@@ -10,8 +10,13 @@ import { getRecord, saveRecord, encodeFloats, decodeFloats, formatTime } from '.
 import { profile, rewardCoins, addCoins, saveProfile } from './profile.js';
 import { SURFACES } from './pieces.js';
 import { SkidMarks } from './skids.js';
+import { InputRecorder, decodeInputs, inputAt, quantSteer, GhostRunner, PHYS_VER } from './replay.js';
+import { getImportedGhost } from './storage.js';
+import { goalMet, goalLabel, completeGoal, goalDone } from './career.js';
 
 const GHOST_EVERY = 4; // un échantillon tous les 4 pas (30 Hz)
+// Caméras en plus pour les replays.
+const REPLAY_CAMS = [{ name: 'TV', tv: true }, { name: 'Orbite libre', orbit: true }];
 const CAM_MODES = [
   { name: 'Poursuite', dist: 9.5, height: 3.7, look: 5, lookUp: 1.3, fov: 66 },
   { name: 'Proche', dist: 6.2, height: 2.3, look: 7, lookUp: 1.0, fov: 70 },
@@ -66,6 +71,14 @@ export class RaceSession {
     app.scene.add(this.ghostCar.group);
 
     this.bot = this.demo && track.path ? new Autopilot(track.path) : null;
+    // Replay : commandes enregistrées rejouées à l'identique.
+    this.replay = opts.replay ? decodeInputs(opts.replay.inputs) : null;
+    this.replaySpeed = 1;
+    this.replayPaused = false;
+    this.replayCam = 0;   // 0 = caméra de course, puis TV, orbite
+    // Fantômes simulés (or, importé).
+    this.ghosts = [];
+    if (!this.demo && !this.replay && !opts.fromEditor) this._setupGhosts();
     this.camMode = this.demo ? 0 : app.settings.camera || 0;
 
     this.up = new THREE.Vector3(0, 1, 0);
@@ -81,8 +94,25 @@ export class RaceSession {
     this.restart();
   }
 
+  _setupGhosts() {
+    const app = this.app, s = app.settings;
+    const add = (runner, color, label) => {
+      const car = createCar(null, { ghost: true, ghostColor: color });
+      car.group.visible = false;
+      app.scene.add(car.group);
+      this.ghosts.push({ runner, car, label, q: new THREE.Quaternion(), pq: new THREE.Quaternion() });
+    };
+    const rec = this.trackKey ? getRecord(this.trackKey) : null;
+    const goldNotYet = this.medals && (!rec || rec.time > this.medals.or + 1e-6);
+    if (s.ghostGold !== false && this.track.path && goldNotYet) add(new GhostRunner(this.track, { bot: true, latK: 0.8 }), '#ffd23e', 'Or');
+    const imp = this.trackKey && s.ghostImported !== false ? getImportedGhost(this.trackKey) : null;
+    if (imp && imp.v === PHYS_VER) add(new GhostRunner(this.track, { inputs: imp.inputs }), '#c77dff', imp.name);
+  }
+
   loadRecord() {
     this.record = this.trackKey && !this.demo ? getRecord(this.trackKey) : null;
+    // Les records d'une autre version de la physique n'ont pas de commandes rejouables.
+    if (this.record && this.record.pv !== PHYS_VER) this.record = { ...this.record, inputs: null };
     this.ghostData = null;
     if (this.record && this.record.ghost) {
       try { this.ghostData = decodeFloats(this.record.ghost); } catch { this.ghostData = null; }
@@ -102,7 +132,11 @@ export class RaceSession {
     this.prevQuat.copy(this.quat);
     this.camYaw = sp.yaw;
     this.camPos.set(sp.x + Math.sin(sp.yaw) * 12, sp.y + 5, sp.z + Math.cos(sp.yaw) * 12);
-    this.state = this.demo ? 'racing' : 'countdown';
+    this.state = this.demo || this.replay ? 'racing' : 'countdown';
+    this.recorder = new InputRecorder();
+    this._pendingRespawn = false;
+    this.stats = { wallHits: 0, respawns: 0, perfects: 0, turbos: 0, rings: 0 };
+    for (const g of this.ghosts) { g.runner.reset(); g.car.group.visible = false; }
     this.countT = 0;
     this.countShown = -1;
     this.acc = 0;
@@ -121,8 +155,10 @@ export class RaceSession {
     this.car.flames.forEach((f) => { f.visible = false; });
   }
 
-  respawn() {
+  respawn(fromInput = false) {
     if (this.state !== 'racing') return;
+    if (fromInput) this._pendingRespawn = true;
+    this.stats.respawns++;
     const r = this.logic.respawn;
     this.phys.place(r.x, r.y, r.z, r.yaw);
     this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
@@ -170,6 +206,11 @@ export class RaceSession {
   }
 
   _input() {
+    if (this.replay) {
+      const inp = inputAt(this.replay, this.logic.steps);
+      if (inp.respawn) this.respawn();
+      return inp;
+    }
     if (this.bot) return this.bot.control(this.phys);
     if (this.state === 'finished') return { steer: 0, throttle: false, brake: true, drift: false };
     return this.app.input.drive();
@@ -178,11 +219,23 @@ export class RaceSession {
   _stepOnce() {
     const app = this.app;
     const inp = this._input();
+    inp.steer = quantSteer(inp.steer);      // volant au centième : replay identique
+    if (this.state === 'racing' && !this.demo && !this.replay) {
+      this.recorder.push(inp, this._pendingRespawn);
+      this._pendingRespawn = false;
+    }
+    if (this.state === 'racing') for (const g of this.ghosts) { g.pq.copy(g.q); g.runner.step(); }
     this.lastInput = inp;
     this.prevQuat.copy(this.quat);
     this.phys.step(inp);
     this._orient();
     const ev = this.phys.ev;
+    if (this.state === 'racing') {
+      if (ev.wall > 4) this.stats.wallHits++;
+      if (ev.landQ === 'perfect') this.stats.perfects++;
+      if (ev.miniTurbo) this.stats.turbos++;
+      if (ev.ring) this.stats.rings++;
+    }
     if (ev.boostHit) {
       app.audio.boost();
       this.shake = Math.max(this.shake, 0.25);
@@ -335,6 +388,9 @@ export class RaceSession {
     const app = this.app;
     this.state = 'finished';
     this.finishT = 0;
+    if (this.replay) { this._replayEnded(); return; }
+    // Dernière course, rejouable depuis l'écran d'arrivée.
+    this.lastRun = { inputs: this.recorder.encode(), time };
     const prev = this.record;
     const isRecord = (!prev || time < prev.time - 1e-9) && !this.opts.spawn;
     if (isRecord && this.trackKey) {
@@ -343,6 +399,8 @@ export class RaceSession {
         time,
         splits: this.logic.splits.slice(),
         ghost: encodeFloats(ghost),
+        inputs: this.recorder.encode(),
+        pv: PHYS_VER,
         date: Date.now(),
         name: app.settings.playerName,
       };
@@ -361,7 +419,17 @@ export class RaceSession {
       reward = rewardCoins({ tier, difficulty: this.opts.difficulty || 1, trackKey: this.trackKey, user: !!this.opts.userMap });
       app.ui.updateCoins();
     }
+    // Objectif bonus (carrière).
+    let goal = null;
+    if (this.opts.goal && !this.opts.spawn) {
+      const met = goalMet(this.opts.goal, { ...this.stats, vehicle: this.phys.vehicle, time });
+      const already = goalDone(this.opts.goalKey);
+      const coins = met ? completeGoal(this.opts.goalKey) : 0;
+      if (coins) app.ui.updateCoins();
+      goal = { label: goalLabel(this.opts.goal), met, coins, already };
+    }
     app.ui.showFinish({
+      goal,
       reward,
       verified: !!this.opts.fromEditor,
       derived: this.opts.fromEditor ? this.track.derivedMedals : null,
@@ -374,6 +442,8 @@ export class RaceSession {
       medals: this.medals,
       fromEditor: !!this.opts.fromEditor,
       hasNext: !!this.opts.hasNext,
+      canReplay: true,
+      canShareGhost: !!(this.trackKey && (isRecord || (this.record && this.record.inputs)) && !this.opts.spawn),
     });
     if (isRecord) this.loadRecord();
     app.ui.hud.time(time, true);
@@ -384,6 +454,8 @@ export class RaceSession {
     const app = this.app;
     const input = app.input;
 
+    if (this.replay) return this._updateReplay(dt);
+
     if (!this.demo) {
       if (input.act('pause') || (this.state === 'paused' && input.hit('Escape'))) {
         if (this.state === 'paused') this.resume();
@@ -393,7 +465,7 @@ export class RaceSession {
       }
       if (this.state === 'paused') return this.render(dt, 0);
       if (input.act('restart') || input.hit('NumpadEnter')) { this.restart(); return; }
-      if (input.act('respawn')) this.respawn();
+      if (input.act('respawn') && !this.replay) this.respawn(true);
       if (input.act('camera')) this.cycleCamera();
     }
 
@@ -430,6 +502,41 @@ export class RaceSession {
       }
     }
     this.render(dt, this.acc / DT);
+  }
+
+  // ---- Replay -------------------------------------------------------------
+  _updateReplay(dt) {
+    const app = this.app, input = app.input;
+    if (input.hit('Escape') || input.act('pause')) { app.endReplay(this.opts.replay); return; }
+    if (input.hit('Space')) { this.replayPaused = !this.replayPaused; this._replayHud(); }
+    const speeds = [0.25, 0.5, 1, 2, 4];
+    if (input.hit('ArrowRight') || input.hit('ArrowUp')) { this.replaySpeed = speeds[Math.min(4, speeds.indexOf(this.replaySpeed) + 1)]; this._replayHud(); }
+    if (input.hit('ArrowLeft') || input.hit('ArrowDown')) { this.replaySpeed = speeds[Math.max(0, speeds.indexOf(this.replaySpeed) - 1)]; this._replayHud(); }
+    if (input.act('restart')) { this.restart(); this._replayHud(); return; }
+    if (input.act('camera')) {
+      this.replayCam = (this.replayCam + 1) % (CAM_MODES.length + REPLAY_CAMS.length);
+      const name = this.replayCam < CAM_MODES.length ? CAM_MODES[this.replayCam].name : REPLAY_CAMS[this.replayCam - CAM_MODES.length].name;
+      if (this.replayCam < CAM_MODES.length) this.camMode = this.replayCam;
+      app.ui.flash(`Caméra : ${name}`, 1.2);
+    }
+    if (!this.replayPaused && this.state !== 'finished') {
+      this.acc += Math.min(dt, 0.1) * this.replaySpeed;
+      while (this.acc >= DT && this.state !== 'finished') {
+        this._stepOnce();
+        this.acc -= DT;
+      }
+    } else if (this.state === 'finished') this.finishT += dt;
+    this.render(dt, this.replayPaused ? 1 : Math.min(1, this.acc / DT));
+  }
+
+  _replayHud() {
+    const el = document.getElementById('replay-bar');
+    if (!el) return;
+    el.querySelector('.rs').textContent = this.replayPaused ? '❚❚ Pause' : `▶ ×${this.replaySpeed}`;
+  }
+
+  _replayEnded() {
+    this.app.ui.hud.message('Fin du replay · Entrée : revoir · Échap : quitter', 3);
   }
 
   pause() {
@@ -517,8 +624,9 @@ export class RaceSession {
     }
     app.particles.update(dt);
 
-    // Fantôme
+    // Fantômes
     this._renderGhost(alpha);
+    this._renderSimGhosts(alpha);
 
     // Caméra
     this._camera(dt);
@@ -530,11 +638,34 @@ export class RaceSession {
     }
     if (!this.demo) {
       const hud = app.ui.hud;
+      if (this.replay && this.state === 'finished') { hud.speed(Math.abs(p.fwdSpeed) * 3.6, p.boost); return; }
       // Effet de vitesse au-delà de 180 km/h.
       const fx = app.settings.speedFx !== false ? Math.max(0, Math.min(1, (Math.abs(p.fwdSpeed) - 50) / 22)) : 0;
       app.ui.speedFx(fx * (this.camMode === 2 ? 1 : 0.8));
       if (this.state === 'racing') hud.time((this.logic.steps + alpha) * DT);
       hud.speed(Math.abs(p.fwdSpeed) * 3.6, p.boost);
+    }
+  }
+
+  _renderSimGhosts(alpha) {
+    for (const g of this.ghosts) {
+      const p = g.runner.phys;
+      const show = this.state !== 'countdown' && !g.runner.done;
+      g.car.group.visible = show;
+      if (!show) continue;
+      const up = tmpV.set(p.n.x, p.n.y, p.n.z);
+      if (!p.grounded) up.set(0, 1, 0);
+      const f = tmpV2.set(p.fwd.x, p.fwd.y, p.fwd.z);
+      f.addScaledVector(up, -f.dot(up));
+      if (f.lengthSq() < 1e-6) f.set(-Math.sin(p.yaw), 0, -Math.cos(p.yaw));
+      f.normalize();
+      const right = new THREE.Vector3().crossVectors(f, up).normalize();
+      tmpM.makeBasis(right, up, f.clone().negate());
+      g.q.setFromRotationMatrix(tmpM);
+      g.car.group.position.set(p.prev.x + (p.pos.x - p.prev.x) * alpha, p.prev.y + (p.pos.y - p.prev.y) * alpha, p.prev.z + (p.pos.z - p.prev.z) * alpha);
+      g.car.group.quaternion.slerpQuaternions(g.pq, g.q, alpha);
+      if (g.car.vehicle !== p.vehicle) g.car.setVehicle(p.vehicle, true);
+      if (g.car.group.position.distanceToSquared(this.renderPos) < 4) g.car.group.visible = false;
     }
   }
 
@@ -564,6 +695,30 @@ export class RaceSession {
     const car = this.car.group;
     this.shake = Math.max(0, this.shake - dt * 1.8);
 
+    const rc = this.replay && this.replayCam >= CAM_MODES.length ? REPLAY_CAMS[this.replayCam - CAM_MODES.length] : null;
+    if (rc && rc.tv) {
+      // Caméra TV : un poste fixe près de la route, qui change quand la voiture s'éloigne.
+      if (!this.tvPos || this.tvPos.distanceTo(car.position) > 70) {
+        const yaw = p.yaw;
+        const ahead = 40 + Math.random() * 20, side = (Math.random() < 0.5 ? -1 : 1) * (16 + Math.random() * 10);
+        this.tvPos = new THREE.Vector3(car.position.x - Math.sin(yaw) * ahead + Math.cos(yaw) * side, car.position.y + 6 + Math.random() * 8, car.position.z - Math.cos(yaw) * ahead - Math.sin(yaw) * side);
+      }
+      cam.up.set(0, 1, 0);
+      cam.position.copy(this.tvPos);
+      cam.lookAt(car.position.x, car.position.y + 1, car.position.z);
+      const d = this.tvPos.distanceTo(car.position);
+      this._fov(Math.max(18, Math.min(70, 1800 / Math.max(10, d))));
+      return;
+    }
+    if (rc && rc.orbit) {
+      this.camT += dt * 0.25;
+      const r = 16;
+      cam.up.set(0, 1, 0);
+      cam.position.set(car.position.x + Math.cos(this.camT) * r, car.position.y + 6, car.position.z + Math.sin(this.camT) * r);
+      cam.lookAt(car.position.x, car.position.y + 1, car.position.z);
+      this._fov(60);
+      return;
+    }
     if (this.state === 'finished' && !this.demo) {
       // Orbite lente autour de la voiture
       this.camT += dt * 0.35;
@@ -675,6 +830,7 @@ export class RaceSession {
     this.view.dispose();
     this.car.dispose();
     this.skids.dispose();
+    for (const g of this.ghosts) g.car.dispose();
     this.ghostCar.dispose();
     this.app.particles.clear();
     this.app.audio.engine(null);

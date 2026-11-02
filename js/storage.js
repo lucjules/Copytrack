@@ -65,6 +65,8 @@ export const DEFAULT_SETTINGS = {
   uiScale: 1,         // taille de l'interface
   showFps: false,
   tutorialDone: false,
+  ghostGold: true,
+  ghostImported: true,
 };
 
 export function loadSettings() {
@@ -84,14 +86,32 @@ export function saveSettings(s) {
 // ---- Records -------------------------------------------------------------
 // v1.1 : pistes plus larges et physique revue => les records v1.0 (préfixe
 // "rec.") ne sont plus comparables. On utilise "rec2." et on purge l'ancien.
-const REC = 'rec2.';
+// v1.5 : nouvelle physique (assiette en l'air, réceptions, mini-turbo) => "rec3.".
+const REC = 'rec3.';
 
 export function purgeOldRecords() {
   try {
     Object.keys(localStorage)
-      .filter((k) => k.startsWith(PREFIX + 'rec.'))
+      .filter((k) => k.startsWith(PREFIX + 'rec.') || k.startsWith(PREFIX + 'rec2.'))
       .forEach((k) => localStorage.removeItem(k));
   } catch { /* stockage indisponible */ }
+}
+
+// ---- Fantômes importés (code SHG1) et défi du jour --------------------------------
+export function getImportedGhost(trackKey) {
+  return read('ghostImp.' + trackKey, null);
+}
+
+export function setImportedGhost(trackKey, g) {
+  write('ghostImp.' + trackKey, g);
+}
+
+export function getDaily(day) {
+  return read('daily.' + day, null);
+}
+
+export function setDaily(day, v) {
+  write('daily.' + day, v);
 }
 
 export function clearRecords() {

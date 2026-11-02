@@ -246,10 +246,10 @@ export function thumbnail(track, key, w = 168, h = 104) {
       for (const pts of lines) {
         g.beginPath();
         pts.forEach((p, i) => (i ? g.lineTo(X(p[0]), Z(p[2])) : g.moveTo(X(p[0]), Z(p[2]))));
-        if (!pass) { g.strokeStyle = '#0b0918'; g.lineWidth = Math.max(3, 18 * s + 2); }
+        if (!pass) { g.strokeStyle = "#0b0918"; g.lineWidth = Math.max(5, 18 * s + 2); }
         else {
           g.strokeStyle = t.s === 'water' ? '#3fa7ff' : P.special === 'start' ? '#2fd3b5' : P.special === 'finish' ? '#ff4f9a' : P.special === 'checkpoint' ? '#ffbf3c' : `hsl(${250 - k * 200}, 70%, ${55 + k * 15}%)`;
-          g.lineWidth = Math.max(1.6, 18 * s);
+          g.lineWidth = Math.max(3.2, 18 * s);
         }
         g.stroke();
       }

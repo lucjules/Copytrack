@@ -187,6 +187,17 @@ export class UI {
   }
 
   showFinish(info) {
+    $('fin-replay').classList.toggle('hidden', !info.canReplay);
+    const gl = $('fin-goal');
+    if (gl) {
+      gl.classList.toggle('hidden', !info.goal);
+      if (info.goal) {
+        const g = info.goal;
+        gl.className = 'fin-goal ' + (g.met || g.already ? 'ok' : 'ko');
+        gl.textContent = `★ Objectif bonus : ${g.label} — ${g.met ? (g.coins ? `réussi ! +${g.coins} ◆` : 'réussi') : g.already ? 'déjà réussi' : 'raté'}`;
+      }
+    }
+    $('fin-ghost').classList.toggle('hidden', !info.canShareGhost);
     $('fin-title').textContent = info.isRecord ? (info.prevTime == null ? 'Premier temps !' : 'Nouveau record !') : 'Arrivée !';
     $('fin-title').className = info.isRecord ? 'fin-record' : '';
     $('fin-time').textContent = formatTime(info.time);

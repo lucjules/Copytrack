@@ -822,3 +822,30 @@ body.touch kbd { display: none; }
 .check-list li.warn { border-left: 3px solid #ffa21a; }
 .thumb { width: 100%; aspect-ratio: 168 / 104; border-radius: 8px; display: block; margin-bottom: 6px; background: #16122b; image-rendering: auto; }
 @media (max-width: 760px) { .ed-selbar { top: auto; bottom: 120px; } .ed-laps { font-size: 12px; } }
+
+/* ---- v1.5 : replay ---- */
+.replay-bar {
+  position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 9;
+  display: flex; gap: 12px; align-items: center; padding: 8px 14px; border-radius: 12px;
+  background: rgba(14, 10, 30, 0.78); border: 1px solid var(--line); font-size: 13px; max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center;
+}
+.replay-bar b { color: #ff4f9a; letter-spacing: 0.12em; }
+.replay-bar .rs { font-weight: 700; }
+.replay-bar .rh { color: var(--muted, #a99fd0); }
+.finish-panel .small-row { margin-top: 8px; gap: 8px; }
+.finish-panel .small-row .btn { font-size: 13px; padding: 6px 10px; }
+@media (max-height: 520px) { .replay-bar .rh { display: none; } }
+
+/* ---- v1.5 : carrière et défi du jour ---- */
+.fin-goal { margin: 6px 0 2px; font-size: 14px; font-weight: 600; }
+.fin-goal.ok { color: #7dffb0; }
+.fin-goal.ko { color: #ff9a8a; }
+.chapter-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.chapter-head .prog { font-size: 13px; color: var(--muted, #a99fd0); }
+.chapter-desc { margin: -4px 0 10px; font-size: 13px; color: var(--muted, #a99fd0); }
+.card.locked { opacity: 0.45; filter: grayscale(0.7); }
+.card .lock { position: absolute; inset: 0; display: grid; place-items: center; font-size: 34px; pointer-events: none; }
+.card .goal { font-size: 12px; margin-top: 4px; color: var(--muted, #a99fd0); }
+.card .goal.done { color: #7dffb0; }
+.card .decor-chip { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,0.08); margin-left: 6px; }
+.daily-card { border: 1px solid #ffd23e88; }

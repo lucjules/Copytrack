@@ -28,7 +28,8 @@
       <h1 class="logo">SHARD<span>WAY</span></h1>
       <p class="tagline">Course contre-la-montre low-poly</p>
       <nav class="menu-buttons">
-        <button data-action="play" class="btn big primary">Jouer</button>
+        <button data-action="play" class="btn big primary">Carrière</button>
+        <button data-action="daily" class="btn big">Défi du jour <small id="daily-best"></small></button>
         <button data-action="editor" class="btn big">Éditeur de circuits</button>
         <button data-action="garage" class="btn big">Garage <small>personnalisation</small></button>
         <button data-action="mytracks" class="btn big">Mes circuits</button>
@@ -84,6 +85,8 @@
       <div class="opt-row"><span>Revoir le tutoriel</span><button class="btn" data-action="tutorial">Tutoriel</button></div>
       <h3 class="opt-h">Jeu</h3>
       <label><span>Afficher le fantôme du record</span><input type="checkbox" id="opt-ghost"></label>
+      <label><span>Fantôme de la médaille d'or (tant qu'elle n'est pas gagnée)</span><input type="checkbox" id="opt-ghostgold"></label>
+      <label><span>Fantôme importé (code d'un ami)</span><input type="checkbox" id="opt-ghostimp"></label>
       <label><span>Nom du pilote</span><input type="text" id="opt-name" maxlength="20"></label>
       <label><span>Commandes tactiles</span>
         <select id="opt-touch"><option value="buttons">Boutons ◀ ▶</option><option value="drag">Glisser le pouce à gauche</option></select>
@@ -185,13 +188,19 @@
       <div id="fin-time" class="fin-time"></div>
       <div id="fin-reward" class="fin-reward"></div>
       <div id="fin-detail" class="fin-detail"></div>
+      <div id="fin-goal" class="fin-goal hidden"></div>
       <div class="row">
         <button class="btn big primary" data-action="restart">Rejouer <kbd>Entrée</kbd></button>
         <button class="btn big" data-action="next" id="fin-next">Circuit suivant</button>
         <button class="btn big" data-action="quit" id="fin-quit">Menu</button>
       </div>
+      <div class="row small-row">
+        <button class="btn" data-action="watch-replay" id="fin-replay">🎬 Revoir la course</button>
+        <button class="btn" data-action="share-ghost" id="fin-ghost">👻 Partager mon fantôme</button>
+      </div>
     </div>
   </div>
+  <div id="replay-bar" class="replay-bar hidden"><b>REPLAY</b><span class="rs">▶ ×1</span><span class="rh">Espace : pause · ← → : vitesse · C : caméra (TV, orbite) · Entrée : recommencer · Échap : quitter</span></div>
 
   <!-- Éditeur -->
   <div id="editor" class="hidden">

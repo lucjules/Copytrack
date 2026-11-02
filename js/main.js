@@ -16,9 +16,12 @@ import { Track, hashString, DECORS } from './track.js';
 import { PIECES } from './pieces.js';
 import { VERSION } from './constants.js';
 import { thumbnail } from './editorTools.js';
+import { encodeGhost, decodeGhost, PHYS_VER } from './replay.js';
+import { dailyChallenge, dayKey } from './daily.js';
+import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, goalFor, goalLabel, goalDone, chapterUnlocked } from './career.js';
 import {
   loadSettings, saveSettings, getRecord, listMyTracks, deleteMyTrack, saveMyTrack, newId,
-  getEditorDraft, formatTime, purgeOldRecords, clearRecords,
+  getEditorDraft, formatTime, purgeOldRecords, clearRecords, setImportedGhost,
 } from './storage.js';
 
 class App {
@@ -112,6 +115,10 @@ class App {
   }
 
   showScreen(name) {
+    if (name === 'menu') {
+      const r = getRecord('daily-' + dayKey());
+      $('daily-best').textContent = r ? formatTime(r.time) : 'nouveau';
+    }
     if (name === 'tracks') this._renderTracks();
     if (name === 'mytracks') this._renderMyTracks();
     if (name === 'options') this._renderOptions();
@@ -122,7 +129,10 @@ class App {
 
   playBuiltin(i) {
     const b = this.builtins[i];
-    this.playTrack(b.track, { trackKey: b.key, medals: b.def.medals, difficulty: b.def.difficulty, hasNext: i < this.builtins.length - 1, builtinIndex: i, seed: b.key });
+    this.playTrack(b.track, {
+      trackKey: b.key, medals: b.def.medals, difficulty: b.def.difficulty, hasNext: i < this.builtins.length - 1, builtinIndex: i, seed: b.key,
+      goal: goalFor(b.def, i), goalKey: b.key + '#goal',
+    });
   }
 
   playTrack(track, opts) {
@@ -132,6 +142,7 @@ class App {
     this.mode = 'race';
     this.ui.showScreen(null);
     this.ui.setMode('race');
+    $('replay-bar').classList.add('hidden');
     this.session = new RaceSession(this, track, opts);
     this.audio.music.play(track.decor || 'desert', [...(track.name || 'x')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 99991, 7) + 1, 1);
     this._resize();
@@ -144,17 +155,76 @@ class App {
     this.playTrack(track, { trackKey: 'u-' + hashString(track.encode()), userEntry: entryId, seed: track.name, userMap: true, medals: track.derivedMedals, difficulty: 2 });
   }
 
+  // ---- Replays et fantômes ------------------------------------------------
+  watchReplay() {
+    const s = this.session;
+    if (!(s instanceof RaceSession) || !s.lastRun) return;
+    const back = { track: s.track, opts: { ...s.opts } };
+    this._replayBack = back;
+    this._dispose();
+    this.mode = 'race';
+    this.ui.showScreen(null);
+    this.ui.setMode('race');
+    this.session = new RaceSession(this, back.track, { ...back.opts, replay: s.lastRun, trackKey: null, medals: back.opts.medals });
+    $('replay-bar').classList.remove('hidden');
+    this._resize();
+  }
+
+  endReplay() {
+    $('replay-bar').classList.add('hidden');
+    const back = this._replayBack;
+    this._replayBack = null;
+    if (!back) { this.showMenu('menu'); return; }
+    this.playTrack(back.track, back.opts);
+  }
+
+  shareGhost() {
+    const s = this.session;
+    if (!s || !s.trackKey) return;
+    const rec = getRecord(s.trackKey);
+    if (!rec || !rec.inputs || rec.pv !== PHYS_VER) { this.ui.flash('Pas encore de course enregistrée avec cette version.'); return; }
+    const code = encodeGhost({ trackKey: s.trackKey, time: rec.time, name: this.settings.playerName, inputs: rec.inputs });
+    this.ui.modal({
+      title: 'Partager mon fantôme',
+      body: `<p>Envoie ce code à un ami : en l'important (bouton « Importer un code »), il courra contre ta course de ${formatTime(rec.time)} sur ce circuit.</p><textarea class="code" readonly rows="4">${esc(code)}</textarea>`,
+      actions: [
+        { label: 'Copier', primary: true, onClick: () => { navigator.clipboard && navigator.clipboard.writeText(code); this.ui.flash('Code copié'); return false; } },
+        { label: 'Fermer' },
+      ],
+    });
+  }
+
+  importGhostCode(code) {
+    try {
+      const g = decodeGhost(code);
+      if (g.v !== PHYS_VER) { this.ui.flash('Ce fantôme vient d\'une autre version du jeu.'); return true; }
+      setImportedGhost(g.trackKey, g);
+      const b = this.builtins.find((x) => x.key === g.trackKey);
+      this.ui.flash(`Fantôme de ${g.name} (${formatTime(g.time)}) importé${b ? ` pour « ${b.def.name} »` : ''}. Il apparaîtra en violet.`, 3.5);
+      return true;
+    } catch (e) { this.ui.flash(e.message); return true; }
+  }
+
   quitRace() {
     const opts = this.session ? this.session.opts : {};
     if (opts.fromEditor) this.openEditor(this.editorState);
-    else if (opts.builtinIndex != null) this.showMenu('tracks');
+    else if (opts.builtinIndex != null || opts.daily) this.showMenu('tracks');
     else if (opts.userEntry) this.showMenu('mytracks');
     else this.showMenu('menu');
   }
 
   nextTrack() {
     const opts = this.session ? this.session.opts : {};
-    if (opts.builtinIndex != null && opts.builtinIndex < this.builtins.length - 1) this.playBuiltin(opts.builtinIndex + 1);
+    if (opts.builtinIndex == null || opts.builtinIndex >= this.builtins.length - 1) return;
+    const next = opts.builtinIndex + 1;
+    const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(rec.time, b.def.medals) : null; };
+    const ch = Math.floor(next / CHAPTER_SIZE);
+    if (!chapterUnlocked(ch, medalOf, this.builtins.length)) {
+      this.ui.flash(`Chapitre ${ch + 1} verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${ch}.`, 2.6);
+      this.audio.error();
+      return;
+    }
+    this.playBuiltin(next);
   }
 
   openEditor(state) {
@@ -222,53 +292,67 @@ class App {
   _renderTracks() {
     const list = $('track-list');
     list.innerHTML = '';
-    const groups = {};
-    this.builtins.forEach((b, i) => { (groups[b.track.decor] = groups[b.track.decor] || []).push([b, i]); });
-    const colors = { desert: '#ff8c5a', polar: '#7fe9ff', jungle: '#2dffb0', city: '#ff3d8a', isles: '#ffd66b' };
-    for (const [decor, items] of Object.entries(groups)) {
+    const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(rec.time, b.def.medals) : null; };
+    // Défi du jour
+    const dailyBox = document.createElement('div');
+    dailyBox.className = 'track-group';
+    dailyBox.innerHTML = '<h3 class="group-title"><i style="background:#ffd23e"></i>Défi du jour</h3>';
+    const dGrid = document.createElement('div');
+    dGrid.className = 'card-grid';
+    const dc = document.createElement('div');
+    dc.className = 'card daily-card';
+    dc.tabIndex = 0;
+    const today = dayKey();
+    const drec = getRecord('daily-' + today);
+    dc.innerHTML = `<h3>Défi du ${today.split('-').reverse().join('/')}</h3>
+      <div class="meta">Un nouveau circuit chaque jour, le même pour tout le monde.</div>
+      <div class="best">${drec ? formatTime(drec.time) : '<span class="meta">Pas encore de temps aujourd’hui</span>'}</div>`;
+    const goDaily = () => { this.audio.click(); this.playDaily(); };
+    dc.addEventListener('click', goDaily);
+    dc.addEventListener('keydown', (e) => { if (e.key === 'Enter') goDaily(); });
+    dGrid.appendChild(dc);
+    dailyBox.appendChild(dGrid);
+    list.appendChild(dailyBox);
+
+    const decorColor = { desert: '#ff8c5a', polar: '#7fe9ff', jungle: '#2dffb0', city: '#ff3d8a', isles: '#ffd66b', volcano: '#ff5a2a', orbit: '#b9a6ff' };
+    const total = this.builtins.length;
+    for (let ch = 0; ch * CHAPTER_SIZE < total; ch++) {
+      const open = chapterUnlocked(ch, medalOf, total);
+      const idx = [];
+      for (let i = ch * CHAPTER_SIZE; i < Math.min(total, (ch + 1) * CHAPTER_SIZE); i++) idx.push(i);
+      const medals = idx.filter((i) => medalOf(i)).length;
+      const goals = idx.filter((i) => goalDone(this.builtins[i].key + '#goal')).length;
+      const C = CHAPTERS[ch] || { name: `Chapitre ${ch + 1}`, desc: '' };
       const g = document.createElement('div');
       g.className = 'track-group';
-      g.innerHTML = `<h3 class="group-title"><i style="background:${colors[decor] || '#fff'}"></i>${esc(DECORS[decor].label)}</h3>`;
+      g.innerHTML = `<div class="chapter-head"><h3 class="group-title"><i style="background:${open ? '#5ff2ff' : '#555'}"></i>Chapitre ${ch + 1} · ${esc(C.name)}${open ? '' : ' 🔒'}</h3>
+        <span class="prog">${medals} / ${idx.length} médailles · ${goals} / ${idx.length} objectifs bonus</span></div>
+        <p class="chapter-desc">${esc(C.desc)}${open ? '' : ` — Gagne ${UNLOCK_MEDALS} médailles au chapitre ${ch} pour l’ouvrir.`}</p>`;
       const grid = document.createElement('div');
       grid.className = 'card-grid';
-      for (const [b, i] of items) {
+      for (const i of idx) {
+        const b = this.builtins[i];
         const rec = getRecord(b.key);
         const medal = rec ? medalFor(rec.time, b.def.medals) : null;
-        const tags = [];
-        const has = (fn) => b.track.tiles.some(fn);
-        if (has((t) => PIECES[t.t].kind === 'loop')) tags.push('Looping');
-        if (has((t) => t.t === 'steep')) tags.push('Sauts');
-        if (has((t) => t.s === 'ice')) tags.push('Verglas');
-        if (has((t) => t.s === 'bounce')) tags.push('Rebond');
-        if (has((t) => t.s === 'sand')) tags.push('Sable');
-        if (has((t) => t.s === 'magnet')) tags.push('Aimant');
-        if (has((t) => t.s === 'moto')) tags.push('Moto');
-        if (has((t) => t.s === 'gravity')) tags.push('Gravité');
-        if (has((t) => t.s === 'wind')) tags.push('Vent');
-        if (has((t) => t.v)) tags.push('Envers');
-        if (has((t) => t.tn)) tags.push('Tunnel');
-        if (has((t) => t.nb)) tags.push('Sans bordures');
-        if (has((t) => t.t === 'wall')) tags.push('Mur');
-        if (has((t) => t.t === 'bank' || t.t === 'bankBig')) tags.push('Virage relevé');
-        if (has((t) => t.t === 'halfpipe')) tags.push('Demi-tube');
-        if (has((t) => t.t === 'tube')) tags.push('Tube');
-        if (has((t) => t.t === 'cork' || t.t === 'corkL')) tags.push('Tire-bouchon');
-        if (has((t) => PIECES[t.t].kind === 'fork')) tags.push('Bifurcation');
-        if (has((t) => PIECES[t.t].kind === 'ring')) tags.push('Anneaux');
-        if (has((t) => t.s === 'water' || t.s === 'boat')) tags.push('Bateau');
-        if (has((t) => t.s === 'glider')) tags.push('Deltaplane');
-        if ((b.track.laps || 1) > 1) tags.push(`${b.track.laps} tours`);
-        if (b.track.decos.some((d) => d.k === 'shard')) tags.push('✦ Secret');
+        const goal = goalFor(b.def, i);
+        const gdone = goalDone(b.key + '#goal');
+        const tags = this._trackTags(b.track);
         const card = document.createElement('div');
-        card.className = 'card ' + decor;
+        card.className = 'card ' + b.track.decor + (open ? '' : ' locked');
         card.tabIndex = 0;
         card.innerHTML = `<div class="num">${i + 1}</div>
           <img class="thumb" alt="" src="${thumbnail(b.track, 'b-' + b.key)}">
-          <h3>${esc(b.def.name)}</h3>
+          <h3>${esc(b.def.name)}<span class="decor-chip" style="color:${decorColor[b.track.decor] || '#fff'}">${esc(DECORS[b.track.decor].label)}</span></h3>
           <div class="meta"><span class="diff">${'◆'.repeat(b.def.difficulty)}${'◇'.repeat(5 - b.def.difficulty)}</span> · ${b.track.tiles.length} pièces</div>
           ${tags.length ? `<div class="tags">${tags.map((t) => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
-          <div class="best">${b.def.medals ? medalIcon(medal) : ''}${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}</div>`;
-        const go = () => { this.audio.click(); this.playBuiltin(i); };
+          <div class="goal${gdone ? ' done' : ''}">★ ${esc(goalLabel(goal))}${gdone ? ' ✓' : ''}</div>
+          <div class="best">${b.def.medals ? medalIcon(medal) : ''}${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}</div>
+          ${open ? '' : '<div class="lock">🔒</div>'}`;
+        const go = () => {
+          this.audio.click();
+          if (!open) { this.ui.flash(`Chapitre verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${ch}.`); this.audio.error(); return; }
+          this.playBuiltin(i);
+        };
         card.addEventListener('click', go);
         card.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
         grid.appendChild(card);
@@ -276,6 +360,41 @@ class App {
       g.appendChild(grid);
       list.appendChild(g);
     }
+  }
+
+  _trackTags(track) {
+    const tags = [];
+    const has = (fn) => track.tiles.some(fn);
+    if (has((t) => PIECES[t.t].kind === 'loop')) tags.push('Looping');
+    if (has((t) => t.t === 'steep')) tags.push('Sauts');
+    if (has((t) => t.t === 'bank' || t.t === 'bankBig')) tags.push('Virage relevé');
+    if (has((t) => t.t === 'halfpipe')) tags.push('Demi-tube');
+    if (has((t) => t.t === 'tube')) tags.push('Tube');
+    if (has((t) => t.t === 'cork' || t.t === 'corkL')) tags.push('Tire-bouchon');
+    if (has((t) => PIECES[t.t].kind === 'fork')) tags.push('Bifurcation');
+    if (has((t) => PIECES[t.t].kind === 'ring')) tags.push('Anneaux');
+    if (has((t) => t.t === 'wall')) tags.push('Mur');
+    if (has((t) => t.s === 'water' || t.s === 'boat')) tags.push('Bateau');
+    if (has((t) => t.s === 'glider')) tags.push('Deltaplane');
+    if (has((t) => t.s === 'moto')) tags.push('Moto');
+    if (has((t) => t.s === 'ice')) tags.push('Verglas');
+    if (has((t) => t.s === 'bounce')) tags.push('Rebond');
+    if (has((t) => t.s === 'gravity')) tags.push('Gravité');
+    if (has((t) => t.s === 'wind')) tags.push('Vent');
+    if (has((t) => t.s === 'sand' || t.s === 'mud')) tags.push('Terrain');
+    if (has((t) => t.tn)) tags.push('Tunnel');
+    if (has((t) => t.nb)) tags.push('Sans bordures');
+    if ((track.laps || 1) > 1) tags.push(`${track.laps} tours`);
+    if (track.decos.some((d) => d.k === 'shard')) tags.push('✦ Secret');
+    return tags.slice(0, 6);
+  }
+
+  playDaily() {
+    const t0 = performance.now();
+    const c = dailyChallenge();
+    if (!c) { this.ui.flash('Le défi du jour n’a pas pu être généré.'); return; }
+    this.playTrack(c.track, { trackKey: c.key, medals: c.medals, difficulty: 3, seed: c.key, daily: true });
+    if (performance.now() - t0 > 50) this.ui.flash('Nouveau défi du jour !', 1.5);
   }
 
   // ------------------------------------------------------------ Commandes
@@ -451,6 +570,8 @@ class App {
     $('opt-volume').value = s.volume;
     $('opt-quality').value = s.quality;
     $('opt-ghost').checked = s.ghost;
+    $('opt-ghostgold').checked = s.ghostGold !== false;
+    $('opt-ghostimp').checked = s.ghostImported !== false;
     $('opt-name').value = s.playerName;
     $('opt-touch').value = s.touchMode;
     $('opt-haptics').checked = s.haptics;
@@ -511,11 +632,12 @@ class App {
 
   importModal(fromEditor = false) {
     const ta = document.createElement('textarea');
-    ta.placeholder = 'Colle ici un code SHW1:… ou un lien de partage';
+    ta.placeholder = 'Colle ici un code de circuit (SHW…), un lien de partage ou un code de fantôme (SHG1:…)';
     const wrap = document.createElement('div');
-    wrap.innerHTML = '<p>Colle le code d’un circuit Shardway.</p>';
+    wrap.innerHTML = '<p>Colle le code d’un circuit Shardway, ou le code du fantôme d’un ami.</p>';
     wrap.appendChild(ta);
     const parse = () => {
+      if (/^\s*SHG1:/.test(ta.value)) { this.importGhostCode(ta.value); return null; }
       try { return Track.decode(ta.value); } catch { this.ui.flash('Code de circuit invalide.'); return null; }
     };
     const actions = fromEditor
@@ -579,6 +701,8 @@ class App {
       this.showMenu('options');
     });
     $('opt-ghost').addEventListener('change', (e) => { this.settings.ghost = e.target.checked; this.saveSettings(); });
+    $('opt-ghostgold').addEventListener('change', (e) => { this.settings.ghostGold = e.target.checked; this.saveSettings(); });
+    $('opt-ghostimp').addEventListener('change', (e) => { this.settings.ghostImported = e.target.checked; this.saveSettings(); });
     $('opt-music').addEventListener('input', (e) => {
       this.settings.musicVolume = parseFloat(e.target.value);
       this.audio.setMusicVolume(this.settings.musicVolume);
@@ -616,6 +740,7 @@ class App {
     const s = this.session;
     switch (a) {
       case 'play': this.showScreen('tracks'); break;
+      case 'daily': this.playDaily(); break;
       case 'editor': this.openEditor(); break;
       case 'mytracks': this.showScreen('mytracks'); break;
       case 'import': this.importModal(false); break;
@@ -642,6 +767,8 @@ class App {
       case 'resume': if (s && s.resume) s.resume(); break;
       case 'restart': if (s && s.restart) { this.ui.hideOverlay('pause'); s.restart(); } break;
       case 'quit': this.quitRace(); break;
+      case 'watch-replay': this.watchReplay(); break;
+      case 'share-ghost': this.shareGhost(); break;
       case 'next': this.nextTrack(); break;
       case 'reset-records':
         this.ui.modal({
