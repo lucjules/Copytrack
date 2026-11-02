@@ -210,7 +210,10 @@ export class RaceSession {
       if (!this.demo) app.ui.hud.message(this.phys.moto ? 'Mode moto !' : 'Retour en voiture', 1.2);
     }
     if (ev.gravity && !this.demo) app.ui.hud.message(`Gravité ${Math.round(this.phys.gravMul * 100)} %`, 1.4);
-    if (ev.loopFall && !this.demo) app.ui.hud.message('Trop lent pour le looping !', 1.4);
+    if (ev.loopFall && !this.demo) {
+      const why = { loop: 'Trop lent pour le looping !', twist: 'Plus rien ne te retient dans la vrille !', inv: 'À l\'envers, la gravité gagne !', crest: 'Décollage !' };
+      app.ui.hud.message(why[this.phys.fallWhy] || why.crest, 1.4);
+    }
 
     if (this.state === 'racing') {
       if (this.logic.steps % 6 === 0) this._checkShards();

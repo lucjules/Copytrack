@@ -105,8 +105,8 @@ export const BUILTIN_TRACKS = [
     script: 'start B S2 L S R S2 B S.j G1 S2 R L C S2 RR S B S2 LL S R S L S2 B S.j G1 S2 C S2 R L S2 finish', medals: { cristal: 24.4, or: 26.1, argent: 30, bronze: 35.2 },
   },
   {
-    id: 'canopee', name: 'Canopée Renversée', decor: 'jungle', difficulty: 3,
-    script: 'start B S2 R S L S2 B S TW S2^ R^ S^ L^ S^ TWB S2 C S L S R S2 B S2 L R S2 finish', medals: { cristal: 19, or: 20, argent: 23, bronze: 27.1 },
+    id: 'canopee', name: 'Canopée Suspendue', decor: 'jungle', difficulty: 3,
+    script: 'start B S2 R S L S2 B S O S2 R S L S B S OL S2 C S L S R S2 B S2 L R S2 finish', medals: { cristal: 23.6, or: 24.9, argent: 28.6, bronze: 33.6 },
   },
   {
     id: 'racines', name: 'Racines Boueuses', decor: 'jungle', difficulty: 2, shard: [0.55, -7],
@@ -114,7 +114,7 @@ export const BUILTIN_TRACKS = [
   },
   {
     id: 'temple', name: 'Temple Perdu', decor: 'jungle', difficulty: 4,
-    script: 'start B S2 R S L S2# R# S# L# S2 C S2 B S2 QU WA2 CR S2 R S L S2 D2 S2 C S L S R S2 finish', medals: { cristal: 22.7, or: 23.9, argent: 27.5, bronze: 32.3 },
+    script: 'start B S2 R S L S2# R# S# L# S2 C S2 B S2 QU WA2 CR S2 R S L S2 D2 S2 C S L S R S2 finish', medals: { cristal: 27.3, or: 28.7, argent: 33, bronze: 38.7 },
   },
   {
     id: 'serpent', name: 'Le Serpent', decor: 'jungle', difficulty: 5,
@@ -130,7 +130,7 @@ export const BUILTIN_TRACKS = [
   },
   {
     id: 'tours', name: 'Tours Jumelles', decor: 'city', difficulty: 4,
-    script: 'start B S2 R S L S2 B S2 QU WA CR S2 C S R S L S2 D2 S L S R S2 B S2 QU WA CR S2 C S2 R L S2 finish', medals: { cristal: 24.6, or: 26.1, argent: 30, bronze: 35.2 },
+    script: 'start B S2 R S L S2 B S2 QU WA CR S2 C S R S L S2 D2 S L S R S2 B S2 QU WA CR S2 C S2 R L S2 finish', medals: { cristal: 34.3, or: 36, argent: 41.4, bronze: 48.6 },
   },
   {
     id: 'metro', name: 'Métro Aérien', decor: 'city', difficulty: 3,
@@ -138,7 +138,7 @@ export const BUILTIN_TRACKS = [
   },
   {
     id: 'viaduc', name: 'Viaduc Vertical', decor: 'city', difficulty: 5,
-    script: 'start B S2 R S L S2 B S2 QU WA2 CR S2 C S2 TW S3^ TWB S R S L D2 S2 B S OD S2 C S L R S2.g40 S2 S.g100 S2 finish', medals: { cristal: 29.3, or: 30.7, argent: 35.3, bronze: 41.4 },
+    script: 'start B S2 R S L S2 B S2 QU WA2 CR S2 C S2 B S OB S R S L D2 S2 B S OD S2 C S L R S2.g40 S2 S.g100 S2 finish', medals: { cristal: 36, or: 37.6, argent: 43.2, bronze: 50.7 },
   },
   {
     id: 'hyper', name: 'Hyperboucle', decor: 'city', difficulty: 4,
@@ -161,8 +161,8 @@ export const BUILTIN_TRACKS = [
     script: 'start B S2 B S.g30 S2 UU G10 DD S2 C S.g100 S2 R S L S2 RR S B S2 S.g30 S2 UU G8 DD S3 C S.g100 S2 L S R S2 finish', medals: { cristal: 31.9, or: 33.3, argent: 38.3, bronze: 45 },
   },
   {
-    id: 'vrille', name: 'Vrille Tropicale', decor: 'isles', difficulty: 4,
-    script: 'start B S2 R S L S2 B S2 TW S2^ RR^ S2^ TWB S C S2 L S R S2 B S2 TW S3^ TWB S2 C S R L S2 finish', medals: { cristal: 23.2, or: 24.4, argent: 28.1, bronze: 32.9 },
+    id: 'vrille', name: 'Tourbillon Tropical', decor: 'isles', difficulty: 4,
+    script: 'start B S2 R S L S2 B S2 OB S C S2 L S R S2 B S2 ODL S2 C S R L S2 finish', medals: { cristal: 25.4, or: 26.6, argent: 30.6, bronze: 36 },
   },
   {
     id: 'archipel', name: 'Grand Archipel', decor: 'isles', difficulty: 5, shard: [0.7, 7],

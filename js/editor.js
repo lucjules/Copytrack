@@ -34,7 +34,7 @@ export const PALETTE_ORDER = [
 
 const MIRROR = { loop: 'loopL', loopL: 'loop', loopBig: 'loopBigL', loopBigL: 'loopBig', loopDouble: 'loopDoubleL', loopDoubleL: 'loopDouble' };
 const MODS = [
-  { id: 'mod:v', flag: 'v', label: 'À l\'envers', hint: 'Route au plafond (à vitesse suffisante)' },
+  { id: 'mod:v', flag: 'v', label: 'À l\'envers', hint: 'Route au plafond (sur du plat, la voiture tombe)' },
   { id: 'mod:nb', flag: 'nb', label: 'Sans bordures', hint: 'Plus de rebord : on peut tomber' },
   { id: 'mod:tn', flag: 'tn', label: 'Tunnel', hint: 'Voûte autour de la route' },
 ];
@@ -249,7 +249,7 @@ export class EditorSession {
     panels.mods.appendChild(rowM);
     const hint = document.createElement('div');
     hint.className = 'pal-hint';
-    hint.textContent = 'Choisis une option puis clique sur une pièce pour l\'activer ou la désactiver. Une route à l\'envers s\'atteint par une vrille ou un looping, et il faut rouler vite pour y rester collé.';
+    hint.textContent = 'Choisis une option puis clique sur une pièce pour l\'activer ou la désactiver. Physique réelle : à l\'envers, rien ne retient la voiture sur une route plate, elle tombe. Seule la courbure d\'un looping, prise assez vite, la plaque contre la route.';
     panels.mods.appendChild(hint);
 
     const dTop = document.createElement('div');

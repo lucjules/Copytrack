@@ -33,7 +33,6 @@ function build(tile) {
     const total = Math.PI * 2 * P.turns;
     const { R, lane, mirror: m } = P;
     return {
-      stick: false,
       minU: P.turns === 1 ? 0.1 : 0.04,
       pos(u, o) {
         const th = total * u, c = Math.cos(th), s = Math.sin(th);
@@ -48,7 +47,6 @@ function build(tile) {
   if (P.kind === 'ribbon') {
     if (tile.t === 'twist') {
       return {
-        stick: true,
         pos(u, o) {
           const f = Math.PI * smooth(u);
           o.x = 0; o.y = base; o.z = half - 2 * half * u;
@@ -60,7 +58,6 @@ function build(tile) {
     if (tile.t === 'ramp90') {
       const Lf = 2 * half - R90, La = (R90 * Math.PI) / 2, tot = Lf + La;
       return {
-        stick: true,
         pos(u, o) {
           const s = u * tot;
           if (s <= Lf) {
@@ -77,7 +74,6 @@ function build(tile) {
     }
     if (tile.t === 'wall') {
       return {
-        stick: true,
         pos(u, o) {
           o.x = 0; o.y = base + LEVEL_H * u; o.z = half;
           o.nx = 0; o.ny = 0; o.nz = 1;
@@ -89,7 +85,6 @@ function build(tile) {
     const La = (R90 * Math.PI) / 2, Lf = 2 * half - R90, tot = La + Lf;
     const cz = half - R90;
     return {
-      stick: true,
       pos(u, o) {
         const s = u * tot;
         o.x = 0;
@@ -109,7 +104,6 @@ function build(tile) {
   if (P.kind === 'arc') {
     const a = arcParams(P);
     return {
-      stick: true,
       pos(u, o) {
         const ang = Math.PI + (Math.PI / 2) * u;
         o.x = a.cx + a.R * Math.cos(ang); o.y = base; o.z = a.cz + a.R * Math.sin(ang);
@@ -120,7 +114,6 @@ function build(tile) {
   }
   const rise = P.rise * LEVEL_H;
   return {
-    stick: true,
     pos(u, o) {
       o.x = 0; o.y = base + rise * u; o.z = half - 2 * half * u;
       o.nx = 0; o.ny = -1; o.nz = 0;
