@@ -6,8 +6,10 @@ const L = { lx: 0, lz: 0 };
 const S = {};
 
 export class RaceLogic {
-  constructor(track) {
+  constructor(track, opts = {}) {
     this.track = track;
+    this.laps = Math.max(1, track.laps || 1);
+    this.partial = !!opts.partial;   // test depuis le curseur : pas besoin des checkpoints
     this.cps = track.tiles.filter((t) => PIECES[t.t].special === 'checkpoint');
     this.startTile = track.startTile;
     this.reset();
@@ -30,6 +32,7 @@ export class RaceLogic {
     this.steps = 0;
     this.respawn = { ...this.spawnPoint(), vehicle: 'car', grav: 1 };
     this.inFinish = false;
+    this.lap = 1;
   }
 
   // Point de réapparition d'un checkpoint aérien : la dernière route roulable traversée
@@ -96,10 +99,19 @@ export class RaceLogic {
         event = { type: 'checkpoint', index: this.splits.length, steps: this.steps };
       } else if (sp === 'finish') {
         onFinish = true;
-        if (this.collected.size >= this.cps.length) {
-          this.finished = true;
-          event = { type: 'finish', steps: this.steps };
-        } else if (!this.inFinish) {
+        if (this.inFinish) continue;
+        if (this.partial || this.collected.size >= this.cps.length) {
+          if (this.lap < this.laps && !this.partial) {
+            // Tour suivant : les checkpoints sont à reprendre.
+            this.lap++;
+            this.collected.clear();
+            this.splits.push(this.steps);
+            event = { type: 'lap', lap: this.lap, laps: this.laps, index: this.splits.length, steps: this.steps };
+          } else {
+            this.finished = true;
+            event = { type: 'finish', steps: this.steps };
+          }
+        } else {
           event = { type: 'missing', remaining: this.cps.length - this.collected.size };
         }
       }

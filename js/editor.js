@@ -8,6 +8,8 @@ import { TrackView, buildTileMesh, SURFACE_STYLE, tint } from './trackMesh.js';
 import { buildDecoMesh, safeUrl } from './decos.js';
 import { DECO_CATS, DECO_LABELS, DECO_COLORS } from './decoData.js';
 import { setEditorDraft, saveMyTrack, newId, formatTime } from './storage.js';
+import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, checkTrack } from './editorTools.js';
+import { centerlineWorld } from './ribbons.js';
 
 export const PALETTE_ORDER = [
   { id: 'straight', key: 'Digit1', k: '1' },
@@ -41,6 +43,7 @@ export const PALETTE_ORDER = [
   { id: 'start', key: 'Digit9', k: '9' },
   { id: 'finish', key: 'Digit0', k: '0' },
   { id: 'platform', key: 'KeyP', k: 'P' },
+  { id: 'select', key: 'KeyQ', k: 'Q' },
   { id: 'erase', key: '', k: 'X' },
 ];
 
@@ -97,6 +100,7 @@ export const ICONS = {
   start: svg(`${straightBase()}<rect x="4" y="22" width="40" height="6" rx="2" fill="#2fd3b5"/><path d="M24 18V6M18 12l6-6 6 6" stroke="${LINE}" stroke-width="2.5" fill="none"/>`),
   finish: svg(`${straightBase()}<g fill="#f7f2ea"><rect x="10" y="20" width="4" height="4"/><rect x="18" y="20" width="4" height="4"/><rect x="26" y="20" width="4" height="4"/><rect x="34" y="20" width="4" height="4"/><rect x="14" y="24" width="4" height="4"/><rect x="22" y="24" width="4" height="4"/><rect x="30" y="24" width="4" height="4"/></g><rect x="4" y="16" width="40" height="3" fill="#ff4f9a"/>`),
   platform: svg(`<rect x="4" y="4" width="40" height="40" fill="#454a6a" stroke="#ffb84d" stroke-width="2"/><path d="M4 24h40M24 4v40" stroke="#5a6088" stroke-width="2"/>`),
+  select: svg(`<rect x="7" y="9" width="34" height="30" fill="#5ff2ff22" stroke="#5ff2ff" stroke-width="3" stroke-dasharray="6 4"/><path d="M30 30l10 10M30 30v8M30 30h8" stroke="#ffffff" stroke-width="2.5"/>`),
   erase: svg(`<path d="M12 12l24 24M36 12L12 36" stroke="#ff5a6e" stroke-width="5" stroke-linecap="round"/>`),
   'surf:': svg(`${straightBase()}<path d="M24 8v32" stroke="${LINE}" stroke-width="2" stroke-dasharray="5 5"/>`),
   'surf:ice': svg(`${straightBase('#bfe4f2', '#7fd3ff')}<path d="M24 14v20M15 19l18 10M15 29l18-10" stroke="#4aa8d8" stroke-width="2.5"/>`),
@@ -120,6 +124,7 @@ export const ICONS = {
 
 export function pieceLabel(id) {
   if (id === 'erase') return 'Gomme';
+  if (id === 'select') return 'Sélection';
   if (id.startsWith('surf:')) return SURFACES[id.slice(5)].label;
   if (id.startsWith('mod:')) return MODS.find((m) => m.id === id).label;
   if (id.startsWith('deco:')) return DECO_LABELS[id.slice(5)];
@@ -128,7 +133,7 @@ export function pieceLabel(id) {
 
 function validTool(t) {
   if (!t) return false;
-  return !!PIECES[t] || t === 'erase' || t.startsWith('surf:') || t.startsWith('mod:') || t.startsWith('deco:');
+  return !!PIECES[t] || t === 'erase' || t === 'select' || t.startsWith('surf:') || t.startsWith('mod:') || t.startsWith('deco:');
 }
 
 export class EditorSession {
@@ -151,6 +156,11 @@ export class EditorSession {
     this.showGrid = true;
     this.autoLevel = null;
     this.surfParam = {};
+    this.sel = null;          // rectangle de sélection {x0, z0, x1, z1}
+    this.selDrag = null;
+    this.clip = null;         // presse-papiers
+    this.pasting = false;
+    this.focusLevel = false;  // vue par niveau
     this.deco = { cat: 'signs', color: 0, scale: 1, rot: 0, url: '', snap: 0 };
 
     this.view = new TrackView(this.track, app.materials);
@@ -179,6 +189,14 @@ export class EditorSession {
       new THREE.MeshBasicMaterial({ color: '#5ff2ff', transparent: true, opacity: 0.18, depthWrite: false }),
     );
     app.scene.add(this.footprint);
+    this.selBox = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshBasicMaterial({ color: '#5ff2ff', transparent: true, opacity: 0.14, depthWrite: false }),
+    );
+    this.selBox.visible = false;
+    app.scene.add(this.selBox);
+    this.marks = new THREE.Group();
+    app.scene.add(this.marks);
     this.grid = null;
     this.gridKey = '';
 
@@ -333,6 +351,16 @@ export class EditorSession {
       this._changed(false);
       decor.blur();
     };
+    const laps = document.getElementById('ed-laps');
+    laps.innerHTML = Array.from({ length: 9 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
+    laps.value = String(this.track.laps || 1);
+    laps.onchange = () => {
+      this.track.laps = +laps.value;
+      this._changed(false);
+      this._commit();
+      laps.blur();
+      if (this.track.laps > 1) this.app.ui.flash('Plusieurs tours : l\'arrivée doit être juste avant le départ (circuit fermé).', 3);
+    };
     this.setTab(this.tool.startsWith('surf:') ? 'surf' : this.tool.startsWith('mod:') ? 'mods' : this.tool.startsWith('deco:') ? 'decos' : 'pieces');
   }
 
@@ -350,6 +378,7 @@ export class EditorSession {
   }
 
   setTool(id) {
+    if (id !== 'select') { this.pasting = false; this.sel = null; this.selDrag = null; }
     this.tool = id;
     this.previewKey = '';
     if (id.startsWith('surf:')) this.setTab('surf');
@@ -421,6 +450,7 @@ export class EditorSession {
   }
 
   _refreshUI() {
+    this._refreshSelBar();
     document.querySelectorAll('#ed-palette .piece-btn').forEach((b) => b.classList.toggle('on', b.dataset.piece === this.tool));
     document.getElementById('ed-level').textContent = `Niv. ${this.level}`;
     const t = this.track;
@@ -442,6 +472,7 @@ export class EditorSession {
     return JSON.stringify({
       t: this.track.tiles.map((t) => [t.t, t.x, t.z, t.l, t.r, t.s || '', t.p || 0, t.v, t.nb, t.tn]),
       d: this.track.decos.map((o) => [o.k, o.x, o.y, o.z, o.ry, o.s, o.c, o.u]),
+      lp: this.track.laps || 1,
     });
   }
 
@@ -452,6 +483,9 @@ export class EditorSession {
     this.track.vt = vt; this.track.vh = vh;
     for (const [t, x, z, l, r, s, p, v, nb, tn] of data.t) this.track.add({ t, x, z, l, r, s, p, v, nb, tn });
     for (const [k, x, y, z, ry, sc, c, u] of data.d) this.track.addDeco({ k, x, y, z, ry, s: sc, c, u });
+    this.track.laps = data.lp || 1;
+    const lapsEl = document.getElementById('ed-laps');
+    if (lapsEl) lapsEl.value = String(this.track.laps);
     this._changed(false);
     this.needsRebuild = true;
   }
@@ -565,6 +599,10 @@ export class EditorSession {
         if (k === 'z' && !e.shiftKey) { e.preventDefault(); this.undo(); }
         else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); this.redo(); }
         else if (k === 's') { e.preventDefault(); this.save(); }
+        else if (k === 'c') { e.preventDefault(); this.copySel(); }
+        else if (k === 'x') { e.preventDefault(); this.cutSel(); }
+        else if (k === 'v') { e.preventDefault(); this.startPaste(); }
+        else if (k === 'a') { e.preventDefault(); this.selectAll(); }
       },
     };
     el.addEventListener('pointerdown', this._h.down);
@@ -589,7 +627,8 @@ export class EditorSession {
     if (e.pointerType === 'mouse' && e.button === 1) e.preventDefault();
     if (e.pointerType === 'mouse' && e.button === 0) {
       this._updateHover();
-      if (e.altKey) this._pick();
+      if (this.tool === 'select') this._selectDown();
+      else if (e.altKey) this._pick();
       else { this.painting = true; this._act(); }
     }
   }
@@ -614,7 +653,10 @@ export class EditorSession {
         }
         this._pinch = { d, ang };
       } else if (p.moved) {
-        this._pan(dx, dy);
+        if (this.tool === 'select' && !this.pasting) {
+          if (!this.selDrag) { this._updateHover(); this._selectDown(); }
+          this._updateHover(); this._selectMove();
+        } else this._pan(dx, dy);
       }
       return;
     }
@@ -623,6 +665,9 @@ export class EditorSession {
       this.pitch = Math.max(0.2, Math.min(1.5, this.pitch + dy * 0.005));
     } else if (p.button === 1 && p.moved) {
       this._pan(dx, dy);
+    } else if (p.button === 0 && this.selDrag) {
+      this._updateHover();
+      this._selectMove();
     } else if (p.button === 0 && this.painting && !this.tool.startsWith('deco:')) {
       this._updateHover();
       this._act(true);
@@ -638,14 +683,18 @@ export class EditorSession {
       if (p.button === 2 && !p.moved) { this._updateHover(); this._erase(); }
       if (p.button === 1 && !p.moved) { this._updateHover(); this._pick(); }
       if (p.button === 0) {
+        if (this.selDrag) this._selectUp();
         this.painting = false;
         this._lastPaint = null;
         this._commit();
       }
+    } else if (this.selDrag) {
+      this._selectUp();
     } else if (!p.moved && this.pointers.size === 0) {
       this._setNdc(e);
       this._updateHover();
-      this._act();
+      if (this.tool === 'select') this._selectDown(true);
+      else this._act();
       this._commit();
     }
   }
@@ -841,8 +890,20 @@ export class EditorSession {
     if (manual) this.autoLevel = null;
     if (nl === this.level) return;
     this.level = nl;
+    if (this.focusLevel) this.needsRebuild = true;
     this.previewKey = '';
     this._refreshUI();
+  }
+
+  // Teste à partir de la pièce visée (sans médaille ni vérification).
+  testHere() {
+    const t = this._hoverTile();
+    if (!t || ['ring', 'area'].includes(PIECES[t.t].kind)) { this.app.ui.flash('Vise une pièce de route pour tester à partir d\'elle.'); this.app.audio.error(); return; }
+    if (this.track.count('finish') === 0) { this.app.ui.flash('Il faut au moins une arrivée.'); this.app.audio.error(); return; }
+    const pts = centerlineWorld(t, 6);
+    const a = pts[0], b = pts[1];
+    const yaw = Math.atan2(-(b[0] - a[0]), -(b[2] - a[2]));
+    this.app.testTrack(this.exportState(), { x: a[0] + (b[0] - a[0]) * 0.5, y: a[1], z: a[2] + (b[2] - a[2]) * 0.5, yaw });
   }
 
   test() {
@@ -919,6 +980,7 @@ export class EditorSession {
   }
 
   _updatePreview() {
+    if (this.tool === 'select') { this._updatePastePreview(); return; }
     const cand = this._candidate();
     this.highlight.visible = false;
     if (!this.hover) {
@@ -990,23 +1052,28 @@ export class EditorSession {
   update(dt) {
     const input = this.app.input;
     if (this.app.ui.modalOpen) return this._render(dt);
+    if ((input.hit('Escape') || input.padEdges.delete('pause')) && (this.pasting || this.sel)) { this.clearSel(); return this._render(dt); }
     if (input.hit('Escape') || input.padEdges.delete('pause')) { this.app.leaveEditor(); return; }
     const shift = input.down('ShiftLeft', 'ShiftRight');
-    if (input.act('ed.rotate')) this.rotate(shift ? -1 : 1);
-    if (input.act('ed.levelUp')) this.setLevel(this.level + 1);
-    if (input.act('ed.levelDown')) this.setLevel(this.level - 1);
+    const ctrl = input.down('ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight');
+    const selMode = this.tool === 'select' && this.sel && !this.pasting;
+    if (input.act('ed.rotate')) { if (this.pasting) this.rotateClipboard(); else this.rotate(shift ? -1 : 1); }
+    if (input.act('ed.levelUp')) { if (selMode) this.shiftSel(1); else this.setLevel(this.level + 1); }
+    if (input.act('ed.levelDown')) { if (selMode) this.shiftSel(-1); else this.setLevel(this.level - 1); }
+    if (input.act('ed.levelView') && !ctrl) this.toggleLevelView();
+    if (input.act('ed.check')) { this.runCheck(); return; }
     if (input.act('ed.nextPiece')) this.cyclePiece(shift ? -1 : 1);
     if (input.act('ed.surface')) this.cycleSurface();
     if (input.act('ed.mirror')) this.mirror();
     if (input.act('ed.snap')) this.cycleSnap();
     if (input.act('ed.scaleUp')) this.scaleDeco(1.1);
     if (input.act('ed.scaleDown')) this.scaleDeco(0.9);
-    if (input.act('ed.erase')) this.setTool('erase');
+    if (input.act('ed.erase')) { if (selMode) this.deleteSel(); else this.setTool('erase'); }
     if (input.act('ed.recenter')) this.recenter();
     if (input.act('ed.topView')) this.toggleTopView();
     if (input.act('ed.grid')) { this.showGrid = !this.showGrid; this.app.ui.flash(this.showGrid ? 'Grille affichée' : 'Grille masquée', 1.2); }
     if (input.act('ed.help')) { this.app.editorHelp(); return; }
-    if (input.act('ed.test')) { this.test(); return; }
+    if (input.act('ed.test')) { if (shift) this.testHere(); else this.test(); return; }
     for (const p of PALETTE_ORDER) if (p.key && input.hit(p.key)) this.setTool(p.id);
 
     // Déplacement avec les touches de conduite
@@ -1044,8 +1111,15 @@ export class EditorSession {
 
   _render(dt) {
     if (this.needsRebuild) {
+      this.view.focus = this.focusLevel ? this.level : null;
       this.view.rebuild();
       this.needsRebuild = false;
+    }
+    this._updateSelBox();
+    if (this.marksT > 0) {
+      this.marksT -= dt;
+      this.marks.visible = this.marksT > 0 && Math.floor(this.marksT * 3) % 2 === 0;
+      if (this.marksT <= 0) for (const c of [...this.marks.children]) { c.geometry.dispose(); c.material.dispose(); this.marks.remove(c); }
     }
     const ty = this.levelY();
     this.target.y += (ty - this.target.y) * Math.min(1, dt * 8);
@@ -1063,7 +1137,212 @@ export class EditorSession {
     this.app.scenery.update(this.target, cam, Math.min(300, this.dist * 1.4));
   }
 
+  // ---------------------------------------------------------------- Sélection
+  _selectDown(tap = false) {
+    if (!this.hover) return;
+    if (this.pasting) { this.doPaste(); return; }
+    this.selDrag = { cx: this.hover.cx, cz: this.hover.cz };
+    this.sel = normRect(this.selDrag, this.selDrag);
+    if (tap) { this.selDrag = null; this._selInfo(); }
+  }
+
+  _selectMove() {
+    if (!this.selDrag || !this.hover) return;
+    this.sel = normRect(this.selDrag, this.hover);
+  }
+
+  _selectUp() {
+    this.selDrag = null;
+    this._selInfo();
+  }
+
+  _selInfo() {
+    if (!this.sel) return;
+    const n = tilesInRect(this.track, this.sel).length, d = decosInRect(this.track, this.sel).length;
+    this.app.ui.flash(`${n} pièce${n > 1 ? 's' : ''}${d ? `, ${d} décoration${d > 1 ? 's' : ''}` : ''} sélectionnée${n + d > 1 ? 's' : ''} · Ctrl+C / X / V, Suppr, E / C pour monter / descendre`, 3);
+    this._refreshSelBar();
+  }
+
+  selectAll() {
+    if (!this.track.tiles.length) return;
+    this.setTool('select');
+    const xs = this.track.tiles.flatMap((t) => Track.cellsOf(t).map((c) => c[0]));
+    const zs = this.track.tiles.flatMap((t) => Track.cellsOf(t).map((c) => c[1]));
+    this.sel = { x0: Math.min(...xs), z0: Math.min(...zs), x1: Math.max(...xs), z1: Math.max(...zs) };
+    this._selInfo();
+  }
+
+  clearSel() {
+    this.sel = null; this.selDrag = null; this.pasting = false; this.previewKey = '';
+    this._clearPreview();
+    this._refreshSelBar();
+  }
+
+  copySel(silent = false) {
+    if (!this.sel) { this.app.ui.flash('Sélectionne d\'abord une zone (outil Sélection, Q).'); return false; }
+    const clip = copyRect(this.track, this.sel);
+    if (!clip) { this.app.ui.flash('Rien à copier dans cette zone.'); return false; }
+    this.clip = clip;
+    if (!silent) this.app.ui.flash(`Copié : ${clip.tiles.length} pièce(s). Ctrl+V pour coller.`);
+    this._refreshSelBar();
+    return true;
+  }
+
+  cutSel() {
+    if (!this.copySel(true)) return;
+    this.deleteSel(true);
+    this.startPaste();
+    this.app.ui.flash('Coupé : clique pour poser la zone ailleurs (R pour pivoter).', 3);
+  }
+
+  deleteSel(silent = false) {
+    if (!this.sel) return;
+    const tiles = tilesInRect(this.track, this.sel), decos = decosInRect(this.track, this.sel);
+    for (const t of tiles) this.track.remove(t);
+    for (const d of decos) this.track.removeDeco(d);
+    if (!silent) this.app.audio.erase();
+    this._changed();
+    this._commit();
+  }
+
+  shiftSel(d) {
+    if (!this.sel) return;
+    const tiles = tilesInRect(this.track, this.sel), decos = decosInRect(this.track, this.sel);
+    if (!tiles.length && !decos.length) return;
+    if (!shiftLevel(this.track, tiles, decos, d)) { this.app.ui.flash('Impossible : une pièce gêne ou sort des niveaux.'); this.app.audio.error(); return; }
+    this.app.audio.place();
+    this._changed();
+    this._commit();
+  }
+
+  startPaste() {
+    if (!this.clip) { this.app.ui.flash('Presse-papiers vide : copie d\'abord une zone.'); return; }
+    if (this.tool !== 'select') this.setTool('select');
+    this.pasting = true;
+    this.sel = null;
+    this.previewKey = '';
+    this.app.ui.flash('Clique pour coller · R pour pivoter · Échap pour annuler', 2.6);
+    this._refreshSelBar();
+  }
+
+  rotateClipboard() {
+    if (!this.clip) return;
+    this.clip = rotateClip(this.clip);
+    this.previewKey = '';
+    this.app.audio.click();
+  }
+
+  doPaste() {
+    if (!this.clip || !this.hover) return;
+    const res = pasteClip(this.track, this.clip, this.hover.cx, this.hover.cz, this.level);
+    this.app.audio.place();
+    if (res.skipped) this.app.ui.flash(`${res.skipped} pièce(s) ignorée(s) (départ en double ou hors des niveaux).`);
+    this._changed();
+    this._commit();
+  }
+
+  _updateSelBox() {
+    const r = this.sel;
+    this.selBox.visible = !!r && this.tool === 'select' && !this.pasting;
+    if (!this.selBox.visible) return;
+    const h = this.levelY() + 6;
+    this.selBox.scale.set((r.x1 - r.x0 + 1) * CELL, h + 2, (r.z1 - r.z0 + 1) * CELL);
+    this.selBox.position.set((r.x0 + r.x1 + 1) / 2 * CELL, h / 2 - 1, (r.z0 + r.z1 + 1) / 2 * CELL);
+  }
+
+  _updatePastePreview() {
+    this.highlight.visible = false;
+    this.marker.visible = false;
+    this.footprint.visible = !!this.hover && !this.pasting;
+    if (this.hover && !this.pasting) {
+      this.footprint.position.set((this.hover.cx + 0.5) * CELL, 0.06, (this.hover.cz + 0.5) * CELL);
+      this.footprint.scale.set(CELL, 1, CELL);
+    }
+    if (!this.pasting || !this.clip || !this.hover) { this.preview.visible = false; return; }
+    const key = `P${this.hover.cx},${this.hover.cz},${this.level},${this.clip.tiles.length},${this.clip.tiles.map((t) => t.r).join('')},${this.clip.w}`;
+    this.preview.visible = true;
+    if (key === this.previewKey) return;
+    this.previewKey = key;
+    this._clearPreview();
+    const P = placedClip(this.clip, this.hover.cx, this.hover.cz, this.level);
+    let bad = false;
+    for (const t of P.tiles) {
+      if (t.l < 0 || t.l > MAX_LEVEL) { bad = true; continue; }
+      if (this.track.conflicts(Track.normalize(t)).length) bad = true;
+      this.preview.add(buildTileMesh(Track.normalize(t), this.previewMat, this.previewGlow));
+    }
+    for (const d of P.decos.slice(0, 40)) this.preview.add(buildDecoMesh(d, this.previewMat, this.previewGlow));
+    this.previewMat.emissive.set(bad ? '#ff8800' : '#000000');
+    this.previewMat.emissiveIntensity = 0.35;
+  }
+
+  _refreshSelBar() {
+    const bar = document.getElementById('ed-selbar');
+    if (!bar) return;
+    bar.classList.toggle('hidden', this.tool !== 'select');
+    bar.querySelectorAll('[data-sel]').forEach((b) => {
+      const a = b.dataset.sel;
+      b.disabled = (['copy', 'cut', 'del', 'up', 'down'].includes(a) && !this.sel) || (a === 'paste' && !this.clip) || (a === 'rot' && !this.pasting);
+    });
+  }
+
+  selAction(a) {
+    switch (a) {
+      case 'copy': this.copySel(); break;
+      case 'cut': this.cutSel(); break;
+      case 'paste': this.startPaste(); break;
+      case 'rot': this.rotateClipboard(); break;
+      case 'del': this.deleteSel(); break;
+      case 'up': this.shiftSel(1); break;
+      case 'down': this.shiftSel(-1); break;
+      case 'all': this.selectAll(); break;
+      case 'none': this.clearSel(); break;
+      default: break;
+    }
+    this._refreshSelBar();
+  }
+
+  // ---------------------------------------------------------------- Vue par niveau
+  toggleLevelView() {
+    this.focusLevel = !this.focusLevel;
+    this.needsRebuild = true;
+    this.app.ui.flash(this.focusLevel ? `Vue du niveau ${this.level} : les autres niveaux sont estompés` : 'Tous les niveaux affichés', 1.6);
+    const b = document.querySelector('[data-ed="levelview"]');
+    if (b) b.classList.toggle('on', this.focusLevel);
+  }
+
+  // ---------------------------------------------------------------- Vérificateur
+  runCheck() {
+    const issues = checkTrack(this.track);
+    this._markIssues(issues);
+    const err = issues.filter((i) => i.level === 'error'), warn = issues.filter((i) => i.level === 'warn');
+    const li = (i) => `<li class="${i.level}">${i.level === 'error' ? '⛔' : '⚠️'} ${i.msg}${i.tile ? ` <small>(niveau ${i.tile.l})</small>` : ''}</li>`;
+    this.app.ui.modal({
+      title: issues.length ? 'Vérification du circuit' : 'Circuit vérifié',
+      body: issues.length
+        ? `<p>${err.length} problème${err.length > 1 ? 's' : ''}, ${warn.length} avertissement${warn.length > 1 ? 's' : ''}. Les pièces concernées clignotent en rouge (problème) ou orange (avertissement).</p><ul class="check-list">${issues.slice(0, 30).map(li).join('')}</ul>`
+        : '<p>Tout est relié : départ, checkpoints et arrivée sont accessibles, et aucun saut n\'a l\'air impossible. Il reste à le terminer toi-même pour le vérifier et le partager avec des médailles.</p>',
+      actions: [{ label: 'OK', primary: true }],
+    });
+  }
+
+  _markIssues(issues) {
+    for (const c of [...this.marks.children]) { c.geometry.dispose(); c.material.dispose(); this.marks.remove(c); }
+    for (const i of issues) {
+      if (!i.tile) continue;
+      const P = PIECES[i.tile.t];
+      const m = new THREE.Mesh(new THREE.BoxGeometry(P.size * CELL, 3, P.size * CELL),
+        new THREE.MeshBasicMaterial({ color: i.level === 'error' ? '#ff2b4a' : '#ffa21a', transparent: true, opacity: 0.35, depthWrite: false }));
+      m.position.set((i.tile.x + P.size / 2) * CELL, this.levelY(i.tile.l) + 1.4, (i.tile.z + P.size / 2) * CELL);
+      this.marks.add(m);
+    }
+    this.marksT = 9;
+  }
+
   dispose() {
+    for (const c of [...this.marks.children]) { c.geometry.dispose(); c.material.dispose(); }
+    this.marks.removeFromParent();
+    this.selBox.geometry.dispose(); this.selBox.material.dispose(); this.selBox.removeFromParent();
     const el = this.app.renderer.domElement;
     el.removeEventListener('pointerdown', this._h.down);
     window.removeEventListener('pointermove', this._h.move);

@@ -29,6 +29,8 @@ export const KEY_ACTIONS = {
     ['ed.topView', 'Vue de dessus', ['KeyH', '']],
     ['ed.grid', 'Afficher / masquer la grille', ['KeyG', '']],
     ['ed.help', 'Liste des raccourcis', ['F1', '']],
+    ['ed.levelView', 'Vue par niveau (estomper les autres)', ['KeyZ', '']],
+    ['ed.check', 'Vérifier le circuit', ['F2', '']],
   ],
 };
 

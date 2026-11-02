@@ -805,3 +805,20 @@ body.touch kbd { display: none; }
 /* Taille de l'interface (Options > Accessibilité). */
 :root { --ui-scale: 1; }
 #hud, .screen, .overlay, #touch, #editor > * { zoom: var(--ui-scale); }
+
+/* ---- v1.5 : éditeur (sélection, tours, vérificateur) ---- */
+.ed-selbar {
+  position: absolute; top: 64px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 4px; padding: 6px; border-radius: 12px;
+  background: var(--panel); border: 1px solid var(--line); flex-wrap: wrap; justify-content: center;
+}
+.ed-selbar .btn[disabled] { opacity: 0.4; pointer-events: none; }
+.ed-laps { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted, #a99fd0); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px 8px; }
+.ed-laps select { font: inherit; color: var(--text); background: transparent; border: 0; }
+.ed-side .btn.on { background: #5ff2ff33; border-color: #5ff2ff; }
+.check-list { margin: 8px 0 0; padding-left: 4px; list-style: none; max-height: 46vh; overflow: auto; display: grid; gap: 6px; }
+.check-list li { padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); }
+.check-list li.error { border-left: 3px solid #ff2b4a; }
+.check-list li.warn { border-left: 3px solid #ffa21a; }
+.thumb { width: 100%; aspect-ratio: 168 / 104; border-radius: 8px; display: block; margin-bottom: 6px; background: #16122b; image-rendering: auto; }
+@media (max-width: 760px) { .ed-selbar { top: auto; bottom: 120px; } .ed-laps { font-size: 12px; } }

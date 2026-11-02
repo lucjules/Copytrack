@@ -15,6 +15,7 @@ import { BUILTIN_TRACKS, buildBuiltin } from './tracks.js';
 import { Track, hashString, DECORS } from './track.js';
 import { PIECES } from './pieces.js';
 import { VERSION } from './constants.js';
+import { thumbnail } from './editorTools.js';
 import {
   loadSettings, saveSettings, getRecord, listMyTracks, deleteMyTrack, saveMyTrack, newId,
   getEditorDraft, formatTime, purgeOldRecords, clearRecords,
@@ -210,10 +211,11 @@ class App {
     this.showMenu('menu');
   }
 
-  testTrack(state) {
+  testTrack(state, spawn = null) {
     this.editorState = state;
     const track = Track.decode(state.code);
-    this.playTrack(track, { fromEditor: true, trackKey: 'e-' + hashString(state.code), seed: 'editeur-test' });
+    this.playTrack(track, { fromEditor: true, trackKey: 'e-' + hashString(state.code), seed: 'editeur-test', spawn });
+    if (spawn) this.ui.flash('Test depuis la pièce visée : sans checkpoints, médaille ni vérification.', 2.6);
   }
 
   // ------------------------------------------------------------ Écrans
@@ -247,11 +249,21 @@ class App {
         if (has((t) => t.tn)) tags.push('Tunnel');
         if (has((t) => t.nb)) tags.push('Sans bordures');
         if (has((t) => t.t === 'wall')) tags.push('Mur');
+        if (has((t) => t.t === 'bank' || t.t === 'bankBig')) tags.push('Virage relevé');
+        if (has((t) => t.t === 'halfpipe')) tags.push('Demi-tube');
+        if (has((t) => t.t === 'tube')) tags.push('Tube');
+        if (has((t) => t.t === 'cork' || t.t === 'corkL')) tags.push('Tire-bouchon');
+        if (has((t) => PIECES[t.t].kind === 'fork')) tags.push('Bifurcation');
+        if (has((t) => PIECES[t.t].kind === 'ring')) tags.push('Anneaux');
+        if (has((t) => t.s === 'water' || t.s === 'boat')) tags.push('Bateau');
+        if (has((t) => t.s === 'glider')) tags.push('Deltaplane');
+        if ((b.track.laps || 1) > 1) tags.push(`${b.track.laps} tours`);
         if (b.track.decos.some((d) => d.k === 'shard')) tags.push('✦ Secret');
         const card = document.createElement('div');
         card.className = 'card ' + decor;
         card.tabIndex = 0;
         card.innerHTML = `<div class="num">${i + 1}</div>
+          <img class="thumb" alt="" src="${thumbnail(b.track, 'b-' + b.key)}">
           <h3>${esc(b.def.name)}</h3>
           <div class="meta"><span class="diff">${'◆'.repeat(b.def.difficulty)}${'◇'.repeat(5 - b.def.difficulty)}</span> · ${b.track.tiles.length} pièces</div>
           ${tags.length ? `<div class="tags">${tags.map((t) => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
@@ -402,8 +414,9 @@ class App {
       const rec = track ? getRecord('u-' + hashString(track.encode())) : null;
       const card = document.createElement('div');
       card.className = 'card';
-      card.innerHTML = `<h3>${esc(entry.name)}</h3>
-        <div class="meta">${track ? track.tiles.length : '?'} pièces · modifié le ${new Date(entry.updated || Date.now()).toLocaleDateString('fr-FR')}</div>
+      card.innerHTML = `${track ? `<img class="thumb" alt="" src="${thumbnail(track, 'u-' + entry.code.length + '-' + hashString(entry.code))}">` : ''}
+        <h3>${esc(entry.name)}</h3>
+        <div class="meta">${track ? track.tiles.length : '?'} pièces${track && track.laps > 1 ? ` · ${track.laps} tours` : ''} · modifié le ${new Date(entry.updated || Date.now()).toLocaleDateString('fr-FR')}</div>
         <div class="best">${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}</div>
         <div class="actions">
           <button class="btn primary" data-a="play">Jouer</button>
@@ -549,7 +562,9 @@ class App {
       const btn = e.target.closest('[data-action]');
       if (btn) { this.audio.click(); this._action(btn.dataset.action); return; }
       const ed = e.target.closest('[data-ed]');
-      if (ed && this.session instanceof EditorSession) { this.audio.click(); this._editorAction(ed.dataset.ed); }
+      if (ed && this.session instanceof EditorSession) { this.audio.click(); this._editorAction(ed.dataset.ed); return; }
+      const sel = e.target.closest('[data-sel]');
+      if (sel && this.session instanceof EditorSession) { this.audio.click(); this.session.selAction(sel.dataset.sel); }
     });
 
     $('opt-volume').addEventListener('input', (e) => {
@@ -657,6 +672,9 @@ class App {
       case 'lvl-up': ed.setLevel(ed.level + 1); break;
       case 'lvl-down': ed.setLevel(ed.level - 1); break;
       case 'help': this.editorHelp(); break;
+      case 'check': ed.runCheck(); break;
+      case 'testhere': ed.testHere(); break;
+      case 'levelview': ed.toggleLevelView(); break;
       case 'export': this.shareModal(ed.track.encode(), ed.track.name, ed.track); break;
       case 'import': this.importModal(true); break;
       case 'new':

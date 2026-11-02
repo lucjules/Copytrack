@@ -57,7 +57,7 @@ export class RaceSession {
     app.scenery.setTrack(track, opts.seed || this.trackKey || track.name);
 
     this.phys = new CarPhysics(track);
-    this.logic = new RaceLogic(track);
+    this.logic = new RaceLogic(track, { partial: !!opts.spawn });
     this.car = createCar(profile().loadout);
     app.scene.add(this.car.group);
     this.skids = new SkidMarks(app.scene);
@@ -92,7 +92,8 @@ export class RaceSession {
   restart() {
     const app = this.app;
     this.logic.reset();
-    const sp = this.logic.spawnPoint();
+    const sp = this.opts.spawn || this.logic.spawnPoint();
+    if (this.opts.spawn) this.logic.respawn = { ...sp, vehicle: 'car', grav: 1 };
     this.phys.place(sp.x, sp.y, sp.z, sp.yaw);
     this.car.setVehicle('car', true);
     this.collectedShards = new Set();
@@ -304,9 +305,19 @@ export class RaceSession {
       if (!this.demo) {
         app.audio.checkpoint(diff == null ? null : diff <= 0);
         app.ui.hud.split(diff, ev.steps * DT);
-        app.ui.hud.checkpoints(this.logic.collected.size, this.logic.cps.length);
+        app.ui.hud.checkpoints(this.logic.collected.size, this.logic.cps.length, this.logic.lap, this.logic.laps);
       }
       app.particles.burst(p.x, p.y + 2, p.z, 30, 12, 0.9, 0.8, '#ffbf3c', 4, 2);
+    } else if (ev.type === 'lap') {
+      let diff = null;
+      if (this.record && this.record.splits && this.record.splits[ev.index - 1] != null) diff = (ev.steps - this.record.splits[ev.index - 1]) * DT;
+      if (!this.demo) {
+        app.audio.checkpoint(diff == null ? null : diff <= 0);
+        app.ui.hud.split(diff, ev.steps * DT);
+        app.ui.hud.message(ev.lap === ev.laps ? 'Dernier tour !' : `Tour ${ev.lap} / ${ev.laps}`, 1.6);
+        app.ui.hud.checkpoints(0, this.logic.cps.length, ev.lap, ev.laps);
+      }
+      app.particles.burst(p.x, p.y + 2, p.z, 40, 14, 1, 0.8, '#ff4f9a', 4, 2);
     } else if (ev.type === 'missing') {
       if (!this.demo) {
         app.ui.hud.message(`Il manque ${ev.remaining} checkpoint${ev.remaining > 1 ? 's' : ''} !`, 1.6);
@@ -325,7 +336,7 @@ export class RaceSession {
     this.state = 'finished';
     this.finishT = 0;
     const prev = this.record;
-    const isRecord = !prev || time < prev.time - 1e-9;
+    const isRecord = (!prev || time < prev.time - 1e-9) && !this.opts.spawn;
     if (isRecord && this.trackKey) {
       const ghost = new Float32Array(this.ghostRec);
       const rec = {
@@ -341,7 +352,9 @@ export class RaceSession {
     const medal = medalFor(time, this.medals);
     const prevMedal = prev ? medalFor(prev.time, this.medals) : null;
     let reward = null;
-    if (this.opts.fromEditor) {
+    if (this.opts.fromEditor && this.opts.spawn) {
+      // Test partiel : pas de vérification ni de médaille.
+    } else if (this.opts.fromEditor) {
       app.onEditorTestFinished(time, this.track);
     } else if (this.medals) {
       const tier = medal ? MEDALS.indexOf(medal) : -1;

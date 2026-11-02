@@ -71,8 +71,9 @@ class Hud {
     this._splitT = setTimeout(() => { e.style.opacity = '0'; }, 2600);
   }
 
-  checkpoints(n, m) {
-    this.el.cp.textContent = m ? `◆ ${n} / ${m}` : '◆ —';
+  checkpoints(n, m, lap = 0, laps = 1) {
+    const lp = laps > 1 ? ` · Tour ${lap} / ${laps}` : '';
+    this.el.cp.textContent = (m ? `◆ ${n} / ${m}` : '◆ —') + lp;
   }
 
   speed(kmh, boost) {

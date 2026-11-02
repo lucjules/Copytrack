@@ -35,6 +35,7 @@ export class Track {
     this.decos = [];
     this.index = new Map();
     this.version = 0;
+    this.laps = 1;    // nombre de tours (circuit fermé)
     this.vt = 0;      // temps de vérification (secondes) de l'auteur
     this.vh = '';     // signature du circuit au moment de la vérification
     for (const t of tiles) this.add(t);
@@ -162,6 +163,7 @@ export class Track {
     this.decos = [];
     this.index.clear();
     this.vt = 0; this.vh = '';
+    this.laps = 1;
     this.version++;
   }
 
@@ -250,7 +252,7 @@ export class Track {
       .sort()
       .join('|');
     const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}`).join('|');
-    return hashString(this.decor + '#' + parts + '#' + d);
+    return hashString(this.decor + '#' + parts + '#' + d + (this.laps > 1 ? '#L' + this.laps : ''));
   }
 
   get verified() {
@@ -275,6 +277,7 @@ export class Track {
     t.decor = this.decor;
     t.decos = this.decos.map((d) => ({ ...d }));
     t.vt = this.vt; t.vh = this.vh;
+    t.laps = this.laps;
     return t;
   }
 
@@ -293,6 +296,7 @@ export class Track {
     ]);
     const data = { v: 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
     if (decos.length) data.o = decos;
+    if (this.laps > 1) data.lp = this.laps;
     if (this.verified) { data.vt = this.vt; data.vh = this.vh; }
     return 'SHW3:' + b64encode(JSON.stringify(data));
   }
@@ -331,6 +335,7 @@ export class Track {
         tr.addDeco({ k, x: o[1], y: o[2], z: o[3], ry: o[4], s: o[5], c: o[6], u });
       }
     }
+    tr.laps = Math.max(1, Math.min(9, data.lp | 0 || 1));
     if (data.vt > 0 && data.vh) { tr.vt = +data.vt; tr.vh = String(data.vh); }
     return tr;
   }

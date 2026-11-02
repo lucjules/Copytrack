@@ -684,7 +684,22 @@ export class TrackView {
     this.disposeMeshes();
     const gb = new GeoBuilder();
     const glow = new GeoBuilder();
-    for (const tile of this.track.tiles) buildTileInto(gb, glow, tile, this.track);
+    // Vue par niveau (éditeur) : les pièces des autres niveaux sont dessinées estompées.
+    const dimG = new GeoBuilder(), dimGlow = new GeoBuilder();
+    const focus = this.focus;
+    for (const tile of this.track.tiles) {
+      const P = PIECES[tile.t];
+      const hi = tile.l + Math.max(P.rise || 0, 0) + (P.clearance ? 1 : 0);
+      const dim = focus != null && !(focus >= tile.l - 0.01 && focus <= hi + 0.01);
+      if (dim) buildTileInto(dimG, dimGlow, tile, this.track);
+      else buildTileInto(gb, glow, tile, this.track);
+    }
+    if (!dimG.empty) {
+      if (!this.dimMat) this.dimMat = new THREE.MeshBasicMaterial({ color: '#8c90b8', transparent: true, opacity: 0.16, depthWrite: false });
+      const m = new THREE.Mesh(dimG.build(), this.dimMat);
+      this.group.add(m);
+      if (!dimGlow.empty) this.group.add(new THREE.Mesh(dimGlow.build(), this.dimMat));
+    }
     for (const d of this.track.decos) {
       if (d.k === 'plaque') {
         const mesh = createPlaque(d);
@@ -716,6 +731,7 @@ export class TrackView {
 
   dispose() {
     this.disposeMeshes();
+    if (this.dimMat) this.dimMat.dispose();
     this.group.removeFromParent();
   }
 }
