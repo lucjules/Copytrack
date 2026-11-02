@@ -114,7 +114,7 @@ export const BUILTIN_TRACKS = [
   },
   {
     id: 'temple', name: 'Temple Perdu', decor: 'jungle', difficulty: 4,
-    script: 'start B S2 R S L S2# R# S# L# S2 C S2 B S2 QU WA2 CR S2 R S L S2 D2 S2 C S L S R S2 finish', medals: { cristal: 22.9, or: 24.1, argent: 27.8, bronze: 32.6 },
+    script: 'start B S2 R S L S2# R# S# L# S2 C S2 B S2 QU WA2 CR S2 R S L S2 D2 S2 C S L S R S2 finish', medals: { cristal: 23.1, or: 24.3, argent: 27.9, bronze: 32.8 },
   },
   {
     id: 'serpent', name: 'Le Serpent', decor: 'jungle', difficulty: 5,
@@ -130,7 +130,7 @@ export const BUILTIN_TRACKS = [
   },
   {
     id: 'tours', name: 'Tours Jumelles', decor: 'city', difficulty: 4,
-    script: 'start B S2 R S L S2 B S2 QU WA CR S2 C S R S L S2 D2 S L S R S2 B S2 QU WA CR S2 C S2 R L S2 finish', medals: { cristal: 24.8, or: 26.1, argent: 30, bronze: 35.3 },
+    script: 'start B S2 R S L S2 B S2 QU WA CR S2 C S R S L S2 D2 S L S R S2 B S2 QU WA CR S2 C S2 R L S2 finish', medals: { cristal: 24.8, or: 26.1, argent: 30, bronze: 35.2 },
   },
   {
     id: 'metro', name: 'Métro Aérien', decor: 'city', difficulty: 3,
@@ -138,7 +138,7 @@ export const BUILTIN_TRACKS = [
   },
   {
     id: 'viaduc', name: 'Viaduc Vertical', decor: 'city', difficulty: 5,
-    script: 'start B S2 R S L S2 B S2 QU WA2 CR S2 C S2 B S OB S R S L D2 S2 B S OD S2 C S L R S2.g40 S2 S.g100 S2 finish', medals: { cristal: 31.4, or: 32.8, argent: 37.7, bronze: 44.3 },
+    script: 'start B S2 R S L S2 B S2 QU WA2 CR S2 C S2 B S OB S R S L D2 S2 B S OD S2 C S L R S2.g40 S2 S.g100 S2 finish', medals: { cristal: 31.4, or: 32.8, argent: 37.8, bronze: 44.3 },
   },
   {
     id: 'hyper', name: 'Hyperboucle', decor: 'city', difficulty: 4,

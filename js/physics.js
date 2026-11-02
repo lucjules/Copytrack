@@ -47,7 +47,9 @@ export const CAR = {
   snap: 0.7,
   step: 1.6,
   launch: 9.5,        // vitesse normale au-delà de laquelle on décolle
-  lipHop: 1.2,       // hauteur du petit saut en haut d'un L (m)
+  lipHopMin: 2,      // saut en haut d'un L : hauteur mini (m)
+  lipHopMax: 4,      // hauteur maxi (m), atteinte vers 180 km/h
+  lipHopK: 600,      // hauteur = vitesse² / lipHopK, bornée
   bounce: 14,         // vitesse verticale donnée par un revêtement Rebond (100 %)
   wind: 20,           // accélération latérale du vent à 100 %
   radius: 1.0,
@@ -651,7 +653,9 @@ export class CarPhysics {
     if (tile.t === 'crest90' && R.dir === 1) {
       if (uBefore < rib.lipU && R.u >= rib.lipU && R.vs > 3) {
         this._ribPlace(R);
-        this.vel.y += Math.sqrt(2 * this.g * CAR.lipHop);
+        // Hauteur du saut selon la vitesse : ~2 m en arrivant doucement, ~4 m à fond.
+        const hop = clamp((R.vs * R.vs) / CAR.lipHopK, CAR.lipHopMin, CAR.lipHopMax);
+        this.vel.y += Math.sqrt(2 * this.g * hop);
         this._ribDetach();
         return;
       }
