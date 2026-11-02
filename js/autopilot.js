@@ -50,7 +50,8 @@ export class Autopilot {
     this._progress(phys);
     if (phys.rib) {
       const R = phys.rib;
-      return { throttle: true, brake: false, steer: Math.max(-1, Math.min(1, -R.dl * 0.35 * R.dir)), drift: false };
+      const st = -((R.dl * 7 + R.vl * 5) / 26) * R.dir;
+      return { throttle: true, brake: false, steer: Math.max(-1, Math.min(1, st)), drift: false };
     }
     const path = this.path, p = phys.pos;
     const v = Math.max(0, phys.fwdSpeed);
