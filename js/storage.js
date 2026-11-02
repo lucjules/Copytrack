@@ -29,7 +29,13 @@ export const DEFAULT_SETTINGS = {
 };
 
 export function loadSettings() {
-  return { ...DEFAULT_SETTINGS, ...read('settings', {}) };
+  const saved = read('settings', {});
+  return {
+    ...DEFAULT_SETTINGS,
+    ...saved,
+    keys: { ...(saved.keys || {}) },
+    pad: { ...(saved.pad || {}) },
+  };
 }
 
 export function saveSettings(s) {
@@ -37,14 +43,34 @@ export function saveSettings(s) {
 }
 
 // ---- Records -------------------------------------------------------------
+// v1.1 : pistes plus larges et physique revue => les records v1.0 (préfixe
+// "rec.") ne sont plus comparables. On utilise "rec2." et on purge l'ancien.
+const REC = 'rec2.';
+
+export function purgeOldRecords() {
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(PREFIX + 'rec.'))
+      .forEach((k) => localStorage.removeItem(k));
+  } catch { /* stockage indisponible */ }
+}
+
+export function clearRecords() {
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(PREFIX + 'rec'))
+      .forEach((k) => localStorage.removeItem(k));
+  } catch { /* stockage indisponible */ }
+}
+
 export function getRecord(trackKey) {
-  return read('rec.' + trackKey, null);
+  return read(REC + trackKey, null);
 }
 
 export function saveRecord(trackKey, rec) {
-  if (!write('rec.' + trackKey, rec)) {
+  if (!write(REC + trackKey, rec)) {
     // Quota dépassé : on garde le temps sans le fantôme.
-    write('rec.' + trackKey, { ...rec, ghost: null });
+    write(REC + trackKey, { ...rec, ghost: null });
   }
 }
 

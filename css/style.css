@@ -65,7 +65,7 @@ html, body {
   background: linear-gradient(90deg, rgba(23, 15, 46, 0.86) 0%, rgba(23, 15, 46, 0.45) 40%, rgba(23, 15, 46, 0) 70%);
 }
 
-#tracks, #mytracks, #options {
+#tracks, #mytracks, #options, #controls {
   background: rgba(23, 15, 46, 0.72);
   backdrop-filter: blur(6px);
 }
@@ -471,6 +471,7 @@ kbd {
   bottom: 44px;
   transform: translateX(-50%);
   display: flex;
+  flex-direction: column;
   gap: 6px;
   padding: 8px;
   background: var(--panel);
@@ -594,4 +595,89 @@ body.touch .hud-br { bottom: 120px; }
   .hud-hint { display: none; }
   .btn.big { font-size: 17px; padding: 11px 16px; }
   .ed-top .ed-group .btn { padding: 7px 9px; font-size: 13px; }
+}
+
+/* ---------- v1.1 ---------- */
+.pal-row { display: flex; gap: 6px; align-items: center; }
+.pal-row.surf .piece-btn { width: 64px; min-width: 64px; padding: 2px 2px 4px; }
+.pal-row.surf .piece-btn svg { width: 34px; height: 34px; }
+.pal-label { font-size: 11px; color: var(--muted); writing-mode: vertical-rl; transform: rotate(180deg); text-transform: uppercase; letter-spacing: 0.1em; }
+
+.ed-select {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.track-group { margin: 6px 0 22px; }
+.track-group h3.group-title { margin: 0 0 12px; font-style: italic; font-size: 20px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+.track-group h3.group-title i { width: 12px; height: 12px; border-radius: 3px; transform: rotate(45deg); display: inline-block; }
+.card.polar { background: linear-gradient(160deg, rgba(20, 44, 84, 0.9), rgba(28, 20, 58, 0.82)); }
+.card .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.card .tag { font-size: 11px; padding: 2px 7px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); color: var(--muted); }
+
+.tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.tab {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+.tab.on { background: var(--grad); color: #1a1030; border-color: transparent; font-weight: 700; }
+.bind-hint { color: var(--muted); margin: 0 0 12px; }
+.bind-list { display: grid; grid-template-columns: 1fr auto auto; gap: 8px 10px; align-items: center; max-width: 640px; }
+.bind-list .lbl { font-weight: 500; }
+.bind-key {
+  font: inherit;
+  min-width: 120px;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.bind-key:hover { border-color: rgba(255, 255, 255, 0.4); }
+.bind-key.wait { border-color: var(--cyan); color: var(--cyan); animation: blink 0.8s infinite; }
+.bind-key .x { opacity: 0.5; padding: 0 2px; }
+.bind-key .x:hover { opacity: 1; color: var(--bad); }
+.bind-key.conflict { border-color: var(--amber); }
+@keyframes blink { 50% { opacity: 0.55; } }
+.kbd-list { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: 14px; }
+.kbd-list b { color: var(--cyan); white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .pal-row.surf .pal-label { display: none; }
+  .bind-key { min-width: 90px; }
+}
+
+/* Petits écrans (téléphone en paysage) */
+body.touch .t-top { top: auto; right: auto; left: 12px; bottom: 112px; flex-direction: row; }
+@media (max-height: 500px) {
+  .ed-top { gap: 5px; top: 6px; left: 6px; right: 6px; }
+  .ed-top .btn { padding: 5px 8px; font-size: 13px; }
+  .ed-top .btn kbd { display: none; }
+  .ed-name { font-size: 14px; padding: 5px 8px; min-width: 90px; }
+  .ed-select { font-size: 13px; padding: 5px 6px; }
+  .ed-status, .ed-help { display: none; }
+  .ed-palette { left: 6px; right: 70px; bottom: 6px; transform: none; max-width: none; padding: 5px; gap: 4px; overflow-x: auto; }
+  .pal-row { gap: 4px; }
+  .piece-btn, .pal-row.surf .piece-btn { width: 54px; min-width: 54px; font-size: 9px; padding: 2px 1px 3px; }
+  .piece-btn svg, .pal-row.surf .piece-btn svg { width: 28px; height: 28px; }
+  .piece-btn .k { display: none; }
+  .pal-label { display: none; }
+  .ed-side { right: 6px; padding: 5px; gap: 4px; top: auto; bottom: 6px; transform: none; }
+  .ed-side .btn.icon { min-width: 34px; padding: 5px 6px; }
+  .ed-level { font-size: 12px; }
+  .hud-tr .medal-list { display: none; }
+  .screen { padding: 14px 16px; }
 }

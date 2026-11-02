@@ -8,7 +8,7 @@ import { RaceLogic } from '../js/raceLogic.js';
 import { Autopilot } from '../js/autopilot.js';
 import { Track } from '../js/track.js';
 import { PIECES } from '../js/pieces.js';
-import { DT } from '../js/constants.js';
+import { DT, CELL } from '../js/constants.js';
 
 const args = process.argv.slice(2);
 const showMap = args.includes('--map');
@@ -16,12 +16,13 @@ const only = args.filter((a) => /^\d+$/.test(a)).map(Number);
 
 const GLYPH = {
   straight: ['║', '═'], curve: ['╗', '╝'], bigcurve: ['◜', '◝'], slope: ['^', '>'], steep: ['⇑', '⇒'],
-  boost: ['»', '»'], checkpoint: ['C', 'C'], start: ['S', 'S'], finish: ['F', 'F'], platform: ['#', '#'], ice: ['~', '~'],
+  checkpoint: ['C', 'C'], start: ['S', 'S'], finish: ['F', 'F'], platform: ['#', '#'], loop: ['O', 'O'], loopL: ['Ø', 'Ø'],
 };
+const SURF = { ice: '~', boost: '»', bounce: 'j', sand: 's', magnet: 'm' };
 
 function map(track) {
   const b = track.bounds();
-  const x0 = b.minX / 20, x1 = b.maxX / 20, z0 = b.minZ / 20, z1 = b.maxZ / 20;
+  const x0 = b.minX / CELL, x1 = b.maxX / CELL, z0 = b.minZ / CELL, z1 = b.maxZ / CELL;
   const lines = [];
   for (let z = z0; z < z1; z++) {
     let row = '';
@@ -29,7 +30,7 @@ function map(track) {
       const ts = track.tilesAt(x, z);
       if (!ts.length) { row += ' . '; continue; }
       const t = ts[ts.length - 1];
-      const g = GLYPH[t.t][t.r % 2];
+      const g = t.s ? SURF[t.s] : GLYPH[t.t][t.r % 2];
       row += (ts.length > 1 ? '*' : ' ') + g + (t.l ? String(t.l) : ' ');
     }
     lines.push(row);
@@ -44,16 +45,18 @@ function run(track, maxTime = 240) {
   phys.place(sp.x, sp.y, sp.z, sp.yaw);
   const bot = new Autopilot(track.path);
   bot.reset(phys);
-  let respawns = 0, stuck = 0, maxSpeed = 0, airMax = 0, lastIdx = 0;
+  let respawns = 0, stuck = 0, maxSpeed = 0, airMax = 0, lastIdx = 0, loops = 0, falls = 0;
   const steps = Math.round(maxTime / DT);
   for (let i = 0; i < steps; i++) {
     const inp = bot.control(phys);
     phys.step(inp);
     maxSpeed = Math.max(maxSpeed, phys.speed);
     airMax = Math.max(airMax, phys.airTime);
+    if (phys.ev.loopOut) loops++;
+    if (phys.ev.loopFall) falls++;
     const ev = logic.update(phys);
     if (ev && ev.type === 'finish') {
-      return { ok: true, time: logic.time, respawns, maxSpeed, airMax };
+      return { ok: true, time: logic.time, respawns, maxSpeed, airMax, loops, falls };
     }
     // Chute au sol : réapparition au dernier checkpoint.
     const fell = phys.grounded && phys.surfType === 'ground';
@@ -92,6 +95,7 @@ BUILTIN_TRACKS.forEach((def, i) => {
   console.log(`#${i + 1} ${def.name.padEnd(22)} ${String(tiles).padStart(3)} pièces, ${cps} CP  ` +
     (res.ok ? `OK ${res.time.toFixed(3)} s` : `ÉCHEC ${res.reason}`) +
     (res.respawns ? `  (${res.respawns} réapparitions)` : '') +
+    (res.loops || res.falls ? `  loopings ${res.loops}${res.falls ? ` (chutes ${res.falls})` : ''}` : '') +
     (res.maxSpeed ? `  vmax ${(res.maxSpeed * 3.6).toFixed(0)} km/h  air ${res.airMax.toFixed(2)} s` : '') +
     (errs.length ? '  ' + errs.join(' ') : '') + `  code ${code.length} car.`);
   if (showMap) console.log(map(track) + '\n');

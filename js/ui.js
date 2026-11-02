@@ -1,6 +1,7 @@
 // Interface DOM : écrans, HUD, fenêtres modales, notifications.
 import { formatTime } from './storage.js';
 import { MEDALS, medalFor } from './race.js';
+import { keyLabel } from './input.js';
 
 export const $ = (id) => document.getElementById(id);
 
@@ -12,7 +13,7 @@ export function medalIcon(m) {
   return `<i class="medal ${m ? m.id : 'none'}" title="${m ? m.label : 'Aucune médaille'}"></i>`;
 }
 
-const SCREENS = ['loading', 'menu', 'tracks', 'mytracks', 'options'];
+const SCREENS = ['loading', 'menu', 'tracks', 'mytracks', 'options', 'controls'];
 
 class Hud {
   constructor() {
@@ -41,6 +42,9 @@ class Hud {
     e.center.textContent = '';
     e.msg.classList.remove('on');
     this.time(0);
+    const inp = session.app.input;
+    const k = (id) => (inp.bindings[id] || []).filter(Boolean).map(keyLabel).join(' / ') || '—';
+    e.hint.textContent = `${k('accelerate')} ${k('brake')} ${k('left')} ${k('right')} · ${k('drift')} : dérapage · ${k('respawn')} : dernier checkpoint · ${k('restart')} : recommencer · ${k('camera')} : caméra · ${k('pause')} : pause`;
     e.hint.style.opacity = '1';
     clearTimeout(this._hintT);
     this._hintT = setTimeout(() => { e.hint.style.opacity = '0'; }, 7000);

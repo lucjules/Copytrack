@@ -34,7 +34,7 @@
         <button data-action="help" class="btn big subtle">Commandes</button>
       </nav>
     </div>
-    <footer class="menu-foot">Shardway · un jeu de course original · propulsé par three.js</footer>
+    <footer class="menu-foot" id="menu-foot">Shardway · un jeu de course original · propulsé par three.js</footer>
   </section>
 
   <!-- Sélection de circuit -->
@@ -43,7 +43,7 @@
       <button class="btn" data-action="back">← Retour</button>
       <h2>Circuits</h2>
     </header>
-    <div id="track-list" class="card-grid"></div>
+    <div id="track-list"></div>
   </section>
 
   <!-- Mes circuits -->
@@ -70,8 +70,25 @@
       <label><span>Afficher le fantôme du record</span><input type="checkbox" id="opt-ghost"></label>
       <label><span>Nom du pilote</span><input type="text" id="opt-name" maxlength="20"></label>
       <div class="opt-row"><span>Couleur de la voiture</span><div id="opt-colors" class="swatches"></div></div>
+      <div class="opt-row"><span>Touches du clavier et de la manette</span><button class="btn primary" data-action="controls">Personnaliser les commandes</button></div>
       <button class="btn subtle" data-action="reset-records">Effacer tous les records</button>
     </div>
+  </section>
+
+  <!-- Commandes -->
+  <section id="controls" class="screen hidden">
+    <header class="screen-head">
+      <button class="btn" data-action="options">← Options</button>
+      <h2>Commandes</h2>
+      <button class="btn subtle" data-action="reset-keys">Rétablir par défaut</button>
+    </header>
+    <div class="tabs" id="bind-tabs">
+      <button class="tab on" data-tab="race">Course</button>
+      <button class="tab" data-tab="editor">Éditeur</button>
+      <button class="tab" data-tab="pad">Manette</button>
+    </div>
+    <p class="bind-hint" id="bind-hint">Clique sur une case puis appuie sur la touche voulue (Échap pour annuler, × pour vider).</p>
+    <div class="panel bind-list" id="bind-list"></div>
   </section>
 
   <!-- HUD de course -->
@@ -127,6 +144,7 @@
     <div class="ed-top">
       <button class="btn" data-ed="menu">← Menu</button>
       <input id="ed-name" class="ed-name" maxlength="40" spellcheck="false" aria-label="Nom du circuit">
+      <select id="ed-decor" class="ed-select" title="Décor du circuit" aria-label="Décor du circuit"></select>
       <div class="ed-group">
         <button class="btn icon" data-ed="undo" title="Annuler (Ctrl+Z)">↶</button>
         <button class="btn icon" data-ed="redo" title="Rétablir (Ctrl+Y)">↷</button>
@@ -145,9 +163,10 @@
       <div id="ed-level" class="ed-level">Niv. 0</div>
       <button class="btn icon" data-ed="lvl-down" title="Descendre (C / Page↓)">▼</button>
       <button class="btn icon" data-ed="rotate" title="Pivoter (R)">⟳</button>
+      <button class="btn icon" data-ed="help" title="Raccourcis (F1 ou ?)">?</button>
     </div>
     <div class="ed-status" id="ed-status"></div>
-    <div class="ed-help">Clic : poser · Clic droit : supprimer · Clic droit glissé : orbiter · Clic molette glissé : déplacer · Molette : zoom · ZQSD / flèches : déplacer · R : pivoter · E / C : niveau · 1–0 : pièces · Alt+clic : pipette</div>
+    <div class="ed-help" id="ed-help"></div>
   </div>
 
   <!-- Fenêtre modale générique -->

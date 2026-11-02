@@ -1,9 +1,15 @@
 // Modèle de circuit : liste de pièces posées sur une grille, index spatial,
 // requêtes de surface pour la physique, sérialisation en code partageable.
-import { CELL, DIRS, ROAD_HALF, MAX_LEVEL } from './constants.js';
+import { CELL, DIRS, ROAD_HALF, RAIL_W, SLAB_T, MAX_LEVEL, LEVEL_H } from './constants.js';
 import {
-  PIECES, PIECE_ORDER, toLocal, sampleLocal, rotVec, centerlineWorld,
+  PIECES, PIECE_ORDER, SURFACE_ORDER, LEGACY_SURFACE, surfaceAllowed,
+  toLocal, sampleLocal, rotVec, centerlineWorld,
 } from './pieces.js';
+
+export const DECORS = {
+  desert: { label: 'Désert crépuscule' },
+  polar: { label: 'Nuit polaire' },
+};
 
 const EMPTY = Object.freeze([]);
 const key = (x, z) => ((x + 4096) << 13) | (z + 4096);
@@ -15,6 +21,7 @@ export class Track {
   constructor(name = 'Nouveau circuit', tiles = []) {
     this.name = name;
     this.author = '';
+    this.decor = 'desert';
     this.tiles = [];
     this.index = new Map();
     this.version = 0;
@@ -28,10 +35,19 @@ export class Track {
     return out;
   }
 
-  // Plage de niveaux occupée (inclusive). Les portiques réservent un niveau de plus.
+  // Plage de niveaux occupée (inclusive). Portiques et loopings réservent de la hauteur.
   static range(t) {
     const p = PIECES[t.t];
     return [t.l, t.l + p.rise + (p.clearance || 0)];
+  }
+
+  // Convertit une pièce (éventuellement au format v1.0) en pièce v1.1.
+  static normalize(t) {
+    let type = t.t, s = t.s || '';
+    if (LEGACY_SURFACE[type]) { s = LEGACY_SURFACE[type]; type = 'straight'; }
+    if (!PIECES[type]) throw new Error('Pièce inconnue : ' + type);
+    if (!surfaceAllowed(type, s)) s = '';
+    return { t: type, x: t.x | 0, z: t.z | 0, l: Math.max(0, Math.min(MAX_LEVEL, t.l | 0)), r: t.r & 3, s };
   }
 
   tilesAt(x, z) {
@@ -51,8 +67,7 @@ export class Track {
   }
 
   add(t) {
-    if (!PIECES[t.t]) throw new Error('Pièce inconnue : ' + t.t);
-    const tile = { t: t.t, x: t.x | 0, z: t.z | 0, l: Math.max(0, Math.min(MAX_LEVEL, t.l | 0)), r: t.r & 3 };
+    const tile = Track.normalize(t);
     this.tiles.push(tile);
     for (const [x, z] of Track.cellsOf(tile)) {
       const k = key(x, z);
@@ -77,6 +92,13 @@ export class Track {
       if (!arr.length) this.index.delete(k);
     }
     this.version++;
+  }
+
+  setSurface(tile, s) {
+    if (!surfaceAllowed(tile.t, s) || tile.s === s) return false;
+    tile.s = s;
+    this.version++;
+    return true;
   }
 
   clear() {
@@ -113,15 +135,15 @@ export class Track {
       minZ = Math.min(minZ, t.z * CELL);
       maxX = Math.max(maxX, (t.x + s) * CELL);
       maxZ = Math.max(maxZ, (t.z + s) * CELL);
-      maxL = Math.max(maxL, t.l + PIECES[t.t].rise);
+      maxL = Math.max(maxL, Track.range(t)[1]);
     }
-    return { minX, maxX, minZ, maxZ, maxY: maxL * 4 };
+    return { minX, maxX, minZ, maxZ, maxY: maxL * LEVEL_H };
   }
 
   // Surface roulable la plus haute sous (x, y + step, z). Le sol est à y = 0.
   surfaceAt(x, y, z, out, step = 1.6) {
     out.h = 0; out.nx = 0; out.ny = 1; out.nz = 0;
-    out.tile = null; out.type = 'ground'; out.lx = 0; out.lz = 0;
+    out.tile = null; out.type = 'ground'; out.mod = ''; out.lx = 0; out.lz = 0;
     const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
     let best = -Infinity;
     for (const tile of this.tilesAt(cx, cz)) {
@@ -136,41 +158,67 @@ export class Track {
       rotVec(tile.r, S.nx, S.nz, W);
       out.nx = W.x; out.ny = S.ny; out.nz = W.z;
       out.tile = tile;
-      out.type = p.special === 'ice' ? 'ice' : 'road';
+      out.type = 'road';
+      out.mod = tile.s || '';
       out.lx = L.lx; out.lz = L.lz;
     }
     return out;
   }
 
+  // Dessous de dalle le plus bas au-dessus de yMin (pour la caméra sous les ponts).
+  ceilingAt(x, z, yMin) {
+    const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
+    let best = Infinity;
+    for (const tile of this.tilesAt(cx, cz)) {
+      if (PIECES[tile.t].kind === 'loop') continue;
+      toLocal(tile, x, z, L);
+      sampleLocal(tile, L.lx, L.lz, S);
+      if (!S.inFootprint) continue;
+      if (PIECES[tile.t].kind !== 'area' && Math.abs(S.d) > ROAD_HALF + RAIL_W + 0.5) continue;
+      const under = S.h - SLAB_T;
+      if (under > yMin && under < best) best = under;
+    }
+    return best;
+  }
+
   clone() {
     const t = new Track(this.name, this.tiles);
     t.author = this.author;
+    t.decor = this.decor;
     return t;
   }
 
   // ---- Sérialisation -----------------------------------------------------
   encode() {
     const arr = [];
-    for (const t of this.tiles) arr.push(PIECE_ORDER.indexOf(t.t), t.x, t.z, t.l, t.r);
-    const json = JSON.stringify({ v: 1, n: this.name, a: this.author || '', t: arr });
-    return 'SHW1:' + b64encode(json);
+    for (const t of this.tiles) {
+      arr.push(PIECE_ORDER.indexOf(t.t), t.x, t.z, t.l, t.r, Math.max(0, SURFACE_ORDER.indexOf(t.s || '')));
+    }
+    const json = JSON.stringify({ v: 2, n: this.name, a: this.author || '', d: this.decor, t: arr });
+    return 'SHW2:' + b64encode(json);
   }
 
+  // Accepte les codes v1.0 (SHW1) et v1.1 (SHW2), bruts ou dans un lien.
   static decode(code) {
     let s = String(code || '').trim();
     const hash = s.indexOf('#t=');
     if (hash >= 0) s = s.slice(hash + 3);
     s = decodeURIComponent(s);
-    if (s.startsWith('SHW1:')) s = s.slice(5);
+    if (/^SHW\d:/.test(s)) s = s.slice(5);
     const data = JSON.parse(b64decode(s));
-    if (!data || !Array.isArray(data.t) || data.t.length % 5) throw new Error('Code de circuit invalide');
+    const stride = data && data.v >= 2 ? 6 : 5;
+    if (!data || !Array.isArray(data.t) || data.t.length % stride) throw new Error('Code de circuit invalide');
     const tr = new Track(String(data.n || 'Circuit importé').slice(0, 40));
     tr.author = String(data.a || '').slice(0, 30);
-    for (let i = 0; i < data.t.length; i += 5) {
+    tr.decor = DECORS[data.d] ? data.d : 'desert';
+    for (let i = 0; i < data.t.length; i += stride) {
       const type = PIECE_ORDER[data.t[i]];
       if (!type) continue;
-      const tile = { t: type, x: data.t[i + 1], z: data.t[i + 2], l: data.t[i + 3], r: data.t[i + 4] };
-      if (tr.conflicts(tile).length) continue;
+      const tile = {
+        t: type, x: data.t[i + 1], z: data.t[i + 2], l: data.t[i + 3], r: data.t[i + 4],
+        s: stride === 6 ? SURFACE_ORDER[data.t[i + 5]] || '' : '',
+      };
+      if (tr.conflicts(Track.normalize(tile)).length) continue;
       tr.add(tile);
     }
     return tr;
@@ -203,24 +251,30 @@ export function hashString(s) {
 }
 
 // ---- Construction "à la tortue" -------------------------------------------
-// Permet de décrire un circuit comme une suite d'instructions :
-//   start finish        départ / arrivée
-//   S3                  3 lignes droites      B  accélérateur   C checkpoint
-//   I                   verglas               P  plateforme
+// Décrit un circuit comme une suite d'instructions :
+//   start finish        départ / arrivée            C  checkpoint
+//   S3                  3 lignes droites            P  plateforme
 //   R / L               virage serré droite / gauche
 //   RR / LL             grand virage droite / gauche (2x2)
 //   U / D               pente montante / descendante
 //   UU / DD             tremplin montant / descendant (2 niveaux)
-//   G2                  vide de 2 cases (saut)
-//   V-2                 change le niveau sans poser de pièce
-// Le chemin central est mémorisé (pilote automatique, démo du menu).
+//   O / OL              looping décalé à droite / à gauche (2x2)
+//   G2                  vide de 2 cases (saut)       V-2  change le niveau
+// Suffixe de revêtement : .i verglas  .b accélérateur  .j rebond  .s sable  .m aimant
+//   ex. "S3.i" = 3 droites verglacées, "RR.b" = grand virage accélérateur.
+// Raccourcis historiques : B = S.b, I = S.i.
+const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', s: 'sand', m: 'magnet' };
+
 export function scriptTrack(name, script, opts = {}) {
   const tr = new Track(name);
+  tr.decor = opts.decor || 'desert';
   let x = opts.x || 0, z = opts.z || 0, h = opts.h || 0, l = opts.l || 0;
   const path = [];
+  let surf = '';
   const place = (t, px, pz, lv, r, reverse = false) => {
-    const tile = { t, x: px, z: pz, l: lv, r: r & 3 };
-    const c = tr.conflicts(tile);
+    const tile = { t, x: px, z: pz, l: lv, r: r & 3, s: surf };
+    if (surf && !surfaceAllowed(t, surf)) throw new Error(`${name} : revêtement ${surf} interdit sur ${t}`);
+    const c = tr.conflicts(Track.normalize(tile));
     if (c.length) throw new Error(`${name} : conflit en (${px}, ${pz}) niveau ${lv} [${t}]`);
     const added = tr.add(tile);
     const pts = centerlineWorld(added, PIECES[t].size === 2 ? 12 : 6, reverse);
@@ -230,13 +284,22 @@ export function scriptTrack(name, script, opts = {}) {
   };
   const adv = (dir, n = 1) => { x += DIRS[dir][0] * n; z += DIRS[dir][1] * n; };
   const rot = (r, lx, lz) => rotVec(r, lx, lz, { x: 0, z: 0 });
+  // Pièce 2x2 : ancre à partir du centre de bloc (en cases) relatif à la case d'entrée.
+  const anchor2 = (r, ox, oz) => {
+    const c = rot(r, ox, oz);
+    return [Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1)];
+  };
 
   for (const tok of script.trim().split(/\s+/)) {
-    const m = /^([A-Za-z]+)(-?\d*)$/.exec(tok);
+    const m = /^([A-Za-z]+)(-?\d*)(?:\.([a-z]))?$/.exec(tok);
     if (!m) throw new Error('Instruction invalide : ' + tok);
-    const op = m[1];
+    let op = m[1];
     const n = m[2] ? parseInt(m[2], 10) : 1;
-    const simple = { S: 'straight', B: 'boost', C: 'checkpoint', I: 'ice', P: 'platform', start: 'start', finish: 'finish' };
+    surf = m[3] ? SURF_CODE[m[3]] : '';
+    if (m[3] && !surf) throw new Error('Revêtement inconnu : ' + tok);
+    if (op === 'B') { op = 'S'; surf = 'boost'; }
+    if (op === 'I') { op = 'S'; surf = 'ice'; }
+    const simple = { S: 'straight', C: 'checkpoint', P: 'platform', start: 'start', finish: 'finish' };
     if (simple[op]) {
       for (let i = 0; i < n; i++) { place(simple[op], x, z, l, h); adv(h); }
       continue;
@@ -251,8 +314,7 @@ export function scriptTrack(name, script, opts = {}) {
         h = (h + 3) & 3; adv(h);
         break;
       case 'RR': {
-        const c = rot(h, 0.5, -0.5);
-        const ax = Math.round(x + 0.5 + c.x - 1), az = Math.round(z + 0.5 + c.z - 1);
+        const [ax, az] = anchor2(h, 0.5, -0.5);
         place('bigcurve', ax, az, l, h);
         const nx = rot(h, 2, -1);
         x += nx.x; z += nx.z; h = (h + 1) & 3;
@@ -260,11 +322,24 @@ export function scriptTrack(name, script, opts = {}) {
       }
       case 'LL': {
         const r = (h + 1) & 3;
-        const c = rot(r, -0.5, 0.5);
-        const ax = Math.round(x + 0.5 + c.x - 1), az = Math.round(z + 0.5 + c.z - 1);
+        const [ax, az] = anchor2(r, -0.5, 0.5);
         place('bigcurve', ax, az, l, r, true);
         const nx = rot(r, -1, 2);
         x += nx.x; z += nx.z; h = (h + 3) & 3;
+        break;
+      }
+      case 'O': {
+        const [ax, az] = anchor2(h, 0.5, -0.5);
+        place('loop', ax, az, l, h);
+        const nx = rot(h, 1, -2);
+        x += nx.x; z += nx.z;
+        break;
+      }
+      case 'OL': {
+        const [ax, az] = anchor2(h, -0.5, -0.5);
+        place('loopL', ax, az, l, h);
+        const nx = rot(h, -1, -2);
+        x += nx.x; z += nx.z;
         break;
       }
       case 'U': for (let i = 0; i < n; i++) { place('slope', x, z, l, h); l += 1; adv(h); } break;

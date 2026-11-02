@@ -3,17 +3,19 @@ import * as THREE from './vendor/three.module.min.js';
 import { Scenery } from './scenery.js';
 import { createTrackMaterials } from './trackMesh.js';
 import { Particles } from './particles.js';
-import { Input } from './input.js';
+import { Input, KEY_ACTIONS, PAD_ACTIONS, keyLabel, padLabel, defaultKeys, defaultPad } from './input.js';
 import { GameAudio } from './audio.js';
 import { UI, $, esc, medalIcon } from './ui.js';
 import { RaceSession, medalFor } from './race.js';
 import { EditorSession } from './editor.js';
 import { BUILTIN_TRACKS, buildBuiltin } from './tracks.js';
-import { Track, hashString } from './track.js';
+import { Track, hashString, DECORS } from './track.js';
+import { PIECES } from './pieces.js';
+import { VERSION } from './constants.js';
 import { CAR_COLORS } from './carModel.js';
 import {
   loadSettings, saveSettings, getRecord, listMyTracks, deleteMyTrack, saveMyTrack, newId,
-  getEditorDraft, formatTime,
+  getEditorDraft, formatTime, purgeOldRecords, clearRecords,
 } from './storage.js';
 
 class App {
@@ -29,6 +31,9 @@ class App {
     this.scenery = new Scenery(this.scene, this.settings.quality);
     this.particles = new Particles(this.scene);
     this.input = new Input();
+    this.input.setBindings(this.settings.keys, this.settings.pad);
+    purgeOldRecords();
+    $('menu-foot').textContent = `Shardway v${VERSION} · un jeu de course original · propulsé par three.js`;
     this.audio = new GameAudio();
     this.audio.setVolume(this.settings.volume);
     this.ui = new UI(this);
@@ -92,6 +97,7 @@ class App {
     if (name === 'tracks') this._renderTracks();
     if (name === 'mytracks') this._renderMyTracks();
     if (name === 'options') this._renderOptions();
+    if (name === 'controls') this._renderControls();
     this.ui.showScreen(name);
   }
 
@@ -135,6 +141,47 @@ class App {
     this.ui.showScreen(null);
     this.ui.setMode('editor');
     this.session = new EditorSession(this, state || getEditorDraft() || {});
+    const L = (a) => this._keysOf(a);
+    $('ed-help').textContent = `Clic : poser · Clic droit : supprimer · Clic droit glissé : orbiter · Clic molette : pipette · Molette : zoom · Maj + molette : niveau · ${L('ed.levelUp')} / ${L('ed.levelDown')} : niveau · ${L('ed.rotate')} : pivoter · F1 ou ? : tous les raccourcis`;
+  }
+
+  _keysOf(action) {
+    const k = (this.input.bindings[action] || []).filter(Boolean).map(keyLabel);
+    return k.length ? k.join(' / ') : '—';
+  }
+
+  editorHelp() {
+    const L = (a) => this._keysOf(a);
+    const rows = [
+      ['Clic', 'Poser la pièce (glisser pour en poser plusieurs)'],
+      ['Clic droit', 'Supprimer la pièce visée'],
+      ['Clic droit glissé', 'Tourner la vue'],
+      ['Clic molette', 'Pipette (reprend pièce, rotation et niveau)'],
+      ['Clic molette glissé', 'Déplacer la vue'],
+      ['Molette', 'Zoom'],
+      ['Maj + molette', 'Monter / descendre d’un niveau'],
+      [L('ed.levelUp'), 'Monter d’un niveau'],
+      [L('ed.levelDown'), 'Descendre d’un niveau'],
+      [L('ed.rotate'), 'Pivoter (avec Maj : sens inverse)'],
+      [L('ed.nextPiece'), 'Pièce suivante (avec Maj : précédente)'],
+      ['1 … 0, P', 'Choisir une pièce'],
+      [L('ed.surface'), 'Revêtement suivant (puis clic sur une pièce)'],
+      [L('ed.erase'), 'Gomme'],
+      [`${L('accelerate')} ${L('left')} ${L('brake')} ${L('right')}`, 'Déplacer la vue'],
+      [L('ed.recenter'), 'Recentrer sur le circuit'],
+      [L('ed.topView'), 'Vue de dessus'],
+      [L('ed.grid'), 'Afficher / masquer la grille'],
+      [L('ed.test'), 'Tester le circuit'],
+      ['Ctrl + Z / Ctrl + Y', 'Annuler / rétablir'],
+      ['Ctrl + S', 'Enregistrer'],
+      ['Alt + clic', 'Pipette'],
+    ];
+    this.ui.modal({
+      title: 'Raccourcis de l’éditeur',
+      body: `<div class="kbd-list">${rows.map(([k, v]) => `<b>${esc(k)}</b><span>${esc(v)}</span>`).join('')}</div>
+        <p style="margin-top:14px">Astuce : après avoir posé une pente, le niveau suit tout seul quand tu vises la case du haut ou du bas. Toutes ces touches se changent dans Options › Commandes.</p>`,
+      actions: [{ label: 'OK', primary: true }],
+    });
   }
 
   leaveEditor() {
@@ -151,21 +198,144 @@ class App {
   _renderTracks() {
     const list = $('track-list');
     list.innerHTML = '';
-    this.builtins.forEach((b, i) => {
-      const rec = getRecord(b.key);
-      const medal = rec ? medalFor(rec.time, b.def.medals) : null;
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.tabIndex = 0;
-      card.innerHTML = `<div class="num">${i + 1}</div>
-        <h3>${esc(b.def.name)}</h3>
-        <div class="meta"><span class="diff">${'◆'.repeat(b.def.difficulty)}${'◇'.repeat(4 - b.def.difficulty)}</span> · ${b.track.tiles.length} pièces</div>
-        <div class="best">${b.def.medals ? medalIcon(medal) : ''}${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}</div>`;
-      const go = () => { this.audio.click(); this.playBuiltin(i); };
-      card.addEventListener('click', go);
-      card.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
-      list.appendChild(card);
-    });
+    const groups = {};
+    this.builtins.forEach((b, i) => { (groups[b.track.decor] = groups[b.track.decor] || []).push([b, i]); });
+    const colors = { desert: '#ff8c5a', polar: '#7fe9ff' };
+    for (const [decor, items] of Object.entries(groups)) {
+      const g = document.createElement('div');
+      g.className = 'track-group';
+      g.innerHTML = `<h3 class="group-title"><i style="background:${colors[decor] || '#fff'}"></i>${esc(DECORS[decor].label)}</h3>`;
+      const grid = document.createElement('div');
+      grid.className = 'card-grid';
+      for (const [b, i] of items) {
+        const rec = getRecord(b.key);
+        const medal = rec ? medalFor(rec.time, b.def.medals) : null;
+        const tags = [];
+        const has = (fn) => b.track.tiles.some(fn);
+        if (has((t) => PIECES[t.t].kind === 'loop')) tags.push('Looping');
+        if (has((t) => t.t === 'steep')) tags.push('Sauts');
+        if (has((t) => t.s === 'ice')) tags.push('Verglas');
+        if (has((t) => t.s === 'bounce')) tags.push('Rebond');
+        if (has((t) => t.s === 'sand')) tags.push('Sable');
+        if (has((t) => t.s === 'magnet')) tags.push('Aimant');
+        const card = document.createElement('div');
+        card.className = 'card ' + decor;
+        card.tabIndex = 0;
+        card.innerHTML = `<div class="num">${i + 1}</div>
+          <h3>${esc(b.def.name)}</h3>
+          <div class="meta"><span class="diff">${'◆'.repeat(b.def.difficulty)}${'◇'.repeat(5 - b.def.difficulty)}</span> · ${b.track.tiles.length} pièces</div>
+          ${tags.length ? `<div class="tags">${tags.map((t) => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
+          <div class="best">${b.def.medals ? medalIcon(medal) : ''}${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}</div>`;
+        const go = () => { this.audio.click(); this.playBuiltin(i); };
+        card.addEventListener('click', go);
+        card.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+        grid.appendChild(card);
+      }
+      g.appendChild(grid);
+      list.appendChild(g);
+    }
+  }
+
+  // ------------------------------------------------------------ Commandes
+  _renderControls(tab = this._bindTab || 'race') {
+    this._bindTab = tab;
+    document.querySelectorAll('#bind-tabs .tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === tab));
+    $('bind-hint').textContent = tab === 'pad'
+      ? 'Clique sur une case puis appuie sur un bouton de la manette (Échap pour annuler). Le stick gauche et la croix dirigent toujours.'
+      : 'Clique sur une case puis appuie sur la touche voulue (Échap pour annuler, × pour vider). Une touche déjà prise est retirée de l’autre action.';
+    const list = $('bind-list');
+    list.innerHTML = '';
+    const s = this.settings;
+    if (tab === 'pad') {
+      for (const [id, label] of PAD_ACTIONS) {
+        const cur = this.input.pad[id];
+        const lbl = document.createElement('div');
+        lbl.className = 'lbl';
+        lbl.textContent = label;
+        list.appendChild(lbl);
+        for (let slot = 0; slot < 2; slot++) {
+          const b = document.createElement('button');
+          b.className = 'bind-key';
+          b.innerHTML = `<span>${padLabel(cur[slot])}</span>`;
+          b.addEventListener('click', () => this._capturePad(id, slot, b));
+          list.appendChild(b);
+        }
+      }
+      return;
+    }
+    const group = KEY_ACTIONS[tab];
+    for (const [id, label] of group) {
+      const cur = this.input.bindings[id] || ['', ''];
+      const lbl = document.createElement('div');
+      lbl.className = 'lbl';
+      lbl.textContent = label;
+      list.appendChild(lbl);
+      for (let slot = 0; slot < 2; slot++) {
+        const b = document.createElement('button');
+        b.className = 'bind-key';
+        b.innerHTML = `<span>${esc(keyLabel(cur[slot]))}</span>${cur[slot] ? '<span class="x" title="Vider">×</span>' : ''}`;
+        b.addEventListener('click', (e) => {
+          if (e.target.classList.contains('x')) {
+            this._setKey(id, slot, '');
+            this._renderControls();
+            return;
+          }
+          b.classList.add('wait');
+          b.innerHTML = '<span>Appuie sur une touche…</span>';
+          this.input.captureKey((code) => {
+            if (code) {
+              const moved = this._setKey(id, slot, code, tab);
+              if (moved) this.ui.flash(`« ${keyLabel(code)} » retirée de : ${moved}`);
+            }
+            this._renderControls();
+          });
+        });
+        list.appendChild(b);
+      }
+    }
+    void s;
+  }
+
+  _setKey(id, slot, code, tab = null) {
+    const keys = this.input.bindings;
+    let moved = null;
+    if (code && tab) {
+      for (const [other, label] of KEY_ACTIONS[tab]) {
+        const arr = keys[other];
+        for (let i = 0; i < arr.length; i++) {
+          if (arr[i] === code && !(other === id && i === slot)) { arr[i] = ''; moved = label; }
+        }
+      }
+    }
+    keys[id] = (keys[id] || ['', '']).slice();
+    keys[id][slot] = code;
+    this.settings.keys = { ...keys };
+    this.saveSettings();
+    return moved;
+  }
+
+  _capturePad(id, slot, btn) {
+    btn.classList.add('wait');
+    btn.innerHTML = '<span>Appuie sur un bouton…</span>';
+    this.input.padButtonPressed();
+    const started = performance.now();
+    let cancelled = false;
+    this.input.captureKey(() => { cancelled = true; });
+    const poll = () => {
+      if (cancelled || performance.now() - started > 8000) { this.input.capture = null; this._renderControls(); return; }
+      const i = this.input.padButtonPressed();
+      if (i >= 0) {
+        this.input.capture = null;
+        for (const arr of Object.values(this.input.pad)) for (let k = 0; k < arr.length; k++) if (arr[k] === i) arr[k] = -1;
+        this.input.pad[id][slot] = i;
+        this.settings.pad = JSON.parse(JSON.stringify(this.input.pad));
+        this.saveSettings();
+        this._renderControls();
+        return;
+      }
+      requestAnimationFrame(poll);
+    };
+    requestAnimationFrame(poll);
   }
 
   _renderMyTracks() {
@@ -329,6 +499,7 @@ class App {
     });
     $('opt-ghost').addEventListener('change', (e) => { this.settings.ghost = e.target.checked; this.saveSettings(); });
     $('opt-name').addEventListener('input', (e) => { this.settings.playerName = e.target.value.slice(0, 20) || 'Pilote'; this.saveSettings(); });
+    document.querySelectorAll('#bind-tabs .tab').forEach((t) => t.addEventListener('click', () => { this.audio.click(); this._renderControls(t.dataset.tab); }));
   }
 
   _action(a) {
@@ -339,6 +510,15 @@ class App {
       case 'mytracks': this.showScreen('mytracks'); break;
       case 'import': this.importModal(false); break;
       case 'options': this.showScreen('options'); break;
+      case 'controls': this.showScreen('controls'); break;
+      case 'reset-keys':
+        this.input.setBindings(defaultKeys(), defaultPad());
+        this.settings.keys = defaultKeys();
+        this.settings.pad = defaultPad();
+        this.saveSettings();
+        this._renderControls();
+        this.ui.flash('Commandes par défaut rétablies.');
+        break;
       case 'help': this.helpModal(); break;
       case 'back': this.showScreen('menu'); break;
       case 'new-track': this.openEditor({ name: 'Mon circuit', code: null, fresh: true }); break;
@@ -353,7 +533,7 @@ class App {
           actions: [
             { label: 'Annuler' },
             { label: 'Effacer', danger: true, onClick: () => {
-              Object.keys(localStorage).filter((k) => k.startsWith('shardway.rec.')).forEach((k) => localStorage.removeItem(k));
+              clearRecords();
               this.ui.flash('Records effacés.');
             } },
           ],
@@ -374,6 +554,7 @@ class App {
       case 'rotate': ed.rotate(1); break;
       case 'lvl-up': ed.setLevel(ed.level + 1); break;
       case 'lvl-down': ed.setLevel(ed.level - 1); break;
+      case 'help': this.editorHelp(); break;
       case 'export': this.shareModal(ed.track.encode(), ed.track.name); break;
       case 'import': this.importModal(true); break;
       case 'new':
@@ -440,7 +621,7 @@ class App {
       last = now;
       this.input.pollGamepadButtons();
       if (this.ui.modalOpen && this.input.hit('Escape')) this.ui.closeModal();
-      if (this.mode === 'menu' && this.input.hit('Escape')) this.showScreen('menu');
+      if (this.mode === 'menu' && !this.ui.modalOpen && this.input.hit('Escape')) this.showScreen('menu');
       if (this.session) this.session.update(dt);
       this.renderer.render(this.scene, this.camera);
       this.input.clearHits();
