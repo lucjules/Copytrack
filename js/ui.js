@@ -128,12 +128,14 @@ export class UI {
 
   showOverlay(id) {
     $(id).classList.remove('hidden');
+    document.body.classList.add('ov-open');
     const b = $(id).querySelector('.btn.primary');
     if (b && matchMedia('(pointer: fine)').matches) b.focus({ preventScroll: true });
   }
 
   hideOverlay(id) {
     $(id).classList.add('hidden');
+    if (['pause', 'finish'].every((o) => $(o).classList.contains('hidden'))) document.body.classList.remove('ov-open');
   }
 
   flash(text, dur = 2.4) {

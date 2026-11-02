@@ -325,6 +325,7 @@ export class RaceSession {
     });
     if (isRecord) this.loadRecord();
     app.ui.hud.time(time, true);
+    if (this.record) app.ui.hud.el.best.innerHTML = `Record ${formatTime(this.record.time)}`;
   }
 
   update(dt) {
