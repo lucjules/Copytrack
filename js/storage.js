@@ -1,0 +1,106 @@
+// Persistance locale (navigateur) : réglages, records + fantômes, circuits perso.
+const PREFIX = 'shardway.';
+
+function read(key, fallback) {
+  try {
+    const v = localStorage.getItem(PREFIX + key);
+    return v ? JSON.parse(v) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function write(key, value) {
+  try {
+    localStorage.setItem(PREFIX + key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export const DEFAULT_SETTINGS = {
+  volume: 0.7,
+  quality: 'high',
+  carColor: '#ffd23e',
+  ghost: true,
+  camera: 0,
+  playerName: 'Pilote',
+};
+
+export function loadSettings() {
+  return { ...DEFAULT_SETTINGS, ...read('settings', {}) };
+}
+
+export function saveSettings(s) {
+  write('settings', s);
+}
+
+// ---- Records -------------------------------------------------------------
+export function getRecord(trackKey) {
+  return read('rec.' + trackKey, null);
+}
+
+export function saveRecord(trackKey, rec) {
+  if (!write('rec.' + trackKey, rec)) {
+    // Quota dépassé : on garde le temps sans le fantôme.
+    write('rec.' + trackKey, { ...rec, ghost: null });
+  }
+}
+
+// ---- Circuits personnels ---------------------------------------------------
+export function listMyTracks() {
+  return read('tracks', []);
+}
+
+export function saveMyTrack(entry) {
+  const list = listMyTracks();
+  const i = list.findIndex((t) => t.id === entry.id);
+  entry.updated = Date.now();
+  if (i >= 0) list[i] = entry; else list.unshift(entry);
+  write('tracks', list);
+  return entry;
+}
+
+export function deleteMyTrack(id) {
+  write('tracks', listMyTracks().filter((t) => t.id !== id));
+}
+
+export function newId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+export function getEditorDraft() {
+  return read('draft', null);
+}
+
+export function setEditorDraft(d) {
+  write('draft', d);
+}
+
+// ---- Fantômes : Float32Array <-> base64 -----------------------------------
+export function encodeFloats(arr) {
+  const bytes = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
+  let bin = '';
+  const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  return btoa(bin);
+}
+
+export function decodeFloats(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Float32Array(bytes.buffer);
+}
+
+export function formatTime(sec, sign = false) {
+  if (sec == null || !isFinite(sec)) return '--:--.---';
+  const neg = sec < 0;
+  const s = Math.abs(sec);
+  const m = Math.floor(s / 60);
+  const r = s - m * 60;
+  const txt = String(m).padStart(2, '0') + ':' + r.toFixed(3).padStart(6, '0');
+  if (sign) return (neg ? '-' : '+') + txt;
+  return (neg ? '-' : '') + txt;
+}

@@ -1,0 +1,12 @@
+{
+  "name": "shardway",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Jeu de course contre-la-montre low-poly avec éditeur de circuits, dans le navigateur.",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "sim": "node tools/sim.mjs"
+  },
+  "license": "MIT"
+}
