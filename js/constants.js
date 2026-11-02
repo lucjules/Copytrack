@@ -15,7 +15,6 @@ export const ROAD_TOP = 0.4;       // altitude de la chaussée au niveau 0
 export const MAX_LEVEL = 14;
 
 // Vitesse minimale (m/s) pour rester collé sur un mur / une route à l'envers.
-export const STICK_MIN = 17;
 // Nombre maximal de décorations par circuit.
 export const MAX_DECOS = 500;
 

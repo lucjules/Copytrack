@@ -1,11 +1,15 @@
-// Physique arcade de la voiture : pas fixe, déterministe, sans moteur externe.
-// Au sol, la voiture glisse sur la surface analytique des pièces ; les bordures
-// sont des murs (deux sondes circulaires, avant et arrière). Sur un ruban
-// (looping, vrille, mur vertical, route à l'envers), elle suit la courbe
-// paramétrée et décroche si elle est trop lente.
+// Physique de la voiture : pas fixe, déterministe, sans moteur externe.
+//
+// Modèle « bicyclette » : le volant oriente les roues avant ; ce sont les pneus
+// (adhérence limitée, avant et arrière) qui font tourner la voiture. Il en découle
+// naturellement le sous-virage, le survirage, le dérapage et le contre-braquage.
+// En l'air il n'y a aucune adhérence : le volant tourne les roues, pas la voiture.
+//
+// Le même modèle s'applique au sol et sur les rubans 3D (loopings, vrilles, murs,
+// routes à l'envers) : seul change le plan de la route, avec la gravité projetée.
 // La personnalisation du véhicule (forme, LED, dessins...) est purement visuelle :
 // aucune de ces constantes n'en dépend.
-import { CELL, DT, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T, STICK_MIN } from './constants.js';
+import { CELL, DT, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T } from './constants.js';
 import {
   PIECES, toLocal, sampleLocal, rotVec, tileCenter, isRibbon, isFloor, tileParam,
 } from './pieces.js';
@@ -23,32 +27,32 @@ export const CAR = {
   roll: 0.6,
   drag: 0.0023,
   coast: 2.0,
-  latGrip: 56,        // accélération latérale max (m/s²)
-  driftGrip: 0.38,
-  driftTurn: 1.5,
-  turnMax: 2.6,       // rad/s
-  turnFall: 44,
-  steerIn: 8,         // vitesse de braquage
-  steerOut: 14,       // retour au centre
-  assist: 2.6,        // ré-alignement automatique sur la trajectoire
-  airTurn: 2.3,
+  // Châssis (modèle bicyclette)
+  a: 1.35,            // centre de gravité -> essieu avant (m)
+  b: 1.4,             // centre de gravité -> essieu arrière (m)
+  yawK: 1.9,          // inertie de lacet ramenée à la masse (m²)
+  corner: 230,        // rigidité de dérive d'un essieu (m/s² par rad)
+  latGrip: 56,        // adhérence latérale totale (m/s²), partagée avant / arrière
+  frontShare: 0.48,   // part avant (un peu moins que l'arrière : comportement stable)
+  steerMax: 0.6,      // angle de braquage maxi des roues (rad) à basse vitesse
+  steerAlat: 52,      // l'angle utile diminue avec la vitesse (le volant reste précis)
+  driftRear: 0.35,    // adhérence arrière restante au frein à main
+  driftSteer: 1.5,    // braquage autorisé en plus au frein à main
+  yawDamp: 0.6,
+  steerIn: 7,         // vitesse de braquage
+  steerOut: 12,       // retour au centre
   gravity: 25,
   snap: 0.7,
   step: 1.6,
   launch: 9.5,        // vitesse normale au-delà de laquelle on décolle
   bounce: 14,         // vitesse verticale donnée par un revêtement Rebond (100 %)
   wind: 20,           // accélération latérale du vent à 100 %
-  ribbonSteer: 26,    // accélération latérale du volant sur un ruban (looping, vrille...)
-  ribbonSway: 1.0,    // part de la force centrifuge latérale ressentie dans les hélices
-  ribbonUnstable: 6,  // instabilité latérale à l'envers / sur un mur
-  ribbonDamp: 0.9,    // amortissement de la glisse latérale
   radius: 1.0,
   probe: 1.25,
   height: 1.3,
 };
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
-const TAU = Math.PI * 2;
 const L1 = { lx: 0, lz: 0 }, L2 = { lx: 0, lz: 0 };
 const S1 = {}, S2 = {};
 const W1 = { x: 0, z: 0 };
@@ -56,6 +60,7 @@ const FL = {};
 const CC = { x: 0, z: 0 };
 const TMP = { x: 0, z: 0 };
 const HIT = { dx: 0, dz: 0, nx: 0, nz: 0 };
+const BK = { vx: 0, vy: 0, w: 0 };
 
 // Repère d'un ruban en coordonnées monde.
 export function frameWorld(tile, rib, u, F) {
@@ -77,7 +82,7 @@ export class CarPhysics {
     this.prev = { x: 0, y: 0, z: 0 };
     this.vel = { x: 0, y: 0, z: 0 };
     this.n = { x: 0, y: 1, z: 0 };
-    this.fwd = { x: 0, y: 0, z: -1 };   // direction visuelle (utile sur un ruban)
+    this.fwd = { x: 0, y: 0, z: -1 };   // direction du nez (visuelle et physique)
     this.surf = {};
     this.F = {}; this.F0 = {}; this.F2 = {}; this.F3 = {};
     this.ev = {
@@ -110,8 +115,8 @@ export class CarPhysics {
     this.pos.x = x; this.pos.y = y; this.pos.z = z;
     this.prev.x = x; this.prev.y = y; this.prev.z = z;
     this.vel.x = 0; this.vel.y = 0; this.vel.z = 0;
-    this.yaw = yaw; this.prevYaw = yaw; this.yawRate = 0;
-    this.steer = 0; this.boost = 0; this.boostF = 1; this.slip = 0; this.airTime = 0; this.fwdSpeed = 0;
+    this.yaw = yaw; this.prevYaw = yaw; this.yawRate = 0; this.omega = 0;
+    this.steer = 0; this.steerAngle = 0; this.boost = 0; this.boostF = 1; this.slip = 0; this.airTime = 0; this.fwdSpeed = 0;
     this.driftT = 0; this.bounceCD = 0;
     this.rib = null;
     this.gravMul = 1;
@@ -152,7 +157,6 @@ export class CarPhysics {
       if (Math.abs(gm - this.gravMul) > 0.01) { this.gravMul = gm; this.ev.gravity = true; }
     }
     // Plaque moto : une suite de plaques collées ne compte que pour UNE transformation.
-    // Le verrou se relâche dès que la voiture roule sur autre chose.
     if (mod === 'moto') {
       if (!this.motoLock) {
         this.motoLock = true;
@@ -162,6 +166,47 @@ export class CarPhysics {
     } else this.motoLock = false;
   }
 
+  // ---------------------------------------------------------------- Pneus
+  // Angle des roues avant selon la vitesse : à haute vitesse, un petit angle suffit.
+  _steerAngle(speed, drift) {
+    const v2 = Math.max(1, speed * speed);
+    // Angle géométrique du virage limite + marge de dérive du pneu avant (saturation).
+    const slipSat = (CAR.latGrip * CAR.frontShare) / CAR.corner;
+    let max = Math.min(CAR.steerMax, Math.atan((CAR.a + CAR.b) * CAR.steerAlat / v2) + slipSat);
+    max *= 1 + (CAR.driftSteer - 1) * drift;
+    return this.steer * max;
+  }
+
+  // Modèle bicyclette, repère voiture (x avant, y droite, w lacet > 0 = vers la droite).
+  // ax : accélération longitudinale (moteur, freins) ; grip : multiplicateur d'adhérence.
+  _tires(vx, vy, w, ax, grip, dt) {
+    const drift = this.driftT;
+    const delta = this._steerAngle(Math.abs(vx), drift);
+    this.steerAngle = delta;
+    const L = CAR.a + CAR.b;
+    const maxF = CAR.latGrip * grip * CAR.frontShare;
+    const maxR = CAR.latGrip * grip * (1 - CAR.frontShare) * (1 - (1 - CAR.driftRear) * drift);
+    if (Math.abs(vx) < 1.5 && grip > 0.3) {
+      // Manœuvre au pas : roulement sans glissement.
+      vx += ax * dt;
+      BK.vx = vx; BK.vy = vy * 0.6; BK.w = (vx * Math.tan(delta)) / L;
+      return BK;
+    }
+    const den = Math.max(Math.abs(vx), 6);
+    const sgn = vx >= 0 ? 1 : -1;
+    const af = Math.atan2(vy + CAR.a * w, den) - delta * sgn;
+    const ar = Math.atan2(vy - CAR.b * w, den);
+    const Ff = clamp(-CAR.corner * af, -maxF, maxF);
+    const Fr = clamp(-CAR.corner * ar, -maxR, maxR);
+    const cd = Math.cos(delta), sd = Math.sin(delta);
+    // (La rotation du repère est prise en compte en reprojetant la vitesse à chaque pas.)
+    vx += (ax - Ff * sd) * dt;
+    vy += (Ff * cd + Fr) * dt;
+    w += ((CAR.a * Ff * cd - CAR.b * Fr) / CAR.yawK - w * CAR.yawDamp) * dt;
+    BK.vx = vx; BK.vy = vy; BK.w = w;
+    return BK;
+  }
+
   step(inp) {
     const dt = DT, p = this.pos, v = this.vel, ev = this.ev;
     ev.wall = 0; ev.land = 0; ev.boostHit = false; ev.bounce = false;
@@ -169,7 +214,7 @@ export class CarPhysics {
     this.prev.x = p.x; this.prev.y = p.y; this.prev.z = p.z;
     this.prevYaw = this.yaw;
 
-    // Direction progressive (retour au centre plus rapide).
+    // Volant progressif (retour au centre plus rapide).
     const target = clamp(inp.steer || 0, -1, 1);
     const back = Math.abs(target) < Math.abs(this.steer) || target * this.steer < 0;
     const sr = (back ? CAR.steerOut : CAR.steerIn) * dt;
@@ -210,33 +255,17 @@ export class CarPhysics {
       else if (mod === 'drift') grip = clamp(0.5 / f, 0.18, 1.2);
       else if (mod === 'slow') extraDrag = 14 * f;
       else if (mod === 'wind') {
-        const a = ((tileParamRaw(this.surfTile) - 100) / 100) * CAR.wind;
+        const a = ((tileParam(this.surfTile) - 100) / 100) * CAR.wind;
         rotVec(this.surfTile.r, 1, 0, TMP);
         vf += (TMP.x * fx + TMP.z * fz) * a * dt;
         vr += (TMP.x * rx + TMP.z * rz) * a * dt;
       }
 
-      vf = this._longitudinal(vf, inp, CAR.maxSpeed * vmaxK, traction, extraDrag, dt);
-
-      // Adhérence latérale limitée ; en dérapage elle chute progressivement.
-      const drift = this.driftT;
-      const lat = CAR.latGrip * grip * (1 - (1 - CAR.driftGrip) * drift) * dt;
-      const corr = clamp(-vr, -lat, lat);
-      vr += corr;
-      // La vitesse latérale « absorbée » en glisse est en partie rendue vers l'avant.
-      if (vf > 5) vf += Math.abs(corr) * (0.2 + 0.35 * drift);
-
-      const sp = Math.abs(vf);
-      let turn = (CAR.turnMax * Math.min(1, sp / 3)) / (1 + sp / CAR.turnFall);
-      turn *= 1 + (CAR.driftTurn - 1) * drift;
-      let yawRate = -this.steer * turn * (vf >= 0 ? 1 : -1);
-      // Aide au contre-braquage : le nez revient vers la trajectoire.
-      if (sp > 4 && vf > 0) {
-        const beta = Math.atan2(vr, Math.max(6, vf));
-        yawRate -= beta * CAR.assist * (1 - 0.7 * drift) * Math.min(1, grip);
-      }
-      this.yawRate = yawRate;
-      this.yaw += yawRate * dt;
+      const ax = (this._longitudinal(vf, inp, CAR.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
+      const r = this._tires(vf, vr, this.omega, ax, grip, dt);
+      vf = r.vx; vr = r.vy; this.omega = r.w;
+      this.yaw -= this.omega * dt;
+      this.yawRate = -this.omega;
 
       v.x = fx * vf + rx * vr;
       v.y = fy * vf + ry * vr;
@@ -245,9 +274,13 @@ export class CarPhysics {
       this.fwdSpeed = vf;
       this.airTime = 0;
     } else {
+      // En l'air : trajectoire balistique, la voiture garde son cap (le volant ne
+      // tourne que les roues). La rotation acquise au décollage s'amortit doucement.
       v.y -= this.g * dt;
-      this.yawRate = -this.steer * CAR.airTurn;
-      this.yaw += this.yawRate * dt;
+      this.omega *= Math.exp(-1.5 * dt);
+      this.yaw -= this.omega * dt;
+      this.yawRate = -this.omega;
+      this.steerAngle = this._steerAngle(Math.hypot(v.x, v.z), this.driftT);
       const k = 1 - 0.0006 * this.speed * dt;
       v.x *= k; v.y *= k; v.z *= k;
       this.slip = 0;
@@ -257,6 +290,7 @@ export class CarPhysics {
 
     p.x += v.x * dt; p.y += v.y * dt; p.z += v.z * dt;
     if (this._tryEnterRibbon()) return;
+    if (!this.grounded && this._tryLandRibbon()) return;
     this._walls();
     this._bounds();
 
@@ -283,7 +317,6 @@ export class CarPhysics {
       }
       this.grounded = true;
       this._setGround(s);
-      this._alignOnLanding();
     } else {
       this.grounded = false;
     }
@@ -301,8 +334,9 @@ export class CarPhysics {
     this._updateFwd();
   }
 
-  // Moteur, freins, résistances le long de l'axe de la voiture.
-  _longitudinal(vf, inp, vmax, traction, extraDrag, dt) {
+  // Nouvelle vitesse longitudinale : moteur, freins, résistances.
+  // load : part du poids qui appuie les roues sur la route (1 au sol, 0 sur un mur vertical).
+  _longitudinal(vf, inp, vmax, traction, extraDrag, dt, load = 1) {
     let a = 0;
     if (inp.throttle) {
       if (vf < -0.5) a += CAR.brake * traction;
@@ -321,24 +355,12 @@ export class CarPhysics {
       const x = Math.max(0, vf) / vb;
       a += CAR.boostAccel * f * Math.max(0, 1 - x * x);
     }
-    let res = CAR.roll + CAR.drag * vf * vf + extraDrag;
-    if (!inp.throttle && !inp.brake) res += CAR.coast;
-    res += 1.5 * this.driftT;
+    let res = CAR.roll * load + CAR.drag * vf * vf + extraDrag * load;
+    if (!inp.throttle && !inp.brake) res += CAR.coast * load;
+    res += 4 * this.driftT * load;
     const dvr = res * dt;
     if (Math.abs(vf) <= dvr) vf = 0; else vf -= Math.sign(vf) * dvr;
     return vf + a * dt;
-  }
-
-  // À la réception d'un saut, le cap se recale en partie sur la trajectoire.
-  _alignOnLanding() {
-    const v = this.vel;
-    const sp = Math.hypot(v.x, v.z);
-    if (sp < 5) return;
-    const vy = Math.atan2(-v.x, -v.z);
-    let da = vy - this.yaw;
-    while (da > Math.PI) da -= TAU;
-    while (da < -Math.PI) da += TAU;
-    if (Math.abs(da) < 1.2) this.yaw += da * 0.5;
   }
 
   _bounds() {
@@ -349,6 +371,8 @@ export class CarPhysics {
     if (p.z > this.bz1) { p.z = this.bz1; if (v.z > 0) v.z = 0; }
   }
 
+  // Bordures : la voiture glisse le long du mur, perd un peu de vitesse au choc,
+  // et le choc freine sa rotation. Pas de réalignement automatique.
   _walls() {
     const p = this.pos, v = this.vel;
     const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
@@ -363,8 +387,8 @@ export class CarPhysics {
         p.x += c.dx; p.z += c.dz;
         const vn = v.x * c.nx + v.z * c.nz;
         if (vn < 0) {
-          v.x -= c.nx * vn * 1.08;
-          v.z -= c.nz * vn * 1.08;
+          v.x -= c.nx * vn * 1.05;
+          v.z -= c.nz * vn * 1.05;
           if (-vn > hit) hit = -vn;
         }
       }
@@ -372,16 +396,8 @@ export class CarPhysics {
     if (hit > 0) {
       const loss = Math.min(0.2, hit * 0.006);
       v.x *= 1 - loss; v.y *= 1 - loss; v.z *= 1 - loss;
+      this.omega *= Math.max(0.3, 1 - hit * 0.05);
       this.ev.wall = hit;
-      // Réaligne la voiture le long du mur.
-      const sp = Math.hypot(v.x, v.z);
-      if (sp > 3 && this.fwdSpeed > 0) {
-        const vy = Math.atan2(-v.x, -v.z);
-        let da = vy - this.yaw;
-        while (da > Math.PI) da -= TAU;
-        while (da < -Math.PI) da += TAU;
-        this.yaw += da * Math.min(0.6, 0.15 + hit * 0.05);
-      }
     }
   }
 
@@ -415,11 +431,21 @@ export class CarPhysics {
   }
 
   // ---------------------------------------------------------------- Rubans
+  // Sur un ruban, l'état est exprimé dans le plan de la route :
+  //   e1 = sens de parcours, e2 = droite, n = normale.
+  //   vs, vd : vitesse le long de e1 / e2 ; psi : cap de la voiture par rapport à e1.
+  _basis(R, F) {
+    const d = R.dir;
+    return {
+      e1x: F.tx * d, e1y: F.ty * d, e1z: F.tz * d,
+      e2x: F.rx * d, e2y: F.ry * d, e2z: F.rz * d,
+    };
+  }
+
   // Détecte le franchissement d'une extrémité de ruban (plan perpendiculaire à la route).
   _tryEnterRibbon() {
     const p = this.pos, q = this.prev, v = this.vel;
-    const sp = this.speed;
-    if (sp < 3) return false;
+    if (this.speed < 3) return false;
     const c1x = Math.floor(p.x / CELL), c1z = Math.floor(p.z / CELL);
     const c2x = Math.floor(q.x / CELL), c2z = Math.floor(q.z / CELL);
     for (let pass = 0; pass < 2; pass++) {
@@ -440,9 +466,16 @@ export class CarPhysics {
           if (Math.abs(dl) > ROAD_HALF + 0.6 || dn < -1.4 || dn > 3.2) continue;
           const vs = v.x * tx + v.y * ty + v.z * tz;
           if (vs < 2.5) continue;
-          // La voiture doit être orientée comme la route (évite de « traverser » un mur).
           if (this.grounded && (this.n.x * F.nx + this.n.y * F.ny + this.n.z * F.nz) < 0.35) continue;
-          this._enterRibbon(tile, rib, end, dc / F.ds, dl, vs, v.x * F.rx + v.y * F.ry + v.z * F.rz);
+          const R = { tile, rib, u: clamp(end === 0 ? dc / F.ds : 1 - dc / F.ds, 0, 1), dir: sg, dl: clamp(dl, -ROAD_HALF + 1, ROAD_HALF - 1), vs: 0, vd: 0, psi: 0 };
+          const B = this._basis(R, F);
+          R.vs = v.x * B.e1x + v.y * B.e1y + v.z * B.e1z;
+          R.vd = v.x * B.e2x + v.y * B.e2y + v.z * B.e2z;
+          const h = this.fwd;
+          R.psi = Math.atan2(h.x * B.e2x + h.y * B.e2y + h.z * B.e2z, h.x * B.e1x + h.y * B.e1y + h.z * B.e1z);
+          this.rib = R;
+          this.ev.loopIn = true;
+          this._ribPlace(R);
           return true;
         }
       }
@@ -450,16 +483,70 @@ export class CarPhysics {
     return false;
   }
 
-  _enterRibbon(tile, rib, end, along, dl, vs, vl) {
-    const u = clamp(end === 0 ? along : 1 - along, 0, 1);
-    this.rib = { tile, rib, u, dir: end === 0 ? 1 : -1, vs, dl: clamp(dl, -ROAD_HALF + 1, ROAD_HALF - 1), vl };
-    this.ev.loopIn = true;
-    this._ribPlace(this.rib);
+  // Atterrissage en plein milieu d'un ruban (retombée sur le haut d'un L, au fond d'un looping...).
+  _tryLandRibbon() {
+    const p = this.pos, q = this.prev, v = this.vel;
+    const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
+    for (const tile of tiles) {
+      if (!isRibbon(tile)) continue;
+      const rib = ribbonOf(tile);
+      // Point du ruban le plus proche (recherche grossière puis affinage).
+      let bu = -1, bd = Infinity;
+      for (let i = 0; i <= 32; i++) {
+        const F = frameWorld(tile, rib, i / 32, this.F);
+        const d = (p.x - F.px) ** 2 + (p.y - F.py) ** 2 + (p.z - F.pz) ** 2;
+        if (d < bd) { bd = d; bu = i / 32; }
+      }
+      let u = bu;
+      for (let it = 0; it < 4; it++) {
+        const F = frameWorld(tile, rib, u, this.F);
+        const dt = (p.x - F.px) * F.tx + (p.y - F.py) * F.ty + (p.z - F.pz) * F.tz;
+        u = clamp(u + dt / F.ds, 0, 1);
+      }
+      if (u <= 0.002 || u >= 0.998) continue;          // les extrémités passent par _tryEnterRibbon
+      const F = frameWorld(tile, rib, u, this.F);
+      if (F.ny < 0.2) continue;                         // on ne se pose pas sur un mur ou un plafond
+      const dn = (p.x - F.px) * F.nx + (p.y - F.py) * F.ny + (p.z - F.pz) * F.nz;
+      const dq = (q.x - F.px) * F.nx + (q.y - F.py) * F.ny + (q.z - F.pz) * F.nz;
+      const dl = (p.x - F.px) * F.rx + (p.y - F.py) * F.ry + (p.z - F.pz) * F.rz;
+      const vn = v.x * F.nx + v.y * F.ny + v.z * F.nz;
+      if (!(dn <= 0.05 && dq >= -0.3 && dn > -1.5 && vn < 0)) continue;
+      if (Math.abs(dl) > ROAD_HALF + (tile.nb ? 0 : 0.3)) continue;
+      const vt = v.x * F.tx + v.y * F.ty + v.z * F.tz;
+      const R = { tile, rib, u, dir: vt >= 0 ? 1 : -1, dl: 0, vs: 0, vd: 0, psi: 0 };
+      R.dl = clamp(dl * R.dir, -ROAD_HALF + 1, ROAD_HALF - 1) * R.dir;
+      const B = this._basis(R, F);
+      R.vs = v.x * B.e1x + v.y * B.e1y + v.z * B.e1z;
+      R.vd = v.x * B.e2x + v.y * B.e2y + v.z * B.e2z;
+      const h = this.fwd;
+      R.psi = Math.atan2(h.x * B.e2x + h.y * B.e2y + h.z * B.e2z, h.x * B.e1x + h.y * B.e1y + h.z * B.e1z);
+      this.ev.land = -vn;
+      this.rib = R;
+      this._ribPlace(R);
+      return true;
+    }
+    return false;
   }
 
   _ribStep(inp) {
     const R = this.rib, dt = DT, tile = R.tile, rib = R.rib;
     let F = frameWorld(tile, rib, R.u, this.F);
+    let B = this._basis(R, F);
+
+    // Gravité projetée dans le plan de la route (vrille, mur, envers...).
+    const g = this.g;
+    R.vs -= g * B.e1y * dt;
+    R.vd -= g * B.e2y * dt;
+
+    // La route tourne sous la voiture : son cap relatif change d'autant
+    // (il faut braquer pour suivre un virage à l'envers).
+    const dU = 0.006;
+    const u0 = Math.max(0, R.u - dU), u1 = Math.min(1, R.u + dU);
+    const A0 = frameWorld(tile, rib, u0, this.F0), A2 = frameWorld(tile, rib, u1, this.F2);
+    const k = 1 / (F.ds * (u1 - u0));
+    const kg = ((A2.tx - A0.tx) * F.rx + (A2.ty - A0.ty) * F.ry + (A2.tz - A0.tz) * F.rz) * k;
+    const kn = ((A2.tx - A0.tx) * F.nx + (A2.ty - A0.ty) * F.ny + (A2.tz - A0.tz) * F.nz) * k;
+    R.psi -= R.dir * kg * R.vs * dt;
 
     // Revêtements actifs sur ce ruban.
     const mod = tile.s, f = tileParam(tile) / 100;
@@ -471,89 +558,79 @@ export class CarPhysics {
     else if (mod === 'sand') extraDrag = 5 * f;
     else if (mod === 'mud') extraDrag = 6 * f;
 
-    // Moteur / freins dans le sens de la voiture, gravité le long du ruban.
-    let vf = this._longitudinal(R.vs, inp, CAR.maxSpeed, 1, extraDrag, dt);
-    vf -= this.g * R.dir * F.ty * dt;
-    R.vs = vf;
+    // Pneus dans le repère voiture.
+    // Appui réel des roues : gravité normale + effet de la courbure (centrifuge).
+    // Au sol plat il vaut g ; sur un mur vertical, 0 ; à l'envers sur du plat, -g.
+    const press = R.vs * R.vs * kn + g * F.ny;
+    const load = clamp(press / g, 0, 1.6);
+    this.press = press;
+    const c = Math.cos(R.psi), s = Math.sin(R.psi);
+    let vx = R.vs * c + R.vd * s, vy = -R.vs * s + R.vd * c;
+    const ax = (this._longitudinal(vx, inp, CAR.maxSpeed, Math.min(1, load), extraDrag, dt, Math.min(1, load)) - vx) / dt;
+    const t = this._tires(vx, vy, this.omega, ax, load, dt);
+    vx = t.vx; vy = t.vy; this.omega = t.w;
+    // Retour dans le plan de la route avec le MÊME cap, puis la voiture pivote.
+    R.vs = vx * c - vy * s;
+    R.vd = vx * s + vy * c;
+    R.psi += this.omega * dt;
+    this.yawRate = -this.omega;
+    this.fwdSpeed = vx;
+    this.slip = Math.abs(vy);
 
-    // Glisse latérale : la gravité (vrille, mur incliné) et la force centrifuge de
-    // l'hélice poussent la voiture sur le côté ; le joueur doit braquer pour rester au centre.
-    {
-      const dU = 0.006;
-      const u0 = Math.max(0, R.u - dU), u1 = Math.min(1, R.u + dU);
-      const A0 = frameWorld(tile, rib, u0, this.F0), A2 = frameWorld(tile, rib, u1, this.F2);
-      const kr = ((A2.tx - A0.tx) * F.rx + (A2.ty - A0.ty) * F.ry + (A2.tz - A0.tz) * F.rz) / (F.ds * (u1 - u0));
-      let aLat = -this.g * F.ry - CAR.ribbonSway * vf * vf * kr;
-      // À l'envers ou sur un mur, l'équilibre est instable : plus on s'écarte, plus on glisse.
-      if (F.ny < 0.5) aLat += CAR.ribbonUnstable * (0.5 - F.ny) * R.dl;
-      aLat += this.steer * R.dir * CAR.ribbonSteer;
-      R.vl += aLat * dt;
-      R.vl *= Math.exp(-CAR.ribbonDamp * dt);
-    }
-    R.dl += R.vl * dt;
+    // Avancée le long du ruban et écart latéral.
+    R.dl += R.dir * R.vd * dt;
     if (tile.nb) {
-      if (Math.abs(R.dl) > ROAD_HALF + 0.3) { this._ribDetach(F); return; }
+      if (Math.abs(R.dl) > ROAD_HALF + 0.3) { this._ribDetach(); return; }
     } else {
       const lim = ROAD_HALF - CAR.radius - 0.2;
       if (Math.abs(R.dl) > lim) {
-        // Frotter la bordure coûte de la vitesse.
-        const hit = Math.abs(R.vl);
-        if (hit > 2) this.ev.wall = hit;
-        vf *= 1 - Math.min(0.12, 0.004 + hit * 0.008);
-        R.vs = vf;
+        const side = Math.sign(R.dl) * R.dir;          // côté du mur, dans l'axe e2
+        const into = R.vd * side;                      // vitesse vers le mur
+        if (into > 0) {
+          if (into > 2) this.ev.wall = into;
+          R.vs *= 1 - Math.min(0.15, into * 0.01);      // perte unique au choc
+          R.vd -= side * into * 1.3;                     // rebond léger
+          R.psi *= 0.7;                                  // le mur redresse la voiture
+          this.omega *= 0.5;
+        }
         R.dl = clamp(R.dl, -lim, lim);
-        R.vl = -R.vl * 0.25;
       }
     }
-
-    R.u += (R.dir * vf * dt) / F.ds;
-    this.fwdSpeed = vf; this.slip = 0; this.yawRate = 0;
+    R.u += (R.dir * R.vs * dt) / F.ds;
     if (R.u > 1 || R.u < 0) { this._ribEnd(R.u > 1 ? 1 : 0); return; }
 
-    F = frameWorld(tile, rib, R.u, this.F);
-    // Pression sur la route : centripète + gravité (ou adhérence « magique »).
-    if (rib.stick) {
-      if (F.ny < 0.5 && Math.abs(vf) < STICK_MIN) { this._ribDetach(F); return; }
-    } else if (R.u > rib.minU && R.u < 1 - rib.minU) {
-      const dU = 0.004;
-      const F0 = frameWorld(tile, rib, Math.max(0, R.u - dU), this.F0);
-      const F2 = frameWorld(tile, rib, Math.min(1, R.u + dU), this.F2);
-      const k = 1 / (F.ds * (Math.min(1, R.u + dU) - Math.max(0, R.u - dU)));
-      const kn = ((F2.tx - F0.tx) * F.nx + (F2.ty - F0.ty) * F.ny + (F2.tz - F0.tz) * F.nz) * k;
-      const press = vf * vf * kn + this.g * F.ny;
-      if (press < 0) { this._ribDetach(F); return; }
-    }
+    // Décrochage : rien ne retient la voiture contre la route si l'appui devient négatif
+    // (route plate à l'envers, sommet bombé pris trop vite, haut d'un looping trop lent).
+    // Sur un mur vertical l'appui est nul : pas de décrochage, mais ni adhérence ni moteur.
+    const mu = rib.minU || 0;
+    if (press < -0.6 && R.u > mu && R.u < 1 - mu) { this._ribPlace(R); this._ribDetach(); return; }
     this._ribPlace(R);
   }
 
   // Place la voiture sur le ruban (position, vitesse, orientation monde).
   _ribPlace(R) {
     const F = frameWorld(R.tile, R.rib, R.u, this.F);
+    const B = this._basis(R, F);
     const p = this.pos, v = this.vel;
     p.x = F.px + F.rx * R.dl; p.y = F.py + F.ry * R.dl; p.z = F.pz + F.rz * R.dl;
-    const d = R.dir;
-    v.x = F.tx * d * R.vs + F.rx * R.vl;
-    v.y = F.ty * d * R.vs + F.ry * R.vl;
-    v.z = F.tz * d * R.vs + F.rz * R.vl;
+    v.x = B.e1x * R.vs + B.e2x * R.vd;
+    v.y = B.e1y * R.vs + B.e2y * R.vd;
+    v.z = B.e1z * R.vs + B.e2z * R.vd;
     this.n.x = F.nx; this.n.y = F.ny; this.n.z = F.nz;
-    // Le nez suit un peu la glisse latérale (retour visuel pour le joueur).
-    const sk = R.vl / Math.max(12, Math.abs(R.vs)) * 0.8;
-    let fx = F.tx * d + F.rx * sk, fy = F.ty * d + F.ry * sk, fz = F.tz * d + F.rz * sk;
-    const fl = Math.hypot(fx, fy, fz) || 1;
-    this.fwd.x = fx / fl; this.fwd.y = fy / fl; this.fwd.z = fz / fl;
+    const c = Math.cos(R.psi), s = Math.sin(R.psi);
+    this.fwd.x = B.e1x * c + B.e2x * s; this.fwd.y = B.e1y * c + B.e2y * s; this.fwd.z = B.e1z * c + B.e2z * s;
     if (Math.hypot(this.fwd.x, this.fwd.z) > 0.3) this.yaw = Math.atan2(-this.fwd.x, -this.fwd.z);
     this.grounded = true;
     this.surfType = 'road';
     this.surfMod = '';
-    this.fwdSpeed = R.vs;
   }
 
-  _ribDetach(F) {
-    this._ribPlace(this.rib);
+  _ribDetach() {
+    const t = this.rib && this.rib.tile;
+    this.fallWhy = t && PIECES[t.t].kind === 'loop' ? 'loop' : t && t.t === 'twist' ? 'twist' : t && t.v ? 'inv' : 'crest';
     this.rib = null;
     this.grounded = false;
     this.ev.loopFall = true;
-    void F;
   }
 
   // Fin de ruban : passe au ruban suivant s'il est raccordé, sinon retour au sol.
@@ -562,27 +639,30 @@ export class CarPhysics {
     R.u = endU;
     this._ribPlace(R);
     const F = frameWorld(R.tile, R.rib, endU, this.F);
-    const d = R.dir;
+    // Sens de sortie : vers l'extérieur du ruban (la voiture peut redescendre en arrière).
+    const d = endU === 1 ? 1 : -1;
     const fx = F.tx * d, fy = F.ty * d, fz = F.tz * d;
     const px = this.pos.x, py = this.pos.y, pz = this.pos.z;
     const next = this._matchRibbon(R.tile, F, fx, fy, fz);
     if (next) {
+      const N = { tile: next.tile, rib: next.rib, u: next.end, dir: next.end === 0 ? 1 : -1, dl: 0, vs: 0, vd: 0, psi: R.psi };
       const F2 = frameWorld(next.tile, next.rib, next.end, this.F2);
-      const vx = this.vel.x, vy = this.vel.y, vz = this.vel.z;
-      this.rib = {
-        tile: next.tile, rib: next.rib, u: next.end, dir: next.end === 0 ? 1 : -1,
-        vs: R.vs,
-        dl: clamp((px - F2.px) * F2.rx + (py - F2.py) * F2.ry + (pz - F2.pz) * F2.rz, -ROAD_HALF + 1, ROAD_HALF - 1),
-        vl: vx * F2.rx + vy * F2.ry + vz * F2.rz,
-      };
-      this._ribPlace(this.rib);
+      const B2 = this._basis(N, F2);
+      const v = this.vel;
+      N.dl = clamp((px - F2.px) * F2.rx + (py - F2.py) * F2.ry + (pz - F2.pz) * F2.rz, -ROAD_HALF + 1, ROAD_HALF - 1);
+      N.vs = v.x * B2.e1x + v.y * B2.e1y + v.z * B2.e1z;
+      N.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
+      const h = this.fwd;
+      N.psi = Math.atan2(h.x * B2.e2x + h.y * B2.e2y + h.z * B2.e2z, h.x * B2.e1x + h.y * B2.e1y + h.z * B2.e1z);
+      this.rib = N;
+      this._ribPlace(N);
       return;
     }
-    // Retour au sol.
+    // Retour au sol : on garde la vitesse et le cap réels de la voiture.
     this.rib = null;
     this.ev.loopOut = true;
-    const hz = Math.hypot(fx, fz);
-    if (hz > 0.2) this.yaw = Math.atan2(-fx, -fz);
+    const h = this.fwd;
+    if (Math.hypot(h.x, h.z) > 0.2) this.yaw = Math.atan2(-h.x, -h.z);
     this.prevYaw = this.yaw;
     if (F.ny > 0.6) {
       this.grounded = true;
@@ -625,8 +705,4 @@ export class CarPhysics {
     }
     return null;
   }
-}
-
-function tileParamRaw(tile) {
-  return tileParam(tile);
 }
