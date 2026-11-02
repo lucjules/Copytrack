@@ -1,32 +1,151 @@
-// Entrées : clavier (QWERTY et AZERTY via e.code), manette, commandes tactiles.
+// Entrées : clavier (codes physiques => QWERTY et AZERTY), manette, tactile.
+// Toutes les actions sont reconfigurables (Options > Commandes).
+
+// [action, libellé, touches par défaut]
+export const KEY_ACTIONS = {
+  race: [
+    ['accelerate', 'Accélérer', ['KeyW', 'ArrowUp']],
+    ['brake', 'Freiner / marche arrière', ['KeyS', 'ArrowDown']],
+    ['left', 'Tourner à gauche', ['KeyA', 'ArrowLeft']],
+    ['right', 'Tourner à droite', ['KeyD', 'ArrowRight']],
+    ['drift', 'Dérapage', ['Space', 'ShiftLeft']],
+    ['respawn', 'Dernier checkpoint', ['KeyR', '']],
+    ['restart', 'Recommencer', ['Enter', 'Backspace']],
+    ['camera', 'Changer de caméra', ['KeyC', '']],
+    ['pause', 'Pause', ['Escape', 'KeyP']],
+  ],
+  editor: [
+    ['ed.rotate', 'Pivoter la pièce', ['KeyR', '']],
+    ['ed.levelUp', 'Monter d’un niveau', ['KeyE', 'PageUp']],
+    ['ed.levelDown', 'Descendre d’un niveau', ['KeyC', 'PageDown']],
+    ['ed.nextPiece', 'Pièce suivante', ['Tab', '']],
+    ['ed.surface', 'Revêtement suivant', ['KeyB', '']],
+    ['ed.erase', 'Gomme', ['KeyX', 'Delete']],
+    ['ed.test', 'Tester le circuit', ['KeyT', '']],
+    ['ed.recenter', 'Recentrer la vue', ['KeyF', 'Home']],
+    ['ed.topView', 'Vue de dessus', ['KeyH', '']],
+    ['ed.grid', 'Afficher / masquer la grille', ['KeyG', '']],
+    ['ed.help', 'Liste des raccourcis', ['F1', '']],
+  ],
+};
+
+// Boutons de manette (mapping standard) par défaut.
+export const PAD_ACTIONS = [
+  ['accelerate', 'Accélérer', [7, 0]],
+  ['brake', 'Freiner', [6, 1]],
+  ['drift', 'Dérapage', [2, -1]],
+  ['respawn', 'Dernier checkpoint', [3, -1]],
+  ['restart', 'Recommencer', [8, -1]],
+  ['camera', 'Caméra', [5, -1]],
+  ['pause', 'Pause', [9, -1]],
+];
+
+export function defaultKeys() {
+  const out = {};
+  for (const group of Object.values(KEY_ACTIONS)) for (const [id, , keys] of group) out[id] = keys.slice();
+  return out;
+}
+
+export function defaultPad() {
+  const out = {};
+  for (const [id, , b] of PAD_ACTIONS) out[id] = b.slice();
+  return out;
+}
+
+const NAMES = {
+  Space: 'Espace', Enter: 'Entrée', Backspace: 'Retour', Escape: 'Échap', Tab: 'Tab',
+  ShiftLeft: 'Maj G', ShiftRight: 'Maj D', ControlLeft: 'Ctrl G', ControlRight: 'Ctrl D',
+  AltLeft: 'Alt', AltRight: 'Alt Gr', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
+  PageUp: 'Page ↑', PageDown: 'Page ↓', Home: 'Début', End: 'Fin', Delete: 'Suppr', Insert: 'Inser',
+  NumpadEnter: 'Entrée (pavé)', CapsLock: 'Verr. maj',
+};
+let layoutMap = null;
+if (typeof navigator !== 'undefined' && navigator.keyboard && navigator.keyboard.getLayoutMap) {
+  navigator.keyboard.getLayoutMap().then((m) => { layoutMap = m; }).catch(() => {});
+}
+const learned = {};
+
+// Libellé lisible d'une touche, adapté à la disposition du clavier si possible.
+export function keyLabel(code) {
+  if (!code) return '—';
+  if (NAMES[code]) return NAMES[code];
+  const fromLayout = (layoutMap && layoutMap.get(code)) || learned[code];
+  if (fromLayout) return fromLayout.toUpperCase();
+  if (code.startsWith('Key')) return code.slice(3);
+  if (code.startsWith('Digit')) return code.slice(5);
+  if (code.startsWith('Numpad')) return 'Pavé ' + code.slice(6);
+  return code;
+}
+
+export const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Select', 'Start', 'L3', 'R3', '↑', '↓', '←', '→', 'Home'];
+export function padLabel(i) {
+  return i == null || i < 0 ? '—' : PAD_NAMES[i] || 'Bouton ' + i;
+}
+
 export class Input {
   constructor() {
     this.keys = new Set();
     this.pressed = new Set(); // touches enfoncées depuis la dernière lecture
     this.touch = { left: false, right: false, gas: false, brake: false, drift: false };
     this.gamepadPrev = {};
+    this.bindings = defaultKeys();
+    this.pad = defaultPad();
+    this.capture = null;
     window.addEventListener('keydown', (e) => {
-      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      if (e.key && e.key.length === 1) learned[e.code] = e.key;
+      if (this.capture) {
+        e.preventDefault();
+        const cb = this.capture;
+        this.capture = null;
+        cb(e.code === 'Escape' ? null : e.code);
+        return;
+      }
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
       if (!this.keys.has(e.code)) this.pressed.add(e.code);
       this.keys.add(e.code);
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'PageUp', 'PageDown'].includes(e.code)) e.preventDefault();
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'PageUp', 'PageDown', 'Tab', 'F1', 'Home'].includes(e.code)) e.preventDefault();
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
   }
 
+  setBindings(keys, pad) {
+    this.bindings = { ...defaultKeys(), ...(keys || {}) };
+    this.pad = { ...defaultPad(), ...(pad || {}) };
+  }
+
+  // Attend la prochaine touche (null si Échap).
+  captureKey(cb) {
+    this.capture = cb;
+  }
+
   down(...codes) {
-    for (const c of codes) if (this.keys.has(c)) return true;
+    for (const c of codes) if (c && this.keys.has(c)) return true;
     return false;
   }
 
   // Vrai une seule fois par appui.
   hit(code) {
-    if (this.pressed.has(code)) {
+    if (code && this.pressed.has(code)) {
       this.pressed.delete(code);
       return true;
     }
     return false;
+  }
+
+  // Action reconfigurable maintenue.
+  held(action) {
+    const b = this.bindings[action];
+    return b ? this.down(...b) : false;
+  }
+
+  // Action reconfigurable déclenchée (une fois par appui).
+  act(action) {
+    const b = this.bindings[action];
+    if (!b) return false;
+    let r = false;
+    for (const c of b) if (this.hit(c)) r = true;
+    return r;
   }
 
   clearHits() {
@@ -39,44 +158,59 @@ export class Input {
     return null;
   }
 
-  // Événements de manette convertis en codes "virtuels".
+  _padPressed(p, i) {
+    const b = i >= 0 ? p.buttons[i] : null;
+    return !!(b && (b.pressed || b.value > 0.3));
+  }
+
+  // Boutons de manette convertis en appuis d'actions (codes virtuels).
   pollGamepadButtons() {
     const p = this._gamepad();
     if (!p) return;
-    const map = { 9: 'Escape', 3: 'KeyR', 8: 'Enter', 5: 'KeyC' };
-    for (const [idx, code] of Object.entries(map)) {
-      const b = p.buttons[idx];
-      const on = !!(b && b.pressed);
-      if (on && !this.gamepadPrev[idx]) this.pressed.add(code);
-      this.gamepadPrev[idx] = on;
+    for (const action of ['respawn', 'restart', 'camera', 'pause']) {
+      for (const i of this.pad[action] || []) {
+        const on = this._padPressed(p, i);
+        const k = action + i;
+        if (on && !this.gamepadPrev[k]) {
+          const code = (this.bindings[action] || []).find((c) => c) || action;
+          this.pressed.add(code);
+        }
+        this.gamepadPrev[k] = on;
+      }
     }
+  }
+
+  // Bouton de manette nouvellement enfoncé (pour la configuration).
+  padButtonPressed() {
+    const p = this._gamepad();
+    if (!p) return -1;
+    for (let i = 0; i < p.buttons.length; i++) {
+      const on = this._padPressed(p, i);
+      const was = this.gamepadPrev['cfg' + i];
+      this.gamepadPrev['cfg' + i] = on;
+      if (on && !was) return i;
+    }
+    return -1;
   }
 
   drive() {
     const t = this.touch;
     let steer = 0;
-    if (this.down('ArrowLeft', 'KeyA') || t.left) steer -= 1;
-    if (this.down('ArrowRight', 'KeyD') || t.right) steer += 1;
-    let throttle = this.down('ArrowUp', 'KeyW') || t.gas;
-    let brake = this.down('ArrowDown', 'KeyS') || t.brake;
-    let drift = this.down('Space', 'ShiftLeft', 'ShiftRight') || t.drift;
+    if (this.held('left') || t.left) steer -= 1;
+    if (this.held('right') || t.right) steer += 1;
+    let throttle = this.held('accelerate') || t.gas;
+    let brake = this.held('brake') || t.brake;
+    let drift = this.held('drift') || t.drift;
     const p = this._gamepad();
     if (p) {
       const ax = p.axes[0] || 0;
-      if (Math.abs(ax) > 0.15) steer = Math.max(-1, Math.min(1, ax));
-      if (p.buttons[14] && p.buttons[14].pressed) steer = -1;
-      if (p.buttons[15] && p.buttons[15].pressed) steer = 1;
-      const rt = p.buttons[7] ? p.buttons[7].value : 0;
-      const lt = p.buttons[6] ? p.buttons[6].value : 0;
-      if (rt > 0.2 || (p.buttons[0] && p.buttons[0].pressed)) throttle = true;
-      if (lt > 0.2 || (p.buttons[1] && p.buttons[1].pressed)) brake = true;
-      if (p.buttons[2] && p.buttons[2].pressed) drift = true;
+      if (Math.abs(ax) > 0.15) steer = Math.max(-1, Math.min(1, (ax - Math.sign(ax) * 0.15) / 0.85));
+      if (this._padPressed(p, 14)) steer = -1;
+      if (this._padPressed(p, 15)) steer = 1;
+      if ((this.pad.accelerate || []).some((i) => this._padPressed(p, i))) throttle = true;
+      if ((this.pad.brake || []).some((i) => this._padPressed(p, i))) brake = true;
+      if ((this.pad.drift || []).some((i) => this._padPressed(p, i))) drift = true;
     }
     return { steer, throttle, brake, drift };
-  }
-
-  anyDriveKey() {
-    const d = this.drive();
-    return d.throttle || d.brake || d.steer !== 0;
   }
 }

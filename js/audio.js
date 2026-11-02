@@ -154,6 +154,15 @@ export class GameAudio {
     this.tone(180, 0.4, 'sawtooth', 0.08, 0, 520);
   }
 
+  bounce() {
+    this.tone(220, 0.35, 'sine', 0.25, 0, 880);
+    this.tone(330, 0.25, 'triangle', 0.12, 0.05, 990);
+  }
+
+  whoosh() {
+    this.noise(0.9, 400, 0.18, 'bandpass', 0, 1800);
+  }
+
   thud(strength) {
     const v = Math.min(0.5, strength * 0.025);
     if (v < 0.03) return;

@@ -135,16 +135,22 @@ export class RaceSession {
   _orient() {
     const p = this.phys;
     const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
-    if (p.grounded) {
+    if (p.mode === 'loop') {
+      tmpV.set(p.n.x, p.n.y, p.n.z);
+      this.up.lerp(tmpV, 0.6).normalize();
+    } else if (p.grounded) {
       tmpV.set(p.n.x, p.n.y, p.n.z);
       this.up.lerp(tmpV, 0.28).normalize();
     } else {
       const sp = p.speed || 1;
       tmpV.set(-fx * (p.vel.y / sp) * 0.7, 1, -fz * (p.vel.y / sp) * 0.7).normalize();
-      this.up.lerp(tmpV, 0.035).normalize();
+      // Retournée (chute d'un looping) : on se redresse plus vite.
+      this.up.lerp(tmpV, this.up.y < 0.3 ? 0.08 : 0.035).normalize();
     }
-    const f = tmpV2.set(fx, 0, fz);
-    f.addScaledVector(this.up, -f.dot(this.up)).normalize();
+    const f = p.mode === 'loop' ? tmpV2.set(p.fwd.x, p.fwd.y, p.fwd.z) : tmpV2.set(fx, 0, fz);
+    f.addScaledVector(this.up, -f.dot(this.up));
+    if (f.lengthSq() < 1e-6) f.set(fx, 0, fz).addScaledVector(this.up, -tmpV2.dot(this.up));
+    f.normalize();
     const right = tmpV.crossVectors(f, this.up).normalize();
     const back = f.negate();
     tmpM.makeBasis(right, this.up, back);
@@ -178,9 +184,16 @@ export class RaceSession {
     if (ev.land > 4) {
       app.audio.land(ev.land);
       const p = this.phys.pos;
-      app.particles.burst(p.x, p.y + 0.3, p.z, Math.min(20, ev.land * 1.5), 6, 0.6, 0.8, '#e8c3a0', 3);
+      app.particles.burst(p.x, p.y + 0.3, p.z, Math.min(20, ev.land * 1.5), 6, 0.6, 0.8, app.scenery.theme.dust, 3);
       this.shake = Math.max(this.shake, Math.min(0.6, ev.land * 0.04));
     }
+    if (ev.bounce) {
+      app.audio.bounce();
+      const p = this.phys.pos;
+      app.particles.burst(p.x, p.y + 0.4, p.z, 24, 9, 0.6, 0.7, '#ff5fd2', 2);
+    }
+    if (ev.loopIn) app.audio.whoosh();
+    if (ev.loopFall && !this.demo) app.ui.hud.message('Trop lent pour le looping !', 1.4);
 
     if (this.state === 'racing') {
       const res = this.logic.update(this.phys);
@@ -266,16 +279,16 @@ export class RaceSession {
     const input = app.input;
 
     if (!this.demo) {
-      if (input.hit('Escape')) {
+      if (input.act('pause') || (this.state === 'paused' && input.hit('Escape'))) {
         if (this.state === 'paused') this.resume();
         else if (this.state !== 'finished') this.pause();
         else app.quitRace();
         return;
       }
       if (this.state === 'paused') return this.render(dt, 0);
-      if (input.hit('Enter') || input.hit('Backspace') || input.hit('NumpadEnter')) { this.restart(); return; }
-      if (input.hit('KeyR')) this.respawn();
-      if (input.hit('KeyC')) this.cycleCamera();
+      if (input.act('restart') || input.hit('NumpadEnter')) { this.restart(); return; }
+      if (input.act('respawn')) this.respawn();
+      if (input.act('camera')) this.cycleCamera();
     }
 
     if (this.state === 'countdown') {
@@ -359,7 +372,8 @@ export class RaceSession {
     if (p.grounded && p.slip > 5 && p.speed > 6) {
       for (const sx of [-1, 1]) {
         tmpV.set(sx * 1.0, 0.15, 1.4).applyQuaternion(g.quaternion).add(g.position);
-        app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, (Math.random() - 0.5) * 2, 1 + Math.random() * 2, (Math.random() - 0.5) * 2, 0.7, 0.9, p.surfType === 'ice' ? '#e8f8ff' : '#d9c2b0', -1);
+        const dust = p.surfMod === 'ice' ? '#e8f8ff' : p.surfMod === 'sand' ? '#d8b07a' : app.scenery.theme.dust;
+        app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, (Math.random() - 0.5) * 2, 1 + Math.random() * 2, (Math.random() - 0.5) * 2, 0.7, 0.9, dust, -1);
       }
     }
     if (boosting && Math.random() < 0.8) {
@@ -418,6 +432,7 @@ export class RaceSession {
       const r = 13;
       tmpV.set(car.position.x + Math.cos(this.camT) * r, car.position.y + 4.5, car.position.z + Math.sin(this.camT) * r);
       this.camPos.lerp(tmpV, 1 - Math.exp(-dt * 2));
+      cam.up.set(0, 1, 0);
       cam.position.copy(this.camPos);
       cam.lookAt(car.position.x, car.position.y + 1, car.position.z);
       this._fov(mode.fov);
@@ -434,21 +449,62 @@ export class RaceSession {
       return;
     }
 
-    // Caméra de poursuite : suit le cap, avec un peu de retard.
+    const sp = Math.abs(p.fwdSpeed);
+    const camUp = this.camUp || (this.camUp = new THREE.Vector3(0, 1, 0));
+
+    // Dans un looping : la caméra se cale derrière la voiture et tourne avec elle.
+    if (p.mode === 'loop') {
+      const up = this.up;
+      camUp.lerp(up, 1 - Math.exp(-dt * 6)).normalize();
+      tmpV.set(p.fwd.x, p.fwd.y, p.fwd.z);
+      const target = tmpV2.copy(car.position).addScaledVector(tmpV, -mode.dist).addScaledVector(up, mode.height);
+      this.camPos.lerp(target, 1 - Math.exp(-dt * 12));
+      cam.position.copy(this.camPos);
+      cam.up.copy(camUp);
+      tmpV2.copy(car.position).addScaledVector(tmpV, mode.look).addScaledVector(up, mode.lookUp);
+      cam.lookAt(tmpV2);
+      this.camYaw = p.yaw;
+      this._fov(mode.fov + Math.min(18, sp * 0.24));
+      return;
+    }
+    camUp.lerp(UP, 1 - Math.exp(-dt * 4)).normalize();
+    cam.up.copy(camUp);
+
+    // Caméra de poursuite : suit le cap, et un peu la trajectoire en dérapage.
     let target = p.yaw;
-    if (p.fwdSpeed < -3) target = p.yaw; // marche arrière : on reste derrière
+    const hv = Math.hypot(p.vel.x, p.vel.z);
+    if (p.grounded && hv > 10 && p.fwdSpeed > 0) {
+      target = lerpAngle(p.yaw, Math.atan2(-p.vel.x, -p.vel.z), 0.45);
+    }
     this.camYaw = lerpAngle(this.camYaw, target, 1 - Math.exp(-dt * (p.grounded ? 5.5 : 2.5)));
     const fx = -Math.sin(this.camYaw), fz = -Math.cos(this.camYaw);
-    const sp = Math.abs(p.fwdSpeed);
-    const dist = mode.dist + Math.min(2.5, sp * 0.03);
-    tmpV.set(car.position.x - fx * dist, car.position.y + mode.height, car.position.z - fz * dist);
-    // Horizontal serré, vertical plus doux
-    const kx = 1 - Math.exp(-dt * 14);
-    const ky = 1 - Math.exp(-dt * 6);
+    let dist = mode.dist + Math.min(2.5, sp * 0.03);
+    let height = mode.height;
+
+    // Sous un pont : on abaisse et on rapproche la caméra pour ne pas traverser la dalle.
+    const carTop = car.position.y + 1.6;
+    let ceil = Infinity;
+    for (let i = 0; i <= 4; i++) {
+      const k = i / 4;
+      const c = this.track.ceilingAt(car.position.x - fx * dist * k, car.position.z - fz * dist * k, carTop);
+      if (c < ceil) ceil = c;
+    }
+    let underBridge = false;
+    if (ceil < car.position.y + height + 1.2) {
+      underBridge = true;
+      height = Math.max(1.4, ceil - car.position.y - 0.9);
+      dist = Math.min(dist, mode.dist * 0.75);
+    }
+    tmpV.set(car.position.x - fx * dist, car.position.y + height, car.position.z - fz * dist);
+    // Horizontal serré, vertical plus doux (sauf sous un pont : réaction immédiate).
+    const kx = 1 - Math.exp(-dt * 12);
+    const ky = 1 - Math.exp(-dt * (underBridge ? 20 : 6));
     this.camPos.x += (tmpV.x - this.camPos.x) * kx;
     this.camPos.z += (tmpV.z - this.camPos.z) * kx;
     this.camPos.y += (tmpV.y - this.camPos.y) * ky;
-    // Ne pas passer sous la chaussée
+    // Jamais dans une dalle ni sous la chaussée
+    const ceilCam = this.track.ceilingAt(this.camPos.x, this.camPos.z, carTop - 0.5);
+    if (this.camPos.y > ceilCam - 0.5 && ceilCam > carTop - 0.5) this.camPos.y = ceilCam - 0.5;
     const s = this.track.surfaceAt(this.camPos.x, this.camPos.y, this.camPos.z, this._camS || (this._camS = {}), 2);
     if (this.camPos.y < s.h + 1.2) this.camPos.y = s.h + 1.2;
     cam.position.copy(this.camPos);
@@ -457,7 +513,8 @@ export class RaceSession {
       cam.position.x += (Math.random() - 0.5) * k;
       cam.position.y += (Math.random() - 0.5) * k;
     }
-    cam.lookAt(car.position.x + fx * mode.look, car.position.y + mode.lookUp, car.position.z + fz * mode.look);
+    const lookUp = underBridge ? Math.min(mode.lookUp, 0.8) : mode.lookUp;
+    cam.lookAt(car.position.x + fx * mode.look, car.position.y + lookUp, car.position.z + fz * mode.look);
     this._fov(mode.fov + Math.min(18, sp * 0.24) + (p.boost > 0 ? 5 : 0));
   }
 
@@ -471,6 +528,7 @@ export class RaceSession {
   }
 
   dispose() {
+    this.app.camera.up.set(0, 1, 0);
     this.view.dispose();
     this.car.dispose();
     this.ghostCar.dispose();
