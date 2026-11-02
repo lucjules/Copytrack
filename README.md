@@ -45,7 +45,9 @@ Pour le publier avec **GitHub Pages** : *Settings → Pages → Deploy from a br
 
 ## Nouveautés de la v1.2
 
-- 18 circuits en plus (30 au total), dont 6 dans trois nouveaux décors.
+- 18 circuits en plus (30 au total) : 6 dans chacun des trois nouveaux décors, avec beaucoup de virages.
+- Loopings, vrilles, murs et routes à l'envers à piloter : la force centrifuge et la gravité font glisser la voiture sur le côté (instable à l'envers), il faut braquer pour rester au centre, et frotter la bordure fait perdre de la vitesse.
+- Plusieurs plaques moto collées ne comptent que pour une transformation.
 - Rubans 3D généraux : routes à l'envers, vrille, L vertical, loopings plus grands.
 - Plaque moto, revêtement de gravité, revêtements réglables, boue, dérive, ralentisseur, vent.
 - Routes sans bordures et tunnels.

@@ -38,6 +38,10 @@ export const CAR = {
   launch: 9.5,        // vitesse normale au-delà de laquelle on décolle
   bounce: 14,         // vitesse verticale donnée par un revêtement Rebond (100 %)
   wind: 20,           // accélération latérale du vent à 100 %
+  ribbonSteer: 26,    // accélération latérale du volant sur un ruban (looping, vrille...)
+  ribbonSway: 1.0,    // part de la force centrifuge latérale ressentie dans les hélices
+  ribbonUnstable: 6,  // instabilité latérale à l'envers / sur un mur
+  ribbonDamp: 0.9,    // amortissement de la glisse latérale
   radius: 1.0,
   probe: 1.25,
   height: 1.3,
@@ -112,7 +116,7 @@ export class CarPhysics {
     this.rib = null;
     this.gravMul = 1;
     this.moto = false;
-    this.lastMoto = null;
+    this.motoLock = false;
     const s = this.track.surfaceAt(x, y + 0.5, z, this.surf, 3);
     this.pos.y = s.h;
     this.prev.y = s.h;
@@ -147,13 +151,15 @@ export class CarPhysics {
       const gm = this.surfP;
       if (Math.abs(gm - this.gravMul) > 0.01) { this.gravMul = gm; this.ev.gravity = true; }
     }
+    // Plaque moto : une suite de plaques collées ne compte que pour UNE transformation.
+    // Le verrou se relâche dès que la voiture roule sur autre chose.
     if (mod === 'moto') {
-      if (this.lastMoto !== s.tile) {
-        this.lastMoto = s.tile;
+      if (!this.motoLock) {
+        this.motoLock = true;
         this.moto = !this.moto;
         this.ev.moto = true;
       }
-    } else if (this.lastMoto) this.lastMoto = null;
+    } else this.motoLock = false;
   }
 
   step(inp) {
@@ -470,18 +476,33 @@ export class CarPhysics {
     vf -= this.g * R.dir * F.ty * dt;
     R.vs = vf;
 
-    // Déplacement latéral piloté (axe droit de la route).
-    const targetVl = this.steer * R.dir * Math.min(9, Math.abs(vf) * 0.3);
-    R.vl += (targetVl - R.vl) * Math.min(1, dt * 6);
+    // Glisse latérale : la gravité (vrille, mur incliné) et la force centrifuge de
+    // l'hélice poussent la voiture sur le côté ; le joueur doit braquer pour rester au centre.
+    {
+      const dU = 0.006;
+      const u0 = Math.max(0, R.u - dU), u1 = Math.min(1, R.u + dU);
+      const A0 = frameWorld(tile, rib, u0, this.F0), A2 = frameWorld(tile, rib, u1, this.F2);
+      const kr = ((A2.tx - A0.tx) * F.rx + (A2.ty - A0.ty) * F.ry + (A2.tz - A0.tz) * F.rz) / (F.ds * (u1 - u0));
+      let aLat = -this.g * F.ry - CAR.ribbonSway * vf * vf * kr;
+      // À l'envers ou sur un mur, l'équilibre est instable : plus on s'écarte, plus on glisse.
+      if (F.ny < 0.5) aLat += CAR.ribbonUnstable * (0.5 - F.ny) * R.dl;
+      aLat += this.steer * R.dir * CAR.ribbonSteer;
+      R.vl += aLat * dt;
+      R.vl *= Math.exp(-CAR.ribbonDamp * dt);
+    }
     R.dl += R.vl * dt;
     if (tile.nb) {
       if (Math.abs(R.dl) > ROAD_HALF + 0.3) { this._ribDetach(F); return; }
     } else {
       const lim = ROAD_HALF - CAR.radius - 0.2;
       if (Math.abs(R.dl) > lim) {
-        if (Math.abs(R.vl) > 3) this.ev.wall = Math.abs(R.vl);
+        // Frotter la bordure coûte de la vitesse.
+        const hit = Math.abs(R.vl);
+        if (hit > 2) this.ev.wall = hit;
+        vf *= 1 - Math.min(0.12, 0.004 + hit * 0.008);
+        R.vs = vf;
         R.dl = clamp(R.dl, -lim, lim);
-        R.vl = 0;
+        R.vl = -R.vl * 0.25;
       }
     }
 
@@ -515,7 +536,11 @@ export class CarPhysics {
     v.y = F.ty * d * R.vs + F.ry * R.vl;
     v.z = F.tz * d * R.vs + F.rz * R.vl;
     this.n.x = F.nx; this.n.y = F.ny; this.n.z = F.nz;
-    this.fwd.x = F.tx * d; this.fwd.y = F.ty * d; this.fwd.z = F.tz * d;
+    // Le nez suit un peu la glisse latérale (retour visuel pour le joueur).
+    const sk = R.vl / Math.max(12, Math.abs(R.vs)) * 0.8;
+    let fx = F.tx * d + F.rx * sk, fy = F.ty * d + F.ry * sk, fz = F.tz * d + F.rz * sk;
+    const fl = Math.hypot(fx, fy, fz) || 1;
+    this.fwd.x = fx / fl; this.fwd.y = fy / fl; this.fwd.z = fz / fl;
     if (Math.hypot(this.fwd.x, this.fwd.z) > 0.3) this.yaw = Math.atan2(-this.fwd.x, -this.fwd.z);
     this.grounded = true;
     this.surfType = 'road';
