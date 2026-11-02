@@ -4,6 +4,9 @@ import { Scenery } from './scenery.js';
 import { createTrackMaterials } from './trackMesh.js';
 import { Particles } from './particles.js';
 import { Input, KEY_ACTIONS, PAD_ACTIONS, keyLabel, padLabel, defaultKeys, defaultPad } from './input.js';
+import { GarageSession, } from './garage.js';
+import { CATEGORIES } from './cosmetics.js';
+import { profile, saveProfile, exportCode, parseCode, applySave, addCoins, owns } from './profile.js';
 import { GameAudio } from './audio.js';
 import { UI, $, esc, medalIcon } from './ui.js';
 import { RaceSession, medalFor } from './race.js';
@@ -12,7 +15,6 @@ import { BUILTIN_TRACKS, buildBuiltin } from './tracks.js';
 import { Track, hashString, DECORS } from './track.js';
 import { PIECES } from './pieces.js';
 import { VERSION } from './constants.js';
-import { CAR_COLORS } from './carModel.js';
 import {
   loadSettings, saveSettings, getRecord, listMyTracks, deleteMyTrack, saveMyTrack, newId,
   getEditorDraft, formatTime, purgeOldRecords, clearRecords,
@@ -32,7 +34,9 @@ class App {
     this.particles = new Particles(this.scene);
     this.input = new Input();
     this.input.setBindings(this.settings.keys, this.settings.pad);
+    this.input.setPadConfig({ deadzone: this.settings.padDeadzone, sens: this.settings.padSens, rumble: this.settings.haptics });
     purgeOldRecords();
+    profile();
     $('menu-foot').textContent = `Shardway v${VERSION} · un jeu de course original · propulsé par three.js`;
     this.audio = new GameAudio();
     this.audio.setVolume(this.settings.volume);
@@ -45,7 +49,8 @@ class App {
       return { def, track, index, key: `b-${def.id}-${hashString(track.encode())}` };
     });
 
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) document.body.classList.add('touch');
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) { document.body.classList.add('touch'); this.input.touchActive = true; }
+    document.body.classList.toggle('drag-steer', this.settings.touchMode === 'drag');
     this._applyQuality();
     this._resize();
     window.addEventListener('resize', () => this._resize());
@@ -54,6 +59,9 @@ class App {
     window.addEventListener('keydown', unlock);
     this._wire();
     this._wireTouch();
+    this._wireEggs();
+    window.addEventListener('orientationchange', () => this._resize());
+    document.addEventListener('fullscreenchange', () => this._resize());
   }
 
   saveSettings() {
@@ -72,10 +80,14 @@ class App {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    const portrait = h > w && document.body.classList.contains('touch');
+    $('rotate-hint').classList.toggle('hidden', !(portrait && (this.mode === 'race' || this.mode === 'editor')));
+    $('fs-btn').classList.toggle('hidden', !(document.body.classList.contains('touch') && (this.mode === 'race' || this.mode === 'menu') && !document.fullscreenElement));
   }
 
   // ------------------------------------------------------------ Navigation
   _dispose() {
+    $('garage').classList.add('hidden');
     if (this.session) this.session.dispose();
     this.session = null;
     this.ui.closeModal();
@@ -91,6 +103,7 @@ class App {
     this.camera.updateProjectionMatrix();
     this.session = new RaceSession(this, demo.track, { demo: true, seed: demo.key });
     this.showScreen(screen);
+    this._resize();
   }
 
   showScreen(name) {
@@ -98,12 +111,13 @@ class App {
     if (name === 'mytracks') this._renderMyTracks();
     if (name === 'options') this._renderOptions();
     if (name === 'controls') this._renderControls();
+    if (name === 'profile') this._renderProfile();
     this.ui.showScreen(name);
   }
 
   playBuiltin(i) {
     const b = this.builtins[i];
-    this.playTrack(b.track, { trackKey: b.key, medals: b.def.medals, hasNext: i < this.builtins.length - 1, builtinIndex: i, seed: b.key });
+    this.playTrack(b.track, { trackKey: b.key, medals: b.def.medals, difficulty: b.def.difficulty, hasNext: i < this.builtins.length - 1, builtinIndex: i, seed: b.key });
   }
 
   playTrack(track, opts) {
@@ -114,12 +128,14 @@ class App {
     this.ui.showScreen(null);
     this.ui.setMode('race');
     this.session = new RaceSession(this, track, opts);
+    this._resize();
   }
 
   playCode(code, entryId = null) {
     let track;
     try { track = Track.decode(code); } catch { this.ui.flash('Code de circuit invalide.'); return; }
-    this.playTrack(track, { trackKey: 'u-' + hashString(track.encode()), userEntry: entryId, seed: track.name });
+    // Circuits de joueurs : médailles déduites du temps de l'auteur, seulement s'il l'a fini.
+    this.playTrack(track, { trackKey: 'u-' + hashString(track.encode()), userEntry: entryId, seed: track.name, userMap: true, medals: track.derivedMedals, difficulty: 2 });
   }
 
   quitRace() {
@@ -142,6 +158,7 @@ class App {
     this.ui.setMode('editor');
     this.session = new EditorSession(this, state || getEditorDraft() || {});
     const L = (a) => this._keysOf(a);
+    this._resize();
     $('ed-help').textContent = `Clic : poser · Clic droit : supprimer · Clic droit glissé : orbiter · Clic molette : pipette · Molette : zoom · Maj + molette : niveau · ${L('ed.levelUp')} / ${L('ed.levelDown')} : niveau · ${L('ed.rotate')} : pivoter · F1 ou ? : tous les raccourcis`;
   }
 
@@ -153,28 +170,27 @@ class App {
   editorHelp() {
     const L = (a) => this._keysOf(a);
     const rows = [
-      ['Clic', 'Poser la pièce (glisser pour en poser plusieurs)'],
-      ['Clic droit', 'Supprimer la pièce visée'],
+      ['Clic', 'Poser la pièce / la décoration (glisser : plusieurs pièces)'],
+      ['Clic droit', 'Supprimer la pièce ou la décoration visée'],
       ['Clic droit glissé', 'Tourner la vue'],
-      ['Clic molette', 'Pipette (reprend pièce, rotation et niveau)'],
+      ['Clic molette', 'Pipette (pièce, rotation, niveau ou décoration)'],
       ['Clic molette glissé', 'Déplacer la vue'],
-      ['Molette', 'Zoom'],
+      ['Molette', 'Zoom (Alt + molette : taille de la décoration)'],
       ['Maj + molette', 'Monter / descendre d’un niveau'],
-      [L('ed.levelUp'), 'Monter d’un niveau'],
-      [L('ed.levelDown'), 'Descendre d’un niveau'],
-      [L('ed.rotate'), 'Pivoter (avec Maj : sens inverse)'],
-      [L('ed.nextPiece'), 'Pièce suivante (avec Maj : précédente)'],
-      ['1 … 0, P', 'Choisir une pièce'],
+      [L('ed.levelUp') + ' / ' + L('ed.levelDown'), 'Niveau + / −'],
+      [L('ed.rotate'), 'Pivoter (Maj : sens inverse) — décos : par 15°'],
+      [L('ed.mirror'), 'Miroir (looping gauche ↔ droite)'],
+      [L('ed.nextPiece'), 'Pièce suivante (Maj : précédente)'],
+      ['1 … 0, P, U, I, V, L, K, J', 'Pièces (U/I : grands loopings, V : vrille, L/K/J : montée en L, mur, sommet)'],
       [L('ed.surface'), 'Revêtement suivant (puis clic sur une pièce)'],
+      [L('ed.snap'), 'Accrochage des décorations (libre, 1 m, 4 m, case)'],
+      [L('ed.scaleUp') + ' / ' + L('ed.scaleDown'), 'Décoration : taille + / −'],
       [L('ed.erase'), 'Gomme'],
       [`${L('accelerate')} ${L('left')} ${L('brake')} ${L('right')}`, 'Déplacer la vue'],
-      [L('ed.recenter'), 'Recentrer sur le circuit'],
-      [L('ed.topView'), 'Vue de dessus'],
-      [L('ed.grid'), 'Afficher / masquer la grille'],
-      [L('ed.test'), 'Tester le circuit'],
-      ['Ctrl + Z / Ctrl + Y', 'Annuler / rétablir'],
-      ['Ctrl + S', 'Enregistrer'],
-      ['Alt + clic', 'Pipette'],
+      [L('ed.recenter') + ' · ' + L('ed.topView') + ' · ' + L('ed.grid'), 'Recentrer · vue de dessus · grille'],
+      [L('ed.test'), 'Tester (finir le circuit = le vérifier)'],
+      ['Ctrl + Z / Y / S', 'Annuler / rétablir / enregistrer'],
+      ['Manette', 'Stick droit : curseur · A : poser · B : supprimer · X : pivoter · Y : tester · LB/RB : niveau'],
     ];
     this.ui.modal({
       title: 'Raccourcis de l’éditeur',
@@ -200,7 +216,7 @@ class App {
     list.innerHTML = '';
     const groups = {};
     this.builtins.forEach((b, i) => { (groups[b.track.decor] = groups[b.track.decor] || []).push([b, i]); });
-    const colors = { desert: '#ff8c5a', polar: '#7fe9ff' };
+    const colors = { desert: '#ff8c5a', polar: '#7fe9ff', jungle: '#2dffb0', city: '#ff3d8a', isles: '#ffd66b' };
     for (const [decor, items] of Object.entries(groups)) {
       const g = document.createElement('div');
       g.className = 'track-group';
@@ -218,6 +234,14 @@ class App {
         if (has((t) => t.s === 'bounce')) tags.push('Rebond');
         if (has((t) => t.s === 'sand')) tags.push('Sable');
         if (has((t) => t.s === 'magnet')) tags.push('Aimant');
+        if (has((t) => t.s === 'moto')) tags.push('Moto');
+        if (has((t) => t.s === 'gravity')) tags.push('Gravité');
+        if (has((t) => t.s === 'wind')) tags.push('Vent');
+        if (has((t) => t.v)) tags.push('Envers');
+        if (has((t) => t.tn)) tags.push('Tunnel');
+        if (has((t) => t.nb)) tags.push('Sans bordures');
+        if (has((t) => t.t === 'wall')) tags.push('Mur');
+        if (b.track.decos.some((d) => d.k === 'shard')) tags.push('✦ Secret');
         const card = document.createElement('div');
         card.className = 'card ' + decor;
         card.tabIndex = 0;
@@ -241,24 +265,44 @@ class App {
     this._bindTab = tab;
     document.querySelectorAll('#bind-tabs .tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === tab));
     $('bind-hint').textContent = tab === 'pad'
-      ? 'Clique sur une case puis appuie sur un bouton de la manette (Échap pour annuler). Le stick gauche et la croix dirigent toujours.'
+      ? 'Clique sur une case (ou avec la manette : A) puis appuie sur le bouton voulu (Échap pour annuler). Stick gauche : direction · menus : stick ou croix. Éditeur : stick droit = curseur, gâchettes = zoom.'
       : 'Clique sur une case puis appuie sur la touche voulue (Échap pour annuler, × pour vider). Une touche déjà prise est retirée de l’autre action.';
     const list = $('bind-list');
     list.innerHTML = '';
     const s = this.settings;
     if (tab === 'pad') {
-      for (const [id, label] of PAD_ACTIONS) {
-        const cur = this.input.pad[id];
-        const lbl = document.createElement('div');
-        lbl.className = 'lbl';
-        lbl.textContent = label;
-        list.appendChild(lbl);
-        for (let slot = 0; slot < 2; slot++) {
-          const b = document.createElement('button');
-          b.className = 'bind-key';
-          b.innerHTML = `<span>${padLabel(cur[slot])}</span>`;
-          b.addEventListener('click', () => this._capturePad(id, slot, b));
-          list.appendChild(b);
+      const slider = (label, key, min, max, step, fmt) => {
+        const row = document.createElement('div');
+        row.className = 'bind-slider';
+        row.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${s[key]}"><b>${fmt(s[key])}</b>`;
+        const inp = row.querySelector('input'), out = row.querySelector('b');
+        inp.oninput = () => {
+          s[key] = parseFloat(inp.value); out.textContent = fmt(s[key]); this.saveSettings();
+          this.input.setPadConfig({ deadzone: s.padDeadzone, sens: s.padSens, rumble: s.haptics });
+        };
+        list.appendChild(row);
+      };
+      slider('Zone morte du stick', 'padDeadzone', 0, 0.4, 0.01, (v) => Math.round(v * 100) + ' %');
+      slider('Sensibilité de la direction', 'padSens', 0.6, 1.6, 0.05, (v) => '×' + v.toFixed(2));
+      const groups = [['Course', PAD_ACTIONS.race], ['Menus', PAD_ACTIONS.menu], ['Éditeur', PAD_ACTIONS.editor]];
+      for (const [gl, acts] of groups) {
+        const gh = document.createElement('div');
+        gh.className = 'bind-group';
+        gh.textContent = gl;
+        list.appendChild(gh);
+        for (const [id, label] of acts) {
+          const cur = this.input.pad[id] || [-1, -1];
+          const lbl = document.createElement('div');
+          lbl.className = 'lbl';
+          lbl.textContent = label;
+          list.appendChild(lbl);
+          for (let slot = 0; slot < 2; slot++) {
+            const b = document.createElement('button');
+            b.className = 'bind-key';
+            b.innerHTML = `<span>${padLabel(cur[slot])}</span>`;
+            b.addEventListener('click', () => this._capturePad(id, slot, b));
+            list.appendChild(b);
+          }
         }
       }
       return;
@@ -367,7 +411,7 @@ class App {
         this.audio.click();
         if (a.dataset.a === 'play') this.playCode(entry.code, entry.id);
         if (a.dataset.a === 'edit') this.openEditor({ code: entry.code, entryId: entry.id, name: entry.name });
-        if (a.dataset.a === 'share') this.shareModal(entry.code, entry.name);
+        if (a.dataset.a === 'share') this.shareModal(entry.code, entry.name, track);
         if (a.dataset.a === 'del') {
           this.ui.modal({
             title: 'Supprimer ce circuit ?',
@@ -389,29 +433,22 @@ class App {
     $('opt-quality').value = s.quality;
     $('opt-ghost').checked = s.ghost;
     $('opt-name').value = s.playerName;
-    const sw = $('opt-colors');
-    sw.innerHTML = '';
-    for (const c of CAR_COLORS) {
-      const b = document.createElement('button');
-      b.className = 'swatch' + (c === s.carColor ? ' on' : '');
-      b.style.background = c;
-      b.title = c;
-      b.addEventListener('click', () => {
-        s.carColor = c;
-        this.saveSettings();
-        this._renderOptions();
-      });
-      sw.appendChild(b);
-    }
+    $('opt-touch').value = s.touchMode;
+    $('opt-haptics').checked = s.haptics;
   }
 
-  shareModal(code, name) {
+  shareModal(code, name, track = null) {
+    let tr = track;
+    if (!tr) { try { tr = Track.decode(code); } catch { tr = null; } }
+    const verified = !!(tr && tr.verified);
     const url = location.href.split('#')[0] + '#t=' + encodeURIComponent(code);
     const ta = document.createElement('textarea');
     ta.readOnly = true;
     ta.value = code;
     const wrap = document.createElement('div');
-    wrap.innerHTML = `<p>Copie ce code (ou le lien) pour partager « ${esc(name)} ». N’importe qui pourra l’importer dans Shardway.</p>`;
+    wrap.innerHTML = verified
+      ? `<p>✔ Circuit vérifié (${formatTime(tr.vt)}). Les médailles sont déduites de ton temps (bronze = ${formatTime(tr.vt)}) et les joueurs gagneront des pièces. Copie le code ou le lien pour partager « ${esc(name)} ».</p>`
+      : `<p>⚠ Ce circuit n’est <b>pas vérifié</b> : tu dois le terminer au moins une fois pour fixer les médailles. Tu peux le partager quand même, mais il ne donnera <b>ni médailles ni pièces</b> et n’aura pas de record.</p>`;
     wrap.appendChild(ta);
     const copy = (txt, msg) => {
       const done = () => this.ui.flash(msg);
@@ -419,15 +456,18 @@ class App {
       else { ta.select(); document.execCommand('copy'); done(); }
       return false;
     };
-    this.ui.modal({
-      title: 'Partager le circuit',
-      body: wrap,
-      actions: [
-        { label: 'Copier le code', primary: true, onClick: () => copy(code, 'Code copié !') },
-        { label: 'Copier le lien', onClick: () => copy(url, 'Lien copié !') },
-        { label: 'Fermer' },
-      ],
-    });
+    const actions = [];
+    if (!verified && this.session instanceof EditorSession) actions.push({ label: 'Terminer le circuit d’abord', primary: true, onClick: () => { this.session.test(); } });
+    actions.push({ label: 'Copier le code', primary: verified, onClick: () => copy(code, 'Code copié !') });
+    actions.push({ label: 'Copier le lien', onClick: () => copy(url, 'Lien copié !') });
+    actions.push({ label: 'Fermer' });
+    this.ui.modal({ title: 'Partager le circuit', body: wrap, actions });
+  }
+
+  // Appelé quand le joueur termine son circuit en test depuis l'éditeur.
+  onEditorTestFinished(time, track) {
+    track.setVerified(time);
+    if (this.editorState) this.editorState.code = track.encode();
   }
 
   importModal(fromEditor = false) {
@@ -498,6 +538,15 @@ class App {
       this.showMenu('options');
     });
     $('opt-ghost').addEventListener('change', (e) => { this.settings.ghost = e.target.checked; this.saveSettings(); });
+    $('opt-touch').addEventListener('change', (e) => {
+      this.settings.touchMode = e.target.value;
+      document.body.classList.toggle('drag-steer', e.target.value === 'drag');
+      this.saveSettings();
+    });
+    $('opt-haptics').addEventListener('change', (e) => {
+      this.settings.haptics = e.target.checked; this.saveSettings();
+      this.input.setPadConfig({ rumble: e.target.checked });
+    });
     $('opt-name').addEventListener('input', (e) => { this.settings.playerName = e.target.value.slice(0, 20) || 'Pilote'; this.saveSettings(); });
     document.querySelectorAll('#bind-tabs .tab').forEach((t) => t.addEventListener('click', () => { this.audio.click(); this._renderControls(t.dataset.tab); }));
   }
@@ -511,6 +560,13 @@ class App {
       case 'import': this.importModal(false); break;
       case 'options': this.showScreen('options'); break;
       case 'controls': this.showScreen('controls'); break;
+      case 'profile': this.showScreen('profile'); break;
+      case 'garage': this.openGarage(); break;
+      case 'garage-back': this.showMenu('menu'); break;
+      case 'garage-buy': if (s instanceof GarageSession) s.buyDraft(); break;
+      case 'garage-revert': if (s instanceof GarageSession) s.revertDraft(); break;
+      case 'garage-moto': if (s instanceof GarageSession) s.toggleMoto(); break;
+      case 'fullscreen': this.toggleFullscreen(); break;
       case 'reset-keys':
         this.input.setBindings(defaultKeys(), defaultPad());
         this.settings.keys = defaultKeys();
@@ -555,7 +611,7 @@ class App {
       case 'lvl-up': ed.setLevel(ed.level + 1); break;
       case 'lvl-down': ed.setLevel(ed.level - 1); break;
       case 'help': this.editorHelp(); break;
-      case 'export': this.shareModal(ed.track.encode(), ed.track.name); break;
+      case 'export': this.shareModal(ed.track.encode(), ed.track.name, ed.track); break;
       case 'import': this.importModal(true); break;
       case 'new':
         this.ui.modal({
@@ -570,6 +626,13 @@ class App {
 
   _wireTouch() {
     const t = this.input.touch;
+    const zone = $('t-zone');
+    let zx = null;
+    zone.addEventListener('pointerdown', (e) => { e.preventDefault(); zx = e.clientX; t.analog = 0; try { zone.setPointerCapture(e.pointerId); } catch { /* pointeur synthétique */ } this.audio.unlock(); });
+    zone.addEventListener('pointermove', (e) => { if (zx != null) t.analog = Math.max(-1, Math.min(1, (e.clientX - zx) / 55)); });
+    const end = () => { zx = null; t.analog = null; };
+    zone.addEventListener('pointerup', end);
+    zone.addEventListener('pointercancel', end);
     document.querySelectorAll('#touch [data-t]').forEach((b) => {
       const k = b.dataset.t;
       const on = (e) => {
@@ -591,6 +654,207 @@ class App {
       b.addEventListener('pointercancel', off);
       b.addEventListener('pointerleave', off);
     });
+  }
+
+  // ------------------------------------------------------------ Garage / profil
+  openGarage() {
+    this._dispose();
+    this.mode = 'garage';
+    this.ui.showScreen(null);
+    this.ui.setMode('garage');
+    this.session = new GarageSession(this);
+    $('garage').classList.remove('hidden');
+    const tabs = $('garage-tabs');
+    tabs.innerHTML = '';
+    for (const c of CATEGORIES) {
+      const b = document.createElement('button');
+      b.className = 'tab';
+      b.dataset.cat = c.id;
+      b.textContent = c.label;
+      b.onclick = () => { this.audio.click(); this.session.setCat(c.id); };
+      tabs.appendChild(b);
+    }
+    this.session._render();
+    this._resize();
+  }
+
+  toggleFullscreen() {
+    const el = document.documentElement;
+    if (document.fullscreenElement) { document.exitFullscreen(); return; }
+    const p = el.requestFullscreen ? el.requestFullscreen() : null;
+    if (p && p.then) {
+      p.then(() => { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); }).catch(() => this.ui.flash('Plein écran indisponible sur cet appareil.'));
+    }
+  }
+
+  async _renderProfile() {
+    const p = profile();
+    const body = $('profile-body');
+    const medals = Object.values(p.medals);
+    body.innerHTML = `
+      <div><div class="meta">Identifiant joueur</div><div class="prof-id">${esc(p.id)}</div></div>
+      <div class="prof-grid">
+        <span>Pièces</span><b>◆ ${p.coins}</b>
+        <span>Courses terminées</span><b>${p.stats.races}</b>
+        <span>Pièces gagnées au total</span><b>${p.stats.earned}</b>
+        <span>Médailles obtenues</span><b>${medals.length}</b>
+        <span>Éclats secrets trouvés</span><b>${Object.keys(p.shards).length}</b>
+      </div>
+      <p class="prof-note">Shardway est un jeu 100 % navigateur, sans serveur : ton <b>code joueur</b> contient toute ta progression (records, fantômes, circuits enregistrés, pièces, personnalisation, réglages). Copie-le ou télécharge-le pour le restaurer sur un autre appareil ou navigateur. L'identifiant ci-dessus sert à reconnaître ta sauvegarde.</p>
+      <div class="row">
+        <button class="btn primary" data-p="copy">Copier mon code joueur</button>
+        <button class="btn" data-p="download">Télécharger (.shw)</button>
+        <button class="btn" data-p="paste">Importer un code</button>
+        <button class="btn" data-p="file">Importer un fichier</button>
+      </div>
+      <input type="file" id="prof-file" accept=".shw,.txt" class="hidden">`;
+    body.querySelector('[data-p="copy"]').onclick = async () => {
+      const code = await exportCode();
+      try { await navigator.clipboard.writeText(code); this.ui.flash(`Code copié (${Math.round(code.length / 1024)} Ko)`); }
+      catch { this._showCode(code); }
+    };
+    body.querySelector('[data-p="download"]').onclick = async () => {
+      const code = await exportCode();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([code], { type: 'text/plain' }));
+      a.download = `shardway-${p.id}.shw`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    };
+    body.querySelector('[data-p="paste"]').onclick = () => this._importSaveModal();
+    const file = body.querySelector('#prof-file');
+    body.querySelector('[data-p="file"]').onclick = () => file.click();
+    file.onchange = async () => {
+      const f = file.files[0];
+      if (f) this._askImport(await f.text());
+    };
+  }
+
+  _showCode(code) {
+    const ta = document.createElement('textarea');
+    ta.readOnly = true; ta.value = code;
+    this.ui.modal({ title: 'Ton code joueur', body: ta, actions: [{ label: 'Fermer', primary: true }] });
+    setTimeout(() => ta.select(), 50);
+  }
+
+  _importSaveModal() {
+    const ta = document.createElement('textarea');
+    ta.placeholder = 'SHWP1:…';
+    const wrap = document.createElement('div');
+    wrap.innerHTML = '<p>Colle ici un code joueur Shardway.</p>';
+    wrap.appendChild(ta);
+    this.ui.modal({ title: 'Importer une sauvegarde', body: wrap, actions: [
+      { label: 'Continuer', primary: true, onClick: () => { const v = ta.value; setTimeout(() => this._askImport(v), 50); } },
+      { label: 'Annuler' },
+    ] });
+    setTimeout(() => ta.focus(), 50);
+  }
+
+  async _askImport(text) {
+    let obj;
+    try { obj = await parseCode(text); } catch (e) { this.ui.flash(e.message); return; }
+    const when = obj.t ? new Date(obj.t).toLocaleString('fr-FR') : '?';
+    this.ui.modal({
+      title: 'Restaurer cette sauvegarde ?',
+      body: `<p>Joueur <b>${esc(obj.id || '?')}</b>, sauvegarde du ${esc(when)}.</p><p><b>Fusionner</b> garde tes meilleurs records et réunit les circuits ; <b>Remplacer</b> efface tes données actuelles.</p>`,
+      actions: [
+        { label: 'Fusionner', primary: true, onClick: () => { applySave(obj, 'merge'); this._afterImport(); } },
+        { label: 'Remplacer', danger: true, onClick: () => { applySave(obj, 'replace'); this._afterImport(); } },
+        { label: 'Annuler' },
+      ],
+    });
+  }
+
+  _afterImport() {
+    this.settings = loadSettings();
+    this.input.setBindings(this.settings.keys, this.settings.pad);
+    this.audio.setVolume(this.settings.volume);
+    this._applyQuality();
+    this.ui.flash('Sauvegarde restaurée !');
+    this.showMenu('profile');
+  }
+
+  // ------------------------------------------------------------ Easter eggs
+  _wireEggs() {
+    const konami = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
+    let ki = 0, typed = '';
+    window.addEventListener('keydown', (e) => {
+      if (this.mode !== 'menu' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      ki = e.code === konami[ki] ? ki + 1 : e.code === konami[0] ? 1 : 0;
+      if (ki === konami.length) {
+        ki = 0;
+        const p = profile();
+        if (!p.eggs.konami) {
+          p.eggs.konami = 1; p.owned['led:rainbow'] = 1; addCoins(100);
+          saveProfile(); this.ui.updateCoins();
+          this.ui.flash('↑↑↓↓←→←→BA : LED arc-en-ciel débloquée et +100 ◆ !', 4);
+        } else this.ui.flash('Tu connais déjà ce code 😉');
+        this.audio.finish(true);
+      }
+      if (e.key.length === 1) {
+        typed = (typed + e.key.toLowerCase()).slice(-8);
+        if (typed.endsWith('moto') && this.session && this.session.car) { this.session.car.setMoto(!this.session.car.isMoto); this.audio.transform(); }
+        if (typed.endsWith('disco')) this._disco = !this._disco;
+        if (typed.endsWith('shard')) this.ui.flash('Des éclats dorés se cachent dans certains circuits… ✦', 3.5);
+      }
+    });
+    let clicks = 0, ct = 0;
+    document.querySelector('#menu .logo').addEventListener('click', () => {
+      const now = performance.now();
+      clicks = now - ct < 700 ? clicks + 1 : 1; ct = now;
+      if (clicks >= 7) {
+        clicks = 0;
+        const p = profile();
+        $('menu').querySelector('.logo').animate([{ transform: 'rotate(0)' }, { transform: 'rotate(360deg) scale(1.15)' }, { transform: 'rotate(720deg)' }], { duration: 900 });
+        this.audio.finish(true);
+        if (!p.eggs.logo) { p.eggs.logo = 1; addCoins(25); saveProfile(); this.ui.updateCoins(); this.ui.flash('Tu as cliqué sur le logo 7 fois : +25 ◆ !', 3); }
+        else this.ui.flash('Shardway vous salue ✦', 2);
+      }
+    });
+  }
+
+  // ------------------------------------------------------------ Navigation manette
+  _padNav(m) {
+    const visible = (el) => el.offsetParent !== null || el.getClientRects().length > 0;
+    let root = null;
+    if (this.ui.modalOpen) root = $('modal');
+    else {
+      for (const id of ['finish', 'pause']) if (!$(id).classList.contains('hidden')) { root = $(id); break; }
+    }
+    if (!root) root = [...document.querySelectorAll('.screen:not(.hidden), #garage:not(.hidden)')][0] || null;
+    if (!root) return;
+    if (m.back) {
+      if (this.ui.modalOpen) { this.ui.closeModal(); return; }
+      const back = root.querySelector('[data-action="back"], [data-action="garage-back"], [data-action="options"]');
+      if (back) back.click();
+      return;
+    }
+    const items = [...root.querySelectorAll('button:not([disabled]), .card, .gcard, select, input[type=checkbox], input[type=range]')].filter(visible);
+    if (!items.length) return;
+    let cur = document.activeElement;
+    if (!items.includes(cur)) { items[0].focus(); return; }
+    if (m.confirm) { cur.click(); return; }
+    if (cur.type === 'range' && m.dx) {
+      const step = parseFloat(cur.step) || 1;
+      cur.value = parseFloat(cur.value) + m.dx * step * 2;
+      cur.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
+    if (!m.dx && !m.dy) return;
+    const r0 = cur.getBoundingClientRect();
+    const cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2;
+    let best = null, bs = Infinity;
+    for (const el of items) {
+      if (el === cur) continue;
+      const r = el.getBoundingClientRect();
+      const dx = r.left + r.width / 2 - cx, dy = r.top + r.height / 2 - cy;
+      const along = m.dx ? dx * m.dx : dy * m.dy;
+      const cross = m.dx ? Math.abs(dy) : Math.abs(dx);
+      if (along <= 4) continue;
+      const score = along + cross * 2.2;
+      if (score < bs) { bs = score; best = el; }
+    }
+    if (best) { best.focus(); best.scrollIntoView({ block: 'nearest', inline: 'nearest' }); this.audio.click(); }
   }
 
   // ------------------------------------------------------------ Boucle
@@ -619,7 +883,16 @@ class App {
     const loop = (now) => {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
-      this.input.pollGamepadButtons();
+      const gmode = this.mode === 'race' ? 'race' : this.mode === 'editor' ? 'editor' : 'menu';
+      this.input.pollGamepad(this.ui.modalOpen ? "menu" : gmode);
+      const inMenuUi = this.ui.modalOpen || this.mode === 'menu' || this.mode === 'garage'
+        || (this.mode === 'race' && (!$('finish').classList.contains('hidden') || !$('pause').classList.contains('hidden')));
+      if (inMenuUi) {
+        if (this.mode === 'race') this.input.pollGamepad('menu');
+        const m = this.input.padMenu();
+        if (m && (m.dx || m.dy || m.confirm || m.back) && !this.input.capture) this._padNav(m);
+      }
+      if (this._disco && this.scenery) this.scenery.sky.material.uniforms.horizon.value.setHSL((now / 4000) % 1, 0.8, 0.55);
       if (this.ui.modalOpen && this.input.hit('Escape')) this.ui.closeModal();
       if (this.mode === 'menu' && !this.ui.modalOpen && this.input.hit('Escape')) this.showScreen('menu');
       if (this.session) this.session.update(dt);

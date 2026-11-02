@@ -1,11 +1,15 @@
 // Physique arcade de la voiture : pas fixe, déterministe, sans moteur externe.
-// La voiture glisse sur la surface analytique des pièces ; les bordures sont
-// des murs (deux sondes circulaires, avant et arrière). Dans un looping, la
-// voiture suit un ruban paramétrique et décroche si elle est trop lente.
-import { CELL, DT, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T, LOOP_R, LOOP_LANE } from './constants.js';
+// Au sol, la voiture glisse sur la surface analytique des pièces ; les bordures
+// sont des murs (deux sondes circulaires, avant et arrière). Sur un ruban
+// (looping, vrille, mur vertical, route à l'envers), elle suit la courbe
+// paramétrée et décroche si elle est trop lente.
+// La personnalisation du véhicule (forme, LED, dessins...) est purement visuelle :
+// aucune de ces constantes n'en dépend.
+import { CELL, DT, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T, STICK_MIN } from './constants.js';
 import {
-  PIECES, SURFACES, toLocal, toLocalVec, sampleLocal, rotVec, baseY, loopFrame, localToWorld,
+  PIECES, toLocal, sampleLocal, rotVec, tileCenter, isRibbon, isFloor, tileParam,
 } from './pieces.js';
+import { ribbonOf, frameLocal } from './ribbons.js';
 
 export const CAR = {
   accel: 28,          // m/s² à bas régime
@@ -32,7 +36,8 @@ export const CAR = {
   snap: 0.7,
   step: 1.6,
   launch: 9.5,        // vitesse normale au-delà de laquelle on décolle
-  bounce: 14,         // vitesse verticale donnée par un revêtement Rebond
+  bounce: 14,         // vitesse verticale donnée par un revêtement Rebond (100 %)
+  wind: 20,           // accélération latérale du vent à 100 %
   radius: 1.0,
   probe: 1.25,
   height: 1.3,
@@ -40,11 +45,26 @@ export const CAR = {
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const TAU = Math.PI * 2;
-const L1 = { lx: 0, lz: 0 }, L2 = { lx: 0, lz: 0 }, LV = { lx: 0, lz: 0 };
+const L1 = { lx: 0, lz: 0 }, L2 = { lx: 0, lz: 0 };
 const S1 = {}, S2 = {};
-const W1 = { x: 0, z: 0 }, W2 = { x: 0, z: 0 };
-const F1 = {};
+const W1 = { x: 0, z: 0 };
+const FL = {};
+const CC = { x: 0, z: 0 };
+const TMP = { x: 0, z: 0 };
 const HIT = { dx: 0, dz: 0, nx: 0, nz: 0 };
+
+// Repère d'un ruban en coordonnées monde.
+export function frameWorld(tile, rib, u, F) {
+  frameLocal(rib, u, FL);
+  const c = tileCenter(tile, CC);
+  const r = tile.r;
+  rotVec(r, FL.px, FL.pz, TMP); F.px = TMP.x + c.x; F.pz = TMP.z + c.z; F.py = FL.py;
+  rotVec(r, FL.tx, FL.tz, TMP); F.tx = TMP.x; F.tz = TMP.z; F.ty = FL.ty;
+  rotVec(r, FL.nx, FL.nz, TMP); F.nx = TMP.x; F.nz = TMP.z; F.ny = FL.ny;
+  rotVec(r, FL.rx, FL.rz, TMP); F.rx = TMP.x; F.rz = TMP.z; F.ry = FL.ry;
+  F.ds = FL.ds;
+  return F;
+}
 
 export class CarPhysics {
   constructor(track) {
@@ -53,12 +73,26 @@ export class CarPhysics {
     this.prev = { x: 0, y: 0, z: 0 };
     this.vel = { x: 0, y: 0, z: 0 };
     this.n = { x: 0, y: 1, z: 0 };
-    this.fwd = { x: 0, y: 0, z: -1 };   // direction visuelle (utile dans le looping)
+    this.fwd = { x: 0, y: 0, z: -1 };   // direction visuelle (utile sur un ruban)
     this.surf = {};
-    this.ev = { wall: 0, land: 0, boostHit: false, bounce: false, loopIn: false, loopOut: false, loopFall: false };
-    this.loop = null;
+    this.F = {}; this.F0 = {}; this.F2 = {}; this.F3 = {};
+    this.ev = {
+      wall: 0, land: 0, boostHit: false, bounce: false, loopIn: false, loopOut: false, loopFall: false,
+      moto: false, gravity: false,
+    };
+    this.rib = null;
+    this.moto = false;
+    this.gravMul = 1;
     this.setBounds();
     this.place(0, 0.4, 0, 0);
+  }
+
+  get g() {
+    return CAR.gravity * this.gravMul;
+  }
+
+  get mode() {
+    return this.rib ? 'ribbon' : 'ground';
   }
 
   setBounds() {
@@ -73,10 +107,12 @@ export class CarPhysics {
     this.prev.x = x; this.prev.y = y; this.prev.z = z;
     this.vel.x = 0; this.vel.y = 0; this.vel.z = 0;
     this.yaw = yaw; this.prevYaw = yaw; this.yawRate = 0;
-    this.steer = 0; this.boost = 0; this.slip = 0; this.airTime = 0; this.fwdSpeed = 0;
+    this.steer = 0; this.boost = 0; this.boostF = 1; this.slip = 0; this.airTime = 0; this.fwdSpeed = 0;
     this.driftT = 0; this.bounceCD = 0;
-    this.mode = 'ground';
-    this.loop = null;
+    this.rib = null;
+    this.gravMul = 1;
+    this.moto = false;
+    this.lastMoto = null;
     const s = this.track.surfaceAt(x, y + 0.5, z, this.surf, 3);
     this.pos.y = s.h;
     this.prev.y = s.h;
@@ -91,7 +127,7 @@ export class CarPhysics {
   }
 
   _updateFwd() {
-    if (this.mode === 'loop') return;
+    if (this.rib) return;
     this.fwd.x = -Math.sin(this.yaw); this.fwd.y = 0; this.fwd.z = -Math.cos(this.yaw);
   }
 
@@ -99,18 +135,31 @@ export class CarPhysics {
     this.n.x = s.nx; this.n.y = s.ny; this.n.z = s.nz;
     this.surfType = s.type;
     this.surfMod = s.mod || '';
-    this.tile = s.tile;
+    this.surfTile = s.tile;
+    this.surfP = s.tile ? tileParam(s.tile) / 100 : 1;
     if (!triggers || !s.tile) return;
-    if (this.surfMod === 'boost') {
+    const mod = this.surfMod;
+    if (mod === 'boost') {
       if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
       this.boost = CAR.boostTime;
+      this.boostF = this.surfP;
+    } else if (mod === 'gravity') {
+      const gm = this.surfP;
+      if (Math.abs(gm - this.gravMul) > 0.01) { this.gravMul = gm; this.ev.gravity = true; }
     }
+    if (mod === 'moto') {
+      if (this.lastMoto !== s.tile) {
+        this.lastMoto = s.tile;
+        this.moto = !this.moto;
+        this.ev.moto = true;
+      }
+    } else if (this.lastMoto) this.lastMoto = null;
   }
 
   step(inp) {
     const dt = DT, p = this.pos, v = this.vel, ev = this.ev;
     ev.wall = 0; ev.land = 0; ev.boostHit = false; ev.bounce = false;
-    ev.loopIn = false; ev.loopOut = false; ev.loopFall = false;
+    ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.moto = false; ev.gravity = false;
     this.prev.x = p.x; this.prev.y = p.y; this.prev.z = p.z;
     this.prevYaw = this.yaw;
 
@@ -123,7 +172,7 @@ export class CarPhysics {
     if (this.bounceCD > 0) this.bounceCD -= dt;
     this.driftT = inp.drift ? Math.min(1, this.driftT + dt * 6) : Math.max(0, this.driftT - dt * 3.5);
 
-    if (this.mode === 'loop') { this._loopStep(inp); return; }
+    if (this.rib) { this._ribStep(inp); return; }
 
     let fx = -Math.sin(this.yaw), fy = 0, fz = -Math.cos(this.yaw);
 
@@ -139,23 +188,36 @@ export class CarPhysics {
 
       let vf = v.x * fx + v.y * fy + v.z * fz;
       let vr = v.x * rx + v.y * ry + v.z * rz;
-      vf -= CAR.gravity * fy * dt;
-      vr -= CAR.gravity * ry * dt;
+      const g = this.g;
+      vf -= g * fy * dt;
+      vr -= g * ry * dt;
 
-      const S = SURFACES[this.surfMod] || SURFACES[''];
+      // Effet du revêtement (le paramètre f vaut 1 à 100 %).
+      const mod = this.surfMod, f = this.surfP;
       const ground = this.surfType === 'ground';
-      const grip = ground ? 0.55 : S.grip ?? 1;
-      const traction = ground ? 0.7 : S.traction ?? 1;
-      const vmax = CAR.maxSpeed * (ground ? 0.45 : S.vmax ?? 1);
+      let grip = 1, traction = 1, vmaxK = 1, extraDrag = 0;
+      if (ground) { grip = 0.55; traction = 0.7; vmaxK = 0.45; extraDrag = 5; }
+      else if (mod === 'ice') { grip = clamp(0.2 / f, 0.05, 0.85); traction = 0.45; }
+      else if (mod === 'sand') { grip = 0.8; traction = 0.65; vmaxK = clamp(1 - 0.45 * f, 0.25, 1); extraDrag = 5 * f; }
+      else if (mod === 'mud') { grip = 0.7; traction = 0.55; vmaxK = clamp(1 - 0.5 * f, 0.2, 1); extraDrag = 6 * f; }
+      else if (mod === 'magnet') grip = 1.45 * f;
+      else if (mod === 'drift') grip = clamp(0.5 / f, 0.18, 1.2);
+      else if (mod === 'slow') extraDrag = 14 * f;
+      else if (mod === 'wind') {
+        const a = ((tileParamRaw(this.surfTile) - 100) / 100) * CAR.wind;
+        rotVec(this.surfTile.r, 1, 0, TMP);
+        vf += (TMP.x * fx + TMP.z * fz) * a * dt;
+        vr += (TMP.x * rx + TMP.z * rz) * a * dt;
+      }
 
-      vf = this._longitudinal(vf, inp, vmax, traction, (ground ? 5 : S.drag || 0), dt);
+      vf = this._longitudinal(vf, inp, CAR.maxSpeed * vmaxK, traction, extraDrag, dt);
 
       // Adhérence latérale limitée ; en dérapage elle chute progressivement.
       const drift = this.driftT;
       const lat = CAR.latGrip * grip * (1 - (1 - CAR.driftGrip) * drift) * dt;
       const corr = clamp(-vr, -lat, lat);
       vr += corr;
-      // La vitesse latérale "absorbée" en glisse est en partie rendue vers l'avant.
+      // La vitesse latérale « absorbée » en glisse est en partie rendue vers l'avant.
       if (vf > 5) vf += Math.abs(corr) * (0.2 + 0.35 * drift);
 
       const sp = Math.abs(vf);
@@ -177,7 +239,7 @@ export class CarPhysics {
       this.fwdSpeed = vf;
       this.airTime = 0;
     } else {
-      v.y -= CAR.gravity * dt;
+      v.y -= this.g * dt;
       this.yawRate = -this.steer * CAR.airTurn;
       this.yaw += this.yawRate * dt;
       const k = 1 - 0.0006 * this.speed * dt;
@@ -188,7 +250,7 @@ export class CarPhysics {
     }
 
     p.x += v.x * dt; p.y += v.y * dt; p.z += v.z * dt;
-    if (this._checkLoopEntry()) return;
+    if (this._tryEnterRibbon()) return;
     this._walls();
     this._bounds();
 
@@ -197,8 +259,9 @@ export class CarPhysics {
     const gap = p.y - s.h;
     const vn = v.x * s.nx + v.y * s.ny + v.z * s.nz;
     const magnet = s.mod === 'magnet';
-    const launch = magnet ? CAR.launch * 3 : CAR.launch;
-    const snap = magnet ? CAR.snap * 2 : CAR.snap;
+    const mk = magnet ? tileParam(s.tile) / 100 : 1;
+    const launch = magnet ? CAR.launch * (1 + 2 * mk) : CAR.launch;
+    const snap = magnet ? CAR.snap * (1 + mk) : CAR.snap;
     if (this.grounded && gap < snap && gap > -CAR.step && vn < launch) {
       p.y = s.h;
       const sp = this.speed;
@@ -223,7 +286,7 @@ export class CarPhysics {
     if (this.grounded && this.surfMod === 'bounce' && this.bounceCD <= 0) {
       const n = this.n;
       const vn2 = v.x * n.x + v.y * n.y + v.z * n.z;
-      const add = Math.max(0, CAR.bounce - vn2);
+      const add = Math.max(0, CAR.bounce * this.surfP - vn2);
       v.x += n.x * add; v.y += n.y * add; v.z += n.z * add;
       this.grounded = false;
       this.bounceCD = 0.4;
@@ -247,8 +310,10 @@ export class CarPhysics {
       }
     }
     if (this.boost > 0) {
-      const x = Math.max(0, vf) / CAR.boostSpeed;
-      a += CAR.boostAccel * Math.max(0, 1 - x * x);
+      const f = this.boostF;
+      const vb = CAR.maxSpeed + (CAR.boostSpeed - CAR.maxSpeed) * f;
+      const x = Math.max(0, vf) / vb;
+      a += CAR.boostAccel * f * Math.max(0, 1 - x * x);
     }
     let res = CAR.roll + CAR.drag * vf * vf + extraDrag;
     if (!inp.throttle && !inp.brake) res += CAR.coast;
@@ -320,7 +385,7 @@ export class CarPhysics {
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
       const P = PIECES[tile.t];
-      if (P.kind === 'area') continue;
+      if (P.kind === 'area' || tile.nb || !isFloor(tile)) continue;
       toLocal(tile, x, z, L1);
       sampleLocal(tile, L1.lx, L1.lz, S1);
       if (!S1.inFootprint) continue;
@@ -343,116 +408,200 @@ export class CarPhysics {
     return null;
   }
 
-  // ---------------------------------------------------------------- Looping
-  _checkLoopEntry() {
-    if (!this.grounded) return false;
-    const p = this.pos, q = this.prev;
-    const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
-    for (const tile of tiles) {
-      const P = PIECES[tile.t];
-      if (P.kind !== 'loop') continue;
-      const base = baseY(tile);
-      if (Math.abs(p.y - base) > 1.2) continue;
-      toLocal(tile, p.x, p.z, L1);
-      toLocal(tile, q.x, q.z, L2);
-      const m = P.mirror;
-      const laneA = -m * LOOP_LANE, laneB = m * LOOP_LANE;
-      if (L2.lz >= 0 && L1.lz < 0 && Math.abs(L2.lx - laneA) <= ROAD_HALF) {
-        this._enterLoop(tile, P, base, Math.min(0.3, -L1.lz / LOOP_R), L1.lx - laneA);
-        return true;
-      }
-      if (L2.lz <= 0 && L1.lz > 0 && Math.abs(L2.lx - laneB) <= ROAD_HALF) {
-        this._enterLoop(tile, P, base, TAU - Math.min(0.3, L1.lz / LOOP_R), L1.lx - laneB);
-        return true;
+  // ---------------------------------------------------------------- Rubans
+  // Détecte le franchissement d'une extrémité de ruban (plan perpendiculaire à la route).
+  _tryEnterRibbon() {
+    const p = this.pos, q = this.prev, v = this.vel;
+    const sp = this.speed;
+    if (sp < 3) return false;
+    const c1x = Math.floor(p.x / CELL), c1z = Math.floor(p.z / CELL);
+    const c2x = Math.floor(q.x / CELL), c2z = Math.floor(q.z / CELL);
+    for (let pass = 0; pass < 2; pass++) {
+      if (pass === 1 && c1x === c2x && c1z === c2z) break;
+      const tiles = pass === 0 ? this.track.tilesAt(c1x, c1z) : this.track.tilesAt(c2x, c2z);
+      for (const tile of tiles) {
+        if (!isRibbon(tile)) continue;
+        const rib = ribbonOf(tile);
+        for (let end = 0; end < 2; end++) {
+          const F = frameWorld(tile, rib, end, this.F);
+          const sg = end === 0 ? 1 : -1;
+          const tx = F.tx * sg, ty = F.ty * sg, tz = F.tz * sg;
+          const dc = (p.x - F.px) * tx + (p.y - F.py) * ty + (p.z - F.pz) * tz;
+          const dp = (q.x - F.px) * tx + (q.y - F.py) * ty + (q.z - F.pz) * tz;
+          if (!(dp < 0 && dc >= 0)) continue;
+          const dl = (p.x - F.px) * F.rx + (p.y - F.py) * F.ry + (p.z - F.pz) * F.rz;
+          const dn = (p.x - F.px) * F.nx + (p.y - F.py) * F.ny + (p.z - F.pz) * F.nz;
+          if (Math.abs(dl) > ROAD_HALF + 0.6 || dn < -1.4 || dn > 3.2) continue;
+          const vs = v.x * tx + v.y * ty + v.z * tz;
+          if (vs < 2.5) continue;
+          // La voiture doit être orientée comme la route (évite de « traverser » un mur).
+          if (this.grounded && (this.n.x * F.nx + this.n.y * F.ny + this.n.z * F.nz) < 0.35) continue;
+          this._enterRibbon(tile, rib, end, dc / F.ds, dl, vs, v.x * F.rx + v.y * F.ry + v.z * F.rz);
+          return true;
+        }
       }
     }
     return false;
   }
 
-  _enterLoop(tile, P, base, th, dl) {
-    const v = this.vel;
-    toLocalVec(tile.r, v.x, v.z, LV);
-    const F = loopFrame(P.mirror, base, th, F1);
-    const vs = LV.lx * F.tx + v.y * F.ty + LV.lz * F.tz;
-    const vl = LV.lx * F.rx + v.y * F.ry + LV.lz * F.rz;
-    toLocalVec(tile.r, -Math.sin(this.yaw), -Math.cos(this.yaw), LV);
-    const dir = LV.lx * F.tx + LV.lz * F.tz >= 0 ? 1 : -1;
-    this.loop = { tile, m: P.mirror, base, th, vs, dl: clamp(dl, -ROAD_HALF + 1, ROAD_HALF - 1), vl, dir };
-    this.mode = 'loop';
+  _enterRibbon(tile, rib, end, along, dl, vs, vl) {
+    const u = clamp(end === 0 ? along : 1 - along, 0, 1);
+    this.rib = { tile, rib, u, dir: end === 0 ? 1 : -1, vs, dl: clamp(dl, -ROAD_HALF + 1, ROAD_HALF - 1), vl };
     this.ev.loopIn = true;
-    this._applyLoopFrame();
+    this._ribPlace(this.rib);
   }
 
-  _loopStep(inp) {
-    const Lp = this.loop, dt = DT;
-    let F = loopFrame(Lp.m, Lp.base, Lp.th, F1);
+  _ribStep(inp) {
+    const R = this.rib, dt = DT, tile = R.tile, rib = R.rib;
+    let F = frameWorld(tile, rib, R.u, this.F);
+
+    // Revêtements actifs sur ce ruban.
+    const mod = tile.s, f = tileParam(tile) / 100;
+    let extraDrag = 0;
+    if (mod === 'boost') {
+      if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
+      this.boost = CAR.boostTime; this.boostF = f;
+    } else if (mod === 'slow') extraDrag = 14 * f;
+    else if (mod === 'sand') extraDrag = 5 * f;
+    else if (mod === 'mud') extraDrag = 6 * f;
+
     // Moteur / freins dans le sens de la voiture, gravité le long du ruban.
-    let vf = Lp.vs * Lp.dir;
-    vf = this._longitudinal(vf, inp, CAR.maxSpeed, 1, 0, dt);
-    Lp.vs = vf * Lp.dir - CAR.gravity * F.ty * dt;
-    // Déplacement latéral piloté.
-    const targetVl = this.steer * Lp.dir * Math.min(9, Math.abs(Lp.vs) * 0.3);
-    Lp.vl += (targetVl - Lp.vl) * Math.min(1, dt * 6);
-    Lp.dl += Lp.vl * dt;
-    const lim = ROAD_HALF - CAR.radius - 0.2;
-    if (Math.abs(Lp.dl) > lim) {
-      if (Math.abs(Lp.vl) > 3) this.ev.wall = Math.abs(Lp.vl);
-      Lp.dl = clamp(Lp.dl, -lim, lim);
-      Lp.vl = 0;
-    }
-    Lp.th += (Lp.vs / F.ds) * dt;
-    this.fwdSpeed = Lp.vs * Lp.dir;
-    this.slip = 0;
-    this.yawRate = 0;
+    let vf = this._longitudinal(R.vs, inp, CAR.maxSpeed, 1, extraDrag, dt);
+    vf -= this.g * R.dir * F.ty * dt;
+    R.vs = vf;
 
-    if (Lp.th >= TAU) { this._exitLoop(TAU); return; }
-    if (Lp.th <= 0) { this._exitLoop(0); return; }
-
-    F = loopFrame(Lp.m, Lp.base, Lp.th, F1);
-    // Force d'appui : la voiture décroche si la vitesse ne suffit plus.
-    const press = (Lp.vs * Lp.vs) / LOOP_R + CAR.gravity * F.ny;
-    this._applyLoopFrame();
-    if (press < 0 && Lp.th > 0.6 && Lp.th < TAU - 0.6) {
-      this.mode = 'ground';
-      this.loop = null;
-      this.grounded = false;
-      this.ev.loopFall = true;
-      if (Math.hypot(this.fwd.x, this.fwd.z) > 0.2) this.yaw = Math.atan2(-this.fwd.x, -this.fwd.z);
+    // Déplacement latéral piloté (axe droit de la route).
+    const targetVl = this.steer * R.dir * Math.min(9, Math.abs(vf) * 0.3);
+    R.vl += (targetVl - R.vl) * Math.min(1, dt * 6);
+    R.dl += R.vl * dt;
+    if (tile.nb) {
+      if (Math.abs(R.dl) > ROAD_HALF + 0.3) { this._ribDetach(F); return; }
+    } else {
+      const lim = ROAD_HALF - CAR.radius - 0.2;
+      if (Math.abs(R.dl) > lim) {
+        if (Math.abs(R.vl) > 3) this.ev.wall = Math.abs(R.vl);
+        R.dl = clamp(R.dl, -lim, lim);
+        R.vl = 0;
+      }
     }
+
+    R.u += (R.dir * vf * dt) / F.ds;
+    this.fwdSpeed = vf; this.slip = 0; this.yawRate = 0;
+    if (R.u > 1 || R.u < 0) { this._ribEnd(R.u > 1 ? 1 : 0); return; }
+
+    F = frameWorld(tile, rib, R.u, this.F);
+    // Pression sur la route : centripète + gravité (ou adhérence « magique »).
+    if (rib.stick) {
+      if (F.ny < 0.5 && Math.abs(vf) < STICK_MIN) { this._ribDetach(F); return; }
+    } else if (R.u > rib.minU && R.u < 1 - rib.minU) {
+      const dU = 0.004;
+      const F0 = frameWorld(tile, rib, Math.max(0, R.u - dU), this.F0);
+      const F2 = frameWorld(tile, rib, Math.min(1, R.u + dU), this.F2);
+      const k = 1 / (F.ds * (Math.min(1, R.u + dU) - Math.max(0, R.u - dU)));
+      const kn = ((F2.tx - F0.tx) * F.nx + (F2.ty - F0.ty) * F.ny + (F2.tz - F0.tz) * F.nz) * k;
+      const press = vf * vf * kn + this.g * F.ny;
+      if (press < 0) { this._ribDetach(F); return; }
+    }
+    this._ribPlace(R);
   }
 
   // Place la voiture sur le ruban (position, vitesse, orientation monde).
-  _applyLoopFrame() {
-    const Lp = this.loop;
-    const F = loopFrame(Lp.m, Lp.base, Lp.th, F1);
-    const lx = F.px + F.rx * Lp.dl, ly = F.py + F.ry * Lp.dl, lz = F.pz + F.rz * Lp.dl;
-    localToWorld(Lp.tile, lx, lz, W2);
-    this.pos.x = W2.x; this.pos.y = ly; this.pos.z = W2.z;
-    const vlx = F.tx * Lp.vs + F.rx * Lp.vl, vly = F.ty * Lp.vs + F.ry * Lp.vl, vlz = F.tz * Lp.vs + F.rz * Lp.vl;
-    rotVec(Lp.tile.r, vlx, vlz, W1);
-    this.vel.x = W1.x; this.vel.y = vly; this.vel.z = W1.z;
-    rotVec(Lp.tile.r, F.nx, F.nz, W1);
-    this.n.x = W1.x; this.n.y = F.ny; this.n.z = W1.z;
-    rotVec(Lp.tile.r, F.tx * Lp.dir, F.tz * Lp.dir, W1);
-    this.fwd.x = W1.x; this.fwd.y = F.ty * Lp.dir; this.fwd.z = W1.z;
+  _ribPlace(R) {
+    const F = frameWorld(R.tile, R.rib, R.u, this.F);
+    const p = this.pos, v = this.vel;
+    p.x = F.px + F.rx * R.dl; p.y = F.py + F.ry * R.dl; p.z = F.pz + F.rz * R.dl;
+    const d = R.dir;
+    v.x = F.tx * d * R.vs + F.rx * R.vl;
+    v.y = F.ty * d * R.vs + F.ry * R.vl;
+    v.z = F.tz * d * R.vs + F.rz * R.vl;
+    this.n.x = F.nx; this.n.y = F.ny; this.n.z = F.nz;
+    this.fwd.x = F.tx * d; this.fwd.y = F.ty * d; this.fwd.z = F.tz * d;
+    if (Math.hypot(this.fwd.x, this.fwd.z) > 0.3) this.yaw = Math.atan2(-this.fwd.x, -this.fwd.z);
     this.grounded = true;
     this.surfType = 'road';
     this.surfMod = '';
+    this.fwdSpeed = R.vs;
   }
 
-  _exitLoop(th) {
-    const Lp = this.loop;
-    Lp.th = th;
-    this._applyLoopFrame();
-    this.yaw = Math.atan2(-this.fwd.x, -this.fwd.z);
-    this.prevYaw = this.yaw;
-    this.vel.y = 0;
-    this.n.x = 0; this.n.y = 1; this.n.z = 0;
-    this.pos.y = Lp.base;
-    this.mode = 'ground';
-    this.loop = null;
-    this.grounded = true;
+  _ribDetach(F) {
+    this._ribPlace(this.rib);
+    this.rib = null;
+    this.grounded = false;
+    this.ev.loopFall = true;
+    void F;
+  }
+
+  // Fin de ruban : passe au ruban suivant s'il est raccordé, sinon retour au sol.
+  _ribEnd(endU) {
+    const R = this.rib;
+    R.u = endU;
+    this._ribPlace(R);
+    const F = frameWorld(R.tile, R.rib, endU, this.F);
+    const d = R.dir;
+    const fx = F.tx * d, fy = F.ty * d, fz = F.tz * d;
+    const px = this.pos.x, py = this.pos.y, pz = this.pos.z;
+    const next = this._matchRibbon(R.tile, F, fx, fy, fz);
+    if (next) {
+      const F2 = frameWorld(next.tile, next.rib, next.end, this.F2);
+      const vx = this.vel.x, vy = this.vel.y, vz = this.vel.z;
+      this.rib = {
+        tile: next.tile, rib: next.rib, u: next.end, dir: next.end === 0 ? 1 : -1,
+        vs: R.vs,
+        dl: clamp((px - F2.px) * F2.rx + (py - F2.py) * F2.ry + (pz - F2.pz) * F2.rz, -ROAD_HALF + 1, ROAD_HALF - 1),
+        vl: vx * F2.rx + vy * F2.ry + vz * F2.rz,
+      };
+      this._ribPlace(this.rib);
+      return;
+    }
+    // Retour au sol.
+    this.rib = null;
     this.ev.loopOut = true;
+    const hz = Math.hypot(fx, fz);
+    if (hz > 0.2) this.yaw = Math.atan2(-fx, -fz);
+    this.prevYaw = this.yaw;
+    if (F.ny > 0.6) {
+      this.grounded = true;
+      this.vel.y = Math.min(this.vel.y, 0);
+      this.n.x = 0; this.n.y = 1; this.n.z = 0;
+    } else {
+      this.grounded = false;
+    }
     this._updateFwd();
   }
+
+  _matchRibbon(curTile, F, fx, fy, fz) {
+    const seen = new Set();
+    const px = F.px, py = F.py, pz = F.pz;
+    const cells = new Set();
+    for (const off of [0, 1.5]) {
+      // Les extrémités tombent pile sur une frontière de case : on regarde les cases voisines.
+      for (const dx of [-0.6, 0, 0.6]) {
+        for (const dz of [-0.6, 0, 0.6]) {
+          cells.add(Math.floor((px + fx * off + dx) / CELL) + ',' + Math.floor((pz + fz * off + dz) / CELL));
+        }
+      }
+    }
+    for (const c of cells) {
+      const [cx, cz] = c.split(',').map(Number);
+      for (const tile of this.track.tilesAt(cx, cz)) {
+        if (tile === curTile || seen.has(tile) || !isRibbon(tile)) continue;
+        seen.add(tile);
+        const rib = ribbonOf(tile);
+        for (let end = 0; end < 2; end++) {
+          const G = frameWorld(tile, rib, end, this.F3);
+          const dist = Math.hypot(G.px - px, G.py - py, G.pz - pz);
+          if (dist > 3.5) continue;
+          const sg = end === 0 ? 1 : -1;
+          if (G.tx * sg * fx + G.ty * sg * fy + G.tz * sg * fz < 0.7) continue;
+          if (G.nx * F.nx + G.ny * F.ny + G.nz * F.nz < 0.6) continue;
+          return { tile, rib, end };
+        }
+      }
+    }
+    return null;
+  }
+}
+
+function tileParamRaw(tile) {
+  return tileParam(tile);
 }

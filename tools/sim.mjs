@@ -17,8 +17,9 @@ const only = args.filter((a) => /^\d+$/.test(a)).map(Number);
 const GLYPH = {
   straight: ['║', '═'], curve: ['╗', '╝'], bigcurve: ['◜', '◝'], slope: ['^', '>'], steep: ['⇑', '⇒'],
   checkpoint: ['C', 'C'], start: ['S', 'S'], finish: ['F', 'F'], platform: ['#', '#'], loop: ['O', 'O'], loopL: ['Ø', 'Ø'],
+  loopBig: ['B', 'B'], loopBigL: ['B', 'B'], loopDouble: ['D', 'D'], loopDoubleL: ['D', 'D'], twist: ['~', '~'], ramp90: ['Q', 'Q'], wall: ['W', 'W'], crest90: ['Y', 'Y'],
 };
-const SURF = { ice: '~', boost: '»', bounce: 'j', sand: 's', magnet: 'm' };
+const SURF = { ice: '~', boost: '»', bounce: 'j', sand: 's', magnet: 'm', mud: 'u', drift: 'd', slow: 'x', wind: 'w', gravity: 'g', moto: 'o' };
 
 function map(track) {
   const b = track.bounds();
@@ -31,7 +32,7 @@ function map(track) {
       if (!ts.length) { row += ' . '; continue; }
       const t = ts[ts.length - 1];
       const g = t.s ? SURF[t.s] : GLYPH[t.t][t.r % 2];
-      row += (ts.length > 1 ? '*' : ' ') + g + (t.l ? String(t.l) : ' ');
+      row += (ts.length > 1 ? '*' : ' ') + (t.v ? '^' : g) + (t.l ? String(t.l % 10) : ' ');
     }
     lines.push(row);
   }

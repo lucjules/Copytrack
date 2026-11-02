@@ -159,6 +159,12 @@ export class GameAudio {
     this.tone(330, 0.25, 'triangle', 0.12, 0.05, 990);
   }
 
+  transform() {
+    this.noise(0.5, 600, 0.2, 'bandpass', 0, 3200);
+    this.tone(160, 0.5, 'sawtooth', 0.1, 0, 640);
+    this.tone(640, 0.3, 'triangle', 0.12, 0.35, 1280);
+  }
+
   whoosh() {
     this.noise(0.9, 400, 0.18, 'bandpass', 0, 1800);
   }

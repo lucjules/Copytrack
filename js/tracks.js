@@ -95,10 +95,93 @@ export const BUILTIN_TRACKS = [
     script: 'start S B S2 O S2 C S U2 RR S2 B S UU G2 DD S2 C S LL S B S.j G1 S2 R S2.m U S.m D.m S C S RR S2 B S OL S2 R S2.i S L S2 B S2 finish',
     medals: { cristal: 35, or: 36.9, argent: 42.5, bronze: 49.8 },
   },
+  // ---- v1.2 : désert crépuscule ----------------------------------------------
+  {
+    id: 'dunes', shard: [0.5, 7], name: 'Dunes Express', decor: 'desert', difficulty: 2,
+    script: 'start B S2 S2.d R S L S C S.o S3 B S R S L S2.o S2 B S2 C S2.x S R S2 finish', medals: { cristal: 17.4, or: 18.3, argent: 21.1, bronze: 24.8 },
+  },
+  {
+    id: 'mirage', shard: [0.6, -7], name: 'Tunnel du Mirage', decor: 'desert', difficulty: 2,
+    script: 'start S B S2# S3_# RR# S C S2 L S2_ S.w60 S2 R S B S2# S finish', medals: { cristal: 13.4, or: 14.3, argent: 16.4, bronze: 19.3 },
+  },
+  {
+    id: 'corniche', name: 'La Corniche', decor: 'desert', difficulty: 3,
+    script: 'start B S2 S3_ S2.w170_ RR_ S3_ C S2.w30_ LL_ S2_ B S3 RR S C S2.u S2 B S2 finish', medals: { cristal: 18.4, or: 19.7, argent: 22.6, bronze: 26.6 },
+  },
+  {
+    id: 'escalade', name: 'Escalade', decor: 'desert', difficulty: 3,
+    script: 'start B S2 B S2 QU WA2 CR S2 C S2 D2 S2 R S2 R S2 B S2 finish', medals: { cristal: 13.9, or: 14.6, argent: 16.8, bronze: 19.7 },
+  },
+  {
+    id: 'lunaire', name: 'Sauts Lunaires', decor: 'desert', difficulty: 3,
+    script: 'start B S2 B S.g30 S2 UU G10 DD S2 C S.g100 S2 RR S B S2 S.g30 S2 UU G8 DD S3 C S.g100 S2 finish', medals: { cristal: 25.4, or: 26.5, argent: 30.4, bronze: 35.7 },
+  },
+  {
+    id: 'vrille', name: 'Vrille Rouge', decor: 'desert', difficulty: 4,
+    script: 'start B S2 B S2 TW S2^ RR^ S2^ TWB S C S2 B S2 TW S3^ TWB S2 finish', medals: { cristal: 13.6, or: 14.1, argent: 16.2, bronze: 19 },
+  },
+  // ---- v1.2 : nuit polaire ----------------------------------------------------
+  {
+    id: 'givre', shard: [0.55, 7], name: 'Chemin de Givre', decor: 'polar', difficulty: 2,
+    script: 'start B S2 S2.o I2 R I S2.o S C S B S2 LL I2 S2.o S B S2 finish', medals: { cristal: 14.3, or: 15.1, argent: 17.3, bronze: 20.4 },
+  },
+  {
+    id: 'faille', name: 'Faille Glaciaire', decor: 'polar', difficulty: 3,
+    script: 'start B S2 B S2 QU WA3 CR S2 C S2 TW S2^ TWB S2 D3 S2 B S2 finish', medals: { cristal: 13.9, or: 14.4, argent: 16.6, bronze: 19.5 },
+  },
+  {
+    id: 'cascade', name: 'Cascade Magnétique', decor: 'polar', difficulty: 3,
+    script: 'start B S2 B S OB S2.m C S2.m RR S B S2 OBL S2 C S B S finish', medals: { cristal: 18.4, or: 19.2, argent: 22.1, bronze: 26 },
+  },
+  {
+    id: 'spirale2', name: 'Spirale Boréale', decor: 'polar', difficulty: 4,
+    script: 'start B S2 B S OD S2 C S.j S2 RR S B S2 ODL S2 C S2 B S2 finish', medals: { cristal: 21.2, or: 22.1, argent: 25.4, bronze: 29.8 },
+  },
+  {
+    id: 'plafond', name: 'Route du Plafond', decor: 'polar', difficulty: 4,
+    script: 'start B S2 B S2 TW S3^ RR^ S2^ LL^ S3^ TWB S C S2 B S2 TW S2^_ TWB S2 finish', medals: { cristal: 16.2, or: 16.8, argent: 19.3, bronze: 22.6 },
+  },
+  {
+    id: 'zenith', name: 'Zénith', decor: 'polar', difficulty: 5,
+    script: 'start B S2 B S2 QU WA CR S2 C S2 TW S2^ TWB S2 D2 S B S OB S2 C S2.o S2 B S2 OD S2 C S B S finish', medals: { cristal: 27.6, or: 28.5, argent: 32.7, bronze: 38.4 },
+  },
+  // ---- v1.2 : nouveaux décors -------------------------------------------------
+  {
+    id: 'lianes', shard: [0.5, -7], name: 'Lianes Néon', decor: 'jungle', difficulty: 3,
+    script: 'start B S2 S2.m R S L S C S.o S2 B S2# RR S B S2.u S2 OL S2 C S2 B S finish', medals: { cristal: 18.6, or: 19.6, argent: 22.6, bronze: 26.5 },
+  },
+  {
+    id: 'spores', name: 'Spores Sauteuses', decor: 'jungle', difficulty: 4,
+    script: 'start B S2 S.j G1 S2 B S RR_ S C S2.o S3 LL S.j G1 S2 B S2.w40 S3 C S2 TW S2^ TWB S2 B S2 finish', medals: { cristal: 20.6, or: 21.6, argent: 24.9, bronze: 29.2 },
+  },
+  {
+    id: 'neons', shard: [0.6, 7], name: 'Néons Express', decor: 'city', difficulty: 3,
+    script: 'start B S2 B S2# S RR S C S.o S2 LL B S2 OB S2 C S2.o S B S2 finish', medals: { cristal: 17.7, or: 18.7, argent: 21.4, bronze: 25.2 },
+  },
+  {
+    id: 'viaduc', name: 'Viaduc Vertical', decor: 'city', difficulty: 5,
+    script: 'start B S2 B S2 QU WA2 CR S2 C S2 TW S3^ TWB S D2 S2 B S OD S2 C S2.g40 S2 B S2 finish', medals: { cristal: 21.8, or: 22.5, argent: 25.9, bronze: 30.4 },
+  },
+  {
+    id: 'lagon', shard: [0.5, 7], name: 'Lagon Turquoise', decor: 'isles', difficulty: 2,
+    script: 'start B S2 S2.o R S L S2 C S B S2 RR S2.o S2 B S2 C S2 finish', medals: { cristal: 13.7, or: 14.6, argent: 16.8, bronze: 19.8 },
+  },
+  {
+    id: 'archipel', name: 'Grand Archipel', decor: 'isles', difficulty: 4,
+    script: 'start B S2 B S2 OL S2 C S2.o S3 RR_ S2.w170_ S C S2 B S2 UU G3 DD S2.o S2 B S OB S2 finish', medals: { cristal: 24.4, or: 25.5, argent: 29.3, bronze: 34.4 },
+  },
 ];
 
 export function buildBuiltin(def) {
   const t = scriptTrack(def.name, def.script, { ...(def.opts || {}), decor: def.decor || 'desert' });
   t.author = 'Shardway';
+  // Éclat secret (easter egg) : posé au bord de la route, à une fraction du parcours.
+  if (def.shard && t.path && t.path.length > 10) {
+    const i = Math.min(t.path.length - 2, Math.floor(t.path.length * def.shard[0]));
+    const a = t.path[i], b = t.path[i + 1];
+    const dx = b[0] - a[0], dz = b[2] - a[2];
+    const l = Math.hypot(dx, dz) || 1;
+    t.addDeco({ k: 'shard', x: a[0] + (-dz / l) * def.shard[1], y: a[1], z: a[2] + (dx / l) * def.shard[1], ry: 0, s: 1, c: 0 });
+  }
   return t;
 }

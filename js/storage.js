@@ -19,6 +19,32 @@ function write(key, value) {
   }
 }
 
+// Accès bruts (profil, sauvegarde complète).
+export function getJSON(key, fallback) { return read(key, fallback); }
+export function setJSON(key, value) { return write(key, value); }
+
+// Toutes les données du jeu (clés « shardway.* ») sous forme d'objet.
+export function dumpAll() {
+  const out = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(PREFIX)) out[k.slice(PREFIX.length)] = localStorage.getItem(k);
+    }
+  } catch { /* stockage indisponible */ }
+  return out;
+}
+
+export function restoreAll(data, keep = false) {
+  try {
+    if (!keep) {
+      Object.keys(localStorage).filter((k) => k.startsWith(PREFIX)).forEach((k) => localStorage.removeItem(k));
+    }
+    for (const [k, v] of Object.entries(data)) if (typeof v === 'string') localStorage.setItem(PREFIX + k, v);
+    return true;
+  } catch { return false; }
+}
+
 export const DEFAULT_SETTINGS = {
   volume: 0.7,
   quality: 'high',
@@ -26,6 +52,10 @@ export const DEFAULT_SETTINGS = {
   ghost: true,
   camera: 0,
   playerName: 'Pilote',
+  touchMode: 'buttons',   // buttons | drag
+  haptics: true,
+  padDeadzone: 0.15,
+  padSens: 1,
 };
 
 export function loadSettings() {

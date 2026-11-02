@@ -5,6 +5,7 @@ import * as THREE from './vendor/three.module.min.js';
 import { GeoBuilder } from './geo.js';
 import { CELL } from './constants.js';
 import { PIECES } from './pieces.js';
+import { buildDecoInto } from './decos.js';
 
 export const THEMES = {
   desert: {
@@ -28,6 +29,39 @@ export const THEMES = {
     rock: ['#c5dbf2', '#9fc0e4', '#7a9fcf', '#5a7cae', '#425d8a'],
     hills: 120,
     dust: '#eef6ff',
+  },
+  jungle: {
+    label: 'Jungle néon',
+    sky: { top: '#07051f', mid: '#2a1066', horizon: '#14a38a', sun: '#d7c8ff', aurora: 0, stars: 0.8 },
+    fog: '#103a38', fogNear: 120, fogFar: 760,
+    sunDir: [-0.35, 0.55, -0.75], sunColor: '#b9a3ff', sunIntensity: 1.7,
+    hemi: ['#7be8c0', '#1a1038', 1.45],
+    ground: ['#1d3b2a', '#22452f', '#1a3324'],
+    rock: ['#2b5a3a', '#2f6b45', '#1f4d5a', '#3a2f6b', '#4a2a7a'],
+    hills: 110,
+    dust: '#8ff5c8',
+  },
+  city: {
+    label: 'Ville futuriste',
+    sky: { top: '#03040f', mid: '#241048', horizon: '#ff3d8a', sun: '#ffd7f0', aurora: 0, stars: 0.5 },
+    fog: '#2a1038', fogNear: 160, fogFar: 900,
+    sunDir: [0.5, 0.25, -0.8], sunColor: '#ff9ad0', sunIntensity: 1.5,
+    hemi: ['#ff9ad8', '#161033', 1.35],
+    ground: ['#1b1f33', '#20253d', '#181b2e'],
+    rock: ['#2a2f4d', '#343a5e', '#242848', '#3a2f5e', '#2a2048'],
+    hills: 14,
+    dust: '#b9a8ff',
+  },
+  isles: {
+    label: 'Archipel tropical',
+    sky: { top: '#2a7fd8', mid: '#6cc0f0', horizon: '#ffe3b0', sun: '#fff7d6', aurora: 0, stars: 0 },
+    fog: '#bfe6f2', fogNear: 260, fogFar: 1500,
+    sunDir: [-0.45, 0.6, -0.65], sunColor: '#fff0d0', sunIntensity: 3.0,
+    hemi: ['#cfeaff', '#3a8fb0', 1.7],
+    ground: ['#1f9fd0', '#27aedb', '#1a8fc0'],
+    rock: ['#f2d9a0', '#e8cc88', '#55b85a', '#44a24c', '#7a8f6a'],
+    hills: 55,
+    dust: '#f5e6c0',
   },
 };
 
@@ -288,6 +322,9 @@ export class Scenery {
     };
     const ctx = { rand, scatter, low: this.quality === 'low' };
     if (this.themeId === 'polar') this._polarDecor(ctx);
+    else if (this.themeId === 'jungle') this._jungleDecor(ctx);
+    else if (this.themeId === 'city') this._cityDecor(ctx);
+    else if (this.themeId === 'isles') this._islesDecor(ctx);
     else this._desertDecor(ctx);
   }
 
@@ -385,6 +422,96 @@ export class Scenery {
       }));
     // Éclats de glace lumineux
     this._crystals(ctx, ['#7fe9ff', '#b48cff', '#e9f6ff'], low ? 18 : 36, 0.8);
+  }
+
+
+  // Fusionne N décorations (builders de decos.js) en un seul maillage.
+  _scatterMerged(ctx, kinds, count, opts = {}) {
+    const { rand, scatter } = ctx;
+    const gb = new GeoBuilder(), glow = new GeoBuilder();
+    scatter(count, (x, y, z) => {
+      const k = kinds[Math.floor(rand() * kinds.length)];
+      const sc = (opts.min || 1) + rand() * ((opts.max || 1.6) - (opts.min || 1));
+      const c = opts.colors ? opts.colors[Math.floor(rand() * opts.colors.length)] : 0;
+      buildDecoInto(gb, glow, { k, x, y: y - 0.2, z, ry: rand() * Math.PI * 2, s: sc, c });
+    });
+    if (!gb.empty) {
+      const m = new THREE.Mesh(gb.build(), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9, side: THREE.DoubleSide }));
+      m.castShadow = true; m.receiveShadow = true;
+      this.decor.add(m);
+    }
+    if (!glow.empty) this.decor.add(new THREE.Mesh(glow.build(), new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, side: THREE.DoubleSide })));
+  }
+
+  _jungleDecor(ctx) {
+    const { rand, scatter, low } = ctx;
+    // Arbres géants à canopée lumineuse
+    const gb = new GeoBuilder();
+    gb.taper(0, 0, 0, 14, 2.4, 2.4, 1.3, 1.3, '#2a2140');
+    gb.taper(0, 0, 14, 22, 1.3, 1.3, 0.8, 0.8, '#3a2c55');
+    const trunk = gb.build();
+    const trees = low ? 50 : 100;
+    const caps = new THREE.IcosahedronGeometry(1, 1);
+    const trunkMesh = this._instanced(trunk, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }), trees,
+      (put) => scatter(trees, (x, y, z) => { const s = 0.8 + rand() * 1.8; put(x, y, z, 0, rand() * 6, 0, s, s * (0.9 + rand() * 0.6), s); }));
+    void trunkMesh;
+    for (const [col, n] of [['#2dffb0', 0.4], ['#8f5bff', 0.35], ['#ff4fd8', 0.25]]) {
+      const cnt = Math.round(trees * n);
+      this._instanced(caps, new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.5, flatShading: true, roughness: 0.5 }), cnt,
+        (put) => scatter(cnt, (x, y, z) => { const s = 5 + rand() * 7; put(x, y + 16 + rand() * 8, z, 0, rand() * 6, 0, s, s * 0.55, s); }));
+    }
+    this._scatterMerged(ctx, ['mushroom'], low ? 25 : 55, { min: 2, max: 5, colors: [0, 5, 7, 4] });
+    this._scatterMerged(ctx, ['bush', 'flower'], low ? 40 : 90, { min: 1, max: 2.2, colors: [0, 4, 7] });
+    this._crystals(ctx, ['#2dffb0', '#ff4fd8', '#8f5bff'], low ? 20 : 40, 0.9);
+    // Lucioles
+    const orb = new THREE.IcosahedronGeometry(0.35, 0);
+    this._instanced(orb, new THREE.MeshBasicMaterial({ color: '#c9ffe9', toneMapped: false }), 160,
+      (put) => scatter(160, (x, y, z) => put(x, y + 2 + rand() * 18, z, 0, 0, 0, 1, 1, 1)));
+  }
+
+  _cityDecor(ctx) {
+    const { rand, scatter, low } = ctx;
+    // Texture de fenêtres lumineuses
+    const cv = document.createElement('canvas');
+    cv.width = 64; cv.height = 128;
+    const g = cv.getContext('2d');
+    g.fillStyle = '#05060f'; g.fillRect(0, 0, 64, 128);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 8; x++) {
+        if (rand() < 0.55) {
+          const c = ['#ffd27a', '#7fe9ff', '#ff7ad9', '#fff3c4'][Math.floor(rand() * 4)];
+          g.fillStyle = c; g.fillRect(x * 8 + 1.5, y * 8 + 2, 5, 4);
+        }
+      }
+    }
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    box.translate(0, 0.5, 0);
+    const mat = new THREE.MeshStandardMaterial({ color: '#232845', emissive: '#ffffff', emissiveMap: tex, emissiveIntensity: 0.9, flatShading: true, roughness: 0.7 });
+    const n = low ? 90 : 190;
+    this._instanced(box, mat, n, (put) => scatter(n, (x, y, z) => {
+      const w = 14 + rand() * 30, hgt = 40 + rand() * (rand() < 0.2 ? 260 : 130);
+      put(x, y, z, 0, 0, 0, w, hgt, w * (0.7 + rand() * 0.6));
+    }));
+    // Néons : enseignes lumineuses sur de petits immeubles
+    for (const col of ['#ff3d8a', '#36e9ff', '#8f5bff']) {
+      const cnt = low ? 14 : 30;
+      this._instanced(box, new THREE.MeshBasicMaterial({ color: col, toneMapped: false }), cnt,
+        (put) => scatter(cnt, (x, y, z) => put(x, y + 30 + rand() * 120, z, 0, rand() * 3, 0, 1.2 + rand() * 1.6, 3 + rand() * 6, 10 + rand() * 18)));
+    }
+    // Pylônes et lampadaires
+    this._scatterMerged(ctx, ['sign_up', 'sign_warn', 'cube'], low ? 30 : 60, { min: 1.5, max: 3, colors: [3, 5, 7] });
+  }
+
+  _islesDecor(ctx) {
+    const { low } = ctx;
+    this._scatterMerged(ctx, ['palm'], low ? 70 : 150, { min: 1.2, max: 2.2 });
+    this._scatterMerged(ctx, ['bush', 'rock'], low ? 40 : 90, { min: 1.2, max: 3 });
+    this._scatterMerged(ctx, ['flower'], low ? 20 : 50, { min: 1.5, max: 2.5, colors: [1, 7, 4] });
+    // Rochers à l'horizon
+    this._crystals(ctx, ['#ffe08a', '#ff9ec8', '#8ff0ff'], low ? 10 : 22, 0.4);
   }
 
   clearTerrain() {

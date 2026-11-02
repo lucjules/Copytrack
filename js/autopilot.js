@@ -48,9 +48,9 @@ export class Autopilot {
 
   control(phys) {
     this._progress(phys);
-    if (phys.mode === 'loop') {
-      const Lp = phys.loop;
-      return { throttle: true, brake: false, steer: Math.max(-1, Math.min(1, -Lp.dl * 0.35 * Lp.dir)), drift: false };
+    if (phys.rib) {
+      const R = phys.rib;
+      return { throttle: true, brake: false, steer: Math.max(-1, Math.min(1, -R.dl * 0.35 * R.dir)), drift: false };
     }
     const path = this.path, p = phys.pos;
     const v = Math.max(0, phys.fwdSpeed);

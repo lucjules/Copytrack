@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, voiture, pièces et circuits ont été conçus pour ce projet.
 
-Version actuelle : **1.1**
+Version actuelle : **1.2**
 
 ## Jouer
 
@@ -19,30 +19,40 @@ Pour le publier avec **GitHub Pages** : *Settings → Pages → Deploy from a br
 
 ## Contenu
 
-- **12 circuits** avec médailles Bronze / Argent / Or / Cristal, dans deux décors :
-  - *Désert crépuscule* : désert facetté et cristaux ;
-  - *Nuit polaire* : banquise, glaciers, sapins enneigés, étoiles et aurore boréale animée.
+- **30 circuits** avec médailles Bronze / Argent / Or / Cristal, dans 5 décors :
+  *Désert crépuscule*, *Nuit polaire* (aurore boréale animée), *Jungle néon*, *Ville futuriste* et *Archipel tropical*.
 - Checkpoints, chronos intermédiaires comparés au record, réapparition au dernier checkpoint, fantôme du meilleur temps.
-- **Pièces** : ligne droite, virage serré, grand virage (2×2), pente, tremplin, **looping** (décalé à droite ou à gauche), checkpoint, départ, arrivée, plateforme. Plusieurs niveaux de hauteur et ponts.
-- **Revêtements** applicables sur toutes les pièces compatibles :
-  - *Verglas* : très peu d'adhérence ;
-  - *Accélérateur* : gros coup de boost ;
-  - *Rebond* : propulse la voiture en l'air (pièces plates uniquement) ;
-  - *Sable* : freine et limite la vitesse ;
-  - *Aimant* : adhérence renforcée, la voiture reste collée sur les bosses.
-- **Éditeur** : pose au clic ou en glissant, rotation, niveaux, revêtements au pinceau, choix du décor, annuler/rétablir, pipette, test immédiat, sauvegarde locale, partage par code ou par lien (`#t=…`).
-- **Commandes personnalisables** (Options › Commandes) : deux touches par action pour la course et l'éditeur, boutons de manette, détection des conflits, retour aux réglages par défaut.
-- Physique arcade déterministe (pas fixe de 1/120 s) : dérapage rattrapable, aide au contre-braquage, sauts, loopings avec décrochage si la vitesse est insuffisante.
-- Caméra qui suit la glisse, tourne avec la voiture dans les loopings et se baisse sous les ponts.
+- **Pièces** : ligne droite, virage serré, grand virage (2×2), pente, tremplin, checkpoint, départ, arrivée, plateforme, plusieurs niveaux de hauteur et ponts, et des obstacles en 3D :
+  - looping (2×2), **grand looping** (3×3), **double looping** (3×3), chacun en version droite ou gauche ;
+  - **vrille** (la route passe à l'envers) ;
+  - **L vertical** : montée en quart de cercle, mur vertical (empilable), sommet du L.
+- **Options de pièce** : *à l'envers* (route au plafond, il faut rouler vite pour rester collé), *sans bordures* (on peut tomber), *tunnel*.
+- **Revêtements réglables** (chaque curseur change l'effet et légèrement la couleur) :
+  verglas, accélérateur (5 % à 200 %), rebond, sable, aimant, boue, dérive, ralentisseur, vent latéral, **gravité** (15 % à 250 %) et **plaque moto**
+  (la voiture se transforme en moto en gardant sa vitesse ; une autre plaque la ramène en voiture).
+- **Éditeur** : pose au clic, rotation, miroir, niveaux, revêtements au pinceau, options, choix du décor, annuler/rétablir, pipette, test immédiat, sauvegarde locale, partage par code ou par lien.
+  - **Décorations à placement libre** (position, rotation, taille, accrochage libre / 1 m / 4 m / case) : panneaux, formes, murs, toits, nature, et **plaque image par URL** (l'image doit autoriser le chargement depuis un autre site, CORS).
+  - **Vérification** : il faut finir son circuit pour que le partage donne des médailles et des pièces. Le temps de l'auteur devient la médaille *bronze*, les trois autres sont déduites. On peut partager sans vérifier, mais sans médailles ni pièces.
+- **Pièces (monnaie)** gagnées en fin de course selon la médaille (doublées la première fois, réduites sur les circuits de joueurs).
+- **Garage** : forme (6 carrosseries), couleurs, LED sous la voiture / moto, dessins, ornements, ailerons, roues, presets et 3 emplacements personnels. Tout est **purement visuel** : la physique ne dépend jamais de l'apparence.
+- **Profil et sauvegarde** : un code joueur contient tout (records, fantômes, circuits enregistrés, pièces, équipement, réglages). Copie-le ou télécharge un fichier `.shw`, puis restaure-le ailleurs (fusion ou remplacement).
+- **Easter eggs** : à toi de les trouver (indice : certains circuits cachent des éclats dorés ✦).
+- **Commandes personnalisables** (clavier, manette, éditeur), navigation complète aux menus avec la manette, curseur et raccourcis d'éditeur à la manette, zone morte et sensibilité réglables, vibrations.
+- **Mobile** : plein écran, indication de passage en paysage, commandes à boutons ou direction au glisser du pouce, zones sûres (encoche), vibrations.
+- Physique arcade déterministe (pas fixe de 1/120 s), dérapage rattrapable, sauts, loopings et rubans 3D avec décrochage si la vitesse est insuffisante.
+- Caméra qui suit la glisse, se retourne avec le véhicule (envers, looping, mur) et se baisse sous les ponts et dans les tunnels.
 - Sons synthétisés en direct (Web Audio), aucun fichier audio.
-- Clavier QWERTY et AZERTY, manette, commandes tactiles sur mobile.
 
-## Nouveautés de la v1.1
+## Nouveautés de la v1.2
 
-- Pistes plus larges (18 m au lieu de 14 m). Tous les circuits existants, y compris ceux enregistrés ou partagés en v1.0 (codes `SHW1:`), sont convertis automatiquement.
-- Les anciennes pièces « Accélérateur » et « Verglas » deviennent des revêtements.
-- Les records et fantômes de la v1.0 sont réinitialisés : la physique et les distances ont changé.
-- 6 nouveaux circuits dans le décor Nuit polaire, looping, 3 nouveaux revêtements, commandes personnalisables, nouveaux raccourcis dans l'éditeur, meilleure maniabilité.
+- 18 circuits en plus (30 au total), dont 6 dans trois nouveaux décors.
+- Rubans 3D généraux : routes à l'envers, vrille, L vertical, loopings plus grands.
+- Plaque moto, revêtement de gravité, revêtements réglables, boue, dérive, ralentisseur, vent.
+- Routes sans bordures et tunnels.
+- Décorations libres, image par URL, vérification des circuits de joueurs, médailles automatiques.
+- Pièces, garage de personnalisation, presets, code joueur, easter eggs.
+- Meilleure adaptation aux téléphones et contrôles à la manette améliorés.
+- Les anciens circuits et codes de partage (`SHW1`, `SHW2`) restent lisibles.
 
 ## Commandes par défaut
 
@@ -69,8 +79,11 @@ Pour le publier avec **GitHub Pages** : *Settings → Pages → Deploy from a br
 | Maj + molette, E / C, Page↑ / Page↓ | Changer de niveau |
 | R (Maj + R) | Pivoter (sens inverse) |
 | Tab (Maj + Tab) | Pièce suivante (précédente) |
-| 1 … 0, P | Choisir une pièce |
+| 1 … 0, P, U, I, V, L, K, J | Choisir une pièce |
+| M | Miroir (looping gauche / droite) |
 | B | Revêtement suivant |
+| N | Accrochage des décorations |
+| [ ] ou Alt + molette | Taille de la décoration |
 | X / Suppr | Gomme |
 | F | Recentrer la vue |
 | H | Vue de dessus |
@@ -86,13 +99,17 @@ Après la pose d'une pente, le niveau suit tout seul quand on vise la case du ha
 ```
 index.html, css/style.css   interface
 js/main.js                  orchestration (menu, course, éditeur, options)
-js/pieces.js, js/track.js   pièces, revêtements, modèle de circuit, codes de partage
-js/physics.js               physique de la voiture (sol, murs, looping)
+js/pieces.js, js/track.js   pièces, revêtements, modèle de circuit, codes de partage (SHW3)
+js/ribbons.js               rubans 3D (looping, vrille, L vertical, envers)
+js/physics.js               physique de la voiture (sol, murs, rubans)
+js/decos.js, decoData.js    décorations à placement libre
+js/garage.js, cosmetics.js  personnalisation visuelle (voiture et moto)
+js/profile.js               pièces, objets débloqués, code joueur
 js/raceLogic.js             checkpoints, arrivée, réapparition
 js/race.js, js/editor.js    sessions de course et d'édition
 js/input.js                 clavier, manette, tactile, touches personnalisables
 js/trackMesh.js, js/geo.js  génération des maillages low-poly
-js/scenery.js               décors (ciel, terrain, objets)
+js/scenery.js               5 décors (ciel, terrain, objets)
 js/tracks.js                circuits intégrés et médailles
 tools/sim.mjs               validation des circuits par pilote automatique (npm run sim)
 ```

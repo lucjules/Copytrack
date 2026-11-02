@@ -5,6 +5,13 @@
 // vers le bord nord (-z). Un virage entre par le sud et sort par l'est
 // (virage à droite). La rotation r (0..3) oriente le nord local vers la
 // direction de grille r.
+//
+// Types de pièces :
+//  line / arc / area : sol « classique » (physique au sol)
+//  loop              : deux voies d'accès au sol + un ruban (looping)
+//  ribbon            : tout un ruban 3D (vrille, quart de cercle, mur, sommet)
+// Une pièce line/arc peut aussi être posée « à l'envers » (drapeau v) : elle
+// devient alors un ruban au plafond.
 import { CELL, HALF, LEVEL_H, ROAD_TOP, LOOP_R, LOOP_LANE } from './constants.js';
 
 export const PIECES = {
@@ -17,8 +24,16 @@ export const PIECES = {
   start:      { label: 'Départ', kind: 'line', size: 1, rise: 0, special: 'start', clearance: 1 },
   finish:     { label: 'Arrivée', kind: 'line', size: 1, rise: 0, special: 'finish', clearance: 1 },
   platform:   { label: 'Plateforme', kind: 'area', size: 1, rise: 0 },
-  loop:       { label: 'Looping ↱', kind: 'loop', size: 2, rise: 0, clearance: 5, mirror: 1 },
-  loopL:      { label: 'Looping ↰', kind: 'loop', size: 2, rise: 0, clearance: 5, mirror: -1 },
+  loop:       { label: 'Looping ↱', kind: 'loop', size: 2, rise: 0, clearance: 5, mirror: 1, R: LOOP_R, lane: LOOP_LANE, turns: 1 },
+  loopL:      { label: 'Looping ↰', kind: 'loop', size: 2, rise: 0, clearance: 5, mirror: -1, R: LOOP_R, lane: LOOP_LANE, turns: 1 },
+  loopBig:    { label: 'Grand looping ↱', kind: 'loop', size: 3, rise: 0, clearance: 7, mirror: 1, R: 18, lane: 24, turns: 1 },
+  loopBigL:   { label: 'Grand looping ↰', kind: 'loop', size: 3, rise: 0, clearance: 7, mirror: -1, R: 18, lane: 24, turns: 1 },
+  loopDouble: { label: 'Double looping ↱', kind: 'loop', size: 3, rise: 0, clearance: 5, mirror: 1, R: 12, lane: 24, turns: 2 },
+  loopDoubleL:{ label: 'Double looping ↰', kind: 'loop', size: 3, rise: 0, clearance: 5, mirror: -1, R: 12, lane: 24, turns: 2 },
+  twist:      { label: 'Vrille', kind: 'ribbon', size: 1, rise: 0, clearance: 0 },
+  ramp90:     { label: 'Montée en L', kind: 'ribbon', size: 1, rise: 1 },
+  wall:       { label: 'Mur vertical', kind: 'ribbon', size: 1, rise: 0 },
+  crest90:    { label: 'Sommet du L', kind: 'ribbon', size: 1, rise: 1 },
 };
 
 // Anciennes pièces de la v1.0 devenues des revêtements sur une ligne droite.
@@ -28,25 +43,68 @@ export const LEGACY_SURFACE = { boost: 'boost', ice: 'ice' };
 export const PIECE_ORDER = [
   'straight', 'curve', 'bigcurve', 'slope', 'steep', 'boost',
   'checkpoint', 'start', 'finish', 'platform', 'ice', 'loop', 'loopL',
+  'loopBig', 'loopBigL', 'loopDouble', 'loopDoubleL', 'twist', 'ramp90', 'wall', 'crest90',
 ];
 
-// Revêtements applicables sur les pièces compatibles.
+// Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
+// flat : pièces plates uniquement. c : couleurs [faible, normal, fort].
 export const SURFACES = {
-  '':     { label: 'Normal' },
-  ice:    { label: 'Verglas', grip: 0.2, traction: 0.45 },
-  boost:  { label: 'Accélérateur' },
-  bounce: { label: 'Rebond', flatOnly: true },
-  sand:   { label: 'Sable', grip: 0.8, traction: 0.65, vmax: 0.55, drag: 5 },
-  magnet: { label: 'Aimant', grip: 1.45 },
+  '':      { label: 'Normal' },
+  ice:     { label: 'Verglas', param: 'Glisse', def: 100, min: 25, max: 200, c: ['#d7f1fb', '#a7e0f5', '#6cc8f0'] },
+  boost:   { label: 'Accélérateur', param: 'Puissance', def: 100, min: 5, max: 200, inv: true, c: ['#3a7bff', '#36e9ff', '#fff25a'] },
+  bounce:  { label: 'Rebond', param: 'Hauteur', def: 100, min: 30, max: 200, flat: true, c: ['#a05fff', '#ff5fd2', '#ff9f5f'] },
+  sand:    { label: 'Sable', param: 'Freinage', def: 100, min: 30, max: 250, inv: true, c: ['#e6cf9c', '#c9a26b', '#a47a45'] },
+  magnet:  { label: 'Aimant', param: 'Force', def: 100, min: 50, max: 250, c: ['#8f7cff', '#b48cff', '#e56bff'] },
+  mud:     { label: 'Boue', param: 'Épaisseur', def: 100, min: 30, max: 250, inv: true, c: ['#8a6a4a', '#6b4a32', '#4a3020'] },
+  drift:   { label: 'Dérive', param: 'Glisse', def: 100, min: 30, max: 200, c: ['#ffb84d', '#ff8c42', '#ff5a3c'] },
+  slow:    { label: 'Ralentisseur', param: 'Freinage', def: 100, min: 30, max: 300, inv: true, c: ['#ffc84d', '#ff6b57', '#c4172e'] },
+  wind:    { label: 'Vent latéral', param: '← Force →', def: 150, min: 1, max: 200, c: ['#7fe9ff', '#bfefff', '#ffffff'] },
+  gravity: { label: 'Gravité', param: 'Gravité', def: 40, min: 15, max: 250, c: ['#7dffb2', '#a7ffe0', '#b06bff'] },
+  moto:    { label: 'Plaque moto', c: ['#ff9f1c', '#ff9f1c', '#ff9f1c'] },
 };
-export const SURFACE_ORDER = ['', 'ice', 'boost', 'bounce', 'sand', 'magnet'];
+// Ne jamais réordonner, seulement ajouter.
+export const SURFACE_ORDER = ['', 'ice', 'boost', 'bounce', 'sand', 'magnet', 'mud', 'drift', 'slow', 'wind', 'gravity', 'moto'];
 
-export function surfaceAllowed(type, s) {
+export function tileParam(tile) {
+  const S = SURFACES[tile.s];
+  if (!S || S.def == null) return 100;
+  return tile.p || S.def;
+}
+
+export function isRibbonKind(type) {
+  const k = PIECES[type].kind;
+  return k === 'ribbon' || k === 'loop';
+}
+
+// Sol roulable (physique « au sol ») ? Les rubans et les routes à l'envers ne le sont pas.
+export function isFloor(tile) {
+  return !tile.v && PIECES[tile.t].kind !== 'ribbon';
+}
+
+// Pièce parcourue en mode ruban (au moins en partie) ?
+export function isRibbon(tile) {
+  return !!tile.v || isRibbonKind(tile.t);
+}
+
+// Drapeaux possibles : v (à l'envers), nb (sans bordures), tn (tunnel).
+export function flagAllowed(type, flag, tile = null) {
+  const p = PIECES[type];
+  if (!p) return false;
+  const lineLike = p.kind === 'line' || p.kind === 'arc';
+  if (flag === 'v') return lineLike && !p.special;
+  if (flag === 'nb') return lineLike && !p.special || p.kind === 'ribbon';
+  if (flag === 'tn') return lineLike && !p.special && !(tile && tile.v);
+  return false;
+}
+
+export function surfaceAllowed(type, s, v = false) {
   if (!s) return true;
   const p = PIECES[type];
   const S = SURFACES[s];
-  if (!p || !S || p.kind === 'loop') return false;
-  if (S.flatOnly && p.rise) return false;
+  if (!p || !S) return false;
+  if (p.kind === 'loop' || p.kind === 'ribbon') return false;
+  if (v && !S.inv) return false;
+  if (S.flat && p.rise) return false;
   return true;
 }
 
@@ -106,28 +164,6 @@ export function arcParams(p) {
     : { cx: CELL, cz: CELL, R: CELL * 1.5 };
 }
 
-// Repère du looping à l'angle th (0 = entrée en bas, 2π = sortie) en local :
-// point central p*, tangente t*, normale intérieure n*, droite r*, ds = dS/dθ.
-export function loopFrame(m, base, th, out) {
-  const u = Math.min(1, Math.max(0, th / (Math.PI * 2)));
-  const sm = u * u * (3 - 2 * u);
-  const dsm = 6 * u * (1 - u);
-  const c = Math.cos(th), s = Math.sin(th);
-  out.px = m * (-LOOP_LANE + 2 * LOOP_LANE * sm);
-  out.py = base + LOOP_R - LOOP_R * c;
-  out.pz = -LOOP_R * s;
-  let tx = (m * 2 * LOOP_LANE * dsm) / (Math.PI * 2), ty = LOOP_R * s, tz = -LOOP_R * c;
-  const len = Math.sqrt(tx * tx + ty * ty + tz * tz);
-  out.ds = len;
-  tx /= len; ty /= len; tz /= len;
-  out.tx = tx; out.ty = ty; out.tz = tz;
-  out.nx = 0; out.ny = c; out.nz = s;
-  let rx = ty * s - tz * c, ry = -tx * s, rz = tx * c;
-  const rl = Math.sqrt(rx * rx + ry * ry + rz * rz) || 1;
-  out.rx = rx / rl; out.ry = ry / rl; out.rz = rz / rl;
-  return out;
-}
-
 // Échantillonne la géométrie au sol d'une pièce au point local (lx, lz).
 //  d       : écart latéral signé par rapport à la ligne centrale
 //  gx, gz  : gradient (local) de d
@@ -162,8 +198,8 @@ export function sampleLocal(tile, lx, lz, out) {
     if (ang < 0) ang += Math.PI * 2;
     out.along = (ang - Math.PI) / (Math.PI / 2);
   } else if (p.kind === 'loop') {
-    // Seules les deux voies d'accès au sol sont des surfaces "normales".
-    const lane = lz >= 0 ? -p.mirror * LOOP_LANE : p.mirror * LOOP_LANE;
+    // Seules les deux voies d'accès au sol sont des surfaces « normales ».
+    const lane = lz >= 0 ? -p.mirror * p.lane : p.mirror * p.lane;
     out.d = lx - lane;
     out.along = (half - lz) / (2 * half);
   } else {
@@ -171,45 +207,4 @@ export function sampleLocal(tile, lx, lz, out) {
     out.along = (half - lz) / (2 * half);
   }
   return out;
-}
-
-// Points de la ligne centrale, en coordonnées locales [x, y, z, drapeau],
-// de l'entrée naturelle (sud) vers la sortie. drapeau = 1 dans le looping.
-export function centerlineLocal(tile, n) {
-  const p = PIECES[tile.t];
-  const half = p.size * HALF;
-  const base = baseY(tile);
-  const pts = [];
-  if (p.kind === 'arc') {
-    const a = arcParams(p);
-    for (let i = 0; i <= n; i++) {
-      const ang = Math.PI + (Math.PI / 2) * (i / n);
-      pts.push([a.cx + a.R * Math.cos(ang), base, a.cz + a.R * Math.sin(ang), 0]);
-    }
-  } else if (p.kind === 'loop') {
-    const m = p.mirror;
-    for (let i = 0; i < 4; i++) pts.push([-m * LOOP_LANE, base, half - (half * i) / 4, 0]);
-    const F = {};
-    const k = 32;
-    for (let i = 0; i <= k; i++) {
-      loopFrame(m, base, (Math.PI * 2 * i) / k, F);
-      pts.push([F.px, F.py, F.pz, i === 0 || i === k ? 0 : 1]);
-    }
-    for (let i = 1; i <= 4; i++) pts.push([m * LOOP_LANE, base, -(half * i) / 4, 0]);
-  } else {
-    const rise = p.rise * LEVEL_H;
-    for (let i = 0; i <= n; i++) {
-      const t = i / n;
-      pts.push([0, base + rise * t, half - 2 * half * t, 0]);
-    }
-  }
-  return pts;
-}
-
-export function centerlineWorld(tile, n, reverse = false) {
-  const out = centerlineLocal(tile, n).map(([lx, y, lz, f]) => {
-    const w = localToWorld(tile, lx, lz);
-    return [w.x, y, w.z, f];
-  });
-  return reverse ? out.reverse() : out;
 }

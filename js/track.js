@@ -1,14 +1,19 @@
 // Modèle de circuit : liste de pièces posées sur une grille, index spatial,
 // requêtes de surface pour la physique, sérialisation en code partageable.
-import { CELL, DIRS, ROAD_HALF, RAIL_W, SLAB_T, MAX_LEVEL, LEVEL_H } from './constants.js';
+import { CELL, DIRS, ROAD_HALF, RAIL_W, SLAB_T, MAX_LEVEL, LEVEL_H, MAX_DECOS } from './constants.js';
 import {
-  PIECES, PIECE_ORDER, SURFACE_ORDER, LEGACY_SURFACE, surfaceAllowed,
-  toLocal, sampleLocal, rotVec, centerlineWorld,
+  PIECES, PIECE_ORDER, SURFACE_ORDER, LEGACY_SURFACE, SURFACES, surfaceAllowed, flagAllowed, isFloor,
+  toLocal, sampleLocal, rotVec,
 } from './pieces.js';
+import { centerlineWorld } from './ribbons.js';
+import { DECO_ORDER } from './decoData.js';
 
 export const DECORS = {
   desert: { label: 'Désert crépuscule' },
   polar: { label: 'Nuit polaire' },
+  jungle: { label: 'Jungle néon' },
+  city: { label: 'Ville futuriste' },
+  isles: { label: 'Archipel tropical' },
 };
 
 const EMPTY = Object.freeze([]);
@@ -23,8 +28,11 @@ export class Track {
     this.author = '';
     this.decor = 'desert';
     this.tiles = [];
+    this.decos = [];
     this.index = new Map();
     this.version = 0;
+    this.vt = 0;      // temps de vérification (secondes) de l'auteur
+    this.vh = '';     // signature du circuit au moment de la vérification
     for (const t of tiles) this.add(t);
   }
 
@@ -41,13 +49,21 @@ export class Track {
     return [t.l, t.l + p.rise + (p.clearance || 0)];
   }
 
-  // Convertit une pièce (éventuellement au format v1.0) en pièce v1.1.
+  // Convertit une pièce (éventuellement au format v1.0 / v1.1) en pièce v1.2.
   static normalize(t) {
     let type = t.t, s = t.s || '';
     if (LEGACY_SURFACE[type]) { s = LEGACY_SURFACE[type]; type = 'straight'; }
     if (!PIECES[type]) throw new Error('Pièce inconnue : ' + type);
-    if (!surfaceAllowed(type, s)) s = '';
-    return { t: type, x: t.x | 0, z: t.z | 0, l: Math.max(0, Math.min(MAX_LEVEL, t.l | 0)), r: t.r & 3, s };
+    const tile = { t: type, x: t.x | 0, z: t.z | 0, l: Math.max(0, Math.min(MAX_LEVEL, t.l | 0)), r: t.r & 3, s: '', p: 0, v: 0, nb: 0, tn: 0 };
+    tile.v = t.v && flagAllowed(type, 'v') ? 1 : 0;
+    tile.nb = t.nb && flagAllowed(type, 'nb') ? 1 : 0;
+    tile.tn = t.tn && flagAllowed(type, 'tn', tile) ? 1 : 0;
+    if (surfaceAllowed(type, s, !!tile.v)) {
+      tile.s = s;
+      const S2 = SURFACES[s];
+      if (S2 && S2.def != null) tile.p = Math.max(S2.min, Math.min(S2.max, t.p || S2.def));
+    }
+    return tile;
   }
 
   tilesAt(x, z) {
@@ -94,16 +110,54 @@ export class Track {
     this.version++;
   }
 
-  setSurface(tile, s) {
-    if (!surfaceAllowed(tile.t, s) || tile.s === s) return false;
-    tile.s = s;
+  // Revêtement (avec paramètre en %). Renvoie true si quelque chose a changé.
+  setSurface(tile, s, p = 0) {
+    if (!surfaceAllowed(tile.t, s, !!tile.v)) return false;
+    const S2 = SURFACES[s];
+    const np = S2 && S2.def != null ? Math.max(S2.min, Math.min(S2.max, p || S2.def)) : 0;
+    if (tile.s === s && (tile.p || 0) === np) return false;
+    tile.s = s; tile.p = np;
     this.version++;
     return true;
   }
 
+  // Bascule un drapeau (v : à l'envers, nb : sans bordures, tn : tunnel).
+  toggleFlag(tile, flag) {
+    if (!flagAllowed(tile.t, flag, tile)) return false;
+    tile[flag] = tile[flag] ? 0 : 1;
+    if (flag === 'v' && tile.v) {
+      tile.tn = 0;
+      if (tile.s && !surfaceAllowed(tile.t, tile.s, true)) { tile.s = ''; tile.p = 0; }
+    }
+    if (flag === 'tn' && tile.tn && tile.v) { tile.tn = 0; return false; }
+    this.version++;
+    return true;
+  }
+
+  addDeco(d) {
+    if (this.decos.length >= MAX_DECOS) return null;
+    const deco = {
+      k: d.k, x: +d.x, y: +d.y, z: +d.z, ry: +d.ry || 0, s: Math.max(0.2, Math.min(20, +d.s || 1)),
+      c: d.c | 0, u: d.u ? String(d.u).slice(0, 400) : '',
+    };
+    if (!DECO_ORDER.includes(deco.k)) return null;
+    this.decos.push(deco);
+    this.version++;
+    return deco;
+  }
+
+  removeDeco(d) {
+    const i = this.decos.indexOf(d);
+    if (i < 0) return;
+    this.decos.splice(i, 1);
+    this.version++;
+  }
+
   clear() {
     this.tiles = [];
+    this.decos = [];
     this.index.clear();
+    this.vt = 0; this.vh = '';
     this.version++;
   }
 
@@ -143,10 +197,11 @@ export class Track {
   // Surface roulable la plus haute sous (x, y + step, z). Le sol est à y = 0.
   surfaceAt(x, y, z, out, step = 1.6) {
     out.h = 0; out.nx = 0; out.ny = 1; out.nz = 0;
-    out.tile = null; out.type = 'ground'; out.mod = ''; out.lx = 0; out.lz = 0;
+    out.tile = null; out.type = 'ground'; out.mod = ''; out.p = 0; out.lx = 0; out.lz = 0;
     const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
     let best = -Infinity;
     for (const tile of this.tilesAt(cx, cz)) {
+      if (!isFloor(tile)) continue;
       toLocal(tile, x, z, L);
       sampleLocal(tile, L.lx, L.lz, S);
       if (!S.inFootprint) continue;
@@ -160,31 +215,61 @@ export class Track {
       out.tile = tile;
       out.type = 'road';
       out.mod = tile.s || '';
+      out.p = tile.p || 0;
       out.lx = L.lx; out.lz = L.lz;
     }
     return out;
   }
 
-  // Dessous de dalle le plus bas au-dessus de yMin (pour la caméra sous les ponts).
+  // Dessous de dalle (ou toit de tunnel) le plus bas au-dessus de yMin : sert à la caméra.
   ceilingAt(x, z, yMin) {
     const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
     let best = Infinity;
     for (const tile of this.tilesAt(cx, cz)) {
-      if (PIECES[tile.t].kind === 'loop') continue;
+      const kind = PIECES[tile.t].kind;
+      if (kind === 'loop' || kind === 'ribbon' || tile.v) continue;
       toLocal(tile, x, z, L);
       sampleLocal(tile, L.lx, L.lz, S);
       if (!S.inFootprint) continue;
-      if (PIECES[tile.t].kind !== 'area' && Math.abs(S.d) > ROAD_HALF + RAIL_W + 0.5) continue;
-      const under = S.h - SLAB_T;
+      if (kind !== 'area' && Math.abs(S.d) > ROAD_HALF + RAIL_W + 0.5) continue;
+      const under = tile.tn ? S.h + ROAD_HALF + RAIL_W + 0.9 : S.h - SLAB_T;
       if (under > yMin && under < best) best = under;
     }
     return best;
+  }
+
+  // Signature du contenu (pièces + décorations), utilisée pour la vérification.
+  signature() {
+    const parts = this.tiles
+      .map((t) => `${t.t}:${t.x}:${t.z}:${t.l}:${t.r}:${t.s}:${t.p}:${t.v}${t.nb}${t.tn}`)
+      .sort()
+      .join('|');
+    const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}`).join('|');
+    return hashString(this.decor + '#' + parts + '#' + d);
+  }
+
+  get verified() {
+    return this.vt > 0 && this.vh === this.signature();
+  }
+
+  setVerified(time) {
+    this.vt = Math.round(time * 1000) / 1000;
+    this.vh = this.signature();
+  }
+
+  // Médailles déduites du temps de l'auteur : bronze = son temps.
+  get derivedMedals() {
+    if (!this.verified) return null;
+    const t = this.vt, r2 = (x) => Math.round(x * 100) / 100;
+    return { bronze: r2(t), argent: r2(t * 0.93), or: r2(t * 0.86), cristal: r2(t * 0.8) };
   }
 
   clone() {
     const t = new Track(this.name, this.tiles);
     t.author = this.author;
     t.decor = this.decor;
+    t.decos = this.decos.map((d) => ({ ...d }));
+    t.vt = this.vt; t.vh = this.vh;
     return t;
   }
 
@@ -192,13 +277,22 @@ export class Track {
   encode() {
     const arr = [];
     for (const t of this.tiles) {
-      arr.push(PIECE_ORDER.indexOf(t.t), t.x, t.z, t.l, t.r, Math.max(0, SURFACE_ORDER.indexOf(t.s || '')));
+      arr.push(
+        PIECE_ORDER.indexOf(t.t), t.x, t.z, t.l, t.r,
+        Math.max(0, SURFACE_ORDER.indexOf(t.s || '')), t.p || 0,
+        (t.v ? 1 : 0) | (t.nb ? 2 : 0) | (t.tn ? 4 : 0),
+      );
     }
-    const json = JSON.stringify({ v: 2, n: this.name, a: this.author || '', d: this.decor, t: arr });
-    return 'SHW2:' + b64encode(json);
+    const decos = this.decos.map((d) => [
+      DECO_ORDER.indexOf(d.k), +d.x.toFixed(2), +d.y.toFixed(2), +d.z.toFixed(2), +d.ry.toFixed(3), +d.s.toFixed(2), d.c, d.u || 0,
+    ]);
+    const data = { v: 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
+    if (decos.length) data.o = decos;
+    if (this.verified) { data.vt = this.vt; data.vh = this.vh; }
+    return 'SHW3:' + b64encode(JSON.stringify(data));
   }
 
-  // Accepte les codes v1.0 (SHW1) et v1.1 (SHW2), bruts ou dans un lien.
+  // Accepte les codes v1.0 (SHW1), v1.1 (SHW2) et v1.2 (SHW3), bruts ou dans un lien.
   static decode(code) {
     let s = String(code || '').trim();
     const hash = s.indexOf('#t=');
@@ -206,7 +300,7 @@ export class Track {
     s = decodeURIComponent(s);
     if (/^SHW\d:/.test(s)) s = s.slice(5);
     const data = JSON.parse(b64decode(s));
-    const stride = data && data.v >= 2 ? 6 : 5;
+    const stride = data && data.v >= 3 ? 8 : data && data.v >= 2 ? 6 : 5;
     if (!data || !Array.isArray(data.t) || data.t.length % stride) throw new Error('Code de circuit invalide');
     const tr = new Track(String(data.n || 'Circuit importé').slice(0, 40));
     tr.author = String(data.a || '').slice(0, 30);
@@ -214,13 +308,25 @@ export class Track {
     for (let i = 0; i < data.t.length; i += stride) {
       const type = PIECE_ORDER[data.t[i]];
       if (!type) continue;
-      const tile = {
-        t: type, x: data.t[i + 1], z: data.t[i + 2], l: data.t[i + 3], r: data.t[i + 4],
-        s: stride === 6 ? SURFACE_ORDER[data.t[i + 5]] || '' : '',
-      };
+      const tile = { t: type, x: data.t[i + 1], z: data.t[i + 2], l: data.t[i + 3], r: data.t[i + 4], s: '' };
+      if (stride >= 6) tile.s = SURFACE_ORDER[data.t[i + 5]] || '';
+      if (stride >= 8) {
+        tile.p = data.t[i + 6];
+        const f = data.t[i + 7] | 0;
+        tile.v = f & 1; tile.nb = (f >> 1) & 1; tile.tn = (f >> 2) & 1;
+      }
       if (tr.conflicts(Track.normalize(tile)).length) continue;
       tr.add(tile);
     }
+    if (Array.isArray(data.o)) {
+      for (const o of data.o.slice(0, MAX_DECOS)) {
+        const k = DECO_ORDER[o[0]];
+        if (!k) continue;
+        const u = typeof o[7] === 'string' && /^https?:\/\//i.test(o[7]) ? o[7] : '';
+        tr.addDeco({ k, x: o[1], y: o[2], z: o[3], ry: o[4], s: o[5], c: o[6], u });
+      }
+    }
+    if (data.vt > 0 && data.vh) { tr.vt = +data.vt; tr.vh = String(data.vh); }
     return tr;
   }
 }
@@ -259,21 +365,28 @@ export function hashString(s) {
 //   U / D               pente montante / descendante
 //   UU / DD             tremplin montant / descendant (2 niveaux)
 //   O / OL              looping décalé à droite / à gauche (2x2)
+//   OB / OBL            grand looping (3x3)    OD / ODL  double looping (3x3)
+//   TW / TWB            vrille endroit -> envers / envers -> endroit
+//   QU  WA3  CR         montée en L, mur de 3 niveaux, sommet du L
 //   G2                  vide de 2 cases (saut)       V-2  change le niveau
 // Suffixe de revêtement : .i verglas  .b accélérateur  .j rebond  .s sable  .m aimant
-//   ex. "S3.i" = 3 droites verglacées, "RR.b" = grand virage accélérateur.
+//   .u boue  .d dérive  .x ralentisseur  .w vent  .g gravité  .o plaque moto
+//   avec un paramètre en % : "S.b150" accélérateur à 150 %, "S.g25" gravité à 25 %.
+// Drapeaux en fin de jeton : ^ à l'envers   _ sans bordures   # tunnel
+//   ex. "S3.i" = 3 droites verglacées, "S2^_" = 2 droites à l'envers sans bordures.
 // Raccourcis historiques : B = S.b, I = S.i.
-const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', s: 'sand', m: 'magnet' };
+const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', s: 'sand', m: 'magnet', u: 'mud', d: 'drift', x: 'slow', w: 'wind', g: 'gravity', o: 'moto' };
 
 export function scriptTrack(name, script, opts = {}) {
   const tr = new Track(name);
   tr.decor = opts.decor || 'desert';
   let x = opts.x || 0, z = opts.z || 0, h = opts.h || 0, l = opts.l || 0;
   const path = [];
-  let surf = '';
+  let cur = { s: '', p: 0, v: 0, nb: 0, tn: 0 };
   const place = (t, px, pz, lv, r, reverse = false) => {
-    const tile = { t, x: px, z: pz, l: lv, r: r & 3, s: surf };
-    if (surf && !surfaceAllowed(t, surf)) throw new Error(`${name} : revêtement ${surf} interdit sur ${t}`);
+    const tile = { t, x: px, z: pz, l: lv, r: r & 3, ...cur };
+    if (cur.s && !surfaceAllowed(t, cur.s, !!cur.v)) throw new Error(`${name} : revêtement ${cur.s} interdit sur ${t}`);
+    for (const f of ['v', 'nb', 'tn']) if (cur[f] && !flagAllowed(t, f, tile)) throw new Error(`${name} : drapeau ${f} interdit sur ${t}`);
     const c = tr.conflicts(Track.normalize(tile));
     if (c.length) throw new Error(`${name} : conflit en (${px}, ${pz}) niveau ${lv} [${t}]`);
     const added = tr.add(tile);
@@ -284,21 +397,28 @@ export function scriptTrack(name, script, opts = {}) {
   };
   const adv = (dir, n = 1) => { x += DIRS[dir][0] * n; z += DIRS[dir][1] * n; };
   const rot = (r, lx, lz) => rotVec(r, lx, lz, { x: 0, z: 0 });
-  // Pièce 2x2 : ancre à partir du centre de bloc (en cases) relatif à la case d'entrée.
-  const anchor2 = (r, ox, oz) => {
-    const c = rot(r, ox, oz);
-    return [Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1)];
+  // Pièce de taille size : ancre à partir de la case d'entrée et du décalage latéral des voies.
+  const bigPiece = (type, mirror, size, laneCells) => {
+    const e = rot(h, -mirror * laneCells, (size - 1) / 2);
+    const ax = Math.round(x + 0.5 - e.x - size / 2), az = Math.round(z + 0.5 - e.z - size / 2);
+    place(type, ax, az, l, h);
+    const d = rot(h, 2 * mirror * laneCells, -size);
+    x += d.x; z += d.z;
   };
 
   for (const tok of script.trim().split(/\s+/)) {
-    const m = /^([A-Za-z]+)(-?\d*)(?:\.([a-z]))?$/.exec(tok);
+    const m = /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#]*)$/.exec(tok);
     if (!m) throw new Error('Instruction invalide : ' + tok);
     let op = m[1];
     const n = m[2] ? parseInt(m[2], 10) : 1;
-    surf = m[3] ? SURF_CODE[m[3]] : '';
-    if (m[3] && !surf) throw new Error('Revêtement inconnu : ' + tok);
-    if (op === 'B') { op = 'S'; surf = 'boost'; }
-    if (op === 'I') { op = 'S'; surf = 'ice'; }
+    cur = { s: '', p: 0, v: m[5].includes('^') ? 1 : 0, nb: m[5].includes('_') ? 1 : 0, tn: m[5].includes('#') ? 1 : 0 };
+    if (m[3]) {
+      cur.s = SURF_CODE[m[3]];
+      if (!cur.s) throw new Error('Revêtement inconnu : ' + tok);
+      cur.p = m[4] ? parseInt(m[4], 10) : 0;
+    }
+    if (op === 'B') { op = 'S'; cur.s = 'boost'; }
+    if (op === 'I') { op = 'S'; cur.s = 'ice'; }
     const simple = { S: 'straight', C: 'checkpoint', P: 'platform', start: 'start', finish: 'finish' };
     if (simple[op]) {
       for (let i = 0; i < n; i++) { place(simple[op], x, z, l, h); adv(h); }
@@ -314,34 +434,31 @@ export function scriptTrack(name, script, opts = {}) {
         h = (h + 3) & 3; adv(h);
         break;
       case 'RR': {
-        const [ax, az] = anchor2(h, 0.5, -0.5);
-        place('bigcurve', ax, az, l, h);
+        const c = rot(h, 0.5, -0.5);
+        place('bigcurve', Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
         const nx = rot(h, 2, -1);
         x += nx.x; z += nx.z; h = (h + 1) & 3;
         break;
       }
       case 'LL': {
         const r = (h + 1) & 3;
-        const [ax, az] = anchor2(r, -0.5, 0.5);
-        place('bigcurve', ax, az, l, r, true);
+        const c = rot(r, -0.5, 0.5);
+        place('bigcurve', Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, r, true);
         const nx = rot(r, -1, 2);
         x += nx.x; z += nx.z; h = (h + 3) & 3;
         break;
       }
-      case 'O': {
-        const [ax, az] = anchor2(h, 0.5, -0.5);
-        place('loop', ax, az, l, h);
-        const nx = rot(h, 1, -2);
-        x += nx.x; z += nx.z;
-        break;
-      }
-      case 'OL': {
-        const [ax, az] = anchor2(h, -0.5, -0.5);
-        place('loopL', ax, az, l, h);
-        const nx = rot(h, -1, -2);
-        x += nx.x; z += nx.z;
-        break;
-      }
+      case 'O': bigPiece('loop', 1, 2, 0.5); break;
+      case 'OL': bigPiece('loopL', -1, 2, 0.5); break;
+      case 'OB': bigPiece('loopBig', 1, 3, 1); break;
+      case 'OBL': bigPiece('loopBigL', -1, 3, 1); break;
+      case 'OD': bigPiece('loopDouble', 1, 3, 1); break;
+      case 'ODL': bigPiece('loopDoubleL', -1, 3, 1); break;
+      case 'TW': place('twist', x, z, l, h); adv(h); break;
+      case 'TWB': place('twist', x, z, l, h + 2, true); adv(h); break;
+      case 'QU': place('ramp90', x, z, l, h); adv(h); l += 2; break;
+      case 'WA': for (let i = 0; i < n; i++) { place('wall', x, z, l, h); l += 1; } break;
+      case 'CR': place('crest90', x, z, l, h); adv(h); l += 2; break;
       case 'U': for (let i = 0; i < n; i++) { place('slope', x, z, l, h); l += 1; adv(h); } break;
       case 'UU': place('steep', x, z, l, h); l += 2; adv(h); break;
       case 'D': for (let i = 0; i < n; i++) { l -= 1; place('slope', x, z, l, h + 2, true); adv(h); } break;
@@ -351,6 +468,7 @@ export function scriptTrack(name, script, opts = {}) {
       default: throw new Error('Instruction inconnue : ' + op);
     }
   }
+  for (const d of opts.decos || []) tr.addDeco(d);
   tr.path = path;
   return tr;
 }

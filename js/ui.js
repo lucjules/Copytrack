@@ -2,6 +2,7 @@
 import { formatTime } from './storage.js';
 import { MEDALS, medalFor } from './race.js';
 import { keyLabel } from './input.js';
+import { profile } from './profile.js';
 
 export const $ = (id) => document.getElementById(id);
 
@@ -13,7 +14,7 @@ export function medalIcon(m) {
   return `<i class="medal ${m ? m.id : 'none'}" title="${m ? m.label : 'Aucune médaille'}"></i>`;
 }
 
-const SCREENS = ['loading', 'menu', 'tracks', 'mytracks', 'options', 'controls'];
+const SCREENS = ['loading', 'menu', 'tracks', 'mytracks', 'options', 'controls', 'profile'];
 
 class Hud {
   constructor() {
@@ -104,11 +105,20 @@ export class UI {
 
   showScreen(name) {
     for (const s of SCREENS) $(s).classList.toggle('hidden', s !== name);
+    $('coins').classList.toggle('hidden', !['menu', 'tracks', 'mytracks', 'profile'].includes(name));
     const first = name && $(name).querySelector('button');
     if (first && matchMedia('(pointer: fine)').matches) first.focus({ preventScroll: true });
   }
 
+  updateCoins() {
+    const c = $('coins');
+    if (c) c.textContent = `◆ ${profile().coins}`;
+  }
+
   setMode(mode) {
+    const showCoins = mode === 'menu';
+    $('coins').classList.toggle('hidden', !showCoins);
+    this.updateCoins();
     $('hud').classList.toggle('hidden', mode !== 'race');
     $('editor').classList.toggle('hidden', mode !== 'editor');
     $('touch').classList.toggle('hidden', !(mode === 'race' && document.body.classList.contains('touch')));
@@ -178,6 +188,17 @@ export class UI {
       const next = [...MEDALS].reverse().find((m) => best > info.medals[m.id]);
       if (next) lines.push(`Prochain objectif : ${medalIcon(next)}<b>${formatTime(info.medals[next.id])}</b>`);
       else lines.push('Toutes les médailles sont à toi ✦');
+    }
+    const rw = $('fin-reward');
+    if (info.reward) {
+      rw.innerHTML = `+${info.reward.coins} ◆ pièces${info.reward.first ? '<small>Bonus : première fois à ce niveau de médaille ×2</small>' : ''}`;
+    } else if (info.verified) {
+      rw.innerHTML = 'Circuit vérifié ✔<small>Ton temps devient la médaille bronze, les autres sont déduites.</small>';
+    } else if (info.unverifiedUser) {
+      rw.innerHTML = '<small>Circuit non vérifié : pas de médailles ni de pièces.</small>';
+    } else rw.innerHTML = '';
+    if (info.verified && info.derived) {
+      lines.push(MEDALS.slice().reverse().map((m) => `${medalIcon(m)}<b>${formatTime(info.derived[m.id])}</b>`).join(' · '));
     }
     $('fin-detail').innerHTML = lines.join('<br>');
     $('fin-next').classList.toggle('hidden', !info.hasNext);

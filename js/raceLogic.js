@@ -28,7 +28,7 @@ export class RaceLogic {
     this.splits = [];
     this.finished = false;
     this.steps = 0;
-    this.respawn = this.spawnPoint();
+    this.respawn = { ...this.spawnPoint(), moto: false, grav: 1 };
     this.inFinish = false;
   }
 
@@ -62,7 +62,7 @@ export class RaceLogic {
         while (da > Math.PI) da -= Math.PI * 2;
         while (da < -Math.PI) da += Math.PI * 2;
         if (Math.abs(da) > Math.PI / 2) yaw = base + Math.PI;
-        this.respawn = { x: c.x, y: h, z: c.z, yaw };
+        this.respawn = { x: c.x, y: h, z: c.z, yaw, moto: phys.moto, grav: phys.gravMul };
         event = { type: 'checkpoint', index: this.splits.length, steps: this.steps };
       } else if (sp === 'finish') {
         onFinish = true;
