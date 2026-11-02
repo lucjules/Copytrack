@@ -29,6 +29,26 @@ export class Autopilot {
     }
   }
 
+  // Hauteur du chemin le plus proche plus loin devant (approximation du sol d'arrivée).
+  _groundBelow(y) {
+    let best = -Infinity;
+    for (let k = this.idx; k < Math.min(this.path.length, this.idx + 60); k++) {
+      const q = this.path[k];
+      if (q[1] <= y + 0.5 && q[1] > best) best = q[1];
+    }
+    return best === -Infinity ? y : best;
+  }
+
+  // Pente (rad) du chemin à une distance donnée.
+  _pathSlopeAt(d) {
+    const path = this.path, n = path.length;
+    let k = this.idx;
+    while (k < n - 2 && this.dist[k] < d) k++;
+    const a = path[Math.max(0, k - 2)], b = path[Math.min(n - 1, k + 2)];
+    const h = Math.hypot(b[0] - a[0], b[2] - a[2]);
+    return h > 0.5 ? Math.atan2(b[1] - a[1], h) : 0;
+  }
+
   reset(phys) {
     this.idx = 0;
     if (phys) this._progress(phys, 400);
@@ -58,6 +78,15 @@ export class Autopilot {
       return { throttle: true, brake: false, steer: Math.max(-1, Math.min(1, st)), drift: false };
     }
     const path = this.path, p = phys.pos;
+    if (!phys.grounded) {
+      // En l'air : on aligne le nez sur la pente de la route à l'atterrissage prévu.
+      const hv = Math.hypot(phys.vel.x, phys.vel.z);
+      const tLand = Math.max(0.15, (phys.vel.y + Math.sqrt(Math.max(0, phys.vel.y ** 2 + 2 * phys.g * Math.max(0, p.y - this._groundBelow(p.y))))) / phys.g);
+      const ahead = this._pathSlopeAt(this.dist[this.idx] + hv * tLand);
+      const err = phys.pitch - ahead + phys.pitchRate * 0.35;
+      const steerAir = 0;
+      return { throttle: err > 0.03, brake: err < -0.03, steer: steerAir, drift: false };
+    }
     const v = Math.max(0, phys.fwdSpeed);
     const look = 8 + v * 0.32;
     let j = this.idx;

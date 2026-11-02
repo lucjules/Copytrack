@@ -52,10 +52,21 @@ const RO = ROAD_HALF + RAIL_W;
 export const TUNNEL_R = RO + 1.0;
 
 const _c1 = new THREE.Color(), _c2 = new THREE.Color();
+
+// Palette adaptée au daltonisme (teintes bien séparées, d'après la palette d'Okabe et Ito).
+const CB_COLORS = {
+  ice: '#ffffff', boost: '#56b4e9', bounce: '#cc79a7', sand: '#f0e442', magnet: '#0072b2',
+  mud: '#8c6d4f', drift: '#e69f00', slow: '#d55e00', wind: '#d9d9d9', gravity: '#009e73',
+  moto: '#ffb000', boat: '#3fa7ff', glider: '#f5f5f5',
+};
+let colorblind = false;
+export function setColorblind(v) { colorblind = !!v; }
+
 // Couleur d'un revêtement selon son paramètre (faible / normal / fort).
 export function tint(s, p) {
   const S = SURFACES[s];
   if (!S || !S.c) return '#ffffff';
+  if (colorblind && CB_COLORS[s]) return CB_COLORS[s];
   if (S.def == null) return S.c[1];
   const v = p || S.def;
   if (v <= S.def) {

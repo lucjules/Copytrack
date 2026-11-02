@@ -785,3 +785,23 @@ body.ov-open #touch, body.ov-open .hud-br, body.ov-open .hud-hint, body.ov-open 
   #pause h2 { width: 100%; text-align: center; }
 }
 body.touch kbd { display: none; }
+
+/* Effet de vitesse : traits radiaux sur les bords, transparents au centre. */
+#speedfx {
+  position: fixed; inset: 0; pointer-events: none; z-index: 3; opacity: 0;
+  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,0.0) 0deg 3.2deg, rgba(255,255,255,0.55) 3.2deg 3.6deg);
+  -webkit-mask-image: radial-gradient(ellipse at center, transparent 0 46%, #000 78%);
+  mask-image: radial-gradient(ellipse at center, transparent 0 46%, #000 78%);
+  transition: opacity 0.25s linear;
+  animation: speedfx-spin 0.6s steps(3) infinite;
+}
+@keyframes speedfx-spin { to { transform: rotate(1.2deg); } }
+@media (prefers-reduced-motion: reduce) { #speedfx { animation: none; } }
+
+#fps { position: fixed; left: calc(10px + env(safe-area-inset-left)); bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 60; font: 600 12px/1 ui-monospace, monospace; color: #b8ffcf; background: rgba(10, 8, 24, 0.6); padding: 4px 6px; border-radius: 6px; pointer-events: none; }
+.opt-h { margin: 10px 0 0; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #a99fd0); }
+.opt-h:first-child { margin-top: 0; }
+
+/* Taille de l'interface (Options > Accessibilité). */
+:root { --ui-scale: 1; }
+#hud, .screen, .overlay, #touch, #editor > * { zoom: var(--ui-scale); }

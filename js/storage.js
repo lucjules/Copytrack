@@ -56,6 +56,15 @@ export const DEFAULT_SETTINGS = {
   haptics: true,
   padDeadzone: 0.15,
   padSens: 1,
+  // v1.5
+  musicVolume: 0.45,
+  fovAdd: 0,          // champ de vision en plus (degrés)
+  speedFx: true,      // lignes de vitesse
+  shakeAmt: 1,        // intensité des tremblements de caméra (0 à 1)
+  colorblind: false,  // couleurs de revêtements adaptées + motifs renforcés
+  uiScale: 1,         // taille de l'interface
+  showFps: false,
+  tutorialDone: false,
 };
 
 export function loadSettings() {

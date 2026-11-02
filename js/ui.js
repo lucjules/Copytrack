@@ -115,7 +115,18 @@ export class UI {
     if (c) c.textContent = `◆ ${profile().coins}`;
   }
 
+  // Lignes de vitesse sur les bords de l'écran (0 = rien, 1 = plein effet).
+  speedFx(k) {
+    const el = $('speedfx');
+    if (!el) return;
+    const v = k < 0.02 ? 0 : k;
+    if (Math.abs(v - (this._fx || 0)) < 0.02 && v !== 0) return;
+    this._fx = v;
+    el.style.opacity = String(v * 0.55);
+  }
+
   setMode(mode) {
+    if (mode !== 'race') this.speedFx(0);
     const showCoins = mode === 'menu';
     $('coins').classList.toggle('hidden', !showCoins);
     this.updateCoins();

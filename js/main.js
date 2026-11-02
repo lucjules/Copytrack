@@ -1,7 +1,7 @@
 // Point d'entrée : crée le moteur de rendu et orchestre menu / course / éditeur.
 import * as THREE from './vendor/three.module.min.js';
 import { Scenery } from './scenery.js';
-import { createTrackMaterials } from './trackMesh.js';
+import { createTrackMaterials, setColorblind } from './trackMesh.js';
 import { Particles } from './particles.js';
 import { Input, KEY_ACTIONS, PAD_ACTIONS, keyLabel, padLabel, defaultKeys, defaultPad } from './input.js';
 import { GarageSession, } from './garage.js';
@@ -40,6 +40,7 @@ class App {
     $('menu-foot').textContent = `Shardway v${VERSION} · un jeu de course original · propulsé par three.js`;
     this.audio = new GameAudio();
     this.audio.setVolume(this.settings.volume);
+    this.audio.setMusicVolume(this.settings.musicVolume);
     this.ui = new UI(this);
     this.session = null;
     this.mode = null;
@@ -52,6 +53,7 @@ class App {
     if ('ontouchstart' in window || navigator.maxTouchPoints > 0) { document.body.classList.add('touch'); this.input.touchActive = true; }
     document.body.classList.toggle('drag-steer', this.settings.touchMode === 'drag');
     this._applyQuality();
+    this._applyAccess();
     this._resize();
     window.addEventListener('resize', () => this._resize());
     const unlock = () => this.audio.unlock();
@@ -69,8 +71,9 @@ class App {
   }
 
   _applyQuality() {
-    const low = this.settings.quality === 'low';
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, low ? 1 : 2));
+    const q = this.settings.quality;
+    const low = q === 'low';
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, low ? 1 : q === 'medium' ? 1.25 : 2));
     this.renderer.shadowMap.enabled = !low;
     this.scenery.setQuality(this.settings.quality);
   }
@@ -102,6 +105,7 @@ class App {
     this.camera.fov = 60;
     this.camera.updateProjectionMatrix();
     this.session = new RaceSession(this, demo.track, { demo: true, seed: demo.key });
+    this.audio.music.play('menu', 7, 0);
     this.showScreen(screen);
     this._resize();
   }
@@ -128,6 +132,7 @@ class App {
     this.ui.showScreen(null);
     this.ui.setMode('race');
     this.session = new RaceSession(this, track, opts);
+    this.audio.music.play(track.decor || 'desert', [...(track.name || 'x')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 99991, 7) + 1, 1);
     this._resize();
   }
 
@@ -157,6 +162,7 @@ class App {
     this.ui.showScreen(null);
     this.ui.setMode('editor');
     this.session = new EditorSession(this, state || getEditorDraft() || {});
+    this.audio.music.play('menu', 3, 0);
     const L = (a) => this._keysOf(a);
     this._resize();
     $('ed-help').textContent = `Clic : poser · Clic droit : supprimer · Clic droit glissé : orbiter · Clic molette : pipette · Molette : zoom · Maj + molette : niveau · ${L('ed.levelUp')} / ${L('ed.levelDown')} : niveau · ${L('ed.rotate')} : pivoter · F1 ou ? : tous les raccourcis`;
@@ -435,6 +441,26 @@ class App {
     $('opt-name').value = s.playerName;
     $('opt-touch').value = s.touchMode;
     $('opt-haptics').checked = s.haptics;
+    $('opt-music').value = s.musicVolume;
+    $('opt-fps').checked = !!s.showFps;
+    $('opt-speedfx').checked = s.speedFx !== false;
+    $('opt-cb').checked = !!s.colorblind;
+    $('opt-fov').value = s.fovAdd; $('opt-fov-v').textContent = (s.fovAdd > 0 ? '+' : '') + s.fovAdd + '°';
+    $('opt-shake').value = s.shakeAmt; $('opt-shake-v').textContent = Math.round(s.shakeAmt * 100) + ' %';
+    $('opt-ui').value = s.uiScale; $('opt-ui-v').textContent = Math.round(s.uiScale * 100) + ' %';
+  }
+
+  // Taille de l'interface, compteur d'images, couleurs adaptées.
+  _applyAccess() {
+    const s = this.settings;
+    document.documentElement.style.setProperty('--ui-scale', String(s.uiScale || 1));
+    document.body.classList.toggle('cb', !!s.colorblind);
+    $('fps').classList.toggle('hidden', !s.showFps);
+    if (this._cbApplied !== !!s.colorblind) {
+      this._cbApplied = !!s.colorblind;
+      setColorblind(this._cbApplied);
+      if (this.session) this.ui.flash('Couleurs appliquées à la prochaine course');
+    }
   }
 
   shareModal(code, name, track = null) {
@@ -538,6 +564,26 @@ class App {
       this.showMenu('options');
     });
     $('opt-ghost').addEventListener('change', (e) => { this.settings.ghost = e.target.checked; this.saveSettings(); });
+    $('opt-music').addEventListener('input', (e) => {
+      this.settings.musicVolume = parseFloat(e.target.value);
+      this.audio.setMusicVolume(this.settings.musicVolume);
+      this.saveSettings();
+    });
+    $('opt-fps').addEventListener('change', (e) => { this.settings.showFps = e.target.checked; this._applyAccess(); this.saveSettings(); });
+    $('opt-speedfx').addEventListener('change', (e) => { this.settings.speedFx = e.target.checked; this.saveSettings(); });
+    $('opt-cb').addEventListener('change', (e) => { this.settings.colorblind = e.target.checked; this._applyAccess(); this.saveSettings(); });
+    const slider = (id, key, fmt) => {
+      const inp = $(id), out = $(id + '-v');
+      inp.addEventListener('input', () => {
+        this.settings[key] = parseFloat(inp.value);
+        if (out) out.textContent = fmt(this.settings[key]);
+        this._applyAccess();
+        this.saveSettings();
+      });
+    };
+    slider('opt-fov', 'fovAdd', (v) => (v > 0 ? '+' : '') + v + '°');
+    slider('opt-shake', 'shakeAmt', (v) => Math.round(v * 100) + ' %');
+    slider('opt-ui', 'uiScale', (v) => Math.round(v * 100) + ' %');
     $('opt-touch').addEventListener('change', (e) => {
       this.settings.touchMode = e.target.value;
       document.body.classList.toggle('drag-steer', e.target.value === 'drag');
@@ -897,6 +943,10 @@ class App {
       if (this.mode === 'menu' && !this.ui.modalOpen && this.input.hit('Escape')) this.showScreen('menu');
       if (this.session) this.session.update(dt);
       this.renderer.render(this.scene, this.camera);
+      if (this.settings.showFps) {
+        this._fpsN = (this._fpsN || 0) + 1; this._fpsT = (this._fpsT || 0) + dt;
+        if (this._fpsT >= 0.5) { $('fps').textContent = `${Math.round(this._fpsN / this._fpsT)} i/s`; this._fpsN = 0; this._fpsT = 0; }
+      }
       this.input.clearHits();
       requestAnimationFrame(loop);
     };

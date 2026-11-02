@@ -1,9 +1,16 @@
 // Sons entièrement synthétisés avec la Web Audio API (aucun fichier audio).
+import { Music } from './music.js';
+
 export class GameAudio {
   constructor() {
     this.ctx = null;
     this.volume = 0.7;
     this.engineOn = false;
+    this.music = new Music(this);
+  }
+
+  setMusicVolume(v) {
+    this.music.setVolume(v);
   }
 
   // Doit être appelé suite à une interaction utilisateur.
@@ -49,6 +56,7 @@ export class GameAudio {
     this.skid = this._loopNoise('bandpass', 1400, 2.5);
     // Vent
     this.wind = this._loopNoise('lowpass', 500, 0.7);
+    this.music.resume();
   }
 
   _loopNoise(type, freq, q) {
@@ -147,6 +155,21 @@ export class GameAudio {
     const notes = record ? [0, 4, 7, 12, 16] : [0, 4, 7, 12];
     notes.forEach((s, i) => this.tone(523 * 2 ** (s / 12), 0.35, 'triangle', 0.25, i * 0.09));
     if (record) this.noise(1.0, 3000, 0.08, 'highpass', 0.3);
+  }
+
+  miniTurbo(level) {
+    this.noise(0.35, 500, 0.22, 'bandpass', 0, 2400);
+    this.tone(level === 2 ? 520 : 380, 0.25, 'square', 0.06, 0, level === 2 ? 1040 : 760);
+  }
+
+  perfectLanding() {
+    this.tone(660, 0.12, 'triangle', 0.12);
+    this.tone(990, 0.18, 'triangle', 0.1, 0.08);
+  }
+
+  horn() {
+    this.tone(392, 0.32, 'square', 0.09);
+    this.tone(494, 0.32, 'square', 0.07);
   }
 
   boost() {
