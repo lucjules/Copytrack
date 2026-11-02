@@ -39,14 +39,14 @@ Pour le publier avec **GitHub Pages** : *Settings → Pages → Deploy from a br
 - **Easter eggs** : à toi de les trouver (indice : certains circuits cachent des éclats dorés ✦).
 - **Commandes personnalisables** (clavier, manette, éditeur), navigation complète aux menus avec la manette, curseur et raccourcis d'éditeur à la manette, zone morte et sensibilité réglables, vibrations.
 - **Mobile** : plein écran, indication de passage en paysage, commandes à boutons ou direction au glisser du pouce, zones sûres (encoche), vibrations.
-- Physique arcade déterministe (pas fixe de 1/120 s), dérapage rattrapable, sauts, loopings et rubans 3D avec décrochage si la vitesse est insuffisante.
+- Physique déterministe (pas fixe de 1/120 s) à modèle « bicyclette » : le volant oriente les roues avant et ce sont les pneus (adhérence limitée avant / arrière) qui font tourner la voiture. Sous-virage, dérapage et contre-braquage en découlent ; en l'air, le volant ne tourne que les roues. Le même modèle s'applique sur les loopings, vrilles, murs et routes à l'envers (gravité projetée, courbure de la route), avec décrochage si la vitesse est insuffisante.
 - Caméra qui suit la glisse, se retourne avec le véhicule (envers, looping, mur) et se baisse sous les ponts et dans les tunnels.
 - Sons synthétisés en direct (Web Audio), aucun fichier audio.
 
 ## Nouveautés de la v1.2
 
 - 18 circuits en plus (30 au total) : 6 dans chacun des trois nouveaux décors, avec beaucoup de virages.
-- Loopings, vrilles, murs et routes à l'envers à piloter : la force centrifuge et la gravité font glisser la voiture sur le côté (instable à l'envers), il faut braquer pour rester au centre, et frotter la bordure fait perdre de la vitesse.
+- Loopings, vrilles, murs et routes à l'envers à piloter avec la même physique qu'au sol : la gravité et la courbure de la route font dériver la voiture, il faut braquer pour suivre la route, et un choc contre la bordure coûte un peu de vitesse.
 - Plusieurs plaques moto collées ne comptent que pour une transformation.
 - Rubans 3D généraux : routes à l'envers, vrille, L vertical, loopings plus grands.
 - Plaque moto, revêtement de gravité, revêtements réglables, boue, dérive, ralentisseur, vent.

@@ -50,7 +50,11 @@ export class Autopilot {
     this._progress(phys);
     if (phys.rib) {
       const R = phys.rib;
-      const st = -((R.dl * 7 + R.vl * 5) / 26) * R.dir;
+      // Revenir au centre : cap visé proportionnel à l'écart, puis braquage vers ce cap.
+      const d2 = R.dir * R.dl;
+      const vs = Math.max(8, Math.abs(R.vs));
+      const psiDes = Math.asin(Math.max(-0.5, Math.min(0.5, (-1.2 * d2) / vs)));
+      const st = (psiDes - R.psi) * 6 - phys.omega * 0.35;
       return { throttle: true, brake: false, steer: Math.max(-1, Math.min(1, st)), drift: false };
     }
     const path = this.path, p = phys.pos;
@@ -65,7 +69,7 @@ export class Autopilot {
     const cross = fx * tz - fz * tx;
     const dot = fx * tx + fz * tz;
     const ang = Math.atan2(cross, dot);
-    const steer = Math.max(-1, Math.min(1, ang * 2.6));
+    const steer = Math.max(-1, Math.min(1, ang * 2.6 - (phys.omega || 0) * 0.25));
 
     // Vitesse cible selon les courbes à venir.
     let vTarget = 999;

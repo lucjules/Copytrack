@@ -410,7 +410,7 @@ export class RaceSession {
     this.wheelSpin += (p.fwdSpeed / 0.44) * dt;
     for (const w of this.car.wheels) {
       w.spin.rotation.x = -this.wheelSpin;
-      if (w.front) w.pivot.rotation.y = -p.steer * 0.42;
+      if (w.front) w.pivot.rotation.y = -(p.steerAngle || 0);   // angle réel des roues avant
     }
     const roll = Math.max(-0.07, Math.min(0.07, p.yawRate * p.fwdSpeed * 0.0022));
     this.car.body.rotation.z += (roll - this.car.body.rotation.z) * Math.min(1, dt * 8);
