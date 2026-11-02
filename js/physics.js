@@ -47,6 +47,7 @@ export const CAR = {
   snap: 0.7,
   step: 1.6,
   launch: 9.5,        // vitesse normale au-delà de laquelle on décolle
+  lipHop: 1.2,       // hauteur du petit saut en haut d'un L (m)
   bounce: 14,         // vitesse verticale donnée par un revêtement Rebond (100 %)
   wind: 20,           // accélération latérale du vent à 100 %
   radius: 1.0,
@@ -636,6 +637,7 @@ export class CarPhysics {
         R.dl = clamp(R.dl, -lim, lim);
       }
     }
+    const uBefore = R.u;
     R.u += (R.dir * R.vs * dt) / F.ds;
     if (R.u > 1 || R.u < 0) { this._ribEnd(R.u > 1 ? 1 : 0); return; }
 
@@ -643,9 +645,18 @@ export class CarPhysics {
     // (route plate à l'envers, sommet bombé pris trop vite, haut d'un looping trop lent).
     // Sur un mur vertical l'appui est nul : pas de décrochage, mais ni adhérence ni moteur.
     const mu = rib.minU || 0;
-    if (press < -0.6 && R.u > mu && R.u < 1 - mu) {
+    // Haut d'un L pris en montant : le rebord guide la voiture le long de l'arrondi
+    // (sans adhérence), puis la fait sauter un petit peu en arrivant sur le plateau.
+    // Trop lente, elle s'arrête dans l'arrondi et redescend en arrière.
+    if (tile.t === 'crest90' && R.dir === 1) {
+      if (uBefore < rib.lipU && R.u >= rib.lipU && R.vs > 3) {
+        this._ribPlace(R);
+        this.vel.y += Math.sqrt(2 * this.g * CAR.lipHop);
+        this._ribDetach();
+        return;
+      }
+    } else if (press < -0.6 && R.u > mu && R.u < 1 - mu) {
       this._ribPlace(R);
-      if (tile.t === 'crest90' && R.dir === 1) this._lipLaunch(R);
       this._ribDetach();
       return;
     }
@@ -668,27 +679,6 @@ export class CarPhysics {
     this.grounded = true;
     this.surfType = 'road';
     this.surfMod = '';
-  }
-
-  // Haut d'un L pris en montant : le rebord fait basculer la voiture vers l'avant.
-  // Une partie de l'élan vertical devient de l'élan vers le plateau, et la voiture ne
-  // monte que juste assez pour s'y poser (si elle allait assez vite).
-  _lipLaunch(R) {
-    const v = this.vel;
-    const top = frameWorld(R.tile, R.rib, 1, this.F3);    // direction du plateau
-    let hx = top.tx, hz = top.tz;
-    const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl;
-    const F = frameWorld(R.tile, R.rib, R.u, this.F2);
-    const side = v.x * F.rx + v.y * F.ry + v.z * F.rz;       // dérive latérale conservée
-    const up = Math.max(0, v.y);
-    const S = Math.hypot(v.x, v.y, v.z);
-    const rise = Math.max(0, top.py - F.py) + 2.2;           // de quoi passer le rebord
-    const need = Math.sqrt(2 * this.g * rise);
-    const vy = Math.min(up, need);
-    const vh = clamp(0.4 * S, 6, 22);
-    v.x = hx * vh + F.rx * side; v.y = vy; v.z = hz * vh + F.rz * side;
-    this.yaw = Math.atan2(-hx, -hz);
-    this.fwd.x = hx; this.fwd.y = 0; this.fwd.z = hz;
   }
 
   _ribDetach() {

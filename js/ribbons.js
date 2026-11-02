@@ -85,6 +85,7 @@ function build(tile) {
     const La = (R90 * Math.PI) / 2, Lf = 2 * half - R90, tot = La + Lf;
     const cz = half - R90;
     return {
+      lipU: La / tot,   // fin de la partie arrondie (rebord du L)
       pos(u, o) {
         const s = u * tot;
         o.x = 0;
