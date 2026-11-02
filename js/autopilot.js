@@ -82,6 +82,9 @@ export class Autopilot {
     }
     const throttle = v < vTarget - 0.5;
     const brake = v > vTarget + 2.5;
-    return { throttle, brake, steer, drift: false };
+    let st = steer;
+    // Freiner en braquant fort fait déraper : le pilote freine avec un braquage modéré.
+    if (brake && Math.abs(st) > 0.45) st = Math.sign(st) * 0.45;
+    return { throttle, brake, steer: st, drift: false };
   }
 }

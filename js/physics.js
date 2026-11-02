@@ -36,8 +36,10 @@ export const CAR = {
   frontShare: 0.48,   // part avant (un peu moins que l'arrière : comportement stable)
   steerMax: 0.6,      // angle de braquage maxi des roues (rad) à basse vitesse
   steerAlat: 52,      // l'angle utile diminue avec la vitesse (le volant reste précis)
-  driftRear: 0.35,    // adhérence arrière restante au frein à main
-  driftSteer: 1.5,    // braquage autorisé en plus au frein à main
+  driftRear: 0.65,    // adhérence arrière restante quand on freine en virage (dérapage)
+  driftSteer: 1.3,    // braquage autorisé en plus pendant le dérapage
+  driftMin: 12,       // vitesse mini (m/s) pour qu'un freinage en virage fasse déraper
+  driftBrake: 0.75,   // part du freinage absorbée par la glisse quand on dérape
   yawDamp: 0.6,
   steerIn: 7,         // vitesse de braquage
   steerOut: 12,       // retour au centre
@@ -50,6 +52,25 @@ export const CAR = {
   radius: 1.0,
   probe: 1.25,
   height: 1.3,
+};
+
+// Réglages propres à la moto (plaque moto) : plus vive et plus agile que la voiture,
+// un peu moins rapide en pointe. Les personnalisations du garage, elles, ne changent rien.
+export const MOTO = {
+  ...CAR,
+  accel: 32,          // démarre plus fort
+  maxSpeed: 51,       // vitesse de pointe un peu plus basse
+  brake: 36,          // freine un peu moins (une seule roue avant)
+  a: 1.15, b: 1.2,    // empattement plus court : tourne plus serré
+  yawK: 1.25,         // plus légère, change de cap plus vite
+  latGrip: 60,        // penche dans les virages : un peu plus d'appui latéral
+  frontShare: 0.5,
+  steerMax: 0.75,     // braque plus à basse vitesse
+  steerAlat: 66,      // et garde plus de braquage à haute vitesse
+  driftRear: 0.76,    // glisse moins au freinage en virage
+  driftSteer: 1.15,
+  steerIn: 9,
+  steerOut: 14,
 };
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -98,6 +119,11 @@ export class CarPhysics {
 
   get g() {
     return CAR.gravity * this.gravMul;
+  }
+
+  // Réglages du véhicule actuel (voiture ou moto).
+  get k() {
+    return this.moto ? MOTO : CAR;
   }
 
   get mode() {
@@ -169,23 +195,24 @@ export class CarPhysics {
   // ---------------------------------------------------------------- Pneus
   // Angle des roues avant selon la vitesse : à haute vitesse, un petit angle suffit.
   _steerAngle(speed, drift) {
+    const K = this.k;
     const v2 = Math.max(1, speed * speed);
     // Angle géométrique du virage limite + marge de dérive du pneu avant (saturation).
-    const slipSat = (CAR.latGrip * CAR.frontShare) / CAR.corner;
-    let max = Math.min(CAR.steerMax, Math.atan((CAR.a + CAR.b) * CAR.steerAlat / v2) + slipSat);
-    max *= 1 + (CAR.driftSteer - 1) * drift;
+    const slipSat = (K.latGrip * K.frontShare) / K.corner;
+    let max = Math.min(K.steerMax, Math.atan((K.a + K.b) * K.steerAlat / v2) + slipSat);
+    max *= 1 + (K.driftSteer - 1) * drift;
     return this.steer * max;
   }
 
   // Modèle bicyclette, repère voiture (x avant, y droite, w lacet > 0 = vers la droite).
   // ax : accélération longitudinale (moteur, freins) ; grip : multiplicateur d'adhérence.
   _tires(vx, vy, w, ax, grip, dt) {
-    const drift = this.driftT;
+    const drift = this.driftT, K = this.k;
     const delta = this._steerAngle(Math.abs(vx), drift);
     this.steerAngle = delta;
-    const L = CAR.a + CAR.b;
-    const maxF = CAR.latGrip * grip * CAR.frontShare;
-    const maxR = CAR.latGrip * grip * (1 - CAR.frontShare) * (1 - (1 - CAR.driftRear) * drift);
+    const L = K.a + K.b;
+    const maxF = K.latGrip * grip * K.frontShare;
+    const maxR = K.latGrip * grip * (1 - K.frontShare) * (1 - (1 - K.driftRear) * drift);
     if (Math.abs(vx) < 1.5 && grip > 0.3) {
       // Manœuvre au pas : roulement sans glissement.
       vx += ax * dt;
@@ -194,15 +221,15 @@ export class CarPhysics {
     }
     const den = Math.max(Math.abs(vx), 6);
     const sgn = vx >= 0 ? 1 : -1;
-    const af = Math.atan2(vy + CAR.a * w, den) - delta * sgn;
-    const ar = Math.atan2(vy - CAR.b * w, den);
-    const Ff = clamp(-CAR.corner * af, -maxF, maxF);
-    const Fr = clamp(-CAR.corner * ar, -maxR, maxR);
+    const af = Math.atan2(vy + K.a * w, den) - delta * sgn;
+    const ar = Math.atan2(vy - K.b * w, den);
+    const Ff = clamp(-K.corner * af, -maxF, maxF);
+    const Fr = clamp(-K.corner * ar, -maxR, maxR);
     const cd = Math.cos(delta), sd = Math.sin(delta);
     // (La rotation du repère est prise en compte en reprojetant la vitesse à chaque pas.)
     vx += (ax - Ff * sd) * dt;
     vy += (Ff * cd + Fr) * dt;
-    w += ((CAR.a * Ff * cd - CAR.b * Fr) / CAR.yawK - w * CAR.yawDamp) * dt;
+    w += ((K.a * Ff * cd - K.b * Fr) / K.yawK - w * K.yawDamp) * dt;
     BK.vx = vx; BK.vy = vy; BK.w = w;
     return BK;
   }
@@ -217,11 +244,22 @@ export class CarPhysics {
     // Volant progressif (retour au centre plus rapide).
     const target = clamp(inp.steer || 0, -1, 1);
     const back = Math.abs(target) < Math.abs(this.steer) || target * this.steer < 0;
-    const sr = (back ? CAR.steerOut : CAR.steerIn) * dt;
+    const K = this.k;
+    const sr = (back ? K.steerOut : K.steerIn) * dt;
     this.steer += clamp(target - this.steer, -sr, sr);
     if (this.boost > 0) this.boost = Math.max(0, this.boost - dt);
     if (this.bounceCD > 0) this.bounceCD -= dt;
-    this.driftT = inp.drift ? Math.min(1, this.driftT + dt * 6) : Math.max(0, this.driftT - dt * 3.5);
+    // Dérapage : il n'y a plus de bouton, c'est le frein pris en virage à bonne vitesse
+    // qui fait décrocher l'arrière. Tant qu'on garde le volant et que ça glisse,
+    // la dérive se prolonge doucement ; sinon l'arrière raccroche vite.
+    const turning = Math.abs(this.steer) > 0.5;      // volant franchement tourné
+    if (inp.brake && !inp.throttle && turning && this.fwdSpeed > K.driftMin && this.grounded) {
+      this.driftT = Math.min(1, this.driftT + dt * 5);
+    } else if (turning && this.slip > 3 && this.driftT > 0) {
+      this.driftT = Math.max(0, this.driftT - dt * 0.9);
+    } else {
+      this.driftT = Math.max(0, this.driftT - dt * 3.5);
+    }
 
     if (this.rib) { this._ribStep(inp); return; }
 
@@ -261,7 +299,7 @@ export class CarPhysics {
         vr += (TMP.x * rx + TMP.z * rz) * a * dt;
       }
 
-      const ax = (this._longitudinal(vf, inp, CAR.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
+      const ax = (this._longitudinal(vf, inp, K.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
       const r = this._tires(vf, vr, this.omega, ax, grip, dt);
       vf = r.vx; vr = r.vy; this.omega = r.w;
       this.yaw -= this.omega * dt;
@@ -337,13 +375,15 @@ export class CarPhysics {
   // Nouvelle vitesse longitudinale : moteur, freins, résistances.
   // load : part du poids qui appuie les roues sur la route (1 au sol, 0 sur un mur vertical).
   _longitudinal(vf, inp, vmax, traction, extraDrag, dt, load = 1) {
+    const K = this.k;
     let a = 0;
     if (inp.throttle) {
-      if (vf < -0.5) a += CAR.brake * traction;
-      else { const x = vf / vmax; a += CAR.accel * traction * (1 - x * x); }
+      if (vf < -0.5) a += K.brake * traction;
+      else { const x = vf / vmax; a += K.accel * traction * (1 - x * x); }
     }
     if (inp.brake) {
-      if (vf > 0.5) a -= CAR.brake * traction;
+      // En dérapage, l'énergie part surtout dans la glisse : on ralentit moins.
+      if (vf > 0.5) a -= K.brake * traction * (1 - CAR.driftBrake * this.driftT);
       else if (!inp.throttle) {
         const x = Math.max(0, -vf) / CAR.reverseMax;
         a -= CAR.reverseAccel * traction * (1 - x * x);
@@ -351,7 +391,7 @@ export class CarPhysics {
     }
     if (this.boost > 0) {
       const f = this.boostF;
-      const vb = CAR.maxSpeed + (CAR.boostSpeed - CAR.maxSpeed) * f;
+      const vb = K.maxSpeed + (CAR.boostSpeed - K.maxSpeed) * f;
       const x = Math.max(0, vf) / vb;
       a += CAR.boostAccel * f * Math.max(0, 1 - x * x);
     }
@@ -566,7 +606,7 @@ export class CarPhysics {
     this.press = press;
     const c = Math.cos(R.psi), s = Math.sin(R.psi);
     let vx = R.vs * c + R.vd * s, vy = -R.vs * s + R.vd * c;
-    const ax = (this._longitudinal(vx, inp, CAR.maxSpeed, Math.min(1, load), extraDrag, dt, Math.min(1, load)) - vx) / dt;
+    const ax = (this._longitudinal(vx, inp, this.k.maxSpeed, Math.min(1, load), extraDrag, dt, Math.min(1, load)) - vx) / dt;
     const t = this._tires(vx, vy, this.omega, ax, load, dt);
     vx = t.vx; vy = t.vy; this.omega = t.w;
     // Retour dans le plan de la route avec le MÊME cap, puis la voiture pivote.
@@ -603,7 +643,12 @@ export class CarPhysics {
     // (route plate à l'envers, sommet bombé pris trop vite, haut d'un looping trop lent).
     // Sur un mur vertical l'appui est nul : pas de décrochage, mais ni adhérence ni moteur.
     const mu = rib.minU || 0;
-    if (press < -0.6 && R.u > mu && R.u < 1 - mu) { this._ribPlace(R); this._ribDetach(); return; }
+    if (press < -0.6 && R.u > mu && R.u < 1 - mu) {
+      this._ribPlace(R);
+      if (tile.t === 'crest90' && R.dir === 1) this._lipLaunch(R);
+      this._ribDetach();
+      return;
+    }
     this._ribPlace(R);
   }
 
@@ -623,6 +668,27 @@ export class CarPhysics {
     this.grounded = true;
     this.surfType = 'road';
     this.surfMod = '';
+  }
+
+  // Haut d'un L pris en montant : le rebord fait basculer la voiture vers l'avant.
+  // Une partie de l'élan vertical devient de l'élan vers le plateau, et la voiture ne
+  // monte que juste assez pour s'y poser (si elle allait assez vite).
+  _lipLaunch(R) {
+    const v = this.vel;
+    const top = frameWorld(R.tile, R.rib, 1, this.F3);    // direction du plateau
+    let hx = top.tx, hz = top.tz;
+    const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl;
+    const F = frameWorld(R.tile, R.rib, R.u, this.F2);
+    const side = v.x * F.rx + v.y * F.ry + v.z * F.rz;       // dérive latérale conservée
+    const up = Math.max(0, v.y);
+    const S = Math.hypot(v.x, v.y, v.z);
+    const rise = Math.max(0, top.py - F.py) + 2.2;           // de quoi passer le rebord
+    const need = Math.sqrt(2 * this.g * rise);
+    const vy = Math.min(up, need);
+    const vh = clamp(0.4 * S, 6, 22);
+    v.x = hx * vh + F.rx * side; v.y = vy; v.z = hz * vh + F.rz * side;
+    this.yaw = Math.atan2(-hx, -hz);
+    this.fwd.x = hx; this.fwd.y = 0; this.fwd.z = hz;
   }
 
   _ribDetach() {
