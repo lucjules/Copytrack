@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#241a4a">
+  <meta name="description" content="Shardway : jeu de course contre-la-montre low-poly avec éditeur de circuits, directement dans le navigateur.">
+  <title>Shardway</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 2 52 26 32 62 12 26Z' fill='%23ff7ad9'/%3E%3Cpath d='M32 2 52 26 32 34Z' fill='%235ff2ff'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="gl"></canvas>
+
+  <div id="loading" class="screen center">
+    <div class="logo">SHARD<span>WAY</span></div>
+    <div class="tagline">Chargement…</div>
+  </div>
+
+  <!-- Menu principal -->
+  <section id="menu" class="screen hidden">
+    <div class="menu-left">
+      <h1 class="logo">SHARD<span>WAY</span></h1>
+      <p class="tagline">Course contre-la-montre low-poly</p>
+      <nav class="menu-buttons">
+        <button data-action="play" class="btn big primary">Jouer</button>
+        <button data-action="editor" class="btn big">Éditeur de circuits</button>
+        <button data-action="mytracks" class="btn big">Mes circuits</button>
+        <button data-action="import" class="btn big">Importer un code</button>
+        <button data-action="options" class="btn big">Options</button>
+        <button data-action="help" class="btn big subtle">Commandes</button>
+      </nav>
+    </div>
+    <footer class="menu-foot">Shardway · un jeu de course original · propulsé par three.js</footer>
+  </section>
+
+  <!-- Sélection de circuit -->
+  <section id="tracks" class="screen hidden">
+    <header class="screen-head">
+      <button class="btn" data-action="back">← Retour</button>
+      <h2>Circuits</h2>
+    </header>
+    <div id="track-list" class="card-grid"></div>
+  </section>
+
+  <!-- Mes circuits -->
+  <section id="mytracks" class="screen hidden">
+    <header class="screen-head">
+      <button class="btn" data-action="back">← Retour</button>
+      <h2>Mes circuits</h2>
+      <button class="btn primary" data-action="new-track">+ Nouveau</button>
+    </header>
+    <div id="my-list" class="card-grid"></div>
+  </section>
+
+  <!-- Options -->
+  <section id="options" class="screen hidden">
+    <header class="screen-head">
+      <button class="btn" data-action="back">← Retour</button>
+      <h2>Options</h2>
+    </header>
+    <div class="panel form">
+      <label><span>Volume</span><input type="range" id="opt-volume" min="0" max="1" step="0.05"></label>
+      <label><span>Qualité graphique</span>
+        <select id="opt-quality"><option value="high">Haute (ombres)</option><option value="low">Basse (performances)</option></select>
+      </label>
+      <label><span>Afficher le fantôme du record</span><input type="checkbox" id="opt-ghost"></label>
+      <label><span>Nom du pilote</span><input type="text" id="opt-name" maxlength="20"></label>
+      <div class="opt-row"><span>Couleur de la voiture</span><div id="opt-colors" class="swatches"></div></div>
+      <button class="btn subtle" data-action="reset-records">Effacer tous les records</button>
+    </div>
+  </section>
+
+  <!-- HUD de course -->
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div id="hud-time" class="hud-time">00:00.000</div>
+      <div id="hud-split" class="hud-split"></div>
+    </div>
+    <div class="hud-tl">
+      <div id="hud-track" class="hud-track"></div>
+      <div id="hud-cp" class="chip">◆ 0 / 0</div>
+    </div>
+    <div class="hud-tr">
+      <div id="hud-best" class="chip"></div>
+      <div id="hud-medals" class="medal-list"></div>
+    </div>
+    <div class="hud-br">
+      <div class="speed-wrap"><div id="hud-speed" class="speed">0</div><div class="speed-unit">km/h</div></div>
+      <div class="boost-bar"><i id="hud-boost"></i></div>
+    </div>
+    <div id="hud-center" class="hud-center"></div>
+    <div id="hud-msg" class="hud-msg"></div>
+    <div id="hud-hint" class="hud-hint">↑ ↓ ← → ou ZQSD · Espace : dérapage · R : dernier checkpoint · Entrée : recommencer · C : caméra · Échap : pause</div>
+  </div>
+
+  <!-- Pause -->
+  <div id="pause" class="overlay hidden">
+    <div class="panel">
+      <h2>Pause</h2>
+      <button class="btn big primary" data-action="resume">Reprendre</button>
+      <button class="btn big" data-action="restart">Recommencer</button>
+      <button class="btn big" data-action="quit" id="pause-quit">Quitter</button>
+    </div>
+  </div>
+
+  <!-- Arrivée -->
+  <div id="finish" class="overlay hidden">
+    <div class="panel finish-panel">
+      <div id="fin-medal" class="fin-medal"></div>
+      <h2 id="fin-title">Arrivée !</h2>
+      <div id="fin-time" class="fin-time"></div>
+      <div id="fin-detail" class="fin-detail"></div>
+      <div class="row">
+        <button class="btn big primary" data-action="restart">Rejouer <kbd>Entrée</kbd></button>
+        <button class="btn big" data-action="next" id="fin-next">Circuit suivant</button>
+        <button class="btn big" data-action="quit" id="fin-quit">Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Éditeur -->
+  <div id="editor" class="hidden">
+    <div class="ed-top">
+      <button class="btn" data-ed="menu">← Menu</button>
+      <input id="ed-name" class="ed-name" maxlength="40" spellcheck="false" aria-label="Nom du circuit">
+      <div class="ed-group">
+        <button class="btn icon" data-ed="undo" title="Annuler (Ctrl+Z)">↶</button>
+        <button class="btn icon" data-ed="redo" title="Rétablir (Ctrl+Y)">↷</button>
+      </div>
+      <div class="ed-group">
+        <button class="btn" data-ed="new">Nouveau</button>
+        <button class="btn" data-ed="import">Importer</button>
+        <button class="btn" data-ed="export">Partager</button>
+        <button class="btn" data-ed="save">Enregistrer</button>
+      </div>
+      <button class="btn primary" data-ed="test">▶ Tester <kbd>T</kbd></button>
+    </div>
+    <div class="ed-palette" id="ed-palette"></div>
+    <div class="ed-side">
+      <button class="btn icon" data-ed="lvl-up" title="Monter (E / Page↑)">▲</button>
+      <div id="ed-level" class="ed-level">Niv. 0</div>
+      <button class="btn icon" data-ed="lvl-down" title="Descendre (C / Page↓)">▼</button>
+      <button class="btn icon" data-ed="rotate" title="Pivoter (R)">⟳</button>
+    </div>
+    <div class="ed-status" id="ed-status"></div>
+    <div class="ed-help">Clic : poser · Clic droit : supprimer · Clic droit glissé : orbiter · Clic molette glissé : déplacer · Molette : zoom · ZQSD / flèches : déplacer · R : pivoter · E / C : niveau · 1–0 : pièces · Alt+clic : pipette</div>
+  </div>
+
+  <!-- Fenêtre modale générique -->
+  <div id="modal" class="overlay hidden">
+    <div class="panel modal-panel">
+      <h2 id="modal-title"></h2>
+      <div id="modal-body"></div>
+      <div id="modal-actions" class="row"></div>
+    </div>
+  </div>
+
+  <!-- Commandes tactiles -->
+  <div id="touch" class="hidden">
+    <div class="t-left"><button data-t="left" aria-label="Gauche">◀</button><button data-t="right" aria-label="Droite">▶</button></div>
+    <div class="t-right"><button data-t="drift" class="t-small">DÉRIVE</button><button data-t="brake" aria-label="Frein">▼</button><button data-t="gas" aria-label="Accélérer">▲</button></div>
+    <div class="t-top"><button data-t="respawn" aria-label="Dernier checkpoint">⟲</button><button data-t="restart" aria-label="Recommencer">↺</button><button data-t="pause" aria-label="Pause">❚❚</button></div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
