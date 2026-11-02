@@ -356,9 +356,79 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
   addUnderglow(bikeRoot, 1.7, 4.2);
   bikeRoot.visible = false;
 
+  // ---------------------------------------------------------------- Bateau
+  const boatRoot = new THREE.Group();
+  const boatBody = new THREE.Group();
+  boatRoot.add(boatBody);
+  // Coque (profil latéral, x = avant), pont, pare-brise, moteur hors-bord.
+  boatBody.add(new THREE.Mesh(extrudeProfile([[-2.4, 0.25], [1.2, 0.05], [2.7, 0.55], [2.55, 0.95], [-2.4, 0.95]], 2.2), paint));
+  boatBody.add(new THREE.Mesh(extrudeProfile([[-2.3, 0.95], [2.4, 0.95], [2.3, 1.05], [-2.3, 1.05]], 2.0), dark));
+  boatBody.add(new THREE.Mesh(extrudeProfile([[-0.4, 1.0], [0.9, 1.0], [0.45, 1.5], [-0.2, 1.5]], 1.7), glass));
+  boatBody.add(new THREE.Mesh(extrudeProfile([[-2.4, 0.55], [2.6, 0.62], [2.62, 0.72], [-2.4, 0.66]], 2.24), trim));
+  {
+    const motor = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.55), dark);
+    motor.position.set(0, 1.25, 2.55); boatBody.add(motor);
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.3, 0.7), paint);
+    cap.position.set(0, 1.78, 2.55); boatBody.add(cap);
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.3, 0.7), dark);
+    seat.position.set(0, 1.2, 0.9); boatBody.add(seat);
+    const pilot = new THREE.Mesh(new THREE.SphereGeometry(0.28, 7, 5), mk({ color: L.color2, roughness: 0.7 }));
+    pilot.position.set(0, 1.9, 0.85); boatBody.add(pilot);
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.36), mk({ color: L.color2, roughness: 0.7 }));
+    torso.position.set(0, 1.5, 0.9); boatBody.add(torso);
+    const bh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.06), lightMat);
+    bh.position.set(0, 0.85, -2.62); boatBody.add(bh);
+  }
+  if (L.decal !== 'none') {
+    const d = new THREE.Mesh(extrudeProfile([[-1.8, 0.7], [2.2, 0.75], [2.1, 0.85], [-1.8, 0.8]], 2.26), decalMat);
+    boatBody.add(d);
+  }
+  const boatFlames = [];
+  {
+    const f = new THREE.Mesh(new THREE.ConeGeometry(0.2, 1, 6), flameMat);
+    f.geometry.translate(0, -0.5, 0);
+    f.rotation.x = -Math.PI / 2;
+    f.position.set(0, 0.85, 2.85);
+    f.visible = false;
+    boatBody.add(f);
+    boatFlames.push(f);
+  }
+  addUnderglow(boatRoot, 2.0, 4.6, 0.2);
+  boatRoot.visible = false;
+
+  // ---------------------------------------------------------------- Deltaplane
+  // La même voiture, avec une aile delta fixée au-dessus par un mât.
+  const wingRoot = new THREE.Group();
+  {
+    const sail = ghost ? paint : mk({ color: L.color2, roughness: 0.6, side: THREE.DoubleSide });
+    const sail2 = ghost ? paint : mk({ color: L.color, roughness: 0.6, side: THREE.DoubleSide });
+    const geo = new THREE.BufferGeometry();
+    const nose = [0, 3.3, -2.0], lt = [-4.6, 3.0, 1.4], rt = [4.6, 3.0, 1.4], keel = [0, 3.15, 1.0];
+    geo.setAttribute('position', new THREE.Float32BufferAttribute([...nose, ...lt, ...keel, ...nose, ...keel, ...rt], 3));
+    geo.computeVertexNormals();
+    wingRoot.add(new THREE.Mesh(geo, sail));
+    const stripe = new THREE.BufferGeometry();
+    stripe.setAttribute('position', new THREE.Float32BufferAttribute([0, 3.32, -1.4, -1.2, 3.22, 0.2, 1.2, 3.22, 0.2], 3));
+    stripe.computeVertexNormals();
+    wingRoot.add(new THREE.Mesh(stripe, sail2));
+    const bar = (a, b, r = 0.045) => {
+      const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, A.distanceTo(B), 5), dark);
+      m.position.copy(A).add(B).multiplyScalar(0.5);
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize());
+      wingRoot.add(m);
+    };
+    bar(nose, lt); bar(nose, rt); bar(nose, keel);
+    bar([0, 1.4, 0.2], [0, 3.15, 0.2], 0.07);          // mât
+    bar([-0.6, 1.4, -0.4], [0, 3.15, 0.2]); bar([0.6, 1.4, -0.4], [0, 3.15, 0.2]);
+    bar([-2.4, 3.1, 0.2], [2.4, 3.1, 0.2], 0.035);      // traverse
+  }
+  wingRoot.visible = false;
+  carRoot.add(wingRoot);
+
   // ---------------------------------------------------------------- Assemblage
   const root = new THREE.Group();
-  root.add(carRoot, bikeRoot);
+  root.add(carRoot, bikeRoot, boatRoot);
   group.add(root);
 
   // Anneau de choc de la transformation
@@ -380,26 +450,36 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
   });
   shock.castShadow = flash.castShadow = false;
 
+  const show = (kind) => {
+    carRoot.visible = kind === 'car' || kind === 'glider';
+    wingRoot.visible = kind === 'glider';
+    bikeRoot.visible = kind === 'moto';
+    boatRoot.visible = kind === 'boat';
+  };
   const api = {
     group,
-    isMoto: false,
+    vehicle: 'car',
     anim: null,
     ledColor: ledDef.color || '#ffffff',
-    get body() { return this.isMoto ? bikeBody : body; },
-    get wheels() { return this.isMoto ? bikeWheels : carWheels; },
-    get flames() { return this.isMoto ? bikeFlames : carFlames; },
-    // Passe voiture <-> moto (avec animation sauf si instant).
-    setMoto(on, instant = false) {
-      if (on === this.isMoto && !this.anim) return false;
+    get isMoto() { return this.vehicle === 'moto'; },
+    get body() { return this.vehicle === 'moto' ? bikeBody : this.vehicle === 'boat' ? boatBody : body; },
+    get wheels() { return this.vehicle === 'moto' ? bikeWheels : this.vehicle === 'boat' ? [] : carWheels; },
+    get flames() { return this.vehicle === 'moto' ? bikeFlames : this.vehicle === 'boat' ? boatFlames : carFlames; },
+    get wing() { return wingRoot; },
+    // Change de véhicule : car, moto, boat, glider (avec animation sauf si instant).
+    setVehicle(kind, instant = false) {
+      kind = kind || 'car';
+      if (kind === this.vehicle && !this.anim) return false;
       if (instant) {
-        this.isMoto = on; carRoot.visible = !on; bikeRoot.visible = on; this.anim = null;
+        this.vehicle = kind; show(kind); this.anim = null;
         root.rotation.y = 0; root.scale.set(1, 1, 1);
         return true;
       }
-      if (this.anim && this.anim.to === on) return false;
-      this.anim = { t: 0, to: on, swapped: false };
+      if (this.anim && this.anim.to === kind) return false;
+      this.anim = { t: 0, to: kind, swapped: false };
       return true;
     },
+    setMoto(on, instant = false) { return this.setVehicle(on ? 'moto' : 'car', instant); },
     update(dt, time = 0) {
       for (const m of leds) {
         // pulsation / arc-en-ciel
@@ -423,7 +503,7 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
       root.rotation.y = T * TAU * 1.5 * (T < 0.5 ? 1 : 1) * (this.isMoto ? 1 : 1);
       root.scale.set(0.2 + 0.8 * e, 0.45 + 0.55 * e, 1 + (1 - e) * 0.7);
       if (T >= 0.5 && !a.swapped) {
-        a.swapped = true; this.isMoto = a.to; carRoot.visible = !a.to; bikeRoot.visible = a.to;
+        a.swapped = true; this.vehicle = a.to; show(a.to);
       }
       shock.visible = flash.visible = true;
       const s = 1 + T * 6;
@@ -445,6 +525,6 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
       group.removeFromParent();
     },
   };
-  api.setMoto(!!opts.moto, true);
+  api.setVehicle(opts.vehicle || (opts.moto ? 'moto' : 'car'), true);
   return api;
 }

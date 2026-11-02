@@ -18,14 +18,14 @@ export class Autopilot {
     this.radius = new Float32Array(n).fill(1e4);
     for (let i = 1; i < n - 1; i++) {
       const a = path[Math.max(0, i - 2)], b = path[i], c = path[Math.min(n - 1, i + 2)];
-      if (a[3] || b[3] || c[3]) continue; // looping : pas de limite de courbe
+      if (a[3] === 1 || b[3] === 1 || c[3] === 1) continue; // looping, tube... : pas de limite de courbe
       const h1 = Math.atan2(b[2] - a[2], b[0] - a[0]);
       const h2 = Math.atan2(c[2] - b[2], c[0] - b[0]);
       let dh = h2 - h1;
       while (dh > Math.PI) dh -= Math.PI * 2;
       while (dh < -Math.PI) dh += Math.PI * 2;
       const len = Math.hypot(b[0] - a[0], b[2] - a[2]) * 0.5 + Math.hypot(c[0] - b[0], c[2] - b[2]) * 0.5;
-      if (Math.abs(dh) > 1e-3 && len > 0.5) this.radius[i] = Math.max(2, len / Math.abs(dh));
+      if (Math.abs(dh) > 1e-3 && len > 0.5) this.radius[i] = Math.max(2, len / Math.abs(dh)) * (b[3] === 2 ? 1.7 : 1);
     }
   }
 
@@ -78,6 +78,17 @@ export class Autopilot {
       return { throttle: true, brake: false, steer: Math.max(-1, Math.min(1, st)), drift: false };
     }
     const path = this.path, p = phys.pos;
+    if (!phys.grounded && phys.vehicle === 'glider') {
+      // Deltaplane : on vise la route devant (cap) et on garde un peu d'altitude au-dessus.
+      let j = this.idx;
+      while (j < path.length - 1 && this.dist[j] - this.dist[this.idx] < 30) j++;
+      const tq = path[j];
+      const fx = -Math.sin(phys.yaw), fz = -Math.cos(phys.yaw);
+      const tx = tq[0] - p.x, tz = tq[2] - p.z;
+      const ang = Math.atan2(fx * tz - fz * tx, fx * tx + fz * tz);
+      const above = p.y - (tq[1] + 3);
+      return { throttle: above > 2 && phys.speed < 60, brake: above < 0 || phys.vel.y < -6, steer: Math.max(-1, Math.min(1, ang * 2.2)), drift: false };
+    }
     if (!phys.grounded) {
       // En l'air : on aligne le nez sur la pente de la route à l'atterrissage prévu.
       const hv = Math.hypot(phys.vel.x, phys.vel.z);
@@ -90,8 +101,8 @@ export class Autopilot {
     const v = Math.max(0, phys.fwdSpeed);
     const look = 8 + v * 0.32;
     let j = this.idx;
-    while (j < path.length - 1 && this.dist[j] - this.dist[this.idx] < look && !path[j + 1][3]) j++;
-    if (path[j + 1] && path[j + 1][3] && j === this.idx) j++;
+    while (j < path.length - 1 && this.dist[j] - this.dist[this.idx] < look && path[j + 1][3] !== 1) j++;
+    if (path[j + 1] && path[j + 1][3] === 1 && j === this.idx) j++;
     const tq = path[j];
     const fx = -Math.sin(phys.yaw), fz = -Math.cos(phys.yaw);
     const tx = tq[0] - p.x, tz = tq[2] - p.z;

@@ -9,7 +9,10 @@
 // Types de pièces :
 //  line / arc / area : sol « classique » (physique au sol)
 //  loop              : deux voies d'accès au sol + un ruban (looping)
-//  ribbon            : tout un ruban 3D (vrille, quart de cercle, mur, sommet)
+//  ribbon            : tout un ruban 3D (vrille, quart de cercle, mur, sommet,
+//                      virage relevé, demi-tube, tube, tire-bouchon)
+//  fork              : bifurcation (une entrée, deux sorties) au sol
+//  ring              : anneau flottant (turbo ou checkpoint aérien)
 // Une pièce line/arc peut aussi être posée « à l'envers » (drapeau v) : elle
 // devient alors un ruban au plafond.
 import { CELL, HALF, LEVEL_H, ROAD_TOP, LOOP_R, LOOP_LANE } from './constants.js';
@@ -34,7 +37,24 @@ export const PIECES = {
   ramp90:     { label: 'Montée en L', kind: 'ribbon', size: 1, rise: 1 },
   wall:       { label: 'Mur vertical', kind: 'ribbon', size: 1, rise: 0 },
   crest90:    { label: 'Sommet du L', kind: 'ribbon', size: 1, rise: 1 },
+  // v1.5
+  bank:       { label: 'Virage relevé', kind: 'ribbon', size: 2, rise: 0, clearance: 2, arc: true, bank: 0.42 },
+  bankBig:    { label: 'Très grand virage relevé', kind: 'ribbon', size: 3, rise: 0, clearance: 2, arc: true, bank: 0.5 },
+  halfpipe:   { label: 'Demi-tube', kind: 'ribbon', size: 1, rise: 0, clearance: 1 },
+  tube:       { label: 'Tube', kind: 'ribbon', size: 2, rise: 0, clearance: 4 },
+  cork:       { label: 'Tire-bouchon ↻', kind: 'ribbon', size: 2, rise: 0, clearance: 4, mirror: 1 },
+  corkL:      { label: 'Tire-bouchon ↺', kind: 'ribbon', size: 2, rise: 0, clearance: 4, mirror: -1 },
+  fork:       { label: 'Bifurcation ⑂→', kind: 'fork', size: 2, rise: 0, mirror: 1 },
+  forkL:      { label: 'Bifurcation ←⑂', kind: 'fork', size: 2, rise: 0, mirror: -1 },
+  ring:       { label: 'Anneau turbo', kind: 'ring', size: 1, rise: 0, clearance: 2 },
+  cpRing:     { label: 'Checkpoint aérien', kind: 'ring', size: 1, rise: 0, clearance: 2, special: 'checkpoint' },
+  cpCurve:    { label: 'Checkpoint en virage', kind: 'arc', size: 1, rise: 0, clearance: 1, special: 'checkpoint' },
+  gentle:     { label: 'Pente douce (½ niveau)', kind: 'line', size: 1, rise: 0.5 },
 };
+
+// Rayon de l'anneau (turbo / checkpoint aérien) et hauteur de son centre au-dessus du niveau.
+export const RING_R = 7;
+export const RING_Y = 6;
 
 // Anciennes pièces de la v1.0 devenues des revêtements sur une ligne droite.
 export const LEGACY_SURFACE = { boost: 'boost', ice: 'ice' };
@@ -44,6 +64,7 @@ export const PIECE_ORDER = [
   'straight', 'curve', 'bigcurve', 'slope', 'steep', 'boost',
   'checkpoint', 'start', 'finish', 'platform', 'ice', 'loop', 'loopL',
   'loopBig', 'loopBigL', 'loopDouble', 'loopDoubleL', 'twist', 'ramp90', 'wall', 'crest90',
+  'bank', 'bankBig', 'halfpipe', 'tube', 'cork', 'corkL', 'fork', 'forkL', 'ring', 'cpRing', 'cpCurve', 'gentle',
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -61,9 +82,15 @@ export const SURFACES = {
   wind:    { label: 'Vent latéral', param: '← Force →', def: 150, min: 1, max: 200, c: ['#7fe9ff', '#bfefff', '#ffffff'] },
   gravity: { label: 'Gravité', param: 'Gravité', def: 40, min: 15, max: 250, c: ['#7dffb2', '#a7ffe0', '#b06bff'] },
   moto:    { label: 'Plaque moto', c: ['#ff9f1c', '#ff9f1c', '#ff9f1c'] },
+  // v1.5
+  water:   { label: 'Eau', flat: true, c: ['#3fa7ff', '#3fa7ff', '#3fa7ff'] },
+  boat:    { label: 'Plaque bateau', flat: true, c: ['#3fd0ff', '#3fd0ff', '#3fd0ff'] },
+  glider:  { label: 'Plaque deltaplane', c: ['#f5f5f5', '#f5f5f5', '#f5f5f5'] },
 };
 // Ne jamais réordonner, seulement ajouter.
-export const SURFACE_ORDER = ['', 'ice', 'boost', 'bounce', 'sand', 'magnet', 'mud', 'drift', 'slow', 'wind', 'gravity', 'moto'];
+export const SURFACE_ORDER = ['', 'ice', 'boost', 'bounce', 'sand', 'magnet', 'mud', 'drift', 'slow', 'wind', 'gravity', 'moto', 'water', 'boat', 'glider'];
+// Plaques de transformation : véhicule obtenu (repasser sur la même plaque ramène la voiture).
+export const PLATES = { moto: 'moto', boat: 'boat', glider: 'glider' };
 
 export function tileParam(tile) {
   const S = SURFACES[tile.s];
@@ -91,8 +118,9 @@ export function flagAllowed(type, flag, tile = null) {
   const p = PIECES[type];
   if (!p) return false;
   const lineLike = p.kind === 'line' || p.kind === 'arc';
-  if (flag === 'v') return lineLike && !p.special;
-  if (flag === 'nb') return lineLike && !p.special || p.kind === 'ribbon';
+  if (flag === 'v') return lineLike && !p.special && Number.isInteger(p.rise);
+  if (p.kind === 'ring' || p.kind === 'fork') return false;
+  if (flag === 'nb') return lineLike && !p.special || (p.kind === 'ribbon' && type !== 'tube');
   if (flag === 'tn') return lineLike && !p.special && !(tile && tile.v);
   return false;
 }
@@ -102,7 +130,8 @@ export function surfaceAllowed(type, s, v = false) {
   const p = PIECES[type];
   const S = SURFACES[s];
   if (!p || !S) return false;
-  if (p.kind === 'loop' || p.kind === 'ribbon') return false;
+  if (p.kind === 'loop' || p.kind === 'ribbon' || p.kind === 'ring') return false;
+  if (s === 'water' && (p.special || p.kind === 'fork')) return false;
   if (v && !S.inv) return false;
   if (S.flat && p.rise) return false;
   return true;
@@ -159,9 +188,9 @@ export function localToWorld(tile, lx, lz, out = {}) {
 }
 
 export function arcParams(p) {
-  return p.size === 1
-    ? { cx: HALF, cz: HALF, R: HALF }
-    : { cx: CELL, cz: CELL, R: CELL * 1.5 };
+  if (p.size === 1) return { cx: HALF, cz: HALF, R: HALF };
+  if (p.size === 3) return { cx: CELL * 1.5, cz: CELL * 1.5, R: CELL * 2.5 };
+  return { cx: CELL, cz: CELL, R: CELL * 1.5 };
 }
 
 // Échantillonne la géométrie au sol d'une pièce au point local (lx, lz).
@@ -197,6 +226,8 @@ export function sampleLocal(tile, lx, lz, out) {
     let ang = Math.atan2(dz, dx);
     if (ang < 0) ang += Math.PI * 2;
     out.along = (ang - Math.PI) / (Math.PI / 2);
+  } else if (p.kind === 'fork') {
+    forkSample(p, lx, lz, out);
   } else if (p.kind === 'loop') {
     // Seules les deux voies d'accès au sol sont des surfaces « normales ».
     const lane = lz >= 0 ? -p.mirror * p.lane : p.mirror * p.lane;
@@ -207,4 +238,38 @@ export function sampleLocal(tile, lx, lz, out) {
     out.along = (half - lz) / (2 * half);
   }
   return out;
+}
+
+// ---- Bifurcation -------------------------------------------------------------
+// Pièce 2x2 : entrée au sud de la colonne gauche (x = -12, ou +12 en miroir).
+// Branche A : tout droit. Branche B : glisse d'une colonne (S doux) vers l'autre côté.
+const smoothF = (t) => t * t * (3 - 2 * t);
+export function forkBranchX(p, t, branch) {
+  const x0 = -p.mirror * HALF;
+  return branch === 0 ? x0 : x0 + p.mirror * CELL * smoothF(t);
+}
+// Écart entre les deux lignes centrales à l'avancée t.
+export function forkSep(t) {
+  return CELL * smoothF(t);
+}
+function forkSample(p, lx, lz, out) {
+  const half = p.size * HALF;
+  let t = (half - lz) / (2 * half);
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  out.along = t;
+  const xa = forkBranchX(p, t, 0), xb = forkBranchX(p, t, 1);
+  // Pente de la branche B (dérivée de x par rapport à -lz).
+  const slope = p.mirror * CELL * 6 * t * (1 - t) / (2 * half);
+  const cb = 1 / Math.sqrt(1 + slope * slope);
+  const da = lx - xa, db = (lx - xb) * cb;
+  const sep = forkSep(t);
+  const between = (lx - xa) * (lx - xb) < 0;
+  if (between && sep < 2 * 9 + 0.05) {
+    // Les deux chaussées se touchent encore : tout l'entre-deux est de la route, sans muret.
+    out.d = 0; out.gx = 1; out.gz = 0; out.branch = Math.abs(da) <= Math.abs(db) ? 0 : 1;
+  } else if (Math.abs(da) <= Math.abs(db)) {
+    out.d = da; out.gx = 1; out.gz = 0; out.branch = 0;
+  } else {
+    out.d = db; out.gx = cb; out.gz = slope * cb; out.branch = 1;
+  }
 }

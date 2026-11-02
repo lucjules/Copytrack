@@ -19,7 +19,7 @@ const GLYPH = {
   checkpoint: ['C', 'C'], start: ['S', 'S'], finish: ['F', 'F'], platform: ['#', '#'], loop: ['O', 'O'], loopL: ['Ø', 'Ø'],
   loopBig: ['B', 'B'], loopBigL: ['B', 'B'], loopDouble: ['D', 'D'], loopDoubleL: ['D', 'D'], twist: ['~', '~'], ramp90: ['Q', 'Q'], wall: ['W', 'W'], crest90: ['Y', 'Y'],
 };
-const SURF = { ice: '~', boost: '»', bounce: 'j', sand: 's', magnet: 'm', mud: 'u', drift: 'd', slow: 'x', wind: 'w', gravity: 'g', moto: 'o' };
+const SURF = { ice: '~', boost: '»', bounce: 'j', sand: 's', magnet: 'm', mud: 'u', drift: 'd', slow: 'x', wind: 'w', gravity: 'g', moto: 'o', water: 'a', boat: 'n', glider: 'e' };
 
 function map(track) {
   const b = track.bounds();
@@ -60,7 +60,7 @@ function run(track, maxTime = 240) {
       return { ok: true, time: logic.time, respawns, maxSpeed, airMax, loops, falls };
     }
     // Chute au sol : réapparition au dernier checkpoint.
-    const fell = phys.grounded && phys.surfType === 'ground';
+    const fell = (phys.grounded && phys.surfType === 'ground') || phys.ev.sink;
     if (i % 120 === 0) {
       if (bot.idx === lastIdx) stuck++; else stuck = 0;
       lastIdx = bot.idx;

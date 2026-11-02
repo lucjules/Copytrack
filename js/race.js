@@ -94,7 +94,7 @@ export class RaceSession {
     this.logic.reset();
     const sp = this.logic.spawnPoint();
     this.phys.place(sp.x, sp.y, sp.z, sp.yaw);
-    this.car.setMoto(false, true);
+    this.car.setVehicle('car', true);
     this.collectedShards = new Set();
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
     this._orient();
@@ -124,8 +124,8 @@ export class RaceSession {
     if (this.state !== 'racing') return;
     const r = this.logic.respawn;
     this.phys.place(r.x, r.y, r.z, r.yaw);
-    this.phys.moto = !!r.moto; this.phys.gravMul = r.grav || 1;
-    this.car.setMoto(this.phys.moto, true);
+    this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
+    this.car.setVehicle(this.phys.vehicle, true);
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
     this._orient();
     this.prevQuat.copy(this.quat);
@@ -224,12 +224,26 @@ export class RaceSession {
       app.ui.hud.message('Réception ratée', 0.9);
     }
     if (ev.moto) {
-      this.car.setMoto(this.phys.moto);
+      const veh = this.phys.vehicle;
+      this.car.setVehicle(veh);
       app.audio.transform();
       const p = this.phys.pos;
-      app.particles.burst(p.x, p.y + 1, p.z, 40, 11, 0.8, 0.8, '#ff9f1c', 1);
+      const col = { moto: '#ff9f1c', boat: '#3fd0ff', glider: '#f5f5f5', car: '#ffd23e' }[veh];
+      app.particles.burst(p.x, p.y + 1, p.z, 40, 11, 0.8, 0.8, col, 1);
       app.particles.burst(p.x, p.y + 1, p.z, 24, 9, 0.8, 0.7, '#ffffff', 1);
-      if (!this.demo) app.ui.hud.message(this.phys.moto ? 'Mode moto !' : 'Retour en voiture', 1.2);
+      if (!this.demo) app.ui.hud.message({ moto: 'Mode moto !', boat: 'Mode bateau !', glider: 'Deltaplane déployé !', car: 'Retour en voiture' }[veh], 1.2);
+    }
+    if (ev.sink && this.state === 'racing') {
+      const p = this.phys.pos;
+      app.particles.burst(p.x, p.y + 0.5, p.z, 30, 8, 0.7, 0.6, '#9fe3ff', 4, 2);
+      if (!this.demo) app.ui.hud.message('Coulé ! Il faut un bateau pour traverser l\'eau', 1.8);
+      if (this.demo) this.restart(); else this.respawn();
+      return;
+    }
+    if (ev.ring) {
+      const p = this.phys.pos;
+      app.particles.burst(p.x, p.y + 0.5, p.z, 30, 12, 0.6, 0.6, '#36e9ff', 0, 1);
+      if (!this.demo) app.ui.hud.message('Anneau turbo !', 0.8);
     }
     if (ev.gravity && !this.demo) app.ui.hud.message(`Gravité ${Math.round(this.phys.gravMul * 100)} %`, 1.4);
     if (ev.loopFall && !this.demo) {
@@ -437,7 +451,9 @@ export class RaceSession {
       w.spin.rotation.x = -this.wheelSpin;
       if (w.front) w.pivot.rotation.y = -(p.steerAngle || 0);   // angle réel des roues avant
     }
-    const roll = Math.max(-0.07, Math.min(0.07, p.yawRate * p.fwdSpeed * 0.0022));
+    // Roulis : léger au sol, franc pour le deltaplane qui vire en l'air.
+    const gliding = p.vehicle === 'glider' && !p.grounded;
+    const roll = gliding ? -(p.steer || 0) * 0.45 : Math.max(-0.07, Math.min(0.07, p.yawRate * p.fwdSpeed * 0.0022));
     this.car.body.rotation.z += (roll - this.car.body.rotation.z) * Math.min(1, dt * 8);
     const inp = this.lastInput || {};
     const pitch = p.grounded ? (inp.throttle ? 0.012 : 0) - (inp.brake && p.fwdSpeed > 2 ? 0.03 : 0) : 0;
@@ -450,7 +466,7 @@ export class RaceSession {
 
     // Traces de pneus (glisse ou gros freinage) et étincelles du mini-turbo en charge.
     const sliding = p.grounded && !p.rib && p.speed > 8 && (p.slip > 0.06 * Math.abs(p.fwdSpeed) + 1.2 || (inp.brake && p.fwdSpeed > 12 && !inp.throttle));
-    const wheelsX = this.car.isMoto ? [0] : [-0.95, 0.95];
+    const wheelsX = this.car.vehicle === 'boat' ? [] : this.car.isMoto ? [0] : [-0.95, 0.95];
     tmpV2.set(1, 0, 0).applyQuaternion(g.quaternion);
     for (let w = 0; w < 2; w++) {
       if (sliding && w < wheelsX.length) {
@@ -467,8 +483,15 @@ export class RaceSession {
         }
       }
     }
+    // Sillage du bateau (ou éclaboussures d'un véhicule dans l'eau).
+    if (p.grounded && p.surfMod === 'water' && p.speed > 4 && Math.random() < 0.9) {
+      for (const sx of [-1.1, 1.1]) {
+        tmpV.set(sx, 0.2, 2.2).applyQuaternion(g.quaternion).add(g.position);
+        app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, sx * (1 + Math.random() * 2), 1.5 + Math.random() * 2.5, (Math.random() - 0.5) * 2, 0.6, 0.55, Math.random() < 0.5 ? '#e8f8ff' : '#9fe3ff', 7);
+      }
+    }
     // Particules : poussière de dérapage, étincelles de boost
-    if (p.grounded && p.slip > 5 && p.speed > 6) {
+    if (p.grounded && p.slip > 5 && p.speed > 6 && p.surfMod !== 'water') {
       for (const sx of [-1, 1]) {
         tmpV.set(sx * 1.0, 0.15, 1.4).applyQuaternion(g.quaternion).add(g.position);
         const dust = p.surfMod === 'ice' ? '#e8f8ff' : p.surfMod === 'sand' ? '#d8b07a' : app.scenery.theme.dust;
