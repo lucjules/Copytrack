@@ -1,7 +1,7 @@
 // Service worker généré par tools/gen-sw.mjs : ne pas modifier à la main.
 // Jeu hors ligne : les fichiers du jeu sont gardés en cache ; le réseau reste prioritaire
 // pour récupérer les mises à jour quand il est disponible.
-const CACHE = 'shardway-1ad75b3eac';
+const CACHE = 'shardway-507255bcd6';
 const FILES = [
   "./",
   "css/style.css",
