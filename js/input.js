@@ -8,7 +8,6 @@ export const KEY_ACTIONS = {
     ['brake', 'Freiner / marche arrière', ['KeyS', 'ArrowDown']],
     ['left', 'Tourner à gauche', ['KeyA', 'ArrowLeft']],
     ['right', 'Tourner à droite', ['KeyD', 'ArrowRight']],
-    ['drift', 'Dérapage', ['Space', 'ShiftLeft']],
     ['respawn', 'Dernier checkpoint', ['KeyR', '']],
     ['restart', 'Recommencer', ['Enter', 'Backspace']],
     ['camera', 'Changer de caméra', ['KeyC', '']],
@@ -39,7 +38,6 @@ export const PAD_ACTIONS = {
   race: [
     ['accelerate', 'Accélérer', [7, 0]],
     ['brake', 'Freiner', [6, 1]],
-    ['drift', 'Dérapage', [2, 4]],
     ['respawn', 'Dernier checkpoint', [3, -1]],
     ['restart', 'Recommencer', [8, -1]],
     ['camera', 'Caméra', [5, -1]],
@@ -142,8 +140,14 @@ export class Input {
   }
 
   setBindings(keys, pad) {
-    this.bindings = { ...defaultKeys(), ...(keys || {}) };
-    this.pad = { ...defaultPad(), ...(pad || {}) };
+    // On ne garde que les actions qui existent encore (l'ancien « dérapage » est ignoré).
+    const keep = (def, saved) => {
+      const out = { ...def };
+      for (const k in saved || {}) if (k in def) out[k] = saved[k];
+      return out;
+    };
+    this.bindings = keep(defaultKeys(), keys);
+    this.pad = keep(defaultPad(), pad);
   }
 
   setPadConfig(cfg) {
@@ -281,7 +285,6 @@ export class Input {
     if (t.analog != null) steer = t.analog;
     let throttle = this.held('accelerate') || t.gas;
     let brake = this.held('brake') || t.brake;
-    let drift = this.held('drift') || t.drift;
     const p = this.gamepad();
     if (p) {
       const ax = dz(p.axes[0] || 0, this.padCfg.deadzone);
@@ -291,8 +294,8 @@ export class Input {
       const pa = (id) => (this.pad[id] || []).reduce((m, i) => Math.max(m, i >= 0 && p.buttons[i] ? p.buttons[i].value || (p.buttons[i].pressed ? 1 : 0) : 0), 0);
       if (pa('accelerate') > 0.2) throttle = true;
       if (pa('brake') > 0.2) brake = true;
-      if (pa('drift') > 0.2) drift = true;
     }
-    return { steer, throttle, brake, drift };
+    // Pas de bouton de dérapage : freiner en virage suffit.
+    return { steer, throttle, brake, drift: false };
   }
 }

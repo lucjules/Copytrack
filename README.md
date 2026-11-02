@@ -30,6 +30,7 @@ Pour le publier avec **GitHub Pages** : *Settings → Pages → Deploy from a br
 - **Revêtements réglables** (chaque curseur change l'effet et légèrement la couleur) :
   verglas, accélérateur (5 % à 200 %), rebond, sable, aimant, boue, dérive, ralentisseur, vent latéral, **gravité** (15 % à 250 %) et **plaque moto**
   (la voiture se transforme en moto en gardant sa vitesse ; une autre plaque la ramène en voiture).
+  La moto a ses propres réglages : elle démarre plus fort, tourne plus serré (même à haute vitesse) et change de cap plus vite, mais sa vitesse de pointe est un peu plus basse, elle freine un peu moins fort et glisse moins en dérapage.
 - **Éditeur** : pose au clic, rotation, miroir, niveaux, revêtements au pinceau, options, choix du décor, annuler/rétablir, pipette, test immédiat, sauvegarde locale, partage par code ou par lien.
   - **Décorations à placement libre** (position, rotation, taille, accrochage libre / 1 m / 4 m / case) : panneaux, formes, murs, toits, nature, et **plaque image par URL** (l'image doit autoriser le chargement depuis un autre site, CORS).
   - **Vérification** : il faut finir son circuit pour que le partage donne des médailles et des pièces. Le temps de l'auteur devient la médaille *bronze*, les trois autres sont déduites. On peut partager sans vérifier, mais sans médailles ni pièces.
@@ -39,7 +40,7 @@ Pour le publier avec **GitHub Pages** : *Settings → Pages → Deploy from a br
 - **Easter eggs** : à toi de les trouver (indice : certains circuits cachent des éclats dorés ✦).
 - **Commandes personnalisables** (clavier, manette, éditeur), navigation complète aux menus avec la manette, curseur et raccourcis d'éditeur à la manette, zone morte et sensibilité réglables, vibrations.
 - **Mobile** : plein écran, indication de passage en paysage, commandes à boutons ou direction au glisser du pouce, zones sûres (encoche), vibrations.
-- Physique déterministe (pas fixe de 1/120 s) à modèle « bicyclette » : le volant oriente les roues avant et ce sont les pneus (adhérence limitée avant / arrière) qui font tourner la voiture. Sous-virage, dérapage et contre-braquage en découlent ; en l'air, le volant ne tourne que les roues. Le même modèle s'applique sur les loopings, vrilles, murs et routes à l'envers, avec une **physique réelle de l'appui** : l'adhérence et le moteur dépendent de la force qui plaque les roues (gravité + courbure de la route). Dans le creux d'un looping la voiture est plaquée ; sur un mur vertical plus rien ne la plaque, elle monte sur son élan sans pouvoir tourner ni accélérer ; un sommet bombé la fait décoller ; une route plate à l'envers ou le milieu d'une vrille la font tomber. Elle peut retomber sur un ruban (haut d'un L, fond d'un looping) ou redescendre en arrière.
+- Physique déterministe (pas fixe de 1/120 s) à modèle « bicyclette » : le volant oriente les roues avant et ce sont les pneus (adhérence limitée avant / arrière) qui font tourner la voiture. Sous-virage, dérapage et contre-braquage en découlent ; en l'air, le volant ne tourne que les roues. **Pas de bouton de dérapage** : freiner en tournant franchement le volant à bonne vitesse fait décrocher l'arrière, et la glisse se prolonge tant qu'on garde le volant ; freiner roues droites (ou avec un léger braquage) freine simplement. Le même modèle s'applique sur les loopings, vrilles, murs et routes à l'envers, avec une **physique réelle de l'appui** : l'adhérence et le moteur dépendent de la force qui plaque les roues (gravité + courbure de la route). Dans le creux d'un looping la voiture est plaquée ; sur un mur vertical plus rien ne la plaque, elle monte sur son élan sans pouvoir tourner ni accélérer ; en haut du L, le rebord la guide le long de l'arrondi puis la fait sauter d'environ 1 m en arrivant sur le plateau (trop lente, elle redescend en arrière) ; une route plate à l'envers ou le milieu d'une vrille la font tomber. Elle peut retomber sur un ruban (haut d'un L, fond d'un looping) ou redescendre en arrière.
 - Caméra qui suit la glisse, se retourne avec le véhicule (envers, looping, mur) et se baisse sous les ponts et dans les tunnels.
 - Sons synthétisés en direct (Web Audio), aucun fichier audio.
 
@@ -63,7 +64,7 @@ Pour le publier avec **GitHub Pages** : *Settings → Pages → Deploy from a br
 | ↑ / Z (W) | Accélérer |
 | ↓ / S | Freiner, marche arrière |
 | ← → / Q D (A D) | Tourner |
-| Espace / Maj | Dérapage |
+| Frein + volant à fond | Dérapage |
 | R | Revenir au dernier checkpoint |
 | Entrée / Retour | Recommencer |
 | C | Changer de caméra |

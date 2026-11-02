@@ -505,12 +505,12 @@ class App {
         <b>↑ / Z / W</b><span>Accélérer</span>
         <b>↓ / S</b><span>Freiner, marche arrière</span>
         <b>← → / Q D / A D</b><span>Tourner</span>
-        <b>Espace / Maj</b><span>Dérapage (frein à main)</span>
+        <b>Frein en virage</b><span>Dérapage (l'arrière décroche ; garde le volant pour prolonger la glisse)</span>
         <b>R</b><span>Revenir au dernier checkpoint</span>
         <b>Entrée / Retour</b><span>Recommencer la course</span>
         <b>C</b><span>Changer de caméra</span>
         <b>Échap</b><span>Pause</span>
-        <b>Manette</b><span>Gâchettes : gaz / frein · stick : direction · X : dérapage · Y : checkpoint</span>
+        <b>Manette</b><span>Gâchettes : gaz / frein · stick : direction · freiner en virage : dérapage · Y : checkpoint</span>
       </div>
       <p style="margin-top:14px">Passe par tous les checkpoints ◆ puis franchis l’arrivée le plus vite possible. Les accélérateurs bleus donnent un gros coup de boost, le verglas fait glisser, les tremplins font décoller.</p>`,
       actions: [{ label: 'OK', primary: true }],
