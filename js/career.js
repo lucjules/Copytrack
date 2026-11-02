@@ -11,8 +11,8 @@ export const CHAPTERS = [
   { name: 'Premiers tours', desc: 'Virages, petits sauts et premiers revêtements.' },
   { name: 'Prise de vitesse', desc: 'Accélérateurs, loopings et virages relevés.' },
   { name: 'Métamorphoses', desc: 'Moto, bateau et deltaplane entrent en piste.' },
-  { name: 'Haute voltige', desc: 'Tubes, tire-bouchons et anneaux dans les airs.' },
-  { name: 'Terrains piégés', desc: 'Glace, boue, vent et routes sans bordures.' },
+  { name: 'Terrains piégés', desc: 'Glace, boue, vent, sable et routes sans bordures.' },
+  { name: 'Haute voltige', desc: 'Tubes, tire-bouchons, montées en L et anneaux dans les airs.' },
   { name: 'Grand huit', desc: 'Des circuits longs qui mélangent tout.' },
   { name: 'Légendes', desc: 'Les plus durs : précision et sang-froid.' },
 ];

@@ -15,6 +15,8 @@ export const DECORS = {
   jungle: { label: 'Jungle néon' },
   city: { label: 'Ville futuriste' },
   isles: { label: 'Archipel tropical' },
+  volcano: { label: 'Volcan' },
+  orbit: { label: 'Station orbitale' },
 };
 
 // L'eau est un peu sous le niveau de la chaussée.
@@ -583,6 +585,7 @@ export function scriptTrack(name, script, opts = {}) {
   }
   for (const d of opts.decos || []) tr.addDeco(d);
   tr.path = path;
+  tr.turtle = { x, z, h, l };   // position finale (sert à refermer les circuits à tours)
   return tr;
 }
 

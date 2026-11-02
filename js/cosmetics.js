@@ -9,6 +9,10 @@ export const CATEGORIES = [
   { id: 'ornament', label: 'Ornements' },
   { id: 'spoiler', label: 'Ailerons' },
   { id: 'wheels', label: 'Roues' },
+  { id: 'finish', label: 'Finition' },
+  { id: 'bike', label: 'Moto' },
+  { id: 'trail', label: 'Traînée' },
+  { id: 'horn', label: 'Klaxon' },
   { id: 'presets', label: 'Presets' },
 ];
 
@@ -20,6 +24,35 @@ export const CATALOG = {
     { id: 'muscle', label: 'Muscle', cost: 200 },
     { id: 'rally', label: 'Rallye', cost: 250 },
     { id: 'wedge', label: 'Fléchette', cost: 300 },
+    { id: 'pickup', label: 'Pick-up', cost: 260 },
+    { id: 'formula', label: 'Monoplace', cost: 380 },
+  ],
+  // v1.5 : finition de la peinture (aspect seulement).
+  finish: [
+    { id: 'gloss', label: 'Brillante', cost: 0 },
+    { id: 'matte', label: 'Mate', cost: 60 },
+    { id: 'metal', label: 'Métallisée', cost: 120 },
+    { id: 'pearl', label: 'Nacrée', cost: 180 },
+  ],
+  // Forme de la moto (plaque moto).
+  bike: [
+    { id: 'street', label: 'Routière', cost: 0 },
+    { id: 'chopper', label: 'Chopper', cost: 220 },
+  ],
+  // Traînée lumineuse en l'air et pendant les turbos.
+  trail: [
+    { id: 'none', label: 'Aucune', cost: 0 },
+    { id: 'comet', label: 'Comète', cost: 80, color: '#7fe9ff' },
+    { id: 'ember', label: 'Braise', cost: 120, color: '#ff7a1f' },
+    { id: 'aurora', label: 'Aurore', cost: 160, color: '#7dffb0' },
+    { id: 'rainbow', label: 'Arc-en-ciel', cost: 220, rainbow: true },
+  ],
+  // Klaxon (touche H).
+  horn: [
+    { id: 'classic', label: 'Classique', cost: 0 },
+    { id: 'duo', label: 'Deux tons', cost: 30 },
+    { id: 'tuba', label: 'Grave', cost: 50 },
+    { id: 'arcade', label: 'Arcade', cost: 70 },
   ],
   led: [
     { id: 'none', label: 'Aucune', cost: 0 },
@@ -77,6 +110,7 @@ export const COLOR_CHOICES = [
 export const DEFAULT_LOADOUT = {
   body: 'buggy', color: '#ffd23e', color2: '#23242f', decalColor: '#ffffff',
   spoiler: 'wing', led: 'none', decal: 'none', ornament: 'none', wheels: 'classic',
+  finish: 'gloss', bike: 'street', trail: 'none', horn: 'classic',
 };
 
 export const PRESETS = [
@@ -87,6 +121,9 @@ export const PRESETS = [
   { id: 'royal', label: 'Royal', loadout: { body: 'wedge', color: '#8a1c2e', color2: '#e8c27a', decalColor: '#e8c27a', spoiler: 'double', led: 'violet', decal: 'stars', ornament: 'crown', wheels: 'gold' } },
   { id: 'party', label: 'Soirée', loadout: { body: 'hatch', color: '#ff4fd8', color2: '#2fd3b5', decalColor: '#ffffff', spoiler: 'low', led: 'rainbow', decal: 'dots', ornament: 'beacon', wheels: 'neon' } },
   { id: 'racer', label: 'Pilote', loadout: { body: 'sport', color: '#f4f1ea', color2: '#ff5a5f', decalColor: '#ff5a5f', spoiler: 'gt', led: 'none', decal: 'checker', ornament: 'flag', wheels: 'spoke' } },
+  { id: 'desert', label: 'Désert', loadout: { body: 'pickup', color: '#e8c27a', color2: '#8a1c2e', decalColor: '#2f3247', spoiler: 'none', led: 'amber', decal: 'stripe', ornament: 'antenna', wheels: 'spoke', finish: 'matte', trail: 'ember' } },
+  { id: 'f1', label: 'Monoplace', loadout: { body: 'formula', color: '#ff5a5f', color2: '#f4f1ea', decalColor: '#f4f1ea', spoiler: 'double', led: 'none', decal: 'twin', ornament: 'none', wheels: 'disc', finish: 'gloss', trail: 'comet' } },
+  { id: 'chrome', label: 'Chrome', loadout: { body: 'wedge', color: '#b0b6c8', color2: '#111118', decalColor: '#36e9ff', spoiler: 'gt', led: 'cyan', decal: 'none', ornament: 'none', wheels: 'gold', finish: 'metal', bike: 'chopper', trail: 'rainbow', horn: 'arcade' } },
   { id: 'shark', label: 'Requin', loadout: { body: 'wedge', color: '#b0b6c8', color2: '#2f3247', decalColor: '#ffffff', spoiler: 'low', led: 'pink', decal: 'bolt', ornament: 'fin', wheels: 'classic' } },
 ];
 
@@ -95,7 +132,7 @@ export function itemCost(cat, id) {
   return it ? it.cost : 0;
 }
 
-const KEYS = ['body', 'led', 'decal', 'ornament', 'spoiler', 'wheels'];
+const KEYS = ['body', 'led', 'decal', 'ornament', 'spoiler', 'wheels', 'finish', 'bike', 'trail', 'horn'];
 
 export function sanitizeLoadout(l) {
   const out = { ...DEFAULT_LOADOUT };

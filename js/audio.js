@@ -167,9 +167,12 @@ export class GameAudio {
     this.tone(990, 0.18, 'triangle', 0.1, 0.08);
   }
 
-  horn() {
-    this.tone(392, 0.32, 'square', 0.09);
-    this.tone(494, 0.32, 'square', 0.07);
+  // Klaxon (cosmétique) : plusieurs timbres.
+  horn(kind = 'classic') {
+    if (kind === 'duo') { this.tone(440, 0.18, 'square', 0.08); this.tone(554, 0.22, 'square', 0.08, 0.2); }
+    else if (kind === 'tuba') { this.tone(147, 0.45, 'sawtooth', 0.12); this.tone(196, 0.45, 'square', 0.05); }
+    else if (kind === 'arcade') { [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.09, 'square', 0.07, i * 0.08)); }
+    else { this.tone(392, 0.32, 'square', 0.09); this.tone(494, 0.32, 'square', 0.07); }
   }
 
   boost() {

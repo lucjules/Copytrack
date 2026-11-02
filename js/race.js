@@ -9,6 +9,7 @@ import { createCar } from './carModel.js';
 import { getRecord, saveRecord, encodeFloats, decodeFloats, formatTime } from './storage.js';
 import { profile, rewardCoins, addCoins, saveProfile } from './profile.js';
 import { SURFACES } from './pieces.js';
+import { CATALOG } from './cosmetics.js';
 import { SkidMarks } from './skids.js';
 import { InputRecorder, decodeInputs, inputAt, quantSteer, GhostRunner, PHYS_VER } from './replay.js';
 import { getImportedGhost } from './storage.js';
@@ -467,6 +468,7 @@ export class RaceSession {
       if (input.act('restart') || input.hit('NumpadEnter')) { this.restart(); return; }
       if (input.act('respawn') && !this.replay) this.respawn(true);
       if (input.act('camera')) this.cycleCamera();
+      if (input.act('horn')) app.audio.horn(profile().loadout.horn);
     }
 
     if (this.state === 'countdown') {
@@ -601,6 +603,15 @@ export class RaceSession {
           tmpV.set(sx, 0.2, 1.4).applyQuaternion(g.quaternion).add(g.position);
           app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, (Math.random() - 0.5) * 4, 1 + Math.random() * 3, (Math.random() - 0.5) * 4, 0.25, 0.3, col, 4);
         }
+      }
+    }
+    // Traînée lumineuse (cosmétique) : en l'air et pendant les turbos.
+    const trail = this._trail || (this._trail = (CATALOG.trail.find((x) => x.id === profile().loadout.trail) || CATALOG.trail[0]));
+    if (trail.id !== 'none' && !this.demo && (!p.grounded || p.boost > 0) && p.speed > 8) {
+      const col = trail.rainbow ? `hsl(${(performance.now() / 6) % 360}, 95%, 60%)` : trail.color;
+      for (let k = 0; k < 2; k++) {
+        tmpV.set((Math.random() - 0.5) * 0.6, 0.6, 2.3).applyQuaternion(g.quaternion).add(g.position);
+        app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, 0.55, 0.42, col, 0);
       }
     }
     // Sillage du bateau (ou éclaboussures d'un véhicule dans l'eau).

@@ -158,7 +158,11 @@ export class GarageSession {
       for (const it of CATALOG[this.cat]) {
         const own = owns(this.cat, it.id);
         const c = this._card(it.label, own ? (it.cost ? '✔ Débloqué' : 'Gratuit') : `🔒 ${it.cost} ◆`, { on: this.draft[this.cat] === it.id, locked: !own });
-        c.onclick = () => { this.setDraft({ [this.cat]: it.id }); };
+        c.onclick = () => {
+          this.setDraft({ [this.cat]: it.id });
+          if (this.cat === 'horn') this.app.audio.horn(it.id);
+          if (this.cat === 'bike' && !this.moto) this.toggleMoto();
+        };
         list.appendChild(c);
       }
     }
