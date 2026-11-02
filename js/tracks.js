@@ -53,7 +53,7 @@ export const BUILTIN_TRACKS = [
     decor: 'polar',
     difficulty: 2,
     script: 'start S B S2 O S C S RR S I2 S R S B S O S2 C S LL S2 B S RR S finish',
-    medals: { cristal: 20.5, or: 21.8, argent: 25.1, bronze: 29.4 },
+    medals: { cristal: 20.6, or: 21.9, argent: 25.2, bronze: 29.5 },
   },
   {
     id: 'banquise',
@@ -77,7 +77,7 @@ export const BUILTIN_TRACKS = [
     decor: 'polar',
     difficulty: 4,
     script: 'start S B S2 O S OL S C S RR S B S U2 R S2 R S2 C S R S3 D2 S RR B S2 O S finish',
-    medals: { cristal: 26.3, or: 27.8, argent: 31.9, bronze: 37.5 },
+    medals: { cristal: 26.4, or: 27.8, argent: 32, bronze: 37.6 },
   },
   {
     id: 'blizzard',
@@ -85,7 +85,7 @@ export const BUILTIN_TRACKS = [
     decor: 'polar',
     difficulty: 4,
     script: 'start S2 B S I3 RR.i S C S2.s L S R S2 B S UU G2 DD S C S LL S2 B S.j G1 S2 R.i S B S O S2 C S RR S2 B S3 finish',
-    medals: { cristal: 30, or: 31.7, argent: 36.5, bronze: 42.8 },
+    medals: { cristal: 30.1, or: 31.8, argent: 36.5, bronze: 42.9 },
   },
   {
     id: 'couronne',
@@ -93,82 +93,80 @@ export const BUILTIN_TRACKS = [
     decor: 'polar',
     difficulty: 5,
     script: 'start S B S2 O S2 C S U2 RR S2 B S UU G2 DD S2 C S LL S B S.j G1 S2 R S2.m U S.m D.m S C S RR S2 B S OL S2 R S2.i S L S2 B S2 finish',
-    medals: { cristal: 35, or: 36.9, argent: 42.5, bronze: 49.8 },
+    medals: { cristal: 35, or: 37, argent: 42.6, bronze: 50 },
   },
-  // ---- v1.2 : désert crépuscule ----------------------------------------------
+  // ---- v1.2 : nouveaux décors (6 circuits chacun) ---------------------------
   {
-    id: 'dunes', shard: [0.5, 7], name: 'Dunes Express', decor: 'desert', difficulty: 2,
-    script: 'start B S2 S2.d R S L S C S.o S3 B S R S L S2.o S2 B S2 C S2.x S R S2 finish', medals: { cristal: 17.4, or: 18.3, argent: 21.1, bronze: 24.8 },
-  },
-  {
-    id: 'mirage', shard: [0.6, -7], name: 'Tunnel du Mirage', decor: 'desert', difficulty: 2,
-    script: 'start S B S2# S3_# RR# S C S2 L S2_ S.w60 S2 R S B S2# S finish', medals: { cristal: 13.4, or: 14.3, argent: 16.4, bronze: 19.3 },
+    id: 'lianes', name: 'Lianes Néon', decor: 'jungle', difficulty: 2, shard: [0.4, 7],
+    script: 'start B S2 R S L S R L S2 C S L S R S2.m R L S2 B S O S2 L S R S2 C S R S L S2 finish', medals: { cristal: 23.5, or: 25.4, argent: 29.2, bronze: 34.2 },
   },
   {
-    id: 'corniche', name: 'La Corniche', decor: 'desert', difficulty: 3,
-    script: 'start B S2 S3_ S2.w170_ RR_ S3_ C S2.w30_ LL_ S2_ B S3 RR S C S2.u S2 B S2 finish', medals: { cristal: 18.4, or: 19.7, argent: 22.6, bronze: 26.6 },
+    id: 'spores', name: 'Spores Sauteuses', decor: 'jungle', difficulty: 3,
+    script: 'start B S2 L S R S2 B S.j G1 S2 R L C S2 RR S B S2 LL S R S L S2 B S.j G1 S2 C S2 R L S2 finish', medals: { cristal: 22.9, or: 24.7, argent: 28.4, bronze: 33.4 },
   },
   {
-    id: 'escalade', name: 'Escalade', decor: 'desert', difficulty: 3,
-    script: 'start B S2 B S2 QU WA2 CR S2 C S2 D2 S2 R S2 R S2 B S2 finish', medals: { cristal: 13.9, or: 14.6, argent: 16.8, bronze: 19.7 },
+    id: 'canopee', name: 'Canopée Renversée', decor: 'jungle', difficulty: 3,
+    script: 'start B S2 R S L S2 B S TW S2^ R^ S^ L^ S^ TWB S2 C S L S R S2 B S2 L R S2 finish', medals: { cristal: 17.7, or: 18.7, argent: 21.5, bronze: 25.3 },
   },
   {
-    id: 'lunaire', name: 'Sauts Lunaires', decor: 'desert', difficulty: 3,
-    script: 'start B S2 B S.g30 S2 UU G10 DD S2 C S.g100 S2 RR S B S2 S.g30 S2 UU G8 DD S3 C S.g100 S2 finish', medals: { cristal: 25.4, or: 26.5, argent: 30.4, bronze: 35.7 },
+    id: 'racines', name: 'Racines Boueuses', decor: 'jungle', difficulty: 2, shard: [0.55, -7],
+    script: 'start B S2 R S2.u L S R S.d L S2 C S R L S2.u R S L S2 B S2 R S L S2 finish', medals: { cristal: 19.4, or: 20.8, argent: 23.9, bronze: 28.1 },
   },
   {
-    id: 'vrille', name: 'Vrille Rouge', decor: 'desert', difficulty: 4,
-    script: 'start B S2 B S2 TW S2^ RR^ S2^ TWB S C S2 B S2 TW S3^ TWB S2 finish', medals: { cristal: 13.6, or: 14.1, argent: 16.2, bronze: 19 },
-  },
-  // ---- v1.2 : nuit polaire ----------------------------------------------------
-  {
-    id: 'givre', shard: [0.55, 7], name: 'Chemin de Givre', decor: 'polar', difficulty: 2,
-    script: 'start B S2 S2.o I2 R I S2.o S C S B S2 LL I2 S2.o S B S2 finish', medals: { cristal: 14.3, or: 15.1, argent: 17.3, bronze: 20.4 },
+    id: 'temple', name: 'Temple Perdu', decor: 'jungle', difficulty: 4,
+    script: 'start B S2 R S L S2# R# S# L# S2 C S2 B S2 QU WA2 CR S2 R S L S2 D2 S2 C S L S R S2 finish', medals: { cristal: 21.2, or: 22.8, argent: 26.2, bronze: 30.8 },
   },
   {
-    id: 'faille', name: 'Faille Glaciaire', decor: 'polar', difficulty: 3,
-    script: 'start B S2 B S2 QU WA3 CR S2 C S2 TW S2^ TWB S2 D3 S2 B S2 finish', medals: { cristal: 13.9, or: 14.4, argent: 16.6, bronze: 19.5 },
+    id: 'serpent', name: 'Le Serpent', decor: 'jungle', difficulty: 5,
+    script: 'start B S2 R L R L S2 C S.o S2 R S L S2 B S OD S2 C S L R L R S2 S.o S2 B S2 RR S2 LL S2 finish', medals: { cristal: 27.8, or: 29.8, argent: 34.2, bronze: 40.2 },
   },
   {
-    id: 'cascade', name: 'Cascade Magnétique', decor: 'polar', difficulty: 3,
-    script: 'start B S2 B S OB S2.m C S2.m RR S B S2 OBL S2 C S B S finish', medals: { cristal: 18.4, or: 19.2, argent: 22.1, bronze: 26 },
+    id: 'neons', name: 'Néons Express', decor: 'city', difficulty: 2, shard: [0.6, 7],
+    script: 'start B S2 R S L S2# C S2 L S R S2.o S2 R L S2 B S2 OB S2 C S L S R S.o S2 finish', medals: { cristal: 23.2, or: 24.7, argent: 28.4, bronze: 33.4 },
   },
   {
-    id: 'spirale2', name: 'Spirale Boréale', decor: 'polar', difficulty: 4,
-    script: 'start B S2 B S OD S2 C S.j S2 RR S B S2 ODL S2 C S2 B S2 finish', medals: { cristal: 21.2, or: 22.1, argent: 25.4, bronze: 29.8 },
+    id: 'boulevard', name: 'Boulevard Sans Fin', decor: 'city', difficulty: 3,
+    script: 'start B S2 R S L S3_ R_ S_ L_ S2.w170 C S2 L S R S2 B S2 R L S2_ C S2 R S L S2 finish', medals: { cristal: 20.1, or: 21.6, argent: 24.8, bronze: 29.1 },
   },
   {
-    id: 'plafond', name: 'Route du Plafond', decor: 'polar', difficulty: 4,
-    script: 'start B S2 B S2 TW S3^ RR^ S2^ LL^ S3^ TWB S C S2 B S2 TW S2^_ TWB S2 finish', medals: { cristal: 16.2, or: 16.8, argent: 19.3, bronze: 22.6 },
+    id: 'tours', name: 'Tours Jumelles', decor: 'city', difficulty: 4,
+    script: 'start B S2 R S L S2 B S2 QU WA CR S2 C S R S L S2 D2 S L S R S2 B S2 QU WA CR S2 C S2 R L S2 finish', medals: { cristal: 23.5, or: 25, argent: 28.8, bronze: 33.8 },
   },
   {
-    id: 'zenith', name: 'Zénith', decor: 'polar', difficulty: 5,
-    script: 'start B S2 B S2 QU WA CR S2 C S2 TW S2^ TWB S2 D2 S B S OB S2 C S2.o S2 B S2 OD S2 C S B S finish', medals: { cristal: 27.6, or: 28.5, argent: 32.7, bronze: 38.4 },
-  },
-  // ---- v1.2 : nouveaux décors -------------------------------------------------
-  {
-    id: 'lianes', shard: [0.5, -7], name: 'Lianes Néon', decor: 'jungle', difficulty: 3,
-    script: 'start B S2 S2.m R S L S C S.o S2 B S2# RR S B S2.u S2 OL S2 C S2 B S finish', medals: { cristal: 18.6, or: 19.6, argent: 22.6, bronze: 26.5 },
-  },
-  {
-    id: 'spores', name: 'Spores Sauteuses', decor: 'jungle', difficulty: 4,
-    script: 'start B S2 S.j G1 S2 B S RR_ S C S2.o S3 LL S.j G1 S2 B S2.w40 S3 C S2 TW S2^ TWB S2 B S2 finish', medals: { cristal: 20.6, or: 21.6, argent: 24.9, bronze: 29.2 },
-  },
-  {
-    id: 'neons', shard: [0.6, 7], name: 'Néons Express', decor: 'city', difficulty: 3,
-    script: 'start B S2 B S2# S RR S C S.o S2 LL B S2 OB S2 C S2.o S B S2 finish', medals: { cristal: 17.7, or: 18.7, argent: 21.4, bronze: 25.2 },
+    id: 'metro', name: 'Métro Aérien', decor: 'city', difficulty: 3,
+    script: 'start B S2 U2 R# S# L# S2# C S2 R S L S2 D2 S R L S2# B S2# L S R S2 C S2 finish', medals: { cristal: 19.6, or: 21, argent: 24.1, bronze: 28.3 },
   },
   {
     id: 'viaduc', name: 'Viaduc Vertical', decor: 'city', difficulty: 5,
-    script: 'start B S2 B S2 QU WA2 CR S2 C S2 TW S3^ TWB S D2 S2 B S OD S2 C S2.g40 S2 B S2 finish', medals: { cristal: 21.8, or: 22.5, argent: 25.9, bronze: 30.4 },
+    script: 'start B S2 R S L S2 B S2 QU WA2 CR S2 C S2 TW S3^ TWB S R S L D2 S2 B S OD S2 C S L R S2.g40 S2 S.g100 S2 finish', medals: { cristal: 28.4, or: 29.8, argent: 34.3, bronze: 40.3 },
   },
   {
-    id: 'lagon', shard: [0.5, 7], name: 'Lagon Turquoise', decor: 'isles', difficulty: 2,
-    script: 'start B S2 S2.o R S L S2 C S B S2 RR S2.o S2 B S2 C S2 finish', medals: { cristal: 13.7, or: 14.6, argent: 16.8, bronze: 19.8 },
+    id: 'hyper', name: 'Hyperboucle', decor: 'city', difficulty: 4,
+    script: 'start B S2 R S L S2 B S O S2 C S L S R S2 B S OL S2 R L S2 B S OB S2 C S2 L S R S2 finish', medals: { cristal: 29.1, or: 30.8, argent: 35.4, bronze: 41.6 },
   },
   {
-    id: 'archipel', name: 'Grand Archipel', decor: 'isles', difficulty: 4,
-    script: 'start B S2 B S2 OL S2 C S2.o S3 RR_ S2.w170_ S C S2 B S2 UU G3 DD S2.o S2 B S OB S2 finish', medals: { cristal: 24.4, or: 25.5, argent: 29.3, bronze: 34.4 },
+    id: 'lagon', name: 'Lagon Turquoise', decor: 'isles', difficulty: 2, shard: [0.5, 7],
+    script: 'start B S2 R S L S2 C S.o S2 L S R S2 RR S2 C S2 LL S2 S.o S2 R L S2 finish', medals: { cristal: 19.2, or: 20.8, argent: 23.9, bronze: 28 },
+  },
+  {
+    id: 'recif', name: 'Récif Corallien', decor: 'isles', difficulty: 3,
+    script: 'start B S2 R S2.s L S2 B S UU G2 DD S2 C S L S R S2.s RR S B S2 UU G2 DD S2 C S2 L R S2 finish', medals: { cristal: 23.7, or: 25.1, argent: 28.9, bronze: 33.9 },
+  },
+  {
+    id: 'phare', name: 'Le Phare', decor: 'isles', difficulty: 3, shard: [0.45, -7],
+    script: 'start B S2 R S L S2_ C S2.w40 S2 R S L S3_ B S2 L S R S2.w160 C S2 RR_ S2_ finish', medals: { cristal: 18.4, or: 19.6, argent: 22.5, bronze: 26.4 },
+  },
+  {
+    id: 'lunaire', name: 'Sauts Lunaires', decor: 'isles', difficulty: 4,
+    script: 'start B S2 B S.g30 S2 UU G10 DD S2 C S.g100 S2 R S L S2 RR S B S2 S.g30 S2 UU G8 DD S3 C S.g100 S2 L S R S2 finish', medals: { cristal: 31.1, or: 32.7, argent: 37.6, bronze: 44.2 },
+  },
+  {
+    id: 'vrille', name: 'Vrille Tropicale', decor: 'isles', difficulty: 4,
+    script: 'start B S2 R S L S2 B S2 TW S2^ RR^ S2^ TWB S C S2 L S R S2 B S2 TW S3^ TWB S2 C S R L S2 finish', medals: { cristal: 24, or: 25.3, argent: 29.1, bronze: 34.1 },
+  },
+  {
+    id: 'archipel', name: 'Grand Archipel', decor: 'isles', difficulty: 5, shard: [0.7, 7],
+    script: 'start B S2 R S L S2 B S2 OL S2 C S2.o S3 RR_ S2.w170_ S C S2 B S2 UU G3 DD S2.o S2 R S L S2 B S OB S2 C S2 L R S2 finish', medals: { cristal: 34.2, or: 36, argent: 41.4, bronze: 48.6 },
   },
 ];
 
