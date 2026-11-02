@@ -155,6 +155,48 @@ class App {
     this.playTrack(track, { trackKey: 'u-' + hashString(track.encode()), userEntry: entryId, seed: track.name, userMap: true, medals: track.derivedMedals, difficulty: 2 });
   }
 
+  // ---- Tutoriel (premier lancement, ou Options > Revoir le tutoriel) -------------
+  tutorial(step = 0) {
+    const touch = document.body.classList.contains('touch');
+    const K = (a) => this._keysOf(a);
+    const steps = [
+      {
+        title: 'Bienvenue dans Shardway !',
+        body: `<p>Une course contre la montre : passe tous les <b>checkpoints</b> puis l'<b>arrivée</b>, le plus vite possible.</p>
+          <ul class="tuto">
+            <li>${touch ? 'Boutons ▲ / ▼ à droite' : `<b>${K('accelerate')}</b> / <b>${K('brake')}</b>`} : accélérer / freiner (et marche arrière)</li>
+            <li>${touch ? 'Boutons ◀ ▶ à gauche (ou glisser le pouce, dans les options)' : `<b>${K('left')}</b> / <b>${K('right')}</b>`} : tourner</li>
+            <li>Manette : gâchettes pour les gaz et le frein, stick gauche pour la direction</li>
+          </ul>`,
+      },
+      {
+        title: 'Glisser, voler, atterrir',
+        body: `<ul class="tuto">
+            <li><b>Dérapage</b> : freine en tournant franchement à bonne vitesse. Garde le volant pour prolonger la glisse.</li>
+            <li><b>Mini-turbo</b> : une glisse assez longue donne une poussée quand l'arrière raccroche (étincelles bleues, puis orange).</li>
+            <li><b>En l'air</b> : accélérer fait plonger le nez, freiner le relève. Pose-toi bien à plat pour garder ta vitesse.</li>
+            <li>Les loopings, tubes et virages relevés suivent une physique réelle : il faut assez de vitesse pour rester plaqué.</li>
+          </ul>`,
+      },
+      {
+        title: 'Plaques, checkpoints et carrière',
+        body: `<ul class="tuto">
+            <li><b>Plaques</b> : moto 🏍, bateau ⛵ (indispensable sur l'eau) et deltaplane 🪂 (pour planer au-dessus du vide). La même plaque te rend ta voiture.</li>
+            <li><b>${touch ? '⟲' : K('respawn')}</b> : revenir au dernier checkpoint · <b>${touch ? '↺' : K('restart')}</b> : recommencer.</li>
+            <li><b>Carrière</b> : 7 chapitres de 6 circuits, ouverts avec des médailles, et un objectif bonus ★ par circuit.</li>
+            <li>Chaque jour, un nouveau <b>défi du jour</b>. Revois tes courses et partage ton fantôme avec tes amis.</li>
+          </ul>`,
+      },
+    ];
+    const s = steps[step];
+    const actions = [];
+    if (step > 0) actions.push({ label: '← Précédent', onClick: () => { setTimeout(() => this.tutorial(step - 1), 0); return true; } });
+    if (step < steps.length - 1) actions.push({ label: 'Suivant →', primary: true, onClick: () => { setTimeout(() => this.tutorial(step + 1), 0); return true; } });
+    else actions.push({ label: 'C\'est parti !', primary: true, onClick: () => { this.settings.tutorialDone = true; this.saveSettings(); return true; } });
+    if (step < steps.length - 1) actions.push({ label: 'Passer', onClick: () => { this.settings.tutorialDone = true; this.saveSettings(); return true; } });
+    this.ui.modal({ title: `${s.title} (${step + 1}/${steps.length})`, body: s.body, actions });
+  }
+
   // ---- Replays et fantômes ------------------------------------------------
   watchReplay() {
     const s = this.session;
@@ -741,6 +783,7 @@ class App {
     switch (a) {
       case 'play': this.showScreen('tracks'); break;
       case 'daily': this.playDaily(); break;
+      case 'tutorial': this.tutorial(); break;
       case 'editor': this.openEditor(); break;
       case 'mytracks': this.showScreen('mytracks'); break;
       case 'import': this.importModal(false); break;
@@ -1052,6 +1095,8 @@ class App {
   start() {
     const hash = location.hash;
     this.showMenu('menu');
+    // Premier lancement : petit tutoriel (sauf si on arrive par un lien de circuit).
+    if (!this.settings.tutorialDone && !hash.startsWith('#t=')) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
     if (hash.startsWith('#t=')) {
       try {
         const track = Track.decode(hash);
@@ -1097,6 +1142,11 @@ class App {
     };
     requestAnimationFrame(loop);
   }
+}
+
+// Application installable et jouable hors ligne (service worker), si le contexte le permet.
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => { /* pas grave : le jeu marche sans */ }); });
 }
 
 try {

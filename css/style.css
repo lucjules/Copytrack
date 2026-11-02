@@ -849,3 +849,7 @@ body.touch kbd { display: none; }
 .card .goal.done { color: #7dffb0; }
 .card .decor-chip { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,0.08); margin-left: 6px; }
 .daily-card { border: 1px solid #ffd23e88; }
+
+/* ---- v1.5 : tutoriel ---- */
+.tuto { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 8px; line-height: 1.45; }
+.tuto-step { font-size: 13px; font-weight: 500; color: var(--muted, #a99fd0); margin-left: 8px; }
