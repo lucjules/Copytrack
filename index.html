@@ -2,7 +2,9 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#241a4a">
   <meta name="description" content="Shardway : jeu de course contre-la-montre low-poly avec éditeur de circuits, directement dans le navigateur.">
   <title>Shardway</title>
@@ -28,8 +30,10 @@
       <nav class="menu-buttons">
         <button data-action="play" class="btn big primary">Jouer</button>
         <button data-action="editor" class="btn big">Éditeur de circuits</button>
+        <button data-action="garage" class="btn big">Garage <small>personnalisation</small></button>
         <button data-action="mytracks" class="btn big">Mes circuits</button>
         <button data-action="import" class="btn big">Importer un code</button>
+        <button data-action="profile" class="btn big">Profil et sauvegarde</button>
         <button data-action="options" class="btn big">Options</button>
         <button data-action="help" class="btn big subtle">Commandes</button>
       </nav>
@@ -69,11 +73,46 @@
       </label>
       <label><span>Afficher le fantôme du record</span><input type="checkbox" id="opt-ghost"></label>
       <label><span>Nom du pilote</span><input type="text" id="opt-name" maxlength="20"></label>
-      <div class="opt-row"><span>Couleur de la voiture</span><div id="opt-colors" class="swatches"></div></div>
+      <label><span>Commandes tactiles</span>
+        <select id="opt-touch"><option value="buttons">Boutons ◀ ▶</option><option value="drag">Glisser le pouce à gauche</option></select>
+      </label>
+      <label><span>Vibrations (manette / téléphone)</span><input type="checkbox" id="opt-haptics"></label>
+      <div class="opt-row"><span>Plein écran</span><button class="btn" data-action="fullscreen">Activer</button></div>
       <div class="opt-row"><span>Touches du clavier et de la manette</span><button class="btn primary" data-action="controls">Personnaliser les commandes</button></div>
       <button class="btn subtle" data-action="reset-records">Effacer tous les records</button>
     </div>
   </section>
+
+  <!-- Profil -->
+  <section id="profile" class="screen hidden">
+    <header class="screen-head">
+      <button class="btn" data-action="back">← Retour</button>
+      <h2>Profil et sauvegarde</h2>
+    </header>
+    <div class="panel form" id="profile-body"></div>
+  </section>
+
+  <!-- Garage -->
+  <aside id="garage" class="side-panel hidden">
+    <header class="side-head">
+      <button class="btn" data-action="garage-back">← Retour</button>
+      <h2>Garage</h2>
+      <b id="garage-coins" class="coins"></b>
+    </header>
+    <p class="side-note">Tout est purement visuel : les performances du véhicule ne changent jamais.</p>
+    <div class="tabs" id="garage-tabs"></div>
+    <div id="garage-list" class="garage-list"></div>
+    <div id="garage-buy" class="garage-buy hidden">
+      <span id="garage-buy-text"></span>
+      <div class="row"><button class="btn primary" id="garage-buy-btn" data-action="garage-buy">Débloquer et équiper</button><button class="btn" data-action="garage-revert">Annuler</button></div>
+    </div>
+    <div class="row garage-foot">
+      <button class="btn" id="garage-moto" data-action="garage-moto">🏍 Voir en moto</button>
+    </div>
+  </aside>
+  <div id="coins" class="coins top hidden">◆ 0</div>
+  <div id="rotate-hint" class="hidden"><div>📱↻<br>Tourne ton téléphone en mode paysage pour jouer.</div></div>
+  <button id="fs-btn" class="btn icon fs-btn hidden" data-action="fullscreen" title="Plein écran">⛶</button>
 
   <!-- Commandes -->
   <section id="controls" class="screen hidden">
@@ -130,6 +169,7 @@
       <div id="fin-medal" class="fin-medal"></div>
       <h2 id="fin-title">Arrivée !</h2>
       <div id="fin-time" class="fin-time"></div>
+      <div id="fin-reward" class="fin-reward"></div>
       <div id="fin-detail" class="fin-detail"></div>
       <div class="row">
         <button class="btn big primary" data-action="restart">Rejouer <kbd>Entrée</kbd></button>
@@ -180,7 +220,8 @@
 
   <!-- Commandes tactiles -->
   <div id="touch" class="hidden">
-    <div class="t-left"><button data-t="left" aria-label="Gauche">◀</button><button data-t="right" aria-label="Droite">▶</button></div>
+    <div class="t-zone" id="t-zone"></div>
+    <div class="t-left" id="t-left"><button data-t="left" aria-label="Gauche">◀</button><button data-t="right" aria-label="Droite">▶</button></div>
     <div class="t-right"><button data-t="drift" class="t-small">DÉRIVE</button><button data-t="brake" aria-label="Frein">▼</button><button data-t="gas" aria-label="Accélérer">▲</button></div>
     <div class="t-top"><button data-t="respawn" aria-label="Dernier checkpoint">⟲</button><button data-t="restart" aria-label="Recommencer">↺</button><button data-t="pause" aria-label="Pause">❚❚</button></div>
   </div>
