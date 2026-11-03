@@ -50,6 +50,7 @@ function run(track, maxTime = 240) {
   const steps = Math.round(maxTime / DT);
   for (let i = 0; i < steps; i++) {
     const inp = bot.control(phys);
+    phys.clock = logic.steps;
     phys.step(inp);
     maxSpeed = Math.max(maxSpeed, phys.speed);
     airMax = Math.max(airMax, phys.airTime);

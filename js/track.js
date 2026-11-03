@@ -7,6 +7,7 @@ import {
 } from './pieces.js';
 import { centerlineWorld } from './ribbons.js';
 import { forkBranchX } from './pieces.js';
+import { isObstacle } from './obstacles.js';
 import { DECO_ORDER } from './decoData.js';
 
 export const DECORS = {
@@ -26,7 +27,8 @@ const EMPTY = Object.freeze([]);
 const key = (x, z) => ((x + 4096) << 13) | (z + 4096);
 const L = { lx: 0, lz: 0 };
 const S = {};
-const W = { x: 0, z: 0 };
+const W = { x: 0, z: 0 }, W2 = { x: 0, z: 0 };
+const MO = {};
 
 export class Track {
   constructor(name = 'Nouveau circuit', tiles = []) {
@@ -40,6 +42,7 @@ export class Track {
     this.laps = 1;    // nombre de tours (circuit fermé)
     this.vt = 0;      // temps de vérification (secondes) de l'auteur
     this.vh = '';     // signature du circuit au moment de la vérification
+    this.time = 0;    // chrono de la course (s) : position des pièces mobiles
     for (const t of tiles) this.add(t);
   }
 
@@ -47,6 +50,12 @@ export class Track {
     const s = PIECES[t.t].size;
     const out = [];
     for (let i = 0; i < s; i++) for (let j = 0; j < s; j++) out.push([t.x + i, t.z + j]);
+    // Glissière : elle balaie aussi la case voisine sur son côté droit.
+    if (t.mv === 2) {
+      rotVec(t.r, 1, 0, W2);
+      const dx = Math.round(W2.x) * s, dz = Math.round(W2.z) * s;
+      for (let i = 0; i < s; i++) for (let j = 0; j < s; j++) out.push([t.x + i + dx, t.z + j + dz]);
+    }
     return out;
   }
 
@@ -55,7 +64,8 @@ export class Track {
     const p = PIECES[t.t];
     const h = p.rise + (p.clearance || 0);
     // Une pièce à l'envers est retournée sous son niveau : elle occupe les niveaux en dessous.
-    return t.v ? [t.l - h, t.l] : [t.l, t.l + h];
+    if (t.v) return [t.l - h, t.l];
+    return [t.l, t.l + h + (t.mv === 1 ? 2 : 0)];   // l'ascenseur monte de 2 niveaux
   }
 
   // Convertit une pièce (éventuellement au format v1.0 / v1.1) en pièce v1.2.
@@ -68,6 +78,7 @@ export class Track {
     tile.v = t.v && flagAllowed(type, 'v') ? 1 : 0;
     tile.nb = t.nb && flagAllowed(type, 'nb') ? 1 : 0;
     tile.tn = t.tn && flagAllowed(type, 'tn', tile) ? 1 : 0;
+    tile.mv = t.mv && !tile.v && flagAllowed(type, 'mv') ? (t.mv | 0) & 3 : 0;
     if (surfaceAllowed(type, s, !!tile.v)) {
       tile.s = s;
       const S2 = SURFACES[s];
@@ -100,7 +111,10 @@ export class Track {
   }
 
   add(t) {
-    const tile = Track.normalize(t);
+    return this._insert(Track.normalize(t));
+  }
+
+  _insert(tile) {
     this.tiles.push(tile);
     for (const [x, z] of Track.cellsOf(tile)) {
       const k = key(x, z);
@@ -139,8 +153,18 @@ export class Track {
   }
 
   // Bascule un drapeau (v : à l'envers, nb : sans bordures, tn : tunnel).
-  toggleFlag(tile, flag) {
+  toggleFlag(tile, flag, val = 1) {
     if (!flagAllowed(tile.t, flag, tile)) return false;
+    if (flag === 'mv' || (flag === 'v' && tile.mv)) {
+      // Le mouvement change les cases et niveaux occupés : on vérifie la place, puis on réindexe.
+      const cand = { ...tile };
+      if (flag === 'mv') cand.mv = tile.mv === val ? 0 : val; else { cand.v = 1; cand.mv = 0; cand.tn = 0; }
+      this.remove(tile);
+      if (this.conflicts(cand).length || !Track.inBounds(cand)) { this._insert(tile); return false; }
+      Object.assign(tile, cand);
+      this._insert(tile);
+      return true;
+    }
     tile[flag] = tile[flag] ? 0 : 1;
     if (flag === 'v' && tile.v) {
       tile.tn = 0;
@@ -157,10 +181,18 @@ export class Track {
       k: d.k, x: +d.x, y: +d.y, z: +d.z, ry: +d.ry || 0, s: Math.max(0.2, Math.min(20, +d.s || 1)),
       c: d.c | 0, u: d.u ? String(d.u).slice(0, 400) : '',
     };
+    // Obstacles : décalage de phase (0 à 1) pour désynchroniser plusieurs obstacles.
+    if (isObstacle(deco.k)) { deco.ph = Math.max(0, Math.min(0.95, Math.round((+d.ph || 0) * 20) / 20)); deco.s = Math.max(0.5, Math.min(2.5, deco.s)); }
     if (!DECO_ORDER.includes(deco.k)) return null;
     this.decos.push(deco);
     this.version++;
     return deco;
+  }
+
+  // Obstacles physiques (décorations particulières), mis en cache par version.
+  get obstacles() {
+    if (this._obsV !== this.version) { this._obs = this.decos.filter((d) => isObstacle(d.k)); this._obsV = this.version; }
+    return this._obs;
   }
 
   removeDeco(d) {
@@ -239,31 +271,67 @@ export class Track {
   }
 
   // Surface roulable la plus haute sous (x, y + step, z). Le sol est à y = 0.
+  // Les pièces mobiles (ascenseur, glissière) sont prises à leur position au temps this.time.
   surfaceAt(x, y, z, out, step = 1.6) {
     out.h = 0; out.nx = 0; out.ny = 1; out.nz = 0;
     out.tile = null; out.type = 'ground'; out.mod = ''; out.p = 0; out.lx = 0; out.lz = 0;
     const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
     let best = -Infinity;
-    for (const tile of this.tilesAt(cx, cz)) {
+    const cell = this.tilesAt(cx, cz);
+    for (let i = 0; i < cell.length; i++) {
+      const tile = cell[i];
+      if (tile.mv || !isFloor(tile)) continue;
+      best = this._floorTry(tile, x, z, 0, y, step, best, out);
+    }
+    const mv = this.movers;
+    for (let i = 0; i < mv.length; i++) {
+      const tile = mv[i];
       if (!isFloor(tile)) continue;
-      toLocal(tile, x, z, L);
-      sampleLocal(tile, L.lx, L.lz, S);
-      if (!S.inFootprint) continue;
-      const p = PIECES[tile.t];
-      if (p.kind !== 'area' && Math.abs(S.d) > ROAD_HALF) continue;
-      if (S.h > y + step || S.h <= best) continue;
-      best = S.h;
-      out.h = S.h;
-      rotVec(tile.r, S.nx, S.nz, W);
-      out.nx = W.x; out.ny = S.ny; out.nz = W.z;
-      out.tile = tile;
-      out.type = 'road';
-      out.mod = tile.s || '';
-      out.p = tile.p || 0;
-      out.lx = L.lx; out.lz = L.lz;
-      if (tile.s === 'water') { out.h -= WATER_DROP; best = out.h; }
+      this.moverOffset(tile, this.time, MO);
+      best = this._floorTry(tile, x - MO.x, z - MO.z, MO.y, y, step, best, out);
     }
     return out;
+  }
+
+  _floorTry(tile, x, z, oy, y, step, best, out) {
+    toLocal(tile, x, z, L);
+    sampleLocal(tile, L.lx, L.lz, S);
+    if (!S.inFootprint) return best;
+    const p = PIECES[tile.t];
+    if (p.kind !== 'area' && Math.abs(S.d) > ROAD_HALF) return best;
+    const h = S.h + oy;
+    if (h > y + step || h <= best) return best;
+    out.h = h;
+    rotVec(tile.r, S.nx, S.nz, W);
+    out.nx = W.x; out.ny = S.ny; out.nz = W.z;
+    out.tile = tile;
+    out.type = 'road';
+    out.mod = tile.s || '';
+    out.p = tile.p || 0;
+    out.lx = L.lx; out.lz = L.lz;
+    if (tile.s === 'water') out.h -= WATER_DROP;
+    return out.h;
+  }
+
+  // Pièces en mouvement (0.9) : 1 = ascenseur (monte de 2 niveaux et redescend, 6 s),
+  // 2 = glissière (se décale d'une case sur le côté et revient, 5 s). Le mouvement ne
+  // dépend que du chrono de la course. out : décalage (x, y, z) et vitesse (vx, vy, vz).
+  moverOffset(tile, t, out) {
+    const P = tile.mv === 1 ? 6 : 5, w = (Math.PI * 2) / P;
+    const k = (1 - Math.cos(w * t)) / 2, dk = (Math.sin(w * t) * w) / 2;
+    out.x = 0; out.y = 0; out.z = 0; out.vx = 0; out.vy = 0; out.vz = 0;
+    if (tile.mv === 1) { out.y = 2 * LEVEL_H * k; out.vy = 2 * LEVEL_H * dk; }
+    else if (tile.mv === 2) {
+      rotVec(tile.r, 1, 0, W2);
+      out.x = W2.x * CELL * k; out.z = W2.z * CELL * k;
+      out.vx = W2.x * CELL * dk; out.vz = W2.z * CELL * dk;
+    }
+    return out;
+  }
+
+  get movers() {
+    if (this._mvV !== this.version) { this._mv = this.tiles.filter((t) => t.mv); this._mvV = this.version; }
+    return this._mv;
   }
 
   // Dessous de dalle (ou toit de tunnel) le plus bas au-dessus de yMin : sert à la caméra.
@@ -326,11 +394,12 @@ export class Track {
       arr.push(
         PIECE_ORDER.indexOf(t.t), t.x, t.z, t.l, t.r,
         Math.max(0, SURFACE_ORDER.indexOf(t.s || '')), t.p || 0,
-        (t.v ? 1 : 0) | (t.nb ? 2 : 0) | (t.tn ? 4 : 0),
+        (t.v ? 1 : 0) | (t.nb ? 2 : 0) | (t.tn ? 4 : 0) | ((t.mv | 0) << 3),
       );
     }
     const decos = this.decos.map((d) => [
       DECO_ORDER.indexOf(d.k), +d.x.toFixed(2), +d.y.toFixed(2), +d.z.toFixed(2), +d.ry.toFixed(3), +d.s.toFixed(2), d.c, d.u || 0,
+      ...(d.ph ? [d.ph] : []),
     ]);
     const data = { v: 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
     if (decos.length) data.o = decos;
@@ -360,7 +429,7 @@ export class Track {
       if (stride >= 8) {
         tile.p = data.t[i + 6];
         const f = data.t[i + 7] | 0;
-        tile.v = f & 1; tile.nb = (f >> 1) & 1; tile.tn = (f >> 2) & 1;
+        tile.v = f & 1; tile.nb = (f >> 1) & 1; tile.tn = (f >> 2) & 1; tile.mv = (f >> 3) & 3;
       }
       if (tr.conflicts(Track.normalize(tile)).length) continue;
       tr.add(tile);
@@ -370,7 +439,7 @@ export class Track {
         const k = DECO_ORDER[o[0]];
         if (!k) continue;
         const u = typeof o[7] === 'string' && /^https?:\/\//i.test(o[7]) ? o[7] : '';
-        tr.addDeco({ k, x: o[1], y: o[2], z: o[3], ry: o[4], s: o[5], c: o[6], u });
+        tr.addDeco({ k, x: o[1], y: o[2], z: o[3], ry: o[4], s: o[5], c: o[6], u, ph: +o[8] || 0 });
       }
     }
     tr.laps = Math.max(1, Math.min(9, data.lp | 0 || 1));
@@ -447,7 +516,7 @@ export function scriptTrack(name, script, opts = {}) {
   const place = (t, px, pz, lv, r, reverse = false, noPath = false, curOver = null) => {
     const tile = { t, x: px, z: pz, l: lv, r: r & 3, ...(curOver || cur) };
     if (cur.s && !surfaceAllowed(t, cur.s, !!cur.v)) throw new Error(`${name} : revêtement ${cur.s} interdit sur ${t}`);
-    for (const f of ['v', 'nb', 'tn']) if (cur[f] && !flagAllowed(t, f, tile)) throw new Error(`${name} : drapeau ${f} interdit sur ${t}`);
+    for (const f of ['v', 'nb', 'tn', 'mv']) if (cur[f] && !flagAllowed(t, f, tile)) throw new Error(`${name} : drapeau ${f} interdit sur ${t}`);
     const c = tr.conflicts(Track.normalize(tile));
     if (c.length) throw new Error(`${name} : conflit en (${px}, ${pz}) niveau ${lv} [${t}]`);
     if (!Track.inBounds(Track.normalize(tile))) throw new Error(`${name} : ${t} sort des niveaux en (${px}, ${pz})`);
@@ -515,11 +584,11 @@ export function scriptTrack(name, script, opts = {}) {
   };
 
   for (const tok of script.trim().split(/\s+/)) {
-    const m = /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#]*)$/.exec(tok);
+    const m = /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=]*)$/.exec(tok);
     if (!m) throw new Error('Instruction invalide : ' + tok);
     let op = m[1];
     const n = m[2] ? parseInt(m[2], 10) : 1;
-    cur = { s: '', p: 0, v: m[5].includes('^') ? 1 : 0, nb: m[5].includes('_') ? 1 : 0, tn: m[5].includes('#') ? 1 : 0 };
+    cur = { s: '', p: 0, v: m[5].includes('^') ? 1 : 0, nb: m[5].includes('_') ? 1 : 0, tn: m[5].includes('#') ? 1 : 0, mv: m[5].includes('~') ? 1 : m[5].includes('=') ? 2 : 0 };
     if (m[3]) {
       cur.s = SURF_CODE[m[3]];
       if (!cur.s) throw new Error('Revêtement inconnu : ' + tok);

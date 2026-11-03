@@ -8,6 +8,8 @@ import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tilePar
 import { WATER_DROP } from './track.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { buildDecoInto, createPlaque } from './decos.js';
+import { isObstacle } from './obstacles.js';
+import { createObstacleMesh } from './obstacleMesh.js';
 
 export const PALETTE = {
   asphalt: '#343950',
@@ -234,6 +236,7 @@ function sweep(gb, frames, style, nb, drop = 0) {
 // Une nappe posée juste au-dessus de la chaussée ; le shader l'anime (eau qui ondule,
 // tapis qui défile dans le sens de sa poussée, verre qui scintille, neige qui pétille).
 export const FX_KIND = { water: 0, conveyor: 1, glass: 2, powder: 3 };
+const MOVO = {};
 const _S = {};
 function fxLayer(fx, frames, tile, kind, half = ROAD_HALF) {
   const n = frames.length - 1;
@@ -845,7 +848,7 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
   if (p.kind === 'loop') loopTowers(gb, glow, tile);
 
   // Piliers (pas sous un ruban vertical / une route à l'envers)
-  if ((tile.l > 0 || p.rise > 0) && p.kind !== 'ribbon' && p.kind !== 'ring' && !tile.v) {
+  if ((tile.l > 0 || p.rise > 0) && p.kind !== 'ribbon' && p.kind !== 'ring' && !tile.v && !tile.mv) {
     for (const [lx, lz] of pillarPoints(tile)) {
       const top = pillarHeightAt(tile, lz) - SLAB_T;
       if (top < 1.2) continue;
@@ -879,6 +882,8 @@ export class TrackView {
     this.materials = materials;
     this.group = new THREE.Group();
     this.plaques = [];
+    this.obstacles = [];
+    this.movers = [];
     this.rebuild();
   }
 
@@ -894,7 +899,23 @@ export class TrackView {
       const P = PIECES[tile.t];
       const hi = tile.l + Math.max(P.rise || 0, 0) + (P.clearance ? 1 : 0);
       const dim = focus != null && !(focus >= tile.l - 0.01 && focus <= hi + 0.01);
-      if (dim) buildTileInto(dimG, dimGlow, tile, this.track);
+      if (tile.mv && !dim) {
+        // Pièce mobile : son propre groupe, déplacé à chaque image selon le chrono.
+        const g1 = new GeoBuilder(), g2 = new GeoBuilder(), g3 = new FxBuilder();
+        buildTileInto(g1, g2, tile, this.track, g3);
+        const grp = new THREE.Group();
+        const m1 = new THREE.Mesh(g1.build(), this.materials.solid);
+        m1.castShadow = true; m1.receiveShadow = true;
+        grp.add(m1);
+        if (!g2.empty) grp.add(new THREE.Mesh(g2.build(), this.materials.glow));
+        if (!g3.empty && this.materials.fx) {
+          const fm = new THREE.Mesh(g3.build(), this.materials.fx), mat = this.materials.fx;
+          fm.onBeforeRender = () => { mat.uniforms.uTime.value = performance.now() / 1000; };
+          grp.add(fm);
+        }
+        this.group.add(grp);
+        this.movers.push({ tile, grp });
+      } else if (dim) buildTileInto(dimG, dimGlow, tile, this.track);
       else buildTileInto(gb, glow, tile, this.track, fx);
     }
     if (!dimG.empty) {
@@ -908,6 +929,10 @@ export class TrackView {
         const mesh = createPlaque(d);
         this.group.add(mesh);
         this.plaques.push(mesh);
+      } else if (isObstacle(d.k)) {
+        const o = createObstacleMesh(d, this.materials);
+        this.group.add(o);
+        this.obstacles.push(o);
       } else buildDecoInto(gb, glow, d);
     }
     if (!gb.empty) {
@@ -927,8 +952,18 @@ export class TrackView {
     this.builtVersion = this.track.version;
   }
 
+  // Anime les obstacles et les pièces mobiles au temps t (s, chrono de la course).
+  updateMoving(t) {
+    for (const o of this.obstacles) o.userData.update(t);
+    for (const m of this.movers) {
+      const o = this.track.moverOffset(m.tile, t, MOVO);
+      m.grp.position.set(o.x, o.y, o.z);
+    }
+  }
+
   disposeMeshes() {
     for (const c of [...this.group.children]) {
+      if (c.isGroup) c.traverse((m) => { if (m.geometry) m.geometry.dispose(); });
       if (c.geometry) c.geometry.dispose();
       if (c.userData.own && c.material) {
         if (c.material.map) c.material.map.dispose();
@@ -937,6 +972,8 @@ export class TrackView {
       this.group.remove(c);
     }
     this.plaques = [];
+    this.obstacles = [];
+    this.movers = [];
   }
 
   dispose() {

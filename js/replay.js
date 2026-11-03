@@ -96,6 +96,7 @@ export class GhostRunner {
       this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
       this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
     }
+    this.phys.clock = this.logic.steps;
     this.phys.step(inp);
     const sink = this.phys.ev.sink;
     const ev = this.logic.update(this.phys);

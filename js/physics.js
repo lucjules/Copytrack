@@ -14,6 +14,7 @@ import {
   PIECES, PLATES, RING_R, RING_Y, toLocal, sampleLocal, rotVec, tileCenter, isRibbon, isFloor, isCeilingFloor, tileParam, baseY,
 } from './pieces.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
+import { OBST, obstacleLocal, toLocalObs, obstacleRadius } from './obstacles.js';
 
 export const CAR = {
   accel: 28,          // m/s² à bas régime
@@ -67,7 +68,9 @@ export const CAR = {
   glassSpeed: 25,     // le verre cède sous cette vitesse (m/s, réglage 100 %)
   glassImpact: 15,    // ... ou sous un atterrissage plus violent (m/s)
   revTime: 1.5,       // volant inversé : durée après la dernière plaque
-  cutTime: 1.0,       // moteur coupé : durée après la dernière plaque           // accélération latérale du vent à pleine force (réglage 0 % ou 200 %)
+  cutTime: 1.0,       // moteur coupé : durée après la dernière plaque
+  shockE: 0.5,        // obstacles : rebond (0 = mou, 1 = élastique)
+  shockKick: 6,       // ... et petite poussée en plus pour bien sentir le choc           // accélération latérale du vent à pleine force (réglage 0 % ou 200 %)
   radius: 1.0,
   probe: 1.25,
   height: 1.3,
@@ -135,6 +138,7 @@ const L1 = { lx: 0, lz: 0 }, L2 = { lx: 0, lz: 0 };
 const S1 = {}, S2 = {};
 const W1 = { x: 0, z: 0 };
 const BELT = { x: 0, z: 0 };
+const OB = {}, OL = {}, MOV = {};
 const FL = {};
 const CC = { x: 0, z: 0 };
 const TMP = { x: 0, z: 0 };
@@ -167,7 +171,7 @@ export class CarPhysics {
     this.F = {}; this.F0 = {}; this.F2 = {}; this.F3 = {};
     this.ev = {
       wall: 0, land: 0, boostHit: false, bounce: false, loopIn: false, loopOut: false, loopFall: false,
-      moto: false, gravity: false, miniTurbo: 0, landQ: '', sink: false, ring: false, flip: false, glass: false, spring: false, reverse: false, cut: false,
+      moto: false, gravity: false, miniTurbo: 0, landQ: '', sink: false, ring: false, flip: false, glass: false, spring: false, reverse: false, cut: false, spike: false, shock: 0,
     };
     this.rib = null;
     this.vehicle = 'car';
@@ -358,8 +362,9 @@ export class CarPhysics {
 
   step(inp) {
     const dt = DT, p = this.pos, v = this.vel, ev = this.ev;
+    this.track.time = (this.clock || 0) * dt;   // position des pièces mobiles
     ev.wall = 0; ev.land = 0; ev.boostHit = false; ev.bounce = false;
-    ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.moto = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false; ev.glass = false; ev.spring = false; ev.reverse = false; ev.cut = false;
+    ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.moto = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false; ev.glass = false; ev.spring = false; ev.reverse = false; ev.cut = false; ev.spike = false; ev.shock = 0;
     this.prev.x = p.x; this.prev.y = p.y; this.prev.z = p.z;
     this.prevYaw = this.yaw;
 
@@ -417,7 +422,13 @@ export class CarPhysics {
       // Tapis roulant : la voiture roule sur une bande qui avance ; la dynamique se fait
       // dans le repère de la bande, puis on rajoute sa vitesse.
       // En montant sur la bande, la voiture prend sa vitesse d'un coup (et la garde en sortant).
-      const belt = this.surfMod === 'conveyor' && this.surfTile ? this._belt(this.surfTile, this.surfLx, this.surfLz, BELT) : null;
+      let belt = this.surfMod === 'conveyor' && this.surfTile ? this._belt(this.surfTile, this.surfLx, this.surfLz, BELT) : null;
+      // Pièce mobile (glissière) : la voiture est portée par la pièce, comme par un tapis.
+      if (this.surfTile && this.surfTile.mv === 2) {
+        const o = this.track.moverOffset(this.surfTile, this.track.time, MOV);
+        if (!belt) { belt = BELT; BELT.x = 0; BELT.z = 0; }
+        belt.x += o.vx; belt.z += o.vz;
+      }
       if (belt) {
         v.x += belt.x - this.beltX; v.z += belt.z - this.beltZ;
         this.beltX = belt.x; this.beltZ = belt.z;
@@ -517,6 +528,7 @@ export class CarPhysics {
     if (this._tryEnterRibbon()) return;
     if (!this.grounded && this._tryLandRibbon()) return;
     this._walls();
+    this._obstacles();
     this._bounds();
 
     // Contact avec la chaussée.
@@ -662,39 +674,118 @@ export class CarPhysics {
     }
   }
 
+  // ---------------------------------------------------------------- Obstacles
+  // Le temps des obstacles est le chrono de la course (this.clock = pas de course, fixé
+  // par l'appelant avant chaque pas) : même mouvement en replay et après un retour (R).
+  _obstacles() {
+    const obs = this.track.obstacles;
+    if (!obs.length) return;
+    const t = (this.clock || 0) * DT;
+    const p = this.pos, v = this.vel, n0 = this.n;
+    const cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
+    for (const d of obs) {
+      if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) continue;
+      const rr = obstacleRadius(d) + 3;
+      if ((cx - d.x) ** 2 + (cz - d.z) ** 2 > rr * rr) continue;
+      const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
+      obstacleLocal(d, t, OB);
+      toLocalObs(d, cx, cy, cz, OL);
+      let nx = 0, ny = 0, nz = 0, pen = 0, ovx = 0, ovy = 0, ovz = 0;
+      if (def.type === 'spike') {
+        if (OB.on < 0.4) continue;
+        if (Math.abs(OL.x) < def.hx + rc * 0.6 && Math.abs(OL.z) < def.hz + rc * 0.6 && OL.y < def.hy * OB.on + rc && OL.y > -1.5) {
+          this.ev.spike = true; this.ev.sink = true;
+          return;
+        }
+        continue;
+      } else if (def.type === 'ball') {
+        const dx = OL.x - OB.x, dy = OL.y - OB.y, dz = OL.z;
+        const dd = Math.hypot(dx, dy, dz);
+        if (dd >= def.r + rc || dd < 1e-6) continue;
+        nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd;
+        ovx = OB.vx; ovy = OB.vy;
+      } else if (def.type === 'box') {
+        const qx = clamp(OL.x, OB.x - def.hx, OB.x + def.hx), qy = clamp(OL.y, 0, def.hy * 2), qz = clamp(OL.z, -def.hz, def.hz);
+        const dx = OL.x - qx, dy = OL.y - qy, dz = OL.z - qz;
+        const dd = Math.hypot(dx, dy, dz);
+        if (dd >= rc) continue;
+        if (dd < 1e-6) { nx = OL.x >= OB.x ? 1 : -1; pen = rc + def.hx - Math.abs(OL.x - OB.x); }
+        else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = rc - dd; }
+        ovx = OB.vx;
+      } else if (def.type === 'bar') {
+        const ca = Math.cos(OB.a), sa = Math.sin(OB.a);
+        const s = clamp(OL.x * ca + OL.z * sa, -def.len, def.len);
+        const dx = OL.x - ca * s, dy = OL.y - def.y, dz = OL.z - sa * s;
+        const dd = Math.hypot(dx, dy, dz);
+        if (dd >= def.r + rc || dd < 1e-6) continue;
+        nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd;
+        ovx = -sa * s * OB.w; ovz = ca * s * OB.w;
+      } else {
+        // Bumper : poteau vertical qui renvoie fort.
+        if (OL.y > def.h + rc) continue;
+        const dd = Math.hypot(OL.x, OL.z);
+        if (dd >= def.r + rc || dd < 1e-6) continue;
+        nx = OL.x / dd; nz = OL.z / dd; pen = def.r + rc - dd;
+      }
+      // Normale et vitesse de l'obstacle en repère monde.
+      const c = Math.cos(d.ry || 0), sn = Math.sin(d.ry || 0);
+      const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
+      const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
+      p.x += wx * pen * k; p.y += wy * pen * k; p.z += wz * pen * k;
+      const vn = (v.x - vwx) * wx + (v.y - vwy) * wy + (v.z - vwz) * wz;
+      let add = vn < 0 ? -(1 + CAR.shockE) * vn : 0;
+      add += def.type === 'post' ? Math.max(0, def.kick - Math.max(0, vn) - add) : CAR.shockKick;
+      v.x += wx * add; v.y += wy * add; v.z += wz * add;
+      this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;   // le choc fait pivoter un peu
+      if (wy * this.gSign > 0.45) this.grounded = false;
+      this.ev.shock = Math.max(this.ev.shock, add);
+    }
+  }
+
   _probe(x, z, px, pz, y) {
     const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
     const tiles = this.track.tilesAt(cx, cz);
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
-      const P = PIECES[tile.t];
-      if (P.kind === 'area' || tile.nb || !(isFloor(tile) || isCeilingFloor(tile))) continue;
-      toLocal(tile, x, z, L1);
-      sampleLocal(tile, L1.lx, L1.lz, S1);
-      if (!S1.inFootprint) continue;
-      // Pièce à l'envers : rails et dalle sont symétriques par rapport à la base.
-      const H = CAR.height, gsg = this.gSign;
-      const ylo = gsg > 0 ? y : y - H, yhi = gsg > 0 ? y + H : y;
-      if (tile.v) {
-        const hv = 2 * baseY(tile) - S1.h;
-        if (ylo > hv + SLAB_T + 0.2 || yhi < hv - RAIL_H + 0.15) continue;
-      } else if (ylo > S1.h + RAIL_H - 0.15 || yhi < S1.h - SLAB_T - 0.2) continue;
-      const ad = Math.abs(S1.d), R = CAR.radius;
-      const inner = ROAD_HALF, outer = ROAD_HALF + RAIL_W;
-      if (ad + R <= inner || ad - R >= outer) continue;
-      toLocal(tile, px, pz, L2);
-      sampleLocal(tile, L2.lx, L2.lz, S2);
-      const inside = Math.abs(S2.d) < (inner + outer) * 0.5;
-      const sgn = S1.d >= 0 ? 1 : -1;
-      const targetD = inside ? inner - R : outer + R;
-      const push = (targetD - ad) * sgn;
-      rotVec(tile.r, S1.gx, S1.gz, W1);
-      HIT.dx = W1.x * push; HIT.dz = W1.z * push;
-      const ns = inside ? -sgn : sgn;
-      HIT.nx = W1.x * ns; HIT.nz = W1.z * ns;
-      return HIT;
+      if (tile.mv) continue;
+      if (this._probeTile(tile, x, z, px, pz, y, 0)) return HIT;
+    }
+    // Pièces mobiles : bordures à leur position du moment.
+    const mv = this.track.movers;
+    for (let i = 0; i < mv.length; i++) {
+      const o = this.track.moverOffset(mv[i], this.track.time, MOV);
+      if (this._probeTile(mv[i], x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y, 0)) return HIT;
     }
     return null;
+  }
+
+  _probeTile(tile, x, z, px, pz, y) {
+    const P = PIECES[tile.t];
+    if (P.kind === 'area' || tile.nb || !(isFloor(tile) || isCeilingFloor(tile))) return false;
+    toLocal(tile, x, z, L1);
+    sampleLocal(tile, L1.lx, L1.lz, S1);
+    if (!S1.inFootprint) return false;
+    // Pièce à l'envers : rails et dalle sont symétriques par rapport à la base.
+    const H = CAR.height, gsg = this.gSign;
+    const ylo = gsg > 0 ? y : y - H, yhi = gsg > 0 ? y + H : y;
+    if (tile.v) {
+      const hv = 2 * baseY(tile) - S1.h;
+      if (ylo > hv + SLAB_T + 0.2 || yhi < hv - RAIL_H + 0.15) return false;
+    } else if (ylo > S1.h + RAIL_H - 0.15 || yhi < S1.h - SLAB_T - 0.2) return false;
+    const ad = Math.abs(S1.d), R = CAR.radius;
+    const inner = ROAD_HALF, outer = ROAD_HALF + RAIL_W;
+    if (ad + R <= inner || ad - R >= outer) return false;
+    toLocal(tile, px, pz, L2);
+    sampleLocal(tile, L2.lx, L2.lz, S2);
+    const inside = Math.abs(S2.d) < (inner + outer) * 0.5;
+    const sgn = S1.d >= 0 ? 1 : -1;
+    const targetD = inside ? inner - R : outer + R;
+    const push = (targetD - ad) * sgn;
+    rotVec(tile.r, S1.gx, S1.gz, W1);
+    HIT.dx = W1.x * push; HIT.dz = W1.z * push;
+    const ns = inside ? -sgn : sgn;
+    HIT.nx = W1.x * ns; HIT.nz = W1.z * ns;
+    return true;
   }
 
   // ---------------------------------------------------------------- Rubans

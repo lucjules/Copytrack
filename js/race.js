@@ -243,6 +243,7 @@ export class RaceSession {
     if (this.state === 'racing') this.tick++;
     this.lastInput = inp;
     this.prevQuat.copy(this.quat);
+    this.phys.clock = this.logic.steps;   // horloge des obstacles et pièces mobiles = chrono
     this.phys.step(inp);
     this._orient();
     const ev = this.phys.ev;
@@ -269,6 +270,12 @@ export class RaceSession {
       const p = this.phys.pos;
       app.particles.burst(p.x, p.y + 0.3, p.z, Math.min(20, ev.land * 1.5), 6, 0.6, 0.8, app.scenery.theme.dust, 3);
       this.shake = Math.max(this.shake, Math.min(0.6, ev.land * 0.04));
+    }
+    if (ev.shock > 0) {
+      const p = this.phys.pos;
+      app.audio.thud();
+      this.shake = Math.max(this.shake, Math.min(1.2, ev.shock * 0.05));
+      app.particles.burst(p.x, p.y + 0.8, p.z, 18, 8, 0.5, 0.5, '#ffd23e', 2);
     }
     if (ev.spring) {
       app.audio.bounce();
@@ -320,7 +327,13 @@ export class RaceSession {
     // ordre que le rejeu (replay.js) — indispensable pour que la vérification des temps
     // en ligne retrouve exactement la même course.
     const sank = ev.sink && this.state === 'racing';
-    if (sank && ev.glass) {
+    if (sank && ev.spike) {
+      const p = this.phys.pos;
+      app.audio.thud();
+      this.shake = Math.max(this.shake, 0.8);
+      app.particles.burst(p.x, p.y + 0.6, p.z, 36, 9, 0.7, 0.5, '#ff5a6e', 3, 1);
+      if (!this.demo) app.ui.hud.message('Aïe, les piques ! Retour au checkpoint', 1.6);
+    } else if (sank && ev.glass) {
       const p = this.phys.pos;
       app.audio.thud();
       app.particles.burst(p.x, p.y + 0.3, p.z, 46, 10, 0.9, 0.5, '#d9f4ff', 4, 2);
@@ -597,6 +610,11 @@ export class RaceSession {
   render(dt, alpha) {
     const app = this.app;
     const p = this.phys;
+    // Obstacles et pièces mobiles : même temps que la physique (chrono), interpolé.
+    if (this.state === 'racing') this.obsT = Math.max(0, (this.logic.steps - 1 + alpha) * DT);
+    else if (this.state === 'finished') this.obsT = (this.obsT || 0) + dt;
+    else if (this.obsT == null || this.state === 'countdown') this.obsT = 0;
+    this.view.updateMoving(this.obsT);
     // Interpolation entre deux pas physiques
     this.renderPos.set(
       p.prev.x + (p.pos.x - p.prev.x) * alpha,

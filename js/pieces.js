@@ -144,6 +144,8 @@ export function flagAllowed(type, flag, tile = null) {
   if (p.kind === 'ring' || p.kind === 'fork') return false;
   if (flag === 'nb') return lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube'));
   if (flag === 'tn') return lineLike && !p.special && !(tile && tile.v);
+  // Pièce mobile : route « simple » (droite, virage, pente, plateforme), pas à l'envers.
+  if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !(tile && tile.v);
   return false;
 }
 

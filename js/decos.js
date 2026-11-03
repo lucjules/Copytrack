@@ -4,6 +4,8 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GeoBuilder } from './geo.js';
 import { DECO_COLORS } from './decoData.js';
+import { isObstacle } from './obstacles.js';
+import { createObstacleMesh } from './obstacleMesh.js';
 
 const TAU = Math.PI * 2;
 
@@ -249,6 +251,7 @@ export function createPlaque(d, onLoad) {
 
 // Aperçu isolé (éditeur).
 export function buildDecoMesh(d, material, glowMaterial) {
+  if (isObstacle(d.k)) return createObstacleMesh(d, { solid: material, glow: glowMaterial || material });
   const g = new THREE.Group();
   if (d.k === 'plaque') {
     const m = createPlaque({ ...d, x: 0, y: 0, z: 0, ry: 0 });

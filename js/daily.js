@@ -49,6 +49,7 @@ export function botTime(track, latK = 0.8) {
   bot.reset(phys);
   let groundT = 0, respawns = 0;
   for (let i = 0; i < 120 * 120; i++) {
+    phys.clock = logic.steps;
     phys.step(bot.control(phys));
     const ev = logic.update(phys);
     if (ev && ev.type === 'finish') return respawns ? null : logic.time;
