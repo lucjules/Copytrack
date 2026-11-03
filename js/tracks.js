@@ -10,7 +10,7 @@ export const BUILTIN_TRACKS = [
     id: 'eclats', name: 'Premiers Éclats', decor: 'desert', difficulty: 1,
     goal: {id: 'nowall'},
     script: 'start S2 RR S C S2 LL B S2 GU2 S GD2 S RR S U S2 D S C S RR S3 finish',
-    medals: { cristal: 18.7, or: 19.9, argent: 22.8, bronze: 26.8 },
+    medals: { cristal: 18.8, or: 20, argent: 23, bronze: 27 },
   },
   {
     id: 'lagon', name: 'Lagon Turquoise', decor: 'isles', difficulty: 1, shard: [0.5, 7],
@@ -27,7 +27,7 @@ export const BUILTIN_TRACKS = [
   {
     id: 'lianes', name: 'Lianes Néon', decor: 'jungle', difficulty: 2, shard: [0.4, 7],
     goal: {id: 'turbo', n: 1},
-    script: 'start B S2 R S L S R L S2 C S L S HP S R S2.m R L S2 B S O S2 L S R S2 C S R S L S2 finish',
+    script: 'start B S2 R S L S R L S2 C S L S S S R S2.m R L S2 B S O S2 L S R S2 C S R S L S2 finish',
     medals: { cristal: 26.1, or: 27.9, argent: 32.1, bronze: 37.6 },
   },
   {
@@ -40,7 +40,7 @@ export const BUILTIN_TRACKS = [
     id: 'braises', name: 'Braises', decor: 'volcano', difficulty: 2,
     goal: {id: 'perfect', n: 1},
     script: 'start S2 B S2 R S L S2 C S2 Y2.b S2 BR S U S2 D S2 C S2 UU G2 DD S2 LL S2 finish',
-    medals: { cristal: 24.1, or: 25.3, argent: 29.1, bronze: 34.2 },
+    medals: { cristal: 24.3, or: 25.5, argent: 29.3, bronze: 34.4 },
   },
   // ---- Chapitre 2 : Prise de vitesse --------------------------------------------
   {
@@ -52,7 +52,7 @@ export const BUILTIN_TRACKS = [
   {
     id: 'quai', name: 'Quai d’Amarrage', decor: 'orbit', difficulty: 2,
     goal: {id: 'rings', n: 1},
-    script: 'start S2 B S2 HP2 S2 R S2 UU GR2 DD S2 C S L S2 B S O S2 KL S2 R S2 finish',
+    script: 'start S2 B S2 S2 S2 R S2 UU GR2 DD S2 C S L S2 B S O S2 KL S2 R S2 finish',
     medals: { cristal: 21, or: 22, argent: 25.3, bronze: 29.7 },
   },
   {
@@ -70,14 +70,14 @@ export const BUILTIN_TRACKS = [
   {
     id: 'canopee', name: 'Canopée Suspendue', decor: 'jungle', difficulty: 3,
     goal: {id: 'turbo', n: 2},
-    script: 'start B S2 R S L S2 B S O S2 R S HP S L S B S OL S2 C S BL S R S2 B S2 L R S2 finish',
+    script: 'start B S2 R S L S2 B S O S2 R S S S L S B S OL S2 C S BL S R S2 B S2 L R S2 finish',
     medals: { cristal: 25.3, or: 26.6, argent: 30.6, bronze: 35.9 },
   },
   {
     id: 'spores', name: 'Spores Sauteuses', decor: 'jungle', difficulty: 3,
     goal: {id: 'perfect', n: 2},
     script: 'start B S2 L S R S2 B S.j G1 S2 R L C S2 RR S B S2 GU2 S GD2 S LL S R S L S2 B S.j G1 S2 C S2 R L S2 finish',
-    medals: { cristal: 27.2, or: 28.9, argent: 33.2, bronze: 39 },
+    medals: { cristal: 27.1, or: 28.8, argent: 33.1, bronze: 38.8 },
   },
   // ---- Chapitre 3 : Métamorphoses -----------------------------------------------
   {
@@ -121,31 +121,31 @@ export const BUILTIN_TRACKS = [
     id: 'verglas', name: 'Lac Gelé', decor: 'desert', difficulty: 3,
     goal: {id: 'nowall'},
     script: 'start S B S I3 RR S C I2 L S R S I2 RR B S2 C S Y2.i S LL I2 S R S2 U S I2 D S L S2 B S finish',
-    medals: { cristal: 29.7, or: 31.4, argent: 36.1, bronze: 42.4 },
+    medals: { cristal: 29.9, or: 31.6, argent: 36.4, bronze: 42.7 },
   },
   {
     id: 'banquise', name: 'Banquise Rebondissante', decor: 'polar', difficulty: 3,
     goal: {id: 'perfect', n: 2},
-    script: 'start S B S2 S.j G1 S2 C S RR S B S S.j G1 S2 LL S2.i C S2 B S HP S S.j G1 S3_ R S2 finish',
-    medals: { cristal: 19.5, or: 20.5, argent: 23.5, bronze: 27.6 },
+    script: 'start S B S2 S.j G1 S2 C S RR S B S S.j G1 S2 LL S2.i C S2 B S S S S.j G1 S3_ R S2 finish',
+    medals: { cristal: 19.4, or: 20.5, argent: 23.5, bronze: 27.6 },
   },
   {
     id: 'racines', name: 'Racines Boueuses', decor: 'jungle', difficulty: 3, shard: [0.55, -7],
     goal: {id: 'turbo', n: 2},
-    script: 'start B S2 R S2.u L S R S.d L S2 C S R L S2.u HP S R S L S2.w60 B S2 Y2.d S R S L S2 finish',
+    script: 'start B S2 R S2.u L S R S.d L S2 C S R L S2.u S S R S L S2.w60 B S2 Y2.d S R S L S2 finish',
     medals: { cristal: 26.8, or: 28.6, argent: 32.8, bronze: 38.6 },
   },
   {
     id: 'glacier', name: 'Glacier Magnétique', decor: 'polar', difficulty: 4,
     goal: {id: 'norespawn'},
-    script: 'start S B S U S.m D S C S R S3.s R S B S2 UU S.m DD.m S C S LL S2.m U S2 D S HP S2 finish',
-    medals: { cristal: 20.1, or: 21.1, argent: 24.2, bronze: 28.4 },
+    script: 'start S B S U S.m D S C S R S3.s R S B S2 UU S.m DD.m S C S LL S2.m U S2 D S S S2 finish',
+    medals: { cristal: 20.4, or: 21.4, argent: 24.7, bronze: 28.9 },
   },
   {
     id: 'metro', name: 'Métro Aérien', decor: 'city', difficulty: 4,
     goal: {id: 'nowall'},
-    script: 'start B S2 U2 R# S# L# S2# C S2 R S L S2 D2 S R L S2# B S2# L S HP S2 UU GC2 DD S2_ R S2 finish',
-    medals: { cristal: 24.5, or: 25.9, argent: 29.7, bronze: 34.9 },
+    script: 'start B S2 U2 R# S# L# S2# C S2 R S L S2 D2 S R L S2# B S2# L S S S2 UU GC2 DD S2_ R S2 finish',
+    medals: { cristal: 25, or: 26.3, argent: 30.3, bronze: 35.6 },
   },
   {
     id: 'basalte', name: 'Champs de Basalte', decor: 'volcano', difficulty: 4,
@@ -158,13 +158,13 @@ export const BUILTIN_TRACKS = [
     id: 'temple', name: 'Temple Perdu', decor: 'jungle', difficulty: 4,
     goal: {id: 'norespawn'},
     script: 'start B S2 R S L S2# R# S# L# S2 C S2 B S2 QU WA2 CR S2 R S L S2 D2 S2 C S TB S L S R S2 finish',
-    medals: { cristal: 24.6, or: 25.8, argent: 29.7, bronze: 34.9 },
+    medals: { cristal: 24.7, or: 25.9, argent: 29.8, bronze: 35 },
   },
   {
     id: 'tours', name: 'Tours Jumelles', decor: 'city', difficulty: 4,
     goal: {id: 'nowall'},
     script: 'start B S2 R S L S2 B S2 QU WA CR S2 C S R S L S2 D2 S CK S2 R S2 B S2 QU WA CR S2 C S2 R L S2 finish',
-    medals: { cristal: 26.1, or: 27.4, argent: 31.5, bronze: 37 },
+    medals: { cristal: 26.2, or: 27.5, argent: 31.7, bronze: 37.2 },
   },
   {
     id: 'ceinture', name: 'Ceinture d’Astéroïdes', decor: 'orbit', difficulty: 4,
@@ -181,8 +181,8 @@ export const BUILTIN_TRACKS = [
   {
     id: 'cheminee', name: 'Cheminée du Volcan', decor: 'volcano', difficulty: 4,
     goal: {id: 'perfect', n: 1},
-    script: 'start S2 B S2 R S L S2 HP2 S C S2 B S2 QU WA2 CR S2 R S2 TB S2 C S L S2 D2 S2 finish',
-    medals: { cristal: 22.1, or: 23, argent: 26.5, bronze: 31.1 },
+    script: 'start S2 B S2 R S L S2 S2 S C S2 B S2 QU WA2 CR S2 R S2 TB S2 C S L S2 D2 S2 finish',
+    medals: { cristal: 22.2, or: 23.1, argent: 26.6, bronze: 31.2 },
   },
   {
     id: 'vrille', name: 'Tourbillon Tropical', decor: 'isles', difficulty: 4,
@@ -213,19 +213,19 @@ export const BUILTIN_TRACKS = [
     id: 'spirale', name: 'Spirale Prismatique', decor: 'desert', difficulty: 4,
     goal: {id: 'norespawn'},
     script: 'start S2 R S U S R S U R S3 C S R S GU2 R S2 R S B S5 BR S D3 S KR S2 B S2 finish',
-    medals: { cristal: 24.7, or: 26.2, argent: 30.1, bronze: 35.4 },
+    medals: { cristal: 26, or: 27.4, argent: 31.6, bronze: 37 },
   },
   {
     id: 'couronne', name: 'Couronne Boréale', decor: 'polar', difficulty: 5,
     goal: {id: 'nowall'},
     script: 'start S B S2 O S2 C S U2 RR S2 B S UU G2 DD S2 C S LL S B S.j G1 S2 R S2.m U S.m D.m S C S BLL S2 B S OL S2 R S2.i S L S2 B S2 finish',
-    medals: { cristal: 37, or: 38.5, argent: 44.3, bronze: 52 },
+    medals: { cristal: 37.9, or: 39.3, argent: 45.2, bronze: 53.1 },
   },
   {
     id: 'caldeira', name: 'Caldeira', decor: 'volcano', difficulty: 5, laps: 2,
     goal: {id: 'nowall'},
-    script: 'start S2 B S2 RR S S.n S2.a RR.a S.a S.n HP S C S2 RR S2 B S RR finish',
-    medals: { cristal: 34.5, or: 36.2, argent: 41.6, bronze: 48.9 },
+    script: 'start S2 B S2 RR S S.n S2.a RR.a S.a S.n S S C S2 RR S2 B S RR finish',
+    medals: { cristal: 34.5, or: 36.2, argent: 41.6, bronze: 48.8 },
   },
   // ---- Chapitre 7 : Légendes ----------------------------------------------------
   {
@@ -238,7 +238,7 @@ export const BUILTIN_TRACKS = [
     id: 'viaduc', name: 'Viaduc Vertical', decor: 'city', difficulty: 5,
     goal: {id: 'perfect', n: 1},
     script: 'start B S2 R S L S2 B S2 QU WA2 CR S2 C S2 B S OB S R S L D2 S2 B S OD S2 C S L R S2.g40 S2 S.g100 S2 finish',
-    medals: { cristal: 31.4, or: 32.8, argent: 37.8, bronze: 44.3 },
+    medals: { cristal: 31.7, or: 33, argent: 38, bronze: 44.6 },
   },
   {
     id: 'archipel', name: 'Grand Archipel', decor: 'isles', difficulty: 5, shard: [0.7, 7],
@@ -249,7 +249,7 @@ export const BUILTIN_TRACKS = [
   {
     id: 'apesanteur', name: 'Apesanteur', decor: 'orbit', difficulty: 5,
     goal: {id: 'rings', n: 2},
-    script: 'start S2 B S S.g40 S2 UU GR6 DD S2 S.g100 S2 C S2 TB S2 R S2 CK S2 L S2 S.e S UU GR7 DD S.e S2 C S2 HP S2 finish',
+    script: 'start S2 B S S.g40 S2 UU GR6 DD S2 S.g100 S2 C S2 TB S2 R S2 CK S2 L S2 S.e S UU GR7 DD S.e S2 C S2 S S2 finish',
     medals: { cristal: 33.4, or: 34.7, argent: 39.9, bronze: 46.8 },
   },
   {
@@ -261,14 +261,14 @@ export const BUILTIN_TRACKS = [
   {
     id: 'zenith', name: 'Station Zénith', decor: 'orbit', difficulty: 5, laps: 2,
     goal: {id: 'nowall'},
-    script: 'start S2 B S4 BR S CK S2 C BR S2 HP S2 UU GR2 DD BR S TB S3 BR finish',
+    script: 'start S2 B S4 BR S CK S2 C BR S2 S S2 UU GR2 DD BR S TB S3 BR finish',
     medals: { cristal: 40.7, or: 42, argent: 48.3, bronze: 56.7 },
   },
 ];
 
 export function buildBuiltin(def) {
   const t = scriptTrack(def.name, def.script, { ...(def.opts || {}), decor: def.decor || 'desert' });
-  t.author = 'Shardway';
+  t.author = 'Copytrack';
   // Circuit à plusieurs tours : le chemin du pilote automatique est répété.
   if (def.laps > 1) {
     t.laps = def.laps;

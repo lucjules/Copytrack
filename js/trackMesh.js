@@ -484,7 +484,7 @@ export function tileMatrix(tile) {
   return m;
 }
 
-// ---- v1.5 : section courbe (demi-tube, tube) ---------------------------------
+// ---- v1.5 : section courbe (tube) ---------------------------------
 function crossSweep(gb, glow, tile, style) {
   const rib = ribbonOf(tile);
   const N = tile.t === 'tube' ? 48 : 24, M = tile.t === 'tube' ? 32 : 18;
@@ -621,7 +621,7 @@ export function buildTileInto(gb, glow, tile, track = null) {
     ringMesh(gb, glow, tile);
   } else if (p.kind === 'fork') {
     forkMesh(gb, glow, tile, styleFor(tile));
-  } else if (tile.t === 'halfpipe' || tile.t === 'tube') {
+  } else if (tile.t === 'tube') {
     crossSweep(gb, glow, tile, styleFor({ s: '' }));
   } else {
     const style = p.kind === 'loop' || p.kind === 'ribbon' ? styleFor({ s: '' }) : styleFor(tile);

@@ -81,7 +81,8 @@ export class RaceLogic {
         event = { type: 'checkpoint', index: this.splits.length, steps: this.steps };
         continue;
       }
-      if (p.y < h - 1.5 || p.y > h + LEVEL_H * 1.6) continue;
+      // Fenêtre haute : on peut passer un checkpoint en sautant (bosse juste avant).
+      if (p.y < h - 1.5 || p.y > h + LEVEL_H * 2.5) continue;
       toLocal(tile, p.x, p.z, L);
       sampleLocal(tile, L.lx, L.lz, S);
       if (!S.inFootprint || Math.abs(S.d) > ROAD_HALF + 1.5) continue;

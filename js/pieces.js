@@ -10,7 +10,7 @@
 //  line / arc / area : sol « classique » (physique au sol)
 //  loop              : deux voies d'accès au sol + un ruban (looping)
 //  ribbon            : tout un ruban 3D (vrille, quart de cercle, mur, sommet,
-//                      virage relevé, demi-tube, tube, tire-bouchon)
+//                      virage relevé, tube, tire-bouchon)
 //  fork              : bifurcation (une entrée, deux sorties) au sol
 //  ring              : anneau flottant (turbo ou checkpoint aérien)
 // Une pièce line/arc peut aussi être posée « à l'envers » (drapeau v) : elle
@@ -40,7 +40,6 @@ export const PIECES = {
   // v1.5
   bank:       { label: 'Virage relevé', kind: 'ribbon', size: 2, rise: 0, clearance: 2, arc: true, bank: 0.42 },
   bankBig:    { label: 'Très grand virage relevé', kind: 'ribbon', size: 3, rise: 0, clearance: 2, arc: true, bank: 0.5 },
-  halfpipe:   { label: 'Demi-tube', kind: 'ribbon', size: 1, rise: 0, clearance: 1 },
   tube:       { label: 'Tube', kind: 'ribbon', size: 2, rise: 0, clearance: 4 },
   cork:       { label: 'Tire-bouchon ↻', kind: 'ribbon', size: 2, rise: 0, clearance: 4, mirror: 1 },
   corkL:      { label: 'Tire-bouchon ↺', kind: 'ribbon', size: 2, rise: 0, clearance: 4, mirror: -1 },
@@ -58,6 +57,8 @@ export const RING_Y = 6;
 
 // Anciennes pièces de la v1.0 devenues des revêtements sur une ligne droite.
 export const LEGACY_SURFACE = { boost: 'boost', ice: 'ice' };
+// Pièces retirées (gardées dans PIECE_ORDER pour lire les anciens codes) : remplacées.
+export const LEGACY_PIECE = { halfpipe: 'straight' };
 
 // Ordre utilisé pour la sérialisation : ne jamais réordonner, seulement ajouter.
 export const PIECE_ORDER = [

@@ -135,8 +135,11 @@ export class Input {
         return;
       }
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
-      if (!this.keys.has(e.code)) this.pressed.add(e.code);
-      this.keys.add(e.code);
+      // Avec Ctrl / Cmd, la touche sert à un raccourci (copier, coller, annuler...) :
+      // elle ne compte pas comme un appui « simple » (C, V, X, Z... ont leur propre action).
+      const mod = e.ctrlKey || e.metaKey;
+      if (!this.keys.has(e.code) && !mod) this.pressed.add(e.code);
+      if (!mod || e.code.startsWith('Control') || e.code.startsWith('Meta')) this.keys.add(e.code);
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'PageUp', 'PageDown', 'Tab', 'F1', 'Home'].includes(e.code)) e.preventDefault();
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));

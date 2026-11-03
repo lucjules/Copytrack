@@ -29,7 +29,6 @@ export const PALETTE_ORDER = [
   { id: 'crest90', key: 'KeyJ', k: 'J' },
   { id: 'bank', key: 'KeyO', k: 'O' },
   { id: 'bankBig', key: '', k: '' },
-  { id: 'halfpipe', key: 'KeyY', k: 'Y' },
   { id: 'tube', key: '', k: '' },
   { id: 'cork', key: '', k: '' },
   { id: 'corkL', key: '', k: '' },
@@ -86,7 +85,6 @@ export const ICONS = {
   crest90: svg(`${straightBase()}<path d="M24 40V26q0-8 8-8M26 18l7 3-3-7" stroke="#ffbf3c" stroke-width="3" fill="none"/>`),
   bank: svg(`<path d="M4 48 A44 44 0 0 1 48 4 L48 22 A26 26 0 0 0 22 48Z" fill="#4a5078"/><path d="M4 48 A44 44 0 0 1 48 4" stroke="${RAIL}" stroke-width="4" fill="none"/><path d="M14 40 A32 32 0 0 1 40 14" stroke="#36e9ff" stroke-width="2" stroke-dasharray="4 4" fill="none"/>`),
   bankBig: svg(`<path d="M2 48 A46 46 0 0 1 48 2 L48 16 A32 32 0 0 0 16 48Z" fill="#4a5078"/><path d="M2 48 A46 46 0 0 1 48 2" stroke="${RAIL}" stroke-width="4" fill="none"/><path d="M10 44 A38 38 0 0 1 44 10" stroke="#ffbf3c" stroke-width="2" stroke-dasharray="4 4" fill="none"/>`),
-  halfpipe: svg(`<path d="M6 10q0 14 18 14t18-14v28q0 10-18 10T6 38z" fill="${ROAD}"/><path d="M6 10q0 14 18 14t18-14" stroke="#36e9ff" stroke-width="3" fill="none"/>`),
   tube: svg(`<rect x="6" y="6" width="36" height="36" rx="18" fill="none" stroke="#7fe9ff" stroke-width="5"/><rect x="14" y="14" width="20" height="20" rx="10" fill="none" stroke="${ROAD}" stroke-width="5"/>`),
   cork: svg(`${straightBase()}<path d="M14 42C14 30 34 34 34 24S14 18 14 6" stroke="#36e9ff" stroke-width="3.5" fill="none"/>`),
   corkL: svg(`${straightBase()}<path d="M34 42C34 30 14 34 14 24S34 18 34 6" stroke="#ff5fd2" stroke-width="3.5" fill="none"/>`),
@@ -900,7 +898,14 @@ export class EditorSession {
     const t = this._hoverTile();
     if (!t || ['ring', 'area'].includes(PIECES[t.t].kind)) { this.app.ui.flash('Vise une pièce de route pour tester à partir d\'elle.'); this.app.audio.error(); return; }
     if (this.track.count('finish') === 0) { this.app.ui.flash('Il faut au moins une arrivée.'); this.app.audio.error(); return; }
-    const pts = centerlineWorld(t, 6);
+    let pts = centerlineWorld(t, 6);
+    // Sens de départ : celui qui s'éloigne de la pièce de départ du circuit.
+    const st = this.track.startTile;
+    if (st && st !== t) {
+      const sp = centerlineWorld(st, 2)[1];
+      const d = (p) => Math.hypot(p[0] - sp[0], p[2] - sp[2]);
+      if (d(pts[0]) > d(pts[pts.length - 1])) pts = pts.slice().reverse();
+    }
     const a = pts[0], b = pts[1];
     const yaw = Math.atan2(-(b[0] - a[0]), -(b[2] - a[2]));
     this.app.testTrack(this.exportState(), { x: a[0] + (b[0] - a[0]) * 0.5, y: a[1], z: a[2] + (b[2] - a[2]) * 0.5, yaw });
@@ -1057,6 +1062,9 @@ export class EditorSession {
     const shift = input.down('ShiftLeft', 'ShiftRight');
     const ctrl = input.down('ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight');
     const selMode = this.tool === 'select' && this.sel && !this.pasting;
+    // Ctrl / Cmd enfoncé : la touche sert au raccourci (copier, coller, annuler...),
+    // pas à son action seule (C = niveau −, V = vrille, X = gomme...).
+    if (ctrl) { this._render(dt); return; }
     if (input.act('ed.rotate')) { if (this.pasting) this.rotateClipboard(); else this.rotate(shift ? -1 : 1); }
     if (input.act('ed.levelUp')) { if (selMode) this.shiftSel(1); else this.setLevel(this.level + 1); }
     if (input.act('ed.levelDown')) { if (selMode) this.shiftSel(-1); else this.setLevel(this.level - 1); }

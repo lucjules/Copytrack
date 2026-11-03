@@ -2,7 +2,7 @@
 // requêtes de surface pour la physique, sérialisation en code partageable.
 import { CELL, DIRS, ROAD_HALF, RAIL_W, SLAB_T, MAX_LEVEL, LEVEL_H, MAX_DECOS } from './constants.js';
 import {
-  PIECES, PIECE_ORDER, SURFACE_ORDER, LEGACY_SURFACE, SURFACES, surfaceAllowed, flagAllowed, isFloor,
+  PIECES, PIECE_ORDER, SURFACE_ORDER, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, isFloor,
   toLocal, sampleLocal, rotVec,
 } from './pieces.js';
 import { centerlineWorld } from './ribbons.js';
@@ -60,6 +60,7 @@ export class Track {
   static normalize(t) {
     let type = t.t, s = t.s || '';
     if (LEGACY_SURFACE[type]) { s = LEGACY_SURFACE[type]; type = 'straight'; }
+    if (LEGACY_PIECE[type]) type = LEGACY_PIECE[type];
     if (!PIECES[type]) throw new Error('Pièce inconnue : ' + type);
     const tile = { t: type, x: t.x | 0, z: t.z | 0, l: Math.max(0, Math.min(MAX_LEVEL, Math.round((+t.l || 0) * 2) / 2)), r: t.r & 3, s: '', p: 0, v: 0, nb: 0, tn: 0 };
     tile.v = t.v && flagAllowed(type, 'v') ? 1 : 0;
@@ -390,7 +391,7 @@ export function hashString(s) {
 //
 // v1.5 :
 //   BR / BL             virage relevé droite / gauche (2x2)   BRR / BLL  très grand virage relevé (3x3)
-//   HP                  demi-tube         TB  tube (2x2)        CK / CKL  tire-bouchon (2x2)
+//   TB                  tube (2x2)        CK / CKL  tire-bouchon (2x2)
 //   KR / KL             checkpoint dans un virage droite / gauche
 //   GU / GD             pente douce (½ niveau) montante / descendante
 //   GR2 / GC2           vide de 2 cases avec un anneau turbo / un checkpoint aérien au milieu
@@ -562,7 +563,6 @@ export function scriptTrack(name, script, opts = {}) {
         h = (h + (sgn > 0 ? 1 : 3)) & 3;
         break;
       }
-      case 'HP': for (let i = 0; i < n; i++) { place('halfpipe', x, z, l, h); adv(h); } break;
       case 'TB': straight2('tube'); break;
       case 'CK': straight2('cork'); break;
       case 'CKL': straight2('corkL'); break;

@@ -1,9 +1,9 @@
-# Shardway
+# Copytrack
 
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **1.5**
+Version actuelle : **bêta 0.6**
 
 ## Jouer
 
@@ -32,7 +32,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 
 - Ligne droite, virages serré et grand, pente, **pente douce** (½ niveau), tremplin, plateforme, ponts sur plusieurs niveaux.
 - **Virages relevés** (2×2 et 3×3) : la route penche vers l'intérieur, on les prend plus vite.
-- **Demi-tube** (la route se creuse en U) et **tube fermé** dont on peut faire le tour complet si on va assez vite.
+- **Tube fermé** dont on peut faire le tour complet si on va assez vite.
 - **Loopings** (normal, grand, double), **tire-bouchons** droite et gauche, **montée en L** (courbe, mur vertical, sommet qui fait sauter vers le plateau).
 - **Bifurcation / jonction** : deux voies au choix.
 - **Anneau turbo** flottant, **checkpoint aérien** (un anneau à traverser), **checkpoint dans un virage**.
@@ -72,10 +72,24 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 - **Tutoriel** au premier lancement. Commandes personnalisables (clavier, manette), mobile (boutons ou glisser du pouce), vibrations.
 - **Easter eggs** : à toi de les trouver.
 
-## Nouveautés de la v1.5
+## Bêta 0.6
+
+- **Bosses réalistes** : quand une pente monte puis redescend (ou passe au plat), la route « tombe » sous la voiture et elle décolle, d'autant plus haut qu'elle va vite. Avant, elle restait collée au sol comme sur un revêtement Aimant (seul l'Aimant garde cet effet).
+- Une bosse de pente se prend sans perte de vitesse à la réception (tolérance d'assiette un peu plus large).
+- Un checkpoint passé en sautant juste au-dessus compte bien.
+- Éditeur : Ctrl + C / V / X / Z ne déclenchent plus en même temps l'action de la touche seule (niveau −, vrille, gomme, vue par niveau) ; « Tester ici » part dans le bon sens.
+- Téléphone en paysage : le menu principal tient sur l'écran (deux colonnes).
+- La barre de replay disparaît toujours en quittant un replay ; le klaxon est indiqué dans l'aide de course.
+
+## Bêta 0.5
+
+- Le jeu s'appelle désormais **Copytrack** et passe en version bêta (0.5).
+- Le demi-tube est retiré (dans les anciens codes de circuit, il devient une ligne droite).
+
+## Nouveautés de la v1.5 (devenue bêta 0.5)
 
 - 42 circuits (12 nouveaux, les 30 autres retravaillés), du plus facile au plus dur, deux nouveaux décors : Volcan et Station orbitale.
-- Nouvelles pièces : virages relevés, demi-tube, tube, tire-bouchons, bifurcations, anneaux turbo, checkpoints aériens et en virage, pente douce.
+- Nouvelles pièces : virages relevés, tube, tire-bouchons, bifurcations, anneaux turbo, checkpoints aériens et en virage, pente douce.
 - Bateau, deltaplane et revêtement Eau.
 - Mode carrière avec objectifs bonus, défi du jour, replays, fantômes de la médaille d'or et d'amis.
 - Assiette en l'air, réceptions, mini-turbo, traces de pneus, caméra lointaine.
@@ -112,7 +126,7 @@ Pendant un replay : Espace pause, ← → vitesse, C caméra (dont TV et orbite)
 | Maj + molette, E / C, Page↑ / Page↓ | Changer de niveau |
 | R (Maj + R) | Pivoter (sens inverse) |
 | Tab (Maj + Tab) | Pièce suivante (précédente) |
-| 1 … 0, P, U, I, V, L, K, J, O, Y | Choisir une pièce |
+| 1 … 0, P, U, I, V, L, K, J, O | Choisir une pièce |
 | M | Miroir (looping, tire-bouchon, bifurcation) |
 | B | Revêtement suivant |
 | Q | Outil Sélection |
@@ -136,7 +150,7 @@ index.html, css/style.css     interface
 manifest.webmanifest, sw.js    application installable, jeu hors ligne (sw.js généré par tools/gen-sw.mjs)
 js/main.js                     orchestration (menu, carrière, course, éditeur, options, tutoriel)
 js/pieces.js, js/track.js      pièces, revêtements, modèle de circuit, codes de partage (SHW3)
-js/ribbons.js                  rubans 3D (loopings, tubes, virages relevés, tire-bouchons, L vertical)
+js/ribbons.js                  rubans 3D (loopings, tube, virages relevés, tire-bouchons, L vertical)
 js/physics.js                  physique (sol, air, deltaplane, bateau, rubans à section courbe)
 js/replay.js                   enregistrement des commandes, replays, fantômes simulés (SHG1)
 js/career.js, js/daily.js      carrière et objectifs, défi du jour généré

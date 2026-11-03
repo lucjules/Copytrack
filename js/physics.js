@@ -46,10 +46,10 @@ export const CAR = {
   gravity: 25,
   snap: 0.7,
   step: 1.6,
-  launch: 9.5,        // vitesse normale au-delà de laquelle on décolle
+  launch: 2.0,        // vitesse normale (m/s) au-delà de laquelle la route « tombe » sous la voiture : elle décolle
   airPitchAcc: 4.2,  // tangage en l'air : gaz = nez vers le bas, frein = nez vers le haut (rad/s²)
   airPitchDamp: 2.6,
-  landOk: 0.3,       // écart d'angle toléré à la réception (rad) sans perte de vitesse
+  landOk: 0.38,      // écart d'angle toléré à la réception (rad) sans perte de vitesse (une bosse de pente passe)
   mtTime1: 0.7,      // durée de glisse pour un mini-turbo (s)
   mtTime2: 1.5,      // durée pour un mini-turbo renforcé
   lipHopMin: 2,      // saut en haut d'un L : hauteur mini (m)
@@ -739,7 +739,7 @@ export class CarPhysics {
     return false;
   }
 
-  // Section courbe (demi-tube, tube) : repère de la route au point de la voiture.
+  // Section courbe (tube) : repère de la route au point de la voiture.
   // Avec kc = courbure transversale et phi = kc * dl, la chaussée remonte de chaque côté :
   // position = centre + r sin(phi)/kc + n (1 - cos(phi))/kc, normale tournée de phi.
   // Remplit F.qx/qy/qz (point de contact) et remplace n et r par leurs valeurs locales.
