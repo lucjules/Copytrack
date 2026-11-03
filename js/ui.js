@@ -14,7 +14,7 @@ export function medalIcon(m) {
   return `<i class="medal ${m ? m.id : 'none'}" title="${m ? m.label : 'Aucune médaille'}"></i>`;
 }
 
-const SCREENS = ['loading', 'menu', 'tracks', 'mytracks', 'options', 'controls', 'profile'];
+const SCREENS = ['loading', 'menu', 'tracks', 'mytracks', 'community', 'options', 'controls', 'profile'];
 
 class Hud {
   constructor() {

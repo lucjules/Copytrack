@@ -16,6 +16,7 @@ import { Track, hashString, DECORS } from './track.js';
 import { PIECES } from './pieces.js';
 import { VERSION } from './constants.js';
 import { thumbnail } from './editorTools.js';
+import { online } from './online.js';
 import { encodeGhost, decodeGhost, PHYS_VER } from './replay.js';
 import { dailyChallenge, dayKey } from './daily.js';
 import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, goalFor, goalLabel, goalDone, chapterUnlocked } from './career.js';
@@ -122,6 +123,7 @@ class App {
     }
     if (name === 'tracks') this._renderTracks();
     if (name === 'mytracks') this._renderMyTracks();
+    if (name === 'community') this._renderCommunity(true);
     if (name === 'options') this._renderOptions();
     if (name === 'controls') this._renderControls();
     if (name === 'profile') this._renderProfile();
@@ -253,6 +255,7 @@ class App {
     if (opts.fromEditor) this.openEditor(this.editorState);
     else if (opts.builtinIndex != null || opts.daily) this.showMenu('tracks');
     else if (opts.userEntry) this.showMenu('mytracks');
+    else if (opts.community) this.showMenu('community');
     else this.showMenu('menu');
   }
 
@@ -665,10 +668,128 @@ class App {
     };
     const actions = [];
     if (!verified && this.session instanceof EditorSession) actions.push({ label: 'Terminer le circuit d’abord', primary: true, onClick: () => { this.session.test(); } });
-    actions.push({ label: 'Copier le code', primary: verified, onClick: () => copy(code, 'Code copié !') });
+    if (verified && tr) actions.push({ label: '🌐 Publier dans la communauté', primary: true, onClick: () => { this.publishTrack(tr); return true; } });
+    actions.push({ label: 'Copier le code', onClick: () => copy(code, 'Code copié !') });
     actions.push({ label: 'Copier le lien', onClick: () => copy(url, 'Lien copié !') });
     actions.push({ label: 'Fermer' });
     this.ui.modal({ title: 'Partager le circuit', body: wrap, actions });
+  }
+
+  // ---- Communauté (circuits publiés en ligne) ----------------------------------
+  async publishTrack(track) {
+    if (!track.verified) { this.ui.flash('Termine d’abord ton circuit (Tester) pour pouvoir le publier.'); return; }
+    this.ui.flash('Publication en cours…', 6);
+    try {
+      await online.publish(track, this.settings.playerName);
+      this.ui.flash(`« ${track.name} » est publié ! Retrouve-le dans Communauté › Mes publications.`, 3.5);
+      this.audio.checkpoint(true);
+    } catch (e) {
+      this.ui.flash(e.message, 4);
+      this.audio.error();
+    }
+  }
+
+  async _renderCommunity(reset = false) {
+    const list = $('comm-list'), status = $('comm-status'), more = $('comm-more');
+    if (!this._comm) {
+      this._comm = { sort: 'recent', search: '', offset: 0 };
+      document.querySelectorAll('#comm-tabs .tab').forEach((b) => b.addEventListener('click', () => {
+        this.audio.click();
+        this._comm.sort = b.dataset.sort;
+        document.querySelectorAll('#comm-tabs .tab').forEach((x) => x.classList.toggle('on', x === b));
+        this._renderCommunity(true);
+      }));
+      let tm = null;
+      $('comm-search').addEventListener('input', (e) => {
+        clearTimeout(tm);
+        tm = setTimeout(() => { this._comm.search = e.target.value; this._renderCommunity(true); }, 350);
+      });
+      more.addEventListener('click', () => { this.audio.click(); this._renderCommunity(false); });
+    }
+    const C = this._comm;
+    if (reset) { C.offset = 0; list.innerHTML = ''; }
+    const req = (this._commReq = (this._commReq || 0) + 1);
+    status.textContent = 'Chargement…';
+    more.classList.add('hidden');
+    let rows, likes;
+    try {
+      [rows, likes] = await Promise.all([
+        online.listTracks({ sort: C.sort === 'mine' ? 'recent' : C.sort, mine: C.sort === 'mine', search: C.search, offset: C.offset, limit: 24 }),
+        online.myLikes().catch(() => new Set()),
+      ]);
+    } catch (e) {
+      if (req !== this._commReq) return;
+      status.innerHTML = `<b>Communauté indisponible</b> : ${esc(e.message)}`;
+      return;
+    }
+    if (req !== this._commReq || !$('community') || $('community').classList.contains('hidden')) return;
+    C.offset += rows.length;
+    status.textContent = !rows.length && reset
+      ? (C.sort === 'mine' ? 'Tu n’as encore rien publié. Dans l’éditeur, termine ton circuit puis « Partager › Publier dans la communauté ».' : 'Aucun circuit trouvé.')
+      : '';
+    more.classList.toggle('hidden', rows.length < 24);
+    for (const row of rows) list.appendChild(this._communityCard(row, likes));
+  }
+
+  _communityCard(row, likes) {
+    let track = null;
+    try { track = Track.decode(row.code); } catch { /* code abîmé */ }
+    const mine = row.author === online.uid;
+    const key = track ? 'u-' + hashString(track.encode()) : '';
+    const rec = key ? getRecord(key) : null;
+    const medals = track ? track.derivedMedals : null;
+    const medal = rec && medals ? medalFor(rec.time, medals) : null;
+    const liked = likes.has(row.id);
+    const card = document.createElement('div');
+    card.className = 'card ' + (row.decor || '');
+    card.innerHTML = `${track ? `<img class="thumb" alt="" src="${thumbnail(track, 'c-' + row.id)}">` : ''}
+      <h3>${esc(row.name)}</h3>
+      <div class="meta">par <b>${esc((row.players && row.players.name) || 'Pilote')}</b> · ${esc((DECORS[row.decor] || {}).label || row.decor)} · ${row.pieces} pièces${row.laps > 1 ? ` · ${row.laps} tours` : ''}</div>
+      <div class="meta">Temps de l’auteur ${formatTime(row.author_time)} · ▶ ${row.plays} · ♥ <span class="nl">${row.likes}</span></div>
+      <div class="best">${medals ? medalIcon(medal) : ''}${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}</div>
+      <div class="actions">
+        <button class="btn primary" data-a="play"${track ? '' : ' disabled'}>Jouer</button>
+        <button class="btn${liked ? ' on' : ''}" data-a="like" title="J’aime">${liked ? '♥' : '♡'}</button>
+        <button class="btn" data-a="copy" title="Copier dans Mes circuits pour le modifier">Copier</button>
+        ${mine ? '<button class="btn danger" data-a="del">Retirer</button>' : '<button class="btn subtle" data-a="report" title="Signaler un circuit inapproprié">⚑</button>'}
+      </div>`;
+    card.addEventListener('click', async (e) => {
+      const a = e.target.closest('[data-a]');
+      if (!a) return;
+      this.audio.click();
+      const act = a.dataset.a;
+      if (act === 'play' && track) {
+        this.playTrack(track, { trackKey: key, seed: track.name, userMap: true, medals, difficulty: 2, community: row.id });
+        online.played(row.id);
+      } else if (act === 'like') {
+        try {
+          const n = await online.toggleLike(row.id, this.settings.playerName);
+          const now = !a.classList.contains('on');
+          a.classList.toggle('on', now); a.textContent = now ? '♥' : '♡';
+          card.querySelector('.nl').textContent = n;
+        } catch (err) { this.ui.flash(err.message); }
+      } else if (act === 'copy' && track) {
+        saveMyTrack({ id: newId(), name: track.name, code: track.encode() });
+        this.ui.flash('Copié dans « Mes circuits ».');
+      } else if (act === 'del') {
+        this.ui.modal({
+          title: 'Retirer ce circuit ?',
+          body: `<p>« ${esc(row.name)} » ne sera plus visible dans la communauté (il reste dans « Mes circuits » s’il y était).</p>`,
+          actions: [{ label: 'Annuler' }, { label: 'Retirer', danger: true, onClick: () => {
+            online.deleteTrack(row.id).then(() => { card.remove(); this.ui.flash('Circuit retiré.'); }, (err) => this.ui.flash(err.message));
+          } }],
+        });
+      } else if (act === 'report') {
+        this.ui.modal({
+          title: 'Signaler ce circuit ?',
+          body: '<p>À utiliser pour un nom ou un contenu inapproprié. Après 3 signalements, le circuit est masqué.</p>',
+          actions: [{ label: 'Annuler' }, { label: 'Signaler', danger: true, onClick: () => {
+            online.report(row.id, this.settings.playerName).then(() => this.ui.flash('Merci, le signalement est enregistré.'), (err) => this.ui.flash(err.message));
+          } }],
+        });
+      }
+    });
+    return card;
   }
 
   // Appelé quand le joueur termine son circuit en test depuis l'éditeur.
@@ -788,6 +909,7 @@ class App {
     switch (a) {
       case 'play': this.showScreen('tracks'); break;
       case 'daily': this.playDaily(); break;
+      case 'community': this.showScreen('community'); break;
       case 'tutorial': this.tutorial(); break;
       case 'editor': this.openEditor(); break;
       case 'mytracks': this.showScreen('mytracks'); break;
