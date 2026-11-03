@@ -20,12 +20,25 @@ const smooth = (u) => u * u * (3 - 2 * u);
 const ramp = (u, w) => (u < w ? smooth(u / w) : u > 1 - w ? smooth((1 - u) / w) : 1);
 const cache = new WeakMap();
 
-export function ribbonOf(tile) {
-  const key = tile.t + '|' + tile.l + '|' + (tile.v ? 1 : 0);
+// raw : géométrie « à l'endroit » (le rendu la retourne lui-même pour une pièce à l'envers).
+// Sinon, pour une pièce posée à l'envers, le ruban est retourné autour de son niveau :
+// y -> 2·base − y et normale inversée (la voiture y roule en gravité inversée).
+export function ribbonOf(tile, raw = false) {
+  const flip = !!tile.v && !raw;
+  const key = tile.t + '|' + tile.l + '|' + (flip ? 1 : 0);
   const c = cache.get(tile);
-  if (c && c.key === key) return c.rib;
-  const rib = build(tile);
-  cache.set(tile, { key, rib });
+  if (c && c.keys && c.keys[key]) return c.keys[key];
+  let rib = build(tile);
+  if (flip && rib) {
+    const inner = rib, base = baseY(tile);
+    rib = {
+      ...inner,
+      pos(u, o) { inner.pos(u, o); o.y = 2 * base - o.y; o.ny = -o.ny; },
+    };
+  }
+  const entry = c && c.keys ? c : { keys: {} };
+  entry.keys[key] = rib;
+  cache.set(tile, entry);
   return rib;
 }
 
@@ -173,26 +186,7 @@ function build(tile) {
       len: tot,
     };
   }
-  // Ligne / virage posé à l'envers
-  if (P.kind === 'arc') {
-    const a = arcParams(P);
-    return {
-      pos(u, o) {
-        const ang = Math.PI + (Math.PI / 2) * u;
-        o.x = a.cx + a.R * Math.cos(ang); o.y = base; o.z = a.cz + a.R * Math.sin(ang);
-        o.nx = 0; o.ny = -1; o.nz = 0;
-      },
-      len: (Math.PI / 2) * a.R,
-    };
-  }
-  const rise = P.rise * LEVEL_H;
-  return {
-    pos(u, o) {
-      o.x = 0; o.y = base + rise * u; o.z = half - 2 * half * u;
-      o.nx = 0; o.ny = -1; o.nz = 0;
-    },
-    len: 2 * half,
-  };
+  return null;
 }
 
 const A = {}, B = {}, C = {};
@@ -229,7 +223,7 @@ export function centerlineLocal(tile, n) {
   const base = baseY(tile);
   const pts = [];
   const sampleRibbon = (count, flag = 1) => {
-    const rib = ribbonOf(tile);
+    const rib = ribbonOf(tile, true);
     const o = {};
     for (let i = 0; i <= count; i++) {
       rib.pos(i / count, o);
@@ -241,8 +235,8 @@ export function centerlineLocal(tile, n) {
     for (let i = 0; i < 4; i++) pts.push([-m * p.lane, base, half - (half * i) / 4, 0]);
     sampleRibbon(32 * p.turns);
     for (let i = 1; i <= 4; i++) pts.push([m * p.lane, base, -(half * i) / 4, 0]);
-  } else if (p.kind === 'ribbon' || tile.v) {
-    const rib = ribbonOf(tile);
+  } else if (p.kind === 'ribbon') {
+    const rib = ribbonOf(tile, true);
     // drapeau 2 : virage relevé (le pilote automatique doit y doser sa vitesse).
     sampleRibbon(Math.max(8, Math.round(rib.len / 3)), p.arc ? 2 : 1);
   } else if (p.kind === 'arc') {
@@ -258,6 +252,8 @@ export function centerlineLocal(tile, n) {
       pts.push([0, base + rise * t, half - 2 * half * t, 0]);
     }
   }
+  // Pièce à l'envers : géométrie retournée autour de son niveau.
+  if (tile.v) for (const q of pts) q[1] = 2 * base - q[1];
   return pts;
 }
 

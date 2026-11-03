@@ -4,7 +4,7 @@
 //   node tools/sim.mjs 2 --map    -> circuit n°2 avec la carte
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
 import { CarPhysics } from '../js/physics.js';
-import { RaceLogic } from '../js/raceLogic.js';
+import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
 import { Autopilot } from '../js/autopilot.js';
 import { Track } from '../js/track.js';
 import { PIECES } from '../js/pieces.js';
@@ -19,7 +19,7 @@ const GLYPH = {
   checkpoint: ['C', 'C'], start: ['S', 'S'], finish: ['F', 'F'], platform: ['#', '#'], loop: ['O', 'O'], loopL: ['Ø', 'Ø'],
   loopBig: ['B', 'B'], loopBigL: ['B', 'B'], loopDouble: ['D', 'D'], loopDoubleL: ['D', 'D'], twist: ['~', '~'], ramp90: ['Q', 'Q'], wall: ['W', 'W'], crest90: ['Y', 'Y'],
 };
-const SURF = { ice: '~', boost: '»', bounce: 'j', sand: 's', magnet: 'm', mud: 'u', drift: 'd', slow: 'x', wind: 'w', gravity: 'g', moto: 'o', water: 'a', boat: 'n', glider: 'e' };
+const SURF = { ice: '~', boost: '»', bounce: 'j', sand: 's', magnet: 'm', mud: 'u', drift: 'd', slow: 'x', wind: 'w', gravity: 'g', moto: 'o', water: 'a', boat: 'n', glider: 'e', flip: 'f', conveyor: 't', spring: 'r', glass: 'v', powder: 'p', reverse: 'y', cut: 'c' };
 
 function map(track) {
   const b = track.bounds();
@@ -42,14 +42,14 @@ function map(track) {
 function run(track, maxTime = 240) {
   const phys = new CarPhysics(track);
   const logic = new RaceLogic(track);
-  const sp = logic.spawnPoint();
-  phys.place(sp.x, sp.y, sp.z, sp.yaw);
+  placeAtStart(phys, logic);
   const bot = new Autopilot(track.path);
   bot.reset(phys);
   let respawns = 0, stuck = 0, maxSpeed = 0, airMax = 0, lastIdx = 0, loops = 0, falls = 0;
   const steps = Math.round(maxTime / DT);
   for (let i = 0; i < steps; i++) {
     const inp = bot.control(phys);
+    phys.clock = logic.steps;
     phys.step(inp);
     maxSpeed = Math.max(maxSpeed, phys.speed);
     airMax = Math.max(airMax, phys.airTime);
@@ -60,7 +60,7 @@ function run(track, maxTime = 240) {
       return { ok: true, time: logic.time, respawns, maxSpeed, airMax, loops, falls };
     }
     // Chute au sol : réapparition au dernier checkpoint.
-    const fell = (phys.grounded && phys.surfType === 'ground') || phys.ev.sink;
+    const fell = phys.offTrack || phys.ev.sink;
     if (i % 120 === 0) {
       if (bot.idx === lastIdx) stuck++; else stuck = 0;
       lastIdx = bot.idx;
@@ -69,7 +69,7 @@ function run(track, maxTime = 240) {
       respawns++;
       if (respawns > 8) return { ok: false, reason: `trop de réapparitions (idx ${bot.idx}/${track.path.length}, pos ${phys.pos.x.toFixed(1)},${phys.pos.y.toFixed(1)},${phys.pos.z.toFixed(1)})`, time: logic.time };
       const r = logic.respawn;
-      phys.place(r.x, r.y, r.z, r.yaw);
+      phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
       bot.reset(phys);
       stuck = 0;
     }

@@ -3,12 +3,14 @@
 // et fixe les médailles, comme pour les circuits intégrés.
 import { scriptTrack, DECORS } from './track.js';
 import { CarPhysics, CAR } from './physics.js';
-import { RaceLogic } from './raceLogic.js';
+import { RaceLogic, placeAtStart } from './raceLogic.js';
 import { Autopilot } from './autopilot.js';
 
+// 0.9 : la date est prise en temps universel (UTC) : le même défi pour tout le monde,
+// quel que soit le fuseau horaire, et il change à la même heure partout.
 export function dayKey(d = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`;
 }
 
 function rng(seedStr) {
@@ -23,6 +25,7 @@ const BLOCKS = [
   ['S', 5, 0], ['S2', 5, 0], ['S3', 2, 0],
   ['R', 5, 0], ['L', 5, 0], ['RR', 3, 0], ['LL', 3, 0], ['BR', 1.2, 0], ['BL', 1.2, 0],
   ['S.b', 2.5, 0], ['S2.i', 0.8, 0], ['S.d', 0.6, 0], ['S.s', 0.5, 0],
+  ['S2.t', 0.7, 0], ['S2.p', 0.4, 0], ['S2.v', 0.3, 0],
   ['U S', 1.6, 1], ['D S', 1.6, -1, 1], ['GU2 S', 0.8, 1], ['GD2 S', 0.8, -1, 1],
   ['S2 UU G2 DD S', 1.2, 0], ['S UU GR2 DD S', 0.6, 0],
   ['O S', 0.9, 0], ['OL S', 0.9, 0], ['CK S', 0.5, 0], ['CKL S', 0.5, 0],
@@ -44,15 +47,16 @@ function tryBuild(tokens, decor) {
 // Course du pilote automatique ; renvoie le temps ou null.
 export function botTime(track, latK = 0.8) {
   const phys = new CarPhysics(track), logic = new RaceLogic(track);
-  const sp = logic.spawnPoint(); phys.place(sp.x, sp.y, sp.z, sp.yaw);
+  placeAtStart(phys, logic);
   const bot = new Autopilot(track.path, { latLimit: CAR.latGrip * latK, brakeDecel: 36 });
   bot.reset(phys);
   let groundT = 0, respawns = 0;
   for (let i = 0; i < 120 * 120; i++) {
+    phys.clock = logic.steps;
     phys.step(bot.control(phys));
     const ev = logic.update(phys);
     if (ev && ev.type === 'finish') return respawns ? null : logic.time;
-    if ((phys.grounded && phys.surfType === 'ground') || phys.ev.sink) {
+    if (phys.offTrack || phys.ev.sink) {
       groundT += 1 / 120;
       if (groundT > 0.3 || phys.ev.sink) return null;
     } else groundT = 0;

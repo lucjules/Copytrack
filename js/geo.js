@@ -22,6 +22,9 @@ export class GeoBuilder {
 
   setMatrix(m4) {
     this.m = m4 ? m4.elements : null;
+    // Matrice miroir (pièce à l'envers) : on inverse l'ordre des sommets pour garder
+    // les faces tournées vers l'extérieur (sinon l'éclairage les voit de dos).
+    this.flip = !!m4 && m4.determinant() < 0;
   }
 
   _p(p) {
@@ -36,7 +39,7 @@ export class GeoBuilder {
   }
 
   tri(a, b, c, hex) {
-    this._p(a); this._p(b); this._p(c);
+    if (this.flip) { this._p(a); this._p(c); this._p(b); } else { this._p(a); this._p(b); this._p(c); }
     const k = lin(hex);
     this.col.push(k[0], k[1], k[2], k[0], k[1], k[2], k[0], k[1], k[2]);
   }
@@ -88,6 +91,29 @@ export class GeoBuilder {
     g.setAttribute('color', new THREE.Float32BufferAttribute(this.col, 3));
     g.computeVertexNormals();
     g.computeBoundingSphere();
+    return g;
+  }
+}
+
+// Variante avec un attribut d'effet par sommet (revêtements animés) :
+// fx = (type, abscisse le long de la route, vitesse, écart latéral).
+export class FxBuilder extends GeoBuilder {
+  constructor() { super(); this.fx = []; }
+
+  fxQuad(a, b, c, d, fa, fb, fc, fd, hex) {
+    this.fxTri(a, b, c, fa, fb, fc, hex);
+    this.fxTri(a, c, d, fa, fc, fd, hex);
+  }
+
+  fxTri(a, b, c, fa, fb, fc, hex) {
+    this.tri(a, b, c, hex);
+    if (this.flip) this.fx.push(...fa, ...fc, ...fb);
+    else this.fx.push(...fa, ...fb, ...fc);
+  }
+
+  build() {
+    const g = super.build();
+    g.setAttribute('fx', new THREE.Float32BufferAttribute(this.fx, 4));
     return g;
   }
 }

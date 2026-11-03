@@ -1,13 +1,13 @@
 // Session de course : boucle à pas fixe, caméra, fantôme, HUD, effets.
 import * as THREE from './vendor/three.module.min.js';
 import { DT } from './constants.js';
-import { CarPhysics } from './physics.js';
-import { RaceLogic } from './raceLogic.js';
+import { CarPhysics, frameWorld } from './physics.js';
+import { RaceLogic, placeAtStart } from './raceLogic.js';
 import { Autopilot } from './autopilot.js';
 import { TrackView } from './trackMesh.js';
 import { createCar } from './carModel.js';
 import { getRecord, saveRecord, encodeFloats, decodeFloats, formatTime } from './storage.js';
-import { profile, rewardCoins, addCoins, saveProfile } from './profile.js';
+import { profile, rewardCoins } from './profile.js';
 import { SURFACES } from './pieces.js';
 import { CATALOG } from './cosmetics.js';
 import { SkidMarks } from './skids.js';
@@ -124,10 +124,9 @@ export class RaceSession {
     const app = this.app;
     this.logic.reset();
     const sp = this.opts.spawn || this.logic.spawnPoint();
-    if (this.opts.spawn) this.logic.respawn = { ...sp, vehicle: 'car', grav: 1 };
-    this.phys.place(sp.x, sp.y, sp.z, sp.yaw);
-    this.car.setVehicle('car', true);
-    this.collectedShards = new Set();
+    if (this.opts.spawn) this.logic.respawn = { ...sp, vehicle: this.track.veh0 || 'car', grav: (this.track.g0 || 100) / 100 };
+    placeAtStart(this.phys, this.logic, sp);
+    this.car.setVehicle(this.phys.vehicle, true);
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
     this._orient();
     this.prevQuat.copy(this.quat);
@@ -135,6 +134,7 @@ export class RaceSession {
     this.camPos.set(sp.x + Math.sin(sp.yaw) * 12, sp.y + 5, sp.z + Math.cos(sp.yaw) * 12);
     this.state = this.demo || this.replay ? 'racing' : 'countdown';
     this.recorder = new InputRecorder();
+    this.tick = 0;          // pas de course depuis le départ (ne recule jamais, contrairement au chrono)
     this._pendingRespawn = false;
     this.stats = { wallHits: 0, respawns: 0, perfects: 0, turbos: 0, rings: 0 };
     for (const g of this.ghosts) { g.runner.reset(); g.car.group.visible = false; }
@@ -160,8 +160,20 @@ export class RaceSession {
     if (this.state !== 'racing') return;
     if (fromInput) this._pendingRespawn = true;
     this.stats.respawns++;
-    const r = this.logic.respawn;
-    this.phys.place(r.x, r.y, r.z, r.yaw);
+    // Retour au dernier checkpoint : le chrono revient au temps de ce checkpoint.
+    const r = this.logic.rewind();
+    const steps = this.logic.steps;
+    this.ghostRec.length = Math.min(this.ghostRec.length, Math.floor(steps / GHOST_EVERY) * 7);
+    for (const g of this.ghosts) {
+      g.runner.reset();
+      while (g.runner.k < steps && !g.runner.done) g.runner.step();
+      g.pq.copy(g.q);
+    }
+    if (!this.demo) {
+      this.app.ui.hud.checkpoints(this.logic.collected.size, this.logic.cps.length, this.logic.lap, this.logic.laps);
+      this.app.ui.hud.time(steps * DT);
+    }
+    this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
     this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
     this.car.setVehicle(this.phys.vehicle, true);
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
@@ -192,9 +204,10 @@ export class RaceSession {
     } else {
       // En l'air, l'assiette vient de la physique (gaz = nez vers le bas, frein = nez vers le haut).
       const c = Math.cos(p.pitch), s = Math.sin(p.pitch);
-      tmpV.set(-fx * s, c, -fz * s);
-      // Retournée (chute d'un looping) : on se redresse plus vite.
-      this.up.lerp(tmpV, this.up.y < 0.3 ? 0.08 : 0.2).normalize();
+      const gs = p.gSign;
+      tmpV.set(-fx * s * gs, c * gs, -fz * s * gs);
+      // Retournée (chute d'un looping, inversion de gravité) : on se redresse plus vite.
+      this.up.lerp(tmpV, this.up.y * gs < 0.3 ? 0.08 : 0.2).normalize();
     }
     const f = p.mode === 'ribbon' ? tmpV2.set(p.fwd.x, p.fwd.y, p.fwd.z) : tmpV2.set(fx, 0, fz);
     f.addScaledVector(this.up, -f.dot(this.up));
@@ -208,7 +221,7 @@ export class RaceSession {
 
   _input() {
     if (this.replay) {
-      const inp = inputAt(this.replay, this.logic.steps);
+      const inp = inputAt(this.replay, this.tick);
       if (inp.respawn) this.respawn();
       return inp;
     }
@@ -226,8 +239,10 @@ export class RaceSession {
       this._pendingRespawn = false;
     }
     if (this.state === 'racing') for (const g of this.ghosts) { g.pq.copy(g.q); g.runner.step(); }
+    if (this.state === 'racing') this.tick++;
     this.lastInput = inp;
     this.prevQuat.copy(this.quat);
+    this.phys.clock = this.logic.steps;   // horloge des obstacles et pièces mobiles = chrono
     this.phys.step(inp);
     this._orient();
     const ev = this.phys.ev;
@@ -254,6 +269,25 @@ export class RaceSession {
       const p = this.phys.pos;
       app.particles.burst(p.x, p.y + 0.3, p.z, Math.min(20, ev.land * 1.5), 6, 0.6, 0.8, app.scenery.theme.dust, 3);
       this.shake = Math.max(this.shake, Math.min(0.6, ev.land * 0.04));
+    }
+    if (ev.shock > 0) {
+      const p = this.phys.pos;
+      app.audio.thud();
+      this.shake = Math.max(this.shake, Math.min(1.2, ev.shock * 0.05));
+      app.particles.burst(p.x, p.y + 0.8, p.z, 18, 8, 0.5, 0.5, '#ffd23e', 2);
+    }
+    if (ev.spring) {
+      app.audio.bounce();
+      const p = this.phys.pos;
+      app.particles.burst(p.x, p.y + 0.4, p.z, 26, 10, 0.6, 0.7, '#5dff8a', 2);
+      if (!this.demo) app.ui.hud.message('Ressort !', 0.8);
+    }
+    if (ev.reverse && !this.demo) { app.audio.whoosh(); app.ui.hud.message('Volant inversé !', 1.2); }
+    if (ev.cut && !this.demo) { app.audio.thud(); app.ui.hud.message('Moteur coupé !', 1.0); }
+    // Gerbes de neige dans la poudreuse.
+    if (this.phys.grounded && this.phys.surfMod === 'powder' && this.phys.speed > 8 && Math.random() < 0.5) {
+      const p = this.phys.pos;
+      app.particles.burst(p.x, p.y + 0.3, p.z, 3, 4 + this.phys.speed * 0.08, 0.5, 0.6, '#ffffff', 2);
     }
     if (ev.bounce) {
       app.audio.bounce();
@@ -292,7 +326,19 @@ export class RaceSession {
     // ordre que le rejeu (replay.js) — indispensable pour que la vérification des temps
     // en ligne retrouve exactement la même course.
     const sank = ev.sink && this.state === 'racing';
-    if (sank) {
+    if (sank && ev.spike) {
+      const p = this.phys.pos;
+      app.audio.thud();
+      this.shake = Math.max(this.shake, 0.8);
+      app.particles.burst(p.x, p.y + 0.6, p.z, 36, 9, 0.7, 0.5, '#ff5a6e', 3, 1);
+      if (!this.demo) app.ui.hud.message('Aïe, les piques ! Retour au checkpoint', 1.6);
+    } else if (sank && ev.glass) {
+      const p = this.phys.pos;
+      app.audio.thud();
+      app.particles.burst(p.x, p.y + 0.3, p.z, 46, 10, 0.9, 0.5, '#d9f4ff', 4, 2);
+      app.particles.burst(p.x, p.y + 0.3, p.z, 20, 7, 0.9, 0.35, '#ffffff', 4, 2);
+      if (!this.demo) app.ui.hud.message('Le verre a cédé ! Trop lent…', 1.8);
+    } else if (sank) {
       const p = this.phys.pos;
       app.particles.burst(p.x, p.y + 0.5, p.z, 30, 8, 0.7, 0.6, '#9fe3ff', 4, 2);
       if (!this.demo) app.ui.hud.message('Coulé ! Il faut un bateau pour traverser l\'eau', 1.8);
@@ -303,13 +349,13 @@ export class RaceSession {
       if (!this.demo) app.ui.hud.message('Anneau turbo !', 0.8);
     }
     if (ev.gravity && !this.demo) app.ui.hud.message(`Gravité ${Math.round(this.phys.gravMul * 100)} %`, 1.4);
+    if (ev.flip && !this.demo) { app.ui.hud.message(this.phys.gSign < 0 ? 'Gravité inversée !' : 'Gravité normale', 1.4); this.shake = Math.max(this.shake, 0.5); }
     if (ev.loopFall && !this.demo) {
       const why = { loop: 'Trop lent pour le looping !', twist: 'Plus rien ne te retient dans la vrille !', inv: 'À l\'envers, la gravité gagne !', crest: 'Décollage !' };
       app.ui.hud.message(why[this.phys.fallWhy] || why.crest, 1.4);
     }
 
     if (this.state === 'racing') {
-      if (this.logic.steps % 6 === 0) this._checkShards();
       const res = this.logic.update(this.phys);
       if (!this.demo && this.logic.steps % GHOST_EVERY === 0) {
         const p = this.phys.pos, q = this.quat;
@@ -319,7 +365,7 @@ export class RaceSession {
 
       // Hors piste (0,5 s) ou noyade : réapparition automatique.
       if (sank && this.state === 'racing') { this.groundT = 0; if (this.demo) this.restart(); else this.respawn(); return; }
-      if (this.phys.grounded && this.phys.surfType === 'ground') {
+      if (this.phys.offTrack) {
         this.groundT += DT;
         if (this.groundT > 0.5) {
           if (this.demo) this.restart(); else { app.ui.hud.message('Hors piste !', 1.0); this.respawn(); }
@@ -328,28 +374,6 @@ export class RaceSession {
     }
   }
 
-  // Éclats secrets (easter egg) : décorations « shard » ramassables une seule fois.
-  _checkShards() {
-    if (this.demo || !this.track.decos.length) return;
-    const p = this.phys.pos;
-    this.track.decos.forEach((d, i) => {
-      if (d.k !== 'shard' || this.collectedShards.has(i)) return;
-      if (Math.hypot(d.x - p.x, d.y + 2.5 * d.s - p.y, d.z - p.z) > 6 * d.s) return;
-      this.collectedShards.add(i);
-      const key = `${this.trackKey}#${i}`;
-      const pr = profile();
-      const first = !pr.shards[key];
-      this.app.particles.burst(d.x, d.y + 2.5, d.z, 40, 12, 1, 0.8, '#ffd23e', 3, 2);
-      this.app.audio.checkpoint(true);
-      if (first) {
-        pr.shards[key] = 1;
-        addCoins(40);
-        this.app.ui.hud.message('Éclat secret ! +40 pièces', 2.2);
-        this.app.ui.updateCoins();
-      } else this.app.ui.hud.message('Éclat secret (déjà trouvé)', 1.4);
-      saveProfile();
-    });
-  }
 
   _event(ev) {
     const app = this.app;
@@ -416,7 +440,7 @@ export class RaceSession {
     let reward = null;
     if (this.opts.fromEditor && this.opts.spawn) {
       // Test partiel : pas de vérification ni de médaille.
-    } else if (this.opts.fromEditor) {
+    } else if (this.opts.fromEditor && this.opts.verify) {
       app.onEditorTestFinished(time, this.track);
     } else if (this.medals) {
       const tier = medal ? MEDALS.indexOf(medal) : -1;
@@ -435,8 +459,8 @@ export class RaceSession {
     app.ui.showFinish({
       goal,
       reward,
-      verified: !!this.opts.fromEditor,
-      derived: this.opts.fromEditor ? this.track.derivedMedals : null,
+      verified: !!(this.opts.fromEditor && this.opts.verify),
+      derived: this.opts.fromEditor && this.opts.verify ? this.track.derivedMedals : null,
       unverifiedUser: !!this.opts.userMap && !this.medals,
       time,
       prevTime: prev ? prev.time : null,
@@ -562,6 +586,11 @@ export class RaceSession {
   render(dt, alpha) {
     const app = this.app;
     const p = this.phys;
+    // Obstacles et pièces mobiles : même temps que la physique (chrono), interpolé.
+    if (this.state === 'racing') this.obsT = Math.max(0, (this.logic.steps - 1 + alpha) * DT);
+    else if (this.state === 'finished') this.obsT = (this.obsT || 0) + dt;
+    else if (this.obsT == null || this.state === 'countdown') this.obsT = 0;
+    this.view.updateMoving(this.obsT);
     // Interpolation entre deux pas physiques
     this.renderPos.set(
       p.prev.x + (p.pos.x - p.prev.x) * alpha,
@@ -769,8 +798,22 @@ export class RaceSession {
       if (camUp.lengthSq() < 1e-3) camUp.copy(up);
       camUp.normalize();
       tmpV.set(p.fwd.x, p.fwd.y, p.fwd.z);
-      const target = tmpV2.copy(car.position).addScaledVector(tmpV, -mode.dist).addScaledVector(up, mode.height);
-      this.camPos.lerp(target, 1 - Math.exp(-dt * 12));
+      // La caméra suit la route elle-même, un peu en arrière sur le ruban et au-dessus de
+      // la chaussée à cet endroit : elle ne traverse plus la piste dans un looping, un tube,
+      // une vrille ou un virage relevé.
+      const R = p.rib;
+      const F = frameWorld(R.tile, R.rib, R.u, this._camF || (this._camF = {}));
+      let ub = R.u - (R.dir * mode.dist) / Math.max(1, F.ds);
+      let extra = 0;
+      if (ub < 0) { extra = -ub * F.ds; ub = 0; } else if (ub > 1) { extra = (ub - 1) * F.ds; ub = 1; }
+      const Fb = frameWorld(R.tile, R.rib, ub, this._camFb || (this._camFb = {}));
+      p._cross({ dl: R.dl }, Fb);
+      const target = tmpV2.set(
+        Fb.qx + Fb.nx * mode.height - Fb.tx * R.dir * extra,
+        Fb.qy + Fb.ny * mode.height - Fb.ty * R.dir * extra,
+        Fb.qz + Fb.nz * mode.height - Fb.tz * R.dir * extra,
+      );
+      this.camPos.lerp(target, 1 - Math.exp(-dt * 14));
       cam.position.copy(this.camPos);
       cam.up.copy(camUp);
       tmpV2.copy(car.position).addScaledVector(tmpV, mode.look).addScaledVector(up, mode.lookUp);
@@ -779,8 +822,11 @@ export class RaceSession {
       this._fov(mode.fov + Math.min(18, sp * 0.24));
       return;
     }
-    camUp.lerp(UP, 1 - Math.exp(-dt * 4));
-    if (camUp.lengthSq() < 1e-3) camUp.set(0, 1, 0);
+    // En gravité inversée, la caméra se retourne : le « haut » est vers le bas du monde.
+    const gs = p.gSign;
+    const gUp = gs > 0 ? UP : (this._downV || (this._downV = new THREE.Vector3(0, -1, 0)));
+    camUp.lerp(gUp, 1 - Math.exp(-dt * 4));
+    if (camUp.lengthSq() < 1e-3) camUp.copy(gUp);
     camUp.normalize();
     cam.up.copy(camUp);
 
@@ -798,7 +844,7 @@ export class RaceSession {
     // Sous un pont : on abaisse et on rapproche la caméra pour ne pas traverser la dalle.
     const carTop = car.position.y + 1.6;
     let ceil = Infinity;
-    for (let i = 0; i <= 4; i++) {
+    for (let i = 0; i <= 4 && gs > 0; i++) {
       const k = i / 4;
       const c = this.track.ceilingAt(car.position.x - fx * dist * k, car.position.z - fz * dist * k, carTop);
       if (c < ceil) ceil = c;
@@ -809,7 +855,7 @@ export class RaceSession {
       height = Math.max(1.4, ceil - car.position.y - 0.9);
       dist = Math.min(dist, mode.dist * 0.75);
     }
-    tmpV.set(car.position.x - fx * dist, car.position.y + height, car.position.z - fz * dist);
+    tmpV.set(car.position.x - fx * dist, car.position.y + height * gs, car.position.z - fz * dist);
     // Horizontal serré, vertical plus doux (sauf sous un pont : réaction immédiate).
     const kx = 1 - Math.exp(-dt * 12);
     const ky = 1 - Math.exp(-dt * (underBridge ? 20 : 6));
@@ -817,10 +863,16 @@ export class RaceSession {
     this.camPos.z += (tmpV.z - this.camPos.z) * kx;
     this.camPos.y += (tmpV.y - this.camPos.y) * ky;
     // Jamais dans une dalle ni sous la chaussée
-    const ceilCam = this.track.ceilingAt(this.camPos.x, this.camPos.z, carTop - 0.5);
-    if (this.camPos.y > ceilCam - 0.5 && ceilCam > carTop - 0.5) this.camPos.y = ceilCam - 0.5;
-    const s = this.track.surfaceAt(this.camPos.x, this.camPos.y, this.camPos.z, this._camS || (this._camS = {}), 2);
-    if (this.camPos.y < s.h + 1.2) this.camPos.y = s.h + 1.2;
+    if (gs > 0) {
+      const ceilCam = this.track.ceilingAt(this.camPos.x, this.camPos.z, carTop - 0.5);
+      if (this.camPos.y > ceilCam - 0.5 && ceilCam > carTop - 0.5) this.camPos.y = ceilCam - 0.5;
+      const s = this.track.surfaceAt(this.camPos.x, this.camPos.y, this.camPos.z, this._camS || (this._camS = {}), 2);
+      if (this.camPos.y < s.h + 1.2) this.camPos.y = s.h + 1.2;
+    } else {
+      // Au plafond : jamais au-dessus de la chaussée retournée.
+      const s = this.track.ceilingSurfaceAt(this.camPos.x, this.camPos.y, this.camPos.z, this._camS || (this._camS = {}), 2);
+      if (Number.isFinite(s.h) && this.camPos.y > s.h - 1.2) this.camPos.y = s.h - 1.2;
+    }
     cam.position.copy(this.camPos);
     if (this.shake > 0) {
       const k = this.shake * 0.25 * (this.app.settings.shakeAmt ?? 1);
@@ -828,7 +880,7 @@ export class RaceSession {
       cam.position.y += (Math.random() - 0.5) * k;
     }
     const lookUp = underBridge ? Math.min(mode.lookUp, 0.8) : mode.lookUp;
-    cam.lookAt(car.position.x + fx * mode.look, car.position.y + lookUp, car.position.z + fz * mode.look);
+    cam.lookAt(car.position.x + fx * mode.look, car.position.y + lookUp * gs, car.position.z + fz * mode.look);
     this._fov(mode.fov + Math.min(18, sp * 0.24) + (p.boost > 0 ? 5 : 0));
   }
 

@@ -231,7 +231,7 @@
     <div class="ed-top">
       <button class="btn" data-ed="menu">← Menu</button>
       <input id="ed-name" class="ed-name" maxlength="40" spellcheck="false" aria-label="Nom du circuit">
-      <select id="ed-decor" class="ed-select" title="Décor du circuit" aria-label="Décor du circuit"></select>
+      <button class="btn" data-ed="params" title="Paramètres du niveau : description, décor, tours, règles de départ (P)">⚙ Paramètres</button>
       <div class="ed-group">
         <button class="btn icon" data-ed="undo" title="Annuler (Ctrl+Z)">↶</button>
         <button class="btn icon" data-ed="redo" title="Rétablir (Ctrl+Y)">↷</button>
@@ -242,11 +242,11 @@
         <button class="btn" data-ed="export">Partager</button>
         <button class="btn" data-ed="save">Enregistrer</button>
       </div>
-      <label class="ed-laps" title="Nombre de tours (circuit fermé : l'arrivée est franchie à chaque tour)">Tours
-        <select id="ed-laps"></select></label>
-      <button class="btn" data-ed="check" title="Vérifier le circuit (F2)">✓ Vérifier</button>
-      <button class="btn" data-ed="testhere" title="Tester depuis la pièce visée (Maj+T)">▶ Ici</button>
-      <button class="btn primary" data-ed="test">▶ Tester <kbd>T</kbd></button>
+      <div class="ed-group">
+        <button class="btn" data-ed="testhere" title="Tester depuis la pièce visée (Maj+T)">▶ Ici</button>
+        <button class="btn" data-ed="test" title="Essai libre, sans vérification (T)">▶ Tester <kbd>T</kbd></button>
+        <button class="btn primary" data-ed="verify" title="Course complète : ton temps devient la médaille cristal, puis tu peux publier (F2)">✔ Vérifier</button>
+      </div>
     </div>
     <div class="ed-selbar hidden" id="ed-selbar">
       <button class="btn" data-sel="all" title="Tout sélectionner (Ctrl+A)">Tout</button>

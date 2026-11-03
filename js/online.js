@@ -109,9 +109,23 @@ class OnlineClient {
   // Le pseudo de l'auteur : lien précisé (plusieurs liens existent entre circuits et pilotes).
   static FIELDS = 'id,name,decor,code,author_time,pieces,laps,plays,likes,created_at,author,players!tracks_author_fkey(name)';
 
-  async listTracks({ sort = 'recent', search = '', mine = false, limit = 30, offset = 0 } = {}) {
+  // La colonne « description » arrive avec l'étape 3 (SQL) : tant qu'elle n'existe pas,
+  // tout marche sans elle.
+  static noDesc(e) { return /description/i.test((e && e.message) || ''); }
+
+  async listTracks(opts = {}) {
+    if (this.hasDesc !== false) {
+      try { const r = await this._listTracks(opts, true); this.hasDesc = true; return r; } catch (e) {
+        if (!OnlineClient.noDesc(e)) throw e;
+        this.hasDesc = false;
+      }
+    }
+    return this._listTracks(opts, false);
+  }
+
+  async _listTracks({ sort = 'recent', search = '', mine = false, limit = 30, offset = 0 } = {}, desc = true) {
     const q = new URLSearchParams();
-    q.set('select', OnlineClient.FIELDS);
+    q.set('select', OnlineClient.FIELDS + (desc ? ',description' : ''));
     if (mine) { await this.ensureSession(); q.set('author', 'eq.' + this.uid); }
     if (search.trim()) q.set('name', 'ilike.*' + search.trim().replace(/[*,()]/g, ' ') + '*');
     q.set('order', sort === 'popular' ? 'likes.desc,plays.desc,created_at.desc' : sort === 'played' ? 'plays.desc,created_at.desc' : 'created_at.desc');
@@ -122,20 +136,35 @@ class OnlineClient {
 
   async publish(track, playerName) {
     await this.ensurePlayer(playerName);
-    const rows = await this._fetch('/rest/v1/tracks', {
-      method: 'POST',
-      headers: { Prefer: 'return=representation' },
-      body: {
-        name: track.name.slice(0, 40) || 'Sans titre',
-        decor: track.decor,
-        code: track.encode(),
-        signature: track.signature(),
-        author_time: track.vt,
-        pieces: track.tiles.length,
-        laps: track.laps || 1,
-      },
-    });
+    const body = {
+      name: track.name.slice(0, 40) || 'Sans titre',
+      decor: track.decor,
+      code: track.encode(),
+      signature: track.signature(),
+      author_time: track.vt,
+      pieces: track.tiles.length,
+      laps: track.laps || 1,
+    };
+    const send = (b) => this._fetch('/rest/v1/tracks', { method: 'POST', headers: { Prefer: 'return=representation' }, body: b });
+    let rows;
+    try {
+      rows = await send(this.hasDesc === false ? body : { ...body, description: track.desc || '' });
+    } catch (e) {
+      if (!OnlineClient.noDesc(e)) throw e;
+      this.hasDesc = false;
+      rows = await send(body);
+    }
     return rows && rows[0];
+  }
+
+  // Modifier le nom et la description d'un circuit publié (le sien seulement).
+  async updateTrackMeta(id, name, description) {
+    try {
+      await this._fetch('/rest/v1/rpc/update_track_meta', { method: 'POST', body: { t: id, n: name, d: description } });
+    } catch (e) {
+      if (e.code === 'http' && /update_track_meta|function/i.test(e.message)) throw new OnlineError('Modification pas encore activée : lance le script SQL de l’étape 3 (supabase/etape3-description.sql) dans Supabase.', 'no-schema');
+      throw e;
+    }
   }
 
   async deleteTrack(id) {

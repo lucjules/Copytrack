@@ -22,7 +22,8 @@ export class RaceLogic {
     // On recule un peu pour que la voiture parte derrière la ligne.
     const back = 4;
     const fx = [0, 1, 0, -1][t.r], fz = [-1, 0, 1, 0][t.r];
-    return { x: c.x - fx * back, y: baseY(t), z: c.z - fz * back, yaw: -t.r * Math.PI / 2 };
+    // Départ posé à l'envers : la course commence en gravité inversée.
+    return { x: c.x - fx * back, y: baseY(t), z: c.z - fz * back, yaw: -t.r * Math.PI / 2, gs: t.v ? -1 : 1 };
   }
 
   reset() {
@@ -30,9 +31,30 @@ export class RaceLogic {
     this.splits = [];
     this.finished = false;
     this.steps = 0;
-    this.respawn = { ...this.spawnPoint(), vehicle: 'car', grav: 1 };
-    this.inFinish = false;
     this.lap = 1;
+    const T = this.track;
+    this.respawn = { ...this.spawnPoint(), vehicle: T.veh0 || 'car', grav: (T.g0 || 100) / 100, snap: this._snap() };
+    this.inFinish = false;
+  }
+
+  // État de course au passage d'un checkpoint : y revenir remet le chrono à ce temps.
+  _snap() {
+    return { steps: this.steps, splits: this.splits.length, collected: [...this.collected], lap: this.lap };
+  }
+
+  // Retour au dernier checkpoint passé (touche R ou réapparition automatique) :
+  // le chrono, les temps intermédiaires et le tour reviennent à ce moment-là.
+  rewind() {
+    const s = this.respawn.snap;
+    if (s) {
+      this.steps = s.steps;
+      this.splits.length = Math.min(this.splits.length, s.splits);
+      this.collected = new Set(s.collected);
+      this.lap = s.lap;
+    }
+    this.finished = false;
+    this.inFinish = false;
+    return this.respawn;
   }
 
   // Point de réapparition d'un checkpoint aérien : la dernière route roulable traversée
@@ -77,12 +99,12 @@ export class RaceLogic {
         this.collected.add(tile);
         this.splits.push(this.steps);
         // Réapparition : juste avant l'anneau, au sol de la pièce précédente si possible.
-        this.respawn = { ...this._ringRespawn(tile, phys), vehicle: phys.vehicle, grav: phys.gravMul };
+        this.respawn = { ...this._ringRespawn(tile, phys), vehicle: phys.vehicle, grav: phys.gravMul, gs: phys.gSign, snap: this._snap() };
         event = { type: 'checkpoint', index: this.splits.length, steps: this.steps };
         continue;
       }
       // Fenêtre haute : on peut passer un checkpoint en sautant (bosse juste avant).
-      if (p.y < h - 1.5 || p.y > h + LEVEL_H * 2.5) continue;
+      if (tile.v ? (p.y > h + 1.5 || p.y < h - LEVEL_H * 2.5) : (p.y < h - 1.5 || p.y > h + LEVEL_H * 2.5)) continue;
       toLocal(tile, p.x, p.z, L);
       sampleLocal(tile, L.lx, L.lz, S);
       if (!S.inFootprint || Math.abs(S.d) > ROAD_HALF + 1.5) continue;
@@ -96,7 +118,7 @@ export class RaceLogic {
         while (da > Math.PI) da -= Math.PI * 2;
         while (da < -Math.PI) da += Math.PI * 2;
         if (Math.abs(da) > Math.PI / 2) yaw = base + Math.PI;
-        this.respawn = { x: c.x, y: h, z: c.z, yaw, vehicle: phys.vehicle, grav: phys.gravMul };
+        this.respawn = { x: c.x, y: h, z: c.z, yaw, vehicle: phys.vehicle, grav: phys.gravMul, gs: phys.gSign, snap: this._snap() };
         event = { type: 'checkpoint', index: this.splits.length, steps: this.steps };
       } else if (sp === 'finish') {
         onFinish = true;
@@ -107,6 +129,8 @@ export class RaceLogic {
             this.lap++;
             this.collected.clear();
             this.splits.push(this.steps);
+            // Le passage de la ligne sert aussi de point de retour pour le nouveau tour.
+            this.respawn = { x: p.x, y: h, z: p.z, yaw: phys.yaw, vehicle: phys.vehicle, grav: phys.gravMul, gs: phys.gSign, snap: this._snap() };
             event = { type: 'lap', lap: this.lap, laps: this.laps, index: this.splits.length, steps: this.steps };
           } else {
             this.finished = true;
@@ -120,4 +144,15 @@ export class RaceLogic {
     this.inFinish = onFinish;
     return event;
   }
+}
+
+// Place la voiture au départ avec les paramètres du niveau (véhicule, gravité, vitesse
+// de départ). sp : point de départ (par défaut celui du circuit).
+export function placeAtStart(phys, logic, sp = logic.spawnPoint()) {
+  const T = logic.track;
+  phys.place(sp.x, sp.y, sp.z, sp.yaw, sp.gs || 1);
+  phys.vehicle = T.veh0 || 'car';
+  phys.gravMul = (T.g0 || 100) / 100;
+  const v0 = (T.v0 || 0) / 3.6;
+  if (v0 > 0) { phys.vel.x = -Math.sin(sp.yaw) * v0; phys.vel.z = -Math.cos(sp.yaw) * v0; phys.fwdSpeed = v0; }
 }

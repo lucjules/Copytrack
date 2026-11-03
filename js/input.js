@@ -8,8 +8,8 @@ export const KEY_ACTIONS = {
     ['brake', 'Freiner / marche arrière', ['KeyS', 'ArrowDown']],
     ['left', 'Tourner à gauche', ['KeyA', 'ArrowLeft']],
     ['right', 'Tourner à droite', ['KeyD', 'ArrowRight']],
-    ['respawn', 'Dernier checkpoint', ['KeyR', '']],
-    ['restart', 'Recommencer', ['Enter', 'Backspace']],
+    ['respawn', 'Dernier checkpoint (chrono remis à ce temps)', ['KeyR', '']],
+    ['restart', 'Recommencer le niveau', ['KeyT', 'Enter']],
     ['camera', 'Changer de caméra', ['KeyC', '']],
     ['horn', 'Klaxon', ['KeyH', '']],
     ['pause', 'Pause', ['Escape', 'KeyP']],
@@ -31,7 +31,8 @@ export const KEY_ACTIONS = {
     ['ed.grid', 'Afficher / masquer la grille', ['KeyG', '']],
     ['ed.help', 'Liste des raccourcis', ['F1', '']],
     ['ed.levelView', 'Vue par niveau (estomper les autres)', ['KeyZ', '']],
-    ['ed.check', 'Vérifier le circuit', ['F2', '']],
+    ['ed.verify', 'Vérifier le circuit (course complète)', ['F2', '']],
+    ['ed.params', 'Paramètres du niveau', ['F3', '']],
   ],
 };
 
@@ -153,6 +154,8 @@ export class Input {
       for (const k in saved || {}) if (k in def) out[k] = saved[k];
       return out;
     };
+    // 0.9 : « Recommencer » passe sur T ; on met à jour l'ancien réglage par défaut.
+    if (keys && JSON.stringify(keys.restart) === JSON.stringify(['Enter', 'Backspace'])) keys = { ...keys, restart: ['KeyT', 'Enter'] };
     this.bindings = keep(defaultKeys(), keys);
     this.pad = keep(defaultPad(), pad);
   }

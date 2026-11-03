@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.8**
+Version actuelle : **bêta 0.9**
 
 ## Jouer
 
@@ -83,9 +83,46 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
    Elle doit s'appeler exactement `submit-score`. Supabase refuse les imports depuis un site quelconque : `index.ts` est donc un fichier
    **autonome** généré par `npm run build:function` à partir de `server.ts` et du code du jeu. Quand la physique change (`PHYS_VER`), regénérer puis redéployer.
 
+3. **Description et modification après publication** (bêta 0.9) : `supabase/etape3-description.sql` ajoute la description des
+   circuits et la fonction `update_track_meta` (l'auteur peut changer le nom et la description de son circuit publié).
+   Sans ce script, le jeu fonctionne, simplement sans description.
+
 Seules l'URL du projet et la clé publique sont dans `js/online.js`. La clé secrète n'est jamais dans le jeu : seule la fonction serveur l'utilise, côté Supabase.
 
-## Bêta 0.8 (en cours)
+## Bêta 0.9
+
+**Pilotage**
+- **T** recommence le niveau ; **R** revient au dernier checkpoint et remet le chrono au temps de ce checkpoint.
+- Vent latéral et Dérive réparés (le vent pousse vraiment, la dérive fait glisser l'arrière).
+- Aimant : colle toujours au maximum. Conduite identique au sol sur les pièces spéciales (virages relevés, loopings, tubes).
+- Un peu plus de contrôle en l'air ; le nez se relève plus vite avec S. La caméra suit la route dans les loopings, vrilles et virages relevés.
+
+**Gravité inversée et pièces à l'envers**
+- Revêtement **Inversion de gravité** : la plaque projette la voiture vers le haut, une pièce posée à l'envers la réceptionne ; une 2e plaque la remet à l'endroit. Sur une vrille, la gravité suit la route.
+- **Toutes les pièces** peuvent être posées à l'envers (au moins un niveau au-dessus du sol) : on n'y roule qu'en gravité inversée.
+
+**Revêtements**
+- Sur **toutes les pièces** (virages relevés, loopings, tubes, plafond), mêmes effets partout ; tableau de compatibilité dans l'éditeur.
+- Nouveaux : **Tapis roulant**, **Ressort latéral** (saut d'une voie), **Verre fragile** (cède si on est trop lent ou si on atterrit trop fort), **Poudreuse**, **Volant inversé**, **Moteur coupé**.
+- Eau animée (houle, écume), tapis qui défile, verre qui scintille, neige qui pétille ; motifs plus parlants pour tous les revêtements.
+
+**Obstacles et pièces mobiles**
+- Obstacles (catégorie de décor) : piques et piques escamotables (retour au checkpoint), boule balancier, marteau tournant, mur coulissant, balayeur, bumper (chocs physiques).
+- Pièces en mouvement : **ascenseur** (monte de 2 niveaux) et **glissière** (se décale d'une case). Tout bouge selon le chrono : identique en replay et après un retour au checkpoint.
+
+**Éditeur**
+- **Paramètres du niveau** (F3) : nom, description, décor, tours, hors piste autorisé, vitesse, gravité et véhicule de départ.
+- **✔ Vérifier** lance la course complète ; à l'arrivée : Publier, Retour à l'éditeur ou Refaire un meilleur temps. **Ton temps devient la médaille cristal**, les autres sont déduites.
+- Nom et description modifiables après publication ; les classements ne dépendent plus du nom.
+- Palette sur toute la largeur (jusqu'à 3 lignes), barre du haut réorganisée, 39 nouvelles décorations (Souterrain, Nuages, Fonds marins, Usine, Espace, Circuit).
+
+**Thèmes et circuits**
+- 4 nouveaux thèmes : **Canyon de cristal**, **Ville dans les nuages**, **Fonds marins**, **Usine mécanique** ; la Station orbitale gagne Voie lactée, nébuleuses, galaxie spirale et étoiles filantes.
+- **66 circuits** (24 nouveaux) ; la carrière compte **11 chapitres, un par thème**, du plus facile au plus dur.
+- Défi du jour calculé en temps universel (le même pour tout le monde). Éclats secrets retirés.
+- La physique ayant changé, les records repartent de zéro ; **la fonction serveur `submit-score` doit être redéployée** (fichier `supabase/functions/submit-score/index.ts` régénéré).
+
+## Bêta 0.8
 
 - **Classements par circuit** (circuits intégrés, défi du jour, circuits de la communauté) : chaque nouveau record est envoyé et vérifié par rejeu côté serveur ; place mondiale affichée à l'arrivée, top 10 avec le bouton 🏆. Option pour ne pas envoyer ses temps.
 
@@ -131,8 +168,8 @@ Seules l'URL du projet et la clé publique sont dans `js/online.js`. La clé sec
 | ↓ / S | Freiner, marche arrière (en l'air : relever le nez) |
 | ← → / Q D (A D) | Tourner |
 | Frein + volant | Dérapage |
-| R | Revenir au dernier checkpoint |
-| Entrée / Retour | Recommencer |
+| R | Revenir au dernier checkpoint (chrono remis au temps du checkpoint) |
+| T / Entrée | Recommencer le niveau |
 | C | Changer de caméra |
 | H | Klaxon |
 | Échap / P | Pause |

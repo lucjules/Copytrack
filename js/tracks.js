@@ -1,6 +1,6 @@
 // Circuits intégrés (créations originales), décrits avec le constructeur "tortue"
 // (voir scriptTrack dans track.js). Les temps de médailles sont en secondes.
-// v1.5 : 42 circuits rangés du plus facile au plus dur, par chapitres de 6 (mode carrière).
+// 0.9 : 66 circuits, 11 chapitres de 6 (un par thème), du plus facile au plus dur.
 // Chaque circuit mélange plusieurs familles de pièces ; goal = objectif bonus.
 import { scriptTrack } from './track.js';
 
@@ -13,7 +13,7 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 18.8, or: 20, argent: 23, bronze: 27 },
   },
   {
-    id: 'lagon', name: 'Lagon Turquoise', decor: 'isles', difficulty: 1, shard: [0.5, 7],
+    id: 'lagon', name: 'Lagon Turquoise', decor: 'isles', difficulty: 1,
     goal: {id: 'rings', n: 1},
     script: 'start B S2 R S L S2 C S2 UU GR2 DD S2 L S.o S R S2 RR S2 S.o C S2 LL S2 B S R L S2 finish',
     medals: { cristal: 23.5, or: 24.9, argent: 28.6, bronze: 33.6 },
@@ -25,13 +25,13 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 18, or: 19, argent: 21.8, bronze: 25.7 },
   },
   {
-    id: 'lianes', name: 'Lianes Néon', decor: 'jungle', difficulty: 2, shard: [0.4, 7],
+    id: 'lianes', name: 'Lianes Néon', decor: 'jungle', difficulty: 2,
     goal: {id: 'turbo', n: 1},
     script: 'start B S2 R S L S R L S2 C S L S S S R S2.m R L S2 B S O S2 L S R S2 C S R S L S2 finish',
     medals: { cristal: 26.1, or: 27.9, argent: 32.1, bronze: 37.6 },
   },
   {
-    id: 'neons', name: 'Néons Express', decor: 'city', difficulty: 2, shard: [0.6, 7],
+    id: 'neons', name: 'Néons Express', decor: 'city', difficulty: 2,
     goal: {id: 'nowall'},
     script: 'start B S2 R S L S2# C S2 L S R S2 Y2.b S2 R L S2 B S2 BL S2 C S L S R S2 finish',
     medals: { cristal: 24.1, or: 25.6, argent: 29.5, bronze: 34.6 },
@@ -87,7 +87,7 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 25.3, or: 26.1, argent: 30.1, bronze: 35.3 },
   },
   {
-    id: 'phare', name: 'Le Phare', decor: 'isles', difficulty: 3, shard: [0.45, -7],
+    id: 'phare', name: 'Le Phare', decor: 'isles', difficulty: 3,
     goal: {id: 'rings', n: 1},
     script: 'start B S2 R S L S2 C S2 S.e S2 UU GR7 DD S2 S.e S R S L S3_ B S2 C S2 RR S2 finish',
     medals: { cristal: 26, or: 27.2, argent: 31.3, bronze: 36.7 },
@@ -130,7 +130,7 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 19.4, or: 20.5, argent: 23.5, bronze: 27.6 },
   },
   {
-    id: 'racines', name: 'Racines Boueuses', decor: 'jungle', difficulty: 3, shard: [0.55, -7],
+    id: 'racines', name: 'Racines Boueuses', decor: 'jungle', difficulty: 3,
     goal: {id: 'turbo', n: 2},
     script: 'start B S2 R S2.u L S R S.d L S2 C S R L S2.u S S R S L S2.w60 B S2 Y2.d S R S L S2 finish',
     medals: { cristal: 26.8, or: 28.6, argent: 32.8, bronze: 38.6 },
@@ -241,7 +241,7 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 31.7, or: 33, argent: 38, bronze: 44.6 },
   },
   {
-    id: 'archipel', name: 'Grand Archipel', decor: 'isles', difficulty: 5, shard: [0.7, 7],
+    id: 'archipel', name: 'Grand Archipel', decor: 'isles', difficulty: 5,
     goal: {id: 'vehicle', v: 'car'},
     script: 'start B S2 R S L S2 B S2 OL S2 C S S.n S3.a R.a S2.a S.n S2 RR_ S2.w170_ S C S2 B S2 UU G3 DD S2 R S L S2 B S OB S2 C S2 L R S2 finish',
     medals: { cristal: 38.8, or: 40.5, argent: 46.6, bronze: 54.7 },
@@ -264,24 +264,201 @@ export const BUILTIN_TRACKS = [
     script: 'start S2 B S4 BR S CK S2 C BR TI TM3 TO UU GR2 DD BR S TB S3 BR finish',
     medals: { cristal: 40.7, or: 42, argent: 48.3, bronze: 56.7 },
   },
+  // ==== 0.9 : quatre nouveaux thèmes (6 circuits chacun) ============================
+  // ---- Fonds marins : courants (tapis roulants), eau et bateau, bulles de verre ----
+  {
+    id: 'courant', name: 'Courant Chaud', decor: 'reef', difficulty: 2,
+    goal: { id: 'nowall' },
+    script: 'start S2 S2.t R S2 C S L S3.t RR S2 B S2 LL S C S2.t R S2 finish',
+    medals: { cristal: 17.3, or: 18.2, argent: 20.9, bronze: 24.5 },
+  },
+  {
+    id: 'corail', name: 'Jardin de Corail', decor: 'reef', difficulty: 3,
+    goal: { id: 'vehicle', v: 'car' },
+    script: 'start S2 B S2 R S S.n S2.a RR.a S.a S.n S C S2 L S2.t O S2 C S R S2.v L S2 finish',
+    obst: [{ k: 'pendulum', at: 0.86, side: 0, s: 0.9 }],
+    medals: { cristal: 21.9, or: 22.8, argent: 26.2, bronze: 30.7 },
+  },
+  {
+    id: 'epave', name: 'Épave Engloutie', decor: 'reef', difficulty: 3,
+    goal: { id: 'turbo', n: 1 },
+    script: 'start S2 B S2 RR S2.v C S2 U S2.t D S LL S2 B S BR S C S S.j G1 S2 R S L S2.t finish',
+    obst: [{ k: 'pendulum', at: 0.36, side: 0, s: 1 }, { k: 'bumper', at: 0.62, side: 5.5, s: 0.8 }],
+    medals: { cristal: 19.7, or: 20.6, argent: 23.7, bronze: 27.8 },
+  },
+  {
+    id: 'meduses', name: 'Méduses Électriques', decor: 'reef', difficulty: 4,
+    goal: { id: 'norespawn' },
+    script: 'start S2 B S2 R S C S2.v S2 L S2 S.n S3.a LL.a S2.a S.n S C S2 UU GR2 DD S2 R S2.t L S2 finish',
+    obst: [{ k: 'sweeper', at: 0.22, side: 0, s: 0.95 }, { k: 'pendulum', at: 0.82, side: 0, s: 1 }],
+    medals: { cristal: 27.4, or: 28.4, argent: 32.7, bronze: 38.3 },
+  },
+  {
+    id: 'abysses', name: 'Abysses', decor: 'reef', difficulty: 4,
+    goal: { id: 'nowall' },
+    opts: { l: 2 },
+    script: 'start S2 B S2 D2 S2 RR S C S2.t OB S2 L S U2 S2.v B S BR S2 C S2.v S2 R S L S2.t S finish',
+    obst: [{ k: 'pendulum', at: 0.55, side: 0, s: 1.1 }],
+    medals: { cristal: 24.7, or: 25.9, argent: 29.8, bronze: 35 },
+  },
+  {
+    id: 'barriere', name: 'Grande Barrière', decor: 'reef', difficulty: 5,
+    goal: { id: 'norespawn' },
+    script: 'start S2 B S2.t RR S2.v C S2 LL S2.t S S.n S2.a R.a S2.a S.n S C S2 OB S2 B S2 BR S2.v S2 L S2.t S finish',
+    obst: [{ k: 'pendulum', at: 0.2, side: 0, s: 1 }, { k: 'sweeper', at: 0.7, side: 0, s: 0.95 }],
+    medals: { cristal: 28.2, or: 30, argent: 34.5, bronze: 40.5 },
+  },
+  // ---- Usine mécanique : obstacles, tapis, moteur coupé, ascenseurs ----
+  {
+    id: 'chaine', name: 'Chaîne de Montage', decor: 'factory', difficulty: 2,
+    goal: { id: 'nowall' },
+    script: 'start S2 B S2.t R S2 C S2 L S2.t S2 RR S2 C S2 B S2 LL S2.t finish',
+    obst: [{ k: 'slider', at: 0.3, side: 0, s: 0.8 }, { k: 'spikes', at: 0.62, side: -5.5, s: 0.7 }],
+    medals: { cristal: 18.7, or: 19.4, argent: 22.3, bronze: 26.1 },
+  },
+  {
+    id: 'laminoir', name: 'Laminoir', decor: 'factory', difficulty: 3,
+    goal: { id: 'turbo', n: 1 },
+    script: 'start S2 B S3.t R S C S2.c S2 L S2 B S2 BR S2 C S2.t S2 R S L S2 B S finish',
+    obst: [{ k: 'hammer', at: 0.4, side: 0, s: 1 }, { k: 'sweeper', at: 0.78, side: 0, s: 0.95 }],
+    medals: { cristal: 21, or: 22.4, argent: 25.7, bronze: 30.2 },
+  },
+  {
+    id: 'engrenages', name: 'Engrenages', decor: 'factory', difficulty: 3,
+    goal: { id: 'norespawn' },
+    params: { offroad: 1 },
+    script: 'start S2 B S2 R S2 S~ S2 C S L S2 B S O S2 C S2 RR S S~ S2 LL S2.t finish',
+    obst: [{ k: 'spikesPop', at: 0.55, side: 5, s: 0.75 }],
+    medals: { cristal: 20.5, or: 21.5, argent: 24.7, bronze: 29 },
+  },
+  {
+    id: 'fonderie', name: 'Fonderie', decor: 'factory', difficulty: 4,
+    goal: { id: 'nowall' },
+    script: 'start S2 B S2 R S2.x S C S2 UU S2.t DD S2 L S2.c S B S2 BR S2 C S2 R S2 L S2 B S2 finish',
+    obst: [{ k: 'hammer', at: 0.25, side: 0, s: 1 }, { k: 'slider', at: 0.6, side: 0, s: 0.85 }, { k: 'bumper', at: 0.85, side: -5.5, s: 0.8 }],
+    medals: { cristal: 24.9, or: 26.5, argent: 30.5, bronze: 35.8 },
+  },
+  {
+    id: 'presse', name: 'Presse Hydraulique', decor: 'factory', difficulty: 4,
+    goal: { id: 'turbo', n: 2 },
+    params: { offroad: 1 },
+    script: 'start S2 B S2 S~ S S= S2 C S2 R S2 L S2.t S RR S2 S~ S2 C S2 LL S2 B S S= S2 finish',
+    obst: [{ k: 'sweeper', at: 0.48, side: 0, s: 0.95 }],
+    medals: { cristal: 21.9, or: 23.3, argent: 26.8, bronze: 31.5 },
+  },
+  {
+    id: 'usinefolle', name: 'Usine Folle', decor: 'factory', difficulty: 5,
+    goal: { id: 'norespawn' },
+    script: 'start S2 B S2.t R S2 C S2.c S QU WA CR S2 B S2 L S2 OB S2 C S2.t BR S2 R S2.x L S2 B S2 finish',
+    obst: [{ k: 'hammer', at: 0.18, side: 0, s: 1 }, { k: 'spikes', at: 0.55, side: 5.5, s: 0.7 }, { k: 'sweeper', at: 0.72, side: 0, s: 0.95 }, { k: 'pendulum', at: 0.9, side: 0, s: 1 }],
+    medals: { cristal: 28.8, or: 30, argent: 34.5, bronze: 40.5 },
+  },
+  // ---- Ville dans les nuages : vent, deltaplane, gravité faible, sauts ----
+  {
+    id: 'envol', name: 'Premier Envol', decor: 'sky', difficulty: 3,
+    goal: { id: 'perfect', n: 1 },
+    script: 'start S2 B S2 GU2 S GD2 S R S2 C S2.w150 S2 L S2 B S UU G2 DD S2 R S2 finish',
+    medals: { cristal: 17.9, or: 18.8, argent: 21.6, bronze: 25.4 },
+  },
+  {
+    id: 'suspendues', name: 'Îles Suspendues', decor: 'sky', difficulty: 3,
+    goal: { id: 'rings', n: 2 },
+    script: 'start S3 S.e S UU GR5 DD S3 S.e S C S2 R S2 L S2 B S.j G1 S2 C S2 B S UU GR2 DD S2 finish',
+    medals: { cristal: 24.8, or: 25.7, argent: 29.6, bronze: 34.8 },
+  },
+  {
+    id: 'rafales', name: 'Rafales', decor: 'sky', difficulty: 4,
+    goal: { id: 'nowall' },
+    script: 'start S2 B S2.w170 R S2.w40 C S2 L S2.w160_ S2 RR S2 B S2 BL S C S2.w30 S R S2 L S2 finish',
+    medals: { cristal: 20.7, or: 21.8, argent: 25.1, bronze: 29.4 },
+  },
+  {
+    id: 'montgolfieres', name: 'Montgolfières', decor: 'sky', difficulty: 4,
+    goal: { id: 'vehicle', v: 'car' },
+    script: 'start S2 B S S.g40 S2 UU GR6 DD S2 S.g100 S2 C S2 R S2 S.e S UU GR6 DD S3 S.e S C S2 L S2 B S2 finish',
+    medals: { cristal: 29, or: 30.1, argent: 34.6, bronze: 40.6 },
+  },
+  {
+    id: 'pontvents', name: 'Pont des Vents', decor: 'sky', difficulty: 5,
+    goal: { id: 'norespawn' },
+    script: 'start S2 B S2_ R_ S2.w150_ C S2_ L_ S2_ B S UU GR2 DD S2 BR S2 C S2.w60_ S2_ R S2 B S2 finish',
+    medals: { cristal: 20.1, or: 21, argent: 24.2, bronze: 28.4 },
+  },
+  {
+    id: 'cite', name: 'Cité Céleste', decor: 'sky', difficulty: 5,
+    goal: { id: 'rings', n: 3 },
+    script: 'start S3 S.e S UU GR5 DD S3 S.e S C S2 B S OB S2 R S2.w160 L S2 C S2 S.g50 S2 UU GR4 DD S.g100 S2 B S BR S2 finish',
+    medals: { cristal: 33.8, or: 35, argent: 40.3, bronze: 47.3 },
+  },
+  // ---- Canyon de cristal : gravité inversée, plafonds, verre, volant inversé ----
+  {
+    id: 'galerie', name: 'Galerie de Cristal', decor: 'caves', difficulty: 3,
+    goal: { id: 'nowall' },
+    script: 'start S2 B S2 R S2 C S2.d L S2 B S2.y S3 R S2 C S2 L S2.i S2 finish',
+    medals: { cristal: 19, or: 19.9, argent: 22.8, bronze: 26.8 },
+  },
+  {
+    id: 'plafond', name: 'Plafond Renversé', decor: 'caves', difficulty: 4,
+    goal: { id: 'norespawn' },
+    opts: { l: 2 },
+    script: 'start S2 B S2 TW.f S2^ C^ S2^ R^ S2^ TWB.f S2 C S2 L S2 B S2 finish',
+    medals: { cristal: 14.2, or: 14.8, argent: 17, bronze: 20 },
+  },
+  {
+    id: 'cristalfele', name: 'Cristal Fêlé', decor: 'caves', difficulty: 4,
+    goal: { id: 'nowall' },
+    script: 'start S2 B S2.v R S2.v C S2 L S2 B S2.v RR S2 C S2.y S2 LL S2.v S2 B S finish',
+    medals: { cristal: 20.5, or: 21.4, argent: 24.6, bronze: 28.9 },
+  },
+  {
+    id: 'miroir', name: 'Miroir', decor: 'caves', difficulty: 4,
+    goal: { id: 'turbo', n: 1 },
+    opts: { l: 1 },
+    script: 'start S2 B S2 S.f V3 S2^ C^ S2^ L^ S2^ S.f^ V-3 S3 C S2 R S2 B S2 finish',
+    medals: { cristal: 14.8, or: 15.5, argent: 17.8, bronze: 20.9 },
+  },
+  {
+    id: 'vrilles', name: 'Vrilles Souterraines', decor: 'caves', difficulty: 5,
+    goal: { id: 'norespawn' },
+    opts: { l: 3 },
+    script: 'start S2 B S2 TW.f S2^ D^ S2^ C^ S2^ U^ S^ TWB.f S2 C S2 R S2 TW.f S2^ R^ S2^ TWB.f S2 B S2 finish',
+    medals: { cristal: 19.6, or: 20.5, argent: 23.5, bronze: 27.6 },
+  },
+  {
+    id: 'coeur', name: 'Cœur de la Montagne', decor: 'caves', difficulty: 5,
+    goal: { id: 'norespawn' },
+    opts: { l: 2 },
+    script: 'start S2 B S2 TW.f S2^ C^ S2^ L^ S2^ TWB.f S2.v R S2 C S2.y S2 L S2 B S2 S.f V3 S2^ R^ S2^ S.f^ V-3 S3 C S2 B S2 finish',
+    obst: [{ k: 'pendulum', at: 0.47, side: 0, s: 1 }],
+    medals: { cristal: 26.2, or: 28.9, argent: 33.2, bronze: 39 },
+  },
 ];
+
+// 0.9 : un chapitre de carrière = un thème. Chapitres du plus facile au plus dur, et
+// dans chaque chapitre du plus facile au plus dur (tri stable : l'ordre d'écriture
+// départage les circuits de même difficulté).
+export const THEME_ORDER = ['desert', 'jungle', 'isles', 'city', 'polar', 'volcano', 'orbit', 'reef', 'factory', 'sky', 'caves'];
+BUILTIN_TRACKS.sort((a, b) => THEME_ORDER.indexOf(a.decor) - THEME_ORDER.indexOf(b.decor) || a.difficulty - b.difficulty);
 
 export function buildBuiltin(def) {
   const t = scriptTrack(def.name, def.script, { ...(def.opts || {}), decor: def.decor || 'desert' });
   t.author = 'Copytrack';
+  if (def.params) t.setParams(def.params);
   // Circuit à plusieurs tours : le chemin du pilote automatique est répété.
   if (def.laps > 1) {
     t.laps = def.laps;
     const one = t.path.slice();
     for (let k = 1; k < def.laps; k++) t.path.push(...one.slice(1));
   }
-  // Éclat secret (easter egg) : posé au bord de la route, à une fraction du parcours.
-  if (def.shard && t.path && t.path.length > 10) {
-    const i = Math.min(t.path.length - 2, Math.floor(t.path.length * def.shard[0]));
-    const a = t.path[i], b = t.path[i + 1];
-    const dx = b[0] - a[0], dz = b[2] - a[2];
-    const l = Math.hypot(dx, dz) || 1;
-    t.addDeco({ k: 'shard', x: a[0] + (-dz / l) * def.shard[1], y: a[1], z: a[2] + (dx / l) * def.shard[1], ry: 0, s: 1, c: 0 });
+  // Obstacles posés le long du parcours : at = fraction du chemin, side = décalage latéral (m).
+  if (def.obst && t.path && t.path.length > 10) {
+    const P = t.path, n = def.laps > 1 ? Math.floor(P.length / def.laps) : P.length;
+    for (const o of def.obst) {
+      const i = Math.min(n - 2, Math.floor(n * o.at));
+      const a = P[i], b = P[i + 1];
+      const dx = b[0] - a[0], dz = b[2] - a[2], l = Math.hypot(dx, dz) || 1;
+      t.addDeco({ k: o.k, x: a[0] + (-dz / l) * (o.side || 0), y: a[1], z: a[2] + (dx / l) * (o.side || 0), ry: Math.atan2(dx / l, dz / l), s: o.s || 1, c: 0, ph: o.ph || 0 });
+    }
   }
   return t;
 }

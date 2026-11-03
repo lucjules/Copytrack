@@ -2,12 +2,12 @@
 // d'enregistrer les commandes de chaque pas pour rejouer une course à l'identique.
 // Une commande = volant quantifié au centième + gaz / frein / réapparition.
 import { CarPhysics } from './physics.js';
-import { RaceLogic } from './raceLogic.js';
+import { RaceLogic, placeAtStart } from './raceLogic.js';
 import { Autopilot } from './autopilot.js';
 import { b64encode, b64decode } from './track.js';
 
 // À incrémenter dès que la physique change : les replays d'une autre version sont ignorés.
-export const PHYS_VER = 15;
+export const PHYS_VER = 16;
 
 export const quantSteer = (s) => Math.round(Math.max(-1, Math.min(1, s || 0)) * 100) / 100;
 
@@ -78,8 +78,7 @@ export class GhostRunner {
 
   reset() {
     this.logic.reset();
-    const sp = this.logic.spawnPoint();
-    this.phys.place(sp.x, sp.y, sp.z, sp.yaw);
+    placeAtStart(this.phys, this.logic);
     if (this.bot) this.bot.reset(this.phys);
     this.k = 0;
     this.groundT = 0;
@@ -92,19 +91,20 @@ export class GhostRunner {
     if (this.bot) inp = this.bot.control(this.phys);
     else inp = inputAt(this.rep, this.k);
     if (inp.respawn) {
-      const r = this.logic.respawn;
-      this.phys.place(r.x, r.y, r.z, r.yaw);
+      const r = this.logic.rewind();
+      this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
       this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
     }
+    this.phys.clock = this.logic.steps;
     this.phys.step(inp);
     const sink = this.phys.ev.sink;
     const ev = this.logic.update(this.phys);
     // Mêmes réapparitions automatiques qu'en course (hors piste 0,5 s, noyade).
-    if (this.phys.grounded && this.phys.surfType === 'ground') this.groundT += 1 / 120; else this.groundT = 0;
+    if (this.phys.offTrack) this.groundT += 1 / 120; else this.groundT = 0;
     if (this.groundT > 0.5 || sink) {
       this.groundT = 0;
-      const r = this.logic.respawn;
-      this.phys.place(r.x, r.y, r.z, r.yaw);
+      const r = this.logic.rewind();
+      this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
       this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
     }
     if (ev && ev.type === 'finish') this.done = true;

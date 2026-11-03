@@ -220,7 +220,7 @@ export class UI {
     if (info.reward) {
       rw.innerHTML = `+${info.reward.coins} ◆ pièces${info.reward.first ? '<small>Bonus : première fois à ce niveau de médaille ×2</small>' : ''}`;
     } else if (info.verified) {
-      rw.innerHTML = 'Circuit vérifié ✔<small>Ton temps devient la médaille bronze, les autres sont déduites.</small>';
+      rw.innerHTML = 'Circuit vérifié ✔<small>Ton temps devient la médaille cristal, les autres sont déduites.</small>';
     } else if (info.unverifiedUser) {
       rw.innerHTML = '<small>Circuit non vérifié : pas de médailles ni de pièces.</small>';
     } else rw.innerHTML = '';

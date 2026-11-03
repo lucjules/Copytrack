@@ -80,7 +80,8 @@ export const SURFACES = {
   boost:   { label: 'Accélérateur', param: 'Puissance', def: 100, min: 5, max: 200, inv: true, c: ['#3a7bff', '#36e9ff', '#fff25a'] },
   bounce:  { label: 'Rebond', param: 'Hauteur', def: 100, min: 30, max: 200, flat: true, c: ['#a05fff', '#ff5fd2', '#ff9f5f'] },
   sand:    { label: 'Sable', param: 'Freinage', def: 100, min: 30, max: 250, inv: true, c: ['#e6cf9c', '#c9a26b', '#a47a45'] },
-  magnet:  { label: 'Aimant', param: 'Force', def: 100, min: 50, max: 250, c: ['#8f7cff', '#b48cff', '#e56bff'] },
+  // 0.9 : plus de réglage, l'aimant colle toujours au maximum.
+  magnet:  { label: 'Aimant', c: ['#b48cff', '#b48cff', '#b48cff'] },
   mud:     { label: 'Boue', param: 'Épaisseur', def: 100, min: 30, max: 250, inv: true, c: ['#8a6a4a', '#6b4a32', '#4a3020'] },
   drift:   { label: 'Dérive', param: 'Glisse', def: 100, min: 30, max: 200, c: ['#ffb84d', '#ff8c42', '#ff5a3c'] },
   slow:    { label: 'Ralentisseur', param: 'Freinage', def: 100, min: 30, max: 300, inv: true, c: ['#ffc84d', '#ff6b57', '#c4172e'] },
@@ -91,9 +92,17 @@ export const SURFACES = {
   water:   { label: 'Eau', flat: true, c: ['#3fa7ff', '#3fa7ff', '#3fa7ff'] },
   boat:    { label: 'Plaque bateau', flat: true, c: ['#3fd0ff', '#3fd0ff', '#3fd0ff'] },
   glider:  { label: 'Plaque deltaplane', c: ['#f5f5f5', '#f5f5f5', '#f5f5f5'] },
+  // 0.9 : inverse le sens de la gravité (une 2e plaque la remet à l'endroit).
+  flip:    { label: 'Inversion de gravité', c: ['#ff4fd8', '#ff4fd8', '#ff4fd8'] },
+  conveyor: { label: 'Tapis roulant', param: '↓ Vitesse ↑', def: 150, min: 1, max: 200, c: ['#ffd23e', '#ffd23e', '#ffd23e'] },
+  spring:  { label: 'Ressort latéral', param: '← Force →', def: 150, min: 1, max: 200, c: ['#5dff8a', '#5dff8a', '#5dff8a'] },
+  glass:   { label: 'Verre fragile', param: 'Vitesse mini', def: 100, min: 30, max: 200, inv: true, c: ['#d9f4ff', '#a8e4ff', '#6fcfff'] },
+  powder:  { label: 'Poudreuse', param: 'Épaisseur', def: 100, min: 30, max: 250, inv: true, c: ['#ffffff', '#e4f1ff', '#bcd9ff'] },
+  reverse: { label: 'Volant inversé', c: ['#c05fff', '#c05fff', '#c05fff'] },
+  cut:     { label: 'Moteur coupé', c: ['#ff3b3b', '#ff3b3b', '#ff3b3b'] },
 };
 // Ne jamais réordonner, seulement ajouter.
-export const SURFACE_ORDER = ['', 'ice', 'boost', 'bounce', 'sand', 'magnet', 'mud', 'drift', 'slow', 'wind', 'gravity', 'moto', 'water', 'boat', 'glider'];
+export const SURFACE_ORDER = ['', 'ice', 'boost', 'bounce', 'sand', 'magnet', 'mud', 'drift', 'slow', 'wind', 'gravity', 'moto', 'water', 'boat', 'glider', 'flip', 'conveyor', 'spring', 'glass', 'powder', 'reverse', 'cut'];
 // Plaques de transformation : véhicule obtenu (repasser sur la même plaque ramène la voiture).
 export const PLATES = { moto: 'moto', boat: 'boat', glider: 'glider' };
 
@@ -110,12 +119,19 @@ export function isRibbonKind(type) {
 
 // Sol roulable (physique « au sol ») ? Les rubans et les routes à l'envers ne le sont pas.
 export function isFloor(tile) {
-  return !tile.v && PIECES[tile.t].kind !== 'ribbon';
+  const k = PIECES[tile.t].kind;
+  return !tile.v && k !== 'ribbon' && k !== 'ring';
+}
+
+// Sol « au plafond » (pièce posée à l'envers) : roulable seulement en gravité inversée.
+export function isCeilingFloor(tile) {
+  const k = PIECES[tile.t].kind;
+  return !!tile.v && k !== 'ribbon' && k !== 'ring';
 }
 
 // Pièce parcourue en mode ruban (au moins en partie) ?
 export function isRibbon(tile) {
-  return !!tile.v || isRibbonKind(tile.t);
+  return isRibbonKind(tile.t);
 }
 
 // Drapeaux possibles : v (à l'envers), nb (sans bordures), tn (tunnel).
@@ -123,10 +139,13 @@ export function flagAllowed(type, flag, tile = null) {
   const p = PIECES[type];
   if (!p) return false;
   const lineLike = p.kind === 'line' || p.kind === 'arc';
-  if (flag === 'v') return lineLike && !p.special && Number.isInteger(p.rise);
+  // 0.9 : toutes les pièces peuvent être posées à l'envers (retournées sous leur niveau).
+  if (flag === 'v') return true;
   if (p.kind === 'ring' || p.kind === 'fork') return false;
   if (flag === 'nb') return lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube'));
   if (flag === 'tn') return lineLike && !p.special && !(tile && tile.v);
+  // Pièce mobile : route « simple » (droite, virage, pente, plateforme), pas à l'envers.
+  if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !(tile && tile.v);
   return false;
 }
 
@@ -135,13 +154,19 @@ export function surfaceAllowed(type, s, v = false) {
   const p = PIECES[type];
   const S = SURFACES[s];
   if (!p || !S) return false;
-  // Sections de tube : accélérateur et gravité autorisés (pour aider à faire des tours).
-  if (p.tubeSurf) return s === 'boost' || s === 'gravity';
-  if (p.kind === 'loop' || p.kind === 'ribbon' || p.kind === 'ring') return false;
-  if (s === 'water' && (p.special || p.kind === 'fork')) return false;
-  if (v && !S.inv) return false;
-  if (S.flat && p.rise) return false;
-  return true;
+  return surfaceRule(p, S, s) === '';
+}
+
+// 0.9 : tous les revêtements vont sur toutes les pièces de route, sauf quelques cas
+// physiquement impossibles. Renvoie '' si c'est permis, sinon la raison (tableau de
+// compatibilité de l'éditeur). v (pièce à l'envers) ne change rien : au plafond, en
+// gravité inversée, les revêtements marchent pareil.
+export function surfaceRule(p, S, s) {
+  if (p.kind === 'ring') return 'pas de route dans un anneau';
+  const curved = p.kind === 'loop' || p.kind === 'ribbon';
+  if (S.flat && (p.rise || curved)) return 'seulement sur du plat';
+  if (s === 'water' && (p.special || p.kind === 'fork')) return 'pas sur une pièce spéciale ni une bifurcation';
+  return '';
 }
 
 export function baseY(tile) {

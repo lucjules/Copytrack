@@ -883,3 +883,34 @@ body.touch kbd { display: none; }
 .board li i { font-style: normal; font-variant-numeric: tabular-nums; font-weight: 700; }
 .board-btn { margin-left: auto; padding: 2px 8px !important; font-size: 13px !important; min-height: 0 !important; }
 .card .best { display: flex; align-items: center; gap: 6px; }
+
+/* ---------- 0.9 : éditeur ---------- */
+/* Palette sur toute la largeur, jusqu'à 3 lignes de pièces (puis défilement). */
+.ed-palette { left: 10px; right: 92px; transform: none; max-width: none; bottom: 34px; overflow-x: hidden; }
+.ed-palette .pal-row { flex-wrap: wrap; align-content: flex-start; max-height: 252px; overflow-y: auto; padding-right: 2px; }
+.ed-palette .piece-btn { width: 68px; min-width: 68px; }
+.ed-palette .piece-btn svg { width: 40px; height: 40px; }
+.ed-palette .pal-row.surf .piece-btn { width: 68px; min-width: 68px; }
+.pal-param { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pal-deco-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ed-top .btn.primary { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25), 0 4px 18px rgba(255, 95, 162, 0.35); }
+
+.form.ed-params { gap: 12px; min-width: min(460px, 82vw); }
+.form label.col { flex-direction: column; align-items: stretch; gap: 6px; }
+.form textarea {
+  font: inherit; color: var(--text); background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; resize: vertical;
+  -webkit-user-select: text; user-select: text;
+}
+.form .inl { display: flex; align-items: center; gap: 8px; }
+.form .inl b { min-width: 64px; text-align: right; }
+.card .desc { margin: 2px 0 6px; font-size: 13px; color: var(--text); opacity: 0.85; line-height: 1.35; }
+
+@media (max-height: 500px) {
+  .ed-palette { right: 70px; bottom: 6px; }
+  .ed-palette .pal-row { max-height: 128px; }
+  .ed-palette .piece-btn, .ed-palette .pal-row.surf .piece-btn { width: 54px; min-width: 54px; }
+  .ed-palette .piece-btn svg { width: 28px; height: 28px; }
+}
+/* Le panneau d'état suit la hauteur réelle de la barre du haut (qui peut passer sur 2 lignes). */
+.ed-status { top: calc(var(--ed-top-h, 54px) + 10px); pointer-events: none; }
