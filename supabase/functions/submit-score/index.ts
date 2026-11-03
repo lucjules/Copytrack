@@ -2,11 +2,15 @@
 //
 // Reçoit une course terminée (clé du circuit, commandes enregistrées, temps), la REJOUE
 // avec le vrai code du jeu, et n'enregistre le temps que s'il est confirmé.
-// Le code du jeu est chargé depuis le site publié (GAME_URL), donc toujours à jour.
+//
+// Le code du jeu (physique, circuits) est importé depuis le site publié AU MOMENT DU
+// DÉPLOIEMENT : quand la physique du jeu change (PHYS_VER), il faut redéployer cette
+// fonction (bouton « Deploy updates ») ; en attendant, les temps sont refusés avec un
+// message clair plutôt que mal vérifiés.
 // La clé secrète (SUPABASE_SERVICE_ROLE_KEY) est fournie automatiquement par Supabase
 // à la fonction : elle n'apparaît nulle part dans le jeu.
+import { verifyRun } from 'https://lucjules.github.io/Copytrack/js/verify.js';
 
-const GAME_URL = Deno.env.get('GAME_URL') ?? 'https://lucjules.github.io/Copytrack';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
@@ -17,13 +21,6 @@ const cors = {
 };
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
-
-// deno-lint-ignore no-explicit-any
-let game: any = null;
-async function loadGame() {
-  if (!game) game = await import(`${GAME_URL}/js/verify.js`);
-  return game;
-}
 
 const db = (path: string, init: RequestInit = {}) =>
   fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -60,9 +57,9 @@ Deno.serve(async (req) => {
     if (typeof code !== 'string' || code.length > 100000) return json(400, { error: 'Code de circuit invalide.' });
 
     // 3. Rejeu de la course avec le code du jeu.
-    const v = await loadGame();
-    const res = v.verifyRun({ trackKey, code, inputs, time, physVer });
-    if (!res.ok) return json(422, { error: res.error });
+    const res = verifyRun({ trackKey, code, inputs, time, physVer });
+    if (!res.ok || typeof res.time !== 'number') return json(422, { error: res.error ?? 'Course non confirmée.' });
+    const simTime: number = res.time;
 
     // 4. Le profil du pilote doit exister.
     const prof = await (await db(`players?id=eq.${uid}&select=id`)).json();
@@ -71,9 +68,9 @@ Deno.serve(async (req) => {
     // 5. On garde le meilleur temps du pilote sur ce circuit.
     const key = encodeURIComponent(trackKey);
     const prev = await (await db(`scores?track_key=eq.${key}&player=eq.${uid}&select=time,phys_ver`)).json();
-    let best = res.time;
+    let best = simTime;
     let improved = true;
-    if (Array.isArray(prev) && prev.length && prev[0].phys_ver === physVer && prev[0].time <= res.time) {
+    if (Array.isArray(prev) && prev.length && prev[0].phys_ver === physVer && prev[0].time <= simTime) {
       best = prev[0].time;
       improved = false;
     }
@@ -82,7 +79,7 @@ Deno.serve(async (req) => {
         method: 'POST',
         headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify({
-          track_key: trackKey, player: uid, time: res.time, inputs, phys_ver: physVer,
+          track_key: trackKey, player: uid, time: simTime, inputs, phys_ver: physVer,
           track_name: String(res.name ?? '').slice(0, 60), updated_at: new Date().toISOString(),
         }),
       });

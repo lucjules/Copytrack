@@ -20,6 +20,9 @@ function explain(status, body) {
   if (/anonymous/i.test(msg) && /disabled/i.test(msg)) return new OnlineError('Connexion anonyme désactivée dans Supabase (Authentication › Sign In / Providers › Allow anonymous sign-ins).', 'anon-disabled');
   if (body && body.code === '42P01' || /relation .* does not exist|Could not find the table/i.test(msg)) return new OnlineError('La base n’est pas encore prête (script SQL de l’étape 1 à lancer dans Supabase).', 'no-schema');
   if (body && body.code === '23505') return new OnlineError('Ce circuit est déjà publié.', 'duplicate');
+  if (status === 404 && body && body.code === 'NOT_FOUND' && /function/i.test(msg)) {
+    return new OnlineError('Fonction serveur « submit-score » introuvable dans Supabase (elle doit être déployée sous ce nom exact).', 'no-function');
+  }
   if (/Trop de publications/.test(msg)) return new OnlineError(msg, 'rate');
   if (status === 401 || status === 403) return new OnlineError('Accès refusé par le serveur.', 'denied');
   return new OnlineError(msg || `Erreur du serveur (${status}).`, 'http');

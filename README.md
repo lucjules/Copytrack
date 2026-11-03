@@ -79,7 +79,8 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
 1. **Communauté** : `supabase/etape1-communaute.sql` (tables des pilotes et circuits publiés, règles de sécurité).
 2. **Classements** : `supabase/etape2-classements.sql` (table des temps, en lecture seule pour le jeu) et la fonction serveur
    `supabase/functions/submit-score/index.ts`. Elle rejoue chaque course (commandes enregistrées, physique déterministe) avec le code
-   du jeu publié (`GAME_URL`, par défaut `https://lucjules.github.io/Copytrack`) avant d'accepter un temps : un faux temps est refusé.
+   du jeu publié (importé depuis `https://lucjules.github.io/Copytrack` au déploiement) avant d'accepter un temps : un faux temps est refusé.
+   Elle doit s'appeler exactement `submit-score`. Quand la physique du jeu change (`PHYS_VER`), il faut la redéployer pour qu'elle reprenne le nouveau code.
 
 Seules l'URL du projet et la clé publique sont dans `js/online.js`. La clé secrète n'est jamais dans le jeu : seule la fonction serveur l'utilise, côté Supabase.
 
