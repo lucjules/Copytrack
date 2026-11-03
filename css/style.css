@@ -853,3 +853,12 @@ body.touch kbd { display: none; }
 /* ---- v1.5 : tutoriel ---- */
 .tuto { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 8px; line-height: 1.45; }
 .tuto-step { font-size: 13px; font-weight: 500; color: var(--muted, #a99fd0); margin-left: 8px; }
+
+/* ---- 0.6 : menu principal sur écran bas (téléphone en paysage) ---- */
+@media (max-height: 520px) {
+  .menu-left .logo { font-size: clamp(30px, 6vw, 46px); }
+  .menu-left .tagline { margin: 2px 0 10px; }
+  .menu-buttons { display: grid; grid-template-columns: 1fr 1fr; width: min(560px, 100%); gap: 6px; }
+  .menu-buttons .btn.big { padding: 7px 10px; font-size: 14px; }
+  .menu-foot { display: none; }
+}

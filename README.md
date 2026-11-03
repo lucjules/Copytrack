@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.5**
+Version actuelle : **bêta 0.6**
 
 ## Jouer
 
@@ -71,6 +71,15 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 - **Options** : volume des effets et de la musique, qualité graphique (haute, moyenne, basse), compteur d'images, champ de vision, effet de vitesse, tremblements de caméra, **couleurs adaptées au daltonisme**, taille de l'interface, fantômes.
 - **Tutoriel** au premier lancement. Commandes personnalisables (clavier, manette), mobile (boutons ou glisser du pouce), vibrations.
 - **Easter eggs** : à toi de les trouver.
+
+## Bêta 0.6
+
+- **Bosses réalistes** : quand une pente monte puis redescend (ou passe au plat), la route « tombe » sous la voiture et elle décolle, d'autant plus haut qu'elle va vite. Avant, elle restait collée au sol comme sur un revêtement Aimant (seul l'Aimant garde cet effet).
+- Une bosse de pente se prend sans perte de vitesse à la réception (tolérance d'assiette un peu plus large).
+- Un checkpoint passé en sautant juste au-dessus compte bien.
+- Éditeur : Ctrl + C / V / X / Z ne déclenchent plus en même temps l'action de la touche seule (niveau −, vrille, gomme, vue par niveau) ; « Tester ici » part dans le bon sens.
+- Téléphone en paysage : le menu principal tient sur l'écran (deux colonnes).
+- La barre de replay disparaît toujours en quittant un replay ; le klaxon est indiqué dans l'aide de course.
 
 ## Bêta 0.5
 

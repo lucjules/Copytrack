@@ -95,6 +95,7 @@ class App {
   // ------------------------------------------------------------ Navigation
   _dispose() {
     $('garage').classList.add('hidden');
+    $('replay-bar').classList.add('hidden');
     if (this.session) this.session.dispose();
     this.session = null;
     this.ui.closeModal();

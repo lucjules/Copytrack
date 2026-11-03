@@ -45,7 +45,7 @@ class Hud {
     this.time(0);
     const inp = session.app.input;
     const k = (id) => (inp.bindings[id] || []).filter(Boolean).map(keyLabel).join(' / ') || '—';
-    e.hint.textContent = `${k('accelerate')} ${k('brake')} ${k('left')} ${k('right')} · freiner en virage : dérapage · ${k('respawn')} : dernier checkpoint · ${k('restart')} : recommencer · ${k('camera')} : caméra · ${k('pause')} : pause`;
+    e.hint.textContent = `${k('accelerate')} ${k('brake')} ${k('left')} ${k('right')} · freiner en virage : dérapage · ${k('respawn')} : dernier checkpoint · ${k('restart')} : recommencer · ${k('camera')} : caméra · ${k('horn')} : klaxon · ${k('pause')} : pause`;
     e.hint.style.opacity = '1';
     clearTimeout(this._hintT);
     this._hintT = setTimeout(() => { e.hint.style.opacity = '0'; }, 7000);

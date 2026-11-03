@@ -898,7 +898,14 @@ export class EditorSession {
     const t = this._hoverTile();
     if (!t || ['ring', 'area'].includes(PIECES[t.t].kind)) { this.app.ui.flash('Vise une pièce de route pour tester à partir d\'elle.'); this.app.audio.error(); return; }
     if (this.track.count('finish') === 0) { this.app.ui.flash('Il faut au moins une arrivée.'); this.app.audio.error(); return; }
-    const pts = centerlineWorld(t, 6);
+    let pts = centerlineWorld(t, 6);
+    // Sens de départ : celui qui s'éloigne de la pièce de départ du circuit.
+    const st = this.track.startTile;
+    if (st && st !== t) {
+      const sp = centerlineWorld(st, 2)[1];
+      const d = (p) => Math.hypot(p[0] - sp[0], p[2] - sp[2]);
+      if (d(pts[0]) > d(pts[pts.length - 1])) pts = pts.slice().reverse();
+    }
     const a = pts[0], b = pts[1];
     const yaw = Math.atan2(-(b[0] - a[0]), -(b[2] - a[2]));
     this.app.testTrack(this.exportState(), { x: a[0] + (b[0] - a[0]) * 0.5, y: a[1], z: a[2] + (b[2] - a[2]) * 0.5, yaw });
@@ -1055,6 +1062,9 @@ export class EditorSession {
     const shift = input.down('ShiftLeft', 'ShiftRight');
     const ctrl = input.down('ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight');
     const selMode = this.tool === 'select' && this.sel && !this.pasting;
+    // Ctrl / Cmd enfoncé : la touche sert au raccourci (copier, coller, annuler...),
+    // pas à son action seule (C = niveau −, V = vrille, X = gomme...).
+    if (ctrl) { this._render(dt); return; }
     if (input.act('ed.rotate')) { if (this.pasting) this.rotateClipboard(); else this.rotate(shift ? -1 : 1); }
     if (input.act('ed.levelUp')) { if (selMode) this.shiftSel(1); else this.setLevel(this.level + 1); }
     if (input.act('ed.levelDown')) { if (selMode) this.shiftSel(-1); else this.setLevel(this.level - 1); }
