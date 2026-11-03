@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node tools/serve.mjs",
     "sim": "node tools/sim.mjs",
-    "sw": "node tools/gen-sw.mjs"
+    "sw": "node tools/gen-sw.mjs",
+    "build:function": "node tools/build-function.mjs"
   },
   "license": "MIT"
 }
