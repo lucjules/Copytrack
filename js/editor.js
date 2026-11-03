@@ -53,7 +53,7 @@ const MIRROR = {
   cork: 'corkL', corkL: 'cork', fork: 'forkL', forkL: 'fork',
 };
 const MODS = [
-  { id: 'mod:v', flag: 'v', label: 'À l\'envers', hint: 'Route au plafond (sur du plat, la voiture tombe)' },
+  { id: 'mod:v', flag: 'v', label: 'À l\'envers', hint: 'Route au plafond : roulable seulement en gravité inversée (plaque d’inversion)' },
   { id: 'mod:nb', flag: 'nb', label: 'Sans bordures', hint: 'Plus de rebord : on peut tomber' },
   { id: 'mod:tn', flag: 'tn', label: 'Tunnel', hint: 'Voûte autour de la route' },
 ];
@@ -118,6 +118,7 @@ export const ICONS = {
   'surf:boat': svg(`${straightBase('#22343f', '#3fd0ff')}<path d="M12 28h24l-4 8H16z" fill="#3fd0ff"/><path d="M24 28V12l8 10h-8" stroke="#3fd0ff" stroke-width="2" fill="none"/>`),
   'surf:glider': svg(`${straightBase('#2f3346', '#f5f5f5')}<path d="M24 10L8 30h32z" fill="#f5f5f5"/><path d="M24 30v8M18 38h12" stroke="#f5f5f5" stroke-width="2"/>`),
   'surf:gravity': svg(`${straightBase('#233a3a', '#a7ffe0')}<circle cx="24" cy="24" r="7" stroke="#a7ffe0" stroke-width="2.5" fill="none"/><path d="M24 6v8M20 10l4-4 4 4M24 42v-8M20 38l4 4 4-4" stroke="#a7ffe0" stroke-width="2.2" fill="none"/>`),
+  'surf:flip': svg(`${straightBase('#3a1f3f', '#ff4fd8')}<path d="M10 24h28" stroke="#ff4fd8" stroke-width="3"/><path d="M18 18V8M14 12l4-4 4 4M30 30v10M26 36l4 4 4-4" stroke="#ff4fd8" stroke-width="2.5" fill="none"/>`),
   'surf:moto': svg(`${straightBase('#3b2e22', '#ff9f1c')}<circle cx="17" cy="32" r="5" stroke="#ff9f1c" stroke-width="2.5" fill="none"/><circle cx="31" cy="32" r="5" stroke="#ff9f1c" stroke-width="2.5" fill="none"/><path d="M17 32l6-10h7l1 10M26 22l-2-5h-4" stroke="#ff9f1c" stroke-width="2.5" fill="none"/>`),
   'mod:v': svg(`${straightBase('#2b2d44', '#8f7cff')}<path d="M24 12v24M16 28l8 8 8-8" stroke="#ffbf3c" stroke-width="3" fill="none"/><path d="M8 8h32" stroke="#8f7cff" stroke-width="3"/>`),
   'mod:nb': svg(`<rect x="10" y="2" width="28" height="44" fill="${ROAD}"/><path d="M24 6v8M24 20v8M24 34v8" stroke="${LINE}" stroke-width="2"/><path d="M8 2v44M40 2v44" stroke="#ff5a6e" stroke-width="2" stroke-dasharray="3 3"/>`),
@@ -299,7 +300,7 @@ export class EditorSession {
     panels.mods.appendChild(rowM);
     const hint = document.createElement('div');
     hint.className = 'pal-hint';
-    hint.textContent = 'Choisis une option puis clique sur une pièce pour l\'activer ou la désactiver. Physique réelle : à l\'envers, rien ne retient la voiture sur une route plate, elle tombe. Seule la courbure d\'un looping, prise assez vite, la plaque contre la route.';
+    hint.textContent = 'Choisis une option puis clique sur une pièce pour l\'activer ou la désactiver. Toute pièce peut être posée à l\'envers (au moins un niveau au-dessus du sol) : on ne peut y rouler qu\'en gravité inversée. Une plaque « Inversion de gravité » projette la voiture vers le haut, une pièce à l\'envers la réceptionne ; une 2e plaque la remet à l\'endroit. Sur une vrille, la plaque fait passer au plafond en douceur.';
     panels.mods.appendChild(hint);
 
     const dTop = document.createElement('div');
@@ -741,6 +742,7 @@ export class EditorSession {
     const key = `${tile.x},${tile.z},${tile.l}`;
     if (painting && key === this._lastPaint) return;
     this._lastPaint = key;
+    if (!Track.inBounds(Track.normalize(tile))) { if (!painting) { this.app.ui.flash('Cette pièce sortirait des niveaux (à l’envers, elle pend sous son niveau : monte d’abord).'); this.app.audio.error(); } return; }
     const conflicts = this.track.conflicts(tile);
     if (conflicts.length === 1) {
       const c = conflicts[0];
@@ -912,7 +914,8 @@ export class EditorSession {
     }
     const a = pts[0], b = pts[1];
     const yaw = Math.atan2(-(b[0] - a[0]), -(b[2] - a[2]));
-    this.app.testTrack(this.exportState(), { x: a[0] + (b[0] - a[0]) * 0.5, y: a[1], z: a[2] + (b[2] - a[2]) * 0.5, yaw });
+    const gs = t.v && PIECES[t.t].kind !== 'ribbon' && PIECES[t.t].kind !== 'loop' ? -1 : 1;
+    this.app.testTrack(this.exportState(), { x: a[0] + (b[0] - a[0]) * 0.5, y: a[1], z: a[2] + (b[2] - a[2]) * 0.5, yaw, gs });
   }
 
   test() {
@@ -1051,7 +1054,8 @@ export class EditorSession {
     this.previewKey = key;
     this._clearPreview();
     const conflicts = this.track.conflicts(cand);
-    const same = conflicts.length === 1 && ['t', 'x', 'z', 'l', 'r'].every((k) => conflicts[0][k] === cand[k]);
+    if (!Track.inBounds(Track.normalize(cand))) conflicts.push(null);
+    const same = conflicts.length === 1 && conflicts[0] && ['t', 'x', 'z', 'l', 'r'].every((k) => conflicts[0][k] === cand[k]);
     this.previewMat.emissive.set(conflicts.length && !same ? '#ff2244' : '#000000');
     this.previewMat.emissiveIntensity = 0.45;
     this.preview.add(buildTileMesh(Track.normalize(cand), this.previewMat, this.previewGlow));

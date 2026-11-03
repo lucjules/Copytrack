@@ -92,9 +92,11 @@ export const SURFACES = {
   water:   { label: 'Eau', flat: true, c: ['#3fa7ff', '#3fa7ff', '#3fa7ff'] },
   boat:    { label: 'Plaque bateau', flat: true, c: ['#3fd0ff', '#3fd0ff', '#3fd0ff'] },
   glider:  { label: 'Plaque deltaplane', c: ['#f5f5f5', '#f5f5f5', '#f5f5f5'] },
+  // 0.9 : inverse le sens de la gravité (une 2e plaque la remet à l'endroit).
+  flip:    { label: 'Inversion de gravité', c: ['#ff4fd8', '#ff4fd8', '#ff4fd8'] },
 };
 // Ne jamais réordonner, seulement ajouter.
-export const SURFACE_ORDER = ['', 'ice', 'boost', 'bounce', 'sand', 'magnet', 'mud', 'drift', 'slow', 'wind', 'gravity', 'moto', 'water', 'boat', 'glider'];
+export const SURFACE_ORDER = ['', 'ice', 'boost', 'bounce', 'sand', 'magnet', 'mud', 'drift', 'slow', 'wind', 'gravity', 'moto', 'water', 'boat', 'glider', 'flip'];
 // Plaques de transformation : véhicule obtenu (repasser sur la même plaque ramène la voiture).
 export const PLATES = { moto: 'moto', boat: 'boat', glider: 'glider' };
 
@@ -111,12 +113,19 @@ export function isRibbonKind(type) {
 
 // Sol roulable (physique « au sol ») ? Les rubans et les routes à l'envers ne le sont pas.
 export function isFloor(tile) {
-  return !tile.v && PIECES[tile.t].kind !== 'ribbon';
+  const k = PIECES[tile.t].kind;
+  return !tile.v && k !== 'ribbon' && k !== 'ring';
+}
+
+// Sol « au plafond » (pièce posée à l'envers) : roulable seulement en gravité inversée.
+export function isCeilingFloor(tile) {
+  const k = PIECES[tile.t].kind;
+  return !!tile.v && k !== 'ribbon' && k !== 'ring';
 }
 
 // Pièce parcourue en mode ruban (au moins en partie) ?
 export function isRibbon(tile) {
-  return !!tile.v || isRibbonKind(tile.t);
+  return isRibbonKind(tile.t);
 }
 
 // Drapeaux possibles : v (à l'envers), nb (sans bordures), tn (tunnel).
@@ -124,7 +133,8 @@ export function flagAllowed(type, flag, tile = null) {
   const p = PIECES[type];
   if (!p) return false;
   const lineLike = p.kind === 'line' || p.kind === 'arc';
-  if (flag === 'v') return lineLike && !p.special && Number.isInteger(p.rise);
+  // 0.9 : toutes les pièces peuvent être posées à l'envers (retournées sous leur niveau).
+  if (flag === 'v') return true;
   if (p.kind === 'ring' || p.kind === 'fork') return false;
   if (flag === 'nb') return lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube'));
   if (flag === 'tn') return lineLike && !p.special && !(tile && tile.v);
@@ -138,9 +148,11 @@ export function surfaceAllowed(type, s, v = false) {
   if (!p || !S) return false;
   // Sections de tube : accélérateur et gravité autorisés (pour aider à faire des tours).
   if (p.tubeSurf) return s === 'boost' || s === 'gravity';
+  // Vrille + inversion : la gravité tourne avec la route, on ressort au plafond.
+  if (s === 'flip' && type === 'twist') return true;
   if (p.kind === 'loop' || p.kind === 'ribbon' || p.kind === 'ring') return false;
   if (s === 'water' && (p.special || p.kind === 'fork')) return false;
-  if (v && !S.inv) return false;
+  void v; // 0.9 : en gravité inversée, tous les revêtements marchent aussi au plafond.
   if (S.flat && p.rise) return false;
   return true;
 }

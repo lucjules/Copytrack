@@ -44,7 +44,7 @@ function tryBuild(tokens, decor) {
 // Course du pilote automatique ; renvoie le temps ou null.
 export function botTime(track, latK = 0.8) {
   const phys = new CarPhysics(track), logic = new RaceLogic(track);
-  const sp = logic.spawnPoint(); phys.place(sp.x, sp.y, sp.z, sp.yaw);
+  const sp = logic.spawnPoint(); phys.place(sp.x, sp.y, sp.z, sp.yaw, sp.gs || 1);
   const bot = new Autopilot(track.path, { latLimit: CAR.latGrip * latK, brakeDecel: 36 });
   bot.reset(phys);
   let groundT = 0, respawns = 0;
@@ -52,7 +52,7 @@ export function botTime(track, latK = 0.8) {
     phys.step(bot.control(phys));
     const ev = logic.update(phys);
     if (ev && ev.type === 'finish') return respawns ? null : logic.time;
-    if ((phys.grounded && phys.surfType === 'ground') || phys.ev.sink) {
+    if (phys.offTrack || phys.ev.sink) {
       groundT += 1 / 120;
       if (groundT > 0.3 || phys.ev.sink) return null;
     } else groundT = 0;

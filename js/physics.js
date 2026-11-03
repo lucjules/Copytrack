@@ -11,7 +11,7 @@
 // aucune de ces constantes n'en dépend.
 import { CELL, DT, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T, LEVEL_H, ROAD_TOP } from './constants.js';
 import {
-  PIECES, PLATES, RING_R, RING_Y, toLocal, sampleLocal, rotVec, tileCenter, isRibbon, isFloor, tileParam,
+  PIECES, PLATES, RING_R, RING_Y, toLocal, sampleLocal, rotVec, tileCenter, isRibbon, isFloor, isCeilingFloor, tileParam, baseY,
 } from './pieces.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 
@@ -55,6 +55,7 @@ export const CAR = {
   landOk: 0.38,      // écart d'angle toléré à la réception (rad) sans perte de vitesse (une bosse de pente passe)
   mtTime1: 0.7,      // durée de glisse pour un mini-turbo (s)
   mtTime2: 1.5,      // durée pour un mini-turbo renforcé
+  flipKick: 7,        // impulsion donnée par une plaque d'inversion de gravité (m/s)
   lipHopMin: 2,      // saut en haut d'un L : hauteur mini (m)
   lipHopMax: 4,      // hauteur maxi (m), atteinte vers 180 km/h
   lipHopK: 600,      // hauteur = vitesse² / lipHopK, bornée
@@ -158,7 +159,7 @@ export class CarPhysics {
     this.F = {}; this.F0 = {}; this.F2 = {}; this.F3 = {};
     this.ev = {
       wall: 0, land: 0, boostHit: false, bounce: false, loopIn: false, loopOut: false, loopFall: false,
-      moto: false, gravity: false, miniTurbo: 0, landQ: '', sink: false, ring: false,
+      moto: false, gravity: false, miniTurbo: 0, landQ: '', sink: false, ring: false, flip: false,
     };
     this.rib = null;
     this.vehicle = 'car';
@@ -180,6 +181,11 @@ export class CarPhysics {
   get moto() { return this.vehicle === 'moto'; }
   set moto(v) { this.vehicle = v ? 'moto' : 'car'; }
 
+  // Hors piste : sur le terrain, ou perdue dans le ciel en gravité inversée.
+  get offTrack() {
+    return (this.grounded && this.surfType === 'ground') || this.lost;
+  }
+
   get mode() {
     return this.rib ? 'ribbon' : 'ground';
   }
@@ -188,10 +194,11 @@ export class CarPhysics {
     const b = this.track.bounds();
     const m = CELL * 3;
     this.bx0 = b.minX - m; this.bx1 = b.maxX + m;
+    this.skyY = b.maxY + 140;   // au-delà, une voiture en gravité inversée est perdue
     this.bz0 = b.minZ - m; this.bz1 = b.maxZ + m;
   }
 
-  place(x, y, z, yaw) {
+  place(x, y, z, yaw, gs = 1) {
     this.pos.x = x; this.pos.y = y; this.pos.z = z;
     this.prev.x = x; this.prev.y = y; this.prev.z = z;
     this.vel.x = 0; this.vel.y = 0; this.vel.z = 0;
@@ -202,9 +209,16 @@ export class CarPhysics {
     this.rib = null;
     this.gravMul = 1;
     this.vehicle = 'car';
+    this.gSign = gs < 0 ? -1 : 1;   // sens de la gravité : 1 normal, -1 inversée (vers le haut)
+    this.lost = false;
+    this._flipNow = false;
     this.plateLock = '';
     this.sinkT = 0;
-    const s = this.track.surfaceAt(x, y + 0.5, z, this.surf, 3);
+    const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3);
+    if (this.gSign < 0) {
+      this.n.x = 0; this.n.y = -1; this.n.z = 0;
+      if (!Number.isFinite(s.h)) { s.h = y; s.type = 'none'; }
+    }
     this.pos.y = s.h;
     this.prev.y = s.h;
     this.grounded = true;
@@ -237,7 +251,15 @@ export class CarPhysics {
     } else if (mod === 'gravity') {
       const gm = this.surfP;
       if (Math.abs(gm - this.gravMul) > 0.01) { this.gravMul = gm; this.ev.gravity = true; }
+    } else if (mod === 'flip' && this.plateLock !== 'flip') {
+      // Inversion de gravité : une suite de plaques collées ne compte qu'une fois.
+      this.plateLock = 'flip';
+      this.gSign = -this.gSign;
+      this._flipNow = true;
+      this.ev.flip = true;
+      return;
     }
+    if (mod === 'flip') return;
     // Plaques de transformation (moto, bateau, deltaplane) : une suite de plaques collées
     // ne compte que pour UNE transformation ; repasser sur la même plaque ramène la voiture.
     if (PLATES[mod]) {
@@ -294,7 +316,7 @@ export class CarPhysics {
   step(inp) {
     const dt = DT, p = this.pos, v = this.vel, ev = this.ev;
     ev.wall = 0; ev.land = 0; ev.boostHit = false; ev.bounce = false;
-    ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.moto = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false;
+    ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.moto = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false;
     this.prev.x = p.x; this.prev.y = p.y; this.prev.z = p.z;
     this.prevYaw = this.yaw;
 
@@ -348,7 +370,7 @@ export class CarPhysics {
 
       let vf = v.x * fx + v.y * fy + v.z * fz;
       let vr = v.x * rx + v.y * ry + v.z * rz;
-      const g = this.g;
+      const g = this.g * this.gSign;
       vf -= g * fy * dt;
       vr -= g * ry * dt;
 
@@ -391,8 +413,8 @@ export class CarPhysics {
       const r = this._tires(vf, vr, this.omega, ax, grip, dt);
       this.rearK = 1;
       vf = r.vx; vr = r.vy; this.omega = r.w;
-      this.yaw -= this.omega * dt;
-      this.yawRate = -this.omega;
+      this.yaw -= this.omega * this.gSign * dt;   // au plafond, la droite du pilote est la gauche du monde
+      this.yawRate = -this.omega * this.gSign;
 
       v.x = fx * vf + rx * vr;
       v.y = fy * vf + ry * vr;
@@ -407,12 +429,12 @@ export class CarPhysics {
       // tourne que les roues). La rotation acquise au décollage s'amortit doucement.
       // Exception : le deltaplane plane et vire en inclinant son aile.
       if (this.vehicle === 'glider') { this._glide(inp, dt); fx = -Math.sin(this.yaw); fz = -Math.cos(this.yaw); }
-      else v.y -= this.g * dt;
+      else v.y -= this.g * this.gSign * dt;
       this.omega *= Math.exp(-1.5 * dt);
       // Un tout petit peu de contrôle en l'air : le volant fait pivoter la voiture lentement.
       if (this.vehicle !== 'glider') this.omega = clamp(this.omega + this.steer * CAR.airSteer * dt, -CAR.airSteerMax, CAR.airSteerMax);
-      this.yaw -= this.omega * dt;
-      this.yawRate = -this.omega;
+      this.yaw -= this.omega * this.gSign * dt;
+      this.yawRate = -this.omega * this.gSign;
       this.steerAngle = this._steerAngle(Math.hypot(v.x, v.z), this.driftT);
       const k = 1 - 0.0006 * this.speed * dt;
       v.x *= k; v.y *= k; v.z *= k;
@@ -423,7 +445,7 @@ export class CarPhysics {
       // garde son assiette (sa rotation s'amortit).
       const pin = this.vehicle === 'glider' ? 0 : (inp.brake ? 1 : 0) - (inp.throttle ? 1 : 0);
       // Relever le nez (S) est plus vif que plonger : on remet vite la voiture à plat.
-      this.pitchRate += pin * K.airPitchAcc * (pin > 0 ? CAR.airPitchUpK : 1) * dt;
+      this.pitchRate += pin * this.gSign * K.airPitchAcc * (pin > 0 ? CAR.airPitchUpK : 1) * dt;   // au plafond, « nez en haut » = vers le bas du monde
       this.pitchRate *= Math.exp(-CAR.airPitchDamp * dt);
       if (this.vehicle === 'glider') this.pitch = this.glidePitch;
       else this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
@@ -437,8 +459,10 @@ export class CarPhysics {
     this._bounds();
 
     // Contact avec la chaussée.
-    const s = this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step);
-    const gap = p.y - s.h;
+    // En gravité inversée, le « sol » est le dessous des pièces posées à l'envers.
+    const gs = this.gSign;
+    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step);
+    const gap = gs * (p.y - s.h);
     const vn = v.x * s.nx + v.y * s.ny + v.z * s.nz;
     // Aimant : la voiture reste collée à la route quoi qu'il arrive (bosses, vitesse).
     const magnet = s.mod === 'magnet';
@@ -453,6 +477,7 @@ export class CarPhysics {
       this._setGround(s);
     } else if (!this.grounded && gap <= 0.02 && gap > -CAR.step && vn <= 0.5) {
       p.y = s.h;
+      if (this.plateLock === 'flip') this.plateLock = '';   // une nouvelle plaque d'inversion peut agir
       if (vn < 0) {
         v.x -= s.nx * vn; v.y -= s.ny * vn; v.z -= s.nz * vn;
         ev.land = -vn;
@@ -475,6 +500,17 @@ export class CarPhysics {
       this.bounceCD = 0.4;
       ev.bounce = true;
     }
+    // Plaque d'inversion : la voiture est projetée vers le nouveau « bas ».
+    if (this._flipNow) {
+      this._flipNow = false;
+      const n = this.n;
+      v.x += n.x * CAR.flipKick; v.y += n.y * CAR.flipKick; v.z += n.z * CAR.flipKick;
+      this.grounded = false;
+      this.pitch = Math.asin(clamp(this.fwd.y, -1, 1));
+      this.airTime = 0;
+    }
+    // Gravité inversée sans plafond : la voiture finit perdue dans le ciel.
+    if (gs < 0 && !this.grounded && p.y > this.skyY) this.lost = true;
     this._updateFwd();
   }
 
@@ -553,11 +589,17 @@ export class CarPhysics {
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
       const P = PIECES[tile.t];
-      if (P.kind === 'area' || tile.nb || !isFloor(tile)) continue;
+      if (P.kind === 'area' || tile.nb || !(isFloor(tile) || isCeilingFloor(tile))) continue;
       toLocal(tile, x, z, L1);
       sampleLocal(tile, L1.lx, L1.lz, S1);
       if (!S1.inFootprint) continue;
-      if (y > S1.h + RAIL_H - 0.15 || y + CAR.height < S1.h - SLAB_T - 0.2) continue;
+      // Pièce à l'envers : rails et dalle sont symétriques par rapport à la base.
+      const H = CAR.height, gsg = this.gSign;
+      const ylo = gsg > 0 ? y : y - H, yhi = gsg > 0 ? y + H : y;
+      if (tile.v) {
+        const hv = 2 * baseY(tile) - S1.h;
+        if (ylo > hv + SLAB_T + 0.2 || yhi < hv - RAIL_H + 0.15) continue;
+      } else if (ylo > S1.h + RAIL_H - 0.15 || yhi < S1.h - SLAB_T - 0.2) continue;
       const ad = Math.abs(S1.d), R = CAR.radius;
       const inner = ROAD_HALF, outer = ROAD_HALF + RAIL_W;
       if (ad + R <= inner || ad - R >= outer) continue;
@@ -641,15 +683,16 @@ export class CarPhysics {
     L = Math.min(L, G.liftMaxG * this.g);
     const D = G.drag * sp * sp + G.induced * L;
     const dx = v.x / sp, dy = v.y / sp, dz = v.z / sp;
-    let lx = -dx * dy, ly = 1 - dy * dy, lz = -dz * dy;
+    const gu = this.gSign;   // « haut » selon la gravité
+    let lx = -dx * dy * gu, ly = (1 - dy * dy) * gu, lz = -dz * dy * gu;
     const ll = Math.hypot(lx, ly, lz) || 1;
     lx /= ll; ly /= ll; lz /= ll;
     v.x += (L * lx - D * dx) * dt;
-    v.y += (L * ly - D * dy - this.g) * dt;
+    v.y += (L * ly - D * dy - this.g * gu) * dt;
     v.z += (L * lz - D * dz) * dt;
     // Virage : l'aile s'incline, la trajectoire et le nez tournent ensemble.
     const yr = this.steer * G.turn * Math.min(1, hv / 15);
-    const a = -yr * dt, c = Math.cos(a), s = Math.sin(a);
+    const a = -yr * gu * dt, c = Math.cos(a), s = Math.sin(a);
     const vx = v.x * c + v.z * s, vz = v.z * c - v.x * s;
     v.x = vx; v.z = vz;
     this.yaw += a;
@@ -727,7 +770,7 @@ export class CarPhysics {
       const F = frameWorld(tile, rib, u, this.F);
       const dl = (p.x - F.px) * F.rx + (p.y - F.py) * F.ry + (p.z - F.pz) * F.rz;
       if (F.kc > 1e-4) this._cross({ dl }, F); else { F.qx = F.px; F.qy = F.py; F.qz = F.pz; }
-      if (F.ny < 0.2) continue;                         // on ne se pose pas sur un mur ou un plafond
+      if (F.ny * this.gSign < 0.2) continue;            // on ne se pose que sur une route face à la gravité
       const dn = (p.x - F.qx) * F.nx + (p.y - F.qy) * F.ny + (p.z - F.qz) * F.nz;
       const dq = (q.x - F.qx) * F.nx + (q.y - F.qy) * F.ny + (q.z - F.qz) * F.nz;
       const vn = v.x * F.nx + v.y * F.ny + v.z * F.nz;
@@ -797,8 +840,13 @@ export class CarPhysics {
     const kn = kn0 * F.cc - kg0 * F.cs, kg = kg0 * F.cc + kn0 * F.cs;
     let B = this._basis(R, F);
 
+    // Vrille avec une plaque d'inversion : la gravité suit la route pendant le retournement.
+    if (tile.t === 'twist' && tile.s === 'flip') {
+      const ng = F.ny >= 0 ? 1 : -1;
+      if (ng !== this.gSign) { this.gSign = ng; this.ev.flip = true; }
+    }
     // Gravité projetée dans le plan de la route (vrille, mur, envers, paroi du tube...).
-    const g = this.g;
+    const g = this.g * this.gSign;
     R.vs -= g * B.e1y * dt;
     R.vd -= g * B.e2y * dt;
     R.psi -= R.dir * kg * R.vs * dt;
@@ -819,16 +867,21 @@ export class CarPhysics {
     // Appui réel des roues : gravité normale + effet de la courbure (centrifuge).
     // Au sol plat il vaut g ; sur un mur vertical, 0 ; à l'envers sur du plat, -g.
     const press = R.vs * R.vs * kn + R.vd * R.vd * kc + g * F.ny;
+    const gAbs = this.g;
     // Conduite identique au sol sur les pièces spéciales (virages relevés, tubes, loopings,
     // tire-bouchons) tant que la voiture est plaquée. Seule la montée en L garde la
     // physique d'appui réelle : sur le mur vertical, plus d'adhérence ni de moteur.
     const lPiece = tile.t === 'wall' || tile.t === 'ramp90' || tile.t === 'crest90';
-    const load = lPiece ? clamp(press / g, 0, 1.6) : press > 0 ? 1 : 0;
+    const load = lPiece ? clamp(press / gAbs, 0, 1.6) : press > 0 ? 1 : 0;
     this.press = press;
     const c = Math.cos(R.psi), s = Math.sin(R.psi);
     let vx = R.vs * c + R.vd * s, vy = -R.vs * s + R.vd * c;
     const ax = (this._longitudinal(vx, inp, this.k.maxSpeed, Math.min(1, load), extraDrag, dt, Math.min(1, load)) - vx) / dt;
+    // Ruban posé à l'envers (miroir) : son axe latéral pointe vers la gauche du pilote.
+    const hs = tile.v ? -1 : 1;
+    if (hs < 0) this.steer = -this.steer;
     const t = this._tires(vx, vy, this.omega, ax, load, dt);
+    if (hs < 0) { this.steer = -this.steer; this.steerAngle = -this.steerAngle; }
     vx = t.vx; vy = t.vy; this.omega = t.w;
     // Retour dans le plan de la route avec le MÊME cap, puis la voiture pivote.
     R.vs = vx * c - vy * s;
@@ -877,7 +930,7 @@ export class CarPhysics {
         this._ribPlace(R);
         // Hauteur du saut selon la vitesse : ~2 m en arrivant doucement, ~4 m à fond.
         const hop = clamp((R.vs * R.vs) / CAR.lipHopK, CAR.lipHopMin, CAR.lipHopMax);
-        this.vel.y += Math.sqrt(2 * this.g * hop);
+        this.vel.y += Math.sqrt(2 * this.g * hop) * this.gSign;
         this._ribDetach();
         return;
       }
@@ -953,10 +1006,11 @@ export class CarPhysics {
     const h = this.fwd;
     if (Math.hypot(h.x, h.z) > 0.2) this.yaw = Math.atan2(-h.x, -h.z);
     this.prevYaw = this.yaw;
-    if (this.n.y > 0.6 && F.ny > 0.6) {
+    const gsx = this.gSign;
+    if (this.n.y * gsx > 0.6 && F.ny * gsx > 0.6) {
       this.grounded = true;
-      this.vel.y = Math.min(this.vel.y, 0);
-      this.n.x = 0; this.n.y = 1; this.n.z = 0;
+      this.vel.y = gsx > 0 ? Math.min(this.vel.y, 0) : Math.max(this.vel.y, 0);
+      this.n.x = 0; this.n.y = gsx; this.n.z = 0;
     } else {
       this.grounded = false;
     }

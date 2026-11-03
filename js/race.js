@@ -125,7 +125,7 @@ export class RaceSession {
     this.logic.reset();
     const sp = this.opts.spawn || this.logic.spawnPoint();
     if (this.opts.spawn) this.logic.respawn = { ...sp, vehicle: 'car', grav: 1 };
-    this.phys.place(sp.x, sp.y, sp.z, sp.yaw);
+    this.phys.place(sp.x, sp.y, sp.z, sp.yaw, sp.gs || 1);
     this.car.setVehicle('car', true);
     this.collectedShards = new Set();
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
@@ -174,7 +174,7 @@ export class RaceSession {
       this.app.ui.hud.checkpoints(this.logic.collected.size, this.logic.cps.length, this.logic.lap, this.logic.laps);
       this.app.ui.hud.time(steps * DT);
     }
-    this.phys.place(r.x, r.y, r.z, r.yaw);
+    this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
     this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
     this.car.setVehicle(this.phys.vehicle, true);
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
@@ -205,9 +205,10 @@ export class RaceSession {
     } else {
       // En l'air, l'assiette vient de la physique (gaz = nez vers le bas, frein = nez vers le haut).
       const c = Math.cos(p.pitch), s = Math.sin(p.pitch);
-      tmpV.set(-fx * s, c, -fz * s);
-      // Retournée (chute d'un looping) : on se redresse plus vite.
-      this.up.lerp(tmpV, this.up.y < 0.3 ? 0.08 : 0.2).normalize();
+      const gs = p.gSign;
+      tmpV.set(-fx * s * gs, c * gs, -fz * s * gs);
+      // Retournée (chute d'un looping, inversion de gravité) : on se redresse plus vite.
+      this.up.lerp(tmpV, this.up.y * gs < 0.3 ? 0.08 : 0.2).normalize();
     }
     const f = p.mode === 'ribbon' ? tmpV2.set(p.fwd.x, p.fwd.y, p.fwd.z) : tmpV2.set(fx, 0, fz);
     f.addScaledVector(this.up, -f.dot(this.up));
@@ -317,6 +318,7 @@ export class RaceSession {
       if (!this.demo) app.ui.hud.message('Anneau turbo !', 0.8);
     }
     if (ev.gravity && !this.demo) app.ui.hud.message(`Gravité ${Math.round(this.phys.gravMul * 100)} %`, 1.4);
+    if (ev.flip && !this.demo) { app.ui.hud.message(this.phys.gSign < 0 ? 'Gravité inversée !' : 'Gravité normale', 1.4); this.shake = Math.max(this.shake, 0.5); }
     if (ev.loopFall && !this.demo) {
       const why = { loop: 'Trop lent pour le looping !', twist: 'Plus rien ne te retient dans la vrille !', inv: 'À l\'envers, la gravité gagne !', crest: 'Décollage !' };
       app.ui.hud.message(why[this.phys.fallWhy] || why.crest, 1.4);
@@ -333,7 +335,7 @@ export class RaceSession {
 
       // Hors piste (0,5 s) ou noyade : réapparition automatique.
       if (sank && this.state === 'racing') { this.groundT = 0; if (this.demo) this.restart(); else this.respawn(); return; }
-      if (this.phys.grounded && this.phys.surfType === 'ground') {
+      if (this.phys.offTrack) {
         this.groundT += DT;
         if (this.groundT > 0.5) {
           if (this.demo) this.restart(); else { app.ui.hud.message('Hors piste !', 1.0); this.respawn(); }
@@ -807,8 +809,11 @@ export class RaceSession {
       this._fov(mode.fov + Math.min(18, sp * 0.24));
       return;
     }
-    camUp.lerp(UP, 1 - Math.exp(-dt * 4));
-    if (camUp.lengthSq() < 1e-3) camUp.set(0, 1, 0);
+    // En gravité inversée, la caméra se retourne : le « haut » est vers le bas du monde.
+    const gs = p.gSign;
+    const gUp = gs > 0 ? UP : (this._downV || (this._downV = new THREE.Vector3(0, -1, 0)));
+    camUp.lerp(gUp, 1 - Math.exp(-dt * 4));
+    if (camUp.lengthSq() < 1e-3) camUp.copy(gUp);
     camUp.normalize();
     cam.up.copy(camUp);
 
@@ -826,7 +831,7 @@ export class RaceSession {
     // Sous un pont : on abaisse et on rapproche la caméra pour ne pas traverser la dalle.
     const carTop = car.position.y + 1.6;
     let ceil = Infinity;
-    for (let i = 0; i <= 4; i++) {
+    for (let i = 0; i <= 4 && gs > 0; i++) {
       const k = i / 4;
       const c = this.track.ceilingAt(car.position.x - fx * dist * k, car.position.z - fz * dist * k, carTop);
       if (c < ceil) ceil = c;
@@ -837,7 +842,7 @@ export class RaceSession {
       height = Math.max(1.4, ceil - car.position.y - 0.9);
       dist = Math.min(dist, mode.dist * 0.75);
     }
-    tmpV.set(car.position.x - fx * dist, car.position.y + height, car.position.z - fz * dist);
+    tmpV.set(car.position.x - fx * dist, car.position.y + height * gs, car.position.z - fz * dist);
     // Horizontal serré, vertical plus doux (sauf sous un pont : réaction immédiate).
     const kx = 1 - Math.exp(-dt * 12);
     const ky = 1 - Math.exp(-dt * (underBridge ? 20 : 6));
@@ -845,10 +850,16 @@ export class RaceSession {
     this.camPos.z += (tmpV.z - this.camPos.z) * kx;
     this.camPos.y += (tmpV.y - this.camPos.y) * ky;
     // Jamais dans une dalle ni sous la chaussée
-    const ceilCam = this.track.ceilingAt(this.camPos.x, this.camPos.z, carTop - 0.5);
-    if (this.camPos.y > ceilCam - 0.5 && ceilCam > carTop - 0.5) this.camPos.y = ceilCam - 0.5;
-    const s = this.track.surfaceAt(this.camPos.x, this.camPos.y, this.camPos.z, this._camS || (this._camS = {}), 2);
-    if (this.camPos.y < s.h + 1.2) this.camPos.y = s.h + 1.2;
+    if (gs > 0) {
+      const ceilCam = this.track.ceilingAt(this.camPos.x, this.camPos.z, carTop - 0.5);
+      if (this.camPos.y > ceilCam - 0.5 && ceilCam > carTop - 0.5) this.camPos.y = ceilCam - 0.5;
+      const s = this.track.surfaceAt(this.camPos.x, this.camPos.y, this.camPos.z, this._camS || (this._camS = {}), 2);
+      if (this.camPos.y < s.h + 1.2) this.camPos.y = s.h + 1.2;
+    } else {
+      // Au plafond : jamais au-dessus de la chaussée retournée.
+      const s = this.track.ceilingSurfaceAt(this.camPos.x, this.camPos.y, this.camPos.z, this._camS || (this._camS = {}), 2);
+      if (Number.isFinite(s.h) && this.camPos.y > s.h - 1.2) this.camPos.y = s.h - 1.2;
+    }
     cam.position.copy(this.camPos);
     if (this.shake > 0) {
       const k = this.shake * 0.25 * (this.app.settings.shakeAmt ?? 1);
@@ -856,7 +867,7 @@ export class RaceSession {
       cam.position.y += (Math.random() - 0.5) * k;
     }
     const lookUp = underBridge ? Math.min(mode.lookUp, 0.8) : mode.lookUp;
-    cam.lookAt(car.position.x + fx * mode.look, car.position.y + lookUp, car.position.z + fz * mode.look);
+    cam.lookAt(car.position.x + fx * mode.look, car.position.y + lookUp * gs, car.position.z + fz * mode.look);
     this._fov(mode.fov + Math.min(18, sp * 0.24) + (p.boost > 0 ? 5 : 0));
   }
 

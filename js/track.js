@@ -2,7 +2,7 @@
 // requêtes de surface pour la physique, sérialisation en code partageable.
 import { CELL, DIRS, ROAD_HALF, RAIL_W, SLAB_T, MAX_LEVEL, LEVEL_H, MAX_DECOS } from './constants.js';
 import {
-  PIECES, PIECE_ORDER, SURFACE_ORDER, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, isFloor,
+  PIECES, PIECE_ORDER, SURFACE_ORDER, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, isFloor, isCeilingFloor, baseY,
   toLocal, sampleLocal, rotVec,
 } from './pieces.js';
 import { centerlineWorld } from './ribbons.js';
@@ -53,7 +53,9 @@ export class Track {
   // Plage de niveaux occupée (inclusive). Portiques et loopings réservent de la hauteur.
   static range(t) {
     const p = PIECES[t.t];
-    return [t.l, t.l + p.rise + (p.clearance || 0)];
+    const h = p.rise + (p.clearance || 0);
+    // Une pièce à l'envers est retournée sous son niveau : elle occupe les niveaux en dessous.
+    return t.v ? [t.l - h, t.l] : [t.l, t.l + h];
   }
 
   // Convertit une pièce (éventuellement au format v1.0 / v1.1) en pièce v1.2.
@@ -76,6 +78,13 @@ export class Track {
 
   tilesAt(x, z) {
     return this.index.get(key(x, z)) || EMPTY;
+  }
+
+  // Une pièce (notamment à l'envers) ne doit pas descendre sous le sol ni dépasser le plafond.
+  static inBounds(t) {
+    const [lo, hi] = Track.range(t);
+    // À l'envers, la voiture pend sous la chaussée : il faut au moins un niveau sous la pièce.
+    return lo >= (t.v ? 1 : 0) && hi <= MAX_LEVEL + 6;
   }
 
   conflicts(t) {
@@ -201,6 +210,32 @@ export class Track {
       maxL = Math.max(maxL, Track.range(t)[1]);
     }
     return { minX, maxX, minZ, maxZ, maxY: maxL * LEVEL_H };
+  }
+
+  // Gravité inversée : surface « au plafond » la plus proche au-dessus de (x, y - step, z),
+  // venant des pièces posées à l'envers (géométrie retournée autour de leur niveau).
+  // Sans plafond, h vaut +∞ (la voiture continue de « tomber » vers le haut).
+  ceilingSurfaceAt(x, y, z, out, step = 1.6) {
+    out.h = Infinity; out.nx = 0; out.ny = -1; out.nz = 0;
+    out.tile = null; out.type = 'none'; out.mod = ''; out.p = 0; out.lx = 0; out.lz = 0;
+    const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
+    for (const tile of this.tilesAt(cx, cz)) {
+      if (!isCeilingFloor(tile)) continue;
+      toLocal(tile, x, z, L);
+      sampleLocal(tile, L.lx, L.lz, S);
+      if (!S.inFootprint) continue;
+      if (PIECES[tile.t].kind !== 'area' && Math.abs(S.d) > ROAD_HALF) continue;
+      const base = baseY(tile);
+      const h = 2 * base - S.h;
+      if (h < y - step || h >= out.h) continue;
+      out.h = h;
+      rotVec(tile.r, S.nx, S.nz, W);
+      out.nx = W.x; out.ny = -S.ny; out.nz = W.z;
+      out.tile = tile; out.type = 'road'; out.mod = tile.s || ''; out.p = tile.p || 0;
+      out.lx = L.lx; out.lz = L.lz;
+      if (tile.s === 'water') out.h += WATER_DROP;
+    }
+    return out;
   }
 
   // Surface roulable la plus haute sous (x, y + step, z). Le sol est à y = 0.
@@ -399,8 +434,8 @@ export function hashString(s) {
 //   Y3.b / YL3.b        bifurcation : deux voies parallèles de 3 cases puis jonction ;
 //                       la voie déportée (à droite, ou à gauche pour YL) reçoit le revêtement
 //                       et c'est elle que suit le pilote automatique
-//   suffixes : .a eau  .n plaque bateau  .e plaque deltaplane
-const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', s: 'sand', m: 'magnet', u: 'mud', d: 'drift', x: 'slow', w: 'wind', g: 'gravity', o: 'moto', a: 'water', n: 'boat', e: 'glider' };
+//   suffixes : .a eau  .n plaque bateau  .e plaque deltaplane  .f inversion de gravité
+const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', s: 'sand', m: 'magnet', u: 'mud', d: 'drift', x: 'slow', w: 'wind', g: 'gravity', o: 'moto', a: 'water', n: 'boat', e: 'glider', f: 'flip' };
 
 export function scriptTrack(name, script, opts = {}) {
   const tr = new Track(name);
@@ -414,6 +449,7 @@ export function scriptTrack(name, script, opts = {}) {
     for (const f of ['v', 'nb', 'tn']) if (cur[f] && !flagAllowed(t, f, tile)) throw new Error(`${name} : drapeau ${f} interdit sur ${t}`);
     const c = tr.conflicts(Track.normalize(tile));
     if (c.length) throw new Error(`${name} : conflit en (${px}, ${pz}) niveau ${lv} [${t}]`);
+    if (!Track.inBounds(Track.normalize(tile))) throw new Error(`${name} : ${t} sort des niveaux en (${px}, ${pz})`);
     const added = tr.add(tile);
     if (noPath) return added;
     const pts = centerlineWorld(added, PIECES[t].size === 2 ? 12 : 6, reverse);
@@ -530,10 +566,11 @@ export function scriptTrack(name, script, opts = {}) {
       case 'QU': place('ramp90', x, z, l, h); adv(h); l += 2; break;
       case 'WA': for (let i = 0; i < n; i++) { place('wall', x, z, l, h); l += 1; } break;
       case 'CR': place('crest90', x, z, l, h); adv(h); l += 2; break;
-      case 'U': for (let i = 0; i < n; i++) { place('slope', x, z, l, h); l += 1; adv(h); } break;
-      case 'UU': place('steep', x, z, l, h); l += 2; adv(h); break;
-      case 'D': for (let i = 0; i < n; i++) { l -= 1; place('slope', x, z, l, h + 2, true); adv(h); } break;
-      case 'DD': l -= 2; place('steep', x, z, l, h + 2, true); adv(h); break;
+      // Au plafond (^), une pente est retournée sous son niveau : elle descend dans son sens normal.
+      case 'U': for (let i = 0; i < n; i++) { if (cur.v) { l += 1; place('slope', x, z, l, h + 2, true); } else { place('slope', x, z, l, h); l += 1; } adv(h); } break;
+      case 'UU': if (cur.v) { l += 2; place('steep', x, z, l, h + 2, true); } else { place('steep', x, z, l, h); l += 2; } adv(h); break;
+      case 'D': for (let i = 0; i < n; i++) { if (cur.v) { place('slope', x, z, l, h); l -= 1; } else { l -= 1; place('slope', x, z, l, h + 2, true); } adv(h); } break;
+      case 'DD': if (cur.v) { place('steep', x, z, l, h); l -= 2; } else { l -= 2; place('steep', x, z, l, h + 2, true); } adv(h); break;
       case 'G': adv(h, n); break;
       // ---- v1.5
       case 'BR': {

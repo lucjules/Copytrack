@@ -252,6 +252,11 @@ export class Scenery {
     this.sun.shadow.normalBias = 0.5;
     scene.add(this.sun);
     scene.add(this.sun.target);
+    // Lumière d'appoint venant d'en bas : éclaire les routes posées à l'envers (au plafond),
+    // qui ne voient jamais le soleil. Allumée seulement sur les circuits qui en ont.
+    this.under = new THREE.DirectionalLight('#ffffff', 0);
+    this.under.position.set(0.3, -1, 0.2);
+    scene.add(this.under);
     this.sunDir = new THREE.Vector3();
 
     this.decor = null;
@@ -294,6 +299,9 @@ export class Scenery {
   setTrack(track, seedStr = 'shardway', opts = {}) {
     this.setTheme(opts.theme || track.decor || 'desert');
     const T = this.theme;
+    const ceiling = track.tiles.some((t) => t.v);
+    this.under.color.set(T.hemi[0]);
+    this.under.intensity = ceiling ? Math.max(0.9, T.sunIntensity * 0.55) : 0;
     const withDecor = opts.decor !== false;
     this.clearTerrain();
     let seed = 7;

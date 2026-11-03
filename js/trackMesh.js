@@ -50,6 +50,7 @@ export const SURFACE_STYLE = {
   water: { road: ['#1f6fb2', '#2479bf'], line: '#9fe3ff' },
   boat: { road: ['#22343f', '#263b47'], line: '#3fd0ff' },
   glider: { road: ['#2f3346', '#353a50'], line: '#f5f5f5' },
+  flip: { road: ['#3a1f3f', '#44244a'], line: '#ff4fd8' },
 };
 
 const RO = ROAD_HALF + RAIL_W;
@@ -61,7 +62,7 @@ const _c1 = new THREE.Color(), _c2 = new THREE.Color();
 const CB_COLORS = {
   ice: '#ffffff', boost: '#56b4e9', bounce: '#cc79a7', sand: '#f0e442', magnet: '#0072b2',
   mud: '#8c6d4f', drift: '#e69f00', slow: '#d55e00', wind: '#d9d9d9', gravity: '#009e73',
-  moto: '#ffb000', boat: '#3fa7ff', glider: '#f5f5f5',
+  moto: '#ffb000', boat: '#3fa7ff', glider: '#f5f5f5', flip: '#ff4fd8',
 };
 let colorblind = false;
 export function setColorblind(v) { colorblind = !!v; }
@@ -141,7 +142,7 @@ function lineStrip(x, z0, z1, y0, y1, n) {
 
 const FL = {};
 function ribbonStrip(tile, count) {
-  const rib = ribbonOf(tile);
+  const rib = ribbonOf(tile, true);
   const out = [];
   for (let i = 0; i <= count; i++) {
     frameLocal(rib, i / count, FL);
@@ -162,8 +163,8 @@ export function stripsFor(tile) {
       lineStrip(m * p.lane, 0, -half, base, base, 3),
     ];
   }
-  if (p.kind === 'ribbon' || tile.v) {
-    return [ribbonStrip(tile, Math.max(8, Math.round(ribbonOf(tile).len / 2.5)))];
+  if (p.kind === 'ribbon') {
+    return [ribbonStrip(tile, Math.max(8, Math.round(ribbonOf(tile, true).len / 2.5)))];
   }
   if (p.kind === 'arc') {
     const a = arcParams(p);
@@ -349,6 +350,16 @@ function surfaceDecals(glow, frames, tile, area = false) {
     bar(glow, f, -0.3, -2.6, 0.3, 1.6, col);
     chevron(glow, f, -2.2, 3.4, 1.4, 0.5, 1.1, Math.PI / 2, col);
     chevron(glow, f, 2.2, 3.4, 1.4, 0.5, 1.1, Math.PI / 2, col);
+  } else if (s === 'flip') {
+    // Deux flèches opposées autour d'une barre : haut et bas s'échangent.
+    for (const t of area ? [0.5] : [0.25, 0.75]) {
+      const f = frameAt(frames, t);
+      bar(glow, f, -ROAD_HALF + 1.5, -0.3, ROAD_HALF - 1.5, 0.3, col);
+      for (const d of [-5, 0, 5]) {
+        chevron(glow, f, d, -2.2, 1.6, 0.55, 1.8, 0, col);
+        chevron(glow, f, d, 2.2, 1.6, 0.55, 1.8, Math.PI, col);
+      }
+    }
   } else if (s === 'glider') {
     // Aile delta
     const f = frameAt(frames, 0.5);
@@ -486,7 +497,7 @@ export function tileMatrix(tile) {
 
 // ---- v1.5 : section courbe (tube) ---------------------------------
 function crossSweep(gb, glow, tile, style) {
-  const rib = ribbonOf(tile);
+  const rib = ribbonOf(tile, true);
   const N = tile.t === 'tube' ? 48 : 20, M = 32;
   const F = {};
   const rings = [];
@@ -611,6 +622,11 @@ function ringMesh(gb, glow, tile) {
 
 export function buildTileInto(gb, glow, tile, track = null) {
   const m = tileMatrix(tile);
+  // Pièce posée à l'envers : tout est retourné autour de son niveau (route au plafond).
+  if (tile.v) {
+    const b = baseY(tile);
+    m.multiply(new THREE.Matrix4().makeTranslation(0, b, 0)).multiply(new THREE.Matrix4().makeScale(1, -1, 1)).multiply(new THREE.Matrix4().makeTranslation(0, -b, 0));
+  }
   gb.setMatrix(m);
   glow.setMatrix(m);
   const p = PIECES[tile.t];

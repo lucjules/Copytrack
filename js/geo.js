@@ -22,6 +22,9 @@ export class GeoBuilder {
 
   setMatrix(m4) {
     this.m = m4 ? m4.elements : null;
+    // Matrice miroir (pièce à l'envers) : on inverse l'ordre des sommets pour garder
+    // les faces tournées vers l'extérieur (sinon l'éclairage les voit de dos).
+    this.flip = !!m4 && m4.determinant() < 0;
   }
 
   _p(p) {
@@ -36,7 +39,7 @@ export class GeoBuilder {
   }
 
   tri(a, b, c, hex) {
-    this._p(a); this._p(b); this._p(c);
+    if (this.flip) { this._p(a); this._p(c); this._p(b); } else { this._p(a); this._p(b); this._p(c); }
     const k = lin(hex);
     this.col.push(k[0], k[1], k[2], k[0], k[1], k[2], k[0], k[1], k[2]);
   }

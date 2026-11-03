@@ -19,7 +19,7 @@ const GLYPH = {
   checkpoint: ['C', 'C'], start: ['S', 'S'], finish: ['F', 'F'], platform: ['#', '#'], loop: ['O', 'O'], loopL: ['Ø', 'Ø'],
   loopBig: ['B', 'B'], loopBigL: ['B', 'B'], loopDouble: ['D', 'D'], loopDoubleL: ['D', 'D'], twist: ['~', '~'], ramp90: ['Q', 'Q'], wall: ['W', 'W'], crest90: ['Y', 'Y'],
 };
-const SURF = { ice: '~', boost: '»', bounce: 'j', sand: 's', magnet: 'm', mud: 'u', drift: 'd', slow: 'x', wind: 'w', gravity: 'g', moto: 'o', water: 'a', boat: 'n', glider: 'e' };
+const SURF = { ice: '~', boost: '»', bounce: 'j', sand: 's', magnet: 'm', mud: 'u', drift: 'd', slow: 'x', wind: 'w', gravity: 'g', moto: 'o', water: 'a', boat: 'n', glider: 'e', flip: 'f' };
 
 function map(track) {
   const b = track.bounds();
@@ -43,7 +43,7 @@ function run(track, maxTime = 240) {
   const phys = new CarPhysics(track);
   const logic = new RaceLogic(track);
   const sp = logic.spawnPoint();
-  phys.place(sp.x, sp.y, sp.z, sp.yaw);
+  phys.place(sp.x, sp.y, sp.z, sp.yaw, sp.gs || 1);
   const bot = new Autopilot(track.path);
   bot.reset(phys);
   let respawns = 0, stuck = 0, maxSpeed = 0, airMax = 0, lastIdx = 0, loops = 0, falls = 0;
@@ -60,7 +60,7 @@ function run(track, maxTime = 240) {
       return { ok: true, time: logic.time, respawns, maxSpeed, airMax, loops, falls };
     }
     // Chute au sol : réapparition au dernier checkpoint.
-    const fell = (phys.grounded && phys.surfType === 'ground') || phys.ev.sink;
+    const fell = phys.offTrack || phys.ev.sink;
     if (i % 120 === 0) {
       if (bot.idx === lastIdx) stuck++; else stuck = 0;
       lastIdx = bot.idx;
@@ -69,7 +69,7 @@ function run(track, maxTime = 240) {
       respawns++;
       if (respawns > 8) return { ok: false, reason: `trop de réapparitions (idx ${bot.idx}/${track.path.length}, pos ${phys.pos.x.toFixed(1)},${phys.pos.y.toFixed(1)},${phys.pos.z.toFixed(1)})`, time: logic.time };
       const r = logic.respawn;
-      phys.place(r.x, r.y, r.z, r.yaw);
+      phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
       bot.reset(phys);
       stuck = 0;
     }

@@ -79,7 +79,7 @@ export class GhostRunner {
   reset() {
     this.logic.reset();
     const sp = this.logic.spawnPoint();
-    this.phys.place(sp.x, sp.y, sp.z, sp.yaw);
+    this.phys.place(sp.x, sp.y, sp.z, sp.yaw, sp.gs || 1);
     if (this.bot) this.bot.reset(this.phys);
     this.k = 0;
     this.groundT = 0;
@@ -93,18 +93,18 @@ export class GhostRunner {
     else inp = inputAt(this.rep, this.k);
     if (inp.respawn) {
       const r = this.logic.rewind();
-      this.phys.place(r.x, r.y, r.z, r.yaw);
+      this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
       this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
     }
     this.phys.step(inp);
     const sink = this.phys.ev.sink;
     const ev = this.logic.update(this.phys);
     // Mêmes réapparitions automatiques qu'en course (hors piste 0,5 s, noyade).
-    if (this.phys.grounded && this.phys.surfType === 'ground') this.groundT += 1 / 120; else this.groundT = 0;
+    if (this.phys.offTrack) this.groundT += 1 / 120; else this.groundT = 0;
     if (this.groundT > 0.5 || sink) {
       this.groundT = 0;
       const r = this.logic.rewind();
-      this.phys.place(r.x, r.y, r.z, r.yaw);
+      this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
       this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
     }
     if (ev && ev.type === 'finish') this.done = true;

@@ -22,7 +22,8 @@ export class RaceLogic {
     // On recule un peu pour que la voiture parte derrière la ligne.
     const back = 4;
     const fx = [0, 1, 0, -1][t.r], fz = [-1, 0, 1, 0][t.r];
-    return { x: c.x - fx * back, y: baseY(t), z: c.z - fz * back, yaw: -t.r * Math.PI / 2 };
+    // Départ posé à l'envers : la course commence en gravité inversée.
+    return { x: c.x - fx * back, y: baseY(t), z: c.z - fz * back, yaw: -t.r * Math.PI / 2, gs: t.v ? -1 : 1 };
   }
 
   reset() {
@@ -97,12 +98,12 @@ export class RaceLogic {
         this.collected.add(tile);
         this.splits.push(this.steps);
         // Réapparition : juste avant l'anneau, au sol de la pièce précédente si possible.
-        this.respawn = { ...this._ringRespawn(tile, phys), vehicle: phys.vehicle, grav: phys.gravMul, snap: this._snap() };
+        this.respawn = { ...this._ringRespawn(tile, phys), vehicle: phys.vehicle, grav: phys.gravMul, gs: phys.gSign, snap: this._snap() };
         event = { type: 'checkpoint', index: this.splits.length, steps: this.steps };
         continue;
       }
       // Fenêtre haute : on peut passer un checkpoint en sautant (bosse juste avant).
-      if (p.y < h - 1.5 || p.y > h + LEVEL_H * 2.5) continue;
+      if (tile.v ? (p.y > h + 1.5 || p.y < h - LEVEL_H * 2.5) : (p.y < h - 1.5 || p.y > h + LEVEL_H * 2.5)) continue;
       toLocal(tile, p.x, p.z, L);
       sampleLocal(tile, L.lx, L.lz, S);
       if (!S.inFootprint || Math.abs(S.d) > ROAD_HALF + 1.5) continue;
@@ -116,7 +117,7 @@ export class RaceLogic {
         while (da > Math.PI) da -= Math.PI * 2;
         while (da < -Math.PI) da += Math.PI * 2;
         if (Math.abs(da) > Math.PI / 2) yaw = base + Math.PI;
-        this.respawn = { x: c.x, y: h, z: c.z, yaw, vehicle: phys.vehicle, grav: phys.gravMul, snap: this._snap() };
+        this.respawn = { x: c.x, y: h, z: c.z, yaw, vehicle: phys.vehicle, grav: phys.gravMul, gs: phys.gSign, snap: this._snap() };
         event = { type: 'checkpoint', index: this.splits.length, steps: this.steps };
       } else if (sp === 'finish') {
         onFinish = true;
@@ -128,7 +129,7 @@ export class RaceLogic {
             this.collected.clear();
             this.splits.push(this.steps);
             // Le passage de la ligne sert aussi de point de retour pour le nouveau tour.
-            this.respawn = { x: p.x, y: h, z: p.z, yaw: phys.yaw, vehicle: phys.vehicle, grav: phys.gravMul, snap: this._snap() };
+            this.respawn = { x: p.x, y: h, z: p.z, yaw: phys.yaw, vehicle: phys.vehicle, grav: phys.gravMul, gs: phys.gSign, snap: this._snap() };
             event = { type: 'lap', lap: this.lap, laps: this.laps, index: this.splits.length, steps: this.steps };
           } else {
             this.finished = true;

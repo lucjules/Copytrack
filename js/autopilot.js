@@ -66,7 +66,19 @@ export class Autopilot {
     this.idx = best;
   }
 
+  // En gravité inversée (au plafond), la droite du pilote est la gauche du monde et
+  // « nez en haut » vise le bas : on traduit les commandes calculées en repère monde.
   control(phys) {
+    const c = this._control(phys);
+    if (phys.rib) { if (phys.rib.tile.v) c.steer = -c.steer; }
+    else if (phys.gSign < 0) {
+      c.steer = -c.steer;
+      if (!phys.grounded && phys.vehicle !== 'glider') { const t = c.throttle; c.throttle = c.brake; c.brake = t; }
+    }
+    return c;
+  }
+
+  _control(phys) {
     this._progress(phys);
     if (phys.rib) {
       const R = phys.rib;
