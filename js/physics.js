@@ -49,6 +49,9 @@ export const CAR = {
   launch: 2.0,        // vitesse normale (m/s) au-delà de laquelle la route « tombe » sous la voiture : elle décolle
   airPitchAcc: 4.2,  // tangage en l'air : gaz = nez vers le bas, frein = nez vers le haut (rad/s²)
   airPitchDamp: 2.6,
+  airPitchUpK: 1.6,   // relever le nez est 1,6 fois plus vif que le plonger
+  airSteer: 1.4,      // contrôle de lacet en l'air (rad/s²), volontairement faible
+  airSteerMax: 0.45,  // vitesse de rotation maxi due au volant en l'air (rad/s)
   landOk: 0.38,      // écart d'angle toléré à la réception (rad) sans perte de vitesse (une bosse de pente passe)
   mtTime1: 0.7,      // durée de glisse pour un mini-turbo (s)
   mtTime2: 1.5,      // durée pour un mini-turbo renforcé
@@ -357,7 +360,7 @@ export class CarPhysics {
       else if (mod === 'ice') { grip = clamp(0.2 / f, 0.05, 0.85); traction = 0.45; }
       else if (mod === 'sand') { grip = 0.8; traction = 0.65; vmaxK = clamp(1 - 0.45 * f, 0.25, 1); extraDrag = 5 * f; }
       else if (mod === 'mud') { grip = 0.7; traction = 0.55; vmaxK = clamp(1 - 0.5 * f, 0.2, 1); extraDrag = 6 * f; }
-      else if (mod === 'magnet') grip = 1.45 * f;
+      else if (mod === 'magnet') grip = 1.6;
       else if (mod === 'drift') {
         // Dérive : l'arrière n'accroche presque plus (l'avant, si) : au moindre coup de
         // volant, la voiture part en glisse et il faut la rattraper en contre-braquant.
@@ -406,6 +409,8 @@ export class CarPhysics {
       if (this.vehicle === 'glider') { this._glide(inp, dt); fx = -Math.sin(this.yaw); fz = -Math.cos(this.yaw); }
       else v.y -= this.g * dt;
       this.omega *= Math.exp(-1.5 * dt);
+      // Un tout petit peu de contrôle en l'air : le volant fait pivoter la voiture lentement.
+      if (this.vehicle !== 'glider') this.omega = clamp(this.omega + this.steer * CAR.airSteer * dt, -CAR.airSteerMax, CAR.airSteerMax);
       this.yaw -= this.omega * dt;
       this.yawRate = -this.omega;
       this.steerAngle = this._steerAngle(Math.hypot(v.x, v.z), this.driftT);
@@ -417,7 +422,8 @@ export class CarPhysics {
       // Tangage : gaz = le nez plonge, frein = le nez se lève. Sans action, la voiture
       // garde son assiette (sa rotation s'amortit).
       const pin = this.vehicle === 'glider' ? 0 : (inp.brake ? 1 : 0) - (inp.throttle ? 1 : 0);
-      this.pitchRate += pin * K.airPitchAcc * dt;
+      // Relever le nez (S) est plus vif que plonger : on remet vite la voiture à plat.
+      this.pitchRate += pin * K.airPitchAcc * (pin > 0 ? CAR.airPitchUpK : 1) * dt;
       this.pitchRate *= Math.exp(-CAR.airPitchDamp * dt);
       if (this.vehicle === 'glider') this.pitch = this.glidePitch;
       else this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
@@ -434,10 +440,10 @@ export class CarPhysics {
     const s = this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step);
     const gap = p.y - s.h;
     const vn = v.x * s.nx + v.y * s.ny + v.z * s.nz;
+    // Aimant : la voiture reste collée à la route quoi qu'il arrive (bosses, vitesse).
     const magnet = s.mod === 'magnet';
-    const mk = magnet ? tileParam(s.tile) / 100 : 1;
-    const launch = magnet ? CAR.launch * (1 + 2 * mk) : CAR.launch;
-    const snap = magnet ? CAR.snap * (1 + mk) : CAR.snap;
+    const launch = magnet ? Infinity : CAR.launch;
+    const snap = magnet ? CAR.step : CAR.snap;
     if (this.grounded && gap < snap && gap > -CAR.step && vn < launch) {
       p.y = s.h;
       const sp = this.speed;
@@ -813,7 +819,11 @@ export class CarPhysics {
     // Appui réel des roues : gravité normale + effet de la courbure (centrifuge).
     // Au sol plat il vaut g ; sur un mur vertical, 0 ; à l'envers sur du plat, -g.
     const press = R.vs * R.vs * kn + R.vd * R.vd * kc + g * F.ny;
-    const load = clamp(press / g, 0, 1.6);
+    // Conduite identique au sol sur les pièces spéciales (virages relevés, tubes, loopings,
+    // tire-bouchons) tant que la voiture est plaquée. Seule la montée en L garde la
+    // physique d'appui réelle : sur le mur vertical, plus d'adhérence ni de moteur.
+    const lPiece = tile.t === 'wall' || tile.t === 'ramp90' || tile.t === 'crest90';
+    const load = lPiece ? clamp(press / g, 0, 1.6) : press > 0 ? 1 : 0;
     this.press = press;
     const c = Math.cos(R.psi), s = Math.sin(R.psi);
     let vx = R.vs * c + R.vd * s, vy = -R.vs * s + R.vd * c;

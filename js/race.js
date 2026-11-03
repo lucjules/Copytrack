@@ -1,7 +1,7 @@
 // Session de course : boucle à pas fixe, caméra, fantôme, HUD, effets.
 import * as THREE from './vendor/three.module.min.js';
 import { DT } from './constants.js';
-import { CarPhysics } from './physics.js';
+import { CarPhysics, frameWorld } from './physics.js';
 import { RaceLogic } from './raceLogic.js';
 import { Autopilot } from './autopilot.js';
 import { TrackView } from './trackMesh.js';
@@ -783,8 +783,22 @@ export class RaceSession {
       if (camUp.lengthSq() < 1e-3) camUp.copy(up);
       camUp.normalize();
       tmpV.set(p.fwd.x, p.fwd.y, p.fwd.z);
-      const target = tmpV2.copy(car.position).addScaledVector(tmpV, -mode.dist).addScaledVector(up, mode.height);
-      this.camPos.lerp(target, 1 - Math.exp(-dt * 12));
+      // La caméra suit la route elle-même, un peu en arrière sur le ruban et au-dessus de
+      // la chaussée à cet endroit : elle ne traverse plus la piste dans un looping, un tube,
+      // une vrille ou un virage relevé.
+      const R = p.rib;
+      const F = frameWorld(R.tile, R.rib, R.u, this._camF || (this._camF = {}));
+      let ub = R.u - (R.dir * mode.dist) / Math.max(1, F.ds);
+      let extra = 0;
+      if (ub < 0) { extra = -ub * F.ds; ub = 0; } else if (ub > 1) { extra = (ub - 1) * F.ds; ub = 1; }
+      const Fb = frameWorld(R.tile, R.rib, ub, this._camFb || (this._camFb = {}));
+      p._cross({ dl: R.dl }, Fb);
+      const target = tmpV2.set(
+        Fb.qx + Fb.nx * mode.height - Fb.tx * R.dir * extra,
+        Fb.qy + Fb.ny * mode.height - Fb.ty * R.dir * extra,
+        Fb.qz + Fb.nz * mode.height - Fb.tz * R.dir * extra,
+      );
+      this.camPos.lerp(target, 1 - Math.exp(-dt * 14));
       cam.position.copy(this.camPos);
       cam.up.copy(camUp);
       tmpV2.copy(car.position).addScaledVector(tmpV, mode.look).addScaledVector(up, mode.lookUp);
