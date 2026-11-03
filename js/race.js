@@ -288,12 +288,14 @@ export class RaceSession {
       app.particles.burst(p.x, p.y + 1, p.z, 24, 9, 0.8, 0.7, '#ffffff', 1);
       if (!this.demo) app.ui.hud.message({ moto: 'Mode moto !', boat: 'Mode bateau !', glider: 'Deltaplane déployé !', car: 'Retour en voiture' }[veh], 1.2);
     }
-    if (ev.sink && this.state === 'racing') {
+    // Noyade : la réapparition se fait après la mise à jour de la course, dans le même
+    // ordre que le rejeu (replay.js) — indispensable pour que la vérification des temps
+    // en ligne retrouve exactement la même course.
+    const sank = ev.sink && this.state === 'racing';
+    if (sank) {
       const p = this.phys.pos;
       app.particles.burst(p.x, p.y + 0.5, p.z, 30, 8, 0.7, 0.6, '#9fe3ff', 4, 2);
       if (!this.demo) app.ui.hud.message('Coulé ! Il faut un bateau pour traverser l\'eau', 1.8);
-      if (this.demo) this.restart(); else this.respawn();
-      return;
     }
     if (ev.ring) {
       const p = this.phys.pos;
@@ -315,7 +317,8 @@ export class RaceSession {
       }
       if (res) this._event(res);
 
-      // Hors piste : réapparition automatique.
+      // Hors piste (0,5 s) ou noyade : réapparition automatique.
+      if (sank && this.state === 'racing') { this.groundT = 0; if (this.demo) this.restart(); else this.respawn(); return; }
       if (this.phys.grounded && this.phys.surfType === 'ground') {
         this.groundT += DT;
         if (this.groundT > 0.5) {
@@ -444,9 +447,12 @@ export class RaceSession {
       fromEditor: !!this.opts.fromEditor,
       hasNext: !!this.opts.hasNext,
       canReplay: true,
+      canBoard: !!(this.trackKey && /^(b-|daily-|u-)/.test(this.trackKey) && !this.opts.spawn && !this.opts.fromEditor),
       canShareGhost: !!(this.trackKey && (isRecord || (this.record && this.record.inputs)) && !this.opts.spawn),
     });
     if (isRecord) this.loadRecord();
+    // Classement en ligne : le record est envoyé (et vérifié par rejeu côté serveur).
+    app.onRaceFinished(this, time, isRecord);
     app.ui.hud.time(time, true);
     if (this.record) app.ui.hud.el.best.innerHTML = `Record ${formatTime(this.record.time)}`;
   }

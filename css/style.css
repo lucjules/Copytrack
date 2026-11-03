@@ -869,3 +869,17 @@ body.touch kbd { display: none; }
 .comm-status { margin: 4px 0 12px; color: var(--muted, #a99fd0); font-size: 14px; }
 .comm-more { display: flex; justify-content: center; margin: 14px 0 30px; }
 #comm-list .btn.on { color: #ff6b9a; border-color: #ff6b9a; }
+
+/* ---- Classements ---- */
+.fin-online { margin: 4px 0; font-size: 14px; font-weight: 600; color: var(--muted, #a99fd0); }
+.fin-online.ok { color: #7fe9ff; }
+.fin-online.ko { color: #ff9a8a; }
+.board { list-style: none; margin: 4px 0 10px; padding: 0; display: grid; gap: 4px; }
+.board li { display: grid; grid-template-columns: 2.2em 1fr auto; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.04); }
+.board li:nth-child(1) b { color: #ffd23e; }
+.board li:nth-child(2) b { color: #d8dce8; }
+.board li:nth-child(3) b { color: #e0a070; }
+.board li.me { outline: 1px solid #7fe9ff; background: rgba(127,233,255,0.08); }
+.board li i { font-style: normal; font-variant-numeric: tabular-nums; font-weight: 700; }
+.board-btn { margin-left: auto; padding: 2px 8px !important; font-size: 13px !important; min-height: 0 !important; }
+.card .best { display: flex; align-items: center; gap: 6px; }

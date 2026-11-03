@@ -17,6 +17,7 @@ import { PIECES } from './pieces.js';
 import { VERSION } from './constants.js';
 import { thumbnail } from './editorTools.js';
 import { online } from './online.js';
+import { PHYS_VER as PV } from './replay.js';
 import { encodeGhost, decodeGhost, PHYS_VER } from './replay.js';
 import { dailyChallenge, dayKey } from './daily.js';
 import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, goalFor, goalLabel, goalDone, chapterUnlocked } from './career.js';
@@ -357,7 +358,12 @@ class App {
     const drec = getRecord('daily-' + today);
     dc.innerHTML = `<h3>Défi du ${today.split('-').reverse().join('/')}</h3>
       <div class="meta">Un nouveau circuit chaque jour, le même pour tout le monde.</div>
-      <div class="best">${drec ? formatTime(drec.time) : '<span class="meta">Pas encore de temps aujourd’hui</span>'}</div>`;
+      <div class="best">${drec ? formatTime(drec.time) : '<span class="meta">Pas encore de temps aujourd’hui</span>'}<button class="btn board-btn" data-board="1" title="Classement du jour">🏆</button></div>`;
+    dc.querySelector('[data-board]').addEventListener('click', (e) => {
+      e.stopPropagation(); this.audio.click();
+      const c = dailyChallenge();
+      if (c) this.leaderboardModal(c.key, c.track.name, c.track);
+    });
     const goDaily = () => { this.audio.click(); this.playDaily(); };
     dc.addEventListener('click', goDaily);
     dc.addEventListener('keydown', (e) => { if (e.key === 'Enter') goDaily(); });
@@ -397,8 +403,9 @@ class App {
           <div class="meta"><span class="diff">${'◆'.repeat(b.def.difficulty)}${'◇'.repeat(5 - b.def.difficulty)}</span> · ${b.track.tiles.length} pièces</div>
           ${tags.length ? `<div class="tags">${tags.map((t) => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
           <div class="goal${gdone ? ' done' : ''}">★ ${esc(goalLabel(goal))}${gdone ? ' ✓' : ''}</div>
-          <div class="best">${b.def.medals ? medalIcon(medal) : ''}${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}</div>
+          <div class="best">${b.def.medals ? medalIcon(medal) : ''}${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}<button class="btn board-btn" data-board="1" title="Classement en ligne">🏆</button></div>
           ${open ? '' : '<div class="lock">🔒</div>'}`;
+        card.querySelector('[data-board]').addEventListener('click', (e) => { e.stopPropagation(); this.audio.click(); this.leaderboardModal(b.key, b.def.name, b.track); });
         const go = () => {
           this.audio.click();
           if (!open) { this.ui.flash(`Chapitre verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${ch}.`); this.audio.error(); return; }
@@ -622,6 +629,7 @@ class App {
     $('opt-ghost').checked = s.ghost;
     $('opt-ghostgold').checked = s.ghostGold !== false;
     $('opt-ghostimp').checked = s.ghostImported !== false;
+    $('opt-onlinescores').checked = s.onlineScores !== false;
     $('opt-name').value = s.playerName;
     $('opt-touch').value = s.touchMode;
     $('opt-haptics').checked = s.haptics;
@@ -673,6 +681,59 @@ class App {
     actions.push({ label: 'Copier le lien', onClick: () => copy(url, 'Lien copié !') });
     actions.push({ label: 'Fermer' });
     this.ui.modal({ title: 'Partager le circuit', body: wrap, actions });
+  }
+
+  // ---- Classements en ligne --------------------------------------------------------
+  // Fin de course : si c'est un record local, on l'envoie (le serveur rejoue la course).
+  async onRaceFinished(session, time, isRecord) {
+    const key = session.trackKey;
+    if (!key || !/^(b-|daily-|u-)/.test(key) || session.opts.fromEditor || session.opts.spawn || session.replay) return;
+    if (this.settings.onlineScores === false || !isRecord || !session.lastRun) return;
+    const el = $('fin-online');
+    el.classList.remove('hidden');
+    el.className = 'fin-online';
+    el.textContent = '🌍 Envoi au classement…';
+    try {
+      const r = await online.submitScore({
+        trackKey: key, code: key.startsWith('u-') ? session.track.encode() : '',
+        inputs: session.lastRun.inputs, time, physVer: PV,
+      }, this.settings.playerName);
+      if (this.session !== session) return;
+      el.className = 'fin-online ok';
+      el.textContent = r.improved
+        ? `🌍 Classement mondial : ${r.rank}${r.rank === 1 ? 'er' : 'e'} sur ${r.total}${r.rank === 1 ? ' — meilleur temps du monde !' : ''}`
+        : `🌍 Ton meilleur temps en ligne reste ${formatTime(r.best)} (${r.rank}${r.rank === 1 ? 'er' : 'e'} sur ${r.total})`;
+    } catch (e) {
+      if (this.session !== session) return;
+      el.className = 'fin-online ko';
+      el.textContent = '🌍 Classement : ' + e.message;
+    }
+  }
+
+  async leaderboardModal(trackKey, name, track = null) {
+    const body = document.createElement('div');
+    body.innerHTML = '<p class="meta">Chargement du classement…</p>';
+    this.ui.modal({ title: `🏆 ${name}`, body, actions: [{ label: 'Fermer', primary: true }] });
+    const render = async () => {
+      let lb;
+      try { lb = await online.leaderboard(trackKey, PV, 10); } catch (e) { body.innerHTML = `<p>Classement indisponible : ${esc(e.message)}</p>`; return; }
+      const rec = getRecord(trackKey);
+      const canSend = rec && rec.inputs && rec.pv === PV && (!lb.me || rec.time < lb.me.time - 1e-6) && this.settings.onlineScores !== false;
+      const rows = lb.top.map((r, i) => `<li class="${r.player === online.uid ? 'me' : ''}"><b>${i + 1}</b><span>${esc((r.players && r.players.name) || 'Pilote')}</span><i>${formatTime(r.time)}</i></li>`).join('');
+      body.innerHTML = `${lb.top.length ? `<ol class="board">${rows}</ol>` : '<p>Aucun temps pour l’instant : sois le premier !</p>'}
+        <p class="meta">${lb.total} pilote${lb.total > 1 ? 's' : ''} classé${lb.total > 1 ? 's' : ''}${lb.me ? ` · ta place : <b>${lb.me.rank}${lb.me.rank === 1 ? 'er' : 'e'}</b> (${formatTime(lb.me.time)})` : ''}.
+        Chaque temps est vérifié : le serveur rejoue la course avant de l’accepter.</p>
+        ${canSend ? `<button class="btn primary" id="lb-send">Envoyer mon record (${formatTime(rec.time)})</button>` : ''}`;
+      const send = body.querySelector('#lb-send');
+      if (send) send.onclick = async () => {
+        send.disabled = true; send.textContent = 'Vérification…';
+        try {
+          await online.submitScore({ trackKey, code: trackKey.startsWith('u-') && track ? track.encode() : '', inputs: rec.inputs, time: rec.time, physVer: PV }, this.settings.playerName);
+          render();
+        } catch (e) { send.textContent = e.message; }
+      };
+    };
+    render();
   }
 
   // ---- Communauté (circuits publiés en ligne) ----------------------------------
@@ -750,6 +811,7 @@ class App {
       <div class="actions">
         <button class="btn primary" data-a="play"${track ? '' : ' disabled'}>Jouer</button>
         <button class="btn${liked ? ' on' : ''}" data-a="like" title="J’aime">${liked ? '♥' : '♡'}</button>
+        <button class="btn" data-a="board" title="Classement">🏆</button>
         <button class="btn" data-a="copy" title="Copier dans Mes circuits pour le modifier">Copier</button>
         ${mine ? '<button class="btn danger" data-a="del">Retirer</button>' : '<button class="btn subtle" data-a="report" title="Signaler un circuit inapproprié">⚑</button>'}
       </div>`;
@@ -768,6 +830,8 @@ class App {
           a.classList.toggle('on', now); a.textContent = now ? '♥' : '♡';
           card.querySelector('.nl').textContent = n;
         } catch (err) { this.ui.flash(err.message); }
+      } else if (act === 'board' && track) {
+        this.leaderboardModal(key, row.name, track);
       } else if (act === 'copy' && track) {
         saveMyTrack({ id: newId(), name: track.name, code: track.encode() });
         this.ui.flash('Copié dans « Mes circuits ».');
@@ -871,6 +935,7 @@ class App {
     $('opt-ghost').addEventListener('change', (e) => { this.settings.ghost = e.target.checked; this.saveSettings(); });
     $('opt-ghostgold').addEventListener('change', (e) => { this.settings.ghostGold = e.target.checked; this.saveSettings(); });
     $('opt-ghostimp').addEventListener('change', (e) => { this.settings.ghostImported = e.target.checked; this.saveSettings(); });
+    $('opt-onlinescores').addEventListener('change', (e) => { this.settings.onlineScores = e.target.checked; this.saveSettings(); });
     $('opt-music').addEventListener('input', (e) => {
       this.settings.musicVolume = parseFloat(e.target.value);
       this.audio.setMusicVolume(this.settings.musicVolume);
@@ -939,6 +1004,11 @@ class App {
       case 'quit': this.quitRace(); break;
       case 'watch-replay': this.watchReplay(); break;
       case 'share-ghost': this.shareGhost(); break;
+      case 'leaderboard': {
+        const s = this.session;
+        if (s && s.trackKey) this.leaderboardModal(s.trackKey, s.track.name, s.track);
+        break;
+      }
       case 'next': this.nextTrack(); break;
       case 'reset-records':
         this.ui.modal({

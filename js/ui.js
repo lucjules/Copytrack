@@ -188,6 +188,8 @@ export class UI {
 
   showFinish(info) {
     $('fin-replay').classList.toggle('hidden', !info.canReplay);
+    $('fin-online').classList.add('hidden');
+    $('fin-board').classList.toggle('hidden', !info.canBoard);
     const gl = $('fin-goal');
     if (gl) {
       gl.classList.toggle('hidden', !info.goal);
