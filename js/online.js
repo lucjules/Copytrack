@@ -153,6 +153,43 @@ class OnlineClient {
     await this._fetch('/rest/v1/rpc/report_track', { method: 'POST', body: { t: id } });
   }
 
+  // ---- Classements ------------------------------------------------------------------
+  // Envoie une course terminée : la fonction serveur la rejoue avant d'accepter le temps.
+  async submitScore({ trackKey, code = '', inputs, time, physVer }, playerName) {
+    await this.ensurePlayer(playerName);
+    return this._fetch('/functions/v1/submit-score', { method: 'POST', body: { trackKey, code, inputs, time, physVer } });
+  }
+
+  async leaderboard(trackKey, physVer, limit = 10) {
+    const q = new URLSearchParams();
+    q.set('select', 'time,player,updated_at,players!scores_player_fkey(name)');
+    q.set('track_key', 'eq.' + trackKey);
+    q.set('phys_ver', 'eq.' + physVer);
+    q.set('order', 'time.asc,updated_at.asc');
+    q.set('limit', String(limit));
+    const top = await this._fetch('/rest/v1/scores?' + q.toString());
+    // Ma place, si j'ai un temps.
+    let me = null;
+    if (this.uid) {
+      const mine = await this._fetch(`/rest/v1/scores?select=time&track_key=eq.${encodeURIComponent(trackKey)}&phys_ver=eq.${physVer}&player=eq.${this.uid}`);
+      if (mine && mine.length) {
+        const before = await this._count(`track_key=eq.${encodeURIComponent(trackKey)}&phys_ver=eq.${physVer}&time=lt.${mine[0].time}`);
+        me = { time: mine[0].time, rank: before + 1 };
+      }
+    }
+    const total = await this._count(`track_key=eq.${encodeURIComponent(trackKey)}&phys_ver=eq.${physVer}`);
+    return { top: top || [], me, total };
+  }
+
+  async _count(query) {
+    const h = { apikey: ONLINE.key, Prefer: 'count=exact', Range: '0-0' };
+    await this.ensureSession();
+    h.Authorization = 'Bearer ' + this.session.access_token;
+    const r = await fetch(`${ONLINE.url}/rest/v1/scores?${query}&select=player`, { headers: h });
+    if (!r.ok) throw explain(r.status, null);
+    return parseInt((r.headers.get('content-range') || '*/0').split('/')[1], 10) || 0;
+  }
+
   async myLikes() {
     await this.ensureSession();
     const rows = await this._fetch('/rest/v1/track_likes?select=track_id&player=eq.' + this.uid);

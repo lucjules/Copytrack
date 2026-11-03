@@ -67,6 +67,7 @@ export const DEFAULT_SETTINGS = {
   tutorialDone: false,
   ghostGold: true,
   ghostImported: true,
+  onlineScores: true,
 };
 
 export function loadSettings() {
