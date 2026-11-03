@@ -8,7 +8,7 @@
 //  wall    : mur vertical d'un niveau
 //  crest90 : quart de cercle convexe (mur -> plat) puis plat
 //  v=1     : n'importe quelle ligne / virage posé à l'envers (au plafond)
-//  bank*   : virage relevé      halfpipe : demi-tube      tube : tube fermé
+//  bank*   : virage relevé      tube : tube fermé
 //  cork*   : tire-bouchon (hélice d'un tour)
 // Un ruban peut avoir une section courbe : kc (courbure transversale), hw (demi-largeur
 // mesurée le long de la section) et wrap (section fermée : on peut en faire le tour).
@@ -67,18 +67,6 @@ function build(tile) {
           o.nx = -ca * Math.sin(b); o.ny = Math.cos(b); o.nz = -sa * Math.sin(b);
         },
         len: (Math.PI / 2) * a.R,
-      };
-    }
-    if (tile.t === 'halfpipe') {
-      // Demi-tube : ligne droite dont la section se creuse en U (rayon 8 m) puis se rouvre.
-      const kcMax = 1 / 8;
-      return {
-        pos(u, o) {
-          o.x = 0; o.y = base; o.z = half - 2 * half * u;
-          o.nx = 0; o.ny = 1; o.nz = 0;
-          o.kc = kcMax * ramp(u, 0.22); o.hw = ROAD_HALF; o.wrap = false;
-        },
-        len: 2 * half,
       };
     }
     if (tile.t === 'tube') {

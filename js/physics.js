@@ -739,7 +739,7 @@ export class CarPhysics {
     return false;
   }
 
-  // Section courbe (demi-tube, tube) : repère de la route au point de la voiture.
+  // Section courbe (tube) : repère de la route au point de la voiture.
   // Avec kc = courbure transversale et phi = kc * dl, la chaussée remonte de chaque côté :
   // position = centre + r sin(phi)/kc + n (1 - cos(phi))/kc, normale tournée de phi.
   // Remplit F.qx/qy/qz (point de contact) et remplace n et r par leurs valeurs locales.

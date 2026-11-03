@@ -41,7 +41,7 @@ class App {
     this.input.setPadConfig({ deadzone: this.settings.padDeadzone, sens: this.settings.padSens, rumble: this.settings.haptics });
     purgeOldRecords();
     profile();
-    $('menu-foot').textContent = `Shardway v${VERSION} · un jeu de course original · propulsé par three.js`;
+    $('menu-foot').textContent = `Copytrack ${VERSION} · un jeu de course original · propulsé par three.js`;
     this.audio = new GameAudio();
     this.audio.setVolume(this.settings.volume);
     this.audio.setMusicVolume(this.settings.musicVolume);
@@ -161,7 +161,7 @@ class App {
     const K = (a) => this._keysOf(a);
     const steps = [
       {
-        title: 'Bienvenue dans Shardway !',
+        title: 'Bienvenue dans Copytrack !',
         body: `<p>Une course contre la montre : passe tous les <b>checkpoints</b> puis l'<b>arrivée</b>, le plus vite possible.</p>
           <ul class="tuto">
             <li>${touch ? 'Boutons ▲ / ▼ à droite' : `<b>${K('accelerate')}</b> / <b>${K('brake')}</b>`} : accélérer / freiner (et marche arrière)</li>
@@ -300,7 +300,7 @@ class App {
       [L('ed.rotate'), 'Pivoter (Maj : sens inverse) — décos : par 15°'],
       [L('ed.mirror'), 'Miroir (looping, tire-bouchon, bifurcation : gauche ↔ droite)'],
       [L('ed.nextPiece'), 'Pièce suivante (Maj : précédente)'],
-      ['1 … 0, P, U, I, V, L, K, J, O, Y', 'Pièces (U/I : grands loopings, V : vrille, L/K/J : montée en L, mur, sommet, O : virage relevé, Y : demi-tube)'],
+      ['1 … 0, P, U, I, V, L, K, J, O', 'Pièces (U/I : grands loopings, V : vrille, L/K/J : montée en L, mur, sommet, O : virage relevé)'],
       ['Q', 'Outil Sélection : glisser pour choisir une zone'],
       ['Ctrl + C / X / V / A', 'Copier / déplacer / coller / tout sélectionner (R : pivoter le collage, E / C : monter / descendre la sélection, Suppr : effacer)'],
       [L('ed.levelView'), 'Vue par niveau (les autres niveaux sont estompés)'],
@@ -415,7 +415,6 @@ class App {
     if (has((t) => PIECES[t.t].kind === 'loop')) tags.push('Looping');
     if (has((t) => t.t === 'steep')) tags.push('Sauts');
     if (has((t) => t.t === 'bank' || t.t === 'bankBig')) tags.push('Virage relevé');
-    if (has((t) => t.t === 'halfpipe')) tags.push('Demi-tube');
     if (has((t) => t.t === 'tube')) tags.push('Tube');
     if (has((t) => t.t === 'cork' || t.t === 'corkL')) tags.push('Tire-bouchon');
     if (has((t) => PIECES[t.t].kind === 'fork')) tags.push('Bifurcation');
@@ -681,7 +680,7 @@ class App {
     const ta = document.createElement('textarea');
     ta.placeholder = 'Colle ici un code de circuit (SHW…), un lien de partage ou un code de fantôme (SHG1:…)';
     const wrap = document.createElement('div');
-    wrap.innerHTML = '<p>Colle le code d’un circuit Shardway, ou le code du fantôme d’un ami.</p>';
+    wrap.innerHTML = '<p>Colle le code d’un circuit Copytrack, ou le code du fantôme d’un ami.</p>';
     wrap.appendChild(ta);
     const parse = () => {
       if (/^\s*SHG1:/.test(ta.value)) { this.importGhostCode(ta.value); return null; }
@@ -939,7 +938,7 @@ class App {
         <span>Médailles obtenues</span><b>${medals.length}</b>
         <span>Éclats secrets trouvés</span><b>${Object.keys(p.shards).length}</b>
       </div>
-      <p class="prof-note">Shardway est un jeu 100 % navigateur, sans serveur : ton <b>code joueur</b> contient toute ta progression (records, fantômes, circuits enregistrés, pièces, personnalisation, réglages). Copie-le ou télécharge-le pour le restaurer sur un autre appareil ou navigateur. L'identifiant ci-dessus sert à reconnaître ta sauvegarde.</p>
+      <p class="prof-note">Copytrack est un jeu 100 % navigateur, sans serveur : ton <b>code joueur</b> contient toute ta progression (records, fantômes, circuits enregistrés, pièces, personnalisation, réglages). Copie-le ou télécharge-le pour le restaurer sur un autre appareil ou navigateur. L'identifiant ci-dessus sert à reconnaître ta sauvegarde.</p>
       <div class="row">
         <button class="btn primary" data-p="copy">Copier mon code joueur</button>
         <button class="btn" data-p="download">Télécharger (.shw)</button>
@@ -956,7 +955,7 @@ class App {
       const code = await exportCode();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([code], { type: 'text/plain' }));
-      a.download = `shardway-${p.id}.shw`;
+      a.download = `copytrack-${p.id}.shw`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     };
@@ -980,7 +979,7 @@ class App {
     const ta = document.createElement('textarea');
     ta.placeholder = 'SHWP1:…';
     const wrap = document.createElement('div');
-    wrap.innerHTML = '<p>Colle ici un code joueur Shardway.</p>';
+    wrap.innerHTML = '<p>Colle ici un code joueur Copytrack.</p>';
     wrap.appendChild(ta);
     this.ui.modal({ title: 'Importer une sauvegarde', body: wrap, actions: [
       { label: 'Continuer', primary: true, onClick: () => { const v = ta.value; setTimeout(() => this._askImport(v), 50); } },
@@ -1047,7 +1046,7 @@ class App {
         $('menu').querySelector('.logo').animate([{ transform: 'rotate(0)' }, { transform: 'rotate(360deg) scale(1.15)' }, { transform: 'rotate(720deg)' }], { duration: 900 });
         this.audio.finish(true);
         if (!p.eggs.logo) { p.eggs.logo = 1; addCoins(25); saveProfile(); this.ui.updateCoins(); this.ui.flash('Tu as cliqué sur le logo 7 fois : +25 ◆ !', 3); }
-        else this.ui.flash('Shardway vous salue ✦', 2);
+        else this.ui.flash('Copytrack vous salue ✦', 2);
       }
     });
   }
@@ -1157,6 +1156,7 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 try {
   const app = new App();
   window.shardway = app;
+  window.copytrack = app;
   app.start();
 } catch (err) {
   console.error(err);

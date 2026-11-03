@@ -23,7 +23,7 @@ function write(key, value) {
 export function getJSON(key, fallback) { return read(key, fallback); }
 export function setJSON(key, value) { return write(key, value); }
 
-// Toutes les données du jeu (clés « shardway.* ») sous forme d'objet.
+// Toutes les données du jeu (clés « shardway.* », gardées pour ne perdre aucune sauvegarde) sous forme d'objet.
 export function dumpAll() {
   const out = {};
   try {
