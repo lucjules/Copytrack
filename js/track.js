@@ -18,6 +18,11 @@ export const DECORS = {
   isles: { label: 'Archipel tropical' },
   volcano: { label: 'Volcan' },
   orbit: { label: 'Station orbitale' },
+  // 0.9
+  caves: { label: 'Canyon de cristal' },
+  sky: { label: 'Ville dans les nuages' },
+  reef: { label: 'Fonds marins' },
+  factory: { label: 'Usine mécanique' },
 };
 
 // L'eau est un peu sous le niveau de la chaussée.

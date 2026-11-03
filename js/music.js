@@ -10,6 +10,10 @@ const THEMES = {
   isles:   { bpm: 104, root: 48, scale: [0, 2, 4, 5, 7, 9, 11], prog: [0, 4, 5, 3], arp: 'triangle', pad: 'triangle', bright: 2400 },
   volcano: { bpm: 128, root: 40, scale: [0, 1, 3, 5, 7, 8, 10], prog: [0, 1, 5, 4], arp: 'sawtooth', pad: 'sawtooth', bright: 1400 },
   orbit:   { bpm: 100, root: 47, scale: [0, 2, 4, 6, 7, 9, 11], prog: [0, 2, 4, 1], arp: 'sine',     pad: 'sine',     bright: 3000 },
+  caves:   { bpm: 98,  root: 44, scale: [0, 2, 3, 7, 8],        prog: [0, 3, 1, 4], arp: 'triangle', pad: 'sine',     bright: 1800 },
+  sky:     { bpm: 116, root: 52, scale: [0, 2, 4, 5, 7, 9, 11], prog: [0, 3, 4, 5], arp: 'sine',     pad: 'triangle', bright: 3200 },
+  reef:    { bpm: 92,  root: 45, scale: [0, 2, 3, 5, 7, 9, 10], prog: [0, 5, 2, 4], arp: 'sine',     pad: 'sine',     bright: 1500 },
+  factory: { bpm: 132, root: 41, scale: [0, 1, 3, 5, 6, 8, 10], prog: [0, 6, 4, 1], arp: 'square',   pad: 'sawtooth', bright: 1900 },
   menu:    { bpm: 92,  root: 48, scale: [0, 2, 4, 7, 9],        prog: [0, 5, 3, 4], arp: 'triangle', pad: 'sine',     bright: 2000 },
 };
 

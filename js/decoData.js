@@ -8,6 +8,12 @@ export const DECO_ORDER = [
   'plaque', 'shard',
   // 0.9 : obstacles (physiques)
   'spikes', 'spikesPop', 'pendulum', 'hammer', 'slider', 'sweeper', 'bumper',
+  'stalagmite', 'cavePillar', 'crystalCluster', 'glowMushroom', 'minecart', 'lantern',
+  'cloud', 'balloon', 'floatIsle', 'windmill', 'airship', 'skyTower',
+  'coral', 'seaweed', 'fishSchool', 'shell', 'anchor', 'jellyfish', 'treasure',
+  'gear', 'pipe', 'chimney', 'crate', 'barrel', 'crane', 'warnLight',
+  'satellite', 'asteroid', 'antenna', 'rocket', 'planetMini',
+  'trafficCone', 'tireStack', 'flagPole', 'grandstand',
 ];
 
 export const DECO_CATS = {
@@ -16,6 +22,12 @@ export const DECO_CATS = {
   build: { label: 'Murs et toits', kinds: ['wall', 'wallLow', 'roofFlat', 'roofGable', 'dome'] },
   nature: { label: 'Nature', kinds: ['pine', 'palm', 'tree', 'bush', 'rock', 'cactus', 'crystal', 'mushroom', 'flower'] },
   image: { label: 'Image', kinds: ['plaque'] },
+  cave: { label: 'Souterrain', kinds: ['stalagmite', 'cavePillar', 'crystalCluster', 'glowMushroom', 'minecart', 'lantern'] },
+  sky: { label: 'Nuages', kinds: ['cloud', 'balloon', 'floatIsle', 'windmill', 'airship', 'skyTower'] },
+  sea: { label: 'Fonds marins', kinds: ['coral', 'seaweed', 'fishSchool', 'shell', 'anchor', 'jellyfish', 'treasure'] },
+  factory: { label: 'Usine', kinds: ['gear', 'pipe', 'chimney', 'crate', 'barrel', 'crane', 'warnLight'] },
+  space: { label: 'Espace', kinds: ['satellite', 'asteroid', 'antenna', 'rocket', 'planetMini'] },
+  race: { label: 'Circuit', kinds: ['trafficCone', 'tireStack', 'flagPole', 'grandstand'] },
   obstacles: { label: 'Obstacles', kinds: ['spikes', 'spikesPop', 'pendulum', 'hammer', 'slider', 'sweeper', 'bumper'] },
 };
 
@@ -28,6 +40,12 @@ export const DECO_LABELS = {
   crystal: 'Cristal', mushroom: 'Champignon', flower: 'Fleur', plaque: 'Plaque image', shard: 'Éclat secret',
   spikes: 'Piques', spikesPop: 'Piques escamotables', pendulum: 'Boule balancier', hammer: 'Marteau tournant',
   slider: 'Mur coulissant', sweeper: 'Balayeur', bumper: 'Bumper',
+  stalagmite: 'Stalagmite', cavePillar: 'Pilier de grotte', crystalCluster: 'Amas de cristaux', glowMushroom: 'Champignon lumineux', minecart: 'Wagonnet', lantern: 'Lanterne',
+  cloud: 'Nuage', balloon: 'Montgolfière', floatIsle: 'Île flottante', windmill: 'Éolienne', airship: 'Dirigeable', skyTower: 'Tour céleste',
+  coral: 'Corail', seaweed: 'Algues', fishSchool: 'Banc de poissons', shell: 'Coquillage', anchor: 'Ancre', jellyfish: 'Méduse', treasure: 'Coffre au trésor',
+  gear: 'Engrenage', pipe: 'Tuyau', chimney: 'Cheminée', crate: 'Caisses', barrel: 'Barils', crane: 'Grue', warnLight: 'Gyrophare',
+  satellite: 'Satellite', asteroid: 'Astéroïde', antenna: 'Antenne', rocket: 'Fusée', planetMini: 'Planète miniature',
+  trafficCone: 'Plot', tireStack: 'Pile de pneus', flagPole: 'Drapeau à damier', grandstand: 'Tribune',
 };
 
 // Couleurs proposées (index 0 = couleurs naturelles de l'objet).

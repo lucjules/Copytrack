@@ -1455,5 +1455,12 @@ const DECO_ICON = {
   wall: '🧱', wallLow: '▬', roofFlat: '⬜', roofGable: '🏠', dome: '🛖',
   pine: '🌲', palm: '🌴', tree: '🌳', bush: '🌿', rock: '🪨', cactus: '🌵', crystal: '💎', mushroom: '🍄', flower: '🌸',
   plaque: '🖼', shard: '✦',
+  spikes: '🔱', spikesPop: '⏫', pendulum: '🔴', hammer: '🔨', slider: '↔', sweeper: '🌀', bumper: '🟣',
+  stalagmite: '🗻', cavePillar: '🏛', crystalCluster: '💠', glowMushroom: '🍄', minecart: '🛒', lantern: '🏮',
+  cloud: '☁', balloon: '🎈', floatIsle: '🏝', windmill: '🌬', airship: '🛸', skyTower: '🗼',
+  coral: '🪸', seaweed: '🌿', fishSchool: '🐟', shell: '🐚', anchor: '⚓', jellyfish: '🪼', treasure: '💰',
+  gear: '⚙', pipe: '🔧', chimney: '🏭', crate: '📦', barrel: '🛢', crane: '🏗', warnLight: '🚨',
+  satellite: '🛰', asteroid: '☄', antenna: '📡', rocket: '🚀', planetMini: '🪐',
+  trafficCone: '🚧', tireStack: '⭕', flagPole: '🏁', grandstand: '🏟',
 };
 void SURFACE_STYLE;

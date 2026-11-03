@@ -375,7 +375,7 @@ class App {
     dailyBox.appendChild(dGrid);
     list.appendChild(dailyBox);
 
-    const decorColor = { desert: '#ff8c5a', polar: '#7fe9ff', jungle: '#2dffb0', city: '#ff3d8a', isles: '#ffd66b', volcano: '#ff5a2a', orbit: '#b9a6ff' };
+    const decorColor = { desert: '#ff8c5a', polar: '#7fe9ff', jungle: '#2dffb0', city: '#ff3d8a', isles: '#ffd66b', volcano: '#ff5a2a', orbit: '#b9a6ff', caves: '#b48cff', sky: '#9fd8ff', reef: '#2fd3b5', factory: '#ffb070' };
     const total = this.builtins.length;
     for (let ch = 0; ch * CHAPTER_SIZE < total; ch++) {
       const open = chapterUnlocked(ch, medalOf, total);
@@ -446,7 +446,6 @@ class App {
     if (has((t) => t.tn)) tags.push('Tunnel');
     if (has((t) => t.nb)) tags.push('Sans bordures');
     if ((track.laps || 1) > 1) tags.push(`${track.laps} tours`);
-    if (track.decos.some((d) => d.k === 'shard')) tags.push('✦ Secret');
     return tags.slice(0, 6);
   }
 
@@ -1174,7 +1173,6 @@ class App {
         <span>Courses terminées</span><b>${p.stats.races}</b>
         <span>Pièces gagnées au total</span><b>${p.stats.earned}</b>
         <span>Médailles obtenues</span><b>${medals.length}</b>
-        <span>Éclats secrets trouvés</span><b>${Object.keys(p.shards).length}</b>
       </div>
       <p class="prof-note">Copytrack est un jeu 100 % navigateur, sans serveur : ton <b>code joueur</b> contient toute ta progression (records, fantômes, circuits enregistrés, pièces, personnalisation, réglages). Copie-le ou télécharge-le pour le restaurer sur un autre appareil ou navigateur. L'identifiant ci-dessus sert à reconnaître ta sauvegarde.</p>
       <div class="row">
@@ -1271,7 +1269,6 @@ class App {
         typed = (typed + e.key.toLowerCase()).slice(-8);
         if (typed.endsWith('moto') && this.session && this.session.car) { this.session.car.setMoto(!this.session.car.isMoto); this.audio.transform(); }
         if (typed.endsWith('disco')) this._disco = !this._disco;
-        if (typed.endsWith('shard')) this.ui.flash('Des éclats dorés se cachent dans certains circuits… ✦', 3.5);
       }
     });
     let clicks = 0, ct = 0;

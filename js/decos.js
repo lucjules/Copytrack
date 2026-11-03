@@ -196,6 +196,287 @@ const BUILDERS = {
   },
 };
 
+// ---- 0.9 : nouvelles décorations par thème ------------------------------------------
+function ring(glow, y, r, n, w, col) {
+  const A = ringPts(0, y, 0, r, n), B = ringPts(0, y + w, 0, r, n);
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n; glow.quad(A[i], A[j], B[j], B[i], col); }
+}
+function blades(gb, cx, cy, cz, r, n, col, a0 = 0) {
+  for (let i = 0; i < n; i++) {
+    const a = a0 + (i / n) * TAU, b = a + 0.35;
+    gb.tri([cx, cy, cz], [cx + Math.cos(a) * r, cy + Math.sin(a) * r, cz], [cx + Math.cos(b) * r, cy + Math.sin(b) * r, cz], col);
+    gb.tri([cx, cy, cz + 0.05], [cx + Math.cos(b) * r, cy + Math.sin(b) * r, cz + 0.05], [cx + Math.cos(a) * r, cy + Math.sin(a) * r, cz + 0.05], col);
+  }
+}
+Object.assign(BUILDERS, {
+  // Souterrain
+  stalagmite(gb, glow, c) {
+    const col = c || '#6a5a7a';
+    cone(gb, 0, 0, 0, 1.6, 7, 7, col, '#5a4a6a');
+    cone(gb, 1.4, 0, 0.6, 0.8, 3.5, 6, col);
+    cone(gb, -1.1, 0, -0.7, 0.7, 2.6, 6, '#7a6a8a');
+  },
+  cavePillar(gb, glow, c) {
+    const col = c || '#5a4a6a';
+    cylinder(gb, 0, 0, 5, 0, 2.4, 8, col, 1.2);
+    cylinder(gb, 0, 5, 9, 0, 1.2, 8, '#6a5a7a', 1.0);
+    cylinder(gb, 0, 9, 14, 0, 1.0, 8, col, 2.6);
+    ring(glow, 6.5, 1.15, 8, 0.25, c ? WHITE : '#7fe9ff');
+  },
+  crystalCluster(gb, glow, c) {
+    const cols = c ? [c, c, c] : ['#5ff2ff', '#b48cff', '#ff7ad9'];
+    octa(gb, 0, 3, 0, 1.2, 3, cols[0], glow, cols[0]);
+    octa(gb, 1.6, 1.8, 0.4, 0.8, 1.8, cols[1], glow, cols[1]);
+    octa(gb, -1.4, 1.6, -0.6, 0.7, 1.6, cols[2], glow, cols[2]);
+    octa(gb, 0.4, 1.2, -1.5, 0.6, 1.2, cols[1], glow, cols[1]);
+    rockBase(gb);
+  },
+  glowMushroom(gb, glow, c) {
+    const col = c || '#2dffb0';
+    cylinder(gb, 0, 0, 3.2, 0, 0.4, 7, '#d9e6f2', 0.32);
+    sphere(glow, 0, 3.1, 0, 2.4, col, null, 1.4, 4, 10, true);
+    cylinder(gb, 1.6, 0, 1.6, 0.8, 0.25, 6, '#d9e6f2');
+    sphere(glow, 1.6, 1.55, 0.8, 1.1, col, null, 0.7, 3, 8, true);
+  },
+  minecart(gb, glow, c) {
+    gb.box(-6, 0, -1.2, 6, 0.15, -0.9, GREY); gb.box(-6, 0, 0.9, 6, 0.15, 1.2, GREY);
+    for (let i = -5; i <= 5; i += 1.25) gb.box(i - 0.2, 0, -1.6, i + 0.2, 0.08, 1.6, '#6b4a32');
+    gb.taper(0, 0, 0.5, 2.4, 3.2, 2.4, 3.8, 2.8, c || '#8a5a3a');
+    for (const [x, z] of [[-1, -1.1], [1, -1.1], [-1, 1.1], [1, 1.1]]) cylinder(gb, x, 0.15, 0.75, z, 0.32, 6, DARK);
+    octa(gb, 0, 2.6, 0, 0.9, 0.5, '#ffd23e', glow, '#ffd23e');
+  },
+  lantern(gb, glow, c) {
+    gb.box(-0.12, 0, -0.12, 0.12, 4, 0.12, DARK);
+    gb.box(-0.12, 3.8, -0.12, 1.4, 4, 0.12, DARK);
+    glow.box(1.0, 2.9, -0.35, 1.7, 3.7, 0.35, c || '#ffb84d');
+  },
+  // Nuages
+  cloud(gb, glow, c) {
+    const col = c || '#ffffff', sh = '#e4ecf7';
+    sphere(gb, 0, 3, 0, 3.2, col, sh, 2.4, 4, 9);
+    sphere(gb, 3, 2.4, 0.6, 2.4, col, sh, 1.8, 4, 8);
+    sphere(gb, -3, 2.3, -0.4, 2.2, col, sh, 1.7, 4, 8);
+    sphere(gb, 0.8, 4.4, -0.8, 1.8, col, null, 1.5, 3, 8);
+  },
+  balloon(gb, glow, c) {
+    const col = c || '#ff6b57';
+    sphere(gb, 0, 9, 0, 3.4, col, '#ffd23e', 4, 6, 10);
+    cone(gb, 0, 3.6, 0, 1.6, 2.4, 8, col);
+    for (const [x, z] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]]) gb.box(x - 0.04, 1.6, z - 0.04, x + 0.04, 4.6, z + 0.04, DARK);
+    gb.box(-0.8, 0.6, -0.8, 0.8, 1.6, 0.8, '#8a6a4a');
+    glow.box(-0.3, 4.6, -0.3, 0.3, 5.2, 0.3, '#ffb84d');
+  },
+  floatIsle(gb, glow, c) {
+    const y = 6;
+    cone(gb, 0, y, 0, 4, -6, 7, '#8a6a5a', '#7a5a4a');
+    cylinder(gb, 0, y, y + 0.8, 0, 4, 7, c || '#5cc860');
+    BUILDERS.tree(gbOffset(gb, 0.8, y + 0.8, 0.4), glow, null);
+    glow.box(-0.15, y - 6, -0.15, 0.15, y, 0.15, '#7fe9ff');
+  },
+  windmill(gb, glow, c) {
+    gb.taper(0, 0, 0, 9, 3, 3, 1.6, 1.6, c || '#f4f1ea');
+    cone(gb, 0, 9, 0, 1.5, 1.8, 6, '#d8654a');
+    blades(gb, 0, 8, 1.2, 5, 4, '#8d93ad', 0.3);
+  },
+  airship(gb, glow, c) {
+    const col = c || '#b48cff';
+    const gy = 9;
+    sphere(gb, 0, gy, 0, 2.6, col, null, 2.6, 4, 10);
+    gb.taper(0, 0, gy - 2.6, gy + 2.6, 0.1, 9, 0.1, 9, col);
+    gb.box(-1, gy - 3.8, -2, 1, gy - 2.8, 2, '#5a5e82');
+    blades(gb, 0, gy, -5.2, 1.2, 3, GREY);
+    glow.box(-1.05, gy - 3.5, -1.5, 1.05, gy - 3.1, 1.5, '#ffd23e');
+  },
+  skyTower(gb, glow, c) {
+    gb.taper(0, 0, 0, 16, 3, 3, 1.8, 1.8, c || '#e6ecf7');
+    sphere(gb, 0, 17, 0, 2.6, '#9fd8ff', '#c9ecff', 2.0, 4, 10);
+    ring(glow, 12, 1.95, 8, 0.4, '#5ff2ff');
+    gb.box(-0.1, 19, -0.1, 0.1, 22, 0.1, GREY);
+    glow.box(-0.3, 22, -0.3, 0.3, 22.6, 0.3, '#ff3d6a');
+  },
+  // Fonds marins
+  coral(gb, glow, c) {
+    const col = c || '#ff7a8a';
+    const br = (x, z, h, r) => { cylinder(gb, x, 0, h, z, r, 6, col, r * 0.6); sphere(gb, x, h, z, r * 0.9, col, null, r * 0.9, 2, 6); };
+    br(0, 0, 4, 0.6); br(1.2, 0.4, 2.8, 0.45); br(-1, -0.5, 3.3, 0.5); br(0.3, -1.2, 2.2, 0.4);
+    for (const [x, z, h] of [[0, 0, 4.6], [1.2, 0.4, 3.3]]) glow.tri([x - 0.2, h, z], [x + 0.2, h, z], [x, h + 0.4, z], '#ffd0f2');
+  },
+  seaweed(gb, glow, c) {
+    const col = c || '#2fa36b';
+    for (const [x, z, h] of [[0, 0, 9], [0.8, 0.5, 7], [-0.7, 0.3, 6], [0.2, -0.8, 8]]) {
+      let px = x;
+      for (let i = 0; i < 6; i++) {
+        const y0 = (h / 6) * i, y1 = (h / 6) * (i + 1), nx = x + Math.sin(i * 1.3) * 0.5;
+        gb.quad([px - 0.35, y0, z], [px + 0.35, y0, z], [nx + 0.3, y1, z], [nx - 0.3, y1, z], i % 2 ? col : '#3fbf7a');
+        px = nx;
+      }
+    }
+  },
+  fishSchool(gb, glow, c) {
+    const col = c || '#ffbf3c';
+    for (let i = 0; i < 9; i++) {
+      const x = Math.cos(i * 2.4) * (1 + i * 0.35), y = 3 + Math.sin(i * 1.7) * 1.5, z = Math.sin(i * 2.4) * (1 + i * 0.35);
+      glow.tri([x - 0.6, y, z], [x + 0.5, y + 0.3, z], [x + 0.5, y - 0.3, z], col);
+      glow.tri([x + 0.5, y, z], [x + 0.9, y + 0.3, z], [x + 0.9, y - 0.3, z], i % 3 ? WHITE : col);
+    }
+  },
+  shell(gb, glow, c) {
+    const col = c || '#ffd0c2';
+    for (let i = 0; i < 7; i++) {
+      const a0 = Math.PI * (0.1 + i / 8), a1 = Math.PI * (0.1 + (i + 1) / 8);
+      gb.tri([0, 0.1, -1], [Math.cos(a0) * 2, 0.2 + Math.sin(a0) * 1.4, Math.sin(a0) * 0.6], [Math.cos(a1) * 2, 0.2 + Math.sin(a1) * 1.4, Math.sin(a1) * 0.6], i % 2 ? col : '#ffe6dc');
+    }
+    sphere(glow, 0, 0.5, 0.2, 0.35, WHITE, null, 0.35, 2, 6);
+  },
+  anchor(gb, glow, c) {
+    const col = c || '#5a5e82';
+    gb.box(-0.3, 0, -0.3, 0.3, 6, 0.3, col);
+    gb.box(-1.6, 4.6, -0.25, 1.6, 5.1, 0.25, col);
+    gb.taper(-1.3, 0, 0, 1.6, 0.5, 0.5, 0.3, 0.3, col); gb.taper(1.3, 0, 0, 1.6, 0.5, 0.5, 0.3, 0.3, col);
+    gb.box(-1.5, 0, -0.25, 1.5, 0.5, 0.25, col);
+    cylinder(gb, 0, 6, 6.5, 0, 0.6, 8, col);
+  },
+  jellyfish(gb, glow, c) {
+    const col = c || '#ff7ad9';
+    sphere(glow, 0, 6, 0, 1.8, col, '#ffd0f2', 1.2, 4, 10, true);
+    for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU, x = Math.cos(a) * 1.1, z = Math.sin(a) * 1.1; glow.quad([x - 0.05, 2.5, z], [x + 0.05, 2.5, z], [x + 0.05, 6, z], [x - 0.05, 6, z], col); }
+  },
+  treasure(gb, glow, c) {
+    gb.box(-1.6, 0, -1, 1.6, 1.6, 1, c || '#8a5a3a');
+    gb.taper(0, 0, 1.6, 2.4, 3.2, 2, 3.2, 1.2, '#7a4a2a');
+    gb.box(-1.7, 0.6, -1.05, 1.7, 0.8, 1.05, '#ffd23e');
+    octa(gb, 0, 1.7, 0, 0.9, 0.35, '#ffd23e', glow, '#ffe58a');
+  },
+  // Usine
+  gear(gb, glow, c) {
+    const col = c || '#8d93ad', r = 3.2, n = 12, y = 4;
+    for (let i = 0; i < n; i++) {
+      const a0 = (i / n) * TAU, a1 = ((i + 1) / n) * TAU, rr = i % 2 ? r : r + 0.8;
+      const P = (a, R, z) => [Math.cos(a) * R, y + Math.sin(a) * R, z];
+      gb.quad(P(a0, 1, 0.5), P(a1, 1, 0.5), P(a1, rr, 0.5), P(a0, rr, 0.5), col);
+      gb.quad(P(a1, 1, -0.5), P(a0, 1, -0.5), P(a0, rr, -0.5), P(a1, rr, -0.5), col);
+      gb.quad(P(a0, rr, -0.5), P(a0, rr, 0.5), P(a1, rr, 0.5), P(a1, rr, -0.5), '#6e7196');
+    }
+    gb.box(-0.4, 0, -0.4, 0.4, y, 0.4, DARK);
+    glow.box(-0.5, y - 0.5, 0.5, 0.5, y + 0.5, 0.6, '#ffbf3c');
+  },
+  pipe(gb, glow, c) {
+    const col = c || '#6e8a9a';
+    for (const x of [-5, 5]) gb.box(x - 0.3, 0, -0.3, x + 0.3, 4, 0.3, DARK);
+    const A = ringPts(0, 0, 0, 0.9, 8);
+    for (let i = 0; i < 8; i++) {
+      const j = (i + 1) % 8, p = (k, x) => [x, 4.9 + A[k][0], A[k][2]];
+      gb.quad(p(i, -6), p(j, -6), p(j, 6), p(i, 6), i % 2 ? col : '#5a7686');
+    }
+    glow.box(-0.5, 5.75, -0.95, 0.5, 5.85, 0.95, '#ffbf3c');
+  },
+  chimney(gb, glow, c) {
+    cylinder(gb, 0, 0, 22, 0, 2.2, 10, c || '#8a4a3a', 1.6);
+    for (let k = 0; k < 3; k++) ring(gb, 6 + k * 6, 1.95 - k * 0.15, 10, 0.6, k % 2 ? WHITE : '#d8654a');
+    glow.box(-1.2, 22, -1.2, 1.2, 22.4, 1.2, '#ff7a3a');
+  },
+  crate(gb, glow, c) {
+    const col = c || '#a87a4a';
+    gb.box(-1.2, 0, -1.2, 1.2, 2.4, 1.2, col);
+    gb.box(-1.25, 0.2, -1.25, 1.25, 0.45, 1.25, '#7a5432'); gb.box(-1.25, 1.95, -1.25, 1.25, 2.2, 1.25, '#7a5432');
+    gb.box(1.4, 0, -0.9, 3.0, 1.6, 0.7, col);
+  },
+  barrel(gb, glow, c) {
+    const col = c || '#2f8f5a';
+    cylinder(gb, 0, 0, 2.6, 0, 1, 10, col);
+    ring(gb, 0.5, 1.02, 10, 0.2, DARK); ring(gb, 2.0, 1.02, 10, 0.2, DARK);
+    cylinder(gb, 2.2, 0, 2.6, 0.4, 1, 10, '#ffbf3c');
+    glow.tri([2.2, 2.62, -0.3], [1.8, 2.62, 0.6], [2.6, 2.62, 0.6], DARK);
+  },
+  crane(gb, glow, c) {
+    const col = c || '#ffbf3c';
+    gb.taper(0, 0, 0, 18, 1.6, 1.6, 1.2, 1.2, col);
+    gb.box(-4, 17.4, -0.6, 12, 18.4, 0.6, col);
+    gb.box(-4, 15.4, -1, -2, 17.4, 1, '#5a5e82');
+    gb.box(10.9, 8, -0.06, 11.1, 17.4, 0.06, DARK);
+    gb.box(10.3, 7, -0.6, 11.7, 8, 0.6, '#5a5e82');
+    glow.box(-0.4, 18.4, -0.4, 0.4, 19, 0.4, '#ff3d6a');
+  },
+  warnLight(gb, glow, c) {
+    gb.box(-0.15, 0, -0.15, 0.15, 3, 0.15, DARK);
+    sphere(glow, 0, 3.4, 0, 0.5, c || '#ff8a1f', '#ffd23e', 0.5, 3, 8);
+    for (let i = 0; i < 4; i++) glow.quad([-0.6, 0.4 + i * 0.6, 0.17], [0.6, 0.8 + i * 0.6, 0.17], [0.6, 1.05 + i * 0.6, 0.17], [-0.6, 0.65 + i * 0.6, 0.17], i % 2 ? '#1a1a1a' : '#ffd23e');
+  },
+  // Espace
+  satellite(gb, glow, c) {
+    const y = 7;
+    gb.box(-1, y - 1, -1, 1, y + 1, 1, c || '#d8dcef');
+    for (const s of [-1, 1]) {
+      gb.box(s * 1, y - 0.1, -0.1, s * 1.8, y + 0.1, 0.1, GREY);
+      gb.box(s * 1.8, y - 1.2, -0.05, s * 5.8, y + 1.2, 0.05, '#1f3a8a');
+      for (let i = 0; i < 4; i++) glow.box(s * (2 + i), y - 1.2, 0.06, s * (2 + i) + s * 0.08, y + 1.2, 0.08, '#4f7cff');
+    }
+    cone(gb, 0, y + 1, 0, 1.4, 0.9, 10, WHITE);
+    glow.box(-0.15, y + 1.9, -0.15, 0.15, y + 2.4, 0.15, '#ff3d6a');
+  },
+  asteroid(gb, glow, c) {
+    const col = c || '#7a7068';
+    octa(gb, 0, 5, 0, 3, 2.4, col);
+    octa(gb, 2.2, 6, 1, 1.4, 1.2, '#6a625a');
+    octa(gb, -2, 4, -1, 1.2, 1, '#8a8078');
+  },
+  antenna(gb, glow, c) {
+    gb.taper(0, 0, 0, 10, 1.4, 1.4, 0.3, 0.3, GREY);
+    const dish = c || '#e6ecf7';
+    for (let i = 0; i < 10; i++) {
+      const a0 = (i / 10) * TAU, a1 = ((i + 1) / 10) * TAU;
+      gb.tri([0, 9, 0.6], [Math.cos(a0) * 3, 9 + Math.sin(a0) * 3, -0.6], [Math.cos(a1) * 3, 9 + Math.sin(a1) * 3, -0.6], dish);
+    }
+    glow.box(-0.2, 8.8, 1.4, 0.2, 9.2, 1.8, '#5ff2ff');
+  },
+  rocket(gb, glow, c) {
+    const col = c || '#f4f1ea';
+    cylinder(gb, 0, 1.5, 12, 0, 1.4, 10, col);
+    cone(gb, 0, 12, 0, 1.4, 3.6, 10, '#ff3b4f');
+    for (let i = 0; i < 3; i++) { const a = (i / 3) * TAU, x = Math.cos(a), z = Math.sin(a); gb.quad([x * 1.4, 1.5, z * 1.4], [x * 3, 0, z * 3], [x * 3, 3, z * 3], [x * 1.4, 5, z * 1.4], '#ff3b4f'); }
+    ring(glow, 8, 1.42, 10, 0.4, '#5ff2ff');
+    cone(glow, 0, 1.5, 0, 1, -1.5, 8, '#ffb84d');
+  },
+  planetMini(gb, glow, c) {
+    sphere(gb, 0, 6, 0, 3, c || '#ff9a62', '#ffb784', 3, 6, 12);
+    ring(glow, 6, 4.8, 18, 0.15, '#ffe0b0');
+    gb.box(-0.2, 0, -0.2, 0.2, 3, 0.2, GREY);
+  },
+  // Circuit
+  trafficCone(gb, glow, c) {
+    gb.box(-0.8, 0, -0.8, 0.8, 0.15, 0.8, '#1a1a1a');
+    cone(gb, 0, 0.15, 0, 0.6, 1.6, 10, c || '#ff6b1a');
+    ring(glow, 0.8, 0.38, 10, 0.25, WHITE);
+  },
+  tireStack(gb, glow, c) {
+    for (let i = 0; i < 3; i++) { cylinder(gb, 0, i * 0.7, i * 0.7 + 0.65, 0, 1.1, 10, '#202020'); ring(gb, i * 0.7 + 0.25, 1.11, 10, 0.15, c || (i % 2 ? WHITE : '#ff3b4f')); }
+    for (let i = 0; i < 2; i++) cylinder(gb, 2.2, i * 0.7, i * 0.7 + 0.65, 0.3, 1.1, 10, '#202020');
+  },
+  flagPole(gb, glow, c) {
+    gb.box(-0.12, 0, -0.12, 0.12, 9, 0.12, GREY);
+    const col = c || '#ff4f9a';
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) gb.quad([0.12 + i * 0.8, 6.4 + j * 0.8, 0], [0.92 + i * 0.8, 6.4 + j * 0.8, 0], [0.92 + i * 0.8, 7.2 + j * 0.8, 0], [0.12 + i * 0.8, 7.2 + j * 0.8, 0], (i + j) % 2 ? WHITE : col);
+  },
+  grandstand(gb, glow, c) {
+    const col = c || '#5a5e82';
+    for (let k = 0; k < 5; k++) gb.box(-8, 0, -k * 1.4, 8, 0.8 + k * 1.0, -k * 1.4 - 1.4, k % 2 ? col : '#6e7196');
+    gb.box(-8.4, 0, -7.4, 8.4, 7.5, -7, col);
+    gb.box(-8.6, 7.5, -7.6, 8.6, 7.8, 0.6, '#ff4f9a');
+    for (let i = 0; i < 12; i++) glow.box(-7.5 + i * 1.3, 1 + (i % 5) * 1.0, -(i % 5) * 1.4 - 0.7, -7.1 + i * 1.3, 1.5 + (i % 5) * 1.0, -(i % 5) * 1.4 - 0.3, ['#5ff2ff', '#ffd23e', '#ff7ad9', WHITE][i % 4]);
+  },
+});
+
+// Petite base rocheuse (amas de cristaux).
+function rockBase(gb) {
+  octa(gb, 0, 0.3, 0, 2.2, 0.6, '#4a3e5a');
+}
+
+// Décale les sommets d'un sous-objet (arbre posé sur une île flottante).
+function gbOffset(gb, ox, oy, oz) {
+  return { quad: (a, b, c, d, col) => gb.quad(sh(a), sh(b), sh(c), sh(d), col), tri: (a, b, c, col) => gb.tri(sh(a), sh(b), sh(c), col), box: (x0, y0, z0, x1, y1, z1, col, f) => gb.box(x0 + ox, y0 + oy, z0 + oz, x1 + ox, y1 + oy, z1 + oz, col, f) };
+  function sh(p) { return [p[0] + ox, p[1] + oy, p[2] + oz]; }
+}
+
 export function decoColor(d) {
   return d.c > 0 ? DECO_COLORS[d.c - 1] || null : null;
 }

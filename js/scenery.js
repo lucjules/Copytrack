@@ -77,6 +77,53 @@ export const THEMES = {
     hills: 8,
     plates: true,
     dust: '#c9d4ff',
+    galaxy: 1,
+  },
+  // 0.9
+  caves: {
+    label: 'Canyon de cristal',
+    sky: { top: '#030208', mid: '#0d0818', horizon: '#241338', sun: '#000000', aurora: 0, stars: 0, cave: 1 },
+    fog: '#160d24', fogNear: 90, fogFar: 640,
+    sunDir: [0.2, 0.9, -0.3], sunColor: '#c4a8ff', sunIntensity: 1.3,
+    hemi: ['#a58cff', '#120a20', 1.5],
+    ground: ['#2a2236', '#30283e', '#251e30'],
+    rock: ['#3a2e4a', '#463858', '#524266', '#2e2440', '#5e4c74'],
+    hills: 190,
+    dust: '#c9b8ff',
+  },
+  sky: {
+    label: 'Ville dans les nuages',
+    sky: { top: '#2f7fe0', mid: '#86c4f4', horizon: '#f2f8ff', sun: '#fffbe6', aurora: 0, stars: 0, clouds: 1 },
+    fog: '#e6f1ff', fogNear: 300, fogFar: 1700,
+    sunDir: [-0.4, 0.7, -0.6], sunColor: '#fff3dc', sunIntensity: 2.9,
+    hemi: ['#ffffff', '#a8c0e0', 1.8],
+    ground: ['#f4f8ff', '#e8f0fb', '#ffffff'],
+    rock: ['#ffffff', '#f2f7fd', '#e4eefa', '#d6e5f6', '#c8dcf2'],
+    hills: 60,
+    dust: '#ffffff',
+  },
+  reef: {
+    label: 'Fonds marins',
+    sky: { top: '#01142a', mid: '#043a62', horizon: '#0d7393', sun: '#c8f6ff', aurora: 0, stars: 0, water: 1 },
+    fog: '#0b4f6e', fogNear: 70, fogFar: 560,
+    sunDir: [0.25, 0.9, -0.35], sunColor: '#a8ecff', sunIntensity: 2.1,
+    hemi: ['#86e2ff', '#08283a', 1.65],
+    ground: ['#d9c79a', '#cdb98a', '#e2d2a8'],
+    rock: ['#3a6a7a', '#2f5a6a', '#4a7a6a', '#5a8a7a', '#2a4a5a'],
+    hills: 85,
+    dust: '#bff4ff',
+  },
+  factory: {
+    label: 'Usine mécanique',
+    sky: { top: '#15100c', mid: '#46301f', horizon: '#d08040', sun: '#ffd0a0', aurora: 0, stars: 0, embers: 0.35, skyline: 1 },
+    fog: '#5a3e2c', fogNear: 150, fogFar: 860,
+    sunDir: [0.5, 0.35, -0.8], sunColor: '#ffb070', sunIntensity: 2.1,
+    hemi: ['#ffc890', '#2a2018', 1.45],
+    ground: ['#3a3a3e', '#424248', '#34343a'],
+    rock: ['#4a4a52', '#5a5a62', '#3e3e46', '#6a5a4a', '#2e2e34'],
+    hills: 28,
+    plates: true,
+    dust: '#d8b890',
   },
   isles: {
     label: 'Archipel tropical',
@@ -151,8 +198,16 @@ const SKY_VERT = `varying vec3 vDir;
   void main(){ vDir = position; vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww; }`;
 const SKY_FRAG = `uniform vec3 top; uniform vec3 mid; uniform vec3 horizon; uniform vec3 sunColor; uniform vec3 sunDir;
   uniform float time; uniform float aurora; uniform float stars; uniform float planet; uniform float embers;
+  uniform float cave; uniform float clouds; uniform float water; uniform float skyline; uniform float galaxy;
   varying vec3 vDir;
   float hash3(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float vnoise(vec3 p){
+    vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+    float a = hash3(i), b = hash3(i + vec3(1.0, 0.0, 0.0)), c = hash3(i + vec3(0.0, 1.0, 0.0)), e = hash3(i + vec3(1.0, 1.0, 0.0));
+    float g = hash3(i + vec3(0.0, 0.0, 1.0)), h = hash3(i + vec3(1.0, 0.0, 1.0)), k = hash3(i + vec3(0.0, 1.0, 1.0)), l = hash3(i + vec3(1.0, 1.0, 1.0));
+    return mix(mix(mix(a, b, f.x), mix(c, e, f.x), f.y), mix(mix(g, h, f.x), mix(k, l, f.x), f.y), f.z);
+  }
+  float fbm3(vec3 p){ float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { s += vnoise(p) * a; p *= 2.07; a *= 0.5; } return s; }
   void main(){
     vec3 d = normalize(vDir);
     float y = d.y;
@@ -202,6 +257,96 @@ const SKY_FRAG = `uniform vec3 top; uniform vec3 mid; uniform vec3 horizon; unif
         if (!behind) col = mix(col, vec3(0.92, 0.84, 0.7), ring * 0.75 * planet);
       }
     }
+    if (galaxy > 0.0) {
+      // Voie lactée inclinée, avec poussières sombres.
+      vec3 gn = normalize(vec3(0.32, 0.82, 0.47));
+      float gd = dot(d, gn);
+      float band = exp(-gd * gd * 26.0);
+      float dust = fbm3(d * 6.0);
+      col += mix(vec3(0.32, 0.22, 0.62), vec3(0.95, 0.78, 0.62), dust) * band * (0.18 + 0.55 * dust) * galaxy;
+      col *= 1.0 - band * 0.45 * smoothstep(0.52, 0.7, fbm3(d * 11.0 + 3.0));
+      float hb = hash3(floor(d * 520.0));
+      col += vec3(0.9, 0.92, 1.0) * step(0.997 - band * 0.012, hb) * (0.5 + 0.5 * sin(time * 3.0 + hb * 90.0)) * galaxy;
+      // Nébuleuses colorées.
+      float n1 = fbm3(d * 3.2 + vec3(1.7, 2.3, 0.4));
+      col += vec3(0.95, 0.18, 0.62) * pow(n1, 3.0) * smoothstep(0.55, 0.95, dot(d, normalize(vec3(0.75, 0.45, 0.4)))) * 1.6 * galaxy;
+      float n2 = fbm3(d * 2.6 + vec3(5.1, 0.2, 3.3));
+      col += vec3(0.18, 0.55, 1.0) * pow(n2, 3.0) * smoothstep(0.5, 0.95, dot(d, normalize(vec3(-0.2, 0.55, 0.8)))) * 1.5 * galaxy;
+      // Galaxie spirale.
+      vec3 sd = normalize(vec3(0.78, 0.32, 0.54));
+      vec3 su = normalize(cross(sd, vec3(0.0, 1.0, 0.0))), sv = cross(su, sd);
+      vec2 sq = vec2(dot(d, su), dot(d, sv) * 2.1);
+      float sr = length(sq), sth = atan(sq.y, sq.x);
+      if (dot(d, sd) > 0.0 && sr < 0.25) {
+        float arms = pow(0.5 + 0.5 * cos(2.0 * sth - log(sr + 1e-3) * 5.5 - time * 0.05), 3.0);
+        col += vec3(0.85, 0.8, 1.0) * (exp(-sr * 60.0) * 1.4 + arms * exp(-sr * 14.0) * 0.55) * galaxy;
+      }
+      // Étoiles colorées plus grosses.
+      float hc = hash3(floor(d * 140.0));
+      col += mix(vec3(1.0, 0.7, 0.5), vec3(0.6, 0.8, 1.0), fract(hc * 37.0)) * step(0.9985, hc) * smoothstep(-0.05, 0.2, y) * 1.2 * galaxy;
+      // Étoile filante de temps en temps.
+      float ph = fract(time * 0.09);
+      if (ph < 0.22) {
+        float s0 = ph / 0.22;
+        vec3 A = normalize(vec3(-0.8, 0.75, -0.3)), B = normalize(vec3(0.3, 0.45, -0.85));
+        for (int i = 0; i < 8; i++) {
+          vec3 p = normalize(mix(A, B, s0 - float(i) * 0.012));
+          col += vec3(1.0, 0.95, 0.85) * smoothstep(0.99993, 1.0, dot(d, p)) * (1.0 - float(i) / 8.0) * 2.0 * galaxy;
+        }
+      }
+    }
+    if (cave > 0.0) {
+      // Voûte rocheuse et cristaux qui scintillent : on est sous terre.
+      // Roche en strates facettées, plus sombre vers le haut, avec des stalactites.
+      float rk = fbm3(d * 7.0), rk2 = fbm3(d * 22.0 + 4.0);
+      vec3 vault = vec3(0.025, 0.018, 0.04) + pow(rk, 1.6) * vec3(0.26, 0.17, 0.34) + step(0.62, rk2) * vec3(0.05, 0.035, 0.07);
+      vault *= 1.0 - 0.45 * smoothstep(0.3, 0.95, y);
+      float az = atan(d.z, d.x);
+      float stal = hash3(vec3(floor(az * 70.0), 7.0, 1.0));
+      float tip = 0.55 - stal * 0.35;
+      float w = abs(fract(az * 70.0) - 0.5) * 2.0;
+      if (y > tip + w * 0.25 * (1.0 - tip)) vault = mix(vault, vec3(0.02, 0.015, 0.03), 0.8);
+      float h = hash3(floor(d * 210.0));
+      vault += step(0.993, h) * (0.5 + 0.5 * sin(time * 1.7 + h * 50.0)) * mix(vec3(0.3, 0.95, 1.0), vec3(1.0, 0.4, 0.9), fract(h * 13.0)) * 1.4;
+      vault += vec3(0.25, 0.12, 0.4) * pow(max(0.0, fbm3(d * 3.0 + 7.0) - 0.45), 2.0) * 3.0;
+      col = mix(col, vault, smoothstep(-0.04, 0.14, y) * cave);
+    }
+    if (clouds > 0.0) {
+      // Mer de nuages sous l'horizon et cumulus au-dessus.
+      float yy = max(-y, 0.015);
+      vec2 cp = d.xz / yy * 0.9 + vec2(time * 0.02, 0.0);
+      float cn = fbm3(vec3(cp, 0.0) * 0.55);
+      vec3 sea = mix(vec3(0.78, 0.86, 0.97), vec3(1.0, 1.0, 1.0), smoothstep(0.35, 0.72, cn));
+      col = mix(col, sea, smoothstep(0.05, -0.03, y) * clouds);
+      float yu = y + 0.16;
+      float cu = fbm3(vec3(d.x / yu * 1.3 + time * 0.015, 2.0, d.z / yu * 1.3));
+      float cl = smoothstep(0.52, 0.72, cu) * smoothstep(0.38, 0.06, y) * smoothstep(-0.01, 0.04, y);
+      col = mix(col, vec3(1.0, 0.98, 0.95), cl * 0.9 * clouds);
+    }
+    if (water > 0.0) {
+      // Sous l'eau : rayons de lumière, surface qui scintille, bulles qui montent.
+      float az = atan(d.z, d.x);
+      float rays = pow(0.5 + 0.5 * sin(az * 26.0 + sin(az * 7.0 + time * 0.35) * 2.2 + time * 0.25), 6.0);
+      col += vec3(0.4, 0.82, 1.0) * rays * smoothstep(0.05, 0.85, y) * 0.28 * water;
+      col += vec3(0.5, 0.9, 1.0) * pow(abs(sin(d.x * 38.0 + time) * sin(d.z * 38.0 - time * 1.3)), 8.0) * smoothstep(0.72, 0.96, y) * 0.6 * water;
+      float hb = hash3(floor(vec3(d.x * 95.0, d.y * 95.0 - time * 1.4, d.z * 95.0)));
+      col += vec3(0.75, 0.97, 1.0) * step(0.9965, hb) * 0.7 * water;
+    }
+    if (skyline > 0.0) {
+      // Silhouette d'usines à l'horizon, fenêtres allumées et hautes cheminées.
+      float az = atan(d.z, d.x);
+      float cell = floor(az * 55.0), fr = fract(az * 55.0);
+      float hgt = 0.015 + hash3(vec3(cell, 1.0, 2.0)) * 0.08;
+      float stack = step(0.8, hash3(vec3(cell, 3.0, 1.0))) * step(0.42, fr) * step(fr, 0.58) * (0.12 + hash3(vec3(cell, 5.0, 2.0)) * 0.08);
+      float top = max(hgt, stack);
+      if (y > -0.02 && y < top) {
+        vec3 bc = vec3(0.07, 0.05, 0.045);
+        float win = step(0.72, hash3(vec3(floor(az * 640.0), floor(y * 320.0), 4.0))) * step(y, hgt - 0.006);
+        bc += vec3(1.0, 0.6, 0.25) * win * 0.8;
+        col = mix(col, bc, skyline);
+      }
+      col += vec3(1.0, 0.3, 0.1) * step(abs(y - top), 0.002) * stack * 4.0 * skyline;
+    }
     if (embers > 0.0) {
       // Lueur rouge au ras de l'horizon et braises qui montent.
       col += vec3(1.0, 0.25, 0.05) * smoothstep(0.18, 0.0, abs(y)) * 0.25 * embers;
@@ -232,6 +377,7 @@ export class Scenery {
           top: { value: new THREE.Color() }, mid: { value: new THREE.Color() }, horizon: { value: new THREE.Color() },
           sunColor: { value: new THREE.Color() }, sunDir: { value: new THREE.Vector3() },
           time: { value: 0 }, aurora: { value: 0 }, stars: { value: 0 }, planet: { value: 0 }, embers: { value: 0 },
+          cave: { value: 0 }, clouds: { value: 0 }, water: { value: 0 }, skyline: { value: 0 }, galaxy: { value: 0 },
         },
         vertexShader: SKY_VERT,
         fragmentShader: SKY_FRAG,
@@ -282,6 +428,11 @@ export class Scenery {
     u.stars.value = T.sky.stars;
     u.planet.value = T.sky.planet || 0;
     u.embers.value = T.sky.embers || 0;
+    u.cave.value = T.sky.cave || 0;
+    u.clouds.value = T.sky.clouds || 0;
+    u.water.value = T.sky.water || 0;
+    u.skyline.value = T.sky.skyline || 0;
+    u.galaxy.value = T.galaxy || 0;
     this.sunDir.set(...T.sunDir).normalize();
     u.sunDir.value.copy(this.sunDir);
     this.scene.background = new THREE.Color(T.sky.horizon);
@@ -398,6 +549,10 @@ export class Scenery {
     else if (this.themeId === 'isles') this._islesDecor(ctx);
     else if (this.themeId === 'volcano') this._volcanoDecor(ctx);
     else if (this.themeId === 'orbit') this._orbitDecor(ctx);
+    else if (this.themeId === 'caves') this._cavesDecor(ctx);
+    else if (this.themeId === 'sky') this._skyDecor(ctx);
+    else if (this.themeId === 'reef') this._reefDecor(ctx);
+    else if (this.themeId === 'factory') this._factoryDecor(ctx);
     else this._desertDecor(ctx);
   }
 
@@ -506,7 +661,8 @@ export class Scenery {
       const k = kinds[Math.floor(rand() * kinds.length)];
       const sc = (opts.min || 1) + rand() * ((opts.max || 1.6) - (opts.min || 1));
       const c = opts.colors ? opts.colors[Math.floor(rand() * opts.colors.length)] : 0;
-      buildDecoInto(gb, glow, { k, x, y: y - 0.2, z, ry: rand() * Math.PI * 2, s: sc, c });
+      const lift = opts.lift ? opts.lift[0] + rand() * (opts.lift[1] - opts.lift[0]) : 0;
+      buildDecoInto(gb, glow, { k, x, y: y - 0.2 + lift, z, ry: rand() * Math.PI * 2, s: sc, c });
     });
     if (!gb.empty) {
       const m = new THREE.Mesh(gb.build(), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9, side: THREE.DoubleSide }));
@@ -673,6 +829,69 @@ export class Scenery {
     this._instanced(deb, new THREE.MeshStandardMaterial({ color: '#7a80a0', flatShading: true, roughness: 0.8 }), low ? 30 : 70,
       (put) => { for (let i = 0; i < (low ? 30 : 70); i++) { const a = rand() * Math.PI * 2, d = 400 + rand() * 900; const s = 2 + rand() * 9; put(this.center.x + Math.cos(a) * d, 60 + rand() * 300, this.center.z + Math.sin(a) * d, rand() * 6, rand() * 6, rand() * 6, s, s, s); } });
     this._crystals(ctx, ['#b9a6ff', '#7fe9ff'], low ? 8 : 18, 0.6);
+    // 0.9 : satellites, antennes, fusées, astéroïdes en orbite et petites planètes.
+    this._scatterMerged(ctx, ['antenna', 'rocket'], low ? 10 : 24, { min: 1.5, max: 3 });
+    this._scatterMerged(ctx, ['satellite', 'asteroid', 'planetMini'], low ? 14 : 34, { min: 2, max: 6, lift: [40, 220] });
+  }
+
+  _cavesDecor(ctx) {
+    const { rand, low } = ctx;
+    this._scatterMerged(ctx, ['stalagmite', 'stalagmite', 'cavePillar'], low ? 60 : 140, { min: 1.5, max: 5 });
+    this._scatterMerged(ctx, ['crystalCluster'], low ? 40 : 90, { min: 1.2, max: 4, colors: [0, 0, 4, 6, 5] });
+    this._scatterMerged(ctx, ['glowMushroom'], low ? 25 : 60, { min: 1, max: 3, colors: [0, 4, 7] });
+    this._scatterMerged(ctx, ['lantern', 'minecart'], low ? 10 : 24, { min: 1, max: 1.6 });
+    this._crystals(ctx, ['#5ff2ff', '#b48cff', '#ff7ad9'], low ? 30 : 70, 1.1);
+    // Stalactites géantes qui pendent de la voûte, au loin.
+    const geo = new THREE.ConeGeometry(1, 1, 7);
+    geo.rotateX(Math.PI);
+    geo.translate(0, -0.5, 0);
+    this._instanced(geo, new THREE.MeshStandardMaterial({ color: '#3a2e4a', flatShading: true, roughness: 1 }), low ? 40 : 90,
+      (put) => { for (let i = 0; i < (low ? 40 : 90); i++) { const a = rand() * Math.PI * 2, d = 200 + rand() * 900; const r = 8 + rand() * 30; put(this.center.x + Math.cos(a) * d, 180 + rand() * 120, this.center.z + Math.sin(a) * d, 0, rand() * 6, 0, r, 60 + rand() * 120, r); } });
+    // Lucioles de cristal.
+    const orb = new THREE.IcosahedronGeometry(0.3, 0);
+    this._instanced(orb, new THREE.MeshBasicMaterial({ color: '#c9f5ff', toneMapped: false }), 140,
+      (put) => ctx.scatter(140, (x, y, z) => put(x, y + 1 + rand() * 14, z, 0, 0, 0, 1, 1, 1)));
+  }
+
+  _skyDecor(ctx) {
+    const { low } = ctx;
+    // Îles flottantes, nuages, montgolfières, dirigeables, tours célestes.
+    this._scatterMerged(ctx, ['floatIsle'], low ? 18 : 40, { min: 2.5, max: 6, lift: [10, 90] });
+    this._scatterMerged(ctx, ['cloud'], low ? 40 : 100, { min: 3, max: 9, lift: [-6, 120] });
+    this._scatterMerged(ctx, ['balloon'], low ? 12 : 30, { min: 1.4, max: 3, lift: [10, 120], colors: [0, 1, 2, 4, 6] });
+    this._scatterMerged(ctx, ['airship'], low ? 5 : 12, { min: 2, max: 4, lift: [40, 160] });
+    this._scatterMerged(ctx, ['skyTower', 'windmill'], low ? 14 : 34, { min: 1.5, max: 3.5 });
+  }
+
+  _reefDecor(ctx) {
+    const { rand, low } = ctx;
+    this._scatterMerged(ctx, ['coral'], low ? 60 : 140, { min: 1.2, max: 4, colors: [0, 0, 1, 6, 5, 2] });
+    this._scatterMerged(ctx, ['seaweed'], low ? 60 : 140, { min: 1.2, max: 3.5 });
+    this._scatterMerged(ctx, ['shell', 'rock', 'anchor', 'treasure'], low ? 30 : 70, { min: 1, max: 2.5 });
+    this._scatterMerged(ctx, ['fishSchool'], low ? 25 : 60, { min: 1.2, max: 3, lift: [2, 40], colors: [0, 0, 4, 2] });
+    this._scatterMerged(ctx, ['jellyfish'], low ? 12 : 30, { min: 1, max: 2.5, lift: [6, 50], colors: [0, 6, 5] });
+    // Bulles qui flottent.
+    const bub = new THREE.IcosahedronGeometry(0.4, 1);
+    this._instanced(bub, new THREE.MeshBasicMaterial({ color: '#bff4ff', toneMapped: false, transparent: true, opacity: 0.6 }), 220,
+      (put) => ctx.scatter(220, (x, y, z) => { const s = 0.5 + rand() * 1.5; put(x, y + 2 + rand() * 40, z, 0, 0, 0, s, s, s); }));
+  }
+
+  _factoryDecor(ctx) {
+    const { rand, low } = ctx;
+    // Hangars sombres aux fenêtres orangées.
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    box.translate(0, 0.5, 0);
+    const n = low ? 40 : 90;
+    this._instanced(box, new THREE.MeshStandardMaterial({ color: '#3a3430', flatShading: true, roughness: 0.9, metalness: 0.2 }), n,
+      (put) => ctx.scatter(n, (x, y, z) => { const w = 16 + rand() * 30; put(x, y, z, 0, rand() * 3, 0, w, 12 + rand() * 30, w * (0.6 + rand() * 0.6)); }));
+    this._scatterMerged(ctx, ['chimney'], low ? 12 : 30, { min: 1.5, max: 3.5 });
+    this._scatterMerged(ctx, ['gear'], low ? 14 : 30, { min: 2, max: 5 });
+    this._scatterMerged(ctx, ['pipe', 'crane'], low ? 16 : 36, { min: 1.2, max: 2.5 });
+    this._scatterMerged(ctx, ['crate', 'barrel', 'warnLight'], low ? 30 : 70, { min: 1, max: 2 });
+    // Fumée au-dessus des cheminées (lointaine).
+    const puff = new THREE.IcosahedronGeometry(1, 1);
+    this._instanced(puff, new THREE.MeshStandardMaterial({ color: '#6a5a50', flatShading: true, roughness: 1, transparent: true, opacity: 0.5 }), low ? 25 : 60,
+      (put) => { for (let i = 0; i < (low ? 25 : 60); i++) { const a = rand() * Math.PI * 2, d = 300 + rand() * 900; const s = 15 + rand() * 40; put(this.center.x + Math.cos(a) * d, 80 + rand() * 200, this.center.z + Math.sin(a) * d, 0, rand() * 6, 0, s, s * 0.6, s); } });
   }
 
   clearTerrain() {

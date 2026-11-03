@@ -13,7 +13,7 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 18.8, or: 20, argent: 23, bronze: 27 },
   },
   {
-    id: 'lagon', name: 'Lagon Turquoise', decor: 'isles', difficulty: 1, shard: [0.5, 7],
+    id: 'lagon', name: 'Lagon Turquoise', decor: 'isles', difficulty: 1,
     goal: {id: 'rings', n: 1},
     script: 'start B S2 R S L S2 C S2 UU GR2 DD S2 L S.o S R S2 RR S2 S.o C S2 LL S2 B S R L S2 finish',
     medals: { cristal: 23.5, or: 24.9, argent: 28.6, bronze: 33.6 },
@@ -25,13 +25,13 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 18, or: 19, argent: 21.8, bronze: 25.7 },
   },
   {
-    id: 'lianes', name: 'Lianes Néon', decor: 'jungle', difficulty: 2, shard: [0.4, 7],
+    id: 'lianes', name: 'Lianes Néon', decor: 'jungle', difficulty: 2,
     goal: {id: 'turbo', n: 1},
     script: 'start B S2 R S L S R L S2 C S L S S S R S2.m R L S2 B S O S2 L S R S2 C S R S L S2 finish',
     medals: { cristal: 26.1, or: 27.9, argent: 32.1, bronze: 37.6 },
   },
   {
-    id: 'neons', name: 'Néons Express', decor: 'city', difficulty: 2, shard: [0.6, 7],
+    id: 'neons', name: 'Néons Express', decor: 'city', difficulty: 2,
     goal: {id: 'nowall'},
     script: 'start B S2 R S L S2# C S2 L S R S2 Y2.b S2 R L S2 B S2 BL S2 C S L S R S2 finish',
     medals: { cristal: 24.1, or: 25.6, argent: 29.5, bronze: 34.6 },
@@ -87,7 +87,7 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 25.3, or: 26.1, argent: 30.1, bronze: 35.3 },
   },
   {
-    id: 'phare', name: 'Le Phare', decor: 'isles', difficulty: 3, shard: [0.45, -7],
+    id: 'phare', name: 'Le Phare', decor: 'isles', difficulty: 3,
     goal: {id: 'rings', n: 1},
     script: 'start B S2 R S L S2 C S2 S.e S2 UU GR7 DD S2 S.e S R S L S3_ B S2 C S2 RR S2 finish',
     medals: { cristal: 26, or: 27.2, argent: 31.3, bronze: 36.7 },
@@ -130,7 +130,7 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 19.4, or: 20.5, argent: 23.5, bronze: 27.6 },
   },
   {
-    id: 'racines', name: 'Racines Boueuses', decor: 'jungle', difficulty: 3, shard: [0.55, -7],
+    id: 'racines', name: 'Racines Boueuses', decor: 'jungle', difficulty: 3,
     goal: {id: 'turbo', n: 2},
     script: 'start B S2 R S2.u L S R S.d L S2 C S R L S2.u S S R S L S2.w60 B S2 Y2.d S R S L S2 finish',
     medals: { cristal: 26.8, or: 28.6, argent: 32.8, bronze: 38.6 },
@@ -241,7 +241,7 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 31.7, or: 33, argent: 38, bronze: 44.6 },
   },
   {
-    id: 'archipel', name: 'Grand Archipel', decor: 'isles', difficulty: 5, shard: [0.7, 7],
+    id: 'archipel', name: 'Grand Archipel', decor: 'isles', difficulty: 5,
     goal: {id: 'vehicle', v: 'car'},
     script: 'start B S2 R S L S2 B S2 OL S2 C S S.n S3.a R.a S2.a S.n S2 RR_ S2.w170_ S C S2 B S2 UU G3 DD S2 R S L S2 B S OB S2 C S2 L R S2 finish',
     medals: { cristal: 38.8, or: 40.5, argent: 46.6, bronze: 54.7 },
@@ -274,14 +274,6 @@ export function buildBuiltin(def) {
     t.laps = def.laps;
     const one = t.path.slice();
     for (let k = 1; k < def.laps; k++) t.path.push(...one.slice(1));
-  }
-  // Éclat secret (easter egg) : posé au bord de la route, à une fraction du parcours.
-  if (def.shard && t.path && t.path.length > 10) {
-    const i = Math.min(t.path.length - 2, Math.floor(t.path.length * def.shard[0]));
-    const a = t.path[i], b = t.path[i + 1];
-    const dx = b[0] - a[0], dz = b[2] - a[2];
-    const l = Math.hypot(dx, dz) || 1;
-    t.addDeco({ k: 'shard', x: a[0] + (-dz / l) * def.shard[1], y: a[1], z: a[2] + (dx / l) * def.shard[1], ry: 0, s: 1, c: 0 });
   }
   return t;
 }

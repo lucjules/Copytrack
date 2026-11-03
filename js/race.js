@@ -7,7 +7,7 @@ import { Autopilot } from './autopilot.js';
 import { TrackView } from './trackMesh.js';
 import { createCar } from './carModel.js';
 import { getRecord, saveRecord, encodeFloats, decodeFloats, formatTime } from './storage.js';
-import { profile, rewardCoins, addCoins, saveProfile } from './profile.js';
+import { profile, rewardCoins } from './profile.js';
 import { SURFACES } from './pieces.js';
 import { CATALOG } from './cosmetics.js';
 import { SkidMarks } from './skids.js';
@@ -127,7 +127,6 @@ export class RaceSession {
     if (this.opts.spawn) this.logic.respawn = { ...sp, vehicle: this.track.veh0 || 'car', grav: (this.track.g0 || 100) / 100 };
     placeAtStart(this.phys, this.logic, sp);
     this.car.setVehicle(this.phys.vehicle, true);
-    this.collectedShards = new Set();
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
     this._orient();
     this.prevQuat.copy(this.quat);
@@ -357,7 +356,6 @@ export class RaceSession {
     }
 
     if (this.state === 'racing') {
-      if (this.logic.steps % 6 === 0) this._checkShards();
       const res = this.logic.update(this.phys);
       if (!this.demo && this.logic.steps % GHOST_EVERY === 0) {
         const p = this.phys.pos, q = this.quat;
@@ -376,28 +374,6 @@ export class RaceSession {
     }
   }
 
-  // Éclats secrets (easter egg) : décorations « shard » ramassables une seule fois.
-  _checkShards() {
-    if (this.demo || !this.track.decos.length) return;
-    const p = this.phys.pos;
-    this.track.decos.forEach((d, i) => {
-      if (d.k !== 'shard' || this.collectedShards.has(i)) return;
-      if (Math.hypot(d.x - p.x, d.y + 2.5 * d.s - p.y, d.z - p.z) > 6 * d.s) return;
-      this.collectedShards.add(i);
-      const key = `${this.trackKey}#${i}`;
-      const pr = profile();
-      const first = !pr.shards[key];
-      this.app.particles.burst(d.x, d.y + 2.5, d.z, 40, 12, 1, 0.8, '#ffd23e', 3, 2);
-      this.app.audio.checkpoint(true);
-      if (first) {
-        pr.shards[key] = 1;
-        addCoins(40);
-        this.app.ui.hud.message('Éclat secret ! +40 pièces', 2.2);
-        this.app.ui.updateCoins();
-      } else this.app.ui.hud.message('Éclat secret (déjà trouvé)', 1.4);
-      saveProfile();
-    });
-  }
 
   _event(ev) {
     const app = this.app;
