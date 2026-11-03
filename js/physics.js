@@ -797,6 +797,8 @@ export class CarPhysics {
     if (mod === 'boost') {
       if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
       this.boost = CAR.boostTime; this.boostF = f;
+    } else if (mod === 'gravity') {
+      if (Math.abs(f - this.gravMul) > 0.01) { this.gravMul = f; this.ev.gravity = true; }
     } else if (mod === 'slow') extraDrag = 14 * f;
     else if (mod === 'sand') extraDrag = 5 * f;
     else if (mod === 'mud') extraDrag = 6 * f;
@@ -912,9 +914,15 @@ export class CarPhysics {
     if (next) {
       const N = { tile: next.tile, rib: next.rib, u: next.end, dir: next.end === 0 ? 1 : -1, dl: 0, vs: 0, vd: 0, psi: R.psi };
       const F2 = frameWorld(next.tile, next.rib, next.end, this.F2);
-      const B2 = this._basis(N, F2);
       const v = this.vel;
-      N.dl = clamp((px - F2.px) * F2.rx + (py - F2.py) * F2.ry + (pz - F2.pz) * F2.rz, -ROAD_HALF + 1, ROAD_HALF - 1);
+      if (F.kc > 1e-4 && F2.kc > 1e-4) {
+        // Tube -> tube : on garde la position sur la paroi (même au plafond).
+        N.dl = R.dl * Math.sign(F.rx * F2.rx + F.ry * F2.ry + F.rz * F2.rz || 1);
+      } else {
+        N.dl = clamp((px - F2.px) * F2.rx + (py - F2.py) * F2.ry + (pz - F2.pz) * F2.rz, -ROAD_HALF + 1, ROAD_HALF - 1);
+      }
+      this._cross(N, F2);
+      const B2 = this._basis(N, F2);
       N.vs = v.x * B2.e1x + v.y * B2.e1y + v.z * B2.e1z;
       N.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
       const h = this.fwd;
@@ -929,7 +937,7 @@ export class CarPhysics {
     const h = this.fwd;
     if (Math.hypot(h.x, h.z) > 0.2) this.yaw = Math.atan2(-h.x, -h.z);
     this.prevYaw = this.yaw;
-    if (F.ny > 0.6) {
+    if (this.n.y > 0.6 && F.ny > 0.6) {
       this.grounded = true;
       this.vel.y = Math.min(this.vel.y, 0);
       this.n.x = 0; this.n.y = 1; this.n.z = 0;

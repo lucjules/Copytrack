@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.6**
+Version actuelle : **bêta 0.7**
 
 ## Jouer
 
@@ -32,7 +32,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 
 - Ligne droite, virages serré et grand, pente, **pente douce** (½ niveau), tremplin, plateforme, ponts sur plusieurs niveaux.
 - **Virages relevés** (2×2 et 3×3) : la route penche vers l'intérieur, on les prend plus vite.
-- **Tube fermé** dont on peut faire le tour complet si on va assez vite.
+- **Tubes** : le tube 2×2, et le **tube modulaire** (entrée, autant de sections que voulu, sortie) dans lequel on peut monter sur la paroi, rouler au plafond et **faire des tours complets** en gardant le volant tourné. Les sections acceptent l'accélérateur et la gravité.
 - **Loopings** (normal, grand, double), **tire-bouchons** droite et gauche, **montée en L** (courbe, mur vertical, sommet qui fait sauter vers le plateau).
 - **Bifurcation / jonction** : deux voies au choix.
 - **Anneau turbo** flottant, **checkpoint aérien** (un anneau à traverser), **checkpoint dans un virage**.
@@ -71,6 +71,11 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 - **Options** : volume des effets et de la musique, qualité graphique (haute, moyenne, basse), compteur d'images, champ de vision, effet de vitesse, tremblements de caméra, **couleurs adaptées au daltonisme**, taille de l'interface, fantômes.
 - **Tutoriel** au premier lancement. Commandes personnalisables (clavier, manette), mobile (boutons ou glisser du pouce), vibrations.
 - **Easter eggs** : à toi de les trouver.
+
+## Bêta 0.7
+
+- À la place de l'ancien demi-tube : un **tube modulaire** (entrée, sections, sortie = entrée retournée). Dans un tube long, on peut rouler sur la paroi, au plafond, et faire des tours complets ; la voiture garde sa position sur la paroi d'une section à l'autre. Les sections peuvent recevoir un accélérateur ou une gravité réduite.
+- Des tubes longs ajoutés dans 6 circuits (dont Glacier Magnétique, à l'endroit de l'ancien demi-tube) et dans le défi du jour. Médailles recalculées.
 
 ## Bêta 0.6
 
@@ -126,7 +131,7 @@ Pendant un replay : Espace pause, ← → vitesse, C caméra (dont TV et orbite)
 | Maj + molette, E / C, Page↑ / Page↓ | Changer de niveau |
 | R (Maj + R) | Pivoter (sens inverse) |
 | Tab (Maj + Tab) | Pièce suivante (précédente) |
-| 1 … 0, P, U, I, V, L, K, J, O | Choisir une pièce |
+| 1 … 0, P, U, I, V, L, K, J, O, Y | Choisir une pièce (Y : entrée de tube) |
 | M | Miroir (looping, tire-bouchon, bifurcation) |
 | B | Revêtement suivant |
 | Q | Outil Sélection |

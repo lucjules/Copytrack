@@ -487,7 +487,7 @@ export function tileMatrix(tile) {
 // ---- v1.5 : section courbe (tube) ---------------------------------
 function crossSweep(gb, glow, tile, style) {
   const rib = ribbonOf(tile);
-  const N = tile.t === 'tube' ? 48 : 24, M = tile.t === 'tube' ? 32 : 18;
+  const N = tile.t === 'tube' ? 48 : 20, M = 32;
   const F = {};
   const rings = [];
   for (let i = 0; i <= N; i++) {
@@ -621,8 +621,10 @@ export function buildTileInto(gb, glow, tile, track = null) {
     ringMesh(gb, glow, tile);
   } else if (p.kind === 'fork') {
     forkMesh(gb, glow, tile, styleFor(tile));
-  } else if (tile.t === 'tube') {
+  } else if (tile.t === 'tube' || tile.t === 'tubeIn' || tile.t === 'tubeMid') {
     crossSweep(gb, glow, tile, styleFor({ s: '' }));
+    // Revêtement d'une section de tube : bandes lumineuses au fond.
+    if (s) surfaceDecals(glow, lineStrip(0, HALF, -HALF, baseY(tile), baseY(tile), 4), tile);
   } else {
     const style = p.kind === 'loop' || p.kind === 'ribbon' ? styleFor({ s: '' }) : styleFor(tile);
     const strips = stripsFor(tile);

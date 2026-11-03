@@ -41,6 +41,9 @@ export const PIECES = {
   bank:       { label: 'Virage relevé', kind: 'ribbon', size: 2, rise: 0, clearance: 2, arc: true, bank: 0.42 },
   bankBig:    { label: 'Très grand virage relevé', kind: 'ribbon', size: 3, rise: 0, clearance: 2, arc: true, bank: 0.5 },
   tube:       { label: 'Tube', kind: 'ribbon', size: 2, rise: 0, clearance: 4 },
+  // 0.7 : tube modulaire (entrée, sections à enchaîner, sortie = entrée retournée).
+  tubeIn:     { label: 'Entrée de tube', kind: 'ribbon', size: 1, rise: 0, clearance: 4 },
+  tubeMid:    { label: 'Section de tube', kind: 'ribbon', size: 1, rise: 0, clearance: 4, tubeSurf: true },
   cork:       { label: 'Tire-bouchon ↻', kind: 'ribbon', size: 2, rise: 0, clearance: 4, mirror: 1 },
   corkL:      { label: 'Tire-bouchon ↺', kind: 'ribbon', size: 2, rise: 0, clearance: 4, mirror: -1 },
   fork:       { label: 'Bifurcation ⑂→', kind: 'fork', size: 2, rise: 0, mirror: 1 },
@@ -66,6 +69,7 @@ export const PIECE_ORDER = [
   'checkpoint', 'start', 'finish', 'platform', 'ice', 'loop', 'loopL',
   'loopBig', 'loopBigL', 'loopDouble', 'loopDoubleL', 'twist', 'ramp90', 'wall', 'crest90',
   'bank', 'bankBig', 'halfpipe', 'tube', 'cork', 'corkL', 'fork', 'forkL', 'ring', 'cpRing', 'cpCurve', 'gentle',
+  'tubeIn', 'tubeMid',
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -121,7 +125,7 @@ export function flagAllowed(type, flag, tile = null) {
   const lineLike = p.kind === 'line' || p.kind === 'arc';
   if (flag === 'v') return lineLike && !p.special && Number.isInteger(p.rise);
   if (p.kind === 'ring' || p.kind === 'fork') return false;
-  if (flag === 'nb') return lineLike && !p.special || (p.kind === 'ribbon' && type !== 'tube');
+  if (flag === 'nb') return lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube'));
   if (flag === 'tn') return lineLike && !p.special && !(tile && tile.v);
   return false;
 }
@@ -131,6 +135,8 @@ export function surfaceAllowed(type, s, v = false) {
   const p = PIECES[type];
   const S = SURFACES[s];
   if (!p || !S) return false;
+  // Sections de tube : accélérateur et gravité autorisés (pour aider à faire des tours).
+  if (p.tubeSurf) return s === 'boost' || s === 'gravity';
   if (p.kind === 'loop' || p.kind === 'ribbon' || p.kind === 'ring') return false;
   if (s === 'water' && (p.special || p.kind === 'fork')) return false;
   if (v && !S.inv) return false;

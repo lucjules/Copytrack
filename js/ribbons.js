@@ -85,6 +85,23 @@ function build(tile) {
         len: 2 * half,
       };
     }
+    if (tile.t === 'tubeIn' || tile.t === 'tubeMid') {
+      // Tube modulaire (une case, route au centre de la case) : l'entrée se referme
+      // progressivement, la section est un tube complet qu'on peut enchaîner.
+      const kcMax = 1 / 8, entry = tile.t === 'tubeIn';
+      return {
+        tubeR: 8,
+        pos(u, o) {
+          o.x = 0; o.y = base; o.z = half - 2 * half * u;
+          o.nx = 0; o.ny = 1; o.nz = 0;
+          const k = entry ? (u >= 0.82 ? 1 : smooth(u / 0.82)) : 1;
+          o.kc = kcMax * k;
+          o.wrap = k >= 0.999;
+          o.hw = o.wrap ? Math.PI / kcMax : ROAD_HALF;
+        },
+        len: 2 * half,
+      };
+    }
     if (tile.t === 'cork' || tile.t === 'corkL') {
       // Tire-bouchon : hélice autour d'un axe parallèle à la route, la chaussée tournée
       // vers l'axe. Un tour complet ; la courbure plaque la voiture si elle va assez vite.

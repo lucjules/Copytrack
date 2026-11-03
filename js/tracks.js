@@ -52,7 +52,7 @@ export const BUILTIN_TRACKS = [
   {
     id: 'quai', name: 'Quai d’Amarrage', decor: 'orbit', difficulty: 2,
     goal: {id: 'rings', n: 1},
-    script: 'start S2 B S2 S2 S2 R S2 UU GR2 DD S2 C S L S2 B S O S2 KL S2 R S2 finish',
+    script: 'start S2 B TI TM2 TO S2 R S2 UU GR2 DD S2 C S L S2 B S O S2 KL S2 R S2 finish',
     medals: { cristal: 21, or: 22, argent: 25.3, bronze: 29.7 },
   },
   {
@@ -138,14 +138,14 @@ export const BUILTIN_TRACKS = [
   {
     id: 'glacier', name: 'Glacier Magnétique', decor: 'polar', difficulty: 4,
     goal: {id: 'norespawn'},
-    script: 'start S B S U S.m D S C S R S3.s R S B S2 UU S.m DD.m S C S LL S2.m U S2 D S S S2 finish',
-    medals: { cristal: 20.4, or: 21.4, argent: 24.7, bronze: 28.9 },
+    script: 'start S B S U S.m D S C S R S3.s R S B S2 UU S.m DD.m S C S LL S2.m U S2 D S TI TM2 TO finish',
+    medals: { cristal: 20.9, or: 22, argent: 25.3, bronze: 29.6 },
   },
   {
     id: 'metro', name: 'Métro Aérien', decor: 'city', difficulty: 4,
     goal: {id: 'nowall'},
-    script: 'start B S2 U2 R# S# L# S2# C S2 R S L S2 D2 S R L S2# B S2# L S S S2 UU GC2 DD S2_ R S2 finish',
-    medals: { cristal: 25, or: 26.3, argent: 30.3, bronze: 35.6 },
+    script: 'start B S2 U2 R# S# L# S2# C S2 R S L S2 D2 S R L S2# B S2# L TI TM2 TO UU GC2 DD S2_ R S2 finish',
+    medals: { cristal: 24.9, or: 26.3, argent: 30.2, bronze: 35.5 },
   },
   {
     id: 'basalte', name: 'Champs de Basalte', decor: 'volcano', difficulty: 4,
@@ -181,7 +181,7 @@ export const BUILTIN_TRACKS = [
   {
     id: 'cheminee', name: 'Cheminée du Volcan', decor: 'volcano', difficulty: 4,
     goal: {id: 'perfect', n: 1},
-    script: 'start S2 B S2 R S L S2 S2 S C S2 B S2 QU WA2 CR S2 R S2 TB S2 C S L S2 D2 S2 finish',
+    script: 'start S2 B S2 R S L TI TM2 TO S C S2 B S2 QU WA2 CR S2 R S2 TB S2 C S L S2 D2 S2 finish',
     medals: { cristal: 22.2, or: 23.1, argent: 26.6, bronze: 31.2 },
   },
   {
@@ -249,8 +249,8 @@ export const BUILTIN_TRACKS = [
   {
     id: 'apesanteur', name: 'Apesanteur', decor: 'orbit', difficulty: 5,
     goal: {id: 'rings', n: 2},
-    script: 'start S2 B S S.g40 S2 UU GR6 DD S2 S.g100 S2 C S2 TB S2 R S2 CK S2 L S2 S.e S UU GR7 DD S.e S2 C S2 S S2 finish',
-    medals: { cristal: 33.4, or: 34.7, argent: 39.9, bronze: 46.8 },
+    script: 'start S2 B S S.g40 S2 UU GR6 DD S2 S.g100 S2 C S2 TB S2 R S2 CK S2 L S2 S.e S UU GR7 DD S.e S2 C TI TM2.b TO S finish',
+    medals: { cristal: 33.1, or: 34.3, argent: 39.5, bronze: 46.3 },
   },
   {
     id: 'eruption', name: 'Éruption', decor: 'volcano', difficulty: 5,
@@ -261,7 +261,7 @@ export const BUILTIN_TRACKS = [
   {
     id: 'zenith', name: 'Station Zénith', decor: 'orbit', difficulty: 5, laps: 2,
     goal: {id: 'nowall'},
-    script: 'start S2 B S4 BR S CK S2 C BR S2 S S2 UU GR2 DD BR S TB S3 BR finish',
+    script: 'start S2 B S4 BR S CK S2 C BR TI TM3 TO UU GR2 DD BR S TB S3 BR finish',
     medals: { cristal: 40.7, or: 42, argent: 48.3, bronze: 56.7 },
   },
 ];
