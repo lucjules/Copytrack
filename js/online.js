@@ -103,7 +103,8 @@ class OnlineClient {
   }
 
   // ---- Circuits de la communauté ---------------------------------------------------
-  static FIELDS = 'id,name,decor,code,author_time,pieces,laps,plays,likes,created_at,author,players(name)';
+  // Le pseudo de l'auteur : lien précisé (plusieurs liens existent entre circuits et pilotes).
+  static FIELDS = 'id,name,decor,code,author_time,pieces,laps,plays,likes,created_at,author,players!tracks_author_fkey(name)';
 
   async listTracks({ sort = 'recent', search = '', mine = false, limit = 30, offset = 0 } = {}) {
     const q = new URLSearchParams();

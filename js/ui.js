@@ -106,7 +106,7 @@ export class UI {
 
   showScreen(name) {
     for (const s of SCREENS) $(s).classList.toggle('hidden', s !== name);
-    $('coins').classList.toggle('hidden', !['menu', 'tracks', 'mytracks', 'community', 'profile'].includes(name));
+    $('coins').classList.toggle('hidden', !['menu', 'tracks', 'mytracks', 'profile'].includes(name));
     const first = name && $(name).querySelector('button');
     if (first && matchMedia('(pointer: fine)').matches) first.focus({ preventScroll: true });
   }
