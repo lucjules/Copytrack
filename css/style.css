@@ -785,3 +785,71 @@ body.ov-open #touch, body.ov-open .hud-br, body.ov-open .hud-hint, body.ov-open 
   #pause h2 { width: 100%; text-align: center; }
 }
 body.touch kbd { display: none; }
+
+/* Effet de vitesse : traits radiaux sur les bords, transparents au centre. */
+#speedfx {
+  position: fixed; inset: 0; pointer-events: none; z-index: 3; opacity: 0;
+  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,0.0) 0deg 3.2deg, rgba(255,255,255,0.55) 3.2deg 3.6deg);
+  -webkit-mask-image: radial-gradient(ellipse at center, transparent 0 46%, #000 78%);
+  mask-image: radial-gradient(ellipse at center, transparent 0 46%, #000 78%);
+  transition: opacity 0.25s linear;
+  animation: speedfx-spin 0.6s steps(3) infinite;
+}
+@keyframes speedfx-spin { to { transform: rotate(1.2deg); } }
+@media (prefers-reduced-motion: reduce) { #speedfx { animation: none; } }
+
+#fps { position: fixed; left: calc(10px + env(safe-area-inset-left)); bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 60; font: 600 12px/1 ui-monospace, monospace; color: #b8ffcf; background: rgba(10, 8, 24, 0.6); padding: 4px 6px; border-radius: 6px; pointer-events: none; }
+.opt-h { margin: 10px 0 0; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #a99fd0); }
+.opt-h:first-child { margin-top: 0; }
+
+/* Taille de l'interface (Options > Accessibilité). */
+:root { --ui-scale: 1; }
+#hud, .screen, .overlay, #touch, #editor > * { zoom: var(--ui-scale); }
+
+/* ---- v1.5 : éditeur (sélection, tours, vérificateur) ---- */
+.ed-selbar {
+  position: absolute; top: 64px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 4px; padding: 6px; border-radius: 12px;
+  background: var(--panel); border: 1px solid var(--line); flex-wrap: wrap; justify-content: center;
+}
+.ed-selbar .btn[disabled] { opacity: 0.4; pointer-events: none; }
+.ed-laps { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted, #a99fd0); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px 8px; }
+.ed-laps select { font: inherit; color: var(--text); background: transparent; border: 0; }
+.ed-side .btn.on { background: #5ff2ff33; border-color: #5ff2ff; }
+.check-list { margin: 8px 0 0; padding-left: 4px; list-style: none; max-height: 46vh; overflow: auto; display: grid; gap: 6px; }
+.check-list li { padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); }
+.check-list li.error { border-left: 3px solid #ff2b4a; }
+.check-list li.warn { border-left: 3px solid #ffa21a; }
+.thumb { width: 100%; aspect-ratio: 168 / 104; border-radius: 8px; display: block; margin-bottom: 6px; background: #16122b; image-rendering: auto; }
+@media (max-width: 760px) { .ed-selbar { top: auto; bottom: 120px; } .ed-laps { font-size: 12px; } }
+
+/* ---- v1.5 : replay ---- */
+.replay-bar {
+  position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 9;
+  display: flex; gap: 12px; align-items: center; padding: 8px 14px; border-radius: 12px;
+  background: rgba(14, 10, 30, 0.78); border: 1px solid var(--line); font-size: 13px; max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center;
+}
+.replay-bar b { color: #ff4f9a; letter-spacing: 0.12em; }
+.replay-bar .rs { font-weight: 700; }
+.replay-bar .rh { color: var(--muted, #a99fd0); }
+.finish-panel .small-row { margin-top: 8px; gap: 8px; }
+.finish-panel .small-row .btn { font-size: 13px; padding: 6px 10px; }
+@media (max-height: 520px) { .replay-bar .rh { display: none; } }
+
+/* ---- v1.5 : carrière et défi du jour ---- */
+.fin-goal { margin: 6px 0 2px; font-size: 14px; font-weight: 600; }
+.fin-goal.ok { color: #7dffb0; }
+.fin-goal.ko { color: #ff9a8a; }
+.chapter-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.chapter-head .prog { font-size: 13px; color: var(--muted, #a99fd0); }
+.chapter-desc { margin: -4px 0 10px; font-size: 13px; color: var(--muted, #a99fd0); }
+.card.locked { opacity: 0.45; filter: grayscale(0.7); }
+.card .lock { position: absolute; inset: 0; display: grid; place-items: center; font-size: 34px; pointer-events: none; }
+.card .goal { font-size: 12px; margin-top: 4px; color: var(--muted, #a99fd0); }
+.card .goal.done { color: #7dffb0; }
+.card .decor-chip { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,0.08); margin-left: 6px; }
+.daily-card { border: 1px solid #ffd23e88; }
+
+/* ---- v1.5 : tutoriel ---- */
+.tuto { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 8px; line-height: 1.45; }
+.tuto-step { font-size: 13px; font-weight: 500; color: var(--muted, #a99fd0); margin-left: 8px; }

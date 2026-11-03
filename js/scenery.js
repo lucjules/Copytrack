@@ -1,6 +1,8 @@
 // Décors : ciel, lumière, terrain facetté et objets, selon le thème du circuit.
 //  - desert : désert au crépuscule et cristaux (v1.0)
 //  - polar  : nuit polaire, aurore boréale, banquise, glaciers et sapins enneigés
+//  - volcano : volcans, coulées de lave, braises (v1.5)
+//  - orbit   : station orbitale, planète à anneau, dômes et panneaux (v1.5)
 import * as THREE from './vendor/three.module.min.js';
 import { GeoBuilder } from './geo.js';
 import { CELL } from './constants.js';
@@ -51,6 +53,30 @@ export const THEMES = {
     rock: ['#2a2f4d', '#343a5e', '#242848', '#3a2f5e', '#2a2048'],
     hills: 14,
     dust: '#b9a8ff',
+  },
+  volcano: {
+    label: 'Volcan',
+    sky: { top: '#12060a', mid: '#3a0f12', horizon: '#ff5a2a', sun: '#ffb27a', aurora: 0, stars: 0.25, embers: 1 },
+    fog: '#3b1612', fogNear: 150, fogFar: 880,
+    sunDir: [0.3, 0.42, -0.85], sunColor: '#ff9a62', sunIntensity: 1.9,
+    hemi: ['#ffb08a', '#2a0f12', 1.4],
+    ground: ['#2a2224', '#30272a', '#241d20'],
+    rock: ['#3a2a2c', '#4a3032', '#5a3530', '#2c2022', '#1e1718'],
+    hills: 150,
+    lava: true,
+    dust: '#8a7a78',
+  },
+  orbit: {
+    label: 'Station orbitale',
+    sky: { top: '#010108', mid: '#050722', horizon: '#141a46', sun: '#ffffff', aurora: 0, stars: 1.3, planet: 1 },
+    fog: '#0b0f2a', fogNear: 320, fogFar: 1700,
+    sunDir: [0.6, 0.45, -0.66], sunColor: '#f2f4ff', sunIntensity: 2.4,
+    hemi: ['#b9c6ff', '#20223a', 1.3],
+    ground: ['#3a3f5a', '#41466a', '#363b55'],
+    rock: ['#4a5070', '#565c80', '#3e4362', '#6a7090', '#2e3250'],
+    hills: 8,
+    plates: true,
+    dust: '#c9d4ff',
   },
   isles: {
     label: 'Archipel tropical',
@@ -124,7 +150,7 @@ function cone(gb, cx, y0, cz, r, h, sides, color, snow = null) {
 const SKY_VERT = `varying vec3 vDir;
   void main(){ vDir = position; vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww; }`;
 const SKY_FRAG = `uniform vec3 top; uniform vec3 mid; uniform vec3 horizon; uniform vec3 sunColor; uniform vec3 sunDir;
-  uniform float time; uniform float aurora; uniform float stars;
+  uniform float time; uniform float aurora; uniform float stars; uniform float planet; uniform float embers;
   varying vec3 vDir;
   float hash3(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
   void main(){
@@ -149,6 +175,39 @@ const SKY_FRAG = `uniform vec3 top; uniform vec3 mid; uniform vec3 horizon; unif
       vec3 ac = mix(vec3(0.1, 1.0, 0.62), vec3(0.62, 0.32, 1.0), smoothstep(0.22, 0.6, y));
       col += ac * band * curtain * rays * 0.6 * aurora;
     }
+    if (planet > 0.0) {
+      // Planète géante avec anneau, au-dessus de la station.
+      vec3 pd = normalize(vec3(-0.55, 0.42, -0.72));
+      vec3 U = normalize(cross(pd, vec3(0.0, 1.0, 0.0)));
+      vec3 V = cross(U, pd);
+      float c = dot(d, pd);
+      vec2 q = vec2(dot(d, U), dot(d, V));
+      float R = 0.21;
+      float r = length(q);
+      if (c > 0.0) {
+        // anneau incliné (ellipse), caché derrière la planète sur sa moitié haute
+        vec2 qr = vec2(q.x * 0.94 + q.y * 0.34, -q.x * 0.34 + q.y * 0.94);
+        float e = length(vec2(qr.x, qr.y / 0.24));
+        float ring = smoothstep(1.35 * R, 1.42 * R, e) * (1.0 - smoothstep(2.05 * R, 2.12 * R, e));
+        ring *= 0.55 + 0.45 * sin(e * 160.0);
+        bool behind = r < R && qr.y > 0.0;
+        if (r < R) {
+          float lat = q.y / R;
+          vec3 base = mix(vec3(0.85, 0.55, 0.38), vec3(0.95, 0.78, 0.55), 0.5 + 0.5 * sin(lat * 18.0 + sin(q.x * 40.0) * 0.6));
+          base = mix(base, vec3(0.55, 0.32, 0.5), 0.35 * (0.5 + 0.5 * sin(lat * 7.0)));
+          vec3 nrm = normalize(pd * sqrt(max(0.0, R * R - r * r)) + U * q.x + V * q.y);
+          float light = 0.12 + 0.88 * max(0.0, dot(nrm, normalize(sunDir)));
+          col = mix(col, base * light, smoothstep(R, R - 0.004, r));
+        }
+        if (!behind) col = mix(col, vec3(0.92, 0.84, 0.7), ring * 0.75 * planet);
+      }
+    }
+    if (embers > 0.0) {
+      // Lueur rouge au ras de l'horizon et braises qui montent.
+      col += vec3(1.0, 0.25, 0.05) * smoothstep(0.18, 0.0, abs(y)) * 0.25 * embers;
+      float h = hash3(floor(vec3(d.x * 120.0, d.y * 120.0 - time * 0.6, d.z * 120.0)));
+      col += vec3(1.0, 0.45, 0.1) * step(0.997, h) * smoothstep(0.0, 0.25, y) * embers;
+    }
     gl_FragColor = vec4(col, 1.0);
     #include <colorspace_fragment>
   }`;
@@ -172,7 +231,7 @@ export class Scenery {
         uniforms: {
           top: { value: new THREE.Color() }, mid: { value: new THREE.Color() }, horizon: { value: new THREE.Color() },
           sunColor: { value: new THREE.Color() }, sunDir: { value: new THREE.Vector3() },
-          time: { value: 0 }, aurora: { value: 0 }, stars: { value: 0 },
+          time: { value: 0 }, aurora: { value: 0 }, stars: { value: 0 }, planet: { value: 0 }, embers: { value: 0 },
         },
         vertexShader: SKY_VERT,
         fragmentShader: SKY_FRAG,
@@ -216,6 +275,8 @@ export class Scenery {
     u.sunColor.value.set(T.sky.sun);
     u.aurora.value = T.sky.aurora;
     u.stars.value = T.sky.stars;
+    u.planet.value = T.sky.planet || 0;
+    u.embers.value = T.sky.embers || 0;
     this.sunDir.set(...T.sunDir).normalize();
     u.sunDir.value.copy(this.sunDir);
     this.scene.background = new THREE.Color(T.sky.horizon);
@@ -288,7 +349,9 @@ export class Scenery {
         H[i].push([x + jx, heightAt(x, z) - 0.02, z + jz]);
       }
     }
-    const colorFor = (h, r) => {
+    const colorFor = (h, r, x = 0, z = 0) => {
+      if (T.lava && h < 1 && fbm(x * 0.012, z * 0.012, seed + 5) > 0.62) return r < 0.5 ? '#ff4a14' : '#ff7a1f';
+      if (T.plates && h < 1) return ((Math.floor(x / 24) + Math.floor(z / 24)) & 1) ? T.ground[0] : T.ground[1 + Math.floor(r * 2)];
       if (h < 1) return T.ground[Math.floor(r * T.ground.length)];
       const k = Math.min(T.rock.length - 1, Math.floor(h / 18 + r * 0.8));
       return T.rock[k];
@@ -296,8 +359,8 @@ export class Scenery {
     for (let i = 0; i < seg; i++) {
       for (let j = 0; j < seg; j++) {
         const a = H[i][j], b2 = H[i + 1][j], c = H[i + 1][j + 1], d = H[i][j + 1];
-        gb.tri(a, d, c, colorFor((a[1] + d[1] + c[1]) / 3, hash2(i, j, seed + 11)));
-        gb.tri(a, c, b2, colorFor((a[1] + c[1] + b2[1]) / 3, hash2(j, i, seed + 13)));
+        gb.tri(a, d, c, colorFor((a[1] + d[1] + c[1]) / 3, hash2(i, j, seed + 11), a[0], a[2]));
+        gb.tri(a, c, b2, colorFor((a[1] + c[1] + b2[1]) / 3, hash2(j, i, seed + 13), c[0], c[2]));
       }
     }
     this.terrain = new THREE.Mesh(gb.build(), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }));
@@ -325,6 +388,8 @@ export class Scenery {
     else if (this.themeId === 'jungle') this._jungleDecor(ctx);
     else if (this.themeId === 'city') this._cityDecor(ctx);
     else if (this.themeId === 'isles') this._islesDecor(ctx);
+    else if (this.themeId === 'volcano') this._volcanoDecor(ctx);
+    else if (this.themeId === 'orbit') this._orbitDecor(ctx);
     else this._desertDecor(ctx);
   }
 
@@ -512,6 +577,94 @@ export class Scenery {
     this._scatterMerged(ctx, ['flower'], low ? 20 : 50, { min: 1.5, max: 2.5, colors: [1, 7, 4] });
     // Rochers à l'horizon
     this._crystals(ctx, ['#ffe08a', '#ff9ec8', '#8ff0ff'], low ? 10 : 22, 0.4);
+  }
+
+  _volcanoDecor(ctx) {
+    const { rand, scatter, low } = ctx;
+    // Volcans à l'horizon (cônes facettés, cratère lumineux) et colonnes de fumée.
+    const gb = new GeoBuilder(), glow = new GeoBuilder();
+    const n = low ? 5 : 9;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + rand() * 0.4, d = 900 + rand() * 500;
+      const x = this.center.x + Math.cos(a) * d, z = this.center.z + Math.sin(a) * d;
+      const r = 160 + rand() * 160, h = 180 + rand() * 220;
+      cone(gb, x, -5, z, r, h, 9, i % 2 ? '#2c2022' : '#3a2a2c');
+      const top = h * 0.86, cr = r * 0.14;
+      for (let k = 0; k < 8; k++) {
+        const a0 = (k / 8) * Math.PI * 2, a1 = ((k + 1) / 8) * Math.PI * 2;
+        glow.tri([x + Math.cos(a0) * cr, top, z + Math.sin(a0) * cr], [x + Math.cos(a1) * cr, top, z + Math.sin(a1) * cr], [x, top + 2, z], '#ff5a1f');
+      }
+      // coulée de lave sur un flanc
+      const fa = rand() * Math.PI * 2;
+      for (let k = 0; k < 6; k++) {
+        const t0 = k / 6, t1 = (k + 1) / 6;
+        const p0 = [x + Math.cos(fa) * cr * (1 + t0 * 6), top * (1 - t0), z + Math.sin(fa) * cr * (1 + t0 * 6)];
+        const p1 = [x + Math.cos(fa) * cr * (1 + t1 * 6), top * (1 - t1), z + Math.sin(fa) * cr * (1 + t1 * 6)];
+        const w = 10 + t1 * 18, px = -Math.sin(fa) * w, pz = Math.cos(fa) * w;
+        glow.quad([p0[0] - px, p0[1] + 1, p0[2] - pz], [p0[0] + px, p0[1] + 1, p0[2] + pz], [p1[0] + px, p1[1] + 1, p1[2] + pz], [p1[0] - px, p1[1] + 1, p1[2] - pz], k % 2 ? '#ff4a14' : '#ff8a2a');
+      }
+    }
+    const m = new THREE.Mesh(gb.build(), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }));
+    this.decor.add(m);
+    this.decor.add(new THREE.Mesh(glow.build(), new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, side: THREE.DoubleSide })));
+    // Fumée : grosses boules grises au-dessus des cratères (instanciées).
+    const puff = new THREE.IcosahedronGeometry(1, 1);
+    this._instanced(puff, new THREE.MeshStandardMaterial({ color: '#5a4a4a', flatShading: true, roughness: 1, transparent: true, opacity: 0.55 }), low ? 20 : 45,
+      (put) => { for (let i = 0; i < (low ? 20 : 45); i++) { const a = rand() * Math.PI * 2, d = 900 + rand() * 500; const s = 30 + rand() * 60; put(this.center.x + Math.cos(a) * d, 300 + rand() * 260, this.center.z + Math.sin(a) * d, 0, rand() * 6, 0, s, s * 0.7, s); } });
+    // Roches basaltiques, cristaux de feu, mares de lave.
+    this._scatterMerged(ctx, ['rock'], low ? 60 : 130, { min: 2, max: 6 });
+    this._crystals(ctx, ['#ff5a1f', '#ffb02e', '#ff2b4a'], low ? 16 : 34, 1.0);
+    const pool = new THREE.CircleGeometry(1, 7).rotateX(-Math.PI / 2);
+    this._instanced(pool, new THREE.MeshBasicMaterial({ color: '#ff6a1a', toneMapped: false }), low ? 25 : 60,
+      (put) => scatter(low ? 25 : 60, (x, y, z) => { const s = 6 + rand() * 16; put(x, y + 0.08, z, 0, rand() * 6, 0, s, 1, s * (0.6 + rand() * 0.6)); }));
+  }
+
+  _orbitDecor(ctx) {
+    const { rand, scatter, low } = ctx;
+    // Modules de station : dômes, tours d'antennes, panneaux solaires, balises.
+    const gb = new GeoBuilder(), glow = new GeoBuilder();
+    const n = low ? 40 : 90;
+    scatter(n, (x, y, z) => {
+      const k = rand();
+      if (k < 0.3) {
+        // dôme
+        const r = 10 + rand() * 18, seg = 8;
+        for (let i = 0; i < seg; i++) {
+          const a0 = (i / seg) * Math.PI * 2, a1 = ((i + 1) / seg) * Math.PI * 2;
+          for (let j = 0; j < 3; j++) {
+            const b0 = (j / 3) * Math.PI / 2, b1 = ((j + 1) / 3) * Math.PI / 2;
+            const P = (a, b) => [x + Math.cos(a) * Math.cos(b) * r, y + Math.sin(b) * r, z + Math.sin(a) * Math.cos(b) * r];
+            gb.quad(P(a0, b0), P(a1, b0), P(a1, b1), P(a0, b1), j === 2 ? '#8fa0d8' : '#5a6290');
+          }
+        }
+        glow.quad([x - r * 0.3, y + 0.6, z + r], [x + r * 0.3, y + 0.6, z + r], [x + r * 0.3, y + 3, z + r * 0.98], [x - r * 0.3, y + 3, z + r * 0.98], '#7fe9ff');
+      } else if (k < 0.55) {
+        // tour d'antennes
+        const h = 30 + rand() * 70;
+        gb.taper(x, z, y, y + h, 3, 3, 1.4, 1.4, '#6a7090');
+        gb.box(x - 6, y + h * 0.6, z - 0.4, x + 6, y + h * 0.6 + 0.8, z + 0.4, '#8890b0');
+        glow.box(x - 0.8, y + h, z - 0.8, x + 0.8, y + h + 1.6, z + 0.8, rand() < 0.5 ? '#ff3d6a' : '#36e9ff');
+      } else if (k < 0.85) {
+        // panneau solaire incliné
+        const w = 16 + rand() * 14, d2 = 8 + rand() * 6, h = 4 + rand() * 4;
+        gb.taper(x, z, y, y + h, 0.8, 0.8, 0.6, 0.6, '#565c80');
+        gb.quad([x - w, y + h, z - d2], [x + w, y + h, z - d2], [x + w, y + h + d2 * 0.6, z + d2], [x - w, y + h + d2 * 0.6, z + d2], '#1f3a8a');
+        for (let i = -2; i <= 2; i++) glow.quad([x + i * w / 2.5 - 0.15, y + h + 0.05, z - d2], [x + i * w / 2.5 + 0.15, y + h + 0.05, z - d2], [x + i * w / 2.5 + 0.15, y + h + d2 * 0.6 + 0.05, z + d2], [x + i * w / 2.5 - 0.15, y + h + d2 * 0.6 + 0.05, z + d2], '#4f7cff');
+      } else {
+        // balise lumineuse
+        gb.taper(x, z, y, y + 8, 1.2, 1.2, 0.6, 0.6, '#3e4362');
+        glow.box(x - 0.9, y + 8, z - 0.9, x + 0.9, y + 9.8, z + 0.9, '#b9a6ff');
+      }
+    });
+    const m = new THREE.Mesh(gb.build(), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.6, metalness: 0.3, side: THREE.DoubleSide }));
+    m.castShadow = true; m.receiveShadow = true;
+    this.decor.add(m);
+    this.decor.add(new THREE.Mesh(glow.build(), new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, side: THREE.DoubleSide })));
+    // Débris flottants et satellites au loin.
+    const deb = new THREE.IcosahedronGeometry(1, 0);
+    this._instanced(deb, new THREE.MeshStandardMaterial({ color: '#7a80a0', flatShading: true, roughness: 0.8 }), low ? 30 : 70,
+      (put) => { for (let i = 0; i < (low ? 30 : 70); i++) { const a = rand() * Math.PI * 2, d = 400 + rand() * 900; const s = 2 + rand() * 9; put(this.center.x + Math.cos(a) * d, 60 + rand() * 300, this.center.z + Math.sin(a) * d, rand() * 6, rand() * 6, rand() * 6, s, s, s); } });
+    this._crystals(ctx, ['#b9a6ff', '#7fe9ff'], low ? 8 : 18, 0.6);
   }
 
   clearTerrain() {

@@ -11,6 +11,7 @@ export const KEY_ACTIONS = {
     ['respawn', 'Dernier checkpoint', ['KeyR', '']],
     ['restart', 'Recommencer', ['Enter', 'Backspace']],
     ['camera', 'Changer de caméra', ['KeyC', '']],
+    ['horn', 'Klaxon', ['KeyH', '']],
     ['pause', 'Pause', ['Escape', 'KeyP']],
   ],
   editor: [
@@ -29,6 +30,8 @@ export const KEY_ACTIONS = {
     ['ed.topView', 'Vue de dessus', ['KeyH', '']],
     ['ed.grid', 'Afficher / masquer la grille', ['KeyG', '']],
     ['ed.help', 'Liste des raccourcis', ['F1', '']],
+    ['ed.levelView', 'Vue par niveau (estomper les autres)', ['KeyZ', '']],
+    ['ed.check', 'Vérifier le circuit', ['F2', '']],
   ],
 };
 
@@ -41,6 +44,7 @@ export const PAD_ACTIONS = {
     ['respawn', 'Dernier checkpoint', [3, -1]],
     ['restart', 'Recommencer', [8, -1]],
     ['camera', 'Caméra', [5, -1]],
+    ['horn', 'Klaxon', [10, -1]],
     ['pause', 'Pause', [9, -1]],
   ],
   menu: [

@@ -71,8 +71,9 @@ class Hud {
     this._splitT = setTimeout(() => { e.style.opacity = '0'; }, 2600);
   }
 
-  checkpoints(n, m) {
-    this.el.cp.textContent = m ? `◆ ${n} / ${m}` : '◆ —';
+  checkpoints(n, m, lap = 0, laps = 1) {
+    const lp = laps > 1 ? ` · Tour ${lap} / ${laps}` : '';
+    this.el.cp.textContent = (m ? `◆ ${n} / ${m}` : '◆ —') + lp;
   }
 
   speed(kmh, boost) {
@@ -115,7 +116,18 @@ export class UI {
     if (c) c.textContent = `◆ ${profile().coins}`;
   }
 
+  // Lignes de vitesse sur les bords de l'écran (0 = rien, 1 = plein effet).
+  speedFx(k) {
+    const el = $('speedfx');
+    if (!el) return;
+    const v = k < 0.02 ? 0 : k;
+    if (Math.abs(v - (this._fx || 0)) < 0.02 && v !== 0) return;
+    this._fx = v;
+    el.style.opacity = String(v * 0.55);
+  }
+
   setMode(mode) {
+    if (mode !== 'race') this.speedFx(0);
     const showCoins = mode === 'menu';
     $('coins').classList.toggle('hidden', !showCoins);
     this.updateCoins();
@@ -175,6 +187,17 @@ export class UI {
   }
 
   showFinish(info) {
+    $('fin-replay').classList.toggle('hidden', !info.canReplay);
+    const gl = $('fin-goal');
+    if (gl) {
+      gl.classList.toggle('hidden', !info.goal);
+      if (info.goal) {
+        const g = info.goal;
+        gl.className = 'fin-goal ' + (g.met || g.already ? 'ok' : 'ko');
+        gl.textContent = `★ Objectif bonus : ${g.label} — ${g.met ? (g.coins ? `réussi ! +${g.coins} ◆` : 'réussi') : g.already ? 'déjà réussi' : 'raté'}`;
+      }
+    }
+    $('fin-ghost').classList.toggle('hidden', !info.canShareGhost);
     $('fin-title').textContent = info.isRecord ? (info.prevTime == null ? 'Premier temps !' : 'Nouveau record !') : 'Arrivée !';
     $('fin-title').className = info.isRecord ? 'fin-record' : '';
     $('fin-time').textContent = formatTime(info.time);

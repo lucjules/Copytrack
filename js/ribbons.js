@@ -8,10 +8,16 @@
 //  wall    : mur vertical d'un niveau
 //  crest90 : quart de cercle convexe (mur -> plat) puis plat
 //  v=1     : n'importe quelle ligne / virage posé à l'envers (au plafond)
-import { HALF, LEVEL_H } from './constants.js';
+//  bank*   : virage relevé      halfpipe : demi-tube      tube : tube fermé
+//  cork*   : tire-bouchon (hélice d'un tour)
+// Un ruban peut avoir une section courbe : kc (courbure transversale), hw (demi-largeur
+// mesurée le long de la section) et wrap (section fermée : on peut en faire le tour).
+import { HALF, LEVEL_H, ROAD_HALF } from './constants.js';
 import { PIECES, baseY, arcParams, localToWorld } from './pieces.js';
 
 const smooth = (u) => u * u * (3 - 2 * u);
+// 0 aux extrémités, 1 au milieu, transitions douces de largeur w.
+const ramp = (u, w) => (u < w ? smooth(u / w) : u > 1 - w ? smooth((1 - u) / w) : 1);
 const cache = new WeakMap();
 
 export function ribbonOf(tile) {
@@ -45,6 +51,67 @@ function build(tile) {
     };
   }
   if (P.kind === 'ribbon') {
+    // ---- v1.5 ----
+    if (P.arc) {
+      // Virage relevé : arc horizontal, la route penche vers l'intérieur (inclinaison
+      // nulle aux extrémités pour se raccorder aux routes plates). Le bord intérieur
+      // reste au niveau de la pièce, le bord extérieur monte.
+      const a = arcParams(P);
+      return {
+        pos(u, o) {
+          const ang = Math.PI + (Math.PI / 2) * u;
+          const b = P.bank * Math.sin(Math.PI * u);
+          const ca = Math.cos(ang), sa = Math.sin(ang);
+          o.x = a.cx + a.R * ca; o.z = a.cz + a.R * sa;
+          o.y = base + ROAD_HALF * Math.sin(b);
+          o.nx = -ca * Math.sin(b); o.ny = Math.cos(b); o.nz = -sa * Math.sin(b);
+        },
+        len: (Math.PI / 2) * a.R,
+      };
+    }
+    if (tile.t === 'halfpipe') {
+      // Demi-tube : ligne droite dont la section se creuse en U (rayon 8 m) puis se rouvre.
+      const kcMax = 1 / 8;
+      return {
+        pos(u, o) {
+          o.x = 0; o.y = base; o.z = half - 2 * half * u;
+          o.nx = 0; o.ny = 1; o.nz = 0;
+          o.kc = kcMax * ramp(u, 0.22); o.hw = ROAD_HALF; o.wrap = false;
+        },
+        len: 2 * half,
+      };
+    }
+    if (tile.t === 'tube') {
+      // Tube fermé (rayon 8 m) : on peut en faire le tour complet si on va assez vite.
+      const kcMax = 1 / 8;
+      return {
+        tubeR: 8,
+        pos(u, o) {
+          o.x = -HALF; o.y = base; o.z = half - 2 * half * u;
+          o.nx = 0; o.ny = 1; o.nz = 0;
+          const k = ramp(u, 0.2);
+          o.kc = kcMax * k;
+          o.wrap = k >= 0.999;
+          o.hw = o.wrap ? Math.PI / kcMax : ROAD_HALF;
+        },
+        len: 2 * half,
+      };
+    }
+    if (tile.t === 'cork' || tile.t === 'corkL') {
+      // Tire-bouchon : hélice autour d'un axe parallèle à la route, la chaussée tournée
+      // vers l'axe. Un tour complet ; la courbure plaque la voiture si elle va assez vite.
+      const Rh = 8, m = P.mirror;
+      return {
+        minU: 0.06,
+        pos(u, o) {
+          const th = Math.PI * 2 * smooth(u);
+          const s = Math.sin(th), c = Math.cos(th);
+          o.x = -HALF + m * Rh * s; o.y = base + Rh * (1 - c); o.z = half - 2 * half * u;
+          o.nx = -m * s; o.ny = c; o.nz = 0;
+        },
+        len: Math.hypot(2 * half, 2 * Math.PI * Rh),
+      };
+    }
     if (tile.t === 'twist') {
       return {
         pos(u, o) {
@@ -129,6 +196,7 @@ const A = {}, B = {}, C = {};
 export function frameLocal(rib, u, F) {
   const e = 2e-3;
   const u0 = Math.max(0, u - e), u1 = Math.min(1, u + e);
+  A.kc = 0; A.hw = 0; A.wrap = false;
   rib.pos(u, A); rib.pos(u0, B); rib.pos(u1, C);
   let tx = C.x - B.x, ty = C.y - B.y, tz = C.z - B.z;
   const l = Math.hypot(tx, ty, tz) || 1e-9;
@@ -143,6 +211,8 @@ export function frameLocal(rib, u, F) {
   F.tx = tx; F.ty = ty; F.tz = tz;
   F.nx = nx; F.ny = ny; F.nz = nz;
   F.rx = ty * nz - tz * ny; F.ry = tz * nx - tx * nz; F.rz = tx * ny - ty * nx;
+  // Section transversale : courbure (concave > 0), demi-largeur, tour complet.
+  F.kc = A.kc || 0; F.hw = A.hw || ROAD_HALF; F.wrap = !!A.wrap;
   return F;
 }
 
@@ -168,7 +238,8 @@ export function centerlineLocal(tile, n) {
     for (let i = 1; i <= 4; i++) pts.push([m * p.lane, base, -(half * i) / 4, 0]);
   } else if (p.kind === 'ribbon' || tile.v) {
     const rib = ribbonOf(tile);
-    sampleRibbon(Math.max(8, Math.round(rib.len / 3)));
+    // drapeau 2 : virage relevé (le pilote automatique doit y doser sa vitesse).
+    sampleRibbon(Math.max(8, Math.round(rib.len / 3)), p.arc ? 2 : 1);
   } else if (p.kind === 'arc') {
     const a = arcParams(p);
     for (let i = 0; i <= n; i++) {

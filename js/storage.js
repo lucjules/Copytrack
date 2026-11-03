@@ -56,6 +56,17 @@ export const DEFAULT_SETTINGS = {
   haptics: true,
   padDeadzone: 0.15,
   padSens: 1,
+  // v1.5
+  musicVolume: 0.45,
+  fovAdd: 0,          // champ de vision en plus (degrés)
+  speedFx: true,      // lignes de vitesse
+  shakeAmt: 1,        // intensité des tremblements de caméra (0 à 1)
+  colorblind: false,  // couleurs de revêtements adaptées + motifs renforcés
+  uiScale: 1,         // taille de l'interface
+  showFps: false,
+  tutorialDone: false,
+  ghostGold: true,
+  ghostImported: true,
 };
 
 export function loadSettings() {
@@ -75,14 +86,32 @@ export function saveSettings(s) {
 // ---- Records -------------------------------------------------------------
 // v1.1 : pistes plus larges et physique revue => les records v1.0 (préfixe
 // "rec.") ne sont plus comparables. On utilise "rec2." et on purge l'ancien.
-const REC = 'rec2.';
+// v1.5 : nouvelle physique (assiette en l'air, réceptions, mini-turbo) => "rec3.".
+const REC = 'rec3.';
 
 export function purgeOldRecords() {
   try {
     Object.keys(localStorage)
-      .filter((k) => k.startsWith(PREFIX + 'rec.'))
+      .filter((k) => k.startsWith(PREFIX + 'rec.') || k.startsWith(PREFIX + 'rec2.'))
       .forEach((k) => localStorage.removeItem(k));
   } catch { /* stockage indisponible */ }
+}
+
+// ---- Fantômes importés (code SHG1) et défi du jour --------------------------------
+export function getImportedGhost(trackKey) {
+  return read('ghostImp.' + trackKey, null);
+}
+
+export function setImportedGhost(trackKey, g) {
+  write('ghostImp.' + trackKey, g);
+}
+
+export function getDaily(day) {
+  return read('daily.' + day, null);
+}
+
+export function setDaily(day, v) {
+  write('daily.' + day, v);
 }
 
 export function clearRecords() {

@@ -9,12 +9,20 @@ import { createCar } from './carModel.js';
 import { getRecord, saveRecord, encodeFloats, decodeFloats, formatTime } from './storage.js';
 import { profile, rewardCoins, addCoins, saveProfile } from './profile.js';
 import { SURFACES } from './pieces.js';
+import { CATALOG } from './cosmetics.js';
+import { SkidMarks } from './skids.js';
+import { InputRecorder, decodeInputs, inputAt, quantSteer, GhostRunner, PHYS_VER } from './replay.js';
+import { getImportedGhost } from './storage.js';
+import { goalMet, goalLabel, completeGoal, goalDone } from './career.js';
 
 const GHOST_EVERY = 4; // un échantillon tous les 4 pas (30 Hz)
+// Caméras en plus pour les replays.
+const REPLAY_CAMS = [{ name: 'TV', tv: true }, { name: 'Orbite libre', orbit: true }];
 const CAM_MODES = [
   { name: 'Poursuite', dist: 9.5, height: 3.7, look: 5, lookUp: 1.3, fov: 66 },
   { name: 'Proche', dist: 6.2, height: 2.3, look: 7, lookUp: 1.0, fov: 70 },
   { name: 'Capot', hood: true, fov: 76 },
+  { name: 'Lointaine', dist: 14, height: 5.6, look: 4, lookUp: 1.6, fov: 62 },
 ];
 export const MEDALS = [
   { id: 'cristal', label: 'Cristal' },
@@ -55,14 +63,23 @@ export class RaceSession {
     app.scenery.setTrack(track, opts.seed || this.trackKey || track.name);
 
     this.phys = new CarPhysics(track);
-    this.logic = new RaceLogic(track);
+    this.logic = new RaceLogic(track, { partial: !!opts.spawn });
     this.car = createCar(profile().loadout);
     app.scene.add(this.car.group);
+    this.skids = new SkidMarks(app.scene);
     this.ghostCar = createCar(null, { ghost: true });
     this.ghostCar.group.visible = false;
     app.scene.add(this.ghostCar.group);
 
     this.bot = this.demo && track.path ? new Autopilot(track.path) : null;
+    // Replay : commandes enregistrées rejouées à l'identique.
+    this.replay = opts.replay ? decodeInputs(opts.replay.inputs) : null;
+    this.replaySpeed = 1;
+    this.replayPaused = false;
+    this.replayCam = 0;   // 0 = caméra de course, puis TV, orbite
+    // Fantômes simulés (or, importé).
+    this.ghosts = [];
+    if (!this.demo && !this.replay && !opts.fromEditor) this._setupGhosts();
     this.camMode = this.demo ? 0 : app.settings.camera || 0;
 
     this.up = new THREE.Vector3(0, 1, 0);
@@ -78,8 +95,25 @@ export class RaceSession {
     this.restart();
   }
 
+  _setupGhosts() {
+    const app = this.app, s = app.settings;
+    const add = (runner, color, label) => {
+      const car = createCar(null, { ghost: true, ghostColor: color });
+      car.group.visible = false;
+      app.scene.add(car.group);
+      this.ghosts.push({ runner, car, label, q: new THREE.Quaternion(), pq: new THREE.Quaternion() });
+    };
+    const rec = this.trackKey ? getRecord(this.trackKey) : null;
+    const goldNotYet = this.medals && (!rec || rec.time > this.medals.or + 1e-6);
+    if (s.ghostGold !== false && this.track.path && goldNotYet) add(new GhostRunner(this.track, { bot: true, latK: 0.8 }), '#ffd23e', 'Or');
+    const imp = this.trackKey && s.ghostImported !== false ? getImportedGhost(this.trackKey) : null;
+    if (imp && imp.v === PHYS_VER) add(new GhostRunner(this.track, { inputs: imp.inputs }), '#c77dff', imp.name);
+  }
+
   loadRecord() {
     this.record = this.trackKey && !this.demo ? getRecord(this.trackKey) : null;
+    // Les records d'une autre version de la physique n'ont pas de commandes rejouables.
+    if (this.record && this.record.pv !== PHYS_VER) this.record = { ...this.record, inputs: null };
     this.ghostData = null;
     if (this.record && this.record.ghost) {
       try { this.ghostData = decodeFloats(this.record.ghost); } catch { this.ghostData = null; }
@@ -89,16 +123,21 @@ export class RaceSession {
   restart() {
     const app = this.app;
     this.logic.reset();
-    const sp = this.logic.spawnPoint();
+    const sp = this.opts.spawn || this.logic.spawnPoint();
+    if (this.opts.spawn) this.logic.respawn = { ...sp, vehicle: 'car', grav: 1 };
     this.phys.place(sp.x, sp.y, sp.z, sp.yaw);
-    this.car.setMoto(false, true);
+    this.car.setVehicle('car', true);
     this.collectedShards = new Set();
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
     this._orient();
     this.prevQuat.copy(this.quat);
     this.camYaw = sp.yaw;
     this.camPos.set(sp.x + Math.sin(sp.yaw) * 12, sp.y + 5, sp.z + Math.cos(sp.yaw) * 12);
-    this.state = this.demo ? 'racing' : 'countdown';
+    this.state = this.demo || this.replay ? 'racing' : 'countdown';
+    this.recorder = new InputRecorder();
+    this._pendingRespawn = false;
+    this.stats = { wallHits: 0, respawns: 0, perfects: 0, turbos: 0, rings: 0 };
+    for (const g of this.ghosts) { g.runner.reset(); g.car.group.visible = false; }
     this.countT = 0;
     this.countShown = -1;
     this.acc = 0;
@@ -108,6 +147,7 @@ export class RaceSession {
     this.lastSplitShown = 0;
     this.wheelSpin = 0;
     app.particles.clear();
+    this.skids.clear();
     if (this.bot) this.bot.reset(this.phys);
     if (!this.demo) {
       app.ui.hud.reset(this);
@@ -116,12 +156,14 @@ export class RaceSession {
     this.car.flames.forEach((f) => { f.visible = false; });
   }
 
-  respawn() {
+  respawn(fromInput = false) {
     if (this.state !== 'racing') return;
+    if (fromInput) this._pendingRespawn = true;
+    this.stats.respawns++;
     const r = this.logic.respawn;
     this.phys.place(r.x, r.y, r.z, r.yaw);
-    this.phys.moto = !!r.moto; this.phys.gravMul = r.grav || 1;
-    this.car.setMoto(this.phys.moto, true);
+    this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
+    this.car.setVehicle(this.phys.vehicle, true);
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
     this._orient();
     this.prevQuat.copy(this.quat);
@@ -148,10 +190,11 @@ export class RaceSession {
       tmpV.set(p.n.x, p.n.y, p.n.z);
       this.up.lerp(tmpV, 0.28).normalize();
     } else {
-      const sp = p.speed || 1;
-      tmpV.set(-fx * (p.vel.y / sp) * 0.7, 1, -fz * (p.vel.y / sp) * 0.7).normalize();
+      // En l'air, l'assiette vient de la physique (gaz = nez vers le bas, frein = nez vers le haut).
+      const c = Math.cos(p.pitch), s = Math.sin(p.pitch);
+      tmpV.set(-fx * s, c, -fz * s);
       // Retournée (chute d'un looping) : on se redresse plus vite.
-      this.up.lerp(tmpV, this.up.y < 0.3 ? 0.08 : 0.035).normalize();
+      this.up.lerp(tmpV, this.up.y < 0.3 ? 0.08 : 0.2).normalize();
     }
     const f = p.mode === 'ribbon' ? tmpV2.set(p.fwd.x, p.fwd.y, p.fwd.z) : tmpV2.set(fx, 0, fz);
     f.addScaledVector(this.up, -f.dot(this.up));
@@ -164,6 +207,11 @@ export class RaceSession {
   }
 
   _input() {
+    if (this.replay) {
+      const inp = inputAt(this.replay, this.logic.steps);
+      if (inp.respawn) this.respawn();
+      return inp;
+    }
     if (this.bot) return this.bot.control(this.phys);
     if (this.state === 'finished') return { steer: 0, throttle: false, brake: true, drift: false };
     return this.app.input.drive();
@@ -172,11 +220,23 @@ export class RaceSession {
   _stepOnce() {
     const app = this.app;
     const inp = this._input();
+    inp.steer = quantSteer(inp.steer);      // volant au centième : replay identique
+    if (this.state === 'racing' && !this.demo && !this.replay) {
+      this.recorder.push(inp, this._pendingRespawn);
+      this._pendingRespawn = false;
+    }
+    if (this.state === 'racing') for (const g of this.ghosts) { g.pq.copy(g.q); g.runner.step(); }
     this.lastInput = inp;
     this.prevQuat.copy(this.quat);
     this.phys.step(inp);
     this._orient();
     const ev = this.phys.ev;
+    if (this.state === 'racing') {
+      if (ev.wall > 4) this.stats.wallHits++;
+      if (ev.landQ === 'perfect') this.stats.perfects++;
+      if (ev.miniTurbo) this.stats.turbos++;
+      if (ev.ring) this.stats.rings++;
+    }
     if (ev.boostHit) {
       app.audio.boost();
       this.shake = Math.max(this.shake, 0.25);
@@ -201,13 +261,44 @@ export class RaceSession {
       app.particles.burst(p.x, p.y + 0.4, p.z, 24, 9, 0.6, 0.7, '#ff5fd2', 2);
     }
     if (ev.loopIn) app.audio.whoosh();
+    if (ev.miniTurbo) {
+      app.audio.miniTurbo(ev.miniTurbo);
+      app.input.rumble(0.4, 0.2, 120);
+      const p = this.phys.pos;
+      app.particles.burst(p.x, p.y + 0.5, p.z, 16, 7, 0.4, 0.5, ev.miniTurbo === 2 ? '#ffb84d' : '#5ff2ff', 2);
+      if (!this.demo) app.ui.hud.message(ev.miniTurbo === 2 ? 'Mini-turbo renforcé !' : 'Mini-turbo !', 0.8);
+    }
+    if (ev.landQ === 'perfect' && !this.demo) {
+      app.audio.perfectLanding();
+      const p = this.phys.pos;
+      app.particles.burst(p.x, p.y + 0.3, p.z, 26, 10, 0.5, 0.55, '#7dffb0', 0, 1);
+      app.ui.hud.message('Réception parfaite !', 0.9);
+    } else if (ev.landQ === 'bad' && !this.demo) {
+      this.shake = Math.max(this.shake, 0.6);
+      app.input.rumble(0.9, 0.6, 220);
+      app.ui.hud.message('Réception ratée', 0.9);
+    }
     if (ev.moto) {
-      this.car.setMoto(this.phys.moto);
+      const veh = this.phys.vehicle;
+      this.car.setVehicle(veh);
       app.audio.transform();
       const p = this.phys.pos;
-      app.particles.burst(p.x, p.y + 1, p.z, 40, 11, 0.8, 0.8, '#ff9f1c', 1);
+      const col = { moto: '#ff9f1c', boat: '#3fd0ff', glider: '#f5f5f5', car: '#ffd23e' }[veh];
+      app.particles.burst(p.x, p.y + 1, p.z, 40, 11, 0.8, 0.8, col, 1);
       app.particles.burst(p.x, p.y + 1, p.z, 24, 9, 0.8, 0.7, '#ffffff', 1);
-      if (!this.demo) app.ui.hud.message(this.phys.moto ? 'Mode moto !' : 'Retour en voiture', 1.2);
+      if (!this.demo) app.ui.hud.message({ moto: 'Mode moto !', boat: 'Mode bateau !', glider: 'Deltaplane déployé !', car: 'Retour en voiture' }[veh], 1.2);
+    }
+    if (ev.sink && this.state === 'racing') {
+      const p = this.phys.pos;
+      app.particles.burst(p.x, p.y + 0.5, p.z, 30, 8, 0.7, 0.6, '#9fe3ff', 4, 2);
+      if (!this.demo) app.ui.hud.message('Coulé ! Il faut un bateau pour traverser l\'eau', 1.8);
+      if (this.demo) this.restart(); else this.respawn();
+      return;
+    }
+    if (ev.ring) {
+      const p = this.phys.pos;
+      app.particles.burst(p.x, p.y + 0.5, p.z, 30, 12, 0.6, 0.6, '#36e9ff', 0, 1);
+      if (!this.demo) app.ui.hud.message('Anneau turbo !', 0.8);
     }
     if (ev.gravity && !this.demo) app.ui.hud.message(`Gravité ${Math.round(this.phys.gravMul * 100)} %`, 1.4);
     if (ev.loopFall && !this.demo) {
@@ -268,9 +359,19 @@ export class RaceSession {
       if (!this.demo) {
         app.audio.checkpoint(diff == null ? null : diff <= 0);
         app.ui.hud.split(diff, ev.steps * DT);
-        app.ui.hud.checkpoints(this.logic.collected.size, this.logic.cps.length);
+        app.ui.hud.checkpoints(this.logic.collected.size, this.logic.cps.length, this.logic.lap, this.logic.laps);
       }
       app.particles.burst(p.x, p.y + 2, p.z, 30, 12, 0.9, 0.8, '#ffbf3c', 4, 2);
+    } else if (ev.type === 'lap') {
+      let diff = null;
+      if (this.record && this.record.splits && this.record.splits[ev.index - 1] != null) diff = (ev.steps - this.record.splits[ev.index - 1]) * DT;
+      if (!this.demo) {
+        app.audio.checkpoint(diff == null ? null : diff <= 0);
+        app.ui.hud.split(diff, ev.steps * DT);
+        app.ui.hud.message(ev.lap === ev.laps ? 'Dernier tour !' : `Tour ${ev.lap} / ${ev.laps}`, 1.6);
+        app.ui.hud.checkpoints(0, this.logic.cps.length, ev.lap, ev.laps);
+      }
+      app.particles.burst(p.x, p.y + 2, p.z, 40, 14, 1, 0.8, '#ff4f9a', 4, 2);
     } else if (ev.type === 'missing') {
       if (!this.demo) {
         app.ui.hud.message(`Il manque ${ev.remaining} checkpoint${ev.remaining > 1 ? 's' : ''} !`, 1.6);
@@ -288,14 +389,19 @@ export class RaceSession {
     const app = this.app;
     this.state = 'finished';
     this.finishT = 0;
+    if (this.replay) { this._replayEnded(); return; }
+    // Dernière course, rejouable depuis l'écran d'arrivée.
+    this.lastRun = { inputs: this.recorder.encode(), time };
     const prev = this.record;
-    const isRecord = !prev || time < prev.time - 1e-9;
+    const isRecord = (!prev || time < prev.time - 1e-9) && !this.opts.spawn;
     if (isRecord && this.trackKey) {
       const ghost = new Float32Array(this.ghostRec);
       const rec = {
         time,
         splits: this.logic.splits.slice(),
         ghost: encodeFloats(ghost),
+        inputs: this.recorder.encode(),
+        pv: PHYS_VER,
         date: Date.now(),
         name: app.settings.playerName,
       };
@@ -305,14 +411,26 @@ export class RaceSession {
     const medal = medalFor(time, this.medals);
     const prevMedal = prev ? medalFor(prev.time, this.medals) : null;
     let reward = null;
-    if (this.opts.fromEditor) {
+    if (this.opts.fromEditor && this.opts.spawn) {
+      // Test partiel : pas de vérification ni de médaille.
+    } else if (this.opts.fromEditor) {
       app.onEditorTestFinished(time, this.track);
     } else if (this.medals) {
       const tier = medal ? MEDALS.indexOf(medal) : -1;
       reward = rewardCoins({ tier, difficulty: this.opts.difficulty || 1, trackKey: this.trackKey, user: !!this.opts.userMap });
       app.ui.updateCoins();
     }
+    // Objectif bonus (carrière).
+    let goal = null;
+    if (this.opts.goal && !this.opts.spawn) {
+      const met = goalMet(this.opts.goal, { ...this.stats, vehicle: this.phys.vehicle, time });
+      const already = goalDone(this.opts.goalKey);
+      const coins = met ? completeGoal(this.opts.goalKey) : 0;
+      if (coins) app.ui.updateCoins();
+      goal = { label: goalLabel(this.opts.goal), met, coins, already };
+    }
     app.ui.showFinish({
+      goal,
       reward,
       verified: !!this.opts.fromEditor,
       derived: this.opts.fromEditor ? this.track.derivedMedals : null,
@@ -325,6 +443,8 @@ export class RaceSession {
       medals: this.medals,
       fromEditor: !!this.opts.fromEditor,
       hasNext: !!this.opts.hasNext,
+      canReplay: true,
+      canShareGhost: !!(this.trackKey && (isRecord || (this.record && this.record.inputs)) && !this.opts.spawn),
     });
     if (isRecord) this.loadRecord();
     app.ui.hud.time(time, true);
@@ -335,6 +455,8 @@ export class RaceSession {
     const app = this.app;
     const input = app.input;
 
+    if (this.replay) return this._updateReplay(dt);
+
     if (!this.demo) {
       if (input.act('pause') || (this.state === 'paused' && input.hit('Escape'))) {
         if (this.state === 'paused') this.resume();
@@ -344,8 +466,9 @@ export class RaceSession {
       }
       if (this.state === 'paused') return this.render(dt, 0);
       if (input.act('restart') || input.hit('NumpadEnter')) { this.restart(); return; }
-      if (input.act('respawn')) this.respawn();
+      if (input.act('respawn') && !this.replay) this.respawn(true);
       if (input.act('camera')) this.cycleCamera();
+      if (input.act('horn')) app.audio.horn(profile().loadout.horn);
     }
 
     if (this.state === 'countdown') {
@@ -383,6 +506,41 @@ export class RaceSession {
     this.render(dt, this.acc / DT);
   }
 
+  // ---- Replay -------------------------------------------------------------
+  _updateReplay(dt) {
+    const app = this.app, input = app.input;
+    if (input.hit('Escape') || input.act('pause')) { app.endReplay(this.opts.replay); return; }
+    if (input.hit('Space')) { this.replayPaused = !this.replayPaused; this._replayHud(); }
+    const speeds = [0.25, 0.5, 1, 2, 4];
+    if (input.hit('ArrowRight') || input.hit('ArrowUp')) { this.replaySpeed = speeds[Math.min(4, speeds.indexOf(this.replaySpeed) + 1)]; this._replayHud(); }
+    if (input.hit('ArrowLeft') || input.hit('ArrowDown')) { this.replaySpeed = speeds[Math.max(0, speeds.indexOf(this.replaySpeed) - 1)]; this._replayHud(); }
+    if (input.act('restart')) { this.restart(); this._replayHud(); return; }
+    if (input.act('camera')) {
+      this.replayCam = (this.replayCam + 1) % (CAM_MODES.length + REPLAY_CAMS.length);
+      const name = this.replayCam < CAM_MODES.length ? CAM_MODES[this.replayCam].name : REPLAY_CAMS[this.replayCam - CAM_MODES.length].name;
+      if (this.replayCam < CAM_MODES.length) this.camMode = this.replayCam;
+      app.ui.flash(`Caméra : ${name}`, 1.2);
+    }
+    if (!this.replayPaused && this.state !== 'finished') {
+      this.acc += Math.min(dt, 0.1) * this.replaySpeed;
+      while (this.acc >= DT && this.state !== 'finished') {
+        this._stepOnce();
+        this.acc -= DT;
+      }
+    } else if (this.state === 'finished') this.finishT += dt;
+    this.render(dt, this.replayPaused ? 1 : Math.min(1, this.acc / DT));
+  }
+
+  _replayHud() {
+    const el = document.getElementById('replay-bar');
+    if (!el) return;
+    el.querySelector('.rs').textContent = this.replayPaused ? '❚❚ Pause' : `▶ ×${this.replaySpeed}`;
+  }
+
+  _replayEnded() {
+    this.app.ui.hud.message('Fin du replay · Entrée : revoir · Échap : quitter', 3);
+  }
+
   pause() {
     this.state = 'paused';
     this.app.ui.showOverlay('pause');
@@ -415,7 +573,9 @@ export class RaceSession {
       w.spin.rotation.x = -this.wheelSpin;
       if (w.front) w.pivot.rotation.y = -(p.steerAngle || 0);   // angle réel des roues avant
     }
-    const roll = Math.max(-0.07, Math.min(0.07, p.yawRate * p.fwdSpeed * 0.0022));
+    // Roulis : léger au sol, franc pour le deltaplane qui vire en l'air.
+    const gliding = p.vehicle === 'glider' && !p.grounded;
+    const roll = gliding ? -(p.steer || 0) * 0.45 : Math.max(-0.07, Math.min(0.07, p.yawRate * p.fwdSpeed * 0.0022));
     this.car.body.rotation.z += (roll - this.car.body.rotation.z) * Math.min(1, dt * 8);
     const inp = this.lastInput || {};
     const pitch = p.grounded ? (inp.throttle ? 0.012 : 0) - (inp.brake && p.fwdSpeed > 2 ? 0.03 : 0) : 0;
@@ -426,8 +586,43 @@ export class RaceSession {
       if (boosting) f.scale.set(1, 1.2 + Math.random() * 1.2, 1);
     }
 
+    // Traces de pneus (glisse ou gros freinage) et étincelles du mini-turbo en charge.
+    const sliding = p.grounded && !p.rib && p.speed > 8 && (p.slip > 0.06 * Math.abs(p.fwdSpeed) + 1.2 || (inp.brake && p.fwdSpeed > 12 && !inp.throttle));
+    const wheelsX = this.car.vehicle === 'boat' ? [] : this.car.isMoto ? [0] : [-0.95, 0.95];
+    tmpV2.set(1, 0, 0).applyQuaternion(g.quaternion);
+    for (let w = 0; w < 2; w++) {
+      if (sliding && w < wheelsX.length) {
+        tmpV.set(wheelsX[w], 0, 1.3).applyQuaternion(g.quaternion).add(g.position);
+        this.skids.add(w, tmpV.x, tmpV.y, tmpV.z, tmpV2.x, tmpV2.z, this.car.isMoto ? 0.22 : 0.3);
+      } else this.skids.lift(w);
+    }
+    if (p.driftCharge > 0.15 && p.grounded) {
+      const col = p.driftCharge >= 1.5 ? '#ffb84d' : p.driftCharge >= 0.7 ? '#5ff2ff' : '#ffffff';
+      for (const sx of wheelsX) {
+        if (Math.random() < 0.6) {
+          tmpV.set(sx, 0.2, 1.4).applyQuaternion(g.quaternion).add(g.position);
+          app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, (Math.random() - 0.5) * 4, 1 + Math.random() * 3, (Math.random() - 0.5) * 4, 0.25, 0.3, col, 4);
+        }
+      }
+    }
+    // Traînée lumineuse (cosmétique) : en l'air et pendant les turbos.
+    const trail = this._trail || (this._trail = (CATALOG.trail.find((x) => x.id === profile().loadout.trail) || CATALOG.trail[0]));
+    if (trail.id !== 'none' && !this.demo && (!p.grounded || p.boost > 0) && p.speed > 8) {
+      const col = trail.rainbow ? `hsl(${(performance.now() / 6) % 360}, 95%, 60%)` : trail.color;
+      for (let k = 0; k < 2; k++) {
+        tmpV.set((Math.random() - 0.5) * 0.6, 0.6, 2.3).applyQuaternion(g.quaternion).add(g.position);
+        app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, 0.55, 0.42, col, 0);
+      }
+    }
+    // Sillage du bateau (ou éclaboussures d'un véhicule dans l'eau).
+    if (p.grounded && p.surfMod === 'water' && p.speed > 4 && Math.random() < 0.9) {
+      for (const sx of [-1.1, 1.1]) {
+        tmpV.set(sx, 0.2, 2.2).applyQuaternion(g.quaternion).add(g.position);
+        app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, sx * (1 + Math.random() * 2), 1.5 + Math.random() * 2.5, (Math.random() - 0.5) * 2, 0.6, 0.55, Math.random() < 0.5 ? '#e8f8ff' : '#9fe3ff', 7);
+      }
+    }
     // Particules : poussière de dérapage, étincelles de boost
-    if (p.grounded && p.slip > 5 && p.speed > 6) {
+    if (p.grounded && p.slip > 5 && p.speed > 6 && p.surfMod !== 'water') {
       for (const sx of [-1, 1]) {
         tmpV.set(sx * 1.0, 0.15, 1.4).applyQuaternion(g.quaternion).add(g.position);
         const dust = p.surfMod === 'ice' ? '#e8f8ff' : p.surfMod === 'sand' ? '#d8b07a' : app.scenery.theme.dust;
@@ -440,8 +635,9 @@ export class RaceSession {
     }
     app.particles.update(dt);
 
-    // Fantôme
+    // Fantômes
     this._renderGhost(alpha);
+    this._renderSimGhosts(alpha);
 
     // Caméra
     this._camera(dt);
@@ -453,8 +649,34 @@ export class RaceSession {
     }
     if (!this.demo) {
       const hud = app.ui.hud;
+      if (this.replay && this.state === 'finished') { hud.speed(Math.abs(p.fwdSpeed) * 3.6, p.boost); return; }
+      // Effet de vitesse au-delà de 180 km/h.
+      const fx = app.settings.speedFx !== false ? Math.max(0, Math.min(1, (Math.abs(p.fwdSpeed) - 50) / 22)) : 0;
+      app.ui.speedFx(fx * (this.camMode === 2 ? 1 : 0.8));
       if (this.state === 'racing') hud.time((this.logic.steps + alpha) * DT);
       hud.speed(Math.abs(p.fwdSpeed) * 3.6, p.boost);
+    }
+  }
+
+  _renderSimGhosts(alpha) {
+    for (const g of this.ghosts) {
+      const p = g.runner.phys;
+      const show = this.state !== 'countdown' && !g.runner.done;
+      g.car.group.visible = show;
+      if (!show) continue;
+      const up = tmpV.set(p.n.x, p.n.y, p.n.z);
+      if (!p.grounded) up.set(0, 1, 0);
+      const f = tmpV2.set(p.fwd.x, p.fwd.y, p.fwd.z);
+      f.addScaledVector(up, -f.dot(up));
+      if (f.lengthSq() < 1e-6) f.set(-Math.sin(p.yaw), 0, -Math.cos(p.yaw));
+      f.normalize();
+      const right = new THREE.Vector3().crossVectors(f, up).normalize();
+      tmpM.makeBasis(right, up, f.clone().negate());
+      g.q.setFromRotationMatrix(tmpM);
+      g.car.group.position.set(p.prev.x + (p.pos.x - p.prev.x) * alpha, p.prev.y + (p.pos.y - p.prev.y) * alpha, p.prev.z + (p.pos.z - p.prev.z) * alpha);
+      g.car.group.quaternion.slerpQuaternions(g.pq, g.q, alpha);
+      if (g.car.vehicle !== p.vehicle) g.car.setVehicle(p.vehicle, true);
+      if (g.car.group.position.distanceToSquared(this.renderPos) < 4) g.car.group.visible = false;
     }
   }
 
@@ -484,6 +706,30 @@ export class RaceSession {
     const car = this.car.group;
     this.shake = Math.max(0, this.shake - dt * 1.8);
 
+    const rc = this.replay && this.replayCam >= CAM_MODES.length ? REPLAY_CAMS[this.replayCam - CAM_MODES.length] : null;
+    if (rc && rc.tv) {
+      // Caméra TV : un poste fixe près de la route, qui change quand la voiture s'éloigne.
+      if (!this.tvPos || this.tvPos.distanceTo(car.position) > 70) {
+        const yaw = p.yaw;
+        const ahead = 40 + Math.random() * 20, side = (Math.random() < 0.5 ? -1 : 1) * (16 + Math.random() * 10);
+        this.tvPos = new THREE.Vector3(car.position.x - Math.sin(yaw) * ahead + Math.cos(yaw) * side, car.position.y + 6 + Math.random() * 8, car.position.z - Math.cos(yaw) * ahead - Math.sin(yaw) * side);
+      }
+      cam.up.set(0, 1, 0);
+      cam.position.copy(this.tvPos);
+      cam.lookAt(car.position.x, car.position.y + 1, car.position.z);
+      const d = this.tvPos.distanceTo(car.position);
+      this._fov(Math.max(18, Math.min(70, 1800 / Math.max(10, d))));
+      return;
+    }
+    if (rc && rc.orbit) {
+      this.camT += dt * 0.25;
+      const r = 16;
+      cam.up.set(0, 1, 0);
+      cam.position.set(car.position.x + Math.cos(this.camT) * r, car.position.y + 6, car.position.z + Math.sin(this.camT) * r);
+      cam.lookAt(car.position.x, car.position.y + 1, car.position.z);
+      this._fov(60);
+      return;
+    }
     if (this.state === 'finished' && !this.demo) {
       // Orbite lente autour de la voiture
       this.camT += dt * 0.35;
@@ -571,7 +817,7 @@ export class RaceSession {
     if (this.camPos.y < s.h + 1.2) this.camPos.y = s.h + 1.2;
     cam.position.copy(this.camPos);
     if (this.shake > 0) {
-      const k = this.shake * 0.25;
+      const k = this.shake * 0.25 * (this.app.settings.shakeAmt ?? 1);
       cam.position.x += (Math.random() - 0.5) * k;
       cam.position.y += (Math.random() - 0.5) * k;
     }
@@ -582,6 +828,7 @@ export class RaceSession {
 
   _fov(target) {
     const cam = this.app.camera;
+    target += this.app.settings.fovAdd || 0;
     const f = cam.fov + (target - cam.fov) * 0.1;
     if (Math.abs(f - cam.fov) > 0.01) {
       cam.fov = f;
@@ -593,6 +840,8 @@ export class RaceSession {
     this.app.camera.up.set(0, 1, 0);
     this.view.dispose();
     this.car.dispose();
+    this.skids.dispose();
+    for (const g of this.ghosts) g.car.dispose();
     this.ghostCar.dispose();
     this.app.particles.clear();
     this.app.audio.engine(null);

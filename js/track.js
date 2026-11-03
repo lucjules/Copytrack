@@ -6,6 +6,7 @@ import {
   toLocal, sampleLocal, rotVec,
 } from './pieces.js';
 import { centerlineWorld } from './ribbons.js';
+import { forkBranchX } from './pieces.js';
 import { DECO_ORDER } from './decoData.js';
 
 export const DECORS = {
@@ -14,7 +15,12 @@ export const DECORS = {
   jungle: { label: 'Jungle néon' },
   city: { label: 'Ville futuriste' },
   isles: { label: 'Archipel tropical' },
+  volcano: { label: 'Volcan' },
+  orbit: { label: 'Station orbitale' },
 };
+
+// L'eau est un peu sous le niveau de la chaussée.
+export const WATER_DROP = 0.35;
 
 const EMPTY = Object.freeze([]);
 const key = (x, z) => ((x + 4096) << 13) | (z + 4096);
@@ -31,6 +37,7 @@ export class Track {
     this.decos = [];
     this.index = new Map();
     this.version = 0;
+    this.laps = 1;    // nombre de tours (circuit fermé)
     this.vt = 0;      // temps de vérification (secondes) de l'auteur
     this.vh = '';     // signature du circuit au moment de la vérification
     for (const t of tiles) this.add(t);
@@ -54,7 +61,7 @@ export class Track {
     let type = t.t, s = t.s || '';
     if (LEGACY_SURFACE[type]) { s = LEGACY_SURFACE[type]; type = 'straight'; }
     if (!PIECES[type]) throw new Error('Pièce inconnue : ' + type);
-    const tile = { t: type, x: t.x | 0, z: t.z | 0, l: Math.max(0, Math.min(MAX_LEVEL, t.l | 0)), r: t.r & 3, s: '', p: 0, v: 0, nb: 0, tn: 0 };
+    const tile = { t: type, x: t.x | 0, z: t.z | 0, l: Math.max(0, Math.min(MAX_LEVEL, Math.round((+t.l || 0) * 2) / 2)), r: t.r & 3, s: '', p: 0, v: 0, nb: 0, tn: 0 };
     tile.v = t.v && flagAllowed(type, 'v') ? 1 : 0;
     tile.nb = t.nb && flagAllowed(type, 'nb') ? 1 : 0;
     tile.tn = t.tn && flagAllowed(type, 'tn', tile) ? 1 : 0;
@@ -158,6 +165,7 @@ export class Track {
     this.decos = [];
     this.index.clear();
     this.vt = 0; this.vh = '';
+    this.laps = 1;
     this.version++;
   }
 
@@ -217,6 +225,7 @@ export class Track {
       out.mod = tile.s || '';
       out.p = tile.p || 0;
       out.lx = L.lx; out.lz = L.lz;
+      if (tile.s === 'water') { out.h -= WATER_DROP; best = out.h; }
     }
     return out;
   }
@@ -245,7 +254,7 @@ export class Track {
       .sort()
       .join('|');
     const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}`).join('|');
-    return hashString(this.decor + '#' + parts + '#' + d);
+    return hashString(this.decor + '#' + parts + '#' + d + (this.laps > 1 ? '#L' + this.laps : ''));
   }
 
   get verified() {
@@ -270,6 +279,7 @@ export class Track {
     t.decor = this.decor;
     t.decos = this.decos.map((d) => ({ ...d }));
     t.vt = this.vt; t.vh = this.vh;
+    t.laps = this.laps;
     return t;
   }
 
@@ -288,6 +298,7 @@ export class Track {
     ]);
     const data = { v: 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
     if (decos.length) data.o = decos;
+    if (this.laps > 1) data.lp = this.laps;
     if (this.verified) { data.vt = this.vt; data.vh = this.vh; }
     return 'SHW3:' + b64encode(JSON.stringify(data));
   }
@@ -326,6 +337,7 @@ export class Track {
         tr.addDeco({ k, x: o[1], y: o[2], z: o[3], ry: o[4], s: o[5], c: o[6], u });
       }
     }
+    tr.laps = Math.max(1, Math.min(9, data.lp | 0 || 1));
     if (data.vt > 0 && data.vh) { tr.vt = +data.vt; tr.vh = String(data.vh); }
     return tr;
   }
@@ -375,7 +387,18 @@ export function hashString(s) {
 // Drapeaux en fin de jeton : ^ à l'envers   _ sans bordures   # tunnel
 //   ex. "S3.i" = 3 droites verglacées, "S2^_" = 2 droites à l'envers sans bordures.
 // Raccourcis historiques : B = S.b, I = S.i.
-const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', s: 'sand', m: 'magnet', u: 'mud', d: 'drift', x: 'slow', w: 'wind', g: 'gravity', o: 'moto' };
+//
+// v1.5 :
+//   BR / BL             virage relevé droite / gauche (2x2)   BRR / BLL  très grand virage relevé (3x3)
+//   HP                  demi-tube         TB  tube (2x2)        CK / CKL  tire-bouchon (2x2)
+//   KR / KL             checkpoint dans un virage droite / gauche
+//   GU / GD             pente douce (½ niveau) montante / descendante
+//   GR2 / GC2           vide de 2 cases avec un anneau turbo / un checkpoint aérien au milieu
+//   Y3.b / YL3.b        bifurcation : deux voies parallèles de 3 cases puis jonction ;
+//                       la voie déportée (à droite, ou à gauche pour YL) reçoit le revêtement
+//                       et c'est elle que suit le pilote automatique
+//   suffixes : .a eau  .n plaque bateau  .e plaque deltaplane
+const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', s: 'sand', m: 'magnet', u: 'mud', d: 'drift', x: 'slow', w: 'wind', g: 'gravity', o: 'moto', a: 'water', n: 'boat', e: 'glider' };
 
 export function scriptTrack(name, script, opts = {}) {
   const tr = new Track(name);
@@ -383,17 +406,63 @@ export function scriptTrack(name, script, opts = {}) {
   let x = opts.x || 0, z = opts.z || 0, h = opts.h || 0, l = opts.l || 0;
   const path = [];
   let cur = { s: '', p: 0, v: 0, nb: 0, tn: 0 };
-  const place = (t, px, pz, lv, r, reverse = false) => {
-    const tile = { t, x: px, z: pz, l: lv, r: r & 3, ...cur };
+  const place = (t, px, pz, lv, r, reverse = false, noPath = false, curOver = null) => {
+    const tile = { t, x: px, z: pz, l: lv, r: r & 3, ...(curOver || cur) };
     if (cur.s && !surfaceAllowed(t, cur.s, !!cur.v)) throw new Error(`${name} : revêtement ${cur.s} interdit sur ${t}`);
     for (const f of ['v', 'nb', 'tn']) if (cur[f] && !flagAllowed(t, f, tile)) throw new Error(`${name} : drapeau ${f} interdit sur ${t}`);
     const c = tr.conflicts(Track.normalize(tile));
     if (c.length) throw new Error(`${name} : conflit en (${px}, ${pz}) niveau ${lv} [${t}]`);
     const added = tr.add(tile);
+    if (noPath) return added;
     const pts = centerlineWorld(added, PIECES[t].size === 2 ? 12 : 6, reverse);
     if (path.length) pts.shift();
     path.push(...pts);
     return added;
+  };
+  // Pièce 2x2 « en ligne droite » sur la colonne gauche (tube, tire-bouchon) :
+  // la case d'entrée est la case courante, la pièce déborde sur la colonne de droite.
+  const straight2 = (type) => {
+    const c = rot(h, 0.5, -0.5);
+    place(type, Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
+    adv(h, 2);
+  };
+  // Bifurcation (+ voies parallèles + jonction). side = 1 : voie B à droite.
+  const fork = (n, side, surf) => {
+    const right = rot(h, side, 0);
+    const bx = x + right.x, bz = z + right.z;
+    const t1 = side > 0 ? 'fork' : 'forkL', t2 = side > 0 ? 'forkL' : 'fork';
+    const plain = { s: '', p: 0, v: 0, nb: 0, tn: 0 };
+    const fwd = rot(h, 0, -1);
+    const step = (k) => [fwd.x * k, fwd.z * k];
+    // Ancre d'un bloc 2x2 : coin minimal des cases (voies A et B, rangées k et k + 1).
+    const block = (k) => {
+      const cells = [];
+      for (const [cx, cz] of [[x, z], [bx, bz]]) for (const kk of [k, k + 1]) cells.push([cx + fwd.x * kk, cz + fwd.z * kk]);
+      return [Math.min(...cells.map((c) => c[0])), Math.min(...cells.map((c) => c[1]))];
+    };
+    const [fx0, fz0] = block(0);
+    const fT = place(t1, fx0, fz0, l, h, false, true, plain);
+    // Voies parallèles (A = colonne d'entrée, B = colonne déportée).
+    const lanesStart = 2;
+    for (let i = 0; i < n; i++) {
+      const [ox, oz] = step(lanesStart + i);
+      place('straight', x + ox, z + oz, l, h, false, true, plain);
+      place('straight', bx + ox, bz + oz, l, h, false, true, surf);
+    }
+    // Jonction : bifurcation miroir tournée de 180°, sortie dans la colonne A.
+    const jA = block(lanesStart + n);
+    const jT = place(t2, jA[0], jA[1], l, h + 2, false, true, plain);
+    // Chemin du pilote : branche B (déportée).
+    const pushPts = (pts) => { if (path.length) pts.shift(); path.push(...pts); };
+    pushPts(forkPath(fT, 1, false));
+    for (let i = 0; i <= n; i++) {
+      const [ox, oz] = step(lanesStart + i);
+      const c0 = { x: (bx + ox + 0.5) * CELL, z: (bz + oz + 0.5) * CELL };
+      const back = rot(h, 0, 0.5);
+      path.push([c0.x + back.x * CELL, l * LEVEL_H + 0.4, c0.z + back.z * CELL, 0]);
+    }
+    pushPts(forkPath(jT, 1, true));
+    adv(h, lanesStart + n + 2);
   };
   const adv = (dir, n = 1) => { x += DIRS[dir][0] * n; z += DIRS[dir][1] * n; };
   const rot = (r, lx, lz) => rotVec(r, lx, lz, { x: 0, z: 0 });
@@ -464,11 +533,75 @@ export function scriptTrack(name, script, opts = {}) {
       case 'D': for (let i = 0; i < n; i++) { l -= 1; place('slope', x, z, l, h + 2, true); adv(h); } break;
       case 'DD': l -= 2; place('steep', x, z, l, h + 2, true); adv(h); break;
       case 'G': adv(h, n); break;
+      // ---- v1.5
+      case 'BR': {
+        const c = rot(h, 0.5, -0.5);
+        place('bank', Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
+        const nx = rot(h, 2, -1);
+        x += nx.x; z += nx.z; h = (h + 1) & 3;
+        break;
+      }
+      case 'BL': {
+        const r = (h + 1) & 3;
+        const c = rot(r, -0.5, 0.5);
+        place('bank', Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, r, true);
+        const nx = rot(r, -1, 2);
+        x += nx.x; z += nx.z; h = (h + 3) & 3;
+        break;
+      }
+      case 'BRR': case 'BLL': {
+        // Très grand virage relevé (3x3) : bloc de cases devant et sur le côté du virage.
+        const sgn = op === 'BRR' ? 1 : -1;
+        const fwd = rot(h, 0, -1), side = rot(h, sgn, 0);
+        const cells = [];
+        for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cells.push([x + side.x * i + fwd.x * j, z + side.z * i + fwd.z * j]);
+        const ax = Math.min(...cells.map((c) => c[0])), az = Math.min(...cells.map((c) => c[1]));
+        if (sgn > 0) place('bankBig', ax, az, l, h);
+        else place('bankBig', ax, az, l, h + 1, true);
+        x += fwd.x * 2 + side.x * 3; z += fwd.z * 2 + side.z * 3;
+        h = (h + (sgn > 0 ? 1 : 3)) & 3;
+        break;
+      }
+      case 'HP': for (let i = 0; i < n; i++) { place('halfpipe', x, z, l, h); adv(h); } break;
+      case 'TB': straight2('tube'); break;
+      case 'CK': straight2('cork'); break;
+      case 'CKL': straight2('corkL'); break;
+      case 'KR': place('cpCurve', x, z, l, h); h = (h + 1) & 3; adv(h); break;
+      case 'KL': place('cpCurve', x, z, l, h + 1, true); h = (h + 3) & 3; adv(h); break;
+      case 'GU': for (let i = 0; i < n; i++) { place('gentle', x, z, l, h); l += 0.5; adv(h); } break;
+      case 'GD': for (let i = 0; i < n; i++) { l -= 0.5; place('gentle', x, z, l, h + 2, true); adv(h); } break;
+      case 'GR': case 'GC': {
+        const mid = Math.floor((n - 1) / 2);
+        const rz = rot(h, 0, -mid);
+        place(op === 'GR' ? 'ring' : 'cpRing', x + rz.x, z + rz.z, l, h, false, true, { s: '', p: 0, v: 0, nb: 0, tn: 0 });
+        adv(h, n);
+        break;
+      }
+      case 'Y': fork(n, 1, { ...cur }); break;
+      case 'YL': fork(n, -1, { ...cur }); break;
       case 'V': l += n; break;
       default: throw new Error('Instruction inconnue : ' + op);
     }
   }
   for (const d of opts.decos || []) tr.addDeco(d);
   tr.path = path;
+  tr.turtle = { x, z, h, l };   // position finale (sert à refermer les circuits à tours)
   return tr;
+}
+
+// Points (monde) d'une branche de bifurcation : 0 = tout droit, 1 = déportée.
+function forkPath(tile, branch, reverse) {
+  const P = PIECES[tile.t];
+  const half = P.size * (CELL / 2);
+  const y = tile.l * LEVEL_H + 0.4;
+  const out = [];
+  for (let i = 0; i <= 16; i++) {
+    const t = i / 16;
+    const lx = forkBranchX(P, t, branch), lz = half - 2 * half * t;
+    const w = { x: 0, z: 0 };
+    rotVec(tile.r, lx, lz, w);
+    const cx = tile.x * CELL + half, cz = tile.z * CELL + half;
+    out.push([w.x + cx, y, w.z + cz, 0]);
+  }
+  return reverse ? out.reverse() : out;
 }

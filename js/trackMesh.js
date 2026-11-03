@@ -4,7 +4,8 @@ import { GeoBuilder } from './geo.js';
 import {
   CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T,
 } from './constants.js';
-import { PIECES, SURFACES, arcParams, baseY, tileCenter, tileParam, isRibbonKind } from './pieces.js';
+import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, isRibbonKind, forkBranchX, forkSep } from './pieces.js';
+import { WATER_DROP } from './track.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { buildDecoInto, createPlaque } from './decos.js';
 
@@ -46,16 +47,30 @@ export const SURFACE_STYLE = {
   wind: { road: ['#2c3a52', '#314160'], line: '#bfefff' },
   gravity: { road: ['#233a3a', '#294444'], line: '#a7ffe0' },
   moto: { road: ['#3b2e22', '#44352a'], line: '#ff9f1c' },
+  water: { road: ['#1f6fb2', '#2479bf'], line: '#9fe3ff' },
+  boat: { road: ['#22343f', '#263b47'], line: '#3fd0ff' },
+  glider: { road: ['#2f3346', '#353a50'], line: '#f5f5f5' },
 };
 
 const RO = ROAD_HALF + RAIL_W;
 export const TUNNEL_R = RO + 1.0;
 
 const _c1 = new THREE.Color(), _c2 = new THREE.Color();
+
+// Palette adaptée au daltonisme (teintes bien séparées, d'après la palette d'Okabe et Ito).
+const CB_COLORS = {
+  ice: '#ffffff', boost: '#56b4e9', bounce: '#cc79a7', sand: '#f0e442', magnet: '#0072b2',
+  mud: '#8c6d4f', drift: '#e69f00', slow: '#d55e00', wind: '#d9d9d9', gravity: '#009e73',
+  moto: '#ffb000', boat: '#3fa7ff', glider: '#f5f5f5',
+};
+let colorblind = false;
+export function setColorblind(v) { colorblind = !!v; }
+
 // Couleur d'un revêtement selon son paramètre (faible / normal / fort).
 export function tint(s, p) {
   const S = SURFACES[s];
   if (!S || !S.c) return '#ffffff';
+  if (colorblind && CB_COLORS[s]) return CB_COLORS[s];
   if (S.def == null) return S.c[1];
   const v = p || S.def;
   if (v <= S.def) {
@@ -170,8 +185,9 @@ const at = (f, d, h) => [
   f.p[2] + f.r[2] * d + f.u[2] * h,
 ];
 
-function sweep(gb, frames, style, nb) {
+function sweep(gb, frames, style, nb, drop = 0) {
   const prof = nb ? PROFILE_NB : PROFILE;
+  if (drop) frames = frames.map((f) => ({ ...f, p: [f.p[0] - f.u[0] * drop, f.p[1] - f.u[1] * drop, f.p[2] - f.u[2] * drop] }));
   const n = frames.length - 1;
   const rings = frames.map((f) => prof.map((q) => at(f, q.d, q.h)));
   const m = prof.length;
@@ -319,6 +335,26 @@ function surfaceDecals(glow, frames, tile, area = false) {
     bar(glow, f, -0.35, -3.4, 0.35, 3.4, col);
     bar(glow, f, -2.2, 2.9, 2.2, 3.5, col);
     bar(glow, f, -1.2, -0.9, 1.2, 0.2, col);
+  } else if (s === 'water') {
+    const n = long ? 7 : 4;
+    for (let i = 0; i < n; i++) {
+      const f = frameAt(frames, (i + 0.5) / n);
+      for (const d of [-5, 0, 5]) chevron(glow, f, d + (i % 2 ? 1.2 : -1.2), 0, 1.8, 0.35, 0.9, Math.PI / 2, '#7fd0ff');
+    }
+  } else if (s === 'boat') {
+    // Coque et vague
+    const f = frameAt(frames, 0.5);
+    bar(glow, f, -2.6, -3.2, 2.6, -2.6, col);
+    chevron(glow, f, 0, -4.2, 2.6, 0.6, 2.0, 0, col);
+    bar(glow, f, -0.3, -2.6, 0.3, 1.6, col);
+    chevron(glow, f, -2.2, 3.4, 1.4, 0.5, 1.1, Math.PI / 2, col);
+    chevron(glow, f, 2.2, 3.4, 1.4, 0.5, 1.1, Math.PI / 2, col);
+  } else if (s === 'glider') {
+    // Aile delta
+    const f = frameAt(frames, 0.5);
+    chevron(glow, f, 0, 0, 6.2, 0.8, 3.6, 0, col);
+    bar(glow, f, -0.3, -1.6, 0.3, 3.0, col);
+    bar(glow, f, -1.8, 2.6, 1.8, 3.1, col);
   } else if (s === 'mud') {
     const n = long ? 7 : 4;
     for (let i = 0; i < n; i++) {
@@ -448,6 +484,131 @@ export function tileMatrix(tile) {
   return m;
 }
 
+// ---- v1.5 : section courbe (demi-tube, tube) ---------------------------------
+function crossSweep(gb, glow, tile, style) {
+  const rib = ribbonOf(tile);
+  const N = tile.t === 'tube' ? 48 : 24, M = tile.t === 'tube' ? 32 : 18;
+  const F = {};
+  const rings = [];
+  for (let i = 0; i <= N; i++) {
+    frameLocal(rib, i / N, F);
+    const kc = F.kc, wrap = F.wrap;
+    const hw = wrap ? Math.PI / kc : F.hw;
+    const pts = [];
+    for (let j = 0; j <= M; j++) {
+      const d = -hw + (2 * hw * j) / M;
+      let X = d, Y = 0, c = 1, sn = 0;
+      if (kc > 1e-5) { const ph = kc * d; c = Math.cos(ph); sn = Math.sin(ph); X = sn / kc; Y = (1 - c) / kc; }
+      const nx = F.nx * c - F.rx * sn, ny = F.ny * c - F.ry * sn, nz = F.nz * c - F.rz * sn;
+      pts.push({
+        p: [F.px + F.rx * X + F.nx * Y, F.py + F.ry * X + F.ny * Y, F.pz + F.rz * X + F.nz * Y],
+        n: [nx, ny, nz], d, phi: kc * d,
+      });
+    }
+    rings.push({ pts, wrap, hw });
+  }
+  const off = (q, k) => [q.p[0] + q.n[0] * k, q.p[1] + q.n[1] * k, q.p[2] + q.n[2] * k];
+  for (let i = 0; i < N; i++) {
+    const A = rings[i], B = rings[i + 1];
+    const cage = A.wrap && B.wrap;
+    for (let j = 0; j < M; j++) {
+      const a = A.pts[j], b = A.pts[j + 1], c = B.pts[j + 1], d = B.pts[j];
+      const phi = Math.abs((a.phi + b.phi) / 2);
+      // Haut du tube en treillis pour voir la voiture de l'extérieur.
+      if (cage && phi > 1.95 && i % 3 !== 0 && j % 4 !== 0) continue;
+      const dm = Math.abs((a.d + b.d) / 2);
+      let col = style.road[i % 2];
+      if (Math.abs(dm - (ROAD_HALF - 0.8)) < 0.5) col = style.line;
+      else if (dm < 0.3 && i % 2) col = style.line;
+      else if (cage && phi > 1.95) col = i % 3 === 0 ? '#7fe9ff' : PALETTE.tunnelRib;
+      else if (phi > 1.2) col = i % 2 ? PALETTE.tunnel : PALETTE.tunnelRib;
+      gb.quad(a.p, b.p, c.p, d.p, col);
+      // Dessous (épaisseur), sauf dans le treillis.
+      if (!(cage && phi > 1.95)) gb.quad(off(b, -SLAB_T), off(a, -SLAB_T), off(d, -SLAB_T), off(c, -SLAB_T), PALETTE.under);
+      if (cage && phi > 1.95 && i % 3 === 0 && j % 4 === 0) glow.quad(a.p, b.p, c.p, d.p, '#7fe9ff');
+    }
+    // Bordures aux deux bords (sauf tube fermé).
+    if (!cage) {
+      for (const [ja, sgn] of [[0, -1], [M, 1]]) {
+        const a = A.pts[ja], d = B.pts[ja];
+        const col = i % 2 ? style.railA : style.railB;
+        gb.quad(a.p, d.p, off(d, RAIL_H), off(a, RAIL_H), col);
+        void sgn;
+      }
+    }
+  }
+}
+
+// ---- v1.5 : bifurcation ---------------------------------------------------------
+function forkMesh(gb, glow, tile, style) {
+  const P = PIECES[tile.t];
+  const base = baseY(tile);
+  const half = P.size * HALF, n = 20;
+  const branches = [0, 1].map((b) => {
+    const fr = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const x = forkBranchX(P, t, b), z = half - 2 * half * t;
+      const x2 = forkBranchX(P, Math.min(1, t + 0.01), b), x1 = forkBranchX(P, Math.max(0, t - 0.01), b);
+      const dz = -2 * half * (Math.min(1, t + 0.01) - Math.max(0, t - 0.01));
+      const l = Math.hypot(x2 - x1, dz) || 1;
+      fr.push({ ...flatFrame(x, base, z, (x2 - x1) / l, dz / l), t });
+    }
+    return fr;
+  });
+  for (const fr of branches) sweep(gb, fr, style, true);
+  // Bordures : extérieures sur toute la longueur, intérieures une fois les voies séparées.
+  const m = P.mirror;
+  const railAlong = (fr, side, from) => {
+    for (let i = 0; i < n; i++) {
+      if (fr[i].t < from) continue;
+      const A = fr[i], B = fr[i + 1];
+      const d0 = side * ROAD_HALF, d1 = side * (ROAD_HALF + RAIL_W);
+      const col = i % 2 ? style.railA : style.railB;
+      gb.quad(at(A, d0, 0), at(B, d0, 0), at(B, d0, RAIL_H), at(A, d0, RAIL_H), col);
+      gb.quad(at(A, d0, RAIL_H), at(B, d0, RAIL_H), at(B, d1, RAIL_H), at(A, d1, RAIL_H), PALETTE.slab);
+      gb.quad(at(A, d1, RAIL_H), at(B, d1, RAIL_H), at(B, d1, -SLAB_T), at(A, d1, -SLAB_T), PALETTE.railOuter);
+    }
+  };
+  let tSplit = 1;
+  for (let i = 0; i <= 200; i++) { if (forkSep(i / 200) >= 2 * ROAD_HALF) { tSplit = i / 200; break; } }
+  railAlong(branches[0], -m, 0);
+  railAlong(branches[1], m, 0);
+  railAlong(branches[0], m, tSplit);
+  railAlong(branches[1], -m, tSplit);
+  // Flèches lumineuses indiquant les deux voies.
+  for (const [b, rot] of [[0, 0], [1, -m * 0.5]]) {
+    const f = frameAt(branches[b], 0.3);
+    chevron(glow, f, 0, 0, 2.6, 0.6, 2.4, rot, '#ffd23e');
+  }
+}
+
+// ---- v1.5 : anneau flottant (turbo ou checkpoint aérien) -------------------------
+function ringMesh(gb, glow, tile) {
+  const P = PIECES[tile.t];
+  const cy = baseY(tile) + RING_Y;
+  const cp = P.special === 'checkpoint';
+  const color = cp ? PALETTE.checkpoint : PALETTE.boost;
+  const K = 28, S = 6, r = cp ? 0.75 : 0.6;
+  const pt = (a, b) => {
+    const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+    const R = RING_R + r * cb;
+    return [R * ca, cy + R * sa, r * sb];
+  };
+  for (let i = 0; i < K; i++) {
+    for (let j = 0; j < S; j++) {
+      const a0 = (i / K) * Math.PI * 2, a1 = ((i + 1) / K) * Math.PI * 2;
+      const b0 = (j / S) * Math.PI * 2, b1 = ((j + 1) / S) * Math.PI * 2;
+      const target = (i + j) % 2 && !cp ? glow : glow;
+      target.quad(pt(a0, b0), pt(a1, b0), pt(a1, b1), pt(a0, b1), (i % 4 < 2) ? color : (cp ? '#fff3c4' : '#c9fbff'));
+    }
+  }
+  // Petits ailerons pour lire le sens de passage.
+  for (const sgn of [-1, 1]) {
+    gb.box(sgn * (RING_R + 0.4) - 0.3, cy - 0.3, -1.4, sgn * (RING_R + 0.4) + 0.3, cy + 0.3, 1.4, PALETTE.slab);
+  }
+}
+
 export function buildTileInto(gb, glow, tile, track = null) {
   const m = tileMatrix(tile);
   gb.setMatrix(m);
@@ -456,20 +617,35 @@ export function buildTileInto(gb, glow, tile, track = null) {
   const s = tile.s || '';
   if (p.kind === 'area') {
     platform(gb, glow, tile);
+  } else if (p.kind === 'ring') {
+    ringMesh(gb, glow, tile);
+  } else if (p.kind === 'fork') {
+    forkMesh(gb, glow, tile, styleFor(tile));
+  } else if (tile.t === 'halfpipe' || tile.t === 'tube') {
+    crossSweep(gb, glow, tile, styleFor({ s: '' }));
   } else {
     const style = p.kind === 'loop' || p.kind === 'ribbon' ? styleFor({ s: '' }) : styleFor(tile);
     const strips = stripsFor(tile);
     for (const strip of strips) {
-      sweep(gb, strip, style, tile.nb);
+      sweep(gb, strip, style, tile.nb, s === 'water' ? WATER_DROP : 0);
       if (s) surfaceDecals(glow, strip, tile);
       if (tile.tn && !tile.v) tunnel(gb, glow, strip);
     }
   }
-  if (p.special === 'start' || p.special === 'checkpoint' || p.special === 'finish') gate(gb, glow, tile);
+  if (p.kind === 'arc' && p.special) {
+    // Portique au milieu du virage, perpendiculaire à la route.
+    const a = arcParams(p), ang = Math.PI * 1.25;
+    const g = new THREE.Matrix4().makeTranslation(a.cx + a.R * Math.cos(ang), 0, a.cz + a.R * Math.sin(ang));
+    g.multiply(new THREE.Matrix4().makeRotationY(-Math.PI / 4));
+    const mm = m.clone().multiply(g);
+    gb.setMatrix(mm); glow.setMatrix(mm);
+    gate(gb, glow, tile);
+    gb.setMatrix(m); glow.setMatrix(m);
+  } else if ((p.special === 'start' || p.special === 'checkpoint' || p.special === 'finish') && p.kind !== 'ring') gate(gb, glow, tile);
   if (p.kind === 'loop') loopTowers(gb, glow, tile);
 
   // Piliers (pas sous un ruban vertical / une route à l'envers)
-  if ((tile.l > 0 || p.rise > 0) && p.kind !== 'ribbon' && !tile.v) {
+  if ((tile.l > 0 || p.rise > 0) && p.kind !== 'ribbon' && p.kind !== 'ring' && !tile.v) {
     for (const [lx, lz] of pillarPoints(tile)) {
       const top = pillarHeightAt(tile, lz) - SLAB_T;
       if (top < 1.2) continue;
@@ -508,7 +684,22 @@ export class TrackView {
     this.disposeMeshes();
     const gb = new GeoBuilder();
     const glow = new GeoBuilder();
-    for (const tile of this.track.tiles) buildTileInto(gb, glow, tile, this.track);
+    // Vue par niveau (éditeur) : les pièces des autres niveaux sont dessinées estompées.
+    const dimG = new GeoBuilder(), dimGlow = new GeoBuilder();
+    const focus = this.focus;
+    for (const tile of this.track.tiles) {
+      const P = PIECES[tile.t];
+      const hi = tile.l + Math.max(P.rise || 0, 0) + (P.clearance ? 1 : 0);
+      const dim = focus != null && !(focus >= tile.l - 0.01 && focus <= hi + 0.01);
+      if (dim) buildTileInto(dimG, dimGlow, tile, this.track);
+      else buildTileInto(gb, glow, tile, this.track);
+    }
+    if (!dimG.empty) {
+      if (!this.dimMat) this.dimMat = new THREE.MeshBasicMaterial({ color: '#8c90b8', transparent: true, opacity: 0.16, depthWrite: false });
+      const m = new THREE.Mesh(dimG.build(), this.dimMat);
+      this.group.add(m);
+      if (!dimGlow.empty) this.group.add(new THREE.Mesh(dimGlow.build(), this.dimMat));
+    }
     for (const d of this.track.decos) {
       if (d.k === 'plaque') {
         const mesh = createPlaque(d);
@@ -540,6 +731,7 @@ export class TrackView {
 
   dispose() {
     this.disposeMeshes();
+    if (this.dimMat) this.dimMat.dispose();
     this.group.removeFromParent();
   }
 }
