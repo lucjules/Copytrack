@@ -94,9 +94,15 @@ export const SURFACES = {
   glider:  { label: 'Plaque deltaplane', c: ['#f5f5f5', '#f5f5f5', '#f5f5f5'] },
   // 0.9 : inverse le sens de la gravité (une 2e plaque la remet à l'endroit).
   flip:    { label: 'Inversion de gravité', c: ['#ff4fd8', '#ff4fd8', '#ff4fd8'] },
+  conveyor: { label: 'Tapis roulant', param: '↓ Vitesse ↑', def: 150, min: 1, max: 200, c: ['#ffd23e', '#ffd23e', '#ffd23e'] },
+  spring:  { label: 'Ressort latéral', param: '← Force →', def: 150, min: 1, max: 200, c: ['#5dff8a', '#5dff8a', '#5dff8a'] },
+  glass:   { label: 'Verre fragile', param: 'Vitesse mini', def: 100, min: 30, max: 200, inv: true, c: ['#d9f4ff', '#a8e4ff', '#6fcfff'] },
+  powder:  { label: 'Poudreuse', param: 'Épaisseur', def: 100, min: 30, max: 250, inv: true, c: ['#ffffff', '#e4f1ff', '#bcd9ff'] },
+  reverse: { label: 'Volant inversé', c: ['#c05fff', '#c05fff', '#c05fff'] },
+  cut:     { label: 'Moteur coupé', c: ['#ff3b3b', '#ff3b3b', '#ff3b3b'] },
 };
 // Ne jamais réordonner, seulement ajouter.
-export const SURFACE_ORDER = ['', 'ice', 'boost', 'bounce', 'sand', 'magnet', 'mud', 'drift', 'slow', 'wind', 'gravity', 'moto', 'water', 'boat', 'glider', 'flip'];
+export const SURFACE_ORDER = ['', 'ice', 'boost', 'bounce', 'sand', 'magnet', 'mud', 'drift', 'slow', 'wind', 'gravity', 'moto', 'water', 'boat', 'glider', 'flip', 'conveyor', 'spring', 'glass', 'powder', 'reverse', 'cut'];
 // Plaques de transformation : véhicule obtenu (repasser sur la même plaque ramène la voiture).
 export const PLATES = { moto: 'moto', boat: 'boat', glider: 'glider' };
 
@@ -146,15 +152,19 @@ export function surfaceAllowed(type, s, v = false) {
   const p = PIECES[type];
   const S = SURFACES[s];
   if (!p || !S) return false;
-  // Sections de tube : accélérateur et gravité autorisés (pour aider à faire des tours).
-  if (p.tubeSurf) return s === 'boost' || s === 'gravity';
-  // Vrille + inversion : la gravité tourne avec la route, on ressort au plafond.
-  if (s === 'flip' && type === 'twist') return true;
-  if (p.kind === 'loop' || p.kind === 'ribbon' || p.kind === 'ring') return false;
-  if (s === 'water' && (p.special || p.kind === 'fork')) return false;
-  void v; // 0.9 : en gravité inversée, tous les revêtements marchent aussi au plafond.
-  if (S.flat && p.rise) return false;
-  return true;
+  return surfaceRule(p, S, s) === '';
+}
+
+// 0.9 : tous les revêtements vont sur toutes les pièces de route, sauf quelques cas
+// physiquement impossibles. Renvoie '' si c'est permis, sinon la raison (tableau de
+// compatibilité de l'éditeur). v (pièce à l'envers) ne change rien : au plafond, en
+// gravité inversée, les revêtements marchent pareil.
+export function surfaceRule(p, S, s) {
+  if (p.kind === 'ring') return 'pas de route dans un anneau';
+  const curved = p.kind === 'loop' || p.kind === 'ribbon';
+  if (S.flat && (p.rise || curved)) return 'seulement sur du plat';
+  if (s === 'water' && (p.special || p.kind === 'fork')) return 'pas sur une pièce spéciale ni une bifurcation';
+  return '';
 }
 
 export function baseY(tile) {

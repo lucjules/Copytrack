@@ -1,10 +1,10 @@
 // Génère les maillages 3D du circuit à partir des pièces.
 import * as THREE from './vendor/three.module.min.js';
-import { GeoBuilder } from './geo.js';
+import { GeoBuilder, FxBuilder } from './geo.js';
 import {
   CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T,
 } from './constants.js';
-import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, isRibbonKind, forkBranchX, forkSep } from './pieces.js';
+import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, isRibbonKind, forkBranchX, forkSep, sampleLocal } from './pieces.js';
 import { WATER_DROP } from './track.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { buildDecoInto, createPlaque } from './decos.js';
@@ -51,6 +51,12 @@ export const SURFACE_STYLE = {
   boat: { road: ['#22343f', '#263b47'], line: '#3fd0ff' },
   glider: { road: ['#2f3346', '#353a50'], line: '#f5f5f5' },
   flip: { road: ['#3a1f3f', '#44244a'], line: '#ff4fd8' },
+  conveyor: { road: ['#2a2b30', '#303138'], line: '#ffd23e' },
+  spring: { road: ['#1f3a2a', '#244432'], line: '#5dff8a' },
+  glass: { road: ['#7fb8d6', '#8cc4e0'], line: '#e9fbff' },
+  powder: { road: ['#e9f2fb', '#f4f8fd'], line: '#bcd9ff' },
+  reverse: { road: ['#2e2340', '#35284a'], line: '#c05fff' },
+  cut: { road: ['#3a1d1d', '#432222'], line: '#ff3b3b' },
 };
 
 const RO = ROAD_HALF + RAIL_W;
@@ -63,6 +69,7 @@ const CB_COLORS = {
   ice: '#ffffff', boost: '#56b4e9', bounce: '#cc79a7', sand: '#f0e442', magnet: '#0072b2',
   mud: '#8c6d4f', drift: '#e69f00', slow: '#d55e00', wind: '#d9d9d9', gravity: '#009e73',
   moto: '#ffb000', boat: '#3fa7ff', glider: '#f5f5f5', flip: '#ff4fd8',
+  conveyor: '#f0e442', spring: '#009e73', glass: '#56b4e9', powder: '#ffffff', reverse: '#cc79a7', cut: '#d55e00',
 };
 let colorblind = false;
 export function setColorblind(v) { colorblind = !!v; }
@@ -148,6 +155,7 @@ function ribbonStrip(tile, count) {
     frameLocal(rib, i / count, FL);
     out.push({ p: [FL.px, FL.py, FL.pz], r: [FL.rx, FL.ry, FL.rz], u: [FL.nx, FL.ny, FL.nz] });
   }
+  out.rib = true;   // parcourue dans le sens du ruban (u croissant)
   return out;
 }
 
@@ -220,6 +228,101 @@ function sweep(gb, frames, style, nb, drop = 0) {
       else gb.quad(b, a, d, c, PALETTE.slab);
     }
   }
+}
+
+// ---- Revêtements animés ------------------------------------------------------
+// Une nappe posée juste au-dessus de la chaussée ; le shader l'anime (eau qui ondule,
+// tapis qui défile dans le sens de sa poussée, verre qui scintille, neige qui pétille).
+export const FX_KIND = { water: 0, conveyor: 1, glass: 2, powder: 3 };
+const _S = {};
+function fxLayer(fx, frames, tile, kind, half = ROAD_HALF) {
+  const n = frames.length - 1;
+  const lift = kind === 0 ? -WATER_DROP + 0.02 : 0.03;
+  let speed = 0, sgn = 1;
+  if (kind === 1) {
+    speed = ((tileParam(tile) - 100) / 100) * 40;
+    if (!frames.rib) {
+      // Même sens que la physique (gradient latéral de la pièce, tourné d'un quart de tour).
+      const f = frames[Math.floor(n / 2)], g = frames[Math.floor(n / 2) + 1];
+      sampleLocal(tile, f.p[0], f.p[2], _S);
+      sgn = (g.p[0] - f.p[0]) * _S.gz + (g.p[2] - f.p[2]) * -_S.gx >= 0 ? 1 : -1;
+    }
+  }
+  const D = [-half, -half / 2, 0, half / 2, half];
+  let s0 = 0;
+  for (let i = 0; i < n; i++) {
+    const A = frames[i], B = frames[i + 1];
+    const s1 = s0 + Math.hypot(B.p[0] - A.p[0], B.p[1] - A.p[1], B.p[2] - A.p[2]);
+    for (let j = 0; j < D.length - 1; j++) {
+      const d0 = D[j], d1 = D[j + 1];
+      fx.fxQuad(at(A, d0, lift), at(A, d1, lift), at(B, d1, lift), at(B, d0, lift),
+        [kind, s0 * sgn, speed, d0], [kind, s0 * sgn, speed, d1], [kind, s1 * sgn, speed, d1], [kind, s1 * sgn, speed, d0], '#ffffff');
+    }
+    s0 = s1;
+  }
+}
+
+const FX_VERT = `
+attribute vec4 fx;
+varying vec4 vFx;
+varying vec3 vPos;
+#include <fog_pars_vertex>
+void main() {
+  vFx = fx;
+  vPos = position;
+  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+  gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+}`;
+const FX_FRAG = `
+uniform float uTime;
+varying vec4 vFx;
+varying vec3 vPos;
+#include <fog_pars_fragment>
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+void main() {
+  float k = vFx.x, t = uTime;
+  vec2 p = vPos.xz;
+  float edge = smoothstep(${(ROAD_HALF - 2).toFixed(1)}, ${ROAD_HALF.toFixed(1)}, abs(vFx.w));
+  vec3 c;
+  if (k < 0.5) {
+    // Eau : houle, reflets mouvants et écume le long des bords.
+    float w = sin(p.x * 0.35 + t * 1.7) + sin(p.y * 0.29 - t * 1.3) + 0.6 * sin((p.x + p.y) * 0.6 + t * 2.3);
+    float ca = abs(sin(p.x * 0.8 + sin(p.y * 0.7 + t) * 1.5 + t * 0.8) * sin(p.y * 0.8 + sin(p.x * 0.6 - t) * 1.5));
+    c = mix(vec3(0.02, 0.20, 0.42), vec3(0.08, 0.48, 0.82), 0.5 + 0.2 * w) + pow(ca, 5.0) * vec3(0.55, 0.85, 1.0) * 0.7;
+    float foam = edge * (0.6 + 0.4 * sin(vFx.y * 0.9 + t * 3.0 + p.x));
+    c = mix(c, vec3(0.92, 0.98, 1.0), clamp(foam, 0.0, 1.0));
+  } else if (k < 1.5) {
+    // Tapis roulant : chevrons qui défilent à la vitesse de la bande.
+    float s = fract((vFx.y - t * vFx.z - abs(vFx.w) * 0.45) / 4.0);
+    float ch = step(0.72, s);
+    float lines = step(0.92, fract(vFx.y * 0.0 + (vFx.w + 9.0) / 4.5));
+    c = mix(vec3(0.10, 0.10, 0.12), vec3(0.18, 0.18, 0.21), lines);
+    c = mix(c, vec3(1.0, 0.82, 0.24), ch * (1.0 - edge));
+  } else if (k < 2.5) {
+    // Verre : transparence froide et reflet qui balaie la surface.
+    float sweep = pow(max(0.0, sin((p.x + p.y) * 0.12 - t * 1.4)), 24.0);
+    float tile = step(0.96, fract(p.x / 6.0)) + step(0.96, fract(p.y / 6.0));
+    c = vec3(0.45, 0.72, 0.88) + sweep * vec3(0.6) + tile * vec3(0.25, 0.3, 0.35) + edge * vec3(0.2);
+  } else {
+    // Poudreuse : blanc bleuté et cristaux qui scintillent.
+    float g = hash(floor(p * 2.5));
+    float tw = step(0.975, g) * (0.5 + 0.5 * sin(t * 6.0 + g * 60.0));
+    float drift = 0.06 * sin(p.x * 0.4 + p.y * 0.3);
+    c = vec3(0.86, 0.92, 1.0) + drift + tw * vec3(0.6, 0.7, 0.8);
+  }
+  gl_FragColor = vec4(c, 1.0);
+  #include <fog_fragment>
+}`;
+
+export function createFxMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uTime: { value: 0 } }]),
+    vertexShader: FX_VERT,
+    fragmentShader: FX_FRAG,
+    fog: true,
+    side: THREE.DoubleSide,
+  });
 }
 
 // Tunnel : arche autour de la route, avec nervures et lumières au plafond.
@@ -337,10 +440,62 @@ function surfaceDecals(glow, frames, tile, area = false) {
     bar(glow, f, -2.2, 2.9, 2.2, 3.5, col);
     bar(glow, f, -1.2, -0.9, 1.2, 0.2, col);
   } else if (s === 'water') {
-    const n = long ? 7 : 4;
+    // L'eau est animée (couche à effets) : rien à ajouter.
+  } else if (s === 'conveyor') {
+    // Bandes de sécurité jaunes et noires le long des bords.
+    const n = long ? 16 : 8;
+    for (let i = 0; i < n; i++) {
+      const f = frameAt(frames, (i + 0.5) / n), c = i % 2 ? '#1a1a1a' : col;
+      bar(glow, f, -ROAD_HALF + 0.2, -1.2, -ROAD_HALF + 1.0, 1.2, c);
+      bar(glow, f, ROAD_HALF - 1.0, -1.2, ROAD_HALF - 0.2, 1.2, c);
+    }
+  } else if (s === 'spring') {
+    // Ressort (zigzag) et grosse flèche du côté de la poussée.
+    const dir = (p || SURFACES.spring.def) >= 100 ? 1 : -1;
+    const f = frameAt(frames, 0.5);
+    for (let k = 0; k < 4; k++) {
+      const d0 = -dir * 6 + dir * k * 1.6;
+      glow.quad(onFrame(f, d0, -2), onFrame(f, d0 + dir * 0.5, -2), onFrame(f, d0 + dir * 1.3, 2), onFrame(f, d0 + dir * 0.8, 2), col);
+      glow.quad(onFrame(f, d0 + dir * 0.8, 2), onFrame(f, d0 + dir * 1.3, 2), onFrame(f, d0 + dir * 2.1, -2), onFrame(f, d0 + dir * 1.6, -2), col);
+    }
+    chevron(glow, f, dir * 4.4, 0, 2.6, 0.8, 3.0, -dir * Math.PI / 2, col);
+    chevron(glow, f, dir * 6.6, 0, 2.6, 0.8, 3.0, -dir * Math.PI / 2, col);
+  } else if (s === 'glass') {
+    // Fissures en étoile.
+    for (const t of area ? [0.5] : long ? [0.3, 0.7] : [0.5]) {
+      const f = frameAt(frames, t);
+      for (let k = 0; k < 7; k++) {
+        const a = (k / 7) * Math.PI * 2 + 0.4 * Math.sin(k * 2.3), len = 3 + 3 * ((k * 37) % 5) / 5;
+        const ca = Math.cos(a), sa = Math.sin(a), w = 0.09;
+        const mx = ca * len * 0.5 + sa * 0.6 * (k % 2 ? 1 : -1), mz = sa * len * 0.5 - ca * 0.6 * (k % 2 ? 1 : -1);
+        glow.quad(onFrame(f, -sa * w, ca * w, 0.06), onFrame(f, sa * w, -ca * w, 0.06), onFrame(f, mx + sa * w, mz - ca * w, 0.06), onFrame(f, mx - sa * w, mz + ca * w, 0.06), '#ffffff');
+        glow.quad(onFrame(f, mx - sa * w, mz + ca * w, 0.06), onFrame(f, mx + sa * w, mz - ca * w, 0.06), onFrame(f, ca * len + sa * w, sa * len - ca * w, 0.06), onFrame(f, ca * len - sa * w, sa * len + ca * w, 0.06), '#ffffff');
+      }
+      ring(glow, f, 0, 0, 1.2, 0.25, '#ffffff');
+    }
+  } else if (s === 'powder') {
+    // Congères sur les bords.
+    const n = long ? 10 : 5;
     for (let i = 0; i < n; i++) {
       const f = frameAt(frames, (i + 0.5) / n);
-      for (const d of [-5, 0, 5]) chevron(glow, f, d + (i % 2 ? 1.2 : -1.2), 0, 1.8, 0.35, 0.9, Math.PI / 2, '#7fd0ff');
+      for (const sg of [-1, 1]) chevron(glow, f, sg * (ROAD_HALF - 1.6), 0, 1.4, 0.5, 1.6, sg * Math.PI / 2, '#ffffff');
+    }
+  } else if (s === 'reverse') {
+    // Flèches qui se croisent : gauche et droite échangées.
+    for (const t of centers) {
+      const f = frameAt(frames, t);
+      chevron(glow, f, -2.5, -1.4, 1.6, 0.55, 2.4, Math.PI / 2, col);
+      chevron(glow, f, 2.5, 1.4, 1.6, 0.55, 2.4, -Math.PI / 2, col);
+      bar(glow, f, -4.2, -1.65, 1.5, -1.15, col);
+      bar(glow, f, -1.5, 1.15, 4.2, 1.65, col);
+    }
+  } else if (s === 'cut') {
+    // Symbole marche / arrêt barré.
+    for (const t of area ? [0.5] : [0.3, 0.7]) {
+      const f = frameAt(frames, t);
+      ring(glow, f, 0, 0, 3.4, 0.6, col);
+      bar(glow, f, -0.35, -0.4, 0.35, 3.8, col);
+      glow.quad(onFrame(f, -4, -3.4), onFrame(f, -3.2, -4), onFrame(f, 4, 3.4), onFrame(f, 3.2, 4), col);
     }
   } else if (s === 'boat') {
     // Coque et vague
@@ -372,11 +527,34 @@ function surfaceDecals(glow, frames, tile, area = false) {
       const f = frameAt(frames, (i + 0.5) / n);
       const d = ((i * 7919) % 11) - 5;
       ring(glow, f, d, 0, 1.6, 0.8, '#2e1f14');
+      ring(glow, f, -d * 0.6 + 2, 1.5, 0.9, 0.5, '#3a2818');
+    }
+    // Ornières sombres.
+    for (const d of [-3.2, 3.2]) for (let i = 0; i < (long ? 8 : 4); i++) bar(glow, frameAt(frames, (i + 0.5) / (long ? 8 : 4)), d - 0.5, -1.4, d + 0.5, 1.4, '#3a2818');
+  } else if (s === 'ice') {
+    // Cristaux de givre.
+    const n = long ? 6 : 3;
+    for (let i = 0; i < n; i++) {
+      const f = frameAt(frames, (i + 0.5) / n);
+      for (const d of [-4.5, 0, 4.5]) {
+        const dd = d + (i % 2 ? 1.5 : -1.5);
+        for (let k = 0; k < 3; k++) {
+          const a = (k / 3) * Math.PI, ca = Math.cos(a) * 1.4, sa = Math.sin(a) * 1.4, w = 0.12;
+          glow.quad(onFrame(f, dd - ca - sa * w, -sa + ca * w), onFrame(f, dd - ca + sa * w, -sa - ca * w), onFrame(f, dd + ca + sa * w, sa - ca * w), onFrame(f, dd + ca - sa * w, sa + ca * w), '#ffffff');
+        }
+      }
+    }
+  } else if (s === 'sand') {
+    // Rides de sable en travers.
+    const n = long ? 12 : 6;
+    for (let i = 0; i < n; i++) {
+      const f = frameAt(frames, (i + 0.5) / n);
+      for (const d of [-5.5, 0, 5.5]) chevron(glow, f, d + (i % 2) * 1.2, 0, 2.6, 0.35, 0.8, Math.PI, '#e8d3ad');
     }
   }
 }
 
-function platform(gb, glow, tile) {
+function platform(gb, glow, tile, fx = null) {
   const y = baseY(tile);
   const y0 = y - SLAB_T;
   const s = tile.s || '';
@@ -395,6 +573,7 @@ function platform(gb, glow, tile) {
   for (const [x0, z0, x1, z1] of [[-HALF, -HALF, HALF, -HALF + e], [-HALF, HALF - e, HALF, HALF], [-HALF, -HALF, -HALF + e, HALF], [HALF - e, -HALF, HALF, HALF]]) {
     gb.quad([x0, y + 0.02, z1], [x1, y + 0.02, z1], [x1, y + 0.02, z0], [x0, y + 0.02, z0], edge);
   }
+  if (fx && FX_KIND[s] !== undefined) fxLayer(fx, lineStrip(0, HALF, -HALF, y, y, 4), tile, FX_KIND[s], HALF - e);
   if (s) surfaceDecals(glow, lineStrip(0, HALF, -HALF, y, y, 4), tile, true);
 }
 
@@ -620,7 +799,7 @@ function ringMesh(gb, glow, tile) {
   }
 }
 
-export function buildTileInto(gb, glow, tile, track = null) {
+export function buildTileInto(gb, glow, tile, track = null, fx = null) {
   const m = tileMatrix(tile);
   // Pièce posée à l'envers : tout est retourné autour de son niveau (route au plafond).
   if (tile.v) {
@@ -629,10 +808,12 @@ export function buildTileInto(gb, glow, tile, track = null) {
   }
   gb.setMatrix(m);
   glow.setMatrix(m);
+  if (fx) fx.setMatrix(m);
   const p = PIECES[tile.t];
   const s = tile.s || '';
+  const fxKind = fx ? FX_KIND[s] : undefined;
   if (p.kind === 'area') {
-    platform(gb, glow, tile);
+    platform(gb, glow, tile, fx);
   } else if (p.kind === 'ring') {
     ringMesh(gb, glow, tile);
   } else if (p.kind === 'fork') {
@@ -642,10 +823,11 @@ export function buildTileInto(gb, glow, tile, track = null) {
     // Revêtement d'une section de tube : bandes lumineuses au fond.
     if (s) surfaceDecals(glow, lineStrip(0, HALF, -HALF, baseY(tile), baseY(tile), 4), tile);
   } else {
-    const style = p.kind === 'loop' || p.kind === 'ribbon' ? styleFor({ s: '' }) : styleFor(tile);
+    const style = styleFor(tile);
     const strips = stripsFor(tile);
     for (const strip of strips) {
       sweep(gb, strip, style, tile.nb, s === 'water' ? WATER_DROP : 0);
+      if (fxKind !== undefined) fxLayer(fx, strip, tile, fxKind);
       if (s) surfaceDecals(glow, strip, tile);
       if (tile.tn && !tile.v) tunnel(gb, glow, strip);
     }
@@ -680,12 +862,14 @@ export function buildTileInto(gb, glow, tile, track = null) {
   }
   gb.setMatrix(null);
   glow.setMatrix(null);
+  if (fx) fx.setMatrix(null);
 }
 
 export function createTrackMaterials() {
   return {
     solid: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0.0, side: THREE.DoubleSide }),
     glow: new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, side: THREE.DoubleSide }),
+    fx: createFxMaterial(),
   };
 }
 
@@ -702,6 +886,7 @@ export class TrackView {
     this.disposeMeshes();
     const gb = new GeoBuilder();
     const glow = new GeoBuilder();
+    const fx = new FxBuilder();
     // Vue par niveau (éditeur) : les pièces des autres niveaux sont dessinées estompées.
     const dimG = new GeoBuilder(), dimGlow = new GeoBuilder();
     const focus = this.focus;
@@ -710,7 +895,7 @@ export class TrackView {
       const hi = tile.l + Math.max(P.rise || 0, 0) + (P.clearance ? 1 : 0);
       const dim = focus != null && !(focus >= tile.l - 0.01 && focus <= hi + 0.01);
       if (dim) buildTileInto(dimG, dimGlow, tile, this.track);
-      else buildTileInto(gb, glow, tile, this.track);
+      else buildTileInto(gb, glow, tile, this.track, fx);
     }
     if (!dimG.empty) {
       if (!this.dimMat) this.dimMat = new THREE.MeshBasicMaterial({ color: '#8c90b8', transparent: true, opacity: 0.16, depthWrite: false });
@@ -732,6 +917,13 @@ export class TrackView {
       this.group.add(mesh);
     }
     if (!glow.empty) this.group.add(new THREE.Mesh(glow.build(), this.materials.glow));
+    if (!fx.empty && this.materials.fx) {
+      const mesh = new THREE.Mesh(fx.build(), this.materials.fx);
+      const mat = this.materials.fx;
+      mesh.onBeforeRender = () => { mat.uniforms.uTime.value = performance.now() / 1000; };
+      mesh.receiveShadow = false;
+      this.group.add(mesh);
+    }
     this.builtVersion = this.track.version;
   }
 

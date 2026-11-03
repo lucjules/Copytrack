@@ -435,7 +435,8 @@ export function hashString(s) {
 //                       la voie déportée (à droite, ou à gauche pour YL) reçoit le revêtement
 //                       et c'est elle que suit le pilote automatique
 //   suffixes : .a eau  .n plaque bateau  .e plaque deltaplane  .f inversion de gravité
-const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', s: 'sand', m: 'magnet', u: 'mud', d: 'drift', x: 'slow', w: 'wind', g: 'gravity', o: 'moto', a: 'water', n: 'boat', e: 'glider', f: 'flip' };
+//              .t tapis roulant  .r ressort latéral  .v verre  .p poudreuse  .y volant inversé  .c moteur coupé
+const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', s: 'sand', m: 'magnet', u: 'mud', d: 'drift', x: 'slow', w: 'wind', g: 'gravity', o: 'moto', a: 'water', n: 'boat', e: 'glider', f: 'flip', t: 'conveyor', r: 'spring', v: 'glass', p: 'powder', y: 'reverse', c: 'cut' };
 
 export function scriptTrack(name, script, opts = {}) {
   const tr = new Track(name);

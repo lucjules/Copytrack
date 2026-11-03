@@ -94,3 +94,26 @@ export class GeoBuilder {
     return g;
   }
 }
+
+// Variante avec un attribut d'effet par sommet (revêtements animés) :
+// fx = (type, abscisse le long de la route, vitesse, écart latéral).
+export class FxBuilder extends GeoBuilder {
+  constructor() { super(); this.fx = []; }
+
+  fxQuad(a, b, c, d, fa, fb, fc, fd, hex) {
+    this.fxTri(a, b, c, fa, fb, fc, hex);
+    this.fxTri(a, c, d, fa, fc, fd, hex);
+  }
+
+  fxTri(a, b, c, fa, fb, fc, hex) {
+    this.tri(a, b, c, hex);
+    if (this.flip) this.fx.push(...fa, ...fc, ...fb);
+    else this.fx.push(...fa, ...fb, ...fc);
+  }
+
+  build() {
+    const g = super.build();
+    g.setAttribute('fx', new THREE.Float32BufferAttribute(this.fx, 4));
+    return g;
+  }
+}
