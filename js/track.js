@@ -35,10 +35,6 @@ const S = {};
 const W = { x: 0, z: 0 }, W2 = { x: 0, z: 0 };
 const MO = {};
 
-function finiteNumber(value, fallback = 0) {
-  return Number.isFinite(value) ? value : fallback;
-}
-
 export class Track {
   constructor(name = 'Nouveau circuit', tiles = []) {
     this.name = name;
@@ -97,7 +93,7 @@ export class Track {
     if (surfaceAllowed(type, s, !!tile.v)) {
       tile.s = s;
       const S2 = SURFACES[s];
-      if (S2 && S2.def != null) tile.p = Math.max(S2.min, Math.min(S2.max, finiteNumber(t.p, S2.def)));
+      if (S2 && S2.def != null) tile.p = Math.max(S2.min, Math.min(S2.max, t.p || S2.def));
     }
     return tile;
   }
@@ -160,7 +156,7 @@ export class Track {
   setSurface(tile, s, p = 0) {
     if (!surfaceAllowed(tile.t, s, !!tile.v)) return false;
     const S2 = SURFACES[s];
-    const np = S2 && S2.def != null ? Math.max(S2.min, Math.min(S2.max, finiteNumber(p, S2.def))) : 0;
+    const np = S2 && S2.def != null ? Math.max(S2.min, Math.min(S2.max, p || S2.def)) : 0;
     if (tile.s === s && (tile.p || 0) === np) return false;
     tile.s = s; tile.p = np;
     this.version++;
@@ -191,20 +187,14 @@ export class Track {
   }
 
   addDeco(d) {
-    if (!d || !DECO_ORDER.includes(d.k)) return null;
     if (this.decos.length >= MAX_DECOS) return null;
     const deco = {
-      k: d.k,
-      x: finiteNumber(+d.x, 0),
-      y: finiteNumber(+d.y, 0),
-      z: finiteNumber(+d.z, 0),
-      ry: finiteNumber(+d.ry, 0),
-      s: Math.max(0.2, Math.min(20, finiteNumber(+d.s, 1))),
-      c: Number.isFinite(+d.c) ? (+d.c) | 0 : 0,
-      u: d.u ? String(d.u).slice(0, 400) : '',
+      k: d.k, x: +d.x, y: +d.y, z: +d.z, ry: +d.ry || 0, s: Math.max(0.2, Math.min(20, +d.s || 1)),
+      c: d.c | 0, u: d.u ? String(d.u).slice(0, 400) : '',
     };
     // Obstacles : décalage de phase (0 à 1) pour désynchroniser plusieurs obstacles.
-    if (isObstacle(deco.k)) { deco.ph = Math.max(0, Math.min(0.95, Math.round((finiteNumber(+d.ph, 0)) * 20) / 20)); deco.s = Math.max(0.5, Math.min(2.5, deco.s)); }
+    if (isObstacle(deco.k)) { deco.ph = Math.max(0, Math.min(0.95, Math.round((+d.ph || 0) * 20) / 20)); deco.s = Math.max(0.5, Math.min(2.5, deco.s)); }
+    if (!DECO_ORDER.includes(deco.k)) return null;
     this.decos.push(deco);
     this.version++;
     return deco;
@@ -390,15 +380,7 @@ export class Track {
       .map((t) => `${t.t}:${t.x}:${t.z}:${t.l}:${t.r}:${t.s}:${t.p}:${t.v}${t.nb}${t.tn}${t.mv ? 'm' + t.mv : ''}`)
       .sort()
       .join('|');
-    const d = this.decos.map((o) => {
-      const x = finiteNumber(+o.x, 0).toFixed(1);
-      const z = finiteNumber(+o.z, 0).toFixed(1);
-      const s = finiteNumber(+o.s, 1);
-      const y = finiteNumber(+o.y, 0).toFixed(1);
-      const ry = finiteNumber(+o.ry, 0).toFixed(2);
-      const ph = finiteNumber(+o.ph, 0);
-      return `${o.k}:${x}:${z}:${s}${isObstacle(o.k) ? `:${y}:${ry}:${ph}` : ''}`;
-    }).join('|');
+    const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}` : ''}`).join('|');
     const rules = (this.offroad ? '#O' : '') + (this.v0 ? '#V' + this.v0 : '') + (this.g0 !== 100 ? '#G' + this.g0 : '') + (this.veh0 !== 'car' ? '#E' + this.veh0 : '');
     return hashString(this.decor + '#' + parts + '#' + d + (this.laps > 1 ? '#L' + this.laps : '') + rules);
   }
@@ -447,8 +429,8 @@ export class Track {
       );
     }
     const decos = this.decos.map((d) => [
-      DECO_ORDER.indexOf(d.k), finiteNumber(+d.x, 0).toFixed(2), finiteNumber(+d.y, 0).toFixed(2), finiteNumber(+d.z, 0).toFixed(2), finiteNumber(+d.ry, 0).toFixed(3), finiteNumber(+d.s, 1).toFixed(2), Number.isFinite(+d.c) ? (+d.c) | 0 : 0, d.u || 0,
-      ...(d.ph ? [finiteNumber(+d.ph, 0)] : []),
+      DECO_ORDER.indexOf(d.k), +d.x.toFixed(2), +d.y.toFixed(2), +d.z.toFixed(2), +d.ry.toFixed(3), +d.s.toFixed(2), d.c, d.u || 0,
+      ...(d.ph ? [d.ph] : []),
     ]);
     const data = { v: 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
     if (decos.length) data.o = decos;
@@ -467,18 +449,9 @@ export class Track {
     let s = String(code || '').trim();
     const hash = s.indexOf('#t=');
     if (hash >= 0) s = s.slice(hash + 3);
-    try {
-      s = decodeURIComponent(s);
-    } catch {
-      throw new Error('Code de circuit invalide');
-    }
+    s = decodeURIComponent(s);
     if (/^SHW\d:/.test(s)) s = s.slice(5);
-    let data;
-    try {
-      data = JSON.parse(b64decode(s));
-    } catch {
-      throw new Error('Code de circuit invalide');
-    }
+    const data = JSON.parse(b64decode(s));
     const stride = data && data.v >= 3 ? 8 : data && data.v >= 2 ? 6 : 5;
     if (!data || !Array.isArray(data.t) || data.t.length % stride) throw new Error('Code de circuit invalide');
     const tr = new Track(String(data.n || 'Circuit importé').slice(0, 40));
@@ -499,7 +472,6 @@ export class Track {
     }
     if (Array.isArray(data.o)) {
       for (const o of data.o.slice(0, MAX_DECOS)) {
-        if (!Array.isArray(o)) continue;
         const k = DECO_ORDER[o[0]];
         if (!k) continue;
         const u = typeof o[7] === 'string' && /^https?:\/\//i.test(o[7]) ? o[7] : '';
@@ -521,10 +493,9 @@ export function b64encode(str) {
 }
 
 export function b64decode(s) {
-  if (typeof s !== 'string' || !s.trim()) throw new Error('Code invalide');
-  let norm = s.trim().replace(/-/g, '+').replace(/_/g, '/');
-  while (norm.length % 4) norm += '=';
-  const bin = atob(norm);
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  const bin = atob(s);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new TextDecoder().decode(bytes);
@@ -571,7 +542,7 @@ export function hashString(s) {
 //                       et c'est elle que suit le pilote automatique
 //   suffixes : .a eau  .n plaque bateau  .e plaque deltaplane  .f inversion de gravité
 //              .t tapis roulant  .r ressort latéral  .v verre  .p poudreuse  .y volant inversé  .c moteur coupé
-const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', s: 'sand', m: 'magnet', u: 'mud', d: 'drift', x: 'slow', w: 'wind', g: 'gravity', o: 'moto', a: 'water', n: 'boat', e: 'glider', f: 'flip', t: 'tread', r: 'spring', v: 'glass', p: 'dust', y: 'invert', c: 'cut', z: 'zone' };
+const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', s: 'sand', m: 'magnet', u: 'mud', d: 'drift', x: 'slow', w: 'wind', g: 'gravity', o: 'moto', a: 'water', n: 'boat', e: 'glider', f: 'flip', t: 'conveyor', r: 'spring', v: 'glass', p: 'powder', y: 'reverse', c: 'cut' };
 
 export function scriptTrack(name, script, opts = {}) {
   const tr = new Track(name);
