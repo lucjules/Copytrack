@@ -4,7 +4,9 @@ const PREFIX = 'shardway.';
 function read(key, fallback) {
   try {
     const v = localStorage.getItem(PREFIX + key);
-    return v ? JSON.parse(v) : fallback;
+    if (v == null) return fallback;
+    const parsed = JSON.parse(v);
+    return parsed;
   } catch {
     return fallback;
   }
@@ -16,6 +18,14 @@ function write(key, value) {
     return true;
   } catch {
     return false;
+  }
+}
+
+function listPrefixedKeys() {
+  try {
+    return Object.keys(localStorage).filter((k) => k.startsWith(PREFIX));
+  } catch {
+    return [];
   }
 }
 
@@ -38,9 +48,11 @@ export function dumpAll() {
 export function restoreAll(data, keep = false) {
   try {
     if (!keep) {
-      Object.keys(localStorage).filter((k) => k.startsWith(PREFIX)).forEach((k) => localStorage.removeItem(k));
+      listPrefixedKeys().forEach((k) => localStorage.removeItem(k));
     }
-    for (const [k, v] of Object.entries(data)) if (typeof v === 'string') localStorage.setItem(PREFIX + k, v);
+    for (const [k, v] of Object.entries(data || {})) {
+      if (typeof v === 'string') localStorage.setItem(PREFIX + k, v);
+    }
     return true;
   } catch { return false; }
 }
@@ -74,9 +86,9 @@ export function loadSettings() {
   const saved = read('settings', {});
   return {
     ...DEFAULT_SETTINGS,
-    ...saved,
-    keys: { ...(saved.keys || {}) },
-    pad: { ...(saved.pad || {}) },
+    ...(saved && typeof saved === 'object' ? saved : {}),
+    keys: { ...((saved && saved.keys) || {}) },
+    pad: { ...((saved && saved.pad) || {}) },
   };
 }
 
@@ -136,7 +148,8 @@ export function saveRecord(trackKey, rec) {
 
 // ---- Circuits personnels ---------------------------------------------------
 export function listMyTracks() {
-  return read('tracks', []);
+  const tracks = read('tracks', []);
+  return Array.isArray(tracks) ? tracks : [];
 }
 
 export function saveMyTrack(entry) {
@@ -166,18 +179,27 @@ export function setEditorDraft(d) {
 
 // ---- Fantômes : Float32Array <-> base64 -----------------------------------
 export function encodeFloats(arr) {
+  if (!ArrayBuffer.isView(arr)) return '';
   const bytes = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
   let bin = '';
   const CH = 0x8000;
-  for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  for (let i = 0; i < bytes.length; i += CH) {
+    const slice = bytes.subarray(i, Math.min(i + CH, bytes.length));
+    bin += String.fromCharCode.apply(null, slice);
+  }
   return btoa(bin);
 }
 
 export function decodeFloats(b64) {
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new Float32Array(bytes.buffer);
+  if (typeof b64 !== 'string' || !b64) return new Float32Array(0);
+  try {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Float32Array(bytes.buffer);
+  } catch {
+    return new Float32Array(0);
+  }
 }
 
 export function formatTime(sec, sign = false) {
@@ -190,3 +212,4 @@ export function formatTime(sec, sign = false) {
   if (sign) return (neg ? '-' : '+') + txt;
   return (neg ? '-' : '') + txt;
 }
+

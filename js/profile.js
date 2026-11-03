@@ -23,8 +23,12 @@ const DEFAULT = () => ({
 let cache = null;
 export function profile() {
   if (!cache) {
-    cache = { ...DEFAULT(), ...getJSON('profile', {}) };
+    const raw = getJSON('profile', {});
+    cache = { ...DEFAULT(), ...(raw && typeof raw === 'object' ? raw : {}) };
     cache.loadout = sanitizeLoadout(cache.loadout);
+    cache.owned = cache.owned && typeof cache.owned === 'object' ? cache.owned : {};
+    cache.medals = cache.medals && typeof cache.medals === 'object' ? cache.medals : {};
+    cache.stats = { races: 0, earned: 0, ...(cache.stats || {}) };
     if (!cache.id) cache.id = newPlayerId();
     setJSON('profile', cache);
   }
@@ -62,8 +66,8 @@ export function buy(items) {
 
 export function addCoins(n) {
   const p = profile();
-  p.coins += n;
-  p.stats.earned += n;
+  p.coins += Number.isFinite(+n) ? +n : 0;
+  p.stats.earned += Number.isFinite(+n) ? +n : 0;
   saveProfile();
 }
 
@@ -101,6 +105,7 @@ const toB64 = (u8) => {
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 };
 const fromB64 = (s) => {
+  if (typeof s !== 'string' || !s) throw new Error('Code joueur invalide');
   s = s.replace(/-/g, '+').replace(/_/g, '/');
   while (s.length % 4) s += '=';
   const bin = atob(s);
@@ -125,47 +130,61 @@ export async function exportCode() {
 export async function parseCode(code) {
   const m = /^\s*(SHWP[01]):([a-z0-9]+):([A-Za-z0-9_-]+)\s*$/.exec(code || '');
   if (!m) throw new Error('Code joueur invalide');
-  let raw = fromB64(m[3]);
+  let raw;
+  try {
+    raw = fromB64(m[3]);
+  } catch {
+    throw new Error('Code joueur invalide');
+  }
   if (m[1] === 'SHWP1') {
     if (typeof DecompressionStream === 'undefined') throw new Error('Navigateur trop ancien pour lire ce code');
     raw = await pipe(raw, new DecompressionStream('deflate-raw'));
   }
   const json = new TextDecoder().decode(raw);
   if (hashString(json) !== m[2]) throw new Error('Code joueur abîmé (somme de contrôle incorrecte)');
-  const obj = JSON.parse(json);
+  let obj;
+  try {
+    obj = JSON.parse(json);
+  } catch {
+    throw new Error('Code joueur invalide');
+  }
   if (!obj || !obj.data) throw new Error('Code joueur invalide');
   return obj;
 }
 
 // mode : 'replace' remplace tout ; 'merge' garde les meilleurs records et réunit les circuits.
 export function applySave(obj, mode = 'replace') {
+  if (!obj || !obj.data || typeof obj.data !== 'object') return reloadProfile();
+
   if (mode === 'replace') {
     restoreAll(obj.data);
   } else {
     const cur = dumpAll();
     const out = { ...cur };
     for (const [k, v] of Object.entries(obj.data)) {
-      if (k.startsWith('rec2.')) {
+      if ((k.startsWith('rec.') || k.startsWith('rec2.') || k.startsWith('rec3.')) && typeof v === 'string') {
         try {
           const a = JSON.parse(cur[k] || 'null'), b = JSON.parse(v);
           if (!a || (b && b.time < a.time)) out[k] = v;
         } catch { out[k] = v; }
-      } else if (k === 'tracks') {
+      } else if (k === 'tracks' && typeof v === 'string') {
         try {
           const a = JSON.parse(cur[k] || '[]'), b = JSON.parse(v);
           const map = new Map(a.map((t) => [t.id, t]));
           for (const t of b) if (!map.has(t.id) || (t.updated || 0) > (map.get(t.id).updated || 0)) map.set(t.id, t);
           out[k] = JSON.stringify([...map.values()]);
         } catch { out[k] = v; }
-      } else if (k === 'profile') {
+      } else if (k === 'profile' && typeof v === 'string') {
         try {
           const a = JSON.parse(cur[k] || '{}'), b = JSON.parse(v);
           out[k] = JSON.stringify({
-            ...b, coins: Math.max(a.coins || 0, b.coins || 0), owned: { ...(a.owned || {}), ...(b.owned || {}) },
+            ...b,
+            coins: Math.max(a.coins || 0, b.coins || 0),
+            owned: { ...(a.owned || {}), ...(b.owned || {}) },
             medals: { ...(a.medals || {}), ...(b.medals || {}) },
           });
         } catch { out[k] = v; }
-      } else out[k] = v;
+      } else if (typeof v === 'string') out[k] = v;
     }
     restoreAll(out);
   }
@@ -173,3 +192,4 @@ export function applySave(obj, mode = 'replace') {
 }
 
 export { b64encode, b64decode };
+
