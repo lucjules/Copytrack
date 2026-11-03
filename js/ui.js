@@ -14,7 +14,7 @@ export function medalIcon(m) {
   return `<i class="medal ${m ? m.id : 'none'}" title="${m ? m.label : 'Aucune médaille'}"></i>`;
 }
 
-const SCREENS = ['loading', 'menu', 'tracks', 'mytracks', 'options', 'controls', 'profile'];
+const SCREENS = ['loading', 'menu', 'tracks', 'mytracks', 'community', 'options', 'controls', 'profile'];
 
 class Hud {
   constructor() {
@@ -106,7 +106,7 @@ export class UI {
 
   showScreen(name) {
     for (const s of SCREENS) $(s).classList.toggle('hidden', s !== name);
-    $('coins').classList.toggle('hidden', !['menu', 'tracks', 'mytracks', 'profile'].includes(name));
+    $('coins').classList.toggle('hidden', !['menu', 'tracks', 'mytracks', 'community', 'profile'].includes(name));
     const first = name && $(name).querySelector('button');
     if (first && matchMedia('(pointer: fine)').matches) first.focus({ preventScroll: true });
   }

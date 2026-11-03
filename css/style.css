@@ -862,3 +862,10 @@ body.touch kbd { display: none; }
   .menu-buttons .btn.big { padding: 7px 10px; font-size: 14px; }
   .menu-foot { display: none; }
 }
+
+/* ---- Communauté ---- */
+.comm-tabs { flex-wrap: wrap; }
+.comm-search { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; min-width: 180px; flex: 1; max-width: 300px; }
+.comm-status { margin: 4px 0 12px; color: var(--muted, #a99fd0); font-size: 14px; }
+.comm-more { display: flex; justify-content: center; margin: 14px 0 30px; }
+#comm-list .btn.on { color: #ff6b9a; border-color: #ff6b9a; }

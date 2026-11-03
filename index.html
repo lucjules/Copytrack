@@ -32,6 +32,7 @@
       <nav class="menu-buttons">
         <button data-action="play" class="btn big primary">Carrière</button>
         <button data-action="daily" class="btn big">Défi du jour <small id="daily-best"></small></button>
+        <button data-action="community" class="btn big">Communauté <small>circuits en ligne</small></button>
         <button data-action="editor" class="btn big">Éditeur de circuits</button>
         <button data-action="garage" class="btn big">Garage <small>personnalisation</small></button>
         <button data-action="mytracks" class="btn big">Mes circuits</button>
@@ -61,6 +62,24 @@
       <button class="btn primary" data-action="new-track">+ Nouveau</button>
     </header>
     <div id="my-list" class="card-grid"></div>
+  </section>
+
+  <!-- Communauté (circuits publiés en ligne) -->
+  <section id="community" class="screen hidden">
+    <header class="screen-head">
+      <button class="btn" data-action="back">← Retour</button>
+      <h2>Communauté</h2>
+      <div class="tabs comm-tabs" id="comm-tabs">
+        <button class="tab on" data-sort="recent">Récents</button>
+        <button class="tab" data-sort="popular">Populaires</button>
+        <button class="tab" data-sort="played">Plus joués</button>
+        <button class="tab" data-sort="mine">Mes publications</button>
+      </div>
+      <input id="comm-search" class="comm-search" type="search" placeholder="Rechercher un circuit…" maxlength="40" aria-label="Rechercher un circuit">
+    </header>
+    <div id="comm-status" class="comm-status"></div>
+    <div id="comm-list" class="card-grid"></div>
+    <div class="comm-more"><button class="btn hidden" id="comm-more">Voir plus</button></div>
   </section>
 
   <!-- Options -->
