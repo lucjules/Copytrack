@@ -392,6 +392,7 @@ export function hashString(s) {
 // v1.5 :
 //   BR / BL             virage relevé droite / gauche (2x2)   BRR / BLL  très grand virage relevé (3x3)
 //   TB                  tube (2x2)        CK / CKL  tire-bouchon (2x2)
+//   TI TM4 TO           tube modulaire : entrée, 4 sections (où l'on peut faire des tours), sortie
 //   KR / KL             checkpoint dans un virage droite / gauche
 //   GU / GD             pente douce (½ niveau) montante / descendante
 //   GR2 / GC2           vide de 2 cases avec un anneau turbo / un checkpoint aérien au milieu
@@ -564,6 +565,9 @@ export function scriptTrack(name, script, opts = {}) {
         break;
       }
       case 'TB': straight2('tube'); break;
+      case 'TI': place('tubeIn', x, z, l, h); adv(h); break;
+      case 'TM': for (let i = 0; i < n; i++) { place('tubeMid', x, z, l, h); adv(h); } break;
+      case 'TO': place('tubeIn', x, z, l, h + 2, true); adv(h); break;
       case 'CK': straight2('cork'); break;
       case 'CKL': straight2('corkL'); break;
       case 'KR': place('cpCurve', x, z, l, h); h = (h + 1) & 3; adv(h); break;

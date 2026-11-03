@@ -301,7 +301,7 @@ class App {
       [L('ed.rotate'), 'Pivoter (Maj : sens inverse) — décos : par 15°'],
       [L('ed.mirror'), 'Miroir (looping, tire-bouchon, bifurcation : gauche ↔ droite)'],
       [L('ed.nextPiece'), 'Pièce suivante (Maj : précédente)'],
-      ['1 … 0, P, U, I, V, L, K, J, O', 'Pièces (U/I : grands loopings, V : vrille, L/K/J : montée en L, mur, sommet, O : virage relevé)'],
+      ['1 … 0, P, U, I, V, L, K, J, O, Y', 'Pièces (U/I : grands loopings, V : vrille, L/K/J : montée en L, mur, sommet, O : virage relevé, Y : entrée de tube)'],
       ['Q', 'Outil Sélection : glisser pour choisir une zone'],
       ['Ctrl + C / X / V / A', 'Copier / déplacer / coller / tout sélectionner (R : pivoter le collage, E / C : monter / descendre la sélection, Suppr : effacer)'],
       [L('ed.levelView'), 'Vue par niveau (les autres niveaux sont estompés)'],
@@ -416,7 +416,7 @@ class App {
     if (has((t) => PIECES[t.t].kind === 'loop')) tags.push('Looping');
     if (has((t) => t.t === 'steep')) tags.push('Sauts');
     if (has((t) => t.t === 'bank' || t.t === 'bankBig')) tags.push('Virage relevé');
-    if (has((t) => t.t === 'tube')) tags.push('Tube');
+    if (has((t) => t.t === 'tube' || t.t === 'tubeMid')) tags.push('Tube');
     if (has((t) => t.t === 'cork' || t.t === 'corkL')) tags.push('Tire-bouchon');
     if (has((t) => PIECES[t.t].kind === 'fork')) tags.push('Bifurcation');
     if (has((t) => PIECES[t.t].kind === 'ring')) tags.push('Anneaux');
