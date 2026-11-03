@@ -30,9 +30,29 @@ export class RaceLogic {
     this.splits = [];
     this.finished = false;
     this.steps = 0;
-    this.respawn = { ...this.spawnPoint(), vehicle: 'car', grav: 1 };
-    this.inFinish = false;
     this.lap = 1;
+    this.respawn = { ...this.spawnPoint(), vehicle: 'car', grav: 1, snap: this._snap() };
+    this.inFinish = false;
+  }
+
+  // État de course au passage d'un checkpoint : y revenir remet le chrono à ce temps.
+  _snap() {
+    return { steps: this.steps, splits: this.splits.length, collected: [...this.collected], lap: this.lap };
+  }
+
+  // Retour au dernier checkpoint passé (touche R ou réapparition automatique) :
+  // le chrono, les temps intermédiaires et le tour reviennent à ce moment-là.
+  rewind() {
+    const s = this.respawn.snap;
+    if (s) {
+      this.steps = s.steps;
+      this.splits.length = Math.min(this.splits.length, s.splits);
+      this.collected = new Set(s.collected);
+      this.lap = s.lap;
+    }
+    this.finished = false;
+    this.inFinish = false;
+    return this.respawn;
   }
 
   // Point de réapparition d'un checkpoint aérien : la dernière route roulable traversée
@@ -77,7 +97,7 @@ export class RaceLogic {
         this.collected.add(tile);
         this.splits.push(this.steps);
         // Réapparition : juste avant l'anneau, au sol de la pièce précédente si possible.
-        this.respawn = { ...this._ringRespawn(tile, phys), vehicle: phys.vehicle, grav: phys.gravMul };
+        this.respawn = { ...this._ringRespawn(tile, phys), vehicle: phys.vehicle, grav: phys.gravMul, snap: this._snap() };
         event = { type: 'checkpoint', index: this.splits.length, steps: this.steps };
         continue;
       }
@@ -96,7 +116,7 @@ export class RaceLogic {
         while (da > Math.PI) da -= Math.PI * 2;
         while (da < -Math.PI) da += Math.PI * 2;
         if (Math.abs(da) > Math.PI / 2) yaw = base + Math.PI;
-        this.respawn = { x: c.x, y: h, z: c.z, yaw, vehicle: phys.vehicle, grav: phys.gravMul };
+        this.respawn = { x: c.x, y: h, z: c.z, yaw, vehicle: phys.vehicle, grav: phys.gravMul, snap: this._snap() };
         event = { type: 'checkpoint', index: this.splits.length, steps: this.steps };
       } else if (sp === 'finish') {
         onFinish = true;
@@ -107,6 +127,8 @@ export class RaceLogic {
             this.lap++;
             this.collected.clear();
             this.splits.push(this.steps);
+            // Le passage de la ligne sert aussi de point de retour pour le nouveau tour.
+            this.respawn = { x: p.x, y: h, z: p.z, yaw: phys.yaw, vehicle: phys.vehicle, grav: phys.gravMul, snap: this._snap() };
             event = { type: 'lap', lap: this.lap, laps: this.laps, index: this.splits.length, steps: this.steps };
           } else {
             this.finished = true;

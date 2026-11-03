@@ -135,6 +135,7 @@ export class RaceSession {
     this.camPos.set(sp.x + Math.sin(sp.yaw) * 12, sp.y + 5, sp.z + Math.cos(sp.yaw) * 12);
     this.state = this.demo || this.replay ? 'racing' : 'countdown';
     this.recorder = new InputRecorder();
+    this.tick = 0;          // pas de course depuis le départ (ne recule jamais, contrairement au chrono)
     this._pendingRespawn = false;
     this.stats = { wallHits: 0, respawns: 0, perfects: 0, turbos: 0, rings: 0 };
     for (const g of this.ghosts) { g.runner.reset(); g.car.group.visible = false; }
@@ -160,7 +161,19 @@ export class RaceSession {
     if (this.state !== 'racing') return;
     if (fromInput) this._pendingRespawn = true;
     this.stats.respawns++;
-    const r = this.logic.respawn;
+    // Retour au dernier checkpoint : le chrono revient au temps de ce checkpoint.
+    const r = this.logic.rewind();
+    const steps = this.logic.steps;
+    this.ghostRec.length = Math.min(this.ghostRec.length, Math.floor(steps / GHOST_EVERY) * 7);
+    for (const g of this.ghosts) {
+      g.runner.reset();
+      while (g.runner.k < steps && !g.runner.done) g.runner.step();
+      g.pq.copy(g.q);
+    }
+    if (!this.demo) {
+      this.app.ui.hud.checkpoints(this.logic.collected.size, this.logic.cps.length, this.logic.lap, this.logic.laps);
+      this.app.ui.hud.time(steps * DT);
+    }
     this.phys.place(r.x, r.y, r.z, r.yaw);
     this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
     this.car.setVehicle(this.phys.vehicle, true);
@@ -208,7 +221,7 @@ export class RaceSession {
 
   _input() {
     if (this.replay) {
-      const inp = inputAt(this.replay, this.logic.steps);
+      const inp = inputAt(this.replay, this.tick);
       if (inp.respawn) this.respawn();
       return inp;
     }
@@ -226,6 +239,7 @@ export class RaceSession {
       this._pendingRespawn = false;
     }
     if (this.state === 'racing') for (const g of this.ghosts) { g.pq.copy(g.q); g.runner.step(); }
+    if (this.state === 'racing') this.tick++;
     this.lastInput = inp;
     this.prevQuat.copy(this.quat);
     this.phys.step(inp);

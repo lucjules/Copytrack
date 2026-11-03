@@ -92,7 +92,7 @@ export class GhostRunner {
     if (this.bot) inp = this.bot.control(this.phys);
     else inp = inputAt(this.rep, this.k);
     if (inp.respawn) {
-      const r = this.logic.respawn;
+      const r = this.logic.rewind();
       this.phys.place(r.x, r.y, r.z, r.yaw);
       this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
     }
@@ -103,7 +103,7 @@ export class GhostRunner {
     if (this.phys.grounded && this.phys.surfType === 'ground') this.groundT += 1 / 120; else this.groundT = 0;
     if (this.groundT > 0.5 || sink) {
       this.groundT = 0;
-      const r = this.logic.respawn;
+      const r = this.logic.rewind();
       this.phys.place(r.x, r.y, r.z, r.yaw);
       this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
     }

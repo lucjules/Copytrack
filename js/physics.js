@@ -56,7 +56,7 @@ export const CAR = {
   lipHopMax: 4,      // hauteur maxi (m), atteinte vers 180 km/h
   lipHopK: 600,      // hauteur = vitesse² / lipHopK, bornée
   bounce: 14,         // vitesse verticale donnée par un revêtement Rebond (100 %)
-  wind: 20,           // accélération latérale du vent à 100 %
+  wind: 36,           // accélération latérale du vent à pleine force (réglage 0 % ou 200 %)
   radius: 1.0,
   probe: 1.25,
   height: 1.3,
@@ -266,7 +266,7 @@ export class CarPhysics {
     this.steerAngle = delta;
     const L = K.a + K.b;
     const maxF = K.latGrip * grip * K.frontShare;
-    const maxR = K.latGrip * grip * (1 - K.frontShare) * (1 - (1 - K.driftRear) * drift);
+    const maxR = K.latGrip * grip * (1 - K.frontShare) * (1 - (1 - K.driftRear) * drift) * (this.rearK ?? 1);
     if (Math.abs(vx) < 1.5 && grip > 0.3) {
       // Manœuvre au pas : roulement sans glissement.
       vx += ax * dt;
@@ -352,13 +352,17 @@ export class CarPhysics {
       // Effet du revêtement (le paramètre f vaut 1 à 100 %).
       const mod = this.surfMod, f = this.surfP;
       const ground = this.surfType === 'ground';
-      let grip = 1, traction = 1, vmaxK = 1, extraDrag = 0;
+      let grip = 1, traction = 1, vmaxK = 1, extraDrag = 0, rearK = 1;
       if (ground) { grip = 0.55; traction = 0.7; vmaxK = 0.45; extraDrag = 5; }
       else if (mod === 'ice') { grip = clamp(0.2 / f, 0.05, 0.85); traction = 0.45; }
       else if (mod === 'sand') { grip = 0.8; traction = 0.65; vmaxK = clamp(1 - 0.45 * f, 0.25, 1); extraDrag = 5 * f; }
       else if (mod === 'mud') { grip = 0.7; traction = 0.55; vmaxK = clamp(1 - 0.5 * f, 0.2, 1); extraDrag = 6 * f; }
       else if (mod === 'magnet') grip = 1.45 * f;
-      else if (mod === 'drift') grip = clamp(0.5 / f, 0.18, 1.2);
+      else if (mod === 'drift') {
+        // Dérive : l'arrière n'accroche presque plus (l'avant, si) : au moindre coup de
+        // volant, la voiture part en glisse et il faut la rattraper en contre-braquant.
+        rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85);
+      }
       else if (mod === 'slow') extraDrag = 14 * f;
       else if (mod === 'water') {
         if (this.vehicle === 'boat') { grip = 0.85; traction = 1; vmaxK = 1; }
@@ -380,7 +384,9 @@ export class CarPhysics {
       if (this.vehicle === 'boat' && mod !== 'water') { grip = Math.min(grip, 0.8); traction *= 0.4; vmaxK = Math.min(vmaxK, 0.3); extraDrag += 7; }
       if (mod !== 'water') this.sinkT = 0;
       const ax = (this._longitudinal(vf, inp, K.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
+      this.rearK = rearK;
       const r = this._tires(vf, vr, this.omega, ax, grip, dt);
+      this.rearK = 1;
       vf = r.vx; vr = r.vy; this.omega = r.w;
       this.yaw -= this.omega * dt;
       this.yawRate = -this.omega;
