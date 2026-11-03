@@ -6,9 +6,11 @@ import { CarPhysics, CAR } from './physics.js';
 import { RaceLogic, placeAtStart } from './raceLogic.js';
 import { Autopilot } from './autopilot.js';
 
+// 0.9 : la date est prise en temps universel (UTC) : le même défi pour tout le monde,
+// quel que soit le fuseau horaire, et il change à la même heure partout.
 export function dayKey(d = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`;
 }
 
 function rng(seedStr) {
@@ -23,6 +25,7 @@ const BLOCKS = [
   ['S', 5, 0], ['S2', 5, 0], ['S3', 2, 0],
   ['R', 5, 0], ['L', 5, 0], ['RR', 3, 0], ['LL', 3, 0], ['BR', 1.2, 0], ['BL', 1.2, 0],
   ['S.b', 2.5, 0], ['S2.i', 0.8, 0], ['S.d', 0.6, 0], ['S.s', 0.5, 0],
+  ['S2.t', 0.7, 0], ['S2.p', 0.4, 0], ['S2.v', 0.3, 0],
   ['U S', 1.6, 1], ['D S', 1.6, -1, 1], ['GU2 S', 0.8, 1], ['GD2 S', 0.8, -1, 1],
   ['S2 UU G2 DD S', 1.2, 0], ['S UU GR2 DD S', 0.6, 0],
   ['O S', 0.9, 0], ['OL S', 0.9, 0], ['CK S', 0.5, 0], ['CKL S', 0.5, 0],

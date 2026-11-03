@@ -7,14 +7,19 @@ export const CHAPTER_SIZE = 6;
 export const UNLOCK_MEDALS = 4;
 export const GOAL_COINS = 50;
 
+// 0.9 : un chapitre par thème, dans l'ordre de THEME_ORDER (tracks.js).
 export const CHAPTERS = [
-  { name: 'Premiers tours', desc: 'Virages, petits sauts et premiers revêtements.' },
-  { name: 'Prise de vitesse', desc: 'Accélérateurs, loopings et virages relevés.' },
-  { name: 'Métamorphoses', desc: 'Moto, bateau et deltaplane entrent en piste.' },
-  { name: 'Terrains piégés', desc: 'Glace, boue, vent, sable et routes sans bordures.' },
-  { name: 'Haute voltige', desc: 'Tubes, tire-bouchons, montées en L et anneaux dans les airs.' },
-  { name: 'Grand huit', desc: 'Des circuits longs qui mélangent tout.' },
-  { name: 'Légendes', desc: 'Les plus durs : précision et sang-froid.' },
+  { name: 'Désert crépuscule', decor: 'desert', desc: 'Premiers virages, petits sauts et premiers revêtements.' },
+  { name: 'Jungle néon', decor: 'jungle', desc: 'Lianes, champignons, boue et premiers loopings.' },
+  { name: 'Archipel tropical', decor: 'isles', desc: 'Eau, bateau, phare et grands sauts au-dessus du lagon.' },
+  { name: 'Ville futuriste', decor: 'city', desc: 'Tunnels, viaducs et boulevards à toute vitesse.' },
+  { name: 'Nuit polaire', decor: 'polar', desc: 'Glace, aurores et virages qui glissent.' },
+  { name: 'Volcan', decor: 'volcano', desc: 'Lave, cheminées et montées en L brûlantes.' },
+  { name: 'Station orbitale', decor: 'orbit', desc: 'Gravité faible, anneaux et deltaplane parmi les étoiles.' },
+  { name: 'Fonds marins', decor: 'reef', desc: 'Courants (tapis roulants), bulles de verre et ancres qui balancent.' },
+  { name: 'Usine mécanique', decor: 'factory', desc: 'Marteaux, balayeurs, ascenseurs et moteur coupé.' },
+  { name: 'Ville dans les nuages', decor: 'sky', desc: 'Rafales de vent, deltaplane et routes sans bordures.' },
+  { name: 'Canyon de cristal', decor: 'caves', desc: 'Gravité inversée, plafonds, verre fragile et volant inversé.' },
 ];
 
 // Objectifs bonus.

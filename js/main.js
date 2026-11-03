@@ -180,7 +180,8 @@ class App {
             <li><b>Dérapage</b> : freine en tournant franchement à bonne vitesse. Garde le volant pour prolonger la glisse.</li>
             <li><b>Mini-turbo</b> : une glisse assez longue donne une poussée quand l'arrière raccroche (étincelles bleues, puis orange).</li>
             <li><b>En l'air</b> : accélérer fait plonger le nez, freiner le relève. Pose-toi bien à plat pour garder ta vitesse.</li>
-            <li>Les loopings, tubes et virages relevés suivent une physique réelle : il faut assez de vitesse pour rester plaqué.</li>
+            <li>Les loopings, tubes et vrilles suivent une physique réelle : il faut assez de vitesse pour rester plaqué.</li>
+            <li><b>Gravité inversée</b> : la plaque rose ⇅ te projette vers le plafond ; roule sur les pièces à l'envers, une 2e plaque te ramène en bas.</li>
           </ul>`,
       },
       {
@@ -188,7 +189,8 @@ class App {
         body: `<ul class="tuto">
             <li><b>Plaques</b> : moto 🏍, bateau ⛵ (indispensable sur l'eau) et deltaplane 🪂 (pour planer au-dessus du vide). La même plaque te rend ta voiture.</li>
             <li><b>${touch ? '⟲' : K('respawn')}</b> : revenir au dernier checkpoint · <b>${touch ? '↺' : K('restart')}</b> : recommencer.</li>
-            <li><b>Carrière</b> : 7 chapitres de 6 circuits, ouverts avec des médailles, et un objectif bonus ★ par circuit.</li>
+            <li><b>Obstacles</b> : les piques renvoient au checkpoint, boules, marteaux et balayeurs te bousculent. Ils bougent toujours au même rythme : apprends-le !</li>
+            <li><b>Carrière</b> : 11 chapitres (un par thème) de 6 circuits, ouverts avec des médailles, et un objectif bonus ★ par circuit.</li>
             <li>Chaque jour, un nouveau <b>défi du jour</b>. Revois tes courses et partage ton fantôme avec tes amis.</li>
           </ul>`,
       },
@@ -942,13 +944,13 @@ class App {
         <b>↓ / S</b><span>Freiner, marche arrière</span>
         <b>← → / Q D / A D</b><span>Tourner</span>
         <b>Frein en virage</b><span>Dérapage (l'arrière décroche ; garde le volant pour prolonger la glisse)</span>
-        <b>R</b><span>Revenir au dernier checkpoint</span>
-        <b>Entrée / Retour</b><span>Recommencer la course</span>
+        <b>R</b><span>Revenir au dernier checkpoint (le chrono revient au temps du checkpoint)</span>
+        <b>T / Entrée</b><span>Recommencer le niveau</span>
         <b>C</b><span>Changer de caméra</span>
         <b>Échap</b><span>Pause</span>
         <b>Manette</b><span>Gâchettes : gaz / frein · stick : direction · freiner en virage : dérapage · Y : checkpoint</span>
       </div>
-      <p style="margin-top:14px">Passe par tous les checkpoints ◆ puis franchis l’arrivée le plus vite possible. Les accélérateurs bleus donnent un gros coup de boost, le verglas fait glisser, les tremplins font décoller.</p>`,
+      <p style="margin-top:14px">Passe par tous les checkpoints ◆ puis franchis l’arrivée le plus vite possible. Les accélérateurs bleus donnent un gros coup de boost, le verglas fait glisser, les tremplins font décoller. Une plaque rose ⇅ inverse la gravité : tu roules alors au plafond, sur les pièces posées à l’envers. Attention aux piques (retour au checkpoint) et aux obstacles qui bougent.</p>`,
       actions: [{ label: 'OK', primary: true }],
     });
   }
