@@ -195,7 +195,7 @@ export class CarPhysics {
 
   // Hors piste : sur le terrain, ou perdue dans le ciel en gravité inversée.
   get offTrack() {
-    return (this.grounded && this.surfType === 'ground') || this.lost;
+    return (this.grounded && this.surfType === 'ground' && !this.track.offroad) || this.lost;
   }
 
   get mode() {

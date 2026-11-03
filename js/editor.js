@@ -9,7 +9,7 @@ import { buildDecoMesh, safeUrl } from './decos.js';
 import { isObstacle } from './obstacles.js';
 import { DECO_CATS, DECO_LABELS, DECO_COLORS } from './decoData.js';
 import { setEditorDraft, saveMyTrack, newId, formatTime } from './storage.js';
-import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, checkTrack } from './editorTools.js';
+import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel } from './editorTools.js';
 import { centerlineWorld } from './ribbons.js';
 
 export const PALETTE_ORDER = [
@@ -365,26 +365,6 @@ export class EditorSession {
     const name = document.getElementById('ed-name');
     name.value = this.track.name;
     name.oninput = () => { this.track.name = name.value.trim() || 'Sans titre'; this._changed(false); };
-    const decor = document.getElementById('ed-decor');
-    decor.innerHTML = Object.entries(DECORS).map(([id, d]) => `<option value="${id}">${d.label}</option>`).join('');
-    decor.value = this.track.decor;
-    decor.onchange = () => {
-      this.track.decor = decor.value;
-      this._applyDecor();
-      this.gridKey = '';
-      this._changed(false);
-      decor.blur();
-    };
-    const laps = document.getElementById('ed-laps');
-    laps.innerHTML = Array.from({ length: 9 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
-    laps.value = String(this.track.laps || 1);
-    laps.onchange = () => {
-      this.track.laps = +laps.value;
-      this._changed(false);
-      this._commit();
-      laps.blur();
-      if (this.track.laps > 1) this.app.ui.flash('Plusieurs tours : l\'arrivée doit être juste avant le départ (circuit fermé).', 3);
-    };
     this.setTab(this.tool.startsWith('surf:') ? 'surf' : this.tool.startsWith('mod:') ? 'mods' : this.tool.startsWith('deco:') ? 'decos' : 'pieces');
   }
 
@@ -486,7 +466,9 @@ export class EditorSession {
     const errs = t.validate();
     const isPiece = !!PIECES[this.tool];
     const detail = isPiece ? ` · ${this.rot * 90}°` : this.tool === 'erase' || this.tool.startsWith('surf:') || this.tool.startsWith('mod:') ? ' · clic sur une pièce' : ` · ${(this.deco.rot * 180 / Math.PI).toFixed(0)}°`;
-    const ver = t.verified ? `<span class="ok">✔ Vérifié ${formatTime(t.vt)}</span>` : '<span class="warn">Non vérifié</span> (à finir avant de partager)';
+    const ver = t.verified ? `<span class="ok">✔ Vérifié ${formatTime(t.vt)}</span>` : '<span class="warn">Non vérifié</span> (« ✔ Vérifier » avant de publier)';
+    const top = document.querySelector('#editor .ed-top');
+    if (top) document.getElementById('editor').style.setProperty('--ed-top-h', top.offsetHeight + 'px');
     document.getElementById('ed-status').innerHTML =
       `<b>${pieceLabel(this.tool)}</b>${detail} · niveau ${this.level}<br>` +
       `${t.tiles.length} pièce${t.tiles.length > 1 ? 's' : ''} · ${cps} checkpoint${cps > 1 ? 's' : ''} · ${t.decos.length} déco${t.decos.length > 1 ? 's' : ''}<br>${ver}` +
@@ -498,9 +480,10 @@ export class EditorSession {
   // ---------------------------------------------------------------- Historique
   _snapshot() {
     return JSON.stringify({
-      t: this.track.tiles.map((t) => [t.t, t.x, t.z, t.l, t.r, t.s || '', t.p || 0, t.v, t.nb, t.tn]),
-      d: this.track.decos.map((o) => [o.k, o.x, o.y, o.z, o.ry, o.s, o.c, o.u]),
+      t: this.track.tiles.map((t) => [t.t, t.x, t.z, t.l, t.r, t.s || '', t.p || 0, t.v, t.nb, t.tn, t.mv || 0]),
+      d: this.track.decos.map((o) => [o.k, o.x, o.y, o.z, o.ry, o.s, o.c, o.u, o.ph || 0]),
       lp: this.track.laps || 1,
+      pr: { desc: this.track.desc, offroad: this.track.offroad, v0: this.track.v0, g0: this.track.g0, veh0: this.track.veh0, decor: this.track.decor },
     });
   }
 
@@ -509,11 +492,13 @@ export class EditorSession {
     const { vt, vh } = this.track;
     this.track.clear();
     this.track.vt = vt; this.track.vh = vh;
-    for (const [t, x, z, l, r, s, p, v, nb, tn] of data.t) this.track.add({ t, x, z, l, r, s, p, v, nb, tn });
-    for (const [k, x, y, z, ry, sc, c, u] of data.d) this.track.addDeco({ k, x, y, z, ry, s: sc, c, u });
+    for (const [t, x, z, l, r, s, p, v, nb, tn, mv] of data.t) this.track.add({ t, x, z, l, r, s, p, v, nb, tn, mv });
+    for (const [k, x, y, z, ry, sc, c, u, ph] of data.d) this.track.addDeco({ k, x, y, z, ry, s: sc, c, u, ph });
     this.track.laps = data.lp || 1;
-    const lapsEl = document.getElementById('ed-laps');
-    if (lapsEl) lapsEl.value = String(this.track.laps);
+    if (data.pr) {
+      this.track.setParams(data.pr);
+      if (data.pr.decor && data.pr.decor !== this.track.decor) { this.track.decor = data.pr.decor; this._applyDecor(); this.gridKey = ''; }
+    }
     this._changed(false);
     this.needsRebuild = true;
   }
@@ -575,9 +560,10 @@ export class EditorSession {
     for (const d of t.decos) this.track.addDeco(d);
     this.track.name = t.name;
     this.track.decor = t.decor;
+    this.track.laps = t.laps;
+    this.track.setParams(t);
     this.track.vt = t.vt; this.track.vh = t.vh;
     document.getElementById('ed-name').value = t.name;
-    document.getElementById('ed-decor').value = t.decor;
     this._applyDecor();
     this.entryId = null;
     this.recenter();
@@ -963,14 +949,65 @@ export class EditorSession {
     this.app.testTrack(this.exportState(), { x: a[0] + (b[0] - a[0]) * 0.5, y: a[1], z: a[2] + (b[2] - a[2]) * 0.5, yaw, gs });
   }
 
-  test() {
+  test(verify = false) {
     const errs = this.track.validate();
     if (errs.length) {
       this.app.ui.flash(errs.join(' '));
       this.app.audio.error();
       return;
     }
-    this.app.testTrack(this.exportState());
+    this.app.testTrack(this.exportState(), null, verify);
+  }
+
+  // Vérifier : course complète depuis le départ ; à l'arrivée, publier ou revenir.
+  verify() { this.test(true); }
+
+  // ---------------------------------------------------------------- Paramètres du niveau
+  openParams() {
+    const T = this.track;
+    const f = document.createElement('div');
+    f.className = 'form ed-params';
+    const veh = { car: 'Voiture', moto: 'Moto', boat: 'Bateau', glider: 'Deltaplane' };
+    f.innerHTML = `
+      <label>Nom<input type="text" id="pp-name" maxlength="40"></label>
+      <label class="col">Description<textarea id="pp-desc" maxlength="200" rows="3" placeholder="Ce qui rend ton circuit unique (200 caractères au plus)"></textarea></label>
+      <label>Décor<select id="pp-decor">${Object.entries(DECORS).map(([id, d]) => `<option value="${id}">${d.label}</option>`).join('')}</select></label>
+      <label title="Circuit fermé : l'arrivée est franchie à chaque tour">Tours<select id="pp-laps">${Array.from({ length: 9 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}</select></label>
+      <label title="Rouler sur le terrain ne renvoie plus au checkpoint (il reste lent)">Hors piste autorisé<input type="checkbox" id="pp-off"></label>
+      <label>Vitesse de départ<span class="inl"><input type="range" id="pp-v0" min="0" max="300" step="10"><b id="pp-v0v"></b></span></label>
+      <label>Gravité de départ<span class="inl"><input type="range" id="pp-g0" min="15" max="250" step="5"><b id="pp-g0v"></b></span></label>
+      <label>Véhicule de départ<select id="pp-veh">${Object.entries(veh).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+      <p class="meta">Le nom et la description se changent librement (même après publication). Le reste modifie la course : il faudra la re-vérifier.</p>`;
+    const $f = (id) => f.querySelector('#' + id);
+    $f('pp-name').value = T.name;
+    $f('pp-desc').value = T.desc || '';
+    $f('pp-decor').value = T.decor;
+    $f('pp-laps').value = String(T.laps || 1);
+    $f('pp-off').checked = !!T.offroad;
+    $f('pp-v0').value = T.v0 || 0;
+    $f('pp-g0').value = T.g0 || 100;
+    $f('pp-veh').value = T.veh0 || 'car';
+    const show = () => {
+      $f('pp-v0v').textContent = +$f('pp-v0').value ? `${$f('pp-v0').value} km/h` : 'arrêt';
+      $f('pp-g0v').textContent = `${$f('pp-g0').value} %`;
+    };
+    $f('pp-v0').oninput = show; $f('pp-g0').oninput = show; show();
+    this.app.ui.modal({
+      title: 'Paramètres du niveau',
+      body: f,
+      actions: [{ label: 'Annuler' }, { label: 'Appliquer', primary: true, onClick: () => {
+        T.name = $f('pp-name').value.trim().slice(0, 40) || 'Sans titre';
+        document.getElementById('ed-name').value = T.name;
+        const laps = +$f('pp-laps').value;
+        if (laps > 1 && (T.laps || 1) === 1) this.app.ui.flash('Plusieurs tours : l\'arrivée doit être juste avant le départ (circuit fermé).', 3);
+        T.laps = laps;
+        T.setParams({ desc: $f('pp-desc').value, offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value });
+        if ($f('pp-decor').value !== T.decor) { T.decor = $f('pp-decor').value; this._applyDecor(); this.gridKey = ''; }
+        this._changed(false);
+        this._commit();
+        return true;
+      } }],
+    });
   }
 
   // ---------------------------------------------------------------- Boucle
@@ -1122,7 +1159,8 @@ export class EditorSession {
     if (input.act('ed.levelUp')) { if (selMode) this.shiftSel(1); else this.setLevel(this.level + 1); }
     if (input.act('ed.levelDown')) { if (selMode) this.shiftSel(-1); else this.setLevel(this.level - 1); }
     if (input.act('ed.levelView') && !ctrl) this.toggleLevelView();
-    if (input.act('ed.check')) { this.runCheck(); return; }
+    if (input.act('ed.verify')) { this.verify(); return; }
+    if (input.act('ed.params')) { this.openParams(); return; }
     if (input.act('ed.nextPiece')) this.cyclePiece(shift ? -1 : 1);
     if (input.act('ed.surface')) this.cycleSurface();
     if (input.act('ed.mirror')) this.mirror();
@@ -1371,21 +1409,6 @@ export class EditorSession {
     this.app.ui.flash(this.focusLevel ? `Vue du niveau ${this.level} : les autres niveaux sont estompés` : 'Tous les niveaux affichés', 1.6);
     const b = document.querySelector('[data-ed="levelview"]');
     if (b) b.classList.toggle('on', this.focusLevel);
-  }
-
-  // ---------------------------------------------------------------- Vérificateur
-  runCheck() {
-    const issues = checkTrack(this.track);
-    this._markIssues(issues);
-    const err = issues.filter((i) => i.level === 'error'), warn = issues.filter((i) => i.level === 'warn');
-    const li = (i) => `<li class="${i.level}">${i.level === 'error' ? '⛔' : '⚠️'} ${i.msg}${i.tile ? ` <small>(niveau ${i.tile.l})</small>` : ''}</li>`;
-    this.app.ui.modal({
-      title: issues.length ? 'Vérification du circuit' : 'Circuit vérifié',
-      body: issues.length
-        ? `<p>${err.length} problème${err.length > 1 ? 's' : ''}, ${warn.length} avertissement${warn.length > 1 ? 's' : ''}. Les pièces concernées clignotent en rouge (problème) ou orange (avertissement).</p><ul class="check-list">${issues.slice(0, 30).map(li).join('')}</ul>`
-        : '<p>Tout est relié : départ, checkpoints et arrivée sont accessibles, et aucun saut n\'a l\'air impossible. Il reste à le terminer toi-même pour le vérifier et le partager avec des médailles.</p>',
-      actions: [{ label: 'OK', primary: true }],
-    });
   }
 
   _markIssues(issues) {

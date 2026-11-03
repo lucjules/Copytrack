@@ -9,7 +9,7 @@ import { CATEGORIES } from './cosmetics.js';
 import { profile, saveProfile, exportCode, parseCode, applySave, addCoins, owns } from './profile.js';
 import { GameAudio } from './audio.js';
 import { UI, $, esc, medalIcon } from './ui.js';
-import { RaceSession, medalFor } from './race.js';
+import { RaceSession, medalFor, MEDALS } from './race.js';
 import { EditorSession } from './editor.js';
 import { BUILTIN_TRACKS, buildBuiltin } from './tracks.js';
 import { Track, hashString, DECORS } from './track.js';
@@ -89,6 +89,7 @@ class App {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    if (this.session instanceof EditorSession) this.session._refreshUI();
     const portrait = h > w && document.body.classList.contains('touch');
     $('rotate-hint').classList.toggle('hidden', !(portrait && (this.mode === 'race' || this.mode === 'editor')));
     $('fs-btn').classList.toggle('hidden', !(document.body.classList.contains('touch') && (this.mode === 'race' || this.mode === 'menu') && !document.fullscreenElement));
@@ -156,7 +157,7 @@ class App {
     let track;
     try { track = Track.decode(code); } catch { this.ui.flash('Code de circuit invalide.'); return; }
     // Circuits de joueurs : médailles déduites du temps de l'auteur, seulement s'il l'a fini.
-    this.playTrack(track, { trackKey: 'u-' + hashString(track.encode()), userEntry: entryId, seed: track.name, userMap: true, medals: track.derivedMedals, difficulty: 2 });
+    this.playTrack(track, { trackKey: track.userKey, userEntry: entryId, seed: track.name, userMap: true, medals: track.derivedMedals, difficulty: 2 });
   }
 
   // ---- Tutoriel (premier lancement, ou Options > Revoir le tutoriel) -------------
@@ -309,7 +310,8 @@ class App {
       ['Q', 'Outil Sélection : glisser pour choisir une zone'],
       ['Ctrl + C / X / V / A', 'Copier / déplacer / coller / tout sélectionner (R : pivoter le collage, E / C : monter / descendre la sélection, Suppr : effacer)'],
       [L('ed.levelView'), 'Vue par niveau (les autres niveaux sont estompés)'],
-      [L('ed.check'), 'Vérifier le circuit (extrémités libres, sauts, accès aux checkpoints)'],
+      [L('ed.verify'), 'Vérifier : course complète, ton temps devient la médaille cristal, puis publier'],
+      [L('ed.params'), 'Paramètres du niveau (description, décor, tours, départ, hors piste)'],
       ['Maj + ' + L('ed.test'), 'Tester depuis la pièce visée'],
       [L('ed.surface'), 'Revêtement suivant (puis clic sur une pièce)'],
       [L('ed.snap'), 'Accrochage des décorations (libre, 1 m, 4 m, case)'],
@@ -317,7 +319,7 @@ class App {
       [L('ed.erase'), 'Gomme'],
       [`${L('accelerate')} ${L('left')} ${L('brake')} ${L('right')}`, 'Déplacer la vue'],
       [L('ed.recenter') + ' · ' + L('ed.topView') + ' · ' + L('ed.grid'), 'Recentrer · vue de dessus · grille'],
-      [L('ed.test'), 'Tester (finir le circuit = le vérifier)'],
+      [L('ed.test'), 'Tester (essai libre, sans vérification)'],
       ['Ctrl + Z / Y / S', 'Annuler / rétablir / enregistrer'],
       ['Manette', 'Stick droit : curseur · A : poser · B : supprimer · X : pivoter · Y : tester · LB/RB : niveau'],
     ];
@@ -333,11 +335,13 @@ class App {
     this.showMenu('menu');
   }
 
-  testTrack(state, spawn = null) {
+  // Test depuis l'éditeur. verify : course complète qui vérifie le circuit (temps de l'auteur).
+  testTrack(state, spawn = null, verify = false) {
     this.editorState = state;
     const track = Track.decode(state.code);
-    this.playTrack(track, { fromEditor: true, trackKey: 'e-' + hashString(state.code), seed: 'editeur-test', spawn });
+    this.playTrack(track, { fromEditor: true, verify: verify && !spawn, trackKey: 'e-' + hashString(state.code), seed: 'editeur-test', spawn });
     if (spawn) this.ui.flash('Test depuis la pièce visée : sans checkpoints, médaille ni vérification.', 2.6);
+    else if (verify) this.ui.flash('Vérification : termine le circuit. Ton temps deviendra la médaille cristal.', 2.6);
   }
 
   // ------------------------------------------------------------ Écrans
@@ -587,7 +591,7 @@ class App {
     for (const entry of tracks) {
       let track = null;
       try { track = Track.decode(entry.code); } catch { /* code abîmé */ }
-      const rec = track ? getRecord('u-' + hashString(track.encode())) : null;
+      const rec = track ? getRecord(track.userKey) || getRecord('u-' + hashString(track.encode())) : null;
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `${track ? `<img class="thumb" alt="" src="${thumbnail(track, 'u-' + entry.code.length + '-' + hashString(entry.code))}">` : ''}
@@ -675,7 +679,7 @@ class App {
       return false;
     };
     const actions = [];
-    if (!verified && this.session instanceof EditorSession) actions.push({ label: 'Terminer le circuit d’abord', primary: true, onClick: () => { this.session.test(); } });
+    if (!verified && this.session instanceof EditorSession) actions.push({ label: '✔ Vérifier d’abord', primary: true, onClick: () => { this.session.verify(); } });
     if (verified && tr) actions.push({ label: '🌐 Publier dans la communauté', primary: true, onClick: () => { this.publishTrack(tr); return true; } });
     actions.push({ label: 'Copier le code', onClick: () => copy(code, 'Code copié !') });
     actions.push({ label: 'Copier le lien', onClick: () => copy(url, 'Lien copié !') });
@@ -738,7 +742,7 @@ class App {
 
   // ---- Communauté (circuits publiés en ligne) ----------------------------------
   async publishTrack(track) {
-    if (!track.verified) { this.ui.flash('Termine d’abord ton circuit (Tester) pour pouvoir le publier.'); return; }
+    if (!track.verified) { this.ui.flash('Vérifie d’abord ton circuit (« ✔ Vérifier » dans l’éditeur) pour pouvoir le publier.'); return; }
     this.ui.flash('Publication en cours…', 6);
     try {
       await online.publish(track, this.settings.playerName);
@@ -796,7 +800,7 @@ class App {
     let track = null;
     try { track = Track.decode(row.code); } catch { /* code abîmé */ }
     const mine = row.author === online.uid;
-    const key = track ? 'u-' + hashString(track.encode()) : '';
+    const key = track ? track.userKey : '';
     const rec = key ? getRecord(key) : null;
     const medals = track ? track.derivedMedals : null;
     const medal = rec && medals ? medalFor(rec.time, medals) : null;
@@ -805,6 +809,7 @@ class App {
     card.className = 'card ' + (row.decor || '');
     card.innerHTML = `${track ? `<img class="thumb" alt="" src="${thumbnail(track, 'c-' + row.id)}">` : ''}
       <h3>${esc(row.name)}</h3>
+      ${row.description ? `<p class="desc">${esc(row.description)}</p>` : ''}
       <div class="meta">par <b>${esc((row.players && row.players.name) || 'Pilote')}</b> · ${esc((DECORS[row.decor] || {}).label || row.decor)} · ${row.pieces} pièces${row.laps > 1 ? ` · ${row.laps} tours` : ''}</div>
       <div class="meta">Temps de l’auteur ${formatTime(row.author_time)} · ▶ ${row.plays} · ♥ <span class="nl">${row.likes}</span></div>
       <div class="best">${medals ? medalIcon(medal) : ''}${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}</div>
@@ -813,7 +818,7 @@ class App {
         <button class="btn${liked ? ' on' : ''}" data-a="like" title="J’aime">${liked ? '♥' : '♡'}</button>
         <button class="btn" data-a="board" title="Classement">🏆</button>
         <button class="btn" data-a="copy" title="Copier dans Mes circuits pour le modifier">Copier</button>
-        ${mine ? '<button class="btn danger" data-a="del">Retirer</button>' : '<button class="btn subtle" data-a="report" title="Signaler un circuit inapproprié">⚑</button>'}
+        ${mine ? '<button class="btn" data-a="edit" title="Modifier le nom et la description">✎</button><button class="btn danger" data-a="del">Retirer</button>' : '<button class="btn subtle" data-a="report" title="Signaler un circuit inapproprié">⚑</button>'}
       </div>`;
     card.addEventListener('click', async (e) => {
       const a = e.target.closest('[data-a]');
@@ -835,6 +840,28 @@ class App {
       } else if (act === 'copy' && track) {
         saveMyTrack({ id: newId(), name: track.name, code: track.encode() });
         this.ui.flash('Copié dans « Mes circuits ».');
+      } else if (act === 'edit') {
+        const f = document.createElement('div');
+        f.className = 'form';
+        f.innerHTML = `<label>Nom<input id="em-name" maxlength="40"></label>
+          <label>Description<textarea id="em-desc" maxlength="200" rows="3" placeholder="Ce qui rend ton circuit unique (200 caractères)"></textarea></label>
+          <p class="meta">Le circuit lui-même, ses médailles et ses classements ne changent pas.</p>`;
+        f.querySelector('#em-name').value = row.name;
+        f.querySelector('#em-desc').value = row.description || '';
+        this.ui.modal({
+          title: 'Modifier le circuit publié',
+          body: f,
+          actions: [{ label: 'Annuler' }, { label: 'Enregistrer', primary: true, onClick: () => {
+            const n = f.querySelector('#em-name').value.trim().slice(0, 40), d = f.querySelector('#em-desc').value.replace(/\s+/g, ' ').trim().slice(0, 200);
+            if (!n) { this.ui.flash('Il faut un nom.'); return false; }
+            online.updateTrackMeta(row.id, n, d).then(() => {
+              row.name = n; row.description = d;
+              card.replaceWith(this._communityCard(row, likes));
+              this.ui.flash('Circuit mis à jour.');
+            }, (err) => this.ui.flash(err.message, 4));
+            return true;
+          } }],
+        });
       } else if (act === 'del') {
         this.ui.modal({
           title: 'Retirer ce circuit ?',
@@ -856,10 +883,27 @@ class App {
     return card;
   }
 
-  // Appelé quand le joueur termine son circuit en test depuis l'éditeur.
+  // Appelé quand le joueur termine la vérification de son circuit depuis l'éditeur :
+  // il choisit alors de publier ou de revenir à l'éditeur.
   onEditorTestFinished(time, track) {
-    track.setVerified(time);
+    // « Refaire un meilleur temps » : on garde le meilleur des deux.
+    if (!(track.verified && track.vt <= time)) track.setVerified(time);
+    time = track.vt;
     if (this.editorState) this.editorState.code = track.encode();
+    const m = track.derivedMedals;
+    setTimeout(() => {
+      this.ui.modal({
+        title: 'Circuit vérifié ✔',
+        body: `<p>Ton temps <b>${formatTime(time)}</b> devient la médaille <b>cristal</b> de « ${esc(track.name)} ».</p>
+          <p class="meta">${MEDALS.map((x) => `${medalIcon(x)}${formatTime(m[x.id])}`).join(' · ')}</p>
+          <p>Tu peux le publier dans la communauté maintenant, ou revenir le modifier (une modification du tracé demandera une nouvelle vérification).</p>`,
+        actions: [
+          { label: '🌐 Publier', primary: true, onClick: () => { this.publishTrack(track).then(() => this.quitRace()); return true; } },
+          { label: 'Retour à l’éditeur', onClick: () => { this.quitRace(); return true; } },
+          { label: 'Refaire un meilleur temps', onClick: () => { if (this.session && this.session.restart) this.session.restart(); return true; } },
+        ],
+      });
+    }, 900);
   }
 
   importModal(fromEditor = false) {
@@ -1039,7 +1083,8 @@ class App {
       case 'lvl-up': ed.setLevel(ed.level + 1); break;
       case 'lvl-down': ed.setLevel(ed.level - 1); break;
       case 'help': this.editorHelp(); break;
-      case 'check': ed.runCheck(); break;
+      case 'verify': ed.verify(); break;
+      case 'params': ed.openParams(); break;
       case 'testhere': ed.testHere(); break;
       case 'levelview': ed.toggleLevelView(); break;
       case 'export': this.shareModal(ed.track.encode(), ed.track.name, ed.track); break;

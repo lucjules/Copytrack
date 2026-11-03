@@ -3,7 +3,7 @@
 // et fixe les médailles, comme pour les circuits intégrés.
 import { scriptTrack, DECORS } from './track.js';
 import { CarPhysics, CAR } from './physics.js';
-import { RaceLogic } from './raceLogic.js';
+import { RaceLogic, placeAtStart } from './raceLogic.js';
 import { Autopilot } from './autopilot.js';
 
 export function dayKey(d = new Date()) {
@@ -44,7 +44,7 @@ function tryBuild(tokens, decor) {
 // Course du pilote automatique ; renvoie le temps ou null.
 export function botTime(track, latK = 0.8) {
   const phys = new CarPhysics(track), logic = new RaceLogic(track);
-  const sp = logic.spawnPoint(); phys.place(sp.x, sp.y, sp.z, sp.yaw, sp.gs || 1);
+  placeAtStart(phys, logic);
   const bot = new Autopilot(track.path, { latLimit: CAR.latGrip * latK, brakeDecel: 36 });
   bot.reset(phys);
   let groundT = 0, respawns = 0;

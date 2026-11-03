@@ -2,7 +2,7 @@
 // d'enregistrer les commandes de chaque pas pour rejouer une course à l'identique.
 // Une commande = volant quantifié au centième + gaz / frein / réapparition.
 import { CarPhysics } from './physics.js';
-import { RaceLogic } from './raceLogic.js';
+import { RaceLogic, placeAtStart } from './raceLogic.js';
 import { Autopilot } from './autopilot.js';
 import { b64encode, b64decode } from './track.js';
 
@@ -78,8 +78,7 @@ export class GhostRunner {
 
   reset() {
     this.logic.reset();
-    const sp = this.logic.spawnPoint();
-    this.phys.place(sp.x, sp.y, sp.z, sp.yaw, sp.gs || 1);
+    placeAtStart(this.phys, this.logic);
     if (this.bot) this.bot.reset(this.phys);
     this.k = 0;
     this.groundT = 0;

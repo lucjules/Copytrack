@@ -31,7 +31,8 @@ export const KEY_ACTIONS = {
     ['ed.grid', 'Afficher / masquer la grille', ['KeyG', '']],
     ['ed.help', 'Liste des raccourcis', ['F1', '']],
     ['ed.levelView', 'Vue par niveau (estomper les autres)', ['KeyZ', '']],
-    ['ed.check', 'Vérifier le circuit', ['F2', '']],
+    ['ed.verify', 'Vérifier le circuit (course complète)', ['F2', '']],
+    ['ed.params', 'Paramètres du niveau', ['F3', '']],
   ],
 };
 

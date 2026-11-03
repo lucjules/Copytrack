@@ -4,7 +4,7 @@
 //   node tools/sim.mjs 2 --map    -> circuit n°2 avec la carte
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
 import { CarPhysics } from '../js/physics.js';
-import { RaceLogic } from '../js/raceLogic.js';
+import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
 import { Autopilot } from '../js/autopilot.js';
 import { Track } from '../js/track.js';
 import { PIECES } from '../js/pieces.js';
@@ -42,8 +42,7 @@ function map(track) {
 function run(track, maxTime = 240) {
   const phys = new CarPhysics(track);
   const logic = new RaceLogic(track);
-  const sp = logic.spawnPoint();
-  phys.place(sp.x, sp.y, sp.z, sp.yaw, sp.gs || 1);
+  placeAtStart(phys, logic);
   const bot = new Autopilot(track.path);
   bot.reset(phys);
   let respawns = 0, stuck = 0, maxSpeed = 0, airMax = 0, lastIdx = 0, loops = 0, falls = 0;

@@ -32,7 +32,8 @@ export class RaceLogic {
     this.finished = false;
     this.steps = 0;
     this.lap = 1;
-    this.respawn = { ...this.spawnPoint(), vehicle: 'car', grav: 1, snap: this._snap() };
+    const T = this.track;
+    this.respawn = { ...this.spawnPoint(), vehicle: T.veh0 || 'car', grav: (T.g0 || 100) / 100, snap: this._snap() };
     this.inFinish = false;
   }
 
@@ -143,4 +144,15 @@ export class RaceLogic {
     this.inFinish = onFinish;
     return event;
   }
+}
+
+// Place la voiture au départ avec les paramètres du niveau (véhicule, gravité, vitesse
+// de départ). sp : point de départ (par défaut celui du circuit).
+export function placeAtStart(phys, logic, sp = logic.spawnPoint()) {
+  const T = logic.track;
+  phys.place(sp.x, sp.y, sp.z, sp.yaw, sp.gs || 1);
+  phys.vehicle = T.veh0 || 'car';
+  phys.gravMul = (T.g0 || 100) / 100;
+  const v0 = (T.v0 || 0) / 3.6;
+  if (v0 > 0) { phys.vel.x = -Math.sin(sp.yaw) * v0; phys.vel.z = -Math.cos(sp.yaw) * v0; phys.fwdSpeed = v0; }
 }

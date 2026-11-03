@@ -14,7 +14,8 @@ export const MAX_INPUTS_CHARS = 400000;
 // Retrouve le circuit correspondant à une clé de classement.
 //   b-<id>-<empreinte>   circuit intégré (l'empreinte garantit la même version)
 //   daily-AAAA-MM-JJ     défi du jour (régénéré à partir de la date)
-//   u-<empreinte>        circuit de joueur (son code doit être fourni)
+//   u-<signature>        circuit de joueur (son code doit être fourni) ; la signature
+//                        ignore le nom et la description, qu'on peut modifier après coup
 export function trackForKey(key, code = '') {
   key = String(key || '');
   if (key.startsWith('b-')) {
@@ -31,7 +32,7 @@ export function trackForKey(key, code = '') {
   }
   if (key.startsWith('u-')) {
     const track = Track.decode(code);
-    if ('u-' + hashString(track.encode()) !== key) throw new Error('Le code du circuit ne correspond pas.');
+    if (track.userKey !== key) throw new Error('Le code du circuit ne correspond pas.');
     return { track, kind: 'user', name: track.name };
   }
   throw new Error('Clé de circuit invalide.');

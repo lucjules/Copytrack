@@ -2,7 +2,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { DT } from './constants.js';
 import { CarPhysics, frameWorld } from './physics.js';
-import { RaceLogic } from './raceLogic.js';
+import { RaceLogic, placeAtStart } from './raceLogic.js';
 import { Autopilot } from './autopilot.js';
 import { TrackView } from './trackMesh.js';
 import { createCar } from './carModel.js';
@@ -124,9 +124,9 @@ export class RaceSession {
     const app = this.app;
     this.logic.reset();
     const sp = this.opts.spawn || this.logic.spawnPoint();
-    if (this.opts.spawn) this.logic.respawn = { ...sp, vehicle: 'car', grav: 1 };
-    this.phys.place(sp.x, sp.y, sp.z, sp.yaw, sp.gs || 1);
-    this.car.setVehicle('car', true);
+    if (this.opts.spawn) this.logic.respawn = { ...sp, vehicle: this.track.veh0 || 'car', grav: (this.track.g0 || 100) / 100 };
+    placeAtStart(this.phys, this.logic, sp);
+    this.car.setVehicle(this.phys.vehicle, true);
     this.collectedShards = new Set();
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
     this._orient();
@@ -464,7 +464,7 @@ export class RaceSession {
     let reward = null;
     if (this.opts.fromEditor && this.opts.spawn) {
       // Test partiel : pas de vérification ni de médaille.
-    } else if (this.opts.fromEditor) {
+    } else if (this.opts.fromEditor && this.opts.verify) {
       app.onEditorTestFinished(time, this.track);
     } else if (this.medals) {
       const tier = medal ? MEDALS.indexOf(medal) : -1;
@@ -483,8 +483,8 @@ export class RaceSession {
     app.ui.showFinish({
       goal,
       reward,
-      verified: !!this.opts.fromEditor,
-      derived: this.opts.fromEditor ? this.track.derivedMedals : null,
+      verified: !!(this.opts.fromEditor && this.opts.verify),
+      derived: this.opts.fromEditor && this.opts.verify ? this.track.derivedMedals : null,
       unverifiedUser: !!this.opts.userMap && !this.medals,
       time,
       prevTime: prev ? prev.time : null,

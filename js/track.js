@@ -40,6 +40,12 @@ export class Track {
     this.index = new Map();
     this.version = 0;
     this.laps = 1;    // nombre de tours (circuit fermé)
+    // Paramètres du niveau (0.9)
+    this.desc = '';       // description (affichée dans la communauté)
+    this.offroad = 0;     // 1 : rouler hors piste est permis (pas de retour au checkpoint)
+    this.v0 = 0;          // vitesse de départ (km/h)
+    this.g0 = 100;        // gravité de départ (%)
+    this.veh0 = 'car';    // véhicule de départ
     this.vt = 0;      // temps de vérification (secondes) de l'auteur
     this.vh = '';     // signature du circuit au moment de la vérification
     this.time = 0;    // chrono de la course (s) : position des pièces mobiles
@@ -208,6 +214,7 @@ export class Track {
     this.index.clear();
     this.vt = 0; this.vh = '';
     this.laps = 1;
+    this.desc = ''; this.offroad = 0; this.v0 = 0; this.g0 = 100; this.veh0 = 'car';
     this.version++;
   }
 
@@ -351,14 +358,31 @@ export class Track {
     return best;
   }
 
-  // Signature du contenu (pièces + décorations), utilisée pour la vérification.
+  // Paramètres du niveau, bornés.
+  setParams({ desc, offroad, v0, g0, veh0 } = {}) {
+    if (desc !== undefined) this.desc = String(desc || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (offroad !== undefined) this.offroad = offroad ? 1 : 0;
+    if (v0 !== undefined) this.v0 = Math.max(0, Math.min(300, Math.round(+v0 || 0)));
+    if (g0 !== undefined) this.g0 = Math.max(15, Math.min(250, Math.round(+g0 || 100)));
+    if (veh0 !== undefined) this.veh0 = ['car', 'moto', 'boat', 'glider'].includes(veh0) ? veh0 : 'car';
+  }
+
+  // Signature du contenu (pièces, décorations, règles de course), utilisée pour la
+  // vérification et comme clé des classements en ligne. Le nom, la description et l'auteur
+  // n'en font pas partie : on peut les modifier sans perdre la vérification ni les temps.
   signature() {
     const parts = this.tiles
-      .map((t) => `${t.t}:${t.x}:${t.z}:${t.l}:${t.r}:${t.s}:${t.p}:${t.v}${t.nb}${t.tn}`)
+      .map((t) => `${t.t}:${t.x}:${t.z}:${t.l}:${t.r}:${t.s}:${t.p}:${t.v}${t.nb}${t.tn}${t.mv ? 'm' + t.mv : ''}`)
       .sort()
       .join('|');
-    const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}`).join('|');
-    return hashString(this.decor + '#' + parts + '#' + d + (this.laps > 1 ? '#L' + this.laps : ''));
+    const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}` : ''}`).join('|');
+    const rules = (this.offroad ? '#O' : '') + (this.v0 ? '#V' + this.v0 : '') + (this.g0 !== 100 ? '#G' + this.g0 : '') + (this.veh0 !== 'car' ? '#E' + this.veh0 : '');
+    return hashString(this.decor + '#' + parts + '#' + d + (this.laps > 1 ? '#L' + this.laps : '') + rules);
+  }
+
+  // Clé de classement d'un circuit de joueur : stable si on renomme le circuit.
+  get userKey() {
+    return 'u-' + this.signature();
   }
 
   get verified() {
@@ -370,11 +394,12 @@ export class Track {
     this.vh = this.signature();
   }
 
-  // Médailles déduites du temps de l'auteur : bronze = son temps.
+  // Médailles déduites du temps de l'auteur (0.9) : cristal = son temps, les autres plus lentes.
   get derivedMedals() {
     if (!this.verified) return null;
-    const t = this.vt, r2 = (x) => Math.round(x * 100) / 100;
-    return { bronze: r2(t), argent: r2(t * 0.93), or: r2(t * 0.86), cristal: r2(t * 0.8) };
+    // Arrondi au centième supérieur : l'auteur obtient bien le cristal avec son propre temps.
+    const t = this.vt, r2 = (x) => Math.ceil(x * 100 - 1e-6) / 100;
+    return { cristal: r2(t), or: r2(t * 1.08), argent: r2(t * 1.2), bronze: r2(t * 1.4) };
   }
 
   clone() {
@@ -384,6 +409,7 @@ export class Track {
     t.decos = this.decos.map((d) => ({ ...d }));
     t.vt = this.vt; t.vh = this.vh;
     t.laps = this.laps;
+    t.desc = this.desc; t.offroad = this.offroad; t.v0 = this.v0; t.g0 = this.g0; t.veh0 = this.veh0;
     return t;
   }
 
@@ -404,6 +430,11 @@ export class Track {
     const data = { v: 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
     if (decos.length) data.o = decos;
     if (this.laps > 1) data.lp = this.laps;
+    if (this.desc) data.ds = this.desc;
+    if (this.offroad) data.or = 1;
+    if (this.v0) data.v0 = this.v0;
+    if (this.g0 !== 100) data.g0 = this.g0;
+    if (this.veh0 !== 'car') data.ve = this.veh0;
     if (this.verified) { data.vt = this.vt; data.vh = this.vh; }
     return 'SHW3:' + b64encode(JSON.stringify(data));
   }
@@ -443,6 +474,7 @@ export class Track {
       }
     }
     tr.laps = Math.max(1, Math.min(9, data.lp | 0 || 1));
+    tr.setParams({ desc: data.ds, offroad: data.or, v0: data.v0, g0: data.g0, veh0: data.ve });
     if (data.vt > 0 && data.vh) { tr.vt = +data.vt; tr.vh = String(data.vh); }
     return tr;
   }
