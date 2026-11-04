@@ -53,7 +53,7 @@ export function inputAt(rep, k) {
 
 // ---- Codes de fantôme partageables ---------------------------------------------
 export function encodeGhost({ trackKey, time, name, inputs }) {
-  return 'SHG1:' + b64encode(JSON.stringify({ k: trackKey, t: time, n: name || '—', i: inputs, v: PHYS_VER }));
+  return 'SHG1:' + b64encode(JSON.stringify({ k: trackKey, t: time, n: name || 'Pilote', i: inputs, v: PHYS_VER }));
 }
 
 export function decodeGhost(code) {
@@ -61,7 +61,7 @@ export function decodeGhost(code) {
   if (!/^SHG1:/.test(s)) throw new Error('Ce n\'est pas un code de fantôme.');
   const d = JSON.parse(b64decode(s.slice(5)));
   if (!d || !d.k || !d.i) throw new Error('Code de fantôme invalide.');
-  return { trackKey: String(d.k), time: +d.t, name: String(d.n || '—').slice(0, 20), inputs: String(d.i), v: d.v | 0 };
+  return { trackKey: String(d.k), time: +d.t, name: String(d.n || 'Pilote').slice(0, 20), inputs: String(d.i), v: d.v | 0 };
 }
 
 // ---- Fantôme simulé ----------------------------------------------------------------
