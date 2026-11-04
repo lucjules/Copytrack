@@ -46,6 +46,10 @@ export const account={
   },
   async sync(uploadLocal=true){
     if(!this.active)throw new Error('Connecte-toi à un compte.');
+    if((this.state.expires_at||0)*1000<Date.now()+60000){
+      const refreshed=normalizeSession(await request('/auth/v1/token?grant_type=refresh_token',{body:{refresh_token:this.state.refresh_token}}));
+      refreshed.username=this.state.username;this.state=refreshed;setJSON(KEY,refreshed);
+    }
     const token=this.state.access_token,id=this.state.user.id;
     const headers={apikey:ONLINE.key,Authorization:'Bearer '+token};
     const r=await fetch(ONLINE.url+'/rest/v1/copytrack_saves?user_id=eq.'+encodeURIComponent(id)+'&select=save_data',{headers});
