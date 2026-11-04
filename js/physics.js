@@ -694,7 +694,7 @@ export class CarPhysics {
     if (!obs.length || this.hazardGrace > 0) return;
     const t = (this.clock || 0) * DT;
     const p = this.pos, v = this.vel, n0 = this.n;
-    const cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
+    let cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
     // Index spatial paresseux : éviter de parcourir tous les obstacles à chaque pas
     // physique sur les circuits chargés. La course garde une liste d'obstacles stable.
     if (this._obstacleGridSource !== obs) {
@@ -718,6 +718,9 @@ export class CarPhysics {
       }
     }
     for (const d of candidates) {
+      // Recalculer le centre après chaque correction de contact : plusieurs obstacles
+      // proches ne doivent pas être testés contre la position d'avant le premier choc.
+      cx = p.x + n0.x * 0.8; cy = p.y + n0.y * 0.8; cz = p.z + n0.z * 0.8;
       if (!d || !OBST[d.k] || !Number.isFinite(d.x) || !Number.isFinite(d.y) || !Number.isFinite(d.z) || !Number.isFinite(d.s || 1) || !Number.isFinite(d.ry || 0)) continue;
       if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) continue;
       const rr = obstacleRadius(d) + 3;
@@ -782,14 +785,28 @@ export class CarPhysics {
       const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
       const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
       if (![wx, wy, wz, vwx, vwy, vwz].every(Number.isFinite)) continue;
-      p.x += wx * pen * k; p.y += wy * pen * k; p.z += wz * pen * k;
+      // Séparer les corps en contact, mais ne pas ré-appliquer un choc si la voiture
+      // s'éloigne déjà de l'obstacle. L'ancien code ajoutait shockKick à chaque pas
+      // tant que les volumes se chevauchaient : obstacles mobiles = impulsions répétées,
+      // tremblements, catapultage et parfois état physique instable.
+      const correction = Math.min(pen * k, 2.5);
+      p.x += wx * correction; p.y += wy * correction; p.z += wz * correction;
       const vn = (v.x - vwx) * wx + (v.y - vwy) * wy + (v.z - vwz) * wz;
-      let add = vn < 0 ? -(1 + CAR.shockE) * vn : 0;
-      add += def.type === 'post' ? Math.max(0, def.kick - Math.max(0, vn) - add) : CAR.shockKick;
-      v.x += wx * add; v.y += wy * add; v.z += wz * add;
-      this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;   // le choc fait pivoter un peu
-      if (wy * this.gSign > 0.45) this.grounded = false;
-      this.ev.shock = Math.max(this.ev.shock, add);
+      let add = 0;
+      if (vn < -0.05) {
+        add = -(1 + CAR.shockE) * vn;
+        if (def.type === 'post') {
+          add = Math.max(add, Math.max(0, def.kick - add));
+        } else {
+          add += CAR.shockKick;
+        }
+      }
+      if (add > 0) {
+        v.x += wx * add; v.y += wy * add; v.z += wz * add;
+        this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;   // le choc fait pivoter un peu
+        if (wy * this.gSign > 0.45) this.grounded = false;
+        this.ev.shock = Math.max(this.ev.shock, add);
+      }
     }
   }
 
