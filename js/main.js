@@ -16,7 +16,7 @@ import { Track, hashString, DECORS } from './track.js';
 import { PIECES } from './pieces.js';
 import { VERSION } from './constants.js';
 import { thumbnail } from './editorTools.js';
-import { online } from './online.js';
+import { online } from './online.js';\nimport { account } from './account.js';
 import { PHYS_VER as PV } from './replay.js';
 import { encodeGhost, decodeGhost, PHYS_VER } from './replay.js';
 import { dailyChallenge, dayKey } from './daily.js';
