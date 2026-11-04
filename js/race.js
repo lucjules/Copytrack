@@ -272,7 +272,7 @@ export class RaceSession {
     }
     if (ev.shock > 0) {
       const p = this.phys.pos;
-      app.audio.thud();
+      app.audio.thud(24);
       this.shake = Math.max(this.shake, Math.min(1.2, ev.shock * 0.05));
       app.particles.burst(p.x, p.y + 0.8, p.z, 18, 8, 0.5, 0.5, '#ffd23e', 2);
     }
@@ -283,7 +283,7 @@ export class RaceSession {
       if (!this.demo) app.ui.hud.message('Ressort !', 0.8);
     }
     if (ev.reverse && !this.demo) { app.audio.whoosh(); app.ui.hud.message('Volant inversé !', 1.2); }
-    if (ev.cut && !this.demo) { app.audio.thud(); app.ui.hud.message('Moteur coupé !', 1.0); }
+    if (ev.cut && !this.demo) { app.audio.thud(24); app.ui.hud.message('Moteur coupé !', 1.0); }
     // Gerbes de neige dans la poudreuse.
     if (this.phys.grounded && this.phys.surfMod === 'powder' && this.phys.speed > 8 && Math.random() < 0.5) {
       const p = this.phys.pos;
@@ -328,13 +328,13 @@ export class RaceSession {
     const sank = ev.sink && this.state === 'racing';
     if (sank && ev.spike) {
       const p = this.phys.pos;
-      app.audio.thud();
+      app.audio.thud(24);
       this.shake = Math.max(this.shake, 0.8);
       app.particles.burst(p.x, p.y + 0.6, p.z, 36, 9, 0.7, 0.5, '#ff5a6e', 3, 1);
       if (!this.demo) app.ui.hud.message('Aïe, les piques ! Retour au checkpoint', 1.6);
     } else if (sank && ev.glass) {
       const p = this.phys.pos;
-      app.audio.thud();
+      app.audio.thud(24);
       app.particles.burst(p.x, p.y + 0.3, p.z, 46, 10, 0.9, 0.5, '#d9f4ff', 4, 2);
       app.particles.burst(p.x, p.y + 0.3, p.z, 20, 7, 0.9, 0.35, '#ffffff', 4, 2);
       if (!this.demo) app.ui.hud.message('Le verre a cédé ! Trop lent…', 1.8);

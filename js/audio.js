@@ -107,6 +107,7 @@ export class GameAudio {
   }
 
   _env(node, t, a, d, peak) {
+    if (!Number.isFinite(peak) || !Number.isFinite(t)) return;   // un son raté ne doit jamais bloquer le jeu
     node.gain.setValueAtTime(0.0001, t);
     node.gain.exponentialRampToValueAtTime(peak, t + a);
     node.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
@@ -195,8 +196,8 @@ export class GameAudio {
     this.noise(0.9, 400, 0.18, 'bandpass', 0, 1800);
   }
 
-  thud(strength) {
-    const v = Math.min(0.5, strength * 0.025);
+  thud(strength = 20) {
+    const v = Math.min(0.5, (Number.isFinite(strength) ? strength : 20) * 0.025);
     if (v < 0.03) return;
     this.noise(0.18, 260, v, 'lowpass');
     this.tone(70, 0.15, 'sine', v * 0.8, 0, 40);
