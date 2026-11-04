@@ -494,6 +494,7 @@ export class CarPhysics {
       v.z = fz * vf + rz * vr;
       if (belt) { v.x += belt.x; v.z += belt.z; }
       this._glassCheck(mod === 'glass', vf, this.surfTile, dt);
+      if (this.ev.sink) return;
       this.slip = Math.abs(vr);
       this.fwdSpeed = vf;
       this.airTime = 0;
@@ -718,7 +719,7 @@ export class CarPhysics {
         const dx = OL.x - qx, dy = OL.y - qy, dz = OL.z - qz;
         const dd = Math.hypot(dx, dy, dz);
         if (dd >= rc) continue;
-        if (dd < 1e-6) { nx = OL.x >= OB.x ? 1 : -1; pen = rc + def.hx - Math.abs(OL.x - OB.x); }
+        if (dd < 1e-6) { nx = OL.x >= OB.x ? 1 : -1; ny = 0; nz = 0; pen = Math.max(0.01, rc + def.hx - Math.abs(OL.x - OB.x)); }
         else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = rc - dd; }
         ovx = OB.vx;
       } else if (def.type === 'bar') {
