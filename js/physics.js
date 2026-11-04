@@ -694,7 +694,7 @@ export class CarPhysics {
     if (!obs.length || this.hazardGrace > 0) return;
     const t = (this.clock || 0) * DT;
     const p = this.pos, v = this.vel, n0 = this.n;
-    const cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
+    let cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
     // Index spatial paresseux : éviter de parcourir tous les obstacles à chaque pas
     // physique sur les circuits chargés. La course garde une liste d'obstacles stable.
     if (this._obstacleGridSource !== obs) {
@@ -718,6 +718,9 @@ export class CarPhysics {
       }
     }
     for (const d of candidates) {
+      // Recalculer le centre après chaque correction de contact : plusieurs obstacles
+      // proches ne doivent pas être testés contre la position d'avant le premier choc.
+      cx = p.x + n0.x * 0.8; cy = p.y + n0.y * 0.8; cz = p.z + n0.z * 0.8;
       if (!d || !OBST[d.k] || !Number.isFinite(d.x) || !Number.isFinite(d.y) || !Number.isFinite(d.z) || !Number.isFinite(d.s || 1) || !Number.isFinite(d.ry || 0)) continue;
       if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) continue;
       const rr = obstacleRadius(d) + 3;
