@@ -694,8 +694,10 @@ export class CarPhysics {
       const rr = obstacleRadius(d) + 3;
       if ((cx - d.x) ** 2 + (cz - d.z) ** 2 > rr * rr) continue;
       const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
+      if (!(k > 0) || !Number.isFinite(rc)) continue;
       obstacleLocal(d, t, OB);
       toLocalObs(d, cx, cy, cz, OL);
+      if (![OB.x, OB.y, OB.z, OB.vx, OB.vy, OB.vz, OB.on, OL.x, OL.y, OL.z].every(Number.isFinite)) continue;
       let nx = 0, ny = 0, nz = 0, pen = 0, ovx = 0, ovy = 0, ovz = 0;
       if (def.type === 'spike') {
         if (OB.on < 0.4) continue;
