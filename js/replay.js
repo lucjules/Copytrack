@@ -7,7 +7,7 @@ import { Autopilot } from './autopilot.js';
 import { b64encode, b64decode } from './track.js';
 
 // À incrémenter dès que la physique change : les replays d'une autre version sont ignorés.
-export const PHYS_VER = 17;
+export const PHYS_VER = 18;
 
 export const quantSteer = (s) => Math.round(Math.max(-1, Math.min(1, s || 0)) * 100) / 100;
 

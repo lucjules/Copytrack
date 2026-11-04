@@ -15,6 +15,8 @@ npm start
 
 Puis ouvrir <http://localhost:8080>. N'importe quel serveur statique fonctionne aussi, par exemple `python3 -m http.server`.
 
+Tests : `npm test` (pot de peinture de l'éditeur, physique à l'envers, caméra, puis les 66 circuits au pilote automatique).
+
 Pour le publier avec **GitHub Pages** : *Settings → Pages → Deploy from a branch*, puis choisir la branche et le dossier `/ (root)`.
 Le jeu s'**installe comme une application** (bouton d'installation du navigateur) et se joue **hors ligne** une fois chargé.
 

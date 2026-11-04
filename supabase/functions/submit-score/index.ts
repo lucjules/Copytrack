@@ -4093,6 +4093,8 @@ var CAR = {
   gravity: 25,
   snap: 0.7,
   step: 1.6,
+  magnetRange: 4,
+  magnetAcc: 80,
   launch: 2,
   airPitchAcc: 4.2,
   airPitchDamp: 2.6,
@@ -4113,7 +4115,6 @@ var CAR = {
   springHop: 11,
   glassSpeed: 25,
   glassImpact: 24,
-  revTime: 1.5,
   cutTime: 1,
   shockE: 0.5,
   shockKick: 6,
@@ -4216,6 +4217,58 @@ var BK = {
   vy: 0,
   w: 0
 };
+var COEF = {
+  grip: 1,
+  traction: 1,
+  vmaxK: 1,
+  extraDrag: 0,
+  rearK: 1
+};
+function surfaceCoeffs(mod, f, out = COEF) {
+  out.grip = 1;
+  out.traction = 1;
+  out.vmaxK = 1;
+  out.extraDrag = 0;
+  out.rearK = 1;
+  switch (mod) {
+    case "ice":
+      out.grip = clamp(0.2 / f, 0.05, 0.85);
+      out.traction = 0.45;
+      break;
+    case "sand":
+      out.grip = 0.8;
+      out.traction = 0.65;
+      out.vmaxK = clamp(1 - 0.45 * f, 0.25, 1);
+      out.extraDrag = 5 * f;
+      break;
+    case "mud":
+      out.grip = 0.7;
+      out.traction = 0.55;
+      out.vmaxK = clamp(1 - 0.5 * f, 0.2, 1);
+      out.extraDrag = 6 * f;
+      break;
+    case "magnet":
+      out.grip = 1.6;
+      break;
+    // Dérive : l'arrière n'accroche presque plus (l'avant, si) : au moindre coup de volant la voiture part en glisse.
+    case "drift":
+      out.rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85);
+      break;
+    case "slow":
+      out.extraDrag = 14 * f;
+      break;
+    // Poudreuse : on s'enfonce un peu, l'adhérence est molle et le moteur patine.
+    case "powder":
+      out.grip = clamp(0.62 / Math.sqrt(f), 0.3, 0.9);
+      out.traction = 0.75;
+      out.vmaxK = clamp(1 - 0.28 * f, 0.4, 1);
+      out.extraDrag = 2.5 * f;
+      break;
+    default:
+      break;
+  }
+  return out;
+}
 function frameWorld(tile, rib, u, F) {
   frameLocal(rib, u, FL);
   const c = tileCenter(tile, CC);
@@ -4271,6 +4324,7 @@ var CarPhysics = class {
       z: -1
     };
     this.surf = {};
+    this.surfM = {};
     this.F = {};
     this.F0 = {};
     this.F2 = {};
@@ -4369,7 +4423,6 @@ var CarPhysics = class {
     this.lost = false;
     this._flipNow = false;
     this._springNow = false;
-    this.revT = 0;
     this.cutT = 0;
     this.glassT = 0;
     this.graceT = 1.5;
@@ -4398,6 +4451,17 @@ var CarPhysics = class {
   get speed() {
     const v = this.vel;
     return Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+  }
+  // Sens du « haut » local de la voiture : +1 toit vers le ciel, -1 retournée. Le volant fait tourner la voiture
+  // AUTOUR de ce haut-là, pas autour du haut du monde (au plafond, la droite du pilote est la gauche du monde).
+  // Au sol on le lit sur la normale du contact ; en l'air, c'est l'assiette, qui suit le sens de la gravité.
+  _upSign() {
+    if (this.grounded) {
+      const ny = this.n.y;
+      if (ny > 0.05) return 1;
+      if (ny < -0.05) return -1;
+    }
+    return this.gSign;
   }
   _updateFwd() {
     if (this.rib) return;
@@ -4459,7 +4523,6 @@ var CarPhysics = class {
   _timedMods(mod) {
     if (mod === "reverse" || mod === "invert") {
       if (this.surfMod !== mod) this.ev.reverse = true;
-      this.revT = 0;
       return true;
     }
     if (mod === "cut") {
@@ -4563,7 +4626,7 @@ var CarPhysics = class {
     this.prev.y = p.y;
     this.prev.z = p.z;
     this.prevYaw = this.yaw;
-    const reverseActive = this.rib ? this.rib.tile.s === "reverse" || this.rib.tile.s === "invert" : this.surfMod === "reverse" || this.surfMod === "invert";
+    const reverseActive = this.rib ? this.rib.tile.s === "reverse" || this.rib.tile.s === "invert" : this.grounded && (this.surfMod === "reverse" || this.surfMod === "invert");
     if (reverseActive) inp = {
       ...inp,
       steer: -(inp.steer || 0)
@@ -4651,34 +4714,13 @@ var CarPhysics = class {
       vr -= g * ry * dt;
       const mod = this.surfMod, f = this.surfP;
       const ground = this.surfType === "ground";
-      let grip = 1, traction = 1, vmaxK = 1, extraDrag = 0, rearK = 1;
+      const C3 = surfaceCoeffs(ground ? "" : mod, f);
+      let grip = C3.grip, traction = C3.traction, vmaxK = C3.vmaxK, extraDrag = C3.extraDrag, rearK = C3.rearK;
       if (ground) {
         grip = 0.55;
         traction = 0.7;
         vmaxK = 0.45;
         extraDrag = 5;
-      } else if (mod === "ice") {
-        grip = clamp(0.2 / f, 0.05, 0.85);
-        traction = 0.45;
-      } else if (mod === "sand") {
-        grip = 0.8;
-        traction = 0.65;
-        vmaxK = clamp(1 - 0.45 * f, 0.25, 1);
-        extraDrag = 5 * f;
-      } else if (mod === "mud") {
-        grip = 0.7;
-        traction = 0.55;
-        vmaxK = clamp(1 - 0.5 * f, 0.2, 1);
-        extraDrag = 6 * f;
-      } else if (mod === "magnet") grip = 1.6;
-      else if (mod === "drift") {
-        rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85);
-      } else if (mod === "slow") extraDrag = 14 * f;
-      else if (mod === "powder") {
-        grip = clamp(0.62 / Math.sqrt(f), 0.3, 0.9);
-        traction = 0.75;
-        vmaxK = clamp(1 - 0.28 * f, 0.4, 1);
-        extraDrag = 2.5 * f;
       } else if (mod === "water") {
         if (this.vehicle === "boat") {
           grip = 0.85;
@@ -4716,8 +4758,9 @@ var CarPhysics = class {
       vf = r.vx;
       vr = r.vy;
       this.omega = r.w;
-      this.yaw -= this.omega * this.gSign * dt;
-      this.yawRate = -this.omega * this.gSign;
+      const us = this._upSign();
+      this.yaw -= this.omega * us * dt;
+      this.yawRate = -this.omega * us;
       v.x = fx * vf + rx * vr;
       v.y = fy * vf + ry * vr;
       v.z = fz * vf + rz * vr;
@@ -4740,8 +4783,9 @@ var CarPhysics = class {
       } else v.y -= this.g * this.gSign * dt;
       this.omega *= Math.exp(-1.5 * dt);
       if (this.vehicle !== "glider") this.omega = clamp(this.omega + this.steer * CAR.airSteer * dt, -CAR.airSteerMax, CAR.airSteerMax);
-      this.yaw -= this.omega * this.gSign * dt;
-      this.yawRate = -this.omega * this.gSign;
+      const us = this._upSign();
+      this.yaw -= this.omega * us * dt;
+      this.yawRate = -this.omega * us;
       this.steerAngle = this._steerAngle(Math.hypot(v.x, v.z), this.driftT);
       const k = 1 - 6e-4 * this.speed * dt;
       v.x *= k;
@@ -4774,6 +4818,16 @@ var CarPhysics = class {
     const magnet = s.mod === "magnet";
     const launch = magnet ? Infinity : CAR.launch;
     const snap = magnet ? CAR.step : CAR.snap;
+    if (!this.grounded) {
+      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange);
+      const mg = gs * (p.y - m.h);
+      if (m.mod === "magnet" && mg > 0.02 && mg < CAR.magnetRange) {
+        const a = CAR.magnetAcc * (1 - mg / CAR.magnetRange) * dt;
+        v.x -= m.nx * a;
+        v.y -= m.ny * a;
+        v.z -= m.nz * a;
+      }
+    }
     if (this.grounded && gap < snap && gap > -CAR.step && vn < launch) {
       p.y = s.h;
       const sp = this.speed;
@@ -5419,7 +5473,8 @@ var CarPhysics = class {
     R.vd -= g * B2.e2y * dt;
     R.psi -= R.dir * kg * R.vs * dt;
     const mod = tile.s, f = tileParam(tile) / 100;
-    let extraDrag = 0, gripK = 1, tractK = 1, vmaxK = 1, beltE1 = 0, rearK = 1;
+    const C3 = surfaceCoeffs(mod, f);
+    let extraDrag = C3.extraDrag, gripK = C3.grip, tractK = C3.traction, vmaxK = C3.vmaxK, beltE1 = 0, rearK = C3.rearK;
     if (mod === "boost") {
       if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
       this.boost = CAR.boostTime;
@@ -5429,28 +5484,7 @@ var CarPhysics = class {
         this.gravMul = f;
         this.ev.gravity = true;
       }
-    } else if (mod === "slow") extraDrag = 14 * f;
-    else if (mod === "sand") {
-      gripK = 0.8;
-      tractK = 0.65;
-      vmaxK = clamp(1 - 0.45 * f, 0.25, 1);
-      extraDrag = 5 * f;
-    } else if (mod === "mud") {
-      gripK = 0.7;
-      tractK = 0.55;
-      vmaxK = clamp(1 - 0.5 * f, 0.2, 1);
-      extraDrag = 6 * f;
-    } else if (mod === "ice") {
-      gripK = clamp(0.2 / f, 0.05, 0.85);
-      tractK = 0.45;
-    } else if (mod === "powder") {
-      gripK = clamp(0.62 / Math.sqrt(f), 0.3, 0.9);
-      tractK = 0.75;
-      vmaxK = clamp(1 - 0.28 * f, 0.4, 1);
-      extraDrag = 2.5 * f;
-    } else if (mod === "magnet") gripK = 1.6;
-    else if (mod === "drift") rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85);
-    else if (mod === "wind") {
+    } else if (mod === "wind") {
       const a = (tileParam(tile) - 100) / 100 * CAR.wind;
       rotVec(tile.r, 1, 0, TMP);
       R.vs += (TMP.x * B2.e1x + TMP.z * B2.e1z) * a * dt;
@@ -6356,7 +6390,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/replay.js
-var PHYS_VER = 17;
+var PHYS_VER = 18;
 function decodeInputs(b64) {
   const bin = atob(b64);
   const steer = [], flags = [];
