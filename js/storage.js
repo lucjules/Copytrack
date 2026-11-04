@@ -1,5 +1,35 @@
 // Persistance locale (navigateur) : réglages, records + fantômes, circuits perso.
-const PREFIX = 'shardway.';
+//
+// Portée (« scope ») : un invité écrit dans « shardway.* » (les sauvegardes d'avant les comptes restent donc
+// valables) ; chaque compte écrit dans « shardwayacct.<id du compte>.* ». Les deux familles de clés ne se
+// recouvrent pas : la progression d'un compte et celle d'un invité ne se mélangent jamais sur un même navigateur.
+// La portée se règle une fois, au lancement, avant que le jeu ne lise quoi que ce soit.
+const GUEST_PREFIX = 'shardway.';
+let PREFIX = GUEST_PREFIX;
+
+export function setScope(accountId) {
+  PREFIX = accountId ? 'shardwayacct.' + accountId + '.' : GUEST_PREFIX;
+}
+export const getScope = () => (PREFIX === GUEST_PREFIX ? '' : PREFIX.slice('shardwayacct.'.length, -1));
+
+// Clés hors portée (identité du compte, marqueur de session invité) : lues avant de choisir la portée.
+export function getGlobal(key, fallback = null) {
+  try { const v = localStorage.getItem('copytrack.' + key); return v == null ? fallback : JSON.parse(v); } catch { return fallback; }
+}
+export function setGlobal(key, value) {
+  try {
+    if (value == null) localStorage.removeItem('copytrack.' + key); else localStorage.setItem('copytrack.' + key, JSON.stringify(value));
+    return true;
+  } catch { return false; }
+}
+export function getSessionFlag(key) { try { return sessionStorage.getItem('copytrack.' + key); } catch { return null; } }
+export function setSessionFlag(key, value) {
+  try { if (value == null) sessionStorage.removeItem('copytrack.' + key); else sessionStorage.setItem('copytrack.' + key, String(value)); } catch { /* sans importance */ }
+}
+
+// Appelé après chaque écriture réussie (sert à la synchronisation du compte).
+let writeHook = null;
+export function onWrite(fn) { writeHook = fn; }
 
 function read(key, fallback) {
   try {
@@ -15,6 +45,7 @@ function read(key, fallback) {
 function write(key, value) {
   try {
     localStorage.setItem(PREFIX + key, JSON.stringify(value));
+    if (writeHook) writeHook(key);
     return true;
   } catch {
     return false;
@@ -63,7 +94,7 @@ export const DEFAULT_SETTINGS = {
   carColor: '#ffd23e',
   ghost: true,
   camera: 0,
-  playerName: 'Pilote',
+  playerName: '',         // aucun pseudo par défaut : l'écran d'accueil le demande (voir welcome.js)
   touchMode: 'buttons',   // buttons | drag
   haptics: true,
   padDeadzone: 0.15,
@@ -163,6 +194,9 @@ export function saveMyTrack(entry) {
 
 export function deleteMyTrack(id) {
   write('tracks', listMyTracks().filter((t) => t.id !== id));
+  // Pierre tombale : sans elle, la synchronisation du compte ressusciterait le circuit depuis un autre appareil.
+  const gone = read('tracksDel', {});
+  write('tracksDel', { ...(gone && typeof gone === 'object' ? gone : {}), [id]: Date.now() });
 }
 
 export function newId() {
