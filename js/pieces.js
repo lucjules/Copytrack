@@ -167,7 +167,7 @@ export function surfaceRule(p, S, s) {
   if (p.kind === 'ring') return 'pas de route dans un anneau';
   const curved = p.kind === 'loop' || p.kind === 'ribbon';
   if (S.flat && (p.rise || curved)) return 'seulement sur du plat';
-  if (s === 'water' && (p.special || p.kind === 'fork')) return 'pas sur une pièce spéciale ni une bifurcation';
+  if (s === 'water' && ((p.special && p.special !== 'checkpoint') || p.kind === 'fork')) return 'pas sur cette pièce spéciale ni une bifurcation';
   return '';
 }
 
