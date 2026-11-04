@@ -782,14 +782,28 @@ export class CarPhysics {
       const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
       const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
       if (![wx, wy, wz, vwx, vwy, vwz].every(Number.isFinite)) continue;
-      p.x += wx * pen * k; p.y += wy * pen * k; p.z += wz * pen * k;
+      // Séparer les corps en contact, mais ne pas ré-appliquer un choc si la voiture
+      // s'éloigne déjà de l'obstacle. L'ancien code ajoutait shockKick à chaque pas
+      // tant que les volumes se chevauchaient : obstacles mobiles = impulsions répétées,
+      // tremblements, catapultage et parfois état physique instable.
+      const correction = Math.min(pen * k, 2.5);
+      p.x += wx * correction; p.y += wy * correction; p.z += wz * correction;
       const vn = (v.x - vwx) * wx + (v.y - vwy) * wy + (v.z - vwz) * wz;
-      let add = vn < 0 ? -(1 + CAR.shockE) * vn : 0;
-      add += def.type === 'post' ? Math.max(0, def.kick - Math.max(0, vn) - add) : CAR.shockKick;
-      v.x += wx * add; v.y += wy * add; v.z += wz * add;
-      this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;   // le choc fait pivoter un peu
-      if (wy * this.gSign > 0.45) this.grounded = false;
-      this.ev.shock = Math.max(this.ev.shock, add);
+      let add = 0;
+      if (vn < -0.05) {
+        add = -(1 + CAR.shockE) * vn;
+        if (def.type === 'post') {
+          add = Math.max(add, Math.max(0, def.kick - add));
+        } else {
+          add += CAR.shockKick;
+        }
+      }
+      if (add > 0) {
+        v.x += wx * add; v.y += wy * add; v.z += wz * add;
+        this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;   // le choc fait pivoter un peu
+        if (wy * this.gSign > 0.45) this.grounded = false;
+        this.ev.shock = Math.max(this.ev.shock, add);
+      }
     }
   }
 
