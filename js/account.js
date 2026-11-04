@@ -10,8 +10,8 @@ const emailFor=(name)=>norm(name)+'@accounts.copytrack.invalid';
 const validName=(name)=>/^[A-Za-z0-9_]{3,20}$/.test(name);
 const validPass=(p)=>typeof p==='string'&&p.length>=8;
 
-async function request(path,{method='POST',body,token=null}={}){
-  const res=await fetch(ONLINE.url+path,{method,headers:{apikey:ONLINE.key,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:body==null?undefined:JSON.stringify(body)});
+async function request(path,{method='POST',body,token=null,headers={}}={}){
+  const res=await fetch(ONLINE.url+path,{method,headers:{apikey:ONLINE.key,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...headers},body:body==null?undefined:JSON.stringify(body)});
   const raw=await res.text();let data=null;try{data=raw?JSON.parse(raw):null}catch{data=raw}
   if(!res.ok)throw new Error(data?.msg||data?.message||data?.error_description||data?.error||'Erreur serveur ('+res.status+')');
   return data;
@@ -41,7 +41,7 @@ export const account={
   async _profile(username,token){
     const user_id=this.state.user.id;
     const q='?on_conflict=user_id';
-    const res=await request('/rest/v1/copytrack_profiles'+q,{method:'POST',token,body:{user_id,username},});
+    const res=await request('/rest/v1/copytrack_profiles'+q,{method:'POST',token,body:{user_id,username},headers:{Prefer:'resolution=merge-duplicates,return=minimal'}});
     return res;
   },
   async sync(uploadLocal=true){
