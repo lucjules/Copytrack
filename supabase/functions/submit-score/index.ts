@@ -520,6 +520,18 @@ var SURFACES = {
       "#ffd23e"
     ]
   },
+  tread: {
+    label: "Tapis roulant",
+    param: "\u2193 Vitesse \u2191",
+    def: 150,
+    min: 1,
+    max: 200,
+    c: [
+      "#ffd23e",
+      "#ffd23e",
+      "#ffd23e"
+    ]
+  },
   spring: {
     label: "Ressort lat\xE9ral",
     param: "\u2190 Force \u2192",
@@ -566,6 +578,14 @@ var SURFACES = {
       "#c05fff"
     ]
   },
+  invert: {
+    label: "Volant invers\xE9",
+    c: [
+      "#c05fff",
+      "#c05fff",
+      "#c05fff"
+    ]
+  },
   cut: {
     label: "Moteur coup\xE9",
     c: [
@@ -593,10 +613,12 @@ var SURFACE_ORDER = [
   "glider",
   "flip",
   "conveyor",
+  "tread",
   "spring",
   "glass",
   "powder",
   "reverse",
+  "invert",
   "cut"
 ];
 var PLATES = {
@@ -646,7 +668,7 @@ function surfaceRule(p, S4, s) {
   if (p.kind === "ring") return "pas de route dans un anneau";
   const curved = p.kind === "loop" || p.kind === "ribbon";
   if (S4.flat && (p.rise || curved)) return "seulement sur du plat";
-  if (s === "water" && (p.special || p.kind === "fork")) return "pas sur une pi\xE8ce sp\xE9ciale ni une bifurcation";
+  if (s === "water" && (p.special && p.special !== "checkpoint" || p.kind === "fork")) return "pas sur cette pi\xE8ce sp\xE9ciale ni une bifurcation";
   return "";
 }
 function baseY(tile) {
@@ -3772,12 +3794,14 @@ function buildBuiltin(def) {
       const i = Math.min(n - 2, Math.floor(n * o.at));
       const a = P[i], b = P[i + 1];
       const dx = b[0] - a[0], dz = b[2] - a[2], l = Math.hypot(dx, dz) || 1;
+      const q = (v, st) => Math.round(v / st) * st;
+      const ry = q(Math.atan2(dx / l, dz / l), Math.PI / 8);
       t.addDeco({
         k: o.k,
-        x: a[0] + -dz / l * (o.side || 0),
-        y: a[1],
-        z: a[2] + dx / l * (o.side || 0),
-        ry: Math.atan2(dx / l, dz / l),
+        x: q(a[0] + -dz / l * (o.side || 0), 0.5),
+        y: q(a[1], 0.1),
+        z: q(a[2] + dx / l * (o.side || 0), 0.5),
+        ry: +ry.toFixed(4),
         s: o.s || 1,
         c: 0,
         ph: o.ph || 0
@@ -4104,6 +4128,7 @@ var CarPhysics = class {
     this.beltS = 0;
     this.plateLock = "";
     this.sinkT = 0;
+    this.hazardGrace = 0.8;
     const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3);
     if (this.gSign < 0) {
       this.n.x = 0;
@@ -4182,9 +4207,9 @@ var CarPhysics = class {
   // Revêtements qui modifient les commandes (volant inversé, moteur coupé) : actifs tant
   // qu'on roule dessus, puis encore un court instant.
   _timedMods(mod) {
-    if (mod === "reverse") {
-      if (this.revT <= 0) this.ev.reverse = true;
-      this.revT = CAR.revTime;
+    if (mod === "reverse" || mod === "invert") {
+      if (this.surfMod !== mod) this.ev.reverse = true;
+      this.revT = 0;
       return true;
     }
     if (mod === "cut") {
@@ -4236,11 +4261,12 @@ var CarPhysics = class {
     const L4 = K.a + K.b;
     const maxF = K.latGrip * grip * K.frontShare;
     const maxR = K.latGrip * grip * (1 - K.frontShare) * (1 - (1 - K.driftRear) * drift) * (this.rearK ?? 1);
-    if (Math.abs(vx) < 1.5 && grip > 0.3) {
+    if (Math.abs(vx) < 1.5) {
       vx += ax * dt;
+      const lateralDamp = clamp(0.35 + grip * 0.3, 0.35, 0.85);
       BK.vx = vx;
-      BK.vy = vy * 0.6;
-      BK.w = vx * Math.tan(delta) / L4;
+      BK.vy = vy * lateralDamp;
+      BK.w = vx * Math.tan(delta) / L4 * clamp(grip, 0.2, 1);
       return BK;
     }
     const den = Math.max(Math.abs(vx), 6);
@@ -4266,6 +4292,7 @@ var CarPhysics = class {
     ev.land = 0;
     ev.boostHit = false;
     ev.bounce = false;
+    if (this.hazardGrace > 0) this.hazardGrace = Math.max(0, this.hazardGrace - dt);
     ev.loopIn = false;
     ev.loopOut = false;
     ev.loopFall = false;
@@ -4286,13 +4313,11 @@ var CarPhysics = class {
     this.prev.y = p.y;
     this.prev.z = p.z;
     this.prevYaw = this.yaw;
-    if (this.revT > 0) {
-      this.revT -= dt;
-      inp = {
-        ...inp,
-        steer: -(inp.steer || 0)
-      };
-    }
+    const reverseActive = this.rib ? this.rib.tile.s === "reverse" || this.rib.tile.s === "invert" : this.surfMod === "reverse" || this.surfMod === "invert";
+    if (reverseActive) inp = {
+      ...inp,
+      steer: -(inp.steer || 0)
+    };
     if (this.cutT > 0) {
       this.cutT -= dt;
       if (inp.throttle) inp = {
@@ -4451,6 +4476,7 @@ var CarPhysics = class {
         v.z += belt.z;
       }
       this._glassCheck(mod === "glass", vf, this.surfTile, dt);
+      if (this.ev.sink) return;
       this.slip = Math.abs(vr);
       this.fwdSpeed = vf;
       this.airTime = 0;
@@ -4484,10 +4510,12 @@ var CarPhysics = class {
     p.y += v.y * dt;
     p.z += v.z * dt;
     this._rings();
+    if (this.ev.sink) return;
     if (this._tryEnterRibbon()) return;
     if (!this.grounded && this._tryLandRibbon()) return;
     this._walls();
     this._obstacles();
+    if (this.ev.sink) return;
     this._bounds();
     const gs = this.gSign;
     const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step);
@@ -4660,17 +4688,54 @@ var CarPhysics = class {
   // par l'appelant avant chaque pas) : même mouvement en replay et après un retour (R).
   _obstacles() {
     const obs = this.track.obstacles;
-    if (!obs.length) return;
+    if (!obs.length || this.hazardGrace > 0) return;
     const t = (this.clock || 0) * DT;
     const p = this.pos, v = this.vel, n0 = this.n;
-    const cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
-    for (const d of obs) {
+    let cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
+    if (this._obstacleGridSource !== obs) {
+      const grid2 = /* @__PURE__ */ new Map(), cell2 = 20;
+      for (const d of obs) {
+        if (!d || !Number.isFinite(d.x) || !Number.isFinite(d.z)) continue;
+        const key2 = `${Math.floor(d.x / cell2)},${Math.floor(d.z / cell2)}`;
+        let bucket = grid2.get(key2);
+        if (!bucket) grid2.set(key2, bucket = []);
+        bucket.push(d);
+      }
+      this._obstacleGridSource = obs;
+      this._obstacleGrid = grid2;
+    }
+    const candidates = [], grid = this._obstacleGrid, cell = 20;
+    const gx = Math.floor(cx / cell), gz = Math.floor(cz / cell);
+    for (let ix = gx - 3; ix <= gx + 3; ix++) {
+      for (let iz = gz - 3; iz <= gz + 3; iz++) {
+        const bucket = grid.get(`${ix},${iz}`);
+        if (bucket) for (const d of bucket) candidates.push(d);
+      }
+    }
+    for (const d of candidates) {
+      cx = p.x + n0.x * 0.8;
+      cy = p.y + n0.y * 0.8;
+      cz = p.z + n0.z * 0.8;
+      if (!d || !OBST[d.k] || !Number.isFinite(d.x) || !Number.isFinite(d.y) || !Number.isFinite(d.z) || !Number.isFinite(d.s || 1) || !Number.isFinite(d.ry || 0)) continue;
       if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) continue;
       const rr = obstacleRadius(d) + 3;
       if ((cx - d.x) ** 2 + (cz - d.z) ** 2 > rr * rr) continue;
       const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
+      if (!(k > 0) || !Number.isFinite(rc)) continue;
       obstacleLocal(d, t, OB);
       toLocalObs(d, cx, cy, cz, OL);
+      if (![
+        OB.x,
+        OB.y,
+        OB.z,
+        OB.vx,
+        OB.vy,
+        OB.vz,
+        OB.on,
+        OL.x,
+        OL.y,
+        OL.z
+      ].every(Number.isFinite)) continue;
       let nx = 0, ny = 0, nz = 0, pen = 0, ovx = 0, ovy = 0, ovz = 0;
       if (def.type === "spike") {
         if (OB.on < 0.4 || this.graceT > 0) continue;
@@ -4683,11 +4748,18 @@ var CarPhysics = class {
       } else if (def.type === "ball") {
         const dx = OL.x - OB.x, dy = OL.y - OB.y, dz = OL.z;
         const dd = Math.hypot(dx, dy, dz);
-        if (dd >= def.r + rc || dd < 1e-6) continue;
-        nx = dx / dd;
-        ny = dy / dd;
-        nz = dz / dd;
-        pen = def.r + rc - dd;
+        if (dd >= def.r + rc) continue;
+        if (dd < 1e-6) {
+          nx = 0;
+          ny = 1;
+          nz = 0;
+          pen = def.r + rc;
+        } else {
+          nx = dx / dd;
+          ny = dy / dd;
+          nz = dz / dd;
+          pen = def.r + rc - dd;
+        }
         ovx = OB.vx;
         ovy = OB.vy;
       } else if (def.type === "box") {
@@ -4696,8 +4768,24 @@ var CarPhysics = class {
         const dd = Math.hypot(dx, dy, dz);
         if (dd >= rc) continue;
         if (dd < 1e-6) {
-          nx = OL.x >= OB.x ? 1 : -1;
-          pen = rc + def.hx - Math.abs(OL.x - OB.x);
+          const ex = def.hx - Math.abs(OL.x - OB.x);
+          const ey0 = OL.y, ey1 = def.hy * 2 - OL.y;
+          const ez = def.hz - Math.abs(OL.z);
+          const face = Math.min(ex, ey0, ey1, ez);
+          if (face === ey0 || face === ey1) {
+            nx = 0;
+            ny = ey0 <= ey1 ? -1 : 1;
+            nz = 0;
+          } else if (face === ez) {
+            nx = 0;
+            ny = 0;
+            nz = OL.z >= 0 ? 1 : -1;
+          } else {
+            nx = OL.x >= OB.x ? 1 : -1;
+            ny = 0;
+            nz = 0;
+          }
+          pen = Math.max(0.01, rc + Math.max(0, face));
         } else {
           nx = dx / dd;
           ny = dy / dd;
@@ -4710,36 +4798,67 @@ var CarPhysics = class {
         const s = clamp(OL.x * ca + OL.z * sa, -def.len, def.len);
         const dx = OL.x - ca * s, dy = OL.y - def.y, dz = OL.z - sa * s;
         const dd = Math.hypot(dx, dy, dz);
-        if (dd >= def.r + rc || dd < 1e-6) continue;
-        nx = dx / dd;
-        ny = dy / dd;
-        nz = dz / dd;
-        pen = def.r + rc - dd;
+        if (dd >= def.r + rc) continue;
+        if (dd < 1e-6) {
+          nx = -sa;
+          ny = 0;
+          nz = ca;
+          pen = def.r + rc;
+        } else {
+          nx = dx / dd;
+          ny = dy / dd;
+          nz = dz / dd;
+          pen = def.r + rc - dd;
+        }
         ovx = -sa * s * OB.w;
         ovz = ca * s * OB.w;
       } else {
         if (OL.y > def.h + rc) continue;
         const dd = Math.hypot(OL.x, OL.z);
-        if (dd >= def.r + rc || dd < 1e-6) continue;
-        nx = OL.x / dd;
-        nz = OL.z / dd;
-        pen = def.r + rc - dd;
+        if (dd >= def.r + rc) continue;
+        if (dd < 1e-6) {
+          nx = 1;
+          nz = 0;
+          pen = def.r + rc;
+        } else {
+          nx = OL.x / dd;
+          nz = OL.z / dd;
+          pen = def.r + rc - dd;
+        }
       }
       const c = Math.cos(d.ry || 0), sn = Math.sin(d.ry || 0);
       const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
       const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
-      p.x += wx * pen * k;
-      p.y += wy * pen * k;
-      p.z += wz * pen * k;
+      if (![
+        wx,
+        wy,
+        wz,
+        vwx,
+        vwy,
+        vwz
+      ].every(Number.isFinite)) continue;
+      const correction = Math.min(pen * k, 2.5);
+      p.x += wx * correction;
+      p.y += wy * correction;
+      p.z += wz * correction;
       const vn = (v.x - vwx) * wx + (v.y - vwy) * wy + (v.z - vwz) * wz;
-      let add = vn < 0 ? -(1 + CAR.shockE) * vn : 0;
-      add += def.type === "post" ? Math.max(0, def.kick - Math.max(0, vn) - add) : CAR.shockKick;
-      v.x += wx * add;
-      v.y += wy * add;
-      v.z += wz * add;
-      this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;
-      if (wy * this.gSign > 0.45) this.grounded = false;
-      this.ev.shock = Math.max(this.ev.shock, add);
+      let add = 0;
+      if (vn < -0.05) {
+        add = -(1 + CAR.shockE) * vn;
+        if (def.type === "post") {
+          add = Math.max(add, Math.max(0, def.kick - add));
+        } else {
+          add += CAR.shockKick;
+        }
+      }
+      if (add > 0) {
+        v.x += wx * add;
+        v.y += wy * add;
+        v.z += wz * add;
+        this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;
+        if (wy * this.gSign > 0.45) this.grounded = false;
+        this.ev.shock = Math.max(this.ev.shock, add);
+      }
     }
   }
   _probe(x, z, px, pz, y) {
@@ -5110,15 +5229,9 @@ var CarPhysics = class {
     const c = Math.cos(R.psi), s = Math.sin(R.psi);
     let vx = R.vs * c + R.vd * s, vy = -R.vs * s + R.vd * c;
     const ax = (this._longitudinal(vx, inp, this.k.maxSpeed * vmaxK, Math.min(1, load) * tractK, extraDrag, dt, Math.min(1, load)) - vx) / dt;
-    const hs = tile.v ? -1 : 1;
-    if (hs < 0) this.steer = -this.steer;
     this.rearK = rearK;
     const t = this._tires(vx, vy, this.omega, ax, load * gripK, dt);
     this.rearK = 1;
-    if (hs < 0) {
-      this.steer = -this.steer;
-      this.steerAngle = -this.steerAngle;
-    }
     vx = t.vx;
     vy = t.vy;
     this.omega = t.w;
