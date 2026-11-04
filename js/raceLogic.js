@@ -44,10 +44,13 @@ export class RaceLogic {
 
   // Retour au dernier checkpoint passé (touche R ou réapparition automatique) :
   // le chrono, les temps intermédiaires et le tour reviennent à ce moment-là.
-  rewind() {
+  // keepClock (multijoueur) : le chronomètre NE revient PAS en arrière, il continue de tourner : le retour au
+  // checkpoint coûte donc tout le temps perdu (pénalité). Les checkpoints, le tour et les temps intermédiaires
+  // reviennent, eux, à l'état du checkpoint.
+  rewind({ keepClock = false } = {}) {
     const s = this.respawn.snap;
     if (s) {
-      this.steps = s.steps;
+      if (!keepClock) this.steps = s.steps;
       this.splits.length = Math.min(this.splits.length, s.splits);
       this.collected = new Set(s.collected);
       this.lap = s.lap;
