@@ -3,6 +3,7 @@
 // 0.9 : 66 circuits, 11 chapitres de 6 (un par thème), du plus facile au plus dur.
 // Chaque circuit mélange plusieurs familles de pièces ; goal = objectif bonus.
 import { scriptTrack } from './track.js';
+import { BUILTIN_OBSTACLES } from './builtinObstacles.js';
 
 export const BUILTIN_TRACKS = [
   // ---- Chapitre 1 : Premiers tours ----------------------------------------------
@@ -451,7 +452,9 @@ export function buildBuiltin(def) {
     for (let k = 1; k < def.laps; k++) t.path.push(...one.slice(1));
   }
   // Obstacles posés le long du parcours : at = fraction du chemin, side = décalage latéral (m).
-  if (def.obst && t.path && t.path.length > 10) {
+  if (BUILTIN_OBSTACLES[def.id]) {
+    for (const o of BUILTIN_OBSTACLES[def.id]) t.addDeco(o);
+  } else if (def.obst && t.path && t.path.length > 10) {
     const P = t.path, n = def.laps > 1 ? Math.floor(P.length / def.laps) : P.length;
     for (const o of def.obst) {
       const i = Math.min(n - 2, Math.floor(n * o.at));
