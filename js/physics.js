@@ -297,7 +297,7 @@ export class CarPhysics {
   // Revêtements qui modifient les commandes (volant inversé, moteur coupé) : actifs tant
   // qu'on roule dessus, puis encore un court instant.
   _timedMods(mod) {
-    if (mod === 'reverse') { if (this.revT <= 0) this.ev.reverse = true; this.revT = CAR.revTime; return true; }
+    if (mod === 'reverse' || mod === 'invert') { if (this.surfMod !== mod) this.ev.reverse = true; this.revT = 0; return true; }
     if (mod === 'cut') { if (this.cutT <= 0) this.ev.cut = true; this.cutT = CAR.cutTime; return true; }
     return false;
   }
@@ -369,7 +369,8 @@ export class CarPhysics {
     this.prevYaw = this.yaw;
 
     // Volant inversé / moteur coupé : les commandes sont modifiées un court instant.
-    if (this.revT > 0) { this.revT -= dt; inp = { ...inp, steer: -(inp.steer || 0) }; }
+    const reverseActive = this.rib ? this.rib.tile.s === 'reverse' || this.rib.tile.s === 'invert' : this.surfMod === 'reverse' || this.surfMod === 'invert';
+    if (reverseActive) inp = { ...inp, steer: -(inp.steer || 0) };
     if (this.cutT > 0) { this.cutT -= dt; if (inp.throttle) inp = { ...inp, throttle: false }; }
     // Volant progressif (retour au centre plus rapide).
     const target = clamp(inp.steer || 0, -1, 1);
