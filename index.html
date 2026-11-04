@@ -61,14 +61,11 @@
         <button data-action="play" class="btn big primary">Carrière</button>
         <button data-action="daily" class="btn big">Défi du jour <small id="daily-best"></small></button>
         <button data-action="community" class="btn big">Communauté <small>circuits en ligne</small></button>
-        <button data-action="multi" class="btn big">Multijoueur <small>course en direct</small></button>
         <button data-action="editor" class="btn big">Éditeur de circuits</button>
         <button data-action="garage" class="btn big">Garage <small>personnalisation</small></button>
         <button data-action="mytracks" class="btn big">Mes circuits</button>
         <button data-action="import" class="btn big">Importer un code</button>
-        <button data-action="profile" class="btn big">Profil et sauvegarde</button>
-        <button data-action="options" class="btn big">Options</button>
-        <button data-action="help" class="btn big subtle">Commandes</button>
+        <button data-action="profile" class="btn big">Profil <small>compte, sauvegardes, options, commandes</small></button>
       </nav>
     </div>
     <footer class="menu-foot" id="menu-foot">Copytrack · un jeu de course original · propulsé par three.js</footer>
@@ -98,6 +95,7 @@
     <header class="screen-head">
       <button class="btn" data-action="back">← Retour</button>
       <h2>Communauté</h2>
+      <button class="btn primary" data-action="multi" title="Courir en direct avec d'autres joueurs, sur un circuit de la communauté ou le tien">👥 Multijoueur</button>
       <div class="tabs comm-tabs" id="comm-tabs">
         <button class="tab on" data-sort="recent">Récents</button>
         <button class="tab" data-sort="popular">Populaires</button>
@@ -112,12 +110,24 @@
   </section>
 
   <!-- Options -->
-  <section id="options" class="screen hidden">
+
+  <!-- Profil -->
+  <!-- Profil : compte, sauvegardes, options, commandes -->
+  <section id="profile" class="screen hidden">
     <header class="screen-head">
       <button class="btn" data-action="back">← Retour</button>
-      <h2>Options</h2>
+      <h2>Profil</h2>
+      <div class="tabs" id="prof-tabs" role="tablist" aria-label="Sections du profil">
+        <button class="tab on" role="tab" data-ptab="account">Compte</button>
+        <button class="tab" role="tab" data-ptab="saves">Sauvegardes</button>
+        <button class="tab" role="tab" data-ptab="options">Options</button>
+        <button class="tab" role="tab" data-ptab="controls">Commandes</button>
+      </div>
     </header>
-    <div class="panel form">
+    <div class="prof-panel" data-ppanel="account"><div class="panel form" id="profile-body"></div></div>
+    <div class="prof-panel hidden" data-ppanel="saves"><div class="panel form" id="saves-body"></div></div>
+    <div class="prof-panel hidden" data-ppanel="options">
+      <div class="panel form">
       <h3 class="opt-h">Son</h3>
       <label><span>Volume des effets</span><input type="range" id="opt-volume" min="0" max="1" step="0.05"></label>
       <label><span>Volume de la musique</span><input type="range" id="opt-music" min="0" max="1" step="0.05"></label>
@@ -146,16 +156,19 @@
       <div class="opt-row"><span>Plein écran</span><button class="btn" data-action="fullscreen">Activer</button></div>
       <div class="opt-row"><span>Touches du clavier et de la manette</span><button class="btn primary" data-action="controls">Personnaliser les commandes</button></div>
       <button class="btn subtle" data-action="reset-records">Effacer tous les records</button>
+      </div>
     </div>
-  </section>
-
-  <!-- Profil -->
-  <section id="profile" class="screen hidden">
-    <header class="screen-head">
-      <button class="btn" data-action="back">← Retour</button>
-      <h2>Profil et sauvegarde</h2>
-    </header>
-    <div class="panel form" id="profile-body"></div>
+    <div class="prof-panel hidden" data-ppanel="controls">
+      <div class="tabs" id="bind-tabs">
+        <button class="tab on" data-tab="race">Course</button>
+        <button class="tab" data-tab="editor">Éditeur</button>
+        <button class="tab" data-tab="pad">Manette</button>
+        <button class="btn subtle" data-action="help">Aide-mémoire</button>
+        <button class="btn subtle" data-action="reset-keys">Rétablir par défaut</button>
+      </div>
+      <p class="bind-hint" id="bind-hint">Clique sur une case puis appuie sur la touche voulue (Échap pour annuler, × pour vider).</p>
+      <div class="panel bind-list" id="bind-list"></div>
+    </div>
   </section>
 
   <!-- Garage -->
@@ -181,20 +194,6 @@
   <button id="fs-btn" class="btn icon fs-btn hidden" data-action="fullscreen" title="Plein écran">⛶</button>
 
   <!-- Commandes -->
-  <section id="controls" class="screen hidden">
-    <header class="screen-head">
-      <button class="btn" data-action="options">← Options</button>
-      <h2>Commandes</h2>
-      <button class="btn subtle" data-action="reset-keys">Rétablir par défaut</button>
-    </header>
-    <div class="tabs" id="bind-tabs">
-      <button class="tab on" data-tab="race">Course</button>
-      <button class="tab" data-tab="editor">Éditeur</button>
-      <button class="tab" data-tab="pad">Manette</button>
-    </div>
-    <p class="bind-hint" id="bind-hint">Clique sur une case puis appuie sur la touche voulue (Échap pour annuler, × pour vider).</p>
-    <div class="panel bind-list" id="bind-list"></div>
-  </section>
 
   <!-- HUD de course -->
   <div id="speedfx" aria-hidden="true"></div>

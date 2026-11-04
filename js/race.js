@@ -87,6 +87,7 @@ export class RaceSession {
     this.multi = opts.multi || null;
     this.remote = new Map();
     this.teleSeq = 0;
+    this.netTick = 0;     // horloge d'envoi : ne recule JAMAIS, même quand on recommence un essai (le tampon des autres joueurs en dépend)
     if (!this.demo && !this.replay && !opts.fromEditor && !this.multi) this._setupGhosts();
     if (this.multi) this._setupRemotes();
     this.camMode = this.demo ? 0 : app.settings.camera || 0;
@@ -127,7 +128,7 @@ export class RaceSession {
     if (!this.multi || this.multi.room.closed) return;
     const p = this.phys, q = this.quat;
     this.multi.room.sendSnapshot({
-      steps: this.logic.steps,
+      steps: this.netTick,
       pos: p.pos, quat: q, vel: p.vel, vehicle: p.vehicle,
       flags: extraFlags | (p.boost > 0 ? F_BOOST : 0) | (p.grounded ? F_GROUNDED : 0),
       tele: this.teleSeq, cp: this.logic.collected.size, lap: this.logic.lap,
@@ -194,6 +195,19 @@ export class RaceSession {
       app.ui.hideOverlay('finish');
     }
     this.car.flames.forEach((f) => { f.visible = false; });
+  }
+
+  // Multijoueur asynchrone (à la Polytrack) : un nouvel essai, tout de suite, sans décompte ni retour au salon. Chacun a son
+  // chrono et recommence quand il veut ; les autres voient la voiture « apparaître » au départ (compteur de téléportation).
+  _newAttempt() {
+    if (!this.multi || (this.state !== 'racing' && this.state !== 'finished')) return;
+    this.restart();
+    this.state = 'racing';
+    this.countShown = 3;
+    this.acc = 0;
+    this.teleSeq = (this.teleSeq + 1) & 255;
+    this._sendNet();
+    this.app.ui.hud.message('', 0.01);
   }
 
   respawn(fromInput = false) {
@@ -289,6 +303,7 @@ export class RaceSession {
     this.phys.clock = this.logic.steps;   // horloge des obstacles et pièces mobiles = chrono
     this.phys.step(inp);
     this._orient();
+    if (this.multi && ++this.netTick % SEND_EVERY_STEPS === 0) this._sendNet(this.state === 'finished' ? F_FINISHED : 0);
     const ev = this.phys.ev;
     if (this.state === 'racing') {
       if (ev.wall > 4) this.stats.wallHits++;
@@ -401,7 +416,6 @@ export class RaceSession {
 
     if (this.state === 'racing') {
       const res = this.logic.update(this.phys);
-      if (this.multi && this.logic.steps % SEND_EVERY_STEPS === 0) this._sendNet();
       if (!this.demo && this.logic.steps % GHOST_EVERY === 0) {
         const p = this.phys.pos, q = this.quat;
         this.ghostRec.push(p.x, p.y, p.z, q.x, q.y, q.z, q.w);
@@ -464,12 +478,12 @@ export class RaceSession {
     if (this.replay) { this._replayEnded(); return; }
     if (this.multi) {
       // Multijoueur : ni record, ni pièces, ni classement en ligne (le chrono y suit des règles différentes). Le temps est
-      // annoncé aux autres joueurs et le tableau des résultats s'affiche.
+      // annoncé aux autres ; on peut recommencer tout de suite (R ou T), sans jamais repasser par le salon.
       this._sendNet(F_FINISHED);
-      this.multi.room.reportFinish(Math.round(time / DT));
-      app.audio.finish(false);
+      const best = this.multi.room.reportFinish(Math.round(time / DT));
+      app.audio.finish(best);
       app.ui.hud.time(time, true);
-      app.showMultiResults(this.multi.room);
+      app.ui.hud.message(`🏁 ${formatTime(time)}${best ? ' · meilleur temps !' : ''} — R : nouvel essai`, 6);
       return;
     }
     // Dernière course, rejouable depuis l'écran d'arrivée.
@@ -551,8 +565,8 @@ export class RaceSession {
         return;
       }
       if (this.state === 'paused') return this.render(dt, 0);
-      if ((input.act('restart') || input.hit('NumpadEnter')) && !this.multi) { this.restart(); return; }
-      if (input.act('respawn') && !this.replay) this.respawn(true);
+      if (input.act('restart') || input.hit('NumpadEnter')) { if (this.multi) this._newAttempt(); else { this.restart(); return; } }
+      if (input.act('respawn') && !this.replay) { if (this.multi && this.state === 'finished') this._newAttempt(); else this.respawn(true); }
       if (input.act('camera')) this.cycleCamera();
       if (input.act('horn')) app.audio.horn(profile().loadout.horn);
     }
