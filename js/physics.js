@@ -66,7 +66,7 @@ export const CAR = {
   spring: 56,         // poussée latérale du ressort à pleine force (m/s) : à 150 %, saut d’une voie (24 m)
   springHop: 11,      // saut du ressort (passe par-dessus la bordure)
   glassSpeed: 25,     // le verre cède sous cette vitesse (m/s, réglage 100 %)
-  glassImpact: 15,    // ... ou sous un atterrissage plus violent (m/s)
+  glassImpact: 24,    // ... ou sous un atterrissage plus violent (m/s)
   revTime: 1.5,       // volant inversé : durée après la dernière plaque
   cutTime: 1.0,       // moteur coupé : durée après la dernière plaque
   shockE: 0.5,        // obstacles : rebond (0 = mou, 1 = élastique)
@@ -226,6 +226,7 @@ export class CarPhysics {
     this._flipNow = false;
     this._springNow = false;
     this.revT = 0; this.cutT = 0; this.glassT = 0;
+    this.graceT = 1.5;   // protection après un (re)départ : ni verre cassé ni piques (évite les boucles de retours)
     this.beltX = 0; this.beltZ = 0; this.beltS = 0;
     this.plateLock = '';
     this.sinkT = 0;
@@ -313,7 +314,7 @@ export class CarPhysics {
 
   // Le verre cède si la voiture y roule trop lentement.
   _glassCheck(on, speed, tile, dt) {
-    if (!on) { this.glassT = 0; return; }
+    if (!on || this.graceT > 0) { this.glassT = 0; return; }
     if (Math.abs(speed) < CAR.glassSpeed * (tileParam(tile) / 100)) this.glassT += dt; else this.glassT = 0;
     if (this.glassT > 0.35) { this.glassT = 0; this.ev.glass = true; this.ev.sink = true; }
   }
@@ -363,6 +364,7 @@ export class CarPhysics {
   step(inp) {
     const dt = DT, p = this.pos, v = this.vel, ev = this.ev;
     this.track.time = (this.clock || 0) * dt;   // position des pièces mobiles
+    if (this.graceT > 0) this.graceT -= dt;
     ev.wall = 0; ev.land = 0; ev.boostHit = false; ev.bounce = false;
     ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.moto = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false; ev.glass = false; ev.spring = false; ev.reverse = false; ev.cut = false; ev.spike = false; ev.shock = 0;
     this.prev.x = p.x; this.prev.y = p.y; this.prev.z = p.z;
@@ -552,7 +554,7 @@ export class CarPhysics {
       p.y = s.h;
       // Une nouvelle plaque peut agir (mais pas la même, si on retombe dessus).
       if ((this.plateLock === 'flip' || this.plateLock === 'spring') && s.tile !== this.lockTile) this.plateLock = '';
-      if (s.mod === 'glass' && -vn > CAR.glassImpact) { this.ev.glass = true; this.ev.sink = true; }
+      if (s.mod === 'glass' && -vn > CAR.glassImpact && this.graceT <= 0) { this.ev.glass = true; this.ev.sink = true; }
       if (vn < 0) {
         v.x -= s.nx * vn; v.y -= s.ny * vn; v.z -= s.nz * vn;
         ev.land = -vn;
@@ -692,7 +694,7 @@ export class CarPhysics {
       toLocalObs(d, cx, cy, cz, OL);
       let nx = 0, ny = 0, nz = 0, pen = 0, ovx = 0, ovy = 0, ovz = 0;
       if (def.type === 'spike') {
-        if (OB.on < 0.4) continue;
+        if (OB.on < 0.4 || this.graceT > 0) continue;
         if (Math.abs(OL.x) < def.hx + rc * 0.6 && Math.abs(OL.z) < def.hz + rc * 0.6 && OL.y < def.hy * OB.on + rc && OL.y > -1.5) {
           this.ev.spike = true; this.ev.sink = true;
           return;

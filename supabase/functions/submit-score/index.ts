@@ -3838,7 +3838,7 @@ var CAR = {
   spring: 56,
   springHop: 11,
   glassSpeed: 25,
-  glassImpact: 15,
+  glassImpact: 24,
   revTime: 1.5,
   cutTime: 1,
   shockE: 0.5,
@@ -4098,6 +4098,7 @@ var CarPhysics = class {
     this.revT = 0;
     this.cutT = 0;
     this.glassT = 0;
+    this.graceT = 1.5;
     this.beltX = 0;
     this.beltZ = 0;
     this.beltS = 0;
@@ -4204,7 +4205,7 @@ var CarPhysics = class {
   }
   // Le verre cède si la voiture y roule trop lentement.
   _glassCheck(on, speed, tile, dt) {
-    if (!on) {
+    if (!on || this.graceT > 0) {
       this.glassT = 0;
       return;
     }
@@ -4260,6 +4261,7 @@ var CarPhysics = class {
   step(inp) {
     const dt = DT, p = this.pos, v = this.vel, ev = this.ev;
     this.track.time = (this.clock || 0) * dt;
+    if (this.graceT > 0) this.graceT -= dt;
     ev.wall = 0;
     ev.land = 0;
     ev.boostHit = false;
@@ -4511,7 +4513,7 @@ var CarPhysics = class {
     } else if (!this.grounded && gap <= 0.02 && gap > -CAR.step && vn <= 0.5) {
       p.y = s.h;
       if ((this.plateLock === "flip" || this.plateLock === "spring") && s.tile !== this.lockTile) this.plateLock = "";
-      if (s.mod === "glass" && -vn > CAR.glassImpact) {
+      if (s.mod === "glass" && -vn > CAR.glassImpact && this.graceT <= 0) {
         this.ev.glass = true;
         this.ev.sink = true;
       }
@@ -4671,7 +4673,7 @@ var CarPhysics = class {
       toLocalObs(d, cx, cy, cz, OL);
       let nx = 0, ny = 0, nz = 0, pen = 0, ovx = 0, ovy = 0, ovz = 0;
       if (def.type === "spike") {
-        if (OB.on < 0.4) continue;
+        if (OB.on < 0.4 || this.graceT > 0) continue;
         if (Math.abs(OL.x) < def.hx + rc * 0.6 && Math.abs(OL.z) < def.hz + rc * 0.6 && OL.y < def.hy * OB.on + rc && OL.y > -1.5) {
           this.ev.spike = true;
           this.ev.sink = true;
@@ -5991,7 +5993,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/replay.js
-var PHYS_VER = 16;
+var PHYS_VER = 17;
 function decodeInputs(b64) {
   const bin = atob(b64);
   const steer = [], flags = [];
