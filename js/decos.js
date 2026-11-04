@@ -478,6 +478,7 @@ function gbOffset(gb, ox, oy, oz) {
 }
 
 export function decoColor(d) {
+  if (d.cc) return d.cc;           // couleur personnalisée (#rrggbb), choisie dans l'Inspecteur › Couleurs
   return d.c > 0 ? DECO_COLORS[d.c - 1] || null : null;
 }
 

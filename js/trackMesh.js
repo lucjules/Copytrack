@@ -592,8 +592,9 @@ function platform(gb, glow, tile, fx = null) {
   const y0 = y - SLAB_T;
   const s = tile.s || '';
   const st = SURFACE_STYLE[s];
-  const top = s ? st.road : [PALETTE.platA, PALETTE.platB];
-  gb.box(-HALF, y0, -HALF, HALF, y - 0.001, HALF, PALETTE.slab, [null, null, top[0], PALETTE.under]);
+  const sty = tile.col || tile.th ? styleFor(tile) : null;          // thème / couleurs personnalisées
+  const top = s ? st.road : sty ? sty.road : [PALETTE.platA, PALETTE.platB];
+  gb.box(-HALF, y0, -HALF, HALF, y - 0.001, HALF, (sty && sty.pal && sty.pal.slab) || PALETTE.slab, [null, null, top[0], (sty && sty.pal && sty.pal.under) || PALETTE.under]);
   const n = 4, w = CELL / n;
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
@@ -602,7 +603,7 @@ function platform(gb, glow, tile, fx = null) {
     }
   }
   const e = 0.4;
-  const edge = s ? styleFor(tile).railA : PALETTE.platEdge;
+  const edge = s || sty ? styleFor(tile).railA : PALETTE.platEdge;
   for (const [x0, z0, x1, z1] of [[-HALF, -HALF, HALF, -HALF + e], [-HALF, HALF - e, HALF, HALF], [-HALF, -HALF, -HALF + e, HALF], [HALF - e, -HALF, HALF, HALF]]) {
     gb.quad([x0, y + 0.02, z1], [x1, y + 0.02, z1], [x1, y + 0.02, z0], [x0, y + 0.02, z0], edge);
   }
@@ -868,7 +869,7 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
   } else if (p.kind === 'fork') {
     forkMesh(gb, glow, tile, styleFor(tile));
   } else if (tile.t === 'tube' || tile.t === 'tubeIn' || tile.t === 'tubeMid') {
-    crossSweep(gb, glow, tile, styleFor({ s: '' }));
+    crossSweep(gb, glow, tile, styleFor({ s: '', th: tile.th, col: tile.col }));
     // Revêtement d'une section de tube : bandes lumineuses au fond.
     if (s) surfaceDecals(glow, lineStrip(0, HALF, -HALF, baseY(tile), baseY(tile), 4), tile);
   } else {

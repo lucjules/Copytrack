@@ -184,12 +184,12 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
   if (flag === 'th') return p.kind !== 'ring';
   if (p.kind === 'ring' || p.kind === 'fork') return false;
   if (flag === 'nb') return lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube'));
-  if (flag === 'tn') return lineLike && !p.special && !(tile && tile.v);
+  if (flag === 'tn') return lineLike && !p.special && !(tile && (tile.v || tile.cp));
   // Pièce mobile : route « simple » (droite, virage, pente, plateforme), pas à l'envers, pas de checkpoint dessus.
   if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !(tile && (tile.v || tile.cp));
   // Checkpoint en option : sur une route plate (ligne ou virage) ; l'anneau aérien seulement sur une ligne droite à l'endroit.
   if (flag === 'cp') {
-    if (!(lineLike && !p.special && !p.rise) || (tile && tile.mv)) return false;
+    if (!(lineLike && !p.special && !p.rise) || (tile && (tile.mv || tile.tn))) return false;
     if (val === 2) return p.kind === 'line' && !(tile && tile.v);
     return true;
   }

@@ -1055,3 +1055,35 @@ body.touch kbd { display: none; }
   .tool-btn svg { width: 24px; height: 24px; }
   .tool-btn { font-size: 9px; padding: 2px 1px 3px; }
 }
+
+/* ---- Phase 2 : familles de pièces (caractéristiques), options combinées, onglets de l'inspecteur ---- */
+.fam-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.fam-card { display: flex; gap: 6px; align-items: stretch; padding: 4px 6px 4px 4px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); }
+.fam-card.on { border-color: var(--cyan); background: rgba(95, 242, 255, 0.08); }
+.fam-card .fam-main { width: 76px; min-width: 76px; }
+.fam-traits { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 112px; }
+.fam-traits label { display: grid; grid-template-columns: 74px 1fr; gap: 4px; align-items: center; font-size: 11px; color: var(--muted); }
+.fam-traits select { min-width: 0; font: inherit; font-size: 12px; color: var(--text); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line); border-radius: 6px; padding: 2px 4px; }
+.fam-traits select option:disabled { color: #777; }
+.opt-panel { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: flex-start; margin-bottom: 4px; }
+.opt-group { display: flex; flex-direction: column; gap: 3px; }
+.opt-group > b { font-size: 11px; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+.opt-panel .pal-chips { margin-bottom: 0; }
+.chip.dim { opacity: 0.38; }
+.chip[hidden], .btn[hidden] { display: none; }
+.chip .th-sw { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; vertical-align: -1px; border: 1px solid rgba(255, 255, 255, 0.4); }
+#ed-opt-hint[data-mode="combo"]::before { content: "Mode combiné — "; color: var(--cyan); }
+#ed-opt-hint[data-mode="apply"]::before { content: "Mode « appliquer » — "; color: var(--cyan); }
+@media (max-width: 760px) {
+  .fam-card .fam-main { width: 54px; min-width: 54px; }
+  .fam-traits { min-width: 96px; }
+  .fam-traits label { grid-template-columns: 1fr; gap: 0; }
+}
+.insp-tabs { display: flex; gap: 4px; }
+.insp-tabs .btn { flex: 1; padding: 5px 4px; font-size: 13px; }
+.insp-tabs .btn.on { background: #5ff2ff33; border-color: #5ff2ff; }
+.insp-color { display: grid; grid-template-columns: 82px 44px 1fr auto; gap: 6px; align-items: center; color: var(--muted); }
+.insp-color input[type="color"] { width: 44px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: transparent; cursor: pointer; }
+.insp-color .code { font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
+.insp-color .btn { padding: 2px 8px; font-size: 12px; }
+.insp-note { font-size: 12px; color: var(--muted); }

@@ -17,6 +17,8 @@ import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
 import { Autopilot } from '../js/autopilot.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
 import { DT, CELL, LEVEL_H, HALF } from '../js/constants.js';
+import { arrowPose, retypePlacement, traitsOf } from '../js/tileInfo.js';
+import { EditorSession, armedOptions } from '../js/editor.js';
 
 let failures = 0;
 function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 6).join('\n       ')); } }
@@ -349,6 +351,118 @@ test('Bifurcation à deux revêtements : la voie déportée a le sien (physique)
   const h = tr.add({ t: 'fork', x: 8, z: 0, l: 0, r: 0, s: 'sand' });
   tr.surfaceAt(8 * CELL + 36, 1, 2, o); assert.equal(o.mod, 'sand', 'sans s2, toute la pièce garde s');
   void f; void g; void h;
+});
+
+
+console.log('Éditeur : pose combinée pièce + options, inspecteur');
+function mkEd(tool, opts = {}) {
+  const track = new Track('t');
+  const calls = { commit: 0, changed: 0, flash: [] };
+  const self = Object.create(EditorSession.prototype);
+  Object.assign(self, {
+    track, tool, level: 0, rot: 0, hover: { x: 12, z: 12, cx: 0, cz: 0 }, surfParam: {}, opts: { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, th: 0, ...opts },
+    app: { ui: { flash: (m) => calls.flash.push(m) }, audio: { place() {}, error() {} } },
+    _commit: () => calls.commit++, _changed: () => calls.changed++,
+  });
+  return { self, track, calls };
+}
+test('options armées : le dernier choix l’emporte sur les incompatibles', () => {
+  const none = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, th: 0 };
+  let o = armedOptions(none, 'v', 1); assert.deepEqual([o.v, o.cp], [1, 0]);
+  o = armedOptions(o, 'cp', 2); assert.deepEqual([o.v, o.cp], [0, 2], 'l’anneau aérien ne va pas à l’envers');
+  o = armedOptions(o, 'mv', 3); assert.deepEqual([o.mv, o.cp], [3, 0]);
+  o = armedOptions(o, 'cp', 1); assert.deepEqual([o.mv, o.cp], [0, 1]);
+  o = armedOptions(o, 'tn', 1); assert.deepEqual([o.tn, o.cp], [1, 0], 'tunnel et portique ne cohabitent pas');
+  o = armedOptions(o, 'th', 2); assert.equal(o.th, 2); o = armedOptions(o, 'th', 2); assert.equal(o.th, 0, 'recliquer retire');
+  assert.deepEqual(armedOptions(none, 'nb', 1), { ...none, nb: 1 });
+});
+test('_candidate : la pièce porte les options armées (aperçu et pose identiques)', () => {
+  const { self } = mkEd('straight', { v: 1, th: 2 });
+  self.level = 2;
+  assert.deepEqual(self._candidate(), { t: 'straight', x: 0, z: 0, l: 2, r: 0, s: '', v: 1, th: 2 });
+  const { self: e2 } = mkEd('loopTriple', { cp: 1 });
+  assert.equal(e2._candidate().x, -1, 'empreinte 4×4 centrée sur la case visée');
+});
+test('_act : pose Ligne droite + Tunnel + Thème Roche, puis un 2e clic identique ne repose rien', () => {
+  const { self, track, calls } = mkEd('straight', { tn: 1, th: 3 });
+  self._act(false);
+  assert.equal(track.tiles.length, 1);
+  assert.deepEqual([track.tiles[0].t, track.tiles[0].tn, track.tiles[0].th], ['straight', 1, 3]);
+  self._act(false);
+  assert.equal(calls.commit, 1, 'rien de nouveau à poser');
+  self.opts.th = 1; self._act(false);                              // même pièce, autre option : remplacée
+  assert.equal(track.tiles.length, 1); assert.equal(track.tiles[0].th, 1); assert.equal(calls.commit, 2);
+});
+test('_act : une option impossible sur la pièce est ignorée avec un message, le reste est posé', () => {
+  const { self, track, calls } = mkEd('loop', { cp: 1, th: 2, tn: 1 });
+  self._act(false);
+  const t = track.tiles[0];
+  assert.deepEqual([t.cp, t.tn, t.th], [0, 0, 2]);
+  assert.ok(calls.flash.some((m) => /Option ignorée/.test(m) && /checkpoint/.test(m) && /tunnel/.test(m)), calls.flash.join('|'));
+});
+test('_act : pièce posée à l’envers au niveau 0 refusée, au niveau 2 acceptée', () => {
+  const { self, track, calls } = mkEd('straight', { v: 1 });
+  self._act(false); assert.equal(track.tiles.length, 0); assert.ok(calls.flash.length);
+  self.level = 2; self._act(false); assert.equal(track.tiles.length, 1); assert.equal(track.tiles[0].v, 1);
+});
+test('Courbe montante posée : le niveau suit pour la case suivante (aide à la pose)', () => {
+  const { self } = mkEd('cv2');
+  self._act(false);
+  const [bx, bz] = [0, 1];                                            // derrière la pièce (sud) : même niveau ; à droite (est) : +2
+  assert.equal(self.autoLevel.get('1,0'), 2); assert.equal(self.autoLevel.get(`${bx},${bz}`), 0);
+  const { self: e2 } = mkEd('cvL2'); e2._act(false);
+  assert.equal(e2.autoLevel.get('-1,0'), 2, 'la version gauche sort à gauche');
+});
+test('retypePlacement : looping 1 → 3 boucles garde la pièce en place (2×2 → 4×4), refuse si la place manque', () => {
+  const tr = new Track('r');
+  const lp = tr.add({ t: 'loop', x: 4, z: 4, l: 0, r: 0 });
+  const c = retypePlacement(tr, lp, 'loopTriple');
+  assert.ok(c); assert.deepEqual([c.t, c.x, c.z], ['loopTriple', 3, 3]);
+  assert.equal(tr.tiles.length, 1, 'la pièce d’origine reste en place le temps du test');
+  const blocker = tr.add({ t: 'straight', x: 3, z: 3, l: 0, r: 0 }); void blocker;
+  tr.add({ t: 'straight', x: 6, z: 6, l: 0, r: 0 }); tr.add({ t: 'straight', x: 5, z: 3, l: 0, r: 0 });
+  // Toutes les ancres autour sont maintenant gênées par une pièce voisine : pas de variante 4×4 possible
+  tr.add({ t: 'straight', x: 3, z: 6, l: 0, r: 0 }); tr.add({ t: 'straight', x: 6, z: 3, l: 0, r: 0 }); tr.add({ t: 'straight', x: 4, z: 3, l: 0, r: 0 });
+  assert.equal(retypePlacement(tr, lp, 'loopTriple'), null);
+  assert.equal(tr.tiles.includes(lp), true);
+});
+test('_retypeFamily : l’objet gardé (sélection de l’Inspecteur), nouvelle empreinte ; _legacyToOption convertit les anciens checkpoints', () => {
+  const { self, track } = mkEd('straight');
+  const lp = track.add({ t: 'loopDouble', x: 6, z: 6, l: 1, r: 1, s: 'ice' });
+  assert.ok(self._retypeFamily(lp, 'loopBigTripleL'));
+  assert.equal(track.tiles[track.tiles.length - 1], lp); assert.equal(lp.t, 'loopBigTripleL'); assert.equal(lp.s, 'ice'); assert.equal(lp.r, 1); assert.equal(lp.l, 1);
+  assert.equal(track.tilesAt(lp.x, lp.z).includes(lp), true);
+  for (const [legacy, t, cp] of [['checkpoint', 'straight', 1], ['cpCurve', 'curve', 1], ['cpRing', 'straight', 2]]) {
+    const tl = track.add({ t: legacy, x: 20, z: 20, l: 0, r: 2 });
+    assert.ok(self._legacyToOption(tl), legacy);
+    assert.deepEqual([tl.t, tl.cp, tl.r], [t, cp, 2]);
+    assert.equal(cpKind(tl) !== null, true);
+    track.remove(tl);
+  }
+});
+test('flèche de direction : cap = sens de parcours (droite, virage, courbe gauche, pièce tournée, looping)', () => {
+  const yawVec = (a) => [-Math.sin(a.yaw), -Math.cos(a.yaw)];
+  const close = (v, w) => Math.hypot(v[0] - w[0], v[1] - w[1]) < 0.12;
+  for (let r = 0; r < 4; r++) {
+    const f = [[0, -1], [1, 0], [0, 1], [-1, 0]][r];
+    assert.ok(close(yawVec(arrowPose(tile({ t: 'straight', r }))), f), 'droite r=' + r);
+    assert.ok(close(yawVec(arrowPose(tile({ t: 'loop', r }))), f), 'looping r=' + r);
+  }
+  const s = Math.SQRT1_2;
+  assert.ok(close(yawVec(arrowPose(tile({ t: 'curve' }))), [s, -s]), 'virage à droite : nord-est au milieu');
+  assert.ok(close(yawVec(arrowPose(tile({ t: 'cvL2' }))), [-s, -s]), 'courbe gauche : nord-ouest');
+  const a = arrowPose(tile({ t: 'cv4', l: 3 }));
+  assert.ok(a.y > baseY(tile({ t: 'cv4', l: 3 })) + 8, 'la flèche suit la montée (milieu de la courbe)');
+  const inv = arrowPose(tile({ t: 'straight', v: 1, l: 2 }));
+  assert.ok(inv.y < baseY(tile({ t: 'straight', l: 2 })), 'à l’envers, la flèche est sous le niveau (côté route)');
+  const wall = arrowPose(tile({ t: 'wall', r: 1 }));
+  assert.ok(close(yawVec(wall), [1, 0]), 'mur vertical : sens nominal de la pièce');
+  for (const type of Object.keys(PIECES)) { const q = arrowPose(tile({ t: type })); assert.ok(Number.isFinite(q.x + q.y + q.z + q.yaw + q.len), type); }
+});
+test('traitsOf : décrit la famille d’une pièce (null sinon)', () => {
+  assert.equal(traitsOf('twist'), null);
+  const t = traitsOf('loopBigTripleL');
+  assert.equal(t.label, 'Looping'); assert.deepEqual(t.values, { dir: 'L', size: 'g', turns: '3' }); assert.equal(t.traits.length, 3);
 });
 
 console.log('Conduite : un circuit qui utilise les nouvelles pièces');

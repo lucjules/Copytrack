@@ -93,7 +93,7 @@ BUILTIN_TRACKS.forEach((def, i) => {
   const res = run(track);
   if (!res.ok) process.exitCode = 1;   // npm test échoue si un circuit n'est plus finissable
   const tiles = track.tiles.length;
-  const cps = track.tiles.filter((t) => PIECES[t.t].special === 'checkpoint').length;
+  const cps = new RaceLogic(track).cps.length;
   console.log(`#${i + 1} ${def.name.padEnd(22)} ${String(tiles).padStart(3)} pièces, ${cps} CP  ` +
     (res.ok ? `OK ${res.time.toFixed(3)} s` : `ÉCHEC ${res.reason}`) +
     (res.respawns ? `  (${res.respawns} réapparitions)` : '') +

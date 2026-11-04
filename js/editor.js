@@ -2,16 +2,18 @@
 // options (envers, sans bordures, tunnel), décorations libres, vérification, historique.
 import * as THREE from './vendor/three.module.min.js';
 import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL, DIRS, MAX_DECOS } from './constants.js';
-import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, surfaceRule, flagAllowed } from './pieces.js';
+import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, surfaceRule, flagAllowed, THEMES, MOVER } from './pieces.js';
+import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from './families.js';
+import { retypePlacement } from './tileInfo.js';
 import { Track, DECORS } from './track.js';
-import { TrackView, buildTileMesh, SURFACE_STYLE, tint } from './trackMesh.js';
+import { TrackView, buildTileMesh, SURFACE_STYLE, tint, THEME_SWATCH } from './trackMesh.js';
 import { buildDecoMesh, safeUrl } from './decos.js';
 import { isObstacle } from './obstacles.js';
 import { DECO_CATS, DECO_LABELS, DECO_COLORS } from './decoData.js';
 import { setEditorDraft, saveMyTrack, newId, formatTime } from './storage.js';
 import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel } from './editorTools.js';
 import { centerlineWorld } from './ribbons.js';
-import { Inspector, MIRROR_TYPES } from './inspector.js';
+import { Inspector, MIRROR_TYPES, LEGACY_CP } from './inspector.js';
 import { keyLabel } from './input.js';
 import { esc } from './ui.js';
 import { pickObjects, ERASE_FILTERS, ERASE_FILTER_ORDER, LAYER_ALL, LAYER_DECO, tileBounds } from './editorPick.js';
@@ -34,6 +36,9 @@ export const PALETTE_ORDER = [
   { id: 'crest90', key: 'KeyJ', k: 'J' },
   { id: 'bank', key: 'KeyO', k: 'O' },
   { id: 'bankBig', key: '', k: '' },
+  { id: 'hugecurve', key: '', k: '' },
+  { id: 'steep4', key: '', k: '' },
+  { id: 'cv1', key: '', k: '' },
   { id: 'tube', key: '', k: '' },
   { id: 'tubeIn', key: 'KeyY', k: 'Y' },
   { id: 'tubeMid', key: '', k: '' },
@@ -43,9 +48,6 @@ export const PALETTE_ORDER = [
   { id: 'forkL', key: '', k: '' },
   { id: 'gentle', key: '', k: '' },
   { id: 'ring', key: '', k: '' },
-  { id: 'checkpoint', key: 'Digit8', k: '8' },
-  { id: 'cpCurve', key: '', k: '' },
-  { id: 'cpRing', key: '', k: '' },
   { id: 'start', key: 'Digit9', k: '9' },
   { id: 'finish', key: 'Digit0', k: '0' },
   { id: 'platform', key: 'KeyP', k: 'P' },
@@ -65,9 +67,40 @@ const MODS = [
   { id: 'mod:v', flag: 'v', label: 'À l\'envers', hint: 'Route au plafond : roulable seulement en gravité inversée (plaque d’inversion)' },
   { id: 'mod:nb', flag: 'nb', label: 'Sans bordures', hint: 'Plus de rebord : on peut tomber' },
   { id: 'mod:tn', flag: 'tn', label: 'Tunnel', hint: 'Voûte autour de la route' },
-  { id: 'mod:mv1', flag: 'mv', val: 1, label: 'Ascenseur', hint: 'La pièce monte de 2 niveaux et redescend (6 s)' },
-  { id: 'mod:mv2', flag: 'mv', val: 2, label: 'Glissière', hint: 'La pièce glisse d’une case vers sa droite et revient (5 s)' },
+  { id: 'mod:mv1', flag: 'mv', val: 1, label: 'Ascenseur', hint: 'La pièce monte et redescend (2 niveaux, 6 s par défaut ; réglable dans l’Inspecteur)' },
+  { id: 'mod:mv2', flag: 'mv', val: 2, label: 'Glissière', hint: 'La pièce glisse d’une case vers sa droite et revient (5 s par défaut ; réglable dans l’Inspecteur)' },
+  { id: 'mod:mv3', flag: 'mv', val: 3, label: 'Rotation', hint: 'La pièce tourne autour de son centre et emporte la voiture (un tour en 12 s ; réglable dans l’Inspecteur)' },
+  { id: 'mod:cp1', flag: 'cp', val: 1, label: 'Checkpoint (portique)', hint: 'Portique au sol : à franchir pour valider le tour (route plate, ligne ou virage)' },
+  { id: 'mod:cp2', flag: 'cp', val: 2, label: 'Checkpoint aérien', hint: 'Anneau à traverser (ligne droite plate, à l’endroit)' },
+  { id: 'mod:th1', flag: 'th', val: 1, label: 'Thème Herbe', hint: 'Aspect herbeux (purement visuel)' },
+  { id: 'mod:th2', flag: 'th', val: 2, label: 'Thème Sable', hint: 'Aspect sableux (purement visuel)' },
+  { id: 'mod:th3', flag: 'th', val: 3, label: 'Thème Roche', hint: 'Aspect rocheux (purement visuel)' },
 ];
+// Options proposées dans l'onglet « Options » : bascules (route) et choix exclusifs (checkpoint, thème, mouvement).
+// Avec une pièce choisie, elles s'ajoutent à la pose (aperçu compris) ; sans pièce, elles s'appliquent à la pièce cliquée.
+const OPTION_GROUPS = [
+  { id: 'route', label: 'Route', multi: true, choices: [['v', 1, 'À l\'envers'], ['nb', 1, 'Sans bordures'], ['tn', 1, 'Tunnel']] },
+  { id: 'cp', label: 'Checkpoint', flag: 'cp', choices: [['cp', 0, 'Aucun'], ['cp', 1, 'Portique'], ['cp', 2, 'Aérien']] },
+  { id: 'th', label: 'Thème', flag: 'th', choices: [['th', 0, 'Classique'], ['th', 1, 'Herbe'], ['th', 2, 'Sable'], ['th', 3, 'Roche']] },
+  { id: 'mv', label: 'Mouvement', flag: 'mv', choices: [['mv', 0, 'Aucun'], ['mv', 1, 'Ascenseur'], ['mv', 2, 'Glissière'], ['mv', 3, 'Rotation']] },
+];
+const OPT_KEYS = ['v', 'nb', 'tn', 'mv', 'cp', 'th'];
+const OPT_NAMES = { v: 'à l\'envers', nb: 'sans bordures', tn: 'tunnel', mv: 'mouvement', cp: 'checkpoint', th: 'thème' };
+const modId = (flag, val) => (flag === 'v' || flag === 'nb' || flag === 'tn' ? 'mod:' + flag : `mod:${flag}${val}`);
+// Un choix qui ne peut pas cohabiter avec un autre : poser « à l'envers » exclut tunnel, mouvement et anneau aérien ; mouvement exclut checkpoint.
+export function armedOptions(opts, flag, val) {
+  const o = { ...opts };
+  const bool = flag === 'v' || flag === 'nb' || flag === 'tn';
+  if (bool) o[flag] = o[flag] ? 0 : 1; else o[flag] = o[flag] === val ? 0 : val;
+  // Le dernier choix l'emporte sur ce qui ne peut pas cohabiter avec lui.
+  if (o[flag]) {
+    if (flag === 'v') { o.tn = 0; o.mv = 0; if (o.cp === 2) o.cp = 0; }
+    else if (flag === 'tn') { o.v = 0; o.cp = 0; }
+    else if (flag === 'mv') { o.v = 0; o.cp = 0; }
+    else if (flag === 'cp') { o.mv = 0; o.tn = 0; if (o.cp === 2) o.v = 0; }
+  }
+  return o;
+}
 const SNAPS = [{ id: 0, label: 'Libre' }, { id: 1, label: '1 m' }, { id: 4, label: '4 m' }, { id: 12, label: 'Demi-case' }, { id: CELL, label: 'Case' }];
 
 // Icônes (vue de dessus) des pièces et revêtements.
@@ -83,6 +116,7 @@ const loopIcon = (mir, col, turns = 1, w = 9) => {
 export const ICONS = {
   straight: svg(`${straightBase()}<path d="M24 6v8M24 20v8M24 34v8" stroke="${LINE}" stroke-width="2"/>`),
   curve: svg(`<path d="M10 48 A38 38 0 0 1 48 10 L48 38 A10 10 0 0 0 38 48Z" fill="${ROAD}"/><path d="M10 48 A38 38 0 0 1 48 10" stroke="${RAIL}" stroke-width="2.5" fill="none"/><path d="M38 48 A10 10 0 0 1 48 38" stroke="${RAIL}" stroke-width="2.5" fill="none"/>`),
+  courbe: svg(`<path d="M10 48 A38 38 0 0 1 48 10 L48 38 A10 10 0 0 0 38 48Z" fill="${ROAD}"/><path d="M10 48 A38 38 0 0 1 48 10" stroke="${RAIL}" stroke-width="2.5" fill="none"/><path d="M38 48 A10 10 0 0 1 48 38" stroke="${RAIL}" stroke-width="2.5" fill="none"/><path d="M18 40l10-10M22 28l6 2-2 6" stroke="#ffbf3c" stroke-width="3" fill="none"/>`),
   bigcurve: svg(`<path d="M4 48 A44 44 0 0 1 48 4 L48 22 A26 26 0 0 0 22 48Z" fill="${ROAD}"/><path d="M4 48 A44 44 0 0 1 48 4" stroke="${RAIL}" stroke-width="2.5" fill="none"/><path d="M22 48 A26 26 0 0 1 48 22" stroke="${RAIL}" stroke-width="2.5" fill="none"/>`),
   slope: svg(`${straightBase()}<path d="M24 36V12M16 20l8-8 8 8" stroke="${LINE}" stroke-width="3" fill="none"/>`),
   steep: svg(`${straightBase()}<path d="M16 26l8-8 8 8M16 38l8-8 8 8" stroke="#ffbf3c" stroke-width="3" fill="none"/>`),
@@ -194,6 +228,8 @@ export class EditorSession {
     this.showGrid = true;
     this.autoLevel = null;
     this.surfParam = {};
+    this.opts = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, th: 0 };   // options « armées » : elles se posent avec la pièce choisie
+    this.famTraits = {};      // dernière combinaison de caractéristiques choisie par famille
     this.sel = null;          // rectangle de sélection {x0, z0, x1, z1}
     this.selDrag = null;
     this.clip = null;         // presse-papiers
@@ -323,8 +359,13 @@ export class EditorSession {
     }
     pal.appendChild(tabs);
 
+    // Familles (caractéristiques en listes déroulantes), puis les pièces à l'unité.
+    const rowF = document.createElement('div'); rowF.className = 'fam-row';
+    this.famCards = {};
+    for (const fam of FAMILY_ORDER) rowF.appendChild(this._familyCard(fam));
+    panels.pieces.appendChild(rowF);
     const rowP = document.createElement('div'); rowP.className = 'pal-row';
-    for (const p of PALETTE_ORDER) this._toolButton(rowP, p.id, p.k);
+    for (const p of PALETTE_ORDER) if (!isFamilyMember(p.id) && !REPLACED_BY_OPTION.has(p.id)) this._toolButton(rowP, p.id, p.k);
     panels.pieces.appendChild(rowP);
 
     const rowS = document.createElement('div'); rowS.className = 'pal-row surf';
@@ -341,12 +382,11 @@ export class EditorSession {
     compat.addEventListener('click', () => this.showCompat());
     par.appendChild(compat);
 
-    const rowM = document.createElement('div'); rowM.className = 'pal-row mods';
-    for (const m of MODS) this._toolButton(rowM, m.id, '');
-    panels.mods.appendChild(rowM);
+    panels.mods.appendChild(this._optionsPanel());
     const hint = document.createElement('div');
     hint.className = 'pal-hint';
-    hint.textContent = 'Choisis une option puis clique sur une pièce pour l\'activer ou la désactiver. Toute pièce peut être posée à l\'envers (au moins un niveau au-dessus du sol) : on ne peut y rouler qu\'en gravité inversée. Une plaque « Inversion de gravité » projette la voiture vers le haut, une pièce à l\'envers la réceptionne ; une 2e plaque la remet à l\'endroit. Sur une vrille, la plaque fait passer au plafond en douceur.';
+    hint.id = 'ed-opt-hint';
+    hint.textContent = 'Choisis une pièce ET des options : elles se posent ensemble (l’aperçu montre le résultat). Sans pièce choisie, une option s’applique à la pièce que tu cliques. Toute pièce peut être posée à l’envers (au moins un niveau au-dessus du sol) : on ne peut y rouler qu’en gravité inversée. Une plaque « Inversion de gravité » projette la voiture vers le haut, une pièce à l’envers la réceptionne ; une 2e plaque la remet à l’endroit. Vitesse, amplitude et couleurs se règlent dans l’Inspecteur.';
     panels.mods.appendChild(hint);
 
     const dTop = document.createElement('div');
@@ -420,6 +460,153 @@ export class EditorSession {
       b.addEventListener('click', () => { if (t.id === 'fill') this.toggleFill(); else this.setTool(t.id); this.app.audio.click(); });
       box.appendChild(b);
     }
+  }
+
+  // ---- Familles de pièces (Phase 2) ---------------------------------------------------------------------------------
+  _familyCard(fam) {
+    const F = FAMILIES[fam];
+    const card = document.createElement('div');
+    card.className = 'fam-card';
+    card.dataset.fam = fam;
+    const main = document.createElement('button');
+    main.className = 'piece-btn fam-main';
+    main.addEventListener('click', () => { this.setTool(resolve(fam, this._famTraits(fam))); this.app.audio.click(); });
+    card.appendChild(main);
+    const col = document.createElement('div');
+    col.className = 'fam-traits';
+    const selects = {};
+    for (const t of F.traits) {
+      const lab = document.createElement('label');
+      const span = document.createElement('span');
+      span.textContent = t.label;
+      const sel = document.createElement('select');
+      sel.setAttribute('aria-label', `${F.label} : ${t.label}`);
+      for (const [v, text] of t.values) { const o = document.createElement('option'); o.value = v; o.textContent = text; sel.appendChild(o); }
+      sel.addEventListener('change', () => {
+        const type = withTrait(fam, this._famTraits(fam), t.id, sel.value);
+        if (type) this.setTool(type);
+        this.app.audio.click();
+      });
+      lab.append(span, sel);
+      col.appendChild(lab);
+      selects[t.id] = sel;
+    }
+    card.appendChild(col);
+    this.famCards[fam] = { card, main, selects };
+    return card;
+  }
+
+  // Combinaison de caractéristiques actuelle d'une famille (celle de la pièce choisie, sinon la dernière choisie, sinon la 1re).
+  _famTraits(fam) {
+    const f = familyOf(fillBase(this.tool));
+    if (f && f.fam === fam) this.famTraits[fam] = f.traits;
+    if (!this.famTraits[fam]) this.famTraits[fam] = { ...FAMILIES[fam].members[Object.keys(FAMILIES[fam].members)[0]] };
+    return this.famTraits[fam];
+  }
+
+  _syncFamilies() {
+    if (!this.famCards) return;
+    for (const fam of FAMILY_ORDER) {
+      const { card, main, selects } = this.famCards[fam];
+      const F = FAMILIES[fam];
+      const tr = this._famTraits(fam);
+      const type = resolve(fam, tr);
+      const on = !!type && type === fillBase(this.tool);
+      card.classList.toggle('on', on);
+      main.classList.toggle('on', on);
+      main.dataset.piece = type || '';
+      const P = type && PIECES[type];
+      main.title = P ? `${P.label} — ${F.hint}` : F.label;
+      main.innerHTML = `${ICONS[type] || ICONS[F.icon] || '<span class="emo">◆</span>'}<span>${F.label}${P && P.size > 1 ? ` ${P.size}×${P.size}` : ''}</span>`;
+      for (const t of F.traits) {
+        const ok = validValues(fam, tr, t.id);
+        selects[t.id].value = tr[t.id];
+        for (const o of selects[t.id].options) o.disabled = !ok.has(o.value) && o.value !== tr[t.id];
+      }
+    }
+  }
+
+  // ---- Options (Phase 2) -----------------------------------------------------------------------------------------------
+  _optionsPanel() {
+    const wrap = document.createElement('div');
+    wrap.className = 'opt-panel';
+    this.optChips = [];
+    for (const g of OPTION_GROUPS) {
+      const row = document.createElement('div');
+      row.className = 'opt-group';
+      const lab = document.createElement('b');
+      lab.textContent = g.label;
+      row.appendChild(lab);
+      const chips = document.createElement('div');
+      chips.className = 'pal-chips';
+      chips.setAttribute('role', 'group');
+      chips.setAttribute('aria-label', g.label);
+      for (const [flag, val, text] of g.choices) {
+        const b = document.createElement('button');
+        b.className = 'chip' + (val === 0 ? ' none' : '');
+        b.textContent = text;
+        b.dataset.flag = flag; b.dataset.val = val;
+        if (flag === 'th') {
+          const sw = document.createElement('i');
+          sw.className = 'th-sw'; sw.style.background = THEME_SWATCH[val] || THEME_SWATCH[0];
+          b.prepend(sw);
+        }
+        const m = val ? MODS.find((x) => x.id === modId(flag, val)) : null;
+        b.title = m ? m.hint : flag === 'cp' ? 'Pas de checkpoint' : flag === 'mv' ? 'Pièce fixe' : flag === 'th' ? 'Aspect d’origine' : '';
+        b.addEventListener('click', () => { this._optClick(flag, val); this.app.audio.click(); });
+        chips.appendChild(b);
+        this.optChips.push(b);
+      }
+      row.appendChild(chips);
+      wrap.appendChild(row);
+    }
+    const clear = document.createElement('button');
+    clear.className = 'btn small';
+    clear.id = 'ed-opt-clear';
+    clear.textContent = 'Retirer les options';
+    clear.addEventListener('click', () => { this.opts = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, th: 0 }; this.previewKey = ''; this._refreshUI(); });
+    wrap.appendChild(clear);
+    return wrap;
+  }
+
+  // Clic sur une option : avec une pièce choisie elle est « armée » (posée avec elle) ; sans pièce, elle devient l'outil
+  // « appliquer à une pièce posée » (comme avant).
+  _optClick(flag, val) {
+    if (PIECES[this.tool]) {
+      this.opts = armedOptions(this.opts, flag, val);
+      this.previewKey = '';
+      this._refreshUI();
+      return;
+    }
+    this.setTool(modId(flag, val === 0 && (flag === 'v' || flag === 'nb' || flag === 'tn') ? 1 : val));
+  }
+
+  _syncOptions() {
+    if (!this.optChips) return;
+    const piece = PIECES[this.tool] ? this.tool : null;
+    const probe = piece ? Track.normalize({ t: piece, x: 0, z: 0, l: 0, r: 0 }) : null;
+    for (const b of this.optChips) {
+      const flag = b.dataset.flag, val = +b.dataset.val;
+      let on;
+      if (piece) on = val === 0 ? !this.opts[flag] : (flag === 'v' || flag === 'nb' || flag === 'tn' ? !!this.opts[flag] : this.opts[flag] === val);
+      else on = this.tool === modId(flag, val);
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+      // « Aucun » n'a de sens que pour une pose combinée ; un choix impossible sur la pièce est grisé.
+      b.hidden = !piece && val === 0;
+      const ok = !piece || val === 0 || flagAllowed(piece, flag, flag === 'cp' || flag === 'mv' ? { ...probe, ...this._compatProbe(flag) } : probe, val);
+      b.classList.toggle('dim', !ok);
+    }
+    const hint = document.getElementById('ed-opt-hint');
+    if (hint) hint.dataset.mode = piece ? 'combo' : 'apply';
+    const clear = document.getElementById('ed-opt-clear');
+    if (clear) clear.hidden = !piece || !OPT_KEYS.some((k) => this.opts[k]);
+  }
+
+  // Options déjà armées qui gênent le test d'une autre (mouvement ↔ checkpoint, tunnel ↔ checkpoint).
+  _compatProbe(flag) {
+    const o = this.opts;
+    return flag === 'cp' ? { mv: o.mv, tn: o.tn, v: o.v } : { cp: o.cp, v: o.v };
   }
 
   _syncDecoCats() {
@@ -539,7 +726,9 @@ export class EditorSession {
 
   _refreshUI() {
     this._refreshSelBar();
-    document.querySelectorAll('#ed-palette .piece-btn').forEach((b) => b.classList.toggle('on', b.dataset.piece === fillBase(this.tool)));
+    document.querySelectorAll('#ed-palette .piece-btn:not(.fam-main)').forEach((b) => b.classList.toggle('on', b.dataset.piece === fillBase(this.tool)));
+    this._syncFamilies();
+    this._syncOptions();
     // Grille d'outils : l'outil actif (le pot de peinture reste actif en gardant la pièce / le revêtement choisi).
     document.querySelectorAll('#ed-tools .tool-btn').forEach((b) => {
       const on = b.dataset.tool === 'fill' ? isFill(this.tool) : b.dataset.tool === this.tool;
@@ -858,7 +1047,14 @@ export class EditorSession {
     const sz = p.size;
     const ax = sz % 2 === 0 ? Math.round(this.hover.x / CELL - sz / 2) : this.hover.cx - (sz - 1) / 2;
     const az = sz % 2 === 0 ? Math.round(this.hover.z / CELL - sz / 2) : this.hover.cz - (sz - 1) / 2;
-    return { t: this.tool, x: ax, z: az, l: this.level, r: this.rot, s: '' };
+    const tile = { t: this.tool, x: ax, z: az, l: this.level, r: this.rot, s: '' };
+    for (const k of OPT_KEYS) if (this.opts[k]) tile[k] = this.opts[k];      // pièce + options choisies ensemble
+    return tile;
+  }
+
+  // Options armées que la pièce `norm` (déjà normalisée) n'a pas pu garder (ex. tunnel sur un looping).
+  _droppedOptions(cand, norm) {
+    return OPT_KEYS.filter((k) => cand[k] && norm[k] !== cand[k]);
   }
 
   _act(painting = false) {
@@ -874,13 +1070,16 @@ export class EditorSession {
     if (painting && key === this._lastPaint) return;
     this._lastPaint = key;
     if (!Track.inBounds(Track.normalize(tile))) { if (!painting) { this.app.ui.flash('Cette pièce sortirait des niveaux (à l’envers, elle pend sous son niveau : monte d’abord).'); this.app.audio.error(); } return; }
+    const norm = Track.normalize(tile);
     const conflicts = this.track.conflicts(tile);
     if (conflicts.length === 1) {
       const c = conflicts[0];
-      if (c.t === tile.t && c.x === tile.x && c.z === tile.z && c.l === tile.l && c.r === tile.r) return;
+      if (c.t === tile.t && c.x === tile.x && c.z === tile.z && c.l === tile.l && c.r === tile.r && OPT_KEYS.every((k) => (c[k] | 0) === (norm[k] | 0))) return;
     }
     for (const c of conflicts) this.track.remove(c);
     if (tile.t === 'start') for (const s of this.track.tiles.filter((x) => x.t === 'start')) this.track.remove(s);
+    const dropped = this._droppedOptions(tile, norm);
+    if (dropped.length && !painting) this.app.ui.flash(`Option ignorée sur « ${PIECES[tile.t].label} » : ${dropped.map((k) => OPT_NAMES[k]).join(', ')}`, 2.4);
     const added = this.track.add(tile);
     this.app.audio.place();
     this._prepareAutoLevel(added);
@@ -892,6 +1091,13 @@ export class EditorSession {
   _prepareAutoLevel(tile) {
     const p = PIECES[tile.t];
     if (!p.rise) { this.autoLevel = null; return; }
+    if (p.kind === 'arc') {
+      // Courbe montante (1 case) : l'entrée est derrière la pièce, la sortie sur son côté (droite, ou gauche pour la version ↰).
+      if (p.size !== 1) { this.autoLevel = null; return; }
+      const [bx, bz] = DIRS[tile.r], [ex, ez] = DIRS[(tile.r + (p.mirror < 0 ? 3 : 1)) & 3];
+      this.autoLevel = new Map([[`${tile.x + ex},${tile.z + ez}`, tile.l + p.rise], [`${tile.x - bx},${tile.z - bz}`, tile.l]]);
+      return;
+    }
     const [dx, dz] = DIRS[tile.r];
     this.autoLevel = new Map([
       [`${tile.x + dx},${tile.z + dz}`, tile.l + p.rise],
@@ -982,6 +1188,29 @@ export class EditorSession {
     return true;
   }
 
+  // Change une caractéristique de famille : la pièce reste « en place » même si son empreinte change (looping 1 → 3 boucles).
+  _retypeFamily(tile, type) {
+    const cand = retypePlacement(this.track, tile, type);
+    if (!cand) return false;
+    this.track.remove(tile);
+    Object.assign(tile, cand);                                        // même objet : la sélection de l'Inspecteur reste valide
+    this.track._insert(tile);
+    return true;
+  }
+
+  // Ancienne pièce « Checkpoint » → route normale + option checkpoint (même position, mêmes niveaux réservés).
+  _legacyToOption(tile) {
+    const conv = LEGACY_CP[tile.t];
+    if (!conv) return false;
+    const cand = Track.normalize({ ...tile, t: conv[0], cp: conv[1] });
+    if (cand.cp !== conv[1] || !Track.inBounds(cand)) return false;
+    this.track.remove(tile);
+    if (this.track.conflicts(cand).length) { this.track._insert(tile); return false; }
+    Object.assign(tile, cand);
+    this.track._insert(tile);
+    return true;
+  }
+
   _toggleMod(painting) {
     const t = this._hoverTile();
     if (!t) return;
@@ -989,8 +1218,8 @@ export class EditorSession {
     if (painting && key === this._lastPaint) return;
     this._lastPaint = key;
     const mod = MODS.find((m) => m.id === this.tool), flag = mod.flag;
-    if (!flagAllowed(t.t, flag, t)) {
-      this.app.ui.flash(`${pieceLabel(this.tool)} : impossible sur « ${PIECES[t.t].label} »`);
+    if (!flagAllowed(t.t, flag, t, mod.val || 1)) {
+      this.app.ui.flash(`${pieceLabel(this.tool)} : impossible sur « ${PIECES[t.t].label} »${flag === 'cp' && (t.mv || t.tn) ? ' (retire d’abord ' + (t.mv ? 'le mouvement' : 'le tunnel') + ')' : flag === 'mv' && t.cp ? ' (retire d’abord le checkpoint)' : ''}`);
       this.app.audio.error();
       return;
     }
@@ -999,6 +1228,7 @@ export class EditorSession {
       this._changed();
       if (!painting) this._commit();
     } else if (flag === 'tn') this.app.ui.flash('Tunnel impossible sur une route à l\'envers');
+    else if (flag === 'cp') { this.app.ui.flash('Pas la place pour le checkpoint (niveaux au-dessus occupés)'); this.app.audio.error(); }
     else if (flag === 'mv') { this.app.ui.flash('Pas la place pour ce mouvement (case voisine ou niveaux au-dessus occupés)'); this.app.audio.error(); }
   }
 
@@ -1135,6 +1365,7 @@ export class EditorSession {
     if (!t) return;
     this.fillMode = false;
     this.tool = t.t; this.rot = t.r; this.level = t.l;
+    for (const k of OPT_KEYS) this.opts[k] = t[k] | 0;                  // la pipette reprend aussi les options de la pièce
     this.autoLevel = null;
     this.previewKey = '';
     this.setTab('pieces');
@@ -1380,18 +1611,19 @@ export class EditorSession {
           this._highlightTile(t, surfaceAllowed(t.t, s, !!t.v) ? (s ? tint(s, this._surfParamValue(s)) : '#ffffff') : '#ff3b5c');
         } else {
           const m = MODS.find((x) => x.id === this.tool);
-          this._highlightTile(t, m && flagAllowed(t.t, m.flag, t) ? '#8f7cff' : '#ff3b5c');
+          this._highlightTile(t, m && flagAllowed(t.t, m.flag, t, m.val || 1) ? '#8f7cff' : '#ff3b5c');
         }
       }
       return;
     }
-    const key = `${cand.t},${cand.x},${cand.z},${cand.l},${cand.r},${this.track.version}`;
+    const key = `${cand.t},${cand.x},${cand.z},${cand.l},${cand.r},${OPT_KEYS.map((k) => cand[k] | 0).join('')},${this.track.version}`;
     if (key === this.previewKey) return;
     this.previewKey = key;
     this._clearPreview();
     const conflicts = this.track.conflicts(cand);
     if (!Track.inBounds(Track.normalize(cand))) conflicts.push(null);
-    const same = conflicts.length === 1 && conflicts[0] && ['t', 'x', 'z', 'l', 'r'].every((k) => conflicts[0][k] === cand[k]);
+    const nc = Track.normalize(cand);
+    const same = conflicts.length === 1 && conflicts[0] && ['t', 'x', 'z', 'l', 'r'].every((k) => conflicts[0][k] === cand[k]) && OPT_KEYS.every((k) => (conflicts[0][k] | 0) === (nc[k] | 0));
     this.previewMat.emissive.set(conflicts.length && !same ? '#ff2244' : '#000000');
     this.previewMat.emissiveIntensity = 0.45;
     this.preview.add(buildTileMesh(Track.normalize(cand), this.previewMat, this.previewGlow));
