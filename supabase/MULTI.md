@@ -28,14 +28,27 @@ impossible » pour cet adversaire. Pour couvrir ces cas, ajouter un serveur TURN
 `ICE_SERVERS` : `{ urls: 'turn:…', username: '…', credential: '…' }`. Ne mettez pas un secret durable dans un jeu
 statique : utilisez des identifiants temporaires fournis par votre service TURN.
 
-## Règles de course
+## Boucle de jeu asynchrone (à la Polytrack)
 
-- Départ commun : l'hôte donne le départ, « GO » tombe au même instant chez tous (délai de 4 s, corrigé de la moitié du ping).
-- **Retour au checkpoint : le chrono continue de tourner.** La voiture est téléportée, le temps perdu est la pénalité.
-  Pas de pause, pas de recommencement (T) pendant la course.
-- Pas de records, pièces, médailles ni classement en ligne en multijoueur : les règles du chrono y sont différentes.
-- Classement final **provisoire** : chaque temps est annoncé par son joueur.
-- Circuits proposés : les 66 circuits intégrés (le circuit est identifié par sa signature : même version obligatoire).
+- **Personne n'attend personne.** Chacun a son propre chrono et fait ses essais à son rythme sur le même circuit. Un joueur qui arrive
+  quand la course est déjà lancée démarre tout de suite (décompte de 1,5 s).
+- **Après l'arrivée : `R` (ou `T`) = nouvel essai immédiat**, sans décompte, sans menu ni salon. `T` fonctionne aussi en cours de course
+  pour abandonner un essai. Les autres voient la voiture « apparaître » au départ (même mécanisme que la téléportation).
+- **Retour au checkpoint (`R` en course) : le chrono continue de tourner** ; le temps perdu est la pénalité.
+- Chaque arrivée est annoncée à la salle : un tableau (meilleur temps de chacun, nombre d'essais) reste affiché sans jamais bloquer le jeu.
+  Un nouvel arrivant reçoit les meilleurs temps déjà réalisés.
+- Échap : proposer de quitter la course (retour au salon, les autres continuent). L'hôte peut choisir un autre circuit et « Relancer
+  pour tous » : chacun repart sur le nouveau circuit.
+- Pas de records, pièces, médailles ni classement en ligne en multijoueur. Classement de la salle **provisoire** : chaque temps est annoncé par son joueur.
+
+## Circuits
+
+Choisis par l'hôte dans le salon :
+- **Intégrés** : les 66 circuits du jeu.
+- **Communauté** : par **ID** (le `id` d'un circuit publié ; colle-le dans le champ du salon) ou « Parcourir la communauté ». Les autres joueurs
+  téléchargent le circuit eux-mêmes ; sa signature est vérifiée (tout le monde doit avoir exactement le même).
+- **Code de circuit** (`SHW…` ou lien de partage) ou **Mes circuits** : l'hôte envoie le code à chacun par le canal fiable, en morceaux de
+  12 Ko (jusqu'à 400 000 caractères, soit largement plus de 5000 pièces). Les morceaux sont assemblés puis vérifiés avec la signature.
 
 ## Rendu des adversaires
 

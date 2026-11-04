@@ -304,18 +304,90 @@ await test('le départ est donné par l\'hôte seulement, avec un délai commun'
   let t = 1000; const now = () => t;
   const host = await Room.create({ ...opts('H'), code: 'ABC234', now }); const g = await Room.join('ABC234', { ...opts('G'), now });
   let started = null; g.on('start', (e) => { started = e; });
-  host.selectTrack('b-1-xyz');
-  assert.deepEqual(env.meshes[0].ctl.at(-1)[0], { k: 'track', id: 'b-1-xyz' });
+  host.selectTrack({ id: 'b-1-xyz', name: 'Premiers Éclats' });
+  assert.deepEqual(host.mesh.ctl.at(-1)[0], { k: 'track', id: 'b-1-xyz', name: 'Premiers Éclats', sig: '', started: false });
   assert.equal(g.start(), false, 'un invité ne peut pas lancer');
-  // l'invité reçoit le message de départ de l'hôte (par le canal fiable)
   g.members.get(host.selfId).rtt = 80;
+  g._onMessage(host.selfId, 'ctl', { k: 'track', id: 'b-1-xyz', name: 'Premiers Éclats' });
   g._onMessage(host.selfId, 'ctl', { k: 'start', trackId: 'b-1-xyz', startIn: 4000 });
   assert.equal(started.trackId, 'b-1-xyz'); assert.equal(started.startLocal, 1000 + 4000 - 40, 'départ = délai − demi-aller-retour');
-  // un faux « départ » venu d'un autre joueur est ignoré
-  g.state = 'lobby'; started = null; g._onMessage('intrus', 'ctl', { k: 'start', trackId: 'x', startIn: 10 }); assert.equal(started, null);
+  assert.equal(g.track.name, 'Premiers Éclats');
+  started = null; g._onMessage('intrus', 'ctl', { k: 'start', trackId: 'x', startIn: 10 }); assert.equal(started, null, 'départ d\'un non-hôte ignoré');
   host.leave(); g.leave();
 });
-await test('paquets d\'état : anti-inondation et classement des arrivées', async () => {
+
+console.log('Boucle asynchrone : essais à son rythme, arrivants, circuits transmis');
+await test('on peut rejoindre une salle où la course a déjà commencé : départ immédiat, sans attendre personne', async () => {
+  const env = fakeRoomEnv();
+  const opts = (name) => ({ name, makeSignaling: ({ code, selfId }) => env.make(selfId, code), makeMesh: env.makeMesh });
+  let t = 5000; const now = () => t;
+  const host = await Room.create({ ...opts('H'), code: 'ABC234', now });
+  host.selectTrack({ id: 'b-1-xyz', name: 'T' }); host.start();
+  const g = await Room.join('ABC234', { ...opts('G'), now });                  // plus de refus « course en cours »
+  let st = null; g.on('start', (e) => { st = e; });
+  g._onMessage(host.selfId, 'ctl', { k: 'track', id: 'b-1-xyz', name: 'T', started: true });   // l'hôte renseigne le nouvel arrivant
+  assert.ok(st && st.startLocal === 5000 + 1500, 'départ dans 1,5 s, à son propre rythme');
+  assert.equal(g.state, 'racing');
+  host.leave(); g.leave();
+});
+await test('chaque joueur garde son meilleur temps et son nombre d\'essais ; un temps synchronisé ne compte pas comme un essai', async () => {
+  const env = fakeRoomEnv();
+  const room = await Room.create({ name: 'H', code: 'ABC234', makeSignaling: ({ code, selfId }) => env.make(selfId, code), makeMesh: env.makeMesh, now: () => 5 });
+  room.members.set('p', { id: 'p', name: 'Pierre', link: 'open', rtt: 0 }); room.members.set('q', { id: 'q', name: 'Quentin', link: 'open', rtt: 0 });
+  room._onMessage('p', 'ctl', { k: 'finish', steps: 4800 }); room._onMessage('p', 'ctl', { k: 'finish', steps: 4700 }); room._onMessage('p', 'ctl', { k: 'finish', steps: 4900 });
+  room._onMessage('q', 'ctl', { k: 'finish', steps: 5000, sync: true });
+  room._onMessage('q', 'ctl', { k: 'finish', steps: -4 }); room._onMessage('q', 'ctl', { k: 'finish', steps: 1e9 }); room._onMessage('q', 'ctl', { k: 'finish', steps: 'x' });
+  const p = room.results.get('p'); assert.deepEqual([p.best, p.last, p.n], [4700, 4900, 3]);
+  const q = room.results.get('q'); assert.deepEqual([q.best, q.n], [5000, 0]);
+  assert.deepEqual(room.ranking().map((r) => r.name), ['Pierre', 'Quentin', 'H']);
+  assert.equal(room.reportFinish(4600), true, 'nouveau meilleur temps'); assert.equal(room.reportFinish(4650), false);
+  assert.deepEqual(room.ranking().map((r) => r.name), ['H', 'Pierre', 'Quentin']);
+  assert.equal(room.results.get(room.selfId).n, 2);
+  // un nouvel arrivant reçoit mon meilleur temps
+  room.members.set('z', { id: 'z', name: 'Zoé', link: 'connecting', rtt: 0 });
+  room._onLink('z', 'open');
+  assert.deepEqual(room.mesh.ctl.at(-1), [{ k: 'finish', steps: 4600, sync: true }, 'z']);
+  room.leave();
+});
+await test('retour au salon : propre à ce joueur, les autres ne sont pas interrompus', async () => {
+  const env = fakeRoomEnv();
+  const opts = (name) => ({ name, makeSignaling: ({ code, selfId }) => env.make(selfId, code), makeMesh: env.makeMesh });
+  const host = await Room.create({ ...opts('H'), code: 'ABC234' });
+  host.selectTrack({ id: 'b-1-xyz', name: 'T' }); host.start();
+  const before = host.mesh.ctl.length;
+  host.backToLobby();
+  assert.equal(host.state, 'lobby'); assert.equal(host.mesh.ctl.length, before, 'aucun message envoyé aux autres');
+  assert.equal(host.meta.racing, false);
+  host.leave();
+});
+await test('circuit envoyé par l\'hôte (code de circuit) : morceaux, assemblage, refus des morceaux douteux', async () => {
+  const env = fakeRoomEnv();
+  const opts = (name) => ({ name, makeSignaling: ({ code, selfId }) => env.make(selfId, code), makeMesh: env.makeMesh });
+  const host = await Room.create({ ...opts('H'), code: 'ABC234' }); const g = await Room.join('ABC234', opts('G'));
+  const code = 'SHW3:' + 'x'.repeat(29995);                                     // ~30 Ko : 3 morceaux de 12 Ko
+  host.selectTrack({ id: 'u:abc', name: 'Mon circuit', sig: 'abc', code });
+  const sent = host.mesh.ctl.map((c) => c[0]);
+  assert.equal(sent[0].k, 'track'); const chunks = sent.filter((m) => m.k === 'tcode'); assert.equal(chunks.length, 3);
+  assert.ok(chunks.every((c) => c.d.length <= 12000 && c.n === 3));
+  let got = null; g.on('trackcode', (id) => { got = id; });
+  const waiter = g.waitForCode('u:abc', 500);
+  for (const c of [chunks[2], chunks[0]]) g._onMessage(host.selfId, 'ctl', c);   // dans le désordre
+  g._onMessage('intrus', 'ctl', chunks[1]);                                       // pas l'hôte : ignoré
+  assert.equal(got, null);
+  g._onMessage(host.selfId, 'ctl', chunks[1]);
+  assert.equal(await waiter, code); assert.equal(got, 'u:abc');
+  g._onMessage(host.selfId, 'ctl', { k: 'tcode', id: 'u:evil', i: 0, n: 9999, d: 'x' });          // trop de morceaux
+  g._onMessage(host.selfId, 'ctl', { k: 'tcode', id: 'u:evil', i: 0, n: 1, d: 'x'.repeat(50000) }); // morceau trop gros
+  g._onMessage(host.selfId, 'ctl', { k: 'tcode', id: 'b-faux', i: 0, n: 1, d: 'x' });               // pas un circuit 'u:'
+  assert.equal(g.trackCodes.has('u:evil') || g.trackCodes.has('b-faux'), false);
+  assert.throws(() => host.selectTrack({ id: 'u:big', name: 'x', code: 'y'.repeat(400001) }), (e) => e.code === 'too-big');
+  await assert.rejects(() => g.waitForCode('u:jamais', 30), (e) => e.code === 'no-code');
+  // nouvel arrivant : l'hôte renvoie circuit ET morceaux
+  host.mesh.ctl.length = 0; host.members.set('n', { id: 'n', name: 'N', link: 'open', rtt: 0 }); host._onLink('n', 'open');
+  assert.deepEqual(host.mesh.ctl.map((c) => c[0].k + (c[1] ? '>' + c[1] : '')), ['track>n', 'tcode>n', 'tcode>n', 'tcode>n']);
+  host.leave(); g.leave();
+});
+await test('paquets d\'état : anti-inondation', async () => {
   const env = fakeRoomEnv();
   const room = await Room.create({ name: 'H', code: 'ABC234', makeSignaling: ({ code, selfId }) => env.make(selfId, code), makeMesh: env.makeMesh, now: () => 5 });
   let n = 0; room.on('snapshot', () => n++);
@@ -323,14 +395,18 @@ await test('paquets d\'état : anti-inondation et classement des arrivées', asy
   for (let i = 0; i < 300; i++) room._onMessage('p', 'state', ab);
   assert.equal(n, 80, 'au plus 80 paquets par seconde et par joueur');
   room._onMessage('p', 'state', new ArrayBuffer(5)); assert.equal(n, 80);
-  room.members.set('p', { id: 'p', name: 'Pierre', link: 'open', rtt: 0 }); room.members.set('q', { id: 'q', name: 'Quentin', link: 'open', rtt: 0 });
-  room._onMessage('q', 'ctl', { k: 'finish', steps: 5000 }); room._onMessage('p', 'ctl', { k: 'finish', steps: 4800 });
-  room._onMessage('p', 'ctl', { k: 'finish', steps: 1 });                  // un second « finish » ne change rien
-  room._onMessage('q', 'ctl', { k: 'finish', steps: -4 });
-  assert.deepEqual(room.ranking().map((r) => r.name), ['Pierre', 'Quentin', 'H']);
-  room.reportFinish(4900);
-  assert.deepEqual(room.ranking().map((r) => r.name), ['Pierre', 'H', 'Quentin']);
   room.leave();
+});
+await test('nouvel essai : l\'horloge d\'envoi ne recule pas et la téléportation est signalée (pas de paquet « trop ancien »)', () => {
+  // Un joueur qui recommence : son horloge de course repart de 0 mais son horloge d'envoi (netTick) continue.
+  const buf = new SnapshotBuffer();
+  const feed2 = (tick, x, tele) => buf.push(unpackSnapshot(packSnapshot(snap(tick, x, { tele }))), tick * DT * 1000 + 30);
+  for (let k = 0; k <= 10; k++) feed2(k * 6, k * 20, 0);                     // essai 1 : va de 0 à 200
+  for (let k = 11; k <= 20; k++) feed2(k * 6, 5 + (k - 11) * 20, 1);         // essai 2 : retour au départ, tele = 1
+  let tp = 0, accepted = true; for (let ms = 0; ms < 20 * 6 * DT * 1000 + 300; ms += 8) { if (buf.sample(ms + 30).teleported) tp++; }
+  assert.equal(tp, 1); assert.equal(buf.length, 21, 'aucun paquet refusé');
+  // le piège : si l\'horloge reculait, les paquets du nouvel essai seraient rejetés comme périmés
+  const bad = new SnapshotBuffer(); feed.call(null, bad, [snap(600, 0)]); assert.equal(bad.push(unpackSnapshot(packSnapshot(snap(5, 0, { tele: 1 }))), 5000), false, 'rappel : une horloge qui recule est refusée');
 });
 
 if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }

@@ -15,6 +15,9 @@ export const ROOM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';     // sans 0 / O 
 export const MAX_PLAYERS = 8;
 export const START_DELAY_MS = 4000;                                // entre « Lancer » et « GO »
 export const SEND_EVERY_STEPS = 6;                                 // 120 / 6 = 20 paquets par seconde
+export const MAX_CODE_CHARS = 400000;                             // taille maximale d'un circuit transmis par un joueur
+const CODE_CHUNK = 12000;                                          // un message fiable ne dépasse pas ~12 Ko (compatibilité entre navigateurs)
+const MAX_RUN_STEPS = 120 * 600;                                   // 10 minutes : au-delà, un temps annoncé est refusé
 const MAX_PACKETS_PER_SEC = 80;                                    // au-delà, un joueur inonde : on ignore l'excédent
 
 export const ROOM_RE = /^[A-HJ-NP-Z2-9]{6}$/;
@@ -36,9 +39,12 @@ export class Room extends Emitter {
     this.makeSignaling = makeSignaling; this.makeMesh = makeMesh;
     this.meta = { name: String(name).slice(0, 20), host: false, ready: false, racing: false, v: PHYS_VER, t: Date.now() };
     this.members = new Map();           // id → { id, name, host, ready, racing, v, t, link, rtt }
-    this.trackId = null;
-    this.state = 'lobby';               // lobby | racing
-    this.results = new Map();           // id → { steps }
+    this.track = null;                  // circuit choisi : { id, name, sig } ; id = 'b-…' (intégré), 'c:<uuid>' (communauté), 'u:<signature>' (code envoyé par l'hôte)
+    this.started = false;               // une course a déjà été lancée dans cette salle : les arrivants y entrent directement
+    this.trackCodes = new Map();        // id 'u:…' → code du circuit reçu de l'hôte
+    this._asm = new Map();              // assemblage des morceaux de code en cours
+    this.state = 'lobby';               // lobby | racing (propre à chaque joueur : la boucle de jeu est asynchrone)
+    this.results = new Map();           // id → { best, last, n } : meilleur temps, dernier temps, nombre d'essais (en pas de 1/120 s)
     this.seq = 0;
     this.buffers = new Map();           // id → SnapshotBuffer (rempli par setBufferFactory : la voiture distante)
     this.bufferFactory = null;
@@ -88,7 +94,6 @@ export class Room extends Emitter {
     } else {
       if (!host) throw new RoomError('Salle introuvable. Vérifie le code.', 'not-found');
       if (present.length + 1 > MAX_PLAYERS) throw new RoomError(`Salle pleine (${MAX_PLAYERS} joueurs).`, 'full');
-      if (host[1].racing) throw new RoomError('Une course est en cours dans cette salle.', 'racing');
       if (host[1].v !== PHYS_VER) throw new RoomError('Version du jeu différente de celle de l\'hôte : recharge la page.', 'version');
     }
     for (const [id, meta] of present) this._onPeer(id, meta);
@@ -110,6 +115,8 @@ export class Room extends Emitter {
   }
 
   // ---- Membres -------------------------------------------------------------------------------------------------------
+  get trackId() { return this.track ? this.track.id : null; }
+
   get hostId() {
     const flagged = [...this.members.values()].filter((m) => m.host);
     if (this.meta.host) flagged.push({ id: this.selfId });
@@ -141,7 +148,11 @@ export class Room extends Emitter {
     const m = this.members.get(id);
     if (m) m.link = status;
     // L'hôte informe un nouvel arrivant du circuit choisi.
-    if (status === 'open' && this.isHost && this.trackId) this.mesh.sendCtl({ k: 'track', id: this.trackId }, id);
+    if (status === 'open') {
+      if (this.isHost && this.track) this._sendTrack(id);
+      const mine = this.results.get(this.selfId);
+      if (mine) this.mesh.sendCtl({ k: 'finish', steps: mine.best, sync: true }, id);   // le nouvel arrivant voit mon meilleur temps
+    }
     this.emit('members');
   }
 
@@ -158,15 +169,31 @@ export class Room extends Emitter {
         if (m && Number.isFinite(rtt) && rtt >= 0) m.rtt = m.rtt ? Math.min(m.rtt * 0.7 + rtt * 0.3, rtt * 3) : rtt;
         break;
       }
-      case 'track': if (from === this.hostId && typeof data.id === 'string') { this.trackId = data.id.slice(0, 40); this.emit('track'); } break;
+      case 'track': {
+        if (from !== this.hostId || typeof data.id !== 'string') break;
+        this.track = { id: data.id.slice(0, 60), name: String(data.name || '').slice(0, 40), sig: String(data.sig || '').slice(0, 40) };
+        this.emit('track');
+        // Course déjà lancée dans la salle : un arrivant part tout de suite, à son rythme (rien à synchroniser).
+        if (data.started && this.state === 'lobby') { this.started = true; this._begin(this.track.id, 1500); }
+        break;
+      }
+      case 'tcode': this._onCodeChunk(from, data); break;
       case 'start':
-        if (from !== this.hostId || this.state === 'racing') break;
-        this._begin(String(data.trackId || '').slice(0, 40), Math.max(500, Math.min(15000, +data.startIn || START_DELAY_MS)) - (m ? m.rtt / 2 : 0));
+        // Un nouveau « Lancer » de l'hôte (même circuit ou autre) remet chacun au départ de ce circuit, à son rythme.
+        if (from !== this.hostId) break;
+        if (typeof data.trackId === 'string') this.track = { id: data.trackId.slice(0, 60), name: String(data.name || (this.track && this.track.name) || '').slice(0, 40), sig: String(data.sig || '').slice(0, 40) };
+        this._begin(String(data.trackId || '').slice(0, 60), Math.max(500, Math.min(15000, +data.startIn || START_DELAY_MS)) - (m ? m.rtt / 2 : 0));
         break;
-      case 'finish':
-        if (m && Number.isFinite(+data.steps) && +data.steps > 0 && !this.results.has(from)) { this.results.set(from, { steps: +data.steps | 0 }); this.emit('results'); }
+      case 'finish': {
+        const steps = +data.steps | 0;
+        if (!m || !(steps > 0 && steps <= MAX_RUN_STEPS)) break;
+        const r = this.results.get(from) || { best: steps, last: steps, n: 0 };
+        r.best = Math.min(r.best, steps);
+        if (!data.sync) { r.last = steps; r.n++; }
+        this.results.set(from, r);
+        this.emit('results');
         break;
-      case 'lobby': if (from === this.hostId) this.backToLobby(false); break;
+      }
       default: break;
     }
   }
@@ -180,30 +207,67 @@ export class Room extends Emitter {
   }
 
   // ---- Choix du circuit, départ, retour au salon (hôte) --------------------------------------------------------------
-  selectTrack(trackId) {
-    if (!this.isHost) return;
-    this.trackId = trackId;
-    this.mesh.sendCtl({ k: 'track', id: trackId });
+  // spec : { id, name, sig, code? } ; code : seulement pour les circuits 'u:…' (envoyé à chaque joueur par morceaux).
+  selectTrack(spec) {
+    if (!this.isHost || !spec || typeof spec.id !== 'string') return;
+    if (spec.code && spec.code.length > MAX_CODE_CHARS) throw new RoomError('Circuit trop gros pour être envoyé.', 'too-big');
+    this.track = { id: spec.id, name: spec.name || '', sig: spec.sig || '' };
+    if (spec.code) this.trackCodes.set(spec.id, spec.code);
+    this._sendTrack();
     this.emit('track');
   }
 
+  _sendTrack(to = null) {
+    const t = this.track;
+    this.mesh.sendCtl({ k: 'track', id: t.id, name: t.name, sig: t.sig, started: this.started }, to);
+    const code = this.trackCodes.get(t.id);
+    if (code && t.id.startsWith('u:')) {
+      const n = Math.ceil(code.length / CODE_CHUNK);
+      for (let i = 0; i < n; i++) this.mesh.sendCtl({ k: 'tcode', id: t.id, i, n, d: code.slice(i * CODE_CHUNK, (i + 1) * CODE_CHUNK) }, to);
+    }
+  }
+
+  _onCodeChunk(from, d) {
+    if (from !== this.hostId || typeof d.id !== 'string' || !d.id.startsWith('u:') || typeof d.d !== 'string') return;
+    const n = d.n | 0, i = d.i | 0;
+    if (n < 1 || n > Math.ceil(MAX_CODE_CHARS / CODE_CHUNK) || i < 0 || i >= n || d.d.length > CODE_CHUNK) return;
+    let a = this._asm.get(d.id);
+    if (!a || a.n !== n) { a = { n, parts: new Array(n).fill(null), got: 0 }; this._asm.set(d.id, a); }
+    if (a.parts[i] === null) { a.parts[i] = d.d; a.got++; }
+    if (a.got === n) {
+      this._asm.delete(d.id);
+      this.trackCodes.set(d.id, a.parts.join(''));
+      this.emit('trackcode', d.id);
+    }
+  }
+
+  // Le code d'un circuit 'u:…' (attend qu'il soit arrivé, au plus ms millisecondes).
+  waitForCode(id, ms = 12000) {
+    if (this.trackCodes.has(id)) return Promise.resolve(this.trackCodes.get(id));
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(() => { this.off('trackcode', on); reject(new RoomError('Le circuit n\'est pas arrivé : réessaie.', 'no-code')); }, ms);
+      const on = (got) => { if (got === id) { clearTimeout(t); this.off('trackcode', on); resolve(this.trackCodes.get(id)); } };
+      this.on('trackcode', on);
+    });
+  }
+
   start() {
-    if (!this.isHost || !this.trackId || this.state === 'racing') return false;
-    this.mesh.sendCtl({ k: 'start', trackId: this.trackId, startIn: START_DELAY_MS });
-    this._begin(this.trackId, START_DELAY_MS);
+    if (!this.isHost || !this.track) return false;
+    this.mesh.sendCtl({ k: 'start', trackId: this.track.id, name: this.track.name, sig: this.track.sig, startIn: START_DELAY_MS });
+    this._begin(this.track.id, START_DELAY_MS);
     return true;
   }
 
   _begin(trackId, inMs) {
     this.state = 'racing';
-    this.results.clear();
+    this.started = true;
+    this.results.clear();                // un nouveau circuit : on repart de zéro (les temps d'avant ne se comparent pas)
     this.meta.racing = true; this.meta.ready = false; this.signaling.track(this.meta);
-    this.seq = 0;
-    this.emit('start', { trackId, startLocal: this.now() + inMs });
+    this.emit('start', { trackId, track: this.track, startLocal: this.now() + inMs });
   }
 
-  backToLobby(announce = true) {
-    if (announce && this.isHost) this.mesh.sendCtl({ k: 'lobby' });
+  // Retour au salon : propre à ce joueur seulement (les autres continuent de courir, chacun à son rythme).
+  backToLobby() {
     this.state = 'lobby';
     this.meta.racing = false; this.meta.ready = false; this.signaling.track(this.meta);
     this.emit('lobby');
@@ -214,16 +278,20 @@ export class Room extends Emitter {
   // s : { steps, pos, quat, vel, vehicle, flags, tele, cp, lap } de la voiture locale ; envoyé à tous, canal rapide.
   sendSnapshot(s) { this.mesh.broadcastState(packSnapshot({ ...s, seq: this.seq++ })); }
 
+  // Une arrivée (à chaque essai) : annoncée à tous ; chacun garde le meilleur temps de chaque joueur.
   reportFinish(steps) {
-    this.results.set(this.selfId, { steps });
+    const r = this.results.get(this.selfId) || { best: steps, last: steps, n: 0 };
+    r.best = Math.min(r.best, steps); r.last = steps; r.n++;
+    this.results.set(this.selfId, r);
     this.mesh.sendCtl({ k: 'finish', steps });
     this.emit('results');
+    return r.best === steps;      // vrai : nouveau meilleur temps personnel dans cette salle
   }
 
-  // Classement : arrivées par temps croissant, puis ceux qui courent encore. Provisoire : chaque temps est déclaré par son joueur.
+  // Classement par meilleur temps, puis ceux qui n'ont pas encore fini. Provisoire : chaque temps est annoncé par son joueur.
   ranking() {
-    const rows = this.list.map((m) => ({ id: m.id, name: m.name, self: !!m.self, steps: this.results.has(m.id) ? this.results.get(m.id).steps : null }));
-    return rows.sort((a, b) => (a.steps == null) - (b.steps == null) || (a.steps ?? 0) - (b.steps ?? 0));
+    const rows = this.list.map((m) => { const r = this.results.get(m.id); return { id: m.id, name: m.name, self: !!m.self, best: r ? r.best : null, last: r ? r.last : null, n: r ? r.n : 0 }; });
+    return rows.sort((a, b) => (a.best == null) - (b.best == null) || (a.best ?? 0) - (b.best ?? 0));
   }
 
   _onState(from, data) {

@@ -70,8 +70,9 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 
 ### Multijoueur en direct
 
-- Menu *Multijoueur* : créer une salle ou rejoindre avec un **code de 6 caractères** ; jusqu'à 8 joueurs, en voitures fantômes (sans collision), départ commun.
-- **Retour au checkpoint : le chrono ne se remet pas à zéro** (le temps perdu est la pénalité). Les adversaires lointains s'assombrissent.
+- *Communauté > Multijoueur* : créer une salle ou rejoindre avec un **code de 6 caractères** ; jusqu'à 8 joueurs, en voitures fantômes (sans collision).
+- **Boucle asynchrone** : chacun a son chrono et recommence quand il veut (**R après l'arrivée**, sans repasser par le salon) ; on peut arriver en cours de route.
+- **Circuits** : intégrés, de la communauté (par ID) ou par code. **Retour au checkpoint : le chrono ne se remet pas à zéro.** Les adversaires lointains s'assombrissent.
 - Supabase Realtime ne sert qu'à se trouver et à négocier ; les positions (20 Hz) passent en **WebRTC pair à pair**. Voir `supabase/MULTI.md`.
 
 ### Le reste
@@ -79,6 +80,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 - **Garage** (purement visuel) : 8 carrosseries, moto routière ou chopper, couleurs, finitions (brillante, mate, métallisée, nacrée), LED, dessins, ornements, ailerons, roues, traînées lumineuses, klaxons (touche H), presets.
 - **Pièces (monnaie)** gagnées selon la médaille et les objectifs bonus. **Profil** : un code joueur contient toute la progression.
 - **Musique** synthétisée en direct, une ambiance par décor ; sons sans aucun fichier audio.
+- **Profil** (menu principal) : onglets *Compte*, *Sauvegardes*, *Options* et *Commandes*.
 - **Options** : volume des effets et de la musique, qualité graphique (haute, moyenne, basse), compteur d'images, champ de vision, effet de vitesse, tremblements de caméra, **couleurs adaptées au daltonisme**, taille de l'interface, fantômes.
 - **Tutoriel** au premier lancement. Commandes personnalisables (clavier, manette), mobile (boutons ou glisser du pouce), vibrations.
 - **Easter eggs** : à toi de les trouver.
