@@ -1,6 +1,6 @@
 // Règles de course (sans rendu) : checkpoints, arrivée, points de réapparition.
 import { CELL, LEVEL_H, ROAD_HALF, DT } from './constants.js';
-import { PIECES, RING_R, RING_Y, toLocal, sampleLocal, tileCenter, baseY } from './pieces.js';
+import { PIECES, RING_R, RING_Y, toLocal, sampleLocal, tileCenter, baseY, cpKind, arcParams, localToWorld } from './pieces.js';
 
 const L = { lx: 0, lz: 0 };
 const S = {};
@@ -10,7 +10,7 @@ export class RaceLogic {
     this.track = track;
     this.laps = Math.max(1, track.laps || 1);
     this.partial = !!opts.partial;   // test depuis le curseur : pas besoin des checkpoints
-    this.cps = track.tiles.filter((t) => PIECES[t.t].special === 'checkpoint');
+    this.cps = track.tiles.filter((t) => cpKind(t));
     this.startTile = track.startTile;
     this.reset();
   }
@@ -86,10 +86,12 @@ export class RaceLogic {
     let onFinish = false;
     for (const tile of this.track.tilesAt(cx, cz)) {
       const P = PIECES[tile.t];
-      const sp = P.special;
+      const ck = cpKind(tile);
+      // 'checkpoint' : pièce checkpoint d'origine ou option cp (portique / anneau) ; 'finish' : arrivée.
+      const sp = ck ? 'checkpoint' : P.special;
       if (sp !== 'checkpoint' && sp !== 'finish') continue;
       const h = baseY(tile);
-      if (P.kind === 'ring') {
+      if (ck === 'ring') {
         // Checkpoint aérien : il faut passer dans l'anneau.
         if (this.collected.has(tile)) continue;
         toLocal(tile, p.x, p.z, L);
@@ -114,8 +116,14 @@ export class RaceLogic {
       if (sp === 'checkpoint' && !this.collected.has(tile)) {
         this.collected.add(tile);
         this.splits.push(this.steps);
-        const c = tileCenter(tile);
-        const base = -tile.r * Math.PI / 2;
+        // Pièce checkpoint d'origine : son centre ; option sur un virage : le milieu de l'arc (le centre n'est pas sur la route).
+        let c = tileCenter(tile);
+        if (!P.special && P.kind === 'arc') {
+          const a = arcParams(P), ang = Math.PI * 1.25;
+          c = localToWorld(tile, a.cx + a.R * Math.cos(ang), a.cz + a.R * Math.sin(ang));
+        }
+        let base = -tile.r * Math.PI / 2;
+        if (!P.special && P.kind === 'arc') base -= Math.PI / 4;       // cap de la route au milieu de l'arc (nord-est local)
         let yaw = base;
         let da = phys.yaw - base;
         while (da > Math.PI) da -= Math.PI * 2;

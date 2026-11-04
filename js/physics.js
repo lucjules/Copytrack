@@ -139,7 +139,7 @@ const L1 = { lx: 0, lz: 0 }, L2 = { lx: 0, lz: 0 };
 const S1 = {}, S2 = {};
 const W1 = { x: 0, z: 0 };
 const BELT = { x: 0, z: 0 };
-const OB = {}, OL = {}, MOV = {};
+const OB = {}, OL = {}, MOV = {}, MQ1 = {}, MQ2 = {};
 const FL = {};
 const CC = { x: 0, z: 0 };
 const TMP = { x: 0, z: 0 };
@@ -293,7 +293,9 @@ export class CarPhysics {
     this.surfType = s.type;
     this.surfMod = s.mod || '';
     this.surfTile = s.tile;
-    this.surfP = s.tile ? tileParam(s.tile) / 100 : 1;
+    // Pourcentage de réglage du revêtement touché (celui de la voie touchée pour une bifurcation à deux revêtements).
+    this.surfPct = s.tile ? tileParam({ s: s.mod || '', p: s.p }) : 100;
+    this.surfP = this.surfPct / 100;
     this.surfLx = s.lx; this.surfLz = s.lz;
     if (!triggers || !s.tile) return;
     const mod = this.surfMod;
@@ -340,9 +342,13 @@ export class CarPhysics {
   }
 
   // Sens et vitesse du tapis roulant au point (lx, lz) de la pièce (repère monde).
+  _pct(tile) {
+    return tile === this.surfTile ? this.surfPct : tileParam(tile);
+  }
+
   _belt(tile, lx, lz, out) {
     sampleLocal(tile, lx, lz, S1);
-    const sp = ((tileParam(tile) - 100) / 100) * CAR.belt;
+    const sp = ((this._pct(tile) - 100) / 100) * CAR.belt;
     rotVec(tile.r, S1.gz, -S1.gx, W1);
     out.x = W1.x * sp; out.z = W1.z * sp;
     return out;
@@ -351,7 +357,7 @@ export class CarPhysics {
   // Le verre cède si la voiture y roule trop lentement.
   _glassCheck(on, speed, tile, dt) {
     if (!on || this.graceT > 0) { this.glassT = 0; return; }
-    if (Math.abs(speed) < CAR.glassSpeed * (tileParam(tile) / 100)) this.glassT += dt; else this.glassT = 0;
+    if (Math.abs(speed) < CAR.glassSpeed * (this._pct(tile) / 100)) this.glassT += dt; else this.glassT = 0;
     if (this.glassT > 0.35) { this.glassT = 0; this.ev.glass = true; this.ev.sink = true; }
   }
 
@@ -471,11 +477,16 @@ export class CarPhysics {
       // dans le repère de la bande, puis on rajoute sa vitesse.
       // En montant sur la bande, la voiture prend sa vitesse d'un coup (et la garde en sortant).
       let belt = this.surfMod === 'conveyor' && this.surfTile ? this._belt(this.surfTile, this.surfLx, this.surfLz, BELT) : null;
-      // Pièce mobile (glissière) : la voiture est portée par la pièce, comme par un tapis.
-      if (this.surfTile && this.surfTile.mv === 2) {
+      // Pièce mobile (glissière, rotation) : la voiture est portée par la pièce, comme par un tapis.
+      // Rotation : vitesse du sol au point de contact = ω × r ; la voiture tourne aussi avec la pièce (même cap).
+      if (this.surfTile && this.surfTile.mv >= 2) {
         const o = this.track.moverOffset(this.surfTile, this.track.time, MOV);
         if (!belt) { belt = BELT; BELT.x = 0; BELT.z = 0; }
-        belt.x += o.vx; belt.z += o.vz;
+        if (this.surfTile.mv === 2) { belt.x += o.vx; belt.z += o.vz; }
+        else {
+          belt.x += o.w * (this.pos.z - o.cz); belt.z -= o.w * (this.pos.x - o.cx);
+          this.yaw += o.w * dt;
+        }
       }
       if (belt) {
         v.x += belt.x - this.beltX; v.z += belt.z - this.beltZ;
@@ -504,7 +515,7 @@ export class CarPhysics {
         }
       }
       else if (mod === 'wind') {
-        const a = ((tileParam(this.surfTile) - 100) / 100) * CAR.wind;
+        const a = ((this._pct(this.surfTile) - 100) / 100) * CAR.wind;
         rotVec(this.surfTile.r, 1, 0, TMP);
         vf += (TMP.x * fx + TMP.z * fz) * a * dt;
         vr += (TMP.x * rx + TMP.z * rz) * a * dt;
@@ -642,7 +653,7 @@ export class CarPhysics {
       if (t) {
         sampleLocal(t, this.surfLx, this.surfLz, S1);
         rotVec(t.r, S1.gx, S1.gz, W1);
-        const k = ((tileParam(t) - 100) / 100) * CAR.spring;
+        const k = ((this._pct(t) - 100) / 100) * CAR.spring;
         const n = this.n;
         v.x += W1.x * k + n.x * CAR.springHop; v.y += n.y * CAR.springHop; v.z += W1.z * k + n.z * CAR.springHop;
         this.grounded = false;
@@ -860,7 +871,16 @@ export class CarPhysics {
     const mv = this.track.movers;
     for (let i = 0; i < mv.length; i++) {
       const o = this.track.moverOffset(mv[i], this.track.time, MOV);
-      if (this._probeTile(mv[i], x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y, 0)) return HIT;
+      if (o.a) {
+        // Pièce tournante : on interroge sa géométrie « au repos », puis on remet le résultat dans le repère du monde.
+        const q = this.track.moverLocal(o, x, z, MQ1), q2 = this.track.moverLocal(o, px, pz, MQ2);
+        if (this._probeTile(mv[i], q.x, q.z, q2.x, q2.z, y - o.y, 0)) {
+          const c = Math.cos(o.a), sn = Math.sin(o.a), dx = HIT.dx, dz = HIT.dz, nx = HIT.nx, nz = HIT.nz;
+          HIT.dx = c * dx + sn * dz; HIT.dz = -sn * dx + c * dz;
+          HIT.nx = c * nx + sn * nz; HIT.nz = -sn * nx + c * nz;
+          return HIT;
+        }
+      } else if (this._probeTile(mv[i], x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y, 0)) return HIT;
     }
     return null;
   }

@@ -582,8 +582,8 @@ export class EditorSession {
   // ---------------------------------------------------------------- Historique
   _snapshot() {
     return JSON.stringify({
-      t: this.track.tiles.map((t) => [t.t, t.x, t.z, t.l, t.r, t.s || '', t.p || 0, t.v, t.nb, t.tn, t.mv || 0]),
-      d: this.track.decos.map((o) => [o.k, o.x, o.y, o.z, o.ry, o.s, o.c, o.u, o.ph || 0]),
+      t: this.track.tiles.map((t) => [t.t, t.x, t.z, t.l, t.r, t.s || '', t.p || 0, t.v, t.nb, t.tn, t.mv || 0, t.cp || 0, t.th || 0, t.ms || 0, t.ma || 0, t.col || 0, t.s2 || '', t.p2 || 0]),
+      d: this.track.decos.map((o) => [o.k, o.x, o.y, o.z, o.ry, o.s, o.c, o.u, o.ph || 0, o.cc || '']),
       lp: this.track.laps || 1,
       pr: { desc: this.track.desc, offroad: this.track.offroad, v0: this.track.v0, g0: this.track.g0, veh0: this.track.veh0, decor: this.track.decor },
     });
@@ -594,8 +594,8 @@ export class EditorSession {
     const { vt, vh } = this.track;
     this.track.clear();
     this.track.vt = vt; this.track.vh = vh;
-    for (const [t, x, z, l, r, s, p, v, nb, tn, mv] of data.t) this.track.add({ t, x, z, l, r, s, p, v, nb, tn, mv });
-    for (const [k, x, y, z, ry, sc, c, u, ph] of data.d) this.track.addDeco({ k, x, y, z, ry, s: sc, c, u, ph });
+    for (const [t, x, z, l, r, s, p, v, nb, tn, mv, cp, th, ms, ma, col, s2, p2] of data.t) this.track.add({ t, x, z, l, r, s, p, v, nb, tn, mv, cp, th, ms, ma, col: col || null, s2, p2 });
+    for (const [k, x, y, z, ry, sc, c, u, ph, cc] of data.d) this.track.addDeco({ k, x, y, z, ry, s: sc, c, u, ph, cc });
     this.track.laps = data.lp || 1;
     if (data.pr) {
       this.track.setParams(data.pr);

@@ -247,7 +247,7 @@ export function centerlineLocal(tile, n) {
     const a = arcParams(p);
     for (let i = 0; i <= n; i++) {
       const ang = Math.PI + (Math.PI / 2) * (i / n);
-      pts.push([a.cx + a.R * Math.cos(ang), base, a.cz + a.R * Math.sin(ang), 0]);
+      pts.push([(p.mirror < 0 ? -1 : 1) * (a.cx + a.R * Math.cos(ang)), base + p.rise * LEVEL_H * (i / n), a.cz + a.R * Math.sin(ang), 0]);
     }
   } else {
     const rise = p.rise * LEVEL_H;

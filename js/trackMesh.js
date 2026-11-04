@@ -4,7 +4,7 @@ import { GeoBuilder, FxBuilder } from './geo.js';
 import {
   CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T,
 } from './constants.js';
-import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, isRibbonKind, forkBranchX, forkSep, sampleLocal } from './pieces.js';
+import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, isRibbonKind, forkBranchX, forkSep, sampleLocal, cpKind } from './pieces.js';
 import { WATER_DROP } from './track.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { buildDecoInto, createPlaque } from './decos.js';
@@ -91,18 +91,46 @@ export function tint(s, p) {
   return '#' + _c1.lerp(_c2, (v - S.def) / Math.max(1, S.max - S.def)).getHexString();
 }
 
+// Thèmes visuels (option « Thème ») : teintes de la chaussée, des lignes, des bordures et de la dalle. Sans effet sur le jeu.
+const THEME_STYLE = [
+  null,
+  { road: ['#3f6c3b', '#487b43'], line: '#eaf5c9', railA: '#6dbb4a', railB: '#dff2b8', pal: { slab: '#5d7c4b', under: '#2e4226', railOuter: '#3d5a30' } },
+  { road: ['#cfae78', '#c2a06a'], line: '#f2e4c4', railA: '#a8764a', railB: '#ecd7ae', pal: { slab: '#9c8156', under: '#6b563a', railOuter: '#7a6244' } },
+  { road: ['#5a5957', '#656361'], line: '#c9c3b8', railA: '#8d857a', railB: '#bdb5a8', pal: { slab: '#6e6a64', under: '#3a3836', railOuter: '#4e4b47' } },
+];
+export const THEME_SWATCH = ['#343950', '#487b43', '#c2a06a', '#656361'];
+const _white = new THREE.Color('#ffffff');
+const mix = (hex, k, to = _white) => '#' + new THREE.Color(hex).lerp(to, k).getHexString();
+
 function styleFor(tile) {
   const s = tile.s || '';
   const base = SURFACE_STYLE[s] || SURFACE_STYLE[''];
   const accent = s && SURFACES[s].c ? tint(s, tile.p) : null;
-  return {
+  const style = {
     road: base.road,
     line: base.line,
     railA: s === 'moto' || s === 'sand' || s === 'mud' || !accent ? (s === 'sand' ? '#9b6b45' : s === 'mud' ? '#6b4a32' : PALETTE.railA) : accent,
     railB: s === 'ice' ? '#ffffff' : s === 'sand' ? '#e8d3ad' : s === 'bounce' ? '#fff0fb' : PALETTE.railB,
     accent: accent || PALETTE.boost,
+    pal: null,
   };
+  // Thème : remplace l'asphalte (et les bordures d'origine) ; un revêtement de jeu garde sa propre chaussée pour rester lisible.
+  const th = THEME_STYLE[tile.th | 0];
+  if (th) {
+    if (base.road[0] === PALETTE.asphalt) { style.road = th.road; style.line = th.line; }
+    if (!accent || s === 'boost' || s === 'moto') { style.railA = th.railA; style.railB = th.railB; }
+    style.pal = th.pal;
+  }
+  // Couleurs personnalisées (Inspecteur › Couleurs) : prennent le pas sur tout le reste.
+  const c = tile.col;
+  if (c) {
+    if (c.road) style.road = [c.road, mix(c.road, 0.07)];
+    if (c.line) style.line = c.line;
+    if (c.rail) { style.railA = c.rail; style.railB = mix(c.rail, 0.55); }
+  }
+  return style;
 }
+export { styleFor };
 
 // Profil de la route (d, h) parcouru dans le sens horaire (d vers la droite).
 // k = type de couleur de l'arête suivante.
@@ -177,12 +205,13 @@ export function stripsFor(tile) {
     return [ribbonStrip(tile, Math.max(8, Math.round(ribbonOf(tile, true).len / 2.5)))];
   }
   if (p.kind === 'arc') {
+    // Arc de cercle ; une « Courbe » (rise > 0) monte régulièrement sur le quart de tour (rampe hélicoïdale, chaussée horizontale en travers).
     const a = arcParams(p);
-    const n = p.size === 2 ? 16 : 8;
-    const fr = [];
+    const n = (p.size === 2 ? 16 : p.size === 3 ? 24 : 8) * (p.rise > 1 ? 2 : 1);
+    const fr = [], mir = p.mirror < 0 ? -1 : 1;
     for (let i = 0; i <= n; i++) {
       const ang = Math.PI + (Math.PI / 2) * (i / n);
-      fr.push(flatFrame(a.cx + a.R * Math.cos(ang), base, a.cz + a.R * Math.sin(ang), -Math.sin(ang), Math.cos(ang)));
+      fr.push(flatFrame(mir * (a.cx + a.R * Math.cos(ang)), base + p.rise * LEVEL_H * (i / n), a.cz + a.R * Math.sin(ang), -mir * Math.sin(ang), Math.cos(ang)));
     }
     return [fr];
   }
@@ -213,7 +242,7 @@ function sweep(gb, frames, style, nb, drop = 0) {
         case 'line': col = style.line; break;
         case 'edge': col = i % 2 ? style.railA : style.railB; break;
         case 'dash': col = i % 2 ? style.road[i % 2] : style.line; break;
-        default: col = PALETTE[prof[j].k];
+        default: col = (style.pal && style.pal[prof[j].k]) || PALETTE[prof[j].k];
       }
       gb.quad(A[j], A[j2], B[j2], B[j], col);
     }
@@ -226,8 +255,9 @@ function sweep(gb, frames, style, nb, drop = 0) {
     const f = frames[start ? 0 : n];
     for (const [d0, d1, h0, h1] of rects) {
       const a = at(f, d0, h0), b = at(f, d1, h0), c = at(f, d1, h1), d = at(f, d0, h1);
-      if (start) gb.quad(a, b, c, d, PALETTE.slab);
-      else gb.quad(b, a, d, c, PALETTE.slab);
+      const slab = (style.pal && style.pal.slab) || PALETTE.slab;
+      if (start) gb.quad(a, b, c, d, slab);
+      else gb.quad(b, a, d, c, slab);
     }
   }
 }
@@ -582,7 +612,7 @@ function platform(gb, glow, tile, fx = null) {
 
 // Portique (départ / checkpoint / arrivée).
 function gate(gb, glow, tile) {
-  const sp = PIECES[tile.t].special;
+  const sp = cpKind(tile) ? 'checkpoint' : PIECES[tile.t].special;
   const y = baseY(tile);
   const color = PALETTE[sp];
   const px = RO + 0.75;
@@ -654,16 +684,24 @@ function pillarPoints(tile) {
   const p = PIECES[tile.t];
   if (p.kind === 'arc') {
     const a = arcParams(p);
-    const angs = p.size === 2 ? [Math.PI + Math.PI / 6, Math.PI + Math.PI / 3] : [Math.PI * 1.25];
-    return angs.map((ang) => [a.cx + a.R * Math.cos(ang), a.cz + a.R * Math.sin(ang)]);
+    const angs = p.size >= 2 ? [Math.PI + Math.PI / 6, Math.PI + Math.PI / 3] : [Math.PI * 1.25];
+    const mir = p.mirror < 0 ? -1 : 1;
+    return angs.map((ang) => [mir * (a.cx + a.R * Math.cos(ang)), a.cz + a.R * Math.sin(ang)]);
   }
   if (p.kind === 'loop') return [[-p.mirror * p.lane, p.size * HALF - 4], [p.mirror * p.lane, -p.size * HALF + 4]];
   return [[0, 0]];
 }
 
-function pillarHeightAt(tile, lz) {
+function pillarHeightAt(tile, lz, lx = 0) {
   const p = PIECES[tile.t];
   const base = baseY(tile);
+  if (p.kind === 'arc') {
+    // Courbe montante : l'altitude suit l'angle (voir sampleLocal).
+    if (!p.rise) return base;
+    const a = arcParams(p);
+    const mx = p.mirror < 0 ? -lx : lx;
+    return base + p.rise * LEVEL_H * ((Math.atan2(lz - a.cz, mx - a.cx) + Math.PI * 2) % (Math.PI * 2) - Math.PI) / (Math.PI / 2);
+  }
   if (p.kind !== 'line') return base;
   const half = p.size * HALF;
   const t = (half - lz) / (2 * half);
@@ -736,6 +774,8 @@ function crossSweep(gb, glow, tile, style) {
 const FORK_BELOW = 0.08;   // m
 function forkMesh(gb, glow, tile, style) {
   const P = PIECES[tile.t];
+  // 2e revêtement : la voie déportée (branche 1) peut avoir le sien ; sinon elle garde celui de la pièce.
+  const style2 = tile.s2 ? styleFor({ ...tile, s: tile.s2 === '-' ? '' : tile.s2, p: tile.p2 }) : style;
   const base = baseY(tile);
   const half = P.size * HALF, n = 20;
   const branches = [0, 1].map((b) => {
@@ -755,7 +795,7 @@ function forkMesh(gb, glow, tile, style) {
     }
     return fr;
   });
-  for (const fr of branches) sweep(gb, fr, style, true);
+  branches.forEach((fr, b) => sweep(gb, fr, b === 1 ? style2 : style, true));
   // Bordures : extérieures sur toute la longueur, intérieures une fois les voies séparées.
   const m = P.mirror;
   const railAlong = (fr, side, from) => {
@@ -786,7 +826,7 @@ function forkMesh(gb, glow, tile, style) {
 function ringMesh(gb, glow, tile) {
   const P = PIECES[tile.t];
   const cy = baseY(tile) + RING_Y;
-  const cp = P.special === 'checkpoint';
+  const cp = cpKind(tile) === 'ring';
   const color = cp ? PALETTE.checkpoint : PALETTE.boost;
   const K = 28, S = 6, r = cp ? 0.75 : 0.6;
   const pt = (a, b) => {
@@ -841,22 +881,25 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
       if (tile.tn && !tile.v) tunnel(gb, glow, strip);
     }
   }
-  if (p.kind === 'arc' && p.special) {
+  const ck = cpKind(tile);
+  if (p.kind === 'arc' && (p.special || ck)) {
     // Portique au milieu du virage, perpendiculaire à la route.
     const a = arcParams(p), ang = Math.PI * 1.25;
-    const g = new THREE.Matrix4().makeTranslation(a.cx + a.R * Math.cos(ang), 0, a.cz + a.R * Math.sin(ang));
-    g.multiply(new THREE.Matrix4().makeRotationY(-Math.PI / 4));
+    const mir = p.mirror < 0 ? -1 : 1;
+    const g = new THREE.Matrix4().makeTranslation(mir * (a.cx + a.R * Math.cos(ang)), 0, a.cz + a.R * Math.sin(ang));
+    g.multiply(new THREE.Matrix4().makeRotationY(-mir * Math.PI / 4));
     const mm = m.clone().multiply(g);
     gb.setMatrix(mm); glow.setMatrix(mm);
     gate(gb, glow, tile);
     gb.setMatrix(m); glow.setMatrix(m);
-  } else if ((p.special === 'start' || p.special === 'checkpoint' || p.special === 'finish') && p.kind !== 'ring') gate(gb, glow, tile);
+  } else if (ck === 'ring' && p.kind !== 'ring') ringMesh(gb, glow, tile);       // checkpoint aérien posé en option sur une route
+  else if ((p.special === 'start' || p.special === 'finish' || ck === 'gate') && p.kind !== 'ring') gate(gb, glow, tile);
   if (p.kind === 'loop') loopTowers(gb, glow, tile);
 
   // Piliers (pas sous un ruban vertical / une route à l'envers)
   if ((tile.l > 0 || p.rise > 0) && p.kind !== 'ribbon' && p.kind !== 'ring' && !tile.v && !tile.mv) {
     for (const [lx, lz] of pillarPoints(tile)) {
-      const top = pillarHeightAt(tile, lz) - SLAB_T;
+      const top = pillarHeightAt(tile, lz, lx) - SLAB_T;
       if (top < 1.2) continue;
       if (track) {
         const w = new THREE.Vector3(lx, 0, lz).applyMatrix4(m);
@@ -903,7 +946,7 @@ export class TrackView {
     const focus = this.focus;
     for (const tile of this.track.tiles) {
       const P = PIECES[tile.t];
-      const hi = tile.l + Math.max(P.rise || 0, 0) + (P.clearance ? 1 : 0);
+      const hi = tile.l + Math.max(P.rise || 0, 0) + (P.clearance || tile.cp ? 1 : 0);
       const dim = focus != null && !(focus >= tile.l - 0.01 && focus <= hi + 0.01);
       if (tile.mv && !dim) {
         // Pièce mobile : son propre groupe, déplacé à chaque image selon le chrono.
@@ -963,7 +1006,15 @@ export class TrackView {
     for (const o of this.obstacles) o.userData.update(t);
     for (const m of this.movers) {
       const o = this.track.moverOffset(m.tile, t, MOVO);
-      m.grp.position.set(o.x, o.y, o.z);
+      if (o.a) {
+        // Rotation autour du centre de la pièce : tourne le groupe, puis le replace pour que le pivot reste fixe.
+        const c = Math.cos(o.a), sn = Math.sin(o.a);
+        m.grp.rotation.y = o.a;
+        m.grp.position.set(o.cx - (c * o.cx + sn * o.cz), o.y, o.cz - (-sn * o.cx + c * o.cz));
+      } else {
+        m.grp.rotation.y = 0;
+        m.grp.position.set(o.x, o.y, o.z);
+      }
     }
   }
 

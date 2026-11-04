@@ -54,6 +54,34 @@ export const PIECES = {
   cpRing:     { label: 'Checkpoint aérien', kind: 'ring', size: 1, rise: 0, clearance: 2, special: 'checkpoint' },
   cpCurve:    { label: 'Checkpoint en virage', kind: 'arc', size: 1, rise: 0, clearance: 1, special: 'checkpoint' },
   gentle:     { label: 'Pente douce (½ niveau)', kind: 'line', size: 1, rise: 0.5 },
+  // Phase 2 : nouvelles pièces (ajoutées en fin de PIECE_ORDER, les anciens codes restent lisibles).
+  steep4:     { label: 'Ligne droite · inclinaison 4', kind: 'line', size: 1, rise: 4 },
+  hugecurve:  { label: 'Très grand virage plat', kind: 'arc', size: 3, rise: 0 },
+  // « Courbe » : un tremplin courbé (virage montant). Serré = 1 case, grand = 2×2.
+  cv05:       { label: 'Courbe serrée · inclinaison ½', kind: 'arc', size: 1, rise: 0.5 },
+  cv1:        { label: 'Courbe serrée · inclinaison 1', kind: 'arc', size: 1, rise: 1 },
+  cv2:        { label: 'Courbe serrée · inclinaison 2', kind: 'arc', size: 1, rise: 2 },
+  cv4:        { label: 'Courbe serrée · inclinaison 4', kind: 'arc', size: 1, rise: 4 },
+  cvBig05:    { label: 'Grande courbe · inclinaison ½', kind: 'arc', size: 2, rise: 0.5 },
+  cvBig1:     { label: 'Grande courbe · inclinaison 1', kind: 'arc', size: 2, rise: 1 },
+  cvBig2:     { label: 'Grande courbe · inclinaison 2', kind: 'arc', size: 2, rise: 2 },
+  cvBig4:     { label: 'Grande courbe · inclinaison 4', kind: 'arc', size: 2, rise: 4 },
+  // Versions gauche : une rampe courbe n'est pas symétrique (parcourue à l'envers elle descend), il faut donc un miroir.
+  cvL05:      { label: 'Courbe serrée ↰ · inclinaison ½', kind: 'arc', size: 1, rise: 0.5, mirror: -1 },
+  cvL1:       { label: 'Courbe serrée ↰ · inclinaison 1', kind: 'arc', size: 1, rise: 1, mirror: -1 },
+  cvL2:       { label: 'Courbe serrée ↰ · inclinaison 2', kind: 'arc', size: 1, rise: 2, mirror: -1 },
+  cvL4:       { label: 'Courbe serrée ↰ · inclinaison 4', kind: 'arc', size: 1, rise: 4, mirror: -1 },
+  cvBigL05:   { label: 'Grande courbe ↰ · inclinaison ½', kind: 'arc', size: 2, rise: 0.5, mirror: -1 },
+  cvBigL1:    { label: 'Grande courbe ↰ · inclinaison 1', kind: 'arc', size: 2, rise: 1, mirror: -1 },
+  cvBigL2:    { label: 'Grande courbe ↰ · inclinaison 2', kind: 'arc', size: 2, rise: 2, mirror: -1 },
+  cvBigL4:    { label: 'Grande courbe ↰ · inclinaison 4', kind: 'arc', size: 2, rise: 4, mirror: -1 },
+  // Loopings à 2 et 3 boucles : le décalage latéral total (lane) est choisi pour garder ≥ 24 m entre deux tours.
+  loopBigDouble:  { label: 'Grand looping ×2 ↱', kind: 'loop', size: 3, rise: 0, clearance: 7, mirror: 1, R: 18, lane: 24, turns: 2 },
+  loopBigDoubleL: { label: 'Grand looping ×2 ↰', kind: 'loop', size: 3, rise: 0, clearance: 7, mirror: -1, R: 18, lane: 24, turns: 2 },
+  loopTriple:     { label: 'Triple looping ↱', kind: 'loop', size: 4, rise: 0, clearance: 5, mirror: 1, R: 12, lane: 36, turns: 3 },
+  loopTripleL:    { label: 'Triple looping ↰', kind: 'loop', size: 4, rise: 0, clearance: 5, mirror: -1, R: 12, lane: 36, turns: 3 },
+  loopBigTriple:  { label: 'Grand looping ×3 ↱', kind: 'loop', size: 4, rise: 0, clearance: 7, mirror: 1, R: 18, lane: 36, turns: 3 },
+  loopBigTripleL: { label: 'Grand looping ×3 ↰', kind: 'loop', size: 4, rise: 0, clearance: 7, mirror: -1, R: 18, lane: 36, turns: 3 },
 };
 
 // Rayon de l'anneau (turbo / checkpoint aérien) et hauteur de son centre au-dessus du niveau.
@@ -72,6 +100,10 @@ export const PIECE_ORDER = [
   'loopBig', 'loopBigL', 'loopDouble', 'loopDoubleL', 'twist', 'ramp90', 'wall', 'crest90',
   'bank', 'bankBig', 'halfpipe', 'tube', 'cork', 'corkL', 'fork', 'forkL', 'ring', 'cpRing', 'cpCurve', 'gentle',
   'tubeIn', 'tubeMid',
+  // Phase 2 (à la suite : ne jamais réordonner)
+  'steep4', 'hugecurve', 'cv05', 'cv1', 'cv2', 'cv4', 'cvBig05', 'cvBig1', 'cvBig2', 'cvBig4',
+  'loopBigDouble', 'loopBigDoubleL', 'loopTriple', 'loopTripleL', 'loopBigTriple', 'loopBigTripleL',
+  'cvL05', 'cvL1', 'cvL2', 'cvL4', 'cvBigL05', 'cvBigL1', 'cvBigL2', 'cvBigL4',
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -140,20 +172,76 @@ export function isRibbon(tile) {
   return isRibbonKind(tile.t);
 }
 
-// Drapeaux possibles : v (à l'envers), nb (sans bordures), tn (tunnel).
-export function flagAllowed(type, flag, tile = null) {
+// Drapeaux possibles : v (à l'envers), nb (sans bordures), tn (tunnel), mv (mouvement 1/2/3),
+// cp (checkpoint : 1 portique, 2 anneau aérien), th (thème visuel).
+export function flagAllowed(type, flag, tile = null, val = 0) {
   const p = PIECES[type];
   if (!p) return false;
   const lineLike = p.kind === 'line' || p.kind === 'arc';
   // 0.9 : toutes les pièces peuvent être posées à l'envers (retournées sous leur niveau).
   if (flag === 'v') return true;
+  // Phase 2 : le thème est purement visuel, toute pièce de route en profite.
+  if (flag === 'th') return p.kind !== 'ring';
   if (p.kind === 'ring' || p.kind === 'fork') return false;
   if (flag === 'nb') return lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube'));
   if (flag === 'tn') return lineLike && !p.special && !(tile && tile.v);
-  // Pièce mobile : route « simple » (droite, virage, pente, plateforme), pas à l'envers.
-  if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !(tile && tile.v);
+  // Pièce mobile : route « simple » (droite, virage, pente, plateforme), pas à l'envers, pas de checkpoint dessus.
+  if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !(tile && (tile.v || tile.cp));
+  // Checkpoint en option : sur une route plate (ligne ou virage) ; l'anneau aérien seulement sur une ligne droite à l'endroit.
+  if (flag === 'cp') {
+    if (!(lineLike && !p.special && !p.rise) || (tile && tile.mv)) return false;
+    if (val === 2) return p.kind === 'line' && !(tile && tile.v);
+    return true;
+  }
   return false;
 }
+
+// Genre de checkpoint d'une pièce : 'gate' (portique), 'ring' (anneau aérien) ou null.
+// Les anciennes pièces « Checkpoint » restent valables ; la nouvelle manière est l'option cp.
+export function cpKind(tile) {
+  const P = PIECES[tile.t];
+  if (P.special === 'checkpoint') return P.kind === 'ring' ? 'ring' : 'gate';
+  if (tile.cp === 2 && P.kind === 'line') return 'ring';
+  if (tile.cp === 1 && (P.kind === 'line' || P.kind === 'arc')) return 'gate';
+  return null;
+}
+
+// ---- Pièces mobiles : paramètres (vitesse en %, amplitude) ----------------------------------------------------
+//  Ascenseur : monte de `amp` niveaux et redescend ; Glissière : se décale de `amp` cases ; Rotation : tourne de `amp` degrés
+//  (360 = tour complet continu, sinon va-et-vient). `speed` : 100 % = la période de base ; négatif = sens inverse (rotation).
+export const MOVER = {
+  1: { label: 'Ascenseur', period: 6, speed: { def: 100, min: 25, max: 300 }, amp: { def: 2, min: 0.5, max: 8, step: 0.5, unit: ' niv.' } },
+  2: { label: 'Glissière', period: 5, speed: { def: 100, min: 25, max: 300 }, amp: { def: 1, min: 0.5, max: 3, step: 0.5, unit: ' case(s)' } },
+  3: { label: 'Rotation', period: 12, speed: { def: 100, min: -300, max: 300 }, amp: { def: 360, min: 45, max: 360, step: 45, unit: '°' } },
+};
+export function moverParams(tile, out = {}) {
+  const M = MOVER[tile.mv];
+  out.speed = M ? (tile.ms || M.speed.def) : 0;
+  out.amp = M ? (tile.ma || M.amp.def) : 0;
+  return out;
+}
+// Valeurs bornées (renvoie 0 = « valeur par défaut » pour garder les codes de circuit compacts).
+export function clampMover(mv, ms, ma) {
+  const M = MOVER[mv];
+  if (!M) return { ms: 0, ma: 0 };
+  let s = Math.round(+ms || 0), a = Math.round((+ma || 0) * 2) / 2;
+  if (s) {
+    const lo = M.speed.min < 0 ? -M.speed.max : M.speed.min;
+    s = Math.max(lo, Math.min(M.speed.max, s));
+    if (M.speed.min < 0 && Math.abs(s) < 25) s = s < 0 ? -25 : 25;
+    if (s === M.speed.def) s = 0;
+  }
+  if (a) { a = Math.max(M.amp.min, Math.min(M.amp.max, a)); if (a === M.amp.def) a = 0; }
+  return { ms: s, ma: a };
+}
+
+// Thèmes visuels d'une pièce (option « Thème », sans effet sur le jeu).
+export const THEMES = [
+  { id: 0, label: 'Classique' },
+  { id: 1, label: 'Herbe' },
+  { id: 2, label: 'Sable' },
+  { id: 3, label: 'Roche' },
+];
 
 export function surfaceAllowed(type, s, v = false) {
   if (!s) return true;
@@ -258,12 +346,25 @@ export function sampleLocal(tile, lx, lz, out) {
     out.along = t;
   } else if (p.kind === 'arc') {
     const a = arcParams(p);
-    const dx = lx - a.cx, dz = lz - a.cz;
+    // Version gauche (mirror < 0) : on calcule dans le repère miroir (x -> -x) puis on retourne les vecteurs.
+    const mir = p.mirror < 0 ? -1 : 1;
+    const dx = mir * lx - a.cx, dz = lz - a.cz;
     const dist = Math.sqrt(dx * dx + dz * dz) || 1e-6;
-    out.d = dist - a.R; out.gx = dx / dist; out.gz = dz / dist;
+    out.d = dist - a.R; out.gx = (mir * dx) / dist; out.gz = dz / dist;
     let ang = Math.atan2(dz, dx);
     if (ang < 0) ang += Math.PI * 2;
     out.along = (ang - Math.PI) / (Math.PI / 2);
+    if (p.rise) {
+      // Courbe montante : l'altitude ne dépend que de l'angle (la chaussée est horizontale en travers, comme une rampe hélicoïdale).
+      // Pente le long de la route = (dh/dθ) / rayon ; la normale se penche vers l'arrière de la marche.
+      const t = out.along < 0 ? 0 : out.along > 1 ? 1 : out.along;
+      const rise = p.rise * LEVEL_H;
+      out.h = base + rise * t;
+      const k = rise / ((Math.PI / 2) * dist);
+      const inv = 1 / Math.sqrt(1 + k * k);
+      const tx = -Math.sin(ang), tz = Math.cos(ang);
+      out.nx = -mir * k * tx * inv; out.ny = inv; out.nz = -k * tz * inv;
+    }
   } else if (p.kind === 'fork') {
     forkSample(p, lx, lz, out);
   } else if (p.kind === 'loop') {
