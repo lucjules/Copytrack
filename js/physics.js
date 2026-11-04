@@ -1069,12 +1069,12 @@ export class CarPhysics {
     let vx = R.vs * c + R.vd * s, vy = -R.vs * s + R.vd * c;
     const ax = (this._longitudinal(vx, inp, this.k.maxSpeed * vmaxK, Math.min(1, load) * tractK, extraDrag, dt, Math.min(1, load)) - vx) / dt;
     // Ruban posé à l'envers (miroir) : son axe latéral pointe vers la gauche du pilote.
-    const hs = tile.v ? -1 : 1;
-    if (hs < 0) this.steer = -this.steer;
+    // Les commandes restent dans le repère du pilote, même sur une pièce inversée.
+    // Le repère latéral du ruban est déjà orienté par sa normale : ne pas inverser
+    // le volant une seconde fois sur les sections retournées.
     this.rearK = rearK;
     const t = this._tires(vx, vy, this.omega, ax, load * gripK, dt);
     this.rearK = 1;
-    if (hs < 0) { this.steer = -this.steer; this.steerAngle = -this.steerAngle; }
     vx = t.vx; vy = t.vy; this.omega = t.w;
     // Retour dans le plan de la route avec le MÊME cap, puis la voiture pivote.
     R.vs = vx * c - vy * s + beltE1;
