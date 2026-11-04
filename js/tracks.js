@@ -457,7 +457,11 @@ export function buildBuiltin(def) {
       const i = Math.min(n - 2, Math.floor(n * o.at));
       const a = P[i], b = P[i + 1];
       const dx = b[0] - a[0], dz = b[2] - a[2], l = Math.hypot(dx, dz) || 1;
-      t.addDeco({ k: o.k, x: a[0] + (-dz / l) * (o.side || 0), y: a[1], z: a[2] + (dx / l) * (o.side || 0), ry: Math.atan2(dx / l, dz / l), s: o.s || 1, c: 0, ph: o.ph || 0 });
+      // Valeurs arrondies : le calcul flottant peut différer d'un moteur JavaScript à l'autre
+      // (navigateur / serveur) ; l'empreinte du circuit doit être identique partout.
+      const q = (v, st) => Math.round(v / st) * st;
+      const ry = q(Math.atan2(dx / l, dz / l), Math.PI / 8);
+      t.addDeco({ k: o.k, x: q(a[0] + (-dz / l) * (o.side || 0), 0.5), y: q(a[1], 0.1), z: q(a[2] + (dx / l) * (o.side || 0), 0.5), ry: +ry.toFixed(4), s: o.s || 1, c: 0, ph: o.ph || 0 });
     }
   }
   return t;
