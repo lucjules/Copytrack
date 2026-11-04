@@ -2,7 +2,7 @@
 // requêtes de surface pour la physique, sérialisation en code partageable.
 import { CELL, DIRS, ROAD_HALF, RAIL_W, SLAB_T, MAX_LEVEL, LEVEL_H, MAX_DECOS } from './constants.js';
 import {
-  PIECES, PIECE_ORDER, SURFACE_ORDER, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, isFloor, isCeilingFloor, baseY,
+  PIECES, PIECE_ORDER, SURFACE_CODES, SURFACE_ALIAS, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, isFloor, isCeilingFloor, baseY,
   toLocal, sampleLocal, rotVec,
 } from './pieces.js';
 import { centerlineWorld } from './ribbons.js';
@@ -81,7 +81,7 @@ export class Track {
 
   // Convertit une pièce (éventuellement au format v1.0 / v1.1) en pièce v1.2.
   static normalize(t) {
-    let type = t.t, s = t.s || '';
+    let type = t.t, s = SURFACE_ALIAS[t.s] || t.s || '';
     if (LEGACY_SURFACE[type]) { s = LEGACY_SURFACE[type]; type = 'straight'; }
     if (LEGACY_PIECE[type]) type = LEGACY_PIECE[type];
     if (!PIECES[type]) throw new Error('Pièce inconnue : ' + type);
@@ -424,7 +424,7 @@ export class Track {
     for (const t of this.tiles) {
       arr.push(
         PIECE_ORDER.indexOf(t.t), t.x, t.z, t.l, t.r,
-        Math.max(0, SURFACE_ORDER.indexOf(t.s || '')), t.p || 0,
+        Math.max(0, SURFACE_CODES.indexOf(t.s || '')), t.p || 0,
         (t.v ? 1 : 0) | (t.nb ? 2 : 0) | (t.tn ? 4 : 0) | ((t.mv | 0) << 3),
       );
     }
@@ -461,7 +461,7 @@ export class Track {
       const type = PIECE_ORDER[data.t[i]];
       if (!type) continue;
       const tile = { t: type, x: data.t[i + 1], z: data.t[i + 2], l: data.t[i + 3], r: data.t[i + 4], s: '' };
-      if (stride >= 6) tile.s = SURFACE_ORDER[data.t[i + 5]] || '';
+      if (stride >= 6) tile.s = SURFACE_CODES[data.t[i + 5]] || '';
       if (stride >= 8) {
         tile.p = data.t[i + 6];
         const f = data.t[i + 7] | 0;
@@ -571,6 +571,14 @@ export function scriptTrack(name, script, opts = {}) {
     place(type, Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
     adv(h, 2);
   };
+  // Vrille : pièce 2×2 dont la route est dans la colonne de gauche. rev : parcourue dans l'autre sens (pièce tournée de 180°,
+  // la route passe alors dans la colonne de droite ; on garde la même case d'entrée).
+  const twist2 = (rev) => {
+    const r = rev ? h + 2 : h;
+    const e = rot(r, -0.5, rev ? -0.5 : 0.5);              // case d'entrée dans le repère de la pièce
+    place('twist', Math.round(x + 0.5 - e.x - 1), Math.round(z + 0.5 - e.z - 1), l, r, rev);
+    adv(h, 2);
+  };
   // Bifurcation (+ voies parallèles + jonction). side = 1 : voie B à droite.
   const fork = (n, side, surf) => {
     const right = rot(h, side, 0);
@@ -668,8 +676,9 @@ export function scriptTrack(name, script, opts = {}) {
       case 'OBL': bigPiece('loopBigL', -1, 3, 1); break;
       case 'OD': bigPiece('loopDouble', 1, 3, 1); break;
       case 'ODL': bigPiece('loopDoubleL', -1, 3, 1); break;
-      case 'TW': place('twist', x, z, l, h); adv(h); break;
-      case 'TWB': place('twist', x, z, l, h + 2, true); adv(h); break;
+      // Vrille (2 cases de long) : TW de l'endroit vers l'envers, TWB (sens inverse) de l'envers vers l'endroit.
+      case 'TW': twist2(false); break;
+      case 'TWB': twist2(true); break;
       case 'QU': place('ramp90', x, z, l, h); adv(h); l += 2; break;
       case 'WA': for (let i = 0; i < n; i++) { place('wall', x, z, l, h); l += 1; } break;
       case 'CR': place('crest90', x, z, l, h); adv(h); l += 2; break;

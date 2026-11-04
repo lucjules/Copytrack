@@ -403,7 +403,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 2 },
     script: 'start S2 B S2 TW.f S2^ C^ S2^ R^ S2^ TWB.f S2 C S2 L S2 B S2 finish',
-    medals: { cristal: 14.2, or: 14.8, argent: 17, bronze: 20 },
+    medals: { cristal: 15.2, or: 15.8, argent: 18, bronze: 21 },
   },
   {
     id: 'cristalfele', name: 'Cristal Fêlé', decor: 'caves', difficulty: 4,
@@ -423,7 +423,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 3 },
     script: 'start S2 B S2 TW.f S2^ D^ S2^ C^ S2^ U^ S^ TWB.f S2 C S2 R S2 TW.f S2^ R^ S2^ TWB.f S2 B S2 finish',
-    medals: { cristal: 19.6, or: 20.5, argent: 23.5, bronze: 27.6 },
+    medals: { cristal: 21.6, or: 22.5, argent: 25.5, bronze: 29.6 },
   },
   {
     id: 'coeur', name: 'Cœur de la Montagne', decor: 'caves', difficulty: 5,
@@ -431,7 +431,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 2 },
     script: 'start S2 B S2 TW.f S2^ C^ S2^ L^ S2^ TWB.f S2.v R S2 C S2.y S2 L S2 B S2 S.f V3 S2^ R^ S2^ S.f^ V-3 S3 C S2 B S2 finish',
     obst: [{ k: 'pendulum', at: 0.47, side: 0, s: 1 }],
-    medals: { cristal: 26.2, or: 28.9, argent: 33.2, bronze: 39 },
+    medals: { cristal: 26.4, or: 29.1, argent: 33.4, bronze: 39.2 },
   },
 ];
 

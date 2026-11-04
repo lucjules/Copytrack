@@ -257,24 +257,28 @@
   <!-- Éditeur -->
   <div id="editor" class="hidden">
     <div class="ed-top">
-      <button class="btn" data-ed="menu">← Menu</button>
-      <input id="ed-name" class="ed-name" maxlength="40" spellcheck="false" aria-label="Nom du circuit">
-      <button class="btn" data-ed="params" title="Paramètres du niveau : description, décor, tours, règles de départ (P)">⚙ Paramètres</button>
+      <div class="ed-menu-wrap">
+        <button class="btn icon" id="ed-menu-btn" data-ed="menu-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="ed-menu" title="Menu de l'éditeur">☰</button>
+        <div class="ed-menu hidden" id="ed-menu" role="menu" aria-labelledby="ed-menu-btn">
+          <button role="menuitem" data-ed="new">Nouveau</button>
+          <button role="menuitem" data-ed="import">Importer</button>
+          <button role="menuitem" data-ed="export">Partager</button>
+          <button role="menuitem" data-ed="save">Enregistrer <kbd>Ctrl S</kbd></button>
+          <hr>
+          <button role="menuitem" data-ed="menu">← Retour au menu</button>
+        </div>
+      </div>
+      <button class="btn" data-ed="params" title="Paramètres du niveau : décor, tours, règles de départ (F3)">⚙ Paramètres</button>
       <div class="ed-group">
         <button class="btn icon" data-ed="undo" title="Annuler (Ctrl+Z)">↶</button>
         <button class="btn icon" data-ed="redo" title="Rétablir (Ctrl+Y)">↷</button>
-      </div>
-      <div class="ed-group">
-        <button class="btn" data-ed="new">Nouveau</button>
-        <button class="btn" data-ed="import">Importer</button>
-        <button class="btn" data-ed="export">Partager</button>
-        <button class="btn" data-ed="save">Enregistrer</button>
       </div>
       <div class="ed-group">
         <button class="btn" data-ed="testhere" title="Tester depuis la pièce visée (Maj+T)">▶ Ici</button>
         <button class="btn" data-ed="test" title="Essai libre, sans vérification (T)">▶ Tester <kbd>T</kbd></button>
         <button class="btn primary" data-ed="verify" title="Course complète : ton temps devient la médaille cristal, puis tu peux publier (F2)">✔ Vérifier</button>
       </div>
+      <button class="ed-warn hidden" id="ed-warn" type="button" aria-live="polite"></button>
     </div>
     <div class="ed-selbar hidden" id="ed-selbar">
       <button class="btn" data-sel="all" title="Tout sélectionner (Ctrl+A)">Tout</button>
@@ -287,6 +291,7 @@
       <button class="btn" data-sel="del" title="Supprimer (Suppr)">Supprimer</button>
       <button class="btn icon" data-sel="none" title="Annuler la sélection (Échap)">✕</button>
     </div>
+    <div class="ed-tools" id="ed-tools" role="toolbar" aria-label="Outils"></div>
     <div class="ed-palette" id="ed-palette"></div>
     <div class="ed-side">
       <button class="btn icon" data-ed="lvl-up" title="Monter (E / Page↑)">▲</button>
@@ -296,8 +301,6 @@
       <button class="btn icon" data-ed="levelview" title="Vue par niveau (Z)">◐</button>
       <button class="btn icon" data-ed="help" title="Raccourcis (F1 ou ?)">?</button>
     </div>
-    <div class="ed-status" id="ed-status"></div>
-    <div class="ed-help" id="ed-help"></div>
   </div>
 
   <!-- Fenêtre modale générique -->

@@ -12,6 +12,8 @@ import { setEditorDraft, saveMyTrack, newId, formatTime } from './storage.js';
 import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel } from './editorTools.js';
 import { centerlineWorld } from './ribbons.js';
 import { Inspector, MIRROR_TYPES } from './inspector.js';
+import { keyLabel } from './input.js';
+import { esc } from './ui.js';
 import { pickObjects, ERASE_FILTERS, ERASE_FILTER_ORDER, LAYER_ALL, LAYER_DECO, tileBounds } from './editorPick.js';
 
 export const PALETTE_ORDER = [
@@ -47,10 +49,16 @@ export const PALETTE_ORDER = [
   { id: 'start', key: 'Digit9', k: '9' },
   { id: 'finish', key: 'Digit0', k: '0' },
   { id: 'platform', key: 'KeyP', k: 'P' },
-  { id: 'select', key: 'KeyQ', k: 'Q' },
-  { id: 'inspect', key: '', k: '' },
-  { id: 'erase', key: '', k: 'X' },
 ];
+
+// Outils (grille « Outils » à gauche) : ne posent rien. action : raccourci réglable (voir input.js) ; key : touche fixe.
+export const TOOLS = [
+  { id: 'select', label: 'Sélection', key: 'KeyQ', k: 'Q', hint: 'Choisir une zone : copier, déplacer, supprimer' },
+  { id: 'inspect', label: 'Inspecter', action: 'ed.inspect', hint: 'Clic sur une pièce ou une déco : propriétés et gizmos 3D' },
+  { id: 'erase', label: 'Gomme', action: 'ed.erase', hint: 'Effacer (filtre : tout / décorations / pistes)' },
+  { id: 'fill', label: 'Pot de peinture', action: 'ed.fill', hint: 'Remplir toute une zone connectée : choisis une pièce ou un revêtement, puis clique une pièce' },
+];
+const TOOL_IDS = new Set(['select', 'inspect', 'erase']);
 
 const MIRROR = MIRROR_TYPES;
 const MODS = [
@@ -108,6 +116,7 @@ export const ICONS = {
   inspect: svg(`<rect x="8" y="14" width="26" height="22" rx="3" fill="#5ff2ff22" stroke="#5ff2ff" stroke-width="3"/><path d="M28 24l14 6-6 3-3 6z" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/><circle cx="21" cy="25" r="3" fill="#5ff2ff"/>`),
   select: svg(`<rect x="7" y="9" width="34" height="30" fill="#5ff2ff22" stroke="#5ff2ff" stroke-width="3" stroke-dasharray="6 4"/><path d="M30 30l10 10M30 30v8M30 30h8" stroke="#ffffff" stroke-width="2.5"/>`),
   erase: svg(`<path d="M12 12l24 24M36 12L12 36" stroke="#ff5a6e" stroke-width="5" stroke-linecap="round"/>`),
+  fill: svg(`<path d="M10 26l14-14 14 14-12 12z" fill="#ffb34722" stroke="#ffb347" stroke-width="3" stroke-linejoin="round"/><path d="M24 12V8M36 30c3 4 5 6 5 9a5 5 0 0 1-10 0c0-3 2-5 5-9z" stroke="#ffb347" stroke-width="3" fill="#ffb347" stroke-linecap="round"/>`),
   'surf:': svg(`${straightBase()}<path d="M24 8v32" stroke="${LINE}" stroke-width="2" stroke-dasharray="5 5"/>`),
   'surf:ice': svg(`${straightBase('#bfe4f2', '#7fd3ff')}<path d="M24 14v20M15 19l18 10M15 29l18-10" stroke="#4aa8d8" stroke-width="2.5"/>`),
   'surf:boost': svg(`${straightBase(ROAD, '#2fe0ff')}<path d="M15 18l9-7 9 7M15 30l9-7 9 7M15 42l9-7 9 7" stroke="#36e9ff" stroke-width="3" fill="none"/>`),
@@ -300,7 +309,7 @@ export class EditorSession {
     const tabs = document.createElement('div');
     tabs.className = 'pal-tabs';
     const panels = {};
-    for (const [id, label] of [['pieces', 'Pièces'], ['surf', 'Revêtements'], ['mods', 'Options'], ['decos', 'Décors']]) {
+    for (const [id, label] of [['pieces', 'Pièces'], ['mods', 'Options'], ['surf', 'Revêtements'], ['decos', 'Décors']]) {   // Options à côté de Pièces
       const b = document.createElement('button');
       b.className = 'pal-tab';
       b.dataset.tab = id;
@@ -312,13 +321,6 @@ export class EditorSession {
       panel.dataset.panel = id;
       panels[id] = panel;
     }
-    const fillBtn = document.createElement('button');
-    fillBtn.className = 'pal-fill';
-    fillBtn.id = 'ed-fill';
-    fillBtn.textContent = '🪣 Pot de peinture';
-    fillBtn.title = 'Remplir toute une zone connectée : choisis une pièce ou un revêtement, puis clique une pièce (² / `)';
-    fillBtn.addEventListener('click', () => { this.toggleFill(); this.app.audio.click(); });
-    tabs.appendChild(fillBtn);
     pal.appendChild(tabs);
 
     const rowP = document.createElement('div'); rowP.className = 'pal-row';
@@ -349,12 +351,21 @@ export class EditorSession {
 
     const dTop = document.createElement('div');
     dTop.className = 'pal-deco-top';
-    dTop.innerHTML = `<select id="ed-deco-cat">${Object.entries(DECO_CATS).map(([k, c]) => `<option value="${k}">${c.label}</option>`).join('')}</select>
-      <div class="swatches" id="ed-deco-colors"></div>
+    dTop.innerHTML = `<div class="swatches" id="ed-deco-colors"></div>
       <label class="inl">Taille <input type="range" id="ed-deco-scale" min="0.3" max="6" step="0.05"><b id="ed-deco-scale-val"></b></label>
       <label class="inl" id="ed-deco-ph-wrap" title="Décalage dans le cycle de l'obstacle (pour désynchroniser plusieurs obstacles)">Décalage <input type="range" id="ed-deco-ph" min="0" max="0.95" step="0.05"><b id="ed-deco-ph-val"></b></label>
       <button class="btn" id="ed-deco-snap" title="Accrochage (N)"></button>
       <input type="text" id="ed-deco-url" placeholder="URL de l'image (https://…)" maxlength="400">`;
+    // Sous-catégories de décors : une rangée de boutons (plus de liste déroulante).
+    const cats = document.createElement('div');
+    cats.className = 'pal-chips'; cats.id = 'ed-deco-cats'; cats.setAttribute('role', 'tablist'); cats.setAttribute('aria-label', 'Catégories de décors');
+    for (const [k, c] of Object.entries(DECO_CATS)) {
+      const b = document.createElement('button');
+      b.className = 'chip'; b.dataset.cat = k; b.textContent = c.label; b.setAttribute('role', 'tab');
+      b.addEventListener('click', () => { this.deco.cat = k; this._buildDecoRow(); this.app.audio.click(); });
+      cats.appendChild(b);
+    }
+    panels.decos.appendChild(cats);
     panels.decos.appendChild(dTop);
     const rowD = document.createElement('div'); rowD.className = 'pal-row decos'; rowD.id = 'ed-deco-row';
     panels.decos.appendChild(rowD);
@@ -365,8 +376,6 @@ export class EditorSession {
     range.oninput = () => { this.surfParam[fillBase(this.tool).slice(5)] = +range.value; this._refreshParam(); };
     document.getElementById('ed-param-reset').onclick = () => { delete this.surfParam[fillBase(this.tool).slice(5)]; this._refreshParam(); };
     // Réglages des décorations
-    const cat = document.getElementById('ed-deco-cat');
-    cat.onchange = () => { this.deco.cat = cat.value; this._buildDecoRow(); cat.blur(); };
     const sc = document.getElementById('ed-deco-scale');
     sc.value = this.deco.scale;
     sc.oninput = () => { this.deco.scale = +sc.value; this.previewKey = ''; this._refreshDeco(); };
@@ -389,13 +398,36 @@ export class EditorSession {
     }
     this._buildDecoRow();
 
-    const name = document.getElementById('ed-name');
-    name.value = this.track.name;
-    name.oninput = () => { this.track.name = name.value.trim() || 'Sans titre'; this._changed(false); };
     this.setTab(fillBase(this.tool).startsWith('surf:') ? 'surf' : this.tool.startsWith('mod:') ? 'mods' : this.tool.startsWith('deco:') ? 'decos' : 'pieces');
+    this._buildTools();
+  }
+
+  // Grille « Outils » : Sélection, Inspecter, Gomme, Pot de peinture (ils ne posent rien : à part des pièces).
+  _buildTools() {
+    const box = document.getElementById('ed-tools');
+    box.innerHTML = '';
+    const SHORT = { Backslash: '\\', Slash: '/', Backquote: '`', Delete: 'Suppr' };
+    const label = (code) => (code ? SHORT[code] || keyLabel(code) : '');
+    for (const t of TOOLS) {
+      const code = t.action ? (this.app.input.bindings[t.action] || []).filter(Boolean)[0] : t.key;
+      const k = t.k || label(code);
+      const b = document.createElement('button');
+      b.className = 'tool-btn';
+      b.dataset.tool = t.id;
+      b.title = `${t.label}${k ? ` (${k})` : ''} : ${t.hint}`;
+      b.setAttribute('aria-label', t.label);
+      b.innerHTML = `${k ? `<span class="k">${esc(k)}</span>` : ''}${ICONS[t.id] || ''}<span>${t.label}</span>`;
+      b.addEventListener('click', () => { if (t.id === 'fill') this.toggleFill(); else this.setTool(t.id); this.app.audio.click(); });
+      box.appendChild(b);
+    }
+  }
+
+  _syncDecoCats() {
+    document.querySelectorAll('#ed-deco-cats .chip').forEach((c) => { const on = c.dataset.cat === this.deco.cat; c.classList.toggle('on', on); c.setAttribute('aria-selected', String(on)); });
   }
 
   _buildDecoRow() {
+    this._syncDecoCats();
     const row = document.getElementById('ed-deco-row');
     row.innerHTML = '';
     for (const k of DECO_CATS[this.deco.cat].kinds) this._toolButton(row, 'deco:' + k, '');
@@ -415,6 +447,7 @@ export class EditorSession {
     else this.fillMode = false;
     if (id !== 'select') { this.pasting = false; this.sel = null; this.selDrag = null; }
     if (id !== 'inspect') this.inspector.clear();
+    if (PIECES[fillBase(id)] || fillBase(id).startsWith('surf:')) this._lastBrush = fillBase(id);     // dernière pièce / dernier revêtement : sert au pot de peinture
     this.tool = id;
     this.previewKey = '';
     if (fillBase(id).startsWith('surf:')) this.setTab('surf');
@@ -423,8 +456,8 @@ export class EditorSession {
       this.setTab('decos');
       const kind = id.slice(5);
       const cat = Object.entries(DECO_CATS).find(([, c]) => c.kinds.includes(kind));
-      if (cat && cat[0] !== this.deco.cat) { this.deco.cat = cat[0]; document.getElementById('ed-deco-cat').value = cat[0]; this._buildDecoRow(); }
-    } else this.setTab('pieces');
+      if (cat && cat[0] !== this.deco.cat) { this.deco.cat = cat[0]; this._buildDecoRow(); }
+    } else if (!TOOL_IDS.has(id)) this.setTab('pieces');     // un outil (sélection, inspecteur, gomme) garde l'onglet affiché
     this._refreshUI();
   }
 
@@ -436,14 +469,14 @@ export class EditorSession {
       this.app.ui.flash('Pot de peinture désactivé', 1.2);
       return;
     }
-    const f = toFill(this.tool);
+    const f = toFill(this.tool) || toFill(this._lastBrush || 'straight');     // depuis un autre outil : on remplit avec la dernière pièce choisie
     if (!f) { this.app.ui.flash('Pot de peinture : choisis d’abord une pièce ou un revêtement.'); this.app.audio.error(); return; }
     this.setTool(f);
     this.app.ui.flash('Pot de peinture : clique une pièce pour remplir sa zone', 1.8);
   }
 
   cyclePiece(d) {
-    const ids = PALETTE_ORDER.map((p) => p.id).filter((id) => id !== 'erase');
+    const ids = PALETTE_ORDER.map((p) => p.id);
     const i = ids.indexOf(fillBase(this.tool));
     this.setTool(ids[(i + d + ids.length) % ids.length] || 'straight');
   }
@@ -507,27 +540,43 @@ export class EditorSession {
   _refreshUI() {
     this._refreshSelBar();
     document.querySelectorAll('#ed-palette .piece-btn').forEach((b) => b.classList.toggle('on', b.dataset.piece === fillBase(this.tool)));
-    const fb = document.getElementById('ed-fill');
-    if (fb) fb.classList.toggle('on', isFill(this.tool));
+    // Grille d'outils : l'outil actif (le pot de peinture reste actif en gardant la pièce / le revêtement choisi).
+    document.querySelectorAll('#ed-tools .tool-btn').forEach((b) => {
+      const on = b.dataset.tool === 'fill' ? isFill(this.tool) : b.dataset.tool === this.tool;
+      b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+    });
     document.getElementById('ed-level').textContent = `Niv. ${this.level}`;
-    const t = this.track;
-    const cps = t.count('checkpoint');
-    const errs = t.validate();
-    const isPiece = !!PIECES[this.tool];
     if (this.eraseBar) {
       this.eraseBar.classList.toggle('hidden', this.tool !== 'erase');
       this.eraseBar.querySelectorAll('[data-ef]').forEach((b) => b.classList.toggle('on', b.dataset.ef === this.eraseFilter));
     }
-    const detail = isPiece ? ` · ${this.rot * 90}°` : isFill(this.tool) ? ' · clic sur une pièce : remplit sa zone' : this.tool === 'inspect' ? ' · clic sur une pièce ou une décoration' : this.tool === 'erase' ? ` · ${ERASE_FILTERS[this.eraseFilter].label}` : this.tool.startsWith('surf:') || this.tool.startsWith('mod:') ? ' · clic sur une pièce' : ` · ${(this.deco.rot * 180 / Math.PI).toFixed(0)}°`;
-    const ver = t.verified ? `<span class="ok">✔ Vérifié ${formatTime(t.vt)}</span>` : '<span class="warn">Non vérifié</span> (« ✔ Vérifier » avant de publier)';
-    const top = document.querySelector('#editor .ed-top');
-    if (top) document.getElementById('editor').style.setProperty('--ed-top-h', top.offsetHeight + 'px');
-    document.getElementById('ed-status').innerHTML =
-      `<b>${pieceLabel(this.tool)}</b>${detail} · niveau ${this.level}<br>` +
-      `${t.tiles.length} pièce${t.tiles.length > 1 ? 's' : ''} · ${cps} checkpoint${cps > 1 ? 's' : ''} · ${t.decos.length} déco${t.decos.length > 1 ? 's' : ''}<br>${ver}` +
-      (errs.length ? `<br><span class="warn">⚠ ${errs.join(' ')}</span>` : '');
+    // Plus de bloc de statistiques en haut à gauche : seulement une pastille quand le circuit a un défaut.
+    const errs = this.track.validate();
+    const warn = document.getElementById('ed-warn');
+    if (warn) {
+      warn.classList.toggle('hidden', !errs.length);
+      warn.textContent = errs.length ? `⚠ ${errs.length}` : '';
+      warn.title = errs.join(' ');
+      warn.setAttribute('aria-label', errs.length ? `${errs.length} problème${errs.length > 1 ? 's' : ''} : ${errs.join(' ')}` : '');
+      warn.onclick = () => this.app.ui.flash(errs.join(' '), 4);
+    }
+    const root = document.getElementById('editor');
+    const top = document.querySelector('#editor .ed-top'), pal = document.getElementById('ed-palette');
+    if (top) root.style.setProperty('--ed-top-h', top.offsetHeight + 'px');
+    if (pal) root.style.setProperty('--ed-pal-h', pal.offsetHeight + 'px');
     this._refreshParam();
     this._refreshDeco();
+  }
+
+  // ---- Menu hamburger (Nouveau, Importer, Partager, Enregistrer, Retour) ---------------------------------------------
+  get menuOpen() { const m = document.getElementById('ed-menu'); return !!m && !m.classList.contains('hidden'); }
+
+  toggleMenu(open = !this.menuOpen) {
+    const m = document.getElementById('ed-menu'), b = document.getElementById('ed-menu-btn');
+    if (!m || !b) return;
+    m.classList.toggle('hidden', !open);
+    b.setAttribute('aria-expanded', String(open));
+    if (open) { const first = m.querySelector('button'); if (first) first.focus({ preventScroll: true }); } else if (document.activeElement && m.contains(document.activeElement)) b.focus({ preventScroll: true });
   }
 
   // ---------------------------------------------------------------- Historique
@@ -602,7 +651,6 @@ export class EditorSession {
     this.track.clear();
     this.track.name = 'Mon circuit';
     this.track.add({ t: 'start', x: 0, z: 0, l: 0, r: 0 });
-    document.getElementById('ed-name').value = this.track.name;
     this.entryId = null;
     this.level = 0;
     this.target.set(CELL / 2, this.levelY(), CELL / 2);
@@ -620,7 +668,6 @@ export class EditorSession {
     this.track.laps = t.laps;
     this.track.setParams(t);
     this.track.vt = t.vt; this.track.vh = t.vh;
-    document.getElementById('ed-name').value = t.name;
     this._applyDecor();
     this.entryId = null;
     this.recenter();
@@ -677,6 +724,16 @@ export class EditorSession {
         else if (k === 'a') { e.preventDefault(); this.selectAll(); }
       },
     };
+    this._h.outside = (e) => { if (this.menuOpen && !e.target.closest('.ed-menu-wrap')) this.toggleMenu(false); };
+    this._h.menuKey = (e) => {
+      if (!this.menuOpen || !e.target.closest || !e.target.closest('#ed-menu')) return;
+      const items = [...document.querySelectorAll('#ed-menu button')], i = items.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+      else if (e.key === 'Escape') { e.preventDefault(); this.toggleMenu(false); }
+    };
+    document.addEventListener('pointerdown', this._h.outside, true);
+    document.addEventListener('keydown', this._h.menuKey);
     el.addEventListener('pointerdown', this._h.down);
     window.addEventListener('pointermove', this._h.move);
     window.addEventListener('pointerup', this._h.up);
@@ -1168,18 +1225,14 @@ export class EditorSession {
     f.className = 'form ed-params';
     const veh = { car: 'Voiture', moto: 'Moto', boat: 'Bateau', glider: 'Deltaplane' };
     f.innerHTML = `
-      <label>Nom<input type="text" id="pp-name" maxlength="40"></label>
-      <label class="col">Description<textarea id="pp-desc" maxlength="200" rows="3" placeholder="Ce qui rend ton circuit unique (200 caractères au plus)"></textarea></label>
       <label>Décor<select id="pp-decor">${Object.entries(DECORS).map(([id, d]) => `<option value="${id}">${d.label}</option>`).join('')}</select></label>
       <label title="Circuit fermé : l'arrivée est franchie à chaque tour">Tours<select id="pp-laps">${Array.from({ length: 9 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}</select></label>
       <label title="Rouler sur le terrain ne renvoie plus au checkpoint (il reste lent)">Hors piste autorisé<input type="checkbox" id="pp-off"></label>
       <label>Vitesse de départ<span class="inl"><input type="range" id="pp-v0" min="0" max="300" step="10"><b id="pp-v0v"></b></span></label>
       <label>Gravité de départ<span class="inl"><input type="range" id="pp-g0" min="15" max="250" step="5"><b id="pp-g0v"></b></span></label>
       <label>Véhicule de départ<select id="pp-veh">${Object.entries(veh).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
-      <p class="meta">Le nom et la description se changent librement (même après publication). Le reste modifie la course : il faudra la re-vérifier.</p>`;
+      <p class="meta">Le nom et la description du circuit se choisissent au moment de la publication. Ces réglages modifient la course : il faudra la re-vérifier.</p>`;
     const $f = (id) => f.querySelector('#' + id);
-    $f('pp-name').value = T.name;
-    $f('pp-desc').value = T.desc || '';
     $f('pp-decor').value = T.decor;
     $f('pp-laps').value = String(T.laps || 1);
     $f('pp-off').checked = !!T.offroad;
@@ -1195,12 +1248,10 @@ export class EditorSession {
       title: 'Paramètres du niveau',
       body: f,
       actions: [{ label: 'Annuler' }, { label: 'Appliquer', primary: true, onClick: () => {
-        T.name = $f('pp-name').value.trim().slice(0, 40) || 'Sans titre';
-        document.getElementById('ed-name').value = T.name;
         const laps = +$f('pp-laps').value;
         if (laps > 1 && (T.laps || 1) === 1) this.app.ui.flash('Plusieurs tours : l\'arrivée doit être juste avant le départ (circuit fermé).', 3);
         T.laps = laps;
-        T.setParams({ desc: $f('pp-desc').value, offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value });
+        T.setParams({ offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value });
         if ($f('pp-decor').value !== T.decor) { T.decor = $f('pp-decor').value; this._applyDecor(); this.gridKey = ''; }
         this._changed(false);
         this._commit();
@@ -1350,6 +1401,7 @@ export class EditorSession {
   update(dt) {
     const input = this.app.input;
     if (this.app.ui.modalOpen) return this._render(dt);
+    if (input.hit('Escape') && this.menuOpen) { this.toggleMenu(false); return this._render(dt); }
     if ((input.hit('Escape') || input.padEdges.delete('pause')) && this.inspector.active) { this.inspector.clear(); return this._render(dt); }
     if ((input.hit('Escape') || input.padEdges.delete('pause')) && (this.pasting || this.sel)) { this.clearSel(); return this._render(dt); }
     if (input.hit('Escape') || input.padEdges.delete('pause')) { this.app.leaveEditor(); return; }
@@ -1379,7 +1431,7 @@ export class EditorSession {
     if (input.act('ed.grid')) { this.showGrid = !this.showGrid; this.app.ui.flash(this.showGrid ? 'Grille affichée' : 'Grille masquée', 1.2); }
     if (input.act('ed.help')) { this.app.editorHelp(); return; }
     if (input.act('ed.test')) { if (shift) this.testHere(); else this.test(); return; }
-    for (const p of PALETTE_ORDER) if (p.key && input.hit(p.key)) this.setTool(p.id);
+    for (const p of [...PALETTE_ORDER, ...TOOLS]) if (p.key && p.id !== 'fill' && input.hit(p.key)) this.setTool(p.id);
 
     // Déplacement avec les touches de conduite
     if (!input.down('ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight')) {
@@ -1643,6 +1695,9 @@ export class EditorSession {
     el.removeEventListener('wheel', this._h.wheel);
     el.removeEventListener('contextmenu', this._h.ctx);
     window.removeEventListener('keydown', this._h.key);
+    document.removeEventListener('pointerdown', this._h.outside, true);
+    document.removeEventListener('keydown', this._h.menuKey);
+    this.toggleMenu(false);
     clearTimeout(this._draftT);
     setEditorDraft(this.exportState());
     this.inspector.dispose();

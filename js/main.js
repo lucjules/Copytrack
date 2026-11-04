@@ -545,9 +545,7 @@ class App {
     this.ui.setMode('editor');
     this.session = new EditorSession(this, state || getEditorDraft() || {});
     this.audio.music.play('menu', 3, 0);
-    const L = (a) => this._keysOf(a);
     this._resize();
-    $('ed-help').textContent = `Clic : poser · Clic droit : supprimer · Clic droit glissé : orbiter · Clic molette : pipette · Molette : zoom · Maj + molette : niveau · ${L('ed.levelUp')} / ${L('ed.levelDown')} : niveau · ${L('ed.rotate')} : pivoter · F1 ou ? : tous les raccourcis`;
   }
 
   _keysOf(action) {
@@ -590,8 +588,9 @@ class App {
     ];
     this.ui.modal({
       title: 'Raccourcis de l’éditeur',
+      wide: true,
       body: `<div class="kbd-list">${rows.map(([k, v]) => `<b>${esc(k)}</b><span>${esc(v)}</span>`).join('')}</div>
-        <p style="margin-top:14px">Astuce : après avoir posé une pente, le niveau suit tout seul quand tu vises la case du haut ou du bas. Toutes ces touches se changent dans Options › Commandes.</p>`,
+        <p style="margin-top:14px">Astuce : après avoir posé une pente, le niveau suit tout seul quand tu vises la case du haut ou du bas. Toutes ces touches se changent dans Profil › Commandes.</p>`,
       actions: [{ label: 'OK', primary: true }],
     });
   }
@@ -1011,8 +1010,39 @@ class App {
   }
 
   // ---- Communauté (circuits publiés en ligne) ----------------------------------
-  async publishTrack(track) {
-    if (!track.verified) { this.ui.flash('Vérifie d’abord ton circuit (« ✔ Vérifier » dans l’éditeur) pour pouvoir le publier.'); return; }
+  // Publication : c'est ici (et seulement ici) qu'on choisit le nom et la description du circuit.
+  publishTrack(track) {
+    if (!track.verified) { this.ui.flash('Vérifie d’abord ton circuit (« ✔ Vérifier » dans l’éditeur) pour pouvoir le publier.'); return Promise.resolve(false); }
+    return new Promise((resolve) => {
+      const f = document.createElement('div');
+      f.className = 'form';
+      f.innerHTML = `<label>Nom<input id="pub-name" maxlength="40" spellcheck="false" autocomplete="off"></label>
+        <label class="col">Description<textarea id="pub-desc" maxlength="200" rows="3" placeholder="Ce qui rend ton circuit unique (200 caractères au plus)"></textarea></label>
+        <p class="meta">Le nom et la description pourront encore être modifiés après la publication (Communauté › Mes publications).</p>
+        <p class="mp-err" id="pub-err" role="alert"></p>`;
+      const name = f.querySelector('#pub-name'), desc = f.querySelector('#pub-desc'), err = f.querySelector('#pub-err');
+      name.value = track.name && track.name !== 'Mon circuit' ? track.name : '';
+      desc.value = track.desc || '';
+      // Différé : la fenêtre d'où l'on vient se referme juste après ce clic et ne doit pas fermer celle-ci.
+      setTimeout(() => this.ui.modal({
+        title: 'Publier dans la communauté', body: f,
+        actions: [
+          { label: 'Annuler', onClick: () => { resolve(false); return true; } },
+          { label: '🌐 Publier', primary: true, onClick: () => {
+            const n = name.value.trim().slice(0, 40);
+            if (!n) { err.textContent = 'Donne un nom à ton circuit.'; name.focus(); return false; }
+            track.name = n;
+            track.desc = desc.value.replace(/\s+/g, ' ').trim().slice(0, 200);
+            this._doPublish(track).then(() => resolve(true));
+            return true;
+          } },
+        ],
+      }), 60);
+      setTimeout(() => name.focus(), 120);
+    });
+  }
+
+  async _doPublish(track) {
     this.ui.flash('Publication en cours…', 6);
     try {
       await online.publish(track, this.settings.playerName);
@@ -1168,7 +1198,7 @@ class App {
           <p class="meta">${MEDALS.map((x) => `${medalIcon(x)}${formatTime(m[x.id])}`).join(' · ')}</p>
           <p>Tu peux le publier dans la communauté maintenant, ou revenir le modifier (une modification du tracé demandera une nouvelle vérification).</p>`,
         actions: [
-          { label: '🌐 Publier', primary: true, onClick: () => { this.publishTrack(track).then(() => this.quitRace()); return true; } },
+          { label: '🌐 Publier', primary: true, onClick: () => { this.publishTrack(track).then((ok) => { if (ok) this.quitRace(); }); return true; } },
           { label: 'Retour à l’éditeur', onClick: () => { this.quitRace(); return true; } },
           { label: 'Refaire un meilleur temps', onClick: () => { if (this.session && this.session.restart) this.session.restart(); return true; } },
         ],
@@ -1355,6 +1385,8 @@ class App {
 
   _editorAction(a) {
     const ed = this.session;
+    if (a === 'menu-toggle') { ed.toggleMenu(); return; }
+    ed.toggleMenu(false);          // toute autre action (y compris un élément du menu hamburger) referme le menu
     switch (a) {
       case 'menu': this.leaveEditor(); break;
       case 'undo': ed.undo(); break;

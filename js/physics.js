@@ -334,7 +334,7 @@ export class CarPhysics {
   // Revêtements qui modifient les commandes (volant inversé, moteur coupé) : actifs tant
   // qu'on roule dessus, puis encore un court instant.
   _timedMods(mod) {
-    if (mod === 'reverse' || mod === 'invert') { if (this.surfMod !== mod) this.ev.reverse = true; return true; }
+    if (mod === 'reverse') { if (this.surfMod !== mod) this.ev.reverse = true; return true; }
     if (mod === 'cut') { if (this.cutT <= 0) this.ev.cut = true; this.cutT = CAR.cutTime; return true; }
     return false;
   }
@@ -416,7 +416,7 @@ export class CarPhysics {
     // Volant inversé / moteur coupé : les commandes sont modifiées un court instant.
     // Volant inversé : seulement tant que les roues touchent une pièce qui l'a (ruban : la pièce sous les roues ;
     // sol : surfMod est celui du dernier contact, donc il ne compte que si on est posé). En l'air, volant normal.
-    const reverseActive = this.rib ? this.rib.tile.s === 'reverse' || this.rib.tile.s === 'invert' : this.grounded && (this.surfMod === 'reverse' || this.surfMod === 'invert');
+    const reverseActive = this.rib ? this.rib.tile.s === 'reverse' : this.grounded && this.surfMod === 'reverse';
     if (reverseActive) inp = { ...inp, steer: -(inp.steer || 0) };
     if (this.cutT > 0) { this.cutT -= dt; if (inp.throttle) inp = { ...inp, throttle: false }; }
     // Volant progressif (retour au centre plus rapide).
@@ -1163,7 +1163,9 @@ export class CarPhysics {
     // tire-bouchons) tant que la voiture est plaquée. Seule la montée en L garde la
     // physique d'appui réelle : sur le mur vertical, plus d'adhérence ni de moteur.
     const lPiece = tile.t === 'wall' || tile.t === 'ramp90' || tile.t === 'crest90';
-    const load = lPiece ? clamp(press / gAbs, 0, 1.6) : press > 0 ? 1 : 0;
+    // Vrille : la voiture est guidée par la route sur toute la pièce, appui ou pas (elle garde son adhérence et son moteur).
+    const guided = tile.t === 'twist';
+    const load = lPiece ? clamp(press / gAbs, 0, 1.6) : press > 0 || guided ? 1 : 0;
     this.press = press;
     R.vs -= beltE1;   // tapis roulant : dynamique dans le repère de la bande
     const c = Math.cos(R.psi), s = Math.sin(R.psi);

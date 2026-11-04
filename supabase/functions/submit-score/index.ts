@@ -165,12 +165,14 @@ var PIECES = {
     lane: 24,
     turns: 2
   },
+  // Vrille : demi-tour de roulis sur 2 cases (comme le tire-bouchon : la route est dans la colonne de gauche de l'empreinte 2×2).
+  // La route balance jusqu'à ±9 m autour de son axe : elle réserve 2 niveaux au-dessus d'elle.
   twist: {
     label: "Vrille",
     kind: "ribbon",
-    size: 1,
+    size: 2,
     rise: 0,
-    clearance: 0
+    clearance: 2
   },
   ramp90: {
     label: "Mont\xE9e en L",
@@ -520,18 +522,6 @@ var SURFACES = {
       "#ffd23e"
     ]
   },
-  tread: {
-    label: "Tapis roulant",
-    param: "\u2193 Vitesse \u2191",
-    def: 150,
-    min: 1,
-    max: 200,
-    c: [
-      "#ffd23e",
-      "#ffd23e",
-      "#ffd23e"
-    ]
-  },
   spring: {
     label: "Ressort lat\xE9ral",
     param: "\u2190 Force \u2192",
@@ -578,14 +568,6 @@ var SURFACES = {
       "#c05fff"
     ]
   },
-  invert: {
-    label: "Volant invers\xE9",
-    c: [
-      "#c05fff",
-      "#c05fff",
-      "#c05fff"
-    ]
-  },
   cut: {
     label: "Moteur coup\xE9",
     c: [
@@ -595,7 +577,7 @@ var SURFACES = {
     ]
   }
 };
-var SURFACE_ORDER = [
+var SURFACE_CODES = [
   "",
   "ice",
   "boost",
@@ -621,6 +603,10 @@ var SURFACE_ORDER = [
   "invert",
   "cut"
 ];
+var SURFACE_ALIAS = {
+  tread: "conveyor",
+  invert: "reverse"
+};
 var PLATES = {
   moto: "moto",
   boat: "boat",
@@ -960,9 +946,10 @@ function build(tile) {
     }
     if (tile.t === "twist") {
       return {
+        minU: 0.5,
         pos(u, o) {
           const f = Math.PI * smooth(u);
-          o.x = 0;
+          o.x = -HALF;
           o.y = base;
           o.z = half - 2 * half * u;
           o.nx = Math.sin(f);
@@ -1471,7 +1458,7 @@ var Track = class _Track {
   }
   // Convertit une pièce (éventuellement au format v1.0 / v1.1) en pièce v1.2.
   static normalize(t) {
-    let type = t.t, s = t.s || "";
+    let type = t.t, s = SURFACE_ALIAS[t.s] || t.s || "";
     if (LEGACY_SURFACE[type]) {
       s = LEGACY_SURFACE[type];
       type = "straight";
@@ -1891,7 +1878,7 @@ var Track = class _Track {
   encode() {
     const arr = [];
     for (const t of this.tiles) {
-      arr.push(PIECE_ORDER.indexOf(t.t), t.x, t.z, t.l, t.r, Math.max(0, SURFACE_ORDER.indexOf(t.s || "")), t.p || 0, (t.v ? 1 : 0) | (t.nb ? 2 : 0) | (t.tn ? 4 : 0) | (t.mv | 0) << 3);
+      arr.push(PIECE_ORDER.indexOf(t.t), t.x, t.z, t.l, t.r, Math.max(0, SURFACE_CODES.indexOf(t.s || "")), t.p || 0, (t.v ? 1 : 0) | (t.nb ? 2 : 0) | (t.tn ? 4 : 0) | (t.mv | 0) << 3);
     }
     const decos = this.decos.map((d) => [
       DECO_ORDER.indexOf(d.k),
@@ -1950,7 +1937,7 @@ var Track = class _Track {
         r: data.t[i + 4],
         s: ""
       };
-      if (stride >= 6) tile.s = SURFACE_ORDER[data.t[i + 5]] || "";
+      if (stride >= 6) tile.s = SURFACE_CODES[data.t[i + 5]] || "";
       if (stride >= 8) {
         tile.p = data.t[i + 6];
         const f = data.t[i + 7] | 0;
@@ -2081,6 +2068,12 @@ function scriptTrack(name, script, opts = {}) {
   const straight2 = (type) => {
     const c = rot(h, 0.5, -0.5);
     place(type, Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
+    adv(h, 2);
+  };
+  const twist2 = (rev) => {
+    const r = rev ? h + 2 : h;
+    const e = rot(r, -0.5, rev ? -0.5 : 0.5);
+    place("twist", Math.round(x + 0.5 - e.x - 1), Math.round(z + 0.5 - e.z - 1), l, r, rev);
     adv(h, 2);
   };
   const fork = (n, side, surf) => {
@@ -2258,13 +2251,12 @@ function scriptTrack(name, script, opts = {}) {
       case "ODL":
         bigPiece("loopDoubleL", -1, 3, 1);
         break;
+      // Vrille (2 cases de long) : TW de l'endroit vers l'envers, TWB (sens inverse) de l'envers vers l'endroit.
       case "TW":
-        place("twist", x, z, l, h);
-        adv(h);
+        twist2(false);
         break;
       case "TWB":
-        place("twist", x, z, l, h + 2, true);
-        adv(h);
+        twist2(true);
         break;
       case "QU":
         place("ramp90", x, z, l, h);
@@ -3921,10 +3913,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 TW.f S2^ C^ S2^ R^ S2^ TWB.f S2 C S2 L S2 B S2 finish",
     medals: {
-      cristal: 14.2,
-      or: 14.8,
-      argent: 17,
-      bronze: 20
+      cristal: 15.2,
+      or: 15.8,
+      argent: 18,
+      bronze: 21
     }
   },
   {
@@ -3976,10 +3968,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 TW.f S2^ D^ S2^ C^ S2^ U^ S^ TWB.f S2 C S2 R S2 TW.f S2^ R^ S2^ TWB.f S2 B S2 finish",
     medals: {
-      cristal: 19.6,
-      or: 20.5,
-      argent: 23.5,
-      bronze: 27.6
+      cristal: 21.6,
+      or: 22.5,
+      argent: 25.5,
+      bronze: 29.6
     }
   },
   {
@@ -4003,10 +3995,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 26.2,
-      or: 28.9,
-      argent: 33.2,
-      bronze: 39
+      cristal: 26.4,
+      or: 29.1,
+      argent: 33.4,
+      bronze: 39.2
     }
   }
 ];
@@ -4521,7 +4513,7 @@ var CarPhysics = class {
   // Revêtements qui modifient les commandes (volant inversé, moteur coupé) : actifs tant
   // qu'on roule dessus, puis encore un court instant.
   _timedMods(mod) {
-    if (mod === "reverse" || mod === "invert") {
+    if (mod === "reverse") {
       if (this.surfMod !== mod) this.ev.reverse = true;
       return true;
     }
@@ -4626,7 +4618,7 @@ var CarPhysics = class {
     this.prev.y = p.y;
     this.prev.z = p.z;
     this.prevYaw = this.yaw;
-    const reverseActive = this.rib ? this.rib.tile.s === "reverse" || this.rib.tile.s === "invert" : this.grounded && (this.surfMod === "reverse" || this.surfMod === "invert");
+    const reverseActive = this.rib ? this.rib.tile.s === "reverse" : this.grounded && this.surfMod === "reverse";
     if (reverseActive) inp = {
       ...inp,
       steer: -(inp.steer || 0)
@@ -5507,7 +5499,8 @@ var CarPhysics = class {
     const press = R.vs * R.vs * kn + R.vd * R.vd * kc + g * F.ny;
     const gAbs = this.g;
     const lPiece = tile.t === "wall" || tile.t === "ramp90" || tile.t === "crest90";
-    const load = lPiece ? clamp(press / gAbs, 0, 1.6) : press > 0 ? 1 : 0;
+    const guided = tile.t === "twist";
+    const load = lPiece ? clamp(press / gAbs, 0, 1.6) : press > 0 || guided ? 1 : 0;
     this.press = press;
     R.vs -= beltE1;
     const c = Math.cos(R.psi), s = Math.sin(R.psi);
@@ -6393,7 +6386,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/replay.js
-var PHYS_VER = 18;
+var PHYS_VER = 19;
 function decodeInputs(b64) {
   const bin = atob(b64);
   const steer = [], flags = [];

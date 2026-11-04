@@ -733,6 +733,7 @@ function crossSweep(gb, glow, tile, style) {
 }
 
 // ---- v1.5 : bifurcation ---------------------------------------------------------
+const FORK_BELOW = 0.08;   // m
 function forkMesh(gb, glow, tile, style) {
   const P = PIECES[tile.t];
   const base = baseY(tile);
@@ -745,7 +746,12 @@ function forkMesh(gb, glow, tile, style) {
       const x2 = forkBranchX(P, Math.min(1, t + 0.01), b), x1 = forkBranchX(P, Math.max(0, t - 0.01), b);
       const dz = -2 * half * (Math.min(1, t + 0.01) - Math.max(0, t - 0.01));
       const l = Math.hypot(x2 - x1, dz) || 1;
-      fr.push({ ...flatFrame(x, base, z, (x2 - x1) / l, dz / l), t });
+      // Z-fighting : tant que les deux chaussées se recouvrent, la voie B est posée 8 cm sous la voie A (qui reste visible
+      // seule, avec ses marquages) ; elle remonte au niveau normal une fois les voies séparées. Sans cela, deux surfaces
+      // coplanaires se disputaient les mêmes pixels (scintillement).
+      const sep = forkSep(t), k = Math.max(0, Math.min(1, (sep - 2 * ROAD_HALF) / (CELL - 2 * ROAD_HALF)));
+      const lowered = b === 1 ? FORK_BELOW * (1 - k * k * (3 - 2 * k)) : 0;   // constant tant que les voies se recouvrent, puis remonte
+      fr.push({ ...flatFrame(x, base - lowered, z, (x2 - x1) / l, dz / l), t });
     }
     return fr;
   });

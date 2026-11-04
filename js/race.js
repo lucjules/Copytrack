@@ -2,6 +2,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { DT } from './constants.js';
 import { CamFlip } from './camflip.js';
+import { MSG, PRIO } from './hudMessages.js';
 import { RemoteCar } from './remoteCar.js';
 import { SEND_EVERY_STEPS } from './net/room.js';
 import { F_FINISHED, F_BOOST, F_GROUNDED } from './net/snapshot.js';
@@ -105,6 +106,9 @@ export class RaceSession {
     this.loadRecord();
     this.restart();
   }
+
+  // Message au centre de l'écran (court, trié par importance : voir hudMessages.js). m = [texte, importance, durée en s].
+  _say(m) { if (!this.demo && m) this.app.ui.hud.message(m[0], m[2], m[1]); }
 
   // ---- Multijoueur : voitures des autres joueurs (RemoteCar), alimentées par les paquets WebRTC ----------------------------
   _setupRemotes() {
@@ -237,7 +241,7 @@ export class RaceSession {
     this.prevQuat.copy(this.quat);
     this._camCut();
     this.groundT = 0;
-    if (this.multi) { this._sendNet(); this.app.ui.hud.message('Retour au checkpoint : le chrono continue !', 1.4); }
+    if (this.multi) { this._sendNet(); this._say(MSG.keepClock); }
     this.app.audio.respawn();
     this.app.particles.burst(r.x, r.y + 1.5, r.z, 24, 8, 0.6, 0.7, '#5ff2ff', 0);
   }
@@ -339,10 +343,9 @@ export class RaceSession {
       app.audio.bounce();
       const p = this.phys.pos;
       app.particles.burst(p.x, p.y + 0.4, p.z, 26, 10, 0.6, 0.7, '#5dff8a', 2);
-      if (!this.demo) app.ui.hud.message('Ressort !', 0.8);
     }
-    if (ev.reverse && !this.demo) { app.audio.whoosh(); app.ui.hud.message('Volant inversé !', 1.2); }
-    if (ev.cut && !this.demo) { app.audio.thud(24); app.ui.hud.message('Moteur coupé !', 1.0); }
+    if (ev.reverse && !this.demo) { app.audio.whoosh(); this._say(MSG.reverse); }
+    if (ev.cut && !this.demo) { app.audio.thud(24); this._say(MSG.cut); }
     // Gerbes de neige dans la poudreuse.
     if (this.phys.grounded && this.phys.surfMod === 'powder' && this.phys.speed > 8 && Math.random() < 0.5) {
       const p = this.phys.pos;
@@ -359,17 +362,15 @@ export class RaceSession {
       app.input.rumble(0.4, 0.2, 120);
       const p = this.phys.pos;
       app.particles.burst(p.x, p.y + 0.5, p.z, 16, 7, 0.4, 0.5, ev.miniTurbo === 2 ? '#ffb84d' : '#5ff2ff', 2);
-      if (!this.demo) app.ui.hud.message(ev.miniTurbo === 2 ? 'Mini-turbo renforcé !' : 'Mini-turbo !', 0.8);
     }
     if (ev.landQ === 'perfect' && !this.demo) {
       app.audio.perfectLanding();
       const p = this.phys.pos;
       app.particles.burst(p.x, p.y + 0.3, p.z, 26, 10, 0.5, 0.55, '#7dffb0', 0, 1);
-      app.ui.hud.message('Réception parfaite !', 0.9);
     } else if (ev.landQ === 'bad' && !this.demo) {
       this.shake = Math.max(this.shake, 0.6);
       app.input.rumble(0.9, 0.6, 220);
-      app.ui.hud.message('Réception ratée', 0.9);
+      this._say(MSG.badLanding);
     }
     if (ev.moto) {
       const veh = this.phys.vehicle;
@@ -379,7 +380,7 @@ export class RaceSession {
       const col = { moto: '#ff9f1c', boat: '#3fd0ff', glider: '#f5f5f5', car: '#ffd23e' }[veh];
       app.particles.burst(p.x, p.y + 1, p.z, 40, 11, 0.8, 0.8, col, 1);
       app.particles.burst(p.x, p.y + 1, p.z, 24, 9, 0.8, 0.7, '#ffffff', 1);
-      if (!this.demo) app.ui.hud.message({ moto: 'Mode moto !', boat: 'Mode bateau !', glider: 'Deltaplane déployé !', car: 'Retour en voiture' }[veh], 1.2);
+      this._say(MSG.vehicle[veh]);
     }
     // Noyade : la réapparition se fait après la mise à jour de la course, dans le même
     // ordre que le rejeu (replay.js) — indispensable pour que la vérification des temps
@@ -390,29 +391,25 @@ export class RaceSession {
       app.audio.thud(24);
       this.shake = Math.max(this.shake, 0.8);
       app.particles.burst(p.x, p.y + 0.6, p.z, 36, 9, 0.7, 0.5, '#ff5a6e', 3, 1);
-      if (!this.demo) app.ui.hud.message('Aïe, les piques ! Retour au checkpoint', 1.6);
+      this._say(MSG.spikes);
     } else if (sank && ev.glass) {
       const p = this.phys.pos;
       app.audio.thud(24);
       app.particles.burst(p.x, p.y + 0.3, p.z, 46, 10, 0.9, 0.5, '#d9f4ff', 4, 2);
       app.particles.burst(p.x, p.y + 0.3, p.z, 20, 7, 0.9, 0.35, '#ffffff', 4, 2);
-      if (!this.demo) app.ui.hud.message('Le verre a cédé ! Trop lent…', 1.8);
+      this._say(MSG.glass);
     } else if (sank) {
       const p = this.phys.pos;
       app.particles.burst(p.x, p.y + 0.5, p.z, 30, 8, 0.7, 0.6, '#9fe3ff', 4, 2);
-      if (!this.demo) app.ui.hud.message('Coulé ! Il faut un bateau pour traverser l\'eau', 1.8);
+      this._say(MSG.sink);
     }
     if (ev.ring) {
       const p = this.phys.pos;
       app.particles.burst(p.x, p.y + 0.5, p.z, 30, 12, 0.6, 0.6, '#36e9ff', 0, 1);
-      if (!this.demo) app.ui.hud.message('Anneau turbo !', 0.8);
     }
-    if (ev.gravity && !this.demo) app.ui.hud.message(`Gravité ${Math.round(this.phys.gravMul * 100)} %`, 1.4);
-    if (ev.flip && !this.demo) { app.ui.hud.message(this.phys.gSign < 0 ? 'Gravité inversée !' : 'Gravité normale', 1.4); this.shake = Math.max(this.shake, 0.5); }
-    if (ev.loopFall && !this.demo) {
-      const why = { loop: 'Trop lent pour le looping !', twist: 'Plus rien ne te retient dans la vrille !', inv: 'À l\'envers, la gravité gagne !', crest: 'Décollage !' };
-      app.ui.hud.message(why[this.phys.fallWhy] || why.crest, 1.4);
-    }
+    if (ev.gravity) this._say(MSG.gravity(Math.round(this.phys.gravMul * 100)));
+    if (ev.flip && !this.demo) { this._say(MSG.flip(this.phys.gSign < 0)); this.shake = Math.max(this.shake, 0.5); }
+    if (ev.loopFall) this._say(MSG.fall[this.phys.fallWhy]);      // « crest » (décollage) : plus de message
 
     if (this.state === 'racing') {
       const res = this.logic.update(this.phys);
@@ -427,7 +424,7 @@ export class RaceSession {
       if (this.phys.offTrack) {
         this.groundT += DT;
         if (this.groundT > 0.5) {
-          if (this.demo) this.restart(); else { app.ui.hud.message('Hors piste !', 1.0); this.respawn(); }
+          if (this.demo) this.restart(); else { this._say(MSG.offTrack); this.respawn(); }
         }
       } else this.groundT = 0;
     }
@@ -454,13 +451,13 @@ export class RaceSession {
       if (!this.demo) {
         app.audio.checkpoint(diff == null ? null : diff <= 0);
         app.ui.hud.split(diff, ev.steps * DT);
-        app.ui.hud.message(ev.lap === ev.laps ? 'Dernier tour !' : `Tour ${ev.lap} / ${ev.laps}`, 1.6);
+        this._say(MSG.lap(ev.lap, ev.laps));
         app.ui.hud.checkpoints(0, this.logic.cps.length, ev.lap, ev.laps);
       }
       app.particles.burst(p.x, p.y + 2, p.z, 40, 14, 1, 0.8, '#ff4f9a', 4, 2);
     } else if (ev.type === 'missing') {
       if (!this.demo) {
-        app.ui.hud.message(`Il manque ${ev.remaining} checkpoint${ev.remaining > 1 ? 's' : ''} !`, 1.6);
+        this._say(MSG.missing(ev.remaining));
         app.audio.error();
       }
     } else if (ev.type === 'finish') {
@@ -483,7 +480,7 @@ export class RaceSession {
       const best = this.multi.room.reportFinish(Math.round(time / DT));
       app.audio.finish(best);
       app.ui.hud.time(time, true);
-      app.ui.hud.message(`🏁 ${formatTime(time)}${best ? ' · meilleur temps !' : ''} — R : nouvel essai`, 6);
+      app.ui.hud.message(`🏁 ${formatTime(time)}${best ? ' · meilleur temps' : ''} · R : nouvel essai`, 6, PRIO.final);
       return;
     }
     // Dernière course, rejouable depuis l'écran d'arrivée.
@@ -645,7 +642,7 @@ export class RaceSession {
   }
 
   _replayEnded() {
-    this.app.ui.hud.message('Fin du replay · Entrée : revoir · Échap : quitter', 3);
+    this.app.ui.hud.message('Replay terminé · Entrée : revoir', 3);
   }
 
   pause() {
