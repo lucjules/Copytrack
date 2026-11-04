@@ -11,6 +11,8 @@ import { DECO_CATS, DECO_LABELS, DECO_COLORS } from './decoData.js';
 import { setEditorDraft, saveMyTrack, newId, formatTime } from './storage.js';
 import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel } from './editorTools.js';
 import { centerlineWorld } from './ribbons.js';
+import { Inspector, MIRROR_TYPES } from './inspector.js';
+import { pickObjects, ERASE_FILTERS, ERASE_FILTER_ORDER, LAYER_ALL, LAYER_DECO, tileBounds } from './editorPick.js';
 
 export const PALETTE_ORDER = [
   { id: 'straight', key: 'Digit1', k: '1' },
@@ -46,13 +48,11 @@ export const PALETTE_ORDER = [
   { id: 'finish', key: 'Digit0', k: '0' },
   { id: 'platform', key: 'KeyP', k: 'P' },
   { id: 'select', key: 'KeyQ', k: 'Q' },
+  { id: 'inspect', key: '', k: '' },
   { id: 'erase', key: '', k: 'X' },
 ];
 
-const MIRROR = {
-  loop: 'loopL', loopL: 'loop', loopBig: 'loopBigL', loopBigL: 'loopBig', loopDouble: 'loopDoubleL', loopDoubleL: 'loopDouble',
-  cork: 'corkL', corkL: 'cork', fork: 'forkL', forkL: 'fork',
-};
+const MIRROR = MIRROR_TYPES;
 const MODS = [
   { id: 'mod:v', flag: 'v', label: 'À l\'envers', hint: 'Route au plafond : roulable seulement en gravité inversée (plaque d’inversion)' },
   { id: 'mod:nb', flag: 'nb', label: 'Sans bordures', hint: 'Plus de rebord : on peut tomber' },
@@ -105,6 +105,7 @@ export const ICONS = {
   start: svg(`${straightBase()}<rect x="4" y="22" width="40" height="6" rx="2" fill="#2fd3b5"/><path d="M24 18V6M18 12l6-6 6 6" stroke="${LINE}" stroke-width="2.5" fill="none"/>`),
   finish: svg(`${straightBase()}<g fill="#f7f2ea"><rect x="10" y="20" width="4" height="4"/><rect x="18" y="20" width="4" height="4"/><rect x="26" y="20" width="4" height="4"/><rect x="34" y="20" width="4" height="4"/><rect x="14" y="24" width="4" height="4"/><rect x="22" y="24" width="4" height="4"/><rect x="30" y="24" width="4" height="4"/></g><rect x="4" y="16" width="40" height="3" fill="#ff4f9a"/>`),
   platform: svg(`<rect x="4" y="4" width="40" height="40" fill="#454a6a" stroke="#ffb84d" stroke-width="2"/><path d="M4 24h40M24 4v40" stroke="#5a6088" stroke-width="2"/>`),
+  inspect: svg(`<rect x="8" y="14" width="26" height="22" rx="3" fill="#5ff2ff22" stroke="#5ff2ff" stroke-width="3"/><path d="M28 24l14 6-6 3-3 6z" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/><circle cx="21" cy="25" r="3" fill="#5ff2ff"/>`),
   select: svg(`<rect x="7" y="9" width="34" height="30" fill="#5ff2ff22" stroke="#5ff2ff" stroke-width="3" stroke-dasharray="6 4"/><path d="M30 30l10 10M30 30v8M30 30h8" stroke="#ffffff" stroke-width="2.5"/>`),
   erase: svg(`<path d="M12 12l24 24M36 12L12 36" stroke="#ff5a6e" stroke-width="5" stroke-linecap="round"/>`),
   'surf:': svg(`${straightBase()}<path d="M24 8v32" stroke="${LINE}" stroke-width="2" stroke-dasharray="5 5"/>`),
@@ -148,6 +149,7 @@ export function pieceLabel(id) {
   if (isFill(id)) return 'Pot de peinture · ' + pieceLabel(fillBase(id));
   if (id === 'erase') return 'Gomme';
   if (id === 'select') return 'Sélection';
+  if (id === 'inspect') return 'Inspecter';
   if (id.startsWith('surf:')) return SURFACES[id.slice(5)].label;
   if (id.startsWith('mod:')) return MODS.find((m) => m.id === id).label;
   if (id.startsWith('deco:')) return DECO_LABELS[id.slice(5)];
@@ -157,7 +159,7 @@ export function pieceLabel(id) {
 function validTool(t) {
   if (!t) return false;
   if (isFill(t)) return toFill(fillBase(t)) === t && validTool(fillBase(t));
-  return !!PIECES[t] || t === 'erase' || t === 'select' || t.startsWith('surf:') || t.startsWith('mod:') || t.startsWith('deco:');
+  return !!PIECES[t] || t === 'erase' || t === 'select' || t === 'inspect' || t.startsWith('surf:') || t.startsWith('mod:') || t.startsWith('deco:');
 }
 
 export class EditorSession {
@@ -175,6 +177,8 @@ export class EditorSession {
     this.entryId = state.entryId || null;
     this.tool = validTool(state.tool) ? state.tool : 'straight';
     this.fillMode = isFill(this.tool);
+    this.eraseFilter = ERASE_FILTERS[state.eraseFilter] ? state.eraseFilter : 'all';   // gomme : tout / décorations / pistes
+    this.camLocked = false;      // vrai pendant qu'un gizmo est saisi : la caméra de l'éditeur ne bouge pas
     this.rot = state.rot || 0;
     this.level = state.level || 0;
     this.tab = 'pieces';
@@ -236,8 +240,12 @@ export class EditorSession {
 
     this.history = [this._snapshot()];
     this.hIndex = 0;
+    this.histSel = [null];       // sélection de l'Inspection rangée avec chaque pas d'historique
 
+    // Le gizmo (TransformControls) s'abonne aux clics AVANT l'éditeur : il décide le premier s'il est saisi.
+    this.inspector = new Inspector(this);
     this._bind();
+    this._buildEraseBar();
     this._buildPalette();
     this._refreshUI();
     app.camera.fov = 55;
@@ -267,6 +275,7 @@ export class EditorSession {
       entryId: this.entryId,
       name: this.track.name,
       tool: this.tool,
+      eraseFilter: this.eraseFilter,
       rot: this.rot,
       level: this.level,
       cam: { tx: this.target.x, tz: this.target.z, dist: this.dist, yaw: this.yaw, pitch: this.pitch },
@@ -405,6 +414,7 @@ export class EditorSession {
     else if (this.fillMode && toFill(id)) id = toFill(id);
     else this.fillMode = false;
     if (id !== 'select') { this.pasting = false; this.sel = null; this.selDrag = null; }
+    if (id !== 'inspect') this.inspector.clear();
     this.tool = id;
     this.previewKey = '';
     if (fillBase(id).startsWith('surf:')) this.setTab('surf');
@@ -504,7 +514,11 @@ export class EditorSession {
     const cps = t.count('checkpoint');
     const errs = t.validate();
     const isPiece = !!PIECES[this.tool];
-    const detail = isPiece ? ` · ${this.rot * 90}°` : isFill(this.tool) ? ' · clic sur une pièce : remplit sa zone' : this.tool === 'erase' || this.tool.startsWith('surf:') || this.tool.startsWith('mod:') ? ' · clic sur une pièce' : ` · ${(this.deco.rot * 180 / Math.PI).toFixed(0)}°`;
+    if (this.eraseBar) {
+      this.eraseBar.classList.toggle('hidden', this.tool !== 'erase');
+      this.eraseBar.querySelectorAll('[data-ef]').forEach((b) => b.classList.toggle('on', b.dataset.ef === this.eraseFilter));
+    }
+    const detail = isPiece ? ` · ${this.rot * 90}°` : isFill(this.tool) ? ' · clic sur une pièce : remplit sa zone' : this.tool === 'inspect' ? ' · clic sur une pièce ou une décoration' : this.tool === 'erase' ? ` · ${ERASE_FILTERS[this.eraseFilter].label}` : this.tool.startsWith('surf:') || this.tool.startsWith('mod:') ? ' · clic sur une pièce' : ` · ${(this.deco.rot * 180 / Math.PI).toFixed(0)}°`;
     const ver = t.verified ? `<span class="ok">✔ Vérifié ${formatTime(t.vt)}</span>` : '<span class="warn">Non vérifié</span> (« ✔ Vérifier » avant de publier)';
     const top = document.querySelector('#editor .ed-top');
     if (top) document.getElementById('editor').style.setProperty('--ed-top-h', top.offsetHeight + 'px');
@@ -540,14 +554,17 @@ export class EditorSession {
     }
     this._changed(false);
     this.needsRebuild = true;
+    this.inspector.restore(this.histSel[this.hIndex]);   // l'objet inspecté revient avec l'état annulé / rétabli
   }
 
   _commit() {
     const snap = this._snapshot();
-    if (snap === this.history[this.hIndex]) return;
+    if (snap === this.history[this.hIndex]) { this.histSel[this.hIndex] = this.inspector.describe(); return; }
     this.history.length = this.hIndex + 1;
+    this.histSel.length = this.hIndex + 1;
     this.history.push(snap);
-    if (this.history.length > 200) this.history.shift();
+    this.histSel.push(this.inspector.describe());
+    if (this.history.length > 200) { this.history.shift(); this.histSel.shift(); }
     this.hIndex = this.history.length - 1;
   }
 
@@ -568,6 +585,7 @@ export class EditorSession {
   _changed(rebuild = true) {
     if (rebuild) this.needsRebuild = true;
     this.previewKey = '';
+    this.inspector.refresh();
     this._refreshUI();
     clearTimeout(this._draftT);
     this._draftT = setTimeout(() => setEditorDraft(this.exportState()), 400);
@@ -630,6 +648,7 @@ export class EditorSession {
       up: (e) => this._onUp(e),
       wheel: (e) => {
         e.preventDefault();
+        if (this.camLocked) return;
         if (e.shiftKey) {
           const d = (e.deltaY || e.deltaX) < 0 ? 1 : -1;
           const now = performance.now();
@@ -675,6 +694,8 @@ export class EditorSession {
   _onDown(e) {
     this.app.audio.unlock();
     this._setNdc(e);
+    // Gizmo survolé ou saisi : le clic est à lui (ni sélection, ni caméra, ni pose de pièce).
+    if (this.camLocked || this.inspector.gizmoBusy) return;
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, button: e.button, type: e.pointerType, moved: false });
     if (this.pointers.size === 2) this._pinch = null;
     if (e.pointerType === 'mouse' && e.button === 1) e.preventDefault();
@@ -682,6 +703,7 @@ export class EditorSession {
       this._updateHover();
       if (this.tool === 'select') this._selectDown();
       else if (e.altKey) this._pick();
+      else if (this.tool === 'inspect') this._inspectPick();
       else { this.painting = true; this._act(); }
     }
   }
@@ -747,6 +769,7 @@ export class EditorSession {
       this._setNdc(e);
       this._updateHover();
       if (this.tool === 'select') this._selectDown(true);
+      else if (this.tool === 'inspect') this._inspectPick();
       else this._act();
       this._commit();
     }
@@ -960,19 +983,85 @@ export class EditorSession {
     return best;
   }
 
+  // Objet visé par le rayon de la souris, limité aux calques de `mask` (voir editorPick.js).
+  _pickTarget(mask) {
+    if (Math.abs(this.ndc.x) > 1 || Math.abs(this.ndc.y) > 1) return null;
+    this.raycaster.setFromCamera(this.ndc, this.app.camera);
+    return pickObjects(this.track, this.raycaster.ray, mask);
+  }
+
+  // Calques que la gomme peut toucher : le filtre choisi avec l'outil Gomme ; avec un autre outil, clic droit = tout
+  // (en pose de décorations : seulement les décorations, comme avant).
+  _eraseMask() {
+    if (this.tool === 'erase') return ERASE_FILTERS[this.eraseFilter].mask;
+    return this.tool.startsWith('deco:') ? LAYER_DECO : LAYER_ALL;
+  }
+
   _erase(painting = false) {
-    const decoMode = this.tool.startsWith('deco:');
-    const t = decoMode ? null : this._hoverTile();
-    if (t) {
-      this.track.remove(t);
-    } else {
-      const d = this._nearestDeco();
-      if (!d) return;
-      this.track.removeDeco(d);
+    const mask = this._eraseMask();
+    let hit = this._pickTarget(mask);
+    if (!hit) {
+      // Repli : visée au sol (niveau courant), toujours limitée aux calques permis.
+      const t = mask & 1 ? this._hoverTile() : null;
+      const d = !t && mask & LAYER_DECO ? this._nearestDeco() : null;
+      hit = t ? { kind: 'tile', obj: t } : d ? { kind: 'deco', obj: d } : null;
     }
+    if (!hit) return;
+    if (hit.kind === 'tile') this.track.remove(hit.obj); else this.track.removeDeco(hit.obj);
     this.app.audio.erase();
     this._changed();
     if (!painting) this._commit();
+  }
+
+  setEraseFilter(f) {
+    if (!ERASE_FILTERS[f]) return;
+    this.eraseFilter = f;
+    this.previewKey = '';
+    this._refreshUI();
+    this.app.ui.flash(`Gomme : ${ERASE_FILTERS[f].label}`, 1.2);
+  }
+
+  cycleEraseFilter() {
+    this.setEraseFilter(ERASE_FILTER_ORDER[(ERASE_FILTER_ORDER.indexOf(this.eraseFilter) + 1) % ERASE_FILTER_ORDER.length]);
+  }
+
+  // Sous-menu de la gomme : un bouton par filtre.
+  _buildEraseBar() {
+    const bar = document.createElement('div');
+    bar.className = 'ed-erasebar hidden';
+    bar.id = 'ed-erasebar';
+    bar.setAttribute('role', 'group');
+    bar.setAttribute('aria-label', 'Filtre de la gomme');
+    for (const f of ERASE_FILTER_ORDER) {
+      const b = document.createElement('button');
+      b.className = 'btn';
+      b.dataset.ef = f;
+      b.textContent = ERASE_FILTERS[f].label;
+      b.title = ERASE_FILTERS[f].hint + ' (X pour changer)';
+      b.addEventListener('click', () => { this.app.audio.click(); this.setEraseFilter(f); });
+      bar.appendChild(b);
+    }
+    document.getElementById('editor').appendChild(bar);
+    this.eraseBar = bar;
+  }
+
+  // Mode Inspection : un clic sélectionne la pièce ou la décoration visée.
+  _inspectPick() {
+    const hit = this._pickTarget(LAYER_ALL);
+    if (hit) { this.inspector.select(hit.kind, hit.obj); this.app.audio.click(); } else this.inspector.clear();
+    this._commit();      // range la sélection dans l'historique (sans créer de pas si rien n'a changé)
+  }
+
+  // Modifie une pièce (case, niveau, rotation) en vérifiant la place ; réindexe le circuit. Faux si impossible.
+  _applyTilePatch(tile, patch) {
+    const cand = Track.normalize({ ...tile, ...patch });
+    if (!Track.inBounds(cand)) return false;
+    if (cand.x === tile.x && cand.z === tile.z && cand.l === tile.l && cand.r === tile.r) return true;
+    this.track.remove(tile);
+    if (this.track.conflicts(cand).length) { this.track._insert(tile); return false; }
+    Object.assign(tile, cand);
+    this.track._insert(tile);
+    return true;
   }
 
   _pick() {
@@ -997,6 +1086,7 @@ export class EditorSession {
   }
 
   rotate(d = 1) {
+    if (this.tool === 'inspect') { this.inspector.rotateBy(d); return; }
     if (this.tool.startsWith('deco:')) {
       this.deco.rot = (this.deco.rot + d * Math.PI / 12 + Math.PI * 2) % (Math.PI * 2);
     } else this.rot = (this.rot + d + 4) & 3;
@@ -1168,6 +1258,15 @@ export class EditorSession {
     this.app.scene.add(this.grid);
   }
 
+  _highlightHit(hit, color) {
+    if (hit.kind === 'tile') { this._highlightTile(hit.obj, color); return; }
+    const d = hit.obj;
+    this.highlight.visible = true;
+    this.highlight.material.color.set(color);
+    this.highlight.position.set(d.x, d.y + 2 * d.s, d.z);
+    this.highlight.scale.set(4 * d.s, 4 * d.s, 4 * d.s);
+  }
+
   _highlightTile(t, color) {
     const s = PIECES[t.t].size;
     const [lo, hi] = Track.range(t);
@@ -1214,18 +1313,11 @@ export class EditorSession {
     }
     if (!cand) {
       this.preview.visible = false;
-      if (this.tool === 'erase') {
-        const t = this._hoverTile();
-        if (t) this._highlightTile(t, '#ff3b5c');
-        else {
-          const d = this._nearestDeco();
-          if (d) {
-            this.highlight.visible = true;
-            this.highlight.material.color.set('#ff3b5c');
-            this.highlight.position.set(d.x, d.y + 2 * d.s, d.z);
-            this.highlight.scale.set(4 * d.s, 4 * d.s, 4 * d.s);
-          }
-        }
+      if (this.tool === 'erase' || this.tool === 'inspect') {
+        // Surbrillance de l'objet que le rayon touche, dans les calques permis par le filtre.
+        const erase = this.tool === 'erase';
+        const hit = this._pickTarget(erase ? ERASE_FILTERS[this.eraseFilter].mask : LAYER_ALL);
+        if (hit) this._highlightHit(hit, erase ? '#ff3b5c' : '#5ff2ff');
         return;
       }
       const t = this._hoverTile();
@@ -1258,6 +1350,7 @@ export class EditorSession {
   update(dt) {
     const input = this.app.input;
     if (this.app.ui.modalOpen) return this._render(dt);
+    if ((input.hit('Escape') || input.padEdges.delete('pause')) && this.inspector.active) { this.inspector.clear(); return this._render(dt); }
     if ((input.hit('Escape') || input.padEdges.delete('pause')) && (this.pasting || this.sel)) { this.clearSel(); return this._render(dt); }
     if (input.hit('Escape') || input.padEdges.delete('pause')) { this.app.leaveEditor(); return; }
     const shift = input.down('ShiftLeft', 'ShiftRight');
@@ -1279,7 +1372,8 @@ export class EditorSession {
     if (input.act('ed.snap')) this.cycleSnap();
     if (input.act('ed.scaleUp')) this.scaleDeco(1.1);
     if (input.act('ed.scaleDown')) this.scaleDeco(0.9);
-    if (input.act('ed.erase')) { if (selMode) this.deleteSel(); else this.setTool('erase'); }
+    if (input.act('ed.erase')) { if (selMode) this.deleteSel(); else if (this.inspector.active) this.inspector.deleteSelected(); else if (this.tool === 'erase') this.cycleEraseFilter(); else this.setTool('erase'); }
+    if (input.act('ed.inspect')) this.setTool(this.tool === 'inspect' ? 'straight' : 'inspect');
     if (input.act('ed.recenter')) this.recenter();
     if (input.act('ed.topView')) this.toggleTopView();
     if (input.act('ed.grid')) { this.showGrid = !this.showGrid; this.app.ui.flash(this.showGrid ? 'Grille affichée' : 'Grille masquée', 1.2); }
@@ -1327,6 +1421,7 @@ export class EditorSession {
       this.needsRebuild = false;
     }
     this._updateSelBox();
+    this.inspector.update();
     this.view.updateMoving(performance.now() / 1000);   // obstacles et pièces mobiles animés
     if (this.marksT > 0) {
       this.marksT -= dt;
@@ -1550,6 +1645,8 @@ export class EditorSession {
     window.removeEventListener('keydown', this._h.key);
     clearTimeout(this._draftT);
     setEditorDraft(this.exportState());
+    this.inspector.dispose();
+    if (this.eraseBar) this.eraseBar.remove();
     this.view.dispose();
     for (const o of [this.preview, this.highlight, this.marker, this.footprint, this.grid]) {
       if (!o) continue;

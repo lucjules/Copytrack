@@ -1,7 +1,7 @@
 // Service worker généré par tools/gen-sw.mjs : ne pas modifier à la main.
 // Jeu hors ligne : les fichiers du jeu sont gardés en cache ; le réseau reste prioritaire
 // pour récupérer les mises à jour quand il est disponible.
-const CACHE = 'copytrack-5a5f1af4fe';
+const CACHE = 'copytrack-3fd5b86579';
 const FILES = [
   "./",
   "css/style.css",
@@ -23,10 +23,12 @@ const FILES = [
   "js/decoData.js",
   "js/decos.js",
   "js/editor.js",
+  "js/editorPick.js",
   "js/editorTools.js",
   "js/garage.js",
   "js/geo.js",
   "js/input.js",
+  "js/inspector.js",
   "js/main.js",
   "js/music.js",
   "js/obstacleMesh.js",
@@ -48,6 +50,7 @@ const FILES = [
   "js/tracks.js",
   "js/ui.js",
   "js/vendor/THREE_LICENSE.txt",
+  "js/vendor/TransformControls.js",
   "js/vendor/three.module.min.js",
   "js/verify.js",
   "js/welcome.js",
