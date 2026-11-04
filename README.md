@@ -90,6 +90,10 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
    circuits et la fonction `update_track_meta` (l'auteur peut changer le nom et la description de son circuit publié).
    Sans ce script, le jeu fonctionne, simplement sans description.
 
+4. **Comptes et sauvegarde cloud** : `supabase/etape4-comptes.sql`, puis les réglages décrits dans `supabase/COMPTES.md`.
+   Au lancement, le jeu demande un pseudo (aucun nom par défaut) : **Invité** (progression locale) ou **Compte** (pseudo + mot de passe,
+   sauvegarde cloud retrouvée sur n'importe quel appareil). Mots de passe hachés (bcrypt + sel) par Supabase Auth, jamais stockés par le jeu.
+
 Seules l'URL du projet et la clé publique sont dans `js/online.js`. La clé secrète n'est jamais dans le jeu : seule la fonction serveur l'utilise, côté Supabase.
 
 ## Bêta 0.9

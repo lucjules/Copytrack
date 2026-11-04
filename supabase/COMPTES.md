@@ -1,0 +1,56 @@
+# Comptes et sauvegarde cloud : installation et fonctionnement
+
+Le jeu propose deux façons de jouer, choisies sur l'écran d'accueil (le menu n'apparaît qu'après) :
+
+- **Invité** : un pseudo pour la session ; la progression reste dans le navigateur de l'appareil.
+- **Compte** : pseudo + mot de passe ; progression, circuits créés et records sont sauvegardés dans le cloud et se
+  retrouvent depuis n'importe quel appareil en se connectant. Les « Player » et « Pilote » par défaut n'existent plus.
+
+## Installation (5 minutes, une seule fois)
+
+1. **SQL** : Supabase > *SQL Editor* > *New query*, coller `supabase/etape4-comptes.sql`, *Run* (après les étapes 1 à 3).
+2. **Auth** : *Authentication > Sign In / Providers > Email* : activer Email, **désactiver « Confirm email »**
+   (les adresses sont techniques, aucun e-mail n'est envoyé). Garder *Allow anonymous sign-ins* activé (les invités
+   s'en servent déjà pour la communauté). *Minimum password length* : 8.
+3. **Test** : lancer le jeu, *Créer un compte*, puis se connecter avec le même pseudo depuis un autre navigateur.
+
+### Si la création de compte répond « le serveur refuse les comptes… »
+
+Les comptes utilisent des adresses techniques `pseudo@accounts.copytrack.invalid`. Certains projets Supabase refusent
+les domaines qui ne peuvent pas recevoir de courrier (erreur `email_address_invalid`). Dans ce cas, choisir un domaine
+accepté par votre projet (par exemple un domaine à vous) et le changer **aux deux endroits** :
+`ACCOUNT_EMAIL_DOMAIN` dans `js/account.js` et la valeur `'accounts.copytrack.invalid'` dans la fonction
+`handle_new_account()` de `etape4-comptes.sql` (puis relancer le script). Configurer un SMTP personnalisé dans
+Supabase lève aussi cette vérification. Aucun e-mail n'est jamais envoyé à ce domaine.
+
+## Sécurité
+
+- **Mots de passe** : jamais stockés par le jeu ni dans les tables du projet. Ils transitent en HTTPS vers Supabase Auth,
+  qui ne garde qu'un **hachage bcrypt salé** (`auth.users.encrypted_password`, un sel aléatoire par mot de passe).
+  Réimplémenter un hachage maison serait moins sûr : c'est volontairement délégué à Auth.
+- **Pseudo unique** sans tenir compte de la casse, créé par un déclencheur à l'inscription (on ne peut pas s'inscrire
+  avec un pseudo et en réserver un autre). Un invité ne peut pas prendre le pseudo d'un compte.
+- **Sauvegarde** (`cloud_saves`) : lisible et modifiable par son seul propriétaire (RLS). Chaque écriture porte un numéro
+  de version : le jeu ne peut pas écraser une version qu'il n'a pas lue (deux appareils : lecture, fusion, nouvel essai).
+- La clé `service_role` ne doit jamais figurer dans le jeu. Le jeu n'utilise que la clé publique.
+- **Pas d'e-mail, donc pas de récupération de mot de passe** : l'écran de création de compte le dit clairement.
+  Un mot de passe perdu = compte inaccessible (on peut en créer un autre).
+- Limites d'essais : celles de Supabase Auth (page *Authentication > Rate Limits*). Rien de plus n'est ajouté ici.
+
+## Fonctionnement des données
+
+- Stockage local : un invité écrit dans `shardway.*` (les anciennes sauvegardes restent valables) ; chaque compte dans
+  `shardwayacct.<id du compte>.*`. Les deux ne se mélangent jamais sur un même navigateur.
+- Synchronisation : à la connexion, puis quelques secondes après chaque enregistrement (record, circuit, achat), au retour
+  du réseau et au bouton *Synchroniser maintenant* (écran Profil). Hors ligne, le jeu continue normalement.
+- Elle **fusionne** au lieu d'écraser : meilleur temps par circuit, circuits réunis (les suppressions suivent), objets et
+  médailles réunis, statistiques au maximum ; les pièces ne sont jamais inventées (l'achat fait sur un autre appareil est déduit).
+- Ne sont pas synchronisés : réglages de l'appareil (volume, touches, qualité), brouillon de l'éditeur.
+- Création d'un compte depuis un appareil qui a déjà de la progression « invité » : case *Reprendre la progression de cet
+  appareil* (cochée par défaut).
+- Suppression : *Profil > Supprimer le compte* efface le compte, la sauvegarde, les circuits publiés et les temps en ligne.
+
+## Tests
+
+- `npm test` : client (pseudos, mots de passe, comptes, fusion, hors ligne, session expirée) avec un Supabase simulé.
+- `npm run test:sql` : le script SQL sur un vrai PostgreSQL local (variables `PGHOST`, `PGPORT`, `PGUSER`), avec un faux schéma `auth`.
