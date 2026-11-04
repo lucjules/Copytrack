@@ -5,8 +5,8 @@
 // englobante par objet, et chaque objet appartient à un calque (comme THREE.Layers) : le filtre de la gomme
 // et du mode Inspection ne voit que les objets du calque demandé. Module pur (aucun rendu).
 import * as THREE from './vendor/three.module.min.js';
-import { LEVEL_H, ROAD_TOP, RAIL_H, SLAB_T, CELL } from './constants.js';
-import { PIECES } from './pieces.js';
+import { LEVEL_H, ROAD_TOP, RAIL_H, SLAB_T, CELL, ROAD_HALF, RAIL_W } from './constants.js';
+import { PIECES, baseY, toLocal, sampleLocal } from './pieces.js';
 import { Track } from './track.js';
 
 export const LAYER_TRACK = 1;   // pièces de piste
@@ -76,4 +76,68 @@ export function pickObjects(track, ray, mask = LAYER_ALL) {
   }
   if (tile && deco) return deco.dist <= tile.exit ? deco : tile;
   return deco || tile;
+}
+
+// ---- Phase 3 : visée exacte ---------------------------------------------------------------------------------------------
+const FLOORISH = new Set(['line', 'arc', 'area', 'fork']);
+const LQ = { lx: 0, lz: 0 }, SQ = {};
+
+// Pièce EXACTE visée par le rayon, quelle que soit la hauteur de pose choisie dans l'éditeur. Les boîtes englobantes sélectionnent
+// les candidats (du plus proche au plus lointain) ; pour une route à plat (droite, virage, plateforme, bifurcation) on vérifie que
+// le rayon traverse bien sa chaussée (pas seulement le volume vide au-dessus d'une pièce basse) ; les rubans, loopings et anneaux
+// se contentent de leur boîte. Renvoie { kind: 'tile', obj, dist, x, y, z } ou null.
+export function pickTileExact(track, ray) {
+  const cand = [];
+  for (const t of track.tiles) {
+    const r = rayBox(ray, tileBounds(t, B));
+    if (r) cand.push({ t, t0: r[0], t1: r[1] });
+  }
+  cand.sort((a, b) => a.t0 - b.t0);
+  for (const c of cand) {
+    const tile = c.t, P = PIECES[tile.t];
+    if (!FLOORISH.has(P.kind)) return { kind: 'tile', obj: tile, dist: c.t0, x: ray.origin.x + ray.direction.x * c.t0, y: ray.origin.y + ray.direction.y * c.t0, z: ray.origin.z + ray.direction.z * c.t0 };
+    const base = baseY(tile);
+    const end = Math.min(c.t1, c.t0 + 4000);
+    for (let d = c.t0; d <= end + 0.4; d += 0.8) {
+      const x = ray.origin.x + ray.direction.x * d, y = ray.origin.y + ray.direction.y * d, z = ray.origin.z + ray.direction.z * d;
+      toLocal(tile, x, z, LQ);
+      sampleLocal(tile, LQ.lx, LQ.lz, SQ);
+      if (!SQ.inFootprint || (P.kind !== 'area' && Math.abs(SQ.d) > ROAD_HALF + RAIL_W + 0.3)) continue;
+      const h = tile.v ? 2 * base - SQ.h : SQ.h;                      // pièce à l'envers : route sous son niveau
+      if (y <= h + RAIL_H + 0.5 && y >= h - SLAB_T - 0.8) return { kind: 'tile', obj: tile, dist: d, x, y, z };
+    }
+  }
+  return null;
+}
+
+// Premier point où le rayon rencontre une surface roulable (route à plat) ou le sol (y = 0). Sert à poser une décoration
+// n'importe où, à une altitude quelconque : { x, y, z, tile } (tile = null pour le sol). On marche le long du rayon ; le croisement
+// est cherché par rapport à l'altitude du pas PRÉCÉDENT, pour qu'une route au-dessus du rayon (un pont) ne soit pas prise pour
+// une surface touchée.
+const SS = {};
+export function rayToSurface(track, ray, maxDist = 3000) {
+  let t = 0, py = ray.origin.y;
+  if (ray.direction.y > -1e-6 && py > 0) return null;                 // le rayon ne descend pas vers le sol
+  while (t < maxDist) {
+    const step = t < 400 ? 1.5 : 5;
+    t += step;
+    const x = ray.origin.x + ray.direction.x * t, y = ray.origin.y + ray.direction.y * t, z = ray.origin.z + ray.direction.z * t;
+    // Plus haute surface (ou sol) sous l'altitude précédente, à la position actuelle.
+    const s = track.surfaceAt(x, py, z, SS, 0);
+    if (y <= s.h) {
+      // Affinage par dichotomie entre le pas précédent et celui-ci.
+      let a = t - step, b = t;
+      for (let i = 0; i < 12; i++) {
+        const m = (a + b) / 2;
+        const mx = ray.origin.x + ray.direction.x * m, my = ray.origin.y + ray.direction.y * m, mz = ray.origin.z + ray.direction.z * m;
+        const sm = track.surfaceAt(mx, py, mz, SS, 0);
+        if (my <= sm.h) b = m; else a = m;
+      }
+      const hx = ray.origin.x + ray.direction.x * b, hz = ray.origin.z + ray.direction.z * b;
+      const sh = track.surfaceAt(hx, py, hz, SS, 0);
+      return { x: hx, y: sh.h, z: hz, tile: sh.tile || null };
+    }
+    py = y;
+  }
+  return null;
 }

@@ -47,7 +47,11 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 
 ### Revêtements et véhicules
 
-- Verglas, accélérateur, rebond, sable, aimant, boue, dérive, ralentisseur, vent latéral, gravité (réglables de faible à fort, la couleur suit), **eau**.
+- Verglas, accélérateur, rebond, aimant, dérive, ralentisseur, vent latéral, gravité (réglables de faible à fort, la couleur suit), **eau**. Les réglages s'affichent avec des **unités réelles** (km/h, m/s², m, secondes) quand elles existent. *Sable* et *boue* ont été supprimés (les anciens circuits qui en contenaient les lisent avec une route normale).
+- **Tapis roulant** réglable de −200 à +200 km/h. **Vent** plus fort (jusqu'à 54 m/s² à pleine force).
+- **Verre fragile** : plus de vitesse minimale, mais un compte à rebours (0,3 à 5 s) de contact cumulé sur la dalle ; passé ce temps elle disparaît (sans collision, la voiture tombe) jusqu'au prochain départ, retour au checkpoint compris.
+- **Eau** : va aussi sur le Départ (course commencée en bateau) ; la **plaque bateau** est posée sur l'eau.
+- **Tunnel** : ses parois et son toit sont physiques, on n'en sort plus par les côtés.
 - **Plaques de transformation** (repasser sur la même plaque rend la voiture) :
   - **moto** : démarre plus fort, tourne plus serré, vitesse de pointe un peu plus basse ;
   - **bateau** : indispensable sur l'eau (une voiture y coule), se traîne sur la route ;
@@ -136,7 +140,9 @@ Seules l'URL du projet et la clé publique sont dans `js/online.js`. La clé sec
 
 **Éditeur**
 - **Inspecteur** (outil Inspecter) : onglet *Propriétés* (position, caractéristiques de la pièce, revêtement, options, réglages des pièces mobiles) et onglet *Couleurs* (route, lignes, bordures d'une pièce ; couleur libre d'une décoration). Une flèche blanche semi-transparente indique le sens de parcours de la pièce inspectée.
-- **Paramètres du niveau** (F3) : nom, description, décor, tours, hors piste autorisé, vitesse, gravité et véhicule de départ.
+- **Paramètres du niveau** (F3) : décor, tours, hors piste autorisé, vitesse, gravité et véhicule de départ, **inversion de gravité au départ** (`inversionGraviteDepart` : la course démarre au plafond). Hauteur maximale : 60 niveaux.
+- **Visée par rayon** : revêtements, options, pot de peinture et pipette ciblent la pièce exacte sous le curseur, à n'importe quelle hauteur. Les **décorations** se posent n'importe où (coordonnées flottantes, là où le curseur touche la route ou le sol) ; **Maj + souris** déplace la pièce ou la décoration ciblée sur l'axe vertical seul. Les anneaux se posent sur des cases déjà occupées ; l'**anneau turbo** existe aussi en option d'une ligne droite.
+- **Essai sans arrivée** : le bouton Tester accepte un circuit sans pièce Arrivée (la vérification, elle, en exige une).
 - **✔ Vérifier** lance la course complète ; à l'arrivée : Publier, Retour à l'éditeur ou Refaire un meilleur temps. **Ton temps devient la médaille cristal**, les autres sont déduites.
 - Nom et description modifiables après publication ; les classements ne dépendent plus du nom.
 - Palette sur toute la largeur (jusqu'à 3 lignes), barre du haut réorganisée, 39 nouvelles décorations (Souterrain, Nuages, Fonds marins, Usine, Espace, Circuit).
@@ -249,6 +255,7 @@ js/cosmetics.js, profile.js    catalogue visuel, pièces, code joueur
 js/scenery.js, music.js        7 décors, musique générée
 js/trackMesh.js, js/geo.js     maillages low-poly
 js/tracks.js                   42 circuits intégrés, médailles et objectifs
+tools/test-phase3.mjs          tests du raycast, décorations libres, verre fragile, tunnel, unités (npm test)
 tools/test-phase2.mjs          tests des familles, du schéma JSON, des courbes, options, mouvements (npm test)
 tools/sim.mjs                  validation des circuits par pilote automatique (npm run sim)
 ```

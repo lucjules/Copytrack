@@ -4,7 +4,7 @@ import { GeoBuilder, FxBuilder } from './geo.js';
 import {
   CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T,
 } from './constants.js';
-import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, isRibbonKind, forkBranchX, forkSep, sampleLocal, cpKind } from './pieces.js';
+import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, isRibbonKind, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed } from './pieces.js';
 import { WATER_DROP } from './track.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { buildDecoInto, createPlaque } from './decos.js';
@@ -41,16 +41,14 @@ export const SURFACE_STYLE = {
   ice: { road: ['#bfe4f2', '#cdeaf6'], line: '#ffffff' },
   boost: { road: [PALETTE.asphalt, PALETTE.asphalt], line: PALETTE.line },
   bounce: { road: ['#4a2d5c', '#55336a'], line: '#ffd0f2' },
-  sand: { road: ['#c9a26b', '#bb935e'], line: '#efe0c4' },
   magnet: { road: ['#2c2a4a', '#2c2a4a'], line: '#b48cff' },
-  mud: { road: ['#4a3426', '#523a2a'], line: '#7a5a40' },
   drift: { road: ['#3a2f3a', '#43374a'], line: '#ffb84d' },
   slow: { road: ['#3b2a2f', '#452f35'], line: '#ff6b57' },
   wind: { road: ['#2c3a52', '#314160'], line: '#bfefff' },
   gravity: { road: ['#233a3a', '#294444'], line: '#a7ffe0' },
   moto: { road: ['#3b2e22', '#44352a'], line: '#ff9f1c' },
   water: { road: ['#1f6fb2', '#2479bf'], line: '#9fe3ff' },
-  boat: { road: ['#22343f', '#263b47'], line: '#3fd0ff' },
+  boat: { road: ['#1f6fb2', '#2479bf'], line: '#3fd0ff' },      // la plaque bateau est posée sur l'eau
   glider: { road: ['#2f3346', '#353a50'], line: '#f5f5f5' },
   flip: { road: ['#3a1f3f', '#44244a'], line: '#ff4fd8' },
   conveyor: { road: ['#2a2b30', '#303138'], line: '#ffd23e' },
@@ -68,8 +66,8 @@ const _c1 = new THREE.Color(), _c2 = new THREE.Color();
 
 // Palette adaptée au daltonisme (teintes bien séparées, d'après la palette d'Okabe et Ito).
 const CB_COLORS = {
-  ice: '#ffffff', boost: '#56b4e9', bounce: '#cc79a7', sand: '#f0e442', magnet: '#0072b2',
-  mud: '#8c6d4f', drift: '#e69f00', slow: '#d55e00', wind: '#d9d9d9', gravity: '#009e73',
+  ice: '#ffffff', boost: '#56b4e9', bounce: '#cc79a7', magnet: '#0072b2',
+  drift: '#e69f00', slow: '#d55e00', wind: '#d9d9d9', gravity: '#009e73',
   moto: '#ffb000', boat: '#3fa7ff', glider: '#f5f5f5', flip: '#ff4fd8',
   conveyor: '#f0e442', spring: '#009e73', glass: '#56b4e9', powder: '#ffffff', reverse: '#cc79a7', cut: '#d55e00',
 };
@@ -109,8 +107,8 @@ function styleFor(tile) {
   const style = {
     road: base.road,
     line: base.line,
-    railA: s === 'moto' || s === 'sand' || s === 'mud' || !accent ? (s === 'sand' ? '#9b6b45' : s === 'mud' ? '#6b4a32' : PALETTE.railA) : accent,
-    railB: s === 'ice' ? '#ffffff' : s === 'sand' ? '#e8d3ad' : s === 'bounce' ? '#fff0fb' : PALETTE.railB,
+    railA: s === 'moto' || !accent ? PALETTE.railA : accent,
+    railB: s === 'ice' ? '#ffffff' : s === 'bounce' ? '#fff0fb' : PALETTE.railB,
     accent: accent || PALETTE.boost,
     pal: null,
   };
@@ -265,7 +263,7 @@ function sweep(gb, frames, style, nb, drop = 0) {
 // ---- Revêtements animés ------------------------------------------------------
 // Une nappe posée juste au-dessus de la chaussée ; le shader l'anime (eau qui ondule,
 // tapis qui défile dans le sens de sa poussée, verre qui scintille, neige qui pétille).
-export const FX_KIND = { water: 0, conveyor: 1, glass: 2, powder: 3 };
+export const FX_KIND = { water: 0, boat: 0, conveyor: 1, glass: 2, powder: 3 };
 const MOVO = {};
 const _S = {};
 function fxLayer(fx, frames, tile, kind, half = ROAD_HALF) {
@@ -273,7 +271,7 @@ function fxLayer(fx, frames, tile, kind, half = ROAD_HALF) {
   const lift = kind === 0 ? -WATER_DROP + 0.02 : 0.03;
   let speed = 0, sgn = 1;
   if (kind === 1) {
-    speed = ((tileParam(tile) - 100) / 100) * 40;
+    speed = beltSpeed(tileParam(tile));
     if (!frames.rib) {
       // Même sens que la physique (gradient latéral de la pièce, tourné d'un quart de tour).
       const f = frames[Math.floor(n / 2)], g = frames[Math.floor(n / 2) + 1];
@@ -554,16 +552,6 @@ function surfaceDecals(glow, frames, tile, area = false) {
     chevron(glow, f, 0, 0, 6.2, 0.8, 3.6, 0, col);
     bar(glow, f, -0.3, -1.6, 0.3, 3.0, col);
     bar(glow, f, -1.8, 2.6, 1.8, 3.1, col);
-  } else if (s === 'mud') {
-    const n = long ? 7 : 4;
-    for (let i = 0; i < n; i++) {
-      const f = frameAt(frames, (i + 0.5) / n);
-      const d = ((i * 7919) % 11) - 5;
-      ring(glow, f, d, 0, 1.6, 0.8, '#2e1f14');
-      ring(glow, f, -d * 0.6 + 2, 1.5, 0.9, 0.5, '#3a2818');
-    }
-    // Ornières sombres.
-    for (const d of [-3.2, 3.2]) for (let i = 0; i < (long ? 8 : 4); i++) bar(glow, frameAt(frames, (i + 0.5) / (long ? 8 : 4)), d - 0.5, -1.4, d + 0.5, 1.4, '#3a2818');
   } else if (s === 'ice') {
     // Cristaux de givre.
     const n = long ? 6 : 3;
@@ -576,13 +564,6 @@ function surfaceDecals(glow, frames, tile, area = false) {
           glow.quad(onFrame(f, dd - ca - sa * w, -sa + ca * w), onFrame(f, dd - ca + sa * w, -sa - ca * w), onFrame(f, dd + ca + sa * w, sa - ca * w), onFrame(f, dd + ca - sa * w, sa + ca * w), '#ffffff');
         }
       }
-    }
-  } else if (s === 'sand') {
-    // Rides de sable en travers.
-    const n = long ? 12 : 6;
-    for (let i = 0; i < n; i++) {
-      const f = frameAt(frames, (i + 0.5) / n);
-      for (const d of [-5.5, 0, 5.5]) chevron(glow, f, d + (i % 2) * 1.2, 0, 2.6, 0.35, 0.8, Math.PI, '#e8d3ad');
     }
   }
 }
@@ -876,7 +857,7 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
     const style = styleFor(tile);
     const strips = stripsFor(tile);
     for (const strip of strips) {
-      sweep(gb, strip, style, tile.nb, s === 'water' ? WATER_DROP : 0);
+      sweep(gb, strip, style, tile.nb, s === 'water' || s === 'boat' ? WATER_DROP : 0);
       if (fxKind !== undefined) fxLayer(fx, strip, tile, fxKind);
       if (s) surfaceDecals(glow, strip, tile);
       if (tile.tn && !tile.v) tunnel(gb, glow, strip);
@@ -893,7 +874,7 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
     gb.setMatrix(mm); glow.setMatrix(mm);
     gate(gb, glow, tile);
     gb.setMatrix(m); glow.setMatrix(m);
-  } else if (ck === 'ring' && p.kind !== 'ring') ringMesh(gb, glow, tile);       // checkpoint aérien posé en option sur une route
+  } else if ((ck === 'ring' || tile.tb) && p.kind !== 'ring') ringMesh(gb, glow, tile);       // anneau (checkpoint aérien ou turbo) posé en option sur une route
   else if ((p.special === 'start' || p.special === 'finish' || ck === 'gate') && p.kind !== 'ring') gate(gb, glow, tile);
   if (p.kind === 'loop') loopTowers(gb, glow, tile);
 
@@ -906,7 +887,7 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
         const w = new THREE.Vector3(lx, 0, lz).applyMatrix4(m);
         const cx = Math.floor(w.x / CELL), cz = Math.floor(w.z / CELL);
         let blocked = false;
-        for (const o of track.tilesAt(cx, cz)) if (o !== tile && baseY(o) < top) blocked = true;
+        for (const o of track.tilesAt(cx, cz)) if (o !== tile && PIECES[o.t].kind !== 'ring' && baseY(o) < top) blocked = true;
         if (blocked) continue;
       }
       gb.taper(lx, lz, 0, top - 0.5, 3.2, 3.2, 2.4, 2.4, PALETTE.pillar);
@@ -934,6 +915,7 @@ export class TrackView {
     this.plaques = [];
     this.obstacles = [];
     this.movers = [];
+    this.glassGroups = [];
     this.rebuild();
   }
 
@@ -949,8 +931,9 @@ export class TrackView {
       const P = PIECES[tile.t];
       const hi = tile.l + Math.max(P.rise || 0, 0) + (P.clearance || tile.cp ? 1 : 0);
       const dim = focus != null && !(focus >= tile.l - 0.01 && focus <= hi + 0.01);
-      if (tile.mv && !dim) {
-        // Pièce mobile : son propre groupe, déplacé à chaque image selon le chrono.
+      const glassy = tile.s === 'glass' || tile.s2 === 'glass';
+      if ((tile.mv || glassy) && !dim) {
+        // Pièce mobile (déplacée à chaque image selon le chrono) ou dalle de verre (masquée quand elle se brise) : son propre groupe.
         const g1 = new GeoBuilder(), g2 = new GeoBuilder(), g3 = new FxBuilder();
         buildTileInto(g1, g2, tile, this.track, g3);
         const grp = new THREE.Group();
@@ -964,7 +947,8 @@ export class TrackView {
           grp.add(fm);
         }
         this.group.add(grp);
-        this.movers.push({ tile, grp });
+        if (tile.mv) this.movers.push({ tile, grp });
+        if (glassy) this.glassGroups.push({ tile, grp });
       } else if (dim) buildTileInto(dimG, dimGlow, tile, this.track);
       else buildTileInto(gb, glow, tile, this.track, fx);
     }
@@ -1032,6 +1016,12 @@ export class TrackView {
     this.plaques = [];
     this.obstacles = [];
     this.movers = [];
+    this.glassGroups = [];
+  }
+
+  // Dalles de verre brisées (voir CarPhysics.broken) : elles disparaissent ; vide = tout est restauré.
+  setBroken(set) {
+    for (const g of this.glassGroups) g.grp.visible = !(set && set.has(g.tile));
   }
 
   dispose() {

@@ -45,7 +45,7 @@ test('le même coup de volant fait le même virage au sol et au plafond', () => 
   }
 });
 
-for (const mod of ['ice', 'sand', 'mud', 'magnet', 'drift', 'slow', 'powder', 'boost']) {
+for (const mod of ['ice', 'magnet', 'drift', 'slow', 'powder', 'boost']) {
   test(`revêtement « ${mod} » : mêmes résultats à l'endroit et à l'envers`, () => {
     const a = line({ surf: surfAll(mod), v0: 120 }), b = line({ surf: surfAll(mod), v: 1, v0: 120 });
     const xa = a.pos.x, xb = b.pos.x;

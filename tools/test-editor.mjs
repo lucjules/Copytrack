@@ -18,31 +18,31 @@ const add = (track, t, x, z, extra = {}) => track.add({ t, x, z, l: 0, r: 0, s: 
 
 // 1. Surface : zone de 6 cases glace connectées + 1 isolée + 1 route normale au milieu
 {
-  const { self, track, calls } = mk('fill-surf:sand', [0, 0]);
+  const { self, track, calls } = mk('fill-surf:slow', [0, 0]);
   for (let i = 0; i < 6; i++) add(track, 'straight', i, 0, { s: 'ice' });
   add(track, 'straight', 10, 0, { s: 'ice' });          // isolée (pas connectée)
   add(track, 'straight', 0, 1);                          // voisine sans glace : hors zone
   self._floodFill();
-  const sand = track.tiles.filter((t) => t.s === 'sand').length;
-  assert.equal(sand, 6, 'toute la zone connectée est remplie');
+  const slow = track.tiles.filter((t) => t.s === 'slow').length;
+  assert.equal(slow, 6, 'toute la zone connectée est remplie');
   assert.equal(track.tilesAt(10, 0)[0].s, 'ice', 'zone isolée intacte');
   assert.equal(track.tilesAt(0, 1)[0].s, '', 'voisine hors prédicat intacte');
   assert.equal(calls.commit, 1, 'un seul commit');
 }
 // 2. Départ / arrivée comme cible : refusé, aucun commit
 {
-  const { self, track, calls } = mk('fill-surf:sand', [0, 0]);
+  const { self, track, calls } = mk('fill-surf:slow', [0, 0]);
   add(track, 'start', 0, 0); add(track, 'straight', 1, 0);
   self._floodFill();
   assert.equal(calls.commit, 0); assert.equal(track.tilesAt(1, 0)[0].s, '');
 }
 // 3. Départ dans la zone (cible = route) : il est sauté
 {
-  const { self, track, calls } = mk('fill-surf:sand', [1, 0]);
+  const { self, track, calls } = mk('fill-surf:slow', [1, 0]);
   add(track, 'start', 0, 0); add(track, 'straight', 1, 0); add(track, 'straight', 2, 0);
   self._floodFill();
   assert.equal(track.tilesAt(0, 0)[0].s, '', 'départ jamais modifié');
-  assert.equal(track.tilesAt(2, 0)[0].s, 'sand'); assert.equal(calls.commit, 1);
+  assert.equal(track.tilesAt(2, 0)[0].s, 'slow'); assert.equal(calls.commit, 1);
 }
 // 4. Type de pièce : straight -> platform (même taille), grand virage (size 2) ignoré
 {

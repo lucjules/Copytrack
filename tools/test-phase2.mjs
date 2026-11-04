@@ -348,8 +348,8 @@ test('Bifurcation à deux revêtements : la voie déportée a le sien (physique)
   const g = tr.add({ t: 'fork', x: 4, z: 0, l: 0, r: 0, s: 'ice', s2: '-' });
   tr.surfaceAt(4 * CELL + 36, 1, 2, o); assert.equal(o.mod, '');                 // « - » : route normale
   tr.surfaceAt(4 * CELL + 12, 1, 2, o); assert.equal(o.mod, 'ice');
-  const h = tr.add({ t: 'fork', x: 8, z: 0, l: 0, r: 0, s: 'sand' });
-  tr.surfaceAt(8 * CELL + 36, 1, 2, o); assert.equal(o.mod, 'sand', 'sans s2, toute la pièce garde s');
+  const h = tr.add({ t: 'fork', x: 8, z: 0, l: 0, r: 0, s: 'drift' });
+  tr.surfaceAt(8 * CELL + 36, 1, 2, o); assert.equal(o.mod, 'drift', 'sans s2, toute la pièce garde s');
   void f; void g; void h;
 });
 
@@ -367,7 +367,7 @@ function mkEd(tool, opts = {}) {
   return { self, track, calls };
 }
 test('options armées : le dernier choix l’emporte sur les incompatibles', () => {
-  const none = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, th: 0 };
+  const none = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0 };
   let o = armedOptions(none, 'v', 1); assert.deepEqual([o.v, o.cp], [1, 0]);
   o = armedOptions(o, 'cp', 2); assert.deepEqual([o.v, o.cp], [0, 2], 'l’anneau aérien ne va pas à l’envers');
   o = armedOptions(o, 'mv', 3); assert.deepEqual([o.mv, o.cp], [3, 0]);

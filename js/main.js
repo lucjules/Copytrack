@@ -149,7 +149,8 @@ class App {
   }
 
   playTrack(track, opts) {
-    const errs = track.validate();
+    // Un essai lancé depuis l'éditeur n'exige pas d'arrivée (Phase 3) ; la vérification et les courses normales, si.
+    const errs = track.validate({ test: !!(opts && opts.fromEditor && !opts.verify) });
     if (errs.length) { this.ui.flash(errs.join(' ')); return; }
     this._dispose();
     this.mode = 'race';
@@ -563,6 +564,7 @@ class App {
       ['Clic molette glissé', 'Déplacer la vue'],
       ['Molette', 'Zoom (Alt + molette : taille de la décoration)'],
       ['Maj + molette', 'Monter / descendre d’un niveau'],
+      ['Maj + souris', 'Inspecter : déplace la pièce ou la décoration ciblée sur l’axe vertical seul (pièces : demi-niveaux). Outil Décoration : règle la hauteur de pose'],
       [L('ed.levelUp') + ' / ' + L('ed.levelDown'), 'Niveau + / −'],
       [L('ed.rotate'), 'Pivoter (Maj : sens inverse) — décos : par 15°'],
       [L('ed.mirror'), 'Miroir (looping, tire-bouchon, bifurcation : gauche ↔ droite)'],
@@ -574,9 +576,9 @@ class App {
       [L('ed.verify'), 'Vérifier : course complète, ton temps devient la médaille cristal, puis publier'],
       [L('ed.params'), 'Paramètres du niveau (description, décor, tours, départ, hors piste)'],
       ['Maj + ' + L('ed.test'), 'Tester depuis la pièce visée'],
-      [L('ed.surface'), 'Revêtement suivant (puis clic sur une pièce)'],
+      [L('ed.surface'), 'Revêtement suivant (puis clic sur une pièce : celle que le curseur touche, à n’importe quelle hauteur)'],
       [L('ed.fill'), 'Pot de peinture : remplit toute la zone connectée de la pièce cliquée (revêtement ou type de pièce choisi)'],
-      [L('ed.snap'), 'Accrochage des décorations (libre, 1 m, 4 m, case)'],
+      [L('ed.snap'), 'Accrochage des décorations (libre par défaut : elles se posent n’importe où, où le curseur touche la route ou le sol)'],
       [L('ed.scaleUp') + ' / ' + L('ed.scaleDown'), 'Décoration : taille + / −'],
       [L('ed.erase'), 'Gomme : touche répétée = filtre Tout / Décorations / Pistes ; avec une sélection (Inspecter), supprime la sélection'],
       [L('ed.inspect'), 'Inspecter : clic sur une pièce ou une déco, panneau de propriétés et gizmos (flèches : déplacer, cercles : pivoter) ; R pivote la sélection'],
@@ -604,7 +606,8 @@ class App {
     this.editorState = state;
     const track = Track.decode(state.code);
     this.playTrack(track, { fromEditor: true, verify: verify && !spawn, trackKey: 'e-' + hashString(state.code), seed: 'editeur-test', spawn });
-    if (spawn) this.ui.flash('Test depuis la pièce visée : sans checkpoints, médaille ni vérification.', 2.6);
+    if (!track.count('finish') && !verify) this.ui.flash('Essai libre : ce circuit n’a pas d’arrivée (Échap pour revenir à l’éditeur).', 3);
+    else if (spawn) this.ui.flash('Test depuis la pièce visée : sans checkpoints, médaille ni vérification.', 2.6);
     else if (verify) this.ui.flash('Vérification : termine le circuit. Ton temps deviendra la médaille cristal.', 2.6);
   }
 
@@ -706,7 +709,7 @@ class App {
     if (has((t) => t.s === 'bounce')) tags.push('Rebond');
     if (has((t) => t.s === 'gravity')) tags.push('Gravité');
     if (has((t) => t.s === 'wind')) tags.push('Vent');
-    if (has((t) => t.s === 'sand' || t.s === 'mud')) tags.push('Terrain');
+    if (has((t) => t.s === 'powder')) tags.push('Terrain');
     if (has((t) => t.tn)) tags.push('Tunnel');
     if (has((t) => t.nb)) tags.push('Sans bordures');
     if ((track.laps || 1) > 1) tags.push(`${track.laps} tours`);

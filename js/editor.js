@@ -1,8 +1,8 @@
 // Éditeur de circuits : pièces sur grille, niveaux, rotation, revêtements réglables,
 // options (envers, sans bordures, tunnel), décorations libres, vérification, historique.
 import * as THREE from './vendor/three.module.min.js';
-import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL, DIRS, MAX_DECOS } from './constants.js';
-import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, surfaceRule, flagAllowed, THEMES, MOVER } from './pieces.js';
+import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL, DIRS, MAX_DECOS, SURF_PHYS } from './constants.js';
+import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, surfaceRule, flagAllowed, THEMES, MOVER, paramText } from './pieces.js';
 import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from './families.js';
 import { retypePlacement } from './tileInfo.js';
 import { Track, DECORS } from './track.js';
@@ -16,7 +16,7 @@ import { centerlineWorld } from './ribbons.js';
 import { Inspector, MIRROR_TYPES, LEGACY_CP } from './inspector.js';
 import { keyLabel } from './input.js';
 import { esc } from './ui.js';
-import { pickObjects, ERASE_FILTERS, ERASE_FILTER_ORDER, LAYER_ALL, LAYER_DECO, tileBounds } from './editorPick.js';
+import { pickObjects, pickTileExact, rayToSurface, ERASE_FILTERS, ERASE_FILTER_ORDER, LAYER_ALL, LAYER_DECO, tileBounds } from './editorPick.js';
 
 export const PALETTE_ORDER = [
   { id: 'straight', key: 'Digit1', k: '1' },
@@ -72,6 +72,7 @@ const MODS = [
   { id: 'mod:mv3', flag: 'mv', val: 3, label: 'Rotation', hint: 'La pièce tourne autour de son centre et emporte la voiture (un tour en 12 s ; réglable dans l’Inspecteur)' },
   { id: 'mod:cp1', flag: 'cp', val: 1, label: 'Checkpoint (portique)', hint: 'Portique au sol : à franchir pour valider le tour (route plate, ligne ou virage)' },
   { id: 'mod:cp2', flag: 'cp', val: 2, label: 'Checkpoint aérien', hint: 'Anneau à traverser (ligne droite plate, à l’endroit)' },
+  { id: 'mod:tb1', flag: 'tb', val: 1, label: 'Anneau turbo', hint: 'Anneau à traverser pour un coup de turbo (ligne droite plate, à l’endroit) ; peut aussi se poser en l’air sur une case déjà occupée' },
   { id: 'mod:th1', flag: 'th', val: 1, label: 'Thème Herbe', hint: 'Aspect herbeux (purement visuel)' },
   { id: 'mod:th2', flag: 'th', val: 2, label: 'Thème Sable', hint: 'Aspect sableux (purement visuel)' },
   { id: 'mod:th3', flag: 'th', val: 3, label: 'Thème Roche', hint: 'Aspect rocheux (purement visuel)' },
@@ -81,23 +82,25 @@ const MODS = [
 const OPTION_GROUPS = [
   { id: 'route', label: 'Route', multi: true, choices: [['v', 1, 'À l\'envers'], ['nb', 1, 'Sans bordures'], ['tn', 1, 'Tunnel']] },
   { id: 'cp', label: 'Checkpoint', flag: 'cp', choices: [['cp', 0, 'Aucun'], ['cp', 1, 'Portique'], ['cp', 2, 'Aérien']] },
+  { id: 'tb', label: 'Anneau turbo', flag: 'tb', choices: [['tb', 0, 'Aucun'], ['tb', 1, 'Turbo']] },
   { id: 'th', label: 'Thème', flag: 'th', choices: [['th', 0, 'Classique'], ['th', 1, 'Herbe'], ['th', 2, 'Sable'], ['th', 3, 'Roche']] },
   { id: 'mv', label: 'Mouvement', flag: 'mv', choices: [['mv', 0, 'Aucun'], ['mv', 1, 'Ascenseur'], ['mv', 2, 'Glissière'], ['mv', 3, 'Rotation']] },
 ];
-const OPT_KEYS = ['v', 'nb', 'tn', 'mv', 'cp', 'th'];
-const OPT_NAMES = { v: 'à l\'envers', nb: 'sans bordures', tn: 'tunnel', mv: 'mouvement', cp: 'checkpoint', th: 'thème' };
+const OPT_KEYS = ['v', 'nb', 'tn', 'mv', 'cp', 'tb', 'th'];
+const OPT_NAMES = { v: 'à l\'envers', nb: 'sans bordures', tn: 'tunnel', mv: 'mouvement', cp: 'checkpoint', tb: 'anneau turbo', th: 'thème' };
 const modId = (flag, val) => (flag === 'v' || flag === 'nb' || flag === 'tn' ? 'mod:' + flag : `mod:${flag}${val}`);
 // Un choix qui ne peut pas cohabiter avec un autre : poser « à l'envers » exclut tunnel, mouvement et anneau aérien ; mouvement exclut checkpoint.
 export function armedOptions(opts, flag, val) {
-  const o = { ...opts };
+  const o = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ...opts };
   const bool = flag === 'v' || flag === 'nb' || flag === 'tn';
   if (bool) o[flag] = o[flag] ? 0 : 1; else o[flag] = o[flag] === val ? 0 : val;
-  // Le dernier choix l'emporte sur ce qui ne peut pas cohabiter avec lui.
+  // Le dernier choix l'emporte sur ce qui ne peut pas cohabiter avec lui (l'anneau turbo se comporte comme le checkpoint aérien).
   if (o[flag]) {
-    if (flag === 'v') { o.tn = 0; o.mv = 0; if (o.cp === 2) o.cp = 0; }
-    else if (flag === 'tn') { o.v = 0; o.cp = 0; }
-    else if (flag === 'mv') { o.v = 0; o.cp = 0; }
-    else if (flag === 'cp') { o.mv = 0; o.tn = 0; if (o.cp === 2) o.v = 0; }
+    if (flag === 'v') { o.tn = 0; o.mv = 0; o.tb = 0; if (o.cp === 2) o.cp = 0; }
+    else if (flag === 'tn') { o.v = 0; o.cp = 0; o.tb = 0; }
+    else if (flag === 'mv') { o.v = 0; o.cp = 0; o.tb = 0; }
+    else if (flag === 'cp') { o.mv = 0; o.tn = 0; o.tb = 0; if (o.cp === 2) o.v = 0; }
+    else if (flag === 'tb') { o.mv = 0; o.tn = 0; o.v = 0; o.cp = 0; }
   }
   return o;
 }
@@ -228,14 +231,14 @@ export class EditorSession {
     this.showGrid = true;
     this.autoLevel = null;
     this.surfParam = {};
-    this.opts = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, th: 0 };   // options « armées » : elles se posent avec la pièce choisie
+    this.opts = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0 };   // options « armées » : elles se posent avec la pièce choisie
     this.famTraits = {};      // dernière combinaison de caractéristiques choisie par famille
     this.sel = null;          // rectangle de sélection {x0, z0, x1, z1}
     this.selDrag = null;
     this.clip = null;         // presse-papiers
     this.pasting = false;
     this.focusLevel = false;  // vue par niveau
-    this.deco = { cat: 'signs', color: 0, scale: 1, rot: 0, url: '', snap: 0, ph: 0 };
+    this.deco = { cat: 'signs', color: 0, scale: 1, rot: 0, url: '', snap: 0, ph: 0, dy: 0 };
 
     this.view = new TrackView(this.track, app.materials);
     app.scenery.trackGroup.add(this.view.group);
@@ -394,6 +397,7 @@ export class EditorSession {
     dTop.innerHTML = `<div class="swatches" id="ed-deco-colors"></div>
       <label class="inl">Taille <input type="range" id="ed-deco-scale" min="0.3" max="6" step="0.05"><b id="ed-deco-scale-val"></b></label>
       <label class="inl" id="ed-deco-ph-wrap" title="Décalage dans le cycle de l'obstacle (pour désynchroniser plusieurs obstacles)">Décalage <input type="range" id="ed-deco-ph" min="0" max="0.95" step="0.05"><b id="ed-deco-ph-val"></b></label>
+      <label class="inl" title="Posée là où le curseur touche la route ou le sol ; ce curseur (ou Maj + souris) ajoute une hauteur">Hauteur <input type="range" id="ed-deco-dy" min="-20" max="120" step="0.5"><b id="ed-deco-dy-val"></b></label>
       <button class="btn" id="ed-deco-snap" title="Accrochage (N)"></button>
       <input type="text" id="ed-deco-url" placeholder="URL de l'image (https://…)" maxlength="400">`;
     // Sous-catégories de décors : une rangée de boutons (plus de liste déroulante).
@@ -419,6 +423,9 @@ export class EditorSession {
     const sc = document.getElementById('ed-deco-scale');
     sc.value = this.deco.scale;
     sc.oninput = () => { this.deco.scale = +sc.value; this.previewKey = ''; this._refreshDeco(); };
+    const dyr = document.getElementById('ed-deco-dy');
+    dyr.value = this.deco.dy || 0;
+    dyr.oninput = () => { this.deco.dy = +dyr.value; this.previewKey = ''; this._refreshDeco(); };
     const ph = document.getElementById('ed-deco-ph');
     ph.value = this.deco.ph;
     ph.oninput = () => { this.deco.ph = +ph.value; this.previewKey = ''; this._refreshDeco(); };
@@ -564,7 +571,7 @@ export class EditorSession {
     clear.className = 'btn small';
     clear.id = 'ed-opt-clear';
     clear.textContent = 'Retirer les options';
-    clear.addEventListener('click', () => { this.opts = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, th: 0 }; this.previewKey = ''; this._refreshUI(); });
+    clear.addEventListener('click', () => { this.opts = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0 }; this.previewKey = ''; this._refreshUI(); });
     wrap.appendChild(clear);
     return wrap;
   }
@@ -594,7 +601,7 @@ export class EditorSession {
       b.setAttribute('aria-pressed', String(on));
       // « Aucun » n'a de sens que pour une pose combinée ; un choix impossible sur la pièce est grisé.
       b.hidden = !piece && val === 0;
-      const ok = !piece || val === 0 || flagAllowed(piece, flag, flag === 'cp' || flag === 'mv' ? { ...probe, ...this._compatProbe(flag) } : probe, val);
+      const ok = !piece || val === 0 || flagAllowed(piece, flag, flag === 'cp' || flag === 'mv' || flag === 'tb' ? { ...probe, ...this._compatProbe(flag) } : probe, val);
       b.classList.toggle('dim', !ok);
     }
     const hint = document.getElementById('ed-opt-hint');
@@ -606,7 +613,7 @@ export class EditorSession {
   // Options déjà armées qui gênent le test d'une autre (mouvement ↔ checkpoint, tunnel ↔ checkpoint).
   _compatProbe(flag) {
     const o = this.opts;
-    return flag === 'cp' ? { mv: o.mv, tn: o.tn, v: o.v } : { cp: o.cp, v: o.v };
+    return flag === 'cp' ? { mv: o.mv, tn: o.tn, tb: o.tb, v: o.v } : flag === 'tb' ? { mv: o.mv, tn: o.tn, cp: o.cp, v: o.v } : { cp: o.cp, tb: o.tb, v: o.v };
   }
 
   _syncDecoCats() {
@@ -703,7 +710,7 @@ export class EditorSession {
     r.value = this._surfParamValue(s);
     r.style.accentColor = tint(s, +r.value);
     document.getElementById('ed-param-label').textContent = S.param || 'Intensité';
-    document.getElementById('ed-param-val').textContent = s === 'wind' ? (+r.value === 100 ? 'nul' : (+r.value > 100 ? '→ ' : '← ') + Math.abs(+r.value - 100) + ' %') : `${r.value} %`;
+    document.getElementById('ed-param-val').textContent = paramText(s, +r.value);      // unités réelles : km/h, m/s², m, s (sinon %)
     this.previewKey = '';
   }
 
@@ -722,6 +729,9 @@ export class EditorSession {
     if (phw) phw.style.display = isObstacle(k) ? '' : 'none';
     const phv = document.getElementById('ed-deco-ph-val');
     if (phv) phv.textContent = Math.round(this.deco.ph * 100) + ' %';
+    const dyr = document.getElementById('ed-deco-dy'), dyv = document.getElementById('ed-deco-dy-val');
+    if (dyr && document.activeElement !== dyr) dyr.value = this.deco.dy || 0;
+    if (dyv) dyv.textContent = `${(this.deco.dy || 0) >= 0 ? '+' : ''}${(this.deco.dy || 0).toFixed(1)} m`;
   }
 
   _refreshUI() {
@@ -771,10 +781,10 @@ export class EditorSession {
   // ---------------------------------------------------------------- Historique
   _snapshot() {
     return JSON.stringify({
-      t: this.track.tiles.map((t) => [t.t, t.x, t.z, t.l, t.r, t.s || '', t.p || 0, t.v, t.nb, t.tn, t.mv || 0, t.cp || 0, t.th || 0, t.ms || 0, t.ma || 0, t.col || 0, t.s2 || '', t.p2 || 0]),
+      t: this.track.tiles.map((t) => [t.t, t.x, t.z, t.l, t.r, t.s || '', t.p || 0, t.v, t.nb, t.tn, t.mv || 0, t.cp || 0, t.th || 0, t.ms || 0, t.ma || 0, t.col || 0, t.s2 || '', t.p2 || 0, t.tb || 0]),
       d: this.track.decos.map((o) => [o.k, o.x, o.y, o.z, o.ry, o.s, o.c, o.u, o.ph || 0, o.cc || '']),
       lp: this.track.laps || 1,
-      pr: { desc: this.track.desc, offroad: this.track.offroad, v0: this.track.v0, g0: this.track.g0, veh0: this.track.veh0, decor: this.track.decor },
+      pr: { desc: this.track.desc, offroad: this.track.offroad, v0: this.track.v0, g0: this.track.g0, veh0: this.track.veh0, inversionGraviteDepart: this.track.inversionGraviteDepart, decor: this.track.decor },
     });
   }
 
@@ -783,7 +793,7 @@ export class EditorSession {
     const { vt, vh } = this.track;
     this.track.clear();
     this.track.vt = vt; this.track.vh = vh;
-    for (const [t, x, z, l, r, s, p, v, nb, tn, mv, cp, th, ms, ma, col, s2, p2] of data.t) this.track.add({ t, x, z, l, r, s, p, v, nb, tn, mv, cp, th, ms, ma, col: col || null, s2, p2 });
+    for (const [t, x, z, l, r, s, p, v, nb, tn, mv, cp, th, ms, ma, col, s2, p2, tb] of data.t) this.track.add({ t, x, z, l, r, s, p, v, nb, tn, mv, cp, th, ms, ma, col: col || null, s2, p2, tb });
     for (const [k, x, y, z, ry, sc, c, u, ph, cc] of data.d) this.track.addDeco({ k, x, y, z, ry, s: sc, c, u, ph, cc });
     this.track.laps = data.lp || 1;
     if (data.pr) {
@@ -899,6 +909,8 @@ export class EditorSession {
         this.dist = Math.max(25, Math.min(700, this.dist * Math.pow(1.0015, e.deltaY)));
       },
       ctx: (e) => e.preventDefault(),
+      keyup: (e) => { if (e.key === 'Shift') this._endShiftY(); },
+      blur: () => this._endShiftY(),
       key: (e) => {
         if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
         if (e.key === '?') { e.preventDefault(); this.app.editorHelp(); return; }
@@ -930,6 +942,8 @@ export class EditorSession {
     el.addEventListener('wheel', this._h.wheel, { passive: false });
     el.addEventListener('contextmenu', this._h.ctx);
     window.addEventListener('keydown', this._h.key);
+    window.addEventListener('keyup', this._h.keyup);
+    window.addEventListener('blur', this._h.blur);
   }
 
   _setNdc(e) {
@@ -957,6 +971,10 @@ export class EditorSession {
   _onMove(e) {
     const p = this.pointers.get(e.pointerId);
     if (e.target === this.app.renderer.domElement || p) this._setNdc(e);
+    // Phase 3 : Maj + mouvement de la souris = déplacement vertical (axe Y seul) de la pièce ou de la décoration ciblée.
+    const dyPx = this._ptrY == null ? 0 : e.clientY - this._ptrY;
+    this._ptrY = e.clientY;
+    if (e.shiftKey && (p || e.target === this.app.renderer.domElement) && this._shiftY(dyPx)) return;
     if (!p) return;
     const dx = e.clientX - p.x, dy = e.clientY - p.y;
     p.x = e.clientX; p.y = e.clientY;
@@ -1021,6 +1039,62 @@ export class EditorSession {
     }
   }
 
+  // Mètres par pixel d'écran à la distance de l'objet (projection en perspective), corrigés de l'inclinaison de la caméra.
+  _metersPerPixel(pos) {
+    const cam = this.app.camera, r = this.app.renderer.domElement.getBoundingClientRect();
+    const d = Math.max(1, cam.position.distanceTo(pos));
+    return (2 * Math.tan((cam.fov * Math.PI) / 360) * d) / Math.max(1, r.height) / Math.max(0.3, Math.cos(this.pitch));
+  }
+
+  // Maj + souris. Renvoie true si le mouvement a été consommé (sinon la caméra / les outils gardent leurs gestes habituels).
+  //  - outil Inspecter : l'objet inspecté (ou, à défaut, celui sous le curseur) monte / descend. Pièce : par demi-niveaux ; décoration : libre.
+  //  - outil Décoration : règle le décalage vertical de la prochaine décoration posée.
+  _shiftY(dyPx) {
+    if (this.camLocked || this.inspector.dragging || this.menuOpen || !dyPx) return false;      // le survol du gizmo ne gêne pas : seul un geste de gizmo en cours est prioritaire
+    if (this.tool === 'inspect') {
+      const insp = this.inspector;
+      if (!insp.sel) {
+        const hit = this._pickTarget(LAYER_ALL);
+        if (!hit) return false;
+        insp.select(hit.kind, hit.obj);
+      }
+      const { kind, obj } = insp.sel;
+      const pos = kind === 'tile' ? new THREE.Vector3((obj.x + PIECES[obj.t].size / 2) * CELL, this.levelY(obj.l), (obj.z + PIECES[obj.t].size / 2) * CELL) : new THREE.Vector3(obj.x, obj.y, obj.z);
+      const dy = -dyPx * this._metersPerPixel(pos);
+      if (kind === 'deco') {
+        obj.y += dy;
+        this.track.version++;
+        this._changed();
+      } else {
+        this._yAcc = (this._yAcc || 0) + dy / LEVEL_H;
+        const step = Math.trunc(this._yAcc * 2) / 2;                      // les pièces montent par demi-niveaux
+        if (step) {
+          const l = Math.max(0, Math.min(MAX_LEVEL, obj.l + step));
+          this._yAcc -= step;
+          if (l !== obj.l) {
+            if (this._applyTilePatch(obj, { l })) { this.level = l; this._changed(); }
+            else { this._yAcc = 0; if (!this._yWarn) { this._yWarn = true; this.app.ui.flash('Place occupée à cette hauteur'); } }
+          }
+        }
+      }
+      this._shiftYDirty = true;
+      return true;
+    }
+    if (this.tool.startsWith('deco:')) {
+      this.deco.dy = Math.max(-60, Math.min(300, (this.deco.dy || 0) - dyPx * this._metersPerPixel(this.target) * 0.5));
+      this.previewKey = '';
+      this._refreshDeco();
+      return true;
+    }
+    return false;
+  }
+
+  // Maj relâchée : un seul pas d'historique pour tout le geste.
+  _endShiftY() {
+    this._yAcc = 0; this._yWarn = false; this._ptrY = null;
+    if (this._shiftYDirty) { this._shiftYDirty = false; this._commit(); }
+  }
+
   _pan(dx, dy) {
     const k = this.dist * 0.0018;
     const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
@@ -1039,6 +1113,18 @@ export class EditorSession {
       if (this.level >= lo && this.level <= hi) return t;
     }
     return tiles.reduce((a, b) => (b.l > a.l ? b : a));
+  }
+
+  // Phase 3 : la pièce EXACTE sur laquelle pointe le curseur (rayon Three.js), quelle que soit la hauteur de pose choisie. Sert aux
+  // revêtements, aux options, au pot de peinture et à la pipette. Sans rayon exploitable (ou rien de touché), on retombe sur la case
+  // visée au niveau courant, comme avant.
+  _targetTile() {
+    if (this.ndc && this.raycaster && Math.abs(this.ndc.x) <= 1 && Math.abs(this.ndc.y) <= 1 && this.app && this.app.camera) {
+      this.raycaster.setFromCamera(this.ndc, this.app.camera);
+      const hit = pickTileExact(this.track, this.raycaster.ray);
+      if (hit) return hit.obj;
+    }
+    return this._hoverTile();
   }
 
   _candidate() {
@@ -1106,7 +1192,7 @@ export class EditorSession {
   }
 
   _paintSurface(painting) {
-    const t = this._hoverTile();
+    const t = this._targetTile();
     if (!t) return;
     const s = this.tool.slice(5);
     if (!surfaceAllowed(t.t, s, !!t.v)) {
@@ -1132,7 +1218,7 @@ export class EditorSession {
   // ('fill-surf:') ou le type de pièce ('fill-piece:'). Zone = pièces voisines (côtés partagés,
   // écart de niveau <= FILL_MAX_DL) qui satisfont le même prédicat que la cible.
   _floodFill() {
-    const start = this._hoverTile();
+    const start = this._targetTile();
     if (!start) return;
     const why = this._fillRefusal(start);
     if (why) { this.app.ui.flash(why); this.app.audio.error(); return; }
@@ -1212,7 +1298,7 @@ export class EditorSession {
   }
 
   _toggleMod(painting) {
-    const t = this._hoverTile();
+    const t = this._targetTile();
     if (!t) return;
     const key = `${t.x},${t.z},${t.l}`;
     if (painting && key === this._lastPaint) return;
@@ -1239,11 +1325,24 @@ export class EditorSession {
     return [Math.round((x - o) / s) * s + o, Math.round((z - o) / s) * s + o];
   }
 
+  // Point de pose libre sous le curseur : le rayon de la souris contre la route ou le sol (Phase 3 : plus de grille ni de niveau
+  // imposé, les coordonnées sont flottantes). null si le rayon ne rencontre rien.
+  _surfaceHit() {
+    if (!this.ndc || !this.raycaster || Math.abs(this.ndc.x) > 1 || Math.abs(this.ndc.y) > 1) return null;
+    this.raycaster.setFromCamera(this.ndc, this.app.camera);
+    return rayToSurface(this.track, this.raycaster.ray);
+  }
+
   _decoAt() {
-    if (!this.hover) return null;
     const kind = this.tool.slice(5);
-    const [x, z] = this._snapPos(this.hover.x, this.hover.z);
-    return { k: kind, x, y: this.levelY(), z, ry: this.deco.rot, s: this.deco.scale, c: this.deco.color, u: kind === 'plaque' ? this.deco.url : '', ph: isObstacle(kind) ? this.deco.ph : 0 };
+    let x, y, z;
+    const hit = this._surfaceHit();
+    if (hit) { x = hit.x; y = hit.y; z = hit.z; }
+    else if (this.hover) { x = this.hover.x; y = this.levelY(); z = this.hover.z; }
+    else return null;
+    [x, z] = this._snapPos(x, z);                           // « Libre » par défaut ; l'accrochage reste facultatif
+    y += this.deco.dy || 0;                                   // décalage vertical réglé avec Maj + souris
+    return { k: kind, x, y, z, ry: this.deco.rot, s: this.deco.scale, c: this.deco.color, u: kind === 'plaque' ? this.deco.url : '', ph: isObstacle(kind) ? this.deco.ph : 0 };
   }
 
   _placeDeco() {
@@ -1361,7 +1460,7 @@ export class EditorSession {
         return;
       }
     }
-    const t = this._hoverTile();
+    const t = this._targetTile();
     if (!t) return;
     this.fillMode = false;
     this.tool = t.t; this.rot = t.r; this.level = t.l;
@@ -1412,16 +1511,15 @@ export class EditorSession {
       }).join('');
       return `<tr><td style="white-space:nowrap">${SURFACES[s].label}</td>${cells}</tr>`;
     }).join('');
-    const body = `<p>Tous les revêtements se posent sur toutes les routes, avec les mêmes effets partout (pas d'aide cachée dans les loopings ou au plafond). Seules exceptions : l'eau, le rebond et la plaque bateau demandent du plat ; l'eau ne va pas sur une pièce spéciale ; un anneau n'a pas de route.</p>
+    const body = `<p>Tous les revêtements se posent sur toutes les routes, avec les mêmes effets partout (pas d'aide cachée dans les loopings ou au plafond). Seules exceptions : l'eau, le rebond et la plaque bateau demandent du plat ; l'eau va aussi sur le Départ (la plaque bateau est posée sur l'eau) mais pas sur l'Arrivée ni sur une bifurcation ; un anneau n'a pas de route.</p>
       <div style="overflow:auto;max-height:52vh"><table style="border-collapse:collapse;font-size:13px;width:100%">
       <tr><th></th>${cols.map(([l]) => `<th style="font-weight:600;padding:2px 4px;font-size:11px">${l}</th>`).join('')}</tr>${rows}</table></div>`;
     this.app.ui.modal({ title: 'Compatibilité des revêtements', body, actions: [{ label: 'OK', primary: true }] });
   }
 
   testHere() {
-    const t = this._hoverTile();
+    const t = this._targetTile();
     if (!t || ['ring', 'area'].includes(PIECES[t.t].kind)) { this.app.ui.flash('Vise une pièce de route pour tester à partir d\'elle.'); this.app.audio.error(); return; }
-    if (this.track.count('finish') === 0) { this.app.ui.flash('Il faut au moins une arrivée.'); this.app.audio.error(); return; }
     let pts = centerlineWorld(t, 6);
     // Sens de départ : celui qui s'éloigne de la pièce de départ du circuit.
     const st = this.track.startTile;
@@ -1432,12 +1530,13 @@ export class EditorSession {
     }
     const a = pts[0], b = pts[1];
     const yaw = Math.atan2(-(b[0] - a[0]), -(b[2] - a[2]));
-    const gs = t.v && PIECES[t.t].kind !== 'ribbon' && PIECES[t.t].kind !== 'loop' ? -1 : 1;
+    const gs = (t.v && PIECES[t.t].kind !== 'ribbon' && PIECES[t.t].kind !== 'loop') || this.track.inversionGraviteDepart ? -1 : 1;
     this.app.testTrack(this.exportState(), { x: a[0] + (b[0] - a[0]) * 0.5, y: a[1], z: a[2] + (b[2] - a[2]) * 0.5, yaw, gs });
   }
 
+  // Phase 3 : un simple essai ne demande plus d'arrivée (on roule librement) ; la vérification, elle, en exige une.
   test(verify = false) {
-    const errs = this.track.validate();
+    const errs = this.track.validate({ test: !verify });
     if (errs.length) {
       this.app.ui.flash(errs.join(' '));
       this.app.audio.error();
@@ -1462,6 +1561,7 @@ export class EditorSession {
       <label>Vitesse de départ<span class="inl"><input type="range" id="pp-v0" min="0" max="300" step="10"><b id="pp-v0v"></b></span></label>
       <label>Gravité de départ<span class="inl"><input type="range" id="pp-g0" min="15" max="250" step="5"><b id="pp-g0v"></b></span></label>
       <label>Véhicule de départ<select id="pp-veh">${Object.entries(veh).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+      <label title="La course commence en gravité inversée : la voiture est plaquée au plafond (départ posé sur une pièce à l'envers)">Inversion de gravité au départ<input type="checkbox" id="pp-ig"></label>
       <p class="meta">Le nom et la description du circuit se choisissent au moment de la publication. Ces réglages modifient la course : il faudra la re-vérifier.</p>`;
     const $f = (id) => f.querySelector('#' + id);
     $f('pp-decor').value = T.decor;
@@ -1470,9 +1570,10 @@ export class EditorSession {
     $f('pp-v0').value = T.v0 || 0;
     $f('pp-g0').value = T.g0 || 100;
     $f('pp-veh').value = T.veh0 || 'car';
+    $f('pp-ig').checked = !!T.inversionGraviteDepart;
     const show = () => {
       $f('pp-v0v').textContent = +$f('pp-v0').value ? `${$f('pp-v0').value} km/h` : 'arrêt';
-      $f('pp-g0v').textContent = `${$f('pp-g0').value} %`;
+      $f('pp-g0v').textContent = `${$f('pp-g0').value} % · ${(SURF_PHYS.gravity * $f('pp-g0').value / 100).toFixed(1).replace('.', ',')} m/s²`;
     };
     $f('pp-v0').oninput = show; $f('pp-g0').oninput = show; show();
     this.app.ui.modal({
@@ -1482,7 +1583,7 @@ export class EditorSession {
         const laps = +$f('pp-laps').value;
         if (laps > 1 && (T.laps || 1) === 1) this.app.ui.flash('Plusieurs tours : l\'arrivée doit être juste avant le départ (circuit fermé).', 3);
         T.laps = laps;
-        T.setParams({ offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value });
+        T.setParams({ offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value, inversionGraviteDepart: $f('pp-ig').checked });
         if ($f('pp-decor').value !== T.decor) { T.decor = $f('pp-decor').value; this._applyDecor(); this.gridKey = ''; }
         this._changed(false);
         this._commit();
@@ -1567,6 +1668,21 @@ export class EditorSession {
     if (this.tool === 'select') { this._updatePastePreview(); return; }
     const cand = this._candidate();
     this.highlight.visible = false;
+    if (this.tool.startsWith('deco:')) {
+      // Décoration : posée là où le rayon touche la route ou le sol, à n'importe quelle altitude (pas de case, pas de niveau).
+      this.marker.visible = false;
+      this.footprint.visible = false;
+      const d = this._decoAt();
+      if (!d) { this.preview.visible = false; return; }
+      const key = `D${d.k},${d.x.toFixed(1)},${d.z.toFixed(1)},${d.y.toFixed(2)},${d.ry},${d.s},${d.c},${d.u}`;
+      if (key !== this.previewKey) {
+        this.previewKey = key;
+        this._clearPreview();
+        this.preview.add(buildDecoMesh(d, this.previewMat, this.previewGlow));
+      }
+      this.preview.visible = true;
+      return;
+    }
     if (!this.hover) {
       this.preview.visible = false;
       this.marker.visible = false;
@@ -1581,18 +1697,6 @@ export class EditorSession {
     this.footprint.position.set((this.hover.cx + 0.5) * CELL, 0.06, (this.hover.cz + 0.5) * CELL);
     this.footprint.scale.set(CELL, 1, CELL);
 
-    if (this.tool.startsWith('deco:')) {
-      const d = this._decoAt();
-      const key = `D${d.k},${d.x.toFixed(1)},${d.z.toFixed(1)},${d.y},${d.ry},${d.s},${d.c},${d.u}`;
-      if (key !== this.previewKey) {
-        this.previewKey = key;
-        this._clearPreview();
-        this.preview.add(buildDecoMesh(d, this.previewMat, this.previewGlow));
-      }
-      this.preview.visible = true;
-      this.footprint.visible = false;
-      return;
-    }
     if (!cand) {
       this.preview.visible = false;
       if (this.tool === 'erase' || this.tool === 'inspect') {
@@ -1602,7 +1706,7 @@ export class EditorSession {
         if (hit) this._highlightHit(hit, erase ? '#ff3b5c' : '#5ff2ff');
         return;
       }
-      const t = this._hoverTile();
+      const t = this._targetTile();
       if (t) {
         if (isFill(this.tool)) {
           this._highlightTile(t, this._fillRefusal(t) ? '#ff3b5c' : '#ffb347');
@@ -1927,6 +2031,8 @@ export class EditorSession {
     el.removeEventListener('wheel', this._h.wheel);
     el.removeEventListener('contextmenu', this._h.ctx);
     window.removeEventListener('keydown', this._h.key);
+    window.removeEventListener('keyup', this._h.keyup);
+    window.removeEventListener('blur', this._h.blur);
     document.removeEventListener('pointerdown', this._h.outside, true);
     document.removeEventListener('keydown', this._h.menuKey);
     this.toggleMenu(false);

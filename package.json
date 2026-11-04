@@ -9,7 +9,7 @@
     "sim": "node tools/sim.mjs",
     "sw": "node tools/gen-sw.mjs",
     "build:function": "node tools/build-function.mjs",
-    "test": "node tools/test-editor.mjs && node tools/test-physics.mjs && node tools/test-camera.mjs && node tools/test-pick.mjs && node tools/test-mesh.mjs && node tools/test-phase2.mjs && node tools/test-hud.mjs && node tools/test-account.mjs && node tools/test-net.mjs && node tools/sim.mjs",
+    "test": "node tools/test-editor.mjs && node tools/test-physics.mjs && node tools/test-camera.mjs && node tools/test-pick.mjs && node tools/test-mesh.mjs && node tools/test-phase2.mjs && node tools/test-phase3.mjs && node tools/test-hud.mjs && node tools/test-account.mjs && node tools/test-net.mjs && node tools/sim.mjs",
     "test:sql": "bash tools/test-accounts-sql.sh"
   },
   "license": "MIT"

@@ -392,16 +392,18 @@ export class RaceSession {
       this.shake = Math.max(this.shake, 0.8);
       app.particles.burst(p.x, p.y + 0.6, p.z, 36, 9, 0.7, 0.5, '#ff5a6e', 3, 1);
       this._say(MSG.spikes);
-    } else if (sank && ev.glass) {
+    } else if (sank) {
+      const p = this.phys.pos;
+      app.particles.burst(p.x, p.y + 0.5, p.z, 30, 8, 0.7, 0.6, '#9fe3ff', 4, 2);
+      this._say(MSG.sink);
+    }
+    // Verre fragile : la dalle vient de céder (elle disparaît, la voiture tombe).
+    if (ev.glass && this.state === 'racing') {
       const p = this.phys.pos;
       app.audio.thud(24);
       app.particles.burst(p.x, p.y + 0.3, p.z, 46, 10, 0.9, 0.5, '#d9f4ff', 4, 2);
       app.particles.burst(p.x, p.y + 0.3, p.z, 20, 7, 0.9, 0.35, '#ffffff', 4, 2);
       this._say(MSG.glass);
-    } else if (sank) {
-      const p = this.phys.pos;
-      app.particles.burst(p.x, p.y + 0.5, p.z, 30, 8, 0.7, 0.6, '#9fe3ff', 4, 2);
-      this._say(MSG.sink);
     }
     if (ev.ring) {
       const p = this.phys.pos;
@@ -665,6 +667,8 @@ export class RaceSession {
     else if (this.state === 'finished') this.obsT = (this.obsT || 0) + dt;
     else if (this.obsT == null || this.state === 'countdown') this.obsT = 0;
     this.view.updateMoving(this.obsT);
+    // Dalles de verre brisées : visibles de nouveau dès qu'un (re)départ les restaure.
+    if (this.phys.broken.size !== this._brokenN) { this._brokenN = this.phys.broken.size; this.view.setBroken(this.phys.broken); }
     // Interpolation entre deux pas physiques
     this.renderPos.set(
       p.prev.x + (p.pos.x - p.prev.x) * alpha,

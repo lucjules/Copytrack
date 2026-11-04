@@ -62,6 +62,7 @@ export class Track {
     this.v0 = 0;          // vitesse de départ (km/h)
     this.g0 = 100;        // gravité de départ (%)
     this.veh0 = 'car';    // véhicule de départ
+    this.inversionGraviteDepart = false;   // la course démarre en gravité inversée (au plafond)
     this.vt = 0;      // temps de vérification (secondes) de l'auteur
     this.vh = '';     // signature du circuit au moment de la vérification
     this.time = 0;    // chrono de la course (s) : position des pièces mobiles
@@ -92,7 +93,7 @@ export class Track {
   static range(t) {
     const p = PIECES[t.t];
     // Un checkpoint en option réserve la hauteur de son portique (1 niveau) ou de son anneau (2 niveaux).
-    const h = p.rise + Math.max(p.clearance || 0, t.cp === 2 ? 2 : t.cp === 1 ? 1 : 0);
+    const h = p.rise + Math.max(p.clearance || 0, t.cp === 2 || t.tb ? 2 : t.cp === 1 ? 1 : 0);
     // Une pièce à l'envers est retournée sous son niveau : elle occupe les niveaux en dessous.
     if (t.v) return [t.l - h, t.l];
     return [t.l, t.l + h + (t.mv === 1 ? Math.ceil(moverParams(t, MP).amp) : 0)];   // l'ascenseur monte de 2 niveaux (réglable)
@@ -108,7 +109,7 @@ export class Track {
     if (!PIECES[type]) throw new Error('Pièce inconnue : ' + type);
     const tile = {
       t: type, x: t.x | 0, z: t.z | 0, l: Math.max(0, Math.min(MAX_LEVEL, Math.round((+t.l || 0) * 2) / 2)), r: t.r & 3,
-      s: '', p: 0, v: 0, nb: 0, tn: 0, mv: 0, cp: 0, th: 0, ms: 0, ma: 0, col: null, s2: '', p2: 0,
+      s: '', p: 0, v: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ms: 0, ma: 0, col: null, s2: '', p2: 0,
     };
     tile.v = t.v && flagAllowed(type, 'v') ? 1 : 0;
     tile.nb = t.nb && flagAllowed(type, 'nb') ? 1 : 0;
@@ -117,6 +118,7 @@ export class Track {
     if (tile.mv) { const m = clampMover(tile.mv, t.ms, t.ma); tile.ms = m.ms; tile.ma = m.ma; }
     // Le mouvement prime sur le checkpoint (une pièce mobile ne peut pas porter de checkpoint).
     tile.cp = t.cp && !tile.mv && flagAllowed(type, 'cp', tile, t.cp | 0) ? (t.cp | 0) : 0;
+    tile.tb = t.tb && !tile.mv && !tile.cp && flagAllowed(type, 'tb', tile) ? 1 : 0;
     tile.th = THEMES.some((h) => h.id === (t.th | 0)) && flagAllowed(type, 'th') ? (t.th | 0) : 0;
     tile.col = cleanColors(t.col);
     if (surfaceAllowed(type, s, !!tile.v)) {
@@ -144,11 +146,16 @@ export class Track {
     return lo >= (t.v ? 1 : 0) && hi <= MAX_LEVEL + 6;
   }
 
+  // Pièces gênées par t. Phase 3 : un anneau flottant (pièce « anneau » : turbo ou ancien checkpoint aérien) peut être posé
+  // sur des cases déjà occupées par une autre pièce, et inversement ; deux anneaux ne se superposent pas.
   conflicts(t) {
     const [lo, hi] = Track.range(t);
+    const ring = PIECES[t.t].kind === 'ring';
     const set = new Set();
     for (const [x, z] of Track.cellsOf(t)) {
       for (const o of this.tilesAt(x, z)) {
+        if (o === t) continue;
+        if ((ring || PIECES[o.t].kind === 'ring') && !(ring && PIECES[o.t].kind === 'ring')) continue;
         const [a, b] = Track.range(o);
         if (a <= hi && lo <= b) set.add(o);
       }
@@ -208,12 +215,13 @@ export class Track {
       this.version++;
       return true;
     }
-    if (flag === 'mv' || flag === 'cp' || (flag === 'v' && (tile.mv || tile.cp === 2))) {
+    if (flag === 'mv' || flag === 'cp' || flag === 'tb' || (flag === 'v' && (tile.mv || tile.cp === 2 || tile.tb))) {
       // Mouvement et checkpoint changent les cases et niveaux occupés : on vérifie la place, puis on réindexe.
       const cand = { ...tile };
-      if (flag === 'mv') { cand.mv = tile.mv === val ? 0 : val; cand.ms = 0; cand.ma = 0; if (cand.mv) cand.cp = 0; }
+      if (flag === 'mv') { cand.mv = tile.mv === val ? 0 : val; cand.ms = 0; cand.ma = 0; if (cand.mv) { cand.cp = 0; cand.tb = 0; } }
       else if (flag === 'cp') { cand.cp = tile.cp === val ? 0 : val; }
-      else { cand.v = 1; cand.mv = 0; cand.ms = 0; cand.ma = 0; cand.tn = 0; if (cand.cp === 2) cand.cp = 0; }
+      else if (flag === 'tb') { cand.tb = tile.tb ? 0 : 1; }
+      else { cand.v = 1; cand.mv = 0; cand.ms = 0; cand.ma = 0; cand.tn = 0; cand.tb = 0; if (cand.cp === 2) cand.cp = 0; }
       this.remove(tile);
       if (this.conflicts(cand).length || !Track.inBounds(cand)) { this._insert(tile); return false; }
       Object.assign(tile, cand);
@@ -297,7 +305,7 @@ export class Track {
     this.index.clear();
     this.vt = 0; this.vh = '';
     this.laps = 1;
-    this.desc = ''; this.offroad = 0; this.v0 = 0; this.g0 = 100; this.veh0 = 'car';
+    this.desc = ''; this.offroad = 0; this.v0 = 0; this.g0 = 100; this.veh0 = 'car'; this.inversionGraviteDepart = false;
     this.version++;
   }
 
@@ -311,12 +319,13 @@ export class Track {
     return n;
   }
 
-  validate() {
+  // test : lancement d'un essai depuis l'éditeur ; l'arrivée n'est alors pas obligatoire (on roule librement).
+  validate({ test = false } = {}) {
     const errors = [];
     const starts = this.count('start');
     if (starts === 0) errors.push('Il faut une pièce « Départ ».');
     if (starts > 1) errors.push('Il ne peut y avoir qu’un seul départ.');
-    if (this.count('finish') === 0) errors.push('Il faut au moins une pièce « Arrivée ».');
+    if (!test && this.count('finish') === 0) errors.push('Il faut au moins une pièce « Arrivée ».');
     return errors;
   }
 
@@ -337,12 +346,13 @@ export class Track {
   // Gravité inversée : surface « au plafond » la plus proche au-dessus de (x, y - step, z),
   // venant des pièces posées à l'envers (géométrie retournée autour de leur niveau).
   // Sans plafond, h vaut +∞ (la voiture continue de « tomber » vers le haut).
-  ceilingSurfaceAt(x, y, z, out, step = 1.6) {
+  ceilingSurfaceAt(x, y, z, out, step = 1.6, broken = null) {
     out.h = Infinity; out.nx = 0; out.ny = -1; out.nz = 0;
     out.tile = null; out.type = 'none'; out.mod = ''; out.p = 0; out.lx = 0; out.lz = 0;
     const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
     for (const tile of this.tilesAt(cx, cz)) {
       if (!isCeilingFloor(tile)) continue;
+      if (broken && broken.has(tile)) continue;
       toLocal(tile, x, z, L);
       sampleLocal(tile, L.lx, L.lz, S);
       if (!S.inFootprint) continue;
@@ -355,14 +365,15 @@ export class Track {
       out.nx = W.x; out.ny = -S.ny; out.nz = W.z;
       out.tile = tile; out.type = 'road'; out.mod = tile.s || ''; out.p = tile.p || 0;
       out.lx = L.lx; out.lz = L.lz;
-      if (tile.s === 'water') out.h += WATER_DROP;
+      if (tile.s === 'water' || tile.s === 'boat') out.h += WATER_DROP;
     }
     return out;
   }
 
   // Surface roulable la plus haute sous (x, y + step, z). Le sol est à y = 0.
   // Les pièces mobiles (ascenseur, glissière) sont prises à leur position au temps this.time.
-  surfaceAt(x, y, z, out, step = 1.6) {
+  // broken : pièces de verre déjà brisées dans CETTE course (propre à chaque voiture, voir CarPhysics) : sans collision.
+  surfaceAt(x, y, z, out, step = 1.6, broken = null) {
     out.h = 0; out.nx = 0; out.ny = 1; out.nz = 0;
     out.tile = null; out.type = 'ground'; out.mod = ''; out.p = 0; out.lx = 0; out.lz = 0;
     const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
@@ -370,13 +381,13 @@ export class Track {
     const cell = this.tilesAt(cx, cz);
     for (let i = 0; i < cell.length; i++) {
       const tile = cell[i];
-      if (tile.mv || !isFloor(tile)) continue;
+      if (tile.mv || !isFloor(tile) || (broken && broken.has(tile))) continue;
       best = this._floorTry(tile, x, z, 0, y, step, best, out);
     }
     const mv = this.movers;
     for (let i = 0; i < mv.length; i++) {
       const tile = mv[i];
-      if (!isFloor(tile)) continue;
+      if (!isFloor(tile) || (broken && broken.has(tile))) continue;
       this.moverOffset(tile, this.time, MO);
       if (MO.a) { this.moverLocal(MO, x, z, W2); best = this._floorTry(tile, W2.x, W2.z, MO.y, y, step, best, out, MO.a); }
       else best = this._floorTry(tile, x - MO.x, z - MO.z, MO.y, y, step, best, out);
@@ -404,7 +415,7 @@ export class Track {
     out.mod = sf || '';
     out.p = sp || 0;
     out.lx = L.lx; out.lz = L.lz;
-    if (sf === 'water') out.h -= WATER_DROP;
+    if (sf === 'water' || sf === 'boat') out.h -= WATER_DROP;      // la plaque bateau est posée sur l'eau
     return out.h;
   }
 
@@ -468,7 +479,8 @@ export class Track {
   }
 
   // Paramètres du niveau, bornés.
-  setParams({ desc, offroad, v0, g0, veh0 } = {}) {
+  setParams({ desc, offroad, v0, g0, veh0, inversionGraviteDepart } = {}) {
+    if (inversionGraviteDepart !== undefined) this.inversionGraviteDepart = !!inversionGraviteDepart;
     if (desc !== undefined) this.desc = String(desc || '').replace(/\s+/g, ' ').trim().slice(0, 200);
     if (offroad !== undefined) this.offroad = offroad ? 1 : 0;
     if (v0 !== undefined) this.v0 = Math.max(0, Math.min(300, Math.round(+v0 || 0)));
@@ -485,7 +497,7 @@ export class Track {
       .sort()
       .join('|');
     const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}` : ''}`).join('|');
-    const rules = (this.offroad ? '#O' : '') + (this.v0 ? '#V' + this.v0 : '') + (this.g0 !== 100 ? '#G' + this.g0 : '') + (this.veh0 !== 'car' ? '#E' + this.veh0 : '');
+    const rules = (this.offroad ? '#O' : '') + (this.v0 ? '#V' + this.v0 : '') + (this.g0 !== 100 ? '#G' + this.g0 : '') + (this.veh0 !== 'car' ? '#E' + this.veh0 : '') + (this.inversionGraviteDepart ? '#I' : '');
     return hashString(this.decor + '#' + parts + '#' + d + (this.laps > 1 ? '#L' + this.laps : '') + rules);
   }
 
@@ -518,7 +530,7 @@ export class Track {
     t.decos = this.decos.map((d) => ({ ...d }));
     t.vt = this.vt; t.vh = this.vh;
     t.laps = this.laps;
-    t.desc = this.desc; t.offroad = this.offroad; t.v0 = this.v0; t.g0 = this.g0; t.veh0 = this.veh0;
+    t.desc = this.desc; t.offroad = this.offroad; t.v0 = this.v0; t.g0 = this.g0; t.veh0 = this.veh0; t.inversionGraviteDepart = this.inversionGraviteDepart;
     return t;
   }
 
@@ -535,6 +547,7 @@ export class Track {
       // Phase 2 : champs optionnels, rangés à part (par index de pièce) ; absents = valeurs par défaut.
       const e = { i: idx };
       if (t.cp) e.cp = t.cp;
+      if (t.tb) e.tb = 1;
       if (t.th) e.th = t.th;
       if (t.ms) e.ms = t.ms;
       if (t.ma) e.ma = t.ma;
@@ -548,7 +561,7 @@ export class Track {
       ...(d.cc ? [d.cc.slice(1)] : []),
     ]);
     // v3 tant que rien de la Phase 2 n'est utilisé : les codes existants ne changent pas.
-    const data = { v: extras.length || this.decos.some((d) => d.cc) ? 4 : 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
+    const data = { v: extras.length || this.decos.some((d) => d.cc) || this.inversionGraviteDepart ? 4 : 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
     if (extras.length) data.e = extras;
     if (decos.length) data.o = decos;
     if (this.laps > 1) data.lp = this.laps;
@@ -557,6 +570,7 @@ export class Track {
     if (this.v0) data.v0 = this.v0;
     if (this.g0 !== 100) data.g0 = this.g0;
     if (this.veh0 !== 'car') data.ve = this.veh0;
+    if (this.inversionGraviteDepart) data.ig = 1;
     if (this.verified) { data.vt = this.vt; data.vh = this.vh; }
     return 'SHW3:' + b64encode(JSON.stringify(data));
   }
@@ -582,7 +596,7 @@ export class Track {
       const tile = { t: type, x: data.t[i + 1], z: data.t[i + 2], l: data.t[i + 3], r: data.t[i + 4], s: '' };
       const ex = extras.get(i / stride);
       if (ex) {
-        tile.cp = ex.cp | 0; tile.th = ex.th | 0; tile.ms = ex.ms | 0; tile.ma = +ex.ma || 0;
+        tile.cp = ex.cp | 0; tile.tb = ex.tb | 0; tile.th = ex.th | 0; tile.ms = ex.ms | 0; tile.ma = +ex.ma || 0;
         if (ex.s2) { tile.s2 = ex.s2 === -1 ? '-' : SURFACE_CODES[ex.s2] || ''; tile.p2 = ex.p2 | 0; }
         if (ex.col && typeof ex.col === 'object') tile.col = Object.fromEntries(COLOR_KEYS.filter((k) => typeof ex.col[k] === 'string').map((k) => [k, '#' + ex.col[k]]));
       }
@@ -604,7 +618,7 @@ export class Track {
       }
     }
     tr.laps = Math.max(1, Math.min(9, data.lp | 0 || 1));
-    tr.setParams({ desc: data.ds, offroad: data.or, v0: data.v0, g0: data.g0, veh0: data.ve });
+    tr.setParams({ desc: data.ds, offroad: data.or, v0: data.v0, g0: data.g0, veh0: data.ve, inversionGraviteDepart: data.ig });
     if (data.vt > 0 && data.vh) { tr.vt = +data.vt; tr.vh = String(data.vh); }
     return tr;
   }
@@ -616,6 +630,7 @@ export class Track {
 function tileExtras(t) {
   let e = '';
   if (t.cp) e += 'c' + t.cp;
+  if (t.tb) e += 'b';
   if (t.mv && (t.ms || t.ma)) e += `s${t.ms || 0}a${t.ma || 0}`;
   if (t.s2) e += `f${t.s2}:${t.p2 || 0}`;
   return e;
@@ -659,8 +674,8 @@ export function hashString(s) {
 //   TW / TWB            vrille endroit -> envers / envers -> endroit
 //   QU  WA3  CR         montée en L, mur de 3 niveaux, sommet du L
 //   G2                  vide de 2 cases (saut)       V-2  change le niveau
-// Suffixe de revêtement : .i verglas  .b accélérateur  .j rebond  .s sable  .m aimant
-//   .u boue  .d dérive  .x ralentisseur  .w vent  .g gravité  .o plaque moto
+// Suffixe de revêtement : .i verglas  .b accélérateur  .j rebond  .m aimant
+//   .d dérive  .x ralentisseur  .w vent  .g gravité  .o plaque moto
 //   avec un paramètre en % : "S.b150" accélérateur à 150 %, "S.g25" gravité à 25 %.
 // Drapeaux en fin de jeton : ^ à l'envers   _ sans bordures   # tunnel
 //   ex. "S3.i" = 3 droites verglacées, "S2^_" = 2 droites à l'envers sans bordures.
@@ -681,7 +696,7 @@ export function hashString(s) {
 //   (0 = ½, 1, 2, 4), ex. CVR2, CBL0.   OT / OTL / OBT / OBTL / OBD / OBDL : looping triple, grand ×3, grand ×2
 //   suffixes : .a eau  .n plaque bateau  .e plaque deltaplane  .f inversion de gravité
 //              .t tapis roulant  .r ressort latéral  .v verre  .p poudreuse  .y volant inversé  .c moteur coupé
-const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', s: 'sand', m: 'magnet', u: 'mud', d: 'drift', x: 'slow', w: 'wind', g: 'gravity', o: 'moto', a: 'water', n: 'boat', e: 'glider', f: 'flip', t: 'conveyor', r: 'spring', v: 'glass', p: 'powder', y: 'reverse', c: 'cut' };
+const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', m: 'magnet', d: 'drift', x: 'slow', w: 'wind', g: 'gravity', o: 'moto', a: 'water', n: 'boat', e: 'glider', f: 'flip', t: 'conveyor', r: 'spring', v: 'glass', p: 'powder', y: 'reverse', c: 'cut' };
 
 export function scriptTrack(name, script, opts = {}) {
   const tr = new Track(name);

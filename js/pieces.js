@@ -15,7 +15,7 @@
 //  ring              : anneau flottant (turbo ou checkpoint aérien)
 // Une pièce line/arc peut aussi être posée « à l'envers » (drapeau v) : elle
 // devient alors un ruban au plafond.
-import { CELL, HALF, LEVEL_H, ROAD_TOP, LOOP_R, LOOP_LANE } from './constants.js';
+import { CELL, HALF, LEVEL_H, ROAD_TOP, LOOP_R, LOOP_LANE, ROAD_HALF, RAIL_W, SURF_PHYS } from './constants.js';
 
 export const PIECES = {
   straight:   { label: 'Ligne droite', kind: 'line', size: 1, rise: 0 },
@@ -113,10 +113,8 @@ export const SURFACES = {
   ice:     { label: 'Verglas', param: 'Glisse', def: 100, min: 25, max: 200, c: ['#d7f1fb', '#a7e0f5', '#6cc8f0'] },
   boost:   { label: 'Accélérateur', param: 'Puissance', def: 100, min: 5, max: 200, inv: true, c: ['#3a7bff', '#36e9ff', '#fff25a'] },
   bounce:  { label: 'Rebond', param: 'Hauteur', def: 100, min: 30, max: 200, flat: true, c: ['#a05fff', '#ff5fd2', '#ff9f5f'] },
-  sand:    { label: 'Sable', param: 'Freinage', def: 100, min: 30, max: 250, inv: true, c: ['#e6cf9c', '#c9a26b', '#a47a45'] },
   // 0.9 : plus de réglage, l'aimant colle toujours au maximum.
   magnet:  { label: 'Aimant', c: ['#b48cff', '#b48cff', '#b48cff'] },
-  mud:     { label: 'Boue', param: 'Épaisseur', def: 100, min: 30, max: 250, inv: true, c: ['#8a6a4a', '#6b4a32', '#4a3020'] },
   drift:   { label: 'Dérive', param: 'Glisse', def: 100, min: 30, max: 200, c: ['#ffb84d', '#ff8c42', '#ff5a3c'] },
   slow:    { label: 'Ralentisseur', param: 'Freinage', def: 100, min: 30, max: 300, inv: true, c: ['#ffc84d', '#ff6b57', '#c4172e'] },
   wind:    { label: 'Vent latéral', param: '← Force →', def: 150, min: 1, max: 200, c: ['#7fe9ff', '#bfefff', '#ffffff'] },
@@ -128,19 +126,24 @@ export const SURFACES = {
   glider:  { label: 'Plaque deltaplane', c: ['#f5f5f5', '#f5f5f5', '#f5f5f5'] },
   // 0.9 : inverse le sens de la gravité (une 2e plaque la remet à l'endroit).
   flip:    { label: 'Inversion de gravité', c: ['#ff4fd8', '#ff4fd8', '#ff4fd8'] },
-  conveyor: { label: 'Tapis roulant', param: '↓ Vitesse ↑', def: 150, min: 1, max: 200, c: ['#ffd23e', '#ffd23e', '#ffd23e'] },
+  // Phase 3 : réglage de -200 à +200 km/h (p = 1 → -200, p = 101 → 0, p = 201 → +200 ; 2 km/h par cran).
+  conveyor: { label: 'Tapis roulant', param: '↓ Vitesse ↑', def: 150, min: 1, max: 201, c: ['#ffd23e', '#ffd23e', '#ffd23e'] },
   spring:  { label: 'Ressort latéral', param: '← Force →', def: 150, min: 1, max: 200, c: ['#5dff8a', '#5dff8a', '#5dff8a'] },
-  glass:   { label: 'Verre fragile', param: 'Vitesse mini', def: 100, min: 30, max: 200, inv: true, c: ['#d9f4ff', '#a8e4ff', '#6fcfff'] },
+  // Phase 3 : plus de vitesse mini. La dalle cède après `p` centièmes de seconde de contact cumulé (150 = 1,5 s), puis n'a plus de collision.
+  glass:   { label: 'Verre fragile', param: 'Résiste', def: 150, min: 30, max: 500, inv: true, c: ['#d9f4ff', '#a8e4ff', '#6fcfff'] },
   powder:  { label: 'Poudreuse', param: 'Épaisseur', def: 100, min: 30, max: 250, inv: true, c: ['#ffffff', '#e4f1ff', '#bcd9ff'] },
   reverse: { label: 'Volant inversé', c: ['#c05fff', '#c05fff', '#c05fff'] },
   cut:     { label: 'Moteur coupé', c: ['#ff3b3b', '#ff3b3b', '#ff3b3b'] },
 };
 // Revêtements proposés dans l'éditeur (une seule entrée par revêtement : plus de doublons « Tapis roulant » / « Volant inversé »).
-export const SURFACE_ORDER = ['', 'ice', 'boost', 'bounce', 'sand', 'magnet', 'mud', 'drift', 'slow', 'wind', 'gravity', 'moto', 'water', 'boat', 'glider', 'flip', 'conveyor', 'spring', 'glass', 'powder', 'reverse', 'cut'];
+export const SURFACE_ORDER = ['', 'ice', 'boost', 'bounce', 'magnet', 'drift', 'slow', 'wind', 'gravity', 'moto', 'water', 'boat', 'glider', 'flip', 'conveyor', 'spring', 'glass', 'powder', 'reverse', 'cut'];
 // Ordre de SÉRIALISATION des revêtements : ne jamais réordonner ni retirer, seulement ajouter (les anciens codes de circuit
 // s'y réfèrent par numéro). « tread » et « invert » sont d'anciens doublons : on sait encore les lire, on ne les propose plus.
 export const SURFACE_CODES = ['', 'ice', 'boost', 'bounce', 'sand', 'magnet', 'mud', 'drift', 'slow', 'wind', 'gravity', 'moto', 'water', 'boat', 'glider', 'flip', 'conveyor', 'tread', 'spring', 'glass', 'powder', 'reverse', 'invert', 'cut'];
 export const SURFACE_ALIAS = { tread: 'conveyor', invert: 'reverse' };
+// Revêtements supprimés (Phase 3) : leurs numéros restent réservés dans SURFACE_CODES, et les anciens circuits qui les
+// utilisaient se lisent avec une route normale à leur place.
+export const REMOVED_SURFACES = new Set(['sand', 'mud']);
 // Plaques de transformation : véhicule obtenu (repasser sur la même plaque ramène la voiture).
 export const PLATES = { moto: 'moto', boat: 'boat', glider: 'glider' };
 
@@ -148,6 +151,31 @@ export function tileParam(tile) {
   const S = SURFACES[tile.s];
   if (!S || S.def == null) return 100;
   return tile.p || S.def;
+}
+
+// Vitesse du tapis roulant (m/s, signée) pour un réglage p : -200 km/h à +200 km/h.
+export const beltSpeed = (p) => ((p - 101) / 100) * SURF_PHYS.belt;
+// Durée de contact cumulé (s) avant que le verre fragile ne cède.
+export const glassSeconds = (p) => p / 100;
+// Hauteur sous voûte d'un tunnel (m) au-dessus de la chaussée : le tunnel est fermé par des parois et un toit.
+export const TUNNEL_TOP = ROAD_HALF + RAIL_W + 0.9;
+
+// Valeur d'un réglage de revêtement avec une unité réelle quand elle existe (km/h, m/s², m, s), sinon en %.
+const fmt1 = (x) => (Math.round(x * 10) / 10).toString().replace('.', ',');
+export function paramText(s, p) {
+  const S = SURFACES[s];
+  if (!S || S.def == null) return '';
+  const v = p || S.def;
+  switch (s) {
+    case 'conveyor': { const k = Math.round(2 * (v - 101)); return `${k > 0 ? '+' : ''}${k} km/h`; }
+    case 'wind': { const a = ((v - 100) / 100) * SURF_PHYS.wind; return Math.abs(a) < 0.05 ? 'nul' : `${a > 0 ? '→' : '←'} ${fmt1(Math.abs(a))} m/s²`; }
+    case 'spring': { const k = ((v - 100) / 100) * SURF_PHYS.spring * 3.6; return Math.abs(k) < 0.5 ? 'nulle' : `${k > 0 ? '→' : '←'} ${Math.round(Math.abs(k))} km/h`; }
+    case 'glass': return `${fmt1(glassSeconds(v))} s`;
+    case 'boost': return `${Math.round((SURF_PHYS.maxSpeed + (SURF_PHYS.boostSpeed - SURF_PHYS.maxSpeed) * (v / 100)) * 3.6)} km/h`;
+    case 'bounce': return `${fmt1((SURF_PHYS.bounce * (v / 100)) ** 2 / (2 * SURF_PHYS.gravity))} m`;
+    case 'gravity': return `${fmt1(SURF_PHYS.gravity * (v / 100))} m/s²`;
+    default: return `${v} %`;
+  }
 }
 
 export function isRibbonKind(type) {
@@ -184,15 +212,17 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
   if (flag === 'th') return p.kind !== 'ring';
   if (p.kind === 'ring' || p.kind === 'fork') return false;
   if (flag === 'nb') return lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube'));
-  if (flag === 'tn') return lineLike && !p.special && !(tile && (tile.v || tile.cp));
+  if (flag === 'tn') return lineLike && !p.special && !(tile && (tile.v || tile.cp || tile.tb));
   // Pièce mobile : route « simple » (droite, virage, pente, plateforme), pas à l'envers, pas de checkpoint dessus.
-  if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !(tile && (tile.v || tile.cp));
+  if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !(tile && (tile.v || tile.cp || tile.tb));
   // Checkpoint en option : sur une route plate (ligne ou virage) ; l'anneau aérien seulement sur une ligne droite à l'endroit.
   if (flag === 'cp') {
-    if (!(lineLike && !p.special && !p.rise) || (tile && (tile.mv || tile.tn))) return false;
+    if (!(lineLike && !p.special && !p.rise) || (tile && (tile.mv || tile.tn || tile.tb))) return false;
     if (val === 2) return p.kind === 'line' && !(tile && tile.v);
     return true;
   }
+  // Anneau turbo en option (Phase 3) : comme le checkpoint aérien, sur une ligne droite plate à l'endroit.
+  if (flag === 'tb') return p.kind === 'line' && !p.special && !p.rise && !(tile && (tile.v || tile.mv || tile.tn || tile.cp));
   return false;
 }
 
@@ -259,7 +289,8 @@ export function surfaceRule(p, S, s) {
   if (p.kind === 'ring') return 'pas de route dans un anneau';
   const curved = p.kind === 'loop' || p.kind === 'ribbon';
   if (S.flat && (p.rise || curved)) return 'seulement sur du plat';
-  if (s === 'water' && ((p.special && p.special !== 'checkpoint') || p.kind === 'fork')) return 'pas sur cette pièce spéciale ni une bifurcation';
+  // Phase 3 : l'eau va aussi sur le Départ (course commencée en bateau) ; la plaque bateau est elle-même sur l'eau.
+  if (s === 'water' && (p.special === 'finish' || p.kind === 'fork')) return 'pas sur l’arrivée ni une bifurcation';
   return '';
 }
 

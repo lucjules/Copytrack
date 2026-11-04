@@ -7,7 +7,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { TransformControls } from './vendor/TransformControls.js';
 import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL } from './constants.js';
-import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, tileCenter, baseY, THEMES, MOVER, moverParams } from './pieces.js';
+import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, tileCenter, baseY, THEMES, MOVER, moverParams, paramText } from './pieces.js';
 import { FAMILIES, familyOf, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from './families.js';
 import { arrowPose } from './tileInfo.js';
 import { styleFor } from './trackMesh.js';
@@ -266,7 +266,7 @@ export class Inspector {
   _structKey() {
     if (!this.sel) return '';
     const o = this.sel.obj;
-    return this.sel.kind === 'tile' ? ['t', o.t, o.s, o.s2, o.v, o.nb, o.tn, o.mv, o.cp, this.mode, this.tab].join('|') : ['d', o.k, this.mode, this.tab].join('|');
+    return this.sel.kind === 'tile' ? ['t', o.t, o.s, o.s2, o.v, o.nb, o.tn, o.mv, o.cp, o.tb, this.mode, this.tab].join('|') : ['d', o.k, this.mode, this.tab].join('|');
   }
 
   _syncPanel() { for (const f of this._sync) f(); }
@@ -404,7 +404,7 @@ export class Inspector {
     rows.push(this._select('Type', surfs.map((s) => [s, SURFACES[s].label]), () => t.s || '', (v) => ed.track.setSurface(t, v, SURFACES[v] && SURFACES[v].def != null ? ed._surfParamValue(v) : 0) || true));
     const S = SURFACES[t.s || ''];
     if (S && S.def != null) {
-      rows.push(this._range(S.param || 'Intensité', () => t.p || S.def, (v) => ed.track.setSurface(t, t.s, v) || true, { min: S.min, max: S.max, step: 1, fmt: (v) => v + ' %' }));
+      rows.push(this._range(S.param || 'Intensité', () => t.p || S.def, (v) => ed.track.setSurface(t, t.s, v) || true, { min: S.min, max: S.max, step: 1, fmt: (v) => paramText(t.s, v) }));
     }
     if (fork) {
       group('Revêtement · voie déportée');
@@ -413,7 +413,7 @@ export class Inspector {
         (v) => ed.track.setSurface2(t, v, v && SURFACES[v] && SURFACES[v].def != null ? ed._surfParamValue(v) : 0) || true));
       const S2 = SURFACES[t.s2 || ''];
       if (S2 && S2.def != null) {
-        rows.push(this._range(S2.param || 'Intensité', () => t.p2 || S2.def, (v) => ed.track.setSurface2(t, t.s2, v) || true, { min: S2.min, max: S2.max, step: 1, fmt: (v) => v + ' %' }));
+        rows.push(this._range(S2.param || 'Intensité', () => t.p2 || S2.def, (v) => ed.track.setSurface2(t, t.s2, v) || true, { min: S2.min, max: S2.max, step: 1, fmt: (v) => paramText(t.s2, v) }));
       }
     }
 
@@ -429,6 +429,7 @@ export class Inspector {
       (v) => { const n = +v, cur = t.cp || 0; if (n === cur) return true; return ed.track.toggleFlag(t, 'cp', n === 0 ? cur : n) || false; },
       !!P.special || (!flagAllowed(t.t, 'cp', t, 1) && !t.cp),
       (v) => v !== '0' && !flagAllowed(t.t, 'cp', t, +v)));
+    rows.push(flag('tb', 'Anneau turbo', 'Anneau à traverser pour un coup de turbo (ligne droite plate, à l’endroit)'));
     // Thème (visuel)
     rows.push(this._select('Thème', THEMES.map((x) => [String(x.id), x.label]), () => String(t.th || 0),
       (v) => { const n = +v, cur = t.th || 0; if (n === cur) return true; return ed.track.toggleFlag(t, 'th', n === 0 ? cur : n) || false; },
