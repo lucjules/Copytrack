@@ -24,34 +24,6 @@
     <div class="tagline">Chargement…</div>
   </div>
 
-  <!-- Écran d'accueil : pseudo obligatoire (invité ou compte) avant le menu principal -->
-  <section id="welcome" class="welcome hidden" role="dialog" aria-modal="true" aria-labelledby="wl-title">
-    <div class="welcome-card">
-      <div class="logo">COPY<span>TRACK</span></div>
-      <h2 id="wl-title">Qui joue ?</h2>
-      <div class="wl-tabs" role="tablist" aria-label="Mode de connexion">
-        <button type="button" role="tab" data-wl="guest" aria-selected="true">Invité</button>
-        <button type="button" role="tab" data-wl="login" aria-selected="false">Connexion</button>
-        <button type="button" role="tab" data-wl="signup" aria-selected="false">Créer un compte</button>
-      </div>
-      <form id="wl-form" novalidate>
-        <p class="wl-hint" id="wl-hint"></p>
-        <label class="wl-field"><span>Pseudo</span>
-          <input id="wl-name" name="username" type="text" maxlength="20" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required>
-        </label>
-        <label class="wl-field" id="wl-pw-wrap"><span>Mot de passe</span>
-          <input id="wl-pw" name="password" type="password" maxlength="72" autocomplete="current-password">
-        </label>
-        <label class="wl-field" id="wl-pw2-wrap"><span>Confirmer le mot de passe</span>
-          <input id="wl-pw2" name="password2" type="password" maxlength="72" autocomplete="new-password">
-        </label>
-        <label class="wl-check" id="wl-keep-wrap"><input type="checkbox" id="wl-keep" checked><span>Reprendre la progression de cet appareil (records, circuits, pièces) dans ce compte</span></label>
-        <p class="wl-error" id="wl-error" role="alert" aria-live="polite"></p>
-        <button class="btn big primary" id="wl-submit" type="submit">Jouer</button>
-      </form>
-    </div>
-  </section>
-
   <!-- Menu principal -->
   <section id="menu" class="screen hidden">
     <div class="menu-left">

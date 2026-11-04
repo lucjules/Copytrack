@@ -17,8 +17,6 @@ import { PIECES } from './pieces.js';
 import { VERSION } from './constants.js';
 import { thumbnail } from './editorTools.js';
 import { online } from './online.js';
-import { account, checkPseudo } from './account.js';
-import { runWelcome } from './welcome.js';
 import { PHYS_VER as PV } from './replay.js';
 import { encodeGhost, decodeGhost, PHYS_VER } from './replay.js';
 import { dailyChallenge, dayKey } from './daily.js';
@@ -29,12 +27,8 @@ import {
 } from './storage.js';
 
 class App {
-  // identity : { kind: 'guest' | 'account', username } décidé par l'écran d'accueil (welcome.js), toujours avant le menu.
-  constructor(identity) {
-    this.identity = identity;
+  constructor() {
     this.settings = loadSettings();
-    this.settings.playerName = identity.username;      // jamais de pseudo par défaut : celui de l'invité ou du compte
-    saveSettings(this.settings);
     const canvas = $('gl');
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.shadowMap.enabled = true;
@@ -643,8 +637,6 @@ class App {
     $('opt-ghostimp').checked = s.ghostImported !== false;
     $('opt-onlinescores').checked = s.onlineScores !== false;
     $('opt-name').value = s.playerName;
-    $('opt-name').readOnly = this.identity.kind === 'account';     // le pseudo d'un compte ne change pas
-    $('opt-name').title = this.identity.kind === 'account' ? 'Pseudo du compte (non modifiable)' : '';
     $('opt-touch').value = s.touchMode;
     $('opt-haptics').checked = s.haptics;
     $('opt-music').value = s.musicVolume;
@@ -733,7 +725,7 @@ class App {
       try { lb = await online.leaderboard(trackKey, PV, 10); } catch (e) { body.innerHTML = `<p>Classement indisponible : ${esc(e.message)}</p>`; return; }
       const rec = getRecord(trackKey);
       const canSend = rec && rec.inputs && rec.pv === PV && (!lb.me || rec.time < lb.me.time - 1e-6) && this.settings.onlineScores !== false;
-      const rows = lb.top.map((r, i) => `<li class="${r.player === online.uid ? 'me' : ''}"><b>${i + 1}</b><span>${esc((r.players && r.players.name) || '—')}</span><i>${formatTime(r.time)}</i></li>`).join('');
+      const rows = lb.top.map((r, i) => `<li class="${r.player === online.uid ? 'me' : ''}"><b>${i + 1}</b><span>${esc((r.players && r.players.name) || 'Pilote')}</span><i>${formatTime(r.time)}</i></li>`).join('');
       body.innerHTML = `${lb.top.length ? `<ol class="board">${rows}</ol>` : '<p>Aucun temps pour l’instant : sois le premier !</p>'}
         <p class="meta">${lb.total} pilote${lb.total > 1 ? 's' : ''} classé${lb.total > 1 ? 's' : ''}${lb.me ? ` · ta place : <b>${lb.me.rank}${lb.me.rank === 1 ? 'er' : 'e'}</b> (${formatTime(lb.me.time)})` : ''}.
         Chaque temps est vérifié : le serveur rejoue la course avant de l’accepter.</p>
@@ -820,7 +812,7 @@ class App {
     card.innerHTML = `${track ? `<img class="thumb" alt="" src="${thumbnail(track, 'c-' + row.id)}">` : ''}
       <h3>${esc(row.name)}</h3>
       ${row.description ? `<p class="desc">${esc(row.description)}</p>` : ''}
-      <div class="meta">par <b>${esc((row.players && row.players.name) || '—')}</b> · ${esc((DECORS[row.decor] || {}).label || row.decor)} · ${row.pieces} pièces${row.laps > 1 ? ` · ${row.laps} tours` : ''}</div>
+      <div class="meta">par <b>${esc((row.players && row.players.name) || 'Pilote')}</b> · ${esc((DECORS[row.decor] || {}).label || row.decor)} · ${row.pieces} pièces${row.laps > 1 ? ` · ${row.laps} tours` : ''}</div>
       <div class="meta">Temps de l’auteur ${formatTime(row.author_time)} · ▶ ${row.plays} · ♥ <span class="nl">${row.likes}</span></div>
       <div class="best">${medals ? medalIcon(medal) : ''}${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}</div>
       <div class="actions">
@@ -1019,17 +1011,7 @@ class App {
       this.settings.haptics = e.target.checked; this.saveSettings();
       this.input.setPadConfig({ rumble: e.target.checked });
     });
-    // Pseudo d'invité modifiable (jamais « Player » / « Pilote », jamais vide) ; celui d'un compte est figé.
-    $('opt-name').addEventListener('input', (e) => {
-      if (this.identity.kind === 'account') { e.target.value = this.identity.username; return; }
-      const c = checkPseudo(e.target.value);
-      e.target.setCustomValidity(c.ok ? '' : c.error);
-      e.target.classList.toggle('bad', !c.ok);
-      if (c.ok) { this.settings.playerName = c.name; this.identity.username = c.name; this.saveSettings(); }
-    });
-    $('opt-name').addEventListener('blur', (e) => {
-      if (this.identity.kind !== 'account' && !checkPseudo(e.target.value).ok) { e.target.value = this.settings.playerName; e.target.classList.remove('bad'); this.ui.flash('Pseudo inchangé : ' + checkPseudo(e.target.value).error); }
-    });
+    $('opt-name').addEventListener('input', (e) => { this.settings.playerName = e.target.value.slice(0, 20) || 'Pilote'; this.saveSettings(); });
     document.querySelectorAll('#bind-tabs .tab').forEach((t) => t.addEventListener('click', () => { this.audio.click(); this._renderControls(t.dataset.tab); }));
   }
 
@@ -1195,8 +1177,7 @@ class App {
         <span>Pièces gagnées au total</span><b>${p.stats.earned}</b>
         <span>Médailles obtenues</span><b>${medals.length}</b>
       </div>
-      <div class="prof-account" id="prof-account"></div>
-      <p class="prof-note">Ton <b>code joueur</b> contient toute ta progression (records, fantômes, circuits enregistrés, pièces, personnalisation, réglages) : une sauvegarde manuelle, utile aussi en invité. Avec un compte, la progression se synchronise toute seule entre tes appareils. L'identifiant ci-dessus sert à reconnaître ta sauvegarde.</p>
+      <p class="prof-note">Copytrack est un jeu 100 % navigateur, sans serveur : ton <b>code joueur</b> contient toute ta progression (records, fantômes, circuits enregistrés, pièces, personnalisation, réglages). Copie-le ou télécharge-le pour le restaurer sur un autre appareil ou navigateur. L'identifiant ci-dessus sert à reconnaître ta sauvegarde.</p>
       <div class="row">
         <button class="btn primary" data-p="copy">Copier mon code joueur</button>
         <button class="btn" data-p="download">Télécharger (.shw)</button>
@@ -1217,7 +1198,6 @@ class App {
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     };
-    this._renderAccountBox(body.querySelector('#prof-account'));
     body.querySelector('[data-p="paste"]').onclick = () => this._importSaveModal();
     const file = body.querySelector('#prof-file');
     body.querySelector('[data-p="file"]').onclick = () => file.click();
@@ -1225,44 +1205,6 @@ class App {
       const f = file.files[0];
       if (f) this._askImport(await f.text());
     };
-  }
-
-  // Bloc « compte » de l'écran Profil : état de la synchronisation, déconnexion, suppression.
-  _renderAccountBox(box) {
-    if (this.identity.kind !== 'account') {
-      box.innerHTML = `<div class="meta">Mode invité · <b>${esc(this.identity.username)}</b></div>
-        <p class="prof-note">Ta progression reste sur cet appareil. Avec un compte, tu la retrouves depuis n'importe quel ordinateur.</p>
-        <div class="row"><button class="btn primary" data-a="acct">Créer un compte / Se connecter</button></div>`;
-      box.querySelector('[data-a="acct"]').onclick = () => { account.leaveGuest(); location.reload(); };
-      return;
-    }
-    const label = () => ({ idle: 'en attente', syncing: 'synchronisation…', ok: account.lastSync ? 'à jour (' + new Date(account.lastSync).toLocaleTimeString('fr-FR') + ')' : 'à jour', offline: 'hors ligne : reprise dès le retour du réseau', error: 'erreur : ' + account.lastError }[account.status] || '');
-    box.innerHTML = `<div class="meta">Compte · <b>${esc(account.username)}</b> · sauvegarde cloud <span id="acct-st"></span></div>
-      <div class="row">
-        <button class="btn" data-a="sync">Synchroniser maintenant</button>
-        <button class="btn" data-a="out">Se déconnecter</button>
-        <button class="btn danger" data-a="del">Supprimer le compte</button>
-      </div>`;
-    const st = box.querySelector('#acct-st');
-    const paint = () => { st.textContent = label(); };
-    paint();
-    box.querySelector('[data-a="sync"]').onclick = () => {
-      paint(); st.textContent = 'synchronisation…';
-      account.sync().then(() => { paint(); this.ui.flash('Sauvegarde synchronisée'); }, (e) => { paint(); this.ui.flash(e.message); });
-    };
-    box.querySelector('[data-a="out"]').onclick = async () => {
-      this.ui.flash('Déconnexion…');
-      await account.signOut();
-      location.reload();
-    };
-    box.querySelector('[data-a="del"]').onclick = () => this.ui.modal({
-      title: 'Supprimer le compte ?',
-      body: `<p>Le compte <b>${esc(account.username)}</b> et sa sauvegarde cloud seront effacés définitivement, ainsi que tes circuits publiés et tes temps en ligne. Les données de cet appareil pour ce compte sont supprimées aussi. Impossible d'annuler.</p>`,
-      actions: [
-        { label: 'Supprimer définitivement', danger: true, onClick: () => { account.deleteAccount().then(() => location.reload(), (e) => this.ui.flash(e.message)); } },
-        { label: 'Annuler', primary: true },
-      ],
-    });
   }
 
   _showCode(code) {
@@ -1302,9 +1244,6 @@ class App {
 
   _afterImport() {
     this.settings = loadSettings();
-    this.settings.playerName = this.identity.username;   // un code joueur ne change pas le pseudo du joueur connecté
-    this.saveSettings();
-    if (this.identity.kind === 'account') account.scheduleSync(500);
     this.input.setBindings(this.settings.keys, this.settings.pad);
     this.audio.setVolume(this.settings.volume);
     this._applyQuality();
@@ -1452,20 +1391,14 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => { /* pas grave : le jeu marche sans */ }); });
 }
 
-(async () => {
-  try {
-    // 1. Pseudo d'abord : invité (session) ou compte. Le menu et le jeu ne se chargent qu'ensuite.
-    const identity = await runWelcome();
-    // 2. Le jeu, avec la progression du bon joueur (la portée de stockage est déjà choisie).
-    const app = new App(identity);
-    window.shardway = app;
-    window.copytrack = app;
-    app.start();
-    if (identity.kind === 'account') account.sync().catch(() => { /* hors ligne : reprise plus tard */ });
-  } catch (err) {
-    console.error(err);
-    const l = document.getElementById('loading');
-    l.classList.remove('hidden');
-    l.querySelector('.tagline').textContent = 'Impossible de démarrer le jeu (WebGL indisponible ?) : ' + err.message;
-  }
-})();
+try {
+  const app = new App();
+  window.shardway = app;
+  window.copytrack = app;
+  app.start();
+} catch (err) {
+  console.error(err);
+  const l = document.getElementById('loading');
+  l.classList.remove('hidden');
+  l.querySelector('.tagline').textContent = 'Impossible de démarrer le jeu (WebGL indisponible ?) : ' + err.message;
+}
