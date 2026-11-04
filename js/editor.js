@@ -136,7 +136,16 @@ export const ICONS = {
   'mod:tn': svg(`<path d="M6 44V22a18 18 0 0 1 36 0v22" stroke="#7fe9ff" stroke-width="3.5" fill="none"/><rect x="14" y="22" width="20" height="24" fill="${ROAD}"/>`),
 };
 
+// ---- Pot de peinture : outils 'fill-surf:<revêtement>' et 'fill-piece:<type>' ----------------
+const FILL_MAX_DL = 2;                                  // écart de niveau toléré entre voisines (un tremplin monte de 2)
+const FILL_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const isFill = (t) => t.startsWith('fill-');
+const fillBase = (t) => (t.startsWith('fill-surf:') ? t.slice(5) : t.startsWith('fill-piece:') ? t.slice(11) : t);
+const toFill = (t) => (t.startsWith('surf:') ? 'fill-' + t : PIECES[t] ? 'fill-piece:' + t : null);
+const isStartFinish = (type) => { const sp = PIECES[type] && PIECES[type].special; return sp === 'start' || sp === 'finish'; };
+
 export function pieceLabel(id) {
+  if (isFill(id)) return 'Pot de peinture · ' + pieceLabel(fillBase(id));
   if (id === 'erase') return 'Gomme';
   if (id === 'select') return 'Sélection';
   if (id.startsWith('surf:')) return SURFACES[id.slice(5)].label;
@@ -147,6 +156,7 @@ export function pieceLabel(id) {
 
 function validTool(t) {
   if (!t) return false;
+  if (isFill(t)) return toFill(fillBase(t)) === t && validTool(fillBase(t));
   return !!PIECES[t] || t === 'erase' || t === 'select' || t.startsWith('surf:') || t.startsWith('mod:') || t.startsWith('deco:');
 }
 
@@ -164,6 +174,7 @@ export class EditorSession {
     if (state.name) this.track.name = state.name;
     this.entryId = state.entryId || null;
     this.tool = validTool(state.tool) ? state.tool : 'straight';
+    this.fillMode = isFill(this.tool);
     this.rot = state.rot || 0;
     this.level = state.level || 0;
     this.tab = 'pieces';
@@ -292,6 +303,13 @@ export class EditorSession {
       panel.dataset.panel = id;
       panels[id] = panel;
     }
+    const fillBtn = document.createElement('button');
+    fillBtn.className = 'pal-fill';
+    fillBtn.id = 'ed-fill';
+    fillBtn.textContent = '🪣 Pot de peinture';
+    fillBtn.title = 'Remplir toute une zone connectée : choisis une pièce ou un revêtement, puis clique une pièce (² / `)';
+    fillBtn.addEventListener('click', () => { this.toggleFill(); this.app.audio.click(); });
+    tabs.appendChild(fillBtn);
     pal.appendChild(tabs);
 
     const rowP = document.createElement('div'); rowP.className = 'pal-row';
@@ -335,8 +353,8 @@ export class EditorSession {
 
     // Réglages des revêtements
     const range = document.getElementById('ed-param');
-    range.oninput = () => { this.surfParam[this.tool.slice(5)] = +range.value; this._refreshParam(); };
-    document.getElementById('ed-param-reset').onclick = () => { delete this.surfParam[this.tool.slice(5)]; this._refreshParam(); };
+    range.oninput = () => { this.surfParam[fillBase(this.tool).slice(5)] = +range.value; this._refreshParam(); };
+    document.getElementById('ed-param-reset').onclick = () => { delete this.surfParam[fillBase(this.tool).slice(5)]; this._refreshParam(); };
     // Réglages des décorations
     const cat = document.getElementById('ed-deco-cat');
     cat.onchange = () => { this.deco.cat = cat.value; this._buildDecoRow(); cat.blur(); };
@@ -365,7 +383,7 @@ export class EditorSession {
     const name = document.getElementById('ed-name');
     name.value = this.track.name;
     name.oninput = () => { this.track.name = name.value.trim() || 'Sans titre'; this._changed(false); };
-    this.setTab(this.tool.startsWith('surf:') ? 'surf' : this.tool.startsWith('mod:') ? 'mods' : this.tool.startsWith('deco:') ? 'decos' : 'pieces');
+    this.setTab(fillBase(this.tool).startsWith('surf:') ? 'surf' : this.tool.startsWith('mod:') ? 'mods' : this.tool.startsWith('deco:') ? 'decos' : 'pieces');
   }
 
   _buildDecoRow() {
@@ -382,10 +400,14 @@ export class EditorSession {
   }
 
   setTool(id) {
+    // Mode pot de peinture : choisir une pièce ou un revêtement garde le pot ; tout autre outil le quitte.
+    if (isFill(id)) this.fillMode = true;
+    else if (this.fillMode && toFill(id)) id = toFill(id);
+    else this.fillMode = false;
     if (id !== 'select') { this.pasting = false; this.sel = null; this.selDrag = null; }
     this.tool = id;
     this.previewKey = '';
-    if (id.startsWith('surf:')) this.setTab('surf');
+    if (fillBase(id).startsWith('surf:')) this.setTab('surf');
     else if (id.startsWith('mod:')) this.setTab('mods');
     else if (id.startsWith('deco:')) {
       this.setTab('decos');
@@ -396,15 +418,29 @@ export class EditorSession {
     this._refreshUI();
   }
 
+  // Active / désactive le pot de peinture sur la pièce ou le revêtement choisi.
+  toggleFill() {
+    if (isFill(this.tool)) {
+      this.fillMode = false;
+      this.setTool(fillBase(this.tool));
+      this.app.ui.flash('Pot de peinture désactivé', 1.2);
+      return;
+    }
+    const f = toFill(this.tool);
+    if (!f) { this.app.ui.flash('Pot de peinture : choisis d’abord une pièce ou un revêtement.'); this.app.audio.error(); return; }
+    this.setTool(f);
+    this.app.ui.flash('Pot de peinture : clique une pièce pour remplir sa zone', 1.8);
+  }
+
   cyclePiece(d) {
     const ids = PALETTE_ORDER.map((p) => p.id).filter((id) => id !== 'erase');
-    const i = ids.indexOf(this.tool);
+    const i = ids.indexOf(fillBase(this.tool));
     this.setTool(ids[(i + d + ids.length) % ids.length] || 'straight');
   }
 
   cycleSurface() {
     const ids = SURFACE_ORDER.map((s) => 'surf:' + s);
-    const i = ids.indexOf(this.tool);
+    const i = ids.indexOf(fillBase(this.tool));
     this.setTool(ids[(i + 1) % ids.length]);
   }
 
@@ -416,7 +452,7 @@ export class EditorSession {
   }
 
   mirror() {
-    if (MIRROR[this.tool]) this.setTool(MIRROR[this.tool]);
+    if (MIRROR[fillBase(this.tool)]) this.setTool(MIRROR[fillBase(this.tool)]);
   }
 
   _surfParamValue(s) {
@@ -425,7 +461,8 @@ export class EditorSession {
   }
 
   _refreshParam() {
-    const s = this.tool.startsWith('surf:') ? this.tool.slice(5) : '';
+    const base = fillBase(this.tool);
+    const s = base.startsWith('surf:') ? base.slice(5) : '';
     const S = SURFACES[s];
     const box = document.querySelector('.pal-param');
     if (!box) return;
@@ -459,13 +496,15 @@ export class EditorSession {
 
   _refreshUI() {
     this._refreshSelBar();
-    document.querySelectorAll('#ed-palette .piece-btn').forEach((b) => b.classList.toggle('on', b.dataset.piece === this.tool));
+    document.querySelectorAll('#ed-palette .piece-btn').forEach((b) => b.classList.toggle('on', b.dataset.piece === fillBase(this.tool)));
+    const fb = document.getElementById('ed-fill');
+    if (fb) fb.classList.toggle('on', isFill(this.tool));
     document.getElementById('ed-level').textContent = `Niv. ${this.level}`;
     const t = this.track;
     const cps = t.count('checkpoint');
     const errs = t.validate();
     const isPiece = !!PIECES[this.tool];
-    const detail = isPiece ? ` · ${this.rot * 90}°` : this.tool === 'erase' || this.tool.startsWith('surf:') || this.tool.startsWith('mod:') ? ' · clic sur une pièce' : ` · ${(this.deco.rot * 180 / Math.PI).toFixed(0)}°`;
+    const detail = isPiece ? ` · ${this.rot * 90}°` : isFill(this.tool) ? ' · clic sur une pièce : remplit sa zone' : this.tool === 'erase' || this.tool.startsWith('surf:') || this.tool.startsWith('mod:') ? ' · clic sur une pièce' : ` · ${(this.deco.rot * 180 / Math.PI).toFixed(0)}°`;
     const ver = t.verified ? `<span class="ok">✔ Vérifié ${formatTime(t.vt)}</span>` : '<span class="warn">Non vérifié</span> (« ✔ Vérifier » avant de publier)';
     const top = document.querySelector('#editor .ed-top');
     if (top) document.getElementById('editor').style.setProperty('--ed-top-h', top.offsetHeight + 'px');
@@ -745,6 +784,7 @@ export class EditorSession {
   _act(painting = false) {
     const t = this.tool;
     if (t === 'erase') { this._erase(painting); return; }
+    if (isFill(t)) { if (!painting) this._floodFill(); return; }   // un clic = un remplissage (pas de glisser)
     if (t.startsWith('surf:')) { this._paintSurface(painting); return; }
     if (t.startsWith('mod:')) { this._toggleMod(painting); return; }
     if (t.startsWith('deco:')) { this._placeDeco(); return; }
@@ -792,6 +832,74 @@ export class EditorSession {
       this._changed();
       if (!painting) this._commit();
     }
+  }
+
+  // Raison pour laquelle la pièce visée ne peut pas servir de cible au pot de peinture ('' si elle convient).
+  _fillRefusal(target) {
+    if (isStartFinish(target.t)) return 'Le départ et l’arrivée ne peuvent pas être remplis.';
+    const base = fillBase(this.tool);
+    if (!base.startsWith('surf:') && isStartFinish(base)) return 'Le départ et l’arrivée ne se posent pas au pot de peinture.';
+    return '';
+  }
+
+  // Pot de peinture : remplace, dans toute la zone connectée à la pièce visée, le revêtement
+  // ('fill-surf:') ou le type de pièce ('fill-piece:'). Zone = pièces voisines (côtés partagés,
+  // écart de niveau <= FILL_MAX_DL) qui satisfont le même prédicat que la cible.
+  _floodFill() {
+    const start = this._hoverTile();
+    if (!start) return;
+    const why = this._fillRefusal(start);
+    if (why) { this.app.ui.flash(why); this.app.audio.error(); return; }
+
+    const surfMode = this.tool.startsWith('fill-surf:');
+    const value = fillBase(this.tool).slice(surfMode ? 5 : 0);       // revêtement ou type voulu
+    const matches = surfMode ? (t) => (t.s || '') === (start.s || '') : (t) => t.t === start.t;
+    if (surfMode ? (start.s || '') === value : start.t === value) return;   // rien à remplacer
+
+    // 1. Parcours en largeur ITÉRATIF (file + index de lecture, aucune récursion) : on ne fait que collecter.
+    const visited = new Set([start]);
+    const queue = [start];
+    let head = 0;
+    while (head < queue.length) {
+      const t = queue[head++];
+      for (const [cx, cz] of Track.cellsOf(t)) {                      // une pièce 2×2 occupe plusieurs cases
+        for (const [dx, dz] of FILL_DIRS) {
+          for (const n of this.track.tilesAt(cx + dx, cz + dz)) {
+            if (visited.has(n) || !matches(n) || Math.abs(n.l - t.l) > FILL_MAX_DL) continue;
+            visited.add(n);
+            queue.push(n);
+          }
+        }
+      }
+    }
+
+    // 2. Application, après le parcours : l'index du circuit ne change pas pendant la lecture.
+    let done = 0, skipped = 0;
+    const param = surfMode && SURFACES[value] && SURFACES[value].def != null ? this._surfParamValue(value) : 0;
+    for (const t of queue) {
+      if (isStartFinish(t.t)) { skipped++; continue; }                // départ / arrivée : jamais modifiés
+      if (surfMode ? this.track.setSurface(t, value, param) : this._retypeTile(t, value)) done++;
+      else skipped++;
+    }
+
+    if (done) {
+      this.app.audio.place();
+      this._changed();
+      this._commit();                                                 // UN SEUL commit : un seul Ctrl+Z annule tout
+    } else this.app.audio.error();
+    this.app.ui.flash(`${done} pièce${done > 1 ? 's' : ''} modifiée${done > 1 ? 's' : ''}` + (skipped ? ` · ${skipped} ignorée${skipped > 1 ? 's' : ''} (incompatible ou pas la place)` : ''));
+  }
+
+  // Change le type d'une pièce sur place (même case, niveau et rotation) si l'empreinte est identique.
+  _retypeTile(tile, type) {
+    if (!PIECES[type] || PIECES[type].size !== PIECES[tile.t].size) return false;
+    const cand = Track.normalize({ ...tile, t: type });               // retire les options devenues impossibles
+    if (!Track.inBounds(cand)) return false;
+    this.track.remove(tile);
+    if (this.track.conflicts(cand).length) { this.track._insert(tile); return false; }
+    Object.assign(tile, cand);                                        // même objet : la zone collectée reste valide
+    this.track._insert(tile);
+    return true;
   }
 
   _toggleMod(painting) {
@@ -879,6 +987,7 @@ export class EditorSession {
     }
     const t = this._hoverTile();
     if (!t) return;
+    this.fillMode = false;
     this.tool = t.t; this.rot = t.r; this.level = t.l;
     this.autoLevel = null;
     this.previewKey = '';
@@ -1121,7 +1230,9 @@ export class EditorSession {
       }
       const t = this._hoverTile();
       if (t) {
-        if (this.tool.startsWith('surf:')) {
+        if (isFill(this.tool)) {
+          this._highlightTile(t, this._fillRefusal(t) ? '#ff3b5c' : '#ffb347');
+        } else if (this.tool.startsWith('surf:')) {
           const s = this.tool.slice(5);
           this._highlightTile(t, surfaceAllowed(t.t, s, !!t.v) ? (s ? tint(s, this._surfParamValue(s)) : '#ffffff') : '#ff3b5c');
         } else {
@@ -1163,6 +1274,7 @@ export class EditorSession {
     if (input.act('ed.params')) { this.openParams(); return; }
     if (input.act('ed.nextPiece')) this.cyclePiece(shift ? -1 : 1);
     if (input.act('ed.surface')) this.cycleSurface();
+    if (input.act('ed.fill')) this.toggleFill();
     if (input.act('ed.mirror')) this.mirror();
     if (input.act('ed.snap')) this.cycleSnap();
     if (input.act('ed.scaleUp')) this.scaleDeco(1.1);

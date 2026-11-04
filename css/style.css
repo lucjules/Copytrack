@@ -914,3 +914,5 @@ body.touch kbd { display: none; }
 }
 /* Le panneau d'état suit la hauteur réelle de la barre du haut (qui peut passer sur 2 lignes). */
 .ed-status { top: calc(var(--ed-top-h, 54px) + 10px); pointer-events: none; }
+.pal-fill { margin-left: auto; font: inherit; font-size: 13px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 4px 12px; cursor: pointer; }
+.pal-fill.on { color: #1a1206; background: #ffb347; border-color: #ffb347; }

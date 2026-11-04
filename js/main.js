@@ -316,6 +316,7 @@ class App {
       [L('ed.params'), 'Paramètres du niveau (description, décor, tours, départ, hors piste)'],
       ['Maj + ' + L('ed.test'), 'Tester depuis la pièce visée'],
       [L('ed.surface'), 'Revêtement suivant (puis clic sur une pièce)'],
+      [L('ed.fill'), 'Pot de peinture : remplit toute la zone connectée de la pièce cliquée (revêtement ou type de pièce choisi)'],
       [L('ed.snap'), 'Accrochage des décorations (libre, 1 m, 4 m, case)'],
       [L('ed.scaleUp') + ' / ' + L('ed.scaleDown'), 'Décoration : taille + / −'],
       [L('ed.erase'), 'Gomme'],

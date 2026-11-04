@@ -1,6 +1,7 @@
 // Session de course : boucle à pas fixe, caméra, fantôme, HUD, effets.
 import * as THREE from './vendor/three.module.min.js';
 import { DT } from './constants.js';
+import { CamFlip } from './camflip.js';
 import { CarPhysics, frameWorld } from './physics.js';
 import { RaceLogic, placeAtStart } from './raceLogic.js';
 import { Autopilot } from './autopilot.js';
@@ -87,6 +88,7 @@ export class RaceSession {
     this.prevQuat = new THREE.Quaternion();
     this.renderPos = new THREE.Vector3();
     this.camPos = new THREE.Vector3();
+    this.camFlip = new CamFlip();       // retournement de la caméra (inversion de gravité)
     this.camYaw = 0;
     this.camT = 0;
     this.shake = 0;
@@ -132,6 +134,7 @@ export class RaceSession {
     this.prevQuat.copy(this.quat);
     this.camYaw = sp.yaw;
     this.camPos.set(sp.x + Math.sin(sp.yaw) * 12, sp.y + 5, sp.z + Math.cos(sp.yaw) * 12);
+    this._camCut();
     this.state = this.demo || this.replay ? 'racing' : 'countdown';
     this.recorder = new InputRecorder();
     this.tick = 0;          // pas de course depuis le départ (ne recule jamais, contrairement au chrono)
@@ -179,6 +182,7 @@ export class RaceSession {
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
     this._orient();
     this.prevQuat.copy(this.quat);
+    this._camCut();
     this.groundT = 0;
     this.app.audio.respawn();
     this.app.particles.burst(r.x, r.y + 1.5, r.z, 24, 8, 0.6, 0.7, '#5ff2ff', 0);
@@ -734,6 +738,16 @@ export class RaceSession {
     gc.visible = gc.position.distanceToSquared(this.renderPos) > 4;
   }
 
+  // Réapparition ou recommencement : la caméra se remet d'office dans le bon sens, sans transition
+  // (même si la voiture vient de mourir la tête en bas), à la bonne place et dans le bon cap.
+  _camCut() {
+    const p = this.phys;
+    if (!this.camUp) this.camUp = new THREE.Vector3(0, 1, 0);
+    this.camFlip.cut(p.gSign, this.camUp);
+    this.camYaw = p.yaw;
+    this._camSnap = true;               // la prochaine image pose la caméra sur sa cible au lieu de glisser vers elle
+  }
+
   _camera(dt) {
     const cam = this.app.camera;
     const p = this.phys;
@@ -794,6 +808,8 @@ export class RaceSession {
     // Dans un looping : la caméra se cale derrière la voiture et tourne avec elle.
     if (p.mode === 'ribbon') {
       const up = this.up;
+      this.camFlip.sync(p.gSign);      // dans un looping le haut vient de la route : pas de retournement à part
+      this._camSnap = false;
       camUp.lerp(up, 1 - Math.exp(-dt * 6));
       if (camUp.lengthSq() < 1e-3) camUp.copy(up);
       camUp.normalize();
@@ -825,11 +841,14 @@ export class RaceSession {
     // En gravité inversée, la caméra se retourne : le « haut » est vers le bas du monde.
     const gs = p.gSign;
     const gUp = gs > 0 ? UP : (this._downV || (this._downV = new THREE.Vector3(0, -1, 0)));
-    const flipRate = this._camGravitySign !== gs ? 18 : 4;
-    this._camGravitySign = gs;
-    camUp.lerp(gUp, 1 - Math.exp(-dt * flipRate));
-    if (camUp.lengthSq() < 1e-3) camUp.copy(gUp);
-    camUp.normalize();
+    // Retournement : rotation du haut de la caméra autour de l'axe de visée en 0,45 s (voir camflip.js).
+    tmpV.copy(car.position).sub(cam.position);
+    if (tmpV.lengthSq() < 1e-6) tmpV.set(-Math.sin(p.yaw), 0, -Math.cos(p.yaw)); else tmpV.normalize();
+    if (!this.camFlip.update(dt, gs, tmpV, camUp)) {
+      camUp.lerp(gUp, 1 - Math.exp(-dt * 4));         // sortie d'un looping : retour doux au haut du monde
+      if (camUp.lengthSq() < 1e-3) camUp.copy(gUp);
+      camUp.normalize();
+    }
     cam.up.copy(camUp);
 
     // Caméra de poursuite : suit le cap, et un peu la trajectoire en dérapage.
@@ -861,9 +880,12 @@ export class RaceSession {
     // Horizontal serré, vertical plus doux (sauf sous un pont : réaction immédiate).
     const kx = 1 - Math.exp(-dt * 12);
     const ky = 1 - Math.exp(-dt * (underBridge ? 20 : 6));
-    this.camPos.x += (tmpV.x - this.camPos.x) * kx;
-    this.camPos.z += (tmpV.z - this.camPos.z) * kx;
-    this.camPos.y += (tmpV.y - this.camPos.y) * ky;
+    if (this._camSnap) { this._camSnap = false; this.camPos.copy(tmpV); }   // coupure : pas de glissement
+    else {
+      this.camPos.x += (tmpV.x - this.camPos.x) * kx;
+      this.camPos.z += (tmpV.z - this.camPos.z) * kx;
+      this.camPos.y += (tmpV.y - this.camPos.y) * ky;
+    }
     // Jamais dans une dalle ni sous la chaussée
     if (gs > 0) {
       const ceilCam = this.track.ceilingAt(this.camPos.x, this.camPos.z, carTop - 0.5);

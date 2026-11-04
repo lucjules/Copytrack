@@ -20,6 +20,7 @@ export const KEY_ACTIONS = {
     ['ed.levelDown', 'Descendre d’un niveau', ['KeyC', 'PageDown']],
     ['ed.nextPiece', 'Pièce suivante', ['Tab', '']],
     ['ed.surface', 'Revêtement suivant', ['KeyB', '']],
+    ['ed.fill', 'Pot de peinture (remplir une zone)', ['Backquote', '']],
     ['ed.mirror', 'Miroir (looping gauche / droite)', ['KeyM', '']],
     ['ed.snap', 'Accrochage des décorations', ['KeyN', '']],
     ['ed.scaleUp', 'Décoration : agrandir', ['BracketRight', '']],

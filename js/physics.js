@@ -47,6 +47,8 @@ export const CAR = {
   gravity: 25,
   snap: 0.7,
   step: 1.6,
+  magnetRange: 4,     // aimant : portée de l'attraction au-dessus d'une route aimantée (m)
+  magnetAcc: 80,      // ... et accélération maximale vers la route, le long de sa normale (m/s²)
   launch: 2.0,        // vitesse normale (m/s) au-delà de laquelle la route « tombe » sous la voiture : elle décolle
   airPitchAcc: 4.2,  // tangage en l'air : gaz = nez vers le bas, frein = nez vers le haut (rad/s²)
   airPitchDamp: 2.6,
@@ -67,7 +69,6 @@ export const CAR = {
   springHop: 11,      // saut du ressort (passe par-dessus la bordure)
   glassSpeed: 25,     // le verre cède sous cette vitesse (m/s, réglage 100 %)
   glassImpact: 24,    // ... ou sous un atterrissage plus violent (m/s)
-  revTime: 1.5,       // volant inversé : durée après la dernière plaque
   cutTime: 1.0,       // moteur coupé : durée après la dernière plaque
   shockE: 0.5,        // obstacles : rebond (0 = mou, 1 = élastique)
   shockKick: 6,       // ... et petite poussée en plus pour bien sentir le choc           // accélération latérale du vent à pleine force (réglage 0 % ou 200 %)
@@ -145,6 +146,27 @@ const TMP = { x: 0, z: 0 };
 const HIT = { dx: 0, dz: 0, nx: 0, nz: 0 };
 const BK = { vx: 0, vy: 0, w: 0 };
 
+// Coefficients des revêtements : UNE seule source pour le sol et pour les rubans (loopings, tubes, plafond...).
+// Ils ne dépendent ni du sens de la gravité ni de la position de la voiture : endroit ou envers, mêmes valeurs.
+// f = paramètre de la pièce (1 = 100 %). Les effets propres à un repère (vent, tapis, eau, plaques) restent à l'appelant.
+const COEF = { grip: 1, traction: 1, vmaxK: 1, extraDrag: 0, rearK: 1 };
+export function surfaceCoeffs(mod, f, out = COEF) {
+  out.grip = 1; out.traction = 1; out.vmaxK = 1; out.extraDrag = 0; out.rearK = 1;
+  switch (mod) {
+    case 'ice': out.grip = clamp(0.2 / f, 0.05, 0.85); out.traction = 0.45; break;
+    case 'sand': out.grip = 0.8; out.traction = 0.65; out.vmaxK = clamp(1 - 0.45 * f, 0.25, 1); out.extraDrag = 5 * f; break;
+    case 'mud': out.grip = 0.7; out.traction = 0.55; out.vmaxK = clamp(1 - 0.5 * f, 0.2, 1); out.extraDrag = 6 * f; break;
+    case 'magnet': out.grip = 1.6; break;
+    // Dérive : l'arrière n'accroche presque plus (l'avant, si) : au moindre coup de volant la voiture part en glisse.
+    case 'drift': out.rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85); break;
+    case 'slow': out.extraDrag = 14 * f; break;
+    // Poudreuse : on s'enfonce un peu, l'adhérence est molle et le moteur patine.
+    case 'powder': out.grip = clamp(0.62 / Math.sqrt(f), 0.3, 0.9); out.traction = 0.75; out.vmaxK = clamp(1 - 0.28 * f, 0.4, 1); out.extraDrag = 2.5 * f; break;
+    default: break;
+  }
+  return out;
+}
+
 // Repère d'un ruban en coordonnées monde.
 export function frameWorld(tile, rib, u, F) {
   frameLocal(rib, u, FL);
@@ -168,6 +190,7 @@ export class CarPhysics {
     this.n = { x: 0, y: 1, z: 0 };
     this.fwd = { x: 0, y: 0, z: -1 };   // direction du nez (visuelle et physique)
     this.surf = {};
+    this.surfM = {};
     this.F = {}; this.F0 = {}; this.F2 = {}; this.F3 = {};
     this.ev = {
       wall: 0, land: 0, boostHit: false, bounce: false, loopIn: false, loopOut: false, loopFall: false,
@@ -225,7 +248,7 @@ export class CarPhysics {
     this.lost = false;
     this._flipNow = false;
     this._springNow = false;
-    this.revT = 0; this.cutT = 0; this.glassT = 0;
+    this.cutT = 0; this.glassT = 0;
     this.graceT = 1.5;   // protection après un (re)départ : ni verre cassé ni piques (évite les boucles de retours)
     this.beltX = 0; this.beltZ = 0; this.beltS = 0;
     this.plateLock = '';
@@ -246,6 +269,18 @@ export class CarPhysics {
   get speed() {
     const v = this.vel;
     return Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+  }
+
+  // Sens du « haut » local de la voiture : +1 toit vers le ciel, -1 retournée. Le volant fait tourner la voiture
+  // AUTOUR de ce haut-là, pas autour du haut du monde (au plafond, la droite du pilote est la gauche du monde).
+  // Au sol on le lit sur la normale du contact ; en l'air, c'est l'assiette, qui suit le sens de la gravité.
+  _upSign() {
+    if (this.grounded) {
+      const ny = this.n.y;
+      if (ny > 0.05) return 1;
+      if (ny < -0.05) return -1;
+    }
+    return this.gSign;
   }
 
   _updateFwd() {
@@ -299,7 +334,7 @@ export class CarPhysics {
   // Revêtements qui modifient les commandes (volant inversé, moteur coupé) : actifs tant
   // qu'on roule dessus, puis encore un court instant.
   _timedMods(mod) {
-    if (mod === 'reverse' || mod === 'invert') { if (this.surfMod !== mod) this.ev.reverse = true; this.revT = 0; return true; }
+    if (mod === 'reverse' || mod === 'invert') { if (this.surfMod !== mod) this.ev.reverse = true; return true; }
     if (mod === 'cut') { if (this.cutT <= 0) this.ev.cut = true; this.cutT = CAR.cutTime; return true; }
     return false;
   }
@@ -379,7 +414,9 @@ export class CarPhysics {
     this.prevYaw = this.yaw;
 
     // Volant inversé / moteur coupé : les commandes sont modifiées un court instant.
-    const reverseActive = this.rib ? this.rib.tile.s === 'reverse' || this.rib.tile.s === 'invert' : this.surfMod === 'reverse' || this.surfMod === 'invert';
+    // Volant inversé : seulement tant que les roues touchent une pièce qui l'a (ruban : la pièce sous les roues ;
+    // sol : surfMod est celui du dernier contact, donc il ne compte que si on est posé). En l'air, volant normal.
+    const reverseActive = this.rib ? this.rib.tile.s === 'reverse' || this.rib.tile.s === 'invert' : this.grounded && (this.surfMod === 'reverse' || this.surfMod === 'invert');
     if (reverseActive) inp = { ...inp, steer: -(inp.steer || 0) };
     if (this.cutT > 0) { this.cutT -= dt; if (inp.throttle) inp = { ...inp, throttle: false }; }
     // Volant progressif (retour au centre plus rapide).
@@ -454,22 +491,9 @@ export class CarPhysics {
       // Effet du revêtement (le paramètre f vaut 1 à 100 %).
       const mod = this.surfMod, f = this.surfP;
       const ground = this.surfType === 'ground';
-      let grip = 1, traction = 1, vmaxK = 1, extraDrag = 0, rearK = 1;
+      const C = surfaceCoeffs(ground ? '' : mod, f);
+      let grip = C.grip, traction = C.traction, vmaxK = C.vmaxK, extraDrag = C.extraDrag, rearK = C.rearK;
       if (ground) { grip = 0.55; traction = 0.7; vmaxK = 0.45; extraDrag = 5; }
-      else if (mod === 'ice') { grip = clamp(0.2 / f, 0.05, 0.85); traction = 0.45; }
-      else if (mod === 'sand') { grip = 0.8; traction = 0.65; vmaxK = clamp(1 - 0.45 * f, 0.25, 1); extraDrag = 5 * f; }
-      else if (mod === 'mud') { grip = 0.7; traction = 0.55; vmaxK = clamp(1 - 0.5 * f, 0.2, 1); extraDrag = 6 * f; }
-      else if (mod === 'magnet') grip = 1.6;
-      else if (mod === 'drift') {
-        // Dérive : l'arrière n'accroche presque plus (l'avant, si) : au moindre coup de
-        // volant, la voiture part en glisse et il faut la rattraper en contre-braquant.
-        rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85);
-      }
-      else if (mod === 'slow') extraDrag = 14 * f;
-      else if (mod === 'powder') {
-        // Poudreuse : on s'enfonce un peu, l'adhérence est molle et le moteur patine.
-        grip = clamp(0.62 / Math.sqrt(f), 0.3, 0.9); traction = 0.75; vmaxK = clamp(1 - 0.28 * f, 0.4, 1); extraDrag = 2.5 * f;
-      }
       else if (mod === 'water') {
         if (this.vehicle === 'boat') { grip = 0.85; traction = 1; vmaxK = 1; }
         else {
@@ -494,8 +518,9 @@ export class CarPhysics {
       const r = this._tires(vf, vr, this.omega, ax, grip, dt);
       this.rearK = 1;
       vf = r.vx; vr = r.vy; this.omega = r.w;
-      this.yaw -= this.omega * this.gSign * dt;   // au plafond, la droite du pilote est la gauche du monde
-      this.yawRate = -this.omega * this.gSign;
+      const us = this._upSign();
+      this.yaw -= this.omega * us * dt;   // rotation autour du haut local
+      this.yawRate = -this.omega * us;
 
       v.x = fx * vf + rx * vr;
       v.y = fy * vf + ry * vr;
@@ -517,8 +542,9 @@ export class CarPhysics {
       this.omega *= Math.exp(-1.5 * dt);
       // Un tout petit peu de contrôle en l'air : le volant fait pivoter la voiture lentement.
       if (this.vehicle !== 'glider') this.omega = clamp(this.omega + this.steer * CAR.airSteer * dt, -CAR.airSteerMax, CAR.airSteerMax);
-      this.yaw -= this.omega * this.gSign * dt;
-      this.yawRate = -this.omega * this.gSign;
+      const us = this._upSign();
+      this.yaw -= this.omega * us * dt;
+      this.yawRate = -this.omega * us;
       this.steerAngle = this._steerAngle(Math.hypot(v.x, v.z), this.driftT);
       const k = 1 - 0.0006 * this.speed * dt;
       v.x *= k; v.y *= k; v.z *= k;
@@ -555,6 +581,16 @@ export class CarPhysics {
     const magnet = s.mod === 'magnet';
     const launch = magnet ? Infinity : CAR.launch;
     const snap = magnet ? CAR.step : CAR.snap;
+    // Aimant : au-dessus d'une route aimantée, la voiture est attirée vers la surface le long de SA normale, pas selon
+    // la gravité du monde. Endroit ou envers, c'est la même règle (au plafond, la normale pointe vers le bas du monde).
+    if (!this.grounded) {
+      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange);
+      const mg = gs * (p.y - m.h);
+      if (m.mod === 'magnet' && mg > 0.02 && mg < CAR.magnetRange) {
+        const a = CAR.magnetAcc * (1 - mg / CAR.magnetRange) * dt;
+        v.x -= m.nx * a; v.y -= m.ny * a; v.z -= m.nz * a;
+      }
+    }
     if (this.grounded && gap < snap && gap > -CAR.step && vn < launch) {
       p.y = s.h;
       const sp = this.speed;
@@ -1093,19 +1129,14 @@ export class CarPhysics {
 
     // Revêtements actifs sur ce ruban : mêmes effets qu'au sol, sans aide particulière.
     const mod = tile.s, f = tileParam(tile) / 100;
-    let extraDrag = 0, gripK = 1, tractK = 1, vmaxK = 1, beltE1 = 0, rearK = 1;
+    const C = surfaceCoeffs(mod, f);
+    let extraDrag = C.extraDrag, gripK = C.grip, tractK = C.traction, vmaxK = C.vmaxK, beltE1 = 0, rearK = C.rearK;
     if (mod === 'boost') {
       if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
       this.boost = CAR.boostTime; this.boostF = f;
     } else if (mod === 'gravity') {
       if (Math.abs(f - this.gravMul) > 0.01) { this.gravMul = f; this.ev.gravity = true; }
-    } else if (mod === 'slow') extraDrag = 14 * f;
-    else if (mod === 'sand') { gripK = 0.8; tractK = 0.65; vmaxK = clamp(1 - 0.45 * f, 0.25, 1); extraDrag = 5 * f; }
-    else if (mod === 'mud') { gripK = 0.7; tractK = 0.55; vmaxK = clamp(1 - 0.5 * f, 0.2, 1); extraDrag = 6 * f; }
-    else if (mod === 'ice') { gripK = clamp(0.2 / f, 0.05, 0.85); tractK = 0.45; }
-    else if (mod === 'powder') { gripK = clamp(0.62 / Math.sqrt(f), 0.3, 0.9); tractK = 0.75; vmaxK = clamp(1 - 0.28 * f, 0.4, 1); extraDrag = 2.5 * f; }
-    else if (mod === 'magnet') gripK = 1.6;
-    else if (mod === 'drift') rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85);
+    }
     else if (mod === 'wind') {
       // Vent : soufflé selon l'axe latéral de la pièce, projeté dans le plan de la route.
       const a = ((tileParam(tile) - 100) / 100) * CAR.wind;
