@@ -854,7 +854,11 @@ class App {
     } catch (e) {
       if (this.session !== session) return;
       el.className = 'fin-online ko';
-      el.textContent = '🌍 Classement : ' + e.message;
+      // Version de physique différente : le plus souvent, la fonction serveur « submit-score » n'a pas été redéployée après
+      // une mise à jour du jeu (ou la page est une ancienne version en cache). Le record reste enregistré sur l'appareil.
+      el.textContent = /Version du jeu différente/.test(e.message)
+        ? `🌍 Classement indisponible pour l'instant : le serveur n'est pas à la même version du jeu (v${PV}). Ton record est gardé sur cet appareil. Recharge la page ; si ça continue, la fonction submit-score doit être mise à jour.`
+        : '🌍 Classement : ' + e.message;
     }
   }
 
