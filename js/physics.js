@@ -708,7 +708,7 @@ export class CarPhysics {
     for (let ix = gx - 3; ix <= gx + 3; ix++) {
       for (let iz = gz - 3; iz <= gz + 3; iz++) {
         const bucket = grid.get(`${ix},${iz}`);
-        if (bucket) candidates.push(...bucket);
+        if (bucket) for (const d of bucket) candidates.push(d);
       }
     }
     for (const d of candidates) {
