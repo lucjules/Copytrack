@@ -1,7 +1,7 @@
 // Outils de l'éditeur (v1.5) : sélection de zone et presse-papiers, vérificateur de
 // circuit, miniatures vues de dessus. Aucun rendu 3D ici : seulement des données.
 import { CELL, LEVEL_H, MAX_LEVEL } from './constants.js';
-import { PIECES, forkBranchX, localToWorld, baseY } from './pieces.js';
+import { PIECES, forkBranchX, localToWorld, baseY, cpKind } from './pieces.js';
 import { Track } from './track.js';
 import { centerlineWorld } from './ribbons.js';
 
@@ -196,7 +196,7 @@ export function checkTrack(track) {
     const root = find(start);
     for (const t of track.tiles) {
       const sp = PIECES[t.t].special;
-      if ((sp === 'checkpoint' || sp === 'finish') && find(t) !== root) {
+      if ((cpKind(t) || sp === 'finish') && find(t) !== root) {
         issues.push({ tile: t, level: 'error', msg: `${PIECES[t.t].label} inaccessible depuis le départ.` });
       }
     }
@@ -226,7 +226,7 @@ export function thumbnail(track, key, w = 168, h = 104) {
     for (const t of sorted) {
       const P = PIECES[t.t];
       if (P.kind === 'ring') {
-        if (pass) { g.strokeStyle = P.special ? '#ffbf3c' : '#36e9ff'; g.lineWidth = 1.5; g.beginPath(); g.arc(X((t.x + 0.5) * CELL), Z((t.z + 0.5) * CELL), 3, 0, 7); g.stroke(); }
+        if (pass) { g.strokeStyle = cpKind(t) ? '#ffbf3c' : '#36e9ff'; g.lineWidth = 1.5; g.beginPath(); g.arc(X((t.x + 0.5) * CELL), Z((t.z + 0.5) * CELL), 3, 0, 7); g.stroke(); }
         continue;
       }
       if (P.kind === 'area') {
@@ -248,7 +248,7 @@ export function thumbnail(track, key, w = 168, h = 104) {
         pts.forEach((p, i) => (i ? g.lineTo(X(p[0]), Z(p[2])) : g.moveTo(X(p[0]), Z(p[2]))));
         if (!pass) { g.strokeStyle = "#0b0918"; g.lineWidth = Math.max(5, 18 * s + 2); }
         else {
-          g.strokeStyle = t.s === 'water' ? '#3fa7ff' : P.special === 'start' ? '#2fd3b5' : P.special === 'finish' ? '#ff4f9a' : P.special === 'checkpoint' ? '#ffbf3c' : `hsl(${250 - k * 200}, 70%, ${55 + k * 15}%)`;
+          g.strokeStyle = t.s === 'water' ? '#3fa7ff' : P.special === 'start' ? '#2fd3b5' : P.special === 'finish' ? '#ff4f9a' : cpKind(t) ? '#ffbf3c' : `hsl(${250 - k * 200}, 70%, ${55 + k * 15}%)`;
           g.lineWidth = Math.max(3.2, 18 * s);
         }
         g.stroke();

@@ -131,10 +131,14 @@ function build(tile) {
       };
     }
     if (tile.t === 'twist') {
+      // Vrille : demi-tour de roulis sur 2 cases, route dans la colonne de gauche de l'empreinte 2×2 (comme le tire-bouchon).
+      // La voiture est GUIDÉE par la route sur toute la pièce (minU 0,5 : jamais lâchée en route) : à la verticale, la route ne
+      // pèse plus rien sur elle, et sans ce guidage elle se détachait au milieu et traversait la chaussée.
       return {
+        minU: 0.5,
         pos(u, o) {
           const f = Math.PI * smooth(u);
-          o.x = 0; o.y = base; o.z = half - 2 * half * u;
+          o.x = -HALF; o.y = base; o.z = half - 2 * half * u;
           o.nx = Math.sin(f); o.ny = Math.cos(f); o.nz = 0;
         },
         len: 2 * half,
@@ -243,7 +247,7 @@ export function centerlineLocal(tile, n) {
     const a = arcParams(p);
     for (let i = 0; i <= n; i++) {
       const ang = Math.PI + (Math.PI / 2) * (i / n);
-      pts.push([a.cx + a.R * Math.cos(ang), base, a.cz + a.R * Math.sin(ang), 0]);
+      pts.push([(p.mirror < 0 ? -1 : 1) * (a.cx + a.R * Math.cos(ang)), base + p.rise * LEVEL_H * (i / n), a.cz + a.R * Math.sin(ang), 0]);
     }
   } else {
     const rise = p.rise * LEVEL_H;

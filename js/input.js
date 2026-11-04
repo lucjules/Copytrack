@@ -21,7 +21,7 @@ export const KEY_ACTIONS = {
     ['ed.nextPiece', 'Pièce suivante', ['Tab', '']],
     ['ed.surface', 'Revêtement suivant', ['KeyB', '']],
     ['ed.fill', 'Pot de peinture (remplir une zone)', ['Backquote', '']],
-    ['ed.inspect', 'Inspecter (propriétés et gizmos)', ['Backslash', '']],
+    ['ed.inspect', 'Inspecter (propriétés et gizmos)', ['Backslash', 'Slash']],
     ['ed.mirror', 'Miroir (looping gauche / droite)', ['KeyM', '']],
     ['ed.snap', 'Accrochage des décorations', ['KeyN', '']],
     ['ed.scaleUp', 'Décoration : agrandir', ['BracketRight', '']],
@@ -89,7 +89,7 @@ const NAMES = {
   ShiftLeft: 'Maj G', ShiftRight: 'Maj D', ControlLeft: 'Ctrl G', ControlRight: 'Ctrl D',
   AltLeft: 'Alt', AltRight: 'Alt Gr', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
   PageUp: 'Page ↑', PageDown: 'Page ↓', Home: 'Début', End: 'Fin', Delete: 'Suppr', Insert: 'Inser',
-  NumpadEnter: 'Entrée (pavé)', CapsLock: 'Verr. maj', BracketLeft: '[', BracketRight: ']',
+  NumpadEnter: 'Entrée (pavé)', CapsLock: 'Verr. maj', BracketLeft: '[', BracketRight: ']', Backquote: '` ²', Backslash: '\\', Slash: '/',
 };
 let layoutMap = null;
 if (typeof navigator !== 'undefined' && navigator.keyboard && navigator.keyboard.getLayoutMap) {

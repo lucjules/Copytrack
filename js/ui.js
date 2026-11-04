@@ -3,6 +3,7 @@ import { formatTime } from './storage.js';
 import { MEDALS, medalFor } from './race.js';
 import { keyLabel } from './input.js';
 import { profile } from './profile.js';
+import { MessageGate, PRIO } from './hudMessages.js';
 
 export const $ = (id) => document.getElementById(id);
 
@@ -24,6 +25,7 @@ class Hud {
       msg: $('hud-msg'), hint: $('hud-hint'), track: $('hud-track'),
     };
     this._last = {};
+    this.gate = new MessageGate();
   }
 
   reset(session) {
@@ -89,8 +91,11 @@ class Hud {
     if (pop) { e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); }
   }
 
-  message(text, dur = 1.5) {
+  // prio : voir hudMessages.js (un message moins important ne coupe pas le courant ; pas de répétition immédiate).
+  message(text, dur = 1.5, prio = PRIO.info) {
     const e = this.el.msg;
+    if (!text) { clearTimeout(this._msgT); e.classList.remove('on'); this.gate.offer('', 0, 0, 0); return; }
+    if (!this.gate.offer(text, dur * 1000, prio, performance.now())) return;
     e.textContent = text;
     e.classList.add('on');
     clearTimeout(this._msgT);
@@ -159,8 +164,9 @@ export class UI {
   }
 
   // actions : [{ label, primary, danger, onClick }] ; onClick renvoie false pour garder la fenêtre ouverte.
-  modal({ title, body, actions = [] }) {
+  modal({ title, body, actions = [], wide = false }) {
     $('modal-title').textContent = title;
+    $('modal').querySelector('.modal-panel').classList.toggle('wide', !!wide);     // large : raccourcis, listes en colonnes
     const b = $('modal-body');
     b.innerHTML = '';
     if (typeof body === 'string') b.innerHTML = body; else if (body) b.appendChild(body);

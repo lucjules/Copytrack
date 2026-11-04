@@ -4,7 +4,7 @@
 //  3. volant inversé : seulement au contact d'une pièce qui l'a (plaque, saut, réception) ;
 //  4. aimant : l'attraction suit la normale de la route, endroit ou envers.
 import assert from 'node:assert/strict';
-import { Track } from '../js/track.js';
+import { Track, scriptTrack } from '../js/track.js';
 import { CarPhysics, surfaceCoeffs } from '../js/physics.js';
 import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
 
@@ -45,7 +45,7 @@ test('le même coup de volant fait le même virage au sol et au plafond', () => 
   }
 });
 
-for (const mod of ['ice', 'sand', 'mud', 'magnet', 'drift', 'slow', 'powder', 'boost']) {
+for (const mod of ['ice', 'magnet', 'drift', 'slow', 'powder', 'boost']) {
   test(`revêtement « ${mod} » : mêmes résultats à l'endroit et à l'envers`, () => {
     const a = line({ surf: surfAll(mod), v0: 120 }), b = line({ surf: surfAll(mod), v: 1, v0: 120 });
     const xa = a.pos.x, xb = b.pos.x;
@@ -107,6 +107,42 @@ test('l’aimant rappelle la voiture vers la route, au sol comme au plafond', ()
   assert.ok(magUp < plainUp - 0.3, `au sol : ${magUp.toFixed(2)} < ${plainUp.toFixed(2)}`);
   assert.ok(magDown < plainDown - 0.3, `au plafond : ${magDown.toFixed(2)} < ${plainDown.toFixed(2)}`);
   assert.ok(Math.abs(magUp - magDown) < 0.05, `symétrique : ${magUp.toFixed(3)} / ${magDown.toFixed(3)}`);
+});
+
+console.log('Vrille (2 cases) : la voiture ne traverse plus la route');
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+// Conduite aléatoire (vitesse d'entrée, volant, gaz, frein) : renvoie combien de fois la voiture quitte la vrille EN ROUTE.
+function twistDrops(script, runs) {
+  let drops = 0, crossed = 0;
+  for (let seed = 1; seed <= runs; seed++) {
+    const tr = scriptTrack('t', script, { l: 2 });
+    const ph = new CarPhysics(tr), lg = new RaceLogic(tr, { partial: true }); placeAtStart(ph, lg);
+    const r = mulberry(seed), v0 = 5 + r() * 55; ph.vel.z = -v0; ph.fwdSpeed = v0;
+    let steer = 0, thr = true, brk = false, prev = null, inTwist = false;
+    for (let k = 0; k < 2500; k++) {
+      if (k % 20 === 0) { steer = (r() - 0.5) * (r() > 0.5 ? 1.6 : 0.2); thr = r() > 0.2; brk = r() > 0.85; }
+      ph.clock = k; lg.update(ph); if (lg.finished) break;
+      ph.step({ steer, throttle: thr, brake: brk });
+      const rib = ph.rib && ph.rib.tile.t === 'twist' ? ph.rib : null;
+      if (rib) inTwist = true;
+      if (prev && !rib && prev.u > 0.04 && prev.u < 0.96) { drops++; break; }
+      prev = rib ? { u: rib.u } : null;
+    }
+    if (inTwist) crossed++;
+  }
+  return { drops, crossed };
+}
+test('vrille avec plaque d\'inversion : jamais lâchée en route (80 conduites aléatoires)', () => {
+  const r = twistDrops('start S3 TW.f S3^ finish^', 80);
+  assert.ok(r.crossed > 40, 'la vrille est bien traversée : ' + r.crossed);
+  assert.equal(r.drops, 0, 'décrochages en route : ' + r.drops);
+});
+test('vrille SANS plaque (avant : la voiture se détachait à mi-parcours et traversait la route) : toujours guidée', () => {
+  const r = twistDrops('start S3 TW S3^ finish^', 80);
+  assert.ok(r.crossed > 40); assert.equal(r.drops, 0, 'décrochages en route : ' + r.drops);
+});
+test('vrille et vrille retour enchaînées : jamais lâchée non plus', () => {
+  assert.equal(twistDrops('start S3 TW.f S3^ TWB.f S3 finish', 60).drops, 0);
 });
 
 if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }

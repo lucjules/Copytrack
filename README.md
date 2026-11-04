@@ -32,17 +32,26 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 
 ### Pièces
 
-- Ligne droite, virages serré et grand, pente, **pente douce** (½ niveau), tremplin, plateforme, ponts sur plusieurs niveaux.
-- **Virages relevés** (2×2 et 3×3) : la route penche vers l'intérieur, on les prend plus vite.
+- **Pièces à caractéristiques** (listes déroulantes dans la palette et dans l'Inspecteur) :
+  - **Ligne droite** : inclinaison plat, ½, 1, 2 ou 4 niveaux (ce qui remplace Pente, Pente douce et Tremplin) ;
+  - **Virage** : rayon serré, grand ou très grand (3×3), plat ou relevé (la route penche vers l'intérieur, on le prend plus vite) ;
+  - **Courbe** : un tremplin courbé, c'est-à-dire un virage qui monte (inclinaison ½, 1, 2 ou 4, serré ou grand, droite ou gauche) ;
+  - **Looping** : orientation droite / gauche, taille normale / grande, 1 à 3 boucles (l'empreinte grandit : 2×2, 3×3, 4×4).
+- Plateforme, ponts sur plusieurs niveaux.
 - **Tubes** : le tube 2×2, et le **tube modulaire** (entrée, autant de sections que voulu, sortie) dans lequel on peut monter sur la paroi, rouler au plafond et **faire des tours complets** en gardant le volant tourné. Les sections acceptent l'accélérateur et la gravité.
 - **Loopings** (normal, grand, double), **tire-bouchons** droite et gauche, **montée en L** (courbe, mur vertical, sommet qui fait sauter vers le plateau).
 - **Bifurcation / jonction** : deux voies au choix.
-- **Anneau turbo** flottant, **checkpoint aérien** (un anneau à traverser), **checkpoint dans un virage**.
-- Options de pièce : *à l'envers*, *sans bordures*, *tunnel*.
+- **Anneau turbo** flottant.
+- **Options** (onglet Options) : *à l'envers*, *sans bordures*, *tunnel*, **checkpoint** (portique, ou anneau aérien sur une ligne droite plate), **thème** visuel (Classique, Herbe, Sable, Roche), **mouvement** (ascenseur, glissière, rotation). On choisit une pièce ET des options : elles se posent ensemble, l'aperçu montre le résultat. Sans pièce choisie, une option s'applique à la pièce cliquée. Les anciennes pièces « Checkpoint » restent lisibles (bouton « Convertir en option » dans l'Inspecteur).
+- **Bifurcation** : chaque voie peut avoir son revêtement (voie directe / voie déportée).
 
 ### Revêtements et véhicules
 
-- Verglas, accélérateur, rebond, sable, aimant, boue, dérive, ralentisseur, vent latéral, gravité (réglables de faible à fort, la couleur suit), **eau**.
+- Verglas, accélérateur, rebond, aimant, dérive, ralentisseur, vent latéral, gravité (réglables de faible à fort, la couleur suit), **eau**. Les réglages s'affichent avec des **unités réelles** (km/h, m/s², m, secondes) quand elles existent. *Sable* et *boue* ont été supprimés (les anciens circuits qui en contenaient les lisent avec une route normale).
+- **Tapis roulant** réglable de −200 à +200 km/h. **Vent** plus fort (jusqu'à 54 m/s² à pleine force).
+- **Verre fragile** : plus de vitesse minimale, mais un compte à rebours (0,3 à 5 s) de contact cumulé sur la dalle ; passé ce temps elle disparaît (sans collision, la voiture tombe) jusqu'au prochain départ, retour au checkpoint compris.
+- **Eau** : va aussi sur le Départ (course commencée en bateau) ; la **plaque bateau** est posée sur l'eau.
+- **Tunnel** : ses parois et son toit sont physiques, on n'en sort plus par les côtés.
 - **Plaques de transformation** (repasser sur la même plaque rend la voiture) :
   - **moto** : démarre plus fort, tourne plus serré, vitesse de pointe un peu plus basse ;
   - **bateau** : indispensable sur l'eau (une voiture y coule), se traîne sur la route ;
@@ -58,6 +67,8 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 - Traces de pneus, quatre caméras (poursuite, proche, capot, lointaine), effet de vitesse au-delà de 180 km/h.
 
 ### Éditeur
+
+- **Interface** : barre du haut avec un menu ☰ (Nouveau, Importer, Partager, Enregistrer, Retour), grille **Outils** à gauche (Sélection, Inspecter, Gomme, Pot de peinture), panneau des pièces ancré en bas (onglets Pièces, Options, Revêtements, Décors ; les décors par catégories). Le nom et la description du circuit se choisissent à la publication.
 
 - Pose au clic, rotation, miroir, niveaux, revêtements réglables, options, décor, annuler / rétablir, pipette, sauvegarde locale, partage par code ou par lien.
 - **Pot de peinture** (bouton 🪣 ou touche ²/`) : choisis une pièce ou un revêtement, puis clique une pièce pour remplir toute sa zone connectée (même revêtement, ou même type de pièce de même taille). Départ et arrivée jamais modifiés, un seul Ctrl + Z annule tout.
@@ -125,10 +136,13 @@ Seules l'URL du projet et la clé publique sont dans `js/online.js`. La clé sec
 
 **Obstacles et pièces mobiles**
 - Obstacles (catégorie de décor) : piques et piques escamotables (retour au checkpoint), boule balancier, marteau tournant, mur coulissant, balayeur, bumper (chocs physiques).
-- Pièces en mouvement : **ascenseur** (monte de 2 niveaux) et **glissière** (se décale d'une case). Tout bouge selon le chrono : identique en replay et après un retour au checkpoint.
+- Pièces en mouvement : **ascenseur** (monte de 2 niveaux), **glissière** (se décale d'une case) et **rotation** (tourne autour de son centre et emporte la voiture). Vitesse et amplitude se règlent dans l'Inspecteur. Tout bouge selon le chrono : identique en replay et après un retour au checkpoint.
 
 **Éditeur**
-- **Paramètres du niveau** (F3) : nom, description, décor, tours, hors piste autorisé, vitesse, gravité et véhicule de départ.
+- **Inspecteur** (outil Inspecter) : onglet *Propriétés* (position, caractéristiques de la pièce, revêtement, options, réglages des pièces mobiles) et onglet *Couleurs* (route, lignes, bordures d'une pièce ; couleur libre d'une décoration). Une flèche blanche semi-transparente indique le sens de parcours de la pièce inspectée.
+- **Paramètres du niveau** (F3) : décor, tours, hors piste autorisé, vitesse, gravité et véhicule de départ, **inversion de gravité au départ** (`inversionGraviteDepart` : la course démarre au plafond). Hauteur maximale : 60 niveaux.
+- **Visée par rayon** : revêtements, options, pot de peinture et pipette ciblent la pièce exacte sous le curseur, à n'importe quelle hauteur. Les **décorations** se posent n'importe où (coordonnées flottantes, là où le curseur touche la route ou le sol) ; **Maj + souris** déplace la pièce ou la décoration ciblée sur l'axe vertical seul. Les anneaux se posent sur des cases déjà occupées ; l'**anneau turbo** existe aussi en option d'une ligne droite.
+- **Essai sans arrivée** : le bouton Tester accepte un circuit sans pièce Arrivée (la vérification, elle, en exige une).
 - **✔ Vérifier** lance la course complète ; à l'arrivée : Publier, Retour à l'éditeur ou Refaire un meilleur temps. **Ton temps devient la médaille cristal**, les autres sont déduites.
 - Nom et description modifiables après publication ; les classements ne dépendent plus du nom.
 - Palette sur toute la largeur (jusqu'à 3 lignes), barre du haut réorganisée, 39 nouvelles décorations (Souterrain, Nuages, Fonds marins, Usine, Espace, Circuit).
@@ -229,6 +243,7 @@ index.html, css/style.css     interface
 manifest.webmanifest, sw.js    application installable, jeu hors ligne (sw.js généré par tools/gen-sw.mjs)
 js/main.js                     orchestration (menu, carrière, course, éditeur, options, tutoriel)
 js/pieces.js, js/track.js      pièces, revêtements, modèle de circuit, codes de partage (SHW3)
+js/families.js, js/tileInfo.js familles de pièces et caractéristiques, aides de l'éditeur (flèche, changement d'empreinte)
 js/ribbons.js                  rubans 3D (loopings, tube, virages relevés, tire-bouchons, L vertical)
 js/physics.js                  physique (sol, air, deltaplane, bateau, rubans à section courbe)
 js/replay.js                   enregistrement des commandes, replays, fantômes simulés (SHG1)
@@ -240,9 +255,21 @@ js/cosmetics.js, profile.js    catalogue visuel, pièces, code joueur
 js/scenery.js, music.js        7 décors, musique générée
 js/trackMesh.js, js/geo.js     maillages low-poly
 js/tracks.js                   42 circuits intégrés, médailles et objectifs
+tools/test-phase3.mjs          tests du raycast, décorations libres, verre fragile, tunnel, unités (npm test)
+tools/test-phase2.mjs          tests des familles, du schéma JSON, des courbes, options, mouvements (npm test)
 tools/sim.mjs                  validation des circuits par pilote automatique (npm run sim)
 ```
 
 ## Licence
 
 Code du jeu : MIT. three.js : MIT (voir `js/vendor/THREE_LICENSE.txt`).
+
+## Format des circuits (SHW3) et compatibilité
+
+Chaque pièce est sérialisée comme **type concret** (index dans `PIECE_ORDER`, qui ne fait qu'ajouter) + position, niveau, rotation, revêtement,
+paramètre et drapeaux : les anciens codes se lisent donc toujours à l'identique. Les **familles** (`js/families.js`) ne sont qu'une couche d'édition :
+elles traduisent des caractéristiques (inclinaison, rayon, nombre de boucles…) vers un type concret et inversement.
+Les champs de la Phase 2 sont **optionnels** et rangés à part dans `data.e` (une entrée par pièce concernée, par index) :
+`cp` checkpoint (1 portique, 2 anneau), `th` thème, `ms` / `ma` vitesse et amplitude du mouvement, `col` couleurs personnalisées, `s2` / `p2` 2e revêtement
+d'une bifurcation ; couleur libre d'une décoration (10e valeur). Le code reste en version 3 tant qu'aucun de ces champs n'est utilisé.
+La signature (clé des classements et de la vérification) ignore le thème et les couleurs, et reste identique pour tout circuit qui n'utilise rien de nouveau.

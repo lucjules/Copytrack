@@ -1001,3 +1001,89 @@ body.touch kbd { display: none; }
 .mp-board-f { margin-top: 4px; color: var(--muted); font-size: 11px; }
 @media (max-width: 760px) { .mp-board { top: auto; bottom: 10px; right: 10px; max-width: 200px; } }
 #profile .screen-head { padding-right: 90px; }   /* laisse la place au compteur de pièces */
+
+/* ===== Éditeur : refonte de l'interface (phase 1) ===== */
+/* Barre du haut : menu hamburger, paramètres, annuler / rétablir, tests. Plus de nom du circuit ni de statistiques. */
+.ed-menu-wrap { position: relative; }
+.ed-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; min-width: 210px; padding: 6px; display: flex; flex-direction: column; gap: 2px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
+.ed-menu.hidden { display: none; }
+.ed-menu button { font: inherit; font-size: 15px; text-align: left; color: var(--text); background: transparent; border: 0; border-radius: 8px; padding: 9px 12px; cursor: pointer; display: flex; justify-content: space-between; gap: 14px; }
+.ed-menu button:hover, .ed-menu button:focus-visible { background: rgba(255, 255, 255, 0.12); outline: none; }
+.ed-menu kbd { font: inherit; font-size: 11px; opacity: 0.6; }
+.ed-menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100%; }
+.ed-warn { font: inherit; font-size: 13px; color: #1a1206; background: var(--amber); border: 0; border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+.ed-warn.hidden { display: none; }
+.ed-status, .ed-help { display: none !important; }
+
+/* Grille « Outils » à gauche */
+.ed-tools { position: absolute; left: 10px; top: calc(var(--ed-top-h, 54px) + 14px); display: grid; grid-template-columns: repeat(2, 66px); gap: 6px; padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+.ed-tools::before { content: 'Outils'; grid-column: 1 / -1; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.tool-btn { font: inherit; font-size: 11px; color: var(--text); background: rgba(255, 255, 255, 0.05); border: 1px solid transparent; border-radius: 10px; padding: 4px 2px 6px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; line-height: 1.1; text-align: center; }
+.tool-btn:hover { background: rgba(255, 255, 255, 0.12); }
+.tool-btn.on { border-color: var(--cyan); background: rgba(95, 242, 255, 0.15); }
+.tool-btn[data-tool="fill"].on { border-color: #ffb347; background: rgba(255, 179, 71, 0.18); }
+.tool-btn svg { width: 36px; height: 36px; }
+.tool-btn .k { position: absolute; top: 2px; left: 5px; font-size: 10px; opacity: 0.7; }
+
+/* Panneau des pièces ancré en bas, pleine largeur (plus flottant) */
+#editor .ed-palette { left: 0; right: 0; bottom: 0; transform: none; max-width: none; width: auto; border-radius: 14px 14px 0 0; border-left: 0; border-right: 0; border-bottom: 0; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); overflow-x: hidden; max-height: 42vh; overflow-y: auto; }
+#editor .ed-palette .pal-row { max-height: 230px; }
+.pal-tabs { align-items: center; }
+.pal-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.chip { font: inherit; font-size: 13px; color: var(--muted); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.chip:hover { color: var(--text); }
+.chip.on { color: var(--text); background: rgba(95, 242, 255, 0.16); border-color: var(--cyan); }
+/* La colonne de niveau à droite et le panneau d'inspection restent au-dessus du panneau ancré. */
+#editor .ed-side { top: calc(50% - var(--ed-pal-h, 270px) / 2); }
+#editor .ed-insp { max-height: calc(100vh - var(--ed-top-h, 54px) - var(--ed-pal-h, 270px) - 30px); }
+#editor .ed-selbar, #editor .ed-erasebar { top: calc(var(--ed-top-h, 54px) + 14px); }
+
+/* Fenêtre large : l'aide des raccourcis s'étend à l'horizontale (quatre colonnes : touche, action, touche, action) */
+.modal-panel.wide { width: min(1180px, 96vw); }
+.modal-panel.wide .kbd-list { grid-template-columns: max-content 1fr max-content 1fr; gap: 6px 18px; max-height: 70vh; overflow-y: auto; }
+@media (max-width: 900px) { .modal-panel.wide .kbd-list { grid-template-columns: max-content 1fr; } }
+@media (max-width: 760px) {
+  .ed-tools { grid-template-columns: repeat(4, 54px); top: auto; bottom: calc(var(--ed-pal-h, 220px) + 8px); left: 6px; padding: 6px; }
+  .ed-tools::before { display: none; }
+  .tool-btn svg { width: 26px; height: 26px; }
+  .tool-btn { font-size: 9px; }
+}
+@media (max-height: 520px) {
+  #editor .ed-palette { max-height: 46vh; }
+  .ed-tools { grid-template-columns: repeat(4, 54px); gap: 4px; padding: 5px 6px; }
+  .ed-tools::before { display: none; }
+  .tool-btn svg { width: 24px; height: 24px; }
+  .tool-btn { font-size: 9px; padding: 2px 1px 3px; }
+}
+
+/* ---- Phase 2 : familles de pièces (caractéristiques), options combinées, onglets de l'inspecteur ---- */
+.fam-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.fam-card { display: flex; gap: 6px; align-items: stretch; padding: 4px 6px 4px 4px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); }
+.fam-card.on { border-color: var(--cyan); background: rgba(95, 242, 255, 0.08); }
+.fam-card .fam-main { width: 76px; min-width: 76px; }
+.fam-traits { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 112px; }
+.fam-traits label { display: grid; grid-template-columns: 74px 1fr; gap: 4px; align-items: center; font-size: 11px; color: var(--muted); }
+.fam-traits select { min-width: 0; font: inherit; font-size: 12px; color: var(--text); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line); border-radius: 6px; padding: 2px 4px; }
+.fam-traits select option:disabled { color: #777; }
+.opt-panel { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: flex-start; margin-bottom: 4px; }
+.opt-group { display: flex; flex-direction: column; gap: 3px; }
+.opt-group > b { font-size: 11px; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+.opt-panel .pal-chips { margin-bottom: 0; }
+.chip.dim { opacity: 0.38; }
+.chip[hidden], .btn[hidden] { display: none; }
+.chip .th-sw { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; vertical-align: -1px; border: 1px solid rgba(255, 255, 255, 0.4); }
+#ed-opt-hint[data-mode="combo"]::before { content: "Mode combiné — "; color: var(--cyan); }
+#ed-opt-hint[data-mode="apply"]::before { content: "Mode « appliquer » — "; color: var(--cyan); }
+@media (max-width: 760px) {
+  .fam-card .fam-main { width: 54px; min-width: 54px; }
+  .fam-traits { min-width: 96px; }
+  .fam-traits label { grid-template-columns: 1fr; gap: 0; }
+}
+.insp-tabs { display: flex; gap: 4px; }
+.insp-tabs .btn { flex: 1; padding: 5px 4px; font-size: 13px; }
+.insp-tabs .btn.on { background: #5ff2ff33; border-color: #5ff2ff; }
+.insp-color { display: grid; grid-template-columns: 82px 44px 1fr auto; gap: 6px; align-items: center; color: var(--muted); }
+.insp-color input[type="color"] { width: 44px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: transparent; cursor: pointer; }
+.insp-color .code { font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
+.insp-color .btn { padding: 2px 8px; font-size: 12px; }
+.insp-note { font-size: 12px; color: var(--muted); }

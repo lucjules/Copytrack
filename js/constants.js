@@ -12,7 +12,19 @@ export const RAIL_W = 0.6;         // épaisseur des bordures
 export const RAIL_H = 1.1;         // hauteur des bordures
 export const SLAB_T = 0.9;         // épaisseur de la dalle
 export const ROAD_TOP = 0.4;       // altitude de la chaussée au niveau 0
-export const MAX_LEVEL = 14;
+// Hauteur maximale d'un circuit, en niveaux (Phase 3 : 14 -> 60, soit près de 290 m).
+export const MAX_LEVEL = 60;
+
+// Grandeurs physiques des revêtements, partagées par la physique (CAR) et par l'interface (valeurs affichées en km/h, m/s²…).
+export const SURF_PHYS = {
+  wind: 54,            // accélération latérale du vent à pleine force (m/s²) ; Phase 3 : 36 -> 54
+  belt: 200 / 3.6,     // vitesse du tapis roulant à son réglage maximal : ±200 km/h
+  spring: 56,          // poussée latérale du ressort à pleine force (m/s)
+  bounce: 14,          // vitesse verticale d'un rebond à 100 % (m/s)
+  gravity: 25,         // gravité normale (m/s²)
+  maxSpeed: 54,        // vitesse visée par le moteur (m/s)
+  boostSpeed: 78,      // vitesse visée sous turbo à 100 % (m/s)
+};
 
 // Vitesse minimale (m/s) pour rester collé sur un mur / une route à l'envers.
 // Nombre maximal de décorations par circuit.

@@ -9,17 +9,18 @@
 // routes à l'envers) : seul change le plan de la route, avec la gravité projetée.
 // La personnalisation du véhicule (forme, LED, dessins...) est purement visuelle :
 // aucune de ces constantes n'en dépend.
-import { CELL, DT, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T, LEVEL_H, ROAD_TOP } from './constants.js';
+import { CELL, DT, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T, LEVEL_H, ROAD_TOP, SURF_PHYS } from './constants.js';
 import {
   PIECES, PLATES, RING_R, RING_Y, toLocal, sampleLocal, rotVec, tileCenter, isRibbon, isFloor, isCeilingFloor, tileParam, baseY,
+  beltSpeed, glassSeconds, TUNNEL_TOP,
 } from './pieces.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { OBST, obstacleLocal, toLocalObs, obstacleRadius } from './obstacles.js';
 
 export const CAR = {
   accel: 28,          // m/s² à bas régime
-  maxSpeed: 54,       // vitesse visée moteur (m/s)
-  boostSpeed: 78,
+  maxSpeed: SURF_PHYS.maxSpeed,       // vitesse visée moteur (m/s)
+  boostSpeed: SURF_PHYS.boostSpeed,
   boostAccel: 38,
   boostTime: 1.6,
   brake: 42,
@@ -44,7 +45,7 @@ export const CAR = {
   yawDamp: 0.6,
   steerIn: 7,         // vitesse de braquage
   steerOut: 12,       // retour au centre
-  gravity: 25,
+  gravity: SURF_PHYS.gravity,
   snap: 0.7,
   step: 1.6,
   magnetRange: 4,     // aimant : portée de l'attraction au-dessus d'une route aimantée (m)
@@ -62,16 +63,13 @@ export const CAR = {
   lipHopMin: 2,      // saut en haut d'un L : hauteur mini (m)
   lipHopMax: 4,      // hauteur maxi (m), atteinte vers 180 km/h
   lipHopK: 600,      // hauteur = vitesse² / lipHopK, bornée
-  bounce: 14,         // vitesse verticale donnée par un revêtement Rebond (100 %)
-  wind: 36,
-  belt: 40,           // vitesse du tapis roulant à pleine force (réglage 0 % ou 200 %), m/s
-  spring: 56,         // poussée latérale du ressort à pleine force (m/s) : à 150 %, saut d’une voie (24 m)
+  bounce: SURF_PHYS.bounce,         // vitesse verticale donnée par un revêtement Rebond (100 %)
+  wind: SURF_PHYS.wind,             // accélération latérale du vent à pleine force (m/s²)
+  spring: SURF_PHYS.spring,         // poussée latérale du ressort à pleine force (m/s) : à 150 %, saut d’une voie (24 m)
   springHop: 11,      // saut du ressort (passe par-dessus la bordure)
-  glassSpeed: 25,     // le verre cède sous cette vitesse (m/s, réglage 100 %)
-  glassImpact: 24,    // ... ou sous un atterrissage plus violent (m/s)
   cutTime: 1.0,       // moteur coupé : durée après la dernière plaque
   shockE: 0.5,        // obstacles : rebond (0 = mou, 1 = élastique)
-  shockKick: 6,       // ... et petite poussée en plus pour bien sentir le choc           // accélération latérale du vent à pleine force (réglage 0 % ou 200 %)
+  shockKick: 6,       // ... et petite poussée en plus pour bien sentir le choc
   radius: 1.0,
   probe: 1.25,
   height: 1.3,
@@ -139,7 +137,7 @@ const L1 = { lx: 0, lz: 0 }, L2 = { lx: 0, lz: 0 };
 const S1 = {}, S2 = {};
 const W1 = { x: 0, z: 0 };
 const BELT = { x: 0, z: 0 };
-const OB = {}, OL = {}, MOV = {};
+const OB = {}, OL = {}, MOV = {}, MQ1 = {}, MQ2 = {};
 const FL = {};
 const CC = { x: 0, z: 0 };
 const TMP = { x: 0, z: 0 };
@@ -154,8 +152,6 @@ export function surfaceCoeffs(mod, f, out = COEF) {
   out.grip = 1; out.traction = 1; out.vmaxK = 1; out.extraDrag = 0; out.rearK = 1;
   switch (mod) {
     case 'ice': out.grip = clamp(0.2 / f, 0.05, 0.85); out.traction = 0.45; break;
-    case 'sand': out.grip = 0.8; out.traction = 0.65; out.vmaxK = clamp(1 - 0.45 * f, 0.25, 1); out.extraDrag = 5 * f; break;
-    case 'mud': out.grip = 0.7; out.traction = 0.55; out.vmaxK = clamp(1 - 0.5 * f, 0.2, 1); out.extraDrag = 6 * f; break;
     case 'magnet': out.grip = 1.6; break;
     // Dérive : l'arrière n'accroche presque plus (l'avant, si) : au moindre coup de volant la voiture part en glisse.
     case 'drift': out.rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85); break;
@@ -199,6 +195,8 @@ export class CarPhysics {
     this.rib = null;
     this.vehicle = 'car';
     this.gravMul = 1;
+    this.glassTime = new Map();   // dalle de verre -> secondes de contact cumulées
+    this.broken = new Set();      // dalles de verre brisées (sans collision) jusqu'au prochain place()
     this.setBounds();
     this.place(0, 0.4, 0, 0);
   }
@@ -248,13 +246,16 @@ export class CarPhysics {
     this.lost = false;
     this._flipNow = false;
     this._springNow = false;
-    this.cutT = 0; this.glassT = 0;
+    this.cutT = 0;
+    // Verre fragile (Phase 3) : temps de contact cumulé par dalle, et dalles brisées dans cette course (elles n'ont plus de collision).
+    // Tout (re)départ — départ, réapparition, retour au checkpoint — les restaure.
+    this.glassTime.clear(); this.broken.clear();
     this.graceT = 1.5;   // protection après un (re)départ : ni verre cassé ni piques (évite les boucles de retours)
     this.beltX = 0; this.beltZ = 0; this.beltS = 0;
     this.plateLock = '';
     this.sinkT = 0;
     this.hazardGrace = 0.8; // sécurité après respawn pour éviter les réapparitions en boucle
-    const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3);
+    const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3, this.broken) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3, this.broken);
     if (this.gSign < 0) {
       this.n.x = 0; this.n.y = -1; this.n.z = 0;
       if (!Number.isFinite(s.h)) { s.h = y; s.type = 'none'; }
@@ -293,7 +294,9 @@ export class CarPhysics {
     this.surfType = s.type;
     this.surfMod = s.mod || '';
     this.surfTile = s.tile;
-    this.surfP = s.tile ? tileParam(s.tile) / 100 : 1;
+    // Pourcentage de réglage du revêtement touché (celui de la voie touchée pour une bifurcation à deux revêtements).
+    this.surfPct = s.tile ? tileParam({ s: s.mod || '', p: s.p }) : 100;
+    this.surfP = this.surfPct / 100;
     this.surfLx = s.lx; this.surfLz = s.lz;
     if (!triggers || !s.tile) return;
     const mod = this.surfMod;
@@ -334,25 +337,35 @@ export class CarPhysics {
   // Revêtements qui modifient les commandes (volant inversé, moteur coupé) : actifs tant
   // qu'on roule dessus, puis encore un court instant.
   _timedMods(mod) {
-    if (mod === 'reverse' || mod === 'invert') { if (this.surfMod !== mod) this.ev.reverse = true; return true; }
+    if (mod === 'reverse') { if (this.surfMod !== mod) this.ev.reverse = true; return true; }
     if (mod === 'cut') { if (this.cutT <= 0) this.ev.cut = true; this.cutT = CAR.cutTime; return true; }
     return false;
   }
 
   // Sens et vitesse du tapis roulant au point (lx, lz) de la pièce (repère monde).
+  _pct(tile) {
+    return tile === this.surfTile ? this.surfPct : tileParam(tile);
+  }
+
   _belt(tile, lx, lz, out) {
     sampleLocal(tile, lx, lz, S1);
-    const sp = ((tileParam(tile) - 100) / 100) * CAR.belt;
+    const sp = beltSpeed(this._pct(tile));
     rotVec(tile.r, S1.gz, -S1.gx, W1);
     out.x = W1.x * sp; out.z = W1.z * sp;
     return out;
   }
 
-  // Le verre cède si la voiture y roule trop lentement.
-  _glassCheck(on, speed, tile, dt) {
-    if (!on || this.graceT > 0) { this.glassT = 0; return; }
-    if (Math.abs(speed) < CAR.glassSpeed * (tileParam(tile) / 100)) this.glassT += dt; else this.glassT = 0;
-    if (this.glassT > 0.35) { this.glassT = 0; this.ev.glass = true; this.ev.sink = true; }
+  // Verre fragile (Phase 3) : plus de condition de vitesse. Chaque dalle a un compte à rebours de contact CUMULÉ (réglage de la
+  // pièce, en secondes). Quand il est écoulé, la dalle est brisée : elle n'a plus aucune collision (la voiture tombe) jusqu'au
+  // prochain (re)départ, qui la restaure. Renvoie true à l'instant où la dalle cède.
+  _glassCheck(on, tile, dt) {
+    if (!on || !tile || this.graceT > 0 || this.broken.has(tile)) return false;
+    const t = (this.glassTime.get(tile) || 0) + dt;
+    this.glassTime.set(tile, t);
+    if (t < glassSeconds(this._pct(tile))) return false;
+    this.broken.add(tile);
+    this.ev.glass = true; this.ev.glassTile = tile;
+    return true;
   }
 
   // ---------------------------------------------------------------- Pneus
@@ -409,14 +422,14 @@ export class CarPhysics {
     if (this.graceT > 0) this.graceT -= dt;
     ev.wall = 0; ev.land = 0; ev.boostHit = false; ev.bounce = false;
     if (this.hazardGrace > 0) this.hazardGrace = Math.max(0, this.hazardGrace - dt);
-    ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.moto = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false; ev.glass = false; ev.spring = false; ev.reverse = false; ev.cut = false; ev.spike = false; ev.shock = 0;
+    ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.moto = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false; ev.glass = false; ev.glassTile = null; ev.spring = false; ev.reverse = false; ev.cut = false; ev.spike = false; ev.shock = 0;
     this.prev.x = p.x; this.prev.y = p.y; this.prev.z = p.z;
     this.prevYaw = this.yaw;
 
     // Volant inversé / moteur coupé : les commandes sont modifiées un court instant.
     // Volant inversé : seulement tant que les roues touchent une pièce qui l'a (ruban : la pièce sous les roues ;
     // sol : surfMod est celui du dernier contact, donc il ne compte que si on est posé). En l'air, volant normal.
-    const reverseActive = this.rib ? this.rib.tile.s === 'reverse' || this.rib.tile.s === 'invert' : this.grounded && (this.surfMod === 'reverse' || this.surfMod === 'invert');
+    const reverseActive = this.rib ? this.rib.tile.s === 'reverse' : this.grounded && this.surfMod === 'reverse';
     if (reverseActive) inp = { ...inp, steer: -(inp.steer || 0) };
     if (this.cutT > 0) { this.cutT -= dt; if (inp.throttle) inp = { ...inp, throttle: false }; }
     // Volant progressif (retour au centre plus rapide).
@@ -471,11 +484,16 @@ export class CarPhysics {
       // dans le repère de la bande, puis on rajoute sa vitesse.
       // En montant sur la bande, la voiture prend sa vitesse d'un coup (et la garde en sortant).
       let belt = this.surfMod === 'conveyor' && this.surfTile ? this._belt(this.surfTile, this.surfLx, this.surfLz, BELT) : null;
-      // Pièce mobile (glissière) : la voiture est portée par la pièce, comme par un tapis.
-      if (this.surfTile && this.surfTile.mv === 2) {
+      // Pièce mobile (glissière, rotation) : la voiture est portée par la pièce, comme par un tapis.
+      // Rotation : vitesse du sol au point de contact = ω × r ; la voiture tourne aussi avec la pièce (même cap).
+      if (this.surfTile && this.surfTile.mv >= 2) {
         const o = this.track.moverOffset(this.surfTile, this.track.time, MOV);
         if (!belt) { belt = BELT; BELT.x = 0; BELT.z = 0; }
-        belt.x += o.vx; belt.z += o.vz;
+        if (this.surfTile.mv === 2) { belt.x += o.vx; belt.z += o.vz; }
+        else {
+          belt.x += o.w * (this.pos.z - o.cz); belt.z -= o.w * (this.pos.x - o.cx);
+          this.yaw += o.w * dt;
+        }
       }
       if (belt) {
         v.x += belt.x - this.beltX; v.z += belt.z - this.beltZ;
@@ -494,25 +512,26 @@ export class CarPhysics {
       const C = surfaceCoeffs(ground ? '' : mod, f);
       let grip = C.grip, traction = C.traction, vmaxK = C.vmaxK, extraDrag = C.extraDrag, rearK = C.rearK;
       if (ground) { grip = 0.55; traction = 0.7; vmaxK = 0.45; extraDrag = 5; }
-      else if (mod === 'water') {
+      else if (mod === 'water' || mod === 'boat') {      // la plaque bateau est posée sur l'eau
         if (this.vehicle === 'boat') { grip = 0.85; traction = 1; vmaxK = 1; }
         else {
           // Une voiture dans l'eau : elle patine, se noie si elle s'arrête.
           grip = 0.35; traction = 0.3; vmaxK = 0.3; extraDrag = 9;
-          if (Math.abs(vf) < 5) this.sinkT += dt; else this.sinkT = Math.max(0, this.sinkT - dt);
+          if (this.graceT <= 0 && Math.abs(vf) < 5) this.sinkT += dt; else this.sinkT = Math.max(0, this.sinkT - dt);
           if (this.sinkT > 1.2) { this.sinkT = 0; this.ev.sink = true; }
         }
       }
       else if (mod === 'wind') {
-        const a = ((tileParam(this.surfTile) - 100) / 100) * CAR.wind;
+        const a = ((this._pct(this.surfTile) - 100) / 100) * CAR.wind;
         rotVec(this.surfTile.r, 1, 0, TMP);
         vf += (TMP.x * fx + TMP.z * fz) * a * dt;
         vr += (TMP.x * rx + TMP.z * rz) * a * dt;
       }
 
       // Le bateau hors de l'eau racle la route.
-      if (this.vehicle === 'boat' && mod !== 'water') { grip = Math.min(grip, 0.8); traction *= 0.4; vmaxK = Math.min(vmaxK, 0.3); extraDrag += 7; }
-      if (mod !== 'water') this.sinkT = 0;
+      const wet = mod === 'water' || mod === 'boat';
+      if (this.vehicle === 'boat' && !wet) { grip = Math.min(grip, 0.8); traction *= 0.4; vmaxK = Math.min(vmaxK, 0.3); extraDrag += 7; }
+      if (!wet) this.sinkT = 0;
       const ax = (this._longitudinal(vf, inp, K.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
       this.rearK = rearK;
       const r = this._tires(vf, vr, this.omega, ax, grip, dt);
@@ -526,7 +545,7 @@ export class CarPhysics {
       v.y = fy * vf + ry * vr;
       v.z = fz * vf + rz * vr;
       if (belt) { v.x += belt.x; v.z += belt.z; }
-      this._glassCheck(mod === 'glass', vf, this.surfTile, dt);
+      if (this._glassCheck(mod === 'glass', this.surfTile, dt)) this.grounded = false;      // la dalle cède : la voiture tombe
       if (this.ev.sink) return;
       this.slip = Math.abs(vr);
       this.fwdSpeed = vf;
@@ -567,6 +586,7 @@ export class CarPhysics {
     if (this._tryEnterRibbon()) return;
     if (!this.grounded && this._tryLandRibbon()) return;
     this._walls();
+    this._tunnelRoof();
     this._obstacles();
     if (this.ev.sink) return; // fin immédiate du pas après un contact létal
     this._bounds();
@@ -574,7 +594,7 @@ export class CarPhysics {
     // Contact avec la chaussée.
     // En gravité inversée, le « sol » est le dessous des pièces posées à l'envers.
     const gs = this.gSign;
-    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step);
+    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken);
     const gap = gs * (p.y - s.h);
     const vn = v.x * s.nx + v.y * s.ny + v.z * s.nz;
     // Aimant : la voiture reste collée à la route quoi qu'il arrive (bosses, vitesse).
@@ -584,7 +604,7 @@ export class CarPhysics {
     // Aimant : au-dessus d'une route aimantée, la voiture est attirée vers la surface le long de SA normale, pas selon
     // la gravité du monde. Endroit ou envers, c'est la même règle (au plafond, la normale pointe vers le bas du monde).
     if (!this.grounded) {
-      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange);
+      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken);
       const mg = gs * (p.y - m.h);
       if (m.mod === 'magnet' && mg > 0.02 && mg < CAR.magnetRange) {
         const a = CAR.magnetAcc * (1 - mg / CAR.magnetRange) * dt;
@@ -602,7 +622,6 @@ export class CarPhysics {
       p.y = s.h;
       // Une nouvelle plaque peut agir (mais pas la même, si on retombe dessus).
       if ((this.plateLock === 'flip' || this.plateLock === 'spring') && s.tile !== this.lockTile) this.plateLock = '';
-      if (s.mod === 'glass' && -vn > CAR.glassImpact && this.graceT <= 0) { this.ev.glass = true; this.ev.sink = true; }
       if (vn < 0) {
         v.x -= s.nx * vn; v.y -= s.ny * vn; v.z -= s.nz * vn;
         ev.land = -vn;
@@ -642,7 +661,7 @@ export class CarPhysics {
       if (t) {
         sampleLocal(t, this.surfLx, this.surfLz, S1);
         rotVec(t.r, S1.gx, S1.gz, W1);
-        const k = ((tileParam(t) - 100) / 100) * CAR.spring;
+        const k = ((this._pct(t) - 100) / 100) * CAR.spring;
         const n = this.n;
         v.x += W1.x * k + n.x * CAR.springHop; v.y += n.y * CAR.springHop; v.z += W1.z * k + n.z * CAR.springHop;
         this.grounded = false;
@@ -696,6 +715,26 @@ export class CarPhysics {
 
   // Bordures : la voiture glisse le long du mur, perd un peu de vitesse au choc,
   // et le choc freine sa rotation. Pas de réalignement automatique.
+  // Toit d'un tunnel : une voiture qui saute à l'intérieur n'en sort pas par le haut (les parois la retiennent déjà sur les côtés).
+  // Seule une voiture déjà dessous est retenue : celle qui survole le tunnel passe au-dessus.
+  _tunnelRoof() {
+    if (this.gSign < 0) return;
+    const p = this.pos, q = this.prev, v = this.vel;
+    const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
+    for (let i = 0; i < tiles.length; i++) {
+      const tile = tiles[i];
+      if (!tile.tn || tile.v || this.broken.has(tile) || !isFloor(tile)) continue;
+      toLocal(tile, p.x, p.z, L1);
+      sampleLocal(tile, L1.lx, L1.lz, S1);
+      if (!S1.inFootprint || Math.abs(S1.d) > ROAD_HALF + RAIL_W) continue;
+      const roof = S1.h + TUNNEL_TOP;
+      if (p.y + CAR.height > roof && q.y + CAR.height <= roof + 0.05) {
+        p.y = roof - CAR.height;
+        if (v.y > 0) v.y = -v.y * 0.2;
+      }
+    }
+  }
+
   _walls() {
     const p = this.pos, v = this.vel;
     const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
@@ -853,21 +892,31 @@ export class CarPhysics {
     const tiles = this.track.tilesAt(cx, cz);
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
-      if (tile.mv) continue;
+      if (tile.mv || this.broken.has(tile)) continue;
       if (this._probeTile(tile, x, z, px, pz, y, 0)) return HIT;
     }
     // Pièces mobiles : bordures à leur position du moment.
     const mv = this.track.movers;
     for (let i = 0; i < mv.length; i++) {
+      if (this.broken.has(mv[i])) continue;
       const o = this.track.moverOffset(mv[i], this.track.time, MOV);
-      if (this._probeTile(mv[i], x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y, 0)) return HIT;
+      if (o.a) {
+        // Pièce tournante : on interroge sa géométrie « au repos », puis on remet le résultat dans le repère du monde.
+        const q = this.track.moverLocal(o, x, z, MQ1), q2 = this.track.moverLocal(o, px, pz, MQ2);
+        if (this._probeTile(mv[i], q.x, q.z, q2.x, q2.z, y - o.y, 0)) {
+          const c = Math.cos(o.a), sn = Math.sin(o.a), dx = HIT.dx, dz = HIT.dz, nx = HIT.nx, nz = HIT.nz;
+          HIT.dx = c * dx + sn * dz; HIT.dz = -sn * dx + c * dz;
+          HIT.nx = c * nx + sn * nz; HIT.nz = -sn * nx + c * nz;
+          return HIT;
+        }
+      } else if (this._probeTile(mv[i], x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y, 0)) return HIT;
     }
     return null;
   }
 
   _probeTile(tile, x, z, px, pz, y) {
     const P = PIECES[tile.t];
-    if (P.kind === 'area' || tile.nb || !(isFloor(tile) || isCeilingFloor(tile))) return false;
+    if (P.kind === 'area' || (tile.nb && !tile.tn) || !(isFloor(tile) || isCeilingFloor(tile))) return false;
     toLocal(tile, x, z, L1);
     sampleLocal(tile, L1.lx, L1.lz, S1);
     if (!S1.inFootprint) return false;
@@ -877,7 +926,7 @@ export class CarPhysics {
     if (tile.v) {
       const hv = 2 * baseY(tile) - S1.h;
       if (ylo > hv + SLAB_T + 0.2 || yhi < hv - RAIL_H + 0.15) return false;
-    } else if (ylo > S1.h + RAIL_H - 0.15 || yhi < S1.h - SLAB_T - 0.2) return false;
+    } else if (ylo > S1.h + (tile.tn ? TUNNEL_TOP : RAIL_H) - 0.15 || yhi < S1.h - SLAB_T - 0.2) return false;      // tunnel : les parois montent jusqu'au toit
     const ad = Math.abs(S1.d), R = CAR.radius;
     const inner = ROAD_HALF, outer = ROAD_HALF + RAIL_W;
     if (ad + R <= inner || ad - R >= outer) return false;
@@ -916,7 +965,7 @@ export class CarPhysics {
       if (pass === 1 && c1x === c2x && c1z === c2z) break;
       const tiles = pass === 0 ? this.track.tilesAt(c1x, c1z) : this.track.tilesAt(c2x, c2z);
       for (const tile of tiles) {
-        if (!isRibbon(tile)) continue;
+        if (!isRibbon(tile) || this.broken.has(tile)) continue;
         const rib = ribbonOf(tile);
         for (let end = 0; end < 2; end++) {
           const F = frameWorld(tile, rib, end, this.F);
@@ -982,7 +1031,7 @@ export class CarPhysics {
     const p = this.pos, q = this.prev;
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
     for (const tile of tiles) {
-      if (tile.t !== 'ring') continue;
+      if (tile.t !== 'ring' && !tile.tb) continue;      // anneau turbo : pièce flottante ou option d'une ligne droite
       toLocal(tile, p.x, p.z, L1);
       toLocal(tile, q.x, q.z, L2);
       if (L1.lz * L2.lz > 0 || L1.lz === L2.lz) continue;
@@ -1027,7 +1076,7 @@ export class CarPhysics {
     const p = this.pos, q = this.prev, v = this.vel;
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
     for (const tile of tiles) {
-      if (!isRibbon(tile)) continue;
+      if (!isRibbon(tile) || this.broken.has(tile)) continue;
       const rib = ribbonOf(tile);
       // Point du ruban le plus proche (recherche grossière puis affinage).
       let bu = -1, bd = Infinity;
@@ -1143,7 +1192,7 @@ export class CarPhysics {
       rotVec(tile.r, 1, 0, TMP);
       R.vs += (TMP.x * B.e1x + TMP.z * B.e1z) * a * dt;
       R.vd += (TMP.x * B.e2x + TMP.z * B.e2z) * a * dt;
-    } else if (mod === 'conveyor') beltE1 = ((tileParam(tile) - 100) / 100) * CAR.belt * R.dir;
+    } else if (mod === 'conveyor') beltE1 = beltSpeed(tileParam(tile)) * R.dir;
     else if (mod === 'spring' && this.plateLock !== 'spring') {
       this.plateLock = 'spring'; this.ev.spring = true;
       R.vd += ((tileParam(tile) - 100) / 100) * CAR.spring * R.dir;
@@ -1163,7 +1212,9 @@ export class CarPhysics {
     // tire-bouchons) tant que la voiture est plaquée. Seule la montée en L garde la
     // physique d'appui réelle : sur le mur vertical, plus d'adhérence ni de moteur.
     const lPiece = tile.t === 'wall' || tile.t === 'ramp90' || tile.t === 'crest90';
-    const load = lPiece ? clamp(press / gAbs, 0, 1.6) : press > 0 ? 1 : 0;
+    // Vrille : la voiture est guidée par la route sur toute la pièce, appui ou pas (elle garde son adhérence et son moteur).
+    const guided = tile.t === 'twist';
+    const load = lPiece ? clamp(press / gAbs, 0, 1.6) : press > 0 || guided ? 1 : 0;
     this.press = press;
     R.vs -= beltE1;   // tapis roulant : dynamique dans le repère de la bande
     const c = Math.cos(R.psi), s = Math.sin(R.psi);
@@ -1180,7 +1231,7 @@ export class CarPhysics {
     // Retour dans le plan de la route avec le MÊME cap, puis la voiture pivote.
     R.vs = vx * c - vy * s + beltE1;
     R.vd = vx * s + vy * c;
-    this._glassCheck(mod === 'glass', vx, tile, dt);
+    if (this._glassCheck(mod === 'glass', tile, dt)) { this._ribPlace(R); this._ribDetach(); return; }      // la dalle cède : la voiture se détache et tombe
     if (this.ev.sink) { this._ribPlace(R); return; }
     R.psi += this.omega * dt;
     this.yawRate = -this.omega;
@@ -1328,7 +1379,7 @@ export class CarPhysics {
     for (const c of cells) {
       const [cx, cz] = c.split(',').map(Number);
       for (const tile of this.track.tilesAt(cx, cz)) {
-        if (tile === curTile || seen.has(tile) || !isRibbon(tile)) continue;
+        if (tile === curTile || seen.has(tile) || !isRibbon(tile) || this.broken.has(tile)) continue;
         seen.add(tile);
         const rib = ribbonOf(tile);
         for (let end = 0; end < 2; end++) {

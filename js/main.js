@@ -149,7 +149,8 @@ class App {
   }
 
   playTrack(track, opts) {
-    const errs = track.validate();
+    // Un essai lancé depuis l'éditeur n'exige pas d'arrivée (Phase 3) ; la vérification et les courses normales, si.
+    const errs = track.validate({ test: !!(opts && opts.fromEditor && !opts.verify) });
     if (errs.length) { this.ui.flash(errs.join(' ')); return; }
     this._dispose();
     this.mode = 'race';
@@ -545,9 +546,7 @@ class App {
     this.ui.setMode('editor');
     this.session = new EditorSession(this, state || getEditorDraft() || {});
     this.audio.music.play('menu', 3, 0);
-    const L = (a) => this._keysOf(a);
     this._resize();
-    $('ed-help').textContent = `Clic : poser · Clic droit : supprimer · Clic droit glissé : orbiter · Clic molette : pipette · Molette : zoom · Maj + molette : niveau · ${L('ed.levelUp')} / ${L('ed.levelDown')} : niveau · ${L('ed.rotate')} : pivoter · F1 ou ? : tous les raccourcis`;
   }
 
   _keysOf(action) {
@@ -565,6 +564,7 @@ class App {
       ['Clic molette glissé', 'Déplacer la vue'],
       ['Molette', 'Zoom (Alt + molette : taille de la décoration)'],
       ['Maj + molette', 'Monter / descendre d’un niveau'],
+      ['Maj + souris', 'Inspecter : déplace la pièce ou la décoration ciblée sur l’axe vertical seul (pièces : demi-niveaux). Outil Décoration : règle la hauteur de pose'],
       [L('ed.levelUp') + ' / ' + L('ed.levelDown'), 'Niveau + / −'],
       [L('ed.rotate'), 'Pivoter (Maj : sens inverse) — décos : par 15°'],
       [L('ed.mirror'), 'Miroir (looping, tire-bouchon, bifurcation : gauche ↔ droite)'],
@@ -576,9 +576,9 @@ class App {
       [L('ed.verify'), 'Vérifier : course complète, ton temps devient la médaille cristal, puis publier'],
       [L('ed.params'), 'Paramètres du niveau (description, décor, tours, départ, hors piste)'],
       ['Maj + ' + L('ed.test'), 'Tester depuis la pièce visée'],
-      [L('ed.surface'), 'Revêtement suivant (puis clic sur une pièce)'],
+      [L('ed.surface'), 'Revêtement suivant (puis clic sur une pièce : celle que le curseur touche, à n’importe quelle hauteur)'],
       [L('ed.fill'), 'Pot de peinture : remplit toute la zone connectée de la pièce cliquée (revêtement ou type de pièce choisi)'],
-      [L('ed.snap'), 'Accrochage des décorations (libre, 1 m, 4 m, case)'],
+      [L('ed.snap'), 'Accrochage des décorations (libre par défaut : elles se posent n’importe où, où le curseur touche la route ou le sol)'],
       [L('ed.scaleUp') + ' / ' + L('ed.scaleDown'), 'Décoration : taille + / −'],
       [L('ed.erase'), 'Gomme : touche répétée = filtre Tout / Décorations / Pistes ; avec une sélection (Inspecter), supprime la sélection'],
       [L('ed.inspect'), 'Inspecter : clic sur une pièce ou une déco, panneau de propriétés et gizmos (flèches : déplacer, cercles : pivoter) ; R pivote la sélection'],
@@ -590,8 +590,9 @@ class App {
     ];
     this.ui.modal({
       title: 'Raccourcis de l’éditeur',
+      wide: true,
       body: `<div class="kbd-list">${rows.map(([k, v]) => `<b>${esc(k)}</b><span>${esc(v)}</span>`).join('')}</div>
-        <p style="margin-top:14px">Astuce : après avoir posé une pente, le niveau suit tout seul quand tu vises la case du haut ou du bas. Toutes ces touches se changent dans Options › Commandes.</p>`,
+        <p style="margin-top:14px">Astuce : après avoir posé une pente, le niveau suit tout seul quand tu vises la case du haut ou du bas. Toutes ces touches se changent dans Profil › Commandes.</p>`,
       actions: [{ label: 'OK', primary: true }],
     });
   }
@@ -605,7 +606,8 @@ class App {
     this.editorState = state;
     const track = Track.decode(state.code);
     this.playTrack(track, { fromEditor: true, verify: verify && !spawn, trackKey: 'e-' + hashString(state.code), seed: 'editeur-test', spawn });
-    if (spawn) this.ui.flash('Test depuis la pièce visée : sans checkpoints, médaille ni vérification.', 2.6);
+    if (!track.count('finish') && !verify) this.ui.flash('Essai libre : ce circuit n’a pas d’arrivée (Échap pour revenir à l’éditeur).', 3);
+    else if (spawn) this.ui.flash('Test depuis la pièce visée : sans checkpoints, médaille ni vérification.', 2.6);
     else if (verify) this.ui.flash('Vérification : termine le circuit. Ton temps deviendra la médaille cristal.', 2.6);
   }
 
@@ -707,7 +709,7 @@ class App {
     if (has((t) => t.s === 'bounce')) tags.push('Rebond');
     if (has((t) => t.s === 'gravity')) tags.push('Gravité');
     if (has((t) => t.s === 'wind')) tags.push('Vent');
-    if (has((t) => t.s === 'sand' || t.s === 'mud')) tags.push('Terrain');
+    if (has((t) => t.s === 'powder')) tags.push('Terrain');
     if (has((t) => t.tn)) tags.push('Tunnel');
     if (has((t) => t.nb)) tags.push('Sans bordures');
     if ((track.laps || 1) > 1) tags.push(`${track.laps} tours`);
@@ -1011,8 +1013,39 @@ class App {
   }
 
   // ---- Communauté (circuits publiés en ligne) ----------------------------------
-  async publishTrack(track) {
-    if (!track.verified) { this.ui.flash('Vérifie d’abord ton circuit (« ✔ Vérifier » dans l’éditeur) pour pouvoir le publier.'); return; }
+  // Publication : c'est ici (et seulement ici) qu'on choisit le nom et la description du circuit.
+  publishTrack(track) {
+    if (!track.verified) { this.ui.flash('Vérifie d’abord ton circuit (« ✔ Vérifier » dans l’éditeur) pour pouvoir le publier.'); return Promise.resolve(false); }
+    return new Promise((resolve) => {
+      const f = document.createElement('div');
+      f.className = 'form';
+      f.innerHTML = `<label>Nom<input id="pub-name" maxlength="40" spellcheck="false" autocomplete="off"></label>
+        <label class="col">Description<textarea id="pub-desc" maxlength="200" rows="3" placeholder="Ce qui rend ton circuit unique (200 caractères au plus)"></textarea></label>
+        <p class="meta">Le nom et la description pourront encore être modifiés après la publication (Communauté › Mes publications).</p>
+        <p class="mp-err" id="pub-err" role="alert"></p>`;
+      const name = f.querySelector('#pub-name'), desc = f.querySelector('#pub-desc'), err = f.querySelector('#pub-err');
+      name.value = track.name && track.name !== 'Mon circuit' ? track.name : '';
+      desc.value = track.desc || '';
+      // Différé : la fenêtre d'où l'on vient se referme juste après ce clic et ne doit pas fermer celle-ci.
+      setTimeout(() => this.ui.modal({
+        title: 'Publier dans la communauté', body: f,
+        actions: [
+          { label: 'Annuler', onClick: () => { resolve(false); return true; } },
+          { label: '🌐 Publier', primary: true, onClick: () => {
+            const n = name.value.trim().slice(0, 40);
+            if (!n) { err.textContent = 'Donne un nom à ton circuit.'; name.focus(); return false; }
+            track.name = n;
+            track.desc = desc.value.replace(/\s+/g, ' ').trim().slice(0, 200);
+            this._doPublish(track).then(() => resolve(true));
+            return true;
+          } },
+        ],
+      }), 60);
+      setTimeout(() => name.focus(), 120);
+    });
+  }
+
+  async _doPublish(track) {
     this.ui.flash('Publication en cours…', 6);
     try {
       await online.publish(track, this.settings.playerName);
@@ -1168,7 +1201,7 @@ class App {
           <p class="meta">${MEDALS.map((x) => `${medalIcon(x)}${formatTime(m[x.id])}`).join(' · ')}</p>
           <p>Tu peux le publier dans la communauté maintenant, ou revenir le modifier (une modification du tracé demandera une nouvelle vérification).</p>`,
         actions: [
-          { label: '🌐 Publier', primary: true, onClick: () => { this.publishTrack(track).then(() => this.quitRace()); return true; } },
+          { label: '🌐 Publier', primary: true, onClick: () => { this.publishTrack(track).then((ok) => { if (ok) this.quitRace(); }); return true; } },
           { label: 'Retour à l’éditeur', onClick: () => { this.quitRace(); return true; } },
           { label: 'Refaire un meilleur temps', onClick: () => { if (this.session && this.session.restart) this.session.restart(); return true; } },
         ],
@@ -1355,6 +1388,8 @@ class App {
 
   _editorAction(a) {
     const ed = this.session;
+    if (a === 'menu-toggle') { ed.toggleMenu(); return; }
+    ed.toggleMenu(false);          // toute autre action (y compris un élément du menu hamburger) referme le menu
     switch (a) {
       case 'menu': this.leaveEditor(); break;
       case 'undo': ed.undo(); break;

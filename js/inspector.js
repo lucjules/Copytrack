@@ -7,7 +7,10 @@
 import * as THREE from './vendor/three.module.min.js';
 import { TransformControls } from './vendor/TransformControls.js';
 import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL } from './constants.js';
-import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, tileCenter, baseY } from './pieces.js';
+import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, tileCenter, baseY, THEMES, MOVER, moverParams, paramText } from './pieces.js';
+import { FAMILIES, familyOf, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from './families.js';
+import { arrowPose } from './tileInfo.js';
+import { styleFor } from './trackMesh.js';
 import { DECO_LABELS, DECO_COLORS } from './decoData.js';
 import { safeUrl } from './decos.js';
 import { isObstacle } from './obstacles.js';
@@ -17,7 +20,13 @@ import { tileBounds, decoBounds, pickObjects, LAYER_ALL } from './editorPick.js'
 export const MIRROR_TYPES = {
   loop: 'loopL', loopL: 'loop', loopBig: 'loopBigL', loopBigL: 'loopBig', loopDouble: 'loopDoubleL', loopDoubleL: 'loopDouble',
   cork: 'corkL', corkL: 'cork', fork: 'forkL', forkL: 'fork',
+  loopBigDouble: 'loopBigDoubleL', loopBigDoubleL: 'loopBigDouble', loopTriple: 'loopTripleL', loopTripleL: 'loopTriple',
+  loopBigTriple: 'loopBigTripleL', loopBigTripleL: 'loopBigTriple',
+  cv05: 'cvL05', cvL05: 'cv05', cv1: 'cvL1', cvL1: 'cv1', cv2: 'cvL2', cvL2: 'cv2', cv4: 'cvL4', cvL4: 'cv4',
+  cvBig05: 'cvBigL05', cvBigL05: 'cvBig05', cvBig1: 'cvBigL1', cvBigL1: 'cvBig1', cvBig2: 'cvBigL2', cvBigL2: 'cvBig2', cvBig4: 'cvBigL4', cvBigL4: 'cvBig4',
 };
+// Anciennes pièces « Checkpoint » : [pièce de route, valeur de l'option cp] pour les convertir en option.
+export const LEGACY_CP = { checkpoint: ['straight', 1], cpCurve: ['curve', 1], cpRing: ['straight', 2] };
 const isStartFinish = (type) => { const sp = PIECES[type] && PIECES[type].special; return sp === 'start' || sp === 'finish'; };
 const TAU = Math.PI * 2;
 
@@ -37,6 +46,18 @@ function h(tag, attrs = {}, ...kids) {
   }
   for (const k of kids.flat()) if (k != null) e.append(k);
   return e;
+}
+
+// Flèche à plat (plan XZ) pointant vers -z, de longueur 1 : tige + pointe.
+function arrowGeometry() {
+  const g = new THREE.BufferGeometry();
+  const w = 0.09, hw = 0.3, z0 = 0.5, zh = -0.12, tip = -0.5;
+  const v = [
+    -w, 0, z0, w, 0, z0, w, 0, zh,   -w, 0, z0, w, 0, zh, -w, 0, zh,       // tige
+    -hw, 0, zh, hw, 0, zh, 0, 0, tip,                                       // pointe
+  ];
+  g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+  return g;
 }
 
 export class Inspector {
@@ -64,6 +85,16 @@ export class Inspector {
     this.outline = new THREE.Box3Helper(new THREE.Box3(), '#5ff2ff');
     this.outline.visible = false;
     scene.add(this.outline);
+
+    // Flèche blanche semi-transparente : sens de parcours de la pièce inspectée.
+    this.tab = 'props';                // onglet du panneau : 'props' (Propriétés) | 'colors' (Couleurs)
+    this.arrow = new THREE.Mesh(arrowGeometry(), new THREE.MeshBasicMaterial({
+      color: '#ffffff', transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false, depthTest: false,
+    }));
+    this.arrow.renderOrder = 20;
+    this.arrow.visible = false;
+    this.arrow.name = 'direction-arrow';
+    scene.add(this.arrow);
 
     this.panel = h('div', { class: 'ed-insp hidden', id: 'ed-insp', role: 'region', 'aria-label': 'Propriétés' });
     document.getElementById('editor').appendChild(this.panel);
@@ -100,6 +131,7 @@ export class Inspector {
     this.tc.detach();
     this.helper.visible = false;
     this.outline.visible = false;
+    this.arrow.visible = false;
     this.panel.classList.add('hidden');
     this._key = '';
     this.ed._refreshUI();
@@ -123,7 +155,7 @@ export class Inspector {
     if (!this.sel) return;
     const list = this.sel.kind === 'tile' ? this.ed.track.tiles : this.ed.track.decos;
     if (!list.includes(this.sel.obj)) { this.clear(); return; }
-    if (!this.dragging) this._syncGizmo();
+    if (!this.dragging) this._syncGizmo(); else this._syncArrow();
     if (this._structKey() !== this._key) this._build(); else this._syncPanel();
   }
 
@@ -132,6 +164,7 @@ export class Inspector {
     this.helper.visible = on;
     this.outline.visible = on;
     this.panel.classList.toggle('hidden', !on);
+    this.arrow.visible = on && this.sel.kind === 'tile';
     if (on) {
       const s = this.sel;
       (s.kind === 'tile' ? tileBounds : decoBounds)(s.obj, this.outline.box);
@@ -144,6 +177,7 @@ export class Inspector {
     this.helper.removeFromParent();
     this.outline.removeFromParent(); this.outline.geometry.dispose(); this.outline.material.dispose();
     this.proxy.removeFromParent();
+    this.arrow.removeFromParent(); this.arrow.geometry.dispose(); this.arrow.material.dispose();
     this.panel.remove();
     this.ed.camLocked = false;
   }
@@ -180,6 +214,17 @@ export class Inspector {
       this.proxy.rotation.set(0, obj.ry || 0, 0);
     }
     this.proxy.updateMatrixWorld(true);
+    this._syncArrow();
+  }
+
+  // Flèche de direction : posée sur la ligne centrale de la pièce, orientée dans son sens de parcours.
+  _syncArrow() {
+    if (!this.sel || this.sel.kind !== 'tile') { this.arrow.visible = false; return; }
+    const a = arrowPose(this.sel.obj);
+    this.arrow.position.set(a.x, a.y, a.z);
+    this.arrow.rotation.set(0, a.yaw, 0);
+    this.arrow.scale.set(a.len, 1, a.len);
+    this.arrow.visible = this.ed.tool === 'inspect';
   }
 
   _onDrag(on) {
@@ -221,7 +266,7 @@ export class Inspector {
   _structKey() {
     if (!this.sel) return '';
     const o = this.sel.obj;
-    return this.sel.kind === 'tile' ? ['t', o.t, o.s, o.v, o.nb, o.tn, o.mv, this.mode].join('|') : ['d', o.k, this.mode].join('|');
+    return this.sel.kind === 'tile' ? ['t', o.t, o.s, o.s2, o.v, o.nb, o.tn, o.mv, o.cp, o.tb, this.mode, this.tab].join('|') : ['d', o.k, this.mode, this.tab].join('|');
   }
 
   _syncPanel() { for (const f of this._sync) f(); }
@@ -241,12 +286,19 @@ export class Inspector {
     if (!this.sel) return;
     this._key = this._structKey();
     this._sync = [];
-    const body = this.sel.kind === 'tile' ? this._tileBody(this.sel.obj) : this._decoBody(this.sel.obj);
-    const title = this.sel.kind === 'tile' ? PIECES[this.sel.obj.t].label : DECO_LABELS[this.sel.obj.k] || this.sel.obj.k;
+    const isTile = this.sel.kind === 'tile';
+    const body = this.tab === 'colors' ? this._colorsBody(this.sel.obj) : isTile ? this._tileBody(this.sel.obj) : this._decoBody(this.sel.obj);
+    const title = isTile ? PIECES[this.sel.obj.t].label : DECO_LABELS[this.sel.obj.k] || this.sel.obj.k;
+    const tabBtn = (id, label) => {
+      const b = h('button', { class: 'btn', role: 'tab', onclick: () => this.setTab(id) }, label);
+      this._sync.push(() => { b.classList.toggle('on', this.tab === id); b.setAttribute('aria-selected', String(this.tab === id)); });
+      return b;
+    };
     this.panel.replaceChildren(
       h('div', { class: 'insp-head' },
-        h('div', {}, h('small', {}, this.sel.kind === 'tile' ? 'Pièce' : 'Décoration'), h('b', {}, title)),
+        h('div', {}, h('small', {}, isTile ? 'Pièce' : 'Décoration'), h('b', {}, title)),
         h('button', { class: 'btn icon', title: 'Désélectionner (Échap)', onclick: () => { this.clear(); } }, '✕')),
+      h('div', { class: 'insp-tabs', role: 'tablist', 'aria-label': 'Onglets de l’inspecteur' }, tabBtn('props', 'Propriétés'), tabBtn('colors', 'Couleurs')),
       h('div', { class: 'insp-gizmo', role: 'group', 'aria-label': 'Gizmo' },
         this._modeBtn('translate', '⤧ Déplacer'), this._modeBtn('rotate', '⟳ Pivoter')),
       ...body,
@@ -254,6 +306,12 @@ export class Inspector {
         h('button', { class: 'btn danger', onclick: () => this.deleteSelected() }, 'Supprimer')),
     );
     this._syncPanel();
+  }
+
+  setTab(tab) {
+    if (tab === this.tab) return;
+    this.tab = tab;
+    if (this.sel) this._build();
   }
 
   _modeBtn(mode, label) {
@@ -285,10 +343,14 @@ export class Inspector {
     return h('label', { class: 'insp-row' }, h('span', {}, label), input, out);
   }
 
-  _select(label, options, get, set, disabled = false) {
+  // optDisabled(valeur) : grise les choix impossibles (ex. checkpoint aérien sur une pente).
+  _select(label, options, get, set, disabled = false, optDisabled = null) {
     const sel = h('select', { disabled }, options.map(([v, text]) => h('option', { value: v }, text)));
     sel.addEventListener('change', () => this._apply(() => set(sel.value)));
-    this._sync.push(() => { sel.value = get(); });
+    this._sync.push(() => {
+      sel.value = get();
+      if (optDisabled) for (const o of sel.options) o.disabled = o.value !== sel.value && !!optDisabled(o.value);
+    });
     return h('label', { class: 'insp-row' }, h('span', {}, label), sel);
   }
 
@@ -302,7 +364,8 @@ export class Inspector {
   _tileBody(t) {
     const ed = this.ed, P = PIECES[t.t];
     const rows = [];
-    rows.push(h('div', { class: 'insp-group' }, 'Position'));
+    const group = (text) => rows.push(h('div', { class: 'insp-group' }, text));
+    group('Position');
     rows.push(this._num('Case X', () => t.x, (v) => ed._applyTilePatch(t, { x: Math.round(v) }), { step: 1 }));
     rows.push(this._num('Case Z', () => t.z, (v) => ed._applyTilePatch(t, { z: Math.round(v) }), { step: 1 }));
     rows.push(this._num('Niveau', () => t.l, (v) => ed._applyTilePatch(t, { l: v }), { step: 0.5, min: 0, max: MAX_LEVEL }));
@@ -313,30 +376,162 @@ export class Inspector {
       return b;
     }));
     rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Rotation'), rot));
-    // Type (même empreinte) et miroir
-    const types = Object.keys(PIECES).filter((k) => PIECES[k].size === P.size && (k === t.t || !isStartFinish(k)));
-    rows.push(this._select('Type', types.map((k) => [k, PIECES[k].label]), () => t.t, (v) => ed._retypeTile(t, v), isStartFinish(t.t)));
-    if (MIRROR_TYPES[t.t]) {
-      rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Miroir'),
-        h('button', { class: 'btn', title: 'Version gauche / droite de la pièce', onclick: () => this._apply(() => ed._retypeTile(t, MIRROR_TYPES[t.t])) }, '⇋ Inverser gauche / droite')));
+
+    // Caractéristiques (pièce d'une famille : listes déroulantes) ou Type (autres pièces de même empreinte)
+    const fam = familyOf(t.t);
+    if (fam) {
+      group('Caractéristiques · ' + FAMILIES[fam.fam].label);
+      for (const tr of FAMILIES[fam.fam].traits) rows.push(this._traitSelect(t, fam.fam, tr));
+      rows.push(h('div', { class: 'insp-note' }, `Empreinte ${P.size}×${P.size} case${P.size > 1 ? 's' : ''}.`));
+    } else {
+      group('Type');
+      const types = Object.keys(PIECES).filter((k) => PIECES[k].size === P.size && (k === t.t || (!isStartFinish(k) && !isFamilyMember(k) && !REPLACED_BY_OPTION.has(k))));
+      rows.push(this._select('Type', types.map((k) => [k, PIECES[k].label]), () => t.t, (v) => ed._retypeTile(t, v), isStartFinish(t.t)));
+      if (MIRROR_TYPES[t.t]) {
+        rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Miroir'),
+          h('button', { class: 'btn', title: 'Version gauche / droite de la pièce', onclick: () => this._apply(() => ed._retypeTile(t, MIRROR_TYPES[t.t])) }, '⇋ Inverser gauche / droite')));
+      }
+      if (LEGACY_CP[t.t]) {
+        rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Checkpoint'),
+          h('button', { class: 'btn', title: 'Remplace cette pièce par une route normale portant l’option Checkpoint', onclick: () => this._apply(() => ed._legacyToOption(t)) }, '→ Convertir en option')));
+      }
     }
-    // Revêtement
-    rows.push(h('div', { class: 'insp-group' }, 'Revêtement'));
+
+    // Revêtement (une bifurcation en a deux : voie directe / voie déportée)
+    const fork = P.kind === 'fork';
+    group(fork ? 'Revêtement · voie directe' : 'Revêtement');
     const surfs = SURFACE_ORDER.filter((s) => s === (t.s || '') || surfaceAllowed(t.t, s, !!t.v));
     rows.push(this._select('Type', surfs.map((s) => [s, SURFACES[s].label]), () => t.s || '', (v) => ed.track.setSurface(t, v, SURFACES[v] && SURFACES[v].def != null ? ed._surfParamValue(v) : 0) || true));
     const S = SURFACES[t.s || ''];
     if (S && S.def != null) {
-      rows.push(this._range(S.param || 'Intensité', () => t.p || S.def, (v) => ed.track.setSurface(t, t.s, v) || true, { min: S.min, max: S.max, step: 1, fmt: (v) => v + ' %' }));
+      rows.push(this._range(S.param || 'Intensité', () => t.p || S.def, (v) => ed.track.setSurface(t, t.s, v) || true, { min: S.min, max: S.max, step: 1, fmt: (v) => paramText(t.s, v) }));
     }
-    // Options : inversion (à l'envers), bordures, tunnel, mouvement
-    rows.push(h('div', { class: 'insp-group' }, 'Options'));
+    if (fork) {
+      group('Revêtement · voie déportée');
+      const s2s = SURFACE_ORDER.filter((s) => s && (s === (t.s2 || '') || surfaceAllowed(t.t, s, !!t.v)));
+      rows.push(this._select('Type', [['', 'Comme la voie directe'], ['-', 'Route normale'], ...s2s.map((s) => [s, SURFACES[s].label])], () => t.s2 || '',
+        (v) => ed.track.setSurface2(t, v, v && SURFACES[v] && SURFACES[v].def != null ? ed._surfParamValue(v) : 0) || true));
+      const S2 = SURFACES[t.s2 || ''];
+      if (S2 && S2.def != null) {
+        rows.push(this._range(S2.param || 'Intensité', () => t.p2 || S2.def, (v) => ed.track.setSurface2(t, t.s2, v) || true, { min: S2.min, max: S2.max, step: 1, fmt: (v) => paramText(t.s2, v) }));
+      }
+    }
+
+    // Options
+    group('Options');
     const flag = (f, label, hint) => this._check(label, () => t[f], (on) => (on !== !!t[f] ? ed.track.toggleFlag(t, f) || false : true), !flagAllowed(t.t, f, t) && !t[f], hint);
     rows.push(flag('v', 'À l\'envers (inversion)', 'Route au plafond : roulable en gravité inversée'));
     rows.push(flag('nb', 'Sans bordures', 'Plus de rebord'));
     rows.push(flag('tn', 'Tunnel', 'Voûte autour de la route'));
+    // Checkpoint en option (les anciennes pièces Checkpoint se convertissent avec le bouton ci-dessus)
+    const cpNames = [['0', 'Aucun'], ['1', 'Portique'], ['2', 'Aérien (anneau)']];
+    rows.push(this._select('Checkpoint', cpNames, () => String(t.cp || 0),
+      (v) => { const n = +v, cur = t.cp || 0; if (n === cur) return true; return ed.track.toggleFlag(t, 'cp', n === 0 ? cur : n) || false; },
+      !!P.special || (!flagAllowed(t.t, 'cp', t, 1) && !t.cp),
+      (v) => v !== '0' && !flagAllowed(t.t, 'cp', t, +v)));
+    rows.push(flag('tb', 'Anneau turbo', 'Anneau à traverser pour un coup de turbo (ligne droite plate, à l’endroit)'));
+    // Thème (visuel)
+    rows.push(this._select('Thème', THEMES.map((x) => [String(x.id), x.label]), () => String(t.th || 0),
+      (v) => { const n = +v, cur = t.th || 0; if (n === cur) return true; return ed.track.toggleFlag(t, 'th', n === 0 ? cur : n) || false; },
+      !flagAllowed(t.t, 'th', t)));
+    // Mouvement + réglages
     const mvOk = flagAllowed(t.t, 'mv', t) || !!t.mv;
-    rows.push(this._select('Mouvement', [['0', 'Aucun'], ['1', 'Ascenseur'], ['2', 'Glissière']], () => String(t.mv || 0),
+    rows.push(this._select('Mouvement', [['0', 'Aucun'], ['1', 'Ascenseur'], ['2', 'Glissière'], ['3', 'Rotation']], () => String(t.mv || 0),
       (v) => { const n = +v; if (n === (t.mv || 0)) return true; return ed.track.toggleFlag(t, 'mv', n === 0 ? t.mv : n) || false; }, !mvOk));
+    if (t.mv) rows.push(...this._moverRows(t));
+    return rows;
+  }
+
+  // Vitesse et amplitude de l'ascenseur / de la glissière / de la rotation.
+  _moverRows(t) {
+    const ed = this.ed, M = MOVER[t.mv];
+    const rows = [];
+    const sign = () => (moverParams(t).speed < 0 ? -1 : 1);
+    rows.push(this._range('Vitesse', () => Math.abs(moverParams(t).speed), (v) => ed.track.setMover(t, v * sign(), undefined),
+      { min: Math.abs(M.speed.min) === M.speed.max ? 25 : M.speed.min, max: M.speed.max, step: 5, fmt: (v) => v + ' %' }));
+    rows.push(this._range(t.mv === 1 ? 'Hauteur' : t.mv === 2 ? 'Distance' : 'Angle', () => moverParams(t).amp, (v) => ed.track.setMover(t, undefined, v),
+      { min: M.amp.min, max: M.amp.max, step: M.amp.step, fmt: (v) => (t.mv === 3 && v >= 360 ? 'Tour complet' : v + M.amp.unit) }));
+    if (t.mv === 3) {
+      rows.push(this._check('Sens inverse', () => moverParams(t).speed < 0, (on) => ed.track.setMover(t, (on ? -1 : 1) * Math.abs(moverParams(t).speed), undefined), false, 'Tourne dans l’autre sens'));
+    }
+    rows.push(h('div', { class: 'insp-row' }, h('span', {}, ''),
+      h('button', { class: 'btn', title: `Vitesse et amplitude d’origine (${M.label})`, onclick: () => this._apply(() => ed.track.setMover(t, 0, 0)) }, '↺ Valeurs par défaut')));
+    return rows;
+  }
+
+  // Menu déroulant d'une caractéristique de famille : les combinaisons qui n'existent pas sont grisées.
+  _traitSelect(t, fam, tr) {
+    const sel = h('select', {}, tr.values.map(([v, text]) => h('option', { value: v }, text)));
+    sel.setAttribute('aria-label', tr.label);
+    sel.addEventListener('change', () => this._apply(() => this._setTrait(t, fam, tr.id, sel.value)));
+    this._sync.push(() => {
+      const cur = familyOf(t.t);
+      if (!cur) return;
+      const ok = validValues(fam, cur.traits, tr.id);
+      sel.value = cur.traits[tr.id];
+      for (const o of sel.options) o.disabled = !ok.has(o.value) && o.value !== cur.traits[tr.id];
+    });
+    return h('label', { class: 'insp-row' }, h('span', {}, tr.label), sel);
+  }
+
+  _setTrait(t, fam, id, value) {
+    const cur = familyOf(t.t);
+    if (!cur) return false;
+    const type = withTrait(fam, cur.traits, id, value);
+    if (!type || type === t.t) return true;
+    if (this.ed._retypeFamily(t, type)) return true;
+    this.ed.app.ui.flash(`Pas la place pour « ${PIECES[type].label} » (${PIECES[type].size}×${PIECES[type].size} cases).`, 2.4);
+    return false;
+  }
+
+  // Onglet Couleurs : couleurs de la chaussée, des lignes et des bordures d'une pièce ; couleur d'une décoration.
+  _colorsBody(obj) {
+    return this.sel.kind === 'tile' ? this._tileColors(obj) : this._decoColors(obj);
+  }
+
+  _colorRow(label, get, def, set, reset) {
+    const input = h('input', { type: 'color', 'aria-label': label });
+    const code = h('span', { class: 'code' });
+    const undo = h('button', { class: 'btn', title: 'Revenir à la couleur d’origine', 'aria-label': `${label} : couleur d’origine`, onclick: () => this._apply(() => reset()) }, '↺');
+    input.addEventListener('input', () => this._apply(() => set(input.value), { live: true }));
+    input.addEventListener('change', () => this.ed._commit());
+    this._sync.push(() => {
+      const own = get();
+      if (document.activeElement !== input) input.value = own || def();
+      code.textContent = own ? own : 'origine';
+      undo.disabled = !own;
+    });
+    return h('div', { class: 'insp-color' }, h('span', {}, label), input, code, undo);
+  }
+
+  _tileColors(t) {
+    const ed = this.ed;
+    const rows = [h('div', { class: 'insp-group' }, 'Couleurs de la pièce')];
+    const defaults = () => { const b = styleFor({ ...t, col: null }); return { road: b.road[0], line: b.line, rail: b.railA }; };
+    for (const [key, label] of [['road', 'Route'], ['line', 'Lignes'], ['rail', 'Bordures']]) {
+      rows.push(this._colorRow(label, () => (t.col && t.col[key]) || '', () => defaults()[key],
+        (v) => ed.track.setColors(t, { ...t.col, [key]: v }), () => ed.track.setColors(t, { ...t.col, [key]: undefined })));
+    }
+    rows.push(h('div', { class: 'insp-row' }, h('span', {}, ''),
+      h('button', { class: 'btn', onclick: () => this._apply(() => ed.track.setColors(t, null)) }, '↺ Tout réinitialiser')));
+    rows.push(h('div', { class: 'insp-note' }, 'Purement visuel : les couleurs ne changent ni le jeu, ni la vérification du circuit. Elles passent devant le thème et la couleur du revêtement.'));
+    return rows;
+  }
+
+  _decoColors(d) {
+    const ed = this.ed;
+    const touch = () => { ed.track.version++; return true; };
+    const rows = [h('div', { class: 'insp-group' }, 'Couleur de la décoration')];
+    const sw = h('div', { class: 'insp-swatches', role: 'group', 'aria-label': 'Couleurs prédéfinies' }, DECO_COLORS.map((c, i) => {
+      const b = h('button', { class: 'swatch', style: `background:${c}`, title: `Couleur ${i + 1}`, onclick: () => this._apply(() => { d.c = i + 1; d.cc = ''; return touch(); }) });
+      this._sync.push(() => b.classList.toggle('on', !d.cc && (d.c | 0) === i + 1));
+      return b;
+    }));
+    rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Palette'), sw));
+    rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Naturelle'),
+      h('button', { class: 'btn', onclick: () => this._apply(() => { d.c = 0; d.cc = ''; return touch(); }) }, 'Couleurs d’origine')));
+    rows.push(this._colorRow('Libre', () => d.cc || '', () => (d.c > 0 ? DECO_COLORS[d.c - 1] : '#ffffff'),
+      (v) => { d.cc = v; return touch(); }, () => { d.cc = ''; return touch(); }));
     return rows;
   }
 
@@ -350,13 +545,6 @@ export class Inspector {
     rows.push(this._range('Rotation', () => Math.round(((d.ry || 0) * 180 / Math.PI + 360) % 360), (v) => { d.ry = v * Math.PI / 180; return touch(); }, { min: 0, max: 359, step: 1, fmt: (v) => v + '°' }));
     const obst = isObstacle(d.k);
     rows.push(this._range('Taille', () => d.s, (v) => { d.s = v; return touch(); }, { min: obst ? 0.5 : 0.3, max: obst ? 2.5 : 6, step: 0.05, fmt: (v) => '×' + (+v).toFixed(2) }));
-    // Couleur
-    const sw = h('div', { class: 'insp-swatches', role: 'group', 'aria-label': 'Couleur' }, DECO_COLORS.map((c, i) => {
-      const b = h('button', { class: 'swatch', style: `background:${c}`, title: `Couleur ${i + 1}`, onclick: () => this._apply(() => { d.c = i; return touch(); }) });
-      this._sync.push(() => b.classList.toggle('on', (d.c | 0) === i));
-      return b;
-    }));
-    rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Couleur'), sw));
     if (d.k === 'plaque') {
       const url = h('input', { type: 'text', maxlength: 400, placeholder: 'https://…', spellcheck: false });
       url.addEventListener('change', () => {

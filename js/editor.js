@@ -1,18 +1,22 @@
 // Éditeur de circuits : pièces sur grille, niveaux, rotation, revêtements réglables,
 // options (envers, sans bordures, tunnel), décorations libres, vérification, historique.
 import * as THREE from './vendor/three.module.min.js';
-import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL, DIRS, MAX_DECOS } from './constants.js';
-import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, surfaceRule, flagAllowed } from './pieces.js';
+import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL, DIRS, MAX_DECOS, SURF_PHYS } from './constants.js';
+import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, surfaceRule, flagAllowed, THEMES, MOVER, paramText } from './pieces.js';
+import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from './families.js';
+import { retypePlacement } from './tileInfo.js';
 import { Track, DECORS } from './track.js';
-import { TrackView, buildTileMesh, SURFACE_STYLE, tint } from './trackMesh.js';
+import { TrackView, buildTileMesh, SURFACE_STYLE, tint, THEME_SWATCH } from './trackMesh.js';
 import { buildDecoMesh, safeUrl } from './decos.js';
 import { isObstacle } from './obstacles.js';
 import { DECO_CATS, DECO_LABELS, DECO_COLORS } from './decoData.js';
 import { setEditorDraft, saveMyTrack, newId, formatTime } from './storage.js';
 import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel } from './editorTools.js';
 import { centerlineWorld } from './ribbons.js';
-import { Inspector, MIRROR_TYPES } from './inspector.js';
-import { pickObjects, ERASE_FILTERS, ERASE_FILTER_ORDER, LAYER_ALL, LAYER_DECO, tileBounds } from './editorPick.js';
+import { Inspector, MIRROR_TYPES, LEGACY_CP } from './inspector.js';
+import { keyLabel } from './input.js';
+import { esc } from './ui.js';
+import { pickObjects, pickTileExact, rayToSurface, ERASE_FILTERS, ERASE_FILTER_ORDER, LAYER_ALL, LAYER_DECO, tileBounds } from './editorPick.js';
 
 export const PALETTE_ORDER = [
   { id: 'straight', key: 'Digit1', k: '1' },
@@ -32,6 +36,9 @@ export const PALETTE_ORDER = [
   { id: 'crest90', key: 'KeyJ', k: 'J' },
   { id: 'bank', key: 'KeyO', k: 'O' },
   { id: 'bankBig', key: '', k: '' },
+  { id: 'hugecurve', key: '', k: '' },
+  { id: 'steep4', key: '', k: '' },
+  { id: 'cv1', key: '', k: '' },
   { id: 'tube', key: '', k: '' },
   { id: 'tubeIn', key: 'KeyY', k: 'Y' },
   { id: 'tubeMid', key: '', k: '' },
@@ -41,25 +48,62 @@ export const PALETTE_ORDER = [
   { id: 'forkL', key: '', k: '' },
   { id: 'gentle', key: '', k: '' },
   { id: 'ring', key: '', k: '' },
-  { id: 'checkpoint', key: 'Digit8', k: '8' },
-  { id: 'cpCurve', key: '', k: '' },
-  { id: 'cpRing', key: '', k: '' },
   { id: 'start', key: 'Digit9', k: '9' },
   { id: 'finish', key: 'Digit0', k: '0' },
   { id: 'platform', key: 'KeyP', k: 'P' },
-  { id: 'select', key: 'KeyQ', k: 'Q' },
-  { id: 'inspect', key: '', k: '' },
-  { id: 'erase', key: '', k: 'X' },
 ];
+
+// Outils (grille « Outils » à gauche) : ne posent rien. action : raccourci réglable (voir input.js) ; key : touche fixe.
+export const TOOLS = [
+  { id: 'select', label: 'Sélection', key: 'KeyQ', k: 'Q', hint: 'Choisir une zone : copier, déplacer, supprimer' },
+  { id: 'inspect', label: 'Inspecter', action: 'ed.inspect', hint: 'Clic sur une pièce ou une déco : propriétés et gizmos 3D' },
+  { id: 'erase', label: 'Gomme', action: 'ed.erase', hint: 'Effacer (filtre : tout / décorations / pistes)' },
+  { id: 'fill', label: 'Pot de peinture', action: 'ed.fill', hint: 'Remplir toute une zone connectée : choisis une pièce ou un revêtement, puis clique une pièce' },
+];
+const TOOL_IDS = new Set(['select', 'inspect', 'erase']);
 
 const MIRROR = MIRROR_TYPES;
 const MODS = [
   { id: 'mod:v', flag: 'v', label: 'À l\'envers', hint: 'Route au plafond : roulable seulement en gravité inversée (plaque d’inversion)' },
   { id: 'mod:nb', flag: 'nb', label: 'Sans bordures', hint: 'Plus de rebord : on peut tomber' },
   { id: 'mod:tn', flag: 'tn', label: 'Tunnel', hint: 'Voûte autour de la route' },
-  { id: 'mod:mv1', flag: 'mv', val: 1, label: 'Ascenseur', hint: 'La pièce monte de 2 niveaux et redescend (6 s)' },
-  { id: 'mod:mv2', flag: 'mv', val: 2, label: 'Glissière', hint: 'La pièce glisse d’une case vers sa droite et revient (5 s)' },
+  { id: 'mod:mv1', flag: 'mv', val: 1, label: 'Ascenseur', hint: 'La pièce monte et redescend (2 niveaux, 6 s par défaut ; réglable dans l’Inspecteur)' },
+  { id: 'mod:mv2', flag: 'mv', val: 2, label: 'Glissière', hint: 'La pièce glisse d’une case vers sa droite et revient (5 s par défaut ; réglable dans l’Inspecteur)' },
+  { id: 'mod:mv3', flag: 'mv', val: 3, label: 'Rotation', hint: 'La pièce tourne autour de son centre et emporte la voiture (un tour en 12 s ; réglable dans l’Inspecteur)' },
+  { id: 'mod:cp1', flag: 'cp', val: 1, label: 'Checkpoint (portique)', hint: 'Portique au sol : à franchir pour valider le tour (route plate, ligne ou virage)' },
+  { id: 'mod:cp2', flag: 'cp', val: 2, label: 'Checkpoint aérien', hint: 'Anneau à traverser (ligne droite plate, à l’endroit)' },
+  { id: 'mod:tb1', flag: 'tb', val: 1, label: 'Anneau turbo', hint: 'Anneau à traverser pour un coup de turbo (ligne droite plate, à l’endroit) ; peut aussi se poser en l’air sur une case déjà occupée' },
+  { id: 'mod:th1', flag: 'th', val: 1, label: 'Thème Herbe', hint: 'Aspect herbeux (purement visuel)' },
+  { id: 'mod:th2', flag: 'th', val: 2, label: 'Thème Sable', hint: 'Aspect sableux (purement visuel)' },
+  { id: 'mod:th3', flag: 'th', val: 3, label: 'Thème Roche', hint: 'Aspect rocheux (purement visuel)' },
 ];
+// Options proposées dans l'onglet « Options » : bascules (route) et choix exclusifs (checkpoint, thème, mouvement).
+// Avec une pièce choisie, elles s'ajoutent à la pose (aperçu compris) ; sans pièce, elles s'appliquent à la pièce cliquée.
+const OPTION_GROUPS = [
+  { id: 'route', label: 'Route', multi: true, choices: [['v', 1, 'À l\'envers'], ['nb', 1, 'Sans bordures'], ['tn', 1, 'Tunnel']] },
+  { id: 'cp', label: 'Checkpoint', flag: 'cp', choices: [['cp', 0, 'Aucun'], ['cp', 1, 'Portique'], ['cp', 2, 'Aérien']] },
+  { id: 'tb', label: 'Anneau turbo', flag: 'tb', choices: [['tb', 0, 'Aucun'], ['tb', 1, 'Turbo']] },
+  { id: 'th', label: 'Thème', flag: 'th', choices: [['th', 0, 'Classique'], ['th', 1, 'Herbe'], ['th', 2, 'Sable'], ['th', 3, 'Roche']] },
+  { id: 'mv', label: 'Mouvement', flag: 'mv', choices: [['mv', 0, 'Aucun'], ['mv', 1, 'Ascenseur'], ['mv', 2, 'Glissière'], ['mv', 3, 'Rotation']] },
+];
+const OPT_KEYS = ['v', 'nb', 'tn', 'mv', 'cp', 'tb', 'th'];
+const OPT_NAMES = { v: 'à l\'envers', nb: 'sans bordures', tn: 'tunnel', mv: 'mouvement', cp: 'checkpoint', tb: 'anneau turbo', th: 'thème' };
+const modId = (flag, val) => (flag === 'v' || flag === 'nb' || flag === 'tn' ? 'mod:' + flag : `mod:${flag}${val}`);
+// Un choix qui ne peut pas cohabiter avec un autre : poser « à l'envers » exclut tunnel, mouvement et anneau aérien ; mouvement exclut checkpoint.
+export function armedOptions(opts, flag, val) {
+  const o = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ...opts };
+  const bool = flag === 'v' || flag === 'nb' || flag === 'tn';
+  if (bool) o[flag] = o[flag] ? 0 : 1; else o[flag] = o[flag] === val ? 0 : val;
+  // Le dernier choix l'emporte sur ce qui ne peut pas cohabiter avec lui (l'anneau turbo se comporte comme le checkpoint aérien).
+  if (o[flag]) {
+    if (flag === 'v') { o.tn = 0; o.mv = 0; o.tb = 0; if (o.cp === 2) o.cp = 0; }
+    else if (flag === 'tn') { o.v = 0; o.cp = 0; o.tb = 0; }
+    else if (flag === 'mv') { o.v = 0; o.cp = 0; o.tb = 0; }
+    else if (flag === 'cp') { o.mv = 0; o.tn = 0; o.tb = 0; if (o.cp === 2) o.v = 0; }
+    else if (flag === 'tb') { o.mv = 0; o.tn = 0; o.v = 0; o.cp = 0; }
+  }
+  return o;
+}
 const SNAPS = [{ id: 0, label: 'Libre' }, { id: 1, label: '1 m' }, { id: 4, label: '4 m' }, { id: 12, label: 'Demi-case' }, { id: CELL, label: 'Case' }];
 
 // Icônes (vue de dessus) des pièces et revêtements.
@@ -75,6 +119,7 @@ const loopIcon = (mir, col, turns = 1, w = 9) => {
 export const ICONS = {
   straight: svg(`${straightBase()}<path d="M24 6v8M24 20v8M24 34v8" stroke="${LINE}" stroke-width="2"/>`),
   curve: svg(`<path d="M10 48 A38 38 0 0 1 48 10 L48 38 A10 10 0 0 0 38 48Z" fill="${ROAD}"/><path d="M10 48 A38 38 0 0 1 48 10" stroke="${RAIL}" stroke-width="2.5" fill="none"/><path d="M38 48 A10 10 0 0 1 48 38" stroke="${RAIL}" stroke-width="2.5" fill="none"/>`),
+  courbe: svg(`<path d="M10 48 A38 38 0 0 1 48 10 L48 38 A10 10 0 0 0 38 48Z" fill="${ROAD}"/><path d="M10 48 A38 38 0 0 1 48 10" stroke="${RAIL}" stroke-width="2.5" fill="none"/><path d="M38 48 A10 10 0 0 1 48 38" stroke="${RAIL}" stroke-width="2.5" fill="none"/><path d="M18 40l10-10M22 28l6 2-2 6" stroke="#ffbf3c" stroke-width="3" fill="none"/>`),
   bigcurve: svg(`<path d="M4 48 A44 44 0 0 1 48 4 L48 22 A26 26 0 0 0 22 48Z" fill="${ROAD}"/><path d="M4 48 A44 44 0 0 1 48 4" stroke="${RAIL}" stroke-width="2.5" fill="none"/><path d="M22 48 A26 26 0 0 1 48 22" stroke="${RAIL}" stroke-width="2.5" fill="none"/>`),
   slope: svg(`${straightBase()}<path d="M24 36V12M16 20l8-8 8 8" stroke="${LINE}" stroke-width="3" fill="none"/>`),
   steep: svg(`${straightBase()}<path d="M16 26l8-8 8 8M16 38l8-8 8 8" stroke="#ffbf3c" stroke-width="3" fill="none"/>`),
@@ -108,6 +153,7 @@ export const ICONS = {
   inspect: svg(`<rect x="8" y="14" width="26" height="22" rx="3" fill="#5ff2ff22" stroke="#5ff2ff" stroke-width="3"/><path d="M28 24l14 6-6 3-3 6z" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/><circle cx="21" cy="25" r="3" fill="#5ff2ff"/>`),
   select: svg(`<rect x="7" y="9" width="34" height="30" fill="#5ff2ff22" stroke="#5ff2ff" stroke-width="3" stroke-dasharray="6 4"/><path d="M30 30l10 10M30 30v8M30 30h8" stroke="#ffffff" stroke-width="2.5"/>`),
   erase: svg(`<path d="M12 12l24 24M36 12L12 36" stroke="#ff5a6e" stroke-width="5" stroke-linecap="round"/>`),
+  fill: svg(`<path d="M10 26l14-14 14 14-12 12z" fill="#ffb34722" stroke="#ffb347" stroke-width="3" stroke-linejoin="round"/><path d="M24 12V8M36 30c3 4 5 6 5 9a5 5 0 0 1-10 0c0-3 2-5 5-9z" stroke="#ffb347" stroke-width="3" fill="#ffb347" stroke-linecap="round"/>`),
   'surf:': svg(`${straightBase()}<path d="M24 8v32" stroke="${LINE}" stroke-width="2" stroke-dasharray="5 5"/>`),
   'surf:ice': svg(`${straightBase('#bfe4f2', '#7fd3ff')}<path d="M24 14v20M15 19l18 10M15 29l18-10" stroke="#4aa8d8" stroke-width="2.5"/>`),
   'surf:boost': svg(`${straightBase(ROAD, '#2fe0ff')}<path d="M15 18l9-7 9 7M15 30l9-7 9 7M15 42l9-7 9 7" stroke="#36e9ff" stroke-width="3" fill="none"/>`),
@@ -185,12 +231,14 @@ export class EditorSession {
     this.showGrid = true;
     this.autoLevel = null;
     this.surfParam = {};
+    this.opts = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0 };   // options « armées » : elles se posent avec la pièce choisie
+    this.famTraits = {};      // dernière combinaison de caractéristiques choisie par famille
     this.sel = null;          // rectangle de sélection {x0, z0, x1, z1}
     this.selDrag = null;
     this.clip = null;         // presse-papiers
     this.pasting = false;
     this.focusLevel = false;  // vue par niveau
-    this.deco = { cat: 'signs', color: 0, scale: 1, rot: 0, url: '', snap: 0, ph: 0 };
+    this.deco = { cat: 'signs', color: 0, scale: 1, rot: 0, url: '', snap: 0, ph: 0, dy: 0 };
 
     this.view = new TrackView(this.track, app.materials);
     app.scenery.trackGroup.add(this.view.group);
@@ -300,7 +348,7 @@ export class EditorSession {
     const tabs = document.createElement('div');
     tabs.className = 'pal-tabs';
     const panels = {};
-    for (const [id, label] of [['pieces', 'Pièces'], ['surf', 'Revêtements'], ['mods', 'Options'], ['decos', 'Décors']]) {
+    for (const [id, label] of [['pieces', 'Pièces'], ['mods', 'Options'], ['surf', 'Revêtements'], ['decos', 'Décors']]) {   // Options à côté de Pièces
       const b = document.createElement('button');
       b.className = 'pal-tab';
       b.dataset.tab = id;
@@ -312,17 +360,15 @@ export class EditorSession {
       panel.dataset.panel = id;
       panels[id] = panel;
     }
-    const fillBtn = document.createElement('button');
-    fillBtn.className = 'pal-fill';
-    fillBtn.id = 'ed-fill';
-    fillBtn.textContent = '🪣 Pot de peinture';
-    fillBtn.title = 'Remplir toute une zone connectée : choisis une pièce ou un revêtement, puis clique une pièce (² / `)';
-    fillBtn.addEventListener('click', () => { this.toggleFill(); this.app.audio.click(); });
-    tabs.appendChild(fillBtn);
     pal.appendChild(tabs);
 
+    // Familles (caractéristiques en listes déroulantes), puis les pièces à l'unité.
+    const rowF = document.createElement('div'); rowF.className = 'fam-row';
+    this.famCards = {};
+    for (const fam of FAMILY_ORDER) rowF.appendChild(this._familyCard(fam));
+    panels.pieces.appendChild(rowF);
     const rowP = document.createElement('div'); rowP.className = 'pal-row';
-    for (const p of PALETTE_ORDER) this._toolButton(rowP, p.id, p.k);
+    for (const p of PALETTE_ORDER) if (!isFamilyMember(p.id) && !REPLACED_BY_OPTION.has(p.id)) this._toolButton(rowP, p.id, p.k);
     panels.pieces.appendChild(rowP);
 
     const rowS = document.createElement('div'); rowS.className = 'pal-row surf';
@@ -339,22 +385,31 @@ export class EditorSession {
     compat.addEventListener('click', () => this.showCompat());
     par.appendChild(compat);
 
-    const rowM = document.createElement('div'); rowM.className = 'pal-row mods';
-    for (const m of MODS) this._toolButton(rowM, m.id, '');
-    panels.mods.appendChild(rowM);
+    panels.mods.appendChild(this._optionsPanel());
     const hint = document.createElement('div');
     hint.className = 'pal-hint';
-    hint.textContent = 'Choisis une option puis clique sur une pièce pour l\'activer ou la désactiver. Toute pièce peut être posée à l\'envers (au moins un niveau au-dessus du sol) : on ne peut y rouler qu\'en gravité inversée. Une plaque « Inversion de gravité » projette la voiture vers le haut, une pièce à l\'envers la réceptionne ; une 2e plaque la remet à l\'endroit. Sur une vrille, la plaque fait passer au plafond en douceur.';
+    hint.id = 'ed-opt-hint';
+    hint.textContent = 'Choisis une pièce ET des options : elles se posent ensemble (l’aperçu montre le résultat). Sans pièce choisie, une option s’applique à la pièce que tu cliques. Toute pièce peut être posée à l’envers (au moins un niveau au-dessus du sol) : on ne peut y rouler qu’en gravité inversée. Une plaque « Inversion de gravité » projette la voiture vers le haut, une pièce à l’envers la réceptionne ; une 2e plaque la remet à l’endroit. Vitesse, amplitude et couleurs se règlent dans l’Inspecteur.';
     panels.mods.appendChild(hint);
 
     const dTop = document.createElement('div');
     dTop.className = 'pal-deco-top';
-    dTop.innerHTML = `<select id="ed-deco-cat">${Object.entries(DECO_CATS).map(([k, c]) => `<option value="${k}">${c.label}</option>`).join('')}</select>
-      <div class="swatches" id="ed-deco-colors"></div>
+    dTop.innerHTML = `<div class="swatches" id="ed-deco-colors"></div>
       <label class="inl">Taille <input type="range" id="ed-deco-scale" min="0.3" max="6" step="0.05"><b id="ed-deco-scale-val"></b></label>
       <label class="inl" id="ed-deco-ph-wrap" title="Décalage dans le cycle de l'obstacle (pour désynchroniser plusieurs obstacles)">Décalage <input type="range" id="ed-deco-ph" min="0" max="0.95" step="0.05"><b id="ed-deco-ph-val"></b></label>
+      <label class="inl" title="Posée là où le curseur touche la route ou le sol ; ce curseur (ou Maj + souris) ajoute une hauteur">Hauteur <input type="range" id="ed-deco-dy" min="-20" max="120" step="0.5"><b id="ed-deco-dy-val"></b></label>
       <button class="btn" id="ed-deco-snap" title="Accrochage (N)"></button>
       <input type="text" id="ed-deco-url" placeholder="URL de l'image (https://…)" maxlength="400">`;
+    // Sous-catégories de décors : une rangée de boutons (plus de liste déroulante).
+    const cats = document.createElement('div');
+    cats.className = 'pal-chips'; cats.id = 'ed-deco-cats'; cats.setAttribute('role', 'tablist'); cats.setAttribute('aria-label', 'Catégories de décors');
+    for (const [k, c] of Object.entries(DECO_CATS)) {
+      const b = document.createElement('button');
+      b.className = 'chip'; b.dataset.cat = k; b.textContent = c.label; b.setAttribute('role', 'tab');
+      b.addEventListener('click', () => { this.deco.cat = k; this._buildDecoRow(); this.app.audio.click(); });
+      cats.appendChild(b);
+    }
+    panels.decos.appendChild(cats);
     panels.decos.appendChild(dTop);
     const rowD = document.createElement('div'); rowD.className = 'pal-row decos'; rowD.id = 'ed-deco-row';
     panels.decos.appendChild(rowD);
@@ -365,11 +420,12 @@ export class EditorSession {
     range.oninput = () => { this.surfParam[fillBase(this.tool).slice(5)] = +range.value; this._refreshParam(); };
     document.getElementById('ed-param-reset').onclick = () => { delete this.surfParam[fillBase(this.tool).slice(5)]; this._refreshParam(); };
     // Réglages des décorations
-    const cat = document.getElementById('ed-deco-cat');
-    cat.onchange = () => { this.deco.cat = cat.value; this._buildDecoRow(); cat.blur(); };
     const sc = document.getElementById('ed-deco-scale');
     sc.value = this.deco.scale;
     sc.oninput = () => { this.deco.scale = +sc.value; this.previewKey = ''; this._refreshDeco(); };
+    const dyr = document.getElementById('ed-deco-dy');
+    dyr.value = this.deco.dy || 0;
+    dyr.oninput = () => { this.deco.dy = +dyr.value; this.previewKey = ''; this._refreshDeco(); };
     const ph = document.getElementById('ed-deco-ph');
     ph.value = this.deco.ph;
     ph.oninput = () => { this.deco.ph = +ph.value; this.previewKey = ''; this._refreshDeco(); };
@@ -389,13 +445,183 @@ export class EditorSession {
     }
     this._buildDecoRow();
 
-    const name = document.getElementById('ed-name');
-    name.value = this.track.name;
-    name.oninput = () => { this.track.name = name.value.trim() || 'Sans titre'; this._changed(false); };
     this.setTab(fillBase(this.tool).startsWith('surf:') ? 'surf' : this.tool.startsWith('mod:') ? 'mods' : this.tool.startsWith('deco:') ? 'decos' : 'pieces');
+    this._buildTools();
+  }
+
+  // Grille « Outils » : Sélection, Inspecter, Gomme, Pot de peinture (ils ne posent rien : à part des pièces).
+  _buildTools() {
+    const box = document.getElementById('ed-tools');
+    box.innerHTML = '';
+    const SHORT = { Backslash: '\\', Slash: '/', Backquote: '`', Delete: 'Suppr' };
+    const label = (code) => (code ? SHORT[code] || keyLabel(code) : '');
+    for (const t of TOOLS) {
+      const code = t.action ? (this.app.input.bindings[t.action] || []).filter(Boolean)[0] : t.key;
+      const k = t.k || label(code);
+      const b = document.createElement('button');
+      b.className = 'tool-btn';
+      b.dataset.tool = t.id;
+      b.title = `${t.label}${k ? ` (${k})` : ''} : ${t.hint}`;
+      b.setAttribute('aria-label', t.label);
+      b.innerHTML = `${k ? `<span class="k">${esc(k)}</span>` : ''}${ICONS[t.id] || ''}<span>${t.label}</span>`;
+      b.addEventListener('click', () => { if (t.id === 'fill') this.toggleFill(); else this.setTool(t.id); this.app.audio.click(); });
+      box.appendChild(b);
+    }
+  }
+
+  // ---- Familles de pièces (Phase 2) ---------------------------------------------------------------------------------
+  _familyCard(fam) {
+    const F = FAMILIES[fam];
+    const card = document.createElement('div');
+    card.className = 'fam-card';
+    card.dataset.fam = fam;
+    const main = document.createElement('button');
+    main.className = 'piece-btn fam-main';
+    main.addEventListener('click', () => { this.setTool(resolve(fam, this._famTraits(fam))); this.app.audio.click(); });
+    card.appendChild(main);
+    const col = document.createElement('div');
+    col.className = 'fam-traits';
+    const selects = {};
+    for (const t of F.traits) {
+      const lab = document.createElement('label');
+      const span = document.createElement('span');
+      span.textContent = t.label;
+      const sel = document.createElement('select');
+      sel.setAttribute('aria-label', `${F.label} : ${t.label}`);
+      for (const [v, text] of t.values) { const o = document.createElement('option'); o.value = v; o.textContent = text; sel.appendChild(o); }
+      sel.addEventListener('change', () => {
+        const type = withTrait(fam, this._famTraits(fam), t.id, sel.value);
+        if (type) this.setTool(type);
+        this.app.audio.click();
+      });
+      lab.append(span, sel);
+      col.appendChild(lab);
+      selects[t.id] = sel;
+    }
+    card.appendChild(col);
+    this.famCards[fam] = { card, main, selects };
+    return card;
+  }
+
+  // Combinaison de caractéristiques actuelle d'une famille (celle de la pièce choisie, sinon la dernière choisie, sinon la 1re).
+  _famTraits(fam) {
+    const f = familyOf(fillBase(this.tool));
+    if (f && f.fam === fam) this.famTraits[fam] = f.traits;
+    if (!this.famTraits[fam]) this.famTraits[fam] = { ...FAMILIES[fam].members[Object.keys(FAMILIES[fam].members)[0]] };
+    return this.famTraits[fam];
+  }
+
+  _syncFamilies() {
+    if (!this.famCards) return;
+    for (const fam of FAMILY_ORDER) {
+      const { card, main, selects } = this.famCards[fam];
+      const F = FAMILIES[fam];
+      const tr = this._famTraits(fam);
+      const type = resolve(fam, tr);
+      const on = !!type && type === fillBase(this.tool);
+      card.classList.toggle('on', on);
+      main.classList.toggle('on', on);
+      main.dataset.piece = type || '';
+      const P = type && PIECES[type];
+      main.title = P ? `${P.label} — ${F.hint}` : F.label;
+      main.innerHTML = `${ICONS[type] || ICONS[F.icon] || '<span class="emo">◆</span>'}<span>${F.label}${P && P.size > 1 ? ` ${P.size}×${P.size}` : ''}</span>`;
+      for (const t of F.traits) {
+        const ok = validValues(fam, tr, t.id);
+        selects[t.id].value = tr[t.id];
+        for (const o of selects[t.id].options) o.disabled = !ok.has(o.value) && o.value !== tr[t.id];
+      }
+    }
+  }
+
+  // ---- Options (Phase 2) -----------------------------------------------------------------------------------------------
+  _optionsPanel() {
+    const wrap = document.createElement('div');
+    wrap.className = 'opt-panel';
+    this.optChips = [];
+    for (const g of OPTION_GROUPS) {
+      const row = document.createElement('div');
+      row.className = 'opt-group';
+      const lab = document.createElement('b');
+      lab.textContent = g.label;
+      row.appendChild(lab);
+      const chips = document.createElement('div');
+      chips.className = 'pal-chips';
+      chips.setAttribute('role', 'group');
+      chips.setAttribute('aria-label', g.label);
+      for (const [flag, val, text] of g.choices) {
+        const b = document.createElement('button');
+        b.className = 'chip' + (val === 0 ? ' none' : '');
+        b.textContent = text;
+        b.dataset.flag = flag; b.dataset.val = val;
+        if (flag === 'th') {
+          const sw = document.createElement('i');
+          sw.className = 'th-sw'; sw.style.background = THEME_SWATCH[val] || THEME_SWATCH[0];
+          b.prepend(sw);
+        }
+        const m = val ? MODS.find((x) => x.id === modId(flag, val)) : null;
+        b.title = m ? m.hint : flag === 'cp' ? 'Pas de checkpoint' : flag === 'mv' ? 'Pièce fixe' : flag === 'th' ? 'Aspect d’origine' : '';
+        b.addEventListener('click', () => { this._optClick(flag, val); this.app.audio.click(); });
+        chips.appendChild(b);
+        this.optChips.push(b);
+      }
+      row.appendChild(chips);
+      wrap.appendChild(row);
+    }
+    const clear = document.createElement('button');
+    clear.className = 'btn small';
+    clear.id = 'ed-opt-clear';
+    clear.textContent = 'Retirer les options';
+    clear.addEventListener('click', () => { this.opts = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0 }; this.previewKey = ''; this._refreshUI(); });
+    wrap.appendChild(clear);
+    return wrap;
+  }
+
+  // Clic sur une option : avec une pièce choisie elle est « armée » (posée avec elle) ; sans pièce, elle devient l'outil
+  // « appliquer à une pièce posée » (comme avant).
+  _optClick(flag, val) {
+    if (PIECES[this.tool]) {
+      this.opts = armedOptions(this.opts, flag, val);
+      this.previewKey = '';
+      this._refreshUI();
+      return;
+    }
+    this.setTool(modId(flag, val === 0 && (flag === 'v' || flag === 'nb' || flag === 'tn') ? 1 : val));
+  }
+
+  _syncOptions() {
+    if (!this.optChips) return;
+    const piece = PIECES[this.tool] ? this.tool : null;
+    const probe = piece ? Track.normalize({ t: piece, x: 0, z: 0, l: 0, r: 0 }) : null;
+    for (const b of this.optChips) {
+      const flag = b.dataset.flag, val = +b.dataset.val;
+      let on;
+      if (piece) on = val === 0 ? !this.opts[flag] : (flag === 'v' || flag === 'nb' || flag === 'tn' ? !!this.opts[flag] : this.opts[flag] === val);
+      else on = this.tool === modId(flag, val);
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+      // « Aucun » n'a de sens que pour une pose combinée ; un choix impossible sur la pièce est grisé.
+      b.hidden = !piece && val === 0;
+      const ok = !piece || val === 0 || flagAllowed(piece, flag, flag === 'cp' || flag === 'mv' || flag === 'tb' ? { ...probe, ...this._compatProbe(flag) } : probe, val);
+      b.classList.toggle('dim', !ok);
+    }
+    const hint = document.getElementById('ed-opt-hint');
+    if (hint) hint.dataset.mode = piece ? 'combo' : 'apply';
+    const clear = document.getElementById('ed-opt-clear');
+    if (clear) clear.hidden = !piece || !OPT_KEYS.some((k) => this.opts[k]);
+  }
+
+  // Options déjà armées qui gênent le test d'une autre (mouvement ↔ checkpoint, tunnel ↔ checkpoint).
+  _compatProbe(flag) {
+    const o = this.opts;
+    return flag === 'cp' ? { mv: o.mv, tn: o.tn, tb: o.tb, v: o.v } : flag === 'tb' ? { mv: o.mv, tn: o.tn, cp: o.cp, v: o.v } : { cp: o.cp, tb: o.tb, v: o.v };
+  }
+
+  _syncDecoCats() {
+    document.querySelectorAll('#ed-deco-cats .chip').forEach((c) => { const on = c.dataset.cat === this.deco.cat; c.classList.toggle('on', on); c.setAttribute('aria-selected', String(on)); });
   }
 
   _buildDecoRow() {
+    this._syncDecoCats();
     const row = document.getElementById('ed-deco-row');
     row.innerHTML = '';
     for (const k of DECO_CATS[this.deco.cat].kinds) this._toolButton(row, 'deco:' + k, '');
@@ -415,6 +641,7 @@ export class EditorSession {
     else this.fillMode = false;
     if (id !== 'select') { this.pasting = false; this.sel = null; this.selDrag = null; }
     if (id !== 'inspect') this.inspector.clear();
+    if (PIECES[fillBase(id)] || fillBase(id).startsWith('surf:')) this._lastBrush = fillBase(id);     // dernière pièce / dernier revêtement : sert au pot de peinture
     this.tool = id;
     this.previewKey = '';
     if (fillBase(id).startsWith('surf:')) this.setTab('surf');
@@ -423,8 +650,8 @@ export class EditorSession {
       this.setTab('decos');
       const kind = id.slice(5);
       const cat = Object.entries(DECO_CATS).find(([, c]) => c.kinds.includes(kind));
-      if (cat && cat[0] !== this.deco.cat) { this.deco.cat = cat[0]; document.getElementById('ed-deco-cat').value = cat[0]; this._buildDecoRow(); }
-    } else this.setTab('pieces');
+      if (cat && cat[0] !== this.deco.cat) { this.deco.cat = cat[0]; this._buildDecoRow(); }
+    } else if (!TOOL_IDS.has(id)) this.setTab('pieces');     // un outil (sélection, inspecteur, gomme) garde l'onglet affiché
     this._refreshUI();
   }
 
@@ -436,14 +663,14 @@ export class EditorSession {
       this.app.ui.flash('Pot de peinture désactivé', 1.2);
       return;
     }
-    const f = toFill(this.tool);
+    const f = toFill(this.tool) || toFill(this._lastBrush || 'straight');     // depuis un autre outil : on remplit avec la dernière pièce choisie
     if (!f) { this.app.ui.flash('Pot de peinture : choisis d’abord une pièce ou un revêtement.'); this.app.audio.error(); return; }
     this.setTool(f);
     this.app.ui.flash('Pot de peinture : clique une pièce pour remplir sa zone', 1.8);
   }
 
   cyclePiece(d) {
-    const ids = PALETTE_ORDER.map((p) => p.id).filter((id) => id !== 'erase');
+    const ids = PALETTE_ORDER.map((p) => p.id);
     const i = ids.indexOf(fillBase(this.tool));
     this.setTool(ids[(i + d + ids.length) % ids.length] || 'straight');
   }
@@ -483,7 +710,7 @@ export class EditorSession {
     r.value = this._surfParamValue(s);
     r.style.accentColor = tint(s, +r.value);
     document.getElementById('ed-param-label').textContent = S.param || 'Intensité';
-    document.getElementById('ed-param-val').textContent = s === 'wind' ? (+r.value === 100 ? 'nul' : (+r.value > 100 ? '→ ' : '← ') + Math.abs(+r.value - 100) + ' %') : `${r.value} %`;
+    document.getElementById('ed-param-val').textContent = paramText(s, +r.value);      // unités réelles : km/h, m/s², m, s (sinon %)
     this.previewKey = '';
   }
 
@@ -502,41 +729,62 @@ export class EditorSession {
     if (phw) phw.style.display = isObstacle(k) ? '' : 'none';
     const phv = document.getElementById('ed-deco-ph-val');
     if (phv) phv.textContent = Math.round(this.deco.ph * 100) + ' %';
+    const dyr = document.getElementById('ed-deco-dy'), dyv = document.getElementById('ed-deco-dy-val');
+    if (dyr && document.activeElement !== dyr) dyr.value = this.deco.dy || 0;
+    if (dyv) dyv.textContent = `${(this.deco.dy || 0) >= 0 ? '+' : ''}${(this.deco.dy || 0).toFixed(1)} m`;
   }
 
   _refreshUI() {
     this._refreshSelBar();
-    document.querySelectorAll('#ed-palette .piece-btn').forEach((b) => b.classList.toggle('on', b.dataset.piece === fillBase(this.tool)));
-    const fb = document.getElementById('ed-fill');
-    if (fb) fb.classList.toggle('on', isFill(this.tool));
+    document.querySelectorAll('#ed-palette .piece-btn:not(.fam-main)').forEach((b) => b.classList.toggle('on', b.dataset.piece === fillBase(this.tool)));
+    this._syncFamilies();
+    this._syncOptions();
+    // Grille d'outils : l'outil actif (le pot de peinture reste actif en gardant la pièce / le revêtement choisi).
+    document.querySelectorAll('#ed-tools .tool-btn').forEach((b) => {
+      const on = b.dataset.tool === 'fill' ? isFill(this.tool) : b.dataset.tool === this.tool;
+      b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+    });
     document.getElementById('ed-level').textContent = `Niv. ${this.level}`;
-    const t = this.track;
-    const cps = t.count('checkpoint');
-    const errs = t.validate();
-    const isPiece = !!PIECES[this.tool];
     if (this.eraseBar) {
       this.eraseBar.classList.toggle('hidden', this.tool !== 'erase');
       this.eraseBar.querySelectorAll('[data-ef]').forEach((b) => b.classList.toggle('on', b.dataset.ef === this.eraseFilter));
     }
-    const detail = isPiece ? ` · ${this.rot * 90}°` : isFill(this.tool) ? ' · clic sur une pièce : remplit sa zone' : this.tool === 'inspect' ? ' · clic sur une pièce ou une décoration' : this.tool === 'erase' ? ` · ${ERASE_FILTERS[this.eraseFilter].label}` : this.tool.startsWith('surf:') || this.tool.startsWith('mod:') ? ' · clic sur une pièce' : ` · ${(this.deco.rot * 180 / Math.PI).toFixed(0)}°`;
-    const ver = t.verified ? `<span class="ok">✔ Vérifié ${formatTime(t.vt)}</span>` : '<span class="warn">Non vérifié</span> (« ✔ Vérifier » avant de publier)';
-    const top = document.querySelector('#editor .ed-top');
-    if (top) document.getElementById('editor').style.setProperty('--ed-top-h', top.offsetHeight + 'px');
-    document.getElementById('ed-status').innerHTML =
-      `<b>${pieceLabel(this.tool)}</b>${detail} · niveau ${this.level}<br>` +
-      `${t.tiles.length} pièce${t.tiles.length > 1 ? 's' : ''} · ${cps} checkpoint${cps > 1 ? 's' : ''} · ${t.decos.length} déco${t.decos.length > 1 ? 's' : ''}<br>${ver}` +
-      (errs.length ? `<br><span class="warn">⚠ ${errs.join(' ')}</span>` : '');
+    // Plus de bloc de statistiques en haut à gauche : seulement une pastille quand le circuit a un défaut.
+    const errs = this.track.validate();
+    const warn = document.getElementById('ed-warn');
+    if (warn) {
+      warn.classList.toggle('hidden', !errs.length);
+      warn.textContent = errs.length ? `⚠ ${errs.length}` : '';
+      warn.title = errs.join(' ');
+      warn.setAttribute('aria-label', errs.length ? `${errs.length} problème${errs.length > 1 ? 's' : ''} : ${errs.join(' ')}` : '');
+      warn.onclick = () => this.app.ui.flash(errs.join(' '), 4);
+    }
+    const root = document.getElementById('editor');
+    const top = document.querySelector('#editor .ed-top'), pal = document.getElementById('ed-palette');
+    if (top) root.style.setProperty('--ed-top-h', top.offsetHeight + 'px');
+    if (pal) root.style.setProperty('--ed-pal-h', pal.offsetHeight + 'px');
     this._refreshParam();
     this._refreshDeco();
+  }
+
+  // ---- Menu hamburger (Nouveau, Importer, Partager, Enregistrer, Retour) ---------------------------------------------
+  get menuOpen() { const m = document.getElementById('ed-menu'); return !!m && !m.classList.contains('hidden'); }
+
+  toggleMenu(open = !this.menuOpen) {
+    const m = document.getElementById('ed-menu'), b = document.getElementById('ed-menu-btn');
+    if (!m || !b) return;
+    m.classList.toggle('hidden', !open);
+    b.setAttribute('aria-expanded', String(open));
+    if (open) { const first = m.querySelector('button'); if (first) first.focus({ preventScroll: true }); } else if (document.activeElement && m.contains(document.activeElement)) b.focus({ preventScroll: true });
   }
 
   // ---------------------------------------------------------------- Historique
   _snapshot() {
     return JSON.stringify({
-      t: this.track.tiles.map((t) => [t.t, t.x, t.z, t.l, t.r, t.s || '', t.p || 0, t.v, t.nb, t.tn, t.mv || 0]),
-      d: this.track.decos.map((o) => [o.k, o.x, o.y, o.z, o.ry, o.s, o.c, o.u, o.ph || 0]),
+      t: this.track.tiles.map((t) => [t.t, t.x, t.z, t.l, t.r, t.s || '', t.p || 0, t.v, t.nb, t.tn, t.mv || 0, t.cp || 0, t.th || 0, t.ms || 0, t.ma || 0, t.col || 0, t.s2 || '', t.p2 || 0, t.tb || 0]),
+      d: this.track.decos.map((o) => [o.k, o.x, o.y, o.z, o.ry, o.s, o.c, o.u, o.ph || 0, o.cc || '']),
       lp: this.track.laps || 1,
-      pr: { desc: this.track.desc, offroad: this.track.offroad, v0: this.track.v0, g0: this.track.g0, veh0: this.track.veh0, decor: this.track.decor },
+      pr: { desc: this.track.desc, offroad: this.track.offroad, v0: this.track.v0, g0: this.track.g0, veh0: this.track.veh0, inversionGraviteDepart: this.track.inversionGraviteDepart, decor: this.track.decor },
     });
   }
 
@@ -545,8 +793,8 @@ export class EditorSession {
     const { vt, vh } = this.track;
     this.track.clear();
     this.track.vt = vt; this.track.vh = vh;
-    for (const [t, x, z, l, r, s, p, v, nb, tn, mv] of data.t) this.track.add({ t, x, z, l, r, s, p, v, nb, tn, mv });
-    for (const [k, x, y, z, ry, sc, c, u, ph] of data.d) this.track.addDeco({ k, x, y, z, ry, s: sc, c, u, ph });
+    for (const [t, x, z, l, r, s, p, v, nb, tn, mv, cp, th, ms, ma, col, s2, p2, tb] of data.t) this.track.add({ t, x, z, l, r, s, p, v, nb, tn, mv, cp, th, ms, ma, col: col || null, s2, p2, tb });
+    for (const [k, x, y, z, ry, sc, c, u, ph, cc] of data.d) this.track.addDeco({ k, x, y, z, ry, s: sc, c, u, ph, cc });
     this.track.laps = data.lp || 1;
     if (data.pr) {
       this.track.setParams(data.pr);
@@ -602,7 +850,6 @@ export class EditorSession {
     this.track.clear();
     this.track.name = 'Mon circuit';
     this.track.add({ t: 'start', x: 0, z: 0, l: 0, r: 0 });
-    document.getElementById('ed-name').value = this.track.name;
     this.entryId = null;
     this.level = 0;
     this.target.set(CELL / 2, this.levelY(), CELL / 2);
@@ -620,7 +867,6 @@ export class EditorSession {
     this.track.laps = t.laps;
     this.track.setParams(t);
     this.track.vt = t.vt; this.track.vh = t.vh;
-    document.getElementById('ed-name').value = t.name;
     this._applyDecor();
     this.entryId = null;
     this.recenter();
@@ -663,6 +909,8 @@ export class EditorSession {
         this.dist = Math.max(25, Math.min(700, this.dist * Math.pow(1.0015, e.deltaY)));
       },
       ctx: (e) => e.preventDefault(),
+      keyup: (e) => { if (e.key === 'Shift') this._endShiftY(); },
+      blur: () => this._endShiftY(),
       key: (e) => {
         if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
         if (e.key === '?') { e.preventDefault(); this.app.editorHelp(); return; }
@@ -677,6 +925,16 @@ export class EditorSession {
         else if (k === 'a') { e.preventDefault(); this.selectAll(); }
       },
     };
+    this._h.outside = (e) => { if (this.menuOpen && !e.target.closest('.ed-menu-wrap')) this.toggleMenu(false); };
+    this._h.menuKey = (e) => {
+      if (!this.menuOpen || !e.target.closest || !e.target.closest('#ed-menu')) return;
+      const items = [...document.querySelectorAll('#ed-menu button')], i = items.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+      else if (e.key === 'Escape') { e.preventDefault(); this.toggleMenu(false); }
+    };
+    document.addEventListener('pointerdown', this._h.outside, true);
+    document.addEventListener('keydown', this._h.menuKey);
     el.addEventListener('pointerdown', this._h.down);
     window.addEventListener('pointermove', this._h.move);
     window.addEventListener('pointerup', this._h.up);
@@ -684,6 +942,8 @@ export class EditorSession {
     el.addEventListener('wheel', this._h.wheel, { passive: false });
     el.addEventListener('contextmenu', this._h.ctx);
     window.addEventListener('keydown', this._h.key);
+    window.addEventListener('keyup', this._h.keyup);
+    window.addEventListener('blur', this._h.blur);
   }
 
   _setNdc(e) {
@@ -711,6 +971,10 @@ export class EditorSession {
   _onMove(e) {
     const p = this.pointers.get(e.pointerId);
     if (e.target === this.app.renderer.domElement || p) this._setNdc(e);
+    // Phase 3 : Maj + mouvement de la souris = déplacement vertical (axe Y seul) de la pièce ou de la décoration ciblée.
+    const dyPx = this._ptrY == null ? 0 : e.clientY - this._ptrY;
+    this._ptrY = e.clientY;
+    if (e.shiftKey && (p || e.target === this.app.renderer.domElement) && this._shiftY(dyPx)) return;
     if (!p) return;
     const dx = e.clientX - p.x, dy = e.clientY - p.y;
     p.x = e.clientX; p.y = e.clientY;
@@ -775,6 +1039,62 @@ export class EditorSession {
     }
   }
 
+  // Mètres par pixel d'écran à la distance de l'objet (projection en perspective), corrigés de l'inclinaison de la caméra.
+  _metersPerPixel(pos) {
+    const cam = this.app.camera, r = this.app.renderer.domElement.getBoundingClientRect();
+    const d = Math.max(1, cam.position.distanceTo(pos));
+    return (2 * Math.tan((cam.fov * Math.PI) / 360) * d) / Math.max(1, r.height) / Math.max(0.3, Math.cos(this.pitch));
+  }
+
+  // Maj + souris. Renvoie true si le mouvement a été consommé (sinon la caméra / les outils gardent leurs gestes habituels).
+  //  - outil Inspecter : l'objet inspecté (ou, à défaut, celui sous le curseur) monte / descend. Pièce : par demi-niveaux ; décoration : libre.
+  //  - outil Décoration : règle le décalage vertical de la prochaine décoration posée.
+  _shiftY(dyPx) {
+    if (this.camLocked || this.inspector.dragging || this.menuOpen || !dyPx) return false;      // le survol du gizmo ne gêne pas : seul un geste de gizmo en cours est prioritaire
+    if (this.tool === 'inspect') {
+      const insp = this.inspector;
+      if (!insp.sel) {
+        const hit = this._pickTarget(LAYER_ALL);
+        if (!hit) return false;
+        insp.select(hit.kind, hit.obj);
+      }
+      const { kind, obj } = insp.sel;
+      const pos = kind === 'tile' ? new THREE.Vector3((obj.x + PIECES[obj.t].size / 2) * CELL, this.levelY(obj.l), (obj.z + PIECES[obj.t].size / 2) * CELL) : new THREE.Vector3(obj.x, obj.y, obj.z);
+      const dy = -dyPx * this._metersPerPixel(pos);
+      if (kind === 'deco') {
+        obj.y += dy;
+        this.track.version++;
+        this._changed();
+      } else {
+        this._yAcc = (this._yAcc || 0) + dy / LEVEL_H;
+        const step = Math.trunc(this._yAcc * 2) / 2;                      // les pièces montent par demi-niveaux
+        if (step) {
+          const l = Math.max(0, Math.min(MAX_LEVEL, obj.l + step));
+          this._yAcc -= step;
+          if (l !== obj.l) {
+            if (this._applyTilePatch(obj, { l })) { this.level = l; this._changed(); }
+            else { this._yAcc = 0; if (!this._yWarn) { this._yWarn = true; this.app.ui.flash('Place occupée à cette hauteur'); } }
+          }
+        }
+      }
+      this._shiftYDirty = true;
+      return true;
+    }
+    if (this.tool.startsWith('deco:')) {
+      this.deco.dy = Math.max(-60, Math.min(300, (this.deco.dy || 0) - dyPx * this._metersPerPixel(this.target) * 0.5));
+      this.previewKey = '';
+      this._refreshDeco();
+      return true;
+    }
+    return false;
+  }
+
+  // Maj relâchée : un seul pas d'historique pour tout le geste.
+  _endShiftY() {
+    this._yAcc = 0; this._yWarn = false; this._ptrY = null;
+    if (this._shiftYDirty) { this._shiftYDirty = false; this._commit(); }
+  }
+
   _pan(dx, dy) {
     const k = this.dist * 0.0018;
     const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
@@ -795,13 +1115,32 @@ export class EditorSession {
     return tiles.reduce((a, b) => (b.l > a.l ? b : a));
   }
 
+  // Phase 3 : la pièce EXACTE sur laquelle pointe le curseur (rayon Three.js), quelle que soit la hauteur de pose choisie. Sert aux
+  // revêtements, aux options, au pot de peinture et à la pipette. Sans rayon exploitable (ou rien de touché), on retombe sur la case
+  // visée au niveau courant, comme avant.
+  _targetTile() {
+    if (this.ndc && this.raycaster && Math.abs(this.ndc.x) <= 1 && Math.abs(this.ndc.y) <= 1 && this.app && this.app.camera) {
+      this.raycaster.setFromCamera(this.ndc, this.app.camera);
+      const hit = pickTileExact(this.track, this.raycaster.ray);
+      if (hit) return hit.obj;
+    }
+    return this._hoverTile();
+  }
+
   _candidate() {
     if (!this.hover || !PIECES[this.tool]) return null;
     const p = PIECES[this.tool];
     const sz = p.size;
     const ax = sz % 2 === 0 ? Math.round(this.hover.x / CELL - sz / 2) : this.hover.cx - (sz - 1) / 2;
     const az = sz % 2 === 0 ? Math.round(this.hover.z / CELL - sz / 2) : this.hover.cz - (sz - 1) / 2;
-    return { t: this.tool, x: ax, z: az, l: this.level, r: this.rot, s: '' };
+    const tile = { t: this.tool, x: ax, z: az, l: this.level, r: this.rot, s: '' };
+    for (const k of OPT_KEYS) if (this.opts[k]) tile[k] = this.opts[k];      // pièce + options choisies ensemble
+    return tile;
+  }
+
+  // Options armées que la pièce `norm` (déjà normalisée) n'a pas pu garder (ex. tunnel sur un looping).
+  _droppedOptions(cand, norm) {
+    return OPT_KEYS.filter((k) => cand[k] && norm[k] !== cand[k]);
   }
 
   _act(painting = false) {
@@ -817,13 +1156,16 @@ export class EditorSession {
     if (painting && key === this._lastPaint) return;
     this._lastPaint = key;
     if (!Track.inBounds(Track.normalize(tile))) { if (!painting) { this.app.ui.flash('Cette pièce sortirait des niveaux (à l’envers, elle pend sous son niveau : monte d’abord).'); this.app.audio.error(); } return; }
+    const norm = Track.normalize(tile);
     const conflicts = this.track.conflicts(tile);
     if (conflicts.length === 1) {
       const c = conflicts[0];
-      if (c.t === tile.t && c.x === tile.x && c.z === tile.z && c.l === tile.l && c.r === tile.r) return;
+      if (c.t === tile.t && c.x === tile.x && c.z === tile.z && c.l === tile.l && c.r === tile.r && OPT_KEYS.every((k) => (c[k] | 0) === (norm[k] | 0))) return;
     }
     for (const c of conflicts) this.track.remove(c);
     if (tile.t === 'start') for (const s of this.track.tiles.filter((x) => x.t === 'start')) this.track.remove(s);
+    const dropped = this._droppedOptions(tile, norm);
+    if (dropped.length && !painting) this.app.ui.flash(`Option ignorée sur « ${PIECES[tile.t].label} » : ${dropped.map((k) => OPT_NAMES[k]).join(', ')}`, 2.4);
     const added = this.track.add(tile);
     this.app.audio.place();
     this._prepareAutoLevel(added);
@@ -835,6 +1177,13 @@ export class EditorSession {
   _prepareAutoLevel(tile) {
     const p = PIECES[tile.t];
     if (!p.rise) { this.autoLevel = null; return; }
+    if (p.kind === 'arc') {
+      // Courbe montante (1 case) : l'entrée est derrière la pièce, la sortie sur son côté (droite, ou gauche pour la version ↰).
+      if (p.size !== 1) { this.autoLevel = null; return; }
+      const [bx, bz] = DIRS[tile.r], [ex, ez] = DIRS[(tile.r + (p.mirror < 0 ? 3 : 1)) & 3];
+      this.autoLevel = new Map([[`${tile.x + ex},${tile.z + ez}`, tile.l + p.rise], [`${tile.x - bx},${tile.z - bz}`, tile.l]]);
+      return;
+    }
     const [dx, dz] = DIRS[tile.r];
     this.autoLevel = new Map([
       [`${tile.x + dx},${tile.z + dz}`, tile.l + p.rise],
@@ -843,7 +1192,7 @@ export class EditorSession {
   }
 
   _paintSurface(painting) {
-    const t = this._hoverTile();
+    const t = this._targetTile();
     if (!t) return;
     const s = this.tool.slice(5);
     if (!surfaceAllowed(t.t, s, !!t.v)) {
@@ -869,7 +1218,7 @@ export class EditorSession {
   // ('fill-surf:') ou le type de pièce ('fill-piece:'). Zone = pièces voisines (côtés partagés,
   // écart de niveau <= FILL_MAX_DL) qui satisfont le même prédicat que la cible.
   _floodFill() {
-    const start = this._hoverTile();
+    const start = this._targetTile();
     if (!start) return;
     const why = this._fillRefusal(start);
     if (why) { this.app.ui.flash(why); this.app.audio.error(); return; }
@@ -925,15 +1274,38 @@ export class EditorSession {
     return true;
   }
 
+  // Change une caractéristique de famille : la pièce reste « en place » même si son empreinte change (looping 1 → 3 boucles).
+  _retypeFamily(tile, type) {
+    const cand = retypePlacement(this.track, tile, type);
+    if (!cand) return false;
+    this.track.remove(tile);
+    Object.assign(tile, cand);                                        // même objet : la sélection de l'Inspecteur reste valide
+    this.track._insert(tile);
+    return true;
+  }
+
+  // Ancienne pièce « Checkpoint » → route normale + option checkpoint (même position, mêmes niveaux réservés).
+  _legacyToOption(tile) {
+    const conv = LEGACY_CP[tile.t];
+    if (!conv) return false;
+    const cand = Track.normalize({ ...tile, t: conv[0], cp: conv[1] });
+    if (cand.cp !== conv[1] || !Track.inBounds(cand)) return false;
+    this.track.remove(tile);
+    if (this.track.conflicts(cand).length) { this.track._insert(tile); return false; }
+    Object.assign(tile, cand);
+    this.track._insert(tile);
+    return true;
+  }
+
   _toggleMod(painting) {
-    const t = this._hoverTile();
+    const t = this._targetTile();
     if (!t) return;
     const key = `${t.x},${t.z},${t.l}`;
     if (painting && key === this._lastPaint) return;
     this._lastPaint = key;
     const mod = MODS.find((m) => m.id === this.tool), flag = mod.flag;
-    if (!flagAllowed(t.t, flag, t)) {
-      this.app.ui.flash(`${pieceLabel(this.tool)} : impossible sur « ${PIECES[t.t].label} »`);
+    if (!flagAllowed(t.t, flag, t, mod.val || 1)) {
+      this.app.ui.flash(`${pieceLabel(this.tool)} : impossible sur « ${PIECES[t.t].label} »${flag === 'cp' && (t.mv || t.tn) ? ' (retire d’abord ' + (t.mv ? 'le mouvement' : 'le tunnel') + ')' : flag === 'mv' && t.cp ? ' (retire d’abord le checkpoint)' : ''}`);
       this.app.audio.error();
       return;
     }
@@ -942,6 +1314,7 @@ export class EditorSession {
       this._changed();
       if (!painting) this._commit();
     } else if (flag === 'tn') this.app.ui.flash('Tunnel impossible sur une route à l\'envers');
+    else if (flag === 'cp') { this.app.ui.flash('Pas la place pour le checkpoint (niveaux au-dessus occupés)'); this.app.audio.error(); }
     else if (flag === 'mv') { this.app.ui.flash('Pas la place pour ce mouvement (case voisine ou niveaux au-dessus occupés)'); this.app.audio.error(); }
   }
 
@@ -952,11 +1325,24 @@ export class EditorSession {
     return [Math.round((x - o) / s) * s + o, Math.round((z - o) / s) * s + o];
   }
 
+  // Point de pose libre sous le curseur : le rayon de la souris contre la route ou le sol (Phase 3 : plus de grille ni de niveau
+  // imposé, les coordonnées sont flottantes). null si le rayon ne rencontre rien.
+  _surfaceHit() {
+    if (!this.ndc || !this.raycaster || Math.abs(this.ndc.x) > 1 || Math.abs(this.ndc.y) > 1) return null;
+    this.raycaster.setFromCamera(this.ndc, this.app.camera);
+    return rayToSurface(this.track, this.raycaster.ray);
+  }
+
   _decoAt() {
-    if (!this.hover) return null;
     const kind = this.tool.slice(5);
-    const [x, z] = this._snapPos(this.hover.x, this.hover.z);
-    return { k: kind, x, y: this.levelY(), z, ry: this.deco.rot, s: this.deco.scale, c: this.deco.color, u: kind === 'plaque' ? this.deco.url : '', ph: isObstacle(kind) ? this.deco.ph : 0 };
+    let x, y, z;
+    const hit = this._surfaceHit();
+    if (hit) { x = hit.x; y = hit.y; z = hit.z; }
+    else if (this.hover) { x = this.hover.x; y = this.levelY(); z = this.hover.z; }
+    else return null;
+    [x, z] = this._snapPos(x, z);                           // « Libre » par défaut ; l'accrochage reste facultatif
+    y += this.deco.dy || 0;                                   // décalage vertical réglé avec Maj + souris
+    return { k: kind, x, y, z, ry: this.deco.rot, s: this.deco.scale, c: this.deco.color, u: kind === 'plaque' ? this.deco.url : '', ph: isObstacle(kind) ? this.deco.ph : 0 };
   }
 
   _placeDeco() {
@@ -1074,10 +1460,11 @@ export class EditorSession {
         return;
       }
     }
-    const t = this._hoverTile();
+    const t = this._targetTile();
     if (!t) return;
     this.fillMode = false;
     this.tool = t.t; this.rot = t.r; this.level = t.l;
+    for (const k of OPT_KEYS) this.opts[k] = t[k] | 0;                  // la pipette reprend aussi les options de la pièce
     this.autoLevel = null;
     this.previewKey = '';
     this.setTab('pieces');
@@ -1124,16 +1511,15 @@ export class EditorSession {
       }).join('');
       return `<tr><td style="white-space:nowrap">${SURFACES[s].label}</td>${cells}</tr>`;
     }).join('');
-    const body = `<p>Tous les revêtements se posent sur toutes les routes, avec les mêmes effets partout (pas d'aide cachée dans les loopings ou au plafond). Seules exceptions : l'eau, le rebond et la plaque bateau demandent du plat ; l'eau ne va pas sur une pièce spéciale ; un anneau n'a pas de route.</p>
+    const body = `<p>Tous les revêtements se posent sur toutes les routes, avec les mêmes effets partout (pas d'aide cachée dans les loopings ou au plafond). Seules exceptions : l'eau, le rebond et la plaque bateau demandent du plat ; l'eau va aussi sur le Départ (la plaque bateau est posée sur l'eau) mais pas sur l'Arrivée ni sur une bifurcation ; un anneau n'a pas de route.</p>
       <div style="overflow:auto;max-height:52vh"><table style="border-collapse:collapse;font-size:13px;width:100%">
       <tr><th></th>${cols.map(([l]) => `<th style="font-weight:600;padding:2px 4px;font-size:11px">${l}</th>`).join('')}</tr>${rows}</table></div>`;
     this.app.ui.modal({ title: 'Compatibilité des revêtements', body, actions: [{ label: 'OK', primary: true }] });
   }
 
   testHere() {
-    const t = this._hoverTile();
+    const t = this._targetTile();
     if (!t || ['ring', 'area'].includes(PIECES[t.t].kind)) { this.app.ui.flash('Vise une pièce de route pour tester à partir d\'elle.'); this.app.audio.error(); return; }
-    if (this.track.count('finish') === 0) { this.app.ui.flash('Il faut au moins une arrivée.'); this.app.audio.error(); return; }
     let pts = centerlineWorld(t, 6);
     // Sens de départ : celui qui s'éloigne de la pièce de départ du circuit.
     const st = this.track.startTile;
@@ -1144,12 +1530,13 @@ export class EditorSession {
     }
     const a = pts[0], b = pts[1];
     const yaw = Math.atan2(-(b[0] - a[0]), -(b[2] - a[2]));
-    const gs = t.v && PIECES[t.t].kind !== 'ribbon' && PIECES[t.t].kind !== 'loop' ? -1 : 1;
+    const gs = (t.v && PIECES[t.t].kind !== 'ribbon' && PIECES[t.t].kind !== 'loop') || this.track.inversionGraviteDepart ? -1 : 1;
     this.app.testTrack(this.exportState(), { x: a[0] + (b[0] - a[0]) * 0.5, y: a[1], z: a[2] + (b[2] - a[2]) * 0.5, yaw, gs });
   }
 
+  // Phase 3 : un simple essai ne demande plus d'arrivée (on roule librement) ; la vérification, elle, en exige une.
   test(verify = false) {
-    const errs = this.track.validate();
+    const errs = this.track.validate({ test: !verify });
     if (errs.length) {
       this.app.ui.flash(errs.join(' '));
       this.app.audio.error();
@@ -1168,39 +1555,35 @@ export class EditorSession {
     f.className = 'form ed-params';
     const veh = { car: 'Voiture', moto: 'Moto', boat: 'Bateau', glider: 'Deltaplane' };
     f.innerHTML = `
-      <label>Nom<input type="text" id="pp-name" maxlength="40"></label>
-      <label class="col">Description<textarea id="pp-desc" maxlength="200" rows="3" placeholder="Ce qui rend ton circuit unique (200 caractères au plus)"></textarea></label>
       <label>Décor<select id="pp-decor">${Object.entries(DECORS).map(([id, d]) => `<option value="${id}">${d.label}</option>`).join('')}</select></label>
       <label title="Circuit fermé : l'arrivée est franchie à chaque tour">Tours<select id="pp-laps">${Array.from({ length: 9 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}</select></label>
       <label title="Rouler sur le terrain ne renvoie plus au checkpoint (il reste lent)">Hors piste autorisé<input type="checkbox" id="pp-off"></label>
       <label>Vitesse de départ<span class="inl"><input type="range" id="pp-v0" min="0" max="300" step="10"><b id="pp-v0v"></b></span></label>
       <label>Gravité de départ<span class="inl"><input type="range" id="pp-g0" min="15" max="250" step="5"><b id="pp-g0v"></b></span></label>
       <label>Véhicule de départ<select id="pp-veh">${Object.entries(veh).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
-      <p class="meta">Le nom et la description se changent librement (même après publication). Le reste modifie la course : il faudra la re-vérifier.</p>`;
+      <label title="La course commence en gravité inversée : la voiture est plaquée au plafond (départ posé sur une pièce à l'envers)">Inversion de gravité au départ<input type="checkbox" id="pp-ig"></label>
+      <p class="meta">Le nom et la description du circuit se choisissent au moment de la publication. Ces réglages modifient la course : il faudra la re-vérifier.</p>`;
     const $f = (id) => f.querySelector('#' + id);
-    $f('pp-name').value = T.name;
-    $f('pp-desc').value = T.desc || '';
     $f('pp-decor').value = T.decor;
     $f('pp-laps').value = String(T.laps || 1);
     $f('pp-off').checked = !!T.offroad;
     $f('pp-v0').value = T.v0 || 0;
     $f('pp-g0').value = T.g0 || 100;
     $f('pp-veh').value = T.veh0 || 'car';
+    $f('pp-ig').checked = !!T.inversionGraviteDepart;
     const show = () => {
       $f('pp-v0v').textContent = +$f('pp-v0').value ? `${$f('pp-v0').value} km/h` : 'arrêt';
-      $f('pp-g0v').textContent = `${$f('pp-g0').value} %`;
+      $f('pp-g0v').textContent = `${$f('pp-g0').value} % · ${(SURF_PHYS.gravity * $f('pp-g0').value / 100).toFixed(1).replace('.', ',')} m/s²`;
     };
     $f('pp-v0').oninput = show; $f('pp-g0').oninput = show; show();
     this.app.ui.modal({
       title: 'Paramètres du niveau',
       body: f,
       actions: [{ label: 'Annuler' }, { label: 'Appliquer', primary: true, onClick: () => {
-        T.name = $f('pp-name').value.trim().slice(0, 40) || 'Sans titre';
-        document.getElementById('ed-name').value = T.name;
         const laps = +$f('pp-laps').value;
         if (laps > 1 && (T.laps || 1) === 1) this.app.ui.flash('Plusieurs tours : l\'arrivée doit être juste avant le départ (circuit fermé).', 3);
         T.laps = laps;
-        T.setParams({ desc: $f('pp-desc').value, offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value });
+        T.setParams({ offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value, inversionGraviteDepart: $f('pp-ig').checked });
         if ($f('pp-decor').value !== T.decor) { T.decor = $f('pp-decor').value; this._applyDecor(); this.gridKey = ''; }
         this._changed(false);
         this._commit();
@@ -1285,6 +1668,21 @@ export class EditorSession {
     if (this.tool === 'select') { this._updatePastePreview(); return; }
     const cand = this._candidate();
     this.highlight.visible = false;
+    if (this.tool.startsWith('deco:')) {
+      // Décoration : posée là où le rayon touche la route ou le sol, à n'importe quelle altitude (pas de case, pas de niveau).
+      this.marker.visible = false;
+      this.footprint.visible = false;
+      const d = this._decoAt();
+      if (!d) { this.preview.visible = false; return; }
+      const key = `D${d.k},${d.x.toFixed(1)},${d.z.toFixed(1)},${d.y.toFixed(2)},${d.ry},${d.s},${d.c},${d.u}`;
+      if (key !== this.previewKey) {
+        this.previewKey = key;
+        this._clearPreview();
+        this.preview.add(buildDecoMesh(d, this.previewMat, this.previewGlow));
+      }
+      this.preview.visible = true;
+      return;
+    }
     if (!this.hover) {
       this.preview.visible = false;
       this.marker.visible = false;
@@ -1299,18 +1697,6 @@ export class EditorSession {
     this.footprint.position.set((this.hover.cx + 0.5) * CELL, 0.06, (this.hover.cz + 0.5) * CELL);
     this.footprint.scale.set(CELL, 1, CELL);
 
-    if (this.tool.startsWith('deco:')) {
-      const d = this._decoAt();
-      const key = `D${d.k},${d.x.toFixed(1)},${d.z.toFixed(1)},${d.y},${d.ry},${d.s},${d.c},${d.u}`;
-      if (key !== this.previewKey) {
-        this.previewKey = key;
-        this._clearPreview();
-        this.preview.add(buildDecoMesh(d, this.previewMat, this.previewGlow));
-      }
-      this.preview.visible = true;
-      this.footprint.visible = false;
-      return;
-    }
     if (!cand) {
       this.preview.visible = false;
       if (this.tool === 'erase' || this.tool === 'inspect') {
@@ -1320,7 +1706,7 @@ export class EditorSession {
         if (hit) this._highlightHit(hit, erase ? '#ff3b5c' : '#5ff2ff');
         return;
       }
-      const t = this._hoverTile();
+      const t = this._targetTile();
       if (t) {
         if (isFill(this.tool)) {
           this._highlightTile(t, this._fillRefusal(t) ? '#ff3b5c' : '#ffb347');
@@ -1329,18 +1715,19 @@ export class EditorSession {
           this._highlightTile(t, surfaceAllowed(t.t, s, !!t.v) ? (s ? tint(s, this._surfParamValue(s)) : '#ffffff') : '#ff3b5c');
         } else {
           const m = MODS.find((x) => x.id === this.tool);
-          this._highlightTile(t, m && flagAllowed(t.t, m.flag, t) ? '#8f7cff' : '#ff3b5c');
+          this._highlightTile(t, m && flagAllowed(t.t, m.flag, t, m.val || 1) ? '#8f7cff' : '#ff3b5c');
         }
       }
       return;
     }
-    const key = `${cand.t},${cand.x},${cand.z},${cand.l},${cand.r},${this.track.version}`;
+    const key = `${cand.t},${cand.x},${cand.z},${cand.l},${cand.r},${OPT_KEYS.map((k) => cand[k] | 0).join('')},${this.track.version}`;
     if (key === this.previewKey) return;
     this.previewKey = key;
     this._clearPreview();
     const conflicts = this.track.conflicts(cand);
     if (!Track.inBounds(Track.normalize(cand))) conflicts.push(null);
-    const same = conflicts.length === 1 && conflicts[0] && ['t', 'x', 'z', 'l', 'r'].every((k) => conflicts[0][k] === cand[k]);
+    const nc = Track.normalize(cand);
+    const same = conflicts.length === 1 && conflicts[0] && ['t', 'x', 'z', 'l', 'r'].every((k) => conflicts[0][k] === cand[k]) && OPT_KEYS.every((k) => (conflicts[0][k] | 0) === (nc[k] | 0));
     this.previewMat.emissive.set(conflicts.length && !same ? '#ff2244' : '#000000');
     this.previewMat.emissiveIntensity = 0.45;
     this.preview.add(buildTileMesh(Track.normalize(cand), this.previewMat, this.previewGlow));
@@ -1350,6 +1737,7 @@ export class EditorSession {
   update(dt) {
     const input = this.app.input;
     if (this.app.ui.modalOpen) return this._render(dt);
+    if (input.hit('Escape') && this.menuOpen) { this.toggleMenu(false); return this._render(dt); }
     if ((input.hit('Escape') || input.padEdges.delete('pause')) && this.inspector.active) { this.inspector.clear(); return this._render(dt); }
     if ((input.hit('Escape') || input.padEdges.delete('pause')) && (this.pasting || this.sel)) { this.clearSel(); return this._render(dt); }
     if (input.hit('Escape') || input.padEdges.delete('pause')) { this.app.leaveEditor(); return; }
@@ -1379,7 +1767,7 @@ export class EditorSession {
     if (input.act('ed.grid')) { this.showGrid = !this.showGrid; this.app.ui.flash(this.showGrid ? 'Grille affichée' : 'Grille masquée', 1.2); }
     if (input.act('ed.help')) { this.app.editorHelp(); return; }
     if (input.act('ed.test')) { if (shift) this.testHere(); else this.test(); return; }
-    for (const p of PALETTE_ORDER) if (p.key && input.hit(p.key)) this.setTool(p.id);
+    for (const p of [...PALETTE_ORDER, ...TOOLS]) if (p.key && p.id !== 'fill' && input.hit(p.key)) this.setTool(p.id);
 
     // Déplacement avec les touches de conduite
     if (!input.down('ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight')) {
@@ -1643,6 +2031,11 @@ export class EditorSession {
     el.removeEventListener('wheel', this._h.wheel);
     el.removeEventListener('contextmenu', this._h.ctx);
     window.removeEventListener('keydown', this._h.key);
+    window.removeEventListener('keyup', this._h.keyup);
+    window.removeEventListener('blur', this._h.blur);
+    document.removeEventListener('pointerdown', this._h.outside, true);
+    document.removeEventListener('keydown', this._h.menuKey);
+    this.toggleMenu(false);
     clearTimeout(this._draftT);
     setEditorDraft(this.exportState());
     this.inspector.dispose();
