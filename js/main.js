@@ -16,7 +16,8 @@ import { Track, hashString, DECORS } from './track.js';
 import { PIECES } from './pieces.js';
 import { VERSION } from './constants.js';
 import { thumbnail } from './editorTools.js';
-import { online } from './online.js';\nimport { account } from './account.js';
+import { online } from './online.js';
+import { account } from './account.js';
 import { PHYS_VER as PV } from './replay.js';
 import { encodeGhost, decodeGhost, PHYS_VER } from './replay.js';
 import { dailyChallenge, dayKey } from './daily.js';
@@ -1014,9 +1015,40 @@ class App {
     document.querySelectorAll('#bind-tabs .tab').forEach((t) => t.addEventListener('click', () => { this.audio.click(); this._renderControls(t.dataset.tab); }));
   }
 
+  async _accountAction(action) {
+    const name = (action === 'guest-enter' ? $('guest-name').value : $('account-name').value).trim();
+    const pass = $('account-password').value;
+    const status = $('account-status');
+    const say = (msg, bad = false) => { status.textContent = msg; status.classList.toggle('error', bad); };
+    try {
+      if (action === 'guest-enter') {
+        if (!/^[A-Za-z0-9_]{3,20}$/.test(name)) throw new Error('Le pseudo invité doit faire 3 à 20 caractères (lettres, chiffres ou _).');
+        this.settings.playerName = name; this.saveSettings(); this.showMenu('menu');
+        if (!this.settings.tutorialDone) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
+        return;
+      }
+      if (action === 'guest-restore') {
+        const code = $('guest-code').value.trim();
+        if (!code) throw new Error('Colle d’abord ta clé de récupération.');
+        await account.restoreGuest(code);
+        this.settings = loadSettings(); this.input.setBindings(this.settings.keys, this.settings.pad);
+        say('Sauvegarde invitée restaurée sur cet appareil.'); return;
+      }
+      if (action === 'guest-recovery') {
+        const code = await account.guestRecovery();
+        this.ui.modal({ title: 'Clé de récupération invité', body: `<p>Conserve cette clé : elle contient ta sauvegarde locale. Toute personne qui la possède peut la restaurer.</p><textarea class="code" readonly rows="5">${esc(code)}</textarea>`, actions: [{label:'Copier',primary:true,onClick:()=>{navigator.clipboard?.writeText(code);this.ui.flash('Clé copiée');return false;}},{label:'Fermer'}] });
+        return;
+      }
+      if (action === 'account-signup') await account.signUp(name, pass); else await account.signIn(name, pass);
+      this.settings.playerName = account.username; this.saveSettings();
+      say('Compte connecté. Sauvegarde synchronisée.'); this.showMenu('menu');
+    } catch (e) { say(e.message || 'Connexion impossible.', true); }
+  }
+
   _action(a) {
     const s = this.session;
     switch (a) {
+      case 'account-login': case 'account-signup': case 'guest-enter': case 'guest-recovery': case 'guest-restore': this._accountAction(a); break;
       case 'play': this.showScreen('tracks'); break;
       case 'daily': this.playDaily(); break;
       case 'community': this.showScreen('community'); break;
@@ -1335,9 +1367,10 @@ class App {
   // ------------------------------------------------------------ Boucle
   start() {
     const hash = location.hash;
-    this.showMenu('menu');
-    // Premier lancement : petit tutoriel (sauf si on arrive par un lien de circuit).
-    if (!this.settings.tutorialDone && !hash.startsWith('#t=')) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
+    $('guest-name').value = this.settings.playerName !== 'Pilote' ? this.settings.playerName : '';
+    $('account-name').value = account.username || '';
+    this.showMenu('account');
+    // Le joueur choisit un compte ou un pseudo invité avant d'accéder au menu.
     if (hash.startsWith('#t=')) {
       try {
         const track = Track.decode(hash);
