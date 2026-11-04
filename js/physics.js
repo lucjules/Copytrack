@@ -689,7 +689,29 @@ export class CarPhysics {
     const t = (this.clock || 0) * DT;
     const p = this.pos, v = this.vel, n0 = this.n;
     const cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
-    for (const d of obs) {
+    // Index spatial paresseux : éviter de parcourir tous les obstacles à chaque pas
+    // physique sur les circuits chargés. La course garde une liste d'obstacles stable.
+    if (this._obstacleGridSource !== obs) {
+      const grid = new Map(), cell = 20;
+      for (const d of obs) {
+        if (!d || !Number.isFinite(d.x) || !Number.isFinite(d.z)) continue;
+        const key = `${Math.floor(d.x / cell)},${Math.floor(d.z / cell)}`;
+        let bucket = grid.get(key);
+        if (!bucket) grid.set(key, bucket = []);
+        bucket.push(d);
+      }
+      this._obstacleGridSource = obs;
+      this._obstacleGrid = grid;
+    }
+    const candidates = [], grid = this._obstacleGrid, cell = 20;
+    const gx = Math.floor(cx / cell), gz = Math.floor(cz / cell);
+    for (let ix = gx - 3; ix <= gx + 3; ix++) {
+      for (let iz = gz - 3; iz <= gz + 3; iz++) {
+        const bucket = grid.get(`${ix},${iz}`);
+        if (bucket) candidates.push(...bucket);
+      }
+    }
+    for (const d of candidates) {
       if (!d || !OBST[d.k] || !Number.isFinite(d.x) || !Number.isFinite(d.y) || !Number.isFinite(d.z) || !Number.isFinite(d.s || 1) || !Number.isFinite(d.ry || 0)) continue;
       if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) continue;
       const rr = obstacleRadius(d) + 3;
@@ -719,8 +741,18 @@ export class CarPhysics {
         const dx = OL.x - qx, dy = OL.y - qy, dz = OL.z - qz;
         const dd = Math.hypot(dx, dy, dz);
         if (dd >= rc) continue;
-        if (dd < 1e-6) { nx = OL.x >= OB.x ? 1 : -1; ny = 0; nz = 0; pen = Math.max(0.01, rc + def.hx - Math.abs(OL.x - OB.x)); }
-        else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = rc - dd; }
+        if (dd < 1e-6) {
+          // Centre de la voiture dans la boîte : choisir la face la plus proche,
+          // au lieu de toujours pousser sur X (source de coincements/jitter).
+          const ex = def.hx - Math.abs(OL.x - OB.x);
+          const ey0 = OL.y, ey1 = def.hy * 2 - OL.y;
+          const ez = def.hz - Math.abs(OL.z);
+          const face = Math.min(ex, ey0, ey1, ez);
+          if (face === ey0 || face === ey1) { nx = 0; ny = ey0 <= ey1 ? -1 : 1; nz = 0; }
+          else if (face === ez) { nx = 0; ny = 0; nz = OL.z >= 0 ? 1 : -1; }
+          else { nx = OL.x >= OB.x ? 1 : -1; ny = 0; nz = 0; }
+          pen = Math.max(0.01, rc + Math.max(0, face));
+        } else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = rc - dd; }
         ovx = OB.vx;
       } else if (def.type === 'bar') {
         const ca = Math.cos(OB.a), sa = Math.sin(OB.a);
