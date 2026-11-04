@@ -229,6 +229,7 @@ export class CarPhysics {
     this.beltX = 0; this.beltZ = 0; this.beltS = 0;
     this.plateLock = '';
     this.sinkT = 0;
+    this.hazardGrace = 0.8; // sécurité après respawn pour éviter les réapparitions en boucle
     const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3);
     if (this.gSign < 0) {
       this.n.x = 0; this.n.y = -1; this.n.z = 0;
@@ -364,6 +365,7 @@ export class CarPhysics {
     const dt = DT, p = this.pos, v = this.vel, ev = this.ev;
     this.track.time = (this.clock || 0) * dt;   // position des pièces mobiles
     ev.wall = 0; ev.land = 0; ev.boostHit = false; ev.bounce = false;
+    if (this.hazardGrace > 0) this.hazardGrace = Math.max(0, this.hazardGrace - dt);
     ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.moto = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false; ev.glass = false; ev.spring = false; ev.reverse = false; ev.cut = false; ev.spike = false; ev.shock = 0;
     this.prev.x = p.x; this.prev.y = p.y; this.prev.z = p.z;
     this.prevYaw = this.yaw;
@@ -526,10 +528,12 @@ export class CarPhysics {
 
     p.x += v.x * dt; p.y += v.y * dt; p.z += v.z * dt;
     this._rings();
+    if (this.ev.sink) return;
     if (this._tryEnterRibbon()) return;
     if (!this.grounded && this._tryLandRibbon()) return;
     this._walls();
     this._obstacles();
+    if (this.ev.sink) return; // fin immédiate du pas après un contact létal
     this._bounds();
 
     // Contact avec la chaussée.
@@ -553,7 +557,7 @@ export class CarPhysics {
       p.y = s.h;
       // Une nouvelle plaque peut agir (mais pas la même, si on retombe dessus).
       if ((this.plateLock === 'flip' || this.plateLock === 'spring') && s.tile !== this.lockTile) this.plateLock = '';
-      if (s.mod === 'glass' && -vn > CAR.glassImpact) { this.ev.glass = true; this.ev.sink = true; }
+      if (s.mod === 'glass' && -vn > CAR.glassImpact) { this.ev.glass = true; this.ev.sink = true; return; }
       if (vn < 0) {
         v.x -= s.nx * vn; v.y -= s.ny * vn; v.z -= s.nz * vn;
         ev.land = -vn;
@@ -680,11 +684,12 @@ export class CarPhysics {
   // par l'appelant avant chaque pas) : même mouvement en replay et après un retour (R).
   _obstacles() {
     const obs = this.track.obstacles;
-    if (!obs.length) return;
+    if (!obs.length || this.hazardGrace > 0) return;
     const t = (this.clock || 0) * DT;
     const p = this.pos, v = this.vel, n0 = this.n;
     const cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
     for (const d of obs) {
+      if (!d || !OBST[d.k] || !Number.isFinite(d.x) || !Number.isFinite(d.y) || !Number.isFinite(d.z) || !Number.isFinite(d.s || 1) || !Number.isFinite(d.ry || 0)) continue;
       if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) continue;
       const rr = obstacleRadius(d) + 3;
       if ((cx - d.x) ** 2 + (cz - d.z) ** 2 > rr * rr) continue;
@@ -702,8 +707,9 @@ export class CarPhysics {
       } else if (def.type === 'ball') {
         const dx = OL.x - OB.x, dy = OL.y - OB.y, dz = OL.z;
         const dd = Math.hypot(dx, dy, dz);
-        if (dd >= def.r + rc || dd < 1e-6) continue;
-        nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd;
+        if (dd >= def.r + rc) continue;
+        if (dd < 1e-6) { nx = 0; ny = 1; nz = 0; pen = def.r + rc; }
+        else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd; }
         ovx = OB.vx; ovy = OB.vy;
       } else if (def.type === 'box') {
         const qx = clamp(OL.x, OB.x - def.hx, OB.x + def.hx), qy = clamp(OL.y, 0, def.hy * 2), qz = clamp(OL.z, -def.hz, def.hz);
@@ -718,8 +724,9 @@ export class CarPhysics {
         const s = clamp(OL.x * ca + OL.z * sa, -def.len, def.len);
         const dx = OL.x - ca * s, dy = OL.y - def.y, dz = OL.z - sa * s;
         const dd = Math.hypot(dx, dy, dz);
-        if (dd >= def.r + rc || dd < 1e-6) continue;
-        nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd;
+        if (dd >= def.r + rc) continue;
+        if (dd < 1e-6) { nx = -sa; ny = 0; nz = ca; pen = def.r + rc; }
+        else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd; }
         ovx = -sa * s * OB.w; ovz = ca * s * OB.w;
       } else {
         // Bumper : poteau vertical qui renvoie fort.
