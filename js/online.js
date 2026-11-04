@@ -24,20 +24,52 @@ function explain(status, body) {
     return new OnlineError('Fonction serveur « submit-score » introuvable dans Supabase (elle doit être déployée sous ce nom exact).', 'no-function');
   }
   if (/Trop de publications/.test(msg)) return new OnlineError(msg, 'rate');
+  // Comptes (Supabase Auth)
+  const ec = (body && (body.error_code || body.code)) || '';
+  if (ec === 'user_already_exists' || /already registered|already been registered/i.test(msg)) return new OnlineError('Ce pseudo est déjà pris.', 'name-taken');
+  if (ec === 'invalid_credentials' || /Invalid login credentials/i.test(msg)) return new OnlineError('Pseudo ou mot de passe incorrect.', 'bad-credentials');
+  if (ec === 'weak_password') return new OnlineError('Mot de passe trop faible : au moins 8 caractères.', 'weak-password');
+  if (ec === 'email_address_invalid' || ec === 'validate_failed' || /email address.*invalid/i.test(msg)) return new OnlineError('Le serveur refuse les comptes pour l’instant (domaine technique des pseudos à configurer dans Supabase : voir supabase/COMPTES.md).', 'server-config');
+  if (ec === 'signup_disabled') return new OnlineError('Les inscriptions sont désactivées sur le serveur.', 'server-config');
+  if (ec === 'over_request_rate_limit' || ec === 'over_email_send_rate_limit' || status === 429) return new OnlineError('Trop d’essais : réessaie dans quelques minutes.', 'rate');
+  if (/Database error saving new user/i.test(msg)) return new OnlineError('Ce pseudo est déjà pris ou invalide.', 'name-taken');
+  if (/appartient à un compte/.test(msg)) return new OnlineError('Ce pseudo appartient à un compte : choisis-en un autre.', 'name-taken');
   if (status === 401 || status === 403) return new OnlineError('Accès refusé par le serveur.', 'denied');
   return new OnlineError(msg || `Erreur du serveur (${status}).`, 'http');
 }
 
 class OnlineClient {
   constructor() {
+    this.kind = 'guest';                 // 'guest' : session anonyme ; 'account' : session du compte (voir account.js)
     this.session = getJSON('online.session', null);
     this.player = getJSON('online.player', null);
+    this.onAccountSession = null;        // appelé quand la session du compte est renouvelée (pour la mémoriser)
     this._authP = null;
   }
+
+  // Passe en mode compte : la session est celle du compte, jamais une session anonyme de remplacement.
+  useAccount(session, username) {
+    this.kind = 'account';
+    this.session = session;
+    this.player = null;                  // le profil en ligne (table players) est créé au premier besoin : ensurePlayer
+  }
+
+  // Retour au mode invité (déconnexion) : une nouvelle session anonyme sera créée au premier besoin.
+  useGuest() {
+    this.kind = 'guest';
+    this.session = null;
+    this.player = null;
+    setJSON('online.session', null);
+    setJSON('online.player', null);
+  }
+
+  // Appel REST authentifié (utilisé par account.js).
+  rest(path, opts = {}) { return this._fetch(path, opts); }
 
   get uid() { return this.session && this.session.user && this.session.user.id; }
 
   _save() {
+    if (this.kind === 'account') { if (this.onAccountSession) this.onAccountSession(this.session); return; }
     setJSON('online.session', this.session);
     setJSON('online.player', this.player);
   }
@@ -69,6 +101,17 @@ class OnlineClient {
     if (!this._authP) {
       this._authP = (async () => {
         try {
+          if (this.kind === 'account') {
+            // Compte : on renouvelle SA session. Jamais de repli sur une session anonyme (ce serait un autre joueur).
+            try {
+              this.session = this._norm(await this._fetch('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: { refresh_token: s && s.refresh_token }, auth: false }));
+            } catch (e) {
+              if (e.code === 'offline') throw e;
+              throw new OnlineError('Session expirée : reconnecte-toi.', 'session-expired');
+            }
+            this._save();
+            return this.session;
+          }
           if (s && s.refresh_token) {
             try {
               this.session = this._norm(await this._fetch('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: { refresh_token: s.refresh_token }, auth: false }));
@@ -94,7 +137,10 @@ class OnlineClient {
   // Profil du pilote (pseudo). Créé ou mis à jour si le pseudo a changé.
   async ensurePlayer(name) {
     await this.ensureSession();
-    const clean = String(name || 'Pilote').trim().slice(0, 20) || 'Pilote';
+    // Compte : le pseudo du compte, toujours. Invité : son pseudo de session, jamais un nom par défaut.
+    const clean = String(this.kind === 'account' && this.player ? this.player.name : name || '').trim().slice(0, 20);
+    if (!clean) throw new OnlineError('Choisis d’abord un pseudo.', 'no-name');
+    if (/^(player|pilote)$/i.test(clean)) throw new OnlineError('« Player » et « Pilote » sont réservés : choisis ton propre pseudo.', 'no-name');
     if (this.player && this.player.id === this.uid && this.player.name === clean) return this.player;
     await this._fetch('/rest/v1/players', {
       method: 'POST', body: { id: this.uid, name: clean },

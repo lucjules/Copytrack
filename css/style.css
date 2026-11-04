@@ -916,3 +916,28 @@ body.touch kbd { display: none; }
 .ed-status { top: calc(var(--ed-top-h, 54px) + 10px); pointer-events: none; }
 .pal-fill { margin-left: auto; font: inherit; font-size: 13px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 4px 12px; cursor: pointer; }
 .pal-fill.on { color: #1a1206; background: #ffb347; border-color: #ffb347; }
+
+/* ---- Écran d'accueil (pseudo / compte) ---- */
+.welcome { position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center; padding: 16px; overflow: auto;
+  background: radial-gradient(ellipse at 50% 20%, rgba(60, 40, 120, 0.9), rgba(23, 15, 46, 0.98) 70%); }
+.welcome.hidden { display: none; }
+.welcome-card { width: min(440px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px 22px 20px; backdrop-filter: blur(6px); text-align: center; }
+.welcome-card .logo { font-size: 30px; margin-bottom: 4px; }
+.welcome-card h2 { margin: 6px 0 14px; font-size: 20px; }
+.wl-tabs { display: flex; gap: 4px; margin-bottom: 14px; background: rgba(0, 0, 0, 0.25); border-radius: 10px; padding: 4px; }
+.wl-tabs button { flex: 1; font: inherit; font-size: 14px; color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 8px 6px; cursor: pointer; }
+.wl-tabs button[aria-selected="true"] { color: var(--text); background: var(--panel-2); border-color: var(--line); }
+#wl-form { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+.wl-hint { margin: 0 0 2px; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+.wl-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.wl-field input { font: inherit; font-size: 16px; color: var(--text); background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.wl-field input:focus { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.wl-field[hidden], .wl-check[hidden] { display: none; }
+.wl-check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--muted); line-height: 1.35; }
+.wl-check input { margin-top: 3px; }
+.wl-error { min-height: 1.3em; margin: 0; color: var(--bad); font-size: 13.5px; }
+#wl-submit { margin-top: 2px; width: 100%; justify-content: center; }
+#wl-submit:disabled { opacity: 0.6; cursor: wait; }
+.prof-account { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: rgba(0, 0, 0, 0.18); }
+.prof-account .row { margin-top: 8px; }
+#opt-name.bad { outline: 2px solid var(--bad); }
