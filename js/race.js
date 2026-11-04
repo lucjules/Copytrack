@@ -825,7 +825,9 @@ export class RaceSession {
     // En gravité inversée, la caméra se retourne : le « haut » est vers le bas du monde.
     const gs = p.gSign;
     const gUp = gs > 0 ? UP : (this._downV || (this._downV = new THREE.Vector3(0, -1, 0)));
-    camUp.lerp(gUp, 1 - Math.exp(-dt * 4));
+    const flipRate = this._camGravitySign !== gs ? 18 : 4;
+    this._camGravitySign = gs;
+    camUp.lerp(gUp, 1 - Math.exp(-dt * flipRate));
     if (camUp.lengthSq() < 1e-3) camUp.copy(gUp);
     camUp.normalize();
     cam.up.copy(camUp);
