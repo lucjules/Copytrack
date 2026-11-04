@@ -19,6 +19,7 @@ import { thumbnail } from './editorTools.js';
 import { online } from './online.js';
 import { account, checkPseudo } from './account.js';
 import { runWelcome } from './welcome.js';
+import { Room, defaultSignaling, normalizeCode, ROOM_RE, MAX_PLAYERS } from './net/room.js';
 import { PHYS_VER as PV } from './replay.js';
 import { encodeGhost, decodeGhost, PHYS_VER } from './replay.js';
 import { dailyChallenge, dayKey } from './daily.js';
@@ -262,11 +263,143 @@ class App {
 
   quitRace() {
     const opts = this.session ? this.session.opts : {};
+    if (opts.multi) { this._leaveRaceToLobby(opts.multi.room); return; }
     if (opts.fromEditor) this.openEditor(this.editorState);
     else if (opts.builtinIndex != null || opts.daily) this.showMenu('tracks');
     else if (opts.userEntry) this.showMenu('mytracks');
     else if (opts.community) this.showMenu('community');
     else this.showMenu('menu');
+  }
+
+  // ------------------------------------------------------------ Multijoueur
+  // Salons : création / jonction par code. Supabase Realtime ne sert qu'à se trouver ; la course passe en WebRTC (net/).
+  _tokenFn() { return () => online.ensureSession().then((s) => s.access_token); }
+
+  _roomOpts() {
+    return { name: this.settings.playerName, makeSignaling: (o) => defaultSignaling(o, this._tokenFn()) };
+  }
+
+  multiMenu() {
+    if (this.room && !this.room.closed) { this.multiLobby(this.room); return; }
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `<p>Courez ensemble sur le même circuit : vous vous voyez en voitures fantômes (aucune collision), chacun garde son propre chrono.
+      Jusqu'à ${MAX_PLAYERS} joueurs. Une salle se rejoint avec un code de 6 caractères.</p>
+      <label class="mp-join"><span>Rejoindre une salle</span><input id="mp-code" maxlength="8" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <p class="mp-err" id="mp-err" role="alert"></p>`;
+    const err = (m) => { wrap.querySelector('#mp-err').textContent = m || ''; };
+    const busy = (b) => document.querySelectorAll('#modal-actions button').forEach((x) => { x.disabled = b; });
+    const go = async (fn) => {
+      err(''); busy(true);
+      try { const room = await fn(); this.room = room; this._bindRoom(room); this.ui.closeModal(); this.multiLobby(room); }
+      catch (e) { err(e.message || 'Impossible de se connecter.'); busy(false); }
+    };
+    this.ui.modal({
+      title: 'Multijoueur', body: wrap,
+      actions: [
+        { label: 'Créer une salle', primary: true, onClick: () => { go(() => Room.create(this._roomOpts())); return false; } },
+        { label: 'Rejoindre', onClick: () => {
+          const code = normalizeCode(wrap.querySelector('#mp-code').value);
+          if (!ROOM_RE.test(code)) { err('Code invalide : 6 caractères (lettres et chiffres, sans 0, O, 1, I).'); return false; }
+          go(() => Room.join(code, this._roomOpts())); return false;
+        } },
+        { label: 'Fermer' },
+      ],
+    });
+    setTimeout(() => { const i = wrap.querySelector('#mp-code'); if (i) i.focus(); }, 50);
+  }
+
+  _bindRoom(room) {
+    room.on('start', ({ trackId, startLocal }) => this._startMultiRace(room, trackId, startLocal));
+    room.on('lobby', () => { if (this.session && this.session.opts && this.session.opts.multi) this._leaveRaceToLobby(room); });
+    room.on('error', (e) => { this.ui.flash(e.message); });
+    room.on('closed', () => {
+      if (this.room === room) this.room = null;
+      if (this.session && this.session.opts && this.session.opts.multi) this.showMenu('menu');
+    });
+  }
+
+  multiLobby(room) {
+    const body = document.createElement('div');
+    const code = document.createElement('div');
+    code.className = 'mp-code';
+    code.innerHTML = `<small>Code de la salle</small><b>${esc(room.code)}</b>`;
+    const list = document.createElement('ul');
+    list.className = 'mp-list';
+    const trackRow = document.createElement('div');
+    trackRow.className = 'mp-track';
+    const note = document.createElement('p');
+    note.className = 'meta';
+    body.append(code, list, trackRow, note);
+    const LINK = { self: '', open: '● connecté', connecting: '… connexion', failed: '✕ liaison impossible', closed: '✕ déconnecté', incompatible: '✕ autre version' };
+    const render = () => {
+      list.innerHTML = room.list.map((m) => `<li class="${m.self ? 'me' : ''}"><span>${m.id === room.hostId ? '★ ' : ''}${esc(m.name)}${m.self ? ' (toi)' : ''}</span><i>${LINK[m.link] || ''}${m.link === 'open' && m.rtt ? ` · ${Math.round(m.rtt)} ms` : ''}</i></li>`).join('');
+      trackRow.innerHTML = '';
+      const host = room.isHost;
+      if (host) {
+        const sel = document.createElement('select');
+        sel.innerHTML = '<option value="">Choisis un circuit…</option>' + this.builtins.map((b) => `<option value="${esc(b.key)}"${room.trackId === b.key ? ' selected' : ''}>${esc(b.def.name)}</option>`).join('');
+        sel.onchange = () => { if (sel.value) room.selectTrack(sel.value); render(); };
+        trackRow.append(Object.assign(document.createElement('span'), { textContent: 'Circuit' }), sel);
+      } else {
+        const b = this.builtins.find((x) => x.key === room.trackId);
+        trackRow.textContent = room.trackId ? `Circuit : ${b ? b.def.name : 'inconnu (mets le jeu à jour)'}` : 'L\'hôte choisit le circuit…';
+      }
+      const start = document.querySelector('#modal-actions [data-mp="start"]');
+      if (start) { start.hidden = !host; start.disabled = !room.trackId || !this.builtins.some((x) => x.key === room.trackId); }
+      note.textContent = host ? 'Donne le code aux autres joueurs, puis lance la course.' : 'En attente du départ donné par l\'hôte.';
+    };
+    const sub = () => render();
+    room.on('members', sub); room.on('track', sub);
+    this.ui.modal({
+      title: 'Salle multijoueur', body,
+      actions: [
+        { label: 'Lancer la course', primary: true, onClick: () => { room.start(); room.off('members', sub); room.off('track', sub); return true; }, attrs: { 'data-mp': 'start' } },
+        { label: 'Quitter la salle', danger: true, onClick: () => { room.off('members', sub); room.off('track', sub); room.leave(); return true; } },
+      ],
+    });
+    render();
+  }
+
+  _startMultiRace(room, trackId, startLocal) {
+    const b = this.builtins.find((x) => x.key === trackId);
+    if (!b) { this.ui.flash('Circuit inconnu : mets le jeu à jour.'); room.backToLobby(false); return; }
+    this.ui.closeModal();
+    this.playTrack(buildBuiltin(b.def), { multi: { room, startLocal }, trackKey: null, seed: trackId, difficulty: 1 });
+  }
+
+  _leaveRaceToLobby(room) {
+    this._dispose();
+    this.mode = 'menu';
+    this.showMenu('menu');
+    if (!room.closed) { if (room.state === 'racing') room.backToLobby(false); this.multiLobby(room); }
+  }
+
+  confirmLeaveMulti() {
+    const room = this.session && this.session.opts.multi && this.session.opts.multi.room;
+    if (!room || this.ui.modalOpen) return;
+    this.ui.modal({
+      title: 'Quitter la course ?', body: '<p>Les autres continuent sans toi. Ta voiture disparaît de leur écran.</p>',
+      actions: [{ label: 'Continuer', primary: true }, { label: 'Quitter', danger: true, onClick: () => { this._leaveRaceToLobby(room); return true; } }],
+    });
+  }
+
+  // Résultats : provisoires, chaque temps est annoncé par le joueur concerné (rien n'est vérifié par un serveur).
+  showMultiResults(room) {
+    const body = document.createElement('div');
+    const render = () => {
+      body.innerHTML = '<ol class="mp-res">' + room.ranking().map((r) => `<li class="${r.self ? 'me' : ''}"><span>${esc(r.name)}</span><i>${r.steps != null ? formatTime(r.steps / 120) : 'en course…'}</i></li>`).join('') + '</ol>'
+        + '<p class="meta">Classement provisoire : chaque temps est annoncé par son joueur. Les retours au checkpoint ajoutent le temps perdu.</p>';
+    };
+    const sub = () => { if (document.body.contains(body)) render(); else room.off('results', sub); };
+    room.on('results', sub);
+    render();
+    this.ui.modal({
+      title: '🏁 Résultats', body,
+      actions: [
+        { label: 'Retour au salon', primary: true, onClick: () => { room.off('results', sub); if (room.isHost) room.backToLobby(true); this._leaveRaceToLobby(room); return true; } },
+        { label: 'Quitter la salle', danger: true, onClick: () => { room.off('results', sub); room.leave(); this._dispose(); this.showMenu('menu'); return true; } },
+      ],
+    });
   }
 
   nextTrack() {
@@ -1040,6 +1173,7 @@ class App {
       case 'play': this.showScreen('tracks'); break;
       case 'daily': this.playDaily(); break;
       case 'community': this.showScreen('community'); break;
+      case 'multi': this.multiMenu(); break;
       case 'tutorial': this.tutorial(); break;
       case 'editor': this.openEditor(); break;
       case 'mytracks': this.showScreen('mytracks'); break;

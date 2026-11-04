@@ -967,3 +967,18 @@ body.touch kbd { display: none; }
 .insp-check { display: flex; gap: 8px; align-items: center; color: var(--text); }
 .insp-foot { margin-top: 4px; display: flex; justify-content: flex-end; }
 @media (max-width: 760px) { .ed-insp { right: 6px; top: auto; bottom: 172px; width: min(264px, calc(100vw - 12px)); max-height: 34vh; } .ed-erasebar { top: auto; bottom: 172px; } }
+
+/* ---- Multijoueur : salon et résultats ---- */
+.mp-join { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 13px; }
+.mp-join input { font: inherit; font-size: 22px; letter-spacing: 0.25em; text-transform: uppercase; text-align: center; color: var(--text); background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+.mp-err { min-height: 1.3em; margin: 6px 0 0; color: var(--bad); font-size: 13.5px; }
+.mp-code { text-align: center; margin-bottom: 8px; }
+.mp-code small { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+.mp-code b { font-size: 38px; letter-spacing: 0.3em; padding-left: 0.3em; user-select: all; }
+.mp-list, .mp-res { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.mp-list li, .mp-res li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); }
+.mp-list li.me, .mp-res li.me { background: rgba(95, 242, 255, 0.14); }
+.mp-list i, .mp-res i { color: var(--muted); font-style: normal; font-size: 13px; }
+.mp-res i { color: var(--text); font-variant-numeric: tabular-nums; }
+.mp-track { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.mp-track select { flex: 1; font: inherit; color: var(--text); background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); border-radius: 6px; padding: 6px; }

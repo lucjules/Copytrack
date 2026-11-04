@@ -2,6 +2,9 @@
 import * as THREE from './vendor/three.module.min.js';
 import { DT } from './constants.js';
 import { CamFlip } from './camflip.js';
+import { RemoteCar } from './remoteCar.js';
+import { SEND_EVERY_STEPS } from './net/room.js';
+import { F_FINISHED, F_BOOST, F_GROUNDED } from './net/snapshot.js';
 import { CarPhysics, frameWorld } from './physics.js';
 import { RaceLogic, placeAtStart } from './raceLogic.js';
 import { Autopilot } from './autopilot.js';
@@ -80,7 +83,12 @@ export class RaceSession {
     this.replayCam = 0;   // 0 = caméra de course, puis TV, orbite
     // Fantômes simulés (or, importé).
     this.ghosts = [];
-    if (!this.demo && !this.replay && !opts.fromEditor) this._setupGhosts();
+    // Multijoueur (opts.multi = { room, startLocal }) : pas de fantômes enregistrés, des voitures distantes à la place.
+    this.multi = opts.multi || null;
+    this.remote = new Map();
+    this.teleSeq = 0;
+    if (!this.demo && !this.replay && !opts.fromEditor && !this.multi) this._setupGhosts();
+    if (this.multi) this._setupRemotes();
     this.camMode = this.demo ? 0 : app.settings.camera || 0;
 
     this.up = new THREE.Vector3(0, 1, 0);
@@ -95,6 +103,35 @@ export class RaceSession {
 
     this.loadRecord();
     this.restart();
+  }
+
+  // ---- Multijoueur : voitures des autres joueurs (RemoteCar), alimentées par les paquets WebRTC ----------------------------
+  _setupRemotes() {
+    const room = this.multi.room;
+    const ids = room.list.map((m) => m.id).sort();
+    const add = (m) => {
+      if (m.self || this.remote.has(m.id) || m.link === 'incompatible') return;
+      const rc = new RemoteCar(this.app.scene, { id: m.id, name: m.name, colorIndex: ids.indexOf(m.id) },
+        { onTeleport: (pos) => this.app.particles.burst(pos.x, pos.y + 1.5, pos.z, 16, 6, 0.5, 0.6, '#9fe3ff', 0) });
+      this.remote.set(m.id, rc);
+    };
+    room.list.forEach(add);
+    this._onSnap = (id, snap, now) => { const rc = this.remote.get(id); if (rc) rc.push(snap, now); };
+    this._onLeft = (id) => { const rc = this.remote.get(id); if (rc) { rc.dispose(); this.remote.delete(id); } };
+    room.on('snapshot', this._onSnap);
+    room.on('left', this._onLeft);
+  }
+
+  // État de la voiture locale, envoyé aux autres (20 fois par seconde, et à chaque téléportation / arrivée).
+  _sendNet(extraFlags = 0) {
+    if (!this.multi || this.multi.room.closed) return;
+    const p = this.phys, q = this.quat;
+    this.multi.room.sendSnapshot({
+      steps: this.logic.steps,
+      pos: p.pos, quat: q, vel: p.vel, vehicle: p.vehicle,
+      flags: extraFlags | (p.boost > 0 ? F_BOOST : 0) | (p.grounded ? F_GROUNDED : 0),
+      tele: this.teleSeq, cp: this.logic.collected.size, lap: this.logic.lap,
+    });
   }
 
   _setupGhosts() {
@@ -163,8 +200,10 @@ export class RaceSession {
     if (this.state !== 'racing') return;
     if (fromInput) this._pendingRespawn = true;
     this.stats.respawns++;
-    // Retour au dernier checkpoint : le chrono revient au temps de ce checkpoint.
-    const r = this.logic.rewind();
+    // Retour au dernier checkpoint : le chrono revient au temps de ce checkpoint (solo). En multijoueur il continue de
+    // tourner : la téléportation coûte tout le temps perdu, et le compteur de téléportation prévient les autres joueurs.
+    const r = this.logic.rewind({ keepClock: !!this.multi });
+    if (this.multi) this.teleSeq = (this.teleSeq + 1) & 255;
     const steps = this.logic.steps;
     this.ghostRec.length = Math.min(this.ghostRec.length, Math.floor(steps / GHOST_EVERY) * 7);
     for (const g of this.ghosts) {
@@ -184,6 +223,7 @@ export class RaceSession {
     this.prevQuat.copy(this.quat);
     this._camCut();
     this.groundT = 0;
+    if (this.multi) { this._sendNet(); this.app.ui.hud.message('Retour au checkpoint : le chrono continue !', 1.4); }
     this.app.audio.respawn();
     this.app.particles.burst(r.x, r.y + 1.5, r.z, 24, 8, 0.6, 0.7, '#5ff2ff', 0);
   }
@@ -361,6 +401,7 @@ export class RaceSession {
 
     if (this.state === 'racing') {
       const res = this.logic.update(this.phys);
+      if (this.multi && this.logic.steps % SEND_EVERY_STEPS === 0) this._sendNet();
       if (!this.demo && this.logic.steps % GHOST_EVERY === 0) {
         const p = this.phys.pos, q = this.quat;
         this.ghostRec.push(p.x, p.y, p.z, q.x, q.y, q.z, q.w);
@@ -421,6 +462,16 @@ export class RaceSession {
     this.state = 'finished';
     this.finishT = 0;
     if (this.replay) { this._replayEnded(); return; }
+    if (this.multi) {
+      // Multijoueur : ni record, ni pièces, ni classement en ligne (le chrono y suit des règles différentes). Le temps est
+      // annoncé aux autres joueurs et le tableau des résultats s'affiche.
+      this._sendNet(F_FINISHED);
+      this.multi.room.reportFinish(Math.round(time / DT));
+      app.audio.finish(false);
+      app.ui.hud.time(time, true);
+      app.showMultiResults(this.multi.room);
+      return;
+    }
     // Dernière course, rejouable depuis l'écran d'arrivée.
     this.lastRun = { inputs: this.recorder.encode(), time };
     const prev = this.record;
@@ -492,6 +543,7 @@ export class RaceSession {
     if (this.replay) return this._updateReplay(dt);
 
     if (!this.demo) {
+      if (this.multi && input.act('pause')) { app.confirmLeaveMulti(); return; }     // pas de pause : les autres courent
       if (input.act('pause') || (this.state === 'paused' && input.hit('Escape'))) {
         if (this.state === 'paused') this.resume();
         else if (this.state !== 'finished') this.pause();
@@ -499,17 +551,24 @@ export class RaceSession {
         return;
       }
       if (this.state === 'paused') return this.render(dt, 0);
-      if (input.act('restart') || input.hit('NumpadEnter')) { this.restart(); return; }
+      if ((input.act('restart') || input.hit('NumpadEnter')) && !this.multi) { this.restart(); return; }
       if (input.act('respawn') && !this.replay) this.respawn(true);
       if (input.act('camera')) this.cycleCamera();
       if (input.act('horn')) app.audio.horn(profile().loadout.horn);
     }
 
     if (this.state === 'countdown') {
-      this.countT += dt;
-      const steps = [0, 0.55, 1.1, 1.65];
-      let k = 0;
-      while (k < steps.length - 1 && this.countT >= steps[k + 1]) k++;
+      let k;
+      if (this.multi) {
+        // Départ commun : « GO » tombe à l'instant convenu avec l'hôte (3, 2, 1 à une seconde d'intervalle).
+        const left = (this.multi.startLocal - performance.now()) / 1000;
+        k = left > 3 ? this.countShown : left > 2 ? 0 : left > 1 ? 1 : left > 0 ? 2 : 3;
+      } else {
+        this.countT += dt;
+        const steps = [0, 0.55, 1.1, 1.65];
+        k = 0;
+        while (k < steps.length - 1 && this.countT >= steps[k + 1]) k++;
+      }
       if (k !== this.countShown) {
         this.countShown = k;
         const final = k === 3;
@@ -680,6 +739,7 @@ export class RaceSession {
 
     // Caméra
     this._camera(dt);
+    if (this.multi) { const now = performance.now(); for (const rc of this.remote.values()) rc.update(now, app.camera.position); }
     app.scenery.update(this.renderPos, app.camera);
 
     // Audio & HUD
@@ -924,6 +984,11 @@ export class RaceSession {
     this.car.dispose();
     this.skids.dispose();
     for (const g of this.ghosts) g.car.dispose();
+    if (this.multi) {
+      this.multi.room.off('snapshot', this._onSnap); this.multi.room.off('left', this._onLeft);
+      for (const rc of this.remote.values()) rc.dispose();
+      this.remote.clear();
+    }
     this.ghostCar.dispose();
     this.app.particles.clear();
     this.app.audio.engine(null);

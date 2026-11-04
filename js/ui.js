@@ -170,6 +170,7 @@ export class UI {
       const btn = document.createElement('button');
       btn.className = 'btn' + (act.primary ? ' primary' : '') + (act.danger ? ' danger' : '');
       btn.textContent = act.label;
+      if (act.attrs) for (const [k, v] of Object.entries(act.attrs)) btn.setAttribute(k, v);
       btn.addEventListener('click', () => {
         this.app.audio.click();
         const keep = act.onClick ? act.onClick() === false : false;

@@ -68,6 +68,12 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 - Décorations à placement libre (panneaux, formes, murs, toits, nature, image par URL).
 - **Vérification** : il faut finir son circuit pour que le partage donne des médailles (le temps de l'auteur devient le bronze).
 
+### Multijoueur en direct
+
+- Menu *Multijoueur* : créer une salle ou rejoindre avec un **code de 6 caractères** ; jusqu'à 8 joueurs, en voitures fantômes (sans collision), départ commun.
+- **Retour au checkpoint : le chrono ne se remet pas à zéro** (le temps perdu est la pénalité). Les adversaires lointains s'assombrissent.
+- Supabase Realtime ne sert qu'à se trouver et à négocier ; les positions (20 Hz) passent en **WebRTC pair à pair**. Voir `supabase/MULTI.md`.
+
 ### Le reste
 
 - **Garage** (purement visuel) : 8 carrosseries, moto routière ou chopper, couleurs, finitions (brillante, mate, métallisée, nacrée), LED, dessins, ornements, ailerons, roues, traînées lumineuses, klaxons (touche H), presets.
