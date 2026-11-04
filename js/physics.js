@@ -230,6 +230,7 @@ export class CarPhysics {
     this.beltX = 0; this.beltZ = 0; this.beltS = 0;
     this.plateLock = '';
     this.sinkT = 0;
+    this.hazardGrace = 0.8; // sécurité après respawn pour éviter les réapparitions en boucle
     const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3);
     if (this.gSign < 0) {
       this.n.x = 0; this.n.y = -1; this.n.z = 0;
@@ -298,7 +299,7 @@ export class CarPhysics {
   // Revêtements qui modifient les commandes (volant inversé, moteur coupé) : actifs tant
   // qu'on roule dessus, puis encore un court instant.
   _timedMods(mod) {
-    if (mod === 'reverse') { if (this.revT <= 0) this.ev.reverse = true; this.revT = CAR.revTime; return true; }
+    if (mod === 'reverse' || mod === 'invert') { if (this.surfMod !== mod) this.ev.reverse = true; this.revT = 0; return true; }
     if (mod === 'cut') { if (this.cutT <= 0) this.ev.cut = true; this.cutT = CAR.cutTime; return true; }
     return false;
   }
@@ -340,10 +341,16 @@ export class CarPhysics {
     const L = K.a + K.b;
     const maxF = K.latGrip * grip * K.frontShare;
     const maxR = K.latGrip * grip * (1 - K.frontShare) * (1 - (1 - K.driftRear) * drift) * (this.rearK ?? 1);
-    if (Math.abs(vx) < 1.5 && grip > 0.3) {
-      // Manœuvre au pas : roulement sans glissement.
+    if (Math.abs(vx) < 1.5) {
+      // À très basse vitesse, le modèle de dérive (angles calculés avec une
+      // vitesse plancher) peut générer une force latérale qui annule la traction,
+      // surtout sur la glace où grip < 0.3. Garder une réponse longitudinale
+      // déterministe et amortir la vitesse latérale selon l'adhérence évite le
+      // blocage à l'arrêt tout en conservant davantage de glisse sur la glace.
       vx += ax * dt;
-      BK.vx = vx; BK.vy = vy * 0.6; BK.w = (vx * Math.tan(delta)) / L;
+      const lateralDamp = clamp(0.35 + grip * 0.3, 0.35, 0.85);
+      BK.vx = vx; BK.vy = vy * lateralDamp;
+      BK.w = (vx * Math.tan(delta) / L) * clamp(grip, 0.2, 1);
       return BK;
     }
     const den = Math.max(Math.abs(vx), 6);
@@ -366,12 +373,14 @@ export class CarPhysics {
     this.track.time = (this.clock || 0) * dt;   // position des pièces mobiles
     if (this.graceT > 0) this.graceT -= dt;
     ev.wall = 0; ev.land = 0; ev.boostHit = false; ev.bounce = false;
+    if (this.hazardGrace > 0) this.hazardGrace = Math.max(0, this.hazardGrace - dt);
     ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.moto = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false; ev.glass = false; ev.spring = false; ev.reverse = false; ev.cut = false; ev.spike = false; ev.shock = 0;
     this.prev.x = p.x; this.prev.y = p.y; this.prev.z = p.z;
     this.prevYaw = this.yaw;
 
     // Volant inversé / moteur coupé : les commandes sont modifiées un court instant.
-    if (this.revT > 0) { this.revT -= dt; inp = { ...inp, steer: -(inp.steer || 0) }; }
+    const reverseActive = this.rib ? this.rib.tile.s === 'reverse' || this.rib.tile.s === 'invert' : this.surfMod === 'reverse' || this.surfMod === 'invert';
+    if (reverseActive) inp = { ...inp, steer: -(inp.steer || 0) };
     if (this.cutT > 0) { this.cutT -= dt; if (inp.throttle) inp = { ...inp, throttle: false }; }
     // Volant progressif (retour au centre plus rapide).
     const target = clamp(inp.steer || 0, -1, 1);
@@ -493,6 +502,7 @@ export class CarPhysics {
       v.z = fz * vf + rz * vr;
       if (belt) { v.x += belt.x; v.z += belt.z; }
       this._glassCheck(mod === 'glass', vf, this.surfTile, dt);
+      if (this.ev.sink) return;
       this.slip = Math.abs(vr);
       this.fwdSpeed = vf;
       this.airTime = 0;
@@ -527,10 +537,12 @@ export class CarPhysics {
 
     p.x += v.x * dt; p.y += v.y * dt; p.z += v.z * dt;
     this._rings();
+    if (this.ev.sink) return;
     if (this._tryEnterRibbon()) return;
     if (!this.grounded && this._tryLandRibbon()) return;
     this._walls();
     this._obstacles();
+    if (this.ev.sink) return; // fin immédiate du pas après un contact létal
     this._bounds();
 
     // Contact avec la chaussée.
@@ -681,17 +693,45 @@ export class CarPhysics {
   // par l'appelant avant chaque pas) : même mouvement en replay et après un retour (R).
   _obstacles() {
     const obs = this.track.obstacles;
-    if (!obs.length) return;
+    if (!obs.length || this.hazardGrace > 0) return;
     const t = (this.clock || 0) * DT;
     const p = this.pos, v = this.vel, n0 = this.n;
-    const cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
-    for (const d of obs) {
+    let cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
+    // Index spatial paresseux : éviter de parcourir tous les obstacles à chaque pas
+    // physique sur les circuits chargés. La course garde une liste d'obstacles stable.
+    if (this._obstacleGridSource !== obs) {
+      const grid = new Map(), cell = 20;
+      for (const d of obs) {
+        if (!d || !Number.isFinite(d.x) || !Number.isFinite(d.z)) continue;
+        const key = `${Math.floor(d.x / cell)},${Math.floor(d.z / cell)}`;
+        let bucket = grid.get(key);
+        if (!bucket) grid.set(key, bucket = []);
+        bucket.push(d);
+      }
+      this._obstacleGridSource = obs;
+      this._obstacleGrid = grid;
+    }
+    const candidates = [], grid = this._obstacleGrid, cell = 20;
+    const gx = Math.floor(cx / cell), gz = Math.floor(cz / cell);
+    for (let ix = gx - 3; ix <= gx + 3; ix++) {
+      for (let iz = gz - 3; iz <= gz + 3; iz++) {
+        const bucket = grid.get(`${ix},${iz}`);
+        if (bucket) for (const d of bucket) candidates.push(d);
+      }
+    }
+    for (const d of candidates) {
+      // Recalculer le centre après chaque correction de contact : plusieurs obstacles
+      // proches ne doivent pas être testés contre la position d'avant le premier choc.
+      cx = p.x + n0.x * 0.8; cy = p.y + n0.y * 0.8; cz = p.z + n0.z * 0.8;
+      if (!d || !OBST[d.k] || !Number.isFinite(d.x) || !Number.isFinite(d.y) || !Number.isFinite(d.z) || !Number.isFinite(d.s || 1) || !Number.isFinite(d.ry || 0)) continue;
       if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) continue;
       const rr = obstacleRadius(d) + 3;
       if ((cx - d.x) ** 2 + (cz - d.z) ** 2 > rr * rr) continue;
       const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
+      if (!(k > 0) || !Number.isFinite(rc)) continue;
       obstacleLocal(d, t, OB);
       toLocalObs(d, cx, cy, cz, OL);
+      if (![OB.x, OB.y, OB.z, OB.vx, OB.vy, OB.vz, OB.on, OL.x, OL.y, OL.z].every(Number.isFinite)) continue;
       let nx = 0, ny = 0, nz = 0, pen = 0, ovx = 0, ovy = 0, ovz = 0;
       if (def.type === 'spike') {
         if (OB.on < 0.4 || this.graceT > 0) continue;
@@ -703,44 +743,72 @@ export class CarPhysics {
       } else if (def.type === 'ball') {
         const dx = OL.x - OB.x, dy = OL.y - OB.y, dz = OL.z;
         const dd = Math.hypot(dx, dy, dz);
-        if (dd >= def.r + rc || dd < 1e-6) continue;
-        nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd;
+        if (dd >= def.r + rc) continue;
+        if (dd < 1e-6) { nx = 0; ny = 1; nz = 0; pen = def.r + rc; }
+        else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd; }
         ovx = OB.vx; ovy = OB.vy;
       } else if (def.type === 'box') {
         const qx = clamp(OL.x, OB.x - def.hx, OB.x + def.hx), qy = clamp(OL.y, 0, def.hy * 2), qz = clamp(OL.z, -def.hz, def.hz);
         const dx = OL.x - qx, dy = OL.y - qy, dz = OL.z - qz;
         const dd = Math.hypot(dx, dy, dz);
         if (dd >= rc) continue;
-        if (dd < 1e-6) { nx = OL.x >= OB.x ? 1 : -1; pen = rc + def.hx - Math.abs(OL.x - OB.x); }
-        else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = rc - dd; }
+        if (dd < 1e-6) {
+          // Centre de la voiture dans la boîte : choisir la face la plus proche,
+          // au lieu de toujours pousser sur X (source de coincements/jitter).
+          const ex = def.hx - Math.abs(OL.x - OB.x);
+          const ey0 = OL.y, ey1 = def.hy * 2 - OL.y;
+          const ez = def.hz - Math.abs(OL.z);
+          const face = Math.min(ex, ey0, ey1, ez);
+          if (face === ey0 || face === ey1) { nx = 0; ny = ey0 <= ey1 ? -1 : 1; nz = 0; }
+          else if (face === ez) { nx = 0; ny = 0; nz = OL.z >= 0 ? 1 : -1; }
+          else { nx = OL.x >= OB.x ? 1 : -1; ny = 0; nz = 0; }
+          pen = Math.max(0.01, rc + Math.max(0, face));
+        } else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = rc - dd; }
         ovx = OB.vx;
       } else if (def.type === 'bar') {
         const ca = Math.cos(OB.a), sa = Math.sin(OB.a);
         const s = clamp(OL.x * ca + OL.z * sa, -def.len, def.len);
         const dx = OL.x - ca * s, dy = OL.y - def.y, dz = OL.z - sa * s;
         const dd = Math.hypot(dx, dy, dz);
-        if (dd >= def.r + rc || dd < 1e-6) continue;
-        nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd;
+        if (dd >= def.r + rc) continue;
+        if (dd < 1e-6) { nx = -sa; ny = 0; nz = ca; pen = def.r + rc; }
+        else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd; }
         ovx = -sa * s * OB.w; ovz = ca * s * OB.w;
       } else {
         // Bumper : poteau vertical qui renvoie fort.
         if (OL.y > def.h + rc) continue;
         const dd = Math.hypot(OL.x, OL.z);
-        if (dd >= def.r + rc || dd < 1e-6) continue;
-        nx = OL.x / dd; nz = OL.z / dd; pen = def.r + rc - dd;
+        if (dd >= def.r + rc) continue;
+        if (dd < 1e-6) { nx = 1; nz = 0; pen = def.r + rc; }
+        else { nx = OL.x / dd; nz = OL.z / dd; pen = def.r + rc - dd; }
       }
       // Normale et vitesse de l'obstacle en repère monde.
       const c = Math.cos(d.ry || 0), sn = Math.sin(d.ry || 0);
       const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
       const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
-      p.x += wx * pen * k; p.y += wy * pen * k; p.z += wz * pen * k;
+      if (![wx, wy, wz, vwx, vwy, vwz].every(Number.isFinite)) continue;
+      // Séparer les corps en contact, mais ne pas ré-appliquer un choc si la voiture
+      // s'éloigne déjà de l'obstacle. L'ancien code ajoutait shockKick à chaque pas
+      // tant que les volumes se chevauchaient : obstacles mobiles = impulsions répétées,
+      // tremblements, catapultage et parfois état physique instable.
+      const correction = Math.min(pen * k, 2.5);
+      p.x += wx * correction; p.y += wy * correction; p.z += wz * correction;
       const vn = (v.x - vwx) * wx + (v.y - vwy) * wy + (v.z - vwz) * wz;
-      let add = vn < 0 ? -(1 + CAR.shockE) * vn : 0;
-      add += def.type === 'post' ? Math.max(0, def.kick - Math.max(0, vn) - add) : CAR.shockKick;
-      v.x += wx * add; v.y += wy * add; v.z += wz * add;
-      this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;   // le choc fait pivoter un peu
-      if (wy * this.gSign > 0.45) this.grounded = false;
-      this.ev.shock = Math.max(this.ev.shock, add);
+      let add = 0;
+      if (vn < -0.05) {
+        add = -(1 + CAR.shockE) * vn;
+        if (def.type === 'post') {
+          add = Math.max(add, Math.max(0, def.kick - add));
+        } else {
+          add += CAR.shockKick;
+        }
+      }
+      if (add > 0) {
+        v.x += wx * add; v.y += wy * add; v.z += wz * add;
+        this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;   // le choc fait pivoter un peu
+        if (wy * this.gSign > 0.45) this.grounded = false;
+        this.ev.shock = Math.max(this.ev.shock, add);
+      }
     }
   }
 
@@ -1071,12 +1139,12 @@ export class CarPhysics {
     let vx = R.vs * c + R.vd * s, vy = -R.vs * s + R.vd * c;
     const ax = (this._longitudinal(vx, inp, this.k.maxSpeed * vmaxK, Math.min(1, load) * tractK, extraDrag, dt, Math.min(1, load)) - vx) / dt;
     // Ruban posé à l'envers (miroir) : son axe latéral pointe vers la gauche du pilote.
-    const hs = tile.v ? -1 : 1;
-    if (hs < 0) this.steer = -this.steer;
+    // Les commandes restent dans le repère du pilote, même sur une pièce inversée.
+    // Le repère latéral du ruban est déjà orienté par sa normale : ne pas inverser
+    // le volant une seconde fois sur les sections retournées.
     this.rearK = rearK;
     const t = this._tires(vx, vy, this.omega, ax, load * gripK, dt);
     this.rearK = 1;
-    if (hs < 0) { this.steer = -this.steer; this.steerAngle = -this.steerAngle; }
     vx = t.vx; vy = t.vy; this.omega = t.w;
     // Retour dans le plan de la route avec le MÊME cap, puis la voiture pivote.
     R.vs = vx * c - vy * s + beltE1;
