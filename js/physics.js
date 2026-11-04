@@ -735,13 +735,15 @@ export class CarPhysics {
         // Bumper : poteau vertical qui renvoie fort.
         if (OL.y > def.h + rc) continue;
         const dd = Math.hypot(OL.x, OL.z);
-        if (dd >= def.r + rc || dd < 1e-6) continue;
-        nx = OL.x / dd; nz = OL.z / dd; pen = def.r + rc - dd;
+        if (dd >= def.r + rc) continue;
+        if (dd < 1e-6) { nx = 1; nz = 0; pen = def.r + rc; }
+        else { nx = OL.x / dd; nz = OL.z / dd; pen = def.r + rc - dd; }
       }
       // Normale et vitesse de l'obstacle en repère monde.
       const c = Math.cos(d.ry || 0), sn = Math.sin(d.ry || 0);
       const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
       const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
+      if (![wx, wy, wz, vwx, vwy, vwz].every(Number.isFinite)) continue;
       p.x += wx * pen * k; p.y += wy * pen * k; p.z += wz * pen * k;
       const vn = (v.x - vwx) * wx + (v.y - vwy) * wy + (v.z - vwz) * wz;
       let add = vn < 0 ? -(1 + CAR.shockE) * vn : 0;
