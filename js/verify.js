@@ -50,7 +50,7 @@ export function replayTime(track, inputs) {
 
 // Vérification complète : même version de physique, circuit reconnu, temps confirmé.
 export function verifyRun({ trackKey, code, inputs, time, physVer }) {
-  if (physVer !== PHYS_VER) return { ok: false, error: 'Version du jeu différente : recharge la page pour la mettre à jour.' };
+  if (physVer !== PHYS_VER) return { ok: false, error: `Version du jeu différente (jeu ${physVer}, serveur ${PHYS_VER}).`, versionMismatch: true };
   let t;
   try { t = trackForKey(trackKey, code); } catch (e) { return { ok: false, error: e.message }; }
   const sim = replayTime(t.track, inputs);
