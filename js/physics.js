@@ -340,10 +340,16 @@ export class CarPhysics {
     const L = K.a + K.b;
     const maxF = K.latGrip * grip * K.frontShare;
     const maxR = K.latGrip * grip * (1 - K.frontShare) * (1 - (1 - K.driftRear) * drift) * (this.rearK ?? 1);
-    if (Math.abs(vx) < 1.5 && grip > 0.3) {
-      // Manœuvre au pas : roulement sans glissement.
+    if (Math.abs(vx) < 1.5) {
+      // À très basse vitesse, le modèle de dérive (angles calculés avec une
+      // vitesse plancher) peut générer une force latérale qui annule la traction,
+      // surtout sur la glace où grip < 0.3. Garder une réponse longitudinale
+      // déterministe et amortir la vitesse latérale selon l'adhérence évite le
+      // blocage à l'arrêt tout en conservant davantage de glisse sur la glace.
       vx += ax * dt;
-      BK.vx = vx; BK.vy = vy * 0.6; BK.w = (vx * Math.tan(delta)) / L;
+      const lateralDamp = clamp(0.35 + grip * 0.3, 0.35, 0.85);
+      BK.vx = vx; BK.vy = vy * lateralDamp;
+      BK.w = (vx * Math.tan(delta) / L) * clamp(grip, 0.2, 1);
       return BK;
     }
     const den = Math.max(Math.abs(vx), 6);
