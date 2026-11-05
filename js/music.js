@@ -1,12 +1,14 @@
-// Musique du jeu : un morceau MP3 (assets/music.mp3) joué en boucle, partout (menu et courses).
+// Musique du jeu : deux morceaux MP3 joués en boucle, un pour le menu (assets/music-menu.mp3, version filtrée et feutrée)
+// et un pour les courses (assets/music-game.mp3, version complète).
 export class Music {
   constructor(audio) {
     this.audio = audio;
     this.volume = 0.45;
     this.src = null;
-    this.buf = null;
-    this.loading = null;
-    this.want = false;
+    this.bufs = {};
+    this.loading = {};
+    this.want = null;
+    this.kind = null;
   }
 
   _gain() {
@@ -24,36 +26,45 @@ export class Music {
     if (this.out) this.out.gain.setTargetAtTime(v * 0.6, this.audio.ctx.currentTime, 0.1);
   }
 
-  // Lance la boucle (sans la relancer si elle joue déjà). Les arguments (décor, graine…) sont ignorés : un seul morceau.
-  play() {
-    this.want = true;
-    if (!this.audio.ctx || this.src) return;
-    if (!this.buf) {
-      if (!this.loading) {
-        this.loading = fetch('assets/music.mp3')
+  // kind : 'menu' ou autre (course). Garde la boucle en cours si c'est déjà la bonne, sinon fondu enchaîné vers l'autre.
+  play(kind = 'game') {
+    kind = kind === 'menu' ? 'menu' : 'game';
+    this.want = kind;
+    const ctx = this.audio.ctx;
+    if (!ctx || this.kind === kind) return;
+    const buf = this.bufs[kind];
+    if (!buf) {
+      if (!this.loading[kind]) {
+        this.loading[kind] = fetch(`assets/music-${kind}.mp3`)
           .then((r) => r.arrayBuffer())
-          .then((b) => this.audio.ctx.decodeAudioData(b))
-          .then((buf) => { this.buf = buf; if (this.want) this.play(); })
-          .catch(() => { this.loading = null; });
+          .then((b) => ctx.decodeAudioData(b))
+          .then((d) => { this.bufs[kind] = d; if (this.want === kind) this.play(kind); })
+          .catch(() => { this.loading[kind] = null; });
       }
       return;
     }
-    const ctx = this.audio.ctx;
-    const s = ctx.createBufferSource();
-    s.buffer = this.buf;
-    s.loop = true;
-    s.connect(this._gain());
+    this.stop(0.8);
+    this.want = kind;
+    const s = ctx.createBufferSource(), g = ctx.createGain();
+    s.buffer = buf; s.loop = true;
+    g.gain.value = 0; g.gain.setTargetAtTime(1, ctx.currentTime, 0.4);
+    s.connect(g).connect(this._gain());
     s.start();
-    this.src = s;
+    this.src = s; this.fade = g; this.kind = kind;
   }
 
-  stop() {
-    this.want = false;
-    if (this.src) { try { this.src.stop(); } catch (e) { /* déjà arrêtée */ } this.src = null; }
+  stop(fade = 0.3) {
+    this.want = null;
+    if (this.src) {
+      const ctx = this.audio.ctx, s = this.src, g = this.fade, t = ctx.currentTime;
+      g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + fade);
+      s.stop(t + fade + 0.05);
+      this.src = null; this.kind = null;
+    }
   }
 
   // Appelé quand l'AudioContext vient d'être débloqué par un clic.
   resume() {
-    if (this.want) this.play();
+    if (this.want) this.play(this.want);
   }
 }

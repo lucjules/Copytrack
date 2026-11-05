@@ -165,7 +165,7 @@ class App {
     this.camera.fov = 60;
     this.camera.updateProjectionMatrix();
     this.session = new RaceSession(this, demo.track, { demo: true, seed: demo.key });
-    this.audio.music.play('menu', 7, 0);
+    this.audio.music.play('menu');
     this.showScreen(screen);
     this._resize();
   }
@@ -203,7 +203,7 @@ class App {
     this.ui.setMode('race');
     $('replay-bar').classList.add('hidden');
     this.session = new RaceSession(this, track, opts);
-    this.audio.music.play(track.decor || 'desert', [...(track.name || 'x')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 99991, 7) + 1, 1);
+    this.audio.music.play('game');
     this._resize();
   }
 
@@ -561,7 +561,7 @@ class App {
     this.ui.showScreen(null);
     this.ui.setMode('editor');
     this.session = new EditorSession(this, state || getEditorDraft() || {});
-    this.audio.music.play('menu', 3, 0);
+    this.audio.music.play('menu');
     this._resize();
   }
 
