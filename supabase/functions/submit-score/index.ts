@@ -3337,7 +3337,6 @@ var BUILTIN_OBSTACLES = {
 
 // js/tracks.js
 var BUILTIN_TRACKS = [
-  // ---- Chapitre 1 : Premiers tours ----------------------------------------------
   {
     id: "eclats",
     name: "Premiers \xC9clats",
@@ -3437,7 +3436,6 @@ var BUILTIN_TRACKS = [
       bronze: 34.4
     }
   },
-  // ---- Chapitre 2 : Prise de vitesse --------------------------------------------
   {
     id: "canyon",
     name: "Canyon Corail",
@@ -3538,7 +3536,6 @@ var BUILTIN_TRACKS = [
       bronze: 38.8
     }
   },
-  // ---- Chapitre 3 : Métamorphoses -----------------------------------------------
   {
     id: "recif",
     name: "R\xE9cif Corallien",
@@ -3640,7 +3637,6 @@ var BUILTIN_TRACKS = [
       bronze: 38.9
     }
   },
-  // ---- Chapitre 4 : Terrains piégés ---------------------------------------------
   {
     id: "verglas",
     name: "Lac Gel\xE9",
@@ -3739,7 +3735,6 @@ var BUILTIN_TRACKS = [
       bronze: 36.2
     }
   },
-  // ---- Chapitre 5 : Haute voltige -----------------------------------------------
   {
     id: "temple",
     name: "Temple Perdu",
@@ -3839,7 +3834,6 @@ var BUILTIN_TRACKS = [
       bronze: 43.4
     }
   },
-  // ---- Chapitre 6 : Grand huit --------------------------------------------------
   {
     id: "grandtour",
     name: "Le Grand Tour",
@@ -3941,7 +3935,6 @@ var BUILTIN_TRACKS = [
       bronze: 48.8
     }
   },
-  // ---- Chapitre 7 : Légendes ----------------------------------------------------
   {
     id: "blizzard",
     name: "Blizzard",
@@ -5421,6 +5414,7 @@ var CarPhysics = class {
     if (!this.grounded && this._tryLandRibbon()) return;
     this._walls();
     this._tunnelRoof();
+    this._slabs();
     this._obstacles();
     if (this.ev.sink) return;
     this._bounds();
@@ -5583,6 +5577,55 @@ var CarPhysics = class {
       if (p.y + CAR.height > roof && q.y + CAR.height <= roof + 0.05) {
         p.y = roof - CAR.height;
         if (v.y > 0) v.y = -v.y * 0.2;
+      }
+    }
+  }
+  // Dalles pleines (gravité normale, véhicule en l'air) : le dessous et la tranche d'une dalle arrêtent la voiture.
+  // Sans cela, un deltaplane (ou un saut) qui arrive sous une rampe ou contre la face d'une plate-forme la traversait, ou était
+  // téléporté dessus par l'aide de montée. Trois cas selon la position au pas précédent :
+  //   au-dessus de la dalle  : réception normale (rien à faire) ;
+  //   en dessous             : la voiture est plaquée sous la dalle (comme le toit d'un tunnel) ;
+  //   hors de l'emprise      : choc de face, la voiture reste devant la tranche.
+  _slabs() {
+    if (this.gSign < 0 || this.grounded || this.rib) return;
+    const p = this.pos, q = this.prev, v = this.vel, H = CAR.height;
+    const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
+    for (let i = 0; i < tiles.length; i++) {
+      const tile = tiles[i];
+      if (tile.mv || tile.v || this.broken.has(tile) || !isFloor(tile) || PIECES[tile.t].kind === "loop") continue;
+      const area = PIECES[tile.t].kind === "area";
+      toLocal(tile, p.x, p.z, L1);
+      sampleLocal(tile, L1.lx, L1.lz, S1);
+      if (!S1.inFootprint || !area && Math.abs(S1.d) > ROAD_HALF) continue;
+      const hP = S1.h;
+      if (!(p.y < hP - 0.3 && p.y + H > hP - SLAB_T)) continue;
+      toLocal(tile, q.x, q.z, L2);
+      sampleLocal(tile, L2.lx, L2.lz, S2);
+      const qIn = S2.inFootprint && (area || Math.abs(S2.d) <= ROAD_HALF);
+      if (qIn) {
+        const hQ = S2.h;
+        if (q.y >= hQ - 0.3) continue;
+        if (q.y + H <= hQ - SLAB_T + 0.3) {
+          p.y = hP - SLAB_T - H;
+          if (v.y > 0) v.y = -v.y * 0.2;
+          this.ev.wall = Math.max(this.ev.wall, 2);
+        }
+        continue;
+      }
+      if (p.y >= hP - CAR.step) {
+        p.y = hP + 0.02;
+        continue;
+      }
+      const dx = p.x - q.x, dz = p.z - q.z, dl = Math.hypot(dx, dz);
+      p.x = q.x;
+      p.z = q.z;
+      if (dl > 1e-6) {
+        const nx = dx / dl, nz = dz / dl, vn = v.x * nx + v.z * nz;
+        if (vn > 0) {
+          v.x -= nx * vn * 1.2;
+          v.z -= nz * vn * 1.2;
+          this.ev.wall = Math.max(this.ev.wall, vn);
+        }
       }
     }
   }
@@ -6400,6 +6443,7 @@ var RaceLogic = class {
     };
   }
   reset() {
+    this.lastGround = null;
     this.collected = /* @__PURE__ */ new Set();
     this.splits = [];
     this.finished = false;
@@ -6445,9 +6489,15 @@ var RaceLogic = class {
   // Point de réapparition d'un checkpoint aérien : la dernière route roulable traversée
   // (mémorisée par la course), sinon l'anneau lui-même au niveau de sa base.
   _ringRespawn(tile, phys) {
-    if (this.lastGround) return {
-      ...this.lastGround
-    };
+    if (this.lastGround) {
+      const g = this.lastGround;
+      return {
+        x: g.x,
+        y: g.y,
+        z: g.z,
+        yaw: g.yaw
+      };
+    }
     const c = tileCenter(tile);
     return {
       x: c.x,
@@ -6469,7 +6519,8 @@ var RaceLogic = class {
         x: p.x,
         y: p.y,
         z: p.z,
-        yaw: phys.yaw
+        yaw: phys.yaw,
+        steps: this.steps
       };
     }
     const cx = Math.floor(p.x / CELL), cz = Math.floor(p.z / CELL);
@@ -6490,14 +6541,18 @@ var RaceLogic = class {
         const k = L3.lz / (L3.lz - lz1);
         const lx = L3.lx + (lx1 - L3.lx) * k, y = phys.prev.y + (p.y - phys.prev.y) * k;
         if (Math.hypot(lx, y - (h + RING_Y)) > RING_R + 0.5) continue;
+        const gl = this.lastGround;
+        const snap = this._snap();
+        if (gl) snap.steps = gl.steps;
+        const rr = this._ringRespawn(tile, phys);
         this.collected.add(tile);
         this.splits.push(this.steps);
         this.respawn = {
-          ...this._ringRespawn(tile, phys),
+          ...rr,
           vehicle: phys.vehicle,
           grav: phys.gravMul,
           gs: phys.gSign,
-          snap: this._snap()
+          snap
         };
         event = {
           type: "checkpoint",
@@ -6506,7 +6561,7 @@ var RaceLogic = class {
         };
         continue;
       }
-      if (tile.v ? p.y > h + 1.5 || p.y < h - LEVEL_H * 2.5 : p.y < h - 1.5 || p.y > h + LEVEL_H * 2.5) continue;
+      if (tile.v ? p.y > h + 1.5 || p.y < h - LEVEL_H * 1.5 : p.y < h - 1.5 || p.y > h + LEVEL_H * 1.5) continue;
       toLocal(tile, p.x, p.z, L3);
       sampleLocal(tile, L3.lx, L3.lz, S3);
       if (!S3.inFootprint || Math.abs(S3.d) > ROAD_HALF + 1.5) continue;
@@ -6699,9 +6754,30 @@ var Autopilot = class {
       const tx2 = tq2[0] - p.x, tz2 = tq2[2] - p.z;
       const ang2 = Math.atan2(fx2 * tz2 - fz2 * tx2, fx2 * tx2 + fz2 * tz2);
       const above = p.y - (tq2[1] + 3);
+      const hv = Math.max(8, Math.hypot(phys.vel.x, phys.vel.z));
+      const wantVy = (tq2[1] + 3 - p.y) / (Math.max(10, Math.hypot(tx2, tz2)) / hv);
+      let landK = -1;
+      for (let k = this.idx + 1; k < path.length && k < this.idx + 80; k++) {
+        if (Math.hypot(path[k][0] - path[k - 1][0], path[k][2] - path[k - 1][2]) > 30) {
+          landK = k;
+          break;
+        }
+      }
+      let low, high;
+      if (landK > 0 && landK > j2) {
+        const rest = Math.hypot(path[landK][0] - p.x, path[landK][2] - p.z);
+        const want = path[landK][1] + 3 + rest / 9;
+        low = p.y < want;
+        high = p.y > want + 4;
+      } else {
+        low = phys.vel.y < wantVy + 2;
+        high = phys.vel.y > wantVy + 6;
+      }
+      const dive = phys.speed < 24 || high && phys.speed < 42;
+      const pull = !dive && (low || phys.speed > 56);
       return {
-        throttle: above > 2 && phys.speed < 60,
-        brake: above < 0 || phys.vel.y < -6,
+        throttle: dive,
+        brake: pull,
         steer: Math.max(-1, Math.min(1, ang2 * 2.2)),
         drift: false
       };
@@ -7043,10 +7119,14 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/replay.js
-var PHYS_VER = 20;
+var PHYS_VER = 21;
+var MAX_REPLAY_STEPS = 120 * 600;
 function decodeInputs(b64) {
   const bin = atob(b64);
   const steer = [], flags = [];
+  let total = 0;
+  for (let i = 0; i + 2 < bin.length; i += 3) total += bin.charCodeAt(i);
+  if (total > MAX_REPLAY_STEPS) throw new Error("Enregistrement trop long.");
   for (let i = 0; i + 2 < bin.length; i += 3) {
     const n = bin.charCodeAt(i), s = bin.charCodeAt(i + 1) << 24 >> 24, f = bin.charCodeAt(i + 2);
     for (let k = 0; k < n; k++) {
@@ -7143,7 +7223,11 @@ function trackForKey(key2, code = "") {
     };
   }
   if (key2.startsWith("daily-")) {
-    const c = dailyChallenge(key2.slice(6));
+    const day = key2.slice(6);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error("D\xE9fi du jour introuvable.");
+    const t = Date.parse(day + "T00:00:00Z");
+    if (!Number.isFinite(t) || Math.abs(t - Date.now()) > 2.5 * 864e5) throw new Error("D\xE9fi du jour hors dates valides.");
+    const c = dailyChallenge(day);
     if (!c || c.key !== key2) throw new Error("D\xE9fi du jour introuvable.");
     return {
       track: c.track,
@@ -7164,7 +7248,12 @@ function trackForKey(key2, code = "") {
 }
 function replayTime(track, inputs) {
   if (!inputs || inputs.length > MAX_INPUTS_CHARS) return null;
-  const rep = decodeInputs(inputs);
+  let rep;
+  try {
+    rep = decodeInputs(inputs);
+  } catch {
+    return null;
+  }
   if (!rep.length || rep.length > MAX_STEPS) return null;
   const g = new GhostRunner(track, {
     inputs
@@ -7270,7 +7359,7 @@ Deno.serve(async (req) => {
         error: "Requ\xEAte invalide."
       });
     }
-    if (typeof code !== "string" || code.length > 1e5) return json(400, {
+    if (typeof code !== "string" || code.length > 4e5) return json(400, {
       error: "Code de circuit invalide."
     });
     const res = verifyRun({

@@ -587,6 +587,7 @@ export class CarPhysics {
     if (!this.grounded && this._tryLandRibbon()) return;
     this._walls();
     this._tunnelRoof();
+    this._slabs();
     this._obstacles();
     if (this.ev.sink) return; // fin immédiate du pas après un contact létal
     this._bounds();
@@ -731,6 +732,50 @@ export class CarPhysics {
       if (p.y + CAR.height > roof && q.y + CAR.height <= roof + 0.05) {
         p.y = roof - CAR.height;
         if (v.y > 0) v.y = -v.y * 0.2;
+      }
+    }
+  }
+
+  // Dalles pleines (gravité normale, véhicule en l'air) : le dessous et la tranche d'une dalle arrêtent la voiture.
+  // Sans cela, un deltaplane (ou un saut) qui arrive sous une rampe ou contre la face d'une plate-forme la traversait, ou était
+  // téléporté dessus par l'aide de montée. Trois cas selon la position au pas précédent :
+  //   au-dessus de la dalle  : réception normale (rien à faire) ;
+  //   en dessous             : la voiture est plaquée sous la dalle (comme le toit d'un tunnel) ;
+  //   hors de l'emprise      : choc de face, la voiture reste devant la tranche.
+  _slabs() {
+    if (this.gSign < 0 || this.grounded || this.rib) return;
+    const p = this.pos, q = this.prev, v = this.vel, H = CAR.height;
+    const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
+    for (let i = 0; i < tiles.length; i++) {
+      const tile = tiles[i];
+      if (tile.mv || tile.v || this.broken.has(tile) || !isFloor(tile) || PIECES[tile.t].kind === 'loop') continue;
+      const area = PIECES[tile.t].kind === 'area';
+      toLocal(tile, p.x, p.z, L1);
+      sampleLocal(tile, L1.lx, L1.lz, S1);
+      if (!S1.inFootprint || (!area && Math.abs(S1.d) > ROAD_HALF)) continue;
+      const hP = S1.h;
+      if (!(p.y < hP - 0.3 && p.y + H > hP - SLAB_T)) continue;       // pas dans la dalle (ou à peine : réception normale)
+      toLocal(tile, q.x, q.z, L2);
+      sampleLocal(tile, L2.lx, L2.lz, S2);
+      const qIn = S2.inFootprint && (area || Math.abs(S2.d) <= ROAD_HALF);
+      if (qIn) {
+        const hQ = S2.h;
+        if (q.y >= hQ - 0.3) continue;                                  // arrivait par le haut
+        if (q.y + H <= hQ - SLAB_T + 0.3) {                             // arrivait par le dessous
+          p.y = hP - SLAB_T - H;
+          if (v.y > 0) v.y = -v.y * 0.2;
+          this.ev.wall = Math.max(this.ev.wall, 2);
+        }
+        continue;                                                       // déjà dans la dalle (cas ancien) : inchangé
+      }
+      // Rebord bas (moins de CAR.step sous le dessus) : aide de montée, la voiture est posée sur la dalle.
+      if (p.y >= hP - CAR.step) { p.y = hP + 0.02; continue; }
+      // Face de la dalle : on revient devant, et on annule la vitesse qui pousse contre elle.
+      const dx = p.x - q.x, dz = p.z - q.z, dl = Math.hypot(dx, dz);
+      p.x = q.x; p.z = q.z;
+      if (dl > 1e-6) {
+        const nx = dx / dl, nz = dz / dl, vn = v.x * nx + v.z * nz;
+        if (vn > 0) { v.x -= nx * vn * 1.2; v.z -= nz * vn * 1.2; this.ev.wall = Math.max(this.ev.wall, vn); }
       }
     }
   }

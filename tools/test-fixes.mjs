@@ -80,5 +80,24 @@ test('défi du jour : seules les dates plausibles sont acceptées', () => {
   for (const bad of ['daily-abc', 'daily-9999-99-99', 'daily-2020-01-01', 'daily-' + d(30), 'daily-']) assert.throws(() => trackForKey(bad), undefined, bad);
 });
 
+console.log('Dalles solides');
+test('un deltaplane qui monte sous une dalle ne la traverse pas, ni la face d\'une plate-forme', () => {
+  const tr = scriptTrack('t', 'start S U S4 finish');
+  const phys = new CarPhysics(tr); const { DT } = { DT: 1 / 120 };
+  const fly = (x, y, z, yaw, vy, brake) => {
+    phys.place(x, y, z, yaw, 1); phys.vehicle = 'glider'; phys.grounded = false; phys.graceT = 0; phys.hazardGrace = 0;
+    phys.pos.y = y; phys.prev.y = y; phys.vel.x = -Math.sin(yaw) * 35; phys.vel.z = -Math.cos(yaw) * 35; phys.vel.y = vy;
+    let inside = 0; const o = {};
+    for (let i = 0; i < 360; i++) {
+      phys.step({ steer: 0, throttle: false, brake });
+      const s = tr.surfaceAt(phys.pos.x, phys.pos.y + 100, phys.pos.z, o, 1.6);
+      if (s.type === 'road' && s.h > 3 && phys.pos.y < s.h - 0.3 && phys.pos.y > s.h - 0.8) inside++;
+    }
+    return inside;
+  };
+  assert.equal(fly(12, 1, -3 * CELL + 10, 0, 6, true), 0, 'par dessous');
+  assert.equal(fly(12, 3, -8 * CELL, Math.PI, 3, false), 0, 'de face');
+});
+
 if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }
 console.log('\nTous les tests des corrections passent.');

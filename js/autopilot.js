@@ -99,7 +99,25 @@ export class Autopilot {
       const tx = tq[0] - p.x, tz = tq[2] - p.z;
       const ang = Math.atan2(fx * tz - fz * tx, fx * tx + fz * tz);
       const above = p.y - (tq[1] + 3);
-      return { throttle: above > 2 && phys.speed < 60, brake: above < 0 || phys.vel.y < -6, steer: Math.max(-1, Math.min(1, ang * 2.2)), drift: false };
+      // Plané : on vise la route 30 m devant, 3 m au-dessus, par la vitesse verticale voulue (cabrer = brake, piquer = gaz).
+      // Une dalle est solide : passer SOUS la route visée, c'est la percuter.
+      const hv = Math.max(8, Math.hypot(phys.vel.x, phys.vel.z));
+      const wantVy = (tq[1] + 3 - p.y) / (Math.max(10, Math.hypot(tx, tz)) / hv);
+      // Prochaine reprise de route après un vide (saut de plus de 30 m entre deux points) : altitude voulue = sa hauteur + 3 m
+      // + 1 m par 9 m restant (finesse d'environ 9). Trop haut : on pique pour garder de la vitesse ; trop bas : on cabre.
+      let landK = -1;
+      for (let k = this.idx + 1; k < path.length && k < this.idx + 80; k++) {
+        if (Math.hypot(path[k][0] - path[k - 1][0], path[k][2] - path[k - 1][2]) > 30) { landK = k; break; }
+      }
+      let low, high;
+      if (landK > 0 && landK > j) {
+        const rest = Math.hypot(path[landK][0] - p.x, path[landK][2] - p.z);
+        const want = path[landK][1] + 3 + rest / 9;
+        low = p.y < want; high = p.y > want + 4;
+      } else { low = phys.vel.y < wantVy + 2; high = phys.vel.y > wantVy + 6; }
+      const dive = phys.speed < 24 || (high && phys.speed < 42);
+      const pull = !dive && (low || phys.speed > 56);
+      return { throttle: dive, brake: pull, steer: Math.max(-1, Math.min(1, ang * 2.2)), drift: false };
     }
     if (!phys.grounded) {
       // En l'air : on aligne le nez sur la pente de la route à l'atterrissage prévu.
