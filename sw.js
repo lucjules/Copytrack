@@ -1,10 +1,11 @@
 // Service worker généré par tools/gen-sw.mjs : ne pas modifier à la main.
 // Jeu hors ligne : les fichiers du jeu sont gardés en cache ; le réseau reste prioritaire
 // pour récupérer les mises à jour quand il est disponible.
-const CACHE = 'copytrack-cfc37974f2';
+const CACHE = 'copytrack-a2b8de8cbe';
 const FILES = [
   "./",
-  "assets/music.mp3",
+  "assets/music-game.mp3",
+  "assets/music-menu.mp3",
   "css/style.css",
   "icons/icon-192.png",
   "icons/icon-512.png",
