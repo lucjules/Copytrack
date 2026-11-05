@@ -13,12 +13,13 @@
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
-// Progression (une mesure chacune) : Am7 · Dm7 · G7 · Cmaj7. Notes MIDI de la basse et des accords.
+// Harmonie relevée sur le morceau de référence (Rally House #4, ~123 BPM) : pédale de ré (D) sur toute la boucle, accords
+// Dmaj7(#11) / D(#5) qui oscillent et un Dm7 en couleur plus sombre. Basse sur D2 (73 Hz).
 const BARS = [
-  { root: 33, chord: [57, 60, 64, 67] },   // Am7
-  { root: 38, chord: [57, 62, 65, 69] },   // Dm7
-  { root: 31, chord: [55, 59, 62, 65] },   // G7
-  { root: 36, chord: [55, 59, 64, 67] },   // Cmaj7
+  { root: 38, chord: [62, 69, 73, 80] },   // D A C# G#
+  { root: 38, chord: [62, 69, 73, 75] },   // D A C# D#
+  { root: 38, chord: [62, 65, 69, 72] },   // Dm7 (D F A C)
+  { root: 38, chord: [62, 69, 73, 80] },
 ];
 // Basse funky sur 16 doubles-croches : 0 = silence, sinon décalage en demi-tons (12 = octave) ; 'g' = note courte « fantôme ».
 const BASS = [0, 'x', 0, 12, 'x', 0, 7, 'x', 0, 'x', 12, 0, 'x', 10, 'x', 7];
@@ -107,7 +108,7 @@ export class AudioEngine {
     this.stats.scheduled++;
     if (step % 4 === 0) { this._kick(t); this._duck(t); }                                // 4-on-the-floor + sidechain
     if (s > 0.12 && (step === 4 || step === 12)) this._clap(t, 0.5 + 0.4 * s);          // clap sur les temps 2 et 4
-    if (s > 0.2 && step % 4 === 2) this._hat(t, 0.25 + 0.3 * s, false);                 // hi-hat à contretemps
+    if (s > 0.2 && step % 4 === 2) this._hat(t, 0.35 + 0.35 * s, false);                 // hi-hat à contretemps
     if (s > 0.55 && step % 2 === 1) this._hat(t, 0.12 + 0.12 * s, false);               // doubles-croches de hats en pleine course
     if (s > 0.35 && step === 14) this._hat(t, 0.3, true);                               // hat ouvert
     const b = BASS[step];
@@ -152,7 +153,7 @@ export class AudioEngine {
 
   _hat(t, v, open) {
     const ctx = this.ctx, n = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
-    n.buffer = this.noise; f.type = 'highpass'; f.frequency.value = 7200;
+    n.buffer = this.noise; f.type = 'highpass'; f.frequency.value = 6500;
     this._env(g, t, 0.001, v * 0.4, open ? 0.2 : 0.04);
     n.connect(f); f.connect(g); g.connect(this.drums); n.start(t, Math.random() * 0.5, open ? 0.25 : 0.06);
   }
