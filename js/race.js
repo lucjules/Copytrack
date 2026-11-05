@@ -771,6 +771,7 @@ export class RaceSession {
     // Audio & HUD
     if (this.state === 'racing') {
       app.audio.engine({ speed: p.fwdSpeed, throttle: !!inp.throttle, slip: p.grounded ? p.slip : 0, boost: boosting });
+      app.audio.music.setSpeed(boosting ? 1.2 : Math.min(1, Math.max(0, p.fwdSpeed) / 50));
     }
     if (!this.demo) {
       const hud = app.ui.hud;
