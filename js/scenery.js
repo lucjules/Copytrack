@@ -4,6 +4,7 @@
 //  - volcano : volcans, coulées de lave, braises (v1.5)
 //  - orbit   : station orbitale, planète à anneau, dômes et panneaux (v1.5)
 import * as THREE from './vendor/three.module.min.js';
+import { PROFILES, profileOf } from './quality.js';
 import { GeoBuilder } from './geo.js';
 import { CELL } from './constants.js';
 import { PIECES } from './pieces.js';
@@ -360,7 +361,10 @@ const SKY_FRAG = `uniform vec3 top; uniform vec3 mid; uniform vec3 horizon; unif
 export class Scenery {
   constructor(scene, quality = 'high') {
     this.scene = scene;
-    this.quality = quality;
+    this.q = profileOf(typeof quality === 'string' ? quality : quality.name);
+    this.quality = this.q.name;
+    this.renderer = null;          // renseigné par le gestionnaire de qualité (sert à fabriquer la carte d'environnement Ultra)
+    this._last = null;             // derniers arguments de setTrack, pour refaire le décor quand la qualité change
     this.root = new THREE.Group();
     scene.add(this.root);
     this.trackGroup = new THREE.Group();
@@ -390,8 +394,8 @@ export class Scenery {
     this.hemi = new THREE.HemisphereLight('#ffffff', '#000000', 1);
     scene.add(this.hemi);
     this.sun = new THREE.DirectionalLight('#ffffff', 2);
-    this.sun.castShadow = quality !== 'low';
-    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.castShadow = this.q.shadow > 0;
+    this.sun.shadow.mapSize.set(this.q.shadow || 1024, this.q.shadow || 1024);
     const sc = this.sun.shadow.camera;
     sc.left = -80; sc.right = 80; sc.top = 80; sc.bottom = -80; sc.near = 1; sc.far = 600;
     this.sun.shadow.bias = -0.0004;
@@ -410,9 +414,44 @@ export class Scenery {
     this.setTheme('desert');
   }
 
+  // q : un profil de js/quality.js (ou son nom). Règle ombres, ciel, fond, environnement ; refait le terrain et le décor si besoin.
   setQuality(q) {
-    this.quality = q;
-    this.sun.castShadow = q !== 'low';
+    const prof = typeof q === 'string' ? profileOf(q) : q;
+    const prev = this.q;
+    this.q = prof; this.quality = prof.name;
+    const size = prof.shadow || 1024;
+    this.sun.castShadow = prof.shadow > 0;
+    if (this.sun.shadow.mapSize.x !== size) {
+      this.sun.shadow.mapSize.set(size, size);
+      if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
+    }
+    this.sky.visible = prof.sky === 'full';        // Potato : aplat de couleur à la place du ciel (gros shader plein écran)
+    this._applyFog();
+    this._updateEnv();
+    if (this._last && (prev.decor !== prof.decor || prev.terrainSeg !== prof.terrainSeg || prev.hills !== prof.hills)) this.setTrack(...this._last);
+  }
+
+  _applyFog() {
+    const T = this.theme, k = this.q.fogScale;
+    this.scene.fog.near = T.fogNear * k;
+    this.scene.fog.far = T.fogFar * k;
+  }
+
+  // Ultra : lumière d'ambiance et reflets tirés du ciel du thème (PMREM), pour des matériaux plus riches.
+  _updateEnv() {
+    const want = this.q.env > 0 && this.renderer;
+    if (this.envTex) { this.envTex.dispose(); this.envTex = null; }
+    this.scene.environment = null;
+    if (!want) return;
+    try {
+      const envScene = new THREE.Scene();
+      envScene.add(new THREE.Mesh(this.sky.geometry, this.sky.material));
+      const pm = new THREE.PMREMGenerator(this.renderer);
+      this.envTex = pm.fromScene(envScene, 0, 1, 4000).texture;
+      pm.dispose();
+      this.scene.environment = this.envTex;
+      this.scene.environmentIntensity = this.q.env;
+    } catch { /* WebGL sans rendu flottant : pas d'environnement, le reste fonctionne */ }
   }
 
   setTheme(id) {
@@ -437,23 +476,25 @@ export class Scenery {
     u.sunDir.value.copy(this.sunDir);
     this.scene.background = new THREE.Color(T.sky.horizon);
     this.scene.fog.color.set(T.fog);
-    this.scene.fog.near = T.fogNear;
-    this.scene.fog.far = T.fogFar;
+    this.scene.fog.near = T.fogNear * this.q.fogScale;
+    this.scene.fog.far = T.fogFar * this.q.fogScale;
     this.hemi.color.set(T.hemi[0]);
     this.hemi.groundColor.set(T.hemi[1]);
     this.hemi.intensity = T.hemi[2];
     this.sun.color.set(T.sunColor);
     this.sun.intensity = T.sunIntensity;
+    if (this.q.env > 0 && this.renderer) this._updateEnv();
   }
 
   // Reconstruit le terrain et le décor autour d'un circuit.
   setTrack(track, seedStr = 'shardway', opts = {}) {
+    this._last = [track, seedStr, opts];
     this.setTheme(opts.theme || track.decor || 'desert');
     const T = this.theme;
     const ceiling = track.tiles.some((t) => t.v);
     this.under.color.set(T.hemi[0]);
     this.under.intensity = ceiling ? Math.max(0.9, T.sunIntensity * 0.55) : 0;
-    const withDecor = opts.decor !== false;
+    const withDecor = opts.decor !== false && this.q.decor !== 'none';
     this.clearTerrain();
     let seed = 7;
     for (let i = 0; i < seedStr.length; i++) seed = (seed * 31 + seedStr.charCodeAt(i)) | 0;
@@ -483,7 +524,7 @@ export class Scenery {
       const o = outside(x, z);
       if (o <= 0) return 0;
       const n = fbm(x * 0.006, z * 0.006, seed);
-      let h = (n * 1.4 - 0.25) * T.hills * smooth(0, 160, o);
+      let h = (n * 1.4 - 0.25) * T.hills * this.q.hills * smooth(0, 160, o);
       h = Math.max(0, h);
       const step = 14;
       const tz = Math.floor(h / step) * step;
@@ -493,7 +534,7 @@ export class Scenery {
     this.heightAt = heightAt;
 
     // Terrain
-    const size = 3000, seg = this.quality === 'low' ? 70 : 110;
+    const size = 3000, seg = this.q.terrainSeg;
     const gb = new GeoBuilder();
     const step = size / seg;
     const x0 = cx - size / 2, z0 = cz - size / 2;
@@ -542,7 +583,7 @@ export class Scenery {
         n++;
       }
     };
-    const ctx = { rand, scatter, low: this.quality === 'low' };
+    const ctx = { rand, scatter, low: this.q.decor !== 'full' };
     if (this.themeId === 'polar') this._polarDecor(ctx);
     else if (this.themeId === 'jungle') this._jungleDecor(ctx);
     else if (this.themeId === 'city') this._cityDecor(ctx);

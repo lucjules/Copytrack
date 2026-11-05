@@ -133,8 +133,17 @@
       <label><span>Volume de la musique</span><input type="range" id="opt-music" min="0" max="1" step="0.05"></label>
       <h3 class="opt-h">Image</h3>
       <label><span>Qualité graphique</span>
-        <select id="opt-quality"><option value="high">Haute (ombres, pleine définition)</option><option value="medium">Moyenne (ombres, définition réduite)</option><option value="low">Basse (sans ombres, téléphones modestes)</option></select>
+        <select id="opt-quality">
+          <option value="auto">Automatique (détectée sur ta machine)</option>
+          <option value="ultra">Ultra (PC puissants : définition x2, ombres 4096, reflets du ciel)</option>
+          <option value="high">Haute (ombres, pleine définition)</option>
+          <option value="medium">Moyenne (ombres, définition réduite)</option>
+          <option value="low">Basse (sans ombres, décor allégé)</option>
+          <option value="potato">Potato (très vieux PC : sans ombres, sans décor, définition réduite)</option>
+        </select>
       </label>
+      <p class="meta" id="opt-quality-info"></p>
+      <button class="btn small" id="opt-quality-redo" type="button" title="Mesure de nouveau la fluidité sur l'animation du menu">Relancer la détection</button>
       <label><span>Afficher les images par seconde</span><input type="checkbox" id="opt-fps"></label>
       <label><span>Champ de vision <output id="opt-fov-v"></output></span><input type="range" id="opt-fov" min="-10" max="20" step="1"></label>
       <label><span>Effet de vitesse (au-delà de 180 km/h)</span><input type="checkbox" id="opt-speedfx"></label>

@@ -240,7 +240,7 @@ export class EditorSession {
     this.focusLevel = false;  // vue par niveau
     this.deco = { cat: 'signs', color: 0, scale: 1, rot: 0, url: '', snap: 0, ph: 0, dy: 0 };
 
-    this.view = new TrackView(this.track, app.materials);
+    this.view = new TrackView(this.track, app.materials, { showAllDecos: true });      // l'éditeur montre toujours toutes les décorations, même en qualité Potato
     app.scenery.trackGroup.add(this.view.group);
     this._applyDecor();
 

@@ -29,15 +29,20 @@ import {
   getEditorDraft, formatTime, purgeOldRecords, clearRecords, setImportedGhost,
 } from './storage.js';
 
+import { QualityManager, Benchmark, PROFILES, PROFILE_LABELS, BENCH_VERSION, hardwareHints, wantAntialias } from './quality.js';
+import { setHideDecos } from './trackMesh.js';
+
 class App {
   // identity : { kind: 'guest' | 'account', username } décidé par l'écran d'accueil (welcome.js), toujours avant le menu.
   constructor(identity) {
     this.identity = identity;
     this.settings = loadSettings();
     this.settings.playerName = identity.username;      // jamais de pseudo par défaut : celui de l'invité ou du compte
+    // Une seule fois : les anciennes installations avaient « Haute » par défaut ; elles passent en détection automatique.
+    if (!this.settings.gfxMigrated) { this.settings.gfxMigrated = 1; this.settings.quality = 'auto'; }
     saveSettings(this.settings);
     const canvas = $('gl');
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: wantAntialias(this.settings), powerPreference: 'high-performance' });
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.scene = new THREE.Scene();
@@ -45,6 +50,10 @@ class App {
     this.materials = createTrackMaterials();
     this.scenery = new Scenery(this.scene, this.settings.quality);
     this.particles = new Particles(this.scene);
+    this.quality = new QualityManager({
+      renderer: this.renderer, scene: this.scene, camera: this.camera, scenery: this.scenery, particles: this.particles,
+      resize: () => this._resize(), views: () => (this.session && this.session.view ? [this.session.view] : []), setDecoHidden: setHideDecos,
+    });
     this.input = new Input();
     this.input.setBindings(this.settings.keys, this.settings.pad);
     this.input.setPadConfig({ deadzone: this.settings.padDeadzone, sens: this.settings.padSens, rumble: this.settings.haptics });
@@ -83,12 +92,48 @@ class App {
     saveSettings(this.settings);
   }
 
-  _applyQuality() {
+  // Profil réellement appliqué : le choix du joueur, ou (automatique) le résultat de la détection (« Haute » en attendant).
+  _qualityName() {
     const q = this.settings.quality;
-    const low = q === 'low';
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, low ? 1 : q === 'medium' ? 1.25 : 2));
-    this.renderer.shadowMap.enabled = !low;
-    this.scenery.setQuality(this.settings.quality);
+    return q === 'auto' ? (this.settings.gfxProfile || 'high') : (PROFILES[q] ? q : 'high');
+  }
+
+  _applyQuality() {
+    this.quality.apply(this._qualityName());
+    this._renderQualityInfo();
+  }
+
+  _renderQualityInfo() {
+    const el = $('opt-quality-info');
+    if (!el) return;
+    const s = this.settings, now = PROFILE_LABELS[this.quality.name] || '';
+    el.textContent = s.quality === 'auto'
+      ? (this.bench ? 'Détection en cours sur l’animation du menu…' : s.gfxProfile ? `Détecté : ${PROFILE_LABELS[s.gfxProfile]} (${s.gfxFps} i/s mesurées). Réduite automatiquement en course si ça saccade.` : `Profil actuel : ${now}.`)
+      : `Profil choisi : ${now}.`;
+  }
+
+  // Benchmark invisible : on mesure la fluidité de l'animation de fond du menu (voir quality.js), sans rien montrer.
+  _startBench(force = false) {
+    const s = this.settings;
+    if (s.quality !== 'auto' || this.bench) return;
+    if (!force && s.gfxProfile && s.gfxV === BENCH_VERSION) return;
+    const gl = this.renderer.getContext();
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const hints = hardwareHints({
+      renderer: ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : '', ua: navigator.userAgent, touch: document.body.classList.contains('touch'),
+      width: window.innerWidth, cores: navigator.hardwareConcurrency, memory: navigator.deviceMemory,
+    });
+    this.bench = new Benchmark({
+      start: hints.start,
+      apply: (p) => this.quality.apply(p),
+      done: (r) => {
+        s.gfxProfile = r.profile; s.gfxV = BENCH_VERSION; s.gfxFps = r.fps;
+        this.saveSettings();
+        this.bench = null;
+        this._renderQualityInfo();
+      },
+    });
+    this._renderQualityInfo();
   }
 
   _resize() {
@@ -896,6 +941,7 @@ class App {
     const s = this.settings;
     $('opt-volume').value = s.volume;
     $('opt-quality').value = s.quality;
+    this._renderQualityInfo();
     $('opt-ghost').checked = s.ghost;
     $('opt-ghostgold').checked = s.ghostGold !== false;
     $('opt-ghostimp').checked = s.ghostImported !== false;
@@ -1275,9 +1321,19 @@ class App {
     });
     $('opt-quality').addEventListener('change', (e) => {
       this.settings.quality = e.target.value;
+      if (this.bench) { this.bench.finished = true; this.bench = null; }
       this._applyQuality();
       this.saveSettings();
       this.showMenu('options');
+      this._startBench();
+    });
+    $('opt-quality-redo').addEventListener('click', () => {
+      this.settings.quality = 'auto';
+      this.settings.gfxProfile = '';
+      $('opt-quality').value = 'auto';
+      this.saveSettings();
+      this.showMenu('options');
+      this._startBench(true);
     });
     $('opt-ghost').addEventListener('change', (e) => { this.settings.ghost = e.target.checked; this.saveSettings(); });
     $('opt-ghostgold').addEventListener('change', (e) => { this.settings.ghostGold = e.target.checked; this.saveSettings(); });
@@ -1717,6 +1773,7 @@ class App {
   start() {
     const hash = location.hash;
     this.showMenu('menu');
+    this._startBench();
     // Premier lancement : petit tutoriel (sauf si on arrive par un lien de circuit).
     if (!this.settings.tutorialDone && !hash.startsWith('#t=')) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
     if (hash.startsWith('#t=')) {
@@ -1738,8 +1795,10 @@ class App {
       } catch { this.ui.flash('Lien de circuit invalide.'); }
     }
     let last = performance.now();
+    let rawLast = last;
     const loop = (now) => {
       const dt = Math.min(0.1, (now - last) / 1000);
+      rawLast = last;
       last = now;
       const gmode = this.mode === 'race' ? 'race' : this.mode === 'editor' ? 'editor' : 'menu';
       this.input.pollGamepad(this.ui.modalOpen ? "menu" : gmode);
@@ -1755,6 +1814,16 @@ class App {
       if (this.mode === 'menu' && !this.ui.modalOpen && this.input.hit('Escape')) this.showScreen('menu');
       if (this.session) this.session.update(dt);
       this.renderer.render(this.scene, this.camera);
+      this.quality.tick();
+      if (this.bench) {
+        // La mesure ne compte que l'animation du menu, visible et sans fenêtre ouverte ; si le joueur part ailleurs, on se rabat sur un profil sûr.
+        if (this.mode !== 'menu') { this.bench.abort(); this.bench = null; this._renderQualityInfo(); }
+        else this.bench.frame(now, !this.ui.modalOpen && document.visibilityState === 'visible');
+      } else {
+        const racing = this.mode === 'race' && this.session && this.session.state === 'racing';
+        const nm = this.quality.watch((now - rawLast) / 1000, racing, this.settings.quality === 'auto');
+        if (nm) { this.settings.gfxProfile = nm; this.saveSettings(); this.ui.flash(`Qualité réduite automatiquement : ${PROFILE_LABELS[nm]}`, 2.5); this._renderQualityInfo(); }
+      }
       if (this.settings.showFps) {
         this._fpsN = (this._fpsN || 0) + 1; this._fpsT = (this._fpsT || 0) + dt;
         if (this._fpsT >= 0.5) { $('fps').textContent = `${Math.round(this._fpsN / this._fpsT)} i/s`; this._fpsN = 0; this._fpsT = 0; }

@@ -907,10 +907,16 @@ export function createTrackMaterials() {
   };
 }
 
+// Profil « Potato » : les décorations du créateur (hors obstacles, qui ont un effet physique) ne sont pas dessinées.
+// Une vue d'éditeur met showAllDecos à true : on y voit toujours tout.
+let hideDecos = false;
+export function setHideDecos(v) { hideDecos = !!v; }
+
 export class TrackView {
-  constructor(track, materials) {
+  constructor(track, materials, { showAllDecos = false } = {}) {
     this.track = track;
     this.materials = materials;
+    this.showAllDecos = showAllDecos;
     this.group = new THREE.Group();
     this.plaques = [];
     this.obstacles = [];
@@ -959,6 +965,7 @@ export class TrackView {
       if (!dimGlow.empty) this.group.add(new THREE.Mesh(dimGlow.build(), this.dimMat));
     }
     for (const d of this.track.decos) {
+      if (hideDecos && !this.showAllDecos && !isObstacle(d.k)) continue;
       if (d.k === 'plaque') {
         const mesh = createPlaque(d);
         this.group.add(mesh);
