@@ -8,7 +8,9 @@ import { createHash } from 'node:crypto';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 async function walk(dir) {
   const out = [];
-  for (const e of await readdir(dir, { withFileTypes: true })) {
+  let list = [];
+  try { list = await readdir(dir, { withFileTypes: true }); } catch { return out; }   // dossier absent (ex. assets/)
+  for (const e of list) {
     const p = join(dir, e.name);
     if (e.isDirectory()) out.push(...await walk(p));
     else out.push(p);
@@ -16,9 +18,9 @@ async function walk(dir) {
   return out;
 }
 const files = ['index.html', 'manifest.webmanifest'];
-for (const d of ['css', 'js', 'icons']) {
+for (const d of ['css', 'js', 'icons', 'assets']) {
   for (const f of await walk(join(root, d))) {
-    if (/\.(js|css|png|svg|txt)$/.test(f)) files.push(relative(root, f).split('\\').join('/'));
+    if (/\.(js|css|png|svg|txt|mp3)$/.test(f)) files.push(relative(root, f).split('\\').join('/'));
   }
 }
 files.sort();
