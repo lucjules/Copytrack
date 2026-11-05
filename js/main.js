@@ -25,7 +25,7 @@ import { encodeGhost, decodeGhost, PHYS_VER } from './replay.js';
 import { dailyChallenge, dayKey } from './daily.js';
 import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, goalFor, goalLabel, goalDone, chapterUnlocked } from './career.js';
 import {
-  loadSettings, saveSettings, getRecord, listMyTracks, deleteMyTrack, saveMyTrack, newId,
+  loadSettings, saveSettings, getRecord, saveRecord, listMyTracks, deleteMyTrack, saveMyTrack, newId,
   getEditorDraft, formatTime, purgeOldRecords, clearRecords, setImportedGhost,
 } from './storage.js';
 
@@ -172,6 +172,7 @@ class App {
   }
 
   showScreen(name) {
+    this._screen = name;
     if (name === 'menu') {
       const r = getRecord('daily-' + dayKey());
       $('daily-best').textContent = r ? formatTime(r.time) : 'nouveau';
@@ -1016,6 +1017,9 @@ class App {
         trackKey: key, code: key.startsWith('u-') ? session.track.encode() : '',
         inputs: session.lastRun.inputs, time, physVer: PV,
       }, this.settings.playerName);
+      // Le serveur a accepté la course : on s'assure que la progression locale la contient (mise à jour sûre si l'écriture de
+      // fin de course avait échoué : stockage plein, autre onglet…). Les médailles et le menu se lisent depuis ces records.
+      this._ensureLocalRecord(key, time, session);
       if (this.session !== session) return;
       el.className = 'fin-online ok';
       el.textContent = r.improved
@@ -1030,6 +1034,23 @@ class App {
         ? `🌍 Classement indisponible pour l'instant : le serveur n'est pas à la même version du jeu (v${PV}). Ton record est gardé sur cet appareil. Recharge la page ; si ça continue, la fonction submit-score doit être mise à jour.`
         : '🌍 Classement : ' + e.message;
     }
+  }
+
+  // Garantit que le record local de `key` est au moins aussi bon que `time`, puis rafraîchit l'écran de sélection s'il est affiché.
+  _ensureLocalRecord(key, time, session = null) {
+    const cur = getRecord(key);
+    if (!cur || time < cur.time - 1e-9) {
+      saveRecord(key, {
+        time, splits: session && session.logic ? session.logic.splits.slice() : [], ghost: null,
+        inputs: session && session.lastRun ? session.lastRun.inputs : null, pv: PV, date: Date.now(), name: this.settings.playerName,
+      });
+    }
+    this.refreshProgress();
+  }
+
+  // Les listes (niveaux, défi du jour, mes circuits) sont reconstruites à chaque affichage : on ne fait que relancer l'écran courant.
+  refreshProgress() {
+    if (this.mode === 'menu' && ['menu', 'tracks', 'mytracks'].includes(this._screen)) this.showScreen(this._screen);
   }
 
   async leaderboardModal(trackKey, name, track = null) {
