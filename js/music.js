@@ -24,6 +24,7 @@ export class Music {
   setVolume(v) {
     this.volume = v;
     if (this.out) this.out.gain.setTargetAtTime(v * 0.6, this.audio.ctx.currentTime, 0.1);
+    if (this.el) this.el.volume = Math.min(1, v * 0.6);
   }
 
   // kind : 'menu' ou autre (course). Garde la boucle en cours si c'est déjà la bonne, sinon fondu enchaîné vers l'autre.
@@ -39,7 +40,7 @@ export class Music {
           .then((r) => r.arrayBuffer())
           .then((b) => ctx.decodeAudioData(b))
           .then((d) => { this.bufs[kind] = d; if (this.want === kind) this.play(kind); })
-          .catch(() => { this.loading[kind] = null; });
+          .catch((e) => { console.warn('Musique : décodage impossible, lecture directe', e); this.loading[kind] = null; this._direct(kind); });
       }
       return;
     }
@@ -53,8 +54,19 @@ export class Music {
     this.src = s; this.fade = g; this.kind = kind;
   }
 
+  // Secours si le décodage Web Audio échoue (navigateur ancien, réseau coupé en cours de route) : balise <audio> en boucle.
+  _direct(kind) {
+    if (this.want !== kind || this.kind === kind) return;
+    this.stop(0.3);
+    this.want = kind;
+    const el = new Audio(`assets/music-${kind}.mp3`);
+    el.loop = true; el.volume = Math.min(1, this.volume * 0.6);
+    el.play().then(() => { this.el = el; this.kind = kind; }).catch(() => {});
+  }
+
   stop(fade = 0.3) {
     this.want = null;
+    if (this.el) { this.el.pause(); this.el = null; this.kind = null; }
     if (this.src) {
       const ctx = this.audio.ctx, s = this.src, g = this.fade, t = ctx.currentTime;
       g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + fade);
