@@ -16,9 +16,9 @@ async function walk(dir) {
   return out;
 }
 const files = ['index.html', 'manifest.webmanifest'];
-for (const d of ['css', 'js', 'icons']) {
+for (const d of ['css', 'js', 'icons', 'assets']) {
   for (const f of await walk(join(root, d))) {
-    if (/\.(js|css|png|svg|txt)$/.test(f)) files.push(relative(root, f).split('\\').join('/'));
+    if (/\.(js|css|png|svg|txt|mp3)$/.test(f)) files.push(relative(root, f).split('\\').join('/'));
   }
 }
 files.sort();
