@@ -12,7 +12,7 @@
 import { CELL, DT, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T, LEVEL_H, ROAD_TOP, SURF_PHYS } from './constants.js';
 import {
   PIECES, PLATES, RING_R, RING_Y, toLocal, sampleLocal, rotVec, tileCenter, isRibbon, isFloor, isCeilingFloor, tileParam, baseY,
-  beltSpeed, glassSeconds, TUNNEL_TOP,
+  beltSpeed, glassSeconds, TUNNEL_TOP, isSideTile, hasNoRails,
 } from './pieces.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { OBST, obstacleLocal, toLocalObs, obstacleRadius } from './obstacles.js';
@@ -51,6 +51,7 @@ export const CAR = {
   magnetRange: 4,     // aimant : portée de l'attraction au-dessus d'une route aimantée (m)
   magnetAcc: 80,      // ... et accélération maximale vers la route, le long de sa normale (m/s²)
   launch: 2.0,        // vitesse normale (m/s) au-delà de laquelle la route « tombe » sous la voiture : elle décolle
+  stickAngle: 0.21,   // 0.9.3 : un défaut de raccord de moins de ~12° (pente, pente douce, raccord doux pris très vite) ne fait plus décoller ; un tremplin (22°) si
   airPitchAcc: 4.2,  // tangage en l'air : gaz = nez vers le bas, frein = nez vers le haut (rad/s²)
   airPitchDamp: 2.6,
   airPitchUpK: 1.6,   // relever le nez est 1,6 fois plus vif que le plonger
@@ -133,6 +134,7 @@ export const GLIDE = {
   turnSpeed: 9,        // vitesse (m/s) à partir de laquelle il vire à plein régime
   turnRamp: 7,         // réactivité du roulis (1/s)
 };
+const STICK_COS = Math.cos(CAR.stickAngle);
 // Route sur le côté (pièces 90°) : appui aérodynamique (m/s² par (m/s)²) ajouté à l'appui réel. Pour tenir contre la gravité sur un
 // plan vertical il faut environ 21 m/s (75 km/h) ; en dessous, la voiture glisse le long du plan et tombe par le bord.
 export const SIDE_AERO = 0.025;
@@ -619,7 +621,12 @@ export class CarPhysics {
         v.x -= m.nx * a; v.y -= m.ny * a; v.z -= m.nz * a;
       }
     }
-    if (this.grounded && gap < snap && gap > -CAR.step && vn < launch) {
+    // Petit défaut de raccord (pente douce, bord d'un virage incliné, raccord doux pris à très grande vitesse) : si la normale de la route ne
+    // tourne que de quelques degrés d'un pas à l'autre, la voiture suit la route au lieu de décoller. Un vrai décrochement (pente nette, tremplin,
+    // tremplin, virage incliné raide : plus de ~12°) la fait toujours décoller.
+    let stick = vn < launch;
+    if (!stick && this.grounded && gap < snap && gap > -CAR.step) stick = this.n.x * s.nx + this.n.y * s.ny + this.n.z * s.nz > STICK_COS;
+    if (this.grounded && gap < snap && gap > -CAR.step && stick) {
       p.y = s.h;
       const sp = this.speed;
       v.x -= s.nx * vn; v.y -= s.ny * vn; v.z -= s.nz * vn;
@@ -1154,7 +1161,7 @@ export class CarPhysics {
       const dq = (q.x - F.qx) * F.nx + (q.y - F.qy) * F.ny + (q.z - F.qz) * F.nz;
       const vn = v.x * F.nx + v.y * F.ny + v.z * F.nz;
       if (!(dn <= 0.05 && dq >= -0.3 && dn > -1.5 && vn < 0)) continue;
-      if (Math.abs(dl) > ROAD_HALF + (tile.nb ? 0 : 0.3)) continue;
+      if (Math.abs(dl) > ROAD_HALF + (hasNoRails(tile) ? 0 : 0.3)) continue;
       const vt = v.x * F.tx + v.y * F.ty + v.z * F.tz;
       const R = { tile, rib, u, dir: vt >= 0 ? 1 : -1, dl: 0, vs: 0, vd: 0, psi: 0 };
       R.dl = clamp(dl * R.dir, -ROAD_HALF + 1, ROAD_HALF - 1) * R.dir;
@@ -1219,16 +1226,18 @@ export class CarPhysics {
     const kn = kn0 * F.cc - kg0 * F.cs, kg = kg0 * F.cc + kn0 * F.cs;
     let B = this._basis(R, F);
 
-    // Inversion de gravité sur un ruban (vrille, looping...) : la gravité suit la route.
-    if (tile.s === 'flip') {
-      const ng = F.ny >= 0 ? 1 : -1;
+    // Inversion de gravité sur un ruban (vrille, looping, transition mur <-> plafond...) : la gravité suit la route. Sur le plan vertical
+    // exact (mur) la gravité reste normale : la marge de 3° évite de rester « à l'envers » en revenant d'un plafond sur un mur.
+    if (tile.s === 'flip' || PIECES[tile.t].autoFlip) {
+      const ng = F.ny >= -0.05 ? 1 : -1;
       if (ng !== this.gSign) { this.gSign = ng; this.ev.flip = true; }
     }
     // Gravité projetée dans le plan de la route (vrille, mur, envers, paroi du tube...).
     const g = this.g * this.gSign;
     // Route sur le côté (pièces 90°) : l'appui aérodynamique (vitesse²) compense la glissade le long du plan ; la gravité, elle, ne change pas.
     // En dessous de ~80 km/h il ne compense plus assez : la voiture glisse vers le bord du bas et tombe.
-    const hold = PIECES[tile.t].side ? Math.min(1, SIDE_HOLD * R.vs * R.vs / Math.max(1, this.g)) : 0;
+    const sidePiece = isSideTile(tile);
+    const hold = sidePiece ? Math.min(1, SIDE_HOLD * R.vs * R.vs / Math.max(1, this.g)) : 0;
     R.vs -= g * B.e1y * dt;
     R.vd -= g * B.e2y * dt * (1 - hold);
     R.psi -= R.dir * kg * R.vs * dt;
@@ -1264,7 +1273,6 @@ export class CarPhysics {
     // Appui réel des roues : gravité normale + effet de la courbure (centrifuge).
     // Au sol plat il vaut g ; sur un mur vertical, 0 ; à l'envers sur du plat, -g.
     // Route sur le côté (90°) : l'appui vient aussi de la vitesse (SIDE_AERO), jamais d'un changement de gravité.
-    const sidePiece = PIECES[tile.t].side;
     let press = R.vs * R.vs * kn + R.vd * R.vd * kc + g * F.ny;
     if (sidePiece) press += SIDE_AERO * R.vs * R.vs * Math.sqrt(Math.max(0, 1 - F.ny * F.ny));      // appui aérodynamique, nul à plat, maximal à la verticale
     const gAbs = this.g;
@@ -1303,7 +1311,7 @@ export class CarPhysics {
     const hw = F.hw || ROAD_HALF;
     if (F.wrap) {
       // Tube : pas de bord, on peut faire le tour.
-    } else if (tile.nb || Math.abs(R.dl) > hw + 1.5) {
+    } else if (hasNoRails(tile) || Math.abs(R.dl) > hw + 1.5) {
       // Sans bordure, ou voiture restée haut sur la paroi quand le tube se rouvre.
       if (Math.abs(R.dl) > hw + 0.3) { this._ribPlace(R); this._ribDetach(); return; }
     } else {

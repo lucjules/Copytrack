@@ -7,7 +7,7 @@ let failures = 0;
 function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 4).join('\n       ')); } }
 
 const { Track } = await import('../js/track.js');
-const { PIECES, PIECE_ORDER, cpKind, flagAllowed, sampleLocal, isRibbon } = await import('../js/pieces.js');
+const { PIECES, PIECE_ORDER, cpKind, flagAllowed, sampleLocal, isRibbon, hasNoRails } = await import('../js/pieces.js');
 const { enclosedRegion, tileRegion } = await import('../js/editorTools.js');
 const { EditorSession, PALETTE_ORDER, TOOLS } = await import('../js/editor.js');
 const { Inspector } = await import('../js/inspector.js');
@@ -144,38 +144,48 @@ test('la plaque bateau est une rampe très légère : eau (entrée) → sol (sor
 });
 
 console.log('Routes à 90°');
-test('4 nouvelles pièces, anciens index inchangés ; elles réservent des niveaux sous elles (pas de niveau 0)', () => {
-  assert.deepEqual(PIECE_ORDER.slice(-8), ['crv05', 'crv1', 'crv2', 'crv4', 'rollL', 'rollR', 'sideL', 'sideR']);
-  for (const t of ['rollL', 'rollR', 'sideL', 'sideR']) { assert.ok(isRibbon({ t })); assert.equal(PIECES[t].noRails, true); }
+test('les 4 anciennes pièces gardent leur index (lecture des anciens circuits) mais deviennent une pièce ordinaire + une orientation', () => {
+  const i = PIECE_ORDER.indexOf('crv05');
+  assert.deepEqual(PIECE_ORDER.slice(i, i + 8), ['crv05', 'crv1', 'crv2', 'crv4', 'rollL', 'rollR', 'sideL', 'sideR']);
+  const tl = (t, extra = {}) => Track.normalize({ t, x: 0, z: 0, l: 2, r: 0, ...extra });
+  assert.equal(tl('rollL').t, 'tr02s'); assert.equal(tl('rollR').t, 'tr01s');
+  assert.deepEqual([tl('sideL').t, tl('sideL').o], ['straight', 2]); assert.deepEqual([tl('sideR').t, tl('sideR').o], ['straight', 1]);
+  for (const t of ['tr01s', 'tr02s']) { assert.ok(isRibbon({ t })); assert.equal(PIECES[t].noRails, true); }
+  assert.ok(isRibbon(tl('sideL')), 'une ligne droite sur un mur se parcourt en mode ruban');
+  // Elles réservent des niveaux sous elles (la moitié basse du plan descend de 9 m) : pas de niveau 0.
   assert.equal(Track.inBounds(Track.normalize({ t: 'sideL', x: 0, z: 0, l: 0, r: 0 })), false);
   assert.equal(Track.inBounds(Track.normalize({ t: 'sideL', x: 0, z: 0, l: 2, r: 0 })), true);
   assert.equal(Track.normalize({ t: 'rollL', x: 0, z: 0, l: 2, r: 0 }).nb, 1, 'sans bordures d’office');
-  assert.equal(flagAllowed('sideL', 'nb'), false);
+  assert.equal(flagAllowed('tr01s', 'nb'), false);
+  assert.equal(tl('sideL').o, 2); assert.equal(hasNoRails(tl('sideL')), true);
+  assert.equal(flagAllowed('straight', 'o', null, 1), true, '0.9.3 : l’orientation est une option de la ligne droite');
 });
-function sideRun(v0, throttle) {
+function sideRun(v0, throttle, legacy = false) {
   const tr = new Track('s');
-  tr.add({ t: 'start', x: 0, z: 0, l: 4, r: 0 }); tr.add({ t: 'rollL', x: 0, z: -1, l: 4, r: 0 });
-  for (let z = -2; z >= -7; z--) tr.add({ t: 'sideL', x: 0, z, l: 4, r: 0 });
+  tr.add({ t: 'start', x: 0, z: 0, l: 4, r: 0 }); tr.add({ t: legacy ? 'rollL' : 'tr02s', x: 0, z: -1, l: 4, r: 0 });
+  for (let z = -2; z >= -7; z--) tr.add(legacy ? { t: 'sideL', x: 0, z, l: 4, r: 0 } : { t: 'straight', o: 2, x: 0, z, l: 4, r: 0 });
   const phys = new CarPhysics(tr), logic = new RaceLogic(tr); placeAtStart(phys, logic);
   phys.vel.z = -v0 / 3.6; phys.fwdSpeed = v0 / 3.6;
   let onSide = 0, maxDl = 0, left = false;
   for (let i = 0; i < 120 * 6; i++) {
     phys.clock = i; phys.step({ steer: 0, throttle, brake: false });
-    if (phys.rib && phys.rib.tile.t === 'sideL') { onSide++; maxDl = Math.max(maxDl, Math.abs(phys.rib.dl)); }
+    if (phys.rib && phys.rib.tile.o === 2) { onSide++; maxDl = Math.max(maxDl, Math.abs(phys.rib.dl)); }
     if (onSide && !phys.rib && phys.pos.z > -7 * CELL) left = true;
   }
   return { onSide, maxDl, left };
 }
-test('à grande vitesse la voiture tient sur le plan vertical sans glisser', () => {
-  const r = sideRun(200, true);
-  assert.ok(r.onSide > 120 * 2, 'longtemps sur la route côté : ' + r.onSide);
-  assert.ok(r.maxDl < 0.5, 'aucune glissade : ' + r.maxDl);
-});
-test('trop lente, elle glisse le long du plan et tombe par le bord (la gravité ne change pas)', () => {
-  const r = sideRun(55, false);
-  assert.equal(r.left, true, 'elle quitte la route avant la fin');
-  assert.ok(SIDE_HOLD > 0);
-});
+for (const legacy of [false, true]) {
+  test(`à grande vitesse la voiture tient sur le plan vertical sans glisser${legacy ? ' (ancien circuit : pièces rollL / sideL)' : ''}`, () => {
+    const r = sideRun(200, true, legacy);
+    assert.ok(r.onSide > 120 * 2, 'longtemps sur la route côté : ' + r.onSide);
+    assert.ok(r.maxDl < 0.5, 'aucune glissade : ' + r.maxDl);
+  });
+  test(`trop lente, elle glisse le long du plan et tombe par le bord (la gravité ne change pas)${legacy ? ' (ancien circuit)' : ''}`, () => {
+    const r = sideRun(55, false, legacy);
+    assert.equal(r.left, true, 'elle quitte la route avant la fin');
+    assert.ok(SIDE_HOLD > 0);
+  });
+}
 
 console.log('Checkpoint');
 test('sur une plateforme, le checkpoint est une balise (« pad ») ; sur une route, un portique ; plus d’anneau aérien dans l’éditeur', () => {

@@ -99,6 +99,68 @@ export const PIECES = {
   sideR:      { label: 'Ligne droite côté ↱', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, side: 2, pivot: 1, noRails: true },
 };
 
+// ---- 0.9.3 : pentes descendantes, raccords doux de pente, virages descendants, transitions d'orientation --------------------------
+// Profil vertical d'une rampe : h(t) = rise · H(t), t = avancée 0..1 le long de la pièce, rise signé (négatif : la pièce DESCEND).
+//   l : droite (pente constante)               i : entrée douce — plate au départ, de plus en plus raide (la pente finale vaut 2·rise / longueur)
+//   o : sortie douce — raide au départ, plate à l'arrivée   s : en S — plate aux deux bouts (raccord entre deux niveaux)
+// Une « entrée douce » de rise ½ / 1 / 2 se raccorde donc à une droite de pente 1 / 2 / 4 ; la « sortie douce » correspondante la ramène à plat.
+export const V_PROFILES = {
+  l: { H: (t) => t, D: () => 1 },
+  i: { H: (t) => t * t, D: (t) => 2 * t },
+  o: { H: (t) => 2 * t - t * t, D: (t) => 2 - 2 * t },
+  s: { H: (t) => t * t * (3 - 2 * t), D: (t) => 6 * t * (1 - t) },
+};
+export const profOf = (p) => p.prof || (p.curv ? 'i' : 'l');
+export const profH = (p, t) => V_PROFILES[profOf(p)].H(t);
+export const profD = (p, t) => V_PROFILES[profOf(p)].D(t);
+
+const RISES = [0.5, 1, 2, 4];
+const rtag = (r) => (r === 0.5 ? '05' : String(r));
+const rtxt = (r) => (r === 0.5 ? '½' : String(r));
+// Ordre figé de ces types (voir PIECE_ORDER) : ne jamais le modifier, seulement ajouter à la suite.
+export const GEN_IDS = [];
+const gen = (id, def) => { PIECES[id] = def; GEN_IDS.push(id); };
+for (const r of RISES) gen('dn' + rtag(r), { label: `Pente descendante ${rtxt(r)}`, kind: 'line', size: 1, rise: -r });
+for (const r of RISES) gen('cro' + rtag(r), { label: `Courbe · fin de montée ${rtxt(r)}`, kind: 'line', size: 1, rise: r, prof: 'o' });
+for (const r of RISES) gen('cdi' + rtag(r), { label: `Courbe · début de descente ${rtxt(r)}`, kind: 'line', size: 1, rise: -r, prof: 'i' });
+for (const r of RISES) gen('cdo' + rtag(r), { label: `Courbe · fin de descente ${rtxt(r)}`, kind: 'line', size: 1, rise: -r, prof: 'o' });
+for (const r of [0.5, 1]) gen('crs' + rtag(r), { label: `Courbe en S · montée ${rtxt(r)}`, kind: 'line', size: 1, rise: r, prof: 's' });
+for (const r of [0.5, 1]) gen('cds' + rtag(r), { label: `Courbe en S · descente ${rtxt(r)}`, kind: 'line', size: 1, rise: -r, prof: 's' });
+// Virages descendants (serré 1 case, grand 2×2 ; ↱ / ↰) : l'inverse des virages montants.
+for (const [pre, size, mir, lab] of [['cvd', 1, 1, 'serré'], ['cvdBig', 2, 1, 'grand'], ['cvdL', 1, -1, 'serré ↰'], ['cvdBigL', 2, -1, 'grand ↰']]) {
+  for (const r of RISES) gen(pre + rtag(r), { label: `Virage descendant ${lab} · ${rtxt(r)}`, kind: 'arc', size, rise: -r, ...(mir < 0 ? { mirror: -1 } : {}) });
+}
+
+// Orientation d'une route : 0 sol, 1 mur gauche (le mur est à gauche du pilote : le toit de la voiture pointe vers la droite),
+// 2 mur droit, 3 plafond (la route retournée : drapeau v, roulable en gravité inversée). Roulis autour de l'axe de la route :
+// normale = cos ψ · (haut de la route) + sin ψ · (droite de la route), ψ = +90° pour un mur gauche, -90° pour un mur droit.
+export const ORIENTS = [
+  { id: 0, label: 'Sol' }, { id: 1, label: 'Mur gauche' }, { id: 2, label: 'Mur droit' }, { id: 3, label: 'Plafond' },
+];
+export const oriAngle = (code, other = 0) => (code === 1 ? Math.PI / 2 : code === 2 ? -Math.PI / 2 : code === 3 ? (other === 2 ? -Math.PI : Math.PI) : 0);
+export const tileOri = (tile) => (tile.v ? 3 : (tile.o | 0));
+// Passages d'une orientation à une autre : « 01 » = du sol au mur gauche… Franche : 1 case ; douce : 2×2 (la route dans la colonne de gauche).
+export const ROLL_PASSAGES = ['01', '10', '02', '20', '13', '31', '23', '32'];
+const ORI_NAME = ['sol', 'mur gauche', 'mur droit', 'plafond'];
+for (const long of [false, true]) {
+  for (const pas of ROLL_PASSAGES) {
+    const a = +pas[0], b = +pas[1];
+    gen(`tr${pas}${long ? 'l' : 's'}`, {
+      label: `Transition ${ORI_NAME[a]} → ${ORI_NAME[b]}${long ? ' (douce 2×2)' : ''}`, kind: 'ribbon', size: long ? 2 : 1, rise: 0, clearance: 2, below: 2,
+      roll: [a, b], rollLong: long, noRails: true,
+      // Entre un mur et le plafond, la gravité suit la route (comme un revêtement « Inversion de gravité ») : sans cela la voiture
+      // tomberait du plafond, ou resterait en gravité inversée en revenant sur le mur.
+      ...(a === 3 || b === 3 ? { autoFlip: true } : {}),
+    });
+  }
+}
+// Anciens types de la 0.9.2 (routes « sur le côté ») : toujours lisibles, convertis à la lecture en pièce + orientation.
+//   rollL / rollR : transitions sol → mur droit / gauche ;  sideL / sideR : ligne droite sur un mur droit / gauche.
+export const LEGACY_TILE = {
+  rollL: { t: 'tr02s' }, rollR: { t: 'tr01s' },
+  sideL: { t: 'straight', o: 2 }, sideR: { t: 'straight', o: 1 },
+};
+
 // Rayon de l'anneau (turbo / checkpoint aérien) et hauteur de son centre au-dessus du niveau.
 export const RING_R = 7;
 export const RING_Y = 6;
@@ -121,6 +183,8 @@ export const PIECE_ORDER = [
   'cvL05', 'cvL1', 'cvL2', 'cvL4', 'cvBigL05', 'cvBigL1', 'cvBigL2', 'cvBigL4',
   // 0.9.2 (à la suite : ne jamais réordonner)
   'crv05', 'crv1', 'crv2', 'crv4', 'rollL', 'rollR', 'sideL', 'sideR',
+  // 0.9.3 (à la suite : ne jamais réordonner ; l'ordre est celui de GEN_IDS, vérifié par les tests)
+  ...GEN_IDS,
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -200,22 +264,35 @@ export function isRibbonKind(type) {
   return k === 'ribbon' || k === 'loop';
 }
 
-// Sol roulable (physique « au sol ») ? Les rubans et les routes à l'envers ne le sont pas.
+// Route « sur le côté » : roulée à 90° autour de son axe (mur gauche / droit, ou transition d'orientation). La gravité ne change pas :
+// l'appui vient de la vitesse (voir physics.js, SIDE_HOLD). Les anciens types de la 0.9.2 (side) en font partie.
+export function isSideTile(tile) {
+  const p = PIECES[tile.t];
+  return !!(tile.o || p.side || p.roll);
+}
+
+// Une ligne ou un virage posé sur un mur (tile.o) se parcourt en mode ruban, comme une transition.
+export const isOriented = (tile) => !!tile.o && (PIECES[tile.t].kind === 'line' || PIECES[tile.t].kind === 'arc');
+
+// Sol roulable (physique « au sol ») ? Les rubans, les routes sur un mur et les routes à l'envers ne le sont pas.
 export function isFloor(tile) {
   const k = PIECES[tile.t].kind;
-  return !tile.v && k !== 'ribbon' && k !== 'ring';
+  return !tile.v && !tile.o && k !== 'ribbon' && k !== 'ring';
 }
 
 // Sol « au plafond » (pièce posée à l'envers) : roulable seulement en gravité inversée.
 export function isCeilingFloor(tile) {
   const k = PIECES[tile.t].kind;
-  return !!tile.v && k !== 'ribbon' && k !== 'ring';
+  return !!tile.v && !tile.o && k !== 'ribbon' && k !== 'ring';
 }
 
 // Pièce parcourue en mode ruban (au moins en partie) ?
 export function isRibbon(tile) {
-  return isRibbonKind(tile.t);
+  return isRibbonKind(tile.t) || isOriented(tile);
 }
+
+// Sans bordures : choix de la pièce, pièces à plan vertical, ou route sur un mur (les rebords sortiraient sur le côté).
+export const hasNoRails = (tile) => !!(tile.nb || tile.o || PIECES[tile.t].noRails);
 
 // Drapeaux possibles : v (à l'envers), nb (sans bordures), tn (tunnel), mv (mouvement 1/2/3),
 // cp (checkpoint : 1 portique, 2 anneau aérien), th (thème visuel).
@@ -228,20 +305,23 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
   // Phase 2 : le thème est purement visuel, toute pièce de route en profite.
   if (flag === 'th') return p.kind !== 'ring';
   if (p.kind === 'ring' || p.kind === 'fork') return false;
+  // 0.9.3 : orientation « mur gauche / droit » : une ligne ou un virage ordinaire peut être posé sur un mur (val 1 = gauche, 2 = droit).
+  // Une route sur un mur n'a ni tunnel, ni checkpoint, ni anneau, ni mouvement, ni bordures ; le plafond (v) se choisit à part.
+  if (flag === 'o') return lineLike && !p.special && !p.noRails && !(tile && (tile.v || tile.tn || tile.cp || tile.tb || tile.mv));
   if (flag === 'nb') return !p.noRails && (lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube')));
-  if (flag === 'tn') return lineLike && !p.special && !(tile && (tile.v || tile.cp || tile.tb));
+  if (flag === 'tn') return lineLike && !p.special && !(tile && (tile.v || tile.o || tile.cp || tile.tb));
   // Pièce mobile : route « simple » (droite, virage, pente, plateforme), pas à l'envers, pas de checkpoint dessus.
-  if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !(tile && (tile.v || tile.cp || tile.tb));
+  if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !(tile && (tile.v || tile.o || tile.cp || tile.tb));
   // Checkpoint en option : sur une route plate (ligne ou virage) ; l'anneau aérien seulement sur une ligne droite à l'endroit.
   if (flag === 'cp') {
     // 0.9.2 : le checkpoint est une simple case à cocher (portique sur route, balise sur plateforme). L'ancien anneau aérien (val 2)
     // n'est plus proposé ; les anciens circuits qui l'utilisent continuent de fonctionner (voir cpKind).
-    if (!((lineLike || p.kind === 'area') && !p.special && !p.rise) || (tile && (tile.mv || tile.tn || tile.tb))) return false;
+    if (!((lineLike || p.kind === 'area') && !p.special && !p.rise) || (tile && (tile.mv || tile.tn || tile.tb || tile.o))) return false;
     if (val === 2) return p.kind === 'line' && !(tile && tile.v);
     return true;
   }
   // Anneau turbo en option (Phase 3) : comme le checkpoint aérien, sur une ligne droite plate à l'endroit.
-  if (flag === 'tb') return p.kind === 'line' && !p.special && !p.rise && !(tile && (tile.v || tile.mv || tile.tn || tile.cp));
+  if (flag === 'tb') return p.kind === 'line' && !p.special && !p.rise && !(tile && (tile.v || tile.o || tile.mv || tile.tn || tile.cp));
   return false;
 }
 
@@ -293,21 +373,21 @@ export const THEMES = [
   { id: 3, label: 'Roche' },
 ];
 
-export function surfaceAllowed(type, s, v = false) {
+export function surfaceAllowed(type, s, v = false, o = 0) {
   if (!s) return true;
   const p = PIECES[type];
   const S = SURFACES[s];
   if (!p || !S) return false;
-  return surfaceRule(p, S, s) === '';
+  return surfaceRule(p, S, s, o) === '';
 }
 
 // 0.9 : tous les revêtements vont sur toutes les pièces de route, sauf quelques cas
 // physiquement impossibles. Renvoie '' si c'est permis, sinon la raison (tableau de
 // compatibilité de l'éditeur). v (pièce à l'envers) ne change rien : au plafond, en
 // gravité inversée, les revêtements marchent pareil.
-export function surfaceRule(p, S, s) {
+export function surfaceRule(p, S, s, o = 0) {
   if (p.kind === 'ring') return 'pas de route dans un anneau';
-  const curved = p.kind === 'loop' || p.kind === 'ribbon';
+  const curved = p.kind === 'loop' || p.kind === 'ribbon' || !!o;      // une route sur un mur n'est pas plate
   if (S.flat && (p.rise || curved)) return 'seulement sur du plat';
   // Phase 3 : l'eau va aussi sur le Départ (course commencée en bateau) ; la plaque bateau est elle-même sur l'eau.
   if (s === 'water' && (p.special === 'finish' || p.kind === 'fork')) return 'pas sur l’arrivée ni une bifurcation';
@@ -390,9 +470,9 @@ export function sampleLocal(tile, lx, lz, out) {
     let t = (half - lz) / len;
     t = t < 0 ? 0 : t > 1 ? 1 : t;
     out.d = lx;
-    // Rampe droite : pente constante. Courbe : h = rise·t², pente 2·rise·t / longueur (nulle à l'entrée).
-    out.h = base + (p.curv ? rise * t * t : rise * t);
-    const k = (p.curv ? 2 * t : 1) * rise / len;
+    // Profil vertical (voir V_PROFILES) : droite, entrée douce, sortie douce ou S. Pente = rise · H'(t) / longueur.
+    out.h = base + rise * profH(p, t);
+    const k = rise * profD(p, t) / len;
     const inv = 1 / Math.sqrt(1 + k * k);
     out.ny = inv; out.nz = k * inv;
     out.along = t;

@@ -13,6 +13,7 @@ import { DECO_CATS, DECO_LABELS, DECO_COLORS, DECO_PACK_ICONS } from './decoData
 import { setEditorDraft, saveMyTrack, newId } from './storage.js';
 import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, enclosedRegion, tileRegion } from './editorTools.js';
 import { centerlineWorld } from './ribbons.js';
+import { orientationIssues } from './joins.js';
 import { Inspector, MIRROR_TYPES, LEGACY_CP } from './inspector.js';
 import { keyLabel } from './input.js';
 import { esc } from './ui.js';
@@ -21,7 +22,7 @@ import { pickObjects, pickTileExact, rayToSurface, ERASE_FILTERS, ERASE_FILTER_O
 // Pièces proposées dans la palette. 0.9.2 : plus aucun raccourci clavier pour choisir une pièce (les outils gardent les leurs).
 export const PALETTE_ORDER = [
   'straight', 'curve', 'bigcurve', 'slope', 'steep', 'loop', 'loopL', 'loopBig', 'loopBigL', 'loopDouble', 'loopDoubleL', 'twist',
-  'ramp90', 'wall', 'crest90', 'bank', 'bankBig', 'hugecurve', 'steep4', 'cv1', 'crv1', 'rollL', 'rollR', 'sideL', 'sideR',
+  'ramp90', 'wall', 'crest90', 'bank', 'bankBig', 'hugecurve', 'steep4', 'cv1', 'crv1',
   'tube', 'tubeIn', 'tubeMid', 'cork', 'corkL', 'fork', 'forkL', 'gentle', 'ring', 'start', 'finish', 'platform',
 ].map((id) => ({ id }));
 
@@ -36,7 +37,10 @@ const TOOL_IDS = new Set(['select', 'inspect', 'erase']);
 
 const MIRROR = MIRROR_TYPES;
 const MODS = [
-  { id: 'mod:v', flag: 'v', label: 'À l\'envers', hint: 'Route au plafond (gravité inversée)' },
+  { id: 'mod:v', flag: 'v', label: 'Plafond', hint: 'Route au plafond, à l’envers (gravité inversée)' },
+  { id: 'mod:o1', flag: 'o', val: 1, label: 'Mur gauche', hint: 'Route sur le mur de gauche (vu dans le sens de la flèche) : il faut de la vitesse pour tenir' },
+  { id: 'mod:o2', flag: 'o', val: 2, label: 'Mur droit', hint: 'Route sur le mur de droite (vu dans le sens de la flèche) : il faut de la vitesse pour tenir' },
+  { id: 'mod:o0', flag: 'o', val: 0, label: 'Sol', hint: 'Remet la route à plat, au sol' },
   { id: 'mod:nb', flag: 'nb', label: 'Sans bordures', hint: 'Plus de rebord : on peut tomber' },
   { id: 'mod:tn', flag: 'tn', label: 'Tunnel', hint: 'Voûte autour de la route' },
   { id: 'mod:mv1', flag: 'mv', val: 1, label: 'Ascenseur', hint: 'Monte et redescend (réglable dans l’Inspecteur)' },
@@ -51,29 +55,47 @@ const MODS = [
 // Options proposées dans l'onglet « Options » : bascules (route) et choix exclusifs (checkpoint, thème, mouvement).
 // Avec une pièce choisie, elles s'ajoutent à la pose (aperçu compris) ; sans pièce, elles s'appliquent à la pièce cliquée.
 const OPTION_GROUPS = [
-  { id: 'route', label: 'Route', multi: true, choices: [['v', 1, 'À l\'envers'], ['nb', 1, 'Sans bordures'], ['tn', 1, 'Tunnel']] },
+  // 0.9.3 : l'orientation est une caractéristique de toute ligne droite ou de tout virage (plus de pièces 90° à part).
+  { id: 'ori', label: 'Orientation', flag: 'o', choices: [['o', 0, 'Sol'], ['o', 1, 'Mur gauche'], ['o', 2, 'Mur droit'], ['v', 1, 'Plafond']] },
+  { id: 'route', label: 'Route', multi: true, choices: [['nb', 1, 'Sans bordures'], ['tn', 1, 'Tunnel']] },
   { id: 'cp', label: 'Checkpoint', flag: 'cp', check: true, choices: [['cp', 1, 'Checkpoint']] },
   { id: 'tb', label: 'Anneau turbo', flag: 'tb', choices: [['tb', 0, 'Aucun'], ['tb', 1, 'Turbo']] },
   { id: 'th', label: 'Thème', flag: 'th', choices: [['th', 0, 'Classique'], ['th', 1, 'Herbe'], ['th', 2, 'Sable'], ['th', 3, 'Roche']] },
   { id: 'mv', label: 'Mouvement', flag: 'mv', choices: [['mv', 0, 'Aucun'], ['mv', 1, 'Ascenseur'], ['mv', 2, 'Glissière'], ['mv', 3, 'Rotation']] },
 ];
-const OPT_KEYS = ['v', 'nb', 'tn', 'mv', 'cp', 'tb', 'th'];
-const OPT_NAMES = { v: 'à l\'envers', nb: 'sans bordures', tn: 'tunnel', mv: 'mouvement', cp: 'checkpoint', tb: 'anneau turbo', th: 'thème' };
+const OPT_KEYS = ['v', 'o', 'nb', 'tn', 'mv', 'cp', 'tb', 'th'];
+const OPT_NAMES = { v: 'plafond', o: 'mur', nb: 'sans bordures', tn: 'tunnel', mv: 'mouvement', cp: 'checkpoint', tb: 'anneau turbo', th: 'thème' };
+const NO_OPTS = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0 };
 const modId = (flag, val) => (flag === 'v' || flag === 'nb' || flag === 'tn' ? 'mod:' + flag : `mod:${flag}${val}`);
-// Un choix qui ne peut pas cohabiter avec un autre : poser « à l'envers » exclut tunnel, mouvement et anneau aérien ; mouvement exclut checkpoint.
+// Un choix qui ne peut pas cohabiter avec un autre : poser « plafond » ou un mur exclut tunnel, mouvement et anneau aérien ; mouvement exclut checkpoint.
 export function armedOptions(opts, flag, val) {
-  const o = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ...opts };
+  const o = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ...opts };
+  // Orientation (0.9.3) : sol, mur gauche (1), mur droit (2) ; le plafond est le drapeau v. Un seul choix à la fois.
+  if (flag === 'o') {
+    o.o = val === 0 || o.o === val ? 0 : val;
+    if (val === 0) o.v = 0;                                   // « Sol » : remet aussi la pièce à l'endroit
+    if (o.o) { o.v = 0; o.tn = 0; o.mv = 0; o.cp = 0; o.tb = 0; }
+    return o;
+  }
   const bool = flag === 'v' || flag === 'nb' || flag === 'tn';
   if (bool) o[flag] = o[flag] ? 0 : 1; else o[flag] = o[flag] === val ? 0 : val;
   // Le dernier choix l'emporte sur ce qui ne peut pas cohabiter avec lui (l'anneau turbo se comporte comme le checkpoint aérien).
   if (o[flag]) {
-    if (flag === 'v') { o.tn = 0; o.mv = 0; o.tb = 0; if (o.cp === 2) o.cp = 0; }
-    else if (flag === 'tn') { o.v = 0; o.cp = 0; o.tb = 0; }
-    else if (flag === 'mv') { o.v = 0; o.cp = 0; o.tb = 0; }
-    else if (flag === 'cp') { o.mv = 0; o.tn = 0; o.tb = 0; if (o.cp === 2) o.v = 0; }
-    else if (flag === 'tb') { o.mv = 0; o.tn = 0; o.v = 0; o.cp = 0; }
+    if (flag === 'v') { o.o = 0; o.tn = 0; o.mv = 0; o.tb = 0; if (o.cp === 2) o.cp = 0; }
+    else if (flag === 'tn') { o.v = 0; o.o = 0; o.cp = 0; o.tb = 0; }
+    else if (flag === 'mv') { o.v = 0; o.o = 0; o.cp = 0; o.tb = 0; }
+    else if (flag === 'cp') { o.mv = 0; o.tn = 0; o.tb = 0; o.o = 0; if (o.cp === 2) o.v = 0; }
+    else if (flag === 'tb') { o.mv = 0; o.tn = 0; o.v = 0; o.cp = 0; o.o = 0; }
   }
   return o;
+}
+// Pourquoi une pose sort des niveaux (sol ou plafond) : plafond, mur, pente descendante ou simple hauteur.
+function outOfBounds(tile) {
+  const P = PIECES[tile.t], [lo] = Track.range(tile);
+  if (tile.v) return 'Hors des niveaux : à l’envers, la route pend sous son niveau (monte d’abord).';
+  if (tile.o || (P.below && lo < 0)) return 'Hors des niveaux : une route sur un mur descend de 2 niveaux sous son niveau (monte d’abord).';
+  if (lo < 0) return 'Hors des niveaux : la pente descend sous le sol (monte d’abord).';
+  return 'Hors des niveaux.';
 }
 const SNAPS = [{ id: 0, label: 'Libre' }, { id: 1, label: '1 m' }, { id: 4, label: '4 m' }, { id: 12, label: 'Demi-case' }, { id: CELL, label: 'Case' }];
 
@@ -91,7 +113,19 @@ const loopIcon = (mir, col, turns = 1, w = 9) => {
 const numTag = (n) => `<text x="31" y="44" font-size="13" fill="#ffbf3c" font-family="sans-serif" font-weight="700" stroke="#14142a" stroke-width="2.2" paint-order="stroke">${n}</text>`;
 const incIcon = (big, n) => svg(`${big ? '<path d="M4 48 A44 44 0 0 1 48 4 L48 22 A26 26 0 0 0 22 48Z" fill="#3c4160"/><path d="M4 48 A44 44 0 0 1 48 4" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M22 48 A26 26 0 0 1 48 22" stroke="#ff6b57" stroke-width="2.5" fill="none"/>' : '<path d="M10 48 A38 38 0 0 1 48 10 L48 38 A10 10 0 0 0 38 48Z" fill="#3c4160"/><path d="M10 48 A38 38 0 0 1 48 10" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M38 48 A10 10 0 0 1 48 38" stroke="#ff6b57" stroke-width="2.5" fill="none"/>'}<path d="M20 38l10-10M24 26l6 2-2 6" stroke="#ffbf3c" stroke-width="3" fill="none"/>${numTag(n)}`);
 const crvIcon = (n) => svg(`<rect x="10" y="2" width="28" height="44" fill="#3c4160"/><rect x="8" y="2" width="2" height="44" fill="#ff6b57"/><rect x="38" y="2" width="2" height="44" fill="#ff6b57"/><path d="M14 42Q24 40 26 26T34 8M27 9h7v7" stroke="#ffbf3c" stroke-width="3.2" fill="none" stroke-linecap="round"/>${numTag(n)}`);
-const sideIcon = (left, roll) => svg(`<rect x="10" y="2" width="28" height="44" fill="#3c4160"/>${roll ? `<path d="M${left ? 10 : 38} 46V26" stroke="#36e9ff" stroke-width="4"/><path d="M${left ? 10 : 38} 26L${left ? 38 : 10} 2" stroke="#36e9ff" stroke-width="4" stroke-dasharray="5 4"/>` : `<rect x="${left ? 6 : 34}" y="2" width="8" height="44" fill="#36e9ff"/><path d="M${left ? 24 : 24} 40V10M18 16l6-6 6 6" stroke="#efe6d6" stroke-width="2.5" fill="none"/>`}<path d="M${left ? 4 : 44} 42l${left ? -3 : 3} -4" stroke="#ffbf3c" stroke-width="3"/>`);
+// Pente descendante : mêmes chevrons que la montée, mais pointant vers le bas (couleur différente).
+const downIcon = (n) => svg(`<rect x="10" y="2" width="28" height="44" fill="#3c4160"/><rect x="8" y="2" width="2" height="44" fill="#ff6b57"/><rect x="38" y="2" width="2" height="44" fill="#ff6b57"/><path d="M16 10l8 8 8-8M16 22l8 8 8-8" stroke="#7dffb2" stroke-width="3" fill="none"/>${numTag(n)}`);
+// Raccords de pente : profil vu de côté (plat -> pente, pente -> plat, S), montée ou descente.
+const PROFILE_PATH = {
+  iu: 'M12 40Q28 40 36 12', ou: 'M12 40Q20 12 36 12', su: 'M12 40C26 40 22 12 36 12',
+  id: 'M12 12Q28 12 36 40', od: 'M12 12Q20 40 36 40', sd: 'M12 12C26 12 22 40 36 40',
+};
+const profIcon = (prof, down, n) => svg(`<rect x="10" y="2" width="28" height="44" fill="#3c4160"/><rect x="8" y="2" width="2" height="44" fill="#ff6b57"/><rect x="38" y="2" width="2" height="44" fill="#ff6b57"/><path d="${PROFILE_PATH[prof + (down ? 'd' : 'u')]}" stroke="${down ? '#7dffb2' : '#ffbf3c'}" stroke-width="3.2" fill="none" stroke-linecap="round"/><path d="M12 44h24" stroke="#efe6d6" stroke-width="1.5" stroke-dasharray="2 3"/>${numTag(n)}`);
+// Virage descendant : le virage incliné, avec une flèche vers le bas.
+const decIcon = (big, n) => incIcon(big, n).replace('stroke="#ffbf3c"', 'stroke="#7dffb2"').replace('M20 38l10-10M24 26l6 2-2 6', 'M30 28L20 38M24 40l-6-2 2-6');
+// Transition d'orientation : coupe de la route avant (à gauche) et après (à droite) ; 0 sol, 1 mur gauche, 2 mur droit, 3 plafond.
+const ORI_BAR = { 0: 'M6 40h14', 1: 'M6 14v26', 2: 'M20 14v26', 3: 'M6 14h14' };
+const rollIcon = (a, b, long) => svg(`<rect x="2" y="6" width="44" height="36" rx="5" fill="#2a2f4e"/><path d="${ORI_BAR[a]}" stroke="#36e9ff" stroke-width="4" stroke-linecap="round"/><path d="${ORI_BAR[b]}" stroke="#ffbf3c" stroke-width="4" stroke-linecap="round" transform="translate(22 0)"/><path d="M22 26h4M24.5 23.5l2.5 2.5-2.5 2.5" stroke="#efe6d6" stroke-width="2" fill="none"/>${long ? '<text x="24" y="46" font-size="9" fill="#efe6d6" font-family="sans-serif" text-anchor="middle">2×2</text>' : ''}`);
 export const ICONS = {
   steep4: svg(`<rect x="10" y="2" width="28" height="44" fill="#3c4160"/><rect x="8" y="2" width="2" height="44" fill="#ff6b57"/><rect x="38" y="2" width="2" height="44" fill="#ff6b57"/><path d="M16 14l8-7 8 7M16 24l8-7 8 7M16 34l8-7 8 7M16 44l8-7 8 7" stroke="#ff6b57" stroke-width="3" fill="none"/>${numTag(4)}`),
   hugecurve: svg(`<path d="M2 48 A46 46 0 0 1 48 2 L48 14 A34 34 0 0 0 14 48Z" fill="#3c4160"/><path d="M2 48 A46 46 0 0 1 48 2" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M14 48 A34 34 0 0 1 48 14" stroke="#ff6b57" stroke-width="2.5" fill="none"/>`),
@@ -100,7 +134,15 @@ export const ICONS = {
   cvL05: incIcon(false, '½'), cvL1: incIcon(false, 1), cvL2: incIcon(false, 2), cvL4: incIcon(false, 4),
   cvBig05: incIcon(true, '½'), cvBig1: incIcon(true, 1), cvBig2: incIcon(true, 2), cvBig4: incIcon(true, 4),
   cvBigL05: incIcon(true, '½'), cvBigL1: incIcon(true, 1), cvBigL2: incIcon(true, 2), cvBigL4: incIcon(true, 4),
-  rollL: sideIcon(true, true), rollR: sideIcon(false, true), sideL: sideIcon(true, false), sideR: sideIcon(false, false), side: sideIcon(true, true),
+  // 0.9.3 : pentes descendantes, raccords de pente, virages descendants, transitions d'orientation.
+  dn05: downIcon('½'), dn1: downIcon(1), dn2: downIcon(2), dn4: downIcon(4),
+  ...Object.fromEntries([['05', '½'], ['1', 1], ['2', 2], ['4', 4]].flatMap(([k, n]) => [
+    ['cro' + k, profIcon('o', false, n)], ['cdi' + k, profIcon('i', true, n)], ['cdo' + k, profIcon('o', true, n)],
+    ['cvd' + k, decIcon(false, n)], ['cvdL' + k, decIcon(false, n)], ['cvdBig' + k, decIcon(true, n)], ['cvdBigL' + k, decIcon(true, n)],
+  ])),
+  crs05: profIcon('s', false, '½'), crs1: profIcon('s', false, 1), cds05: profIcon('s', true, '½'), cds1: profIcon('s', true, 1),
+  ...Object.fromEntries(['s', 'l'].flatMap((f) => ['01', '10', '02', '20', '13', '31', '23', '32'].map((pas) => ['tr' + pas + f, rollIcon(+pas[0], +pas[1], f === 'l')]))),
+  roll: rollIcon(0, 1, false),
   straight: svg(`${straightBase()}<path d="M24 6v8M24 20v8M24 34v8" stroke="${LINE}" stroke-width="2"/>`),
   curve: svg(`<path d="M10 48 A38 38 0 0 1 48 10 L48 38 A10 10 0 0 0 38 48Z" fill="${ROAD}"/><path d="M10 48 A38 38 0 0 1 48 10" stroke="${RAIL}" stroke-width="2.5" fill="none"/><path d="M38 48 A10 10 0 0 1 48 38" stroke="${RAIL}" stroke-width="2.5" fill="none"/>`),
   courbe: crvIcon(''),
@@ -213,7 +255,7 @@ export class EditorSession {
     this.showGrid = true;
     this.autoLevel = null;
     this.surfParam = {};
-    this.opts = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0 };   // options « armées » : elles se posent avec la pièce choisie
+    this.opts = { ...NO_OPTS };   // options « armées » : elles se posent avec la pièce choisie
     this.famTraits = {};      // dernière combinaison de caractéristiques choisie par famille
     this.sel = null;          // rectangle de sélection {x0, z0, x1, z1}
     this.selDrag = null;
@@ -541,7 +583,7 @@ export class EditorSession {
           b.prepend(sw);
         }
         const m = val ? MODS.find((x) => x.id === modId(flag, val)) : null;
-        b.title = m ? m.hint : flag === 'cp' ? 'Pas de checkpoint' : flag === 'mv' ? 'Pièce fixe' : flag === 'th' ? 'Aspect d’origine' : '';
+        b.title = m ? m.hint : flag === 'cp' ? 'Pas de checkpoint' : flag === 'mv' ? 'Pièce fixe' : flag === 'th' ? 'Aspect d’origine' : flag === 'o' ? 'Route à plat, au sol' : '';
         b.addEventListener('click', () => { this._optClick(flag, val); this.app.audio.click(); });
         chips.appendChild(b);
         this.optChips.push(b);
@@ -553,7 +595,7 @@ export class EditorSession {
     clear.className = 'btn small';
     clear.id = 'ed-opt-clear';
     clear.textContent = 'Retirer les options';
-    clear.addEventListener('click', () => { this.opts = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0 }; this.previewKey = ''; this._refreshUI(); });
+    clear.addEventListener('click', () => { this.opts = { ...NO_OPTS }; this.previewKey = ''; this._refreshUI(); });
     wrap.appendChild(clear);
     return wrap;
   }
@@ -577,13 +619,17 @@ export class EditorSession {
     for (const b of this.optChips) {
       const flag = b.dataset.flag, val = +b.dataset.val;
       let on;
-      if (piece) on = val === 0 ? !this.opts[flag] : (flag === 'v' || flag === 'nb' || flag === 'tn' ? !!this.opts[flag] : this.opts[flag] === val);
-      else on = this.tool === modId(flag, val);
+      if (piece) {
+        if (flag === 'o' && val === 0) on = !this.opts.o && !this.opts.v;                 // « Sol » : ni mur ni plafond
+        else if (val === 0) on = !this.opts[flag];
+        else on = flag === 'v' || flag === 'nb' || flag === 'tn' ? !!this.opts[flag] : this.opts[flag] === val;
+      } else on = this.tool === modId(flag, val);
       b.classList.toggle('on', on);
       b.setAttribute('aria-pressed', String(on));
       // « Aucun » n'a de sens que pour une pose combinée ; un choix impossible sur la pièce est grisé.
-      b.hidden = !piece && val === 0;
-      const ok = !piece || val === 0 || flagAllowed(piece, flag, flag === 'cp' || flag === 'mv' || flag === 'tb' ? { ...probe, ...this._compatProbe(flag) } : probe, val);
+      b.hidden = !piece && val === 0 && flag !== 'o';
+      // « Sol » est toujours possible ; l'orientation compte pour la ligne droite et le virage, pas pour les autres pièces.
+      const ok = !piece || (flag === 'o' && val === 0) || (val === 0) || flagAllowed(piece, flag, flag === 'cp' || flag === 'mv' || flag === 'tb' ? { ...probe, ...this._compatProbe(flag) } : flag === 'o' ? null : probe, val);
       b.classList.toggle('dim', !ok);
     }
     const hint = document.getElementById('ed-opt-hint');
@@ -595,7 +641,7 @@ export class EditorSession {
   // Options déjà armées qui gênent le test d'une autre (mouvement ↔ checkpoint, tunnel ↔ checkpoint).
   _compatProbe(flag) {
     const o = this.opts;
-    return flag === 'cp' ? { mv: o.mv, tn: o.tn, tb: o.tb, v: o.v } : flag === 'tb' ? { mv: o.mv, tn: o.tn, cp: o.cp, v: o.v } : { cp: o.cp, tb: o.tb, v: o.v };
+    return flag === 'cp' ? { mv: o.mv, tn: o.tn, tb: o.tb, v: o.v, o: o.o } : flag === 'tb' ? { mv: o.mv, tn: o.tn, cp: o.cp, v: o.v, o: o.o } : { cp: o.cp, tb: o.tb, v: o.v, o: o.o };
   }
 
   _syncDecoCats() {
@@ -671,7 +717,14 @@ export class EditorSession {
   }
 
   mirror() {
-    if (MIRROR[fillBase(this.tool)]) this.setTool(MIRROR[fillBase(this.tool)]);
+    const base = fillBase(this.tool);
+    if (MIRROR[base]) { this.setTool(MIRROR[base]); return; }
+    // 0.9.3 : une ligne droite ou un virage armé « Mur gauche » devient « Mur droit », et inversement.
+    if (PIECES[base] && this.opts && (this.opts.o === 1 || this.opts.o === 2)) {
+      this.opts = armedOptions({ ...this.opts, o: 0 }, 'o', this.opts.o === 1 ? 2 : 1);
+      this.previewKey = '';
+      this._refreshUI();
+    }
   }
 
   _surfParamValue(s) {
@@ -732,7 +785,7 @@ export class EditorSession {
       this.eraseBar.querySelectorAll('[data-ef]').forEach((b) => b.classList.toggle('on', b.dataset.ef === this.eraseFilter));
     }
     // Plus de bloc de statistiques en haut à gauche : seulement une pastille quand le circuit a un défaut.
-    const errs = this.track.validate();
+    const errs = this.track.validate().concat(this._joinWarnings());
     const warn = document.getElementById('ed-warn');
     if (warn) {
       warn.classList.toggle('hidden', !errs.length);
@@ -749,6 +802,13 @@ export class EditorSession {
     this._refreshDeco();
   }
 
+  // 0.9.3 : raccords d'orientation (un mur contre le sol : il manque une transition). Calculés une fois par état du circuit.
+  _joinWarnings() {
+    const v = this.track.version;
+    if (this._joinKey !== v) { this._joinKey = v; this._joinList = orientationIssues(this.track).map((i) => i.msg); }
+    return this._joinList;
+  }
+
   // ---- Menu hamburger (Nouveau, Importer, Partager, Enregistrer, Retour) ---------------------------------------------
   get menuOpen() { const m = document.getElementById('ed-menu'); return !!m && !m.classList.contains('hidden'); }
 
@@ -763,7 +823,7 @@ export class EditorSession {
   // ---------------------------------------------------------------- Historique
   _snapshot() {
     return JSON.stringify({
-      t: this.track.tiles.map((t) => [t.t, t.x, t.z, t.l, t.r, t.s || '', t.p || 0, t.v, t.nb, t.tn, t.mv || 0, t.cp || 0, t.th || 0, t.ms || 0, t.ma || 0, t.col || 0, t.s2 || '', t.p2 || 0, t.tb || 0]),
+      t: this.track.tiles.map((t) => [t.t, t.x, t.z, t.l, t.r, t.s || '', t.p || 0, t.v, t.nb, t.tn, t.mv || 0, t.cp || 0, t.th || 0, t.ms || 0, t.ma || 0, t.col || 0, t.s2 || '', t.p2 || 0, t.tb || 0, t.o || 0]),
       d: this.track.decos.map((o) => [o.k, o.x, o.y, o.z, o.ry, o.s, o.c, o.u, o.ph || 0, o.cc || '']),
       lp: this.track.laps || 1,
       pr: { name: this.track.name, desc: this.track.desc, offroad: this.track.offroad, v0: this.track.v0, g0: this.track.g0, veh0: this.track.veh0, inversionGraviteDepart: this.track.inversionGraviteDepart, decor: this.track.decor },
@@ -775,7 +835,7 @@ export class EditorSession {
     const { vt, vh } = this.track;
     this.track.clear();
     this.track.vt = vt; this.track.vh = vh;
-    for (const [t, x, z, l, r, s, p, v, nb, tn, mv, cp, th, ms, ma, col, s2, p2, tb] of data.t) this.track.add({ t, x, z, l, r, s, p, v, nb, tn, mv, cp, th, ms, ma, col: col || null, s2, p2, tb });
+    for (const [t, x, z, l, r, s, p, v, nb, tn, mv, cp, th, ms, ma, col, s2, p2, tb, o] of data.t) this.track.add({ t, x, z, l, r, s, p, v, nb, tn, mv, cp, th, ms, ma, col: col || null, s2, p2, tb, o });
     for (const [k, x, y, z, ry, sc, c, u, ph, cc] of data.d) this.track.addDeco({ k, x, y, z, ry, s: sc, c, u, ph, cc });
     this.track.laps = data.lp || 1;
     if (data.pr) {
@@ -1139,8 +1199,8 @@ export class EditorSession {
     const key = `${tile.x},${tile.z},${tile.l}`;
     if (painting && key === this._lastPaint) return;
     this._lastPaint = key;
-    if (!Track.inBounds(Track.normalize(tile))) { if (!painting) { this.app.ui.flash('Hors des niveaux (à l’envers : monte d’abord).'); this.app.audio.error(); } return; }
     const norm = Track.normalize(tile);
+    if (!Track.inBounds(norm)) { if (!painting) { this.app.ui.flash(outOfBounds(norm)); this.app.audio.error(); } return; }
     const conflicts = this.track.conflicts(tile);
     if (conflicts.length === 1) {
       const c = conflicts[0];
@@ -1179,7 +1239,7 @@ export class EditorSession {
     const t = this._targetTile();
     if (!t) return;
     const s = this.tool.slice(5);
-    if (!surfaceAllowed(t.t, s, !!t.v)) {
+    if (!surfaceAllowed(t.t, s, !!t.v, t.o | 0)) {
       if (!painting) { this.app.ui.flash(`${SURFACES[s].label} : impossible ici`); this.app.audio.error(); }
       return;
     }
@@ -1336,16 +1396,19 @@ export class EditorSession {
     if (painting && key === this._lastPaint) return;
     this._lastPaint = key;
     const mod = MODS.find((m) => m.id === this.tool), flag = mod.flag;
-    if (!flagAllowed(t.t, flag, t, mod.val || 1)) {
+    const val = mod.val == null ? 1 : mod.val;
+    // Orientation : le dernier choix l'emporte (plafond, tunnel, mouvement, checkpoint sont retirés) ; seul le type de pièce compte.
+    if (!flagAllowed(t.t, flag, flag === 'o' ? null : t, val) && !(flag === 'o' && val === 0)) {
       this.app.ui.flash(`${pieceLabel(this.tool)} : impossible sur « ${PIECES[t.t].label} »${flag === 'cp' && (t.mv || t.tn) ? ' (retire d’abord ' + (t.mv ? 'le mouvement' : 'le tunnel') + ')' : flag === 'mv' && t.cp ? ' (retire d’abord le checkpoint)' : ''}`);
       this.app.audio.error();
       return;
     }
-    if (this.track.toggleFlag(t, flag, mod.val || 1)) {
+    if (this.track.toggleFlag(t, flag, val)) {
       this.app.audio.place();
       this._changed();
       if (!painting) this._commit();
     } else if (flag === 'tn') this.app.ui.flash('Tunnel impossible sur une route à l\'envers');
+    else if (flag === 'v' || flag === 'o') { if (!painting) this.app.ui.flash(flag === 'o' ? 'Pas la place pour un mur : la route descend de 2 niveaux sous son niveau (monte d’abord, libère le dessous).' : 'Pas la place à l’envers : monte d’abord, ou libère le niveau en dessous.'); this.app.audio.error(); }
     else if (flag === 'cp') { this.app.ui.flash('Pas la place (niveaux au-dessus occupés)'); this.app.audio.error(); }
     else if (flag === 'mv') { this.app.ui.flash('Pas la place pour ce mouvement'); this.app.audio.error(); }
   }
@@ -1534,16 +1597,16 @@ export class EditorSession {
   showCompat() {
     const cols = [
       ['Droite, virage', 'straight'], ['Pente', 'slope'], ['Départ, CP, arrivée', 'checkpoint'], ['Bifurcation', 'fork'],
-      ['Plateforme', 'platform'], ['Relevé, vrille, tube', 'bank'], ['Looping', 'loop'], ['Anneau', 'ring'],
+      ['Plateforme', 'platform'], ['Relevé, vrille, tube', 'bank'], ['Looping', 'loop'], ['Sur un mur', 'straight', 1], ['Anneau', 'ring'],
     ].filter(([, t]) => PIECES[t]);
     const rows = SURFACE_ORDER.filter((s) => s).map((s) => {
-      const cells = cols.map(([, t]) => {
-        const why = surfaceRule(PIECES[t], SURFACES[s], s);
+      const cells = cols.map(([, t, o]) => {
+        const why = surfaceRule(PIECES[t], SURFACES[s], s, o || 0);
         return `<td title="${why || 'oui'}" style="text-align:center;color:${why ? '#ff6b7a' : '#5dff8a'}">${why ? '✕' : '✓'}</td>`;
       }).join('');
       return `<tr><td style="white-space:nowrap">${SURFACES[s].label}</td>${cells}</tr>`;
     }).join('');
-    const body = `<p>Tous les revêtements vont partout, avec les mêmes effets. Exceptions : eau, rebond et plaque bateau demandent du plat ; l'eau va sur le Départ, pas sur l'Arrivée ni une bifurcation.</p>
+    const body = `<p>Tous les revêtements vont partout, avec les mêmes effets. Exceptions : eau, rebond et plaque bateau demandent du plat (ni pente, ni mur) ; l'eau va sur le Départ, pas sur l'Arrivée ni une bifurcation.</p>
       <div style="overflow:auto;max-height:52vh"><table style="border-collapse:collapse;font-size:13px;width:100%">
       <tr><th></th>${cols.map(([l]) => `<th style="font-weight:600;padding:2px 4px;font-size:11px">${l}</th>`).join('')}</tr>${rows}</table></div>`;
     this.app.ui.modal({ title: 'Compatibilité des revêtements', body, actions: [{ label: 'OK', primary: true }] });
@@ -1552,6 +1615,8 @@ export class EditorSession {
   testHere() {
     const t = this._targetTile();
     if (!t || ['ring', 'area'].includes(PIECES[t.t].kind)) { this.app.ui.flash('Vise une pièce de route.'); this.app.audio.error(); return; }
+    // Une route sur un mur (ou une transition qui part d'un mur) ne peut pas servir de départ : la voiture y tomberait.
+    if (t.o || (PIECES[t.t].roll && PIECES[t.t].roll[0] !== 0)) { this.app.ui.flash('Teste depuis une route au sol (ou une transition qui part du sol) : on ne démarre pas sur un mur.'); this.app.audio.error(); return; }
     let pts = centerlineWorld(t, 6);
     // Sens de départ : celui qui s'éloigne de la pièce de départ du circuit.
     const st = this.track.startTile;
@@ -1778,7 +1843,7 @@ export class EditorSession {
           this._highlightTile(t, this._fillRefusal(t) ? '#ff3b5c' : '#ffb347');
         } else if (this.tool.startsWith('surf:')) {
           const s = this.tool.slice(5);
-          this._highlightTile(t, surfaceAllowed(t.t, s, !!t.v) ? (s ? tint(s, this._surfParamValue(s)) : '#ffffff') : '#ff3b5c');
+          this._highlightTile(t, surfaceAllowed(t.t, s, !!t.v, t.o | 0) ? (s ? tint(s, this._surfParamValue(s)) : '#ffffff') : '#ff3b5c');
         } else {
           const m = MODS.find((x) => x.id === this.tool);
           this._highlightTile(t, m && flagAllowed(t.t, m.flag, t, m.val || 1) ? '#8f7cff' : '#ff3b5c');
@@ -1896,7 +1961,16 @@ export class EditorSession {
     this._updateGrid();
     if (!this.pointers.size || this.painting) this._updateHover();
     this._updatePreview();
+    this._editorHorizon(cam);
     this.app.scenery.update(this.target, cam, Math.min(300, this.dist * 1.4));
+  }
+
+  // Les profils légers (Potato, Ultra Potato) rapprochent l'horizon et le brouillard pour la course (Ultra Potato : 450 m de portée, brouillard
+  // à 180 m) : dans l'éditeur on dézoome jusqu'à 700 m, le circuit disparaîtrait. On ne fait qu'éloigner : jamais plus près que le profil.
+  _editorHorizon(cam) {
+    const need = this.dist * 2.2 + 300, fog = this.app.scene && this.app.scene.fog;
+    if (cam.far < need) { cam.far = need; cam.updateProjectionMatrix(); }
+    if (fog) { fog.near = Math.max(fog.near, this.dist * 0.7); fog.far = Math.max(fog.far, need); }
   }
 
   // ---------------------------------------------------------------- Sélection
@@ -2107,6 +2181,10 @@ export class EditorSession {
     clearTimeout(this._draftT);
     setEditorDraft(this.exportState());
     this.inspector.dispose();
+    // Horizon et brouillard du profil de qualité reviennent avec la course.
+    const q = this.app.quality && this.app.quality.profile;
+    if (q) { this.app.camera.far = q.far; this.app.camera.updateProjectionMatrix(); }
+    if (this.app.scenery.refreshFog) this.app.scenery.refreshFog();
     if (this.eraseBar) this.eraseBar.remove();
     this.view.dispose();
     for (const o of [this.preview, this.highlight, this.marker, this.footprint, this.grid]) {

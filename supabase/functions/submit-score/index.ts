@@ -568,6 +568,183 @@ var PIECES = {
     noRails: true
   }
 };
+var V_PROFILES = {
+  l: {
+    H: (t) => t,
+    D: () => 1
+  },
+  i: {
+    H: (t) => t * t,
+    D: (t) => 2 * t
+  },
+  o: {
+    H: (t) => 2 * t - t * t,
+    D: (t) => 2 - 2 * t
+  },
+  s: {
+    H: (t) => t * t * (3 - 2 * t),
+    D: (t) => 6 * t * (1 - t)
+  }
+};
+var profOf = (p) => p.prof || (p.curv ? "i" : "l");
+var profH = (p, t) => V_PROFILES[profOf(p)].H(t);
+var profD = (p, t) => V_PROFILES[profOf(p)].D(t);
+var RISES = [
+  0.5,
+  1,
+  2,
+  4
+];
+var rtag = (r) => r === 0.5 ? "05" : String(r);
+var rtxt = (r) => r === 0.5 ? "\xBD" : String(r);
+var GEN_IDS = [];
+var gen = (id, def) => {
+  PIECES[id] = def;
+  GEN_IDS.push(id);
+};
+for (const r of RISES) gen("dn" + rtag(r), {
+  label: `Pente descendante ${rtxt(r)}`,
+  kind: "line",
+  size: 1,
+  rise: -r
+});
+for (const r of RISES) gen("cro" + rtag(r), {
+  label: `Courbe \xB7 fin de mont\xE9e ${rtxt(r)}`,
+  kind: "line",
+  size: 1,
+  rise: r,
+  prof: "o"
+});
+for (const r of RISES) gen("cdi" + rtag(r), {
+  label: `Courbe \xB7 d\xE9but de descente ${rtxt(r)}`,
+  kind: "line",
+  size: 1,
+  rise: -r,
+  prof: "i"
+});
+for (const r of RISES) gen("cdo" + rtag(r), {
+  label: `Courbe \xB7 fin de descente ${rtxt(r)}`,
+  kind: "line",
+  size: 1,
+  rise: -r,
+  prof: "o"
+});
+for (const r of [
+  0.5,
+  1
+]) gen("crs" + rtag(r), {
+  label: `Courbe en S \xB7 mont\xE9e ${rtxt(r)}`,
+  kind: "line",
+  size: 1,
+  rise: r,
+  prof: "s"
+});
+for (const r of [
+  0.5,
+  1
+]) gen("cds" + rtag(r), {
+  label: `Courbe en S \xB7 descente ${rtxt(r)}`,
+  kind: "line",
+  size: 1,
+  rise: -r,
+  prof: "s"
+});
+for (const [pre, size, mir, lab] of [
+  [
+    "cvd",
+    1,
+    1,
+    "serr\xE9"
+  ],
+  [
+    "cvdBig",
+    2,
+    1,
+    "grand"
+  ],
+  [
+    "cvdL",
+    1,
+    -1,
+    "serr\xE9 \u21B0"
+  ],
+  [
+    "cvdBigL",
+    2,
+    -1,
+    "grand \u21B0"
+  ]
+]) {
+  for (const r of RISES) gen(pre + rtag(r), {
+    label: `Virage descendant ${lab} \xB7 ${rtxt(r)}`,
+    kind: "arc",
+    size,
+    rise: -r,
+    ...mir < 0 ? {
+      mirror: -1
+    } : {}
+  });
+}
+var oriAngle = (code, other = 0) => code === 1 ? Math.PI / 2 : code === 2 ? -Math.PI / 2 : code === 3 ? other === 2 ? -Math.PI : Math.PI : 0;
+var ROLL_PASSAGES = [
+  "01",
+  "10",
+  "02",
+  "20",
+  "13",
+  "31",
+  "23",
+  "32"
+];
+var ORI_NAME = [
+  "sol",
+  "mur gauche",
+  "mur droit",
+  "plafond"
+];
+for (const long of [
+  false,
+  true
+]) {
+  for (const pas of ROLL_PASSAGES) {
+    const a = +pas[0], b = +pas[1];
+    gen(`tr${pas}${long ? "l" : "s"}`, {
+      label: `Transition ${ORI_NAME[a]} \u2192 ${ORI_NAME[b]}${long ? " (douce 2\xD72)" : ""}`,
+      kind: "ribbon",
+      size: long ? 2 : 1,
+      rise: 0,
+      clearance: 2,
+      below: 2,
+      roll: [
+        a,
+        b
+      ],
+      rollLong: long,
+      noRails: true,
+      // Entre un mur et le plafond, la gravité suit la route (comme un revêtement « Inversion de gravité ») : sans cela la voiture
+      // tomberait du plafond, ou resterait en gravité inversée en revenant sur le mur.
+      ...a === 3 || b === 3 ? {
+        autoFlip: true
+      } : {}
+    });
+  }
+}
+var LEGACY_TILE = {
+  rollL: {
+    t: "tr02s"
+  },
+  rollR: {
+    t: "tr01s"
+  },
+  sideL: {
+    t: "straight",
+    o: 2
+  },
+  sideR: {
+    t: "straight",
+    o: 1
+  }
+};
 var RING_R = 7;
 var RING_Y = 6;
 var LEGACY_SURFACE = {
@@ -646,7 +823,9 @@ var PIECE_ORDER = [
   "rollL",
   "rollR",
   "sideL",
-  "sideR"
+  "sideR",
+  // 0.9.3 (à la suite : ne jamais réordonner ; l'ordre est celui de GEN_IDS, vérifié par les tests)
+  ...GEN_IDS
 ];
 var SURFACES = {
   "": {
@@ -908,17 +1087,23 @@ function isRibbonKind(type) {
   const k = PIECES[type].kind;
   return k === "ribbon" || k === "loop";
 }
+function isSideTile(tile) {
+  const p = PIECES[tile.t];
+  return !!(tile.o || p.side || p.roll);
+}
+var isOriented = (tile) => !!tile.o && (PIECES[tile.t].kind === "line" || PIECES[tile.t].kind === "arc");
 function isFloor(tile) {
   const k = PIECES[tile.t].kind;
-  return !tile.v && k !== "ribbon" && k !== "ring";
+  return !tile.v && !tile.o && k !== "ribbon" && k !== "ring";
 }
 function isCeilingFloor(tile) {
   const k = PIECES[tile.t].kind;
-  return !!tile.v && k !== "ribbon" && k !== "ring";
+  return !!tile.v && !tile.o && k !== "ribbon" && k !== "ring";
 }
 function isRibbon(tile) {
-  return isRibbonKind(tile.t);
+  return isRibbonKind(tile.t) || isOriented(tile);
 }
+var hasNoRails = (tile) => !!(tile.nb || tile.o || PIECES[tile.t].noRails);
 function flagAllowed(type, flag, tile = null, val = 0) {
   const p = PIECES[type];
   if (!p) return false;
@@ -926,15 +1111,16 @@ function flagAllowed(type, flag, tile = null, val = 0) {
   if (flag === "v") return true;
   if (flag === "th") return p.kind !== "ring";
   if (p.kind === "ring" || p.kind === "fork") return false;
+  if (flag === "o") return lineLike && !p.special && !p.noRails && !(tile && (tile.v || tile.tn || tile.cp || tile.tb || tile.mv));
   if (flag === "nb") return !p.noRails && (lineLike && !p.special || p.kind === "ribbon" && !type.startsWith("tube"));
-  if (flag === "tn") return lineLike && !p.special && !(tile && (tile.v || tile.cp || tile.tb));
-  if (flag === "mv") return (lineLike || p.kind === "area") && !p.special && !(tile && (tile.v || tile.cp || tile.tb));
+  if (flag === "tn") return lineLike && !p.special && !(tile && (tile.v || tile.o || tile.cp || tile.tb));
+  if (flag === "mv") return (lineLike || p.kind === "area") && !p.special && !(tile && (tile.v || tile.o || tile.cp || tile.tb));
   if (flag === "cp") {
-    if (!((lineLike || p.kind === "area") && !p.special && !p.rise) || tile && (tile.mv || tile.tn || tile.tb)) return false;
+    if (!((lineLike || p.kind === "area") && !p.special && !p.rise) || tile && (tile.mv || tile.tn || tile.tb || tile.o)) return false;
     if (val === 2) return p.kind === "line" && !(tile && tile.v);
     return true;
   }
-  if (flag === "tb") return p.kind === "line" && !p.special && !p.rise && !(tile && (tile.v || tile.mv || tile.tn || tile.cp));
+  if (flag === "tb") return p.kind === "line" && !p.special && !p.rise && !(tile && (tile.v || tile.o || tile.mv || tile.tn || tile.cp));
   return false;
 }
 function cpKind(tile) {
@@ -1041,16 +1227,16 @@ var THEMES = [
     label: "Roche"
   }
 ];
-function surfaceAllowed(type, s, v = false) {
+function surfaceAllowed(type, s, v = false, o = 0) {
   if (!s) return true;
   const p = PIECES[type];
   const S4 = SURFACES[s];
   if (!p || !S4) return false;
-  return surfaceRule(p, S4, s) === "";
+  return surfaceRule(p, S4, s, o) === "";
 }
-function surfaceRule(p, S4, s) {
+function surfaceRule(p, S4, s, o = 0) {
   if (p.kind === "ring") return "pas de route dans un anneau";
-  const curved = p.kind === "loop" || p.kind === "ribbon";
+  const curved = p.kind === "loop" || p.kind === "ribbon" || !!o;
   if (S4.flat && (p.rise || curved)) return "seulement sur du plat";
   if (s === "water" && (p.special === "finish" || p.kind === "fork")) return "pas sur l\u2019arriv\xE9e ni une bifurcation";
   return "";
@@ -1154,8 +1340,8 @@ function sampleLocal(tile, lx, lz, out) {
     let t = (half - lz) / len;
     t = t < 0 ? 0 : t > 1 ? 1 : t;
     out.d = lx;
-    out.h = base + (p.curv ? rise * t * t : rise * t);
-    const k = (p.curv ? 2 * t : 1) * rise / len;
+    out.h = base + rise * profH(p, t);
+    const k = rise * profD(p, t) / len;
     const inv = 1 / Math.sqrt(1 + k * k);
     out.ny = inv;
     out.nz = k * inv;
@@ -1235,7 +1421,7 @@ var ramp = (u, w) => u < w ? smooth(u / w) : u > 1 - w ? smooth((1 - u) / w) : 1
 var cache = /* @__PURE__ */ new WeakMap();
 function ribbonOf(tile, raw = false) {
   const flip = !!tile.v && !raw;
-  const key2 = tile.t + "|" + tile.l + "|" + (flip ? 1 : 0);
+  const key2 = tile.t + "|" + tile.l + "|" + (flip ? 1 : 0) + "|" + (tile.o | 0);
   const c = cache.get(tile);
   if (c && c.keys && c.keys[key2]) return c.keys[key2];
   let rib = build(tile);
@@ -1257,11 +1443,67 @@ function ribbonOf(tile, raw = false) {
   cache.set(tile, entry);
   return rib;
 }
+function floorCenter(tile, u, out) {
+  const P = PIECES[tile.t], base = baseY(tile), half = P.size * HALF;
+  let dx, dy, dz;
+  if (P.kind === "arc") {
+    const a = arcParams(P), mir = P.mirror < 0 ? -1 : 1, ang = Math.PI + Math.PI / 2 * u;
+    out.x = mir * (a.cx + a.R * Math.cos(ang));
+    out.z = a.cz + a.R * Math.sin(ang);
+    out.y = base + P.rise * LEVEL_H * u;
+    dx = -mir * a.R * Math.sin(ang) * (Math.PI / 2);
+    dz = a.R * Math.cos(ang) * (Math.PI / 2);
+    dy = P.rise * LEVEL_H;
+  } else {
+    out.x = 0;
+    out.z = half - 2 * half * u;
+    out.y = base + P.rise * LEVEL_H * profH(P, u);
+    dx = 0;
+    dz = -2 * half;
+    dy = P.rise * LEVEL_H * profD(P, u);
+  }
+  const l = Math.hypot(dx, dy, dz) || 1;
+  out.tx = dx / l;
+  out.ty = dy / l;
+  out.tz = dz / l;
+  return out;
+}
+function rolledNormal(t, psi, o) {
+  let ux = -t.tx * t.ty, uy = 1 - t.ty * t.ty, uz = -t.tz * t.ty;
+  const l = Math.hypot(ux, uy, uz) || 1;
+  ux /= l;
+  uy /= l;
+  uz /= l;
+  const rx = t.ty * uz - t.tz * uy, ry = t.tz * ux - t.tx * uz, rz = t.tx * uy - t.ty * ux;
+  const c = Math.cos(psi), s = Math.sin(psi);
+  o.nx = c * ux + s * rx;
+  o.ny = c * uy + s * ry;
+  o.nz = c * uz + s * rz;
+}
+function buildRolled(tile) {
+  const P = PIECES[tile.t];
+  const psi = tile.o === 1 ? Math.PI / 2 : -Math.PI / 2;
+  const C3 = {};
+  const half = P.size * HALF;
+  const len = P.kind === "arc" ? Math.hypot(Math.PI / 2 * arcParams(P).R, P.rise * LEVEL_H) : Math.hypot(2 * half, P.rise * LEVEL_H);
+  return {
+    minU: 0.5,
+    len: len * 1.2,
+    pos(u, o) {
+      floorCenter(tile, u, C3);
+      o.x = C3.x;
+      o.y = C3.y;
+      o.z = C3.z;
+      rolledNormal(C3, psi, o);
+    }
+  };
+}
 function build(tile) {
   const P = PIECES[tile.t];
   const base = baseY(tile);
   const half = P.size * HALF;
   const R90 = 2 * LEVEL_H;
+  if (isOriented(tile)) return buildRolled(tile);
   if (P.kind === "loop") {
     const total = Math.PI * 2 * P.turns;
     const { R, lane, mirror: m } = P;
@@ -1335,20 +1577,21 @@ function build(tile) {
         len: 2 * half
       };
     }
-    if (P.side) {
-      const m = P.pivot, roll = P.side === 1;
+    if (P.roll) {
+      const [a, b] = P.roll, long = !!P.rollLong;
+      const psa = oriAngle(a, b), psb = oriAngle(b, a);
       return {
         minU: 0.5,
         pos(u, o) {
-          const f = roll ? Math.PI / 2 * smooth(u) : Math.PI / 2;
-          o.x = 0;
+          const psi = psa + (psb - psa) * smooth(u);
+          o.x = long ? -HALF : 0;
           o.y = base;
           o.z = half - 2 * half * u;
-          o.nx = m * Math.sin(f);
-          o.ny = Math.cos(f);
+          o.nx = Math.sin(psi);
+          o.ny = Math.cos(psi);
           o.nz = 0;
         },
-        len: roll ? 2 * half * 1.6 : 2 * half
+        len: long ? 2 * half : 2 * half * 1.6
       };
     }
     if (tile.t === "cork" || tile.t === "corkL") {
@@ -1545,7 +1788,7 @@ function centerlineLocal(tile, n) {
       const t = i / n;
       pts.push([
         0,
-        base + rise * (p.curv ? t * t : t),
+        base + rise * profH(p, t),
         half - 2 * half * t,
         0
       ]);
@@ -3385,16 +3628,19 @@ var Track = class _Track {
     return out;
   }
   // Plage de niveaux occupée (inclusive). Portiques et loopings réservent de la hauteur.
+  // 0.9.3 : `rise` est signé (une pente descendante occupe les niveaux en dessous de son niveau d'entrée) ; une route sur un mur
+  // (orientation o) réserve 2 niveaux au-dessus et au-dessous (le plan vertical mesure 18 m de haut, centré sur l'axe de la route).
   static range(t) {
     const p = PIECES[t.t];
-    const h = p.rise + Math.max(p.clearance || 0, t.cp === 2 || t.tb ? 2 : t.cp === 1 ? 1 : 0);
-    const below = p.below || 0;
+    const up = Math.max(0, p.rise || 0), down = Math.min(0, p.rise || 0);
+    const h = up + Math.max(p.clearance || 0, t.cp === 2 || t.tb ? 2 : t.cp === 1 ? 1 : 0, t.o ? 2 : 0);
+    const below = Math.max(p.below || 0, t.o ? 2 : 0);
     if (t.v) return [
       t.l - h,
-      t.l + below
+      t.l - down + below
     ];
     return [
-      t.l - below,
+      t.l + down - below,
       t.l + h + (t.mv === 1 ? Math.ceil(moverParams(t, MP).amp) : 0)
     ];
   }
@@ -3408,6 +3654,12 @@ var Track = class _Track {
       type = "straight";
     }
     if (LEGACY_PIECE[type]) type = LEGACY_PIECE[type];
+    let ori = t.o | 0;
+    const lg = LEGACY_TILE[type];
+    if (lg) {
+      type = lg.t;
+      if (lg.o) ori = lg.o;
+    }
     if (!PIECES[type]) throw new Error("Pi\xE8ce inconnue : " + type);
     const tile = {
       t: type,
@@ -3418,6 +3670,7 @@ var Track = class _Track {
       s: "",
       p: 0,
       v: 0,
+      o: 0,
       nb: 0,
       tn: 0,
       mv: 0,
@@ -3431,6 +3684,7 @@ var Track = class _Track {
       p2: 0
     };
     tile.v = t.v && flagAllowed(type, "v") ? 1 : 0;
+    tile.o = (ori === 1 || ori === 2) && !tile.v && flagAllowed(type, "o", tile, ori) ? ori : 0;
     tile.nb = PIECES[type].noRails || t.nb && flagAllowed(type, "nb") ? 1 : 0;
     tile.tn = t.tn && flagAllowed(type, "tn", tile) ? 1 : 0;
     tile.mv = t.mv && !tile.v && flagAllowed(type, "mv", tile) ? (t.mv | 0) & 3 : 0;
@@ -3443,12 +3697,12 @@ var Track = class _Track {
     tile.tb = t.tb && !tile.mv && !tile.cp && flagAllowed(type, "tb", tile) ? 1 : 0;
     tile.th = THEMES.some((h) => h.id === (t.th | 0)) && flagAllowed(type, "th") ? t.th | 0 : 0;
     tile.col = cleanColors(t.col);
-    if (surfaceAllowed(type, s, !!tile.v)) {
+    if (surfaceAllowed(type, s, !!tile.v, tile.o)) {
       tile.s = s;
       const S22 = SURFACES[s];
       if (S22 && S22.def != null) tile.p = Math.max(S22.min, Math.min(S22.max, t.p || S22.def));
     }
-    if (PIECES[type].kind === "fork" && t.s2 && (t.s2 === "-" || surfaceAllowed(type, t.s2, !!tile.v))) {
+    if (PIECES[type].kind === "fork" && t.s2 && (t.s2 === "-" || surfaceAllowed(type, t.s2, !!tile.v, tile.o))) {
       tile.s2 = t.s2 === "-" ? "-" : SURFACE_ALIAS[t.s2] || t.s2;
       const S32 = SURFACES[tile.s2];
       if (S32 && S32.def != null) tile.p2 = Math.max(S32.min, Math.min(S32.max, t.p2 || S32.def));
@@ -3511,7 +3765,7 @@ var Track = class _Track {
   }
   // Revêtement (avec paramètre en %). Renvoie true si quelque chose a changé.
   setSurface(tile, s, p = 0) {
-    if (!surfaceAllowed(tile.t, s, !!tile.v)) return false;
+    if (!surfaceAllowed(tile.t, s, !!tile.v, tile.o)) return false;
     const S22 = SURFACES[s];
     const np = S22 && S22.def != null ? Math.max(S22.min, Math.min(S22.max, p || S22.def)) : 0;
     if (tile.s === s && (tile.p || 0) === np) return false;
@@ -3522,6 +3776,27 @@ var Track = class _Track {
   }
   // Bascule un drapeau (v : à l'envers, nb : sans bordures, tn : tunnel, mv : mouvement 1/2/3, cp : checkpoint 1/2, th : thème).
   toggleFlag(tile, flag, val = 1) {
+    if (flag === "o") {
+      const target = val | 0;
+      if (target && !flagAllowed(tile.t, "o", null, target)) return false;
+      const cand = {
+        ...tile
+      };
+      if (!target || tile.o === target) {
+        cand.o = 0;
+        if (!target) cand.v = 0;
+      } else {
+        cand.o = target;
+        cand.v = 0;
+        cand.tn = 0;
+        cand.mv = 0;
+        cand.ms = 0;
+        cand.ma = 0;
+        cand.cp = 0;
+        cand.tb = 0;
+      }
+      return this._reshape(tile, cand);
+    }
     if (!flagAllowed(tile.t, flag, tile, val)) return false;
     if (flag === "th") {
       const th = tile.th === val ? 0 : val;
@@ -3530,7 +3805,7 @@ var Track = class _Track {
       this.version++;
       return true;
     }
-    if (flag === "mv" || flag === "cp" || flag === "tb" || flag === "v" && (tile.mv || tile.cp === 2 || tile.tb)) {
+    if (flag === "mv" || flag === "cp" || flag === "tb" || flag === "v") {
       const cand = {
         ...tile
       };
@@ -3546,8 +3821,10 @@ var Track = class _Track {
         cand.cp = tile.cp === val ? 0 : val;
       } else if (flag === "tb") {
         cand.tb = tile.tb ? 0 : 1;
-      } else {
+      } else if (tile.v) cand.v = 0;
+      else {
         cand.v = 1;
+        cand.o = 0;
         cand.mv = 0;
         cand.ms = 0;
         cand.ma = 0;
@@ -3555,28 +3832,27 @@ var Track = class _Track {
         cand.tb = 0;
         if (cand.cp === 2) cand.cp = 0;
       }
-      this.remove(tile);
-      if (this.conflicts(cand).length || !_Track.inBounds(cand)) {
-        this._insert(tile);
-        return false;
-      }
-      Object.assign(tile, cand);
-      this._insert(tile);
-      return true;
+      return this._reshape(tile, cand);
     }
     tile[flag] = tile[flag] ? 0 : 1;
-    if (flag === "v" && tile.v) {
-      tile.tn = 0;
-      if (tile.s && !surfaceAllowed(tile.t, tile.s, true)) {
-        tile.s = "";
-        tile.p = 0;
-      }
-    }
     if (flag === "tn" && tile.tn && tile.v) {
       tile.tn = 0;
       return false;
     }
     this.version++;
+    return true;
+  }
+  // Remplace `tile` par `cand` (normalisée : options devenues impossibles retirées, revêtement incompatible effacé) si la place et les niveaux
+  // le permettent ; sinon rien ne change. Même objet : la sélection de l'inspecteur reste valable.
+  _reshape(tile, cand) {
+    const n = _Track.normalize(cand);
+    this.remove(tile);
+    if (this.conflicts(n).length || !_Track.inBounds(n)) {
+      this._insert(tile);
+      return false;
+    }
+    Object.assign(tile, n);
+    this._insert(tile);
     return true;
   }
   // Réglage d'une pièce mobile (vitesse en %, amplitude). Change les cases / niveaux balayés : vérifie la place.
@@ -3608,7 +3884,7 @@ var Track = class _Track {
   // 2e revêtement d'une bifurcation (voie déportée).
   setSurface2(tile, s, p = 0) {
     if (PIECES[tile.t].kind !== "fork") return false;
-    if (s && s !== "-" && !surfaceAllowed(tile.t, s, !!tile.v)) return false;
+    if (s && s !== "-" && !surfaceAllowed(tile.t, s, !!tile.v, tile.o)) return false;
     const S22 = SURFACES[s];
     const np = S22 && S22.def != null ? Math.max(S22.min, Math.min(S22.max, p || S22.def)) : 0;
     if ((tile.s2 || "") === s && (tile.p2 || 0) === np) return false;
@@ -3888,7 +4164,7 @@ var Track = class _Track {
     let best = Infinity;
     for (const tile of this.tilesAt(cx, cz)) {
       const kind = PIECES[tile.t].kind;
-      if (kind === "loop" || kind === "ribbon" || tile.v) continue;
+      if (kind === "loop" || kind === "ribbon" || tile.v || tile.o) continue;
       toLocal(tile, x, z, L);
       sampleLocal(tile, L.lx, L.lz, S);
       if (!S.inFootprint) continue;
@@ -3971,6 +4247,7 @@ var Track = class _Track {
         i: idx
       };
       if (t.cp) e.cp = t.cp;
+      if (t.o) e.o = t.o;
       if (t.tb) e.tb = 1;
       if (t.th) e.th = t.th;
       if (t.ms) e.ms = t.ms;
@@ -4054,6 +4331,7 @@ var Track = class _Track {
       const ex = extras.get(i / stride);
       if (ex) {
         tile.cp = ex.cp | 0;
+        tile.o = ex.o | 0;
         tile.tb = ex.tb | 0;
         tile.th = ex.th | 0;
         tile.ms = ex.ms | 0;
@@ -4118,6 +4396,7 @@ function tileExtras(t) {
   let e = "";
   if (t.cp) e += "c" + t.cp;
   if (t.tb) e += "b";
+  if (t.o) e += "o" + t.o;
   if (t.mv && (t.ms || t.ma)) e += `s${t.ms || 0}a${t.ma || 0}`;
   if (t.s2) e += `f${t.s2}:${t.p2 || 0}`;
   return e;
@@ -4186,13 +4465,14 @@ function scriptTrack(name, script, opts = {}) {
       r: r & 3,
       ...curOver || cur
     };
-    if (cur.s && !surfaceAllowed(t, cur.s, !!cur.v)) throw new Error(`${name} : rev\xEAtement ${cur.s} interdit sur ${t}`);
+    if (cur.s && !surfaceAllowed(t, cur.s, !!cur.v, cur.o | 0)) throw new Error(`${name} : rev\xEAtement ${cur.s} interdit sur ${t}`);
     for (const f of [
       "v",
       "nb",
       "tn",
       "mv"
     ]) if (cur[f] && !flagAllowed(t, f, tile)) throw new Error(`${name} : drapeau ${f} interdit sur ${t}`);
+    if (cur.o && !flagAllowed(t, "o", tile, cur.o)) throw new Error(`${name} : orientation ${cur.o} interdite sur ${t}`);
     const c = tr.conflicts(Track.normalize(tile));
     if (c.length) throw new Error(`${name} : conflit en (${px}, ${pz}) niveau ${lv} [${t}]`);
     if (!Track.inBounds(Track.normalize(tile))) throw new Error(`${name} : ${t} sort des niveaux en (${px}, ${pz})`);
@@ -4302,7 +4582,15 @@ function scriptTrack(name, script, opts = {}) {
     z += d.z;
   };
   for (const tok of script.trim().split(/\s+/)) {
-    const m = /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=]*)$/.exec(tok);
+    const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=<>]*)$/.exec(tok);
+    const m = gm ? [
+      tok,
+      "@" + gm[1],
+      gm[2],
+      gm[3],
+      gm[4],
+      gm[5]
+    ] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=<>]*)$/.exec(tok);
     if (!m) throw new Error("Instruction invalide : " + tok);
     let op = m[1];
     const n = m[2] ? parseInt(m[2], 10) : 1;
@@ -4312,7 +4600,8 @@ function scriptTrack(name, script, opts = {}) {
       v: m[5].includes("^") ? 1 : 0,
       nb: m[5].includes("_") ? 1 : 0,
       tn: m[5].includes("#") ? 1 : 0,
-      mv: m[5].includes("~") ? 1 : m[5].includes("=") ? 2 : 0
+      mv: m[5].includes("~") ? 1 : m[5].includes("=") ? 2 : 0,
+      o: m[5].includes("<") ? 1 : m[5].includes(">") ? 2 : 0
     };
     if (m[3]) {
       cur.s = SURF_CODE[m[3]];
@@ -4326,6 +4615,31 @@ function scriptTrack(name, script, opts = {}) {
     if (op === "I") {
       op = "S";
       cur.s = "ice";
+    }
+    if (op[0] === "@") {
+      const id = op.slice(1), P = PIECES[id];
+      if (!P) throw new Error("Pi\xE8ce inconnue : " + id);
+      for (let i = 0; i < n; i++) {
+        const sg = P.mirror < 0 ? -1 : 1, rise = P.rise || 0;
+        if (P.kind === "arc" && P.size === 2) {
+          const c = rot(h, 0.5 * sg, -0.5);
+          place(id, Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
+          const nx = rot(h, 2 * sg, -1);
+          x += nx.x;
+          z += nx.z;
+          h = h + (sg > 0 ? 1 : 3) & 3;
+        } else if (P.kind === "arc") {
+          place(id, x, z, l, h);
+          h = h + (sg > 0 ? 1 : 3) & 3;
+          adv(h);
+        } else if (P.size === 2) straight2(id);
+        else {
+          place(id, x, z, l, h);
+          adv(h);
+        }
+        l += rise;
+      }
+      continue;
     }
     const simple = {
       S: "straight",
@@ -6297,6 +6611,7 @@ var CAR = {
   magnetRange: 4,
   magnetAcc: 80,
   launch: 2,
+  stickAngle: 0.21,
   airPitchAcc: 4.2,
   airPitchDamp: 2.6,
   airPitchUpK: 1.6,
@@ -6375,6 +6690,7 @@ var GLIDE = {
   turnSpeed: 9,
   turnRamp: 7
 };
+var STICK_COS = Math.cos(CAR.stickAngle);
 var SIDE_AERO = 0.025;
 var SIDE_HOLD = 25 / (22 * 22);
 var clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -7040,7 +7356,9 @@ var CarPhysics = class {
         v.z -= m.nz * a;
       }
     }
-    if (this.grounded && gap < snap && gap > -CAR.step && vn < launch) {
+    let stick = vn < launch;
+    if (!stick && this.grounded && gap < snap && gap > -CAR.step) stick = this.n.x * s.nx + this.n.y * s.ny + this.n.z * s.nz > STICK_COS;
+    if (this.grounded && gap < snap && gap > -CAR.step && stick) {
       p.y = s.h;
       const sp = this.speed;
       v.x -= s.nx * vn;
@@ -7673,7 +7991,7 @@ var CarPhysics = class {
       const dq = (q.x - F.qx) * F.nx + (q.y - F.qy) * F.ny + (q.z - F.qz) * F.nz;
       const vn = v.x * F.nx + v.y * F.ny + v.z * F.nz;
       if (!(dn <= 0.05 && dq >= -0.3 && dn > -1.5 && vn < 0)) continue;
-      if (Math.abs(dl) > ROAD_HALF + (tile.nb ? 0 : 0.3)) continue;
+      if (Math.abs(dl) > ROAD_HALF + (hasNoRails(tile) ? 0 : 0.3)) continue;
       const vt = v.x * F.tx + v.y * F.ty + v.z * F.tz;
       const R = {
         tile,
@@ -7749,15 +8067,16 @@ var CarPhysics = class {
     const kc = F.kc || 0;
     const kn = kn0 * F.cc - kg0 * F.cs, kg = kg0 * F.cc + kn0 * F.cs;
     let B2 = this._basis(R, F);
-    if (tile.s === "flip") {
-      const ng = F.ny >= 0 ? 1 : -1;
+    if (tile.s === "flip" || PIECES[tile.t].autoFlip) {
+      const ng = F.ny >= -0.05 ? 1 : -1;
       if (ng !== this.gSign) {
         this.gSign = ng;
         this.ev.flip = true;
       }
     }
     const g = this.g * this.gSign;
-    const hold = PIECES[tile.t].side ? Math.min(1, SIDE_HOLD * R.vs * R.vs / Math.max(1, this.g)) : 0;
+    const sidePiece = isSideTile(tile);
+    const hold = sidePiece ? Math.min(1, SIDE_HOLD * R.vs * R.vs / Math.max(1, this.g)) : 0;
     R.vs -= g * B2.e1y * dt;
     R.vd -= g * B2.e2y * dt * (1 - hold);
     R.psi -= R.dir * kg * R.vs * dt;
@@ -7793,7 +8112,6 @@ var CarPhysics = class {
     if (!PLATES[mod] && mod !== "spring" && mod !== "flip") this.plateLock = "";
     R.vs += beltE1 - this.beltS;
     this.beltS = beltE1;
-    const sidePiece = PIECES[tile.t].side;
     let press = R.vs * R.vs * kn + R.vd * R.vd * kc + g * F.ny;
     if (sidePiece) press += SIDE_AERO * R.vs * R.vs * Math.sqrt(Math.max(0, 1 - F.ny * F.ny));
     const gAbs = this.g;
@@ -7829,7 +8147,7 @@ var CarPhysics = class {
     R.dl += R.dir * R.vd * dt;
     const hw = F.hw || ROAD_HALF;
     if (F.wrap) {
-    } else if (tile.nb || Math.abs(R.dl) > hw + 1.5) {
+    } else if (hasNoRails(tile) || Math.abs(R.dl) > hw + 1.5) {
       if (Math.abs(R.dl) > hw + 0.3) {
         this._ribPlace(R);
         this._ribDetach();
@@ -8727,7 +9045,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/replay.js
-var PHYS_VER = 22;
+var PHYS_VER = 23;
 var MAX_REPLAY_STEPS = 120 * 600;
 function decodeInputs(b64) {
   const bin = atob(b64);

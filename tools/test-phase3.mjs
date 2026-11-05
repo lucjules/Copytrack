@@ -426,8 +426,8 @@ test('tunnel sans bordures : les parois du tunnel existent quand même', () => {
 });
 
 console.log('Rejeu identique (vérification serveur) et version');
-test('PHYS_VER 22 ; un circuit avec verre, tapis, vent, eau et tunnel est rejoué à l’identique par la vérification', () => {
-  assert.equal(PHYS_VER, 22);
+test('PHYS_VER 23 ; un circuit avec verre, tapis, vent, eau et tunnel est rejoué à l’identique par la vérification', () => {
+  assert.equal(PHYS_VER, 23);
   const tr = scriptTrack('mix', 'start S2 S.v S2.t137 S2.w150 S.a2 R S2# S2.a L S2 finish');
   // Enregistre une course du pilote automatique, puis la rejoue comme le fait le serveur.
   const phys = new CarPhysics(tr), logic = new RaceLogic(tr); placeAtStart(phys, logic);

@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.2**
+Version actuelle : **bêta 0.9.3**
 
 ## Jouer
 
@@ -15,7 +15,7 @@ npm start
 
 Puis ouvrir <http://localhost:8080>. N'importe quel serveur statique fonctionne aussi, par exemple `python3 -m http.server`.
 
-Tests : `npm test` (pot de peinture de l'éditeur, physique à l'envers, caméra, puis les 66 circuits au pilote automatique).
+Tests : `npm test` (éditeur, physique, caméra, familles, pentes et murs, audit du graphe des pièces, puis les 66 circuits au pilote automatique).
 
 Pour le publier avec **GitHub Pages** : *Settings → Pages → Deploy from a branch*, puis choisir la branche et le dossier `/ (root)`.
 Le jeu s'**installe comme une application** (bouton d'installation du navigateur) et se joue **hors ligne** une fois chargé.
@@ -33,17 +33,17 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 ### Pièces
 
 - **Pièces à caractéristiques** (listes déroulantes dans la palette et dans l'Inspecteur) :
-  - **Ligne droite** : inclinaison plat, ½, 1, 2 ou 4 niveaux (ce qui remplace Pente, Pente douce et Tremplin) ;
-  - **Virage** : rayon serré, grand ou très grand (3×3), plat ou relevé (la route penche vers l'intérieur, on le prend plus vite), et **inclinaison** plat, ½, 1, 2 ou 4 comme la ligne droite (un virage qui monte ; le sens ↱ / ↰ compte alors) ;
-  - **Courbe** : une rampe qui se courbe progressivement vers le haut (arc de Bézier : plate à l'entrée, de plus en plus raide ; inclinaison ½, 1, 2 ou 4). Parcourue à l'envers, elle descend et s'aplatit en douceur ;
-  - **Route sur le côté** : transition (la route bascule jusqu'à la verticale) et ligne droite sur un plan vertical, à gauche ou à droite. La gravité ne change pas : il faut environ 80 km/h pour tenir, en dessous on glisse le long du plan et on tombe par le bord. Ces pièces demandent le niveau 2 au moins (le plan descend de 9 m sous leur niveau) ;
+  - **Ligne droite** : inclinaison **plat, montée ou descente** de ½, 1, 2 ou 4 niveaux (ce qui remplace Pente, Pente douce et Tremplin) ;
+  - **Virage** : rayon serré, grand ou très grand (3×3), plat ou relevé (la route penche vers l'intérieur, on le prend plus vite), et **inclinaison** plat, ½, 1, 2 ou 4 en **montée comme en descente** (un virage qui monte ou qui descend ; le sens ↱ / ↰ compte alors) ;
+  - **Courbe** : un raccord de pente qui se courbe. **Début doux** (plat → pente, de plus en plus raide), **fin douce** (pente → plat) ou **en S** (plat → plat, entre deux niveaux), en montée ou en descente, d'inclinaison ½, 1, 2 ou 4 (le S existe en ½ et 1). Un début doux de ½ / 1 / 2 se raccorde **sans aucune cassure** à une ligne droite d'inclinaison 1 / 2 / 4, et la fin douce correspondante la ramène à plat : une colline entière se construit sans à-coup ;
+  - **Transition** : fait basculer la route d'une orientation à l'autre (**de** Sol, Mur gauche, Mur droit ou Plafond **vers** une autre), **franche** (1 case) ou **douce** (2×2, deux fois moins de roulis par mètre, la route dans la colonne de gauche comme la vrille). Entre un mur et le plafond la gravité suit la route toute seule ;
   - **Looping** : orientation droite / gauche, taille normale / grande, 1 à 3 boucles (l'empreinte grandit : 2×2, 3×3, 4×4).
 - Plateforme, ponts sur plusieurs niveaux.
 - **Tubes** : le tube 2×2, et le **tube modulaire** (entrée, autant de sections que voulu, sortie) dans lequel on peut monter sur la paroi, rouler au plafond et **faire des tours complets** en gardant le volant tourné. Les sections acceptent l'accélérateur et la gravité.
 - **Loopings** (normal, grand, double), **tire-bouchons** droite et gauche, **montée en L** (courbe, mur vertical, sommet qui fait sauter vers le plateau).
 - **Bifurcation / jonction** : deux voies au choix.
 - **Anneau turbo** flottant.
-- **Options** (onglet Options) : *à l'envers*, *sans bordures*, *tunnel*, **checkpoint** (portique, ou anneau aérien sur une ligne droite plate), **thème** visuel (Classique, Herbe, Sable, Roche), **mouvement** (ascenseur, glissière, rotation). On choisit une pièce ET des options : elles se posent ensemble, l'aperçu montre le résultat. Sans pièce choisie, une option s'applique à la pièce cliquée. Les anciennes pièces « Checkpoint » restent lisibles (bouton « Convertir en option » dans l'Inspecteur).
+- **Options** (onglet Options) : **Orientation** (*Sol*, *Mur gauche*, *Mur droit*, *Plafond* : une ligne droite ou un virage ordinaire, pente comprise, se pose sur un mur ou au plafond ; la gauche et la droite se lisent dans le sens de la flèche de la pièce ; un mur demande le niveau 2 au moins, il descend de 9 m sous la route ; on y tient à partir de 80 km/h environ, sinon on glisse et on tombe), *sans bordures*, *tunnel*, **checkpoint** (portique, ou anneau aérien sur une ligne droite plate), **thème** visuel (Classique, Herbe, Sable, Roche), **mouvement** (ascenseur, glissière, rotation). On choisit une pièce ET des options : elles se posent ensemble, l'aperçu montre le résultat. Sans pièce choisie, une option s'applique à la pièce cliquée. Les anciennes pièces « Checkpoint » restent lisibles (bouton « Convertir en option » dans l'Inspecteur).
 - **Bifurcation** : chaque voie peut avoir son revêtement (voie directe / voie déportée).
 
 ### Revêtements et véhicules
@@ -119,6 +119,18 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
 5. **Durcissement** : `supabase/etape5-securite.sql` (replays des classements privés, plafond de temps par pilote, signalements et parties moins faciles à truquer). À lancer après l'étape 4.
 
 Seules l'URL du projet et la clé publique sont dans `js/online.js`. La clé secrète n'est jamais dans le jeu : seule la fonction serveur l'utilise, côté Supabase.
+
+## Bêta 0.9.3
+
+- **Orientation** : Sol, Mur gauche, Mur droit, Plafond sont une **caractéristique** (onglet Options, liste *Orientation* de l'Inspecteur) des lignes droites et des virages ordinaires, pentes comprises : plus de pièces 90° à part. Les anciennes pièces « Route sur le côté » (0.9.2) se lisent comme une transition ou une ligne droite orientée, à l'identique.
+- **Transitions d'orientation** (famille *Transition*, 16 pièces) : Sol ↔ Mur gauche, Sol ↔ Mur droit, Mur ↔ Plafond, chacune **franche** (1 case) ou **douce** (2×2). Entrée sur le mur, retour à l'horizontale, et de quoi refaire un plafond puis revenir au sol.
+- **Pentes** : la **descente** existe (Ligne droite, Virage, Courbe), avec ses raccords doux (début doux, fin douce, S). La descente est exactement la montée parcourue à l'envers, mais se pose dans son sens, et le niveau suit tout seul à la pose.
+- **Physique** : un défaut de raccord de moins de ~12° (haut d'une pente, pente douce, raccord doux pris à très grande vitesse) ne fait plus décoller la voiture ; un tremplin (2 niveaux et plus), lui, décolle toujours. Entre un mur et le plafond la gravité locale suit la route (3° de marge pour ne pas rester « à l'envers » en revenant sur le mur).
+- **Éditeur** : l'orientation se pose avec la pièce (aperçu compris) ou s'applique à une pièce posée ; messages clairs quand la place manque (un mur, un plafond ou une descente ne tiennent pas au ras du sol) ; une route sur un mur se sélectionne dans la scène et ne peut pas servir de point de départ pour « Tester ici ».
+- **Éditeur (corrections)** : en profil *Potato* / *Ultra Potato* (portée 450 m, brouillard à 180 m) le circuit disparaissait quand on dézoomait : l'éditeur éloigne maintenant la portée et le brouillard (le profil de la course revient en sortant) ; une pièce posée à l'envers au niveau 0 est refusée avec un message au lieu de passer sous le sol ; l'éditeur avertit (pastille ⚠) quand un mur touche le sol sans transition ; `M` échange Mur gauche / Mur droit.
+- **Audit** : `node tools/audit-pieces.mjs` relève l'entrée et la sortie de chaque pièce (pente, roulis, dénivelé, virage), vérifie qu'aucune sortie n'est un cul-de-sac et que **toute pièce existe aussi parcourue à l'envers** ; `tools/test-v093.mjs` conduit des pentes, des murs et un plafond, et tire 150 circuits au hasard.
+- Le format reste compatible : 52 types ajoutés **à la suite** de `PIECE_ORDER`, l'orientation est un champ optionnel (`o`, dans `data.e`) ; un circuit sans mur garde exactement la même signature.
+- La physique change (`PHYS_VER` 23) : records et replays repartent de zéro ; **la fonction `submit-score` doit être redéployée** (`npm run build:function`, puis la déployer).
 
 ## Bêta 0.9.2
 
@@ -278,6 +290,8 @@ js/trackMesh.js, js/geo.js     maillages low-poly
 js/tracks.js                   66 circuits intégrés, médailles et objectifs
 tools/test-phase3.mjs          tests du raycast, décorations libres, verre fragile, tunnel, unités (npm test)
 tools/test-phase2.mjs          tests des familles, du schéma JSON, des courbes, options, mouvements (npm test)
+tools/test-v093.mjs            tests des pentes, murs, plafond, orientation et du hasard (npm test)
+tools/audit-pieces.mjs         audit du graphe des pièces : raccords, culs-de-sac, inversions (npm test)
 tools/sim.mjs                  validation des circuits par pilote automatique (npm run sim)
 ```
 
@@ -292,5 +306,5 @@ paramètre et drapeaux : les anciens codes se lisent donc toujours à l'identiqu
 elles traduisent des caractéristiques (inclinaison, rayon, nombre de boucles…) vers un type concret et inversement.
 Les champs de la Phase 2 sont **optionnels** et rangés à part dans `data.e` (une entrée par pièce concernée, par index) :
 `cp` checkpoint (1 portique, 2 anneau), `th` thème, `ms` / `ma` vitesse et amplitude du mouvement, `col` couleurs personnalisées, `s2` / `p2` 2e revêtement
-d'une bifurcation ; couleur libre d'une décoration (10e valeur). Le code reste en version 3 tant qu'aucun de ces champs n'est utilisé.
+d'une bifurcation, `o` orientation (1 mur gauche, 2 mur droit ; le plafond reste le drapeau `v`) ; couleur libre d'une décoration (10e valeur). Le code reste en version 3 tant qu'aucun de ces champs n'est utilisé.
 La signature (clé des classements et de la vérification) ignore le thème et les couleurs, et reste identique pour tout circuit qui n'utilise rien de nouveau.
