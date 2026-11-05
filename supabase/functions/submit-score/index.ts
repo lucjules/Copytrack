@@ -1700,6 +1700,1159 @@ function obstacleRadius(d) {
   return (def.r + 1) * k;
 }
 
+// js/decoPackData.js
+var PACK = [
+  [
+    "beach",
+    "Plage et \xE9t\xE9",
+    [
+      [
+        "parasol",
+        "Parasol",
+        "\u26F1"
+      ],
+      [
+        "beachChair",
+        "Chaise de plage",
+        "\u{1FA91}"
+      ],
+      [
+        "sandCastle",
+        "Ch\xE2teau de sable",
+        "\u{1F3F0}"
+      ],
+      [
+        "surfboard",
+        "Planche de surf",
+        "\u{1F3C4}"
+      ],
+      [
+        "lifeguard",
+        "Tour de sauveteur",
+        "\u{1F6DF}"
+      ],
+      [
+        "beachBall",
+        "Ballon de plage",
+        "\u{1F3D0}"
+      ],
+      [
+        "towel",
+        "Serviette",
+        "\u{1F7E6}"
+      ],
+      [
+        "coconutPalm",
+        "Cocotier",
+        "\u{1F965}"
+      ],
+      [
+        "sunLounger",
+        "Bain de soleil",
+        "\u{1F3D6}"
+      ],
+      [
+        "starfish",
+        "\xC9toile de mer",
+        "\u2B50"
+      ],
+      [
+        "bigCrab",
+        "Crabe g\xE9ant",
+        "\u{1F980}"
+      ],
+      [
+        "lighthouse",
+        "Phare",
+        "\u{1F5FC}"
+      ],
+      [
+        "beachHut",
+        "Cabane de plage",
+        "\u{1F6D6}"
+      ],
+      [
+        "buoy",
+        "Bou\xE9e",
+        "\u{1F534}"
+      ],
+      [
+        "volleyNet",
+        "Filet de volley",
+        "\u{1F3D0}"
+      ],
+      [
+        "iceCreamCart",
+        "Charrette \xE0 glaces",
+        "\u{1F366}"
+      ],
+      [
+        "bigSun",
+        "Soleil",
+        "\u2600"
+      ],
+      [
+        "kayak",
+        "Kayak",
+        "\u{1F6F6}"
+      ],
+      [
+        "sandalPair",
+        "Tongs",
+        "\u{1FA74}"
+      ]
+    ]
+  ],
+  [
+    "valentine",
+    "Saint-Valentin",
+    [
+      [
+        "heartBig",
+        "Grand c\u0153ur",
+        "\u2764"
+      ],
+      [
+        "heartArch",
+        "Arche en c\u0153ur",
+        "\u{1F49E}"
+      ],
+      [
+        "roseBouquet",
+        "Bouquet de roses",
+        "\u{1F490}"
+      ],
+      [
+        "rose",
+        "Rose",
+        "\u{1F339}"
+      ],
+      [
+        "cupidArrow",
+        "Fl\xE8che de Cupidon",
+        "\u{1F498}"
+      ],
+      [
+        "loveLetter",
+        "Lettre d\u2019amour",
+        "\u{1F48C}"
+      ],
+      [
+        "chocolateBox",
+        "Bo\xEEte de chocolats",
+        "\u{1F36B}"
+      ],
+      [
+        "teddy",
+        "Ours en peluche",
+        "\u{1F9F8}"
+      ],
+      [
+        "heartBalloons",
+        "Ballons en c\u0153ur",
+        "\u{1F388}"
+      ],
+      [
+        "ringBox",
+        "\xC9crin \xE0 bague",
+        "\u{1F48D}"
+      ],
+      [
+        "heartTree",
+        "Arbre \xE0 c\u0153urs",
+        "\u{1F497}"
+      ],
+      [
+        "loveBench",
+        "Banc des amoureux",
+        "\u{1FA91}"
+      ]
+    ]
+  ],
+  [
+    "newyear",
+    "Nouvel An",
+    [
+      [
+        "fireworkTower",
+        "Feu d\u2019artifice",
+        "\u{1F386}"
+      ],
+      [
+        "champagne",
+        "Bouteille de champagne",
+        "\u{1F37E}"
+      ],
+      [
+        "bigClock",
+        "Horloge du compte \xE0 rebours",
+        "\u{1F55B}"
+      ],
+      [
+        "confettiCannon",
+        "Canon \xE0 confettis",
+        "\u{1F38A}"
+      ],
+      [
+        "partyHat",
+        "Chapeau de f\xEAte",
+        "\u{1F973}"
+      ],
+      [
+        "discoBall",
+        "Boule \xE0 facettes",
+        "\u{1FAA9}"
+      ],
+      [
+        "balloonArch",
+        "Arche de ballons",
+        "\u{1F388}"
+      ],
+      [
+        "streamerPole",
+        "M\xE2t \xE0 serpentins",
+        "\u{1F38F}"
+      ],
+      [
+        "sparkler",
+        "Cierge magique",
+        "\u{1F387}"
+      ],
+      [
+        "starGarland",
+        "Guirlande d\u2019\xE9toiles",
+        "\u2728"
+      ],
+      [
+        "redLantern",
+        "Lanterne rouge",
+        "\u{1F3EE}"
+      ],
+      [
+        "newYearArch",
+        "Arche du Nouvel An",
+        "\u{1F389}"
+      ]
+    ]
+  ],
+  [
+    "xmas",
+    "No\xEBl",
+    [
+      [
+        "giftStack",
+        "Pile de cadeaux",
+        "\u{1F381}"
+      ],
+      [
+        "snowflake",
+        "Flocon g\xE9ant",
+        "\u2744"
+      ],
+      [
+        "stocking",
+        "Chaussette de No\xEBl",
+        "\u{1F9E6}"
+      ],
+      [
+        "lightString",
+        "Guirlande lumineuse",
+        "\u{1F4A1}"
+      ],
+      [
+        "snowPine",
+        "Sapin enneig\xE9",
+        "\u{1F332}"
+      ],
+      [
+        "igloo",
+        "Igloo",
+        "\u{1F6D6}"
+      ],
+      [
+        "nutcracker",
+        "Casse-noisette",
+        "\u{1F482}"
+      ],
+      [
+        "snowGlobe",
+        "Boule \xE0 neige",
+        "\u{1F52E}"
+      ],
+      [
+        "santaChimney",
+        "Chemin\xE9e du P\xE8re No\xEBl",
+        "\u{1F3E0}"
+      ],
+      [
+        "elf",
+        "Lutin",
+        "\u{1F9DD}"
+      ],
+      [
+        "bell",
+        "Cloche",
+        "\u{1F514}"
+      ],
+      [
+        "holly",
+        "Houx",
+        "\u{1F340}"
+      ]
+    ]
+  ],
+  [
+    "halloween",
+    "Halloween",
+    [
+      [
+        "coffin",
+        "Cercueil",
+        "\u26B0"
+      ],
+      [
+        "scarecrow",
+        "\xC9pouvantail",
+        "\u{1F383}"
+      ],
+      [
+        "spiderWeb",
+        "Toile d\u2019araign\xE9e",
+        "\u{1F578}"
+      ],
+      [
+        "spider",
+        "Araign\xE9e g\xE9ante",
+        "\u{1F577}"
+      ],
+      [
+        "candyBucket",
+        "Seau de bonbons",
+        "\u{1F36C}"
+      ],
+      [
+        "crystalBall",
+        "Boule de cristal",
+        "\u{1F52E}"
+      ],
+      [
+        "hangingGhost",
+        "Fant\xF4me suspendu",
+        "\u{1F47B}"
+      ],
+      [
+        "graveFence",
+        "Grille de cimeti\xE8re",
+        "\u26D3"
+      ],
+      [
+        "broom",
+        "Balai de sorci\xE8re",
+        "\u{1F9F9}"
+      ],
+      [
+        "mummy",
+        "Momie",
+        "\u{1F9DF}"
+      ],
+      [
+        "skeleton",
+        "Squelette",
+        "\u{1F480}"
+      ],
+      [
+        "blackCat",
+        "Chat noir",
+        "\u{1F408}\u200D\u2B1B"
+      ]
+    ]
+  ],
+  [
+    "spring",
+    "Printemps et P\xE2ques",
+    [
+      [
+        "easterEgg",
+        "\u0152uf de P\xE2ques",
+        "\u{1F95A}"
+      ],
+      [
+        "bunny",
+        "Lapin",
+        "\u{1F430}"
+      ],
+      [
+        "eggBasket",
+        "Panier d\u2019\u0153ufs",
+        "\u{1F9FA}"
+      ],
+      [
+        "tulip",
+        "Tulipe",
+        "\u{1F337}"
+      ],
+      [
+        "daisy",
+        "Marguerite",
+        "\u{1F33C}"
+      ],
+      [
+        "beehive",
+        "Ruche",
+        "\u{1F41D}"
+      ],
+      [
+        "butterfly",
+        "Papillon",
+        "\u{1F98B}"
+      ],
+      [
+        "birdhouse",
+        "Nichoir",
+        "\u{1F426}"
+      ],
+      [
+        "lamb",
+        "Agneau",
+        "\u{1F411}"
+      ],
+      [
+        "rainbow",
+        "Arc-en-ciel",
+        "\u{1F308}"
+      ],
+      [
+        "cherryTree",
+        "Cerisier en fleurs",
+        "\u{1F338}"
+      ],
+      [
+        "picnic",
+        "Pique-nique",
+        "\u{1F9FA}"
+      ]
+    ]
+  ],
+  [
+    "autumn",
+    "Automne",
+    [
+      [
+        "mapleTree",
+        "\xC9rable",
+        "\u{1F341}"
+      ],
+      [
+        "leafPile",
+        "Tas de feuilles",
+        "\u{1F342}"
+      ],
+      [
+        "hayBale",
+        "Botte de foin",
+        "\u{1F33E}"
+      ],
+      [
+        "appleTree",
+        "Pommier",
+        "\u{1F34E}"
+      ],
+      [
+        "acorn",
+        "Gland g\xE9ant",
+        "\u{1F330}"
+      ],
+      [
+        "harvestCart",
+        "Charrette de r\xE9colte",
+        "\u{1F6D2}"
+      ],
+      [
+        "redMushroom",
+        "Amanite",
+        "\u{1F344}"
+      ],
+      [
+        "pumpkinPatch",
+        "Champ de citrouilles",
+        "\u{1F383}"
+      ],
+      [
+        "woodpile",
+        "Tas de b\xFBches",
+        "\u{1FAB5}"
+      ],
+      [
+        "fallBirch",
+        "Bouleau dor\xE9",
+        "\u{1F333}"
+      ]
+    ]
+  ],
+  [
+    "winter",
+    "Neige et glace",
+    [
+      [
+        "iceSpike",
+        "Pointe de glace",
+        "\u{1F9CA}"
+      ],
+      [
+        "iceCastle",
+        "Ch\xE2teau de glace",
+        "\u{1F3F0}"
+      ],
+      [
+        "snowdrift",
+        "Cong\xE8re",
+        "\u26C4"
+      ],
+      [
+        "skiPole",
+        "Remonte-pente",
+        "\u{1F3BF}"
+      ],
+      [
+        "sled",
+        "Luge",
+        "\u{1F6F7}"
+      ],
+      [
+        "frozenLamp",
+        "Lampe gel\xE9e",
+        "\u{1F4A1}"
+      ],
+      [
+        "iceCube",
+        "Bloc de glace",
+        "\u{1F9CA}"
+      ],
+      [
+        "polarBear",
+        "Ours polaire",
+        "\u{1F43B}\u200D\u2744"
+      ],
+      [
+        "penguin",
+        "Pingouin",
+        "\u{1F427}"
+      ],
+      [
+        "iceArch",
+        "Arche de glace",
+        "\u{1F309}"
+      ]
+    ]
+  ],
+  [
+    "fair",
+    "F\xEAte foraine",
+    [
+      [
+        "ferrisWheel",
+        "Grande roue",
+        "\u{1F3A1}"
+      ],
+      [
+        "carousel",
+        "Man\xE8ge",
+        "\u{1F3A0}"
+      ],
+      [
+        "circusTent",
+        "Chapiteau",
+        "\u{1F3AA}"
+      ],
+      [
+        "popcornStand",
+        "Stand de pop-corn",
+        "\u{1F37F}"
+      ],
+      [
+        "cottonCandy",
+        "Barbe \xE0 papa",
+        "\u{1F36D}"
+      ],
+      [
+        "strengthTester",
+        "Jeu du marteau",
+        "\u{1F528}"
+      ],
+      [
+        "balloonStand",
+        "Stand de ballons",
+        "\u{1F388}"
+      ],
+      [
+        "clownHead",
+        "T\xEAte de clown",
+        "\u{1F921}"
+      ],
+      [
+        "ticketBooth",
+        "Guichet",
+        "\u{1F39F}"
+      ],
+      [
+        "dropTower",
+        "Tour de chute",
+        "\u{1F5FC}"
+      ],
+      [
+        "swingRide",
+        "Chaises volantes",
+        "\u{1F3A0}"
+      ],
+      [
+        "hotDogStand",
+        "Stand de hot-dogs",
+        "\u{1F32D}"
+      ],
+      [
+        "funHouse",
+        "Palais des glaces",
+        "\u{1FA9E}"
+      ],
+      [
+        "coaster",
+        "Rail de montagnes russes",
+        "\u{1F3A2}"
+      ]
+    ]
+  ],
+  [
+    "city",
+    "Ville",
+    [
+      [
+        "skyscraper",
+        "Gratte-ciel",
+        "\u{1F3D9}"
+      ],
+      [
+        "apartment",
+        "Immeuble",
+        "\u{1F3E2}"
+      ],
+      [
+        "shop",
+        "Boutique",
+        "\u{1F3EA}"
+      ],
+      [
+        "busStop",
+        "Abribus",
+        "\u{1F68F}"
+      ],
+      [
+        "mailbox",
+        "Bo\xEEte aux lettres",
+        "\u{1F4EE}"
+      ],
+      [
+        "hydrant",
+        "Bouche d\u2019incendie",
+        "\u{1F9EF}"
+      ],
+      [
+        "trafficLight",
+        "Feu tricolore",
+        "\u{1F6A6}"
+      ],
+      [
+        "bench",
+        "Banc",
+        "\u{1FA91}"
+      ],
+      [
+        "fountain",
+        "Fontaine",
+        "\u26F2"
+      ],
+      [
+        "phoneBooth",
+        "Cabine t\xE9l\xE9phonique",
+        "\u260E"
+      ],
+      [
+        "billboard",
+        "Panneau publicitaire",
+        "\u{1FAA7}"
+      ],
+      [
+        "parkingMeter",
+        "Horodateur",
+        "\u{1F17F}"
+      ],
+      [
+        "gasPump",
+        "Pompe \xE0 essence",
+        "\u26FD"
+      ],
+      [
+        "cityTree",
+        "Arbre de rue",
+        "\u{1F333}"
+      ]
+    ]
+  ],
+  [
+    "farm",
+    "Ferme",
+    [
+      [
+        "barn",
+        "Grange",
+        "\u{1F3DA}"
+      ],
+      [
+        "silo",
+        "Silo",
+        "\u{1F33E}"
+      ],
+      [
+        "tractor",
+        "Tracteur",
+        "\u{1F69C}"
+      ],
+      [
+        "woodFence",
+        "Barri\xE8re en bois",
+        "\u{1FAB5}"
+      ],
+      [
+        "cow",
+        "Vache",
+        "\u{1F404}"
+      ],
+      [
+        "pig",
+        "Cochon",
+        "\u{1F416}"
+      ],
+      [
+        "sheep",
+        "Mouton",
+        "\u{1F411}"
+      ],
+      [
+        "well",
+        "Puits",
+        "\u{1FAA3}"
+      ],
+      [
+        "hayStack",
+        "Meule de foin",
+        "\u{1F33E}"
+      ],
+      [
+        "chickenCoop",
+        "Poulailler",
+        "\u{1F414}"
+      ],
+      [
+        "farmWindmill",
+        "Moulin de ferme",
+        "\u{1F32C}"
+      ]
+    ]
+  ],
+  [
+    "castle",
+    "Ch\xE2teau",
+    [
+      [
+        "castleTower",
+        "Tour de ch\xE2teau",
+        "\u{1F3F0}"
+      ],
+      [
+        "castleWall",
+        "Rempart",
+        "\u{1F9F1}"
+      ],
+      [
+        "castleGate",
+        "Porte fortifi\xE9e",
+        "\u{1F6AA}"
+      ],
+      [
+        "bannerPole",
+        "\xC9tendard",
+        "\u{1F6A9}"
+      ],
+      [
+        "catapult",
+        "Catapulte",
+        "\u{1F3F9}"
+      ],
+      [
+        "knightStatue",
+        "Statue de chevalier",
+        "\u{1F6E1}"
+      ],
+      [
+        "shield",
+        "Bouclier",
+        "\u{1F6E1}"
+      ],
+      [
+        "dragon",
+        "Dragon",
+        "\u{1F409}"
+      ],
+      [
+        "drawbridge",
+        "Pont-levis",
+        "\u{1F309}"
+      ],
+      [
+        "campfire",
+        "Feu de camp",
+        "\u{1F525}"
+      ],
+      [
+        "tent",
+        "Tente",
+        "\u26FA"
+      ],
+      [
+        "crown",
+        "Couronne royale",
+        "\u{1F451}"
+      ]
+    ]
+  ],
+  [
+    "wild",
+    "Pirates et western",
+    [
+      [
+        "shipWreck",
+        "\xC9pave de bateau",
+        "\u{1F6A2}"
+      ],
+      [
+        "cannon",
+        "Canon",
+        "\u{1F4A3}"
+      ],
+      [
+        "skullFlag",
+        "Pavillon pirate",
+        "\u{1F3F4}\u200D\u2620"
+      ],
+      [
+        "treasureX",
+        "Marque du tr\xE9sor",
+        "\u274C"
+      ],
+      [
+        "saloon",
+        "Saloon",
+        "\u{1F37A}"
+      ],
+      [
+        "bigCactus",
+        "Grand cactus",
+        "\u{1F335}"
+      ],
+      [
+        "wagon",
+        "Chariot",
+        "\u{1F6FB}"
+      ],
+      [
+        "tipi",
+        "Tipi",
+        "\u26FA"
+      ],
+      [
+        "totem",
+        "Totem",
+        "\u{1F5FF}"
+      ],
+      [
+        "tumbleweed",
+        "Boule de ronces",
+        "\u{1F33F}"
+      ]
+    ]
+  ],
+  [
+    "japan",
+    "Japon",
+    [
+      [
+        "torii",
+        "Torii",
+        "\u26E9"
+      ],
+      [
+        "pagoda",
+        "Pagode",
+        "\u{1F3EF}"
+      ],
+      [
+        "paperLantern",
+        "Lanterne en papier",
+        "\u{1F3EE}"
+      ],
+      [
+        "bonsai",
+        "Bonsa\xEF",
+        "\u{1FAB4}"
+      ],
+      [
+        "sakura",
+        "Cerisier japonais",
+        "\u{1F338}"
+      ],
+      [
+        "bamboo",
+        "Bambous",
+        "\u{1F38B}"
+      ],
+      [
+        "zenStone",
+        "Pierres zen",
+        "\u{1FAA8}"
+      ],
+      [
+        "shrine",
+        "Petit sanctuaire",
+        "\u26E9"
+      ],
+      [
+        "koiNobori",
+        "Ko\xEF-nobori",
+        "\u{1F38F}"
+      ]
+    ]
+  ],
+  [
+    "sport",
+    "Sport",
+    [
+      [
+        "goal",
+        "But de football",
+        "\u{1F945}"
+      ],
+      [
+        "basketHoop",
+        "Panier de basket",
+        "\u{1F3C0}"
+      ],
+      [
+        "tennisNet",
+        "Filet de tennis",
+        "\u{1F3BE}"
+      ],
+      [
+        "giantBall",
+        "Ballon g\xE9ant",
+        "\u26BD"
+      ],
+      [
+        "podium",
+        "Podium",
+        "\u{1F3C6}"
+      ],
+      [
+        "finishArch",
+        "Arche d\u2019arriv\xE9e",
+        "\u{1F3C1}"
+      ],
+      [
+        "startGantry",
+        "Portique de d\xE9part",
+        "\u{1F6A6}"
+      ],
+      [
+        "trophy",
+        "Troph\xE9e",
+        "\u{1F3C6}"
+      ],
+      [
+        "archeryTarget",
+        "Cible de tir \xE0 l\u2019arc",
+        "\u{1F3AF}"
+      ],
+      [
+        "rugbyPost",
+        "Poteaux de rugby",
+        "\u{1F3C9}"
+      ]
+    ]
+  ],
+  [
+    "jungle",
+    "Jungle",
+    [
+      [
+        "bigLeaf",
+        "Grande feuille",
+        "\u{1F343}"
+      ],
+      [
+        "vines",
+        "Lianes",
+        "\u{1F33F}"
+      ],
+      [
+        "tikiTotem",
+        "Totem tiki",
+        "\u{1F5FF}"
+      ],
+      [
+        "jungleTree",
+        "Arbre de jungle",
+        "\u{1F334}"
+      ],
+      [
+        "jungleHut",
+        "Hutte",
+        "\u{1F6D6}"
+      ],
+      [
+        "parrot",
+        "Perroquet",
+        "\u{1F99C}"
+      ],
+      [
+        "fern",
+        "Foug\xE8re",
+        "\u{1F33F}"
+      ],
+      [
+        "waterfallRock",
+        "Cascade",
+        "\u{1F4A7}"
+      ],
+      [
+        "giantFlower",
+        "Fleur g\xE9ante",
+        "\u{1F33A}"
+      ]
+    ]
+  ],
+  [
+    "candy",
+    "Bonbons",
+    [
+      [
+        "lollipop",
+        "Sucette",
+        "\u{1F36D}"
+      ],
+      [
+        "cupcake",
+        "Cupcake",
+        "\u{1F9C1}"
+      ],
+      [
+        "donut",
+        "Donut",
+        "\u{1F369}"
+      ],
+      [
+        "iceCreamCone",
+        "Cornet de glace",
+        "\u{1F366}"
+      ],
+      [
+        "candyTree",
+        "Arbre en bonbons",
+        "\u{1F36C}"
+      ],
+      [
+        "chocolateWall",
+        "Mur de chocolat",
+        "\u{1F36B}"
+      ],
+      [
+        "cookie",
+        "Cookie",
+        "\u{1F36A}"
+      ],
+      [
+        "gumdrop",
+        "Gomme",
+        "\u{1F36C}"
+      ],
+      [
+        "candyHouse",
+        "Maison de bonbons",
+        "\u{1F3E0}"
+      ],
+      [
+        "macaron",
+        "Macaron",
+        "\u{1F9C1}"
+      ]
+    ]
+  ],
+  [
+    "party",
+    "Musique et f\xEAte",
+    [
+      [
+        "speaker",
+        "Enceinte",
+        "\u{1F50A}"
+      ],
+      [
+        "stage",
+        "Sc\xE8ne",
+        "\u{1F3A4}"
+      ],
+      [
+        "bigGuitar",
+        "Guitare g\xE9ante",
+        "\u{1F3B8}"
+      ],
+      [
+        "drumKit",
+        "Batterie",
+        "\u{1F941}"
+      ],
+      [
+        "piano",
+        "Piano",
+        "\u{1F3B9}"
+      ],
+      [
+        "microphone",
+        "Micro",
+        "\u{1F399}"
+      ],
+      [
+        "neonSign",
+        "Enseigne n\xE9on",
+        "\u{1F4A1}"
+      ],
+      [
+        "lightTruss",
+        "Portique de lumi\xE8res",
+        "\u{1F526}"
+      ],
+      [
+        "birthdayCake",
+        "G\xE2teau d\u2019anniversaire",
+        "\u{1F382}"
+      ],
+      [
+        "balloonBunch",
+        "Bouquet de ballons",
+        "\u{1F388}"
+      ]
+    ]
+  ]
+];
+var PACK_IDS = PACK.flatMap(([, , items]) => items.map((i) => i[0]));
+
 // js/decoData.js
 var DECO_ORDER = [
   "sign_left",
@@ -1806,8 +2959,315 @@ var DECO_ORDER = [
   "cauldron",
   "spookyTree",
   "hauntedHouse",
-  "skull"
+  "skull",
+  // 0.9.3 : pack de ~200 décorations (plage, Saint-Valentin, Nouvel An, fête foraine, ville, ferme, château, Japon, sport, jungle…)
+  ...PACK_IDS
 ];
+var DECO_CATS = {
+  signs: {
+    label: "Panneaux",
+    kinds: [
+      "sign_left",
+      "sign_right",
+      "sign_up",
+      "sign_stop",
+      "sign_speed",
+      "sign_warn",
+      "banner"
+    ]
+  },
+  shapes: {
+    label: "Formes",
+    kinds: [
+      "cube",
+      "sphere",
+      "cylinder",
+      "cone",
+      "pyramid",
+      "arch"
+    ]
+  },
+  build: {
+    label: "Murs et toits",
+    kinds: [
+      "wall",
+      "wallLow",
+      "roofFlat",
+      "roofGable",
+      "dome"
+    ]
+  },
+  nature: {
+    label: "Nature",
+    kinds: [
+      "pine",
+      "palm",
+      "tree",
+      "bush",
+      "rock",
+      "cactus",
+      "crystal",
+      "mushroom",
+      "flower"
+    ]
+  },
+  image: {
+    label: "Image",
+    kinds: [
+      "plaque"
+    ]
+  },
+  cave: {
+    label: "Souterrain",
+    kinds: [
+      "stalagmite",
+      "cavePillar",
+      "crystalCluster",
+      "glowMushroom",
+      "minecart",
+      "lantern"
+    ]
+  },
+  sky: {
+    label: "Nuages",
+    kinds: [
+      "cloud",
+      "balloon",
+      "floatIsle",
+      "windmill",
+      "airship",
+      "skyTower"
+    ]
+  },
+  sea: {
+    label: "Fonds marins",
+    kinds: [
+      "coral",
+      "seaweed",
+      "fishSchool",
+      "shell",
+      "anchor",
+      "jellyfish",
+      "treasure"
+    ]
+  },
+  factory: {
+    label: "Usine",
+    kinds: [
+      "gear",
+      "pipe",
+      "chimney",
+      "crate",
+      "barrel",
+      "crane",
+      "warnLight"
+    ]
+  },
+  space: {
+    label: "Espace",
+    kinds: [
+      "satellite",
+      "asteroid",
+      "antenna",
+      "rocket",
+      "planetMini"
+    ]
+  },
+  race: {
+    label: "Circuit",
+    kinds: [
+      "trafficCone",
+      "tireStack",
+      "flagPole",
+      "grandstand"
+    ]
+  },
+  lights: {
+    label: "Lumi\xE8res",
+    kinds: [
+      "searchlight",
+      "spotlight",
+      "lanternPost",
+      "lanternHang",
+      "streetLamp"
+    ]
+  },
+  vehicles: {
+    label: "V\xE9hicules",
+    kinds: [
+      "plane",
+      "biplane",
+      "helicopter",
+      "bus",
+      "truck",
+      "locomotive",
+      "sedan",
+      "ufo",
+      "sailboat"
+    ]
+  },
+  xmas: {
+    label: "No\xEBl",
+    kinds: [
+      "xmasTree",
+      "snowman",
+      "gift",
+      "candyCane",
+      "xmasStar",
+      "wreath",
+      "sleigh",
+      "reindeer",
+      "gingerHouse"
+    ]
+  },
+  halloween: {
+    label: "Halloween",
+    kinds: [
+      "pumpkin",
+      "ghost",
+      "tombstone",
+      "bats",
+      "witchHat",
+      "cauldron",
+      "spookyTree",
+      "hauntedHouse",
+      "skull"
+    ]
+  },
+  obstacles: {
+    label: "Obstacles",
+    kinds: [
+      "spikes",
+      "spikesPop",
+      "pendulum",
+      "hammer",
+      "slider",
+      "sweeper",
+      "bumper"
+    ]
+  }
+};
+var DECO_LABELS = {
+  ...Object.fromEntries(PACK.flatMap(([, , items]) => items.map(([id, name]) => [
+    id,
+    name
+  ]))),
+  sign_left: "Fl\xE8che gauche",
+  sign_right: "Fl\xE8che droite",
+  sign_up: "Tout droit",
+  sign_stop: "Stop",
+  sign_speed: "Limite",
+  sign_warn: "Danger",
+  banner: "Banderole",
+  cube: "Cube",
+  sphere: "Sph\xE8re",
+  cylinder: "Cylindre",
+  cone: "C\xF4ne",
+  pyramid: "Pyramide",
+  arch: "Arche",
+  wall: "Mur",
+  wallLow: "Muret",
+  roofFlat: "Toit plat",
+  roofGable: "Toit en pente",
+  dome: "D\xF4me",
+  pine: "Sapin",
+  palm: "Palmier",
+  tree: "Arbre",
+  bush: "Buisson",
+  rock: "Rocher",
+  cactus: "Cactus",
+  crystal: "Cristal",
+  mushroom: "Champignon",
+  flower: "Fleur",
+  plaque: "Plaque image",
+  shard: "\xC9clat secret",
+  spikes: "Piques",
+  spikesPop: "Piques escamotables",
+  pendulum: "Boule balancier",
+  hammer: "Marteau tournant",
+  slider: "Mur coulissant",
+  sweeper: "Balayeur",
+  bumper: "Bumper",
+  stalagmite: "Stalagmite",
+  cavePillar: "Pilier de grotte",
+  crystalCluster: "Amas de cristaux",
+  glowMushroom: "Champignon lumineux",
+  minecart: "Wagonnet",
+  lantern: "Lanterne",
+  cloud: "Nuage",
+  balloon: "Montgolfi\xE8re",
+  floatIsle: "\xCEle flottante",
+  windmill: "\xC9olienne",
+  airship: "Dirigeable",
+  skyTower: "Tour c\xE9leste",
+  coral: "Corail",
+  seaweed: "Algues",
+  fishSchool: "Banc de poissons",
+  shell: "Coquillage",
+  anchor: "Ancre",
+  jellyfish: "M\xE9duse",
+  treasure: "Coffre au tr\xE9sor",
+  gear: "Engrenage",
+  pipe: "Tuyau",
+  chimney: "Chemin\xE9e",
+  crate: "Caisses",
+  barrel: "Barils",
+  crane: "Grue",
+  warnLight: "Gyrophare",
+  satellite: "Satellite",
+  asteroid: "Ast\xE9ro\xEFde",
+  antenna: "Antenne",
+  rocket: "Fus\xE9e",
+  planetMini: "Plan\xE8te miniature",
+  trafficCone: "Plot",
+  tireStack: "Pile de pneus",
+  flagPole: "Drapeau \xE0 damier",
+  grandstand: "Tribune",
+  searchlight: "Projecteur tournant",
+  spotlight: "Projecteur",
+  lanternPost: "Lanterne sur pied",
+  lanternHang: "Lanterne suspendue",
+  streetLamp: "Lampadaire",
+  plane: "Avion de ligne",
+  biplane: "Avion \xE0 h\xE9lice",
+  helicopter: "H\xE9licopt\xE8re",
+  bus: "Bus",
+  truck: "Camion",
+  locomotive: "Locomotive",
+  sedan: "Voiture",
+  ufo: "Soucoupe",
+  sailboat: "Voilier",
+  xmasTree: "Sapin de No\xEBl",
+  snowman: "Bonhomme de neige",
+  gift: "Cadeau",
+  candyCane: "Sucre d\u2019orge",
+  xmasStar: "\xC9toile",
+  wreath: "Couronne",
+  sleigh: "Tra\xEEneau",
+  reindeer: "Renne",
+  gingerHouse: "Maison en pain d\u2019\xE9pices",
+  pumpkin: "Citrouille",
+  ghost: "Fant\xF4me",
+  tombstone: "Pierre tombale",
+  bats: "Chauves-souris",
+  witchHat: "Chapeau de sorci\xE8re",
+  cauldron: "Chaudron",
+  spookyTree: "Arbre mort",
+  hauntedHouse: "Maison hant\xE9e",
+  skull: "Cr\xE2ne"
+};
+for (const [key2, label, items] of PACK) {
+  const kinds = items.map((i) => i[0]);
+  if (DECO_CATS[key2]) DECO_CATS[key2].kinds.push(...kinds);
+  else DECO_CATS[key2] = {
+    label,
+    kinds
+  };
+}
+var DECO_PACK_ICONS = Object.fromEntries(PACK.flatMap(([, , items]) => items.map(([id, , icon]) => [
+  id,
+  icon
+])));
 
 // js/track.js
 var DECORS = {

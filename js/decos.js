@@ -4,6 +4,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GeoBuilder } from './geo.js';
 import { DECO_COLORS } from './decoData.js';
+import { registerPack } from './decoPack.js';
 import { isObstacle } from './obstacles.js';
 import { createObstacleMesh } from './obstacleMesh.js';
 
@@ -809,6 +810,8 @@ function gbOffset(gb, ox, oy, oz) {
   return { quad: (a, b, c, d, col) => gb.quad(sh(a), sh(b), sh(c), sh(d), col), tri: (a, b, c, col) => gb.tri(sh(a), sh(b), sh(c), col), box: (x0, y0, z0, x1, y1, z1, col, f) => gb.box(x0 + ox, y0 + oy, z0 + oz, x1 + ox, y1 + oy, z1 + oz, col, f) };
   function sh(p) { return [p[0] + ox, p[1] + oy, p[2] + oz]; }
 }
+
+registerPack(BUILDERS, { cylinder, cone, sphere, octa, limb, star5, cylX, cylZ, GREY, DARK, WHITE });
 
 export function decoColor(d) {
   if (d.cc) return d.cc;           // couleur personnalisée (#rrggbb), choisie dans l'Inspecteur › Couleurs

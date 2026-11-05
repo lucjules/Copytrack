@@ -1,3 +1,5 @@
+import { PACK, PACK_IDS } from './decoPackData.js';
+
 // Données des décorations (sans dépendance au rendu) : ordre de sérialisation et métadonnées.
 // Ne jamais réordonner DECO_ORDER, seulement ajouter à la fin.
 export const DECO_ORDER = [
@@ -19,6 +21,8 @@ export const DECO_ORDER = [
   'plane', 'biplane', 'helicopter', 'bus', 'truck', 'locomotive', 'sedan', 'ufo', 'sailboat',
   'xmasTree', 'snowman', 'gift', 'candyCane', 'xmasStar', 'wreath', 'sleigh', 'reindeer', 'gingerHouse',
   'pumpkin', 'ghost', 'tombstone', 'bats', 'witchHat', 'cauldron', 'spookyTree', 'hauntedHouse', 'skull',
+  // 0.9.3 : pack de ~200 décorations (plage, Saint-Valentin, Nouvel An, fête foraine, ville, ferme, château, Japon, sport, jungle…)
+  ...PACK_IDS,
 ];
 
 // Décorations qui éclairent vraiment la scène (PointLight / SpotLight). La couleur de l'objet (index ou #rrggbb) donne celle de la lumière.
@@ -53,6 +57,7 @@ export const DECO_CATS = {
 };
 
 export const DECO_LABELS = {
+  ...Object.fromEntries(PACK.flatMap(([, , items]) => items.map(([id, name]) => [id, name]))),
   sign_left: 'Flèche gauche', sign_right: 'Flèche droite', sign_up: 'Tout droit', sign_stop: 'Stop',
   sign_speed: 'Limite', sign_warn: 'Danger', banner: 'Banderole',
   cube: 'Cube', sphere: 'Sphère', cylinder: 'Cylindre', cone: 'Cône', pyramid: 'Pyramide', arch: 'Arche',
@@ -75,3 +80,11 @@ export const DECO_LABELS = {
 
 // Couleurs proposées (index 0 = couleurs naturelles de l'objet).
 export const DECO_COLORS = ['#ff6b57', '#ffbf3c', '#7cf06b', '#2fd3b5', '#3ec1ff', '#8f7cff', '#ff7ad9', '#f4f1ea', '#2f3247'];
+
+// Pack 0.9.3 : nouvelles catégories, et ajouts aux catégories Noël / Halloween existantes.
+for (const [key, label, items] of PACK) {
+  const kinds = items.map((i) => i[0]);
+  if (DECO_CATS[key]) DECO_CATS[key].kinds.push(...kinds);
+  else DECO_CATS[key] = { label, kinds };
+}
+export const DECO_PACK_ICONS = Object.fromEntries(PACK.flatMap(([, , items]) => items.map(([id, , icon]) => [id, icon])));

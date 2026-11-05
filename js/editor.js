@@ -9,7 +9,7 @@ import { Track, DECORS } from './track.js';
 import { TrackView, buildTileMesh, SURFACE_STYLE, tint, THEME_SWATCH } from './trackMesh.js';
 import { buildDecoMesh, safeUrl } from './decos.js';
 import { isObstacle } from './obstacles.js';
-import { DECO_CATS, DECO_LABELS, DECO_COLORS } from './decoData.js';
+import { DECO_CATS, DECO_LABELS, DECO_COLORS, DECO_PACK_ICONS } from './decoData.js';
 import { setEditorDraft, saveMyTrack, newId } from './storage.js';
 import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, enclosedRegion, tileRegion } from './editorTools.js';
 import { centerlineWorld } from './ribbons.js';
@@ -2120,6 +2120,7 @@ export class EditorSession {
 }
 
 const DECO_ICON = {
+  ...DECO_PACK_ICONS,
   sign_left: '⬅', sign_right: '➡', sign_up: '⬆', sign_stop: '⛔', sign_speed: '🅿', sign_warn: '⚠', banner: '🚩',
   cube: '⬛', sphere: '⚪', cylinder: '🛢', cone: '🔺', pyramid: '🔻', arch: '🌉',
   wall: '🧱', wallLow: '▬', roofFlat: '⬜', roofGable: '🏠', dome: '🛖',
