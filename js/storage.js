@@ -169,15 +169,35 @@ export function clearRecords() {
   } catch { /* stockage indisponible */ }
 }
 
+// Copie en mémoire des records de cette session : si le stockage du navigateur est plein ou refuse d'écrire, le menu affiche
+// quand même le temps et les médailles qui viennent d'être gagnés (la progression ne dépend plus de la place disponible).
+const memRec = new Map();
+const slim = (rec) => ({ ...rec, ghost: null, inputs: null });
+
 export function getRecord(trackKey) {
-  return read(REC + trackKey, null);
+  const disk = read(REC + trackKey, null);
+  const mem = memRec.get(PREFIX + trackKey);
+  if (!disk) return mem || null;
+  return mem && mem.time < disk.time - 1e-9 ? mem : disk;
 }
 
+// Écrit le record, quitte à perdre ce qui prend de la place : d'abord le fantôme, puis les commandes enregistrées, puis (si
+// le stockage est vraiment plein) le fantôme et les commandes des AUTRES circuits, du plus ancien au plus récent. Le temps, lui,
+// n'est jamais perdu. Renvoie true si le record est bien sur le disque.
 export function saveRecord(trackKey, rec) {
-  if (!write(REC + trackKey, rec)) {
-    // Quota dépassé : on garde le temps sans le fantôme.
-    write(REC + trackKey, { ...rec, ghost: null });
+  memRec.set(PREFIX + trackKey, slim(rec));
+  const tiers = [rec, { ...rec, ghost: null }, slim(rec)];
+  const tryWrite = () => tiers.some((t) => write(REC + trackKey, t));
+  if (tryWrite()) return true;
+  let keys = [];
+  try { keys = Object.keys(localStorage).filter((k) => k.startsWith(PREFIX + REC) && k !== PREFIX + REC + trackKey); } catch { return false; }
+  const others = keys.map((k) => { try { return { k, v: JSON.parse(localStorage.getItem(k)) }; } catch { return null; } })
+    .filter((o) => o && o.v && (o.v.ghost || o.v.inputs)).sort((a, b) => (a.v.date || 0) - (b.v.date || 0));
+  for (const o of others) {
+    try { localStorage.setItem(o.k, JSON.stringify(slim(o.v))); } catch { /* on continue */ }
+    if (tryWrite()) return true;
   }
+  return false;
 }
 
 // ---- Circuits personnels ---------------------------------------------------
