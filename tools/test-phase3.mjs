@@ -246,7 +246,7 @@ console.log('Revêtements : unités et réglages');
 test('unités réelles : km/h, m/s², m, s (et % pour les réglages sans unité physique)', () => {
   assert.equal(paramText('conveyor', 1), '-200 km/h'); assert.equal(paramText('conveyor', 101), '0 km/h'); assert.equal(paramText('conveyor', 201), '+200 km/h');
   assert.equal(paramText('glass', 150), '1,5 s'); assert.equal(paramText('glass', 30), '0,3 s'); assert.equal(paramText('glass', 500), '5 s');
-  assert.equal(paramText('boost', 100), '281 km/h'); assert.match(paramText('bounce', 100), /^3,9 m$/); assert.equal(paramText('gravity', 40), '10 m/s²');
+  assert.equal(paramText('boost', 100), '403 km/h'); assert.match(paramText('bounce', 100), /^3,9 m$/); assert.equal(paramText('gravity', 40), '10 m/s²');
   assert.equal(paramText('wind', 100), 'nul'); assert.equal(paramText('wind', 150), '→ 27 m/s²'); assert.equal(paramText('wind', 50), '← 27 m/s²');
   assert.match(paramText('spring', 150), /^→ \d+ km\/h$/); assert.equal(paramText('ice', 100), '100 %');
   assert.equal(paramText('', 0), ''); assert.equal(paramText('magnet', 0), '');
@@ -359,6 +359,7 @@ test('la dalle brisée perd ses collisions, pas les voisines ; seule la durée d
   const crossing = (p) => {
     const tr2 = strip('straight', 12, { s: 'glass', p });
     const phys = new CarPhysics(tr2); const logic = new RaceLogic(tr2); placeAtStart(phys, logic);
+    phys.vel.z = -55; phys.fwdSpeed = 55; phys.graceT = 0;          // 0.9.4 : le moteur monte lentement, on lance la voiture déjà vite
     let broke = 0, vmax = 0;
     run(phys, tr2, 8, GAS, () => { vmax = Math.max(vmax, phys.speed); if (phys.ev.glass) broke++; });
     return { broke, vmax, size: phys.broken.size };
@@ -426,8 +427,8 @@ test('tunnel sans bordures : les parois du tunnel existent quand même', () => {
 });
 
 console.log('Rejeu identique (vérification serveur) et version');
-test('PHYS_VER 23 ; un circuit avec verre, tapis, vent, eau et tunnel est rejoué à l’identique par la vérification', () => {
-  assert.equal(PHYS_VER, 23);
+test('PHYS_VER 24 ; un circuit avec verre, tapis, vent, eau et tunnel est rejoué à l’identique par la vérification', () => {
+  assert.equal(PHYS_VER, 24);
   const tr = scriptTrack('mix', 'start S2 S.v S2.t137 S2.w150 S.a2 R S2# S2.a L S2 finish');
   // Enregistre une course du pilote automatique, puis la rejoue comme le fait le serveur.
   const phys = new CarPhysics(tr), logic = new RaceLogic(tr); placeAtStart(phys, logic);

@@ -20,8 +20,8 @@ var SURF_PHYS = {
   spring: 56,
   bounce: 14,
   gravity: 25,
-  maxSpeed: 54,
-  boostSpeed: 78
+  maxSpeed: 95,
+  boostSpeed: 112
 };
 var MAX_DECOS = 500;
 var LOOP_R = 12;
@@ -5261,10 +5261,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 RR S C S2 LL B S2 GU2 S GD2 S RR S U S2 D S C S RR S3 finish",
     medals: {
-      cristal: 18.8,
-      or: 20,
-      argent: 23,
-      bronze: 27
+      cristal: 20,
+      or: 21.3,
+      argent: 24.4,
+      bronze: 28.7
     }
   },
   {
@@ -5278,10 +5278,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 C S2 UU GR2 DD S2 L S.o S R S2 RR S2 S.o C S2 LL S2 B S R L S2 finish",
     medals: {
-      cristal: 23.5,
-      or: 24.9,
-      argent: 28.6,
-      bronze: 33.6
+      cristal: 26.1,
+      or: 27.7,
+      argent: 31.8,
+      bronze: 37.3
     }
   },
   {
@@ -5294,10 +5294,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S B S2 O S C S RR S I2 S R S B S2 C S LL S2 B S BR S finish",
     medals: {
-      cristal: 18,
-      or: 19,
-      argent: 21.8,
-      bronze: 25.7
+      cristal: 19.3,
+      or: 20.3,
+      argent: 23.3,
+      bronze: 27.5
     }
   },
   {
@@ -5311,10 +5311,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S R L S2 C S L S S S R S2.m R L S2 B S O S2 L S R S2 C S R S L S2 finish",
     medals: {
-      cristal: 26.1,
-      or: 27.9,
-      argent: 32.1,
-      bronze: 37.6
+      cristal: 28.4,
+      or: 30.3,
+      argent: 34.9,
+      bronze: 40.9
     }
   },
   {
@@ -5327,10 +5327,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2# C S2 L S R S2 Y2.b S2 R L S2 B S2 BL S2 C S L S R S2 finish",
     medals: {
-      cristal: 24.1,
-      or: 25.6,
-      argent: 29.5,
-      bronze: 34.6
+      cristal: 24.7,
+      or: 26.3,
+      argent: 30.3,
+      bronze: 35.5
     }
   },
   {
@@ -5344,10 +5344,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 R S L S2 C S2 Y2.b S2 BR S U S2 D S2 C S2 UU G2 DD S2 LL S2 finish",
     medals: {
-      cristal: 24.3,
-      or: 25.5,
-      argent: 29.3,
-      bronze: 34.4
+      cristal: 26,
+      or: 27.3,
+      argent: 31.4,
+      bronze: 36.8
     }
   },
   {
@@ -5360,10 +5360,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 C S R R S2 L S B S3 BRR S C S L L S2 R S2 B S R S L S2 KL S2 B S3 finish",
     medals: {
-      cristal: 27.6,
-      or: 28.7,
-      argent: 33,
-      bronze: 38.8
+      cristal: 30.8,
+      or: 32.1,
+      argent: 36.9,
+      bronze: 43.3
     }
   },
   {
@@ -5375,12 +5375,12 @@ var BUILTIN_TRACKS = [
       id: "rings",
       n: 1
     },
-    script: "start S2 B TI TM2 TO S2 R S2 UU GR2 DD S2 C S L S2 B S O S2 KL S2 R S2 finish",
+    script: "start S2 B TI TM2 TO S2 R B S UU GR2 DD S2 C S L S2 B S O S2 KL S2 R S2 finish",
     medals: {
-      cristal: 21,
-      or: 22,
-      argent: 25.3,
-      bronze: 29.7
+      cristal: 23,
+      or: 24.1,
+      argent: 27.7,
+      bronze: 32.5
     }
   },
   {
@@ -5394,10 +5394,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S B S2 UU GR2 DD S2 C S LL B S2 UU G2 S2 D2 RR S C S2 B S UU GC2 DD S2 finish",
     medals: {
-      cristal: 19.4,
-      or: 20.2,
-      argent: 23.3,
-      bronze: 27.3
+      cristal: 21.4,
+      or: 22.3,
+      argent: 25.7,
+      bronze: 30.1
     }
   },
   {
@@ -5410,10 +5410,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 B S O S2 C S L S R S2 B S OL S2 BR S2 B S OB S2 C S2 L S R S2 finish",
     medals: {
-      cristal: 29.8,
-      or: 31.1,
-      argent: 35.7,
-      bronze: 41.9
+      cristal: 32.3,
+      or: 33.7,
+      argent: 38.7,
+      bronze: 45.4
     }
   },
   {
@@ -5427,10 +5427,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 B S O S2 R S S S L S B S OL S2 C S BL S R S2 B S2 L R S2 finish",
     medals: {
-      cristal: 25.3,
-      or: 26.6,
-      argent: 30.6,
-      bronze: 35.9
+      cristal: 28.4,
+      or: 29.8,
+      argent: 34.3,
+      bronze: 40.3
     }
   },
   {
@@ -5444,10 +5444,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 L S R S2 B S.j G1 S2 R L C S2 RR S B S2 GU2 S GD2 S LL S R S L S2 B S.j G1 S2 C S2 R L S2 finish",
     medals: {
-      cristal: 27.1,
-      or: 28.8,
-      argent: 33.1,
-      bronze: 38.8
+      cristal: 31,
+      or: 32.9,
+      argent: 37.9,
+      bronze: 44.4
     }
   },
   {
@@ -5461,10 +5461,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S2 S.n S3.a R.a S2.a L.a S2.a S.n S2 C S L S BR S B S UU G2 DD S2 C S2 L R S2 finish",
     medals: {
-      cristal: 25.3,
-      or: 26.1,
-      argent: 30.1,
-      bronze: 35.3
+      cristal: 28.2,
+      or: 29.1,
+      argent: 33.5,
+      bronze: 39.3
     }
   },
   {
@@ -5478,10 +5478,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 C S2 S.e S2 UU GR7 DD S2 S.e S R S L S3_ B S2 C S2 RR S2 finish",
     medals: {
-      cristal: 26,
-      or: 27.2,
-      argent: 31.3,
-      bronze: 36.7
+      cristal: 29.4,
+      or: 30.7,
+      argent: 35.4,
+      bronze: 41.5
     }
   },
   {
@@ -5495,10 +5495,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R L R L S2 C S.o S2 R S L S2 B S O S2 C S L R L R S2 S.o S2 B S2 RR S2 LL S.o S2 finish",
     medals: {
-      cristal: 27.4,
-      or: 29.3,
-      argent: 33.6,
-      bronze: 39.5
+      cristal: 28.4,
+      or: 30.4,
+      argent: 34.8,
+      bronze: 41
     }
   },
   {
@@ -5506,16 +5506,19 @@ var BUILTIN_TRACKS = [
     name: "Coul\xE9e Ardente",
     decor: "volcano",
     difficulty: 3,
+    pilot: {
+      vCap: 40
+    },
     goal: {
       id: "rings",
       n: 2
     },
-    script: "start B S2 R S L S2 C S S.e S UU GR6 DD S2 R S2 UU GR6 DD S.e S2 C S L S2 B S2 finish",
+    script: "start B S2 R S L S2 C S S.e S5 UU GR6 DD S2 R S5 UU GR6 DD S.e S2 C S L S2 B S2 finish",
     medals: {
-      cristal: 29.5,
-      or: 30.6,
-      argent: 35.2,
-      bronze: 41.3
+      cristal: 41.7,
+      or: 43.3,
+      argent: 49.8,
+      bronze: 58.4
     }
   },
   {
@@ -5523,16 +5526,19 @@ var BUILTIN_TRACKS = [
     name: "Navette",
     decor: "orbit",
     difficulty: 3,
+    pilot: {
+      vCap: 44
+    },
     goal: {
       id: "vehicle",
       v: "moto"
     },
-    script: "start S2 B S2 R S L S2 S.o S2 C S2 R S2 BR S2 S.o S S.e S2 UU G6 DD S S.e S2 C S L S2 S.o S2 finish",
+    script: "start S2 B S2 R S L S2 S.o S2 C S2 R S2 BR S2 S.o S S.e S3 UU G6 DD S S.e S2 C S L S2 S.o S2 finish",
     medals: {
-      cristal: 29.5,
-      or: 30.7,
-      argent: 35.3,
-      bronze: 41.4
+      cristal: 25.9,
+      or: 27,
+      argent: 31,
+      bronze: 36.4
     }
   },
   {
@@ -5545,10 +5551,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S3_ R_ S_ L_ S2 C S S.n S4.a L.a S2.a R.a S.a S.n S2 B S2 BR S2_ KL S2 R S L S2 finish",
     medals: {
-      cristal: 27.7,
-      or: 28.8,
-      argent: 33.1,
-      bronze: 38.9
+      cristal: 29.4,
+      or: 30.6,
+      argent: 35.2,
+      bronze: 41.3
     }
   },
   {
@@ -5561,10 +5567,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S B S I3 RR S C I2 L S R S I2 RR B S2 C S Y2.i S LL I2 S R S2 U S I2 D S L S2 B S finish",
     medals: {
-      cristal: 29.9,
-      or: 31.6,
-      argent: 36.4,
-      bronze: 42.7
+      cristal: 33.2,
+      or: 35.1,
+      argent: 40.4,
+      bronze: 47.4
     }
   },
   {
@@ -5578,10 +5584,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S B S2 S.j G1 S2 C S RR S B S S.j G1 S2 LL S2.i C S2 B S S S S.j G1 S3_ R S2 finish",
     medals: {
-      cristal: 19.4,
-      or: 20.5,
-      argent: 23.5,
-      bronze: 27.6
+      cristal: 20.4,
+      or: 21.6,
+      argent: 24.7,
+      bronze: 29
     }
   },
   {
@@ -5595,10 +5601,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S2 L S R S.d L S2 C S R L S2 S S R S L S2.w60 B S2 Y2.d S R S L S2 finish",
     medals: {
-      cristal: 24.9,
-      or: 26.7,
-      argent: 30.9,
-      bronze: 36.7
+      cristal: 27.8,
+      or: 29.8,
+      argent: 34.5,
+      bronze: 41
     }
   },
   {
@@ -5611,10 +5617,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S B S U S.m D S C S R S3 R S B S2 UU S.m DD.m S C S LL S2.m U S2 D S TI TM2 TO finish",
     medals: {
-      cristal: 19.8,
-      or: 20.9,
-      argent: 24.2,
-      bronze: 28.5
+      cristal: 21.8,
+      or: 23,
+      argent: 26.7,
+      bronze: 31.4
     }
   },
   {
@@ -5627,10 +5633,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 U2 R# S# L# S2# C S2 R S L S2 D2 S R L S2# B S2# L TI TM2 TO UU GC2 DD S2_ R S2 finish",
     medals: {
-      cristal: 24.9,
-      or: 26.3,
-      argent: 30.2,
-      bronze: 35.5
+      cristal: 29.4,
+      or: 31.1,
+      argent: 35.7,
+      bronze: 41.9
     }
   },
   {
@@ -5643,10 +5649,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 R S2 L S2 C S2_ R_ S_ L S2.w150 S2 B S2 UU GR2 DD S2 KL S2.d R S2 B S.j G1 S2 L S2 finish",
     medals: {
-      cristal: 25,
-      or: 26.4,
-      argent: 30.6,
-      bronze: 36.2
+      cristal: 25.9,
+      or: 27.3,
+      argent: 31.6,
+      bronze: 37.4
     }
   },
   {
@@ -5659,10 +5665,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2# R# S# L# S2 C S2 B S2 QU WA2 CR S2 R S L S2 D2 S2 C S TB S L S R S2 finish",
     medals: {
-      cristal: 24.7,
-      or: 25.9,
-      argent: 29.8,
-      bronze: 35
+      cristal: 26.4,
+      or: 27.7,
+      argent: 31.9,
+      bronze: 37.4
     }
   },
   {
@@ -5670,15 +5676,18 @@ var BUILTIN_TRACKS = [
     name: "Tours Jumelles",
     decor: "city",
     difficulty: 4,
+    pilot: {
+      vCap: 40
+    },
     goal: {
       id: "nowall"
     },
     script: "start B S2 R S L S2 B S2 QU WA CR S2 C S R S L S2 D2 S CK S2 R S2 B S2 QU WA CR S2 C S2 R L S2 finish",
     medals: {
-      cristal: 26.2,
-      or: 27.5,
-      argent: 31.7,
-      bronze: 37.2
+      cristal: 28.6,
+      or: 30,
+      argent: 34.6,
+      bronze: 40.6
     }
   },
   {
@@ -5692,10 +5701,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 UU GC2 DD S2 R S2 TB S2 L S2 B S2 UU GR2 DD S2 C S CKL S2 BL S2 UU GR2 DD S2 finish",
     medals: {
-      cristal: 25.2,
-      or: 26.2,
-      argent: 30.2,
-      bronze: 35.4
+      cristal: 27,
+      or: 28,
+      argent: 32.3,
+      bronze: 37.9
     }
   },
   {
@@ -5708,10 +5717,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S B S2 O S OL S C S RR S B S CK S2 L S2 C S R S3 CKL S LL B S2 O S finish",
     medals: {
-      cristal: 27.7,
-      or: 28.9,
-      argent: 33.3,
-      bronze: 39
+      cristal: 30,
+      or: 31.3,
+      argent: 36,
+      bronze: 42.2
     }
   },
   {
@@ -5725,10 +5734,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 R S L TI TM2 TO S C S2 B S2 QU WA2 CR S2 R S2 TB S2 C S L S2 D2 S2 finish",
     medals: {
-      cristal: 22.2,
-      or: 23.1,
-      argent: 26.6,
-      bronze: 31.2
+      cristal: 22.8,
+      or: 23.7,
+      argent: 27.3,
+      bronze: 32.1
     }
   },
   {
@@ -5742,10 +5751,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 B S2 OB S C S2 CK S2 L S R S2 B S2 ODL S2 C S CKL S2 R L S2 finish",
     medals: {
-      cristal: 30.8,
-      or: 32.1,
-      argent: 37,
-      bronze: 43.4
+      cristal: 38,
+      or: 39.6,
+      argent: 45.7,
+      bronze: 53.6
     }
   },
   {
@@ -5759,10 +5768,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B RR S2 C S3 BR S2 UU G2 DD S2 RR S2 B S2 RR S L R S1 finish",
     medals: {
-      cristal: 38.3,
-      or: 40.6,
-      argent: 46.7,
-      bronze: 54.9
+      cristal: 40.8,
+      or: 43.2,
+      argent: 49.7,
+      bronze: 58.4
     }
   },
   {
@@ -5777,10 +5786,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B BR S2 C S2 BR S2 TB S2 BR S5 BR S1 finish",
     medals: {
-      cristal: 45.6,
-      or: 47,
-      argent: 54.1,
-      bronze: 63.5
+      cristal: 40.1,
+      or: 41.3,
+      argent: 47.6,
+      bronze: 55.8
     }
   },
   {
@@ -5788,16 +5797,19 @@ var BUILTIN_TRACKS = [
     name: "Sauts Lunaires",
     decor: "isles",
     difficulty: 4,
+    pilot: {
+      vCap: 58
+    },
     goal: {
       id: "perfect",
       n: 2
     },
     script: "start B S2 B S.g30 S2 UU G10 DD S2 C S.g100 S2 R S L S2 RR S B S2 S.e S2 UU G8 DD S S.e S2 C S2 L S R S2 finish",
     medals: {
-      cristal: 35.1,
-      or: 36.6,
-      argent: 42.1,
-      bronze: 49.4
+      cristal: 39.9,
+      or: 41.6,
+      argent: 47.9,
+      bronze: 56.2
     }
   },
   {
@@ -5810,10 +5822,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 R S U S R S U R S3 C S R S GU2 R S2 R S B S5 BR S D3 S KR S2 B S2 finish",
     medals: {
-      cristal: 26,
-      or: 27.4,
-      argent: 31.6,
-      bronze: 37
+      cristal: 31,
+      or: 32.7,
+      argent: 37.7,
+      bronze: 44.1
     }
   },
   {
@@ -5826,10 +5838,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S B S2 O S2 C S U2 RR S2 B S UU G2 DD S2 C S LL S B S.j G1 S2 R S2.m U S.m D.m S C S BLL S2 B S OL S2 R S2.i S L S2 B S2 finish",
     medals: {
-      cristal: 37.9,
-      or: 39.3,
-      argent: 45.2,
-      bronze: 53.1
+      cristal: 42.6,
+      or: 44.2,
+      argent: 50.8,
+      bronze: 59.7
     }
   },
   {
@@ -5843,10 +5855,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 RR S S.n S2.a RR.a S.a S.n S S C S2 RR S2 B S RR finish",
     medals: {
-      cristal: 34.5,
-      or: 36.2,
-      argent: 41.6,
-      bronze: 48.8
+      cristal: 44,
+      or: 46.2,
+      argent: 53.1,
+      bronze: 62.3
     }
   },
   {
@@ -5857,12 +5869,12 @@ var BUILTIN_TRACKS = [
     goal: {
       id: "norespawn"
     },
-    script: "start S2 B S I3 RR.i S C S2 L S R S2 B S UU GR2 DD S C S LL S2 B S.j G1 S2 R.i S B S O S2 C S CK S2 B S3 finish",
+    script: "start S2 B S I3 RR S C S2 L S R S2 B S UU GR2 DD S C S LL S2 B S.j G1 S2 R.i S B S O S2 C S CK S2 B S3 finish",
     medals: {
-      cristal: 32,
-      or: 33.4,
-      argent: 38.5,
-      bronze: 45.2
+      cristal: 33.5,
+      or: 34.9,
+      argent: 40.3,
+      bronze: 47.3
     }
   },
   {
@@ -5876,10 +5888,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 B S2 QU WA2 CR S2 C S2 B S OB S R S L D2 S2 B S OD S2 C S L R S2.g40 S2 S.g100 S2 finish",
     medals: {
-      cristal: 31.7,
-      or: 33,
-      argent: 38,
-      bronze: 44.6
+      cristal: 32.2,
+      or: 33.5,
+      argent: 38.6,
+      bronze: 45.3
     }
   },
   {
@@ -5893,10 +5905,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 B S2 OL S2 C S S.n S3.a R.a S2.a S.n S2 RR_ S2.w170_ S C S2 B S2 UU G3 DD S2 R S L S2 B S OB S2 C S2 L R S2 finish",
     medals: {
-      cristal: 38.8,
-      or: 40.5,
-      argent: 46.6,
-      bronze: 54.7
+      cristal: 50.1,
+      or: 52.3,
+      argent: 60.2,
+      bronze: 70.7
     }
   },
   {
@@ -5910,10 +5922,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S S.g40 S2 UU GR6 DD S2 S.g100 S2 C S2 TB S2 R S2 CK S2 L S2 S.e S UU GR7 DD S.e S2 C TI TM2.b TO S finish",
     medals: {
-      cristal: 33.1,
-      or: 34.3,
-      argent: 39.5,
-      bronze: 46.3
+      cristal: 32,
+      or: 33.1,
+      argent: 38.1,
+      bronze: 44.7
     }
   },
   {
@@ -5926,10 +5938,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 R S L S2 QU WA CR S2 C S2 OB S2 BL S2 S.n S2.a L.a S.a S.n S2 C S2 CKL S2 UU GR2 DD S2 Y2.b S2 finish",
     medals: {
-      cristal: 36,
-      or: 37.4,
-      argent: 43,
-      bronze: 50.5
+      cristal: 38,
+      or: 39.5,
+      argent: 45.4,
+      bronze: 53.3
     }
   },
   {
@@ -5943,10 +5955,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S4 BR S CK S2 C BR TI TM3 TO UU GR2 DD BR S TB S3 BR finish",
     medals: {
-      cristal: 40.7,
-      or: 42,
-      argent: 48.3,
-      bronze: 56.7
+      cristal: 39.8,
+      or: 41,
+      argent: 47.2,
+      bronze: 55.4
     }
   },
   // ==== 0.9 : quatre nouveaux thèmes (6 circuits chacun) ============================
@@ -5961,10 +5973,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 S2.t137 R S2 C S L S3.t137 RR S2 B S2 LL S C S2.t137 R S2 finish",
     medals: {
-      cristal: 17.3,
-      or: 18.2,
-      argent: 20.9,
-      bronze: 24.5
+      cristal: 18.8,
+      or: 19.8,
+      argent: 22.7,
+      bronze: 26.6
     }
   },
   {
@@ -5986,10 +5998,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 21.9,
-      or: 22.8,
-      argent: 26.2,
-      bronze: 30.7
+      cristal: 25.5,
+      or: 26.5,
+      argent: 30.5,
+      bronze: 35.7
     }
   },
   {
@@ -6017,10 +6029,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 19.7,
-      or: 20.6,
-      argent: 23.7,
-      bronze: 27.8
+      cristal: 22.3,
+      or: 23.3,
+      argent: 26.8,
+      bronze: 31.4
     }
   },
   {
@@ -6047,10 +6059,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 27.4,
-      or: 28.4,
-      argent: 32.7,
-      bronze: 38.3
+      cristal: 33,
+      or: 34.2,
+      argent: 39.4,
+      bronze: 46.1
     }
   },
   {
@@ -6074,10 +6086,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 24.7,
-      or: 25.9,
-      argent: 29.8,
-      bronze: 35
+      cristal: 26.8,
+      or: 28.1,
+      argent: 32.3,
+      bronze: 38
     }
   },
   {
@@ -6104,10 +6116,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 28.2,
-      or: 30,
-      argent: 34.5,
-      bronze: 40.5
+      cristal: 21.1,
+      or: 22.5,
+      argent: 25.9,
+      bronze: 30.4
     }
   },
   // ---- Usine mécanique : obstacles, tapis, moteur coupé, ascenseurs ----
@@ -6135,10 +6147,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 18.7,
-      or: 19.4,
-      argent: 22.3,
-      bronze: 26.1
+      cristal: 19.9,
+      or: 20.7,
+      argent: 23.8,
+      bronze: 27.8
     }
   },
   {
@@ -6166,10 +6178,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 21,
-      or: 22.4,
-      argent: 25.7,
-      bronze: 30.2
+      cristal: 27.5,
+      or: 29.3,
+      argent: 33.6,
+      bronze: 39.5
     }
   },
   {
@@ -6193,10 +6205,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 20.5,
-      or: 21.5,
-      argent: 24.7,
-      bronze: 29
+      cristal: 22.9,
+      or: 24.1,
+      argent: 27.6,
+      bronze: 32.5
     }
   },
   {
@@ -6229,10 +6241,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 24.9,
-      or: 26.5,
-      argent: 30.5,
-      bronze: 35.8
+      cristal: 29.6,
+      or: 31.5,
+      argent: 36.3,
+      bronze: 42.6
     }
   },
   {
@@ -6257,10 +6269,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 21.9,
-      or: 23.3,
-      argent: 26.8,
-      bronze: 31.5
+      cristal: 29.8,
+      or: 31.7,
+      argent: 36.5,
+      bronze: 42.8
     }
   },
   {
@@ -6299,10 +6311,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 28.8,
-      or: 30,
-      argent: 34.5,
-      bronze: 40.5
+      cristal: 38.8,
+      or: 40.4,
+      argent: 46.4,
+      bronze: 54.5
     }
   },
   // ---- Ville dans les nuages : vent, deltaplane, gravité faible, sauts ----
@@ -6317,10 +6329,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 GU2 S GD2 S R S2 C S2.w150 S2 L S2 B S UU G2 DD S2 R S2 finish",
     medals: {
-      cristal: 17.9,
-      or: 18.8,
-      argent: 21.6,
-      bronze: 25.4
+      cristal: 20.4,
+      or: 21.5,
+      argent: 24.7,
+      bronze: 29
     }
   },
   {
@@ -6334,10 +6346,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S3 S.e S UU GR5 DD S3 S.e S C S2 R S2 L S2 B S.j G1 S2 C S2 B S UU GR2 DD S2 finish",
     medals: {
-      cristal: 24.8,
-      or: 25.7,
-      argent: 29.6,
-      bronze: 34.8
+      cristal: 27.4,
+      or: 28.4,
+      argent: 32.7,
+      bronze: 38.4
     }
   },
   {
@@ -6350,10 +6362,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2.w170 R S2.w40 C S2 L S2.w160_ S2 RR S2 B S2 BL S C S2.w30 S R S2 L S2 finish",
     medals: {
-      cristal: 20.7,
-      or: 21.8,
-      argent: 25.1,
-      bronze: 29.4
+      cristal: 23,
+      or: 24.2,
+      argent: 27.8,
+      bronze: 32.6
     }
   },
   {
@@ -6367,10 +6379,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S S.g40 S2 UU GR6 DD S2 S.g100 S2 C S2 R S2 S.e S UU GR6 DD S3 S.e S C S2 L S2 B S2 finish",
     medals: {
-      cristal: 29,
-      or: 30.1,
-      argent: 34.6,
-      bronze: 40.6
+      cristal: 31.5,
+      or: 32.7,
+      argent: 37.6,
+      bronze: 44.1
     }
   },
   {
@@ -6383,10 +6395,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2_ R_ S2.w150_ C S2_ L_ S2_ B S UU GR2 DD S2 BR S2 C S2.w60_ S2_ R S2 B S2 finish",
     medals: {
-      cristal: 20.1,
-      or: 21,
-      argent: 24.2,
-      bronze: 28.4
+      cristal: 22.6,
+      or: 23.6,
+      argent: 27.2,
+      bronze: 31.9
     }
   },
   {
@@ -6400,10 +6412,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S3 S.e S UU GR5 DD S3 S.e S C S2 B S OB S2 R S2.w160 L S2 C S2 S.g50 S2 UU GR4 DD S.g100 S2 B S BR S2 finish",
     medals: {
-      cristal: 33.8,
-      or: 35,
-      argent: 40.3,
-      bronze: 47.3
+      cristal: 36.1,
+      or: 37.4,
+      argent: 43.1,
+      bronze: 50.5
     }
   },
   // ---- Canyon de cristal : gravité inversée, plafonds, verre, volant inversé ----
@@ -6417,10 +6429,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 R S2 C S2.d L S2 B S2.y S3 R S2 C S2 L S2.i S2 finish",
     medals: {
-      cristal: 19,
-      or: 19.9,
-      argent: 22.8,
-      bronze: 26.8
+      cristal: 22.7,
+      or: 23.8,
+      argent: 27.3,
+      bronze: 32.1
     }
   },
   {
@@ -6436,10 +6448,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 TW.f S2^ C^ S2^ R^ S2^ TWB.f S2 C S2 L S2 B S2 finish",
     medals: {
-      cristal: 15.2,
-      or: 15.8,
-      argent: 18,
-      bronze: 21
+      cristal: 17.2,
+      or: 17.9,
+      argent: 20.3,
+      bronze: 23.7
     }
   },
   {
@@ -6452,10 +6464,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2.v R S2.v C S2 L S2 B S2.v RR S2 C S2.y S2 LL S2.v S2 B S finish",
     medals: {
-      cristal: 20.5,
-      or: 21.4,
-      argent: 24.6,
-      bronze: 28.9
+      cristal: 24.8,
+      or: 25.9,
+      argent: 29.8,
+      bronze: 35
     }
   },
   {
@@ -6472,10 +6484,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 S.f V3 S2^ C^ S2^ L^ S2^ S.f^ V-3 S3 C S2 R S2 B S2 finish",
     medals: {
-      cristal: 14.8,
-      or: 15.5,
-      argent: 17.8,
-      bronze: 20.9
+      cristal: 17.1,
+      or: 17.9,
+      argent: 20.5,
+      bronze: 24.1
     }
   },
   {
@@ -6491,10 +6503,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 TW.f S2^ D^ S2^ C^ S2^ U^ S^ TWB.f S2 C S2 R S2 TW.f S2^ R^ S2^ TWB.f S2 B S2 finish",
     medals: {
-      cristal: 21.6,
-      or: 22.5,
-      argent: 25.5,
-      bronze: 29.6
+      cristal: 23.2,
+      or: 24.2,
+      argent: 27.4,
+      bronze: 31.8
     }
   },
   {
@@ -6518,10 +6530,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 26.4,
-      or: 29.1,
-      argent: 33.4,
-      bronze: 39.2
+      cristal: 37.3,
+      or: 41.1,
+      argent: 47.2,
+      bronze: 55.4
     }
   }
 ];
@@ -6551,6 +6563,7 @@ function buildBuiltin(def) {
     const one = t.path.slice();
     for (let k = 1; k < def.laps; k++) t.path.push(...one.slice(1));
   }
+  if (def.pilot && t.path) t.path.pilot = def.pilot;
   if (BUILTIN_OBSTACLES[def.id]) {
     for (const o of BUILTIN_OBSTACLES[def.id]) t.addDeco(o);
   } else if (def.obst && t.path && t.path.length > 10) {
@@ -6578,16 +6591,17 @@ function buildBuiltin(def) {
 
 // js/physics.js
 var CAR = {
-  accel: 28,
+  accel: 11,
+  accelCurve: 1.5,
   maxSpeed: SURF_PHYS.maxSpeed,
   boostSpeed: SURF_PHYS.boostSpeed,
-  boostAccel: 38,
+  boostAccel: 30,
   boostTime: 1.6,
-  brake: 42,
+  brake: 52,
   reverseAccel: 15,
   reverseMax: 15,
   roll: 0.6,
-  drag: 23e-4,
+  drag: 9e-4,
   coast: 2,
   // Châssis (modèle bicyclette)
   a: 1.35,
@@ -6631,15 +6645,26 @@ var CAR = {
   cutTime: 1,
   shockE: 0.5,
   shockKick: 6,
+  // 0.9.4 : un mur se paie. Choc = rebond + perte de vitesse proportionnelle à l'impact + coup de volant forcé + moteur et adhérence
+  // réduits un instant (la voiture « encaisse »), et frottement continu tant qu'on racle.
+  wallE: 0.35,
+  wallLoss: 0.05,
+  wallLossMax: 0.65,
+  wallScrape: 2,
+  wallSpin: 0.14,
+  wallSpinMax: 2.5,
+  wallStun: 0.04,
+  stunTraction: 0.3,
+  stunGrip: 0.6,
   radius: 1,
   probe: 1.25,
   height: 1.3
 };
 var MOTO = {
   ...CAR,
-  accel: 32,
-  maxSpeed: 51,
-  brake: 36,
+  accel: 10,
+  maxSpeed: 90,
+  brake: 44,
   a: 1.15,
   b: 1.2,
   yawK: 1.25,
@@ -6655,9 +6680,9 @@ var MOTO = {
 };
 var BOAT = {
   ...CAR,
-  accel: 26,
-  maxSpeed: 50,
-  brake: 26,
+  accel: 8,
+  maxSpeed: 85,
+  brake: 32,
   latGrip: 44,
   frontShare: 0.46,
   steerMax: 0.55,
@@ -6668,8 +6693,8 @@ var BOAT = {
 };
 var GLIDER = {
   ...CAR,
-  accel: 25,
-  maxSpeed: 51,
+  accel: 8,
+  maxSpeed: 90,
   airPitchAcc: 3.4
 };
 var SPECS = {
@@ -6691,8 +6716,10 @@ var GLIDE = {
   turnRamp: 7
 };
 var STICK_COS = Math.cos(CAR.stickAngle);
-var SIDE_AERO = 0.025;
-var SIDE_HOLD = 25 / (22 * 22);
+var SIDE_AERO = 0.03;
+var SIDE_HOLD = 25 / (30 * 30);
+var SIDE_MIN_SPEED = 30;
+var SIDE_GRACE = 0.3;
 var clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 var L1 = {
   lx: 0,
@@ -6921,6 +6948,7 @@ var CarPhysics = class {
     this.driftT = 0;
     this.bounceCD = 0;
     this.driftCharge = 0;
+    this.stunT = 0;
     this.pitch = 0;
     this.pitchRate = 0;
     this.landQ = "";
@@ -7141,6 +7169,7 @@ var CarPhysics = class {
     ev.cut = false;
     ev.spike = false;
     ev.shock = 0;
+    ev.wallOff = false;
     this.prev.x = p.x;
     this.prev.y = p.y;
     this.prev.z = p.z;
@@ -7164,6 +7193,7 @@ var CarPhysics = class {
     this.steer += clamp(target - this.steer, -sr, sr);
     if (this.boost > 0) this.boost = Math.max(0, this.boost - dt);
     if (this.bounceCD > 0) this.bounceCD -= dt;
+    if (this.stunT > 0) this.stunT = Math.max(0, this.stunT - dt);
     const turning = Math.abs(this.steer) > 0.5;
     if (inp.brake && !inp.throttle && turning && this.fwdSpeed > K.driftMin && this.grounded) {
       this.driftT = Math.min(1, this.driftT + dt * 5);
@@ -7241,6 +7271,10 @@ var CarPhysics = class {
       const ground = this.surfType === "ground";
       const C3 = surfaceCoeffs(ground ? "" : mod, f);
       let grip = C3.grip, traction = C3.traction, vmaxK = C3.vmaxK, extraDrag = C3.extraDrag, rearK = C3.rearK;
+      if (this.stunT > 0) {
+        grip *= CAR.stunGrip;
+        traction *= CAR.stunTraction;
+      }
       if (ground) {
         grip = 0.55;
         traction = 0.7;
@@ -7438,8 +7472,8 @@ var CarPhysics = class {
     if (inp.throttle) {
       if (vf < -0.5) a += K.brake * traction;
       else {
-        const x = vf / vmax;
-        a += K.accel * traction * (1 - x * x);
+        const x = Math.max(0, vf / vmax);
+        a += K.accel * traction * (1 - Math.pow(x, CAR.accelCurve));
       }
     }
     if (inp.brake) {
@@ -7556,29 +7590,44 @@ var CarPhysics = class {
     const p = this.pos, v = this.vel;
     const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
     const pfx = -Math.sin(this.prevYaw), pfz = -Math.cos(this.prevYaw);
-    let hit = 0;
+    let hit = 0, touch = false, sx = 0, sz = 0;
     for (let k = -1; k <= 1; k += 2) {
       const off = CAR.probe * k;
       for (let iter = 0; iter < 2; iter++) {
         const c = this._probe(p.x + fx * off, p.z + fz * off, this.prev.x + pfx * off, this.prev.z + pfz * off, p.y);
         if (!c) break;
+        touch = true;
         p.x += c.dx;
         p.z += c.dz;
         const vn = v.x * c.nx + v.z * c.nz;
         if (vn < 0) {
-          v.x -= c.nx * vn * 1.05;
-          v.z -= c.nz * vn * 1.05;
-          if (-vn > hit) hit = -vn;
+          v.x -= c.nx * vn * (1 + CAR.wallE);
+          v.z -= c.nz * vn * (1 + CAR.wallE);
+          if (-vn > hit) {
+            hit = -vn;
+            sx = c.nx;
+            sz = c.nz;
+          }
         }
       }
     }
+    if (touch) {
+      const k = Math.max(0, 1 - CAR.wallScrape * DT);
+      v.x *= k;
+      v.y *= k;
+      v.z *= k;
+    }
     if (hit > 0) {
-      const loss = Math.min(0.2, hit * 6e-3);
+      const loss = Math.min(CAR.wallLossMax, hit * CAR.wallLoss);
       v.x *= 1 - loss;
       v.y *= 1 - loss;
       v.z *= 1 - loss;
-      this.omega *= Math.max(0.3, 1 - hit * 0.05);
       this.ev.wall = hit;
+      if (hit > 1.5) {
+        const side = sx * fz - sz * fx;
+        this.omega += (side >= 0 ? 1 : -1) * this._upSign() * Math.min(CAR.wallSpinMax, hit * CAR.wallSpin);
+        this.stunT = Math.max(this.stunT, Math.min(0.8, 0.1 + hit * CAR.wallStun));
+      }
     }
   }
   // ---------------------------------------------------------------- Obstacles
@@ -8079,10 +8128,23 @@ var CarPhysics = class {
     const hold = sidePiece ? Math.min(1, SIDE_HOLD * R.vs * R.vs / Math.max(1, this.g)) : 0;
     R.vs -= g * B2.e1y * dt;
     R.vd -= g * B2.e2y * dt * (1 - hold);
+    if (sidePiece && Math.abs(F.ny) < 0.7 && Math.abs(R.vs) < SIDE_MIN_SPEED) {
+      R.lowT = (R.lowT || 0) + dt;
+      if (R.lowT > SIDE_GRACE) {
+        this.ev.wallOff = true;
+        this._ribPlace(R);
+        this._ribDetach();
+        return;
+      }
+    } else if (R.lowT) R.lowT = Math.max(0, R.lowT - 2 * dt);
     R.psi -= R.dir * kg * R.vs * dt;
     const mod = tile.s, f = tileParam(tile) / 100;
     const C3 = surfaceCoeffs(mod, f);
     let extraDrag = C3.extraDrag, gripK = C3.grip, tractK = C3.traction, vmaxK = C3.vmaxK, beltE1 = 0, rearK = C3.rearK;
+    if (this.stunT > 0) {
+      gripK *= CAR.stunGrip;
+      tractK *= CAR.stunTraction;
+    }
     if (mod === "boost") {
       if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
       this.boost = CAR.boostTime;
@@ -8158,12 +8220,15 @@ var CarPhysics = class {
       if (Math.abs(R.dl) > lim) {
         const side = Math.sign(R.dl) * R.dir;
         const into = R.vd * side;
+        R.vs *= Math.max(0, 1 - CAR.wallScrape * dt);
         if (into > 0) {
           if (into > 2) this.ev.wall = into;
-          R.vs *= 1 - Math.min(0.15, into * 0.01);
-          R.vd -= side * into * 1.3;
-          R.psi *= 0.7;
-          this.omega *= 0.5;
+          R.vs *= 1 - Math.min(CAR.wallLossMax, into * CAR.wallLoss);
+          R.vd -= side * into * (1 + CAR.wallE);
+          if (into > 1.5) {
+            R.psi += -side * Math.min(CAR.wallSpinMax, into * CAR.wallSpin) * 0.3;
+            this.stunT = Math.max(this.stunT, Math.min(0.8, 0.1 + into * CAR.wallStun));
+          }
         }
         R.dl = clamp(R.dl, -lim, lim);
       }
@@ -8218,7 +8283,7 @@ var CarPhysics = class {
     this.pitchRate = 0;
     this.airTime = 0;
     const t = this.rib && this.rib.tile;
-    this.fallWhy = t && PIECES[t.t].kind === "loop" ? "loop" : t && t.t === "twist" ? "twist" : t && t.v ? "inv" : "crest";
+    this.fallWhy = this.ev.wallOff ? "wall" : t && PIECES[t.t].kind === "loop" ? "loop" : t && t.t === "twist" ? "twist" : t && t.v ? "inv" : "crest";
     this.rib = null;
     this.grounded = false;
     this.ev.loopFall = true;
@@ -8585,7 +8650,8 @@ var Autopilot = class {
     this.path = path;
     this.idx = 0;
     this.latLimit = opts.latLimit ?? CAR.latGrip * 0.8;
-    this.brakeDecel = opts.brakeDecel ?? 32;
+    this.brakeDecel = opts.brakeDecel ?? 20;
+    this.vCap = opts.vCap ?? (path.pilot && path.pilot.vCap) ?? 52;
     const n = path.length;
     this.dist = new Float32Array(n);
     for (let i = 1; i < n; i++) {
@@ -8733,7 +8799,7 @@ var Autopilot = class {
     const dot = fx * tx + fz * tz;
     const ang = Math.atan2(cross, dot);
     const steer = Math.max(-1, Math.min(1, ang * 2.6 - (phys.omega || 0) * 0.25));
-    let vTarget = 999;
+    let vTarget = this.vCap;
     const horizon = 15 + v * v / (2 * this.brakeDecel);
     for (let k = this.idx; k < path.length && this.dist[k] - this.dist[this.idx] < horizon; k++) {
       const vMax = Math.sqrt(this.latLimit * this.radius[k]);
@@ -9045,7 +9111,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/replay.js
-var PHYS_VER = 23;
+var PHYS_VER = 24;
 var MAX_REPLAY_STEPS = 120 * 600;
 function decodeInputs(b64) {
   const bin = atob(b64);
@@ -9089,8 +9155,7 @@ var GhostRunner = class {
     this.logic = new RaceLogic(track);
     this.rep = inputs ? decodeInputs(inputs) : null;
     this.bot = bot && track.path ? new Autopilot(track.path, {
-      latLimit: 56 * latK,
-      brakeDecel: 36
+      latLimit: 56 * latK
     }) : null;
     this.reset();
   }

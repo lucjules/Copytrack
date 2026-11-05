@@ -359,7 +359,7 @@ test('raccords exacts : début doux ↔ fin douce ↔ droite, mur ↔ sol ↔ pl
 
 console.log('Conduite : pentes et raccords');
 test('physique v23 : PHYS_VER à 23 ; un défaut de raccord de moins de ~12° ne fait plus décoller', () => {
-  assert.equal(PHYS_VER, 23);
+  assert.equal(PHYS_VER, 24);
   assert.ok(CAR.stickAngle > 0.19 && CAR.stickAngle < 0.25);
 });
 const hop = (script, v0, secs = 4.5) => drive(script, { v0, auto: false, secs }).airMax;

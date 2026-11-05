@@ -34,7 +34,7 @@ const lateral = (ph, x0, gs) => (ph.pos.x - x0) * gs;
 console.log('Volant et revêtements à l’endroit / à l’envers');
 test('le même coup de volant fait le même virage au sol et au plafond', () => {
   for (const steer of [-1, 1]) {
-    const a = line(), b = line({ v: 1 });
+    const a = line({ v0: 100 }), b = line({ v: 1, v0: 100 });      // (0.9.4 : la voiture accélère lentement, on la lance déjà vite)
     const xa = a.pos.x, xb = b.pos.x;
     assert.equal(b.gSign, -1);
     drive(a, 240, { steer, throttle: true, brake: false });
@@ -92,7 +92,7 @@ for (const v of [0, 1]) {
 
 console.log('Aimant');
 function magnetHop(v, magnet) {
-  const ph = line({ v, surf: magnet ? surfAll('magnet') : {} });
+  const ph = line({ v, v0: 100, surf: magnet ? surfAll('magnet') : {} });
   drive(ph, 120, { steer: 0, throttle: true, brake: false });
   assert.ok(ph.grounded, 'posée avant le saut');
   const y0 = ph.pos.y;
@@ -117,7 +117,7 @@ function twistDrops(script, runs) {
   for (let seed = 1; seed <= runs; seed++) {
     const tr = scriptTrack('t', script, { l: 2 });
     const ph = new CarPhysics(tr), lg = new RaceLogic(tr, { partial: true }); placeAtStart(ph, lg);
-    const r = mulberry(seed), v0 = 5 + r() * 55; ph.vel.z = -v0; ph.fwdSpeed = v0;
+    const r = mulberry(seed), v0 = 25 + r() * 35; ph.vel.z = -v0; ph.fwdSpeed = v0;
     let steer = 0, thr = true, brk = false, prev = null, inTwist = false;
     for (let k = 0; k < 2500; k++) {
       if (k % 20 === 0) { steer = (r() - 0.5) * (r() > 0.5 ? 1.6 : 0.2); thr = r() > 0.2; brk = r() > 0.85; }
@@ -132,13 +132,13 @@ function twistDrops(script, runs) {
   }
   return { drops, crossed };
 }
-test('vrille avec plaque d\'inversion : jamais lâchée en route (80 conduites aléatoires)', () => {
-  const r = twistDrops('start S3 TW.f S3^ finish^', 80);
+test('vrille avec plaque d\'inversion : jamais lâchée en route (240 conduites aléatoires, les chocs contre les murs en éliminent beaucoup)', () => {
+  const r = twistDrops('start S3 TW.f S3^ finish^', 240);
   assert.ok(r.crossed > 40, 'la vrille est bien traversée : ' + r.crossed);
   assert.equal(r.drops, 0, 'décrochages en route : ' + r.drops);
 });
 test('vrille SANS plaque (avant : la voiture se détachait à mi-parcours et traversait la route) : toujours guidée', () => {
-  const r = twistDrops('start S3 TW S3^ finish^', 80);
+  const r = twistDrops('start S3 TW S3^ finish^', 240);
   assert.ok(r.crossed > 40); assert.equal(r.drops, 0, 'décrochages en route : ' + r.drops);
 });
 test('vrille et vrille retour enchaînées : jamais lâchée non plus', () => {

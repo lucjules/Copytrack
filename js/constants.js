@@ -2,7 +2,7 @@
 // v1.1 : pistes élargies (14 -> 18 m) et cases agrandies (20 -> 24 m).
 // Les circuits étant stockés en positions de grille, tous les anciens
 // circuits sont convertis automatiquement.
-export const VERSION = 'bêta 0.9.3';   // à incrémenter à chaque modification livrée : 0.9.1, 0.9.2, 0.9.3…
+export const VERSION = 'bêta 0.9.4';   // à incrémenter à chaque modification livrée : 0.9.1, 0.9.2, 0.9.3…
 export const CELL = 24;            // taille d'une case de grille
 export const HALF = CELL / 2;
 export const LEVEL_H = 4.8;        // hauteur d'un niveau (pentes identiques à la v1.0)
@@ -22,8 +22,8 @@ export const SURF_PHYS = {
   spring: 56,          // poussée latérale du ressort à pleine force (m/s)
   bounce: 14,          // vitesse verticale d'un rebond à 100 % (m/s)
   gravity: 25,         // gravité normale (m/s²)
-  maxSpeed: 54,        // vitesse visée par le moteur (m/s)
-  boostSpeed: 78,      // vitesse visée sous turbo à 100 % (m/s)
+  maxSpeed: 95,        // vitesse visée par le moteur (m/s) : la courbe d'accélération est très longue, on n'en atteint la fin qu'avec de longues lignes droites et de bonnes sorties de virage (0.9.4 : 54 -> 95)
+  boostSpeed: 112,     // vitesse visée sous turbo à 100 % (m/s)
 };
 
 // Nombre maximal de décorations par circuit.

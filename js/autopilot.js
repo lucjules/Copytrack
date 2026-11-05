@@ -7,7 +7,8 @@ export class Autopilot {
     this.path = path;
     this.idx = 0;
     this.latLimit = opts.latLimit ?? CAR.latGrip * 0.8;
-    this.brakeDecel = opts.brakeDecel ?? 32;
+    this.brakeDecel = opts.brakeDecel ?? 20;
+    this.vCap = opts.vCap ?? (path.pilot && path.pilot.vCap) ?? 52;     // 0.9.4 : le moteur monte bien plus haut, mais le pilote reste prudent (glace, murs punitifs, sauts calés pour ~190 km/h)
     const n = path.length;
     // Distances cumulées (3D) et rayon de courbure horizontal en chaque point.
     this.dist = new Float32Array(n);
@@ -141,7 +142,7 @@ export class Autopilot {
     const steer = Math.max(-1, Math.min(1, ang * 2.6 - (phys.omega || 0) * 0.25));
 
     // Vitesse cible selon les courbes à venir.
-    let vTarget = 999;
+    let vTarget = this.vCap;
     const horizon = 15 + (v * v) / (2 * this.brakeDecel);
     for (let k = this.idx; k < path.length && this.dist[k] - this.dist[this.idx] < horizon; k++) {
       const vMax = Math.sqrt(this.latLimit * this.radius[k]);
