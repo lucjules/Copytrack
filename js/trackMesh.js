@@ -1002,7 +1002,7 @@ export class TrackView {
     for (const tile of this.track.tiles) {
       const P = PIECES[tile.t];
       const hi = tile.l + Math.max(P.rise || 0, 0) + (P.clearance || tile.cp ? 1 : 0);
-      const dim = focus != null && !(focus >= tile.l - 0.01 && focus <= hi + 0.01);
+      const dim = focus != null && !(focus >= tile.l - (P.below || 0) - 0.01 && focus <= hi + 0.01);       // (`below` : route sur le côté, qui descend sous son niveau)
       const glassy = tile.s === 'glass' || tile.s2 === 'glass';
       if ((tile.mv || glassy) && !dim) {
         // Pièce mobile (déplacée à chaque image selon le chrono) ou dalle de verre (masquée quand elle se brise) : son propre groupe.

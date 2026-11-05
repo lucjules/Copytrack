@@ -21,11 +21,11 @@ export class OnlineError extends Error {
 // Messages d'erreur compréhensibles.
 function explain(status, body) {
   const msg = (body && (body.message || body.msg || body.error_description || body.error)) || '';
-  if (/anonymous/i.test(msg) && /disabled/i.test(msg)) return new OnlineError('Connexion anonyme désactivée dans Supabase (Authentication › Sign In / Providers › Allow anonymous sign-ins).', 'anon-disabled');
-  if (body && body.code === '42P01' || /relation .* does not exist|Could not find the table/i.test(msg)) return new OnlineError('La base n’est pas encore prête (script SQL de l’étape 1 à lancer dans Supabase).', 'no-schema');
+  if (/anonymous/i.test(msg) && /disabled/i.test(msg)) return new OnlineError('Connexion anonyme désactivée sur le serveur.', 'anon-disabled');
+  if (body && body.code === '42P01' || /relation .* does not exist|Could not find the table/i.test(msg)) return new OnlineError('Base non prête (étape 1 SQL manquante).', 'no-schema');
   if (body && body.code === '23505') return new OnlineError('Ce circuit est déjà publié.', 'duplicate');
   if (status === 404 && body && body.code === 'NOT_FOUND' && /function/i.test(msg)) {
-    return new OnlineError('Fonction serveur « submit-score » introuvable dans Supabase (elle doit être déployée sous ce nom exact).', 'no-function');
+    return new OnlineError('Fonction « submit-score » introuvable sur le serveur.', 'no-function');
   }
   if (/Trop de publications/.test(msg)) return new OnlineError(msg, 'rate');
   // Comptes (Supabase Auth)
@@ -33,7 +33,7 @@ function explain(status, body) {
   if (ec === 'user_already_exists' || /already registered|already been registered/i.test(msg)) return new OnlineError('Ce pseudo est déjà pris.', 'name-taken');
   if (ec === 'invalid_credentials' || /Invalid login credentials/i.test(msg)) return new OnlineError('Pseudo ou mot de passe incorrect.', 'bad-credentials');
   if (ec === 'weak_password') return new OnlineError('Mot de passe trop faible : au moins 8 caractères.', 'weak-password');
-  if (ec === 'email_address_invalid' || ec === 'validate_failed' || /email address.*invalid/i.test(msg)) return new OnlineError('Le serveur refuse les comptes pour l’instant (domaine technique des pseudos à configurer dans Supabase : voir supabase/COMPTES.md).', 'server-config');
+  if (ec === 'email_address_invalid' || ec === 'validate_failed' || /email address.*invalid/i.test(msg)) return new OnlineError('Le serveur refuse les comptes (voir COMPTES.md).', 'server-config');
   if (ec === 'signup_disabled') return new OnlineError('Les inscriptions sont désactivées sur le serveur.', 'server-config');
   if (ec === 'over_request_rate_limit' || ec === 'over_email_send_rate_limit' || status === 429) return new OnlineError('Trop d’essais : réessaie dans quelques minutes.', 'rate');
   if (/Database error saving new user/i.test(msg)) return new OnlineError('Ce pseudo est déjà pris ou invalide.', 'name-taken');
@@ -215,7 +215,7 @@ class OnlineClient {
     try {
       await this._fetch('/rest/v1/rpc/update_track_meta', { method: 'POST', body: { t: id, n: name, d: description } });
     } catch (e) {
-      if (e.code === 'http' && /update_track_meta|function/i.test(e.message)) throw new OnlineError('Modification pas encore activée : lance le script SQL de l’étape 3 (supabase/etape3-description.sql) dans Supabase.', 'no-schema');
+      if (e.code === 'http' && /update_track_meta|function/i.test(e.message)) throw new OnlineError('Modification indisponible (étape 3 SQL manquante).', 'no-schema');
       throw e;
     }
   }

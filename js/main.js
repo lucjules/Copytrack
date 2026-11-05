@@ -439,7 +439,7 @@ class App {
       if (start) { start.hidden = !host; start.disabled = !room.track; start.textContent = room.started ? 'Relancer pour tous' : 'Lancer la course'; }
       if (!host) {
         trackRow.textContent = room.track ? `Circuit : ${room.track.name || room.track.id}` : 'L\'hôte choisit le circuit…';
-        note.textContent = room.started ? 'Une course est en cours : tu peux la rejoindre depuis le circuit choisi par l\'hôte.' : 'En attente du départ donné par l\'hôte.';
+        note.textContent = room.started ? 'Course en cours : rejoins-la.' : 'En attente de l\'hôte.';
         return;
       }
       note.textContent = 'Partage le code. Chacun court à son rythme.';

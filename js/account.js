@@ -131,7 +131,7 @@ class Account {
       return await online.rest('/rest/v1/rpc/username_available', { method: 'POST', auth: false, body: { n: name } }) === true;
     } catch (e) {
       if (e.code === 'offline') throw e;
-      throw new OnlineError('Les comptes ne sont pas encore installés sur le serveur (script supabase/etape4-comptes.sql à lancer).', 'no-schema');
+      throw new OnlineError('Comptes non installés sur le serveur (étape 4 SQL).', 'no-schema');
     }
   }
 
@@ -145,7 +145,7 @@ class Account {
     const tutorialDone = !!loadSettings().tutorialDone;
     if (!(await this.usernameAvailable(c.name))) throw new OnlineError('Ce pseudo est déjà pris.', 'name-taken');
     const d = await online.rest('/auth/v1/signup', { method: 'POST', auth: false, body: { email: accountEmail(c.name), password, data: { username: c.name } } });
-    if (!d || !d.access_token) throw new OnlineError('Compte créé, mais le serveur attend une confirmation par e-mail : désactive-la dans Supabase (voir supabase/COMPTES.md).', 'server-config');
+    if (!d || !d.access_token) throw new OnlineError('Compte créé, mais le serveur exige une confirmation par e-mail (voir COMPTES.md).', 'server-config');
     this._begin(d, c.name);
     if (guestDump) restoreAll(guestDump, true);
     const s = loadSettings(); s.playerName = c.name; s.tutorialDone = tutorialDone; saveSettings(s);
