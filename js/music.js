@@ -1,5 +1,6 @@
-// Musique du jeu : deux morceaux MP3 joués en boucle, un pour le menu (assets/music-menu.mp3, version filtrée et feutrée)
-// et un pour les courses (assets/music-game.mp3, version complète).
+// Musique du jeu : le menu joue le MP3 assets/music-menu.mp3 en boucle ; les courses jouent la musique synthétisée en direct
+// (AudioEngine.js, French Touch 124 BPM), dont l'intensité suit la vitesse de la voiture.
+import { AudioEngine } from './AudioEngine.js';
 export class Music {
   constructor(audio) {
     this.audio = audio;
@@ -9,6 +10,7 @@ export class Music {
     this.loading = {};
     this.want = null;
     this.kind = null;
+    this.synth = null;
   }
 
   _gain() {
@@ -24,6 +26,7 @@ export class Music {
   setVolume(v) {
     this.volume = v;
     if (this.out) this.out.gain.setTargetAtTime(v * 0.6, this.audio.ctx.currentTime, 0.1);
+    if (this.synth) this.synth.setVolume(v * 0.7);
     if (this.el) this.el.volume = Math.min(1, v * 0.6);
   }
 
@@ -33,6 +36,16 @@ export class Music {
     this.want = kind;
     const ctx = this.audio.ctx;
     if (!ctx || this.kind === kind) return;
+    if (kind === 'game') {
+      this.stop(0.8);
+      this.want = kind;
+      if (!this.synth) this.synth = new AudioEngine({ volume: 1 }).init(ctx);
+      this.synth.setVolume(this.volume * 0.7);
+      this.synth.updateWithCarSpeed(0);
+      this.synth.start();
+      this.kind = kind;
+      return;
+    }
     const buf = this.bufs[kind];
     if (!buf) {
       if (!this.loading[kind]) {
@@ -64,8 +77,12 @@ export class Music {
     el.play().then(() => { this.el = el; this.kind = kind; }).catch(() => {});
   }
 
+  // Vitesse de la voiture, de 0 à 1 (au-delà : boost) ; sans effet hors course.
+  setSpeed(r) { if (this.synth && this.kind === 'game') this.synth.updateWithCarSpeed(r); }
+
   stop(fade = 0.3) {
     this.want = null;
+    if (this.synth && this.kind === 'game') { this.synth.stop(); this.kind = null; }
     if (this.el) { this.el.pause(); this.el = null; this.kind = null; }
     if (this.src) {
       const ctx = this.audio.ctx, s = this.src, g = this.fade, t = ctx.currentTime;
