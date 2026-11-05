@@ -25,11 +25,18 @@ const BARS = [
 const BASS = [0, 'x', 0, 12, 'x', 0, 7, 'x', 0, 'x', 12, 0, 'x', 10, 'x', 7];
 const STAB_STEPS = new Set([2, 5, 10, 13]);          // stabs disco syncopés
 const BPM_BASE = 124, BPM_BOOST = 4;
+// Mode « chill » (courses) : tempo lent, accords de 7e/9e feutrés, basse ronde, percussions discrètes.
+const CHILL = [
+  { root: 38, chord: [65, 69, 72, 76] },   // Dm9
+  { root: 34, chord: [62, 65, 69, 72] },   // Bbmaj7
+  { root: 41, chord: [60, 64, 69, 72] },   // Fmaj7
+  { root: 33, chord: [60, 64, 67, 72] },   // Am7
+];
 
 export class AudioEngine {
   constructor({ volume = 0.5 } = {}) {
     this.ctx = null; this.running = false; this.volume = volume;
-    this.speed = 0; this.boost = false;              // cibles (lissées côté audio)
+    this.speed = 0; this.boost = false; this.mode = 'house';              // cibles (lissées côté audio)
     this._step = 0; this._next = 0; this._timer = null; this._bpm = BPM_BASE; this._bar = 0;
     this.stats = { scheduled: 0 };
   }
@@ -57,7 +64,9 @@ export class AudioEngine {
     return this;
   }
 
-  start() {
+  // mode : 'house' (menu, groove French Touch à 124 BPM) ou 'chill' (courses, tempo lent et doux).
+  start(mode = 'house') {
+    this.mode = mode;
     if (!this.ctx) this.init();
     if (!this.ctx || this.running) return;
     if (this.ctx.state === 'suspended') this.ctx.resume();
@@ -85,14 +94,15 @@ export class AudioEngine {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     // Menu / arrêt : passe-bas serré (≈ 300 Hz, kick et basse douce) ; en course il s'ouvre jusqu'à ≈ 9 kHz.
-    const cutoff = 300 * Math.pow(30, this.speed) * (this.boost ? 1.25 : 1);
+    const chill = this.mode === 'chill';
+    const cutoff = chill ? 1400 + 3200 * this.speed : 300 * Math.pow(30, this.speed) * (this.boost ? 1.25 : 1);
     this.lp.frequency.setTargetAtTime(cutoff, t, 0.25);
     this.lp.Q.setTargetAtTime(0.8 + 2.2 * (1 - this.speed) * 0.4 + (this.boost ? 0.8 : 0), t, 0.3);
     this.synthBus.gain.setTargetAtTime(0.18 + 0.5 * this.speed, t, 0.4);
   }
 
   // Tempo effectif : 124 BPM, jusqu'à +4 à pleine vitesse avec boost.
-  get bpm() { return BPM_BASE + (this.boost ? BPM_BOOST : this.speed > 0.9 ? 2 : 0); }
+  get bpm() { return this.mode === 'chill' ? 92 + 6 * this.speed : BPM_BASE + (this.boost ? BPM_BOOST : this.speed > 0.9 ? 2 : 0); }
 
   // ---- Ordonnanceur ------------------------------------------------------------------------------------------------------------
   _tick() {
@@ -104,7 +114,39 @@ export class AudioEngine {
     }
   }
 
+  _playChill(step, t) {
+    const s = this.speed, bar = CHILL[this._bar];
+    this.stats.scheduled++;
+    if (step === 0 || step === 10) { this._kick(t, 0.7); this._duck(t); }
+    if (step === 8) this._clap(t, 0.28);
+    if (step % 4 === 2 && s > 0.1) this._hat(t, 0.14 + 0.1 * s, false);
+    if (step === 0 || step === 6 || step === 11) this._bass(t, bar.root + (step === 11 ? 7 : 0), step === 6, true);
+    if (step === 0) this._pad(t, bar.chord, 60 / this.bpm * 3.8);
+    if (step === 3 || step === 7 || step === 14) this._pluck(t, bar.chord[(step + this._bar) % 4] + 12);
+  }
+
+  _pad(t, chord, len) {
+    const ctx = this.ctx, f = ctx.createBiquadFilter(), g = ctx.createGain();
+    f.type = 'lowpass'; f.Q.value = 0.7;
+    f.frequency.setValueAtTime(500, t); f.frequency.linearRampToValueAtTime(1800, t + len * 0.6);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.085, t + 0.35); g.gain.linearRampToValueAtTime(0.0001, t + len);
+    for (const m of chord) for (const det of [-9, 9]) {
+      const o = ctx.createOscillator();
+      o.type = 'triangle'; o.frequency.value = mtof(m); o.detune.value = det;
+      o.connect(f); o.start(t); o.stop(t + len + 0.05);
+    }
+    f.connect(g); g.connect(this.synthBus);
+  }
+
+  _pluck(t, midi) {
+    const ctx = this.ctx, o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+    o.type = 'sine'; o.frequency.value = mtof(midi); f.type = 'lowpass'; f.frequency.value = 2400;
+    this._env(g, t, 0.004, 0.13, 0.45);
+    o.connect(f); f.connect(g); g.connect(this.synthBus); o.start(t); o.stop(t + 0.55);
+  }
+
   _play(step, t) {
+    if (this.mode === 'chill') return this._playChill(step, t);
     const s = this.speed, bar = BARS[this._bar];
     this.stats.scheduled++;
     if (step % 4 === 0) { this._kick(t); this._duck(t); }                                // 4-on-the-floor + sidechain
@@ -132,10 +174,10 @@ export class AudioEngine {
 
   _env(g, t, a, peak, d) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
 
-  _kick(t) {
+  _kick(t, v = 1) {
     const ctx = this.ctx, o = ctx.createOscillator(), g = ctx.createGain();
     o.type = 'sine'; o.frequency.setValueAtTime(165, t); o.frequency.exponentialRampToValueAtTime(46, t + 0.09);
-    this._env(g, t, 0.003, 1, 0.3);
+    this._env(g, t, 0.003, v, 0.3);
     o.connect(g); g.connect(this.drums); o.start(t); o.stop(t + 0.36);
     const c = ctx.createBufferSource(), cg = ctx.createGain();                          // clic d'attaque
     c.buffer = this.noise; this._env(cg, t, 0.001, 0.35, 0.012);
@@ -160,12 +202,12 @@ export class AudioEngine {
   }
 
   // Basse : dent de scie + carré une octave dessous, passe-bas résonant dont la fréquence plonge (le « wow » funky).
-  _bass(t, midi, ghost) {
-    const ctx = this.ctx, f = ctx.createBiquadFilter(), g = ctx.createGain(), len = ghost ? 0.07 : 0.16;
-    f.type = 'lowpass'; f.Q.value = 9;
+  _bass(t, midi, ghost, soft) {
+    const ctx = this.ctx, f = ctx.createBiquadFilter(), g = ctx.createGain(), len = soft ? 0.4 : ghost ? 0.07 : 0.16;
+    f.type = 'lowpass'; f.Q.value = soft ? 1.5 : 9;
     f.frequency.setValueAtTime(260 + 900 * (0.3 + this.speed), t); f.frequency.exponentialRampToValueAtTime(110, t + len);
     this._env(g, t, 0.005, ghost ? 0.3 : 0.6, len);
-    for (const [type, m, v] of [['sawtooth', midi, 0.7], ['square', midi - 12, 0.5]]) {
+    for (const [type, m, v] of soft ? [['triangle', midi, 0.9], ['sine', midi - 12, 0.7]] : [['sawtooth', midi, 0.7], ['square', midi - 12, 0.5]]) {
       const o = ctx.createOscillator(), og = ctx.createGain();
       o.type = type; o.frequency.value = mtof(m); og.gain.value = v;
       o.connect(og); og.connect(f); o.start(t); o.stop(t + len + 0.1);

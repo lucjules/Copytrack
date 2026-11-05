@@ -1,99 +1,52 @@
-// Musique du jeu : le menu joue le MP3 assets/music-menu.mp3 en boucle ; les courses jouent la musique synthétisée en direct
-// (AudioEngine.js, French Touch 124 BPM), dont l'intensité suit la vitesse de la voiture.
+// Musique du jeu, entièrement synthétisée (AudioEngine.js) : le menu joue un groove French Touch / house à 124 BPM,
+// les courses une version chill (tempo lent, accords doux) dont l'intensité suit la vitesse. Coupure nette entre les deux.
 import { AudioEngine } from './AudioEngine.js';
+
 export class Music {
   constructor(audio) {
     this.audio = audio;
     this.volume = 0.45;
-    this.src = null;
-    this.bufs = {};
-    this.loading = {};
-    this.want = null;
-    this.kind = null;
     this.synth = null;
-  }
-
-  _gain() {
-    const ctx = this.audio.ctx;
-    if (!this.out) {
-      this.out = ctx.createGain();
-      this.out.gain.value = this.volume * 0.6;
-      this.out.connect(ctx.destination);
-    }
-    return this.out;
+    this.kind = null;       // morceau en cours
+    this.want = null;       // morceau demandé (lancé dès que l'audio est débloqué)
+    this._timer = null;
   }
 
   setVolume(v) {
     this.volume = v;
-    if (this.out) this.out.gain.setTargetAtTime(v * 0.6, this.audio.ctx.currentTime, 0.1);
     if (this.synth) this.synth.setVolume(v * 0.7);
-    if (this.el) this.el.volume = Math.min(1, v * 0.6);
   }
 
-  // kind : 'menu' ou autre (course). Garde la boucle en cours si c'est déjà la bonne, sinon fondu enchaîné vers l'autre.
+  // kind : 'menu' ou 'game'. L'ancien morceau est coupé (fondu de 0,4 s), le nouveau démarre une fois le silence fait.
   play(kind = 'game') {
     kind = kind === 'menu' ? 'menu' : 'game';
     this.want = kind;
     const ctx = this.audio.ctx;
     if (!ctx || this.kind === kind) return;
-    if (kind === 'game') {
-      this.stop(0.8);
-      this.want = kind;
-      if (!this.synth) this.synth = new AudioEngine({ volume: 1 }).init(ctx);
+    clearTimeout(this._timer);
+    if (!this.synth) this.synth = new AudioEngine({ volume: 1 }).init(ctx);
+    const wasPlaying = this.synth.running;
+    if (wasPlaying) this.synth.stop();
+    this.kind = kind;
+    this._timer = setTimeout(() => {
+      if (this.want !== kind) return;
       this.synth.setVolume(this.volume * 0.7);
-      this.synth.updateWithCarSpeed(0);
-      this.synth.start();
-      this.kind = kind;
-      return;
-    }
-    const buf = this.bufs[kind];
-    if (!buf) {
-      if (!this.loading[kind]) {
-        this.loading[kind] = fetch(`assets/music-${kind}.mp3`)
-          .then((r) => r.arrayBuffer())
-          .then((b) => ctx.decodeAudioData(b))
-          .then((d) => { this.bufs[kind] = d; if (this.want === kind) this.play(kind); })
-          .catch((e) => { console.warn('Musique : décodage impossible, lecture directe', e); this.loading[kind] = null; this._direct(kind); });
-      }
-      return;
-    }
-    this.stop(0.8);
-    this.want = kind;
-    const s = ctx.createBufferSource(), g = ctx.createGain();
-    s.buffer = buf; s.loop = true;
-    g.gain.value = 0; g.gain.setTargetAtTime(1, ctx.currentTime, 0.4);
-    s.connect(g).connect(this._gain());
-    s.start();
-    this.src = s; this.fade = g; this.kind = kind;
+      this.synth.updateWithCarSpeed(kind === 'menu' ? 0.5 : 0);
+      this.synth.start(kind === 'menu' ? 'house' : 'chill');
+    }, wasPlaying ? 450 : 0);
   }
 
-  // Secours si le décodage Web Audio échoue (navigateur ancien, réseau coupé en cours de route) : balise <audio> en boucle.
-  _direct(kind) {
-    if (this.want !== kind || this.kind === kind) return;
-    this.stop(0.3);
-    this.want = kind;
-    const el = new Audio(`assets/music-${kind}.mp3`);
-    el.loop = true; el.volume = Math.min(1, this.volume * 0.6);
-    el.play().then(() => { this.el = el; this.kind = kind; }).catch(() => {});
-  }
+  // Vitesse de la voiture, de 0 à 1 (au-delà : boost) ; sans effet au menu.
+  setSpeed(r) { if (this.synth && this.kind === 'game' && this.synth.running) this.synth.updateWithCarSpeed(Math.min(1, r)); }
 
-  // Vitesse de la voiture, de 0 à 1 (au-delà : boost) ; sans effet hors course.
-  setSpeed(r) { if (this.synth && this.kind === 'game') this.synth.updateWithCarSpeed(r); }
-
-  stop(fade = 0.3) {
-    this.want = null;
-    if (this.synth && this.kind === 'game') { this.synth.stop(); this.kind = null; }
-    if (this.el) { this.el.pause(); this.el = null; this.kind = null; }
-    if (this.src) {
-      const ctx = this.audio.ctx, s = this.src, g = this.fade, t = ctx.currentTime;
-      g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + fade);
-      s.stop(t + fade + 0.05);
-      this.src = null; this.kind = null;
-    }
+  stop() {
+    this.want = null; this.kind = null;
+    clearTimeout(this._timer);
+    if (this.synth) this.synth.stop();
   }
 
   // Appelé quand l'AudioContext vient d'être débloqué par un clic.
   resume() {
-    if (this.want) this.play(this.want);
+    if (this.want) { const k = this.want; this.kind = null; this.play(k); }
   }
 }
