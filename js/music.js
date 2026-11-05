@@ -1,6 +1,6 @@
-// Musique du jeu : le menu joue un groove French Touch / house synthétisé (AudioEngine.js, 124 BPM) ; les courses jouent le MP3
-// déposé dans assets/music-game.mp3 (en boucle). Sans ce fichier, repli sur une version chill synthétisée dont l'intensité suit la
-// vitesse. Coupure nette entre les deux.
+// Musique du jeu : le menu joue le MP3 déposé dans assets/music-menu.mp3 (en boucle ; sans ce fichier, repli sur un groove house
+// synthétisé) ; les courses jouent une musique chill synthétisée (AudioEngine.js) dont l'intensité suit la vitesse.
+// Coupure nette entre les deux.
 import { AudioEngine } from './AudioEngine.js';
 
 export class Music {
@@ -12,7 +12,7 @@ export class Music {
     this.want = null;       // morceau demandé (lancé dès que l'audio est débloqué)
     this._timer = null;
     this.src = null;        // lecteur du MP3 de course
-    this.gameBuf = undefined; // undefined : pas encore cherché, null : absent
+    this.bufs = {};         // MP3 décodés ; null : fichier absent
   }
 
   setVolume(v) {
@@ -35,8 +35,8 @@ export class Music {
     this.kind = kind;
     this._timer = setTimeout(async () => {
       if (this.want !== kind) return;
-      if (kind === 'game') {
-        const buf = await this._loadGame();
+      if (kind === 'menu') {
+        const buf = await this._load('menu');
         if (this.want !== kind) return;
         if (buf) { this._playFile(buf); return; }
       }
@@ -46,15 +46,15 @@ export class Music {
     }, wasPlaying ? 450 : 0);
   }
 
-  // Cherche assets/music-game.mp3 (une seule fois) ; null s'il n'existe pas ou ne se décode pas.
-  async _loadGame() {
-    if (this.gameBuf !== undefined) return this.gameBuf;
+  // Cherche assets/music-<kind>.mp3 (une seule fois) ; null s'il n'existe pas ou ne se décode pas.
+  async _load(kind) {
+    if (this.bufs[kind] !== undefined) return this.bufs[kind];
     try {
-      const r = await fetch('assets/music-game.mp3');
+      const r = await fetch(`assets/music-${kind}.mp3`);
       if (!r.ok) throw new Error(r.status);
-      this.gameBuf = await this.audio.ctx.decodeAudioData(await r.arrayBuffer());
-    } catch (e) { this.gameBuf = null; }
-    return this.gameBuf;
+      this.bufs[kind] = await this.audio.ctx.decodeAudioData(await r.arrayBuffer());
+    } catch (e) { this.bufs[kind] = null; }
+    return this.bufs[kind];
   }
 
   _playFile(buf) {
