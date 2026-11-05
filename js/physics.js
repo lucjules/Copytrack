@@ -129,8 +129,15 @@ export const GLIDE = {
   trim: 0.08,          // incidence sans action (rad)
   up: 0.34,            // incidence en cabrant (frein)
   down: -0.16,         // incidence en piquant (gaz)
-  turn: 0.95,          // vitesse de virage maxi (rad/s)
+  turn: 1.7,           // vitesse de virage maxi (rad/s) (0.9.2 : 0,95 -> 1,7, le deltaplane vire beaucoup plus franchement)
+  turnSpeed: 9,        // vitesse (m/s) à partir de laquelle il vire à plein régime
+  turnRamp: 7,         // réactivité du roulis (1/s)
 };
+// Route sur le côté (pièces 90°) : appui aérodynamique (m/s² par (m/s)²) ajouté à l'appui réel. Pour tenir contre la gravité sur un
+// plan vertical il faut environ 21 m/s (75 km/h) ; en dessous, la voiture glisse le long du plan et tombe par le bord.
+export const SIDE_AERO = 0.025;
+// Compensation de la glissade sur un plan vertical (m/s² par (m/s)²) : g / 22² => tenue complète à partir de 22 m/s (80 km/h).
+export const SIDE_HOLD = 25 / (22 * 22);
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const L1 = { lx: 0, lz: 0 }, L2 = { lx: 0, lz: 0 };
@@ -238,7 +245,7 @@ export class CarPhysics {
     this.yaw = yaw; this.prevYaw = yaw; this.yawRate = 0; this.omega = 0;
     this.steer = 0; this.steerAngle = 0; this.boost = 0; this.boostF = 1; this.slip = 0; this.airTime = 0; this.fwdSpeed = 0;
     this.driftT = 0; this.bounceCD = 0; this.driftCharge = 0;
-    this.pitch = 0; this.pitchRate = 0; this.landQ = ''; this.aoa = 0.08; this.glidePitch = 0;
+    this.pitch = 0; this.pitchRate = 0; this.landQ = ''; this.aoa = 0.08; this.glidePitch = 0; this.bankT = 0;
     this.rib = null;
     this.gravMul = 1;
     this.vehicle = 'car';
@@ -512,7 +519,7 @@ export class CarPhysics {
       const C = surfaceCoeffs(ground ? '' : mod, f);
       let grip = C.grip, traction = C.traction, vmaxK = C.vmaxK, extraDrag = C.extraDrag, rearK = C.rearK;
       if (ground) { grip = 0.55; traction = 0.7; vmaxK = 0.45; extraDrag = 5; }
-      else if (mod === 'water' || mod === 'boat') {      // la plaque bateau est posée sur l'eau
+      else if (mod === 'water' || (mod === 'boat' && this.vehicle === 'boat')) {      // la plaque bateau agit comme de l'eau pour un bateau seulement (route normale pour les autres)
         if (this.vehicle === 'boat') { grip = 0.85; traction = 1; vmaxK = 1; }
         else {
           // Une voiture dans l'eau : elle patine, se noie si elle s'arrête.
@@ -1061,7 +1068,9 @@ export class CarPhysics {
     v.y += (L * ly - D * dy - this.g * gu) * dt;
     v.z += (L * lz - D * dz) * dt;
     // Virage : l'aile s'incline, la trajectoire et le nez tournent ensemble.
-    const yr = this.steer * G.turn * Math.min(1, hv / 15);
+    // Roulis : le virage suit le volant avec un petit retard (aile qui s'incline), plus vif et utilisable dès 9 m/s.
+    this.bankT = (this.bankT || 0) + (this.steer - (this.bankT || 0)) * Math.min(1, dt * G.turnRamp);
+    const yr = this.bankT * G.turn * Math.min(1, hv / G.turnSpeed);
     const a = -yr * gu * dt, c = Math.cos(a), s = Math.sin(a);
     const vx = v.x * c + v.z * s, vz = v.z * c - v.x * s;
     v.x = vx; v.z = vz;
@@ -1217,8 +1226,11 @@ export class CarPhysics {
     }
     // Gravité projetée dans le plan de la route (vrille, mur, envers, paroi du tube...).
     const g = this.g * this.gSign;
+    // Route sur le côté (pièces 90°) : l'appui aérodynamique (vitesse²) compense la glissade le long du plan ; la gravité, elle, ne change pas.
+    // En dessous de ~80 km/h il ne compense plus assez : la voiture glisse vers le bord du bas et tombe.
+    const hold = PIECES[tile.t].side ? Math.min(1, SIDE_HOLD * R.vs * R.vs / Math.max(1, this.g)) : 0;
     R.vs -= g * B.e1y * dt;
-    R.vd -= g * B.e2y * dt;
+    R.vd -= g * B.e2y * dt * (1 - hold);
     R.psi -= R.dir * kg * R.vs * dt;
 
     // Revêtements actifs sur ce ruban : mêmes effets qu'au sol, sans aide particulière.
@@ -1251,12 +1263,15 @@ export class CarPhysics {
     // Pneus dans le repère voiture.
     // Appui réel des roues : gravité normale + effet de la courbure (centrifuge).
     // Au sol plat il vaut g ; sur un mur vertical, 0 ; à l'envers sur du plat, -g.
-    const press = R.vs * R.vs * kn + R.vd * R.vd * kc + g * F.ny;
+    // Route sur le côté (90°) : l'appui vient aussi de la vitesse (SIDE_AERO), jamais d'un changement de gravité.
+    const sidePiece = PIECES[tile.t].side;
+    let press = R.vs * R.vs * kn + R.vd * R.vd * kc + g * F.ny;
+    if (sidePiece) press += SIDE_AERO * R.vs * R.vs * Math.sqrt(Math.max(0, 1 - F.ny * F.ny));      // appui aérodynamique, nul à plat, maximal à la verticale
     const gAbs = this.g;
     // Conduite identique au sol sur les pièces spéciales (virages relevés, tubes, loopings,
     // tire-bouchons) tant que la voiture est plaquée. Seule la montée en L garde la
     // physique d'appui réelle : sur le mur vertical, plus d'adhérence ni de moteur.
-    const lPiece = tile.t === 'wall' || tile.t === 'ramp90' || tile.t === 'crest90';
+    const lPiece = tile.t === 'wall' || tile.t === 'ramp90' || tile.t === 'crest90' || !!sidePiece;
     // Vrille : la voiture est guidée par la route sur toute la pièce, appui ou pas (elle garde son adhérence et son moteur).
     const guided = tile.t === 'twist';
     const load = lPiece ? clamp(press / gAbs, 0, 1.6) : press > 0 || guided ? 1 : 0;

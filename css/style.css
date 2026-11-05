@@ -1089,3 +1089,15 @@ body.touch kbd { display: none; }
 .insp-color .code { font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
 .insp-color .btn { padding: 2px 8px; font-size: 12px; }
 .insp-note { font-size: 12px; color: var(--muted); }
+
+/* 0.9.2 : option « Checkpoint » en case à cocher */
+.chip.chk::before { content: '☐ '; }
+.chip.chk.on::before { content: '☑ '; }
+
+/* 0.9.2 : carte de la communauté (jouer + j'aime en haut, actions secondaires en dessous) */
+.card .actions.main { flex-wrap: nowrap; }
+.card .actions.main .primary { flex: 1; }
+.card .actions.sub { margin-top: 0; }
+.card .actions.sub .btn { flex: 1; min-width: 0; }
+.card .actions.sub .btn.danger, .card .actions.sub .btn.subtle { flex: 0 0 auto; }
+.card .meta .medal { vertical-align: -3px; margin-right: 2px; }

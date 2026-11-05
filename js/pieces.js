@@ -82,6 +82,21 @@ export const PIECES = {
   loopTripleL:    { label: 'Triple looping ↰', kind: 'loop', size: 4, rise: 0, clearance: 5, mirror: -1, R: 12, lane: 36, turns: 3 },
   loopBigTriple:  { label: 'Grand looping ×3 ↱', kind: 'loop', size: 4, rise: 0, clearance: 7, mirror: 1, R: 18, lane: 36, turns: 3 },
   loopBigTripleL: { label: 'Grand looping ×3 ↰', kind: 'loop', size: 4, rise: 0, clearance: 7, mirror: -1, R: 18, lane: 36, turns: 3 },
+  // « Courbe » (0.9.2) : une rampe dont le profil se courbe PROGRESSIVEMENT vers le haut. Plate à l'entrée (elle se raccorde à une route
+  // plate sans cassure), de plus en plus raide ensuite : h(t) = rise · t² (Bézier quadratique, point de contrôle au ras du sol à l'entrée).
+  // Pente en sortie = 2·rise / longueur ; parcourue à l'envers, elle descend et s'aplatit à l'arrivée (atterrissage en douceur).
+  crv05:      { label: 'Courbe · inclinaison ½', kind: 'line', size: 1, rise: 0.5, curv: 1 },
+  crv1:       { label: 'Courbe · inclinaison 1', kind: 'line', size: 1, rise: 1, curv: 1 },
+  crv2:       { label: 'Courbe · inclinaison 2', kind: 'line', size: 1, rise: 2, curv: 1 },
+  crv4:       { label: 'Courbe · inclinaison 4', kind: 'line', size: 1, rise: 4, curv: 1 },
+  // Pièces à 90° (0.9.2) : la route bascule autour de son axe jusqu'à un plan VERTICAL (route « sur le côté »).
+  // La gravité ne change pas : à vitesse insuffisante la voiture glisse le long du plan et tombe par le bord (pas de bordures).
+  // `side` : 1 transition, 2 ligne droite (l'appui vient en partie de la vitesse, voir physics.js) ; `pivot` : côté du plan (-1 gauche, 1 droite) ;
+  // `below` : niveaux réservés SOUS la pièce (la moitié basse du plan descend de 9 m : la pièce ne se pose donc pas au niveau 0 ou 1).
+  rollL:      { label: 'Transition côté ↰', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, side: 1, pivot: -1, noRails: true },
+  rollR:      { label: 'Transition côté ↱', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, side: 1, pivot: 1, noRails: true },
+  sideL:      { label: 'Ligne droite côté ↰', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, side: 2, pivot: -1, noRails: true },
+  sideR:      { label: 'Ligne droite côté ↱', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, side: 2, pivot: 1, noRails: true },
 };
 
 // Rayon de l'anneau (turbo / checkpoint aérien) et hauteur de son centre au-dessus du niveau.
@@ -104,6 +119,8 @@ export const PIECE_ORDER = [
   'steep4', 'hugecurve', 'cv05', 'cv1', 'cv2', 'cv4', 'cvBig05', 'cvBig1', 'cvBig2', 'cvBig4',
   'loopBigDouble', 'loopBigDoubleL', 'loopTriple', 'loopTripleL', 'loopBigTriple', 'loopBigTripleL',
   'cvL05', 'cvL1', 'cvL2', 'cvL4', 'cvBigL05', 'cvBigL1', 'cvBigL2', 'cvBigL4',
+  // 0.9.2 (à la suite : ne jamais réordonner)
+  'crv05', 'crv1', 'crv2', 'crv4', 'rollL', 'rollR', 'sideL', 'sideR',
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -211,13 +228,15 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
   // Phase 2 : le thème est purement visuel, toute pièce de route en profite.
   if (flag === 'th') return p.kind !== 'ring';
   if (p.kind === 'ring' || p.kind === 'fork') return false;
-  if (flag === 'nb') return lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube'));
+  if (flag === 'nb') return !p.noRails && (lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube')));
   if (flag === 'tn') return lineLike && !p.special && !(tile && (tile.v || tile.cp || tile.tb));
   // Pièce mobile : route « simple » (droite, virage, pente, plateforme), pas à l'envers, pas de checkpoint dessus.
   if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !(tile && (tile.v || tile.cp || tile.tb));
   // Checkpoint en option : sur une route plate (ligne ou virage) ; l'anneau aérien seulement sur une ligne droite à l'endroit.
   if (flag === 'cp') {
-    if (!(lineLike && !p.special && !p.rise) || (tile && (tile.mv || tile.tn || tile.tb))) return false;
+    // 0.9.2 : le checkpoint est une simple case à cocher (portique sur route, balise sur plateforme). L'ancien anneau aérien (val 2)
+    // n'est plus proposé ; les anciens circuits qui l'utilisent continuent de fonctionner (voir cpKind).
+    if (!((lineLike || p.kind === 'area') && !p.special && !p.rise) || (tile && (tile.mv || tile.tn || tile.tb))) return false;
     if (val === 2) return p.kind === 'line' && !(tile && tile.v);
     return true;
   }
@@ -233,6 +252,7 @@ export function cpKind(tile) {
   if (P.special === 'checkpoint') return P.kind === 'ring' ? 'ring' : 'gate';
   if (tile.cp === 2 && P.kind === 'line') return 'ring';
   if (tile.cp === 1 && (P.kind === 'line' || P.kind === 'arc')) return 'gate';
+  if (tile.cp === 1 && P.kind === 'area') return 'pad';       // plateforme : balise au sol (pas de sens de route pour un portique)
   return null;
 }
 
@@ -370,8 +390,9 @@ export function sampleLocal(tile, lx, lz, out) {
     let t = (half - lz) / len;
     t = t < 0 ? 0 : t > 1 ? 1 : t;
     out.d = lx;
-    out.h = base + rise * t;
-    const k = rise / len;
+    // Rampe droite : pente constante. Courbe : h = rise·t², pente 2·rise·t / longueur (nulle à l'entrée).
+    out.h = base + (p.curv ? rise * t * t : rise * t);
+    const k = (p.curv ? 2 * t : 1) * rise / len;
     const inv = 1 / Math.sqrt(1 + k * k);
     out.ny = inv; out.nz = k * inv;
     out.along = t;
@@ -436,11 +457,15 @@ function forkSample(p, lx, lz, out) {
   const between = (lx - xa) * (lx - xb) < 0;
   if (between && sep < 2 * 9 + 0.05) {
     // Les deux chaussées se touchent encore : tout l'entre-deux est de la route, sans muret.
-    out.d = 0; out.gx = 1; out.gz = 0; out.branch = Math.abs(da) <= Math.abs(db) ? 0 : 1;
+    out.d = 0; out.gx = 1; out.gz = 0;
   } else if (Math.abs(da) <= Math.abs(db)) {
-    out.d = da; out.gx = 1; out.gz = 0; out.branch = 0;
+    out.d = da; out.gx = 1; out.gz = 0;
   } else {
-    out.d = db; out.gx = cb; out.gz = slope * cb; out.branch = 1;
+    out.d = db; out.gx = cb; out.gz = slope * cb;
   }
+  // Revêtement : la voie directe est dessinée PAR-DESSUS (la déportée est 8 cm plus bas). Tant que le point est sur la chaussée directe c'est
+  // SON revêtement qui compte ; celui de la voie déportée ne commence que là où elle dépasse. (Avant : la voie « la plus proche » gagnait,
+  // donc dès l'entrée de la pièce toute la moitié droite de la voie directe prenait le revêtement de la voie déportée.)
+  out.branch = Math.abs(da) <= ROAD_HALF ? 0 : 1;
 }
 

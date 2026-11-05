@@ -5,6 +5,65 @@ import { PIECES, forkBranchX, localToWorld, baseY, cpKind } from './pieces.js';
 import { Track } from './track.js';
 import { centerlineWorld } from './ribbons.js';
 
+// ---- Pot de peinture : zones VIDES fermées -----------------------------------------------------------------------
+// Algorithme (0.9.2). Une « zone vide » est un ensemble de cases libres, reliées par leurs 4 côtés, au niveau de pose. Elle est
+// « fermée » si aucune de ses cases ne mène à l'extérieur du circuit :
+//  1. case libre = aucune pièce (hors anneaux flottants) dont les niveaux [a, b] recoupent ceux de la pièce à poser [lo, hi] ;
+//  2. boîte englobante de TOUTES les cases occupées (à n'importe quel niveau), agrandie d'une case : toute case de la couronne
+//     extérieure est libre à coup sûr, et rejoindre cette couronne revient à rejoindre l'infini ;
+//  3. parcours en largeur ITÉRATIF depuis la case visée (file + index de lecture, pas de récursion : aucun dépassement de pile) ;
+//  4. dès qu'une case de la couronne est atteinte → zone ouverte ; au-delà de `max` cases → zone refusée (trop grande).
+// Deux pièces qui ne se touchent que par un coin ferment la zone (la connexité de la zone est en 4-voisins, celle du mur en 8).
+// Retourne { ok: true, cells: [[x, z], …] } triées par (z, x), ou { ok: false, why: 'occupied' | 'open' | 'big' | 'empty' }.
+export function enclosedRegion(track, cx, cz, lo, hi, { max = 600 } = {}) {
+  const blocked = (x, z) => {
+    for (const t of track.tilesAt(x, z)) {
+      if (PIECES[t.t].kind === 'ring') continue;
+      const [a, b] = Track.range(t);
+      if (a <= hi && lo <= b) return true;
+    }
+    return false;
+  };
+  if (!track.tiles.length) return { ok: false, why: 'empty' };
+  if (blocked(cx, cz)) return { ok: false, why: 'occupied' };
+  let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+  for (const t of track.tiles) {
+    for (const [x, z] of Track.cellsOf(t)) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (z < z0) z0 = z; if (z > z1) z1 = z; }
+  }
+  x0--; z0--; x1++; z1++;                                         // couronne extérieure
+  if (cx < x0 || cx > x1 || cz < z0 || cz > z1) return { ok: false, why: 'open' };
+  const W = z1 - z0 + 1, id = (x, z) => (x - x0) * W + (z - z0);
+  const seen = new Set([id(cx, cz)]), queue = [[cx, cz]];
+  for (let head = 0; head < queue.length; head++) {
+    const [x, z] = queue[head];
+    if (x === x0 || x === x1 || z === z0 || z === z1) return { ok: false, why: 'open' };
+    if (queue.length > max) return { ok: false, why: 'big' };
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, nz = z + dz, k = id(nx, nz);
+      if (seen.has(k) || blocked(nx, nz)) continue;
+      seen.add(k); queue.push([nx, nz]);
+    }
+  }
+  queue.sort((p, q) => p[1] - q[1] || p[0] - q[0]);
+  return { ok: true, cells: queue };
+}
+
+// Pavage d'une zone avec des pièces de côté `n` (n×n cases) : parcours dans l'ordre (z, x), une pièce à chaque case libre dont le
+// carré n×n tient entièrement dans la zone. Renvoie les coins (x, z) des carrés et le nombre de cases laissées vides.
+export function tileRegion(cells, n = 1) {
+  const free = new Set(cells.map(([x, z]) => x + ',' + z));
+  const spots = [];
+  for (const [x, z] of cells) {
+    if (!free.has(x + ',' + z)) continue;
+    let fits = true;
+    for (let i = 0; i < n && fits; i++) for (let j = 0; j < n; j++) if (!free.has((x + i) + ',' + (z + j))) { fits = false; break; }
+    if (!fits) continue;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) free.delete((x + i) + ',' + (z + j));
+    spots.push([x, z]);
+  }
+  return { spots, left: free.size };
+}
+
 // ---- Sélection -----------------------------------------------------------------
 export function normRect(a, b) {
   return { x0: Math.min(a.cx, b.cx), z0: Math.min(a.cz, b.cz), x1: Math.max(a.cx, b.cx), z1: Math.max(a.cz, b.cz) };

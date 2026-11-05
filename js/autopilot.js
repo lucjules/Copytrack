@@ -98,7 +98,6 @@ export class Autopilot {
       const fx = -Math.sin(phys.yaw), fz = -Math.cos(phys.yaw);
       const tx = tq[0] - p.x, tz = tq[2] - p.z;
       const ang = Math.atan2(fx * tz - fz * tx, fx * tx + fz * tz);
-      const above = p.y - (tq[1] + 3);
       // Plané : on vise la route 30 m devant, 3 m au-dessus, par la vitesse verticale voulue (cabrer = brake, piquer = gaz).
       // Une dalle est solide : passer SOUS la route visée, c'est la percuter.
       const hv = Math.max(8, Math.hypot(phys.vel.x, phys.vel.z));

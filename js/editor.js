@@ -11,77 +11,48 @@ import { buildDecoMesh, safeUrl } from './decos.js';
 import { isObstacle } from './obstacles.js';
 import { DECO_CATS, DECO_LABELS, DECO_COLORS } from './decoData.js';
 import { setEditorDraft, saveMyTrack, newId } from './storage.js';
-import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel } from './editorTools.js';
+import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, enclosedRegion, tileRegion } from './editorTools.js';
 import { centerlineWorld } from './ribbons.js';
 import { Inspector, MIRROR_TYPES, LEGACY_CP } from './inspector.js';
 import { keyLabel } from './input.js';
 import { esc } from './ui.js';
 import { pickObjects, pickTileExact, rayToSurface, ERASE_FILTERS, ERASE_FILTER_ORDER, LAYER_ALL, LAYER_DECO } from './editorPick.js';
 
+// Pièces proposées dans la palette. 0.9.2 : plus aucun raccourci clavier pour choisir une pièce (les outils gardent les leurs).
 export const PALETTE_ORDER = [
-  { id: 'straight', key: 'Digit1', k: '1' },
-  { id: 'curve', key: 'Digit2', k: '2' },
-  { id: 'bigcurve', key: 'Digit3', k: '3' },
-  { id: 'slope', key: 'Digit4', k: '4' },
-  { id: 'steep', key: 'Digit5', k: '5' },
-  { id: 'loop', key: 'Digit6', k: '6' },
-  { id: 'loopL', key: 'Digit7', k: '7' },
-  { id: 'loopBig', key: 'KeyU', k: 'U' },
-  { id: 'loopBigL', key: '', k: '' },
-  { id: 'loopDouble', key: 'KeyI', k: 'I' },
-  { id: 'loopDoubleL', key: '', k: '' },
-  { id: 'twist', key: 'KeyV', k: 'V' },
-  { id: 'ramp90', key: 'KeyL', k: 'L' },
-  { id: 'wall', key: 'KeyK', k: 'K' },
-  { id: 'crest90', key: 'KeyJ', k: 'J' },
-  { id: 'bank', key: 'KeyO', k: 'O' },
-  { id: 'bankBig', key: '', k: '' },
-  { id: 'hugecurve', key: '', k: '' },
-  { id: 'steep4', key: '', k: '' },
-  { id: 'cv1', key: '', k: '' },
-  { id: 'tube', key: '', k: '' },
-  { id: 'tubeIn', key: 'KeyY', k: 'Y' },
-  { id: 'tubeMid', key: '', k: '' },
-  { id: 'cork', key: '', k: '' },
-  { id: 'corkL', key: '', k: '' },
-  { id: 'fork', key: '', k: '' },
-  { id: 'forkL', key: '', k: '' },
-  { id: 'gentle', key: '', k: '' },
-  { id: 'ring', key: '', k: '' },
-  { id: 'start', key: 'Digit9', k: '9' },
-  { id: 'finish', key: 'Digit0', k: '0' },
-  { id: 'platform', key: 'KeyP', k: 'P' },
-];
+  'straight', 'curve', 'bigcurve', 'slope', 'steep', 'loop', 'loopL', 'loopBig', 'loopBigL', 'loopDouble', 'loopDoubleL', 'twist',
+  'ramp90', 'wall', 'crest90', 'bank', 'bankBig', 'hugecurve', 'steep4', 'cv1', 'crv1', 'rollL', 'rollR', 'sideL', 'sideR',
+  'tube', 'tubeIn', 'tubeMid', 'cork', 'corkL', 'fork', 'forkL', 'gentle', 'ring', 'start', 'finish', 'platform',
+].map((id) => ({ id }));
 
 // Outils (grille « Outils » à gauche) : ne posent rien. action : raccourci réglable (voir input.js) ; key : touche fixe.
 export const TOOLS = [
-  { id: 'select', label: 'Sélection', key: 'KeyQ', k: 'Q', hint: 'Choisir une zone : copier, déplacer, supprimer' },
-  { id: 'inspect', label: 'Inspecter', action: 'ed.inspect', hint: 'Clic sur une pièce ou une déco : propriétés et gizmos 3D' },
-  { id: 'erase', label: 'Gomme', action: 'ed.erase', hint: 'Effacer (filtre : tout / décorations / pistes)' },
-  { id: 'fill', label: 'Pot de peinture', action: 'ed.fill', hint: 'Remplir toute une zone connectée : choisis une pièce ou un revêtement, puis clique une pièce' },
+  { id: 'select', label: 'Sélection', key: 'KeyQ', k: 'Q', hint: 'Zone : copier, déplacer, supprimer' },
+  { id: 'inspect', label: 'Inspecter', action: 'ed.inspect', hint: 'Propriétés et gizmos 3D (Ctrl+D : dupliquer)' },
+  { id: 'erase', label: 'Gomme', action: 'ed.erase', hint: 'Effacer (tout, décors ou pistes)' },
+  { id: 'fill', label: 'Pot de peinture', action: 'ed.fill', hint: 'Remplir une zone connectée, ou une zone vide fermée' },
 ];
 const TOOL_IDS = new Set(['select', 'inspect', 'erase']);
 
 const MIRROR = MIRROR_TYPES;
 const MODS = [
-  { id: 'mod:v', flag: 'v', label: 'À l\'envers', hint: 'Route au plafond : roulable seulement en gravité inversée (plaque d’inversion)' },
+  { id: 'mod:v', flag: 'v', label: 'À l\'envers', hint: 'Route au plafond (gravité inversée)' },
   { id: 'mod:nb', flag: 'nb', label: 'Sans bordures', hint: 'Plus de rebord : on peut tomber' },
   { id: 'mod:tn', flag: 'tn', label: 'Tunnel', hint: 'Voûte autour de la route' },
-  { id: 'mod:mv1', flag: 'mv', val: 1, label: 'Ascenseur', hint: 'La pièce monte et redescend (2 niveaux, 6 s par défaut ; réglable dans l’Inspecteur)' },
-  { id: 'mod:mv2', flag: 'mv', val: 2, label: 'Glissière', hint: 'La pièce glisse d’une case vers sa droite et revient (5 s par défaut ; réglable dans l’Inspecteur)' },
-  { id: 'mod:mv3', flag: 'mv', val: 3, label: 'Rotation', hint: 'La pièce tourne autour de son centre et emporte la voiture (un tour en 12 s ; réglable dans l’Inspecteur)' },
-  { id: 'mod:cp1', flag: 'cp', val: 1, label: 'Checkpoint (portique)', hint: 'Portique au sol : à franchir pour valider le tour (route plate, ligne ou virage)' },
-  { id: 'mod:cp2', flag: 'cp', val: 2, label: 'Checkpoint aérien', hint: 'Anneau à traverser (ligne droite plate, à l’endroit)' },
-  { id: 'mod:tb1', flag: 'tb', val: 1, label: 'Anneau turbo', hint: 'Anneau à traverser pour un coup de turbo (ligne droite plate, à l’endroit) ; peut aussi se poser en l’air sur une case déjà occupée' },
-  { id: 'mod:th1', flag: 'th', val: 1, label: 'Thème Herbe', hint: 'Aspect herbeux (purement visuel)' },
-  { id: 'mod:th2', flag: 'th', val: 2, label: 'Thème Sable', hint: 'Aspect sableux (purement visuel)' },
-  { id: 'mod:th3', flag: 'th', val: 3, label: 'Thème Roche', hint: 'Aspect rocheux (purement visuel)' },
+  { id: 'mod:mv1', flag: 'mv', val: 1, label: 'Ascenseur', hint: 'Monte et redescend (réglable dans l’Inspecteur)' },
+  { id: 'mod:mv2', flag: 'mv', val: 2, label: 'Glissière', hint: 'Glisse d’une case et revient (réglable)' },
+  { id: 'mod:mv3', flag: 'mv', val: 3, label: 'Rotation', hint: 'Tourne autour de son centre (réglable)' },
+  { id: 'mod:cp1', flag: 'cp', val: 1, label: 'Checkpoint', hint: 'Route : portique. Plateforme : balise au sol' },
+  { id: 'mod:tb1', flag: 'tb', val: 1, label: 'Anneau turbo', hint: 'Anneau turbo (ligne droite plate, à l’endroit)' },
+  { id: 'mod:th1', flag: 'th', val: 1, label: 'Thème Herbe', hint: 'Aspect herbeux (visuel)' },
+  { id: 'mod:th2', flag: 'th', val: 2, label: 'Thème Sable', hint: 'Aspect sableux (visuel)' },
+  { id: 'mod:th3', flag: 'th', val: 3, label: 'Thème Roche', hint: 'Aspect rocheux (visuel)' },
 ];
 // Options proposées dans l'onglet « Options » : bascules (route) et choix exclusifs (checkpoint, thème, mouvement).
 // Avec une pièce choisie, elles s'ajoutent à la pose (aperçu compris) ; sans pièce, elles s'appliquent à la pièce cliquée.
 const OPTION_GROUPS = [
   { id: 'route', label: 'Route', multi: true, choices: [['v', 1, 'À l\'envers'], ['nb', 1, 'Sans bordures'], ['tn', 1, 'Tunnel']] },
-  { id: 'cp', label: 'Checkpoint', flag: 'cp', choices: [['cp', 0, 'Aucun'], ['cp', 1, 'Portique'], ['cp', 2, 'Aérien']] },
+  { id: 'cp', label: 'Checkpoint', flag: 'cp', check: true, choices: [['cp', 1, 'Checkpoint']] },
   { id: 'tb', label: 'Anneau turbo', flag: 'tb', choices: [['tb', 0, 'Aucun'], ['tb', 1, 'Turbo']] },
   { id: 'th', label: 'Thème', flag: 'th', choices: [['th', 0, 'Classique'], ['th', 1, 'Herbe'], ['th', 2, 'Sable'], ['th', 3, 'Roche']] },
   { id: 'mv', label: 'Mouvement', flag: 'mv', choices: [['mv', 0, 'Aucun'], ['mv', 1, 'Ascenseur'], ['mv', 2, 'Glissière'], ['mv', 3, 'Rotation']] },
@@ -116,10 +87,23 @@ const loopIcon = (mir, col, turns = 1, w = 9) => {
   void x1;
   return svg(`<path d="${r}" stroke="${ROAD}" stroke-width="${w}" fill="none"/><path d="${r}" stroke="${col}" stroke-width="2" fill="none"/>`);
 };
+// Petit nombre d'inclinaison dans le coin d'une icône.
+const numTag = (n) => `<text x="31" y="44" font-size="13" fill="#ffbf3c" font-family="sans-serif" font-weight="700" stroke="#14142a" stroke-width="2.2" paint-order="stroke">${n}</text>`;
+const incIcon = (big, n) => svg(`${big ? '<path d="M4 48 A44 44 0 0 1 48 4 L48 22 A26 26 0 0 0 22 48Z" fill="#3c4160"/><path d="M4 48 A44 44 0 0 1 48 4" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M22 48 A26 26 0 0 1 48 22" stroke="#ff6b57" stroke-width="2.5" fill="none"/>' : '<path d="M10 48 A38 38 0 0 1 48 10 L48 38 A10 10 0 0 0 38 48Z" fill="#3c4160"/><path d="M10 48 A38 38 0 0 1 48 10" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M38 48 A10 10 0 0 1 48 38" stroke="#ff6b57" stroke-width="2.5" fill="none"/>'}<path d="M20 38l10-10M24 26l6 2-2 6" stroke="#ffbf3c" stroke-width="3" fill="none"/>${numTag(n)}`);
+const crvIcon = (n) => svg(`<rect x="10" y="2" width="28" height="44" fill="#3c4160"/><rect x="8" y="2" width="2" height="44" fill="#ff6b57"/><rect x="38" y="2" width="2" height="44" fill="#ff6b57"/><path d="M14 42Q24 40 26 26T34 8M27 9h7v7" stroke="#ffbf3c" stroke-width="3.2" fill="none" stroke-linecap="round"/>${numTag(n)}`);
+const sideIcon = (left, roll) => svg(`<rect x="10" y="2" width="28" height="44" fill="#3c4160"/>${roll ? `<path d="M${left ? 10 : 38} 46V26" stroke="#36e9ff" stroke-width="4"/><path d="M${left ? 10 : 38} 26L${left ? 38 : 10} 2" stroke="#36e9ff" stroke-width="4" stroke-dasharray="5 4"/>` : `<rect x="${left ? 6 : 34}" y="2" width="8" height="44" fill="#36e9ff"/><path d="M${left ? 24 : 24} 40V10M18 16l6-6 6 6" stroke="#efe6d6" stroke-width="2.5" fill="none"/>`}<path d="M${left ? 4 : 44} 42l${left ? -3 : 3} -4" stroke="#ffbf3c" stroke-width="3"/>`);
 export const ICONS = {
+  steep4: svg(`<rect x="10" y="2" width="28" height="44" fill="#3c4160"/><rect x="8" y="2" width="2" height="44" fill="#ff6b57"/><rect x="38" y="2" width="2" height="44" fill="#ff6b57"/><path d="M16 14l8-7 8 7M16 24l8-7 8 7M16 34l8-7 8 7M16 44l8-7 8 7" stroke="#ff6b57" stroke-width="3" fill="none"/>${numTag(4)}`),
+  hugecurve: svg(`<path d="M2 48 A46 46 0 0 1 48 2 L48 14 A34 34 0 0 0 14 48Z" fill="#3c4160"/><path d="M2 48 A46 46 0 0 1 48 2" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M14 48 A34 34 0 0 1 48 14" stroke="#ff6b57" stroke-width="2.5" fill="none"/>`),
+  crv05: crvIcon('½'), crv1: crvIcon(1), crv2: crvIcon(2), crv4: crvIcon(4),
+  cv05: incIcon(false, '½'), cv1: incIcon(false, 1), cv2: incIcon(false, 2), cv4: incIcon(false, 4),
+  cvL05: incIcon(false, '½'), cvL1: incIcon(false, 1), cvL2: incIcon(false, 2), cvL4: incIcon(false, 4),
+  cvBig05: incIcon(true, '½'), cvBig1: incIcon(true, 1), cvBig2: incIcon(true, 2), cvBig4: incIcon(true, 4),
+  cvBigL05: incIcon(true, '½'), cvBigL1: incIcon(true, 1), cvBigL2: incIcon(true, 2), cvBigL4: incIcon(true, 4),
+  rollL: sideIcon(true, true), rollR: sideIcon(false, true), sideL: sideIcon(true, false), sideR: sideIcon(false, false), side: sideIcon(true, true),
   straight: svg(`${straightBase()}<path d="M24 6v8M24 20v8M24 34v8" stroke="${LINE}" stroke-width="2"/>`),
   curve: svg(`<path d="M10 48 A38 38 0 0 1 48 10 L48 38 A10 10 0 0 0 38 48Z" fill="${ROAD}"/><path d="M10 48 A38 38 0 0 1 48 10" stroke="${RAIL}" stroke-width="2.5" fill="none"/><path d="M38 48 A10 10 0 0 1 48 38" stroke="${RAIL}" stroke-width="2.5" fill="none"/>`),
-  courbe: svg(`<path d="M10 48 A38 38 0 0 1 48 10 L48 38 A10 10 0 0 0 38 48Z" fill="${ROAD}"/><path d="M10 48 A38 38 0 0 1 48 10" stroke="${RAIL}" stroke-width="2.5" fill="none"/><path d="M38 48 A10 10 0 0 1 48 38" stroke="${RAIL}" stroke-width="2.5" fill="none"/><path d="M18 40l10-10M22 28l6 2-2 6" stroke="#ffbf3c" stroke-width="3" fill="none"/>`),
+  courbe: crvIcon(''),
   bigcurve: svg(`<path d="M4 48 A44 44 0 0 1 48 4 L48 22 A26 26 0 0 0 22 48Z" fill="${ROAD}"/><path d="M4 48 A44 44 0 0 1 48 4" stroke="${RAIL}" stroke-width="2.5" fill="none"/><path d="M22 48 A26 26 0 0 1 48 22" stroke="${RAIL}" stroke-width="2.5" fill="none"/>`),
   slope: svg(`${straightBase()}<path d="M24 36V12M16 20l8-8 8 8" stroke="${LINE}" stroke-width="3" fill="none"/>`),
   steep: svg(`${straightBase()}<path d="M16 26l8-8 8 8M16 38l8-8 8 8" stroke="#ffbf3c" stroke-width="3" fill="none"/>`),
@@ -163,7 +147,7 @@ export const ICONS = {
   'surf:slow': svg(`${straightBase('#3b2a2f', '#ff6b57')}<path d="M12 14h24M12 24h24M12 34h24" stroke="#ffd23e" stroke-width="3" stroke-dasharray="4 3"/>`),
   'surf:wind': svg(`${straightBase('#2c3a52', '#bfefff')}<path d="M14 16h16l4-3M14 26h20M14 36h14l4 3" stroke="#bfefff" stroke-width="2.5" fill="none"/>`),
   'surf:water': svg(`${straightBase('#1f6fb2', '#9fe3ff')}<path d="M12 16q6-5 12 0t12 0M12 26q6-5 12 0t12 0M12 36q6-5 12 0t12 0" stroke="#9fe3ff" stroke-width="2.5" fill="none"/>`),
-  'surf:boat': svg(`${straightBase('#22343f', '#3fd0ff')}<path d="M12 28h24l-4 8H16z" fill="#3fd0ff"/><path d="M24 28V12l8 10h-8" stroke="#3fd0ff" stroke-width="2" fill="none"/>`),
+  'surf:boat': svg(`<defs><linearGradient id="bt" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#2a79bd"/><stop offset="0.6" stop-color="#5b7b8a"/></linearGradient></defs><rect x="10" y="2" width="28" height="44" fill="url(#bt)"/><rect x="8" y="2" width="2" height="44" fill="#3fd0ff"/><rect x="38" y="2" width="2" height="44" fill="#3fd0ff"/><path d="M12 12h24M12 20h24M12 28h24M12 36h24" stroke="#cdeeff" stroke-width="1.2" opacity=".6"/><path d="M12 30h24l-4 8H16z" fill="#3fd0ff"/><path d="M24 30V14l8 10h-8" stroke="#3fd0ff" stroke-width="2" fill="none"/>`),
   'surf:glider': svg(`${straightBase('#2f3346', '#f5f5f5')}<path d="M24 10L8 30h32z" fill="#f5f5f5"/><path d="M24 30v8M18 38h12" stroke="#f5f5f5" stroke-width="2"/>`),
   'surf:gravity': svg(`${straightBase('#233a3a', '#a7ffe0')}<circle cx="24" cy="24" r="7" stroke="#a7ffe0" stroke-width="2.5" fill="none"/><path d="M24 6v8M20 10l4-4 4 4M24 42v-8M20 38l4 4 4-4" stroke="#a7ffe0" stroke-width="2.2" fill="none"/>`),
   'surf:flip': svg(`${straightBase('#3a1f3f', '#ff4fd8')}<path d="M10 24h28" stroke="#ff4fd8" stroke-width="3"/><path d="M18 18V8M14 12l4-4 4 4M30 30v10M26 36l4 4 4-4" stroke="#ff4fd8" stroke-width="2.5" fill="none"/>`),
@@ -203,7 +187,7 @@ export function pieceLabel(id) {
 function validTool(t) {
   if (!t) return false;
   if (isFill(t)) return toFill(fillBase(t)) === t && validTool(fillBase(t));
-  return !!PIECES[t] || t === 'erase' || t === 'select' || t === 'inspect' || t.startsWith('surf:') || t.startsWith('mod:') || t.startsWith('deco:');
+  return !!PIECES[t] || t === 'erase' || t === 'select' || t === 'inspect' || (t.startsWith('surf:') && !!SURFACES[t.slice(5)]) || (t.startsWith('mod:') && MODS.some((m) => m.id === t)) || (t.startsWith('deco:') && !!DECO_LABELS[t.slice(5)]);
 }
 
 export class EditorSession {
@@ -387,7 +371,7 @@ export class EditorSession {
     const hint = document.createElement('div');
     hint.className = 'pal-hint';
     hint.id = 'ed-opt-hint';
-    hint.textContent = 'Choisis une pièce ET des options : elles se posent ensemble (l’aperçu montre le résultat). Sans pièce choisie, une option s’applique à la pièce que tu cliques. Toute pièce peut être posée à l’envers (au moins un niveau au-dessus du sol) : on ne peut y rouler qu’en gravité inversée. Une plaque « Inversion de gravité » projette la voiture vers le haut, une pièce à l’envers la réceptionne ; une 2e plaque la remet à l’endroit. Vitesse, amplitude et couleurs se règlent dans l’Inspecteur.';
+    hint.textContent = 'Pièce + options se posent ensemble. Sans pièce : l’option s’applique à la pièce cliquée.';
     panels.mods.appendChild(hint);
 
     const dTop = document.createElement('div');
@@ -548,7 +532,7 @@ export class EditorSession {
       chips.setAttribute('aria-label', g.label);
       for (const [flag, val, text] of g.choices) {
         const b = document.createElement('button');
-        b.className = 'chip' + (val === 0 ? ' none' : '');
+        b.className = 'chip' + (val === 0 ? ' none' : '') + (g.check ? ' chk' : '');
         b.textContent = text;
         b.dataset.flag = flag; b.dataset.val = val;
         if (flag === 'th') {
@@ -662,7 +646,7 @@ export class EditorSession {
       return;
     }
     const f = toFill(this.tool) || toFill(this._lastBrush || 'straight');     // depuis un autre outil : on remplit avec la dernière pièce choisie
-    if (!f) { this.app.ui.flash('Pot de peinture : choisis d’abord une pièce ou un revêtement.'); this.app.audio.error(); return; }
+    if (!f) { this.app.ui.flash('Choisis d’abord une pièce ou un revêtement.'); this.app.audio.error(); return; }
     this.setTool(f);
     this.app.ui.flash('Pot de peinture : clique une pièce pour remplir sa zone', 1.8);
   }
@@ -782,7 +766,7 @@ export class EditorSession {
       t: this.track.tiles.map((t) => [t.t, t.x, t.z, t.l, t.r, t.s || '', t.p || 0, t.v, t.nb, t.tn, t.mv || 0, t.cp || 0, t.th || 0, t.ms || 0, t.ma || 0, t.col || 0, t.s2 || '', t.p2 || 0, t.tb || 0]),
       d: this.track.decos.map((o) => [o.k, o.x, o.y, o.z, o.ry, o.s, o.c, o.u, o.ph || 0, o.cc || '']),
       lp: this.track.laps || 1,
-      pr: { desc: this.track.desc, offroad: this.track.offroad, v0: this.track.v0, g0: this.track.g0, veh0: this.track.veh0, inversionGraviteDepart: this.track.inversionGraviteDepart, decor: this.track.decor },
+      pr: { name: this.track.name, desc: this.track.desc, offroad: this.track.offroad, v0: this.track.v0, g0: this.track.g0, veh0: this.track.veh0, inversionGraviteDepart: this.track.inversionGraviteDepart, decor: this.track.decor },
     });
   }
 
@@ -796,6 +780,7 @@ export class EditorSession {
     this.track.laps = data.lp || 1;
     if (data.pr) {
       this.track.setParams(data.pr);
+      if (data.pr.name) this.track.name = data.pr.name;
       if (data.pr.decor && data.pr.decor !== this.track.decor) { this.track.decor = data.pr.decor; this._applyDecor(); this.gridKey = ''; }
     }
     this._changed(false);
@@ -921,6 +906,7 @@ export class EditorSession {
         else if (k === 'x') { e.preventDefault(); this.cutSel(); }
         else if (k === 'v') { e.preventDefault(); this.startPaste(); }
         else if (k === 'a') { e.preventDefault(); this.selectAll(); }
+        else if (k === 'd') { e.preventDefault(); this.inspector.duplicate(); }      // Ctrl+D : duplique la pièce ou la décoration inspectée
       },
     };
     this._h.outside = (e) => { if (this.menuOpen && !e.target.closest('.ed-menu-wrap')) this.toggleMenu(false); };
@@ -1153,7 +1139,7 @@ export class EditorSession {
     const key = `${tile.x},${tile.z},${tile.l}`;
     if (painting && key === this._lastPaint) return;
     this._lastPaint = key;
-    if (!Track.inBounds(Track.normalize(tile))) { if (!painting) { this.app.ui.flash('Cette pièce sortirait des niveaux (à l’envers, elle pend sous son niveau : monte d’abord).'); this.app.audio.error(); } return; }
+    if (!Track.inBounds(Track.normalize(tile))) { if (!painting) { this.app.ui.flash('Hors des niveaux (à l’envers : monte d’abord).'); this.app.audio.error(); } return; }
     const norm = Track.normalize(tile);
     const conflicts = this.track.conflicts(tile);
     if (conflicts.length === 1) {
@@ -1163,7 +1149,7 @@ export class EditorSession {
     for (const c of conflicts) this.track.remove(c);
     if (tile.t === 'start') for (const s of this.track.tiles.filter((x) => x.t === 'start')) this.track.remove(s);
     const dropped = this._droppedOptions(tile, norm);
-    if (dropped.length && !painting) this.app.ui.flash(`Option ignorée sur « ${PIECES[tile.t].label} » : ${dropped.map((k) => OPT_NAMES[k]).join(', ')}`, 2.4);
+    if (dropped.length && !painting) this.app.ui.flash(`Option ignorée : ${dropped.map((k) => OPT_NAMES[k]).join(', ')}`, 2.4);
     const added = this.track.add(tile);
     this.app.audio.place();
     this._prepareAutoLevel(added);
@@ -1194,7 +1180,7 @@ export class EditorSession {
     if (!t) return;
     const s = this.tool.slice(5);
     if (!surfaceAllowed(t.t, s, !!t.v)) {
-      if (!painting) { this.app.ui.flash(`${SURFACES[s].label} : incompatible avec « ${PIECES[t.t].label}${t.v ? ' (envers)' : ''} »`); this.app.audio.error(); }
+      if (!painting) { this.app.ui.flash(`${SURFACES[s].label} : impossible ici`); this.app.audio.error(); }
       return;
     }
     if (this.track.setSurface(t, s, SURFACES[s].def != null ? this._surfParamValue(s) : 0)) {
@@ -1216,6 +1202,8 @@ export class EditorSession {
   // ('fill-surf:') ou le type de pièce ('fill-piece:'). Zone = pièces voisines (côtés partagés,
   // écart de niveau <= FILL_MAX_DL) qui satisfont le même prédicat que la cible.
   _floodFill() {
+    // Case VIDE sous le curseur (aucune pièce au niveau de pose) : on remplit la zone vide fermée par des pièces (voir enclosedRegion).
+    if (this._emptyFillTarget()) { this._fillEmpty(); return; }
     const start = this._targetTile();
     if (!start) return;
     const why = this._fillRefusal(start);
@@ -1257,7 +1245,53 @@ export class EditorSession {
       this._changed();
       this._commit();                                                 // UN SEUL commit : un seul Ctrl+Z annule tout
     } else this.app.audio.error();
-    this.app.ui.flash(`${done} pièce${done > 1 ? 's' : ''} modifiée${done > 1 ? 's' : ''}` + (skipped ? ` · ${skipped} ignorée${skipped > 1 ? 's' : ''} (incompatible ou pas la place)` : ''));
+    this.app.ui.flash(`${done} pièce${done > 1 ? 's' : ''} modifiée${done > 1 ? 's' : ''}` + (skipped ? ` · ${skipped} ignorée${skipped > 1 ? 's' : ''}` : ''));
+  }
+
+  // Niveaux [lo, hi] occupés par la pièce que le pot de peinture poserait au niveau courant.
+  _fillRange() {
+    const base = fillBase(this.tool);
+    if (!PIECES[base]) return [this.level, this.level];
+    const o = this.opts || {};
+    return Track.range({ t: base, x: 0, z: 0, l: this.level, r: 0, v: o.v ? 1 : 0, cp: o.cp | 0, tb: o.tb | 0, mv: o.mv | 0 });
+  }
+
+  // Vrai si le curseur vise une case VIDE (sans pièce aux niveaux de pose) et pas une pièce touchée par le rayon : on remplit alors la zone vide.
+  _emptyFillTarget() {
+    if (!this.hover) return false;
+    if (this.ndc && this.raycaster && Math.abs(this.ndc.x) <= 1 && Math.abs(this.ndc.y) <= 1 && this.app.camera) {
+      this.raycaster.setFromCamera(this.ndc, this.app.camera);
+      const hit = pickTileExact(this.track, this.raycaster.ray);
+      if (hit && Track.cellsOf(hit.obj).some(([x, z]) => x === this.hover.cx && z === this.hover.cz)) return false;
+    }
+    const [lo, hi] = this._fillRange();
+    return this.track.tilesAt(this.hover.cx, this.hover.cz).every((t) => { if (PIECES[t.t].kind === 'ring') return true; const [a, b] = Track.range(t); return !(a <= hi && lo <= b); });
+  }
+
+  // Remplit la zone vide fermée sous le curseur avec la pièce choisie (rotation, niveau et options du moment).
+  _fillEmpty() {
+    const base = fillBase(this.tool), ui = this.app.ui;
+    const fail = (m) => { ui.flash(m); this.app.audio.error(); };
+    if (!PIECES[base]) return fail('Choisis une pièce pour remplir une zone vide.');
+    if (isStartFinish(base) || PIECES[base].kind === 'ring') return fail('Cette pièce ne se pose pas au pot de peinture.');
+    const [lo, hi] = this._fillRange();
+    const reg = enclosedRegion(this.track, this.hover.cx, this.hover.cz, lo, hi);
+    if (!reg.ok) return fail(reg.why === 'open' ? 'Zone non fermée : entoure-la de pièces.' : reg.why === 'big' ? 'Zone trop grande (600 cases au plus).' : 'Rien à remplir ici.');
+    const { spots, left } = tileRegion(reg.cells, PIECES[base].size);
+    let done = 0, skipped = left;
+    for (const [x, z] of spots) {
+      const tile = { t: base, x, z, l: this.level, r: this.rot, s: '' };
+      for (const k of OPT_KEYS) if (this.opts && this.opts[k]) tile[k] = this.opts[k];
+      const norm = Track.normalize(tile);
+      if (!Track.inBounds(norm) || this.track.conflicts(norm).length) { skipped++; continue; }
+      this.track.add(tile);
+      done++;
+    }
+    if (!done) return fail('Aucune pièce posée (pas la place).');
+    this.app.audio.place();
+    this._changed();
+    this._commit();                                                   // un seul pas d'annulation
+    ui.flash(`${done} pièce${done > 1 ? 's' : ''} posée${done > 1 ? 's' : ''}` + (skipped ? ` · ${skipped} case${skipped > 1 ? 's' : ''} vide${skipped > 1 ? 's' : ''}` : ''));
   }
 
   // Change le type d'une pièce sur place (même case, niveau et rotation) si l'empreinte est identique.
@@ -1312,8 +1346,8 @@ export class EditorSession {
       this._changed();
       if (!painting) this._commit();
     } else if (flag === 'tn') this.app.ui.flash('Tunnel impossible sur une route à l\'envers');
-    else if (flag === 'cp') { this.app.ui.flash('Pas la place pour le checkpoint (niveaux au-dessus occupés)'); this.app.audio.error(); }
-    else if (flag === 'mv') { this.app.ui.flash('Pas la place pour ce mouvement (case voisine ou niveaux au-dessus occupés)'); this.app.audio.error(); }
+    else if (flag === 'cp') { this.app.ui.flash('Pas la place (niveaux au-dessus occupés)'); this.app.audio.error(); }
+    else if (flag === 'mv') { this.app.ui.flash('Pas la place pour ce mouvement'); this.app.audio.error(); }
   }
 
   _snapPos(x, z) {
@@ -1509,7 +1543,7 @@ export class EditorSession {
       }).join('');
       return `<tr><td style="white-space:nowrap">${SURFACES[s].label}</td>${cells}</tr>`;
     }).join('');
-    const body = `<p>Tous les revêtements se posent sur toutes les routes, avec les mêmes effets partout (pas d'aide cachée dans les loopings ou au plafond). Seules exceptions : l'eau, le rebond et la plaque bateau demandent du plat ; l'eau va aussi sur le Départ (la plaque bateau est posée sur l'eau) mais pas sur l'Arrivée ni sur une bifurcation ; un anneau n'a pas de route.</p>
+    const body = `<p>Tous les revêtements vont partout, avec les mêmes effets. Exceptions : eau, rebond et plaque bateau demandent du plat ; l'eau va sur le Départ, pas sur l'Arrivée ni une bifurcation.</p>
       <div style="overflow:auto;max-height:52vh"><table style="border-collapse:collapse;font-size:13px;width:100%">
       <tr><th></th>${cols.map(([l]) => `<th style="font-weight:600;padding:2px 4px;font-size:11px">${l}</th>`).join('')}</tr>${rows}</table></div>`;
     this.app.ui.modal({ title: 'Compatibilité des revêtements', body, actions: [{ label: 'OK', primary: true }] });
@@ -1517,7 +1551,7 @@ export class EditorSession {
 
   testHere() {
     const t = this._targetTile();
-    if (!t || ['ring', 'area'].includes(PIECES[t.t].kind)) { this.app.ui.flash('Vise une pièce de route pour tester à partir d\'elle.'); this.app.audio.error(); return; }
+    if (!t || ['ring', 'area'].includes(PIECES[t.t].kind)) { this.app.ui.flash('Vise une pièce de route.'); this.app.audio.error(); return; }
     let pts = centerlineWorld(t, 6);
     // Sens de départ : celui qui s'éloigne de la pièce de départ du circuit.
     const st = this.track.startTile;
@@ -1553,6 +1587,8 @@ export class EditorSession {
     f.className = 'form ed-params';
     const veh = { car: 'Voiture', moto: 'Moto', boat: 'Bateau', glider: 'Deltaplane' };
     f.innerHTML = `
+      <label>Nom<input type="text" id="pp-name" maxlength="40" placeholder="Mon circuit"></label>
+      <label class="col">Description<textarea id="pp-desc" maxlength="200" rows="2" placeholder="200 caractères au plus"></textarea></label>
       <label>Décor<select id="pp-decor">${Object.entries(DECORS).map(([id, d]) => `<option value="${id}">${d.label}</option>`).join('')}</select></label>
       <label title="Circuit fermé : l'arrivée est franchie à chaque tour">Tours<select id="pp-laps">${Array.from({ length: 9 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}</select></label>
       <label title="Rouler sur le terrain ne renvoie plus au checkpoint (il reste lent)">Hors piste autorisé<input type="checkbox" id="pp-off"></label>
@@ -1560,8 +1596,10 @@ export class EditorSession {
       <label>Gravité de départ<span class="inl"><input type="range" id="pp-g0" min="15" max="250" step="5"><b id="pp-g0v"></b></span></label>
       <label>Véhicule de départ<select id="pp-veh">${Object.entries(veh).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
       <label title="La course commence en gravité inversée : la voiture est plaquée au plafond (départ posé sur une pièce à l'envers)">Inversion de gravité au départ<input type="checkbox" id="pp-ig"></label>
-      <p class="meta">Le nom et la description du circuit se choisissent au moment de la publication. Ces réglages modifient la course : il faudra la re-vérifier.</p>`;
+      <p class="meta">Départ, tours, gravité et véhicule changent la course : à revérifier.</p>`;
     const $f = (id) => f.querySelector('#' + id);
+    $f('pp-name').value = T.name || '';
+    $f('pp-desc').value = T.desc || '';
     $f('pp-decor').value = T.decor;
     $f('pp-laps').value = String(T.laps || 1);
     $f('pp-off').checked = !!T.offroad;
@@ -1579,9 +1617,11 @@ export class EditorSession {
       body: f,
       actions: [{ label: 'Annuler' }, { label: 'Appliquer', primary: true, onClick: () => {
         const laps = +$f('pp-laps').value;
-        if (laps > 1 && (T.laps || 1) === 1) this.app.ui.flash('Plusieurs tours : l\'arrivée doit être juste avant le départ (circuit fermé).', 3);
+        if (laps > 1 && (T.laps || 1) === 1) this.app.ui.flash('Plusieurs tours : arrivée juste avant le départ.', 3);
         T.laps = laps;
-        T.setParams({ offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value, inversionGraviteDepart: $f('pp-ig').checked });
+        const nm = $f('pp-name').value.trim().slice(0, 40);
+        if (nm) T.name = nm;
+        T.setParams({ desc: $f('pp-desc').value, offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value, inversionGraviteDepart: $f('pp-ig').checked });
         if ($f('pp-decor').value !== T.decor) { T.decor = $f('pp-decor').value; this._applyDecor(); this.gridKey = ''; }
         this._changed(false);
         this._commit();
@@ -1658,11 +1698,31 @@ export class EditorSession {
     this.highlight.scale.set(s * CELL + 0.4, y1 - y0, s * CELL + 0.4);
   }
 
+  // Cases surlignées par le pot de peinture sur une zone vide (null : on les cache).
+  _showFillCells(cells, color) {
+    if (!this.fillCells) {
+      this.fillCells = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#7dffb2', transparent: true, opacity: 0.4, depthWrite: false }), 700);
+      this.fillCells.frustumCulled = false;
+      this.fillCells.count = 0;
+      this.app.scene.add(this.fillCells);
+    }
+    const m = this.fillCells;
+    if (!cells) { m.visible = false; return; }
+    m.visible = true;
+    m.material.color.set(color);
+    const mat = new THREE.Matrix4();
+    const n = Math.min(cells.length, 700);
+    for (let i = 0; i < n; i++) { mat.makeScale(CELL - 0.8, 1, CELL - 0.8).setPosition((cells[i][0] + 0.5) * CELL, this.levelY() + 0.12, (cells[i][1] + 0.5) * CELL); m.setMatrixAt(i, mat); }
+    m.count = n;
+    m.instanceMatrix.needsUpdate = true;
+  }
+
   _clearPreview() {
     for (const c of [...this.preview.children]) { c.traverse((o) => o.geometry && o.geometry.dispose()); this.preview.remove(c); }
   }
 
   _updatePreview() {
+    if (this.fillCells && (!isFill(this.tool) || !this.hover)) this.fillCells.visible = false;
     if (this.tool === 'select') { this._updatePastePreview(); return; }
     const cand = this._candidate();
     this.highlight.visible = false;
@@ -1704,6 +1764,14 @@ export class EditorSession {
         if (hit) this._highlightHit(hit, erase ? '#ff3b5c' : '#5ff2ff');
         return;
       }
+      if (isFill(this.tool) && this._emptyFillTarget()) {
+        // Zone vide : cases qui seraient remplies (vert) ou refus (rouge, case seule).
+        const [lo, hi] = this._fillRange();
+        const reg = PIECES[fillBase(this.tool)] ? enclosedRegion(this.track, this.hover.cx, this.hover.cz, lo, hi) : { ok: false };
+        this._showFillCells(reg.ok ? reg.cells : [[this.hover.cx, this.hover.cz]], reg.ok ? '#7dffb2' : '#ff3b5c');
+        return;
+      }
+      this._showFillCells(null);
       const t = this._targetTile();
       if (t) {
         if (isFill(this.tool)) {
@@ -1762,7 +1830,7 @@ export class EditorSession {
     if (input.act('ed.inspect')) this.setTool(this.tool === 'inspect' ? 'straight' : 'inspect');
     if (input.act('ed.recenter')) this.recenter();
     if (input.act('ed.topView')) this.toggleTopView();
-    if (input.act('ed.grid')) { this.showGrid = !this.showGrid; this.app.ui.flash(this.showGrid ? 'Grille affichée' : 'Grille masquée', 1.2); }
+    if (input.act('ed.grid')) { this.showGrid = !this.showGrid; this.app.ui.flash(this.showGrid ? 'Grille' : 'Sans grille', 1.2); }
     if (input.act('ed.help')) { this.app.editorHelp(); return; }
     if (input.act('ed.test')) { if (shift) this.testHere(); else this.test(); return; }
     for (const p of [...PALETTE_ORDER, ...TOOLS]) if (p.key && p.id !== 'fill' && input.hit(p.key)) this.setTool(p.id);
@@ -1809,6 +1877,7 @@ export class EditorSession {
     this._updateSelBox();
     this.inspector.update();
     this.view.updateMoving(performance.now() / 1000);   // obstacles et pièces mobiles animés
+    this.view.updateLights(this.app.camera.position, performance.now() / 1000);
     if (this.marksT > 0) {
       this.marksT -= dt;
       this.marks.visible = this.marksT > 0 && Math.floor(this.marksT * 3) % 2 === 0;
@@ -1852,7 +1921,7 @@ export class EditorSession {
   _selInfo() {
     if (!this.sel) return;
     const n = tilesInRect(this.track, this.sel).length, d = decosInRect(this.track, this.sel).length;
-    this.app.ui.flash(`${n} pièce${n > 1 ? 's' : ''}${d ? `, ${d} décoration${d > 1 ? 's' : ''}` : ''} sélectionnée${n + d > 1 ? 's' : ''} · Ctrl+C / X / V, Suppr, E / C pour monter / descendre`, 3);
+    this.app.ui.flash(`${n} pièce${n > 1 ? 's' : ''}${d ? `, ${d} décoration${d > 1 ? 's' : ''}` : ''} sélectionnée${n + d > 1 ? 's' : ''}`, 2);
     this._refreshSelBar();
   }
 
@@ -1902,7 +1971,7 @@ export class EditorSession {
     if (!this.sel) return;
     const tiles = tilesInRect(this.track, this.sel), decos = decosInRect(this.track, this.sel);
     if (!tiles.length && !decos.length) return;
-    if (!shiftLevel(this.track, tiles, decos, d)) { this.app.ui.flash('Impossible : une pièce gêne ou sort des niveaux.'); this.app.audio.error(); return; }
+    if (!shiftLevel(this.track, tiles, decos, d)) { this.app.ui.flash('Impossible : pièce gênante ou hors niveaux.'); this.app.audio.error(); return; }
     this.app.audio.place();
     this._changed();
     this._commit();
@@ -1999,7 +2068,7 @@ export class EditorSession {
   toggleLevelView() {
     this.focusLevel = !this.focusLevel;
     this.needsRebuild = true;
-    this.app.ui.flash(this.focusLevel ? `Vue du niveau ${this.level} : les autres niveaux sont estompés` : 'Tous les niveaux affichés', 1.6);
+    this.app.ui.flash(this.focusLevel ? `Niveau ${this.level} seul` : 'Tous les niveaux', 1.6);
     const b = document.querySelector('[data-ed="levelview"]');
     if (b) b.classList.toggle('on', this.focusLevel);
   }
@@ -2020,6 +2089,7 @@ export class EditorSession {
   dispose() {
     for (const c of [...this.marks.children]) { c.geometry.dispose(); c.material.dispose(); }
     this.marks.removeFromParent();
+    if (this.fillCells) { this.fillCells.geometry.dispose(); this.fillCells.material.dispose(); this.fillCells.dispose(); this.fillCells.removeFromParent(); this.fillCells = null; }
     this.selBox.geometry.dispose(); this.selBox.material.dispose(); this.selBox.removeFromParent();
     const el = this.app.renderer.domElement;
     el.removeEventListener('pointerdown', this._h.down);
@@ -2062,5 +2132,9 @@ const DECO_ICON = {
   gear: '⚙', pipe: '🔧', chimney: '🏭', crate: '📦', barrel: '🛢', crane: '🏗', warnLight: '🚨',
   satellite: '🛰', asteroid: '☄', antenna: '📡', rocket: '🚀', planetMini: '🪐',
   trafficCone: '🚧', tireStack: '⭕', flagPole: '🏁', grandstand: '🏟',
+  searchlight: '🔦', spotlight: '💡', lanternPost: '🏮', lanternHang: '🏮', streetLamp: '🛣',
+  plane: '✈', biplane: '🛩', helicopter: '🚁', bus: '🚌', truck: '🚚', locomotive: '🚂', sedan: '🚗', ufo: '🛸', sailboat: '⛵',
+  xmasTree: '🎄', snowman: '⛄', gift: '🎁', candyCane: '🍭', xmasStar: '⭐', wreath: '🎍', sleigh: '🛷', reindeer: '🦌', gingerHouse: '🍪',
+  pumpkin: '🎃', ghost: '👻', tombstone: '🪦', bats: '🦇', witchHat: '🧙', cauldron: '🫕', spookyTree: '🌳', hauntedHouse: '🏚', skull: '💀',
 };
 void SURFACE_STYLE;

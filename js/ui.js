@@ -47,7 +47,7 @@ class Hud {
     this.time(0);
     const inp = session.app.input;
     const k = (id) => (inp.bindings[id] || []).filter(Boolean).map(keyLabel).join(' / ') || '—';
-    e.hint.textContent = `${k('accelerate')} ${k('brake')} ${k('left')} ${k('right')} · freiner en virage : dérapage · ${k('respawn')} : dernier checkpoint · ${k('restart')} : recommencer · ${k('camera')} : caméra · ${k('horn')} : klaxon · ${k('pause')} : pause`;
+    e.hint.textContent = `${k('accelerate')} ${k('brake')} ${k('left')} ${k('right')} · frein en virage : dérapage · ${k('respawn')} : dernier checkpoint · ${k('restart')} : recommencer · ${k('camera')} : caméra · ${k('horn')} : klaxon · ${k('pause')} : pause`;
     e.hint.style.opacity = '1';
     clearTimeout(this._hintT);
     this._hintT = setTimeout(() => { e.hint.style.opacity = '0'; }, 7000);
@@ -225,9 +225,9 @@ export class UI {
     }
     const rw = $('fin-reward');
     if (info.reward) {
-      rw.innerHTML = `+${info.reward.coins} ◆ pièces${info.reward.first ? '<small>Bonus : première fois à ce niveau de médaille ×2</small>' : ''}`;
+      rw.innerHTML = `+${info.reward.coins} ◆ pièces${info.reward.first ? '<small>Bonus 1re fois ×2</small>' : ''}`;
     } else if (info.verified) {
-      rw.innerHTML = 'Circuit vérifié ✔<small>Ton temps devient la médaille cristal, les autres sont déduites.</small>';
+      rw.innerHTML = 'Circuit vérifié ✔<small>Ton temps = médaille cristal.</small>';
     } else if (info.unverifiedUser) {
       rw.innerHTML = '<small>Circuit non vérifié : pas de médailles ni de pièces.</small>';
     } else rw.innerHTML = '';

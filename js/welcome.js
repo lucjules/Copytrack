@@ -9,7 +9,7 @@ const $ = (id) => document.getElementById(id);
 const MODES = {
   guest: {
     submit: 'Jouer en invité',
-    hint: 'Choisis un pseudo pour cette session. Ta progression reste sur cet appareil : pour la retrouver ailleurs, crée un compte.',
+    hint: 'Choisis un pseudo. Progression sur cet appareil ; un compte la suit partout.',
     pw: false, pw2: false, keep: false,
   },
   login: {
@@ -19,7 +19,7 @@ const MODES = {
   },
   signup: {
     submit: 'Créer mon compte',
-    hint: 'Pseudo de 3 à 20 lettres, chiffres ou _ (unique), mot de passe de 8 caractères au moins. Aucune adresse e-mail n’est demandée : le mot de passe ne pourra pas être réinitialisé, note-le bien.',
+    hint: 'Pseudo unique de 3 à 20 lettres, chiffres ou _ ; mot de passe de 8 caractères au moins. Sans e-mail : pas de récupération, note-le.',
     pw: true, pw2: true, keep: true,
   },
 };

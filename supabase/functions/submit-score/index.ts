@@ -487,6 +487,85 @@ var PIECES = {
     R: 18,
     lane: 36,
     turns: 3
+  },
+  // « Courbe » (0.9.2) : une rampe dont le profil se courbe PROGRESSIVEMENT vers le haut. Plate à l'entrée (elle se raccorde à une route
+  // plate sans cassure), de plus en plus raide ensuite : h(t) = rise · t² (Bézier quadratique, point de contrôle au ras du sol à l'entrée).
+  // Pente en sortie = 2·rise / longueur ; parcourue à l'envers, elle descend et s'aplatit à l'arrivée (atterrissage en douceur).
+  crv05: {
+    label: "Courbe \xB7 inclinaison \xBD",
+    kind: "line",
+    size: 1,
+    rise: 0.5,
+    curv: 1
+  },
+  crv1: {
+    label: "Courbe \xB7 inclinaison 1",
+    kind: "line",
+    size: 1,
+    rise: 1,
+    curv: 1
+  },
+  crv2: {
+    label: "Courbe \xB7 inclinaison 2",
+    kind: "line",
+    size: 1,
+    rise: 2,
+    curv: 1
+  },
+  crv4: {
+    label: "Courbe \xB7 inclinaison 4",
+    kind: "line",
+    size: 1,
+    rise: 4,
+    curv: 1
+  },
+  // Pièces à 90° (0.9.2) : la route bascule autour de son axe jusqu'à un plan VERTICAL (route « sur le côté »).
+  // La gravité ne change pas : à vitesse insuffisante la voiture glisse le long du plan et tombe par le bord (pas de bordures).
+  // `side` : 1 transition, 2 ligne droite (l'appui vient en partie de la vitesse, voir physics.js) ; `pivot` : côté du plan (-1 gauche, 1 droite) ;
+  // `below` : niveaux réservés SOUS la pièce (la moitié basse du plan descend de 9 m : la pièce ne se pose donc pas au niveau 0 ou 1).
+  rollL: {
+    label: "Transition c\xF4t\xE9 \u21B0",
+    kind: "ribbon",
+    size: 1,
+    rise: 0,
+    clearance: 2,
+    below: 2,
+    side: 1,
+    pivot: -1,
+    noRails: true
+  },
+  rollR: {
+    label: "Transition c\xF4t\xE9 \u21B1",
+    kind: "ribbon",
+    size: 1,
+    rise: 0,
+    clearance: 2,
+    below: 2,
+    side: 1,
+    pivot: 1,
+    noRails: true
+  },
+  sideL: {
+    label: "Ligne droite c\xF4t\xE9 \u21B0",
+    kind: "ribbon",
+    size: 1,
+    rise: 0,
+    clearance: 2,
+    below: 2,
+    side: 2,
+    pivot: -1,
+    noRails: true
+  },
+  sideR: {
+    label: "Ligne droite c\xF4t\xE9 \u21B1",
+    kind: "ribbon",
+    size: 1,
+    rise: 0,
+    clearance: 2,
+    below: 2,
+    side: 2,
+    pivot: 1,
+    noRails: true
   }
 };
 var RING_R = 7;
@@ -558,7 +637,16 @@ var PIECE_ORDER = [
   "cvBigL05",
   "cvBigL1",
   "cvBigL2",
-  "cvBigL4"
+  "cvBigL4",
+  // 0.9.2 (à la suite : ne jamais réordonner)
+  "crv05",
+  "crv1",
+  "crv2",
+  "crv4",
+  "rollL",
+  "rollR",
+  "sideL",
+  "sideR"
 ];
 var SURFACES = {
   "": {
@@ -838,11 +926,11 @@ function flagAllowed(type, flag, tile = null, val = 0) {
   if (flag === "v") return true;
   if (flag === "th") return p.kind !== "ring";
   if (p.kind === "ring" || p.kind === "fork") return false;
-  if (flag === "nb") return lineLike && !p.special || p.kind === "ribbon" && !type.startsWith("tube");
+  if (flag === "nb") return !p.noRails && (lineLike && !p.special || p.kind === "ribbon" && !type.startsWith("tube"));
   if (flag === "tn") return lineLike && !p.special && !(tile && (tile.v || tile.cp || tile.tb));
   if (flag === "mv") return (lineLike || p.kind === "area") && !p.special && !(tile && (tile.v || tile.cp || tile.tb));
   if (flag === "cp") {
-    if (!(lineLike && !p.special && !p.rise) || tile && (tile.mv || tile.tn || tile.tb)) return false;
+    if (!((lineLike || p.kind === "area") && !p.special && !p.rise) || tile && (tile.mv || tile.tn || tile.tb)) return false;
     if (val === 2) return p.kind === "line" && !(tile && tile.v);
     return true;
   }
@@ -854,6 +942,7 @@ function cpKind(tile) {
   if (P.special === "checkpoint") return P.kind === "ring" ? "ring" : "gate";
   if (tile.cp === 2 && P.kind === "line") return "ring";
   if (tile.cp === 1 && (P.kind === "line" || P.kind === "arc")) return "gate";
+  if (tile.cp === 1 && P.kind === "area") return "pad";
   return null;
 }
 var MOVER = {
@@ -1065,8 +1154,8 @@ function sampleLocal(tile, lx, lz, out) {
     let t = (half - lz) / len;
     t = t < 0 ? 0 : t > 1 ? 1 : t;
     out.d = lx;
-    out.h = base + rise * t;
-    const k = rise / len;
+    out.h = base + (p.curv ? rise * t * t : rise * t);
+    const k = (p.curv ? 2 * t : 1) * rise / len;
     const inv = 1 / Math.sqrt(1 + k * k);
     out.ny = inv;
     out.nz = k * inv;
@@ -1128,18 +1217,16 @@ function forkSample(p, lx, lz, out) {
     out.d = 0;
     out.gx = 1;
     out.gz = 0;
-    out.branch = Math.abs(da) <= Math.abs(db2) ? 0 : 1;
   } else if (Math.abs(da) <= Math.abs(db2)) {
     out.d = da;
     out.gx = 1;
     out.gz = 0;
-    out.branch = 0;
   } else {
     out.d = db2;
     out.gx = cb;
     out.gz = slope * cb;
-    out.branch = 1;
   }
+  out.branch = Math.abs(da) <= ROAD_HALF ? 0 : 1;
 }
 
 // js/ribbons.js
@@ -1246,6 +1333,22 @@ function build(tile) {
           o.hw = o.wrap ? Math.PI / kcMax : ROAD_HALF;
         },
         len: 2 * half
+      };
+    }
+    if (P.side) {
+      const m = P.pivot, roll = P.side === 1;
+      return {
+        minU: 0.5,
+        pos(u, o) {
+          const f = roll ? Math.PI / 2 * smooth(u) : Math.PI / 2;
+          o.x = 0;
+          o.y = base;
+          o.z = half - 2 * half * u;
+          o.nx = m * Math.sin(f);
+          o.ny = Math.cos(f);
+          o.nz = 0;
+        },
+        len: roll ? 2 * half * 1.6 : 2 * half
       };
     }
     if (tile.t === "cork" || tile.t === "corkL") {
@@ -1442,7 +1545,7 @@ function centerlineLocal(tile, n) {
       const t = i / n;
       pts.push([
         0,
-        base + rise * t,
+        base + rise * (p.curv ? t * t : t),
         half - 2 * half * t,
         0
       ]);
@@ -1670,7 +1773,40 @@ var DECO_ORDER = [
   "trafficCone",
   "tireStack",
   "flagPole",
-  "grandstand"
+  "grandstand",
+  // 0.9.2 : lumières (vraies lumières, de la couleur de l'objet), véhicules, Noël, Halloween
+  "searchlight",
+  "spotlight",
+  "lanternPost",
+  "lanternHang",
+  "streetLamp",
+  "plane",
+  "biplane",
+  "helicopter",
+  "bus",
+  "truck",
+  "locomotive",
+  "sedan",
+  "ufo",
+  "sailboat",
+  "xmasTree",
+  "snowman",
+  "gift",
+  "candyCane",
+  "xmasStar",
+  "wreath",
+  "sleigh",
+  "reindeer",
+  "gingerHouse",
+  "pumpkin",
+  "ghost",
+  "tombstone",
+  "bats",
+  "witchHat",
+  "cauldron",
+  "spookyTree",
+  "hauntedHouse",
+  "skull"
 ];
 
 // js/track.js
@@ -1711,6 +1847,7 @@ var DECORS = {
   }
 };
 var WATER_DROP = 0.35;
+var boatDrop = (along) => WATER_DROP * (1 - Math.max(0, Math.min(1, along || 0)));
 var COLOR_KEYS = [
   "road",
   "line",
@@ -1791,12 +1928,13 @@ var Track = class _Track {
   static range(t) {
     const p = PIECES[t.t];
     const h = p.rise + Math.max(p.clearance || 0, t.cp === 2 || t.tb ? 2 : t.cp === 1 ? 1 : 0);
+    const below = p.below || 0;
     if (t.v) return [
       t.l - h,
-      t.l
+      t.l + below
     ];
     return [
-      t.l,
+      t.l - below,
       t.l + h + (t.mv === 1 ? Math.ceil(moverParams(t, MP).amp) : 0)
     ];
   }
@@ -1833,7 +1971,7 @@ var Track = class _Track {
       p2: 0
     };
     tile.v = t.v && flagAllowed(type, "v") ? 1 : 0;
-    tile.nb = t.nb && flagAllowed(type, "nb") ? 1 : 0;
+    tile.nb = PIECES[type].noRails || t.nb && flagAllowed(type, "nb") ? 1 : 0;
     tile.tn = t.tn && flagAllowed(type, "tn", tile) ? 1 : 0;
     tile.mv = t.mv && !tile.v && flagAllowed(type, "mv", tile) ? (t.mv | 0) & 3 : 0;
     if (tile.mv) {
@@ -2148,7 +2286,8 @@ var Track = class _Track {
       out.p = tile.p || 0;
       out.lx = L.lx;
       out.lz = L.lz;
-      if (tile.s === "water" || tile.s === "boat") out.h += WATER_DROP;
+      if (tile.s === "water") out.h += WATER_DROP;
+      else if (tile.s === "boat" && (PIECES[tile.t].kind === "line" || PIECES[tile.t].kind === "arc")) out.h += boatDrop(S.along);
     }
     return out;
   }
@@ -2215,7 +2354,8 @@ var Track = class _Track {
     out.p = sp || 0;
     out.lx = L.lx;
     out.lz = L.lz;
-    if (sf === "water" || sf === "boat") out.h -= WATER_DROP;
+    if (sf === "water") out.h -= WATER_DROP;
+    else if (sf === "boat" && (p.kind === "line" || p.kind === "arc")) out.h -= boatDrop(S.along);
     return out.h;
   }
   // Pièces en mouvement : 1 = ascenseur (monte puis redescend), 2 = glissière (se décale sur son côté droit et revient),
@@ -4771,8 +4911,12 @@ var GLIDE = {
   trim: 0.08,
   up: 0.34,
   down: -0.16,
-  turn: 0.95
+  turn: 1.7,
+  turnSpeed: 9,
+  turnRamp: 7
 };
+var SIDE_AERO = 0.025;
+var SIDE_HOLD = 25 / (22 * 22);
 var clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 var L1 = {
   lx: 0,
@@ -5006,6 +5150,7 @@ var CarPhysics = class {
     this.landQ = "";
     this.aoa = 0.08;
     this.glidePitch = 0;
+    this.bankT = 0;
     this.rib = null;
     this.gravMul = 1;
     this.vehicle = "car";
@@ -5325,7 +5470,7 @@ var CarPhysics = class {
         traction = 0.7;
         vmaxK = 0.45;
         extraDrag = 5;
-      } else if (mod === "water" || mod === "boat") {
+      } else if (mod === "water" || mod === "boat" && this.vehicle === "boat") {
         if (this.vehicle === "boat") {
           grip = 0.85;
           traction = 1;
@@ -5976,7 +6121,8 @@ var CarPhysics = class {
     v.x += (L4 * lx - D * dx) * dt;
     v.y += (L4 * ly - D * dy - this.g * gu) * dt;
     v.z += (L4 * lz - D * dz) * dt;
-    const yr = this.steer * G.turn * Math.min(1, hv / 15);
+    this.bankT = (this.bankT || 0) + (this.steer - (this.bankT || 0)) * Math.min(1, dt * G.turnRamp);
+    const yr = this.bankT * G.turn * Math.min(1, hv / G.turnSpeed);
     const a = -yr * gu * dt, c = Math.cos(a), s = Math.sin(a);
     const vx = v.x * c + v.z * s, vz = v.z * c - v.x * s;
     v.x = vx;
@@ -6151,8 +6297,9 @@ var CarPhysics = class {
       }
     }
     const g = this.g * this.gSign;
+    const hold = PIECES[tile.t].side ? Math.min(1, SIDE_HOLD * R.vs * R.vs / Math.max(1, this.g)) : 0;
     R.vs -= g * B2.e1y * dt;
-    R.vd -= g * B2.e2y * dt;
+    R.vd -= g * B2.e2y * dt * (1 - hold);
     R.psi -= R.dir * kg * R.vs * dt;
     const mod = tile.s, f = tileParam(tile) / 100;
     const C3 = surfaceCoeffs(mod, f);
@@ -6186,9 +6333,11 @@ var CarPhysics = class {
     if (!PLATES[mod] && mod !== "spring" && mod !== "flip") this.plateLock = "";
     R.vs += beltE1 - this.beltS;
     this.beltS = beltE1;
-    const press = R.vs * R.vs * kn + R.vd * R.vd * kc + g * F.ny;
+    const sidePiece = PIECES[tile.t].side;
+    let press = R.vs * R.vs * kn + R.vd * R.vd * kc + g * F.ny;
+    if (sidePiece) press += SIDE_AERO * R.vs * R.vs * Math.sqrt(Math.max(0, 1 - F.ny * F.ny));
     const gAbs = this.g;
-    const lPiece = tile.t === "wall" || tile.t === "ramp90" || tile.t === "crest90";
+    const lPiece = tile.t === "wall" || tile.t === "ramp90" || tile.t === "crest90" || !!sidePiece;
     const guided = tile.t === "twist";
     const load = lPiece ? clamp(press / gAbs, 0, 1.6) : press > 0 || guided ? 1 : 0;
     this.press = press;
@@ -6753,7 +6902,6 @@ var Autopilot = class {
       const fx2 = -Math.sin(phys.yaw), fz2 = -Math.cos(phys.yaw);
       const tx2 = tq2[0] - p.x, tz2 = tq2[2] - p.z;
       const ang2 = Math.atan2(fx2 * tz2 - fz2 * tx2, fx2 * tx2 + fz2 * tz2);
-      const above = p.y - (tq2[1] + 3);
       const hv = Math.max(8, Math.hypot(phys.vel.x, phys.vel.z));
       const wantVy = (tq2[1] + 3 - p.y) / (Math.max(10, Math.hypot(tx2, tz2)) / hv);
       let landK = -1;
@@ -7119,7 +7267,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/replay.js
-var PHYS_VER = 21;
+var PHYS_VER = 22;
 var MAX_REPLAY_STEPS = 120 * 600;
 function decodeInputs(b64) {
   const bin = atob(b64);

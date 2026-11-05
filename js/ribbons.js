@@ -115,6 +115,22 @@ function build(tile) {
         len: 2 * half,
       };
     }
+    if (P.side) {
+      // Route « sur le côté » : la chaussée bascule autour de SON AXE (comme la vrille, dont c'est la première moitié) jusqu'à un plan
+      // vertical : normale = (m·sin f, cos f, 0), m = -1 (plan à gauche, ↰) ou +1 (↱). L'axe reste fixe : la tangente ne tourne pas,
+      // la voiture n'est pas déportée par la bascule. La moitié basse du plan descend de 9 m sous le niveau de la pièce (réservé : `below`).
+      // rollX : f va de 0 (route plate) à 90° ; sideX : plan vertical sur toute la pièce.
+      const m = P.pivot, roll = P.side === 1;
+      return {
+        minU: 0.5,      // comme la vrille : jamais lâchée par l'appui (c'est la vitesse, via SIDE_HOLD, qui décide si on tient ou si on glisse)
+        pos(u, o) {
+          const f = roll ? (Math.PI / 2) * smooth(u) : Math.PI / 2;
+          o.x = 0; o.y = base; o.z = half - 2 * half * u;
+          o.nx = m * Math.sin(f); o.ny = Math.cos(f); o.nz = 0;
+        },
+        len: roll ? 2 * half * 1.6 : 2 * half,      // (plus de tronçons de maillage pour la bascule)
+      };
+    }
     if (tile.t === 'cork' || tile.t === 'corkL') {
       // Tire-bouchon : hélice autour d'un axe parallèle à la route, la chaussée tournée
       // vers l'axe. Un tour complet ; la courbure plaque la voiture si elle va assez vite.
@@ -253,7 +269,7 @@ export function centerlineLocal(tile, n) {
     const rise = p.rise * LEVEL_H;
     for (let i = 0; i <= n; i++) {
       const t = i / n;
-      pts.push([0, base + rise * t, half - 2 * half * t, 0]);
+      pts.push([0, base + rise * (p.curv ? t * t : t), half - 2 * half * t, 0]);
     }
   }
   // Pièce à l'envers : géométrie retournée autour de son niveau.

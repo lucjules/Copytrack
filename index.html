@@ -45,7 +45,7 @@
         <label class="wl-field" id="wl-pw2-wrap"><span>Confirmer le mot de passe</span>
           <input id="wl-pw2" name="password2" type="password" maxlength="72" autocomplete="new-password">
         </label>
-        <label class="wl-check" id="wl-keep-wrap"><input type="checkbox" id="wl-keep" checked><span>Reprendre la progression de cet appareil (records, circuits, pièces) dans ce compte</span></label>
+        <label class="wl-check" id="wl-keep-wrap"><input type="checkbox" id="wl-keep" checked><span>Reprendre la progression de cet appareil</span></label>
         <p class="wl-error" id="wl-error" role="alert" aria-live="polite"></p>
         <button class="btn big primary" id="wl-submit" type="submit">Jouer</button>
       </form>
@@ -135,11 +135,11 @@
       <label><span>Qualité graphique</span>
         <select id="opt-quality">
           <option value="auto">Automatique (détectée sur ta machine)</option>
-          <option value="ultra">Ultra (PC puissants : définition x2, ombres 4096, reflets du ciel)</option>
+          <option value="ultra">Ultra (PC puissants)</option>
           <option value="high">Haute (ombres, pleine définition)</option>
           <option value="medium">Moyenne (ombres, définition réduite)</option>
           <option value="low">Basse (sans ombres, décor allégé)</option>
-          <option value="potato">Potato (très vieux PC : sans ombres, sans décor, définition réduite)</option>
+          <option value="potato">Potato (très vieux PC)</option>
         </select>
       </label>
       <p class="meta" id="opt-quality-info"></p>
@@ -175,7 +175,7 @@
         <button class="btn subtle" data-action="help">Aide-mémoire</button>
         <button class="btn subtle" data-action="reset-keys">Rétablir par défaut</button>
       </div>
-      <p class="bind-hint" id="bind-hint">Clique sur une case puis appuie sur la touche voulue (Échap pour annuler, × pour vider).</p>
+      <p class="bind-hint" id="bind-hint">Clique une case, puis la touche voulue.</p>
       <div class="panel bind-list" id="bind-list"></div>
     </div>
   </section>
@@ -187,7 +187,7 @@
       <h2>Garage</h2>
       <b id="garage-coins" class="coins"></b>
     </header>
-    <p class="side-note">Tout est purement visuel : les performances du véhicule ne changent jamais.</p>
+    <p class="side-note">Purement visuel.</p>
     <div class="tabs" id="garage-tabs"></div>
     <div id="garage-list" class="garage-list"></div>
     <div id="garage-buy" class="garage-buy hidden">
@@ -226,7 +226,7 @@
     </div>
     <div id="hud-center" class="hud-center"></div>
     <div id="hud-msg" class="hud-msg"></div>
-    <div id="hud-hint" class="hud-hint">↑ ↓ ← → ou ZQSD · freiner en virage : dérapage · R : dernier checkpoint · Entrée : recommencer · C : caméra · Échap : pause</div>
+    <div id="hud-hint" class="hud-hint">↑ ↓ ← → · frein en virage : dérapage · R : checkpoint · Entrée : recommencer · C : caméra · Échap : pause</div>
   </div>
 
   <!-- Pause -->
@@ -261,7 +261,7 @@
       </div>
     </div>
   </div>
-  <div id="replay-bar" class="replay-bar hidden"><b>REPLAY</b><span class="rs">▶ ×1</span><span class="rh">Espace : pause · ← → : vitesse · C : caméra (TV, orbite) · Entrée : recommencer · Échap : quitter</span></div>
+  <div id="replay-bar" class="replay-bar hidden"><b>REPLAY</b><span class="rs">▶ ×1</span><span class="rh">Espace : pause · ← → : vitesse · C : caméra · Entrée : recommencer · Échap : quitter</span></div>
 
   <!-- Éditeur -->
   <div id="editor" class="hidden">

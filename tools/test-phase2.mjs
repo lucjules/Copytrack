@@ -46,11 +46,17 @@ test('Ligne droite : inclinaison plat / ½ / 1 / 2 / 4 ; les anciennes Pente, Pe
 });
 test('Virages : serré / grand / très grand plat et relevé ; une combinaison qui n’existe pas est repoussée', () => {
   assert.equal(PIECES.hugecurve.size, 3); assert.equal(PIECES.hugecurve.rise, 0); assert.equal(PIECES.hugecurve.kind, 'arc');
-  assert.equal(resolve('turn', { size: 'l', bank: '0' }), 'hugecurve');
-  assert.equal(resolve('turn', { size: 's', bank: '1' }), null);
-  assert.deepEqual([...validValues('turn', { size: 's', bank: '0' }, 'bank')], ['0']);
-  assert.equal(withTrait('turn', { size: 's', bank: '0' }, 'bank', '1'), 'bank');                      // « relevé » : on prend le plus proche
-  assert.equal(withTrait('turn', { size: 'l', bank: '1' }, 'size', 's'), 'curve');
+  const flat = { incl: '0', dir: 'R' };
+  assert.equal(resolve('turn', { size: 'l', bank: '0', ...flat }), 'hugecurve');
+  assert.equal(resolve('turn', { size: 's', bank: '1', ...flat }), null);
+  assert.deepEqual([...validValues('turn', { size: 's', bank: '0', ...flat }, 'bank')], ['0']);
+  assert.equal(withTrait('turn', { size: 's', bank: '0', ...flat }, 'bank', '1'), 'bank');                      // « relevé » : on prend le plus proche
+  assert.equal(withTrait('turn', { size: 'l', bank: '1', ...flat }, 'size', 's'), 'curve');
+  // 0.9.2 : l'Inclinaison du virage fonctionne comme celle de la ligne droite (plat, ½, 1, 2, 4) ; le sens ne compte que s'il monte.
+  assert.deepEqual(FAMILIES.turn.traits.find((t) => t.id === 'incl').values.map((v) => v[0]), FAMILIES.straight.traits[0].values.map((v) => v[0]));
+  assert.equal(resolve('turn', { size: 'm', bank: '0', incl: '2', dir: 'L' }), 'cvBigL2');
+  assert.deepEqual([...validValues('turn', { size: 's', bank: '0', incl: '0', dir: 'R' }, 'dir')], ['R']);
+  assert.deepEqual([...validValues('turn', { size: 's', bank: '0', incl: '1', dir: 'R' }, 'dir')].sort(), ['L', 'R']);
 });
 test('Looping : orientation × taille × 1 à 3 boucles = 12 pièces, toutes à lane ≥ 12·boucles', () => {
   const F = FAMILIES.loop;
@@ -65,11 +71,32 @@ test('Looping : orientation × taille × 1 à 3 boucles = 12 pièces, toutes à 
   }
   assert.equal(PIECES.loopTriple.size, 4);
 });
-test('Courbe : 16 pièces (droite / gauche × serrée / grande × ½, 1, 2, 4), rise = inclinaison', () => {
-  assert.equal(Object.keys(FAMILIES.courbe.members).length, 16);
-  for (const [type, tr] of Object.entries(FAMILIES.courbe.members)) {
+test('Virage incliné : 16 pièces (droite / gauche × serré / grand × ½, 1, 2, 4), rise = inclinaison', () => {
+  const inc = Object.entries(FAMILIES.turn.members).filter(([, tr]) => tr.incl !== '0');
+  assert.equal(inc.length, 16);
+  for (const [type, tr] of inc) {
     assert.equal(PIECES[type].kind, 'arc'); assert.equal(PIECES[type].rise, +tr.incl);
     assert.equal(PIECES[type].size, tr.size === 's' ? 1 : 2); assert.equal(PIECES[type].mirror === -1, tr.dir === 'L');
+  }
+});
+test('Courbe (0.9.2) : 4 rampes dont le profil se courbe progressivement (h = rise·t²), plates à l’entrée', () => {
+  assert.deepEqual(Object.keys(FAMILIES.courbe.members), ['crv05', 'crv1', 'crv2', 'crv4']);
+  for (const [type, tr] of Object.entries(FAMILIES.courbe.members)) {
+    const P = PIECES[type]; assert.equal(P.kind, 'line'); assert.equal(P.rise, +tr.incl); assert.ok(P.curv);
+    const t = tile({ t: type, l: 1 }), o = {}, half = P.size * HALF;
+    let prevH = -Infinity, prevSlope = -1;
+    for (let i = 0; i <= 24; i++) {
+      const u = i / 24;
+      sampleLocal(t, 0, half - 2 * half * u, o);
+      assert.ok(Math.abs(o.h - (baseY(t) + P.rise * LEVEL_H * u * u)) < 1e-6, 'profil en t²');
+      assert.ok(o.h >= prevH - 1e-9, 'monte toujours');
+      const slope = o.nz / o.ny;                                           // pente le long de la route = tan(inclinaison)
+      assert.ok(slope >= prevSlope - 1e-9, 'de plus en plus raide');
+      assert.ok(Math.abs(Math.hypot(o.nx, o.ny, o.nz) - 1) < 1e-9, 'normale unitaire');
+      prevH = o.h; prevSlope = slope;
+    }
+    sampleLocal(t, 0, half, o); assert.ok(Math.abs(o.nz) < 1e-9 && Math.abs(o.ny - 1) < 1e-9, 'entrée parfaitement plate : se raccorde sans cassure');
+    sampleLocal(t, 0, -half, o); assert.ok(Math.abs(o.nz / o.ny - 2 * P.rise * LEVEL_H / (2 * half)) < 1e-9, 'pente de sortie = 2·rise / longueur');
   }
 });
 test('PIECE_ORDER : les anciens index n’ont pas bougé (sérialisation)', () => {
@@ -139,7 +166,7 @@ test('options impossibles refusées : checkpoint sur pente, anneau à l’envers
 });
 
 console.log('Courbes montantes et pièces paramétriques');
-const CURVES = Object.keys(FAMILIES.courbe.members);
+const CURVES = Object.entries(FAMILIES.turn.members).filter(([, tr]) => tr.incl !== '0').map(([type]) => type);
 for (const type of CURVES) {
   test(`${type} : l’altitude monte de ${PIECES[type].rise} niveau(x) de l’entrée à la sortie, normale unitaire, bords cohérents avec le maillage`, () => {
     const P = PIECES[type], t = tile({ t: type, l: 1 }), half = P.size * HALF, mir = P.mirror < 0 ? -1 : 1;

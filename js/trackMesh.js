@@ -5,9 +5,10 @@ import {
   CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T,
 } from './constants.js';
 import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, isRibbonKind, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed } from './pieces.js';
-import { WATER_DROP } from './track.js';
+import { WATER_DROP, boatDrop } from './track.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
-import { buildDecoInto, createPlaque } from './decos.js';
+import { buildDecoInto, createPlaque, decoColor } from './decos.js';
+import { LIGHT_DECOS } from './decoData.js';
 import { isObstacle } from './obstacles.js';
 import { createObstacleMesh } from './obstacleMesh.js';
 
@@ -48,7 +49,7 @@ export const SURFACE_STYLE = {
   gravity: { road: ['#233a3a', '#294444'], line: '#a7ffe0' },
   moto: { road: ['#3b2e22', '#44352a'], line: '#ff9f1c' },
   water: { road: ['#1f6fb2', '#2479bf'], line: '#9fe3ff' },
-  boat: { road: ['#1f6fb2', '#2479bf'], line: '#3fd0ff' },      // la plaque bateau est posée sur l'eau
+  boat: { road: ['#5b7b8a', '#668898'], line: '#cdeeff' },      // plaque bateau : cale de mise à l'eau (ni eau ni route), voir roadFn
   glider: { road: ['#2f3346', '#353a50'], line: '#f5f5f5' },
   flip: { road: ['#3a1f3f', '#44244a'], line: '#ff4fd8' },
   conveyor: { road: ['#2a2b30', '#303138'], line: '#ffd23e' },
@@ -100,6 +101,9 @@ export const THEME_SWATCH = ['#343950', '#487b43', '#c2a06a', '#656361'];
 const _white = new THREE.Color('#ffffff');
 const mix = (hex, k, to = _white) => '#' + new THREE.Color(hex).lerp(to, k).getHexString();
 
+const smoothStep = (u) => u * u * (3 - 2 * u);
+const mixHex = (a, b, k) => '#' + new THREE.Color(a).lerp(new THREE.Color(b), k).getHexString();
+
 function styleFor(tile) {
   const s = tile.s || '';
   const base = SURFACE_STYLE[s] || SURFACE_STYLE[''];
@@ -112,6 +116,8 @@ function styleFor(tile) {
     accent: accent || PALETTE.boost,
     pal: null,
   };
+  // Plaque bateau : de l'eau (entrée, un peu plus bas) au sol (sortie) : la couleur de la chaussée passe du bleu de l'eau au gris de la cale.
+  if (s === 'boat') style.roadFn = (i, n) => mixHex('#2a79bd', i % 2 ? base.road[1] : base.road[0], smoothStep(Math.min(1, (i + 0.5) / Math.max(1, n * 0.6))));
   // Thème : remplace l'asphalte (et les bordures d'origine) ; un revêtement de jeu garde sa propre chaussée pour rester lisible.
   const th = THEME_STYLE[tile.th | 0];
   if (th) {
@@ -187,6 +193,15 @@ function ribbonStrip(tile, count) {
   return out;
 }
 
+// Plaque bateau : bande rééchantillonnée (12 tronçons au moins) dont l'altitude descend de boatDrop(along) sous la route.
+function boatRamp(strip, tile) {
+  const p = PIECES[tile.t];
+  let fr = strip;
+  if (p.kind === 'line' && strip.length < 13) fr = lineStrip(0, p.size * HALF, -p.size * HALF, baseY(tile), baseY(tile) + p.rise * LEVEL_H, 12);
+  const n = fr.length - 1;
+  return fr.map((f, i) => ({ ...f, p: [f.p[0], f.p[1] - boatDrop(i / n), f.p[2]] }));
+}
+
 // Liste des bandes de route d'une pièce (coordonnées locales).
 export function stripsFor(tile) {
   const p = PIECES[tile.t];
@@ -214,6 +229,12 @@ export function stripsFor(tile) {
     return [fr];
   }
   const half = p.size * HALF;
+  if (p.curv) {
+    // Courbe : h = rise · t² (voir sampleLocal) ; 12 tronçons pour que l'arc reste lisse.
+    const fr = [], n = 12, rise = p.rise * LEVEL_H;
+    for (let i = 0; i <= n; i++) { const t = i / n; fr.push(flatFrame(0, base + rise * t * t, half - 2 * half * t, 0, -1)); }
+    return [fr];
+  }
   return [lineStrip(0, half, -half, base, base + p.rise * LEVEL_H, 4)];
 }
 
@@ -236,10 +257,10 @@ function sweep(gb, frames, style, nb, drop = 0) {
       let col;
       switch (prof[j].k) {
         case 'rail': col = i % 2 ? style.railA : style.railB; break;
-        case 'road': col = style.road[i % 2]; break;
+        case 'road': col = style.roadFn ? style.roadFn(i, n) : style.road[i % 2]; break;
         case 'line': col = style.line; break;
         case 'edge': col = i % 2 ? style.railA : style.railB; break;
-        case 'dash': col = i % 2 ? style.road[i % 2] : style.line; break;
+        case 'dash': col = i % 2 ? (style.roadFn ? style.roadFn(i, n) : style.road[i % 2]) : style.line; break;
         default: col = (style.pal && style.pal[prof[j].k]) || PALETTE[prof[j].k];
       }
       gb.quad(A[j], A[j2], B[j2], B[j], col);
@@ -263,7 +284,7 @@ function sweep(gb, frames, style, nb, drop = 0) {
 // ---- Revêtements animés ------------------------------------------------------
 // Une nappe posée juste au-dessus de la chaussée ; le shader l'anime (eau qui ondule,
 // tapis qui défile dans le sens de sa poussée, verre qui scintille, neige qui pétille).
-export const FX_KIND = { water: 0, boat: 0, conveyor: 1, glass: 2, powder: 3 };
+export const FX_KIND = { water: 0, conveyor: 1, glass: 2, powder: 3 };
 const MOVO = {};
 const _S = {};
 function fxLayer(fx, frames, tile, kind, half = ROAD_HALF) {
@@ -529,7 +550,11 @@ function surfaceDecals(glow, frames, tile, area = false) {
       glow.quad(onFrame(f, -4, -3.4), onFrame(f, -3.2, -4), onFrame(f, 4, 3.4), onFrame(f, 3.2, 4), col);
     }
   } else if (s === 'boat') {
-    // Coque et vague
+    // Cale de mise à l'eau : stries en travers (de plus en plus espacées vers le sol), puis coque et vague.
+    for (let i = 0; i < 7; i++) {
+      const g = frameAt(frames, 0.04 + 0.13 * i);
+      bar(glow, g, -ROAD_HALF + 1.2, -0.14, ROAD_HALF - 1.2, 0.14, i < 3 ? '#8fd4f2' : '#aebfca');
+    }
     const f = frameAt(frames, 0.5);
     bar(glow, f, -2.6, -3.2, 2.6, -2.6, col);
     chevron(glow, f, 0, -4.2, 2.6, 0.6, 2.0, 0, col);
@@ -645,6 +670,27 @@ function gate(gb, glow, tile) {
   }
 }
 
+// Checkpoint posé sur une plateforme : quatre balises d'angle, un cadre lumineux au sol et un losange central. La plateforme
+// n'a pas de sens de route : un portique n'aurait pas de sens ici, toute la dalle valide le checkpoint.
+function checkpointPad(gb, glow, tile) {
+  const y = baseY(tile), color = PALETTE.checkpoint, c = HALF - 1.6, top = 5.2;
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      const x = sx * c, z = sz * c, r = 0.5;
+      gb.taper(x, z, y, y + top, 1.0, 1.0, 0.6, 0.6, color);
+      const tip = [x, y + top + 1.4, z], rg = [[x - r, y + top, z], [x, y + top, z - r], [x + r, y + top, z], [x, y + top, z + r]];
+      for (let i = 0; i < 4; i++) glow.tri(rg[i], rg[(i + 1) % 4], tip, color);
+    }
+  }
+  const o = HALF - 1.6, w = 0.7, ly = y + 0.05;
+  for (const [x0, z0, x1, z1] of [[-o, -o, o, -o + w], [-o, o - w, o, o], [-o, -o, -o + w, o], [o - w, -o, o, o]]) {
+    glow.quad([x0, ly, z1], [x1, ly, z1], [x1, ly, z0], [x0, ly, z0], color);
+  }
+  const f = { p: [0, y, 0], r: [1, 0, 0], u: [0, 1, 0], t: [0, 0, -1] };
+  ring(glow, f, 0, 0, 5.2, 0.7, color);
+  ring(glow, f, 0, 0, 2.6, 0.55, color);
+}
+
 // Tours encadrant un looping.
 function loopTowers(gb, glow, tile) {
   const P = PIECES[tile.t];
@@ -687,7 +733,7 @@ function pillarHeightAt(tile, lz, lx = 0) {
   if (p.kind !== 'line') return base;
   const half = p.size * HALF;
   const t = (half - lz) / (2 * half);
-  return base + p.rise * LEVEL_H * t;
+  return base + p.rise * LEVEL_H * (p.curv ? t * t : t);
 }
 
 export function tileMatrix(tile) {
@@ -754,7 +800,7 @@ function crossSweep(gb, glow, tile, style) {
 
 // ---- v1.5 : bifurcation ---------------------------------------------------------
 const FORK_BELOW = 0.08;   // m
-function forkMesh(gb, glow, tile, style) {
+function forkMesh(gb, glow, tile, style, fx = null) {
   const P = PIECES[tile.t];
   // 2e revêtement : la voie déportée (branche 1) peut avoir le sien ; sinon elle garde celui de la pièce.
   const style2 = tile.s2 ? styleFor({ ...tile, s: tile.s2 === '-' ? '' : tile.s2, p: tile.p2 }) : style;
@@ -797,6 +843,16 @@ function forkMesh(gb, glow, tile, style) {
   railAlong(branches[1], m, 0);
   railAlong(branches[0], m, tSplit);
   railAlong(branches[1], -m, tSplit);
+  // Revêtements : chaque voie reçoit les siens, centrés sur SA ligne centrale. Ceux de la voie déportée ne sont dessinés que là où
+  // elle est séparée de la voie directe (sinon ils passeraient sous / déborderaient sur la voie directe).
+  const sA = tile.s || '', sB = tile.s2 === '-' ? '' : (tile.s2 || sA), pB = tile.s2 ? tile.p2 : tile.p;
+  if (sA) { if (fx && FX_KIND[sA] !== undefined) fxLayer(fx, branches[0], tile, FX_KIND[sA]); surfaceDecals(glow, branches[0], tile); }
+  if (sB) {
+    const tB = { ...tile, s: sB, p: pB };
+    if (fx && FX_KIND[sB] !== undefined) fxLayer(fx, branches[1], tB, FX_KIND[sB]);
+    const apart = branches[1].filter((fr) => fr.t >= tSplit);
+    if (apart.length >= 3) surfaceDecals(glow, apart, tB);
+  }
   // Flèches lumineuses indiquant les deux voies.
   for (const [b, rot] of [[0, 0], [1, -m * 0.5]]) {
     const f = frameAt(branches[b], 0.3);
@@ -848,7 +904,7 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
   } else if (p.kind === 'ring') {
     ringMesh(gb, glow, tile);
   } else if (p.kind === 'fork') {
-    forkMesh(gb, glow, tile, styleFor(tile));
+    forkMesh(gb, glow, tile, styleFor(tile), fx);
   } else if (tile.t === 'tube' || tile.t === 'tubeIn' || tile.t === 'tubeMid') {
     crossSweep(gb, glow, tile, styleFor({ s: '', th: tile.th, col: tile.col }));
     // Revêtement d'une section de tube : bandes lumineuses au fond.
@@ -856,8 +912,10 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
   } else {
     const style = styleFor(tile);
     const strips = stripsFor(tile);
-    for (const strip of strips) {
-      sweep(gb, strip, style, tile.nb, s === 'water' || s === 'boat' ? WATER_DROP : 0);
+    for (let strip of strips) {
+      // Plaque bateau : une très légère montée, de l'eau (entrée, 35 cm plus bas) jusqu'au sol (sortie). Même hauteur que la physique.
+      if (s === 'boat' && (p.kind === 'line' || p.kind === 'arc')) strip = boatRamp(strip, tile);
+      sweep(gb, strip, style, tile.nb, s === 'water' ? WATER_DROP : 0);
       if (fxKind !== undefined) fxLayer(fx, strip, tile, fxKind);
       if (s) surfaceDecals(glow, strip, tile);
       if (tile.tn && !tile.v) tunnel(gb, glow, strip);
@@ -875,6 +933,7 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
     gate(gb, glow, tile);
     gb.setMatrix(m); glow.setMatrix(m);
   } else if ((ck === 'ring' || tile.tb) && p.kind !== 'ring') ringMesh(gb, glow, tile);       // anneau (checkpoint aérien ou turbo) posé en option sur une route
+  else if (ck === 'pad') checkpointPad(gb, glow, tile);       // checkpoint sur une plateforme : balise au sol (pas de sens de route)
   else if ((p.special === 'start' || p.special === 'finish' || ck === 'gate') && p.kind !== 'ring') gate(gb, glow, tile);
   if (p.kind === 'loop') loopTowers(gb, glow, tile);
 
@@ -911,6 +970,11 @@ export function createTrackMaterials() {
 // Une vue d'éditeur met showAllDecos à true : on y voit toujours tout.
 let hideDecos = false;
 export function setHideDecos(v) { hideDecos = !!v; }
+// Nombre de vraies lumières (PointLight / SpotLight) que les décorations lumineuses peuvent allumer en même temps : les plus proches de la
+// caméra. Fixé par le profil de qualité (0 = faisceaux visibles seulement). Le nombre de lumières de la scène ne change jamais en cours de
+// course (pas de recompilation des shaders) : seul leur réglage change à chaque image.
+let lightBudget = { point: 4, spot: 2 };
+export function setLightBudget(b) { lightBudget = b || { point: 0, spot: 0 }; }
 
 export class TrackView {
   constructor(track, materials, { showAllDecos = false } = {}) {
@@ -922,6 +986,8 @@ export class TrackView {
     this.obstacles = [];
     this.movers = [];
     this.glassGroups = [];
+    this.lamps = [];
+    this.pool = null;
     this.rebuild();
   }
 
@@ -974,8 +1040,12 @@ export class TrackView {
         const o = createObstacleMesh(d, this.materials);
         this.group.add(o);
         this.obstacles.push(o);
-      } else buildDecoInto(gb, glow, d);
+      } else {
+        buildDecoInto(gb, glow, d);
+        if (LIGHT_DECOS[d.k]) this._addLamp(d);
+      }
     }
+    this._initLightPool();
     if (!gb.empty) {
       const mesh = new THREE.Mesh(gb.build(), this.materials.solid);
       mesh.castShadow = true;
@@ -991,6 +1061,91 @@ export class TrackView {
       this.group.add(mesh);
     }
     this.builtVersion = this.track.version;
+  }
+
+  // ---- Décorations lumineuses (projecteurs, lanternes, lampadaires) -------------------------------------------------------------
+  // Chaque lampe a un groupe dynamique (faisceau tournant, halo) ; la lumière réelle vient d'un petit nombre de lumières partagées
+  // (voir lightBudget) attribuées à chaque image aux lampes les plus proches de la caméra. La couleur de la lumière suit celle de l'objet.
+  _addLamp(d) {
+    const L = LIGHT_DECOS[d.k];
+    const grp = new THREE.Group();
+    grp.position.set(d.x, d.y, d.z); grp.rotation.y = d.ry || 0; grp.scale.setScalar(d.s || 1);
+    grp.userData.lamp = true;
+    const col = new THREE.Color(decoColor(d) || L.color);
+    const lamp = { d, L, grp, col, head: null, mats: [], phase: ((d.x * 12.9898 + d.z * 78.233) % 6.283 + 6.283) % 6.283 };
+    const mat = (o) => { const m = new THREE.MeshBasicMaterial({ color: col.clone(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, ...o }); lamp.mats.push(m); return m; };
+    if (L.type === 'spot') {
+      const head = new THREE.Group(); head.position.y = L.y; grp.add(head);
+      const phi = Math.PI / 2 + L.tilt;
+      const cone = (r, len, op) => { const g = new THREE.ConeGeometry(r, len, 20, 1, true); g.translate(0, -len / 2, 0); g.rotateX(phi); return new THREE.Mesh(g, mat({ opacity: op })); };
+      const r = L.beam * Math.tan(L.angle);
+      head.add(cone(r, L.beam, 0.06), cone(r * 0.4, L.beam, 0.11));
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.75, 2.0, 12).rotateX(phi), new THREE.MeshStandardMaterial({ color: '#2f3247', roughness: 0.6 }));
+      barrel.position.set(0, Math.sin(L.tilt) * 0.7, -Math.cos(L.tilt) * 0.7);
+      barrel.userData.own = true;
+      head.add(barrel);
+      const lens = new THREE.Mesh(new THREE.CircleGeometry(0.5, 12).rotateX(phi - Math.PI / 2 + Math.PI), mat({ opacity: 0.95 }));
+      lens.position.set(0, Math.sin(L.tilt) * 1.55, -Math.cos(L.tilt) * 1.55);
+      head.add(lens);
+      lamp.head = head;
+    } else {
+      const halo = new THREE.Mesh(new THREE.SphereGeometry(L.type === 'point' && L.y > 6 ? 1.5 : 1.1, 10, 8), mat({ opacity: 0.12 }));
+      halo.position.set(d.k === 'streetLamp' ? 1.8 : 0, L.y - (d.k === 'streetLamp' ? 0.2 : d.k === 'lanternHang' ? 0.1 : 0), 0);
+      grp.add(halo);
+    }
+    this.group.add(grp);
+    this.lamps.push(lamp);
+  }
+
+  _initLightPool() {
+    this.pool = null;
+    if (!this.lamps || !this.lamps.length) return;
+    const b = lightBudget, pool = { points: [], spots: [] };
+    for (let i = 0; i < b.point; i++) { const l = new THREE.PointLight('#ffffff', 0, 40, 2); l.userData.pool = true; this.group.add(l); pool.points.push(l); }
+    for (let i = 0; i < b.spot; i++) {
+      const l = new THREE.SpotLight('#ffffff', 0, 120, 0.3, 0.55, 1.6);
+      l.userData.pool = true; this.group.add(l); this.group.add(l.target); pool.spots.push(l);
+    }
+    this.pool = pool;
+  }
+
+  // À appeler à chaque image : fait tourner les projecteurs et attribue les vraies lumières aux lampes les plus proches de pos.
+  updateLights(pos, t) {
+    if (!this.lamps || !this.lamps.length) return;
+    const near = { point: [], spot: [] };
+    for (const lamp of this.lamps) {
+      const { L, d, col } = lamp;
+      col.set(decoColor(d) || L.color);
+      for (const m of lamp.mats) m.color.copy(col);
+      const ang = L.spin ? L.spin * t + lamp.phase : 0;
+      if (lamp.head) lamp.head.rotation.y = ang;
+      lamp.ang = ang;
+      const s = d.s || 1, wy = d.y + L.y * s;
+      const dx = d.x - pos.x, dy = wy - pos.y, dz = d.z - pos.z, d2 = dx * dx + dy * dy + dz * dz;
+      const reach = L.range * s * 1.4;
+      if (d2 < reach * reach) near[L.type].push({ lamp, d2, wy, s });
+    }
+    if (!this.pool) return;
+    const assign = (lights, list, spot) => {
+      list.sort((a, b) => a.d2 - b.d2);
+      lights.forEach((light, i) => {
+        const e = list[i];
+        if (!e) { light.intensity = 0; return; }
+        const { lamp, wy, s } = e, { L, d } = lamp;
+        light.position.set(d.x, wy, d.z);
+        light.color.copy(lamp.col);
+        light.intensity = L.power * s;
+        light.distance = L.range * s;
+        if (spot) {
+          const yaw = (d.ry || 0) + lamp.ang, ct = Math.cos(L.tilt);
+          light.angle = L.angle;
+          light.target.position.set(d.x - ct * Math.sin(yaw) * 40, wy + Math.sin(L.tilt) * 40, d.z - ct * Math.cos(yaw) * 40);
+          light.target.updateMatrixWorld();
+        }
+      });
+    };
+    assign(this.pool.points, near.point, false);
+    assign(this.pool.spots, near.spot, true);
   }
 
   // Anime les obstacles et les pièces mobiles au temps t (s, chrono de la course).
@@ -1012,7 +1167,7 @@ export class TrackView {
 
   disposeMeshes() {
     for (const c of [...this.group.children]) {
-      if (c.isGroup) c.traverse((m) => { if (m.geometry) m.geometry.dispose(); });
+      if (c.isGroup) c.traverse((m) => { if (m.geometry) m.geometry.dispose(); if (c.userData.lamp && m.material) m.material.dispose(); });
       if (c.geometry) c.geometry.dispose();
       if (c.userData.own && c.material) {
         if (c.material.map) c.material.map.dispose();
@@ -1024,6 +1179,8 @@ export class TrackView {
     this.obstacles = [];
     this.movers = [];
     this.glassGroups = [];
+    this.lamps = [];
+    this.pool = null;
   }
 
   // Dalles de verre brisées (voir CarPhysics.broken) : elles disparaissent ; vide = tout est restauré.

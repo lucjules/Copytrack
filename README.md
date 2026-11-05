@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.1**
+Version actuelle : **bêta 0.9.2**
 
 ## Jouer
 
@@ -34,8 +34,9 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 
 - **Pièces à caractéristiques** (listes déroulantes dans la palette et dans l'Inspecteur) :
   - **Ligne droite** : inclinaison plat, ½, 1, 2 ou 4 niveaux (ce qui remplace Pente, Pente douce et Tremplin) ;
-  - **Virage** : rayon serré, grand ou très grand (3×3), plat ou relevé (la route penche vers l'intérieur, on le prend plus vite) ;
-  - **Courbe** : un tremplin courbé, c'est-à-dire un virage qui monte (inclinaison ½, 1, 2 ou 4, serré ou grand, droite ou gauche) ;
+  - **Virage** : rayon serré, grand ou très grand (3×3), plat ou relevé (la route penche vers l'intérieur, on le prend plus vite), et **inclinaison** plat, ½, 1, 2 ou 4 comme la ligne droite (un virage qui monte ; le sens ↱ / ↰ compte alors) ;
+  - **Courbe** : une rampe qui se courbe progressivement vers le haut (arc de Bézier : plate à l'entrée, de plus en plus raide ; inclinaison ½, 1, 2 ou 4). Parcourue à l'envers, elle descend et s'aplatit en douceur ;
+  - **Route sur le côté** : transition (la route bascule jusqu'à la verticale) et ligne droite sur un plan vertical, à gauche ou à droite. La gravité ne change pas : il faut environ 80 km/h pour tenir, en dessous on glisse le long du plan et on tombe par le bord. Ces pièces demandent le niveau 2 au moins (le plan descend de 9 m sous leur niveau) ;
   - **Looping** : orientation droite / gauche, taille normale / grande, 1 à 3 boucles (l'empreinte grandit : 2×2, 3×3, 4×4).
 - Plateforme, ponts sur plusieurs niveaux.
 - **Tubes** : le tube 2×2, et le **tube modulaire** (entrée, autant de sections que voulu, sortie) dans lequel on peut monter sur la paroi, rouler au plafond et **faire des tours complets** en gardant le volant tourné. Les sections acceptent l'accélérateur et la gravité.
@@ -50,7 +51,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 - Verglas, accélérateur, rebond, aimant, dérive, ralentisseur, vent latéral, gravité (réglables de faible à fort, la couleur suit), **eau**. Les réglages s'affichent avec des **unités réelles** (km/h, m/s², m, secondes) quand elles existent. *Sable* et *boue* ont été supprimés (les anciens circuits qui en contenaient les lisent avec une route normale).
 - **Tapis roulant** réglable de −200 à +200 km/h. **Vent** plus fort (jusqu'à 54 m/s² à pleine force).
 - **Verre fragile** : plus de vitesse minimale, mais un compte à rebours (0,3 à 5 s) de contact cumulé sur la dalle ; passé ce temps elle disparaît (sans collision, la voiture tombe) jusqu'au prochain départ, retour au checkpoint compris.
-- **Eau** : va aussi sur le Départ (course commencée en bateau) ; la **plaque bateau** est posée sur l'eau.
+- **Eau** : va aussi sur le Départ (course commencée en bateau) ; la **plaque bateau** est une très légère montée de l'eau vers le sol (pour un bateau elle agit comme de l'eau, pour les autres véhicules comme une route normale).
 - **Tunnel** : ses parois et son toit sont physiques, on n'en sort plus par les côtés.
 - **Plaques de transformation** (repasser sur la même plaque rend la voiture) :
   - **moto** : démarre plus fort, tourne plus serré, vitesse de pointe un peu plus basse ;
@@ -71,9 +72,9 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 - **Interface** : barre du haut avec un menu ☰ (Nouveau, Importer, Partager, Enregistrer, Retour), grille **Outils** à gauche (Sélection, Inspecter, Gomme, Pot de peinture), panneau des pièces ancré en bas (onglets Pièces, Options, Revêtements, Décors ; les décors par catégories). Le nom et la description du circuit se choisissent à la publication.
 
 - Pose au clic, rotation, miroir, niveaux, revêtements réglables, options, décor, annuler / rétablir, pipette, sauvegarde locale, partage par code ou par lien.
-- **Pot de peinture** (bouton 🪣 ou touche ²/`) : choisis une pièce ou un revêtement, puis clique une pièce pour remplir toute sa zone connectée (même revêtement, ou même type de pièce de même taille). Départ et arrivée jamais modifiés, un seul Ctrl + Z annule tout.
+- **Pot de peinture** (bouton 🪣 ou touche ²/`) : choisis une pièce ou un revêtement, puis clique une pièce pour remplir toute sa zone connectée (ou une case vide entourée de pièces pour poser la pièce choisie dans toute la zone vide fermée ; la zone est surlignée avant le clic) (même revêtement, ou même type de pièce de même taille). Départ et arrivée jamais modifiés, un seul Ctrl + Z annule tout.
 - **Gomme à filtres** : *Tout*, *Décorations uniquement* ou *Pistes uniquement* (sous-menu de la gomme, ou touche X répétée). Le rayon ne touche que les objets du calque choisi.
-- **Inspecter** (bouton *Inspecter*, touche `\`) : un clic sélectionne une pièce ou une décoration ; un panneau de propriétés (position, rotation, revêtement, options, taille, couleur, image...) reste lié au circuit dans les deux sens. Des **gizmos 3D** déplacent (flèches) et pivotent (cercles) l'objet directement dans la scène, la caméra reste immobile pendant le geste. Chaque geste ou réglage est un seul pas d'annulation, et l'objet sélectionné revient avec Ctrl + Z / Ctrl + Y.
+- **Inspecter** (bouton *Inspecter*, touche `I`) : un clic sélectionne une pièce ou une décoration ; un panneau de propriétés (position, rotation, revêtement, options, taille, couleur, image...) reste lié au circuit dans les deux sens. Des **gizmos 3D** déplacent (flèches) et pivotent (cercles) l'objet directement dans la scène, la caméra reste immobile pendant le geste. Chaque geste ou réglage est un seul pas d'annulation, et l'objet sélectionné revient avec Ctrl + Z / Ctrl + Y.
 - **Sélection de zone** (Q) : copier, couper / déplacer, coller avec rotation, monter / descendre, supprimer.
 - **Tester depuis la pièce visée** (Maj + T), **vérificateur** (F2 : extrémités libres, sauts risqués, checkpoints inaccessibles), **vue par niveau** (Z), **nombre de tours**, **miniatures** vues de dessus.
 - Décorations à placement libre (panneaux, formes, murs, toits, nature, image par URL).
@@ -118,6 +119,16 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
 5. **Durcissement** : `supabase/etape5-securite.sql` (replays des classements privés, plafond de temps par pilote, signalements et parties moins faciles à truquer). À lancer après l'étape 4.
 
 Seules l'URL du projet et la clé publique sont dans `js/online.js`. La clé secrète n'est jamais dans le jeu : seule la fonction serveur l'utilise, côté Supabase.
+
+## Bêta 0.9.2
+
+- **Pièces** : *Courbe* (rampe qui se courbe progressivement), *Inclinaison* pour le *Virage* (comme la ligne droite), *Route sur le côté* (transition et ligne droite à 90° : il faut de la vitesse, sinon on glisse et on tombe). Icône pour la *Ligne droite · inclinaison 4*.
+- **Plaque bateau** : une très légère montée de l'eau au sol ; eau pour le bateau, route normale pour les autres.
+- **Bifurcation** : le revêtement de la voie déportée ne déborde plus sur la voie directe (il commence là où la voie déportée sort de la voie directe) et ses motifs sont centrés sur elle.
+- **Éditeur** : plus de raccourcis pour choisir une pièce ; `I` = Inspecter ; `Ctrl + D` duplique la pièce ou la décoration inspectée ; le pot de peinture remplit aussi une **zone vide fermée** par des pièces ; *Checkpoint* est une simple case à cocher (portique sur route, balise sur plateforme ; l'anneau aérien disparaît de l'éditeur, les anciens circuits restent lisibles) ; nom et description dans les paramètres du niveau.
+- **Décors** : catégories *Lumières* (projecteur tournant, projecteur, lanternes, lampadaire : de vraies lumières, de la couleur de l'objet), *Véhicules*, *Noël* et *Halloween*.
+- **Jeu** : deltaplane plus maniable ; traînée du véhicule permanente (intensité selon la vitesse et le boost) ; plus de bruit de moteur à l'arrivée ; textes plus courts ; menu Communauté (icône cristal pour le temps de l'auteur, boutons réorganisés).
+- La physique change (`PHYS_VER` 22) : records et replays repartent de zéro ; **la fonction `submit-score` doit être redéployée**.
 
 ## Bêta 0.9.1
 
@@ -228,10 +239,10 @@ Pendant un replay : Espace pause, ← → vitesse, C caméra (dont TV et orbite)
 | Maj + molette, E / C, Page↑ / Page↓ | Changer de niveau |
 | R (Maj + R) | Pivoter (sens inverse) |
 | Tab (Maj + Tab) | Pièce suivante (précédente) |
-| 1 … 0, P, U, I, V, L, K, J, O, Y | Choisir une pièce (Y : entrée de tube) |
 | M | Miroir (looping, tire-bouchon, bifurcation) |
 | B | Revêtement suivant |
 | Q | Outil Sélection |
+| I | Outil Inspecter (Ctrl + D : dupliquer la pièce ou la décoration inspectée) |
 | Ctrl + C / X / V / A | Copier / déplacer / coller / tout sélectionner |
 | Z | Vue par niveau |
 | F2 | Vérifier le circuit |
@@ -259,6 +270,7 @@ js/replay.js                   enregistrement des commandes, replays, fantômes 
 js/career.js, js/daily.js      carrière et objectifs, défi du jour généré
 js/editor.js, editorTools.js   éditeur, sélection, vérificateur, miniatures
 js/race.js, js/raceLogic.js    course, caméras, effets, checkpoints, tours
+js/trail.js                    traînée lumineuse du véhicule (ruban permanent)
 js/carModel.js, garage.js      voiture, moto, bateau, deltaplane, garage
 js/cosmetics.js, profile.js    catalogue visuel, pièces, code joueur
 js/scenery.js, music.js        11 décors, musique générée

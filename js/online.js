@@ -186,8 +186,8 @@ class OnlineClient {
 
   async publish(track, playerName) {
     const code = track.encode();
-    if (code.length > MAX_PUBLISH_CHARS) throw new OnlineError(`Circuit trop gros pour la communauté (${code.length} caractères, ${MAX_PUBLISH_CHARS} au plus) : retire des pièces ou des décorations.`, 'too-big');
-    if (track.tiles.length > MAX_PUBLISH_PIECES) throw new OnlineError(`Circuit trop gros pour la communauté (${track.tiles.length} pièces, ${MAX_PUBLISH_PIECES} au plus).`, 'too-big');
+    if (code.length > MAX_PUBLISH_CHARS) throw new OnlineError(`Circuit trop gros (${code.length} / ${MAX_PUBLISH_CHARS} caractères).`, 'too-big');
+    if (track.tiles.length > MAX_PUBLISH_PIECES) throw new OnlineError(`Circuit trop gros (${track.tiles.length} / ${MAX_PUBLISH_PIECES} pièces).`, 'too-big');
     await this.ensurePlayer(playerName);
     const body = {
       name: track.name.slice(0, 40) || 'Sans titre',

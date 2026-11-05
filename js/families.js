@@ -12,48 +12,56 @@ import { PIECES } from './pieces.js';
 export const FAMILIES = {
   straight: {
     label: 'Ligne droite',
-    hint: 'Route droite, plate ou inclinée (½, 1, 2 ou 4 niveaux de dénivelé sur la case).',
+    hint: 'Route droite, plate ou inclinée (½, 1, 2 ou 4 niveaux).',
     icon: 'straight',
     traits: [{ id: 'incl', label: 'Inclinaison', values: [['0', 'Plat'], ['0.5', '½'], ['1', '1'], ['2', '2'], ['4', '4']] }],
     members: {
       straight: { incl: '0' }, gentle: { incl: '0.5' }, slope: { incl: '1' }, steep: { incl: '2' }, steep4: { incl: '4' },
     },
-    key: 'Digit1', k: '1',
   },
+  // 0.9.2 : l'Inclinaison du virage fonctionne comme celle de la ligne droite (les anciennes « Courbes » montantes en font partie).
+  // L'orientation ne compte que pour un virage incliné : il monte dans son sens de parcours (↱ : à droite, ↰ : à gauche).
   turn: {
     label: 'Virage',
-    hint: 'Virage à plat (serré, grand ou très grand) ou relevé (la route penche vers l’intérieur).',
+    hint: 'Serré, grand ou très grand ; plat, relevé ou incliné.',
     icon: 'curve',
     traits: [
       { id: 'size', label: 'Rayon', values: [['s', 'Serré'], ['m', 'Grand'], ['l', 'Très grand']] },
       { id: 'bank', label: 'Profil', values: [['0', 'Plat'], ['1', 'Relevé']] },
+      { id: 'incl', label: 'Inclinaison', values: [['0', 'Plat'], ['0.5', '½'], ['1', '1'], ['2', '2'], ['4', '4']] },
+      { id: 'dir', label: 'Sens', values: [['R', 'Droite ↱'], ['L', 'Gauche ↰']] },
     ],
     members: {
-      curve: { size: 's', bank: '0' }, bigcurve: { size: 'm', bank: '0' }, hugecurve: { size: 'l', bank: '0' },
-      bank: { size: 'm', bank: '1' }, bankBig: { size: 'l', bank: '1' },
+      curve: { size: 's', bank: '0', incl: '0', dir: 'R' }, bigcurve: { size: 'm', bank: '0', incl: '0', dir: 'R' }, hugecurve: { size: 'l', bank: '0', incl: '0', dir: 'R' },
+      bank: { size: 'm', bank: '1', incl: '0', dir: 'R' }, bankBig: { size: 'l', bank: '1', incl: '0', dir: 'R' },
+      cv05: { size: 's', bank: '0', incl: '0.5', dir: 'R' }, cv1: { size: 's', bank: '0', incl: '1', dir: 'R' }, cv2: { size: 's', bank: '0', incl: '2', dir: 'R' }, cv4: { size: 's', bank: '0', incl: '4', dir: 'R' },
+      cvBig05: { size: 'm', bank: '0', incl: '0.5', dir: 'R' }, cvBig1: { size: 'm', bank: '0', incl: '1', dir: 'R' }, cvBig2: { size: 'm', bank: '0', incl: '2', dir: 'R' }, cvBig4: { size: 'm', bank: '0', incl: '4', dir: 'R' },
+      cvL05: { size: 's', bank: '0', incl: '0.5', dir: 'L' }, cvL1: { size: 's', bank: '0', incl: '1', dir: 'L' }, cvL2: { size: 's', bank: '0', incl: '2', dir: 'L' }, cvL4: { size: 's', bank: '0', incl: '4', dir: 'L' },
+      cvBigL05: { size: 'm', bank: '0', incl: '0.5', dir: 'L' }, cvBigL1: { size: 'm', bank: '0', incl: '1', dir: 'L' }, cvBigL2: { size: 'm', bank: '0', incl: '2', dir: 'L' }, cvBigL4: { size: 'm', bank: '0', incl: '4', dir: 'L' },
     },
-    key: 'Digit2', k: '2',
   },
+  // 0.9.2 : la Courbe est une rampe dont le profil se courbe progressivement (arc) : plate à l'entrée, de plus en plus raide.
   courbe: {
     label: 'Courbe',
-    hint: 'Un tremplin courbé : un virage qui monte (inclinaison ½, 1, 2 ou 4 niveaux), à droite ou à gauche. Pris dans l’autre sens, il descend.',
+    hint: 'Rampe qui se courbe vers le haut : plate au départ, de plus en plus raide.',
     icon: 'courbe',
+    traits: [{ id: 'incl', label: 'Inclinaison', values: [['0.5', '½'], ['1', '1'], ['2', '2'], ['4', '4']] }],
+    members: { crv05: { incl: '0.5' }, crv1: { incl: '1' }, crv2: { incl: '2' }, crv4: { incl: '4' } },
+  },
+  // 0.9.2 : routes à 90° (plan vertical). La gravité ne change pas : trop lent, on glisse et on tombe.
+  side: {
+    label: 'Route sur le côté',
+    hint: 'Route à 90°. Il faut de la vitesse pour tenir, sinon on glisse.',
+    icon: 'side',
     traits: [
-      { id: 'dir', label: 'Orientation', values: [['R', 'Droite ↱'], ['L', 'Gauche ↰']] },
-      { id: 'size', label: 'Rayon', values: [['s', 'Serré'], ['m', 'Grand']] },
-      { id: 'incl', label: 'Inclinaison', values: [['0.5', '½'], ['1', '1'], ['2', '2'], ['4', '4']] },
+      { id: 'kind', label: 'Pièce', values: [['t', 'Transition'], ['s', 'Ligne droite']] },
+      { id: 'dir', label: 'Côté', values: [['L', 'Gauche ↰'], ['R', 'Droite ↱']] },
     ],
-    members: {
-      cv05: { dir: 'R', size: 's', incl: '0.5' }, cv1: { dir: 'R', size: 's', incl: '1' }, cv2: { dir: 'R', size: 's', incl: '2' }, cv4: { dir: 'R', size: 's', incl: '4' },
-      cvBig05: { dir: 'R', size: 'm', incl: '0.5' }, cvBig1: { dir: 'R', size: 'm', incl: '1' }, cvBig2: { dir: 'R', size: 'm', incl: '2' }, cvBig4: { dir: 'R', size: 'm', incl: '4' },
-      cvL05: { dir: 'L', size: 's', incl: '0.5' }, cvL1: { dir: 'L', size: 's', incl: '1' }, cvL2: { dir: 'L', size: 's', incl: '2' }, cvL4: { dir: 'L', size: 's', incl: '4' },
-      cvBigL05: { dir: 'L', size: 'm', incl: '0.5' }, cvBigL1: { dir: 'L', size: 'm', incl: '1' }, cvBigL2: { dir: 'L', size: 'm', incl: '2' }, cvBigL4: { dir: 'L', size: 'm', incl: '4' },
-    },
-    key: 'Digit3', k: '3',
+    members: { rollL: { kind: 't', dir: 'L' }, rollR: { kind: 't', dir: 'R' }, sideL: { kind: 's', dir: 'L' }, sideR: { kind: 's', dir: 'R' } },
   },
   loop: {
     label: 'Looping',
-    hint: 'Boucle verticale : orientation, taille et nombre de boucles (1 à 3). L’empreinte grandit avec le nombre de boucles.',
+    hint: 'Boucle verticale : sens, taille, 1 à 3 boucles (l’empreinte grandit).',
     icon: 'loop',
     traits: [
       { id: 'dir', label: 'Orientation', values: [['R', 'Droite ↱'], ['L', 'Gauche ↰']] },
@@ -68,10 +76,9 @@ export const FAMILIES = {
       loopTriple: { dir: 'R', size: 'n', turns: '3' }, loopTripleL: { dir: 'L', size: 'n', turns: '3' },
       loopBigTriple: { dir: 'R', size: 'g', turns: '3' }, loopBigTripleL: { dir: 'L', size: 'g', turns: '3' },
     },
-    key: 'Digit6', k: '6',
   },
 };
-export const FAMILY_ORDER = ['straight', 'turn', 'courbe', 'loop'];
+export const FAMILY_ORDER = ['straight', 'turn', 'courbe', 'side', 'loop'];
 
 // type concret -> { fam, traits }
 const BY_TYPE = new Map();
@@ -122,7 +129,7 @@ export function withTrait(fam, traits, traitId, value) {
 }
 
 // Famille dont on affiche la fiche dans la palette pour un outil donné (type concret ou id de famille).
-export const FAMILY_DEFAULT = { straight: 'straight', turn: 'curve', courbe: 'cv1', loop: 'loop' };
+export const FAMILY_DEFAULT = { straight: 'straight', turn: 'curve', courbe: 'crv1', side: 'rollL', loop: 'loop' };
 
 // Pièces concrètes qu'on ne propose plus telles quelles dans la palette (remplacées par une famille ou une option).
 export const REPLACED_BY_OPTION = new Set(['checkpoint', 'cpRing', 'cpCurve']);

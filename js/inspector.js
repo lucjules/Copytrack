@@ -6,7 +6,8 @@
 // La caméra de l'éditeur n'est pas un OrbitControls : elle est verrouillée (ed.camLocked) tant qu'un gizmo est saisi.
 import * as THREE from './vendor/three.module.min.js';
 import { TransformControls } from './vendor/TransformControls.js';
-import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL } from './constants.js';
+import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL, DIRS } from './constants.js';
+import { Track } from './track.js';
 import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, tileCenter, baseY, THEMES, MOVER, moverParams, paramText } from './pieces.js';
 import { FAMILIES, familyOf, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from './families.js';
 import { arrowPose } from './tileInfo.js';
@@ -24,6 +25,7 @@ export const MIRROR_TYPES = {
   loopBigTriple: 'loopBigTripleL', loopBigTripleL: 'loopBigTriple',
   cv05: 'cvL05', cvL05: 'cv05', cv1: 'cvL1', cvL1: 'cv1', cv2: 'cvL2', cvL2: 'cv2', cv4: 'cvL4', cvL4: 'cv4',
   cvBig05: 'cvBigL05', cvBigL05: 'cvBig05', cvBig1: 'cvBigL1', cvBigL1: 'cvBig1', cvBig2: 'cvBigL2', cvBigL2: 'cvBig2', cvBig4: 'cvBigL4', cvBigL4: 'cvBig4',
+  rollL: 'rollR', rollR: 'rollL', sideL: 'sideR', sideR: 'sideL',
 };
 // Anciennes pièces « Checkpoint » : [pièce de route, valeur de l'option cp] pour les convertir en option.
 export const LEGACY_CP = { checkpoint: ['straight', 1], cpCurve: ['curve', 1], cpRing: ['straight', 2] };
@@ -423,12 +425,11 @@ export class Inspector {
     rows.push(flag('v', 'À l\'envers (inversion)', 'Route au plafond : roulable en gravité inversée'));
     rows.push(flag('nb', 'Sans bordures', 'Plus de rebord'));
     rows.push(flag('tn', 'Tunnel', 'Voûte autour de la route'));
-    // Checkpoint en option (les anciennes pièces Checkpoint se convertissent avec le bouton ci-dessus)
-    const cpNames = [['0', 'Aucun'], ['1', 'Portique'], ['2', 'Aérien (anneau)']];
-    rows.push(this._select('Checkpoint', cpNames, () => String(t.cp || 0),
-      (v) => { const n = +v, cur = t.cp || 0; if (n === cur) return true; return ed.track.toggleFlag(t, 'cp', n === 0 ? cur : n) || false; },
-      !!P.special || (!flagAllowed(t.t, 'cp', t, 1) && !t.cp),
-      (v) => v !== '0' && !flagAllowed(t.t, 'cp', t, +v)));
+    // Checkpoint : simple case à cocher (portique sur route, balise sur plateforme). L'ancien anneau aérien (cp = 2) reste lisible :
+    // il s'affiche « aérien (ancien) » et se convertit en portique en cochant / décochant.
+    rows.push(this._check(t.cp === 2 ? 'Checkpoint (aérien, ancien)' : 'Checkpoint', () => !!t.cp,
+      (on) => { if (on === !!t.cp) return true; return ed.track.toggleFlag(t, 'cp', t.cp || 1) || false; },
+      !!P.special || (!flagAllowed(t.t, 'cp', t, 1) && !t.cp), 'Route : portique. Plateforme : balise au sol.'));
     rows.push(flag('tb', 'Anneau turbo', 'Anneau à traverser pour un coup de turbo (ligne droite plate, à l’endroit)'));
     // Thème (visuel)
     rows.push(this._select('Thème', THEMES.map((x) => [String(x.id), x.label]), () => String(t.th || 0),
@@ -480,7 +481,7 @@ export class Inspector {
     const type = withTrait(fam, cur.traits, id, value);
     if (!type || type === t.t) return true;
     if (this.ed._retypeFamily(t, type)) return true;
-    this.ed.app.ui.flash(`Pas la place pour « ${PIECES[type].label} » (${PIECES[type].size}×${PIECES[type].size} cases).`, 2.4);
+    this.ed.app.ui.flash(`Pas la place (${PIECES[type].size}×${PIECES[type].size}).`, 2.4);
     return false;
   }
 
@@ -514,7 +515,7 @@ export class Inspector {
     }
     rows.push(h('div', { class: 'insp-row' }, h('span', {}, ''),
       h('button', { class: 'btn', onclick: () => this._apply(() => ed.track.setColors(t, null)) }, '↺ Tout réinitialiser')));
-    rows.push(h('div', { class: 'insp-note' }, 'Purement visuel : les couleurs ne changent ni le jeu, ni la vérification du circuit. Elles passent devant le thème et la couleur du revêtement.'));
+    rows.push(h('div', { class: 'insp-note' }, 'Visuel seulement : aucun effet sur le jeu ni la vérification.'));
     return rows;
   }
 
@@ -548,7 +549,7 @@ export class Inspector {
     if (d.k === 'plaque') {
       const url = h('input', { type: 'text', maxlength: 400, placeholder: 'https://…', spellcheck: false });
       url.addEventListener('change', () => {
-        if (url.value && !safeUrl(url.value)) { ed.app.ui.flash('URL d\'image https:// invalide.'); ed.app.audio.error(); this._syncPanel(); return; }
+        if (url.value && !safeUrl(url.value)) { ed.app.ui.flash('URL https:// invalide.'); ed.app.audio.error(); this._syncPanel(); return; }
         this._apply(() => { d.u = url.value; return touch(); });
       });
       this._sync.push(() => { if (document.activeElement !== url) url.value = d.u || ''; });
@@ -559,6 +560,38 @@ export class Inspector {
   }
 
   // ---- Actions ---------------------------------------------------------------------------------------------------------
+  // Ctrl+D : copie de l'objet inspecté, posée sur la première place libre (devant, à droite, à gauche, derrière, puis au-dessus) ;
+  // la copie devient la sélection. Un seul pas d'annulation.
+  duplicate() {
+    const ed = this.ed;
+    if (!this.sel) { ed.app.ui.flash('Inspecte une pièce (I), puis Ctrl+D.'); return false; }
+    const { kind, obj } = this.sel;
+    let added = null;
+    if (kind === 'tile') {
+      const P = PIECES[obj.t];
+      if (P.special === 'start') { ed.app.ui.flash('Un seul départ par circuit.'); ed.app.audio.error(); return false; }
+      const f = DIRS[obj.r & 3], rt = DIRS[(obj.r + 1) & 3], n = P.size;
+      const tries = [[f[0] * n, f[1] * n, obj.l + P.rise], [rt[0] * n, rt[1] * n, obj.l], [-rt[0] * n, -rt[1] * n, obj.l], [-f[0] * n, -f[1] * n, obj.l - P.rise], [0, 0, obj.l + P.rise + (P.clearance || 0) + 1]];
+      for (const [dx, dz, l] of tries) {
+        if (l < 0 || l > MAX_LEVEL) continue;
+        const cand = Track.normalize({ ...obj, col: obj.col ? { ...obj.col } : null, x: obj.x + dx, z: obj.z + dz, l });
+        if (!Track.inBounds(cand) || ed.track.conflicts(cand).length) continue;
+        added = ed.track.add(cand);
+        break;
+      }
+      if (!added) { ed.app.ui.flash('Pas de place pour une copie.'); ed.app.audio.error(); return false; }
+    } else {
+      added = ed.track.addDeco({ ...obj, x: obj.x + Math.max(4, 3 * obj.s), z: obj.z });
+      if (!added) { ed.app.ui.flash('Trop de décorations.'); ed.app.audio.error(); return false; }
+    }
+    this.clear();
+    this.select(kind, added);
+    ed.app.audio.place();
+    ed._changed();
+    ed._commit();
+    return true;
+  }
+
   deleteSelected() {
     if (!this.sel) return;
     const { kind, obj } = this.sel;

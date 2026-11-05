@@ -16,23 +16,23 @@ export const PROFILE_ORDER = ['ultra', 'high', 'medium', 'low', 'potato'];
 // du créateur, hors obstacles) ; mat : matériaux 'standard' | 'lambert' | 'basic' ; sky : 'full' (shader) | 'flat' (aplat de couleur).
 export const PROFILES = {
   ultra: {
-    name: 'ultra', label: 'Ultra', pixelRatio: { min: 1.5, max: 2 }, shadow: 4096, shadowType: 'pcfsoft', env: 0.55, tone: 'neutral', exposure: 1.05,
+    name: 'ultra', label: 'Ultra', pixelRatio: { min: 1.5, max: 2 }, shadow: 4096, shadowType: 'pcfsoft', env: 0.55, tone: 'neutral', exposure: 1.05, lights: { point: 6, spot: 3 },
     terrainSeg: 190, decor: 'full', mat: 'standard', sky: 'full', hills: 1, fogScale: 1, far: 5000, particles: 1,
   },
   high: {
-    name: 'high', label: 'Haute', pixelRatio: { min: 1, max: 2 }, shadow: 2048, shadowType: 'pcfsoft', env: 0, tone: 'none', exposure: 1,
+    name: 'high', label: 'Haute', pixelRatio: { min: 1, max: 2 }, shadow: 2048, shadowType: 'pcfsoft', env: 0, tone: 'none', exposure: 1, lights: { point: 4, spot: 2 },
     terrainSeg: 110, decor: 'full', mat: 'standard', sky: 'full', hills: 1, fogScale: 1, far: 5000, particles: 1,
   },
   medium: {
-    name: 'medium', label: 'Moyenne', pixelRatio: { min: 0.75, max: 1.25 }, shadow: 1024, shadowType: 'pcf', env: 0, tone: 'none', exposure: 1,
+    name: 'medium', label: 'Moyenne', pixelRatio: { min: 0.75, max: 1.25 }, shadow: 1024, shadowType: 'pcf', env: 0, tone: 'none', exposure: 1, lights: { point: 2, spot: 1 },
     terrainSeg: 90, decor: 'full', mat: 'standard', sky: 'full', hills: 1, fogScale: 1, far: 5000, particles: 0.8,
   },
   low: {
-    name: 'low', label: 'Basse', pixelRatio: { min: 0.6, max: 1 }, shadow: 0, shadowType: 'pcf', env: 0, tone: 'none', exposure: 1,
+    name: 'low', label: 'Basse', pixelRatio: { min: 0.6, max: 1 }, shadow: 0, shadowType: 'pcf', env: 0, tone: 'none', exposure: 1, lights: { point: 0, spot: 0 },
     terrainSeg: 70, decor: 'reduced', mat: 'lambert', sky: 'full', hills: 1, fogScale: 0.8, far: 3000, particles: 0.5,
   },
   potato: {
-    name: 'potato', label: 'Potato', pixelRatio: { min: 0.5, max: 0.65 }, shadow: 0, shadowType: 'pcf', env: 0, tone: 'none', exposure: 1,
+    name: 'potato', label: 'Potato', pixelRatio: { min: 0.5, max: 0.65 }, shadow: 0, shadowType: 'pcf', env: 0, tone: 'none', exposure: 1, lights: { point: 0, spot: 0 },
     terrainSeg: 24, decor: 'none', mat: 'basic', sky: 'flat', hills: 0, fogScale: 0.45, far: 1400, particles: 0.25,
   },
 };
@@ -238,8 +238,10 @@ export class QualityManager {
     h.scenery.setQuality(p);
     if (h.particles) h.particles.setScale?.(p.particles);
     // Décorations du créateur (hors obstacles) : masquées en Potato ; les vues déjà construites sont refaites.
+    h.setLights?.(p.lights);
+    const lk = (q) => (q ? q.point + ',' + q.spot : '');
     const hide = p.decor === 'none';
-    if ((prev ? prev.decor === 'none' : false) !== hide) { h.setDecoHidden?.(hide); for (const v of h.views?.() || []) v.rebuild(); }
+    if ((prev ? prev.decor === 'none' : false) !== hide || (prev && lk(prev.lights) !== lk(p.lights))) { h.setDecoHidden?.(hide); for (const v of h.views?.() || []) v.rebuild(); }
     swapMaterials(h.scene, p.mat);
     this._recompile();
     h.resize?.();

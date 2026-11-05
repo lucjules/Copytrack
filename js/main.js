@@ -1,7 +1,7 @@
 // Point d'entrée : crée le moteur de rendu et orchestre menu / course / éditeur.
 import * as THREE from './vendor/three.module.min.js';
 import { Scenery } from './scenery.js';
-import { createTrackMaterials, setColorblind, setHideDecos } from './trackMesh.js';
+import { createTrackMaterials, setColorblind, setHideDecos, setLightBudget } from './trackMesh.js';
 import { Particles } from './particles.js';
 import { Input, KEY_ACTIONS, PAD_ACTIONS, keyLabel, padLabel, defaultKeys, defaultPad } from './input.js';
 import { GarageSession, } from './garage.js';
@@ -51,7 +51,7 @@ class App {
     this.particles = new Particles(this.scene);
     this.quality = new QualityManager({
       renderer: this.renderer, scene: this.scene, camera: this.camera, scenery: this.scenery, particles: this.particles,
-      resize: () => this._resize(), views: () => (this.session && this.session.view ? [this.session.view] : []), setDecoHidden: setHideDecos,
+      resize: () => this._resize(), views: () => (this.session && this.session.view ? [this.session.view] : []), setDecoHidden: setHideDecos, setLights: setLightBudget,
     });
     this.input = new Input();
     this.input.setBindings(this.settings.keys, this.settings.pad);
@@ -107,7 +107,7 @@ class App {
     if (!el) return;
     const s = this.settings, now = PROFILE_LABELS[this.quality.name] || '';
     el.textContent = s.quality === 'auto'
-      ? (this.bench ? 'Détection en cours sur l’animation du menu…' : s.gfxProfile ? `Détecté : ${PROFILE_LABELS[s.gfxProfile]} (${s.gfxFps} i/s mesurées). Réduite automatiquement en course si ça saccade.` : `Profil actuel : ${now}.`)
+      ? (this.bench ? 'Détection en cours sur l’animation du menu…' : s.gfxProfile ? `Détecté : ${PROFILE_LABELS[s.gfxProfile]} (${s.gfxFps} i/s). Baisse auto si ça saccade.` : `Profil actuel : ${now}.`)
       : `Profil choisi : ${now}.`;
   }
 
@@ -221,31 +221,31 @@ class App {
     const steps = [
       {
         title: 'Bienvenue dans Copytrack !',
-        body: `<p>Une course contre la montre : passe tous les <b>checkpoints</b> puis l'<b>arrivée</b>, le plus vite possible.</p>
+        body: `<p>Passe les <b>checkpoints</b> puis l'<b>arrivée</b>, le plus vite possible.</p>
           <ul class="tuto">
-            <li>${touch ? 'Boutons ▲ / ▼ à droite' : `<b>${K('accelerate')}</b> / <b>${K('brake')}</b>`} : accélérer / freiner (et marche arrière)</li>
-            <li>${touch ? 'Boutons ◀ ▶ à gauche (ou glisser le pouce, dans les options)' : `<b>${K('left')}</b> / <b>${K('right')}</b>`} : tourner</li>
-            <li>Manette : gâchettes pour les gaz et le frein, stick gauche pour la direction</li>
+            <li>${touch ? 'Boutons ▲ / ▼ à droite' : `<b>${K('accelerate')}</b> / <b>${K('brake')}</b>`} : accélérer / freiner</li>
+            <li>${touch ? 'Boutons ◀ ▶ à gauche' : `<b>${K('left')}</b> / <b>${K('right')}</b>`} : tourner</li>
+            <li>Manette : gâchettes et stick gauche</li>
           </ul>`,
       },
       {
         title: 'Glisser, voler, atterrir',
         body: `<ul class="tuto">
-            <li><b>Dérapage</b> : freine en tournant franchement à bonne vitesse. Garde le volant pour prolonger la glisse.</li>
-            <li><b>Mini-turbo</b> : une glisse assez longue donne une poussée quand l'arrière raccroche (étincelles bleues, puis orange).</li>
-            <li><b>En l'air</b> : accélérer fait plonger le nez, freiner le relève. Pose-toi bien à plat pour garder ta vitesse.</li>
-            <li>Les loopings, tubes et vrilles suivent une physique réelle : il faut assez de vitesse pour rester plaqué.</li>
-            <li><b>Gravité inversée</b> : la plaque rose ⇅ te projette vers le plafond ; roule sur les pièces à l'envers, une 2e plaque te ramène en bas.</li>
+            <li><b>Dérapage</b> : freine en virage, garde le volant.</li>
+            <li><b>Mini-turbo</b> : une longue glisse donne une poussée.</li>
+            <li><b>En l'air</b> : gaz = nez en bas, frein = nez en haut. Atterris à plat.</li>
+            <li>Loopings, tubes, routes sur le côté : il faut de la vitesse pour rester plaqué.</li>
+            <li><b>Gravité inversée</b> : la plaque rose ⇅ t'envoie au plafond, une 2e te ramène.</li>
           </ul>`,
       },
       {
         title: 'Plaques, checkpoints et carrière',
         body: `<ul class="tuto">
-            <li><b>Plaques</b> : moto 🏍, bateau ⛵ (indispensable sur l'eau) et deltaplane 🪂 (pour planer au-dessus du vide). La même plaque te rend ta voiture.</li>
+            <li><b>Plaques</b> : moto 🏍, bateau ⛵ (sur l'eau), deltaplane 🪂. Repasser dessus te rend ta voiture.</li>
             <li><b>${touch ? '⟲' : K('respawn')}</b> : revenir au dernier checkpoint · <b>${touch ? '↺' : K('restart')}</b> : recommencer.</li>
-            <li><b>Obstacles</b> : les piques renvoient au checkpoint, boules, marteaux et balayeurs te bousculent. Ils bougent toujours au même rythme : apprends-le !</li>
-            <li><b>Carrière</b> : 11 chapitres (un par thème) de 6 circuits, ouverts avec des médailles, et un objectif bonus ★ par circuit.</li>
-            <li>Chaque jour, un nouveau <b>défi du jour</b>. Revois tes courses et partage ton fantôme avec tes amis.</li>
+            <li><b>Obstacles</b> : piques mortelles, boules et marteaux bousculent. Leur rythme est fixe.</li>
+            <li><b>Carrière</b> : 11 chapitres de 6 circuits, un objectif bonus ★ chacun.</li>
+            <li>Un <b>défi du jour</b> chaque jour. Replays et fantômes partageables.</li>
           </ul>`,
       },
     ];
@@ -289,7 +289,7 @@ class App {
     const code = encodeGhost({ trackKey: s.trackKey, time: rec.time, name: this.settings.playerName, inputs: rec.inputs });
     this.ui.modal({
       title: 'Partager mon fantôme',
-      body: `<p>Envoie ce code à un ami : en l'important (bouton « Importer un code »), il courra contre ta course de ${formatTime(rec.time)} sur ce circuit.</p><textarea class="code" readonly rows="4">${esc(code)}</textarea>`,
+      body: `<p>Un ami qui l'importe courra contre ton temps de ${formatTime(rec.time)}.</p><textarea class="code" readonly rows="4">${esc(code)}</textarea>`,
       actions: [
         { label: 'Copier', primary: true, onClick: () => { navigator.clipboard && navigator.clipboard.writeText(code); this.ui.flash('Code copié'); return false; } },
         { label: 'Fermer' },
@@ -442,7 +442,7 @@ class App {
         note.textContent = room.started ? 'Une course est en cours : tu peux la rejoindre depuis le circuit choisi par l\'hôte.' : 'En attente du départ donné par l\'hôte.';
         return;
       }
-      note.textContent = 'Donne le code aux autres joueurs. Chacun court à son rythme ; les arrivants rejoignent directement la course.';
+      note.textContent = 'Partage le code. Chacun court à son rythme.';
       const sel = document.createElement('select');
       const opt = (v, label, selected) => `<option value="${esc(v)}"${selected ? ' selected' : ''}>${esc(label)}</option>`;
       const mine = listMyTracks();
@@ -514,7 +514,7 @@ class App {
     const room = this.session && this.session.opts.multi && this.session.opts.multi.room;
     if (!room || this.ui.modalOpen) return;
     this.ui.modal({
-      title: 'Quitter la course ?', body: '<p>Les autres continuent sans toi (leur course n\'est pas interrompue). Tu retournes au salon, d\'où tu peux rejoindre la course ou quitter la salle.</p>',
+      title: 'Quitter la course ?', body: '<p>Les autres continuent. Tu retournes au salon.</p>',
       actions: [{ label: 'Continuer', primary: true }, { label: 'Quitter la course', danger: true, onClick: () => { this._leaveRaceToLobby(room); return true; } }],
     });
   }
@@ -573,42 +573,42 @@ class App {
   editorHelp() {
     const L = (a) => this._keysOf(a);
     const rows = [
-      ['Clic', 'Poser la pièce / la décoration (glisser : plusieurs pièces)'],
-      ['Clic droit', 'Supprimer la pièce ou la décoration visée'],
+      ['Clic', 'Poser (glisser : plusieurs)'],
+      ['Clic droit', 'Supprimer'],
       ['Clic droit glissé', 'Tourner la vue'],
-      ['Clic molette', 'Pipette (pièce, rotation, niveau ou décoration)'],
+      ['Clic molette', 'Pipette'],
       ['Clic molette glissé', 'Déplacer la vue'],
-      ['Molette', 'Zoom (Alt + molette : taille de la décoration)'],
-      ['Maj + molette', 'Monter / descendre d’un niveau'],
-      ['Maj + souris', 'Inspecter : déplace la pièce ou la décoration ciblée sur l’axe vertical seul (pièces : demi-niveaux). Outil Décoration : règle la hauteur de pose'],
+      ['Molette', 'Zoom (Alt : taille du décor)'],
+      ['Maj + molette', 'Niveau + / −'],
+      ['Maj + souris', 'Inspecter : déplacer à la verticale'],
       [L('ed.levelUp') + ' / ' + L('ed.levelDown'), 'Niveau + / −'],
-      [L('ed.rotate'), 'Pivoter (Maj : sens inverse) — décos : par 15°'],
-      [L('ed.mirror'), 'Miroir (looping, tire-bouchon, bifurcation : gauche ↔ droite)'],
+      [L('ed.rotate'), 'Pivoter (Maj : sens inverse)'],
+      [L('ed.mirror'), 'Miroir gauche / droite'],
       [L('ed.nextPiece'), 'Pièce suivante (Maj : précédente)'],
-      ['1 … 0, P, U, I, V, L, K, J, O, Y', 'Pièces (U/I : grands loopings, V : vrille, L/K/J : montée en L, mur, sommet, O : virage relevé, Y : entrée de tube)'],
-      ['Q', 'Outil Sélection : glisser pour choisir une zone'],
-      ['Ctrl + C / X / V / A', 'Copier / déplacer / coller / tout sélectionner (R : pivoter le collage, E / C : monter / descendre la sélection, Suppr : effacer)'],
-      [L('ed.levelView'), 'Vue par niveau (les autres niveaux sont estompés)'],
-      [L('ed.verify'), 'Vérifier : course complète, ton temps devient la médaille cristal, puis publier'],
-      [L('ed.params'), 'Paramètres du niveau (description, décor, tours, départ, hors piste)'],
+      ['Q', 'Sélection de zone'],
+      [L('ed.inspect'), 'Inspecter (propriétés, gizmos)'],
+      ['Ctrl + D', 'Dupliquer la pièce inspectée'],
+      ['Ctrl + C / X / V / A', 'Copier / couper / coller / tout'],
+      [L('ed.levelView'), 'Vue par niveau'],
+      [L('ed.verify'), 'Vérifier le circuit'],
+      [L('ed.params'), 'Niveau : nom, description, réglages'],
       ['Maj + ' + L('ed.test'), 'Tester depuis la pièce visée'],
-      [L('ed.surface'), 'Revêtement suivant (puis clic sur une pièce : celle que le curseur touche, à n’importe quelle hauteur)'],
-      [L('ed.fill'), 'Pot de peinture : remplit toute la zone connectée de la pièce cliquée (revêtement ou type de pièce choisi)'],
-      [L('ed.snap'), 'Accrochage des décorations (libre par défaut : elles se posent n’importe où, où le curseur touche la route ou le sol)'],
-      [L('ed.scaleUp') + ' / ' + L('ed.scaleDown'), 'Décoration : taille + / −'],
-      [L('ed.erase'), 'Gomme : touche répétée = filtre Tout / Décorations / Pistes ; avec une sélection (Inspecter), supprime la sélection'],
-      [L('ed.inspect'), 'Inspecter : clic sur une pièce ou une déco, panneau de propriétés et gizmos (flèches : déplacer, cercles : pivoter) ; R pivote la sélection'],
+      [L('ed.surface'), 'Revêtement suivant'],
+      [L('ed.fill'), 'Pot de peinture (pièces liées ou zone vide fermée)'],
+      [L('ed.snap'), 'Accrochage des décors'],
+      [L('ed.scaleUp') + ' / ' + L('ed.scaleDown'), 'Taille du décor'],
+      [L('ed.erase'), 'Gomme (répéter : filtre)'],
       [`${L('accelerate')} ${L('left')} ${L('brake')} ${L('right')}`, 'Déplacer la vue'],
-      [L('ed.recenter') + ' · ' + L('ed.topView') + ' · ' + L('ed.grid'), 'Recentrer · vue de dessus · grille'],
-      [L('ed.test'), 'Tester (essai libre, sans vérification)'],
+      [L('ed.recenter') + ' · ' + L('ed.topView') + ' · ' + L('ed.grid'), 'Recentrer · dessus · grille'],
+      [L('ed.test'), 'Tester'],
       ['Ctrl + Z / Y / S', 'Annuler / rétablir / enregistrer'],
-      ['Manette', 'Stick droit : curseur · A : poser · B : supprimer · X : pivoter · Y : tester · LB/RB : niveau'],
+      ['Manette', 'Stick droit : curseur · A : poser · B : effacer · X : pivoter · Y : tester · LB/RB : niveau'],
     ];
     this.ui.modal({
       title: 'Raccourcis de l’éditeur',
       wide: true,
       body: `<div class="kbd-list">${rows.map(([k, v]) => `<b>${esc(k)}</b><span>${esc(v)}</span>`).join('')}</div>
-        <p style="margin-top:14px">Astuce : après avoir posé une pente, le niveau suit tout seul quand tu vises la case du haut ou du bas. Toutes ces touches se changent dans Profil › Commandes.</p>`,
+        <p style="margin-top:14px">Touches modifiables : Profil › Commandes.</p>`,
       actions: [{ label: 'OK', primary: true }],
     });
   }
@@ -745,8 +745,8 @@ class App {
     this._bindTab = tab;
     document.querySelectorAll('#bind-tabs .tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === tab));
     $('bind-hint').textContent = tab === 'pad'
-      ? 'Clique sur une case (ou avec la manette : A) puis appuie sur le bouton voulu (Échap pour annuler). Stick gauche : direction · menus : stick ou croix. Éditeur : stick droit = curseur, gâchettes = zoom.'
-      : 'Clique sur une case puis appuie sur la touche voulue (Échap pour annuler, × pour vider). Une touche déjà prise est retirée de l’autre action.';
+      ? 'Clique une case, puis le bouton voulu (Échap : annuler). Éditeur : stick droit = curseur, gâchettes = zoom.'
+      : 'Clique une case, puis la touche voulue (Échap : annuler, × : vider).';
     const list = $('bind-list');
     list.innerHTML = '';
     const s = this.settings;
@@ -867,7 +867,7 @@ class App {
     list.innerHTML = '';
     const tracks = listMyTracks();
     if (!tracks.length) {
-      list.innerHTML = '<div class="empty">Aucun circuit enregistré pour l’instant. Crée le tien dans l’éditeur, ou importe un code partagé.</div>';
+      list.innerHTML = '<div class="empty">Aucun circuit. Crée-en un ou importe un code.</div>';
       return;
     }
     for (const entry of tracks) {
@@ -954,8 +954,8 @@ class App {
     ta.value = code;
     const wrap = document.createElement('div');
     wrap.innerHTML = verified
-      ? `<p>✔ Circuit vérifié (${formatTime(tr.vt)}). Les médailles sont déduites de ton temps (bronze = ${formatTime(tr.vt)}) et les joueurs gagneront des pièces. Copie le code ou le lien pour partager « ${esc(name)} ».</p>`
-      : `<p>⚠ Ce circuit n’est <b>pas vérifié</b> : tu dois le terminer au moins une fois pour fixer les médailles. Tu peux le partager quand même, mais il ne donnera <b>ni médailles ni pièces</b> et n’aura pas de record.</p>`;
+      ? `<p>✔ Vérifié (${formatTime(tr.vt)}) : médailles déduites de ton temps. Copie le code ou le lien de « ${esc(name)} ».</p>`
+      : `<p>⚠ <b>Non vérifié</b> : termine-le une fois pour fixer les médailles. Partageable, mais sans médailles ni pièces.</p>`;
     wrap.appendChild(ta);
     const copy = (txt, msg) => {
       const done = () => this.ui.flash(msg);
@@ -994,14 +994,14 @@ class App {
       el.className = 'fin-online ok';
       el.textContent = r.improved
         ? `🌍 Classement mondial : ${r.rank}${r.rank === 1 ? 'er' : 'e'} sur ${r.total}${r.rank === 1 ? ' — meilleur temps du monde !' : ''}`
-        : `🌍 Ton meilleur temps en ligne reste ${formatTime(r.best)} (${r.rank}${r.rank === 1 ? 'er' : 'e'} sur ${r.total})`;
+        : `🌍 Meilleur temps en ligne : ${formatTime(r.best)} (${r.rank}${r.rank === 1 ? 'er' : 'e'} sur ${r.total})`;
     } catch (e) {
       if (this.session !== session) return;
       el.className = 'fin-online ko';
       // Version de physique différente : le plus souvent, la fonction serveur « submit-score » n'a pas été redéployée après
       // une mise à jour du jeu (ou la page est une ancienne version en cache). Le record reste enregistré sur l'appareil.
       el.textContent = /Version du jeu différente/.test(e.message)
-        ? `🌍 Classement indisponible pour l'instant : le serveur n'est pas à la même version du jeu (v${PV}). Ton record est gardé sur cet appareil. Recharge la page ; si ça continue, la fonction submit-score doit être mise à jour.`
+        ? `🌍 Classement indisponible : serveur d'une autre version (v${PV}). Record gardé ici. Recharge la page.`
         : '🌍 Classement : ' + e.message;
     }
   }
@@ -1058,7 +1058,7 @@ class App {
       f.className = 'form';
       f.innerHTML = `<label>Nom<input id="pub-name" maxlength="40" spellcheck="false" autocomplete="off"></label>
         <label class="col">Description<textarea id="pub-desc" maxlength="200" rows="3" placeholder="Ce qui rend ton circuit unique (200 caractères au plus)"></textarea></label>
-        <p class="meta">Le nom et la description pourront encore être modifiés après la publication (Communauté › Mes publications).</p>
+        <p class="meta">Nom et description modifiables après publication.</p>
         <p class="mp-err" id="pub-err" role="alert"></p>`;
       const name = f.querySelector('#pub-name'), desc = f.querySelector('#pub-desc'), err = f.querySelector('#pub-err');
       name.value = track.name && track.name !== 'Mon circuit' ? track.name : '';
@@ -1130,7 +1130,7 @@ class App {
     if (req !== this._commReq || !$('community') || $('community').classList.contains('hidden')) return;
     C.offset += rows.length;
     status.textContent = !rows.length && reset
-      ? (C.sort === 'mine' ? 'Tu n’as encore rien publié. Dans l’éditeur, termine ton circuit puis « Partager › Publier dans la communauté ».' : 'Aucun circuit trouvé.')
+      ? (C.sort === 'mine' ? 'Rien de publié. Termine un circuit puis « Partager › Publier ».' : 'Aucun circuit trouvé.')
       : '';
     more.classList.toggle('hidden', rows.length < 24);
     for (const row of rows) list.appendChild(this._communityCard(row, likes));
@@ -1150,15 +1150,17 @@ class App {
     card.innerHTML = `${track ? `<img class="thumb" alt="" src="${thumbnail(track, 'c-' + row.id)}">` : ''}
       <h3>${esc(row.name)}</h3>
       ${row.description ? `<p class="desc">${esc(row.description)}</p>` : ''}
-      <div class="meta">par <b>${esc((row.players && row.players.name) || '—')}</b> · ${esc((DECORS[row.decor] || {}).label || row.decor)} · ${row.pieces} pièces${row.laps > 1 ? ` · ${row.laps} tours` : ''}</div>
-      <div class="meta">Temps de l’auteur ${formatTime(row.author_time)} · ▶ ${row.plays} · ♥ <span class="nl">${row.likes}</span></div>
+      <div class="meta">par <b>${esc((row.players && row.players.name) || '—')}</b>${row.laps > 1 ? ` · ${row.laps} tours` : ''}</div>
+      <div class="meta" title="Temps de l’auteur">${medalIcon(MEDALS[0])} <b>${formatTime(row.author_time)}</b> · ▶ ${row.plays}</div>
       <div class="best">${medals ? medalIcon(medal) : ''}${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}</div>
-      <div class="actions">
+      <div class="actions main">
         <button class="btn primary" data-a="play"${track ? '' : ' disabled'}>Jouer</button>
-        <button class="btn${liked ? ' on' : ''}" data-a="like" title="J’aime">${liked ? '♥' : '♡'}</button>
+        <button class="btn like${liked ? ' on' : ''}" data-a="like" title="J’aime"><span class="hrt">${liked ? '♥' : '♡'}</span> <span class="nl">${row.likes}</span></button>
+      </div>
+      <div class="actions sub">
         <button class="btn" data-a="board" title="Classement">🏆</button>
-        <button class="btn" data-a="copy" title="Copier dans Mes circuits pour le modifier">Copier</button>
-        ${mine ? '<button class="btn" data-a="edit" title="Modifier le nom et la description">✎</button><button class="btn danger" data-a="del">Retirer</button>' : '<button class="btn subtle" data-a="report" title="Signaler un circuit inapproprié">⚑</button>'}
+        <button class="btn" data-a="copy" title="Copier dans Mes circuits">⧉ Copier</button>
+        ${mine ? '<button class="btn" data-a="edit" title="Nom et description">✎</button><button class="btn danger" data-a="del" title="Retirer de la communauté">✕</button>' : '<button class="btn subtle" data-a="report" title="Signaler">⚑</button>'}
       </div>`;
     card.addEventListener('click', async (e) => {
       const a = e.target.closest('[data-a]');
@@ -1172,7 +1174,7 @@ class App {
         try {
           const n = await online.toggleLike(row.id, this.settings.playerName);
           const now = !a.classList.contains('on');
-          a.classList.toggle('on', now); a.textContent = now ? '♥' : '♡';
+          a.classList.toggle('on', now); a.querySelector('.hrt').textContent = now ? '♥' : '♡';
           card.querySelector('.nl').textContent = n;
         } catch (err) { this.ui.flash(err.message); }
       } else if (act === 'board' && track) {
@@ -1205,7 +1207,7 @@ class App {
       } else if (act === 'del') {
         this.ui.modal({
           title: 'Retirer ce circuit ?',
-          body: `<p>« ${esc(row.name)} » ne sera plus visible dans la communauté (il reste dans « Mes circuits » s’il y était).</p>`,
+          body: `<p>« ${esc(row.name)} » disparaît de la communauté.</p>`,
           actions: [{ label: 'Annuler' }, { label: 'Retirer', danger: true, onClick: () => {
             online.deleteTrack(row.id).then(() => { card.remove(); this.ui.flash('Circuit retiré.'); }, (err) => this.ui.flash(err.message));
           } }],
@@ -1213,7 +1215,7 @@ class App {
       } else if (act === 'report') {
         this.ui.modal({
           title: 'Signaler ce circuit ?',
-          body: '<p>À utiliser pour un nom ou un contenu inapproprié. Après 3 signalements, le circuit est masqué.</p>',
+          body: '<p>Contenu inapproprié ? Après 3 signalements, le circuit est masqué.</p>',
           actions: [{ label: 'Annuler' }, { label: 'Signaler', danger: true, onClick: () => {
             online.report(row.id, this.settings.playerName).then(() => this.ui.flash('Merci, le signalement est enregistré.'), (err) => this.ui.flash(err.message));
           } }],
@@ -1236,7 +1238,7 @@ class App {
         title: 'Circuit vérifié ✔',
         body: `<p>Ton temps <b>${formatTime(time)}</b> devient la médaille <b>cristal</b> de « ${esc(track.name)} ».</p>
           <p class="meta">${MEDALS.map((x) => `${medalIcon(x)}${formatTime(m[x.id])}`).join(' · ')}</p>
-          <p>Tu peux le publier dans la communauté maintenant, ou revenir le modifier (une modification du tracé demandera une nouvelle vérification).</p>`,
+          <p>Publie-le, ou modifie-le (le tracé devra être revérifié).</p>`,
         actions: [
           { label: '🌐 Publier', primary: true, onClick: () => { this.publishTrack(track).then((ok) => { if (ok) this.quitRace(); }); return true; } },
           { label: 'Retour à l’éditeur', onClick: () => { this.quitRace(); return true; } },
@@ -1289,7 +1291,7 @@ class App {
         <b>Échap</b><span>Pause</span>
         <b>Manette</b><span>Gâchettes : gaz / frein · stick : direction · freiner en virage : dérapage · Y : checkpoint</span>
       </div>
-      <p style="margin-top:14px">Passe par tous les checkpoints ◆ puis franchis l’arrivée le plus vite possible. Les accélérateurs bleus donnent un gros coup de boost, le verglas fait glisser, les tremplins font décoller. Une plaque rose ⇅ inverse la gravité : tu roules alors au plafond, sur les pièces posées à l’envers. Attention aux piques (retour au checkpoint) et aux obstacles qui bougent.</p>`,
+      <p style="margin-top:14px">Passe les checkpoints ◆ puis l’arrivée. Bleu : boost · verglas : glisse · tremplin : saut · plaque rose ⇅ : gravité inversée. Attention aux piques et aux obstacles mobiles.</p>`,
       actions: [{ label: 'OK', primary: true }],
     });
   }
@@ -1554,7 +1556,7 @@ class App {
         <span>Médailles obtenues</span><b>${medals.length}</b>
       </div>
       <div class="prof-account" id="prof-account"></div>
-      <p class="prof-note">L'identifiant ci-dessus sert à reconnaître ta sauvegarde. Le code joueur et l'import / export sont dans l'onglet <b>Sauvegardes</b>.</p>`;
+      <p class="prof-note">Code joueur et import / export : onglet <b>Sauvegardes</b>.</p>`;
     this._renderAccountBox(body.querySelector('#prof-account'));
   }
 
@@ -1562,7 +1564,7 @@ class App {
     const p = profile();
     const body = $('saves-body');
     body.innerHTML = `
-      <p class="prof-note">Ton <b>code joueur</b> contient toute ta progression (records, fantômes, circuits enregistrés, pièces, personnalisation, réglages) : une sauvegarde manuelle, utile aussi en invité. Avec un compte, la progression se synchronise toute seule entre tes appareils (voir l'onglet Compte).</p>
+      <p class="prof-note">Ton <b>code joueur</b> contient toute ta progression : une sauvegarde manuelle. Avec un compte, elle se synchronise toute seule.</p>
       <div class="row">
         <button class="btn primary" data-p="copy">Copier mon code joueur</button>
         <button class="btn" data-p="download">Télécharger (.shw)</button>
@@ -1596,7 +1598,7 @@ class App {
   _renderAccountBox(box) {
     if (this.identity.kind !== 'account') {
       box.innerHTML = `<div class="meta">Mode invité · <b>${esc(this.identity.username)}</b></div>
-        <p class="prof-note">Ta progression reste sur cet appareil. Avec un compte, tu la retrouves depuis n'importe quel ordinateur.</p>
+        <p class="prof-note">Progression locale. Un compte la suit partout.</p>
         <div class="row"><button class="btn primary" data-a="acct">Créer un compte / Se connecter</button></div>`;
       box.querySelector('[data-a="acct"]').onclick = () => { account.leaveGuest(); location.reload(); };
       return;
@@ -1622,7 +1624,7 @@ class App {
     };
     box.querySelector('[data-a="del"]').onclick = () => this.ui.modal({
       title: 'Supprimer le compte ?',
-      body: `<p>Le compte <b>${esc(account.username)}</b> et sa sauvegarde cloud seront effacés définitivement, ainsi que tes circuits publiés et tes temps en ligne. Les données de cet appareil pour ce compte sont supprimées aussi. Impossible d'annuler.</p>`,
+      body: `<p>Le compte <b>${esc(account.username)}</b>, sa sauvegarde, tes circuits publiés et tes temps en ligne seront effacés. Irréversible.</p>`,
       actions: [
         { label: 'Supprimer définitivement', danger: true, onClick: () => { account.deleteAccount().then(() => location.reload(), (e) => this.ui.flash(e.message)); } },
         { label: 'Annuler', primary: true },
@@ -1656,7 +1658,7 @@ class App {
     const when = obj.t ? new Date(obj.t).toLocaleString('fr-FR') : '?';
     this.ui.modal({
       title: 'Restaurer cette sauvegarde ?',
-      body: `<p>Joueur <b>${esc(obj.id || '?')}</b>, sauvegarde du ${esc(when)}.</p><p><b>Fusionner</b> garde tes meilleurs records et réunit les circuits ; <b>Remplacer</b> efface tes données actuelles.</p>`,
+      body: `<p>Joueur <b>${esc(obj.id || '?')}</b>, du ${esc(when)}.</p><p><b>Fusionner</b> : meilleurs records, circuits réunis. <b>Remplacer</b> : efface tes données.</p>`,
       actions: [
         { label: 'Fusionner', primary: true, onClick: () => { applySave(obj, 'merge'); this._afterImport(); } },
         { label: 'Remplacer', danger: true, onClick: () => { applySave(obj, 'replace'); this._afterImport(); } },

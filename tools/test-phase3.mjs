@@ -300,8 +300,10 @@ test('compatibilité : l’eau va sur le Départ, pas sur l’Arrivée ni une bi
   assert.equal(Track.normalize({ t: 'start', x: 0, z: 0, l: 0, r: 0, s: 'water' }).s, 'water');
   const tr = new Track('w'); tr.add({ t: 'straight', x: 0, z: 0, l: 0, r: 0, s: 'boat' }); tr.add({ t: 'straight', x: 1, z: 0, l: 0, r: 0, s: 'water' }); tr.add({ t: 'straight', x: 2, z: 0, l: 0, r: 0 });
   const o = {};
-  tr.surfaceAt(12, 5, 12, o); const hb = o.h; tr.surfaceAt(36, 5, 12, o); const hw = o.h; tr.surfaceAt(60, 5, 12, o);
-  assert.ok(Math.abs(hb - hw) < 1e-9 && hw < o.h, 'plaque bateau et eau à la même hauteur, sous la route');
+  tr.surfaceAt(36, 5, 12, o); const hw = o.h; tr.surfaceAt(60, 5, 12, o); const hr = o.h;
+  // 0.9.2 : la plaque bateau est une très légère montée de l'eau (entrée au niveau de l'eau) vers le sol (sortie au niveau de la route).
+  tr.surfaceAt(12, 5, 12 + 11.9, o); const hIn = o.h; tr.surfaceAt(12, 5, 12 - 11.9, o); const hOut = o.h;
+  assert.ok(Math.abs(hIn - hw) < 0.02 && Math.abs(hOut - hr) < 0.02 && hw < hr, 'rampe : eau → route (' + [hIn, hw, hOut, hr].join(', ') + ')');
 });
 test('un circuit peut commencer sur l’eau, en bateau : le bateau flotte indéfiniment', () => {
   const tr = scriptTrack('eau', 'start S2 finish');
@@ -424,8 +426,8 @@ test('tunnel sans bordures : les parois du tunnel existent quand même', () => {
 });
 
 console.log('Rejeu identique (vérification serveur) et version');
-test('PHYS_VER 21 ; un circuit avec verre, tapis, vent, eau et tunnel est rejoué à l’identique par la vérification', () => {
-  assert.equal(PHYS_VER, 21);
+test('PHYS_VER 22 ; un circuit avec verre, tapis, vent, eau et tunnel est rejoué à l’identique par la vérification', () => {
+  assert.equal(PHYS_VER, 22);
   const tr = scriptTrack('mix', 'start S2 S.v S2.t137 S2.w150 S.a2 R S2# S2.a L S2 finish');
   // Enregistre une course du pilote automatique, puis la rejoue comme le fait le serveur.
   const phys = new CarPhysics(tr), logic = new RaceLogic(tr); placeAtStart(phys, logic);

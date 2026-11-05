@@ -26,6 +26,8 @@ export const DECORS = {
 
 // L'eau est un peu sous le niveau de la chaussée.
 export const WATER_DROP = 0.35;
+// Plaque bateau : une très légère montée de l'eau (entrée de la pièce, un peu sous la route) jusqu'au sol (sortie, au niveau normal).
+export const boatDrop = (along) => WATER_DROP * (1 - Math.max(0, Math.min(1, along || 0)));
 
 // Couleurs personnalisées d'une pièce : { road, line, rail } en #rrggbb (clés absentes = couleur d'origine). null si aucune.
 export const COLOR_KEYS = ['road', 'line', 'rail'];
@@ -94,8 +96,9 @@ export class Track {
     // Un checkpoint en option réserve la hauteur de son portique (1 niveau) ou de son anneau (2 niveaux).
     const h = p.rise + Math.max(p.clearance || 0, t.cp === 2 || t.tb ? 2 : t.cp === 1 ? 1 : 0);
     // Une pièce à l'envers est retournée sous son niveau : elle occupe les niveaux en dessous.
-    if (t.v) return [t.l - h, t.l];
-    return [t.l, t.l + h + (t.mv === 1 ? Math.ceil(moverParams(t, MP).amp) : 0)];   // l'ascenseur monte de 2 niveaux (réglable)
+    const below = p.below || 0;       // pièces qui descendent sous leur niveau (route sur le côté : le plan vertical va 9 m plus bas)
+    if (t.v) return [t.l - h, t.l + below];
+    return [t.l - below, t.l + h + (t.mv === 1 ? Math.ceil(moverParams(t, MP).amp) : 0)];   // l'ascenseur monte de 2 niveaux (réglable)
   }
 
   // Convertit une pièce (éventuellement au format v1.0 / v1.1) en pièce v1.2 / Phase 2.
@@ -111,7 +114,7 @@ export class Track {
       s: '', p: 0, v: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ms: 0, ma: 0, col: null, s2: '', p2: 0,
     };
     tile.v = t.v && flagAllowed(type, 'v') ? 1 : 0;
-    tile.nb = t.nb && flagAllowed(type, 'nb') ? 1 : 0;
+    tile.nb = PIECES[type].noRails || (t.nb && flagAllowed(type, 'nb')) ? 1 : 0;
     tile.tn = t.tn && flagAllowed(type, 'tn', tile) ? 1 : 0;
     tile.mv = t.mv && !tile.v && flagAllowed(type, 'mv', tile) ? (t.mv | 0) & 3 : 0;
     if (tile.mv) { const m = clampMover(tile.mv, t.ms, t.ma); tile.ms = m.ms; tile.ma = m.ma; }
@@ -364,7 +367,8 @@ export class Track {
       out.nx = W.x; out.ny = -S.ny; out.nz = W.z;
       out.tile = tile; out.type = 'road'; out.mod = tile.s || ''; out.p = tile.p || 0;
       out.lx = L.lx; out.lz = L.lz;
-      if (tile.s === 'water' || tile.s === 'boat') out.h += WATER_DROP;
+      if (tile.s === 'water') out.h += WATER_DROP;
+      else if (tile.s === 'boat' && (PIECES[tile.t].kind === 'line' || PIECES[tile.t].kind === 'arc')) out.h += boatDrop(S.along);
     }
     return out;
   }
@@ -414,7 +418,8 @@ export class Track {
     out.mod = sf || '';
     out.p = sp || 0;
     out.lx = L.lx; out.lz = L.lz;
-    if (sf === 'water' || sf === 'boat') out.h -= WATER_DROP;      // la plaque bateau est posée sur l'eau
+    if (sf === 'water') out.h -= WATER_DROP;
+    else if (sf === 'boat' && (p.kind === 'line' || p.kind === 'arc')) out.h -= boatDrop(S.along);      // plaque bateau : rampe de l'eau au sol
     return out.h;
   }
 

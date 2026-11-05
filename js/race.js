@@ -15,6 +15,7 @@ import { getRecord, saveRecord, encodeFloats, decodeFloats, formatTime, getImpor
 import { profile, rewardCoins } from './profile.js';
 import { CATALOG } from './cosmetics.js';
 import { SkidMarks } from './skids.js';
+import { TrailRibbon } from './trail.js';
 import { InputRecorder, decodeInputs, inputAt, quantSteer, GhostRunner, PHYS_VER } from './replay.js';
 import { goalMet, goalLabel, completeGoal, goalDone } from './career.js';
 
@@ -192,6 +193,7 @@ export class RaceSession {
     this.wheelSpin = 0;
     app.particles.clear();
     this.skids.clear();
+    if (this.trailRib) this.trailRib.reset();
     if (this.bot) this.bot.reset(this.phys);
     if (!this.demo) {
       app.ui.hud.reset(this);
@@ -241,6 +243,7 @@ export class RaceSession {
     this.prevQuat.copy(this.quat);
     this._camCut();
     this.groundT = 0;
+    if (this.trailRib) this.trailRib.reset();      // pas de traînée qui traverse la téléportation
     if (this.multi) { this._sendNet(); this._say(MSG.keepClock); }
     this.app.audio.respawn();
     this.app.particles.burst(r.x, r.y + 1.5, r.z, 24, 8, 0.6, 0.7, '#5ff2ff', 0);
@@ -476,6 +479,7 @@ export class RaceSession {
   _finish(time) {
     const app = this.app;
     this.state = 'finished';
+    app.audio.engine(null);          // plus de bruit de moteur une fois le niveau terminé
     this.finishT = 0;
     if (this.replay) { this._replayEnded(); return; }
     if (this.multi) {
@@ -672,6 +676,7 @@ export class RaceSession {
     else if (this.state === 'finished') this.obsT = (this.obsT || 0) + dt;
     else if (this.obsT == null || this.state === 'countdown') this.obsT = 0;
     this.view.updateMoving(this.obsT);
+    this.view.updateLights(app.camera.position, this.obsT);
     // Dalles de verre brisées : visibles de nouveau dès qu'un (re)départ les restaure.
     if (this.phys.broken.size !== this._brokenN) { this._brokenN = this.phys.broken.size; this.view.setBroken(this.phys.broken); }
     // Interpolation entre deux pas physiques
@@ -723,15 +728,16 @@ export class RaceSession {
         }
       }
     }
-    // Traînée lumineuse (cosmétique) : en l'air et pendant les turbos.
+    // Traînée lumineuse (cosmétique) : un ruban toujours présent, dont l'intensité suit la vitesse et le boost (voir trail.js).
     const trail = this._trail || (this._trail = (CATALOG.trail.find((x) => x.id === profile().loadout.trail) || CATALOG.trail[0]));
-    if (trail.id !== 'none' && !this.demo && (!p.grounded || p.boost > 0) && p.speed > 8) {
-      const col = trail.rainbow ? `hsl(${(performance.now() / 6) % 360}, 95%, 60%)` : trail.color;
-      for (let k = 0; k < 2; k++) {
-        tmpV.set((Math.random() - 0.5) * 0.6, 0.6, 2.3).applyQuaternion(g.quaternion).add(g.position);
-        app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, 0.55, 0.42, col, 0);
+    if (trail.id !== 'none' && !this.demo && !this.replay) {
+      if (!this.trailRib) this.trailRib = new TrailRibbon(app.scene);
+      if (this.state !== 'paused') {
+        tmpV.set(0, 0.7, 2.3).applyQuaternion(g.quaternion).add(g.position);
+        tmpV2.set(1, 0, 0).applyQuaternion(g.quaternion);
+        this.trailRib.update(dt, tmpV, tmpV2, p.speed, Math.min(1, p.boost), trail.rainbow ? null : trail.color, performance.now() / 1000, app.camera.position);
       }
-    }
+    } else if (this.trailRib) this.trailRib.reset();
     // Sillage du bateau (ou éclaboussures d'un véhicule dans l'eau).
     if (p.grounded && p.surfMod === 'water' && p.speed > 4 && Math.random() < 0.9) {
       for (const sx of [-1.1, 1.1]) {
@@ -763,7 +769,7 @@ export class RaceSession {
     app.scenery.update(this.renderPos, app.camera);
 
     // Audio & HUD
-    if (this.state === 'racing' || this.state === 'finished') {
+    if (this.state === 'racing') {
       app.audio.engine({ speed: p.fwdSpeed, throttle: !!inp.throttle, slip: p.grounded ? p.slip : 0, boost: boosting });
     }
     if (!this.demo) {
@@ -1009,6 +1015,7 @@ export class RaceSession {
       for (const rc of this.remote.values()) rc.dispose();
       this.remote.clear();
     }
+    if (this.trailRib) { this.trailRib.dispose(); this.trailRib = null; }
     this.ghostCar.dispose();
     this.app.particles.clear();
     this.app.audio.engine(null);

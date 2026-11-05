@@ -466,6 +466,339 @@ Object.assign(BUILDERS, {
   },
 });
 
+// ---- 0.9.2 : outils pour les objets horizontaux (véhicules) et les membres fins ------------------------------------------------
+// Cylindre d'axe z (fuselage, chaudière) : de z0 (rayon r0) à z1 (rayon r1), centré en (cx, cy).
+function cylZ(gb, cx, cy, z0, z1, r0, r1, n, color, cap = true) {
+  const pt = (z, r, i) => { const a = (i / n) * TAU; return [cx + Math.cos(a) * r, cy + Math.sin(a) * r, z]; };
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    gb.quad(pt(z0, r0, i), pt(z0, r0, j), pt(z1, r1, j), pt(z1, r1, i), color);
+    if (cap) { gb.tri([cx, cy, z1], pt(z1, r1, j), pt(z1, r1, i), color); gb.tri([cx, cy, z0], pt(z0, r0, i), pt(z0, r0, j), color); }
+  }
+}
+// Cylindre d'axe x (roue vue de côté) : de x0 à x1, rayon r, centré en (cy, cz).
+function cylX(gb, x0, x1, cy, cz, r, n, color) {
+  const pt = (x, i) => { const a = (i / n) * TAU; return [x, cy + Math.cos(a) * r, cz + Math.sin(a) * r]; };
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    gb.quad(pt(x0, i), pt(x0, j), pt(x1, j), pt(x1, i), color);
+    gb.tri([x1, cy, cz], pt(x1, j), pt(x1, i), color);
+    gb.tri([x0, cy, cz], pt(x0, i), pt(x0, j), color);
+  }
+}
+const wheelsX = (gb, xs, zs, r, w = 0.5) => { for (const x of xs) for (const z of zs) cylX(gb, x - w / 2, x + w / 2, r, z, r, 10, '#1d1e2a'); };
+// Membre : prisme à quatre faces entre deux points (branche, antenne, patte, bois de renne).
+function limb(gb, a, b, r0, r1, color) {
+  let d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+  const l = Math.hypot(d[0], d[1], d[2]) || 1;
+  d = d.map((v) => v / l);
+  const h = Math.abs(d[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+  let p = [d[1] * h[2] - d[2] * h[1], d[2] * h[0] - d[0] * h[2], d[0] * h[1] - d[1] * h[0]];
+  const pl = Math.hypot(p[0], p[1], p[2]) || 1; p = p.map((v) => v / pl);
+  const q = [d[1] * p[2] - d[2] * p[1], d[2] * p[0] - d[0] * p[2], d[0] * p[1] - d[1] * p[0]];
+  const S = [[1, 1], [-1, 1], [-1, -1], [1, -1]];
+  const pt = (o, r, [u, v]) => [o[0] + (p[0] * u + q[0] * v) * r, o[1] + (p[1] * u + q[1] * v) * r, o[2] + (p[2] * u + q[2] * v) * r];
+  for (let i = 0; i < 4; i++) gb.quad(pt(a, r0, S[i]), pt(a, r0, S[(i + 1) % 4]), pt(b, r1, S[(i + 1) % 4]), pt(b, r1, S[i]), color);
+  gb.quad(pt(b, r1, S[0]), pt(b, r1, S[1]), pt(b, r1, S[2]), pt(b, r1, S[3]), color);
+}
+const star5 = (glow, cx, cy, z, R, r, color) => {
+  for (let i = 0; i < 5; i++) {
+    const a0 = Math.PI / 2 + (i / 5) * TAU, a1 = a0 + TAU / 10, a2 = a0 - TAU / 10;
+    glow.tri([cx, cy, z], [cx + Math.cos(a0) * R, cy + Math.sin(a0) * R, z], [cx + Math.cos(a1) * r, cy + Math.sin(a1) * r, z], color);
+    glow.tri([cx, cy, z], [cx + Math.cos(a0) * R, cy + Math.sin(a0) * R, z], [cx + Math.cos(a2) * r, cy + Math.sin(a2) * r, z], color);
+  }
+};
+
+Object.assign(BUILDERS, {
+  // ---- Lumières : la partie fixe (la lumière et le faisceau sont ajoutés par TrackView, voir LIGHT_DECOS) ----
+  searchlight(gb, glow, c) {
+    cylinder(gb, 0, 0, 1.3, 0, 1.5, 10, '#4a4f6a', 1.1);
+    gb.box(-0.9, 1.3, -0.9, 0.9, 2.3, 0.9, GREY);
+    glow.quad([-0.5, 1.6, 0.95], [0.5, 1.6, 0.95], [0.5, 1.9, 0.95], [-0.5, 1.9, 0.95], c || '#cfeaff');
+  },
+  spotlight(gb, glow, c) {
+    gb.box(-1.2, 0, -1.2, 1.2, 0.5, 1.2, '#4a4f6a');
+    limb(gb, [0, 0.5, 0], [0, 2.5, 0], 0.22, 0.22, GREY);
+    gb.box(-0.8, 2.4, -0.8, 0.8, 3.2, 0.8, '#2f3247');
+    glow.quad([-0.6, 2.55, -0.82], [0.6, 2.55, -0.82], [0.6, 3.05, -0.82], [-0.6, 3.05, -0.82], c || '#fff2c4');
+  },
+  lanternPost(gb, glow, c) {
+    gb.box(-0.9, 0, -0.9, 0.9, 0.5, 0.9, '#3a3d56');
+    limb(gb, [0, 0.5, 0], [0, 1.7, 0], 0.16, 0.12, '#2f3247');
+    gb.box(-0.45, 1.7, -0.45, 0.45, 3.0, 0.45, '#2f3247');
+    glow.box(-0.33, 1.85, -0.33, 0.33, 2.85, 0.33, c || '#ffc46b');
+    gb.taper(0, 0, 3.0, 3.5, 0.65, 0.65, 0.12, 0.12, '#2f3247');
+  },
+  lanternHang(gb, glow, c) {
+    gb.box(-0.15, 6.2, -0.15, 0.15, 6.6, 0.15, GREY);
+    limb(gb, [0, 6.2, 0], [0, 4.6, 0], 0.05, 0.05, '#2f3247');
+    gb.taper(0, 0, 4.6, 5.0, 0.2, 0.2, 0.55, 0.55, '#2f3247');
+    glow.box(-0.4, 3.7, -0.4, 0.4, 4.6, 0.4, c || '#ffb35c');
+    gb.taper(0, 0, 3.4, 3.7, 0.12, 0.12, 0.5, 0.5, '#2f3247');
+  },
+  streetLamp(gb, glow, c) {
+    cylinder(gb, 0, 0, 0.8, 0, 0.7, 8, '#3a3d56', 0.45);
+    limb(gb, [0, 0.8, 0], [0, 8.2, 0], 0.22, 0.14, '#4a4f6a');
+    limb(gb, [0, 8.2, 0], [1.7, 8.6, 0], 0.12, 0.1, '#4a4f6a');
+    gb.box(1.2, 8.3, -0.55, 2.4, 8.6, 0.55, '#2f3247');
+    glow.quad([1.3, 8.28, -0.45], [2.3, 8.28, -0.45], [2.3, 8.28, 0.45], [1.3, 8.28, 0.45], c || '#ffe9b0');
+  },
+  // ---- Véhicules (nez vers -z) ----
+  plane(gb, glow, c) {
+    const body = c || '#f4f1ea', acc = '#3ec1ff';
+    cylZ(gb, 0, 4, -11, 9, 1.5, 1.5, 12, body);
+    cylZ(gb, 0, 4, -14, -11, 0.4, 1.5, 12, body);
+    cylZ(gb, 0, 4.2, 9, 13, 1.5, 0.35, 12, body);
+    gb.box(-10, 3.4, -2, -1.2, 3.8, 3, '#dfe3ee'); gb.box(1.2, 3.4, -2, 10, 3.8, 3, '#dfe3ee');
+    gb.box(-0.15, 5, 9, 0.15, 9, 12.5, acc);
+    gb.box(-4.2, 4.4, 10.2, -0.6, 4.7, 12.8, '#dfe3ee'); gb.box(0.6, 4.4, 10.2, 4.2, 4.7, 12.8, '#dfe3ee');
+    for (const x of [-4.6, 4.6]) cylZ(gb, x, 2.9, -3.4, 0, 0.75, 0.75, 8, '#8d93ad');
+    for (const x of [-1.2, 1.2]) { limb(gb, [x, 3, -6], [x, 0.9, -6], 0.09, 0.09, GREY); } wheelsX(gb, [-1.2, 1.2], [-6], 0.9, 0.5);
+    for (const x of [-2.2, 2.2]) { limb(gb, [x, 3, 1.5], [x, 0.9, 1.5], 0.09, 0.09, GREY); } wheelsX(gb, [-2.2, 2.2], [1.5], 0.9, 0.5);
+    gb.box(-1.52, 4.15, -10.5, -1.48, 4.35, 8, acc); gb.box(1.48, 4.15, -10.5, 1.52, 4.35, 8, acc);
+    for (let i = 0; i < 10; i++) for (const s of [-1, 1]) glow.quad([s * 1.53, 4.55, -8.6 + i * 1.5], [s * 1.53, 4.55, -7.9 + i * 1.5], [s * 1.53, 5.0, -7.9 + i * 1.5], [s * 1.53, 5.0, -8.6 + i * 1.5], '#7fe9ff');
+    glow.quad([-0.9, 4.75, -12.1], [0.9, 4.75, -12.1], [0.7, 5.2, -11.7], [-0.7, 5.2, -11.7], '#7fe9ff');
+  },
+  biplane(gb, glow, c) {
+    const body = c || '#d8654a';
+    cylZ(gb, 0, 2.2, -4, 4.5, 0.85, 0.85, 8, body);
+    cylZ(gb, 0, 2.2, 4.5, 7, 0.85, 0.2, 8, body);
+    gb.box(-6, 1.7, -2.4, 6, 1.9, 0.6, '#f4f1ea'); gb.box(-6, 3.9, -2.4, 6, 4.1, 0.6, '#f4f1ea');
+    for (const x of [-4, 4]) limb(gb, [x, 1.9, -1], [x, 3.9, -1], 0.07, 0.07, GREY);
+    limb(gb, [0, 2.8, -1.4], [0, 3.9, -1.4], 0.1, 0.1, GREY);
+    gb.box(-0.1, 2.5, 5.5, 0.1, 4.2, 7, '#f4f1ea'); gb.box(-2.4, 2.35, 5.6, 2.4, 2.5, 7, '#f4f1ea');
+    gb.box(-0.15, 1.2, -5.3, 0.15, 3.2, -4.3, '#2f3247');
+    gb.box(-0.12, 2.2, -4.5, 0.12, 2.3, -4.1, '#2f3247');
+    for (const x of [-0.9, 0.9]) { limb(gb, [x, 1.5, -2.2], [x, 0.7, -2.4], 0.07, 0.07, GREY); }
+    wheelsX(gb, [-0.9, 0.9], [-2.4], 0.7, 0.35);
+    glow.quad([-0.5, 3.0, -2.5], [0.5, 3.0, -2.5], [0.5, 3.15, -1.4], [-0.5, 3.15, -1.4], '#7fe9ff');
+  },
+  helicopter(gb, glow, c) {
+    const body = c || '#ff6b57';
+    sphere(gb, 0, 2.6, -0.4, 2.0, body, null, 1.6, 5, 10);
+    cylZ(gb, 0, 2.9, 1, 8.5, 0.7, 0.28, 8, body);
+    gb.box(-0.1, 2.9, 7.6, 0.1, 5, 8.7, body);
+    gb.box(-1.2, 3.1, 8.4, 1.2, 3.25, 8.7, '#dfe3ee');
+    limb(gb, [0, 4.1, -0.4], [0, 4.9, -0.4], 0.2, 0.15, GREY);
+    for (let k = 0; k < 4; k++) { const a = (k / 4) * TAU + 0.4; limb(gb, [0, 4.9, -0.4], [Math.cos(a) * 6.4, 4.95, -0.4 + Math.sin(a) * 6.4], 0.14, 0.07, '#2f3247'); }
+    for (const x of [-1.5, 1.5]) { gb.box(x - 0.1, 0.5, -3, x + 0.1, 0.7, 2, GREY); limb(gb, [x, 0.7, -1.8], [x * 0.85, 1.9, -1.2], 0.08, 0.08, GREY); limb(gb, [x, 0.7, 0.8], [x * 0.85, 1.9, 0.3], 0.08, 0.08, GREY); }
+    glow.quad([-1.1, 2.9, -2.35], [1.1, 2.9, -2.35], [0.9, 3.6, -2.2], [-0.9, 3.6, -2.2], '#7fe9ff');
+  },
+  bus(gb, glow, c) {
+    const body = c || '#ffbf3c';
+    gb.box(-1.6, 0.7, -6.5, 1.6, 3.7, 6.5, body);
+    gb.box(-1.62, 1.5, -6.5, 1.62, 1.9, 6.5, '#2f3247');
+    gb.box(-1.62, 0.7, -6.5, 1.62, 1.0, 6.5, '#2f3247');
+    for (let i = 0; i < 6; i++) for (const s of [-1, 1]) glow.quad([s * 1.64, 2.1, -5.6 + i * 2], [s * 1.64, 2.1, -4.4 + i * 2], [s * 1.64, 3.2, -4.4 + i * 2], [s * 1.64, 3.2, -5.6 + i * 2], '#bfefff');
+    glow.quad([-1.3, 2.0, -6.55], [1.3, 2.0, -6.55], [1.3, 3.3, -6.55], [-1.3, 3.3, -6.55], '#bfefff');
+    for (const x of [-1.0, 1.0]) glow.quad([x - 0.25, 1.0, -6.56], [x + 0.25, 1.0, -6.56], [x + 0.25, 1.35, -6.56], [x - 0.25, 1.35, -6.56], '#fff2c4');
+    gb.box(-1.4, 3.7, -3, 1.4, 3.9, 3, '#dfe3ee');
+    wheelsX(gb, [-1.6, 1.6], [-4.2, 4.2], 0.7, 0.4);
+  },
+  truck(gb, glow, c) {
+    const cab = c || '#3ec1ff';
+    gb.box(-1.5, 0.8, -7, 1.5, 3.2, -4.6, cab);
+    gb.box(-1.52, 2.0, -6.9, 1.52, 3.0, -5.2, '#2f3247');
+    glow.quad([-1.2, 2.1, -7.02], [1.2, 2.1, -7.02], [1.2, 3.0, -7.02], [-1.2, 3.0, -7.02], '#bfefff');
+    gb.box(-1.6, 0.8, -4.4, 1.6, 4.4, 6.5, '#dfe3ee');
+    gb.box(-1.62, 2.4, -4.4, 1.62, 2.8, 6.5, cab);
+    gb.box(-1.3, 0.6, -4.5, 1.3, 1.0, 6.4, '#2f3247');
+    wheelsX(gb, [-1.5, 1.5], [-5.6, 3.2, 5.2], 0.8, 0.5);
+  },
+  locomotive(gb, glow, c) {
+    const body = c || '#8f1d2c';
+    gb.box(-1.9, 0.9, -6, 1.9, 1.5, 6, '#2f3247');
+    cylZ(gb, 0, 3.1, -6, 1.5, 1.5, 1.5, 12, body);
+    gb.box(-1.8, 1.5, 1.5, 1.8, 5, 6, body);
+    gb.box(-2.1, 5, 1.2, 2.1, 5.3, 6.3, '#2f3247');
+    cylinder(gb, 0, 4.4, 6.0, -4.2, 0.55, 8, '#2f3247', 0.8);
+    gb.box(-0.4, 4.6, -1.2, 0.4, 5.1, -0.4, '#d8b53f');
+    glow.quad([-1.0, 3.3, -6.05], [1.0, 3.3, -6.05], [1.0, 3.9, -6.05], [-1.0, 3.9, -6.05], '#fff2c4');
+    for (const s of [-1, 1]) glow.quad([s * 1.83, 3.0, 2.4], [s * 1.83, 3.0, 4.6], [s * 1.83, 4.2, 4.6], [s * 1.83, 4.2, 2.4], '#bfefff');
+    wheelsX(gb, [-1.7, 1.7], [-4, -1.6, 1, 3.4, 5.2], 0.85, 0.35);
+  },
+  sedan(gb, glow, c) {
+    const body = c || '#7cf06b';
+    gb.box(-1.4, 0.5, -3.2, 1.4, 1.6, 3.2, body);
+    gb.box(-1.2, 1.6, -1.6, 1.2, 2.5, 1.9, body);
+    glow.quad([-1.1, 1.7, -1.62], [1.1, 1.7, -1.62], [1.0, 2.4, -1.5], [-1.0, 2.4, -1.5], '#bfefff');
+    for (const s of [-1, 1]) glow.quad([s * 1.24, 1.7, -1.4], [s * 1.24, 1.7, 1.6], [s * 1.24, 2.4, 1.3], [s * 1.24, 2.4, -1.2], '#bfefff');
+    for (const x of [-0.9, 0.9]) glow.quad([x - 0.3, 0.9, -3.22], [x + 0.3, 0.9, -3.22], [x + 0.3, 1.25, -3.22], [x - 0.3, 1.25, -3.22], '#fff2c4');
+    wheelsX(gb, [-1.4, 1.4], [-2.1, 2.1], 0.55, 0.4);
+  },
+  ufo(gb, glow, c) {
+    const body = c || '#b8c0d8';
+    sphere(gb, 0, 2.2, 0, 4.6, body, '#9aa3c2', 1.0, 3, 14);
+    sphere(gb, 0, 2.6, 0, 1.9, '#7fe9ff', null, 1.8, 4, 10, true);
+    for (let i = 0; i < 10; i++) { const a = (i / 10) * TAU; glow.tri([Math.cos(a) * 4.3, 2.0, Math.sin(a) * 4.3], [Math.cos(a + 0.2) * 4.3, 2.0, Math.sin(a + 0.2) * 4.3], [Math.cos(a + 0.1) * 4.6, 2.4, Math.sin(a + 0.1) * 4.6], i % 2 ? '#ffd23e' : '#ff7ad9'); }
+    for (const [x, z] of [[2.4, 0], [-1.2, 2.1], [-1.2, -2.1]]) limb(gb, [x, 1.5, z], [x * 1.2, 0, z * 1.2], 0.14, 0.2, GREY);
+  },
+  sailboat(gb, glow, c) {
+    const hull = c || '#f4f1ea';
+    gb.taper(0, 0, 0.3, 1.8, 1.3, 4.2, 1.9, 5.0, hull);
+    gb.box(-1.4, 1.7, -4.6, 1.4, 1.9, 4.6, '#8a6a4a');
+    limb(gb, [0, 1.9, -0.6], [0, 11, -0.6], 0.17, 0.1, '#6b4a32');
+    gb.tri([0.05, 2.6, -0.6], [0.05, 10.4, -0.6], [0.05, 2.6, 4.2], '#f4f1ea'); gb.tri([-0.05, 2.6, -0.6], [-0.05, 2.6, 4.2], [-0.05, 10.4, -0.6], '#f4f1ea');
+    gb.tri([0.05, 2.4, -0.9], [0.05, 9.6, -0.9], [0.05, 2.4, -4.4], c || '#ff4f9a'); gb.tri([-0.05, 2.4, -0.9], [-0.05, 2.4, -4.4], [-0.05, 9.6, -0.9], c || '#ff4f9a');
+  },
+  // ---- Noël ----
+  xmasTree(gb, glow, c) {
+    cylinder(gb, 0, 0, 1.4, 0, 0.5, 6, '#6b4a32');
+    const col = c || '#1f7a4a';
+    cone(gb, 0, 1, 0, 3.4, 3.6, 10, col); cone(gb, 0, 3.2, 0, 2.6, 3.2, 10, col); cone(gb, 0, 5.2, 0, 1.8, 3.0, 10, c || '#27905a');
+    star5(glow, 0, 8.6, 0.05, 0.9, 0.38, '#ffd23e'); star5(glow, 0, 8.6, -0.05, 0.9, 0.38, '#ffd23e');
+    const balls = [[1.6, 2.2, 1.9, '#ff3b4f'], [-1.9, 2.5, 1.2, '#3ec1ff'], [0.4, 4.4, 1.8, '#ffd23e'], [-1.1, 4.8, -1.2, '#ff7ad9'], [1.2, 6.5, 0.9, '#ff3b4f'], [-0.8, 6.8, 0.7, '#7cf06b'], [2.2, 2.3, -1.6, '#ffd23e']];
+    for (const [x, y, z, k] of balls) octa(gb, x, y, z, 0.28, 0.32, k, glow, k);
+  },
+  snowman(gb, glow, c) {
+    sphere(gb, 0, 1.4, 0, 1.5, WHITE, '#e6eefc', 1.4, 4, 9); sphere(gb, 0, 3.6, 0, 1.1, WHITE, '#e6eefc', 1.05, 4, 9); sphere(gb, 0, 5.2, 0, 0.8, WHITE, '#e6eefc', 0.8, 4, 9);
+    cone(gb, 0, 5.2, 0, 0.14, 1.0, 5, '#ff7a1a');
+    for (const x of [-0.28, 0.28]) glow.tri([x, 5.55, 0.7], [x + 0.14, 5.55, 0.7], [x + 0.07, 5.7, 0.7], '#14142a');
+    for (let i = 0; i < 3; i++) glow.tri([-0.1, 3.9 - i * 0.55, 1.05], [0.1, 3.9 - i * 0.55, 1.05], [0, 4.1 - i * 0.55, 1.05], '#14142a');
+    gb.box(-0.9, 5.85, -0.9, 0.9, 5.95, 0.9, '#2f3247'); gb.box(-0.55, 5.95, -0.55, 0.55, 6.9, 0.55, '#2f3247');
+    gb.box(-0.95, 4.35, -0.95, 0.95, 4.65, 0.95, c || '#ff3b4f');
+    limb(gb, [1.0, 3.9, 0], [2.3, 4.7, 0], 0.07, 0.05, '#6b4a32'); limb(gb, [-1.0, 3.9, 0], [-2.3, 4.7, 0], 0.07, 0.05, '#6b4a32');
+  },
+  gift(gb, glow, c) {
+    const col = c || '#ff3b4f';
+    gb.box(-1.6, 0, -1.6, 1.6, 2.6, 1.6, col);
+    gb.box(-0.3, 0, -1.65, 0.3, 2.65, 1.65, '#ffd23e'); gb.box(-1.65, 0, -0.3, 1.65, 2.65, 0.3, '#ffd23e');
+    octa(gb, -0.55, 3.0, 0, 0.6, 0.45, '#ffd23e'); octa(gb, 0.55, 3.0, 0, 0.6, 0.45, '#ffd23e');
+    gb.box(-0.2, 2.6, -0.2, 0.2, 3.0, 0.2, '#ffd23e');
+  },
+  candyCane(gb, glow, c) {
+    const A = c || '#ff3b4f';
+    for (let i = 0; i < 9; i++) cylinder(gb, 0, i * 0.5, i * 0.5 + 0.5, 0, 0.36, 8, i % 2 ? WHITE : A);
+    for (let i = 0; i < 7; i++) { const a = (i / 6) * Math.PI; sphere(gb, Math.cos(a) * 1.1 + 1.1, 4.5 + Math.sin(a) * 1.1, 0, 0.4, i % 2 ? WHITE : A, null, 0.4, 3, 6); }
+  },
+  xmasStar(gb, glow, c) {
+    limb(gb, [0, 0, 0], [0, 4.2, 0], 0.18, 0.12, GREY);
+    const col = c || '#ffd23e';
+    star5(glow, 0, 6.2, 0.08, 2.2, 0.95, col); star5(glow, 0, 6.2, -0.08, 2.2, 0.95, col);
+    octa(gb, 0, 6.2, 0, 0.7, 0.5, col, glow, col);
+  },
+  wreath(gb, glow, c) {
+    const col = c || '#1f7a4a';
+    for (let i = 0; i < 14; i++) { const a = (i / 14) * TAU; sphere(gb, Math.cos(a) * 2.6, 3 + Math.sin(a) * 2.6, 0, 0.75, col, i % 2 ? '#2a9a5e' : null, 0.75, 3, 6); }
+    for (let i = 0; i < 6; i++) { const a = 0.4 + (i / 6) * TAU; octa(gb, Math.cos(a) * 2.6, 3 + Math.sin(a) * 2.6, 0.7, 0.2, 0.22, '#ff3b4f', glow, '#ff3b4f'); }
+    octa(gb, -0.55, 0.45, 0.4, 0.65, 0.5, '#ff3b4f'); octa(gb, 0.55, 0.45, 0.4, 0.65, 0.5, '#ff3b4f');
+    gb.box(-1.4, 0, -0.2, 1.4, 0.3, 0.2, '#6b4a32');
+  },
+  sleigh(gb, glow, c) {
+    const col = c || '#d8213b';
+    gb.box(-1.4, 0.9, -2.4, 1.4, 1.5, 2.4, col);
+    gb.box(-1.5, 1.5, -0.4, -1.3, 2.7, 2.4, col); gb.box(1.3, 1.5, -0.4, 1.5, 2.7, 2.4, col);
+    gb.box(-1.4, 1.5, 2.3, 1.4, 3.1, 2.6, col);
+    gb.box(-1.0, 1.5, -0.2, 1.0, 1.6, 2.2, '#8a6a4a');
+    for (const x of [-1.1, 1.1]) { gb.box(x - 0.1, 0.3, -3.4, x + 0.1, 0.5, 3, '#d8b53f'); limb(gb, [x, 0.5, -3], [x, 1.1, -3.4], 0.1, 0.1, '#d8b53f'); limb(gb, [x, 0.5, -1.4], [x, 1.0, -1.4], 0.08, 0.08, '#d8b53f'); limb(gb, [x, 0.5, 1.6], [x, 1.0, 1.6], 0.08, 0.08, '#d8b53f'); }
+    sphere(gb, 0, 2.2, 0.8, 1.0, '#8a6a4a', null, 0.9, 3, 7); gb.box(-0.1, 3.0, 0.7, 0.1, 3.2, 0.9, '#d8b53f');
+    octa(gb, -0.5, 1.9, -1.0, 0.5, 0.45, '#3ec1ff'); octa(gb, 0.4, 1.9, -1.2, 0.45, 0.4, '#ffd23e');
+  },
+  reindeer(gb, glow, c) {
+    const col = c || '#8a5a3c';
+    gb.box(-0.7, 2.2, -1.6, 0.7, 3.5, 1.6, col);
+    for (const [x, z] of [[-0.5, -1.2], [0.5, -1.2], [-0.5, 1.2], [0.5, 1.2]]) limb(gb, [x, 2.3, z], [x, 0, z], 0.2, 0.12, col);
+    limb(gb, [0, 3.3, -1.3], [0, 4.7, -2.0], 0.4, 0.28, col);
+    gb.box(-0.38, 4.6, -3.1, 0.38, 5.4, -1.8, col);
+    glow.tri([-0.12, 4.9, -3.12], [0.12, 4.9, -3.12], [0, 5.1, -3.12], '#ff3b4f'); octa(gb, 0, 4.85, -3.15, 0.22, 0.22, '#ff3b4f', glow, '#ff3b4f');
+    for (const s of [-1, 1]) { limb(gb, [s * 0.25, 5.4, -2.1], [s * 1.0, 6.7, -2.2], 0.07, 0.05, '#d8c9a0'); limb(gb, [s * 0.7, 6.1, -2.15], [s * 0.45, 6.9, -2.1], 0.05, 0.04, '#d8c9a0'); limb(gb, [s * 0.7, 6.1, -2.15], [s * 1.5, 6.6, -2.3], 0.05, 0.04, '#d8c9a0'); }
+    gb.box(-0.1, 3.3, 1.5, 0.1, 3.7, 1.8, WHITE);
+  },
+  gingerHouse(gb, glow, c) {
+    const wall = c || '#a8693a';
+    gb.box(-4, 0, -3.5, 4, 3.6, 3.5, wall);
+    const r1 = [-4.6, 3.6, 0], r2 = [4.6, 3.6, 0];
+    gb.quad([-4.6, 3.6, -4], [4.6, 3.6, -4], [4.6, 5.8, 0], [-4.6, 5.8, 0], WHITE); gb.quad([-4.6, 5.8, 0], [4.6, 5.8, 0], [4.6, 3.6, 4], [-4.6, 3.6, 4], WHITE);
+    gb.tri([-4, 3.6, -3.5], [-4, 3.6, 3.5], [-4, 5.7, 0], wall); gb.tri([4, 3.6, -3.5], [4, 5.7, 0], [4, 3.6, 3.5], wall);
+    void r1; void r2;
+    gb.box(-0.8, 0, 3.5, 0.8, 2.2, 3.6, '#5a3a22');
+    for (const x of [-2.6, 2.6]) glow.quad([x - 0.6, 1.4, 3.56], [x + 0.6, 1.4, 3.56], [x + 0.6, 2.6, 3.56], [x - 0.6, 2.6, 3.56], '#ffd23e');
+    for (let i = 0; i < 7; i++) octa(gb, -4 + i * 1.33, 3.7, 3.9, 0.3, 0.3, ['#ff3b4f', '#7cf06b', '#ffd23e'][i % 3], glow, ['#ff3b4f', '#7cf06b', '#ffd23e'][i % 3]);
+    cylinder(gb, 2.4, 5.2, 7.0, -1, 0.5, 6, '#7a4a28');
+  },
+  // ---- Halloween ----
+  pumpkin(gb, glow, c) {
+    const col = c || '#ff7a1a';
+    sphere(gb, 0, 1.5, 0, 2.0, col, '#e8650f', 1.5, 5, 12); sphere(gb, 0, 1.5, 0, 1.3, '#d85a0c', null, 1.55, 4, 8);
+    cylinder(gb, 0, 2.9, 3.6, 0, 0.28, 6, '#3f7a3a', 0.2);
+    glow.tri([-1.1, 2.2, 1.95], [-0.4, 2.2, 1.95], [-0.75, 2.8, 1.95], '#ffd23e'); glow.tri([0.4, 2.2, 1.95], [1.1, 2.2, 1.95], [0.75, 2.8, 1.95], '#ffd23e');
+    for (let i = 0; i < 4; i++) glow.quad([-1.2 + i * 0.6, 0.8, 1.9], [-0.8 + i * 0.6, 0.8, 1.9], [-0.8 + i * 0.6, 1.5, 1.9], [-1.2 + i * 0.6, 1.5, 1.9], i % 2 ? '#ff9f3a' : '#ffd23e');
+  },
+  ghost(gb, glow, c) {
+    const col = c || '#f4f1ea';
+    sphere(gb, 0, 4.2, 0, 1.7, col, null, 1.8, 5, 10);
+    for (let i = 0; i < 10; i++) {
+      const a0 = (i / 10) * TAU, a1 = ((i + 1) / 10) * TAU, am = (a0 + a1) / 2;
+      const R = 1.7, bot = i % 2 ? 0.6 : 1.2;
+      gb.quad([Math.cos(a0) * R, 4.2, Math.sin(a0) * R], [Math.cos(a1) * R, 4.2, Math.sin(a1) * R], [Math.cos(a1) * R, bot + 0.9, Math.sin(a1) * R], [Math.cos(a0) * R, bot + 0.9, Math.sin(a0) * R], col);
+      gb.tri([Math.cos(a0) * R, bot + 0.9, Math.sin(a0) * R], [Math.cos(a1) * R, bot + 0.9, Math.sin(a1) * R], [Math.cos(am) * R * 0.9, bot - 0.1 + (i % 2 ? 0 : 0.5), Math.sin(am) * R * 0.9], col);
+    }
+    for (const x of [-0.6, 0.6]) glow.quad([x - 0.22, 4.5, 1.66], [x + 0.22, 4.5, 1.66], [x + 0.22, 5.1, 1.66], [x - 0.22, 5.1, 1.66], '#14142a');
+    glow.quad([-0.35, 3.6, 1.66], [0.35, 3.6, 1.66], [0.3, 4.0, 1.66], [-0.3, 4.0, 1.66], '#14142a');
+  },
+  tombstone(gb, glow, c) {
+    const col = c || '#8d93ad';
+    gb.box(-1.5, 0, -0.45, 1.5, 3.0, 0.45, col);
+    sphere(gb, 0, 3.0, 0, 1.5, col, null, 1.2, 3, 10, true);
+    gb.box(-0.12, 1.5, 0.46, 0.12, 2.9, 0.5, '#4a4f6a'); gb.box(-0.55, 2.3, 0.46, 0.55, 2.55, 0.5, '#4a4f6a');
+    gb.box(-1.9, 0, -1.3, 1.9, 0.25, 1.3, '#5a8a4a');
+  },
+  bats(gb, glow, c) {
+    const col = c || '#2f3247';
+    const bat = (x, y, z, k) => {
+      octa(gb, x, y, z, 0.35, 0.5, col);
+      for (const s of [-1, 1]) {
+        gb.quad([x, y + 0.2, z - 0.1], [x + s * 0.2, y + 0.1, z + 0.3], [x + s * 2.0, y + 0.5 + k, z + 0.4], [x + s * 1.9, y + 0.7 + k, z - 0.5], col);
+        gb.tri([x + s * 0.2, y + 0.1, z + 0.3], [x + s * 1.0, y - 0.1, z + 0.5], [x + s * 2.0, y + 0.5 + k, z + 0.4], col);
+      }
+      octa(gb, x - 0.12, y + 0.35, z - 0.3, 0.07, 0.07, '#ff3b4f', glow, '#ff3b4f'); octa(gb, x + 0.12, y + 0.35, z - 0.3, 0.07, 0.07, '#ff3b4f', glow, '#ff3b4f');
+    };
+    bat(0, 3.2, 0, 0.3); bat(3.4, 4.6, 1.6, -0.2); bat(-3, 5.4, -1.8, 0.4);
+  },
+  witchHat(gb, glow, c) {
+    const col = c || '#2a2438';
+    cylinder(gb, 0, 0, 0.35, 0, 3.4, 12, col, 3.2);
+    cone(gb, 0, 0.35, 0, 2.0, 4.6, 10, col);
+    cylinder(gb, 0, 0.45, 1.1, 0, 2.02, 10, '#8f3df2', 1.7);
+    gb.box(-0.6, 0.5, 1.7, 0.6, 1.1, 2.1, '#ffd23e'); gb.box(-0.35, 0.6, 1.75, 0.35, 1.0, 2.15, '#2a2438');
+    void glow;
+  },
+  cauldron(gb, glow, c) {
+    const col = c || '#2a2a33';
+    sphere(gb, 0, 2.0, 0, 2.2, col, null, 1.7, 4, 12, false);
+    cylinder(gb, 0, 3.4, 3.7, 0, 2.2, 12, '#3a3a46', 2.2);
+    for (const a of [0.6, 2.7, 4.8]) limb(gb, [Math.cos(a) * 1.4, 1.0, Math.sin(a) * 1.4], [Math.cos(a) * 1.9, 0, Math.sin(a) * 1.9], 0.22, 0.28, col);
+    glow.quad([-1.9, 3.62, -1.9], [1.9, 3.62, -1.9], [1.9, 3.62, 1.9], [-1.9, 3.62, 1.9], '#7cf06b');
+    for (const [x, z, r] of [[0.6, 0.4, 0.4], [-0.9, -0.5, 0.3], [0.2, -1.1, 0.25]]) octa(gb, x, 3.9, z, r, r, '#b6ff9a', glow, '#b6ff9a');
+    limb(gb, [-1.2, 0.2, 1.4], [-2.6, 0.2, 2.6], 0.12, 0.12, '#6b4a32');
+  },
+  spookyTree(gb, glow, c) {
+    const col = c || '#3a2f38';
+    cylinder(gb, 0, 0, 3.8, 0, 0.9, 7, col, 0.45);
+    const br = [[[0, 3.2, 0], [-2.4, 5.4, 0.4], 0.32], [[0, 3.6, 0], [2.6, 6.0, -0.5], 0.3], [[0, 3.8, 0], [0.3, 7.4, 0.6], 0.28], [[-2.4, 5.4, 0.4], [-3.6, 7.2, 0.2], 0.16], [[2.6, 6.0, -0.5], [3.8, 7.4, -0.7], 0.15], [[2.6, 6.0, -0.5], [2.1, 7.8, 0], 0.13], [[-1.2, 4.4, 0.2], [-2.8, 4.0, 1.4], 0.14], [[0.3, 7.4, 0.6], [-0.7, 8.8, 0.9], 0.12]];
+    for (const [a, b, r] of br) limb(gb, a, b, r, r * 0.45, col);
+    for (const x of [-0.25, 0.25]) glow.quad([x - 0.1, 2.4, 0.5], [x + 0.1, 2.4, 0.5], [x + 0.1, 2.75, 0.5], [x - 0.1, 2.75, 0.5], '#ffd23e');
+  },
+  hauntedHouse(gb, glow, c) {
+    const wall = c || '#4a4260';
+    gb.box(-4.5, 0, -3.5, 4.5, 6.2, 3.5, wall);
+    gb.quad([-5, 6.2, -4], [5, 6.2, -4], [5, 8.6, 0], [-5, 8.6, 0], '#2a2438'); gb.quad([-5, 8.6, 0], [5, 8.6, 0], [5, 6.2, 4], [-5, 6.2, 4], '#2a2438');
+    gb.tri([-4.5, 6.2, -3.5], [-4.5, 6.2, 3.5], [-4.5, 8.5, 0], wall); gb.tri([4.5, 6.2, -3.5], [4.5, 8.5, 0], [4.5, 6.2, 3.5], wall);
+    gb.box(2.2, 0, -1.2, 4.8, 10.5, 1.4, wall); cone(gb, 3.5, 10.5, 0.1, 2.2, 3.2, 4, '#2a2438');
+    gb.box(-0.9, 0, 3.5, 0.9, 2.6, 3.6, '#1d1a28');
+    for (const [x, y] of [[-2.8, 1.8], [-2.8, 4.2], [2.6, 1.8], [-0.2, 4.4]]) glow.quad([x - 0.6, y, 3.56], [x + 0.6, y, 3.56], [x + 0.6, y + 1.2, 3.56], [x - 0.6, y + 1.2, 3.56], '#ffb347');
+    glow.quad([3.1, 7.6, 1.46], [3.9, 7.6, 1.46], [3.9, 8.8, 1.46], [3.1, 8.8, 1.46], '#ffb347');
+  },
+  skull(gb, glow, c) {
+    const col = c || '#f4f1ea';
+    sphere(gb, 0, 3.2, 0, 2.0, col, '#e6dfcf', 1.8, 5, 10);
+    gb.box(-1.2, 1.0, -1.0, 1.2, 1.9, 1.2, col);
+    for (const x of [-0.75, 0.75]) glow.quad([x - 0.5, 3.0, 1.9], [x + 0.5, 3.0, 1.9], [x + 0.5, 3.9, 1.9], [x - 0.5, 3.9, 1.9], '#14142a');
+    glow.tri([-0.2, 2.5, 1.95], [0.2, 2.5, 1.95], [0, 2.9, 1.95], '#14142a');
+    for (let i = 0; i < 5; i++) gb.box(-1.0 + i * 0.4, 0.95, 1.18, -0.7 + i * 0.4, 1.7, 1.22, '#14142a');
+  },
+});
+
 // Petite base rocheuse (amas de cristaux).
 function rockBase(gb) {
   octa(gb, 0, 0.3, 0, 2.2, 0.6, '#4a3e5a');

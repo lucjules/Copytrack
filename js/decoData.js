@@ -14,7 +14,24 @@ export const DECO_ORDER = [
   'gear', 'pipe', 'chimney', 'crate', 'barrel', 'crane', 'warnLight',
   'satellite', 'asteroid', 'antenna', 'rocket', 'planetMini',
   'trafficCone', 'tireStack', 'flagPole', 'grandstand',
+  // 0.9.2 : lumières (vraies lumières, de la couleur de l'objet), véhicules, Noël, Halloween
+  'searchlight', 'spotlight', 'lanternPost', 'lanternHang', 'streetLamp',
+  'plane', 'biplane', 'helicopter', 'bus', 'truck', 'locomotive', 'sedan', 'ufo', 'sailboat',
+  'xmasTree', 'snowman', 'gift', 'candyCane', 'xmasStar', 'wreath', 'sleigh', 'reindeer', 'gingerHouse',
+  'pumpkin', 'ghost', 'tombstone', 'bats', 'witchHat', 'cauldron', 'spookyTree', 'hauntedHouse', 'skull',
 ];
+
+// Décorations qui éclairent vraiment la scène (PointLight / SpotLight). La couleur de l'objet (index ou #rrggbb) donne celle de la lumière.
+//  type : 'spot' (projecteur : faisceau visible + SpotLight) ou 'point' ; y : hauteur de la source (m, avant échelle) ;
+//  spin : rotation du faisceau (rad/s) ; tilt : inclinaison du faisceau au-dessus de l'horizontale ; range : portée (m) ;
+//  power : intensité (candelas) ; color : couleur d'origine quand l'objet est « aux couleurs naturelles ».
+export const LIGHT_DECOS = {
+  searchlight: { type: 'spot', y: 2.7, spin: 0.7, tilt: 0.62, range: 150, power: 9000, angle: 0.2, color: '#cfeaff', beam: 70 },
+  spotlight:   { type: 'spot', y: 3.1, spin: 0, tilt: 0.45, range: 110, power: 6500, angle: 0.3, color: '#fff2c4', beam: 50 },
+  lanternPost: { type: 'point', y: 2.6, range: 34, power: 520, color: '#ffc46b' },
+  lanternHang: { type: 'point', y: 4.1, range: 30, power: 430, color: '#ffb35c' },
+  streetLamp:  { type: 'point', y: 8.3, range: 60, power: 1500, color: '#ffe9b0' },
+};
 
 export const DECO_CATS = {
   signs: { label: 'Panneaux', kinds: ['sign_left', 'sign_right', 'sign_up', 'sign_stop', 'sign_speed', 'sign_warn', 'banner'] },
@@ -28,6 +45,10 @@ export const DECO_CATS = {
   factory: { label: 'Usine', kinds: ['gear', 'pipe', 'chimney', 'crate', 'barrel', 'crane', 'warnLight'] },
   space: { label: 'Espace', kinds: ['satellite', 'asteroid', 'antenna', 'rocket', 'planetMini'] },
   race: { label: 'Circuit', kinds: ['trafficCone', 'tireStack', 'flagPole', 'grandstand'] },
+  lights: { label: 'Lumières', kinds: ['searchlight', 'spotlight', 'lanternPost', 'lanternHang', 'streetLamp'] },
+  vehicles: { label: 'Véhicules', kinds: ['plane', 'biplane', 'helicopter', 'bus', 'truck', 'locomotive', 'sedan', 'ufo', 'sailboat'] },
+  xmas: { label: 'Noël', kinds: ['xmasTree', 'snowman', 'gift', 'candyCane', 'xmasStar', 'wreath', 'sleigh', 'reindeer', 'gingerHouse'] },
+  halloween: { label: 'Halloween', kinds: ['pumpkin', 'ghost', 'tombstone', 'bats', 'witchHat', 'cauldron', 'spookyTree', 'hauntedHouse', 'skull'] },
   obstacles: { label: 'Obstacles', kinds: ['spikes', 'spikesPop', 'pendulum', 'hammer', 'slider', 'sweeper', 'bumper'] },
 };
 
@@ -46,6 +67,10 @@ export const DECO_LABELS = {
   gear: 'Engrenage', pipe: 'Tuyau', chimney: 'Cheminée', crate: 'Caisses', barrel: 'Barils', crane: 'Grue', warnLight: 'Gyrophare',
   satellite: 'Satellite', asteroid: 'Astéroïde', antenna: 'Antenne', rocket: 'Fusée', planetMini: 'Planète miniature',
   trafficCone: 'Plot', tireStack: 'Pile de pneus', flagPole: 'Drapeau à damier', grandstand: 'Tribune',
+  searchlight: 'Projecteur tournant', spotlight: 'Projecteur', lanternPost: 'Lanterne sur pied', lanternHang: 'Lanterne suspendue', streetLamp: 'Lampadaire',
+  plane: 'Avion de ligne', biplane: 'Avion à hélice', helicopter: 'Hélicoptère', bus: 'Bus', truck: 'Camion', locomotive: 'Locomotive', sedan: 'Voiture', ufo: 'Soucoupe', sailboat: 'Voilier',
+  xmasTree: 'Sapin de Noël', snowman: 'Bonhomme de neige', gift: 'Cadeau', candyCane: 'Sucre d’orge', xmasStar: 'Étoile', wreath: 'Couronne', sleigh: 'Traîneau', reindeer: 'Renne', gingerHouse: 'Maison en pain d’épices',
+  pumpkin: 'Citrouille', ghost: 'Fantôme', tombstone: 'Pierre tombale', bats: 'Chauves-souris', witchHat: 'Chapeau de sorcière', cauldron: 'Chaudron', spookyTree: 'Arbre mort', hauntedHouse: 'Maison hantée', skull: 'Crâne',
 };
 
 // Couleurs proposées (index 0 = couleurs naturelles de l'objet).
