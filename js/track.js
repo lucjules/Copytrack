@@ -3,10 +3,9 @@
 import { CELL, DIRS, ROAD_HALF, RAIL_W, SLAB_T, MAX_LEVEL, LEVEL_H, MAX_DECOS } from './constants.js';
 import {
   PIECES, PIECE_ORDER, SURFACE_CODES, SURFACE_ALIAS, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, isFloor, isCeilingFloor, baseY,
-  toLocal, sampleLocal, rotVec, tileCenter, MOVER, moverParams, clampMover, THEMES,
+  forkBranchX, toLocal, sampleLocal, rotVec, tileCenter, MOVER, moverParams, clampMover, THEMES,
 } from './pieces.js';
 import { centerlineWorld } from './ribbons.js';
-import { forkBranchX } from './pieces.js';
 import { isObstacle } from './obstacles.js';
 import { DECO_ORDER } from './decoData.js';
 

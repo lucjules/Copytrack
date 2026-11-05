@@ -766,6 +766,8 @@ body.touch .t-left { left: calc(14px + env(safe-area-inset-left)); bottom: calc(
 body.touch .t-right { right: calc(14px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom)); }
 
 /* Panneaux (arrivée, pause) : pendant qu'ils sont ouverts, on masque les commandes et le compteur. */
+/* Tactile : le bouton plein écran ne doit pas recouvrir la flèche gauche de conduite (il passe au milieu, en bas). */
+body.touch .fs-btn { left: 50%; transform: translateX(-50%); }
 body.ov-open #touch, body.ov-open .hud-br, body.ov-open .hud-hint, body.ov-open #fs-btn { display: none !important; }
 
 /* Téléphone en paysage : panneau d'arrivée compact. */

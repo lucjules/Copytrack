@@ -87,7 +87,9 @@ export function rewardCoins({ tier, difficulty = 1, trackKey, user = false }) {
   const first = tier >= 0 && (best == null || tier < best);
   if (first) { base *= 2; p.medals[trackKey] = tier; }
   if (user) base *= 0.5;
-  const n = Math.max(1, Math.round(base));
+  // Circuit de joueur : la médaille vient du temps de son auteur, donc une arrivée répétée sur un circuit minuscule ne doit pas
+  // rapporter à l'infini : seule une nouvelle médaille (meilleure que la précédente) rapporte des pièces.
+  const n = user && !first ? 0 : Math.max(1, Math.round(base));
   p.stats.races += 1;
   addCoins(n);
   return { coins: n, first };

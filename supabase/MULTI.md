@@ -48,7 +48,7 @@ Choisis par l'hôte dans le salon :
 - **Communauté** : par **ID** (le `id` d'un circuit publié ; colle-le dans le champ du salon) ou « Parcourir la communauté ». Les autres joueurs
   téléchargent le circuit eux-mêmes ; sa signature est vérifiée (tout le monde doit avoir exactement le même).
 - **Code de circuit** (`SHW…` ou lien de partage) ou **Mes circuits** : l'hôte envoie le code à chacun par le canal fiable, en morceaux de
-  12 Ko (jusqu'à 400 000 caractères, soit largement plus de 5000 pièces). Les morceaux sont assemblés puis vérifiés avec la signature.
+  12 Ko (jusqu'à 400 000 caractères). Attention : la publication dans la communauté est limitée à 100 000 caractères et 5000 pièces. Les morceaux sont assemblés puis vérifiés avec la signature.
 
 ## Rendu des adversaires
 

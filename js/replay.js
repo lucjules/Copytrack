@@ -35,9 +35,15 @@ export class InputRecorder {
   }
 }
 
+export const MAX_REPLAY_STEPS = 120 * 600;     // 10 minutes : au-delà, un enregistrement est refusé AVANT d'être déplié en mémoire
+
 export function decodeInputs(b64) {
   const bin = atob(b64);
   const steer = [], flags = [];
+  // Un petit texte peut se déplier en des dizaines de millions de pas (255 répétitions par triplet) : on compte d'abord.
+  let total = 0;
+  for (let i = 0; i + 2 < bin.length; i += 3) total += bin.charCodeAt(i);
+  if (total > MAX_REPLAY_STEPS) throw new Error('Enregistrement trop long.');
   for (let i = 0; i + 2 < bin.length; i += 3) {
     const n = bin.charCodeAt(i), s = (bin.charCodeAt(i + 1) << 24) >> 24, f = bin.charCodeAt(i + 2);
     for (let k = 0; k < n; k++) { steer.push(s); flags.push(f); }

@@ -6,7 +6,6 @@ import { scriptTrack } from './track.js';
 import { BUILTIN_OBSTACLES } from './builtinObstacles.js';
 
 export const BUILTIN_TRACKS = [
-  // ---- Chapitre 1 : Premiers tours ----------------------------------------------
   {
     id: 'eclats', name: 'Premiers Éclats', decor: 'desert', difficulty: 1,
     goal: {id: 'nowall'},
@@ -43,7 +42,6 @@ export const BUILTIN_TRACKS = [
     script: 'start S2 B S2 R S L S2 C S2 Y2.b S2 BR S U S2 D S2 C S2 UU G2 DD S2 LL S2 finish',
     medals: { cristal: 24.3, or: 25.5, argent: 29.3, bronze: 34.4 },
   },
-  // ---- Chapitre 2 : Prise de vitesse --------------------------------------------
   {
     id: 'canyon', name: 'Canyon Corail', decor: 'desert', difficulty: 2,
     goal: {id: 'nowall'},
@@ -80,7 +78,6 @@ export const BUILTIN_TRACKS = [
     script: 'start B S2 L S R S2 B S.j G1 S2 R L C S2 RR S B S2 GU2 S GD2 S LL S R S L S2 B S.j G1 S2 C S2 R L S2 finish',
     medals: { cristal: 27.1, or: 28.8, argent: 33.1, bronze: 38.8 },
   },
-  // ---- Chapitre 3 : Métamorphoses -----------------------------------------------
   {
     id: 'recif', name: 'Récif Corallien', decor: 'isles', difficulty: 3,
     goal: {id: 'vehicle', v: 'car'},
@@ -117,7 +114,6 @@ export const BUILTIN_TRACKS = [
     script: 'start B S2 R S L S3_ R_ S_ L_ S2 C S S.n S4.a L.a S2.a R.a S.a S.n S2 B S2 BR S2_ KL S2 R S L S2 finish',
     medals: { cristal: 27.7, or: 28.8, argent: 33.1, bronze: 38.9 },
   },
-  // ---- Chapitre 4 : Terrains piégés ---------------------------------------------
   {
     id: 'verglas', name: 'Lac Gelé', decor: 'desert', difficulty: 3,
     goal: {id: 'nowall'},
@@ -154,7 +150,6 @@ export const BUILTIN_TRACKS = [
     script: 'start S2 B S2 R S2 L S2 C S2_ R_ S_ L S2.w150 S2 B S2 UU GR2 DD S2 KL S2.d R S2 B S.j G1 S2 L S2 finish',
     medals: { cristal: 25, or: 26.4, argent: 30.6, bronze: 36.2 },
   },
-  // ---- Chapitre 5 : Haute voltige -----------------------------------------------
   {
     id: 'temple', name: 'Temple Perdu', decor: 'jungle', difficulty: 4,
     goal: {id: 'norespawn'},
@@ -191,7 +186,6 @@ export const BUILTIN_TRACKS = [
     script: 'start B S2 R S L S2 B S2 OB S C S2 CK S2 L S R S2 B S2 ODL S2 C S CKL S2 R L S2 finish',
     medals: { cristal: 30.8, or: 32.1, argent: 37, bronze: 43.4 },
   },
-  // ---- Chapitre 6 : Grand huit --------------------------------------------------
   {
     id: 'grandtour', name: 'Le Grand Tour', decor: 'desert', difficulty: 4, laps: 2,
     goal: {id: 'norespawn'},
@@ -228,7 +222,6 @@ export const BUILTIN_TRACKS = [
     script: 'start S2 B S2 RR S S.n S2.a RR.a S.a S.n S S C S2 RR S2 B S RR finish',
     medals: { cristal: 34.5, or: 36.2, argent: 41.6, bronze: 48.8 },
   },
-  // ---- Chapitre 7 : Légendes ----------------------------------------------------
   {
     id: 'blizzard', name: 'Blizzard', decor: 'polar', difficulty: 5,
     goal: {id: 'norespawn'},

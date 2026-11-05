@@ -26,7 +26,6 @@ export const SURF_PHYS = {
   boostSpeed: 78,      // vitesse visée sous turbo à 100 % (m/s)
 };
 
-// Vitesse minimale (m/s) pour rester collé sur un mur / une route à l'envers.
 // Nombre maximal de décorations par circuit.
 export const MAX_DECOS = 500;
 

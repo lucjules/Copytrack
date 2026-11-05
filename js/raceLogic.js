@@ -28,6 +28,7 @@ export class RaceLogic {
   }
 
   reset() {
+    this.lastGround = null;
     this.collected = new Set();
     this.splits = [];
     this.finished = false;
@@ -64,7 +65,7 @@ export class RaceLogic {
   // Point de réapparition d'un checkpoint aérien : la dernière route roulable traversée
   // (mémorisée par la course), sinon l'anneau lui-même au niveau de sa base.
   _ringRespawn(tile, phys) {
-    if (this.lastGround) return { ...this.lastGround };
+    if (this.lastGround) { const g = this.lastGround; return { x: g.x, y: g.y, z: g.z, yaw: g.yaw }; }
     const c = tileCenter(tile);
     return { x: c.x, y: baseY(tile), z: c.z, yaw: phys.yaw };
   }
@@ -80,7 +81,7 @@ export class RaceLogic {
     const p = phys.pos;
     // Dernière position stable au sol (sert à réapparaître avant un checkpoint aérien).
     if (phys.grounded && !phys.rib && phys.surfType === 'road' && this.steps % 30 === 0) {
-      this.lastGround = { x: p.x, y: p.y, z: p.z, yaw: phys.yaw };
+      this.lastGround = { x: p.x, y: p.y, z: p.z, yaw: phys.yaw, steps: this.steps };
     }
     const cx = Math.floor(p.x / CELL), cz = Math.floor(p.z / CELL);
     let event = null;
@@ -102,15 +103,20 @@ export class RaceLogic {
         const k = L.lz / (L.lz - lz1);
         const lx = L.lx + (lx1 - L.lx) * k, y = phys.prev.y + (p.y - phys.prev.y) * k;
         if (Math.hypot(lx, y - (h + RING_Y)) > RING_R + 0.5) continue;
+        // Réapparition : juste avant l'anneau, au sol de la pièce précédente si possible. Le chrono, les temps intermédiaires et
+        // les checkpoints reviennent à CE moment-là (l'anneau est à repasser) : sinon le temps passé en l'air serait gagné gratuitement.
+        const gl = this.lastGround;
+        const snap = this._snap();                       // avant l'anneau : il reste à passer
+        if (gl) snap.steps = gl.steps;
+        const rr = this._ringRespawn(tile, phys);
         this.collected.add(tile);
         this.splits.push(this.steps);
-        // Réapparition : juste avant l'anneau, au sol de la pièce précédente si possible.
-        this.respawn = { ...this._ringRespawn(tile, phys), vehicle: phys.vehicle, grav: phys.gravMul, gs: phys.gSign, snap: this._snap() };
+        this.respawn = { ...rr, vehicle: phys.vehicle, grav: phys.gravMul, gs: phys.gSign, snap };
         event = { type: 'checkpoint', index: this.splits.length, steps: this.steps };
         continue;
       }
       // Fenêtre haute : on peut passer un checkpoint en sautant (bosse juste avant).
-      if (tile.v ? (p.y > h + 1.5 || p.y < h - LEVEL_H * 2.5) : (p.y < h - 1.5 || p.y > h + LEVEL_H * 2.5)) continue;
+      if (tile.v ? (p.y > h + 1.5 || p.y < h - LEVEL_H * 1.5) : (p.y < h - 1.5 || p.y > h + LEVEL_H * 1.5)) continue;
       toLocal(tile, p.x, p.z, L);
       sampleLocal(tile, L.lx, L.lz, S);
       if (!S.inFootprint || Math.abs(S.d) > ROAD_HALF + 1.5) continue;

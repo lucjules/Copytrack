@@ -29,6 +29,7 @@ export const ICE_SERVERS = [
 ];
 
 export const MAX_BUFFERED = 16 * 1024;
+export const MAX_LINKS = 7;
 
 export class PeerLink {
   constructor(mesh, id, initiator) {
@@ -53,6 +54,7 @@ export class PeerMesh {
   // Un joueur est apparu dans la salle : on ouvre (ou on attend) la connexion.
   addPeer(id) {
     if (this.links.has(id) || id === this.selfId) return;
+    if (this.links.size >= MAX_LINKS) return;       // une salle compte 8 joueurs au plus : un identifiant inventé ne peut pas ouvrir des liaisons sans fin
     const link = new PeerLink(this, id, this.selfId < id);
     this.links.set(id, link);
     this._setup(link);

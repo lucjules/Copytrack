@@ -4,7 +4,7 @@
 //  - volcano : volcans, coulées de lave, braises (v1.5)
 //  - orbit   : station orbitale, planète à anneau, dômes et panneaux (v1.5)
 import * as THREE from './vendor/three.module.min.js';
-import { PROFILES, profileOf } from './quality.js';
+import { profileOf } from './quality.js';
 import { GeoBuilder } from './geo.js';
 import { CELL } from './constants.js';
 import { PIECES } from './pieces.js';

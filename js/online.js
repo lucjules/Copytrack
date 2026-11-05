@@ -10,6 +10,10 @@ export const ONLINE = {
   key: 'sb_publishable_wBsMno7Qs4N-dM7usIm5OQ_0aEv-N1o',
 };
 
+// Limites de la base (voir supabase/etape1-communaute.sql).
+export const MAX_PUBLISH_CHARS = 100000;
+export const MAX_PUBLISH_PIECES = 5000;
+
 export class OnlineError extends Error {
   constructor(message, code = '') { super(message); this.code = code; }
 }
@@ -181,11 +185,14 @@ class OnlineClient {
   }
 
   async publish(track, playerName) {
+    const code = track.encode();
+    if (code.length > MAX_PUBLISH_CHARS) throw new OnlineError(`Circuit trop gros pour la communauté (${code.length} caractères, ${MAX_PUBLISH_CHARS} au plus) : retire des pièces ou des décorations.`, 'too-big');
+    if (track.tiles.length > MAX_PUBLISH_PIECES) throw new OnlineError(`Circuit trop gros pour la communauté (${track.tiles.length} pièces, ${MAX_PUBLISH_PIECES} au plus).`, 'too-big');
     await this.ensurePlayer(playerName);
     const body = {
       name: track.name.slice(0, 40) || 'Sans titre',
       decor: track.decor,
-      code: track.encode(),
+      code,
       signature: track.signature(),
       author_time: track.vt,
       pieces: track.tiles.length,

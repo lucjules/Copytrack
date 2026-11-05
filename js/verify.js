@@ -26,7 +26,12 @@ export function trackForKey(key, code = '') {
     return { track, kind: 'builtin', name: def.name };
   }
   if (key.startsWith('daily-')) {
-    const c = dailyChallenge(key.slice(6));
+    const day = key.slice(6);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error('Défi du jour introuvable.');
+    // Seuls hier, aujourd'hui et demain sont acceptés (décalages d'horloge) : pas de génération à la demande pour des dates arbitraires.
+    const t = Date.parse(day + 'T00:00:00Z');
+    if (!Number.isFinite(t) || Math.abs(t - Date.now()) > 2.5 * 86400000) throw new Error('Défi du jour hors dates valides.');
+    const c = dailyChallenge(day);
     if (!c || c.key !== key) throw new Error('Défi du jour introuvable.');
     return { track: c.track, kind: 'daily', name: c.track.name };
   }
@@ -41,7 +46,8 @@ export function trackForKey(key, code = '') {
 // Rejoue les commandes ; renvoie le temps (s) si la course va jusqu'à l'arrivée, sinon null.
 export function replayTime(track, inputs) {
   if (!inputs || inputs.length > MAX_INPUTS_CHARS) return null;
-  const rep = decodeInputs(inputs);
+  let rep;
+  try { rep = decodeInputs(inputs); } catch { return null; }      // illisible, ou trop long (refusé avant dépliage)
   if (!rep.length || rep.length > MAX_STEPS) return null;
   const g = new GhostRunner(track, { inputs });
   while (!g.done && g.k < MAX_STEPS) g.step();

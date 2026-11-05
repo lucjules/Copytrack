@@ -2,7 +2,7 @@
 // options (envers, sans bordures, tunnel), décorations libres, vérification, historique.
 import * as THREE from './vendor/three.module.min.js';
 import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL, DIRS, MAX_DECOS, SURF_PHYS } from './constants.js';
-import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, surfaceRule, flagAllowed, THEMES, MOVER, paramText } from './pieces.js';
+import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, surfaceRule, flagAllowed, paramText } from './pieces.js';
 import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from './families.js';
 import { retypePlacement } from './tileInfo.js';
 import { Track, DECORS } from './track.js';
@@ -10,13 +10,13 @@ import { TrackView, buildTileMesh, SURFACE_STYLE, tint, THEME_SWATCH } from './t
 import { buildDecoMesh, safeUrl } from './decos.js';
 import { isObstacle } from './obstacles.js';
 import { DECO_CATS, DECO_LABELS, DECO_COLORS } from './decoData.js';
-import { setEditorDraft, saveMyTrack, newId, formatTime } from './storage.js';
+import { setEditorDraft, saveMyTrack, newId } from './storage.js';
 import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel } from './editorTools.js';
 import { centerlineWorld } from './ribbons.js';
 import { Inspector, MIRROR_TYPES, LEGACY_CP } from './inspector.js';
 import { keyLabel } from './input.js';
 import { esc } from './ui.js';
-import { pickObjects, pickTileExact, rayToSurface, ERASE_FILTERS, ERASE_FILTER_ORDER, LAYER_ALL, LAYER_DECO, tileBounds } from './editorPick.js';
+import { pickObjects, pickTileExact, rayToSurface, ERASE_FILTERS, ERASE_FILTER_ORDER, LAYER_ALL, LAYER_DECO } from './editorPick.js';
 
 export const PALETTE_ORDER = [
   { id: 'straight', key: 'Digit1', k: '1' },
@@ -158,9 +158,7 @@ export const ICONS = {
   'surf:ice': svg(`${straightBase('#bfe4f2', '#7fd3ff')}<path d="M24 14v20M15 19l18 10M15 29l18-10" stroke="#4aa8d8" stroke-width="2.5"/>`),
   'surf:boost': svg(`${straightBase(ROAD, '#2fe0ff')}<path d="M15 18l9-7 9 7M15 30l9-7 9 7M15 42l9-7 9 7" stroke="#36e9ff" stroke-width="3" fill="none"/>`),
   'surf:bounce': svg(`${straightBase('#4a2d5c', '#ff5fd2')}<path d="M24 12l12 12-12 12-12-12z M24 18l6 6-6 6-6-6z" stroke="#ff5fd2" stroke-width="2.5" fill="none"/>`),
-  'surf:sand': svg(`${straightBase('#c9a26b', '#9b6b45')}<path d="M12 14q6-4 12 0t12 0M12 24q6-4 12 0t12 0M12 34q6-4 12 0t12 0" stroke="#8a6440" stroke-width="2" fill="none"/>`),
   'surf:magnet': svg(`${straightBase('#2c2a4a', '#b48cff')}<path d="M16 10v14a8 8 0 0 0 16 0V10" stroke="#b48cff" stroke-width="4" fill="none"/><path d="M13 10h6M29 10h6" stroke="#f3e7d3" stroke-width="4"/>`),
-  'surf:mud': svg(`${straightBase('#4a3426', '#6b4a32')}<circle cx="19" cy="16" r="4" fill="#2e1f14"/><circle cx="30" cy="26" r="5" fill="#2e1f14"/><circle cx="20" cy="36" r="3.5" fill="#2e1f14"/>`),
   'surf:drift': svg(`${straightBase('#3a2f3a', '#ff8c42')}<path d="M18 40Q14 26 24 14M30 40Q34 26 24 14" stroke="#ffb84d" stroke-width="2.5" fill="none"/>`),
   'surf:slow': svg(`${straightBase('#3b2a2f', '#ff6b57')}<path d="M12 14h24M12 24h24M12 34h24" stroke="#ffd23e" stroke-width="3" stroke-dasharray="4 3"/>`),
   'surf:wind': svg(`${straightBase('#2c3a52', '#bfefff')}<path d="M14 16h16l4-3M14 26h20M14 36h14l4 3" stroke="#bfefff" stroke-width="2.5" fill="none"/>`),

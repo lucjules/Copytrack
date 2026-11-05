@@ -11,13 +11,11 @@ import { RaceLogic, placeAtStart } from './raceLogic.js';
 import { Autopilot } from './autopilot.js';
 import { TrackView } from './trackMesh.js';
 import { createCar } from './carModel.js';
-import { getRecord, saveRecord, encodeFloats, decodeFloats, formatTime } from './storage.js';
+import { getRecord, saveRecord, encodeFloats, decodeFloats, formatTime, getImportedGhost } from './storage.js';
 import { profile, rewardCoins } from './profile.js';
-import { SURFACES } from './pieces.js';
 import { CATALOG } from './cosmetics.js';
 import { SkidMarks } from './skids.js';
 import { InputRecorder, decodeInputs, inputAt, quantSteer, GhostRunner, PHYS_VER } from './replay.js';
-import { getImportedGhost } from './storage.js';
 import { goalMet, goalLabel, completeGoal, goalDone } from './career.js';
 
 const GHOST_EVERY = 4; // un échantillon tous les 4 pas (30 Hz)
@@ -182,6 +180,7 @@ export class RaceSession {
     this.tick = 0;          // pas de course depuis le départ (ne recule jamais, contrairement au chrono)
     this._pendingRespawn = false;
     this.stats = { wallHits: 0, respawns: 0, perfects: 0, turbos: 0, rings: 0 };
+    this.statsSnap = { perfects: 0, turbos: 0, rings: 0 };     // compteurs au dernier checkpoint : un retour (R) les annule
     for (const g of this.ghosts) { g.runner.reset(); g.car.group.visible = false; }
     this.countT = 0;
     this.countShown = -1;
@@ -221,6 +220,7 @@ export class RaceSession {
     // Retour au dernier checkpoint : le chrono revient au temps de ce checkpoint (solo). En multijoueur il continue de
     // tourner : la téléportation coûte tout le temps perdu, et le compteur de téléportation prévient les autres joueurs.
     const r = this.logic.rewind({ keepClock: !!this.multi });
+    Object.assign(this.stats, this.statsSnap);       // les réceptions, turbos et anneaux d'après le checkpoint ne comptent plus
     if (this.multi) this.teleSeq = (this.teleSeq + 1) & 255;
     const steps = this.logic.steps;
     this.ghostRec.length = Math.min(this.ghostRec.length, Math.floor(steps / GHOST_EVERY) * 7);
@@ -433,9 +433,12 @@ export class RaceSession {
   }
 
 
+  _snapStats() { const s = this.stats; this.statsSnap = { perfects: s.perfects, turbos: s.turbos, rings: s.rings }; }
+
   _event(ev) {
     const app = this.app;
     const p = this.phys.pos;
+    if (ev.type === 'checkpoint' || ev.type === 'lap') this._snapStats();
     if (ev.type === 'checkpoint') {
       let diff = null;
       if (this.record && this.record.splits && this.record.splits[ev.index - 1] != null) {
@@ -488,7 +491,9 @@ export class RaceSession {
     // Dernière course, rejouable depuis l'écran d'arrivée.
     this.lastRun = { inputs: this.recorder.encode(), time };
     const prev = this.record;
-    const isRecord = (!prev || time < prev.time - 1e-9) && !this.opts.spawn;
+    // Un record d'une autre version de la physique n'est plus comparable (et n'a pas de commandes rejouables) : il ne bloque pas le nouveau.
+    const prevValid = prev && prev.pv === PHYS_VER;
+    const isRecord = (!prevValid || time < prev.time - 1e-9) && !this.opts.spawn;
     if (isRecord && this.trackKey) {
       const ghost = new Float32Array(this.ghostRec);
       const rec = {
@@ -738,7 +743,7 @@ export class RaceSession {
     if (p.grounded && p.slip > 5 && p.speed > 6 && p.surfMod !== 'water') {
       for (const sx of [-1, 1]) {
         tmpV.set(sx * 1.0, 0.15, 1.4).applyQuaternion(g.quaternion).add(g.position);
-        const dust = p.surfMod === 'ice' ? '#e8f8ff' : p.surfMod === 'sand' ? '#d8b07a' : app.scenery.theme.dust;
+        const dust = p.surfMod === 'ice' ? '#e8f8ff' : app.scenery.theme.dust;
         app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, (Math.random() - 0.5) * 2, 1 + Math.random() * 2, (Math.random() - 0.5) * 2, 0.7, 0.9, dust, -1);
       }
     }

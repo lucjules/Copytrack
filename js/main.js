@@ -1,12 +1,12 @@
 // Point d'entrée : crée le moteur de rendu et orchestre menu / course / éditeur.
 import * as THREE from './vendor/three.module.min.js';
 import { Scenery } from './scenery.js';
-import { createTrackMaterials, setColorblind } from './trackMesh.js';
+import { createTrackMaterials, setColorblind, setHideDecos } from './trackMesh.js';
 import { Particles } from './particles.js';
 import { Input, KEY_ACTIONS, PAD_ACTIONS, keyLabel, padLabel, defaultKeys, defaultPad } from './input.js';
 import { GarageSession, } from './garage.js';
 import { CATEGORIES } from './cosmetics.js';
-import { profile, saveProfile, exportCode, parseCode, applySave, addCoins, owns } from './profile.js';
+import { profile, saveProfile, exportCode, parseCode, applySave, addCoins } from './profile.js';
 import { GameAudio } from './audio.js';
 import { UI, $, esc, medalIcon } from './ui.js';
 import { RaceSession, medalFor, MEDALS } from './race.js';
@@ -20,8 +20,8 @@ import { online } from './online.js';
 import { account, checkPseudo } from './account.js';
 import { runWelcome } from './welcome.js';
 import { Room, defaultSignaling, normalizeCode, ROOM_RE, MAX_PLAYERS } from './net/room.js';
-import { PHYS_VER as PV } from './replay.js';
 import { encodeGhost, decodeGhost, PHYS_VER } from './replay.js';
+const PV = PHYS_VER;
 import { dailyChallenge, dayKey } from './daily.js';
 import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, goalFor, goalLabel, goalDone, chapterUnlocked } from './career.js';
 import {
@@ -30,7 +30,6 @@ import {
 } from './storage.js';
 
 import { QualityManager, Benchmark, PROFILES, PROFILE_LABELS, BENCH_VERSION, hardwareHints, wantAntialias } from './quality.js';
-import { setHideDecos } from './trackMesh.js';
 
 class App {
   // identity : { kind: 'guest' | 'account', username } décidé par l'écran d'accueil (welcome.js), toujours avant le menu.
@@ -325,35 +324,6 @@ class App {
 
   _roomOpts() {
     return { name: this.settings.playerName, makeSignaling: (o) => defaultSignaling(o, this._tokenFn()) };
-  }
-
-  multiMenu() {
-    if (this.room && !this.room.closed) { this.multiLobby(this.room); return; }
-    const wrap = document.createElement('div');
-    wrap.innerHTML = `<p>Courez ensemble sur le même circuit : vous vous voyez en voitures fantômes (aucune collision), chacun garde son propre chrono.
-      Jusqu'à ${MAX_PLAYERS} joueurs. Une salle se rejoint avec un code de 6 caractères.</p>
-      <label class="mp-join"><span>Rejoindre une salle</span><input id="mp-code" maxlength="8" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
-      <p class="mp-err" id="mp-err" role="alert"></p>`;
-    const err = (m) => { wrap.querySelector('#mp-err').textContent = m || ''; };
-    const busy = (b) => document.querySelectorAll('#modal-actions button').forEach((x) => { x.disabled = b; });
-    const go = async (fn) => {
-      err(''); busy(true);
-      try { const room = await fn(); this.room = room; this._bindRoom(room); this.ui.closeModal(); this.multiLobby(room); }
-      catch (e) { err(e.message || 'Impossible de se connecter.'); busy(false); }
-    };
-    this.ui.modal({
-      title: 'Multijoueur', body: wrap,
-      actions: [
-        { label: 'Créer une salle', primary: true, onClick: () => { go(() => Room.create(this._roomOpts())); return false; } },
-        { label: 'Rejoindre', onClick: () => {
-          const code = normalizeCode(wrap.querySelector('#mp-code').value);
-          if (!ROOM_RE.test(code)) { err('Code invalide : 6 caractères (lettres et chiffres, sans 0, O, 1, I).'); return false; }
-          go(() => Room.join(code, this._roomOpts())); return false;
-        } },
-        { label: 'Fermer' },
-      ],
-    });
-    setTimeout(() => { const i = wrap.querySelector('#mp-code'); if (i) i.focus(); }, 50);
   }
 
   _bindRoom(room) {

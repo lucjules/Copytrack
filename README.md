@@ -22,8 +22,8 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 
 ## Contenu
 
-- **42 circuits** dans 7 décors (*Désert crépuscule*, *Nuit polaire*, *Jungle néon*, *Ville futuriste*, *Archipel tropical*, *Volcan*, *Station orbitale*),
-  rangés **du plus facile au plus dur** en 7 chapitres de carrière. Chaque circuit mélange plusieurs familles de pièces ; 4 circuits se courent en plusieurs tours.
+- **66 circuits** dans 11 décors (*Désert crépuscule*, *Jungle néon*, *Archipel tropical*, *Ville futuriste*, *Nuit polaire*, *Volcan*, *Station orbitale*, *Fonds marins*, *Usine mécanique*, *Ville dans les nuages*, *Canyon de cristal*),
+  rangés **du plus facile au plus dur** en 11 chapitres de carrière (un par décor, 6 circuits chacun). Chaque circuit mélange plusieurs familles de pièces ; 4 circuits se courent en plusieurs tours.
 - **Carrière** : un chapitre s'ouvre avec 4 médailles dans le précédent ; chaque circuit a un **objectif bonus** ★ (sans toucher de muret, réceptions parfaites, mini-turbos, anneaux, finir en moto…) qui rapporte 50 pièces.
 - **Défi du jour** : un circuit généré à partir de la date, le même pour tout le monde, vérifié par le pilote automatique.
 - **Médailles** Bronze / Argent / Or / Cristal, chronos intermédiaires, réapparition au dernier checkpoint.
@@ -92,7 +92,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 - **Pièces (monnaie)** gagnées selon la médaille et les objectifs bonus. **Profil** : un code joueur contient toute la progression.
 - **Musique** synthétisée en direct, une ambiance par décor ; sons sans aucun fichier audio.
 - **Profil** (menu principal) : onglets *Compte*, *Sauvegardes*, *Options* et *Commandes*.
-- **Options** : volume des effets et de la musique, qualité graphique (haute, moyenne, basse), compteur d'images, champ de vision, effet de vitesse, tremblements de caméra, **couleurs adaptées au daltonisme**, taille de l'interface, fantômes.
+- **Options** : volume des effets et de la musique, qualité graphique (Auto, Ultra, Haute, Moyenne, Basse, Potato), compteur d'images, champ de vision, effet de vitesse, tremblements de caméra, **couleurs adaptées au daltonisme**, taille de l'interface, fantômes.
 - **Tutoriel** au premier lancement. Commandes personnalisables (clavier, manette), mobile (boutons ou glisser du pouce), vibrations.
 - **Easter eggs** : à toi de les trouver.
 
@@ -115,7 +115,16 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
    Au lancement, le jeu demande un pseudo (aucun nom par défaut) : **Invité** (progression locale) ou **Compte** (pseudo + mot de passe,
    sauvegarde cloud retrouvée sur n'importe quel appareil). Mots de passe hachés (bcrypt + sel) par Supabase Auth, jamais stockés par le jeu.
 
+5. **Durcissement** : `supabase/etape5-securite.sql` (replays des classements privés, plafond de temps par pilote, signalements et parties moins faciles à truquer). À lancer après l'étape 4.
+
 Seules l'URL du projet et la clé publique sont dans `js/online.js`. La clé secrète n'est jamais dans le jeu : seule la fonction serveur l'utilise, côté Supabase.
+
+## Bêta 0.9.1
+
+- **Qualité graphique** : profils Ultra, Haute, Moyenne, Basse et Potato, détection automatique par un benchmark invisible sur l'animation du menu, réduction automatique si le jeu rame.
+- **Records locaux** : le temps et les médailles ne dépendent plus de la place disponible dans le navigateur.
+- **Corrections** : le dessous et la tranche des dalles sont solides (un deltaplane ne traverse plus une rampe), un pont au-dessus d'un checkpoint ou de l'arrivée ne les déclenche plus, « Effacer les records » efface vraiment (y compris dans le cloud), un record d'une ancienne version de la physique ne bloque plus un nouveau, le retour au checkpoint annule les anneaux / réceptions / mini-turbos d'après le checkpoint, un checkpoint aérien ne fait plus gagner le temps passé en l'air, les circuits de joueurs ne rapportent des pièces que pour une nouvelle médaille.
+- **Serveur** : replays refusés avant dépliage s'ils sont trop longs, défis du jour limités à hier / aujourd'hui / demain, replays des classements non lisibles publiquement (`supabase/etape5-securite.sql`, à lancer une fois).
 
 ## Bêta 0.9
 
@@ -252,9 +261,9 @@ js/editor.js, editorTools.js   éditeur, sélection, vérificateur, miniatures
 js/race.js, js/raceLogic.js    course, caméras, effets, checkpoints, tours
 js/carModel.js, garage.js      voiture, moto, bateau, deltaplane, garage
 js/cosmetics.js, profile.js    catalogue visuel, pièces, code joueur
-js/scenery.js, music.js        7 décors, musique générée
+js/scenery.js, music.js        11 décors, musique générée
 js/trackMesh.js, js/geo.js     maillages low-poly
-js/tracks.js                   42 circuits intégrés, médailles et objectifs
+js/tracks.js                   66 circuits intégrés, médailles et objectifs
 tools/test-phase3.mjs          tests du raycast, décorations libres, verre fragile, tunnel, unités (npm test)
 tools/test-phase2.mjs          tests des familles, du schéma JSON, des courbes, options, mouvements (npm test)
 tools/sim.mjs                  validation des circuits par pilote automatique (npm run sim)

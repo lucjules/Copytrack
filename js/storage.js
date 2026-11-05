@@ -153,20 +153,15 @@ export function setImportedGhost(trackKey, g) {
   write('ghostImp.' + trackKey, g);
 }
 
-export function getDaily(day) {
-  return read('daily.' + day, null);
-}
-
-export function setDaily(day, v) {
-  write('daily.' + day, v);
-}
-
 export function clearRecords() {
+  for (const k of [...memRec.keys()]) if (k.startsWith(PREFIX)) memRec.delete(k);
   try {
     Object.keys(localStorage)
       .filter((k) => k.startsWith(PREFIX + 'rec'))
       .forEach((k) => localStorage.removeItem(k));
   } catch { /* stockage indisponible */ }
+  // Pierre tombale : sans elle, la synchronisation du compte ramènerait les records effacés depuis le cloud.
+  write('recReset', Date.now());
 }
 
 // Copie en mémoire des records de cette session : si le stockage du navigateur est plein ou refuse d'écrire, le menu affiche

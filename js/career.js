@@ -10,7 +10,7 @@ export const GOAL_COINS = 50;
 // 0.9 : un chapitre par thème, dans l'ordre de THEME_ORDER (tracks.js).
 export const CHAPTERS = [
   { name: 'Désert crépuscule', decor: 'desert', desc: 'Premiers virages, petits sauts et premiers revêtements.' },
-  { name: 'Jungle néon', decor: 'jungle', desc: 'Lianes, champignons, boue et premiers loopings.' },
+  { name: 'Jungle néon', decor: 'jungle', desc: 'Lianes, champignons et premiers loopings.' },
   { name: 'Archipel tropical', decor: 'isles', desc: 'Eau, bateau, phare et grands sauts au-dessus du lagon.' },
   { name: 'Ville futuriste', decor: 'city', desc: 'Tunnels, viaducs et boulevards à toute vitesse.' },
   { name: 'Nuit polaire', decor: 'polar', desc: 'Glace, aurores et virages qui glissent.' },

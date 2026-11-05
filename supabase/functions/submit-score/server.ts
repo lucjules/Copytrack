@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     if (typeof trackKey !== 'string' || trackKey.length > 80 || typeof inputs !== 'string' || typeof time !== 'number' || typeof physVer !== 'number') {
       return json(400, { error: 'Requête invalide.' });
     }
-    if (typeof code !== 'string' || code.length > 100000) return json(400, { error: 'Code de circuit invalide.' });
+    if (typeof code !== 'string' || code.length > 400000) return json(400, { error: 'Code de circuit invalide.' });
 
     // 3. Rejeu de la course avec le code du jeu.
     const res = verifyRun({ trackKey, code, inputs, time, physVer });

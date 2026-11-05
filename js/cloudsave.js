@@ -10,7 +10,7 @@ import { itemCost } from './cosmetics.js';
 // Ce qui suit un compte d'un appareil à l'autre : progression, circuits créés, records. Les réglages
 // (volume, touches, qualité...) restent propres à chaque appareil, le brouillon de l'éditeur aussi.
 export const isSyncKey = (k) =>
-  k === 'profile' || k === 'tracks' || k === 'tracksDel' || /^(rec3|daily|ghostImp)\./.test(k);
+  k === 'profile' || k === 'tracks' || k === 'tracksDel' || k === 'recReset' || /^(rec3|daily|ghostImp)\./.test(k);
 
 export const pickSynced = (dump) => Object.fromEntries(Object.entries(dump || {}).filter(([k, v]) => isSyncKey(k) && typeof v === 'string'));
 
@@ -82,7 +82,15 @@ export function mergeProfile(local, remote) {
 
 // local, remote : formes cloud {clé: valeur}. Renvoie la forme cloud fusionnée.
 export function mergeSaves(local, remote) {
-  const a = obj(local), b = obj(remote), out = {};
+  let a = obj(local), b = obj(remote);
+  const out = {};
+  // « Effacer les records » : les records plus anciens que la dernière remise à zéro sont écartés AVANT la fusion (sinon un ancien
+  // record, meilleur, l'emporterait sur le nouveau puis serait supprimé).
+  const resetAt = Math.max(num(a.recReset), num(b.recReset));
+  if (resetAt) {
+    const clean = (o) => Object.fromEntries(Object.entries(o).filter(([k, v]) => !(k.startsWith('rec3.') && num(obj(v).date) <= resetAt)));
+    a = clean(a); b = clean(b);
+  }
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
   const gone = { ...obj(b.tracksDel), ...obj(a.tracksDel) };
   for (const k of Object.keys(obj(b.tracksDel))) gone[k] = Math.max(num(a.tracksDel && a.tracksDel[k]), num(b.tracksDel[k]));
@@ -94,6 +102,7 @@ export function mergeSaves(local, remote) {
     else if (k.startsWith('rec3.')) out[k] = mergeRecord(a[k], b[k]);
     else out[k] = a[k] !== undefined ? a[k] : b[k];                 // fantômes importés, défi du jour : le local d'abord
   }
+  if (resetAt) out.recReset = resetAt;
   if (!('tracksDel' in out) && Object.keys(gone).length) out.tracksDel = gone;
   if (!('tracks' in out) && (a.tracks || b.tracks)) out.tracks = mergeTracks(a.tracks, b.tracks, gone);
   return out;

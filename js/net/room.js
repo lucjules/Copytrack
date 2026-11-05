@@ -81,7 +81,7 @@ export class Room extends Emitter {
     sig.on('join', (id, meta) => this._onPeer(id, meta));
     sig.on('meta', (id, meta) => this._onPeer(id, meta));
     sig.on('leave', (id) => this._onLeave(id));
-    sig.on('closed', (why) => { if (!this.closed) { this.emit('error', new RoomError(why || 'Connexion perdue.', 'closed')); this._dispose(); } });
+    sig.on('closed', (why) => { if (!this.closed) { this.emit('error', new RoomError(why || 'Connexion perdue.', 'closed')); this._dispose(); this.emit('closed'); } });
     try { await sig.join(this.meta); }
     catch (e) { throw new RoomError(e.message || 'Connexion au serveur de salons impossible.', 'network'); }
 

@@ -24,7 +24,7 @@ function rng(seedStr) {
 const BLOCKS = [
   ['S', 5, 0], ['S2', 5, 0], ['S3', 2, 0],
   ['R', 5, 0], ['L', 5, 0], ['RR', 3, 0], ['LL', 3, 0], ['BR', 1.2, 0], ['BL', 1.2, 0],
-  ['S.b', 2.5, 0], ['S2.i', 0.8, 0], ['S.d', 0.6, 0], ['S.s', 0.5, 0],
+  ['S.b', 2.5, 0], ['S2.i', 0.8, 0], ['S.d', 0.6, 0], ['S.s', 0.5, 0],   // « S.s » (sable, supprimé) est refusé par le constructeur : bloc jamais retenu, mais gardé pour que les défis déjà joués restent identiques
   ['S2.t', 0.7, 0], ['S2.p', 0.4, 0], ['S2.v', 0.3, 0],
   ['U S', 1.6, 1], ['D S', 1.6, -1, 1], ['GU2 S', 0.8, 1], ['GD2 S', 0.8, -1, 1],
   ['S2 UU G2 DD S', 1.2, 0], ['S UU GR2 DD S', 0.6, 0],

@@ -1,7 +1,7 @@
 // Mini serveur statique pour jouer en local : node tools/serve.mjs [port]
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
-import { extname, join, normalize, dirname } from 'node:path';
+import { extname, join, normalize, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -17,7 +17,7 @@ createServer(async (req, res) => {
     let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     if (path.endsWith('/')) path += 'index.html';
     const file = normalize(join(root, path));
-    if (!file.startsWith(root)) { res.writeHead(403).end(); return; }
+    if (file !== root && !file.startsWith(root + sep)) { res.writeHead(403).end(); return; }
     const s = await stat(file);
     if (!s.isFile()) throw new Error('not a file');
     res.writeHead(200, { 'Content-Type': TYPES[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
@@ -25,4 +25,4 @@ createServer(async (req, res) => {
   } catch {
     res.writeHead(404, { 'Content-Type': 'text/plain' }).end('404');
   }
-}).listen(port, () => console.log(`Copytrack : http://localhost:${port}`));
+}).listen(port, '127.0.0.1', () => console.log(`Copytrack : http://localhost:${port}`));
