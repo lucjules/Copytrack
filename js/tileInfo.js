@@ -24,8 +24,14 @@ export function arrowPose(tile) {
     tx = f.x; tz = f.z;
   }
   const len = Math.min(P.size * 24 * 0.55, 30);
-  // Pièce posée à l'envers : la route est sous son niveau, la flèche se pose donc de l'autre côté.
-  return { x: m[0], y: m[1] + (tile.v ? -1.1 : 1.1), z: m[2], yaw: Math.atan2(-tx, -tz), len };
+  // Pièce posée à l'envers : la route est sous son niveau, la flèche se pose donc de l'autre côté. Route sur un mur : la flèche flotte
+  // devant le mur, côté voiture (mur gauche : à droite de l'axe, mur droit : à gauche).
+  let ox = 0, oy = tile.v ? -1.1 : 1.1, oz = 0;
+  if (tile.o) {
+    const l = Math.hypot(tx, tz) || 1, sg = tile.o === 1 ? 1 : -1;
+    ox = sg * (-tz / l) * 1.6; oz = sg * (tx / l) * 1.6; oy = 0;
+  }
+  return { x: m[0] + ox, y: m[1] + oy, z: m[2] + oz, yaw: Math.atan2(-tx, -tz), len };
 }
 
 // Pièce voisine dans la même famille quand on change UNE caractéristique, avec une position qui garde la pièce « en place »

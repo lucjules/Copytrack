@@ -234,7 +234,7 @@ class App {
             <li><b>Dérapage</b> : freine en virage, garde le volant.</li>
             <li><b>Mini-turbo</b> : une longue glisse donne une poussée.</li>
             <li><b>En l'air</b> : gaz = nez en bas, frein = nez en haut. Atterris à plat.</li>
-            <li>Loopings, tubes, routes sur le côté : il faut de la vitesse pour rester plaqué.</li>
+            <li>Loopings, tubes, routes sur un mur : il faut de la vitesse pour rester plaqué.</li>
             <li><b>Gravité inversée</b> : la plaque rose ⇅ t'envoie au plafond, une 2e te ramène.</li>
           </ul>`,
       },
@@ -717,7 +717,7 @@ class App {
     if (has((t) => t.t === 'cork' || t.t === 'corkL')) tags.push('Tire-bouchon');
     if (has((t) => PIECES[t.t].kind === 'fork')) tags.push('Bifurcation');
     if (has((t) => PIECES[t.t].kind === 'ring')) tags.push('Anneaux');
-    if (has((t) => t.t === 'wall')) tags.push('Mur');
+    if (has((t) => t.t === 'wall' || t.o || PIECES[t.t].roll)) tags.push('Mur');
     if (has((t) => t.s === 'water' || t.s === 'boat')) tags.push('Bateau');
     if (has((t) => t.s === 'glider')) tags.push('Deltaplane');
     if (has((t) => t.s === 'moto')) tags.push('Moto');

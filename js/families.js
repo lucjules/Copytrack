@@ -7,16 +7,21 @@
 //
 // Une caractéristique : { id, label, values: [[valeur, texte], …] } ; valeurs en chaînes.
 // Une combinaison absente de `members` n'existe pas : l'interface la grise (ex. virage serré relevé).
-import { PIECES } from './pieces.js';
+import { PIECES, ROLL_PASSAGES, ORIENTS } from './pieces.js';
+
+// Inclinaisons proposées (niveaux gagnés sur la pièce ; négatif : la pièce DESCEND, 0.9.3). Même liste pour la ligne droite et le virage.
+const INCL = [['-4', 'Descente 4'], ['-2', 'Descente 2'], ['-1', 'Descente 1'], ['-0.5', 'Descente ½'], ['0', 'Plat'], ['0.5', 'Montée ½'], ['1', 'Montée 1'], ['2', 'Montée 2'], ['4', 'Montée 4']];
+const rtag = (r) => String(r).replace('-', '').replace('0.5', '05');
 
 export const FAMILIES = {
   straight: {
     label: 'Ligne droite',
-    hint: 'Route droite, plate ou inclinée (½, 1, 2 ou 4 niveaux).',
+    hint: 'Route droite, plate ou en pente : montée ou descente de ½, 1, 2 ou 4 niveaux. L’orientation (sol, mur, plafond) se règle dans Options.',
     icon: 'straight',
-    traits: [{ id: 'incl', label: 'Inclinaison', values: [['0', 'Plat'], ['0.5', '½'], ['1', '1'], ['2', '2'], ['4', '4']] }],
+    traits: [{ id: 'incl', label: 'Inclinaison', values: INCL }],
     members: {
       straight: { incl: '0' }, gentle: { incl: '0.5' }, slope: { incl: '1' }, steep: { incl: '2' }, steep4: { incl: '4' },
+      dn05: { incl: '-0.5' }, dn1: { incl: '-1' }, dn2: { incl: '-2' }, dn4: { incl: '-4' },
     },
   },
   // 0.9.2 : l'Inclinaison du virage fonctionne comme celle de la ligne droite (les anciennes « Courbes » montantes en font partie).
@@ -28,7 +33,7 @@ export const FAMILIES = {
     traits: [
       { id: 'size', label: 'Rayon', values: [['s', 'Serré'], ['m', 'Grand'], ['l', 'Très grand']] },
       { id: 'bank', label: 'Profil', values: [['0', 'Plat'], ['1', 'Relevé']] },
-      { id: 'incl', label: 'Inclinaison', values: [['0', 'Plat'], ['0.5', '½'], ['1', '1'], ['2', '2'], ['4', '4']] },
+      { id: 'incl', label: 'Inclinaison', values: INCL },
       { id: 'dir', label: 'Sens', values: [['R', 'Droite ↱'], ['L', 'Gauche ↰']] },
     ],
     members: {
@@ -38,26 +43,47 @@ export const FAMILIES = {
       cvBig05: { size: 'm', bank: '0', incl: '0.5', dir: 'R' }, cvBig1: { size: 'm', bank: '0', incl: '1', dir: 'R' }, cvBig2: { size: 'm', bank: '0', incl: '2', dir: 'R' }, cvBig4: { size: 'm', bank: '0', incl: '4', dir: 'R' },
       cvL05: { size: 's', bank: '0', incl: '0.5', dir: 'L' }, cvL1: { size: 's', bank: '0', incl: '1', dir: 'L' }, cvL2: { size: 's', bank: '0', incl: '2', dir: 'L' }, cvL4: { size: 's', bank: '0', incl: '4', dir: 'L' },
       cvBigL05: { size: 'm', bank: '0', incl: '0.5', dir: 'L' }, cvBigL1: { size: 'm', bank: '0', incl: '1', dir: 'L' }, cvBigL2: { size: 'm', bank: '0', incl: '2', dir: 'L' }, cvBigL4: { size: 'm', bank: '0', incl: '4', dir: 'L' },
+      // 0.9.3 : virages descendants (la pièce descend dans son sens de parcours).
+      ...Object.fromEntries([0.5, 1, 2, 4].flatMap((r) => [
+        ['cvd' + rtag(r), { size: 's', bank: '0', incl: String(-r), dir: 'R' }], ['cvdBig' + rtag(r), { size: 'm', bank: '0', incl: String(-r), dir: 'R' }],
+        ['cvdL' + rtag(r), { size: 's', bank: '0', incl: String(-r), dir: 'L' }], ['cvdBigL' + rtag(r), { size: 'm', bank: '0', incl: String(-r), dir: 'L' }],
+      ])),
     },
   },
-  // 0.9.2 : la Courbe est une rampe dont le profil se courbe progressivement (arc) : plate à l'entrée, de plus en plus raide.
+  // 0.9.2 : la Courbe est une rampe dont le profil se courbe progressivement. 0.9.3 : elle se décline en montée ou en descente et en
+  // trois raccords : début doux (plat → pente), fin douce (pente → plat) et en S (plat → plat, entre deux niveaux). Une « Courbe »
+  // à début doux d'inclinaison ½ / 1 / 2 se raccorde exactement à une droite d'inclinaison 1 / 2 / 4 ; la fin douce la ramène à plat.
   courbe: {
     label: 'Courbe',
-    hint: 'Rampe qui se courbe vers le haut : plate au départ, de plus en plus raide.',
+    hint: 'Raccord de pente qui se courbe : début doux (plat → pente), fin douce (pente → plat) ou en S (plat → plat). Montée ou descente.',
     icon: 'courbe',
-    traits: [{ id: 'incl', label: 'Inclinaison', values: [['0.5', '½'], ['1', '1'], ['2', '2'], ['4', '4']] }],
-    members: { crv05: { incl: '0.5' }, crv1: { incl: '1' }, crv2: { incl: '2' }, crv4: { incl: '4' } },
-  },
-  // 0.9.2 : routes à 90° (plan vertical). La gravité ne change pas : trop lent, on glisse et on tombe.
-  side: {
-    label: 'Route sur le côté',
-    hint: 'Route à 90°. Il faut de la vitesse pour tenir, sinon on glisse.',
-    icon: 'side',
     traits: [
-      { id: 'kind', label: 'Pièce', values: [['t', 'Transition'], ['s', 'Ligne droite']] },
-      { id: 'dir', label: 'Côté', values: [['L', 'Gauche ↰'], ['R', 'Droite ↱']] },
+      { id: 'sens', label: 'Sens', values: [['u', 'Montée ↗'], ['d', 'Descente ↘']] },
+      { id: 'incl', label: 'Inclinaison', values: [['0.5', '½'], ['1', '1'], ['2', '2'], ['4', '4']] },
+      { id: 'prof', label: 'Raccord', values: [['i', 'Début doux'], ['o', 'Fin douce'], ['s', 'En S']] },
     ],
-    members: { rollL: { kind: 't', dir: 'L' }, rollR: { kind: 't', dir: 'R' }, sideL: { kind: 's', dir: 'L' }, sideR: { kind: 's', dir: 'R' } },
+    members: {
+      crv05: { sens: 'u', incl: '0.5', prof: 'i' }, crv1: { sens: 'u', incl: '1', prof: 'i' }, crv2: { sens: 'u', incl: '2', prof: 'i' }, crv4: { sens: 'u', incl: '4', prof: 'i' },
+      cro05: { sens: 'u', incl: '0.5', prof: 'o' }, cro1: { sens: 'u', incl: '1', prof: 'o' }, cro2: { sens: 'u', incl: '2', prof: 'o' }, cro4: { sens: 'u', incl: '4', prof: 'o' },
+      crs05: { sens: 'u', incl: '0.5', prof: 's' }, crs1: { sens: 'u', incl: '1', prof: 's' },
+      cdi05: { sens: 'd', incl: '0.5', prof: 'i' }, cdi1: { sens: 'd', incl: '1', prof: 'i' }, cdi2: { sens: 'd', incl: '2', prof: 'i' }, cdi4: { sens: 'd', incl: '4', prof: 'i' },
+      cdo05: { sens: 'd', incl: '0.5', prof: 'o' }, cdo1: { sens: 'd', incl: '1', prof: 'o' }, cdo2: { sens: 'd', incl: '2', prof: 'o' }, cdo4: { sens: 'd', incl: '4', prof: 'o' },
+      cds05: { sens: 'd', incl: '0.5', prof: 's' }, cds1: { sens: 'd', incl: '1', prof: 's' },
+    },
+  },
+  // 0.9.3 : transitions d'orientation (sol, mur gauche, mur droit, plafond). La route bascule autour de son axe d'une orientation à
+  // l'autre ; « franche » : 1 case, « douce » : 2×2 (deux fois moins de roulis par mètre). Une ligne droite ou un virage prend ensuite
+  // l'orientation d'arrivée (option Orientation). La gravité ne change pas : sur un mur il faut de la vitesse pour tenir (≈ 80 km/h).
+  roll: {
+    label: 'Transition',
+    hint: 'Fait basculer la route d’une orientation à l’autre : du sol vers un mur, d’un mur vers le sol ou le plafond. Il faut de la vitesse sur un mur.',
+    icon: 'roll',
+    traits: [
+      { id: 'de', label: 'De', values: ORIENTS.map((o) => [String(o.id), o.label]) },
+      { id: 'vers', label: 'Vers', values: ORIENTS.map((o) => [String(o.id), o.label]) },
+      { id: 'forme', label: 'Passage', values: [['s', 'Franc (1 case)'], ['l', 'Doux (2×2)']] },
+    ],
+    members: Object.fromEntries(['s', 'l'].flatMap((forme) => ROLL_PASSAGES.map((pas) => [`tr${pas}${forme}`, { de: pas[0], vers: pas[1], forme }]))),
   },
   loop: {
     label: 'Looping',
@@ -78,7 +104,7 @@ export const FAMILIES = {
     },
   },
 };
-export const FAMILY_ORDER = ['straight', 'turn', 'courbe', 'side', 'loop'];
+export const FAMILY_ORDER = ['straight', 'turn', 'courbe', 'roll', 'loop'];
 
 // type concret -> { fam, traits }
 const BY_TYPE = new Map();
@@ -129,7 +155,7 @@ export function withTrait(fam, traits, traitId, value) {
 }
 
 // Famille dont on affiche la fiche dans la palette pour un outil donné (type concret ou id de famille).
-export const FAMILY_DEFAULT = { straight: 'straight', turn: 'curve', courbe: 'crv1', side: 'rollL', loop: 'loop' };
+export const FAMILY_DEFAULT = { straight: 'straight', turn: 'curve', courbe: 'crv1', roll: 'tr01s', loop: 'loop' };
 
 // Pièces concrètes qu'on ne propose plus telles quelles dans la palette (remplacées par une famille ou une option).
 export const REPLACED_BY_OPTION = new Set(['checkpoint', 'cpRing', 'cpCurve']);

@@ -8,7 +8,7 @@ import * as THREE from './vendor/three.module.min.js';
 import { TransformControls } from './vendor/TransformControls.js';
 import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL, DIRS } from './constants.js';
 import { Track } from './track.js';
-import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, tileCenter, baseY, THEMES, MOVER, moverParams, paramText } from './pieces.js';
+import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, tileCenter, baseY, THEMES, MOVER, moverParams, paramText, ORIENTS, tileOri } from './pieces.js';
 import { FAMILIES, familyOf, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from './families.js';
 import { arrowPose } from './tileInfo.js';
 import { styleFor } from './trackMesh.js';
@@ -25,7 +25,9 @@ export const MIRROR_TYPES = {
   loopBigTriple: 'loopBigTripleL', loopBigTripleL: 'loopBigTriple',
   cv05: 'cvL05', cvL05: 'cv05', cv1: 'cvL1', cvL1: 'cv1', cv2: 'cvL2', cvL2: 'cv2', cv4: 'cvL4', cvL4: 'cv4',
   cvBig05: 'cvBigL05', cvBigL05: 'cvBig05', cvBig1: 'cvBigL1', cvBigL1: 'cvBig1', cvBig2: 'cvBigL2', cvBigL2: 'cvBig2', cvBig4: 'cvBigL4', cvBigL4: 'cvBig4',
-  rollL: 'rollR', rollR: 'rollL', sideL: 'sideR', sideR: 'sideL',
+  // 0.9.3 : virages descendants (droite <-> gauche) ; transitions d'orientation (mur gauche <-> mur droit)
+  ...Object.fromEntries(['05', '1', '2', '4'].flatMap((k) => [['cvd' + k, 'cvdL' + k], ['cvdL' + k, 'cvd' + k], ['cvdBig' + k, 'cvdBigL' + k], ['cvdBigL' + k, 'cvdBig' + k]])),
+  ...Object.fromEntries(['s', 'l'].flatMap((f) => [['01', '02'], ['10', '20'], ['13', '23'], ['31', '32']].flatMap(([a, b]) => [[`tr${a}${f}`, `tr${b}${f}`], [`tr${b}${f}`, `tr${a}${f}`]]))),
 };
 // Anciennes pièces « Checkpoint » : [pièce de route, valeur de l'option cp] pour les convertir en option.
 export const LEGACY_CP = { checkpoint: ['straight', 1], cpCurve: ['curve', 1], cpRing: ['straight', 2] };
@@ -268,7 +270,7 @@ export class Inspector {
   _structKey() {
     if (!this.sel) return '';
     const o = this.sel.obj;
-    return this.sel.kind === 'tile' ? ['t', o.t, o.s, o.s2, o.v, o.nb, o.tn, o.mv, o.cp, o.tb, this.mode, this.tab].join('|') : ['d', o.k, this.mode, this.tab].join('|');
+    return this.sel.kind === 'tile' ? ['t', o.t, o.s, o.s2, o.v, o.o, o.nb, o.tn, o.mv, o.cp, o.tb, this.mode, this.tab].join('|') : ['d', o.k, this.mode, this.tab].join('|');
   }
 
   _syncPanel() { for (const f of this._sync) f(); }
@@ -402,7 +404,7 @@ export class Inspector {
     // Revêtement (une bifurcation en a deux : voie directe / voie déportée)
     const fork = P.kind === 'fork';
     group(fork ? 'Revêtement · voie directe' : 'Revêtement');
-    const surfs = SURFACE_ORDER.filter((s) => s === (t.s || '') || surfaceAllowed(t.t, s, !!t.v));
+    const surfs = SURFACE_ORDER.filter((s) => s === (t.s || '') || surfaceAllowed(t.t, s, !!t.v, t.o | 0));
     rows.push(this._select('Type', surfs.map((s) => [s, SURFACES[s].label]), () => t.s || '', (v) => ed.track.setSurface(t, v, SURFACES[v] && SURFACES[v].def != null ? ed._surfParamValue(v) : 0) || true));
     const S = SURFACES[t.s || ''];
     if (S && S.def != null) {
@@ -410,7 +412,7 @@ export class Inspector {
     }
     if (fork) {
       group('Revêtement · voie déportée');
-      const s2s = SURFACE_ORDER.filter((s) => s && (s === (t.s2 || '') || surfaceAllowed(t.t, s, !!t.v)));
+      const s2s = SURFACE_ORDER.filter((s) => s && (s === (t.s2 || '') || surfaceAllowed(t.t, s, !!t.v, t.o | 0)));
       rows.push(this._select('Type', [['', 'Comme la voie directe'], ['-', 'Route normale'], ...s2s.map((s) => [s, SURFACES[s].label])], () => t.s2 || '',
         (v) => ed.track.setSurface2(t, v, v && SURFACES[v] && SURFACES[v].def != null ? ed._surfParamValue(v) : 0) || true));
       const S2 = SURFACES[t.s2 || ''];
@@ -422,7 +424,15 @@ export class Inspector {
     // Options
     group('Options');
     const flag = (f, label, hint) => this._check(label, () => t[f], (on) => (on !== !!t[f] ? ed.track.toggleFlag(t, f) || false : true), !flagAllowed(t.t, f, t) && !t[f], hint);
-    rows.push(flag('v', 'À l\'envers (inversion)', 'Route au plafond : roulable en gravité inversée'));
+    // Orientation (0.9.3) : sol, mur gauche / droit (vus dans le sens de la flèche), plafond (à l'envers : gravité inversée).
+    rows.push(this._select('Orientation', ORIENTS.map((x) => [String(x.id), x.label]), () => String(tileOri(t)),
+      (v) => {
+        const n = +v;
+        if (n === tileOri(t)) return true;
+        const ok = n === 3 ? ed.track.toggleFlag(t, 'v') : ed.track.toggleFlag(t, 'o', n);
+        if (!ok) ed.app.ui.flash(n === 3 ? 'Pas la place à l’envers : monte d’abord, ou libère le niveau en dessous.' : n ? 'Pas la place pour un mur : la route descend de 2 niveaux sous son niveau (monte d’abord, libère le dessous).' : 'Pas la place pour remettre la route à plat.');
+        return ok || false;
+      }, false, (v) => +v === 1 || +v === 2 ? !flagAllowed(t.t, 'o', null, +v) : false));
     rows.push(flag('nb', 'Sans bordures', 'Plus de rebord'));
     rows.push(flag('tn', 'Tunnel', 'Voûte autour de la route'));
     // Checkpoint : simple case à cocher (portique sur route, balise sur plateforme). L'ancien anneau aérien (cp = 2) reste lisible :
@@ -571,7 +581,7 @@ export class Inspector {
       const P = PIECES[obj.t];
       if (P.special === 'start') { ed.app.ui.flash('Un seul départ par circuit.'); ed.app.audio.error(); return false; }
       const f = DIRS[obj.r & 3], rt = DIRS[(obj.r + 1) & 3], n = P.size;
-      const tries = [[f[0] * n, f[1] * n, obj.l + P.rise], [rt[0] * n, rt[1] * n, obj.l], [-rt[0] * n, -rt[1] * n, obj.l], [-f[0] * n, -f[1] * n, obj.l - P.rise], [0, 0, obj.l + P.rise + (P.clearance || 0) + 1]];
+      const tries = [[f[0] * n, f[1] * n, obj.l + P.rise], [rt[0] * n, rt[1] * n, obj.l], [-rt[0] * n, -rt[1] * n, obj.l], [-f[0] * n, -f[1] * n, obj.l - P.rise], [0, 0, obj.l + Math.max(P.rise, 0) + Math.max(P.clearance || 0, obj.o ? 2 : 0) + 1]];
       for (const [dx, dz, l] of tries) {
         if (l < 0 || l > MAX_LEVEL) continue;
         const cand = Track.normalize({ ...obj, col: obj.col ? { ...obj.col } : null, x: obj.x + dx, z: obj.z + dz, l });

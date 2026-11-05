@@ -7,7 +7,7 @@ import { Autopilot } from './autopilot.js';
 import { b64encode, b64decode } from './track.js';
 
 // À incrémenter dès que la physique change : les replays d'une autre version sont ignorés.
-export const PHYS_VER = 22;
+export const PHYS_VER = 24;
 
 export const quantSteer = (s) => Math.round(Math.max(-1, Math.min(1, s || 0)) * 100) / 100;
 
@@ -78,7 +78,7 @@ export class GhostRunner {
     this.phys = new CarPhysics(track);
     this.logic = new RaceLogic(track);
     this.rep = inputs ? decodeInputs(inputs) : null;
-    this.bot = bot && track.path ? new Autopilot(track.path, { latLimit: 56 * latK, brakeDecel: 36 }) : null;
+    this.bot = bot && track.path ? new Autopilot(track.path, { latLimit: 56 * latK }) : null;
     this.reset();
   }
 

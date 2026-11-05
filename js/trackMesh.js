@@ -4,7 +4,7 @@ import { GeoBuilder, FxBuilder } from './geo.js';
 import {
   CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T,
 } from './constants.js';
-import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, isRibbonKind, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed } from './pieces.js';
+import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, isRibbonKind, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
 import { WATER_DROP, boatDrop } from './track.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { buildDecoInto, createPlaque, decoColor } from './decos.js';
@@ -181,6 +181,13 @@ function lineStrip(x, z0, z1, y0, y1, n) {
   return out;
 }
 
+// Ligne droite à profil vertical (pente, entrée / sortie douce, S) : n tronçons d'altitude base + rise · H(t) (voir V_PROFILES).
+function profileStrip(p, base, n) {
+  const half = p.size * HALF, rise = p.rise * LEVEL_H, fr = [];
+  for (let i = 0; i <= n; i++) { const t = i / n; fr.push(flatFrame(0, base + rise * profH(p, t), half - 2 * half * t, 0, -1)); }
+  return fr;
+}
+
 const FL = {};
 function ribbonStrip(tile, count) {
   const rib = ribbonOf(tile, true);
@@ -197,7 +204,7 @@ function ribbonStrip(tile, count) {
 function boatRamp(strip, tile) {
   const p = PIECES[tile.t];
   let fr = strip;
-  if (p.kind === 'line' && strip.length < 13) fr = lineStrip(0, p.size * HALF, -p.size * HALF, baseY(tile), baseY(tile) + p.rise * LEVEL_H, 12);
+  if (p.kind === 'line' && strip.length < 13) fr = profileStrip(p, baseY(tile), 12);
   const n = fr.length - 1;
   return fr.map((f, i) => ({ ...f, p: [f.p[0], f.p[1] - boatDrop(i / n), f.p[2]] }));
 }
@@ -214,13 +221,14 @@ export function stripsFor(tile) {
       lineStrip(m * p.lane, 0, -half, base, base, 3),
     ];
   }
-  if (p.kind === 'ribbon') {
+  if (p.kind === 'ribbon' || isOriented(tile)) {
+    // Ruban (transition, vrille, tube…) ou ligne / virage posé sur un mur : la bande suit la chaussée roulée.
     return [ribbonStrip(tile, Math.max(8, Math.round(ribbonOf(tile, true).len / 2.5)))];
   }
   if (p.kind === 'arc') {
-    // Arc de cercle ; une « Courbe » (rise > 0) monte régulièrement sur le quart de tour (rampe hélicoïdale, chaussée horizontale en travers).
+    // Arc de cercle ; un virage incliné monte (ou descend) régulièrement sur le quart de tour (rampe hélicoïdale, chaussée horizontale en travers).
     const a = arcParams(p);
-    const n = (p.size === 2 ? 16 : p.size === 3 ? 24 : 8) * (p.rise > 1 ? 2 : 1);
+    const n = (p.size === 2 ? 16 : p.size === 3 ? 24 : 8) * (Math.abs(p.rise) > 1 ? 2 : 1);
     const fr = [], mir = p.mirror < 0 ? -1 : 1;
     for (let i = 0; i <= n; i++) {
       const ang = Math.PI + (Math.PI / 2) * (i / n);
@@ -228,14 +236,8 @@ export function stripsFor(tile) {
     }
     return [fr];
   }
-  const half = p.size * HALF;
-  if (p.curv) {
-    // Courbe : h = rise · t² (voir sampleLocal) ; 12 tronçons pour que l'arc reste lisse.
-    const fr = [], n = 12, rise = p.rise * LEVEL_H;
-    for (let i = 0; i <= n; i++) { const t = i / n; fr.push(flatFrame(0, base + rise * t * t, half - 2 * half * t, 0, -1)); }
-    return [fr];
-  }
-  return [lineStrip(0, half, -half, base, base + p.rise * LEVEL_H, 4)];
+  // Ligne droite : profil vertical droit (4 tronçons) ou courbe (12 tronçons pour que le raccord reste lisse).
+  return [profOf(p) === 'l' ? lineStrip(0, p.size * HALF, -p.size * HALF, base, base + p.rise * LEVEL_H, 4) : profileStrip(p, base, 12)];
 }
 
 const at = (f, d, h) => [
@@ -733,7 +735,7 @@ function pillarHeightAt(tile, lz, lx = 0) {
   if (p.kind !== 'line') return base;
   const half = p.size * HALF;
   const t = (half - lz) / (2 * half);
-  return base + p.rise * LEVEL_H * (p.curv ? t * t : t);
+  return base + p.rise * LEVEL_H * profH(p, t);
 }
 
 export function tileMatrix(tile) {
@@ -915,7 +917,7 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
     for (let strip of strips) {
       // Plaque bateau : une très légère montée, de l'eau (entrée, 35 cm plus bas) jusqu'au sol (sortie). Même hauteur que la physique.
       if (s === 'boat' && (p.kind === 'line' || p.kind === 'arc')) strip = boatRamp(strip, tile);
-      sweep(gb, strip, style, tile.nb, s === 'water' ? WATER_DROP : 0);
+      sweep(gb, strip, style, hasNoRails(tile), s === 'water' ? WATER_DROP : 0);
       if (fxKind !== undefined) fxLayer(fx, strip, tile, fxKind);
       if (s) surfaceDecals(glow, strip, tile);
       if (tile.tn && !tile.v) tunnel(gb, glow, strip);
@@ -938,7 +940,7 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
   if (p.kind === 'loop') loopTowers(gb, glow, tile);
 
   // Piliers (pas sous un ruban vertical / une route à l'envers)
-  if ((tile.l > 0 || p.rise > 0) && p.kind !== 'ribbon' && p.kind !== 'ring' && !tile.v && !tile.mv) {
+  if ((tile.l > 0 || p.rise > 0) && p.kind !== 'ribbon' && p.kind !== 'ring' && !tile.v && !tile.o && !tile.mv) {
     for (const [lx, lz] of pillarPoints(tile)) {
       const top = pillarHeightAt(tile, lz, lx) - SLAB_T;
       if (top < 1.2) continue;
@@ -1001,8 +1003,9 @@ export class TrackView {
     const focus = this.focus;
     for (const tile of this.track.tiles) {
       const P = PIECES[tile.t];
-      const hi = tile.l + Math.max(P.rise || 0, 0) + (P.clearance || tile.cp ? 1 : 0);
-      const dim = focus != null && !(focus >= tile.l - (P.below || 0) - 0.01 && focus <= hi + 0.01);       // (`below` : route sur le côté, qui descend sous son niveau)
+      const hi = tile.l + Math.max(P.rise || 0, 0) + (P.clearance || tile.cp ? 1 : 0) + (tile.o ? 2 : 0);
+      const lo = tile.l + Math.min(P.rise || 0, 0) - Math.max(P.below || 0, tile.o ? 2 : 0);          // (`below` : route sur le côté, qui descend sous son niveau ; pente descendante : sous son niveau d'entrée)
+      const dim = focus != null && !(focus >= lo - 0.01 && focus <= hi + 0.01);
       const glassy = tile.s === 'glass' || tile.s2 === 'glass';
       if ((tile.mv || glassy) && !dim) {
         // Pièce mobile (déplacée à chaque image selon le chrono) ou dalle de verre (masquée quand elle se brise) : son propre groupe.

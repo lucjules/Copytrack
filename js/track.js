@@ -3,7 +3,7 @@
 import { CELL, DIRS, ROAD_HALF, RAIL_W, SLAB_T, MAX_LEVEL, LEVEL_H, MAX_DECOS } from './constants.js';
 import {
   PIECES, PIECE_ORDER, SURFACE_CODES, SURFACE_ALIAS, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, isFloor, isCeilingFloor, baseY,
-  forkBranchX, toLocal, sampleLocal, rotVec, tileCenter, MOVER, moverParams, clampMover, THEMES,
+  forkBranchX, toLocal, sampleLocal, rotVec, tileCenter, MOVER, moverParams, clampMover, THEMES, LEGACY_TILE,
 } from './pieces.js';
 import { centerlineWorld } from './ribbons.js';
 import { isObstacle } from './obstacles.js';
@@ -91,14 +91,17 @@ export class Track {
   }
 
   // Plage de niveaux occupée (inclusive). Portiques et loopings réservent de la hauteur.
+  // 0.9.3 : `rise` est signé (une pente descendante occupe les niveaux en dessous de son niveau d'entrée) ; une route sur un mur
+  // (orientation o) réserve 2 niveaux au-dessus et au-dessous (le plan vertical mesure 18 m de haut, centré sur l'axe de la route).
   static range(t) {
     const p = PIECES[t.t];
+    const up = Math.max(0, p.rise || 0), down = Math.min(0, p.rise || 0);
     // Un checkpoint en option réserve la hauteur de son portique (1 niveau) ou de son anneau (2 niveaux).
-    const h = p.rise + Math.max(p.clearance || 0, t.cp === 2 || t.tb ? 2 : t.cp === 1 ? 1 : 0);
+    const h = up + Math.max(p.clearance || 0, t.cp === 2 || t.tb ? 2 : t.cp === 1 ? 1 : 0, t.o ? 2 : 0);
+    const below = Math.max(p.below || 0, t.o ? 2 : 0);       // pièces qui descendent sous leur niveau (plan vertical : 9 m plus bas)
     // Une pièce à l'envers est retournée sous son niveau : elle occupe les niveaux en dessous.
-    const below = p.below || 0;       // pièces qui descendent sous leur niveau (route sur le côté : le plan vertical va 9 m plus bas)
-    if (t.v) return [t.l - h, t.l + below];
-    return [t.l - below, t.l + h + (t.mv === 1 ? Math.ceil(moverParams(t, MP).amp) : 0)];   // l'ascenseur monte de 2 niveaux (réglable)
+    if (t.v) return [t.l - h, t.l - down + below];
+    return [t.l + down - below, t.l + h + (t.mv === 1 ? Math.ceil(moverParams(t, MP).amp) : 0)];   // l'ascenseur monte de 2 niveaux (réglable)
   }
 
   // Convertit une pièce (éventuellement au format v1.0 / v1.1) en pièce v1.2 / Phase 2.
@@ -108,12 +111,18 @@ export class Track {
     let type = t.t, s = SURFACE_ALIAS[t.s] || t.s || '';
     if (LEGACY_SURFACE[type]) { s = LEGACY_SURFACE[type]; type = 'straight'; }
     if (LEGACY_PIECE[type]) type = LEGACY_PIECE[type];
+    // 0.9.2 : les anciennes pièces « route sur le côté » deviennent une pièce ordinaire + son orientation (même géométrie, même physique).
+    let ori = t.o | 0;
+    const lg = LEGACY_TILE[type];
+    if (lg) { type = lg.t; if (lg.o) ori = lg.o; }
     if (!PIECES[type]) throw new Error('Pièce inconnue : ' + type);
     const tile = {
       t: type, x: t.x | 0, z: t.z | 0, l: Math.max(0, Math.min(MAX_LEVEL, Math.round((+t.l || 0) * 2) / 2)), r: t.r & 3,
-      s: '', p: 0, v: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ms: 0, ma: 0, col: null, s2: '', p2: 0,
+      s: '', p: 0, v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ms: 0, ma: 0, col: null, s2: '', p2: 0,
     };
     tile.v = t.v && flagAllowed(type, 'v') ? 1 : 0;
+    // Orientation (mur gauche 1 / droit 2) : exclusive du plafond, du tunnel, du checkpoint, de l'anneau et du mouvement.
+    tile.o = (ori === 1 || ori === 2) && !tile.v && flagAllowed(type, 'o', tile, ori) ? ori : 0;
     tile.nb = PIECES[type].noRails || (t.nb && flagAllowed(type, 'nb')) ? 1 : 0;
     tile.tn = t.tn && flagAllowed(type, 'tn', tile) ? 1 : 0;
     tile.mv = t.mv && !tile.v && flagAllowed(type, 'mv', tile) ? (t.mv | 0) & 3 : 0;
@@ -123,13 +132,13 @@ export class Track {
     tile.tb = t.tb && !tile.mv && !tile.cp && flagAllowed(type, 'tb', tile) ? 1 : 0;
     tile.th = THEMES.some((h) => h.id === (t.th | 0)) && flagAllowed(type, 'th') ? (t.th | 0) : 0;
     tile.col = cleanColors(t.col);
-    if (surfaceAllowed(type, s, !!tile.v)) {
+    if (surfaceAllowed(type, s, !!tile.v, tile.o)) {
       tile.s = s;
       const S2 = SURFACES[s];
       if (S2 && S2.def != null) tile.p = Math.max(S2.min, Math.min(S2.max, t.p || S2.def));
     }
     // Bifurcation : un 2e revêtement pour la voie déportée (la 1re voie garde s).
-    if (PIECES[type].kind === 'fork' && t.s2 && (t.s2 === '-' || surfaceAllowed(type, t.s2, !!tile.v))) {
+    if (PIECES[type].kind === 'fork' && t.s2 && (t.s2 === '-' || surfaceAllowed(type, t.s2, !!tile.v, tile.o))) {
       tile.s2 = t.s2 === '-' ? '-' : (SURFACE_ALIAS[t.s2] || t.s2);
       const S3 = SURFACES[tile.s2];
       if (S3 && S3.def != null) tile.p2 = Math.max(S3.min, Math.min(S3.max, t.p2 || S3.def));
@@ -198,7 +207,7 @@ export class Track {
 
   // Revêtement (avec paramètre en %). Renvoie true si quelque chose a changé.
   setSurface(tile, s, p = 0) {
-    if (!surfaceAllowed(tile.t, s, !!tile.v)) return false;
+    if (!surfaceAllowed(tile.t, s, !!tile.v, tile.o)) return false;
     const S2 = SURFACES[s];
     const np = S2 && S2.def != null ? Math.max(S2.min, Math.min(S2.max, p || S2.def)) : 0;
     if (tile.s === s && (tile.p || 0) === np) return false;
@@ -209,6 +218,15 @@ export class Track {
 
   // Bascule un drapeau (v : à l'envers, nb : sans bordures, tn : tunnel, mv : mouvement 1/2/3, cp : checkpoint 1/2, th : thème).
   toggleFlag(tile, flag, val = 1) {
+    // Orientation : val 1 = mur gauche, 2 = mur droit (même valeur : retour au sol) ; val 0 = retour au sol (aussi depuis le plafond).
+    if (flag === 'o') {
+      const target = val | 0;
+      if (target && !flagAllowed(tile.t, 'o', null, target)) return false;      // seul le type compte : le plafond, le tunnel, etc. sont retirés (le dernier choix l'emporte)
+      const cand = { ...tile };
+      if (!target || tile.o === target) { cand.o = 0; if (!target) cand.v = 0; }
+      else { cand.o = target; cand.v = 0; cand.tn = 0; cand.mv = 0; cand.ms = 0; cand.ma = 0; cand.cp = 0; cand.tb = 0; }
+      return this._reshape(tile, cand);
+    }
     if (!flagAllowed(tile.t, flag, tile, val)) return false;
     if (flag === 'th') {
       const th = tile.th === val ? 0 : val;
@@ -217,26 +235,31 @@ export class Track {
       this.version++;
       return true;
     }
-    if (flag === 'mv' || flag === 'cp' || flag === 'tb' || (flag === 'v' && (tile.mv || tile.cp === 2 || tile.tb))) {
-      // Mouvement et checkpoint changent les cases et niveaux occupés : on vérifie la place, puis on réindexe.
+    // Ces options changent les cases ou les niveaux occupés (mouvement, checkpoint, anneau, orientation, plafond) : on vérifie la place
+    // (et qu'une pièce à l'envers ne sort pas du sol), puis on réindexe.
+    if (flag === 'mv' || flag === 'cp' || flag === 'tb' || flag === 'v') {
       const cand = { ...tile };
       if (flag === 'mv') { cand.mv = tile.mv === val ? 0 : val; cand.ms = 0; cand.ma = 0; if (cand.mv) { cand.cp = 0; cand.tb = 0; } }
       else if (flag === 'cp') { cand.cp = tile.cp === val ? 0 : val; }
       else if (flag === 'tb') { cand.tb = tile.tb ? 0 : 1; }
-      else { cand.v = 1; cand.mv = 0; cand.ms = 0; cand.ma = 0; cand.tn = 0; cand.tb = 0; if (cand.cp === 2) cand.cp = 0; }
-      this.remove(tile);
-      if (this.conflicts(cand).length || !Track.inBounds(cand)) { this._insert(tile); return false; }
-      Object.assign(tile, cand);
-      this._insert(tile);
-      return true;
+      else if (tile.v) cand.v = 0;
+      else { cand.v = 1; cand.o = 0; cand.mv = 0; cand.ms = 0; cand.ma = 0; cand.tn = 0; cand.tb = 0; if (cand.cp === 2) cand.cp = 0; }
+      return this._reshape(tile, cand);
     }
     tile[flag] = tile[flag] ? 0 : 1;
-    if (flag === 'v' && tile.v) {
-      tile.tn = 0;
-      if (tile.s && !surfaceAllowed(tile.t, tile.s, true)) { tile.s = ''; tile.p = 0; }
-    }
     if (flag === 'tn' && tile.tn && tile.v) { tile.tn = 0; return false; }
     this.version++;
+    return true;
+  }
+
+  // Remplace `tile` par `cand` (normalisée : options devenues impossibles retirées, revêtement incompatible effacé) si la place et les niveaux
+  // le permettent ; sinon rien ne change. Même objet : la sélection de l'inspecteur reste valable.
+  _reshape(tile, cand) {
+    const n = Track.normalize(cand);
+    this.remove(tile);
+    if (this.conflicts(n).length || !Track.inBounds(n)) { this._insert(tile); return false; }
+    Object.assign(tile, n);
+    this._insert(tile);
     return true;
   }
 
@@ -263,7 +286,7 @@ export class Track {
   // 2e revêtement d'une bifurcation (voie déportée).
   setSurface2(tile, s, p = 0) {
     if (PIECES[tile.t].kind !== 'fork') return false;
-    if (s && s !== '-' && !surfaceAllowed(tile.t, s, !!tile.v)) return false;
+    if (s && s !== '-' && !surfaceAllowed(tile.t, s, !!tile.v, tile.o)) return false;
     const S2 = SURFACES[s];
     const np = S2 && S2.def != null ? Math.max(S2.min, Math.min(S2.max, p || S2.def)) : 0;
     if ((tile.s2 || '') === s && (tile.p2 || 0) === np) return false;
@@ -471,7 +494,7 @@ export class Track {
     let best = Infinity;
     for (const tile of this.tilesAt(cx, cz)) {
       const kind = PIECES[tile.t].kind;
-      if (kind === 'loop' || kind === 'ribbon' || tile.v) continue;
+      if (kind === 'loop' || kind === 'ribbon' || tile.v || tile.o) continue;
       toLocal(tile, x, z, L);
       sampleLocal(tile, L.lx, L.lz, S);
       if (!S.inFootprint) continue;
@@ -551,6 +574,7 @@ export class Track {
       // Phase 2 : champs optionnels, rangés à part (par index de pièce) ; absents = valeurs par défaut.
       const e = { i: idx };
       if (t.cp) e.cp = t.cp;
+      if (t.o) e.o = t.o;
       if (t.tb) e.tb = 1;
       if (t.th) e.th = t.th;
       if (t.ms) e.ms = t.ms;
@@ -600,7 +624,7 @@ export class Track {
       const tile = { t: type, x: data.t[i + 1], z: data.t[i + 2], l: data.t[i + 3], r: data.t[i + 4], s: '' };
       const ex = extras.get(i / stride);
       if (ex) {
-        tile.cp = ex.cp | 0; tile.tb = ex.tb | 0; tile.th = ex.th | 0; tile.ms = ex.ms | 0; tile.ma = +ex.ma || 0;
+        tile.cp = ex.cp | 0; tile.o = ex.o | 0; tile.tb = ex.tb | 0; tile.th = ex.th | 0; tile.ms = ex.ms | 0; tile.ma = +ex.ma || 0;
         if (ex.s2) { tile.s2 = ex.s2 === -1 ? '-' : SURFACE_CODES[ex.s2] || ''; tile.p2 = ex.p2 | 0; }
         if (ex.col && typeof ex.col === 'object') tile.col = Object.fromEntries(COLOR_KEYS.filter((k) => typeof ex.col[k] === 'string').map((k) => [k, '#' + ex.col[k]]));
       }
@@ -635,6 +659,7 @@ function tileExtras(t) {
   let e = '';
   if (t.cp) e += 'c' + t.cp;
   if (t.tb) e += 'b';
+  if (t.o) e += 'o' + t.o;
   if (t.mv && (t.ms || t.ma)) e += `s${t.ms || 0}a${t.ma || 0}`;
   if (t.s2) e += `f${t.s2}:${t.p2 || 0}`;
   return e;
@@ -700,6 +725,8 @@ export function hashString(s) {
 //   (0 = ½, 1, 2, 4), ex. CVR2, CBL0.   OT / OTL / OBT / OBTL / OBD / OBDL : looping triple, grand ×3, grand ×2
 //   suffixes : .a eau  .n plaque bateau  .e plaque deltaplane  .f inversion de gravité
 //              .t tapis roulant  .r ressort latéral  .v verre  .p poudreuse  .y volant inversé  .c moteur coupé
+//   0.9.3 : [id] place n'importe quelle pièce par son identifiant (ex. [dn1] pente descendante, [cro1] fin de montée douce, [tr01s] sol → mur gauche,
+//           [cvd1] virage descendant) et suit son dénivelé ; drapeaux < mur gauche et > mur droit (ex. "S3<" : 3 droites sur le mur gauche).
 const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', m: 'magnet', d: 'drift', x: 'slow', w: 'wind', g: 'gravity', o: 'moto', a: 'water', n: 'boat', e: 'glider', f: 'flip', t: 'conveyor', r: 'spring', v: 'glass', p: 'powder', y: 'reverse', c: 'cut' };
 
 export function scriptTrack(name, script, opts = {}) {
@@ -710,8 +737,9 @@ export function scriptTrack(name, script, opts = {}) {
   let cur = { s: '', p: 0, v: 0, nb: 0, tn: 0 };
   const place = (t, px, pz, lv, r, reverse = false, noPath = false, curOver = null) => {
     const tile = { t, x: px, z: pz, l: lv, r: r & 3, ...(curOver || cur) };
-    if (cur.s && !surfaceAllowed(t, cur.s, !!cur.v)) throw new Error(`${name} : revêtement ${cur.s} interdit sur ${t}`);
+    if (cur.s && !surfaceAllowed(t, cur.s, !!cur.v, cur.o | 0)) throw new Error(`${name} : revêtement ${cur.s} interdit sur ${t}`);
     for (const f of ['v', 'nb', 'tn', 'mv']) if (cur[f] && !flagAllowed(t, f, tile)) throw new Error(`${name} : drapeau ${f} interdit sur ${t}`);
+    if (cur.o && !flagAllowed(t, 'o', tile, cur.o)) throw new Error(`${name} : orientation ${cur.o} interdite sur ${t}`);
     const c = tr.conflicts(Track.normalize(tile));
     if (c.length) throw new Error(`${name} : conflit en (${px}, ${pz}) niveau ${lv} [${t}]`);
     if (!Track.inBounds(Track.normalize(tile))) throw new Error(`${name} : ${t} sort des niveaux en (${px}, ${pz})`);
@@ -787,11 +815,16 @@ export function scriptTrack(name, script, opts = {}) {
   };
 
   for (const tok of script.trim().split(/\s+/)) {
-    const m = /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=]*)$/.exec(tok);
+    // [id] : n'importe quelle pièce par son identifiant (ex. [dn1] [cro2] [tr01s] [cvd1]) ; le niveau suit la pente de la pièce.
+    const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=<>]*)$/.exec(tok);
+    const m = gm ? [tok, '@' + gm[1], gm[2], gm[3], gm[4], gm[5]] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=<>]*)$/.exec(tok);
     if (!m) throw new Error('Instruction invalide : ' + tok);
     let op = m[1];
     const n = m[2] ? parseInt(m[2], 10) : 1;
-    cur = { s: '', p: 0, v: m[5].includes('^') ? 1 : 0, nb: m[5].includes('_') ? 1 : 0, tn: m[5].includes('#') ? 1 : 0, mv: m[5].includes('~') ? 1 : m[5].includes('=') ? 2 : 0 };
+    cur = {
+      s: '', p: 0, v: m[5].includes('^') ? 1 : 0, nb: m[5].includes('_') ? 1 : 0, tn: m[5].includes('#') ? 1 : 0, mv: m[5].includes('~') ? 1 : m[5].includes('=') ? 2 : 0,
+      o: m[5].includes('<') ? 1 : m[5].includes('>') ? 2 : 0,      // < : mur gauche, > : mur droit
+    };
     if (m[3]) {
       cur.s = SURF_CODE[m[3]];
       if (!cur.s) throw new Error('Revêtement inconnu : ' + tok);
@@ -799,6 +832,25 @@ export function scriptTrack(name, script, opts = {}) {
     }
     if (op === 'B') { op = 'S'; cur.s = 'boost'; }
     if (op === 'I') { op = 'S'; cur.s = 'ice'; }
+    if (op[0] === '@') {
+      const id = op.slice(1), P = PIECES[id];
+      if (!P) throw new Error('Pièce inconnue : ' + id);
+      for (let i = 0; i < n; i++) {
+        const sg = P.mirror < 0 ? -1 : 1, rise = P.rise || 0;
+        if (P.kind === 'arc' && P.size === 2) {
+          const c = rot(h, 0.5 * sg, -0.5);
+          place(id, Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
+          const nx = rot(h, 2 * sg, -1);
+          x += nx.x; z += nx.z; h = (h + (sg > 0 ? 1 : 3)) & 3;
+        } else if (P.kind === 'arc') {
+          place(id, x, z, l, h);
+          h = (h + (sg > 0 ? 1 : 3)) & 3; adv(h);
+        } else if (P.size === 2) straight2(id);
+        else { place(id, x, z, l, h); adv(h); }
+        l += rise;
+      }
+      continue;
+    }
     const simple = { S: 'straight', C: 'checkpoint', P: 'platform', start: 'start', finish: 'finish' };
     if (simple[op]) {
       for (let i = 0; i < n; i++) { place(simple[op], x, z, l, h); adv(h); }

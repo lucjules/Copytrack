@@ -29,7 +29,7 @@ export const MSG = {
   glass: ['Verre brisé', PRIO.penalty, 1.1],
   sink: ['Coulé', PRIO.penalty, 1.1],
   missing: (n) => [n > 1 ? `${n} checkpoints manquants` : 'Checkpoint manquant', PRIO.penalty, 1.2],
-  fall: { loop: ['Trop lent', PRIO.penalty, 1.1], twist: ['Décroché', PRIO.penalty, 1.1], inv: ['Gravité', PRIO.penalty, 1.1] },   // « crest » : plus de message
+  fall: { loop: ['Trop lent', PRIO.penalty, 1.1], twist: ['Décroché', PRIO.penalty, 1.1], wall: ['Trop lent', PRIO.penalty, 1.1], inv: ['Gravité', PRIO.penalty, 1.1] },   // « crest » : plus de message
   gravity: (pct) => [`Gravité ${pct} %`, PRIO.event, 1.1],
   flip: (inverted) => [inverted ? 'Gravité inversée' : 'Gravité normale', PRIO.event, 1.1],
   vehicle: { moto: ['Moto', PRIO.event, 1.0], boat: ['Bateau', PRIO.event, 1.0], glider: ['Deltaplane', PRIO.event, 1.0], car: ['Voiture', PRIO.event, 1.0] },

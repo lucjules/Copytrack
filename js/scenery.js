@@ -431,6 +431,9 @@ export class Scenery {
     if (this._last && (prev.decor !== prof.decor || prev.terrainSeg !== prof.terrainSeg || prev.hills !== prof.hills)) this.setTrack(...this._last);
   }
 
+  // Remet le brouillard du profil de qualité (l'éditeur l'éloigne pour qu'on voie tout le circuit).
+  refreshFog() { this._applyFog(); }
+
   _applyFog() {
     const T = this.theme, k = this.q.fogScale;
     this.scene.fog.near = T.fogNear * k;

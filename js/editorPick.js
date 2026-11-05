@@ -85,7 +85,7 @@ const LQ = { lx: 0, lz: 0 }, SQ = {};
 // Pièce EXACTE visée par le rayon, quelle que soit la hauteur de pose choisie dans l'éditeur. Les boîtes englobantes sélectionnent
 // les candidats (du plus proche au plus lointain) ; pour une route à plat (droite, virage, plateforme, bifurcation) on vérifie que
 // le rayon traverse bien sa chaussée (pas seulement le volume vide au-dessus d'une pièce basse) ; les rubans, loopings et anneaux
-// se contentent de leur boîte. Renvoie { kind: 'tile', obj, dist, x, y, z } ou null.
+// se contentent de leur boîte (comme une route posée sur un mur). Renvoie { kind: 'tile', obj, dist, x, y, z } ou null.
 export function pickTileExact(track, ray) {
   const cand = [];
   for (const t of track.tiles) {
@@ -95,7 +95,7 @@ export function pickTileExact(track, ray) {
   cand.sort((a, b) => a.t0 - b.t0);
   for (const c of cand) {
     const tile = c.t, P = PIECES[tile.t];
-    if (!FLOORISH.has(P.kind)) return { kind: 'tile', obj: tile, dist: c.t0, x: ray.origin.x + ray.direction.x * c.t0, y: ray.origin.y + ray.direction.y * c.t0, z: ray.origin.z + ray.direction.z * c.t0 };
+    if (!FLOORISH.has(P.kind) || tile.o) return { kind: 'tile', obj: tile, dist: c.t0, x: ray.origin.x + ray.direction.x * c.t0, y: ray.origin.y + ray.direction.y * c.t0, z: ray.origin.z + ray.direction.z * c.t0 };
     const base = baseY(tile);
     const end = Math.min(c.t1, c.t0 + 4000);
     for (let d = c.t0; d <= end + 0.4; d += 0.8) {

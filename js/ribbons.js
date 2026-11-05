@@ -13,7 +13,7 @@
 // Un ruban peut avoir une section courbe : kc (courbure transversale), hw (demi-largeur
 // mesurée le long de la section) et wrap (section fermée : on peut en faire le tour).
 import { HALF, LEVEL_H, ROAD_HALF } from './constants.js';
-import { PIECES, baseY, arcParams, localToWorld } from './pieces.js';
+import { PIECES, baseY, arcParams, localToWorld, isOriented, oriAngle, profH, profD } from './pieces.js';
 
 const smooth = (u) => u * u * (3 - 2 * u);
 // 0 aux extrémités, 1 au milieu, transitions douces de largeur w.
@@ -25,7 +25,7 @@ const cache = new WeakMap();
 // y -> 2·base − y et normale inversée (la voiture y roule en gravité inversée).
 export function ribbonOf(tile, raw = false) {
   const flip = !!tile.v && !raw;
-  const key = tile.t + '|' + tile.l + '|' + (flip ? 1 : 0);
+  const key = tile.t + '|' + tile.l + '|' + (flip ? 1 : 0) + '|' + (tile.o | 0);
   const c = cache.get(tile);
   if (c && c.keys && c.keys[key]) return c.keys[key];
   let rib = build(tile);
@@ -42,12 +42,60 @@ export function ribbonOf(tile, raw = false) {
   return rib;
 }
 
+// Ligne centrale d'une ligne ou d'un virage (coordonnées locales) et tangente unitaire à l'avancée u (profil vertical compris).
+export function floorCenter(tile, u, out) {
+  const P = PIECES[tile.t], base = baseY(tile), half = P.size * HALF;
+  let dx, dy, dz;
+  if (P.kind === 'arc') {
+    const a = arcParams(P), mir = P.mirror < 0 ? -1 : 1, ang = Math.PI + (Math.PI / 2) * u;
+    out.x = mir * (a.cx + a.R * Math.cos(ang)); out.z = a.cz + a.R * Math.sin(ang);
+    out.y = base + P.rise * LEVEL_H * u;
+    dx = -mir * a.R * Math.sin(ang) * (Math.PI / 2); dz = a.R * Math.cos(ang) * (Math.PI / 2); dy = P.rise * LEVEL_H;
+  } else {
+    out.x = 0; out.z = half - 2 * half * u; out.y = base + P.rise * LEVEL_H * profH(P, u);
+    dx = 0; dz = -2 * half; dy = P.rise * LEVEL_H * profD(P, u);
+  }
+  const l = Math.hypot(dx, dy, dz) || 1;
+  out.tx = dx / l; out.ty = dy / l; out.tz = dz / l;
+  return out;
+}
+
+// Normale d'une route roulée de psi autour de son axe (tangente t) : cos ψ · (haut de la route) + sin ψ · (droite de la route).
+function rolledNormal(t, psi, o) {
+  let ux = -t.tx * t.ty, uy = 1 - t.ty * t.ty, uz = -t.tz * t.ty;          // haut du monde projeté dans le plan perpendiculaire à t
+  const l = Math.hypot(ux, uy, uz) || 1;
+  ux /= l; uy /= l; uz /= l;
+  const rx = t.ty * uz - t.tz * uy, ry = t.tz * ux - t.tx * uz, rz = t.tx * uy - t.ty * ux;   // droite = t × haut
+  const c = Math.cos(psi), s = Math.sin(psi);
+  o.nx = c * ux + s * rx; o.ny = c * uy + s * ry; o.nz = c * uz + s * rz;
+}
+
+// Ligne ou virage posé sur un mur (tile.o : 1 = mur gauche, ψ = +90° ; 2 = mur droit, ψ = -90°) : la chaussée est roulée de 90° autour de
+// son axe, partout. L'axe reste celui de la route plate (même ligne centrale, même profil vertical) ; la moitié basse du plan descend de 9 m.
+function buildRolled(tile) {
+  const P = PIECES[tile.t];
+  const psi = tile.o === 1 ? Math.PI / 2 : -Math.PI / 2;
+  const C = {};
+  const half = P.size * HALF;
+  const len = P.kind === 'arc' ? Math.hypot((Math.PI / 2) * arcParams(P).R, P.rise * LEVEL_H) : Math.hypot(2 * half, P.rise * LEVEL_H);
+  return {
+    minU: 0.5,        // comme la vrille : l'appui ne lâche jamais la voiture (c'est la vitesse, via SIDE_HOLD, qui décide si elle tient)
+    len: len * 1.2,
+    pos(u, o) {
+      floorCenter(tile, u, C);
+      o.x = C.x; o.y = C.y; o.z = C.z;
+      rolledNormal(C, psi, o);
+    },
+  };
+}
+
 function build(tile) {
   const P = PIECES[tile.t];
   const base = baseY(tile);
   const half = P.size * HALF;
   const R90 = 2 * LEVEL_H;
 
+  if (isOriented(tile)) return buildRolled(tile);
   if (P.kind === 'loop') {
     const total = Math.PI * 2 * P.turns;
     const { R, lane, mirror: m } = P;
@@ -115,20 +163,21 @@ function build(tile) {
         len: 2 * half,
       };
     }
-    if (P.side) {
-      // Route « sur le côté » : la chaussée bascule autour de SON AXE (comme la vrille, dont c'est la première moitié) jusqu'à un plan
-      // vertical : normale = (m·sin f, cos f, 0), m = -1 (plan à gauche, ↰) ou +1 (↱). L'axe reste fixe : la tangente ne tourne pas,
-      // la voiture n'est pas déportée par la bascule. La moitié basse du plan descend de 9 m sous le niveau de la pièce (réservé : `below`).
-      // rollX : f va de 0 (route plate) à 90° ; sideX : plan vertical sur toute la pièce.
-      const m = P.pivot, roll = P.side === 1;
+    if (P.roll) {
+      // Transition d'orientation : la chaussée bascule autour de SON AXE (comme la vrille, dont c'est une portion) d'une orientation à
+      // l'autre (sol 0°, mur gauche +90°, mur droit -90°, plafond ±180°) : normale = (sin ψ, cos ψ, 0). L'axe reste fixe : la tangente ne
+      // tourne pas, la voiture n'est pas déportée par la bascule. Franche : 1 case ; douce : 2×2, route dans la colonne de gauche (comme la
+      // vrille), deux fois moins de roulis par mètre. La moitié basse d'un plan vertical descend de 9 m sous le niveau (réservé : `below`).
+      const [a, b] = P.roll, long = !!P.rollLong;
+      const psa = oriAngle(a, b), psb = oriAngle(b, a);
       return {
-        minU: 0.5,      // comme la vrille : jamais lâchée par l'appui (c'est la vitesse, via SIDE_HOLD, qui décide si on tient ou si on glisse)
+        minU: 0.5,      // jamais lâchée par l'appui : c'est la vitesse (SIDE_HOLD) qui décide si on tient ou si on glisse
         pos(u, o) {
-          const f = roll ? (Math.PI / 2) * smooth(u) : Math.PI / 2;
-          o.x = 0; o.y = base; o.z = half - 2 * half * u;
-          o.nx = m * Math.sin(f); o.ny = Math.cos(f); o.nz = 0;
+          const psi = psa + (psb - psa) * smooth(u);
+          o.x = long ? -HALF : 0; o.y = base; o.z = half - 2 * half * u;
+          o.nx = Math.sin(psi); o.ny = Math.cos(psi); o.nz = 0;
         },
-        len: roll ? 2 * half * 1.6 : 2 * half,      // (plus de tronçons de maillage pour la bascule)
+        len: long ? 2 * half : 2 * half * 1.6,      // (plus de tronçons de maillage pour la bascule franche)
       };
     }
     if (tile.t === 'cork' || tile.t === 'corkL') {
@@ -269,7 +318,7 @@ export function centerlineLocal(tile, n) {
     const rise = p.rise * LEVEL_H;
     for (let i = 0; i <= n; i++) {
       const t = i / n;
-      pts.push([0, base + rise * (p.curv ? t * t : t), half - 2 * half * t, 0]);
+      pts.push([0, base + rise * profH(p, t), half - 2 * half * t, 0]);
     }
   }
   // Pièce à l'envers : géométrie retournée autour de son niveau.

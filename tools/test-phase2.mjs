@@ -9,7 +9,7 @@ import { GeoBuilder } from '../js/geo.js';
 import { buildTileInto, stripsFor, styleFor } from '../js/trackMesh.js';
 import { Track, scriptTrack, b64encode } from '../js/track.js';
 import {
-  PIECES, PIECE_ORDER, sampleLocal, baseY, flagAllowed, cpKind, MOVER, moverParams, clampMover,
+  PIECES, PIECE_ORDER, sampleLocal, baseY, flagAllowed, cpKind, MOVER, moverParams, clampMover, profH, profD,
 } from '../js/pieces.js';
 import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, isFamilyMember } from '../js/families.js';
 import { CarPhysics } from '../js/physics.js';
@@ -39,9 +39,10 @@ test('chaque pièce de famille existe, une seule fois, et se résout vers elle-m
   }
   assert.ok(isFamilyMember('slope') && isFamilyMember('steep') && isFamilyMember('gentle'));
 });
-test('Ligne droite : inclinaison plat / ½ / 1 / 2 / 4 ; les anciennes Pente, Pente douce et Tremplin en font partie', () => {
+test('Ligne droite : inclinaison plat / ½ / 1 / 2 / 4, montée ou descente ; les anciennes Pente, Pente douce et Tremplin en font partie', () => {
   const m = FAMILIES.straight.members;
   assert.equal(m.straight.incl, '0'); assert.equal(m.gentle.incl, '0.5'); assert.equal(m.slope.incl, '1'); assert.equal(m.steep.incl, '2'); assert.equal(m.steep4.incl, '4');
+  assert.deepEqual([m.dn05.incl, m.dn1.incl, m.dn2.incl, m.dn4.incl], ['-0.5', '-1', '-2', '-4'], '0.9.3 : pentes descendantes');
   for (const [type, tr] of Object.entries(m)) assert.equal(PIECES[type].rise, +tr.incl, type);
 });
 test('Virages : serré / grand / très grand plat et relevé ; une combinaison qui n’existe pas est repoussée', () => {
@@ -71,32 +72,50 @@ test('Looping : orientation × taille × 1 à 3 boucles = 12 pièces, toutes à 
   }
   assert.equal(PIECES.loopTriple.size, 4);
 });
-test('Virage incliné : 16 pièces (droite / gauche × serré / grand × ½, 1, 2, 4), rise = inclinaison', () => {
-  const inc = Object.entries(FAMILIES.turn.members).filter(([, tr]) => tr.incl !== '0');
-  assert.equal(inc.length, 16);
-  for (const [type, tr] of inc) {
-    assert.equal(PIECES[type].kind, 'arc'); assert.equal(PIECES[type].rise, +tr.incl);
-    assert.equal(PIECES[type].size, tr.size === 's' ? 1 : 2); assert.equal(PIECES[type].mirror === -1, tr.dir === 'L');
+test('Virage incliné : 16 pièces montantes + 16 descendantes (droite / gauche × serré / grand × ½, 1, 2, 4), rise = inclinaison signée', () => {
+  for (const sgn of [1, -1]) {
+    const inc = Object.entries(FAMILIES.turn.members).filter(([, tr]) => Math.sign(+tr.incl) === sgn);
+    assert.equal(inc.length, 16, sgn > 0 ? 'montants' : 'descendants');
+    for (const [type, tr] of inc) {
+      assert.equal(PIECES[type].kind, 'arc'); assert.equal(PIECES[type].rise, +tr.incl);
+      assert.equal(PIECES[type].size, tr.size === 's' ? 1 : 2); assert.equal(PIECES[type].mirror === -1, tr.dir === 'L');
+    }
   }
 });
-test('Courbe (0.9.2) : 4 rampes dont le profil se courbe progressivement (h = rise·t²), plates à l’entrée', () => {
-  assert.deepEqual(Object.keys(FAMILIES.courbe.members), ['crv05', 'crv1', 'crv2', 'crv4']);
-  for (const [type, tr] of Object.entries(FAMILIES.courbe.members)) {
-    const P = PIECES[type]; assert.equal(P.kind, 'line'); assert.equal(P.rise, +tr.incl); assert.ok(P.curv);
-    const t = tile({ t: type, l: 1 }), o = {}, half = P.size * HALF;
-    let prevH = -Infinity, prevSlope = -1;
+test('Courbe (0.9.3) : 20 raccords de pente (montée / descente × début doux, fin douce, S), profil h = rise·H(t), tangentes aux extrémités', () => {
+  const ms = Object.entries(FAMILIES.courbe.members);
+  assert.equal(ms.length, 20);
+  assert.deepEqual(ms.slice(0, 4).map(([k]) => k), ['crv05', 'crv1', 'crv2', 'crv4'], 'les anciennes Courbes (0.9.2) sont le « début doux » montant');
+  for (const [type, tr] of ms) {
+    const P = PIECES[type]; assert.equal(P.kind, 'line'); assert.equal(P.rise, (tr.sens === 'd' ? -1 : 1) * +tr.incl, type);
+    assert.equal(P.prof || 'i', tr.prof, type);
+    const t = tile({ type, t: type, l: 4 }), o = {}, half = P.size * HALF, sg = Math.sign(P.rise);
+    let prevH = -Infinity;
     for (let i = 0; i <= 24; i++) {
       const u = i / 24;
       sampleLocal(t, 0, half - 2 * half * u, o);
-      assert.ok(Math.abs(o.h - (baseY(t) + P.rise * LEVEL_H * u * u)) < 1e-6, 'profil en t²');
-      assert.ok(o.h >= prevH - 1e-9, 'monte toujours');
-      const slope = o.nz / o.ny;                                           // pente le long de la route = tan(inclinaison)
-      assert.ok(slope >= prevSlope - 1e-9, 'de plus en plus raide');
+      assert.ok(Math.abs(o.h - (baseY(t) + P.rise * LEVEL_H * profH(P, u))) < 1e-6, type + ' : profil');
+      assert.ok(sg * o.h >= prevH - 1e-9, type + ' : monotone'); prevH = sg * o.h;
       assert.ok(Math.abs(Math.hypot(o.nx, o.ny, o.nz) - 1) < 1e-9, 'normale unitaire');
-      prevH = o.h; prevSlope = slope;
     }
-    sampleLocal(t, 0, half, o); assert.ok(Math.abs(o.nz) < 1e-9 && Math.abs(o.ny - 1) < 1e-9, 'entrée parfaitement plate : se raccorde sans cassure');
-    sampleLocal(t, 0, -half, o); assert.ok(Math.abs(o.nz / o.ny - 2 * P.rise * LEVEL_H / (2 * half)) < 1e-9, 'pente de sortie = 2·rise / longueur');
+    // Pentes d'extrémité (tan de l'inclinaison) : 0 là où le raccord est « doux », 2·rise / longueur de l'autre côté.
+    const slopeAt = (u) => { sampleLocal(t, 0, half - 2 * half * u, o); return -o.nz / o.ny * 1; };
+    const full = 2 * Math.abs(P.rise) * LEVEL_H / (2 * half);
+    const e0 = Math.abs(slopeAt(0)), e1 = Math.abs(slopeAt(1));
+    const want0 = tr.prof === 'o' ? full : 0, want1 = tr.prof === 'i' ? full : 0;
+    assert.ok(Math.abs(e0 - want0) < 1e-9 && Math.abs(e1 - want1) < 1e-9, `${type} : pentes d'extrémité ${e0.toFixed(3)} / ${e1.toFixed(3)} (attendu ${want0.toFixed(3)} / ${want1.toFixed(3)})`);
+    // Dérivée analytique cohérente avec la différence finie.
+    for (const u of [0.2, 0.5, 0.8]) {
+      const d = (profH(P, u + 1e-5) - profH(P, u - 1e-5)) / 2e-5;
+      assert.ok(Math.abs(d - profD(P, u)) < 1e-4, type + ' : dérivée');
+    }
+  }
+  // Raccords exacts : un début doux de ½ / 1 / 2 se raccorde à une droite de pente 1 / 2 / 4 (même pente de sortie), la fin douce la ramène à plat.
+  for (const [soft, line, rise] of [['crv05', 'slope', 1], ['crv1', 'steep', 2], ['crv2', 'steep4', 4]]) {
+    const t = tile({ t: soft }), q = tile({ t: line }), o = {}, w = {};
+    sampleLocal(t, 0, -HALF + 1e-9, o); sampleLocal(q, 0, 0, w);
+    assert.ok(Math.abs(Math.abs(o.nz / o.ny) - Math.abs(w.nz / w.ny)) < 1e-6, `${soft} → ${line}`);
+    assert.equal(PIECES[line].rise, rise);
   }
 });
 test('PIECE_ORDER : les anciens index n’ont pas bougé (sérialisation)', () => {
@@ -168,7 +187,7 @@ test('options impossibles refusées : checkpoint sur pente, anneau à l’envers
 console.log('Courbes montantes et pièces paramétriques');
 const CURVES = Object.entries(FAMILIES.turn.members).filter(([, tr]) => tr.incl !== '0').map(([type]) => type);
 for (const type of CURVES) {
-  test(`${type} : l’altitude monte de ${PIECES[type].rise} niveau(x) de l’entrée à la sortie, normale unitaire, bords cohérents avec le maillage`, () => {
+  test(`${type} : l’altitude ${PIECES[type].rise > 0 ? 'monte' : 'descend'} de ${Math.abs(PIECES[type].rise)} niveau(x) de l’entrée à la sortie, normale unitaire, bords cohérents avec le maillage`, () => {
     const P = PIECES[type], t = tile({ t: type, l: 1 }), half = P.size * HALF, mir = P.mirror < 0 ? -1 : 1;
     const o = {};
     // Entrée : milieu du bord sud de la route ; sortie : bord est (ou ouest).
@@ -179,8 +198,9 @@ for (const type of CURVES) {
     assert.ok(Math.abs(o.d) < 1e-6, 'sur la ligne centrale');
     sampleLocal(t, B.x, B.z, o);
     assert.ok(Math.abs(o.h - (baseY(t) + P.rise * LEVEL_H)) < 1e-6, 'sortie à ' + o.h);
-    // Hauteur continue et croissante, normale unitaire inclinée vers l'arrière.
+    // Hauteur continue et monotone (croissante pour une montée, décroissante pour une descente), normale unitaire inclinée.
     let prev = -Infinity;
+    const sg = Math.sign(P.rise);
     const fr = stripsFor(t)[0];
     for (let i = 0; i < fr.length; i++) {
       const q = fr[i].p;
@@ -188,7 +208,7 @@ for (const type of CURVES) {
       assert.ok(Math.abs(o.h - q[1]) < 1e-6, `image ${i} : maillage ${q[1]} ≠ physique ${o.h}`);
       assert.ok(Math.abs(Math.hypot(o.nx, o.ny, o.nz) - 1) < 1e-9);
       assert.ok(o.ny > 0.3 && o.ny < 1, 'normale ' + o.ny);
-      assert.ok(q[1] >= prev - 1e-9); prev = q[1];
+      assert.ok(sg * q[1] >= prev - 1e-9); prev = sg * q[1];
       assert.ok(Math.abs(o.d) < 1e-6);
     }
     // Pente le long de la route égale à la dérivée de la hauteur le long de la ligne centrale.
@@ -196,8 +216,8 @@ for (const type of CURVES) {
     sampleLocal(t, mid.p[0], mid.p[2], o);
     const dxz = Math.hypot(nxt.p[0] - mid.p[0], nxt.p[2] - mid.p[2]), dy = nxt.p[1] - mid.p[1];
     const along = ((nxt.p[0] - mid.p[0]) * -o.nx + (nxt.p[2] - mid.p[2]) * -o.nz) / (dxz * Math.hypot(o.nx, o.nz));
-    assert.ok(Math.abs(Math.hypot(o.nx, o.nz) / o.ny - dy / dxz) < 0.03, 'pente de la normale ' + (Math.hypot(o.nx, o.nz) / o.ny) + ' vs ' + dy / dxz);
-    assert.ok(along > 0.9, 'la normale penche vers l’arrière de la montée');
+    assert.ok(Math.abs(Math.hypot(o.nx, o.nz) / o.ny - Math.abs(dy / dxz)) < 0.03, 'pente de la normale ' + (Math.hypot(o.nx, o.nz) / o.ny) + ' vs ' + dy / dxz);
+    assert.ok(sg * along > 0.9, 'la normale penche vers l’arrière d’une montée (vers l’avant d’une descente)');
   });
 }
 test('Courbe gauche = miroir exact de la courbe droite (hauteur, distance à l’axe, normale)', () => {
@@ -221,7 +241,7 @@ test('maillage de toutes les nouvelles pièces : sommets finis, hauteur max coh�
     for (let i = 0; i < gb.pos.length; i++) assert.ok(Number.isFinite(gb.pos[i]), type + ' : NaN');
     for (let i = 1; i < gb.pos.length; i += 3) maxY = Math.max(maxY, gb.pos[i]);
     const P = PIECES[type];
-    const top = baseY(tile({ t: type, l: 2 })) + (P.kind === 'loop' ? P.R * 2 + 6 : P.rise * LEVEL_H + 8);
+    const top = baseY(tile({ t: type, l: 2 })) + (P.kind === 'loop' ? P.R * 2 + 6 : Math.max(P.rise, 0) * LEVEL_H + 8);
     assert.ok(maxY <= top + 8, `${type} dépasse (${maxY} > ${top})`);
   }
 });
@@ -394,7 +414,7 @@ function mkEd(tool, opts = {}) {
   return { self, track, calls };
 }
 test('options armées : le dernier choix l’emporte sur les incompatibles', () => {
-  const none = { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0 };
+  const none = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0 };
   let o = armedOptions(none, 'v', 1); assert.deepEqual([o.v, o.cp], [1, 0]);
   o = armedOptions(o, 'cp', 2); assert.deepEqual([o.v, o.cp], [0, 2], 'l’anneau aérien ne va pas à l’envers');
   o = armedOptions(o, 'mv', 3); assert.deepEqual([o.mv, o.cp], [3, 0]);
@@ -402,6 +422,15 @@ test('options armées : le dernier choix l’emporte sur les incompatibles', () 
   o = armedOptions(o, 'tn', 1); assert.deepEqual([o.tn, o.cp], [1, 0], 'tunnel et portique ne cohabitent pas');
   o = armedOptions(o, 'th', 2); assert.equal(o.th, 2); o = armedOptions(o, 'th', 2); assert.equal(o.th, 0, 'recliquer retire');
   assert.deepEqual(armedOptions(none, 'nb', 1), { ...none, nb: 1 });
+  // 0.9.3 : l'orientation (sol / mur gauche / mur droit / plafond) est un choix exclusif.
+  o = armedOptions(none, 'o', 1); assert.deepEqual([o.o, o.v], [1, 0]);
+  o = armedOptions(o, 'o', 2); assert.deepEqual([o.o, o.v], [2, 0], 'mur droit remplace mur gauche');
+  o = armedOptions(o, 'v', 1); assert.deepEqual([o.o, o.v], [0, 1], 'le plafond remplace le mur');
+  o = armedOptions(o, 'o', 1); assert.deepEqual([o.o, o.v], [1, 0], 'le mur remplace le plafond');
+  o = armedOptions(o, 'o', 1); assert.equal(o.o, 0, 'recliquer retire le mur');
+  o = armedOptions(armedOptions(none, 'tn', 1), 'o', 1); assert.deepEqual([o.o, o.tn], [1, 0], 'un mur n’a pas de tunnel');
+  o = armedOptions(armedOptions(none, 'o', 2), 'mv', 1); assert.deepEqual([o.o, o.mv], [0, 1], 'un mouvement retire le mur');
+  o = armedOptions(armedOptions(none, 'v', 1), 'o', 0); assert.deepEqual([o.o, o.v], [0, 0], '« Sol » remet tout à plat');
 });
 test('_candidate : la pièce porte les options armées (aperçu et pose identiques)', () => {
   const { self } = mkEd('straight', { v: 1, th: 2 });
