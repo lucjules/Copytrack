@@ -4,6 +4,7 @@ import * as THREE from './vendor/three.module.min.js';
 export class Particles {
   constructor(scene, max = 400) {
     this.max = max;
+    this.scale = 1;     // profil de qualité : proportion de particules réellement émises
     const geo = new THREE.TetrahedronGeometry(0.35, 0);
     const mat = new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false });
     this.mesh = new THREE.InstancedMesh(geo, mat, max);
@@ -18,7 +19,10 @@ export class Particles {
     this.dummy = new THREE.Object3D();
   }
 
+  setScale(k) { this.scale = k; }
+
   spawn(x, y, z, vx, vy, vz, life, size, color, gravity = 0) {
+    if (this.scale < 1 && Math.random() > this.scale) return;
     const q = this.p[this.cursor];
     this.cursor = (this.cursor + 1) % this.max;
     q.alive = true;
