@@ -10,10 +10,11 @@
 //  - la mesure se fait sur la MÉDIANE et le 90e centile des durées d'image, pas sur la moyenne (un à-coup ne fausse rien).
 import * as THREE from './vendor/three.module.min.js';
 
-export const PROFILE_ORDER = ['ultra', 'high', 'medium', 'low', 'potato'];
+export const PROFILE_ORDER = ['ultra', 'high', 'medium', 'low', 'potato', 'ultrapotato'];
 
 // shadow : taille de la carte d'ombres (0 = aucune ombre) ; decor : 'full' | 'reduced' | 'none' (décor autour du circuit ET décorations
-// du créateur, hors obstacles) ; mat : matériaux 'standard' | 'lambert' | 'basic' ; sky : 'full' (shader) | 'flat' (aplat de couleur).
+// du créateur, hors obstacles) ; fpsCap : images dessinées par seconde au plus (la physique, elle, tourne toujours à fond) ;
+// lean : on supprime aussi les extras de course (traînée, traces de pneus, étincelles) ; pixelated : on agrandit l'image sans lissage ; mat : matériaux 'standard' | 'lambert' | 'basic' ; sky : 'full' (shader) | 'flat' (aplat de couleur).
 export const PROFILES = {
   ultra: {
     name: 'ultra', label: 'Ultra', pixelRatio: { min: 1.5, max: 2 }, shadow: 4096, shadowType: 'pcfsoft', env: 0.55, tone: 'neutral', exposure: 1.05, lights: { point: 6, spot: 3 },
@@ -35,10 +36,16 @@ export const PROFILES = {
     name: 'potato', label: 'Potato', pixelRatio: { min: 0.5, max: 0.65 }, shadow: 0, shadowType: 'pcf', env: 0, tone: 'none', exposure: 1, lights: { point: 0, spot: 0 },
     terrainSeg: 24, decor: 'none', mat: 'basic', sky: 'flat', hills: 0, fogScale: 0.45, far: 1400, particles: 0.25,
   },
+  // Pour les ordinateurs minuscules (Raspberry Pi…) : image ~3x moins définie et agrandie en gros pixels, 30 images/s dessinées,
+  // horizon à 450 m dans le brouillard, terrain réduit à un damier de 4 cases, aucun décor, aucune particule, aucune traînée.
+  ultrapotato: {
+    name: 'ultrapotato', label: 'Ultra Potato', pixelRatio: { min: 0.28, max: 0.34 }, shadow: 0, shadowType: 'pcf', env: 0, tone: 'none', exposure: 1, lights: { point: 0, spot: 0 },
+    terrainSeg: 4, decor: 'none', mat: 'basic', sky: 'flat', hills: 0, fogScale: 0.16, far: 450, particles: 0, fpsCap: 30, lean: true, pixelated: true,
+  },
 };
 
 export const PROFILE_LABELS = Object.fromEntries(Object.entries(PROFILES).map(([k, p]) => [k, p.label]));
-export const BENCH_VERSION = 1;          // à incrémenter si les profils changent : la détection est refaite
+export const BENCH_VERSION = 2;          // à incrémenter si les profils changent : la détection est refaite
 
 export const profileOf = (name) => PROFILES[name] || PROFILES.high;
 export const stepDown = (name) => PROFILE_ORDER[Math.min(PROFILE_ORDER.length - 1, Math.max(0, PROFILE_ORDER.indexOf(name)) + 1)];
@@ -49,7 +56,7 @@ export const pixelRatioFor = (profile, dpr = 1) => Math.max(profile.pixelRatio.m
 // L'antialiasing se choisit à la création du contexte WebGL (il ne se change plus ensuite) : coupé pour les machines modestes.
 export function wantAntialias(settings) {
   const p = settings.quality === 'auto' ? settings.gfxProfile : settings.quality;
-  return p !== 'low' && p !== 'potato';
+  return p !== 'low' && p !== 'potato' && p !== 'ultrapotato';
 }
 
 // ---- Indices matériels : par quel profil commencer le test ----------------------------------------------------------------
@@ -58,16 +65,19 @@ export function hardwareHints(info = {}) {
   const ua = String(info.ua || '');
   const mobile = !!info.touch && (/Android|iPhone|iPad|Mobile/i.test(ua) || (info.width || 9999) < 900);
   const software = /swiftshader|llvmpipe|softpipe|software|microsoft basic|basic render/i.test(r);
+  // Petits ordinateurs (Raspberry Pi : GPU VideoCore / V3D, processeur ARM sous Linux) : on part du plus léger sans rien tenter de plus beau.
+  const tiny = /v3d|videocore|vc4/i.test(r) || (/aarch64|armv\d/i.test(ua) && /Linux/i.test(ua) && !/Android/i.test(ua));
   const strong = /nvidia|geforce|rtx|gtx|radeon (rx|pro)|rx \d{3,4}|apple m\d|arc a\d/i.test(r);
   const weak = /intel.*(hd|uhd|graphics)|mali|adreno [1-5]\d\d|powervr|vivante|videocore/i.test(r);
   const cores = info.cores || 4, mem = info.memory || 4;
   let start = 'high';
-  if (software) start = 'potato';
+  if (tiny) start = 'ultrapotato';
+  else if (software) start = 'potato';
   else if (mobile) start = weak || cores <= 4 || mem <= 3 ? 'low' : 'medium';
   else if (strong && cores >= 6) start = 'ultra';
   else if (weak) start = cores <= 2 || mem <= 2 ? 'low' : 'medium';
   else if (cores <= 2 || mem <= 2) start = 'medium';
-  return { start, mobile, software, strong, weak };
+  return { start, mobile, software, strong, weak, tiny };
 }
 
 // ---- Statistiques de durées d'image (ms) -------------------------------------------------------------------------------------
@@ -242,6 +252,7 @@ export class QualityManager {
     const lk = (q) => (q ? q.point + ',' + q.spot : '');
     const hide = p.decor === 'none';
     if ((prev ? prev.decor === 'none' : false) !== hide || (prev && lk(prev.lights) !== lk(p.lights))) { h.setDecoHidden?.(hide); for (const v of h.views?.() || []) v.rebuild(); }
+    if (r.domElement && r.domElement.style) r.domElement.style.imageRendering = p.pixelated ? 'pixelated' : '';
     swapMaterials(h.scene, p.mat);
     this._recompile();
     h.resize?.();
@@ -272,7 +283,7 @@ export class QualityManager {
     if (this._win.t < 5) return null;
     const fps = this._win.n / this._win.t;
     this._win = { t: 0, n: 0 };
-    if (fps >= 42 || this._cool > 0 || this.name === 'potato') return null;
+    if (fps >= 42 || this._cool > 0 || this.name === PROFILE_ORDER[PROFILE_ORDER.length - 1]) return null;
     this._cool = 10;
     const next = stepDown(this.name);
     this.apply(next);

@@ -1806,7 +1806,9 @@ class App {
       if (this.ui.modalOpen && this.input.hit('Escape')) this.ui.closeModal();
       if (this.mode === 'menu' && !this.ui.modalOpen && this.input.hit('Escape')) this.showScreen('menu');
       if (this.session) this.session.update(dt);
-      this.renderer.render(this.scene, this.camera);
+      // Profil Ultra Potato : on ne dessine qu'une image sur deux (la physique et les commandes continuent à pleine vitesse).
+      const cap = this.quality.profile && this.quality.profile.fpsCap;
+      if (!cap || now - (this._lastDraw || 0) >= 1000 / cap - 4) { this._lastDraw = now; this.renderer.render(this.scene, this.camera); }
       this.quality.tick();
       if (this.bench) {
         // La mesure ne compte que l'animation du menu, visible et sans fenêtre ouverte ; si le joueur part ailleurs, on se rabat sur un profil sûr.

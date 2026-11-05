@@ -90,7 +90,7 @@ export function restoreAll(data, keep = false) {
 
 export const DEFAULT_SETTINGS = {
   volume: 0.7,
-  quality: 'auto',         // auto | ultra | high | medium | low | potato (voir quality.js)
+  quality: 'auto',         // auto | ultra | high | medium | low | potato | ultrapotato (voir quality.js)
   gfxProfile: '',          // dernier profil trouvé par la détection automatique
   gfxV: 0,                 // version des profils au moment de la détection
   gfxFps: 0,               // images par seconde mesurées à ce moment-là

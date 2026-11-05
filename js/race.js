@@ -713,13 +713,14 @@ export class RaceSession {
     const sliding = p.grounded && !p.rib && p.speed > 8 && (p.slip > 0.06 * Math.abs(p.fwdSpeed) + 1.2 || (inp.brake && p.fwdSpeed > 12 && !inp.throttle));
     const wheelsX = this.car.vehicle === 'boat' ? [] : this.car.isMoto ? [0] : [-0.95, 0.95];
     tmpV2.set(1, 0, 0).applyQuaternion(g.quaternion);
+    const lean = !!(app.quality && app.quality.profile && app.quality.profile.lean);   // Ultra Potato : ni traces de pneus, ni étincelles, ni traînée
     for (let w = 0; w < 2; w++) {
-      if (sliding && w < wheelsX.length) {
+      if (sliding && !lean && w < wheelsX.length) {
         tmpV.set(wheelsX[w], 0, 1.3).applyQuaternion(g.quaternion).add(g.position);
         this.skids.add(w, tmpV.x, tmpV.y, tmpV.z, tmpV2.x, tmpV2.z, this.car.isMoto ? 0.22 : 0.3);
       } else this.skids.lift(w);
     }
-    if (p.driftCharge > 0.15 && p.grounded) {
+    if (p.driftCharge > 0.15 && p.grounded && !lean) {
       const col = p.driftCharge >= 1.5 ? '#ffb84d' : p.driftCharge >= 0.7 ? '#5ff2ff' : '#ffffff';
       for (const sx of wheelsX) {
         if (Math.random() < 0.6) {
@@ -730,7 +731,7 @@ export class RaceSession {
     }
     // Traînée lumineuse (cosmétique) : un ruban toujours présent, dont l'intensité suit la vitesse et le boost (voir trail.js).
     const trail = this._trail || (this._trail = (CATALOG.trail.find((x) => x.id === profile().loadout.trail) || CATALOG.trail[0]));
-    if (trail.id !== 'none' && !this.demo && !this.replay) {
+    if (trail.id !== 'none' && !this.demo && !this.replay && !lean) {
       if (!this.trailRib) this.trailRib = new TrailRibbon(app.scene);
       if (this.state !== 'paused') {
         tmpV.set(0, 0.7, 2.3).applyQuaternion(g.quaternion).add(g.position);

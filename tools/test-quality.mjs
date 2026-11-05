@@ -24,8 +24,8 @@ function simulate(fpsOf, { start = 'ultra', hitches = {}, active = () => true, l
 }
 
 console.log('Profils');
-test('cinq profils, du plus beau au plus léger, avec des réglages qui décroissent', () => {
-  assert.deepEqual(PROFILE_ORDER, ['ultra', 'high', 'medium', 'low', 'potato']);
+test('six profils, du plus beau au plus léger, avec des réglages qui décroissent', () => {
+  assert.deepEqual(PROFILE_ORDER, ['ultra', 'high', 'medium', 'low', 'potato', 'ultrapotato']);
   const ps = PROFILE_ORDER.map((n) => PROFILES[n]);
   for (let i = 1; i < ps.length; i++) {
     assert.ok(ps[i].shadow <= ps[i - 1].shadow, 'ombres décroissantes ' + ps[i].name);
@@ -35,6 +35,8 @@ test('cinq profils, du plus beau au plus léger, avec des réglages qui décrois
   assert.ok(PROFILES.ultra.shadow >= 4096 && PROFILES.ultra.env > 0 && PROFILES.ultra.pixelRatio.min >= 1.5, 'Ultra : ombres 4096, reflets, sur-échantillonnage');
   const p = PROFILES.potato;
   assert.equal(p.shadow, 0); assert.equal(p.decor, 'none'); assert.equal(p.mat, 'basic'); assert.equal(p.sky, 'flat'); assert.ok(p.pixelRatio.max < 1); assert.equal(p.hills, 0);
+  const u = PROFILES.ultrapotato;
+  assert.ok(u.pixelRatio.max <= 0.34 && u.far <= 450 && u.terrainSeg <= 4 && u.particles === 0 && u.fpsCap === 30 && u.lean && u.pixelated, 'Ultra Potato : image minuscule, 30 i/s, brouillard proche, sans extras');
   assert.equal(PROFILES.low.shadow, 0); assert.equal(PROFILES.low.mat, 'lambert'); assert.equal(PROFILES.low.decor, 'reduced');
   assert.equal(PROFILES.high.shadow, 2048); assert.equal(PROFILES.medium.shadow, 1024);
 });
@@ -46,14 +48,16 @@ test('pixel ratio : Ultra sur-échantillonne un écran 1x, Potato descend sous 1
 test('antialiasing : coupé seulement pour Basse et Potato (choisi à la création du contexte)', () => {
   assert.equal(wantAntialias({ quality: 'auto', gfxProfile: '' }), true);
   assert.equal(wantAntialias({ quality: 'auto', gfxProfile: 'potato' }), false);
-  assert.equal(wantAntialias({ quality: 'low' }), false); assert.equal(wantAntialias({ quality: 'ultra' }), true);
-  assert.equal(stepDown('ultra'), 'high'); assert.equal(stepDown('potato'), 'potato');
+  assert.equal(wantAntialias({ quality: 'ultrapotato' }), false); assert.equal(wantAntialias({ quality: 'low' }), false); assert.equal(wantAntialias({ quality: 'ultra' }), true);
+  assert.equal(stepDown('ultra'), 'high'); assert.equal(stepDown('potato'), 'ultrapotato'); assert.equal(stepDown('ultrapotato'), 'ultrapotato');
 });
 
 console.log('Indices matériels');
 test('GPU logiciel → Potato ; carte gamer → Ultra ; Intel de bureau → Moyenne ; mobile modeste → Basse ; inconnu → Haute', () => {
   assert.equal(hardwareHints({ renderer: 'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device), SwiftShader driver)' }).start, 'potato');
   assert.equal(hardwareHints({ renderer: 'llvmpipe (LLVM 15.0.7, 256 bits)' }).start, 'potato');
+  assert.equal(hardwareHints({ renderer: 'V3D 4.2.14.0', ua: 'Mozilla/5.0 (X11; Linux aarch64) Chrome/120' }).start, 'ultrapotato');
+  assert.equal(hardwareHints({ renderer: 'Mesa VideoCore VII', ua: 'Mozilla/5.0 (X11; Linux armv7l)' }).tiny, true);
   assert.equal(hardwareHints({ renderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Direct3D11)', cores: 16 }).start, 'ultra');
   assert.equal(hardwareHints({ renderer: 'ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11)', cores: 4, memory: 8 }).start, 'medium');
   assert.equal(hardwareHints({ renderer: 'Intel(R) HD Graphics', cores: 2, memory: 2 }).start, 'low');
@@ -82,9 +86,9 @@ test('vieux PC de bureau : Ultra 14 i/s, Haute 24, Moyenne 38, Basse 61 → Bass
   assert.ok(result.steps.every((s, i) => s.pass === (i === 3)));
   assert.ok(t < 40000, 'la détection reste courte : ' + Math.round(t / 1000) + ' s');
 });
-test('machine très faible : même Basse échoue → Potato, et le test s’arrête là', () => {
+test('machine très faible : même Potato échoue → Ultra Potato, et le test s’arrête là', () => {
   const { result, applied } = simulate(() => 20, { start: 'high' });
-  assert.equal(result.profile, 'potato'); assert.equal(result.passed, false); assert.equal(applied.at(-1), 'potato');
+  assert.equal(result.profile, 'ultrapotato'); assert.equal(result.passed, false); assert.equal(applied.at(-1), 'ultrapotato');
   assert.equal(new Set(applied).size, applied.length, 'chaque profil n’est essayé qu’une fois');
 });
 test('mobile : on démarre bas et on s’arrête dès que 60 i/s sont tenus (pas de montée inutile)', () => {
