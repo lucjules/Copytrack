@@ -23,7 +23,7 @@ import { Room, defaultSignaling, normalizeCode, ROOM_RE, MAX_PLAYERS } from './n
 import { encodeGhost, decodeGhost, PHYS_VER } from './replay.js';
 const PV = PHYS_VER;
 import { dailyChallenge, dayKey } from './daily.js';
-import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked } from './career.js';
+import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked, chapterState, careerSummary } from './career.js';
 import {
   loadSettings, saveSettings, getRecord, saveRecord, listMyTracks, deleteMyTrack, saveMyTrack, newId,
   getEditorDraft, formatTime, purgeOldRecords, clearRecords, setImportedGhost,
@@ -636,6 +636,19 @@ class App {
     const list = $('track-list');
     list.innerHTML = '';
     const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(rec.time, b.def.medals) : null; };
+    // Bilan de la carrière
+    {
+      const ids = this.builtins.map((b, i) => { const m = medalOf(i); return m ? m.id : null; });
+      const gd = this.builtins.filter((b) => goalDone(b.key + '#goal')).length;
+      const sm = careerSummary(ids, gd);
+      const box = document.createElement('div');
+      box.className = 'career-summary' + (sm.complete ? ' complete' : sm.finished ? ' finished' : '');
+      box.innerHTML = `<div class="cs-main"><b>${sm.pct} %</b><span>de la carrière</span></div>
+        <div class="cs-bar"><i style="width:${sm.pct}%"></i></div>
+        <div class="cs-stats">${sm.medals} / ${sm.total} médailles · ${sm.crystal} cristal · ${sm.goals} / ${sm.total} objectifs bonus</div>
+        ${sm.complete ? '<p class="cs-msg">✦ Carrière complète : 66 cristaux et 66 objectifs. Il n’y a plus rien à finir ici.</p>' : sm.finished ? '<p class="cs-msg">🏁 Carrière terminée : une médaille sur chaque circuit. Reste les cristaux et les objectifs bonus.</p>' : ''}`;
+      list.appendChild(box);
+    }
     // Défi du jour
     const dailyBox = document.createElement('div');
     dailyBox.className = 'track-group';
@@ -671,10 +684,11 @@ class App {
       const medals = idx.filter((i) => medalOf(i)).length;
       const goals = idx.filter((i) => goalDone(this.builtins[i].key + '#goal')).length;
       const C = CHAPTERS[ch] || { name: `Chapitre ${ch + 1}`, desc: '' };
+      const cst = chapterState(idx.map((i) => { const m = medalOf(i); return m ? m.id : null; }), goals, idx.length);
       const g = document.createElement('div');
-      g.className = 'track-group';
+      g.className = 'track-group' + (cst.id !== 'open' ? ' ch-' + cst.id : '');
       g.innerHTML = `<div class="chapter-head"><h3 class="group-title"><i style="background:${open ? '#5ff2ff' : '#555'}"></i>Chapitre ${ch + 1} · ${esc(C.name)}${open ? '' : ' 🔒'}</h3>
-        <span class="prog">${medals} / ${idx.length} médailles · ${goals} / ${idx.length} objectifs bonus</span></div>
+        <span class="prog">${medals} / ${idx.length} médailles · ${goals} / ${idx.length} objectifs bonus</span>${cst.label ? `<span class="ch-badge ${cst.id}">${cst.label}</span>` : ''}</div>
         <p class="chapter-desc">${esc(C.desc)}${open ? '' : ` — Gagne ${UNLOCK_MEDALS} médailles au chapitre ${ch} pour l’ouvrir.`}</p>`;
       const grid = document.createElement('div');
       grid.className = 'card-grid';
@@ -689,6 +703,7 @@ class App {
         const card = document.createElement('div');
         card.className = 'card ' + b.track.decor + (open ? '' : ' locked');
         card.tabIndex = 0;
+        if (b.def.appris) card.title = b.def.appris;
         card.innerHTML = `<div class="num">${i + 1}</div>
           <img class="thumb" alt="" src="${thumbnail(b.track, 'b-' + b.key)}">
           <h3>${esc(b.def.name)}<span class="decor-chip" style="color:${decorColor[b.track.decor] || '#fff'}">${esc(DECORS[b.track.decor].label)}</span></h3>

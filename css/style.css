@@ -1052,3 +1052,16 @@ body.touch kbd { display: none; }
 }
 .form label > span { flex: 1; min-width: 0; }
 .form input[type="range"] { flex: 0 0 auto; }
+
+/* 0.9.10 : bilan de carrière et chapitres terminés */
+.career-summary { margin: 0 0 18px; padding: 12px 16px; border-radius: 12px; background: rgba(95, 242, 255, .07); border: 1px solid rgba(95, 242, 255, .25); }
+.career-summary .cs-main { display: flex; align-items: baseline; gap: 8px; }
+.career-summary .cs-main b { font-size: 28px; }
+.career-summary .cs-main span, .career-summary .cs-stats { font-size: 13px; color: var(--muted, #a99fd0); }
+.career-summary .cs-bar { height: 6px; margin: 6px 0; border-radius: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.career-summary .cs-bar i { display: block; height: 100%; background: linear-gradient(90deg, #5ff2ff, #ffd23e); }
+.career-summary .cs-msg { margin: 8px 0 0; font-weight: 600; }
+.career-summary.complete { border-color: #ffd23e; background: rgba(255, 210, 62, .1); }
+.ch-badge { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(95, 242, 255, .18); color: #5ff2ff; }
+.ch-badge.perfect { background: rgba(255, 210, 62, .2); color: #ffd23e; }
+.ch-badge.crystal { background: rgba(185, 166, 255, .25); color: #d9ccff; }

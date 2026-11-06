@@ -110,6 +110,7 @@ export function checkDef(def) {
   // médailles (un candidat sans médailles reçoit celles du pilote : or = son temps)
   const M = proposeFrom(S.time);
   if (!def.medals) def.medals = M;
+  else if (def.medalsBy === 'humain') { const m = def.medals; if (!(m.cristal < m.or && m.or < m.argent && m.argent < m.bronze)) f.push('médailles humaines non croissantes'); }
   else for (const k of Object.keys(M)) if (Math.abs(def.medals[k] - M[k]) / M[k] >= 0.02) { f.push(`médailles à recalculer (proposé ${JSON.stringify(M).replace(/"/g, '')})`); break; }
   // objectif bonus
   const g = def.goal || {};

@@ -20,6 +20,15 @@ const { OBST } = await import('../js/obstacles.js');
 const { RaceLogic } = await import('../js/raceLogic.js');
 const { checkDef, openingOf, vocabulary } = await import('./contract.mjs');
 const { runTrack } = await import('./lab.mjs');
+const { proposeFromHumans } = await import('./medals.mjs');
+const { measure, load: loadGolden } = await import('./golden.mjs');
+const { chapterState, careerSummary } = await import('./../js/career.js');
+const { Track } = await import('../js/track.js');
+const { checkTrack } = await import('../js/editorTools.js');
+const { CarPhysics } = await import('../js/physics.js');
+const { placeAtStart } = await import('../js/raceLogic.js');
+const { Autopilot } = await import('../js/autopilot.js');
+const { DT } = await import('../js/constants.js');
 
 const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 const by = Object.fromEntries(BUILTIN_TRACKS.map((d) => [d.id, d]));
@@ -31,7 +40,7 @@ const CAREER = [
   ['eclats', 'canyon', 'tremplins', 'spirale', 'verglas', 'grandtour'],
   ['lianes', 'canopee', 'spores', 'serpent', 'racines', 'temple'],
   ['lagon', 'recif', 'phare', 'vrille', 'lunaire', 'archipel'],
-  ['neons', 'hyper', 'boulevard', 'metro', 'tours', 'viaduc'],
+  ['neons', 'boulevard', 'hyper', 'metro', 'tours', 'viaduc'],
   ['aurore', 'banquise', 'glacier', 'helice', 'couronne', 'blizzard'],
   ['braises', 'coulee', 'basalte', 'cheminee', 'caldeira', 'eruption'],
   ['quai', 'navette', 'ceinture', 'grandanneau', 'apesanteur', 'zenith'],
@@ -49,8 +58,8 @@ const OPENINGS = {
   lianes: 'B3 UU GR2', canopee: 'TI TM3.b TO', spores: 'B2 S.j200 G2', serpent: 'Y2.o B S', racines: 'B3^ [tr31s] S<', temple: 'S# R# R#',
   // chapitre 3 : descente en moto · eau · deltaplane · triple looping · basse gravité · pente douce
   lagon: '[cdi1] [dn2] [dn2]', recif: 'S.n S2.a R.a', phare: 'B3 S.e UU', vrille: 'B4 OBT S2', lunaire: 'S.g50 G2 V-6', archipel: 'GD6 BRR S',
-  // chapitre 4 : tapis roulant · deux loopings · sans bordures · montée en lacets · rampe de toit · lift hill
-  neons: 'S3.t201 S BRR', hyper: 'B3 O OL', boulevard: 'B2_ S3_ B_', metro: 'B CVR2 CVR2', tours: 'B2 [crv2] UX', viaduc: 'B3 [crv4] UX',
+  // chapitre 4 : tapis roulant · deux loopings · sans bordures · montée en lacets · looping + rampe de toit · lift hill
+  neons: 'S3.t201 S BRR', hyper: 'B3 O OL', boulevard: 'B2_ S3_ B_', metro: 'B CVR2 CVR2', tours: 'B3 O S2', viaduc: 'B3 [crv4] UX',
   // chapitre 5 : glace · rebonds · toboggan · tire-bouchon · virage relevé sans booster · poudreuse
   aurore: 'I2 B3 I2', banquise: 'I B2 S.j100', glacier: '[cdi2] DX [cdo2]', helice: 'S2 CK S', couronne: 'BRR B3 S', blizzard: 'S2.p B S2',
   // chapitre 6 : collines · S relevé · dérive · tube + cheminée · montée douce · rampe sans virage d'entrée
@@ -64,7 +73,7 @@ const OPENINGS = {
   // chapitre 10 : vent · rampe sans bordures · vent fort · gravité réduite · pont sans bordures · deltaplane
   envol: 'B3 S3.w150 S', suspendues: 'B3_ [crv1]_ UU_', rafales: 'B2 S2.w180 S', montgolfieres: 'B3 S.g40 OB', pontvents: 'B2_ S2.w150_ BRR_', cite: 'S.e G2 V-6',
   // chapitre 11 : volant inversé · vrille · inversion de gravité · S en miroir · double looping · verre
-  galerie: 'B2 S3.y S2', plafond: 'B TW.f S2^', cristalfele: 'B2 S.f V8', miroir: 'B3 BLL S', vrilles: 'B3 ODL S2', coeur: 'B S2.v500 S',
+  galerie: 'B2 S3.y S2', plafond: 'B TW.f S2^', cristalfele: 'B2 S.f V8', miroir: 'B3 BLL S', vrilles: 'B [cdi1] [dn2]', coeur: 'B S2.v500 S',
 };
 
 console.log('Version et profils');
@@ -160,6 +169,76 @@ console.log('Contrat de chaque circuit (tools/contract.mjs)');
 for (const d of BUILTIN_TRACKS) {
   test(`${d.id} (${d.profil}) respecte le contrat`, () => { const { fails } = checkDef(d); assert.deepEqual(fails, []); });
 }
+
+console.log('Finitions (0.9.10)');
+test('chaque circuit a son texte « ce qu’il enseigne » (infobulle de la carte de carrière)', () => {
+  for (const d of BUILTIN_TRACKS) assert.ok(d.appris && d.appris.length > 40 && d.appris.length < 260 && d.appris.startsWith('Départ : '), d.id + ' : ' + d.appris);
+  assert.match(read('js/main.js'), /card\.title = b\.def\.appris/);
+});
+test('étoiles de difficulté : le premier circuit d’un chapitre a au plus 3 étoiles, l’avant-dernier au moins 3, le dernier au moins 4, et un sprint n’a jamais plus de 2', () => {
+  for (const ch of chapters) { assert.ok(ch[0].difficulty <= 3, ch[0].id); assert.ok(ch[4].difficulty >= 3 && ch[5].difficulty >= 4, ch[5].id); }
+  for (const d of BUILTIN_TRACKS.filter((x) => x.profil === 'sprint')) assert.ok(d.difficulty <= 2, d.id);
+});
+test('temps de référence : le pilote met le même temps qu’à la dernière validation (tools/golden-temps.json ; node tools/golden.mjs --update après un changement voulu)', () => {
+  const ref = loadGolden(), now = measure();
+  assert.deepEqual(Object.keys(ref).sort(), Object.keys(now).sort());
+  const diff = Object.keys(now).filter((k) => Math.abs(now[k] - ref[k]) > 0.02).map((k) => `${k} ${ref[k]} → ${now[k]}`);
+  assert.deepEqual(diff, [], 'circuits dont le temps a changé : leurs médailles sont à revoir (node tools/medals.mjs --check)');
+});
+test('état d’un chapitre et bilan de carrière (écran de carrière)', () => {
+  assert.equal(chapterState([null, 'or', 'or', 'or', 'or', 'or'], 6).id, 'open');
+  assert.equal(chapterState(['bronze', 'or', 'or', 'or', 'or', 'or'], 5).id, 'done');
+  assert.equal(chapterState(['bronze', 'or', 'or', 'or', 'or', 'or'], 6).id, 'perfect');
+  assert.equal(chapterState(Array(6).fill('cristal'), 6).id, 'crystal');
+  const none = careerSummary(Array(66).fill(null), 0);
+  assert.deepEqual([none.pct, none.finished, none.complete], [0, false, false]);
+  const all = careerSummary(Array(66).fill('cristal'), 66);
+  assert.deepEqual([all.pct, all.finished, all.complete], [100, true, true]);
+  const mid = careerSummary([...Array(33).fill('or'), ...Array(33).fill(null)], 10);
+  assert.ok(mid.pct > 0 && mid.pct < 100 && !mid.finished);
+  const m = read('js/main.js');
+  assert.match(m, /careerSummary\(ids, gd\)/); assert.match(m, /chapterState\(/); assert.match(m, /class="ch-badge/);
+  assert.match(read('css/style.css'), /\.career-summary/);
+});
+test('fiche d’essai et calage humain : 66 sections, gabarit de temps vide, médailles proposées à partir du meilleur temps', () => {
+  const f = read('docs/FICHE-ESSAI.md'), tpl = JSON.parse(read('docs/temps-humains.json'));
+  assert.equal((f.match(/^### \d+\. /gm) || []).length, 66);
+  assert.equal((f.match(/^## Chapitre /gm) || []).length, 11);
+  assert.deepEqual(Object.keys(tpl), BUILTIN_TRACKS.map((d) => d.id));
+  assert.deepEqual(proposeFromHumans([16.2, 15.4, 17.9]), { cristal: 15.4, or: 16.2, argent: 18.5, bronze: 21.6 });
+  for (const d of BUILTIN_TRACKS) assert.ok(f.includes('### ' + (BUILTIN_TRACKS.indexOf(d) + 1) + '. ' + d.name), d.id);
+});
+test('éditeur et partage : chaque circuit décodé garde ses tours, son véhicule et sa gravité de départ, ses obstacles, et reste sans alerte', () => {
+  for (const d of BUILTIN_TRACKS) {
+    const tr = buildBuiltin(d), back = Track.decode(tr.encode());
+    assert.equal(back.laps, tr.laps, d.id + ' tours'); assert.equal(back.veh0, tr.veh0, d.id + ' véhicule'); assert.equal(back.g0, tr.g0, d.id + ' gravité');
+    assert.equal(back.decos.length, tr.decos.length, d.id + ' obstacles');
+    assert.deepEqual(back.validate(), [], d.id);
+    assert.deepEqual(checkTrack(back).filter((i) => i.level === 'error'), [], d.id);
+  }
+});
+test('partage fidèle : les commandes du pilote rejouées sur le circuit décodé donnent la même arrivée, au même instant (plafond, deltaplane, tapis, tours, rebonds, verre…)', () => {
+  const play = (tr, inputs) => {
+    const phys = new CarPhysics(tr), logic = new RaceLogic(tr); placeAtStart(phys, logic);
+    const bot = inputs ? null : new Autopilot(tr.path, { ...(tr.path.pilot || {}) }); if (bot) bot.reset(phys);
+    const rec = [];
+    for (let i = 0; i < 120 * 120; i++) {
+      const inp = inputs ? inputs[i] : { ...bot.control(phys) }; if (!inp) break; rec.push(inp);
+      phys.clock = logic.steps; phys.step(inp);
+      const ev = logic.update(phys); if (ev && ev.type === 'finish') return { t: logic.steps, x: phys.pos.x, y: phys.pos.y, z: phys.pos.z, rec, ok: true };
+      if (!inputs && (phys.offTrack || phys.ev.sink)) { const r = logic.respawn; phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1); bot.reset(phys); }
+    }
+    return { ok: false, rec };
+  };
+  for (const id of ['plafond', 'cite', 'neons', 'racines', 'lagon', 'banquise', 'cristalfele', 'presse', 'apesanteur', 'recif', 'zenith']) {
+    const d = by[id], tr = buildBuiltin(d), a = play(tr);
+    if (!a.ok) continue;                                    // un circuit où le pilote doit réapparaître n'a pas d'enregistrement simple
+    const back = Track.decode(tr.encode()); back.path = tr.path;
+    const b = play(back, a.rec);
+    assert.ok(b.ok, id + ' : le circuit décodé ne se termine plus'); assert.equal(b.t, a.t, id + ' : instant d’arrivée');
+    assert.ok(Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) < 1e-6, id + ' : position d’arrivée');
+  }
+});
 
 console.log('Cohérence de la carrière');
 test('médailles strictement croissantes (cristal < or < argent < bronze)', () => {

@@ -5011,6 +5011,7 @@ var BUILTIN_TRACKS = [
     decor: "desert",
     difficulty: 1,
     profil: "sprint",
+    appris: "D\xE9part : deux boosters \u2192 premier wall-ride (transitions douces 2\xD72). Au programme : vitesse de pointe, trajectoire dans les tr\xE8s grands virages plats, courbes progressives.",
     goal: {
       id: "under",
       t: 16
@@ -5037,6 +5038,7 @@ var BUILTIN_TRACKS = [
     decor: "isles",
     difficulty: 1,
     profil: "sprint",
+    appris: "D\xE9part : en moto, lanc\xE9 par une descente de 7 niveaux (sans booster). Au programme : deux sauts en chapelet avec un anneau turbo chacun, tr\xE8s grand virage plat.",
     goal: {
       id: "rings",
       n: 2
@@ -5066,6 +5068,7 @@ var BUILTIN_TRACKS = [
     decor: "polar",
     difficulty: 1,
     profil: "sprint",
+    appris: "D\xE9part : sur la glace : verglas, trois boosters, verglas. Au programme : vague douce, deux tr\xE8s grands virages plats, descente finale.",
     goal: {
       id: "under",
       t: 19.5
@@ -5093,6 +5096,7 @@ var BUILTIN_TRACKS = [
     decor: "jungle",
     difficulty: 2,
     profil: "sprint",
+    appris: "D\xE9part : trois boosters \u2192 rampe de lancement avec anneau turbo dans le saut. Au programme : vagues douces, pont de lianes sans bordures \xE0 plus de 230 km/h, S de virages relev\xE9s, tr\xE8s grand virage plat.",
     goal: {
       id: "rings",
       n: 1
@@ -5119,6 +5123,7 @@ var BUILTIN_TRACKS = [
     decor: "city",
     difficulty: 2,
     profil: "speedway",
+    appris: "D\xE9part : tapis roulant \xE0 +200 km/h (trois cases) : pr\xE8s de 290 km/h sans booster. Au programme : quatre virages relev\xE9s, wall-ride sur la fa\xE7ade d\u2019une tour, 70 % au-dessus de 250 km/h.",
     goal: {
       id: "nowall"
     },
@@ -5144,6 +5149,7 @@ var BUILTIN_TRACKS = [
     decor: "volcano",
     difficulty: 2,
     profil: "sprint",
+    appris: "D\xE9part : deux boosters \u2192 colline douce. Au programme : vague en S, S relev\xE9 2\xD72, un tr\xE8s grand virage plat.",
     goal: {
       id: "under",
       t: 18
@@ -5171,6 +5177,7 @@ var BUILTIN_TRACKS = [
     decor: "desert",
     difficulty: 2,
     profil: "speedway",
+    appris: "D\xE9part : un booster \u2192 directement un tr\xE8s grand virage relev\xE9. Au programme : virages relev\xE9s 3\xD73 \xE0 plus de 250 km/h, wall-ride de 6 cases sur la paroi du canyon, descente douce.",
     goal: {
       id: "nowall"
     },
@@ -5196,6 +5203,7 @@ var BUILTIN_TRACKS = [
     decor: "orbit",
     difficulty: 2,
     profil: "sprint",
+    appris: "D\xE9part : un booster \u2192 tube. Au programme : saut en basse gravit\xE9 (40 %) avec anneau turbo, tr\xE8s grand virage plat.",
     goal: {
       id: "rings",
       n: 1
@@ -5224,6 +5232,7 @@ var BUILTIN_TRACKS = [
     decor: "desert",
     difficulty: 2,
     profil: "acrobatique",
+    appris: "D\xE9part : chute libre imm\xE9diate depuis 77 m (la voiture quitte la plateforme de d\xE9part, \xE0 l\u2019arr\xEAt). Au programme : rampes progressives et \xE0 38\xB0, r\xE9ceptions sur longues pentes, checkpoint a\xE9rien, saut sur un mur.",
     goal: {
       id: "perfect",
       n: 3
@@ -5243,13 +5252,14 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 4 · 2/6 — ROLLERCOASTER (boucles). Ouverture : trois boosters puis DEUX LOOPINGS qui s'enchaînent en S (droite puis gauche). Ensuite deux wall-rides de quatre cases
+    // Chapitre 4 · 3/6 — ROLLERCOASTER (boucles). Ouverture : trois boosters puis DEUX LOOPINGS qui s'enchaînent en S (droite puis gauche). Ensuite deux wall-rides de quatre cases
     // (mur gauche, mur droit) séparés par un virage relevé, un grand looping et un plongeon de 8 niveaux : trois loopings, 15 niveaux de dénivelé.
     id: "hyper",
     name: "Hyperboucle",
     decor: "city",
     difficulty: 3,
     profil: "rollercoaster",
+    appris: "D\xE9part : trois boosters \u2192 deux loopings qui s\u2019encha\xEEnent en S. Au programme : trois loopings, deux wall-rides, plongeon de 8 niveaux.",
     goal: {
       id: "norespawn"
     },
@@ -5276,6 +5286,7 @@ var BUILTIN_TRACKS = [
     decor: "jungle",
     difficulty: 3,
     profil: "speedway",
+    appris: "D\xE9part : en tube propuls\xE9, qui d\xE9bouche sur un virage relev\xE9 3\xD73. Au programme : S relev\xE9s, wall-ride de 5 cases sur le mur gauche, tube \xE0 pleine vitesse, 47 % du temps au-dessus de 250 km/h.",
     goal: {
       id: "under",
       t: 25
@@ -5303,6 +5314,7 @@ var BUILTIN_TRACKS = [
     decor: "jungle",
     difficulty: 3,
     profil: "acrobatique",
+    appris: "D\xE9part : deux boosters \u2192 rebond g\xE9ant (palier 2 niveaux plus haut). Au programme : quatre champignons en escalier en zigzag (+8 niveaux), plongeon final ; la port\xE9e d\u2019un rebond est proportionnelle \xE0 la vitesse, le circuit est tr\xE8s tol\xE9rant.",
     goal: {
       id: "perfect",
       n: 4
@@ -5327,6 +5339,7 @@ var BUILTIN_TRACKS = [
     decor: "isles",
     difficulty: 3,
     profil: "technique",
+    appris: "D\xE9part : sur l\u2019eau (plaque bateau, slalom R L R L dans un chenal). Au programme : \xE9pingles en voiture entre deux chenaux, petit saut sur un mur, arriv\xE9e franchie en bateau (objectif bonus).",
     goal: {
       id: "vehicle",
       v: "boat"
@@ -5351,6 +5364,7 @@ var BUILTIN_TRACKS = [
     decor: "isles",
     difficulty: 3,
     profil: "acrobatique",
+    appris: "D\xE9part : trois boosters \u2192 d\xE9collage en deltaplane. Au programme : vol de cinq cases, mont\xE9e du phare (+8 niveaux), deux sauts de voiture avec anneau turbo.",
     goal: {
       id: "rings",
       n: 2
@@ -5375,6 +5389,7 @@ var BUILTIN_TRACKS = [
     decor: "jungle",
     difficulty: 3,
     profil: "technique",
+    appris: "D\xE9part : bifurcation d\xE8s le d\xE9part : la voie de droite porte la plaque moto. Au programme : douze virages serr\xE9s en slaloms (R L R L), descente en lacets, petit saut sur un mur, moto \u2192 voiture \u2192 moto.",
     goal: {
       id: "vehicle",
       v: "moto"
@@ -5398,6 +5413,7 @@ var BUILTIN_TRACKS = [
     decor: "volcano",
     difficulty: 3,
     profil: "speedway",
+    appris: "D\xE9part : un booster \u2192 S de virages relev\xE9s 2\xD72. Au programme : six virages relev\xE9s, wall-ride, plongeon, 4 % de freinage.",
     goal: {
       id: "nowall"
     },
@@ -5423,6 +5439,7 @@ var BUILTIN_TRACKS = [
     decor: "orbit",
     difficulty: 3,
     profil: "technique",
+    appris: "D\xE9part : en moto (plaque), slalom R L R L imm\xE9diat. Au programme : huit virages serr\xE9s, chicane, arriv\xE9e en moto (objectif bonus).",
     goal: {
       id: "vehicle",
       v: "moto"
@@ -5439,13 +5456,14 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 4 · 3/6 — SPRINT. Ouverture : départ SANS BORDURES (deux boosters, six cases à plus de 200 km/h sans la moindre barrière : la trajectoire se joue dès la première seconde).
+    // Chapitre 4 · 2/6 — SPRINT. Ouverture : départ SANS BORDURES (deux boosters, six cases à plus de 200 km/h sans la moindre barrière : la trajectoire se joue dès la première seconde).
     // Puis une vague douce, un tunnel de quatre cases pris à pleine vitesse, un seul très grand virage plat et une descente finale. Presque tout droit.
     id: "boulevard",
     name: "Boulevard Sans Fin",
     decor: "city",
-    difficulty: 3,
+    difficulty: 2,
     profil: "sprint",
+    appris: "D\xE9part : sans bordures (six cases). Au programme : vague douce, tunnel de quatre cases, un seul tr\xE8s grand virage plat.",
     goal: {
       id: "under",
       t: 16
@@ -5473,6 +5491,7 @@ var BUILTIN_TRACKS = [
     decor: "desert",
     difficulty: 3,
     profil: "rollercoaster",
+    appris: "D\xE9part : trois boosters \u2192 directement un grand looping. Au programme : h\xE9lice montante de 16 niveaux (quatre grandes courbes inclin\xE9es), plongeon de 16 niveaux \xE0 38\xB0, slalom de wall-rides gauche / droite.",
     goal: {
       id: "norespawn"
     },
@@ -5496,6 +5515,7 @@ var BUILTIN_TRACKS = [
     decor: "desert",
     difficulty: 3,
     profil: "technique",
+    appris: "D\xE9part : \xE9pingle descendante d\xE8s le d\xE9part. Au programme : 11 virages serr\xE9s, un booster \xE0 chaque relance, glace avant les \xE9pingles, chicane sur un mur.",
     goal: {
       id: "turbo",
       n: 2
@@ -5520,6 +5540,7 @@ var BUILTIN_TRACKS = [
     decor: "polar",
     difficulty: 3,
     profil: "acrobatique",
+    appris: "D\xE9part : verglas, deux boosters, rebond vers une terrasse plus basse. Au programme : quatre rebonds de plus en plus puissants et longs : la Banquise descend de terrasse en terrasse (Spores monte).",
     goal: {
       id: "under",
       t: 26
@@ -5547,6 +5568,7 @@ var BUILTIN_TRACKS = [
     decor: "jungle",
     difficulty: 3,
     profil: "rollercoaster",
+    appris: "D\xE9part : au plafond (la course commence en gravit\xE9 invers\xE9e). Au programme : deux tonneaux complets (plafond \u2192 mur gauche \u2192 sol \u2192 mur droit \u2192 plafond), plongeon, virage relev\xE9, boue et vent, double looping.",
     goal: {
       id: "norespawn"
     },
@@ -5570,6 +5592,7 @@ var BUILTIN_TRACKS = [
     decor: "polar",
     difficulty: 4,
     profil: "technique",
+    appris: "D\xE9part : toboggan de 10 niveaux d\xE8s le d\xE9part. Au programme : huit virages serr\xE9s, glace avant les \xE9pingles, aimants sur la bosse centrale.",
     goal: {
       id: "norespawn"
     },
@@ -5592,6 +5615,7 @@ var BUILTIN_TRACKS = [
     decor: "city",
     difficulty: 4,
     profil: "technique",
+    appris: "D\xE9part : mont\xE9e en lacets : deux courbes montantes serr\xE9es. Au programme : 13 virages serr\xE9s : slalom sans bordures sur le viaduc, \xE9pingles, chicane sur un mur, slalom sous un tunnel.",
     goal: {
       id: "norespawn"
     },
@@ -5614,6 +5638,7 @@ var BUILTIN_TRACKS = [
     decor: "volcano",
     difficulty: 4,
     profil: "technique",
+    appris: "D\xE9part : sur une plaque de d\xE9rive (l\u2019arri\xE8re n\u2019accroche presque plus). Au programme : huit virages serr\xE9s dont trois sur d\xE9rive, chicane sur un mur.",
     goal: {
       id: "norespawn"
     },
@@ -5637,6 +5662,7 @@ var BUILTIN_TRACKS = [
     decor: "jungle",
     difficulty: 4,
     profil: "technique",
+    appris: "D\xE9part : dans un tunnel, \xE9pingle imm\xE9diate. Au programme : douze virages serr\xE9s (\xE9pingles dans un tube, h\xE9lice descendante, slalom sous un tunnel), un booster \xE0 chaque relance.",
     goal: {
       id: "norespawn"
     },
@@ -5652,30 +5678,30 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 4 · 5/6 — ACROBATIQUE (toits). Ouverture : deux boosters → rampe à forte pente qui lance la voiture au-dessus d'un anneau turbo, puis une longue réception de 10 niveaux.
-    // Trois sauts de toit en toit (rampe de 6 niveaux, rampe douce de 3 niveaux, rampe de 6 niveaux) avec un petit wall-ride sur une façade entre les deux derniers. Chaque checkpoint est suivi
-    // de deux boosters (on repart de chacun à l'arrêt) et placé loin de la réception précédente (un saut un peu long le survolerait).
+    // Chapitre 4 · 5/6 — ACROBATIQUE (toits). Ouverture : trois boosters puis un PETIT LOOPING (2×2), pris juste avant la première rampe : la boucle donne l'élan du premier saut de toit.
+    // Trois sauts de toit en toit (rampe de 6 niveaux, rampe douce, rampe de 6 niveaux) avec un petit wall-ride sur une façade entre les deux derniers. Chaque checkpoint est suivi de deux boosters et placé loin de la réception précédente.
     id: "tours",
     name: "Tours Jumelles",
     decor: "city",
     difficulty: 4,
     profil: "acrobatique",
+    appris: "D\xE9part : trois boosters, petit looping, puis rampe de toit. Au programme : trois sauts de toit en toit, wall-ride sur une fa\xE7ade, r\xE9ception de 10 niveaux.",
     goal: {
       id: "under",
-      t: 25
+      t: 28
     },
     opts: {
-      l: 14
+      l: 16
     },
     pilot: {
       vCap: 60
     },
-    script: "start B2 [crv2] UX GR3 DX DX [cdo2] S3 C B2 [crv1] UU G3 DD [cdo1] S [tr01s] S2< [tr10s] S C B2 [crv2] UX G3 DX DX [cdo2] S5 finish",
+    script: "start B3 O S2 [crv2] UX G3 DX DX [cdo2] S3 C B2 [crv1] UU G3 DD [cdo1] S [tr01s] S2< [tr10s] S C B2 [crv2] UX G3 DX DX [cdo2] S5 finish",
     medals: {
-      cristal: 22.3,
-      or: 23.5,
-      argent: 27,
-      bronze: 31.7
+      cristal: 25.3,
+      or: 26.7,
+      argent: 30.7,
+      bronze: 36
     }
   },
   {
@@ -5686,6 +5712,7 @@ var BUILTIN_TRACKS = [
     decor: "orbit",
     difficulty: 4,
     profil: "rollercoaster",
+    appris: "D\xE9part : tire-bouchon \xE0 l\u2019\xE9lan \u2192 trois boosters \u2192 grand double looping. Au programme : slalom de wall-rides, tube, plongeon.",
     goal: {
       id: "norespawn"
     },
@@ -5711,6 +5738,7 @@ var BUILTIN_TRACKS = [
     decor: "polar",
     difficulty: 4,
     profil: "rollercoaster",
+    appris: "D\xE9part : tire-bouchon pris \xE0 l\u2019\xE9lan, sans booster. Au programme : h\xE9lice montante (16 niveaux) puis descendante dans l\u2019autre sens, double looping, wall-rides.",
     goal: {
       id: "norespawn"
     },
@@ -5736,6 +5764,7 @@ var BUILTIN_TRACKS = [
     decor: "volcano",
     difficulty: 4,
     profil: "rollercoaster",
+    appris: "D\xE9part : trois boosters \u2192 tube \u2192 mont\xE9e verticale de quatre niveaux. Au programme : plongeon de 8 niveaux, grand looping, slalom de wall-rides.",
     goal: {
       id: "norespawn"
     },
@@ -5761,6 +5790,7 @@ var BUILTIN_TRACKS = [
     decor: "isles",
     difficulty: 4,
     profil: "rollercoaster",
+    appris: "D\xE9part : quatre boosters \u2192 looping triple (4\xD74). Au programme : slalom de wall-rides gauche / droite, grand double looping, plongeon de 8 niveaux : 15 niveaux de d\xE9nivel\xE9.",
     goal: {
       id: "norespawn"
     },
@@ -5787,6 +5817,7 @@ var BUILTIN_TRACKS = [
     decor: "desert",
     difficulty: 4,
     profil: "rollercoaster",
+    appris: "D\xE9part : trois boosters \u2192 mont\xE9e verticale (mont\xE9e en L, mur, sommet). Au programme : chute, slalom de wall-rides gauche / droite, grand looping, arche mur \u2192 plafond \u2192 mur.",
     goal: {
       id: "norespawn"
     },
@@ -5809,6 +5840,7 @@ var BUILTIN_TRACKS = [
     decor: "orbit",
     difficulty: 4,
     profil: "speedway",
+    appris: "D\xE9part : deux boosters \u2192 tube court ; circuit ferm\xE9, 3 tours. Au programme : quatre virages relev\xE9s, wall-ride, 70 % au-dessus de 250 km/h.",
     goal: {
       id: "nowall"
     },
@@ -5836,6 +5868,7 @@ var BUILTIN_TRACKS = [
     decor: "isles",
     difficulty: 4,
     profil: "acrobatique",
+    appris: "D\xE9part : la plaque de d\xE9part r\xE8gle la gravit\xE9 \xE0 50 % : la voiture flotte de 6 niveaux. Au programme : trois sauts de cinq cases en basse gravit\xE9, longues r\xE9ceptions.",
     goal: {
       id: "perfect",
       n: 2
@@ -5859,6 +5892,7 @@ var BUILTIN_TRACKS = [
     decor: "polar",
     difficulty: 5,
     profil: "speedway",
+    appris: "D\xE9part : directement dans un tr\xE8s grand virage relev\xE9, sans booster. Au programme : six virages relev\xE9s en couronne, wall-ride, 45 % du tour au-dessus de 250 km/h.",
     goal: {
       id: "nowall"
     },
@@ -5884,6 +5918,7 @@ var BUILTIN_TRACKS = [
     decor: "volcano",
     difficulty: 5,
     profil: "speedway",
+    appris: "D\xE9part : deux boosters \u2192 mont\xE9e douce vers la cr\xEAte ; circuit ferm\xE9, 2 tours. Au programme : quatre virages relev\xE9s en anneau, wall-ride, 70 % du temps au-dessus de 250 km/h.",
     goal: {
       id: "nowall"
     },
@@ -5910,6 +5945,7 @@ var BUILTIN_TRACKS = [
     decor: "polar",
     difficulty: 5,
     profil: "technique",
+    appris: "D\xE9part : dans la poudreuse. Au programme : neuf virages serr\xE9s, vent avant les \xE9pingles, neige \xE9paisse en sortie.",
     goal: {
       id: "norespawn"
     },
@@ -5932,6 +5968,7 @@ var BUILTIN_TRACKS = [
     decor: "city",
     difficulty: 5,
     profil: "rollercoaster",
+    appris: "D\xE9part : trois boosters \u2192 lift hill de 16 niveaux. Au programme : plongeon de 12 niveaux, grand looping, slalom de wall-rides.",
     goal: {
       id: "norespawn"
     },
@@ -5958,6 +5995,7 @@ var BUILTIN_TRACKS = [
     decor: "isles",
     difficulty: 5,
     profil: "speedway",
+    appris: "D\xE9part : aucun booster : une pente douce de six cases lance dans un tr\xE8s grand virage relev\xE9. Au programme : cinq virages relev\xE9s, wall-ride de quatre cases, plongeon, 58 % du tour au-dessus de 250 km/h.",
     goal: {
       id: "under",
       t: 21.5
@@ -5985,6 +6023,7 @@ var BUILTIN_TRACKS = [
     decor: "orbit",
     difficulty: 5,
     profil: "acrobatique",
+    appris: "D\xE9part : deux boosters \u2192 plaque de gravit\xE9 20 %. Au programme : trois vols de 8 \xE0 10 s en l\u2019air (28 niveaux de d\xE9nivel\xE9), wall-rides.",
     goal: {
       id: "under",
       t: 52
@@ -6012,6 +6051,7 @@ var BUILTIN_TRACKS = [
     decor: "volcano",
     difficulty: 5,
     profil: "acrobatique",
+    appris: "D\xE9part : trois boosters \u2192 rampe sans virage d\u2019entr\xE9e : saut de huit cases, r\xE9ception 10 niveaux plus bas. Au programme : quatre \xE9ruptions, anneau turbo, wall-ride.",
     goal: {
       id: "under",
       t: 30
@@ -6038,6 +6078,7 @@ var BUILTIN_TRACKS = [
     decor: "orbit",
     difficulty: 5,
     profil: "technique",
+    appris: "D\xE9part : sur une plateforme d\u2019amarrage. Au programme : neuf virages serr\xE9s, chicane sur un mur.",
     goal: {
       id: "norespawn"
     },
@@ -6062,6 +6103,7 @@ var BUILTIN_TRACKS = [
     decor: "reef",
     difficulty: 2,
     profil: "sprint",
+    appris: "D\xE9part : deux boosters \u2192 contre-courant (\u2212122 km/h) puis courant favorable (+138 km/h). Au programme : vague, tr\xE8s grand virage plat, tapis de trois cases.",
     goal: {
       id: "under",
       t: 18
@@ -6088,6 +6130,7 @@ var BUILTIN_TRACKS = [
     decor: "reef",
     difficulty: 3,
     profil: "technique",
+    appris: "D\xE9part : un booster \u2192 courant favorable vers une premi\xE8re \xE9pingle. Au programme : huit virages serr\xE9s, dalle de verre fragile, chicane.",
     goal: {
       id: "norespawn"
     },
@@ -6110,6 +6153,7 @@ var BUILTIN_TRACKS = [
     decor: "reef",
     difficulty: 3,
     profil: "rollercoaster",
+    appris: "D\xE9part : trois boosters \u2192 wall-ride sur le flanc de la coque. Au programme : double looping, second wall-ride, plongeon de 8 niveaux.",
     goal: {
       id: "norespawn"
     },
@@ -6136,6 +6180,7 @@ var BUILTIN_TRACKS = [
     decor: "reef",
     difficulty: 4,
     profil: "acrobatique",
+    appris: "D\xE9part : plaque de gravit\xE9 200 % (la pression des profondeurs). Au programme : quatre sauts brefs, r\xE9ceptions violentes, wall-ride.",
     goal: {
       id: "under",
       t: 30
@@ -6162,6 +6207,7 @@ var BUILTIN_TRACKS = [
     decor: "reef",
     difficulty: 4,
     profil: "rollercoaster",
+    appris: "D\xE9part : un booster \u2192 plongeon de 12 niveaux \u2192 grand looping au fond. Au programme : slalom de wall-rides, remont\xE9e en h\xE9lice.",
     goal: {
       id: "norespawn"
     },
@@ -6187,6 +6233,7 @@ var BUILTIN_TRACKS = [
     decor: "reef",
     difficulty: 5,
     profil: "speedway",
+    appris: "D\xE9part : deux boosters \u2192 pont de verre \u2192 virage relev\xE9. Au programme : cinq virages relev\xE9s, wall-ride, courant favorable, 77 % au-dessus de 250 km/h.",
     goal: {
       id: "nowall"
     },
@@ -6213,6 +6260,7 @@ var BUILTIN_TRACKS = [
     decor: "factory",
     difficulty: 2,
     profil: "sprint",
+    appris: "D\xE9part : trois boosters \u2192 trois cases \xE0 moteur coup\xE9. Au programme : tapis roulant, vague, deux tr\xE8s grands virages plats ; bumper et piques sur les bords.",
     goal: {
       id: "under",
       t: 18
@@ -6253,6 +6301,7 @@ var BUILTIN_TRACKS = [
     decor: "factory",
     difficulty: 3,
     profil: "technique",
+    appris: "D\xE9part : bifurcation : la voie de droite porte un booster. Au programme : huit virages serr\xE9s, ralentisseur, chicane ; bumper et piques.",
     goal: {
       id: "norespawn"
     },
@@ -6289,6 +6338,7 @@ var BUILTIN_TRACKS = [
     decor: "factory",
     difficulty: 3,
     profil: "rollercoaster",
+    appris: "D\xE9part : deux boosters \u2192 h\xE9lice montante de 8 niveaux. Au programme : looping triple, wall-rides, plongeon ; piques escamotables.",
     goal: {
       id: "norespawn"
     },
@@ -6322,6 +6372,7 @@ var BUILTIN_TRACKS = [
     decor: "factory",
     difficulty: 4,
     profil: "speedway",
+    appris: "D\xE9part : trois boosters \u2192 tunnel de quatre cases \u2192 virage relev\xE9. Au programme : cinq virages relev\xE9s, wall-ride, deux cases \xE0 moteur coup\xE9, bumpers.",
     goal: {
       id: "nowall"
     },
@@ -6361,6 +6412,7 @@ var BUILTIN_TRACKS = [
     decor: "factory",
     difficulty: 4,
     profil: "acrobatique",
+    appris: "D\xE9part : deux boosters \u2192 tapis de quatre pistons (rebonds en cha\xEEne). Au programme : rampe raide, rebond vers une terrasse, wall-ride, rampe douce.",
     goal: {
       id: "under",
       t: 27
@@ -6401,6 +6453,7 @@ var BUILTIN_TRACKS = [
     decor: "factory",
     difficulty: 5,
     profil: "technique",
+    appris: "D\xE9part : deux boosters \u2192 deux dalles ralentisseur juste avant le slalom. Au programme : neuf virages serr\xE9s, moteur coup\xE9, chicane ; marteau, piques, bumper.",
     goal: {
       id: "norespawn"
     },
@@ -6442,8 +6495,9 @@ var BUILTIN_TRACKS = [
     id: "envol",
     name: "Premier Envol",
     decor: "sky",
-    difficulty: 3,
+    difficulty: 2,
     profil: "sprint",
+    appris: "D\xE9part : trois boosters \u2192 vent lat\xE9ral. Au programme : vague en S, deux tr\xE8s grands virages plats, descente.",
     goal: {
       id: "under",
       t: 18
@@ -6470,6 +6524,7 @@ var BUILTIN_TRACKS = [
     decor: "sky",
     difficulty: 3,
     profil: "acrobatique",
+    appris: "D\xE9part : trois boosters \u2192 rampe sans bordures (les \xEEles n\u2019ont pas de barri\xE8re). Au programme : trois sauts avec anneaux turbo, wall-ride.",
     goal: {
       id: "under",
       t: 26
@@ -6496,6 +6551,7 @@ var BUILTIN_TRACKS = [
     decor: "sky",
     difficulty: 4,
     profil: "technique",
+    appris: "D\xE9part : deux boosters \u2192 vent fort (180 %) juste avant la premi\xE8re \xE9pingle. Au programme : neuf virages serr\xE9s, du vent \xE0 chaque relance.",
     goal: {
       id: "norespawn"
     },
@@ -6518,6 +6574,7 @@ var BUILTIN_TRACKS = [
     decor: "sky",
     difficulty: 4,
     profil: "rollercoaster",
+    appris: "D\xE9part : trois boosters \u2192 plaque de gravit\xE9 40 % \u2192 grand looping. Au programme : slalom de wall-rides, plongeon, pesanteur r\xE9tablie avant l\u2019arriv\xE9e.",
     goal: {
       id: "norespawn"
     },
@@ -6543,6 +6600,7 @@ var BUILTIN_TRACKS = [
     decor: "sky",
     difficulty: 5,
     profil: "speedway",
+    appris: "D\xE9part : deux boosters \u2192 vent sur un pont sans bordures \u2192 virage relev\xE9 sans bordure. Au programme : quatre virages relev\xE9s, wall-ride, 75 % au-dessus de 250 km/h.",
     goal: {
       id: "nowall"
     },
@@ -6568,6 +6626,7 @@ var BUILTIN_TRACKS = [
     decor: "sky",
     difficulty: 5,
     profil: "acrobatique",
+    appris: "D\xE9part : en deltaplane : plaque sur la ligne, chute de 6 niveaux. Au programme : avenue de 10 cases, rampe raide, wall-ride, rampe douce avec anneau.",
     goal: {
       id: "under",
       t: 32
@@ -6593,8 +6652,9 @@ var BUILTIN_TRACKS = [
     id: "galerie",
     name: "Galerie de Cristal",
     decor: "caves",
-    difficulty: 3,
+    difficulty: 2,
     profil: "sprint",
+    appris: "D\xE9part : deux boosters \u2192 volant invers\xE9 (trois cases en ligne droite). Au programme : vague en S, deux tr\xE8s grands virages plats, descente.",
     goal: {
       id: "under",
       t: 18
@@ -6621,6 +6681,7 @@ var BUILTIN_TRACKS = [
     decor: "caves",
     difficulty: 4,
     profil: "technique",
+    appris: "D\xE9part : un booster \u2192 vrille : la route se retourne, gravit\xE9 invers\xE9e. Au programme : huit virages serr\xE9s dont quatre au plafond.",
     goal: {
       id: "norespawn"
     },
@@ -6643,6 +6704,7 @@ var BUILTIN_TRACKS = [
     decor: "caves",
     difficulty: 4,
     profil: "acrobatique",
+    appris: "D\xE9part : deux boosters \u2192 inversion de gravit\xE9 : la voiture \xAB tombe \xBB au plafond, 8 niveaux plus haut. Au programme : trois allers-retours sol / plafond, verre fragile au plafond.",
     goal: {
       id: "under",
       t: 26
@@ -6669,6 +6731,7 @@ var BUILTIN_TRACKS = [
     decor: "caves",
     difficulty: 4,
     profil: "speedway",
+    appris: "D\xE9part : trois boosters \u2192 S de deux tr\xE8s grands virages relev\xE9s en miroir. Au programme : six virages relev\xE9s, wall-ride, trois dalles de verre.",
     goal: {
       id: "nowall"
     },
@@ -6687,28 +6750,29 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 11 · 5/6 — ROLLERCOASTER (vrilles). Ouverture : trois boosters puis directement un double looping (3×3, tournant à gauche). Ensuite un slalom de wall-rides gauche / droite, puis une
-    // vrille qui retourne la route : on roule au plafond (gravité inversée) pendant une descente et une remontée, avant une seconde vrille qui remet la route à l'endroit.
+    // Chapitre 11 · 5/6 — ROLLERCOASTER (vrilles). Ouverture : un booster puis un PLONGEON de 4 niveaux qui débouche directement sur une VRILLE : la route se retourne et l'on roule au plafond (gravité inversée)
+    // pendant une descente et une remontée, avant une seconde vrille qui remet la route à l'endroit. Ensuite un double looping tournant à gauche, un slalom de wall-rides gauche / droite et l'arrivée.
     id: "vrilles",
     name: "Vrilles Souterraines",
     decor: "caves",
     difficulty: 5,
     profil: "rollercoaster",
+    appris: "D\xE9part : plongeon de 4 niveaux directement dans une vrille. Au programme : parcours au plafond, double looping, slalom de wall-rides gauche / droite.",
     goal: {
       id: "norespawn"
     },
     opts: {
-      l: 6
+      l: 10
     },
     pilot: {
       vCap: 66
     },
-    script: "start B3 ODL S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B TW.f S2^ D^ S2^ B^ S2^ U^ S^ TWB.f S2 B finish",
+    script: "start B [cdi1] [dn2] [cdo1] TW.f S2^ D^ S2^ B^ S2^ U^ S^ TWB.f S2 B ODL S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 finish",
     medals: {
-      cristal: 17.7,
-      or: 18.7,
-      argent: 21.5,
-      bronze: 25.2
+      cristal: 18.5,
+      or: 19.5,
+      argent: 22.4,
+      bronze: 26.3
     }
   },
   {
@@ -6719,6 +6783,7 @@ var BUILTIN_TRACKS = [
     decor: "caves",
     difficulty: 5,
     profil: "technique",
+    appris: "D\xE9part : un booster \u2192 deux dalles de verre fragile (5 s de r\xE9sistance) \u2192 slalom. Au programme : huit virages serr\xE9s, chicane sur un mur : le dernier circuit.",
     goal: {
       id: "norespawn"
     },

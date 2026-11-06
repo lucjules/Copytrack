@@ -10,6 +10,7 @@ export function format(d) {
   const L = ['  {'];
   for (const line of String(d.comment || '').split('\n').filter(Boolean)) L.push('    // ' + line);
   L.push(`    id: ${q(d.id)}, name: ${q(d.name)}, decor: ${q(d.decor)}, difficulty: ${d.difficulty}, profil: ${q(d.profil)},`);
+  if (d.appris) L.push(`    appris: ${q(d.appris)},`);
   L.push(`    goal: ${obj(d.goal)},`);
   const extra = [];
   if (d.opts) extra.push(`opts: ${obj(d.opts)}`);
@@ -20,6 +21,7 @@ export function format(d) {
   if (d.obst) L.push(`    obst: [${d.obst.map(obj).join(', ')}],`);
   L.push(`    script: ${q(d.script)},`);
   L.push(`    medals: ${obj(d.medals)},`);
+  if (d.medalsBy) L.push(`    medalsBy: ${q(d.medalsBy)},`);
   L.push('  },');
   return L.join('\n') + '\n';
 }
