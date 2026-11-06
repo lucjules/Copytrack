@@ -30,9 +30,9 @@ export const WATER_DROP = 0.35;
 export const boatDrop = (along) => WATER_DROP * (1 - Math.max(0, Math.min(1, along || 0)));
 
 // Couleurs personnalisées d'une pièce : { road, line, rail } en #rrggbb (clés absentes = couleur d'origine). null si aucune.
-export const COLOR_KEYS = ['road', 'line', 'rail'];
+const COLOR_KEYS = ['road', 'line', 'rail'];
 const HEX = /^#[0-9a-f]{6}$/i;
-export function cleanColors(c) {
+function cleanColors(c) {
   if (!c || typeof c !== 'object') return null;
   const out = {};
   for (const k of COLOR_KEYS) if (typeof c[k] === 'string' && HEX.test(c[k])) out[k] = c[k].toLowerCase();

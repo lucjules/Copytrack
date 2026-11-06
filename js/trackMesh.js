@@ -4,7 +4,7 @@ import { GeoBuilder, FxBuilder } from './geo.js';
 import {
   CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T,
 } from './constants.js';
-import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, isRibbonKind, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
+import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
 import { WATER_DROP, boatDrop } from './track.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { buildDecoInto, createPlaque, decoColor } from './decos.js';
@@ -12,7 +12,7 @@ import { LIGHT_DECOS } from './decoData.js';
 import { isObstacle } from './obstacles.js';
 import { createObstacleMesh } from './obstacleMesh.js';
 
-export const PALETTE = {
+const PALETTE = {
   asphalt: '#343950',
   line: '#efe6d6',
   railA: '#ff6b57',
@@ -61,7 +61,7 @@ export const SURFACE_STYLE = {
 };
 
 const RO = ROAD_HALF + RAIL_W;
-export const TUNNEL_R = RO + 1.0;
+const TUNNEL_R = RO + 1.0;
 
 const _c1 = new THREE.Color(), _c2 = new THREE.Color();
 
@@ -286,7 +286,7 @@ function sweep(gb, frames, style, nb, drop = 0) {
 // ---- Revêtements animés ------------------------------------------------------
 // Une nappe posée juste au-dessus de la chaussée ; le shader l'anime (eau qui ondule,
 // tapis qui défile dans le sens de sa poussée, verre qui scintille, neige qui pétille).
-export const FX_KIND = { water: 0, conveyor: 1, glass: 2, powder: 3 };
+const FX_KIND = { water: 0, conveyor: 1, glass: 2, powder: 3 };
 const MOVO = {};
 const _S = {};
 function fxLayer(fx, frames, tile, kind, half = ROAD_HALF) {
@@ -369,7 +369,7 @@ void main() {
   #include <fog_fragment>
 }`;
 
-export function createFxMaterial() {
+function createFxMaterial() {
   return new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uTime: { value: 0 } }]),
     vertexShader: FX_VERT,
@@ -738,7 +738,7 @@ function pillarHeightAt(tile, lz, lx = 0) {
   return base + p.rise * LEVEL_H * profH(p, t);
 }
 
-export function tileMatrix(tile) {
+function tileMatrix(tile) {
   const c = tileCenter(tile);
   const m = new THREE.Matrix4().makeRotationY(-tile.r * Math.PI / 2);
   m.setPosition(c.x, 0, c.z);
@@ -790,11 +790,10 @@ function crossSweep(gb, glow, tile, style) {
     }
     // Bordures aux deux bords (sauf tube fermé).
     if (!cage) {
-      for (const [ja, sgn] of [[0, -1], [M, 1]]) {
+      for (const ja of [0, M]) {
         const a = A.pts[ja], d = B.pts[ja];
         const col = i % 2 ? style.railA : style.railB;
         gb.quad(a.p, d.p, off(d, RAIL_H), off(a, RAIL_H), col);
-        void sgn;
       }
     }
   }
@@ -864,7 +863,6 @@ function forkMesh(gb, glow, tile, style, fx = null) {
 
 // ---- v1.5 : anneau flottant (turbo ou checkpoint aérien) -------------------------
 function ringMesh(gb, glow, tile) {
-  const P = PIECES[tile.t];
   const cy = baseY(tile) + RING_Y;
   const cp = cpKind(tile) === 'ring';
   const color = cp ? PALETTE.checkpoint : PALETTE.boost;
@@ -1209,4 +1207,3 @@ export function buildTileMesh(tile, material, glowMaterial) {
   return g;
 }
 
-export { isRibbonKind };

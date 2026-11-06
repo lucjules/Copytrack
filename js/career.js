@@ -5,7 +5,7 @@ import { profile, saveProfile, addCoins } from './profile.js';
 
 export const CHAPTER_SIZE = 6;
 export const UNLOCK_MEDALS = 4;
-export const GOAL_COINS = 50;
+const GOAL_COINS = 50;
 
 // 0.9.6 : profils de circuits (champ `profil` des circuits intégrés). Chaque circuit est conçu pour une expérience précise ; la pastille
 // de la carte de carrière l'annonce. Les mesures qui définissent chaque profil sont vérifiées par tools/contract.mjs (appliqué à tous les circuits par tools/test-niveaux.mjs).
@@ -83,7 +83,6 @@ export function completeGoal(key) {
   return GOAL_COINS;
 }
 
-export const chapterOf = (i) => Math.floor(i / CHAPTER_SIZE);
 
 // medalOf(i) -> médaille du joueur sur le circuit i (ou null).
 export function chapterUnlocked(ch, medalOf, total) {

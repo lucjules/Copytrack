@@ -25,7 +25,7 @@ export class SkidMarks {
     this.mesh.renderOrder = 1;
     scene.add(this.mesh);
     this.cursor = 0;
-    this.last = [null, null, null];
+    this.last = [null, null];
   }
 
   // Ajoute un point de trace pour la roue « w » (x, y, z : contact ; rx, rz : axe latéral).
@@ -51,7 +51,7 @@ export class SkidMarks {
   clear() {
     this.pos.fill(0);
     this.attr.needsUpdate = true;
-    this.last = [null, null, null];
+    this.last = [null, null];
     this.cursor = 0;
   }
 

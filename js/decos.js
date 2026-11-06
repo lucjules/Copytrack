@@ -708,10 +708,8 @@ Object.assign(BUILDERS, {
   gingerHouse(gb, glow, c) {
     const wall = c || '#a8693a';
     gb.box(-4, 0, -3.5, 4, 3.6, 3.5, wall);
-    const r1 = [-4.6, 3.6, 0], r2 = [4.6, 3.6, 0];
     gb.quad([-4.6, 3.6, -4], [4.6, 3.6, -4], [4.6, 5.8, 0], [-4.6, 5.8, 0], WHITE); gb.quad([-4.6, 5.8, 0], [4.6, 5.8, 0], [4.6, 3.6, 4], [-4.6, 3.6, 4], WHITE);
     gb.tri([-4, 3.6, -3.5], [-4, 3.6, 3.5], [-4, 5.7, 0], wall); gb.tri([4, 3.6, -3.5], [4, 5.7, 0], [4, 3.6, 3.5], wall);
-    void r1; void r2;
     gb.box(-0.8, 0, 3.5, 0.8, 2.2, 3.6, '#5a3a22');
     for (const x of [-2.6, 2.6]) glow.quad([x - 0.6, 1.4, 3.56], [x + 0.6, 1.4, 3.56], [x + 0.6, 2.6, 3.56], [x - 0.6, 2.6, 3.56], '#ffd23e');
     for (let i = 0; i < 7; i++) octa(gb, -4 + i * 1.33, 3.7, 3.9, 0.3, 0.3, ['#ff3b4f', '#7cf06b', '#ffd23e'][i % 3], glow, ['#ff3b4f', '#7cf06b', '#ffd23e'][i % 3]);
@@ -762,7 +760,6 @@ Object.assign(BUILDERS, {
     cone(gb, 0, 0.35, 0, 2.0, 4.6, 10, col);
     cylinder(gb, 0, 0.45, 1.1, 0, 2.02, 10, '#8f3df2', 1.7);
     gb.box(-0.6, 0.5, 1.7, 0.6, 1.1, 2.1, '#ffd23e'); gb.box(-0.35, 0.6, 1.75, 0.35, 1.0, 2.15, '#2a2438');
-    void glow;
   },
   cauldron(gb, glow, c) {
     const col = c || '#2a2a33';
@@ -822,7 +819,7 @@ const mat4 = new THREE.Matrix4();
 const q = new THREE.Quaternion();
 const up = new THREE.Vector3(0, 1, 0);
 
-export function decoMatrix(d) {
+function decoMatrix(d) {
   q.setFromAxisAngle(up, d.ry || 0);
   return mat4.compose(new THREE.Vector3(d.x, d.y, d.z), q, new THREE.Vector3(d.s, d.s, d.s)).clone();
 }
@@ -891,4 +888,3 @@ export function buildDecoMesh(d, material, glowMaterial) {
   return g;
 }
 
-export { DECO_COLORS };

@@ -5,12 +5,10 @@ import { Track } from './track.js';
 import { TrackView } from './trackMesh.js';
 import { createCar } from './carModel.js';
 import {
-  CATEGORIES, CATALOG, COLOR_CHOICES, PRESETS, DEFAULT_LOADOUT, sanitizeLoadout, itemCost, itemsOf,
+  CATALOG, COLOR_CHOICES, PRESETS, sanitizeLoadout,
 } from './cosmetics.js';
 import { profile, saveProfile, owns, missingItems, totalCost, buy, setLoadout } from './profile.js';
 import { $, esc } from './ui.js';
-
-const LEAD = { body: 'Carrosserie', led: 'LED', decal: 'Dessin', ornament: 'Ornement', spoiler: 'Aileron', wheels: 'Roues' };
 
 export class GarageSession {
   constructor(app) {
@@ -229,4 +227,3 @@ export class GarageSession {
   }
 }
 
-export { CATEGORIES, DEFAULT_LOADOUT, itemCost, itemsOf, LEAD };

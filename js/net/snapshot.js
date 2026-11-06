@@ -10,8 +10,8 @@
 import { DT } from '../constants.js';
 
 export const SNAPSHOT_BYTES = 38;
-export const SNAP_VERSION = 1;
-export const VEHICLES = ['car', 'moto', 'boat', 'glider'];
+const SNAP_VERSION = 1;
+const VEHICLES = ['car', 'moto', 'boat', 'glider'];
 export const F_FINISHED = 1, F_BOOST = 2, F_GROUNDED = 4;
 
 const clamp16 = (v) => Math.max(-32767, Math.min(32767, Math.round(v)));

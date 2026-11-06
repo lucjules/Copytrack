@@ -15,9 +15,9 @@ import { toCloud, fromCloud, mergeSaves, sameData, pickSynced, withoutGhosts, is
 import { reloadProfile } from './profile.js';
 
 // Domaine technique des adresses (doit être le même que dans supabase/etape4-comptes.sql).
-export const ACCOUNT_EMAIL_DOMAIN = 'accounts.copytrack.invalid';
-export const FORBIDDEN_NAMES = ['player', 'pilote'];
-export const MAX_CLOUD_BYTES = 6_000_000;     // au-delà, les fantômes enregistrés ne partent pas dans le cloud
+const ACCOUNT_EMAIL_DOMAIN = 'accounts.copytrack.invalid';
+const FORBIDDEN_NAMES = ['player', 'pilote'];
+const MAX_CLOUD_BYTES = 6_000_000;     // au-delà, les fantômes enregistrés ne partent pas dans le cloud
 
 export const accountEmail = (name) => String(name).trim().toLowerCase() + '@' + ACCOUNT_EMAIL_DOMAIN;
 

@@ -6,7 +6,7 @@ import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, surfaceRule, flagAllow
 import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from './families.js';
 import { retypePlacement } from './tileInfo.js';
 import { Track, DECORS } from './track.js';
-import { TrackView, buildTileMesh, SURFACE_STYLE, tint, THEME_SWATCH } from './trackMesh.js';
+import { TrackView, buildTileMesh, tint, THEME_SWATCH } from './trackMesh.js';
 import { buildDecoMesh, safeUrl } from './decos.js';
 import { isObstacle } from './obstacles.js';
 import { DECO_CATS, DECO_LABELS, DECO_COLORS, DECO_PACK_ICONS } from './decoData.js';
@@ -104,9 +104,8 @@ const svg = (inner) => `<svg viewBox="0 0 48 48">${inner}</svg>`;
 const ROAD = '#3c4160', RAIL = '#ff6b57', LINE = '#efe6d6';
 const straightBase = (road = ROAD, rail = RAIL) => `<rect x="10" y="2" width="28" height="44" fill="${road}"/><rect x="8" y="2" width="2" height="44" fill="${rail}"/><rect x="38" y="2" width="2" height="44" fill="${rail}"/>`;
 const loopIcon = (mir, col, turns = 1, w = 9) => {
-  const x0 = mir > 0 ? 14 : 34, x1 = mir > 0 ? 34 : 14;
+  const x0 = mir > 0 ? 14 : 34;
   const r = turns > 1 ? `M${x0} 46V32a8 8 0 1 ${mir > 0 ? 1 : 0} 16 0a8 8 0 1 ${mir > 0 ? 1 : 0} -16 0` : `M${x0} 46V30a10 10 0 1 ${mir > 0 ? 1 : 0} ${mir > 0 ? 20 : -20} 0V2`;
-  void x1;
   return svg(`<path d="${r}" stroke="${ROAD}" stroke-width="${w}" fill="none"/><path d="${r}" stroke="${col}" stroke-width="2" fill="none"/>`);
 };
 // Petit nombre d'inclinaison dans le coin d'une icône.
@@ -126,7 +125,7 @@ const decIcon = (big, n) => incIcon(big, n).replace('stroke="#ffbf3c"', 'stroke=
 // Transition d'orientation : coupe de la route avant (à gauche) et après (à droite) ; 0 sol, 1 mur gauche, 2 mur droit, 3 plafond.
 const ORI_BAR = { 0: 'M6 40h14', 1: 'M6 14v26', 2: 'M20 14v26', 3: 'M6 14h14' };
 const rollIcon = (a, b, long) => svg(`<rect x="2" y="6" width="44" height="36" rx="5" fill="#2a2f4e"/><path d="${ORI_BAR[a]}" stroke="#36e9ff" stroke-width="4" stroke-linecap="round"/><path d="${ORI_BAR[b]}" stroke="#ffbf3c" stroke-width="4" stroke-linecap="round" transform="translate(22 0)"/><path d="M22 26h4M24.5 23.5l2.5 2.5-2.5 2.5" stroke="#efe6d6" stroke-width="2" fill="none"/>${long ? '<text x="24" y="46" font-size="9" fill="#efe6d6" font-family="sans-serif" text-anchor="middle">2×2</text>' : ''}`);
-export const ICONS = {
+const ICONS = {
   steep4: svg(`<rect x="10" y="2" width="28" height="44" fill="#3c4160"/><rect x="8" y="2" width="2" height="44" fill="#ff6b57"/><rect x="38" y="2" width="2" height="44" fill="#ff6b57"/><path d="M16 14l8-7 8 7M16 24l8-7 8 7M16 34l8-7 8 7M16 44l8-7 8 7" stroke="#ff6b57" stroke-width="3" fill="none"/>${numTag(4)}`),
   hugecurve: svg(`<path d="M2 48 A46 46 0 0 1 48 2 L48 14 A34 34 0 0 0 14 48Z" fill="#3c4160"/><path d="M2 48 A46 46 0 0 1 48 2" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M14 48 A34 34 0 0 1 48 14" stroke="#ff6b57" stroke-width="2.5" fill="none"/>`),
   crv05: crvIcon('½'), crv1: crvIcon(1), crv2: crvIcon(2), crv4: crvIcon(4),
@@ -215,7 +214,7 @@ const fillBase = (t) => (t.startsWith('fill-surf:') ? t.slice(5) : t.startsWith(
 const toFill = (t) => (t.startsWith('surf:') ? 'fill-' + t : PIECES[t] ? 'fill-piece:' + t : null);
 const isStartFinish = (type) => { const sp = PIECES[type] && PIECES[type].special; return sp === 'start' || sp === 'finish'; };
 
-export function pieceLabel(id) {
+function pieceLabel(id) {
   if (isFill(id)) return 'Pot de peinture · ' + pieceLabel(fillBase(id));
   if (id === 'erase') return 'Gomme';
   if (id === 'select') return 'Sélection';
@@ -1920,7 +1919,7 @@ export class EditorSession {
     if (input.act('ed.grid')) { this.showGrid = !this.showGrid; this.app.ui.flash(this.showGrid ? 'Grille' : 'Sans grille', 1.2); }
     if (input.act('ed.help')) { this.app.editorHelp(); return; }
     if (input.act('ed.test')) { if (shift) this.testHere(); else this.test(); return; }
-    for (const p of [...PALETTE_ORDER, ...TOOLS]) if (p.key && p.id !== 'fill' && input.hit(p.key)) this.setTool(p.id);
+    for (const t of TOOLS) if (t.key && t.id !== 'fill' && input.hit(t.key)) this.setTool(t.id);
 
     // Déplacement avec les touches de conduite
     if (!input.down('ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight')) {
@@ -2238,4 +2237,3 @@ const DECO_ICON = {
   xmasTree: '🎄', snowman: '⛄', gift: '🎁', candyCane: '🍭', xmasStar: '⭐', wreath: '🎍', sleigh: '🛷', reindeer: '🦌', gingerHouse: '🍪',
   pumpkin: '🎃', ghost: '👻', tombstone: '🪦', bats: '🦇', witchHat: '🧙', cauldron: '🫕', spookyTree: '🌳', hauntedHouse: '🏚', skull: '💀',
 };
-void SURFACE_STYLE;

@@ -154,8 +154,6 @@ export function withTrait(fam, traits, traitId, value) {
   return best;
 }
 
-// Famille dont on affiche la fiche dans la palette pour un outil donné (type concret ou id de famille).
-export const FAMILY_DEFAULT = { straight: 'straight', turn: 'curve', courbe: 'crv1', roll: 'tr01s', loop: 'loop' };
 
 // Pièces concrètes qu'on ne propose plus telles quelles dans la palette (remplacées par une famille ou une option).
 export const REPLACED_BY_OPTION = new Set(['checkpoint', 'cpRing', 'cpCurve']);

@@ -108,7 +108,7 @@ export const MOTO = {
 };
 
 // Bateau (plaque bateau) : rapide sur l'eau, glisse un peu, se traîne sur la route.
-export const BOAT = {
+const BOAT = {
   ...CAR,
   accel: 8,
   maxSpeed: 85,
@@ -124,7 +124,7 @@ export const BOAT = {
 
 // Voiture-deltaplane (plaque deltaplane) : une voiture un peu plus lourde au sol,
 // qui plane en l'air et s'y dirige en inclinant l'aile.
-export const GLIDER = {
+const GLIDER = {
   ...CAR,
   accel: 8,
   maxSpeed: 90,
@@ -133,7 +133,7 @@ export const GLIDER = {
 const SPECS = { car: CAR, moto: MOTO, boat: BOAT, glider: GLIDER };
 
 // Vol plané : portance proportionnelle à v² et à l'incidence, traînée, virage incliné.
-export const GLIDE = {
+const GLIDE = {
   lift: 0.021,         // portance (m/s² par (m/s)²) à incidence de vol
   liftMaxG: 1.6,       // portance maxi (en g)
   drag: 0.0009,        // traînée de forme
@@ -147,7 +147,7 @@ export const GLIDE = {
 };
 // Route sur le côté (pièces 90°) : appui aérodynamique (m/s² par (m/s)²) ajouté à l'appui réel. Pour tenir contre la gravité sur un
 // plan vertical il faut environ 21 m/s (75 km/h) ; en dessous, la voiture glisse le long du plan et tombe par le bord.
-export const SIDE_AERO = 0.03;
+const SIDE_AERO = 0.03;
 // Compensation de la glissade sur un plan vertical (m/s² par (m/s)²) : g / 22² => tenue complète à partir de 22 m/s (80 km/h).
 export const SIDE_HOLD = 25 / (30 * 30);
 // 0.9.4 : vitesse minimale sur un mur. En dessous (108 km/h), la gravité reprend toute la paroi ; si l'élan manque encore SIDE_GRACE secondes
@@ -213,7 +213,7 @@ export class CarPhysics {
     this.F = {}; this.F0 = {}; this.F2 = {}; this.F3 = {};
     this.ev = {
       wall: 0, land: 0, boostHit: false, bounce: false, loopIn: false, loopOut: false, loopFall: false,
-      moto: false, gravity: false, miniTurbo: 0, landQ: '', sink: false, ring: false, flip: false, glass: false, spring: false, reverse: false, cut: false, spike: false, shock: 0,
+      transform: false, gravity: false, miniTurbo: 0, landQ: '', sink: false, ring: false, flip: false, glass: false, spring: false, reverse: false, cut: false, spike: false, shock: 0,
     };
     this.rib = null;
     this.vehicle = 'car';
@@ -232,10 +232,6 @@ export class CarPhysics {
   get k() {
     return SPECS[this.vehicle] || CAR;
   }
-
-  // Compatibilité : « moto » est un des véhicules possibles.
-  get moto() { return this.vehicle === 'moto'; }
-  set moto(v) { this.vehicle = v ? 'moto' : 'car'; }
 
   // Hors piste : sur le terrain, ou perdue dans le ciel en gravité inversée.
   get offTrack() {
@@ -352,7 +348,7 @@ export class CarPhysics {
       if (this.plateLock !== mod) {
         this.plateLock = mod;
         this.vehicle = this.vehicle === PLATES[mod] ? 'car' : PLATES[mod];
-        this.ev.moto = true;
+        this.ev.transform = true;
       }
     } else this.plateLock = '';
   }
@@ -445,7 +441,7 @@ export class CarPhysics {
     if (this.graceT > 0) this.graceT -= dt;
     ev.wall = 0; ev.land = 0; ev.boostHit = false; ev.bounce = false;
     if (this.hazardGrace > 0) this.hazardGrace = Math.max(0, this.hazardGrace - dt);
-    ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.moto = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false; ev.glass = false; ev.glassTile = null; ev.spring = false; ev.reverse = false; ev.cut = false; ev.spike = false; ev.shock = 0; ev.wallOff = false;
+    ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.transform = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false; ev.glass = false; ev.glassTile = null; ev.spring = false; ev.reverse = false; ev.cut = false; ev.spike = false; ev.shock = 0; ev.wallOff = false;
     this.prev.x = p.x; this.prev.y = p.y; this.prev.z = p.z;
     this.prevYaw = this.yaw;
 
@@ -637,13 +633,9 @@ export class CarPhysics {
         v.x -= m.nx * a; v.y -= m.ny * a; v.z -= m.nz * a;
       }
     }
-    // Petit défaut de raccord (pente douce, bord d'un virage incliné, raccord doux pris à très grande vitesse) : si la normale de la route ne
-    // tourne que de quelques degrés d'un pas à l'autre, la voiture suit la route au lieu de décoller. Un vrai décrochement (pente nette, tremplin,
-    // tremplin, virage incliné raide : plus de ~12°) la fait toujours décoller.
-    // 0.9.11 : plus d'exemption d'angle. Avant, un défaut de raccord de moins de 12° (pente, bosse, sommet de côte) ne faisait JAMAIS décoller, à
-    // n'importe quelle vitesse : la voiture restait collée à la route comme avec un aimant. Maintenant seule compte la vitesse avec laquelle la
-    // route « tombe » sous la voiture (vn = vitesse × sinus de l'angle de raccord) : un raccord doux pris lentement reste collé, le même pris à
-    // 300 km/h décolle, comme dans la vraie vie. Un vol de moins de 0,35 s ne coûte rien à la réception.
+    // Décollage : seule compte la vitesse avec laquelle la route « tombe » sous la voiture (vn = vitesse × sinus de l'angle de raccord), sans
+    // exemption d'angle. Un raccord doux (pente, bosse, sommet de côte) pris lentement reste collé à la route, le même pris à 300 km/h décolle.
+    // Un vol de moins de 0,35 s ne coûte rien à la réception.
     const stick = vn < launch;
     if (this.grounded && gap < snap && gap > -CAR.step && stick) {
       p.y = s.h;
@@ -951,10 +943,8 @@ export class CarPhysics {
       const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
       const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
       if (![wx, wy, wz, vwx, vwy, vwz].every(Number.isFinite)) continue;
-      // Séparer les corps en contact, mais ne pas ré-appliquer un choc si la voiture
-      // s'éloigne déjà de l'obstacle. L'ancien code ajoutait shockKick à chaque pas
-      // tant que les volumes se chevauchaient : obstacles mobiles = impulsions répétées,
-      // tremblements, catapultage et parfois état physique instable.
+      // Séparer les corps en contact, mais ne donner l'impulsion du choc (shockKick) que si la voiture ne s'éloigne pas déjà de l'obstacle :
+      // sinon un obstacle mobile qui chevauche la voiture la pousserait à chaque pas (tremblements, catapultage).
       const correction = Math.min(pen * k, 2.5);
       p.x += wx * correction; p.y += wy * correction; p.z += wz * correction;
       const vn = (v.x - vwx) * wx + (v.y - vwy) * wy + (v.z - vwz) * wz;
@@ -1300,7 +1290,7 @@ export class CarPhysics {
       this.plateLock = 'spring'; this.ev.spring = true;
       R.vd += ((tileParam(tile) - 100) / 100) * CAR.spring * R.dir;
     } else if (PLATES[mod]) {
-      if (this.plateLock !== mod) { this.plateLock = mod; this.vehicle = this.vehicle === PLATES[mod] ? 'car' : PLATES[mod]; this.ev.moto = true; }
+      if (this.plateLock !== mod) { this.plateLock = mod; this.vehicle = this.vehicle === PLATES[mod] ? 'car' : PLATES[mod]; this.ev.transform = true; }
     } else this._timedMods(mod);
     if (!PLATES[mod] && mod !== 'spring' && mod !== 'flip') this.plateLock = '';
     R.vs += beltE1 - this.beltS;   // même prise de vitesse en montant sur un tapis de ruban

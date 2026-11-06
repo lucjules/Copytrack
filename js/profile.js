@@ -3,7 +3,7 @@
 // elle-même, compressée, à copier / coller ou à télécharger sous forme de fichier.
 import { getJSON, setJSON, dumpAll, restoreAll } from './storage.js';
 import { DEFAULT_LOADOUT, itemCost, sanitizeLoadout, itemsOf } from './cosmetics.js';
-import { b64encode, b64decode, hashString } from './track.js';
+import { hashString } from './track.js';
 
 const ID_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -193,5 +193,4 @@ export function applySave(obj, mode = 'replace') {
   return reloadProfile();
 }
 
-export { b64encode, b64decode };
 

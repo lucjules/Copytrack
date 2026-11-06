@@ -15,14 +15,13 @@ export const OBST = {
   sweeper:   { label: 'Balayeur', type: 'bar', period: 4, len: 9, r: 0.6, y: 1.2 },
   bumper:    { label: 'Bumper', type: 'post', period: 0, r: 1.8, h: 2.2, kick: 18 },
 };
-export const OBST_KINDS = Object.keys(OBST);
 export const isObstacle = (k) => !!OBST[k];
 
 const TAU = Math.PI * 2;
 
 // Hauteur des piques escamotables (0 = rentrées, 1 = sorties) : 1,5 s dehors, 1,5 s dedans,
 // avec des transitions rapides.
-export function spikeLevel(def, t) {
+function spikeLevel(def, t) {
   if (!def.period) return 1;
   const u = ((t / def.period) % 1 + 1) % 1;
   const ramp = 0.07;
@@ -62,14 +61,6 @@ export function obstacleLocal(d, t, out) {
   return out;
 }
 
-// Passage repère local -> monde (rotation ry autour de y, échelle s, position).
-export function toWorld(d, lx, ly, lz, out) {
-  const c = Math.cos(d.ry || 0), s = Math.sin(d.ry || 0), k = d.s || 1;
-  out.x = d.x + (lx * c + lz * s) * k;
-  out.y = d.y + ly * k;
-  out.z = d.z + (-lx * s + lz * c) * k;
-  return out;
-}
 
 export function toLocalObs(d, wx, wy, wz, out) {
   const c = Math.cos(d.ry || 0), s = Math.sin(d.ry || 0), k = d.s || 1;

@@ -8,8 +8,8 @@ import { dailyChallenge } from './daily.js';
 import { GhostRunner, decodeInputs } from './replay.js';
 import { PHYS_VER } from './version.js';
 
-export const MAX_STEPS = 120 * 600;          // 10 minutes de course au plus
-export const MAX_INPUTS_CHARS = 400000;
+const MAX_STEPS = 120 * 600;          // 10 minutes de course au plus
+const MAX_INPUTS_CHARS = 400000;
 
 // Retrouve le circuit correspondant à une clé de classement.
 //   b-<id>-<empreinte>   circuit intégré (l'empreinte garantit la même version)

@@ -3,7 +3,7 @@
 import * as THREE from './vendor/three.module.min.js';
 
 const colorCache = new Map();
-export function lin(hex) {
+function lin(hex) {
   let c = colorCache.get(hex);
   if (!c) {
     const col = new THREE.Color(hex);

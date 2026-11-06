@@ -1,6 +1,6 @@
 // Interface DOM : écrans, HUD, fenêtres modales, notifications.
 import { formatTime } from './storage.js';
-import { MEDALS, medalFor } from './race.js';
+import { MEDALS } from './race.js';
 import { keyLabel } from './input.js';
 import { profile } from './profile.js';
 import { MessageGate, PRIO } from './hudMessages.js';
@@ -241,4 +241,3 @@ export class UI {
   }
 }
 
-export { medalFor };

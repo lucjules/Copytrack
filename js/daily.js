@@ -45,7 +45,7 @@ function tryBuild(tokens, decor) {
 }
 
 // Course du pilote automatique ; renvoie le temps ou null.
-export function botTime(track, latK = 0.8) {
+function botTime(track, latK = 0.8) {
   const phys = new CarPhysics(track), logic = new RaceLogic(track);
   placeAtStart(phys, logic);
   const bot = new Autopilot(track.path, { latLimit: CAR.latGrip * latK, brakeDecel: 36 });

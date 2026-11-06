@@ -10,7 +10,7 @@ import { CELL } from './constants.js';
 import { PIECES } from './pieces.js';
 import { buildDecoInto } from './decos.js';
 
-export const THEMES = {
+const THEMES = {
   desert: {
     label: 'Désert crépuscule',
     sky: { top: '#241a4a', mid: '#7a4a8f', horizon: '#ffb07a', sun: '#fff0c8', aurora: 0, stars: 0 },
@@ -490,7 +490,7 @@ export class Scenery {
   }
 
   // Reconstruit le terrain et le décor autour d'un circuit.
-  setTrack(track, seedStr = 'shardway', opts = {}) {
+  setTrack(track, seedStr = 'copytrack', opts = {}) {
     this._last = [track, seedStr, opts];
     this.setTheme(opts.theme || track.decor || 'desert');
     const T = this.theme;
@@ -725,9 +725,8 @@ export class Scenery {
     const trunk = gb.build();
     const trees = low ? 50 : 100;
     const caps = new THREE.IcosahedronGeometry(1, 1);
-    const trunkMesh = this._instanced(trunk, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }), trees,
+    this._instanced(trunk, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }), trees,
       (put) => scatter(trees, (x, y, z) => { const s = 0.8 + rand() * 1.8; put(x, y, z, 0, rand() * 6, 0, s, s * (0.9 + rand() * 0.6), s); }));
-    void trunkMesh;
     for (const [col, n] of [['#2dffb0', 0.4], ['#8f5bff', 0.35], ['#ff4fd8', 0.25]]) {
       const cnt = Math.round(trees * n);
       this._instanced(caps, new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.5, flatShading: true, roughness: 0.5 }), cnt,

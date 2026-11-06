@@ -836,7 +836,6 @@ class App {
         list.appendChild(b);
       }
     }
-    void s;
   }
 
   _setKey(id, slot, code, tab = null) {
@@ -1860,8 +1859,7 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
     const identity = await runWelcome();
     // 2. Le jeu, avec la progression du bon joueur (la portée de stockage est déjà choisie).
     const app = new App(identity);
-    window.shardway = app;
-    window.copytrack = app;
+    window.copytrack = app;      // accès de débogage et des tests navigateur (tools/test-browser.mjs)
     app.start();
     if (identity.kind === 'account') account.sync().catch(() => { /* hors ligne : reprise plus tard */ });
   } catch (err) {

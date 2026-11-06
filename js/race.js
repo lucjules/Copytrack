@@ -376,7 +376,7 @@ export class RaceSession {
       app.input.rumble(0.9, 0.6, 220);
       this._say(MSG.badLanding);
     }
-    if (ev.moto) {
+    if (ev.transform) {
       const veh = this.phys.vehicle;
       this.car.setVehicle(veh);
       app.audio.transform();
@@ -1025,4 +1025,3 @@ export class RaceSession {
   }
 }
 
-export { formatTime, UP };

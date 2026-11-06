@@ -19,7 +19,7 @@ export class Emitter {
   emit(ev, ...args) { for (const f of [...(this._h.get(ev) || [])]) { try { f(...args); } catch (e) { console.error(e); } } }
 }
 
-export const JOIN_TIMEOUT = 6000;
+const JOIN_TIMEOUT = 6000;
 
 // ---- Supabase Realtime (protocole Phoenix, version 1.0.0 : messages JSON {topic, event, payload, ref}) ----------------
 export class SupabaseSignaling extends Emitter {

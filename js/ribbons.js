@@ -286,7 +286,7 @@ export function frameLocal(rib, u, F) {
 
 // Points de la ligne centrale, en coordonnées locales [x, y, z, drapeau],
 // de l'entrée naturelle (sud) vers la sortie. drapeau = 1 sur un ruban.
-export function centerlineLocal(tile, n) {
+function centerlineLocal(tile, n) {
   const p = PIECES[tile.t];
   const half = p.size * HALF;
   const base = baseY(tile);

@@ -1,7 +1,7 @@
-// Dimensions du monde (en mètres).
-// v1.1 : pistes élargies (14 -> 18 m) et cases agrandies (20 -> 24 m).
-// Les circuits étant stockés en positions de grille, tous les anciens
-// circuits sont convertis automatiquement.
+// Dimensions du monde (en mètres) : case de 32 m, route de 24 m de large, niveau de 6,4 m.
+// Les circuits sont stockés en positions de grille et les pièces sont écrites en proportion de la case (voir pieces.js) :
+// un changement d'échelle (la 0.9.11 est passée de 24 à 32 m) agrandit donc tous les circuits sans les convertir. Il impose en revanche de
+// repasser sur chaque valeur « en mètres » écrite en dur ailleurs ; tools/test-scale.mjs en vérifie quelques-unes par homothétie.
 export const CELL = 32;            // taille d'une case de grille
 export const HALF = CELL / 2;
 export const LEVEL_H = 6.4;        // hauteur d'un niveau (pentes identiques à la v1.0)

@@ -11,8 +11,8 @@ export const ONLINE = {
 };
 
 // Limites de la base (voir supabase/etape1-communaute.sql).
-export const MAX_PUBLISH_CHARS = 100000;
-export const MAX_PUBLISH_PIECES = 5000;
+const MAX_PUBLISH_CHARS = 100000;
+const MAX_PUBLISH_PIECES = 5000;
 
 export class OnlineError extends Error {
   constructor(message, code = '') { super(message); this.code = code; }
@@ -92,7 +92,7 @@ class OnlineClient {
       throw new OnlineError('Serveur injoignable (connexion internet ?).', 'offline');
     }
     const text = await res.text();
-    let data = null;
+    let data;
     try { data = text ? JSON.parse(text) : null; } catch { data = text; }
     if (!res.ok) throw explain(res.status, data);
     return data;

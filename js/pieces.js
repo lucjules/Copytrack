@@ -92,14 +92,12 @@ export const PIECES = {
   crv1:       { label: 'Courbe · inclinaison 1', kind: 'line', size: 1, rise: 1, curv: 1 },
   crv2:       { label: 'Courbe · inclinaison 2', kind: 'line', size: 1, rise: 2, curv: 1 },
   crv4:       { label: 'Courbe · inclinaison 4', kind: 'line', size: 1, rise: 4, curv: 1 },
-  // Pièces à 90° (0.9.2) : la route bascule autour de son axe jusqu'à un plan VERTICAL (route « sur le côté »).
-  // La gravité ne change pas : à vitesse insuffisante la voiture glisse le long du plan et tombe par le bord (pas de bordures).
-  // `side` : 1 transition, 2 ligne droite (l'appui vient en partie de la vitesse, voir physics.js) ; `pivot` : côté du plan (-1 gauche, 1 droite) ;
-  // `below` : niveaux réservés SOUS la pièce (la moitié basse du plan descend de 9 m : la pièce ne se pose donc pas au niveau 0 ou 1).
-  rollL:      { label: 'Transition côté ↰', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, side: 1, pivot: -1, noRails: true },
-  rollR:      { label: 'Transition côté ↱', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, side: 1, pivot: 1, noRails: true },
-  sideL:      { label: 'Ligne droite côté ↰', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, side: 2, pivot: -1, noRails: true },
-  sideR:      { label: 'Ligne droite côté ↱', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, side: 2, pivot: 1, noRails: true },
+  // Anciennes pièces à 90° (0.9.2) : elles ne sont plus posées (Track.normalize les convertit en pièce + orientation, voir LEGACY_TILE) ; leurs
+  // définitions ne servent qu'à garder leur numéro dans PIECE_ORDER. `below` : niveaux réservés SOUS la pièce (la moitié basse du plan descend de 9 m).
+  rollL:      { label: 'Transition côté ↰', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, noRails: true },
+  rollR:      { label: 'Transition côté ↱', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, noRails: true },
+  sideL:      { label: 'Ligne droite côté ↰', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, noRails: true },
+  sideR:      { label: 'Ligne droite côté ↱', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, noRails: true },
 };
 
 // ---- 0.9.3 : pentes descendantes, raccords doux de pente, virages descendants, transitions d'orientation --------------------------
@@ -107,7 +105,7 @@ export const PIECES = {
 //   l : droite (pente constante)               i : entrée douce — plate au départ, de plus en plus raide (la pente finale vaut 2·rise / longueur)
 //   o : sortie douce — raide au départ, plate à l'arrivée   s : en S — plate aux deux bouts (raccord entre deux niveaux)
 // Une « entrée douce » de rise ½ / 1 / 2 se raccorde donc à une droite de pente 1 / 2 / 4 ; la « sortie douce » correspondante la ramène à plat.
-export const V_PROFILES = {
+const V_PROFILES = {
   l: { H: (t) => t, D: () => 1 },
   i: { H: (t) => t * t, D: (t) => 2 * t },
   o: { H: (t) => 2 * t - t * t, D: (t) => 2 - 2 * t },
@@ -225,9 +223,6 @@ export const SURFACE_ORDER = ['', 'ice', 'boost', 'bounce', 'magnet', 'drift', '
 // s'y réfèrent par numéro). « tread » et « invert » sont d'anciens doublons : on sait encore les lire, on ne les propose plus.
 export const SURFACE_CODES = ['', 'ice', 'boost', 'bounce', 'sand', 'magnet', 'mud', 'drift', 'slow', 'wind', 'gravity', 'moto', 'water', 'boat', 'glider', 'flip', 'conveyor', 'tread', 'spring', 'glass', 'powder', 'reverse', 'invert', 'cut'];
 export const SURFACE_ALIAS = { tread: 'conveyor', invert: 'reverse' };
-// Revêtements supprimés (Phase 3) : leurs numéros restent réservés dans SURFACE_CODES, et les anciens circuits qui les
-// utilisaient se lisent avec une route normale à leur place.
-export const REMOVED_SURFACES = new Set(['sand', 'mud']);
 // Plaques de transformation : véhicule obtenu (repasser sur la même plaque ramène la voiture).
 export const PLATES = { moto: 'moto', boat: 'boat', glider: 'glider' };
 
@@ -268,10 +263,10 @@ export function isRibbonKind(type) {
 }
 
 // Route « sur le côté » : roulée à 90° autour de son axe (mur gauche / droit, ou transition d'orientation). La gravité ne change pas :
-// l'appui vient de la vitesse (voir physics.js, SIDE_HOLD). Les anciens types de la 0.9.2 (side) en font partie.
+// l'appui vient de la vitesse (voir physics.js, SIDE_HOLD).
 export function isSideTile(tile) {
   const p = PIECES[tile.t];
-  return !!(tile.o || p.side || p.roll);
+  return !!(tile.o || p.roll);
 }
 
 // Une ligne ou un virage posé sur un mur (tile.o) se parcourt en mode ruban, comme une transition.
@@ -417,7 +412,7 @@ export function toLocal(tile, wx, wz, out) {
 }
 
 // Monde -> local (vecteur)
-export function toLocalVec(r, dx, dz, out) {
+function toLocalVec(r, dx, dz, out) {
   switch (r & 3) {
     case 0: out.lx = dx; out.lz = dz; break;
     case 1: out.lx = dz; out.lz = -dx; break;

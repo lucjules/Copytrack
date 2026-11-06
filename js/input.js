@@ -109,7 +109,7 @@ export function keyLabel(code) {
   return code;
 }
 
-export const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Select', 'Start', 'L3', 'R3', '↑', '↓', '←', '→', 'Home'];
+const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Select', 'Start', 'L3', 'R3', '↑', '↓', '←', '→', 'Home'];
 export function padLabel(i) {
   return i == null || i < 0 ? '—' : PAD_NAMES[i] || 'Bouton ' + i;
 }
