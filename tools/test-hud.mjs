@@ -1,9 +1,8 @@
 // Tests des messages du HUD : node tools/test-hud.mjs   (npm test)
 import assert from 'node:assert/strict';
 import { MessageGate, MSG, PRIO } from '../js/hudMessages.js';
+import { test, finish } from './harness.mjs';
 
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + e.message); } }
 const flat = (m) => (typeof m === 'function' ? null : Array.isArray(m) ? [m] : Object.values(m).flatMap(flat));
 
 test('un message moins important ne coupe pas un message important en cours', () => {
@@ -36,5 +35,4 @@ test('tous les textes sont courts (28 caractères au plus) et durent au plus 1,2
   assert.equal(MSG.fall.crest, undefined, 'le décollage n\'a plus de message');
 });
 
-if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }
-console.log('\nTous les tests du HUD passent.');
+await finish('Tous les tests du HUD passent.');

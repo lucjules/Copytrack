@@ -18,9 +18,8 @@ import { Autopilot } from '../js/autopilot.js';
 import { pickTileExact, rayToSurface } from '../js/editorPick.js';
 import { EditorSession } from '../js/editor.js';
 import { DT, CELL, HALF, LEVEL_H, ROAD_TOP, ROAD_HALF, RAIL_W, MAX_LEVEL, SURF_PHYS } from '../js/constants.js';
+import { test, finish } from './harness.mjs';
 
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 6).join('\n       ')); } }
 const IDLE = { throttle: false, brake: false, steer: 0 };
 const GAS = { throttle: true, brake: false, steer: 0 };
 function run(phys, track, seconds, inp = IDLE, each = null) {
@@ -451,5 +450,4 @@ test('PHYS_VER 25 ; un circuit avec verre, tapis, vent, eau et tunnel est rejou√
   void GhostRunner; void decodeInputs;
 });
 
-console.log(failures ? `\n${failures} test(s) en √©chec` : '\nTous les tests de la Phase 3 passent.');
-process.exit(failures ? 1 : 0);
+await finish('Tous les tests de la Phase 3 passent.');

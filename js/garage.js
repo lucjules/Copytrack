@@ -8,14 +8,15 @@ import {
   CATALOG, COLOR_CHOICES, PRESETS, sanitizeLoadout,
 } from './cosmetics.js';
 import { profile, saveProfile, owns, missingItems, totalCost, buy, setLoadout } from './profile.js';
-import { $, esc } from './ui.js';
+import { $, esc } from './dom.js';
+import { DEFAULT_DECOR } from './themes.js';
 
 export class GarageSession {
   constructor(app) {
     this.app = app;
     this.track = new Track('Garage');
     this.track.add({ t: 'platform', x: 0, z: 0, l: 0, r: 0 });
-    this.track.decor = 'desert';
+    this.track.decor = DEFAULT_DECOR;
     this.view = new TrackView(this.track, app.materials);
     app.scenery.trackGroup.add(this.view.group);
     app.scenery.setTrack(this.track, 'garage', { decor: true });

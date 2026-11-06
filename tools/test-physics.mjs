@@ -8,11 +8,7 @@ import { Track, scriptTrack } from '../js/track.js';
 import { CarPhysics, surfaceCoeffs } from '../js/physics.js';
 import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
 import { CELL } from '../js/constants.js';
-
-let failures = 0;
-function test(name, fn) {
-  try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.message).split('\n').join('\n       ')); }
-}
+import { test, finish } from './harness.mjs';
 
 // Ligne droite orientée vers -z : départ en z = 12, pièces de z = 11 à z = 2 (celles de `gaps` sont omises), arrivée en z = 1.
 // v : pièces posées à l'envers (niveau 3, gravité inversée au départ).
@@ -146,5 +142,4 @@ test('vrille et vrille retour enchaînées : jamais lâchée non plus', () => {
   assert.equal(twistDrops('start S3 TW.f S3^ TWB.f S3 finish', 60).drops, 0);
 });
 
-if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }
-console.log('\nTous les tests de physique passent.');
+await finish('Tous les tests de physique passent.');

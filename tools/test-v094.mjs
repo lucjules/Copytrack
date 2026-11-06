@@ -1,9 +1,7 @@
 // Tests de la bêta 0.9.4 (feeling « technique ») : node tools/test-v094.mjs   (npm test)
 //  accélération longue et vitesse de pointe élevée, murs punitifs, décrochage sur les murs à 90°.
 import assert from 'node:assert/strict';
-
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 5).join('\n       ')); } }
+import { test, finish } from './harness.mjs';
 
 const { Track, scriptTrack } = await import('../js/track.js');
 const { CarPhysics, CAR, MOTO, SIDE_MIN_SPEED, SIDE_GRACE } = await import('../js/physics.js');
@@ -153,5 +151,4 @@ test('le fantôme d’or (pilote automatique) finit les 66 circuits avec la nouv
   assert.deepEqual(bad, []);
 });
 
-if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }
-console.log('\nTous les tests de la bêta 0.9.4 passent.');
+await finish('Tous les tests de la bêta 0.9.4 passent.');

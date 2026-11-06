@@ -4,9 +4,7 @@
 //  2. un pilote humain imparfait (réaction, volant qui tremble, braquage moins sec) sur les 66 circuits : contacts avec les bordures par minute et taux d'arrivée.
 // Les seuils sont ceux de la 0.9.11 avec une marge ; la 0.9.10 donnait 1,1 contact par minute (26 circuits sur 66 avec au moins un contact) pour 178 arrivées sur 198.
 import assert from 'node:assert/strict';
-
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 5).join('\n       ')); } }
+import { test, finish } from './harness.mjs';
 
 const { virageStabilise, recuperation, changementDeVoie, pilotHumain, mesureHumain } = await import('./maniabilite.mjs');
 const { CELL, ROAD_HALF, ROAD_W } = await import('../js/constants.js');
@@ -91,5 +89,4 @@ test('les sprints et les speedways, les plus rapides, restent sans contact (hors
   assert.ok(touches.length <= 1, 'circuits rapides à plus d\'1 contact/min : ' + touches.map((r) => r.id + ' ' + r.contactsParMinute).join(', '));
 });
 
-console.log(failures ? `\n${failures} échec(s)` : '\nTous les tests de maniabilité passent.');
-process.exit(failures ? 1 : 0);
+await finish('Tous les tests de maniabilité passent.');

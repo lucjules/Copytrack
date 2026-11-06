@@ -1,11 +1,10 @@
 // Session de course : boucle à pas fixe, caméra, fantôme, HUD, effets.
 import * as THREE from './vendor/three.module.min.js';
-import { DT } from './constants.js';
+import { DT, OFF_TRACK_RESPAWN_S } from './constants.js';
 import { CamFlip } from './camflip.js';
 import { MSG, PRIO } from './hudMessages.js';
 import { RemoteCar } from './remoteCar.js';
-import { SEND_EVERY_STEPS } from './net/room.js';
-import { F_FINISHED, F_BOOST, F_GROUNDED } from './net/snapshot.js';
+import { SEND_EVERY_STEPS, F_FINISHED, F_BOOST, F_GROUNDED } from './net/snapshot.js';
 import { CarPhysics, frameWorld } from './physics.js';
 import { RaceLogic, placeAtStart } from './raceLogic.js';
 import { Autopilot } from './autopilot.js';
@@ -14,6 +13,7 @@ import { createCar } from './carModel.js';
 import { getRecord, saveRecord, encodeFloats, decodeFloats, formatTime, getImportedGhost } from './storage.js';
 import { profile, rewardCoins } from './profile.js';
 import { CATALOG } from './cosmetics.js';
+import { MEDALS, medalFor } from './medals.js';
 import { SkidMarks } from './skids.js';
 import { TrailRibbon } from './trail.js';
 import { InputRecorder, decodeInputs, inputAt, quantSteer, GhostRunner } from './replay.js';
@@ -29,13 +29,6 @@ const CAM_MODES = [
   { name: 'Capot', hood: true, fov: 76 },
   { name: 'Lointaine', dist: 14, height: 5.6, look: 4, lookUp: 1.6, fov: 62 },
 ];
-export const MEDALS = [
-  { id: 'cristal', label: 'Cristal' },
-  { id: 'or', label: 'Or' },
-  { id: 'argent', label: 'Argent' },
-  { id: 'bronze', label: 'Bronze' },
-];
-
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpV = new THREE.Vector3();
 const tmpV2 = new THREE.Vector3();
@@ -46,12 +39,6 @@ function lerpAngle(a, b, t) {
   while (d > Math.PI) d -= Math.PI * 2;
   while (d < -Math.PI) d += Math.PI * 2;
   return a + d * t;
-}
-
-export function medalFor(time, medals) {
-  if (!medals || time == null) return null;
-  for (const m of MEDALS) if (time <= medals[m.id] + 1e-6) return m;
-  return null;
 }
 
 export class RaceSession {
@@ -429,7 +416,7 @@ export class RaceSession {
       if (sank && this.state === 'racing') { this.groundT = 0; if (this.demo) this.restart(); else this.respawn(); return; }
       if (this.phys.offTrack) {
         this.groundT += DT;
-        if (this.groundT > 0.5) {
+        if (this.groundT > OFF_TRACK_RESPAWN_S) {
           if (this.demo) this.restart(); else { this._say(MSG.offTrack); this.respawn(); }
         }
       } else this.groundT = 0;

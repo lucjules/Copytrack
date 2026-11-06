@@ -9,10 +9,11 @@ import { GeoBuilder } from './geo.js';
 import { CELL } from './constants.js';
 import { PIECES } from './pieces.js';
 import { buildDecoInto } from './decos.js';
+import { DEFAULT_DECOR } from './themes.js';
 
-const THEMES = {
+// Exporté pour tools/test-registres.mjs : les clés doivent être exactement celles de DECORS (themes.js).
+export const THEMES = {
   desert: {
-    label: 'Désert crépuscule',
     sky: { top: '#241a4a', mid: '#7a4a8f', horizon: '#ffb07a', sun: '#fff0c8', aurora: 0, stars: 0 },
     fog: '#e79a7c', fogNear: 240, fogFar: 1150,
     sunDir: [-0.55, 0.32, -0.77], sunColor: '#ffd0a0', sunIntensity: 2.6,
@@ -23,7 +24,6 @@ const THEMES = {
     dust: '#d9c2b0',
   },
   polar: {
-    label: 'Nuit polaire',
     sky: { top: '#02040f', mid: '#0b1d42', horizon: '#2b5f84', sun: '#e3ecff', aurora: 1, stars: 1 },
     fog: '#1a3658', fogNear: 200, fogFar: 1050,
     sunDir: [0.42, 0.38, -0.82], sunColor: '#aac6ff', sunIntensity: 1.9,
@@ -34,7 +34,6 @@ const THEMES = {
     dust: '#eef6ff',
   },
   jungle: {
-    label: 'Jungle néon',
     sky: { top: '#07051f', mid: '#2a1066', horizon: '#14a38a', sun: '#d7c8ff', aurora: 0, stars: 0.8 },
     fog: '#103a38', fogNear: 120, fogFar: 760,
     sunDir: [-0.35, 0.55, -0.75], sunColor: '#b9a3ff', sunIntensity: 1.7,
@@ -45,7 +44,6 @@ const THEMES = {
     dust: '#8ff5c8',
   },
   city: {
-    label: 'Ville futuriste',
     sky: { top: '#03040f', mid: '#241048', horizon: '#ff3d8a', sun: '#ffd7f0', aurora: 0, stars: 0.5 },
     fog: '#2a1038', fogNear: 160, fogFar: 900,
     sunDir: [0.5, 0.25, -0.8], sunColor: '#ff9ad0', sunIntensity: 1.5,
@@ -56,7 +54,6 @@ const THEMES = {
     dust: '#b9a8ff',
   },
   volcano: {
-    label: 'Volcan',
     sky: { top: '#12060a', mid: '#3a0f12', horizon: '#ff5a2a', sun: '#ffb27a', aurora: 0, stars: 0.25, embers: 1 },
     fog: '#3b1612', fogNear: 150, fogFar: 880,
     sunDir: [0.3, 0.42, -0.85], sunColor: '#ff9a62', sunIntensity: 1.9,
@@ -68,7 +65,6 @@ const THEMES = {
     dust: '#8a7a78',
   },
   orbit: {
-    label: 'Station orbitale',
     sky: { top: '#010108', mid: '#050722', horizon: '#141a46', sun: '#ffffff', aurora: 0, stars: 1.3, planet: 1 },
     fog: '#0b0f2a', fogNear: 320, fogFar: 1700,
     sunDir: [0.6, 0.45, -0.66], sunColor: '#f2f4ff', sunIntensity: 2.4,
@@ -82,7 +78,6 @@ const THEMES = {
   },
   // 0.9
   caves: {
-    label: 'Canyon de cristal',
     sky: { top: '#030208', mid: '#0d0818', horizon: '#241338', sun: '#000000', aurora: 0, stars: 0, cave: 1 },
     fog: '#160d24', fogNear: 90, fogFar: 640,
     sunDir: [0.2, 0.9, -0.3], sunColor: '#c4a8ff', sunIntensity: 1.3,
@@ -93,7 +88,6 @@ const THEMES = {
     dust: '#c9b8ff',
   },
   sky: {
-    label: 'Ville dans les nuages',
     sky: { top: '#2f7fe0', mid: '#86c4f4', horizon: '#f2f8ff', sun: '#fffbe6', aurora: 0, stars: 0, clouds: 1 },
     fog: '#e6f1ff', fogNear: 300, fogFar: 1700,
     sunDir: [-0.4, 0.7, -0.6], sunColor: '#fff3dc', sunIntensity: 2.9,
@@ -104,7 +98,6 @@ const THEMES = {
     dust: '#ffffff',
   },
   reef: {
-    label: 'Fonds marins',
     sky: { top: '#01142a', mid: '#043a62', horizon: '#0d7393', sun: '#c8f6ff', aurora: 0, stars: 0, water: 1 },
     fog: '#0b4f6e', fogNear: 70, fogFar: 560,
     sunDir: [0.25, 0.9, -0.35], sunColor: '#a8ecff', sunIntensity: 2.1,
@@ -115,7 +108,6 @@ const THEMES = {
     dust: '#bff4ff',
   },
   factory: {
-    label: 'Usine mécanique',
     sky: { top: '#15100c', mid: '#46301f', horizon: '#d08040', sun: '#ffd0a0', aurora: 0, stars: 0, embers: 0.35, skyline: 1 },
     fog: '#5a3e2c', fogNear: 150, fogFar: 860,
     sunDir: [0.5, 0.35, -0.8], sunColor: '#ffb070', sunIntensity: 2.1,
@@ -127,7 +119,6 @@ const THEMES = {
     dust: '#d8b890',
   },
   isles: {
-    label: 'Archipel tropical',
     sky: { top: '#2a7fd8', mid: '#6cc0f0', horizon: '#ffe3b0', sun: '#fff7d6', aurora: 0, stars: 0 },
     fog: '#bfe6f2', fogNear: 260, fogFar: 1500,
     sunDir: [-0.45, 0.6, -0.65], sunColor: '#fff0d0', sunIntensity: 3.0,
@@ -411,7 +402,7 @@ export class Scenery {
 
     this.decor = null;
     this.terrain = null;
-    this.setTheme('desert');
+    this.setTheme(DEFAULT_DECOR);
   }
 
   // q : un profil de js/quality.js (ou son nom). Règle ombres, ciel, fond, environnement ; refait le terrain et le décor si besoin.
@@ -458,8 +449,8 @@ export class Scenery {
   }
 
   setTheme(id) {
-    const T = THEMES[id] || THEMES.desert;
-    this.themeId = THEMES[id] ? id : 'desert';
+    const T = THEMES[id] || THEMES[DEFAULT_DECOR];
+    this.themeId = THEMES[id] ? id : DEFAULT_DECOR;
     this.theme = T;
     const u = this.sky.material.uniforms;
     u.top.value.set(T.sky.top);
@@ -492,7 +483,7 @@ export class Scenery {
   // Reconstruit le terrain et le décor autour d'un circuit.
   setTrack(track, seedStr = 'copytrack', opts = {}) {
     this._last = [track, seedStr, opts];
-    this.setTheme(opts.theme || track.decor || 'desert');
+    this.setTheme(opts.theme || track.decor || DEFAULT_DECOR);
     const T = this.theme;
     const ceiling = track.tiles.some((t) => t.v);
     this.under.color.set(T.hemi[0]);

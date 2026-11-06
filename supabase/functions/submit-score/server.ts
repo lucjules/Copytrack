@@ -11,6 +11,7 @@
 // La clé secrète (SUPABASE_SERVICE_ROLE_KEY) est fournie automatiquement par Supabase
 // à la fonction : elle n'apparaît nulle part dans le jeu.
 import { verifyRun } from '../../../js/verify.js';
+import { MAX_TRACK_CODE_CHARS } from '../../../js/constants.js';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -55,7 +56,7 @@ Deno.serve(async (req) => {
     if (typeof trackKey !== 'string' || trackKey.length > 80 || typeof inputs !== 'string' || typeof time !== 'number' || typeof physVer !== 'number') {
       return json(400, { error: 'Requête invalide.' });
     }
-    if (typeof code !== 'string' || code.length > 400000) return json(400, { error: 'Code de circuit invalide.' });
+    if (typeof code !== 'string' || code.length > MAX_TRACK_CODE_CHARS) return json(400, { error: 'Code de circuit invalide.' });
 
     // 3. Rejeu de la course avec le code du jeu.
     const res = verifyRun({ trackKey, code, inputs, time, physVer });

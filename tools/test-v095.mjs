@@ -2,9 +2,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 5).join('\n       ')); } }
+import { test, finish } from './harness.mjs';
 
 const { VERSION } = await import('../js/version.js');
 const { BUILTIN_TRACKS, buildBuiltin } = await import('../js/tracks.js');
@@ -90,5 +88,4 @@ test('palette de l’éditeur repliable, choix mémorisé', () => {
   assert.match(css, /\.ed-palette\.folded/);
 });
 
-console.log(failures ? `\n${failures} test(s) en échec.` : '\nTous les tests de la bêta 0.9.5 passent.');
-process.exit(failures ? 1 : 0);
+await finish('Tous les tests de la bêta 0.9.5 passent.');

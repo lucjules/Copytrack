@@ -15,10 +15,10 @@
 //  ring              : anneau flottant (turbo ou checkpoint aérien)
 // Une pièce line/arc peut aussi être posée « à l'envers » (drapeau v) : elle
 // devient alors un ruban au plafond.
-import { CELL, HALF, LEVEL_H, ROAD_TOP, LOOP_R, LOOP_LANE, ROAD_HALF, RAIL_W, SURF_PHYS } from './constants.js';
+import { CELL, HALF, LEVEL_H, ROAD_TOP, LOOP_R, LOOP_LANE, ROAD_HALF, RAIL_W, SURF_PHYS, WORLD_SCALE } from './constants.js';
 
 // 0.9.11 : les pièces ne sont plus écrites en mètres fixes mais en proportion de la case (CELL = 24 m avant la 0.9.11, 32 m depuis) : K = 1 reproduit l'ancien monde.
-const K = CELL / 24;
+const K = WORLD_SCALE;
 
 export const PIECES = {
   straight:   { label: 'Ligne droite', kind: 'line', size: 1, rise: 0 },

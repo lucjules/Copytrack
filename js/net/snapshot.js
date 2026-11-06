@@ -9,6 +9,7 @@
 // si le paquet qui la portait s'est perdu (le canal est volontairement non fiable, pour ne jamais accumuler de retard).
 import { DT } from '../constants.js';
 
+export const SEND_EVERY_STEPS = 6;       // un paquet tous les 6 pas de 1/120 s : 20 paquets par seconde
 export const SNAPSHOT_BYTES = 38;
 const SNAP_VERSION = 1;
 const VEHICLES = ['car', 'moto', 'boat', 'glider'];

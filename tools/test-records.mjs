@@ -1,5 +1,6 @@
 // Records locaux : node tools/test-records.mjs   (npm test) — le temps et les médailles ne dépendent jamais de la place disponible.
 import assert from 'node:assert/strict';
+import { test, finish } from './harness.mjs';
 const medalFor = (t, m) => (t <= m.cristal ? 'cristal' : t <= m.or ? 'or' : null);
 
 // Faux localStorage avec un quota (en caractères).
@@ -20,8 +21,6 @@ Object.defineProperty(globalThis, 'localStorage', { value: fakeStorage(100000), 
 const wrap = (st) => new Proxy(st, { ownKeys: () => st._keys(), getOwnPropertyDescriptor: (t, k) => (st._keys().includes(k) ? { enumerable: true, configurable: true, value: st.getItem(k) } : Reflect.getOwnPropertyDescriptor(t, k)) });
 const { getRecord, saveRecord } = await import('../js/storage.js');
 
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 5).join('\n       ')); } }
 const rec = (time, big = 0, date = Date.now()) => ({ time, splits: [1, 2], ghost: 'g'.repeat(big), inputs: 'i'.repeat(big), pv: 20, date, name: 'Zoé' });
 
 console.log('Records locaux');
@@ -56,5 +55,4 @@ test('un meilleur temps en mémoire l’emporte sur un ancien record du disque',
   assert.equal(getRecord('b-k').time, 30);
 });
 
-console.log(failures ? `\n${failures} test(s) en échec` : '\nTous les tests de records passent.');
-process.exit(failures ? 1 : 0);
+await finish('Tous les tests de records passent.');

@@ -2,6 +2,7 @@
 // Le serveur Supabase est simulé en mémoire (Auth + REST) : on vérifie le CLIENT. Le SQL a son propre test
 // (tools/test-accounts-sql.sh, sur un vrai PostgreSQL).
 import assert from 'node:assert/strict';
+import { test, finish } from './harness.mjs';
 
 // ---- Faux navigateur : un « appareil » = un localStorage + un sessionStorage ------------------------------------
 class Store {
@@ -94,11 +95,6 @@ function boot(name) {
 }
 const wait = (ms = 0) => new Promise((r) => setTimeout(r, ms));
 const rec = (time, pv = 18) => ({ time, pv, splits: [], inputs: 'x', date: 1, name: 'x', ghost: null });
-
-let failures = 0;
-async function test(name, fn) {
-  try { await fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e).split('\n').slice(0, 4).join('\n       ')); }
-}
 
 console.log('Pseudos et mots de passe');
 await test('« Player » et « Pilote » sont refusés (toute casse, tous modes)', () => {
@@ -318,5 +314,4 @@ await test('circuit modifié après sa suppression : il revit ; supprimé après
   assert.equal(mergeSaves({ tracks: t(5) }, { tracks: t(5), tracksDel: { a: 10 } }).tracks.length, 0);
 });
 
-if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }
-console.log('\nTous les tests de comptes passent.');
+await finish('Tous les tests de comptes passent.');

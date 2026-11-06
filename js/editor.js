@@ -5,18 +5,19 @@ import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL, DIRS, MAX_DECOS, SURF_PHYS } from '
 import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, surfaceRule, flagAllowed, paramText } from './pieces.js';
 import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from './families.js';
 import { retypePlacement } from './tileInfo.js';
-import { Track, DECORS } from './track.js';
+import { Track } from './track.js';
+import { DECORS, DEFAULT_DECOR } from './themes.js';
 import { TrackView, buildTileMesh, tint, THEME_SWATCH } from './trackMesh.js';
 import { buildDecoMesh, safeUrl } from './decos.js';
 import { isObstacle } from './obstacles.js';
-import { DECO_CATS, DECO_LABELS, DECO_COLORS, DECO_PACK_ICONS } from './decoData.js';
+import { DECO_CATS, DECO_LABELS, DECO_COLORS, DECO_ICONS } from './decoData.js';
 import { setEditorDraft, saveMyTrack, newId } from './storage.js';
 import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, enclosedRegion, tileRegion, checkTrack } from './editorTools.js';
 import { centerlineWorld } from './ribbons.js';
 import { orientationIssues } from './joins.js';
 import { Inspector, MIRROR_TYPES, LEGACY_CP } from './inspector.js';
 import { keyLabel } from './input.js';
-import { esc } from './ui.js';
+import { esc } from './dom.js';
 import { pickObjects, pickTileExact, rayToSurface, ERASE_FILTERS, ERASE_FILTER_ORDER, LAYER_ALL, LAYER_DECO } from './editorPick.js';
 
 // Pièces proposées dans la palette. 0.9.2 : plus aucun raccourci clavier pour choisir une pièce (les outils gardent les leurs).
@@ -239,7 +240,7 @@ export class EditorSession {
       try { this.track = Track.decode(state.code); } catch { this.track = new Track('Mon circuit'); }
     } else {
       this.track = new Track(state.name || 'Mon circuit');
-      this.track.decor = state.decor || 'desert';
+      this.track.decor = state.decor || DEFAULT_DECOR;
       this.track.add({ t: 'start', x: 0, z: 0, l: 0, r: 0 });
     }
     if (state.name) this.track.name = state.name;
@@ -359,7 +360,7 @@ export class EditorSession {
     b.className = 'piece-btn';
     b.dataset.piece = id;
     b.title = label + (k ? ` (${k})` : '');
-    const icon = ICONS[id] || `<span class="emo">${id.startsWith('deco:') ? DECO_ICON[id.slice(5)] || '◆' : '◆'}</span>`;
+    const icon = ICONS[id] || `<span class="emo">${id.startsWith('deco:') ? DECO_ICONS[id.slice(5)] || '◆' : '◆'}</span>`;
     b.innerHTML = `${k ? `<span class="k">${k}</span>` : ''}${icon}<span>${label}</span>`;
     b.addEventListener('click', () => { this.setTool(id); this.app.audio.click(); });
     parent.appendChild(b);
@@ -1746,7 +1747,7 @@ export class EditorSession {
     const n = 32;
     const pts = [], cols = [];
     const y = this.levelY() + 0.05;
-    const dark = ['polar', 'jungle', 'city'].includes(this.track.decor);
+    const dark = !!(DECORS[this.track.decor] && DECORS[this.track.decor].darkGround);
     const c1 = new THREE.Color(dark ? '#5b6f9c' : '#2a1c4a'), c2 = new THREE.Color('#5ff2ff');
     for (let i = -n; i <= n; i++) {
       const c = (cx + i) % 5 === 0 ? c2 : c1;
@@ -2217,23 +2218,3 @@ export class EditorSession {
     this.previewGlow.dispose();
   }
 }
-
-const DECO_ICON = {
-  ...DECO_PACK_ICONS,
-  sign_left: '⬅', sign_right: '➡', sign_up: '⬆', sign_stop: '⛔', sign_speed: '🅿', sign_warn: '⚠', banner: '🚩',
-  cube: '⬛', sphere: '⚪', cylinder: '🛢', cone: '🔺', pyramid: '🔻', arch: '🌉',
-  wall: '🧱', wallLow: '▬', roofFlat: '⬜', roofGable: '🏠', dome: '🛖',
-  pine: '🌲', palm: '🌴', tree: '🌳', bush: '🌿', rock: '🪨', cactus: '🌵', crystal: '💎', mushroom: '🍄', flower: '🌸',
-  plaque: '🖼', shard: '✦',
-  spikes: '🔱', spikesPop: '⏫', pendulum: '🔴', hammer: '🔨', slider: '↔', sweeper: '🌀', bumper: '🟣',
-  stalagmite: '🗻', cavePillar: '🏛', crystalCluster: '💠', glowMushroom: '🍄', minecart: '🛒', lantern: '🏮',
-  cloud: '☁', balloon: '🎈', floatIsle: '🏝', windmill: '🌬', airship: '🛸', skyTower: '🗼',
-  coral: '🪸', seaweed: '🌿', fishSchool: '🐟', shell: '🐚', anchor: '⚓', jellyfish: '🪼', treasure: '💰',
-  gear: '⚙', pipe: '🔧', chimney: '🏭', crate: '📦', barrel: '🛢', crane: '🏗', warnLight: '🚨',
-  satellite: '🛰', asteroid: '☄', antenna: '📡', rocket: '🚀', planetMini: '🪐',
-  trafficCone: '🚧', tireStack: '⭕', flagPole: '🏁', grandstand: '🏟',
-  searchlight: '🔦', spotlight: '💡', lanternPost: '🏮', lanternHang: '🏮', streetLamp: '🛣',
-  plane: '✈', biplane: '🛩', helicopter: '🚁', bus: '🚌', truck: '🚚', locomotive: '🚂', sedan: '🚗', ufo: '🛸', sailboat: '⛵',
-  xmasTree: '🎄', snowman: '⛄', gift: '🎁', candyCane: '🍭', xmasStar: '⭐', wreath: '🎍', sleigh: '🛷', reindeer: '🦌', gingerHouse: '🍪',
-  pumpkin: '🎃', ghost: '👻', tombstone: '🪦', bats: '🦇', witchHat: '🧙', cauldron: '🫕', spookyTree: '🌳', hauntedHouse: '🏚', skull: '💀',
-};

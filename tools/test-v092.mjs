@@ -2,9 +2,7 @@
 //  pot de peinture (zones vides fermées), bifurcation, plaque bateau, pièces à 90°, checkpoint sur plateforme, Ctrl+D,
 //  raccourcis, décorations (véhicules, Noël, Halloween, lumières), traînée.
 import assert from 'node:assert/strict';
-
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 4).join('\n       ')); } }
+import { test, finish } from './harness.mjs';
 
 const { Track } = await import('../js/track.js');
 const { PIECES, PIECE_ORDER, cpKind, flagAllowed, sampleLocal, isRibbon, hasNoRails } = await import('../js/pieces.js');
@@ -281,5 +279,4 @@ test('le deltaplane vire franchement : plus de 1,2 rad/s au volant à fond, dès
   assert.ok(turn(12) > 0.8, 'à 12 m/s : ' + turn(12));
 });
 
-if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }
-console.log('\nTous les tests de la bêta 0.9.2 passent.');
+await finish('Tous les tests de la bêta 0.9.2 passent.');

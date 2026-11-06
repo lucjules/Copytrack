@@ -1,7 +1,8 @@
 // Défi du jour (v1.5) : un circuit généré à partir de la date. Tout le monde a le même
 // circuit le même jour, sans serveur. Le pilote automatique vérifie qu'il est faisable
 // et fixe les médailles, comme pour les circuits intégrés.
-import { scriptTrack, DECORS } from './track.js';
+import { scriptTrack } from './track.js';
+import { DECORS } from './themes.js';
 import { CarPhysics, CAR } from './physics.js';
 import { RaceLogic, placeAtStart } from './raceLogic.js';
 import { Autopilot } from './autopilot.js';

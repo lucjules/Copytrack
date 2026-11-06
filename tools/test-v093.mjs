@@ -2,9 +2,7 @@
 //  pentes descendantes et raccords doux, orientation (sol / mur gauche / mur droit / plafond) comme option des lignes et des virages,
 //  transitions d'orientation, conversion des anciennes pièces 90°, audit du graphe des pièces, conduite (pentes, murs, plafond), aléatoire.
 import assert from 'node:assert/strict';
-
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 5).join('\n       ')); } }
+import { test, finish } from './harness.mjs';
 
 const { Track, scriptTrack, b64encode } = await import('../js/track.js');
 const P = await import('../js/pieces.js');
@@ -507,5 +505,4 @@ test('150 circuits tirés au hasard (pentes douces, virages, hélices, murs, pla
   assert.deepEqual(bad, [], '\n' + bad.join('\n'));
 });
 
-if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }
-console.log('\nTous les tests de la bêta 0.9.3 passent.');
+await finish('Tous les tests de la bêta 0.9.3 passent.');

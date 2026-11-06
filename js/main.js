@@ -8,11 +8,14 @@ import { GarageSession, } from './garage.js';
 import { CATEGORIES } from './cosmetics.js';
 import { profile, saveProfile, exportCode, parseCode, applySave, addCoins } from './profile.js';
 import { GameAudio } from './audio.js';
-import { UI, $, esc, medalIcon } from './ui.js';
-import { RaceSession, medalFor, MEDALS } from './race.js';
+import { UI, medalIcon } from './ui.js';
+import { $, esc } from './dom.js';
+import { RaceSession } from './race.js';
+import { MEDALS, medalFor } from './medals.js';
 import { EditorSession } from './editor.js';
 import { BUILTIN_TRACKS, buildBuiltin } from './tracks.js';
-import { Track, hashString, DECORS } from './track.js';
+import { Track, hashString } from './track.js';
+import { DECORS } from './themes.js';
 import { PIECES } from './pieces.js';
 import { VERSION, PHYS_VER } from './version.js';
 import { thumbnail } from './editorTools.js';
@@ -674,7 +677,6 @@ class App {
     dailyBox.appendChild(dGrid);
     list.appendChild(dailyBox);
 
-    const decorColor = { desert: '#ff8c5a', polar: '#7fe9ff', jungle: '#2dffb0', city: '#ff3d8a', isles: '#ffd66b', volcano: '#ff5a2a', orbit: '#b9a6ff', caves: '#b48cff', sky: '#9fd8ff', reef: '#2fd3b5', factory: '#ffb070' };
     const total = this.builtins.length;
     for (let ch = 0; ch * CHAPTER_SIZE < total; ch++) {
       const open = chapterUnlocked(ch, medalOf, total);
@@ -705,7 +707,7 @@ class App {
         if (b.def.appris) card.title = b.def.appris;
         card.innerHTML = `<div class="num">${i + 1}</div>
           <img class="thumb" alt="" src="${thumbnail(b.track, 'b-' + b.key)}">
-          <h3>${esc(b.def.name)}<span class="decor-chip" style="color:${decorColor[b.track.decor] || '#fff'}">${esc(DECORS[b.track.decor].label)}</span></h3>
+          <h3>${esc(b.def.name)}<span class="decor-chip" style="color:${DECORS[b.track.decor].chip}">${esc(DECORS[b.track.decor].label)}</span></h3>
           <div class="meta"><span class="diff">${'◆'.repeat(b.def.difficulty)}${'◇'.repeat(5 - b.def.difficulty)}</span> · ${b.track.tiles.length} pièces</div>
           ${tags.length || pf ? `<div class="tags">${pf ? `<span class="tag profil ${pf.cls}" title="${esc(pf.tip)}">${esc(pf.label)}</span>` : ''}${tags.map((t) => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
           <div class="goal${gdone ? ' done' : ''}">★ ${esc(goalLabel(goal))}${gdone ? ' ✓' : ''}</div>

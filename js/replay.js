@@ -6,6 +6,7 @@ import { RaceLogic, placeAtStart } from './raceLogic.js';
 import { Autopilot } from './autopilot.js';
 import { b64encode, b64decode } from './track.js';
 import { PHYS_VER } from './version.js';
+import { DT, MAX_RUN_STEPS, OFF_TRACK_RESPAWN_S } from './constants.js';
 
 
 export const quantSteer = (s) => Math.round(Math.max(-1, Math.min(1, s || 0)) * 100) / 100;
@@ -34,7 +35,6 @@ export class InputRecorder {
   }
 }
 
-export const MAX_REPLAY_STEPS = 120 * 600;     // 10 minutes : au-delà, un enregistrement est refusé AVANT d'être déplié en mémoire
 
 export function decodeInputs(b64) {
   const bin = atob(b64);
@@ -42,7 +42,7 @@ export function decodeInputs(b64) {
   // Un petit texte peut se déplier en des dizaines de millions de pas (255 répétitions par triplet) : on compte d'abord.
   let total = 0;
   for (let i = 0; i + 2 < bin.length; i += 3) total += bin.charCodeAt(i);
-  if (total > MAX_REPLAY_STEPS) throw new Error('Enregistrement trop long.');
+  if (total > MAX_RUN_STEPS) throw new Error('Enregistrement trop long.');       // refusé AVANT d'être déplié en mémoire
   for (let i = 0; i + 2 < bin.length; i += 3) {
     const n = bin.charCodeAt(i), s = (bin.charCodeAt(i + 1) << 24) >> 24, f = bin.charCodeAt(i + 2);
     for (let k = 0; k < n; k++) { steer.push(s); flags.push(f); }
@@ -105,8 +105,8 @@ export class GhostRunner {
     const sink = this.phys.ev.sink;
     const ev = this.logic.update(this.phys);
     // Mêmes réapparitions automatiques qu'en course (hors piste 0,5 s, noyade).
-    if (this.phys.offTrack) this.groundT += 1 / 120; else this.groundT = 0;
-    if (this.groundT > 0.5 || sink) {
+    if (this.phys.offTrack) this.groundT += DT; else this.groundT = 0;
+    if (this.groundT > OFF_TRACK_RESPAWN_S || sink) {
       this.groundT = 0;
       const r = this.logic.rewind();
       this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);

@@ -16,6 +16,7 @@ import { DECO_LABELS, DECO_COLORS } from './decoData.js';
 import { safeUrl } from './decos.js';
 import { isObstacle } from './obstacles.js';
 import { tileBounds, decoBounds, pickObjects, LAYER_ALL } from './editorPick.js';
+import { h } from './dom.js';
 
 // Pièces qui ont une version « miroir » (même empreinte).
 export const MIRROR_TYPES = {
@@ -38,18 +39,6 @@ const TAU = Math.PI * 2;
 export function yawOf(q) {
   const v = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
   return Math.atan2(-v.x, -v.z);
-}
-
-function h(tag, attrs = {}, ...kids) {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k === 'class') e.className = v;
-    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
-    else if (v === true) e.setAttribute(k, '');
-    else if (v !== false && v != null) e.setAttribute(k, v);
-  }
-  for (const k of kids.flat()) if (k != null) e.append(k);
-  return e;
 }
 
 // Flèche à plat (plan XZ) pointant vers -z, de longueur 1 : tige + pointe.

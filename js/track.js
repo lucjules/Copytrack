@@ -8,21 +8,7 @@ import {
 import { centerlineWorld } from './ribbons.js';
 import { isObstacle } from './obstacles.js';
 import { DECO_ORDER } from './decoData.js';
-
-export const DECORS = {
-  desert: { label: 'Désert crépuscule' },
-  polar: { label: 'Nuit polaire' },
-  jungle: { label: 'Jungle néon' },
-  city: { label: 'Ville futuriste' },
-  isles: { label: 'Archipel tropical' },
-  volcano: { label: 'Volcan' },
-  orbit: { label: 'Station orbitale' },
-  // 0.9
-  caves: { label: 'Canyon de cristal' },
-  sky: { label: 'Ville dans les nuages' },
-  reef: { label: 'Fonds marins' },
-  factory: { label: 'Usine mécanique' },
-};
+import { DECORS, DEFAULT_DECOR } from './themes.js';
 
 // L'eau est un peu sous le niveau de la chaussée.
 export const WATER_DROP = 0.35;
@@ -51,7 +37,7 @@ export class Track {
   constructor(name = 'Nouveau circuit', tiles = []) {
     this.name = name;
     this.author = '';
-    this.decor = 'desert';
+    this.decor = DEFAULT_DECOR;
     this.tiles = [];
     this.decos = [];
     this.index = new Map();
@@ -615,7 +601,7 @@ export class Track {
     if (!data || !Array.isArray(data.t) || data.t.length % stride) throw new Error('Code de circuit invalide');
     const tr = new Track(String(data.n || 'Circuit importé').slice(0, 40));
     tr.author = String(data.a || '').slice(0, 30);
-    tr.decor = DECORS[data.d] ? data.d : 'desert';
+    tr.decor = DECORS[data.d] ? data.d : DEFAULT_DECOR;
     const extras = new Map();
     if (Array.isArray(data.e)) for (const e of data.e) if (e && Number.isInteger(e.i)) extras.set(e.i, e);
     for (let i = 0; i < data.t.length; i += stride) {
@@ -731,7 +717,7 @@ const SURF_CODE = { i: 'ice', b: 'boost', j: 'bounce', m: 'magnet', d: 'drift', 
 
 export function scriptTrack(name, script, opts = {}) {
   const tr = new Track(name);
-  tr.decor = opts.decor || 'desert';
+  tr.decor = opts.decor || DEFAULT_DECOR;
   let x = opts.x || 0, z = opts.z || 0, h = opts.h || 0, l = opts.l || 0;
   const path = [];
   let cur = { s: '', p: 0, v: 0, nb: 0, tn: 0 };

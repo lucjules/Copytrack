@@ -9,11 +9,10 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { test, finish } from './harness.mjs';
 
-let failures = 0;
-function test(name, fn) { try { const r = fn(); if (r && typeof r.then === 'function') throw new Error('test asynchrone : ses assertions ne seraient jamais vérifiées'); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 8).join('\n       ')); } }
-
-const { BUILTIN_TRACKS, THEME_ORDER, buildBuiltin } = await import('../js/tracks.js');
+const { BUILTIN_TRACKS, buildBuiltin } = await import('../js/tracks.js');
+const { CAREER_ORDER: THEME_ORDER } = await import('../js/themes.js');
 const { PROFILS, CHAPTERS, CHAPTER_SIZE, GOALS } = await import('../js/career.js');
 const { VERSION } = await import('../js/version.js');
 const { OBST } = await import('../js/obstacles.js');
@@ -273,5 +272,4 @@ test('les anciennes listes d’obstacles figés ont disparu (js/builtinObstacles
   for (const f of walk(new URL('../js', import.meta.url).pathname)) assert.ok(!/builtinObstacles/.test(readFileSync(f, 'utf8')), f);
 });
 
-console.log(failures ? `\n${failures} test(s) en échec.` : '\nTous les tests des niveaux passent.');
-process.exit(failures ? 1 : 0);
+await finish('Tous les tests des niveaux passent.');

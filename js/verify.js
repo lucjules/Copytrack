@@ -7,9 +7,7 @@ import { BUILTIN_TRACKS, buildBuiltin } from './tracks.js';
 import { dailyChallenge } from './daily.js';
 import { GhostRunner, decodeInputs } from './replay.js';
 import { PHYS_VER } from './version.js';
-
-const MAX_STEPS = 120 * 600;          // 10 minutes de course au plus
-const MAX_INPUTS_CHARS = 400000;
+import { MAX_RUN_STEPS, MAX_INPUTS_CHARS } from './constants.js';
 
 // Retrouve le circuit correspondant à une clé de classement.
 //   b-<id>-<empreinte>   circuit intégré (l'empreinte garantit la même version)
@@ -48,9 +46,9 @@ export function replayTime(track, inputs) {
   if (!inputs || inputs.length > MAX_INPUTS_CHARS) return null;
   let rep;
   try { rep = decodeInputs(inputs); } catch { return null; }      // illisible, ou trop long (refusé avant dépliage)
-  if (!rep.length || rep.length > MAX_STEPS) return null;
+  if (!rep.length || rep.length > MAX_RUN_STEPS) return null;
   const g = new GhostRunner(track, { inputs });
-  while (!g.done && g.k < MAX_STEPS) g.step();
+  while (!g.done && g.k < MAX_RUN_STEPS) g.step();
   return g.logic.finished ? g.logic.time : null;
 }
 

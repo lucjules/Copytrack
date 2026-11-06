@@ -19,9 +19,8 @@ import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
 import { DT, CELL, LEVEL_H, HALF, ROAD_HALF } from '../js/constants.js';
 import { arrowPose, retypePlacement, traitsOf } from '../js/tileInfo.js';
 import { EditorSession, armedOptions } from '../js/editor.js';
+import { test, finish } from './harness.mjs';
 
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 6).join('\n       ')); } }
 const tile = (o) => Track.normalize({ x: 0, z: 0, l: 0, r: 0, ...o });
 
 console.log('Familles et caractéristiques');
@@ -400,7 +399,6 @@ test('Bifurcation à deux revêtements : la voie déportée a le sien (physique)
   void f; void g; void h;
 });
 
-
 console.log('Éditeur : pose combinée pièce + options, inspecteur');
 function mkEd(tool, opts = {}) {
   const track = new Track('t');
@@ -567,5 +565,4 @@ test('checkpoints en option (portique, anneau, virage) : indispensables pour fin
   assert.equal(new RaceLogic(tr).cps.length, 3);
 });
 
-console.log(failures ? `\n${failures} test(s) en échec` : '\nTous les tests de la Phase 2 passent.');
-process.exit(failures ? 1 : 0);
+await finish('Tous les tests de la Phase 2 passent.');
