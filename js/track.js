@@ -6,7 +6,7 @@ import {
   forkBranchX, toLocal, sampleLocal, rotVec, tileCenter, MOVER, moverParams, clampMover, THEMES, LEGACY_TILE, clearConflicts,
 } from './pieces.js';
 import { centerlineWorld } from './ribbons.js';
-import { isObstacle } from './obstacles.js';
+import { isObstacle, buildObstacleGrid } from './obstacles.js';
 import { DECO_ORDER } from './decoData.js';
 import { DECORS, DEFAULT_DECOR } from './themes.js';
 
@@ -70,7 +70,6 @@ export class Track {
     this.resetRules();
     this.vt = 0;      // temps de vérification (secondes) de l'auteur
     this.vh = '';     // signature du circuit au moment de la vérification
-    this.time = 0;    // chrono de la course (s) : position des pièces mobiles
     for (const t of tiles) this.add(t);
   }
 
@@ -320,6 +319,12 @@ export class Track {
     return this._obs;
   }
 
+  // Index spatial des obstacles (voir obstacles.js), reconstruit quand le circuit change : partagé par toutes les voitures.
+  get obstacleGrid() {
+    if (this._ogV !== this.version) { this._og = buildObstacleGrid(this.obstacles); this._ogV = this.version; }
+    return this._og;
+  }
+
   removeDeco(d) {
     const i = this.decos.indexOf(d);
     if (i < 0) return;
@@ -401,9 +406,10 @@ export class Track {
   }
 
   // Surface roulable la plus haute sous (x, y + step, z). Le sol est à y = 0.
-  // Les pièces mobiles (ascenseur, glissière) sont prises à leur position au temps this.time.
+  // Les pièces mobiles (ascenseur, glissière, rotation) sont prises à leur position au chrono `time` (s) de la course : le circuit n'a
+  // pas d'horloge propre, plusieurs voitures (la sienne, un fantôme, un adversaire) l'interrogent chacune à son propre chrono.
   // broken : pièces de verre déjà brisées dans CETTE course (propre à chaque voiture, voir CarPhysics) : sans collision.
-  surfaceAt(x, y, z, out, step = 1.6, broken = null) {
+  surfaceAt(x, y, z, out, step = 1.6, broken = null, time = 0) {
     out.h = 0; out.nx = 0; out.ny = 1; out.nz = 0;
     out.tile = null; out.type = 'ground'; out.mod = ''; out.p = 0; out.lx = 0; out.lz = 0;
     const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
@@ -418,7 +424,7 @@ export class Track {
     for (let i = 0; i < mv.length; i++) {
       const tile = mv[i];
       if (!isFloor(tile) || (broken && broken.has(tile))) continue;
-      this.moverOffset(tile, this.time, MO);
+      this.moverOffset(tile, time, MO);
       if (MO.a) { this.moverLocal(MO, x, z, W2); best = this._floorTry(tile, W2.x, W2.z, MO.y, y, step, best, out, MO.a); }
       else best = this._floorTry(tile, x - MO.x, z - MO.z, MO.y, y, step, best, out);
     }

@@ -24,7 +24,7 @@ const IDLE = { throttle: false, brake: false, steer: 0 };
 const GAS = { throttle: true, brake: false, steer: 0 };
 function run(phys, track, seconds, inp = IDLE, each = null) {
   const n = Math.round(seconds / DT);
-  for (let i = 0; i < n; i++) { track.time = i * DT; phys.clock = i; phys.step(typeof inp === 'function' ? inp(i) : inp); if (each) each(i); }
+  for (let i = 0; i < n; i++) { phys.clock = i; phys.step(typeof inp === 'function' ? inp(i) : inp); if (each) each(i); }
 }
 const strip = (type, n, extra = {}, z0 = 0) => {
   const tr = new Track('t');
@@ -387,7 +387,7 @@ test('le verre se brise aussi sous un looping (ruban) : la voiture se détache e
   const rec = new CarPhysics(tr); const logic = new RaceLogic(tr); placeAtStart(rec, logic);
   const bot = new Autopilot(tr.path); bot.reset(rec);
   let broke = false;
-  for (let i = 0; i < 20 / DT && !broke; i++) { rec.clock = i; tr.time = i * DT; rec.step(bot.control(rec)); if (rec.ev.glass) broke = true; }
+  for (let i = 0; i < 20 / DT && !broke; i++) { rec.clock = i; rec.step(bot.control(rec)); if (rec.ev.glass) broke = true; }
   assert.ok(broke, 'le verre du looping cède (0,3 s)');
   assert.ok(rec.broken.has(lp)); assert.ok(!rec.rib, 'plus guidée par le ruban');
 });
@@ -439,7 +439,7 @@ test('PHYS_VER 25 ; un circuit avec verre, tapis, vent, eau et tunnel est rejou�
     const inp = bot.control(phys);
     inp.steer = quantSteer(inp.steer);                      // comme en course : la commande est quantifiée avant d'agir
     rec.push(inp, false);
-    phys.clock = logic.steps; tr.time = logic.steps * DT;
+    phys.clock = logic.steps;
     phys.step(inp);
     const ev = logic.update(phys);
     if (ev && ev.type === 'finish') finished = logic.time;

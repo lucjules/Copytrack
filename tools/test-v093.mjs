@@ -35,7 +35,7 @@ function drive(script, { secs = 40, v0 = 0, auto = true, throttle = true, l = 4 
   const r = { finished: null, falls: 0, airMax: 0, air: 0, ribTime: 0, gMin: 1, ceilTime: 0, lost: false, nan: false, vmax: 0, ph, tr };
   for (let i = 0; i < secs / DT; i++) {
     const inp = bot ? bot.control(ph) : { steer: 0, throttle, brake: false };
-    tr.time = i * DT; ph.clock = i; ph.step(inp);
+    ph.clock = i; ph.step(inp);
     if (!Number.isFinite(ph.pos.x + ph.pos.y + ph.pos.z)) { r.nan = true; break; }
     r.vmax = Math.max(r.vmax, ph.speed);
     if (ph.ev.loopFall) r.falls++;
@@ -443,7 +443,7 @@ test('un circuit avec pentes douces, mur, plafond et transitions : la course du 
     const inp = bot.control(phys);
     inp.steer = quantSteer(inp.steer);
     rec.push(inp, false);
-    phys.clock = logic.steps; tr.time = logic.steps * DT;
+    phys.clock = logic.steps;
     phys.step(inp);
     const ev = logic.update(phys);
     if (ev && ev.type === 'finish') finished = logic.time;

@@ -966,7 +966,7 @@ export class RaceSession {
     if (gs > 0) {
       const ceilCam = this.track.ceilingAt(this.camPos.x, this.camPos.z, carTop - 0.5);
       if (this.camPos.y > ceilCam - 0.5 && ceilCam > carTop - 0.5) this.camPos.y = ceilCam - 0.5;
-      const s = this.track.surfaceAt(this.camPos.x, this.camPos.y, this.camPos.z, this._camS || (this._camS = {}), 2);
+      const s = this.track.surfaceAt(this.camPos.x, this.camPos.y, this.camPos.z, this._camS || (this._camS = {}), 2, null, p.time);
       if (this.camPos.y < s.h + 1.2) this.camPos.y = s.h + 1.2;
     } else {
       // Au plafond : jamais au-dessus de la chaussée retournée.

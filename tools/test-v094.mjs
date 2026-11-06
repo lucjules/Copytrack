@@ -28,7 +28,7 @@ test('la courbe est longue : 100 km/h en 2,5 à 4 s, 180 km/h entre 6 et 9 s, 21
   const { tr, ph } = straight(60);
   const t = {};
   for (let k = 0; k < 40 / DT; k++) {
-    ph.clock = k; tr.time = k * DT; ph.step(GAS);
+    ph.clock = k; ph.step(GAS);
     for (const [name, v] of [['100', 27.8], ['180', 50], ['216', 60]]) if (!(name in t) && ph.speed >= v) t[name] = k * DT;
   }
   assert.ok(t['100'] > 2.5 && t['100'] < 4, '100 km/h : ' + t['100']);
@@ -39,7 +39,7 @@ test('la poussée diminue avec la vitesse (récompense une bonne sortie de virag
   const { tr, ph } = straight(60);
   let t20 = null, t30 = null, t50 = null;
   for (let k = 0; k < 40 / DT; k++) {
-    ph.clock = k; tr.time = k * DT; ph.step(GAS);
+    ph.clock = k; ph.step(GAS);
     if (t20 === null && ph.speed >= 20) t20 = k * DT;
     if (t30 === null && ph.speed >= 30) t30 = k * DT;
     if (t50 === null && ph.speed >= 50) t50 = k * DT;
@@ -47,7 +47,7 @@ test('la poussée diminue avec la vitesse (récompense une bonne sortie de virag
   assert.ok(t50 - t30 > 1.5 * t20, `0→20 : ${t20.toFixed(2)} s, 30→50 : ${(t50 - t30).toFixed(2)} s`);
 });
 test('une voiture lancée à 40 m/s en sortie de virage garde une avance de plus de 50 m sur une voiture lancée à 25 m/s après 8 s (le gain se paie en distance)', () => {
-  const run = (v0) => { const { tr, ph } = straight(60); ph.vel.z = -v0; ph.fwdSpeed = v0; ph.graceT = 0; for (let k = 0; k < 8 / DT; k++) { ph.clock = k; tr.time = k * DT; ph.step(GAS); } return { d: -ph.pos.z, v: ph.speed }; };
+  const run = (v0) => { const { tr, ph } = straight(60); ph.vel.z = -v0; ph.fwdSpeed = v0; ph.graceT = 0; for (let k = 0; k < 8 / DT; k++) { ph.clock = k; ph.step(GAS); } return { d: -ph.pos.z, v: ph.speed }; };
   const fast = run(40), slow = run(25);
   assert.ok(fast.d - slow.d > 50 && fast.v - slow.v > 2, `écart après 8 s : ${(fast.d - slow.d).toFixed(0)} m, ${(fast.v - slow.v).toFixed(1)} m/s`);
 });
@@ -59,7 +59,7 @@ function hitWall(v0, steer = 0.5) {
   ph.vel.z = -v0; ph.fwdSpeed = v0; ph.graceT = 0;
   let before = v0, hit = null;
   for (let k = 0; k < 6 / DT; k++) {
-    ph.clock = k; tr.time = k * DT; ph.step({ steer, throttle: false, brake: false });
+    ph.clock = k; ph.step({ steer, throttle: false, brake: false });
     if (hit === null && ph.ev.wall > 3) { hit = { k, impact: ph.ev.wall, before }; }
     if (hit && k === hit.k + 60) return { ...hit, after: ph.speed, stun: ph.stunT };
     before = ph.speed;
@@ -78,7 +78,7 @@ test('le choc rebondit et fait pivoter la voiture, qui encaisse (moteur et adhé
   ph.vel.z = -40; ph.fwdSpeed = 40; ph.graceT = 0;
   let spun = 0, stunned = false, hits = 0;
   for (let k = 0; k < 4 / DT; k++) {
-    ph.clock = k; tr.time = k * DT; ph.step({ steer: 0.6, throttle: true, brake: false });
+    ph.clock = k; ph.step({ steer: 0.6, throttle: true, brake: false });
     if (ph.ev.wall > 3) { hits++; spun = Math.max(spun, Math.abs(ph.omega)); stunned = stunned || ph.stunT > 0.2; }
   }
   assert.ok(hits >= 1 && spun > 0.8 && stunned, `chocs ${hits}, rotation ${spun.toFixed(2)} rad/s, encaissement ${stunned}`);
@@ -89,7 +89,7 @@ test('racler un mur freine en continu même sans vrai choc', () => {
   // la voiture est collée contre la bordure : on la maintient en contact en braquant légèrement
   let k = 0, contact = 0;
   for (; k < 3 / DT; k++) {
-    ph.clock = k; tr.time = k * DT; ph.step({ steer: 0.12, throttle: false, brake: false });
+    ph.clock = k; ph.step({ steer: 0.12, throttle: false, brake: false });
     if (Math.abs(ph.pos.x - 12) > 4.5) contact++;
   }
   assert.ok(contact > 0, 'la voiture atteint la bordure');
@@ -106,7 +106,7 @@ function wallRun(v0, throttle, secs = 8) {
   ph.vel.z = -v0; ph.fwdSpeed = v0; ph.graceT = 0;
   let onWall = 0, dropped = false, dropSpeed = 0, tilted = 0;
   for (let k = 0; k < secs / DT; k++) {
-    ph.clock = k; tr.time = k * DT; ph.step({ steer: 0, throttle, brake: false });
+    ph.clock = k; ph.step({ steer: 0, throttle, brake: false });
     if (ph.rib && Math.abs(ph.n.y) < 0.5) { onWall++; tilted = Math.max(tilted, Math.abs(ph.rib.vs)); }
     if (ph.ev.wallOff) { dropped = true; dropSpeed = ph.speed; }
   }
@@ -134,7 +134,7 @@ test('le décrochage n’a lieu que sur un plan penché de plus de 45° : la tra
   ph.vel.z = -20; ph.fwdSpeed = 20; ph.graceT = 0;
   let early = null;
   for (let k = 0; k < 4 / DT; k++) {
-    ph.clock = k; tr.time = k * DT; ph.step({ steer: 0, throttle: false, brake: false });
+    ph.clock = k; ph.step({ steer: 0, throttle: false, brake: false });
     if (ph.ev.wallOff && early === null) early = Math.abs(ph.n.y);
   }
   assert.ok(early === null || early < 0.72, 'décrochage seulement penché : |ny| = ' + early);

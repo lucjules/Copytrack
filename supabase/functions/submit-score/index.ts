@@ -33,6 +33,12 @@ var MAX_RUN_STEPS = Math.round(MAX_RUN_SECONDS / DT);
 var MAX_TRACK_CODE_CHARS = 4e5;
 var MAX_INPUTS_CHARS = 4e5;
 var OFF_TRACK_RESPAWN_S = 0.5;
+var VEHICLES = [
+  "car",
+  "moto",
+  "boat",
+  "glider"
+];
 var DIRS = [
   [
     0,
@@ -1101,6 +1107,59 @@ function isRibbon(tile) {
   return isRibbonKind(tile.t) || isOriented(tile);
 }
 var hasNoRails = (tile) => !!(tile.nb || tile.o || PIECES[tile.t].noRails);
+var OPTION_CONFLICTS = {
+  v: [
+    "o",
+    "tn",
+    "mv",
+    "tb"
+  ],
+  o: [
+    "v",
+    "tn",
+    "mv",
+    "cp",
+    "tb"
+  ],
+  tn: [
+    "v",
+    "o",
+    "cp",
+    "tb"
+  ],
+  mv: [
+    "v",
+    "o",
+    "cp",
+    "tb"
+  ],
+  cp: [
+    "o",
+    "tn",
+    "mv",
+    "tb"
+  ],
+  tb: [
+    "v",
+    "o",
+    "tn",
+    "mv",
+    "cp"
+  ]
+};
+var hasConflict = (flag, tile) => !!tile && OPTION_CONFLICTS[flag].some((f) => tile[f]);
+function clearConflicts(opts, flag) {
+  for (const f of OPTION_CONFLICTS[flag] || []) {
+    opts[f] = 0;
+    if (f === "mv" && "ms" in opts) {
+      opts.ms = 0;
+      opts.ma = 0;
+    }
+  }
+  if (flag === "v" && opts.cp === 2) opts.cp = 0;
+  if (flag === "cp" && opts.cp === 2) opts.v = 0;
+  return opts;
+}
 function flagAllowed(type, flag, tile = null, val = 0) {
   const p = PIECES[type];
   if (!p) return false;
@@ -1108,16 +1167,16 @@ function flagAllowed(type, flag, tile = null, val = 0) {
   if (flag === "v") return true;
   if (flag === "th") return p.kind !== "ring";
   if (p.kind === "ring" || p.kind === "fork") return false;
-  if (flag === "o") return lineLike && !p.special && !p.noRails && !(tile && (tile.v || tile.tn || tile.cp || tile.tb || tile.mv));
+  if (flag === "o") return lineLike && !p.special && !p.noRails && !hasConflict("o", tile);
   if (flag === "nb") return !p.noRails && (lineLike && !p.special || p.kind === "ribbon" && !type.startsWith("tube"));
-  if (flag === "tn") return lineLike && !p.special && !(tile && (tile.v || tile.o || tile.cp || tile.tb));
-  if (flag === "mv") return (lineLike || p.kind === "area") && !p.special && !(tile && (tile.v || tile.o || tile.cp || tile.tb));
+  if (flag === "tn") return lineLike && !p.special && !hasConflict("tn", tile);
+  if (flag === "mv") return (lineLike || p.kind === "area") && !p.special && !hasConflict("mv", tile);
   if (flag === "cp") {
-    if (!((lineLike || p.kind === "area") && !p.special && !p.rise) || tile && (tile.mv || tile.tn || tile.tb || tile.o)) return false;
+    if (!((lineLike || p.kind === "area") && !p.special && !p.rise) || hasConflict("cp", tile)) return false;
     if (val === 2) return p.kind === "line" && !(tile && tile.v);
     return true;
   }
-  if (flag === "tb") return p.kind === "line" && !p.special && !p.rise && !(tile && (tile.v || tile.o || tile.mv || tile.tn || tile.cp));
+  if (flag === "tb") return p.kind === "line" && !p.special && !p.rise && !hasConflict("tb", tile);
   return false;
 }
 function cpKind(tile) {
@@ -1417,14 +1476,25 @@ var smooth = (u) => u * u * (3 - 2 * u);
 var ramp = (u, w) => u < w ? smooth(u / w) : u > 1 - w ? smooth((1 - u) / w) : 1;
 var cache = /* @__PURE__ */ new WeakMap();
 function ribbonOf(tile, raw = false) {
-  const flip = !!tile.v && !raw;
-  const key2 = tile.t + "|" + tile.l + "|" + (flip ? 1 : 0) + "|" + (tile.o | 0);
-  const c = cache.get(tile);
-  if (c && c.keys && c.keys[key2]) return c.keys[key2];
-  let rib = build(tile);
-  if (flip && rib) {
-    const inner = rib, base = baseY(tile);
-    rib = {
+  const ori = tile.o | 0;
+  let c = cache.get(tile);
+  if (c === void 0 || c.t !== tile.t || c.l !== tile.l || c.o !== ori) {
+    c = {
+      t: tile.t,
+      l: tile.l,
+      o: ori,
+      plain: void 0,
+      flipped: void 0
+    };
+    cache.set(tile, c);
+  }
+  if (!tile.v || raw) {
+    if (c.plain === void 0) c.plain = build(tile);
+    return c.plain;
+  }
+  if (c.flipped === void 0) {
+    const inner = ribbonOf(tile, true), base = baseY(tile);
+    c.flipped = inner && {
       ...inner,
       pos(u, o) {
         inner.pos(u, o);
@@ -1433,12 +1503,7 @@ function ribbonOf(tile, raw = false) {
       }
     };
   }
-  const entry = c && c.keys ? c : {
-    keys: {}
-  };
-  entry.keys[key2] = rib;
-  cache.set(tile, entry);
-  return rib;
+  return c.flipped;
 }
 function floorCenter(tile, u, out) {
   const P = PIECES[tile.t], base = baseY(tile), half = P.size * HALF;
@@ -1870,6 +1935,21 @@ var OBST = {
   }
 };
 var isObstacle = (k) => !!OBST[k];
+var OBSTACLE_CELL = 20;
+var obstacleKey = (ix, iz) => ix * 1048576 + iz;
+function buildObstacleGrid(list) {
+  const grid = /* @__PURE__ */ new Map();
+  for (const d of list) {
+    if (!d || !Number.isFinite(d.x) || !Number.isFinite(d.z)) continue;
+    const k = obstacleKey(Math.floor(d.x / OBSTACLE_CELL), Math.floor(d.z / OBSTACLE_CELL));
+    const bucket = grid.get(k);
+    if (bucket) bucket.push(d);
+    else grid.set(k, [
+      d
+    ]);
+  }
+  return grid;
+}
 var TAU = Math.PI * 2;
 function spikeLevel(def, t) {
   if (!def.period) return 1;
@@ -1891,6 +1971,7 @@ function obstacleLocal(d, t, out) {
   out.vy = 0;
   out.vz = 0;
   out.a = 0;
+  out.w = 0;
   out.on = 1;
   if (def.type === "spike") {
     out.on = spikeLevel(def, tt);
@@ -3939,6 +4020,45 @@ var W2 = {
 };
 var MO = {};
 var MP = {};
+var clampInt = (v, lo, hi, fallback) => Math.max(lo, Math.min(hi, Math.round(+v || fallback)));
+var RULES = [
+  {
+    key: "offroad",
+    def: 0,
+    clean: (v) => v ? 1 : 0,
+    code: "or",
+    sig: (v) => v ? "#O" : ""
+  },
+  {
+    key: "v0",
+    def: 0,
+    clean: (v) => clampInt(v, 0, 300, 0),
+    code: "v0",
+    sig: (v) => v ? "#V" + v : ""
+  },
+  {
+    key: "g0",
+    def: 100,
+    clean: (v) => clampInt(v, 15, 250, 100),
+    code: "g0",
+    sig: (v) => v !== 100 ? "#G" + v : ""
+  },
+  {
+    key: "veh0",
+    def: "car",
+    clean: (v) => VEHICLES.includes(v) ? v : "car",
+    code: "ve",
+    sig: (v) => v !== "car" ? "#E" + v : ""
+  },
+  {
+    key: "flip0",
+    def: false,
+    clean: (v) => !!v,
+    code: "ig",
+    sig: (v) => v ? "#I" : "",
+    v4: true
+  }
+];
 var Track = class _Track {
   constructor(name = "Nouveau circuit", tiles = []) {
     this.name = name;
@@ -3950,14 +4070,9 @@ var Track = class _Track {
     this.version = 0;
     this.laps = 1;
     this.desc = "";
-    this.offroad = 0;
-    this.v0 = 0;
-    this.g0 = 100;
-    this.veh0 = "car";
-    this.inversionGraviteDepart = false;
+    this.resetRules();
     this.vt = 0;
     this.vh = "";
-    this.time = 0;
     for (const t of tiles) this.add(t);
   }
   static cellsOf(t) {
@@ -4046,14 +4161,14 @@ var Track = class _Track {
     tile.o = (ori === 1 || ori === 2) && !tile.v && flagAllowed(type, "o", tile, ori) ? ori : 0;
     tile.nb = PIECES[type].noRails || t.nb && flagAllowed(type, "nb") ? 1 : 0;
     tile.tn = t.tn && flagAllowed(type, "tn", tile) ? 1 : 0;
-    tile.mv = t.mv && !tile.v && flagAllowed(type, "mv", tile) ? (t.mv | 0) & 3 : 0;
+    tile.mv = t.mv && flagAllowed(type, "mv", tile) ? (t.mv | 0) & 3 : 0;
     if (tile.mv) {
       const m = clampMover(tile.mv, t.ms, t.ma);
       tile.ms = m.ms;
       tile.ma = m.ma;
     }
-    tile.cp = t.cp && !tile.mv && flagAllowed(type, "cp", tile, t.cp | 0) ? t.cp | 0 : 0;
-    tile.tb = t.tb && !tile.mv && !tile.cp && flagAllowed(type, "tb", tile) ? 1 : 0;
+    tile.cp = t.cp && flagAllowed(type, "cp", tile, t.cp | 0) ? t.cp | 0 : 0;
+    tile.tb = t.tb && flagAllowed(type, "tb", tile) ? 1 : 0;
     tile.th = THEMES.some((h) => h.id === (t.th | 0)) && flagAllowed(type, "th") ? t.th | 0 : 0;
     tile.col = cleanColors(t.col);
     if (surfaceAllowed(type, s, !!tile.v, tile.o)) {
@@ -4146,13 +4261,7 @@ var Track = class _Track {
         if (!target) cand.v = 0;
       } else {
         cand.o = target;
-        cand.v = 0;
-        cand.tn = 0;
-        cand.mv = 0;
-        cand.ms = 0;
-        cand.ma = 0;
-        cand.cp = 0;
-        cand.tb = 0;
+        clearConflicts(cand, "o");
       }
       return this._reshape(tile, cand);
     }
@@ -4172,10 +4281,6 @@ var Track = class _Track {
         cand.mv = tile.mv === val ? 0 : val;
         cand.ms = 0;
         cand.ma = 0;
-        if (cand.mv) {
-          cand.cp = 0;
-          cand.tb = 0;
-        }
       } else if (flag === "cp") {
         cand.cp = tile.cp === val ? 0 : val;
       } else if (flag === "tb") {
@@ -4183,21 +4288,11 @@ var Track = class _Track {
       } else if (tile.v) cand.v = 0;
       else {
         cand.v = 1;
-        cand.o = 0;
-        cand.mv = 0;
-        cand.ms = 0;
-        cand.ma = 0;
-        cand.tn = 0;
-        cand.tb = 0;
-        if (cand.cp === 2) cand.cp = 0;
+        clearConflicts(cand, "v");
       }
       return this._reshape(tile, cand);
     }
     tile[flag] = tile[flag] ? 0 : 1;
-    if (flag === "tn" && tile.tn && tile.v) {
-      tile.tn = 0;
-      return false;
-    }
     this.version++;
     return true;
   }
@@ -4282,6 +4377,14 @@ var Track = class _Track {
     }
     return this._obs;
   }
+  // Index spatial des obstacles (voir obstacles.js), reconstruit quand le circuit change : partagé par toutes les voitures.
+  get obstacleGrid() {
+    if (this._ogV !== this.version) {
+      this._og = buildObstacleGrid(this.obstacles);
+      this._ogV = this.version;
+    }
+    return this._og;
+  }
   removeDeco(d) {
     const i = this.decos.indexOf(d);
     if (i < 0) return;
@@ -4296,11 +4399,7 @@ var Track = class _Track {
     this.vh = "";
     this.laps = 1;
     this.desc = "";
-    this.offroad = 0;
-    this.v0 = 0;
-    this.g0 = 100;
-    this.veh0 = "car";
-    this.inversionGraviteDepart = false;
+    this.resetRules();
     this.version++;
   }
   get startTile() {
@@ -4387,9 +4486,10 @@ var Track = class _Track {
     return out;
   }
   // Surface roulable la plus haute sous (x, y + step, z). Le sol est à y = 0.
-  // Les pièces mobiles (ascenseur, glissière) sont prises à leur position au temps this.time.
+  // Les pièces mobiles (ascenseur, glissière, rotation) sont prises à leur position au chrono `time` (s) de la course : le circuit n'a
+  // pas d'horloge propre, plusieurs voitures (la sienne, un fantôme, un adversaire) l'interrogent chacune à son propre chrono.
   // broken : pièces de verre déjà brisées dans CETTE course (propre à chaque voiture, voir CarPhysics) : sans collision.
-  surfaceAt(x, y, z, out, step = 1.6, broken = null) {
+  surfaceAt(x, y, z, out, step = 1.6, broken = null, time = 0) {
     out.h = 0;
     out.nx = 0;
     out.ny = 1;
@@ -4412,7 +4512,7 @@ var Track = class _Track {
     for (let i = 0; i < mv.length; i++) {
       const tile = mv[i];
       if (!isFloor(tile) || broken && broken.has(tile)) continue;
-      this.moverOffset(tile, this.time, MO);
+      this.moverOffset(tile, time, MO);
       if (MO.a) {
         this.moverLocal(MO, x, z, W2);
         best = this._floorTry(tile, W2.x, W2.z, MO.y, y, step, best, out, MO.a);
@@ -4533,19 +4633,22 @@ var Track = class _Track {
     }
     return best;
   }
-  // Paramètres du niveau, bornés.
-  setParams({ desc, offroad, v0, g0, veh0, inversionGraviteDepart } = {}) {
-    if (inversionGraviteDepart !== void 0) this.inversionGraviteDepart = !!inversionGraviteDepart;
-    if (desc !== void 0) this.desc = String(desc || "").replace(/\s+/g, " ").trim().slice(0, 200);
-    if (offroad !== void 0) this.offroad = offroad ? 1 : 0;
-    if (v0 !== void 0) this.v0 = Math.max(0, Math.min(300, Math.round(+v0 || 0)));
-    if (g0 !== void 0) this.g0 = Math.max(15, Math.min(250, Math.round(+g0 || 100)));
-    if (veh0 !== void 0) this.veh0 = [
-      "car",
-      "moto",
-      "boat",
-      "glider"
-    ].includes(veh0) ? veh0 : "car";
+  // Règles de course remises à leurs valeurs par défaut.
+  resetRules() {
+    for (const r of RULES) this[r.key] = r.def;
+  }
+  // Les règles de course actuelles : { offroad, v0, g0, veh0, flip0 }.
+  rulesState() {
+    return Object.fromEntries(RULES.map((r) => [
+      r.key,
+      this[r.key]
+    ]));
+  }
+  // Paramètres du niveau, bornés : la description et les règles de course (les champs absents ou `undefined` restent inchangés ;
+  // accepte aussi un autre circuit, dont on lit les mêmes champs).
+  setParams(p = {}) {
+    if (p.desc !== void 0) this.desc = String(p.desc || "").replace(/\s+/g, " ").trim().slice(0, 200);
+    for (const r of RULES) if (p[r.key] !== void 0) this[r.key] = r.clean(p[r.key]);
   }
   // Signature du contenu (pièces, décorations, règles de course), utilisée pour la
   // vérification et comme clé des classements en ligne. Le nom, la description et l'auteur
@@ -4553,7 +4656,7 @@ var Track = class _Track {
   signature() {
     const parts = this.tiles.map((t) => `${t.t}:${t.x}:${t.z}:${t.l}:${t.r}:${t.s}:${t.p}:${t.v}${t.nb}${t.tn}${t.mv ? "m" + t.mv : ""}${tileExtras(t)}`).sort().join("|");
     const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}` : ""}`).join("|");
-    const rules = (this.offroad ? "#O" : "") + (this.v0 ? "#V" + this.v0 : "") + (this.g0 !== 100 ? "#G" + this.g0 : "") + (this.veh0 !== "car" ? "#E" + this.veh0 : "") + (this.inversionGraviteDepart ? "#I" : "");
+    const rules = RULES.map((r) => r.sig(this[r.key])).join("");
     return hashString(this.decor + "#" + parts + "#" + d + (this.laps > 1 ? "#L" + this.laps : "") + rules);
   }
   // Clé de classement d'un circuit de joueur : stable si on renomme le circuit.
@@ -4589,11 +4692,7 @@ var Track = class _Track {
     t.vh = this.vh;
     t.laps = this.laps;
     t.desc = this.desc;
-    t.offroad = this.offroad;
-    t.v0 = this.v0;
-    t.g0 = this.g0;
-    t.veh0 = this.veh0;
-    t.inversionGraviteDepart = this.inversionGraviteDepart;
+    for (const r of RULES) t[r.key] = this[r.key];
     return t;
   }
   // ---- Sérialisation -----------------------------------------------------
@@ -4638,7 +4737,7 @@ var Track = class _Track {
       ] : []
     ]);
     const data = {
-      v: extras.length || this.decos.some((d) => d.cc) || this.inversionGraviteDepart ? 4 : 3,
+      v: extras.length || this.decos.some((d) => d.cc) || RULES.some((r) => r.v4 && this[r.key]) ? 4 : 3,
       n: this.name,
       a: this.author || "",
       d: this.decor,
@@ -4648,11 +4747,7 @@ var Track = class _Track {
     if (decos.length) data.o = decos;
     if (this.laps > 1) data.lp = this.laps;
     if (this.desc) data.ds = this.desc;
-    if (this.offroad) data.or = 1;
-    if (this.v0) data.v0 = this.v0;
-    if (this.g0 !== 100) data.g0 = this.g0;
-    if (this.veh0 !== "car") data.ve = this.veh0;
-    if (this.inversionGraviteDepart) data.ig = 1;
+    for (const r of RULES) if (this[r.key] !== r.def) data[r.code] = this[r.key] === true ? 1 : this[r.key];
     if (this.verified) {
       data.vt = this.vt;
       data.vh = this.vh;
@@ -4738,11 +4833,10 @@ var Track = class _Track {
     tr.laps = Math.max(1, Math.min(9, data.lp | 0 || 1));
     tr.setParams({
       desc: data.ds,
-      offroad: data.or,
-      v0: data.v0,
-      g0: data.g0,
-      veh0: data.ve,
-      inversionGraviteDepart: data.ig
+      ...Object.fromEntries(RULES.map((r) => [
+        r.key,
+        data[r.code]
+      ]))
     });
     if (data.vt > 0 && data.vh) {
       tr.vt = +data.vt;
@@ -7325,6 +7419,7 @@ var SIDE_HOLD = 25 / (30 * 30);
 var SIDE_MIN_SPEED = 30;
 var SIDE_GRACE = 0.3;
 var clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+var fin = Number.isFinite;
 var L1 = {
   lx: 0,
   lz: 0
@@ -7367,6 +7462,14 @@ var BK = {
   vx: 0,
   vy: 0,
   w: 0
+};
+var BASIS = {
+  e1x: 0,
+  e1y: 0,
+  e1z: 0,
+  e2x: 0,
+  e2y: 0,
+  e2z: 0
 };
 var COEF = {
   grip: 1,
@@ -7501,6 +7604,11 @@ var CarPhysics = class {
   get g() {
     return CAR.gravity * this.gravMul;
   }
+  // Chrono de la course (s) : donne la position des pièces mobiles et des obstacles. this.clock = pas de course, fixé par l'appelant
+  // avant chaque pas (même valeur en course, en replay, après un retour au checkpoint et dans la vérification en ligne).
+  get time() {
+    return (this.clock || 0) * DT;
+  }
   // Réglages du véhicule actuel (voiture ou moto).
   get k() {
     return SPECS[this.vehicle] || CAR;
@@ -7569,7 +7677,7 @@ var CarPhysics = class {
     this.plateLock = "";
     this.sinkT = 0;
     this.hazardGrace = 0.8;
-    const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3, this.broken) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3, this.broken);
+    const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3, this.broken, this.time) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3, this.broken);
     if (this.gSign < 0) {
       this.n.x = 0;
       this.n.y = -1;
@@ -7742,7 +7850,6 @@ var CarPhysics = class {
   }
   step(inp) {
     const dt = DT, p = this.pos, v = this.vel, ev = this.ev;
-    this.track.time = (this.clock || 0) * dt;
     if (this.graceT > 0) this.graceT -= dt;
     ev.wall = 0;
     ev.land = 0;
@@ -7833,7 +7940,7 @@ var CarPhysics = class {
       rz /= len;
       let belt = this.surfMod === "conveyor" && this.surfTile ? this._belt(this.surfTile, this.surfLx, this.surfLz, BELT) : null;
       if (this.surfTile && this.surfTile.mv >= 2) {
-        const o = this.track.moverOffset(this.surfTile, this.track.time, MOV);
+        const o = this.track.moverOffset(this.surfTile, this.time, MOV);
         if (!belt) {
           belt = BELT;
           BELT.x = 0;
@@ -7971,14 +8078,14 @@ var CarPhysics = class {
     if (this.ev.sink) return;
     this._bounds();
     const gs = this.gSign;
-    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken);
+    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken);
     const gap = gs * (p.y - s.h);
     const vn = v.x * s.nx + v.y * s.ny + v.z * s.nz;
     const magnet = s.mod === "magnet";
     const launch = magnet ? Infinity : CAR.launch;
     const snap = magnet ? CAR.step : CAR.snap;
     if (!this.grounded) {
-      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken);
+      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken);
       const mg = gs * (p.y - m.h);
       if (m.mod === "magnet" && mg > 0.02 && mg < CAR.magnetRange) {
         const a = CAR.magnetAcc * (1 - mg / CAR.magnetRange) * dt;
@@ -8229,180 +8336,154 @@ var CarPhysics = class {
   // ---------------------------------------------------------------- Obstacles
   // Le temps des obstacles est le chrono de la course (this.clock = pas de course, fixé
   // par l'appelant avant chaque pas) : même mouvement en replay et après un retour (R).
+  // L'index spatial (cases de 20 m) appartient au circuit : il est construit une fois par version du circuit,
+  // pas par voiture ni par pas. Les cases voisines sont parcourues dans le même ordre qu'avant (ix puis iz, puis ordre du circuit) :
+  // l'ordre compte, chaque contact corrige la position avant le test du suivant.
   _obstacles() {
-    const obs = this.track.obstacles;
-    if (!obs.length || this.hazardGrace > 0) return;
+    const track = this.track;
+    if (!track.obstacles.length || this.hazardGrace > 0) return;
+    const grid = track.obstacleGrid;
     const t = (this.clock || 0) * DT;
-    const p = this.pos, v = this.vel, n0 = this.n;
-    let cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
-    if (this._obstacleGridSource !== obs) {
-      const grid2 = /* @__PURE__ */ new Map(), cell2 = 20;
-      for (const d of obs) {
-        if (!d || !Number.isFinite(d.x) || !Number.isFinite(d.z)) continue;
-        const key2 = `${Math.floor(d.x / cell2)},${Math.floor(d.z / cell2)}`;
-        let bucket = grid2.get(key2);
-        if (!bucket) grid2.set(key2, bucket = []);
-        bucket.push(d);
-      }
-      this._obstacleGridSource = obs;
-      this._obstacleGrid = grid2;
-    }
-    const candidates = [], grid = this._obstacleGrid, cell = 20;
-    const gx = Math.floor(cx / cell), gz = Math.floor(cz / cell);
+    const p = this.pos, n0 = this.n;
+    const gx = Math.floor((p.x + n0.x * 0.8) / OBSTACLE_CELL), gz = Math.floor((p.z + n0.z * 0.8) / OBSTACLE_CELL);
     for (let ix = gx - 3; ix <= gx + 3; ix++) {
       for (let iz = gz - 3; iz <= gz + 3; iz++) {
-        const bucket = grid.get(`${ix},${iz}`);
-        if (bucket) for (const d of bucket) candidates.push(d);
+        const bucket = grid.get(obstacleKey(ix, iz));
+        if (bucket === void 0) continue;
+        for (let i = 0; i < bucket.length; i++) if (this._obstacleContact(bucket[i], t)) return;
       }
     }
-    for (const d of candidates) {
-      cx = p.x + n0.x * 0.8;
-      cy = p.y + n0.y * 0.8;
-      cz = p.z + n0.z * 0.8;
-      if (!d || !OBST[d.k] || !Number.isFinite(d.x) || !Number.isFinite(d.y) || !Number.isFinite(d.z) || !Number.isFinite(d.s || 1) || !Number.isFinite(d.ry || 0)) continue;
-      if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) continue;
-      const rr = obstacleRadius(d) + 3;
-      if ((cx - d.x) ** 2 + (cz - d.z) ** 2 > rr * rr) continue;
-      const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
-      if (!(k > 0) || !Number.isFinite(rc)) continue;
-      obstacleLocal(d, t, OB);
-      toLocalObs(d, cx, cy, cz, OL);
-      if (![
-        OB.x,
-        OB.y,
-        OB.z,
-        OB.vx,
-        OB.vy,
-        OB.vz,
-        OB.on,
-        OL.x,
-        OL.y,
-        OL.z
-      ].every(Number.isFinite)) continue;
-      let nx = 0, ny = 0, nz = 0, pen = 0, ovx = 0, ovy = 0, ovz = 0;
-      if (def.type === "spike") {
-        if (OB.on < 0.4 || this.graceT > 0) continue;
-        if (Math.abs(OL.x) < def.hx + rc * 0.6 && Math.abs(OL.z) < def.hz + rc * 0.6 && OL.y < def.hy * OB.on + rc && OL.y > -1.5) {
-          this.ev.spike = true;
-          this.ev.sink = true;
-          return;
-        }
-        continue;
-      } else if (def.type === "ball") {
-        const dx = OL.x - OB.x, dy = OL.y - OB.y, dz = OL.z;
-        const dd = Math.hypot(dx, dy, dz);
-        if (dd >= def.r + rc) continue;
-        if (dd < 1e-6) {
-          nx = 0;
-          ny = 1;
-          nz = 0;
-          pen = def.r + rc;
-        } else {
-          nx = dx / dd;
-          ny = dy / dd;
-          nz = dz / dd;
-          pen = def.r + rc - dd;
-        }
-        ovx = OB.vx;
-        ovy = OB.vy;
-      } else if (def.type === "box") {
-        const qx = clamp(OL.x, OB.x - def.hx, OB.x + def.hx), qy = clamp(OL.y, 0, def.hy * 2), qz = clamp(OL.z, -def.hz, def.hz);
-        const dx = OL.x - qx, dy = OL.y - qy, dz = OL.z - qz;
-        const dd = Math.hypot(dx, dy, dz);
-        if (dd >= rc) continue;
-        if (dd < 1e-6) {
-          const ex = def.hx - Math.abs(OL.x - OB.x);
-          const ey0 = OL.y, ey1 = def.hy * 2 - OL.y;
-          const ez = def.hz - Math.abs(OL.z);
-          const face = Math.min(ex, ey0, ey1, ez);
-          if (face === ey0 || face === ey1) {
-            nx = 0;
-            ny = ey0 <= ey1 ? -1 : 1;
-            nz = 0;
-          } else if (face === ez) {
-            nx = 0;
-            ny = 0;
-            nz = OL.z >= 0 ? 1 : -1;
-          } else {
-            nx = OL.x >= OB.x ? 1 : -1;
-            ny = 0;
-            nz = 0;
-          }
-          pen = Math.max(0.01, rc + Math.max(0, face));
-        } else {
-          nx = dx / dd;
-          ny = dy / dd;
-          nz = dz / dd;
-          pen = rc - dd;
-        }
-        ovx = OB.vx;
-      } else if (def.type === "bar") {
-        const ca = Math.cos(OB.a), sa = Math.sin(OB.a);
-        const s = clamp(OL.x * ca + OL.z * sa, -def.len, def.len);
-        const dx = OL.x - ca * s, dy = OL.y - def.y, dz = OL.z - sa * s;
-        const dd = Math.hypot(dx, dy, dz);
-        if (dd >= def.r + rc) continue;
-        if (dd < 1e-6) {
-          nx = -sa;
-          ny = 0;
-          nz = ca;
-          pen = def.r + rc;
-        } else {
-          nx = dx / dd;
-          ny = dy / dd;
-          nz = dz / dd;
-          pen = def.r + rc - dd;
-        }
-        ovx = -sa * s * OB.w;
-        ovz = ca * s * OB.w;
+  }
+  // Contact de la voiture avec l'obstacle d au temps t (s). Renvoie true si le contact est létal (le pas se termine aussitôt).
+  _obstacleContact(d, t) {
+    const p = this.pos, v = this.vel, n0 = this.n;
+    const cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
+    if (!d || !OBST[d.k] || !fin(d.x) || !fin(d.y) || !fin(d.z) || !fin(d.s || 1) || !fin(d.ry || 0)) return false;
+    if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) return false;
+    const rr = obstacleRadius(d) + 3;
+    if ((cx - d.x) ** 2 + (cz - d.z) ** 2 > rr * rr) return false;
+    const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
+    if (!(k > 0) || !fin(rc)) return false;
+    obstacleLocal(d, t, OB);
+    toLocalObs(d, cx, cy, cz, OL);
+    if (!(fin(OB.x) && fin(OB.y) && fin(OB.z) && fin(OB.vx) && fin(OB.vy) && fin(OB.vz) && fin(OB.on) && fin(OL.x) && fin(OL.y) && fin(OL.z))) return false;
+    let nx = 0, ny = 0, nz = 0, pen = 0, ovx = 0, ovy = 0, ovz = 0;
+    if (def.type === "spike") {
+      if (OB.on < 0.4 || this.graceT > 0) return false;
+      if (Math.abs(OL.x) < def.hx + rc * 0.6 && Math.abs(OL.z) < def.hz + rc * 0.6 && OL.y < def.hy * OB.on + rc && OL.y > -1.5) {
+        this.ev.spike = true;
+        this.ev.sink = true;
+        return true;
+      }
+      return false;
+    } else if (def.type === "ball") {
+      const dx = OL.x - OB.x, dy = OL.y - OB.y, dz = OL.z;
+      const dd = Math.hypot(dx, dy, dz);
+      if (dd >= def.r + rc) return false;
+      if (dd < 1e-6) {
+        nx = 0;
+        ny = 1;
+        nz = 0;
+        pen = def.r + rc;
       } else {
-        if (OL.y > def.h + rc) continue;
-        const dd = Math.hypot(OL.x, OL.z);
-        if (dd >= def.r + rc) continue;
-        if (dd < 1e-6) {
-          nx = 1;
+        nx = dx / dd;
+        ny = dy / dd;
+        nz = dz / dd;
+        pen = def.r + rc - dd;
+      }
+      ovx = OB.vx;
+      ovy = OB.vy;
+    } else if (def.type === "box") {
+      const qx = clamp(OL.x, OB.x - def.hx, OB.x + def.hx), qy = clamp(OL.y, 0, def.hy * 2), qz = clamp(OL.z, -def.hz, def.hz);
+      const dx = OL.x - qx, dy = OL.y - qy, dz = OL.z - qz;
+      const dd = Math.hypot(dx, dy, dz);
+      if (dd >= rc) return false;
+      if (dd < 1e-6) {
+        const ex = def.hx - Math.abs(OL.x - OB.x);
+        const ey0 = OL.y, ey1 = def.hy * 2 - OL.y;
+        const ez = def.hz - Math.abs(OL.z);
+        const face = Math.min(ex, ey0, ey1, ez);
+        if (face === ey0 || face === ey1) {
+          nx = 0;
+          ny = ey0 <= ey1 ? -1 : 1;
           nz = 0;
-          pen = def.r + rc;
+        } else if (face === ez) {
+          nx = 0;
+          ny = 0;
+          nz = OL.z >= 0 ? 1 : -1;
         } else {
-          nx = OL.x / dd;
-          nz = OL.z / dd;
-          pen = def.r + rc - dd;
+          nx = OL.x >= OB.x ? 1 : -1;
+          ny = 0;
+          nz = 0;
         }
+        pen = Math.max(0.01, rc + Math.max(0, face));
+      } else {
+        nx = dx / dd;
+        ny = dy / dd;
+        nz = dz / dd;
+        pen = rc - dd;
       }
-      const c = Math.cos(d.ry || 0), sn = Math.sin(d.ry || 0);
-      const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
-      const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
-      if (![
-        wx,
-        wy,
-        wz,
-        vwx,
-        vwy,
-        vwz
-      ].every(Number.isFinite)) continue;
-      const correction = Math.min(pen * k, 2.5);
-      p.x += wx * correction;
-      p.y += wy * correction;
-      p.z += wz * correction;
-      const vn = (v.x - vwx) * wx + (v.y - vwy) * wy + (v.z - vwz) * wz;
-      let add = 0;
-      if (vn < -0.05) {
-        add = -(1 + CAR.shockE) * vn;
-        if (def.type === "post") {
-          add = Math.max(add, Math.max(0, def.kick - add));
-        } else {
-          add += CAR.shockKick;
-        }
+      ovx = OB.vx;
+    } else if (def.type === "bar") {
+      const ca = Math.cos(OB.a), sa = Math.sin(OB.a);
+      const s = clamp(OL.x * ca + OL.z * sa, -def.len, def.len);
+      const dx = OL.x - ca * s, dy = OL.y - def.y, dz = OL.z - sa * s;
+      const dd = Math.hypot(dx, dy, dz);
+      if (dd >= def.r + rc) return false;
+      if (dd < 1e-6) {
+        nx = -sa;
+        ny = 0;
+        nz = ca;
+        pen = def.r + rc;
+      } else {
+        nx = dx / dd;
+        ny = dy / dd;
+        nz = dz / dd;
+        pen = def.r + rc - dd;
       }
-      if (add > 0) {
-        v.x += wx * add;
-        v.y += wy * add;
-        v.z += wz * add;
-        this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;
-        if (wy * this.gSign > 0.45) this.grounded = false;
-        this.ev.shock = Math.max(this.ev.shock, add);
+      ovx = -sa * s * OB.w;
+      ovz = ca * s * OB.w;
+    } else {
+      if (OL.y > def.h + rc) return false;
+      const dd = Math.hypot(OL.x, OL.z);
+      if (dd >= def.r + rc) return false;
+      if (dd < 1e-6) {
+        nx = 1;
+        nz = 0;
+        pen = def.r + rc;
+      } else {
+        nx = OL.x / dd;
+        nz = OL.z / dd;
+        pen = def.r + rc - dd;
       }
     }
+    const c = Math.cos(d.ry || 0), sn = Math.sin(d.ry || 0);
+    const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
+    const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
+    if (!(fin(wx) && fin(wy) && fin(wz) && fin(vwx) && fin(vwy) && fin(vwz))) return false;
+    const correction = Math.min(pen * k, 2.5);
+    p.x += wx * correction;
+    p.y += wy * correction;
+    p.z += wz * correction;
+    const vn = (v.x - vwx) * wx + (v.y - vwy) * wy + (v.z - vwz) * wz;
+    let add = 0;
+    if (vn < -0.05) {
+      add = -(1 + CAR.shockE) * vn;
+      if (def.type === "post") {
+        add = Math.max(add, Math.max(0, def.kick - add));
+      } else {
+        add += CAR.shockKick;
+      }
+    }
+    if (add > 0) {
+      v.x += wx * add;
+      v.y += wy * add;
+      v.z += wz * add;
+      this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;
+      if (wy * this.gSign > 0.45) this.grounded = false;
+      this.ev.shock = Math.max(this.ev.shock, add);
+    }
+    return false;
   }
   _probe(x, z, px, pz, y) {
     const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
@@ -8412,10 +8493,10 @@ var CarPhysics = class {
       if (tile.mv || this.broken.has(tile)) continue;
       if (this._probeTile(tile, x, z, px, pz, y, 0)) return HIT;
     }
-    const mv = this.track.movers;
+    const mv = this.track.movers, time = this.time;
     for (let i = 0; i < mv.length; i++) {
       if (this.broken.has(mv[i])) continue;
-      const o = this.track.moverOffset(mv[i], this.track.time, MOV);
+      const o = this.track.moverOffset(mv[i], time, MOV);
       if (o.a) {
         const q = this.track.moverLocal(o, x, z, MQ1), q2 = this.track.moverLocal(o, px, pz, MQ2);
         if (this._probeTile(mv[i], q.x, q.z, q2.x, q2.z, y - o.y, 0)) {
@@ -8463,16 +8544,16 @@ var CarPhysics = class {
   // Sur un ruban, l'état est exprimé dans le plan de la route :
   //   e1 = sens de parcours, e2 = droite, n = normale.
   //   vs, vd : vitesse le long de e1 / e2 ; psi : cap de la voiture par rapport à e1.
+  // Le résultat est un tampon partagé : valable jusqu'au prochain appel (chaque appelant l'utilise aussitôt).
   _basis(R, F) {
     const d = R.dir;
-    return {
-      e1x: F.tx * d,
-      e1y: F.ty * d,
-      e1z: F.tz * d,
-      e2x: F.rx * d,
-      e2y: F.ry * d,
-      e2z: F.rz * d
-    };
+    BASIS.e1x = F.tx * d;
+    BASIS.e1y = F.ty * d;
+    BASIS.e1z = F.tz * d;
+    BASIS.e2x = F.rx * d;
+    BASIS.e2y = F.ry * d;
+    BASIS.e2z = F.rz * d;
+    return BASIS;
   }
   // Détecte le franchissement d'une extrémité de ruban (plan perpendiculaire à la route).
   _tryEnterRibbon() {
@@ -9027,7 +9108,7 @@ var RaceLogic = class {
       y: baseY(t),
       z: c.z - fz * back,
       yaw: -t.r * Math.PI / 2,
-      gs: t.v || this.track.inversionGraviteDepart ? -1 : 1
+      gs: t.v || this.track.flip0 ? -1 : 1
     };
   }
   reset() {

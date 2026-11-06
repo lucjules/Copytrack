@@ -17,6 +17,21 @@ export const OBST = {
 };
 export const isObstacle = (k) => !!OBST[k];
 
+// Index spatial des obstacles : cases de 20 m, clé numérique (aucune chaîne construite à chaque requête). Le circuit en tient un
+// (Track.obstacleGrid), reconstruit quand il change ; la physique le parcourt à chaque pas. Les seaux gardent l'ordre du circuit.
+export const OBSTACLE_CELL = 20;
+export const obstacleKey = (ix, iz) => ix * 1048576 + iz;
+export function buildObstacleGrid(list) {
+  const grid = new Map();
+  for (const d of list) {
+    if (!d || !Number.isFinite(d.x) || !Number.isFinite(d.z)) continue;
+    const k = obstacleKey(Math.floor(d.x / OBSTACLE_CELL), Math.floor(d.z / OBSTACLE_CELL));
+    const bucket = grid.get(k);
+    if (bucket) bucket.push(d); else grid.set(k, [d]);
+  }
+  return grid;
+}
+
 const TAU = Math.PI * 2;
 
 // Hauteur des piques escamotables (0 = rentrées, 1 = sorties) : 1,5 s dehors, 1,5 s dedans,
@@ -37,7 +52,7 @@ export function obstacleLocal(d, t, out) {
   const def = OBST[d.k];
   const ph = (d.ph || 0) * (def.period || 1);
   const tt = t + ph;
-  out.x = 0; out.y = 0; out.z = 0; out.vx = 0; out.vy = 0; out.vz = 0; out.a = 0; out.on = 1;
+  out.x = 0; out.y = 0; out.z = 0; out.vx = 0; out.vy = 0; out.vz = 0; out.a = 0; out.w = 0; out.on = 1;
   if (def.type === 'spike') {
     out.on = spikeLevel(def, tt);
   } else if (d.k === 'pendulum') {

@@ -18,28 +18,33 @@ import { PIECES, baseY, arcParams, localToWorld, isOriented, oriAngle, profH, pr
 const smooth = (u) => u * u * (3 - 2 * u);
 // 0 aux extrémités, 1 au milieu, transitions douces de largeur w.
 const ramp = (u, w) => (u < w ? smooth(u / w) : u > 1 - w ? smooth((1 - u) / w) : 1);
+// Cache par pièce. Une pièce se modifie en place (niveau, orientation, type) : l'entrée garde les champs dont dépend la géométrie
+// (type, niveau, orientation) et se reconstruit dès que l'un change. `plain` : à l'endroit, `flipped` : retournée (pièce à l'envers) ;
+// undefined = pas encore construit, null = cette pièce n'est pas un ruban.
 const cache = new WeakMap();
 
 // raw : géométrie « à l'endroit » (le rendu la retourne lui-même pour une pièce à l'envers).
 // Sinon, pour une pièce posée à l'envers, le ruban est retourné autour de son niveau :
 // y -> 2·base − y et normale inversée (la voiture y roule en gravité inversée).
 export function ribbonOf(tile, raw = false) {
-  const flip = !!tile.v && !raw;
-  const key = tile.t + '|' + tile.l + '|' + (flip ? 1 : 0) + '|' + (tile.o | 0);
-  const c = cache.get(tile);
-  if (c && c.keys && c.keys[key]) return c.keys[key];
-  let rib = build(tile);
-  if (flip && rib) {
-    const inner = rib, base = baseY(tile);
-    rib = {
+  const ori = tile.o | 0;
+  let c = cache.get(tile);
+  if (c === undefined || c.t !== tile.t || c.l !== tile.l || c.o !== ori) {
+    c = { t: tile.t, l: tile.l, o: ori, plain: undefined, flipped: undefined };
+    cache.set(tile, c);
+  }
+  if (!tile.v || raw) {
+    if (c.plain === undefined) c.plain = build(tile);
+    return c.plain;
+  }
+  if (c.flipped === undefined) {
+    const inner = ribbonOf(tile, true), base = baseY(tile);
+    c.flipped = inner && {
       ...inner,
       pos(u, o) { inner.pos(u, o); o.y = 2 * base - o.y; o.ny = -o.ny; },
     };
   }
-  const entry = c && c.keys ? c : { keys: {} };
-  entry.keys[key] = rib;
-  cache.set(tile, entry);
-  return rib;
+  return c.flipped;
 }
 
 // Ligne centrale d'une ligne ou d'un virage (coordonnées locales) et tangente unitaire à l'avancée u (profil vertical compris).

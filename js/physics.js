@@ -15,7 +15,7 @@ import {
   beltSpeed, glassSeconds, TUNNEL_TOP, isSideTile, hasNoRails,
 } from './pieces.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
-import { OBST, obstacleLocal, toLocalObs, obstacleRadius } from './obstacles.js';
+import { OBST, OBSTACLE_CELL, obstacleKey, obstacleLocal, toLocalObs, obstacleRadius } from './obstacles.js';
 
 export const CAR = {
   accel: 11,          // m/s² à l'arrêt ; la poussée décroît ensuite selon accelCurve (0.9.4 : 28 -> 9, 0 à 100 km/h en ~4 s, 180 km/h en ~8 s, 220 km/h en ~12 s)
@@ -156,6 +156,7 @@ export const SIDE_MIN_SPEED = 30;
 export const SIDE_GRACE = 0.3;
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const fin = Number.isFinite;
 const L1 = { lx: 0, lz: 0 }, L2 = { lx: 0, lz: 0 };
 const S1 = {}, S2 = {};
 const W1 = { x: 0, z: 0 };
@@ -166,6 +167,7 @@ const CC = { x: 0, z: 0 };
 const TMP = { x: 0, z: 0 };
 const HIT = { dx: 0, dz: 0, nx: 0, nz: 0 };
 const BK = { vx: 0, vy: 0, w: 0 };
+const BASIS = { e1x: 0, e1y: 0, e1z: 0, e2x: 0, e2y: 0, e2z: 0 };
 
 // Coefficients des revêtements : UNE seule source pour le sol et pour les rubans (loopings, tubes, plafond...).
 // Ils ne dépendent ni du sens de la gravité ni de la position de la voiture : endroit ou envers, mêmes valeurs.
@@ -228,6 +230,12 @@ export class CarPhysics {
     return CAR.gravity * this.gravMul;
   }
 
+  // Chrono de la course (s) : donne la position des pièces mobiles et des obstacles. this.clock = pas de course, fixé par l'appelant
+  // avant chaque pas (même valeur en course, en replay, après un retour au checkpoint et dans la vérification en ligne).
+  get time() {
+    return (this.clock || 0) * DT;
+  }
+
   // Réglages du véhicule actuel (voiture ou moto).
   get k() {
     return SPECS[this.vehicle] || CAR;
@@ -274,7 +282,7 @@ export class CarPhysics {
     this.plateLock = '';
     this.sinkT = 0;
     this.hazardGrace = 0.8; // sécurité après respawn pour éviter les réapparitions en boucle
-    const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3, this.broken) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3, this.broken);
+    const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3, this.broken, this.time) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3, this.broken);
     if (this.gSign < 0) {
       this.n.x = 0; this.n.y = -1; this.n.z = 0;
       if (!Number.isFinite(s.h)) { s.h = y; s.type = 'none'; }
@@ -437,7 +445,6 @@ export class CarPhysics {
 
   step(inp) {
     const dt = DT, p = this.pos, v = this.vel, ev = this.ev;
-    this.track.time = (this.clock || 0) * dt;   // position des pièces mobiles
     if (this.graceT > 0) this.graceT -= dt;
     ev.wall = 0; ev.land = 0; ev.boostHit = false; ev.bounce = false;
     if (this.hazardGrace > 0) this.hazardGrace = Math.max(0, this.hazardGrace - dt);
@@ -507,7 +514,7 @@ export class CarPhysics {
       // Pièce mobile (glissière, rotation) : la voiture est portée par la pièce, comme par un tapis.
       // Rotation : vitesse du sol au point de contact = ω × r ; la voiture tourne aussi avec la pièce (même cap).
       if (this.surfTile && this.surfTile.mv >= 2) {
-        const o = this.track.moverOffset(this.surfTile, this.track.time, MOV);
+        const o = this.track.moverOffset(this.surfTile, this.time, MOV);
         if (!belt) { belt = BELT; BELT.x = 0; BELT.z = 0; }
         if (this.surfTile.mv === 2) { belt.x += o.vx; belt.z += o.vz; }
         else {
@@ -616,7 +623,7 @@ export class CarPhysics {
     // Contact avec la chaussée.
     // En gravité inversée, le « sol » est le dessous des pièces posées à l'envers.
     const gs = this.gSign;
-    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken);
+    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken);
     const gap = gs * (p.y - s.h);
     const vn = v.x * s.nx + v.y * s.ny + v.z * s.nz;
     // Aimant : la voiture reste collée à la route quoi qu'il arrive (bosses, vitesse).
@@ -626,7 +633,7 @@ export class CarPhysics {
     // Aimant : au-dessus d'une route aimantée, la voiture est attirée vers la surface le long de SA normale, pas selon
     // la gravité du monde. Endroit ou envers, c'est la même règle (au plafond, la normale pointe vers le bas du monde).
     if (!this.grounded) {
-      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken);
+      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken);
       const mg = gs * (p.y - m.h);
       if (m.mod === 'magnet' && mg > 0.02 && mg < CAR.magnetRange) {
         const a = CAR.magnetAcc * (1 - mg / CAR.magnetRange) * dt;
@@ -847,123 +854,116 @@ export class CarPhysics {
   // ---------------------------------------------------------------- Obstacles
   // Le temps des obstacles est le chrono de la course (this.clock = pas de course, fixé
   // par l'appelant avant chaque pas) : même mouvement en replay et après un retour (R).
+  // L'index spatial (cases de 20 m) appartient au circuit : il est construit une fois par version du circuit,
+  // pas par voiture ni par pas. Les cases voisines sont parcourues dans le même ordre qu'avant (ix puis iz, puis ordre du circuit) :
+  // l'ordre compte, chaque contact corrige la position avant le test du suivant.
   _obstacles() {
-    const obs = this.track.obstacles;
-    if (!obs.length || this.hazardGrace > 0) return;
+    const track = this.track;
+    if (!track.obstacles.length || this.hazardGrace > 0) return;
+    const grid = track.obstacleGrid;
     const t = (this.clock || 0) * DT;
-    const p = this.pos, v = this.vel, n0 = this.n;
-    let cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
-    // Index spatial paresseux : éviter de parcourir tous les obstacles à chaque pas
-    // physique sur les circuits chargés. La course garde une liste d'obstacles stable.
-    if (this._obstacleGridSource !== obs) {
-      const grid = new Map(), cell = 20;
-      for (const d of obs) {
-        if (!d || !Number.isFinite(d.x) || !Number.isFinite(d.z)) continue;
-        const key = `${Math.floor(d.x / cell)},${Math.floor(d.z / cell)}`;
-        let bucket = grid.get(key);
-        if (!bucket) grid.set(key, bucket = []);
-        bucket.push(d);
-      }
-      this._obstacleGridSource = obs;
-      this._obstacleGrid = grid;
-    }
-    const candidates = [], grid = this._obstacleGrid, cell = 20;
-    const gx = Math.floor(cx / cell), gz = Math.floor(cz / cell);
+    const p = this.pos, n0 = this.n;
+    const gx = Math.floor((p.x + n0.x * 0.8) / OBSTACLE_CELL), gz = Math.floor((p.z + n0.z * 0.8) / OBSTACLE_CELL);
     for (let ix = gx - 3; ix <= gx + 3; ix++) {
       for (let iz = gz - 3; iz <= gz + 3; iz++) {
-        const bucket = grid.get(`${ix},${iz}`);
-        if (bucket) for (const d of bucket) candidates.push(d);
+        const bucket = grid.get(obstacleKey(ix, iz));
+        if (bucket === undefined) continue;
+        for (let i = 0; i < bucket.length; i++) if (this._obstacleContact(bucket[i], t)) return;
       }
     }
-    for (const d of candidates) {
-      // Recalculer le centre après chaque correction de contact : plusieurs obstacles
-      // proches ne doivent pas être testés contre la position d'avant le premier choc.
-      cx = p.x + n0.x * 0.8; cy = p.y + n0.y * 0.8; cz = p.z + n0.z * 0.8;
-      if (!d || !OBST[d.k] || !Number.isFinite(d.x) || !Number.isFinite(d.y) || !Number.isFinite(d.z) || !Number.isFinite(d.s || 1) || !Number.isFinite(d.ry || 0)) continue;
-      if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) continue;
-      const rr = obstacleRadius(d) + 3;
-      if ((cx - d.x) ** 2 + (cz - d.z) ** 2 > rr * rr) continue;
-      const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
-      if (!(k > 0) || !Number.isFinite(rc)) continue;
-      obstacleLocal(d, t, OB);
-      toLocalObs(d, cx, cy, cz, OL);
-      if (![OB.x, OB.y, OB.z, OB.vx, OB.vy, OB.vz, OB.on, OL.x, OL.y, OL.z].every(Number.isFinite)) continue;
-      let nx = 0, ny = 0, nz = 0, pen = 0, ovx = 0, ovy = 0, ovz = 0;
-      if (def.type === 'spike') {
-        if (OB.on < 0.4 || this.graceT > 0) continue;
-        if (Math.abs(OL.x) < def.hx + rc * 0.6 && Math.abs(OL.z) < def.hz + rc * 0.6 && OL.y < def.hy * OB.on + rc && OL.y > -1.5) {
-          this.ev.spike = true; this.ev.sink = true;
-          return;
-        }
-        continue;
-      } else if (def.type === 'ball') {
-        const dx = OL.x - OB.x, dy = OL.y - OB.y, dz = OL.z;
-        const dd = Math.hypot(dx, dy, dz);
-        if (dd >= def.r + rc) continue;
-        if (dd < 1e-6) { nx = 0; ny = 1; nz = 0; pen = def.r + rc; }
-        else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd; }
-        ovx = OB.vx; ovy = OB.vy;
-      } else if (def.type === 'box') {
-        const qx = clamp(OL.x, OB.x - def.hx, OB.x + def.hx), qy = clamp(OL.y, 0, def.hy * 2), qz = clamp(OL.z, -def.hz, def.hz);
-        const dx = OL.x - qx, dy = OL.y - qy, dz = OL.z - qz;
-        const dd = Math.hypot(dx, dy, dz);
-        if (dd >= rc) continue;
-        if (dd < 1e-6) {
-          // Centre de la voiture dans la boîte : choisir la face la plus proche,
-          // au lieu de toujours pousser sur X (source de coincements/jitter).
-          const ex = def.hx - Math.abs(OL.x - OB.x);
-          const ey0 = OL.y, ey1 = def.hy * 2 - OL.y;
-          const ez = def.hz - Math.abs(OL.z);
-          const face = Math.min(ex, ey0, ey1, ez);
-          if (face === ey0 || face === ey1) { nx = 0; ny = ey0 <= ey1 ? -1 : 1; nz = 0; }
-          else if (face === ez) { nx = 0; ny = 0; nz = OL.z >= 0 ? 1 : -1; }
-          else { nx = OL.x >= OB.x ? 1 : -1; ny = 0; nz = 0; }
-          pen = Math.max(0.01, rc + Math.max(0, face));
-        } else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = rc - dd; }
-        ovx = OB.vx;
-      } else if (def.type === 'bar') {
-        const ca = Math.cos(OB.a), sa = Math.sin(OB.a);
-        const s = clamp(OL.x * ca + OL.z * sa, -def.len, def.len);
-        const dx = OL.x - ca * s, dy = OL.y - def.y, dz = OL.z - sa * s;
-        const dd = Math.hypot(dx, dy, dz);
-        if (dd >= def.r + rc) continue;
-        if (dd < 1e-6) { nx = -sa; ny = 0; nz = ca; pen = def.r + rc; }
-        else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd; }
-        ovx = -sa * s * OB.w; ovz = ca * s * OB.w;
+  }
+
+  // Contact de la voiture avec l'obstacle d au temps t (s). Renvoie true si le contact est létal (le pas se termine aussitôt).
+  _obstacleContact(d, t) {
+    const p = this.pos, v = this.vel, n0 = this.n;
+    // Le centre est recalculé à chaque obstacle : plusieurs obstacles proches ne doivent pas être testés contre
+    // la position d'avant le premier choc.
+    const cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
+    if (!d || !OBST[d.k] || !fin(d.x) || !fin(d.y) || !fin(d.z) || !fin(d.s || 1) || !fin(d.ry || 0)) return false;
+    if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) return false;
+    const rr = obstacleRadius(d) + 3;
+    if ((cx - d.x) ** 2 + (cz - d.z) ** 2 > rr * rr) return false;
+    const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
+    if (!(k > 0) || !fin(rc)) return false;
+    obstacleLocal(d, t, OB);
+    toLocalObs(d, cx, cy, cz, OL);
+    if (!(fin(OB.x) && fin(OB.y) && fin(OB.z) && fin(OB.vx) && fin(OB.vy) && fin(OB.vz) && fin(OB.on) && fin(OL.x) && fin(OL.y) && fin(OL.z))) return false;
+    let nx = 0, ny = 0, nz = 0, pen = 0, ovx = 0, ovy = 0, ovz = 0;
+    if (def.type === 'spike') {
+      if (OB.on < 0.4 || this.graceT > 0) return false;
+      if (Math.abs(OL.x) < def.hx + rc * 0.6 && Math.abs(OL.z) < def.hz + rc * 0.6 && OL.y < def.hy * OB.on + rc && OL.y > -1.5) {
+        this.ev.spike = true; this.ev.sink = true;
+        return true;
+      }
+      return false;
+    } else if (def.type === 'ball') {
+      const dx = OL.x - OB.x, dy = OL.y - OB.y, dz = OL.z;
+      const dd = Math.hypot(dx, dy, dz);
+      if (dd >= def.r + rc) return false;
+      if (dd < 1e-6) { nx = 0; ny = 1; nz = 0; pen = def.r + rc; }
+      else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd; }
+      ovx = OB.vx; ovy = OB.vy;
+    } else if (def.type === 'box') {
+      const qx = clamp(OL.x, OB.x - def.hx, OB.x + def.hx), qy = clamp(OL.y, 0, def.hy * 2), qz = clamp(OL.z, -def.hz, def.hz);
+      const dx = OL.x - qx, dy = OL.y - qy, dz = OL.z - qz;
+      const dd = Math.hypot(dx, dy, dz);
+      if (dd >= rc) return false;
+      if (dd < 1e-6) {
+        // Centre de la voiture dans la boîte : choisir la face la plus proche,
+        // au lieu de toujours pousser sur X (source de coincements/jitter).
+        const ex = def.hx - Math.abs(OL.x - OB.x);
+        const ey0 = OL.y, ey1 = def.hy * 2 - OL.y;
+        const ez = def.hz - Math.abs(OL.z);
+        const face = Math.min(ex, ey0, ey1, ez);
+        if (face === ey0 || face === ey1) { nx = 0; ny = ey0 <= ey1 ? -1 : 1; nz = 0; }
+        else if (face === ez) { nx = 0; ny = 0; nz = OL.z >= 0 ? 1 : -1; }
+        else { nx = OL.x >= OB.x ? 1 : -1; ny = 0; nz = 0; }
+        pen = Math.max(0.01, rc + Math.max(0, face));
+      } else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = rc - dd; }
+      ovx = OB.vx;
+    } else if (def.type === 'bar') {
+      const ca = Math.cos(OB.a), sa = Math.sin(OB.a);
+      const s = clamp(OL.x * ca + OL.z * sa, -def.len, def.len);
+      const dx = OL.x - ca * s, dy = OL.y - def.y, dz = OL.z - sa * s;
+      const dd = Math.hypot(dx, dy, dz);
+      if (dd >= def.r + rc) return false;
+      if (dd < 1e-6) { nx = -sa; ny = 0; nz = ca; pen = def.r + rc; }
+      else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd; }
+      ovx = -sa * s * OB.w; ovz = ca * s * OB.w;
+    } else {
+      // Bumper : poteau vertical qui renvoie fort.
+      if (OL.y > def.h + rc) return false;
+      const dd = Math.hypot(OL.x, OL.z);
+      if (dd >= def.r + rc) return false;
+      if (dd < 1e-6) { nx = 1; nz = 0; pen = def.r + rc; }
+      else { nx = OL.x / dd; nz = OL.z / dd; pen = def.r + rc - dd; }
+    }
+    // Normale et vitesse de l'obstacle en repère monde.
+    const c = Math.cos(d.ry || 0), sn = Math.sin(d.ry || 0);
+    const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
+    const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
+    if (!(fin(wx) && fin(wy) && fin(wz) && fin(vwx) && fin(vwy) && fin(vwz))) return false;
+    // Séparer les corps en contact, mais ne donner l'impulsion du choc (shockKick) que si la voiture ne s'éloigne pas déjà de l'obstacle :
+    // sinon un obstacle mobile qui chevauche la voiture la pousserait à chaque pas (tremblements, catapultage).
+    const correction = Math.min(pen * k, 2.5);
+    p.x += wx * correction; p.y += wy * correction; p.z += wz * correction;
+    const vn = (v.x - vwx) * wx + (v.y - vwy) * wy + (v.z - vwz) * wz;
+    let add = 0;
+    if (vn < -0.05) {
+      add = -(1 + CAR.shockE) * vn;
+      if (def.type === 'post') {
+        add = Math.max(add, Math.max(0, def.kick - add));
       } else {
-        // Bumper : poteau vertical qui renvoie fort.
-        if (OL.y > def.h + rc) continue;
-        const dd = Math.hypot(OL.x, OL.z);
-        if (dd >= def.r + rc) continue;
-        if (dd < 1e-6) { nx = 1; nz = 0; pen = def.r + rc; }
-        else { nx = OL.x / dd; nz = OL.z / dd; pen = def.r + rc - dd; }
-      }
-      // Normale et vitesse de l'obstacle en repère monde.
-      const c = Math.cos(d.ry || 0), sn = Math.sin(d.ry || 0);
-      const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
-      const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
-      if (![wx, wy, wz, vwx, vwy, vwz].every(Number.isFinite)) continue;
-      // Séparer les corps en contact, mais ne donner l'impulsion du choc (shockKick) que si la voiture ne s'éloigne pas déjà de l'obstacle :
-      // sinon un obstacle mobile qui chevauche la voiture la pousserait à chaque pas (tremblements, catapultage).
-      const correction = Math.min(pen * k, 2.5);
-      p.x += wx * correction; p.y += wy * correction; p.z += wz * correction;
-      const vn = (v.x - vwx) * wx + (v.y - vwy) * wy + (v.z - vwz) * wz;
-      let add = 0;
-      if (vn < -0.05) {
-        add = -(1 + CAR.shockE) * vn;
-        if (def.type === 'post') {
-          add = Math.max(add, Math.max(0, def.kick - add));
-        } else {
-          add += CAR.shockKick;
-        }
-      }
-      if (add > 0) {
-        v.x += wx * add; v.y += wy * add; v.z += wz * add;
-        this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;   // le choc fait pivoter un peu
-        if (wy * this.gSign > 0.45) this.grounded = false;
-        this.ev.shock = Math.max(this.ev.shock, add);
+        add += CAR.shockKick;
       }
     }
+    if (add > 0) {
+      v.x += wx * add; v.y += wy * add; v.z += wz * add;
+      this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;   // le choc fait pivoter un peu
+      if (wy * this.gSign > 0.45) this.grounded = false;
+      this.ev.shock = Math.max(this.ev.shock, add);
+    }
+    return false;
   }
 
   _probe(x, z, px, pz, y) {
@@ -975,10 +975,10 @@ export class CarPhysics {
       if (this._probeTile(tile, x, z, px, pz, y, 0)) return HIT;
     }
     // Pièces mobiles : bordures à leur position du moment.
-    const mv = this.track.movers;
+    const mv = this.track.movers, time = this.time;
     for (let i = 0; i < mv.length; i++) {
       if (this.broken.has(mv[i])) continue;
-      const o = this.track.moverOffset(mv[i], this.track.time, MOV);
+      const o = this.track.moverOffset(mv[i], time, MOV);
       if (o.a) {
         // Pièce tournante : on interroge sa géométrie « au repos », puis on remet le résultat dans le repère du monde.
         const q = this.track.moverLocal(o, x, z, MQ1), q2 = this.track.moverLocal(o, px, pz, MQ2);
@@ -1026,12 +1026,12 @@ export class CarPhysics {
   // Sur un ruban, l'état est exprimé dans le plan de la route :
   //   e1 = sens de parcours, e2 = droite, n = normale.
   //   vs, vd : vitesse le long de e1 / e2 ; psi : cap de la voiture par rapport à e1.
+  // Le résultat est un tampon partagé : valable jusqu'au prochain appel (chaque appelant l'utilise aussitôt).
   _basis(R, F) {
     const d = R.dir;
-    return {
-      e1x: F.tx * d, e1y: F.ty * d, e1z: F.tz * d,
-      e2x: F.rx * d, e2y: F.ry * d, e2z: F.rz * d,
-    };
+    BASIS.e1x = F.tx * d; BASIS.e1y = F.ty * d; BASIS.e1z = F.tz * d;
+    BASIS.e2x = F.rx * d; BASIS.e2y = F.ry * d; BASIS.e2z = F.rz * d;
+    return BASIS;
   }
 
   // Détecte le franchissement d'une extrémité de ruban (plan perpendiculaire à la route).
