@@ -11,7 +11,8 @@ import {
 } from '../js/pieces.js';
 import { CarPhysics, CAR } from '../js/physics.js';
 import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
-import { GhostRunner, InputRecorder, PHYS_VER, decodeInputs, quantSteer } from '../js/replay.js';
+import { GhostRunner, InputRecorder, decodeInputs, quantSteer } from '../js/replay.js';
+import { PHYS_VER } from '../js/version.js';
 import { replayTime } from '../js/verify.js';
 import { Autopilot } from '../js/autopilot.js';
 import { pickTileExact, rayToSurface } from '../js/editorPick.js';

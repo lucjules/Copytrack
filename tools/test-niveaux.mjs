@@ -15,7 +15,7 @@ function test(name, fn) { try { const r = fn(); if (r && typeof r.then === 'func
 
 const { BUILTIN_TRACKS, THEME_ORDER, buildBuiltin } = await import('../js/tracks.js');
 const { PROFILS, CHAPTERS, CHAPTER_SIZE, GOALS } = await import('../js/career.js');
-const { VERSION } = await import('../js/constants.js');
+const { VERSION } = await import('../js/version.js');
 const { OBST } = await import('../js/obstacles.js');
 const { RaceLogic } = await import('../js/raceLogic.js');
 const { checkDef, openingOf, vocabulary } = await import('./contract.mjs');

@@ -8,7 +8,7 @@ function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e)
 const { Track, scriptTrack } = await import('../js/track.js');
 const { CarPhysics, CAR, MOTO, SIDE_MIN_SPEED, SIDE_GRACE } = await import('../js/physics.js');
 const { RaceLogic, placeAtStart } = await import('../js/raceLogic.js');
-const { PHYS_VER } = await import('../js/replay.js');
+const { PHYS_VER } = await import('../js/version.js');
 const { SURF_PHYS, DT, LEVEL_H } = await import('../js/constants.js');
 const { BUILTIN_TRACKS, buildBuiltin } = await import('../js/tracks.js');
 const { GhostRunner } = await import('../js/replay.js');

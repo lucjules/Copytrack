@@ -14,14 +14,13 @@ import { EditorSession } from './editor.js';
 import { BUILTIN_TRACKS, buildBuiltin } from './tracks.js';
 import { Track, hashString, DECORS } from './track.js';
 import { PIECES } from './pieces.js';
-import { VERSION } from './constants.js';
+import { VERSION, PHYS_VER } from './version.js';
 import { thumbnail } from './editorTools.js';
 import { online } from './online.js';
 import { account, checkPseudo } from './account.js';
 import { runWelcome } from './welcome.js';
 import { Room, defaultSignaling, normalizeCode, ROOM_RE, MAX_PLAYERS } from './net/room.js';
-import { encodeGhost, decodeGhost, PHYS_VER } from './replay.js';
-const PV = PHYS_VER;
+import { encodeGhost, decodeGhost } from './replay.js';
 import { dailyChallenge, dayKey } from './daily.js';
 import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked, chapterState, careerSummary } from './career.js';
 import {
@@ -1005,7 +1004,7 @@ class App {
     try {
       const r = await online.submitScore({
         trackKey: key, code: key.startsWith('u-') ? session.track.encode() : '',
-        inputs: session.lastRun.inputs, time, physVer: PV,
+        inputs: session.lastRun.inputs, time, physVer: PHYS_VER,
       }, this.settings.playerName);
       // Le serveur a accepté la course : on s'assure que la progression locale la contient (mise à jour sûre si l'écriture de
       // fin de course avait échoué : stockage plein, autre onglet…). Les médailles et le menu se lisent depuis ces records.
@@ -1021,7 +1020,7 @@ class App {
       // Version de physique différente : le plus souvent, la fonction serveur « submit-score » n'a pas été redéployée après
       // une mise à jour du jeu (ou la page est une ancienne version en cache). Le record reste enregistré sur l'appareil.
       el.textContent = /Version du jeu différente/.test(e.message)
-        ? `🌍 Classement indisponible : serveur d'une autre version (v${PV}). Record gardé ici. Recharge la page.`
+        ? `🌍 Classement indisponible : serveur d'une autre version (v${PHYS_VER}). Record gardé ici. Recharge la page.`
         : '🌍 Classement : ' + e.message;
     }
   }
@@ -1032,7 +1031,7 @@ class App {
     if (!cur || time < cur.time - 1e-9) {
       saveRecord(key, {
         time, splits: session && session.logic ? session.logic.splits.slice() : [], ghost: null,
-        inputs: session && session.lastRun ? session.lastRun.inputs : null, pv: PV, date: Date.now(), name: this.settings.playerName,
+        inputs: session && session.lastRun ? session.lastRun.inputs : null, pv: PHYS_VER, date: Date.now(), name: this.settings.playerName,
       });
     }
     this.refreshProgress();
@@ -1049,9 +1048,9 @@ class App {
     this.ui.modal({ title: `🏆 ${name}`, body, actions: [{ label: 'Fermer', primary: true }] });
     const render = async () => {
       let lb;
-      try { lb = await online.leaderboard(trackKey, PV, 10); } catch (e) { body.innerHTML = `<p>Classement indisponible : ${esc(e.message)}</p>`; return; }
+      try { lb = await online.leaderboard(trackKey, PHYS_VER, 10); } catch (e) { body.innerHTML = `<p>Classement indisponible : ${esc(e.message)}</p>`; return; }
       const rec = getRecord(trackKey);
-      const canSend = rec && rec.inputs && rec.pv === PV && (!lb.me || rec.time < lb.me.time - 1e-6) && this.settings.onlineScores !== false;
+      const canSend = rec && rec.inputs && rec.pv === PHYS_VER && (!lb.me || rec.time < lb.me.time - 1e-6) && this.settings.onlineScores !== false;
       const rows = lb.top.map((r, i) => `<li class="${r.player === online.uid ? 'me' : ''}"><b>${i + 1}</b><span>${esc((r.players && r.players.name) || '—')}</span><i>${formatTime(r.time)}</i></li>`).join('');
       body.innerHTML = `${lb.top.length ? `<ol class="board">${rows}</ol>` : '<p>Aucun temps pour l’instant : sois le premier !</p>'}
         <p class="meta">${lb.total} pilote${lb.total > 1 ? 's' : ''} classé${lb.total > 1 ? 's' : ''}${lb.me ? ` · ta place : <b>${lb.me.rank}${lb.me.rank === 1 ? 'er' : 'e'}</b> (${formatTime(lb.me.time)})` : ''}.
@@ -1061,7 +1060,7 @@ class App {
       if (send) send.onclick = async () => {
         send.disabled = true; send.textContent = 'Vérification…';
         try {
-          await online.submitScore({ trackKey, code: trackKey.startsWith('u-') && track ? track.encode() : '', inputs: rec.inputs, time: rec.time, physVer: PV }, this.settings.playerName);
+          await online.submitScore({ trackKey, code: trackKey.startsWith('u-') && track ? track.encode() : '', inputs: rec.inputs, time: rec.time, physVer: PHYS_VER }, this.settings.playerName);
           render();
         } catch (e) { send.textContent = e.message; }
       };

@@ -9,7 +9,7 @@
 import { Emitter, SupabaseSignaling, LocalSignaling } from './signaling.js';
 import { PeerMesh } from './transport.js';
 import { packSnapshot, unpackSnapshot } from './snapshot.js';
-import { PHYS_VER } from '../replay.js';
+import { PHYS_VER } from '../version.js';
 
 export const ROOM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';     // sans 0 / O / 1 / I : pas de confusion à la dictée
 export const MAX_PLAYERS = 8;

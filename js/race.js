@@ -16,7 +16,8 @@ import { profile, rewardCoins } from './profile.js';
 import { CATALOG } from './cosmetics.js';
 import { SkidMarks } from './skids.js';
 import { TrailRibbon } from './trail.js';
-import { InputRecorder, decodeInputs, inputAt, quantSteer, GhostRunner, PHYS_VER } from './replay.js';
+import { InputRecorder, decodeInputs, inputAt, quantSteer, GhostRunner } from './replay.js';
+import { PHYS_VER } from './version.js';
 import { goalMet, goalLabel, completeGoal, goalDone } from './career.js';
 
 const GHOST_EVERY = 4; // un échantillon tous les 4 pas (30 Hz)

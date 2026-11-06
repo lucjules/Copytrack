@@ -5,9 +5,9 @@
 import { Track, hashString } from './track.js';
 import { BUILTIN_TRACKS, buildBuiltin } from './tracks.js';
 import { dailyChallenge } from './daily.js';
-import { GhostRunner, PHYS_VER, decodeInputs } from './replay.js';
+import { GhostRunner, decodeInputs } from './replay.js';
+import { PHYS_VER } from './version.js';
 
-export { PHYS_VER };
 export const MAX_STEPS = 120 * 600;          // 10 minutes de course au plus
 export const MAX_INPUTS_CHARS = 400000;
 

@@ -11,7 +11,7 @@ import { PeerMesh } from '../js/net/transport.js';
 import { Room, newRoomCode, normalizeCode, ROOM_RE, RoomError } from '../js/net/room.js';
 import { RaceLogic } from '../js/raceLogic.js';
 import { Track } from '../js/track.js';
-import { PHYS_VER } from '../js/replay.js';
+import { PHYS_VER } from '../js/version.js';
 
 let failures = 0;
 async function test(name, fn) {

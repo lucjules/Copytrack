@@ -6,7 +6,7 @@ import { join } from 'node:path';
 let failures = 0;
 function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 5).join('\n       ')); } }
 
-const { VERSION } = await import('../js/constants.js');
+const { VERSION } = await import('../js/version.js');
 const { BUILTIN_TRACKS, buildBuiltin } = await import('../js/tracks.js');
 const { checkTrack } = await import('../js/editorTools.js');
 const { paramText } = await import('../js/pieces.js');
