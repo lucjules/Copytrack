@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.6**
+Version actuelle : **bêta 0.9.7**
 
 ## Jouer
 
@@ -120,6 +120,37 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
 
 Seules l'URL du projet et la clé publique sont dans `js/online.js`. La clé secrète n'est jamais dans le jeu : seule la fonction serveur l'utilise, côté Supabase.
 
+## Bêta 0.9.7 — refonte du level design (lot 2 / 14)
+
+Suite de la refonte : le dernier circuit du chapitre 1 (Spirale Prismatique) et les quatre premiers de la Jungle néon (chapitre 2). Chacun a son profil et une ouverture qui
+n'a jamais servi.
+
+| # | Circuit | Profil | Ouverture | Ce qu'il enseigne |
+| --- | --- | --- | --- | --- |
+| 4 | Spirale Prismatique | Rollercoaster | trois boosters → **directement un grand looping** | hélice montante de 16 niveaux (quatre grandes courbes inclinées), plongeon de 16 niveaux à 38°, slalom de wall-rides gauche / droite |
+| 7 | Lianes Néon | Sprint | trois boosters → **rampe de lancement** avec anneau turbo dans le saut | vagues douces, pont de lianes **sans bordures** à plus de 230 km/h, S de virages relevés, très grand virage plat |
+| 8 | Canopée | Speedway | **départ en tube** propulsé, qui débouche sur un virage relevé 3×3 | S relevés, wall-ride de 5 cases sur le mur gauche, tube à pleine vitesse, 47 % du temps au-dessus de 250 km/h |
+| 9 | Spores | Acrobatique | deux boosters → **rebond géant** (palier 2 niveaux plus haut) | quatre champignons en escalier en zigzag (+8 niveaux), plongeon final ; la portée d'un rebond est proportionnelle à la vitesse, le circuit est très tolérant |
+| 10 | Serpent | Technique | **bifurcation dès le départ** : la voie de droite porte la plaque moto | douze virages serrés en slaloms (R L R L), descente en lacets, petit saut sur un mur, moto → voiture → moto |
+
+- **Le chapitre 1 est complet** et propose les cinq profils. Spirale est maintenant le n°4 (difficulté 3) et Lac Gelé le n°5 : deux Rollercoasters ne se suivent plus
+  (règle vérifiée : deux circuits consécutifs d'un chapitre n'ont jamais le même profil). Le Grand Tour reste le final (n°6).
+- Nouveautés de l'outillage : `tools/test-v096.mjs` devient **`tools/test-niveaux.mjs`** (contrat de tous les circuits qui ont un `profil`, plus les ouvertures de chaque lot) ;
+  `tools/lab.mjs` compte maintenant les anneaux et le véhicule d'arrivée ; objectifs bonus vérifiés (chrono, réceptions parfaites, anneaux, moto à l'arrivée).
+- Ce que ce lot a appris sur la physique : un **rebond** (`.j`, hauteur 200 % au maximum) donne 28 m/s vers le haut, soit un palier de **+2 niveaux** au plus ; il n'est
+  posé que sur des droites plates. Une **sortie qui repasse au-dessus du départ** perturbe le premier saut (constaté sur Spores, dont le plongeon final passait juste au-dessus du premier rebond) : le dernier virage s'écarte de la tour.
+- **Bibliothèque d'ouvertures** (une par circuit, jamais deux fois la même). Déjà employées : booster → wall-ride · booster → virage relevé · chute libre ·
+  épingle descendante · montée verticale · booster → looping · rampe de lancement + anneau · départ en tube · rebond géant · bifurcation avec plaque moto.
+  Prévues : départ à 250 km/h sur un mur · rampe de lancement sans anneau (autre angle) · départ sur l'eau · décollage en deltaplane · départ sur glace · départ au plafond.
+- **Correctif du lot 1 (Tremplins du Crépuscule).** Un contrôle nouveau a montré que, après une chute, la réapparition (qui remet la voiture **à l'arrêt**) la posait devant une rampe
+  qu'elle ne pouvait plus prendre, et qu'un départ lancé (`v0`) ne se rejoue pas non plus après une réapparition avant le premier checkpoint. Le circuit est refait : chute libre
+  depuis l'arrêt, un checkpoint avant chaque rampe suivi de deux boosters, anneau turbo au lieu du checkpoint aérien (sa réapparition tombait sur la rampe). Le contrat vérifie maintenant,
+  pour **chaque checkpoint** de **chaque circuit refait**, que le pilote qui réapparaît à l'arrêt termine sans nouvelle chute, et qu'aucun circuit refait n'utilise `v0`.
+- **Correctif des tests.** Trois tests de `tools/test-niveaux.mjs` (marge sur les murs, vérificateur de l'éditeur, partage SHW) étaient asynchrones et le script s'arrêtait avant qu'ils ne
+  s'exécutent : ils affichaient « ok » sans rien vérifier. Ils sont maintenant synchrones (un test asynchrone est refusé) et passent réellement ; le vérificateur de l'éditeur a été
+  complété pour les rebonds (réception plus haute que le départ jusqu'aux 4/5 de la hauteur du rebond).
+- Les records des cinq circuits refaits repartent de zéro ; **la fonction `submit-score` doit être redéployée** (`index.ts` régénéré). `PHYS_VER` reste 24.
+
 ## Bêta 0.9.6 — refonte du level design (lot 1 / 14)
 
 Les 66 circuits intégrés sont refaits par lots de 5 (un lot par version). Les circuits d'avant la 0.9.4 étaient tous bâtis sur la même recette
@@ -132,11 +163,11 @@ de carrière) et une **ouverture** qui n'a rien à voir avec celle des autres.
 | --- | --- | --- | --- | --- |
 | 1 | Premiers Éclats | Sprint | deux boosters → premier wall-ride (transitions douces 2×2) | vitesse de pointe, trajectoire dans les très grands virages plats, courbes progressives |
 | 2 | Canyon Corail | Speedway | un booster → directement un très grand virage relevé | virages relevés 3×3 à plus de 250 km/h, wall-ride de 6 cases sur la paroi du canyon, descente douce |
-| 3 | Tremplins du Crépuscule | Acrobatique | **chute libre** depuis 77 m (départ lancé à 110 km/h) | rampes progressives et à 38°, réceptions sur longues pentes, checkpoint aérien, saut sur un mur |
+| 3 | Tremplins du Crépuscule | Acrobatique | **chute libre** immédiate depuis 77 m (la voiture quitte la plateforme de départ, à l'arrêt) | rampes progressives et à 38°, réceptions sur longues pentes, checkpoint aérien, saut sur un mur |
 | 4 | Lac Gelé | Technique | épingle descendante dès le départ | 11 virages serrés, un booster à chaque relance, glace avant les épingles, chicane sur un mur |
 | 5 | Le Grand Tour | Rollercoaster | trois boosters → **montée verticale** (montée en L, mur, sommet) | chute, slalom de wall-rides gauche / droite, grand looping, arche mur → plafond → mur |
 
-**Les profils sont mesurés, pas seulement annoncés** (`tools/test-v096.mjs`, sur la course du pilote automatique) :
+**Les profils sont mesurés, pas seulement annoncés** (`tools/test-niveaux.mjs`, sur la course du pilote automatique) :
 
 | Profil | Contrat |
 | --- | --- |
@@ -146,14 +177,14 @@ de carrière) et une **ouverture** qui n'a rien à voir avec celle des autres.
 | Rollercoaster | ≥ 6 niveaux de hauteur, ≥ 8 cases sur un mur (des deux côtés), au moins un looping |
 | Acrobatique | ≥ 6 s en l'air, ≥ 3 réceptions parfaites, ≥ 8 niveaux de hauteur |
 
-Règles communes à tout circuit refait : ouverture différente de toutes les autres, jamais le départ « classique », au moins quatre pièces de la 0.9.3
+Règles communes à tout circuit refait : ouverture différente de toutes les autres, **aucun départ lancé** (`v0`), jamais le départ « classique », au moins quatre pièces de la 0.9.3
 (wall-rides, courbes progressives, inclinaisons, très grands virages), wall-rides pris avec ≥ 130 km/h (le décrochage est à 108), **finissable sans choc ni
 réapparition à ±10 % de vitesse** (un joueur n'a jamais la vitesse exacte du pilote), médailles à jour, objectif bonus réalisable.
 
 **Ce que la physique impose au level design** (mesuré avec `tools/lab.mjs`) : sur le plat, la voiture plafonne vers 237 km/h (traînée) ; seuls les boosters
 (jusqu'à 300 km/h), les descentes et les virages relevés permettent d'aller plus vite. Un virage serré se prend à ≤ 93 km/h, un grand à ≤ 162, un très grand
 plat à ≤ 207 ; un très grand virage relevé laisse passer plus de 240 km/h. La portée d'un saut varie avec le carré de la vitesse : on le rend tolérant avec
-de longues réceptions en pente, et on place les checkpoints **avant** les rampes (un saut trop long survole un checkpoint posé juste après).
+de longues réceptions en pente, et on place les checkpoints **avant** les rampes (un saut trop long survole un checkpoint posé juste après), suivis de boosters : la réapparition remet la voiture **à l'arrêt**.
 
 **Bibliothèque d'ouvertures** (une par circuit, jamais deux fois la même). Déjà employées : booster → wall-ride · booster → virage relevé · chute libre ·
 épingle descendante · montée verticale. Prévues pour les lots suivants : booster → looping · rampe de lancement · départ à 250 km/h sur un mur · départ en tube ·
@@ -361,7 +392,7 @@ tools/audit-pieces.mjs         audit du graphe des pièces : raccords, culs-de-s
 tools/sim.mjs                  validation des circuits par pilote automatique (npm run sim)
 tools/lab.mjs                  atelier de level design : carte, profil de vitesse, tolérance, typologie d'un script ou d'un circuit
 tools/medals.mjs               médailles d'un circuit calculées sur le temps du pilote automatique
-tools/test-v096.mjs            contrat des profils de circuits (sprint, speedway, technique, rollercoaster, acrobatique) (npm test)
+tools/test-niveaux.mjs         contrat des profils de circuits (sprint, speedway, technique, rollercoaster, acrobatique), ouvertures, tolérance de vitesse (npm test)
 ```
 
 ## Licence

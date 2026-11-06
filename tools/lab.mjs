@@ -60,13 +60,15 @@ export function asciiMap(track) {
 
 // ---- Course ------------------------------------------------------------------------------------------------------------------------
 // Fait rouler le pilote automatique ; renvoie le profil. samples : un point toutes les 0,1 s.
-export function runTrack(track, { maxTime = 240, vCap, brakeDecel } = {}) {
+// rewindAtCp : numéro (à partir de 1) d'un checkpoint où l'on force une réapparition dès qu'il est pris, comme la touche « dernier checkpoint » :
+// la voiture repart À L'ARRÊT du point de réapparition. Sert à vérifier qu'on peut toujours repartir de chaque checkpoint.
+export function runTrack(track, { maxTime = 240, vCap, brakeDecel, rewindAtCp = 0 } = {}) {
   const phys = new CarPhysics(track);
   const logic = new RaceLogic(track);
   placeAtStart(phys, logic);
   const bot = new Autopilot(track.path, { ...(vCap ? { vCap } : {}), ...(brakeDecel ? { brakeDecel } : {}) });
   bot.reset(phys);
-  const S = { ok: false, time: 0, respawns: 0, wallHits: 0, vmax: 0, airMax: 0, airTotal: 0, loops: 0, perfects: 0, turbos: 0, rings: 0, brakeT: 0, wallT: 0, ribT: 0, samples: [], cps: [], yMin: Infinity, yMax: -Infinity, dist: 0, reason: '' };
+  const S = { ok: false, vehicle: 'car', time: 0, respawns: 0, wallHits: 0, vmax: 0, airMax: 0, airTotal: 0, loops: 0, perfects: 0, turbos: 0, rings: 0, brakeT: 0, wallT: 0, ribT: 0, samples: [], cps: [], yMin: Infinity, yMax: -Infinity, dist: 0, reason: '' };
   let stuck = 0, lastIdx = 0, last = null;
   const steps = Math.round(maxTime / DT);
   for (let i = 0; i < steps; i++) {
@@ -88,8 +90,18 @@ export function runTrack(track, { maxTime = 240, vCap, brakeDecel } = {}) {
     if (phys.ev.ring) S.rings++;
     if (i % 12 === 0) S.samples.push([i * DT, sp, phys.pos.y, phys.grounded || phys.rib ? 1 : 0]);
     const ev = logic.update(phys);
-    if (ev && ev.type === 'cp') S.cps.push(+logic.time.toFixed(2));
-    if (ev && ev.type === 'finish') { S.ok = true; S.time = logic.time; break; }
+    if (ev && ev.type === 'checkpoint') {
+      S.cps.push(+logic.time.toFixed(2));
+      if (rewindAtCp && ev.index === rewindAtCp && !S.rewound) {
+        S.rewound = true;
+        const r = logic.rewind();
+        phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
+        phys.vehicle = r.vehicle || 'car'; phys.gravMul = r.grav || 1;
+        bot.reset(phys); stuck = 0;
+        continue;
+      }
+    }
+    if (ev && ev.type === 'finish') { S.ok = true; S.time = logic.time; S.vehicle = phys.vehicle; break; }
     const fell = phys.offTrack || phys.ev.sink;
     if (i % 120 === 0) { if (bot.idx === lastIdx) stuck++; else stuck = 0; lastIdx = bot.idx; }
     if (fell || stuck > 4) {

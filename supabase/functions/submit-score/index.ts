@@ -5311,20 +5311,30 @@ var BUILTIN_TRACKS = [
     }
   },
   {
+    // Chapitre 2 · 1/6 — SPRINT. Ouverture : trois boosters → rampe de lancement avec un anneau turbo dans le saut. Puis une vague douce,
+    // un pont de lianes sans bordures à plus de 230 km/h (la trajectoire ne pardonne rien), un S de virages relevés et un très grand virage
+    // plat pour finir. Trois virages en tout, aucun serré.
     id: "lianes",
     name: "Lianes N\xE9on",
     decor: "jungle",
     difficulty: 2,
+    profil: "sprint",
     goal: {
-      id: "turbo",
+      id: "rings",
       n: 1
     },
-    script: "start B S2 R S L S R L S2 C S L S S S R S2.m R L S2 B S O S2 L S R S2 C S R S L S2 finish",
+    opts: {
+      l: 3
+    },
+    pilot: {
+      vCap: 66
+    },
+    script: "start B3 UU GR2 DD [cdo1] B2 S [crs1] S2 [cds1] B S2_ B_ S2_ BR S2 B BL S2 B C S3 HL S B2 finish",
     medals: {
-      cristal: 29.2,
-      or: 31.2,
-      argent: 35.9,
-      bronze: 42
+      cristal: 18,
+      or: 18.9,
+      argent: 21.8,
+      bronze: 25.5
     }
   },
   {
@@ -5404,10 +5414,10 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 1 · 3/6 — ACROBATIQUE. Ouverture : chute libre immédiate (départ lancé à 110 km/h depuis une plateforme à 77 m, réception sur une
-    // descente à 38°). Puis trois sauts de plus en plus grands (bosse, grand tremplin à 38°, dernier saut avec checkpoint aérien) et un
-    // petit saut sur un mur. Les réceptions sont de longues pentes descendantes et les checkpoints sont posés AVANT les rampes, jamais
-    // sur une zone de réception : le circuit reste finissable de 195 à 300 km/h à l'abord des sauts (vérifié par tools/test-v096.mjs).
+    // Chapitre 1 · 3/6 — ACROBATIQUE. Ouverture : chute libre immédiate, depuis l'arrêt (la voiture quitte la plateforme de départ, à 77 m, et
+    // se réceptionne sur une descente à 38°). Puis trois sauts de plus en plus grands (bosse, grand tremplin à 38°, dernier saut avec anneau
+    // turbo) et un petit saut sur un mur. Réceptions en longues pentes descendantes ; chaque checkpoint est suivi de deux boosters
+    // avant la rampe : on peut repartir À L'ARRÊT de n'importe quel checkpoint (la réapparition remet la voiture à l'arrêt) et réussir le saut.
     id: "tremplins",
     name: "Tremplins du Cr\xE9puscule",
     decor: "desert",
@@ -5420,18 +5430,15 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 16
     },
-    params: {
-      v0: 110
-    },
     pilot: {
       vCap: 60
     },
-    script: "start G2 V-5 [dn4] [cdo2] B S C [crv1] UU G2 DD [cdo1] S3 CBR1 S [tr01s] S2< [tr10s] S LL B S C S [crv2] UX G3 DX DX [cdo2] S3 B UU GC2 DD [cdo1] S2 finish",
+    script: "start G1 V-5 [dn4] [cdo2] S C B2 S [crv1] UU G2 DD [cdo1] S3 CBR1 S [tr01s] S2< [tr10s] S LL S C B2 S2 [crv2] UX G3 DX DX [cdo2] S3 C B2 S UU GR2 DD [cdo1] S2 finish",
     medals: {
-      cristal: 24.1,
-      or: 25.3,
-      argent: 29.1,
-      bronze: 34.2
+      cristal: 27.8,
+      or: 29.3,
+      argent: 33.7,
+      bronze: 39.6
     }
   },
   {
@@ -5451,37 +5458,54 @@ var BUILTIN_TRACKS = [
     }
   },
   {
+    // Chapitre 2 · 2/6 — SPEEDWAY. Ouverture : départ en tube, propulsé par trois boosters, qui débouche directement sur un virage relevé 3×3.
+    // Une succession de S relevés (droite / gauche), deux vagues douces, un wall-ride de 5 cases sur le mur gauche (l'autre côté que le canyon
+    // du chapitre 1) et un tube à pleine vitesse. Aucun virage serré, plus de 250 km/h pendant près de la moitié du tour.
     id: "canopee",
-    name: "Canop\xE9e Suspendue",
+    name: "Canop\xE9e",
     decor: "jungle",
     difficulty: 3,
+    profil: "speedway",
     goal: {
-      id: "turbo",
-      n: 2
+      id: "under",
+      t: 25
     },
-    script: "start B S2 R S L S2 B S O S2 R S S S L S B S OL S2 C S BL S R S2 B S2 L R S2 finish",
+    opts: {
+      l: 5
+    },
+    pilot: {
+      vCap: 70
+    },
+    script: "start TI TM3.b TO BRR S B BLL S [crs1] S2 [cds1] S [tr01l] S5< [tr10l] C B BRR S [crs1] S [cds1] B BLL S2 TB BRR S B BLL S2 B2 finish",
     medals: {
-      cristal: 27.7,
-      or: 29.1,
-      argent: 33.5,
-      bronze: 39.3
+      cristal: 22.8,
+      or: 24,
+      argent: 27.6,
+      bronze: 32.4
     }
   },
   {
+    // Chapitre 2 · 3/6 — ACROBATIQUE (rebonds). Ouverture : deux boosters → rebond géant (palier 2 niveaux plus haut). Quatre champignons en
+    // escalier en zigzag (+8 niveaux), puis un long plongeon. Un checkpoint avant chaque rebond, suivi de deux boosters : on repart de chacun
+    // à l'arrêt. La portée d'un rebond est proportionnelle à la vitesse (et non à son carré) : le circuit est finissable à ±40 % de vitesse.
     id: "spores",
-    name: "Spores Sauteuses",
+    name: "Spores",
     decor: "jungle",
     difficulty: 3,
+    profil: "acrobatique",
     goal: {
       id: "perfect",
-      n: 2
+      n: 4
     },
-    script: "start B S2 L S R S2 B S.j G1 S2 R L C S2 RR S B S2 GU2 S GD2 S LL S R S L S2 B S.j G1 S2 C S2 R L S2 finish",
+    opts: {
+      l: 2
+    },
+    script: "start B2 S.j200 G2 V2 S3 RR C B2 S.j200 G2 V2 S3 LL C B2 S.j200 G2 V2 S3 RR C B2 S.j200 G2 V2 S3 LL S B [cdi2] DX [cdo2] B [crs1] S [cds1] B2 finish",
     medals: {
-      cristal: 29.9,
-      or: 31.8,
-      argent: 36.5,
-      bronze: 42.8
+      cristal: 27.8,
+      or: 29.3,
+      argent: 33.7,
+      bronze: 39.5
     }
   },
   {
@@ -5519,20 +5543,27 @@ var BUILTIN_TRACKS = [
     }
   },
   {
+    // Chapitre 2 · 4/6 — TECHNIQUE (moto). Ouverture : bifurcation dès le départ ; la voie de droite porte la plaque moto (c'est elle qu'il faut
+    // prendre pour finir en moto). Douze virages serrés en slaloms (R L R L), une descente en lacets, un petit saut sur un mur et un
+    // booster à chaque relance. Deux autres plaques : la voiture au milieu, la moto de nouveau avant l'arrivée.
     id: "serpent",
-    name: "Le Serpent",
+    name: "Serpent",
     decor: "jungle",
     difficulty: 3,
+    profil: "technique",
     goal: {
       id: "vehicle",
       v: "moto"
     },
-    script: "start B S2 R L R L S2 C S.o S2 R S L S2 B S O S2 C S L R L R S2 S.o S2 B S2 RR S2 LL S.o S2 finish",
+    opts: {
+      l: 8
+    },
+    script: "start Y2.o B S [cvd05] [cvdL05] [cvd05] [cvdL05] B S S.o S [tr01s] S2< [tr10s] S R L R L B S2 C S.o S R L R L B S2 B finish",
     medals: {
-      cristal: 29.7,
-      or: 31.8,
-      argent: 36.4,
-      bronze: 42.8
+      cristal: 23.5,
+      or: 24.7,
+      argent: 28.4,
+      bronze: 33.4
     }
   },
   {
@@ -5589,6 +5620,29 @@ var BUILTIN_TRACKS = [
       or: 32.2,
       argent: 37,
       bronze: 43.4
+    }
+  },
+  {
+    // Chapitre 1 · 4/6 — ROLLERCOASTER (spirale ; placé avant Lac Gelé pour que deux Rollercoasters ne se suivent pas). Ouverture : trois boosters puis directement un grand looping. Hélice montante de quatre
+    // grandes courbes inclinées (16 niveaux, 78 m), point de contrôle au sommet, plongeon de 16 niveaux à 38° et slalom de wall-rides
+    // gauche / droite en bas. Le plongeon passe à plus de 250 km/h : les murs se prennent avec une grande marge.
+    id: "spirale",
+    name: "Spirale Prismatique",
+    decor: "desert",
+    difficulty: 3,
+    profil: "rollercoaster",
+    goal: {
+      id: "norespawn"
+    },
+    opts: {
+      l: 2
+    },
+    script: "start B3 OB S B CBR4 CBR4 CBR4 CBR4 S C [cdi2] DX DX DX [cdo2] B S [tr01s] S2< [tr10s] S [tr02s] S3> [tr20s] S2 B2 finish",
+    medals: {
+      cristal: 24.3,
+      or: 25.6,
+      argent: 29.4,
+      bronze: 34.6
     }
   },
   {
@@ -5858,22 +5912,6 @@ var BUILTIN_TRACKS = [
       or: 32.2,
       argent: 37,
       bronze: 43.4
-    }
-  },
-  {
-    id: "spirale",
-    name: "Spirale Prismatique",
-    decor: "desert",
-    difficulty: 4,
-    goal: {
-      id: "norespawn"
-    },
-    script: "start S2 R S U S R S U R S3 C S R S GU2 R S2 R S B S5 BR S D3 S KR S2 B S2 finish",
-    medals: {
-      cristal: 27.8,
-      or: 29.3,
-      argent: 33.8,
-      bronze: 39.6
     }
   },
   {
