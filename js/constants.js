@@ -46,5 +46,8 @@ export const MAX_TRACK_CODE_CHARS = 400000;                // taille maximale d'
 export const MAX_INPUTS_CHARS = 400000;                    // taille maximale d'un enregistrement de commandes
 export const OFF_TRACK_RESPAWN_S = 0.5;                    // temps passé hors piste avant la réapparition automatique
 
+// Véhicules possibles (le véhicule de départ d'un circuit, les plaques de transformation, les paquets réseau).
+export const VEHICLES = ['car', 'moto', 'boat', 'glider'];
+
 // Directions de grille : 0 = nord (-z), 1 = est (+x), 2 = sud (+z), 3 = ouest (-x).
 export const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];

@@ -292,6 +292,50 @@ export function isRibbon(tile) {
 // Sans bordures : choix de la pièce, pièces à plan vertical, ou route sur un mur (les rebords sortiraient sur le côté).
 export const hasNoRails = (tile) => !!(tile.nb || tile.o || PIECES[tile.t].noRails);
 
+// Options qui ne vont pas ensemble : { drapeau : [drapeaux incompatibles avec lui] } (relation symétrique ; le mouvement et le tunnel, eux, cohabitent).
+// C'est la SEULE description de ces exclusions ; trois comportements s'en déduisent :
+//   - flagAllowed : sur une pièce où l'un est déjà posé, l'autre est refusé ;
+//   - Track.toggleFlag : le plafond (v) et l'orientation (o) retirent les incompatibles (le dernier choix l'emporte) ;
+//   - armOption : avant la pose, chaque option choisie retire les incompatibles.
+// Cas particulier : un checkpoint de valeur 2 (l'ancien anneau aérien) est aussi incompatible avec le plafond.
+export const OPTION_CONFLICTS = {
+  v: ['o', 'tn', 'mv', 'tb'],
+  o: ['v', 'tn', 'mv', 'cp', 'tb'],
+  tn: ['v', 'o', 'cp', 'tb'],
+  mv: ['v', 'o', 'cp', 'tb'],
+  cp: ['o', 'tn', 'mv', 'tb'],
+  tb: ['v', 'o', 'tn', 'mv', 'cp'],
+};
+const hasConflict = (flag, tile) => !!tile && OPTION_CONFLICTS[flag].some((f) => tile[f]);
+
+// Retire de `opts` (une pièce ou un jeu d'options) tout ce qui est incompatible avec `flag` : c'est ce que fait « le dernier choix l'emporte ».
+// Un mouvement retiré perd aussi ses réglages (vitesse, amplitude) quand l'objet en porte.
+export function clearConflicts(opts, flag) {
+  for (const f of OPTION_CONFLICTS[flag] || []) {
+    opts[f] = 0;
+    if (f === 'mv' && 'ms' in opts) { opts.ms = 0; opts.ma = 0; }
+  }
+  if (flag === 'v' && opts.cp === 2) opts.cp = 0;            // l'anneau aérien ne va pas au plafond
+  if (flag === 'cp' && opts.cp === 2) opts.v = 0;
+  return opts;
+}
+
+// Options « armées » dans l'éditeur avant la pose (elles s'ajoutent à la pièce choisie, aperçu compris) : bascule l'option `flag` (valeur `val` pour les
+// choix exclusifs : orientation, checkpoint, thème, mouvement) et retire ce qui lui est incompatible. Renvoie un nouvel objet.
+export function armOption(opts, flag, val) {
+  const o = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ...opts };
+  if (flag === 'o') {
+    // Orientation : sol, mur gauche (1), mur droit (2) ; le plafond est le drapeau v. Un seul choix à la fois.
+    o.o = val === 0 || o.o === val ? 0 : val;
+    if (val === 0) o.v = 0;                                   // « Sol » : remet aussi la pièce à l'endroit
+  } else {
+    const bool = flag === 'v' || flag === 'nb' || flag === 'tn';
+    if (bool) o[flag] = o[flag] ? 0 : 1; else o[flag] = o[flag] === val ? 0 : val;
+  }
+  if (o[flag]) clearConflicts(o, flag);
+  return o;
+}
+
 // Drapeaux possibles : v (à l'envers), nb (sans bordures), tn (tunnel), mv (mouvement 1/2/3),
 // cp (checkpoint : 1 portique, 2 anneau aérien), th (thème visuel).
 export function flagAllowed(type, flag, tile = null, val = 0) {
@@ -305,21 +349,21 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
   if (p.kind === 'ring' || p.kind === 'fork') return false;
   // 0.9.3 : orientation « mur gauche / droit » : une ligne ou un virage ordinaire peut être posé sur un mur (val 1 = gauche, 2 = droit).
   // Une route sur un mur n'a ni tunnel, ni checkpoint, ni anneau, ni mouvement, ni bordures ; le plafond (v) se choisit à part.
-  if (flag === 'o') return lineLike && !p.special && !p.noRails && !(tile && (tile.v || tile.tn || tile.cp || tile.tb || tile.mv));
+  if (flag === 'o') return lineLike && !p.special && !p.noRails && !hasConflict('o', tile);
   if (flag === 'nb') return !p.noRails && (lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube')));
-  if (flag === 'tn') return lineLike && !p.special && !(tile && (tile.v || tile.o || tile.cp || tile.tb));
+  if (flag === 'tn') return lineLike && !p.special && !hasConflict('tn', tile);
   // Pièce mobile : route « simple » (droite, virage, pente, plateforme), pas à l'envers, pas de checkpoint dessus.
-  if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !(tile && (tile.v || tile.o || tile.cp || tile.tb));
+  if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !hasConflict('mv', tile);
   // Checkpoint en option : sur une route plate (ligne ou virage) ; l'anneau aérien seulement sur une ligne droite à l'endroit.
   if (flag === 'cp') {
     // 0.9.2 : le checkpoint est une simple case à cocher (portique sur route, balise sur plateforme). L'ancien anneau aérien (val 2)
     // n'est plus proposé ; les anciens circuits qui l'utilisent continuent de fonctionner (voir cpKind).
-    if (!((lineLike || p.kind === 'area') && !p.special && !p.rise) || (tile && (tile.mv || tile.tn || tile.tb || tile.o))) return false;
+    if (!((lineLike || p.kind === 'area') && !p.special && !p.rise) || hasConflict('cp', tile)) return false;
     if (val === 2) return p.kind === 'line' && !(tile && tile.v);
     return true;
   }
   // Anneau turbo en option (Phase 3) : comme le checkpoint aérien, sur une ligne droite plate à l'endroit.
-  if (flag === 'tb') return p.kind === 'line' && !p.special && !p.rise && !(tile && (tile.v || tile.o || tile.mv || tile.tn || tile.cp));
+  if (flag === 'tb') return p.kind === 'line' && !p.special && !p.rise && !hasConflict('tb', tile);
   return false;
 }
 

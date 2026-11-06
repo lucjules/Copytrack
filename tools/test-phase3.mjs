@@ -54,21 +54,21 @@ test('essai : le départ suffit, l’arrivée n’est exigée que pour jouer ou 
   e.test(false); assert.deepEqual(calls, [['test', false]], 'essai sans arrivée accepté');
   calls.length = 0; e.test(true); assert.ok(typeof calls[0] === 'string', 'la vérification exige une arrivée');
 });
-test('inversionGraviteDepart : paramètre du niveau (code, signature, copie) et départ au plafond', () => {
+test('flip0 : paramètre du niveau (code, signature, copie) et départ au plafond', () => {
   const tr = scriptTrack('g', 'start S2 finish');
   const sig = tr.signature();
-  assert.equal(tr.inversionGraviteDepart, false);
-  tr.setParams({ inversionGraviteDepart: true });
-  assert.equal(tr.inversionGraviteDepart, true); assert.notEqual(tr.signature(), sig, 'change la course : change la signature');
+  assert.equal(tr.flip0, false);
+  tr.setParams({ flip0: true });
+  assert.equal(tr.flip0, true); assert.notEqual(tr.signature(), sig, 'change la course : change la signature');
   const back = Track.decode(tr.encode());
-  assert.equal(back.inversionGraviteDepart, true); assert.equal(back.signature(), tr.signature()); assert.equal(back.clone().inversionGraviteDepart, true);
+  assert.equal(back.flip0, true); assert.equal(back.signature(), tr.signature()); assert.equal(back.clone().flip0, true);
   assert.equal(JSON.parse(Buffer.from(tr.encode().slice(5).replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()).ig, 1);
   const logic = new RaceLogic(tr);
   assert.equal(logic.spawnPoint().gs, -1); assert.equal(logic.respawn.gs, -1, 'la réapparition aussi');
   const phys = new CarPhysics(tr); placeAtStart(phys, logic);
   assert.equal(phys.gSign, -1);
   assert.equal(new RaceLogic(Track.decode(scriptTrack('n', 'start S finish').encode())).spawnPoint().gs, 1, 'par défaut : normal');
-  tr.clear(); assert.equal(tr.inversionGraviteDepart, false);
+  tr.clear(); assert.equal(tr.flip0, false);
 });
 
 console.log('Anneaux et superposition');

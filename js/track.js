@@ -1,9 +1,9 @@
 // Modèle de circuit : liste de pièces posées sur une grille, index spatial,
 // requêtes de surface pour la physique, sérialisation en code partageable.
-import { CELL, DIRS, ROAD_HALF, RAIL_W, SLAB_T, MAX_LEVEL, LEVEL_H, MAX_DECOS } from './constants.js';
+import { CELL, DIRS, ROAD_HALF, RAIL_W, SLAB_T, MAX_LEVEL, LEVEL_H, MAX_DECOS, VEHICLES } from './constants.js';
 import {
   PIECES, PIECE_ORDER, SURFACE_CODES, SURFACE_ALIAS, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, isFloor, isCeilingFloor, baseY,
-  forkBranchX, toLocal, sampleLocal, rotVec, tileCenter, MOVER, moverParams, clampMover, THEMES, LEGACY_TILE,
+  forkBranchX, toLocal, sampleLocal, rotVec, tileCenter, MOVER, moverParams, clampMover, THEMES, LEGACY_TILE, clearConflicts,
 } from './pieces.js';
 import { centerlineWorld } from './ribbons.js';
 import { isObstacle } from './obstacles.js';
@@ -33,6 +33,28 @@ const W = { x: 0, z: 0 }, W2 = { x: 0, z: 0 };
 const MO = {};
 const MP = {};
 
+// ---- Règles de course (« paramètres du niveau ») ---------------------------------------------------------------------------------------
+// UNE table décrit chaque règle : champ du circuit, valeur par défaut, nettoyage, clé dans le code de partage et étiquette dans la signature.
+// Ajouter une règle = une ligne ici (et son champ dans le formulaire de l'éditeur) ; le constructeur, clear, clone, setParams, signature, encode,
+// decode et l'historique de l'éditeur s'en déduisent. L'ordre est celui de la signature et du code de partage : ne pas le changer.
+const clampInt = (v, lo, hi, fallback) => Math.max(lo, Math.min(hi, Math.round(+v || fallback)));
+export const RULES = [
+  { key: 'offroad', def: 0, clean: (v) => (v ? 1 : 0), code: 'or', sig: (v) => (v ? '#O' : '') },                          // 1 : rouler hors piste est permis (pas de retour au checkpoint)
+  { key: 'v0', def: 0, clean: (v) => clampInt(v, 0, 300, 0), code: 'v0', sig: (v) => (v ? '#V' + v : '') },               // vitesse de départ (km/h)
+  { key: 'g0', def: 100, clean: (v) => clampInt(v, 15, 250, 100), code: 'g0', sig: (v) => (v !== 100 ? '#G' + v : '') },   // gravité de départ (%)
+  { key: 'veh0', def: 'car', clean: (v) => (VEHICLES.includes(v) ? v : 'car'), code: 've', sig: (v) => (v !== 'car' ? '#E' + v : '') },   // véhicule de départ
+  { key: 'flip0', def: false, clean: (v) => !!v, code: 'ig', sig: (v) => (v ? '#I' : ''), v4: true },                      // la course démarre en gravité inversée (au plafond) ; v4 : exige le format 4
+];
+
+// Champs d'une pièce, dans l'ordre des instantanés de l'historique de l'éditeur (en mémoire seulement : jamais écrits, l'ordre est libre), avec
+// leur valeur par défaut. Chaque champ produit par Track.normalize doit y figurer : un test (tools/test-circuit.mjs) le vérifie.
+export const TILE_FIELDS = [
+  ['t', ''], ['x', 0], ['z', 0], ['l', 0], ['r', 0], ['s', ''], ['p', 0], ['v', 0], ['nb', 0], ['tn', 0], ['mv', 0], ['cp', 0], ['th', 0],
+  ['ms', 0], ['ma', 0], ['col', null], ['s2', ''], ['p2', 0], ['tb', 0], ['o', 0],
+];
+export const tileToRow = (t) => TILE_FIELDS.map(([k, def]) => (t[k] ?? def));
+export const rowToTile = (row) => Object.fromEntries(TILE_FIELDS.map(([k], i) => [k, row[i]]));
+
 export class Track {
   constructor(name = 'Nouveau circuit', tiles = []) {
     this.name = name;
@@ -43,13 +65,9 @@ export class Track {
     this.index = new Map();
     this.version = 0;
     this.laps = 1;    // nombre de tours (circuit fermé)
-    // Paramètres du niveau (0.9)
-    this.desc = '';       // description (affichée dans la communauté)
-    this.offroad = 0;     // 1 : rouler hors piste est permis (pas de retour au checkpoint)
-    this.v0 = 0;          // vitesse de départ (km/h)
-    this.g0 = 100;        // gravité de départ (%)
-    this.veh0 = 'car';    // véhicule de départ
-    this.inversionGraviteDepart = false;   // la course démarre en gravité inversée (au plafond)
+    // Paramètres du niveau : la description (affichée dans la communauté) et les règles de course (table RULES)
+    this.desc = '';
+    this.resetRules();
     this.vt = 0;      // temps de vérification (secondes) de l'auteur
     this.vh = '';     // signature du circuit au moment de la vérification
     this.time = 0;    // chrono de la course (s) : position des pièces mobiles
@@ -111,11 +129,11 @@ export class Track {
     tile.o = (ori === 1 || ori === 2) && !tile.v && flagAllowed(type, 'o', tile, ori) ? ori : 0;
     tile.nb = PIECES[type].noRails || (t.nb && flagAllowed(type, 'nb')) ? 1 : 0;
     tile.tn = t.tn && flagAllowed(type, 'tn', tile) ? 1 : 0;
-    tile.mv = t.mv && !tile.v && flagAllowed(type, 'mv', tile) ? (t.mv | 0) & 3 : 0;
+    tile.mv = t.mv && flagAllowed(type, 'mv', tile) ? (t.mv | 0) & 3 : 0;
     if (tile.mv) { const m = clampMover(tile.mv, t.ms, t.ma); tile.ms = m.ms; tile.ma = m.ma; }
     // Le mouvement prime sur le checkpoint (une pièce mobile ne peut pas porter de checkpoint).
-    tile.cp = t.cp && !tile.mv && flagAllowed(type, 'cp', tile, t.cp | 0) ? (t.cp | 0) : 0;
-    tile.tb = t.tb && !tile.mv && !tile.cp && flagAllowed(type, 'tb', tile) ? 1 : 0;
+    tile.cp = t.cp && flagAllowed(type, 'cp', tile, t.cp | 0) ? (t.cp | 0) : 0;
+    tile.tb = t.tb && flagAllowed(type, 'tb', tile) ? 1 : 0;
     tile.th = THEMES.some((h) => h.id === (t.th | 0)) && flagAllowed(type, 'th') ? (t.th | 0) : 0;
     tile.col = cleanColors(t.col);
     if (surfaceAllowed(type, s, !!tile.v, tile.o)) {
@@ -210,7 +228,7 @@ export class Track {
       if (target && !flagAllowed(tile.t, 'o', null, target)) return false;      // seul le type compte : le plafond, le tunnel, etc. sont retirés (le dernier choix l'emporte)
       const cand = { ...tile };
       if (!target || tile.o === target) { cand.o = 0; if (!target) cand.v = 0; }
-      else { cand.o = target; cand.v = 0; cand.tn = 0; cand.mv = 0; cand.ms = 0; cand.ma = 0; cand.cp = 0; cand.tb = 0; }
+      else { cand.o = target; clearConflicts(cand, 'o'); }
       return this._reshape(tile, cand);
     }
     if (!flagAllowed(tile.t, flag, tile, val)) return false;
@@ -225,15 +243,14 @@ export class Track {
     // (et qu'une pièce à l'envers ne sort pas du sol), puis on réindexe.
     if (flag === 'mv' || flag === 'cp' || flag === 'tb' || flag === 'v') {
       const cand = { ...tile };
-      if (flag === 'mv') { cand.mv = tile.mv === val ? 0 : val; cand.ms = 0; cand.ma = 0; if (cand.mv) { cand.cp = 0; cand.tb = 0; } }
+      if (flag === 'mv') { cand.mv = tile.mv === val ? 0 : val; cand.ms = 0; cand.ma = 0; }     // (flagAllowed a déjà refusé le cas d'un checkpoint ou d'un anneau)
       else if (flag === 'cp') { cand.cp = tile.cp === val ? 0 : val; }
       else if (flag === 'tb') { cand.tb = tile.tb ? 0 : 1; }
       else if (tile.v) cand.v = 0;
-      else { cand.v = 1; cand.o = 0; cand.mv = 0; cand.ms = 0; cand.ma = 0; cand.tn = 0; cand.tb = 0; if (cand.cp === 2) cand.cp = 0; }
+      else { cand.v = 1; clearConflicts(cand, 'v'); }
       return this._reshape(tile, cand);
     }
     tile[flag] = tile[flag] ? 0 : 1;
-    if (flag === 'tn' && tile.tn && tile.v) { tile.tn = 0; return false; }
     this.version++;
     return true;
   }
@@ -316,7 +333,8 @@ export class Track {
     this.index.clear();
     this.vt = 0; this.vh = '';
     this.laps = 1;
-    this.desc = ''; this.offroad = 0; this.v0 = 0; this.g0 = 100; this.veh0 = 'car'; this.inversionGraviteDepart = false;
+    this.desc = '';
+    this.resetRules();
     this.version++;
   }
 
@@ -491,14 +509,21 @@ export class Track {
     return best;
   }
 
-  // Paramètres du niveau, bornés.
-  setParams({ desc, offroad, v0, g0, veh0, inversionGraviteDepart } = {}) {
-    if (inversionGraviteDepart !== undefined) this.inversionGraviteDepart = !!inversionGraviteDepart;
-    if (desc !== undefined) this.desc = String(desc || '').replace(/\s+/g, ' ').trim().slice(0, 200);
-    if (offroad !== undefined) this.offroad = offroad ? 1 : 0;
-    if (v0 !== undefined) this.v0 = Math.max(0, Math.min(300, Math.round(+v0 || 0)));
-    if (g0 !== undefined) this.g0 = Math.max(15, Math.min(250, Math.round(+g0 || 100)));
-    if (veh0 !== undefined) this.veh0 = ['car', 'moto', 'boat', 'glider'].includes(veh0) ? veh0 : 'car';
+  // Règles de course remises à leurs valeurs par défaut.
+  resetRules() {
+    for (const r of RULES) this[r.key] = r.def;
+  }
+
+  // Les règles de course actuelles : { offroad, v0, g0, veh0, flip0 }.
+  rulesState() {
+    return Object.fromEntries(RULES.map((r) => [r.key, this[r.key]]));
+  }
+
+  // Paramètres du niveau, bornés : la description et les règles de course (les champs absents ou `undefined` restent inchangés ;
+  // accepte aussi un autre circuit, dont on lit les mêmes champs).
+  setParams(p = {}) {
+    if (p.desc !== undefined) this.desc = String(p.desc || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    for (const r of RULES) if (p[r.key] !== undefined) this[r.key] = r.clean(p[r.key]);
   }
 
   // Signature du contenu (pièces, décorations, règles de course), utilisée pour la
@@ -510,7 +535,7 @@ export class Track {
       .sort()
       .join('|');
     const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}` : ''}`).join('|');
-    const rules = (this.offroad ? '#O' : '') + (this.v0 ? '#V' + this.v0 : '') + (this.g0 !== 100 ? '#G' + this.g0 : '') + (this.veh0 !== 'car' ? '#E' + this.veh0 : '') + (this.inversionGraviteDepart ? '#I' : '');
+    const rules = RULES.map((r) => r.sig(this[r.key])).join('');
     return hashString(this.decor + '#' + parts + '#' + d + (this.laps > 1 ? '#L' + this.laps : '') + rules);
   }
 
@@ -543,7 +568,8 @@ export class Track {
     t.decos = this.decos.map((d) => ({ ...d }));
     t.vt = this.vt; t.vh = this.vh;
     t.laps = this.laps;
-    t.desc = this.desc; t.offroad = this.offroad; t.v0 = this.v0; t.g0 = this.g0; t.veh0 = this.veh0; t.inversionGraviteDepart = this.inversionGraviteDepart;
+    t.desc = this.desc;
+    for (const r of RULES) t[r.key] = this[r.key];
     return t;
   }
 
@@ -575,16 +601,12 @@ export class Track {
       ...(d.cc ? [d.cc.slice(1)] : []),
     ]);
     // v3 tant que rien de la Phase 2 n'est utilisé : les codes existants ne changent pas.
-    const data = { v: extras.length || this.decos.some((d) => d.cc) || this.inversionGraviteDepart ? 4 : 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
+    const data = { v: extras.length || this.decos.some((d) => d.cc) || RULES.some((r) => r.v4 && this[r.key]) ? 4 : 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
     if (extras.length) data.e = extras;
     if (decos.length) data.o = decos;
     if (this.laps > 1) data.lp = this.laps;
     if (this.desc) data.ds = this.desc;
-    if (this.offroad) data.or = 1;
-    if (this.v0) data.v0 = this.v0;
-    if (this.g0 !== 100) data.g0 = this.g0;
-    if (this.veh0 !== 'car') data.ve = this.veh0;
-    if (this.inversionGraviteDepart) data.ig = 1;
+    for (const r of RULES) if (this[r.key] !== r.def) data[r.code] = this[r.key] === true ? 1 : this[r.key];
     if (this.verified) { data.vt = this.vt; data.vh = this.vh; }
     return 'SHW3:' + b64encode(JSON.stringify(data));
   }
@@ -632,7 +654,7 @@ export class Track {
       }
     }
     tr.laps = Math.max(1, Math.min(9, data.lp | 0 || 1));
-    tr.setParams({ desc: data.ds, offroad: data.or, v0: data.v0, g0: data.g0, veh0: data.ve, inversionGraviteDepart: data.ig });
+    tr.setParams({ desc: data.ds, ...Object.fromEntries(RULES.map((r) => [r.key, data[r.code]])) });
     if (data.vt > 0 && data.vh) { tr.vt = +data.vt; tr.vh = String(data.vh); }
     return tr;
   }

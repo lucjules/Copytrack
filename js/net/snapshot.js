@@ -7,12 +7,11 @@
 //
 // Le compteur de téléportation augmente à CHAQUE retour au checkpoint : le récepteur détecte la téléportation même
 // si le paquet qui la portait s'est perdu (le canal est volontairement non fiable, pour ne jamais accumuler de retard).
-import { DT } from '../constants.js';
+import { DT, VEHICLES } from '../constants.js';
 
 export const SEND_EVERY_STEPS = 6;       // un paquet tous les 6 pas de 1/120 s : 20 paquets par seconde
 export const SNAPSHOT_BYTES = 38;
 const SNAP_VERSION = 1;
-const VEHICLES = ['car', 'moto', 'boat', 'glider'];
 export const F_FINISHED = 1, F_BOOST = 2, F_GROUNDED = 4;
 
 const clamp16 = (v) => Math.max(-32767, Math.min(32767, Math.round(v)));

@@ -18,7 +18,8 @@ import { Autopilot } from '../js/autopilot.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
 import { DT, CELL, LEVEL_H, HALF, ROAD_HALF } from '../js/constants.js';
 import { arrowPose, retypePlacement, traitsOf } from '../js/tileInfo.js';
-import { EditorSession, armedOptions } from '../js/editor.js';
+import { EditorSession } from '../js/editor.js';
+import { armOption as armedOptions } from '../js/pieces.js';
 import { test, finish } from './harness.mjs';
 
 const tile = (o) => Track.normalize({ x: 0, z: 0, l: 0, r: 0, ...o });

@@ -2,10 +2,10 @@
 // options (envers, sans bordures, tunnel), décorations libres, vérification, historique.
 import * as THREE from './vendor/three.module.min.js';
 import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL, DIRS, MAX_DECOS, SURF_PHYS } from './constants.js';
-import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, surfaceRule, flagAllowed, paramText } from './pieces.js';
+import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, surfaceRule, flagAllowed, paramText, armOption } from './pieces.js';
 import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from './families.js';
 import { retypePlacement } from './tileInfo.js';
-import { Track } from './track.js';
+import { Track, tileToRow, rowToTile } from './track.js';
 import { DECORS, DEFAULT_DECOR } from './themes.js';
 import { TrackView, buildTileMesh, tint, THEME_SWATCH } from './trackMesh.js';
 import { buildDecoMesh, safeUrl } from './decos.js';
@@ -68,28 +68,6 @@ const OPT_KEYS = ['v', 'o', 'nb', 'tn', 'mv', 'cp', 'tb', 'th'];
 const OPT_NAMES = { v: 'plafond', o: 'mur', nb: 'sans bordures', tn: 'tunnel', mv: 'mouvement', cp: 'checkpoint', tb: 'anneau turbo', th: 'thème' };
 const NO_OPTS = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0 };
 const modId = (flag, val) => (flag === 'v' || flag === 'nb' || flag === 'tn' ? 'mod:' + flag : `mod:${flag}${val}`);
-// Un choix qui ne peut pas cohabiter avec un autre : poser « plafond » ou un mur exclut tunnel, mouvement et anneau aérien ; mouvement exclut checkpoint.
-export function armedOptions(opts, flag, val) {
-  const o = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ...opts };
-  // Orientation (0.9.3) : sol, mur gauche (1), mur droit (2) ; le plafond est le drapeau v. Un seul choix à la fois.
-  if (flag === 'o') {
-    o.o = val === 0 || o.o === val ? 0 : val;
-    if (val === 0) o.v = 0;                                   // « Sol » : remet aussi la pièce à l'endroit
-    if (o.o) { o.v = 0; o.tn = 0; o.mv = 0; o.cp = 0; o.tb = 0; }
-    return o;
-  }
-  const bool = flag === 'v' || flag === 'nb' || flag === 'tn';
-  if (bool) o[flag] = o[flag] ? 0 : 1; else o[flag] = o[flag] === val ? 0 : val;
-  // Le dernier choix l'emporte sur ce qui ne peut pas cohabiter avec lui (l'anneau turbo se comporte comme le checkpoint aérien).
-  if (o[flag]) {
-    if (flag === 'v') { o.o = 0; o.tn = 0; o.mv = 0; o.tb = 0; if (o.cp === 2) o.cp = 0; }
-    else if (flag === 'tn') { o.v = 0; o.o = 0; o.cp = 0; o.tb = 0; }
-    else if (flag === 'mv') { o.v = 0; o.o = 0; o.cp = 0; o.tb = 0; }
-    else if (flag === 'cp') { o.mv = 0; o.tn = 0; o.tb = 0; o.o = 0; if (o.cp === 2) o.v = 0; }
-    else if (flag === 'tb') { o.mv = 0; o.tn = 0; o.v = 0; o.cp = 0; o.o = 0; }
-  }
-  return o;
-}
 // Pourquoi une pose sort des niveaux (sol ou plafond) : plafond, mur, pente descendante ou simple hauteur.
 function outOfBounds(tile) {
   const P = PIECES[tile.t], [lo] = Track.range(tile);
@@ -619,7 +597,7 @@ export class EditorSession {
   // « appliquer à une pièce posée » (comme avant).
   _optClick(flag, val) {
     if (PIECES[this.tool]) {
-      this.opts = armedOptions(this.opts, flag, val);
+      this.opts = armOption(this.opts, flag, val);
       this.previewKey = '';
       this._refreshUI();
       return;
@@ -736,7 +714,7 @@ export class EditorSession {
     if (MIRROR[base]) { this.setTool(MIRROR[base]); return; }
     // 0.9.3 : une ligne droite ou un virage armé « Mur gauche » devient « Mur droit », et inversement.
     if (PIECES[base] && this.opts && (this.opts.o === 1 || this.opts.o === 2)) {
-      this.opts = armedOptions({ ...this.opts, o: 0 }, 'o', this.opts.o === 1 ? 2 : 1);
+      this.opts = armOption({ ...this.opts, o: 0 }, 'o', this.opts.o === 1 ? 2 : 1);
       this.previewKey = '';
       this._refreshUI();
     }
@@ -845,10 +823,10 @@ export class EditorSession {
   // ---------------------------------------------------------------- Historique
   _snapshot() {
     return JSON.stringify({
-      t: this.track.tiles.map((t) => [t.t, t.x, t.z, t.l, t.r, t.s || '', t.p || 0, t.v, t.nb, t.tn, t.mv || 0, t.cp || 0, t.th || 0, t.ms || 0, t.ma || 0, t.col || 0, t.s2 || '', t.p2 || 0, t.tb || 0, t.o || 0]),
+      t: this.track.tiles.map(tileToRow),
       d: this.track.decos.map((o) => [o.k, o.x, o.y, o.z, o.ry, o.s, o.c, o.u, o.ph || 0, o.cc || '']),
       lp: this.track.laps || 1,
-      pr: { name: this.track.name, desc: this.track.desc, offroad: this.track.offroad, v0: this.track.v0, g0: this.track.g0, veh0: this.track.veh0, inversionGraviteDepart: this.track.inversionGraviteDepart, decor: this.track.decor },
+      pr: { name: this.track.name, desc: this.track.desc, decor: this.track.decor, ...this.track.rulesState() },
     });
   }
 
@@ -857,7 +835,7 @@ export class EditorSession {
     const { vt, vh } = this.track;
     this.track.clear();
     this.track.vt = vt; this.track.vh = vh;
-    for (const [t, x, z, l, r, s, p, v, nb, tn, mv, cp, th, ms, ma, col, s2, p2, tb, o] of data.t) this.track.add({ t, x, z, l, r, s, p, v, nb, tn, mv, cp, th, ms, ma, col: col || null, s2, p2, tb, o });
+    for (const row of data.t) this.track.add(rowToTile(row));
     for (const [k, x, y, z, ry, sc, c, u, ph, cc] of data.d) this.track.addDeco({ k, x, y, z, ry, s: sc, c, u, ph, cc });
     this.track.laps = data.lp || 1;
     if (data.pr) {
@@ -1649,7 +1627,7 @@ export class EditorSession {
     }
     const a = pts[0], b = pts[1];
     const yaw = Math.atan2(-(b[0] - a[0]), -(b[2] - a[2]));
-    const gs = (t.v && PIECES[t.t].kind !== 'ribbon' && PIECES[t.t].kind !== 'loop') || this.track.inversionGraviteDepart ? -1 : 1;
+    const gs = (t.v && PIECES[t.t].kind !== 'ribbon' && PIECES[t.t].kind !== 'loop') || this.track.flip0 ? -1 : 1;
     this.app.testTrack(this.exportState(), { x: a[0] + (b[0] - a[0]) * 0.5, y: a[1], z: a[2] + (b[2] - a[2]) * 0.5, yaw, gs });
   }
 
@@ -1693,7 +1671,7 @@ export class EditorSession {
     $f('pp-v0').value = T.v0 || 0;
     $f('pp-g0').value = T.g0 || 100;
     $f('pp-veh').value = T.veh0 || 'car';
-    $f('pp-ig').checked = !!T.inversionGraviteDepart;
+    $f('pp-ig').checked = !!T.flip0;
     const show = () => {
       $f('pp-v0v').textContent = +$f('pp-v0').value ? `${$f('pp-v0').value} km/h` : 'arrêt';
       $f('pp-g0v').textContent = `${$f('pp-g0').value} % · ${(SURF_PHYS.gravity * $f('pp-g0').value / 100).toFixed(1).replace('.', ',')} m/s²`;
@@ -1708,7 +1686,7 @@ export class EditorSession {
         T.laps = laps;
         const nm = $f('pp-name').value.trim().slice(0, 40);
         if (nm) T.name = nm;
-        T.setParams({ desc: $f('pp-desc').value, offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value, inversionGraviteDepart: $f('pp-ig').checked });
+        T.setParams({ desc: $f('pp-desc').value, offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value, flip0: $f('pp-ig').checked });
         if ($f('pp-decor').value !== T.decor) { T.decor = $f('pp-decor').value; this._applyDecor(); this.gridKey = ''; }
         this._changed(false);
         this._commit();

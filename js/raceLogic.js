@@ -22,8 +22,8 @@ export class RaceLogic {
     // On recule un peu pour que la voiture parte derrière la ligne.
     const back = 4;
     const fx = [0, 1, 0, -1][t.r], fz = [-1, 0, 1, 0][t.r];
-    // Gravité inversée au départ : départ posé à l'envers, ou paramètre du niveau « inversionGraviteDepart ».
-    return { x: c.x - fx * back, y: baseY(t), z: c.z - fz * back, yaw: -t.r * Math.PI / 2, gs: t.v || this.track.inversionGraviteDepart ? -1 : 1 };
+    // Gravité inversée au départ : départ posé à l'envers, ou paramètre du niveau « flip0 ».
+    return { x: c.x - fx * back, y: baseY(t), z: c.z - fz * back, yaw: -t.r * Math.PI / 2, gs: t.v || this.track.flip0 ? -1 : 1 };
   }
 
   reset() {

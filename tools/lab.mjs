@@ -163,7 +163,7 @@ export function speedPlot(S, rows = 10) {
 export function buildFromScript(script, o = {}) {
   const t = scriptTrack('lab', script, { decor: o.decor || 'desert', ...(o.l ? { l: o.l } : {}) });
   if (o.v0 || o.veh || o.g0) t.setParams({ v0: o.v0, veh0: o.veh, g0: o.g0 });
-  if (o.params) t.setParams(o.params);               // ex. { inversionGraviteDepart: true }
+  if (o.params) t.setParams(o.params);               // ex. { flip0: true }
   return t;
 }
 
