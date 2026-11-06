@@ -1,12 +1,12 @@
 // Session de course : boucle à pas fixe, caméra, fantôme, HUD, effets.
 import * as THREE from './vendor/three.module.min.js';
-import { DT, OFF_TRACK_RESPAWN_S } from './constants.js';
+import { DT } from './constants.js';
 import { CamFlip } from './camflip.js';
 import { MSG, PRIO } from './hudMessages.js';
 import { RemoteCar } from './remoteCar.js';
 import { SEND_EVERY_STEPS, F_FINISHED, F_BOOST, F_GROUNDED } from './net/snapshot.js';
-import { CarPhysics, frameWorld } from './physics.js';
-import { RaceLogic, placeAtStart } from './raceLogic.js';
+import { frameWorld } from './physics.js';
+import { Simulation } from './simulation.js';
 import { Autopilot } from './autopilot.js';
 import { TrackView } from './trackMesh.js';
 import { createCar } from './carModel.js';
@@ -54,8 +54,9 @@ export class RaceSession {
     app.scenery.trackGroup.add(this.view.group);
     app.scenery.setTrack(track, opts.seed || this.trackKey || track.name);
 
-    this.phys = new CarPhysics(track);
-    this.logic = new RaceLogic(track, { partial: !!opts.spawn });
+    this.sim = new Simulation(track, { partial: !!opts.spawn });
+    this.phys = this.sim.phys;
+    this.logic = this.sim.logic;
     this.car = createCar(profile().loadout);
     app.scene.add(this.car.group);
     this.skids = new SkidMarks(app.scene);
@@ -153,10 +154,7 @@ export class RaceSession {
 
   restart() {
     const app = this.app;
-    this.logic.reset();
-    const sp = this.opts.spawn || this.logic.spawnPoint();
-    if (this.opts.spawn) this.logic.respawn = { ...sp, vehicle: this.track.veh0 || 'car', grav: (this.track.g0 || 100) / 100 };
-    placeAtStart(this.phys, this.logic, sp);
+    const sp = this.sim.start(this.opts.spawn);
     this.car.setVehicle(this.phys.vehicle, true);
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
     this._orient();
@@ -175,7 +173,6 @@ export class RaceSession {
     this.countShown = -1;
     this.acc = 0;
     this.ghostRec = [];
-    this.groundT = 0;
     this.finishT = 0;
     this.lastSplitShown = 0;
     this.wheelSpin = 0;
@@ -209,7 +206,7 @@ export class RaceSession {
     this.stats.respawns++;
     // Retour au dernier checkpoint : le chrono revient au temps de ce checkpoint (solo). En multijoueur il continue de
     // tourner : la téléportation coûte tout le temps perdu, et le compteur de téléportation prévient les autres joueurs.
-    const r = this.logic.rewind({ keepClock: !!this.multi });
+    const r = this.sim.rewind({ keepClock: !!this.multi });      // (remet aussi la voiture au point de retour, avec son véhicule et sa gravité)
     Object.assign(this.stats, this.statsSnap);       // les réceptions, turbos et anneaux d'après le checkpoint ne comptent plus
     if (this.multi) this.teleSeq = (this.teleSeq + 1) & 255;
     const steps = this.logic.steps;
@@ -223,14 +220,11 @@ export class RaceSession {
       this.app.ui.hud.checkpoints(this.logic.collected.size, this.logic.cps.length, this.logic.lap, this.logic.laps);
       this.app.ui.hud.time(steps * DT);
     }
-    this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
-    this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
     this.car.setVehicle(this.phys.vehicle, true);
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
     this._orient();
     this.prevQuat.copy(this.quat);
     this._camCut();
-    this.groundT = 0;
     if (this.trailRib) this.trailRib.reset();      // pas de traînée qui traverse la téléportation
     if (this.multi) { this._sendNet(); this._say(MSG.keepClock); }
     this.app.audio.respawn();
@@ -295,8 +289,7 @@ export class RaceSession {
     if (this.state === 'racing') this.tick++;
     this.lastInput = inp;
     this.prevQuat.copy(this.quat);
-    this.phys.clock = this.logic.steps;   // horloge des obstacles et pièces mobiles = chrono
-    this.phys.step(inp);
+    this.sim.drive(inp);      // horloge des obstacles et pièces mobiles = chrono, puis un pas de physique
     this._orient();
     if (this.multi && ++this.netTick % SEND_EVERY_STEPS === 0) this._sendNet(this.state === 'finished' ? F_FINISHED : 0);
     const ev = this.phys.ev;
@@ -405,21 +398,18 @@ export class RaceSession {
     if (ev.loopFall) this._say(MSG.fall[this.phys.fallWhy]);      // « crest » (décollage) : plus de message
 
     if (this.state === 'racing') {
-      const res = this.logic.update(this.phys);
+      const res = this.sim.score();
       if (!this.demo && this.logic.steps % GHOST_EVERY === 0) {
         const p = this.phys.pos, q = this.quat;
         this.ghostRec.push(p.x, p.y, p.z, q.x, q.y, q.z, q.w);
       }
       if (res) this._event(res);
 
-      // Hors piste (0,5 s) ou noyade : réapparition automatique.
-      if (sank && this.state === 'racing') { this.groundT = 0; if (this.demo) this.restart(); else this.respawn(); return; }
-      if (this.phys.offTrack) {
-        this.groundT += DT;
-        if (this.groundT > OFF_TRACK_RESPAWN_S) {
-          if (this.demo) this.restart(); else { this._say(MSG.offTrack); this.respawn(); }
-        }
-      } else this.groundT = 0;
+      // Hors piste (0,5 s) ou noyade : réapparition automatique (le suivi du hors-piste est dans Simulation.score).
+      if (sank && this.state === 'racing') { if (this.demo) this.restart(); else this.respawn(); return; }
+      if (this.sim.groundT > this.sim.offTrackLimit) {
+        if (this.demo) this.restart(); else { this._say(MSG.offTrack); this.respawn(); }
+      }
     }
   }
 

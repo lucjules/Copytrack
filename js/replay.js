@@ -1,12 +1,11 @@
 // Replays et fantômes (v1.5). La physique est déterministe (pas fixe) : il suffit
 // d'enregistrer les commandes de chaque pas pour rejouer une course à l'identique.
 // Une commande = volant quantifié au centième + gaz / frein / réapparition.
-import { CarPhysics } from './physics.js';
-import { RaceLogic, placeAtStart } from './raceLogic.js';
+import { Simulation } from './simulation.js';
 import { Autopilot } from './autopilot.js';
 import { b64encode, b64decode } from './track.js';
 import { PHYS_VER } from './version.js';
-import { DT, MAX_RUN_STEPS, OFF_TRACK_RESPAWN_S } from './constants.js';
+import { MAX_RUN_STEPS } from './constants.js';
 
 
 export const quantSteer = (s) => Math.round(Math.max(-1, Math.min(1, s || 0)) * 100) / 100;
@@ -72,46 +71,30 @@ export function decodeGhost(code) {
 // ---- Fantôme simulé ----------------------------------------------------------------
 // Une seconde voiture qui roule en même temps que le joueur, pilotée soit par un
 // replay (commandes enregistrées), soit par le pilote automatique (fantôme « or »).
+// C'est aussi ce qui rejoue une course côté serveur (verify.js) : le pas est celui de Simulation, le même que la course en direct.
 export class GhostRunner {
   constructor(track, { inputs = null, bot = false, latK = 0.8 } = {}) {
-    this.phys = new CarPhysics(track);
-    this.logic = new RaceLogic(track);
+    this.sim = new Simulation(track);
+    this.phys = this.sim.phys;
+    this.logic = this.sim.logic;
     this.rep = inputs ? decodeInputs(inputs) : null;
     this.bot = bot && track.path ? new Autopilot(track.path, { latLimit: 56 * latK }) : null;
     this.reset();
   }
 
   reset() {
-    this.logic.reset();
-    placeAtStart(this.phys, this.logic);
+    this.sim.start();
     if (this.bot) this.bot.reset(this.phys);
     this.k = 0;
-    this.groundT = 0;
     this.done = false;
   }
 
   step() {
     if (this.done) return;
-    let inp;
-    if (this.bot) inp = this.bot.control(this.phys);
-    else inp = inputAt(this.rep, this.k);
-    if (inp.respawn) {
-      const r = this.logic.rewind();
-      this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
-      this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
-    }
-    this.phys.clock = this.logic.steps;
-    this.phys.step(inp);
-    const sink = this.phys.ev.sink;
-    const ev = this.logic.update(this.phys);
-    // Mêmes réapparitions automatiques qu'en course (hors piste 0,5 s, noyade).
-    if (this.phys.offTrack) this.groundT += DT; else this.groundT = 0;
-    if (this.groundT > OFF_TRACK_RESPAWN_S || sink) {
-      this.groundT = 0;
-      const r = this.logic.rewind();
-      this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
-      this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
-    }
+    const inp = this.bot ? this.bot.control(this.phys) : inputAt(this.rep, this.k);
+    if (inp.respawn) this.sim.rewind();
+    const ev = this.sim.step(inp);
+    if (this.sim.lost) this.sim.rewind();      // mêmes réapparitions automatiques qu'en course (hors piste 0,5 s, noyade)
     if (ev && ev.type === 'finish') this.done = true;
     if (this.rep && this.k >= this.rep.length + 240) this.done = true;
     this.k++;

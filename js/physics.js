@@ -333,14 +333,9 @@ export class CarPhysics {
       if (this.plateLock !== 'spring') { this.plateLock = 'spring'; this.lockTile = s.tile; this._springNow = true; this.ev.spring = true; }
       return;
     }
-    if (mod === 'boost') {
-      if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
-      this.boost = CAR.boostTime;
-      this.boostF = this.surfP;
-    } else if (mod === 'gravity') {
-      const gm = this.surfP;
-      if (Math.abs(gm - this.gravMul) > 0.01) { this.gravMul = gm; this.ev.gravity = true; }
-    } else if (mod === 'flip' && this.plateLock !== 'flip') {
+    if (mod === 'boost') this._boostPad(this.surfP);
+    else if (mod === 'gravity') this._gravityPad(this.surfP);
+    else if (mod === 'flip' && this.plateLock !== 'flip') {
       // Inversion de gravité : une suite de plaques collées ne compte qu'une fois.
       this.plateLock = 'flip';
       this.lockTile = s.tile;
@@ -352,13 +347,28 @@ export class CarPhysics {
     if (mod === 'flip') return;
     // Plaques de transformation (moto, bateau, deltaplane) : une suite de plaques collées
     // ne compte que pour UNE transformation ; repasser sur la même plaque ramène la voiture.
-    if (PLATES[mod]) {
-      if (this.plateLock !== mod) {
-        this.plateLock = mod;
-        this.vehicle = this.vehicle === PLATES[mod] ? 'car' : PLATES[mod];
-        this.ev.transform = true;
-      }
-    } else this.plateLock = '';
+    if (PLATES[mod]) this._transformPlate(mod);
+    else this.plateLock = '';
+  }
+
+  // Pastilles et plaques : mêmes effets au sol (_setGround) et sur un ruban (_ribStep).
+  _boostPad(f) {
+    if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
+    this.boost = CAR.boostTime;
+    this.boostF = f;
+  }
+
+  _gravityPad(f) {
+    if (Math.abs(f - this.gravMul) > 0.01) { this.gravMul = f; this.ev.gravity = true; }
+  }
+
+  // Plaques de transformation (moto, bateau, deltaplane) : une suite de plaques collées ne compte que pour UNE transformation ;
+  // repasser sur la même plaque ramène la voiture.
+  _transformPlate(mod) {
+    if (this.plateLock === mod) return;
+    this.plateLock = mod;
+    this.vehicle = this.vehicle === PLATES[mod] ? 'car' : PLATES[mod];
+    this.ev.transform = true;
   }
 
   // Revêtements qui modifient les commandes (volant inversé, moteur coupé) : actifs tant
@@ -974,21 +984,23 @@ export class CarPhysics {
       if (tile.mv || this.broken.has(tile)) continue;
       if (this._probeTile(tile, x, z, px, pz, y, 0)) return HIT;
     }
-    // Pièces mobiles : bordures à leur position du moment.
-    const mv = this.track.movers, time = this.time;
-    for (let i = 0; i < mv.length; i++) {
-      if (this.broken.has(mv[i])) continue;
-      const o = this.track.moverOffset(mv[i], time, MOV);
+    // Pièces mobiles : bordures à leur position du moment. L'index les range dans toutes les cases qu'elles balaient : celles de cette case suffisent.
+    if (!this.track.hasMovers) return null;
+    const time = this.time;
+    for (let i = 0; i < tiles.length; i++) {
+      const tile = tiles[i];
+      if (!tile.mv || this.broken.has(tile)) continue;
+      const o = this.track.moverOffset(tile, time, MOV);
       if (o.a) {
         // Pièce tournante : on interroge sa géométrie « au repos », puis on remet le résultat dans le repère du monde.
         const q = this.track.moverLocal(o, x, z, MQ1), q2 = this.track.moverLocal(o, px, pz, MQ2);
-        if (this._probeTile(mv[i], q.x, q.z, q2.x, q2.z, y - o.y, 0)) {
+        if (this._probeTile(tile, q.x, q.z, q2.x, q2.z, y - o.y, 0)) {
           const c = Math.cos(o.a), sn = Math.sin(o.a), dx = HIT.dx, dz = HIT.dz, nx = HIT.nx, nz = HIT.nz;
           HIT.dx = c * dx + sn * dz; HIT.dz = -sn * dx + c * dz;
           HIT.nx = c * nx + sn * nz; HIT.nz = -sn * nx + c * nz;
           return HIT;
         }
-      } else if (this._probeTile(mv[i], x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y, 0)) return HIT;
+      } else if (this._probeTile(tile, x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y, 0)) return HIT;
     }
     return null;
   }
@@ -1273,12 +1285,8 @@ export class CarPhysics {
     const C = surfaceCoeffs(mod, f);
     let extraDrag = C.extraDrag, gripK = C.grip, tractK = C.traction, vmaxK = C.vmaxK, beltE1 = 0, rearK = C.rearK;
     if (this.stunT > 0) { gripK *= CAR.stunGrip; tractK *= CAR.stunTraction; }       // choc contre une paroi : la voiture encaisse
-    if (mod === 'boost') {
-      if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
-      this.boost = CAR.boostTime; this.boostF = f;
-    } else if (mod === 'gravity') {
-      if (Math.abs(f - this.gravMul) > 0.01) { this.gravMul = f; this.ev.gravity = true; }
-    }
+    if (mod === 'boost') this._boostPad(f);
+    else if (mod === 'gravity') this._gravityPad(f);
     else if (mod === 'wind') {
       // Vent : soufflé selon l'axe latéral de la pièce, projeté dans le plan de la route.
       const a = ((tileParam(tile) - 100) / 100) * CAR.wind;
@@ -1289,9 +1297,8 @@ export class CarPhysics {
     else if (mod === 'spring' && this.plateLock !== 'spring') {
       this.plateLock = 'spring'; this.ev.spring = true;
       R.vd += ((tileParam(tile) - 100) / 100) * CAR.spring * R.dir;
-    } else if (PLATES[mod]) {
-      if (this.plateLock !== mod) { this.plateLock = mod; this.vehicle = this.vehicle === PLATES[mod] ? 'car' : PLATES[mod]; this.ev.transform = true; }
-    } else this._timedMods(mod);
+    } else if (PLATES[mod]) this._transformPlate(mod);
+    else this._timedMods(mod);
     if (!PLATES[mod] && mod !== 'spring' && mod !== 'flip') this.plateLock = '';
     R.vs += beltE1 - this.beltS;   // même prise de vitesse en montant sur un tapis de ruban
     this.beltS = beltE1;

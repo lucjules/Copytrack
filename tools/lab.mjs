@@ -9,8 +9,7 @@
 //           --map carte vue de dessus · --profile courbe de vitesse (ASCII) · --json sortie machine
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
 import { scriptTrack, Track } from '../js/track.js';
-import { CarPhysics } from '../js/physics.js';
-import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
+import { Simulation, placeAtRespawn } from '../js/simulation.js';
 import { Autopilot } from '../js/autopilot.js';
 import { PIECES } from '../js/pieces.js';
 import { DT, CELL, LEVEL_H } from '../js/constants.js';
@@ -63,9 +62,8 @@ export function asciiMap(track) {
 // rewindAtCp : numéro (à partir de 1) d'un checkpoint où l'on force une réapparition dès qu'il est pris, comme la touche « dernier checkpoint » :
 // la voiture repart À L'ARRÊT du point de réapparition. Sert à vérifier qu'on peut toujours repartir de chaque checkpoint.
 export function runTrack(track, { maxTime = 240, vCap, brakeDecel, rewindAtCp = 0, driver = null } = {}) {
-  const phys = new CarPhysics(track);
-  const logic = new RaceLogic(track);
-  placeAtStart(phys, logic);
+  const sim = new Simulation(track), { phys, logic } = sim;
+  sim.start();
   const bot = new Autopilot(track.path, { ...(vCap ? { vCap } : {}), ...(brakeDecel ? { brakeDecel } : {}) });
   bot.reset(phys);
   const S = { contacts: 0, contactsHard: 0, ok: false, vehicle: 'car', jumps: 0, wallVmin: Infinity, shocks: 0, spikes: 0, time: 0, respawns: 0, wallHits: 0, vmax: 0, airMax: 0, airTotal: 0, loops: 0, perfects: 0, turbos: 0, rings: 0, brakeT: 0, wallT: 0, ribT: 0, samples: [], cps: [], yMin: Infinity, yMax: -Infinity, dist: 0, reason: '' };
@@ -73,8 +71,7 @@ export function runTrack(track, { maxTime = 240, vCap, brakeDecel, rewindAtCp = 
   const steps = Math.round(maxTime / DT);
   for (let i = 0; i < steps; i++) {
     const inp = driver ? driver.control(phys, bot) : bot.control(phys);
-    phys.clock = logic.steps;
-    phys.step(inp);
+    sim.drive(inp);
     const sp = phys.speed;
     S.vmax = Math.max(S.vmax, sp);
     S.airMax = Math.max(S.airMax, phys.airTime);
@@ -93,14 +90,12 @@ export function runTrack(track, { maxTime = 240, vCap, brakeDecel, rewindAtCp = 
     if (phys.ev.landQ === 'perfect') S.perfects++;
     if (phys.ev.ring) S.rings++;
     if (i % 12 === 0) S.samples.push([i * DT, sp, phys.pos.y, phys.grounded || phys.rib ? 1 : 0]);
-    const ev = logic.update(phys);
+    const ev = sim.score();
     if (ev && ev.type === 'checkpoint') {
       S.cps.push(+logic.time.toFixed(2));
       if (rewindAtCp && ev.index === rewindAtCp && !S.rewound) {
         S.rewound = true;
-        const r = logic.rewind();
-        phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
-        phys.vehicle = r.vehicle || 'car'; phys.gravMul = r.grav || 1;
+        sim.rewind();
         bot.reset(phys); stuck = 0;
         continue;
       }
@@ -111,8 +106,7 @@ export function runTrack(track, { maxTime = 240, vCap, brakeDecel, rewindAtCp = 
     if (fell || stuck > 4) {
       S.respawns++;
       if (S.respawns > 8) { S.reason = `trop de réapparitions (idx ${bot.idx}/${track.path.length}, pos ${phys.pos.x.toFixed(1)},${phys.pos.y.toFixed(1)},${phys.pos.z.toFixed(1)})`; S.time = logic.time; return S; }
-      const r = logic.respawn;
-      phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
+      placeAtRespawn(phys, logic.respawn);
       bot.reset(phys);
       stuck = 0;
     }

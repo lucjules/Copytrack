@@ -420,13 +420,16 @@ export class Track {
       if (tile.mv || !isFloor(tile) || (broken && broken.has(tile))) continue;
       best = this._floorTry(tile, x, z, 0, y, step, best, out);
     }
-    const mv = this.movers;
-    for (let i = 0; i < mv.length; i++) {
-      const tile = mv[i];
-      if (!isFloor(tile) || (broken && broken.has(tile))) continue;
-      this.moverOffset(tile, time, MO);
-      if (MO.a) { this.moverLocal(MO, x, z, W2); best = this._floorTry(tile, W2.x, W2.z, MO.y, y, step, best, out, MO.a); }
-      else best = this._floorTry(tile, x - MO.x, z - MO.z, MO.y, y, step, best, out);
+    // Pièces mobiles : l'index les range dans toutes les cases qu'elles balaient, donc seules celles de CETTE case peuvent porter le point
+    // (même ordre qu'avant : celui du circuit).
+    if (this.hasMovers) {
+      for (let i = 0; i < cell.length; i++) {
+        const tile = cell[i];
+        if (!tile.mv || !isFloor(tile) || (broken && broken.has(tile))) continue;
+        this.moverOffset(tile, time, MO);
+        if (MO.a) { this.moverLocal(MO, x, z, W2); best = this._floorTry(tile, W2.x, W2.z, MO.y, y, step, best, out, MO.a); }
+        else best = this._floorTry(tile, x - MO.x, z - MO.z, MO.y, y, step, best, out);
+      }
     }
     return out;
   }
@@ -493,9 +496,10 @@ export class Track {
     return out;
   }
 
-  get movers() {
-    if (this._mvV !== this.version) { this._mv = this.tiles.filter((t) => t.mv); this._mvV = this.version; }
-    return this._mv;
+  // Le circuit a-t-il des pièces mobiles ? (mis en cache par version : évite de balayer la case une seconde fois pour rien)
+  get hasMovers() {
+    if (this._mvV !== this.version) { this._hasMv = this.tiles.some((t) => t.mv); this._mvV = this.version; }
+    return this._hasMv;
   }
 
   // Dessous de dalle (ou toit de tunnel) le plus bas au-dessus de yMin : sert à la caméra.

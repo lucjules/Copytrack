@@ -4508,15 +4508,16 @@ var Track = class _Track {
       if (tile.mv || !isFloor(tile) || broken && broken.has(tile)) continue;
       best = this._floorTry(tile, x, z, 0, y, step, best, out);
     }
-    const mv = this.movers;
-    for (let i = 0; i < mv.length; i++) {
-      const tile = mv[i];
-      if (!isFloor(tile) || broken && broken.has(tile)) continue;
-      this.moverOffset(tile, time, MO);
-      if (MO.a) {
-        this.moverLocal(MO, x, z, W2);
-        best = this._floorTry(tile, W2.x, W2.z, MO.y, y, step, best, out, MO.a);
-      } else best = this._floorTry(tile, x - MO.x, z - MO.z, MO.y, y, step, best, out);
+    if (this.hasMovers) {
+      for (let i = 0; i < cell.length; i++) {
+        const tile = cell[i];
+        if (!tile.mv || !isFloor(tile) || broken && broken.has(tile)) continue;
+        this.moverOffset(tile, time, MO);
+        if (MO.a) {
+          this.moverLocal(MO, x, z, W2);
+          best = this._floorTry(tile, W2.x, W2.z, MO.y, y, step, best, out, MO.a);
+        } else best = this._floorTry(tile, x - MO.x, z - MO.z, MO.y, y, step, best, out);
+      }
     }
     return out;
   }
@@ -4610,12 +4611,13 @@ var Track = class _Track {
     out.z = z;
     return out;
   }
-  get movers() {
+  // Le circuit a-t-il des pièces mobiles ? (mis en cache par version : évite de balayer la case une seconde fois pour rien)
+  get hasMovers() {
     if (this._mvV !== this.version) {
-      this._mv = this.tiles.filter((t) => t.mv);
+      this._hasMv = this.tiles.some((t) => t.mv);
       this._mvV = this.version;
     }
-    return this._mv;
+    return this._hasMv;
   }
   // Dessous de dalle (ou toit de tunnel) le plus bas au-dessus de yMin : sert à la caméra.
   ceilingAt(x, z, yMin) {
@@ -7740,17 +7742,9 @@ var CarPhysics = class {
       }
       return;
     }
-    if (mod === "boost") {
-      if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
-      this.boost = CAR.boostTime;
-      this.boostF = this.surfP;
-    } else if (mod === "gravity") {
-      const gm = this.surfP;
-      if (Math.abs(gm - this.gravMul) > 0.01) {
-        this.gravMul = gm;
-        this.ev.gravity = true;
-      }
-    } else if (mod === "flip" && this.plateLock !== "flip") {
+    if (mod === "boost") this._boostPad(this.surfP);
+    else if (mod === "gravity") this._gravityPad(this.surfP);
+    else if (mod === "flip" && this.plateLock !== "flip") {
       this.plateLock = "flip";
       this.lockTile = s.tile;
       this.gSign = -this.gSign;
@@ -7759,13 +7753,28 @@ var CarPhysics = class {
       return;
     }
     if (mod === "flip") return;
-    if (PLATES[mod]) {
-      if (this.plateLock !== mod) {
-        this.plateLock = mod;
-        this.vehicle = this.vehicle === PLATES[mod] ? "car" : PLATES[mod];
-        this.ev.transform = true;
-      }
-    } else this.plateLock = "";
+    if (PLATES[mod]) this._transformPlate(mod);
+    else this.plateLock = "";
+  }
+  // Pastilles et plaques : mêmes effets au sol (_setGround) et sur un ruban (_ribStep).
+  _boostPad(f) {
+    if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
+    this.boost = CAR.boostTime;
+    this.boostF = f;
+  }
+  _gravityPad(f) {
+    if (Math.abs(f - this.gravMul) > 0.01) {
+      this.gravMul = f;
+      this.ev.gravity = true;
+    }
+  }
+  // Plaques de transformation (moto, bateau, deltaplane) : une suite de plaques collées ne compte que pour UNE transformation ;
+  // repasser sur la même plaque ramène la voiture.
+  _transformPlate(mod) {
+    if (this.plateLock === mod) return;
+    this.plateLock = mod;
+    this.vehicle = this.vehicle === PLATES[mod] ? "car" : PLATES[mod];
+    this.ev.transform = true;
   }
   // Revêtements qui modifient les commandes (volant inversé, moteur coupé) : actifs tant
   // qu'on roule dessus, puis encore un court instant.
@@ -8493,13 +8502,15 @@ var CarPhysics = class {
       if (tile.mv || this.broken.has(tile)) continue;
       if (this._probeTile(tile, x, z, px, pz, y, 0)) return HIT;
     }
-    const mv = this.track.movers, time = this.time;
-    for (let i = 0; i < mv.length; i++) {
-      if (this.broken.has(mv[i])) continue;
-      const o = this.track.moverOffset(mv[i], time, MOV);
+    if (!this.track.hasMovers) return null;
+    const time = this.time;
+    for (let i = 0; i < tiles.length; i++) {
+      const tile = tiles[i];
+      if (!tile.mv || this.broken.has(tile)) continue;
+      const o = this.track.moverOffset(tile, time, MOV);
       if (o.a) {
         const q = this.track.moverLocal(o, x, z, MQ1), q2 = this.track.moverLocal(o, px, pz, MQ2);
-        if (this._probeTile(mv[i], q.x, q.z, q2.x, q2.z, y - o.y, 0)) {
+        if (this._probeTile(tile, q.x, q.z, q2.x, q2.z, y - o.y, 0)) {
           const c = Math.cos(o.a), sn = Math.sin(o.a), dx = HIT.dx, dz = HIT.dz, nx = HIT.nx, nz = HIT.nz;
           HIT.dx = c * dx + sn * dz;
           HIT.dz = -sn * dx + c * dz;
@@ -8507,7 +8518,7 @@ var CarPhysics = class {
           HIT.nz = -sn * nx + c * nz;
           return HIT;
         }
-      } else if (this._probeTile(mv[i], x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y, 0)) return HIT;
+      } else if (this._probeTile(tile, x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y, 0)) return HIT;
     }
     return null;
   }
@@ -8822,16 +8833,9 @@ var CarPhysics = class {
       gripK *= CAR.stunGrip;
       tractK *= CAR.stunTraction;
     }
-    if (mod === "boost") {
-      if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
-      this.boost = CAR.boostTime;
-      this.boostF = f;
-    } else if (mod === "gravity") {
-      if (Math.abs(f - this.gravMul) > 0.01) {
-        this.gravMul = f;
-        this.ev.gravity = true;
-      }
-    } else if (mod === "wind") {
+    if (mod === "boost") this._boostPad(f);
+    else if (mod === "gravity") this._gravityPad(f);
+    else if (mod === "wind") {
       const a = (tileParam(tile) - 100) / 100 * CAR.wind;
       rotVec(tile.r, 1, 0, TMP);
       R.vs += (TMP.x * B2.e1x + TMP.z * B2.e1z) * a * dt;
@@ -8841,13 +8845,8 @@ var CarPhysics = class {
       this.plateLock = "spring";
       this.ev.spring = true;
       R.vd += (tileParam(tile) - 100) / 100 * CAR.spring * R.dir;
-    } else if (PLATES[mod]) {
-      if (this.plateLock !== mod) {
-        this.plateLock = mod;
-        this.vehicle = this.vehicle === PLATES[mod] ? "car" : PLATES[mod];
-        this.ev.transform = true;
-      }
-    } else this._timedMods(mod);
+    } else if (PLATES[mod]) this._transformPlate(mod);
+    else this._timedMods(mod);
     if (!PLATES[mod] && mod !== "spring" && mod !== "flip") this.plateLock = "";
     R.vs += beltE1 - this.beltS;
     this.beltS = beltE1;
@@ -9321,6 +9320,73 @@ function placeAtStart(phys, logic, sp = logic.spawnPoint()) {
   }
 }
 
+// js/simulation.js
+function placeAtRespawn(phys, r) {
+  phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
+  phys.vehicle = r.vehicle || "car";
+  phys.gravMul = r.grav || 1;
+}
+var Simulation = class {
+  // partial : test depuis le curseur (pas besoin des checkpoints). offTrackLimit : temps hors piste (s) avant la réapparition automatique.
+  constructor(track, { partial = false, offTrackLimit = OFF_TRACK_RESPAWN_S } = {}) {
+    this.track = track;
+    this.phys = new CarPhysics(track);
+    this.logic = new RaceLogic(track, {
+      partial
+    });
+    this.offTrackLimit = offTrackLimit;
+    this.groundT = 0;
+    this.sank = false;
+    this.lost = "";
+  }
+  // (Re)départ : règles remises à zéro, voiture au point de départ avec les paramètres du niveau. spawn : point de départ imposé
+  // (test depuis le curseur de l'éditeur), qui sert aussi de point de retour.
+  start(spawn = null) {
+    const T = this.track;
+    this.logic.reset();
+    const sp = spawn || this.logic.spawnPoint();
+    if (spawn) this.logic.respawn = {
+      ...sp,
+      vehicle: T.veh0 || "car",
+      grav: (T.g0 || 100) / 100
+    };
+    placeAtStart(this.phys, this.logic, sp);
+    this.groundT = 0;
+    this.sank = false;
+    this.lost = "";
+    return sp;
+  }
+  // Retour au dernier checkpoint (touche R, hors piste, noyade). keepClock : le chrono continue de tourner (multijoueur).
+  rewind({ keepClock = false } = {}) {
+    const r = this.logic.rewind({
+      keepClock
+    });
+    placeAtRespawn(this.phys, r);
+    this.groundT = 0;
+    this.sank = false;
+    this.lost = "";
+    return r;
+  }
+  // Phase 1 d'un pas : horloge de la course puis physique.
+  drive(inp) {
+    this.phys.clock = this.logic.steps;
+    this.phys.step(inp);
+    this.sank = this.phys.ev.sink;
+  }
+  // Phase 2 d'un pas : règles de course puis suivi du hors-piste. Renvoie l'évènement de course (checkpoint, tour, arrivée...) ou null.
+  score() {
+    const ev = this.logic.update(this.phys);
+    if (this.phys.offTrack) this.groundT += DT;
+    else this.groundT = 0;
+    this.lost = this.sank ? "sink" : this.groundT > this.offTrackLimit ? "offTrack" : "";
+    return ev;
+  }
+  step(inp) {
+    this.drive(inp);
+    return this.score();
+  }
+};
+
 // js/autopilot.js
 var Autopilot = class {
   constructor(path, opts = {}) {
@@ -9691,23 +9757,19 @@ function tryBuild(tokens, decor) {
   }
 }
 function botTime(track, latK = 0.8) {
-  const phys = new CarPhysics(track), logic = new RaceLogic(track);
-  placeAtStart(phys, logic);
+  const sim = new Simulation(track, {
+    offTrackLimit: 0.3
+  });
+  sim.start();
   const bot = new Autopilot(track.path, {
     latLimit: CAR.latGrip * latK,
     brakeDecel: 36
   });
-  bot.reset(phys);
-  let groundT = 0, respawns = 0;
+  bot.reset(sim.phys);
   for (let i = 0; i < 120 * 120; i++) {
-    phys.clock = logic.steps;
-    phys.step(bot.control(phys));
-    const ev = logic.update(phys);
-    if (ev && ev.type === "finish") return respawns ? null : logic.time;
-    if (phys.offTrack || phys.ev.sink) {
-      groundT += 1 / 120;
-      if (groundT > 0.3 || phys.ev.sink) return null;
-    } else groundT = 0;
+    const ev = sim.step(bot.control(sim.phys));
+    if (ev && ev.type === "finish") return sim.logic.time;
+    if (sim.lost) return null;
   }
   return null;
 }
@@ -9831,8 +9893,9 @@ function inputAt(rep, k) {
 }
 var GhostRunner = class {
   constructor(track, { inputs = null, bot = false, latK = 0.8 } = {}) {
-    this.phys = new CarPhysics(track);
-    this.logic = new RaceLogic(track);
+    this.sim = new Simulation(track);
+    this.phys = this.sim.phys;
+    this.logic = this.sim.logic;
     this.rep = inputs ? decodeInputs(inputs) : null;
     this.bot = bot && track.path ? new Autopilot(track.path, {
       latLimit: 56 * latK
@@ -9840,37 +9903,17 @@ var GhostRunner = class {
     this.reset();
   }
   reset() {
-    this.logic.reset();
-    placeAtStart(this.phys, this.logic);
+    this.sim.start();
     if (this.bot) this.bot.reset(this.phys);
     this.k = 0;
-    this.groundT = 0;
     this.done = false;
   }
   step() {
     if (this.done) return;
-    let inp;
-    if (this.bot) inp = this.bot.control(this.phys);
-    else inp = inputAt(this.rep, this.k);
-    if (inp.respawn) {
-      const r = this.logic.rewind();
-      this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
-      this.phys.vehicle = r.vehicle || "car";
-      this.phys.gravMul = r.grav || 1;
-    }
-    this.phys.clock = this.logic.steps;
-    this.phys.step(inp);
-    const sink = this.phys.ev.sink;
-    const ev = this.logic.update(this.phys);
-    if (this.phys.offTrack) this.groundT += DT;
-    else this.groundT = 0;
-    if (this.groundT > OFF_TRACK_RESPAWN_S || sink) {
-      this.groundT = 0;
-      const r = this.logic.rewind();
-      this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
-      this.phys.vehicle = r.vehicle || "car";
-      this.phys.gravMul = r.grav || 1;
-    }
+    const inp = this.bot ? this.bot.control(this.phys) : inputAt(this.rep, this.k);
+    if (inp.respawn) this.sim.rewind();
+    const ev = this.sim.step(inp);
+    if (this.sim.lost) this.sim.rewind();
     if (ev && ev.type === "finish") this.done = true;
     if (this.rep && this.k >= this.rep.length + 240) this.done = true;
     this.k++;
