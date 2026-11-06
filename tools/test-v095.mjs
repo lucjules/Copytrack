@@ -11,6 +11,8 @@ const { paramText } = await import('../js/pieces.js');
 const { scriptTrack } = await import('../js/track.js');
 
 const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+// Le code de l'éditeur est réparti entre js/editor.js et js/editor/*.js (familles de méthodes) : ces contrôles de texte lisent l'ensemble.
+const readEditor = () => ['js/editor.js', ...readdirSync(new URL('../js/editor', import.meta.url)).map((f) => 'js/editor/' + f)].map(read).join('\n');
 function walk(dir, out = []) {
   for (const f of readdirSync(dir)) {
     const p = join(dir, f);
@@ -54,7 +56,7 @@ test('une extrémité libre est signalée, avec sa pièce', () => {
   assert.ok(issues.some((i) => i.tile && /extrémité/.test(i.msg)), JSON.stringify(issues.map((i) => i.msg)));
 });
 test('l’éditeur branche checkTrack et _markIssues (plus de code mort)', () => {
-  const e = read('js/editor.js');
+  const e = readEditor();
   assert.match(e, /checkTrack\(this\.track\)/);
   assert.match(e, /this\._markIssues\(this\._tileIssues\(\)\)/);
 });
@@ -82,7 +84,7 @@ test('listes déroulantes d’options : jamais plus larges que l’écran', () =
   assert.match(css, /\.form select \{[^}]*max-width: 100%/);
 });
 test('palette de l’éditeur repliable, choix mémorisé', () => {
-  const e = read('js/editor.js');
+  const e = readEditor();
   assert.match(e, /pal-fold/);
   assert.match(e, /copytrack\.edFold/);
   assert.match(css, /\.ed-palette\.folded/);
