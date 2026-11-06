@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
 import { Simulation, placeAtRespawn } from '../js/simulation.js';
-import { GhostRunner } from '../js/replay.js';
+import { GhostRunner, newGhostPose } from '../js/replay.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
 import { Autopilot } from '../js/autopilot.js';
 import { scriptTrack } from '../js/track.js';
@@ -85,6 +85,46 @@ test('start(spawn) : le point imposé sert aussi de point de retour', () => {
   sim.start(sp);
   assert.equal(sim.logic.respawn.x, 40);
   assert.equal(sim.logic.respawn.vehicle, 'car');
+});
+
+console.log('Fantôme : historique des poses');
+test('poseAt(k) redonne la pose du pas k sans rejouer le fantôme (retour au checkpoint)', () => {
+  const track = buildBuiltin(BUILTIN_TRACKS[3]);
+  const a = new GhostRunner(track, { bot: true, latK: 0.8 });
+  const out = newGhostPose();
+  a.poseAt(1500, out);
+  const kAvant = a.k;
+  assert.ok(kAvant >= 1500);
+  // Poses relues en arrière : le fantôme n'avance ni ne recule.
+  const relu = [200, 800, 1499].map((k) => { a.poseAt(k, out); return { k, x: out.pos.x, y: out.pos.y, z: out.pos.z, px: out.prev.x }; });
+  assert.equal(a.k, kAvant, 'aucun pas rejoué');
+  // Référence : un fantôme neuf amené exactement à ces pas.
+  const b = new GhostRunner(buildBuiltin(BUILTIN_TRACKS[3]), { bot: true, latK: 0.8 });
+  for (const r of relu) {
+    while (b.k < r.k) b.step();
+    assert.ok(Math.abs(b.phys.pos.x - r.x) < 1e-3 && Math.abs(b.phys.pos.y - r.y) < 1e-3 && Math.abs(b.phys.pos.z - r.z) < 1e-3, 'pas ' + r.k);
+    assert.ok(Math.abs(b.phys.prev.x - r.px) < 1e-3);
+  }
+});
+test('poseAt : le fantôme arrivé est « terminé » à partir de son arrivée, pas avant', () => {
+  const g = new GhostRunner(buildBuiltin(BUILTIN_TRACKS[0]), { bot: true, latK: 0.8 });
+  const out = newGhostPose();
+  g.poseAt(120 * 120, out);
+  assert.ok(g.done, 'le pilote automatique termine le circuit');
+  const fin = g.k;
+  assert.equal(g.poseAt(fin + 50, out).done, true);
+  assert.equal(g.poseAt(fin - 100, out).done, false, 'avant l\'arrivée il roule encore');
+  assert.equal(g.poseAt(0, out).done, false);
+});
+test('poseAt : véhicule, sol et normale sont ceux du pas demandé', () => {
+  const g = new GhostRunner(scriptTrack('v', 'start S2 S.o S3 finish'), { bot: true, latK: 0.8 });
+  const out = newGhostPose();
+  g.poseAt(1, out);
+  assert.equal(out.vehicle, 'car');
+  assert.equal(out.grounded, true);
+  assert.ok(Math.abs(out.n.y - 1) < 1e-6);
+  g.poseAt(120 * 40, out);
+  assert.ok(['car', 'moto'].includes(out.vehicle));
 });
 
 finish('Tous les tests de la simulation passent.');

@@ -16,7 +16,7 @@ import { CATALOG } from './cosmetics.js';
 import { MEDALS, medalFor } from './medals.js';
 import { SkidMarks } from './skids.js';
 import { TrailRibbon } from './trail.js';
-import { InputRecorder, decodeInputs, inputAt, quantSteer, GhostRunner } from './replay.js';
+import { InputRecorder, decodeInputs, inputAt, quantSteer, GhostRunner, newGhostPose } from './replay.js';
 import { PHYS_VER } from './version.js';
 import { goalMet, goalLabel, completeGoal, goalDone } from './career.js';
 
@@ -32,6 +32,7 @@ const CAM_MODES = [
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpV = new THREE.Vector3();
 const tmpV2 = new THREE.Vector3();
+const tmpV3 = new THREE.Vector3();
 const tmpM = new THREE.Matrix4();
 
 function lerpAngle(a, b, t) {
@@ -133,7 +134,7 @@ export class RaceSession {
       const car = createCar(null, { ghost: true, ghostColor: color });
       car.group.visible = false;
       app.scene.add(car.group);
-      this.ghosts.push({ runner, car, label, q: new THREE.Quaternion(), pq: new THREE.Quaternion() });
+      this.ghosts.push({ runner, car, label, q: new THREE.Quaternion(), pq: new THREE.Quaternion(), pose: newGhostPose(), pose0: newGhostPose() });
     };
     const rec = this.trackKey ? getRecord(this.trackKey) : null;
     const goldNotYet = this.medals && (!rec || rec.time > this.medals.or + 1e-6);
@@ -168,7 +169,7 @@ export class RaceSession {
     this._pendingRespawn = false;
     this.stats = { wallHits: 0, respawns: 0, perfects: 0, turbos: 0, rings: 0 };
     this.statsSnap = { perfects: 0, turbos: 0, rings: 0 };     // compteurs au dernier checkpoint : un retour (R) les annule
-    for (const g of this.ghosts) { g.runner.reset(); g.car.group.visible = false; }
+    for (const g of this.ghosts) g.car.group.visible = false;      // (le fantôme est une suite déterministe : sa course, déjà calculée, est relue, pas rejouée)
     this.countT = 0;
     this.countShown = -1;
     this.acc = 0;
@@ -211,11 +212,6 @@ export class RaceSession {
     if (this.multi) this.teleSeq = (this.teleSeq + 1) & 255;
     const steps = this.logic.steps;
     this.ghostRec.length = Math.min(this.ghostRec.length, Math.floor(steps / GHOST_EVERY) * 7);
-    for (const g of this.ghosts) {
-      g.runner.reset();
-      while (g.runner.k < steps && !g.runner.done) g.runner.step();
-      g.pq.copy(g.q);
-    }
     if (!this.demo) {
       this.app.ui.hud.checkpoints(this.logic.collected.size, this.logic.cps.length, this.logic.lap, this.logic.laps);
       this.app.ui.hud.time(steps * DT);
@@ -285,7 +281,6 @@ export class RaceSession {
       this.recorder.push(inp, this._pendingRespawn);
       this._pendingRespawn = false;
     }
-    if (this.state === 'racing') for (const g of this.ghosts) { g.pq.copy(g.q); g.runner.step(); }
     if (this.state === 'racing') this.tick++;
     this.lastInput = inp;
     this.prevQuat.copy(this.quat);
@@ -763,21 +758,29 @@ export class RaceSession {
     }
   }
 
+  // Orientation d'une voiture fantôme d'après sa pose (même règle que la voiture du joueur : le haut suit la normale au sol, sinon le ciel).
+  _ghostQuat(p, q) {
+    const up = tmpV.set(p.n.x, p.n.y, p.n.z);
+    if (!p.grounded) up.set(0, 1, 0);
+    const f = tmpV2.set(p.fwd.x, p.fwd.y, p.fwd.z);
+    f.addScaledVector(up, -f.dot(up));
+    if (f.lengthSq() < 1e-6) f.set(-Math.sin(p.yaw), 0, -Math.cos(p.yaw));
+    f.normalize();
+    const right = tmpV3.crossVectors(f, up).normalize();
+    tmpM.makeBasis(right, up, f.negate());
+    return q.setFromRotationMatrix(tmpM);
+  }
+
+  // Fantômes simulés (or, importé) : la pose vient de l'historique du fantôme au pas de course du joueur (voir GhostRunner.poseAt).
   _renderSimGhosts(alpha) {
+    const steps = this.logic.steps;
     for (const g of this.ghosts) {
-      const p = g.runner.phys;
-      const show = this.state !== 'countdown' && !g.runner.done;
+      const p = g.runner.poseAt(steps, g.pose);
+      const show = this.state !== 'countdown' && !p.done;
       g.car.group.visible = show;
       if (!show) continue;
-      const up = tmpV.set(p.n.x, p.n.y, p.n.z);
-      if (!p.grounded) up.set(0, 1, 0);
-      const f = tmpV2.set(p.fwd.x, p.fwd.y, p.fwd.z);
-      f.addScaledVector(up, -f.dot(up));
-      if (f.lengthSq() < 1e-6) f.set(-Math.sin(p.yaw), 0, -Math.cos(p.yaw));
-      f.normalize();
-      const right = new THREE.Vector3().crossVectors(f, up).normalize();
-      tmpM.makeBasis(right, up, f.clone().negate());
-      g.q.setFromRotationMatrix(tmpM);
+      this._ghostQuat(p, g.q);
+      this._ghostQuat(g.runner.poseAt(Math.max(0, steps - 1), g.pose0), g.pq);
       g.car.group.position.set(p.prev.x + (p.pos.x - p.prev.x) * alpha, p.prev.y + (p.pos.y - p.prev.y) * alpha, p.prev.z + (p.pos.z - p.prev.z) * alpha);
       g.car.group.quaternion.slerpQuaternions(g.pq, g.q, alpha);
       if (g.car.vehicle !== p.vehicle) g.car.setVehicle(p.vehicle, true);

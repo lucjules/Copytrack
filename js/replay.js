@@ -72,6 +72,13 @@ export function decodeGhost(code) {
 // Une seconde voiture qui roule en même temps que le joueur, pilotée soit par un
 // replay (commandes enregistrées), soit par le pilote automatique (fantôme « or »).
 // C'est aussi ce qui rejoue une course côté serveur (verify.js) : le pas est celui de Simulation, le même que la course en direct.
+//
+// Historique : le fantôme ne dépend pas du joueur, c'est une suite déterministe. Chaque pas laisse donc une ligne dans `hist` (assez pour dessiner
+// la voiture), et la course en direct lit la ligne qui correspond à SON chrono. Quand le joueur revient à un checkpoint, il suffit de relire une ligne plus
+// ancienne : on ne rejoue plus le fantôme depuis le départ (ce qui figeait l'image à chaque retour tardif dans une longue course).
+const HIST_STRIDE = 17;
+const VEH_IDS = ['car', 'moto', 'boat', 'glider'];
+
 export class GhostRunner {
   constructor(track, { inputs = null, bot = false, latK = 0.8 } = {}) {
     this.sim = new Simulation(track);
@@ -79,6 +86,7 @@ export class GhostRunner {
     this.logic = this.sim.logic;
     this.rep = inputs ? decodeInputs(inputs) : null;
     this.bot = bot && track.path ? new Autopilot(track.path, { latLimit: 56 * latK }) : null;
+    this.hist = new Float32Array(HIST_STRIDE * 1024);
     this.reset();
   }
 
@@ -87,6 +95,7 @@ export class GhostRunner {
     if (this.bot) this.bot.reset(this.phys);
     this.k = 0;
     this.done = false;
+    this._record(0);
   }
 
   step() {
@@ -98,5 +107,39 @@ export class GhostRunner {
     if (ev && ev.type === 'finish') this.done = true;
     if (this.rep && this.k >= this.rep.length + 240) this.done = true;
     this.k++;
+    this._record(this.k);
+  }
+
+  // Avance jusqu'au pas k (les lignes de l'historique jusque-là existent) ; renvoie false si le fantôme a terminé avant.
+  seek(k) {
+    while (this.k < k && !this.done) this.step();
+    return k <= this.k;
+  }
+
+  _record(k) {
+    if ((k + 1) * HIST_STRIDE > this.hist.length) { const h = new Float32Array(this.hist.length * 2); h.set(this.hist); this.hist = h; }
+    const p = this.phys, h = this.hist, o = k * HIST_STRIDE;
+    h[o] = p.pos.x; h[o + 1] = p.pos.y; h[o + 2] = p.pos.z;
+    h[o + 3] = p.prev.x; h[o + 4] = p.prev.y; h[o + 5] = p.prev.z;
+    h[o + 6] = p.n.x; h[o + 7] = p.n.y; h[o + 8] = p.n.z;
+    h[o + 9] = p.fwd.x; h[o + 10] = p.fwd.y; h[o + 11] = p.fwd.z;
+    h[o + 12] = p.yaw; h[o + 13] = p.grounded ? 1 : 0; h[o + 14] = VEH_IDS.indexOf(p.vehicle);
+    h[o + 15] = this.done ? 1 : 0; h[o + 16] = 0;
+  }
+
+  // Ce qu'il faut pour dessiner la voiture après k pas (out : pos, prev, n, fwd, yaw, grounded, vehicle, done). Avance le fantôme si besoin.
+  poseAt(k, out) {
+    this.seek(k);
+    const i = Math.min(k, this.k), h = this.hist, o = i * HIST_STRIDE;
+    out.pos.x = h[o]; out.pos.y = h[o + 1]; out.pos.z = h[o + 2];
+    out.prev.x = h[o + 3]; out.prev.y = h[o + 4]; out.prev.z = h[o + 5];
+    out.n.x = h[o + 6]; out.n.y = h[o + 7]; out.n.z = h[o + 8];
+    out.fwd.x = h[o + 9]; out.fwd.y = h[o + 10]; out.fwd.z = h[o + 11];
+    out.yaw = h[o + 12]; out.grounded = h[o + 13] === 1; out.vehicle = VEH_IDS[h[o + 14]] || 'car';
+    out.done = k > this.k || h[o + 15] === 1;
+    return out;
   }
 }
+
+// Support d'une pose de fantôme pour le rendu (réutilisé d'une image à l'autre).
+export const newGhostPose = () => ({ pos: { x: 0, y: 0, z: 0 }, prev: { x: 0, y: 0, z: 0 }, n: { x: 0, y: 1, z: 0 }, fwd: { x: 0, y: 0, z: -1 }, yaw: 0, grounded: true, vehicle: 'car', done: false });

@@ -5,7 +5,7 @@ import {
   CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T,
 } from './constants.js';
 import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
-import { WATER_DROP, boatDrop } from './track.js';
+import { WATER_DROP, boatDrop, tileToRow } from './track.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { buildDecoInto, createPlaque, decoColor } from './decos.js';
 import { LIGHT_DECOS } from './decoData.js';
@@ -976,12 +976,24 @@ export function setHideDecos(v) { hideDecos = !!v; }
 let lightBudget = { point: 4, spot: 2 };
 export function setLightBudget(b) { lightBudget = b || { point: 0, spot: 0 }; }
 
+// Tronçons : le maillage statique (route, piliers, décorations fixes) est découpé en carrés de CHUNK × CHUNK cases (128 m). Un tronçon n'est reconstruit
+// que si l'un de ses éléments, ou un voisin qui influe sur ses piliers, a changé : dans l'éditeur, poser une pièce ne régénère plus tout le circuit
+// (un grand circuit de 270 pièces et 300 décorations coûtait ~130 ms par modification). Chaque tronçon a sa boîte englobante : la caméra et les
+// ombres n'envoient à la carte graphique que ceux qu'elles voient.
+const CHUNK = 4;
+const chunkKey = (cx, cz) => cx * 8192 + cz;
+const tileSig = (t, flags) => flags + JSON.stringify(tileToRow(t));
+const decoSig = (d) => `${d.k}|${d.x}|${d.y}|${d.z}|${d.ry || 0}|${d.s || 1}|${d.c || 0}|${d.cc || ''}|${d.u || ''}`;
+
 export class TrackView {
   constructor(track, materials, { showAllDecos = false } = {}) {
     this.track = track;
     this.materials = materials;
     this.showAllDecos = showAllDecos;
     this.group = new THREE.Group();
+    this.chunks = new Map();            // clé de tronçon -> { sig, meshes } (maillage statique, conservé d'une reconstruction à l'autre)
+    this.chunkMeshes = new Set();
+    this.chunkBuilds = 0;               // nombre de tronçons construits depuis la création (mesuré par les tests)
     this.plaques = [];
     this.obstacles = [];
     this.movers = [];
@@ -991,47 +1003,51 @@ export class TrackView {
     this.rebuild();
   }
 
+  // Remet le maillage à jour. Les objets dynamiques (pièces mobiles, dalles de verre, obstacles, plaques, lampes) sont recréés ; le maillage
+  // statique ne l'est que pour les tronçons dont la signature a changé.
   rebuild() {
-    this.disposeMeshes();
-    const gb = new GeoBuilder();
-    const glow = new GeoBuilder();
-    const fx = new FxBuilder();
+    this._disposeDynamic();
+    const track = this.track, focus = this.focus;
     // Vue par niveau (éditeur) : les pièces des autres niveaux sont dessinées estompées.
     const dimG = new GeoBuilder(), dimGlow = new GeoBuilder();
-    const focus = this.focus;
-    for (const tile of this.track.tiles) {
+    const buckets = new Map();
+    const bucket = (cx, cz) => {
+      const k = chunkKey(cx, cz);
+      let b = buckets.get(k);
+      if (!b) buckets.set(k, b = { cx, cz, tiles: [], decos: [], sig: '' });
+      return b;
+    };
+    const sigs = new Map();
+    for (const tile of track.tiles) {
       const P = PIECES[tile.t];
       const hi = tile.l + Math.max(P.rise || 0, 0) + (P.clearance || tile.cp ? 1 : 0) + (tile.o ? 2 : 0);
       const lo = tile.l + Math.min(P.rise || 0, 0) - Math.max(P.below || 0, tile.o ? 2 : 0);          // (`below` : route sur le côté, qui descend sous son niveau ; pente descendante : sous son niveau d'entrée)
       const dim = focus != null && !(focus >= lo - 0.01 && focus <= hi + 0.01);
       const glassy = tile.s === 'glass' || tile.s2 === 'glass';
+      sigs.set(tile, tileSig(tile, dim ? 'd' : 's'));
       if ((tile.mv || glassy) && !dim) {
         // Pièce mobile (déplacée à chaque image selon le chrono) ou dalle de verre (masquée quand elle se brise) : son propre groupe.
         const g1 = new GeoBuilder(), g2 = new GeoBuilder(), g3 = new FxBuilder();
-        buildTileInto(g1, g2, tile, this.track, g3);
+        buildTileInto(g1, g2, tile, track, g3);
         const grp = new THREE.Group();
         const m1 = new THREE.Mesh(g1.build(), this.materials.solid);
         m1.castShadow = true; m1.receiveShadow = true;
         grp.add(m1);
         if (!g2.empty) grp.add(new THREE.Mesh(g2.build(), this.materials.glow));
-        if (!g3.empty && this.materials.fx) {
-          const fm = new THREE.Mesh(g3.build(), this.materials.fx), mat = this.materials.fx;
-          fm.onBeforeRender = () => { mat.uniforms.uTime.value = performance.now() / 1000; };
-          grp.add(fm);
-        }
+        if (!g3.empty && this.materials.fx) grp.add(this._fxMesh(g3));
         this.group.add(grp);
         if (tile.mv) this.movers.push({ tile, grp });
         if (glassy) this.glassGroups.push({ tile, grp });
-      } else if (dim) buildTileInto(dimG, dimGlow, tile, this.track);
-      else buildTileInto(gb, glow, tile, this.track, fx);
+      } else if (dim) buildTileInto(dimG, dimGlow, tile, track);
+      else bucket(Math.floor(tile.x / CHUNK), Math.floor(tile.z / CHUNK)).tiles.push(tile);
     }
     if (!dimG.empty) {
       if (!this.dimMat) this.dimMat = new THREE.MeshBasicMaterial({ color: '#8c90b8', transparent: true, opacity: 0.16, depthWrite: false });
-      const m = new THREE.Mesh(dimG.build(), this.dimMat);
-      this.group.add(m);
+      this.group.add(new THREE.Mesh(dimG.build(), this.dimMat));
       if (!dimGlow.empty) this.group.add(new THREE.Mesh(dimGlow.build(), this.dimMat));
     }
-    for (const d of this.track.decos) {
+    const span = CELL * CHUNK;
+    for (const d of track.decos) {
       if (hideDecos && !this.showAllDecos && !isObstacle(d.k)) continue;
       if (d.k === 'plaque') {
         const mesh = createPlaque(d);
@@ -1042,26 +1058,71 @@ export class TrackView {
         this.group.add(o);
         this.obstacles.push(o);
       } else {
-        buildDecoInto(gb, glow, d);
+        bucket(Math.floor(d.x / span), Math.floor(d.z / span)).decos.push(d);
         if (LIGHT_DECOS[d.k]) this._addLamp(d);
       }
     }
     this._initLightPool();
+
+    // Signature d'un tronçon : ses pièces, ses décorations, et les pièces voisines (la case d'à côté, comprise) dont dépend l'emplacement de
+    // ses piliers (un pilier est omis sous une autre pièce) ; plus les réglages de qualité qui changent le contenu.
+    const flags = (hideDecos ? 'h' : 'v') + (this.showAllDecos ? 'a' : 'n');
+    for (const b of buckets.values()) {
+      const seen = new Set(b.tiles);
+      let sig = flags;
+      for (const t of b.tiles) sig += '|' + sigs.get(t);
+      for (let cz = b.cz * CHUNK - 1; cz <= b.cz * CHUNK + CHUNK; cz++) {
+        for (let cx = b.cx * CHUNK - 1; cx <= b.cx * CHUNK + CHUNK; cx++) {
+          for (const o of track.tilesAt(cx, cz)) if (!seen.has(o)) { seen.add(o); sig += '#' + sigs.get(o); }
+        }
+      }
+      for (const d of b.decos) sig += '~' + decoSig(d);
+      b.sig = sig;
+    }
+    for (const [key, ch] of [...this.chunks]) {
+      const b = buckets.get(key);
+      if (!b || b.sig !== ch.sig) { this._disposeChunk(ch); this.chunks.delete(key); }
+    }
+    for (const [key, b] of buckets) if (!this.chunks.has(key)) this.chunks.set(key, this._buildChunk(b));
+    this.builtVersion = track.version;
+  }
+
+  _buildChunk(b) {
+    this.chunkBuilds++;
+    const gb = new GeoBuilder(), glow = new GeoBuilder(), fx = new FxBuilder();
+    for (const tile of b.tiles) buildTileInto(gb, glow, tile, this.track, fx);
+    for (const d of b.decos) buildDecoInto(gb, glow, d);
+    const meshes = [];
     if (!gb.empty) {
       const mesh = new THREE.Mesh(gb.build(), this.materials.solid);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
-      this.group.add(mesh);
+      meshes.push(mesh);
     }
-    if (!glow.empty) this.group.add(new THREE.Mesh(glow.build(), this.materials.glow));
-    if (!fx.empty && this.materials.fx) {
-      const mesh = new THREE.Mesh(fx.build(), this.materials.fx);
-      const mat = this.materials.fx;
-      mesh.onBeforeRender = () => { mat.uniforms.uTime.value = performance.now() / 1000; };
-      mesh.receiveShadow = false;
-      this.group.add(mesh);
+    if (!glow.empty) meshes.push(new THREE.Mesh(glow.build(), this.materials.glow));
+    if (!fx.empty && this.materials.fx) meshes.push(this._fxMesh(fx));
+    for (const m of meshes) {
+      m.matrixAutoUpdate = false;          // statique : la matrice (identité) ne se recalcule pas à chaque image
+      this.group.add(m);
+      this.chunkMeshes.add(m);
     }
-    this.builtVersion = this.track.version;
+    return { sig: b.sig, meshes };
+  }
+
+  _disposeChunk(ch) {
+    for (const m of ch.meshes) {
+      m.geometry.dispose();
+      this.group.remove(m);
+      this.chunkMeshes.delete(m);
+    }
+  }
+
+  // Couche d'effets animés (le temps passe par une variable de la matière, mise à jour juste avant le dessin).
+  _fxMesh(builder) {
+    const mesh = new THREE.Mesh(builder.build(), this.materials.fx), mat = this.materials.fx;
+    mesh.onBeforeRender = () => { mat.uniforms.uTime.value = performance.now() / 1000; };
+    mesh.receiveShadow = false;
+    return mesh;
   }
 
   // ---- Décorations lumineuses (projecteurs, lanternes, lampadaires) -------------------------------------------------------------
@@ -1072,8 +1133,9 @@ export class TrackView {
     const grp = new THREE.Group();
     grp.position.set(d.x, d.y, d.z); grp.rotation.y = d.ry || 0; grp.scale.setScalar(d.s || 1);
     grp.userData.lamp = true;
-    const col = new THREE.Color(decoColor(d) || L.color);
-    const lamp = { d, L, grp, col, head: null, mats: [], phase: ((d.x * 12.9898 + d.z * 78.233) % 6.283 + 6.283) % 6.283 };
+    const hex = decoColor(d) || L.color;
+    const col = new THREE.Color(hex);
+    const lamp = { d, L, grp, col, hex, head: null, mats: [], phase: ((d.x * 12.9898 + d.z * 78.233) % 6.283 + 6.283) % 6.283 };
     const mat = (o) => { const m = new THREE.MeshBasicMaterial({ color: col.clone(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, ...o }); lamp.mats.push(m); return m; };
     if (L.type === 'spot') {
       const head = new THREE.Group(); head.position.y = L.y; grp.add(head);
@@ -1116,8 +1178,9 @@ export class TrackView {
     const near = { point: [], spot: [] };
     for (const lamp of this.lamps) {
       const { L, d, col } = lamp;
-      col.set(decoColor(d) || L.color);
-      for (const m of lamp.mats) m.color.copy(col);
+      // La couleur ne se recalcule que si l'inspecteur vient de la changer (analyser « #rrggbb » à chaque image et pour chaque lampe coûte).
+      const hex = decoColor(d) || L.color;
+      if (hex !== lamp.hex) { lamp.hex = hex; col.set(hex); for (const m of lamp.mats) m.color.copy(col); }
       const ang = L.spin ? L.spin * t + lamp.phase : 0;
       if (lamp.head) lamp.head.rotation.y = ang;
       lamp.ang = ang;
@@ -1166,8 +1229,10 @@ export class TrackView {
     }
   }
 
-  disposeMeshes() {
+  // Libère les objets dynamiques (tout sauf le maillage statique des tronçons).
+  _disposeDynamic() {
     for (const c of [...this.group.children]) {
+      if (this.chunkMeshes.has(c)) continue;
       if (c.isGroup) c.traverse((m) => { if (m.geometry) m.geometry.dispose(); if (c.userData.lamp && m.material) m.material.dispose(); });
       if (c.geometry) c.geometry.dispose();
       if (c.userData.own && c.material) {
@@ -1190,7 +1255,9 @@ export class TrackView {
   }
 
   dispose() {
-    this.disposeMeshes();
+    this._disposeDynamic();
+    for (const ch of this.chunks.values()) this._disposeChunk(ch);
+    this.chunks.clear();
     if (this.dimMat) this.dimMat.dispose();
     this.group.removeFromParent();
   }
