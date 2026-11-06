@@ -3,7 +3,7 @@
 // et fixe les médailles, comme pour les circuits intégrés.
 import { scriptTrack } from './track.js';
 import { DECORS } from './themes.js';
-import { CAR } from './physics.js';
+import { CAR } from './physics/specs.js';
 import { Simulation } from './simulation.js';
 import { Autopilot } from './autopilot.js';
 

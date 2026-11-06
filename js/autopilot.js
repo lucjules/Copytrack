@@ -1,6 +1,6 @@
 // Pilote automatique simple qui suit la ligne centrale d'un circuit scripté.
 // Utilisé pour la démo du menu et pour valider les circuits (tools/sim.mjs).
-import { CAR } from './physics.js';
+import { CAR } from './physics/specs.js';
 
 export class Autopilot {
   constructor(path, opts = {}) {

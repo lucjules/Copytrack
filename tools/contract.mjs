@@ -10,7 +10,7 @@ import { GEN_IDS } from '../js/pieces.js';
 import { checkTrack } from '../js/editorTools.js';
 import { orientationIssues } from '../js/joins.js';
 import { RaceLogic } from '../js/raceLogic.js';
-import { SIDE_MIN_SPEED } from '../js/physics.js';
+import { SIDE_MIN_SPEED } from '../js/physics/specs.js';
 import { Track } from '../js/track.js';
 import { runTrack, profile, asciiMap } from './lab.mjs';
 import { proposeFrom } from './medals.mjs';

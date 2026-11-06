@@ -6,7 +6,8 @@
 //  2. un pilote HUMAIN imparfait sur les vrais circuits : le pilote automatique, mais avec un temps de réaction (il agit sur ce qu'il voyait
 //     il y a ~0,15 s), un volant qui tremble et un jugement approximatif des freinages. On compte les contacts avec les bordures par minute :
 //     c'est la mesure de « je me cogne toutes les 2 secondes ».
-import { CarPhysics, CAR } from '../js/physics.js';
+import { CarPhysics } from '../js/physics.js';
+import { CAR } from '../js/physics/specs.js';
 import { scriptTrack } from '../js/track.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
 import { DT, CELL, ROAD_HALF } from '../js/constants.js';

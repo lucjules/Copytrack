@@ -5,7 +5,7 @@ import { CamFlip } from './camflip.js';
 import { MSG, PRIO } from './hudMessages.js';
 import { RemoteCar } from './remoteCar.js';
 import { SEND_EVERY_STEPS, F_FINISHED, F_BOOST, F_GROUNDED } from './net/snapshot.js';
-import { frameWorld } from './physics.js';
+import { frameWorld } from './physics/ribbon.js';
 import { Simulation } from './simulation.js';
 import { Autopilot } from './autopilot.js';
 import { TrackView } from './trackMesh.js';

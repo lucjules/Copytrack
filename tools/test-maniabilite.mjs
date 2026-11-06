@@ -8,7 +8,7 @@ import { test, finish } from './harness.mjs';
 
 const { virageStabilise, recuperation, changementDeVoie, pilotHumain, mesureHumain } = await import('./maniabilite.mjs');
 const { CELL, ROAD_HALF, ROAD_W } = await import('../js/constants.js');
-const { CAR } = await import('../js/physics.js');
+const { CAR } = await import('../js/physics/specs.js');
 const { BUILTIN_TRACKS } = await import('../js/tracks.js');
 
 const V = { 72: 20, 144: 40, 216: 60, 288: 80 };    // km/h -> m/s

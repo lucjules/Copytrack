@@ -5,7 +5,8 @@
 //  4. aimant : l'attraction suit la normale de la route, endroit ou envers.
 import assert from 'node:assert/strict';
 import { Track, scriptTrack } from '../js/track.js';
-import { CarPhysics, surfaceCoeffs } from '../js/physics.js';
+import { CarPhysics } from '../js/physics.js';
+import { surfaceCoeffs } from '../js/physics/specs.js';
 import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
 import { CELL } from '../js/constants.js';
 import { test, finish } from './harness.mjs';

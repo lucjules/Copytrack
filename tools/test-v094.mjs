@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
 
 const { scriptTrack } = await import('../js/track.js');
-const { CarPhysics, CAR, MOTO, SIDE_MIN_SPEED, SIDE_GRACE } = await import('../js/physics.js');
+const { CarPhysics } = await import('../js/physics.js');
+const { CAR, MOTO, SIDE_MIN_SPEED, SIDE_GRACE } = await import('../js/physics/specs.js');
 const { RaceLogic, placeAtStart } = await import('../js/raceLogic.js');
 const { PHYS_VER } = await import('../js/version.js');
 const { SURF_PHYS, DT, LEVEL_H } = await import('../js/constants.js');

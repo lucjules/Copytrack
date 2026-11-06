@@ -9,7 +9,8 @@ import { Track, scriptTrack, b64encode } from '../js/track.js';
 import {
   PIECES, SURFACES, SURFACE_ORDER, SURFACE_CODES, surfaceAllowed, surfaceRule, paramText, beltSpeed, glassSeconds, TUNNEL_TOP, flagAllowed,
 } from '../js/pieces.js';
-import { CarPhysics, CAR } from '../js/physics.js';
+import { CarPhysics } from '../js/physics.js';
+import { CAR } from '../js/physics/specs.js';
 import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
 import { GhostRunner, InputRecorder, decodeInputs, quantSteer } from '../js/replay.js';
 import { PHYS_VER } from '../js/version.js';
