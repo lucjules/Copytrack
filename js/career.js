@@ -92,3 +92,21 @@ export function chapterUnlocked(ch, medalOf, total) {
   for (let i = (ch - 1) * CHAPTER_SIZE; i < Math.min(total, ch * CHAPTER_SIZE); i++) if (medalOf(i)) n++;
   return n >= UNLOCK_MEDALS;
 }
+
+// 0.9.10 : finitions de la carrière. État d'un chapitre : « terminé » = une médaille sur chacun de ses circuits, « parfait » = en plus tous les
+// objectifs bonus ; « cristal » = toutes les médailles sont des cristaux. Fonctions pures (testées), l'écran ne fait que les afficher.
+export function chapterState(medalIds, goalsDone, size = CHAPTER_SIZE) {
+  const n = medalIds.filter(Boolean).length;
+  if (n < size) return { id: 'open', label: '' };
+  if (medalIds.every((m) => m === 'cristal') && goalsDone >= size) return { id: 'crystal', label: '✦ Chapitre cristal' };
+  if (goalsDone >= size) return { id: 'perfect', label: '★ Chapitre parfait' };
+  return { id: 'done', label: '✓ Chapitre terminé' };
+}
+
+// Bilan de toute la carrière : medalIds = id de médaille (ou null) pour chaque circuit, goalsDone = nombre d'objectifs bonus réussis.
+export function careerSummary(medalIds, goalsDone) {
+  const total = medalIds.length, medals = medalIds.filter(Boolean).length;
+  const crystal = medalIds.filter((m) => m === 'cristal').length;
+  const pct = total ? Math.round(((medals + goalsDone + crystal) / (3 * total)) * 100) : 0;
+  return { total, medals, crystal, goals: goalsDone, pct, finished: total > 0 && medals === total, complete: total > 0 && medals === total && goalsDone === total && crystal === total };
+}

@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.9**
+Version actuelle : **bêta 0.9.10**
 
 ## Jouer
 
@@ -120,6 +120,29 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
 
 Seules l'URL du projet et la clé publique sont dans `js/online.js`. La clé secrète n'est jamais dans le jeu : seule la fonction serveur l'utilise, côté Supabase.
 
+## Mettre en ligne une nouvelle version (aide-mémoire)
+
+1. `npm test` doit finir sans erreur (il vérifie aussi que `sw.js` et `supabase/functions/submit-score/index.ts` sont à jour).
+2. Après tout changement de circuit, de pièce ou de physique : `npm run sw` (cache hors ligne) puis `npm run build:function` (fonction serveur).
+3. **Redéployer la fonction `submit-score`** dans Supabase avec le nouveau `index.ts` : sans cela, les temps des circuits changés sont refusés en ligne.
+4. Les records d'un circuit repartent de zéro dès que son tracé change (la clé de classement contient son empreinte) : rien à nettoyer côté base.
+5. Si le temps d'un circuit change volontairement : `node tools/golden.mjs --update`, puis `node tools/medals.mjs --check` pour revoir ses médailles.
+6. Publier la branche (GitHub Pages sert le dossier racine) ; le numéro de version est dans `js/constants.js` et `package.json` (les deux doivent concorder, un test le vérifie).
+
+## Bêta 0.9.10 — finitions (rien de nouveau, tout ce qui manquait pour dire « c'est fini »)
+
+- **Fiche d'essai** : `node tools/fiche-essai.mjs` écrit `docs/FICHE-ESSAI.md` (une case par circuit : départ clair, passage juste, médaille atteignable, bonus réalisable, checkpoint sûr, « fini ») et un gabarit `docs/temps-humains.json`.
+  Jusqu'ici seul le pilote automatique avait parcouru les circuits : c'est la liste de ce qu'il reste à jouer à la main.
+- **Médailles calées sur de vrais joueurs** : `node tools/medals.mjs --humain docs/temps-humains.json [--ecrire]` propose Cristal = meilleur temps relevé, Or ×1,05, Argent ×1,2, Bronze ×1,4 ; avec `--ecrire` le circuit passe en
+  `medalsBy: 'humain'` (le contrat ne le recale plus sur le pilote) et son objectif « moins de t s » reste entre l'or et l'argent.
+- **Courbe de difficulté** : `node tools/difficulte.mjs` calcule un indice par circuit (virages, murs, loopings, sauts, freinages, vitesse, obstacles). Il a montré que trois sprints (Boulevard Sans Fin, Premier Envol, Galerie de Cristal) étaient notés
+  3 étoiles pour un indice de 3 : ils passent à 2 (Boulevard Sans Fin remonte d'un rang dans le chapitre 4). Règles testées : le premier circuit d'un chapitre a au plus 3 étoiles, le dernier au moins 4, un sprint au plus 2.
+- **Départs** : le départ de Tours Jumelles (rampe, comme Éruption) devient « trois boosters → petit looping → rampe de toit », celui de Vrilles Souterraines (looping, comme cinq autres) « plongeon → vrille ». Il reste cinq départs avec un looping (Spirale, Hyperboucle, Tourbillon, Montgolfières, Tours), tous différents (simple, deux en S, triple, basse gravité, petit looping avant une rampe) ; trois départs en rampe (Lianes, Éruption, Viaduc).
+- **Carrière** : un bilan en haut de l'écran (pourcentage, médailles, cristaux, objectifs bonus, message à la fin), un badge « Chapitre terminé / parfait / cristal » sur chaque chapitre, et une **infobulle** sur chaque carte (« Départ : … Au programme : … », champ `appris`).
+- **Garde-fous** : `tools/golden-temps.json` mémorise le temps du pilote sur chacun des 66 circuits (un test échoue en nommant ceux qui bougent) ; chaque circuit décodé garde ses tours, son véhicule et sa gravité de départ ;
+  les commandes du pilote rejouées sur le circuit décodé redonnent la même arrivée au même pas (plafond, deltaplane, tapis, rebonds, verre…).
+- README : anciennes listes de départs « prévus » supprimées, aide-mémoire de mise en ligne ci-dessus. Version 0.9.10.
+
 ## Bêta 0.9.9 — refonte du level design, fin : les 51 circuits restants
 
 Les **66 circuits intégrés sont tous refaits** (les lots 4 à 14 sont livrés d'un coup). Chaque chapitre propose maintenant les **cinq profils** (Sprint, Speedway, Technique, Rollercoaster, Acrobatique),
@@ -131,10 +154,10 @@ jamais deux fois le même de suite, et chaque circuit a une **ouverture qui n'es
 | 17 | Sauts Lunaires | Acrobatique | la plaque de départ règle la **gravité à 50 %** : la voiture flotte de 6 niveaux | trois sauts de cinq cases en basse gravité, longues réceptions |
 | 18 | Grand Archipel | Speedway | **aucun booster** : une pente douce de six cases lance dans un très grand virage relevé | cinq virages relevés, wall-ride de quatre cases, plongeon, 58 % du tour au-dessus de 250 km/h |
 | 19 | Néons Express | Speedway | **tapis roulant** à +200 km/h (trois cases) : près de 290 km/h sans booster | quatre virages relevés, wall-ride sur la façade d'une tour, 70 % au-dessus de 250 km/h |
-| 20 | Hyperboucle | Rollercoaster | trois boosters → **deux loopings** qui s'enchaînent en S | trois loopings, deux wall-rides, plongeon de 8 niveaux |
-| 21 | Boulevard Sans Fin | Sprint | départ **sans bordures** (six cases) | vague douce, tunnel de quatre cases, un seul très grand virage plat |
+| 20 | Boulevard Sans Fin | Sprint | départ **sans bordures** (six cases) | vague douce, tunnel de quatre cases, un seul très grand virage plat |
+| 21 | Hyperboucle | Rollercoaster | trois boosters → **deux loopings** qui s'enchaînent en S | trois loopings, deux wall-rides, plongeon de 8 niveaux |
 | 22 | Métro Aérien | Technique | **montée en lacets** : deux courbes montantes serrées | 13 virages serrés : slalom sans bordures sur le viaduc, épingles, chicane sur un mur, slalom sous un tunnel |
-| 23 | Tours Jumelles | Acrobatique | deux boosters → **rampe de toit** au-dessus d'un anneau turbo | trois sauts de toit en toit, wall-ride sur une façade, réception de 10 niveaux |
+| 23 | Tours Jumelles | Acrobatique | trois boosters → **petit looping** → rampe de toit | trois sauts de toit en toit, wall-ride sur une façade, réception de 10 niveaux |
 | 24 | Viaduc Vertical | Rollercoaster | trois boosters → **lift hill** de 16 niveaux | plongeon de 12 niveaux, grand looping, slalom de wall-rides |
 | 25 | Aurore Naissante | Sprint | **départ sur la glace** : verglas, trois boosters, verglas | vague douce, deux très grands virages plats, descente finale |
 | 26 | Banquise Rebondissante | Acrobatique | verglas, deux boosters, **rebond** vers une terrasse plus basse | quatre rebonds de plus en plus puissants et longs : la Banquise **descend** de terrasse en terrasse (Spores monte) |
@@ -176,7 +199,7 @@ jamais deux fois le même de suite, et chaque circuit a une **ouverture qui n'es
 | 62 | Plafond Renversé | Technique | un booster → **vrille** : la route se retourne, gravité inversée | huit virages serrés dont quatre au plafond |
 | 63 | Cristal Fêlé | Acrobatique | deux boosters → **inversion de gravité** : la voiture « tombe » au plafond, 8 niveaux plus haut | trois allers-retours sol / plafond, verre fragile au plafond |
 | 64 | Miroir | Speedway | trois boosters → **S de deux très grands virages relevés** en miroir | six virages relevés, wall-ride, trois dalles de verre |
-| 65 | Vrilles Souterraines | Rollercoaster | trois boosters → double looping tournant à gauche | slalom de wall-rides, deux vrilles et un parcours au plafond |
+| 65 | Vrilles Souterraines | Rollercoaster | un booster → **plongeon** de 4 niveaux → vrille | parcours au plafond, double looping, slalom de wall-rides |
 | 66 | Cœur de la Montagne | Technique | un booster → **deux dalles de verre fragile** (5 s de résistance) → slalom | huit virages serrés, chicane sur un mur : le dernier circuit |
 
 - **Le contrat est une fonction.** `tools/contract.mjs` (`checkDef`) définit « un circuit bien fait » : construction, profil mesuré sur le pilote automatique, ouverture jamais classique, pas de départ lancé, au moins quatre pièces de la 0.9.3,
@@ -222,9 +245,7 @@ Fin de la Jungle néon (chapitre 2, qui propose maintenant les cinq profils) et 
 - **Deltaplane** : l'autopilote ne tient pas une portée de vol constante (selon l'élan, le deltaplane se pose entre 12 et 22 cases plus loin) ; le circuit laisse une longue piste d'atterrissage avant la plaque qui rend la voiture, et
   le contrat « sauts » compte les vols de plus d'une seconde (et non plus les réceptions parfaites, que le pilote réussit au hasard de l'élan).
 - Nouveautés de l'outillage : `tools/lab.mjs` accepte `params` (gravité inversée, véhicule de départ), compte les **sauts** et le véhicule d'arrivée ; le contrat des Acrobatiques devient « ≥ 6 s en l'air, ≥ 3 sauts, ≥ 8 niveaux ».
-- **Bibliothèque d'ouvertures** (une par circuit, jamais deux fois la même). Déjà employées : booster → wall-ride · booster → virage relevé · chute libre · épingle descendante · montée verticale · booster → looping · rampe de lancement + anneau ·
-  départ en tube · rebond géant · bifurcation avec plaque moto · départ au plafond · départ dans un tunnel · descente en moto · départ sur l'eau · décollage en deltaplane.
-  Prévues : départ sur glace · rampe de lancement sans anneau (autre angle) · départ sur un tapis roulant · départ sur un ressort latéral · départ en apesanteur.
+- Bibliothèque d'ouvertures : la liste complète et définitive des 66 départs est dans la section Bêta 0.9.9 (et écrite dans `tools/test-niveaux.mjs`).
 - Les records des cinq circuits refaits repartent de zéro ; **la fonction `submit-score` doit être redéployée** (`index.ts` régénéré). `PHYS_VER` reste 24.
 
 ## Bêta 0.9.7 — refonte du level design (lot 2 / 14)
@@ -246,9 +267,7 @@ n'a jamais servi.
   `tools/lab.mjs` compte maintenant les anneaux et le véhicule d'arrivée ; objectifs bonus vérifiés (chrono, réceptions parfaites, anneaux, moto à l'arrivée).
 - Ce que ce lot a appris sur la physique : un **rebond** (`.j`, hauteur 200 % au maximum) donne 28 m/s vers le haut, soit un palier de **+2 niveaux** au plus ; il n'est
   posé que sur des droites plates. Une **sortie qui repasse au-dessus du départ** perturbe le premier saut (constaté sur Spores, dont le plongeon final passait juste au-dessus du premier rebond) : le dernier virage s'écarte de la tour.
-- **Bibliothèque d'ouvertures** (une par circuit, jamais deux fois la même). Déjà employées : booster → wall-ride · booster → virage relevé · chute libre ·
-  épingle descendante · montée verticale · booster → looping · rampe de lancement + anneau · départ en tube · rebond géant · bifurcation avec plaque moto.
-  Prévues : départ à 250 km/h sur un mur · rampe de lancement sans anneau (autre angle) · départ sur l'eau · décollage en deltaplane · départ sur glace · départ au plafond.
+- Bibliothèque d'ouvertures : la liste complète et définitive des 66 départs est dans la section Bêta 0.9.9 (et écrite dans `tools/test-niveaux.mjs`).
 - **Correctif du lot 1 (Tremplins du Crépuscule).** Un contrôle nouveau a montré que, après une chute, la réapparition (qui remet la voiture **à l'arrêt**) la posait devant une rampe
   qu'elle ne pouvait plus prendre, et qu'un départ lancé (`v0`) ne se rejoue pas non plus après une réapparition avant le premier checkpoint. Le circuit est refait : chute libre
   depuis l'arrêt, un checkpoint avant chaque rampe suivi de deux boosters, anneau turbo au lieu du checkpoint aérien (sa réapparition tombait sur la rampe). Le contrat vérifie maintenant,
@@ -293,9 +312,7 @@ réapparition à ±10 % de vitesse** (un joueur n'a jamais la vitesse exacte du 
 plat à ≤ 207 ; un très grand virage relevé laisse passer plus de 240 km/h. La portée d'un saut varie avec le carré de la vitesse : on le rend tolérant avec
 de longues réceptions en pente, et on place les checkpoints **avant** les rampes (un saut trop long survole un checkpoint posé juste après), suivis de boosters : la réapparition remet la voiture **à l'arrêt**.
 
-**Bibliothèque d'ouvertures** (une par circuit, jamais deux fois la même). Déjà employées : booster → wall-ride · booster → virage relevé · chute libre ·
-épingle descendante · montée verticale. Prévues pour les lots suivants : booster → looping · rampe de lancement · départ à 250 km/h sur un mur · départ en tube ·
-bifurcation dès le départ · départ sur l'eau · décollage en deltaplane · départ sur glace · départ au plafond.
+Bibliothèque d'ouvertures : voir la section Bêta 0.9.9 (liste complète des 66 départs, écrite dans `tools/test-niveaux.mjs`).
 
 **Outils** : `node tools/lab.mjs "script" --l 4 --map --profile --robust` (carte, profil de vitesse, tolérance à la vitesse) ou `--id eclats` ou `--all` ;
 `node tools/medals.mjs eclats` propose les médailles (or = temps du pilote, cristal 0,95 ×, argent 1,15 ×, bronze 1,35 ×) et `--check` les vérifie.
@@ -501,6 +518,9 @@ tools/lab.mjs                  atelier de level design : carte, profil de vitess
 tools/medals.mjs               médailles d'un circuit calculées sur le temps du pilote automatique
 tools/contract.mjs             le contrat d'un circuit bien fait (profil mesuré, tolérance de vitesse, repartir de chaque checkpoint, médailles…) : juge des candidats, `--builtin` les circuits intégrés
 tools/inject.mjs               écrit des définitions de circuits dans js/tracks.js à la place de celles de même identifiant
+tools/difficulte.mjs           indice de difficulté de chaque circuit (courbe par chapitre)
+tools/golden.mjs               temps de référence du pilote sur les 66 circuits (garde-fou de la physique)
+tools/fiche-essai.mjs          fiche d'essai à remplir en jouant (docs/FICHE-ESSAI.md)
 tools/test-niveaux.mjs         applique le contrat aux 66 circuits, puis les profils de chaque chapitre, les 66 ouvertures, l'ordre de la carrière (npm test)
 ```
 
