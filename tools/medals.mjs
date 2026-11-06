@@ -10,10 +10,12 @@ import { runTrack } from './lab.mjs';
 export const RATIOS = { cristal: 0.95, or: 1, argent: 1.15, bronze: 1.35 };
 const r1 = (x) => Math.round(x * 10) / 10;
 
+export const proposeFrom = (time) => Object.fromEntries(Object.entries(RATIOS).map(([k, r]) => [k, r1(time * r)]));
+
 export function proposeMedals(def) {
   const S = runTrack(buildBuiltin(def));
   if (!S.ok) return null;
-  return { time: S.time, medals: Object.fromEntries(Object.entries(RATIOS).map(([k, r]) => [k, r1(S.time * r)])) };
+  return { time: S.time, medals: proposeFrom(S.time) };
 }
 
 if (process.argv[1] && process.argv[1].endsWith('medals.mjs')) {
