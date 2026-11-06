@@ -22,9 +22,10 @@ function walk(dir, out = []) {
 }
 
 console.log('Version et textes');
-test('version 0.9.5 (constants.js et package.json)', () => {
-  assert.equal(VERSION, 'bêta 0.9.5');
-  assert.equal(JSON.parse(read('package.json')).version, '0.9.5');
+test('la version affichée suit package.json (bêta 0.9.x)', () => {
+  const v = JSON.parse(read('package.json')).version;
+  assert.match(v, /^0\.9\.\d+$/);
+  assert.equal(VERSION, 'bêta ' + v);
 });
 test('le texte du turbo dit « jusqu’à » (vitesse visée, jamais garantie)', () => {
   assert.match(paramText('boost', 100), /^jusqu'à \d+ km\/h$/);

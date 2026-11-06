@@ -7,9 +7,19 @@ export const CHAPTER_SIZE = 6;
 export const UNLOCK_MEDALS = 4;
 export const GOAL_COINS = 50;
 
+// 0.9.6 : profils de circuits (champ `profil` des circuits intégrés). Chaque circuit est conçu pour une expérience précise ; la pastille
+// de la carte de carrière l'annonce. Les mesures qui définissent chaque profil sont vérifiées par tools/test-v096.mjs.
+export const PROFILS = {
+  sprint: { cls: 'p-sprint', label: 'Sprint', tip: 'Presque tout droit : le chrono pur, la trajectoire fait la différence.' },
+  speedway: { cls: 'p-speedway', label: 'Speedway', tip: 'Très grands virages, longues lignes droites : on garde la vitesse de pointe.' },
+  technique: { cls: 'p-technique', label: 'Technique', tip: 'Freinages forts et relances rapides : la courbe d’accélération se travaille.' },
+  rollercoaster: { cls: 'p-rollercoaster', label: 'Rollercoaster', tip: 'Verticalité extrême : murs, boucles et chutes.' },
+  acrobatique: { cls: 'p-acrobatique', label: 'Acrobatique', tip: 'Sauts et réceptions : l’élan décide de tout.' },
+};
+
 // 0.9 : un chapitre par thème, dans l'ordre de THEME_ORDER (tracks.js).
 export const CHAPTERS = [
-  { name: 'Désert crépuscule', decor: 'desert', desc: 'Premiers virages, petits sauts et premiers revêtements.' },
+  { name: 'Désert crépuscule', decor: 'desert', desc: 'Sprint, speedway, tremplins, épingles et grand huit : tous les profils de circuits, avec un wall-ride dès le premier.' },
   { name: 'Jungle néon', decor: 'jungle', desc: 'Lianes, champignons et premiers loopings.' },
   { name: 'Archipel tropical', decor: 'isles', desc: 'Eau, bateau, phare et grands sauts au-dessus du lagon.' },
   { name: 'Ville futuriste', decor: 'city', desc: 'Tunnels, viaducs et boulevards à toute vitesse.' },

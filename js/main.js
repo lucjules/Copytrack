@@ -23,7 +23,7 @@ import { Room, defaultSignaling, normalizeCode, ROOM_RE, MAX_PLAYERS } from './n
 import { encodeGhost, decodeGhost, PHYS_VER } from './replay.js';
 const PV = PHYS_VER;
 import { dailyChallenge, dayKey } from './daily.js';
-import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, goalFor, goalLabel, goalDone, chapterUnlocked } from './career.js';
+import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked } from './career.js';
 import {
   loadSettings, saveSettings, getRecord, saveRecord, listMyTracks, deleteMyTrack, saveMyTrack, newId,
   getEditorDraft, formatTime, purgeOldRecords, clearRecords, setImportedGhost,
@@ -685,6 +685,7 @@ class App {
         const goal = goalFor(b.def, i);
         const gdone = goalDone(b.key + '#goal');
         const tags = this._trackTags(b.track);
+        const pf = PROFILS[b.def.profil];
         const card = document.createElement('div');
         card.className = 'card ' + b.track.decor + (open ? '' : ' locked');
         card.tabIndex = 0;
@@ -692,7 +693,7 @@ class App {
           <img class="thumb" alt="" src="${thumbnail(b.track, 'b-' + b.key)}">
           <h3>${esc(b.def.name)}<span class="decor-chip" style="color:${decorColor[b.track.decor] || '#fff'}">${esc(DECORS[b.track.decor].label)}</span></h3>
           <div class="meta"><span class="diff">${'◆'.repeat(b.def.difficulty)}${'◇'.repeat(5 - b.def.difficulty)}</span> · ${b.track.tiles.length} pièces</div>
-          ${tags.length ? `<div class="tags">${tags.map((t) => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
+          ${tags.length || pf ? `<div class="tags">${pf ? `<span class="tag profil ${pf.cls}" title="${esc(pf.tip)}">${esc(pf.label)}</span>` : ''}${tags.map((t) => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
           <div class="goal${gdone ? ' done' : ''}">★ ${esc(goalLabel(goal))}${gdone ? ' ✓' : ''}</div>
           <div class="best">${b.def.medals ? medalIcon(medal) : ''}${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}<button class="btn board-btn" data-board="1" title="Classement en ligne">🏆</button></div>
           ${open ? '' : '<div class="lock">🔒</div>'}`;
@@ -715,7 +716,7 @@ class App {
     const tags = [];
     const has = (fn) => track.tiles.some(fn);
     if (has((t) => PIECES[t.t].kind === 'loop')) tags.push('Looping');
-    if (has((t) => t.t === 'steep')) tags.push('Sauts');
+    if (has((t) => t.t === 'steep' || t.t === 'steep4')) tags.push('Sauts');
     if (has((t) => t.t === 'bank' || t.t === 'bankBig')) tags.push('Virage relevé');
     if (has((t) => t.t === 'tube' || t.t === 'tubeMid')) tags.push('Tube');
     if (has((t) => t.t === 'cork' || t.t === 'corkL')) tags.push('Tire-bouchon');
@@ -731,7 +732,7 @@ class App {
     if (has((t) => t.s === 'wind')) tags.push('Vent');
     if (has((t) => t.s === 'powder')) tags.push('Terrain');
     if (has((t) => t.tn)) tags.push('Tunnel');
-    if (has((t) => t.nb)) tags.push('Sans bordures');
+    if (has((t) => t.nb && !t.o && !PIECES[t.t].roll)) tags.push('Sans bordures');     // les transitions de mur n'ont jamais de bordures : ce n'est pas un choix du créateur
     if ((track.laps || 1) > 1) tags.push(`${track.laps} tours`);
     return tags.slice(0, 6);
   }
