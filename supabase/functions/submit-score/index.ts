@@ -24,9 +24,15 @@ var SURF_PHYS = {
   boostSpeed: 112
 };
 var MAX_DECOS = 500;
-var LOOP_R = 12 * (CELL / 24);
+var WORLD_SCALE = CELL / 24;
+var LOOP_R = 12 * WORLD_SCALE;
 var LOOP_LANE = HALF;
 var DT = 1 / 120;
+var MAX_RUN_SECONDS = 600;
+var MAX_RUN_STEPS = Math.round(MAX_RUN_SECONDS / DT);
+var MAX_TRACK_CODE_CHARS = 4e5;
+var MAX_INPUTS_CHARS = 4e5;
+var OFF_TRACK_RESPAWN_S = 0.5;
 var DIRS = [
   [
     0,
@@ -47,7 +53,7 @@ var DIRS = [
 ];
 
 // js/pieces.js
-var K = CELL / 24;
+var K = WORLD_SCALE;
 var PIECES = {
   straight: {
     label: "Ligne droite",
@@ -520,10 +526,8 @@ var PIECES = {
     rise: 4,
     curv: 1
   },
-  // Pièces à 90° (0.9.2) : la route bascule autour de son axe jusqu'à un plan VERTICAL (route « sur le côté »).
-  // La gravité ne change pas : à vitesse insuffisante la voiture glisse le long du plan et tombe par le bord (pas de bordures).
-  // `side` : 1 transition, 2 ligne droite (l'appui vient en partie de la vitesse, voir physics.js) ; `pivot` : côté du plan (-1 gauche, 1 droite) ;
-  // `below` : niveaux réservés SOUS la pièce (la moitié basse du plan descend de 9 m : la pièce ne se pose donc pas au niveau 0 ou 1).
+  // Anciennes pièces à 90° (0.9.2) : elles ne sont plus posées (Track.normalize les convertit en pièce + orientation, voir LEGACY_TILE) ; leurs
+  // définitions ne servent qu'à garder leur numéro dans PIECE_ORDER. `below` : niveaux réservés SOUS la pièce (la moitié basse du plan descend de 9 m).
   rollL: {
     label: "Transition c\xF4t\xE9 \u21B0",
     kind: "ribbon",
@@ -531,8 +535,6 @@ var PIECES = {
     rise: 0,
     clearance: 2,
     below: 2,
-    side: 1,
-    pivot: -1,
     noRails: true
   },
   rollR: {
@@ -542,8 +544,6 @@ var PIECES = {
     rise: 0,
     clearance: 2,
     below: 2,
-    side: 1,
-    pivot: 1,
     noRails: true
   },
   sideL: {
@@ -553,8 +553,6 @@ var PIECES = {
     rise: 0,
     clearance: 2,
     below: 2,
-    side: 2,
-    pivot: -1,
     noRails: true
   },
   sideR: {
@@ -564,8 +562,6 @@ var PIECES = {
     rise: 0,
     clearance: 2,
     below: 2,
-    side: 2,
-    pivot: 1,
     noRails: true
   }
 };
@@ -1090,7 +1086,7 @@ function isRibbonKind(type) {
 }
 function isSideTile(tile) {
   const p = PIECES[tile.t];
-  return !!(tile.o || p.side || p.roll);
+  return !!(tile.o || p.roll);
 }
 var isOriented = (tile) => !!tile.o && (PIECES[tile.t].kind === "line" || PIECES[tile.t].kind === "arc");
 function isFloor(tile) {
@@ -1873,7 +1869,6 @@ var OBST = {
     kick: 18
   }
 };
-var OBST_KINDS = Object.keys(OBST);
 var isObstacle = (k) => !!OBST[k];
 var TAU = Math.PI * 2;
 function spikeLevel(def, t) {
@@ -3207,349 +3202,712 @@ var DECO_ORDER = [
   // 0.9.3 : pack de ~200 décorations (plage, Saint-Valentin, Nouvel An, fête foraine, ville, ferme, château, Japon, sport, jungle…)
   ...PACK_IDS
 ];
-var DECO_CATS = {
-  signs: {
-    label: "Panneaux",
-    kinds: [
-      "sign_left",
-      "sign_right",
-      "sign_up",
-      "sign_stop",
-      "sign_speed",
-      "sign_warn",
-      "banner"
+var BASE = [
+  [
+    "signs",
+    "Panneaux",
+    [
+      [
+        "sign_left",
+        "Fl\xE8che gauche",
+        "\u2B05"
+      ],
+      [
+        "sign_right",
+        "Fl\xE8che droite",
+        "\u27A1"
+      ],
+      [
+        "sign_up",
+        "Tout droit",
+        "\u2B06"
+      ],
+      [
+        "sign_stop",
+        "Stop",
+        "\u26D4"
+      ],
+      [
+        "sign_speed",
+        "Limite",
+        "\u{1F17F}"
+      ],
+      [
+        "sign_warn",
+        "Danger",
+        "\u26A0"
+      ],
+      [
+        "banner",
+        "Banderole",
+        "\u{1F6A9}"
+      ]
     ]
-  },
-  shapes: {
-    label: "Formes",
-    kinds: [
-      "cube",
-      "sphere",
-      "cylinder",
-      "cone",
-      "pyramid",
-      "arch"
+  ],
+  [
+    "shapes",
+    "Formes",
+    [
+      [
+        "cube",
+        "Cube",
+        "\u2B1B"
+      ],
+      [
+        "sphere",
+        "Sph\xE8re",
+        "\u26AA"
+      ],
+      [
+        "cylinder",
+        "Cylindre",
+        "\u{1F6E2}"
+      ],
+      [
+        "cone",
+        "C\xF4ne",
+        "\u{1F53A}"
+      ],
+      [
+        "pyramid",
+        "Pyramide",
+        "\u{1F53B}"
+      ],
+      [
+        "arch",
+        "Arche",
+        "\u{1F309}"
+      ]
     ]
-  },
-  build: {
-    label: "Murs et toits",
-    kinds: [
-      "wall",
-      "wallLow",
-      "roofFlat",
-      "roofGable",
-      "dome"
+  ],
+  [
+    "build",
+    "Murs et toits",
+    [
+      [
+        "wall",
+        "Mur",
+        "\u{1F9F1}"
+      ],
+      [
+        "wallLow",
+        "Muret",
+        "\u25AC"
+      ],
+      [
+        "roofFlat",
+        "Toit plat",
+        "\u2B1C"
+      ],
+      [
+        "roofGable",
+        "Toit en pente",
+        "\u{1F3E0}"
+      ],
+      [
+        "dome",
+        "D\xF4me",
+        "\u{1F6D6}"
+      ]
     ]
-  },
-  nature: {
-    label: "Nature",
-    kinds: [
-      "pine",
-      "palm",
-      "tree",
-      "bush",
-      "rock",
-      "cactus",
-      "crystal",
-      "mushroom",
-      "flower"
+  ],
+  [
+    "nature",
+    "Nature",
+    [
+      [
+        "pine",
+        "Sapin",
+        "\u{1F332}"
+      ],
+      [
+        "palm",
+        "Palmier",
+        "\u{1F334}"
+      ],
+      [
+        "tree",
+        "Arbre",
+        "\u{1F333}"
+      ],
+      [
+        "bush",
+        "Buisson",
+        "\u{1F33F}"
+      ],
+      [
+        "rock",
+        "Rocher",
+        "\u{1FAA8}"
+      ],
+      [
+        "cactus",
+        "Cactus",
+        "\u{1F335}"
+      ],
+      [
+        "crystal",
+        "Cristal",
+        "\u{1F48E}"
+      ],
+      [
+        "mushroom",
+        "Champignon",
+        "\u{1F344}"
+      ],
+      [
+        "flower",
+        "Fleur",
+        "\u{1F338}"
+      ]
     ]
-  },
-  image: {
-    label: "Image",
-    kinds: [
-      "plaque"
+  ],
+  [
+    "image",
+    "Image",
+    [
+      [
+        "plaque",
+        "Plaque image",
+        "\u{1F5BC}"
+      ]
     ]
-  },
-  cave: {
-    label: "Souterrain",
-    kinds: [
-      "stalagmite",
-      "cavePillar",
-      "crystalCluster",
-      "glowMushroom",
-      "minecart",
-      "lantern"
+  ],
+  [
+    "cave",
+    "Souterrain",
+    [
+      [
+        "stalagmite",
+        "Stalagmite",
+        "\u{1F5FB}"
+      ],
+      [
+        "cavePillar",
+        "Pilier de grotte",
+        "\u{1F3DB}"
+      ],
+      [
+        "crystalCluster",
+        "Amas de cristaux",
+        "\u{1F4A0}"
+      ],
+      [
+        "glowMushroom",
+        "Champignon lumineux",
+        "\u{1F344}"
+      ],
+      [
+        "minecart",
+        "Wagonnet",
+        "\u{1F6D2}"
+      ],
+      [
+        "lantern",
+        "Lanterne",
+        "\u{1F3EE}"
+      ]
     ]
-  },
-  sky: {
-    label: "Nuages",
-    kinds: [
-      "cloud",
-      "balloon",
-      "floatIsle",
-      "windmill",
-      "airship",
-      "skyTower"
+  ],
+  [
+    "sky",
+    "Nuages",
+    [
+      [
+        "cloud",
+        "Nuage",
+        "\u2601"
+      ],
+      [
+        "balloon",
+        "Montgolfi\xE8re",
+        "\u{1F388}"
+      ],
+      [
+        "floatIsle",
+        "\xCEle flottante",
+        "\u{1F3DD}"
+      ],
+      [
+        "windmill",
+        "\xC9olienne",
+        "\u{1F32C}"
+      ],
+      [
+        "airship",
+        "Dirigeable",
+        "\u{1F6F8}"
+      ],
+      [
+        "skyTower",
+        "Tour c\xE9leste",
+        "\u{1F5FC}"
+      ]
     ]
-  },
-  sea: {
-    label: "Fonds marins",
-    kinds: [
-      "coral",
-      "seaweed",
-      "fishSchool",
-      "shell",
-      "anchor",
-      "jellyfish",
-      "treasure"
+  ],
+  [
+    "sea",
+    "Fonds marins",
+    [
+      [
+        "coral",
+        "Corail",
+        "\u{1FAB8}"
+      ],
+      [
+        "seaweed",
+        "Algues",
+        "\u{1F33F}"
+      ],
+      [
+        "fishSchool",
+        "Banc de poissons",
+        "\u{1F41F}"
+      ],
+      [
+        "shell",
+        "Coquillage",
+        "\u{1F41A}"
+      ],
+      [
+        "anchor",
+        "Ancre",
+        "\u2693"
+      ],
+      [
+        "jellyfish",
+        "M\xE9duse",
+        "\u{1FABC}"
+      ],
+      [
+        "treasure",
+        "Coffre au tr\xE9sor",
+        "\u{1F4B0}"
+      ]
     ]
-  },
-  factory: {
-    label: "Usine",
-    kinds: [
-      "gear",
-      "pipe",
-      "chimney",
-      "crate",
-      "barrel",
-      "crane",
-      "warnLight"
+  ],
+  [
+    "factory",
+    "Usine",
+    [
+      [
+        "gear",
+        "Engrenage",
+        "\u2699"
+      ],
+      [
+        "pipe",
+        "Tuyau",
+        "\u{1F527}"
+      ],
+      [
+        "chimney",
+        "Chemin\xE9e",
+        "\u{1F3ED}"
+      ],
+      [
+        "crate",
+        "Caisses",
+        "\u{1F4E6}"
+      ],
+      [
+        "barrel",
+        "Barils",
+        "\u{1F6E2}"
+      ],
+      [
+        "crane",
+        "Grue",
+        "\u{1F3D7}"
+      ],
+      [
+        "warnLight",
+        "Gyrophare",
+        "\u{1F6A8}"
+      ]
     ]
-  },
-  space: {
-    label: "Espace",
-    kinds: [
-      "satellite",
-      "asteroid",
-      "antenna",
-      "rocket",
-      "planetMini"
+  ],
+  [
+    "space",
+    "Espace",
+    [
+      [
+        "satellite",
+        "Satellite",
+        "\u{1F6F0}"
+      ],
+      [
+        "asteroid",
+        "Ast\xE9ro\xEFde",
+        "\u2604"
+      ],
+      [
+        "antenna",
+        "Antenne",
+        "\u{1F4E1}"
+      ],
+      [
+        "rocket",
+        "Fus\xE9e",
+        "\u{1F680}"
+      ],
+      [
+        "planetMini",
+        "Plan\xE8te miniature",
+        "\u{1FA90}"
+      ]
     ]
-  },
-  race: {
-    label: "Circuit",
-    kinds: [
-      "trafficCone",
-      "tireStack",
-      "flagPole",
-      "grandstand"
+  ],
+  [
+    "race",
+    "Circuit",
+    [
+      [
+        "trafficCone",
+        "Plot",
+        "\u{1F6A7}"
+      ],
+      [
+        "tireStack",
+        "Pile de pneus",
+        "\u2B55"
+      ],
+      [
+        "flagPole",
+        "Drapeau \xE0 damier",
+        "\u{1F3C1}"
+      ],
+      [
+        "grandstand",
+        "Tribune",
+        "\u{1F3DF}"
+      ]
     ]
-  },
-  lights: {
-    label: "Lumi\xE8res",
-    kinds: [
-      "searchlight",
-      "spotlight",
-      "lanternPost",
-      "lanternHang",
-      "streetLamp"
+  ],
+  [
+    "lights",
+    "Lumi\xE8res",
+    [
+      [
+        "searchlight",
+        "Projecteur tournant",
+        "\u{1F526}"
+      ],
+      [
+        "spotlight",
+        "Projecteur",
+        "\u{1F4A1}"
+      ],
+      [
+        "lanternPost",
+        "Lanterne sur pied",
+        "\u{1F3EE}"
+      ],
+      [
+        "lanternHang",
+        "Lanterne suspendue",
+        "\u{1F3EE}"
+      ],
+      [
+        "streetLamp",
+        "Lampadaire",
+        "\u{1F6E3}"
+      ]
     ]
-  },
-  vehicles: {
-    label: "V\xE9hicules",
-    kinds: [
-      "plane",
-      "biplane",
-      "helicopter",
-      "bus",
-      "truck",
-      "locomotive",
-      "sedan",
-      "ufo",
-      "sailboat"
+  ],
+  [
+    "vehicles",
+    "V\xE9hicules",
+    [
+      [
+        "plane",
+        "Avion de ligne",
+        "\u2708"
+      ],
+      [
+        "biplane",
+        "Avion \xE0 h\xE9lice",
+        "\u{1F6E9}"
+      ],
+      [
+        "helicopter",
+        "H\xE9licopt\xE8re",
+        "\u{1F681}"
+      ],
+      [
+        "bus",
+        "Bus",
+        "\u{1F68C}"
+      ],
+      [
+        "truck",
+        "Camion",
+        "\u{1F69A}"
+      ],
+      [
+        "locomotive",
+        "Locomotive",
+        "\u{1F682}"
+      ],
+      [
+        "sedan",
+        "Voiture",
+        "\u{1F697}"
+      ],
+      [
+        "ufo",
+        "Soucoupe",
+        "\u{1F6F8}"
+      ],
+      [
+        "sailboat",
+        "Voilier",
+        "\u26F5"
+      ]
     ]
-  },
-  xmas: {
-    label: "No\xEBl",
-    kinds: [
-      "xmasTree",
-      "snowman",
-      "gift",
-      "candyCane",
-      "xmasStar",
-      "wreath",
-      "sleigh",
-      "reindeer",
-      "gingerHouse"
+  ],
+  [
+    "xmas",
+    "No\xEBl",
+    [
+      [
+        "xmasTree",
+        "Sapin de No\xEBl",
+        "\u{1F384}"
+      ],
+      [
+        "snowman",
+        "Bonhomme de neige",
+        "\u26C4"
+      ],
+      [
+        "gift",
+        "Cadeau",
+        "\u{1F381}"
+      ],
+      [
+        "candyCane",
+        "Sucre d\u2019orge",
+        "\u{1F36D}"
+      ],
+      [
+        "xmasStar",
+        "\xC9toile",
+        "\u2B50"
+      ],
+      [
+        "wreath",
+        "Couronne",
+        "\u{1F38D}"
+      ],
+      [
+        "sleigh",
+        "Tra\xEEneau",
+        "\u{1F6F7}"
+      ],
+      [
+        "reindeer",
+        "Renne",
+        "\u{1F98C}"
+      ],
+      [
+        "gingerHouse",
+        "Maison en pain d\u2019\xE9pices",
+        "\u{1F36A}"
+      ]
     ]
-  },
-  halloween: {
-    label: "Halloween",
-    kinds: [
-      "pumpkin",
-      "ghost",
-      "tombstone",
-      "bats",
-      "witchHat",
-      "cauldron",
-      "spookyTree",
-      "hauntedHouse",
-      "skull"
+  ],
+  [
+    "halloween",
+    "Halloween",
+    [
+      [
+        "pumpkin",
+        "Citrouille",
+        "\u{1F383}"
+      ],
+      [
+        "ghost",
+        "Fant\xF4me",
+        "\u{1F47B}"
+      ],
+      [
+        "tombstone",
+        "Pierre tombale",
+        "\u{1FAA6}"
+      ],
+      [
+        "bats",
+        "Chauves-souris",
+        "\u{1F987}"
+      ],
+      [
+        "witchHat",
+        "Chapeau de sorci\xE8re",
+        "\u{1F9D9}"
+      ],
+      [
+        "cauldron",
+        "Chaudron",
+        "\u{1FAD5}"
+      ],
+      [
+        "spookyTree",
+        "Arbre mort",
+        "\u{1F333}"
+      ],
+      [
+        "hauntedHouse",
+        "Maison hant\xE9e",
+        "\u{1F3DA}"
+      ],
+      [
+        "skull",
+        "Cr\xE2ne",
+        "\u{1F480}"
+      ]
     ]
-  },
-  obstacles: {
-    label: "Obstacles",
-    kinds: [
-      "spikes",
-      "spikesPop",
-      "pendulum",
-      "hammer",
-      "slider",
-      "sweeper",
-      "bumper"
+  ],
+  [
+    "obstacles",
+    "Obstacles",
+    [
+      [
+        "spikes",
+        "Piques",
+        "\u{1F531}"
+      ],
+      [
+        "spikesPop",
+        "Piques escamotables",
+        "\u23EB"
+      ],
+      [
+        "pendulum",
+        "Boule balancier",
+        "\u{1F534}"
+      ],
+      [
+        "hammer",
+        "Marteau tournant",
+        "\u{1F528}"
+      ],
+      [
+        "slider",
+        "Mur coulissant",
+        "\u2194"
+      ],
+      [
+        "sweeper",
+        "Balayeur",
+        "\u{1F300}"
+      ],
+      [
+        "bumper",
+        "Bumper",
+        "\u{1F7E3}"
+      ]
     ]
-  }
-};
-var DECO_LABELS = {
-  ...Object.fromEntries(PACK.flatMap(([, , items]) => items.map(([id, name]) => [
-    id,
-    name
-  ]))),
-  sign_left: "Fl\xE8che gauche",
-  sign_right: "Fl\xE8che droite",
-  sign_up: "Tout droit",
-  sign_stop: "Stop",
-  sign_speed: "Limite",
-  sign_warn: "Danger",
-  banner: "Banderole",
-  cube: "Cube",
-  sphere: "Sph\xE8re",
-  cylinder: "Cylindre",
-  cone: "C\xF4ne",
-  pyramid: "Pyramide",
-  arch: "Arche",
-  wall: "Mur",
-  wallLow: "Muret",
-  roofFlat: "Toit plat",
-  roofGable: "Toit en pente",
-  dome: "D\xF4me",
-  pine: "Sapin",
-  palm: "Palmier",
-  tree: "Arbre",
-  bush: "Buisson",
-  rock: "Rocher",
-  cactus: "Cactus",
-  crystal: "Cristal",
-  mushroom: "Champignon",
-  flower: "Fleur",
-  plaque: "Plaque image",
-  shard: "\xC9clat secret",
-  spikes: "Piques",
-  spikesPop: "Piques escamotables",
-  pendulum: "Boule balancier",
-  hammer: "Marteau tournant",
-  slider: "Mur coulissant",
-  sweeper: "Balayeur",
-  bumper: "Bumper",
-  stalagmite: "Stalagmite",
-  cavePillar: "Pilier de grotte",
-  crystalCluster: "Amas de cristaux",
-  glowMushroom: "Champignon lumineux",
-  minecart: "Wagonnet",
-  lantern: "Lanterne",
-  cloud: "Nuage",
-  balloon: "Montgolfi\xE8re",
-  floatIsle: "\xCEle flottante",
-  windmill: "\xC9olienne",
-  airship: "Dirigeable",
-  skyTower: "Tour c\xE9leste",
-  coral: "Corail",
-  seaweed: "Algues",
-  fishSchool: "Banc de poissons",
-  shell: "Coquillage",
-  anchor: "Ancre",
-  jellyfish: "M\xE9duse",
-  treasure: "Coffre au tr\xE9sor",
-  gear: "Engrenage",
-  pipe: "Tuyau",
-  chimney: "Chemin\xE9e",
-  crate: "Caisses",
-  barrel: "Barils",
-  crane: "Grue",
-  warnLight: "Gyrophare",
-  satellite: "Satellite",
-  asteroid: "Ast\xE9ro\xEFde",
-  antenna: "Antenne",
-  rocket: "Fus\xE9e",
-  planetMini: "Plan\xE8te miniature",
-  trafficCone: "Plot",
-  tireStack: "Pile de pneus",
-  flagPole: "Drapeau \xE0 damier",
-  grandstand: "Tribune",
-  searchlight: "Projecteur tournant",
-  spotlight: "Projecteur",
-  lanternPost: "Lanterne sur pied",
-  lanternHang: "Lanterne suspendue",
-  streetLamp: "Lampadaire",
-  plane: "Avion de ligne",
-  biplane: "Avion \xE0 h\xE9lice",
-  helicopter: "H\xE9licopt\xE8re",
-  bus: "Bus",
-  truck: "Camion",
-  locomotive: "Locomotive",
-  sedan: "Voiture",
-  ufo: "Soucoupe",
-  sailboat: "Voilier",
-  xmasTree: "Sapin de No\xEBl",
-  snowman: "Bonhomme de neige",
-  gift: "Cadeau",
-  candyCane: "Sucre d\u2019orge",
-  xmasStar: "\xC9toile",
-  wreath: "Couronne",
-  sleigh: "Tra\xEEneau",
-  reindeer: "Renne",
-  gingerHouse: "Maison en pain d\u2019\xE9pices",
-  pumpkin: "Citrouille",
-  ghost: "Fant\xF4me",
-  tombstone: "Pierre tombale",
-  bats: "Chauves-souris",
-  witchHat: "Chapeau de sorci\xE8re",
-  cauldron: "Chaudron",
-  spookyTree: "Arbre mort",
-  hauntedHouse: "Maison hant\xE9e",
-  skull: "Cr\xE2ne"
-};
-for (const [key2, label, items] of PACK) {
-  const kinds = items.map((i) => i[0]);
-  if (DECO_CATS[key2]) DECO_CATS[key2].kinds.push(...kinds);
-  else DECO_CATS[key2] = {
-    label,
-    kinds
+  ],
+  [
+    "secret",
+    "Secrets",
+    [
+      [
+        "shard",
+        "\xC9clat secret",
+        "\u2726"
+      ]
+    ],
+    {
+      hidden: true
+    }
+  ]
+];
+var DECO_CATS = {};
+var DECO_LABELS = {};
+var DECO_ICONS = {};
+for (const [key2, title, items, opts = {}] of [
+  ...BASE,
+  ...PACK
+]) {
+  if (!opts.hidden && !DECO_CATS[key2]) DECO_CATS[key2] = {
+    label: title,
+    kinds: []
   };
+  for (const [id, name, icon] of items) {
+    if (!opts.hidden) DECO_CATS[key2].kinds.push(id);
+    DECO_LABELS[id] = name;
+    DECO_ICONS[id] = icon;
+  }
 }
-var DECO_PACK_ICONS = Object.fromEntries(PACK.flatMap(([, , items]) => items.map(([id, , icon]) => [
-  id,
-  icon
-])));
 
-// js/track.js
+// js/themes.js
 var DECORS = {
   desert: {
-    label: "D\xE9sert cr\xE9puscule"
+    label: "D\xE9sert cr\xE9puscule",
+    chip: "#ff8c5a"
   },
   polar: {
-    label: "Nuit polaire"
+    label: "Nuit polaire",
+    chip: "#7fe9ff",
+    darkGround: true
   },
   jungle: {
-    label: "Jungle n\xE9on"
+    label: "Jungle n\xE9on",
+    chip: "#2dffb0",
+    darkGround: true
   },
   city: {
-    label: "Ville futuriste"
+    label: "Ville futuriste",
+    chip: "#ff3d8a",
+    darkGround: true
   },
   isles: {
-    label: "Archipel tropical"
+    label: "Archipel tropical",
+    chip: "#ffd66b"
   },
   volcano: {
-    label: "Volcan"
+    label: "Volcan",
+    chip: "#ff5a2a"
   },
   orbit: {
-    label: "Station orbitale"
+    label: "Station orbitale",
+    chip: "#b9a6ff"
   },
-  // 0.9
   caves: {
-    label: "Canyon de cristal"
+    label: "Canyon de cristal",
+    chip: "#b48cff"
   },
   sky: {
-    label: "Ville dans les nuages"
+    label: "Ville dans les nuages",
+    chip: "#9fd8ff"
   },
   reef: {
-    label: "Fonds marins"
+    label: "Fonds marins",
+    chip: "#2fd3b5"
   },
   factory: {
-    label: "Usine m\xE9canique"
+    label: "Usine m\xE9canique",
+    chip: "#ffb070"
   }
 };
+var DEFAULT_DECOR = "desert";
+var CAREER_ORDER = [
+  "desert",
+  "jungle",
+  "isles",
+  "city",
+  "polar",
+  "volcano",
+  "orbit",
+  "reef",
+  "factory",
+  "sky",
+  "caves"
+];
+
+// js/track.js
 var WATER_DROP = 0.35;
 var boatDrop = (along) => WATER_DROP * (1 - Math.max(0, Math.min(1, along || 0)));
 var COLOR_KEYS = [
@@ -3585,7 +3943,7 @@ var Track = class _Track {
   constructor(name = "Nouveau circuit", tiles = []) {
     this.name = name;
     this.author = "";
-    this.decor = "desert";
+    this.decor = DEFAULT_DECOR;
     this.tiles = [];
     this.decos = [];
     this.index = /* @__PURE__ */ new Map();
@@ -4313,7 +4671,7 @@ var Track = class _Track {
     if (!data || !Array.isArray(data.t) || data.t.length % stride) throw new Error("Code de circuit invalide");
     const tr = new _Track(String(data.n || "Circuit import\xE9").slice(0, 40));
     tr.author = String(data.a || "").slice(0, 30);
-    tr.decor = DECORS[data.d] ? data.d : "desert";
+    tr.decor = DECORS[data.d] ? data.d : DEFAULT_DECOR;
     const extras = /* @__PURE__ */ new Map();
     if (Array.isArray(data.e)) {
       for (const e of data.e) if (e && Number.isInteger(e.i)) extras.set(e.i, e);
@@ -4447,7 +4805,7 @@ var SURF_CODE = {
 };
 function scriptTrack(name, script, opts = {}) {
   const tr = new Track(name);
-  tr.decor = opts.decor || "desert";
+  tr.decor = opts.decor || DEFAULT_DECOR;
   let x = opts.x || 0, z = opts.z || 0, h = opts.h || 0, l = opts.l || 0;
   const path = [];
   let cur = {
@@ -6800,20 +7158,7 @@ var BUILTIN_TRACKS = [
     }
   }
 ];
-var THEME_ORDER = [
-  "desert",
-  "jungle",
-  "isles",
-  "city",
-  "polar",
-  "volcano",
-  "orbit",
-  "reef",
-  "factory",
-  "sky",
-  "caves"
-];
-BUILTIN_TRACKS.sort((a, b) => THEME_ORDER.indexOf(a.decor) - THEME_ORDER.indexOf(b.decor) || a.difficulty - b.difficulty);
+BUILTIN_TRACKS.sort((a, b) => CAREER_ORDER.indexOf(a.decor) - CAREER_ORDER.indexOf(b.decor) || a.difficulty - b.difficulty);
 function buildBuiltin(def) {
   const t = scriptTrack(def.name, def.script, {
     ...def.opts || {},
@@ -7131,7 +7476,7 @@ var CarPhysics = class {
       loopIn: false,
       loopOut: false,
       loopFall: false,
-      moto: false,
+      transform: false,
       gravity: false,
       miniTurbo: 0,
       landQ: "",
@@ -7159,13 +7504,6 @@ var CarPhysics = class {
   // Réglages du véhicule actuel (voiture ou moto).
   get k() {
     return SPECS[this.vehicle] || CAR;
-  }
-  // Compatibilité : « moto » est un des véhicules possibles.
-  get moto() {
-    return this.vehicle === "moto";
-  }
-  set moto(v) {
-    this.vehicle = v ? "moto" : "car";
   }
   // Hors piste : sur le terrain, ou perdue dans le ciel en gravité inversée.
   get offTrack() {
@@ -7317,7 +7655,7 @@ var CarPhysics = class {
       if (this.plateLock !== mod) {
         this.plateLock = mod;
         this.vehicle = this.vehicle === PLATES[mod] ? "car" : PLATES[mod];
-        this.ev.moto = true;
+        this.ev.transform = true;
       }
     } else this.plateLock = "";
   }
@@ -7414,7 +7752,7 @@ var CarPhysics = class {
     ev.loopIn = false;
     ev.loopOut = false;
     ev.loopFall = false;
-    ev.moto = false;
+    ev.transform = false;
     ev.gravity = false;
     ev.miniTurbo = 0;
     ev.landQ = "";
@@ -8426,7 +8764,7 @@ var CarPhysics = class {
       if (this.plateLock !== mod) {
         this.plateLock = mod;
         this.vehicle = this.vehicle === PLATES[mod] ? "car" : PLATES[mod];
-        this.ev.moto = true;
+        this.ev.transform = true;
       }
     } else this._timedMods(mod);
     if (!PLATES[mod] && mod !== "spring" && mod !== "flip") this.plateLock = "";
@@ -9370,15 +9708,16 @@ function dailyChallenge(day = dayKey()) {
   return null;
 }
 
-// js/replay.js
+// js/version.js
 var PHYS_VER = 25;
-var MAX_REPLAY_STEPS = 120 * 600;
+
+// js/replay.js
 function decodeInputs(b64) {
   const bin = atob(b64);
   const steer = [], flags = [];
   let total = 0;
   for (let i = 0; i + 2 < bin.length; i += 3) total += bin.charCodeAt(i);
-  if (total > MAX_REPLAY_STEPS) throw new Error("Enregistrement trop long.");
+  if (total > MAX_RUN_STEPS) throw new Error("Enregistrement trop long.");
   for (let i = 0; i + 2 < bin.length; i += 3) {
     const n = bin.charCodeAt(i), s = bin.charCodeAt(i + 1) << 24 >> 24, f = bin.charCodeAt(i + 2);
     for (let k = 0; k < n; k++) {
@@ -9442,9 +9781,9 @@ var GhostRunner = class {
     this.phys.step(inp);
     const sink = this.phys.ev.sink;
     const ev = this.logic.update(this.phys);
-    if (this.phys.offTrack) this.groundT += 1 / 120;
+    if (this.phys.offTrack) this.groundT += DT;
     else this.groundT = 0;
-    if (this.groundT > 0.5 || sink) {
+    if (this.groundT > OFF_TRACK_RESPAWN_S || sink) {
       this.groundT = 0;
       const r = this.logic.rewind();
       this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
@@ -9458,8 +9797,6 @@ var GhostRunner = class {
 };
 
 // js/verify.js
-var MAX_STEPS = 120 * 600;
-var MAX_INPUTS_CHARS = 4e5;
 function trackForKey(key2, code = "") {
   key2 = String(key2 || "");
   if (key2.startsWith("b-")) {
@@ -9505,11 +9842,11 @@ function replayTime(track, inputs) {
   } catch {
     return null;
   }
-  if (!rep.length || rep.length > MAX_STEPS) return null;
+  if (!rep.length || rep.length > MAX_RUN_STEPS) return null;
   const g = new GhostRunner(track, {
     inputs
   });
-  while (!g.done && g.k < MAX_STEPS) g.step();
+  while (!g.done && g.k < MAX_RUN_STEPS) g.step();
   return g.logic.finished ? g.logic.time : null;
 }
 function verifyRun({ trackKey, code, inputs, time, physVer }) {
@@ -9610,7 +9947,7 @@ Deno.serve(async (req) => {
         error: "Requ\xEAte invalide."
       });
     }
-    if (typeof code !== "string" || code.length > 4e5) return json(400, {
+    if (typeof code !== "string" || code.length > MAX_TRACK_CODE_CHARS) return json(400, {
       error: "Code de circuit invalide."
     });
     const res = verifyRun({
