@@ -20,8 +20,8 @@ export const PROFILS = {
 // 0.9 : un chapitre par thème, dans l'ordre de THEME_ORDER (tracks.js).
 export const CHAPTERS = [
   { name: 'Désert crépuscule', decor: 'desert', desc: 'Sprint, speedway, tremplins, épingles et grand huit : tous les profils de circuits, avec un wall-ride dès le premier.' },
-  { name: 'Jungle néon', decor: 'jungle', desc: 'Lianes, champignons et premiers loopings.' },
-  { name: 'Archipel tropical', decor: 'isles', desc: 'Eau, bateau, phare et grands sauts au-dessus du lagon.' },
+  { name: 'Jungle néon', decor: 'jungle', desc: 'Rampe de lancement, tube, rebonds de champignons et slalom en moto : la jungle au grand complet.' },
+  { name: 'Archipel tropical', decor: 'isles', desc: 'Descente en moto, slalom en bateau et décollage en deltaplane autour du phare.' },
   { name: 'Ville futuriste', decor: 'city', desc: 'Tunnels, viaducs et boulevards à toute vitesse.' },
   { name: 'Nuit polaire', decor: 'polar', desc: 'Glace, aurores et virages qui glissent.' },
   { name: 'Volcan', decor: 'volcano', desc: 'Lave, cheminées et montées en L brûlantes.' },

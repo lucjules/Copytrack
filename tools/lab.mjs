@@ -60,14 +60,16 @@ export function asciiMap(track) {
 
 // ---- Course ------------------------------------------------------------------------------------------------------------------------
 // Fait rouler le pilote automatique ; renvoie le profil. samples : un point toutes les 0,1 s.
-export function runTrack(track, { maxTime = 240, vCap, brakeDecel } = {}) {
+// rewindAtCp : numéro (à partir de 1) d'un checkpoint où l'on force une réapparition dès qu'il est pris, comme la touche « dernier checkpoint » :
+// la voiture repart À L'ARRÊT du point de réapparition. Sert à vérifier qu'on peut toujours repartir de chaque checkpoint.
+export function runTrack(track, { maxTime = 240, vCap, brakeDecel, rewindAtCp = 0 } = {}) {
   const phys = new CarPhysics(track);
   const logic = new RaceLogic(track);
   placeAtStart(phys, logic);
   const bot = new Autopilot(track.path, { ...(vCap ? { vCap } : {}), ...(brakeDecel ? { brakeDecel } : {}) });
   bot.reset(phys);
-  const S = { ok: false, time: 0, respawns: 0, wallHits: 0, vmax: 0, airMax: 0, airTotal: 0, loops: 0, perfects: 0, turbos: 0, rings: 0, brakeT: 0, wallT: 0, ribT: 0, samples: [], cps: [], yMin: Infinity, yMax: -Infinity, dist: 0, reason: '' };
-  let stuck = 0, lastIdx = 0, last = null;
+  const S = { ok: false, vehicle: 'car', jumps: 0, time: 0, respawns: 0, wallHits: 0, vmax: 0, airMax: 0, airTotal: 0, loops: 0, perfects: 0, turbos: 0, rings: 0, brakeT: 0, wallT: 0, ribT: 0, samples: [], cps: [], yMin: Infinity, yMax: -Infinity, dist: 0, reason: '' };
+  let stuck = 0, lastIdx = 0, last = null, airRun = 0;
   const steps = Math.round(maxTime / DT);
   for (let i = 0; i < steps; i++) {
     const inp = bot.control(phys);
@@ -76,7 +78,8 @@ export function runTrack(track, { maxTime = 240, vCap, brakeDecel } = {}) {
     const sp = phys.speed;
     S.vmax = Math.max(S.vmax, sp);
     S.airMax = Math.max(S.airMax, phys.airTime);
-    if (!phys.grounded && !phys.rib) S.airTotal += DT;
+    if (!phys.grounded && !phys.rib) { S.airTotal += DT; airRun += DT; }
+    else { if (airRun >= 1) S.jumps++; airRun = 0; }
     if (inp.brake && phys.grounded) S.brakeT += DT;
     if (phys.rib) { S.ribT += DT; if (phys.rib.tile && phys.rib.tile.o) S.wallT += DT; }
     S.yMin = Math.min(S.yMin, phys.pos.y); S.yMax = Math.max(S.yMax, phys.pos.y);
@@ -88,8 +91,18 @@ export function runTrack(track, { maxTime = 240, vCap, brakeDecel } = {}) {
     if (phys.ev.ring) S.rings++;
     if (i % 12 === 0) S.samples.push([i * DT, sp, phys.pos.y, phys.grounded || phys.rib ? 1 : 0]);
     const ev = logic.update(phys);
-    if (ev && ev.type === 'cp') S.cps.push(+logic.time.toFixed(2));
-    if (ev && ev.type === 'finish') { S.ok = true; S.time = logic.time; break; }
+    if (ev && ev.type === 'checkpoint') {
+      S.cps.push(+logic.time.toFixed(2));
+      if (rewindAtCp && ev.index === rewindAtCp && !S.rewound) {
+        S.rewound = true;
+        const r = logic.rewind();
+        phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
+        phys.vehicle = r.vehicle || 'car'; phys.gravMul = r.grav || 1;
+        bot.reset(phys); stuck = 0;
+        continue;
+      }
+    }
+    if (ev && ev.type === 'finish') { S.ok = true; S.time = logic.time; S.vehicle = phys.vehicle; break; }
     const fell = phys.offTrack || phys.ev.sink;
     if (i % 120 === 0) { if (bot.idx === lastIdx) stuck++; else stuck = 0; lastIdx = bot.idx; }
     if (fell || stuck > 4) {
@@ -146,6 +159,7 @@ export function speedPlot(S, rows = 10) {
 export function buildFromScript(script, o = {}) {
   const t = scriptTrack('lab', script, { decor: o.decor || 'desert', ...(o.l ? { l: o.l } : {}) });
   if (o.v0 || o.veh || o.g0) t.setParams({ v0: o.v0, veh0: o.veh, g0: o.g0 });
+  if (o.params) t.setParams(o.params);               // ex. { inversionGraviteDepart: true }
   return t;
 }
 
@@ -173,8 +187,9 @@ if (process.argv[1] && process.argv[1].endsWith('lab.mjs')) {
     } else {
       const script = a.find((x) => !x.startsWith('--') && /\s|^start/.test(x));
       if (!script) { console.error('usage : node tools/lab.mjs "script" [--l N] [--v0 kmh] [--vcap m/s] [--map] [--profile]'); process.exit(2); }
-      tr = buildFromScript(script, { l: +opt('l', 0), v0: +opt('v0', 0), veh: opt('veh'), decor: opt('decor') });
-      name = 'script'; buildFromScriptLike = () => buildFromScript(script, { l: +opt('l', 0), v0: +opt('v0', 0), veh: opt('veh'), decor: opt('decor') });
+      const po = opt('params') ? JSON.parse(opt('params')) : undefined, decor = opt('decor');
+      tr = buildFromScript(script, { l: +opt('l', 0), v0: +opt('v0', 0), veh: opt('veh'), decor, params: po });
+      name = 'script'; buildFromScriptLike = () => buildFromScript(script, { l: +opt('l', 0), v0: +opt('v0', 0), veh: opt('veh'), decor, params: po });
       const errs = tr.validate();
       if (errs.length) console.log('validate :', errs.join(' | '));
     }

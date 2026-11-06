@@ -1,4 +1,4 @@
-// Tests de la bêta 0.9.6 (refonte du level design, lot 1 : les cinq premiers circuits) : node tools/test-v096.mjs   (npm test)
+// Tests de la refonte du level design (0.9.6 : lot 1, 0.9.7 : lot 2…) : node tools/test-niveaux.mjs   (npm test)
 //
 // Un circuit refait porte un champ `profil` (sprint, speedway, technique, rollercoaster, acrobatique). Ce fichier est le CONTRAT de ces
 // profils : chaque profil est défini par des mesures (virages serrés, vitesse, freinages, hauteur, temps en l'air), prises sur la course du
@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 6).join('\n       ')); } }
+function test(name, fn) { try { const r = fn(); if (r && typeof r.then === 'function') throw new Error('test asynchrone : ses assertions ne seraient jamais vérifiées'); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 6).join('\n       ')); } }
 
 const { BUILTIN_TRACKS, buildBuiltin } = await import('../js/tracks.js');
 const { PROFILS } = await import('../js/career.js');
@@ -16,6 +16,12 @@ const { GEN_IDS, PIECES } = await import('../js/pieces.js');
 const { VERSION } = await import('../js/constants.js');
 const { runTrack, profile } = await import('./lab.mjs');
 const { proposeMedals } = await import('./medals.mjs');
+const { checkTrack } = await import('../js/editorTools.js');
+const { orientationIssues } = await import('../js/joins.js');
+const { CarPhysics, SIDE_MIN_SPEED } = await import('../js/physics.js');
+const { RaceLogic, placeAtStart } = await import('../js/raceLogic.js');
+const { Autopilot } = await import('../js/autopilot.js');
+const { Track } = await import('../js/track.js');
 
 const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 const REDONE = BUILTIN_TRACKS.filter((d) => d.profil);
@@ -30,11 +36,19 @@ test('version 0.9.6 ou plus (bêta 0.9.x suit package.json)', () => {
   assert.equal(VERSION, 'bêta ' + v);
   assert.ok(+v.split('.')[2] >= 6, v);
 });
-test('chaque profil écrit existe, et les cinq premiers circuits de la carrière ont cinq profils différents', () => {
+test('chaque profil écrit existe ; les quinze premiers circuits ont un profil', () => {
   for (const d of REDONE) assert.ok(PROFILS[d.profil], d.id + ' : profil inconnu ' + d.profil);
-  const first = BUILTIN_TRACKS.slice(0, 5);
-  assert.ok(first.every((d) => d.profil), 'les cinq premiers circuits doivent avoir un profil');
-  assert.equal(new Set(first.map((d) => d.profil)).size, 5);
+  const first = BUILTIN_TRACKS.slice(0, 15);
+  assert.ok(first.every((d) => d.profil), 'les quinze premiers circuits doivent avoir un profil : ' + first.filter((d) => !d.profil).map((d) => d.id));
+});
+test('les chapitres 1 et 2 sont complets et proposent les cinq profils', () => {
+  for (const [a, b] of [[0, 6], [6, 12]]) assert.equal(new Set(BUILTIN_TRACKS.slice(a, b).map((d) => d.profil)).size, 5, 'chapitre ' + (a / 6 + 1));
+});
+test('deux circuits consécutifs d’un chapitre n’ont jamais le même profil', () => {
+  for (let i = 0; i + 1 < BUILTIN_TRACKS.length; i++) {
+    const a = BUILTIN_TRACKS[i], b = BUILTIN_TRACKS[i + 1];
+    if (a.profil && b.profil && Math.floor(i / 6) === Math.floor((i + 1) / 6)) assert.notEqual(a.profil, b.profil, `${a.id} puis ${b.id} : ${a.profil} deux fois de suite`);
+  }
 });
 test('chaque profil a un libellé et une infobulle', () => {
   for (const [k, p] of Object.entries(PROFILS)) assert.ok(p.label && p.tip, k);
@@ -54,19 +68,42 @@ test('les ouvertures des circuits refaits sont toutes différentes', () => {
   const o = REDONE.map(opening);
   assert.equal(new Set(o).size, o.length, o.join(' | '));
 });
-test('ouvertures du chapitre 1 : booster → wall-ride, booster → virage relevé, chute libre, épingle descendante, montée verticale', () => {
+test('ouvertures du chapitre 1 : booster → wall-ride, booster → virage relevé, chute libre, épingle descendante, montée verticale, booster → looping', () => {
   const by = Object.fromEntries(BUILTIN_TRACKS.map((d) => [d.id, d]));
   assert.match(by.eclats.script, /^start B2 \[tr01l\]/);
   assert.match(by.canyon.script, /^start B BRR/);
   assert.match(by.tremplins.script, /^start G\d V-\d/);
   assert.match(by.verglas.script, /^start \[cvd1\] \[cvd1\]/);
   assert.match(by.grandtour.script, /^start B3 QU WA\d CR/);
+  assert.match(by.spirale.script, /^start B3 OB /);
 });
-test('chute libre : départ à plus de 8 niveaux de haut, déjà lancé (v0 ≥ 60 km/h), réception sur une descente', () => {
+test('ouvertures du chapitre 2 : boosters → rampe de lancement avec anneau, départ en tube, boosters → rebond géant, bifurcation avec plaque moto', () => {
+  const by = Object.fromEntries(BUILTIN_TRACKS.map((d) => [d.id, d]));
+  assert.match(by.lianes.script, /^start B3 UU GR\d DD /);
+  assert.match(by.canopee.script, /^start TI TM\d\.b TO BRR/);
+  assert.match(by.spores.script, /^start B2 S\.j200 G2 V2 /);
+  assert.match(by.serpent.script, /^start Y2\.o /);
+});
+test('ouvertures des chapitres 2 (fin) et 3 : départ au plafond, départ dans un tunnel, descente en moto, départ sur l’eau, décollage en deltaplane', () => {
+  const by = Object.fromEntries(BUILTIN_TRACKS.map((d) => [d.id, d]));
+  assert.match(by.racines.script, /^start\^ B3\^ \[tr31s\]/);
+  assert.match(by.temple.script, /^start S# R# R# /);
+  assert.match(by.lagon.script, /^start \[cdi1\] \[dn2\] \[dn2\] /); assert.equal(by.lagon.params.veh0, 'moto');
+  assert.match(by.recif.script, /^start S\.n S2\.a /);
+  assert.match(by.phare.script, /^start B3 S\.e UU /);
+});
+test('départ au plafond : la course commence bien en gravité inversée, et le départ en moto en moto', () => {
+  const r = new RaceLogic(built.get('racines')).spawnPoint();
+  assert.equal(r.gs, -1);
+  const lg = new RaceLogic(built.get('lagon'));
+  assert.equal(lg.respawn.vehicle, 'moto');
+});
+test('aucun circuit refait n’a de vitesse de départ (v0) : on doit pouvoir repartir du départ À L’ARRÊT (réapparition avant le premier checkpoint)', () => {
+  for (const d of REDONE) assert.ok(!(d.params && d.params.v0), d.id + ' : départ lancé');
+});
+test('chute libre : départ à plus de 8 niveaux de haut, depuis l’arrêt, réception sur une descente', () => {
   const d = BUILTIN_TRACKS.find((x) => x.id === 'tremplins');
-  assert.ok(d.opts.l >= 10 && d.params.v0 >= 60, JSON.stringify([d.opts, d.params]));
-  const tr = built.get('tremplins');
-  assert.equal(tr.v0, d.params.v0);
+  assert.ok(d.opts.l >= 10, JSON.stringify(d.opts));
   assert.ok(runs.get('tremplins').S.airMax > 1, 'la chute doit durer');
 });
 
@@ -80,13 +117,10 @@ const vocabulary = (tr) => {
 test('chaque circuit refait emploie au moins quatre pièces de la 0.9.3 (wall-rides, courbes progressives, inclinaisons, très grands virages)', () => {
   for (const d of REDONE) assert.ok(vocabulary(built.get(d.id)).size >= 4, d.id + ' : ' + [...vocabulary(built.get(d.id))].join(' '));
 });
-test('wall-ride dès le premier circuit, et dans les cinq premiers', () => {
-  for (const d of BUILTIN_TRACKS.slice(0, 5)) assert.ok(built.get(d.id).tiles.some((t) => t.o), d.id + ' sans wall-ride');
+test('wall-ride dès le premier circuit, et dans les six circuits du chapitre 1', () => {
+  for (const d of BUILTIN_TRACKS.slice(0, 6)) assert.ok(built.get(d.id).tiles.some((t) => t.o), d.id + ' sans wall-ride');
 });
-test('les wall-rides se prennent au-dessus de la vitesse de décrochage avec une marge (≥ 130 km/h)', async () => {
-  const { CarPhysics, SIDE_MIN_SPEED } = await import('../js/physics.js');
-  const { RaceLogic, placeAtStart } = await import('../js/raceLogic.js');
-  const { Autopilot } = await import('../js/autopilot.js');
+test('les wall-rides se prennent au-dessus de la vitesse de décrochage avec une marge (≥ 130 km/h)', () => {
   for (const d of REDONE) {
     const tr = buildBuiltin(d);
     const phys = new CarPhysics(tr), logic = new RaceLogic(tr); placeAtStart(phys, logic);
@@ -131,7 +165,7 @@ const C = {
   },
   acrobatique: (P, S) => {
     assert.ok(S.airTotal >= 6, 'temps en l\'air ' + S.airTotal.toFixed(1));
-    assert.ok(S.perfects >= 3, 'réceptions parfaites ' + S.perfects);
+    assert.ok(S.jumps >= 3, 'sauts (vols de plus d\'une seconde) ' + S.jumps);
     assert.ok(P.heightRange >= 8, 'hauteur ' + P.heightRange);
   },
 };
@@ -140,9 +174,7 @@ for (const d of REDONE) {
 }
 
 console.log('Solidité des circuits refaits');
-test('le vérificateur de l’éditeur ne signale rien sur les circuits refaits (ni extrémité libre, ni saut risqué, ni raccord d’orientation)', async () => {
-  const { checkTrack } = await import('../js/editorTools.js');
-  const { orientationIssues } = await import('../js/joins.js');
+test('le vérificateur de l’éditeur ne signale rien sur les circuits refaits (ni extrémité libre, ni saut risqué, ni raccord d’orientation)', () => {
   for (const d of REDONE) {
     const tr = built.get(d.id);
     assert.deepEqual(checkTrack(tr).map((i) => i.msg), [], d.id);
@@ -165,29 +197,45 @@ test('profils sans saut calé : finissables même avec un pilote 25 % plus rapid
     assert.ok(S.ok, `${d.id} à 125 % : ${S.reason}`);
   }
 });
+test('chaque checkpoint est repartable À L’ARRÊT : le pilote qui réapparaît à l’arrêt au point de réapparition finit sans nouvelle chute', () => {
+  for (const d of REDONE) {
+    const n = new RaceLogic(built.get(d.id)).cps.length;
+    for (let k = 1; k <= n; k++) {
+      const S = runTrack(buildBuiltin(d), { rewindAtCp: k });
+      assert.ok(S.ok && S.respawns === 0, `${d.id} : repartir du checkpoint ${k} à l'arrêt ${S.ok ? 'coûte ' + S.respawns + ' réapparitions' : 'échoue (' + S.reason + ')'}`);
+    }
+  }
+});
+test('chaque circuit refait a au moins un checkpoint', () => {
+  for (const d of REDONE) assert.ok(new RaceLogic(built.get(d.id)).cps.length >= 1, d.id + ' sans checkpoint');
+});
 test('médailles à jour : or = temps du pilote, cristal 0,95 ×, argent 1,15 ×, bronze 1,35 × (écart < 2 %)', () => {
   for (const d of REDONE) {
     const P = proposeMedals(d);
     for (const k of Object.keys(P.medals)) assert.ok(Math.abs(d.medals[k] - P.medals[k]) / P.medals[k] < 0.02, `${d.id} ${k} : écrit ${d.medals[k]}, proposé ${P.medals[k]}`);
   }
 });
-test('circuit de sauts : finissable de 54 à 84 m/s (195 à 300 km/h) à l’abord des rampes, sans checkpoint survolable', () => {
+test('circuit de sauts : finissable de 48 à 72 m/s (172 à 260 km/h) à l’abord des rampes, sans checkpoint survolable', () => {
   const d = BUILTIN_TRACKS.find((x) => x.id === 'tremplins');
-  for (const c of [54, 60, 66, 72, 78, 84]) { const S = runTrack(buildBuiltin(d), { vCap: c }); assert.ok(S.ok && S.respawns === 0, `vCap ${c} : ${S.ok ? S.respawns + ' réapparitions' : S.reason}`); }
+  for (const c of [48, 54, 60, 66, 72]) { const S = runTrack(buildBuiltin(d), { vCap: c }); assert.ok(S.ok && S.respawns === 0, `vCap ${c} : ${S.ok ? S.respawns + ' réapparitions' : S.reason}`); }
 });
-test('objectifs bonus réalisables : chrono ≥ médaille d’or, réceptions parfaites ≤ celles du pilote', () => {
+test('objectifs bonus réalisables : chrono ≥ médaille d’or, réceptions parfaites, anneaux et véhicule d’arrivée du pilote', () => {
   for (const d of REDONE) {
     const { S } = runs.get(d.id);
     if (d.goal.id === 'under') assert.ok(d.goal.t >= d.medals.or - 1e-9 && d.goal.t <= d.medals.argent, `${d.id} : ${d.goal.t} s`);
     if (d.goal.id === 'perfect') assert.ok(S.perfects >= d.goal.n, `${d.id} : ${S.perfects} réceptions parfaites`);
+    if (d.goal.id === 'rings') assert.ok(S.rings >= d.goal.n, `${d.id} : ${S.rings} anneaux`);
+    if (d.goal.id === 'vehicle') assert.equal(S.vehicle, d.goal.v, `${d.id} : arrivée en ${S.vehicle}`);
   }
 });
-test('difficulté croissante dans le chapitre (1, 2, 2, 3, 4) et ordre de carrière conservé', () => {
-  assert.deepEqual(BUILTIN_TRACKS.slice(0, 5).map((d) => d.difficulty), [1, 2, 2, 3, 4]);
-  assert.deepEqual(BUILTIN_TRACKS.slice(0, 5).map((d) => d.id), ['eclats', 'canyon', 'tremplins', 'verglas', 'grandtour']);
+test('ordre de carrière : chapitre 1 (difficulté 1, 2, 2, 3, 3, 4), chapitre 2 (lianes … temple) et début du chapitre 3 (lagon, récif, phare)', () => {
+  assert.deepEqual(BUILTIN_TRACKS.slice(0, 6).map((d) => d.difficulty), [1, 2, 2, 3, 3, 4]);
+  assert.deepEqual(BUILTIN_TRACKS.slice(0, 6).map((d) => d.id), ['eclats', 'canyon', 'tremplins', 'spirale', 'verglas', 'grandtour']);
+  assert.deepEqual(BUILTIN_TRACKS.slice(6, 12).map((d) => d.id), ['lianes', 'canopee', 'spores', 'serpent', 'racines', 'temple']);
+  assert.deepEqual(BUILTIN_TRACKS.slice(12, 15).map((d) => d.id), ['lagon', 'recif', 'phare']);
+  assert.deepEqual(BUILTIN_TRACKS.slice(6, 12).map((d) => d.difficulty), [2, 3, 3, 3, 3, 4]);
 });
-test('les nouveaux circuits se partagent et se rechargent (code SHW) sans perte', async () => {
-  const { Track } = await import('../js/track.js');
+test('les nouveaux circuits se partagent et se rechargent (code SHW) sans perte', () => {
   for (const d of REDONE) {
     const tr = built.get(d.id), back = Track.decode(tr.encode());
     assert.equal(back.tiles.length, tr.tiles.length, d.id);
@@ -195,5 +243,5 @@ test('les nouveaux circuits se partagent et se rechargent (code SHW) sans perte'
   }
 });
 
-console.log(failures ? `\n${failures} test(s) en échec.` : '\nTous les tests de la bêta 0.9.6 passent.');
+console.log(failures ? `\n${failures} test(s) en échec.` : '\nTous les tests des niveaux passent.');
 process.exit(failures ? 1 : 0);

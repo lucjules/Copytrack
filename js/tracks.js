@@ -18,10 +18,13 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 15.1, or: 15.9, argent: 18.3, bronze: 21.5 },
   },
   {
-    id: 'lagon', name: 'Lagon Turquoise', decor: 'isles', difficulty: 1,
-    goal: {id: 'rings', n: 1},
-    script: 'start B S2 R S L S2 C S2 UU GR2 DD S2 L S.o S R S2 RR S2 S.o C S2 LL S2 B S R L S2 finish',
-    medals: { cristal: 26.2, or: 27.7, argent: 31.9, bronze: 37.4 },
+    // Chapitre 3 · 1/6 — SPRINT (moto). Ouverture : départ EN MOTO (veh0), lancé par une descente de 7 niveaux au lieu d'un booster. Puis deux
+    // sauts en chapelet avec un anneau turbo chacun, un très grand virage plat et un dernier booster. Presque tout droit.
+    id: 'lagon', name: 'Lagon Turquoise', decor: 'isles', difficulty: 1, profil: 'sprint',
+    goal: { id: 'rings', n: 2 },
+    opts: { l: 8 }, params: { veh0: 'moto' }, pilot: { vCap: 66 },
+    script: 'start [cdi1] [dn2] [dn2] [cdo2] B S [crv1] UU GR2 DD [cdo1] B2 S [crv1] UU GR2 DD [cdo1] S B C S3 HL S2 B2 finish',
+    medals: { cristal: 17, or: 17.9, argent: 20.6, bronze: 24.2 },
   },
   {
     id: 'aurore', name: 'Aurore Naissante', decor: 'polar', difficulty: 1,
@@ -30,10 +33,14 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 19.3, or: 20.3, argent: 23.3, bronze: 27.5 },
   },
   {
-    id: 'lianes', name: 'Lianes Néon', decor: 'jungle', difficulty: 2,
-    goal: {id: 'turbo', n: 1},
-    script: 'start B S2 R S L S R L S2 C S L S S S R S2.m R L S2 B S O S2 L S R S2 C S R S L S2 finish',
-    medals: { cristal: 29.2, or: 31.2, argent: 35.9, bronze: 42 },
+    // Chapitre 2 · 1/6 — SPRINT. Ouverture : trois boosters → rampe de lancement avec un anneau turbo dans le saut. Puis une vague douce,
+    // un pont de lianes sans bordures à plus de 230 km/h (la trajectoire ne pardonne rien), un S de virages relevés et un très grand virage
+    // plat pour finir. Trois virages en tout, aucun serré.
+    id: 'lianes', name: 'Lianes Néon', decor: 'jungle', difficulty: 2, profil: 'sprint',
+    goal: { id: 'rings', n: 1 },
+    opts: { l: 3 }, pilot: { vCap: 66 },
+    script: 'start B3 UU GR2 DD [cdo1] B2 S [crs1] S2 [cds1] B S2_ B_ S2_ BR S2 B BL S2 B C S3 HL S B2 finish',
+    medals: { cristal: 18, or: 18.9, argent: 21.8, bronze: 25.5 },
   },
   {
     id: 'neons', name: 'Néons Express', decor: 'city', difficulty: 2,
@@ -64,15 +71,15 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 22, or: 23, argent: 26.5, bronze: 31.1 },
   },
   {
-    // Chapitre 1 · 3/6 — ACROBATIQUE. Ouverture : chute libre immédiate (départ lancé à 110 km/h depuis une plateforme à 77 m, réception sur une
-    // descente à 38°). Puis trois sauts de plus en plus grands (bosse, grand tremplin à 38°, dernier saut avec checkpoint aérien) et un
-    // petit saut sur un mur. Les réceptions sont de longues pentes descendantes et les checkpoints sont posés AVANT les rampes, jamais
-    // sur une zone de réception : le circuit reste finissable de 195 à 300 km/h à l'abord des sauts (vérifié par tools/test-v096.mjs).
+    // Chapitre 1 · 3/6 — ACROBATIQUE. Ouverture : chute libre immédiate, depuis l'arrêt (la voiture quitte la plateforme de départ, à 77 m, et
+    // se réceptionne sur une descente à 38°). Puis trois sauts de plus en plus grands (bosse, grand tremplin à 38°, dernier saut avec anneau
+    // turbo) et un petit saut sur un mur. Réceptions en longues pentes descendantes ; chaque checkpoint est suivi de deux boosters
+    // avant la rampe : on peut repartir À L'ARRÊT de n'importe quel checkpoint (la réapparition remet la voiture à l'arrêt) et réussir le saut.
     id: 'tremplins', name: 'Tremplins du Crépuscule', decor: 'desert', difficulty: 2, profil: 'acrobatique',
     goal: { id: 'perfect', n: 3 },
-    opts: { l: 16 }, params: { v0: 110 }, pilot: { vCap: 60 },
-    script: 'start G2 V-5 [dn4] [cdo2] B S C [crv1] UU G2 DD [cdo1] S3 CBR1 S [tr01s] S2< [tr10s] S LL B S C S [crv2] UX G3 DX DX [cdo2] S3 B UU GC2 DD [cdo1] S2 finish',
-    medals: { cristal: 24.1, or: 25.3, argent: 29.1, bronze: 34.2 },
+    opts: { l: 16 }, pilot: { vCap: 60 },
+    script: 'start G1 V-5 [dn4] [cdo2] S C B2 S [crv1] UU G2 DD [cdo1] S3 CBR1 S [tr01s] S2< [tr10s] S LL S C B2 S2 [crv2] UX G3 DX DX [cdo2] S3 C B2 S UU GR2 DD [cdo1] S2 finish',
+    medals: { cristal: 27.8, or: 29.3, argent: 33.7, bronze: 39.6 },
   },
   {
     id: 'hyper', name: 'Hyperboucle', decor: 'city', difficulty: 3,
@@ -81,34 +88,54 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 31.3, or: 32.7, argent: 37.5, bronze: 44.1 },
   },
   {
-    id: 'canopee', name: 'Canopée Suspendue', decor: 'jungle', difficulty: 3,
-    goal: {id: 'turbo', n: 2},
-    script: 'start B S2 R S L S2 B S O S2 R S S S L S B S OL S2 C S BL S R S2 B S2 L R S2 finish',
-    medals: { cristal: 27.7, or: 29.1, argent: 33.5, bronze: 39.3 },
+    // Chapitre 2 · 2/6 — SPEEDWAY. Ouverture : départ en tube, propulsé par trois boosters, qui débouche directement sur un virage relevé 3×3.
+    // Une succession de S relevés (droite / gauche), deux vagues douces, un wall-ride de 5 cases sur le mur gauche (l'autre côté que le canyon
+    // du chapitre 1) et un tube à pleine vitesse. Aucun virage serré, plus de 250 km/h pendant près de la moitié du tour.
+    id: 'canopee', name: 'Canopée', decor: 'jungle', difficulty: 3, profil: 'speedway',
+    goal: { id: 'under', t: 25 },
+    opts: { l: 5 }, pilot: { vCap: 70 },
+    script: 'start TI TM3.b TO BRR S B BLL S [crs1] S2 [cds1] S [tr01l] S5< [tr10l] C B BRR S [crs1] S [cds1] B BLL S2 TB BRR S B BLL S2 B2 finish',
+    medals: { cristal: 22.8, or: 24, argent: 27.6, bronze: 32.4 },
   },
   {
-    id: 'spores', name: 'Spores Sauteuses', decor: 'jungle', difficulty: 3,
-    goal: {id: 'perfect', n: 2},
-    script: 'start B S2 L S R S2 B S.j G1 S2 R L C S2 RR S B S2 GU2 S GD2 S LL S R S L S2 B S.j G1 S2 C S2 R L S2 finish',
-    medals: { cristal: 29.9, or: 31.8, argent: 36.5, bronze: 42.8 },
+    // Chapitre 2 · 3/6 — ACROBATIQUE (rebonds). Ouverture : deux boosters → rebond géant (palier 2 niveaux plus haut). Quatre champignons en
+    // escalier en zigzag (+8 niveaux), puis un long plongeon. Un checkpoint avant chaque rebond, suivi de deux boosters : on repart de chacun
+    // à l'arrêt. La portée d'un rebond est proportionnelle à la vitesse (et non à son carré) : le circuit est finissable à ±40 % de vitesse.
+    id: 'spores', name: 'Spores', decor: 'jungle', difficulty: 3, profil: 'acrobatique',
+    goal: { id: 'perfect', n: 4 },
+    opts: { l: 2 },
+    script: 'start B2 S.j200 G2 V2 S3 RR C B2 S.j200 G2 V2 S3 LL C B2 S.j200 G2 V2 S3 RR C B2 S.j200 G2 V2 S3 LL S B [cdi2] DX [cdo2] B [crs1] S [cds1] B2 finish',
+    medals: { cristal: 27.8, or: 29.3, argent: 33.7, bronze: 39.5 },
   },
   {
-    id: 'recif', name: 'Récif Corallien', decor: 'isles', difficulty: 3,
-    goal: {id: 'vehicle', v: 'car'},
-    script: 'start B S2 R S2 S.n S3.a R.a S2.a L.a S2.a S.n S2 C S L S BR S B S UU G2 DD S2 C S2 L R S2 finish',
-    medals: { cristal: 28.6, or: 29.5, argent: 34, bronze: 39.9 },
+    // Chapitre 3 · 2/6 — TECHNIQUE (bateau). Ouverture : départ SUR L'EAU (plaque bateau juste après la ligne, slalom R L R L dans un chenal).
+    // Le bateau glisse et freine peu : les épingles se font en voiture, entre deux chenaux, avec un petit saut sur un mur. L'arrivée se franchit
+    // en bateau (objectif bonus), le chenal final sortant directement sur la ligne.
+    id: 'recif', name: 'Récif', decor: 'isles', difficulty: 3, profil: 'technique',
+    goal: { id: 'vehicle', v: 'boat' },
+    opts: { l: 4 },
+    script: 'start S.n S2.a R.a L.a R.a L.a S.a S.n B2 S [tr01s] S2< [tr10s] S3 R R B S2 L S L B S3 [cvd05] [cvdL05] B S C S.n S2.a R.a L.a R.a L.a S2.a finish',
+    medals: { cristal: 27.9, or: 29.4, argent: 33.8, bronze: 39.7 },
   },
   {
-    id: 'phare', name: 'Le Phare', decor: 'isles', difficulty: 3,
-    goal: {id: 'rings', n: 1},
-    script: 'start B S2 R S L S2 C S2 S.e S2 UU GR7 DD S2 S.e S R S L S3_ B S2 C S2 RR S2 finish',
-    medals: { cristal: 27, or: 28.2, argent: 32.5, bronze: 38.1 },
+    // Chapitre 3 · 3/6 — ACROBATIQUE (deltaplane). Ouverture : trois boosters, plaque deltaplane et vol de cinq cases au-dessus de la mer. Puis
+    // deux sauts de voiture avec anneau turbo, séparés par la montée du phare (hélice de quatre grandes courbes inclinées, +8 niveaux) et un
+    // plongeon. La piste qui suit un vol plané est longue : selon l'élan, le deltaplane se pose plus ou moins loin.
+    id: 'phare', name: 'Phare', decor: 'isles', difficulty: 3, profil: 'acrobatique',
+    goal: { id: 'rings', n: 2 },
+    opts: { l: 4 },
+    script: 'start B3 S.e UU GR5 DD S5 S.e S C B2 S [crv1] UU GR2 DD [cdo1] S2 CBR2 CBR2 CBR2 CBR2 S C B [cdi2] DX [cdo2] B S2 [crv1] UU GR2 DD [cdo1] S2 B finish',
+    medals: { cristal: 31.4, or: 33, argent: 38, bronze: 44.6 },
   },
   {
-    id: 'serpent', name: 'Le Serpent', decor: 'jungle', difficulty: 3,
-    goal: {id: 'vehicle', v: 'moto'},
-    script: 'start B S2 R L R L S2 C S.o S2 R S L S2 B S O S2 C S L R L R S2 S.o S2 B S2 RR S2 LL S.o S2 finish',
-    medals: { cristal: 29.7, or: 31.8, argent: 36.4, bronze: 42.8 },
+    // Chapitre 2 · 4/6 — TECHNIQUE (moto). Ouverture : bifurcation dès le départ ; la voie de droite porte la plaque moto (c'est elle qu'il faut
+    // prendre pour finir en moto). Douze virages serrés en slaloms (R L R L), une descente en lacets, un petit saut sur un mur et un
+    // booster à chaque relance. Deux autres plaques : la voiture au milieu, la moto de nouveau avant l'arrivée.
+    id: 'serpent', name: 'Serpent', decor: 'jungle', difficulty: 3, profil: 'technique',
+    goal: { id: 'vehicle', v: 'moto' },
+    opts: { l: 8 },
+    script: 'start Y2.o B S [cvd05] [cvdL05] [cvd05] [cvdL05] B S S.o S [tr01s] S2< [tr10s] S R L R L B S2 C S.o S R L R L B S2 B finish',
+    medals: { cristal: 23.5, or: 24.7, argent: 28.4, bronze: 33.4 },
   },
   {
     id: 'coulee', name: 'Coulée Ardente', decor: 'volcano', difficulty: 3, pilot: { vCap: 40 },
@@ -129,6 +156,16 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 30.9, or: 32.2, argent: 37, bronze: 43.4 },
   },
   {
+    // Chapitre 1 · 4/6 — ROLLERCOASTER (spirale ; placé avant Lac Gelé pour que deux Rollercoasters ne se suivent pas). Ouverture : trois boosters puis directement un grand looping. Hélice montante de quatre
+    // grandes courbes inclinées (16 niveaux, 78 m), point de contrôle au sommet, plongeon de 16 niveaux à 38° et slalom de wall-rides
+    // gauche / droite en bas. Le plongeon passe à plus de 250 km/h : les murs se prennent avec une grande marge.
+    id: 'spirale', name: 'Spirale Prismatique', decor: 'desert', difficulty: 3, profil: 'rollercoaster',
+    goal: { id: 'norespawn' },
+    opts: { l: 2 },
+    script: 'start B3 OB S B CBR4 CBR4 CBR4 CBR4 S C [cdi2] DX DX DX [cdo2] B S [tr01s] S2< [tr10s] S [tr02s] S3> [tr20s] S2 B2 finish',
+    medals: { cristal: 24.3, or: 25.6, argent: 29.4, bronze: 34.6 },
+  },
+  {
     // Chapitre 1 · 4/6 — TECHNIQUE. Ouverture : une épingle descendante dès le départ. Onze virages serrés, des freinages forts avant chaque
     // épingle et un booster à chaque sortie pour exploiter la courbe d'accélération ; de la glace avant les épingles (on ne freine plus
     // dessus), une chicane sur un mur et un checkpoint dans un virage.
@@ -145,10 +182,14 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 21.2, or: 22.4, argent: 25.7, bronze: 30.1 },
   },
   {
-    id: 'racines', name: 'Racines Boueuses', decor: 'jungle', difficulty: 3,
-    goal: {id: 'turbo', n: 2},
-    script: 'start B S2 R S2 L S R S.d L S2 C S R L S2 S S R S L S2.w60 B S2 Y2.d S R S L S2 finish',
-    medals: { cristal: 27.9, or: 29.9, argent: 34.7, bronze: 41.2 },
+    // Chapitre 2 · 5/6 — ROLLERCOASTER (tonneaux). Ouverture : départ AU PLAFOND (la course commence en gravité inversée, comme des racines qui
+    // pendent). Deux tonneaux complets autour de l'axe de la route (plafond → mur gauche → sol → mur droit → plafond), un plongeon de
+    // 8 niveaux, un virage relevé, de la boue et du vent, puis un double looping. Les checkpoints sont suivis de boosters.
+    id: 'racines', name: 'Racines Boueuses', decor: 'jungle', difficulty: 3, profil: 'rollercoaster',
+    goal: { id: 'norespawn' },
+    opts: { l: 10 },
+    script: 'start^ B3^ [tr31s] S< [tr10s] [tr02s] S> [tr23s] S^ [tr31s] S< [tr10s] S C B [cdi2] DX [cdo2] S BLL S S.d S.w100 S C B3 OD S2 B finish',
+    medals: { cristal: 19.8, or: 20.9, argent: 24, bronze: 28.2 },
   },
   {
     id: 'glacier', name: 'Glacier Magnétique', decor: 'polar', difficulty: 4,
@@ -169,10 +210,14 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 28.4, or: 30, argent: 34.8, bronze: 41.2 },
   },
   {
-    id: 'temple', name: 'Temple Perdu', decor: 'jungle', difficulty: 4,
-    goal: {id: 'norespawn'},
-    script: 'start B S2 R S L S2# R# S# L# S2 C S2 B S2 QU WA2 CR S2 R S L S2 D2 S2 C S TB S L S R S2 finish',
-    medals: { cristal: 28.3, or: 29.6, argent: 34.1, bronze: 40 },
+    // Chapitre 2 · 6/6 — TECHNIQUE (tunnels). Ouverture : départ dans un tunnel, avec une épingle immédiate. Douze virages serrés (épingles dans
+    // un tube, hélice descendante de quatre virages, slalom R L R L sous un tunnel), un tube pris à pleine vitesse et un booster à
+    // chaque relance : freiner fort, relancer fort.
+    id: 'temple', name: 'Temple', decor: 'jungle', difficulty: 4, profil: 'technique',
+    goal: { id: 'norespawn' },
+    opts: { l: 8 },
+    script: 'start S# R# R# B# S2# B S3 TI TM2 TO S R R B S2 [cdi1] [dn2] [cdo1] S C S [cvd05] [cvd05] [cvd05] [cvd05] S2 B S R# L# R# L# S2# B finish',
+    medals: { cristal: 24.6, or: 25.9, argent: 29.7, bronze: 34.9 },
   },
   {
     id: 'tours', name: 'Tours Jumelles', decor: 'city', difficulty: 4, pilot: { vCap: 40 },
@@ -225,12 +270,6 @@ export const BUILTIN_TRACKS = [
     goal: {id: 'perfect', n: 2},
     script: 'start B S2 B S.g30 S2 UU G10 DD S2 C S.g100 S2 R S L S2 RR S B S2 S.e S2 UU G8 DD S S.e S2 C S2 L S R S2 finish',
     medals: { cristal: 30.8, or: 32.2, argent: 37, bronze: 43.4 },
-  },
-  {
-    id: 'spirale', name: 'Spirale Prismatique', decor: 'desert', difficulty: 4,
-    goal: {id: 'norespawn'},
-    script: 'start S2 R S U S R S U R S3 C S R S GU2 R S2 R S B S5 BR S D3 S KR S2 B S2 finish',
-    medals: { cristal: 27.8, or: 29.3, argent: 33.8, bronze: 39.6 },
   },
   {
     id: 'couronne', name: 'Couronne Boréale', decor: 'polar', difficulty: 5,

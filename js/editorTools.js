@@ -1,6 +1,6 @@
 // Outils de l'éditeur (v1.5) : sélection de zone et presse-papiers, vérificateur de
 // circuit, miniatures vues de dessus. Aucun rendu 3D ici : seulement des données.
-import { CELL, LEVEL_H, MAX_LEVEL } from './constants.js';
+import { CELL, LEVEL_H, MAX_LEVEL, SURF_PHYS } from './constants.js';
 import { PIECES, forkBranchX, localToWorld, baseY, cpKind } from './pieces.js';
 import { Track } from './track.js';
 import { centerlineWorld } from './ribbons.js';
@@ -232,7 +232,9 @@ export function checkTrack(track) {
       if (along < (flip ? -0.5 : 1) || along > CELL * maxJump || side > 5) continue;
       // Une plaque de gravité inversée envoie la voiture d'un niveau à l'autre (sol ↔ plafond) : pas de limite de hauteur.
       // (Sauf pour une extrémité d'ENTRÉE : c'est la réception d'un saut, et le départ du saut peut être bien plus haut : chute libre.)
-      if (f.y > e.y + LEVEL_H * 1.2 && !flip && !e.entry) continue;
+      // Un revêtement Rebond lance la voiture vers le haut : la réception peut être plus haute, jusqu'aux 4/5 de la hauteur du rebond.
+      const hop = e.tile.s === 'bounce' ? 0.8 * (SURF_PHYS.bounce * ((e.tile.p || 100) / 100)) ** 2 / (2 * SURF_PHYS.gravity) : LEVEL_H * 1.2;
+      if (f.y > e.y + hop && !flip && !e.entry) continue;
       if (!land || along < dist) { land = f; dist = along; }
     }
     if (land) {
@@ -242,7 +244,7 @@ export function checkTrack(track) {
       const ramp = (PIECES[e.tile.t].rise || 0) > 0 || e.tile.t === 'crest90' || e.tile.s === 'bounce' || e.tile.s === 'boost';   // toute pièce qui monte (pente, tremplin, inclinaison 4, courbe…) lance la voiture
       if (cells >= 6 / Math.max(0.35, lowG) && !glider) issues.push({ tile: e.tile, level: 'warn', msg: `Saut de ${cells} cases : très long sans deltaplane.` });
       else if (!ramp && cells >= 2 && land.y >= e.y - 1) issues.push({ tile: e.tile, level: 'warn', msg: `Saut de ${cells} cases sans tremplin : la voiture risque de tomber.` });
-      if (land.y > e.y + 0.6 && e.tile.s !== 'flip' && land.tile.s !== 'flip') issues.push({ tile: land.tile, level: 'warn', msg: 'Arrivée de saut plus haute que le départ.' });
+      if (land.y > e.y + 0.6 && e.tile.s !== 'flip' && land.tile.s !== 'flip' && e.tile.s !== 'bounce') issues.push({ tile: land.tile, level: 'warn', msg: 'Arrivée de saut plus haute que le départ.' });
       // Les éventuels anneaux sur le trajet sont « sur la route ».
       for (const t of track.tiles) {
         if (PIECES[t.t].kind !== 'ring') continue;

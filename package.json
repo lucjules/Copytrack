@@ -1,6 +1,6 @@
 {
   "name": "copytrack",
-  "version": "0.9.6",
+  "version": "0.9.8",
   "private": true,
   "type": "module",
   "description": "Jeu de course contre-la-montre low-poly avec éditeur de circuits, dans le navigateur.",
@@ -9,7 +9,7 @@
     "sim": "node tools/sim.mjs",
     "sw": "node tools/gen-sw.mjs",
     "build:function": "node tools/build-function.mjs",
-    "test": "node tools/test-editor.mjs && node tools/test-physics.mjs && node tools/test-camera.mjs && node tools/test-pick.mjs && node tools/test-mesh.mjs && node tools/test-phase2.mjs && node tools/test-phase3.mjs && node tools/test-quality.mjs && node tools/test-records.mjs && node tools/test-hud.mjs && node tools/test-account.mjs && node tools/test-net.mjs && node tools/test-fixes.mjs && node tools/test-v092.mjs && node tools/test-v093.mjs && node tools/test-v094.mjs && node tools/test-v095.mjs && node tools/test-v096.mjs && node tools/audit-pieces.mjs > /dev/null && node tools/check-generated.mjs && node tools/sim.mjs",
+    "test": "node tools/test-editor.mjs && node tools/test-physics.mjs && node tools/test-camera.mjs && node tools/test-pick.mjs && node tools/test-mesh.mjs && node tools/test-phase2.mjs && node tools/test-phase3.mjs && node tools/test-quality.mjs && node tools/test-records.mjs && node tools/test-hud.mjs && node tools/test-account.mjs && node tools/test-net.mjs && node tools/test-fixes.mjs && node tools/test-v092.mjs && node tools/test-v093.mjs && node tools/test-v094.mjs && node tools/test-v095.mjs && node tools/test-niveaux.mjs && node tools/audit-pieces.mjs > /dev/null && node tools/check-generated.mjs && node tools/sim.mjs",
     "test:sql": "bash tools/test-accounts-sql.sh"
   },
   "license": "MIT"
