@@ -102,6 +102,15 @@ html, body {
   width: min(340px, 100%);
 }
 
+.menu-back {
+  display: inline-block;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 14px;
+  text-decoration: none;
+}
+.menu-back:hover, .menu-back:focus-visible { color: inherit; text-decoration: underline; }
+
 .menu-foot {
   position: absolute;
   bottom: 14px;
@@ -804,6 +813,7 @@ body.touch kbd { display: none; }
   .menu-buttons { display: grid; grid-template-columns: 1fr 1fr; width: min(560px, 100%); gap: 6px; }
   .menu-buttons .btn.big { padding: 7px 10px; font-size: 14px; }
   .menu-foot { display: none; }
+  .menu-back { margin-top: 6px; font-size: 12px; }
 }
 
 /* ---- Communauté ---- */
