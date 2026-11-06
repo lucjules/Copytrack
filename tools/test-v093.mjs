@@ -6,7 +6,7 @@ import { test, finish } from './harness.mjs';
 
 const { Track, scriptTrack, b64encode } = await import('../js/track.js');
 const P = await import('../js/pieces.js');
-const { PIECES, PIECE_ORDER, GEN_IDS, flagAllowed, surfaceAllowed, sampleLocal, baseY, profH, profD, isSideTile, isOriented, hasNoRails, tileOri, ORIENTS, ROLL_PASSAGES } = P;
+const { PIECES, PIECE_ORDER, GEN_IDS, flagAllowed, surfaceAllowed, sampleLocal, profH, profD, isSideTile, isOriented, hasNoRails, tileOri, ORIENTS, ROLL_PASSAGES } = P;
 const { FAMILIES, FAMILY_ORDER, familyOf, resolve, withTrait, validValues } = await import('../js/families.js');
 const { CarPhysics, CAR } = await import('../js/physics.js');
 const { RaceLogic, placeAtStart } = await import('../js/raceLogic.js');
@@ -14,12 +14,11 @@ const { Autopilot } = await import('../js/autopilot.js');
 const { InputRecorder, quantSteer } = await import('../js/replay.js');
 const { PHYS_VER } = await import('../js/version.js');
 const { replayTime } = await import('../js/verify.js');
-const { DT, CELL, LEVEL_H, HALF } = await import('../js/constants.js');
+const { DT, HALF } = await import('../js/constants.js');
 const { GeoBuilder, FxBuilder } = await import('../js/geo.js');
 const { buildTileInto, stripsFor } = await import('../js/trackMesh.js');
 const { ribbonOf, frameLocal } = await import('../js/ribbons.js');
 const { EditorSession } = await import('../js/editor.js');
-const { armOption: armedOptions } = await import('../js/pieces.js');
 const { auditPieces } = await import('./audit-pieces.mjs');
 const { orientationIssues, endRolls, rollName } = await import('../js/joins.js');
 const { MIRROR_TYPES } = await import('../js/inspector.js');
@@ -129,10 +128,10 @@ test('normalize : o ∈ {1, 2} sur une ligne ; refusé sur le reste ; le plafond
   assert.equal(tileOri(w), 1); assert.equal(tileOri(tile({ t: 'straight', v: 1 })), 3); assert.equal(tileOri(tile({ t: 'straight' })), 0);
 });
 test('revêtements sur un mur : « seulement sur du plat » (eau, rebond, bateau) refusés ; les autres fonctionnent', () => {
-  assert.equal(surfaceAllowed('straight', 'boost', false, 1), true);
-  assert.equal(surfaceAllowed('straight', 'bounce', false, 1), false);
-  assert.equal(surfaceAllowed('straight', 'water', false, 1), false);
-  assert.equal(surfaceAllowed('straight', 'bounce', false, 0), true);
+  assert.equal(surfaceAllowed('straight', 'boost', 1), true);
+  assert.equal(surfaceAllowed('straight', 'bounce', 1), false);
+  assert.equal(surfaceAllowed('straight', 'water', 1), false);
+  assert.equal(surfaceAllowed('straight', 'bounce', 0), true);
   assert.equal(tile({ t: 'straight', o: 1, s: 'bounce' }).s, '');
   assert.equal(tile({ t: 'straight', o: 1, s: 'ice', p: 150 }).s, 'ice');
 });
@@ -492,7 +491,8 @@ function randomChain(seed, len = 9) {
   return null;
 }
 test('150 circuits tirés au hasard (pentes douces, virages, hélices, murs, plafond, transitions franches et douces) : tous se roulent du départ à l’arrivée sans chute ni long envol (moins de 2 s)', () => {
-  let done = 0, bad = [];
+  let done = 0;
+  const bad = [];
   for (let seed = 1; seed <= 150; seed++) {
     const script = randomChain(seed);
     if (!script) continue;

@@ -79,7 +79,7 @@ class Account {
 
   _adopt(st) {
     this.state = st;
-    online.useAccount(st.session, st.username);
+    online.useAccount(st.session);
     online.onAccountSession = (session) => { if (this.state) { this.state.session = session; setGlobal('account', this.state); } };
   }
 

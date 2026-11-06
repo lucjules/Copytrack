@@ -314,7 +314,7 @@ export class Inspector {
   }
 
   // Un champ numérique lié : relit le modèle (sauf pendant la saisie), écrit à la validation.
-  _num(label, get, set, { step = 1, min, max, live = false } = {}) {
+  _num(label, get, set, { step = 1, min, max } = {}) {
     const input = h('input', { type: 'number', step, min, max, inputmode: 'decimal' });
     const commit = () => {
       const v = parseFloat(input.value);
@@ -393,7 +393,7 @@ export class Inspector {
     // Revêtement (une bifurcation en a deux : voie directe / voie déportée)
     const fork = P.kind === 'fork';
     group(fork ? 'Revêtement · voie directe' : 'Revêtement');
-    const surfs = SURFACE_ORDER.filter((s) => s === (t.s || '') || surfaceAllowed(t.t, s, !!t.v, t.o | 0));
+    const surfs = SURFACE_ORDER.filter((s) => s === (t.s || '') || surfaceAllowed(t.t, s, t.o | 0));
     rows.push(this._select('Type', surfs.map((s) => [s, SURFACES[s].label]), () => t.s || '', (v) => ed.track.setSurface(t, v, SURFACES[v] && SURFACES[v].def != null ? ed._surfParamValue(v) : 0) || true));
     const S = SURFACES[t.s || ''];
     if (S && S.def != null) {
@@ -401,7 +401,7 @@ export class Inspector {
     }
     if (fork) {
       group('Revêtement · voie déportée');
-      const s2s = SURFACE_ORDER.filter((s) => s && (s === (t.s2 || '') || surfaceAllowed(t.t, s, !!t.v, t.o | 0)));
+      const s2s = SURFACE_ORDER.filter((s) => s && (s === (t.s2 || '') || surfaceAllowed(t.t, s, t.o | 0)));
       rows.push(this._select('Type', [['', 'Comme la voie directe'], ['-', 'Route normale'], ...s2s.map((s) => [s, SURFACES[s].label])], () => t.s2 || '',
         (v) => ed.track.setSurface2(t, v, v && SURFACES[v] && SURFACES[v].def != null ? ed._surfParamValue(v) : 0) || true));
       const S2 = SURFACES[t.s2 || ''];

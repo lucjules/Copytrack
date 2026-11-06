@@ -32,7 +32,7 @@ class Hash {
     this.b = Math.imul(((this.b ^ x) + 0x7f4a7c15) | 0, 0x85ebca6b) >>> 0;
   }
   f(x) {
-    this.view.setFloat64(0, x !== x ? NaN : x, true);
+    this.view.setFloat64(0, Number.isNaN(x) ? NaN : x, true);
     this.word(this.view.getUint32(0, true)); this.word(this.view.getUint32(4, true));
   }
   i(x) { this.word(x >>> 0); }

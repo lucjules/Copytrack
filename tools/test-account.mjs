@@ -82,7 +82,7 @@ globalThis.fetch = async (url, init = {}) => {
 const storage = await import('../js/storage.js');
 const { online } = await import('../js/online.js');
 const { account, checkPseudo, checkPassword, accountEmail } = await import('../js/account.js');
-const { mergeSaves, mergeProfile, isSyncKey, toCloud } = await import('../js/cloudsave.js');
+const { mergeSaves, mergeProfile, isSyncKey } = await import('../js/cloudsave.js');
 const { profile, saveProfile, reloadProfile } = await import('../js/profile.js');
 
 // Remet les singletons (client en ligne, compte, portée) comme au chargement d'une page sur cet appareil.

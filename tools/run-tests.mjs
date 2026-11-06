@@ -51,7 +51,8 @@ const jobs = [
 ];
 all.push(...await pool(jobs, Math.max(2, availableParallelism())));
 
-let ok = 0, bad = 0, failedFiles = [];
+let ok = 0, bad = 0;
+const failedFiles = [];
 for (const r of all.sort((a, b) => a.file.localeCompare(b.file))) {
   const lines = r.out.split('\n');
   const nOk = lines.filter((l) => /^ {2}ok {3}/.test(l)).length;

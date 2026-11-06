@@ -7,7 +7,6 @@ import { RaceLogic } from '../js/raceLogic.js';
 import { Simulation, placeAtRespawn } from '../js/simulation.js';
 import { Autopilot } from '../js/autopilot.js';
 import { Track } from '../js/track.js';
-import { PIECES } from '../js/pieces.js';
 import { DT, CELL } from '../js/constants.js';
 
 const args = process.argv.slice(2);

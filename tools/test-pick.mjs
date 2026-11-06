@@ -2,14 +2,13 @@
 import assert from 'node:assert/strict';
 import * as THREE from '../js/vendor/three.module.min.js';
 import { Track } from '../js/track.js';
-import { CELL, LEVEL_H, ROAD_TOP } from '../js/constants.js';
+import { CELL, ROAD_TOP } from '../js/constants.js';
 import { pickObjects, rayBox, LAYER_TRACK, LAYER_DECO, LAYER_ALL, ERASE_FILTERS } from '../js/editorPick.js';
 import { yawOf } from '../js/inspector.js';
 import { test, finish } from './harness.mjs';
 
 // Rayon descendant verticalement sur (x, z), ou oblique depuis une caméra.
 const down = (x, z, y = 100) => new THREE.Ray(new THREE.Vector3(x, y, z), new THREE.Vector3(0, -1, 0));
-const from = (o, to) => new THREE.Ray(new THREE.Vector3(...o), new THREE.Vector3(...to).sub(new THREE.Vector3(...o)).normalize());
 const mid = (c) => (c + 0.5) * CELL;
 
 function scene() {

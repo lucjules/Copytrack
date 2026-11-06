@@ -1756,7 +1756,7 @@ class App {
     }
     const items = [...root.querySelectorAll('button:not([disabled]), .card, .gcard, select, input[type=checkbox], input[type=range]')].filter(visible);
     if (!items.length) return;
-    let cur = document.activeElement;
+    const cur = document.activeElement;
     if (!items.includes(cur)) { items[0].focus(); return; }
     if (m.confirm) { cur.click(); return; }
     if (cur.type === 'range' && m.dx) {

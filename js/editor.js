@@ -1239,7 +1239,7 @@ export class EditorSession {
     const t = this._targetTile();
     if (!t) return;
     const s = this.tool.slice(5);
-    if (!surfaceAllowed(t.t, s, !!t.v, t.o | 0)) {
+    if (!surfaceAllowed(t.t, s, t.o | 0)) {
       if (!painting) { this.app.ui.flash(`${SURFACES[s].label} : impossible ici`); this.app.audio.error(); }
       return;
     }
@@ -1843,7 +1843,7 @@ export class EditorSession {
           this._highlightTile(t, this._fillRefusal(t) ? '#ff3b5c' : '#ffb347');
         } else if (this.tool.startsWith('surf:')) {
           const s = this.tool.slice(5);
-          this._highlightTile(t, surfaceAllowed(t.t, s, !!t.v, t.o | 0) ? (s ? tint(s, this._surfParamValue(s)) : '#ffffff') : '#ff3b5c');
+          this._highlightTile(t, surfaceAllowed(t.t, s, t.o | 0) ? (s ? tint(s, this._surfParamValue(s)) : '#ffffff') : '#ff3b5c');
         } else {
           const m = MODS.find((x) => x.id === this.tool);
           this._highlightTile(t, m && flagAllowed(t.t, m.flag, t, m.val || 1) ? '#8f7cff' : '#ff3b5c');

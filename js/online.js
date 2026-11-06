@@ -52,7 +52,7 @@ class OnlineClient {
   }
 
   // Passe en mode compte : la session est celle du compte, jamais une session anonyme de remplacement.
-  useAccount(session, username) {
+  useAccount(session) {
     this.kind = 'account';
     this.session = session;
     this.player = null;                  // le profil en ligne (table players) est créé au premier besoin : ensurePlayer

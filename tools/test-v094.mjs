@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
 
-const { Track, scriptTrack } = await import('../js/track.js');
+const { scriptTrack } = await import('../js/track.js');
 const { CarPhysics, CAR, MOTO, SIDE_MIN_SPEED, SIDE_GRACE } = await import('../js/physics.js');
 const { RaceLogic, placeAtStart } = await import('../js/raceLogic.js');
 const { PHYS_VER } = await import('../js/version.js');
@@ -25,7 +25,7 @@ test('PHYS_VER 25 ; vitesse visée par le moteur et turbo nettement plus hautes 
   assert.ok(MOTO.maxSpeed >= 85);
 });
 test('la courbe est longue : 100 km/h en 2,5 à 4 s, 180 km/h entre 6 et 9 s, 216 km/h seulement après 9 s', () => {
-  const { tr, ph } = straight(60);
+  const { ph } = straight(60);
   const t = {};
   for (let k = 0; k < 40 / DT; k++) {
     ph.clock = k; ph.step(GAS);
@@ -36,7 +36,7 @@ test('la courbe est longue : 100 km/h en 2,5 à 4 s, 180 km/h entre 6 et 9 s, 21
   assert.ok(t['216'] > 9, '216 km/h : ' + t['216']);
 });
 test('la poussée diminue avec la vitesse (récompense une bonne sortie de virage) : de 30 à 50 m/s on met bien plus longtemps que de 0 à 20', () => {
-  const { tr, ph } = straight(60);
+  const { ph } = straight(60);
   let t20 = null, t30 = null, t50 = null;
   for (let k = 0; k < 40 / DT; k++) {
     ph.clock = k; ph.step(GAS);
@@ -47,7 +47,7 @@ test('la poussée diminue avec la vitesse (récompense une bonne sortie de virag
   assert.ok(t50 - t30 > 1.5 * t20, `0→20 : ${t20.toFixed(2)} s, 30→50 : ${(t50 - t30).toFixed(2)} s`);
 });
 test('une voiture lancée à 40 m/s en sortie de virage garde une avance de plus de 50 m sur une voiture lancée à 25 m/s après 8 s (le gain se paie en distance)', () => {
-  const run = (v0) => { const { tr, ph } = straight(60); ph.vel.z = -v0; ph.fwdSpeed = v0; ph.graceT = 0; for (let k = 0; k < 8 / DT; k++) { ph.clock = k; ph.step(GAS); } return { d: -ph.pos.z, v: ph.speed }; };
+  const run = (v0) => { const { ph } = straight(60); ph.vel.z = -v0; ph.fwdSpeed = v0; ph.graceT = 0; for (let k = 0; k < 8 / DT; k++) { ph.clock = k; ph.step(GAS); } return { d: -ph.pos.z, v: ph.speed }; };
   const fast = run(40), slow = run(25);
   assert.ok(fast.d - slow.d > 50 && fast.v - slow.v > 2, `écart après 8 s : ${(fast.d - slow.d).toFixed(0)} m, ${(fast.v - slow.v).toFixed(1)} m/s`);
 });
@@ -55,7 +55,7 @@ test('une voiture lancée à 40 m/s en sortie de virage garde une avance de plus
 console.log('Murs');
 function hitWall(v0, steer = 0.5) {
   // Voiture lancée de biais contre la bordure : on mesure la vitesse juste avant et 0,5 s après le premier choc.
-  const { tr, ph } = straight(20);
+  const { ph } = straight(20);
   ph.vel.z = -v0; ph.fwdSpeed = v0; ph.graceT = 0;
   let before = v0, hit = null;
   for (let k = 0; k < 6 / DT; k++) {
@@ -74,7 +74,7 @@ test('un choc franc contre un mur fait perdre au moins 30 % de la vitesse imméd
   assert.ok(b.after < 0.55 * b.before, `55 m/s : ${b.before.toFixed(1)} → ${b.after.toFixed(1)}`);
 });
 test('le choc rebondit et fait pivoter la voiture, qui encaisse (moteur et adhérence réduits un instant)', () => {
-  const { tr, ph } = straight(20);
+  const { ph } = straight(20);
   ph.vel.z = -40; ph.fwdSpeed = 40; ph.graceT = 0;
   let spun = 0, stunned = false, hits = 0;
   for (let k = 0; k < 4 / DT; k++) {
@@ -84,7 +84,7 @@ test('le choc rebondit et fait pivoter la voiture, qui encaisse (moteur et adhé
   assert.ok(hits >= 1 && spun > 0.8 && stunned, `chocs ${hits}, rotation ${spun.toFixed(2)} rad/s, encaissement ${stunned}`);
 });
 test('racler un mur freine en continu même sans vrai choc', () => {
-  const { tr, ph } = straight(20);
+  const { ph } = straight(20);
   ph.vel.z = -40; ph.fwdSpeed = 40; ph.graceT = 0;
   // la voiture est collée contre la bordure : on la maintient en contact en braquant légèrement
   let k = 0, contact = 0;

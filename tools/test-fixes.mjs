@@ -82,7 +82,7 @@ test('défi du jour : seules les dates plausibles sont acceptées', () => {
 console.log('Dalles solides');
 test('un deltaplane qui monte sous une dalle ne la traverse pas, ni la face d\'une plate-forme', () => {
   const tr = scriptTrack('t', 'start S U S4 finish');
-  const phys = new CarPhysics(tr); const { DT } = { DT: 1 / 120 };
+  const phys = new CarPhysics(tr);
   const fly = (x, y, z, yaw, vy, brake) => {
     phys.place(x, y, z, yaw, 1); phys.vehicle = 'glider'; phys.grounded = false; phys.graceT = 0; phys.hazardGrace = 0;
     phys.pos.y = y; phys.prev.y = y; phys.vel.x = -Math.sin(yaw) * 35; phys.vel.z = -Math.cos(yaw) * 35; phys.vel.y = vy;

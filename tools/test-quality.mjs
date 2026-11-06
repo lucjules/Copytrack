@@ -109,7 +109,7 @@ test('une machine lente n’est PAS sauvée par les à-coups ignorés : elle éc
   assert.equal(result.profile, 'high');
 });
 test('pause : fenêtre ouverte / onglet masqué = le temps ne compte pas ; la détection reprend ensuite', () => {
-  let paused = true;
+  const paused = true;
   const { result, t } = simulate(() => 60, { start: 'ultra', active: (t) => !(t > 2000 && t < 20000) });
   assert.equal(result.profile, 'ultra'); assert.ok(t > 20000, 'rien n’a été conclu pendant la pause'); void paused;
 });

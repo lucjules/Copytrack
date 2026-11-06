@@ -135,13 +135,13 @@ export class Track {
     tile.tb = t.tb && flagAllowed(type, 'tb', tile) ? 1 : 0;
     tile.th = THEMES.some((h) => h.id === (t.th | 0)) && flagAllowed(type, 'th') ? (t.th | 0) : 0;
     tile.col = cleanColors(t.col);
-    if (surfaceAllowed(type, s, !!tile.v, tile.o)) {
+    if (surfaceAllowed(type, s, tile.o)) {
       tile.s = s;
       const S2 = SURFACES[s];
       if (S2 && S2.def != null) tile.p = Math.max(S2.min, Math.min(S2.max, t.p || S2.def));
     }
     // Bifurcation : un 2e revêtement pour la voie déportée (la 1re voie garde s).
-    if (PIECES[type].kind === 'fork' && t.s2 && (t.s2 === '-' || surfaceAllowed(type, t.s2, !!tile.v, tile.o))) {
+    if (PIECES[type].kind === 'fork' && t.s2 && (t.s2 === '-' || surfaceAllowed(type, t.s2, tile.o))) {
       tile.s2 = t.s2 === '-' ? '-' : (SURFACE_ALIAS[t.s2] || t.s2);
       const S3 = SURFACES[tile.s2];
       if (S3 && S3.def != null) tile.p2 = Math.max(S3.min, Math.min(S3.max, t.p2 || S3.def));
@@ -210,7 +210,7 @@ export class Track {
 
   // Revêtement (avec paramètre en %). Renvoie true si quelque chose a changé.
   setSurface(tile, s, p = 0) {
-    if (!surfaceAllowed(tile.t, s, !!tile.v, tile.o)) return false;
+    if (!surfaceAllowed(tile.t, s, tile.o)) return false;
     const S2 = SURFACES[s];
     const np = S2 && S2.def != null ? Math.max(S2.min, Math.min(S2.max, p || S2.def)) : 0;
     if (tile.s === s && (tile.p || 0) === np) return false;
@@ -288,7 +288,7 @@ export class Track {
   // 2e revêtement d'une bifurcation (voie déportée).
   setSurface2(tile, s, p = 0) {
     if (PIECES[tile.t].kind !== 'fork') return false;
-    if (s && s !== '-' && !surfaceAllowed(tile.t, s, !!tile.v, tile.o)) return false;
+    if (s && s !== '-' && !surfaceAllowed(tile.t, s, tile.o)) return false;
     const S2 = SURFACES[s];
     const np = S2 && S2.def != null ? Math.max(S2.min, Math.min(S2.max, p || S2.def)) : 0;
     if ((tile.s2 || '') === s && (tile.p2 || 0) === np) return false;
@@ -755,7 +755,7 @@ export function scriptTrack(name, script, opts = {}) {
   let cur = { s: '', p: 0, v: 0, nb: 0, tn: 0 };
   const place = (t, px, pz, lv, r, reverse = false, noPath = false, curOver = null) => {
     const tile = { t, x: px, z: pz, l: lv, r: r & 3, ...(curOver || cur) };
-    if (cur.s && !surfaceAllowed(t, cur.s, !!cur.v, cur.o | 0)) throw new Error(`${name} : revêtement ${cur.s} interdit sur ${t}`);
+    if (cur.s && !surfaceAllowed(t, cur.s, cur.o | 0)) throw new Error(`${name} : revêtement ${cur.s} interdit sur ${t}`);
     for (const f of ['v', 'nb', 'tn', 'mv']) if (cur[f] && !flagAllowed(t, f, tile)) throw new Error(`${name} : drapeau ${f} interdit sur ${t}`);
     if (cur.o && !flagAllowed(t, 'o', tile, cur.o)) throw new Error(`${name} : orientation ${cur.o} interdite sur ${t}`);
     const c = tr.conflicts(Track.normalize(tile));

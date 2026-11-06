@@ -415,7 +415,7 @@ export const THEMES = [
   { id: 3, label: 'Roche' },
 ];
 
-export function surfaceAllowed(type, s, v = false, o = 0) {
+export function surfaceAllowed(type, s, o = 0) {
   if (!s) return true;
   const p = PIECES[type];
   const S = SURFACES[s];

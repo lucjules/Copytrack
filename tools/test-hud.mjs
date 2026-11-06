@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { MessageGate, MSG, PRIO } from '../js/hudMessages.js';
 import { test, finish } from './harness.mjs';
 
-const flat = (m) => (typeof m === 'function' ? null : Array.isArray(m) ? [m] : Object.values(m).flatMap(flat));
 
 test('un message moins important ne coupe pas un message important en cours', () => {
   const g = new MessageGate();

@@ -9,7 +9,7 @@ import { GeoBuilder } from '../js/geo.js';
 import { buildTileInto, stripsFor, styleFor } from '../js/trackMesh.js';
 import { Track, scriptTrack, b64encode } from '../js/track.js';
 import {
-  PIECES, PIECE_ORDER, sampleLocal, baseY, flagAllowed, cpKind, MOVER, moverParams, clampMover, profH, profD,
+  PIECES, PIECE_ORDER, sampleLocal, baseY, flagAllowed, cpKind, moverParams, clampMover, profH, profD,
 } from '../js/pieces.js';
 import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, isFamilyMember } from '../js/families.js';
 import { CarPhysics } from '../js/physics.js';

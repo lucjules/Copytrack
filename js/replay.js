@@ -61,7 +61,7 @@ export function encodeGhost({ trackKey, time, name, inputs }) {
 }
 
 export function decodeGhost(code) {
-  let s = String(code || '').trim();
+  const s = String(code || '').trim();
   if (!/^SHG1:/.test(s)) throw new Error('Ce n\'est pas un code de fantôme.');
   const d = JSON.parse(b64decode(s.slice(5)));
   if (!d || !d.k || !d.i) throw new Error('Code de fantôme invalide.');

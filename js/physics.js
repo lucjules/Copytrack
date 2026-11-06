@@ -547,7 +547,8 @@ export class CarPhysics {
       const mod = this.surfMod, f = this.surfP;
       const ground = this.surfType === 'ground';
       const C = surfaceCoeffs(ground ? '' : mod, f);
-      let grip = C.grip, traction = C.traction, vmaxK = C.vmaxK, extraDrag = C.extraDrag, rearK = C.rearK;
+      let grip = C.grip, traction = C.traction, vmaxK = C.vmaxK, extraDrag = C.extraDrag;
+      const rearK = C.rearK;
       if (this.stunT > 0) { grip *= CAR.stunGrip; traction *= CAR.stunTraction; }       // choc contre un mur : la voiture encaisse
       if (ground) { grip = 0.55; traction = 0.7; vmaxK = 0.45; extraDrag = 5; }
       else if (mod === 'water' || (mod === 'boat' && this.vehicle === 'boat')) {      // la plaque bateau agit comme de l'eau pour un bateau seulement (route normale pour les autres)
@@ -1242,7 +1243,7 @@ export class CarPhysics {
 
   _ribStep(inp) {
     const R = this.rib, dt = DT, tile = R.tile, rib = R.rib;
-    let F = frameWorld(tile, rib, R.u, this.F);
+    const F = frameWorld(tile, rib, R.u, this.F);
 
     // La route tourne sous la voiture : son cap relatif change d'autant
     // (il faut braquer pour suivre un virage à l'envers).
@@ -1256,7 +1257,7 @@ export class CarPhysics {
     this._cross(R, F);
     const kc = F.kc || 0;
     const kn = kn0 * F.cc - kg0 * F.cs, kg = kg0 * F.cc + kn0 * F.cs;
-    let B = this._basis(R, F);
+    const B = this._basis(R, F);
 
     // Inversion de gravité sur un ruban (vrille, looping, transition mur <-> plafond...) : la gravité suit la route. Sur le plan vertical
     // exact (mur) la gravité reste normale : la marge de 3° évite de rester « à l'envers » en revenant d'un plafond sur un mur.
@@ -1283,7 +1284,8 @@ export class CarPhysics {
     // Revêtements actifs sur ce ruban : mêmes effets qu'au sol, sans aide particulière.
     const mod = tile.s, f = tileParam(tile) / 100;
     const C = surfaceCoeffs(mod, f);
-    let extraDrag = C.extraDrag, gripK = C.grip, tractK = C.traction, vmaxK = C.vmaxK, beltE1 = 0, rearK = C.rearK;
+    const extraDrag = C.extraDrag, vmaxK = C.vmaxK, rearK = C.rearK;
+    let gripK = C.grip, tractK = C.traction, beltE1 = 0;
     if (this.stunT > 0) { gripK *= CAR.stunGrip; tractK *= CAR.stunTraction; }       // choc contre une paroi : la voiture encaisse
     if (mod === 'boost') this._boostPad(f);
     else if (mod === 'gravity') this._gravityPad(f);

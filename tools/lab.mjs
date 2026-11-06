@@ -8,7 +8,7 @@
 // Options : --l niveau de départ · --v0 km/h au départ · --vcap m/s (vitesse visée du pilote) · --decor · --veh moto|boat|glider
 //           --map carte vue de dessus · --profile courbe de vitesse (ASCII) · --json sortie machine
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
-import { scriptTrack, Track } from '../js/track.js';
+import { scriptTrack } from '../js/track.js';
 import { Simulation, placeAtRespawn } from '../js/simulation.js';
 import { Autopilot } from '../js/autopilot.js';
 import { PIECES } from '../js/pieces.js';
@@ -126,7 +126,6 @@ export function profile(track, S) {
   const boosts = tiles.filter((t) => t.s === 'boost').length;
   const straights = tiles.filter((t) => P(t).kind === 'line' && !P(t).special && !(P(t).rise)).length;
   const rises = tiles.filter((t) => P(t).rise).length;
-  const hs = (S.samples || []).filter((s) => s[3]);
   const share = (v) => (S.samples.length ? S.samples.filter((s) => s[1] >= v).length / S.samples.length : 0);
   return {
     pieces: tiles.length, tight, wide, wallCells, loops, boosts, straights, rises,

@@ -27,7 +27,6 @@ const { checkTrack } = await import('../js/editorTools.js');
 const { CarPhysics } = await import('../js/physics.js');
 const { placeAtStart } = await import('../js/raceLogic.js');
 const { Autopilot } = await import('../js/autopilot.js');
-const { DT } = await import('../js/constants.js');
 
 const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 const by = Object.fromEntries(BUILTIN_TRACKS.map((d) => [d.id, d]));

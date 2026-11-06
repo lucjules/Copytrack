@@ -9,6 +9,7 @@
     "sim": "node tools/sim.mjs",
     "sw": "node tools/gen-sw.mjs",
     "build:function": "node tools/build-function.mjs",
+    "lint": "eslint .",
     "test": "node tools/run-tests.mjs",
     "test:sql": "bash tools/test-accounts-sql.sh",
     "test:browser": "node tools/test-browser.mjs",

@@ -14,7 +14,6 @@ function fakeStorage(quota) {
     removeItem: (k) => m.delete(k),
     _keys: () => [...m.keys()],
   };
-  void size;
 }
 Object.defineProperty(globalThis, 'localStorage', { value: fakeStorage(100000), configurable: true, writable: true });
 // Object.keys(localStorage) doit lister les clés comme un vrai Storage.

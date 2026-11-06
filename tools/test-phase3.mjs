@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import * as THREE from '../js/vendor/three.module.min.js';
 import { Track, scriptTrack, b64encode } from '../js/track.js';
 import {
-  PIECES, SURFACES, SURFACE_ORDER, SURFACE_CODES, surfaceAllowed, surfaceRule, paramText, beltSpeed, glassSeconds, TUNNEL_TOP, baseY, flagAllowed,
+  PIECES, SURFACES, SURFACE_ORDER, SURFACE_CODES, surfaceAllowed, surfaceRule, paramText, beltSpeed, glassSeconds, TUNNEL_TOP, flagAllowed,
 } from '../js/pieces.js';
 import { CarPhysics, CAR } from '../js/physics.js';
 import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
@@ -209,8 +209,7 @@ test('Maj + souris (outil Inspecter) : la pièce monte et descend par demi-nivea
   self.cam = null;
   self.app.camera.position.set(3 * CELL, 120, 3 * CELL + 120); self.app.camera.updateMatrixWorld(true);
   assert.equal(self._shiftY(0), false, 'pas de mouvement : rien');
-  let moved = 0;
-  for (let i = 0; i < 400 && t.l < 8; i++) { self._shiftY(-6); moved++; }       // souris vers le haut
+  for (let i = 0; i < 400 && t.l < 8; i++) self._shiftY(-6);       // souris vers le haut
   assert.ok(t.l >= 8, 'monté : ' + t.l); assert.equal(t.l % 0.5, 0);
   assert.equal(calls.commit, 0, 'pas d’historique en cours de geste');
   for (let i = 0; i < 400 && t.l > 1; i++) self._shiftY(6);
