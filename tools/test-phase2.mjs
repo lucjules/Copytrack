@@ -6,7 +6,7 @@
 //  - conduite du pilote automatique sur un circuit qui utilise les nouvelles pièces.
 import assert from 'node:assert/strict';
 import { GeoBuilder } from '../js/geo.js';
-import { buildTileInto, stripsFor, styleFor } from '../js/trackMesh.js';
+import { buildTileInto, stripsFor, styleFor } from '../js/trackGeometry.js';
 import { Track, scriptTrack, b64encode } from '../js/track.js';
 import {
   PIECES, PIECE_ORDER, sampleLocal, baseY, flagAllowed, cpKind, moverParams, clampMover, profH, profD,

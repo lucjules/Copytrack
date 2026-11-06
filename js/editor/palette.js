@@ -5,7 +5,7 @@ import { PIECES, SURFACES, SURFACE_ORDER, surfaceRule, flagAllowed, paramText, a
 import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from '../families.js';
 import { Track } from '../track.js';
 import { DECORS } from '../themes.js';
-import { tint, THEME_SWATCH } from '../trackMesh.js';
+import { tint, THEME_SWATCH } from '../trackGeometry.js';
 import { isObstacle } from '../obstacles.js';
 import { DECO_CATS, DECO_COLORS, DECO_ICONS } from '../decoData.js';
 import { keyLabel } from '../input.js';

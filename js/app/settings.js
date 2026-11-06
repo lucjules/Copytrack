@@ -1,6 +1,6 @@
 // Réglages : qualité graphique et banc d'essai, commandes (clavier, manette), options, accessibilité.
 // Ces méthodes s'ajoutent au prototype de App (voir main.js) : `this` est l'instance.
-import { setColorblind } from '../trackMesh.js';
+import { setColorblind } from '../trackGeometry.js';
 import { KEY_ACTIONS, PAD_ACTIONS, keyLabel, padLabel } from '../input.js';
 import { $, esc } from '../dom.js';
 import { Benchmark, PROFILES, PROFILE_LABELS, BENCH_VERSION, hardwareHints } from '../quality.js';

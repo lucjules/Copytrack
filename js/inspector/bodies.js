@@ -3,7 +3,7 @@
 import { MAX_LEVEL } from '../constants.js';
 import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, THEMES, MOVER, moverParams, paramText, ORIENTS, tileOri } from '../pieces.js';
 import { FAMILIES, familyOf, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from '../families.js';
-import { styleFor } from '../trackMesh.js';
+import { styleFor } from '../trackGeometry.js';
 import { DECO_COLORS } from '../decoData.js';
 import { safeUrl } from '../decos.js';
 import { isObstacle } from '../obstacles.js';

@@ -5,7 +5,8 @@ import { test, finish } from './harness.mjs';
 
 globalThis.document = { createElement: () => ({ getContext: () => null, width: 0, height: 0 }) };   // canvas des plaques
 const THREE = await import('../js/vendor/three.module.min.js');
-const { TrackView, createTrackMaterials, buildTileInto } = await import('../js/trackMesh.js');
+const { TrackView, createTrackMaterials } = await import('../js/trackMesh.js');
+const { buildTileInto } = await import('../js/trackGeometry.js');
 const { GeoBuilder, FxBuilder } = await import('../js/geo.js');
 const { buildDecoInto } = await import('../js/decos.js');
 const { Track } = await import('../js/track.js');

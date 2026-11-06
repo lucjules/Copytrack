@@ -3,7 +3,7 @@
 //  - vrille et revêtements : ce qui touche aux pièces (doublons retirés, anciens codes lisibles).
 import assert from 'node:assert/strict';
 import { GeoBuilder } from '../js/geo.js';
-import { buildTileInto } from '../js/trackMesh.js';
+import { buildTileInto } from '../js/trackGeometry.js';
 import { Track } from '../js/track.js';
 import { PIECES, SURFACES, SURFACE_ORDER, SURFACE_CODES } from '../js/pieces.js';
 import { test, finish } from './harness.mjs';
