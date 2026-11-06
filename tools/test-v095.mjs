@@ -11,6 +11,8 @@ const { paramText } = await import('../js/pieces.js');
 const { scriptTrack } = await import('../js/track.js');
 
 const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+// Le code de l'application est réparti entre js/main.js et js/app/*.js (familles de méthodes) : ces contrôles de texte lisent l'ensemble.
+const readApp = () => ['js/main.js', ...readdirSync(new URL('../js/app', import.meta.url)).map((f) => 'js/app/' + f)].map(read).join('\n');
 // Le code de l'éditeur est réparti entre js/editor.js et js/editor/*.js (familles de méthodes) : ces contrôles de texte lisent l'ensemble.
 const readEditor = () => ['js/editor.js', ...readdirSync(new URL('../js/editor', import.meta.url)).map((f) => 'js/editor/' + f)].map(read).join('\n');
 function walk(dir, out = []) {
@@ -35,7 +37,7 @@ test('le réglage « effet de vitesse » annonce un seuil réaliste (220 km/h) e
   assert.match(read('js/race.js'), /fwdSpeed\) - 62\) \/ 38/);
 });
 test('le tutoriel parle des murs et de la vitesse', () => {
-  const m = read('js/main.js');
+  const m = readApp();
   assert.match(m, /<b>Murs<\/b>/);
   assert.match(m, /<b>Vitesse<\/b>/);
 });

@@ -29,6 +29,8 @@ const { placeAtStart } = await import('../js/raceLogic.js');
 const { Autopilot } = await import('../js/autopilot.js');
 
 const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+// Le code de l'application est réparti entre js/main.js et js/app/*.js (familles de méthodes) : ces contrôles de texte lisent l'ensemble.
+const readApp = () => ['js/main.js', ...readdirSync(new URL('../js/app', import.meta.url)).map((f) => 'js/app/' + f)].map(read).join('\n');
 const by = Object.fromEntries(BUILTIN_TRACKS.map((d) => [d.id, d]));
 const chapters = [];
 for (let c = 0; c * CHAPTER_SIZE < BUILTIN_TRACKS.length; c++) chapters.push(BUILTIN_TRACKS.slice(c * CHAPTER_SIZE, (c + 1) * CHAPTER_SIZE));
@@ -110,7 +112,7 @@ test('chaque profil a un libellé et une infobulle', () => {
   for (const [k, p] of Object.entries(PROFILS)) assert.ok(p.label && p.tip, k);
 });
 test('la carte de carrière affiche la pastille du profil', () => {
-  assert.match(read('js/main.js'), /tag profil \$\{pf\.cls\}/);
+  assert.match(readApp(), /tag profil \$\{pf\.cls\}/);
   for (const p of Object.values(PROFILS)) assert.match(read('css/style.css'), new RegExp('\\.card \\.tag\\.' + p.cls));
 });
 test('chaque chapitre a une description propre', () => {
@@ -171,7 +173,7 @@ for (const d of BUILTIN_TRACKS) {
 console.log('Finitions (0.9.10)');
 test('chaque circuit a son texte « ce qu’il enseigne » (infobulle de la carte de carrière)', () => {
   for (const d of BUILTIN_TRACKS) assert.ok(d.appris && d.appris.length > 40 && d.appris.length < 260 && d.appris.startsWith('Départ : '), d.id + ' : ' + d.appris);
-  assert.match(read('js/main.js'), /card\.title = b\.def\.appris/);
+  assert.match(readApp(), /card\.title = b\.def\.appris/);
 });
 test('étoiles de difficulté : le premier circuit d’un chapitre a au plus 3 étoiles, l’avant-dernier au moins 3, le dernier au moins 4, et un sprint n’a jamais plus de 2', () => {
   for (const ch of chapters) { assert.ok(ch[0].difficulty <= 3, ch[0].id); assert.ok(ch[4].difficulty >= 3 && ch[5].difficulty >= 4, ch[5].id); }
@@ -194,7 +196,7 @@ test('état d’un chapitre et bilan de carrière (écran de carrière)', () => 
   assert.deepEqual([all.pct, all.finished, all.complete], [100, true, true]);
   const mid = careerSummary([...Array(33).fill('or'), ...Array(33).fill(null)], 10);
   assert.ok(mid.pct > 0 && mid.pct < 100 && !mid.finished);
-  const m = read('js/main.js');
+  const m = readApp();
   assert.match(m, /careerSummary\(ids, gd\)/); assert.match(m, /chapterState\(/); assert.match(m, /class="ch-badge/);
   assert.match(read('css/style.css'), /\.career-summary/);
 });
