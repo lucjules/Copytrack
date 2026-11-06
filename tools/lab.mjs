@@ -68,7 +68,7 @@ export function runTrack(track, { maxTime = 240, vCap, brakeDecel, rewindAtCp = 
   placeAtStart(phys, logic);
   const bot = new Autopilot(track.path, { ...(vCap ? { vCap } : {}), ...(brakeDecel ? { brakeDecel } : {}) });
   bot.reset(phys);
-  const S = { ok: false, vehicle: 'car', jumps: 0, time: 0, respawns: 0, wallHits: 0, vmax: 0, airMax: 0, airTotal: 0, loops: 0, perfects: 0, turbos: 0, rings: 0, brakeT: 0, wallT: 0, ribT: 0, samples: [], cps: [], yMin: Infinity, yMax: -Infinity, dist: 0, reason: '' };
+  const S = { ok: false, vehicle: 'car', jumps: 0, wallVmin: Infinity, shocks: 0, spikes: 0, time: 0, respawns: 0, wallHits: 0, vmax: 0, airMax: 0, airTotal: 0, loops: 0, perfects: 0, turbos: 0, rings: 0, brakeT: 0, wallT: 0, ribT: 0, samples: [], cps: [], yMin: Infinity, yMax: -Infinity, dist: 0, reason: '' };
   let stuck = 0, lastIdx = 0, last = null, airRun = 0;
   const steps = Math.round(maxTime / DT);
   for (let i = 0; i < steps; i++) {
@@ -81,7 +81,9 @@ export function runTrack(track, { maxTime = 240, vCap, brakeDecel, rewindAtCp = 
     if (!phys.grounded && !phys.rib) { S.airTotal += DT; airRun += DT; }
     else { if (airRun >= 1) S.jumps++; airRun = 0; }
     if (inp.brake && phys.grounded) S.brakeT += DT;
-    if (phys.rib) { S.ribT += DT; if (phys.rib.tile && phys.rib.tile.o) S.wallT += DT; }
+    if (phys.rib) { S.ribT += DT; if (phys.rib.tile && phys.rib.tile.o) { S.wallT += DT; S.wallVmin = Math.min(S.wallVmin, sp); } }
+    if (phys.ev.shock) S.shocks++;
+    if (phys.ev.spike) S.spikes++;
     S.yMin = Math.min(S.yMin, phys.pos.y); S.yMax = Math.max(S.yMax, phys.pos.y);
     if (last) S.dist += Math.hypot(phys.pos.x - last.x, phys.pos.y - last.y, phys.pos.z - last.z);
     last = { x: phys.pos.x, y: phys.pos.y, z: phys.pos.z };

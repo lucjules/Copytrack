@@ -8,7 +8,7 @@ export const UNLOCK_MEDALS = 4;
 export const GOAL_COINS = 50;
 
 // 0.9.6 : profils de circuits (champ `profil` des circuits intégrés). Chaque circuit est conçu pour une expérience précise ; la pastille
-// de la carte de carrière l'annonce. Les mesures qui définissent chaque profil sont vérifiées par tools/test-v096.mjs.
+// de la carte de carrière l'annonce. Les mesures qui définissent chaque profil sont vérifiées par tools/contract.mjs (appliqué à tous les circuits par tools/test-niveaux.mjs).
 export const PROFILS = {
   sprint: { cls: 'p-sprint', label: 'Sprint', tip: 'Presque tout droit : le chrono pur, la trajectoire fait la différence.' },
   speedway: { cls: 'p-speedway', label: 'Speedway', tip: 'Très grands virages, longues lignes droites : on garde la vitesse de pointe.' },
@@ -22,14 +22,14 @@ export const CHAPTERS = [
   { name: 'Désert crépuscule', decor: 'desert', desc: 'Sprint, speedway, tremplins, épingles et grand huit : tous les profils de circuits, avec un wall-ride dès le premier.' },
   { name: 'Jungle néon', decor: 'jungle', desc: 'Rampe de lancement, tube, rebonds de champignons et slalom en moto : la jungle au grand complet.' },
   { name: 'Archipel tropical', decor: 'isles', desc: 'Descente en moto, slalom en bateau et décollage en deltaplane autour du phare.' },
-  { name: 'Ville futuriste', decor: 'city', desc: 'Tunnels, viaducs et boulevards à toute vitesse.' },
-  { name: 'Nuit polaire', decor: 'polar', desc: 'Glace, aurores et virages qui glissent.' },
-  { name: 'Volcan', decor: 'volcano', desc: 'Lave, cheminées et montées en L brûlantes.' },
-  { name: 'Station orbitale', decor: 'orbit', desc: 'Gravité faible, anneaux et deltaplane parmi les étoiles.' },
-  { name: 'Fonds marins', decor: 'reef', desc: 'Courants (tapis roulants), bulles de verre et ancres qui balancent.' },
-  { name: 'Usine mécanique', decor: 'factory', desc: 'Marteaux, balayeurs, ascenseurs et moteur coupé.' },
-  { name: 'Ville dans les nuages', decor: 'sky', desc: 'Rafales de vent, deltaplane et routes sans bordures.' },
-  { name: 'Canyon de cristal', decor: 'caves', desc: 'Gravité inversée, plafonds, verre fragile et volant inversé.' },
+  { name: 'Ville futuriste', decor: 'city', desc: 'Tapis roulant express, boucles, métro aérien, toits et lift hill : la ville monte en puissance.' },
+  { name: 'Nuit polaire', decor: 'polar', desc: 'Départ sur la glace, rebonds en terrasses, toboggan aimanté, hélices et poudreuse.' },
+  { name: 'Volcan', decor: 'volcano', desc: 'Collines de braises, plaque de dérive, cheminée verticale, caldeira à deux tours et éruptions.' },
+  { name: 'Station orbitale', decor: 'orbit', desc: 'Tube d’amarrage, basse gravité, moto, grand anneau à trois tours et apesanteur.' },
+  { name: 'Fonds marins', decor: 'reef', desc: 'Contre-courants, gravité lourde, pont de verre et plongée vers les abysses.' },
+  { name: 'Usine mécanique', decor: 'factory', desc: 'Moteur coupé, bifurcation, pistons, marteau et ralentisseurs : l’usine ne pardonne rien.' },
+  { name: 'Ville dans les nuages', decor: 'sky', desc: 'Vent de travers, îles sans bordures, gravité réduite, pont des vents et départ en deltaplane.' },
+  { name: 'Canyon de cristal', decor: 'caves', desc: 'Volant inversé, vrilles, inversions de gravité, plafonds et verre fragile.' },
 ];
 
 // Objectifs bonus.
