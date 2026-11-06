@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.5**
+Version actuelle : **bêta 0.9.6**
 
 ## Jouer
 
@@ -119,6 +119,51 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
 5. **Durcissement** : `supabase/etape5-securite.sql` (replays des classements privés, plafond de temps par pilote, signalements et parties moins faciles à truquer). À lancer après l'étape 4.
 
 Seules l'URL du projet et la clé publique sont dans `js/online.js`. La clé secrète n'est jamais dans le jeu : seule la fonction serveur l'utilise, côté Supabase.
+
+## Bêta 0.9.6 — refonte du level design (lot 1 / 14)
+
+Les 66 circuits intégrés sont refaits par lots de 5 (un lot par version). Les circuits d'avant la 0.9.4 étaient tous bâtis sur la même recette
+(`start B S2 R S L S2 C…`) et calés sur l'ancienne physique. Chaque circuit refait porte un **profil** (champ `profil`, pastille colorée sur la carte
+de carrière) et une **ouverture** qui n'a rien à voir avec celle des autres.
+
+**Lot 1 : le chapitre 1, Désert crépuscule (5 des 6 circuits)**
+
+| # | Circuit | Profil | Ouverture | Ce qu'il enseigne |
+| --- | --- | --- | --- | --- |
+| 1 | Premiers Éclats | Sprint | deux boosters → premier wall-ride (transitions douces 2×2) | vitesse de pointe, trajectoire dans les très grands virages plats, courbes progressives |
+| 2 | Canyon Corail | Speedway | un booster → directement un très grand virage relevé | virages relevés 3×3 à plus de 250 km/h, wall-ride de 6 cases sur la paroi du canyon, descente douce |
+| 3 | Tremplins du Crépuscule | Acrobatique | **chute libre** depuis 77 m (départ lancé à 110 km/h) | rampes progressives et à 38°, réceptions sur longues pentes, checkpoint aérien, saut sur un mur |
+| 4 | Lac Gelé | Technique | épingle descendante dès le départ | 11 virages serrés, un booster à chaque relance, glace avant les épingles, chicane sur un mur |
+| 5 | Le Grand Tour | Rollercoaster | trois boosters → **montée verticale** (montée en L, mur, sommet) | chute, slalom de wall-rides gauche / droite, grand looping, arche mur → plafond → mur |
+
+**Les profils sont mesurés, pas seulement annoncés** (`tools/test-v096.mjs`, sur la course du pilote automatique) :
+
+| Profil | Contrat |
+| --- | --- |
+| Sprint | aucun virage serré, ≤ 3 très grands virages, 10 à 20 s, plus de 180 km/h pendant 60 % du temps, au moins 40 % de lignes droites |
+| Speedway | aucun virage serré, ≥ 4 très grands virages, plus de 250 km/h pendant 40 % du temps, freinage ≤ 8 %, moyenne ≥ 200 km/h |
+| Technique | ≥ 8 virages serrés, freinage ≥ 12 % du temps, moyenne ≤ 150 km/h, un booster par relance |
+| Rollercoaster | ≥ 6 niveaux de hauteur, ≥ 8 cases sur un mur (des deux côtés), au moins un looping |
+| Acrobatique | ≥ 6 s en l'air, ≥ 3 réceptions parfaites, ≥ 8 niveaux de hauteur |
+
+Règles communes à tout circuit refait : ouverture différente de toutes les autres, jamais le départ « classique », au moins quatre pièces de la 0.9.3
+(wall-rides, courbes progressives, inclinaisons, très grands virages), wall-rides pris avec ≥ 130 km/h (le décrochage est à 108), **finissable sans choc ni
+réapparition à ±10 % de vitesse** (un joueur n'a jamais la vitesse exacte du pilote), médailles à jour, objectif bonus réalisable.
+
+**Ce que la physique impose au level design** (mesuré avec `tools/lab.mjs`) : sur le plat, la voiture plafonne vers 237 km/h (traînée) ; seuls les boosters
+(jusqu'à 300 km/h), les descentes et les virages relevés permettent d'aller plus vite. Un virage serré se prend à ≤ 93 km/h, un grand à ≤ 162, un très grand
+plat à ≤ 207 ; un très grand virage relevé laisse passer plus de 240 km/h. La portée d'un saut varie avec le carré de la vitesse : on le rend tolérant avec
+de longues réceptions en pente, et on place les checkpoints **avant** les rampes (un saut trop long survole un checkpoint posé juste après).
+
+**Bibliothèque d'ouvertures** (une par circuit, jamais deux fois la même). Déjà employées : booster → wall-ride · booster → virage relevé · chute libre ·
+épingle descendante · montée verticale. Prévues pour les lots suivants : booster → looping · rampe de lancement · départ à 250 km/h sur un mur · départ en tube ·
+bifurcation dès le départ · départ sur l'eau · décollage en deltaplane · départ sur glace · départ au plafond.
+
+**Outils** : `node tools/lab.mjs "script" --l 4 --map --profile --robust` (carte, profil de vitesse, tolérance à la vitesse) ou `--id eclats` ou `--all` ;
+`node tools/medals.mjs eclats` propose les médailles (or = temps du pilote, cristal 0,95 ×, argent 1,15 ×, bronze 1,35 ×) et `--check` les vérifie.
+
+- Les records des circuits refaits repartent de zéro (la clé de classement contient l'empreinte du circuit) ; **la fonction `submit-score` doit être redéployée** (`index.ts` régénéré, elle connaît les circuits intégrés).
+- `PHYS_VER` reste 24.
 
 ## Bêta 0.9.5
 
@@ -314,6 +359,9 @@ tools/test-phase2.mjs          tests des familles, du schéma JSON, des courbes,
 tools/test-v093.mjs            tests des pentes, murs, plafond, orientation et du hasard (npm test)
 tools/audit-pieces.mjs         audit du graphe des pièces : raccords, culs-de-sac, inversions (npm test)
 tools/sim.mjs                  validation des circuits par pilote automatique (npm run sim)
+tools/lab.mjs                  atelier de level design : carte, profil de vitesse, tolérance, typologie d'un script ou d'un circuit
+tools/medals.mjs               médailles d'un circuit calculées sur le temps du pilote automatique
+tools/test-v096.mjs            contrat des profils de circuits (sprint, speedway, technique, rollercoaster, acrobatique) (npm test)
 ```
 
 ## Licence

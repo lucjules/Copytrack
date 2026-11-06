@@ -9,10 +9,13 @@ import { BUILTIN_OBSTACLES } from './builtinObstacles.js';
 
 export const BUILTIN_TRACKS = [
   {
-    id: 'eclats', name: 'Premiers Éclats', decor: 'desert', difficulty: 1,
-    goal: {id: 'nowall'},
-    script: 'start S2 RR S C S2 LL B S2 GU2 S GD2 S RR S U S2 D S C S RR S3 finish',
-    medals: { cristal: 20, or: 21.3, argent: 24.4, bronze: 28.7 },
+    // Chapitre 1 · 1/6 — SPRINT d'initiation. Ouverture : deux boosters puis un premier wall-ride (transitions douces 2×2).
+    // Presque tout droit : le chrono se joue sur la vitesse de pointe et sur la trajectoire dans les deux très grands virages plats.
+    id: 'eclats', name: 'Premiers Éclats', decor: 'desert', difficulty: 1, profil: 'sprint',
+    goal: { id: 'under', t: 16 },
+    opts: { l: 2 }, pilot: { vCap: 66 },
+    script: 'start B2 [tr01l] S4< [tr10l] S B S [crs1] S [cds1] HR S3 B C S HL S3 B2 finish',
+    medals: { cristal: 15.1, or: 15.9, argent: 18.3, bronze: 21.5 },
   },
   {
     id: 'lagon', name: 'Lagon Turquoise', decor: 'isles', difficulty: 1,
@@ -45,10 +48,14 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 25.9, or: 27.1, argent: 31.2, bronze: 36.6 },
   },
   {
-    id: 'canyon', name: 'Canyon Corail', decor: 'desert', difficulty: 2,
-    goal: {id: 'nowall'},
-    script: 'start B S2 R S L S2 C S R R S2 L S B S3 BRR S C S L L S2 R S2 B S R S L S2 KL S2 B S3 finish',
-    medals: { cristal: 30.7, or: 31.9, argent: 36.6, bronze: 43.1 },
+    // Chapitre 1 · 2/6 — SPEEDWAY. Ouverture : un booster puis directement un très grand virage relevé. Aucun virage serré : quatre virages
+    // relevés 3×3, un wall-ride de 6 cases sur la paroi du canyon (mur droit) à plus de 250 km/h, une descente douce et des boosters
+    // pour rester au-dessus de 250 km/h sur plus de la moitié du tour.
+    id: 'canyon', name: 'Canyon Corail', decor: 'desert', difficulty: 2, profil: 'speedway',
+    goal: { id: 'nowall' },
+    opts: { l: 8 }, pilot: { vCap: 70 },
+    script: 'start B BRR B3 S2 [tr02l] S6> [tr20l] C S BRR S [cdi1] [dn2] [cdo1] S C B S BRR S3 B BLL S BRR S2 B2 finish',
+    medals: { cristal: 19.6, or: 20.7, argent: 23.7, bronze: 27.9 },
   },
   {
     id: 'quai', name: 'Quai d’Amarrage', decor: 'orbit', difficulty: 2,
@@ -57,10 +64,15 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 22, or: 23, argent: 26.5, bronze: 31.1 },
   },
   {
-    id: 'tremplins', name: 'Tremplins du Crépuscule', decor: 'desert', difficulty: 2,
-    goal: {id: 'perfect', n: 2},
-    script: 'start S B S2 UU GR2 DD S2 C S LL B S2 UU G2 S2 D2 RR S C S2 B S UU GC2 DD S2 finish',
-    medals: { cristal: 20.8, or: 21.6, argent: 24.9, bronze: 29.2 },
+    // Chapitre 1 · 3/6 — ACROBATIQUE. Ouverture : chute libre immédiate (départ lancé à 110 km/h depuis une plateforme à 77 m, réception sur une
+    // descente à 38°). Puis trois sauts de plus en plus grands (bosse, grand tremplin à 38°, dernier saut avec checkpoint aérien) et un
+    // petit saut sur un mur. Les réceptions sont de longues pentes descendantes et les checkpoints sont posés AVANT les rampes, jamais
+    // sur une zone de réception : le circuit reste finissable de 195 à 300 km/h à l'abord des sauts (vérifié par tools/test-v096.mjs).
+    id: 'tremplins', name: 'Tremplins du Crépuscule', decor: 'desert', difficulty: 2, profil: 'acrobatique',
+    goal: { id: 'perfect', n: 3 },
+    opts: { l: 16 }, params: { v0: 110 }, pilot: { vCap: 60 },
+    script: 'start G2 V-5 [dn4] [cdo2] B S C [crv1] UU G2 DD [cdo1] S3 CBR1 S [tr01s] S2< [tr10s] S LL B S C S [crv2] UX G3 DX DX [cdo2] S3 B UU GC2 DD [cdo1] S2 finish',
+    medals: { cristal: 24.1, or: 25.3, argent: 29.1, bronze: 34.2 },
   },
   {
     id: 'hyper', name: 'Hyperboucle', decor: 'city', difficulty: 3,
@@ -117,10 +129,14 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 30.9, or: 32.2, argent: 37, bronze: 43.4 },
   },
   {
-    id: 'verglas', name: 'Lac Gelé', decor: 'desert', difficulty: 3,
-    goal: {id: 'nowall'},
-    script: 'start S B S I3 RR S C I2 L S R S I2 RR B S2 C S Y2.i S LL I2 S R S2 U S I2 D S L S2 B S finish',
-    medals: { cristal: 32.5, or: 34.3, argent: 39.6, bronze: 46.4 },
+    // Chapitre 1 · 4/6 — TECHNIQUE. Ouverture : une épingle descendante dès le départ. Onze virages serrés, des freinages forts avant chaque
+    // épingle et un booster à chaque sortie pour exploiter la courbe d'accélération ; de la glace avant les épingles (on ne freine plus
+    // dessus), une chicane sur un mur et un checkpoint dans un virage.
+    id: 'verglas', name: 'Lac Gelé', decor: 'desert', difficulty: 3, profil: 'technique',
+    goal: { id: 'turbo', n: 2 },
+    opts: { l: 5 },
+    script: 'start [cvd1] [cvd1] B S3 L I B S R L S B S2 R S R B S2 [tr01s] S2< [tr10s] S3 L S L B I S3 KR S R S2 B finish',
+    medals: { cristal: 26.6, or: 28, argent: 32.2, bronze: 37.8 },
   },
   {
     id: 'banquise', name: 'Banquise Rebondissante', decor: 'polar', difficulty: 3,
@@ -189,10 +205,14 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 43.6, or: 45.4, argent: 52.3, bronze: 61.4 },
   },
   {
-    id: 'grandtour', name: 'Le Grand Tour', decor: 'desert', difficulty: 4, laps: 2,
-    goal: {id: 'norespawn'},
-    script: 'start S2 B RR S2 C S3 BR S2 UU G2 DD S2 RR S2 B S2 RR S L R S1 finish',
-    medals: { cristal: 39.3, or: 41.7, argent: 47.9, bronze: 56.4 },
+    // Chapitre 1 · 5/6 — ROLLERCOASTER. Ouverture : trois boosters puis une montée verticale (montée en L, mur de 3, sommet). Chute depuis le
+    // sommet, un virage relevé, un slalom de wall-rides gauche / droite, un grand looping, puis une arche mur → plafond → mur.
+    // Verticalité : 9 niveaux (45 m) ; plus de 18 cases sur un mur.
+    id: 'grandtour', name: 'Le Grand Tour', decor: 'desert', difficulty: 4, profil: 'rollercoaster',
+    goal: { id: 'norespawn' },
+    opts: { l: 3 },
+    script: 'start B3 QU WA3 CR S [cdi2] DX [cdo2] B BRR S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S OB S C S [tr01s] S2< [tr13s] S2^ [tr31s] S2< [tr10s] S B2 finish',
+    medals: { cristal: 24.4, or: 25.7, argent: 29.6, bronze: 34.7 },
   },
   {
     id: 'grandanneau', name: 'Grand Anneau', decor: 'orbit', difficulty: 4, laps: 3,

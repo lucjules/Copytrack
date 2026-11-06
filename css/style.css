@@ -565,6 +565,13 @@ body.touch .hud-br { bottom: 120px; }
 .card.polar { background: linear-gradient(160deg, rgba(20, 44, 84, 0.9), rgba(28, 20, 58, 0.82)); }
 .card .tags { display: flex; gap: 6px; flex-wrap: wrap; }
 .card .tag { font-size: 11px; padding: 2px 7px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); color: var(--muted); }
+/* Profil du circuit (0.9.6) : une couleur par profil, en tête des pastilles. */
+.card .tag.profil { font-weight: 700; border: 1px solid currentColor; }
+.card .tag.p-sprint { color: #ffd23e; background: rgba(255, 210, 62, 0.14); }
+.card .tag.p-speedway { color: #ff6b9a; background: rgba(255, 107, 154, 0.14); }
+.card .tag.p-technique { color: #7fe9ff; background: rgba(127, 233, 255, 0.14); }
+.card .tag.p-rollercoaster { color: #b9a6ff; background: rgba(185, 166, 255, 0.16); }
+.card .tag.p-acrobatique { color: #5dffb0; background: rgba(93, 255, 176, 0.14); }
 
 .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
 .tab {
