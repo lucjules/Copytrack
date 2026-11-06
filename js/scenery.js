@@ -554,7 +554,7 @@ export class Scenery {
     }
     const colorFor = (h, r, x = 0, z = 0) => {
       if (T.lava && h < 1 && fbm(x * 0.012, z * 0.012, seed + 5) > 0.62) return r < 0.5 ? '#ff4a14' : '#ff7a1f';
-      if (T.plates && h < 1) return ((Math.floor(x / 24) + Math.floor(z / 24)) & 1) ? T.ground[0] : T.ground[1 + Math.floor(r * 2)];
+      if (T.plates && h < 1) return ((Math.floor(x / CELL) + Math.floor(z / CELL)) & 1) ? T.ground[0] : T.ground[1 + Math.floor(r * 2)];
       if (h < 1) return T.ground[Math.floor(r * T.ground.length)];
       const k = Math.min(T.rock.length - 1, Math.floor(h / 18 + r * 0.8));
       return T.rock[k];

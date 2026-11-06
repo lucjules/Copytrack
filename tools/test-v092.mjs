@@ -14,7 +14,7 @@ const { Inspector } = await import('../js/inspector.js');
 const { KEY_ACTIONS } = await import('../js/input.js');
 const { CarPhysics, SIDE_HOLD } = await import('../js/physics.js');
 const { RaceLogic, placeAtStart } = await import('../js/raceLogic.js');
-const { CELL, LEVEL_H, DT } = await import('../js/constants.js');
+const { CELL, HALF, LEVEL_H, DT } = await import('../js/constants.js');
 const { DECO_ORDER, DECO_CATS, DECO_LABELS, LIGHT_DECOS } = await import('../js/decoData.js');
 const { GeoBuilder } = await import('../js/geo.js');
 const { buildDecoInto } = await import('../js/decos.js');
@@ -138,9 +138,9 @@ test('pour un bateau la plaque est de l’eau ; pour les autres véhicules, une 
 test('la plaque bateau est une rampe très légère : eau (entrée) → sol (sortie)', () => {
   const tr = new Track('r'); tr.add({ t: 'straight', x: 0, z: 0, l: 0, r: 0, s: 'boat' });
   const o = {}; let prev = -Infinity;
-  for (let z = 23.5; z >= 0.5; z -= 1) { tr.surfaceAt(12, 5, z, o); assert.ok(o.h >= prev - 1e-9, 'monte toujours'); prev = o.h; }
-  tr.surfaceAt(12, 5, 23.9, o); assert.ok(Math.abs(o.h - (0.4 - 0.35)) < 0.02);
-  tr.surfaceAt(12, 5, 0.1, o); assert.ok(Math.abs(o.h - 0.4) < 0.02);
+  for (let z = CELL - 0.5; z >= 0.5; z -= 1) { tr.surfaceAt(HALF, 5, z, o); assert.ok(o.h >= prev - 1e-9, 'monte toujours'); prev = o.h; }
+  tr.surfaceAt(HALF, 5, CELL - 0.1, o); assert.ok(Math.abs(o.h - (0.4 - 0.35)) < 0.02);
+  tr.surfaceAt(HALF, 5, 0.1, o); assert.ok(Math.abs(o.h - 0.4) < 0.02);
 });
 
 console.log('Routes à 90°');
@@ -181,7 +181,7 @@ for (const legacy of [false, true]) {
     assert.ok(r.maxDl < 0.5, 'aucune glissade : ' + r.maxDl);
   });
   test(`trop lente, elle glisse le long du plan et tombe par le bord (la gravité ne change pas)${legacy ? ' (ancien circuit)' : ''}`, () => {
-    const r = sideRun(55, false, legacy);
+    const r = sideRun(72, false, legacy);
     assert.equal(r.left, true, 'elle quitte la route avant la fin');
     assert.ok(SIDE_HOLD > 0);
   });
@@ -245,7 +245,7 @@ test('traînée : toujours là (discrète à l’arrêt), plus forte avec la vit
 });
 test('Courbe : une rampe courbe monte comme prévu dans le circuit (niveau final)', () => {
   const tr = new Track('c'); tr.add({ t: 'crv2', x: 0, z: 0, l: 1, r: 0 });
-  const o = {}; sampleLocal(tr.tiles[0], 0, -12, o);
+  const o = {}; sampleLocal(tr.tiles[0], 0, -HALF, o);
   assert.ok(Math.abs(o.h - (1 * LEVEL_H + 0.4 + 2 * LEVEL_H)) < 1e-6);
   void DT;
 });

@@ -3,6 +3,7 @@ import { PIECES, rotVec } from './pieces.js';
 import { centerlineWorld } from './ribbons.js';
 import { Track } from './track.js';
 import { familyOf, FAMILIES } from './families.js';
+import { CELL } from './constants.js';
 
 // Pose de la flèche blanche semi-transparente qui indique le sens de parcours d'une pièce inspectée :
 // un point sur sa ligne centrale (au milieu de la route ; pour un ruban ou un looping, juste après l'entrée, là où la route est
@@ -23,7 +24,7 @@ export function arrowPose(tile) {
     const f = rotVec(tile.r, 0, -1, { x: 0, z: 0 });
     tx = f.x; tz = f.z;
   }
-  const len = Math.min(P.size * 24 * 0.55, 30);
+  const len = Math.min(P.size * CELL * 0.55, 30);
   // Pièce posée à l'envers : la route est sous son niveau, la flèche se pose donc de l'autre côté. Route sur un mur : la flèche flotte
   // devant le mur, côté voiture (mur gauche : à droite de l'axe, mur droit : à gauche).
   let ox = 0, oy = tile.v ? -1.1 : 1.1, oz = 0;

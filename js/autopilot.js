@@ -6,7 +6,7 @@ export class Autopilot {
   constructor(path, opts = {}) {
     this.path = path;
     this.idx = 0;
-    this.latLimit = opts.latLimit ?? CAR.latGrip * 0.8;
+    this.latLimit = opts.latLimit ?? CAR.latGrip * 0.62;     // 0.9.11 : la voiture est à l'avant limité (frontShare 0,42) : l'adhérence réellement utilisable est ~0,79 × latGrip
     this.brakeDecel = opts.brakeDecel ?? 20;
     this.vCap = opts.vCap ?? (path.pilot && path.pilot.vCap) ?? 52;     // 0.9.4 : le moteur monte bien plus haut, mais le pilote reste prudent (glace, murs punitifs, sauts calés pour ~190 km/h)
     const n = path.length;
@@ -76,6 +76,10 @@ export class Autopilot {
       c.steer = -c.steer;
       if (!phys.grounded && phys.vehicle !== 'glider') { const t = c.throttle; c.throttle = c.brake; c.brake = t; }
     }
+    // 0.9.11 : sur une dalle « volant inversé », la physique renverse le braquage (physics.js, reverseActive). Le pilote le sait : sans cela
+    // toute correction aggravait l'écart (rétroaction positive) et le moindre bruit de volant sortait la voiture de la route.
+    const reverseActive = phys.rib ? phys.rib.tile.s === 'reverse' : phys.grounded && phys.surfMod === 'reverse';
+    if (reverseActive) c.steer = -c.steer;
     return c;
   }
 

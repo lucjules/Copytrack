@@ -16,7 +16,7 @@ import { CarPhysics } from '../js/physics.js';
 import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
 import { Autopilot } from '../js/autopilot.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
-import { DT, CELL, LEVEL_H, HALF } from '../js/constants.js';
+import { DT, CELL, LEVEL_H, HALF, ROAD_HALF } from '../js/constants.js';
 import { arrowPose, retypePlacement, traitsOf } from '../js/tileInfo.js';
 import { EditorSession, armedOptions } from '../js/editor.js';
 
@@ -66,8 +66,8 @@ test('Looping : orientation × taille × 1 à 3 boucles = 12 pièces, toutes à 
     const P = PIECES[type];
     assert.equal(P.turns, +tr.turns, type);
     assert.equal(P.mirror, tr.dir === 'R' ? 1 : -1, type);
-    assert.equal(P.R, tr.size === 'g' ? 18 : 12, type);
-    assert.ok(P.lane >= 12 * P.turns || P.turns === 1, type);
+    assert.equal(P.R, (tr.size === 'g' ? 18 : 12) * (CELL / 24), type);
+    assert.ok(P.lane >= HALF * P.turns || P.turns === 1, type);
     assert.ok(P.size * HALF >= P.lane + 10, `${type} : empreinte trop petite`);
   }
   assert.equal(PIECES.loopTriple.size, 4);
@@ -191,8 +191,8 @@ for (const type of CURVES) {
     const P = PIECES[type], t = tile({ t: type, l: 1 }), half = P.size * HALF, mir = P.mirror < 0 ? -1 : 1;
     const o = {};
     // Entrée : milieu du bord sud de la route ; sortie : bord est (ou ouest).
-    const A = P.size === 1 ? { x: 0, z: half } : { x: mir * -12, z: half };
-    const B = P.size === 1 ? { x: mir * half, z: 0 } : { x: mir * half, z: -12 };
+    const A = P.size === 1 ? { x: 0, z: half } : { x: mir * -HALF, z: half };
+    const B = P.size === 1 ? { x: mir * half, z: 0 } : { x: mir * half, z: -HALF };
     sampleLocal(t, A.x, A.z, o);
     assert.ok(Math.abs(o.h - baseY(t)) < 1e-6, 'entrée à ' + o.h);
     assert.ok(Math.abs(o.d) < 1e-6, 'sur la ligne centrale');
@@ -377,11 +377,11 @@ test('Rotation : la route tournante porte sa surface (surfaceAt) là où elle es
   tr.moverOffset(p, tr.time, o);
   // Au repos la route couvre x ∈ [-9, 9] autour du centre (axe nord-sud) ; après un quart de tour elle est est-ouest.
   tr.time = 0;
-  tr.surfaceAt(cx, 1, cz + 11, s); assert.equal(s.type, 'road', 'au repos la route va du nord au sud');
-  tr.surfaceAt(cx + 11, 1, cz, s); assert.equal(s.type, 'ground');
+  tr.surfaceAt(cx, 1, cz + HALF - 1, s); assert.equal(s.type, 'road', 'au repos la route va du nord au sud');
+  tr.surfaceAt(cx + ROAD_HALF + 2, 1, cz, s); assert.equal(s.type, 'ground');
   tr.time = 3;
-  tr.surfaceAt(cx + 11, 1, cz, s); assert.equal(s.type, 'road', 'après un quart de tour elle va de l’ouest à l’est');
-  tr.surfaceAt(cx, 1, cz + 11, s); assert.equal(s.type, 'ground', 'au nord/sud, la route est partie');
+  tr.surfaceAt(cx + ROAD_HALF + 2, 1, cz, s); assert.equal(s.type, 'road', 'après un quart de tour elle va de l’ouest à l’est');
+  tr.surfaceAt(cx, 1, cz + ROAD_HALF + 2, s); assert.equal(s.type, 'ground', 'au nord/sud, la route est partie');
   assert.equal(o.a > 0, true);
 });
 test('Bifurcation à deux revêtements : la voie déportée a le sien (physique)', () => {
@@ -389,9 +389,9 @@ test('Bifurcation à deux revêtements : la voie déportée a le sien (physique)
   const f = tr.add({ t: 'fork', x: 0, z: 0, l: 0, r: 0, s: 'ice', s2: 'boost', p2: 150 });
   const o = {};
   // Pièce 2×2 en (0, 0) : centre (24, 24) ; entrée au sud de la colonne gauche (x = 12), sorties au nord en x = 12 (voie A) et x = 36 (voie B).
-  tr.surfaceAt(12, 1, 46, o); assert.equal(o.mod, 'ice');                        // départ : voie d'entrée
-  tr.surfaceAt(36, 1, 2, o); assert.equal(o.mod, 'boost'); assert.equal(o.p, 150);   // sortie : voie déportée
-  tr.surfaceAt(12, 1, 2, o); assert.equal(o.mod, 'ice');
+  tr.surfaceAt(HALF, 1, 2 * CELL - 2, o); assert.equal(o.mod, 'ice');                        // départ : voie d'entrée
+  tr.surfaceAt(HALF + CELL, 1, 2, o); assert.equal(o.mod, 'boost'); assert.equal(o.p, 150);   // sortie : voie déportée
+  tr.surfaceAt(HALF, 1, 2, o); assert.equal(o.mod, 'ice');
   const g = tr.add({ t: 'fork', x: 4, z: 0, l: 0, r: 0, s: 'ice', s2: '-' });
   tr.surfaceAt(4 * CELL + 36, 1, 2, o); assert.equal(o.mod, '');                 // « - » : route normale
   tr.surfaceAt(4 * CELL + 12, 1, 2, o); assert.equal(o.mod, 'ice');
@@ -407,7 +407,7 @@ function mkEd(tool, opts = {}) {
   const calls = { commit: 0, changed: 0, flash: [] };
   const self = Object.create(EditorSession.prototype);
   Object.assign(self, {
-    track, tool, level: 0, rot: 0, hover: { x: 12, z: 12, cx: 0, cz: 0 }, surfParam: {}, opts: { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, th: 0, ...opts },
+    track, tool, level: 0, rot: 0, hover: { x: HALF, z: HALF, cx: 0, cz: 0 }, surfParam: {}, opts: { v: 0, nb: 0, tn: 0, mv: 0, cp: 0, th: 0, ...opts },
     app: { ui: { flash: (m) => calls.flash.push(m) }, audio: { place() {}, error() {} } },
     _commit: () => calls.commit++, _changed: () => calls.changed++,
   });
