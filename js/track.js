@@ -1,44 +1,25 @@
 // Modèle de circuit : liste de pièces posées sur une grille, index spatial,
 // requêtes de surface pour la physique, sérialisation en code partageable.
-import { CELL, DIRS, ROAD_HALF, RAIL_W, SLAB_T, MAX_LEVEL, LEVEL_H, MAX_DECOS, VEHICLES } from './constants.js';
-import {
-  PIECES, PIECE_ORDER, SURFACE_CODES, SURFACE_ALIAS, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, isFloor, isCeilingFloor, baseY,
-  forkBranchX, toLocal, sampleLocal, rotVec, tileCenter, MOVER, moverParams, clampMover, THEMES, LEGACY_TILE, clearConflicts,
-} from './pieces.js';
+import { CELL, DIRS, MAX_LEVEL, LEVEL_H, MAX_DECOS, VEHICLES } from './constants.js';
+import { PIECES, PIECE_ORDER, SURFACE_CODES, SURFACE_ALIAS, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, forkBranchX, rotVec, moverParams, clampMover, THEMES, LEGACY_TILE } from './pieces.js';
 import { centerlineWorld } from './ribbons.js';
 import { isObstacle, buildObstacleGrid } from './obstacles.js';
 import { DECO_ORDER } from './decoData.js';
 import { DECORS, DEFAULT_DECOR } from './themes.js';
-import { dcos, dsin } from './dmath.js';
-
-// L'eau est un peu sous le niveau de la chaussée.
-export const WATER_DROP = 0.35;
-// Plaque bateau : une très légère montée de l'eau (entrée de la pièce, un peu sous la route) jusqu'au sol (sortie, au niveau normal).
-export const boatDrop = (along) => WATER_DROP * (1 - Math.max(0, Math.min(1, along || 0)));
-
-// Couleurs personnalisées d'une pièce : { road, line, rail } en #rrggbb (clés absentes = couleur d'origine). null si aucune.
-const COLOR_KEYS = ['road', 'line', 'rail'];
-const HEX = /^#[0-9a-f]{6}$/i;
-function cleanColors(c) {
-  if (!c || typeof c !== 'object') return null;
-  const out = {};
-  for (const k of COLOR_KEYS) if (typeof c[k] === 'string' && HEX.test(c[k])) out[k] = c[k].toLowerCase();
-  return Object.keys(out).length ? out : null;
-}
+import { COLOR_KEYS, MP, W2, cleanColors } from './track/shared.js';
+import { surfaceMethods } from './track/surfaces.js';
+import { editMethods } from './track/edit.js';
 
 const EMPTY = Object.freeze([]);
+
 const key = (x, z) => ((x + 4096) << 13) | (z + 4096);
-const L = { lx: 0, lz: 0 };
-const S = {};
-const W = { x: 0, z: 0 }, W2 = { x: 0, z: 0 };
-const MO = {};
-const MP = {};
 
 // ---- Règles de course (« paramètres du niveau ») ---------------------------------------------------------------------------------------
 // UNE table décrit chaque règle : champ du circuit, valeur par défaut, nettoyage, clé dans le code de partage et étiquette dans la signature.
 // Ajouter une règle = une ligne ici (et son champ dans le formulaire de l'éditeur) ; le constructeur, clear, clone, setParams, signature, encode,
 // decode et l'historique de l'éditeur s'en déduisent. L'ordre est celui de la signature et du code de partage : ne pas le changer.
 const clampInt = (v, lo, hi, fallback) => Math.max(lo, Math.min(hi, Math.round(+v || fallback)));
+
 export const RULES = [
   { key: 'offroad', def: 0, clean: (v) => (v ? 1 : 0), code: 'or', sig: (v) => (v ? '#O' : '') },                          // 1 : rouler hors piste est permis (pas de retour au checkpoint)
   { key: 'v0', def: 0, clean: (v) => clampInt(v, 0, 300, 0), code: 'v0', sig: (v) => (v ? '#V' + v : '') },               // vitesse de départ (km/h)
@@ -53,7 +34,9 @@ export const TILE_FIELDS = [
   ['t', ''], ['x', 0], ['z', 0], ['l', 0], ['r', 0], ['s', ''], ['p', 0], ['v', 0], ['nb', 0], ['tn', 0], ['mv', 0], ['cp', 0], ['th', 0],
   ['ms', 0], ['ma', 0], ['col', null], ['s2', ''], ['p2', 0], ['tb', 0], ['o', 0],
 ];
+
 export const tileToRow = (t) => TILE_FIELDS.map(([k, def]) => (t[k] ?? def));
+
 export const rowToTile = (row) => Object.fromEntries(TILE_FIELDS.map(([k], i) => [k, row[i]]));
 
 export class Track {
@@ -209,111 +192,6 @@ export class Track {
     this.version++;
   }
 
-  // Revêtement (avec paramètre en %). Renvoie true si quelque chose a changé.
-  setSurface(tile, s, p = 0) {
-    if (!surfaceAllowed(tile.t, s, tile.o)) return false;
-    const S2 = SURFACES[s];
-    const np = S2 && S2.def != null ? Math.max(S2.min, Math.min(S2.max, p || S2.def)) : 0;
-    if (tile.s === s && (tile.p || 0) === np) return false;
-    tile.s = s; tile.p = np;
-    this.version++;
-    return true;
-  }
-
-  // Bascule un drapeau (v : à l'envers, nb : sans bordures, tn : tunnel, mv : mouvement 1/2/3, cp : checkpoint 1/2, th : thème).
-  toggleFlag(tile, flag, val = 1) {
-    // Orientation : val 1 = mur gauche, 2 = mur droit (même valeur : retour au sol) ; val 0 = retour au sol (aussi depuis le plafond).
-    if (flag === 'o') {
-      const target = val | 0;
-      if (target && !flagAllowed(tile.t, 'o', null, target)) return false;      // seul le type compte : le plafond, le tunnel, etc. sont retirés (le dernier choix l'emporte)
-      const cand = { ...tile };
-      if (!target || tile.o === target) { cand.o = 0; if (!target) cand.v = 0; }
-      else { cand.o = target; clearConflicts(cand, 'o'); }
-      return this._reshape(tile, cand);
-    }
-    if (!flagAllowed(tile.t, flag, tile, val)) return false;
-    if (flag === 'th') {
-      const th = tile.th === val ? 0 : val;
-      if (!THEMES.some((h) => h.id === th)) return false;
-      tile.th = th;
-      this.version++;
-      return true;
-    }
-    // Ces options changent les cases ou les niveaux occupés (mouvement, checkpoint, anneau, orientation, plafond) : on vérifie la place
-    // (et qu'une pièce à l'envers ne sort pas du sol), puis on réindexe.
-    if (flag === 'mv' || flag === 'cp' || flag === 'tb' || flag === 'v') {
-      const cand = { ...tile };
-      if (flag === 'mv') { cand.mv = tile.mv === val ? 0 : val; cand.ms = 0; cand.ma = 0; }     // (flagAllowed a déjà refusé le cas d'un checkpoint ou d'un anneau)
-      else if (flag === 'cp') { cand.cp = tile.cp === val ? 0 : val; }
-      else if (flag === 'tb') { cand.tb = tile.tb ? 0 : 1; }
-      else if (tile.v) cand.v = 0;
-      else { cand.v = 1; clearConflicts(cand, 'v'); }
-      return this._reshape(tile, cand);
-    }
-    tile[flag] = tile[flag] ? 0 : 1;
-    this.version++;
-    return true;
-  }
-
-  // Remplace `tile` par `cand` (normalisée : options devenues impossibles retirées, revêtement incompatible effacé) si la place et les niveaux
-  // le permettent ; sinon rien ne change. Même objet : la sélection de l'inspecteur reste valable.
-  _reshape(tile, cand) {
-    const n = Track.normalize(cand);
-    this.remove(tile);
-    if (this.conflicts(n).length || !Track.inBounds(n)) { this._insert(tile); return false; }
-    Object.assign(tile, n);
-    this._insert(tile);
-    return true;
-  }
-
-  // Réglage d'une pièce mobile (vitesse en %, amplitude). Change les cases / niveaux balayés : vérifie la place.
-  setMover(tile, ms, ma) {
-    if (!tile.mv) return false;
-    const m = clampMover(tile.mv, ms === undefined ? tile.ms : ms, ma === undefined ? tile.ma : ma);
-    if (m.ms === (tile.ms || 0) && m.ma === (tile.ma || 0)) return true;
-    const cand = { ...tile, ms: m.ms, ma: m.ma };
-    this.remove(tile);
-    if (this.conflicts(cand).length || !Track.inBounds(cand)) { this._insert(tile); return false; }
-    tile.ms = m.ms; tile.ma = m.ma;
-    this._insert(tile);
-    return true;
-  }
-
-  // Couleurs personnalisées { road, line, rail } (null / {} : couleurs d'origine).
-  setColors(tile, col) {
-    tile.col = cleanColors(col);
-    this.version++;
-    return true;
-  }
-
-  // 2e revêtement d'une bifurcation (voie déportée).
-  setSurface2(tile, s, p = 0) {
-    if (PIECES[tile.t].kind !== 'fork') return false;
-    if (s && s !== '-' && !surfaceAllowed(tile.t, s, tile.o)) return false;
-    const S2 = SURFACES[s];
-    const np = S2 && S2.def != null ? Math.max(S2.min, Math.min(S2.max, p || S2.def)) : 0;
-    if ((tile.s2 || '') === s && (tile.p2 || 0) === np) return false;
-    tile.s2 = s; tile.p2 = np;
-    this.version++;
-    return true;
-  }
-
-  addDeco(d) {
-    if (this.decos.length >= MAX_DECOS) return null;
-    const deco = {
-      k: d.k, x: +d.x, y: +d.y, z: +d.z, ry: +d.ry || 0, s: Math.max(0.2, Math.min(20, +d.s || 1)),
-      c: d.c | 0, u: d.u ? String(d.u).slice(0, 400) : '',
-    };
-    // Obstacles : décalage de phase (0 à 1) pour désynchroniser plusieurs obstacles.
-    if (isObstacle(deco.k)) { deco.ph = Math.max(0, Math.min(0.95, Math.round((+d.ph || 0) * 20) / 20)); deco.s = Math.max(0.5, Math.min(2.5, deco.s)); }
-    if (!DECO_ORDER.includes(deco.k)) return null;
-    // Couleur personnalisée (#rrggbb) : prend le pas sur l'index de couleur c.
-    if (typeof d.cc === 'string' && HEX.test(d.cc)) deco.cc = d.cc.toLowerCase();
-    this.decos.push(deco);
-    this.version++;
-    return deco;
-  }
-
   // Obstacles physiques (décorations particulières), mis en cache par version.
   get obstacles() {
     if (this._obsV !== this.version) { this._obs = this.decos.filter((d) => isObstacle(d.k)); this._obsV = this.version; }
@@ -324,13 +202,6 @@ export class Track {
   get obstacleGrid() {
     if (this._ogV !== this.version) { this._og = buildObstacleGrid(this.obstacles); this._ogV = this.version; }
     return this._og;
-  }
-
-  removeDeco(d) {
-    const i = this.decos.indexOf(d);
-    if (i < 0) return;
-    this.decos.splice(i, 1);
-    this.version++;
   }
 
   clear() {
@@ -378,146 +249,10 @@ export class Track {
     return { minX, maxX, minZ, maxZ, maxY: maxL * LEVEL_H };
   }
 
-  // Gravité inversée : surface « au plafond » la plus proche au-dessus de (x, y - step, z),
-  // venant des pièces posées à l'envers (géométrie retournée autour de leur niveau).
-  // Sans plafond, h vaut +∞ (la voiture continue de « tomber » vers le haut).
-  ceilingSurfaceAt(x, y, z, out, step = 1.6, broken = null) {
-    out.h = Infinity; out.nx = 0; out.ny = -1; out.nz = 0;
-    out.tile = null; out.type = 'none'; out.mod = ''; out.p = 0; out.lx = 0; out.lz = 0;
-    const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
-    for (const tile of this.tilesAt(cx, cz)) {
-      if (!isCeilingFloor(tile)) continue;
-      if (broken && broken.has(tile)) continue;
-      toLocal(tile, x, z, L);
-      sampleLocal(tile, L.lx, L.lz, S);
-      if (!S.inFootprint) continue;
-      if (PIECES[tile.t].kind !== 'area' && Math.abs(S.d) > ROAD_HALF) continue;
-      const base = baseY(tile);
-      const h = 2 * base - S.h;
-      if (h < y - step || h >= out.h) continue;
-      out.h = h;
-      rotVec(tile.r, S.nx, S.nz, W);
-      out.nx = W.x; out.ny = -S.ny; out.nz = W.z;
-      out.tile = tile; out.type = 'road'; out.mod = tile.s || ''; out.p = tile.p || 0;
-      out.lx = L.lx; out.lz = L.lz;
-      if (tile.s === 'water') out.h += WATER_DROP;
-      else if (tile.s === 'boat' && (PIECES[tile.t].kind === 'line' || PIECES[tile.t].kind === 'arc')) out.h += boatDrop(S.along);
-    }
-    return out;
-  }
-
-  // Surface roulable la plus haute sous (x, y + step, z). Le sol est à y = 0.
-  // Les pièces mobiles (ascenseur, glissière, rotation) sont prises à leur position au chrono `time` (s) de la course : le circuit n'a
-  // pas d'horloge propre, plusieurs voitures (la sienne, un fantôme, un adversaire) l'interrogent chacune à son propre chrono.
-  // broken : pièces de verre déjà brisées dans CETTE course (propre à chaque voiture, voir CarPhysics) : sans collision.
-  surfaceAt(x, y, z, out, step = 1.6, broken = null, time = 0) {
-    out.h = 0; out.nx = 0; out.ny = 1; out.nz = 0;
-    out.tile = null; out.type = 'ground'; out.mod = ''; out.p = 0; out.lx = 0; out.lz = 0;
-    const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
-    let best = -Infinity;
-    const cell = this.tilesAt(cx, cz);
-    for (let i = 0; i < cell.length; i++) {
-      const tile = cell[i];
-      if (tile.mv || !isFloor(tile) || (broken && broken.has(tile))) continue;
-      best = this._floorTry(tile, x, z, 0, y, step, best, out);
-    }
-    // Pièces mobiles : l'index les range dans toutes les cases qu'elles balaient, donc seules celles de CETTE case peuvent porter le point
-    // (même ordre qu'avant : celui du circuit).
-    if (this.hasMovers) {
-      for (let i = 0; i < cell.length; i++) {
-        const tile = cell[i];
-        if (!tile.mv || !isFloor(tile) || (broken && broken.has(tile))) continue;
-        this.moverOffset(tile, time, MO);
-        if (MO.a) { this.moverLocal(MO, x, z, W2); best = this._floorTry(tile, W2.x, W2.z, MO.y, y, step, best, out, MO.a); }
-        else best = this._floorTry(tile, x - MO.x, z - MO.z, MO.y, y, step, best, out);
-      }
-    }
-    return out;
-  }
-
-  _floorTry(tile, x, z, oy, y, step, best, out, a = 0) {
-    toLocal(tile, x, z, L);
-    sampleLocal(tile, L.lx, L.lz, S);
-    if (!S.inFootprint) return best;
-    const p = PIECES[tile.t];
-    if (p.kind !== 'area' && Math.abs(S.d) > ROAD_HALF) return best;
-    const h = S.h + oy;
-    if (h > y + step || h <= best) return best;
-    out.h = h;
-    rotVec(tile.r, S.nx, S.nz, W);
-    out.nx = W.x; out.ny = S.ny; out.nz = W.z;
-    if (a) { const c = dcos(a), sn = dsin(a); out.nx = c * W.x + sn * W.z; out.nz = -sn * W.x + c * W.z; }   // pièce tournée : la normale suit
-    out.tile = tile;
-    out.type = 'road';
-    // Bifurcation à deux revêtements : la voie déportée (branche 1) peut avoir le sien (« - » = route normale).
-    let sf = tile.s, sp = tile.p;
-    if (p.kind === 'fork' && S.branch === 1 && tile.s2) { sf = tile.s2 === '-' ? '' : tile.s2; sp = tile.s2 === '-' ? 0 : tile.p2; }
-    out.mod = sf || '';
-    out.p = sp || 0;
-    out.lx = L.lx; out.lz = L.lz;
-    if (sf === 'water') out.h -= WATER_DROP;
-    else if (sf === 'boat' && (p.kind === 'line' || p.kind === 'arc')) out.h -= boatDrop(S.along);      // plaque bateau : rampe de l'eau au sol
-    return out.h;
-  }
-
-  // Pièces en mouvement : 1 = ascenseur (monte puis redescend), 2 = glissière (se décale sur son côté droit et revient),
-  // 3 = rotation (tourne autour de son centre, tour complet ou va-et-vient). Vitesse et amplitude réglables (voir MOVER).
-  // Le mouvement ne dépend que du chrono de la course. out : décalage (x, y, z) et vitesse (vx, vy, vz) ;
-  // pour une rotation : a (angle, rad), w (vitesse angulaire, rad/s) et le pivot (cx, cz).
-  moverOffset(tile, t, out) {
-    const M = MOVER[tile.mv];
-    const mp = moverParams(tile, MP);
-    const sp = mp.speed / 100, P = M.period / Math.abs(sp), w = (Math.PI * 2) / P;
-    const k = (1 - dcos(w * t)) / 2, dk = (dsin(w * t) * w) / 2;
-    out.x = 0; out.y = 0; out.z = 0; out.vx = 0; out.vy = 0; out.vz = 0;
-    out.a = 0; out.w = 0; out.cx = 0; out.cz = 0;
-    if (tile.mv === 1) { out.y = mp.amp * LEVEL_H * k; out.vy = mp.amp * LEVEL_H * dk; }
-    else if (tile.mv === 2) {
-      rotVec(tile.r, 1, 0, W2);
-      out.x = W2.x * CELL * mp.amp * k; out.z = W2.z * CELL * mp.amp * k;
-      out.vx = W2.x * CELL * mp.amp * dk; out.vz = W2.z * CELL * mp.amp * dk;
-    } else if (tile.mv === 3) {
-      const c = tileCenter(tile, W2);
-      out.cx = c.x; out.cz = c.z;
-      const sg = sp < 0 ? -1 : 1;
-      if (mp.amp >= 360) { out.a = sg * w * t; out.w = sg * w; }      // rotation continue : un tour par période
-      else { const A = (mp.amp * Math.PI) / 180; out.a = sg * A * k; out.w = sg * A * dk; }
-    }
-    return out;
-  }
-
-  // Monde -> repère de la pièce mobile « au repos » (annule le décalage et la rotation) : sert à interroger sa géométrie.
-  moverLocal(o, x, z, out) {
-    x -= o.x; z -= o.z;
-    if (o.a) {
-      const dx = x - o.cx, dz = z - o.cz, c = dcos(o.a), s = dsin(o.a);
-      x = o.cx + c * dx - s * dz; z = o.cz + s * dx + c * dz;
-    }
-    out.x = x; out.z = z;
-    return out;
-  }
-
   // Le circuit a-t-il des pièces mobiles ? (mis en cache par version : évite de balayer la case une seconde fois pour rien)
   get hasMovers() {
     if (this._mvV !== this.version) { this._hasMv = this.tiles.some((t) => t.mv); this._mvV = this.version; }
     return this._hasMv;
-  }
-
-  // Dessous de dalle (ou toit de tunnel) le plus bas au-dessus de yMin : sert à la caméra.
-  ceilingAt(x, z, yMin) {
-    const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
-    let best = Infinity;
-    for (const tile of this.tilesAt(cx, cz)) {
-      const kind = PIECES[tile.t].kind;
-      if (kind === 'loop' || kind === 'ribbon' || tile.v || tile.o) continue;
-      toLocal(tile, x, z, L);
-      sampleLocal(tile, L.lx, L.lz, S);
-      if (!S.inFootprint) continue;
-      if (kind !== 'area' && Math.abs(S.d) > ROAD_HALF + RAIL_W + 0.5) continue;
-      const under = tile.tn ? S.h + ROAD_HALF + RAIL_W + 0.9 : S.h - SLAB_T;
-      if (under > yMin && under < best) best = under;
-    }
-    return best;
   }
 
   // Règles de course remises à leurs valeurs par défaut.
@@ -670,6 +405,10 @@ export class Track {
     return tr;
   }
 }
+
+// Les familles de méthodes vivent dans track/ ; elles s'ajoutent au prototype (`this` est l'instance).
+Object.assign(Track.prototype, surfaceMethods, editMethods);
+
 
 // Suffixe de signature des champs de la Phase 2 : vide tant qu'ils ont leur valeur par défaut (les anciennes signatures ne changent pas).
 // Les couleurs et le thème n'ont aucun effet sur le jeu ni sur les temps : ils restent hors de la signature (modifier une couleur
@@ -1028,4 +767,3 @@ function forkPath(tile, branch, reverse) {
   }
   return reverse ? out.reverse() : out;
 }
-

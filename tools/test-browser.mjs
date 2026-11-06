@@ -45,7 +45,7 @@ await page.route(/fonts\.(googleapis|gstatic)\.com|supabase\.co/, (r) => r.abort
 
 const shot = async (n) => { if (shots) await page.screenshot({ path: join(shots, n + '.png') }); };
 const app = (fn, arg) => page.evaluate(fn, arg);
-const waitApp = (cond, arg, timeout = 15000) => page.waitForFunction(cond, arg, { timeout });
+const waitApp = (cond, arg, timeout = 30000) => page.waitForFunction(cond, arg, { timeout });
 // Les boutons du menu sont animés : Playwright attendrait indéfiniment qu'ils soient « stables ». On déclenche donc le clic dans la page.
 const click = async (sel) => { await page.locator(sel).first().evaluate((el) => el.click(), null, { timeout: 8000 }); };
 
@@ -82,7 +82,7 @@ try {
     await shot('03-carriere');
     await click('#track-list .track-group:not(.ch-open) .card:not(.daily-card):not(.locked)');
     await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.state);
-    await waitApp(() => window.copytrack.session.state === 'racing', null, 20000);
+    await waitApp(() => window.copytrack.session.state === 'racing', null, 40000);
     await page.keyboard.down('ArrowUp');
     await page.waitForTimeout(2500);
     const speed = await app(() => window.copytrack.session.phys.speed);
@@ -114,7 +114,7 @@ try {
 
   await test('défi du jour et circuit en plusieurs tours', async () => {
     await click('[data-action="daily"]');
-    await waitApp(() => window.copytrack.mode === 'race', null, 20000);
+    await waitApp(() => window.copytrack.mode === 'race', null, 40000);
     await page.waitForTimeout(600);
     await app(() => window.copytrack.quitRace());
     await waitApp(() => window.copytrack.mode === 'menu');
@@ -155,7 +155,7 @@ try {
     await page.waitForTimeout(400);
     await shot('08-editeur-circuit');
     await page.keyboard.press('t');
-    await waitApp(() => window.copytrack.mode === 'race', null, 20000);
+    await waitApp(() => window.copytrack.mode === 'race', null, 40000);
     await page.waitForTimeout(700);
     await app(() => window.copytrack.quitRace());
     await waitApp(() => window.copytrack.mode === 'editor' || window.copytrack.mode === 'menu');

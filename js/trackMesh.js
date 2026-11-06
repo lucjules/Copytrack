@@ -5,7 +5,8 @@ import {
   CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T,
 } from './constants.js';
 import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
-import { WATER_DROP, boatDrop, tileToRow } from './track.js';
+import { tileToRow } from './track.js';
+import { WATER_DROP, boatDrop } from './track/shared.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { buildDecoInto, createPlaque, decoColor } from './decos.js';
 import { LIGHT_DECOS } from './decoData.js';
