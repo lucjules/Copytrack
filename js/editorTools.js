@@ -228,8 +228,10 @@ export function checkTrack(track) {
       if (ex * f.dx / fl + ez * f.dz / fl > -0.7) continue;
       const vx = f.x - e.x, vz = f.z - e.z;
       const along = vx * ex + vz * ez, side = Math.abs(vx * ez - vz * ex);
-      if (along < 1 || along > CELL * maxJump || side > 5) continue;
-      if (f.y > e.y + LEVEL_H * 1.2) continue;
+      const flip = e.tile.s === 'flip' || f.tile.s === 'flip';   // la plaque de gravité inversée fait passer au niveau du dessus sur la même case
+      if (along < (flip ? -0.5 : 1) || along > CELL * maxJump || side > 5) continue;
+      // Une plaque de gravité inversée envoie la voiture d'un niveau à l'autre (sol ↔ plafond) : pas de limite de hauteur.
+      if (f.y > e.y + LEVEL_H * 1.2 && !flip) continue;
       if (!land || along < dist) { land = f; dist = along; }
     }
     if (land) {
@@ -238,7 +240,7 @@ export function checkTrack(track) {
       const ramp = ['steep', 'slope', 'gentle', 'crest90'].includes(e.tile.t) || e.tile.s === 'bounce' || e.tile.s === 'boost';
       if (cells >= 6 / Math.max(0.35, lowG) && !glider) issues.push({ tile: e.tile, level: 'warn', msg: `Saut de ${cells} cases : très long sans deltaplane.` });
       else if (!ramp && cells >= 2 && land.y >= e.y - 1) issues.push({ tile: e.tile, level: 'warn', msg: `Saut de ${cells} cases sans tremplin : la voiture risque de tomber.` });
-      if (land.y > e.y + 0.6) issues.push({ tile: land.tile, level: 'warn', msg: 'Arrivée de saut plus haute que le départ.' });
+      if (land.y > e.y + 0.6 && e.tile.s !== 'flip' && land.tile.s !== 'flip') issues.push({ tile: land.tile, level: 'warn', msg: 'Arrivée de saut plus haute que le départ.' });
       // Les éventuels anneaux sur le trajet sont « sur la route ».
       for (const t of track.tiles) {
         if (PIECES[t.t].kind !== 'ring') continue;

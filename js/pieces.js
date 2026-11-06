@@ -252,7 +252,7 @@ export function paramText(s, p) {
     case 'wind': { const a = ((v - 100) / 100) * SURF_PHYS.wind; return Math.abs(a) < 0.05 ? 'nul' : `${a > 0 ? '→' : '←'} ${fmt1(Math.abs(a))} m/s²`; }
     case 'spring': { const k = ((v - 100) / 100) * SURF_PHYS.spring * 3.6; return Math.abs(k) < 0.5 ? 'nulle' : `${k > 0 ? '→' : '←'} ${Math.round(Math.abs(k))} km/h`; }
     case 'glass': return `${fmt1(glassSeconds(v))} s`;
-    case 'boost': return `${Math.round((SURF_PHYS.maxSpeed + (SURF_PHYS.boostSpeed - SURF_PHYS.maxSpeed) * (v / 100)) * 3.6)} km/h`;
+    case 'boost': return `jusqu'à ${Math.round((SURF_PHYS.maxSpeed + (SURF_PHYS.boostSpeed - SURF_PHYS.maxSpeed) * (v / 100)) * 3.6)} km/h`;
     case 'bounce': return `${fmt1((SURF_PHYS.bounce * (v / 100)) ** 2 / (2 * SURF_PHYS.gravity))} m`;
     case 'gravity': return `${fmt1(SURF_PHYS.gravity * (v / 100))} m/s²`;
     default: return `${v} %`;

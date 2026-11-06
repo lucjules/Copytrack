@@ -778,7 +778,7 @@ export class RaceSession {
       const hud = app.ui.hud;
       if (this.replay && this.state === 'finished') { hud.speed(Math.abs(p.fwdSpeed) * 3.6, p.boost); return; }
       // Effet de vitesse au-delà de 180 km/h.
-      const fx = app.settings.speedFx !== false ? Math.max(0, Math.min(1, (Math.abs(p.fwdSpeed) - 50) / 22)) : 0;
+      const fx = app.settings.speedFx !== false ? Math.max(0, Math.min(1, (Math.abs(p.fwdSpeed) - 62) / 38)) : 0;
       app.ui.speedFx(fx * (this.camMode === 2 ? 1 : 0.8));
       if (this.state === 'racing') hud.time((this.logic.steps + alpha) * DT);
       hud.speed(Math.abs(p.fwdSpeed) * 3.6, p.boost);

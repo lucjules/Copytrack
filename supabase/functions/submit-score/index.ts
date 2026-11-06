@@ -5278,10 +5278,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 C S2 UU GR2 DD S2 L S.o S R S2 RR S2 S.o C S2 LL S2 B S R L S2 finish",
     medals: {
-      cristal: 26.1,
+      cristal: 26.2,
       or: 27.7,
-      argent: 31.8,
-      bronze: 37.3
+      argent: 31.9,
+      bronze: 37.4
     }
   },
   {
@@ -5311,10 +5311,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S R L S2 C S L S S S R S2.m R L S2 B S O S2 L S R S2 C S R S L S2 finish",
     medals: {
-      cristal: 28.4,
-      or: 30.3,
-      argent: 34.9,
-      bronze: 40.9
+      cristal: 29.2,
+      or: 31.2,
+      argent: 35.9,
+      bronze: 42
     }
   },
   {
@@ -5327,10 +5327,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2# C S2 L S R S2 Y2.b S2 R L S2 B S2 BL S2 C S L S R S2 finish",
     medals: {
-      cristal: 24.7,
-      or: 26.3,
-      argent: 30.3,
-      bronze: 35.5
+      cristal: 26.8,
+      or: 28.4,
+      argent: 32.8,
+      bronze: 38.4
     }
   },
   {
@@ -5344,10 +5344,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 R S L S2 C S2 Y2.b S2 BR S U S2 D S2 C S2 UU G2 DD S2 LL S2 finish",
     medals: {
-      cristal: 26,
-      or: 27.3,
-      argent: 31.4,
-      bronze: 36.8
+      cristal: 25.9,
+      or: 27.1,
+      argent: 31.2,
+      bronze: 36.6
     }
   },
   {
@@ -5360,10 +5360,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 C S R R S2 L S B S3 BRR S C S L L S2 R S2 B S R S L S2 KL S2 B S3 finish",
     medals: {
-      cristal: 30.8,
-      or: 32.1,
-      argent: 36.9,
-      bronze: 43.3
+      cristal: 30.7,
+      or: 31.9,
+      argent: 36.6,
+      bronze: 43.1
     }
   },
   {
@@ -5377,10 +5377,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B TI TM2 TO S2 R B S UU GR2 DD S2 C S L S2 B S O S2 KL S2 R S2 finish",
     medals: {
-      cristal: 23,
-      or: 24.1,
-      argent: 27.7,
-      bronze: 32.5
+      cristal: 22,
+      or: 23,
+      argent: 26.5,
+      bronze: 31.1
     }
   },
   {
@@ -5394,10 +5394,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S B S2 UU GR2 DD S2 C S LL B S2 UU G2 S2 D2 RR S C S2 B S UU GC2 DD S2 finish",
     medals: {
-      cristal: 21.4,
-      or: 22.3,
-      argent: 25.7,
-      bronze: 30.1
+      cristal: 20.8,
+      or: 21.6,
+      argent: 24.9,
+      bronze: 29.2
     }
   },
   {
@@ -5410,10 +5410,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 B S O S2 C S L S R S2 B S OL S2 BR S2 B S OB S2 C S2 L S R S2 finish",
     medals: {
-      cristal: 32.3,
-      or: 33.7,
-      argent: 38.7,
-      bronze: 45.4
+      cristal: 31.3,
+      or: 32.7,
+      argent: 37.5,
+      bronze: 44.1
     }
   },
   {
@@ -5427,10 +5427,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 B S O S2 R S S S L S B S OL S2 C S BL S R S2 B S2 L R S2 finish",
     medals: {
-      cristal: 28.4,
-      or: 29.8,
-      argent: 34.3,
-      bronze: 40.3
+      cristal: 27.7,
+      or: 29.1,
+      argent: 33.5,
+      bronze: 39.3
     }
   },
   {
@@ -5444,10 +5444,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 L S R S2 B S.j G1 S2 R L C S2 RR S B S2 GU2 S GD2 S LL S R S L S2 B S.j G1 S2 C S2 R L S2 finish",
     medals: {
-      cristal: 31,
-      or: 32.9,
-      argent: 37.9,
-      bronze: 44.4
+      cristal: 29.9,
+      or: 31.8,
+      argent: 36.5,
+      bronze: 42.8
     }
   },
   {
@@ -5461,10 +5461,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S2 S.n S3.a R.a S2.a L.a S2.a S.n S2 C S L S BR S B S UU G2 DD S2 C S2 L R S2 finish",
     medals: {
-      cristal: 28.2,
-      or: 29.1,
-      argent: 33.5,
-      bronze: 39.3
+      cristal: 28.6,
+      or: 29.5,
+      argent: 34,
+      bronze: 39.9
     }
   },
   {
@@ -5478,10 +5478,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 C S2 S.e S2 UU GR7 DD S2 S.e S R S L S3_ B S2 C S2 RR S2 finish",
     medals: {
-      cristal: 29.4,
-      or: 30.7,
-      argent: 35.4,
-      bronze: 41.5
+      cristal: 27,
+      or: 28.2,
+      argent: 32.5,
+      bronze: 38.1
     }
   },
   {
@@ -5495,10 +5495,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R L R L S2 C S.o S2 R S L S2 B S O S2 C S L R L R S2 S.o S2 B S2 RR S2 LL S.o S2 finish",
     medals: {
-      cristal: 28.4,
-      or: 30.4,
-      argent: 34.8,
-      bronze: 41
+      cristal: 29.7,
+      or: 31.8,
+      argent: 36.4,
+      bronze: 42.8
     }
   },
   {
@@ -5515,10 +5515,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 C S S.e S5 UU GR6 DD S2 R S5 UU GR6 DD S.e S2 C S L S2 B S2 finish",
     medals: {
-      cristal: 41.7,
-      or: 43.3,
-      argent: 49.8,
-      bronze: 58.4
+      cristal: 25.9,
+      or: 26.9,
+      argent: 30.9,
+      bronze: 36.3
     }
   },
   {
@@ -5535,10 +5535,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 R S L S2 S.o S2 C S2 R S2 BR S2 S.o S S.e S3 UU G6 DD S S.e S2 C S L S2 S.o S2 finish",
     medals: {
-      cristal: 25.9,
-      or: 27,
-      argent: 31,
-      bronze: 36.4
+      cristal: 30,
+      or: 31.2,
+      argent: 35.9,
+      bronze: 42.1
     }
   },
   {
@@ -5551,10 +5551,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S3_ R_ S_ L_ S2 C S S.n S4.a L.a S2.a R.a S.a S.n S2 B S2 BR S2_ KL S2 R S L S2 finish",
     medals: {
-      cristal: 29.4,
-      or: 30.6,
-      argent: 35.2,
-      bronze: 41.3
+      cristal: 30.9,
+      or: 32.2,
+      argent: 37,
+      bronze: 43.4
     }
   },
   {
@@ -5567,10 +5567,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S B S I3 RR S C I2 L S R S I2 RR B S2 C S Y2.i S LL I2 S R S2 U S I2 D S L S2 B S finish",
     medals: {
-      cristal: 33.2,
-      or: 35.1,
-      argent: 40.4,
-      bronze: 47.4
+      cristal: 32.5,
+      or: 34.3,
+      argent: 39.6,
+      bronze: 46.4
     }
   },
   {
@@ -5584,10 +5584,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S B S2 S.j G1 S2 C S RR S B S S.j G1 S2 LL S2.i C S2 B S S S S.j G1 S3_ R S2 finish",
     medals: {
-      cristal: 20.4,
-      or: 21.6,
-      argent: 24.7,
-      bronze: 29
+      cristal: 21.2,
+      or: 22.4,
+      argent: 25.7,
+      bronze: 30.1
     }
   },
   {
@@ -5601,10 +5601,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S2 L S R S.d L S2 C S R L S2 S S R S L S2.w60 B S2 Y2.d S R S L S2 finish",
     medals: {
-      cristal: 27.8,
-      or: 29.8,
-      argent: 34.5,
-      bronze: 41
+      cristal: 27.9,
+      or: 29.9,
+      argent: 34.7,
+      bronze: 41.2
     }
   },
   {
@@ -5617,10 +5617,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S B S U S.m D S C S R S3 R S B S2 UU S.m DD.m S C S LL S2.m U S2 D S TI TM2 TO finish",
     medals: {
-      cristal: 21.8,
-      or: 23,
-      argent: 26.7,
-      bronze: 31.4
+      cristal: 21.2,
+      or: 22.4,
+      argent: 25.9,
+      bronze: 30.5
     }
   },
   {
@@ -5633,10 +5633,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 U2 R# S# L# S2# C S2 R S L S2 D2 S R L S2# B S2# L TI TM2 TO UU GC2 DD S2_ R S2 finish",
     medals: {
-      cristal: 29.4,
-      or: 31.1,
-      argent: 35.7,
-      bronze: 41.9
+      cristal: 27.4,
+      or: 29,
+      argent: 33.3,
+      bronze: 39.1
     }
   },
   {
@@ -5649,10 +5649,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 R S2 L S2 C S2_ R_ S_ L S2.w150 S2 B S2 UU GR2 DD S2 KL S2.d R S2 B S.j G1 S2 L S2 finish",
     medals: {
-      cristal: 25.9,
-      or: 27.3,
-      argent: 31.6,
-      bronze: 37.4
+      cristal: 28.4,
+      or: 30,
+      argent: 34.8,
+      bronze: 41.2
     }
   },
   {
@@ -5665,10 +5665,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2# R# S# L# S2 C S2 B S2 QU WA2 CR S2 R S L S2 D2 S2 C S TB S L S R S2 finish",
     medals: {
-      cristal: 26.4,
-      or: 27.7,
-      argent: 31.9,
-      bronze: 37.4
+      cristal: 28.3,
+      or: 29.6,
+      argent: 34.1,
+      bronze: 40
     }
   },
   {
@@ -5684,10 +5684,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 B S2 QU WA CR S2 C S R S L S2 D2 S CK S2 R S2 B S2 QU WA CR S2 C S2 R L S2 finish",
     medals: {
-      cristal: 28.6,
-      or: 30,
-      argent: 34.6,
-      bronze: 40.6
+      cristal: 30.9,
+      or: 32.5,
+      argent: 37.4,
+      bronze: 43.9
     }
   },
   {
@@ -5701,10 +5701,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 UU GC2 DD S2 R S2 TB S2 L S2 B S2 UU GR2 DD S2 C S CKL S2 BL S2 UU GR2 DD S2 finish",
     medals: {
-      cristal: 27,
-      or: 28,
-      argent: 32.3,
-      bronze: 37.9
+      cristal: 32.6,
+      or: 33.9,
+      argent: 39,
+      bronze: 45.7
     }
   },
   {
@@ -5734,10 +5734,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 R S L TI TM2 TO S C S2 B S2 QU WA2 CR S2 R S2 TB S2 C S L S2 D2 S2 finish",
     medals: {
-      cristal: 22.8,
-      or: 23.7,
-      argent: 27.3,
-      bronze: 32.1
+      cristal: 26.5,
+      or: 27.5,
+      argent: 31.7,
+      bronze: 37.2
     }
   },
   {
@@ -5751,10 +5751,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 B S2 OB S C S2 CK S2 L S R S2 B S2 ODL S2 C S CKL S2 R L S2 finish",
     medals: {
-      cristal: 38,
-      or: 39.6,
-      argent: 45.7,
-      bronze: 53.6
+      cristal: 43.6,
+      or: 45.4,
+      argent: 52.3,
+      bronze: 61.4
     }
   },
   {
@@ -5768,10 +5768,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B RR S2 C S3 BR S2 UU G2 DD S2 RR S2 B S2 RR S L R S1 finish",
     medals: {
-      cristal: 40.8,
-      or: 43.2,
-      argent: 49.7,
-      bronze: 58.4
+      cristal: 39.3,
+      or: 41.7,
+      argent: 47.9,
+      bronze: 56.4
     }
   },
   {
@@ -5786,10 +5786,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B BR S2 C S2 BR S2 TB S2 BR S5 BR S1 finish",
     medals: {
-      cristal: 40.1,
-      or: 41.3,
-      argent: 47.6,
-      bronze: 55.8
+      cristal: 44,
+      or: 45.4,
+      argent: 52.2,
+      bronze: 61.3
     }
   },
   {
@@ -5806,10 +5806,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 B S.g30 S2 UU G10 DD S2 C S.g100 S2 R S L S2 RR S B S2 S.e S2 UU G8 DD S S.e S2 C S2 L S R S2 finish",
     medals: {
-      cristal: 39.9,
-      or: 41.6,
-      argent: 47.9,
-      bronze: 56.2
+      cristal: 30.8,
+      or: 32.2,
+      argent: 37,
+      bronze: 43.4
     }
   },
   {
@@ -5822,10 +5822,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 R S U S R S U R S3 C S R S GU2 R S2 R S B S5 BR S D3 S KR S2 B S2 finish",
     medals: {
-      cristal: 31,
-      or: 32.7,
-      argent: 37.7,
-      bronze: 44.1
+      cristal: 27.8,
+      or: 29.3,
+      argent: 33.8,
+      bronze: 39.6
     }
   },
   {
@@ -5838,10 +5838,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S B S2 O S2 C S U2 RR S2 B S UU G2 DD S2 C S LL S B S.j G1 S2 R S2.m U S.m D.m S C S BLL S2 B S OL S2 R S2.i S L S2 B S2 finish",
     medals: {
-      cristal: 42.6,
-      or: 44.2,
-      argent: 50.8,
-      bronze: 59.7
+      cristal: 39,
+      or: 40.4,
+      argent: 46.5,
+      bronze: 54.6
     }
   },
   {
@@ -5855,10 +5855,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 RR S S.n S2.a RR.a S.a S.n S S C S2 RR S2 B S RR finish",
     medals: {
-      cristal: 44,
-      or: 46.2,
-      argent: 53.1,
-      bronze: 62.3
+      cristal: 38.8,
+      or: 40.7,
+      argent: 46.8,
+      bronze: 54.9
     }
   },
   {
@@ -5871,10 +5871,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S I3 RR S C S2 L S R S2 B S UU GR2 DD S C S LL S2 B S.j G1 S2 R.i S B S O S2 C S CK S2 B S3 finish",
     medals: {
-      cristal: 33.5,
-      or: 34.9,
-      argent: 40.3,
-      bronze: 47.3
+      cristal: 39.5,
+      or: 41.2,
+      argent: 47.5,
+      bronze: 55.8
     }
   },
   {
@@ -5888,10 +5888,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 B S2 QU WA2 CR S2 C S2 B S OB S R S L D2 S2 B S OD S2 C S L R S2.g40 S2 S.g100 S2 finish",
     medals: {
-      cristal: 32.2,
-      or: 33.5,
-      argent: 38.6,
-      bronze: 45.3
+      cristal: 32.8,
+      or: 34.1,
+      argent: 39.3,
+      bronze: 46.1
     }
   },
   {
@@ -5905,10 +5905,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2 R S L S2 B S2 OL S2 C S S.n S3.a R.a S2.a S.n S2 RR_ S2.w170_ S C S2 B S2 UU G3 DD S2 R S L S2 B S OB S2 C S2 L R S2 finish",
     medals: {
-      cristal: 50.1,
-      or: 52.3,
-      argent: 60.2,
-      bronze: 70.7
+      cristal: 41.2,
+      or: 43,
+      argent: 49.5,
+      bronze: 58.1
     }
   },
   {
@@ -5922,10 +5922,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S S.g40 S2 UU GR6 DD S2 S.g100 S2 C S2 TB S2 R S2 CK S2 L S2 S.e S UU GR7 DD S.e S2 C TI TM2.b TO S finish",
     medals: {
-      cristal: 32,
-      or: 33.1,
-      argent: 38.1,
-      bronze: 44.7
+      cristal: 35,
+      or: 36.2,
+      argent: 41.7,
+      bronze: 48.9
     }
   },
   {
@@ -5938,10 +5938,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 B S2 R S L S2 QU WA CR S2 C S2 OB S2 BL S2 S.n S2.a L.a S.a S.n S2 C S2 CKL S2 UU GR2 DD S2 Y2.b S2 finish",
     medals: {
-      cristal: 38,
-      or: 39.5,
-      argent: 45.4,
-      bronze: 53.3
+      cristal: 46,
+      or: 47.7,
+      argent: 54.9,
+      bronze: 64.5
     }
   },
   {
