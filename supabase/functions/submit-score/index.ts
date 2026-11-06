@@ -5278,20 +5278,32 @@ var BUILTIN_TRACKS = [
     }
   },
   {
+    // Chapitre 3 · 1/6 — SPRINT (moto). Ouverture : départ EN MOTO (veh0), lancé par une descente de 7 niveaux au lieu d'un booster. Puis deux
+    // sauts en chapelet avec un anneau turbo chacun, un très grand virage plat et un dernier booster. Presque tout droit.
     id: "lagon",
     name: "Lagon Turquoise",
     decor: "isles",
     difficulty: 1,
+    profil: "sprint",
     goal: {
       id: "rings",
-      n: 1
+      n: 2
     },
-    script: "start B S2 R S L S2 C S2 UU GR2 DD S2 L S.o S R S2 RR S2 S.o C S2 LL S2 B S R L S2 finish",
+    opts: {
+      l: 8
+    },
+    params: {
+      veh0: "moto"
+    },
+    pilot: {
+      vCap: 66
+    },
+    script: "start [cdi1] [dn2] [dn2] [cdo2] B S [crv1] UU GR2 DD [cdo1] B2 S [crv1] UU GR2 DD [cdo1] S B C S3 HL S2 B2 finish",
     medals: {
-      cristal: 26.2,
-      or: 27.7,
-      argent: 31.9,
-      bronze: 37.4
+      cristal: 17,
+      or: 17.9,
+      argent: 20.6,
+      bronze: 24.2
     }
   },
   {
@@ -5509,37 +5521,51 @@ var BUILTIN_TRACKS = [
     }
   },
   {
+    // Chapitre 3 · 2/6 — TECHNIQUE (bateau). Ouverture : départ SUR L'EAU (plaque bateau juste après la ligne, slalom R L R L dans un chenal).
+    // Le bateau glisse et freine peu : les épingles se font en voiture, entre deux chenaux, avec un petit saut sur un mur. L'arrivée se franchit
+    // en bateau (objectif bonus), le chenal final sortant directement sur la ligne.
     id: "recif",
-    name: "R\xE9cif Corallien",
+    name: "R\xE9cif",
     decor: "isles",
     difficulty: 3,
+    profil: "technique",
     goal: {
       id: "vehicle",
-      v: "car"
+      v: "boat"
     },
-    script: "start B S2 R S2 S.n S3.a R.a S2.a L.a S2.a S.n S2 C S L S BR S B S UU G2 DD S2 C S2 L R S2 finish",
+    opts: {
+      l: 4
+    },
+    script: "start S.n S2.a R.a L.a R.a L.a S.a S.n B2 S [tr01s] S2< [tr10s] S3 R R B S2 L S L B S3 [cvd05] [cvdL05] B S C S.n S2.a R.a L.a R.a L.a S2.a finish",
     medals: {
-      cristal: 28.6,
-      or: 29.5,
-      argent: 34,
-      bronze: 39.9
+      cristal: 27.9,
+      or: 29.4,
+      argent: 33.8,
+      bronze: 39.7
     }
   },
   {
+    // Chapitre 3 · 3/6 — ACROBATIQUE (deltaplane). Ouverture : trois boosters, plaque deltaplane et vol de cinq cases au-dessus de la mer. Puis
+    // deux sauts de voiture avec anneau turbo, séparés par la montée du phare (hélice de quatre grandes courbes inclinées, +8 niveaux) et un
+    // plongeon. La piste qui suit un vol plané est longue : selon l'élan, le deltaplane se pose plus ou moins loin.
     id: "phare",
-    name: "Le Phare",
+    name: "Phare",
     decor: "isles",
     difficulty: 3,
+    profil: "acrobatique",
     goal: {
       id: "rings",
-      n: 1
+      n: 2
     },
-    script: "start B S2 R S L S2 C S2 S.e S2 UU GR7 DD S2 S.e S R S L S3_ B S2 C S2 RR S2 finish",
+    opts: {
+      l: 4
+    },
+    script: "start B3 S.e UU GR5 DD S5 S.e S C B2 S [crv1] UU GR2 DD [cdo1] S2 CBR2 CBR2 CBR2 CBR2 S C B [cdi2] DX [cdo2] B S2 [crv1] UU GR2 DD [cdo1] S2 B finish",
     medals: {
-      cristal: 27,
-      or: 28.2,
-      argent: 32.5,
-      bronze: 38.1
+      cristal: 31.4,
+      or: 33,
+      argent: 38,
+      bronze: 44.6
     }
   },
   {
@@ -5687,20 +5713,26 @@ var BUILTIN_TRACKS = [
     }
   },
   {
+    // Chapitre 2 · 5/6 — ROLLERCOASTER (tonneaux). Ouverture : départ AU PLAFOND (la course commence en gravité inversée, comme des racines qui
+    // pendent). Deux tonneaux complets autour de l'axe de la route (plafond → mur gauche → sol → mur droit → plafond), un plongeon de
+    // 8 niveaux, un virage relevé, de la boue et du vent, puis un double looping. Les checkpoints sont suivis de boosters.
     id: "racines",
     name: "Racines Boueuses",
     decor: "jungle",
     difficulty: 3,
+    profil: "rollercoaster",
     goal: {
-      id: "turbo",
-      n: 2
+      id: "norespawn"
     },
-    script: "start B S2 R S2 L S R S.d L S2 C S R L S2 S S R S L S2.w60 B S2 Y2.d S R S L S2 finish",
+    opts: {
+      l: 10
+    },
+    script: "start^ B3^ [tr31s] S< [tr10s] [tr02s] S> [tr23s] S^ [tr31s] S< [tr10s] S C B [cdi2] DX [cdo2] S BLL S S.d S.w100 S C B3 OD S2 B finish",
     medals: {
-      cristal: 27.9,
-      or: 29.9,
-      argent: 34.7,
-      bronze: 41.2
+      cristal: 19.8,
+      or: 20.9,
+      argent: 24,
+      bronze: 28.2
     }
   },
   {
@@ -5752,19 +5784,26 @@ var BUILTIN_TRACKS = [
     }
   },
   {
+    // Chapitre 2 · 6/6 — TECHNIQUE (tunnels). Ouverture : départ dans un tunnel, avec une épingle immédiate. Douze virages serrés (épingles dans
+    // un tube, hélice descendante de quatre virages, slalom R L R L sous un tunnel), un tube pris à pleine vitesse et un booster à
+    // chaque relance : freiner fort, relancer fort.
     id: "temple",
-    name: "Temple Perdu",
+    name: "Temple",
     decor: "jungle",
     difficulty: 4,
+    profil: "technique",
     goal: {
       id: "norespawn"
     },
-    script: "start B S2 R S L S2# R# S# L# S2 C S2 B S2 QU WA2 CR S2 R S L S2 D2 S2 C S TB S L S R S2 finish",
+    opts: {
+      l: 8
+    },
+    script: "start S# R# R# B# S2# B S3 TI TM2 TO S R R B S2 [cdi1] [dn2] [cdo1] S C S [cvd05] [cvd05] [cvd05] [cvd05] S2 B S R# L# R# L# S2# B finish",
     medals: {
-      cristal: 28.3,
-      or: 29.6,
-      argent: 34.1,
-      bronze: 40
+      cristal: 24.6,
+      or: 25.9,
+      argent: 29.7,
+      bronze: 34.9
     }
   },
   {

@@ -36,13 +36,15 @@ test('version 0.9.6 ou plus (bêta 0.9.x suit package.json)', () => {
   assert.equal(VERSION, 'bêta ' + v);
   assert.ok(+v.split('.')[2] >= 6, v);
 });
-test('chaque profil écrit existe ; les dix premiers circuits ont un profil', () => {
+test('chaque profil écrit existe ; les quinze premiers circuits ont un profil', () => {
   for (const d of REDONE) assert.ok(PROFILS[d.profil], d.id + ' : profil inconnu ' + d.profil);
-  const first = BUILTIN_TRACKS.slice(0, 10);
-  assert.ok(first.every((d) => d.profil), 'les dix premiers circuits doivent avoir un profil : ' + first.filter((d) => !d.profil).map((d) => d.id));
+  const first = BUILTIN_TRACKS.slice(0, 15);
+  assert.ok(first.every((d) => d.profil), 'les quinze premiers circuits doivent avoir un profil : ' + first.filter((d) => !d.profil).map((d) => d.id));
 });
-test('le chapitre 1 propose les cinq profils, et deux circuits consécutifs d’un chapitre n’ont jamais le même profil', () => {
-  assert.equal(new Set(BUILTIN_TRACKS.slice(0, 6).map((d) => d.profil)).size, 5);
+test('les chapitres 1 et 2 sont complets et proposent les cinq profils', () => {
+  for (const [a, b] of [[0, 6], [6, 12]]) assert.equal(new Set(BUILTIN_TRACKS.slice(a, b).map((d) => d.profil)).size, 5, 'chapitre ' + (a / 6 + 1));
+});
+test('deux circuits consécutifs d’un chapitre n’ont jamais le même profil', () => {
   for (let i = 0; i + 1 < BUILTIN_TRACKS.length; i++) {
     const a = BUILTIN_TRACKS[i], b = BUILTIN_TRACKS[i + 1];
     if (a.profil && b.profil && Math.floor(i / 6) === Math.floor((i + 1) / 6)) assert.notEqual(a.profil, b.profil, `${a.id} puis ${b.id} : ${a.profil} deux fois de suite`);
@@ -81,6 +83,20 @@ test('ouvertures du chapitre 2 : boosters → rampe de lancement avec anneau, d�
   assert.match(by.canopee.script, /^start TI TM\d\.b TO BRR/);
   assert.match(by.spores.script, /^start B2 S\.j200 G2 V2 /);
   assert.match(by.serpent.script, /^start Y2\.o /);
+});
+test('ouvertures des chapitres 2 (fin) et 3 : départ au plafond, départ dans un tunnel, descente en moto, départ sur l’eau, décollage en deltaplane', () => {
+  const by = Object.fromEntries(BUILTIN_TRACKS.map((d) => [d.id, d]));
+  assert.match(by.racines.script, /^start\^ B3\^ \[tr31s\]/);
+  assert.match(by.temple.script, /^start S# R# R# /);
+  assert.match(by.lagon.script, /^start \[cdi1\] \[dn2\] \[dn2\] /); assert.equal(by.lagon.params.veh0, 'moto');
+  assert.match(by.recif.script, /^start S\.n S2\.a /);
+  assert.match(by.phare.script, /^start B3 S\.e UU /);
+});
+test('départ au plafond : la course commence bien en gravité inversée, et le départ en moto en moto', () => {
+  const r = new RaceLogic(built.get('racines')).spawnPoint();
+  assert.equal(r.gs, -1);
+  const lg = new RaceLogic(built.get('lagon'));
+  assert.equal(lg.respawn.vehicle, 'moto');
 });
 test('aucun circuit refait n’a de vitesse de départ (v0) : on doit pouvoir repartir du départ À L’ARRÊT (réapparition avant le premier checkpoint)', () => {
   for (const d of REDONE) assert.ok(!(d.params && d.params.v0), d.id + ' : départ lancé');
@@ -149,7 +165,7 @@ const C = {
   },
   acrobatique: (P, S) => {
     assert.ok(S.airTotal >= 6, 'temps en l\'air ' + S.airTotal.toFixed(1));
-    assert.ok(S.perfects >= 3, 'réceptions parfaites ' + S.perfects);
+    assert.ok(S.jumps >= 3, 'sauts (vols de plus d\'une seconde) ' + S.jumps);
     assert.ok(P.heightRange >= 8, 'hauteur ' + P.heightRange);
   },
 };
@@ -212,10 +228,12 @@ test('objectifs bonus réalisables : chrono ≥ médaille d’or, réceptions pa
     if (d.goal.id === 'vehicle') assert.equal(S.vehicle, d.goal.v, `${d.id} : arrivée en ${S.vehicle}`);
   }
 });
-test('ordre de carrière du chapitre 1 et difficulté croissante (1, 2, 2, 3, 3, 4), chapitre 2 refait dans l’ordre (lianes, canopée, spores, serpent)', () => {
+test('ordre de carrière : chapitre 1 (difficulté 1, 2, 2, 3, 3, 4), chapitre 2 (lianes … temple) et début du chapitre 3 (lagon, récif, phare)', () => {
   assert.deepEqual(BUILTIN_TRACKS.slice(0, 6).map((d) => d.difficulty), [1, 2, 2, 3, 3, 4]);
   assert.deepEqual(BUILTIN_TRACKS.slice(0, 6).map((d) => d.id), ['eclats', 'canyon', 'tremplins', 'spirale', 'verglas', 'grandtour']);
-  assert.deepEqual(BUILTIN_TRACKS.slice(6, 10).map((d) => d.id), ['lianes', 'canopee', 'spores', 'serpent']);
+  assert.deepEqual(BUILTIN_TRACKS.slice(6, 12).map((d) => d.id), ['lianes', 'canopee', 'spores', 'serpent', 'racines', 'temple']);
+  assert.deepEqual(BUILTIN_TRACKS.slice(12, 15).map((d) => d.id), ['lagon', 'recif', 'phare']);
+  assert.deepEqual(BUILTIN_TRACKS.slice(6, 12).map((d) => d.difficulty), [2, 3, 3, 3, 3, 4]);
 });
 test('les nouveaux circuits se partagent et se rechargent (code SHW) sans perte', () => {
   for (const d of REDONE) {
