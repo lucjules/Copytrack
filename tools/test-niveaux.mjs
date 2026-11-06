@@ -53,21 +53,21 @@ const CAREER = [
 // Les trois premiers jetons après « start » : l'ouverture de chaque circuit, écrite ici pour que personne ne la change sans le vouloir.
 const OPENINGS = {
   // chapitre 1 : booster → wall-ride · booster → virage relevé · chute libre · booster → looping · épingle descendante · montée verticale
-  eclats: 'B2 [tr01l] S4<', canyon: 'B BRR B3', tremplins: 'G1 V-5 [dn4]', spirale: 'B3 OB S', verglas: '[cvd1] [cvd1] B', grandtour: 'B3 QU WA3',
+  eclats: 'B2 [tr01l] S4<', canyon: 'B BRR B3', tremplins: 'V-5 [dn4] [cdo2]', spirale: 'B3 OB S', verglas: '[cvd1] [cvd1] B', grandtour: 'B3 QU WA3',
   // chapitre 2 : rampe + anneau · tube · rebond géant · bifurcation + moto · plafond · tunnel
-  lianes: 'B3 UU GR2', canopee: 'TI TM3.b TO', spores: 'B2 S.j200 G2', serpent: 'Y2.o B S', racines: 'B3^ [tr31s] S<', temple: 'S# R# R#',
+  lianes: 'B3 UU GR2', canopee: 'TI TM3.b TO', spores: 'B2 S.j200 G1', serpent: 'Y2.o B S', racines: 'B3^ [tr31s] S<', temple: 'S# R# R#',
   // chapitre 3 : descente en moto · eau · deltaplane · triple looping · basse gravité · pente douce
   lagon: '[cdi1] [dn2] [dn2]', recif: 'S.n S2.a R.a', phare: 'B3 S.e UU', vrille: 'B4 OBT S2', lunaire: 'S.g50 G2 V-6', archipel: 'GD6 BRR S',
   // chapitre 4 : tapis roulant · deux loopings · sans bordures · montée en lacets · looping + rampe de toit · lift hill
-  neons: 'S3.t201 S BRR', hyper: 'B3 O OL', boulevard: 'B2_ S3_ B_', metro: 'B CVR2 CVR2', tours: 'B3 O S2', viaduc: 'B3 [crv4] UX',
+  neons: 'S3.t201 S BRR', hyper: 'B3 O OL', boulevard: 'B2_ S3_ B_', metro: 'B CVR2 CVR2', tours: 'B3 O S2', viaduc: 'B3 [crv4] UX.b',
   // chapitre 5 : glace · rebonds · toboggan · tire-bouchon · virage relevé sans booster · poudreuse
   aurore: 'I2 B3 I2', banquise: 'I B2 S.j100', glacier: '[cdi2] DX [cdo2]', helice: 'S2 CK S', couronne: 'BRR B3 S', blizzard: 'S2.p B S2',
   // chapitre 6 : collines · S relevé · dérive · tube + cheminée · montée douce · rampe sans virage d'entrée
-  braises: 'B2 GU3 GD3', coulee: 'B BR S', basalte: 'S2.d B S2', cheminee: 'B3 TI TM2', caldeira: 'B2 GU4 S', eruption: 'B3 UX G3',
+  braises: 'B2 GU3 GD3', coulee: 'B BR S', basalte: 'S2.d B S2', cheminee: 'B3 TI TM2', caldeira: 'B2 GU4 S', eruption: 'B3 UX G2',
   // chapitre 7 : tube + basse gravité · moto · tire-bouchon · tube court · apesanteur · plateforme
   quai: 'B TI TM', navette: 'S.o B R', ceinture: 'S CKL S', grandanneau: 'B2 TB S2', apesanteur: 'B2 S.g20 [crv1]', zenith: 'P2 B S',
   // chapitre 8 : contre-courant · courant · wall-ride · gravité lourde · plongeon · pont de verre
-  courant: 'B2 S2.t40 S2.t170', corail: 'B S2.t137 S2', epave: 'B3 [tr02s] S3>', meduses: 'B3 S.g200 [crv2]', abysses: 'B [cdi2] DX', barriere: 'B2 S3.v BRR',
+  courant: 'B2 S2.t40 S2.t170', corail: 'B S2.t137 S2', epave: 'B3 [tr02s] S3>', meduses: 'B5 S.g130 S2', abysses: 'B [cdi2] DX', barriere: 'B2 S3.v BRR',
   // chapitre 9 : moteur coupé · bifurcation · hélice · tunnel · pistons · ralentisseurs
   chaine: 'B3 S3.c B', laminoir: 'Y2.b B S', engrenages: 'B2 CBR2 CBR2', fonderie: 'B3 S4# BRR', presse: 'B2 S4.j150 S3', usinefolle: 'B2 S2.x R',
   // chapitre 10 : vent · rampe sans bordures · vent fort · gravité réduite · pont sans bordures · deltaplane
@@ -264,8 +264,8 @@ test('les circuits à plusieurs tours se referment (l’arrivée jouxte le dépa
   assert.deepEqual(laps.map((d) => d.id).sort(), ['caldeira', 'grandanneau']);
   for (const d of laps) { const S = runTrack(buildBuiltin(d)); assert.ok(S.ok && S.respawns === 0, d.id + ' : ' + S.reason); }
 });
-test('circuit de sauts (Tremplins) : finissable de 48 à 72 m/s (172 à 260 km/h) à l’abord des rampes, sans checkpoint survolable', () => {
-  for (const c of [48, 54, 60, 66, 72]) { const S = runTrack(buildBuiltin(by.tremplins), { vCap: c }); assert.ok(S.ok && S.respawns === 0, `vCap ${c} : ${S.ok ? S.respawns + ' réapparitions' : S.reason}`); }
+test('circuit de sauts (Tremplins) : finissable de 56 à 80 m/s (202 à 288 km/h) à l’abord des rampes, sans checkpoint survolable (sans « collage », une rampe prise trop lentement ne se franchit plus)', () => {
+  for (const c of [56, 60, 66, 72, 80]) { const S = runTrack(buildBuiltin(by.tremplins), { vCap: c }); assert.ok(S.ok && S.respawns === 0, `vCap ${c} : ${S.ok ? S.respawns + ' réapparitions' : S.reason}`); }
 });
 test('les anciennes listes d’obstacles figés ont disparu (js/builtinObstacles.js) : un circuit n’a que les obstacles de son champ obst', () => {
   assert.ok(!existsSync(new URL('../js/builtinObstacles.js', import.meta.url)));

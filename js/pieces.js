@@ -17,6 +17,9 @@
 // devient alors un ruban au plafond.
 import { CELL, HALF, LEVEL_H, ROAD_TOP, LOOP_R, LOOP_LANE, ROAD_HALF, RAIL_W, SURF_PHYS } from './constants.js';
 
+// 0.9.11 : les pièces ne sont plus écrites en mètres fixes mais en proportion de la case (CELL = 24 m avant la 0.9.11, 32 m depuis) : K = 1 reproduit l'ancien monde.
+const K = CELL / 24;
+
 export const PIECES = {
   straight:   { label: 'Ligne droite', kind: 'line', size: 1, rise: 0 },
   curve:      { label: 'Virage serré', kind: 'arc', size: 1, rise: 0 },
@@ -29,10 +32,10 @@ export const PIECES = {
   platform:   { label: 'Plateforme', kind: 'area', size: 1, rise: 0 },
   loop:       { label: 'Looping ↱', kind: 'loop', size: 2, rise: 0, clearance: 5, mirror: 1, R: LOOP_R, lane: LOOP_LANE, turns: 1 },
   loopL:      { label: 'Looping ↰', kind: 'loop', size: 2, rise: 0, clearance: 5, mirror: -1, R: LOOP_R, lane: LOOP_LANE, turns: 1 },
-  loopBig:    { label: 'Grand looping ↱', kind: 'loop', size: 3, rise: 0, clearance: 7, mirror: 1, R: 18, lane: 24, turns: 1 },
-  loopBigL:   { label: 'Grand looping ↰', kind: 'loop', size: 3, rise: 0, clearance: 7, mirror: -1, R: 18, lane: 24, turns: 1 },
-  loopDouble: { label: 'Double looping ↱', kind: 'loop', size: 3, rise: 0, clearance: 5, mirror: 1, R: 12, lane: 24, turns: 2 },
-  loopDoubleL:{ label: 'Double looping ↰', kind: 'loop', size: 3, rise: 0, clearance: 5, mirror: -1, R: 12, lane: 24, turns: 2 },
+  loopBig:    { label: 'Grand looping ↱', kind: 'loop', size: 3, rise: 0, clearance: 7, mirror: 1, R: 18 * K, lane: CELL, turns: 1 },
+  loopBigL:   { label: 'Grand looping ↰', kind: 'loop', size: 3, rise: 0, clearance: 7, mirror: -1, R: 18 * K, lane: CELL, turns: 1 },
+  loopDouble: { label: 'Double looping ↱', kind: 'loop', size: 3, rise: 0, clearance: 5, mirror: 1, R: 12 * K, lane: CELL, turns: 2 },
+  loopDoubleL:{ label: 'Double looping ↰', kind: 'loop', size: 3, rise: 0, clearance: 5, mirror: -1, R: 12 * K, lane: CELL, turns: 2 },
   // Vrille : demi-tour de roulis sur 2 cases (comme le tire-bouchon : la route est dans la colonne de gauche de l'empreinte 2×2).
   // La route balance jusqu'à ±9 m autour de son axe : elle réserve 2 niveaux au-dessus d'elle.
   twist:      { label: 'Vrille', kind: 'ribbon', size: 2, rise: 0, clearance: 2 },
@@ -76,12 +79,12 @@ export const PIECES = {
   cvBigL2:    { label: 'Grande courbe ↰ · inclinaison 2', kind: 'arc', size: 2, rise: 2, mirror: -1 },
   cvBigL4:    { label: 'Grande courbe ↰ · inclinaison 4', kind: 'arc', size: 2, rise: 4, mirror: -1 },
   // Loopings à 2 et 3 boucles : le décalage latéral total (lane) est choisi pour garder ≥ 24 m entre deux tours.
-  loopBigDouble:  { label: 'Grand looping ×2 ↱', kind: 'loop', size: 3, rise: 0, clearance: 7, mirror: 1, R: 18, lane: 24, turns: 2 },
-  loopBigDoubleL: { label: 'Grand looping ×2 ↰', kind: 'loop', size: 3, rise: 0, clearance: 7, mirror: -1, R: 18, lane: 24, turns: 2 },
-  loopTriple:     { label: 'Triple looping ↱', kind: 'loop', size: 4, rise: 0, clearance: 5, mirror: 1, R: 12, lane: 36, turns: 3 },
-  loopTripleL:    { label: 'Triple looping ↰', kind: 'loop', size: 4, rise: 0, clearance: 5, mirror: -1, R: 12, lane: 36, turns: 3 },
-  loopBigTriple:  { label: 'Grand looping ×3 ↱', kind: 'loop', size: 4, rise: 0, clearance: 7, mirror: 1, R: 18, lane: 36, turns: 3 },
-  loopBigTripleL: { label: 'Grand looping ×3 ↰', kind: 'loop', size: 4, rise: 0, clearance: 7, mirror: -1, R: 18, lane: 36, turns: 3 },
+  loopBigDouble:  { label: 'Grand looping ×2 ↱', kind: 'loop', size: 3, rise: 0, clearance: 7, mirror: 1, R: 18 * K, lane: CELL, turns: 2 },
+  loopBigDoubleL: { label: 'Grand looping ×2 ↰', kind: 'loop', size: 3, rise: 0, clearance: 7, mirror: -1, R: 18 * K, lane: CELL, turns: 2 },
+  loopTriple:     { label: 'Triple looping ↱', kind: 'loop', size: 4, rise: 0, clearance: 5, mirror: 1, R: 12 * K, lane: 1.5 * CELL, turns: 3 },
+  loopTripleL:    { label: 'Triple looping ↰', kind: 'loop', size: 4, rise: 0, clearance: 5, mirror: -1, R: 12 * K, lane: 1.5 * CELL, turns: 3 },
+  loopBigTriple:  { label: 'Grand looping ×3 ↱', kind: 'loop', size: 4, rise: 0, clearance: 7, mirror: 1, R: 18 * K, lane: 1.5 * CELL, turns: 3 },
+  loopBigTripleL: { label: 'Grand looping ×3 ↰', kind: 'loop', size: 4, rise: 0, clearance: 7, mirror: -1, R: 18 * K, lane: 1.5 * CELL, turns: 3 },
   // « Courbe » (0.9.2) : une rampe dont le profil se courbe PROGRESSIVEMENT vers le haut. Plate à l'entrée (elle se raccorde à une route
   // plate sans cassure), de plus en plus raide ensuite : h(t) = rise · t² (Bézier quadratique, point de contrôle au ras du sol à l'entrée).
   // Pente en sortie = 2·rise / longueur ; parcourue à l'envers, elle descend et s'aplatit à l'arrivée (atterrissage en douceur).

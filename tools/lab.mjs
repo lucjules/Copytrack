@@ -62,17 +62,17 @@ export function asciiMap(track) {
 // Fait rouler le pilote automatique ; renvoie le profil. samples : un point toutes les 0,1 s.
 // rewindAtCp : numéro (à partir de 1) d'un checkpoint où l'on force une réapparition dès qu'il est pris, comme la touche « dernier checkpoint » :
 // la voiture repart À L'ARRÊT du point de réapparition. Sert à vérifier qu'on peut toujours repartir de chaque checkpoint.
-export function runTrack(track, { maxTime = 240, vCap, brakeDecel, rewindAtCp = 0 } = {}) {
+export function runTrack(track, { maxTime = 240, vCap, brakeDecel, rewindAtCp = 0, driver = null } = {}) {
   const phys = new CarPhysics(track);
   const logic = new RaceLogic(track);
   placeAtStart(phys, logic);
   const bot = new Autopilot(track.path, { ...(vCap ? { vCap } : {}), ...(brakeDecel ? { brakeDecel } : {}) });
   bot.reset(phys);
-  const S = { ok: false, vehicle: 'car', jumps: 0, wallVmin: Infinity, shocks: 0, spikes: 0, time: 0, respawns: 0, wallHits: 0, vmax: 0, airMax: 0, airTotal: 0, loops: 0, perfects: 0, turbos: 0, rings: 0, brakeT: 0, wallT: 0, ribT: 0, samples: [], cps: [], yMin: Infinity, yMax: -Infinity, dist: 0, reason: '' };
-  let stuck = 0, lastIdx = 0, last = null, airRun = 0;
+  const S = { contacts: 0, contactsHard: 0, ok: false, vehicle: 'car', jumps: 0, wallVmin: Infinity, shocks: 0, spikes: 0, time: 0, respawns: 0, wallHits: 0, vmax: 0, airMax: 0, airTotal: 0, loops: 0, perfects: 0, turbos: 0, rings: 0, brakeT: 0, wallT: 0, ribT: 0, samples: [], cps: [], yMin: Infinity, yMax: -Infinity, dist: 0, reason: '' };
+  let stuck = 0, lastIdx = 0, last = null, airRun = 0, lastContact = -1000;
   const steps = Math.round(maxTime / DT);
   for (let i = 0; i < steps; i++) {
-    const inp = bot.control(phys);
+    const inp = driver ? driver.control(phys, bot) : bot.control(phys);
     phys.clock = logic.steps;
     phys.step(inp);
     const sp = phys.speed;
@@ -89,6 +89,7 @@ export function runTrack(track, { maxTime = 240, vCap, brakeDecel, rewindAtCp = 
     last = { x: phys.pos.x, y: phys.pos.y, z: phys.pos.z };
     if (phys.ev.loopOut) S.loops++;
     if (phys.ev.wall > 4) S.wallHits++;
+    if (phys.ev.wall > 1) { if (i - lastContact > 36) { S.contacts++; if (phys.ev.wall > 6) S.contactsHard++; } lastContact = i; }
     if (phys.ev.landQ === 'perfect') S.perfects++;
     if (phys.ev.ring) S.rings++;
     if (i % 12 === 0) S.samples.push([i * DT, sp, phys.pos.y, phys.grounded || phys.rib ? 1 : 0]);
@@ -136,7 +137,8 @@ export function profile(track, S) {
   return {
     pieces: tiles.length, tight, wide, wallCells, loops, boosts, straights, rises,
     heightRange: +((S.yMax - S.yMin) / LEVEL_H).toFixed(1),
-    over180: +share(50).toFixed(2), over250: +share(69.4).toFixed(2), over300: +share(83.3).toFixed(2),
+    over180: +share(50).toFixed(2), over240: +share(66.7).toFixed(2), over250: +share(69.4).toFixed(2), over300: +share(83.3).toFixed(2),
+    under120: S.samples.length ? +(S.samples.filter((s) => s[1] < 33.3).length / S.samples.length).toFixed(2) : 0,
     avgKmh: S.time ? +((S.dist / S.time) * 3.6).toFixed(0) : 0,
     brakePct: S.time ? +((S.brakeT / S.time) * 100).toFixed(0) : 0,
   };

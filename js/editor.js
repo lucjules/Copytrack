@@ -97,7 +97,7 @@ function outOfBounds(tile) {
   if (lo < 0) return 'Hors des niveaux : la pente descend sous le sol (monte d’abord).';
   return 'Hors des niveaux.';
 }
-const SNAPS = [{ id: 0, label: 'Libre' }, { id: 1, label: '1 m' }, { id: 4, label: '4 m' }, { id: 12, label: 'Demi-case' }, { id: CELL, label: 'Case' }];
+const SNAPS = [{ id: 0, label: 'Libre' }, { id: 1, label: '1 m' }, { id: 4, label: '4 m' }, { id: CELL / 2, label: 'Demi-case' }, { id: CELL, label: 'Case' }];
 
 // Icônes (vue de dessus) des pièces et revêtements.
 const svg = (inner) => `<svg viewBox="0 0 48 48">${inner}</svg>`;
@@ -1438,7 +1438,7 @@ export class EditorSession {
   _snapPos(x, z) {
     const s = this.deco.snap;
     if (!s) return [x, z];
-    const o = s === CELL || s === 12 ? s / 2 : 0;
+    const o = s === CELL || s === CELL / 2 ? s / 2 : 0;
     return [Math.round((x - o) / s) * s + o, Math.round((z - o) / s) * s + o];
   }
 

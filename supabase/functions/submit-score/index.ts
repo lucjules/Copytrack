@@ -4,10 +4,10 @@
 // deno-lint-ignore-file
 // @ts-nocheck
 // js/constants.js
-var CELL = 24;
+var CELL = 32;
 var HALF = CELL / 2;
-var LEVEL_H = 4.8;
-var ROAD_W = 18;
+var LEVEL_H = 6.4;
+var ROAD_W = 24;
 var ROAD_HALF = ROAD_W / 2;
 var RAIL_W = 0.6;
 var RAIL_H = 1.1;
@@ -24,7 +24,7 @@ var SURF_PHYS = {
   boostSpeed: 112
 };
 var MAX_DECOS = 500;
-var LOOP_R = 12;
+var LOOP_R = 12 * (CELL / 24);
 var LOOP_LANE = HALF;
 var DT = 1 / 120;
 var DIRS = [
@@ -47,6 +47,7 @@ var DIRS = [
 ];
 
 // js/pieces.js
+var K = CELL / 24;
 var PIECES = {
   straight: {
     label: "Ligne droite",
@@ -137,8 +138,8 @@ var PIECES = {
     rise: 0,
     clearance: 7,
     mirror: 1,
-    R: 18,
-    lane: 24,
+    R: 18 * K,
+    lane: CELL,
     turns: 1
   },
   loopBigL: {
@@ -148,8 +149,8 @@ var PIECES = {
     rise: 0,
     clearance: 7,
     mirror: -1,
-    R: 18,
-    lane: 24,
+    R: 18 * K,
+    lane: CELL,
     turns: 1
   },
   loopDouble: {
@@ -159,8 +160,8 @@ var PIECES = {
     rise: 0,
     clearance: 5,
     mirror: 1,
-    R: 12,
-    lane: 24,
+    R: 12 * K,
+    lane: CELL,
     turns: 2
   },
   loopDoubleL: {
@@ -170,8 +171,8 @@ var PIECES = {
     rise: 0,
     clearance: 5,
     mirror: -1,
-    R: 12,
-    lane: 24,
+    R: 12 * K,
+    lane: CELL,
     turns: 2
   },
   // Vrille : demi-tour de roulis sur 2 cases (comme le tire-bouchon : la route est dans la colonne de gauche de l'empreinte 2×2).
@@ -429,8 +430,8 @@ var PIECES = {
     rise: 0,
     clearance: 7,
     mirror: 1,
-    R: 18,
-    lane: 24,
+    R: 18 * K,
+    lane: CELL,
     turns: 2
   },
   loopBigDoubleL: {
@@ -440,8 +441,8 @@ var PIECES = {
     rise: 0,
     clearance: 7,
     mirror: -1,
-    R: 18,
-    lane: 24,
+    R: 18 * K,
+    lane: CELL,
     turns: 2
   },
   loopTriple: {
@@ -451,8 +452,8 @@ var PIECES = {
     rise: 0,
     clearance: 5,
     mirror: 1,
-    R: 12,
-    lane: 36,
+    R: 12 * K,
+    lane: 1.5 * CELL,
     turns: 3
   },
   loopTripleL: {
@@ -462,8 +463,8 @@ var PIECES = {
     rise: 0,
     clearance: 5,
     mirror: -1,
-    R: 12,
-    lane: 36,
+    R: 12 * K,
+    lane: 1.5 * CELL,
     turns: 3
   },
   loopBigTriple: {
@@ -473,8 +474,8 @@ var PIECES = {
     rise: 0,
     clearance: 7,
     mirror: 1,
-    R: 18,
-    lane: 36,
+    R: 18 * K,
+    lane: 1.5 * CELL,
     turns: 3
   },
   loopBigTripleL: {
@@ -484,8 +485,8 @@ var PIECES = {
     rise: 0,
     clearance: 7,
     mirror: -1,
-    R: 18,
-    lane: 36,
+    R: 18 * K,
+    lane: 1.5 * CELL,
     turns: 3
   },
   // « Courbe » (0.9.2) : une rampe dont le profil se courbe PROGRESSIVEMENT vers le haut. Plate à l'entrée (elle se raccorde à une route
@@ -5014,7 +5015,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : deux boosters \u2192 premier wall-ride (transitions douces 2\xD72). Au programme : vitesse de pointe, trajectoire dans les tr\xE8s grands virages plats, courbes progressives.",
     goal: {
       id: "under",
-      t: 16
+      t: 22.5
     },
     opts: {
       l: 2
@@ -5024,10 +5025,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 [tr01l] S4< [tr10l] S B S [crs1] S [cds1] HR S3 B C S HL S3 B2 finish",
     medals: {
-      cristal: 15.1,
-      or: 15.9,
-      argent: 18.3,
-      bronze: 21.5
+      cristal: 20.3,
+      or: 21.3,
+      argent: 24.5,
+      bronze: 28.8
     }
   },
   {
@@ -5054,10 +5055,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start [cdi1] [dn2] [dn2] [cdo2] B S [crv1] UU GR2 DD [cdo1] B2 S [crv1] UU GR2 DD [cdo1] S B C S3 HL S2 B2 finish",
     medals: {
-      cristal: 17,
-      or: 17.9,
-      argent: 20.6,
-      bronze: 24.2
+      cristal: 21.3,
+      or: 22.4,
+      argent: 25.8,
+      bronze: 30.3
     }
   },
   {
@@ -5071,7 +5072,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : sur la glace : verglas, trois boosters, verglas. Au programme : vague douce, deux tr\xE8s grands virages plats, descente finale.",
     goal: {
       id: "under",
-      t: 19.5
+      t: 24.5
     },
     opts: {
       l: 6
@@ -5081,10 +5082,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start I2 B3 I2 S [crs1] S2 [cds1] B HR S3 B C S2 HL S2 B [cdi1] [dn2] [cdo1] S B2 finish",
     medals: {
-      cristal: 17.2,
-      or: 18.1,
-      argent: 20.8,
-      bronze: 24.5
+      cristal: 22,
+      or: 23.2,
+      argent: 26.7,
+      bronze: 31.3
     }
   },
   {
@@ -5109,21 +5110,21 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 UU GR2 DD [cdo1] B2 S [crs1] S2 [cds1] B S2_ B_ S2_ BR S2 B BL S2 B C S3 HL S B2 finish",
     medals: {
-      cristal: 18,
-      or: 18.9,
-      argent: 21.8,
-      bronze: 25.5
+      cristal: 23.8,
+      or: 25.1,
+      argent: 28.8,
+      bronze: 33.9
     }
   },
   {
     // Chapitre 4 · 1/6 — SPEEDWAY. Ouverture : DÉPART SUR UN TAPIS ROULANT à +200 km/h (trois cases) : la voiture est lancée à près de 290 km/h sans un seul booster. Quatre
-    // virages relevés 3×3 en S, un wall-ride de quatre cases sur le mur droit (la façade d'une tour) et des boosters en sortie de virage : plus de 70 % du tour au-dessus de 250 km/h.
+    // virages relevés 3×3 en S, un wall-ride de quatre cases sur le mur droit (la façade d'une tour) et des boosters en sortie de virage : 88 % du tour au-dessus de 240 km/h.
     id: "neons",
     name: "N\xE9ons Express",
     decor: "city",
     difficulty: 2,
     profil: "speedway",
-    appris: "D\xE9part : tapis roulant \xE0 +200 km/h (trois cases) : pr\xE8s de 290 km/h sans booster. Au programme : quatre virages relev\xE9s, wall-ride sur la fa\xE7ade d\u2019une tour, 70 % au-dessus de 250 km/h.",
+    appris: "D\xE9part : tapis roulant \xE0 +200 km/h (trois cases) : pr\xE8s de 290 km/h sans booster. Au programme : quatre virages relev\xE9s, wall-ride sur la fa\xE7ade d\u2019une tour, 88 % au-dessus de 240 km/h.",
     goal: {
       id: "nowall"
     },
@@ -5135,10 +5136,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S3.t201 S BRR S2 B BLL S2 C B [tr02l] S4> [tr20l] BRR S2 B BLL S2 B2 finish",
     medals: {
-      cristal: 14.4,
-      or: 15.2,
-      argent: 17.5,
-      bronze: 20.5
+      cristal: 20,
+      or: 21.1,
+      argent: 24.2,
+      bronze: 28.4
     }
   },
   {
@@ -5152,7 +5153,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : deux boosters \u2192 colline douce. Au programme : vague en S, S relev\xE9 2\xD72, un tr\xE8s grand virage plat.",
     goal: {
       id: "under",
-      t: 18
+      t: 24
     },
     opts: {
       l: 6
@@ -5162,22 +5163,22 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 GU3 GD3 B S [crs1] S2 [cds1] B BR S BL S B C S2 HL S2 B [cdi1] [dn2] [cdo1] S B2 finish",
     medals: {
-      cristal: 16.2,
-      or: 17.1,
-      argent: 19.6,
-      bronze: 23.1
+      cristal: 21.7,
+      or: 22.8,
+      argent: 26.2,
+      bronze: 30.8
     }
   },
   {
     // Chapitre 1 · 2/6 — SPEEDWAY. Ouverture : un booster puis directement un très grand virage relevé. Aucun virage serré : quatre virages
-    // relevés 3×3, un wall-ride de 6 cases sur la paroi du canyon (mur droit) à plus de 250 km/h, une descente douce et des boosters
-    // pour rester au-dessus de 250 km/h sur plus de la moitié du tour.
+    // relevés 3×3, un wall-ride de 6 cases sur la paroi du canyon (mur droit) à plus de 240 km/h, une descente douce et des boosters
+    // pour rester au-dessus de 240 km/h sur plus de la moitié du tour (60 %).
     id: "canyon",
     name: "Canyon Corail",
     decor: "desert",
     difficulty: 2,
     profil: "speedway",
-    appris: "D\xE9part : un booster \u2192 directement un tr\xE8s grand virage relev\xE9. Au programme : virages relev\xE9s 3\xD73 \xE0 plus de 250 km/h, wall-ride de 6 cases sur la paroi du canyon, descente douce.",
+    appris: "D\xE9part : un booster \u2192 directement un tr\xE8s grand virage relev\xE9. Au programme : virages relev\xE9s 3\xD73 \xE0 plus de 240 km/h, wall-ride de 6 cases sur la paroi du canyon, descente douce.",
     goal: {
       id: "nowall"
     },
@@ -5189,10 +5190,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B BRR B3 S2 [tr02l] S6> [tr20l] C S BRR S [cdi1] [dn2] [cdo1] S C B S BRR S3 B BLL S BRR S2 B2 finish",
     medals: {
-      cristal: 19.6,
-      or: 20.7,
-      argent: 23.7,
-      bronze: 27.9
+      cristal: 27.8,
+      or: 29.2,
+      argent: 33.6,
+      bronze: 39.4
     }
   },
   {
@@ -5214,16 +5215,16 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start B TI TM TO B S.g40 [crs1] UU GR3 G7 V-5 S10 S.g100 B C S HR S B [cdi1] [dn2] [cdo1] B2 finish",
+    script: "start B TI TM TO B S.g40 [crs1] UU GR2 G5 V-5 S10 S.g100 B C S HR S B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 18.6,
-      or: 19.6,
-      argent: 22.6,
-      bronze: 26.5
+      cristal: 23.5,
+      or: 24.7,
+      argent: 28.5,
+      bronze: 33.4
     }
   },
   {
-    // Chapitre 1 · 3/6 — ACROBATIQUE. Ouverture : chute libre immédiate, depuis l'arrêt (la voiture quitte la plateforme de départ, à 77 m, et
+    // Chapitre 1 · 3/6 — ACROBATIQUE. Ouverture : chute libre immédiate, depuis l'arrêt (la voiture quitte la plateforme de départ, à 66 m, et
     // se réceptionne sur une descente à 38°). Puis trois sauts de plus en plus grands (bosse, grand tremplin à 38°, dernier saut avec anneau
     // turbo) et un petit saut sur un mur. Réceptions en longues pentes descendantes ; chaque checkpoint est suivi de deux boosters
     // avant la rampe : on peut repartir À L'ARRÊT de n'importe quel checkpoint (la réapparition remet la voiture à l'arrêt) et réussir le saut.
@@ -5232,10 +5233,10 @@ var BUILTIN_TRACKS = [
     decor: "desert",
     difficulty: 2,
     profil: "acrobatique",
-    appris: "D\xE9part : chute libre imm\xE9diate depuis 77 m (la voiture quitte la plateforme de d\xE9part, \xE0 l\u2019arr\xEAt). Au programme : rampes progressives et \xE0 38\xB0, r\xE9ceptions sur longues pentes, checkpoint a\xE9rien, saut sur un mur.",
+    appris: "D\xE9part : chute libre imm\xE9diate depuis 66 m (la voiture quitte la plateforme de d\xE9part, \xE0 l\u2019arr\xEAt). Au programme : rampes progressives et \xE0 38\xB0, r\xE9ceptions sur longues pentes, checkpoint a\xE9rien, saut sur un mur.",
     goal: {
       id: "perfect",
-      n: 3
+      n: 2
     },
     opts: {
       l: 16
@@ -5243,12 +5244,12 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start G1 V-5 [dn4] [cdo2] S C B2 S [crv1] UU G2 DD [cdo1] S3 CBR1 S [tr01s] S2< [tr10s] S LL S C B2 S2 [crv2] UX G3 DX DX [cdo2] S3 C B2 S UU GR2 DD [cdo1] S2 finish",
+    script: "start V-5 [dn4] [cdo2] S C B2 S [crv1] UU G2 DD [cdo1] S3 CBR1 S [tr01s] S2< [tr10s] S LL S C B2 S2 [crv2] UX G2 DX DX [cdo2] S3 C B2 S UU GR2 DD [cdo1] S2 finish",
     medals: {
-      cristal: 27.8,
-      or: 29.3,
-      argent: 33.7,
-      bronze: 39.6
+      cristal: 35,
+      or: 36.9,
+      argent: 42.4,
+      bronze: 49.8
     }
   },
   {
@@ -5271,25 +5272,25 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 O OL S2 B3 [tr01s] S4< [tr10s] S BR S2 B [tr02s] S4> [tr20s] S C B OB S2 B [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 21.2,
-      or: 22.3,
-      argent: 25.6,
-      bronze: 30.1
+      cristal: 29.9,
+      or: 31.5,
+      argent: 36.2,
+      bronze: 42.5
     }
   },
   {
     // Chapitre 2 · 2/6 — SPEEDWAY. Ouverture : départ en tube, propulsé par trois boosters, qui débouche directement sur un virage relevé 3×3.
     // Une succession de S relevés (droite / gauche), deux vagues douces, un wall-ride de 5 cases sur le mur gauche (l'autre côté que le canyon
-    // du chapitre 1) et un tube à pleine vitesse. Aucun virage serré, plus de 250 km/h pendant près de la moitié du tour.
+    // du chapitre 1) et un tube à pleine vitesse. Aucun virage serré, plus de 240 km/h pendant plus d'un tiers du tour (35 %).
     id: "canopee",
     name: "Canop\xE9e",
     decor: "jungle",
     difficulty: 3,
     profil: "speedway",
-    appris: "D\xE9part : en tube propuls\xE9, qui d\xE9bouche sur un virage relev\xE9 3\xD73. Au programme : S relev\xE9s, wall-ride de 5 cases sur le mur gauche, tube \xE0 pleine vitesse, 47 % du temps au-dessus de 250 km/h.",
+    appris: "D\xE9part : en tube propuls\xE9, qui d\xE9bouche sur un virage relev\xE9 3\xD73. Au programme : S relev\xE9s, wall-ride de 5 cases sur le mur gauche, tube \xE0 pleine vitesse, 35 % du temps au-dessus de 240 km/h.",
     goal: {
       id: "under",
-      t: 25
+      t: 36
     },
     opts: {
       l: 5
@@ -5299,10 +5300,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start TI TM3.b TO BRR S B BLL S [crs1] S2 [cds1] S [tr01l] S5< [tr10l] C B BRR S [crs1] S [cds1] B BLL S2 TB BRR S B BLL S2 B2 finish",
     medals: {
-      cristal: 22.8,
-      or: 24,
-      argent: 27.6,
-      bronze: 32.4
+      cristal: 32.6,
+      or: 34.3,
+      argent: 39.4,
+      bronze: 46.3
     }
   },
   {
@@ -5322,12 +5323,12 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 2
     },
-    script: "start B2 S.j200 G2 V2 S3 RR C B2 S.j200 G2 V2 S3 LL C B2 S.j200 G2 V2 S3 RR C B2 S.j200 G2 V2 S3 LL S B [cdi2] DX [cdo2] B [crs1] S [cds1] B2 finish",
+    script: "start B2 S.j200 G1 V2 S3 RR C B2 S.j200 G1 V2 S3 LL C B2 S.j200 G1 V2 S3 RR C B2 S.j200 G1 V2 S3 LL S B [cdi2] DX [cdo2] B [crs1] S [cds1] B2 finish",
     medals: {
-      cristal: 27.8,
-      or: 29.3,
-      argent: 33.7,
-      bronze: 39.5
+      cristal: 33.3,
+      or: 35.1,
+      argent: 40.3,
+      bronze: 47.4
     }
   },
   {
@@ -5349,10 +5350,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S.n S2.a R.a L.a R.a L.a S.a S.n B2 S [tr01s] S2< [tr10s] S3 R R B S2 L S L B S3 [cvd05] [cvdL05] B S C S.n S2.a R.a L.a R.a L.a S2.a finish",
     medals: {
-      cristal: 27.9,
-      or: 29.4,
-      argent: 33.8,
-      bronze: 39.7
+      cristal: 34.6,
+      or: 36.4,
+      argent: 41.8,
+      bronze: 49.1
     }
   },
   {
@@ -5372,12 +5373,12 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 4
     },
-    script: "start B3 S.e UU GR5 DD S5 S.e S C B2 S [crv1] UU GR2 DD [cdo1] S2 CBR2 CBR2 CBR2 CBR2 S C B [cdi2] DX [cdo2] B S2 [crv1] UU GR2 DD [cdo1] S2 B finish",
+    script: "start B3 S.e UU GR4 DD S5 S.e S C B2 S [crv1] UU GR1 DD [cdo1] S2 CBR2 CBR2 CBR2 CBR2 S C B [cdi2] DX [cdo2] B S2 [crv1] UU GR1 DD [cdo1] S2 B finish",
     medals: {
-      cristal: 31.4,
-      or: 33,
-      argent: 38,
-      bronze: 44.6
+      cristal: 39.2,
+      or: 41.2,
+      argent: 47.4,
+      bronze: 55.7
     }
   },
   {
@@ -5399,15 +5400,15 @@ var BUILTIN_TRACKS = [
     },
     script: "start Y2.o B S [cvd05] [cvdL05] [cvd05] [cvdL05] B S S.o S [tr01s] S2< [tr10s] S R L R L B S2 C S.o S R L R L B S2 B finish",
     medals: {
-      cristal: 23.5,
-      or: 24.7,
-      argent: 28.4,
-      bronze: 33.4
+      cristal: 29.3,
+      or: 30.8,
+      argent: 35.4,
+      bronze: 41.6
     }
   },
   {
     // Chapitre 6 · 2/6 — SPEEDWAY (coulée de lave). Ouverture : un booster puis un S de virages relevés 2×2 (droite, gauche) dès les premières cases, avant les virages relevés 3×3.
-    // Six virages relevés en tout, un wall-ride de quatre cases (mur droit) et un plongeon de 4 niveaux qui relance la voiture : près de la moitié du tour au-dessus de 250 km/h, 4 % de freinage.
+    // Six virages relevés en tout, un wall-ride de quatre cases (mur droit) et un plongeon de 4 niveaux qui relance la voiture : 36 % du tour au-dessus de 240 km/h, aucun freinage.
     id: "coulee",
     name: "Coul\xE9e Ardente",
     decor: "volcano",
@@ -5425,10 +5426,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B BR S BL S BRR S B [tr02l] S4> [tr20l] BLL S2 C B [cdi1] [dn2] [cdo1] BRR S BLL B2 finish",
     medals: {
-      cristal: 16.7,
-      or: 17.6,
-      argent: 20.2,
-      bronze: 23.7
+      cristal: 23.6,
+      or: 24.8,
+      argent: 28.5,
+      bronze: 33.5
     }
   },
   {
@@ -5449,10 +5450,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S.o B R L R L B S2 C B S R S L B S2 [tr01s] S2< [tr10s] S R B S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 19.2,
-      or: 20.2,
-      argent: 23.2,
-      bronze: 27.2
+      cristal: 25.3,
+      or: 26.6,
+      argent: 30.6,
+      bronze: 36
     }
   },
   {
@@ -5466,7 +5467,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : sans bordures (six cases). Au programme : vague douce, tunnel de quatre cases, un seul tr\xE8s grand virage plat.",
     goal: {
       id: "under",
-      t: 16
+      t: 21.5
     },
     opts: {
       l: 4
@@ -5476,16 +5477,16 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2_ S3_ B_ S [crs1] S2 [cds1] B S B2# S2# C B S3 HR S2 B [cdi1] [dn2] [cdo1] S B2 finish",
     medals: {
-      cristal: 14.6,
-      or: 15.4,
-      argent: 17.7,
-      bronze: 20.8
+      cristal: 19.5,
+      or: 20.6,
+      argent: 23.6,
+      bronze: 27.7
     }
   },
   {
     // Chapitre 1 · 4/6 — ROLLERCOASTER (spirale ; placé avant Lac Gelé pour que deux Rollercoasters ne se suivent pas). Ouverture : trois boosters puis directement un grand looping. Hélice montante de quatre
     // grandes courbes inclinées (16 niveaux, 78 m), point de contrôle au sommet, plongeon de 16 niveaux à 38° et slalom de wall-rides
-    // gauche / droite en bas. Le plongeon passe à plus de 250 km/h : les murs se prennent avec une grande marge.
+    // gauche / droite en bas. Le plongeon passe à plus de 240 km/h : les murs se prennent avec une grande marge.
     id: "spirale",
     name: "Spirale Prismatique",
     decor: "desert",
@@ -5500,10 +5501,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 OB S B CBR4 CBR4 CBR4 CBR4 S C [cdi2] DX DX DX [cdo2] B S [tr01s] S2< [tr10s] S [tr02s] S3> [tr20s] S2 B2 finish",
     medals: {
-      cristal: 24.3,
-      or: 25.6,
-      argent: 29.4,
-      bronze: 34.6
+      cristal: 32.7,
+      or: 34.4,
+      argent: 39.6,
+      bronze: 46.5
     }
   },
   {
@@ -5525,10 +5526,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start [cvd1] [cvd1] B S3 L I B S R L S B S2 R S R B S2 [tr01s] S2< [tr10s] S3 L S L B I S3 KR S R S2 B finish",
     medals: {
-      cristal: 26.6,
-      or: 28,
-      argent: 32.2,
-      bronze: 37.8
+      cristal: 32.9,
+      or: 34.7,
+      argent: 39.9,
+      bronze: 46.8
     }
   },
   {
@@ -5543,7 +5544,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : verglas, deux boosters, rebond vers une terrasse plus basse. Au programme : quatre rebonds de plus en plus puissants et longs : la Banquise descend de terrasse en terrasse (Spores monte).",
     goal: {
       id: "under",
-      t: 26
+      t: 31.5
     },
     opts: {
       l: 28
@@ -5551,12 +5552,12 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start I B2 S.j100 G2 V-2 S3.i C B2 S.j150 G3 V-2 S3.i C B2 S.j200 G4 V-2 S3.i C B2 S.j200 G4 V-2 S2.i [tr01s] S3< [tr10s] S2 [cdi2] DX [cdo2] S2 B finish",
+    script: "start I B2 S.j100 G1 V-2 S3.i C B2 S.j150 G2 V-2 S3.i C B2 S.j200 G2 V-2 S3.i C B2 S.j200 G2 V-2 S2.i [tr01s] S3< [tr10s] S2 [cdi2] DX [cdo2] S2 B finish",
     medals: {
-      cristal: 23.4,
-      or: 24.6,
-      argent: 28.3,
-      bronze: 33.3
+      cristal: 28.8,
+      or: 30.3,
+      argent: 34.8,
+      bronze: 40.9
     }
   },
   {
@@ -5577,10 +5578,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start^ B3^ [tr31s] S< [tr10s] [tr02s] S> [tr23s] S^ [tr31s] S< [tr10s] S C B [cdi2] DX [cdo2] S BLL S S.d S.w100 S C B3 OD S2 B finish",
     medals: {
-      cristal: 19.8,
-      or: 20.9,
-      argent: 24,
-      bronze: 28.2
+      cristal: 27.7,
+      or: 29.2,
+      argent: 33.6,
+      bronze: 39.4
     }
   },
   {
@@ -5601,10 +5602,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start [cdi2] DX [cdo2] S2 I S2 R B S2 L B S I S2 R S L C B S [tr01s] S2< [tr10s] S2 R B S.m [crs1].m S [cds1].m L B S I S2 R S2 L B S2 finish",
     medals: {
-      cristal: 28.1,
-      or: 29.6,
-      argent: 34,
-      bronze: 39.9
+      cristal: 35.8,
+      or: 37.7,
+      argent: 43.3,
+      bronze: 50.9
     }
   },
   {
@@ -5624,10 +5625,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B CVR2 CVR2 S B R_ L_ R_ L_ S B C B S2 R S R B S [tr01s] S2< [tr10s] S B L S R# L# R# L# S2# B [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 24.1,
-      or: 25.4,
-      argent: 29.2,
-      bronze: 34.3
+      cristal: 30.8,
+      or: 32.4,
+      argent: 37.3,
+      bronze: 43.8
     }
   },
   {
@@ -5647,10 +5648,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2.d B S2 R S L S B R.d L.d S2 C B S [tr01s] S2< [tr10s] S2 R S2.d L B S2 R.d S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 23.9,
-      or: 25.2,
-      argent: 29,
-      bronze: 34
+      cristal: 30.4,
+      or: 32,
+      argent: 36.7,
+      bronze: 43.1
     }
   },
   {
@@ -5671,10 +5672,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S# R# R# B# S2# B S3 TI TM2 TO S R R B S2 [cdi1] [dn2] [cdo1] S C S [cvd05] [cvd05] [cvd05] [cvd05] S2 B S R# L# R# L# S2# B finish",
     medals: {
-      cristal: 24.6,
-      or: 25.9,
-      argent: 29.7,
-      bronze: 34.9
+      cristal: 30.8,
+      or: 32.4,
+      argent: 37.3,
+      bronze: 43.8
     }
   },
   {
@@ -5688,7 +5689,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : trois boosters, petit looping, puis rampe de toit. Au programme : trois sauts de toit en toit, wall-ride sur une fa\xE7ade, r\xE9ception de 10 niveaux.",
     goal: {
       id: "under",
-      t: 28
+      t: 37.5
     },
     opts: {
       l: 16
@@ -5696,12 +5697,12 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start B3 O S2 [crv2] UX G3 DX DX [cdo2] S3 C B2 [crv1] UU G3 DD [cdo1] S [tr01s] S2< [tr10s] S C B2 [crv2] UX G3 DX DX [cdo2] S5 finish",
+    script: "start B3 O S2 B2 [crv2] UX G2 DX DX [cdo2] S3 C B2 [crv1] UU G2 DD [cdo1] S [tr01s] S2< [tr10s] S C B2 [crv2] UX G2 DX DX [cdo2] S5 finish",
     medals: {
-      cristal: 25.3,
-      or: 26.7,
-      argent: 30.7,
-      bronze: 36
+      cristal: 34,
+      or: 35.7,
+      argent: 41.1,
+      bronze: 48.3
     }
   },
   {
@@ -5724,10 +5725,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S CKL S B3 OBDL S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B TI TM2 TO S B [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 20.6,
-      or: 21.7,
-      argent: 25,
-      bronze: 29.3
+      cristal: 27.7,
+      or: 29.2,
+      argent: 33.6,
+      bronze: 39.4
     }
   },
   {
@@ -5748,12 +5749,12 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start S2 CK S B2 CBR4 CBR4 CBR4 CBR4 S C B [cvdBigL2] [cvdBigL2] [cvdBigL2] [cvdBigL2] S B OD S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 finish",
+    script: "start S2 CK S B2 CBR4 CBR4 CBR4 CBR4 S C [cvdBigL2] [cvdBigL2] [cvdBigL2] [cvdBigL2] S B OD S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 finish",
     medals: {
-      cristal: 30.1,
-      or: 31.7,
-      argent: 36.4,
-      bronze: 42.8
+      cristal: 37.1,
+      or: 39.1,
+      argent: 44.9,
+      bronze: 52.7
     }
   },
   {
@@ -5776,10 +5777,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 TI TM2 TO QU WA4 CR S C [cdi2] DX [cdo2] B OB S2 B [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 finish",
     medals: {
-      cristal: 16.2,
-      or: 17,
-      argent: 19.6,
-      bronze: 23
+      cristal: 23.6,
+      or: 24.9,
+      argent: 28.6,
+      bronze: 33.6
     }
   },
   {
@@ -5802,10 +5803,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B4 OBT S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B OBDL S C B2 [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 22.8,
-      or: 24.1,
-      argent: 27.7,
-      bronze: 32.5
+      cristal: 32.9,
+      or: 34.7,
+      argent: 39.9,
+      bronze: 46.8
     }
   },
   {
@@ -5824,23 +5825,23 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 3
     },
-    script: "start B3 QU WA3 CR S [cdi2] DX [cdo2] B BRR S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S OB S C S [tr01s] S2< [tr13s] S2^ [tr31s] S2< [tr10s] S B2 finish",
+    script: "start B3 QU WA3 CR S [cdi2] DX [cdo2] B BRR S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 OB S C S [tr01s] S2< [tr13s] S2^ [tr31s] S2< [tr10s] S B2 finish",
     medals: {
-      cristal: 24.4,
-      or: 25.7,
-      argent: 29.6,
-      bronze: 34.7
+      cristal: 34,
+      or: 35.7,
+      argent: 41.1,
+      bronze: 48.3
     }
   },
   {
     // Chapitre 7 · 4/6 — SPEEDWAY (circuit fermé, 3 tours). Ouverture : deux boosters puis UN TUBE COURT (2×2) pris à pleine vitesse, directement suivi du premier virage relevé. Quatre virages
-    // relevés 3×3 forment l'anneau, avec un wall-ride de deux cases sur le mur gauche (côté intérieur de l'anneau). Sur trois tours, plus de 70 % du temps au-dessus de 250 km/h.
+    // relevés 3×3 forment l'anneau, avec un wall-ride de deux cases sur le mur gauche (côté intérieur de l'anneau). Sur trois tours, 58 % du temps au-dessus de 240 km/h.
     id: "grandanneau",
     name: "Grand Anneau",
     decor: "orbit",
     difficulty: 4,
     profil: "speedway",
-    appris: "D\xE9part : deux boosters \u2192 tube court ; circuit ferm\xE9, 3 tours. Au programme : quatre virages relev\xE9s, wall-ride, 70 % au-dessus de 250 km/h.",
+    appris: "D\xE9part : deux boosters \u2192 tube court ; circuit ferm\xE9, 3 tours. Au programme : quatre virages relev\xE9s, wall-ride, 58 % au-dessus de 240 km/h.",
     goal: {
       id: "nowall"
     },
@@ -5853,10 +5854,10 @@ var BUILTIN_TRACKS = [
     laps: 3,
     script: "start B2 TB S2 BRR B S2 C S2 B BRR S [tr01l] S2< [tr10l] S BRR S B S2 B S2 BRR finish",
     medals: {
-      cristal: 45.3,
-      or: 47.7,
-      argent: 54.9,
-      bronze: 64.4
+      cristal: 64,
+      or: 67.3,
+      argent: 77.4,
+      bronze: 90.9
     }
   },
   {
@@ -5876,23 +5877,23 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 28
     },
-    script: "start S.g50 G2 V-6 [dn4] [cdo2] S C B2 S [crv1] UU G5 DD [cdo1] [crs1] S2 [cds1] C B2 S [crv1] UU G5 DD [cdo1] [crs1] S2 [cds1] C B2 S [crv1] UU G5 DD [cdo1] S5 finish",
+    script: "start S.g50 G2 V-6 [dn4] [cdo2] S C B2 S [crv1] UU G3 DD [cdo1] [crs1] S2 [cds1] C B2 S [crv1] UU G3 DD [cdo1] [crs1] S2 [cds1] C B2 S [crv1] UU G3 DD [cdo1] S5 finish",
     medals: {
-      cristal: 31,
-      or: 32.6,
-      argent: 37.5,
-      bronze: 44
+      cristal: 37.4,
+      or: 39.3,
+      argent: 45.2,
+      bronze: 53.1
     }
   },
   {
     // Chapitre 5 · 5/6 — SPEEDWAY. Ouverture : DIRECTEMENT DANS UN TRÈS GRAND VIRAGE RELEVÉ, sans un seul booster : la voiture l'aborde au pas et les boosters la relancent à la sortie.
-    // Six virages relevés 3×3 en couronne (droite, gauche, droite…), un wall-ride de quatre cases (mur droit) et des boosters en sortie de virage : 45 % du tour au-dessus de 250 km/h.
+    // Six virages relevés 3×3 en couronne (droite, gauche, droite…), un wall-ride de quatre cases (mur droit) et des boosters en sortie de virage : 60 % du tour au-dessus de 240 km/h.
     id: "couronne",
     name: "Couronne Bor\xE9ale",
     decor: "polar",
     difficulty: 5,
     profil: "speedway",
-    appris: "D\xE9part : directement dans un tr\xE8s grand virage relev\xE9, sans booster. Au programme : six virages relev\xE9s en couronne, wall-ride, 45 % du tour au-dessus de 250 km/h.",
+    appris: "D\xE9part : directement dans un tr\xE8s grand virage relev\xE9, sans booster. Au programme : six virages relev\xE9s en couronne, wall-ride, 60 % du tour au-dessus de 240 km/h.",
     goal: {
       id: "nowall"
     },
@@ -5904,21 +5905,21 @@ var BUILTIN_TRACKS = [
     },
     script: "start BRR B3 S BLL S2 B BRR C S [tr02l] S4> [tr20l] BLL B S2 BRR B S BLL B2 finish",
     medals: {
-      cristal: 19.1,
-      or: 20.1,
-      argent: 23.1,
-      bronze: 27.1
+      cristal: 25.6,
+      or: 27,
+      argent: 31,
+      bronze: 36.4
     }
   },
   {
     // Chapitre 6 · 5/6 — SPEEDWAY (circuit fermé, 2 tours). Ouverture : deux boosters puis UNE MONTÉE DOUCE de quatre cases (2 niveaux) vers la crête du cratère. Quatre virages relevés 3×3
-    // forment l'anneau, avec un wall-ride de quatre cases sur la paroi (mur droit) et la descente douce du retour. Sur deux tours, plus de 70 % du temps au-dessus de 250 km/h.
+    // forment l'anneau, avec un wall-ride de quatre cases sur la paroi (mur droit) et la descente douce du retour. Sur deux tours, 64 % du temps au-dessus de 240 km/h.
     id: "caldeira",
     name: "Caldeira",
     decor: "volcano",
     difficulty: 5,
     profil: "speedway",
-    appris: "D\xE9part : deux boosters \u2192 mont\xE9e douce vers la cr\xEAte ; circuit ferm\xE9, 2 tours. Au programme : quatre virages relev\xE9s en anneau, wall-ride, 70 % du temps au-dessus de 250 km/h.",
+    appris: "D\xE9part : deux boosters \u2192 mont\xE9e douce vers la cr\xEAte ; circuit ferm\xE9, 2 tours. Au programme : quatre virages relev\xE9s en anneau, wall-ride, 64 % du temps au-dessus de 240 km/h.",
     goal: {
       id: "nowall"
     },
@@ -5931,10 +5932,10 @@ var BUILTIN_TRACKS = [
     laps: 2,
     script: "start B2 GU4 S BRR B S [tr02l] S4> [tr20l] BRR B S2 C GD4 S BRR S B S2 B S2 B S2 BRR finish",
     medals: {
-      cristal: 35.5,
-      or: 37.4,
-      argent: 43,
-      bronze: 50.5
+      cristal: 50.8,
+      or: 53.4,
+      argent: 61.4,
+      bronze: 72.1
     }
   },
   {
@@ -5954,15 +5955,15 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2.p B S2 R S.w150 L S B S2.p R S L B C B S3.w120 R S R S B S2 [tr01s] S2< [tr10s] S L B S.p R S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 27.8,
-      or: 29.3,
-      argent: 33.7,
-      bronze: 39.5
+      cristal: 35.2,
+      or: 37.1,
+      argent: 42.6,
+      bronze: 50.1
     }
   },
   {
     // Chapitre 4 · 6/6 — ROLLERCOASTER (viaduc). Ouverture : trois boosters → LIFT HILL, une montée de 16 niveaux (80 m) en deux rampes à forte pente. Au sommet un checkpoint, puis un
-    // plongeon de 12 niveaux, un grand looping et un slalom de wall-rides gauche / droite. Le plongeon passe à plus de 250 km/h : les murs se prennent avec une grande marge.
+    // plongeon de 12 niveaux, un grand looping et un slalom de wall-rides gauche / droite. Le plongeon passe à plus de 240 km/h : les murs se prennent avec une grande marge.
     id: "viaduc",
     name: "Viaduc Vertical",
     decor: "city",
@@ -5978,27 +5979,27 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start B3 [crv4] UX UX [cro4] S C [cdi2] DX DX [cdo2] B OB S2 B [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 finish",
+    script: "start B3 [crv4] UX.b UX.b [cro4] S5 C S2 [cdi2] DX DX [cdo2] B OB S2 B [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 finish",
     medals: {
-      cristal: 17.4,
-      or: 18.4,
-      argent: 21.1,
-      bronze: 24.8
+      cristal: 30.1,
+      or: 31.6,
+      argent: 36.4,
+      bronze: 42.7
     }
   },
   {
     // Chapitre 3 · 6/6 — SPEEDWAY. Ouverture : AUCUN booster, une pente douce de six cases (3 niveaux) lance la voiture dans un très grand virage relevé. Cinq virages relevés 3×3,
-    // un wall-ride de quatre cases sur la falaise (mur droit), un plongeon de quatre niveaux et des boosters placés en sortie de virage : plus de la moitié du tour au-dessus de 250 km/h,
+    // un wall-ride de quatre cases sur la falaise (mur droit), un plongeon de quatre niveaux et des boosters placés en sortie de virage : plus de la moitié du tour (61 %) au-dessus de 240 km/h,
     // moins de 8 % de freinage.
     id: "archipel",
     name: "Grand Archipel",
     decor: "isles",
     difficulty: 5,
     profil: "speedway",
-    appris: "D\xE9part : aucun booster : une pente douce de six cases lance dans un tr\xE8s grand virage relev\xE9. Au programme : cinq virages relev\xE9s, wall-ride de quatre cases, plongeon, 58 % du tour au-dessus de 250 km/h.",
+    appris: "D\xE9part : aucun booster : une pente douce de six cases lance dans un tr\xE8s grand virage relev\xE9. Au programme : cinq virages relev\xE9s, wall-ride de quatre cases, plongeon, 61 % du tour au-dessus de 240 km/h.",
     goal: {
       id: "under",
-      t: 21.5
+      t: 30
     },
     opts: {
       l: 8
@@ -6008,10 +6009,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start GD6 BRR S B BLL S2 C B [tr02l] S4> [tr20l] BRR S [cdi1] [dn2] [cdo1] B BLL S2 B BRR S2 B2 finish",
     medals: {
-      cristal: 20,
-      or: 21.1,
-      argent: 24.2,
-      bronze: 28.5
+      cristal: 27,
+      or: 28.5,
+      argent: 32.7,
+      bronze: 38.4
     }
   },
   {
@@ -6026,7 +6027,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : deux boosters \u2192 plaque de gravit\xE9 20 %. Au programme : trois vols de 8 \xE0 10 s en l\u2019air (28 niveaux de d\xE9nivel\xE9), wall-rides.",
     goal: {
       id: "under",
-      t: 52
+      t: 57
     },
     opts: {
       l: 44
@@ -6034,16 +6035,16 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start B2 S.g20 [crv1] UU G14 D D D D D D D D S3 C B2 [crv1] UU G14 D D D D D D D D S [tr01s] S2< [tr10s] S [tr02s] S2> [tr20s] S C B2 [crv1] UU G14 D D D D D D D D S5 finish",
+    script: "start B2 S.g20 [crv1] UU G8 D D D D D D D D S3 C B2 [crv1] UU G8 D D D D D D D D S [tr01s] S2< [tr10s] S [tr02s] S2> [tr20s] S C B2 [crv1] UU G8 D D D D D D D D S5 finish",
     medals: {
-      cristal: 46.3,
-      or: 48.7,
-      argent: 56,
-      bronze: 65.8
+      cristal: 51.8,
+      or: 54.6,
+      argent: 62.7,
+      bronze: 73.6
     }
   },
   {
-    // Chapitre 6 · 6/6 — ACROBATIQUE (éruptions). Ouverture : trois boosters → une rampe à forte pente SANS virage d'entrée : un saut de huit cases qui retombe dix niveaux plus bas. Quatre
+    // Chapitre 6 · 6/6 — ACROBATIQUE (éruptions). Ouverture : trois boosters → une rampe à forte pente SANS virage d'entrée : un saut de cinq cases qui retombe dix niveaux plus bas. Quatre
     // éruptions en tout (rampe forte, rampe douce avec anneau turbo, wall-ride entre les deux, rampe forte, rampe douce), chaque checkpoint suivi de deux boosters et placé loin de la réception
     // précédente.
     id: "eruption",
@@ -6051,10 +6052,10 @@ var BUILTIN_TRACKS = [
     decor: "volcano",
     difficulty: 5,
     profil: "acrobatique",
-    appris: "D\xE9part : trois boosters \u2192 rampe sans virage d\u2019entr\xE9e : saut de huit cases, r\xE9ception 10 niveaux plus bas. Au programme : quatre \xE9ruptions, anneau turbo, wall-ride.",
+    appris: "D\xE9part : trois boosters \u2192 rampe sans virage d\u2019entr\xE9e : saut de cinq cases, r\xE9ception 10 niveaux plus bas. Au programme : quatre \xE9ruptions, anneau turbo, wall-ride.",
     goal: {
       id: "under",
-      t: 30
+      t: 38.5
     },
     opts: {
       l: 16
@@ -6062,12 +6063,12 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start B3 UX G3 DX DX [cdo2] S3 C B2 [crv1] UU GR2 DD [cdo1] S [tr01s] S2< [tr10s] S C B2 [crv2] UX G3 DX DX [cdo2] S3 C B2 [crv1] UU G3 DD [cdo1] S5 finish",
+    script: "start B3 UX G2 DX DX [cdo2] S3 C B2 [crv1] UU GR2 DD [cdo1] S [tr01s] S2< [tr10s] S C B2 [crv2] UX G2 DX DX [cdo2] S3 C B2 [crv1] UU G2 DD [cdo1] S5 finish",
     medals: {
-      cristal: 27,
-      or: 28.5,
-      argent: 32.7,
-      bronze: 38.4
+      cristal: 34.9,
+      or: 36.7,
+      argent: 42.2,
+      bronze: 49.6
     }
   },
   {
@@ -6087,10 +6088,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start P2 B S R B S L S R B S2 C B S L R L R B S2 [tr01s] S2< [tr10s] S3 L B S R B [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 23,
-      or: 24.2,
-      argent: 27.8,
-      bronze: 32.7
+      cristal: 29.5,
+      or: 31,
+      argent: 35.7,
+      bronze: 41.9
     }
   },
   // ==== 0.9 : quatre nouveaux thèmes (6 circuits chacun) ============================
@@ -6106,7 +6107,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : deux boosters \u2192 contre-courant (\u2212122 km/h) puis courant favorable (+138 km/h). Au programme : vague, tr\xE8s grand virage plat, tapis de trois cases.",
     goal: {
       id: "under",
-      t: 18
+      t: 22.5
     },
     opts: {
       l: 6
@@ -6116,10 +6117,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 S2.t40 S2.t170 S [crs1] S2 [cds1] B HR S3.t137 B C S2 HL S2 B [cdi1] [dn2] [cdo1] S B2 finish",
     medals: {
-      cristal: 15.5,
-      or: 16.3,
-      argent: 18.8,
-      bronze: 22
+      cristal: 20.5,
+      or: 21.6,
+      argent: 24.8,
+      bronze: 29.1
     }
   },
   {
@@ -6139,10 +6140,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2.t137 S2 R S L S R S L B C B S R S2.v S L B S2 [tr01s] S2< [tr10s] S R B S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 22.4,
-      or: 23.6,
-      argent: 27.1,
-      bronze: 31.8
+      cristal: 29.5,
+      or: 31,
+      argent: 35.7,
+      bronze: 41.9
     }
   },
   {
@@ -6165,14 +6166,14 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 [tr02s] S3> [tr20s] S C B2 OD S2 B [tr01s] S3< [tr10s] S B [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 14.3,
-      or: 15.1,
-      argent: 17.3,
-      bronze: 20.4
+      cristal: 20.5,
+      or: 21.5,
+      argent: 24.8,
+      bronze: 29.1
     }
   },
   {
-    // Chapitre 8 · 4/6 — ACROBATIQUE (gravité lourde). Ouverture : trois boosters puis une plaque de GRAVITÉ À 200 % (la pression des profondeurs) : la voiture ne flotte plus, elle tombe.
+    // Chapitre 8 · 4/6 — ACROBATIQUE (gravité lourde). Ouverture : cinq boosters puis une plaque de GRAVITÉ À 130 % (la pression des profondeurs) : la voiture flotte moins, elle tombe plus vite (à 200 %, plus aucune rampe ne se franchissait : les pentes freinent trop).
     // Rampes raides mais vides très courts (1 ou 2 cases) : quatre sauts brefs de moins de deux secondes, réceptions violentes sur des pentes à forte inclinaison, un wall-ride avant le dernier saut.
     // Chaque checkpoint est suivi de deux boosters ; la gravité lourde reste active jusqu'à l'arrivée.
     id: "meduses",
@@ -6180,23 +6181,23 @@ var BUILTIN_TRACKS = [
     decor: "reef",
     difficulty: 4,
     profil: "acrobatique",
-    appris: "D\xE9part : plaque de gravit\xE9 200 % (la pression des profondeurs). Au programme : quatre sauts brefs, r\xE9ceptions violentes, wall-ride.",
+    appris: "D\xE9part : cinq boosters \u2192 plaque de gravit\xE9 130 % (la pression des profondeurs). Au programme : quatre sauts brefs, r\xE9ceptions violentes, wall-ride.",
     goal: {
       id: "under",
-      t: 30
+      t: 43
     },
     opts: {
       l: 24
     },
     pilot: {
-      vCap: 60
+      vCap: 66
     },
-    script: "start B3 S.g200 [crv2] UX G2 DX DX [cdo2] S3 C B2 [crv2] UX G1 DX DX [cdo2] S3 C B2 [crv1] UU G1 DD [cdo1] S [tr01s] S2< [tr10s] S3 C B2 [crv2] UX G2 DX DX [cdo2] S5 finish",
+    script: "start B5 S.g130 S2 [crv2] UX G1 DX DX [cdo2] S3 C B3 [crv2] UX G1 DX DX [cdo2] S3 C B3 [crv1] UU G1 DD [cdo1] S [tr01s] S2< [tr10s] S3 C B3 [crv2] UX G1 DX DX [cdo2] S5 finish",
     medals: {
-      cristal: 26.8,
-      or: 28.2,
-      argent: 32.4,
-      bronze: 38.1
+      cristal: 39.1,
+      or: 41.1,
+      argent: 47.3,
+      bronze: 55.5
     }
   },
   {
@@ -6219,21 +6220,21 @@ var BUILTIN_TRACKS = [
     },
     script: "start B [cdi2] DX DX [cdo2] OB S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 S B finish",
     medals: {
-      cristal: 17.6,
-      or: 18.5,
-      argent: 21.3,
-      bronze: 25
+      cristal: 23.2,
+      or: 24.5,
+      argent: 28.1,
+      bronze: 33
     }
   },
   {
     // Chapitre 8 · 6/6 — SPEEDWAY (barrière). Ouverture : deux boosters puis un PONT DE VERRE (trois dalles fragiles, sans danger à grande vitesse) qui débouche sur un virage relevé 3×3.
-    // Cinq virages relevés, un wall-ride de quatre cases (mur droit) et un courant favorable de deux cases entre deux virages : plus de 75 % du tour au-dessus de 250 km/h.
+    // Cinq virages relevés, un wall-ride de quatre cases (mur droit) et un courant favorable de deux cases entre deux virages : 62 % du tour au-dessus de 240 km/h.
     id: "barriere",
     name: "Grande Barri\xE8re",
     decor: "reef",
     difficulty: 5,
     profil: "speedway",
-    appris: "D\xE9part : deux boosters \u2192 pont de verre \u2192 virage relev\xE9. Au programme : cinq virages relev\xE9s, wall-ride, courant favorable, 77 % au-dessus de 250 km/h.",
+    appris: "D\xE9part : deux boosters \u2192 pont de verre \u2192 virage relev\xE9. Au programme : cinq virages relev\xE9s, wall-ride, courant favorable, 62 % au-dessus de 240 km/h.",
     goal: {
       id: "nowall"
     },
@@ -6245,10 +6246,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 S3.v BRR S B BLL S2 C B [tr02l] S4> [tr20l] BRR S2.t137 BLL B S BRR S B2 finish",
     medals: {
-      cristal: 15.9,
-      or: 16.7,
-      argent: 19.2,
-      bronze: 22.5
+      cristal: 22.9,
+      or: 24.1,
+      argent: 27.7,
+      bronze: 32.6
     }
   },
   // ---- Usine mécanique : obstacles, tapis, moteur coupé, ascenseurs ----
@@ -6263,7 +6264,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : trois boosters \u2192 trois cases \xE0 moteur coup\xE9. Au programme : tapis roulant, vague, deux tr\xE8s grands virages plats ; bumper et piques sur les bords.",
     goal: {
       id: "under",
-      t: 18
+      t: 22
     },
     opts: {
       l: 6
@@ -6275,22 +6276,22 @@ var BUILTIN_TRACKS = [
       {
         k: "bumper",
         at: 0.3,
-        side: 5.5,
+        side: 7.5,
         s: 0.8
       },
       {
         k: "spikes",
         at: 0.6,
-        side: -5.5,
+        side: -7.5,
         s: 0.7
       }
     ],
     script: "start B3 S3.c B S2.t137 S [crs1] S2 [cds1] B HR S2 B C S HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 15.2,
-      or: 16.1,
-      argent: 18.5,
-      bronze: 21.7
+      cristal: 20.1,
+      or: 21.2,
+      argent: 24.4,
+      bronze: 28.6
     }
   },
   {
@@ -6312,22 +6313,22 @@ var BUILTIN_TRACKS = [
       {
         k: "bumper",
         at: 0.3,
-        side: -5.5,
+        side: -7.5,
         s: 0.8
       },
       {
         k: "spikes",
         at: 0.8,
-        side: 5.5,
+        side: 7.5,
         s: 0.7
       }
     ],
     script: "start Y2.b B S R S L S R S L B C B S R S2.x S L B S2 [tr01s] S2< [tr10s] S R B S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 25.8,
-      or: 27.2,
-      argent: 31.3,
-      bronze: 36.7
+      cristal: 34.5,
+      or: 36.3,
+      argent: 41.7,
+      bronze: 49
     }
   },
   {
@@ -6352,20 +6353,20 @@ var BUILTIN_TRACKS = [
       {
         k: "spikesPop",
         at: 0.45,
-        side: 5,
+        side: 6.5,
         s: 0.75
       }
     ],
     script: "start B2 CBR2 CBR2 CBR2 CBR2 S C B2 OTL S2 B [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 22.1,
-      or: 23.3,
-      argent: 26.8,
-      bronze: 31.4
+      cristal: 29.9,
+      or: 31.5,
+      argent: 36.2,
+      bronze: 42.5
     }
   },
   {
-    // Chapitre 9 · 4/6 — SPEEDWAY (fonderie). Ouverture : trois boosters puis UN TUNNEL de quatre cases pris à plus de 250 km/h, directement suivi d'un très grand virage relevé. Cinq virages relevés 3×3,
+    // Chapitre 9 · 4/6 — SPEEDWAY (fonderie). Ouverture : trois boosters puis UN TUNNEL de quatre cases pris à plus de 240 km/h, directement suivi d'un très grand virage relevé. Cinq virages relevés 3×3,
     // un wall-ride de quatre cases (mur droit), deux cases à moteur coupé entre deux virages (la voiture file sur son élan) et deux bumpers sur les bords.
     id: "fonderie",
     name: "Fonderie",
@@ -6386,22 +6387,22 @@ var BUILTIN_TRACKS = [
       {
         k: "bumper",
         at: 0.35,
-        side: -5.5,
+        side: -7.5,
         s: 0.8
       },
       {
         k: "bumper",
         at: 0.75,
-        side: 5.5,
+        side: 7.5,
         s: 0.8
       }
     ],
     script: "start B3 S4# BRR S B BLL S2 C B [tr02l] S4> [tr20l] BRR S2.c BLL B S BRR S B2 finish",
     medals: {
-      cristal: 17.2,
-      or: 18.1,
-      argent: 20.8,
-      bronze: 24.4
+      cristal: 24.9,
+      or: 26.2,
+      argent: 30.1,
+      bronze: 35.4
     }
   },
   {
@@ -6415,7 +6416,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : deux boosters \u2192 tapis de quatre pistons (rebonds en cha\xEEne). Au programme : rampe raide, rebond vers une terrasse, wall-ride, rampe douce.",
     goal: {
       id: "under",
-      t: 27
+      t: 35
     },
     opts: {
       l: 20
@@ -6427,22 +6428,22 @@ var BUILTIN_TRACKS = [
       {
         k: "spikesPop",
         at: 0.2,
-        side: -5,
+        side: -6.5,
         s: 0.75
       },
       {
         k: "bumper",
         at: 0.6,
-        side: 5.5,
+        side: 7.5,
         s: 0.8
       }
     ],
-    script: "start B2 S4.j150 S3 C B2 [crv2] UX G3 DX DX [cdo2] S3 C B2 S.j150 G3 V-2 S3 [tr01s] S2< [tr10s] S C B2 [crv1] UU G3 DD [cdo1] S5 finish",
+    script: "start B2 S4.j150 S3 C B2 [crv2] UX G2 DX DX [cdo2] S3 C B2 S.j150 G2 V-2 S3 [tr01s] S2< [tr10s] S C B2 [crv1] UU G2 DD [cdo1] S5 finish",
     medals: {
-      cristal: 24.2,
-      or: 25.5,
-      argent: 29.3,
-      bronze: 34.4
+      cristal: 31.8,
+      or: 33.5,
+      argent: 38.5,
+      bronze: 45.2
     }
   },
   {
@@ -6463,29 +6464,29 @@ var BUILTIN_TRACKS = [
     obst: [
       {
         k: "hammer",
-        at: 0.3,
+        at: 0.35,
         side: 0,
         s: 1
       },
       {
         k: "spikes",
         at: 0.5,
-        side: 5.5,
+        side: 7.5,
         s: 0.7
       },
       {
         k: "bumper",
         at: 0.9,
-        side: -5.5,
+        side: -7.5,
         s: 0.8
       }
     ],
     script: "start B2 S2.x R L R L B S2 C B S R S L B S2.c S2 [tr01s] S2< [tr10s] S R B S L B S R B [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 22.5,
-      or: 23.7,
-      argent: 27.3,
-      bronze: 32
+      cristal: 29.7,
+      or: 31.2,
+      argent: 35.9,
+      bronze: 42.2
     }
   },
   // ---- Ville dans les nuages : vent, deltaplane, gravité faible, sauts ----
@@ -6500,7 +6501,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : trois boosters \u2192 vent lat\xE9ral. Au programme : vague en S, deux tr\xE8s grands virages plats, descente.",
     goal: {
       id: "under",
-      t: 18
+      t: 21
     },
     opts: {
       l: 6
@@ -6510,10 +6511,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 S3.w150 S [crs1] S2 [cds1] B HR S2 B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 14.9,
-      or: 15.6,
-      argent: 18,
-      bronze: 21.1
+      cristal: 19.3,
+      or: 20.3,
+      argent: 23.3,
+      bronze: 27.4
     }
   },
   {
@@ -6527,7 +6528,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : trois boosters \u2192 rampe sans bordures (les \xEEles n\u2019ont pas de barri\xE8re). Au programme : trois sauts avec anneaux turbo, wall-ride.",
     goal: {
       id: "under",
-      t: 26
+      t: 31.5
     },
     opts: {
       l: 20
@@ -6535,12 +6536,12 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start B3_ [crv1]_ UU_ GR3 DD_ [cdo1]_ S3_ C B2_ [crv2]_ UX_ G3 DX_ DX_ [cdo2]_ S3_ C B2_ [tr01s] S2< [tr10s] B_ S_ [crv1]_ UU_ GR3 DD_ [cdo1]_ S5_ finish",
+    script: "start B3_ [crv1]_ UU_ GR2 DD_ [cdo1]_ S3_ C B2_ [crv2]_ UX_ G2 DX_ DX_ [cdo2]_ S3_ C B2_ [tr01s] S2< [tr10s] B_ S_ [crv1]_ UU_ GR2 DD_ [cdo1]_ S5_ finish",
     medals: {
-      cristal: 21.9,
-      or: 23,
-      argent: 26.5,
-      bronze: 31.1
+      cristal: 28.4,
+      or: 29.9,
+      argent: 34.4,
+      bronze: 40.4
     }
   },
   {
@@ -6560,10 +6561,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 S2.w180 S R S L S R B S2 C B S.w150 S2 R S L B S2.w120 S R S L B S [tr01s] S2< [tr10s] S3 R B S2 L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 27.6,
-      or: 29,
-      argent: 33.4,
-      bronze: 39.2
+      cristal: 35.5,
+      or: 37.3,
+      argent: 42.9,
+      bronze: 50.4
     }
   },
   {
@@ -6586,21 +6587,21 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 S.g40 OB S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B [cdi2] DX [cdo2] S.g100 B2 finish",
     medals: {
-      cristal: 14.2,
-      or: 14.9,
-      argent: 17.2,
-      bronze: 20.2
+      cristal: 19.8,
+      or: 20.9,
+      argent: 24,
+      bronze: 28.2
     }
   },
   {
     // Chapitre 10 · 5/6 — SPEEDWAY (pont des vents). Ouverture : deux boosters puis du VENT LATÉRAL sur un pont SANS BORDURES, directement suivi d'un très grand virage relevé lui aussi sans bordure.
-    // Quatre virages relevés, un wall-ride de quatre cases (mur droit) et un second coup de vent : tout le tour est sans barrière, plus de 70 % du temps au-dessus de 250 km/h.
+    // Quatre virages relevés, un wall-ride de quatre cases (mur droit) et un second coup de vent : tout le tour est sans barrière, 60 % du temps au-dessus de 240 km/h.
     id: "pontvents",
     name: "Pont des Vents",
     decor: "sky",
     difficulty: 5,
     profil: "speedway",
-    appris: "D\xE9part : deux boosters \u2192 vent sur un pont sans bordures \u2192 virage relev\xE9 sans bordure. Au programme : quatre virages relev\xE9s, wall-ride, 75 % au-dessus de 250 km/h.",
+    appris: "D\xE9part : deux boosters \u2192 vent sur un pont sans bordures \u2192 virage relev\xE9 sans bordure. Au programme : quatre virages relev\xE9s, wall-ride, 60 % au-dessus de 240 km/h.",
     goal: {
       id: "nowall"
     },
@@ -6612,10 +6613,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2_ S2.w150_ BRR_ S_ B_ BLL_ S2_ C B_ [tr02l] S4> [tr20l] BRR_ S2.w100_ B_ BLL_ S_ B2 finish",
     medals: {
-      cristal: 14.3,
-      or: 15,
-      argent: 17.3,
-      bronze: 20.3
+      cristal: 20.8,
+      or: 21.9,
+      argent: 25.2,
+      bronze: 29.6
     }
   },
   {
@@ -6629,7 +6630,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : en deltaplane : plaque sur la ligne, chute de 6 niveaux. Au programme : avenue de 10 cases, rampe raide, wall-ride, rampe douce avec anneau.",
     goal: {
       id: "under",
-      t: 32
+      t: 42
     },
     opts: {
       l: 40
@@ -6637,12 +6638,12 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start S.e G2 V-6 [dn4] [cdo2] S10 S.e S2 C B2 [crv2] UX G3 DX DX [cdo2] S3 C B2 [tr01s] S2< [tr10s] S C B2 [crv1] UU GR3 DD [cdo1] S5 finish",
+    script: "start S.e G2 V-6 [dn4] [cdo2] S10 S.e S2 C B2 [crv2] UX G2 DX DX [cdo2] S3 C B2 [tr01s] S2< [tr10s] S C B2 [crv1] UU GR2 DD [cdo1] S5 finish",
     medals: {
-      cristal: 26.5,
-      or: 27.9,
-      argent: 32,
-      bronze: 37.6
+      cristal: 38.4,
+      or: 40.4,
+      argent: 46.4,
+      bronze: 54.5
     }
   },
   // ---- Canyon de cristal : gravité inversée, plafonds, verre, volant inversé ----
@@ -6657,7 +6658,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : deux boosters \u2192 volant invers\xE9 (trois cases en ligne droite). Au programme : vague en S, deux tr\xE8s grands virages plats, descente.",
     goal: {
       id: "under",
-      t: 18
+      t: 21.5
     },
     opts: {
       l: 6
@@ -6667,10 +6668,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 S3.y S2 [crs1] S2 [cds1] B HR S2 B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 14.9,
-      or: 15.7,
-      argent: 18,
-      bronze: 21.1
+      cristal: 19.4,
+      or: 20.4,
+      argent: 23.4,
+      bronze: 27.5
     }
   },
   {
@@ -6690,10 +6691,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B TW.f S2^ B^ R^ S^ L^ S2^ R^ S^ L^ C^ B^ S2^ TWB.f S2 B R S L B S2 [tr01s] S2< [tr10s] S3 R B S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 25.8,
-      or: 27.2,
-      argent: 31.2,
-      bronze: 36.7
+      cristal: 33.4,
+      or: 35.1,
+      argent: 40.4,
+      bronze: 47.4
     }
   },
   {
@@ -6707,7 +6708,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : deux boosters \u2192 inversion de gravit\xE9 : la voiture \xAB tombe \xBB au plafond, 8 niveaux plus haut. Au programme : trois allers-retours sol / plafond, verre fragile au plafond.",
     goal: {
       id: "under",
-      t: 26
+      t: 35.5
     },
     opts: {
       l: 8
@@ -6717,15 +6718,15 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 S.f V8 S4^ C^ B2^ S.f^ V-8 S4 C B2 S.f V8 S2.v^ S2^ B2^ S.f^ V-8 S4 C B2 S.f V10 S4^ B2^ S.f^ V-10 S5 [tr01s] S2< [tr10s] S [cdi1] [dn2] [cdo1] S2 finish",
     medals: {
-      cristal: 23.4,
-      or: 24.7,
-      argent: 28.3,
-      bronze: 33.3
+      cristal: 32.2,
+      or: 33.9,
+      argent: 39,
+      bronze: 45.8
     }
   },
   {
     // Chapitre 11 · 4/6 — SPEEDWAY (miroir). Ouverture : trois boosters puis un S de deux très grands virages relevés en miroir (gauche puis droite). La suite reprend le dessin à l'envers (droite
-    // puis gauche), après un wall-ride de quatre cases (mur droit) ; trois dalles de verre fragile (sans danger à grande vitesse) et un dernier S. Six virages relevés, la moitié du tour au-dessus de 250 km/h.
+    // puis gauche), après un wall-ride de quatre cases (mur droit) ; trois dalles de verre fragile (sans danger à grande vitesse) et un dernier S. Six virages relevés, 44 % du tour au-dessus de 240 km/h.
     id: "miroir",
     name: "Miroir",
     decor: "caves",
@@ -6743,10 +6744,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 BLL S BRR S2 C B [tr02l] S4> [tr20l] BRR S BLL S B2 S3.v B BLL S BRR S B2 finish",
     medals: {
-      cristal: 18.5,
-      or: 19.5,
-      argent: 22.4,
-      bronze: 26.3
+      cristal: 26.4,
+      or: 27.8,
+      argent: 31.9,
+      bronze: 37.5
     }
   },
   {
@@ -6769,10 +6770,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B [cdi1] [dn2] [cdo1] TW.f S2^ D^ S2^ B^ S2^ U^ S^ TWB.f S2 B ODL S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 finish",
     medals: {
-      cristal: 18.5,
-      or: 19.5,
-      argent: 22.4,
-      bronze: 26.3
+      cristal: 26,
+      or: 27.4,
+      argent: 31.5,
+      bronze: 37
     }
   },
   {
@@ -6792,10 +6793,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2.v500 S R L R L B S2 C B S R S L B S2 [tr01s] S2< [tr10s] S3 R B S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 21.1,
-      or: 22.2,
-      argent: 25.5,
-      bronze: 29.9
+      cristal: 27.4,
+      or: 28.8,
+      argent: 33.2,
+      bronze: 38.9
     }
   }
 ];
@@ -6855,8 +6856,8 @@ var CAR = {
   accelCurve: 1.5,
   maxSpeed: SURF_PHYS.maxSpeed,
   boostSpeed: SURF_PHYS.boostSpeed,
-  boostAccel: 30,
-  boostTime: 1.6,
+  boostAccel: 10,
+  boostTime: 1.2,
   brake: 52,
   reverseAccel: 15,
   reverseMax: 15,
@@ -6868,24 +6869,23 @@ var CAR = {
   b: 1.4,
   yawK: 1.9,
   corner: 230,
-  latGrip: 56,
-  frontShare: 0.48,
-  steerMax: 0.6,
+  latGrip: 80,
+  frontShare: 0.42,
+  steerMax: 0.65,
   steerAlat: 52,
   driftRear: 0.65,
   driftSteer: 1.3,
   driftMin: 12,
   driftBrake: 0.75,
   yawDamp: 0.6,
-  steerIn: 7,
-  steerOut: 12,
+  steerIn: 8,
+  steerOut: 13,
   gravity: SURF_PHYS.gravity,
   snap: 0.7,
   step: 1.6,
   magnetRange: 4,
   magnetAcc: 80,
-  launch: 2,
-  stickAngle: 0.21,
+  launch: 0.6,
   airPitchAcc: 4.2,
   airPitchDamp: 2.6,
   airPitchUpK: 1.6,
@@ -6928,8 +6928,8 @@ var MOTO = {
   a: 1.15,
   b: 1.2,
   yawK: 1.25,
-  latGrip: 60,
-  frontShare: 0.5,
+  latGrip: 78,
+  frontShare: 0.45,
   steerMax: 0.75,
   steerAlat: 66,
   driftRear: 0.76,
@@ -6943,8 +6943,8 @@ var BOAT = {
   accel: 8,
   maxSpeed: 85,
   brake: 32,
-  latGrip: 44,
-  frontShare: 0.46,
+  latGrip: 58,
+  frontShare: 0.41,
   steerMax: 0.55,
   steerAlat: 48,
   yawK: 2.1,
@@ -6975,7 +6975,6 @@ var GLIDE = {
   turnSpeed: 9,
   turnRamp: 7
 };
-var STICK_COS = Math.cos(CAR.stickAngle);
 var SIDE_AERO = 0.03;
 var SIDE_HOLD = 25 / (30 * 30);
 var SIDE_MIN_SPEED = 30;
@@ -7364,22 +7363,22 @@ var CarPhysics = class {
   // ---------------------------------------------------------------- Pneus
   // Angle des roues avant selon la vitesse : à haute vitesse, un petit angle suffit.
   _steerAngle(speed, drift) {
-    const K = this.k;
+    const K2 = this.k;
     const v2 = Math.max(1, speed * speed);
-    const slipSat = K.latGrip * K.frontShare / K.corner;
-    let max = Math.min(K.steerMax, Math.atan((K.a + K.b) * K.steerAlat / v2) + slipSat);
-    max *= 1 + (K.driftSteer - 1) * drift;
+    const slipSat = K2.latGrip * K2.frontShare / K2.corner;
+    let max = Math.min(K2.steerMax, Math.atan((K2.a + K2.b) * K2.steerAlat / v2) + slipSat);
+    max *= 1 + (K2.driftSteer - 1) * drift;
     return this.steer * max;
   }
   // Modèle bicyclette, repère voiture (x avant, y droite, w lacet > 0 = vers la droite).
   // ax : accélération longitudinale (moteur, freins) ; grip : multiplicateur d'adhérence.
   _tires(vx, vy, w, ax, grip, dt) {
-    const drift = this.driftT, K = this.k;
+    const drift = this.driftT, K2 = this.k;
     const delta = this._steerAngle(Math.abs(vx), drift);
     this.steerAngle = delta;
-    const L4 = K.a + K.b;
-    const maxF = K.latGrip * grip * K.frontShare;
-    const maxR = K.latGrip * grip * (1 - K.frontShare) * (1 - (1 - K.driftRear) * drift) * (this.rearK ?? 1);
+    const L4 = K2.a + K2.b;
+    const maxF = K2.latGrip * grip * K2.frontShare;
+    const maxR = K2.latGrip * grip * (1 - K2.frontShare) * (1 - (1 - K2.driftRear) * drift) * (this.rearK ?? 1);
     if (Math.abs(vx) < 1.5) {
       vx += ax * dt;
       const lateralDamp = clamp(0.35 + grip * 0.3, 0.35, 0.85);
@@ -7390,14 +7389,14 @@ var CarPhysics = class {
     }
     const den = Math.max(Math.abs(vx), 6);
     const sgn = vx >= 0 ? 1 : -1;
-    const af = Math.atan2(vy + K.a * w, den) - delta * sgn;
-    const ar = Math.atan2(vy - K.b * w, den);
-    const Ff = clamp(-K.corner * af, -maxF, maxF);
-    const Fr = clamp(-K.corner * ar, -maxR, maxR);
+    const af = Math.atan2(vy + K2.a * w, den) - delta * sgn;
+    const ar = Math.atan2(vy - K2.b * w, den);
+    const Ff = clamp(-K2.corner * af, -maxF, maxF);
+    const Fr = clamp(-K2.corner * ar, -maxR, maxR);
     const cd = Math.cos(delta), sd = Math.sin(delta);
     vx += (ax - Ff * sd) * dt;
     vy += (Ff * cd + Fr) * dt;
-    w += ((K.a * Ff * cd - K.b * Fr) / K.yawK - w * K.yawDamp) * dt;
+    w += ((K2.a * Ff * cd - K2.b * Fr) / K2.yawK - w * K2.yawDamp) * dt;
     BK.vx = vx;
     BK.vy = vy;
     BK.w = w;
@@ -7448,16 +7447,16 @@ var CarPhysics = class {
     }
     const target = clamp(inp.steer || 0, -1, 1);
     const back = Math.abs(target) < Math.abs(this.steer) || target * this.steer < 0;
-    const K = this.k;
-    const sr = (back ? K.steerOut : K.steerIn) * dt;
+    const K2 = this.k;
+    const sr = (back ? K2.steerOut : K2.steerIn) * dt;
     this.steer += clamp(target - this.steer, -sr, sr);
     if (this.boost > 0) this.boost = Math.max(0, this.boost - dt);
     if (this.bounceCD > 0) this.bounceCD -= dt;
     if (this.stunT > 0) this.stunT = Math.max(0, this.stunT - dt);
     const turning = Math.abs(this.steer) > 0.5;
-    if (inp.brake && !inp.throttle && turning && this.fwdSpeed > K.driftMin && this.grounded) {
+    if (inp.brake && !inp.throttle && turning && this.fwdSpeed > K2.driftMin && this.grounded) {
       this.driftT = Math.min(1, this.driftT + dt * 5);
-    } else if (turning && this.driftT > 0 && this.fwdSpeed > K.driftMin * 0.7) {
+    } else if (turning && this.driftT > 0 && this.fwdSpeed > K2.driftMin * 0.7) {
       this.driftT = Math.max(0, this.driftT - dt * 0.3);
     } else {
       this.driftT = Math.max(0, this.driftT - dt * 3.5);
@@ -7571,7 +7570,7 @@ var CarPhysics = class {
         extraDrag += 7;
       }
       if (!wet) this.sinkT = 0;
-      const ax = (this._longitudinal(vf, inp, K.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
+      const ax = (this._longitudinal(vf, inp, K2.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
       this.rearK = rearK;
       const r = this._tires(vf, vr, this.omega, ax, grip, dt);
       this.rearK = 1;
@@ -7615,7 +7614,7 @@ var CarPhysics = class {
       this.fwdSpeed = v.x * fx + v.z * fz;
       this.airTime += dt;
       const pin = this.vehicle === "glider" ? 0 : (inp.brake ? 1 : 0) - (inp.throttle ? 1 : 0);
-      this.pitchRate += pin * this.gSign * K.airPitchAcc * (pin > 0 ? CAR.airPitchUpK : 1) * dt;
+      this.pitchRate += pin * this.gSign * K2.airPitchAcc * (pin > 0 ? CAR.airPitchUpK : 1) * dt;
       this.pitchRate *= Math.exp(-CAR.airPitchDamp * dt);
       if (this.vehicle === "glider") this.pitch = this.glidePitch;
       else this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
@@ -7650,8 +7649,7 @@ var CarPhysics = class {
         v.z -= m.nz * a;
       }
     }
-    let stick = vn < launch;
-    if (!stick && this.grounded && gap < snap && gap > -CAR.step) stick = this.n.x * s.nx + this.n.y * s.ny + this.n.z * s.nz > STICK_COS;
+    const stick = vn < launch;
     if (this.grounded && gap < snap && gap > -CAR.step && stick) {
       p.y = s.h;
       const sp = this.speed;
@@ -7727,17 +7725,17 @@ var CarPhysics = class {
   // Nouvelle vitesse longitudinale : moteur, freins, résistances.
   // load : part du poids qui appuie les roues sur la route (1 au sol, 0 sur un mur vertical).
   _longitudinal(vf, inp, vmax, traction, extraDrag, dt, load = 1) {
-    const K = this.k;
+    const K2 = this.k;
     let a = 0;
     if (inp.throttle) {
-      if (vf < -0.5) a += K.brake * traction;
+      if (vf < -0.5) a += K2.brake * traction;
       else {
         const x = Math.max(0, vf / vmax);
-        a += K.accel * traction * (1 - Math.pow(x, CAR.accelCurve));
+        a += K2.accel * traction * (1 - Math.pow(x, CAR.accelCurve));
       }
     }
     if (inp.brake) {
-      if (vf > 0.5) a -= K.brake * traction * (1 - CAR.driftBrake * this.driftT);
+      if (vf > 0.5) a -= K2.brake * traction * (1 - CAR.driftBrake * this.driftT);
       else if (!inp.throttle) {
         const x = Math.max(0, -vf) / CAR.reverseMax;
         a -= CAR.reverseAccel * traction * (1 - x * x);
@@ -7745,7 +7743,7 @@ var CarPhysics = class {
     }
     if (this.boost > 0) {
       const f = this.boostF;
-      const vb = K.maxSpeed + (CAR.boostSpeed - K.maxSpeed) * f;
+      const vb = K2.maxSpeed + (CAR.boostSpeed - K2.maxSpeed) * f;
       const x = Math.max(0, vf) / vb;
       a += CAR.boostAccel * f * Math.max(0, 1 - x * x);
     }
@@ -8909,7 +8907,7 @@ var Autopilot = class {
   constructor(path, opts = {}) {
     this.path = path;
     this.idx = 0;
-    this.latLimit = opts.latLimit ?? CAR.latGrip * 0.8;
+    this.latLimit = opts.latLimit ?? CAR.latGrip * 0.62;
     this.brakeDecel = opts.brakeDecel ?? 20;
     this.vCap = opts.vCap ?? (path.pilot && path.pilot.vCap) ?? 52;
     const n = path.length;
@@ -8981,6 +8979,8 @@ var Autopilot = class {
         c.brake = t;
       }
     }
+    const reverseActive = phys.rib ? phys.rib.tile.s === "reverse" : phys.grounded && phys.surfMod === "reverse";
+    if (reverseActive) c.steer = -c.steer;
     return c;
   }
   _control(phys) {
@@ -9371,7 +9371,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/replay.js
-var PHYS_VER = 24;
+var PHYS_VER = 25;
 var MAX_REPLAY_STEPS = 120 * 600;
 function decodeInputs(b64) {
   const bin = atob(b64);

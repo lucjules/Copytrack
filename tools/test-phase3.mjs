@@ -16,7 +16,7 @@ import { replayTime } from '../js/verify.js';
 import { Autopilot } from '../js/autopilot.js';
 import { pickTileExact, rayToSurface } from '../js/editorPick.js';
 import { EditorSession } from '../js/editor.js';
-import { DT, CELL, LEVEL_H, ROAD_TOP, ROAD_HALF, RAIL_W, MAX_LEVEL, SURF_PHYS } from '../js/constants.js';
+import { DT, CELL, HALF, LEVEL_H, ROAD_TOP, ROAD_HALF, RAIL_W, MAX_LEVEL, SURF_PHYS } from '../js/constants.js';
 
 let failures = 0;
 function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 6).join('\n       ')); } }
@@ -300,9 +300,9 @@ test('compatibilité : l’eau va sur le Départ, pas sur l’Arrivée ni une bi
   assert.equal(Track.normalize({ t: 'start', x: 0, z: 0, l: 0, r: 0, s: 'water' }).s, 'water');
   const tr = new Track('w'); tr.add({ t: 'straight', x: 0, z: 0, l: 0, r: 0, s: 'boat' }); tr.add({ t: 'straight', x: 1, z: 0, l: 0, r: 0, s: 'water' }); tr.add({ t: 'straight', x: 2, z: 0, l: 0, r: 0 });
   const o = {};
-  tr.surfaceAt(36, 5, 12, o); const hw = o.h; tr.surfaceAt(60, 5, 12, o); const hr = o.h;
+  tr.surfaceAt(CELL + HALF, 5, HALF, o); const hw = o.h; tr.surfaceAt(2 * CELL + HALF, 5, HALF, o); const hr = o.h;
   // 0.9.2 : la plaque bateau est une très légère montée de l'eau (entrée au niveau de l'eau) vers le sol (sortie au niveau de la route).
-  tr.surfaceAt(12, 5, 12 + 11.9, o); const hIn = o.h; tr.surfaceAt(12, 5, 12 - 11.9, o); const hOut = o.h;
+  tr.surfaceAt(HALF, 5, HALF + HALF - 0.1, o); const hIn = o.h; tr.surfaceAt(HALF, 5, 0.1, o); const hOut = o.h;
   assert.ok(Math.abs(hIn - hw) < 0.02 && Math.abs(hOut - hr) < 0.02 && hw < hr, 'rampe : eau → route (' + [hIn, hw, hOut, hr].join(', ') + ')');
 });
 test('un circuit peut commencer sur l’eau, en bateau : le bateau flotte indéfiniment', () => {
@@ -396,11 +396,11 @@ console.log('Tunnel : parois et toit');
 test('sans tunnel la voiture saute par-dessus la bordure ; avec le tunnel elle reste dedans (même lancée haut et fort)', () => {
   const lateral = (tn) => {
     const tr = strip('straight', 8, { tn });
-    const phys = new CarPhysics(tr); phys.place(12, ROAD_TOP + 0.01, 4 * CELL + 12, 0, 1);
+    const phys = new CarPhysics(tr); phys.place(CELL / 2, ROAD_TOP + 0.01, 4 * CELL + CELL / 2, 0, 1);
     phys.graceT = 0;
-    phys.vel.x = 22; phys.vel.y = 9; phys.grounded = false;
+    phys.vel.x = 30; phys.vel.y = 10; phys.grounded = false;
     let maxD = 0, maxY = -1;
-    run(phys, tr, 2.5, IDLE, () => { maxD = Math.max(maxD, Math.abs(phys.pos.x - 12)); maxY = Math.max(maxY, phys.pos.y); });
+    run(phys, tr, 2.5, IDLE, () => { maxD = Math.max(maxD, Math.abs(phys.pos.x - CELL / 2)); maxY = Math.max(maxY, phys.pos.y); });
     return { maxD, maxY, x: phys.pos.x };
   };
   const open = lateral(0), closed = lateral(1);
@@ -427,8 +427,8 @@ test('tunnel sans bordures : les parois du tunnel existent quand même', () => {
 });
 
 console.log('Rejeu identique (vérification serveur) et version');
-test('PHYS_VER 24 ; un circuit avec verre, tapis, vent, eau et tunnel est rejoué à l’identique par la vérification', () => {
-  assert.equal(PHYS_VER, 24);
+test('PHYS_VER 25 ; un circuit avec verre, tapis, vent, eau et tunnel est rejoué à l’identique par la vérification', () => {
+  assert.equal(PHYS_VER, 25);
   const tr = scriptTrack('mix', 'start S2 S.v S2.t137 S2.w150 S.a2 R S2# S2.a L S2 finish');
   // Enregistre une course du pilote automatique, puis la rejoue comme le fait le serveur.
   const phys = new CarPhysics(tr), logic = new RaceLogic(tr); placeAtStart(phys, logic);

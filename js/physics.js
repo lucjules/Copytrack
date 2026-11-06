@@ -22,8 +22,8 @@ export const CAR = {
   accelCurve: 1.5,    // poussée = accel × (1 - (v / vmax)^accelCurve) : plus c'est petit, plus la fin de la courbe est longue
   maxSpeed: SURF_PHYS.maxSpeed,       // vitesse visée moteur (m/s)
   boostSpeed: SURF_PHYS.boostSpeed,
-  boostAccel: 30,
-  boostTime: 1.6,
+  boostAccel: 10,
+  boostTime: 1.2,
   brake: 52,
   reverseAccel: 15,
   reverseMax: 15,
@@ -35,24 +35,23 @@ export const CAR = {
   b: 1.4,             // centre de gravité -> essieu arrière (m)
   yawK: 1.9,          // inertie de lacet ramenée à la masse (m²)
   corner: 230,        // rigidité de dérive d'un essieu (m/s² par rad)
-  latGrip: 56,        // adhérence latérale totale (m/s²), partagée avant / arrière
-  frontShare: 0.48,   // part avant (un peu moins que l'arrière : comportement stable)
-  steerMax: 0.6,      // angle de braquage maxi des roues (rad) à basse vitesse
+  latGrip: 80,        // adhérence latérale totale (m/s²), partagée avant / arrière (0.9.11 : 56 -> 80, la voiture tient mieux dans les virages)
+  frontShare: 0.42,   // part avant (0.9.11 : 0,48 -> 0,42 : l'arrière accroche plus que l'avant, la voiture PERD l'avant avant de partir en tête-à-queue : pardonne un volant tardif)
+  steerMax: 0.65,     // angle de braquage maxi des roues (rad) à basse vitesse
   steerAlat: 52,      // l'angle utile diminue avec la vitesse (le volant reste précis)
   driftRear: 0.65,    // adhérence arrière restante quand on freine en virage (dérapage)
   driftSteer: 1.3,    // braquage autorisé en plus pendant le dérapage
   driftMin: 12,       // vitesse mini (m/s) pour qu'un freinage en virage fasse déraper
   driftBrake: 0.75,   // part du freinage absorbée par la glisse quand on dérape
   yawDamp: 0.6,
-  steerIn: 7,         // vitesse de braquage
-  steerOut: 12,       // retour au centre
+  steerIn: 8,         // vitesse de braquage
+  steerOut: 13,       // retour au centre
   gravity: SURF_PHYS.gravity,
   snap: 0.7,
   step: 1.6,
   magnetRange: 4,     // aimant : portée de l'attraction au-dessus d'une route aimantée (m)
   magnetAcc: 80,      // ... et accélération maximale vers la route, le long de sa normale (m/s²)
-  launch: 2.0,        // vitesse normale (m/s) au-delà de laquelle la route « tombe » sous la voiture : elle décolle
-  stickAngle: 0.21,   // 0.9.3 : un défaut de raccord de moins de ~12° (pente, pente douce, raccord doux pris très vite) ne fait plus décoller ; un tremplin (22°) si
+  launch: 0.6,        // vitesse normale (m/s) au-delà de laquelle la route « tombe » sous la voiture : elle décolle (0.9.11 : 2,0 -> 0,6, sans exemption d'angle)
   airPitchAcc: 4.2,  // tangage en l'air : gaz = nez vers le bas, frein = nez vers le haut (rad/s²)
   airPitchDamp: 2.6,
   airPitchUpK: 1.6,   // relever le nez est 1,6 fois plus vif que le plonger
@@ -97,8 +96,8 @@ export const MOTO = {
   brake: 44,          // freine un peu moins (une seule roue avant)
   a: 1.15, b: 1.2,    // empattement plus court : tourne plus serré
   yawK: 1.25,         // plus légère, change de cap plus vite
-  latGrip: 60,        // penche dans les virages : un peu plus d'appui latéral
-  frontShare: 0.5,
+  latGrip: 78,        // penche dans les virages : un peu plus d'appui latéral
+  frontShare: 0.45,
   steerMax: 0.75,     // braque plus à basse vitesse
   steerAlat: 66,      // et garde plus de braquage à haute vitesse
   driftRear: 0.76,    // glisse moins au freinage en virage
@@ -114,8 +113,8 @@ export const BOAT = {
   accel: 8,
   maxSpeed: 85,
   brake: 32,
-  latGrip: 44,        // la coque glisse plus qu'un pneu
-  frontShare: 0.46,
+  latGrip: 58,        // la coque glisse plus qu'un pneu
+  frontShare: 0.41,
   steerMax: 0.55,
   steerAlat: 48,
   yawK: 2.1,
@@ -146,7 +145,6 @@ export const GLIDE = {
   turnSpeed: 9,        // vitesse (m/s) à partir de laquelle il vire à plein régime
   turnRamp: 7,         // réactivité du roulis (1/s)
 };
-const STICK_COS = Math.cos(CAR.stickAngle);
 // Route sur le côté (pièces 90°) : appui aérodynamique (m/s² par (m/s)²) ajouté à l'appui réel. Pour tenir contre la gravité sur un
 // plan vertical il faut environ 21 m/s (75 km/h) ; en dessous, la voiture glisse le long du plan et tombe par le bord.
 export const SIDE_AERO = 0.03;
@@ -642,8 +640,11 @@ export class CarPhysics {
     // Petit défaut de raccord (pente douce, bord d'un virage incliné, raccord doux pris à très grande vitesse) : si la normale de la route ne
     // tourne que de quelques degrés d'un pas à l'autre, la voiture suit la route au lieu de décoller. Un vrai décrochement (pente nette, tremplin,
     // tremplin, virage incliné raide : plus de ~12°) la fait toujours décoller.
-    let stick = vn < launch;
-    if (!stick && this.grounded && gap < snap && gap > -CAR.step) stick = this.n.x * s.nx + this.n.y * s.ny + this.n.z * s.nz > STICK_COS;
+    // 0.9.11 : plus d'exemption d'angle. Avant, un défaut de raccord de moins de 12° (pente, bosse, sommet de côte) ne faisait JAMAIS décoller, à
+    // n'importe quelle vitesse : la voiture restait collée à la route comme avec un aimant. Maintenant seule compte la vitesse avec laquelle la
+    // route « tombe » sous la voiture (vn = vitesse × sinus de l'angle de raccord) : un raccord doux pris lentement reste collé, le même pris à
+    // 300 km/h décolle, comme dans la vraie vie. Un vol de moins de 0,35 s ne coûte rien à la réception.
+    const stick = vn < launch;
     if (this.grounded && gap < snap && gap > -CAR.step && stick) {
       p.y = s.h;
       const sp = this.speed;

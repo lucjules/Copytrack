@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { Track, scriptTrack } from '../js/track.js';
 import { CarPhysics, surfaceCoeffs } from '../js/physics.js';
 import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
+import { CELL } from '../js/constants.js';
 
 let failures = 0;
 function test(name, fn) {
@@ -74,7 +75,7 @@ function reverseProbe(v) {
     const wasGrounded = ph.grounded, mod = ph.surfMod;     // l'état AVANT le pas décide du volant de ce pas
     ph.step({ steer: 1, throttle: true, brake: false });
     const s = Math.sign(ph.steer);
-    if (!wasGrounded && !ph.grounded && ph.pos.z < 24 * 9 && ph.pos.z > 24 * 5) seen.air.push(s);
+    if (!wasGrounded && !ph.grounded && ph.pos.z < CELL * 9 && ph.pos.z > CELL * 5) seen.air.push(s);
     else if (wasGrounded && mod === 'reverse') seen.plate.push(s);
     else if (wasGrounded && mod === '' && ph.grounded) seen.after.push(s);
   }

@@ -229,11 +229,14 @@ export function checkTrack(track) {
       const vx = f.x - e.x, vz = f.z - e.z;
       const along = vx * ex + vz * ez, side = Math.abs(vx * ez - vz * ex);
       const flip = e.tile.s === 'flip' || f.tile.s === 'flip';   // la plaque de gravité inversée fait passer au niveau du dessus sur la même case
-      if (along < (flip ? -0.5 : 1) || along > CELL * maxJump || side > 5) continue;
+      // Une chute d'au moins un niveau peut se faire en bout de dalle, sans vide entre les deux pièces (le départ de Tremplins : la voiture quitte
+      // la plateforme à l'arrêt et tombe sur la descente voisine, 5 niveaux plus bas) : 0.9.11.
+      const drop = Math.abs(e.y - f.y) > LEVEL_H * 0.9;
+      if (along < (flip || drop ? -0.5 : 1) || along > CELL * maxJump || side > 5) continue;
       // Une plaque de gravité inversée envoie la voiture d'un niveau à l'autre (sol ↔ plafond) : pas de limite de hauteur.
       // (Sauf pour une extrémité d'ENTRÉE : c'est la réception d'un saut, et le départ du saut peut être bien plus haut : chute libre.)
-      // Un revêtement Rebond lance la voiture vers le haut : la réception peut être plus haute, jusqu'aux 4/5 de la hauteur du rebond.
-      const hop = e.tile.s === 'bounce' ? 0.8 * (SURF_PHYS.bounce * ((e.tile.p || 100) / 100)) ** 2 / (2 * SURF_PHYS.gravity) : LEVEL_H * 1.2;
+      // Un revêtement Rebond lance la voiture vers le haut : la réception peut être plus haute, jusqu'aux 85 % de la hauteur du rebond.
+      const hop = e.tile.s === 'bounce' ? 0.85 * (SURF_PHYS.bounce * ((e.tile.p || 100) / 100)) ** 2 / (2 * SURF_PHYS.gravity) : LEVEL_H * 1.2;
       if (f.y > e.y + hop && !flip && !e.entry) continue;
       if (!land || along < dist) { land = f; dist = along; }
     }

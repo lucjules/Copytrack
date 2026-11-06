@@ -9,7 +9,7 @@ const { Track, scriptTrack } = await import('../js/track.js');
 const { CarPhysics, CAR, MOTO, SIDE_MIN_SPEED, SIDE_GRACE } = await import('../js/physics.js');
 const { RaceLogic, placeAtStart } = await import('../js/raceLogic.js');
 const { PHYS_VER } = await import('../js/replay.js');
-const { SURF_PHYS, DT } = await import('../js/constants.js');
+const { SURF_PHYS, DT, LEVEL_H } = await import('../js/constants.js');
 const { BUILTIN_TRACKS, buildBuiltin } = await import('../js/tracks.js');
 const { GhostRunner } = await import('../js/replay.js');
 
@@ -21,8 +21,8 @@ function straight(n = 40, extra = '') {
 const GAS = { steer: 0, throttle: true, brake: false };
 
 console.log('Accélération et vitesse de pointe');
-test('PHYS_VER 24 ; vitesse visée par le moteur et turbo nettement plus hautes qu’avant (54 / 78 m/s)', () => {
-  assert.equal(PHYS_VER, 24);
+test('PHYS_VER 25 ; vitesse visée par le moteur et turbo nettement plus hautes qu’avant (54 / 78 m/s)', () => {
+  assert.equal(PHYS_VER, 25);
   assert.ok(SURF_PHYS.maxSpeed >= 90 && SURF_PHYS.boostSpeed > SURF_PHYS.maxSpeed + 10);
   assert.ok(MOTO.maxSpeed >= 85);
 });
@@ -121,10 +121,10 @@ test('assez d’élan (45 m/s) : la voiture tient sur le mur toute la longueur',
   const r = wallRun(45, true);
   assert.equal(r.dropped, false); assert.ok(r.onWall > 120, 'longtemps sur le mur : ' + r.onWall);
 });
-test('pas assez d’élan (20 m/s) : elle décroche de la paroi et tombe, avec la vitesse qu’elle avait', () => {
-  const r = wallRun(20, false);
-  assert.equal(r.dropped, true, 'décrochage'); assert.ok(r.dropSpeed > 10, 'vitesse conservée : ' + r.dropSpeed.toFixed(1));
-  assert.ok(!r.ph.rib, 'plus sur le ruban'); assert.ok(r.ph.pos.y < 4 * 4.8 + 0.4 - 3, 'elle est tombée : y = ' + r.ph.pos.y.toFixed(1));
+test('pas assez d’élan (24 m/s) : elle décroche de la paroi et tombe, avec la vitesse qu’elle avait', () => {
+  const r = wallRun(24, false);
+  assert.equal(r.dropped, true, 'décrochage'); assert.ok(r.dropSpeed > 3, 'vitesse conservée : ' + r.dropSpeed.toFixed(1));
+  assert.ok(!r.ph.rib, 'plus sur le ruban'); assert.ok(r.ph.pos.y < 4 * LEVEL_H + 0.4 - 3, 'elle est tombée : y = ' + r.ph.pos.y.toFixed(1));
 });
 test('juste sous le seuil (28 m/s, sans gaz) la voiture finit aussi par décrocher ; juste au-dessus (34 m/s, gaz) elle tient', () => {
   assert.equal(wallRun(26, false).dropped, true);

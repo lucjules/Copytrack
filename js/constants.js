@@ -2,11 +2,11 @@
 // v1.1 : pistes élargies (14 -> 18 m) et cases agrandies (20 -> 24 m).
 // Les circuits étant stockés en positions de grille, tous les anciens
 // circuits sont convertis automatiquement.
-export const VERSION = 'bêta 0.9.10';   // à incrémenter à chaque modification livrée : 0.9.1, 0.9.2, 0.9.3…
-export const CELL = 24;            // taille d'une case de grille
+export const VERSION = 'bêta 0.9.11';   // à incrémenter à chaque modification livrée : 0.9.1, 0.9.2, 0.9.3…
+export const CELL = 32;            // taille d'une case de grille
 export const HALF = CELL / 2;
-export const LEVEL_H = 4.8;        // hauteur d'un niveau (pentes identiques à la v1.0)
-export const ROAD_W = 18;          // largeur roulable
+export const LEVEL_H = 6.4;        // hauteur d'un niveau (pentes identiques à la v1.0)
+export const ROAD_W = 24;          // largeur roulable
 export const ROAD_HALF = ROAD_W / 2;
 export const RAIL_W = 0.6;         // épaisseur des bordures
 export const RAIL_H = 1.1;         // hauteur des bordures
@@ -30,7 +30,7 @@ export const SURF_PHYS = {
 export const MAX_DECOS = 500;
 
 // Looping : rayon et décalage latéral (une demi-case de chaque côté).
-export const LOOP_R = 12;
+export const LOOP_R = 12 * (CELL / 24);
 export const LOOP_LANE = HALF;
 
 // Pas de simulation fixe.

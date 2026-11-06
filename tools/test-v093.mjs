@@ -213,7 +213,7 @@ function mkEd(tool, opts = {}, level = 0) {
   const calls = { commit: 0, changed: 0, flash: [] };
   const self = Object.create(EditorSession.prototype);
   Object.assign(self, {
-    track, tool, level, rot: 0, hover: { x: 12, z: 12, cx: 0, cz: 0 }, surfParam: {}, opts: { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ...opts },
+    track, tool, level, rot: 0, hover: { x: HALF, z: HALF, cx: 0, cz: 0 }, surfParam: {}, opts: { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ...opts },
     app: { ui: { flash: (m) => calls.flash.push(m) }, audio: { place() {}, error() {} } },
     _commit: () => calls.commit++, _changed: () => calls.changed++,
   });
@@ -358,36 +358,37 @@ test('raccords exacts : début doux ↔ fin douce ↔ droite, mur ↔ sol ↔ pl
 });
 
 console.log('Conduite : pentes et raccords');
-test('physique v23 : PHYS_VER à 23 ; un défaut de raccord de moins de ~12° ne fait plus décoller', () => {
-  assert.equal(PHYS_VER, 24);
-  assert.ok(CAR.stickAngle > 0.19 && CAR.stickAngle < 0.25);
+test('physique v25 : PHYS_VER à 25 ; plus d’exemption d’angle : seule la vitesse de la route qui « tombe » sous la voiture compte (CAR.launch)', () => {
+  assert.equal(PHYS_VER, 25);
+  assert.equal(CAR.stickAngle, undefined, 'l’ancienne exemption de 12° n’existe plus');
+  assert.ok(CAR.launch > 0.3 && CAR.launch < 1.2, 'seuil de décollage ' + CAR.launch);
 });
 const hop = (script, v0, secs = 4.5) => drive(script, { v0, auto: false, secs }).airMax;
-test('montée puis plat SANS raccord : plus de saut parasite (pente 11°) ; descente sans raccord idem ; pente douce idem', () => {
-  for (const v0 of [20, 40, 54]) {
-    assert.equal(hop('start S S [slope] S4 S4 S4', v0), 0, `pente 1 à ${v0} m/s`);
-    assert.equal(hop('start S S [dn1] S4 S4 S4', v0), 0, `descente 1 à ${v0} m/s`);
-    assert.equal(hop('start S S [gentle] S4 S4 S4', v0), 0, `pente douce à ${v0} m/s`);
-    assert.equal(hop('start S S [dn05] S4 S4 S4', v0), 0, `descente ½ à ${v0} m/s`);
+test('un raccord franc (pente 11°, descente, pente douce) : à basse vitesse le saut reste court, à grande vitesse la voiture décolle franchement (plus de « collage »)', () => {
+  for (const sc of ['start S S [slope] S4 S4 S4', 'start S S [dn1] S4 S4 S4', 'start S S [gentle] S4 S4 S4', 'start S S [dn05] S4 S4 S4']) {
+    assert.ok(hop(sc, 10) < 0.7, `${sc} à 10 m/s : un petit saut seulement`);
+    assert.ok(hop(sc, 60) > 0.4, `${sc} à 60 m/s : elle décolle`);
   }
+  assert.ok(hop('start S S [slope] S4 S4 S4', 60) > hop('start S S [slope] S4 S4 S4', 10) + 0.3, 'la pente décolle d’autant plus que la vitesse est grande');
 });
 test('un tremplin reste un tremplin : la montée de 2 niveaux (22°) et la descente de 2 niveaux décollent toujours', () => {
   assert.ok(hop('start S S [steep] S4 S4 S4', 40) > 0.3, 'tremplin');
   assert.ok(hop('start S S [steep4] S4 S4 S4', 40) > 0.3, 'tremplin 4');
   assert.ok(hop('start S S [dn2] S4 S4 S4', 40) > 0.3, 'descente de 2 niveaux, sans raccord doux');
 });
-test('raccords doux : aucun décollage, à aucune vitesse, sur toutes les combinaisons montée / descente', () => {
+test('raccords doux : aucun décollage jusqu’à 30 m/s (108 km/h) ; à 80 m/s (288 km/h) les raccords d’un niveau décollent comme une vraie côte', () => {
   const chains = [
     'start S S [crv05] [slope] [cro05] S4 S4 S4', 'start S S [crv1] [steep] [cro1] S4 S4 S4', 'start S S [crv2] [steep4] [cro2] S4 S4 S4',
     'start S S [cdi05] [dn1] [cdo05] S4 S4 S4', 'start S S [cdi1] [dn2] [cdo1] S4 S4 S4',
     'start S S [crs05] S4 S4 S4', 'start S S [crs1] S4 S4 S4', 'start S S [cds05] S4 S4 S4', 'start S S [cds1] S4 S4 S4',
     'start S S [crv05] [slope] [cro05] [cdi05] [dn1] [cdo05] S4 S4 S4',
   ];
-  for (const sc of chains) for (const v0 of [20, 45]) assert.equal(hop(sc, v0), 0, `${sc} à ${v0} m/s`);
+  for (const sc of chains) for (const v0 of [10, 20, 30]) assert.equal(hop(sc, v0), 0, `${sc} à ${v0} m/s`);
+  for (const sc of ['start S S [cdi1] [dn2] [cdo1] S4 S4 S4', 'start S S [crs1] S4 S4 S4']) assert.ok(hop(sc, 80) > 0.8, `${sc} à 80 m/s`);
 });
-test('une colline à raccords doux se roule d’une traite avec le pilote automatique, du départ à l’arrivée', () => {
+test('une colline à raccords doux se roule d’une traite avec le pilote automatique, du départ à l’arrivée (au plus un petit vol aux sommets)', () => {
   const r = drive('start S2 [crv05] [slope] [cro05] S2 [cdi05] [dn1] [cdo05] S2 [crs1] S [cds1] S2 finish', { secs: 30, l: 4 });
-  assert.ok(r.finished, 'arrivée'); assert.equal(r.falls, 0); assert.equal(r.airMax, 0); assert.ok(!r.lost);
+  assert.ok(r.finished, 'arrivée'); assert.equal(r.falls, 0); assert.ok(r.airMax < 1.5, 'vol ' + r.airMax); assert.ok(!r.lost);
 });
 test('virages descendants : ils se roulent comme les virages montants (niveau d’arrivée, pas de chute)', () => {
   const r = drive('start S [cvd1] S2 [cvdL1] S2 [cvdBig1] S2 finish', { secs: 30, l: 6 });
@@ -490,7 +491,7 @@ function randomChain(seed, len = 9) {
   }
   return null;
 }
-test('150 circuits tirés au hasard (pentes douces, virages, hélices, murs, plafond, transitions franches et douces) : tous se roulent du départ à l’arrivée sans chute ni envol', () => {
+test('150 circuits tirés au hasard (pentes douces, virages, hélices, murs, plafond, transitions franches et douces) : tous se roulent du départ à l’arrivée sans chute ni long envol (moins de 2 s)', () => {
   let done = 0, bad = [];
   for (let seed = 1; seed <= 150; seed++) {
     const script = randomChain(seed);
@@ -499,7 +500,7 @@ test('150 circuits tirés au hasard (pentes douces, virages, hélices, murs, pla
     done++;
     const warn = orientationIssues(r.tr);
     if (warn.length) bad.push(`#${seed} ${script} → avertissement de raccord : ${warn[0].msg}`);
-    if (r.nan || r.lost || !r.finished || r.falls > 0 || r.airMax > 0.2) bad.push(`#${seed} ${script} → ${r.nan ? 'NaN' : r.lost ? 'perdu' : !r.finished ? 'pas d’arrivée' : r.falls + ' chute(s)'}`);
+    if (r.nan || r.lost || !r.finished || r.falls > 0 || r.airMax > 2) bad.push(`#${seed} ${script} → ${r.nan ? 'NaN' : r.lost ? 'perdu' : !r.finished ? 'pas d’arrivée' : r.falls + ' chute(s)'}`);
   }
   assert.ok(done >= 120, 'circuits générés : ' + done);
   assert.deepEqual(bad, [], '\n' + bad.join('\n'));

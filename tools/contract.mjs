@@ -28,7 +28,7 @@ export const PROFILE_CONTRACT = {
     const f = [];
     if (P.tight !== 0) f.push(`sprint : ${P.tight} virage(s) serré(s) (0 attendu)`);
     if (P.wide > 3) f.push(`sprint : ${P.wide} très grands virages (3 au plus)`);
-    if (S.time < 10 || S.time > 20) f.push(`sprint : ${S.time.toFixed(1)} s (10 à 20 s)`);
+    if (S.time < 12 || S.time > 26) f.push(`sprint : ${S.time.toFixed(1)} s (12 à 26 s)`);       // 0.9.11 : cases de 32 m au lieu de 24 : 10-20 s -> 12-26 s
     if (P.over180 < 0.6) f.push(`sprint : ${(P.over180 * 100).toFixed(0)} % du temps au-dessus de 180 km/h (60 % au moins)`);
     if (P.straights / P.pieces < 0.4) f.push(`sprint : ${(100 * P.straights / P.pieces).toFixed(0)} % de lignes droites (40 % au moins)`);
     return f;
@@ -37,7 +37,7 @@ export const PROFILE_CONTRACT = {
     const f = [];
     if (P.tight !== 0) f.push(`speedway : ${P.tight} virage(s) serré(s) (0 attendu)`);
     if (P.wide < 4) f.push(`speedway : ${P.wide} très grands virages (4 au moins)`);
-    if (P.over250 < 0.4) f.push(`speedway : ${(P.over250 * 100).toFixed(0)} % du temps au-dessus de 250 km/h (40 % au moins)`);
+    if (P.over240 < 0.35) f.push(`speedway : ${(P.over240 * 100).toFixed(0)} % du temps au-dessus de 240 km/h (35 % au moins)`);   // 0.9.11 : boosters moins forts, 250 -> 240 km/h
     if (P.brakePct > 8) f.push(`speedway : ${P.brakePct} % de freinage (8 % au plus)`);
     if (P.avgKmh < 200) f.push(`speedway : moyenne ${P.avgKmh} km/h (200 au moins)`);
     return f;
@@ -45,8 +45,9 @@ export const PROFILE_CONTRACT = {
   technique: (P) => {
     const f = [];
     if (P.tight < 8) f.push(`technique : ${P.tight} virages serrés (8 au moins)`);
-    if (P.brakePct < 12) f.push(`technique : ${P.brakePct} % de freinage (12 % au moins)`);
-    if (P.avgKmh > 150) f.push(`technique : moyenne ${P.avgKmh} km/h (150 au plus)`);
+    if (P.brakePct < 3) f.push(`technique : ${P.brakePct} % de freinage (3 % au moins)`);                       // 0.9.11 : plus d'adhérence, on freine moins longtemps
+    if (P.under120 < 0.15) f.push(`technique : ${(P.under120 * 100).toFixed(0)} % du temps sous 120 km/h (15 % au moins)`);
+    if (P.avgKmh > 155) f.push(`technique : moyenne ${P.avgKmh} km/h (155 au plus)`);
     if (P.boosts < 5) f.push(`technique : ${P.boosts} boosters (5 au moins, un par relance)`);
     return f;
   },
