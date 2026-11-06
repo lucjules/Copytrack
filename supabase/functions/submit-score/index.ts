@@ -58,6 +58,154 @@ var DIRS = [
   ]
 ];
 
+// js/dmath.js
+var sqrt = Math.sqrt;
+var floor = Math.floor;
+var isNaN_ = Number.isNaN;
+var PI = 3.141592653589793;
+var HALF_PI = 1.5707963267948966;
+var TWO_OVER_PI = 0.6366197723675814;
+var PIO2_1 = 1.5707963267341256;
+var PIO2_2 = 6077100506303966e-26;
+var PIO2_3 = 20222662487111665e-37;
+function ksin(r) {
+  const z = r * r;
+  return r * (1 + z * (-1 / 6 + z * (1 / 120 + z * (-1 / 5040 + z * (1 / 362880 + z * (-1 / 39916800 + z * (1 / 6227020800 + z * (-1 / 1307674368e3 + z * (1 / 355687428096e3)))))))));
+}
+function kcos(r) {
+  const z = r * r;
+  return 1 + z * (-1 / 2 + z * (1 / 24 + z * (-1 / 720 + z * (1 / 40320 + z * (-1 / 3628800 + z * (1 / 479001600 + z * (-1 / 87178291200 + z * (1 / 20922789888e3 + z * (-1 / 6402373705728e3)))))))));
+}
+var reducedR = 0;
+function reduce(x) {
+  if (!(x > -1e6 && x < 1e6)) {
+    reducedR = NaN;
+    return 0;
+  }
+  const n = Math.round(x * TWO_OVER_PI);
+  reducedR = x - n * PIO2_1 - n * PIO2_2 - n * PIO2_3;
+  return n & 3;
+}
+function dsin(x) {
+  const q = reduce(x), r = reducedR;
+  return q === 0 ? ksin(r) : q === 1 ? kcos(r) : q === 2 ? -ksin(r) : -kcos(r);
+}
+function dcos(x) {
+  const q = reduce(x), r = reducedR;
+  return q === 0 ? kcos(r) : q === 1 ? -ksin(r) : q === 2 ? -kcos(r) : ksin(r);
+}
+function dtan(x) {
+  const q = reduce(x), r = reducedR;
+  return (q & 1) === 0 ? ksin(r) / kcos(r) : -kcos(r) / ksin(r);
+}
+function datan(x) {
+  if (isNaN_(x)) return NaN;
+  const neg = x < 0;
+  let t = neg ? -x : x;
+  const inv = t > 1;
+  if (inv) t = 1 / t;
+  t = t / (1 + sqrt(1 + t * t));
+  t = t / (1 + sqrt(1 + t * t));
+  t = t / (1 + sqrt(1 + t * t));
+  const z = t * t;
+  let s = t * (1 + z * (-1 / 3 + z * (1 / 5 + z * (-1 / 7 + z * (1 / 9 + z * (-1 / 11 + z * (1 / 13 + z * (-1 / 15 + z * (1 / 17)))))))));
+  s *= 8;
+  if (inv) s = HALF_PI - s;
+  return neg ? -s : s;
+}
+function datan2(y, x) {
+  if (isNaN_(x) || isNaN_(y)) return NaN;
+  if (x > 0) return datan(y / x);
+  if (x < 0) {
+    const a = datan(y / x);
+    return y >= 0 ? a + PI : a - PI;
+  }
+  return y > 0 ? HALF_PI : y < 0 ? -HALF_PI : 0;
+}
+function dasin(x) {
+  if (!(x >= -1 && x <= 1)) return NaN;
+  return datan2(x, sqrt((1 - x) * (1 + x)));
+}
+function dacos(x) {
+  if (!(x >= -1 && x <= 1)) return NaN;
+  return datan2(sqrt((1 - x) * (1 + x)), x);
+}
+var POW2 = new Float64Array(2100);
+{
+  let p = 1;
+  for (let k = 0; k <= 1023; k++) {
+    POW2[k + 1074] = p;
+    p *= 2;
+  }
+  p = 1;
+  for (let k = 0; k >= -1074; k--) {
+    POW2[k + 1074] = p;
+    p *= 0.5;
+  }
+}
+var LN2_HI = 0.6931471803691238;
+var LN2_LO = 19082149292705877e-26;
+var INV_LN2 = 1.4426950408889634;
+function dexp(x) {
+  if (isNaN_(x)) return NaN;
+  if (x > 709.7) return Infinity;
+  if (x < -745) return 0;
+  const k = Math.round(x * INV_LN2);
+  const r = x - k * LN2_HI - k * LN2_LO;
+  const s = 1 + r * (1 + r * (1 / 2 + r * (1 / 6 + r * (1 / 24 + r * (1 / 120 + r * (1 / 720 + r * (1 / 5040 + r * (1 / 40320 + r * (1 / 362880 + r * (1 / 3628800 + r * (1 / 39916800 + r * (1 / 479001600 + r * (1 / 6227020800)))))))))))));
+  const k1 = k < -1e3 ? k + 100 : k;
+  return k1 === k ? s * POW2[k + 1074] : s * POW2[k1 + 1074] * POW2[-100 + 1074];
+}
+var view = new DataView(new ArrayBuffer(8));
+function dlog(x) {
+  if (isNaN_(x) || x < 0) return NaN;
+  if (x === 0) return -Infinity;
+  if (x === Infinity) return Infinity;
+  let e = 0;
+  if (x < 22250738585072014e-324) {
+    x *= POW2[54 + 1074];
+    e = -54;
+  }
+  view.setFloat64(0, x);
+  const hi = view.getUint32(0);
+  e += (hi >>> 20 & 2047) - 1023;
+  view.setUint32(0, hi & 1048575 | 1072693248);
+  let m = view.getFloat64(0);
+  if (m > 1.4142135623730951) {
+    m *= 0.5;
+    e += 1;
+  }
+  const s = (m - 1) / (m + 1), z = s * s;
+  const p = s * (2 + z * (2 / 3 + z * (2 / 5 + z * (2 / 7 + z * (2 / 9 + z * (2 / 11 + z * (2 / 13 + z * (2 / 15 + z * (2 / 17 + z * (2 / 19 + z * (2 / 21)))))))))));
+  return e * LN2_HI + (p + e * LN2_LO);
+}
+function dpow(x, y) {
+  if (y === 0) return 1;
+  if (isNaN_(x) || isNaN_(y)) return NaN;
+  if (y === 1) return x;
+  if (y === 2) return x * x;
+  if (y === 0.5) return sqrt(x);
+  if (x === 1) return 1;
+  if (x === 0) return y > 0 ? 0 : Infinity;
+  if (y === floor(y) && y >= -64 && y <= 64) {
+    let r = 1, b = x, n = y < 0 ? -y : y;
+    while (n > 0) {
+      if (n & 1) r *= b;
+      b *= b;
+      n >>= 1;
+    }
+    return y < 0 ? 1 / r : r;
+  }
+  if (x < 0) {
+    if (floor(y) !== y) return NaN;
+    const r = dexp(y * dlog(-x));
+    return y % 2 !== 0 ? -r : r;
+  }
+  return dexp(y * dlog(x));
+}
+var hypot2 = (a, b) => sqrt(a * a + b * b);
+var hypot3 = (a, b, c) => sqrt(a * a + b * b + c * c);
+
 // js/pieces.js
 var K = WORLD_SCALE;
 var PIECES = {
@@ -1410,7 +1558,7 @@ function sampleLocal(tile, lx, lz, out) {
     out.d = dist - a.R;
     out.gx = mir * dx / dist;
     out.gz = dz / dist;
-    let ang = Math.atan2(dz, dx);
+    let ang = datan2(dz, dx);
     if (ang < 0) ang += Math.PI * 2;
     out.along = (ang - Math.PI) / (Math.PI / 2);
     if (p.rise) {
@@ -1419,7 +1567,7 @@ function sampleLocal(tile, lx, lz, out) {
       out.h = base + rise * t;
       const k = rise / (Math.PI / 2 * dist);
       const inv = 1 / Math.sqrt(1 + k * k);
-      const tx = -Math.sin(ang), tz = Math.cos(ang);
+      const tx = -dsin(ang), tz = dcos(ang);
       out.nx = -mir * k * tx * inv;
       out.ny = inv;
       out.nz = -k * tz * inv;
@@ -1455,7 +1603,7 @@ function forkSample(p, lx, lz, out) {
   const da = lx - xa, db2 = (lx - xb) * cb;
   const sep = forkSep(t);
   const between = (lx - xa) * (lx - xb) < 0;
-  if (between && sep < 2 * 9 + 0.05) {
+  if (between && sep < 2 * ROAD_HALF + 0.05) {
     out.d = 0;
     out.gx = 1;
     out.gz = 0;
@@ -1510,11 +1658,11 @@ function floorCenter(tile, u, out) {
   let dx, dy, dz;
   if (P.kind === "arc") {
     const a = arcParams(P), mir = P.mirror < 0 ? -1 : 1, ang = Math.PI + Math.PI / 2 * u;
-    out.x = mir * (a.cx + a.R * Math.cos(ang));
-    out.z = a.cz + a.R * Math.sin(ang);
+    out.x = mir * (a.cx + a.R * dcos(ang));
+    out.z = a.cz + a.R * dsin(ang);
     out.y = base + P.rise * LEVEL_H * u;
-    dx = -mir * a.R * Math.sin(ang) * (Math.PI / 2);
-    dz = a.R * Math.cos(ang) * (Math.PI / 2);
+    dx = -mir * a.R * dsin(ang) * (Math.PI / 2);
+    dz = a.R * dcos(ang) * (Math.PI / 2);
     dy = P.rise * LEVEL_H;
   } else {
     out.x = 0;
@@ -1524,7 +1672,7 @@ function floorCenter(tile, u, out) {
     dz = -2 * half;
     dy = P.rise * LEVEL_H * profD(P, u);
   }
-  const l = Math.hypot(dx, dy, dz) || 1;
+  const l = hypot3(dx, dy, dz) || 1;
   out.tx = dx / l;
   out.ty = dy / l;
   out.tz = dz / l;
@@ -1532,12 +1680,12 @@ function floorCenter(tile, u, out) {
 }
 function rolledNormal(t, psi, o) {
   let ux = -t.tx * t.ty, uy = 1 - t.ty * t.ty, uz = -t.tz * t.ty;
-  const l = Math.hypot(ux, uy, uz) || 1;
+  const l = hypot3(ux, uy, uz) || 1;
   ux /= l;
   uy /= l;
   uz /= l;
   const rx = t.ty * uz - t.tz * uy, ry = t.tz * ux - t.tx * uz, rz = t.tx * uy - t.ty * ux;
-  const c = Math.cos(psi), s = Math.sin(psi);
+  const c = dcos(psi), s = dsin(psi);
   o.nx = c * ux + s * rx;
   o.ny = c * uy + s * ry;
   o.nz = c * uz + s * rz;
@@ -1547,7 +1695,7 @@ function buildRolled(tile) {
   const psi = tile.o === 1 ? Math.PI / 2 : -Math.PI / 2;
   const C3 = {};
   const half = P.size * HALF;
-  const len = P.kind === "arc" ? Math.hypot(Math.PI / 2 * arcParams(P).R, P.rise * LEVEL_H) : Math.hypot(2 * half, P.rise * LEVEL_H);
+  const len = P.kind === "arc" ? hypot2(Math.PI / 2 * arcParams(P).R, P.rise * LEVEL_H) : hypot2(2 * half, P.rise * LEVEL_H);
   return {
     minU: 0.5,
     len: len * 1.2,
@@ -1572,7 +1720,7 @@ function build(tile) {
     return {
       minU: P.turns === 1 ? 0.1 : 0.04,
       pos(u, o) {
-        const th = total * u, c = Math.cos(th), s = Math.sin(th);
+        const th = total * u, c = dcos(th), s = dsin(th);
         o.x = m * lane * (2 * smooth(u) - 1);
         o.y = base + R - R * c;
         o.z = -R * s;
@@ -1589,14 +1737,14 @@ function build(tile) {
       return {
         pos(u, o) {
           const ang = Math.PI + Math.PI / 2 * u;
-          const b = P.bank * Math.sin(Math.PI * u);
-          const ca = Math.cos(ang), sa = Math.sin(ang);
+          const b = P.bank * dsin(Math.PI * u);
+          const ca = dcos(ang), sa = dsin(ang);
           o.x = a.cx + a.R * ca;
           o.z = a.cz + a.R * sa;
-          o.y = base + ROAD_HALF * Math.sin(b);
-          o.nx = -ca * Math.sin(b);
-          o.ny = Math.cos(b);
-          o.nz = -sa * Math.sin(b);
+          o.y = base + ROAD_HALF * dsin(b);
+          o.nx = -ca * dsin(b);
+          o.ny = dcos(b);
+          o.nz = -sa * dsin(b);
         },
         len: Math.PI / 2 * a.R
       };
@@ -1649,8 +1797,8 @@ function build(tile) {
           o.x = long ? -HALF : 0;
           o.y = base;
           o.z = half - 2 * half * u;
-          o.nx = Math.sin(psi);
-          o.ny = Math.cos(psi);
+          o.nx = dsin(psi);
+          o.ny = dcos(psi);
           o.nz = 0;
         },
         len: long ? 2 * half : 2 * half * 1.6
@@ -1662,7 +1810,7 @@ function build(tile) {
         minU: 0.06,
         pos(u, o) {
           const th = Math.PI * 2 * smooth(u);
-          const s = Math.sin(th), c = Math.cos(th);
+          const s = dsin(th), c = dcos(th);
           o.x = -HALF + m * Rh * s;
           o.y = base + Rh * (1 - c);
           o.z = half - 2 * half * u;
@@ -1670,7 +1818,7 @@ function build(tile) {
           o.ny = c;
           o.nz = 0;
         },
-        len: Math.hypot(2 * half, 2 * Math.PI * Rh)
+        len: hypot2(2 * half, 2 * Math.PI * Rh)
       };
     }
     if (tile.t === "twist") {
@@ -1681,8 +1829,8 @@ function build(tile) {
           o.x = -HALF;
           o.y = base;
           o.z = half - 2 * half * u;
-          o.nx = Math.sin(f);
-          o.ny = Math.cos(f);
+          o.nx = dsin(f);
+          o.ny = dcos(f);
           o.nz = 0;
         },
         len: 2 * half
@@ -1703,11 +1851,11 @@ function build(tile) {
           } else {
             const a = (s - Lf2) / R90;
             o.x = 0;
-            o.z = -half + R90 - R90 * Math.sin(a);
-            o.y = base + R90 - R90 * Math.cos(a);
+            o.z = -half + R90 - R90 * dsin(a);
+            o.y = base + R90 - R90 * dcos(a);
             o.nx = 0;
-            o.ny = Math.cos(a);
-            o.nz = Math.sin(a);
+            o.ny = dcos(a);
+            o.nz = dsin(a);
           }
         },
         len: tot2
@@ -1735,11 +1883,11 @@ function build(tile) {
         o.x = 0;
         if (s <= La) {
           const a = s / R90;
-          o.z = cz + R90 * Math.cos(a);
-          o.y = base + R90 * Math.sin(a);
+          o.z = cz + R90 * dcos(a);
+          o.y = base + R90 * dsin(a);
           o.nx = 0;
-          o.ny = Math.sin(a);
-          o.nz = Math.cos(a);
+          o.ny = dsin(a);
+          o.nz = dcos(a);
         } else {
           o.z = cz - (s - La);
           o.y = base + R90;
@@ -1766,7 +1914,7 @@ function frameLocal(rib, u, F) {
   rib.pos(u0, B);
   rib.pos(u1, C2);
   let tx = C2.x - B.x, ty = C2.y - B.y, tz = C2.z - B.z;
-  const l = Math.hypot(tx, ty, tz) || 1e-9;
+  const l = hypot3(tx, ty, tz) || 1e-9;
   F.ds = l / (u1 - u0);
   tx /= l;
   ty /= l;
@@ -1776,7 +1924,7 @@ function frameLocal(rib, u, F) {
   nx -= tx * d;
   ny -= ty * d;
   nz -= tz * d;
-  const nl = Math.hypot(nx, ny, nz) || 1;
+  const nl = hypot3(nx, ny, nz) || 1;
   nx /= nl;
   ny /= nl;
   nz /= nl;
@@ -1838,9 +1986,9 @@ function centerlineLocal(tile, n) {
     for (let i = 0; i <= n; i++) {
       const ang = Math.PI + Math.PI / 2 * (i / n);
       pts.push([
-        (p.mirror < 0 ? -1 : 1) * (a.cx + a.R * Math.cos(ang)),
+        (p.mirror < 0 ? -1 : 1) * (a.cx + a.R * dcos(ang)),
         base + p.rise * LEVEL_H * (i / n),
-        a.cz + a.R * Math.sin(ang),
+        a.cz + a.R * dsin(ang),
         0
       ]);
     }
@@ -1977,24 +2125,24 @@ function obstacleLocal(d, t, out) {
     out.on = spikeLevel(def, tt);
   } else if (d.k === "pendulum") {
     const w = TAU / def.period;
-    const th = def.amp * Math.sin(w * tt), dth = def.amp * w * Math.cos(w * tt);
-    out.x = Math.sin(th) * def.arm;
-    out.y = def.pivot - Math.cos(th) * def.arm;
-    out.vx = Math.cos(th) * def.arm * dth;
-    out.vy = Math.sin(th) * def.arm * dth;
+    const th = def.amp * dsin(w * tt), dth = def.amp * w * dcos(w * tt);
+    out.x = dsin(th) * def.arm;
+    out.y = def.pivot - dcos(th) * def.arm;
+    out.vx = dcos(th) * def.arm * dth;
+    out.vy = dsin(th) * def.arm * dth;
     out.a = th;
   } else if (d.k === "hammer") {
     const w = TAU / def.period, th = w * tt;
-    out.x = Math.sin(th) * def.arm;
-    out.y = def.pivot - Math.cos(th) * def.arm;
-    out.vx = Math.cos(th) * def.arm * w;
-    out.vy = Math.sin(th) * def.arm * w;
+    out.x = dsin(th) * def.arm;
+    out.y = def.pivot - dcos(th) * def.arm;
+    out.vx = dcos(th) * def.arm * w;
+    out.vy = dsin(th) * def.arm * w;
     out.a = th;
   } else if (d.k === "slider") {
     const w = TAU / def.period;
-    out.x = def.travel * Math.sin(w * tt);
+    out.x = def.travel * dsin(w * tt);
     out.y = def.hy;
-    out.vx = def.travel * w * Math.cos(w * tt);
+    out.vx = def.travel * w * dcos(w * tt);
   } else if (d.k === "sweeper") {
     const w = TAU / def.period;
     out.a = w * tt;
@@ -2004,7 +2152,7 @@ function obstacleLocal(d, t, out) {
   return out;
 }
 function toLocalObs(d, wx, wy, wz, out) {
-  const c = Math.cos(d.ry || 0), s = Math.sin(d.ry || 0), k = d.s || 1;
+  const c = dcos(d.ry || 0), s = dsin(d.ry || 0), k = d.s || 1;
   const dx = (wx - d.x) / k, dz = (wz - d.z) / k;
   out.x = dx * c - dz * s;
   out.y = (wy - d.y) / k;
@@ -2013,9 +2161,9 @@ function toLocalObs(d, wx, wy, wz, out) {
 }
 function obstacleRadius(d) {
   const def = OBST[d.k], k = d.s || 1;
-  if (def.type === "spike") return (Math.hypot(def.hx, def.hz) + 1) * k;
+  if (def.type === "spike") return (hypot2(def.hx, def.hz) + 1) * k;
   if (def.type === "ball") return (def.arm + def.r + 1) * k + 2;
-  if (def.type === "box") return (def.travel + Math.hypot(def.hx, def.hz) + 1) * k;
+  if (def.type === "box") return (def.travel + hypot2(def.hx, def.hz) + 1) * k;
   if (def.type === "bar") return (def.len + def.r + 1) * k;
   return (def.r + 1) * k;
 }
@@ -4535,7 +4683,7 @@ var Track = class _Track {
     out.ny = S.ny;
     out.nz = W.z;
     if (a) {
-      const c = Math.cos(a), sn = Math.sin(a);
+      const c = dcos(a), sn = dsin(a);
       out.nx = c * W.x + sn * W.z;
       out.nz = -sn * W.x + c * W.z;
     }
@@ -4562,7 +4710,7 @@ var Track = class _Track {
     const M = MOVER[tile.mv];
     const mp = moverParams(tile, MP);
     const sp = mp.speed / 100, P = M.period / Math.abs(sp), w = Math.PI * 2 / P;
-    const k = (1 - Math.cos(w * t)) / 2, dk = Math.sin(w * t) * w / 2;
+    const k = (1 - dcos(w * t)) / 2, dk = dsin(w * t) * w / 2;
     out.x = 0;
     out.y = 0;
     out.z = 0;
@@ -4603,7 +4751,7 @@ var Track = class _Track {
     x -= o.x;
     z -= o.z;
     if (o.a) {
-      const dx = x - o.cx, dz = z - o.cz, c = Math.cos(o.a), s = Math.sin(o.a);
+      const dx = x - o.cx, dz = z - o.cz, c = dcos(o.a), s = dsin(o.a);
       x = o.cx + c * dx - s * dz;
       z = o.cz + s * dx + c * dz;
     }
@@ -7273,9 +7421,9 @@ function buildBuiltin(def) {
     for (const o of def.obst) {
       const i = Math.min(n - 2, Math.floor(n * o.at));
       const a = P[i], b = P[i + 1];
-      const dx = b[0] - a[0], dz = b[2] - a[2], l = Math.hypot(dx, dz) || 1;
+      const dx = b[0] - a[0], dz = b[2] - a[2], l = hypot2(dx, dz) || 1;
       const q = (v, st) => Math.round(v / st) * st;
-      const ry = q(Math.atan2(dx / l, dz / l), Math.PI / 8);
+      const ry = q(datan2(dx / l, dz / l), Math.PI / 8);
       t.addDeco({
         k: o.k,
         x: q(a[0] + -dz / l * (o.side || 0), 0.5),
@@ -7565,7 +7713,7 @@ var wallMethods = {
         p.y = hP + 0.02;
         continue;
       }
-      const dx = p.x - q.x, dz = p.z - q.z, dl = Math.hypot(dx, dz);
+      const dx = p.x - q.x, dz = p.z - q.z, dl = hypot2(dx, dz);
       p.x = q.x;
       p.z = q.z;
       if (dl > 1e-6) {
@@ -7580,8 +7728,8 @@ var wallMethods = {
   },
   _walls() {
     const p = this.pos, v = this.vel;
-    const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
-    const pfx = -Math.sin(this.prevYaw), pfz = -Math.cos(this.prevYaw);
+    const fx = -dsin(this.yaw), fz = -dcos(this.yaw);
+    const pfx = -dsin(this.prevYaw), pfz = -dcos(this.prevYaw);
     let hit = 0, touch = false, sx = 0, sz = 0;
     for (let k = -1; k <= 1; k += 2) {
       const off = CAR.probe * k;
@@ -7639,7 +7787,7 @@ var wallMethods = {
       if (o.a) {
         const q = this.track.moverLocal(o, x, z, MQ1), q2 = this.track.moverLocal(o, px, pz, MQ2);
         if (this._probeTile(tile, q.x, q.z, q2.x, q2.z, y - o.y, 0)) {
-          const c = Math.cos(o.a), sn = Math.sin(o.a), dx = HIT.dx, dz = HIT.dz, nx = HIT.nx, nz = HIT.nz;
+          const c = dcos(o.a), sn = dsin(o.a), dx = HIT.dx, dz = HIT.dz, nx = HIT.nx, nz = HIT.nz;
           HIT.dx = c * dx + sn * dz;
           HIT.dz = -sn * dx + c * dz;
           HIT.nx = c * nx + sn * nz;
@@ -7713,7 +7861,8 @@ var obstacleMethods = {
     if (!d || !OBST[d.k] || !fin(d.x) || !fin(d.y) || !fin(d.z) || !fin(d.s || 1) || !fin(d.ry || 0)) return false;
     if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) return false;
     const rr = obstacleRadius(d) + 3;
-    if ((cx - d.x) ** 2 + (cz - d.z) ** 2 > rr * rr) return false;
+    const ox = cx - d.x, oz = cz - d.z;
+    if (ox * ox + oz * oz > rr * rr) return false;
     const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
     if (!(k > 0) || !fin(rc)) return false;
     obstacleLocal(d, t, OB);
@@ -7730,7 +7879,7 @@ var obstacleMethods = {
       return false;
     } else if (def.type === "ball") {
       const dx = OL.x - OB.x, dy = OL.y - OB.y, dz = OL.z;
-      const dd = Math.hypot(dx, dy, dz);
+      const dd = hypot3(dx, dy, dz);
       if (dd >= def.r + rc) return false;
       if (dd < 1e-6) {
         nx = 0;
@@ -7748,7 +7897,7 @@ var obstacleMethods = {
     } else if (def.type === "box") {
       const qx = clamp(OL.x, OB.x - def.hx, OB.x + def.hx), qy = clamp(OL.y, 0, def.hy * 2), qz = clamp(OL.z, -def.hz, def.hz);
       const dx = OL.x - qx, dy = OL.y - qy, dz = OL.z - qz;
-      const dd = Math.hypot(dx, dy, dz);
+      const dd = hypot3(dx, dy, dz);
       if (dd >= rc) return false;
       if (dd < 1e-6) {
         const ex = def.hx - Math.abs(OL.x - OB.x);
@@ -7777,10 +7926,10 @@ var obstacleMethods = {
       }
       ovx = OB.vx;
     } else if (def.type === "bar") {
-      const ca = Math.cos(OB.a), sa = Math.sin(OB.a);
+      const ca = dcos(OB.a), sa = dsin(OB.a);
       const s = clamp(OL.x * ca + OL.z * sa, -def.len, def.len);
       const dx = OL.x - ca * s, dy = OL.y - def.y, dz = OL.z - sa * s;
-      const dd = Math.hypot(dx, dy, dz);
+      const dd = hypot3(dx, dy, dz);
       if (dd >= def.r + rc) return false;
       if (dd < 1e-6) {
         nx = -sa;
@@ -7797,7 +7946,7 @@ var obstacleMethods = {
       ovz = ca * s * OB.w;
     } else {
       if (OL.y > def.h + rc) return false;
-      const dd = Math.hypot(OL.x, OL.z);
+      const dd = hypot2(OL.x, OL.z);
       if (dd >= def.r + rc) return false;
       if (dd < 1e-6) {
         nx = 1;
@@ -7809,7 +7958,7 @@ var obstacleMethods = {
         pen = def.r + rc - dd;
       }
     }
-    const c = Math.cos(d.ry || 0), sn = Math.sin(d.ry || 0);
+    const c = dcos(d.ry || 0), sn = dsin(d.ry || 0);
     const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
     const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
     if (!(fin(wx) && fin(wy) && fin(wz) && fin(vwx) && fin(vwy) && fin(vwz))) return false;
@@ -7937,7 +8086,7 @@ var ribbonMethods = {
           R.vs = v.x * B2.e1x + v.y * B2.e1y + v.z * B2.e1z;
           R.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
           const h = this.fwd;
-          R.psi = Math.atan2(h.x * B2.e2x + h.y * B2.e2y + h.z * B2.e2z, h.x * B2.e1x + h.y * B2.e1y + h.z * B2.e1z);
+          R.psi = datan2(h.x * B2.e2x + h.y * B2.e2y + h.z * B2.e2z, h.x * B2.e1x + h.y * B2.e1y + h.z * B2.e1z);
           this.rib = R;
           this.ev.loopIn = true;
           this._ribPlace(R);
@@ -7957,7 +8106,8 @@ var ribbonMethods = {
       let bu = -1, bd = Infinity;
       for (let i = 0; i <= 32; i++) {
         const F2 = frameWorld(tile, rib, i / 32, this.F);
-        const d = (p.x - F2.px) ** 2 + (p.y - F2.py) ** 2 + (p.z - F2.pz) ** 2;
+        const dx = p.x - F2.px, dy = p.y - F2.py, dz = p.z - F2.pz;
+        const d = dx * dx + dy * dy + dz * dz;
         if (d < bd) {
           bd = d;
           bu = i / 32;
@@ -8002,7 +8152,7 @@ var ribbonMethods = {
       R.vs = v.x * B2.e1x + v.y * B2.e1y + v.z * B2.e1z;
       R.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
       const h = this.fwd;
-      R.psi = Math.atan2(h.x * B2.e2x + h.y * B2.e2y + h.z * B2.e2z, h.x * B2.e1x + h.y * B2.e1y + h.z * B2.e1z);
+      R.psi = datan2(h.x * B2.e2x + h.y * B2.e2y + h.z * B2.e2z, h.x * B2.e1x + h.y * B2.e1y + h.z * B2.e1z);
       this.ev.land = -vn;
       const kq = this._landing(F.nx, F.ny, F.nz);
       R.vs *= kq;
@@ -8026,8 +8176,8 @@ var ribbonMethods = {
     let X = R.dl, Y = 0, c = 1, s = 0;
     if (kc > 1e-5) {
       const phi = kc * R.dl;
-      c = Math.cos(phi);
-      s = Math.sin(phi);
+      c = dcos(phi);
+      s = dsin(phi);
       X = s / kc;
       Y = (1 - c) / kc;
     }
@@ -8116,7 +8266,7 @@ var ribbonMethods = {
     const load = lPiece ? clamp(press / gAbs, 0, 1.6) : press > 0 || guided ? 1 : 0;
     this.press = press;
     R.vs -= beltE1;
-    const c = Math.cos(R.psi), s = Math.sin(R.psi);
+    const c = dcos(R.psi), s = dsin(R.psi);
     let vx = R.vs * c + R.vd * s, vy = -R.vs * s + R.vd * c;
     const ax = (this._longitudinal(vx, inp, this.k.maxSpeed * vmaxK, Math.min(1, load) * tractK, extraDrag, dt, Math.min(1, load)) - vx) / dt;
     this.rearK = rearK;
@@ -8203,17 +8353,17 @@ var ribbonMethods = {
     this.n.x = F.nx;
     this.n.y = F.ny;
     this.n.z = F.nz;
-    const c = Math.cos(R.psi), s = Math.sin(R.psi);
+    const c = dcos(R.psi), s = dsin(R.psi);
     this.fwd.x = B2.e1x * c + B2.e2x * s;
     this.fwd.y = B2.e1y * c + B2.e2y * s;
     this.fwd.z = B2.e1z * c + B2.e2z * s;
-    if (Math.hypot(this.fwd.x, this.fwd.z) > 0.3) this.yaw = Math.atan2(-this.fwd.x, -this.fwd.z);
+    if (hypot2(this.fwd.x, this.fwd.z) > 0.3) this.yaw = datan2(-this.fwd.x, -this.fwd.z);
     this.grounded = true;
     this.surfType = "road";
     this.surfMod = R.tile.s || "";
   },
   _ribDetach() {
-    this.pitch = Math.asin(clamp(this.fwd.y, -1, 1));
+    this.pitch = dasin(clamp(this.fwd.y, -1, 1));
     this.pitchRate = 0;
     this.airTime = 0;
     const t = this.rib && this.rib.tile;
@@ -8255,7 +8405,7 @@ var ribbonMethods = {
       N.vs = v.x * B2.e1x + v.y * B2.e1y + v.z * B2.e1z;
       N.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
       const h2 = this.fwd;
-      N.psi = Math.atan2(h2.x * B2.e2x + h2.y * B2.e2y + h2.z * B2.e2z, h2.x * B2.e1x + h2.y * B2.e1y + h2.z * B2.e1z);
+      N.psi = datan2(h2.x * B2.e2x + h2.y * B2.e2y + h2.z * B2.e2z, h2.x * B2.e1x + h2.y * B2.e1y + h2.z * B2.e1z);
       this.rib = N;
       this._ribPlace(N);
       return;
@@ -8263,7 +8413,7 @@ var ribbonMethods = {
     this.rib = null;
     this.ev.loopOut = true;
     const h = this.fwd;
-    if (Math.hypot(h.x, h.z) > 0.2) this.yaw = Math.atan2(-h.x, -h.z);
+    if (hypot2(h.x, h.z) > 0.2) this.yaw = datan2(-h.x, -h.z);
     this.prevYaw = this.yaw;
     const gsx = this.gSign;
     if (this.n.y * gsx > 0.6 && F.ny * gsx > 0.6) {
@@ -8307,7 +8457,7 @@ var ribbonMethods = {
         const rib = ribbonOf(tile);
         for (let end = 0; end < 2; end++) {
           const G = frameWorld(tile, rib, end, this.F3);
-          const dist = Math.hypot(G.px - px, G.py - py, G.pz - pz);
+          const dist = hypot3(G.px - px, G.py - py, G.pz - pz);
           if (dist > 3.5) continue;
           const sg = end === 0 ? 1 : -1;
           if (G.tx * sg * fx + G.ty * sg * fy + G.tz * sg * fz < 0.7) continue;
@@ -8525,9 +8675,9 @@ var CarPhysics = class {
   }
   _updateFwd() {
     if (this.rib) return;
-    this.fwd.x = -Math.sin(this.yaw);
+    this.fwd.x = -dsin(this.yaw);
     this.fwd.y = 0;
-    this.fwd.z = -Math.cos(this.yaw);
+    this.fwd.z = -dcos(this.yaw);
   }
   _setGround(s, triggers = true) {
     this.n.x = s.nx;
@@ -8634,7 +8784,7 @@ var CarPhysics = class {
     const K2 = this.k;
     const v2 = Math.max(1, speed * speed);
     const slipSat = K2.latGrip * K2.frontShare / K2.corner;
-    let max = Math.min(K2.steerMax, Math.atan((K2.a + K2.b) * K2.steerAlat / v2) + slipSat);
+    let max = Math.min(K2.steerMax, datan((K2.a + K2.b) * K2.steerAlat / v2) + slipSat);
     max *= 1 + (K2.driftSteer - 1) * drift;
     return this.steer * max;
   }
@@ -8652,16 +8802,16 @@ var CarPhysics = class {
       const lateralDamp = clamp(0.35 + grip * 0.3, 0.35, 0.85);
       BK.vx = vx;
       BK.vy = vy * lateralDamp;
-      BK.w = vx * Math.tan(delta) / L4 * clamp(grip, 0.2, 1);
+      BK.w = vx * dtan(delta) / L4 * clamp(grip, 0.2, 1);
       return BK;
     }
     const den = Math.max(Math.abs(vx), 6);
     const sgn = vx >= 0 ? 1 : -1;
-    const af = Math.atan2(vy + K2.a * w, den) - delta * sgn;
-    const ar = Math.atan2(vy - K2.b * w, den);
+    const af = datan2(vy + K2.a * w, den) - delta * sgn;
+    const ar = datan2(vy - K2.b * w, den);
     const Ff = clamp(-K2.corner * af, -maxF, maxF);
     const Fr = clamp(-K2.corner * ar, -maxR, maxR);
-    const cd = Math.cos(delta), sd = Math.sin(delta);
+    const cd = dcos(delta), sd = dsin(delta);
     vx += (ax - Ff * sd) * dt;
     vy += (Ff * cd + Fr) * dt;
     w += ((K2.a * Ff * cd - K2.b * Fr) / K2.yawK - w * K2.yawDamp) * dt;
@@ -8768,7 +8918,7 @@ var CarPhysics = class {
   // Voiture posée sur une route ou sur le terrain : dynamique dans le plan du sol, revêtement, tapis, pièces mobiles. Renvoie true si le pas se termine ici (noyade).
   _driveGround(inp) {
     const dt = DT, v = this.vel, K2 = this.k;
-    let fx = -Math.sin(this.yaw), fy = 0, fz = -Math.cos(this.yaw);
+    let fx = -dsin(this.yaw), fy = 0, fz = -dcos(this.yaw);
     const n = this.n;
     const d = fx * n.x + fy * n.y + fz * n.z;
     fx -= n.x * d;
@@ -8883,25 +9033,25 @@ var CarPhysics = class {
     this.slip = Math.abs(vr);
     this.fwdSpeed = vf;
     this.airTime = 0;
-    this.pitch = Math.asin(clamp(fy, -1, 1));
+    this.pitch = dasin(clamp(fy, -1, 1));
     this.pitchRate = 0;
     return false;
   }
   // En l'air : trajectoire balistique, rotation, tangage, vol plané.
   _flyAir(inp) {
     const dt = DT, v = this.vel, K2 = this.k;
-    let fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
+    let fx = -dsin(this.yaw), fz = -dcos(this.yaw);
     if (this.vehicle === "glider") {
       this._glide(inp, dt);
-      fx = -Math.sin(this.yaw);
-      fz = -Math.cos(this.yaw);
+      fx = -dsin(this.yaw);
+      fz = -dcos(this.yaw);
     } else v.y -= this.g * this.gSign * dt;
-    this.omega *= Math.exp(-1.5 * dt);
+    this.omega *= dexp(-1.5 * dt);
     if (this.vehicle !== "glider") this.omega = clamp(this.omega + this.steer * CAR.airSteer * dt, -CAR.airSteerMax, CAR.airSteerMax);
     const us = this._upSign();
     this.yaw -= this.omega * us * dt;
     this.yawRate = -this.omega * us;
-    this.steerAngle = this._steerAngle(Math.hypot(v.x, v.z), this.driftT);
+    this.steerAngle = this._steerAngle(hypot2(v.x, v.z), this.driftT);
     const k = 1 - 6e-4 * this.speed * dt;
     v.x *= k;
     v.y *= k;
@@ -8911,7 +9061,7 @@ var CarPhysics = class {
     this.airTime += dt;
     const pin = this.vehicle === "glider" ? 0 : (inp.brake ? 1 : 0) - (inp.throttle ? 1 : 0);
     this.pitchRate += pin * this.gSign * K2.airPitchAcc * (pin > 0 ? CAR.airPitchUpK : 1) * dt;
-    this.pitchRate *= Math.exp(-CAR.airPitchDamp * dt);
+    this.pitchRate *= dexp(-CAR.airPitchDamp * dt);
     if (this.vehicle === "glider") this.pitch = this.glidePitch;
     else this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
   }
@@ -9004,7 +9154,7 @@ var CarPhysics = class {
       v.y += n.y * CAR.flipKick;
       v.z += n.z * CAR.flipKick;
       this.grounded = false;
-      this.pitch = Math.asin(clamp(this.fwd.y, -1, 1));
+      this.pitch = dasin(clamp(this.fwd.y, -1, 1));
       this.airTime = 0;
     }
     if (this._springNow) {
@@ -9019,7 +9169,7 @@ var CarPhysics = class {
         v.y += n.y * CAR.springHop;
         v.z += W12.z * k + n.z * CAR.springHop;
         this.grounded = false;
-        this.pitch = Math.asin(clamp(this.fwd.y, -1, 1));
+        this.pitch = dasin(clamp(this.fwd.y, -1, 1));
         this.airTime = 0;
       }
     }
@@ -9035,7 +9185,7 @@ var CarPhysics = class {
       if (vf < -0.5) a += K2.brake * traction;
       else {
         const x = Math.max(0, vf / vmax);
-        a += K2.accel * traction * (1 - Math.pow(x, CAR.accelCurve));
+        a += K2.accel * traction * (1 - dpow(x, CAR.accelCurve));
       }
     }
     if (inp.brake) {
@@ -9065,8 +9215,8 @@ var CarPhysics = class {
   // incidence pilotée (gaz = piquer, frein = cabrer), virage incliné au volant.
   _glide(inp, dt) {
     const v = this.vel, G = GLIDE;
-    const hv = Math.hypot(v.x, v.z);
-    const sp = Math.max(1e-3, Math.hypot(hv, v.y));
+    const hv = hypot2(v.x, v.z);
+    const sp = Math.max(1e-3, hypot2(hv, v.y));
     const aoaT = inp.brake ? G.up : inp.throttle ? G.down : G.trim;
     this.aoa += (aoaT - this.aoa) * Math.min(1, dt * 3);
     let L4 = G.lift * sp * sp * Math.max(0, 0.6 + 4 * this.aoa);
@@ -9075,7 +9225,7 @@ var CarPhysics = class {
     const dx = v.x / sp, dy = v.y / sp, dz = v.z / sp;
     const gu = this.gSign;
     let lx = -dx * dy * gu, ly = (1 - dy * dy) * gu, lz = -dz * dy * gu;
-    const ll = Math.hypot(lx, ly, lz) || 1;
+    const ll = hypot3(lx, ly, lz) || 1;
     lx /= ll;
     ly /= ll;
     lz /= ll;
@@ -9084,13 +9234,13 @@ var CarPhysics = class {
     v.z += (L4 * lz - D * dz) * dt;
     this.bankT = (this.bankT || 0) + (this.steer - (this.bankT || 0)) * Math.min(1, dt * G.turnRamp);
     const yr = this.bankT * G.turn * Math.min(1, hv / G.turnSpeed);
-    const a = -yr * gu * dt, c = Math.cos(a), s = Math.sin(a);
+    const a = -yr * gu * dt, c = dcos(a), s = dsin(a);
     const vx = v.x * c + v.z * s, vz = v.z * c - v.x * s;
     v.x = vx;
     v.z = vz;
     this.yaw += a;
     this.omega = yr;
-    const traj = Math.atan2(v.y, Math.max(1e-3, Math.hypot(v.x, v.z)));
+    const traj = datan2(v.y, Math.max(1e-3, hypot2(v.x, v.z)));
     this.glidePitch = traj + this.aoa;
   }
   // Anneaux turbo : traverser le disque donne une poussée.
@@ -9105,7 +9255,7 @@ var CarPhysics = class {
       const k = L22.lz / (L22.lz - L12.lz);
       const lx = L22.lx + (L12.lx - L22.lx) * k, y = q.y + (p.y - q.y) * k;
       const cy = tile.l * LEVEL_H + ROAD_TOP + RING_Y;
-      if (Math.hypot(lx, y - cy) > RING_R) continue;
+      if (hypot2(lx, y - cy) > RING_R) continue;
       this.boost = Math.max(this.boost, 1.3);
       this.boostF = Math.max(this.boost > 0 ? this.boostF : 0, 0.9);
       this.ev.ring = true;
@@ -9118,14 +9268,14 @@ var CarPhysics = class {
   _landing(nx, ny, nz) {
     if (this.airTime < 0.35) return 1;
     const v = this.vel;
-    const c = Math.cos(this.pitch), sn = Math.sin(this.pitch);
-    const fx = -Math.sin(this.yaw) * c, fy = sn, fz = -Math.cos(this.yaw) * c;
-    const mis = Math.abs(Math.asin(clamp(fx * nx + fy * ny + fz * nz, -1, 1)));
-    const hv = Math.hypot(v.x, v.z);
+    const c = dcos(this.pitch), sn = dsin(this.pitch);
+    const fx = -dsin(this.yaw) * c, fy = sn, fz = -dcos(this.yaw) * c;
+    const mis = Math.abs(dasin(clamp(fx * nx + fy * ny + fz * nz, -1, 1)));
+    const hv = hypot2(v.x, v.z);
     let side = 0;
     if (hv > 4) {
-      const hx = -Math.sin(this.yaw), hz = -Math.cos(this.yaw);
-      side = Math.acos(clamp((v.x * hx + v.z * hz) / hv, -1, 1));
+      const hx = -dsin(this.yaw), hz = -dcos(this.yaw);
+      side = dacos(clamp((v.x * hx + v.z * hz) / hv, -1, 1));
       if (side > Math.PI / 2) side = Math.PI - side;
     }
     const loss = clamp((mis - CAR.landOk) * 0.45, 0, 0.35) + clamp((side - 0.35) * 0.3, 0, 0.2);
@@ -9281,7 +9431,7 @@ var RaceLogic = class {
         if (lz1 * L3.lz > 0 || lz1 === L3.lz) continue;
         const k = L3.lz / (L3.lz - lz1);
         const lx = L3.lx + (lx1 - L3.lx) * k, y = phys.prev.y + (p.y - phys.prev.y) * k;
-        if (Math.hypot(lx, y - (h + RING_Y)) > RING_R + 0.5) continue;
+        if (hypot2(lx, y - (h + RING_Y)) > RING_R + 0.5) continue;
         const gl = this.lastGround;
         const snap = this._snap();
         if (gl) snap.steps = gl.steps;
@@ -9312,7 +9462,7 @@ var RaceLogic = class {
         let c = tileCenter(tile);
         if (!P.special && P.kind === "arc") {
           const a = arcParams(P), ang = Math.PI * 1.25;
-          c = localToWorld(tile, a.cx + a.R * Math.cos(ang), a.cz + a.R * Math.sin(ang));
+          c = localToWorld(tile, a.cx + a.R * dcos(ang), a.cz + a.R * dsin(ang));
         }
         let base = -tile.r * Math.PI / 2;
         if (!P.special && P.kind === "arc") base -= Math.PI / 4;
@@ -9387,8 +9537,8 @@ function placeAtStart(phys, logic, sp = logic.spawnPoint()) {
   phys.gravMul = (T.g0 || 100) / 100;
   const v0 = (T.v0 || 0) / 3.6;
   if (v0 > 0) {
-    phys.vel.x = -Math.sin(sp.yaw) * v0;
-    phys.vel.z = -Math.cos(sp.yaw) * v0;
+    phys.vel.x = -dsin(sp.yaw) * v0;
+    phys.vel.z = -dcos(sp.yaw) * v0;
     phys.fwdSpeed = v0;
   }
 }
@@ -9451,7 +9601,8 @@ var Simulation = class {
     const ev = this.logic.update(this.phys);
     if (this.phys.offTrack) this.groundT += DT;
     else this.groundT = 0;
-    this.lost = this.sank ? "sink" : this.groundT > this.offTrackLimit ? "offTrack" : "";
+    const crossed = !!ev && ev.type === "finish";
+    this.lost = crossed ? "" : this.sank ? "sink" : this.groundT > this.offTrackLimit ? "offTrack" : "";
     return ev;
   }
   step(inp) {
@@ -9472,18 +9623,18 @@ var Autopilot = class {
     this.dist = new Float32Array(n);
     for (let i = 1; i < n; i++) {
       const a = path[i - 1], b = path[i];
-      this.dist[i] = this.dist[i - 1] + Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+      this.dist[i] = this.dist[i - 1] + hypot3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
     }
     this.radius = new Float32Array(n).fill(1e4);
     for (let i = 1; i < n - 1; i++) {
       const a = path[Math.max(0, i - 2)], b = path[i], c = path[Math.min(n - 1, i + 2)];
       if (a[3] === 1 || b[3] === 1 || c[3] === 1) continue;
-      const h1 = Math.atan2(b[2] - a[2], b[0] - a[0]);
-      const h2 = Math.atan2(c[2] - b[2], c[0] - b[0]);
+      const h1 = datan2(b[2] - a[2], b[0] - a[0]);
+      const h2 = datan2(c[2] - b[2], c[0] - b[0]);
       let dh = h2 - h1;
       while (dh > Math.PI) dh -= Math.PI * 2;
       while (dh < -Math.PI) dh += Math.PI * 2;
-      const len = Math.hypot(b[0] - a[0], b[2] - a[2]) * 0.5 + Math.hypot(c[0] - b[0], c[2] - b[2]) * 0.5;
+      const len = hypot2(b[0] - a[0], b[2] - a[2]) * 0.5 + hypot2(c[0] - b[0], c[2] - b[2]) * 0.5;
       if (Math.abs(dh) > 1e-3 && len > 0.5) this.radius[i] = Math.max(2, len / Math.abs(dh)) * (b[3] === 2 ? 1.7 : 1);
     }
   }
@@ -9502,8 +9653,8 @@ var Autopilot = class {
     let k = this.idx;
     while (k < n - 2 && this.dist[k] < d) k++;
     const a = path[Math.max(0, k - 2)], b = path[Math.min(n - 1, k + 2)];
-    const h = Math.hypot(b[0] - a[0], b[2] - a[2]);
-    return h > 0.5 ? Math.atan2(b[1] - a[1], h) : 0;
+    const h = hypot2(b[0] - a[0], b[2] - a[2]);
+    return h > 0.5 ? datan2(b[1] - a[1], h) : 0;
   }
   reset(phys) {
     this.idx = 0;
@@ -9515,7 +9666,8 @@ var Autopilot = class {
     const end = Math.min(path.length - 1, this.idx + range);
     for (let i = this.idx; i <= end; i++) {
       const q = path[i];
-      const d = (q[0] - p.x) ** 2 + (q[2] - p.z) ** 2 + ((q[1] - p.y) * 3) ** 2;
+      const dx = q[0] - p.x, dz = q[2] - p.z, dy = (q[1] - p.y) * 3;
+      const d = dx * dx + dz * dz + dy * dy;
       if (d < bd) {
         bd = d;
         best = i;
@@ -9547,7 +9699,7 @@ var Autopilot = class {
       const R = phys.rib;
       const d2 = R.dir * R.dl;
       const vs = Math.max(8, Math.abs(R.vs));
-      const psiDes = Math.asin(Math.max(-0.5, Math.min(0.5, -1.2 * d2 / vs)));
+      const psiDes = dasin(Math.max(-0.5, Math.min(0.5, -1.2 * d2 / vs)));
       const st2 = (psiDes - R.psi) * 6 - phys.omega * 0.35;
       return {
         throttle: true,
@@ -9561,21 +9713,21 @@ var Autopilot = class {
       let j2 = this.idx;
       while (j2 < path.length - 1 && this.dist[j2] - this.dist[this.idx] < 30) j2++;
       const tq2 = path[j2];
-      const fx2 = -Math.sin(phys.yaw), fz2 = -Math.cos(phys.yaw);
+      const fx2 = -dsin(phys.yaw), fz2 = -dcos(phys.yaw);
       const tx2 = tq2[0] - p.x, tz2 = tq2[2] - p.z;
-      const ang2 = Math.atan2(fx2 * tz2 - fz2 * tx2, fx2 * tx2 + fz2 * tz2);
-      const hv = Math.max(8, Math.hypot(phys.vel.x, phys.vel.z));
-      const wantVy = (tq2[1] + 3 - p.y) / (Math.max(10, Math.hypot(tx2, tz2)) / hv);
+      const ang2 = datan2(fx2 * tz2 - fz2 * tx2, fx2 * tx2 + fz2 * tz2);
+      const hv = Math.max(8, hypot2(phys.vel.x, phys.vel.z));
+      const wantVy = (tq2[1] + 3 - p.y) / (Math.max(10, hypot2(tx2, tz2)) / hv);
       let landK = -1;
       for (let k = this.idx + 1; k < path.length && k < this.idx + 80; k++) {
-        if (Math.hypot(path[k][0] - path[k - 1][0], path[k][2] - path[k - 1][2]) > 30) {
+        if (hypot2(path[k][0] - path[k - 1][0], path[k][2] - path[k - 1][2]) > 30) {
           landK = k;
           break;
         }
       }
       let low, high;
       if (landK > 0 && landK > j2) {
-        const rest = Math.hypot(path[landK][0] - p.x, path[landK][2] - p.z);
+        const rest = hypot2(path[landK][0] - p.x, path[landK][2] - p.z);
         const want = path[landK][1] + 3 + rest / 9;
         low = p.y < want;
         high = p.y > want + 4;
@@ -9593,8 +9745,8 @@ var Autopilot = class {
       };
     }
     if (!phys.grounded) {
-      const hv = Math.hypot(phys.vel.x, phys.vel.z);
-      const tLand = Math.max(0.15, (phys.vel.y + Math.sqrt(Math.max(0, phys.vel.y ** 2 + 2 * phys.g * Math.max(0, p.y - this._groundBelow(p.y))))) / phys.g);
+      const hv = hypot2(phys.vel.x, phys.vel.z);
+      const tLand = Math.max(0.15, (phys.vel.y + Math.sqrt(Math.max(0, phys.vel.y * phys.vel.y + 2 * phys.g * Math.max(0, p.y - this._groundBelow(p.y))))) / phys.g);
       const ahead = this._pathSlopeAt(this.dist[this.idx] + hv * tLand);
       const err = phys.pitch - ahead + phys.pitchRate * 0.35;
       const steerAir = 0;
@@ -9611,11 +9763,11 @@ var Autopilot = class {
     while (j < path.length - 1 && this.dist[j] - this.dist[this.idx] < look && path[j + 1][3] !== 1) j++;
     if (path[j + 1] && path[j + 1][3] === 1 && j === this.idx) j++;
     const tq = path[j];
-    const fx = -Math.sin(phys.yaw), fz = -Math.cos(phys.yaw);
+    const fx = -dsin(phys.yaw), fz = -dcos(phys.yaw);
     const tx = tq[0] - p.x, tz = tq[2] - p.z;
     const cross = fx * tz - fz * tx;
     const dot = fx * tx + fz * tz;
-    const ang = Math.atan2(cross, dot);
+    const ang = datan2(cross, dot);
     const steer = Math.max(-1, Math.min(1, ang * 2.6 - (phys.omega || 0) * 0.25));
     let vTarget = this.vCap;
     const horizon = 15 + v * v / (2 * this.brakeDecel);
@@ -9925,7 +10077,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/version.js
-var PHYS_VER = 25;
+var PHYS_VER = 26;
 
 // js/replay.js
 function decodeInputs(b64) {

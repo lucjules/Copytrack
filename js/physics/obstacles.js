@@ -4,6 +4,7 @@ import { DT } from '../constants.js';
 import { OBST, OBSTACLE_CELL, obstacleKey, obstacleLocal, toLocalObs, obstacleRadius } from '../obstacles.js';
 import { CAR } from './specs.js';
 import { clamp } from '../mathutil.js';
+import { dcos, dsin, hypot2, hypot3 } from '../dmath.js';
 
 const OB = {};
 const OL = {};
@@ -40,7 +41,8 @@ export const obstacleMethods = {
     if (!d || !OBST[d.k] || !fin(d.x) || !fin(d.y) || !fin(d.z) || !fin(d.s || 1) || !fin(d.ry || 0)) return false;
     if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) return false;
     const rr = obstacleRadius(d) + 3;
-    if ((cx - d.x) ** 2 + (cz - d.z) ** 2 > rr * rr) return false;
+    const ox = cx - d.x, oz = cz - d.z;
+    if (ox * ox + oz * oz > rr * rr) return false;
     const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
     if (!(k > 0) || !fin(rc)) return false;
     obstacleLocal(d, t, OB);
@@ -56,7 +58,7 @@ export const obstacleMethods = {
       return false;
     } else if (def.type === 'ball') {
       const dx = OL.x - OB.x, dy = OL.y - OB.y, dz = OL.z;
-      const dd = Math.hypot(dx, dy, dz);
+      const dd = hypot3(dx, dy, dz);
       if (dd >= def.r + rc) return false;
       if (dd < 1e-6) { nx = 0; ny = 1; nz = 0; pen = def.r + rc; }
       else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd; }
@@ -64,7 +66,7 @@ export const obstacleMethods = {
     } else if (def.type === 'box') {
       const qx = clamp(OL.x, OB.x - def.hx, OB.x + def.hx), qy = clamp(OL.y, 0, def.hy * 2), qz = clamp(OL.z, -def.hz, def.hz);
       const dx = OL.x - qx, dy = OL.y - qy, dz = OL.z - qz;
-      const dd = Math.hypot(dx, dy, dz);
+      const dd = hypot3(dx, dy, dz);
       if (dd >= rc) return false;
       if (dd < 1e-6) {
         // Centre de la voiture dans la boîte : choisir la face la plus proche,
@@ -80,10 +82,10 @@ export const obstacleMethods = {
       } else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = rc - dd; }
       ovx = OB.vx;
     } else if (def.type === 'bar') {
-      const ca = Math.cos(OB.a), sa = Math.sin(OB.a);
+      const ca = dcos(OB.a), sa = dsin(OB.a);
       const s = clamp(OL.x * ca + OL.z * sa, -def.len, def.len);
       const dx = OL.x - ca * s, dy = OL.y - def.y, dz = OL.z - sa * s;
-      const dd = Math.hypot(dx, dy, dz);
+      const dd = hypot3(dx, dy, dz);
       if (dd >= def.r + rc) return false;
       if (dd < 1e-6) { nx = -sa; ny = 0; nz = ca; pen = def.r + rc; }
       else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd; }
@@ -91,13 +93,13 @@ export const obstacleMethods = {
     } else {
       // Bumper : poteau vertical qui renvoie fort.
       if (OL.y > def.h + rc) return false;
-      const dd = Math.hypot(OL.x, OL.z);
+      const dd = hypot2(OL.x, OL.z);
       if (dd >= def.r + rc) return false;
       if (dd < 1e-6) { nx = 1; nz = 0; pen = def.r + rc; }
       else { nx = OL.x / dd; nz = OL.z / dd; pen = def.r + rc - dd; }
     }
     // Normale et vitesse de l'obstacle en repère monde.
-    const c = Math.cos(d.ry || 0), sn = Math.sin(d.ry || 0);
+    const c = dcos(d.ry || 0), sn = dsin(d.ry || 0);
     const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
     const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
     if (!(fin(wx) && fin(wy) && fin(wz) && fin(vwx) && fin(vwy) && fin(vwz))) return false;

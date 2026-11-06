@@ -7,4 +7,4 @@ export const VERSION = 'bêta 0.9.11';
 // multijoueurs sont tous liés à ce numéro : un replay enregistré avec une autre physique ne redonne pas la même course.
 // À incrémenter dès que la physique, la géométrie des pièces ou les circuits intégrés changent. Ce n'est plus à retenir de tête :
 // `node tools/phys-fingerprint.mjs` (npm test) échoue tant que la physique a changé sans que ce numéro bouge.
-export const PHYS_VER = 25;
+export const PHYS_VER = 26;

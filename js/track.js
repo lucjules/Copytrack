@@ -9,6 +9,7 @@ import { centerlineWorld } from './ribbons.js';
 import { isObstacle, buildObstacleGrid } from './obstacles.js';
 import { DECO_ORDER } from './decoData.js';
 import { DECORS, DEFAULT_DECOR } from './themes.js';
+import { dcos, dsin } from './dmath.js';
 
 // L'eau est un peu sous le niveau de la chaussée.
 export const WATER_DROP = 0.35;
@@ -445,7 +446,7 @@ export class Track {
     out.h = h;
     rotVec(tile.r, S.nx, S.nz, W);
     out.nx = W.x; out.ny = S.ny; out.nz = W.z;
-    if (a) { const c = Math.cos(a), sn = Math.sin(a); out.nx = c * W.x + sn * W.z; out.nz = -sn * W.x + c * W.z; }   // pièce tournée : la normale suit
+    if (a) { const c = dcos(a), sn = dsin(a); out.nx = c * W.x + sn * W.z; out.nz = -sn * W.x + c * W.z; }   // pièce tournée : la normale suit
     out.tile = tile;
     out.type = 'road';
     // Bifurcation à deux revêtements : la voie déportée (branche 1) peut avoir le sien (« - » = route normale).
@@ -467,7 +468,7 @@ export class Track {
     const M = MOVER[tile.mv];
     const mp = moverParams(tile, MP);
     const sp = mp.speed / 100, P = M.period / Math.abs(sp), w = (Math.PI * 2) / P;
-    const k = (1 - Math.cos(w * t)) / 2, dk = (Math.sin(w * t) * w) / 2;
+    const k = (1 - dcos(w * t)) / 2, dk = (dsin(w * t) * w) / 2;
     out.x = 0; out.y = 0; out.z = 0; out.vx = 0; out.vy = 0; out.vz = 0;
     out.a = 0; out.w = 0; out.cx = 0; out.cz = 0;
     if (tile.mv === 1) { out.y = mp.amp * LEVEL_H * k; out.vy = mp.amp * LEVEL_H * dk; }
@@ -489,7 +490,7 @@ export class Track {
   moverLocal(o, x, z, out) {
     x -= o.x; z -= o.z;
     if (o.a) {
-      const dx = x - o.cx, dz = z - o.cz, c = Math.cos(o.a), s = Math.sin(o.a);
+      const dx = x - o.cx, dz = z - o.cz, c = dcos(o.a), s = dsin(o.a);
       x = o.cx + c * dx - s * dz; z = o.cz + s * dx + c * dz;
     }
     out.x = x; out.z = z;

@@ -65,7 +65,10 @@ export class Simulation {
   score() {
     const ev = this.logic.update(this.phys);
     if (this.phys.offTrack) this.groundT += DT; else this.groundT = 0;
-    this.lost = this.sank ? 'sink' : this.groundT > this.offTrackLimit ? 'offTrack' : '';
+    // L'arrivée franchie l'emporte : on ne rappelle pas au checkpoint une voiture qui vient de passer la ligne (la course en direct, le fantôme et
+    // la vérification serveur doivent conclure pareil).
+    const crossed = !!ev && ev.type === 'finish';
+    this.lost = crossed ? '' : this.sank ? 'sink' : this.groundT > this.offTrackLimit ? 'offTrack' : '';
     return ev;
   }
 

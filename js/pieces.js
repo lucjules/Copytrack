@@ -16,6 +16,7 @@
 // Une pièce line/arc peut aussi être posée « à l'envers » (drapeau v) : elle
 // devient alors un ruban au plafond.
 import { CELL, HALF, LEVEL_H, ROAD_TOP, LOOP_R, LOOP_LANE, ROAD_HALF, RAIL_W, SURF_PHYS, WORLD_SCALE } from './constants.js';
+import { datan2, dcos, dsin } from './dmath.js';
 
 // 0.9.11 : les pièces ne sont plus écrites en mètres fixes mais en proportion de la case (CELL = 24 m avant la 0.9.11, 32 m depuis) : K = 1 reproduit l'ancien monde.
 const K = WORLD_SCALE;
@@ -251,7 +252,7 @@ export function paramText(s, p) {
     case 'spring': { const k = ((v - 100) / 100) * SURF_PHYS.spring * 3.6; return Math.abs(k) < 0.5 ? 'nulle' : `${k > 0 ? '→' : '←'} ${Math.round(Math.abs(k))} km/h`; }
     case 'glass': return `${fmt1(glassSeconds(v))} s`;
     case 'boost': return `jusqu'à ${Math.round((SURF_PHYS.maxSpeed + (SURF_PHYS.boostSpeed - SURF_PHYS.maxSpeed) * (v / 100)) * 3.6)} km/h`;
-    case 'bounce': return `${fmt1((SURF_PHYS.bounce * (v / 100)) ** 2 / (2 * SURF_PHYS.gravity))} m`;
+    case 'bounce': { const vb = SURF_PHYS.bounce * (v / 100); return `${fmt1(vb * vb / (2 * SURF_PHYS.gravity))} m`; }
     case 'gravity': return `${fmt1(SURF_PHYS.gravity * (v / 100))} m/s²`;
     default: return `${v} %`;
   }
@@ -525,7 +526,7 @@ export function sampleLocal(tile, lx, lz, out) {
     const dx = mir * lx - a.cx, dz = lz - a.cz;
     const dist = Math.sqrt(dx * dx + dz * dz) || 1e-6;
     out.d = dist - a.R; out.gx = (mir * dx) / dist; out.gz = dz / dist;
-    let ang = Math.atan2(dz, dx);
+    let ang = datan2(dz, dx);
     if (ang < 0) ang += Math.PI * 2;
     out.along = (ang - Math.PI) / (Math.PI / 2);
     if (p.rise) {
@@ -536,7 +537,7 @@ export function sampleLocal(tile, lx, lz, out) {
       out.h = base + rise * t;
       const k = rise / ((Math.PI / 2) * dist);
       const inv = 1 / Math.sqrt(1 + k * k);
-      const tx = -Math.sin(ang), tz = Math.cos(ang);
+      const tx = -dsin(ang), tz = dcos(ang);
       out.nx = -mir * k * tx * inv; out.ny = inv; out.nz = -k * tz * inv;
     }
   } else if (p.kind === 'fork') {
@@ -577,7 +578,7 @@ function forkSample(p, lx, lz, out) {
   const da = lx - xa, db = (lx - xb) * cb;
   const sep = forkSep(t);
   const between = (lx - xa) * (lx - xb) < 0;
-  if (between && sep < 2 * 9 + 0.05) {
+  if (between && sep < 2 * ROAD_HALF + 0.05) {
     // Les deux chaussées se touchent encore : tout l'entre-deux est de la route, sans muret.
     out.d = 0; out.gx = 1; out.gz = 0;
   } else if (Math.abs(da) <= Math.abs(db)) {

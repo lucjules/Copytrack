@@ -5,6 +5,7 @@ import { PIECES, PLATES, rotVec, tileCenter, isRibbon, tileParam, beltSpeed, isS
 import { ribbonOf, frameLocal } from '../ribbons.js';
 import { CAR, SIDE_AERO, SIDE_HOLD, SIDE_MIN_SPEED, SIDE_GRACE, surfaceCoeffs } from './specs.js';
 import { clamp } from '../mathutil.js';
+import { dasin, datan2, dcos, dsin, hypot2, hypot3 } from '../dmath.js';
 
 const FL = {};
 const CC = { x: 0, z: 0 };
@@ -67,7 +68,7 @@ export const ribbonMethods = {
           R.vs = v.x * B.e1x + v.y * B.e1y + v.z * B.e1z;
           R.vd = v.x * B.e2x + v.y * B.e2y + v.z * B.e2z;
           const h = this.fwd;
-          R.psi = Math.atan2(h.x * B.e2x + h.y * B.e2y + h.z * B.e2z, h.x * B.e1x + h.y * B.e1y + h.z * B.e1z);
+          R.psi = datan2(h.x * B.e2x + h.y * B.e2y + h.z * B.e2z, h.x * B.e1x + h.y * B.e1y + h.z * B.e1z);
           this.rib = R;
           this.ev.loopIn = true;
           this._ribPlace(R);
@@ -89,7 +90,8 @@ export const ribbonMethods = {
       let bu = -1, bd = Infinity;
       for (let i = 0; i <= 32; i++) {
         const F = frameWorld(tile, rib, i / 32, this.F);
-        const d = (p.x - F.px) ** 2 + (p.y - F.py) ** 2 + (p.z - F.pz) ** 2;
+        const dx = p.x - F.px, dy = p.y - F.py, dz = p.z - F.pz;
+        const d = dx * dx + dy * dy + dz * dz;
         if (d < bd) { bd = d; bu = i / 32; }
       }
       let u = bu;
@@ -115,7 +117,7 @@ export const ribbonMethods = {
       R.vs = v.x * B.e1x + v.y * B.e1y + v.z * B.e1z;
       R.vd = v.x * B.e2x + v.y * B.e2y + v.z * B.e2z;
       const h = this.fwd;
-      R.psi = Math.atan2(h.x * B.e2x + h.y * B.e2y + h.z * B.e2z, h.x * B.e1x + h.y * B.e1y + h.z * B.e1z);
+      R.psi = datan2(h.x * B.e2x + h.y * B.e2y + h.z * B.e2z, h.x * B.e1x + h.y * B.e1y + h.z * B.e1z);
       this.ev.land = -vn;
       const kq = this._landing(F.nx, F.ny, F.nz);
       R.vs *= kq; R.vd *= kq;
@@ -139,7 +141,7 @@ export const ribbonMethods = {
     let X = R.dl, Y = 0, c = 1, s = 0;
     if (kc > 1e-5) {
       const phi = kc * R.dl;
-      c = Math.cos(phi); s = Math.sin(phi);
+      c = dcos(phi); s = dsin(phi);
       X = s / kc; Y = (1 - c) / kc;
     }
     F.qx = F.px + F.rx * X + F.nx * Y;
@@ -234,7 +236,7 @@ export const ribbonMethods = {
     const load = lPiece ? clamp(press / gAbs, 0, 1.6) : press > 0 || guided ? 1 : 0;
     this.press = press;
     R.vs -= beltE1;   // tapis roulant : dynamique dans le repère de la bande
-    const c = Math.cos(R.psi), s = Math.sin(R.psi);
+    const c = dcos(R.psi), s = dsin(R.psi);
     let vx = R.vs * c + R.vd * s, vy = -R.vs * s + R.vd * c;
     const ax = (this._longitudinal(vx, inp, this.k.maxSpeed * vmaxK, Math.min(1, load) * tractK, extraDrag, dt, Math.min(1, load)) - vx) / dt;
     // Ruban posé à l'envers (miroir) : son axe latéral pointe vers la gauche du pilote.
@@ -319,16 +321,16 @@ export const ribbonMethods = {
     v.y = B.e1y * R.vs + B.e2y * R.vd;
     v.z = B.e1z * R.vs + B.e2z * R.vd;
     this.n.x = F.nx; this.n.y = F.ny; this.n.z = F.nz;
-    const c = Math.cos(R.psi), s = Math.sin(R.psi);
+    const c = dcos(R.psi), s = dsin(R.psi);
     this.fwd.x = B.e1x * c + B.e2x * s; this.fwd.y = B.e1y * c + B.e2y * s; this.fwd.z = B.e1z * c + B.e2z * s;
-    if (Math.hypot(this.fwd.x, this.fwd.z) > 0.3) this.yaw = Math.atan2(-this.fwd.x, -this.fwd.z);
+    if (hypot2(this.fwd.x, this.fwd.z) > 0.3) this.yaw = datan2(-this.fwd.x, -this.fwd.z);
     this.grounded = true;
     this.surfType = 'road';
     this.surfMod = R.tile.s || '';
   },
 
   _ribDetach() {
-    this.pitch = Math.asin(clamp(this.fwd.y, -1, 1)); this.pitchRate = 0; this.airTime = 0;
+    this.pitch = dasin(clamp(this.fwd.y, -1, 1)); this.pitchRate = 0; this.airTime = 0;
     const t = this.rib && this.rib.tile;
     this.fallWhy = this.ev.wallOff ? 'wall' : t && PIECES[t.t].kind === 'loop' ? 'loop' : t && t.t === 'twist' ? 'twist' : t && t.v ? 'inv' : 'crest';
     this.rib = null;
@@ -362,7 +364,7 @@ export const ribbonMethods = {
       N.vs = v.x * B2.e1x + v.y * B2.e1y + v.z * B2.e1z;
       N.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
       const h = this.fwd;
-      N.psi = Math.atan2(h.x * B2.e2x + h.y * B2.e2y + h.z * B2.e2z, h.x * B2.e1x + h.y * B2.e1y + h.z * B2.e1z);
+      N.psi = datan2(h.x * B2.e2x + h.y * B2.e2y + h.z * B2.e2z, h.x * B2.e1x + h.y * B2.e1y + h.z * B2.e1z);
       this.rib = N;
       this._ribPlace(N);
       return;
@@ -371,7 +373,7 @@ export const ribbonMethods = {
     this.rib = null;
     this.ev.loopOut = true;
     const h = this.fwd;
-    if (Math.hypot(h.x, h.z) > 0.2) this.yaw = Math.atan2(-h.x, -h.z);
+    if (hypot2(h.x, h.z) > 0.2) this.yaw = datan2(-h.x, -h.z);
     this.prevYaw = this.yaw;
     const gsx = this.gSign;
     if (this.n.y * gsx > 0.6 && F.ny * gsx > 0.6) {
@@ -404,7 +406,7 @@ export const ribbonMethods = {
         const rib = ribbonOf(tile);
         for (let end = 0; end < 2; end++) {
           const G = frameWorld(tile, rib, end, this.F3);
-          const dist = Math.hypot(G.px - px, G.py - py, G.pz - pz);
+          const dist = hypot3(G.px - px, G.py - py, G.pz - pz);
           if (dist > 3.5) continue;
           const sg = end === 0 ? 1 : -1;
           if (G.tx * sg * fx + G.ty * sg * fy + G.tz * sg * fz < 0.7) continue;

@@ -73,4 +73,17 @@ export default [
       'no-this-before-super': 'error',
     },
   },
+  // Noyau de simulation : ce que la vérification serveur rejoue. Pas de fonction mathématique approximée par le moteur (js/dmath.js dit pourquoi) ;
+  // tools/test-determinisme.mjs fait le même contrôle sur la fermeture des imports de js/verify.js, sans ESLint.
+  {
+    files: ['js/autopilot.js', 'js/obstacles.js', 'js/physics.js', 'js/physics/**/*.js', 'js/pieces.js', 'js/raceLogic.js', 'js/ribbons.js', 'js/track.js',
+      'js/tracks.js', 'js/daily.js', 'js/replay.js', 'js/simulation.js', 'js/verify.js'],
+    rules: {
+      'no-restricted-properties': ['error', ...['sin', 'cos', 'tan', 'atan', 'atan2', 'asin', 'acos', 'exp', 'log', 'pow', 'hypot', 'random', 'sinh', 'cosh', 'tanh',
+        'cbrt', 'expm1', 'log1p', 'log2', 'log10'].map((property) => ({ object: 'Math', property, message: 'Résultat dépendant du moteur : utiliser js/dmath.js (dsin, dcos, datan2, hypot2...).' }))],
+      'no-restricted-syntax': ['error',
+        { selector: "BinaryExpression[operator='**']", message: 'L\'opérateur ** est approximé par le moteur : écrire x * x (ou dpow).' },
+        { selector: "AssignmentExpression[operator='**=']", message: 'L\'opérateur **= est approximé par le moteur : écrire x *= x (ou dpow).' }],
+    },
+  },
 ];

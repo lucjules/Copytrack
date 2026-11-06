@@ -57,18 +57,18 @@ export function obstacleLocal(d, t, out) {
     out.on = spikeLevel(def, tt);
   } else if (d.k === 'pendulum') {
     const w = TAU / def.period;
-    const th = def.amp * Math.sin(w * tt), dth = def.amp * w * Math.cos(w * tt);
-    out.x = Math.sin(th) * def.arm; out.y = def.pivot - Math.cos(th) * def.arm;
-    out.vx = Math.cos(th) * def.arm * dth; out.vy = Math.sin(th) * def.arm * dth;
+    const th = def.amp * dsin(w * tt), dth = def.amp * w * dcos(w * tt);
+    out.x = dsin(th) * def.arm; out.y = def.pivot - dcos(th) * def.arm;
+    out.vx = dcos(th) * def.arm * dth; out.vy = dsin(th) * def.arm * dth;
     out.a = th;
   } else if (d.k === 'hammer') {
     const w = TAU / def.period, th = w * tt;
-    out.x = Math.sin(th) * def.arm; out.y = def.pivot - Math.cos(th) * def.arm;
-    out.vx = Math.cos(th) * def.arm * w; out.vy = Math.sin(th) * def.arm * w;
+    out.x = dsin(th) * def.arm; out.y = def.pivot - dcos(th) * def.arm;
+    out.vx = dcos(th) * def.arm * w; out.vy = dsin(th) * def.arm * w;
     out.a = th;
   } else if (d.k === 'slider') {
     const w = TAU / def.period;
-    out.x = def.travel * Math.sin(w * tt); out.y = def.hy; out.vx = def.travel * w * Math.cos(w * tt);
+    out.x = def.travel * dsin(w * tt); out.y = def.hy; out.vx = def.travel * w * dcos(w * tt);
   } else if (d.k === 'sweeper') {
     const w = TAU / def.period;
     out.a = w * tt; out.y = def.y; out.w = w;
@@ -78,7 +78,7 @@ export function obstacleLocal(d, t, out) {
 
 
 export function toLocalObs(d, wx, wy, wz, out) {
-  const c = Math.cos(d.ry || 0), s = Math.sin(d.ry || 0), k = d.s || 1;
+  const c = dcos(d.ry || 0), s = dsin(d.ry || 0), k = d.s || 1;
   const dx = (wx - d.x) / k, dz = (wz - d.z) / k;
   out.x = dx * c - dz * s;
   out.y = (wy - d.y) / k;
@@ -89,9 +89,11 @@ export function toLocalObs(d, wx, wy, wz, out) {
 // Rayon englobant (m) pour un tri rapide.
 export function obstacleRadius(d) {
   const def = OBST[d.k], k = d.s || 1;
-  if (def.type === 'spike') return (Math.hypot(def.hx, def.hz) + 1) * k;
+  if (def.type === 'spike') return (hypot2(def.hx, def.hz) + 1) * k;
   if (def.type === 'ball') return (def.arm + def.r + 1) * k + 2;
-  if (def.type === 'box') return (def.travel + Math.hypot(def.hx, def.hz) + 1) * k;
+  if (def.type === 'box') return (def.travel + hypot2(def.hx, def.hz) + 1) * k;
   if (def.type === 'bar') return (def.len + def.r + 1) * k;
   return (def.r + 1) * k;
 }
+
+import { dcos, dsin, hypot2 } from './dmath.js';

@@ -20,8 +20,8 @@ function straight(n = 40, extra = '') {
 const GAS = { steer: 0, throttle: true, brake: false };
 
 console.log('Accélération et vitesse de pointe');
-test('PHYS_VER 25 ; vitesse visée par le moteur et turbo nettement plus hautes qu’avant (54 / 78 m/s)', () => {
-  assert.equal(PHYS_VER, 25);
+test('vitesse visée par le moteur et turbo nettement plus hautes qu’avant (54 / 78 m/s)', () => {
+  assert.ok(Number.isInteger(PHYS_VER) && PHYS_VER >= 25);
   assert.ok(SURF_PHYS.maxSpeed >= 90 && SURF_PHYS.boostSpeed > SURF_PHYS.maxSpeed + 10);
   assert.ok(MOTO.maxSpeed >= 85);
 });

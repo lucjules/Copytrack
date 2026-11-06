@@ -26,7 +26,7 @@ _Sprint, speedway, tremplins, épingles et grand huit : tous les profils de circ
 
 ### 2. Canyon Corail — Speedway, ◆◆◇◇◇
 
-- Départ : un booster → directement un très grand virage relevé. Au programme : virages relevés 3×3 à plus de 250 km/h, wall-ride de 6 cases sur la paroi du canyon, descente douce.
+- Départ : un booster → directement un très grand virage relevé. Au programme : virages relevés 3×3 à plus de 240 km/h, wall-ride de 6 cases sur la paroi du canyon, descente douce.
 - Pilote automatique : **29.2 s** · médailles : cristal 27.8 · or 29.2 · argent 33.6 · bronze 39.4
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -34,7 +34,7 @@ _Sprint, speedway, tremplins, épingles et grand huit : tous les profils de circ
 
 ### 3. Tremplins du Crépuscule — Acrobatique, ◆◆◇◇◇
 
-- Départ : chute libre immédiate depuis 77 m (la voiture quitte la plateforme de départ, à l’arrêt). Au programme : rampes progressives et à 38°, réceptions sur longues pentes, checkpoint aérien, saut sur un mur.
+- Départ : chute libre immédiate depuis 66 m (la voiture quitte la plateforme de départ, à l’arrêt). Au programme : rampes progressives et à 38°, réceptions sur longues pentes, checkpoint aérien, saut sur un mur.
 - Pilote automatique : **36.9 s** · médailles : cristal 35 · or 36.9 · argent 42.4 · bronze 49.8
 - Objectif bonus ★ : 2 réceptions parfaites
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -78,7 +78,7 @@ _Rampe de lancement, tube, rebonds de champignons et slalom en moto : la jungle 
 
 ### 8. Canopée — Speedway, ◆◆◆◇◇
 
-- Départ : en tube propulsé, qui débouche sur un virage relevé 3×3. Au programme : S relevés, wall-ride de 5 cases sur le mur gauche, tube à pleine vitesse, 47 % du temps au-dessus de 250 km/h.
+- Départ : en tube propulsé, qui débouche sur un virage relevé 3×3. Au programme : S relevés, wall-ride de 5 cases sur le mur gauche, tube à pleine vitesse, 35 % du temps au-dessus de 240 km/h.
 - Pilote automatique : **34.3 s** · médailles : cristal 32.6 · or 34.3 · argent 39.4 · bronze 46.3
 - Objectif bonus ★ : Finir en moins de 36 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -162,7 +162,7 @@ _Descente en moto, slalom en bateau et décollage en deltaplane autour du phare.
 
 ### 18. Grand Archipel — Speedway, ◆◆◆◆◆
 
-- Départ : aucun booster : une pente douce de six cases lance dans un très grand virage relevé. Au programme : cinq virages relevés, wall-ride de quatre cases, plongeon, 58 % du tour au-dessus de 250 km/h.
+- Départ : aucun booster : une pente douce de six cases lance dans un très grand virage relevé. Au programme : cinq virages relevés, wall-ride de quatre cases, plongeon, 61 % du tour au-dessus de 240 km/h.
 - Pilote automatique : **28.4 s** · médailles : cristal 27 · or 28.5 · argent 32.7 · bronze 38.4
 - Objectif bonus ★ : Finir en moins de 30 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -174,7 +174,7 @@ _Tapis roulant express, boucles, métro aérien, toits et lift hill : la ville m
 
 ### 19. Néons Express — Speedway, ◆◆◇◇◇
 
-- Départ : tapis roulant à +200 km/h (trois cases) : près de 290 km/h sans booster. Au programme : quatre virages relevés, wall-ride sur la façade d’une tour, 70 % au-dessus de 250 km/h.
+- Départ : tapis roulant à +200 km/h (trois cases) : près de 290 km/h sans booster. Au programme : quatre virages relevés, wall-ride sur la façade d’une tour, 88 % au-dessus de 240 km/h.
 - Pilote automatique : **21.1 s** · médailles : cristal 20 · or 21.1 · argent 24.2 · bronze 28.4
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -258,7 +258,7 @@ _Départ sur la glace, rebonds en terrasses, toboggan aimanté, hélices et poud
 
 ### 29. Couronne Boréale — Speedway, ◆◆◆◆◆
 
-- Départ : directement dans un très grand virage relevé, sans booster. Au programme : six virages relevés en couronne, wall-ride, 45 % du tour au-dessus de 250 km/h.
+- Départ : directement dans un très grand virage relevé, sans booster. Au programme : six virages relevés en couronne, wall-ride, 60 % du tour au-dessus de 240 km/h.
 - Pilote automatique : **26.9 s** · médailles : cristal 25.6 · or 27 · argent 31 · bronze 36.4
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -310,7 +310,7 @@ _Collines de braises, plaque de dérive, cheminée verticale, caldeira à deux t
 
 ### 35. Caldeira — Speedway, ◆◆◆◆◆
 
-- Départ : deux boosters → montée douce vers la crête ; circuit fermé, 2 tours. Au programme : quatre virages relevés en anneau, wall-ride, 70 % du temps au-dessus de 250 km/h.
+- Départ : deux boosters → montée douce vers la crête ; circuit fermé, 2 tours. Au programme : quatre virages relevés en anneau, wall-ride, 64 % du temps au-dessus de 240 km/h.
 - Pilote automatique : **53.4 s** · médailles : cristal 50.8 · or 53.4 · argent 61.4 · bronze 72.1
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -318,7 +318,7 @@ _Collines de braises, plaque de dérive, cheminée verticale, caldeira à deux t
 
 ### 36. Éruption — Acrobatique, ◆◆◆◆◆
 
-- Départ : trois boosters → rampe sans virage d’entrée : saut de huit cases, réception 10 niveaux plus bas. Au programme : quatre éruptions, anneau turbo, wall-ride.
+- Départ : trois boosters → rampe sans virage d’entrée : saut de cinq cases, réception 10 niveaux plus bas. Au programme : quatre éruptions, anneau turbo, wall-ride.
 - Pilote automatique : **36.7 s** · médailles : cristal 34.9 · or 36.7 · argent 42.2 · bronze 49.6
 - Objectif bonus ★ : Finir en moins de 38.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -354,7 +354,7 @@ _Tube d’amarrage, basse gravité, moto, grand anneau à trois tours et apesant
 
 ### 40. Grand Anneau — Speedway, ◆◆◆◆◇
 
-- Départ : deux boosters → tube court ; circuit fermé, 3 tours. Au programme : quatre virages relevés, wall-ride, 70 % au-dessus de 250 km/h.
+- Départ : deux boosters → tube court ; circuit fermé, 3 tours. Au programme : quatre virages relevés, wall-ride, 58 % au-dessus de 240 km/h.
 - Pilote automatique : **67.3 s** · médailles : cristal 64 · or 67.3 · argent 77.4 · bronze 90.9
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -406,7 +406,7 @@ _Contre-courants, gravité lourde, pont de verre et plongée vers les abysses._
 
 ### 46. Méduses Électriques — Acrobatique, ◆◆◆◆◇
 
-- Départ : plaque de gravité 200 % (la pression des profondeurs). Au programme : quatre sauts brefs, réceptions violentes, wall-ride.
+- Départ : cinq boosters → plaque de gravité 130 % (la pression des profondeurs). Au programme : quatre sauts brefs, réceptions violentes, wall-ride.
 - Pilote automatique : **41.1 s** · médailles : cristal 39.1 · or 41.1 · argent 47.3 · bronze 55.5
 - Objectif bonus ★ : Finir en moins de 43 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -422,7 +422,7 @@ _Contre-courants, gravité lourde, pont de verre et plongée vers les abysses._
 
 ### 48. Grande Barrière — Speedway, ◆◆◆◆◆
 
-- Départ : deux boosters → pont de verre → virage relevé. Au programme : cinq virages relevés, wall-ride, courant favorable, 77 % au-dessus de 250 km/h.
+- Départ : deux boosters → pont de verre → virage relevé. Au programme : cinq virages relevés, wall-ride, courant favorable, 62 % au-dessus de 240 km/h.
 - Pilote automatique : **24.1 s** · médailles : cristal 22.9 · or 24.1 · argent 27.7 · bronze 32.6
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -518,7 +518,7 @@ _Vent de travers, îles sans bordures, gravité réduite, pont des vents et dép
 
 ### 59. Pont des Vents — Speedway, ◆◆◆◆◆
 
-- Départ : deux boosters → vent sur un pont sans bordures → virage relevé sans bordure. Au programme : quatre virages relevés, wall-ride, 75 % au-dessus de 250 km/h.
+- Départ : deux boosters → vent sur un pont sans bordures → virage relevé sans bordure. Au programme : quatre virages relevés, wall-ride, 60 % au-dessus de 240 km/h.
 - Pilote automatique : **21.9 s** · médailles : cristal 20.8 · or 21.9 · argent 25.2 · bronze 29.6
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini

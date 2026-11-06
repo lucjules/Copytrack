@@ -3,6 +3,7 @@
 import { CELL, DT, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T } from '../constants.js';
 import { PIECES, toLocal, sampleLocal, rotVec, isFloor, isCeilingFloor, baseY, TUNNEL_TOP } from '../pieces.js';
 import { CAR } from './specs.js';
+import { dcos, dsin, hypot2 } from '../dmath.js';
 
 const L1 = { lx: 0, lz: 0 };
 const L2 = { lx: 0, lz: 0 };
@@ -80,7 +81,7 @@ export const wallMethods = {
       // Rebord bas (moins de CAR.step sous le dessus) : aide de montée, la voiture est posée sur la dalle.
       if (p.y >= hP - CAR.step) { p.y = hP + 0.02; continue; }
       // Face de la dalle : on revient devant, et on annule la vitesse qui pousse contre elle.
-      const dx = p.x - q.x, dz = p.z - q.z, dl = Math.hypot(dx, dz);
+      const dx = p.x - q.x, dz = p.z - q.z, dl = hypot2(dx, dz);
       p.x = q.x; p.z = q.z;
       if (dl > 1e-6) {
         const nx = dx / dl, nz = dz / dl, vn = v.x * nx + v.z * nz;
@@ -91,8 +92,8 @@ export const wallMethods = {
 
   _walls() {
     const p = this.pos, v = this.vel;
-    const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
-    const pfx = -Math.sin(this.prevYaw), pfz = -Math.cos(this.prevYaw);
+    const fx = -dsin(this.yaw), fz = -dcos(this.yaw);
+    const pfx = -dsin(this.prevYaw), pfz = -dcos(this.prevYaw);
     let hit = 0, touch = false, sx = 0, sz = 0;
     for (let k = -1; k <= 1; k += 2) {
       const off = CAR.probe * k;
@@ -147,7 +148,7 @@ export const wallMethods = {
         // Pièce tournante : on interroge sa géométrie « au repos », puis on remet le résultat dans le repère du monde.
         const q = this.track.moverLocal(o, x, z, MQ1), q2 = this.track.moverLocal(o, px, pz, MQ2);
         if (this._probeTile(tile, q.x, q.z, q2.x, q2.z, y - o.y, 0)) {
-          const c = Math.cos(o.a), sn = Math.sin(o.a), dx = HIT.dx, dz = HIT.dz, nx = HIT.nx, nz = HIT.nz;
+          const c = dcos(o.a), sn = dsin(o.a), dx = HIT.dx, dz = HIT.dz, nx = HIT.nx, nz = HIT.nz;
           HIT.dx = c * dx + sn * dz; HIT.dz = -sn * dx + c * dz;
           HIT.nx = c * nx + sn * nz; HIT.nz = -sn * nx + c * nz;
           return HIT;

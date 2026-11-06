@@ -7,10 +7,11 @@
 //   PW_SHOTS=/dossier  enregistre une capture de chaque étape
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import assert from 'node:assert/strict';
+import { DMATH_DIGEST_EXPECTED } from './dmath-digest.mjs';
 
 const require = createRequire(import.meta.url);
 let chromium;
@@ -49,6 +50,19 @@ const waitApp = (cond, arg, timeout = 15000) => page.waitForFunction(cond, arg, 
 const click = async (sel) => { await page.locator(sel).first().evaluate((el) => el.click(), null, { timeout: 8000 }); };
 
 try {
+  // Un autre moteur JavaScript que Node (celui de Chromium) doit calculer EXACTEMENT les mêmes nombres : c'est ce qui permet de rejouer une course
+  // ailleurs que là où elle a été enregistrée (voir js/dmath.js). Même contrôle sous Deno, le moteur de la fonction serveur : voir .github/workflows.
+  await test('déterminisme : mathématiques et physique identiques à Node (empreintes)', async () => {
+    await page.goto(`http://127.0.0.1:${PORT}/README.md`, { waitUntil: 'load' });
+    const dm = await page.evaluate(async () => (await import('/tools/dmath-digest.mjs')).dmathDigest());
+    assert.equal(dm, DMATH_DIGEST_EXPECTED, 'js/dmath.js ne donne pas les mêmes bits dans Chromium');
+    const ref = JSON.parse(readFileSync(join(root, 'tools/phys-fingerprint.json'), 'utf8'));
+    const fp = await page.evaluate(async () => (await import('/tools/fingerprint-core.mjs')).computeFingerprint());
+    assert.equal(fp.version, ref.version);
+    const bad = Object.keys(ref.scenarios).filter((k) => fp.scenarios[k] !== ref.scenarios[k]);
+    assert.deepEqual(bad, [], `${bad.length} scénario(s) de physique différent(s) dans Chromium`);
+  });
+
   await test('le jeu démarre : accueil invité puis menu', async () => {
     await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'load' });
     await page.locator('#wl-name').fill('Testeur');

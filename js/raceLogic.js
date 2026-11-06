@@ -1,6 +1,7 @@
 // Règles de course (sans rendu) : checkpoints, arrivée, points de réapparition.
 import { CELL, LEVEL_H, ROAD_HALF, DT } from './constants.js';
 import { PIECES, RING_R, RING_Y, toLocal, sampleLocal, tileCenter, baseY, cpKind, arcParams, localToWorld } from './pieces.js';
+import { dcos, dsin, hypot2 } from './dmath.js';
 
 const L = { lx: 0, lz: 0 };
 const S = {};
@@ -101,7 +102,7 @@ export class RaceLogic {
         if (lz1 * L.lz > 0 || lz1 === L.lz) continue;
         const k = L.lz / (L.lz - lz1);
         const lx = L.lx + (lx1 - L.lx) * k, y = phys.prev.y + (p.y - phys.prev.y) * k;
-        if (Math.hypot(lx, y - (h + RING_Y)) > RING_R + 0.5) continue;
+        if (hypot2(lx, y - (h + RING_Y)) > RING_R + 0.5) continue;
         // Réapparition : juste avant l'anneau, au sol de la pièce précédente si possible. Le chrono, les temps intermédiaires et
         // les checkpoints reviennent à CE moment-là (l'anneau est à repasser) : sinon le temps passé en l'air serait gagné gratuitement.
         const gl = this.lastGround;
@@ -126,7 +127,7 @@ export class RaceLogic {
         let c = tileCenter(tile);
         if (!P.special && P.kind === 'arc') {
           const a = arcParams(P), ang = Math.PI * 1.25;
-          c = localToWorld(tile, a.cx + a.R * Math.cos(ang), a.cz + a.R * Math.sin(ang));
+          c = localToWorld(tile, a.cx + a.R * dcos(ang), a.cz + a.R * dsin(ang));
         }
         let base = -tile.r * Math.PI / 2;
         if (!P.special && P.kind === 'arc') base -= Math.PI / 4;       // cap de la route au milieu de l'arc (nord-est local)
@@ -171,5 +172,5 @@ export function placeAtStart(phys, logic, sp = logic.spawnPoint()) {
   phys.vehicle = T.veh0 || 'car';
   phys.gravMul = (T.g0 || 100) / 100;
   const v0 = (T.v0 || 0) / 3.6;
-  if (v0 > 0) { phys.vel.x = -Math.sin(sp.yaw) * v0; phys.vel.z = -Math.cos(sp.yaw) * v0; phys.fwdSpeed = v0; }
+  if (v0 > 0) { phys.vel.x = -dsin(sp.yaw) * v0; phys.vel.z = -dcos(sp.yaw) * v0; phys.fwdSpeed = v0; }
 }
