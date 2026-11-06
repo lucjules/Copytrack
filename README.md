@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.4**
+Version actuelle : **bêta 0.9.5**
 
 ## Jouer
 
@@ -76,7 +76,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 - **Gomme à filtres** : *Tout*, *Décorations uniquement* ou *Pistes uniquement* (sous-menu de la gomme, ou touche X répétée). Le rayon ne touche que les objets du calque choisi.
 - **Inspecter** (bouton *Inspecter*, touche `I`) : un clic sélectionne une pièce ou une décoration ; un panneau de propriétés (position, rotation, revêtement, options, taille, couleur, image...) reste lié au circuit dans les deux sens. Des **gizmos 3D** déplacent (flèches) et pivotent (cercles) l'objet directement dans la scène, la caméra reste immobile pendant le geste. Chaque geste ou réglage est un seul pas d'annulation, et l'objet sélectionné revient avec Ctrl + Z / Ctrl + Y.
 - **Sélection de zone** (Q) : copier, couper / déplacer, coller avec rotation, monter / descendre, supprimer.
-- **Tester depuis la pièce visée** (Maj + T), **vérificateur** (F2 : extrémités libres, sauts risqués, checkpoints inaccessibles), **vue par niveau** (Z), **nombre de tours**, **miniatures** vues de dessus.
+- **Tester depuis la pièce visée** (Maj + T), **vérificateur** (le badge ⚠ de la barre du haut signale extrémités libres, sauts risqués, raccords d'orientation et pièces inaccessibles ; un clic le détaille et fait clignoter les pièces en cause ; F2 lance la vérification complète au pilote automatique), **vue par niveau** (Z), **nombre de tours**, **miniatures** vues de dessus.
 - Décorations à placement libre (panneaux, formes, murs, toits, nature, image par URL).
 - **Vérification** : il faut finir son circuit pour que le partage donne des médailles (le temps de l'auteur devient le bronze).
 
@@ -119,6 +119,17 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
 5. **Durcissement** : `supabase/etape5-securite.sql` (replays des classements privés, plafond de temps par pilote, signalements et parties moins faciles à truquer). À lancer après l'étape 4.
 
 Seules l'URL du projet et la clé publique sont dans `js/online.js`. La clé secrète n'est jamais dans le jeu : seule la fonction serveur l'utilise, côté Supabase.
+
+## Bêta 0.9.5
+
+Audit de l'interface et des textes, sans changement de physique (`PHYS_VER` reste 24, rien à redéployer côté serveur) :
+
+- **HUD** : les pastilles « ◆ 0 / 3 » et « Record » retrouvent leur fond (une règle `.chip` de l'éditeur les écrasait) ; les règles sont maintenant limitées à `#hud` et `#editor`.
+- **Écrans** : « + Nouveau » ne passe plus sous le compteur de pièces (Mes circuits, Circuits, Profil) ; l'écran Communauté a son fond flouté et un champ de recherche lisible ; les listes déroulantes d'Options ne dépassent plus de l'écran sur téléphone ; le champ de vision affiche « normal » à 0.
+- **Éditeur** : palette **repliable** (▾, choix mémorisé), moins haute sur téléphone en paysage ; le vérificateur `checkTrack` (code resté sans appel) est de nouveau branché sur le badge ⚠, et son clic fait clignoter les pièces en cause (`_markIssues`). Les plaques de gravité inversée ne sont plus prises pour des routes coupées.
+- **Textes** : le turbo annonce « jusqu'à 403 km/h » (vitesse visée), le tutoriel parle de la vitesse, des murs et du décrochage, le réglage « effet de vitesse » annonce 220 km/h.
+- **Son et effets** : rapports de boîte du moteur et lignes de vitesse recalés sur la vitesse de pointe de 0.9.4.
+- **Code** : 9 classes CSS mortes et les règles `.ed-status` / `.ed-help` supprimées, doublons `.pal-param` fusionnés, avertissement sur l'ordre des circuits dans `tracks.js` ; nouveaux tests `tools/test-v095.mjs`.
 
 ## Bêta 0.9.4
 
@@ -228,7 +239,7 @@ Recalibrage de la physique vers un feeling plus technique (arcade exigeant) :
 - Bateau, deltaplane et revêtement Eau.
 - Mode carrière avec objectifs bonus, défi du jour, replays, fantômes de la médaille d'or et d'amis.
 - Assiette en l'air, réceptions, mini-turbo, traces de pneus, caméra lointaine.
-- Éditeur : sélection et copier-coller, test depuis le curseur, vérificateur, vue par niveau, tours multiples, miniatures.
+- Éditeur : sélection et copier-coller, test depuis le curseur, vérificateur (badge ⚠), vue par niveau, tours multiples, miniatures.
 - Garage : carrosseries Pick-up et Monoplace, moto Chopper, finitions, traînées, klaxons.
 - Musique, accessibilité, qualité graphique moyenne, compteur d'images, application installable hors ligne, tutoriel.
 - La physique ayant changé, les records repartent de zéro (les pièces, le garage et les circuits enregistrés sont conservés).

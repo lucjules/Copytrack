@@ -91,7 +91,7 @@ export class GameAudio {
       return;
     }
     const sp = Math.abs(state.speed);
-    const gears = [0, 13, 24, 35, 46, 58, 999];
+    const gears = [0, 16, 31, 46, 61, 76, 90, 999];   // 0.9.5 : calées sur la vitesse de pointe de 0.9.4 (95 m/s, 112 en boost)
     let g = 0;
     while (sp > gears[g + 1]) g++;
     const frac = (sp - gears[g]) / (gears[g + 1] - gears[g]);

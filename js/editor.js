@@ -11,7 +11,7 @@ import { buildDecoMesh, safeUrl } from './decos.js';
 import { isObstacle } from './obstacles.js';
 import { DECO_CATS, DECO_LABELS, DECO_COLORS, DECO_PACK_ICONS } from './decoData.js';
 import { setEditorDraft, saveMyTrack, newId } from './storage.js';
-import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, enclosedRegion, tileRegion } from './editorTools.js';
+import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, enclosedRegion, tileRegion, checkTrack } from './editorTools.js';
 import { centerlineWorld } from './ribbons.js';
 import { orientationIssues } from './joins.js';
 import { Inspector, MIRROR_TYPES, LEGACY_CP } from './inspector.js';
@@ -377,14 +377,29 @@ export class EditorSession {
       b.className = 'pal-tab';
       b.dataset.tab = id;
       b.textContent = label;
-      b.addEventListener('click', () => { this.setTab(id); this.app.audio.click(); });
+      b.addEventListener('click', () => { if (pal.classList.contains('folded')) pal.querySelector('.pal-fold').click(); this.setTab(id); this.app.audio.click(); });
       tabs.appendChild(b);
       const panel = document.createElement('div');
       panel.className = 'pal-panel';
       panel.dataset.panel = id;
       panels[id] = panel;
     }
+    // Replier la palette : libère l'écran (utile sur téléphone en paysage). Le choix est mémorisé.
+    const fold = document.createElement('button');
+    fold.className = 'pal-tab pal-fold'; fold.type = 'button';
+    const setFold = (on, save) => {
+      pal.classList.toggle('folded', on);
+      fold.textContent = on ? '▴' : '▾';
+      fold.title = fold.ariaLabel = on ? 'Déplier la palette' : 'Replier la palette';
+      fold.setAttribute('aria-expanded', String(!on));
+      document.getElementById('editor').style.setProperty('--ed-pal-h', pal.offsetHeight + 'px');
+      if (save) try { localStorage.setItem('copytrack.edFold', on ? '1' : '0'); } catch (e) { /* stockage indisponible */ }
+    };
+    fold.addEventListener('click', () => { setFold(!pal.classList.contains('folded'), true); this.app.audio.click(); });
+    tabs.appendChild(fold);
     pal.appendChild(tabs);
+    let folded = false; try { folded = localStorage.getItem('copytrack.edFold') === '1'; } catch (e) { /* ignoré */ }
+    setFold(folded, false);
 
     // Familles (caractéristiques en listes déroulantes), puis les pièces à l'unité.
     const rowF = document.createElement('div'); rowF.className = 'fam-row';
@@ -792,7 +807,7 @@ export class EditorSession {
       warn.textContent = errs.length ? `⚠ ${errs.length}` : '';
       warn.title = errs.join(' ');
       warn.setAttribute('aria-label', errs.length ? `${errs.length} problème${errs.length > 1 ? 's' : ''} : ${errs.join(' ')}` : '');
-      warn.onclick = () => this.app.ui.flash(errs.join(' '), 4);
+      warn.onclick = () => { this.app.ui.flash(errs.join(' '), 4); this._markIssues(this._tileIssues()); };   // et fait clignoter les pièces en cause
     }
     const root = document.getElementById('editor');
     const top = document.querySelector('#editor .ed-top'), pal = document.getElementById('ed-palette');
@@ -802,12 +817,19 @@ export class EditorSession {
     this._refreshDeco();
   }
 
-  // 0.9.3 : raccords d'orientation (un mur contre le sol : il manque une transition). Calculés une fois par état du circuit.
-  _joinWarnings() {
+  // Problèmes repérables sans rouler (0.9.5) : extrémités libres, sauts risqués, pièces inaccessibles (checkTrack), puis raccords d'orientation
+  // de 0.9.3 (un mur contre le sol : il manque une transition). Calculés une fois par état du circuit ; { tile, level, msg }.
+  _tileIssues() {
     const v = this.track.version;
-    if (this._joinKey !== v) { this._joinKey = v; this._joinList = orientationIssues(this.track).map((i) => i.msg); }
+    if (this._joinKey !== v) {
+      this._joinKey = v;
+      this._joinList = checkTrack(this.track).filter((i) => i.tile)
+        .concat(orientationIssues(this.track).map((i) => ({ tile: i.tile, level: 'warn', msg: i.msg })));
+    }
     return this._joinList;
   }
+
+  _joinWarnings() { return this._tileIssues().map((i) => i.msg); }
 
   // ---- Menu hamburger (Nouveau, Importer, Partager, Enregistrer, Retour) ---------------------------------------------
   get menuOpen() { const m = document.getElementById('ed-menu'); return !!m && !m.classList.contains('hidden'); }

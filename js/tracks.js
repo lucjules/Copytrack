@@ -2,6 +2,8 @@
 // (voir scriptTrack dans track.js). Les temps de médailles sont en secondes.
 // 0.9 : 66 circuits, 11 chapitres de 6 (un par thème), du plus facile au plus dur.
 // Chaque circuit mélange plusieurs familles de pièces ; goal = objectif bonus.
+// ATTENTION : l'ordre de ce fichier n'est PAS celui de la carrière. La liste est triée en bas de fichier (thème selon THEME_ORDER, puis difficulté) :
+// pour retrouver le numéro d'un circuit, utiliser BUILTIN_TRACKS.findIndex() après import, jamais la position dans le texte.
 import { scriptTrack } from './track.js';
 import { BUILTIN_OBSTACLES } from './builtinObstacles.js';
 

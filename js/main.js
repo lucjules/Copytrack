@@ -30,6 +30,8 @@ import {
 } from './storage.js';
 
 import { QualityManager, Benchmark, PROFILES, PROFILE_LABELS, BENCH_VERSION, hardwareHints, wantAntialias } from './quality.js';
+// Champ de vision : 0 = réglage d'origine (affiché « normal » plutôt que « 0° »).
+const fovText = (v) => (v === 0 ? 'normal' : (v > 0 ? '+' : '') + v + '°');
 
 class App {
   // identity : { kind: 'guest' | 'account', username } décidé par l'écran d'accueil (welcome.js), toujours avant le menu.
@@ -234,7 +236,9 @@ class App {
             <li><b>Dérapage</b> : freine en virage, garde le volant.</li>
             <li><b>Mini-turbo</b> : une longue glisse donne une poussée.</li>
             <li><b>En l'air</b> : gaz = nez en bas, frein = nez en haut. Atterris à plat.</li>
-            <li>Loopings, tubes, routes sur un mur : il faut de la vitesse pour rester plaqué.</li>
+            <li><b>Vitesse</b> : la voiture accélère longtemps, la vitesse de pointe se mérite. Le turbo va encore plus vite.</li>
+            <li><b>Murs</b> : un choc te ralentit et te fait tourner, frotter une barrière te freine. Lève le pied avant d'y aller.</li>
+            <li>Loopings, tubes, routes sur un mur : il faut de la vitesse pour rester plaqué (sur un mur à 90°, environ 110 km/h minimum, sinon tu décroches).</li>
             <li><b>Gravité inversée</b> : la plaque rose ⇅ t'envoie au plafond, une 2e te ramène.</li>
           </ul>`,
       },
@@ -926,7 +930,7 @@ class App {
     $('opt-fps').checked = !!s.showFps;
     $('opt-speedfx').checked = s.speedFx !== false;
     $('opt-cb').checked = !!s.colorblind;
-    $('opt-fov').value = s.fovAdd; $('opt-fov-v').textContent = (s.fovAdd > 0 ? '+' : '') + s.fovAdd + '°';
+    $('opt-fov').value = s.fovAdd; $('opt-fov-v').textContent = fovText(s.fovAdd);
     $('opt-shake').value = s.shakeAmt; $('opt-shake-v').textContent = Math.round(s.shakeAmt * 100) + ' %';
     $('opt-ui').value = s.uiScale; $('opt-ui-v').textContent = Math.round(s.uiScale * 100) + ' %';
   }
@@ -1349,7 +1353,7 @@ class App {
         this.saveSettings();
       });
     };
-    slider('opt-fov', 'fovAdd', (v) => (v > 0 ? '+' : '') + v + '°');
+    slider('opt-fov', 'fovAdd', fovText);
     slider('opt-shake', 'shakeAmt', (v) => Math.round(v * 100) + ' %');
     slider('opt-ui', 'uiScale', (v) => Math.round(v * 100) + ' %');
     $('opt-touch').addEventListener('change', (e) => {
