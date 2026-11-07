@@ -167,6 +167,7 @@ export class RaceSession {
     if (this.trailRib) this.trailRib.reset();      // pas de traînée qui traverse la téléportation
     if (this.multi) { this._sendNet(); this._say(MSG.keepClock); }
     this.app.audio.respawn();
+    this.app.particles.clear();        // les étincelles, la poussière et la fumée de l'endroit d'où l'on vient ne suivent pas la voiture
     this.app.particles.burst(r.x, r.y + 1.5, r.z, 24, 8, 0.6, 0.7, '#5ff2ff', 0);
   }
 
@@ -516,8 +517,8 @@ export class RaceSession {
     app.particles.update(dt);
 
     // Fantômes
-    this._renderGhost(alpha);
-    this._renderSimGhosts(alpha);
+    this._renderGhost(alpha, dt);
+    this._renderSimGhosts(alpha, dt);
 
     // Caméra
     this._camera(dt);
