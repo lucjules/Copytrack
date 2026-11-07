@@ -1,24 +1,47 @@
 // Ambiance d'un circuit (0.9.18) : le MOMENT de la journée, la BRUME et la MUSIQUE, au choix de l'auteur, par-dessus le décor. Purement visuel et sonore : aucun effet sur la physique, les temps ni la signature
 // du circuit (changer l'ambiance ne fait perdre ni la vérification ni les records). Module sans rendu : resolveAmbiance renvoie les réglages à appliquer à la scène (scenery.js).
 
+import { dsin, dcos, hypot2, PI } from './dmath.js';
+
 export const SKY_CHOICES = [['', 'Selon le décor'], ['dawn', 'Aube'], ['day', 'Plein jour'], ['sunset', 'Coucher de soleil'], ['night', 'Nuit']];
 export const FOG_CHOICES = [['', 'Selon le décor'], ['clear', 'Dégagé'], ['misty', 'Brumeux'], ['thick', 'Épais']];
 export const MUSIC_CHOICES = [['', 'Chill de course'], ['menu', 'Groove du menu'], ['none', 'Aucune']];
 
 const SKIES = SKY_CHOICES.map(([k]) => k).filter(Boolean), FOGS = FOG_CHOICES.map(([k]) => k).filter(Boolean), MUSICS = MUSIC_CHOICES.map(([k]) => k).filter(Boolean);
 
-export const DEFAULT_AMBIANCE = Object.freeze({ sky: '', fog: '', music: '' });
-export const isDefaultAmbiance = (a) => !a || (!a.sky && !a.fog && !a.music);
+// Ambiance avancée (lot 12) : météo, azimut du soleil, teinte du ciel et du sol, couleur de la brume, heure qui défile.
+export const WEATHER_CHOICES = [['', 'Aucune'], ['rain', 'Pluie'], ['snow', 'Neige'], ['embers', 'Braises'], ['dust', 'Poussière'], ['petals', 'Pétales']];
+export const CYCLE_CHOICES = [['', 'Heure fixe'], ['slow', 'Journée lente (2 min)'], ['fast', 'Journée rapide (50 s)']];
+const WEATHERS = WEATHER_CHOICES.map(([k]) => k).filter(Boolean), CYCLES = CYCLE_CHOICES.map(([k]) => k).filter(Boolean);
+const HEXC = /^#[0-9a-f]{6}$/i;
+
+export const DEFAULT_AMBIANCE = Object.freeze({ sky: '', fog: '', music: '', weather: '', sunAz: -1, tint: '', gtint: '', fogC: '', cycle: '' });
+export const isDefaultAmbiance = (a) => !a || (!a.sky && !a.fog && !a.music && !a.weather && !(a.sunAz >= 0) && !a.tint && !a.gtint && !a.fogC && !a.cycle);
 
 // Valeurs inconnues ou hostiles (code de circuit venu d'un inconnu) : ignorées.
 export function cleanAmbiance(a) {
   const o = a && typeof a === 'object' ? a : {};
-  return { sky: SKIES.includes(o.sky) ? o.sky : '', fog: FOGS.includes(o.fog) ? o.fog : '', music: MUSICS.includes(o.music) ? o.music : '' };
+  const az = Number(o.sunAz);
+  return {
+    sky: SKIES.includes(o.sky) ? o.sky : '', fog: FOGS.includes(o.fog) ? o.fog : '', music: MUSICS.includes(o.music) ? o.music : '',
+    weather: WEATHERS.includes(o.weather) ? o.weather : '',
+    sunAz: Number.isFinite(az) && az >= 0 ? Math.round(Math.min(345, az) / 15) * 15 : -1,
+    tint: HEXC.test(o.tint || '') ? o.tint.toLowerCase() : '', gtint: HEXC.test(o.gtint || '') ? o.gtint.toLowerCase() : '', fogC: HEXC.test(o.fogC || '') ? o.fogC.toLowerCase() : '',
+    cycle: CYCLES.includes(o.cycle) ? o.cycle : '',
+  };
 }
 
-// Forme compacte écrite dans le code du circuit (champ « am ») : [ciel, brume, musique], null si tout est par défaut.
-export const ambianceToArray = (a) => (isDefaultAmbiance(a) ? null : [a.sky || '', a.fog || '', a.music || '']);
-export const ambianceFromArray = (arr) => (Array.isArray(arr) ? cleanAmbiance({ sky: arr[0], fog: arr[1], music: arr[2] }) : { ...DEFAULT_AMBIANCE });
+// Forme compacte écrite dans le code du circuit (champ « am ») : [ciel, brume, musique] (les anciens codes) ou, avec l'ambiance avancée,
+// [ciel, brume, musique, météo, azimut, teinte, teinte du sol, couleur de brume, cycle]. null si tout est par défaut.
+export function ambianceToArray(a) {
+  if (isDefaultAmbiance(a)) return null;
+  const base = [a.sky || '', a.fog || '', a.music || ''];
+  if (!a.weather && !(a.sunAz >= 0) && !a.tint && !a.gtint && !a.fogC && !a.cycle) return base;
+  return [...base, a.weather || '', a.sunAz >= 0 ? a.sunAz : -1, a.tint ? a.tint.slice(1) : '', a.gtint ? a.gtint.slice(1) : '', a.fogC ? a.fogC.slice(1) : '', a.cycle || ''];
+}
+export const ambianceFromArray = (arr) => (Array.isArray(arr)
+  ? cleanAmbiance({ sky: arr[0], fog: arr[1], music: arr[2], weather: arr[3], sunAz: arr[4], tint: arr[5] ? '#' + arr[5] : '', gtint: arr[6] ? '#' + arr[6] : '', fogC: arr[7] ? '#' + arr[7] : '', cycle: arr[8] })
+  : { ...DEFAULT_AMBIANCE });
 
 // Le moment de la journée tire les couleurs du décor vers celles-ci (k : part du décor remplacée).
 const SKY_TARGET = {
@@ -52,6 +75,28 @@ export function resolveAmbiance(theme, ambiance) {
     out.sunIntensity = lerp(theme.sunIntensity, T.sunIntensity, k);
     out.hemi = [mix(theme.hemi[0], T.hemi[0], k), mix(theme.hemi[1], T.hemi[1], k), lerp(theme.hemi[2], T.hemi[2], k)];
   }
+  if (am.tint) { out.sky.top = mix(out.sky.top, am.tint, 0.5); out.sky.mid = mix(out.sky.mid, am.tint, 0.4); out.sky.horizon = mix(out.sky.horizon, am.tint, 0.3); out.fog = mix(out.fog, am.tint, 0.3); }
+  if (am.gtint && Array.isArray(theme.ground)) out.ground = theme.ground.map((c) => mix(c, am.gtint, 0.55));
+  if (am.fogC) out.fog = am.fogC;
+  if (am.sunAz >= 0) { const L = hypot2(out.sunDir[0], out.sunDir[2]) || 0.5, r = am.sunAz * (PI / 180); out.sunDir[0] = dcos(r) * L; out.sunDir[2] = dsin(r) * L; }
   if (FOG_SCALE[am.fog]) { out.fogNear = theme.fogNear * FOG_SCALE[am.fog]; out.fogFar = theme.fogFar * FOG_SCALE[am.fog]; }
+  if (am.weather) out.weather = am.weather;
   return out;
 }
+
+// Heure qui défile : phase de 0 à 4 (aube, plein jour, coucher, nuit, retour à l'aube) ; renvoie le décor mélangé entre deux moments.
+export const CYCLE_STAGES = ['dawn', 'day', 'sunset', 'night'];
+export const CYCLE_SECONDS = { slow: 120, fast: 50 };
+const mixTheme = (A, B, k) => ({
+  ...A,
+  sky: { ...A.sky, top: mix(A.sky.top, B.sky.top, k), mid: mix(A.sky.mid, B.sky.mid, k), horizon: mix(A.sky.horizon, B.sky.horizon, k), sun: mix(A.sky.sun, B.sky.sun, k), stars: lerp(A.sky.stars || 0, B.sky.stars || 0, k) },
+  fog: mix(A.fog, B.fog, k), sunDir: A.sunDir.map((v, i) => lerp(v, B.sunDir[i], k)), sunColor: mix(A.sunColor, B.sunColor, k), sunIntensity: lerp(A.sunIntensity, B.sunIntensity, k),
+  hemi: [mix(A.hemi[0], B.hemi[0], k), mix(A.hemi[1], B.hemi[1], k), lerp(A.hemi[2], B.hemi[2], k)],
+});
+export function cycleTheme(theme, ambiance, phase) {
+  const am = cleanAmbiance(ambiance);
+  const ph = ((phase % 4) + 4) % 4, i = Math.floor(ph), k = ph - i;
+  const A = resolveAmbiance(theme, { ...am, sky: CYCLE_STAGES[i] }), B = resolveAmbiance(theme, { ...am, sky: CYCLE_STAGES[(i + 1) % 4] });
+  return { ...mixTheme(A, B, k), weather: am.weather };
+}
+export const cyclePhaseStart = (ambiance) => Math.max(0, CYCLE_STAGES.indexOf(cleanAmbiance(ambiance).sky));

@@ -121,6 +121,12 @@ export const wiringMethods = {
         this.ui.flash('Commandes par défaut rétablies.');
         break;
       case 'help': this.helpModal(); break;
+      case 'hud-editor': this.openHudEditor(); break;
+      case 'hud-done': this.closeHudEditor(); break;
+      case 'hud-reset': this.resetHudPlaces(); break;
+      case 'cameras': this.openCameraEditor(); break;
+      case 'modes': this.modesMenu(); break;
+      case 'ui-reset': this.resetUi(); break;
       case 'back': this.showScreen('menu'); break;
       case 'new-track': this.openEditor({ name: 'Mon circuit', code: null, fresh: true }); break;
       case 'resume': if (s && s.resume) s.resume(); break;

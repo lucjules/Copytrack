@@ -8,6 +8,7 @@ import { PACK_BUILDERS } from './decoPack.js';
 import { TAU, ringPts, cylinder, cone, sphere, octa, cylZ, cylX, limb, star5, GREY, DARK, WHITE } from './decoPrimitives.js';
 import { isObstacle } from './obstacles.js';
 import { createObstacleMesh } from './obstacleMesh.js';
+import { buildCustomParts } from './customDecoBuild.js';
 
 
 
@@ -717,6 +718,7 @@ function gbOffset(gb, ox, oy, oz) {
 }
 
 Object.assign(BUILDERS, PACK_BUILDERS);
+BUILDERS.custom = (gb, glow, c, d) => buildCustomParts(gb, glow, (d && d.cp) || []);
 
 export function decoColor(d) {
   if (d.cc) return d.cc;           // couleur personnalisée (#rrggbb), choisie dans l'Inspecteur › Couleurs
@@ -738,7 +740,7 @@ export function buildDecoInto(gb, glow, d) {
   const m = decoMatrix(d);
   gb.setMatrix(m);
   glow.setMatrix(m);
-  fn(gb, glow, decoColor(d));
+  fn(gb, glow, decoColor(d), d);
   gb.setMatrix(null);
   glow.setMatrix(null);
 }
@@ -787,7 +789,7 @@ export function buildDecoMesh(d, material, glowMaterial) {
   const gb = new GeoBuilder(), glow = new GeoBuilder();
   const fn = BUILDERS[d.k];
   if (!fn) return g;
-  fn(gb, glow, decoColor(d));
+  fn(gb, glow, decoColor(d), d);
   g.add(new THREE.Mesh(gb.build(), material));
   if (!glow.empty) g.add(new THREE.Mesh(glow.build(), glowMaterial || material));
   g.position.set(d.x, d.y, d.z);

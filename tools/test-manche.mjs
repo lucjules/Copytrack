@@ -336,6 +336,21 @@ await test('un départ libre de l\'hôte met fin au championnat ; en championnat
   assert.equal(a.cup, null); assert.equal(b.cup, null, 'tout le monde est revenu en mode libre');
   env.end();
 });
+console.log('Règles de la partie (0.9.25)');
+await test('l\'hôte choisit des règles : elles arrivent validées à tous, y compris à un arrivant tardif ; un invité ne peut pas en imposer', async () => {
+  const env = lan(); const [a, b] = [await env.add('Ana', 'a'), await env.add('Ben', 'b')];
+  env.open();
+  b.setRules({ g0: 40 }); assert.equal(a.rules, null, 'un invité ne choisit pas les règles');
+  a.setRules({ g0: 40, veh0: 'moto', obstacles: 'off', sameCars: 1, laps: 99, bogus: 1 });
+  assert.deepEqual(b.rules, { laps: 5, g0: 40, veh0: 'moto', v0: -1, offroad: -1, obstacles: 'off', sameCars: 1 }, 'bornées et nettoyées à l\'arrivée');
+  const c = await env.add('Cléo', 'c'); env.open();
+  assert.equal(c.rules && c.rules.g0, 40, 'un arrivant reçoit les règles');
+  // un message hostile d'un invité est ignoré ; des règles par défaut les effacent
+  b._onMessage('b', 'ctl', { k: 'rules', r: { g0: 250 } }); assert.equal(c.rules.g0, 40);
+  a.setRules({}); assert.equal(a.rules, null); assert.equal(b.rules, null); assert.equal(c.rules, null);
+  env.end();
+});
+
 await test('NET_VER : le salon refuse un hôte qui parle un autre protocole', async () => {
   const env = lan(); const a = await env.add('Ana', 'a');
   assert.equal(a.meta.net, NET_VER); assert.equal(a.meta.v, PHYS_VER);

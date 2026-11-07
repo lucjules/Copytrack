@@ -28,6 +28,8 @@ export const DECO_ORDER = [
   'pumpkin', 'ghost', 'tombstone', 'bats', 'witchHat', 'cauldron', 'spookyTree', 'hauntedHouse', 'skull',
   // 0.9.3 : pack de ~200 décorations (plage, Saint-Valentin, Nouvel An, fête foraine, ville, ferme, château, Japon, sport, jungle…)
   ...PACK_IDS,
+  // 0.9.24 : pièce décorative personnalisée (customDeco.js), à la fin : l'ordre existant ne change jamais.
+  'custom',
 ];
 
 // Décorations qui éclairent vraiment la scène (PointLight / SpotLight). La couleur de l'objet (index ou #rrggbb) donne celle de la lumière.
@@ -114,6 +116,7 @@ const BASE = [
   ['secret', 'Secrets', [
     ['shard', 'Éclat secret', '✦'],
   ], { hidden: true }],
+  ['custom', 'Mes pièces', [['custom', 'Pièce perso', '✦']], { hidden: true }],
 ];
 
 // Catégories, noms et icônes : déduits des tables BASE et PACK. Les clés « xmas » et « halloween » du pack complètent celles d'origine.

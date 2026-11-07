@@ -17,6 +17,8 @@ import { toolMethods } from './editor/tools.js';
 import { selectionMethods } from './editor/selection.js';
 import { historyMethods } from './editor/history.js';
 import { prefabMethods } from './editor/prefabs.js';
+import { cdecoMethods } from './editor/cdeco.js';
+import { scriptsUiMethods } from './editor/scriptsUi.js';
 
 function validTool(t) {
   if (!t) return false;
@@ -276,4 +278,4 @@ export class EditorSession {
 }
 
 // Les familles de méthodes vivent dans editor/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(EditorSession.prototype, paletteMethods, pointerMethods, toolMethods, selectionMethods, historyMethods, prefabMethods);
+Object.assign(EditorSession.prototype, paletteMethods, pointerMethods, toolMethods, selectionMethods, historyMethods, prefabMethods, cdecoMethods, scriptsUiMethods);

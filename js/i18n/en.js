@@ -7,6 +7,7 @@ import editor from './en/editor.js';
 import pieces from './en/pieces.js';
 import data from './en/data.js';
 import tracks from './en/tracks.js';
+import custom from './en/custom.js';
 
-export const PARTS = { shell, race, online, editor, pieces, data, tracks };
+export const PARTS = { shell, race, online, editor, pieces, data, tracks, custom };
 export default Object.assign({}, ...Object.values(PARTS));

@@ -41,7 +41,7 @@ export class GameAudio {
     this.engFilter.frequency.value = 900;
     this.engFilter.Q.value = 4;
     this.osc1 = ctx.createOscillator();
-    this.osc1.type = 'sawtooth';
+    this.osc1.type = this.voice ? this.voice.wave : 'sawtooth';
     this.osc2 = ctx.createOscillator();
     this.osc2.type = 'square';
     const g2 = ctx.createGain();
@@ -80,6 +80,13 @@ export class GameAudio {
     if (this.master) this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05);
   }
 
+  // Voix du véhicule choisie par le joueur (custom.js : fx.engine, fx.pitch, fx.hornPitch). Purement sonore.
+  setVoice(fx) {
+    const WAVE = { default: 'sawtooth', saw: 'sawtooth', square: 'square', tri: 'triangle', sine: 'sine' };
+    this.voice = { wave: WAVE[fx && fx.engine] || 'sawtooth', pitch: (fx && fx.pitch) || 1, hornPitch: (fx && fx.hornPitch) || 1 };
+    if (this.osc1) this.osc1.type = this.voice.wave;
+  }
+
   // Mise à jour continue du moteur (appelée chaque image).
   engine(state) {
     if (!this.ctx) return;
@@ -97,8 +104,9 @@ export class GameAudio {
     const frac = (sp - gears[g]) / (gears[g + 1] - gears[g]);
     const rpm = Math.min(1.15, 0.25 + frac * 0.85);
     const base = 55 + g * 6 + rpm * 120 + (state.boost ? 25 : 0);
-    this.osc1.frequency.setTargetAtTime(base, t, 0.03);
-    this.osc2.frequency.setTargetAtTime(base * 0.5, t, 0.03);
+    const pm = this.voice ? this.voice.pitch : 1;
+    this.osc1.frequency.setTargetAtTime(base * pm, t, 0.03);
+    this.osc2.frequency.setTargetAtTime(base * 0.5 * pm, t, 0.03);
     this.engFilter.frequency.setTargetAtTime(500 + rpm * 1500 + (state.throttle ? 600 : 0), t, 0.05);
     const vol = (state.throttle ? 0.16 : 0.09) + rpm * 0.05;
     this.engGain.gain.setTargetAtTime(vol, t, 0.05);
@@ -170,11 +178,16 @@ export class GameAudio {
 
   // Klaxon (cosmétique) : plusieurs timbres.
   horn(kind = 'classic') {
-    if (kind === 'duo') { this.tone(440, 0.18, 'square', 0.08); this.tone(554, 0.22, 'square', 0.08, 0.2); }
-    else if (kind === 'tuba') { this.tone(147, 0.45, 'sawtooth', 0.12); this.tone(196, 0.45, 'square', 0.05); }
-    else if (kind === 'arcade') { [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.09, 'square', 0.07, i * 0.08)); }
-    else { this.tone(392, 0.32, 'square', 0.09); this.tone(494, 0.32, 'square', 0.07); }
+    const hp = this.voice ? this.voice.hornPitch : 1;
+    const tone = (f, ...rest) => this.tone(f * hp, ...rest);
+    if (kind === 'duo') { tone(440, 0.18, 'square', 0.08); tone(554, 0.22, 'square', 0.08, 0.2); }
+    else if (kind === 'tuba') { tone(147, 0.45, 'sawtooth', 0.12); tone(196, 0.45, 'square', 0.05); }
+    else if (kind === 'arcade') { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.09, 'square', 0.07, i * 0.08)); }
+    else { tone(392, 0.32, 'square', 0.09); tone(494, 0.32, 'square', 0.07); }
   }
+
+  // Petit « ding » (déclencheurs de circuit).
+  ding() { this.tone(990, 0.18, 'triangle', 0.12); this.tone(1320, 0.22, 'triangle', 0.08, 0.08); }
 
   boost() {
     this.noise(0.6, 300, 0.3, 'bandpass', 0, 2600);

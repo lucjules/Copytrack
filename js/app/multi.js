@@ -3,6 +3,7 @@
 import { esc } from '../dom.js';
 import { buildBuiltin } from '../tracks.js';
 import { Track } from '../track.js';
+import { applyRules, describeRules } from '../rules.js';
 import { online } from '../online.js';
 import { Room, defaultSignaling, normalizeCode, ROOM_RE, MAX_PLAYERS } from '../net/room.js';
 import { buildPlaylist, poolFor, POOLS, liveOrder } from '../net/championship.js';
@@ -196,7 +197,7 @@ export const multiMethods = {
       if (!host) {
         trackRow.textContent = running ? `Championnat en cours : manche ${Math.min(room.cup.total, (room.cupState ? room.cupState.n : room.cup.played) + 1)} sur ${room.cup.total}.`
           : room.track ? `Circuit : ${room.track.name || room.track.id}` : 'L\'hôte choisit le circuit…';
-        note.textContent = running ? 'Tu rejoins à la prochaine manche.' : room.started ? 'Course en cours : rejoins-la.' : 'En attente de l\'hôte.';
+        note.textContent = (running ? 'Tu rejoins à la prochaine manche.' : room.started ? 'Course en cours : rejoins-la.' : 'En attente de l\'hôte.') + (room.rules ? ' Règles : ' + describeRules(room.rules).join(' · ') + '.' : '');
         return;
       }
       // Mode : course libre (chacun à son rythme) ou championnat (manches, points).
@@ -257,6 +258,7 @@ export const multiMethods = {
         pub.querySelector('input').onchange = (e) => { extra.pub = e.target.checked; this._syncDirectory(room); };
         pick.append(pub);
       }
+      pick.append(this._roomRulesBlock(room));
       if (running) {
         const stop = document.createElement('button');
         stop.className = 'btn danger'; stop.textContent = 'Arrêter le championnat';
@@ -264,7 +266,7 @@ export const multiMethods = {
         pick.append(stop);
       }
     };
-    const EVENTS = ['members', 'track', 'cup', 'cupstop', 'cupround'];
+    const EVENTS = ['members', 'track', 'cup', 'cupstop', 'cupround', ...(room.meta.host ? [] : ['rules'])];       // l'hôte ne redessine pas ses propres réglages sous ses doigts
     const sub = () => { if (document.body.contains(body)) render(); };
     for (const e of EVENTS) room.on(e, sub);
     const off = () => { for (const e of EVENTS) room.off(e, sub); };
@@ -289,6 +291,7 @@ export const multiMethods = {
     let track;
     try { track = await this._resolveMultiTrack(room, spec); }
     catch (e) { this.ui.flash(e.message || 'Circuit impossible à charger.', 4); room.backToLobby(); if (!this.ui.modalOpen) this.multiLobby(room); return; }
+    track = applyRules(track, room.rules);          // règles de la partie choisies par l'hôte (rules.js)
     this.ui.closeModal();
     this._removeCupPanel();
     // Course libre : chacun court à son rythme, le départ commun n'a de sens que pour le tout premier essai. Championnat : départ commun à chaque manche (grille).

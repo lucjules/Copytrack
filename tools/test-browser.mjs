@@ -178,6 +178,58 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  await test('garage : atelier de voiture (pièces libres, peinture, dessin, effets, code) : la voiture change, le profil garde, le code revient', async () => {
+    await click('[data-action="garage"]');
+    await waitApp(() => window.copytrack.mode === 'garage');
+    await page.waitForTimeout(400);
+    const meshes = () => app(() => { let n = 0; window.copytrack.session.car.group.traverse((o) => { if (o.isMesh) n++; }); return n; });
+    const base = await meshes();
+    await click('#garage-tabs [data-cat="studio"]');
+    await page.waitForTimeout(200);
+    assert.ok(await page.locator('.studio').count(), 'l\'atelier s\'affiche');
+    await click('.studio .row button:has-text("+ Cylindre")');
+    await click('.studio .row button:has-text("+ Sphère")');
+    await page.waitForTimeout(400);
+    assert.equal(await app(() => window.copytrack.session.draft.custom.parts.length), 2);
+    assert.ok((await meshes()) >= base + 2, 'les pièces sont dans le modèle 3D');
+    // symétrique : une copie de l'autre côté
+    await page.locator('.studio input[type="checkbox"]').first().check();
+    await page.waitForTimeout(400);
+    // peinture : numéro et texte => livrée sur les flancs
+    await click('.stabs button:has-text("Peinture")');
+    await page.locator('.studio input[placeholder="07"]').fill('42');
+    await page.waitForTimeout(400);
+    assert.equal(await app(() => window.copytrack.session.draft.custom.paint.num), '42');
+    // dessin : un pixel
+    await click('.stabs button:has-text("Dessin")');
+    const cv = page.locator('canvas.pixcv');
+    const box = await cv.boundingBox();
+    await page.mouse.click(box.x + 10, box.y + 10);
+    assert.notEqual(await app(() => window.copytrack.session.draft.custom.draw), '0'.repeat(256), 'le pixel est posé');
+    // effets
+    await click('.stabs button:has-text("Effets")');
+    await page.locator('.studio select').selectOption('square');
+    await page.waitForTimeout(300);
+    // enregistré dans le profil (gratuit)
+    const saved = await app(() => { const c = JSON.parse(JSON.stringify(window.copytrack.session.draft.custom)); return { parts: c.parts.length, num: c.paint.num, eng: c.fx.engine }; });
+    assert.deepEqual(saved, { parts: 2, num: '42', eng: 'square' }, 'deux pièces, numéro, timbre');
+    const inProfile = await app(async () => (await import('/js/profile.js')).profile().loadout.custom.parts.length);
+    assert.equal(inProfile, 2, 'la personnalisation est enregistrée sans rien acheter');
+    // code : exporter puis tout retirer puis réimporter
+    await click('.stabs button:has-text("Code")');
+    const code = await page.locator('textarea.codebox').first().inputValue();
+    assert.ok(code.startsWith('SHC1:'));
+    await click('.studio button:has-text("Retirer toute la personnalisation")');
+    assert.equal(await app(() => window.copytrack.session.draft.custom.parts.length), 0);
+    await click('.stabs button:has-text("Code")');
+    await page.locator('textarea.codebox').nth(1).fill(code);
+    await click('.studio button:has-text("Importer")');
+    await page.waitForTimeout(300);
+    assert.equal(await app(() => window.copytrack.session.draft.custom.parts.length), 2, 'le code redonne la voiture');
+    await click('#garage [data-action="garage-back"]');
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
   await test('profil : compte, sauvegardes, options, commandes', async () => {
     await click('[data-action="profile"]');
     await waitApp(() => !document.getElementById('profile').classList.contains('hidden'));
@@ -188,6 +240,144 @@ try {
     await shot('10-profil-commandes');
     await click('#profile [data-action="back"]');
     await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  await test('personnalisation de l\'interface : thème, accent, compteur, HUD déplaçable, caméra du joueur utilisée en course', async () => {
+    await app(() => window.copytrack.showScreen('profile'));
+    await click('#prof-tabs [data-ptab="options"]');
+    await page.locator('#opt-ui-theme').selectOption('midnight');
+    assert.equal(await app(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()), '#070b1c', 'le thème est posé sur la page');
+    await page.locator('#opt-ui-speedo').selectOption('ring');
+    assert.equal(await app(() => document.body.dataset.speedo), 'ring');
+    await page.locator('#opt-ui-hide input[data-hide="hint"]').check();
+    assert.ok(await app(() => document.body.classList.contains('hud-no-hint')));
+    // HUD : on glisse le chrono
+    await click('[data-action="hud-editor"]');
+    await waitApp(() => document.body.classList.contains('hud-editing'));
+    const top = page.locator('#hud .hud-top');
+    const b = await top.boundingBox();
+    await page.mouse.move(b.x + b.width / 2, b.y + 10); await page.mouse.down(); await page.mouse.move(b.x + b.width / 2 + 200, b.y + 110, { steps: 6 }); await page.mouse.up();
+    const moved = await app(() => window.copytrack.settings.ui.hud.top);
+    assert.ok(moved && moved[0] > 5 && moved[1] > 5, 'le chrono a été déplacé : ' + JSON.stringify(moved));
+    await click('[data-action="hud-done"]');
+    assert.ok(!(await app(() => document.body.classList.contains('hud-editing'))));
+    assert.ok(await app(() => document.getElementById('hud').classList.contains('hidden')), 'le HUD se recache hors course');
+    // caméra du joueur
+    await app(() => window.copytrack.openCameraEditor());
+    await click('#modal-body button:has-text("+ Nouvelle")');
+    await page.waitForTimeout(100);
+    await click('#modal-body button:has-text("Utiliser en course")');
+    await click('#modal-actions button.primary');
+    assert.equal(await app(() => window.copytrack.settings.cameras.length), 1);
+    assert.equal(await app(() => window.copytrack.settings.camera), 4);
+    await app(() => window.copytrack.playBuiltin(0));
+    await waitApp(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    assert.deepEqual(await app(() => [window.copytrack.session.camList.length, window.copytrack.session.camMode]), [5, 4], 'la caméra du joueur est en service');
+    await page.keyboard.press('c'); await page.waitForTimeout(150);
+    assert.equal(await app(() => window.copytrack.session.camMode), 0, 'la touche caméra fait le tour de la liste complète');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu');
+    await app(() => window.copytrack.resetUi());
+    assert.equal(await app(() => document.body.dataset.speedo), 'default');
+  });
+
+  await test('décors réglables, pièce perso et déclencheurs : météo et heure qui défile, pièce posée dans le circuit, message et éclat joués en course', async () => {
+    const r = await app(async () => {
+      const A = window.copytrack;
+      const { scriptTrack } = await import('/js/track.js');
+      const t = scriptTrack('Perso', 'start S3 R S2 finish', { decor: 'desert' });
+      t.setParams({ ambiance: { sky: 'night', weather: 'snow', cycle: 'fast', sunAz: 90, tint: '#334466' }, scripts: [{ x: 0, z: 0, a: 'msg', v: 'Bravo !' }, { x: 0, z: 0, a: 'burst', v: '#ff00ff' }] });
+      t.addDeco({ k: 'custom', x: 10, y: 0, z: 10, ry: 0, s: 1, c: 0, cp: [{ s: 'box', sx: 3, sy: 3, sz: 3, c: '#ff0000' }, { s: 'sphere', y: 4, g: 1 }] });
+      A.playTrack(t, { trackKey: null });
+      return t.encode();
+    });
+    await waitApp(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    const info = await app(() => {
+      const A = window.copytrack, S = A.session;
+      const before = JSON.stringify(A.scenery.theme.sky.top);
+      const out = { weather: A.scenery.theme.weather, cycle: !!A.scenery._cycle, hasCustom: S.track.decos.some((d) => d.k === 'custom') };
+      S.phys.pos.x = 16; S.phys.pos.z = 16;       // case (0, 0)
+      S._scriptsUpdate();
+      out.msg = document.getElementById('hud-msg').textContent;
+      out.done = S._scDone.size;
+      S._scriptsUpdate();
+      out.doneAgain = S._scDone.size;
+      out.before = before;
+      return out;
+    });
+    const wx = await app(async () => {
+      const { Weather } = await import('/js/weather.js'); const THREE = await import('/js/vendor/three.module.min.js');
+      const sc = new THREE.Scene(), w = new Weather(sc), cam = new THREE.PerspectiveCamera(); const out = {};
+      for (const k of ['rain', 'snow', 'embers', 'dust', 'petals']) { w.set(k, 1); w.update(0.05, cam); out[k] = [w.kind, sc.children.length, Number.isFinite(w.pos[0])]; }
+      w.set('', 1); out.none = sc.children.length; w.set('rain', 0); out.off = w.kind; w.dispose();
+      return out;
+    });
+    assert.deepEqual(wx, { rain: ['rain', 1, true], snow: ['snow', 1, true], embers: ['embers', 1, true], dust: ['dust', 1, true], petals: ['petals', 1, true], none: 0, off: '' }, 'les cinq météos se construisent, bougent et se retirent');
+    assert.deepEqual([info.weather, info.cycle, info.hasCustom], ['snow', true, true], 'météo, heure qui défile, pièce perso dans le circuit');
+    assert.equal(info.msg.trim(), 'Bravo !', 'le message du déclencheur s\'affiche');
+    assert.deepEqual([info.done, info.doneAgain], [2, 2], 'chaque déclencheur ne part qu\'une fois par essai');
+    await page.waitForTimeout(1500);
+    assert.notEqual(await app(() => JSON.stringify(window.copytrack.scenery.theme.sky.top)), info.before, 'l\'heure a défilé');
+    await app(() => { window.copytrack.quitRace(); });
+    await waitApp(() => window.copytrack.mode === 'menu');
+    // le code du circuit porte tout (météo, déclencheurs, pièce perso) : on le rouvre
+    const back = await app(async (code) => { const { Track } = await import('/js/track.js'); const t = Track.decode(code); return [t.ambiance.weather, t.scripts.length, t.decos.filter((d) => d.k === 'custom')[0].cp.length]; }, r);
+    assert.deepEqual(back, ['snow', 2, 2]);
+    // éditeur : l'atelier de pièces, les déclencheurs et les réglages d'ambiance s'ouvrent
+    await app(() => window.copytrack.openEditor({ code: null }));
+    await page.waitForTimeout(1000);
+    await app(() => window.copytrack.session.openParams());
+    assert.ok(await page.locator('#pp-weather').count() && await page.locator('#pp-cycle').count(), 'réglages météo et heure');
+    await click('#pp-scripts');
+    await page.waitForTimeout(300);
+    await click('#modal-body button[data-sc="add"]');
+    assert.ok(await page.locator('#modal-body .sc-row').count() === 1, 'un déclencheur ajouté');
+    await app(() => window.copytrack.ui.closeModal());
+    await app(() => window.copytrack.session._cdecoDialog(null));
+    await page.waitForTimeout(300);
+    assert.equal(await page.locator('#modal-body canvas.cdv').count(), 2, 'vues de face et de dessus');
+    await click('#modal-actions button.primary');
+    const lib = await app(async () => (await import('/js/storage.js')).listCustomDecos().length);
+    assert.equal(lib, 1, 'la pièce est dans la bibliothèque');
+    const used = await app(async () => { const E = window.copytrack.session; const { listCustomDecos } = await import('/js/storage.js'); E._buildPrefabPanel(); E._useCdeco(listCustomDecos()[0]); return [E.tool, E.deco.cp.length]; });
+    assert.deepEqual(used, ['deco:custom', 1], 'la pièce est prête à être posée');
+    await app(() => window.copytrack.showScreen('menu'));
+  });
+
+  await test('modes de jeu et paquets : menu, créer un mode, le jouer (règles appliquées, bilan), exporter puis réimporter un paquet', async () => {
+    await app(() => window.copytrack.showScreen('menu'));
+    await click('[data-action="modes"]');
+    await waitApp(() => document.querySelectorAll('#modal-body .mode-row').length >= 6);
+    assert.ok(await page.locator('#modal-body [data-md="packs"]').count());
+    // un mode fourni : « Sauts lunaires » (gravité 40 %), sur le premier circuit
+    await page.locator('#modal-body .mode-row[data-mode="lune"] button.primary').evaluate((el) => el.click());
+    await waitApp(() => document.querySelector('#modal-title') && document.querySelector('#modal-title').textContent.includes('Jouer le mode'));
+    await click('#modal-actions button.primary');
+    await waitApp(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    const g = await app(() => [window.copytrack.session.track.g0, !!window.copytrack.session.opts.mode, window.copytrack.session.trackKey]);
+    assert.deepEqual(g, [40, true, null], 'règles appliquées, aucun record ni classement');
+    await app(() => window.copytrack.session._finish(33.3));
+    await waitApp(() => document.querySelector('#modal-title') && /réussi|Pas tout/.test(document.querySelector('#modal-title').textContent));
+    assert.ok(await app(() => window.copytrack.ui.modalOpen), 'le bilan du mode s\'affiche');
+    await click('#modal-actions button:has-text("Modes")');
+    await waitApp(() => window.copytrack.mode === 'menu');
+    await page.waitForTimeout(300);
+    // créer un mode (via l'API de stockage) puis le retrouver dans « Mes modes »
+    await app(async () => { const { saveMode } = await import('/js/storage.js'); saveMode({ id: 'm1', name: 'Mon essai', desc: '', rules: { g0: 70 }, goal: { id: 'norespawn' } }); window.copytrack.modesMenu(); });
+    await waitApp(() => document.querySelector('#modal-body .mode-row[data-mode="m1"]'));
+    // paquet : exporter puis réimporter (la voiture, l'interface et le mode)
+    await click('#modal-body [data-md="packs"]');
+    await waitApp(() => document.querySelector('#modal-body [data-pk="export"]'));
+    await click('#modal-body [data-pk="export"]');
+    const code = await page.locator('#modal-body textarea').first().inputValue();
+    assert.ok(code.startsWith('SHX1:'), 'code de paquet');
+    await app(async () => { const { deleteMode } = await import('/js/storage.js'); deleteMode('m1'); });
+    await page.locator('#modal-body textarea').nth(1).fill(code);
+    await waitApp(() => document.querySelector('#modal-body [data-pk="apply"]'));
+    await click('#modal-body [data-pk="apply"]');
+    const modes = await app(async () => (await import('/js/storage.js')).listModes().map((m) => m.name));
+    assert.deepEqual(modes, ['Mon essai'], 'le mode revient avec le paquet');
+    await app(() => window.copytrack.ui.closeModal());
   });
 
   await test('communauté hors ligne, mes circuits, importer : aucun plantage', async () => {
@@ -374,7 +564,7 @@ try {
     await waitApp(() => window.copytrack.session.track.ambiance.sky === 'night');
     const after = await app(() => ({ far: window.copytrack.scenery.theme.fogFar, sun: window.copytrack.scenery.sun.intensity, am: window.copytrack.session.track.ambiance, code: window.copytrack.session.track.encode() }));
     assert.ok(after.far < before.far * 0.5, `brume : ${before.far} -> ${after.far}`); assert.ok(after.sun < before.sun, `lumière : ${before.sun} -> ${after.sun}`);
-    assert.deepEqual(after.am, { sky: 'night', fog: 'thick', music: 'none' });
+    assert.deepEqual(after.am, { sky: 'night', fog: 'thick', music: 'none', weather: '', sunAz: -1, tint: '', gtint: '', fogC: '', cycle: '' });
     assert.ok(await app((c) => { const t = window.copytrack.session.track.constructor.decode(c); return t.ambiance.fog === 'thick'; }, after.code), 'le code relu garde l\'ambiance');
     await shot('22-ambiance-nuit');
     // --- prefabs
@@ -498,11 +688,16 @@ try {
       await page.evaluate(() => { document.querySelector('input[name="mp-mode"][value="cup"]').click(); });
       await page.evaluate(() => { const r = document.querySelector('select[data-k="rounds"]'); r.value = '2'; r.dispatchEvent(new Event('change')); const p = document.querySelector('select[data-k="pool"]'); p.value = 'easy'; p.dispatchEvent(new Event('change')); });
       assert.match(await text(page, '#modal-actions [data-mp="start"]'), /Lancer le championnat/);
+      // Règles de la partie : l'hôte les choisit, l'invité les reçoit ; elles s'appliquent au circuit de chacun.
+      assert.ok(await page.locator('.mp-rules').count(), 'le bloc des règles est dans le salon de l\'hôte');
+      await page.evaluate(() => window.copytrack.room.setRules({ offroad: 1, sameCars: 1 }));
+      await B.waitForFunction(() => window.copytrack.room && window.copytrack.room.rules && window.copytrack.room.rules.offroad === 1, null, { timeout: 10000 });
       await clickBtn(page, 'Lancer le championnat');
       await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.cup, null, 30000);
       await B.waitForFunction(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.cup, null, { timeout: 30000 });
       const info = (p) => p.evaluate(() => { const s = window.copytrack.session; return { n: s.cup.n, total: s.cup.total, slot: s.cup.slot, count: s.cup.count, collisions: s.cup.collisions, x: s.phys.pos.x, z: s.phys.pos.z, track: s.track.name }; });
       const ia = await info(page), ib = await info(B);
+      assert.deepEqual(await Promise.all([page, B].map((p) => p.evaluate(() => window.copytrack.session.track.offroad))), [1, 1], 'la règle de la partie (hors piste) s\'applique chez les deux joueurs');
       assert.deepEqual([ia.n, ia.total, ia.count, ia.collisions], [0, 2, 2, true]); assert.equal(ib.track, ia.track, 'même circuit');
       assert.deepEqual([ia.slot, ib.slot].sort(), [0, 1]);
       assert.ok(Math.hypot(ia.x - ib.x, ia.z - ib.z) >= 5, 'sur la grille, pas superposés');

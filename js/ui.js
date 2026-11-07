@@ -19,6 +19,7 @@ class Hud {
       medals: $('hud-medals'), speed: $('hud-speed'), boost: $('hud-boost'), center: $('hud-center'),
       msg: $('hud-msg'), hint: $('hud-hint'), track: $('hud-track'),
     };
+    this.root = $('hud');
     this._last = {};
     this.gate = new MessageGate();
   }
@@ -78,6 +79,8 @@ class Hud {
     if (v !== this._last.speed) { this.el.speed.textContent = v; this._last.speed = v; }
     const b = Math.round((boost / 1.6) * 100);
     if (b !== this._last.boost) { this.el.boost.style.width = b + '%'; this._last.boost = b; }
+    const s = Math.min(100, Math.round((kmh / 400) * 100));
+    if (s !== this._last.spd) { this.root.style.setProperty('--spd', String(s / 100)); this._last.spd = s; }
   }
 
   center(text, pop = false) {

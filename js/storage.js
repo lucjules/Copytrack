@@ -114,6 +114,8 @@ export const DEFAULT_SETTINGS = {
   ghostGold: true,
   ghostImported: true,
   onlineScores: true,
+  ui: {},                 // thème et disposition de l'interface (uitheme.js)
+  cameras: [],            // caméras de course personnalisées (camprefs.js)
   feel: 1,                // sensations de course : 0 (aucun effet ajouté) à 1,5 ; voir feel.js
   editorGuided: null,     // éditeur en mode guidé (l'essentiel) : null = non (joueur qui connaît déjà l'éditeur), true = oui (voir editor/palette.js)
   telemetry: null,        // statistiques anonymes (voir telemetry.js) : null = pas encore demandé, true = accepté, false = refusé
@@ -229,6 +231,36 @@ export function savePrefab({ id, name, code }) {
 export function deletePrefab(id) {
   write('prefabs', listPrefabs().filter((p) => p.id !== id));
 }
+
+// ---- Pièces décoratives perso (bibliothèque locale, customDeco.js) : jusqu'à CDECO_MAX ; le partage se fait par le code « SHD1: » ----
+export const CDECO_MAX = 30;
+export function listCustomDecos() {
+  const l = read('cdecos', []);
+  return Array.isArray(l) ? l.filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string' && Array.isArray(p.parts)).slice(0, CDECO_MAX) : [];
+}
+export function saveCustomDeco({ id, name, parts }) {
+  const entry = { id: String(id).slice(0, 30), name: String(name).slice(0, 24) || 'Ma pièce', parts, updated: Date.now() };
+  const list = listCustomDecos().filter((p) => p.id !== entry.id);
+  list.unshift(entry);
+  write('cdecos', list.slice(0, CDECO_MAX));
+  return entry;
+}
+export function deleteCustomDeco(id) { write('cdecos', listCustomDecos().filter((p) => p.id !== id)); }
+
+// ---- Modes de jeu du joueur (rules.js) : jusqu'à MAX_MODES ; ils se partagent par le code « SHM1: » ----
+export const MODES_MAX = 20;
+export function listModes() {
+  const l = read('modes', []);
+  return Array.isArray(l) ? l.filter((m) => m && typeof m.id === 'string' && typeof m.name === 'string' && m.rules && typeof m.rules === 'object').slice(0, MODES_MAX) : [];
+}
+export function saveMode(mode) {
+  const entry = { id: String(mode.id).slice(0, 30), name: String(mode.name).slice(0, 24), desc: String(mode.desc || '').slice(0, 100), rules: mode.rules, goal: mode.goal || null, updated: Date.now() };
+  const list = listModes().filter((m) => m.id !== entry.id);
+  list.unshift(entry);
+  write('modes', list.slice(0, MODES_MAX));
+  return entry;
+}
+export function deleteMode(id) { write('modes', listModes().filter((m) => m.id !== id)); }
 
 export function deleteMyTrack(id) {
   write('tracks', listMyTracks().filter((t) => t.id !== id));

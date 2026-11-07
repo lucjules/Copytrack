@@ -6,6 +6,55 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.25 — règles de partie, modes de jeu à toi et paquets de personnalisation
+
+`PHYS_VER` inchangé (26) ; **`NET_VER` passe à 3** (nouveau message « rules » du salon : tout le monde doit recharger la page pour jouer ensemble). Rien à redéployer côté serveur. **Aucune voiture ne change de performances** et aucune physique nouvelle : une règle n'est qu'un réglage que les circuits savent déjà porter (gravité, véhicule et vitesse de départ, hors-piste, tours) ou le retrait des obstacles.
+
+- **Règles de la partie** (salon multijoueur, l'hôte) : gravité de départ, véhicule de départ, vitesse de départ, hors-piste, nombre de tours (circuits fermés), **sans obstacles**, **voitures identiques** (même apparence pour tous, la tienne comprise). Envoyées à tous (et à chaque arrivant), **revalidées à la réception**, appliquées au circuit de chacun ; un invité ne peut pas en imposer. `js/rules.js`.
+- **Modes de jeu** (nouveau bouton **Modes** du menu) : un mode = des règles + un **objectif** (les objectifs bonus de la carrière : sans muret, sans réapparition, N réceptions parfaites, N mini-turbos, N anneaux, finir en moto/bateau/deltaplane, finir sous un temps) + un nom. Six modes fournis (*Sauts lunaires*, *Pieds de plomb*, *Route libre*, *Tout en moto*, *Départ lancé*, *Marathon*), création et modification des siens (20), jeu sur le circuit de son choix (intégré ou à soi), bilan « réussi / raté », **code `SHM1:`** à partager. Pas de records, pas de classement (le circuit transformé n'est plus celui des classements) et **pas de pièces à gagner** : sinon un mode « 1 000 pièces pour rien » casserait l'économie.
+- **Paquets (mods)** (Modes › Paquets) : un code **`SHX1:`** regroupe ma voiture, mon interface, mes caméras, mes pièces décoratives et mes modes. **Rien d'exécutable** : chaque morceau repasse par le valideur de son module (champ inconnu ignoré, valeur bornée, 30 000 caractères au plus), l'import se fait élément par élément (cases à cocher) et **les éléments payants du catalogue ne sont pas offerts** (remplacés par l'élément d'origine). `js/mods.js`.
+- **Corrigé au passage** : `Object.hasOwn` pour les noms de thème, de police, de compteur et d'objectif (un thème « __proto__ » aurait fait planter l'application de l'interface) ; la copie d'un circuit intégré par une règle garde sa ligne centrale (classement en direct) et la refait pour un autre nombre de tours.
+- **Limites assumées** : les modes se partagent par code, pas par un serveur (aucune publication en ligne) ; les règles ne couvrent pas la gravité en cours de course (ce serait de la physique) ; « voitures identiques » ne change que l'apparence ; la personnalisation de la voiture n'est toujours pas envoyée aux autres joueurs.
+- Tests : `tools/test-modes.mjs`, `tools/test-manche.mjs` (règles du salon), `tools/test-interface.mjs` (noms hérités) ; test navigateur (modes, bilan, paquet exporté puis réimporté, règle appliquée chez les deux joueurs d'un championnat).
+
+## Bêta 0.9.24 — des décors réglables, tes propres pièces, des effets sur le circuit
+
+`PHYS_VER` inchangé (26) ; rien à redéployer. **Rien ici ne touche à la conduite** : tout est visuel ou sonore, hors signature (changer un décor, une pièce ou un déclencheur ne fait perdre ni la vérification ni les records).
+
+- **Ambiance avancée** (Paramètres du niveau, éditeur) : **météo** (pluie, neige, braises, poussière, pétales), **direction du soleil** (azimut, la hauteur est gardée), **teinte du ciel**, **teinte du sol**, **couleur de la brume**, et **heure qui défile** (aube → plein jour → coucher → nuit, en 2 min ou 50 s, 5 mises à jour par seconde). La météo est un nuage de points qui suit la caméra (`js/weather.js`), coupée aux profils les plus légers. Les anciens codes (trois champs) restent identiques.
+- **Mes pièces** (onglet Prefabs de l'éditeur) : un atelier de **pièces décoratives** — jusqu'à 12 formes (bloc, sphère, cylindre, cône, cale, anneau) avec position, taille, rotation, couleur et **lumineuse** — vues de face et de dessus, bibliothèque locale (30), **code `SHD1:`** à partager. Une pièce se pose comme n'importe quelle décoration (taille, rotation, couleur) et **ses formes voyagent dans le code du circuit** (jusqu'à 10 par circuit) : celui qui l'ouvre la voit. Nouvelle décoration `custom` ajoutée à la fin de l'ordre existant.
+- **Déclencheurs de circuit** (Paramètres du niveau › Déclencheurs…) : jusqu'à 16 effets posés sur des cases, joués une fois par essai quand la voiture passe : **message**, **moment de la journée**, **météo**, **brume**, **musique**, **éclat de couleur**, **secousse**, **son**. Le départ d'un nouvel essai remet décor et musique. **Volontairement aucun effet sur la conduite** (gravité, obstacles, vitesse) : ce serait de la physique, donc une autre version pour tout le monde.
+- `js/ambiance.js` (étendu), `js/weather.js`, `js/customDeco.js`, `js/scripts.js` (purs, testés), `js/editor/cdeco.js`, `js/editor/scriptsUi.js`, `js/race/scriptsRun.js`.
+- **Limites assumées** : le déclencheur se joue sur une case, à n'importe quelle hauteur (un pont qui en croise une autre déclenche aussi) ; la pièce perso est dessinée en 2D (face / dessus), sans aperçu 3D ; l'heure qui défile ne rafraîchit pas les reflets de l'environnement du profil Ultra ; la teinte du sol ne se met à jour qu'au chargement du circuit.
+- Tests : `tools/test-pieces-perso.mjs`, `tools/test-scripts.mjs`, `tools/test-ambiance.mjs` (étendu) ; test navigateur (météo, heure qui défile, déclencheur en course, pièce perso dans le code, ateliers de l'éditeur).
+
+## Bêta 0.9.23 — l'interface et les caméras à ton goût
+
+`PHYS_VER` inchangé (26) ; rien à redéployer. Visuel uniquement : la conduite, les temps et les classements ne changent pas.
+
+- **Profil › Options › Personnalisation** :
+  - **6 thèmes** (Copytrack, Minuit, Crépuscule, Forêt, Mono, **Contraste élevé**), **deux couleurs d'accent** au choix, **opacité des panneaux**, **arrondi des boutons**, **5 polices** (Chakra Petch, système, arrondie, machine, classique).
+  - **Compteur de vitesse** : chiffres, énorme, discret, **jauge** ou **cadran** ; **taille du chrono** (petit, normal, gros) ; **taille du HUD** (70 à 150 %) ; **cacher** l'écart, le record, les médailles, la jauge de boost, l'aide des touches, le nom du circuit.
+  - **Disposer le HUD** : le vrai HUD s'affiche et on **glisse** le chrono, le bloc circuit, le bloc record, la vitesse et l'aide des touches où on veut (les positions sont en vw/vh : elles suivent la taille de l'écran) ; « Remettre » et « Réinitialiser » rendent tout.
+  - **Mes caméras** : jusqu'à 6 caméras de course en plus des 4 d'origine (distance, hauteur, regard devant et en hauteur, champ de vision, nom), « Utiliser en course » ; la touche caméra fait le tour de la liste complète (replays compris).
+- `js/uitheme.js` et `js/camprefs.js` (purs, testés), `js/app/uicustom.js` (application à la page, éditeurs). Réglages enregistrés dans les réglages du profil (`ui`, `cameras`), validés à chaque lecture.
+- **Limites assumées** : pas d'aperçu en direct de la caméra pendant son réglage (on l'essaie en course) ; le thème « Contraste élevé » couvre les couleurs du HUD et des panneaux mais pas les textures du jeu ; les positions du HUD ne sont pas réajustées en tactile (le HUD tactile garde sa disposition).
+- Tests : `tools/test-interface.mjs` ; test navigateur (thème posé, compteur, glisser le chrono, caméra du joueur en course).
+
+## Bêta 0.9.22 — l'atelier de voiture : une voiture vraiment à toi
+
+`PHYS_VER` inchangé (26) ; rien à redéployer. **Aucune de ces options ne touche aux performances** : la voiture roule exactement pareil (la physique ne dépend pas du modèle 3D ; empreinte de physique identique).
+
+- **Garage › Atelier** (nouvel onglet, gratuit) avec cinq sous-onglets :
+  - **Formes** : jusqu'à 24 pièces libres (bloc, sphère, cylindre, cône, cale, anneau) posées où tu veux sur la voiture et le deltaplane : position, taille, rotation, couleur, **symétrique** (copie de l'autre côté), **lumineuse**, dupliquer, supprimer.
+  - **Peinture** : dégradé (deux sens), 6 motifs (rayures, alvéoles, camouflage, damier, pois, vagues) avec couleur et intensité, **texte**, **numéro de course** et **plaque d'immatriculation**, sur les deux flancs et à l'arrière.
+  - **Dessin** : une grille 16 × 16 (crayon, pot de peinture, gomme, 15 couleurs) collée sur les flancs, ou **import d'une image** ramenée à la grille (couleur la plus proche).
+  - **Effets** : couleur et longueur de la traînée (qui peut exister sans traînée du catalogue), couleur des étincelles et de la fumée de dérapage, **timbre** et hauteur du moteur, hauteur du klaxon.
+  - **Code** : un code **`SHC1:`** contient toute la voiture, à envoyer à un ami (les éléments payants du catalogue restent à débloquer chez lui).
+- `js/custom.js` (données, validation, codec, dessin : pur, testé) et `js/customCar.js` (rendu) ; `js/garage/studio.js` (interface). Tout ce qui vient de l'extérieur (code, profil, cloud) passe par `sanitizeCustom` : bornes, jeux de caractères (aucun HTML), longueurs.
+- **Limites assumées** : les pièces libres ne s'appliquent pas à la moto ni au bateau ; la personnalisation n'est pas envoyée aux autres joueurs en multijoueur (ils voient la voiture de base) ; le dessin est une grille 16 × 16 (pas de pinceau 3D) ; **pas de modération** des textes et des dessins (ils ne sont visibles que sur ta voiture ou chez qui importe ton code).
+- Tests : `tools/test-voiture.mjs` ; test navigateur (atelier complet, enregistrement dans le profil, aller-retour par le code).
+
 ## Bêta 0.9.21 — le jeu parle anglais (français / anglais)
 
 `PHYS_VER` inchangé (26) ; rien à redéployer, côté serveur comme côté physique. **Rien ici ne touche à la course** (empreinte de physique, records, replays, classements identiques).

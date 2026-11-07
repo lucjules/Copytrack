@@ -13,18 +13,20 @@ import { TrackView } from './trackMesh.js';
 import { createCar } from './carModel.js';
 import { getRecord, decodeFloats } from './storage.js';
 import { profile } from './profile.js';
-import { CATALOG } from './cosmetics.js';
+import { CATALOG, DEFAULT_LOADOUT } from './cosmetics.js';
 import { SkidMarks } from './skids.js';
 import { TrailRibbon } from './trail.js';
 import { InputRecorder, decodeInputs, inputAt, quantSteer } from './replay.js';
 import { PHYS_VER } from './version.js';
-import { GHOST_VEHICLES, GHOST_EVERY, tmpM, tmpV, tmpV2 } from './race/shared.js';
+import { GHOST_VEHICLES, GHOST_EVERY, CAM_MODES, tmpM, tmpV, tmpV2 } from './race/shared.js';
+import { cameraList, clampCamIndex } from './camprefs.js';
 
 import { cameraMethods } from './race/camera.js';
 import { ghostMethods } from './race/ghosts.js';
 import { netMethods } from './race/net.js';
 import { finishMethods } from './race/finish.js';
 import { replayMethods } from './race/replayMode.js';
+import { scriptMethods } from './race/scriptsRun.js';
 
 const CAR_COLOR = '#ffd23e';   // éclat quand la voiture retrouve sa forme d'origine (les plaques ont la couleur de leur revêtement : SURFACES)
 
@@ -44,7 +46,11 @@ export class RaceSession {
     this.sim = new Simulation(track, { partial: !!opts.spawn });
     this.phys = this.sim.phys;
     this.logic = this.sim.logic;
-    this.car = createCar(profile().loadout);
+    // Voitures identiques (règle de la partie) : tout le monde, moi compris, avec l'apparence d'origine.
+    const sameCars = opts.multi && opts.multi.room.rules && opts.multi.room.rules.sameCars;
+    this.car = createCar(sameCars ? DEFAULT_LOADOUT : profile().loadout);
+    this.fx = profile().loadout.custom.fx;                       // effets du joueur (custom.js) : traînée, étincelles, fumée, voix
+    app.audio.setVoice(this.fx);
     app.scene.add(this.car.group);
     this.skids = new SkidMarks(app.scene);
     this.ghostCar = createCar(null, { ghost: true });
@@ -73,7 +79,8 @@ export class RaceSession {
     if (!this.demo && !this.replay && !opts.fromEditor && !this.multi) this._setupGhosts();
     if (this.multi) this._setupRemotes();
     if (opts.rivals && !this.demo && !this.replay && !this.multi) this.setRivals(opts.rivals);
-    this.camMode = this.demo ? 0 : app.settings.camera || 0;
+    this.camList = cameraList(CAM_MODES, app.settings.cameras);          // les 4 d'origine puis celles du joueur (camprefs.js)
+    this.camMode = this.demo ? 0 : clampCamIndex(app.settings.camera || 0, this.camList);
 
     this.up = new THREE.Vector3(0, 1, 0);
     this.quat = new THREE.Quaternion();
@@ -107,6 +114,8 @@ export class RaceSession {
     const app = this.app;
     this._telemetryQuit();
     this._tmDone = false;
+    this._scAmb = null;
+    this._scriptsReset();
     // Manche d'un championnat : chacun part de sa place sur la grille (le premier devant, quatre de front).
     let spawn = this.opts.spawn;
     if (this.cup && !spawn) { this.logic.reset(); spawn = gridSpawn(this.logic.spawnPoint(), this.cup.slot, this.cup.count); }
@@ -297,7 +306,7 @@ export class RaceSession {
       app.audio.miniTurbo(ev.miniTurbo);
       app.input.rumble(0.4, 0.2, 120);
       const p = this.phys.pos;
-      app.particles.burst(p.x, p.y + 0.5, p.z, 16, 7, 0.4, 0.5, ev.miniTurbo === 2 ? '#ffb84d' : '#5ff2ff', 2);
+      app.particles.burst(p.x, p.y + 0.5, p.z, 16, 7, 0.4, 0.5, this.fx.spark || (ev.miniTurbo === 2 ? '#ffb84d' : '#5ff2ff'), 2);
     }
     if (ev.landQ === 'perfect' && !this.demo) {
       app.audio.perfectLanding();
@@ -502,7 +511,7 @@ export class RaceSession {
       } else this.skids.lift(w);
     }
     if (p.driftCharge > 0.15 && p.grounded && !lean && !frozen) {
-      const col = p.driftCharge >= 1.5 ? '#ffb84d' : p.driftCharge >= 0.7 ? '#5ff2ff' : '#ffffff';
+      const col = this.fx.spark || (p.driftCharge >= 1.5 ? '#ffb84d' : p.driftCharge >= 0.7 ? '#5ff2ff' : '#ffffff');
       for (const sx of wheelsX) {
         if (Math.random() < 0.6) {
           tmpV.set(sx, 0.2, 1.4).applyQuaternion(g.quaternion).add(g.position);
@@ -512,12 +521,13 @@ export class RaceSession {
     }
     // Traînée lumineuse (cosmétique) : un ruban toujours présent, dont l'intensité suit la vitesse et le boost (voir trail.js).
     const trail = this._trail || (this._trail = (CATALOG.trail.find((x) => x.id === profile().loadout.trail) || CATALOG.trail[0]));
-    if (trail.id !== 'none' && !this.demo && !this.replay && !lean) {
+    const trailColor = this.fx.trailC || (trail.rainbow ? null : trail.color);
+    if ((trail.id !== 'none' || this.fx.trailC) && !this.demo && !this.replay && !lean) {
       if (!this.trailRib) this.trailRib = new TrailRibbon(app.scene);
       if (!frozen) {
         tmpV.set(0, 0.7, 2.3).applyQuaternion(g.quaternion).add(g.position);
         tmpV2.set(1, 0, 0).applyQuaternion(g.quaternion);
-        this.trailRib.update(dt, tmpV, tmpV2, p.speed, Math.min(1, p.boost), trail.rainbow ? null : trail.color, performance.now() / 1000, app.camera.position);
+        this.trailRib.update(dt, tmpV, tmpV2, p.speed, Math.min(1, p.boost), trailColor, performance.now() / 1000, app.camera.position, this.fx.trailLen);
       }
     } else if (this.trailRib) this.trailRib.reset();
     // Sillage du bateau (ou éclaboussures d'un véhicule dans l'eau).
@@ -531,7 +541,7 @@ export class RaceSession {
     if (!frozen && p.grounded && p.slip > 5 && p.speed > 6 && p.surfMod !== 'water') {
       for (const sx of [-1, 1]) {
         tmpV.set(sx * 1.0, 0.15, 1.4).applyQuaternion(g.quaternion).add(g.position);
-        const dust = p.surfMod === 'ice' ? '#e8f8ff' : app.scenery.theme.dust;
+        const dust = this.fx.smoke || (p.surfMod === 'ice' ? '#e8f8ff' : app.scenery.theme.dust);
         app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, (Math.random() - 0.5) * 2, 1 + Math.random() * 2, (Math.random() - 0.5) * 2, 0.7, 0.9, dust, -1);
       }
     }
@@ -556,6 +566,7 @@ export class RaceSession {
     app.scenery.update(this.renderPos, app.camera);
 
     this._feelUpdate(dt);
+    if (this.state === 'racing') this._scriptsUpdate();
     // Audio & HUD
     if (this.state === 'racing') {
       app.audio.engine({ speed: p.fwdSpeed, throttle: !!inp.throttle, slip: p.grounded ? p.slip : 0, boost: boosting, draft: this._feel.slip * this._feelScale() });
@@ -624,4 +635,4 @@ export class RaceSession {
 }
 
 // Les familles de méthodes vivent dans race/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(RaceSession.prototype, cameraMethods, ghostMethods, netMethods, finishMethods, replayMethods);
+Object.assign(RaceSession.prototype, cameraMethods, ghostMethods, netMethods, finishMethods, replayMethods, scriptMethods);

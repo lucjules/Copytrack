@@ -5,7 +5,9 @@ import { PIECES, PIECE_ORDER, SURFACE_CODES, SURFACE_ALIAS, LEGACY_SURFACE, LEGA
 import { centerlineWorld } from './ribbons.js';
 import { isObstacle, buildObstacleGrid } from './obstacles.js';
 import { DECO_ORDER } from './decoData.js';
+import { packDecoParts, unpackDecoParts } from './customDeco.js';
 import { DECORS, DEFAULT_DECOR } from './themes.js';
+import { scriptsToArray, scriptsFromArray, sanitizeScripts } from './scripts.js';
 import { DEFAULT_AMBIANCE, cleanAmbiance, ambianceToArray, ambianceFromArray } from './ambiance.js';
 import { COLOR_KEYS, MP, W2, cleanColors } from './track/shared.js';
 import { surfaceMethods } from './track/surfaces.js';
@@ -52,6 +54,7 @@ export class Track {
     this.laps = 1;    // nombre de tours (circuit fermé)
     // Paramètres du niveau : la description (affichée dans la communauté) et les règles de course (table RULES)
     this.desc = '';
+    this.scripts = [];                          // déclencheurs visuels et sonores posés sur des cases (scripts.js ; hors signature)
     this.ambiance = { ...DEFAULT_AMBIANCE };    // moment de la journée, brume, musique (visuel et sonore : hors signature, voir ambiance.js)
     this.resetRules();
     this.vt = 0;      // temps de vérification (secondes) de l'auteur
@@ -214,6 +217,7 @@ export class Track {
     this.laps = 1;
     this.desc = '';
     this.ambiance = { ...DEFAULT_AMBIANCE };
+    this.scripts = [];
     this.resetRules();
     this.version++;
   }
@@ -273,6 +277,7 @@ export class Track {
   setParams(p = {}) {
     if (p.desc !== undefined) this.desc = String(p.desc || '').replace(/\s+/g, ' ').trim().slice(0, 200);
     if (p.ambiance !== undefined) this.ambiance = cleanAmbiance(p.ambiance);
+    if (p.scripts !== undefined) this.scripts = sanitizeScripts(p.scripts);
     for (const r of RULES) if (p[r.key] !== undefined) this[r.key] = r.clean(p[r.key]);
   }
 
@@ -320,6 +325,7 @@ export class Track {
     t.laps = this.laps;
     t.desc = this.desc;
     t.ambiance = { ...this.ambiance };
+    t.scripts = this.scripts.map((s) => ({ ...s }));
     for (const r of RULES) t[r.key] = this[r.key];
     return t;
   }
@@ -348,17 +354,18 @@ export class Track {
     });
     const decos = this.decos.map((d) => [
       DECO_ORDER.indexOf(d.k), +d.x.toFixed(2), +d.y.toFixed(2), +d.z.toFixed(2), +d.ry.toFixed(3), +d.s.toFixed(2), d.c, d.u || 0,
-      ...(d.ph || d.cc ? [d.ph || 0] : []),
-      ...(d.cc ? [d.cc.slice(1)] : []),
+      ...(d.cp && d.cp.length ? [d.ph || 0, d.cc ? d.cc.slice(1) : '', packDecoParts(d.cp)] : [...(d.ph || d.cc ? [d.ph || 0] : []), ...(d.cc ? [d.cc.slice(1)] : [])]),
     ]);
     // v3 tant que rien de la Phase 2 n'est utilisé : les codes existants ne changent pas.
-    const data = { v: extras.length || this.decos.some((d) => d.cc) || RULES.some((r) => r.v4 && this[r.key]) ? 4 : 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
+    const data = { v: extras.length || this.decos.some((d) => d.cc || d.cp) || RULES.some((r) => r.v4 && this[r.key]) ? 4 : 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
     if (extras.length) data.e = extras;
     if (decos.length) data.o = decos;
     if (this.laps > 1) data.lp = this.laps;
     if (this.desc) data.ds = this.desc;
     const am = ambianceToArray(this.ambiance);
     if (am) data.am = am;
+    const sc = scriptsToArray(this.scripts);
+    if (sc) data.sc = sc;
     for (const r of RULES) if (this[r.key] !== r.def) data[r.code] = this[r.key] === true ? 1 : this[r.key];
     if (this.verified) { data.vt = this.vt; data.vh = this.vh; }
     return 'SHW3:' + b64encode(JSON.stringify(data));
@@ -403,11 +410,11 @@ export class Track {
         const k = DECO_ORDER[o[0]];
         if (!k) continue;
         const u = typeof o[7] === 'string' && /^https?:\/\//i.test(o[7]) ? o[7] : '';
-        tr.addDeco({ k, x: o[1], y: o[2], z: o[3], ry: o[4], s: o[5], c: o[6], u, ph: +o[8] || 0, cc: typeof o[9] === 'string' ? '#' + o[9] : '' });
+        tr.addDeco({ k, x: o[1], y: o[2], z: o[3], ry: o[4], s: o[5], c: o[6], u, ph: +o[8] || 0, cc: typeof o[9] === 'string' && o[9] ? '#' + o[9] : '', cp: k === 'custom' ? unpackDecoParts(o[10]) : undefined });
       }
     }
     tr.laps = Math.max(1, Math.min(9, data.lp | 0 || 1));
-    tr.setParams({ desc: data.ds, ambiance: ambianceFromArray(data.am), ...Object.fromEntries(RULES.map((r) => [r.key, data[r.code]])) });
+    tr.setParams({ desc: data.ds, ambiance: ambianceFromArray(data.am), scripts: scriptsFromArray(data.sc), ...Object.fromEntries(RULES.map((r) => [r.key, data[r.code]])) });
     if (data.vt > 0 && data.vh) { tr.vt = +data.vt; tr.vh = String(data.vh); }
     return tr;
   }

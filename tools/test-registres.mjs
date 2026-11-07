@@ -54,7 +54,7 @@ test('toute décoration sérialisée a un nom, une icône et (sauf les secrètes
   for (const id of DECO_ORDER) {
     assert.ok(DECO_LABELS[id], 'nom manquant : ' + id);
     assert.ok(DECO_ICONS[id], 'icône manquante : ' + id);
-    if (id !== 'shard') assert.ok(classees.has(id), 'sans catégorie : ' + id);
+    if (id !== 'shard' && id !== 'custom') assert.ok(classees.has(id), 'sans catégorie : ' + id);
   }
 });
 test('les catégories ne listent que des décorations sérialisables, sans doublon', () => {
@@ -69,7 +69,7 @@ test('le pack de décorations est entièrement dans DECO_ORDER', () => {
 test('chaque décoration a une géométrie (les obstacles et la plaque image ont la leur ailleurs)', () => {
   const sans = [];
   for (const id of DECO_ORDER) {
-    if (isObstacle(id) || id === 'plaque') continue;
+    if (isObstacle(id) || id === 'plaque' || id === 'custom') continue;
     const gb = new GeoBuilder(), glow = new GeoBuilder();
     buildDecoInto(gb, glow, { k: id, x: 0, y: 0, z: 0, ry: 0, s: 1, c: 0 });
     if (gb.empty && glow.empty) sans.push(id);

@@ -15,12 +15,17 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `AudioEngine.js` | Moteur de musique procédurale « French Touch / rally house / nu-disco » à ~124 BPM, 100 % Web Audio API (aucun fichier audio). |
 | `autopilot.js` | Pilote automatique simple qui suit la ligne centrale d'un circuit scripté. |
 | `camflip.js` | Retournement de la caméra quand la gravité s'inverse (plaque d'inversion). |
+| `camprefs.js` | Caméras personnalisées (lot 11) : jusqu'à 6 caméras de course en plus des 4 d'origine, réglées par le joueur. |
 | `career.js` | Mode carrière (v1.5) : les circuits intégrés, rangés du plus facile au plus dur, sont regroupés en chapitres de 6. Un chapitre s'ouvre avec 4 médailles dans le précédent. Chaque circuit a un objectif bonus qui rapporte des pièces une fois. |
 | `carModel.js` | Modèles 3D de la voiture et de la moto (low-poly, originaux), construits par code. |
 | `cloudsave.js` | Sauvegarde cloud : quelles données partent dans le cloud, et comment fusionner deux versions. |
 | `config.js` | Réglages propres à un DÉPLOIEMENT du jeu : le serveur en ligne (classements, communauté, comptes, salons) et le relais réseau du multijoueur. |
 | `constants.js` | Dimensions du monde (en mètres) : case de 32 m, route de 24 m de large, niveau de 6,4 m. |
 | `cosmetics.js` | Catalogue de personnalisation du véhicule. 100 % visuel : aucune de ces options ne modifie la physique (voir CAR dans physics.js, qui ne dépend pas du modèle 3D). |
+| `custom.js` | Voiture personnalisée (lot 10) : pièces libres, peinture avancée, dessin 16×16, effets, code partageable « SHC1: ». |
+| `customCar.js` | Rendu de la voiture personnalisée (lot 10) : pièces libres, livrée (dégradé, motif, dessin 16×16, texte, numéro) et plaque d'immatriculation. |
+| `customDeco.js` | Pièces décoratives personnalisées (lot 12) : un petit objet que le joueur assemble avec des formes simples et pose dans l'éditeur comme n'importe quelle décoration. |
+| `customDecoBuild.js` | Géométrie des pièces décoratives personnalisées (lot 12) : construction sur un GeoBuilder. Données et validation : customDeco.js. |
 | `daily.js` | Défi du jour (v1.5) : un circuit généré à partir de la date. Tout le monde a le même circuit le même jour, sans serveur. Le pilote automatique vérifie qu'il est faisable et fixe les médailles, comme pour les circuits intégrés. |
 | `decoData.js` | Données des décorations (sans dépendance au rendu). |
 | `decoPack.js` | Constructeurs du pack de décorations 0.9.3 (voir decoPackData.js pour la liste). Coordonnées locales, base à y = 0, 1 unité = 1 m. |
@@ -46,6 +51,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `main.js` | Point d'entrée : crée le moteur de rendu et orchestre menu / course / éditeur. |
 | `mathutil.js` | Petits utilitaires numériques partagés (la physique, l'audio, les traînées). Ne dépend de rien. |
 | `medals.js` | Médailles : leur ordre (de la meilleure à la moins bonne) et leur attribution selon un temps. |
+| `mods.js` | Paquets de personnalisation « mods » (lot 13) : un seul code « SHX1: » qui regroupe ma voiture, mon interface, mes caméras, mes pièces décoratives et mes modes. |
 | `music.js` | Musique du jeu : le menu joue le MP3 déposé dans assets/music-menu.mp3 (en boucle ; sans ce fichier, repli sur un groove house synthétisé) ; les courses jouent une musique chill synthétisée (AudioEngine.js) dont l'intensité suit la vitesse. |
 | `obstacleMesh.js` | Modèles 3D animés des obstacles (voir obstacles.js pour la physique). |
 | `obstacles.js` | Obstacles (0.9) : objets posés librement comme les décorations, mais qui comptent pour la physique. Leur mouvement ne dépend que du chrono de la course (pas fixe), donc il est identique en course, en replay, après un retour au checkpoint et dans la vérification en ligne. Ce module n'a aucune dépendance au rendu. |
@@ -63,7 +69,9 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `replay.js` | Replays et fantômes (v1.5). La physique est déterministe (pas fixe) : il suffit d'enregistrer les commandes de chaque pas pour rejouer une course à l'identique. |
 | `rewards.js` | Récompenses (0.9.18) : titres affichés au classement, éléments EXCLUSIFS du garage (qui ne s'achètent pas), collections à thème. Données et règles pures : le contexte (médailles, défis, leçons…) est rassemblé par app/rewards.js, ici on décide seulement ce qui est mérité. Rien ne touche à la physique ni aux temps : tout est visuel. |
 | `ribbons.js` | Rubans 3D : toute portion de route qui n'est pas un simple « sol ». |
+| `rules.js` | Règles de partie et modes de jeu (lot 13). Une RÈGLE est un réglage de départ qu'un circuit sait déjà porter (gravité de départ, vitesse de départ, véhicule de départ, hors-piste, tours) ou une transformation du circuit (sans obstacles) : rien de nouveau dans la physique, aucune voiture ne change de performances. Un MODE réunit des règles, un objectif et un nom ; il se joue sur n'importe quel circuit, sans records ni classements (le circuit transformé n'est plus celui des classements), et se partage par un code « SHM1: ». |
 | `scenery.js` | Décors : ciel, lumière, terrain facetté et objets, selon le thème du circuit. |
+| `scripts.js` | Scripts de circuit (lot 12) : des déclencheurs posés sur une case du circuit. Quand la voiture passe dessus, UN effet visuel ou sonore se produit (message, moment de la journée, météo, brume, musique, éclat, secousse, son). Hors signature (comme l'ambiance) : ni records, ni vérification, ni physique. |
 | `simulation.js` | Simulation d'une course : UNE voiture (CarPhysics), ses règles (RaceLogic) et l'enchaînement exact d'un pas, en un seul endroit. |
 | `skids.js` | Traces de pneus : bandes sombres posées sur la route pendant les glisses et les gros freinages. |
 | `storage.js` | Persistance locale (navigateur) : réglages, records + fantômes, circuits perso. |
@@ -76,9 +84,11 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `tracks.js` | Circuits intégrés (créations originales), décrits avec le constructeur "tortue" (voir scriptTrack dans track.js). Les temps de médailles sont en secondes. |
 | `trail.js` | Traînée lumineuse du véhicule (cosmétique) : un ruban derrière la voiture, TOUJOURS présent (même à l'arrêt, très discret), dont l'intensité, la longueur et la largeur suivent la vitesse et le boost. Un ruban 3D avec une opacité par sommet (additif) : pas de particules qui apparaissent et disparaissent. |
 | `ui.js` | Interface DOM : écrans, HUD, fenêtres modales, notifications. |
+| `uitheme.js` | Thèmes et disposition de l'interface (lot 11) : couleurs, police, arrondis, compteur de vitesse, taille et place des éléments du HUD. |
 | `verify.js` | Vérification d'une course (classements en ligne). Module sans rendu ni navigateur : il est utilisé par la fonction serveur Supabase (supabase/functions/submit-score), qui le charge depuis le site du jeu. La physique étant déterministe, rejouer les commandes enregistrées redonne exactement la même course et le même temps. |
 | `version.js` | Numéros de version du jeu (une seule source). |
 | `videoExport.js` | Export d'un replay en vidéo : le canvas 3D est enregistré (MediaRecorder) pendant que le replay se joue, puis proposé en téléchargement (WebM). |
+| `weather.js` | Météo décorative (lot 12) : pluie, neige, braises, poussière, pétales. Un nuage de points qui suit la caméra ; aucun effet sur la course. |
 | `welcome.js` | Écran d'accueil : le menu principal ne s'ouvre qu'une fois le pseudo défini. |
 
 ## `js/app/`
@@ -88,25 +98,35 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `academy.js` | Académie : menu des six leçons, introduction de chaque leçon, bilan à l'arrivée. Les données et les règles sont dans academy.js. |
 | `community.js` | Communauté : partage, classements en ligne, publication, import de circuits et de fantômes, aide. |
 | `editorFlow.js` | Passages entre le menu et l'éditeur : ouverture, aide, retour, essai d'un circuit. |
+| `modes.js` | Modes de jeu, règles de partie et paquets (lot 13) : l'interface. Les règles et validations sont dans rules.js et mods.js. Ces méthodes s'ajoutent au prototype de App. |
 | `multi.js` | Multijoueur : salons (privés par code, ou publics), circuit commun, lobby, départ en course à plusieurs, classement du salon, championnat (manches). |
 | `profile.js` | Profil : compte, sauvegardes, import et export de sauvegarde. |
 | `rewards.js` | Récompenses côté application : rassembler les compteurs (médailles, leçons, défis du jour…), donner ce qui est mérité, afficher le titre choisi dans le profil. |
 | `screens.js` | Écrans de liste : carrière, circuits du joueur, défi du jour, circuit suivant, menu, tutoriel. |
 | `settings.js` | Réglages : qualité graphique et banc d'essai, commandes (clavier, manette), options, accessibilité. |
 | `shared.js` | Éléments partagés par les familles de méthodes de App (voir main.js). |
+| `uicustom.js` | Personnalisation de l'interface (lot 11) : thème, couleurs, police, compteur de vitesse, éditeur de HUD (glisser-déposer) et éditeur de caméras. |
 | `wiring.js` | Branchement de l'interface : clics, actions du menu, de l'éditeur, tactile, manette, clins d'œil cachés. |
 
 ## `js/editor/`
 
 | Fichier | Rôle |
 | --- | --- |
+| `cdeco.js` | « Mes pièces » : l'atelier de pièces décoratives de l'éditeur (lot 12). On assemble des formes simples, on voit la pièce de face et de dessus, on l'enregistre dans sa bibliothèque, puis on la pose comme n'importe quelle décoration. Les règles sont dans customDeco.js. Ces méthodes s'ajoutent au prototype de EditorSession. |
 | `history.js` | État du circuit dans l'éditeur : instantanés, annuler / rétablir, enregistrement, nouveau circuit, essai. |
 | `palette.js` | Palette de l'éditeur : boutons d'outils, familles de pièces, options, paramètres, aide à la compatibilité, menu. |
 | `pointer.js` | Souris, tactile et manette dans l'éditeur : événements, survol, aperçu de la pose, case et décoration visées. |
 | `prefabs.js` | Onglet « Prefabs » de la palette : coller un morceau tout fait (chicane, saut, looping…), enregistrer SA sélection sous un nom, la partager par code, importer le code d'un ami. |
+| `scriptsUi.js` | Déclencheurs de circuit dans l'éditeur (lot 12) : on pose des effets visuels et sonores sur des cases ; la voiture les joue en passant dessus. |
 | `selection.js` | Sélection rectangulaire, copier / couper / coller, vue par niveau et repérage des problèmes. |
 | `shared.js` | Éléments partagés par les familles de méthodes de EditorSession (voir editor.js). |
 | `tools.js` | Outils d'édition : poser, peindre, remplir, gomme, pipette, options des pièces, décorations, niveau. |
+
+## `js/garage/`
+
+| Fichier | Rôle |
+| --- | --- |
+| `studio.js` | Atelier du garage (lot 10) : éditeur de voiture libre. Onglets : Pièces, Peinture, Dessin, Effets, Code. |
 
 ## `js/i18n/`
 
@@ -120,6 +140,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 
 | Fichier | Rôle |
 | --- | --- |
+| `custom.js` | Dictionnaire anglais — personnalisation : atelier de voiture (lot 10), interface et caméras (lot 11), décors et scripts (lot 12), règles et mods (lot 13). |
 | `data.js` | Dictionnaire anglais — les données du jeu : noms des circuits intégrés, libellés des commandes et des touches. |
 | `editor.js` | Dictionnaire anglais — l'éditeur de circuits : barre d'outils, palette, options, niveau, sélection, prefabs, raccourcis, messages. |
 | `online.js` | Dictionnaire anglais — la vie autour de la course : Académie, récompenses, garage, communauté, multijoueur, erreurs du serveur. |
@@ -170,6 +191,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `ghosts.js` | Fantômes : record personnel enregistré, fantômes simulés (or, importé), orientation et affichage. |
 | `net.js` | Multijoueur dans la course : voitures des autres joueurs et envoi de l'état local. |
 | `replayMode.js` | Mode replay : lecture à vitesse variable, pause, interface et fin du replay. |
+| `scriptsRun.js` | Exécution des scripts de circuit (lot 12) pendant la course : voir js/scripts.js. Effets visuels et sonores seulement. Ces méthodes s'ajoutent au prototype de RaceSession. |
 | `shared.js` | Éléments partagés par les familles de méthodes de RaceSession (voir race.js). |
 
 ## `js/scenery/`
