@@ -71,14 +71,22 @@ Règles pour tout fichier du noyau (la fermeture des imports de `js/verify.js` :
 - pas d'horloge ni de hasard (le défi du jour dérive d'une graine, la date UTC est une entrée) ;
 - `abs`, `min`, `max`, `floor`, `round`, `trunc`, `sign`, `sqrt` restent permis : leur résultat est imposé.
 
-`tools/phys-fingerprint.mjs` rejoue 161 scénarios (pilote automatique et commandes pseudo-aléatoires sur les 66 circuits, défis du jour, obstacles, pièces mobiles, bifurcation, revêtements, véhicules) et
+`tools/phys-fingerprint.mjs` rejoue 173 scénarios (pilote automatique et commandes pseudo-aléatoires sur les 72 circuits, défis du jour, obstacles, pièces mobiles, bifurcation, revêtements, véhicules) et
 condense l'état exact de la voiture (bits des flottants) en un hachage par scénario, enregistré dans `tools/phys-fingerprint.json`. L'empreinte doit être **identique sous Node, Deno et Chromium** : la CI
 la recalcule sous Deno (`deno run -A tools/phys-fingerprint.mjs`) et dans un navigateur (`tools/test-browser.mjs`).
+
+### Compatibilité avec ce que les joueurs ont déjà
+
+L'empreinte garde la physique ; le **corpus de compatibilité** (`tools/compat/corpus.json`, figé par `node tools/compat-gen.mjs --update`) garde tout le reste :
+les clés de classement des 72 circuits intégrés, des défis du jour passés, des codes de circuit de tous les formats (SHW1, SHW2, SHW3 v3 et v4, lien de partage),
+les codes de partage (SHG1, SHC1, SHD1, SHM1, SHX1, SHP1), des courses enregistrées avec leur temps exact (retour au checkpoint compris), d'anciens réglages
+et la fusion des sauvegardes. `tools/test-compat.mjs` (`npm test`) relit tout avec le code actuel. Un champ **ajouté** est permis ; un champ perdu, une clé
+ou un temps changé fait échouer le test. Ne régénérer le corpus que pour un changement voulu, annoncé dans le CHANGELOG.
 
 ### Changer la physique (la procédure)
 
 1. Modifier le code, puis incrémenter `PHYS_VER` dans `js/version.js`.
-2. `node tools/phys-fingerprint.mjs --update` (nouvelle empreinte), `node tools/golden.mjs` (les temps de référence des 66 circuits ont-ils bougé ? `--update` si c'est voulu) puis `node tools/medals.mjs --check` (médailles).
+2. `node tools/phys-fingerprint.mjs --update` (nouvelle empreinte), `node tools/golden.mjs` (les temps de référence des 72 circuits ont-ils bougé ? `--update` si c'est voulu) puis `node tools/medals.mjs --check` (médailles) et `node tools/compat-gen.mjs --update` (les temps du corpus).
 3. `npm run build:function` et `npm run sw` (fichiers générés), `npm test`.
 4. **Redéployer la fonction `submit-score`** : sans cela, le serveur rejoue l'ancienne physique et refuse les nouveaux temps. Les records d'avant ne sont plus rejouables (leur `pv` diffère) : ils restent affichés comme temps.
 
@@ -120,16 +128,17 @@ hors ligne ; il est « réseau d'abord » pour récupérer les mises à jour ; s
 | `supabase/functions/submit-score/index.ts` | `npm run build:function` | CI (`git diff --exit-code`) |
 | `tools/phys-fingerprint.json` | `node tools/phys-fingerprint.mjs --update` | `npm test`, CI (Node, Deno, Chromium) |
 | `tools/golden-temps.json` | `node tools/golden.mjs --update` | `tools/test-niveaux.mjs` |
+| `tools/compat/corpus.json` | `node tools/compat-gen.mjs --update` (changement voulu seulement) | `tools/test-compat.mjs` (`npm test`) |
 | `docs/MODULES.md` | `npm run docs` | `tools/check-docs.mjs` (`npm test`) |
 | `docs/FICHE-ESSAI.md` | `node tools/fiche-essai.mjs` | — |
 
 ## Tests et outils
 
-- `npm test` : `tools/run-tests.mjs` lance chaque `tools/test-*.mjs` dans son processus, en parallèle (~17 s), plus les contrôles (`check-generated`, `check-docs`, `phys-fingerprint`, `audit-pieces`, `sim` : les 66 circuits au pilote automatique).
+- `npm test` : `tools/run-tests.mjs` lance chaque `tools/test-*.mjs` dans son processus, en parallèle (~17 s), plus les contrôles (`check-generated`, `check-docs`, `phys-fingerprint`, `audit-pieces`, `sim` : les 72 circuits au pilote automatique).
   Un échec n'arrête pas les autres. Harnais commun : `tools/harness.mjs`.
 - Par thème : `test-physics`, `test-vitesse-et-murs`, `test-pentes-murs`, `test-maniabilite` (physique, pentes, murs, plafond, véhicules), `test-familles`, `test-pieces-speciales`, `test-pot-peinture` (modèle de pièces, éditeur), `test-textes-et-style` (textes, CSS), `test-simulation` (pas de simulation, fantômes), `test-dmath` et `test-determinisme` (mathématiques et règles du noyau),
   `test-scale` (échelle, bifurcation), `test-circuit` / `test-registres` (modèle de circuit, ordres de sérialisation), `test-editor` / `test-pick` (éditeur), `test-contrats` (ce que l'inspecteur attend de l'éditeur, l'application de ses sessions, familles de méthodes sans doublon), `test-trackview` / `test-mesh` (maillage), `test-net` (multijoueur),
-  `test-account` / `test-records` (comptes, records), `test-submit-handler` (fonction serveur), `test-niveaux` (les 66 circuits : contrat, profils, médailles).
+  `test-account` / `test-records` (comptes, records), `test-submit-handler` (fonction serveur), `test-niveaux` (les 72 circuits : contrat, profils, médailles), `test-compat` (corpus de compatibilité).
 - Hors `npm test` : `npm run test:browser` (Chromium via Playwright, ignoré s'il est absent), `npm run test:deno` (même physique sous Deno), `npm run test:sql` (PostgreSQL), `npm run lint` (ESLint).
 - Atelier de level design : `tools/lab.mjs` (carte, profil de vitesse, typologie), `tools/contract.mjs`, `tools/medals.mjs`, `tools/golden.mjs`, `tools/difficulte.mjs`, `tools/maniabilite.mjs`.
 - **CI** (`.github/workflows/test.yml`) : `test` (lint, tests, fichiers générés), `deno` (même physique que Node), `browser` (Playwright), `sql` (PostgreSQL 16).
