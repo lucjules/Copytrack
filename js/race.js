@@ -5,6 +5,7 @@ import { CamFlip } from './camflip.js';
 import { MSG } from './hudMessages.js';
 import { SEND_EVERY_STEPS, F_FINISHED } from './net/snapshot.js';
 import { ProgressTracker, gridSpawn } from './net/progress.js';
+import { speedLines, slipstream, rumbleLevels, PassTracker } from './feel.js';
 import { Simulation } from './simulation.js';
 import { SURFACES } from './pieces.js';
 import { Autopilot } from './autopilot.js';
@@ -59,6 +60,8 @@ export class RaceSession {
     // Fantômes simulés (or, importé).
     this.ghosts = [];
     this.rivals = [];       // fantômes du haut d'un classement en ligne (setRivals)
+    // Ressenti de course (feel.js) : visuel, sonore et tactile seulement. punchT / dipT : secondes depuis le dernier coup de turbo / la dernière réception forte (dipI : son intensité).
+    this._feel = { punchT: 99, dipT: 99, dipI: 0, slip: 0, pass: new PassTracker(), rumbleAt: 0, self: { x: 0, z: 0, fx: 0, fz: -1, speed: 0 }, others: [] };
     // Multijoueur (opts.multi = { room, startLocal }) : pas de fantômes enregistrés, des voitures distantes à la place.
     this.multi = opts.multi || null;
     this.cup = this.multi && this.multi.cup || null;          // manche d'un championnat : { n, total, slot, count, roster, collisions } (départ commun sur une grille)
@@ -250,6 +253,8 @@ export class RaceSession {
       app.audio.boost();
       this.shake = Math.max(this.shake, 0.25);
     }
+    if (ev.boostHit || ev.miniTurbo) this._feel.punchT = 0;                      // coup de champ de vision (feel.js)
+    if (ev.land > 4) { this._feel.dipT = 0; this._feel.dipI = ev.land; }          // tassement de la caméra à la réception
     if (ev.wall > 3) {
       app.audio.thud(ev.wall);
       app.input.rumble(Math.min(1, ev.wall * 0.06), 0.4, 140);
@@ -550,19 +555,50 @@ export class RaceSession {
     }
     app.scenery.update(this.renderPos, app.camera);
 
+    this._feelUpdate(dt);
     // Audio & HUD
     if (this.state === 'racing') {
-      app.audio.engine({ speed: p.fwdSpeed, throttle: !!inp.throttle, slip: p.grounded ? p.slip : 0, boost: boosting });
+      app.audio.engine({ speed: p.fwdSpeed, throttle: !!inp.throttle, slip: p.grounded ? p.slip : 0, boost: boosting, draft: this._feel.slip * this._feelScale() });
       app.audio.music.setSpeed(boosting ? 1.2 : Math.min(1, Math.max(0, p.fwdSpeed) / 50));
     }
     if (!this.demo) {
       const hud = app.ui.hud;
       if (this.replay && this.state === 'finished') { hud.speed(Math.abs(p.fwdSpeed) * 3.6, p.boost); return; }
-      // Effet de vitesse au-delà de 180 km/h.
-      const fx = app.settings.speedFx !== false ? Math.max(0, Math.min(1, (Math.abs(p.fwdSpeed) - 62) / 38)) : 0;
+      // Lignes de vitesse GRADUÉES (dès 126 km/h, plein effet vers 360 km/h) ; l'aspiration derrière une voiture les renforce (feel.js). Réglage « Sensations » : 0 = aucune de ces nouveautés.
+      const sc = this._feelScale();
+      const base = app.settings.speedFx !== false ? speedLines(p.fwdSpeed) : 0;
+      const fx = sc > 0 ? Math.min(1, Math.max(base * sc, this._feel.slip * 0.6 * sc)) : app.settings.speedFx !== false ? Math.max(0, Math.min(1, (Math.abs(p.fwdSpeed) - 62) / 38)) : 0;
       app.ui.speedFx(fx * (this.camMode === 2 ? 1 : 0.8));
       if (this.state === 'racing') hud.time((this.logic.steps + alpha) * DT);
       hud.speed(Math.abs(p.fwdSpeed) * 3.6, p.boost);
+    }
+  }
+
+  // Ressenti : fait avancer les minuteries, mesure l'aspiration et les croisements, fait vibrer la manette. Aucun effet sur la physique.
+  _feelUpdate(dt) {
+    const F = this._feel, sc = this._feelScale(), p = this.phys;
+    F.punchT += dt; F.dipT += dt;
+    if (sc <= 0 || this.demo || this.state === 'countdown' || this.state === 'paused') { F.slip += (0 - F.slip) * Math.min(1, dt * 6); return; }
+    const gp = this.renderPos;
+    const fwdX = -Math.sin(p.yaw), fwdZ = -Math.cos(p.yaw);
+    const self = F.self; self.x = gp.x; self.z = gp.z; self.fx = fwdX; self.fz = fwdZ; self.speed = p.fwdSpeed;
+    // Les autres voitures visibles : fantômes (record, or, importé), rivaux du classement, joueurs distants.
+    const others = F.others; others.length = 0;
+    const add = (id, g) => { if (g && g.visible) others.push({ id, x: g.position.x, z: g.position.z, speed: 0 }); };
+    add('rec', this.ghostCar.group);
+    this.ghosts.forEach((g, i) => add('g' + i, g.car.group));
+    this.rivals.forEach((r, i) => add('r' + i, r.car.group));
+    for (const [id, rc] of this.remote) add('m' + id, rc.group);
+    const target = this.state === 'racing' && p.grounded ? slipstream(self, others) : 0;
+    F.slip += (target - F.slip) * Math.min(1, dt * 6);
+    if (this.replay || this.state !== 'racing') return;
+    if (F.pass.update(self, others, dt)) this.app.audio.whoosh();
+    // Vibrations de manette graduées : toutes les 110 ms au plus.
+    const now = performance.now();
+    if (now - F.rumbleAt > 110) {
+      F.rumbleAt = now;
+      const lv = rumbleLevels({ speed: p.fwdSpeed, slip: p.grounded ? p.slip : 0, offTrack: !!p.offTrack, boosting: p.boost > 0, grounded: p.grounded, scale: sc });
+      if (lv.strong + lv.weak > 0.03) this.app.input.rumble(lv.strong, lv.weak, 140);
     }
   }
 

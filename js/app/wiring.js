@@ -65,6 +65,7 @@ export const wiringMethods = {
     };
     slider('opt-fov', 'fovAdd', fovText);
     slider('opt-shake', 'shakeAmt', (v) => Math.round(v * 100) + ' %');
+    slider('opt-feel', 'feel', (v) => Math.round(v * 100) + ' %');
     slider('opt-ui', 'uiScale', (v) => Math.round(v * 100) + ' %');
     $('opt-touch').addEventListener('change', (e) => {
       this.settings.touchMode = e.target.value;

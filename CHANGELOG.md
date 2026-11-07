@@ -6,6 +6,21 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.20 — le ressenti de course : de la ponctuation autour de la conduite
+
+`PHYS_VER` inchangé (26) ; rien à redéployer. **Rien ici ne touche à la physique** : la voiture roule exactement pareil avec ou sans (empreinte de physique, records et replays identiques) ; ce sont des retours visuels, sonores et tactiles.
+
+- **Lignes de vitesse graduées** : elles naissent dès 126 km/h et montent jusqu'au plein effet vers 360 km/h (avant : rien avant 223 km/h, puis tout d'un coup).
+- **Coup de champ de vision** (+5°, retombe en 0,4 s) au départ d'un turbo ou d'un mini-turbo.
+- **Tassement de la caméra à la réception** : plus le choc est fort, plus elle descend (jusqu'à 65 cm), puis remonte doucement.
+- **Aspiration** : rouler derrière une autre voiture (fantôme du record, fantôme d'or ou importé, rival du classement, joueur distant), dans son axe et à moins de 30 m, renforce les lignes de vitesse et fait siffler le vent.
+- **Vibrations de manette graduées** (avant : seulement des coups ponctuels) : un grondement léger qui monte avec la vitesse, plus fort hors piste et en dérapage, des pulsations en turbo.
+- **Bruit de croisement** quand on double ou croise une autre voiture à moins de 6 m en travers.
+- **Réglage « Sensations de course »** (Profil › Options, 0 à 150 %, 100 % par défaut) : à 0, aucun de ces effets (et les lignes de vitesse reviennent à l'ancien comportement).
+- `js/feel.js` : fonctions pures (sans rendu), testées. **Limite assumée** : ces dosages (intensités, durées, seuils) sont raisonnables d'après les ordres de grandeur du jeu mais **n'ont pas été jugés à la manette** : c'est le seul point du diagnostic qui demande un joueur
+  aux commandes ; le réglage « Sensations » et les constantes en tête de `feel.js` sont faits pour être ajustés.
+- Tests : `tools/test-ressenti.mjs` ; test navigateur (coup de FOV, aspiration, vibrations, réglage à 0).
+
 ## Bêta 0.9.19 — l'éditeur : des prefabs et une ambiance par circuit
 
 `PHYS_VER` inchangé (26) ; rien à redéployer côté serveur.

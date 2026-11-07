@@ -334,6 +334,35 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  await test('ressenti de course : coup de FOV au turbo, aspiration derrière une voiture, vibrations graduées ; le réglage « Sensations » à 0 coupe tout', async () => {
+    await app(() => { window.copytrack.settings.feel = 1; window.copytrack.playBuiltin(0); });
+    await waitApp(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    const rumbles = await app(() => { window.__rumble = 0; const i = window.copytrack.input, o = i.rumble.bind(i); i.rumble = (...a) => { window.__rumble++; return o(...a); }; return 0; });
+    assert.equal(rumbles, 0);
+    await page.keyboard.down('ArrowUp'); await page.waitForTimeout(1500);
+    const fov0 = await app(() => window.copytrack.camera.fov);
+    await app(() => { window.copytrack.session._feel.punchT = 0; });
+    await page.waitForTimeout(120);
+    const fov1 = await app(() => window.copytrack.camera.fov);
+    assert.ok(fov1 > fov0 + 0.4, `coup de FOV : ${fov0.toFixed(2)} -> ${fov1.toFixed(2)}`);
+    // Une voiture 12 m devant, dans l'axe : l'aspiration monte et renforce les lignes de vitesse.
+    await app(() => { const s = window.copytrack.session, y = s.phys.yaw, p = s.renderPos; s.remote.set('fantome', { group: { visible: true, position: { x: p.x - Math.sin(y) * 12, z: p.z - Math.cos(y) * 12 } }, update() {}, dispose() {} }); });
+    await page.waitForTimeout(600);
+    const slip = await app(() => window.copytrack.session._feel.slip);
+    assert.ok(slip > 0.15, 'aspiration : ' + slip);
+    assert.ok(await app(() => window.__rumble) > 0, 'la manette a reçu des vibrations graduées');
+    // Réglage à zéro : l'aspiration retombe, plus de coup de FOV de la part de ce réglage.
+    await app(() => { window.copytrack.settings.feel = 0; });
+    await page.waitForTimeout(900);
+    assert.ok(await app(() => window.copytrack.session._feel.slip) < 0.05, 'plus d\'aspiration à 0 %');
+    const before = await app(() => window.__rumble); await page.waitForTimeout(500);
+    assert.equal(await app(() => window.__rumble), before, 'plus de vibrations à 0 %');
+    await page.keyboard.up('ArrowUp');
+    await app(() => { const s = window.copytrack.session; s.remote.delete('fantome'); window.copytrack.settings.feel = 1; });
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
   await test('éditeur : ambiance du circuit (nuit, brume épaisse) appliquée à la scène et gardée dans le code ; prefabs : coller un morceau fourni, enregistrer sa sélection, exporter, supprimer, importer', async () => {
     await app(() => { window.copytrack.settings.editorGuided = null; window.copytrack.openEditor({ name: 'Essai prefabs', code: null, fresh: true }); });
     await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.openParams, null, 20000);

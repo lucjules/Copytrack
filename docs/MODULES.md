@@ -34,6 +34,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `editorPick.js` | Sélection par rayon dans l'éditeur, avec calques. |
 | `editorTools.js` | Outils de l'éditeur (v1.5) : sélection de zone et presse-papiers, vérificateur de circuit, miniatures vues de dessus. Aucun rendu 3D ici : seulement des données. |
 | `families.js` | Familles de pièces et « caractéristiques » (Phase 2). |
+| `feel.js` | Ressenti de course (0.9.20) : de petits retours visuels, sonores et tactiles qui ponctuent la conduite, calculés d'après l'état de la voiture. Tout est VISUEL / SONORE / TACTILE : rien ici ne touche à la physique, aux temps ni aux replays (la voiture roule exactement pareil avec ou sans). Fonctions pures, sans rendu : race.js les appelle et applique le résultat (caméra, HUD, audio, manette). |
 | `garage.js` | Garage : personnalisation purement visuelle du véhicule (forme, couleurs, LED, dessins, ornements, ailerons, roues). Aucune option ne change les performances. |
 | `geo.js` | Petit constructeur de géométrie low-poly (triangles non indexés + couleurs par sommet => rendu "facetté" en un seul appel de dessin). |
 | `ghostFormat.js` | Format des fantômes enregistrés : une pose (x, y, z + quaternion) tous les GHOST_EVERY pas de course, plus la liste des changements de véhicule. |
