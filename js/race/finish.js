@@ -71,6 +71,11 @@ export const finishMethods = {
       app.onAcademyFinished(this, time);
       return;
     }
+    if (this.opts.mode) {          // mode de jeu du joueur : ni record, ni pièces, ni classement ; le bilan est celui des modes
+      app.audio.finish(false);
+      app.onModeFinished(this, time);
+      return;
+    }
     if (this.cup) {
       // Championnat : le temps part à tous, l'hôte clôt la manche ; la place et les points s'affichent dans le panneau de manche (app/multi.js).
       this._sendNet(F_FINISHED);

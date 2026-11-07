@@ -13,6 +13,11 @@ test('valeurs inconnues ou hors bornes : retour aux valeurs sûres', () => {
   assert.deepEqual(u.hud, { top: [48, -48] }); assert.deepEqual(u.hide, { hint: true });
   assert.deepEqual(sanitizeUi(null), DEFAULT_UI); assert.deepEqual(sanitizeUi('x'), DEFAULT_UI);
 });
+test('noms hérités de Object (__proto__, constructor…) : refusés comme n\'importe quelle valeur inconnue', () => {
+  const u = sanitizeUi({ theme: '__proto__', font: 'constructor', speedo: 'toString', timer: 'hasOwnProperty' });
+  assert.deepEqual([u.theme, u.font, u.speedo, u.timer], ['default', 'default', 'default', 'normal']);
+  assert.doesNotThrow(() => themeVars({ theme: '__proto__', font: 'constructor' }));
+});
 test('les variables CSS produites sont toutes connues (aucune ne reste posée après un changement de thème)', () => {
   for (const id of Object.keys(THEMES)) for (const k of Object.keys(themeVars({ theme: id, accent: '#112233', accent2: '#445566', panelA: 0.5, radius: 8, font: 'mono', hud: { top: [1, 2], br: [3, 4] } }))) assert.ok(CSS_VARS.includes(k), id + ' ' + k);
   for (const k of Object.keys(HUD_PIECES)) assert.ok(CSS_VARS.includes('--hx-' + k) && CSS_VARS.includes('--hy-' + k));

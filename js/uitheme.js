@@ -29,14 +29,14 @@ export const DEFAULT_UI = { theme: 'default', accent: '', accent2: '', panelA: 0
 export function sanitizeUi(u) {
   const o = u && typeof u === 'object' ? u : {};
   const out = {
-    theme: THEMES[o.theme] ? o.theme : 'default',
+    theme: Object.hasOwn(THEMES, o.theme) ? o.theme : 'default',
     accent: HEX.test(o.accent || '') ? o.accent.toLowerCase() : '',
     accent2: HEX.test(o.accent2 || '') ? o.accent2.toLowerCase() : '',
     panelA: o.panelA ? Number(clamp(o.panelA, 0.3, 1, 0).toFixed(2)) : 0,         // 0 : opacité du thème
     radius: o.radius >= 0 ? Math.round(clamp(o.radius, 0, 28, 0)) : -1,            // -1 : arrondis d'origine
-    font: FONTS[o.font] ? o.font : 'default',
-    speedo: SPEEDOS[o.speedo] ? o.speedo : 'default',
-    timer: TIMERS[o.timer] ? o.timer : 'normal',
+    font: Object.hasOwn(FONTS, o.font) ? o.font : 'default',
+    speedo: Object.hasOwn(SPEEDOS, o.speedo) ? o.speedo : 'default',
+    timer: Object.hasOwn(TIMERS, o.timer) ? o.timer : 'normal',
     hudScale: Number(clamp(o.hudScale, 0.7, 1.5, 1).toFixed(2)),
     hud: {}, hide: {},
   };

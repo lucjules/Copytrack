@@ -6,6 +6,17 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.25 — règles de partie, modes de jeu à toi et paquets de personnalisation
+
+`PHYS_VER` inchangé (26) ; **`NET_VER` passe à 3** (nouveau message « rules » du salon : tout le monde doit recharger la page pour jouer ensemble). Rien à redéployer côté serveur. **Aucune voiture ne change de performances** et aucune physique nouvelle : une règle n'est qu'un réglage que les circuits savent déjà porter (gravité, véhicule et vitesse de départ, hors-piste, tours) ou le retrait des obstacles.
+
+- **Règles de la partie** (salon multijoueur, l'hôte) : gravité de départ, véhicule de départ, vitesse de départ, hors-piste, nombre de tours (circuits fermés), **sans obstacles**, **voitures identiques** (même apparence pour tous, la tienne comprise). Envoyées à tous (et à chaque arrivant), **revalidées à la réception**, appliquées au circuit de chacun ; un invité ne peut pas en imposer. `js/rules.js`.
+- **Modes de jeu** (nouveau bouton **Modes** du menu) : un mode = des règles + un **objectif** (les objectifs bonus de la carrière : sans muret, sans réapparition, N réceptions parfaites, N mini-turbos, N anneaux, finir en moto/bateau/deltaplane, finir sous un temps) + un nom. Six modes fournis (*Sauts lunaires*, *Pieds de plomb*, *Route libre*, *Tout en moto*, *Départ lancé*, *Marathon*), création et modification des siens (20), jeu sur le circuit de son choix (intégré ou à soi), bilan « réussi / raté », **code `SHM1:`** à partager. Pas de records, pas de classement (le circuit transformé n'est plus celui des classements) et **pas de pièces à gagner** : sinon un mode « 1 000 pièces pour rien » casserait l'économie.
+- **Paquets (mods)** (Modes › Paquets) : un code **`SHX1:`** regroupe ma voiture, mon interface, mes caméras, mes pièces décoratives et mes modes. **Rien d'exécutable** : chaque morceau repasse par le valideur de son module (champ inconnu ignoré, valeur bornée, 30 000 caractères au plus), l'import se fait élément par élément (cases à cocher) et **les éléments payants du catalogue ne sont pas offerts** (remplacés par l'élément d'origine). `js/mods.js`.
+- **Corrigé au passage** : `Object.hasOwn` pour les noms de thème, de police, de compteur et d'objectif (un thème « __proto__ » aurait fait planter l'application de l'interface) ; la copie d'un circuit intégré par une règle garde sa ligne centrale (classement en direct) et la refait pour un autre nombre de tours.
+- **Limites assumées** : les modes se partagent par code, pas par un serveur (aucune publication en ligne) ; les règles ne couvrent pas la gravité en cours de course (ce serait de la physique) ; « voitures identiques » ne change que l'apparence ; la personnalisation de la voiture n'est toujours pas envoyée aux autres joueurs.
+- Tests : `tools/test-modes.mjs`, `tools/test-manche.mjs` (règles du salon), `tools/test-interface.mjs` (noms hérités) ; test navigateur (modes, bilan, paquet exporté puis réimporté, règle appliquée chez les deux joueurs d'un championnat).
+
 ## Bêta 0.9.24 — des décors réglables, tes propres pièces, des effets sur le circuit
 
 `PHYS_VER` inchangé (26) ; rien à redéployer. **Rien ici ne touche à la conduite** : tout est visuel ou sonore, hors signature (changer un décor, une pièce ou un déclencheur ne fait perdre ni la vérification ni les records).

@@ -13,7 +13,7 @@ import { TrackView } from './trackMesh.js';
 import { createCar } from './carModel.js';
 import { getRecord, decodeFloats } from './storage.js';
 import { profile } from './profile.js';
-import { CATALOG } from './cosmetics.js';
+import { CATALOG, DEFAULT_LOADOUT } from './cosmetics.js';
 import { SkidMarks } from './skids.js';
 import { TrailRibbon } from './trail.js';
 import { InputRecorder, decodeInputs, inputAt, quantSteer } from './replay.js';
@@ -46,7 +46,9 @@ export class RaceSession {
     this.sim = new Simulation(track, { partial: !!opts.spawn });
     this.phys = this.sim.phys;
     this.logic = this.sim.logic;
-    this.car = createCar(profile().loadout);
+    // Voitures identiques (règle de la partie) : tout le monde, moi compris, avec l'apparence d'origine.
+    const sameCars = opts.multi && opts.multi.room.rules && opts.multi.room.rules.sameCars;
+    this.car = createCar(sameCars ? DEFAULT_LOADOUT : profile().loadout);
     this.fx = profile().loadout.custom.fx;                       // effets du joueur (custom.js) : traînée, étincelles, fumée, voix
     app.audio.setVoice(this.fx);
     app.scene.add(this.car.group);

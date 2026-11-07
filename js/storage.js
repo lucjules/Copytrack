@@ -247,6 +247,21 @@ export function saveCustomDeco({ id, name, parts }) {
 }
 export function deleteCustomDeco(id) { write('cdecos', listCustomDecos().filter((p) => p.id !== id)); }
 
+// ---- Modes de jeu du joueur (rules.js) : jusqu'à MAX_MODES ; ils se partagent par le code « SHM1: » ----
+export const MODES_MAX = 20;
+export function listModes() {
+  const l = read('modes', []);
+  return Array.isArray(l) ? l.filter((m) => m && typeof m.id === 'string' && typeof m.name === 'string' && m.rules && typeof m.rules === 'object').slice(0, MODES_MAX) : [];
+}
+export function saveMode(mode) {
+  const entry = { id: String(mode.id).slice(0, 30), name: String(mode.name).slice(0, 24), desc: String(mode.desc || '').slice(0, 100), rules: mode.rules, goal: mode.goal || null, updated: Date.now() };
+  const list = listModes().filter((m) => m.id !== entry.id);
+  list.unshift(entry);
+  write('modes', list.slice(0, MODES_MAX));
+  return entry;
+}
+export function deleteMode(id) { write('modes', listModes().filter((m) => m.id !== id)); }
+
 export function deleteMyTrack(id) {
   write('tracks', listMyTracks().filter((t) => t.id !== id));
   // Pierre tombale : sans elle, la synchronisation du compte ressusciterait le circuit depuis un autre appareil.

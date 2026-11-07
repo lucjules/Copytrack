@@ -34,6 +34,7 @@ import { profileMethods } from './app/profile.js';
 import { wiringMethods } from './app/wiring.js';
 import { editorFlowMethods } from './app/editorFlow.js';
 import { uiCustomMethods } from './app/uicustom.js';
+import { modesMethods } from './app/modes.js';
 
 const MENU_FPS_CAP = 30;     // images par seconde au plus dans les menus
 
@@ -178,6 +179,7 @@ class App {
     const opts = this.session ? this.session.opts : {};
     if (opts.multi) { this._leaveRaceToLobby(opts.multi.room); return; }
     if (opts.academy) { this.showMenu('menu'); this.academyMenu(); return; }
+    if (opts.mode) { this.showMenu('menu'); this.modesMenu(); return; }
     if (opts.fromEditor) this.openEditor(this.editorState);
     else if (opts.builtinIndex != null || opts.daily) this.showMenu('tracks');
     else if (opts.userEntry) this.showMenu('mytracks');
@@ -358,7 +360,7 @@ class App {
 }
 
 // Les familles de méthodes vivent dans app/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(App.prototype, multiMethods, academyMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods);
+Object.assign(App.prototype, multiMethods, academyMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods);
 
 
 // Application installable et jouable hors ligne (service worker), si le contexte le permet.

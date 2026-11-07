@@ -51,6 +51,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `main.js` | Point d'entrée : crée le moteur de rendu et orchestre menu / course / éditeur. |
 | `mathutil.js` | Petits utilitaires numériques partagés (la physique, l'audio, les traînées). Ne dépend de rien. |
 | `medals.js` | Médailles : leur ordre (de la meilleure à la moins bonne) et leur attribution selon un temps. |
+| `mods.js` | Paquets de personnalisation « mods » (lot 13) : un seul code « SHX1: » qui regroupe ma voiture, mon interface, mes caméras, mes pièces décoratives et mes modes. |
 | `music.js` | Musique du jeu : le menu joue le MP3 déposé dans assets/music-menu.mp3 (en boucle ; sans ce fichier, repli sur un groove house synthétisé) ; les courses jouent une musique chill synthétisée (AudioEngine.js) dont l'intensité suit la vitesse. |
 | `obstacleMesh.js` | Modèles 3D animés des obstacles (voir obstacles.js pour la physique). |
 | `obstacles.js` | Obstacles (0.9) : objets posés librement comme les décorations, mais qui comptent pour la physique. Leur mouvement ne dépend que du chrono de la course (pas fixe), donc il est identique en course, en replay, après un retour au checkpoint et dans la vérification en ligne. Ce module n'a aucune dépendance au rendu. |
@@ -68,6 +69,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `replay.js` | Replays et fantômes (v1.5). La physique est déterministe (pas fixe) : il suffit d'enregistrer les commandes de chaque pas pour rejouer une course à l'identique. |
 | `rewards.js` | Récompenses (0.9.18) : titres affichés au classement, éléments EXCLUSIFS du garage (qui ne s'achètent pas), collections à thème. Données et règles pures : le contexte (médailles, défis, leçons…) est rassemblé par app/rewards.js, ici on décide seulement ce qui est mérité. Rien ne touche à la physique ni aux temps : tout est visuel. |
 | `ribbons.js` | Rubans 3D : toute portion de route qui n'est pas un simple « sol ». |
+| `rules.js` | Règles de partie et modes de jeu (lot 13). Une RÈGLE est un réglage de départ qu'un circuit sait déjà porter (gravité de départ, vitesse de départ, véhicule de départ, hors-piste, tours) ou une transformation du circuit (sans obstacles) : rien de nouveau dans la physique, aucune voiture ne change de performances. Un MODE réunit des règles, un objectif et un nom ; il se joue sur n'importe quel circuit, sans records ni classements (le circuit transformé n'est plus celui des classements), et se partage par un code « SHM1: ». |
 | `scenery.js` | Décors : ciel, lumière, terrain facetté et objets, selon le thème du circuit. |
 | `scripts.js` | Scripts de circuit (lot 12) : des déclencheurs posés sur une case du circuit. Quand la voiture passe dessus, UN effet visuel ou sonore se produit (message, moment de la journée, météo, brume, musique, éclat, secousse, son). Hors signature (comme l'ambiance) : ni records, ni vérification, ni physique. |
 | `simulation.js` | Simulation d'une course : UNE voiture (CarPhysics), ses règles (RaceLogic) et l'enchaînement exact d'un pas, en un seul endroit. |
@@ -96,6 +98,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `academy.js` | Académie : menu des six leçons, introduction de chaque leçon, bilan à l'arrivée. Les données et les règles sont dans academy.js. |
 | `community.js` | Communauté : partage, classements en ligne, publication, import de circuits et de fantômes, aide. |
 | `editorFlow.js` | Passages entre le menu et l'éditeur : ouverture, aide, retour, essai d'un circuit. |
+| `modes.js` | Modes de jeu, règles de partie et paquets (lot 13) : l'interface. Les règles et validations sont dans rules.js et mods.js. Ces méthodes s'ajoutent au prototype de App. |
 | `multi.js` | Multijoueur : salons (privés par code, ou publics), circuit commun, lobby, départ en course à plusieurs, classement du salon, championnat (manches). |
 | `profile.js` | Profil : compte, sauvegardes, import et export de sauvegarde. |
 | `rewards.js` | Récompenses côté application : rassembler les compteurs (médailles, leçons, défis du jour…), donner ce qui est mérité, afficher le titre choisi dans le profil. |

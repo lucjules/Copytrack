@@ -125,6 +125,7 @@ export const wiringMethods = {
       case 'hud-done': this.closeHudEditor(); break;
       case 'hud-reset': this.resetHudPlaces(); break;
       case 'cameras': this.openCameraEditor(); break;
+      case 'modes': this.modesMenu(); break;
       case 'ui-reset': this.resetUi(); break;
       case 'back': this.showScreen('menu'); break;
       case 'new-track': this.openEditor({ name: 'Mon circuit', code: null, fresh: true }); break;

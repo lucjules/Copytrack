@@ -18,6 +18,7 @@ import { PeerMesh } from './transport.js';
 import { packSnapshot, unpackSnapshot } from './snapshot.js';
 import { Championship, MAX_ROUNDS } from './championship.js';
 import { PHYS_VER, NET_VER } from '../version.js';
+import { sanitizeRules, isDefaultRules } from '../rules.js';
 import { MAX_RUN_STEPS, MAX_TRACK_CODE_CHARS } from '../constants.js';
 
 const ROOM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';     // sans 0 / O / 1 / I : pas de confusion à la dictée
@@ -49,6 +50,7 @@ export class Room extends Emitter {
     this.meta = { name: String(name).slice(0, 20), host: false, ready: false, racing: false, v: PHYS_VER, net: NET_VER, t: Date.now() };
     this.members = new Map();           // id → { id, name, host, ready, racing, v, t, link, rtt }
     this.track = null;                  // circuit choisi : { id, name, sig } ; id = 'b-…' (intégré), 'c:<uuid>' (communauté), 'u:<signature>' (code envoyé par l'hôte)
+    this.rules = null;                  // règles de la partie choisies par l'hôte (rules.js) ; null : aucune
     this.started = false;               // une course a déjà été lancée dans cette salle : les arrivants y entrent directement
     this.trackCodes = new Map();        // id 'u:…' → code du circuit reçu de l'hôte
     this._asm = new Map();              // assemblage des morceaux de code en cours
@@ -167,6 +169,7 @@ export class Room extends Emitter {
     if (m) m.link = status;
     // L'hôte informe un nouvel arrivant du circuit choisi.
     if (status === 'open') {
+      if (this.isHost && this.rules) this.mesh.sendCtl({ k: 'rules', r: this.rules }, id);        // les règles d'abord : elles s'appliquent au circuit qui suit
       if (this.isHost && this.cup && !this.cup.finished) this._sendCup(id);       // en championnat, un arrivant reçoit le championnat, pas le circuit seul
       else if (this.isHost && this.track) this._sendTrack(id);
       const mine = this.results.get(this.selfId);
@@ -196,6 +199,7 @@ export class Room extends Emitter {
         if (data.started && this.state === 'lobby' && !this.cup) { this.started = true; this._begin(this.track.id, 1500); }
         break;
       }
+      case 'rules': if (from === this.hostId) { this.rules = isDefaultRules(data.r) ? null : sanitizeRules(data.r); this.emit('rules'); } break;
       case 'tcode': this._onCodeChunk(from, data); break;
       case 'start':
         // Un nouveau « Lancer » de l'hôte (même circuit ou autre) remet chacun au départ de ce circuit, à son rythme.
@@ -240,6 +244,14 @@ export class Room extends Emitter {
     if (spec.code) this.trackCodes.set(spec.id, spec.code);
     this._sendTrack();
     this.emit('track');
+  }
+
+  // Règles de la partie (hôte) : envoyées à tous, et à chaque arrivant avec le circuit.
+  setRules(r) {
+    if (!this.isHost) return;
+    this.rules = isDefaultRules(r) ? null : sanitizeRules(r);
+    this.mesh.sendCtl({ k: 'rules', r: this.rules || {} });
+    this.emit('rules');
   }
 
   _sendTrack(to = null) {

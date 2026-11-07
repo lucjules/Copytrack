@@ -344,6 +344,42 @@ try {
     await app(() => window.copytrack.showScreen('menu'));
   });
 
+  await test('modes de jeu et paquets : menu, créer un mode, le jouer (règles appliquées, bilan), exporter puis réimporter un paquet', async () => {
+    await app(() => window.copytrack.showScreen('menu'));
+    await click('[data-action="modes"]');
+    await waitApp(() => document.querySelectorAll('#modal-body .mode-row').length >= 6);
+    assert.ok(await page.locator('#modal-body [data-md="packs"]').count());
+    // un mode fourni : « Sauts lunaires » (gravité 40 %), sur le premier circuit
+    await page.locator('#modal-body .mode-row[data-mode="lune"] button.primary').evaluate((el) => el.click());
+    await waitApp(() => document.querySelector('#modal-title') && document.querySelector('#modal-title').textContent.includes('Jouer le mode'));
+    await click('#modal-actions button.primary');
+    await waitApp(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    const g = await app(() => [window.copytrack.session.track.g0, !!window.copytrack.session.opts.mode, window.copytrack.session.trackKey]);
+    assert.deepEqual(g, [40, true, null], 'règles appliquées, aucun record ni classement');
+    await app(() => window.copytrack.session._finish(33.3));
+    await waitApp(() => document.querySelector('#modal-title') && /réussi|Pas tout/.test(document.querySelector('#modal-title').textContent));
+    assert.ok(await app(() => window.copytrack.ui.modalOpen), 'le bilan du mode s\'affiche');
+    await click('#modal-actions button:has-text("Modes")');
+    await waitApp(() => window.copytrack.mode === 'menu');
+    await page.waitForTimeout(300);
+    // créer un mode (via l'API de stockage) puis le retrouver dans « Mes modes »
+    await app(async () => { const { saveMode } = await import('/js/storage.js'); saveMode({ id: 'm1', name: 'Mon essai', desc: '', rules: { g0: 70 }, goal: { id: 'norespawn' } }); window.copytrack.modesMenu(); });
+    await waitApp(() => document.querySelector('#modal-body .mode-row[data-mode="m1"]'));
+    // paquet : exporter puis réimporter (la voiture, l'interface et le mode)
+    await click('#modal-body [data-md="packs"]');
+    await waitApp(() => document.querySelector('#modal-body [data-pk="export"]'));
+    await click('#modal-body [data-pk="export"]');
+    const code = await page.locator('#modal-body textarea').first().inputValue();
+    assert.ok(code.startsWith('SHX1:'), 'code de paquet');
+    await app(async () => { const { deleteMode } = await import('/js/storage.js'); deleteMode('m1'); });
+    await page.locator('#modal-body textarea').nth(1).fill(code);
+    await waitApp(() => document.querySelector('#modal-body [data-pk="apply"]'));
+    await click('#modal-body [data-pk="apply"]');
+    const modes = await app(async () => (await import('/js/storage.js')).listModes().map((m) => m.name));
+    assert.deepEqual(modes, ['Mon essai'], 'le mode revient avec le paquet');
+    await app(() => window.copytrack.ui.closeModal());
+  });
+
   await test('communauté hors ligne, mes circuits, importer : aucun plantage', async () => {
     await click('[data-action="community"]');
     await waitApp(() => !document.getElementById('community').classList.contains('hidden'));
@@ -652,11 +688,16 @@ try {
       await page.evaluate(() => { document.querySelector('input[name="mp-mode"][value="cup"]').click(); });
       await page.evaluate(() => { const r = document.querySelector('select[data-k="rounds"]'); r.value = '2'; r.dispatchEvent(new Event('change')); const p = document.querySelector('select[data-k="pool"]'); p.value = 'easy'; p.dispatchEvent(new Event('change')); });
       assert.match(await text(page, '#modal-actions [data-mp="start"]'), /Lancer le championnat/);
+      // Règles de la partie : l'hôte les choisit, l'invité les reçoit ; elles s'appliquent au circuit de chacun.
+      assert.ok(await page.locator('.mp-rules').count(), 'le bloc des règles est dans le salon de l\'hôte');
+      await page.evaluate(() => window.copytrack.room.setRules({ offroad: 1, sameCars: 1 }));
+      await B.waitForFunction(() => window.copytrack.room && window.copytrack.room.rules && window.copytrack.room.rules.offroad === 1, null, { timeout: 10000 });
       await clickBtn(page, 'Lancer le championnat');
       await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.cup, null, 30000);
       await B.waitForFunction(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.cup, null, { timeout: 30000 });
       const info = (p) => p.evaluate(() => { const s = window.copytrack.session; return { n: s.cup.n, total: s.cup.total, slot: s.cup.slot, count: s.cup.count, collisions: s.cup.collisions, x: s.phys.pos.x, z: s.phys.pos.z, track: s.track.name }; });
       const ia = await info(page), ib = await info(B);
+      assert.deepEqual(await Promise.all([page, B].map((p) => p.evaluate(() => window.copytrack.session.track.offroad))), [1, 1], 'la règle de la partie (hors piste) s\'applique chez les deux joueurs');
       assert.deepEqual([ia.n, ia.total, ia.count, ia.collisions], [0, 2, 2, true]); assert.equal(ib.track, ia.track, 'même circuit');
       assert.deepEqual([ia.slot, ib.slot].sort(), [0, 1]);
       assert.ok(Math.hypot(ia.x - ib.x, ia.z - ib.z) >= 5, 'sur la grille, pas superposés');
