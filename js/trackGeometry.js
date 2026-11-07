@@ -5,6 +5,7 @@ import { CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T } from './consta
 import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
 import { WATER_DROP, boatDrop } from './track/shared.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
+import { renderOptions } from './renderOptions.js';
 
 const PALETTE = {
   asphalt: '#343950',
@@ -66,14 +67,12 @@ const CB_COLORS = {
   moto: '#ffb000', boat: '#3fa7ff', glider: '#f5f5f5', flip: '#ff4fd8',
   conveyor: '#f0e442', spring: '#009e73', glass: '#56b4e9', powder: '#ffffff', reverse: '#cc79a7', cut: '#d55e00',
 };
-let colorblind = false;
-export function setColorblind(v) { colorblind = !!v; }
 
 // Couleur d'un revêtement selon son paramètre (faible / normal / fort).
 export function tint(s, p) {
   const S = SURFACES[s];
   if (!S || !S.c) return '#ffffff';
-  if (colorblind && CB_COLORS[s]) return CB_COLORS[s];
+  if (renderOptions.colorblind && CB_COLORS[s]) return CB_COLORS[s];
   if (S.def == null) return S.c[1];
   const v = p || S.def;
   if (v <= S.def) {

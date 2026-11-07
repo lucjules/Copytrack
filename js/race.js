@@ -5,6 +5,7 @@ import { CamFlip } from './camflip.js';
 import { MSG } from './hudMessages.js';
 import { SEND_EVERY_STEPS, F_FINISHED } from './net/snapshot.js';
 import { Simulation } from './simulation.js';
+import { SURFACES } from './pieces.js';
 import { Autopilot } from './autopilot.js';
 import { TrackView } from './trackMesh.js';
 import { createCar } from './carModel.js';
@@ -16,11 +17,14 @@ import { TrailRibbon } from './trail.js';
 import { InputRecorder, decodeInputs, inputAt, quantSteer } from './replay.js';
 import { PHYS_VER } from './version.js';
 import { GHOST_EVERY, tmpM, tmpV, tmpV2 } from './race/shared.js';
+
 import { cameraMethods } from './race/camera.js';
 import { ghostMethods } from './race/ghosts.js';
 import { netMethods } from './race/net.js';
 import { finishMethods } from './race/finish.js';
 import { replayMethods } from './race/replayMode.js';
+
+const CAR_COLOR = '#ffd23e';   // éclat quand la voiture retrouve sa forme d'origine (les plaques ont la couleur de leur revêtement : SURFACES)
 
 export class RaceSession {
   constructor(app, track, opts = {}) {
@@ -285,7 +289,7 @@ export class RaceSession {
       this.car.setVehicle(veh);
       app.audio.transform();
       const p = this.phys.pos;
-      const col = { moto: '#ff9f1c', boat: '#3fd0ff', glider: '#f5f5f5', car: '#ffd23e' }[veh];
+      const col = veh === 'car' ? CAR_COLOR : SURFACES[veh].c[0];      // (la couleur d'une plaque est celle de son revêtement : une seule table)
       app.particles.burst(p.x, p.y + 1, p.z, 40, 11, 0.8, 0.8, col, 1);
       app.particles.burst(p.x, p.y + 1, p.z, 24, 9, 0.8, 0.7, '#ffffff', 1);
       this._say(MSG.vehicle[veh]);

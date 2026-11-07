@@ -1,7 +1,8 @@
 // Point d'entrée : crée le moteur de rendu et orchestre menu / course / éditeur.
 import * as THREE from './vendor/three.module.min.js';
 import { Scenery } from './scenery.js';
-import { createTrackMaterials, setHideDecos, setLightBudget } from './trackMesh.js';
+import { createTrackMaterials } from './trackMesh.js';
+import { renderOptions } from './renderOptions.js';
 import { Particles } from './particles.js';
 import { Input } from './input.js';
 import { GarageSession } from './garage.js';
@@ -28,6 +29,8 @@ import { profileMethods } from './app/profile.js';
 import { wiringMethods } from './app/wiring.js';
 import { editorFlowMethods } from './app/editorFlow.js';
 
+const MENU_FPS_CAP = 30;     // images par seconde au plus dans les menus
+
 class App {
   // identity : { kind: 'guest' | 'account', username } décidé par l'écran d'accueil (welcome.js), toujours avant le menu.
   constructor(identity) {
@@ -48,7 +51,7 @@ class App {
     this.particles = new Particles(this.scene);
     this.quality = new QualityManager({
       renderer: this.renderer, scene: this.scene, camera: this.camera, scenery: this.scenery, particles: this.particles,
-      resize: () => this._resize(), views: () => (this.session && this.session.view ? [this.session.view] : []), setDecoHidden: setHideDecos, setLights: setLightBudget,
+      resize: () => this._resize(), views: () => (this.session && this.session.view ? [this.session.view] : []), setDecoHidden: (v) => { renderOptions.hideDecos = !!v; }, setLights: (b) => { renderOptions.lightBudget = b || { point: 0, spot: 0 }; },
     });
     this.input = new Input();
     this.input.setBindings(this.settings.keys, this.settings.pad);
@@ -306,8 +309,11 @@ class App {
       if (this.ui.modalOpen && this.input.hit('Escape')) this.ui.closeModal();
       if (this.mode === 'menu' && !this.ui.modalOpen && this.input.hit('Escape')) this.showScreen('menu');
       if (this.session) this.session.update(dt);
-      // Profil Ultra Potato : on ne dessine qu'une image sur deux (la physique et les commandes continuent à pleine vitesse).
-      const cap = this.quality.profile && this.quality.profile.fpsCap;
+      // Profil Ultra Potato : on ne dessine qu'une image sur deux (la physique et les commandes continuent à pleine vitesse). Dans les menus (rien à
+      // piloter, une simple animation de fond) on dessine à 30 images/s au plus : la machine chauffe moins et la batterie dure. Le banc d'essai de la
+      // qualité, qui mesure justement cette animation, passe avant.
+      const profileCap = this.quality.profile && this.quality.profile.fpsCap;
+      const cap = this.mode === 'menu' && !this.bench ? Math.min(MENU_FPS_CAP, profileCap || MENU_FPS_CAP) : profileCap;
       if (!cap || now - (this._lastDraw || 0) >= 1000 / cap - 4) { this._lastDraw = now; this.renderer.render(this.scene, this.camera); }
       this.quality.tick();
       if (this.bench) {

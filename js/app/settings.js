@@ -1,6 +1,6 @@
 // Réglages : qualité graphique et banc d'essai, commandes (clavier, manette), options, accessibilité.
 // Ces méthodes s'ajoutent au prototype de App (voir main.js) : `this` est l'instance.
-import { setColorblind } from '../trackGeometry.js';
+import { renderOptions } from '../renderOptions.js';
 import { KEY_ACTIONS, PAD_ACTIONS, keyLabel, padLabel } from '../input.js';
 import { $, esc } from '../dom.js';
 import { Benchmark, PROFILES, PROFILE_LABELS, BENCH_VERSION, hardwareHints } from '../quality.js';
@@ -202,7 +202,7 @@ export const settingsMethods = {
     $('fps').classList.toggle('hidden', !s.showFps);
     if (this._cbApplied !== !!s.colorblind) {
       this._cbApplied = !!s.colorblind;
-      setColorblind(this._cbApplied);
+      renderOptions.colorblind = this._cbApplied;
       if (this.session) this.ui.flash('Couleurs appliquées à la prochaine course');
     }
   },

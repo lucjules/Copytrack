@@ -10,6 +10,7 @@ import { LIGHT_DECOS } from './decoData.js';
 import { isObstacle } from './obstacles.js';
 import { createObstacleMesh } from './obstacleMesh.js';
 import { buildTileInto } from './trackGeometry.js';
+import { renderOptions } from './renderOptions.js';
 
 const MOVO = {};
 
@@ -85,16 +86,6 @@ export function createTrackMaterials() {
   };
 }
 
-// Profil « Potato » : les décorations du créateur (hors obstacles, qui ont un effet physique) ne sont pas dessinées.
-// Une vue d'éditeur met showAllDecos à true : on y voit toujours tout.
-let hideDecos = false;
-export function setHideDecos(v) { hideDecos = !!v; }
-// Nombre de vraies lumières (PointLight / SpotLight) que les décorations lumineuses peuvent allumer en même temps : les plus proches de la
-// caméra. Fixé par le profil de qualité (0 = faisceaux visibles seulement). Le nombre de lumières de la scène ne change jamais en cours de
-// course (pas de recompilation des shaders) : seul leur réglage change à chaque image.
-let lightBudget = { point: 4, spot: 2 };
-export function setLightBudget(b) { lightBudget = b || { point: 0, spot: 0 }; }
-
 // Tronçons : le maillage statique (route, piliers, décorations fixes) est découpé en carrés de CHUNK × CHUNK cases (128 m). Un tronçon n'est reconstruit
 // que si l'un de ses éléments, ou un voisin qui influe sur ses piliers, a changé : dans l'éditeur, poser une pièce ne régénère plus tout le circuit
 // (un grand circuit de 270 pièces et 300 décorations coûtait ~130 ms par modification). Chaque tronçon a sa boîte englobante : la caméra et les
@@ -167,7 +158,7 @@ export class TrackView {
     }
     const span = CELL * CHUNK;
     for (const d of track.decos) {
-      if (hideDecos && !this.showAllDecos && !isObstacle(d.k)) continue;
+      if (renderOptions.hideDecos && !this.showAllDecos && !isObstacle(d.k)) continue;
       if (d.k === 'plaque') {
         const mesh = createPlaque(d);
         this.group.add(mesh);
@@ -185,7 +176,7 @@ export class TrackView {
 
     // Signature d'un tronçon : ses pièces, ses décorations, et les pièces voisines (la case d'à côté, comprise) dont dépend l'emplacement de
     // ses piliers (un pilier est omis sous une autre pièce) ; plus les réglages de qualité qui changent le contenu.
-    const flags = (hideDecos ? 'h' : 'v') + (this.showAllDecos ? 'a' : 'n');
+    const flags = (renderOptions.hideDecos ? 'h' : 'v') + (this.showAllDecos ? 'a' : 'n') + (renderOptions.colorblind ? 'c' : 'n');
     for (const b of buckets.values()) {
       const seen = new Set(b.tiles);
       let sig = flags;
@@ -246,7 +237,7 @@ export class TrackView {
 
   // ---- Décorations lumineuses (projecteurs, lanternes, lampadaires) -------------------------------------------------------------
   // Chaque lampe a un groupe dynamique (faisceau tournant, halo) ; la lumière réelle vient d'un petit nombre de lumières partagées
-  // (voir lightBudget) attribuées à chaque image aux lampes les plus proches de la caméra. La couleur de la lumière suit celle de l'objet.
+  // (voir renderOptions.lightBudget) attribuées à chaque image aux lampes les plus proches de la caméra. La couleur de la lumière suit celle de l'objet.
   _addLamp(d) {
     const L = LIGHT_DECOS[d.k];
     const grp = new THREE.Group();
@@ -282,7 +273,7 @@ export class TrackView {
   _initLightPool() {
     this.pool = null;
     if (!this.lamps || !this.lamps.length) return;
-    const b = lightBudget, pool = { points: [], spots: [] };
+    const b = renderOptions.lightBudget, pool = { points: [], spots: [] };
     for (let i = 0; i < b.point; i++) { const l = new THREE.PointLight('#ffffff', 0, 40, 2); l.userData.pool = true; this.group.add(l); pool.points.push(l); }
     for (let i = 0; i < b.spot; i++) {
       const l = new THREE.SpotLight('#ffffff', 0, 120, 0.3, 0.55, 1.6);
