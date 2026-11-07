@@ -61,6 +61,19 @@ export function encodeGhost({ trackKey, time, name, inputs }) {
   return 'SHG1:' + b64encode(JSON.stringify({ k: trackKey, t: time, n: name || '—', i: inputs, v: PHYS_VER }));
 }
 
+// Lien de partage d'un fantôme : le code voyage dans la partie « # » de l'adresse (elle ne part jamais vers un serveur). Une messagerie qui coupe les longs liens perd la fin du code :
+// au-delà de GHOST_LINK_MAX caractères, le jeu prévient et propose le code à copier plutôt que le lien.
+export const GHOST_LINK_MAX = 7000;
+export const ghostLink = (base, code) => String(base).split('#')[0] + '#g=' + encodeURIComponent(code);
+// Fantôme contenu dans un fragment d'adresse (« #g=… ») ; null si ce n'en est pas un ; lève une erreur lisible si le code est invalide.
+export function ghostFromHash(hash) {
+  const h = String(hash || '');
+  if (!h.startsWith('#g=')) return null;
+  let code;
+  try { code = decodeURIComponent(h.slice(3)); } catch { throw new Error('Lien de fantôme invalide.'); }
+  try { return decodeGhost(code); } catch (e) { throw new Error(e.message === 'Ce n\'est pas un code de fantôme.' ? 'Lien de fantôme invalide.' : 'Code de fantôme invalide ou coupé (le lien est-il complet ?).'); }
+}
+
 export function decodeGhost(code) {
   const s = String(code || '').trim();
   if (!/^SHG1:/.test(s)) throw new Error('Ce n\'est pas un code de fantôme.');

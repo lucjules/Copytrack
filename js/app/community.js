@@ -7,7 +7,7 @@ import { Track } from '../track.js';
 import { PHYS_VER } from '../version.js';
 import { thumbnail } from '../editorTools.js';
 import { online } from '../online.js';
-import { encodeGhost, decodeGhost } from '../replay.js';
+import { encodeGhost, decodeGhost, ghostLink, GHOST_LINK_MAX } from '../replay.js';
 import { getRecord, saveMyTrack, newId, formatTime, setImportedGhost } from '../storage.js';
 export const communityMethods = {
   shareGhost() {
@@ -16,12 +16,35 @@ export const communityMethods = {
     const rec = getRecord(s.trackKey);
     if (!rec || !rec.inputs || rec.pv !== PHYS_VER) { this.ui.flash('Pas encore de course enregistrée avec cette version.'); return; }
     const code = encodeGhost({ trackKey: s.trackKey, time: rec.time, name: this.settings.playerName, inputs: rec.inputs });
+    const link = ghostLink(location.href, code);
+    const long = link.length > GHOST_LINK_MAX;
+    const copy = (txt, msg) => { if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => this.ui.flash(msg), () => this.ui.flash('Copie impossible : sélectionne le texte.')); else this.ui.flash('Copie impossible : sélectionne le texte.'); return false; };
     this.ui.modal({
       title: 'Partager mon fantôme',
-      body: `<p>Un ami qui l'importe courra contre ton temps de ${formatTime(rec.time)}.</p><textarea class="code" readonly rows="4">${esc(code)}</textarea>`,
+      body: `<p>Un ami qui ouvre le <b>lien</b> (ou colle le code dans « Importer ») court contre ton temps de ${formatTime(rec.time)}.</p>
+        ${long ? '<p class="meta">⚠ Ce lien est long : certaines messageries le coupent. Préfère le code.</p>' : ''}
+        <textarea class="code" readonly rows="4">${esc(code)}</textarea>`,
       actions: [
-        { label: 'Copier', primary: true, onClick: () => { navigator.clipboard && navigator.clipboard.writeText(code); this.ui.flash('Code copié'); return false; } },
+        { label: 'Copier le lien', primary: !long, onClick: () => copy(link, 'Lien copié !') },
+        { label: 'Copier le code', primary: long, onClick: () => copy(code, 'Code copié !') },
         { label: 'Fermer' },
+      ],
+    });
+  },
+
+  // Un lien « …#g=SHG1… » ouvre ce défi : fantôme importé, puis course contre lui (circuits intégrés et défi du jour ; un circuit de joueur doit déjà être chez toi).
+  openGhostLink(ghost) {
+    const b = this.builtins.find((x) => x.key === ghost.trackKey);
+    const daily = ghost.trackKey.startsWith('daily-');
+    if (ghost.v !== PHYS_VER) { this.ui.flash('Ce fantôme vient d\'une autre version du jeu : recharge la page (ou celle de ton ami).', 5); return; }
+    const where = b ? `« ${b.def.name} »` : daily ? 'le défi du jour' : 'un circuit de joueur';
+    this.ui.modal({
+      title: 'Défi partagé',
+      body: `<p><b>${esc(ghost.name)}</b> t'envoie son fantôme : <b>${formatTime(ghost.time)}</b> sur ${esc(where)}. Saurais-tu le battre ?</p>`
+        + (b || daily ? '' : '<p class="meta">Ce circuit n\'est pas intégré au jeu : le fantôme est enregistré, il apparaîtra quand tu joueras ce circuit.</p>'),
+      actions: [
+        ...(b || daily ? [{ label: 'Courir contre lui', primary: true, onClick: () => { setImportedGhost(ghost.trackKey, ghost); setTimeout(() => (b ? this.playBuiltin(this.builtins.indexOf(b)) : this.playDaily()), 0); return true; } }] : [{ label: 'Garder le fantôme', primary: true, onClick: () => { setImportedGhost(ghost.trackKey, ghost); this.ui.flash('Fantôme enregistré.'); return true; } }]),
+        { label: 'Annuler' },
       ],
     });
   },

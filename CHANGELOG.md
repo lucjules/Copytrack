@@ -6,6 +6,21 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.17 — partager un record : un lien qui lance le défi, et le replay en vidéo
+
+`PHYS_VER` inchangé (26) ; rien à redéployer côté serveur.
+
+- **Lien de défi** : « Partager mon fantôme » propose maintenant **Copier le lien** en plus du code. Le lien (`…#g=SHG1…`) ouvre le jeu sur « Défi partagé » : *X t'envoie son fantôme, saurais-tu le battre ?* ;
+  « Courir contre lui » importe le fantôme (violet) et lance le circuit (circuits intégrés et défi du jour ; pour un circuit de joueur, le fantôme est gardé jusqu'à ce que tu joues ce circuit). Le code reste dans la
+  partie « # » de l'adresse : il ne part jamais vers un serveur. Un lien trop long pour certaines messageries (plus de 7 000 caractères) est signalé, avec le code à copier à la place ; un lien cassé, coupé
+  ou d'une autre version du jeu donne un message lisible.
+- **Export vidéo du replay** : la barre de replay a un bouton **🎬 Vidéo** : le replay repart du début, la scène 3D est enregistrée (`MediaRecorder`, WebM VP9/VP8, 8 Mb/s, 60 i/s, sans son ni interface) et le fichier
+  `copytrack-<circuit>-<temps>.webm` est proposé au téléchargement, après une seconde et demie sur la ligne d'arrivée ; un second appui, Échap ou la fermeture du replay annule. Le navigateur qui ne sait pas enregistrer
+  (anciens Safari, notamment) l'annonce au lieu de planter. **Pas de GIF** : un GIF de plusieurs secondes pèse bien plus lourd qu'un WebM et demande un encodeur à embarquer ; le WebM s'importe partout où un GIF animé servirait.
+- Nouveaux modules : `js/videoExport.js` (enregistreur de canvas, sans dépendance au jeu) ; `ghostLink` / `ghostFromHash` dans `js/replay.js`.
+- Tests : `tools/test-partage.mjs` (aller-retour du lien, liens cassés ou coupés, formats vidéo, enregistreur, nom de fichier) ; test navigateur : lien ouvert dans un autre onglet, course contre le fantôme partagé,
+  **export vidéo réel** (fichier WebM reçu en téléchargement).
+
 ## Bêta 0.9.16 — l'Académie : six leçons guidées et un éditeur qui démarre simple
 
 `PHYS_VER` inchangé (26) ; rien à redéployer côté serveur.

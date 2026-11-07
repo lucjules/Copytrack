@@ -41,6 +41,7 @@
   <link rel="modulepreload" href="js/career.js">
   <link rel="modulepreload" href="js/storage.js">
   <link rel="modulepreload" href="js/telemetry.js">
+  <link rel="modulepreload" href="js/replay.js">
   <link rel="modulepreload" href="js/quality.js">
   <link rel="modulepreload" href="js/app/multi.js">
   <link rel="modulepreload" href="js/app/academy.js">
@@ -72,7 +73,6 @@
   <link rel="modulepreload" href="js/autopilot.js">
   <link rel="modulepreload" href="js/skids.js">
   <link rel="modulepreload" href="js/trail.js">
-  <link rel="modulepreload" href="js/replay.js">
   <link rel="modulepreload" href="js/race/shared.js">
   <link rel="modulepreload" href="js/race/camera.js">
   <link rel="modulepreload" href="js/race/ghosts.js">
@@ -106,6 +106,7 @@
   <link rel="modulepreload" href="js/physics/ribbon.js">
   <link rel="modulepreload" href="js/remoteCar.js">
   <link rel="modulepreload" href="js/net/collide.js">
+  <link rel="modulepreload" href="js/videoExport.js">
   <link rel="modulepreload" href="js/net/signaling.js">
   <link rel="modulepreload" href="js/net/transport.js">
   <link rel="modulepreload" href="js/physics/walls.js">
@@ -359,7 +360,7 @@
       </div>
     </div>
   </div>
-  <div id="replay-bar" class="replay-bar hidden"><b>REPLAY</b><span class="rs">▶ ×1</span><span class="rh">Espace : pause · ← → : vitesse · C : caméra · Entrée : recommencer · Échap : quitter</span></div>
+  <div id="replay-bar" class="replay-bar hidden"><b>REPLAY</b><span class="rs">▶ ×1</span><button class="btn small" id="replay-export" data-action="export-video" title="Enregistrer ce replay en vidéo (WebM, sans son)">🎬 Vidéo</button><span class="rh">Espace : pause · ← → : vitesse · C : caméra · Entrée : recommencer · Échap : quitter</span></div>
 
   <!-- Éditeur -->
   <div id="editor" class="hidden">

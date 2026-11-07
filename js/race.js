@@ -574,6 +574,7 @@ export class RaceSession {
     this.skids.dispose();
     for (const g of this.ghosts) g.car.dispose();
     this._clearRivals();
+    if (this._rec) this._cancelVideo();
     if (this.multi) {
       this.multi.room.off('snapshot', this._onSnap); this.multi.room.off('left', this._onLeft);
       for (const rc of this.remote.values()) rc.dispose();

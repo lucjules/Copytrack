@@ -127,6 +127,7 @@ export const wiringMethods = {
       case 'quit': this.quitRace(); break;
       case 'watch-replay': this.watchReplay(); break;
       case 'share-ghost': this.shareGhost(); break;
+      case 'export-video': if (s && s.exportVideo) s.exportVideo(); break;
       case 'leaderboard': {
         const s = this.session;
         if (s && s.trackKey) this.leaderboardModal(s.trackKey, s.track.name, s.track);

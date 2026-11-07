@@ -245,6 +245,73 @@ try {
     await app(() => { window.copytrack.settings.editorGuided = null; window.copytrack.saveSettings(); });
   });
 
+  // Une vraie course du pilote automatique (commandes enregistrées) : sert au lien de défi et à l'export vidéo.
+  const makeRun = () => app(async () => {
+    const { Simulation } = await import('/js/simulation.js');
+    const { Autopilot } = await import('/js/autopilot.js');
+    const { InputRecorder, quantSteer } = await import('/js/replay.js');
+    const b = window.copytrack.builtins[0], sim = new Simulation(b.track), rec = new InputRecorder();
+    sim.start();
+    const bot = new Autopilot(b.track.path, { latLimit: 56 * 0.8 });
+    bot.reset(sim.phys);
+    for (let i = 0; i < 120 * 90; i++) {
+      const inp = bot.control(sim.phys); inp.steer = quantSteer(inp.steer); rec.push(inp, false);
+      const ev = sim.step(inp);
+      if (sim.lost) sim.rewind();
+      if (ev && ev.type === 'finish') return { key: b.key, inputs: rec.encode(), time: sim.logic.time };
+    }
+    throw new Error('pas d\'arrivée');
+  });
+
+  await test('lien de défi : un fantôme partagé (#g=…) ouvre « Défi partagé », importe le fantôme et lance la course contre lui', async () => {
+    const run = await makeRun();
+    const code = await app(async (r) => (await import('/js/replay.js')).encodeGhost({ trackKey: r.key, time: r.time, name: 'Amie', inputs: r.inputs }), run);
+    // 1. Une autre page, ouverte directement sur le lien (comme un ami qui clique).
+    const C = await hook(await ctx.newPage());
+    try {
+      await C.goto(`http://127.0.0.1:${PORT}/#g=${encodeURIComponent(code)}`, { waitUntil: 'load' });
+      if (await C.locator('#wl-name').isVisible().catch(() => false)) { await C.locator('#wl-name').fill('Ami'); await C.locator('#wl-submit').evaluate((el) => el.click()); }
+      await C.waitForFunction(() => window.copytrack && window.copytrack.ui.modalOpen && /Défi partagé/.test(document.getElementById('modal-title').textContent), null, { timeout: 30000 });
+      assert.ok((await C.evaluate(() => document.getElementById('modal-body').textContent)).includes('Amie'));
+      assert.equal(await C.evaluate(() => location.hash), '', 'le fragment est retiré de l\'adresse');
+    } finally { await C.close(); }
+    // 2. Dans la page de jeu : « Courir contre lui » lance le circuit avec le fantôme violet.
+    await app(async (c) => { const m = await import('/js/replay.js'); window.copytrack.openGhostLink(m.ghostFromHash('#g=' + encodeURIComponent(c))); }, code);
+    await waitApp(() => /Défi partagé/.test(document.getElementById('modal-title').textContent));
+    await page.evaluate(() => [...document.querySelectorAll('#modal-actions button')].find((x) => x.textContent.trim() === 'Courir contre lui').click());
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.ghosts, null, 30000);
+    assert.ok(await app(() => window.copytrack.session.ghosts.some((g) => g.label === 'Amie')), 'le fantôme de l\'amie est sur la piste');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu');
+    await app(() => { localStorage.removeItem('copytrack.ghostImp'); });
+  });
+
+  await test('export vidéo : le replay est rejoué et enregistré en WebM (ou refusé proprement si le navigateur ne sait pas)', async () => {
+    const run = await makeRun();
+    await app(() => window.copytrack.playBuiltin(0));
+    await waitApp(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    await app((r) => { window.copytrack.session.lastRun = { inputs: r.inputs, time: r.time }; }, run);
+    await app(() => window.copytrack.watchReplay());
+    await waitApp(() => window.copytrack.session && window.copytrack.session.replay, null, 20000);
+    const supported = await app(async () => (await import('/js/videoExport.js')).videoSupported(window.copytrack.renderer.domElement));
+    const dl = page.waitForEvent('download', { timeout: 120000 }).catch(() => null);
+    const started = await app(() => window.copytrack.session.exportVideo({ speed: 4 }));
+    assert.equal(started, supported, 'démarre si et seulement si le navigateur sait enregistrer');
+    if (supported) {
+      assert.match(await app(() => document.querySelector('#replay-bar .rs').textContent), /REC/);
+      await waitApp(() => window.copytrack.session.lastVideo, null, 120000);
+      const v = await app(() => window.copytrack.session.lastVideo);
+      assert.ok(v.size > 5000 && /webm/.test(v.type) && /^copytrack-.*\.webm$/.test(v.name), JSON.stringify(v));
+      const d = await dl;
+      assert.ok(d, 'le navigateur a reçu un téléchargement');
+      assert.match(d.suggestedFilename(), /\.webm$/);
+      assert.doesNotMatch(await app(() => document.querySelector('#replay-bar .rs').textContent), /REC/, 'enregistrement terminé');
+    }
+    await app(() => window.copytrack.endReplay());
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
   await test('fantôme rival (haut d\'un classement) : affiché sur la piste, suit son enregistrement, étiquette au nom du rival', async () => {
     await app(() => window.copytrack.playBuiltin(0));
     await waitApp(() => window.copytrack.session && window.copytrack.session.state, null, 40000);

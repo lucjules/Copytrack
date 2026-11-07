@@ -21,6 +21,7 @@ import { runWelcome } from './welcome.js';
 import { goalFor, nextBuiltinIndex } from './career.js';
 import { loadSettings, saveSettings, getRecord, saveRecord, saveMyTrack, newId, formatTime, purgeOldRecords, getJSON, setJSON } from './storage.js';
 import { Telemetry } from './telemetry.js';
+import { ghostFromHash } from './replay.js';
 import { QualityManager, PROFILE_LABELS, wantAntialias } from './quality.js';
 import { multiMethods } from './app/multi.js';
 import { academyMethods } from './app/academy.js';
@@ -277,7 +278,14 @@ class App {
     this.telemetry.scheduleFlush(15000);
     setTimeout(() => this.askTelemetry(), 4000);
     // Premier lancement : petit tutoriel (sauf si on arrive par un lien de circuit).
-    if (!this.settings.tutorialDone && !hash.startsWith('#t=')) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
+    if (!this.settings.tutorialDone && !hash.startsWith('#t=') && !hash.startsWith('#g=')) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
+    if (hash.startsWith('#g=')) {
+      try {
+        const ghost = ghostFromHash(hash);
+        history.replaceState(null, '', location.pathname + location.search);
+        setTimeout(() => this.openGhostLink(ghost), 400);
+      } catch (e) { history.replaceState(null, '', location.pathname + location.search); this.ui.flash(e.message, 4); }
+    }
     if (hash.startsWith('#t=')) {
       try {
         const track = Track.decode(hash);
