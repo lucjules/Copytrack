@@ -162,7 +162,7 @@ export function clearRecords() {
   for (const k of [...memRec.keys()]) if (k.startsWith(PREFIX)) memRec.delete(k);
   try {
     Object.keys(localStorage)
-      .filter((k) => k.startsWith(PREFIX + 'rec'))
+      .filter((k) => k.startsWith(PREFIX + 'rec') || k.startsWith(PREFIX + RUNS))
       .forEach((k) => localStorage.removeItem(k));
   } catch { /* stockage indisponible */ }
   // Pierre tombale : sans elle, la synchronisation du compte ramènerait les records effacés depuis le cloud.
@@ -198,6 +198,26 @@ export function saveRecord(trackKey, rec) {
     if (tryWrite()) return true;
   }
   return false;
+}
+
+// ---- Dernières courses d'un circuit (Race Hub, onglet Personnel) ---------------------------------------------------------------------------
+// « runs.<clé> » : les RUNS_MAX dernières courses terminées, de la plus récente à la plus ancienne : { time, date } (ni fantôme ni commandes :
+// le record garde les siennes). Synchronisé avec le compte (cloudsave.js : fusion par date).
+const RUNS = 'runs.';
+export const RUNS_MAX = 10;
+export function cleanRuns(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  return list.filter((r) => r && Number.isFinite(+r.time) && +r.time > 0 && Number.isFinite(+r.date))
+    .map((r) => ({ time: +r.time, date: +r.date }))
+    .sort((a, b) => b.date - a.date)
+    .filter((r) => { const k = r.date + ':' + r.time; if (seen.has(k)) return false; seen.add(k); return true; })
+    .slice(0, RUNS_MAX);
+}
+export function listRuns(trackKey) { return cleanRuns(read(RUNS + trackKey, [])); }
+export function pushRun(trackKey, run) {
+  if (!trackKey) return false;
+  return write(RUNS + trackKey, cleanRuns([{ time: run.time, date: run.date || Date.now() }, ...listRuns(trackKey)]));
 }
 
 // ---- Circuits personnels ---------------------------------------------------

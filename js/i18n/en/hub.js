@@ -1,0 +1,101 @@
+// Dictionnaire anglais — Race Hub (fiche d'un circuit), classement à onglets, favoris, course rapide (Copytrack Evolution, 0.9.26).
+
+export default {
+  // ---------------------------------------------------------------- en-tête, favoris
+  'Carrière · Circuit {n:w}': 'Career · Track {n}',
+  'Défi du jour · {d:w}': 'Daily challenge · {d}',
+  'Communauté · par {name}': 'Community · by {name}',
+  '☆ Favori': '☆ Favourite',
+  '★ Favori': '★ Favourite',
+  'Retirer des favoris': 'Remove from favourites',
+  'Ajouter aux favoris (Circuits › Favoris)': 'Add to favourites (Tracks › Favourites)',
+  '« {name} » ajouté aux favoris.': '“{name}” added to favourites.',
+  '« {name} » retiré des favoris.': '“{name}” removed from favourites.',
+  '★ Favoris': '★ Favourites',
+  'Communauté · en ligne': 'Community · online',
+
+  // ---------------------------------------------------------------- carte
+  'Carte du circuit : molette ou pincement pour zoomer, glisser pour déplacer, double clic pour tout voir': 'Track map: scroll or pinch to zoom, drag to move, double-click to see it all',
+  'Zoomer (+)': 'Zoom in (+)',
+  'Zoomer': 'Zoom in',
+  'Dézoomer (−)': 'Zoom out (−)',
+  'Dézoomer': 'Zoom out',
+  'Tout le circuit (0)': 'Whole track (0)',
+  'Tout le circuit': 'Whole track',
+  'Checkpoints ({n:w})': 'Checkpoints ({n})',
+  'Checkpoints ({n:w}) · dans l’ordre de ton choix': 'Checkpoints ({n}) · in any order',
+  'Pièces mobiles': 'Moving pieces',
+
+  // ---------------------------------------------------------------- fiche
+  'Difficulté': 'Difficulty',
+  'estimée': 'estimated',
+  'Distance de course': 'Race distance',
+  'Longueur de piste': 'Track length',
+  'Joué': 'Played',
+  'Médailles': 'Medals',
+  'Objectif bonus': 'Bonus goal',
+
+  // ---------------------------------------------------------------- lancement
+  'Mon record': 'My record',
+  'Pas encore de temps : à toi d’ouvrir la voie.': 'No time yet: you get to blaze the trail.',
+  'Fantômes': 'Ghosts',
+  'Fantôme or': 'Gold ghost',
+  'Fantôme importé': 'Imported ghost',
+  'Pas encore de record sur ce circuit': 'No record on this track yet',
+  'Retirer ce rival': 'Remove this rival',
+  'Ajoute jusqu’à 3 rivaux en ligne avec 👻 dans le classement mondial.': 'Add up to 3 online rivals with 👻 in the world leaderboard.',
+  '▶ Jouer': '▶ Play',
+  '▶ Jouer <kbd>Entrée</kbd>': '▶ Play <kbd>Enter</kbd>',
+  'Trois rivaux au plus : retires-en un d’abord.': 'Three rivals at most: remove one first.',
+
+  // ---------------------------------------------------------------- catégories de records (variantes)
+  'Catégorie de record': 'Record category',
+  '🏁 Officiel': '🏁 Official',
+  '🚗 Départ en voiture': '🚗 Car start',
+  '🏍 Départ en moto': '🏍 Motorbike start',
+  '⛵ Départ en bateau': '⛵ Boat start',
+  '🪂 Départ en deltaplane': '🪂 Hang-glider start',
+  '🚫 Sans obstacles': '🚫 No obstacles',
+  'Classement et record à part, sans médailles ni pièces : le record officiel ne bouge pas.': 'A separate leaderboard and record, with no medals or coins: the official record is untouched.',
+  'Catégorie : {c:t} · classement à part': 'Category: {c:t} · separate leaderboard',
+  'Catégorie de record inconnue.': 'Unknown record category.',
+  'Cette catégorie ne change rien sur ce circuit.': 'This category changes nothing on this track.',
+  'Catégorie trop longue pour ce circuit.': 'Category too long for this track.',
+
+  // ---------------------------------------------------------------- records
+  'Records': 'Records',
+  '🎬 Regarder mon record': '🎬 Watch my record',
+  '🎬 Regarder mon record ({t:w})': '🎬 Watch my record ({t})',
+  'Le replay rejoue ta course exacte : caméras au choix (C), pause, vitesse.': 'The replay plays back your exact run: pick a camera (C), pause, change speed.',
+  'Ce record vient d’une ancienne version du jeu : il ne se rejoue plus.': 'This record comes from an older version of the game: it can no longer be replayed.',
+  'Termine une course pour pouvoir la revoir.': 'Finish a race to be able to watch it again.',
+  'Les meilleurs temps en ligne se regardent en course : choisis-les comme rivaux 👻.': 'The best online times are watched during a race: pick them as 👻 rivals.',
+
+  // ---------------------------------------------------------------- classement à onglets
+  '🌍 Mondial': '🌍 World',
+  '👤 Personnel': '👤 Personal',
+  'Véhicule inconnu (temps d’avant l’enregistrement des fantômes)': 'Unknown vehicle (a time from before ghosts were recorded)',
+  'Aucun classement pour ce circuit.': 'No leaderboard for this track.',
+  'Classement indisponible : {e:t}.': 'Leaderboard unavailable: {e:t}.',
+  'Le reste de la fiche marche sans réseau ; ton record local est dans l’onglet Personnel.': 'The rest of this page works offline; your local record is in the Personal tab.',
+  'Affronter le fantôme de {name}': 'Race the ghost of {name}',
+  'Pas encore de temps sur ce circuit.': 'No time on this track yet.',
+  'Temps intermédiaires du record': 'Record split times',
+  'Mes {n:w} dernières courses': 'My last {n} races',
+  'Ma dernière course': 'My last race',
+
+  // ---------------------------------------------------------------- entrées, erreurs
+  'Course rapide': 'Quick race',
+  'Course rapide <small>un clic, c’est parti</small>': 'Quick race <small>one click and go</small>',
+  'un clic, c’est parti': 'one click and go',
+  'Le prochain circuit de la carrière sans médaille, sinon le défi du jour': 'The next career track without a medal, otherwise the daily challenge',
+  'Course rapide : {name:t}': 'Quick race: {name:t}',
+  'Course rapide : toute la carrière est médaillée, voici le défi du jour !': 'Quick race: the whole career has medals, here is the daily challenge!',
+  '🗺 Fiche du circuit': '🗺 Track page',
+  'Ouverture…': 'Opening…',
+  'Ce circuit est abîmé : impossible de l’ouvrir.': 'This track is damaged: it cannot be opened.',
+  'Ce circuit n’existe plus.': 'This track no longer exists.',
+  'Ce circuit a été supprimé de Mes circuits.': 'This track was deleted from My tracks.',
+  'Communauté indisponible : {e:t}': 'Community unavailable: {e:t}',
+  'Ce circuit a été retiré de la communauté.': 'This track was removed from the community.',
+};

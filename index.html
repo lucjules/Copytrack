@@ -39,7 +39,7 @@
   <link rel="modulepreload" href="js/account.js">
   <link rel="modulepreload" href="js/welcome.js">
   <link rel="modulepreload" href="js/i18n/boot.js">
-  <link rel="modulepreload" href="js/career.js">
+  <link rel="modulepreload" href="js/trackDescriptor.js">
   <link rel="modulepreload" href="js/storage.js">
   <link rel="modulepreload" href="js/telemetry.js">
   <link rel="modulepreload" href="js/replay.js">
@@ -55,6 +55,7 @@
   <link rel="modulepreload" href="js/app/editorFlow.js">
   <link rel="modulepreload" href="js/app/uicustom.js">
   <link rel="modulepreload" href="js/app/modes.js">
+  <link rel="modulepreload" href="js/app/raceHub.js">
   <link rel="modulepreload" href="js/geo.js">
   <link rel="modulepreload" href="js/constants.js">
   <link rel="modulepreload" href="js/pieces.js">
@@ -102,6 +103,9 @@
   <link rel="modulepreload" href="js/cloudsave.js">
   <link rel="modulepreload" href="js/i18n.js">
   <link rel="modulepreload" href="js/i18n/dom.js">
+  <link rel="modulepreload" href="js/career.js">
+  <link rel="modulepreload" href="js/difficulty.js">
+  <link rel="modulepreload" href="js/variants.js">
   <link rel="modulepreload" href="js/ghostFormat.js">
   <link rel="modulepreload" href="js/rules.js">
   <link rel="modulepreload" href="js/net/room.js">
@@ -110,11 +114,13 @@
   <link rel="modulepreload" href="js/net/ice.js">
   <link rel="modulepreload" href="js/academy.js">
   <link rel="modulepreload" href="js/editorTools.js">
-  <link rel="modulepreload" href="js/difficulty.js">
+  <link rel="modulepreload" href="js/ui/leaderboardPanel.js">
   <link rel="modulepreload" href="js/daily.js">
   <link rel="modulepreload" href="js/app/shared.js">
   <link rel="modulepreload" href="js/uitheme.js">
   <link rel="modulepreload" href="js/mods.js">
+  <link rel="modulepreload" href="js/favorites.js">
+  <link rel="modulepreload" href="js/ui/trackMap.js">
   <link rel="modulepreload" href="js/decoPack.js">
   <link rel="modulepreload" href="js/decoPrimitives.js">
   <link rel="modulepreload" href="js/customDecoBuild.js">
@@ -129,6 +135,7 @@
   <link rel="modulepreload" href="js/remoteCar.js">
   <link rel="modulepreload" href="js/net/collide.js">
   <link rel="modulepreload" href="js/videoExport.js">
+  <link rel="modulepreload" href="js/rulesCore.js">
   <link rel="modulepreload" href="js/net/signaling.js">
   <link rel="modulepreload" href="js/net/transport.js">
   <link rel="modulepreload" href="js/physics/walls.js">
@@ -182,7 +189,8 @@
       <h1 class="logo">COPY<span>TRACK</span></h1>
       <p class="tagline">Course contre-la-montre low-poly</p>
       <nav class="menu-buttons">
-        <button data-action="play" class="btn big primary">Carrière</button>
+        <button data-action="quick" class="btn big primary" title="Le prochain circuit de la carrière sans médaille, sinon le défi du jour">Course rapide <small>un clic, c’est parti</small></button>
+        <button data-action="play" class="btn big">Carrière</button>
         <button data-action="daily" class="btn big">Défi du jour <small id="daily-best"></small></button>
         <button data-action="academy" class="btn big">Académie <small>6 leçons guidées</small></button>
         <button data-action="community" class="btn big">Communauté <small>circuits en ligne</small></button>
@@ -204,6 +212,34 @@
       <h2>Circuits</h2>
     </header>
     <div id="track-list"></div>
+  </section>
+
+  <!-- Race Hub : la fiche d'un circuit avant de courir (js/app/raceHub.js) -->
+  <section id="race-hub" class="screen hidden" aria-labelledby="hub-name">
+    <header class="screen-head">
+      <button class="btn" data-action="hub-back">← Retour</button>
+      <div class="hub-title"><h2 id="hub-name"></h2><div class="hub-sub" id="hub-sub"></div></div>
+      <button class="btn hidden" id="hub-fav" data-action="hub-fav" aria-pressed="false">☆ Favori</button>
+    </header>
+    <div class="hub">
+      <div class="hub-main">
+        <div class="hub-map-wrap">
+          <canvas id="hub-map" tabindex="0" aria-label="Carte du circuit : molette ou pincement pour zoomer, glisser pour déplacer, double clic pour tout voir"></canvas>
+          <div class="hub-map-tools">
+            <button class="btn icon" data-action="hub-zoom-in" title="Zoomer (+)" aria-label="Zoomer">+</button>
+            <button class="btn icon" data-action="hub-zoom-out" title="Dézoomer (−)" aria-label="Dézoomer">−</button>
+            <button class="btn icon" data-action="hub-zoom-fit" title="Tout le circuit (0)" aria-label="Tout le circuit">⤢</button>
+          </div>
+        </div>
+        <ul class="hub-legend" id="hub-legend"></ul>
+        <div class="hub-facts" id="hub-facts"></div>
+      </div>
+      <aside class="hub-side">
+        <div class="hub-panel hub-launch" id="hub-launch"></div>
+        <div class="hub-panel" id="hub-board"></div>
+        <div class="hub-panel hub-records" id="hub-records"></div>
+      </aside>
+    </div>
   </section>
 
   <!-- Mes circuits -->
@@ -403,6 +439,7 @@
         <button class="btn" data-action="watch-replay" id="fin-replay">🎬 Revoir la course</button>
         <button class="btn" data-action="share-ghost" id="fin-ghost">👻 Partager mon fantôme</button>
         <button class="btn" data-action="leaderboard" id="fin-board">🏆 Classement</button>
+        <button class="btn" data-action="race-hub" id="fin-hub">🗺 Fiche du circuit</button>
       </div>
     </div>
   </div>

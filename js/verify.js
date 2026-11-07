@@ -9,14 +9,22 @@ import { GhostRunner, decodeInputs } from './replay.js';
 import { PHYS_VER } from './version.js';
 import { MAX_RUN_STEPS, MAX_INPUTS_CHARS } from './constants.js';
 import { encodeFloats } from './ghostFormat.js';
+import { splitKey, parseVariant, applyVariant } from './variants.js';
 
 // Retrouve le circuit correspondant à une clé de classement.
 //   b-<id>-<empreinte>   circuit intégré (l'empreinte garantit la même version)
 //   daily-AAAA-MM-JJ     défi du jour (régénéré à partir de la date)
 //   u-<signature>        circuit de joueur (son code doit être fourni) ; la signature
 //                        ignore le nom et la description, qu'on peut modifier après coup
+//   <clé>~v1.…           variante de record (variants.js) : le circuit de la clé officielle, transformé par ses règles
 export function trackForKey(key, code = '') {
   key = String(key || '');
+  const { base, variant } = splitKey(key);
+  if (key.includes('~')) {                       // (une clé terminée par « ~ » est une variante vide : refusée par parseVariant)
+    const off = trackForKey(base, code);
+    const v = parseVariant(variant);
+    return { ...off, track: applyVariant(off.track, v), name: `${off.name} · ${variant}`, variant: v };
+  }
   if (key.startsWith('b-')) {
     const def = BUILTIN_TRACKS.find((d) => key.startsWith(`b-${d.id}-`));
     if (!def) throw new Error('Circuit intégré inconnu.');

@@ -1176,3 +1176,73 @@ body.hud-editing #hud .hud-tl, body.hud-editing #hud .hud-tr { display: flex; }
 body.hud-editing > section, body.hud-editing #touch { display: none !important; }
 .pixcv.cdv { image-rendering: auto; cursor: default; max-width: 240px; width: 240px; }
 .cd-sec { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+
+/* ---------- Race Hub : la fiche d'un circuit (js/app/raceHub.js) ---------- */
+/* Layout : carte à gauche (zone principale), colonne de 380 px à droite (lancement, classement, records) ; une seule colonne en dessous de 960 px. */
+.hub-title { flex: 1; min-width: 0; }
+.hub-title h2 { margin: 0; font-size: 30px; font-style: italic; overflow-wrap: anywhere; }
+.hub-sub { color: var(--muted); font-size: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
+#hub-fav[aria-pressed="true"] { color: var(--amber); border-color: rgba(255, 191, 60, 0.6); }
+.hub { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; }
+@media (max-width: 960px) { .hub { grid-template-columns: minmax(0, 1fr); } }
+.hub-main { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.hub-map-wrap { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #16122b; }
+#hub-map { display: block; width: 100%; height: clamp(260px, 58vh, 640px); cursor: grab; touch-action: none; }
+#hub-map:active { cursor: grabbing; }
+#hub-map:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.hub-map-tools { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; }
+.hub-map-tools .btn { padding: 4px 10px; font-size: 18px; line-height: 1.1; }
+.hub-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+.hub-legend li { display: flex; align-items: center; gap: 6px; }
+.hub-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid rgba(0, 0, 0, 0.4); }
+.hub-facts { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.hub-facts dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; margin: 0; }
+.hub-facts dt { color: var(--muted); font-size: 14px; }
+.hub-facts dd { margin: 0; font-variant-numeric: tabular-nums; }
+.hub-medals { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.hub-desc { margin: 10px 0 0; overflow-wrap: anywhere; }
+.goal-done { color: var(--good); }
+.hub-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.hub-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; min-width: 0; }
+.hub-panel h3 { margin: 0 0 8px; font-size: 18px; font-style: italic; }
+.hub-pb { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.hub-pb b { font-size: 24px; font-variant-numeric: tabular-nums; }
+.hub-ghosts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+.hub-ghosts .meta { width: 100%; font-size: 13px; }
+.hub-ghosts .chip { font: inherit; font-size: 13px; color: var(--muted); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.hub-ghosts .chip.on { color: var(--text); background: rgba(95, 242, 255, 0.16); border-color: var(--cyan); }
+.hub-ghosts .chip.rival.on { background: rgba(199, 125, 255, 0.22); border-color: #c77dff; }
+.hub-ghosts .chip:disabled { opacity: 0.45; cursor: default; }
+.hub-cats { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+.hub-cats .meta { width: 100%; font-size: 13px; }
+.hub-cats .chip { font: inherit; font-size: 13px; color: var(--muted); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.hub-cats .chip.on { color: #1a1030; background: var(--amber); border-color: transparent; font-weight: 700; }
+.hub-cats .hub-hint { width: 100%; margin: 4px 0 0; }
+.hub-hint { font-size: 13px; margin: 0 0 8px; }
+.hub-lock { color: var(--amber); margin: 0 0 8px; }
+.hub-play { width: 100%; text-align: center; font-size: 22px; }
+.hub-play:disabled { filter: grayscale(0.8); opacity: 0.6; cursor: not-allowed; }
+.hub-records .btn { width: 100%; text-align: left; }
+.hub-records .meta { font-size: 13px; margin: 8px 0 0; }
+.lb-panel .lb-tabs { margin-bottom: 8px; }
+.lb-panel .board li { grid-template-columns: 2em minmax(0, 1fr) 1.8em auto auto 2.4em; }
+.lb-panel .board li em, .lb-pb b, .lb-splits em { font-style: normal; font-variant-numeric: tabular-nums; font-weight: 700; }
+.lb-panel .lb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-panel .lb-date { color: var(--muted); font-size: 12px; }
+.lb-panel .rival-btn.on { background: rgba(199, 125, 255, 0.55); border-color: #c77dff; }
+.lb-panel .lb-runs .board li { grid-template-columns: 2em minmax(0, 1fr) auto; }
+.lb-pb { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.lb-pb b { font-size: 20px; }
+.lb-splits ol { list-style: none; margin: 4px 0 10px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 4px 12px; font-size: 14px; }
+.lb-splits li { display: flex; justify-content: space-between; gap: 8px; }
+.lb-off { color: var(--amber); }
+.fav-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.fav-card h3 { font-size: 16px; }
+.fav-online { display: flex; align-items: center; justify-content: center; font-size: 34px; }
+/* Écran étroit : le bouton Jouer reste visible en bas de l'écran (la fiche défile dessous). */
+@media (max-width: 960px) {
+  #race-hub .hub { padding-bottom: 84px; }
+  #race-hub .hub-play { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(12px, env(safe-area-inset-bottom, 0px)); width: auto; z-index: 12; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); }
+}
+/* La scène de démonstration reste visible derrière la fiche, assombrie : le texte reste lisible sur un décor clair. */
+#race-hub { background: linear-gradient(180deg, rgba(23, 15, 46, 0.86) 0%, rgba(23, 15, 46, 0.62) 55%, rgba(23, 15, 46, 0.8) 100%); }

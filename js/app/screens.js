@@ -9,6 +9,7 @@ import { DECORS } from '../themes.js';
 import { PIECES } from '../pieces.js';
 import { thumbnail } from '../editorTools.js';
 import { dailyChallenge, dayKey } from '../daily.js';
+import { describeDaily } from '../trackDescriptor.js';
 import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked, chapterState, careerSummary, prerequisiteOf, nextBuiltinIndex } from '../career.js';
 import { locale } from '../i18n.js';
 import { getRecord, listMyTracks, deleteMyTrack, formatTime } from '../storage.js';
@@ -34,6 +35,7 @@ export const screenMethods = {
       $('daily-best').textContent = r ? formatTime(r.time) : 'nouveau';
     }
     if (name === 'tracks') this._renderTracks();
+    if (name === 'race-hub') this._renderHub();
     if (name === 'mytracks') this._renderMyTracks();
     if (name === 'community') this._renderCommunity(true);
     // Options et Commandes sont des onglets de l'écran Profil (les anciens appels showScreen('options') y mènent toujours).
@@ -111,7 +113,7 @@ export const screenMethods = {
       this.audio.error();
       return;
     }
-    this.playBuiltin(next);
+    this.playBuiltin(next, opts.fromHub ? { fromHub: opts.fromHub } : {});      // lancé depuis une fiche : « Retour » ramène à la fiche du nouveau circuit
   },
 
   // ------------------------------------------------------------ Écrans
@@ -132,6 +134,7 @@ export const screenMethods = {
         ${sm.complete ? `<p class="cs-msg">✦ Carrière complète : ${sm.total} cristaux et ${sm.total} objectifs. Il n’y a plus rien à finir ici.</p>` : sm.finished ? '<p class="cs-msg">🏁 Carrière terminée : une médaille sur chaque circuit. Reste les cristaux et les objectifs bonus.</p>' : ''}`;
       list.appendChild(box);
     }
+    this._renderFavorites(list);
     // Défi du jour
     const dailyBox = document.createElement('div');
     dailyBox.className = 'track-group';
@@ -151,7 +154,7 @@ export const screenMethods = {
       const c = dailyChallenge();
       if (c) this.leaderboardModal(c.key, c.track.name, c.track);
     });
-    const goDaily = () => { this.audio.click(); this.playDaily(); };
+    const goDaily = () => { this.audio.click(); this.openDailyHub('tracks'); };
     dc.addEventListener('click', goDaily);
     dc.addEventListener('keydown', (e) => { if (e.key === 'Enter') goDaily(); });
     dGrid.appendChild(dc);
@@ -198,7 +201,7 @@ export const screenMethods = {
         const go = () => {
           this.audio.click();
           if (!open) { this.ui.flash(`Chapitre verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${prerequisiteOf(ch) + 1}.`); this.audio.error(); return; }
-          this.playBuiltin(i);
+          this.openBuiltinHub(i, 'tracks');
         };
         card.addEventListener('click', go);
         card.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
@@ -234,11 +237,11 @@ export const screenMethods = {
     return tags.slice(0, 6);
   },
 
-  playDaily() {
+  playDaily(extra = {}) {
     const t0 = performance.now();
     const c = dailyChallenge();
     if (!c) { this.ui.flash('Le défi du jour n’a pas pu être généré.'); return; }
-    this.playTrack(c.track, { trackKey: c.key, medals: c.medals, difficulty: 3, seed: c.key, daily: true });
+    this.launchDesc(describeDaily(c), extra);
     if (performance.now() - t0 > 50) this.ui.flash('Nouveau défi du jour !', 1.5);
   },
 
@@ -266,9 +269,11 @@ export const screenMethods = {
           <button class="btn" data-a="share">Partager</button>
           <button class="btn danger" data-a="del">Supprimer</button>
         </div>`;
+      card.tabIndex = 0;
+      card.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === card && track) { this.audio.click(); this.openUserHub(entry, 'mytracks'); } });
       card.addEventListener('click', (e) => {
         const a = e.target.closest('[data-a]');
-        if (!a) return;
+        if (!a) { if (track) { this.audio.click(); this.openUserHub(entry, 'mytracks'); } return; }      // la carte : la fiche du circuit ; les boutons : leur action
         this.audio.click();
         if (a.dataset.a === 'play') this.playCode(entry.code, entry.id);
         if (a.dataset.a === 'edit') this.openEditor({ code: entry.code, entryId: entry.id, name: entry.name });

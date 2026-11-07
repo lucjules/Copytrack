@@ -9,9 +9,9 @@ import { thumbnail } from '../editorTools.js';
 import { online } from '../online.js';
 import { encodeGhost, decodeGhost, ghostLink, GHOST_LINK_MAX } from '../replay.js';
 import { estimateDifficulty, starsText, STAR_LABELS } from '../difficulty.js';
-import { titleLabel } from '../rewards.js';
-import { profile } from '../profile.js';
 import { getRecord, saveMyTrack, newId, formatTime, setImportedGhost } from '../storage.js';
+import { describeUser, describeCommunity } from '../trackDescriptor.js';
+import { renderWorldBoard } from '../ui/leaderboardPanel.js';
 export const communityMethods = {
   shareGhost() {
     const s = this.session;
@@ -91,44 +91,20 @@ export const communityMethods = {
     this.ui.modal({ title: 'Partager le circuit', body: wrap, actions });
   },
 
-  async leaderboardModal(trackKey, name, track = null) {
+  // Fenêtre « 🏆 » (cartes, écran d'arrivée) : le même classement mondial que le Race Hub (ui/leaderboardPanel.js) ; ici, 👻 lance la course contre ce fantôme.
+  leaderboardModal(trackKey, name, track = null) {
     const body = document.createElement('div');
-    body.innerHTML = '<p class="meta">Chargement du classement…</p>';
+    body.className = 'lb-panel';
     this.ui.modal({ title: `🏆 ${name}`, body, actions: [{ label: 'Fermer', primary: true }] });
-    const render = async () => {
-      let lb;
-      try { lb = await online.leaderboard(trackKey, PHYS_VER, 10); } catch (e) { body.innerHTML = `<p>Classement indisponible : ${esc(e.message)}</p>`; return; }
-      const rec = getRecord(trackKey);
-      const canSend = rec && rec.inputs && rec.pv === PHYS_VER && (!lb.me || rec.time < lb.me.time - 1e-6) && this.settings.onlineScores !== false;
-      const rows = lb.top.map((r, i) => `<li class="${r.player === online.uid ? 'me' : ''}"><b>${i + 1}</b><span>${esc((r.players && r.players.name) || '—')}${r.players && titleLabel(r.players.title) ? ` <small class="ttl">${esc(titleLabel(r.players.title))}</small>` : ''}</span><i>${formatTime(r.time)}</i>${r.has_ghost && i < 10 ? `<button class="rival-btn" data-rank="${i + 1}" title="Affronter son fantôme" aria-label="Affronter le fantôme n° ${i + 1}">👻</button>` : '<span class="rival-none"></span>'}</li>`).join('');
-      const anyGhost = lb.top.some((r) => r.has_ghost);
-      body.innerHTML = `${lb.top.length ? `<ol class="board">${rows}</ol>` : '<p>Aucun temps pour l’instant : sois le premier !</p>'}
-        ${anyGhost ? '<p class="meta">👻 : affronte le fantôme d’un des dix premiers (sa course rejouée par le serveur ; seulement ses positions, jamais ses commandes).</p>' : ''}
-        <p class="mp-err" id="lb-err" role="alert"></p>
-        <p class="meta">${lb.total} pilote${lb.total > 1 ? 's' : ''} classé${lb.total > 1 ? 's' : ''}${lb.me ? ` · ta place : <b>${lb.me.rank}${lb.me.rank === 1 ? 'er' : 'e'}</b> (${formatTime(lb.me.time)})` : ''}.
-        Chaque temps est vérifié : le serveur rejoue la course avant de l’accepter.</p>
-        ${canSend ? `<button class="btn primary" id="lb-send">Envoyer mon record (${formatTime(rec.time)})</button>` : ''}`;
-      for (const b of body.querySelectorAll('.rival-btn')) b.onclick = async () => {
-        const err = body.querySelector('#lb-err');
-        b.disabled = true; err.textContent = '';
-        try {
-          const g = await online.ghost(trackKey, +b.dataset.rank, PHYS_VER);
-          if (!g) { err.textContent = 'Pas de fantôme pour ce temps (record d’avant cette fonction : son auteur doit le renvoyer).'; b.disabled = false; return; }
-          this.ui.closeModal();
-          this.raceWithRivals(trackKey, track, [g]);
-        } catch (e) { err.textContent = e.message || 'Fantôme indisponible.'; b.disabled = false; }
-      };
-      const send = body.querySelector('#lb-send');
-      if (send) send.onclick = async () => {
-        send.disabled = true; send.textContent = 'Vérification…';
-        try {
-          if (profile().title) online.setTitle(profile().title).catch(() => { /* sans l'étape 8 : le titre reste local */ });
-          await online.submitScore({ trackKey, code: trackKey.startsWith('u-') && track ? track.encode() : '', inputs: rec.inputs, time: rec.time, physVer: PHYS_VER }, this.settings.playerName);
-          render();
-        } catch (e) { send.textContent = e.message; }
-      };
-    };
-    render();
+    renderWorldBoard(body, { key: trackKey, track, recordKeys: [trackKey] }, {
+      app: this,
+      onRival: async (row, rank) => {
+        const g = await online.ghost(trackKey, rank, PHYS_VER);
+        if (!g) throw new Error('Pas de fantôme pour ce temps (record d’avant cette fonction : son auteur doit le renvoyer).');
+        this.ui.closeModal();
+        this.raceWithRivals(trackKey, track, [g]);
+      },
+    });
   },
 
   // Lance (ou relance) la course d'un circuit avec des fantômes rivaux : ceux du haut d'un classement en ligne.
@@ -140,7 +116,7 @@ export const communityMethods = {
       if (i < 0) { this.ui.flash('Circuit introuvable.'); return; }
       this.playBuiltin(i);
     } else if (trackKey.startsWith('daily-')) this.playDaily();
-    else if (track) this.playTrack(track, { trackKey: track.userKey, userMap: true, medals: track.derivedMedals, difficulty: 2, seed: track.name });
+    else if (track) this.launchDesc(describeUser(track));
     else { this.ui.flash('Ouvre d’abord le circuit pour affronter ce fantôme.'); return; }
     if (this.session && this.session.setRivals) this.session.setRivals(rivals);
   },
@@ -280,14 +256,15 @@ export const communityMethods = {
         <button class="btn" data-a="copy" title="Copier dans Mes circuits">⧉ Copier</button>
         ${mine ? '<button class="btn" data-a="edit" title="Nom et description">✎</button><button class="btn danger" data-a="del" title="Retirer de la communauté">✕</button>' : '<button class="btn subtle" data-a="report" title="Signaler">⚑</button>'}
       </div>`;
+    card.tabIndex = 0;
+    card.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === card && track) { this.audio.click(); this.openCommunityHub(row, 'community'); } });
     card.addEventListener('click', async (e) => {
       const a = e.target.closest('[data-a]');
-      if (!a) return;
+      if (!a) { if (track) { this.audio.click(); this.openCommunityHub(row, 'community'); } return; }      // la carte : la fiche du circuit
       this.audio.click();
       const act = a.dataset.a;
       if (act === 'play' && track) {
-        this.playTrack(track, { trackKey: key, seed: track.name, userMap: true, medals, difficulty: 2, community: row.id });
-        online.played(row.id);
+        this.launchDesc(describeCommunity(track, row));
       } else if (act === 'like') {
         try {
           const n = await online.toggleLike(row.id, this.settings.playerName);

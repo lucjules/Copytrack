@@ -1296,17 +1296,17 @@ var OPTION_CONFLICTS = {
   ]
 };
 var hasConflict = (flag, tile) => !!tile && OPTION_CONFLICTS[flag].some((f) => tile[f]);
-function clearConflicts(opts, flag) {
+function clearConflicts(opts2, flag) {
   for (const f of OPTION_CONFLICTS[flag] || []) {
-    opts[f] = 0;
-    if (f === "mv" && "ms" in opts) {
-      opts.ms = 0;
-      opts.ma = 0;
+    opts2[f] = 0;
+    if (f === "mv" && "ms" in opts2) {
+      opts2.ms = 0;
+      opts2.ma = 0;
     }
   }
-  if (flag === "v" && opts.cp === 2) opts.cp = 0;
-  if (flag === "cp" && opts.cp === 2) opts.v = 0;
-  return opts;
+  if (flag === "v" && opts2.cp === 2) opts2.cp = 0;
+  if (flag === "cp" && opts2.cp === 2) opts2.v = 0;
+  return opts2;
 }
 function flagAllowed(type, flag, tile = null, val = 0) {
   const p = PIECES[type];
@@ -3429,7 +3429,9 @@ var DECO_ORDER = [
   "hauntedHouse",
   "skull",
   // 0.9.3 : pack de ~200 décorations (plage, Saint-Valentin, Nouvel An, fête foraine, ville, ferme, château, Japon, sport, jungle…)
-  ...PACK_IDS
+  ...PACK_IDS,
+  // 0.9.24 : pièce décorative personnalisée (customDeco.js), à la fin : l'ordre existant ne change jamais.
+  "custom"
 ];
 var BASE = [
   [
@@ -4051,25 +4053,98 @@ var BASE = [
     {
       hidden: true
     }
+  ],
+  [
+    "custom",
+    "Mes pi\xE8ces",
+    [
+      [
+        "custom",
+        "Pi\xE8ce perso",
+        "\u2726"
+      ]
+    ],
+    {
+      hidden: true
+    }
   ]
 ];
 var DECO_CATS = {};
 var DECO_LABELS = {};
 var DECO_ICONS = {};
-for (const [key2, title, items, opts = {}] of [
+for (const [key2, title, items, opts2 = {}] of [
   ...BASE,
   ...PACK
 ]) {
-  if (!opts.hidden && !DECO_CATS[key2]) DECO_CATS[key2] = {
+  if (!opts2.hidden && !DECO_CATS[key2]) DECO_CATS[key2] = {
     label: title,
     kinds: []
   };
   for (const [id, name, icon] of items) {
-    if (!opts.hidden) DECO_CATS[key2].kinds.push(id);
+    if (!opts2.hidden) DECO_CATS[key2].kinds.push(id);
     DECO_LABELS[id] = name;
     DECO_ICONS[id] = icon;
   }
 }
+
+// js/customDeco.js
+var MAX_DECO_PARTS = 12;
+var MAX_CUSTOM_DECOS = 10;
+var DECO_SHAPES = [
+  "box",
+  "sphere",
+  "cyl",
+  "cone",
+  "wedge",
+  "ring"
+];
+var HEX = /^#[0-9a-f]{6}$/i;
+var num = (v, lo, hi, def, step) => {
+  let n = Number(v);
+  if (!Number.isFinite(n)) n = def;
+  n = Math.min(hi, Math.max(lo, n));
+  return Number((Math.round(n / step) * step).toFixed(3));
+};
+function sanitizeDecoPart(p) {
+  if (!p || typeof p !== "object" || !DECO_SHAPES.includes(p.s)) return null;
+  return {
+    s: p.s,
+    x: num(p.x, -8, 8, 0, 0.1),
+    y: num(p.y, 0, 12, 1, 0.1),
+    z: num(p.z, -8, 8, 0, 0.1),
+    sx: num(p.sx, 0.1, 8, 1, 0.1),
+    sy: num(p.sy, 0.1, 10, 1, 0.1),
+    sz: num(p.sz, 0.1, 8, 1, 0.1),
+    ry: num(p.ry, 0, 345, 0, 15),
+    c: typeof p.c === "string" && HEX.test(p.c) ? p.c.toLowerCase() : "#c0c6e0",
+    g: p.g ? 1 : 0
+  };
+}
+var sanitizeDecoParts = (list) => Array.isArray(list) ? list.slice(0, MAX_DECO_PARTS).map(sanitizeDecoPart).filter(Boolean) : [];
+var packDecoParts = (parts) => sanitizeDecoParts(parts).map((p) => [
+  DECO_SHAPES.indexOf(p.s),
+  p.x,
+  p.y,
+  p.z,
+  p.sx,
+  p.sy,
+  p.sz,
+  p.ry / 15,
+  p.c.slice(1),
+  p.g
+]);
+var unpackDecoParts = (arr) => sanitizeDecoParts(Array.isArray(arr) ? arr.slice(0, MAX_DECO_PARTS).map((a) => Array.isArray(a) ? {
+  s: DECO_SHAPES[a[0]],
+  x: a[1],
+  y: a[2],
+  z: a[3],
+  sx: a[4],
+  sy: a[5],
+  sz: a[6],
+  ry: (+a[7] || 0) * 15,
+  c: "#" + a[8],
+  g: a[9]
+} : null) : []);
 
 // js/themes.js
 var DECORS = {
@@ -4142,6 +4217,297 @@ var CAREER_ORDER = [
 ];
 var DAILY_DECORS = Object.keys(DECORS).slice(0, 11);
 
+// js/ambiance.js
+var SKY_CHOICES = [
+  [
+    "",
+    "Selon le d\xE9cor"
+  ],
+  [
+    "dawn",
+    "Aube"
+  ],
+  [
+    "day",
+    "Plein jour"
+  ],
+  [
+    "sunset",
+    "Coucher de soleil"
+  ],
+  [
+    "night",
+    "Nuit"
+  ]
+];
+var FOG_CHOICES = [
+  [
+    "",
+    "Selon le d\xE9cor"
+  ],
+  [
+    "clear",
+    "D\xE9gag\xE9"
+  ],
+  [
+    "misty",
+    "Brumeux"
+  ],
+  [
+    "thick",
+    "\xC9pais"
+  ]
+];
+var MUSIC_CHOICES = [
+  [
+    "",
+    "Chill de course"
+  ],
+  [
+    "menu",
+    "Groove du menu"
+  ],
+  [
+    "none",
+    "Aucune"
+  ]
+];
+var SKIES = SKY_CHOICES.map(([k]) => k).filter(Boolean);
+var FOGS = FOG_CHOICES.map(([k]) => k).filter(Boolean);
+var MUSICS = MUSIC_CHOICES.map(([k]) => k).filter(Boolean);
+var WEATHER_CHOICES = [
+  [
+    "",
+    "Aucune"
+  ],
+  [
+    "rain",
+    "Pluie"
+  ],
+  [
+    "snow",
+    "Neige"
+  ],
+  [
+    "embers",
+    "Braises"
+  ],
+  [
+    "dust",
+    "Poussi\xE8re"
+  ],
+  [
+    "petals",
+    "P\xE9tales"
+  ]
+];
+var CYCLE_CHOICES = [
+  [
+    "",
+    "Heure fixe"
+  ],
+  [
+    "slow",
+    "Journ\xE9e lente (2 min)"
+  ],
+  [
+    "fast",
+    "Journ\xE9e rapide (50 s)"
+  ]
+];
+var WEATHERS = WEATHER_CHOICES.map(([k]) => k).filter(Boolean);
+var CYCLES = CYCLE_CHOICES.map(([k]) => k).filter(Boolean);
+var HEXC = /^#[0-9a-f]{6}$/i;
+var DEFAULT_AMBIANCE = Object.freeze({
+  sky: "",
+  fog: "",
+  music: "",
+  weather: "",
+  sunAz: -1,
+  tint: "",
+  gtint: "",
+  fogC: "",
+  cycle: ""
+});
+var isDefaultAmbiance = (a) => !a || !a.sky && !a.fog && !a.music && !a.weather && !(a.sunAz >= 0) && !a.tint && !a.gtint && !a.fogC && !a.cycle;
+function cleanAmbiance(a) {
+  const o = a && typeof a === "object" ? a : {};
+  const az = Number(o.sunAz);
+  return {
+    sky: SKIES.includes(o.sky) ? o.sky : "",
+    fog: FOGS.includes(o.fog) ? o.fog : "",
+    music: MUSICS.includes(o.music) ? o.music : "",
+    weather: WEATHERS.includes(o.weather) ? o.weather : "",
+    sunAz: Number.isFinite(az) && az >= 0 ? Math.round(Math.min(345, az) / 15) * 15 : -1,
+    tint: HEXC.test(o.tint || "") ? o.tint.toLowerCase() : "",
+    gtint: HEXC.test(o.gtint || "") ? o.gtint.toLowerCase() : "",
+    fogC: HEXC.test(o.fogC || "") ? o.fogC.toLowerCase() : "",
+    cycle: CYCLES.includes(o.cycle) ? o.cycle : ""
+  };
+}
+function ambianceToArray(a) {
+  if (isDefaultAmbiance(a)) return null;
+  const base = [
+    a.sky || "",
+    a.fog || "",
+    a.music || ""
+  ];
+  if (!a.weather && !(a.sunAz >= 0) && !a.tint && !a.gtint && !a.fogC && !a.cycle) return base;
+  return [
+    ...base,
+    a.weather || "",
+    a.sunAz >= 0 ? a.sunAz : -1,
+    a.tint ? a.tint.slice(1) : "",
+    a.gtint ? a.gtint.slice(1) : "",
+    a.fogC ? a.fogC.slice(1) : "",
+    a.cycle || ""
+  ];
+}
+var ambianceFromArray = (arr) => Array.isArray(arr) ? cleanAmbiance({
+  sky: arr[0],
+  fog: arr[1],
+  music: arr[2],
+  weather: arr[3],
+  sunAz: arr[4],
+  tint: arr[5] ? "#" + arr[5] : "",
+  gtint: arr[6] ? "#" + arr[6] : "",
+  fogC: arr[7] ? "#" + arr[7] : "",
+  cycle: arr[8]
+}) : {
+  ...DEFAULT_AMBIANCE
+};
+
+// js/scripts.js
+var MAX_SCRIPTS = 16;
+var SCRIPT_SOUNDS = [
+  [
+    "ding",
+    "Ding"
+  ],
+  [
+    "whoosh",
+    "Souffle"
+  ],
+  [
+    "horn",
+    "Klaxon"
+  ],
+  [
+    "boost",
+    "Turbo"
+  ],
+  [
+    "bounce",
+    "Rebond"
+  ]
+];
+var opts = (list, none) => list.filter(([k]) => k || none);
+var SCRIPT_ACTIONS = [
+  [
+    "msg",
+    "Afficher un message",
+    null
+  ],
+  [
+    "sky",
+    "Changer le moment de la journ\xE9e",
+    opts(SKY_CHOICES, true)
+  ],
+  [
+    "weather",
+    "Changer la m\xE9t\xE9o",
+    opts(WEATHER_CHOICES, true)
+  ],
+  [
+    "fog",
+    "Changer la brume",
+    opts(FOG_CHOICES, true)
+  ],
+  [
+    "music",
+    "Changer la musique",
+    [
+      [
+        "",
+        "Chill de course"
+      ],
+      [
+        "menu",
+        "Groove du menu"
+      ],
+      [
+        "none",
+        "Silence"
+      ]
+    ]
+  ],
+  [
+    "burst",
+    "Lancer un \xE9clat de couleur",
+    "color"
+  ],
+  [
+    "shake",
+    "Secouer la cam\xE9ra",
+    [
+      [
+        "1",
+        "L\xE9g\xE8rement"
+      ],
+      [
+        "2",
+        "Fort"
+      ]
+    ]
+  ],
+  [
+    "sound",
+    "Jouer un son",
+    SCRIPT_SOUNDS
+  ]
+];
+var IDS = SCRIPT_ACTIONS.map(([id]) => id);
+var choicesOf = (id) => {
+  const c = SCRIPT_ACTIONS.find((a) => a[0] === id)[2];
+  return Array.isArray(c) ? c.map(([k]) => k) : null;
+};
+var HEX2 = /^#[0-9a-f]{6}$/i;
+var cell = (v) => {
+  const n = Math.trunc(Number(v));
+  return Number.isFinite(n) ? Math.max(-500, Math.min(500, n)) : 0;
+};
+function sanitizeScript(s) {
+  if (!s || typeof s !== "object" || !IDS.includes(s.a)) return null;
+  const ch = choicesOf(s.a);
+  let v = String(s.v == null ? "" : s.v);
+  if (s.a === "msg") v = v.replace(/[^\p{L}\p{N} _'’.,!?:;()+\-×÷%/]/gu, "").trim().slice(0, 40);
+  else if (s.a === "burst") v = HEX2.test(v) ? v.toLowerCase() : "#ffd23e";
+  else if (!ch.includes(v)) v = ch[0] === void 0 ? "" : s.a === "shake" || s.a === "sound" ? ch[0] : "";
+  if (s.a === "msg" && !v) return null;
+  return {
+    x: cell(s.x),
+    z: cell(s.z),
+    a: s.a,
+    v
+  };
+}
+var sanitizeScripts = (list) => Array.isArray(list) ? list.slice(0, MAX_SCRIPTS).map(sanitizeScript).filter(Boolean) : [];
+var scriptsToArray = (list) => {
+  const l = sanitizeScripts(list);
+  return l.length ? l.map((s) => [
+    s.x,
+    s.z,
+    IDS.indexOf(s.a),
+    s.v
+  ]) : null;
+};
+var scriptsFromArray = (arr) => sanitizeScripts(Array.isArray(arr) ? arr.slice(0, MAX_SCRIPTS).map((a) => Array.isArray(a) ? {
+  x: a[0],
+  z: a[1],
+  a: IDS[a[2]],
+  v: a[3]
+} : null) : []);
+
 // js/track/shared.js
 var WATER_DROP = 0.35;
 var boatDrop = (along) => WATER_DROP * (1 - Math.max(0, Math.min(1, along || 0)));
@@ -4150,11 +4516,11 @@ var COLOR_KEYS = [
   "line",
   "rail"
 ];
-var HEX = /^#[0-9a-f]{6}$/i;
+var HEX3 = /^#[0-9a-f]{6}$/i;
 function cleanColors(c) {
   if (!c || typeof c !== "object") return null;
   const out = {};
-  for (const k of COLOR_KEYS) if (typeof c[k] === "string" && HEX.test(c[k])) out[k] = c[k].toLowerCase();
+  for (const k of COLOR_KEYS) if (typeof c[k] === "string" && HEX3.test(c[k])) out[k] = c[k].toLowerCase();
   return Object.keys(out).length ? out : null;
 }
 var W = {
@@ -4233,15 +4599,15 @@ var surfaceMethods = {
     out.lz = 0;
     const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
     let best = -Infinity;
-    const cell = this.tilesAt(cx, cz);
-    for (let i = 0; i < cell.length; i++) {
-      const tile = cell[i];
+    const cell2 = this.tilesAt(cx, cz);
+    for (let i = 0; i < cell2.length; i++) {
+      const tile = cell2[i];
       if (tile.mv || !isFloor(tile) || broken && broken.has(tile)) continue;
       best = this._floorTry(tile, x, z, 0, y, step, best, out);
     }
     if (this.hasMovers) {
-      for (let i = 0; i < cell.length; i++) {
-        const tile = cell[i];
+      for (let i = 0; i < cell2.length; i++) {
+        const tile = cell2[i];
         if (!tile.mv || !isFloor(tile) || broken && broken.has(tile)) continue;
         this.moverOffset(tile, time, MO);
         if (MO.a) {
@@ -4489,7 +4855,11 @@ var editMethods = {
       deco.s = Math.max(0.5, Math.min(2.5, deco.s));
     }
     if (!DECO_ORDER.includes(deco.k)) return null;
-    if (typeof d.cc === "string" && HEX.test(d.cc)) deco.cc = d.cc.toLowerCase();
+    if (typeof d.cc === "string" && HEX3.test(d.cc)) deco.cc = d.cc.toLowerCase();
+    if (deco.k === "custom") {
+      deco.cp = sanitizeDecoParts(d.cp);
+      if (!deco.cp.length || this.decos.filter((o) => o.k === "custom").length >= MAX_CUSTOM_DECOS) return null;
+    }
     this.decos.push(deco);
     this.version++;
     return deco;
@@ -4555,6 +4925,10 @@ var Track = class _Track {
     this.version = 0;
     this.laps = 1;
     this.desc = "";
+    this.scripts = [];
+    this.ambiance = {
+      ...DEFAULT_AMBIANCE
+    };
     this.resetRules();
     this.vt = 0;
     this.vh = "";
@@ -4746,6 +5120,10 @@ var Track = class _Track {
     this.vh = "";
     this.laps = 1;
     this.desc = "";
+    this.ambiance = {
+      ...DEFAULT_AMBIANCE
+    };
+    this.scripts = [];
     this.resetRules();
     this.version++;
   }
@@ -4814,6 +5192,8 @@ var Track = class _Track {
   // accepte aussi un autre circuit, dont on lit les mêmes champs).
   setParams(p = {}) {
     if (p.desc !== void 0) this.desc = String(p.desc || "").replace(/\s+/g, " ").trim().slice(0, 200);
+    if (p.ambiance !== void 0) this.ambiance = cleanAmbiance(p.ambiance);
+    if (p.scripts !== void 0) this.scripts = sanitizeScripts(p.scripts);
     for (const r of RULES) if (p[r.key] !== void 0) this[r.key] = r.clean(p[r.key]);
   }
   // Signature du contenu (pièces, décorations, règles de course), utilisée pour la
@@ -4858,6 +5238,12 @@ var Track = class _Track {
     t.vh = this.vh;
     t.laps = this.laps;
     t.desc = this.desc;
+    t.ambiance = {
+      ...this.ambiance
+    };
+    t.scripts = this.scripts.map((s) => ({
+      ...s
+    }));
     for (const r of RULES) t[r.key] = this[r.key];
     return t;
   }
@@ -4895,15 +5281,21 @@ var Track = class _Track {
       +d.s.toFixed(2),
       d.c,
       d.u || 0,
-      ...d.ph || d.cc ? [
-        d.ph || 0
-      ] : [],
-      ...d.cc ? [
-        d.cc.slice(1)
-      ] : []
+      ...d.cp && d.cp.length ? [
+        d.ph || 0,
+        d.cc ? d.cc.slice(1) : "",
+        packDecoParts(d.cp)
+      ] : [
+        ...d.ph || d.cc ? [
+          d.ph || 0
+        ] : [],
+        ...d.cc ? [
+          d.cc.slice(1)
+        ] : []
+      ]
     ]);
     const data = {
-      v: extras.length || this.decos.some((d) => d.cc) || RULES.some((r) => r.v4 && this[r.key]) ? 4 : 3,
+      v: extras.length || this.decos.some((d) => d.cc || d.cp) || RULES.some((r) => r.v4 && this[r.key]) ? 4 : 3,
       n: this.name,
       a: this.author || "",
       d: this.decor,
@@ -4913,6 +5305,10 @@ var Track = class _Track {
     if (decos.length) data.o = decos;
     if (this.laps > 1) data.lp = this.laps;
     if (this.desc) data.ds = this.desc;
+    const am = ambianceToArray(this.ambiance);
+    if (am) data.am = am;
+    const sc = scriptsToArray(this.scripts);
+    if (sc) data.sc = sc;
     for (const r of RULES) if (this[r.key] !== r.def) data[r.code] = this[r.key] === true ? 1 : this[r.key];
     if (this.verified) {
       data.vt = this.vt;
@@ -4992,13 +5388,16 @@ var Track = class _Track {
           c: o[6],
           u,
           ph: +o[8] || 0,
-          cc: typeof o[9] === "string" ? "#" + o[9] : ""
+          cc: typeof o[9] === "string" && o[9] ? "#" + o[9] : "",
+          cp: k === "custom" ? unpackDecoParts(o[10]) : void 0
         });
       }
     }
     tr.laps = Math.max(1, Math.min(9, data.lp | 0 || 1));
     tr.setParams({
       desc: data.ds,
+      ambiance: ambianceFromArray(data.am),
+      scripts: scriptsFromArray(data.sc),
       ...Object.fromEntries(RULES.map((r) => [
         r.key,
         data[r.code]
@@ -5064,10 +5463,10 @@ var SURF_CODE = {
   y: "reverse",
   c: "cut"
 };
-function scriptTrack(name, script, opts = {}) {
+function scriptTrack(name, script, opts2 = {}) {
   const tr = new Track(name);
-  tr.decor = opts.decor || DEFAULT_DECOR;
-  let x = opts.x || 0, z = opts.z || 0, h = opts.h || 0, l = opts.l || 0;
+  tr.decor = opts2.decor || DEFAULT_DECOR;
+  let x = opts2.x || 0, z = opts2.z || 0, h = opts2.h || 0, l = opts2.l || 0;
   const path = [];
   let cur = {
     s: "",
@@ -5086,7 +5485,7 @@ function scriptTrack(name, script, opts = {}) {
       r: r & 3,
       ...curOver || cur
     };
-    const mp = cur.mv && opts.movers ? opts.movers[cur.mvTok - 1] : null;
+    const mp = cur.mv && opts2.movers ? opts2.movers[cur.mvTok - 1] : null;
     if (mp) {
       tile.ms = mp.ms || 0;
       tile.ma = mp.ma || 0;
@@ -5594,7 +5993,7 @@ function scriptTrack(name, script, opts = {}) {
         throw new Error("Instruction inconnue : " + op);
     }
   }
-  for (const d of opts.decos || []) tr.addDeco(d);
+  for (const d of opts2.decos || []) tr.addDeco(d);
   tr.path = path;
   tr.turtle = {
     x,
@@ -9608,10 +10007,10 @@ var L3 = {
 };
 var S3 = {};
 var RaceLogic = class {
-  constructor(track, opts = {}) {
+  constructor(track, opts2 = {}) {
     this.track = track;
     this.laps = Math.max(1, track.laps || 1);
-    this.partial = !!opts.partial;
+    this.partial = !!opts2.partial;
     this.cps = track.tiles.filter((t) => cpKind(t));
     this.startTile = track.startTile;
     this.reset();
@@ -9927,12 +10326,12 @@ var Simulation = class {
 
 // js/autopilot.js
 var Autopilot = class {
-  constructor(path, opts = {}) {
+  constructor(path, opts2 = {}) {
     this.path = path;
     this.idx = 0;
-    this.latLimit = opts.latLimit ?? CAR.latGrip * 0.62;
-    this.brakeDecel = opts.brakeDecel ?? 20;
-    this.vCap = opts.vCap ?? (path.pilot && path.pilot.vCap) ?? 52;
+    this.latLimit = opts2.latLimit ?? CAR.latGrip * 0.62;
+    this.brakeDecel = opts2.brakeDecel ?? 20;
+    this.vCap = opts2.vCap ?? (path.pilot && path.pilot.vCap) ?? 52;
     const n = path.length;
     this.dist = new Float32Array(n);
     for (let i = 1; i < n; i++) {
@@ -10647,9 +11046,208 @@ var GhostRunner = class {
   }
 };
 
+// js/rulesCore.js
+var VEHICLE_CHOICES = [
+  [
+    "",
+    "Celui du circuit"
+  ],
+  [
+    "car",
+    "Voiture"
+  ],
+  [
+    "moto",
+    "Moto"
+  ],
+  [
+    "boat",
+    "Bateau"
+  ],
+  [
+    "glider",
+    "Deltaplane"
+  ]
+];
+var DEFAULT_RULES = Object.freeze({
+  laps: 0,
+  g0: 0,
+  veh0: "",
+  v0: -1,
+  offroad: -1,
+  obstacles: "",
+  sameCars: 0
+});
+var VEHICLES2 = VEHICLE_CHOICES.map(([k]) => k).filter(Boolean);
+var int = (v, lo, hi, def) => {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : def;
+};
+function sanitizeRules(r) {
+  const o = r && typeof r === "object" ? r : {};
+  return {
+    laps: o.laps ? int(o.laps, 1, 5, 0) : 0,
+    g0: o.g0 ? int(o.g0, 15, 250, 0) : 0,
+    veh0: VEHICLES2.includes(o.veh0) ? o.veh0 : "",
+    v0: o.v0 >= 0 ? int(o.v0, 0, 300, -1) : -1,
+    offroad: o.offroad === 1 || o.offroad === true ? 1 : o.offroad === 0 || o.offroad === false ? 0 : -1,
+    obstacles: o.obstacles === "off" ? "off" : "",
+    sameCars: o.sameCars ? 1 : 0
+  };
+}
+var isDefaultRules = (r) => JSON.stringify(sanitizeRules(r)) === JSON.stringify(DEFAULT_RULES);
+function applyRules(track, rules) {
+  const r = sanitizeRules(rules);
+  if (isDefaultRules(r)) return track;
+  const t = track.clone();
+  if (track.path) t.path = track.path;
+  const p = {};
+  if (r.g0) p.g0 = r.g0;
+  if (r.veh0) p.veh0 = r.veh0;
+  if (r.v0 >= 0) p.v0 = r.v0;
+  if (r.offroad >= 0) p.offroad = r.offroad;
+  t.setParams(p);
+  if (r.laps && t.laps > 1) {
+    if (t.path) {
+      const L4 = Math.round((t.path.length - 1) / t.laps) + 1, one = t.path.slice(0, L4), pilot = t.path.pilot;
+      const path = one.slice();
+      for (let k = 1; k < r.laps; k++) path.push(...one.slice(1));
+      if (pilot) path.pilot = pilot;
+      t.path = path;
+    }
+    t.laps = r.laps;
+  }
+  if (r.obstacles === "off") {
+    for (const d of t.decos.slice()) if (isObstacle(d.k)) t.removeDeco(d);
+  }
+  return t;
+}
+
+// js/variants.js
+var VARIANT_VER = "v1";
+var VARIANTS = {
+  g: {
+    values: [
+      "40",
+      "70",
+      "130",
+      "180"
+    ],
+    rule: (v) => ({
+      g0: +v
+    })
+  },
+  lap: {
+    values: [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+    ],
+    rule: (v) => ({
+      laps: +v
+    })
+  },
+  obs: {
+    values: [
+      "0"
+    ],
+    rule: () => ({
+      obstacles: "off"
+    })
+  },
+  off: {
+    values: [
+      "0",
+      "1"
+    ],
+    rule: (v) => ({
+      offroad: +v
+    })
+  },
+  v0: {
+    values: [
+      "0",
+      "100",
+      "200"
+    ],
+    rule: (v) => ({
+      v0: +v
+    })
+  },
+  veh: {
+    values: [
+      "car",
+      "moto",
+      "boat",
+      "glider"
+    ],
+    rule: (v) => ({
+      veh0: v
+    })
+  }
+};
+var NAMES = Object.keys(VARIANTS).sort();
+function rulesOfVariant(v) {
+  const r = {};
+  for (const n of NAMES) if (v[n] != null) Object.assign(r, VARIANTS[n].rule(String(v[n])));
+  return r;
+}
+function formatVariant(v) {
+  const parts = [];
+  for (const n of Object.keys(v || {})) if (!Object.hasOwn(VARIANTS, n)) throw new Error("Cat\xE9gorie de record inconnue.");
+  for (const n of NAMES) {
+    if (v[n] == null) continue;
+    const val = String(v[n]);
+    if (!VARIANTS[n].values.includes(val)) throw new Error("Cat\xE9gorie de record inconnue.");
+    parts.push(`${n}-${val}`);
+  }
+  return parts.length ? `${VARIANT_VER}.${parts.join(".")}` : "";
+}
+function parseVariant(s) {
+  const str = String(s || "");
+  const m = /^v1((?:\.[a-z0-9]+-[a-z0-9]+)+)$/.exec(str);
+  if (!m) throw new Error("Cat\xE9gorie de record inconnue.");
+  const v = {};
+  for (const p of m[1].slice(1).split(".")) {
+    const i = p.indexOf("-"), n = p.slice(0, i), val = p.slice(i + 1);
+    if (!Object.hasOwn(VARIANTS, n) || Object.hasOwn(v, n) || !VARIANTS[n].values.includes(val)) throw new Error("Cat\xE9gorie de record inconnue.");
+    v[n] = val;
+  }
+  if (formatVariant(v) !== str) throw new Error("Cat\xE9gorie de record inconnue.");
+  return v;
+}
+function splitKey(key2) {
+  const k = String(key2 || ""), i = k.indexOf("~");
+  return i < 0 ? {
+    base: k,
+    variant: ""
+  } : {
+    base: k.slice(0, i),
+    variant: k.slice(i + 1)
+  };
+}
+function applyVariant(track, v) {
+  const t = applyRules(track, rulesOfVariant(v));
+  if (t === track || t.signature() === track.signature() && t.laps === track.laps) throw new Error("Cette cat\xE9gorie ne change rien sur ce circuit.");
+  return t;
+}
+
 // js/verify.js
 function trackForKey(key2, code = "") {
   key2 = String(key2 || "");
+  const { base, variant } = splitKey(key2);
+  if (key2.includes("~")) {
+    const off = trackForKey(base, code);
+    const v = parseVariant(variant);
+    return {
+      ...off,
+      track: applyVariant(off.track, v),
+      name: `${off.name} \xB7 ${variant}`,
+      variant: v
+    };
+  }
   if (key2.startsWith("b-")) {
     const def = BUILTIN_TRACKS.find((d) => key2.startsWith(`b-${d.id}-`));
     if (!def) throw new Error("Circuit int\xE9gr\xE9 inconnu.");

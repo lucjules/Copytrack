@@ -1,7 +1,7 @@
 // Service worker généré par tools/gen-sw.mjs : ne pas modifier à la main.
 // Jeu hors ligne : les fichiers du jeu sont gardés en cache ; le réseau reste prioritaire
 // pour récupérer les mises à jour quand il est disponible.
-const CACHE = 'copytrack-fd728a893a';
+const CACHE = 'copytrack-9520afe9e6';
 const FILES = [
   "./",
   "assets/README.txt",
@@ -21,6 +21,7 @@ const FILES = [
   "js/app/modes.js",
   "js/app/multi.js",
   "js/app/profile.js",
+  "js/app/raceHub.js",
   "js/app/rewards.js",
   "js/app/screens.js",
   "js/app/settings.js",
@@ -63,6 +64,7 @@ const FILES = [
   "js/editorPick.js",
   "js/editorTools.js",
   "js/families.js",
+  "js/favorites.js",
   "js/feel.js",
   "js/garage.js",
   "js/garage/studio.js",
@@ -76,6 +78,7 @@ const FILES = [
   "js/i18n/en/custom.js",
   "js/i18n/en/data.js",
   "js/i18n/en/editor.js",
+  "js/i18n/en/hub.js",
   "js/i18n/en/online.js",
   "js/i18n/en/pieces.js",
   "js/i18n/en/race.js",
@@ -131,6 +134,7 @@ const FILES = [
   "js/rewards.js",
   "js/ribbons.js",
   "js/rules.js",
+  "js/rulesCore.js",
   "js/scenery.js",
   "js/scenery/decor.js",
   "js/scenery/shared.js",
@@ -145,12 +149,16 @@ const FILES = [
   "js/track/edit.js",
   "js/track/shared.js",
   "js/track/surfaces.js",
+  "js/trackDescriptor.js",
   "js/trackGeometry.js",
   "js/trackMesh.js",
   "js/tracks.js",
   "js/trail.js",
   "js/ui.js",
+  "js/ui/leaderboardPanel.js",
+  "js/ui/trackMap.js",
   "js/uitheme.js",
+  "js/variants.js",
   "js/vendor/THREE_LICENSE.txt",
   "js/vendor/TransformControls.js",
   "js/vendor/three.module.min.js",

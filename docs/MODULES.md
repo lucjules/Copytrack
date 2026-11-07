@@ -39,6 +39,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `editorPick.js` | Sélection par rayon dans l'éditeur, avec calques. |
 | `editorTools.js` | Outils de l'éditeur (v1.5) : sélection de zone et presse-papiers, vérificateur de circuit, miniatures vues de dessus. Aucun rendu 3D ici : seulement des données. |
 | `families.js` | Familles de pièces et « caractéristiques » (Phase 2). |
+| `favorites.js` | Circuits favoris (Race Hub) : une référence par circuit, rangée dans le profil (donc dans la sauvegarde cloud du compte). Module pur, testé sous Node. |
 | `feel.js` | Ressenti de course (0.9.20) : de petits retours visuels, sonores et tactiles qui ponctuent la conduite, calculés d'après l'état de la voiture. Tout est VISUEL / SONORE / TACTILE : rien ici ne touche à la physique, aux temps ni aux replays (la voiture roule exactement pareil avec ou sans). Fonctions pures, sans rendu : race.js les appelle et applique le résultat (caméra, HUD, audio, manette). |
 | `garage.js` | Garage : personnalisation purement visuelle du véhicule (forme, couleurs, LED, dessins, ornements, ailerons, roues). Aucune option ne change les performances. |
 | `geo.js` | Petit constructeur de géométrie low-poly (triangles non indexés + couleurs par sommet => rendu "facetté" en un seul appel de dessin). |
@@ -70,6 +71,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `rewards.js` | Récompenses (0.9.18) : titres affichés au classement, éléments EXCLUSIFS du garage (qui ne s'achètent pas), collections à thème. Données et règles pures : le contexte (médailles, défis, leçons…) est rassemblé par app/rewards.js, ici on décide seulement ce qui est mérité. Rien ne touche à la physique ni aux temps : tout est visuel. |
 | `ribbons.js` | Rubans 3D : toute portion de route qui n'est pas un simple « sol ». |
 | `rules.js` | Règles de partie et modes de jeu (lot 13). Une RÈGLE est un réglage de départ qu'un circuit sait déjà porter (gravité de départ, vitesse de départ, véhicule de départ, hors-piste, tours) ou une transformation du circuit (sans obstacles) : rien de nouveau dans la physique, aucune voiture ne change de performances. Un MODE réunit des règles, un objectif et un nom ; il se joue sur n'importe quel circuit, sans records ni classements (le circuit transformé n'est plus celui des classements), et se partage par un code « SHM1: ». |
+| `rulesCore.js` | Règles de partie : le noyau sans dépendance (validation et application au circuit). Il est dans la fermeture de la vérification serveur (js/verify.js, via variants.js : les variantes de records sont des règles) : il n'importe que obstacles.js, jamais le profil ni le stockage. |
 | `scenery.js` | Décors : ciel, lumière, terrain facetté et objets, selon le thème du circuit. |
 | `scripts.js` | Scripts de circuit (lot 12) : des déclencheurs posés sur une case du circuit. Quand la voiture passe dessus, UN effet visuel ou sonore se produit (message, moment de la journée, météo, brume, musique, éclat, secousse, son). Hors signature (comme l'ambiance) : ni records, ni vérification, ni physique. |
 | `simulation.js` | Simulation d'une course : UNE voiture (CarPhysics), ses règles (RaceLogic) et l'enchaînement exact d'un pas, en un seul endroit. |
@@ -79,12 +81,14 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `themes.js` | Les 12 décors (thèmes visuels) du jeu : identité, nom et ordre de la carrière. Module de données pur (aucun rendu). |
 | `tileInfo.js` | Aides « pures » (sans DOM ni 3D) de l'éditeur et de l'inspecteur, faciles à tester. |
 | `track.js` | Modèle de circuit : liste de pièces posées sur une grille, index spatial, requêtes de surface pour la physique, sérialisation en code partageable. |
+| `trackDescriptor.js` | Descripteur de circuit : UNE description d'un circuit quelle que soit sa source (carrière, défi du jour, mes circuits, communauté), pour le Race Hub et tout écran qui présente un circuit avant de le lancer. Module pur (sans DOM ni rendu : testé sous Node). |
 | `trackGeometry.js` | Géométrie du circuit : la forme 3D de chaque pièce (route, bordures, tunnel, revêtements, portiques, piliers) construite dans un GeoBuilder. |
 | `trackMesh.js` | Maillage du circuit à partir des pièces : matières, tronçons statiques reconstruits à la demande, pièces mobiles, obstacles, lampes. |
 | `tracks.js` | Circuits intégrés (créations originales), décrits avec le constructeur "tortue" (voir scriptTrack dans track.js). Les temps de médailles sont en secondes. |
 | `trail.js` | Traînée lumineuse du véhicule (cosmétique) : un ruban derrière la voiture, TOUJOURS présent (même à l'arrêt, très discret), dont l'intensité, la longueur et la largeur suivent la vitesse et le boost. Un ruban 3D avec une opacité par sommet (additif) : pas de particules qui apparaissent et disparaissent. |
 | `ui.js` | Interface DOM : écrans, HUD, fenêtres modales, notifications. |
 | `uitheme.js` | Thèmes et disposition de l'interface (lot 11) : couleurs, police, arrondis, compteur de vitesse, taille et place des éléments du HUD. |
+| `variants.js` | Variantes de records (Copytrack Evolution, E3) : des catégories de classement sur un même circuit (départ en moto, gravité lunaire, sans obstacles…), SÉPARÉES du record officiel. Une variante est un jeu de règles (rulesCore.js) appliqué à une copie du circuit : rien de neuf dans la physique. Elle voyage dans la clé de classement, sans aucune migration de la base : |
 | `verify.js` | Vérification d'une course (classements en ligne). Module sans rendu ni navigateur : il est utilisé par la fonction serveur Supabase (supabase/functions/submit-score), qui le charge depuis le site du jeu. La physique étant déterministe, rejouer les commandes enregistrées redonne exactement la même course et le même temps. |
 | `version.js` | Numéros de version du jeu (une seule source). |
 | `videoExport.js` | Export d'un replay en vidéo : le canvas 3D est enregistré (MediaRecorder) pendant que le replay se joue, puis proposé en téléchargement (WebM). |
@@ -101,6 +105,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `modes.js` | Modes de jeu, règles de partie et paquets (lot 13) : l'interface. Les règles et validations sont dans rules.js et mods.js. Ces méthodes s'ajoutent au prototype de App. |
 | `multi.js` | Multijoueur : salons (privés par code, ou publics), circuit commun, lobby, départ en course à plusieurs, classement du salon, championnat (manches). |
 | `profile.js` | Profil : compte, sauvegardes, import et export de sauvegarde. |
+| `raceHub.js` | Race Hub : la fiche d'un circuit, avant de courir. Chaque sélection de circuit y mène (carrière, défi du jour, mes circuits, communauté, favoris) ; « Jouer » lance la course avec les options du descripteur (trackDescriptor.js), sans rien recalculer. |
 | `rewards.js` | Récompenses côté application : rassembler les compteurs (médailles, leçons, défis du jour…), donner ce qui est mérité, afficher le titre choisi dans le profil. |
 | `screens.js` | Écrans de liste : carrière, circuits du joueur, défi du jour, circuit suivant, menu, tutoriel. |
 | `settings.js` | Réglages : qualité graphique et banc d'essai, commandes (clavier, manette), options, accessibilité. |
@@ -143,6 +148,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `custom.js` | Dictionnaire anglais — personnalisation : atelier de voiture (lot 10), interface et caméras (lot 11), décors et scripts (lot 12), règles et mods (lot 13). |
 | `data.js` | Dictionnaire anglais — les données du jeu : noms des circuits intégrés, libellés des commandes et des touches. |
 | `editor.js` | Dictionnaire anglais — l'éditeur de circuits : barre d'outils, palette, options, niveau, sélection, prefabs, raccourcis, messages. |
+| `hub.js` | Dictionnaire anglais — Race Hub (fiche d'un circuit), classement à onglets, favoris, course rapide (Copytrack Evolution, 0.9.26). |
 | `online.js` | Dictionnaire anglais — la vie autour de la course : Académie, récompenses, garage, communauté, multijoueur, erreurs du serveur. |
 | `pieces.js` | Dictionnaire anglais — le catalogue de l'éditeur : pièces de piste, familles et caractéristiques, inspecteur, décorations. |
 | `race.js` | Dictionnaire anglais — la course : messages au centre de l'écran, objectifs, carrière, arrivée, replay, caméras, décors, erreurs de circuit. |
@@ -208,6 +214,13 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `edit.js` | Modifications du circuit : revêtements, options des pièces, mouvement, couleurs, décorations. |
 | `shared.js` | Éléments partagés par les familles de méthodes de Track (voir track.js). |
 | `surfaces.js` | Requêtes de surface pour la physique et la caméra : sol sous un point, plafond, pièces mobiles. |
+
+## `js/ui/`
+
+| Fichier | Rôle |
+| --- | --- |
+| `leaderboardPanel.js` | Classement à onglets (Race Hub, fenêtre « 🏆 ») : chaque onglet est un FOURNISSEUR de données enregistré ici. Un onglet dont le fournisseur n'est pas disponible n'est pas affiché (jamais d'onglet vide ou factice) : « Amis » et « Saison » s'ajouteront avec leur étape SQL. |
+| `trackMap.js` | Mini-carte d'un circuit, vue de dessus : un seul noyau de dessin pour les miniatures des cartes (editorTools.thumbnail) et la grande carte zoomable du Race Hub (createTrackMap). Marche pour TOUS les circuits, éditeur compris : elle dessine la ligne centrale de chaque pièce (centerlineWorld), pas track.path (qui n'existe que pour les circuits scriptés). |
 
 ## `supabase/functions/ice/`
 
