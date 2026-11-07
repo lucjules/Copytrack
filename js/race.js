@@ -16,7 +16,7 @@ import { SkidMarks } from './skids.js';
 import { TrailRibbon } from './trail.js';
 import { InputRecorder, decodeInputs, inputAt, quantSteer } from './replay.js';
 import { PHYS_VER } from './version.js';
-import { GHOST_EVERY, tmpM, tmpV, tmpV2 } from './race/shared.js';
+import { GHOST_VEHICLES, GHOST_EVERY, tmpM, tmpV, tmpV2 } from './race/shared.js';
 
 import { cameraMethods } from './race/camera.js';
 import { ghostMethods } from './race/ghosts.js';
@@ -88,6 +88,7 @@ export class RaceSession {
     // Les records d'une autre version de la physique n'ont pas de commandes rejouables.
     if (this.record && this.record.pv !== PHYS_VER) this.record = { ...this.record, inputs: null };
     this.ghostData = null;
+    this.ghostVehData = this.record && Array.isArray(this.record.ghostVeh) ? this.record.ghostVeh : [];
     if (this.record && this.record.ghost) {
       try { this.ghostData = decodeFloats(this.record.ghost); } catch { this.ghostData = null; }
     }
@@ -114,6 +115,7 @@ export class RaceSession {
     this.countShown = -1;
     this.acc = 0;
     this.ghostRec = [];
+    this.ghostVeh = [];          // changements de véhicule du fantôme enregistré : [image, id]
     this.finishT = 0;
     this.lastSplitShown = 0;
     this.wheelSpin = 0;
@@ -152,6 +154,7 @@ export class RaceSession {
     if (this.multi) this.teleSeq = (this.teleSeq + 1) & 255;
     const steps = this.logic.steps;
     this.ghostRec.length = Math.min(this.ghostRec.length, Math.floor(steps / GHOST_EVERY) * 7);
+    while (this.ghostVeh.length && this.ghostVeh[this.ghostVeh.length - 1][0] >= this.ghostRec.length / 7) this.ghostVeh.pop();
     if (!this.demo) {
       this.app.ui.hud.checkpoints(this.logic.collected.size, this.logic.cps.length, this.logic.lap, this.logic.laps);
       this.app.ui.hud.time(steps * DT);
@@ -329,6 +332,8 @@ export class RaceSession {
       const res = this.sim.score();
       if (!this.demo && this.logic.steps % GHOST_EVERY === 0) {
         const p = this.phys.pos, q = this.quat;
+        const vid = GHOST_VEHICLES.indexOf(this.phys.vehicle), last = this.ghostVeh.length ? this.ghostVeh[this.ghostVeh.length - 1][1] : 0;
+        if (vid !== last) this.ghostVeh.push([this.ghostRec.length / 7, vid]);
         this.ghostRec.push(p.x, p.y, p.z, q.x, q.y, q.z, q.w);
       }
       if (res) this._event(res);

@@ -127,4 +127,11 @@ test('poseAt : véhicule, sol et normale sont ceux du pas demandé', () => {
   assert.ok(['car', 'moto'].includes(out.vehicle));
 });
 
+test('fantôme enregistré : le véhicule suit les changements enregistrés (moto, bateau, retour voiture), les anciens records restent des voitures', async () => {
+  const { ghostVehicleAt } = await import('../js/race/shared.js');
+  const ch = [[0, 1], [10, 2], [25, 0]];
+  assert.deepEqual([0, 9, 10, 24, 25, 99].map((f) => ghostVehicleAt(ch, f)), ['moto', 'moto', 'boat', 'boat', 'car', 'car']);
+  assert.equal(ghostVehicleAt([], 50), 'car');
+});
+
 finish('Tous les tests de la simulation passent.');

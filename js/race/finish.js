@@ -75,6 +75,7 @@ export const finishMethods = {
         time,
         splits: this.logic.splits.slice(),
         ghost: encodeFloats(ghost),
+        ghostVeh: this.ghostVeh.slice(),
         inputs: this.recorder.encode(),
         pv: PHYS_VER,
         date: Date.now(),

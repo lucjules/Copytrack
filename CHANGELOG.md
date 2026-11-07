@@ -12,6 +12,12 @@ Aucune nouvelle fonction de jeu : un audit complet du dépôt (code mort, chanti
 Seule la physique change (`PHYS_VER` 26) : les records, replays et fantômes d'avant sont écartés, comme à chaque changement de physique ; les **temps de
 référence des 66 circuits et leurs médailles sont inchangés**. **La fonction `submit-score` doit être redéployée** (`npm run build:function`, puis `index.ts`).
 
+### Corrections en jeu
+- **Fantôme du record** : il restait une voiture quand le joueur se transformait en moto, bateau ou deltaplane (l'enregistrement ne gardait que position et orientation). Les changements de véhicule sont maintenant enregistrés avec le record (`ghostVeh`) ; les anciens records restent des voitures.
+- **Décor « Ville »** : les enseignes néon étaient semées au hasard entre 30 et 150 m de haut, sans immeuble : elles flottaient. Elles sont collées à la façade d'un immeuble.
+- **Décor « Jungle »** : les canopées lumineuses étaient semées à part des troncs et flottaient ; elles se posent au sommet d'un tronc.
+- `tools/test-decors.mjs` : aucun élément de ces décors ne flotte (testé sur plusieurs graines).
+
 ### Physique et vérification des temps
 - **Mathématiques déterministes** (`js/dmath.js`) : `sin`, `cos`, `atan2`, `exp`, `pow`, `hypot`… n'étaient pas garanties identiques d'un moteur JavaScript à l'autre,
   et la fonction serveur (Deno) rejoue les courses pour les vérifier : 152 des 161 scénarios de `tools/phys-fingerprint.mjs` différaient entre Node 22 et Deno 2.9, donc

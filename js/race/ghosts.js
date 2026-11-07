@@ -5,7 +5,7 @@ import { createCar } from '../carModel.js';
 import { getRecord, getImportedGhost } from '../storage.js';
 import { GhostRunner, newGhostPose } from '../replay.js';
 import { PHYS_VER } from '../version.js';
-import { GHOST_EVERY, tmpM, tmpV, tmpV2 } from './shared.js';
+import { GHOST_EVERY, ghostVehicleAt, tmpM, tmpV, tmpV2 } from './shared.js';
 const tmpV3 = new THREE.Vector3();
 
 export const ghostMethods = {
@@ -69,6 +69,8 @@ export const ghostMethods = {
     const qa = new THREE.Quaternion(gd[a + 3], gd[a + 4], gd[a + 5], gd[a + 6]);
     const qb = new THREE.Quaternion(gd[b + 3], gd[b + 4], gd[b + 5], gd[b + 6]);
     gc.quaternion.slerpQuaternions(qa, qb, f);
+    // Véhicule du fantôme à cette image (voiture, moto, bateau, deltaplane) : sans cela il restait une voiture quand le joueur se transformait.
+    this.ghostCar.setVehicle(ghostVehicleAt(this.ghostVehData, i), true);
     // On masque le fantôme quand il est collé à la caméra / au joueur.
     gc.visible = gc.position.distanceToSquared(this.renderPos) > 4;
   },
