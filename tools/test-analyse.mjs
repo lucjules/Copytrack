@@ -15,6 +15,7 @@ import { traceFromInputs, traceFromGhost } from '../js/analysis/trace.js';
 import { makeReference, alignTrace, timeAtS } from '../js/analysis/reference.js';
 import { sectors, compareSectors, delta, deltaAt, brakingPoints } from '../js/analysis/sectors.js';
 import { summarize } from '../js/analysis/events.js';
+import { createLiveTracker } from '../js/analysis/live.js';
 
 const C = JSON.parse(readFileSync(new URL('./compat/corpus.json', import.meta.url), 'utf8'));
 const def = (id) => BUILTIN_TRACKS.find((d) => d.id === id);
@@ -120,6 +121,52 @@ test('sans ligne de course (circuit de l’éditeur), la référence est la traj
   assert.ok(tr.sm[tr.n - 1] > ref.length * 0.98);
   const sec = sectors(tr, { count: 8 });
   assert.ok(Math.abs(sec.reduce((x, k) => x + k.dt, 0) - r.time) < DT);
+});
+
+console.log('Suivi en direct (HUD d’entraînement)');
+test('l’écart en direct au passage d’un checkpoint est l’écart officiel, à 1/30 s près', () => {
+  for (const [id, kA, kB] of [['eclats', 0.8, 0.4], ['lianes', 0.8, 0.55], ['verglas', 0.8, 0.5]]) {
+    const track = buildBuiltin(def(id)), ref = makeReference(track);
+    const a = botRun(track, { latK: kA }), b = botRun(track, { latK: kB });
+    const A = alignTrace(traceFromInputs(track, a.inputs), ref), B = traceFromInputs(track, b.inputs);
+    const cpA = new Map(A.events.filter((e) => e.k === 'cp').map((e) => [e.q, e.step]));
+    const cpB = B.events.filter((e) => e.k === 'cp');
+    assert.ok(cpB.length >= 1, id + ' : des checkpoints');
+    const lt = createLiveTracker(A);
+    let e = 0, checked = 0, sum = 0;
+    for (let i = 0; i < B.n; i++) {
+      const r = lt.update(B.pos[i * 3], B.pos[i * 3 + 1], B.pos[i * 3 + 2], B.t[i]);
+      if (r.done && r.done.diff != null) sum += r.done.diff;
+      while (e < cpB.length && cpB[e].step <= Math.round(B.t[i] / DT)) {
+        const official = (cpB[e].step - cpA.get(cpB[e].q)) * DT;
+        assert.ok(r.delta != null && Math.abs(r.delta - official) <= 1 / 30 + 1e-9, `${id} CP ${cpB[e].q} : direct ${r.delta && r.delta.toFixed(3)} / officiel ${official.toFixed(3)}`);
+        e++; checked++;
+      }
+    }
+    const last = lt.finish(b.time);
+    sum += last.diff;
+    assert.ok(Math.abs(sum - (b.time - a.time)) < 2 * DT, `${id} : les secteurs en direct somment à l’écart final`);
+    assert.equal(checked, cpB.length);
+  }
+});
+test('après un retour au checkpoint, le suivi se recale sur toute la référence', () => {
+  const track = buildBuiltin(def('eclats')), ref = makeReference(track), a = botRun(track);
+  const A = alignTrace(traceFromInputs(track, a.inputs), ref), lt = createLiveTracker(A);
+  const mid = Math.floor(A.n * 0.7);
+  for (let i = 0; i <= mid; i++) lt.update(A.pos[i * 3], A.pos[i * 3 + 1], A.pos[i * 3 + 2], A.t[i]);
+  const back = Math.floor(A.n * 0.2);
+  lt.relocate(A.pos[back * 3], A.pos[back * 3 + 1], A.pos[back * 3 + 2], A.t[back]);
+  const r = lt.update(A.pos[(back + 1) * 3], A.pos[(back + 1) * 3 + 1], A.pos[(back + 1) * 3 + 2], A.t[back + 1]);
+  assert.ok(Math.abs(r.s - A.s[back + 1]) < 1, 'recalé au bon endroit');
+  assert.ok(Math.abs(r.delta) < 1e-6, 'la référence contre elle-même : écart nul');
+});
+test('coût : une mise à jour du suivi prend moins de 0,05 ms', () => {
+  const track = buildBuiltin(def('grandtour')), a = botRun(track);
+  const A = alignTrace(traceFromInputs(track, a.inputs), makeReference(track)), lt = createLiveTracker(A);
+  const t0 = performance.now();
+  for (let rep = 0; rep < 5; rep++) { lt.reset(); for (let i = 0; i < A.n; i++) lt.update(A.pos[i * 3], A.pos[i * 3 + 1], A.pos[i * 3 + 2], A.t[i]); }
+  const per = (performance.now() - t0) / (5 * A.n);
+  assert.ok(per < 0.05, `${(per * 1000).toFixed(1)} µs par mise à jour`);
 });
 
 await finish('Tous les tests du noyau d’analyse passent.');

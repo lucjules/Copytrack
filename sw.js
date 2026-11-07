@@ -1,7 +1,7 @@
 // Service worker généré par tools/gen-sw.mjs : ne pas modifier à la main.
 // Jeu hors ligne : les fichiers du jeu sont gardés en cache ; le réseau reste prioritaire
 // pour récupérer les mises à jour quand il est disponible.
-const CACHE = 'copytrack-70e9cfef3a';
+const CACHE = 'copytrack-7e48b504f6';
 const FILES = [
   "./",
   "assets/README.txt",
@@ -16,6 +16,7 @@ const FILES = [
   "js/account.js",
   "js/ambiance.js",
   "js/analysis/events.js",
+  "js/analysis/live.js",
   "js/analysis/reference.js",
   "js/analysis/sectors.js",
   "js/analysis/trace.js",
@@ -75,6 +76,7 @@ const FILES = [
   "js/geo.js",
   "js/ghostFormat.js",
   "js/hudMessages.js",
+  "js/hudProfile.js",
   "js/i18n.js",
   "js/i18n/boot.js",
   "js/i18n/dom.js",
@@ -131,6 +133,7 @@ const FILES = [
   "js/race/replayMode.js",
   "js/race/scriptsRun.js",
   "js/race/shared.js",
+  "js/race/training.js",
   "js/raceLogic.js",
   "js/remoteCar.js",
   "js/renderOptions.js",
@@ -160,6 +163,7 @@ const FILES = [
   "js/trail.js",
   "js/ui.js",
   "js/ui/leaderboardPanel.js",
+  "js/ui/traceChart.js",
   "js/ui/trackMap.js",
   "js/uitheme.js",
   "js/variants.js",

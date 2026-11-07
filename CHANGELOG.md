@@ -6,6 +6,19 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.28 — HUD d'entraînement et profils de HUD
+
+Étapes E4 et E5 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer. **Rien ne change pour qui garde le profil Classique** (le profil par défaut).
+
+- **Profils de HUD** (Options › Personnalisation › Profil du HUD) : *Classique* (tout, comme avant), *Compétitif* (sans aide des touches, médailles ni nom du circuit), *Entraînement* (les outils ci-dessous), *Minimaliste* (chrono et vitesse). Un profil cache ses éléments **en plus** de ceux que tu as cachés toi-même.
+- **HUD d'entraînement** : à gauche de l'écran, l'**écart en direct** avec une course de référence (au passage d'un checkpoint, c'est l'écart officiel à 1/30 s près : testé), les **mini-secteurs** (12, temps et écart), la **vitesse maxi**, les **forces g**, et trois secondes de **courbes** gaz / frein / vitesse. Sur la piste : la **ligne de la référence** (verte quand elle accélère, rouge quand elle freine, blanche en roue libre) et des **repères à ses points de freinage**. Chaque outil se coupe à part.
+  - **Référence** au choix : mon record (ses commandes rejouées : la course exacte), le fantôme or (le pilote automatique, circuits intégrés) ou le record mondial (positions du n° 1 en ligne). Si elle manque, on prend la suivante et on l'écrit (« à défaut »). Un nouveau record devient la référence à l'essai suivant.
+  - Puce **🎯 HUD d'entraînement** dans la fiche du circuit pour l'activer d'un geste.
+  - Coût mesuré dans le test navigateur : **moins de 0,3 ms par image** (le texte se met à jour 10 fois par seconde, le suivi à chaque image). La ligne et les repères ne lisent que la course : rien ne touche à la physique ni au chrono.
+- **Noyau d'analyse** (`js/analysis/`, pur, testé sous Node) : `trace.js` rejoue une course avec le GhostRunner du jeu et note tout ce qu'il faut (ses positions sont celles du fantôme enregistré, au bit près) ; `reference.js` (ligne de course, projection) ; `sectors.js` (mini-secteurs dont la somme est le temps de la course, écarts, freinages) ; `live.js` (le suivi en direct) ; `events.js`. Il servira au Replay Theater et au coach.
+- **Limites assumées** : la ligne de la référence est un trait fin (pas un ruban) ; sur un circuit de l'éditeur, la « distance » est mesurée le long de la course de référence (il n'y a pas de ligne centrale continue) ; le record mondial comme référence ne donne ni courbes de commandes ni repères de freinage (le serveur ne publie que les positions).
+- Tests : `tools/test-analyse.mjs` (trace au bit près sur le corpus, secteurs, deux styles de pilotage, les 72 circuits, écart en direct contre l'écart officiel sur trois circuits, recalage après un retour, coût), `tools/test-interface.mjs` (profils), test navigateur (HUD d'entraînement, coût par image, Classique inchangé) et anglais.
+
 ## Bêta 0.9.27 — catégories de records : départ en moto, en bateau, en deltaplane, sans obstacles
 
 Étape E3 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), **aucune étape SQL** : une catégorie voyage dans la clé de classement (`<clé officielle>~v1.veh-moto`, 80 caractères au plus comme avant). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des catégories (« Clé de circuit invalide »), le reste marche.

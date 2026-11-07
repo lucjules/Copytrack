@@ -115,6 +115,8 @@ export const DEFAULT_SETTINGS = {
   ghostImported: true,
   onlineScores: true,
   ui: {},                 // thème et disposition de l'interface (uitheme.js)
+  hudProfile: 'classic',  // profil du HUD : classic | competitive | training | minimal (hudProfile.js)
+  training: null,         // HUD d'entraînement : { ref, w } (hudProfile.js : sanitizeTraining) ; null = réglages par défaut
   cameras: [],            // caméras de course personnalisées (camprefs.js)
   feel: 1,                // sensations de course : 0 (aucun effet ajouté) à 1,5 ; voir feel.js
   editorGuided: null,     // éditeur en mode guidé (l'essentiel) : null = non (joueur qui connaît déjà l'éditeur), true = oui (voir editor/palette.js)

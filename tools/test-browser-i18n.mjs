@@ -156,6 +156,14 @@ try {
     await page.evaluate(() => window.copytrack.playBuiltin(0));
     await page.waitForFunction(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, { timeout: 40000 });
     assert.match(await text(page, '#hud-hint'), /brake in a turn: drift/, 'bandeau d\'aide de la course');
+    // HUD d'entraînement (profil « Entraînement ») : référence, écart, vitesse maxi
+    await page.evaluate(() => { window.copytrack.setHudProfile('training'); window.copytrack.playBuiltin(0); });
+    await page.waitForFunction(() => window.copytrack.session && window.copytrack.session._train && window.copytrack.session._train.lt, null, { timeout: 40000 });
+    await page.waitForTimeout(1500);
+    assert.match(await text(page, '#tr-ref'), /Reference: gold ghost/);
+    assert.deepEqual(await frenchLeft(page), [], 'HUD d\'entraînement : texte resté en français');
+    await page.evaluate(() => { window.copytrack.setHudProfile('classic'); window.copytrack.playBuiltin(0); });
+    await page.waitForFunction(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, { timeout: 40000 });
     assert.match(await text(page, '#hud-best'), /No record yet/);
     await page.evaluate(() => window.copytrack.session.app.ui.hud.message('Hors piste', 1, 3));
     await page.waitForTimeout(100);

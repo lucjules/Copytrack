@@ -92,6 +92,7 @@
   <link rel="modulepreload" href="js/race/finish.js">
   <link rel="modulepreload" href="js/race/replayMode.js">
   <link rel="modulepreload" href="js/race/scriptsRun.js">
+  <link rel="modulepreload" href="js/race/training.js">
   <link rel="modulepreload" href="js/dmath.js">
   <link rel="modulepreload" href="js/ribbons.js">
   <link rel="modulepreload" href="js/customDeco.js">
@@ -118,6 +119,7 @@
   <link rel="modulepreload" href="js/daily.js">
   <link rel="modulepreload" href="js/app/shared.js">
   <link rel="modulepreload" href="js/uitheme.js">
+  <link rel="modulepreload" href="js/hudProfile.js">
   <link rel="modulepreload" href="js/mods.js">
   <link rel="modulepreload" href="js/favorites.js">
   <link rel="modulepreload" href="js/ui/trackMap.js">
@@ -135,6 +137,11 @@
   <link rel="modulepreload" href="js/remoteCar.js">
   <link rel="modulepreload" href="js/net/collide.js">
   <link rel="modulepreload" href="js/videoExport.js">
+  <link rel="modulepreload" href="js/analysis/trace.js">
+  <link rel="modulepreload" href="js/analysis/reference.js">
+  <link rel="modulepreload" href="js/analysis/sectors.js">
+  <link rel="modulepreload" href="js/analysis/live.js">
+  <link rel="modulepreload" href="js/ui/traceChart.js">
   <link rel="modulepreload" href="js/rulesCore.js">
   <link rel="modulepreload" href="js/net/signaling.js">
   <link rel="modulepreload" href="js/net/transport.js">
@@ -332,6 +339,11 @@
       <label><span>Compteur de vitesse</span><select id="opt-ui-speedo"></select></label>
       <label><span>Taille du chrono</span><select id="opt-ui-timer"></select></label>
       <label><span>Taille du HUD <output id="opt-ui-hud-v"></output></span><input type="range" id="opt-ui-hud" min="0.7" max="1.5" step="0.05"></label>
+      <label title="Classique : tout ; Compétitif : l'essentiel pour la course ; Entraînement : les outils d'analyse en direct ; Minimaliste : chrono et vitesse"><span>Profil du HUD</span><select id="opt-hud-profile"></select></label>
+      <div id="opt-train-box" class="opt-train">
+        <label><span>Entraînement : référence</span><select id="opt-train-ref"></select></label>
+        <div class="opt-row"><span>Entraînement : outils affichés</span><span class="opt-hide" id="opt-train-w"></span></div>
+      </div>
       <div class="opt-row"><span>Cacher des éléments du HUD</span><span class="opt-hide" id="opt-ui-hide"></span></div>
       <div class="opt-row"><span>Place des éléments du HUD</span><button class="btn" type="button" data-action="hud-editor">Disposer le HUD</button></div>
       <div class="opt-row"><span>Caméras de course</span><button class="btn" type="button" data-action="cameras">Mes caméras</button></div>
@@ -404,6 +416,7 @@
       <div class="speed-bar"><i></i></div>
       <div class="boost-bar"><i id="hud-boost"></i></div>
     </div>
+    <div id="hud-train" class="hud-train hidden"></div>
     <div id="hud-center" class="hud-center"></div>
     <div id="hud-msg" class="hud-msg"></div>
     <div id="hud-edit-bar" class="hud-edit-bar hidden"><b>Glisse les éléments pour les placer</b><button class="btn small" type="button" data-action="hud-reset">Remettre</button><button class="btn small primary" type="button" data-action="hud-done">Terminé</button></div>

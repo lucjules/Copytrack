@@ -53,6 +53,15 @@ export function project(ref, x, y, z, j0 = 0, out = { s: 0, j: 0, d: 0 }) {
   return out;
 }
 
+// Projection sur toute la référence (après un retour au checkpoint : la voiture peut être loin du dernier segment connu).
+export function projectGlobal(ref, x, y, z, out = { s: 0, j: 0, d: 0 }) {
+  const seg = { d2: 0, s: 0 };
+  let best = Infinity;
+  for (let j = 0; j <= ref.n - 2; j++) { onSegment(ref, j, x, y, z, seg); if (seg.d2 < best) { best = seg.d2; out.s = seg.s; out.j = j; } }
+  out.d = Math.sqrt(best);
+  return out;
+}
+
 export function alignTrace(trace, ref) {
   const s = new Float64Array(trace.n), sm = new Float64Array(trace.n), off = new Float32Array(trace.n);
   const o = { s: 0, j: 0, d: 0 };

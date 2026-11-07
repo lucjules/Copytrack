@@ -27,6 +27,7 @@ import { netMethods } from './race/net.js';
 import { finishMethods } from './race/finish.js';
 import { replayMethods } from './race/replayMode.js';
 import { scriptMethods } from './race/scriptsRun.js';
+import { trainingMethods } from './race/training.js';
 
 const CAR_COLOR = '#ffd23e';   // éclat quand la voiture retrouve sa forme d'origine (les plaques ont la couleur de leur revêtement : SURFACES)
 
@@ -94,6 +95,7 @@ export class RaceSession {
 
     this.loadRecord();
     this.restart();
+    this._trainSetup();          // HUD d'entraînement (profil « Entraînement » : race/training.js)
   }
 
   // Message au centre de l'écran (court, trié par importance : voir hudMessages.js). m = [texte, importance, durée en s].
@@ -154,6 +156,7 @@ export class RaceSession {
       app.ui.hideOverlay('finish');
     }
     this.car.flames.forEach((f) => { f.visible = false; });
+    if (this._train) this._trainReset();
   }
 
   // Multijoueur asynchrone (à la Polytrack) : un nouvel essai, tout de suite, sans décompte ni retour au salon. Chacun a son
@@ -176,6 +179,7 @@ export class RaceSession {
     // Retour au dernier checkpoint : le chrono revient au temps de ce checkpoint (solo). En multijoueur il continue de
     // tourner : la téléportation coûte tout le temps perdu, et le compteur de téléportation prévient les autres joueurs.
     const r = this.sim.rewind({ keepClock: !!this.multi });      // (remet aussi la voiture au point de retour, avec son véhicule et sa gravité)
+    if (this._train) this._trainRespawn();
     Object.assign(this.stats, this.statsSnap);       // les réceptions, turbos et anneaux d'après le checkpoint ne comptent plus
     if (this.multi) { this.teleSeq = (this.teleSeq + 1) & 255; this._jumped = true; this.protectUntil = this.tick + 240; }       // 2 s sans collision après un retour au checkpoint
     const steps = this.logic.steps;
@@ -582,6 +586,7 @@ export class RaceSession {
       app.ui.speedFx(fx * (this.camMode === 2 ? 1 : 0.8));
       if (this.state === 'racing') hud.time((this.logic.steps + alpha) * DT);
       hud.speed(Math.abs(p.fwdSpeed) * 3.6, p.boost);
+      if (this._train) this._trainUpdate();
     }
   }
 
@@ -615,6 +620,7 @@ export class RaceSession {
 
   dispose() {
     this._telemetryQuit();
+    this._trainDispose();
     this.app.camera.up.set(0, 1, 0);
     this.view.dispose();
     this.car.dispose();
@@ -635,4 +641,4 @@ export class RaceSession {
 }
 
 // Les familles de méthodes vivent dans race/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(RaceSession.prototype, cameraMethods, ghostMethods, netMethods, finishMethods, replayMethods, scriptMethods);
+Object.assign(RaceSession.prototype, cameraMethods, ghostMethods, netMethods, finishMethods, replayMethods, scriptMethods, trainingMethods);

@@ -49,4 +49,24 @@ test('liste complète : les 4 caméras d\'origine d\'abord, puis celles du joueu
   for (const c of l.slice(CAM_MODES.length)) for (const k of Object.keys(CAM_LIMITS)) assert.ok(c[k] >= CAM_LIMITS[k][0] && c[k] <= CAM_LIMITS[k][1]);
 });
 
+console.log('Profils de HUD et HUD d’entraînement');
+test('profils : valeur inconnue -> Classique ; le profil ajoute ses éléments cachés à ceux du joueur', async () => {
+  const H = await import('../js/hudProfile.js');
+  assert.equal(H.sanitizeHudProfile('training'), 'training');
+  for (const bad of ['', '__proto__', 'constructor', 42, null]) assert.equal(H.sanitizeHudProfile(bad), 'classic');
+  assert.deepEqual(H.effectiveHide({ hide: {} }, 'classic'), {}, 'Classique : le HUD d’avant');
+  assert.deepEqual(H.effectiveHide({ hide: { boost: true } }, 'classic'), { boost: true });
+  const m = H.effectiveHide({ hide: { boost: true } }, 'competitive');
+  assert.ok(m.boost && m.hint && m.medals && m.track && !m.split, 'union des deux');
+  assert.equal(H.isTraining('training'), true); assert.equal(H.isTraining('minimal'), false);
+});
+test('réglages d’entraînement : tout affiché par défaut, référence validée', async () => {
+  const H = await import('../js/hudProfile.js');
+  const d = H.sanitizeTraining(null);
+  assert.equal(d.ref, 'record'); assert.ok(Object.values(d.w).every(Boolean));
+  const t = H.sanitizeTraining({ ref: 'world', w: { line: false, nope: false } });
+  assert.equal(t.ref, 'world'); assert.equal(t.w.line, false); assert.equal(t.w.delta, true); assert.equal('nope' in t.w, false);
+  assert.equal(H.sanitizeTraining({ ref: '__proto__' }).ref, 'record');
+});
+
 finish('Tous les tests de l\'interface personnalisée passent.');

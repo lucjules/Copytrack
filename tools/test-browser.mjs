@@ -75,6 +75,9 @@ try {
     await page.waitForTimeout(1200);
     if (await app(() => window.copytrack.ui.modalOpen)) { await shot('01b-tutoriel'); await page.keyboard.press('Escape'); await waitApp(() => !window.copytrack.ui.modalOpen); }
     await shot('02-menu');
+    // La question des statistiques anonymes (posée une fois, puis toutes les 8 s tant qu'elle n'a pas de réponse) : répondue ici pour qu'elle ne s'ouvre
+    // pas au milieu d'un autre test ; elle a son propre test (test-browser-i18n.mjs).
+    await app(() => { window.copytrack.settings.telemetry = false; window.copytrack.saveSettings(); if (window.copytrack.ui.modalOpen) window.copytrack.ui.closeModal(); });
     assert.ok(await app(() => !document.getElementById('menu').classList.contains('hidden')), 'le menu doit être visible');
     assert.equal(await app(() => window.copytrack.builtins.length), 72);
   });
@@ -198,6 +201,32 @@ try {
     assert.equal(await page.evaluate(() => document.querySelector('#hub-launch [data-cat="veh-moto"]').getAttribute('aria-checked')), 'true', 'la fiche revient dans la catégorie choisie');
     await click('#hub-launch [data-cat=""]');
     assert.doesNotMatch(await app(() => window.copytrack._hub.desc.key), /~/);
+    await click('#race-hub [data-action="hub-back"]');
+    await click('#tracks [data-action="back"]');
+  });
+
+  await test('HUD d’entraînement : référence (à défaut le fantôme or), écart en direct, ligne dans la scène, moins de 0,3 ms par image ; Classique inchangé', async () => {
+    assert.ok(await page.evaluate(() => document.getElementById('hud-train').classList.contains('hidden')), 'profil Classique : rien de plus');
+    await app(() => { window.copytrack.showMenu('tracks'); window.copytrack.openBuiltinHub(2, 'tracks'); });
+    await click('#hub-launch [data-hudtrain]');
+    assert.equal(await app(() => window.copytrack.settings.hudProfile), 'training');
+    await click('#hub-play');
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    await waitApp(() => window.copytrack.session._train && window.copytrack.session._train.lt, null, 20000);
+    assert.match(await page.evaluate(() => document.getElementById('tr-ref').textContent), /fantôme or[\s\S]*à défaut/);
+    assert.ok(await app(() => window.copytrack.session._train.obj.length > 0), 'ligne et repères de freinage posés dans la scène');
+    await page.keyboard.down('ArrowUp'); await page.waitForTimeout(2500); await page.keyboard.up('ArrowUp');
+    assert.match(await page.evaluate(() => document.getElementById('tr-delta').textContent), /^[+-]/, 'écart en direct affiché');
+    assert.match(await page.evaluate(() => document.getElementById('tr-vmax').textContent), /Vmax \d+ km\/h/);
+    const cost = await app(() => { const T = window.copytrack.session._train; return T.cost / T.costN; });
+    assert.ok(cost < 0.3, `${cost.toFixed(3)} ms par image en moyenne`);
+    await shot('07c-hud-entrainement');
+    assert.ok(await page.evaluate(() => document.body.classList.contains('hud-no-hint')), 'profil Entraînement : aide des touches cachée');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
+    await click('#hub-launch [data-hudtrain]');
+    assert.equal(await app(() => window.copytrack.settings.hudProfile), 'classic');
+    assert.ok(await page.evaluate(() => !document.body.classList.contains('hud-no-hint')));
     await click('#race-hub [data-action="hub-back"]');
     await click('#tracks [data-action="back"]');
   });

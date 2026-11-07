@@ -21,6 +21,7 @@ import { profile, saveProfile } from '../profile.js';
 import { isFavorite, toggleFavorite, cleanFavorites } from '../favorites.js';
 import { describeDaily, describeUser, describeCommunity, personalRecord, quickRaceIndex, describeVariant, hubCategories } from '../trackDescriptor.js';
 import { createTrackMap } from '../ui/trackMap.js';
+import { isTraining } from '../hudProfile.js';
 import { SURFACES } from '../pieces.js';
 import { mountLeaderboard } from '../ui/leaderboardPanel.js';
 import { thumbnail } from '../editorTools.js';
@@ -145,10 +146,12 @@ export const raceHubMethods = {
     if (d.key && getImportedGhost(d.key)) chips.push(['ghostImported', 'Fantôme importé', s.ghostImported !== false, true]);
     const rivals = [...h.rivals.entries()].sort((a, b) => a[0] - b[0]);
     const cats = hubCategories(h.base);
+    const train = isTraining(s.hudProfile);
     $('hub-launch').innerHTML = `<div class="hub-pb">${rec ? `<span class="meta">Mon record</span><b>${medal ? medalIcon(medal) + ' ' : ''}${formatTime(rec.time)}</b>` : '<span class="meta">Pas encore de temps : à toi d’ouvrir la voie.</span>'}</div>
       <div class="hub-ghosts" role="group" aria-label="Fantômes"><span class="meta">Fantômes</span>
         ${chips.map(([k, l, on, ok]) => `<button class="chip${on ? ' on' : ''}" data-ghost="${k}" aria-pressed="${on}"${ok ? '' : ' disabled title="Pas encore de record sur ce circuit"'}>${esc(l)}</button>`).join('')}
         ${rivals.map(([rank, g]) => `<button class="chip on rival" data-rival="${rank}" aria-pressed="true" title="Retirer ce rival">👻 ${rank}. ${esc(g.name)} · ${formatTime(g.time)} ✕</button>`).join('')}
+        <button class="chip${train ? ' on' : ''}" data-hudtrain aria-pressed="${train}" title="Écart en direct, secteurs, courbes, ligne et freinages de la référence (Options › Personnalisation)">🎯 HUD d’entraînement</button>
       </div>
       ${rivals.length < MAX_RIVALS && h.board && h.board.boards.some((b) => b.id === 'world') ? '<p class="meta hub-hint">Ajoute jusqu’à 3 rivaux en ligne avec 👻 dans le classement mondial.</p>' : ''}
       ${cats.length ? `<div class="hub-cats" role="radiogroup" aria-label="Catégorie de record"><span class="meta">Catégorie de record</span>
@@ -169,6 +172,12 @@ export const raceHubMethods = {
       this.audio.click();
       const c = cats.find((x) => x.id === b.dataset.cat);
       this._setHubCategory(c ? c.v : null);
+    };
+    $('hub-launch').querySelector('[data-hudtrain]').onclick = () => {
+      this.audio.click();
+      if (isTraining(s.hudProfile)) this.setHudProfile(this._hudBeforeTraining || 'classic');
+      else { this._hudBeforeTraining = s.hudProfile; this.setHudProfile('training'); }
+      this._renderHubLaunch();
     };
     $('hub-play').onclick = () => this.hubPlay();
   },

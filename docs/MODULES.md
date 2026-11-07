@@ -45,6 +45,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `geo.js` | Petit constructeur de géométrie low-poly (triangles non indexés + couleurs par sommet => rendu "facetté" en un seul appel de dessin). |
 | `ghostFormat.js` | Format des fantômes enregistrés : une pose (x, y, z + quaternion) tous les GHOST_EVERY pas de course, plus la liste des changements de véhicule. |
 | `hudMessages.js` | Messages au centre de l'écran en course : courts, triés par importance, jamais empilés. Minimaliste. |
+| `hudProfile.js` | Profils de HUD (Copytrack Evolution, E5) et réglages du HUD d'entraînement. Un profil choisit ce qui s'affiche PAR-DESSUS la personnalisation du joueur (lot 11 : un élément caché par le joueur reste caché) ; « Entraînement » ajoute les outils d'analyse en direct (race/training.js). |
 | `i18n.js` | Internationalisation (français / anglais) : noyau, sans aucune dépendance au navigateur (testé sous Node). |
 | `input.js` | Entrées : clavier (codes physiques => QWERTY et AZERTY), manette, tactile. |
 | `inspector.js` | Mode Inspection de l'éditeur : sélection d'une pièce ou d'une décoration, panneau de propriétés généré selon l'objet, et gizmos 3D (TransformControls : flèches de déplacement, cercles de rotation). |
@@ -100,6 +101,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | Fichier | Rôle |
 | --- | --- |
 | `events.js` | Bilan des évènements d'une course (analysis/trace.js) : chocs, réapparitions, réceptions, mini-turbos, temps en l'air. Module pur. |
+| `live.js` | Suivi en direct contre une course de référence (HUD d'entraînement) : à chaque image, la position de la voiture est projetée sur la référence de parcours (recherche fenêtrée : quelques dizaines de segments), et l'écart est le chrono moins le temps de la référence à cette distance. |
 | `reference.js` | Référence de parcours : une ligne le long du circuit, graduée en mètres, sur laquelle on projette toute course pour la comparer à une autre (« à 820 m du départ, tu avais 0,4 s de retard »). Module pur, testé sous Node. |
 | `sectors.js` | Secteurs et écarts entre deux courses projetées sur la même référence (analysis/reference.js). Module pur, testé sous Node. |
 | `trace.js` | Trace d'une course (Copytrack Evolution, analyse) : ce qui s'est passé, échantillonné comme les fantômes (un point tous les GHOST_EVERY pas, soit 30 par seconde). Module pur, sans DOM ni rendu : testé sous Node (tools/test-analyse.mjs). |
@@ -208,6 +210,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `replayMode.js` | Mode replay : lecture à vitesse variable, pause, interface et fin du replay. |
 | `scriptsRun.js` | Exécution des scripts de circuit (lot 12) pendant la course : voir js/scripts.js. Effets visuels et sonores seulement. Ces méthodes s'ajoutent au prototype de RaceSession. |
 | `shared.js` | Éléments partagés par les familles de méthodes de RaceSession (voir race.js). |
+| `training.js` | HUD d'entraînement (Copytrack Evolution, E5) : écart en direct contre une course de référence, mini-secteurs, vitesse maxi, forces g, courbes gaz / frein / vitesse, ligne de la référence et repères de ses freinages, dans la scène. Actif avec le profil de HUD « Entraînement » (hudProfile.js). Ne LIT que la course : rien ici ne touche à la physique, au chrono ni à l'enregistrement. |
 
 ## `js/scenery/`
 
@@ -229,6 +232,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | Fichier | Rôle |
 | --- | --- |
 | `leaderboardPanel.js` | Classement à onglets (Race Hub, fenêtre « 🏆 ») : chaque onglet est un FOURNISSEUR de données enregistré ici. Un onglet dont le fournisseur n'est pas disponible n'est pas affiché (jamais d'onglet vide ou factice) : « Amis » et « Saison » s'ajouteront avec leur étape SQL. |
+| `traceChart.js` | Petites courbes sur un canvas (HUD d'entraînement, Replay Theater) : une fenêtre glissante de N valeurs par série, dessinée sans allocation. |
 | `trackMap.js` | Mini-carte d'un circuit, vue de dessus : un seul noyau de dessin pour les miniatures des cartes (editorTools.thumbnail) et la grande carte zoomable du Race Hub (createTrackMap). Marche pour TOUS les circuits, éditeur compris : elle dessine la ligne centrale de chaque pièce (centerlineWorld), pas track.path (qui n'existe que pour les circuits scriptés). |
 
 ## `supabase/functions/ice/`

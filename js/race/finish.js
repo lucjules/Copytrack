@@ -95,6 +95,7 @@ export const finishMethods = {
       app.ui.hud.message(`🏁 ${formatTime(time)}${best ? ' · meilleur temps' : ''} · R : nouvel essai`, 6, PRIO.final);
       return;
     }
+    if (this._train) this._trainFinish(time);
     // Dernière course, rejouable depuis l'écran d'arrivée.
     this.lastRun = { inputs: this.recorder.encode(), time };
     const prev = this.record;
