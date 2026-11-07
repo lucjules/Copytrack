@@ -79,6 +79,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `themes.js` | Les 12 décors (thèmes visuels) du jeu : identité, nom et ordre de la carrière. Module de données pur (aucun rendu). |
 | `tileInfo.js` | Aides « pures » (sans DOM ni 3D) de l'éditeur et de l'inspecteur, faciles à tester. |
 | `track.js` | Modèle de circuit : liste de pièces posées sur une grille, index spatial, requêtes de surface pour la physique, sérialisation en code partageable. |
+| `trackDescriptor.js` | Descripteur de circuit : UNE description d'un circuit quelle que soit sa source (carrière, défi du jour, mes circuits, communauté), pour le Race Hub et tout écran qui présente un circuit avant de le lancer. Module pur (sans DOM ni rendu : testé sous Node). |
 | `trackGeometry.js` | Géométrie du circuit : la forme 3D de chaque pièce (route, bordures, tunnel, revêtements, portiques, piliers) construite dans un GeoBuilder. |
 | `trackMesh.js` | Maillage du circuit à partir des pièces : matières, tronçons statiques reconstruits à la demande, pièces mobiles, obstacles, lampes. |
 | `tracks.js` | Circuits intégrés (créations originales), décrits avec le constructeur "tortue" (voir scriptTrack dans track.js). Les temps de médailles sont en secondes. |
@@ -208,6 +209,12 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `edit.js` | Modifications du circuit : revêtements, options des pièces, mouvement, couleurs, décorations. |
 | `shared.js` | Éléments partagés par les familles de méthodes de Track (voir track.js). |
 | `surfaces.js` | Requêtes de surface pour la physique et la caméra : sol sous un point, plafond, pièces mobiles. |
+
+## `js/ui/`
+
+| Fichier | Rôle |
+| --- | --- |
+| `trackMap.js` | Mini-carte d'un circuit, vue de dessus : un seul noyau de dessin pour les miniatures des cartes (editorTools.thumbnail) et la grande carte zoomable du Race Hub (createTrackMap). Marche pour TOUS les circuits, éditeur compris : elle dessine la ligne centrale de chaque pièce (centerlineWorld), pas track.path (qui n'existe que pour les circuits scriptés). |
 
 ## `supabase/functions/ice/`
 

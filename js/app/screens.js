@@ -9,6 +9,7 @@ import { DECORS } from '../themes.js';
 import { PIECES } from '../pieces.js';
 import { thumbnail } from '../editorTools.js';
 import { dailyChallenge, dayKey } from '../daily.js';
+import { describeDaily } from '../trackDescriptor.js';
 import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked, chapterState, careerSummary, prerequisiteOf, nextBuiltinIndex } from '../career.js';
 import { locale } from '../i18n.js';
 import { getRecord, listMyTracks, deleteMyTrack, formatTime } from '../storage.js';
@@ -238,7 +239,7 @@ export const screenMethods = {
     const t0 = performance.now();
     const c = dailyChallenge();
     if (!c) { this.ui.flash('Le défi du jour n’a pas pu être généré.'); return; }
-    this.playTrack(c.track, { trackKey: c.key, medals: c.medals, difficulty: 3, seed: c.key, daily: true });
+    this.playTrack(c.track, describeDaily(c).launch);
     if (performance.now() - t0 > 50) this.ui.flash('Nouveau défi du jour !', 1.5);
   },
 

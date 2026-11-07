@@ -12,6 +12,7 @@ import { estimateDifficulty, starsText, STAR_LABELS } from '../difficulty.js';
 import { titleLabel } from '../rewards.js';
 import { profile } from '../profile.js';
 import { getRecord, saveMyTrack, newId, formatTime, setImportedGhost } from '../storage.js';
+import { describeUser, describeCommunity } from '../trackDescriptor.js';
 export const communityMethods = {
   shareGhost() {
     const s = this.session;
@@ -140,7 +141,7 @@ export const communityMethods = {
       if (i < 0) { this.ui.flash('Circuit introuvable.'); return; }
       this.playBuiltin(i);
     } else if (trackKey.startsWith('daily-')) this.playDaily();
-    else if (track) this.playTrack(track, { trackKey: track.userKey, userMap: true, medals: track.derivedMedals, difficulty: 2, seed: track.name });
+    else if (track) this.playTrack(track, describeUser(track).launch);
     else { this.ui.flash('Ouvre d’abord le circuit pour affronter ce fantôme.'); return; }
     if (this.session && this.session.setRivals) this.session.setRivals(rivals);
   },
@@ -286,7 +287,7 @@ export const communityMethods = {
       this.audio.click();
       const act = a.dataset.a;
       if (act === 'play' && track) {
-        this.playTrack(track, { trackKey: key, seed: track.name, userMap: true, medals, difficulty: 2, community: row.id });
+        this.playTrack(track, describeCommunity(track, row).launch);
         online.played(row.id);
       } else if (act === 'like') {
         try {

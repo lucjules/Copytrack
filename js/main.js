@@ -19,7 +19,7 @@ import { online } from './online.js';
 import { account } from './account.js';
 import { runWelcome } from './welcome.js';
 import { initI18n } from './i18n/boot.js';
-import { goalFor, nextBuiltinIndex } from './career.js';
+import { describeBuiltin, describeUser } from './trackDescriptor.js';
 import { loadSettings, saveSettings, getRecord, saveRecord, saveMyTrack, newId, formatTime, purgeOldRecords, getJSON, setJSON } from './storage.js';
 import { Telemetry } from './telemetry.js';
 import { ghostFromHash } from './replay.js';
@@ -121,12 +121,14 @@ class App {
     this.ui.closeModal();
   }
 
+  // Descripteur d'un circuit de la carrière (trackDescriptor.js) : clé, médailles, objectif, verrou de chapitre et options de lancement.
+  describeBuiltin(i) {
+    return describeBuiltin(this.builtins[i], { total: this.builtins.length, builtins: this.builtins, getRecord });
+  }
+
   playBuiltin(i) {
-    const b = this.builtins[i];
-    this.playTrack(b.track, {
-      trackKey: b.key, medals: b.def.medals, difficulty: b.def.difficulty, hasNext: nextBuiltinIndex(i, this.builtins.length) != null, builtinIndex: i, seed: b.key,
-      goal: goalFor(b.def, i), goalKey: b.key + '#goal',
-    });
+    const d = this.describeBuiltin(i);
+    this.playTrack(d.track, d.launch);
   }
 
   playTrack(track, opts) {
@@ -148,8 +150,8 @@ class App {
   playCode(code, entryId = null) {
     let track;
     try { track = Track.decode(code); } catch { this.ui.flash('Code de circuit invalide.'); return; }
-    // Circuits de joueurs : médailles déduites du temps de l'auteur, seulement s'il l'a fini.
-    this.playTrack(track, { trackKey: track.userKey, userEntry: entryId, seed: track.name, userMap: true, medals: track.derivedMedals, difficulty: 2 });
+    // Circuits de joueurs : médailles déduites du temps de l'auteur, seulement s'il l'a fini (trackDescriptor.js).
+    this.playTrack(track, describeUser(track, entryId ? { id: entryId } : null).launch);
   }
 
   // ---- Replays et fantômes ------------------------------------------------
