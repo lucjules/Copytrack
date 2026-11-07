@@ -6,6 +6,23 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.15 — l'Atelier des mécanismes : un chapitre bonus qui montre chaque obstacle et chaque pièce mobile
+
+**`PHYS_VER` inchangé (26)** : records, replays et fantômes sont conservés, et le défi du jour est identique à celui d'avant (vérifié). Six circuits s'ajoutent : **la fonction `submit-score` doit être
+redéployée** (`npm run build:function`, puis `index.ts`) pour qu'elle connaisse leurs clés ; tant qu'elle ne l'est pas, leurs classements en ligne refusent les temps (« Circuit intégré inconnu »).
+
+- **Chapitre 12, l'Atelier** (nouveau décor « Atelier des mécanismes ») : six circuits courts du profil *Mécanisme* qui enseignent les sept obstacles du jeu et l'ascenseur / la glissière **un par un** :
+  *Garde-Fous* (bumpers et piques fixes) → *En Cadence* (piques escamotables sur la route) → *Le Pendule* (balancier + mur coulissant) → *Rotors* (marteau + balayeur) → *Monte-Charge* (ascenseur + glissière)
+  → *Le Grand Atelier* (tout ensemble). Jusqu'ici 6 circuits sur 66 portaient un obstacle et aucun une pièce mobile : la moitié de ce que l'éditeur sait faire ne se voyait jamais en carrière.
+- Chaque circuit a été **placé par recherche** avec le pilote automatique (positions et phases des obstacles) : il passe sans choc ni réapparition à 90, 100 et 110 % de sa vitesse, et peut repartir de chaque
+  checkpoint à l'arrêt ; la fenêtre de passage est large (les phases voisines passent aussi). Nouveau contrat de profil `atelier` dans `tools/contract.mjs` (temps, mécanismes déclarés présents).
+- **Chapitre bonus** : il vient en dernier de la liste mais s'ouvre avec 4 médailles dans le **premier** chapitre ; il ne fait pas partie de l'enchaînement « circuit suivant » (rien ne bouge pour qui a déjà progressé).
+- Le **défi du jour** ne tire que dans les onze décors d'origine (`DAILY_DECORS`) : en ajouter un douzième aurait changé le circuit de chaque jour.
+- `scriptTrack` : paramètres des pièces mobiles dans les circuits scriptés (`movers`) et drapeau `%` (rotation). La **rotation n'est pas utilisée** : elle réserve une couronne de cases autour d'elle, donc ne se pose pas
+  au milieu d'une route (voir `Track.cellsOf`) ; elle reste un outil d'éditeur.
+- `tools/phys-fingerprint.mjs` distingue désormais un circuit *ajouté* (nouveaux scénarios : on enregistre, sans toucher à `PHYS_VER`) d'une physique *modifiée*.
+- Tests : `tools/test-atelier.mjs` ; `test-niveaux` / `test-registres` passent à 72 circuits et 12 décors ; le test navigateur compte 72 cartes.
+
 ## Bêta 0.9.14 — affronter le top 10 : fantômes des classements en ligne
 
 **`PHYS_VER` inchangé (26)** : records, replays et fantômes sont conservés. **La fonction `submit-score` doit être redéployée** (`npm run build:function`, puis `index.ts`) et `supabase/etape7-fantomes.sql`

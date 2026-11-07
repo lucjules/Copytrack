@@ -4119,6 +4119,10 @@ var DECORS = {
   factory: {
     label: "Usine m\xE9canique",
     chip: "#ffb070"
+  },
+  atelier: {
+    label: "Atelier des m\xE9canismes",
+    chip: "#ffd23e"
   }
 };
 var DEFAULT_DECOR = "desert";
@@ -4133,8 +4137,10 @@ var CAREER_ORDER = [
   "reef",
   "factory",
   "sky",
-  "caves"
+  "caves",
+  "atelier"
 ];
+var DAILY_DECORS = Object.keys(DECORS).slice(0, 11);
 
 // js/track/shared.js
 var WATER_DROP = 0.35;
@@ -5070,6 +5076,7 @@ function scriptTrack(name, script, opts = {}) {
     nb: 0,
     tn: 0
   };
+  let moverTok = 0;
   const place = (t, px, pz, lv, r, reverse = false, noPath = false, curOver = null) => {
     const tile = {
       t,
@@ -5079,6 +5086,11 @@ function scriptTrack(name, script, opts = {}) {
       r: r & 3,
       ...curOver || cur
     };
+    const mp = cur.mv && opts.movers ? opts.movers[cur.mvTok - 1] : null;
+    if (mp) {
+      tile.ms = mp.ms || 0;
+      tile.ma = mp.ma || 0;
+    }
     if (cur.s && !surfaceAllowed(t, cur.s, cur.o | 0)) throw new Error(`${name} : rev\xEAtement ${cur.s} interdit sur ${t}`);
     for (const f of [
       "v",
@@ -5196,7 +5208,7 @@ function scriptTrack(name, script, opts = {}) {
     z += d.z;
   };
   for (const tok of script.trim().split(/\s+/)) {
-    const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=<>]*)$/.exec(tok);
+    const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>]*)$/.exec(tok);
     const m = gm ? [
       tok,
       "@" + gm[1],
@@ -5204,7 +5216,7 @@ function scriptTrack(name, script, opts = {}) {
       gm[3],
       gm[4],
       gm[5]
-    ] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=<>]*)$/.exec(tok);
+    ] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>]*)$/.exec(tok);
     if (!m) throw new Error("Instruction invalide : " + tok);
     let op = m[1];
     const n = m[2] ? parseInt(m[2], 10) : 1;
@@ -5214,9 +5226,10 @@ function scriptTrack(name, script, opts = {}) {
       v: m[5].includes("^") ? 1 : 0,
       nb: m[5].includes("_") ? 1 : 0,
       tn: m[5].includes("#") ? 1 : 0,
-      mv: m[5].includes("~") ? 1 : m[5].includes("=") ? 2 : 0,
+      mv: m[5].includes("~") ? 1 : m[5].includes("=") ? 2 : m[5].includes("%") ? 3 : 0,
       o: m[5].includes("<") ? 1 : m[5].includes(">") ? 2 : 0
     };
+    cur.mvTok = cur.mv ? ++moverTok : 0;
     if (m[3]) {
       cur.s = SURF_CODE[m[3]];
       if (!cur.s) throw new Error("Rev\xEAtement inconnu : " + tok);
@@ -7411,13 +7424,298 @@ var BUILTIN_TRACKS = [
       argent: 33.2,
       bronze: 38.9
     }
+  },
+  // ---- Atelier des mécanismes (chapitre BONUS, 12e) : obstacles puis pièces mobiles, un à un ----
+  {
+    // Chapitre 12 (Atelier, bonus) · 1/6 — MÉCANISME : bumpers et piques fixes sur les bords : ils ne gênent que si l’on coupe les virages.
+    // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    id: "garde",
+    name: "Garde-Fous",
+    decor: "atelier",
+    difficulty: 1,
+    profil: "atelier",
+    meca: [
+      "bumper",
+      "spikes"
+    ],
+    appris: "D\xE9part : quatre boosters \u2192 vague. Au programme : les premiers obstacles, bumpers (ils repoussent) et piques fixes, sur les bords : rester sur la route les \xE9vite, couper un virage les r\xE9veille.",
+    goal: {
+      id: "nowall"
+    },
+    opts: {
+      l: 6
+    },
+    pilot: {
+      vCap: 66
+    },
+    obst: [
+      {
+        k: "bumper",
+        at: 0.3,
+        side: -7.5,
+        s: 0.8
+      },
+      {
+        k: "spikes",
+        at: 0.55,
+        side: 7.5,
+        s: 0.7
+      },
+      {
+        k: "bumper",
+        at: 0.8,
+        side: 7.5,
+        s: 0.8
+      }
+    ],
+    script: "start B4 [cds1] S [crs1] S2 B HR S2 C S HL S B [cdi1] [dn2] [cdo1] B2 finish",
+    medals: {
+      cristal: 17,
+      or: 17.9,
+      argent: 20.5,
+      bronze: 24.1
+    }
+  },
+  {
+    // Chapitre 12 (Atelier, bonus) · 2/6 — MÉCANISME : piques escamotables en travers de la route : on passe quand elles sont rentrées.
+    // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    id: "cadence",
+    name: "En Cadence",
+    decor: "atelier",
+    difficulty: 1,
+    profil: "atelier",
+    meca: [
+      "spikesPop"
+    ],
+    appris: "D\xE9part : trois boosters \u2192 trois cases. Au programme : des piques escamotables en travers de la route (trois secondes de cycle, une et demie dehors) : on passe quand elles sont rentr\xE9es.",
+    goal: {
+      id: "norespawn"
+    },
+    opts: {
+      l: 6
+    },
+    pilot: {
+      vCap: 66
+    },
+    obst: [
+      {
+        k: "spikesPop",
+        at: 0.1,
+        side: 0,
+        s: 1.1,
+        ph: 0.438
+      },
+      {
+        k: "spikesPop",
+        at: 0.25,
+        side: 0,
+        s: 1.1,
+        ph: 0
+      }
+    ],
+    script: "start B3 S3 [crs1] S B HR S2 C S2 HL S B [cdi1] [dn2] [cdo1] B2 finish",
+    medals: {
+      cristal: 16.8,
+      or: 17.7,
+      argent: 20.4,
+      bronze: 23.9
+    }
+  },
+  {
+    // Chapitre 12 (Atelier, bonus) · 3/6 — MÉCANISME : une boule balancier puis un mur coulissant : il faut lire leur rythme.
+    // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    id: "pendule",
+    name: "Le Pendule",
+    decor: "atelier",
+    difficulty: 2,
+    profil: "atelier",
+    meca: [
+      "pendulum",
+      "slider"
+    ],
+    appris: "D\xE9part : deux boosters \u2192 vague. Au programme : une boule balancier qui balaie la route, puis un mur coulissant : on lit leur rythme et on passe dans le vide.",
+    goal: {
+      id: "nowall"
+    },
+    opts: {
+      l: 6
+    },
+    pilot: {
+      vCap: 66
+    },
+    obst: [
+      {
+        k: "pendulum",
+        at: 0.1,
+        side: 0,
+        s: 1,
+        ph: 0
+      },
+      {
+        k: "slider",
+        at: 0.6,
+        side: 0,
+        s: 1,
+        ph: 0.75
+      }
+    ],
+    script: "start B2 [crs1] S2 [cds1] S2 HR S B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
+    medals: {
+      cristal: 17.4,
+      or: 18.3,
+      argent: 21.1,
+      bronze: 24.7
+    }
+  },
+  {
+    // Chapitre 12 (Atelier, bonus) · 4/6 — MÉCANISME : un marteau tournant puis un balayeur : des obstacles qui tournent.
+    // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    id: "rotors",
+    name: "Rotors",
+    decor: "atelier",
+    difficulty: 2,
+    profil: "atelier",
+    meca: [
+      "hammer",
+      "sweeper"
+    ],
+    appris: "D\xE9part : trois cases \u2192 trois boosters. Au programme : un marteau tournant au milieu de la route, puis un balayeur : des obstacles qui tournent, on entre juste apr\xE8s leur passage.",
+    goal: {
+      id: "norespawn"
+    },
+    opts: {
+      l: 6
+    },
+    pilot: {
+      vCap: 66
+    },
+    obst: [
+      {
+        k: "hammer",
+        at: 0.1,
+        side: 0,
+        s: 1,
+        ph: 0.438
+      },
+      {
+        k: "sweeper",
+        at: 0.3,
+        side: 0,
+        s: 1,
+        ph: 0
+      }
+    ],
+    script: "start S3 B3 [cds1] S [crs1] S2 HR S B C S2 HL S B [cdi1] [dn2] [cdo1] B2 finish",
+    medals: {
+      cristal: 18.8,
+      or: 19.7,
+      argent: 22.7,
+      bronze: 26.7
+    }
+  },
+  {
+    // Chapitre 12 (Atelier, bonus) · 5/6 — MÉCANISME : un ascenseur et une glissière : la route elle-même bouge.
+    // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    id: "montecharge",
+    name: "Monte-Charge",
+    decor: "atelier",
+    difficulty: 3,
+    profil: "atelier",
+    meca: [
+      "lift",
+      "slide"
+    ],
+    appris: "D\xE9part : cinq boosters \u2192 vague. Au programme : la route bouge, un ascenseur (la dalle monte puis redescend) et une glissi\xE8re (elle se d\xE9cale sur le c\xF4t\xE9), comme dans l\u2019\xE9diteur.",
+    goal: {
+      id: "nowall"
+    },
+    opts: {
+      l: 6
+    },
+    pilot: {
+      vCap: 66
+    },
+    movers: [
+      {
+        ms: 100,
+        ma: 1
+      },
+      {
+        ms: 100,
+        ma: 1
+      }
+    ],
+    script: "start B5 S [crs1] S2~ B HR S2= C S HL S B [cdi1] [dn2] [cdo1] B2 finish",
+    medals: {
+      cristal: 16.8,
+      or: 17.7,
+      argent: 20.4,
+      bronze: 23.9
+    }
+  },
+  {
+    // Chapitre 12 (Atelier, bonus) · 6/6 — MÉCANISME : marteau, balancier et mur coulissant à la suite : tout le chapitre d’un coup.
+    // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    id: "grandatelier",
+    name: "Le Grand Atelier",
+    decor: "atelier",
+    difficulty: 3,
+    profil: "atelier",
+    meca: [
+      "hammer",
+      "pendulum",
+      "slider"
+    ],
+    appris: "D\xE9part : deux boosters \u2192 deux cases. Au programme : le tour d\u2019horizon, un marteau, un balancier puis un mur coulissant \xE0 la suite : les m\xE9canismes des circuits d\u2019avant reviennent d\u2019un coup.",
+    goal: {
+      id: "norespawn"
+    },
+    opts: {
+      l: 6
+    },
+    pilot: {
+      vCap: 66
+    },
+    obst: [
+      {
+        k: "hammer",
+        at: 0.1,
+        side: 0,
+        s: 1,
+        ph: 0.938
+      },
+      {
+        k: "pendulum",
+        at: 0.35,
+        side: 0,
+        s: 1,
+        ph: 0.313
+      },
+      {
+        k: "slider",
+        at: 0.6,
+        side: 0,
+        s: 1,
+        ph: 0.188
+      }
+    ],
+    script: "start B2 S2 [cds1] S2 [crs1] S B HR S2 C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
+    medals: {
+      cristal: 18,
+      or: 19,
+      argent: 21.8,
+      bronze: 25.6
+    }
   }
 ];
 BUILTIN_TRACKS.sort((a, b) => CAREER_ORDER.indexOf(a.decor) - CAREER_ORDER.indexOf(b.decor) || a.difficulty - b.difficulty);
 function buildBuiltin(def) {
   const t = scriptTrack(def.name, def.script, {
     ...def.opts || {},
-    decor: def.decor || "desert"
+    decor: def.decor || "desert",
+    ...def.movers ? {
+      movers: def.movers
+    } : {}
   });
   t.author = "Copytrack";
   if (def.params) t.setParams(def.params);
@@ -10017,7 +10315,7 @@ function botTime(track, latK = 0.8) {
 var cache2 = /* @__PURE__ */ new Map();
 function dailyChallenge(day = dayKey()) {
   if (cache2.has(day)) return cache2.get(day);
-  const decors = Object.keys(DECORS);
+  const decors = DAILY_DECORS;
   for (let attempt = 0; attempt < 40; attempt++) {
     const r = rng(day + "#" + attempt);
     const decor = decors[Math.floor(r() * decors.length)];

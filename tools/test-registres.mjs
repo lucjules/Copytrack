@@ -1,7 +1,7 @@
 // Registres : ordres de sérialisation figés, tables uniques cohérentes entre elles : node tools/test-registres.mjs   (npm test)
 //  - PIECE_ORDER, SURFACE_CODES et DECO_ORDER ne changent jamais (les codes de circuit partagés s'y réfèrent par numéro) : on en garde l'empreinte ;
 //  - chaque décoration a un nom, une icône, une catégorie et une géométrie ; chaque pièce a une définition ;
-//  - les 11 décors : mêmes identifiants dans themes.js, scenery.js (rendu) et la carrière.
+//  - les 12 décors : mêmes identifiants dans themes.js, scenery.js (rendu) et la carrière.
 import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
 import { hashString } from '../js/track.js';
@@ -11,7 +11,7 @@ import { PACK_IDS } from '../js/decoPackData.js';
 import { GeoBuilder } from '../js/geo.js';
 import { buildDecoInto } from '../js/decos.js';
 import { isObstacle } from '../js/obstacles.js';
-import { DECORS, CAREER_ORDER, DEFAULT_DECOR } from '../js/themes.js';
+import { DECORS, CAREER_ORDER, DEFAULT_DECOR, DAILY_DECORS } from '../js/themes.js';
 import { THEMES } from '../js/scenery.js';
 import { CHAPTERS } from '../js/career.js';
 
@@ -78,16 +78,18 @@ test('chaque décoration a une géométrie (les obstacles et la plaque image ont
 });
 
 console.log('Décors (thèmes)');
-test('themes.js, le rendu (scenery.js) et la carrière portent les mêmes 11 identifiants', () => {
+test('themes.js, le rendu (scenery.js) et la carrière portent les mêmes 12 identifiants', () => {
   const ids = Object.keys(DECORS).sort();
-  assert.equal(ids.length, 11);
+  assert.equal(ids.length, 12);
   assert.deepEqual(Object.keys(THEMES).sort(), ids);
   assert.deepEqual([...CAREER_ORDER].sort(), ids);
   assert.deepEqual(CHAPTERS.map((c) => c.decor), CAREER_ORDER);
   assert.ok(DECORS[DEFAULT_DECOR]);
 });
 test('l\'ordre historique de DECORS est figé (le défi du jour tire le décor par son rang)', () => {
-  assert.equal(Object.keys(DECORS).join(','), 'desert,polar,jungle,city,isles,volcano,orbit,caves,sky,reef,factory');
+  assert.equal(Object.keys(DECORS).join(','), 'desert,polar,jungle,city,isles,volcano,orbit,caves,sky,reef,factory,atelier');
+  // Le défi du jour ne tire que dans les onze décors d'origine : en ajouter un ne change aucun circuit du jour.
+  assert.deepEqual(DAILY_DECORS, ['desert', 'polar', 'jungle', 'city', 'isles', 'volcano', 'orbit', 'caves', 'sky', 'reef', 'factory']);
 });
 test('chaque décor a un nom, une couleur de pastille et un chapitre de carrière nommé comme lui', () => {
   for (const [id, d] of Object.entries(DECORS)) { assert.ok(d.label && /^#[0-9a-f]{6}$/i.test(d.chip), id); }

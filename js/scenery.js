@@ -119,6 +119,18 @@ export const THEMES = {
     plates: true,
     dust: '#d8b890',
   },
+  // Atelier des mécanismes (chapitre bonus) : une halle claire et propre, des couleurs de signalisation (jaune, bleu) : on y VOIT les mécanismes.
+  atelier: {
+    sky: { top: '#2b3f6b', mid: '#6f8fc0', horizon: '#f3e6c4', sun: '#fff4c8', aurora: 0, stars: 0, skyline: 1 },
+    fog: '#b9c6d8', fogNear: 170, fogFar: 900,
+    sunDir: [0.4, 0.55, -0.7], sunColor: '#fff0cc', sunIntensity: 2.6,
+    hemi: ['#e8f0ff', '#6a6f7c', 1.6],
+    ground: ['#8f95a3', '#9aa0ae', '#848a98'],
+    rock: ['#7a8398', '#8a93a8', '#6a7388', '#c9a23a', '#4d5668'],
+    hills: 24,
+    plates: true,
+    dust: '#e8dcc0',
+  },
   isles: {
     sky: { top: '#2a7fd8', mid: '#6cc0f0', horizon: '#ffe3b0', sun: '#fff7d6', aurora: 0, stars: 0 },
     fog: '#bfe6f2', fogNear: 260, fogFar: 1500,
@@ -559,7 +571,7 @@ export class Scenery {
     else if (this.themeId === 'caves') this._cavesDecor(ctx);
     else if (this.themeId === 'sky') this._skyDecor(ctx);
     else if (this.themeId === 'reef') this._reefDecor(ctx);
-    else if (this.themeId === 'factory') this._factoryDecor(ctx);
+    else if (this.themeId === 'factory' || this.themeId === 'atelier') this._factoryDecor(ctx);
     else this._desertDecor(ctx);
   }
 

@@ -76,12 +76,12 @@ try {
     if (await app(() => window.copytrack.ui.modalOpen)) { await shot('01b-tutoriel'); await page.keyboard.press('Escape'); await waitApp(() => !window.copytrack.ui.modalOpen); }
     await shot('02-menu');
     assert.ok(await app(() => !document.getElementById('menu').classList.contains('hidden')), 'le menu doit être visible');
-    assert.equal(await app(() => window.copytrack.builtins.length), 66);
+    assert.equal(await app(() => window.copytrack.builtins.length), 72);
   });
 
-  await test('carrière : 66 circuits listés, le premier se lance et se conduit', async () => {
+  await test('carrière : 72 circuits listés, le premier se lance et se conduit', async () => {
     await click('[data-action="play"]');
-    await waitApp(() => document.querySelectorAll('#track-list .card:not(.daily-card)').length === 66);
+    await waitApp(() => document.querySelectorAll('#track-list .card:not(.daily-card)').length === 72);
     await shot('03-carriere');
     await click('#track-list .track-group:not(.ch-open) .card:not(.daily-card):not(.locked)');
     await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.state);

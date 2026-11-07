@@ -9,7 +9,7 @@ import { DECORS } from '../themes.js';
 import { PIECES } from '../pieces.js';
 import { thumbnail } from '../editorTools.js';
 import { dailyChallenge, dayKey } from '../daily.js';
-import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked, chapterState, careerSummary } from '../career.js';
+import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked, chapterState, careerSummary, prerequisiteOf, nextBuiltinIndex } from '../career.js';
 import { getRecord, listMyTracks, deleteMyTrack, formatTime } from '../storage.js';
 export const screenMethods = {
   showMenu(screen = 'menu') {
@@ -89,12 +89,13 @@ export const screenMethods = {
 
   nextTrack() {
     const opts = this.session ? this.session.opts : {};
-    if (opts.builtinIndex == null || opts.builtinIndex >= this.builtins.length - 1) return;
-    const next = opts.builtinIndex + 1;
+    if (opts.builtinIndex == null) return;
+    const next = nextBuiltinIndex(opts.builtinIndex, this.builtins.length);
+    if (next == null) return;
     const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(rec.time, b.def.medals) : null; };
     const ch = Math.floor(next / CHAPTER_SIZE);
     if (!chapterUnlocked(ch, medalOf, this.builtins.length)) {
-      this.ui.flash(`Chapitre ${ch + 1} verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${ch}.`, 2.6);
+      this.ui.flash(`Chapitre ${ch + 1} verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${prerequisiteOf(ch) + 1}.`, 2.6);
       this.audio.error();
       return;
     }
@@ -116,7 +117,7 @@ export const screenMethods = {
       box.innerHTML = `<div class="cs-main"><b>${sm.pct} %</b><span>de la carrière</span></div>
         <div class="cs-bar"><i style="width:${sm.pct}%"></i></div>
         <div class="cs-stats">${sm.medals} / ${sm.total} médailles · ${sm.crystal} cristal · ${sm.goals} / ${sm.total} objectifs bonus</div>
-        ${sm.complete ? '<p class="cs-msg">✦ Carrière complète : 66 cristaux et 66 objectifs. Il n’y a plus rien à finir ici.</p>' : sm.finished ? '<p class="cs-msg">🏁 Carrière terminée : une médaille sur chaque circuit. Reste les cristaux et les objectifs bonus.</p>' : ''}`;
+        ${sm.complete ? '<p class="cs-msg">✦ Carrière complète : ${sm.total} cristaux et ${sm.total} objectifs. Il n’y a plus rien à finir ici.</p>' : sm.finished ? '<p class="cs-msg">🏁 Carrière terminée : une médaille sur chaque circuit. Reste les cristaux et les objectifs bonus.</p>' : ''}`;
       list.appendChild(box);
     }
     // Défi du jour
@@ -158,7 +159,7 @@ export const screenMethods = {
       g.className = 'track-group' + (cst.id !== 'open' ? ' ch-' + cst.id : '');
       g.innerHTML = `<div class="chapter-head"><h3 class="group-title"><i style="background:${open ? '#5ff2ff' : '#555'}"></i>Chapitre ${ch + 1} · ${esc(C.name)}${open ? '' : ' 🔒'}</h3>
         <span class="prog">${medals} / ${idx.length} médailles · ${goals} / ${idx.length} objectifs bonus</span>${cst.label ? `<span class="ch-badge ${cst.id}">${cst.label}</span>` : ''}</div>
-        <p class="chapter-desc">${esc(C.desc)}${open ? '' : ` — Gagne ${UNLOCK_MEDALS} médailles au chapitre ${ch} pour l’ouvrir.`}</p>`;
+        <p class="chapter-desc">${esc(C.desc)}${open ? '' : ` — Gagne ${UNLOCK_MEDALS} médailles au chapitre ${prerequisiteOf(ch) + 1} pour l’ouvrir.`}</p>`;
       const grid = document.createElement('div');
       grid.className = 'card-grid';
       for (const i of idx) {
@@ -184,7 +185,7 @@ export const screenMethods = {
         card.querySelector('[data-board]').addEventListener('click', (e) => { e.stopPropagation(); this.audio.click(); this.leaderboardModal(b.key, b.def.name, b.track); });
         const go = () => {
           this.audio.click();
-          if (!open) { this.ui.flash(`Chapitre verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${ch}.`); this.audio.error(); return; }
+          if (!open) { this.ui.flash(`Chapitre verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${prerequisiteOf(ch) + 1}.`); this.audio.error(); return; }
           this.playBuiltin(i);
         };
         card.addEventListener('click', go);

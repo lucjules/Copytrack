@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.14** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.9.15** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -20,9 +20,9 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 
 ## Contenu
 
-- **66 circuits** dans 11 décors (*Désert crépuscule*, *Jungle néon*, *Archipel tropical*, *Ville futuriste*, *Nuit polaire*, *Volcan*, *Station orbitale*, *Fonds marins*, *Usine mécanique*, *Ville dans les nuages*, *Canyon de cristal*),
-  rangés **du plus facile au plus dur** en 11 chapitres de carrière (un par décor, 6 circuits chacun). Chaque circuit a un **profil** (Sprint, Speedway, Technique, Rollercoaster, Acrobatique) et une ouverture qui lui est propre ; 2 circuits se courent en plusieurs tours (Caldeira, Grand Anneau).
-- **Carrière** : un chapitre s'ouvre avec 4 médailles dans le précédent ; chaque circuit a un **objectif bonus** ★ (sans toucher de muret, réceptions parfaites, mini-turbos, anneaux, finir en moto…) qui rapporte 50 pièces.
+- **72 circuits** dans 12 décors (*Désert crépuscule*, *Jungle néon*, *Archipel tropical*, *Ville futuriste*, *Nuit polaire*, *Volcan*, *Station orbitale*, *Fonds marins*, *Usine mécanique*, *Ville dans les nuages*, *Canyon de cristal* et l'*Atelier des mécanismes*),
+  rangés **du plus facile au plus dur** en 11 chapitres de carrière (un par décor, 6 circuits chacun), plus un **chapitre bonus, l'Atelier** (6 circuits qui montrent chaque obstacle et chaque pièce mobile, un par un ; il s'ouvre avec 4 médailles dans le premier chapitre). Chaque circuit a un **profil** (Sprint, Speedway, Technique, Rollercoaster, Acrobatique) et une ouverture qui lui est propre ; 2 circuits se courent en plusieurs tours (Caldeira, Grand Anneau).
+- **Carrière** : un chapitre s'ouvre avec 4 médailles dans le précédent (l'Atelier bonus : dans le premier) ; chaque circuit a un **objectif bonus** ★ (sans toucher de muret, réceptions parfaites, mini-turbos, anneaux, finir en moto…) qui rapporte 50 pièces.
 - **Défi du jour** : un circuit généré à partir de la date, le même pour tout le monde, vérifié par le pilote automatique.
 - **Médailles** Bronze / Argent / Or / Cristal, chronos intermédiaires, réapparition au dernier checkpoint.
 - **Replays** : chaque course est enregistrée (commandes seulement, la physique est déterministe) et peut être revue à l'identique, de ×0,25 à ×4, avec des caméras TV et orbite.

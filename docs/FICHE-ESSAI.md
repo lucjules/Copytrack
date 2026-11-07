@@ -1,4 +1,4 @@
-# Fiche d'essai — les 66 circuits
+# Fiche d'essai — les 72 circuits
 
 À remplir en jouant, **un circuit après l'autre, dans l'ordre de la carrière** (un chapitre s'ouvre avec 4 médailles dans le précédent). Pour essayer un circuit précis sans progresser : ouvrir la console du navigateur (F12) et taper `copytrack.playBuiltin(N)`, où N = numéro du circuit − 1.
 Pour chaque circuit, coche ce qui est vrai et note le meilleur temps. Le temps du pilote automatique sert de repère : **Or = son temps**.
@@ -580,6 +580,58 @@ _Volant inversé, vrilles, inversions de gravité, plafonds et verre fragile._
 
 - Départ : un booster → deux dalles de verre fragile (5 s de résistance) → slalom. Au programme : huit virages serrés, chicane sur un mur : le dernier circuit.
 - Pilote automatique : **28.8 s** · médailles : cristal 27.4 · or 28.8 · argent 33.2 · bronze 38.9
+- Objectif bonus ★ : Finir sans réapparition
+- [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
+- Mon meilleur temps : ______ s · Notes : ____________________________________________
+
+## Chapitre 12 · Atelier des mécanismes
+
+_Piques, balancier, marteau, balayeur, ascenseur, glissière, plateau tournant : chaque mécanisme, un par un. Les mêmes outils que dans l’éditeur._
+
+### 67. Garde-Fous — Mécanisme, ◆◇◇◇◇
+
+- Départ : quatre boosters → vague. Au programme : les premiers obstacles, bumpers (ils repoussent) et piques fixes, sur les bords : rester sur la route les évite, couper un virage les réveille.
+- Pilote automatique : **17.9 s** · médailles : cristal 17 · or 17.9 · argent 20.5 · bronze 24.1
+- Objectif bonus ★ : Finir sans toucher de muret
+- [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
+- Mon meilleur temps : ______ s · Notes : ____________________________________________
+
+### 68. En Cadence — Mécanisme, ◆◇◇◇◇
+
+- Départ : trois boosters → trois cases. Au programme : des piques escamotables en travers de la route (trois secondes de cycle, une et demie dehors) : on passe quand elles sont rentrées.
+- Pilote automatique : **17.7 s** · médailles : cristal 16.8 · or 17.7 · argent 20.4 · bronze 23.9
+- Objectif bonus ★ : Finir sans réapparition
+- [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
+- Mon meilleur temps : ______ s · Notes : ____________________________________________
+
+### 69. Le Pendule — Mécanisme, ◆◆◇◇◇
+
+- Départ : deux boosters → vague. Au programme : une boule balancier qui balaie la route, puis un mur coulissant : on lit leur rythme et on passe dans le vide.
+- Pilote automatique : **18.3 s** · médailles : cristal 17.4 · or 18.3 · argent 21.1 · bronze 24.7
+- Objectif bonus ★ : Finir sans toucher de muret
+- [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
+- Mon meilleur temps : ______ s · Notes : ____________________________________________
+
+### 70. Rotors — Mécanisme, ◆◆◇◇◇
+
+- Départ : trois cases → trois boosters. Au programme : un marteau tournant au milieu de la route, puis un balayeur : des obstacles qui tournent, on entre juste après leur passage.
+- Pilote automatique : **19.7 s** · médailles : cristal 18.8 · or 19.7 · argent 22.7 · bronze 26.7
+- Objectif bonus ★ : Finir sans réapparition
+- [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
+- Mon meilleur temps : ______ s · Notes : ____________________________________________
+
+### 71. Monte-Charge — Mécanisme, ◆◆◆◇◇
+
+- Départ : cinq boosters → vague. Au programme : la route bouge, un ascenseur (la dalle monte puis redescend) et une glissière (elle se décale sur le côté), comme dans l’éditeur.
+- Pilote automatique : **17.9 s** · médailles : cristal 16.8 · or 17.7 · argent 20.4 · bronze 23.9
+- Objectif bonus ★ : Finir sans toucher de muret
+- [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
+- Mon meilleur temps : ______ s · Notes : ____________________________________________
+
+### 72. Le Grand Atelier — Mécanisme, ◆◆◆◇◇
+
+- Départ : deux boosters → deux cases. Au programme : le tour d’horizon, un marteau, un balancier puis un mur coulissant à la suite : les mécanismes des circuits d’avant reviennent d’un coup.
+- Pilote automatique : **19.0 s** · médailles : cristal 18 · or 19 · argent 21.8 · bronze 25.6
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________

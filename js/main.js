@@ -18,7 +18,7 @@ import { VERSION, PHYS_VER } from './version.js';
 import { online } from './online.js';
 import { account } from './account.js';
 import { runWelcome } from './welcome.js';
-import { goalFor } from './career.js';
+import { goalFor, nextBuiltinIndex } from './career.js';
 import { loadSettings, saveSettings, getRecord, saveRecord, saveMyTrack, newId, formatTime, purgeOldRecords, getJSON, setJSON } from './storage.js';
 import { Telemetry } from './telemetry.js';
 import { QualityManager, PROFILE_LABELS, wantAntialias } from './quality.js';
@@ -117,7 +117,7 @@ class App {
   playBuiltin(i) {
     const b = this.builtins[i];
     this.playTrack(b.track, {
-      trackKey: b.key, medals: b.def.medals, difficulty: b.def.difficulty, hasNext: i < this.builtins.length - 1, builtinIndex: i, seed: b.key,
+      trackKey: b.key, medals: b.def.medals, difficulty: b.def.difficulty, hasNext: nextBuiltinIndex(i, this.builtins.length) != null, builtinIndex: i, seed: b.key,
       goal: goalFor(b.def, i), goalKey: b.key + '#goal',
     });
   }

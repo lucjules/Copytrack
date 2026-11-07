@@ -28,8 +28,17 @@ const FILE = new URL('./phys-fingerprint.json', import.meta.url);
       console.log(`FAIL PHYS_VER vaut ${now.version} mais l'empreinte enregistrée date de la version ${ref.version} : node tools/phys-fingerprint.mjs --update`);
       process.exit(1);
     }
-    const bad = Object.keys(now.scenarios).filter((k) => now.scenarios[k] !== ref.scenarios[k]);
+    const changed = Object.keys(now.scenarios).filter((k) => k in ref.scenarios && now.scenarios[k] !== ref.scenarios[k]);
+    const added = Object.keys(now.scenarios).filter((k) => !(k in ref.scenarios));
+    const bad = changed;
     const gone = Object.keys(ref.scenarios).filter((k) => !(k in now.scenarios));
+    // Un circuit AJOUTÉ crée de nouveaux scénarios sans toucher aux anciens : la physique n'a pas changé, PHYS_VER ne bouge pas (les records et fantômes existants restent valables) ;
+    // il faut seulement ajouter ces scénarios à l'empreinte de référence.
+    if (!bad.length && !gone.length && added.length) {
+      console.log(`FAIL ${added.length} nouveau(x) scénario(s) (circuit ajouté ?) : ${added.slice(0, 8).join(', ')}${added.length > 8 ? ' …' : ''}`);
+      console.log('  Les anciens scénarios sont identiques : la physique n\'a PAS changé, ne touche pas à PHYS_VER. Enregistre-les :  node tools/phys-fingerprint.mjs --update');
+      process.exit(1);
+    }
     if (bad.length || gone.length) {
       console.log(`FAIL la physique a changé sans que PHYS_VER (${now.version}) soit incrémenté : ${bad.length} scénario(s) différent(s)` + (gone.length ? `, ${gone.length} disparu(s)` : ''));
       console.log('  ' + bad.slice(0, 12).join(', ') + (bad.length > 12 ? ` … (+${bad.length - 12})` : ''));

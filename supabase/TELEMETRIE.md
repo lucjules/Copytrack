@@ -1,6 +1,6 @@
 # Statistiques de jeu anonymes et médailles calibrées sur de vrais joueurs
 
-Les temps de médailles des 66 circuits intégrés ont été calés sur le **pilote automatique**, pas sur des humains. Pour les régler sur de vrais joueurs, le jeu peut (avec l'accord du joueur)
+Les temps de médailles des circuits intégrés ont été calés sur le **pilote automatique**, pas sur des humains. Pour les régler sur de vrais joueurs, le jeu peut (avec l'accord du joueur)
 envoyer quelques statistiques anonymes. Rien ne part tant que le joueur n'a pas accepté : la question est posée une fois (au menu principal), et le réglage
 « Statistiques anonymes » (Profil › Options) la retire à tout moment ; retirer l'accord vide aussi la file d'attente locale.
 

@@ -61,7 +61,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `skids.js` | Traces de pneus : bandes sombres posées sur la route pendant les glisses et les gros freinages. |
 | `storage.js` | Persistance locale (navigateur) : réglages, records + fantômes, circuits perso. |
 | `telemetry.js` | Statistiques de jeu ANONYMES (avec l'accord du joueur) : temps de fin, abandons, essais par circuit intégré. |
-| `themes.js` | Les 11 décors (thèmes visuels) du jeu : identité, nom et ordre de la carrière. Module de données pur (aucun rendu). |
+| `themes.js` | Les 12 décors (thèmes visuels) du jeu : identité, nom et ordre de la carrière. Module de données pur (aucun rendu). |
 | `tileInfo.js` | Aides « pures » (sans DOM ni 3D) de l'éditeur et de l'inspecteur, faciles à tester. |
 | `track.js` | Modèle de circuit : liste de pièces posées sur une grille, index spatial, requêtes de surface pour la physique, sérialisation en code partageable. |
 | `trackGeometry.js` | Géométrie du circuit : la forme 3D de chaque pièce (route, bordures, tunnel, revêtements, portiques, piliers) construite dans un GeoBuilder. |

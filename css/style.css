@@ -569,6 +569,7 @@ body.touch .hud-br { bottom: 120px; }
 .card .tag.p-sprint { color: #ffd23e; background: rgba(255, 210, 62, 0.14); }
 .card .tag.p-speedway { color: #ff6b9a; background: rgba(255, 107, 154, 0.14); }
 .card .tag.p-technique { color: #7fe9ff; background: rgba(127, 233, 255, 0.14); }
+.card .tag.p-atelier { color: #ffd23e; background: rgba(255, 210, 62, 0.22); border: 1px solid rgba(255, 210, 62, 0.45); }
 .card .tag.p-rollercoaster { color: #b9a6ff; background: rgba(185, 166, 255, 0.16); }
 .card .tag.p-acrobatique { color: #5dffb0; background: rgba(93, 255, 176, 0.14); }
 

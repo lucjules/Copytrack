@@ -493,8 +493,11 @@ export function scriptTrack(name, script, opts = {}) {
   let x = opts.x || 0, z = opts.z || 0, h = opts.h || 0, l = opts.l || 0;
   const path = [];
   let cur = { s: '', p: 0, v: 0, nb: 0, tn: 0 };
+  let moverTok = 0;       // numéro de l'instruction à pièce mobile (opts.movers[n - 1] = { ms, ma } : vitesse en % et amplitude de ses pièces)
   const place = (t, px, pz, lv, r, reverse = false, noPath = false, curOver = null) => {
     const tile = { t, x: px, z: pz, l: lv, r: r & 3, ...(curOver || cur) };
+    const mp = cur.mv && opts.movers ? opts.movers[cur.mvTok - 1] : null;
+    if (mp) { tile.ms = mp.ms || 0; tile.ma = mp.ma || 0; }
     if (cur.s && !surfaceAllowed(t, cur.s, cur.o | 0)) throw new Error(`${name} : revêtement ${cur.s} interdit sur ${t}`);
     for (const f of ['v', 'nb', 'tn', 'mv']) if (cur[f] && !flagAllowed(t, f, tile)) throw new Error(`${name} : drapeau ${f} interdit sur ${t}`);
     if (cur.o && !flagAllowed(t, 'o', tile, cur.o)) throw new Error(`${name} : orientation ${cur.o} interdite sur ${t}`);
@@ -574,15 +577,16 @@ export function scriptTrack(name, script, opts = {}) {
 
   for (const tok of script.trim().split(/\s+/)) {
     // [id] : n'importe quelle pièce par son identifiant (ex. [dn1] [cro2] [tr01s] [cvd1]) ; le niveau suit la pente de la pièce.
-    const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=<>]*)$/.exec(tok);
-    const m = gm ? [tok, '@' + gm[1], gm[2], gm[3], gm[4], gm[5]] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=<>]*)$/.exec(tok);
+    const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>]*)$/.exec(tok);
+    const m = gm ? [tok, '@' + gm[1], gm[2], gm[3], gm[4], gm[5]] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>]*)$/.exec(tok);
     if (!m) throw new Error('Instruction invalide : ' + tok);
     let op = m[1];
     const n = m[2] ? parseInt(m[2], 10) : 1;
     cur = {
-      s: '', p: 0, v: m[5].includes('^') ? 1 : 0, nb: m[5].includes('_') ? 1 : 0, tn: m[5].includes('#') ? 1 : 0, mv: m[5].includes('~') ? 1 : m[5].includes('=') ? 2 : 0,
+      s: '', p: 0, v: m[5].includes('^') ? 1 : 0, nb: m[5].includes('_') ? 1 : 0, tn: m[5].includes('#') ? 1 : 0, mv: m[5].includes('~') ? 1 : m[5].includes('=') ? 2 : m[5].includes('%') ? 3 : 0,
       o: m[5].includes('<') ? 1 : m[5].includes('>') ? 2 : 0,      // < : mur gauche, > : mur droit
     };
+    cur.mvTok = cur.mv ? ++moverTok : 0;
     if (m[3]) {
       cur.s = SURF_CODE[m[3]];
       if (!cur.s) throw new Error('Revêtement inconnu : ' + tok);
