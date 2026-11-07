@@ -4,7 +4,7 @@ import * as THREE from '../vendor/three.module.min.js';
 export { GHOST_EVERY, GHOST_VEHICLES, ghostVehicleAt } from '../ghostFormat.js';
 
 // Caméras en plus pour les replays.
-export const REPLAY_CAMS = [{ name: 'TV', tv: true }, { name: 'Orbite libre', orbit: true }];
+export const REPLAY_CAMS = [{ name: 'TV', tv: true }, { name: 'Orbite libre', orbit: true }, { name: 'Libre', free: true }, { name: 'Cinématique', cine: true }];      // Libre, Cinématique : Replay Theater (theater/cameras.js)
 
 export const CAM_MODES = [
   { name: 'Poursuite', dist: 9.5, height: 3.7, look: 5, lookUp: 1.3, fov: 66 },

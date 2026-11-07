@@ -4,6 +4,7 @@ import { $, h } from '../dom.js';
 import { THEMES, FONTS, SPEEDOS, TIMERS, HUD_PIECES, HUD_HIDE, sanitizeUi, themeVars, CSS_VARS } from '../uitheme.js';
 import { CAM_LIMITS, CAM_LABELS, CAM_DEFAULT, MAX_CUSTOM_CAMS, sanitizeCams, sanitizeCam } from '../camprefs.js';
 import { CAM_MODES } from '../race/shared.js';
+import { HUD_PROFILES, TRAIN_WIDGETS, TRAIN_REFS, sanitizeHudProfile, sanitizeTraining, effectiveHide } from '../hudProfile.js';
 
 // Classes posées sur <body> par applyUiPrefs (écrites en toutes lettres pour que le test de style les retrouve) :
 // hud-no-split hud-no-best hud-no-medals hud-no-boost hud-no-hint hud-no-track
@@ -19,7 +20,23 @@ export const uiCustomMethods = {
     const b = document.body;
     b.classList.toggle('has-radius', ui.radius >= 0);
     b.dataset.speedo = ui.speedo; b.dataset.timer = ui.timer;
-    for (const k of Object.keys(HUD_HIDE)) b.classList.toggle('hud-no-' + k, !!ui.hide[k]);
+    const prof = (this.settings.hudProfile = sanitizeHudProfile(this.settings.hudProfile));
+    const hide = effectiveHide(ui, prof);                 // ce que le joueur cache ET ce que le profil de HUD cache (hudProfile.js)
+    for (const k of Object.keys(HUD_HIDE)) b.classList.toggle('hud-no-' + k, !!hide[k]);
+    b.dataset.hudProfile = prof;
+  },
+
+  // Profil du HUD et réglages du HUD d'entraînement (Options › Personnalisation, et la puce « Entraînement » de la fiche du circuit).
+  setHudProfile(p) {
+    this.settings.hudProfile = sanitizeHudProfile(p);
+    this.applyUiPrefs(); this.saveSettings();
+    if ($('opt-hud-profile')) this._renderUiCustom();
+  },
+
+  _setTraining(patch) {
+    const cur = sanitizeTraining(this.settings.training);
+    this.settings.training = sanitizeTraining({ ...cur, ...patch, w: { ...cur.w, ...(patch.w || {}) } });
+    this.saveSettings();
   },
 
   _setUi(patch, save = true) {
@@ -40,6 +57,15 @@ export const uiCustomMethods = {
     on('opt-ui-theme', 'theme'); on('opt-ui-font', 'font'); on('opt-ui-speedo', 'speedo'); on('opt-ui-timer', 'timer');
     on('opt-ui-accent', 'accent'); on('opt-ui-accent2', 'accent2');
     on('opt-ui-panel', 'panelA', Number); on('opt-ui-radius', 'radius', Number); on('opt-ui-hud', 'hudScale', Number);
+    $('opt-hud-profile').replaceChildren(...Object.entries(HUD_PROFILES).map(([k, p]) => h('option', { value: k }, p.label)));
+    $('opt-hud-profile').addEventListener('change', (e) => this.setHudProfile(e.target.value));
+    $('opt-train-ref').replaceChildren(...Object.entries(TRAIN_REFS).map(([k, l]) => h('option', { value: k }, l)));
+    $('opt-train-ref').addEventListener('change', (e) => this._setTraining({ ref: e.target.value }));
+    $('opt-train-w').replaceChildren(...Object.entries(TRAIN_WIDGETS).map(([k, label]) => {
+      const c = h('input', { type: 'checkbox', 'data-tw': k });
+      c.onchange = () => this._setTraining({ w: { [k]: c.checked } });
+      return h('label', {}, c, label);
+    }));
     $('opt-ui-accent-reset').addEventListener('click', () => { this._setUi({ accent: '', accent2: '' }); this._renderUiCustom(); });
     this.applyUiPrefs();
   },
@@ -52,6 +78,11 @@ export const uiCustomMethods = {
     $('opt-ui-radius').value = u.radius < 0 ? 12 : u.radius; $('opt-ui-radius-v').textContent = u.radius < 0 ? 'défaut' : u.radius + ' px';
     $('opt-ui-hud').value = u.hudScale; $('opt-ui-hud-v').textContent = Math.round(u.hudScale * 100) + ' %';
     for (const c of $('opt-ui-hide').querySelectorAll('input')) c.checked = !!u.hide[c.dataset.hide];
+    const tr = sanitizeTraining(this.settings.training), prof = sanitizeHudProfile(this.settings.hudProfile);
+    $('opt-hud-profile').value = prof;
+    $('opt-train-ref').value = tr.ref;
+    for (const c of $('opt-train-w').querySelectorAll('input')) c.checked = !!tr.w[c.dataset.tw];
+    $('opt-train-box').classList.toggle('dim', prof !== 'training');
   },
 
   resetUi() {

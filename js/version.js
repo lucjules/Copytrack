@@ -1,7 +1,7 @@
 // Numéros de version du jeu (une seule source).
 //
 // VERSION : la version affichée au joueur ; à incrémenter à chaque modification livrée (package.json doit concorder : un test le vérifie).
-export const VERSION = 'bêta 0.9.27';
+export const VERSION = 'bêta 0.9.29';
 
 // PHYS_VER : la version de la PHYSIQUE. Les replays, les records, les fantômes importés, les classements en ligne et les salons
 // multijoueurs sont tous liés à ce numéro : un replay enregistré avec une autre physique ne redonne pas la même course.

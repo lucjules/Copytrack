@@ -1246,3 +1246,49 @@ body.hud-editing > section, body.hud-editing #touch { display: none !important; 
 }
 /* La scène de démonstration reste visible derrière la fiche, assombrie : le texte reste lisible sur un décor clair. */
 #race-hub { background: linear-gradient(180deg, rgba(23, 15, 46, 0.86) 0%, rgba(23, 15, 46, 0.62) 55%, rgba(23, 15, 46, 0.8) 100%); }
+
+/* ---------- HUD d'entraînement (js/race/training.js) : colonne à gauche, au milieu de l'écran ---------- */
+.hud-train { position: absolute; left: 16px; top: 34%; width: 210px; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); font-variant-numeric: tabular-nums; pointer-events: none; }
+.hud-train .tr-ref { font-size: 11px; color: var(--muted); line-height: 1.3; }
+.hud-train .tr-delta { font-size: 30px; font-weight: 700; font-style: italic; line-height: 1.1; }
+.hud-train .tr-delta.good, .hud-train .tr-sector.good { color: var(--good); }
+.hud-train .tr-delta.bad, .hud-train .tr-sector.bad { color: var(--bad); }
+.hud-train .tr-sector { font-size: 15px; font-weight: 700; min-height: 1.2em; }
+.hud-train .tr-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
+.hud-train .tr-chart { width: 100%; height: 44px; display: block; background: rgba(0, 0, 0, 0.25); border-radius: 6px; }
+.hud-train .hidden { display: none; }
+@media (max-width: 720px), (max-height: 520px) { .hud-train { top: auto; bottom: 120px; left: 8px; width: 160px; padding: 6px 8px; } .hud-train .tr-delta { font-size: 22px; } .hud-train .tr-chart { height: 32px; } }
+.opt-train.dim { opacity: 0.55; }
+
+/* ---------- Replay Theater (js/theater/) : barre de temps au-dessus de la barre de replay, panneau d'analyse à droite ---------- */
+.theater { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 9; width: min(940px, calc(100vw - 32px));
+  display: flex; flex-direction: column; gap: 6px; padding: 10px 14px; border-radius: 12px; background: rgba(14, 10, 30, 0.82); border: 1px solid var(--line); font-size: 13px; }
+.theater .th-runs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.theater .th-runs li { display: flex; align-items: center; gap: 6px; }
+.theater .th-runs i, .th-table th i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.theater .th-runs span, .theater .th-time { font-variant-numeric: tabular-nums; }
+.theater em.good, .th-table small.good { color: var(--good); font-style: normal; }
+.theater em.bad, .th-table small.bad { color: var(--bad); font-style: normal; }
+.theater .th-line { display: flex; align-items: center; gap: 10px; }
+.theater .th-track { position: relative; flex: 1; min-width: 0; }
+.theater .th-track input { width: 100%; display: block; accent-color: var(--pink); }
+.theater .th-marks { position: absolute; left: 0; right: 0; top: -6px; height: 6px; pointer-events: none; }
+.theater .th-mark { position: absolute; width: 2px; height: 8px; transform: translateX(-1px); background: rgba(255, 255, 255, 0.55); }
+.theater .th-mark.respawn { background: var(--amber); height: 10px; }
+.theater .th-mark.wall { background: var(--bad); }
+.theater .th-mark.coach { background: var(--cyan); width: 4px; height: 12px; border-radius: 2px; }
+.theater .th-ctl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.theater .th-ctl .btn { padding: 4px 10px; font-size: 13px; }
+.theater .th-ctl .th-speed { min-width: 3em; text-align: center; font-variant-numeric: tabular-nums; }
+.theater .btn[aria-pressed="true"] { border-color: var(--cyan); background: rgba(95, 242, 255, 0.16); }
+.theater-panel { position: fixed; top: calc(14px + env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); z-index: 9; width: min(440px, calc(100vw - 28px));
+  max-height: calc(100vh - 230px); overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 12px; background: rgba(14, 10, 30, 0.86); border: 1px solid var(--line); }
+.theater-panel .th-map { width: 100%; height: 220px; display: block; border-radius: 8px; touch-action: none; }
+.theater-panel .th-chart { width: 100%; height: auto; aspect-ratio: 560 / 170; display: block; border-radius: 8px; }
+.th-table { border-collapse: collapse; width: 100%; font-size: 11px; font-variant-numeric: tabular-nums; }
+.th-table th, .th-table td { padding: 2px 3px; text-align: right; border-bottom: 1px solid var(--line); }
+.th-table td small { display: block; font-size: 10px; }
+.th-table td.best { color: #c77dff; font-weight: 700; }
+.th-sectors { overflow-x: auto; }
+@media (max-width: 720px), (max-height: 520px) { .theater { bottom: calc(58px + env(safe-area-inset-bottom)); padding: 6px 8px; } .theater-panel { max-height: 45vh; } .theater-panel .th-map { height: 150px; } }
+.theater-on .replay-bar .rh, .theater-on #hud-hint { display: none; }

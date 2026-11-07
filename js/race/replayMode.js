@@ -27,6 +27,7 @@ export const replayMethods = {
       }
     } else if (this.state === 'finished') this.finishT += dt;
     this.render(dt, this.replayPaused ? 1 : Math.min(1, this.acc / DT));
+    if (this._th) this._theaterUi();
     if (this._rec) this._videoTick(dt);
   },
 
