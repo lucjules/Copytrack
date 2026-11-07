@@ -36,9 +36,9 @@ export class TrailRibbon {
 
   // anchor : arrière de la voiture (monde) ; right : axe latéral (vecteur unitaire) ; color : '#rrggbb' ou null (arc-en-ciel).
   // cam : position de la caméra (monde), ou null : les points trop près d'elle s'effacent (sinon le ruban passe devant l'objectif).
-  update(dt, anchor, right, speed, boost, color, time, cam = null) {
+  update(dt, anchor, right, speed, boost, color, time, cam = null, len = 1) {
     const k = clamp((speed - 4) / 46, 0, 1), strength = trailStrength(speed, boost);
-    const maxAge = 0.2 + 0.75 * k + 0.35 * boost, half = 0.22 + 0.5 * k + 0.5 * boost;
+    const maxAge = (0.2 + 0.75 * k + 0.35 * boost) * len, half = 0.22 + 0.5 * k + 0.5 * boost;
     for (const p of this.pts) p.age += dt;
     while (this.pts.length && this.pts[0].age > maxAge) this.pts.shift();
     const last = this.pts[this.pts.length - 1];

@@ -178,6 +178,58 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  await test('garage : atelier de voiture (pièces libres, peinture, dessin, effets, code) : la voiture change, le profil garde, le code revient', async () => {
+    await click('[data-action="garage"]');
+    await waitApp(() => window.copytrack.mode === 'garage');
+    await page.waitForTimeout(400);
+    const meshes = () => app(() => { let n = 0; window.copytrack.session.car.group.traverse((o) => { if (o.isMesh) n++; }); return n; });
+    const base = await meshes();
+    await click('#garage-tabs [data-cat="studio"]');
+    await page.waitForTimeout(200);
+    assert.ok(await page.locator('.studio').count(), 'l\'atelier s\'affiche');
+    await click('.studio .row button:has-text("+ Cylindre")');
+    await click('.studio .row button:has-text("+ Sphère")');
+    await page.waitForTimeout(400);
+    assert.equal(await app(() => window.copytrack.session.draft.custom.parts.length), 2);
+    assert.ok((await meshes()) >= base + 2, 'les pièces sont dans le modèle 3D');
+    // symétrique : une copie de l'autre côté
+    await page.locator('.studio input[type="checkbox"]').first().check();
+    await page.waitForTimeout(400);
+    // peinture : numéro et texte => livrée sur les flancs
+    await click('.stabs button:has-text("Peinture")');
+    await page.locator('.studio input[placeholder="07"]').fill('42');
+    await page.waitForTimeout(400);
+    assert.equal(await app(() => window.copytrack.session.draft.custom.paint.num), '42');
+    // dessin : un pixel
+    await click('.stabs button:has-text("Dessin")');
+    const cv = page.locator('canvas.pixcv');
+    const box = await cv.boundingBox();
+    await page.mouse.click(box.x + 10, box.y + 10);
+    assert.notEqual(await app(() => window.copytrack.session.draft.custom.draw), '0'.repeat(256), 'le pixel est posé');
+    // effets
+    await click('.stabs button:has-text("Effets")');
+    await page.locator('.studio select').selectOption('square');
+    await page.waitForTimeout(300);
+    // enregistré dans le profil (gratuit)
+    const saved = await app(() => { const c = JSON.parse(JSON.stringify(window.copytrack.session.draft.custom)); return { parts: c.parts.length, num: c.paint.num, eng: c.fx.engine }; });
+    assert.deepEqual(saved, { parts: 2, num: '42', eng: 'square' }, 'deux pièces, numéro, timbre');
+    const inProfile = await app(async () => (await import('/js/profile.js')).profile().loadout.custom.parts.length);
+    assert.equal(inProfile, 2, 'la personnalisation est enregistrée sans rien acheter');
+    // code : exporter puis tout retirer puis réimporter
+    await click('.stabs button:has-text("Code")');
+    const code = await page.locator('textarea.codebox').first().inputValue();
+    assert.ok(code.startsWith('SHC1:'));
+    await click('.studio button:has-text("Retirer toute la personnalisation")');
+    assert.equal(await app(() => window.copytrack.session.draft.custom.parts.length), 0);
+    await click('.stabs button:has-text("Code")');
+    await page.locator('textarea.codebox').nth(1).fill(code);
+    await click('.studio button:has-text("Importer")');
+    await page.waitForTimeout(300);
+    assert.equal(await app(() => window.copytrack.session.draft.custom.parts.length), 2, 'le code redonne la voiture');
+    await click('#garage [data-action="garage-back"]');
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
   await test('profil : compte, sauvegardes, options, commandes', async () => {
     await click('[data-action="profile"]');
     await waitApp(() => !document.getElementById('profile').classList.contains('hidden'));

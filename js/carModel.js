@@ -2,6 +2,7 @@
 // Tout est visuel : la physique ne dépend d'aucune dimension de ces modèles.
 import * as THREE from './vendor/three.module.min.js';
 import { CATALOG, DEFAULT_LOADOUT, sanitizeLoadout } from './cosmetics.js';
+import { addParts, addLivery } from './customCar.js';
 
 const TAU = Math.PI * 2;
 // Couleurs de la LED « pulsation » (créées une fois : pas d'allocation ni d'analyse de texte à chaque image).
@@ -129,6 +130,11 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
       sideShape(poly(c));
     }
   }
+
+  // Personnalisation libre (lot 10) : livrée sur les flancs, plaque, pièces posées par le joueur (voiture et deltaplane ; pas la moto ni le bateau).
+  const C = L.custom;
+  const freeLivery = ghost ? null : addLivery(body, C, lowerUp, B, (m) => own.push(m));
+  addParts(body, C.parts, (c, glow) => (glow && !ghost ? basic(c) : mk({ color: c, roughness: 0.5, metalness: 0.1 })));
 
   // Ailerons
   const rear = (B.lower[0][0] * -1) - 0.2;
@@ -535,6 +541,7 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
         if (o.isMesh && o.geometry) o.geometry.dispose();
       });
       for (const m of own) m.dispose();
+      if (freeLivery) freeLivery();
       group.removeFromParent();
     },
   };

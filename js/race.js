@@ -45,6 +45,8 @@ export class RaceSession {
     this.phys = this.sim.phys;
     this.logic = this.sim.logic;
     this.car = createCar(profile().loadout);
+    this.fx = profile().loadout.custom.fx;                       // effets du joueur (custom.js) : traînée, étincelles, fumée, voix
+    app.audio.setVoice(this.fx);
     app.scene.add(this.car.group);
     this.skids = new SkidMarks(app.scene);
     this.ghostCar = createCar(null, { ghost: true });
@@ -297,7 +299,7 @@ export class RaceSession {
       app.audio.miniTurbo(ev.miniTurbo);
       app.input.rumble(0.4, 0.2, 120);
       const p = this.phys.pos;
-      app.particles.burst(p.x, p.y + 0.5, p.z, 16, 7, 0.4, 0.5, ev.miniTurbo === 2 ? '#ffb84d' : '#5ff2ff', 2);
+      app.particles.burst(p.x, p.y + 0.5, p.z, 16, 7, 0.4, 0.5, this.fx.spark || (ev.miniTurbo === 2 ? '#ffb84d' : '#5ff2ff'), 2);
     }
     if (ev.landQ === 'perfect' && !this.demo) {
       app.audio.perfectLanding();
@@ -502,7 +504,7 @@ export class RaceSession {
       } else this.skids.lift(w);
     }
     if (p.driftCharge > 0.15 && p.grounded && !lean && !frozen) {
-      const col = p.driftCharge >= 1.5 ? '#ffb84d' : p.driftCharge >= 0.7 ? '#5ff2ff' : '#ffffff';
+      const col = this.fx.spark || (p.driftCharge >= 1.5 ? '#ffb84d' : p.driftCharge >= 0.7 ? '#5ff2ff' : '#ffffff');
       for (const sx of wheelsX) {
         if (Math.random() < 0.6) {
           tmpV.set(sx, 0.2, 1.4).applyQuaternion(g.quaternion).add(g.position);
@@ -512,12 +514,13 @@ export class RaceSession {
     }
     // Traînée lumineuse (cosmétique) : un ruban toujours présent, dont l'intensité suit la vitesse et le boost (voir trail.js).
     const trail = this._trail || (this._trail = (CATALOG.trail.find((x) => x.id === profile().loadout.trail) || CATALOG.trail[0]));
-    if (trail.id !== 'none' && !this.demo && !this.replay && !lean) {
+    const trailColor = this.fx.trailC || (trail.rainbow ? null : trail.color);
+    if ((trail.id !== 'none' || this.fx.trailC) && !this.demo && !this.replay && !lean) {
       if (!this.trailRib) this.trailRib = new TrailRibbon(app.scene);
       if (!frozen) {
         tmpV.set(0, 0.7, 2.3).applyQuaternion(g.quaternion).add(g.position);
         tmpV2.set(1, 0, 0).applyQuaternion(g.quaternion);
-        this.trailRib.update(dt, tmpV, tmpV2, p.speed, Math.min(1, p.boost), trail.rainbow ? null : trail.color, performance.now() / 1000, app.camera.position);
+        this.trailRib.update(dt, tmpV, tmpV2, p.speed, Math.min(1, p.boost), trailColor, performance.now() / 1000, app.camera.position, this.fx.trailLen);
       }
     } else if (this.trailRib) this.trailRib.reset();
     // Sillage du bateau (ou éclaboussures d'un véhicule dans l'eau).
@@ -531,7 +534,7 @@ export class RaceSession {
     if (!frozen && p.grounded && p.slip > 5 && p.speed > 6 && p.surfMod !== 'water') {
       for (const sx of [-1, 1]) {
         tmpV.set(sx * 1.0, 0.15, 1.4).applyQuaternion(g.quaternion).add(g.position);
-        const dust = p.surfMod === 'ice' ? '#e8f8ff' : app.scenery.theme.dust;
+        const dust = this.fx.smoke || (p.surfMod === 'ice' ? '#e8f8ff' : app.scenery.theme.dust);
         app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, (Math.random() - 0.5) * 2, 1 + Math.random() * 2, (Math.random() - 0.5) * 2, 0.7, 0.9, dust, -1);
       }
     }

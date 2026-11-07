@@ -11,6 +11,7 @@ import { COLLECTIONS, COLLECTION_COINS, collectionProgress } from './rewards.js'
 import { profile, saveProfile, owns, missingItems, totalCost, buy, setLoadout } from './profile.js';
 import { $, esc } from './dom.js';
 import { DEFAULT_DECOR } from './themes.js';
+import { studioMethods } from './garage/studio.js';
 
 export class GarageSession {
   constructor(app) {
@@ -58,6 +59,7 @@ export class GarageSession {
 
   _rebuildCar() {
     if (this.car) this.car.dispose();
+    this.app.audio.setVoice(this.draft.custom.fx);
     this.car = createCar(this.draft, { moto: this.moto });
     this.car.group.position.set(12, 0.4, 12);
     this.car.group.rotation.y = Math.PI;
@@ -128,6 +130,8 @@ export class GarageSession {
         row.appendChild(sw);
         list.appendChild(row);
       }
+    } else if (this.cat === 'studio') {
+      this._renderStudio(list);
     } else if (this.cat === 'collections') {
       const h0 = document.createElement('div');
       h0.className = 'ghead';
@@ -244,3 +248,5 @@ export class GarageSession {
   }
 }
 
+
+Object.assign(GarageSession.prototype, studioMethods);

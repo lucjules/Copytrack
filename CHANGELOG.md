@@ -6,6 +6,20 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.22 — l'atelier de voiture : une voiture vraiment à toi
+
+`PHYS_VER` inchangé (26) ; rien à redéployer. **Aucune de ces options ne touche aux performances** : la voiture roule exactement pareil (la physique ne dépend pas du modèle 3D ; empreinte de physique identique).
+
+- **Garage › Atelier** (nouvel onglet, gratuit) avec cinq sous-onglets :
+  - **Formes** : jusqu'à 24 pièces libres (bloc, sphère, cylindre, cône, cale, anneau) posées où tu veux sur la voiture et le deltaplane : position, taille, rotation, couleur, **symétrique** (copie de l'autre côté), **lumineuse**, dupliquer, supprimer.
+  - **Peinture** : dégradé (deux sens), 6 motifs (rayures, alvéoles, camouflage, damier, pois, vagues) avec couleur et intensité, **texte**, **numéro de course** et **plaque d'immatriculation**, sur les deux flancs et à l'arrière.
+  - **Dessin** : une grille 16 × 16 (crayon, pot de peinture, gomme, 15 couleurs) collée sur les flancs, ou **import d'une image** ramenée à la grille (couleur la plus proche).
+  - **Effets** : couleur et longueur de la traînée (qui peut exister sans traînée du catalogue), couleur des étincelles et de la fumée de dérapage, **timbre** et hauteur du moteur, hauteur du klaxon.
+  - **Code** : un code **`SHC1:`** contient toute la voiture, à envoyer à un ami (les éléments payants du catalogue restent à débloquer chez lui).
+- `js/custom.js` (données, validation, codec, dessin : pur, testé) et `js/customCar.js` (rendu) ; `js/garage/studio.js` (interface). Tout ce qui vient de l'extérieur (code, profil, cloud) passe par `sanitizeCustom` : bornes, jeux de caractères (aucun HTML), longueurs.
+- **Limites assumées** : les pièces libres ne s'appliquent pas à la moto ni au bateau ; la personnalisation n'est pas envoyée aux autres joueurs en multijoueur (ils voient la voiture de base) ; le dessin est une grille 16 × 16 (pas de pinceau 3D) ; **pas de modération** des textes et des dessins (ils ne sont visibles que sur ta voiture ou chez qui importe ton code).
+- Tests : `tools/test-voiture.mjs` ; test navigateur (atelier complet, enregistrement dans le profil, aller-retour par le code).
+
 ## Bêta 0.9.21 — le jeu parle anglais (français / anglais)
 
 `PHYS_VER` inchangé (26) ; rien à redéployer, côté serveur comme côté physique. **Rien ici ne touche à la course** (empreinte de physique, records, replays, classements identiques).

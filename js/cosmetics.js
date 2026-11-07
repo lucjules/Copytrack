@@ -1,6 +1,8 @@
 // Catalogue de personnalisation du véhicule. 100 % visuel : aucune de ces options
 // ne modifie la physique (voir CAR dans physics.js, qui ne dépend pas du modèle 3D).
 
+import { DEFAULT_CUSTOM, sanitizeCustom, cloneCustom } from './custom.js';
+
 export const CATEGORIES = [
   { id: 'body', label: 'Carrosserie' },
   { id: 'colors', label: 'Couleurs' },
@@ -13,6 +15,7 @@ export const CATEGORIES = [
   { id: 'bike', label: 'Moto' },
   { id: 'trail', label: 'Traînée' },
   { id: 'horn', label: 'Klaxon' },
+  { id: 'studio', label: 'Atelier' },
   { id: 'presets', label: 'Presets' },
   { id: 'collections', label: 'Collections' },
 ];
@@ -116,6 +119,7 @@ export const DEFAULT_LOADOUT = {
   body: 'buggy', color: '#ffd23e', color2: '#23242f', decalColor: '#ffffff',
   spoiler: 'wing', led: 'none', decal: 'none', ornament: 'none', wheels: 'classic',
   finish: 'gloss', bike: 'street', trail: 'none', horn: 'classic',
+  custom: DEFAULT_CUSTOM,       // lot 10 : pièces libres, peinture avancée, dessin, effets (custom.js) ; gratuit, purement visuel
 };
 
 export const PRESETS = [
@@ -146,10 +150,11 @@ export function exclusiveOf(cat, id) {
 const KEYS = ['body', 'led', 'decal', 'ornament', 'spoiler', 'wheels', 'finish', 'bike', 'trail', 'horn'];
 
 export function sanitizeLoadout(l) {
-  const out = { ...DEFAULT_LOADOUT };
+  const out = { ...DEFAULT_LOADOUT, custom: cloneCustom() };
   if (!l) return out;
   for (const k of KEYS) if ((CATALOG[k] || []).some((x) => x.id === l[k])) out[k] = l[k];
   for (const k of ['color', 'color2', 'decalColor']) if (/^#[0-9a-f]{6}$/i.test(l[k] || '')) out[k] = l[k];
+  out.custom = sanitizeCustom(l.custom);
   return out;
 }
 
