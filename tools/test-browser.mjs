@@ -204,6 +204,47 @@ try {
     await waitApp(() => !window.copytrack.ui.modalOpen);
   });
 
+  await test('académie : menu des six leçons, leçon 1 jouée et réussie, bilan, retour au menu des leçons', async () => {
+    const btn = (label) => page.evaluate((l) => { const b = [...document.querySelectorAll('#modal-actions button')].find((x) => x.textContent.trim() === l); if (!b) throw new Error('bouton introuvable : ' + l); b.click(); }, label);
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.academy = {}; saveProfile(); window.copytrack.academyMenu(); });
+    await waitApp(() => document.querySelectorAll('.academy-list li').length === 6);
+    await shot('16-academie');
+    await app(() => document.querySelector('[data-lesson="0"]').click());
+    await waitApp(() => window.copytrack.ui.modalOpen && /Leçon 1/.test(document.getElementById('modal-title').textContent));
+    await btn('Commencer');
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.opts.academy, null, 30000);
+    await waitApp(() => window.copytrack.session.state === 'racing', null, 30000);
+    await app(() => window.copytrack.session._finish(12.5));
+    await waitApp(() => /Leçon réussie/.test(document.getElementById('modal-title').textContent), null, 10000);
+    assert.equal(await app(async () => (await import('/js/profile.js')).profile().academy.prise), 1);
+    await shot('17-lecon-reussie');
+    await btn('Académie');
+    await waitApp(() => window.copytrack.mode === 'menu' && document.querySelectorAll('.academy-list li.done').length === 1, null, 10000);
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.academy = {}; p.coins = 0; saveProfile(); window.copytrack.ui.closeModal(); });
+  });
+
+  await test('éditeur guidé : l\'essentiel seulement, les autres pièces refusées, « Tout afficher » rend tout', async () => {
+    await app(() => { window.copytrack.settings.editorGuided = true; window.copytrack.openEditor(); });
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.guidedOn, null, 20000);
+    const vis = () => app(() => {
+      const pal = document.getElementById('ed-palette'), v = (q) => [...pal.querySelectorAll(q)].filter((e) => !e.hidden).length;
+      return { guided: pal.classList.contains('guided'), banner: !pal.querySelector('.pal-guided').hidden, fams: v('.fam-card'), singles: v('.pal-row:not(.surf):not(.decos) > .piece-btn[data-piece]'), tabs: v('.pal-tab[data-tab]'), groups: v('.opt-group') };
+    });
+    const g = await vis();
+    assert.ok(g.guided && g.banner, 'bandeau'); assert.equal(g.fams, 2); assert.equal(g.singles, 2); assert.equal(g.tabs, 2); assert.equal(g.groups, 1, 'seul le groupe checkpoint');
+    await shot('18-editeur-guide');
+    const refused = await app(() => { const s = window.copytrack.session; s.setTool('loop'); return s.tool; });
+    assert.notEqual(refused, 'loop', 'une pièce du mode complet est refusée');
+    await app(() => document.querySelector('#ed-palette .pal-guided button').click());
+    const f = await vis();
+    assert.ok(!f.guided && !f.banner); assert.ok(f.fams >= 5 && f.singles > 10 && f.tabs === 4 && f.groups > 3, JSON.stringify(f));
+    assert.equal(await app(() => window.copytrack.settings.editorGuided), false);
+    assert.equal(await app(() => { const s = window.copytrack.session; s.setTool('loop'); return s.tool; }), 'loop');
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+    await app(() => { window.copytrack.settings.editorGuided = null; window.copytrack.saveSettings(); });
+  });
+
   await test('fantôme rival (haut d\'un classement) : affiché sur la piste, suit son enregistrement, étiquette au nom du rival', async () => {
     await app(() => window.copytrack.playBuiltin(0));
     await waitApp(() => window.copytrack.session && window.copytrack.session.state, null, 40000);

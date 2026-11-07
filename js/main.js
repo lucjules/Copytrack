@@ -23,6 +23,7 @@ import { loadSettings, saveSettings, getRecord, saveRecord, saveMyTrack, newId, 
 import { Telemetry } from './telemetry.js';
 import { QualityManager, PROFILE_LABELS, wantAntialias } from './quality.js';
 import { multiMethods } from './app/multi.js';
+import { academyMethods } from './app/academy.js';
 import { communityMethods } from './app/community.js';
 import { screenMethods } from './app/screens.js';
 import { settingsMethods } from './app/settings.js';
@@ -169,6 +170,7 @@ class App {
   quitRace() {
     const opts = this.session ? this.session.opts : {};
     if (opts.multi) { this._leaveRaceToLobby(opts.multi.room); return; }
+    if (opts.academy) { this.showMenu('menu'); this.academyMenu(); return; }
     if (opts.fromEditor) this.openEditor(this.editorState);
     else if (opts.builtinIndex != null || opts.daily) this.showMenu('tracks');
     else if (opts.userEntry) this.showMenu('mytracks');
@@ -341,7 +343,7 @@ class App {
 }
 
 // Les familles de méthodes vivent dans app/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(App.prototype, multiMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods);
+Object.assign(App.prototype, multiMethods, academyMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods);
 
 
 // Application installable et jouable hors ligne (service worker), si le contexte le permet.

@@ -6,6 +6,22 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.16 — l'Académie : six leçons guidées et un éditeur qui démarre simple
+
+`PHYS_VER` inchangé (26) ; rien à redéployer côté serveur.
+
+- **Académie** (menu principal) : six leçons de deux minutes, chacune sur un seul geste — *Prise en main*, *Dérapage et mini-turbo*, *Mini-turbos en série*, *Saut et réception parfaite*, *Plaque de transformation*, *Obstacles* —
+  chacune avec un court circuit, une introduction (avec les touches réelles du joueur, ou les boutons à l'écran sur tactile), une consigne qui s'affiche au départ, un **objectif** (les mêmes règles que les objectifs bonus
+  de la carrière) et un bilan qui dit quoi corriger. Pas de chrono, de médaille ni de statistique. **+20 ◆** la première fois qu'une leçon est réussie, **+60 ◆** au diplôme. Jusqu'ici le dérapage et le mini-turbo, le cœur
+  de la conduite, ne se découvraient que par hasard.
+- Le **tutoriel** de premier lancement propose de commencer l'Académie, et mentionne l'Atelier.
+- **Éditeur guidé** : pour un **nouveau** joueur (à la fin du premier tutoriel), l'éditeur n'affiche que l'essentiel — les familles Droite (avec les pentes) et Virage, le départ, l'arrivée et le checkpoint ; les autres pièces,
+  options, revêtements et décors se débloquent d'un clic sur « Tout afficher » (ou dans Profil › Options : « Éditeur guidé »). Rien n'est retiré à qui connaît déjà l'éditeur : le mode ne s'active pas pour les joueurs existants.
+- Vérifié : le pilote automatique réussit les objectifs des leçons 1, 4, 5 et 6 (muret, réception parfaite, moto, piques sans réapparition, à 90 et 110 % de sa vitesse) ; pour le mini-turbo, le **geste décrit dans la leçon**
+  (volant à fond, frein 0,8 s) déclenche bien un mini-turbo dans le grand virage sans toucher de muret. **Limite assumée** : l'objectif de la leçon 3 (deux mini-turbos d'affilée) n'a pas de joueur automatique qui le prouve ;
+  il se joue à la main.
+- Tests : `tools/test-academy.mjs` ; test navigateur (menu, leçon jouée et réussie, bilan, récompense unique ; éditeur guidé, pièces refusées, « Tout afficher »).
+
 ## Bêta 0.9.15 — l'Atelier des mécanismes : un chapitre bonus qui montre chaque obstacle et chaque pièce mobile
 
 **`PHYS_VER` inchangé (26)** : records, replays et fantômes sont conservés, et le défi du jour est identique à celui d'avant (vérifié). Six circuits s'ajoutent : **la fonction `submit-score` doit être

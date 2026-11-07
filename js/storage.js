@@ -114,6 +114,7 @@ export const DEFAULT_SETTINGS = {
   ghostGold: true,
   ghostImported: true,
   onlineScores: true,
+  editorGuided: null,     // éditeur en mode guidé (l'essentiel) : null = non (joueur qui connaît déjà l'éditeur), true = oui (voir editor/palette.js)
   telemetry: null,        // statistiques anonymes (voir telemetry.js) : null = pas encore demandé, true = accepté, false = refusé
 };
 

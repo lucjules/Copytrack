@@ -181,6 +181,7 @@ export const settingsMethods = {
     $('opt-ghostimp').checked = s.ghostImported !== false;
     $('opt-onlinescores').checked = s.onlineScores !== false;
     $('opt-telemetry').checked = s.telemetry === true;
+    $('opt-editor-guided').checked = s.editorGuided === true;
     $('opt-name').value = s.playerName;
     $('opt-name').readOnly = this.identity.kind === 'account';     // le pseudo d'un compte ne change pas
     $('opt-name').title = this.identity.kind === 'account' ? 'Pseudo du compte (non modifiable)' : '';

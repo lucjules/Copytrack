@@ -65,6 +65,11 @@ export const finishMethods = {
     app.audio.engine(null);          // plus de bruit de moteur une fois le niveau terminé
     this.finishT = 0;
     if (this.replay) { this._replayEnded(); return; }
+    if (this.opts.academy) {       // leçon de l'Académie : ni record, ni pièces de circuit, ni statistiques ; l'écran de bilan est celui de l'Académie
+      app.audio.finish(false);
+      app.onAcademyFinished(this, time);
+      return;
+    }
     if (this.cup) {
       // Championnat : le temps part à tous, l'hôte clôt la manche ; la place et les points s'affichent dans le panneau de manche (app/multi.js).
       this._sendNet(F_FINISHED);

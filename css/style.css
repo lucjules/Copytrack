@@ -1090,3 +1090,16 @@ body.touch kbd { display: none; }
 .ch-badge { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(95, 242, 255, .18); color: #5ff2ff; }
 .ch-badge.perfect { background: rgba(255, 210, 62, .2); color: #ffd23e; }
 .ch-badge.crystal { background: rgba(185, 166, 255, .25); color: #d9ccff; }
+
+/* Éditeur guidé et Académie (0.9.16) */
+#ed-palette [hidden] { display: none !important; }
+.pal-guided { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; padding: 5px 10px; border-radius: 10px; background: rgba(255, 210, 62, 0.12); border: 1px solid rgba(255, 210, 62, 0.35); font-size: 12.5px; }
+.pal-guided[hidden] { display: none; }
+.academy-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.academy-list li { display: grid; grid-template-columns: 2em 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); }
+.academy-list li.done { background: rgba(125, 255, 176, 0.1); }
+.academy-list .ac-st { display: grid; place-items: center; width: 1.8em; height: 1.8em; border-radius: 50%; background: rgba(255, 255, 255, 0.1); font-weight: 700; }
+.academy-list li.done .ac-st { background: #7dffb0; color: #0b2a18; }
+.academy-list .ac-name b { display: block; }
+.academy-list .ac-name small { color: var(--muted); }
+.academy-goal { margin-top: 10px; padding: 6px 10px; border-radius: 8px; background: rgba(95, 242, 255, 0.1); }

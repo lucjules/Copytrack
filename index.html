@@ -43,6 +43,7 @@
   <link rel="modulepreload" href="js/telemetry.js">
   <link rel="modulepreload" href="js/quality.js">
   <link rel="modulepreload" href="js/app/multi.js">
+  <link rel="modulepreload" href="js/app/academy.js">
   <link rel="modulepreload" href="js/app/community.js">
   <link rel="modulepreload" href="js/app/screens.js">
   <link rel="modulepreload" href="js/app/settings.js">
@@ -90,6 +91,7 @@
   <link rel="modulepreload" href="js/net/championship.js">
   <link rel="modulepreload" href="js/net/directory.js">
   <link rel="modulepreload" href="js/net/ice.js">
+  <link rel="modulepreload" href="js/academy.js">
   <link rel="modulepreload" href="js/editorTools.js">
   <link rel="modulepreload" href="js/daily.js">
   <link rel="modulepreload" href="js/app/shared.js">
@@ -155,6 +157,7 @@
       <nav class="menu-buttons">
         <button data-action="play" class="btn big primary">Carrière</button>
         <button data-action="daily" class="btn big">Défi du jour <small id="daily-best"></small></button>
+        <button data-action="academy" class="btn big">Académie <small>6 leçons guidées</small></button>
         <button data-action="community" class="btn big">Communauté <small>circuits en ligne</small></button>
         <button data-action="editor" class="btn big">Éditeur de circuits</button>
         <button data-action="garage" class="btn big">Garage <small>personnalisation</small></button>
@@ -250,6 +253,7 @@
       <label><span>Fantôme de la médaille d'or (tant qu'elle n'est pas gagnée)</span><input type="checkbox" id="opt-ghostgold"></label>
       <label><span>Fantôme importé (code d'un ami)</span><input type="checkbox" id="opt-ghostimp"></label>
       <label><span>Envoyer mes records aux classements en ligne</span><input type="checkbox" id="opt-onlinescores"></label>
+      <label title="L'éditeur n'affiche que l'essentiel (droite et pentes, virages, départ, arrivée, checkpoint) pour commencer."><span>Éditeur guidé (l'essentiel seulement)</span><input type="checkbox" id="opt-editor-guided"></label>
       <label title="Temps, abandons et essais par circuit, sans nom ni compte : ils servent à régler la difficulté et les médailles."><span>Statistiques de jeu anonymes (aide à équilibrer les circuits)</span><input type="checkbox" id="opt-telemetry"></label>
       <label><span>Nom du pilote</span><input type="text" id="opt-name" maxlength="20"></label>
       <label><span>Commandes tactiles</span>

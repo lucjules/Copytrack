@@ -35,6 +35,7 @@ const isStartFinish = (type) => { const sp = PIECES[type] && PIECES[type].specia
 
 export const toolMethods = {
   setTool(id) {
+    if (!this.guidedAllows(id)) { this.app.ui.flash('Disponible en mode complet : « Tout afficher » dans la palette.', 2.5); return; }
     // Mode pot de peinture : choisir une pièce ou un revêtement garde le pot ; tout autre outil le quitte.
     if (isFill(id)) this.fillMode = true;
     else if (this.fillMode && toFill(id)) id = toFill(id);

@@ -73,7 +73,8 @@ export const screenMethods = {
             <li><b>Plaques</b> : moto 🏍, bateau ⛵ (sur l'eau), deltaplane 🪂. Repasser dessus te rend ta voiture.</li>
             <li><b>${touch ? '⟲' : K('respawn')}</b> : revenir au dernier checkpoint · <b>${touch ? '↺' : K('restart')}</b> : recommencer.</li>
             <li><b>Obstacles</b> : piques mortelles, boules et marteaux bousculent. Leur rythme est fixe.</li>
-            <li><b>Carrière</b> : 11 chapitres de 6 circuits, un objectif bonus ★ chacun.</li>
+            <li><b>Carrière</b> : 11 chapitres de 6 circuits, un objectif bonus ★ chacun, plus l’<b>Atelier</b> bonus (obstacles et pièces mobiles).</li>
+            <li><b>Académie</b> (menu principal) : six leçons guidées, sur le dérapage, le mini-turbo, la réception…</li>
             <li>Un <b>défi du jour</b> chaque jour. Replays et fantômes partageables.</li>
           </ul>`,
       },
@@ -82,9 +83,19 @@ export const screenMethods = {
     const actions = [];
     if (step > 0) actions.push({ label: '← Précédent', onClick: () => { setTimeout(() => this.tutorial(step - 1), 0); return true; } });
     if (step < steps.length - 1) actions.push({ label: 'Suivant →', primary: true, onClick: () => { setTimeout(() => this.tutorial(step + 1), 0); return true; } });
-    else actions.push({ label: 'C\'est parti !', primary: true, onClick: () => { this.settings.tutorialDone = true; this.saveSettings(); return true; } });
-    if (step < steps.length - 1) actions.push({ label: 'Passer', onClick: () => { this.settings.tutorialDone = true; this.saveSettings(); return true; } });
+    else {
+      actions.push({ label: '🎓 Commencer l’Académie', primary: true, onClick: () => { this._tutorialDone(); setTimeout(() => this.academyMenu(), 0); return true; } });
+      actions.push({ label: 'C\'est parti !', onClick: () => { this._tutorialDone(); return true; } });
+    }
+    if (step < steps.length - 1) actions.push({ label: 'Passer', onClick: () => { this._tutorialDone(); return true; } });
     this.ui.modal({ title: `${s.title} (${step + 1}/${steps.length})`, body: s.body, actions });
+  },
+
+  // Fin du tutoriel. Premier passage d'un NOUVEAU joueur : l'éditeur démarre en mode guidé (six pièces, voir editor/palette.js) ; ceux qui l'ont déjà utilisé n'y perdent rien.
+  _tutorialDone() {
+    if (!this.settings.tutorialDone && this.settings.editorGuided == null) this.settings.editorGuided = true;
+    this.settings.tutorialDone = true;
+    this.saveSettings();
   },
 
   nextTrack() {

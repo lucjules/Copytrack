@@ -406,6 +406,7 @@ export class RaceSession {
         if (final) {
           this.state = 'racing';
           setTimeout(() => app.ui.hud.center(''), 600);
+          if (this.opts.academy) this._say([this.opts.academy.tip, 1, 7]);      // consigne de la leçon (Académie)
         }
       }
       if (this.state === 'countdown') {
