@@ -284,7 +284,7 @@ export const pointerMethods = {
     else return null;
     [x, z] = this._snapPos(x, z);                           // « Libre » par défaut ; l'accrochage reste facultatif
     y += this.deco.dy || 0;                                   // décalage vertical réglé avec Maj + souris
-    return { k: kind, x, y, z, ry: this.deco.rot, s: this.deco.scale, c: this.deco.color, u: kind === 'plaque' ? this.deco.url : '', ph: isObstacle(kind) ? this.deco.ph : 0 };
+    return { k: kind, x, y, z, ry: this.deco.rot, s: this.deco.scale, c: this.deco.color, u: kind === 'plaque' ? this.deco.url : '', cp: kind === 'custom' ? this.deco.cp : undefined, ph: isObstacle(kind) ? this.deco.ph : 0 };
   },
 
   _nearestDeco(maxD = 8) {
@@ -315,6 +315,7 @@ export const pointerMethods = {
       return;
     }
     this.hover = { x: hit.x, z: hit.z, cx: Math.floor(hit.x / CELL), cz: Math.floor(hit.z / CELL) };
+    this.lastHoverCell = this.hover;                  // gardée quand le curseur quitte la grille (déclencheurs : « case visée »)
     if (this.autoLevel) {
       const l = this.autoLevel.get(`${this.hover.cx},${this.hover.cz}`);
       if (l != null && l !== this.level) {

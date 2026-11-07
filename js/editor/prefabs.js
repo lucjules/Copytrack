@@ -24,6 +24,7 @@ export const prefabMethods = {
     for (const b of panel.querySelectorAll('[data-pf-del]')) b.onclick = () => { deletePrefab(b.dataset.pfDel); this.app.audio.erase(); this._buildPrefabPanel(); };
     panel.querySelector('[data-pf="save"]').onclick = () => this._savePrefabDialog();
     panel.querySelector('[data-pf="import"]').onclick = () => this._importPrefabDialog();
+    this._buildCdecoSection(panel);
   },
 
   _usePrefab(clip) {

@@ -1126,7 +1126,7 @@ body.touch kbd { display: none; }
 .pf-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.06); color: var(--text); cursor: pointer; font: inherit; }
 .pf-btn:hover { background: rgba(95, 242, 255, 0.14); }
 .pf-btn small { color: var(--muted); font-size: 11px; }
-.pf-mine { display: inline-flex; gap: 2px; align-items: stretch; }
+.pf-mine , .cd-mine { display: inline-flex; gap: 2px; align-items: stretch; }
 .pf-x { border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05); color: var(--muted); border-radius: 8px; padding: 0 7px; cursor: pointer; font: inherit; }
 .pf-x:hover { color: var(--text); background: rgba(255, 90, 110, 0.2); }
 .pf-actions { display: flex; gap: 8px; }
@@ -1174,3 +1174,5 @@ body.hud-editing #hud .hud-tl, body.hud-editing #hud .hud-tr { display: flex; }
 .hud-edit-bar { position: fixed; left: 50%; bottom: 24px; translate: -50% 0; display: flex; gap: 10px; align-items: center; padding: 10px 14px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; pointer-events: auto; z-index: 30; }
 .hud-edit-bar.hidden { display: none; }
 body.hud-editing > section, body.hud-editing #touch { display: none !important; }
+.pixcv.cdv { image-rendering: auto; cursor: default; max-width: 240px; width: 240px; }
+.cd-sec { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }

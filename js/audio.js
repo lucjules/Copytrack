@@ -186,6 +186,9 @@ export class GameAudio {
     else { tone(392, 0.32, 'square', 0.09); tone(494, 0.32, 'square', 0.07); }
   }
 
+  // Petit « ding » (déclencheurs de circuit).
+  ding() { this.tone(990, 0.18, 'triangle', 0.12); this.tone(1320, 0.22, 'triangle', 0.08, 0.08); }
+
   boost() {
     this.noise(0.6, 300, 0.3, 'bandpass', 0, 2600);
     this.tone(180, 0.4, 'sawtooth', 0.08, 0, 520);

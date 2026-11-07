@@ -226,7 +226,7 @@ test('toutes les décorations ont un nom, une catégorie et se construisent (gé
   const inCat = new Set(Object.values(DECO_CATS).flatMap((c) => c.kinds));
   for (const k of DECO_ORDER) {
     assert.ok(DECO_LABELS[k], 'nom ' + k);
-    if (k !== 'plaque' && k !== 'shard') assert.ok(inCat.has(k), 'catégorie ' + k);
+    if (k !== 'plaque' && k !== 'shard' && k !== 'custom') assert.ok(inCat.has(k), 'catégorie ' + k);
     if (k === 'plaque') continue;
     const gb = new GeoBuilder(), glow = new GeoBuilder();
     try { buildDecoInto(gb, glow, { k, x: 0, y: 0, z: 0, ry: 0.3, s: 1, c: 0 }); } catch (e) { if (!/obstacle|createObstacle/i.test(String(e))) throw new Error(k + ' : ' + e.message); continue; }

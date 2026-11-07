@@ -1,7 +1,7 @@
 // Service worker généré par tools/gen-sw.mjs : ne pas modifier à la main.
 // Jeu hors ligne : les fichiers du jeu sont gardés en cache ; le réseau reste prioritaire
 // pour récupérer les mises à jour quand il est disponible.
-const CACHE = 'copytrack-c4ab9964b9';
+const CACHE = 'copytrack-38f4eddf06';
 const FILES = [
   "./",
   "assets/README.txt",
@@ -38,6 +38,8 @@ const FILES = [
   "js/cosmetics.js",
   "js/custom.js",
   "js/customCar.js",
+  "js/customDeco.js",
+  "js/customDecoBuild.js",
   "js/daily.js",
   "js/decoData.js",
   "js/decoPack.js",
@@ -48,10 +50,12 @@ const FILES = [
   "js/dmath.js",
   "js/dom.js",
   "js/editor.js",
+  "js/editor/cdeco.js",
   "js/editor/history.js",
   "js/editor/palette.js",
   "js/editor/pointer.js",
   "js/editor/prefabs.js",
+  "js/editor/scriptsUi.js",
   "js/editor/selection.js",
   "js/editor/shared.js",
   "js/editor/tools.js",
@@ -116,6 +120,7 @@ const FILES = [
   "js/race/ghosts.js",
   "js/race/net.js",
   "js/race/replayMode.js",
+  "js/race/scriptsRun.js",
   "js/race/shared.js",
   "js/raceLogic.js",
   "js/remoteCar.js",
@@ -126,6 +131,7 @@ const FILES = [
   "js/scenery.js",
   "js/scenery/decor.js",
   "js/scenery/shared.js",
+  "js/scripts.js",
   "js/simulation.js",
   "js/skids.js",
   "js/storage.js",
@@ -147,6 +153,7 @@ const FILES = [
   "js/vendor/three.module.min.js",
   "js/version.js",
   "js/videoExport.js",
+  "js/weather.js",
   "js/welcome.js",
   "manifest.webmanifest"
 ];

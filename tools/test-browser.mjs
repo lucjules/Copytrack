@@ -281,6 +281,69 @@ try {
     assert.equal(await app(() => document.body.dataset.speedo), 'default');
   });
 
+  await test('décors réglables, pièce perso et déclencheurs : météo et heure qui défile, pièce posée dans le circuit, message et éclat joués en course', async () => {
+    const r = await app(async () => {
+      const A = window.copytrack;
+      const { scriptTrack } = await import('/js/track.js');
+      const t = scriptTrack('Perso', 'start S3 R S2 finish', { decor: 'desert' });
+      t.setParams({ ambiance: { sky: 'night', weather: 'snow', cycle: 'fast', sunAz: 90, tint: '#334466' }, scripts: [{ x: 0, z: 0, a: 'msg', v: 'Bravo !' }, { x: 0, z: 0, a: 'burst', v: '#ff00ff' }] });
+      t.addDeco({ k: 'custom', x: 10, y: 0, z: 10, ry: 0, s: 1, c: 0, cp: [{ s: 'box', sx: 3, sy: 3, sz: 3, c: '#ff0000' }, { s: 'sphere', y: 4, g: 1 }] });
+      A.playTrack(t, { trackKey: null });
+      return t.encode();
+    });
+    await waitApp(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    const info = await app(() => {
+      const A = window.copytrack, S = A.session;
+      const before = JSON.stringify(A.scenery.theme.sky.top);
+      const out = { weather: A.scenery.theme.weather, cycle: !!A.scenery._cycle, hasCustom: S.track.decos.some((d) => d.k === 'custom') };
+      S.phys.pos.x = 16; S.phys.pos.z = 16;       // case (0, 0)
+      S._scriptsUpdate();
+      out.msg = document.getElementById('hud-msg').textContent;
+      out.done = S._scDone.size;
+      S._scriptsUpdate();
+      out.doneAgain = S._scDone.size;
+      out.before = before;
+      return out;
+    });
+    const wx = await app(async () => {
+      const { Weather } = await import('/js/weather.js'); const THREE = await import('/js/vendor/three.module.min.js');
+      const sc = new THREE.Scene(), w = new Weather(sc), cam = new THREE.PerspectiveCamera(); const out = {};
+      for (const k of ['rain', 'snow', 'embers', 'dust', 'petals']) { w.set(k, 1); w.update(0.05, cam); out[k] = [w.kind, sc.children.length, Number.isFinite(w.pos[0])]; }
+      w.set('', 1); out.none = sc.children.length; w.set('rain', 0); out.off = w.kind; w.dispose();
+      return out;
+    });
+    assert.deepEqual(wx, { rain: ['rain', 1, true], snow: ['snow', 1, true], embers: ['embers', 1, true], dust: ['dust', 1, true], petals: ['petals', 1, true], none: 0, off: '' }, 'les cinq météos se construisent, bougent et se retirent');
+    assert.deepEqual([info.weather, info.cycle, info.hasCustom], ['snow', true, true], 'météo, heure qui défile, pièce perso dans le circuit');
+    assert.equal(info.msg.trim(), 'Bravo !', 'le message du déclencheur s\'affiche');
+    assert.deepEqual([info.done, info.doneAgain], [2, 2], 'chaque déclencheur ne part qu\'une fois par essai');
+    await page.waitForTimeout(1500);
+    assert.notEqual(await app(() => JSON.stringify(window.copytrack.scenery.theme.sky.top)), info.before, 'l\'heure a défilé');
+    await app(() => { window.copytrack.quitRace(); });
+    await waitApp(() => window.copytrack.mode === 'menu');
+    // le code du circuit porte tout (météo, déclencheurs, pièce perso) : on le rouvre
+    const back = await app(async (code) => { const { Track } = await import('/js/track.js'); const t = Track.decode(code); return [t.ambiance.weather, t.scripts.length, t.decos.filter((d) => d.k === 'custom')[0].cp.length]; }, r);
+    assert.deepEqual(back, ['snow', 2, 2]);
+    // éditeur : l'atelier de pièces, les déclencheurs et les réglages d'ambiance s'ouvrent
+    await app(() => window.copytrack.openEditor({ code: null }));
+    await page.waitForTimeout(1000);
+    await app(() => window.copytrack.session.openParams());
+    assert.ok(await page.locator('#pp-weather').count() && await page.locator('#pp-cycle').count(), 'réglages météo et heure');
+    await click('#pp-scripts');
+    await page.waitForTimeout(300);
+    await click('#modal-body button[data-sc="add"]');
+    assert.ok(await page.locator('#modal-body .sc-row').count() === 1, 'un déclencheur ajouté');
+    await app(() => window.copytrack.ui.closeModal());
+    await app(() => window.copytrack.session._cdecoDialog(null));
+    await page.waitForTimeout(300);
+    assert.equal(await page.locator('#modal-body canvas.cdv').count(), 2, 'vues de face et de dessus');
+    await click('#modal-actions button.primary');
+    const lib = await app(async () => (await import('/js/storage.js')).listCustomDecos().length);
+    assert.equal(lib, 1, 'la pièce est dans la bibliothèque');
+    const used = await app(async () => { const E = window.copytrack.session; const { listCustomDecos } = await import('/js/storage.js'); E._buildPrefabPanel(); E._useCdeco(listCustomDecos()[0]); return [E.tool, E.deco.cp.length]; });
+    assert.deepEqual(used, ['deco:custom', 1], 'la pièce est prête à être posée');
+    await app(() => window.copytrack.showScreen('menu'));
+  });
+
   await test('communauté hors ligne, mes circuits, importer : aucun plantage', async () => {
     await click('[data-action="community"]');
     await waitApp(() => !document.getElementById('community').classList.contains('hidden'));
@@ -465,7 +528,7 @@ try {
     await waitApp(() => window.copytrack.session.track.ambiance.sky === 'night');
     const after = await app(() => ({ far: window.copytrack.scenery.theme.fogFar, sun: window.copytrack.scenery.sun.intensity, am: window.copytrack.session.track.ambiance, code: window.copytrack.session.track.encode() }));
     assert.ok(after.far < before.far * 0.5, `brume : ${before.far} -> ${after.far}`); assert.ok(after.sun < before.sun, `lumière : ${before.sun} -> ${after.sun}`);
-    assert.deepEqual(after.am, { sky: 'night', fog: 'thick', music: 'none' });
+    assert.deepEqual(after.am, { sky: 'night', fog: 'thick', music: 'none', weather: '', sunAz: -1, tint: '', gtint: '', fogC: '', cycle: '' });
     assert.ok(await app((c) => { const t = window.copytrack.session.track.constructor.decode(c); return t.ambiance.fog === 'thick'; }, after.code), 'le code relu garde l\'ambiance');
     await shot('22-ambiance-nuit');
     // --- prefabs

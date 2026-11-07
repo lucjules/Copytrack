@@ -232,6 +232,21 @@ export function deletePrefab(id) {
   write('prefabs', listPrefabs().filter((p) => p.id !== id));
 }
 
+// ---- Pièces décoratives perso (bibliothèque locale, customDeco.js) : jusqu'à CDECO_MAX ; le partage se fait par le code « SHD1: » ----
+export const CDECO_MAX = 30;
+export function listCustomDecos() {
+  const l = read('cdecos', []);
+  return Array.isArray(l) ? l.filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string' && Array.isArray(p.parts)).slice(0, CDECO_MAX) : [];
+}
+export function saveCustomDeco({ id, name, parts }) {
+  const entry = { id: String(id).slice(0, 30), name: String(name).slice(0, 24) || 'Ma pièce', parts, updated: Date.now() };
+  const list = listCustomDecos().filter((p) => p.id !== entry.id);
+  list.unshift(entry);
+  write('cdecos', list.slice(0, CDECO_MAX));
+  return entry;
+}
+export function deleteCustomDeco(id) { write('cdecos', listCustomDecos().filter((p) => p.id !== id)); }
+
 export function deleteMyTrack(id) {
   write('tracks', listMyTracks().filter((t) => t.id !== id));
   // Pierre tombale : sans elle, la synchronisation du compte ressusciterait le circuit depuis un autre appareil.

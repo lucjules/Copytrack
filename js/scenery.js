@@ -9,7 +9,8 @@ import { GeoBuilder } from './geo.js';
 import { CELL } from './constants.js';
 import { PIECES } from './pieces.js';
 import { DEFAULT_DECOR } from './themes.js';
-import { resolveAmbiance, isDefaultAmbiance } from './ambiance.js';
+import { resolveAmbiance, isDefaultAmbiance, cleanAmbiance, cycleTheme, cyclePhaseStart, CYCLE_SECONDS } from './ambiance.js';
+import { Weather } from './weather.js';
 import { hash2 } from './scenery/shared.js';
 import { decorMethods } from './scenery/decor.js';
 
@@ -438,7 +439,18 @@ export class Scenery {
     const base = THEMES[id] || THEMES[DEFAULT_DECOR];
     const T = isDefaultAmbiance(ambiance) ? base : resolveAmbiance(base, ambiance);
     this.themeId = THEMES[id] ? id : DEFAULT_DECOR;
+    this._cycle = null;
+    const am = isDefaultAmbiance(ambiance) ? null : cleanAmbiance(ambiance);
+    if (am && am.cycle) this._cycle = { base, am, phase: cyclePhaseStart(am), len: CYCLE_SECONDS[am.cycle], acc: 1 };       // l'heure défile : voir update()
+    this._applyTheme(T);
+    if (this.q.env > 0 && this.renderer) this._updateEnv();
+  }
+
+  // Pose un décor (déjà résolu) sur le ciel, la brume et les lumières ; sert aussi à chaque pas de « l'heure qui défile » (sans refaire l'environnement).
+  _applyTheme(T) {
     this.theme = T;
+    if (!this.weather) this.weather = new Weather(this.scene);
+    this.weather.set(T.weather || '', this.q.particles);
     const u = this.sky.material.uniforms;
     u.top.value.set(T.sky.top);
     u.mid.value.set(T.sky.mid);
@@ -464,7 +476,6 @@ export class Scenery {
     this.hemi.intensity = T.hemi[2];
     this.sun.color.set(T.sunColor);
     this.sun.intensity = T.sunIntensity;
-    if (this.q.env > 0 && this.renderer) this._updateEnv();
   }
 
   // Reconstruit le terrain et le décor autour d'un circuit.
@@ -588,7 +599,17 @@ export class Scenery {
     this.sun.target.position.copy(focus);
     this.sun.position.copy(focus).addScaledVector(this.sunDir, 280);
     if (camera) this.sky.position.copy(camera.position);
-    this.sky.material.uniforms.time.value = performance.now() / 1000;
+    const now = performance.now();
+    this.sky.material.uniforms.time.value = now / 1000;
+    const dt = Math.min(0.1, (now - (this._wT || now)) / 1000);
+    this._wT = now;
+    if (this.weather) this.weather.update(dt, camera || { position: focus });
+    const c = this._cycle;
+    if (c) {
+      c.phase += (dt / c.len) * 4;
+      c.acc += dt;
+      if (c.acc >= 0.2) { c.acc = 0; this._applyTheme(cycleTheme(c.base, c.am, c.phase)); }      // 5 fois par seconde suffisent : la lumière varie lentement
+    }
   }
 }
 

@@ -11,7 +11,7 @@ import { DECO_CATS, DECO_COLORS, DECO_ICONS } from '../decoData.js';
 import { keyLabel } from '../input.js';
 import { esc } from '../dom.js';
 import { ERASE_FILTERS, ERASE_FILTER_ORDER } from '../editorPick.js';
-import { SKY_CHOICES, FOG_CHOICES, MUSIC_CHOICES } from '../ambiance.js';
+import { SKY_CHOICES, FOG_CHOICES, MUSIC_CHOICES, WEATHER_CHOICES, CYCLE_CHOICES } from '../ambiance.js';
 import { MODS, NO_OPTS, OPT_KEYS, PALETTE_ORDER, SNAPS, TOOLS, fillBase, isFill, pieceLabel } from './shared.js';
 // Options proposées dans l'onglet « Options » : bascules (route) et choix exclusifs (checkpoint, thème, mouvement).
 // Avec une pièce choisie, elles s'ajoutent à la pose (aperçu compris) ; sans pièce, elles s'appliquent à la pièce cliquée.
@@ -676,7 +676,14 @@ export const paletteMethods = {
       <h4 class="opt-h">Ambiance (sans effet sur la course ni les temps)</h4>
       <label>Moment de la journée<select id="pp-sky">${SKY_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
       <label>Brume<select id="pp-fog">${FOG_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
-      <label>Musique<select id="pp-music">${MUSIC_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>`;
+      <label>Musique<select id="pp-music">${MUSIC_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+      <label>Météo<select id="pp-weather">${WEATHER_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+      <label title="L'heure traverse aube, plein jour, coucher de soleil et nuit pendant la course">Heure qui défile<select id="pp-cycle">${CYCLE_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+      <label>Direction du soleil<span class="inl"><input type="checkbox" id="pp-sun-on" title="Direction choisie"><input type="range" id="pp-sun" min="0" max="345" step="15"></span></label>
+      <label>Teinte du ciel<span class="inl"><input type="checkbox" id="pp-tint-on" title="Teinte choisie"><input type="color" id="pp-tint"></span></label>
+      <label>Teinte du sol<span class="inl"><input type="checkbox" id="pp-gtint-on" title="Teinte choisie"><input type="color" id="pp-gtint"></span></label>
+      <label>Couleur de la brume<span class="inl"><input type="checkbox" id="pp-fogc-on" title="Couleur choisie"><input type="color" id="pp-fogc"></span></label>
+      <div class="opt-row"><span>Effets sur les cases du circuit</span><button class="btn small" type="button" id="pp-scripts">Déclencheurs…</button></div>`;
     const $f = (id) => f.querySelector('#' + id);
     $f('pp-name').value = T.name || '';
     $f('pp-desc').value = T.desc || '';
@@ -688,11 +695,15 @@ export const paletteMethods = {
     $f('pp-veh').value = T.veh0 || 'car';
     $f('pp-ig').checked = !!T.flip0;
     $f('pp-sky').value = T.ambiance.sky; $f('pp-fog').value = T.ambiance.fog; $f('pp-music').value = T.ambiance.music;
+    $f('pp-weather').value = T.ambiance.weather; $f('pp-cycle').value = T.ambiance.cycle;
+    $f('pp-sun-on').checked = T.ambiance.sunAz >= 0; $f('pp-sun').value = T.ambiance.sunAz >= 0 ? T.ambiance.sunAz : 90;
+    for (const [id, key, def] of [['tint', 'tint', '#ff8c5a'], ['gtint', 'gtint', '#2d7a4a'], ['fogc', 'fogC', '#cfe6f5']]) { $f(`pp-${id}-on`).checked = !!T.ambiance[key]; $f(`pp-${id}`).value = T.ambiance[key] || def; }
     const show = () => {
       $f('pp-v0v').textContent = +$f('pp-v0').value ? `${$f('pp-v0').value} km/h` : 'arrêt';
       $f('pp-g0v').textContent = `${$f('pp-g0').value} % · ${(SURF_PHYS.gravity * $f('pp-g0').value / 100).toFixed(1).replace('.', ',')} m/s²`;
     };
     $f('pp-v0').oninput = show; $f('pp-g0').oninput = show; show();
+    $f('pp-scripts').onclick = () => { this.app.ui.closeModal(); setTimeout(() => this._scriptsDialog(), 0); };
     this.app.ui.modal({
       title: 'Paramètres du niveau',
       body: f,
@@ -702,7 +713,11 @@ export const paletteMethods = {
         T.laps = laps;
         const nm = $f('pp-name').value.trim().slice(0, 40);
         if (nm) T.name = nm;
-        const amb = { sky: $f('pp-sky').value, fog: $f('pp-fog').value, music: $f('pp-music').value };
+        const amb = {
+          sky: $f('pp-sky').value, fog: $f('pp-fog').value, music: $f('pp-music').value, weather: $f('pp-weather').value, cycle: $f('pp-cycle').value,
+          sunAz: $f('pp-sun-on').checked ? +$f('pp-sun').value : -1,
+          tint: $f('pp-tint-on').checked ? $f('pp-tint').value : '', gtint: $f('pp-gtint-on').checked ? $f('pp-gtint').value : '', fogC: $f('pp-fogc-on').checked ? $f('pp-fogc').value : '',
+        };
         const ambChanged = JSON.stringify(amb) !== JSON.stringify(T.ambiance);
         T.setParams({ desc: $f('pp-desc').value, offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value, flip0: $f('pp-ig').checked, ambiance: amb });
         if ($f('pp-decor').value !== T.decor) { T.decor = $f('pp-decor').value; this._applyDecor(); this.gridKey = ''; }

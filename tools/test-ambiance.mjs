@@ -1,7 +1,7 @@
 // Ambiance d'un circuit (0.9.18) : moment de la journée, brume, musique ; dans le code de partage, hors signature, appliquée au décor sans le modifier. node tools/test-ambiance.mjs   (npm test)
 import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
-import { SKY_CHOICES, FOG_CHOICES, MUSIC_CHOICES, DEFAULT_AMBIANCE, cleanAmbiance, ambianceToArray, ambianceFromArray, isDefaultAmbiance, resolveAmbiance } from '../js/ambiance.js';
+import { cycleTheme, CYCLE_STAGES, WEATHER_CHOICES, SKY_CHOICES, FOG_CHOICES, MUSIC_CHOICES, DEFAULT_AMBIANCE, cleanAmbiance, ambianceToArray, ambianceFromArray, isDefaultAmbiance, resolveAmbiance } from '../js/ambiance.js';
 import { Track, scriptTrack, b64decode } from '../js/track.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
 import { DECORS } from '../js/themes.js';
@@ -12,12 +12,12 @@ const dataOf = (code) => JSON.parse(b64decode(code.replace(/^SHW\d:/, '')));
 
 console.log('Données');
 test('valeurs : seules les connues passent ; une ambiance par défaut ne s\'écrit pas', () => {
-  assert.deepEqual(cleanAmbiance({ sky: 'night', fog: 'thick', music: 'none' }), { sky: 'night', fog: 'thick', music: 'none' });
+  assert.deepEqual(cleanAmbiance({ sky: 'night', fog: 'thick', music: 'none' }), { ...DEFAULT_AMBIANCE, sky: 'night', fog: 'thick', music: 'none' });
   assert.deepEqual(cleanAmbiance({ sky: '<script>', fog: 42, music: null }), DEFAULT_AMBIANCE);
   assert.deepEqual(cleanAmbiance(null), DEFAULT_AMBIANCE); assert.deepEqual(cleanAmbiance('x'), DEFAULT_AMBIANCE);
   assert.equal(ambianceToArray(DEFAULT_AMBIANCE), null); assert.equal(ambianceToArray(undefined), null);
   assert.deepEqual(ambianceToArray({ sky: 'dawn', fog: '', music: 'menu' }), ['dawn', '', 'menu']);
-  assert.deepEqual(ambianceFromArray(['dawn', '', 'menu']), { sky: 'dawn', fog: '', music: 'menu' });
+  assert.deepEqual(ambianceFromArray(['dawn', '', 'menu']), { ...DEFAULT_AMBIANCE, sky: 'dawn', music: 'menu' });
   assert.deepEqual(ambianceFromArray(['nuit', 'x']), DEFAULT_AMBIANCE); assert.deepEqual(ambianceFromArray('dawn'), DEFAULT_AMBIANCE); assert.deepEqual(ambianceFromArray(undefined), DEFAULT_AMBIANCE);
   assert.ok(isDefaultAmbiance(null) && isDefaultAmbiance({}) && !isDefaultAmbiance({ fog: 'misty' }));
   assert.ok(SKY_CHOICES[0][0] === '' && FOG_CHOICES[0][0] === '' && MUSIC_CHOICES[0][0] === '');
@@ -30,7 +30,7 @@ test('aller-retour par le code de partage ; un circuit sans ambiance garde EXACT
   t.setParams({ ambiance: { sky: 'sunset', fog: 'misty', music: 'none' } });
   assert.deepEqual(dataOf(t.encode()).am, ['sunset', 'misty', 'none']);
   const back = Track.decode(t.encode());
-  assert.deepEqual(back.ambiance, { sky: 'sunset', fog: 'misty', music: 'none' });
+  assert.deepEqual(back.ambiance, { ...DEFAULT_AMBIANCE, sky: 'sunset', fog: 'misty', music: 'none' });
   assert.deepEqual(Track.decode(mk().encode()).ambiance, DEFAULT_AMBIANCE);
   for (const d of BUILTIN_TRACKS.slice(0, 5)) assert.equal('am' in dataOf(buildBuiltin(d).encode()), false, d.id);
 });
@@ -46,7 +46,7 @@ test('un code venu d\'un inconnu : valeurs hostiles ignorées ; clone et remise 
   const d = dataOf(t.encode()); d.am = ['"><img src=x>', 'thick', { x: 1 }];
   const code = 'SHW3:' + btoa(JSON.stringify(d));
   const back = Track.decode(code);
-  assert.deepEqual(back.ambiance, { sky: '', fog: 'thick', music: '' });
+  assert.deepEqual(back.ambiance, { ...DEFAULT_AMBIANCE, fog: 'thick' });
   const c = back.clone(); assert.deepEqual(c.ambiance, back.ambiance); c.ambiance.fog = 'clear'; assert.equal(back.ambiance.fog, 'thick', 'le clone ne partage pas l\'objet');
   back.clear(); assert.deepEqual(back.ambiance, DEFAULT_AMBIANCE);
 });
@@ -82,6 +82,37 @@ test('chaque décor × chaque moment de la journée : couleurs valides (#rrggbb)
       assert.ok(r.sunIntensity > 0 && r.hemi[2] > 0 && r.fogNear > 0 && r.fogFar > r.fogNear && r.sunDir.every(Number.isFinite) && Math.hypot(...r.sunDir) > 0.3, `${m[1]} ${sky} ${fog}`);
     }
   }
+});
+
+console.log('Ambiance avancée (lot 12)');
+test('les anciens codes (trois champs) restent identiques ; les nouveaux champs ne s\'écrivent que s\'ils servent', () => {
+  assert.deepEqual(ambianceToArray({ ...DEFAULT_AMBIANCE, sky: 'dawn' }), ['dawn', '', '']);
+  const full = { sky: 'night', fog: '', music: '', weather: 'rain', sunAz: 90, tint: '#112233', gtint: '#445566', fogC: '#778899', cycle: 'fast' };
+  const arr = ambianceToArray(full);
+  assert.equal(arr.length, 9);
+  assert.deepEqual(ambianceFromArray(arr), full);
+  assert.deepEqual(ambianceFromArray(['', '', '', 'snow']), { ...DEFAULT_AMBIANCE, weather: 'snow' });
+});
+test('valeurs hostiles : météo, couleurs, azimut, cycle', () => {
+  const c = cleanAmbiance({ weather: 'acid', tint: 'red', gtint: '#12', fogC: '<x>', sunAz: 9999, cycle: 'turbo' });
+  assert.deepEqual([c.weather, c.tint, c.gtint, c.fogC, c.sunAz, c.cycle], ['', '', '', '', 345, '']);
+  assert.equal(cleanAmbiance({ sunAz: -5 }).sunAz, -1); assert.equal(cleanAmbiance({ sunAz: 'x' }).sunAz, -1); assert.equal(cleanAmbiance({ sunAz: 100 }).sunAz, 105);
+  assert.ok(WEATHER_CHOICES.length >= 5);
+});
+const THEME = { sky: { top: '#112233', mid: '#223344', horizon: '#334455', sun: '#ffffff', stars: 0 }, fog: '#aabbcc', fogNear: 100, fogFar: 1000, sunDir: [0.4, 0.8, 0.3], sunColor: '#ffffff', sunIntensity: 2, hemi: ['#ffffff', '#000000', 1], ground: ['#101010', '#202020', '#303030'] };
+test('soleil, teintes, brume : appliqués à une COPIE ; l\'azimut garde la hauteur du soleil', () => {
+  const before = JSON.stringify(THEME);
+  const r = resolveAmbiance(THEME, { sunAz: 180, tint: '#ff0000', gtint: '#00ff00', fogC: '#0000ff', weather: 'rain' });
+  assert.equal(JSON.stringify(THEME), before, 'le décor d\'origine n\'est pas modifié');
+  assert.ok(Math.abs(r.sunDir[0] + Math.hypot(0.4, 0.3)) < 1e-9 && Math.abs(r.sunDir[2]) < 1e-9 && r.sunDir[1] === 0.8);
+  assert.equal(r.fog, '#0000ff'); assert.equal(r.weather, 'rain'); assert.notEqual(r.sky.top, THEME.sky.top); assert.notEqual(r.ground[0], THEME.ground[0]);
+});
+test('l\'heure qui défile : continue, périodique (4 moments), toujours des couleurs valides', () => {
+  const a = cycleTheme(THEME, { cycle: 'slow' }, 0), b = cycleTheme(THEME, { cycle: 'slow' }, 4), c = cycleTheme(THEME, { cycle: 'slow' }, 1.5);
+  assert.deepEqual(a, b, 'après quatre moments on revient au début');
+  assert.notDeepEqual(a.sky.top, c.sky.top);
+  for (let p = -3; p < 9; p += 0.37) { const t = cycleTheme(THEME, { cycle: 'fast', weather: 'snow' }, p); assert.match(t.sky.top, /^#[0-9a-f]{6}$/); assert.match(t.fog, /^#[0-9a-f]{6}$/); assert.ok(t.sunIntensity > 0); assert.equal(t.weather, 'snow'); }
+  assert.equal(CYCLE_STAGES.length, 4);
 });
 
 await finish('Tous les tests de l\'ambiance passent.');

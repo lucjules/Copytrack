@@ -6,6 +6,17 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.24 — des décors réglables, tes propres pièces, des effets sur le circuit
+
+`PHYS_VER` inchangé (26) ; rien à redéployer. **Rien ici ne touche à la conduite** : tout est visuel ou sonore, hors signature (changer un décor, une pièce ou un déclencheur ne fait perdre ni la vérification ni les records).
+
+- **Ambiance avancée** (Paramètres du niveau, éditeur) : **météo** (pluie, neige, braises, poussière, pétales), **direction du soleil** (azimut, la hauteur est gardée), **teinte du ciel**, **teinte du sol**, **couleur de la brume**, et **heure qui défile** (aube → plein jour → coucher → nuit, en 2 min ou 50 s, 5 mises à jour par seconde). La météo est un nuage de points qui suit la caméra (`js/weather.js`), coupée aux profils les plus légers. Les anciens codes (trois champs) restent identiques.
+- **Mes pièces** (onglet Prefabs de l'éditeur) : un atelier de **pièces décoratives** — jusqu'à 12 formes (bloc, sphère, cylindre, cône, cale, anneau) avec position, taille, rotation, couleur et **lumineuse** — vues de face et de dessus, bibliothèque locale (30), **code `SHD1:`** à partager. Une pièce se pose comme n'importe quelle décoration (taille, rotation, couleur) et **ses formes voyagent dans le code du circuit** (jusqu'à 10 par circuit) : celui qui l'ouvre la voit. Nouvelle décoration `custom` ajoutée à la fin de l'ordre existant.
+- **Déclencheurs de circuit** (Paramètres du niveau › Déclencheurs…) : jusqu'à 16 effets posés sur des cases, joués une fois par essai quand la voiture passe : **message**, **moment de la journée**, **météo**, **brume**, **musique**, **éclat de couleur**, **secousse**, **son**. Le départ d'un nouvel essai remet décor et musique. **Volontairement aucun effet sur la conduite** (gravité, obstacles, vitesse) : ce serait de la physique, donc une autre version pour tout le monde.
+- `js/ambiance.js` (étendu), `js/weather.js`, `js/customDeco.js`, `js/scripts.js` (purs, testés), `js/editor/cdeco.js`, `js/editor/scriptsUi.js`, `js/race/scriptsRun.js`.
+- **Limites assumées** : le déclencheur se joue sur une case, à n'importe quelle hauteur (un pont qui en croise une autre déclenche aussi) ; la pièce perso est dessinée en 2D (face / dessus), sans aperçu 3D ; l'heure qui défile ne rafraîchit pas les reflets de l'environnement du profil Ultra ; la teinte du sol ne se met à jour qu'au chargement du circuit.
+- Tests : `tools/test-pieces-perso.mjs`, `tools/test-scripts.mjs`, `tools/test-ambiance.mjs` (étendu) ; test navigateur (météo, heure qui défile, déclencheur en course, pièce perso dans le code, ateliers de l'éditeur).
+
 ## Bêta 0.9.23 — l'interface et les caméras à ton goût
 
 `PHYS_VER` inchangé (26) ; rien à redéployer. Visuel uniquement : la conduite, les temps et les classements ne changent pas.

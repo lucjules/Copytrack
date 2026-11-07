@@ -26,6 +26,7 @@ import { ghostMethods } from './race/ghosts.js';
 import { netMethods } from './race/net.js';
 import { finishMethods } from './race/finish.js';
 import { replayMethods } from './race/replayMode.js';
+import { scriptMethods } from './race/scriptsRun.js';
 
 const CAR_COLOR = '#ffd23e';   // éclat quand la voiture retrouve sa forme d'origine (les plaques ont la couleur de leur revêtement : SURFACES)
 
@@ -111,6 +112,8 @@ export class RaceSession {
     const app = this.app;
     this._telemetryQuit();
     this._tmDone = false;
+    this._scAmb = null;
+    this._scriptsReset();
     // Manche d'un championnat : chacun part de sa place sur la grille (le premier devant, quatre de front).
     let spawn = this.opts.spawn;
     if (this.cup && !spawn) { this.logic.reset(); spawn = gridSpawn(this.logic.spawnPoint(), this.cup.slot, this.cup.count); }
@@ -561,6 +564,7 @@ export class RaceSession {
     app.scenery.update(this.renderPos, app.camera);
 
     this._feelUpdate(dt);
+    if (this.state === 'racing') this._scriptsUpdate();
     // Audio & HUD
     if (this.state === 'racing') {
       app.audio.engine({ speed: p.fwdSpeed, throttle: !!inp.throttle, slip: p.grounded ? p.slip : 0, boost: boosting, draft: this._feel.slip * this._feelScale() });
@@ -629,4 +633,4 @@ export class RaceSession {
 }
 
 // Les familles de méthodes vivent dans race/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(RaceSession.prototype, cameraMethods, ghostMethods, netMethods, finishMethods, replayMethods);
+Object.assign(RaceSession.prototype, cameraMethods, ghostMethods, netMethods, finishMethods, replayMethods, scriptMethods);

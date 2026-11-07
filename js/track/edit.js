@@ -4,6 +4,7 @@ import { MAX_DECOS } from '../constants.js';
 import { PIECES, SURFACES, surfaceAllowed, flagAllowed, clampMover, THEMES, clearConflicts } from '../pieces.js';
 import { isObstacle } from '../obstacles.js';
 import { DECO_ORDER } from '../decoData.js';
+import { sanitizeDecoParts, MAX_CUSTOM_DECOS } from '../customDeco.js';
 import { HEX, cleanColors } from './shared.js';
 import { Track } from '../track.js';
 export const editMethods = {
@@ -107,6 +108,11 @@ export const editMethods = {
     if (!DECO_ORDER.includes(deco.k)) return null;
     // Couleur personnalisée (#rrggbb) : prend le pas sur l'index de couleur c.
     if (typeof d.cc === 'string' && HEX.test(d.cc)) deco.cc = d.cc.toLowerCase();
+    // Pièce perso : ses formes voyagent avec la décoration ; au plus MAX_CUSTOM_DECOS par circuit, jamais vide.
+    if (deco.k === 'custom') {
+      deco.cp = sanitizeDecoParts(d.cp);
+      if (!deco.cp.length || this.decos.filter((o) => o.k === 'custom').length >= MAX_CUSTOM_DECOS) return null;
+    }
     this.decos.push(deco);
     this.version++;
     return deco;
