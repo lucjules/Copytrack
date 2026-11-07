@@ -1,7 +1,7 @@
 // Mode replay : lecture à vitesse variable, pause, interface et fin du replay.
 // Ces méthodes s'ajoutent au prototype de RaceSession (voir race.js) : `this` est l'instance.
 import { DT } from '../constants.js';
-import { CAM_MODES, REPLAY_CAMS } from './shared.js';
+import { REPLAY_CAMS } from './shared.js';
 import { CanvasRecorder, videoSupported, videoFileName, downloadBlob } from '../videoExport.js';
 export const replayMethods = {
   // ---- Replay -------------------------------------------------------------
@@ -14,9 +14,9 @@ export const replayMethods = {
     if (input.hit('ArrowLeft') || input.hit('ArrowDown')) { this.replaySpeed = speeds[Math.max(0, speeds.indexOf(this.replaySpeed) - 1)]; this._replayHud(); }
     if (input.act('restart')) { this.restart(); this._replayHud(); return; }
     if (input.act('camera')) {
-      this.replayCam = (this.replayCam + 1) % (CAM_MODES.length + REPLAY_CAMS.length);
-      const name = this.replayCam < CAM_MODES.length ? CAM_MODES[this.replayCam].name : REPLAY_CAMS[this.replayCam - CAM_MODES.length].name;
-      if (this.replayCam < CAM_MODES.length) this.camMode = this.replayCam;
+      this.replayCam = (this.replayCam + 1) % (this.camList.length + REPLAY_CAMS.length);
+      const name = this.replayCam < this.camList.length ? this.camList[this.replayCam].name : REPLAY_CAMS[this.replayCam - this.camList.length].name;
+      if (this.replayCam < this.camList.length) this.camMode = this.replayCam;
       app.ui.flash(`Caméra : ${name}`, 1.2);
     }
     if (!this.replayPaused && this.state !== 'finished') {

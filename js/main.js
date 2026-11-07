@@ -33,6 +33,7 @@ import { settingsMethods } from './app/settings.js';
 import { profileMethods } from './app/profile.js';
 import { wiringMethods } from './app/wiring.js';
 import { editorFlowMethods } from './app/editorFlow.js';
+import { uiCustomMethods } from './app/uicustom.js';
 
 const MENU_FPS_CAP = 30;     // images par seconde au plus dans les menus
 
@@ -87,6 +88,7 @@ class App {
     window.addEventListener('pointerdown', unlock);
     window.addEventListener('keydown', unlock);
     this._wire();
+    this._wireUiCustom();
     this._wireTouch();
     this._wireEggs();
     window.addEventListener('orientationchange', () => this._resize());
@@ -356,7 +358,7 @@ class App {
 }
 
 // Les familles de méthodes vivent dans app/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(App.prototype, multiMethods, academyMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods);
+Object.assign(App.prototype, multiMethods, academyMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods);
 
 
 // Application installable et jouable hors ligne (service worker), si le contexte le permet.

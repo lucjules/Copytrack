@@ -6,6 +6,19 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.23 — l'interface et les caméras à ton goût
+
+`PHYS_VER` inchangé (26) ; rien à redéployer. Visuel uniquement : la conduite, les temps et les classements ne changent pas.
+
+- **Profil › Options › Personnalisation** :
+  - **6 thèmes** (Copytrack, Minuit, Crépuscule, Forêt, Mono, **Contraste élevé**), **deux couleurs d'accent** au choix, **opacité des panneaux**, **arrondi des boutons**, **5 polices** (Chakra Petch, système, arrondie, machine, classique).
+  - **Compteur de vitesse** : chiffres, énorme, discret, **jauge** ou **cadran** ; **taille du chrono** (petit, normal, gros) ; **taille du HUD** (70 à 150 %) ; **cacher** l'écart, le record, les médailles, la jauge de boost, l'aide des touches, le nom du circuit.
+  - **Disposer le HUD** : le vrai HUD s'affiche et on **glisse** le chrono, le bloc circuit, le bloc record, la vitesse et l'aide des touches où on veut (les positions sont en vw/vh : elles suivent la taille de l'écran) ; « Remettre » et « Réinitialiser » rendent tout.
+  - **Mes caméras** : jusqu'à 6 caméras de course en plus des 4 d'origine (distance, hauteur, regard devant et en hauteur, champ de vision, nom), « Utiliser en course » ; la touche caméra fait le tour de la liste complète (replays compris).
+- `js/uitheme.js` et `js/camprefs.js` (purs, testés), `js/app/uicustom.js` (application à la page, éditeurs). Réglages enregistrés dans les réglages du profil (`ui`, `cameras`), validés à chaque lecture.
+- **Limites assumées** : pas d'aperçu en direct de la caméra pendant son réglage (on l'essaie en course) ; le thème « Contraste élevé » couvre les couleurs du HUD et des panneaux mais pas les textures du jeu ; les positions du HUD ne sont pas réajustées en tactile (le HUD tactile garde sa disposition).
+- Tests : `tools/test-interface.mjs` ; test navigateur (thème posé, compteur, glisser le chrono, caméra du joueur en course).
+
 ## Bêta 0.9.22 — l'atelier de voiture : une voiture vraiment à toi
 
 `PHYS_VER` inchangé (26) ; rien à redéployer. **Aucune de ces options ne touche aux performances** : la voiture roule exactement pareil (la physique ne dépend pas du modèle 3D ; empreinte de physique identique).

@@ -15,6 +15,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `AudioEngine.js` | Moteur de musique procédurale « French Touch / rally house / nu-disco » à ~124 BPM, 100 % Web Audio API (aucun fichier audio). |
 | `autopilot.js` | Pilote automatique simple qui suit la ligne centrale d'un circuit scripté. |
 | `camflip.js` | Retournement de la caméra quand la gravité s'inverse (plaque d'inversion). |
+| `camprefs.js` | Caméras personnalisées (lot 11) : jusqu'à 6 caméras de course en plus des 4 d'origine, réglées par le joueur. |
 | `career.js` | Mode carrière (v1.5) : les circuits intégrés, rangés du plus facile au plus dur, sont regroupés en chapitres de 6. Un chapitre s'ouvre avec 4 médailles dans le précédent. Chaque circuit a un objectif bonus qui rapporte des pièces une fois. |
 | `carModel.js` | Modèles 3D de la voiture et de la moto (low-poly, originaux), construits par code. |
 | `cloudsave.js` | Sauvegarde cloud : quelles données partent dans le cloud, et comment fusionner deux versions. |
@@ -78,6 +79,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `tracks.js` | Circuits intégrés (créations originales), décrits avec le constructeur "tortue" (voir scriptTrack dans track.js). Les temps de médailles sont en secondes. |
 | `trail.js` | Traînée lumineuse du véhicule (cosmétique) : un ruban derrière la voiture, TOUJOURS présent (même à l'arrêt, très discret), dont l'intensité, la longueur et la largeur suivent la vitesse et le boost. Un ruban 3D avec une opacité par sommet (additif) : pas de particules qui apparaissent et disparaissent. |
 | `ui.js` | Interface DOM : écrans, HUD, fenêtres modales, notifications. |
+| `uitheme.js` | Thèmes et disposition de l'interface (lot 11) : couleurs, police, arrondis, compteur de vitesse, taille et place des éléments du HUD. |
 | `verify.js` | Vérification d'une course (classements en ligne). Module sans rendu ni navigateur : il est utilisé par la fonction serveur Supabase (supabase/functions/submit-score), qui le charge depuis le site du jeu. La physique étant déterministe, rejouer les commandes enregistrées redonne exactement la même course et le même temps. |
 | `version.js` | Numéros de version du jeu (une seule source). |
 | `videoExport.js` | Export d'un replay en vidéo : le canvas 3D est enregistré (MediaRecorder) pendant que le replay se joue, puis proposé en téléchargement (WebM). |
@@ -96,6 +98,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `screens.js` | Écrans de liste : carrière, circuits du joueur, défi du jour, circuit suivant, menu, tutoriel. |
 | `settings.js` | Réglages : qualité graphique et banc d'essai, commandes (clavier, manette), options, accessibilité. |
 | `shared.js` | Éléments partagés par les familles de méthodes de App (voir main.js). |
+| `uicustom.js` | Personnalisation de l'interface (lot 11) : thème, couleurs, police, compteur de vitesse, éditeur de HUD (glisser-déposer) et éditeur de caméras. |
 | `wiring.js` | Branchement de l'interface : clics, actions du menu, de l'éditeur, tactile, manette, clins d'œil cachés. |
 
 ## `js/editor/`

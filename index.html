@@ -53,6 +53,7 @@
   <link rel="modulepreload" href="js/app/profile.js">
   <link rel="modulepreload" href="js/app/wiring.js">
   <link rel="modulepreload" href="js/app/editorFlow.js">
+  <link rel="modulepreload" href="js/app/uicustom.js">
   <link rel="modulepreload" href="js/geo.js">
   <link rel="modulepreload" href="js/constants.js">
   <link rel="modulepreload" href="js/pieces.js">
@@ -81,6 +82,7 @@
   <link rel="modulepreload" href="js/skids.js">
   <link rel="modulepreload" href="js/trail.js">
   <link rel="modulepreload" href="js/race/shared.js">
+  <link rel="modulepreload" href="js/camprefs.js">
   <link rel="modulepreload" href="js/race/camera.js">
   <link rel="modulepreload" href="js/race/ghosts.js">
   <link rel="modulepreload" href="js/race/net.js">
@@ -105,6 +107,7 @@
   <link rel="modulepreload" href="js/difficulty.js">
   <link rel="modulepreload" href="js/daily.js">
   <link rel="modulepreload" href="js/app/shared.js">
+  <link rel="modulepreload" href="js/uitheme.js">
   <link rel="modulepreload" href="js/decoPack.js">
   <link rel="modulepreload" href="js/decoPrimitives.js">
   <link rel="modulepreload" href="js/decoPackData.js">
@@ -275,6 +278,19 @@
       <label><span>Envoyer mes records aux classements en ligne</span><input type="checkbox" id="opt-onlinescores"></label>
       <label title="L'éditeur n'affiche que l'essentiel (droite et pentes, virages, départ, arrivée, checkpoint) pour commencer."><span>Éditeur guidé (l'essentiel seulement)</span><input type="checkbox" id="opt-editor-guided"></label>
       <label title="Temps, abandons et essais par circuit, sans nom ni compte : ils servent à régler la difficulté et les médailles."><span>Statistiques de jeu anonymes (aide à équilibrer les circuits)</span><input type="checkbox" id="opt-telemetry"></label>
+      <h3 class="opt-h">Personnalisation</h3>
+      <label><span>Thème de l'interface</span><select id="opt-ui-theme"></select></label>
+      <label><span>Couleur d'accent</span><span class="opt-pick"><input type="color" id="opt-ui-accent"><input type="color" id="opt-ui-accent2" title="Deuxième couleur"><button class="btn small" type="button" id="opt-ui-accent-reset">Défaut</button></span></label>
+      <label><span>Opacité des panneaux <output id="opt-ui-panel-v"></output></span><input type="range" id="opt-ui-panel" min="0.3" max="1" step="0.05"></label>
+      <label><span>Arrondi des boutons <output id="opt-ui-radius-v"></output></span><input type="range" id="opt-ui-radius" min="0" max="28" step="1"></label>
+      <label><span>Police</span><select id="opt-ui-font"></select></label>
+      <label><span>Compteur de vitesse</span><select id="opt-ui-speedo"></select></label>
+      <label><span>Taille du chrono</span><select id="opt-ui-timer"></select></label>
+      <label><span>Taille du HUD <output id="opt-ui-hud-v"></output></span><input type="range" id="opt-ui-hud" min="0.7" max="1.5" step="0.05"></label>
+      <div class="opt-row"><span>Cacher des éléments du HUD</span><span class="opt-hide" id="opt-ui-hide"></span></div>
+      <div class="opt-row"><span>Place des éléments du HUD</span><button class="btn" type="button" data-action="hud-editor">Disposer le HUD</button></div>
+      <div class="opt-row"><span>Caméras de course</span><button class="btn" type="button" data-action="cameras">Mes caméras</button></div>
+      <div class="opt-row"><span>Interface par défaut</span><button class="btn subtle" type="button" data-action="ui-reset">Réinitialiser</button></div>
       <label><span>Nom du pilote</span><input type="text" id="opt-name" maxlength="20"></label>
       <label><span>Commandes tactiles</span>
         <select id="opt-touch"><option value="buttons">Boutons ◀ ▶</option><option value="drag">Glisser le pouce à gauche</option></select>
@@ -340,10 +356,12 @@
     </div>
     <div class="hud-br">
       <div class="speed-wrap"><div id="hud-speed" class="speed">0</div><div class="speed-unit">km/h</div></div>
+      <div class="speed-bar"><i></i></div>
       <div class="boost-bar"><i id="hud-boost"></i></div>
     </div>
     <div id="hud-center" class="hud-center"></div>
     <div id="hud-msg" class="hud-msg"></div>
+    <div id="hud-edit-bar" class="hud-edit-bar hidden"><b>Glisse les éléments pour les placer</b><button class="btn small" type="button" data-action="hud-reset">Remettre</button><button class="btn small primary" type="button" data-action="hud-done">Terminé</button></div>
     <div id="hud-hint" class="hud-hint">↑ ↓ ← → · frein en virage : dérapage · R : checkpoint · Entrée : recommencer · C : caméra · Échap : pause</div>
   </div>
 

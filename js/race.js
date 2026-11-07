@@ -18,7 +18,8 @@ import { SkidMarks } from './skids.js';
 import { TrailRibbon } from './trail.js';
 import { InputRecorder, decodeInputs, inputAt, quantSteer } from './replay.js';
 import { PHYS_VER } from './version.js';
-import { GHOST_VEHICLES, GHOST_EVERY, tmpM, tmpV, tmpV2 } from './race/shared.js';
+import { GHOST_VEHICLES, GHOST_EVERY, CAM_MODES, tmpM, tmpV, tmpV2 } from './race/shared.js';
+import { cameraList, clampCamIndex } from './camprefs.js';
 
 import { cameraMethods } from './race/camera.js';
 import { ghostMethods } from './race/ghosts.js';
@@ -75,7 +76,8 @@ export class RaceSession {
     if (!this.demo && !this.replay && !opts.fromEditor && !this.multi) this._setupGhosts();
     if (this.multi) this._setupRemotes();
     if (opts.rivals && !this.demo && !this.replay && !this.multi) this.setRivals(opts.rivals);
-    this.camMode = this.demo ? 0 : app.settings.camera || 0;
+    this.camList = cameraList(CAM_MODES, app.settings.cameras);          // les 4 d'origine puis celles du joueur (camprefs.js)
+    this.camMode = this.demo ? 0 : clampCamIndex(app.settings.camera || 0, this.camList);
 
     this.up = new THREE.Vector3(0, 1, 0);
     this.quat = new THREE.Quaternion();

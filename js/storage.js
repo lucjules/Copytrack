@@ -114,6 +114,8 @@ export const DEFAULT_SETTINGS = {
   ghostGold: true,
   ghostImported: true,
   onlineScores: true,
+  ui: {},                 // thème et disposition de l'interface (uitheme.js)
+  cameras: [],            // caméras de course personnalisées (camprefs.js)
   feel: 1,                // sensations de course : 0 (aucun effet ajouté) à 1,5 ; voir feel.js
   editorGuided: null,     // éditeur en mode guidé (l'essentiel) : null = non (joueur qui connaît déjà l'éditeur), true = oui (voir editor/palette.js)
   telemetry: null,        // statistiques anonymes (voir telemetry.js) : null = pas encore demandé, true = accepté, false = refusé

@@ -242,6 +242,45 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  await test('personnalisation de l\'interface : thème, accent, compteur, HUD déplaçable, caméra du joueur utilisée en course', async () => {
+    await app(() => window.copytrack.showScreen('profile'));
+    await click('#prof-tabs [data-ptab="options"]');
+    await page.locator('#opt-ui-theme').selectOption('midnight');
+    assert.equal(await app(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()), '#070b1c', 'le thème est posé sur la page');
+    await page.locator('#opt-ui-speedo').selectOption('ring');
+    assert.equal(await app(() => document.body.dataset.speedo), 'ring');
+    await page.locator('#opt-ui-hide input[data-hide="hint"]').check();
+    assert.ok(await app(() => document.body.classList.contains('hud-no-hint')));
+    // HUD : on glisse le chrono
+    await click('[data-action="hud-editor"]');
+    await waitApp(() => document.body.classList.contains('hud-editing'));
+    const top = page.locator('#hud .hud-top');
+    const b = await top.boundingBox();
+    await page.mouse.move(b.x + b.width / 2, b.y + 10); await page.mouse.down(); await page.mouse.move(b.x + b.width / 2 + 200, b.y + 110, { steps: 6 }); await page.mouse.up();
+    const moved = await app(() => window.copytrack.settings.ui.hud.top);
+    assert.ok(moved && moved[0] > 5 && moved[1] > 5, 'le chrono a été déplacé : ' + JSON.stringify(moved));
+    await click('[data-action="hud-done"]');
+    assert.ok(!(await app(() => document.body.classList.contains('hud-editing'))));
+    assert.ok(await app(() => document.getElementById('hud').classList.contains('hidden')), 'le HUD se recache hors course');
+    // caméra du joueur
+    await app(() => window.copytrack.openCameraEditor());
+    await click('#modal-body button:has-text("+ Nouvelle")');
+    await page.waitForTimeout(100);
+    await click('#modal-body button:has-text("Utiliser en course")');
+    await click('#modal-actions button.primary');
+    assert.equal(await app(() => window.copytrack.settings.cameras.length), 1);
+    assert.equal(await app(() => window.copytrack.settings.camera), 4);
+    await app(() => window.copytrack.playBuiltin(0));
+    await waitApp(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    assert.deepEqual(await app(() => [window.copytrack.session.camList.length, window.copytrack.session.camMode]), [5, 4], 'la caméra du joueur est en service');
+    await page.keyboard.press('c'); await page.waitForTimeout(150);
+    assert.equal(await app(() => window.copytrack.session.camMode), 0, 'la touche caméra fait le tour de la liste complète');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu');
+    await app(() => window.copytrack.resetUi());
+    assert.equal(await app(() => document.body.dataset.speedo), 'default');
+  });
+
   await test('communauté hors ligne, mes circuits, importer : aucun plantage', async () => {
     await click('[data-action="community"]');
     await waitApp(() => !document.getElementById('community').classList.contains('hidden'));

@@ -2,7 +2,7 @@
 // Ces méthodes s'ajoutent au prototype de RaceSession (voir race.js) : `this` est l'instance.
 import * as THREE from '../vendor/three.module.min.js';
 import { frameWorld } from '../physics/ribbon.js';
-import { CAM_MODES, REPLAY_CAMS, tmpV, tmpV2 } from './shared.js';
+import { REPLAY_CAMS, tmpV, tmpV2 } from './shared.js';
 import { fovPunch, landingDip, feelScale } from '../feel.js';
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -15,10 +15,10 @@ function lerpAngle(a, b, t) {
 
 export const cameraMethods = {
   cycleCamera() {
-    this.camMode = (this.camMode + 1) % CAM_MODES.length;
+    this.camMode = (this.camMode + 1) % this.camList.length;
     this.app.settings.camera = this.camMode;
     this.app.saveSettings();
-    this.app.ui.flash(`Caméra : ${CAM_MODES[this.camMode].name}`);
+    this.app.ui.flash(`Caméra : ${this.camList[this.camMode].name}`);
   },
 
   // Réapparition ou recommencement : la caméra se remet d'office dans le bon sens, sans transition
@@ -34,11 +34,11 @@ export const cameraMethods = {
   _camera(dt) {
     const cam = this.app.camera;
     const p = this.phys;
-    const mode = CAM_MODES[this.camMode];
+    const mode = this.camList[this.camMode];
     const car = this.car.group;
     this.shake = Math.max(0, this.shake - dt * 1.8);
 
-    const rc = this.replay && this.replayCam >= CAM_MODES.length ? REPLAY_CAMS[this.replayCam - CAM_MODES.length] : null;
+    const rc = this.replay && this.replayCam >= this.camList.length ? REPLAY_CAMS[this.replayCam - this.camList.length] : null;
     if (rc && rc.tv) {
       // Caméra TV : un poste fixe près de la route, qui change quand la voiture s'éloigne.
       if (!this.tvPos || this.tvPos.distanceTo(car.position) > 70) {

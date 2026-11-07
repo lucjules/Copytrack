@@ -196,6 +196,7 @@ export const settingsMethods = {
     $('opt-shake').value = s.shakeAmt; $('opt-shake-v').textContent = Math.round(s.shakeAmt * 100) + ' %';
     $('opt-feel').value = s.feel ?? 1; $('opt-feel-v').textContent = Math.round(feelScale(s.feel) * 100) + ' %';
     $('opt-ui').value = s.uiScale; $('opt-ui-v').textContent = Math.round(s.uiScale * 100) + ' %';
+    this._renderUiCustom();
   },
 
   // Taille de l'interface, compteur d'images, couleurs adaptées.
