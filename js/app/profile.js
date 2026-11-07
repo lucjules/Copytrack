@@ -29,8 +29,10 @@ export const profileMethods = {
         <span>Médailles obtenues</span><b>${medals.length}</b>
       </div>
       <div class="prof-account" id="prof-account"></div>
+      <div class="prof-titles" id="prof-titles"></div>
       <p class="prof-note">Code joueur et import / export : onglet <b>Sauvegardes</b>.</p>`;
     this._renderAccountBox(body.querySelector('#prof-account'));
+    this._renderTitlesBox(body.querySelector('#prof-titles'));
   },
 
   _renderSaves() {

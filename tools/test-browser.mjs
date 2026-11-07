@@ -334,6 +334,54 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  await test('communauté : onglet « Cette semaine », circuit de la semaine, difficulté estimée sur chaque carte (serveur simulé)', async () => {
+    await app(async () => {
+      const { online } = await import('/js/online.js');
+      const mk = (i, n, extra = {}) => { const b = window.copytrack.builtins[i]; return { id: `00000000-0000-0000-0000-0000000000${String(i).padStart(2, '0')}`, name: n, decor: b.def.decor, code: b.track.encode(), author_time: 20, pieces: b.track.tiles.length, laps: 1, plays: 10, likes: 3, created_at: '2026-01-01', author: 'x', players: { name: 'Ana' }, description: '', ...extra }; };
+      online.listTracks = async () => [mk(0, 'Récent A'), mk(40, 'Récent B')];
+      online.trending = async ({ limit } = {}) => (limit === 1 ? [mk(40, 'Star', { week_players: 5 })] : [mk(40, 'Star', { week_players: 5 }), mk(0, 'Autre', { week_players: 3 })]);
+      online.myLikes = async () => new Set();
+      window.copytrack._comm = null; window.copytrack._featured = null;
+    });
+    await click('[data-action="community"]');
+    await waitApp(() => document.querySelectorAll('#comm-list .card').length === 2);
+    await waitApp(() => !document.getElementById('comm-featured').classList.contains('hidden'), null, 10000);
+    assert.match(await page.evaluate(() => document.getElementById('comm-featured').textContent), /Circuit de la semaine[\s\S]*Star/);
+    await page.evaluate(() => document.querySelector('#comm-tabs [data-sort="trending"]').click());
+    await waitApp(() => [...document.querySelectorAll('#comm-list .card h3')].map((h) => h.textContent).join() === 'Star,Autre', null, 10000);
+    const txt = await page.evaluate(() => document.getElementById('comm-list').textContent);
+    assert.ok(txt.includes('🔥 5 pilotes cette semaine') && txt.includes('🔥 3 pilotes cette semaine'), txt.slice(0, 200));
+    const stars = await page.evaluate(() => [...document.querySelectorAll('#comm-list .card .meta.diff')].map((e) => e.textContent.trim()));
+    assert.equal(stars.length, 2); assert.ok(stars.every((x) => /^[◆◇]{5} \S/.test(x)), stars.join(' | '));
+    await shot('19-communaute-semaine');
+    await click('#community [data-action="back"]');
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  await test('profil : les titres (aucun mérité au départ, conditions lisibles) ; garage : collections et exclusifs verrouillés avec leur condition', async () => {
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.owned = {}; p.title = ''; p.collections = {}; p.academy = {}; p.dailyDays = []; saveProfile(); });
+    await click('[data-action="profile"]');
+    await waitApp(() => document.querySelector('#prof-titles select'));
+    assert.equal(await page.evaluate(() => document.querySelectorAll('#prof-title option').length), 1, 'seulement « Aucun »');
+    assert.equal(await page.evaluate(() => document.querySelectorAll('.title-list li').length), 9);
+    assert.ok((await page.evaluate(() => document.querySelector('.title-list').textContent)).includes('Réussir les 6 leçons de l’Académie'));
+    await shot('20-profil-titres');
+    await click('#profile [data-action="back"]');
+    await waitApp(() => window.copytrack.mode === 'menu');
+    await app(() => window.copytrack.openGarage());
+    await waitApp(() => window.copytrack.mode === 'garage');
+    await page.evaluate(() => document.querySelector('#garage-tabs [data-cat="collections"]').click());
+    await waitApp(() => document.querySelectorAll('#garage-list .gcard, #garage-list [class*="card"]').length >= 4);
+    assert.ok((await page.evaluate(() => document.getElementById('garage-list').textContent)).includes('Néon · 0/4'));
+    await page.evaluate(() => document.querySelector('#garage-tabs [data-cat="trail"]').click());
+    await waitApp(() => /Terminer 7 défis du jour différents/.test(document.getElementById('garage-list').textContent));
+    await page.evaluate(() => { const c = [...document.querySelectorAll('#garage-list > *')].find((e) => e.textContent.includes('Traînée dorée')); c.click(); });
+    await waitApp(() => /exclusif/.test(document.getElementById('garage-buy-text').textContent) && document.getElementById('garage-buy-btn').disabled);
+    await shot('21-garage-exclusif');
+    await app(() => window.copytrack.showMenu('menu'));
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
   await test('multijoueur : le menu des salons s\'ouvre sans serveur', async () => {
     await click('[data-action="community"]');
     await waitApp(() => !document.getElementById('community').classList.contains('hidden'));

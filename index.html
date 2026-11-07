@@ -45,6 +45,7 @@
   <link rel="modulepreload" href="js/quality.js">
   <link rel="modulepreload" href="js/app/multi.js">
   <link rel="modulepreload" href="js/app/academy.js">
+  <link rel="modulepreload" href="js/app/rewards.js">
   <link rel="modulepreload" href="js/app/community.js">
   <link rel="modulepreload" href="js/app/screens.js">
   <link rel="modulepreload" href="js/app/settings.js">
@@ -63,6 +64,7 @@
   <link rel="modulepreload" href="js/obstacleMesh.js">
   <link rel="modulepreload" href="js/trackGeometry.js">
   <link rel="modulepreload" href="js/carModel.js">
+  <link rel="modulepreload" href="js/rewards.js">
   <link rel="modulepreload" href="js/music.js">
   <link rel="modulepreload" href="js/medals.js">
   <link rel="modulepreload" href="js/hudMessages.js">
@@ -93,6 +95,7 @@
   <link rel="modulepreload" href="js/net/ice.js">
   <link rel="modulepreload" href="js/academy.js">
   <link rel="modulepreload" href="js/editorTools.js">
+  <link rel="modulepreload" href="js/difficulty.js">
   <link rel="modulepreload" href="js/daily.js">
   <link rel="modulepreload" href="js/app/shared.js">
   <link rel="modulepreload" href="js/decoPack.js">
@@ -199,10 +202,12 @@
         <button class="tab on" data-sort="recent">Récents</button>
         <button class="tab" data-sort="popular">Populaires</button>
         <button class="tab" data-sort="played">Plus joués</button>
+        <button class="tab" data-sort="trending" title="Les circuits où le plus de pilotes différents ont couru ces 7 derniers jours">🔥 Cette semaine</button>
         <button class="tab" data-sort="mine">Mes publications</button>
       </div>
       <input id="comm-search" class="comm-search" type="search" placeholder="Rechercher un circuit…" maxlength="40" aria-label="Rechercher un circuit">
     </header>
+    <div id="comm-featured" class="comm-featured hidden"></div>
     <div id="comm-status" class="comm-status"></div>
     <div id="comm-list" class="card-grid"></div>
     <div class="comm-more"><button class="btn hidden" id="comm-more">Voir plus</button></div>

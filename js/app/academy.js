@@ -47,6 +47,7 @@ export const academyMethods = {
     const i = session.opts.academy.index, L = LESSONS[i];
     const r = completeLesson(i, { ...session.stats, vehicle: session.phys.vehicle, time });
     if (r.coins) this.ui.updateCoins();
+    if (r.passed) this.checkRewards();
     const next = i + 1 < LESSONS.length ? i + 1 : null;
     const actions = [];
     if (r.passed && next != null) actions.push({ label: 'Leçon suivante', primary: true, onClick: () => { setTimeout(() => this.lessonIntro(next), 0); return true; } });

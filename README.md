@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.17** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.9.18** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -22,6 +22,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 
 - **72 circuits** dans 12 décors (*Désert crépuscule*, *Jungle néon*, *Archipel tropical*, *Ville futuriste*, *Nuit polaire*, *Volcan*, *Station orbitale*, *Fonds marins*, *Usine mécanique*, *Ville dans les nuages*, *Canyon de cristal* et l'*Atelier des mécanismes*),
   rangés **du plus facile au plus dur** en 11 chapitres de carrière (un par décor, 6 circuits chacun), plus un **chapitre bonus, l'Atelier** (6 circuits qui montrent chaque obstacle et chaque pièce mobile, un par un ; il s'ouvre avec 4 médailles dans le premier chapitre). Chaque circuit a un **profil** (Sprint, Speedway, Technique, Rollercoaster, Acrobatique) et une ouverture qui lui est propre ; 2 circuits se courent en plusieurs tours (Caldeira, Grand Anneau).
+- **Communauté** : onglet **Cette semaine** (circuits où le plus de pilotes différents ont couru), **Circuit de la semaine**, **difficulté estimée** (◆◇) sur chaque carte et à la publication. **Titres** affichés au classement, **exclusifs** du garage qui se méritent (défis du jour, Atelier, Académie) et **collections** à thème (+100 ◆).
 - **Partage** : un lien de **défi** (« Partager mon fantôme » › « Copier le lien ») ouvre directement la course contre ton fantôme ; le **replay** s'exporte en **vidéo WebM** (bouton 🎬 de la barre de replay).
 - **Académie** : six leçons guidées de deux minutes (conduite, dérapage, mini-turbo en série, réception parfaite, plaque de transformation, obstacles), chacune avec un objectif ; l'éditeur démarre en **mode guidé** (l'essentiel seulement) pour un nouveau joueur.
 - **Carrière** : un chapitre s'ouvre avec 4 médailles dans le précédent (l'Atelier bonus : dans le premier) ; chaque circuit a un **objectif bonus** ★ (sans toucher de muret, réceptions parfaites, mini-turbos, anneaux, finir en moto…) qui rapporte 50 pièces.
@@ -127,6 +128,8 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
 8. **Fantômes du haut des classements** : `supabase/etape7-fantomes.sql` (à lancer **avant** de redéployer `submit-score`, mais l'ordre n'est pas bloquant : sans les colonnes, la fonction enregistre le temps sans fantôme).
    La fonction `submit-score` range alors, avec chaque record, le fantôme de la course qu'elle vient de rejouer (positions, jamais les commandes) ; le classement affiche un bouton 👻 pour affronter les dix premiers.
    Les records d'avant l'étape 7 n'ont pas de fantôme : `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node tools/backfill-ghosts.mjs` leur en fabrique un (ou leur auteur renvoie son temps).
+
+9. **Découverte et titres** (facultatif) : `supabase/etape8-decouverte.sql` ajoute l'onglet « Cette semaine » et le « Circuit de la semaine » de la communauté (`trending_tracks`, d'après `track_plays`) et les titres affichés au classement (`players.title`, `set_title` à liste blanche). Sans lui, le jeu fonctionne : « Cette semaine » retombe sur « Plus joués », les titres restent locaux.
 
 Les scripts sont relançables et testés sur PostgreSQL (`npm run test:sql`).
 

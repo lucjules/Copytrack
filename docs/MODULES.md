@@ -26,6 +26,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `decoPackData.js` | Pack de décorations 0.9.3 (≈ 200 objets) : données seules (identifiant, nom, icône), sans dépendance au rendu. |
 | `decoPrimitives.js` | Primitives de géométrie low-poly des décorations (coordonnées locales, base à y = 0, 1 unité = 1 m) : cylindre, cône, sphère, octaèdre, membre, étoile… Elles écrivent des triangles dans un GeoBuilder (geo.js). decos.js et decoPack.js s'en servent ; aucune ne dépend du rendu Three.js. |
 | `decos.js` | Décorations à placement libre : panneaux, formes, murs et toits, nature, plaque image. |
+| `difficulty.js` | Indice de difficulté d'un circuit, estimé d'après sa GÉOMÉTRIE seulement (aucune simulation) : on le calcule pour chaque carte de la communauté et à la publication, instantanément, sur n'importe quel circuit (un circuit d'éditeur n'a pas de ligne centrale pour le pilote automatique). Mêmes ingrédients que tools/difficulte.mjs (qui, lui, mesure la course du pilote) : virages serrés, très grands virages, murs, loopings, dénivelé, obstacles, pièces mobiles, revêtements piégeux, longueur. Les seuils des étoiles sont calés sur les circuits intégrés (tools/test-difficulte.mjs). |
 | `dmath.js` | Mathématiques déterministes pour tout ce qui décide du résultat d'une course (physique, géométrie des pièces, pilote automatique, défi du jour). |
 | `dom.js` | Aides DOM partagées par tous les écrans. |
 | `editor.js` | Éditeur de circuits : pièces sur grille, niveaux, rotation, revêtements réglables, options (envers, sans bordures, tunnel), décorations libres, vérification, historique. |
@@ -56,6 +57,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `remoteCar.js` | Voiture fantôme d'un adversaire (multijoueur) : traverse tout, ne collisionne avec rien, ne s'affiche que par ce que le réseau en dit. Plus elle est loin de la caméra du joueur local, plus son matériau s'assombrit. |
 | `renderOptions.js` | Réglages de rendu partagés par la construction des maillages du circuit : fixés par le profil de qualité et par l'accessibilité (main.js, app/settings.js), lus par trackGeometry.js et trackMesh.js. Un seul objet visible ici, au lieu de trois variables de module modifiées par des fonctions éparpillées. |
 | `replay.js` | Replays et fantômes (v1.5). La physique est déterministe (pas fixe) : il suffit d'enregistrer les commandes de chaque pas pour rejouer une course à l'identique. |
+| `rewards.js` | Récompenses (0.9.18) : titres affichés au classement, éléments EXCLUSIFS du garage (qui ne s'achètent pas), collections à thème. Données et règles pures : le contexte (médailles, défis, leçons…) est rassemblé par app/rewards.js, ici on décide seulement ce qui est mérité. Rien ne touche à la physique ni aux temps : tout est visuel. |
 | `ribbons.js` | Rubans 3D : toute portion de route qui n'est pas un simple « sol ». |
 | `scenery.js` | Décors : ciel, lumière, terrain facetté et objets, selon le thème du circuit. |
 | `simulation.js` | Simulation d'une course : UNE voiture (CarPhysics), ses règles (RaceLogic) et l'enchaînement exact d'un pas, en un seul endroit. |
@@ -84,6 +86,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `editorFlow.js` | Passages entre le menu et l'éditeur : ouverture, aide, retour, essai d'un circuit. |
 | `multi.js` | Multijoueur : salons (privés par code, ou publics), circuit commun, lobby, départ en course à plusieurs, classement du salon, championnat (manches). |
 | `profile.js` | Profil : compte, sauvegardes, import et export de sauvegarde. |
+| `rewards.js` | Récompenses côté application : rassembler les compteurs (médailles, leçons, défis du jour…), donner ce qui est mérité, afficher le titre choisi dans le profil. |
 | `screens.js` | Écrans de liste : carrière, circuits du joueur, défi du jour, circuit suivant, menu, tutoriel. |
 | `settings.js` | Réglages : qualité graphique et banc d'essai, commandes (clavier, manette), options, accessibilité. |
 | `shared.js` | Éléments partagés par les familles de méthodes de App (voir main.js). |

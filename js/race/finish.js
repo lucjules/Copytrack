@@ -7,6 +7,7 @@ import { saveRecord, encodeFloats, formatTime } from '../storage.js';
 import { rewardCoins } from '../profile.js';
 import { MEDALS, medalFor } from '../medals.js';
 import { PHYS_VER } from '../version.js';
+import { noteRace } from '../rewards.js';
 import { goalMet, goalLabel, completeGoal, goalDone } from '../career.js';
 export const finishMethods = {
   _event(ev) {
@@ -115,6 +116,7 @@ export const finishMethods = {
     }
     const medal = medalFor(time, this.medals);
     this._tmDone = true;
+    if (!this.opts.fromEditor && !this.opts.spawn) noteRace({ turbos: this.stats.turbos, dailyDay: this.opts.daily && this.trackKey ? String(this.trackKey).slice(6) : '' });
     if (!this.opts.fromEditor && !this.opts.spawn) app.telemetry.record({ trackKey: this.trackKey, outcome: 'finish', time, respawns: this.stats.respawns, medal: medal && medal.id });
     const prevMedal = prev ? medalFor(prev.time, this.medals) : null;
     let reward = null;
@@ -136,6 +138,7 @@ export const finishMethods = {
       if (coins) app.ui.updateCoins();
       goal = { label: goalLabel(this.opts.goal), met, coins, already };
     }
+    app.checkRewards();
     app.ui.showFinish({
       goal,
       reward,

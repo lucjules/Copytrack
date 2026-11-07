@@ -25,6 +25,7 @@ import { ghostFromHash } from './replay.js';
 import { QualityManager, PROFILE_LABELS, wantAntialias } from './quality.js';
 import { multiMethods } from './app/multi.js';
 import { academyMethods } from './app/academy.js';
+import { rewardsMethods } from './app/rewards.js';
 import { communityMethods } from './app/community.js';
 import { screenMethods } from './app/screens.js';
 import { settingsMethods } from './app/settings.js';
@@ -277,6 +278,7 @@ class App {
     this._startBench();
     this.telemetry.scheduleFlush(15000);
     setTimeout(() => this.askTelemetry(), 4000);
+    setTimeout(() => this.checkRewards(), 2500);          // rattrape ce qui est déjà mérité (joueur existant)
     // Premier lancement : petit tutoriel (sauf si on arrive par un lien de circuit).
     if (!this.settings.tutorialDone && !hash.startsWith('#t=') && !hash.startsWith('#g=')) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
     if (hash.startsWith('#g=')) {
@@ -351,7 +353,7 @@ class App {
 }
 
 // Les familles de méthodes vivent dans app/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(App.prototype, multiMethods, academyMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods);
+Object.assign(App.prototype, multiMethods, academyMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods);
 
 
 // Application installable et jouable hors ligne (service worker), si le contexte le permet.

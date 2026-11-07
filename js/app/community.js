@@ -8,6 +8,9 @@ import { PHYS_VER } from '../version.js';
 import { thumbnail } from '../editorTools.js';
 import { online } from '../online.js';
 import { encodeGhost, decodeGhost, ghostLink, GHOST_LINK_MAX } from '../replay.js';
+import { estimateDifficulty, starsText, STAR_LABELS } from '../difficulty.js';
+import { titleLabel } from '../rewards.js';
+import { profile } from '../profile.js';
 import { getRecord, saveMyTrack, newId, formatTime, setImportedGhost } from '../storage.js';
 export const communityMethods = {
   shareGhost() {
@@ -97,7 +100,7 @@ export const communityMethods = {
       try { lb = await online.leaderboard(trackKey, PHYS_VER, 10); } catch (e) { body.innerHTML = `<p>Classement indisponible : ${esc(e.message)}</p>`; return; }
       const rec = getRecord(trackKey);
       const canSend = rec && rec.inputs && rec.pv === PHYS_VER && (!lb.me || rec.time < lb.me.time - 1e-6) && this.settings.onlineScores !== false;
-      const rows = lb.top.map((r, i) => `<li class="${r.player === online.uid ? 'me' : ''}"><b>${i + 1}</b><span>${esc((r.players && r.players.name) || '—')}</span><i>${formatTime(r.time)}</i>${r.has_ghost && i < 10 ? `<button class="rival-btn" data-rank="${i + 1}" title="Affronter son fantôme" aria-label="Affronter le fantôme n° ${i + 1}">👻</button>` : '<span class="rival-none"></span>'}</li>`).join('');
+      const rows = lb.top.map((r, i) => `<li class="${r.player === online.uid ? 'me' : ''}"><b>${i + 1}</b><span>${esc((r.players && r.players.name) || '—')}${r.players && titleLabel(r.players.title) ? ` <small class="ttl">${esc(titleLabel(r.players.title))}</small>` : ''}</span><i>${formatTime(r.time)}</i>${r.has_ghost && i < 10 ? `<button class="rival-btn" data-rank="${i + 1}" title="Affronter son fantôme" aria-label="Affronter le fantôme n° ${i + 1}">👻</button>` : '<span class="rival-none"></span>'}</li>`).join('');
       const anyGhost = lb.top.some((r) => r.has_ghost);
       body.innerHTML = `${lb.top.length ? `<ol class="board">${rows}</ol>` : '<p>Aucun temps pour l’instant : sois le premier !</p>'}
         ${anyGhost ? '<p class="meta">👻 : affronte le fantôme d’un des dix premiers (sa course rejouée par le serveur ; seulement ses positions, jamais ses commandes).</p>' : ''}
@@ -119,6 +122,7 @@ export const communityMethods = {
       if (send) send.onclick = async () => {
         send.disabled = true; send.textContent = 'Vérification…';
         try {
+          if (profile().title) online.setTitle(profile().title).catch(() => { /* sans l'étape 8 : le titre reste local */ });
           await online.submitScore({ trackKey, code: trackKey.startsWith('u-') && track ? track.encode() : '', inputs: rec.inputs, time: rec.time, physVer: PHYS_VER }, this.settings.playerName);
           render();
         } catch (e) { send.textContent = e.message; }
@@ -150,6 +154,7 @@ export const communityMethods = {
       f.className = 'form';
       f.innerHTML = `<label>Nom<input id="pub-name" maxlength="40" spellcheck="false" autocomplete="off"></label>
         <label class="col">Description<textarea id="pub-desc" maxlength="200" rows="3" placeholder="Ce qui rend ton circuit unique (200 caractères au plus)"></textarea></label>
+        <p class="meta">Difficulté estimée : <b>${starsText(estimateDifficulty(track).stars)} ${STAR_LABELS[estimateDifficulty(track).stars]}</b> (d’après la géométrie ; affichée sur la carte).</p>
         <p class="meta">Nom et description modifiables après publication.</p>
         <p class="mp-err" id="pub-err" role="alert"></p>`;
       const name = f.querySelector('#pub-name'), desc = f.querySelector('#pub-desc'), err = f.querySelector('#pub-err');
@@ -210,10 +215,10 @@ export const communityMethods = {
     more.classList.add('hidden');
     let rows, likes;
     try {
-      [rows, likes] = await Promise.all([
-        online.listTracks({ sort: C.sort === 'mine' ? 'recent' : C.sort, mine: C.sort === 'mine', search: C.search, offset: C.offset, limit: 24 }),
-        online.myLikes().catch(() => new Set()),
-      ]);
+      const trending = C.sort === 'trending' && !C.search.trim();
+      const list0 = trending ? online.trending({ offset: C.offset, limit: 24 }).then((r) => (r === null ? online.listTracks({ sort: 'played', offset: C.offset, limit: 24 }) : r))
+        : online.listTracks({ sort: C.sort === 'mine' ? 'recent' : C.sort === 'trending' ? 'played' : C.sort, mine: C.sort === 'mine', search: C.search, offset: C.offset, limit: 24 });
+      [rows, likes] = await Promise.all([list0, online.myLikes().catch(() => new Set())]);
     } catch (e) {
       if (req !== this._commReq) return;
       status.innerHTML = `<b>Communauté indisponible</b> : ${esc(e.message)}`;
@@ -226,6 +231,25 @@ export const communityMethods = {
       : '';
     more.classList.toggle('hidden', rows.length < 24);
     for (const row of rows) list.appendChild(this._communityCard(row, likes));
+    if (reset) this._renderFeatured(likes, req);
+  },
+
+  // « Circuit de la semaine » : celui où le plus de pilotes différents ont couru ces 7 derniers jours (au moins 2 pilotes), en tête de l'écran, hors recherche et hors « Mes publications ».
+  async _renderFeatured(likes, req) {
+    const box = $('comm-featured');
+    if (!box) return;
+    const C = this._comm;
+    box.classList.add('hidden'); box.innerHTML = '';
+    if (C.search.trim() || C.sort === 'mine') return;
+    let top = this._featured && Date.now() - this._featured.at < 600000 ? this._featured.row : undefined;
+    if (top === undefined) {
+      try { const r = await online.trending({ limit: 1 }); top = r && r[0] && r[0].week_players >= 2 ? r[0] : null; } catch { top = null; }
+      this._featured = { at: Date.now(), row: top };
+    }
+    if (!top || req !== this._commReq || !$('community') || $('community').classList.contains('hidden')) return;
+    box.innerHTML = '<h3 class="featured-h">⭐ Circuit de la semaine</h3>';
+    box.appendChild(this._communityCard(top, likes));
+    box.classList.remove('hidden');
   },
 
   _communityCard(row, likes) {
@@ -237,13 +261,15 @@ export const communityMethods = {
     const medals = track ? track.derivedMedals : null;
     const medal = rec && medals ? medalFor(rec.time, medals) : null;
     const liked = likes.has(row.id);
+    const est = track ? estimateDifficulty(track) : null;
     const card = document.createElement('div');
     card.className = 'card ' + (row.decor || '');
     card.innerHTML = `${track ? `<img class="thumb" alt="" src="${thumbnail(track, 'c-' + row.id)}">` : ''}
       <h3>${esc(row.name)}</h3>
       ${row.description ? `<p class="desc">${esc(row.description)}</p>` : ''}
       <div class="meta">par <b>${esc((row.players && row.players.name) || '—')}</b>${row.laps > 1 ? ` · ${row.laps} tours` : ''}</div>
-      <div class="meta" title="Temps de l’auteur">${medalIcon(MEDALS[0])} <b>${formatTime(row.author_time)}</b> · ▶ ${row.plays}</div>
+      <div class="meta" title="Temps de l’auteur">${medalIcon(MEDALS[0])} <b>${formatTime(row.author_time)}</b> · ▶ ${row.plays}${row.week_players ? ` · 🔥 ${row.week_players} pilote${row.week_players > 1 ? 's' : ''} cette semaine` : ''}</div>
+      ${est ? `<div class="meta diff" title="Difficulté estimée d’après la géométrie du circuit (virages serrés, murs, loopings, obstacles, pièces mobiles, longueur) : une indication, pas une mesure.">${starsText(est.stars)} ${STAR_LABELS[est.stars]}</div>` : ''}
       <div class="best">${medals ? medalIcon(medal) : ''}${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}</div>
       <div class="actions main">
         <button class="btn primary" data-a="play"${track ? '' : ' disabled'}>Jouer</button>

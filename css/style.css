@@ -1103,3 +1103,14 @@ body.touch kbd { display: none; }
 .academy-list .ac-name b { display: block; }
 .academy-list .ac-name small { color: var(--muted); }
 .academy-goal { margin-top: 10px; padding: 6px 10px; border-radius: 8px; background: rgba(95, 242, 255, 0.1); }
+
+/* Découverte, titres et collections (0.9.18) */
+.comm-featured { margin: 0 0 14px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 210, 62, 0.08); border: 1px solid rgba(255, 210, 62, 0.35); max-width: 380px; }
+.comm-featured .featured-h { margin: 0 0 8px; font-size: 14px; color: #ffd23e; }
+.card .meta.diff { color: #ffd23e; letter-spacing: 0.04em; }
+.board li .ttl { margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: rgba(255, 210, 62, 0.16); color: #ffd23e; font-size: 11px; }
+.prof-titles { margin-top: 14px; }
+.title-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.title-list li { display: flex; flex-direction: column; padding: 5px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); opacity: 0.7; }
+.title-list li.got { opacity: 1; background: rgba(255, 210, 62, 0.08); }
+.title-list small { color: var(--muted); }

@@ -14,6 +14,7 @@ export const CATEGORIES = [
   { id: 'trail', label: 'Traînée' },
   { id: 'horn', label: 'Klaxon' },
   { id: 'presets', label: 'Presets' },
+  { id: 'collections', label: 'Collections' },
 ];
 
 export const CATALOG = {
@@ -46,6 +47,8 @@ export const CATALOG = {
     { id: 'ember', label: 'Braise', cost: 120, color: '#ff7a1f' },
     { id: 'aurora', label: 'Aurore', cost: 160, color: '#7dffb0' },
     { id: 'rainbow', label: 'Arc-en-ciel', cost: 220, rainbow: true },
+    // Exclusivité (0.9.18) : ne s'achète pas, se mérite (champ `exclusive` : comment). Voir rewards.js.
+    { id: 'gold', label: 'Traînée dorée', cost: 0, color: '#ffd23e', exclusive: 'Terminer 7 défis du jour différents' },
   ],
   // Klaxon (touche H).
   horn: [
@@ -63,6 +66,8 @@ export const CATALOG = {
     { id: 'violet', label: 'Violet', cost: 60, color: '#9b6bff' },
     { id: 'pulse', label: 'Pulsation', cost: 150, color: '#36e9ff', pulse: true },
     { id: 'rainbow', label: 'Arc-en-ciel', cost: 250, rainbow: true },
+    { id: 'emerald', label: 'Émeraude', cost: 0, color: '#2dffb0', exclusive: 'Une médaille sur les 6 circuits de l’Atelier' },
+    { id: 'sunset', label: 'Crépuscule', cost: 0, color: '#ff8c5a', exclusive: 'Réussir les 6 leçons de l’Académie' },
   ],
   decal: [
     { id: 'none', label: 'Aucun', cost: 0 },
@@ -132,6 +137,12 @@ export function itemCost(cat, id) {
   return it ? it.cost : 0;
 }
 
+// Élément exclusif : jamais en vente, débloqué par un exploit (rewards.js). Renvoie le texte « comment l'obtenir », ou '' pour un élément ordinaire.
+export function exclusiveOf(cat, id) {
+  const it = (CATALOG[cat] || []).find((x) => x.id === id);
+  return (it && it.exclusive) || '';
+}
+
 const KEYS = ['body', 'led', 'decal', 'ornament', 'spoiler', 'wheels', 'finish', 'bike', 'trail', 'horn'];
 
 export function sanitizeLoadout(l) {
@@ -144,5 +155,5 @@ export function sanitizeLoadout(l) {
 
 // Éléments payants d'un équipement : [[catégorie, id], ...]
 export function itemsOf(loadout) {
-  return KEYS.map((k) => [k, loadout[k]]).filter(([k, id]) => itemCost(k, id) > 0);
+  return KEYS.map((k) => [k, loadout[k]]).filter(([k, id]) => itemCost(k, id) > 0 || exclusiveOf(k, id));
 }

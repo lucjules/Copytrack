@@ -1,7 +1,7 @@
 // Service worker généré par tools/gen-sw.mjs : ne pas modifier à la main.
 // Jeu hors ligne : les fichiers du jeu sont gardés en cache ; le réseau reste prioritaire
 // pour récupérer les mises à jour quand il est disponible.
-const CACHE = 'copytrack-cfe090e951';
+const CACHE = 'copytrack-09b2f62d51';
 const FILES = [
   "./",
   "assets/README.txt",
@@ -19,6 +19,7 @@ const FILES = [
   "js/app/editorFlow.js",
   "js/app/multi.js",
   "js/app/profile.js",
+  "js/app/rewards.js",
   "js/app/screens.js",
   "js/app/settings.js",
   "js/app/shared.js",
@@ -38,6 +39,7 @@ const FILES = [
   "js/decoPackData.js",
   "js/decoPrimitives.js",
   "js/decos.js",
+  "js/difficulty.js",
   "js/dmath.js",
   "js/dom.js",
   "js/editor.js",
@@ -98,6 +100,7 @@ const FILES = [
   "js/remoteCar.js",
   "js/renderOptions.js",
   "js/replay.js",
+  "js/rewards.js",
   "js/ribbons.js",
   "js/scenery.js",
   "js/scenery/decor.js",

@@ -6,6 +6,23 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.18 — trouver de bons circuits, et des récompenses qui se méritent
+
+`PHYS_VER` inchangé (26) ; **facultatif côté serveur** : `supabase/etape8-decouverte.sql` (sans lui, rien ne casse : l'onglet « Cette semaine » retombe sur « Plus joués », les titres restent locaux).
+
+- **Découverte dans la communauté** : un onglet **🔥 Cette semaine** (les circuits où le plus de pilotes *différents* ont couru ces 7 derniers jours, d'après `track_plays`) et, en tête de l'écran, le **⭐ Circuit de la semaine**
+  (le premier de cette liste, à partir de deux pilotes). Chaque carte affiche une **difficulté estimée** (◆◆◆◇◇ + libellé) et la fenêtre de publication la montre avant de publier.
+- **Indice de difficulté** (`js/difficulty.js`) : estimé d'après la **géométrie** seulement (virages serrés, murs, loopings, rubans, plaques, obstacles pondérés, pièces mobiles, pièges, longueur, tours), sans simulation : instantané, valable
+  pour tout circuit d'éditeur (qui n'a pas de ligne centrale pour le pilote automatique). Les seuils des étoiles sont les centiles des 72 circuits intégrés. **Limite assumée** : c'est une indication, pas une mesure ; elle ne voit
+  pas, par exemple, un enchaînement de sauts très délicat.
+- **Titres** : neuf titres décoratifs (Diplômé, Mécano, Globe-trotter, Cristallin, Légende, Fidèle, Collectionneur, Vétéran, Maître du dérapage), calculés d'après la progression ; on en choisit un dans Profil, il s'affiche à côté du pseudo dans
+  les classements en ligne. Le serveur ne vérifie que la liste (il ne connaît pas la progression) : un titre est cosmétique.
+- **Exclusifs du garage** (jamais en vente) : *Traînée dorée* (7 défis du jour différents), *LED Émeraude* (une médaille sur chacun des 6 circuits de l'Atelier), *LED Crépuscule* (diplôme de l'Académie) ; le garage dit comment les obtenir.
+- **Collections** à thème (Néon, Feu, Royal, Course) : quatre éléments qui vont ensemble ; les posséder tous rapporte **100 ◆ une fois** ; un nouvel onglet « Collections » du garage montre l'avancement.
+- Le profil retient les jours de défi du jour et les mini-turbos cumulés ; la fusion des sauvegardes cloud réunit leçons, collections, jours de défi et titres vus. Les récompenses sont données (et annoncées) à la fin d'une course, d'une leçon, et au démarrage
+  pour un joueur qui les mérite déjà.
+- Tests : `tools/test-difficulte.mjs`, `tools/test-recompenses.mjs` (dont la liste blanche SQL comparée à celle du jeu), SQL (étape 8 : tendances, fenêtre, pagination, titres), navigateur (communauté simulée, profil, garage).
+
 ## Bêta 0.9.17 — partager un record : un lien qui lance le défi, et le replay en vidéo
 
 `PHYS_VER` inchangé (26) ; rien à redéployer côté serveur.
