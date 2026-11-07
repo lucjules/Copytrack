@@ -363,7 +363,7 @@ export class RaceSession {
         else app.quitRace();
         return;
       }
-      if (this.state === 'paused') return this.render(dt, 0);
+      if (this.state === 'paused') return this.render(dt, this.acc / DT);      // (même interpolation qu'avant la pause : la voiture ne recule pas d'un pas)
       if (input.act('restart') || input.hit('NumpadEnter')) { if (this.multi) this._newAttempt(); else { this.restart(); return; } }
       if (input.act('respawn') && !this.replay) { if (this.multi && this.state === 'finished') this._newAttempt(); else this.respawn(true); }
       if (input.act('camera')) this.cycleCamera();
@@ -459,10 +459,12 @@ export class RaceSession {
     const inp = this.lastInput || {};
     const pitch = p.grounded ? (inp.throttle ? 0.012 : 0) - (inp.brake && p.fwdSpeed > 2 ? 0.03 : 0) : 0;
     this.car.body.rotation.x += (pitch - this.car.body.rotation.x) * Math.min(1, dt * 6);
+    // Pause (course ou replay) : le monde est figé, il ne naît ni particule, ni trace, ni scintillement de flamme.
+    const frozen = this.state === 'paused' || (this.replay && this.replayPaused);
     const boosting = p.boost > 0;
     for (const f of this.car.flames) {
       f.visible = boosting;
-      if (boosting) f.scale.set(1, 1.2 + Math.random() * 1.2, 1);
+      if (boosting && !frozen) f.scale.set(1, 1.2 + Math.random() * 1.2, 1);
     }
 
     // Traces de pneus (glisse ou gros freinage) et étincelles du mini-turbo en charge.
@@ -471,12 +473,13 @@ export class RaceSession {
     tmpV2.set(1, 0, 0).applyQuaternion(g.quaternion);
     const lean = !!(app.quality && app.quality.profile && app.quality.profile.lean);   // Ultra Potato : ni traces de pneus, ni étincelles, ni traînée
     for (let w = 0; w < 2; w++) {
+      if (frozen) continue;
       if (sliding && !lean && w < wheelsX.length) {
         tmpV.set(wheelsX[w], 0, 1.3).applyQuaternion(g.quaternion).add(g.position);
         this.skids.add(w, tmpV.x, tmpV.y, tmpV.z, tmpV2.x, tmpV2.z, this.car.isMoto ? 0.22 : 0.3);
       } else this.skids.lift(w);
     }
-    if (p.driftCharge > 0.15 && p.grounded && !lean) {
+    if (p.driftCharge > 0.15 && p.grounded && !lean && !frozen) {
       const col = p.driftCharge >= 1.5 ? '#ffb84d' : p.driftCharge >= 0.7 ? '#5ff2ff' : '#ffffff';
       for (const sx of wheelsX) {
         if (Math.random() < 0.6) {
@@ -489,28 +492,28 @@ export class RaceSession {
     const trail = this._trail || (this._trail = (CATALOG.trail.find((x) => x.id === profile().loadout.trail) || CATALOG.trail[0]));
     if (trail.id !== 'none' && !this.demo && !this.replay && !lean) {
       if (!this.trailRib) this.trailRib = new TrailRibbon(app.scene);
-      if (this.state !== 'paused') {
+      if (!frozen) {
         tmpV.set(0, 0.7, 2.3).applyQuaternion(g.quaternion).add(g.position);
         tmpV2.set(1, 0, 0).applyQuaternion(g.quaternion);
         this.trailRib.update(dt, tmpV, tmpV2, p.speed, Math.min(1, p.boost), trail.rainbow ? null : trail.color, performance.now() / 1000, app.camera.position);
       }
     } else if (this.trailRib) this.trailRib.reset();
     // Sillage du bateau (ou éclaboussures d'un véhicule dans l'eau).
-    if (p.grounded && p.surfMod === 'water' && p.speed > 4 && Math.random() < 0.9) {
+    if (!frozen && p.grounded && p.surfMod === 'water' && p.speed > 4 && Math.random() < 0.9) {
       for (const sx of [-1.1, 1.1]) {
         tmpV.set(sx, 0.2, 2.2).applyQuaternion(g.quaternion).add(g.position);
         app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, sx * (1 + Math.random() * 2), 1.5 + Math.random() * 2.5, (Math.random() - 0.5) * 2, 0.6, 0.55, Math.random() < 0.5 ? '#e8f8ff' : '#9fe3ff', 7);
       }
     }
     // Particules : poussière de dérapage, étincelles de boost
-    if (p.grounded && p.slip > 5 && p.speed > 6 && p.surfMod !== 'water') {
+    if (!frozen && p.grounded && p.slip > 5 && p.speed > 6 && p.surfMod !== 'water') {
       for (const sx of [-1, 1]) {
         tmpV.set(sx * 1.0, 0.15, 1.4).applyQuaternion(g.quaternion).add(g.position);
         const dust = p.surfMod === 'ice' ? '#e8f8ff' : app.scenery.theme.dust;
         app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, (Math.random() - 0.5) * 2, 1 + Math.random() * 2, (Math.random() - 0.5) * 2, 0.7, 0.9, dust, -1);
       }
     }
-    if (boosting && Math.random() < 0.8) {
+    if (boosting && !frozen && Math.random() < 0.8) {
       tmpV.set((Math.random() - 0.5) * 0.8, 0.4, 2.4).applyQuaternion(g.quaternion).add(g.position);
       app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, -p.vel.x * 0.2 + (Math.random() - 0.5) * 3, Math.random() * 2, -p.vel.z * 0.2 + (Math.random() - 0.5) * 3, 0.35, 0.5, '#5ff2ff', 0);
     }

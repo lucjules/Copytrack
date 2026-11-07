@@ -127,6 +127,21 @@ test('poseAt : véhicule, sol et normale sont ceux du pas demandé', () => {
   assert.ok(['car', 'moto'].includes(out.vehicle));
 });
 
+test('après l\'arrivée, l\'horloge des obstacles et des pièces mobiles continue (le chrono, lui, reste figé)', () => {
+  const sim = new Simulation(scriptTrack('s', 'start S2 finish'));
+  sim.start();
+  let n = 0;
+  while (!sim.logic.finished && n++ < 4000) sim.step(GAS);
+  assert.ok(sim.logic.finished, 'arrivée franchie');
+  const steps = sim.logic.steps;
+  sim.drive(GAS);
+  const c1 = sim.phys.clock;
+  for (let i = 0; i < 50; i++) sim.drive(GAS);
+  assert.equal(sim.logic.steps, steps, 'le chrono ne bouge plus');
+  assert.equal(sim.phys.clock - c1, 50, 'mais l\'horloge physique avance d\'un pas à chaque pas');
+  sim.start();
+  assert.equal(sim.idle, 0, 'remise à zéro au départ');
+});
 test('fantôme enregistré : le véhicule suit les changements enregistrés (moto, bateau, retour voiture), les anciens records restent des voitures', async () => {
   const { ghostVehicleAt } = await import('../js/race/shared.js');
   const ch = [[0, 1], [10, 2], [25, 0]];

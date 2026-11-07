@@ -26,6 +26,7 @@ export class Simulation {
     this.logic = new RaceLogic(track, { partial });
     this.offTrackLimit = offTrackLimit;
     this.groundT = 0;       // temps passé hors piste (s)
+    this.idle = 0;          // pas joués depuis l'arrivée (le chrono de la course est figé, pas les obstacles ni les pièces mobiles)
     this.sank = false;      // noyade, piques : la physique a demandé la fin du pas
     this.lost = '';         // réapparition automatique demandée par le dernier pas : 'sink', 'offTrack' ou ''
   }
@@ -39,6 +40,7 @@ export class Simulation {
     if (spawn) this.logic.respawn = { ...sp, vehicle: T.veh0 || 'car', grav: (T.g0 || 100) / 100 };
     placeAtStart(this.phys, this.logic, sp);
     this.groundT = 0;
+    this.idle = 0;
     this.sank = false;
     this.lost = '';
     return sp;
@@ -56,7 +58,9 @@ export class Simulation {
 
   // Phase 1 d'un pas : horloge de la course puis physique.
   drive(inp) {
-    this.phys.clock = this.logic.steps;
+    // Une fois l'arrivée franchie, le chrono s'arrête mais la voiture roule encore : l'horloge des obstacles et des pièces mobiles continue (elle
+    // restait figée alors que leur dessin, lui, bougeait : on pouvait heurter un obstacle là où il n'était plus).
+    this.phys.clock = this.logic.steps + (this.logic.finished ? this.idle++ : 0);
     this.phys.step(inp);
     this.sank = this.phys.ev.sink;
   }
