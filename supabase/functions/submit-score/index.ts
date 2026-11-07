@@ -1600,19 +1600,19 @@ function forkSample(p, lx, lz, out) {
   const xa = forkBranchX(p, t, 0), xb = forkBranchX(p, t, 1);
   const slope = p.mirror * CELL * 6 * t * (1 - t) / (2 * half);
   const cb = 1 / Math.sqrt(1 + slope * slope);
-  const da = lx - xa, db2 = (lx - xb) * cb;
+  const da = lx - xa, db = (lx - xb) * cb;
   const sep = forkSep(t);
   const between = (lx - xa) * (lx - xb) < 0;
   if (between && sep < 2 * ROAD_HALF + 0.05) {
     out.d = 0;
     out.gx = 1;
     out.gz = 0;
-  } else if (Math.abs(da) <= Math.abs(db2)) {
+  } else if (Math.abs(da) <= Math.abs(db)) {
     out.d = da;
     out.gx = 1;
     out.gz = 0;
   } else {
-    out.d = db2;
+    out.d = db;
     out.gx = cb;
     out.gz = slope * cb;
   }
@@ -1950,11 +1950,11 @@ function centerlineLocal(tile, n) {
   const half = p.size * HALF;
   const base = baseY(tile);
   const pts = [];
-  const sampleRibbon = (count2, flag = 1) => {
+  const sampleRibbon = (count, flag = 1) => {
     const rib = ribbonOf(tile, true);
     const o = {};
-    for (let i = 0; i <= count2; i++) {
-      rib.pos(i / count2, o);
+    for (let i = 0; i <= count; i++) {
+      rib.pos(i / count, o);
       pts.push([
         o.x,
         o.y,
@@ -4136,7 +4136,7 @@ var CAREER_ORDER = [
   "caves"
 ];
 
-// js/track.js
+// js/track/shared.js
 var WATER_DROP = 0.35;
 var boatDrop = (along) => WATER_DROP * (1 - Math.max(0, Math.min(1, along || 0)));
 var COLOR_KEYS = [
@@ -4151,13 +4151,6 @@ function cleanColors(c) {
   for (const k of COLOR_KEYS) if (typeof c[k] === "string" && HEX.test(c[k])) out[k] = c[k].toLowerCase();
   return Object.keys(out).length ? out : null;
 }
-var EMPTY = Object.freeze([]);
-var key = (x, z) => x + 4096 << 13 | z + 4096;
-var L = {
-  lx: 0,
-  lz: 0
-};
-var S = {};
 var W = {
   x: 0,
   z: 0
@@ -4166,8 +4159,346 @@ var W2 = {
   x: 0,
   z: 0
 };
-var MO = {};
 var MP = {};
+
+// js/track/surfaces.js
+var L = {
+  lx: 0,
+  lz: 0
+};
+var S = {};
+var MO = {};
+var surfaceMethods = {
+  // Gravité inversée : surface « au plafond » la plus proche au-dessus de (x, y - step, z),
+  // venant des pièces posées à l'envers (géométrie retournée autour de leur niveau).
+  // Sans plafond, h vaut +∞ (la voiture continue de « tomber » vers le haut).
+  ceilingSurfaceAt(x, y, z, out, step = 1.6, broken = null) {
+    out.h = Infinity;
+    out.nx = 0;
+    out.ny = -1;
+    out.nz = 0;
+    out.tile = null;
+    out.type = "none";
+    out.mod = "";
+    out.p = 0;
+    out.lx = 0;
+    out.lz = 0;
+    const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
+    for (const tile of this.tilesAt(cx, cz)) {
+      if (!isCeilingFloor(tile)) continue;
+      if (broken && broken.has(tile)) continue;
+      toLocal(tile, x, z, L);
+      sampleLocal(tile, L.lx, L.lz, S);
+      if (!S.inFootprint) continue;
+      if (PIECES[tile.t].kind !== "area" && Math.abs(S.d) > ROAD_HALF) continue;
+      const base = baseY(tile);
+      const h = 2 * base - S.h;
+      if (h < y - step || h >= out.h) continue;
+      out.h = h;
+      rotVec(tile.r, S.nx, S.nz, W);
+      out.nx = W.x;
+      out.ny = -S.ny;
+      out.nz = W.z;
+      out.tile = tile;
+      out.type = "road";
+      out.mod = tile.s || "";
+      out.p = tile.p || 0;
+      out.lx = L.lx;
+      out.lz = L.lz;
+      if (tile.s === "water") out.h += WATER_DROP;
+      else if (tile.s === "boat" && (PIECES[tile.t].kind === "line" || PIECES[tile.t].kind === "arc")) out.h += boatDrop(S.along);
+    }
+    return out;
+  },
+  // Surface roulable la plus haute sous (x, y + step, z). Le sol est à y = 0.
+  // Les pièces mobiles (ascenseur, glissière, rotation) sont prises à leur position au chrono `time` (s) de la course : le circuit n'a
+  // pas d'horloge propre, plusieurs voitures (la sienne, un fantôme, un adversaire) l'interrogent chacune à son propre chrono.
+  // broken : pièces de verre déjà brisées dans CETTE course (propre à chaque voiture, voir CarPhysics) : sans collision.
+  surfaceAt(x, y, z, out, step = 1.6, broken = null, time = 0) {
+    out.h = 0;
+    out.nx = 0;
+    out.ny = 1;
+    out.nz = 0;
+    out.tile = null;
+    out.type = "ground";
+    out.mod = "";
+    out.p = 0;
+    out.lx = 0;
+    out.lz = 0;
+    const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
+    let best = -Infinity;
+    const cell = this.tilesAt(cx, cz);
+    for (let i = 0; i < cell.length; i++) {
+      const tile = cell[i];
+      if (tile.mv || !isFloor(tile) || broken && broken.has(tile)) continue;
+      best = this._floorTry(tile, x, z, 0, y, step, best, out);
+    }
+    if (this.hasMovers) {
+      for (let i = 0; i < cell.length; i++) {
+        const tile = cell[i];
+        if (!tile.mv || !isFloor(tile) || broken && broken.has(tile)) continue;
+        this.moverOffset(tile, time, MO);
+        if (MO.a) {
+          this.moverLocal(MO, x, z, W2);
+          best = this._floorTry(tile, W2.x, W2.z, MO.y, y, step, best, out, MO.a);
+        } else best = this._floorTry(tile, x - MO.x, z - MO.z, MO.y, y, step, best, out);
+      }
+    }
+    return out;
+  },
+  _floorTry(tile, x, z, oy, y, step, best, out, a = 0) {
+    toLocal(tile, x, z, L);
+    sampleLocal(tile, L.lx, L.lz, S);
+    if (!S.inFootprint) return best;
+    const p = PIECES[tile.t];
+    if (p.kind !== "area" && Math.abs(S.d) > ROAD_HALF) return best;
+    const h = S.h + oy;
+    if (h > y + step || h <= best) return best;
+    out.h = h;
+    rotVec(tile.r, S.nx, S.nz, W);
+    out.nx = W.x;
+    out.ny = S.ny;
+    out.nz = W.z;
+    if (a) {
+      const c = dcos(a), sn = dsin(a);
+      out.nx = c * W.x + sn * W.z;
+      out.nz = -sn * W.x + c * W.z;
+    }
+    out.tile = tile;
+    out.type = "road";
+    let sf = tile.s, sp = tile.p;
+    if (p.kind === "fork" && S.branch === 1 && tile.s2) {
+      sf = tile.s2 === "-" ? "" : tile.s2;
+      sp = tile.s2 === "-" ? 0 : tile.p2;
+    }
+    out.mod = sf || "";
+    out.p = sp || 0;
+    out.lx = L.lx;
+    out.lz = L.lz;
+    if (sf === "water") out.h -= WATER_DROP;
+    else if (sf === "boat" && (p.kind === "line" || p.kind === "arc")) out.h -= boatDrop(S.along);
+    return out.h;
+  },
+  // Pièces en mouvement : 1 = ascenseur (monte puis redescend), 2 = glissière (se décale sur son côté droit et revient),
+  // 3 = rotation (tourne autour de son centre, tour complet ou va-et-vient). Vitesse et amplitude réglables (voir MOVER).
+  // Le mouvement ne dépend que du chrono de la course. out : décalage (x, y, z) et vitesse (vx, vy, vz) ;
+  // pour une rotation : a (angle, rad), w (vitesse angulaire, rad/s) et le pivot (cx, cz).
+  moverOffset(tile, t, out) {
+    const M = MOVER[tile.mv];
+    const mp = moverParams(tile, MP);
+    const sp = mp.speed / 100, P = M.period / Math.abs(sp), w = Math.PI * 2 / P;
+    const k = (1 - dcos(w * t)) / 2, dk = dsin(w * t) * w / 2;
+    out.x = 0;
+    out.y = 0;
+    out.z = 0;
+    out.vx = 0;
+    out.vy = 0;
+    out.vz = 0;
+    out.a = 0;
+    out.w = 0;
+    out.cx = 0;
+    out.cz = 0;
+    if (tile.mv === 1) {
+      out.y = mp.amp * LEVEL_H * k;
+      out.vy = mp.amp * LEVEL_H * dk;
+    } else if (tile.mv === 2) {
+      rotVec(tile.r, 1, 0, W2);
+      out.x = W2.x * CELL * mp.amp * k;
+      out.z = W2.z * CELL * mp.amp * k;
+      out.vx = W2.x * CELL * mp.amp * dk;
+      out.vz = W2.z * CELL * mp.amp * dk;
+    } else if (tile.mv === 3) {
+      const c = tileCenter(tile, W2);
+      out.cx = c.x;
+      out.cz = c.z;
+      const sg = sp < 0 ? -1 : 1;
+      if (mp.amp >= 360) {
+        out.a = sg * w * t;
+        out.w = sg * w;
+      } else {
+        const A2 = mp.amp * Math.PI / 180;
+        out.a = sg * A2 * k;
+        out.w = sg * A2 * dk;
+      }
+    }
+    return out;
+  },
+  // Monde -> repère de la pièce mobile « au repos » (annule le décalage et la rotation) : sert à interroger sa géométrie.
+  moverLocal(o, x, z, out) {
+    x -= o.x;
+    z -= o.z;
+    if (o.a) {
+      const dx = x - o.cx, dz = z - o.cz, c = dcos(o.a), s = dsin(o.a);
+      x = o.cx + c * dx - s * dz;
+      z = o.cz + s * dx + c * dz;
+    }
+    out.x = x;
+    out.z = z;
+    return out;
+  },
+  // Dessous de dalle (ou toit de tunnel) le plus bas au-dessus de yMin : sert à la caméra.
+  ceilingAt(x, z, yMin) {
+    const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
+    let best = Infinity;
+    for (const tile of this.tilesAt(cx, cz)) {
+      const kind = PIECES[tile.t].kind;
+      if (kind === "loop" || kind === "ribbon" || tile.v || tile.o) continue;
+      toLocal(tile, x, z, L);
+      sampleLocal(tile, L.lx, L.lz, S);
+      if (!S.inFootprint) continue;
+      if (kind !== "area" && Math.abs(S.d) > ROAD_HALF + RAIL_W + 0.5) continue;
+      const under = tile.tn ? S.h + ROAD_HALF + RAIL_W + 0.9 : S.h - SLAB_T;
+      if (under > yMin && under < best) best = under;
+    }
+    return best;
+  }
+};
+
+// js/track/edit.js
+var editMethods = {
+  // Revêtement (avec paramètre en %). Renvoie true si quelque chose a changé.
+  setSurface(tile, s, p = 0) {
+    if (!surfaceAllowed(tile.t, s, tile.o)) return false;
+    const S22 = SURFACES[s];
+    const np = S22 && S22.def != null ? Math.max(S22.min, Math.min(S22.max, p || S22.def)) : 0;
+    if (tile.s === s && (tile.p || 0) === np) return false;
+    tile.s = s;
+    tile.p = np;
+    this.version++;
+    return true;
+  },
+  // Bascule un drapeau (v : à l'envers, nb : sans bordures, tn : tunnel, mv : mouvement 1/2/3, cp : checkpoint 1/2, th : thème).
+  toggleFlag(tile, flag, val = 1) {
+    if (flag === "o") {
+      const target = val | 0;
+      if (target && !flagAllowed(tile.t, "o", null, target)) return false;
+      const cand = {
+        ...tile
+      };
+      if (!target || tile.o === target) {
+        cand.o = 0;
+        if (!target) cand.v = 0;
+      } else {
+        cand.o = target;
+        clearConflicts(cand, "o");
+      }
+      return this._reshape(tile, cand);
+    }
+    if (!flagAllowed(tile.t, flag, tile, val)) return false;
+    if (flag === "th") {
+      const th = tile.th === val ? 0 : val;
+      if (!THEMES.some((h) => h.id === th)) return false;
+      tile.th = th;
+      this.version++;
+      return true;
+    }
+    if (flag === "mv" || flag === "cp" || flag === "tb" || flag === "v") {
+      const cand = {
+        ...tile
+      };
+      if (flag === "mv") {
+        cand.mv = tile.mv === val ? 0 : val;
+        cand.ms = 0;
+        cand.ma = 0;
+      } else if (flag === "cp") {
+        cand.cp = tile.cp === val ? 0 : val;
+      } else if (flag === "tb") {
+        cand.tb = tile.tb ? 0 : 1;
+      } else if (tile.v) cand.v = 0;
+      else {
+        cand.v = 1;
+        clearConflicts(cand, "v");
+      }
+      return this._reshape(tile, cand);
+    }
+    tile[flag] = tile[flag] ? 0 : 1;
+    this.version++;
+    return true;
+  },
+  // Remplace `tile` par `cand` (normalisée : options devenues impossibles retirées, revêtement incompatible effacé) si la place et les niveaux
+  // le permettent ; sinon rien ne change. Même objet : la sélection de l'inspecteur reste valable.
+  _reshape(tile, cand) {
+    const n = Track.normalize(cand);
+    this.remove(tile);
+    if (this.conflicts(n).length || !Track.inBounds(n)) {
+      this._insert(tile);
+      return false;
+    }
+    Object.assign(tile, n);
+    this._insert(tile);
+    return true;
+  },
+  // Réglage d'une pièce mobile (vitesse en %, amplitude). Change les cases / niveaux balayés : vérifie la place.
+  setMover(tile, ms, ma) {
+    if (!tile.mv) return false;
+    const m = clampMover(tile.mv, ms === void 0 ? tile.ms : ms, ma === void 0 ? tile.ma : ma);
+    if (m.ms === (tile.ms || 0) && m.ma === (tile.ma || 0)) return true;
+    const cand = {
+      ...tile,
+      ms: m.ms,
+      ma: m.ma
+    };
+    this.remove(tile);
+    if (this.conflicts(cand).length || !Track.inBounds(cand)) {
+      this._insert(tile);
+      return false;
+    }
+    tile.ms = m.ms;
+    tile.ma = m.ma;
+    this._insert(tile);
+    return true;
+  },
+  // Couleurs personnalisées { road, line, rail } (null / {} : couleurs d'origine).
+  setColors(tile, col) {
+    tile.col = cleanColors(col);
+    this.version++;
+    return true;
+  },
+  // 2e revêtement d'une bifurcation (voie déportée).
+  setSurface2(tile, s, p = 0) {
+    if (PIECES[tile.t].kind !== "fork") return false;
+    if (s && s !== "-" && !surfaceAllowed(tile.t, s, tile.o)) return false;
+    const S22 = SURFACES[s];
+    const np = S22 && S22.def != null ? Math.max(S22.min, Math.min(S22.max, p || S22.def)) : 0;
+    if ((tile.s2 || "") === s && (tile.p2 || 0) === np) return false;
+    tile.s2 = s;
+    tile.p2 = np;
+    this.version++;
+    return true;
+  },
+  addDeco(d) {
+    if (this.decos.length >= MAX_DECOS) return null;
+    const deco = {
+      k: d.k,
+      x: +d.x,
+      y: +d.y,
+      z: +d.z,
+      ry: +d.ry || 0,
+      s: Math.max(0.2, Math.min(20, +d.s || 1)),
+      c: d.c | 0,
+      u: d.u ? String(d.u).slice(0, 400) : ""
+    };
+    if (isObstacle(deco.k)) {
+      deco.ph = Math.max(0, Math.min(0.95, Math.round((+d.ph || 0) * 20) / 20));
+      deco.s = Math.max(0.5, Math.min(2.5, deco.s));
+    }
+    if (!DECO_ORDER.includes(deco.k)) return null;
+    if (typeof d.cc === "string" && HEX.test(d.cc)) deco.cc = d.cc.toLowerCase();
+    this.decos.push(deco);
+    this.version++;
+    return deco;
+  },
+  removeDeco(d) {
+    const i = this.decos.indexOf(d);
+    if (i < 0) return;
+    this.decos.splice(i, 1);
+    this.version++;
+  }
+};
+
+// js/track.js
+var EMPTY = Object.freeze([]);
+var key = (x, z) => x + 4096 << 13 | z + 4096;
 var clampInt = (v, lo, hi, fallback) => Math.max(lo, Math.min(hi, Math.round(+v || fallback)));
 var RULES = [
   {
@@ -4385,138 +4716,6 @@ var Track = class _Track {
     }
     this.version++;
   }
-  // Revêtement (avec paramètre en %). Renvoie true si quelque chose a changé.
-  setSurface(tile, s, p = 0) {
-    if (!surfaceAllowed(tile.t, s, tile.o)) return false;
-    const S22 = SURFACES[s];
-    const np = S22 && S22.def != null ? Math.max(S22.min, Math.min(S22.max, p || S22.def)) : 0;
-    if (tile.s === s && (tile.p || 0) === np) return false;
-    tile.s = s;
-    tile.p = np;
-    this.version++;
-    return true;
-  }
-  // Bascule un drapeau (v : à l'envers, nb : sans bordures, tn : tunnel, mv : mouvement 1/2/3, cp : checkpoint 1/2, th : thème).
-  toggleFlag(tile, flag, val = 1) {
-    if (flag === "o") {
-      const target = val | 0;
-      if (target && !flagAllowed(tile.t, "o", null, target)) return false;
-      const cand = {
-        ...tile
-      };
-      if (!target || tile.o === target) {
-        cand.o = 0;
-        if (!target) cand.v = 0;
-      } else {
-        cand.o = target;
-        clearConflicts(cand, "o");
-      }
-      return this._reshape(tile, cand);
-    }
-    if (!flagAllowed(tile.t, flag, tile, val)) return false;
-    if (flag === "th") {
-      const th = tile.th === val ? 0 : val;
-      if (!THEMES.some((h) => h.id === th)) return false;
-      tile.th = th;
-      this.version++;
-      return true;
-    }
-    if (flag === "mv" || flag === "cp" || flag === "tb" || flag === "v") {
-      const cand = {
-        ...tile
-      };
-      if (flag === "mv") {
-        cand.mv = tile.mv === val ? 0 : val;
-        cand.ms = 0;
-        cand.ma = 0;
-      } else if (flag === "cp") {
-        cand.cp = tile.cp === val ? 0 : val;
-      } else if (flag === "tb") {
-        cand.tb = tile.tb ? 0 : 1;
-      } else if (tile.v) cand.v = 0;
-      else {
-        cand.v = 1;
-        clearConflicts(cand, "v");
-      }
-      return this._reshape(tile, cand);
-    }
-    tile[flag] = tile[flag] ? 0 : 1;
-    this.version++;
-    return true;
-  }
-  // Remplace `tile` par `cand` (normalisée : options devenues impossibles retirées, revêtement incompatible effacé) si la place et les niveaux
-  // le permettent ; sinon rien ne change. Même objet : la sélection de l'inspecteur reste valable.
-  _reshape(tile, cand) {
-    const n = _Track.normalize(cand);
-    this.remove(tile);
-    if (this.conflicts(n).length || !_Track.inBounds(n)) {
-      this._insert(tile);
-      return false;
-    }
-    Object.assign(tile, n);
-    this._insert(tile);
-    return true;
-  }
-  // Réglage d'une pièce mobile (vitesse en %, amplitude). Change les cases / niveaux balayés : vérifie la place.
-  setMover(tile, ms, ma) {
-    if (!tile.mv) return false;
-    const m = clampMover(tile.mv, ms === void 0 ? tile.ms : ms, ma === void 0 ? tile.ma : ma);
-    if (m.ms === (tile.ms || 0) && m.ma === (tile.ma || 0)) return true;
-    const cand = {
-      ...tile,
-      ms: m.ms,
-      ma: m.ma
-    };
-    this.remove(tile);
-    if (this.conflicts(cand).length || !_Track.inBounds(cand)) {
-      this._insert(tile);
-      return false;
-    }
-    tile.ms = m.ms;
-    tile.ma = m.ma;
-    this._insert(tile);
-    return true;
-  }
-  // Couleurs personnalisées { road, line, rail } (null / {} : couleurs d'origine).
-  setColors(tile, col) {
-    tile.col = cleanColors(col);
-    this.version++;
-    return true;
-  }
-  // 2e revêtement d'une bifurcation (voie déportée).
-  setSurface2(tile, s, p = 0) {
-    if (PIECES[tile.t].kind !== "fork") return false;
-    if (s && s !== "-" && !surfaceAllowed(tile.t, s, tile.o)) return false;
-    const S22 = SURFACES[s];
-    const np = S22 && S22.def != null ? Math.max(S22.min, Math.min(S22.max, p || S22.def)) : 0;
-    if ((tile.s2 || "") === s && (tile.p2 || 0) === np) return false;
-    tile.s2 = s;
-    tile.p2 = np;
-    this.version++;
-    return true;
-  }
-  addDeco(d) {
-    if (this.decos.length >= MAX_DECOS) return null;
-    const deco = {
-      k: d.k,
-      x: +d.x,
-      y: +d.y,
-      z: +d.z,
-      ry: +d.ry || 0,
-      s: Math.max(0.2, Math.min(20, +d.s || 1)),
-      c: d.c | 0,
-      u: d.u ? String(d.u).slice(0, 400) : ""
-    };
-    if (isObstacle(deco.k)) {
-      deco.ph = Math.max(0, Math.min(0.95, Math.round((+d.ph || 0) * 20) / 20));
-      deco.s = Math.max(0.5, Math.min(2.5, deco.s));
-    }
-    if (!DECO_ORDER.includes(deco.k)) return null;
-    if (typeof d.cc === "string" && HEX.test(d.cc)) deco.cc = d.cc.toLowerCase();
-    this.decos.push(deco);
-    this.version++;
-    return deco;
-  }
   // Obstacles physiques (décorations particulières), mis en cache par version.
   get obstacles() {
     if (this._obsV !== this.version) {
@@ -4532,12 +4731,6 @@ var Track = class _Track {
       this._ogV = this.version;
     }
     return this._og;
-  }
-  removeDeco(d) {
-    const i = this.decos.indexOf(d);
-    if (i < 0) return;
-    this.decos.splice(i, 1);
-    this.version++;
   }
   clear() {
     this.tiles = [];
@@ -4592,173 +4785,6 @@ var Track = class _Track {
       maxY: maxL * LEVEL_H
     };
   }
-  // Gravité inversée : surface « au plafond » la plus proche au-dessus de (x, y - step, z),
-  // venant des pièces posées à l'envers (géométrie retournée autour de leur niveau).
-  // Sans plafond, h vaut +∞ (la voiture continue de « tomber » vers le haut).
-  ceilingSurfaceAt(x, y, z, out, step = 1.6, broken = null) {
-    out.h = Infinity;
-    out.nx = 0;
-    out.ny = -1;
-    out.nz = 0;
-    out.tile = null;
-    out.type = "none";
-    out.mod = "";
-    out.p = 0;
-    out.lx = 0;
-    out.lz = 0;
-    const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
-    for (const tile of this.tilesAt(cx, cz)) {
-      if (!isCeilingFloor(tile)) continue;
-      if (broken && broken.has(tile)) continue;
-      toLocal(tile, x, z, L);
-      sampleLocal(tile, L.lx, L.lz, S);
-      if (!S.inFootprint) continue;
-      if (PIECES[tile.t].kind !== "area" && Math.abs(S.d) > ROAD_HALF) continue;
-      const base = baseY(tile);
-      const h = 2 * base - S.h;
-      if (h < y - step || h >= out.h) continue;
-      out.h = h;
-      rotVec(tile.r, S.nx, S.nz, W);
-      out.nx = W.x;
-      out.ny = -S.ny;
-      out.nz = W.z;
-      out.tile = tile;
-      out.type = "road";
-      out.mod = tile.s || "";
-      out.p = tile.p || 0;
-      out.lx = L.lx;
-      out.lz = L.lz;
-      if (tile.s === "water") out.h += WATER_DROP;
-      else if (tile.s === "boat" && (PIECES[tile.t].kind === "line" || PIECES[tile.t].kind === "arc")) out.h += boatDrop(S.along);
-    }
-    return out;
-  }
-  // Surface roulable la plus haute sous (x, y + step, z). Le sol est à y = 0.
-  // Les pièces mobiles (ascenseur, glissière, rotation) sont prises à leur position au chrono `time` (s) de la course : le circuit n'a
-  // pas d'horloge propre, plusieurs voitures (la sienne, un fantôme, un adversaire) l'interrogent chacune à son propre chrono.
-  // broken : pièces de verre déjà brisées dans CETTE course (propre à chaque voiture, voir CarPhysics) : sans collision.
-  surfaceAt(x, y, z, out, step = 1.6, broken = null, time = 0) {
-    out.h = 0;
-    out.nx = 0;
-    out.ny = 1;
-    out.nz = 0;
-    out.tile = null;
-    out.type = "ground";
-    out.mod = "";
-    out.p = 0;
-    out.lx = 0;
-    out.lz = 0;
-    const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
-    let best = -Infinity;
-    const cell = this.tilesAt(cx, cz);
-    for (let i = 0; i < cell.length; i++) {
-      const tile = cell[i];
-      if (tile.mv || !isFloor(tile) || broken && broken.has(tile)) continue;
-      best = this._floorTry(tile, x, z, 0, y, step, best, out);
-    }
-    if (this.hasMovers) {
-      for (let i = 0; i < cell.length; i++) {
-        const tile = cell[i];
-        if (!tile.mv || !isFloor(tile) || broken && broken.has(tile)) continue;
-        this.moverOffset(tile, time, MO);
-        if (MO.a) {
-          this.moverLocal(MO, x, z, W2);
-          best = this._floorTry(tile, W2.x, W2.z, MO.y, y, step, best, out, MO.a);
-        } else best = this._floorTry(tile, x - MO.x, z - MO.z, MO.y, y, step, best, out);
-      }
-    }
-    return out;
-  }
-  _floorTry(tile, x, z, oy, y, step, best, out, a = 0) {
-    toLocal(tile, x, z, L);
-    sampleLocal(tile, L.lx, L.lz, S);
-    if (!S.inFootprint) return best;
-    const p = PIECES[tile.t];
-    if (p.kind !== "area" && Math.abs(S.d) > ROAD_HALF) return best;
-    const h = S.h + oy;
-    if (h > y + step || h <= best) return best;
-    out.h = h;
-    rotVec(tile.r, S.nx, S.nz, W);
-    out.nx = W.x;
-    out.ny = S.ny;
-    out.nz = W.z;
-    if (a) {
-      const c = dcos(a), sn = dsin(a);
-      out.nx = c * W.x + sn * W.z;
-      out.nz = -sn * W.x + c * W.z;
-    }
-    out.tile = tile;
-    out.type = "road";
-    let sf = tile.s, sp = tile.p;
-    if (p.kind === "fork" && S.branch === 1 && tile.s2) {
-      sf = tile.s2 === "-" ? "" : tile.s2;
-      sp = tile.s2 === "-" ? 0 : tile.p2;
-    }
-    out.mod = sf || "";
-    out.p = sp || 0;
-    out.lx = L.lx;
-    out.lz = L.lz;
-    if (sf === "water") out.h -= WATER_DROP;
-    else if (sf === "boat" && (p.kind === "line" || p.kind === "arc")) out.h -= boatDrop(S.along);
-    return out.h;
-  }
-  // Pièces en mouvement : 1 = ascenseur (monte puis redescend), 2 = glissière (se décale sur son côté droit et revient),
-  // 3 = rotation (tourne autour de son centre, tour complet ou va-et-vient). Vitesse et amplitude réglables (voir MOVER).
-  // Le mouvement ne dépend que du chrono de la course. out : décalage (x, y, z) et vitesse (vx, vy, vz) ;
-  // pour une rotation : a (angle, rad), w (vitesse angulaire, rad/s) et le pivot (cx, cz).
-  moverOffset(tile, t, out) {
-    const M = MOVER[tile.mv];
-    const mp = moverParams(tile, MP);
-    const sp = mp.speed / 100, P = M.period / Math.abs(sp), w = Math.PI * 2 / P;
-    const k = (1 - dcos(w * t)) / 2, dk = dsin(w * t) * w / 2;
-    out.x = 0;
-    out.y = 0;
-    out.z = 0;
-    out.vx = 0;
-    out.vy = 0;
-    out.vz = 0;
-    out.a = 0;
-    out.w = 0;
-    out.cx = 0;
-    out.cz = 0;
-    if (tile.mv === 1) {
-      out.y = mp.amp * LEVEL_H * k;
-      out.vy = mp.amp * LEVEL_H * dk;
-    } else if (tile.mv === 2) {
-      rotVec(tile.r, 1, 0, W2);
-      out.x = W2.x * CELL * mp.amp * k;
-      out.z = W2.z * CELL * mp.amp * k;
-      out.vx = W2.x * CELL * mp.amp * dk;
-      out.vz = W2.z * CELL * mp.amp * dk;
-    } else if (tile.mv === 3) {
-      const c = tileCenter(tile, W2);
-      out.cx = c.x;
-      out.cz = c.z;
-      const sg = sp < 0 ? -1 : 1;
-      if (mp.amp >= 360) {
-        out.a = sg * w * t;
-        out.w = sg * w;
-      } else {
-        const A2 = mp.amp * Math.PI / 180;
-        out.a = sg * A2 * k;
-        out.w = sg * A2 * dk;
-      }
-    }
-    return out;
-  }
-  // Monde -> repère de la pièce mobile « au repos » (annule le décalage et la rotation) : sert à interroger sa géométrie.
-  moverLocal(o, x, z, out) {
-    x -= o.x;
-    z -= o.z;
-    if (o.a) {
-      const dx = x - o.cx, dz = z - o.cz, c = dcos(o.a), s = dsin(o.a);
-      x = o.cx + c * dx - s * dz;
-      z = o.cz + s * dx + c * dz;
-    }
-    out.x = x;
-    out.z = z;
-    return out;
-  }
   // Le circuit a-t-il des pièces mobiles ? (mis en cache par version : évite de balayer la case une seconde fois pour rien)
   get hasMovers() {
     if (this._mvV !== this.version) {
@@ -4766,22 +4792,6 @@ var Track = class _Track {
       this._mvV = this.version;
     }
     return this._hasMv;
-  }
-  // Dessous de dalle (ou toit de tunnel) le plus bas au-dessus de yMin : sert à la caméra.
-  ceilingAt(x, z, yMin) {
-    const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
-    let best = Infinity;
-    for (const tile of this.tilesAt(cx, cz)) {
-      const kind = PIECES[tile.t].kind;
-      if (kind === "loop" || kind === "ribbon" || tile.v || tile.o) continue;
-      toLocal(tile, x, z, L);
-      sampleLocal(tile, L.lx, L.lz, S);
-      if (!S.inFootprint) continue;
-      if (kind !== "area" && Math.abs(S.d) > ROAD_HALF + RAIL_W + 0.5) continue;
-      const under = tile.tn ? S.h + ROAD_HALF + RAIL_W + 0.9 : S.h - SLAB_T;
-      if (under > yMin && under < best) best = under;
-    }
-    return best;
   }
   // Règles de course remises à leurs valeurs par défaut.
   resetRules() {
@@ -4995,6 +5005,7 @@ var Track = class _Track {
     return tr;
   }
 };
+Object.assign(Track.prototype, surfaceMethods, editMethods);
 function tileExtras(t) {
   let e = "";
   if (t.cp) e += "c" + t.cp;
@@ -10116,6 +10127,13 @@ function inputAt(rep, k) {
     respawn: !!(f & 4)
   };
 }
+var HIST_STRIDE = 17;
+var VEH_IDS = [
+  "car",
+  "moto",
+  "boat",
+  "glider"
+];
 var GhostRunner = class {
   constructor(track, { inputs = null, bot = false, latK = 0.8 } = {}) {
     this.sim = new Simulation(track);
@@ -10125,6 +10143,7 @@ var GhostRunner = class {
     this.bot = bot && track.path ? new Autopilot(track.path, {
       latLimit: 56 * latK
     }) : null;
+    this.hist = new Float32Array(HIST_STRIDE * 1024);
     this.reset();
   }
   reset() {
@@ -10132,6 +10151,7 @@ var GhostRunner = class {
     if (this.bot) this.bot.reset(this.phys);
     this.k = 0;
     this.done = false;
+    this._record(0);
   }
   step() {
     if (this.done) return;
@@ -10142,6 +10162,59 @@ var GhostRunner = class {
     if (ev && ev.type === "finish") this.done = true;
     if (this.rep && this.k >= this.rep.length + 240) this.done = true;
     this.k++;
+    this._record(this.k);
+  }
+  // Avance jusqu'au pas k (les lignes de l'historique jusque-là existent) ; renvoie false si le fantôme a terminé avant.
+  seek(k) {
+    while (this.k < k && !this.done) this.step();
+    return k <= this.k;
+  }
+  _record(k) {
+    if ((k + 1) * HIST_STRIDE > this.hist.length) {
+      const h2 = new Float32Array(this.hist.length * 2);
+      h2.set(this.hist);
+      this.hist = h2;
+    }
+    const p = this.phys, h = this.hist, o = k * HIST_STRIDE;
+    h[o] = p.pos.x;
+    h[o + 1] = p.pos.y;
+    h[o + 2] = p.pos.z;
+    h[o + 3] = p.prev.x;
+    h[o + 4] = p.prev.y;
+    h[o + 5] = p.prev.z;
+    h[o + 6] = p.n.x;
+    h[o + 7] = p.n.y;
+    h[o + 8] = p.n.z;
+    h[o + 9] = p.fwd.x;
+    h[o + 10] = p.fwd.y;
+    h[o + 11] = p.fwd.z;
+    h[o + 12] = p.yaw;
+    h[o + 13] = p.grounded ? 1 : 0;
+    h[o + 14] = VEH_IDS.indexOf(p.vehicle);
+    h[o + 15] = this.done ? 1 : 0;
+    h[o + 16] = 0;
+  }
+  // Ce qu'il faut pour dessiner la voiture après k pas (out : pos, prev, n, fwd, yaw, grounded, vehicle, done). Avance le fantôme si besoin.
+  poseAt(k, out) {
+    this.seek(k);
+    const i = Math.min(k, this.k), h = this.hist, o = i * HIST_STRIDE;
+    out.pos.x = h[o];
+    out.pos.y = h[o + 1];
+    out.pos.z = h[o + 2];
+    out.prev.x = h[o + 3];
+    out.prev.y = h[o + 4];
+    out.prev.z = h[o + 5];
+    out.n.x = h[o + 6];
+    out.n.y = h[o + 7];
+    out.n.z = h[o + 8];
+    out.fwd.x = h[o + 9];
+    out.fwd.y = h[o + 10];
+    out.fwd.z = h[o + 11];
+    out.yaw = h[o + 12];
+    out.grounded = h[o + 13] === 1;
+    out.vehicle = VEH_IDS[h[o + 14]] || "car";
+    out.done = k > this.k || h[o + 15] === 1;
+    return out;
   }
 };
 
@@ -10230,131 +10303,186 @@ function verifyRun({ trackKey, code, inputs, time, physVer }) {
   };
 }
 
-// supabase/functions/submit-score/server.ts
-var SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-var SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-var cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS"
+// supabase/functions/submit-score/handler.js
+var MAX_BODY_CHARS = MAX_INPUTS_CHARS + MAX_TRACK_CODE_CHARS + 4096;
+var RATE_LIMIT = {
+  max: 8,
+  windowMs: 6e4
 };
-var json = (status, body) => new Response(JSON.stringify(body), {
-  status,
-  headers: {
-    ...cors,
-    "Content-Type": "application/json"
-  }
-});
-var db = (path, init = {}) => fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-  ...init,
-  headers: {
-    apikey: SERVICE_KEY,
-    Authorization: `Bearer ${SERVICE_KEY}`,
-    "Content-Type": "application/json",
-    ...init.headers ?? {}
-  }
-});
-async function count(query) {
-  const r = await db(`scores?${query}&select=player`, {
+function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, allowedOrigin = "*", now = Date.now, rateLimit = RATE_LIMIT, log = console.error }) {
+  const cors = {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    Vary: "Origin"
+  };
+  const json = (status, body, extra = {}) => new Response(JSON.stringify(body), {
+    status,
     headers: {
-      Prefer: "count=exact",
-      Range: "0-0"
+      ...cors,
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+      ...extra
     }
   });
-  const range = r.headers.get("content-range") ?? "*/0";
-  return parseInt(range.split("/")[1] ?? "0", 10) || 0;
-}
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", {
-    headers: cors
+  const db = (path, init = {}) => fetchImpl(`${supabaseUrl}/rest/v1/${path}`, {
+    ...init,
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      "Content-Type": "application/json",
+      ...init.headers ?? {}
+    }
   });
-  if (req.method !== "POST") return json(405, {
-    error: "M\xE9thode non autoris\xE9e."
-  });
-  try {
-    if (!SUPABASE_URL || !SERVICE_KEY) return json(500, {
-      error: "Fonction mal configur\xE9e (cl\xE9s Supabase absentes)."
-    });
-    const ures = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+  async function count(query) {
+    const r = await db(`scores?${query}&select=player`, {
       headers: {
-        Authorization: req.headers.get("Authorization") ?? "",
-        apikey: SERVICE_KEY
+        Prefer: "count=exact",
+        Range: "0-0"
       }
     });
-    if (!ures.ok) return json(401, {
-      error: "Non connect\xE9."
-    });
-    const user = await ures.json();
-    const uid = String(user.id ?? "");
-    if (!/^[0-9a-f-]{36}$/.test(uid)) return json(401, {
-      error: "Non connect\xE9."
-    });
-    const body = await req.json();
-    const { trackKey, code = "", inputs, time, physVer } = body ?? {};
-    if (typeof trackKey !== "string" || trackKey.length > 80 || typeof inputs !== "string" || typeof time !== "number" || typeof physVer !== "number") {
-      return json(400, {
-        error: "Requ\xEAte invalide."
-      });
-    }
-    if (typeof code !== "string" || code.length > MAX_TRACK_CODE_CHARS) return json(400, {
-      error: "Code de circuit invalide."
-    });
-    const res = verifyRun({
-      trackKey,
-      code,
-      inputs,
-      time,
-      physVer
-    });
-    if (!res.ok || typeof res.time !== "number") return json(422, {
-      error: res.error ?? "Course non confirm\xE9e."
-    });
-    const simTime = res.time;
-    const prof = await (await db(`players?id=eq.${uid}&select=id`)).json();
-    if (!Array.isArray(prof) || !prof.length) return json(400, {
-      error: "Profil pilote manquant."
-    });
-    const key2 = encodeURIComponent(trackKey);
-    const prev = await (await db(`scores?track_key=eq.${key2}&player=eq.${uid}&select=time,phys_ver`)).json();
-    let best = simTime;
-    let improved = true;
-    if (Array.isArray(prev) && prev.length && prev[0].phys_ver === physVer && prev[0].time <= simTime) {
-      best = prev[0].time;
-      improved = false;
-    }
-    if (improved) {
-      const up = await db("scores", {
-        method: "POST",
-        headers: {
-          Prefer: "resolution=merge-duplicates,return=minimal"
-        },
-        body: JSON.stringify({
-          track_key: trackKey,
-          player: uid,
-          time: simTime,
-          inputs,
-          phys_ver: physVer,
-          track_name: String(res.name ?? "").slice(0, 60),
-          updated_at: (/* @__PURE__ */ new Date()).toISOString()
-        })
-      });
-      if (!up.ok) return json(500, {
-        error: "Enregistrement impossible."
-      });
-    }
-    const base = `track_key=eq.${key2}&phys_ver=eq.${physVer}`;
-    const before = await count(`${base}&time=lt.${best}`);
-    const total = await count(base);
-    return json(200, {
-      ok: true,
-      improved,
-      best,
-      rank: before + 1,
-      total
-    });
-  } catch (e) {
-    return json(500, {
-      error: String(e?.message ?? e)
-    });
+    const range = r.headers.get("content-range") ?? "*/0";
+    return parseInt(range.split("/")[1] ?? "0", 10) || 0;
   }
-});
+  const hits = /* @__PURE__ */ new Map();
+  function tooFast(uid) {
+    const t = now();
+    const recent = (hits.get(uid) ?? []).filter((x) => t - x < rateLimit.windowMs);
+    if (recent.length >= rateLimit.max) {
+      hits.set(uid, recent);
+      return Math.ceil((rateLimit.windowMs - (t - recent[0])) / 1e3);
+    }
+    recent.push(t);
+    hits.set(uid, recent);
+    if (hits.size > 5e3) {
+      for (const [k, v] of hits) if (!v.some((x) => t - x < rateLimit.windowMs)) hits.delete(k);
+    }
+    return 0;
+  }
+  return async function handle(req) {
+    if (req.method === "OPTIONS") return new Response("ok", {
+      headers: cors
+    });
+    if (req.method !== "POST") return json(405, {
+      error: "M\xE9thode non autoris\xE9e."
+    });
+    try {
+      if (!supabaseUrl || !serviceKey) return json(500, {
+        error: "Fonction mal configur\xE9e (cl\xE9s Supabase absentes)."
+      });
+      const declared = Number(req.headers.get("content-length") ?? 0);
+      if (declared > MAX_BODY_CHARS) return json(413, {
+        error: "Requ\xEAte trop volumineuse."
+      });
+      const ures = await fetchImpl(`${supabaseUrl}/auth/v1/user`, {
+        headers: {
+          Authorization: req.headers.get("Authorization") ?? "",
+          apikey: serviceKey
+        }
+      });
+      if (!ures.ok) return json(401, {
+        error: "Non connect\xE9."
+      });
+      const user = await ures.json();
+      const uid = String(user.id ?? "");
+      if (!/^[0-9a-f-]{36}$/.test(uid)) return json(401, {
+        error: "Non connect\xE9."
+      });
+      const wait = tooFast(uid);
+      if (wait) return json(429, {
+        error: `Trop de courses envoy\xE9es : r\xE9essaie dans ${wait} s.`
+      }, {
+        "Retry-After": String(wait)
+      });
+      const text = await req.text();
+      if (text.length > MAX_BODY_CHARS) return json(413, {
+        error: "Requ\xEAte trop volumineuse."
+      });
+      let body;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        return json(400, {
+          error: "Requ\xEAte invalide."
+        });
+      }
+      const { trackKey, code = "", inputs, time, physVer } = body ?? {};
+      if (typeof trackKey !== "string" || trackKey.length > 80 || typeof inputs !== "string" || typeof time !== "number" || !Number.isFinite(time) || !Number.isInteger(physVer)) {
+        return json(400, {
+          error: "Requ\xEAte invalide."
+        });
+      }
+      if (typeof code !== "string" || code.length > MAX_TRACK_CODE_CHARS) return json(400, {
+        error: "Code de circuit invalide."
+      });
+      const res = verifyRun({
+        trackKey,
+        code,
+        inputs,
+        time,
+        physVer
+      });
+      if (!res.ok || typeof res.time !== "number") return json(422, {
+        error: res.error ?? "Course non confirm\xE9e.",
+        ...res.versionMismatch ? {
+          versionMismatch: true
+        } : {}
+      });
+      const simTime = res.time;
+      const prof = await (await db(`players?id=eq.${uid}&select=id`)).json();
+      if (!Array.isArray(prof) || !prof.length) return json(400, {
+        error: "Profil pilote manquant."
+      });
+      const key2 = encodeURIComponent(trackKey);
+      const prev = await (await db(`scores?track_key=eq.${key2}&player=eq.${uid}&select=time,phys_ver`)).json();
+      let best = simTime;
+      let improved = true;
+      if (Array.isArray(prev) && prev.length && prev[0].phys_ver === physVer && prev[0].time <= simTime) {
+        best = prev[0].time;
+        improved = false;
+      }
+      if (improved) {
+        const up = await db("scores", {
+          method: "POST",
+          headers: {
+            Prefer: "resolution=merge-duplicates,return=minimal"
+          },
+          body: JSON.stringify({
+            track_key: trackKey,
+            player: uid,
+            time: simTime,
+            inputs,
+            phys_ver: physVer,
+            track_name: String(res.name ?? "").slice(0, 60),
+            updated_at: new Date(now()).toISOString()
+          })
+        });
+        if (!up.ok) return json(500, {
+          error: "Enregistrement impossible."
+        });
+      }
+      const base = `track_key=eq.${key2}&phys_ver=eq.${physVer}`;
+      const before = await count(`${base}&time=lt.${best}`);
+      const total = await count(base);
+      return json(200, {
+        ok: true,
+        improved,
+        best,
+        rank: before + 1,
+        total
+      });
+    } catch (e) {
+      log("submit-score :", e);
+      return json(500, {
+        error: "Erreur interne."
+      });
+    }
+  };
+}
+
+// supabase/functions/submit-score/server.ts
+Deno.serve(createHandler({
+  supabaseUrl: Deno.env.get("SUPABASE_URL") ?? "",
+  serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
+}));

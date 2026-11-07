@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Teste supabase/etape4-comptes.sql sur un PostgreSQL local (faux schéma « auth » de Supabase).
+# Teste les étapes SQL de supabase/ (communauté, classements, comptes, durcissement) sur un PostgreSQL local (faux schéma « auth » de Supabase).
 # Usage : PGHOST=/tmp PGPORT=54329 PGUSER=postgres tools/test-accounts-sql.sh   (pas inclus dans npm test : il faut un serveur PostgreSQL)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -16,7 +16,7 @@ create table auth.users (id uuid primary key default gen_random_uuid(), email te
 create function auth.uid() returns uuid language sql stable as $f$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $f$;
 grant usage on schema auth to anon, authenticated;
 SQL
-for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
+for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
 $P -d $DB <<'SQL'
 \set ON_ERROR_STOP off
 create function public.as_user(u uuid) returns void language plpgsql as $$ begin perform set_config('request.jwt.claim.sub', u::text, false); end $$;
@@ -85,8 +85,24 @@ select public.as_user('00000000-0000-0000-0000-0000000000b1');
 do $$ begin perform delete_account(); exception when others then null; end $$;
 reset role;
 select public.check('un invité ne peut pas « supprimer son compte »', exists (select 1 from auth.users where id='00000000-0000-0000-0000-0000000000b1'));
--- 9. aucun mot de passe en clair dans nos tables
+-- 9. durcissement (étape 5) : les commandes enregistrées ne sont plus lisibles, plafond de temps par pilote
+reset role;
+insert into scores (track_key, player, time, inputs, phys_ver) values ('b-essai-1', '00000000-0000-0000-0000-0000000000b1', 20.5, 'AAAA', 26);
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000b1');
+do $$ declare refuse boolean := false; begin
+  begin perform inputs from scores limit 1; exception when insufficient_privilege then refuse := true; end;
+  perform public.check('étape 5 : la colonne « inputs » n''est plus lisible par le jeu', refuse);
+end $$;
+select public.check('étape 5 : les classements restent lisibles (colonnes utiles)', (select count(*) from scores where track_key = 'b-essai-1' and time = 20.5) = 1);
+reset role;
+do $$ declare refuse boolean := false; begin
+  for i in 1..1999 loop insert into scores (track_key, player, time, inputs, phys_ver) values ('k' || i, '00000000-0000-0000-0000-0000000000b1', 30, 'A', 26); end loop;
+  begin insert into scores (track_key, player, time, inputs, phys_ver) values ('k-de-trop', '00000000-0000-0000-0000-0000000000b1', 30, 'A', 26); exception when others then refuse := true; end;
+  perform public.check('étape 5 : 2000 temps au plus par pilote', refuse and (select count(*) from scores where player = '00000000-0000-0000-0000-0000000000b1') = 2000);
+end $$;
+-- 10. aucun mot de passe en clair dans nos tables
 select public.check('aucune colonne mot de passe dans le schéma public', not exists (select 1 from information_schema.columns where table_schema='public' and column_name ilike '%pass%'));
 select case when ok then '  ok   ' else '  FAIL ' end || name from public.res order by ok, name;
-select 'RESULT ' || case when bool_and(ok) and count(*) = 25 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
+select 'RESULT ' || case when bool_and(ok) and count(*) = 28 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
 SQL

@@ -9,8 +9,9 @@
     "sim": "node tools/sim.mjs",
     "sw": "node tools/gen-sw.mjs",
     "build:function": "node tools/build-function.mjs",
-    "lint": "eslint .",
+    "lint": "npx --yes eslint@10.1.0 .",
     "test": "node tools/run-tests.mjs",
+    "test:deno": "npx --yes deno@2.9.6 run -A tools/test-dmath.mjs && npx --yes deno@2.9.6 run -A tools/phys-fingerprint.mjs",
     "test:sql": "bash tools/test-accounts-sql.sh",
     "test:browser": "node tools/test-browser.mjs",
     "fingerprint": "node tools/phys-fingerprint.mjs"
