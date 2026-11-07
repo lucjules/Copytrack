@@ -1,6 +1,6 @@
 {
   "name": "copytrack",
-  "version": "0.9.11",
+  "version": "0.9.12",
   "private": true,
   "type": "module",
   "description": "Jeu de course contre-la-montre low-poly avec éditeur de circuits, dans le navigateur.",
@@ -8,6 +8,7 @@
     "start": "node tools/serve.mjs",
     "sim": "node tools/sim.mjs",
     "sw": "node tools/gen-sw.mjs",
+    "docs": "node tools/gen-docs.mjs",
     "build:function": "node tools/build-function.mjs",
     "lint": "npx --yes eslint@10.1.0 .",
     "test": "node tools/run-tests.mjs",

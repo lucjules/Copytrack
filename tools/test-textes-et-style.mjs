@@ -1,4 +1,4 @@
-// Tests de la bêta 0.9.5 (audit : problèmes visibles en jeu, texte, CSS, vérificateur) : node tools/test-v095.mjs   (npm test)
+// Textes affichés (version, turbo, effet de vitesse, tutoriel), vérificateur de l'éditeur (checkTrack) et feuille de style (classes et identifiants vivants) : node tools/test-textes-et-style.mjs   (npm test)
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -92,4 +92,4 @@ test('palette de l’éditeur repliable, choix mémorisé', () => {
   assert.match(css, /\.ed-palette\.folded/);
 });
 
-await finish('Tous les tests de la bêta 0.9.5 passent.');
+await finish('Tous les tests des textes et du style passent.');

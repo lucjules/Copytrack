@@ -1,4 +1,4 @@
-// Tests de la Phase 3 : node tools/test-phase3.mjs   (npm test)
+// Pièces et règles spéciales : hauteur, essai sans arrivée, anneaux, visée par rayon, décorations libres, verre fragile, tunnel, unités : node tools/test-pieces-speciales.mjs   (npm test)
 //  - visée par rayon (pièce exacte, point de pose libre), décorations libres, Maj + souris sur l'axe Y ;
 //  - anneaux posés sur des cases occupées, hauteur maximale, essai sans arrivée, gravité inversée au départ ;
 //  - revêtements : verre fragile (compte à rebours), unités, tapis ±200 km/h, vent, eau / plaque bateau / départ, sable et boue retirés ;

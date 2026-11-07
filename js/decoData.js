@@ -1,5 +1,3 @@
-import { PACK, PACK_IDS } from './decoPackData.js';
-
 // Données des décorations (sans dépendance au rendu).
 //
 // DEUX choses seulement à tenir à jour pour ajouter une décoration :
@@ -7,6 +5,8 @@ import { PACK, PACK_IDS } from './decoPackData.js';
 //      un test (tools/test-registres.mjs) en garde une empreinte.
 //   2. une ligne [identifiant, nom, icône] dans un groupe de BASE (ci-dessous) ou dans PACK (decoPackData.js) ;
 //      sa géométrie s'écrit dans decos.js (ou decoPack.js). Catégories, noms et icônes de l'éditeur en sont déduits.
+import { PACK, PACK_IDS } from './decoPackData.js';
+
 export const DECO_ORDER = [
   'sign_left', 'sign_right', 'sign_up', 'sign_stop', 'sign_speed', 'sign_warn', 'banner',
   'cube', 'sphere', 'cylinder', 'cone', 'pyramid', 'arch',

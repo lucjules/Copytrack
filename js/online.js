@@ -4,11 +4,9 @@
 // de la base (voir supabase/etape1-communaute.sql). Sans réseau, le jeu marche
 // normalement et ces fonctions répondent simplement « hors ligne ».
 import { getJSON, setJSON } from './storage.js';
+import { CONFIG } from './config.js';
 
-export const ONLINE = {
-  url: 'https://vakhnbmqnwvkekwuntbz.supabase.co',
-  key: 'sb_publishable_wBsMno7Qs4N-dM7usIm5OQ_0aEv-N1o',
-};
+export const ONLINE = CONFIG.supabase;      // { url, key } : voir js/config.js
 
 // Limites de la base (voir supabase/etape1-communaute.sql).
 const MAX_PUBLISH_CHARS = 100000;

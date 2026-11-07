@@ -1,4 +1,4 @@
-// Tests de la Phase 2 : node tools/test-phase2.mjs   (npm test)
+// Familles de pièces, schéma JSON du circuit, courbes, options, mouvements, revêtements : node tools/test-familles.mjs   (npm test)
 //  - familles et caractéristiques de pièces ; anciens codes toujours lisibles ; nouveaux champs optionnels ;
 //  - géométrie des pièces paramétriques (courbes montantes, très grand virage, loopings ×2 / ×3) ;
 //  - options : checkpoint (portique / anneau), thème, couleurs, 2e revêtement de bifurcation ;

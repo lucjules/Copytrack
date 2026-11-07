@@ -1,4 +1,4 @@
-// Tests de la bêta 0.9.3 : node tools/test-v093.mjs   (npm test)
+// Pentes descendantes, raccords de pente, orientation (sol, murs, plafond), transitions, pièces générées : node tools/test-pentes-murs.mjs   (npm test)
 //  pentes descendantes et raccords doux, orientation (sol / mur gauche / mur droit / plafond) comme option des lignes et des virages,
 //  transitions d'orientation, conversion des anciennes pièces 90°, audit du graphe des pièces, conduite (pentes, murs, plafond), aléatoire.
 import assert from 'node:assert/strict';
@@ -507,4 +507,4 @@ test('150 circuits tirés au hasard (pentes douces, virages, hélices, murs, pla
   assert.deepEqual(bad, [], '\n' + bad.join('\n'));
 });
 
-await finish('Tous les tests de la bêta 0.9.3 passent.');
+await finish('Tous les tests des pentes et des murs passent.');

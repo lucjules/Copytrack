@@ -1,4 +1,4 @@
-// Tests de la bêta 0.9.4 (feeling « technique ») : node tools/test-v094.mjs   (npm test)
+// Accélération et vitesse de pointe, chocs contre les murs, décrochage sur les murs à 90° (le « feeling » technique) : node tools/test-vitesse-et-murs.mjs   (npm test)
 //  accélération longue et vitesse de pointe élevée, murs punitifs, décrochage sur les murs à 90°.
 import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
@@ -152,4 +152,4 @@ test('le fantôme d’or (pilote automatique) finit les 66 circuits avec la nouv
   assert.deepEqual(bad, []);
 });
 
-await finish('Tous les tests de la bêta 0.9.4 passent.');
+await finish('Tous les tests de la vitesse et des murs passent.');
