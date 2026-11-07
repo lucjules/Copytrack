@@ -4,7 +4,6 @@ import { defaultKeys, defaultPad } from '../input.js';
 import { GarageSession } from '../garage.js';
 import { profile, saveProfile, addCoins } from '../profile.js';
 import { $ } from '../dom.js';
-import { EditorSession } from '../editor.js';
 import { checkPseudo } from '../account.js';
 import { clearRecords } from '../storage.js';
 import { fovText } from './shared.js';
@@ -15,9 +14,9 @@ export const wiringMethods = {
       const btn = e.target.closest('[data-action]');
       if (btn) { this.audio.click(); this._action(btn.dataset.action); return; }
       const ed = e.target.closest('[data-ed]');
-      if (ed && this.session instanceof EditorSession) { this.audio.click(); this._editorAction(ed.dataset.ed); return; }
+      if (ed && this.session && this.session.kind === 'editor') { this.audio.click(); this._editorAction(ed.dataset.ed); return; }
       const sel = e.target.closest('[data-sel]');
-      if (sel && this.session instanceof EditorSession) { this.audio.click(); this.session.selAction(sel.dataset.sel); }
+      if (sel && this.session && this.session.kind === 'editor') { this.audio.click(); this.session.selAction(sel.dataset.sel); }
     });
 
     $('opt-volume').addEventListener('input', (e) => {

@@ -25,6 +25,7 @@ function validTool(t) {
 
 export class EditorSession {
   constructor(app, state = {}) {
+    this.kind = 'editor';      // (l'application reconnaît ses sessions sans importer leur module : l'éditeur est chargé à la demande)
     this.app = app;
     this.state = state;
     if (state.code) {

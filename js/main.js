@@ -11,7 +11,6 @@ import { GameAudio } from './audio.js';
 import { UI } from './ui.js';
 import { $, esc } from './dom.js';
 import { RaceSession } from './race.js';
-import { EditorSession } from './editor.js';
 import { BUILTIN_TRACKS, buildBuiltin } from './tracks.js';
 import { Track, hashString } from './track.js';
 import { VERSION, PHYS_VER } from './version.js';
@@ -94,7 +93,7 @@ class App {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    if (this.session instanceof EditorSession) this.session._refreshUI();
+    if (this.session && this.session.kind === 'editor') this.session._refreshUI();
     const portrait = h > w && document.body.classList.contains('touch');
     $('rotate-hint').classList.toggle('hidden', !(portrait && (this.mode === 'race' || this.mode === 'editor')));
     $('fs-btn').classList.toggle('hidden', !(document.body.classList.contains('touch') && (this.mode === 'race' || this.mode === 'menu') && !document.fullscreenElement));

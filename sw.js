@@ -1,7 +1,7 @@
 // Service worker généré par tools/gen-sw.mjs : ne pas modifier à la main.
 // Jeu hors ligne : les fichiers du jeu sont gardés en cache ; le réseau reste prioritaire
 // pour récupérer les mises à jour quand il est disponible.
-const CACHE = 'copytrack-ab37274b84';
+const CACHE = 'copytrack-14f9b2e0ed';
 const FILES = [
   "./",
   "assets/README.txt",
@@ -109,7 +109,6 @@ const FILES = [
   "js/vendor/THREE_LICENSE.txt",
   "js/vendor/TransformControls.js",
   "js/vendor/three.module.min.js",
-  "js/verify.js",
   "js/version.js",
   "js/welcome.js",
   "manifest.webmanifest"
@@ -128,7 +127,8 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   e.respondWith(
     fetch(req).then((res) => {
-      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
+      // Seules les réponses complètes (200) se gardent : une réponse partielle (206, lecture du MP3 par morceaux) ferait échouer cache.put.
+      if (res.status === 200) { const copy = res.clone(); e.waitUntil(caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {})); }
       return res;
     }).catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r || caches.match('./index.html'))),
   );

@@ -13,8 +13,94 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap" rel="stylesheet">
+  <!-- Police : chargée sans bloquer le premier affichage (texte de secours d'abord, police ensuite : display=swap) -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap"></noscript>
   <link rel="stylesheet" href="css/style.css">
+  <!-- modulepreload:start (généré par tools/gen-sw.mjs : ne pas modifier à la main) -->
+  <link rel="modulepreload" href="js/main.js">
+  <link rel="modulepreload" href="js/vendor/three.module.min.js">
+  <link rel="modulepreload" href="js/scenery.js">
+  <link rel="modulepreload" href="js/trackMesh.js">
+  <link rel="modulepreload" href="js/particles.js">
+  <link rel="modulepreload" href="js/input.js">
+  <link rel="modulepreload" href="js/garage.js">
+  <link rel="modulepreload" href="js/cosmetics.js">
+  <link rel="modulepreload" href="js/profile.js">
+  <link rel="modulepreload" href="js/audio.js">
+  <link rel="modulepreload" href="js/ui.js">
+  <link rel="modulepreload" href="js/dom.js">
+  <link rel="modulepreload" href="js/race.js">
+  <link rel="modulepreload" href="js/tracks.js">
+  <link rel="modulepreload" href="js/track.js">
+  <link rel="modulepreload" href="js/version.js">
+  <link rel="modulepreload" href="js/online.js">
+  <link rel="modulepreload" href="js/account.js">
+  <link rel="modulepreload" href="js/welcome.js">
+  <link rel="modulepreload" href="js/career.js">
+  <link rel="modulepreload" href="js/storage.js">
+  <link rel="modulepreload" href="js/quality.js">
+  <link rel="modulepreload" href="js/app/multi.js">
+  <link rel="modulepreload" href="js/app/community.js">
+  <link rel="modulepreload" href="js/app/screens.js">
+  <link rel="modulepreload" href="js/app/settings.js">
+  <link rel="modulepreload" href="js/app/profile.js">
+  <link rel="modulepreload" href="js/app/wiring.js">
+  <link rel="modulepreload" href="js/app/editorFlow.js">
+  <link rel="modulepreload" href="js/geo.js">
+  <link rel="modulepreload" href="js/constants.js">
+  <link rel="modulepreload" href="js/pieces.js">
+  <link rel="modulepreload" href="js/themes.js">
+  <link rel="modulepreload" href="js/scenery/shared.js">
+  <link rel="modulepreload" href="js/scenery/decor.js">
+  <link rel="modulepreload" href="js/decos.js">
+  <link rel="modulepreload" href="js/decoData.js">
+  <link rel="modulepreload" href="js/obstacles.js">
+  <link rel="modulepreload" href="js/obstacleMesh.js">
+  <link rel="modulepreload" href="js/trackGeometry.js">
+  <link rel="modulepreload" href="js/carModel.js">
+  <link rel="modulepreload" href="js/music.js">
+  <link rel="modulepreload" href="js/medals.js">
+  <link rel="modulepreload" href="js/hudMessages.js">
+  <link rel="modulepreload" href="js/camflip.js">
+  <link rel="modulepreload" href="js/net/snapshot.js">
+  <link rel="modulepreload" href="js/simulation.js">
+  <link rel="modulepreload" href="js/autopilot.js">
+  <link rel="modulepreload" href="js/skids.js">
+  <link rel="modulepreload" href="js/trail.js">
+  <link rel="modulepreload" href="js/replay.js">
+  <link rel="modulepreload" href="js/race/shared.js">
+  <link rel="modulepreload" href="js/race/camera.js">
+  <link rel="modulepreload" href="js/race/ghosts.js">
+  <link rel="modulepreload" href="js/race/net.js">
+  <link rel="modulepreload" href="js/race/finish.js">
+  <link rel="modulepreload" href="js/race/replayMode.js">
+  <link rel="modulepreload" href="js/dmath.js">
+  <link rel="modulepreload" href="js/ribbons.js">
+  <link rel="modulepreload" href="js/track/shared.js">
+  <link rel="modulepreload" href="js/track/surfaces.js">
+  <link rel="modulepreload" href="js/track/edit.js">
+  <link rel="modulepreload" href="js/cloudsave.js">
+  <link rel="modulepreload" href="js/net/room.js">
+  <link rel="modulepreload" href="js/editorTools.js">
+  <link rel="modulepreload" href="js/daily.js">
+  <link rel="modulepreload" href="js/app/shared.js">
+  <link rel="modulepreload" href="js/decoPack.js">
+  <link rel="modulepreload" href="js/decoPrimitives.js">
+  <link rel="modulepreload" href="js/decoPackData.js">
+  <link rel="modulepreload" href="js/AudioEngine.js">
+  <link rel="modulepreload" href="js/physics.js">
+  <link rel="modulepreload" href="js/raceLogic.js">
+  <link rel="modulepreload" href="js/physics/specs.js">
+  <link rel="modulepreload" href="js/mathutil.js">
+  <link rel="modulepreload" href="js/physics/ribbon.js">
+  <link rel="modulepreload" href="js/remoteCar.js">
+  <link rel="modulepreload" href="js/net/signaling.js">
+  <link rel="modulepreload" href="js/net/transport.js">
+  <link rel="modulepreload" href="js/physics/walls.js">
+  <link rel="modulepreload" href="js/physics/obstacles.js">
+  <link rel="modulepreload" href="js/net/interp.js">
+  <!-- modulepreload:end -->
 </head>
 <body>
   <canvas id="gl"></canvas>

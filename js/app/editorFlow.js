@@ -4,18 +4,24 @@ import { keyLabel } from '../input.js';
 import { medalIcon } from '../ui.js';
 import { esc } from '../dom.js';
 import { MEDALS } from '../medals.js';
-import { EditorSession } from '../editor.js';
 import { Track, hashString } from '../track.js';
 import { getEditorDraft, formatTime } from '../storage.js';
 export const editorFlowMethods = {
-  openEditor(state) {
-    this._dispose();
-    this.mode = 'editor';
-    this.ui.showScreen(null);
-    this.ui.setMode('editor');
-    this.session = new EditorSession(this, state || getEditorDraft() || {});
-    this.audio.music.play('menu');
-    this._resize();
+  // L'éditeur (et l'inspecteur, les outils de remplissage, les familles de pièces…) pèse un quart du code du jeu : il n'est chargé qu'à la première
+  // ouverture, pas au démarrage. Un second appel pendant le chargement est ignoré.
+  async openEditor(state) {
+    if (this._openingEditor) return;
+    this._openingEditor = true;
+    try {
+      const { EditorSession } = await import('../editor.js');
+      this._dispose();
+      this.mode = 'editor';
+      this.ui.showScreen(null);
+      this.ui.setMode('editor');
+      this.session = new EditorSession(this, state || getEditorDraft() || {});
+      this.audio.music.play('menu');
+      this._resize();
+    } finally { this._openingEditor = false; }
   },
 
   _keysOf(action) {

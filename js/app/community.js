@@ -3,7 +3,6 @@
 import { medalIcon } from '../ui.js';
 import { $, esc } from '../dom.js';
 import { MEDALS, medalFor } from '../medals.js';
-import { EditorSession } from '../editor.js';
 import { Track } from '../track.js';
 import { PHYS_VER } from '../version.js';
 import { thumbnail } from '../editorTools.js';
@@ -58,7 +57,7 @@ export const communityMethods = {
       return false;
     };
     const actions = [];
-    if (!verified && this.session instanceof EditorSession) actions.push({ label: '✔ Vérifier d’abord', primary: true, onClick: () => { this.session.verify(); } });
+    if (!verified && this.session && this.session.kind === 'editor') actions.push({ label: '✔ Vérifier d’abord', primary: true, onClick: () => { this.session.verify(); } });
     if (verified && tr) actions.push({ label: '🌐 Publier dans la communauté', primary: true, onClick: () => { this.publishTrack(tr); return true; } });
     actions.push({ label: 'Copier le code', onClick: () => copy(code, 'Code copié !') });
     actions.push({ label: 'Copier le lien', onClick: () => copy(url, 'Lien copié !') });
