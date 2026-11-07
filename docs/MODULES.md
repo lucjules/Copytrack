@@ -39,6 +39,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `geo.js` | Petit constructeur de géométrie low-poly (triangles non indexés + couleurs par sommet => rendu "facetté" en un seul appel de dessin). |
 | `ghostFormat.js` | Format des fantômes enregistrés : une pose (x, y, z + quaternion) tous les GHOST_EVERY pas de course, plus la liste des changements de véhicule. |
 | `hudMessages.js` | Messages au centre de l'écran en course : courts, triés par importance, jamais empilés. Minimaliste. |
+| `i18n.js` | Internationalisation (français / anglais) : noyau, sans aucune dépendance au navigateur (testé sous Node). |
 | `input.js` | Entrées : clavier (codes physiques => QWERTY et AZERTY), manette, tactile. |
 | `inspector.js` | Mode Inspection de l'éditeur : sélection d'une pièce ou d'une décoration, panneau de propriétés généré selon l'objet, et gizmos 3D (TransformControls : flèches de déplacement, cercles de rotation). |
 | `joins.js` | Raccords d'orientation (0.9.3) : une route sur un mur ne se raccorde pas directement au sol, il faut une transition. |
@@ -106,6 +107,26 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `selection.js` | Sélection rectangulaire, copier / couper / coller, vue par niveau et repérage des problèmes. |
 | `shared.js` | Éléments partagés par les familles de méthodes de EditorSession (voir editor.js). |
 | `tools.js` | Outils d'édition : poser, peindre, remplir, gomme, pipette, options des pièces, décorations, niveau. |
+
+## `js/i18n/`
+
+| Fichier | Rôle |
+| --- | --- |
+| `boot.js` | Démarrage de l'internationalisation : choix de la langue, chargement du dictionnaire, traducteur DOM, sélecteurs de langue. |
+| `dom.js` | Traducteur DOM : traduit à la volée ce que le jeu écrit dans la page (voir i18n.js pour le principe). |
+| `en.js` | Dictionnaire anglais : l'assemblage des dictionnaires par domaine (js/i18n/en/*.js). Chargé à la demande (voir i18n/boot.js). |
+
+## `js/i18n/en/`
+
+| Fichier | Rôle |
+| --- | --- |
+| `data.js` | Dictionnaire anglais — les données du jeu : noms des circuits intégrés, libellés des commandes et des touches. |
+| `editor.js` | Dictionnaire anglais — l'éditeur de circuits : barre d'outils, palette, options, niveau, sélection, prefabs, raccourcis, messages. |
+| `online.js` | Dictionnaire anglais — la vie autour de la course : Académie, récompenses, garage, communauté, multijoueur, erreurs du serveur. |
+| `pieces.js` | Dictionnaire anglais — le catalogue de l'éditeur : pièces de piste, familles et caractéristiques, inspecteur, décorations. |
+| `race.js` | Dictionnaire anglais — la course : messages au centre de l'écran, objectifs, carrière, arrivée, replay, caméras, décors, erreurs de circuit. |
+| `shell.js` | Dictionnaire anglais — l'enveloppe du jeu : accueil, menus, profil, options, commandes, fenêtres communes. |
+| `tracks.js` | Dictionnaire anglais — les descriptions des circuits intégrés (infobulles des cartes de la carrière). |
 
 ## `js/inspector/`
 

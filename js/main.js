@@ -18,6 +18,7 @@ import { VERSION, PHYS_VER } from './version.js';
 import { online } from './online.js';
 import { account } from './account.js';
 import { runWelcome } from './welcome.js';
+import { initI18n } from './i18n/boot.js';
 import { goalFor, nextBuiltinIndex } from './career.js';
 import { loadSettings, saveSettings, getRecord, saveRecord, saveMyTrack, newId, formatTime, purgeOldRecords, getJSON, setJSON } from './storage.js';
 import { Telemetry } from './telemetry.js';
@@ -365,6 +366,8 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 
 (async () => {
   try {
+    // 0. La langue d'abord (réglage de l'appareil) : l'écran d'accueil lui-même est traduit.
+    await initI18n();
     // 1. Pseudo d'abord : invité (session) ou compte. Le menu et le jeu ne se chargent qu'ensuite.
     const identity = await runWelcome();
     // 2. Le jeu, avec la progression du bon joueur (la portée de stockage est déjà choisie).

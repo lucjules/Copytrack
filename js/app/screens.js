@@ -10,6 +10,7 @@ import { PIECES } from '../pieces.js';
 import { thumbnail } from '../editorTools.js';
 import { dailyChallenge, dayKey } from '../daily.js';
 import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked, chapterState, careerSummary, prerequisiteOf, nextBuiltinIndex } from '../career.js';
+import { locale } from '../i18n.js';
 import { getRecord, listMyTracks, deleteMyTrack, formatTime } from '../storage.js';
 export const screenMethods = {
   showMenu(screen = 'menu') {
@@ -128,7 +129,7 @@ export const screenMethods = {
       box.innerHTML = `<div class="cs-main"><b>${sm.pct} %</b><span>de la carrière</span></div>
         <div class="cs-bar"><i style="width:${sm.pct}%"></i></div>
         <div class="cs-stats">${sm.medals} / ${sm.total} médailles · ${sm.crystal} cristal · ${sm.goals} / ${sm.total} objectifs bonus</div>
-        ${sm.complete ? '<p class="cs-msg">✦ Carrière complète : ${sm.total} cristaux et ${sm.total} objectifs. Il n’y a plus rien à finir ici.</p>' : sm.finished ? '<p class="cs-msg">🏁 Carrière terminée : une médaille sur chaque circuit. Reste les cristaux et les objectifs bonus.</p>' : ''}`;
+        ${sm.complete ? `<p class="cs-msg">✦ Carrière complète : ${sm.total} cristaux et ${sm.total} objectifs. Il n’y a plus rien à finir ici.</p>` : sm.finished ? '<p class="cs-msg">🏁 Carrière terminée : une médaille sur chaque circuit. Reste les cristaux et les objectifs bonus.</p>' : ''}`;
       list.appendChild(box);
     }
     // Défi du jour
@@ -257,7 +258,7 @@ export const screenMethods = {
       card.className = 'card';
       card.innerHTML = `${track ? `<img class="thumb" alt="" src="${thumbnail(track, 'u-' + entry.code.length + '-' + hashString(entry.code))}">` : ''}
         <h3>${esc(entry.name)}</h3>
-        <div class="meta">${track ? track.tiles.length : '?'} pièces${track && track.laps > 1 ? ` · ${track.laps} tours` : ''} · modifié le ${new Date(entry.updated || Date.now()).toLocaleDateString('fr-FR')}</div>
+        <div class="meta">${track ? track.tiles.length : '?'} pièces${track && track.laps > 1 ? ` · ${track.laps} tours` : ''} · modifié le ${new Date(entry.updated || Date.now()).toLocaleDateString(locale())}</div>
         <div class="best">${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}</div>
         <div class="actions">
           <button class="btn primary" data-a="play">Jouer</button>

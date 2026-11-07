@@ -866,6 +866,10 @@ body.touch kbd { display: none; }
 .welcome.hidden { display: none; }
 .welcome-card { width: min(440px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px 22px 20px; backdrop-filter: blur(6px); text-align: center; }
 .welcome-card .logo { font-size: 30px; margin-bottom: 4px; }
+.wl-lang { display: flex; justify-content: flex-end; gap: 4px; margin: -8px -8px 4px 0; }
+.wl-lang button { font: inherit; font-size: 12px; color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 3px 9px; cursor: pointer; }
+.wl-lang button[aria-pressed="true"] { color: var(--text); background: var(--panel-2); border-color: var(--line); }
+.wl-lang button:focus-visible { outline: 2px solid var(--accent, #ffd23e); outline-offset: 1px; }
 .welcome-card h2 { margin: 6px 0 14px; font-size: 20px; }
 .wl-tabs { display: flex; gap: 4px; margin-bottom: 14px; background: rgba(0, 0, 0, 0.25); border-radius: 10px; padding: 4px; }
 .wl-tabs button { flex: 1; font: inherit; font-size: 14px; color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 8px 6px; cursor: pointer; }

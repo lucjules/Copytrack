@@ -4,6 +4,7 @@ import { profile, exportCode, parseCode, applySave } from '../profile.js';
 import { $, esc } from '../dom.js';
 import { account } from '../account.js';
 import { loadSettings } from '../storage.js';
+import { locale } from '../i18n.js';
 export const profileMethods = {
   async _renderProfile() {
     const tab = ['account', 'saves', 'options', 'controls'].includes(this.profileTab) ? this.profileTab : 'account';
@@ -78,7 +79,7 @@ export const profileMethods = {
       box.querySelector('[data-a="acct"]').onclick = () => { account.leaveGuest(); location.reload(); };
       return;
     }
-    const label = () => ({ idle: 'en attente', syncing: 'synchronisation…', ok: account.lastSync ? 'à jour (' + new Date(account.lastSync).toLocaleTimeString('fr-FR') + ')' : 'à jour', offline: 'hors ligne : reprise dès le retour du réseau', error: 'erreur : ' + account.lastError }[account.status] || '');
+    const label = () => ({ idle: 'en attente', syncing: 'synchronisation…', ok: account.lastSync ? 'à jour (' + new Date(account.lastSync).toLocaleTimeString(locale()) + ')' : 'à jour', offline: 'hors ligne : reprise dès le retour du réseau', error: 'erreur : ' + account.lastError }[account.status] || '');
     box.innerHTML = `<div class="meta">Compte · <b>${esc(account.username)}</b> · sauvegarde cloud <span id="acct-st"></span></div>
       <div class="row">
         <button class="btn" data-a="sync">Synchroniser maintenant</button>
@@ -130,7 +131,7 @@ export const profileMethods = {
   async _askImport(text) {
     let obj;
     try { obj = await parseCode(text); } catch (e) { this.ui.flash(e.message); return; }
-    const when = obj.t ? new Date(obj.t).toLocaleString('fr-FR') : '?';
+    const when = obj.t ? new Date(obj.t).toLocaleString(locale()) : '?';
     this.ui.modal({
       title: 'Restaurer cette sauvegarde ?',
       body: `<p>Joueur <b>${esc(obj.id || '?')}</b>, du ${esc(when)}.</p><p><b>Fusionner</b> : meilleurs records, circuits réunis. <b>Remplacer</b> : efface tes données.</p>`,

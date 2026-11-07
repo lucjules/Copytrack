@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.20** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.9.21** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -95,6 +95,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 - **Pièces (monnaie)** gagnées selon la médaille et les objectifs bonus. **Profil** : un code joueur contient toute la progression.
 - **Musique** synthétisée en direct, une ambiance par décor ; sons sans aucun fichier audio.
 - **Profil** (menu principal) : onglets *Compte*, *Sauvegardes*, *Options* et *Commandes*.
+- **Langues** : **français et anglais** (~1 700 textes traduits : menus, carrière et ses 72 circuits, éditeur, communauté, multijoueur, Académie…). La langue suit le navigateur au premier lancement d'un nouvel appareil (un appareil qui a déjà des données reste en français), se change d'un clic sur l'écran d'accueil ou dans Profil › Options › Langue, et se mémorise par appareil. Un texte sans traduction reste en français : jamais d'écran cassé. Voir `js/i18n.js` pour ajouter une langue.
 - **Options** : volume des effets et de la musique, qualité graphique (Auto, Ultra, Haute, Moyenne, Basse, Potato), compteur d'images, champ de vision, effet de vitesse, tremblements de caméra, **couleurs adaptées au daltonisme**, taille de l'interface, fantômes.
 - **Tutoriel** au premier lancement. Commandes personnalisables (clavier, manette), mobile (boutons ou glisser du pouce), vibrations.
 - **Easter eggs** : à toi de les trouver.
