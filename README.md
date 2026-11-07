@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.13** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.9.14** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -121,6 +121,10 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
    Sans ce script, le jeu fonctionne, simplement sans statistiques.
 
 7. **Relais TURN du multijoueur** (facultatif) : la fonction serveur `ice` (`supabase/functions/ice/index.ts`, générée par `npm run build:function`) donne STUN + TURN à identifiants à durée limitée ; voir `supabase/MULTI.md`.
+
+8. **Fantômes du haut des classements** : `supabase/etape7-fantomes.sql` (à lancer **avant** de redéployer `submit-score`, mais l'ordre n'est pas bloquant : sans les colonnes, la fonction enregistre le temps sans fantôme).
+   La fonction `submit-score` range alors, avec chaque record, le fantôme de la course qu'elle vient de rejouer (positions, jamais les commandes) ; le classement affiche un bouton 👻 pour affronter les dix premiers.
+   Les records d'avant l'étape 7 n'ont pas de fantôme : `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node tools/backfill-ghosts.mjs` leur en fabrique un (ou leur auteur renvoie son temps).
 
 Les scripts sont relançables et testés sur PostgreSQL (`npm run test:sql`).
 

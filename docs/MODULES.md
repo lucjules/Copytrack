@@ -33,6 +33,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `families.js` | Familles de pièces et « caractéristiques » (Phase 2). |
 | `garage.js` | Garage : personnalisation purement visuelle du véhicule (forme, couleurs, LED, dessins, ornements, ailerons, roues). Aucune option ne change les performances. |
 | `geo.js` | Petit constructeur de géométrie low-poly (triangles non indexés + couleurs par sommet => rendu "facetté" en un seul appel de dessin). |
+| `ghostFormat.js` | Format des fantômes enregistrés : une pose (x, y, z + quaternion) tous les GHOST_EVERY pas de course, plus la liste des changements de véhicule. |
 | `hudMessages.js` | Messages au centre de l'écran en course : courts, triés par importance, jamais empilés. Minimaliste. |
 | `input.js` | Entrées : clavier (codes physiques => QWERTY et AZERTY), manette, tactile. |
 | `inspector.js` | Mode Inspection de l'éditeur : sélection d'une pièce ou d'une décoration, panneau de propriétés généré selon l'objet, et gizmos 3D (TransformControls : flèches de déplacement, cercles de rotation). |

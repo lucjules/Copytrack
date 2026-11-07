@@ -6,6 +6,22 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.14 — affronter le top 10 : fantômes des classements en ligne
+
+**`PHYS_VER` inchangé (26)** : records, replays et fantômes sont conservés. **La fonction `submit-score` doit être redéployée** (`npm run build:function`, puis `index.ts`) et `supabase/etape7-fantomes.sql`
+lancé dans Supabase (dans n'importe quel ordre : sans les colonnes, le temps est enregistré sans fantôme).
+
+- **Fantôme du record côté serveur** : la fonction qui rejoue déjà chaque course (pour en vérifier le temps) en tire aussi le fantôme : une pose (position + orientation) tous les 4 pas et les
+  changements de véhicule, au format exact du fantôme enregistré en local. Le fantôme ne contient **jamais les commandes** : il ne permet pas de renvoyer la course d'un autre sous son nom
+  (c'est pourquoi l'étape 5 avait rendu les replays illisibles). Un record d'avant l'étape 7 en reçoit un quand son auteur renvoie le même temps, ou via `tools/backfill-ghosts.mjs`.
+- **Classement** : un bouton 👻 sur chacun des dix premiers (là où le fantôme existe) ; il lance (ou relance) le circuit avec ce rival affiché, étiqueté de son nom et de son temps (jusqu'à trois à la fois
+  côté code), et le jeu indique à l'arrivée de combien tu le bats (ou de combien il reste devant).
+- Lecture : la fonction SQL `get_ghost` (n° 1 à 10 d'un circuit et d'une version de physique) ; la colonne n'est pas lisible directement. Tout fantôme reçu est validé (format, bornes) avant d'être dessiné.
+- `js/ghostFormat.js` (nouveau, sans rendu) regroupe le format des fantômes (constantes, orientation d'après la pose, codec) : il sert au jeu et à la fonction serveur. `GhostRunner` sait enregistrer le fantôme
+  pendant le rejeu (même règle que la course en direct : un retour au checkpoint efface les poses qui le suivent).
+- Tests : `tools/test-fantomes.mjs` (orientation identique à celle du jeu, enregistrement, retour au checkpoint, client, outil de rattrapage), test du gestionnaire serveur (fantôme rangé, colonnes absentes, rattrapage),
+  SQL (colonne illisible, `get_ghost`), test navigateur (rival affiché et étiqueté).
+
 ## Bêta 0.9.13 — multijoueur « championnat », salons publics, relais TURN, télémétrie et médailles calibrées sur de vrais joueurs
 
 `PHYS_VER` reste à 26 (physique inchangée) : **records, replays et fantômes sont conservés**, et la fonction `submit-score` n'a pas à être redéployée. Le **protocole réseau**

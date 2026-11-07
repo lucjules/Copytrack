@@ -16,7 +16,7 @@ create table auth.users (id uuid primary key default gen_random_uuid(), email te
 create function auth.uid() returns uuid language sql stable as $f$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $f$;
 grant usage on schema auth to anon, authenticated;
 SQL
-for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape6-telemetrie.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
+for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape6-telemetrie.sql supabase/etape7-fantomes.sql supabase/etape7-fantomes.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
 $P -d $DB <<'SQL'
 \set ON_ERROR_STOP off
 create function public.as_user(u uuid) returns void language plpgsql as $$ begin perform set_config('request.jwt.claim.sub', u::text, false); end $$;
@@ -130,8 +130,29 @@ do $$ declare total int := 0; begin
 end $$;
 reset role;
 select public.check('étape 6 : la clé de service lit les statistiques', (select count(*) from run_stats where install = '00000000000000a1') = 2);
--- 11. aucun mot de passe en clair dans nos tables
+-- 11. fantômes du haut des classements (étape 7) : lisibles par get_ghost seulement, du n° 1 au n° 10, dans l'ordre du classement
+reset role;
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000c1', 'c1@accounts.copytrack.invalid'), ('00000000-0000-0000-0000-0000000000c2', 'c2@accounts.copytrack.invalid'), ('00000000-0000-0000-0000-0000000000c3', 'c3@accounts.copytrack.invalid') on conflict do nothing;
+insert into players (id, name) values ('00000000-0000-0000-0000-0000000000c1', 'Rapide'), ('00000000-0000-0000-0000-0000000000c2', 'Moyen'), ('00000000-0000-0000-0000-0000000000c3', 'Lent') on conflict do nothing;
+insert into scores (track_key, player, time, inputs, phys_ver, ghost, ghost_veh) values ('b-fantome-1', '00000000-0000-0000-0000-0000000000c1', 19.9, 'AAAA', 26, 'R0hPU1Q=', '[[3,1]]');
+insert into scores (track_key, player, time, inputs, phys_ver) values ('b-fantome-1', '00000000-0000-0000-0000-0000000000c2', 21.0, 'AAAA', 26);
+insert into scores (track_key, player, time, inputs, phys_ver, ghost) values ('b-fantome-1', '00000000-0000-0000-0000-0000000000c3', 22.0, 'AAAA', 26, 'T1RIRVI=');
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000b1');
+do $$ declare refuse boolean := false; begin
+  begin perform ghost from scores limit 1; exception when insufficient_privilege then refuse := true; end;
+  perform public.check('étape 7 : la colonne « ghost » n''est lisible que par get_ghost', refuse);
+end $$;
+select public.check('étape 7 : has_ghost est lisible (bouton 👻 du classement)', (select count(*) from scores where track_key = 'b-fantome-1' and has_ghost) = 2);
+select public.check('étape 7 : get_ghost(1) rend le fantôme du premier, avec son nom, son temps et ses véhicules',
+  (select name = 'Rapide' and time = 19.9 and ghost = 'R0hPU1Q=' and ghost_veh = '[[3,1]]'::jsonb from public.get_ghost('b-fantome-1', 1, 26)));
+select public.check('étape 7 : un record sans fantôme (2e) ne rend rien', (select count(*) from public.get_ghost('b-fantome-1', 2, 26)) = 0);
+select public.check('étape 7 : le 3e a son fantôme ; mauvaise physique, rang 0 ou 11 : rien',
+  (select count(*) from public.get_ghost('b-fantome-1', 3, 26)) = 1 and (select count(*) from public.get_ghost('b-fantome-1', 1, 25)) = 0
+  and (select count(*) from public.get_ghost('b-fantome-1', 0, 26)) = 0 and (select count(*) from public.get_ghost('b-fantome-1', 11, 26)) = 0);
+reset role;
+-- 12. aucun mot de passe en clair dans nos tables
 select public.check('aucune colonne mot de passe dans le schéma public', not exists (select 1 from information_schema.columns where table_schema='public' and column_name ilike '%pass%'));
 select case when ok then '  ok   ' else '  FAIL ' end || name from public.res order by ok, name;
-select 'RESULT ' || case when bool_and(ok) and count(*) = 33 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
+select 'RESULT ' || case when bool_and(ok) and count(*) = 38 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
 SQL

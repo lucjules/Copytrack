@@ -230,30 +230,8 @@ export function setEditorDraft(d) {
   write('draft', d);
 }
 
-// ---- Fantômes : Float32Array <-> base64 -----------------------------------
-export function encodeFloats(arr) {
-  if (!ArrayBuffer.isView(arr)) return '';
-  const bytes = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
-  let bin = '';
-  const CH = 0x8000;
-  for (let i = 0; i < bytes.length; i += CH) {
-    const slice = bytes.subarray(i, Math.min(i + CH, bytes.length));
-    bin += String.fromCharCode.apply(null, slice);
-  }
-  return btoa(bin);
-}
-
-export function decodeFloats(b64) {
-  if (typeof b64 !== 'string' || !b64) return new Float32Array(0);
-  try {
-    const bin = atob(b64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return new Float32Array(bytes.buffer);
-  } catch {
-    return new Float32Array(0);
-  }
-}
+// ---- Fantômes : Float32Array <-> base64 (le codec vit dans ghostFormat.js, partagé avec la fonction serveur) ----
+export { encodeFloats, decodeFloats } from './ghostFormat.js';
 
 export function formatTime(sec, sign = false) {
   if (sec == null || !isFinite(sec)) return '--:--.---';

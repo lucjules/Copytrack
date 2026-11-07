@@ -58,6 +58,7 @@ export class RaceSession {
     this.replayCam = 0;   // 0 = caméra de course, puis TV, orbite
     // Fantômes simulés (or, importé).
     this.ghosts = [];
+    this.rivals = [];       // fantômes du haut d'un classement en ligne (setRivals)
     // Multijoueur (opts.multi = { room, startLocal }) : pas de fantômes enregistrés, des voitures distantes à la place.
     this.multi = opts.multi || null;
     this.cup = this.multi && this.multi.cup || null;          // manche d'un championnat : { n, total, slot, count, roster, collisions } (départ commun sur une grille)
@@ -68,6 +69,7 @@ export class RaceSession {
     this.netTick = 0;     // horloge d'envoi : ne recule JAMAIS, même quand on recommence un essai (le tampon des autres joueurs en dépend)
     if (!this.demo && !this.replay && !opts.fromEditor && !this.multi) this._setupGhosts();
     if (this.multi) this._setupRemotes();
+    if (opts.rivals && !this.demo && !this.replay && !this.multi) this.setRivals(opts.rivals);
     this.camMode = this.demo ? 0 : app.settings.camera || 0;
 
     this.up = new THREE.Vector3(0, 1, 0);
@@ -536,6 +538,7 @@ export class RaceSession {
     // Fantômes
     this._renderGhost(alpha, dt);
     this._renderSimGhosts(alpha, dt);
+    this._renderRivals(alpha, dt);
 
     // Caméra
     this._camera(dt);
@@ -569,6 +572,7 @@ export class RaceSession {
     this.car.dispose();
     this.skids.dispose();
     for (const g of this.ghosts) g.car.dispose();
+    this._clearRivals();
     if (this.multi) {
       this.multi.room.off('snapshot', this._onSnap); this.multi.room.off('left', this._onLeft);
       for (const rc of this.remote.values()) rc.dispose();

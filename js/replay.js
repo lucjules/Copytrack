@@ -6,6 +6,7 @@ import { Autopilot } from './autopilot.js';
 import { b64encode, b64decode } from './track.js';
 import { PHYS_VER } from './version.js';
 import { MAX_RUN_STEPS } from './constants.js';
+import { GHOST_EVERY, GHOST_STRIDE, GHOST_VEHICLES, poseQuat } from './ghostFormat.js';
 
 
 export const quantSteer = (s) => Math.round(Math.max(-1, Math.min(1, s || 0)) * 100) / 100;
@@ -80,7 +81,11 @@ const HIST_STRIDE = 17;
 const VEH_IDS = ['car', 'moto', 'boat', 'glider'];
 
 export class GhostRunner {
-  constructor(track, { inputs = null, bot = false, latK = 0.8 } = {}) {
+  // ghost : enregistre aussi le fantôme (une pose tous les GHOST_EVERY pas, comme la course en direct) : c'est ce que la fonction serveur range avec un record.
+  constructor(track, { inputs = null, bot = false, latK = 0.8, ghost = false } = {}) {
+    this.gRec = ghost ? [] : null;       // x, y, z, qx, qy, qz, qw par échantillon
+    this.gVeh = [];                      // changements de véhicule : [image, id]
+    this._q = [0, 0, 0, 1];
     this.sim = new Simulation(track);
     this.phys = this.sim.phys;
     this.logic = this.sim.logic;
@@ -101,14 +106,32 @@ export class GhostRunner {
   step() {
     if (this.done) return;
     const inp = this.bot ? this.bot.control(this.phys) : inputAt(this.rep, this.k);
-    if (inp.respawn) this.sim.rewind();
+    if (inp.respawn) { this.sim.rewind(); this._gTrim(); }
     const ev = this.sim.step(inp);
-    if (this.sim.lost) this.sim.rewind();      // mêmes réapparitions automatiques qu'en course (hors piste 0,5 s, noyade)
+    if (this.gRec) this._gSample();
+    if (this.sim.lost) { this.sim.rewind(); this._gTrim(); }      // mêmes réapparitions automatiques qu'en course (hors piste 0,5 s, noyade)
     if (ev && ev.type === 'finish') this.done = true;
     if (this.rep && this.k >= this.rep.length + 240) this.done = true;
     this.k++;
     this._record(this.k);
   }
+
+  // Fantôme enregistré (comme RaceSession) : un échantillon quand le chrono tombe sur un multiple de GHOST_EVERY ; un retour au checkpoint efface ce qui suit le checkpoint.
+  _gSample() {
+    const steps = this.logic.steps;
+    if (steps % GHOST_EVERY !== 0) return;
+    const p = this.phys, q = poseQuat(p, this._q);
+    const vid = GHOST_VEHICLES.indexOf(p.vehicle), last = this.gVeh.length ? this.gVeh[this.gVeh.length - 1][1] : 0;
+    if (vid !== last) this.gVeh.push([this.gRec.length / GHOST_STRIDE, vid]);
+    this.gRec.push(p.pos.x, p.pos.y, p.pos.z, q[0], q[1], q[2], q[3]);
+  }
+  _gTrim() {
+    if (!this.gRec) return;
+    this.gRec.length = Math.min(this.gRec.length, Math.floor(this.logic.steps / GHOST_EVERY) * GHOST_STRIDE);
+    while (this.gVeh.length && this.gVeh[this.gVeh.length - 1][0] >= this.gRec.length / GHOST_STRIDE) this.gVeh.pop();
+  }
+  // Le fantôme enregistré : { data: Float32Array, veh } (nécessite l'option ghost).
+  ghostResult() { return { data: new Float32Array(this.gRec), veh: this.gVeh.map((c) => c.slice()) }; }
 
   // Avance jusqu'au pas k (les lignes de l'historique jusque-là existent) ; renvoie false si le fantôme a terminé avant.
   seek(k) {

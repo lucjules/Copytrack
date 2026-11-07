@@ -13,6 +13,8 @@ export const MAX_BODY_CHARS = MAX_INPUTS_CHARS + MAX_TRACK_CODE_CHARS + 4096;
 // Cadence : au plus `max` courses soumises par pilote et par fenêtre (chaque soumission rejoue toute la course). La mémoire est celle de l'instance de la
 // fonction : c'est un frein contre les rafales, pas un quota exact (les instances sont indépendantes).
 export const RATE_LIMIT = { max: 8, windowMs: 60_000 };
+// Taille maximale d'un fantôme enregistré (base64) : 60 000 poses de 28 octets = 2,2 Mo ; une vraie course en fait 100 Ko.
+export const MAX_GHOST_CHARS = 800_000;
 
 export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, allowedOrigin = '*', now = Date.now, rateLimit = RATE_LIMIT, log = console.error }) {
   const cors = {
@@ -79,7 +81,7 @@ export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = glob
       if (typeof code !== 'string' || code.length > MAX_TRACK_CODE_CHARS) return json(400, { error: 'Code de circuit invalide.' });
 
       // 4. Rejeu de la course avec le code du jeu.
-      const res = verifyRun({ trackKey, code, inputs, time, physVer });
+      const res = verifyRun({ trackKey, code, inputs, time, physVer, withGhost: true });
       if (!res.ok || typeof res.time !== 'number') return json(422, { error: res.error ?? 'Course non confirmée.', ...(res.versionMismatch ? { versionMismatch: true } : {}) });
       const simTime = res.time;
 
@@ -89,23 +91,31 @@ export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = glob
 
       // 6. On garde le meilleur temps du pilote sur ce circuit.
       const key = encodeURIComponent(trackKey);
-      const prev = await (await db(`scores?track_key=eq.${key}&player=eq.${uid}&select=time,phys_ver`)).json();
+      // (has_ghost : colonne de supabase/etape7-fantomes.sql ; absente, la requête échoue et on retombe sur la lecture sans elle.)
+      let prevRes = await db(`scores?track_key=eq.${key}&player=eq.${uid}&select=time,phys_ver,has_ghost`);
+      if (!prevRes.ok) prevRes = await db(`scores?track_key=eq.${key}&player=eq.${uid}&select=time,phys_ver`);
+      const prev = await prevRes.json();
       let best = simTime;
       let improved = true;
       if (Array.isArray(prev) && prev.length && prev[0].phys_ver === physVer && prev[0].time <= simTime) {
         best = prev[0].time;
         improved = false;
       }
+      // Fantôme du record (jouable par les autres : il ne dévoile pas les commandes, donc ne permet pas de rejouer la course sous un autre nom).
+      const ghost = typeof res.ghost === 'string' && res.ghost.length <= MAX_GHOST_CHARS ? { ghost: res.ghost, ghost_veh: res.ghostVeh ?? [] } : null;
+      // Un record déjà enregistré sans fantôme (avant l'étape 7) en reçoit un quand le même temps est renvoyé.
+      const backfill = !improved && ghost && prev[0].has_ghost === false && Math.abs(prev[0].time - simTime) < 1e-6;
       if (improved) {
-        const up = await db('scores', {
-          method: 'POST',
-          headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-          body: JSON.stringify({
-            track_key: trackKey, player: uid, time: simTime, inputs, phys_ver: physVer,
-            track_name: String(res.name ?? '').slice(0, 60), updated_at: new Date(now()).toISOString(),
-          }),
-        });
+        const row = {
+          track_key: trackKey, player: uid, time: simTime, inputs, phys_ver: physVer,
+          track_name: String(res.name ?? '').slice(0, 60), updated_at: new Date(now()).toISOString(),
+        };
+        let up = await db('scores', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(ghost ? { ...row, ...ghost } : row) });
+        // Colonnes du fantôme absentes (étape 7 pas encore lancée) : le temps est enregistré quand même, sans fantôme.
+        if (!up.ok && ghost && up.status === 400) up = await db('scores', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(row) });
         if (!up.ok) return json(500, { error: 'Enregistrement impossible.' });
+      } else if (backfill) {
+        await db(`scores?track_key=eq.${key}&player=eq.${uid}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(ghost) });
       }
 
       // 7. Place au classement (même version de physique).

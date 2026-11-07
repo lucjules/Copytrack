@@ -1,7 +1,7 @@
 // Service worker généré par tools/gen-sw.mjs : ne pas modifier à la main.
 // Jeu hors ligne : les fichiers du jeu sont gardés en cache ; le réseau reste prioritaire
 // pour récupérer les mises à jour quand il est disponible.
-const CACHE = 'copytrack-240449b3a5';
+const CACHE = 'copytrack-909d8cc828';
 const FILES = [
   "./",
   "assets/README.txt",
@@ -50,6 +50,7 @@ const FILES = [
   "js/families.js",
   "js/garage.js",
   "js/geo.js",
+  "js/ghostFormat.js",
   "js/hudMessages.js",
   "js/input.js",
   "js/inspector.js",

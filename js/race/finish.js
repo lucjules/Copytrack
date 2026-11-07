@@ -105,6 +105,9 @@ export const finishMethods = {
       saveRecord(this.trackKey, rec);
     }
     app.audio.finish(isRecord);
+    if (this.rivals.length) {
+      app.ui.flash('👻 ' + this.rivals.map((r) => (time < r.time ? `tu bats ${r.name} de ${(r.time - time).toFixed(3)} s` : `${r.name} reste devant de ${(time - r.time).toFixed(3)} s`)).join(' · '), 6);
+    }
     const medal = medalFor(time, this.medals);
     this._tmDone = true;
     if (!this.opts.fromEditor && !this.opts.spawn) app.telemetry.record({ trackKey: this.trackKey, outcome: 'finish', time, respawns: this.stats.respawns, medal: medal && medal.id });

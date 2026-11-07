@@ -250,12 +250,15 @@ class OnlineClient {
 
   async leaderboard(trackKey, physVer, limit = 10) {
     const q = new URLSearchParams();
-    q.set('select', 'time,player,updated_at,players!scores_player_fkey(name)');
     q.set('track_key', 'eq.' + trackKey);
     q.set('phys_ver', 'eq.' + physVer);
     q.set('order', 'time.asc,updated_at.asc');
     q.set('limit', String(limit));
-    const top = await this._fetch('/rest/v1/scores?' + q.toString());
+    // has_ghost : colonne de supabase/etape7-fantomes.sql ; absente (étape pas lancée), on relit sans elle.
+    let top;
+    q.set('select', 'time,player,updated_at,has_ghost,players!scores_player_fkey(name)');
+    try { top = await this._fetch('/rest/v1/scores?' + q.toString()); }
+    catch { q.set('select', 'time,player,updated_at,players!scores_player_fkey(name)'); top = await this._fetch('/rest/v1/scores?' + q.toString()); }
     // Ma place, si j'ai un temps.
     let me = null;
     if (this.uid) {
@@ -267,6 +270,13 @@ class OnlineClient {
     }
     const total = await this._count(`track_key=eq.${encodeURIComponent(trackKey)}&phys_ver=eq.${physVer}`);
     return { top: top || [], me, total };
+  }
+
+  // Le fantôme du n° rank (1 à 10) du classement d'un circuit : { name, time, ghost (base64), veh } ou null (record d'avant l'étape 7, ou hors du top 10).
+  async ghost(trackKey, rank, physVer) {
+    const rows = await this._fetch('/rest/v1/rpc/get_ghost', { method: 'POST', body: { k: trackKey, r: rank, pv: physVer } });
+    const g = Array.isArray(rows) ? rows[0] : null;
+    return g && typeof g.ghost === 'string' ? { name: String(g.name || '?'), time: +g.time, ghost: g.ghost, veh: g.ghost_veh || [] } : null;
   }
 
   async _count(query) {

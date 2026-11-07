@@ -204,6 +204,28 @@ try {
     await waitApp(() => !window.copytrack.ui.modalOpen);
   });
 
+  await test('fantôme rival (haut d\'un classement) : affiché sur la piste, suit son enregistrement, étiquette au nom du rival', async () => {
+    await app(() => window.copytrack.playBuiltin(0));
+    await waitApp(() => window.copytrack.session && window.copytrack.session.state, null, 40000);
+    await app(async () => {
+      const { GhostRunner } = await import('/js/replay.js');
+      const { encodeFloats } = await import('/js/ghostFormat.js');
+      const s = window.copytrack.session;
+      const g = new GhostRunner(s.track, { bot: true, latK: 0.8, ghost: true });
+      while (!g.done && g.k < 120 * 120) g.step();
+      const r = g.ghostResult();
+      s.setRivals([{ name: 'Rival', time: g.logic.time, ghost: encodeFloats(r.data), veh: r.veh }]);
+      s.restart();
+    });
+    await waitApp(() => window.copytrack.session.state === 'racing', null, 40000);
+    await page.waitForTimeout(3500);
+    const st = await app(() => { const s = window.copytrack.session, r = s.rivals[0]; return { n: s.rivals.length, visible: r.car.group.visible, dist: r.car.group.position.distanceTo(s.renderPos), label: !!r.label }; });
+    assert.equal(st.n, 1); assert.ok(st.label, 'étiquette'); assert.ok(st.visible && st.dist > 2, 'le rival roule devant (distance ' + st.dist.toFixed(1) + ' m)');
+    await shot('04b-fantome-rival');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
   await test('multijoueur : le menu des salons s\'ouvre sans serveur', async () => {
     await click('[data-action="community"]');
     await waitApp(() => !document.getElementById('community').classList.contains('hidden'));

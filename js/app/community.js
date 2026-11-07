@@ -74,11 +74,24 @@ export const communityMethods = {
       try { lb = await online.leaderboard(trackKey, PHYS_VER, 10); } catch (e) { body.innerHTML = `<p>Classement indisponible : ${esc(e.message)}</p>`; return; }
       const rec = getRecord(trackKey);
       const canSend = rec && rec.inputs && rec.pv === PHYS_VER && (!lb.me || rec.time < lb.me.time - 1e-6) && this.settings.onlineScores !== false;
-      const rows = lb.top.map((r, i) => `<li class="${r.player === online.uid ? 'me' : ''}"><b>${i + 1}</b><span>${esc((r.players && r.players.name) || '—')}</span><i>${formatTime(r.time)}</i></li>`).join('');
+      const rows = lb.top.map((r, i) => `<li class="${r.player === online.uid ? 'me' : ''}"><b>${i + 1}</b><span>${esc((r.players && r.players.name) || '—')}</span><i>${formatTime(r.time)}</i>${r.has_ghost && i < 10 ? `<button class="rival-btn" data-rank="${i + 1}" title="Affronter son fantôme" aria-label="Affronter le fantôme n° ${i + 1}">👻</button>` : '<span class="rival-none"></span>'}</li>`).join('');
+      const anyGhost = lb.top.some((r) => r.has_ghost);
       body.innerHTML = `${lb.top.length ? `<ol class="board">${rows}</ol>` : '<p>Aucun temps pour l’instant : sois le premier !</p>'}
+        ${anyGhost ? '<p class="meta">👻 : affronte le fantôme d’un des dix premiers (sa course rejouée par le serveur ; seulement ses positions, jamais ses commandes).</p>' : ''}
+        <p class="mp-err" id="lb-err" role="alert"></p>
         <p class="meta">${lb.total} pilote${lb.total > 1 ? 's' : ''} classé${lb.total > 1 ? 's' : ''}${lb.me ? ` · ta place : <b>${lb.me.rank}${lb.me.rank === 1 ? 'er' : 'e'}</b> (${formatTime(lb.me.time)})` : ''}.
         Chaque temps est vérifié : le serveur rejoue la course avant de l’accepter.</p>
         ${canSend ? `<button class="btn primary" id="lb-send">Envoyer mon record (${formatTime(rec.time)})</button>` : ''}`;
+      for (const b of body.querySelectorAll('.rival-btn')) b.onclick = async () => {
+        const err = body.querySelector('#lb-err');
+        b.disabled = true; err.textContent = '';
+        try {
+          const g = await online.ghost(trackKey, +b.dataset.rank, PHYS_VER);
+          if (!g) { err.textContent = 'Pas de fantôme pour ce temps (record d’avant cette fonction : son auteur doit le renvoyer).'; b.disabled = false; return; }
+          this.ui.closeModal();
+          this.raceWithRivals(trackKey, track, [g]);
+        } catch (e) { err.textContent = e.message || 'Fantôme indisponible.'; b.disabled = false; }
+      };
       const send = body.querySelector('#lb-send');
       if (send) send.onclick = async () => {
         send.disabled = true; send.textContent = 'Vérification…';
@@ -89,6 +102,20 @@ export const communityMethods = {
       };
     };
     render();
+  },
+
+  // Lance (ou relance) la course d'un circuit avec des fantômes rivaux : ceux du haut d'un classement en ligne.
+  raceWithRivals(trackKey, track, rivals) {
+    const s = this.session;
+    if (s && s.trackKey === trackKey && s.setRivals && !s.replay && !s.multi && s.kind !== 'editor') { s.setRivals(rivals); s.restart(); this.ui.hideOverlay('finish'); return; }
+    if (trackKey.startsWith('b-')) {
+      const i = this.builtins.findIndex((b) => b.key === trackKey);
+      if (i < 0) { this.ui.flash('Circuit introuvable.'); return; }
+      this.playBuiltin(i);
+    } else if (trackKey.startsWith('daily-')) this.playDaily();
+    else if (track) this.playTrack(track, { trackKey: track.userKey, userMap: true, medals: track.derivedMedals, difficulty: 2, seed: track.name });
+    else { this.ui.flash('Ouvre d’abord le circuit pour affronter ce fantôme.'); return; }
+    if (this.session && this.session.setRivals) this.session.setRivals(rivals);
   },
 
   // ---- Communauté (circuits publiés en ligne) ----------------------------------
