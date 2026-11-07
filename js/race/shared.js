@@ -1,14 +1,7 @@
 // Éléments partagés par les familles de méthodes de RaceSession (voir race.js).
 import * as THREE from '../vendor/three.module.min.js';
-export const GHOST_EVERY = 4;
-// Identifiants de véhicule des fantômes enregistrés (l'ordre est celui des enregistrements : ne jamais réordonner).
-export const GHOST_VEHICLES = ['car', 'moto', 'boat', 'glider'];
-// Véhicule d'un fantôme enregistré à l'image `frame`, d'après la liste de ses changements [[image, id], …] (vide : toujours la voiture, comme les anciens records).
-export function ghostVehicleAt(changes, frame) {
-  let id = 0;
-  for (const [f, v] of changes) { if (f > frame) break; id = v; }
-  return GHOST_VEHICLES[id] || 'car';
-} // un échantillon tous les 4 pas (30 Hz)
+// Format des fantômes : js/ghostFormat.js (sans rendu : la fonction serveur s'en sert aussi).
+export { GHOST_EVERY, GHOST_VEHICLES, ghostVehicleAt } from '../ghostFormat.js';
 
 // Caméras en plus pour les replays.
 export const REPLAY_CAMS = [{ name: 'TV', tv: true }, { name: 'Orbite libre', orbit: true }];

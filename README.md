@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.13** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.9.21** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -20,9 +20,13 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 
 ## Contenu
 
-- **66 circuits** dans 11 décors (*Désert crépuscule*, *Jungle néon*, *Archipel tropical*, *Ville futuriste*, *Nuit polaire*, *Volcan*, *Station orbitale*, *Fonds marins*, *Usine mécanique*, *Ville dans les nuages*, *Canyon de cristal*),
-  rangés **du plus facile au plus dur** en 11 chapitres de carrière (un par décor, 6 circuits chacun). Chaque circuit a un **profil** (Sprint, Speedway, Technique, Rollercoaster, Acrobatique) et une ouverture qui lui est propre ; 2 circuits se courent en plusieurs tours (Caldeira, Grand Anneau).
-- **Carrière** : un chapitre s'ouvre avec 4 médailles dans le précédent ; chaque circuit a un **objectif bonus** ★ (sans toucher de muret, réceptions parfaites, mini-turbos, anneaux, finir en moto…) qui rapporte 50 pièces.
+- **72 circuits** dans 12 décors (*Désert crépuscule*, *Jungle néon*, *Archipel tropical*, *Ville futuriste*, *Nuit polaire*, *Volcan*, *Station orbitale*, *Fonds marins*, *Usine mécanique*, *Ville dans les nuages*, *Canyon de cristal* et l'*Atelier des mécanismes*),
+  rangés **du plus facile au plus dur** en 11 chapitres de carrière (un par décor, 6 circuits chacun), plus un **chapitre bonus, l'Atelier** (6 circuits qui montrent chaque obstacle et chaque pièce mobile, un par un ; il s'ouvre avec 4 médailles dans le premier chapitre). Chaque circuit a un **profil** (Sprint, Speedway, Technique, Rollercoaster, Acrobatique) et une ouverture qui lui est propre ; 2 circuits se courent en plusieurs tours (Caldeira, Grand Anneau).
+- **Éditeur** : onglet **Prefabs** (chicane, épingle, slalom, saut, looping, wall-ride : on les colle comme le presse-papiers ; « Enregistrer la sélection » crée les tiens, partageables par un code `SHP1:`) et **ambiance** par circuit (moment de la journée, brume, musique : Paramètres du niveau ; sans effet sur la course ni sur les records).
+- **Communauté** : onglet **Cette semaine** (circuits où le plus de pilotes différents ont couru), **Circuit de la semaine**, **difficulté estimée** (◆◇) sur chaque carte et à la publication. **Titres** affichés au classement, **exclusifs** du garage qui se méritent (défis du jour, Atelier, Académie) et **collections** à thème (+100 ◆).
+- **Partage** : un lien de **défi** (« Partager mon fantôme » › « Copier le lien ») ouvre directement la course contre ton fantôme ; le **replay** s'exporte en **vidéo WebM** (bouton 🎬 de la barre de replay).
+- **Académie** : six leçons guidées de deux minutes (conduite, dérapage, mini-turbo en série, réception parfaite, plaque de transformation, obstacles), chacune avec un objectif ; l'éditeur démarre en **mode guidé** (l'essentiel seulement) pour un nouveau joueur.
+- **Carrière** : un chapitre s'ouvre avec 4 médailles dans le précédent (l'Atelier bonus : dans le premier) ; chaque circuit a un **objectif bonus** ★ (sans toucher de muret, réceptions parfaites, mini-turbos, anneaux, finir en moto…) qui rapporte 50 pièces.
 - **Défi du jour** : un circuit généré à partir de la date, le même pour tout le monde, vérifié par le pilote automatique.
 - **Médailles** Bronze / Argent / Or / Cristal, chronos intermédiaires, réapparition au dernier checkpoint.
 - **Replays** : chaque course est enregistrée (commandes seulement, la physique est déterministe) et peut être revue à l'identique, de ×0,25 à ×4, avec des caméras TV et orbite.
@@ -91,6 +95,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 - **Pièces (monnaie)** gagnées selon la médaille et les objectifs bonus. **Profil** : un code joueur contient toute la progression.
 - **Musique** synthétisée en direct, une ambiance par décor ; sons sans aucun fichier audio.
 - **Profil** (menu principal) : onglets *Compte*, *Sauvegardes*, *Options* et *Commandes*.
+- **Langues** : **français et anglais** (~1 700 textes traduits : menus, carrière et ses 72 circuits, éditeur, communauté, multijoueur, Académie…). La langue suit le navigateur au premier lancement d'un nouvel appareil (un appareil qui a déjà des données reste en français), se change d'un clic sur l'écran d'accueil ou dans Profil › Options › Langue, et se mémorise par appareil. Un texte sans traduction reste en français : jamais d'écran cassé. Voir `js/i18n.js` pour ajouter une langue.
 - **Options** : volume des effets et de la musique, qualité graphique (Auto, Ultra, Haute, Moyenne, Basse, Potato), compteur d'images, champ de vision, effet de vitesse, tremblements de caméra, **couleurs adaptées au daltonisme**, taille de l'interface, fantômes.
 - **Tutoriel** au premier lancement. Commandes personnalisables (clavier, manette), mobile (boutons ou glisser du pouce), vibrations.
 - **Easter eggs** : à toi de les trouver.
@@ -121,6 +126,12 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
    Sans ce script, le jeu fonctionne, simplement sans statistiques.
 
 7. **Relais TURN du multijoueur** (facultatif) : la fonction serveur `ice` (`supabase/functions/ice/index.ts`, générée par `npm run build:function`) donne STUN + TURN à identifiants à durée limitée ; voir `supabase/MULTI.md`.
+
+8. **Fantômes du haut des classements** : `supabase/etape7-fantomes.sql` (à lancer **avant** de redéployer `submit-score`, mais l'ordre n'est pas bloquant : sans les colonnes, la fonction enregistre le temps sans fantôme).
+   La fonction `submit-score` range alors, avec chaque record, le fantôme de la course qu'elle vient de rejouer (positions, jamais les commandes) ; le classement affiche un bouton 👻 pour affronter les dix premiers.
+   Les records d'avant l'étape 7 n'ont pas de fantôme : `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node tools/backfill-ghosts.mjs` leur en fabrique un (ou leur auteur renvoie son temps).
+
+9. **Découverte et titres** (facultatif) : `supabase/etape8-decouverte.sql` ajoute l'onglet « Cette semaine » et le « Circuit de la semaine » de la communauté (`trending_tracks`, d'après `track_plays`) et les titres affichés au classement (`players.title`, `set_title` à liste blanche). Sans lui, le jeu fonctionne : « Cette semaine » retombe sur « Plus joués », les titres restent locaux.
 
 Les scripts sont relançables et testés sur PostgreSQL (`npm run test:sql`).
 

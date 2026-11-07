@@ -8,6 +8,7 @@ import { dailyChallenge } from './daily.js';
 import { GhostRunner, decodeInputs } from './replay.js';
 import { PHYS_VER } from './version.js';
 import { MAX_RUN_STEPS, MAX_INPUTS_CHARS } from './constants.js';
+import { encodeFloats } from './ghostFormat.js';
 
 // Retrouve le circuit correspondant à une clé de classement.
 //   b-<id>-<empreinte>   circuit intégré (l'empreinte garantit la même version)
@@ -41,24 +42,33 @@ export function trackForKey(key, code = '') {
   throw new Error('Clé de circuit invalide.');
 }
 
-// Rejoue les commandes ; renvoie le temps (s) si la course va jusqu'à l'arrivée, sinon null.
-export function replayTime(track, inputs) {
+// Rejoue les commandes ; renvoie { time } (s) si la course va jusqu'à l'arrivée, sinon null. ghost : fabrique aussi le fantôme de la course pendant le même rejeu
+// ({ ghost, ghostVeh } : une pose tous les 4 pas en base64, et les changements de véhicule), pour les fantômes du haut des classements.
+export function replayRun(track, inputs, { ghost = false } = {}) {
   if (!inputs || inputs.length > MAX_INPUTS_CHARS) return null;
   let rep;
   try { rep = decodeInputs(inputs); } catch { return null; }      // illisible, ou trop long (refusé avant dépliage)
   if (!rep.length || rep.length > MAX_RUN_STEPS) return null;
-  const g = new GhostRunner(track, { inputs });
+  const g = new GhostRunner(track, { inputs, ghost });
   while (!g.done && g.k < MAX_RUN_STEPS) g.step();
-  return g.logic.finished ? g.logic.time : null;
+  if (!g.logic.finished) return null;
+  const out = { time: g.logic.time };
+  if (ghost) { const r = g.ghostResult(); out.ghost = encodeFloats(r.data); out.ghostVeh = r.veh; }
+  return out;
+}
+
+export function replayTime(track, inputs) {
+  const r = replayRun(track, inputs);
+  return r ? r.time : null;
 }
 
 // Vérification complète : même version de physique, circuit reconnu, temps confirmé.
-export function verifyRun({ trackKey, code, inputs, time, physVer }) {
+export function verifyRun({ trackKey, code, inputs, time, physVer, withGhost = false }) {
   if (physVer !== PHYS_VER) return { ok: false, error: `Version du jeu différente (jeu ${physVer}, serveur ${PHYS_VER}).`, versionMismatch: true };
   let t;
   try { t = trackForKey(trackKey, code); } catch (e) { return { ok: false, error: e.message }; }
-  const sim = replayTime(t.track, inputs);
-  if (sim == null) return { ok: false, error: 'La course rejouée n’atteint pas l’arrivée.' };
-  if (Math.abs(sim - time) > 0.0005) return { ok: false, error: 'Le temps ne correspond pas à la course rejouée.' };
-  return { ok: true, time: sim, name: t.name, kind: t.kind };
+  const run = replayRun(t.track, inputs, { ghost: withGhost });
+  if (run == null) return { ok: false, error: 'La course rejouée n’atteint pas l’arrivée.' };
+  if (Math.abs(run.time - time) > 0.0005) return { ok: false, error: 'Le temps ne correspond pas à la course rejouée.' };
+  return { ok: true, time: run.time, name: t.name, kind: t.kind, ...(withGhost ? { ghost: run.ghost, ghostVeh: run.ghostVeh } : {}) };
 }

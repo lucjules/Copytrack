@@ -114,6 +114,8 @@ export const DEFAULT_SETTINGS = {
   ghostGold: true,
   ghostImported: true,
   onlineScores: true,
+  feel: 1,                // sensations de course : 0 (aucun effet ajouté) à 1,5 ; voir feel.js
+  editorGuided: null,     // éditeur en mode guidé (l'essentiel) : null = non (joueur qui connaît déjà l'éditeur), true = oui (voir editor/palette.js)
   telemetry: null,        // statistiques anonymes (voir telemetry.js) : null = pas encore demandé, true = accepté, false = refusé
 };
 
@@ -211,6 +213,23 @@ export function saveMyTrack(entry) {
   return entry;
 }
 
+// ---- Prefabs de l'éditeur (bibliothèque locale : jusqu'à PREFAB_MAX ; elle ne se synchronise pas avec le compte, le partage se fait par le code « SHP1: ») ----
+export const PREFAB_MAX = 40;
+export function listPrefabs() {
+  const l = read('prefabs', []);
+  return Array.isArray(l) ? l.filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string' && typeof p.code === 'string' && p.code.startsWith('SHP1:')).slice(0, PREFAB_MAX) : [];
+}
+export function savePrefab({ id, name, code }) {
+  const entry = { id: String(id).slice(0, 30), name: String(name).slice(0, 40) || 'Prefab', code: String(code), updated: Date.now() };
+  const list = listPrefabs().filter((p) => p.id !== entry.id);
+  list.unshift(entry);
+  write('prefabs', list.slice(0, PREFAB_MAX));
+  return entry;
+}
+export function deletePrefab(id) {
+  write('prefabs', listPrefabs().filter((p) => p.id !== id));
+}
+
 export function deleteMyTrack(id) {
   write('tracks', listMyTracks().filter((t) => t.id !== id));
   // Pierre tombale : sans elle, la synchronisation du compte ressusciterait le circuit depuis un autre appareil.
@@ -230,30 +249,8 @@ export function setEditorDraft(d) {
   write('draft', d);
 }
 
-// ---- Fantômes : Float32Array <-> base64 -----------------------------------
-export function encodeFloats(arr) {
-  if (!ArrayBuffer.isView(arr)) return '';
-  const bytes = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
-  let bin = '';
-  const CH = 0x8000;
-  for (let i = 0; i < bytes.length; i += CH) {
-    const slice = bytes.subarray(i, Math.min(i + CH, bytes.length));
-    bin += String.fromCharCode.apply(null, slice);
-  }
-  return btoa(bin);
-}
-
-export function decodeFloats(b64) {
-  if (typeof b64 !== 'string' || !b64) return new Float32Array(0);
-  try {
-    const bin = atob(b64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return new Float32Array(bytes.buffer);
-  } catch {
-    return new Float32Array(0);
-  }
-}
+// ---- Fantômes : Float32Array <-> base64 (le codec vit dans ghostFormat.js, partagé avec la fonction serveur) ----
+export { encodeFloats, decodeFloats } from './ghostFormat.js';
 
 export function formatTime(sec, sign = false) {
   if (sec == null || !isFinite(sec)) return '--:--.---';

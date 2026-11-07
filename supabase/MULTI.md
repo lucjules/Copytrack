@@ -86,7 +86,7 @@ Aucune table, aucun script SQL.
 ## Circuits
 
 Choisis par l'hôte dans le salon :
-- **Intégrés** : les 66 circuits du jeu.
+- **Intégrés** : les 72 circuits du jeu (66 + le chapitre bonus de l'Atelier).
 - **Communauté** : par **ID** (le `id` d'un circuit publié ; colle-le dans le champ du salon) ou « Parcourir la communauté ». Les autres joueurs
   téléchargent le circuit eux-mêmes ; sa signature est vérifiée (tout le monde doit avoir exactement le même).
 - **Code de circuit** (`SHW…` ou lien de partage) ou **Mes circuits** : l'hôte envoie le code à chacun par le canal fiable, en morceaux de

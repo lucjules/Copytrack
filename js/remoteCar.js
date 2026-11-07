@@ -16,6 +16,24 @@ export function darkness(distance, near = FADE_NEAR, far = FADE_FAR) {
   return t * t * (3 - 2 * t) * MAX_DARKEN;
 }
 
+// Nom flottant au-dessus d'une voiture (sprite) ; userData.map est la texture à libérer. null hors navigateur.
+export function makeNameLabel(name) {
+  if (typeof document === 'undefined') return null;
+  const cv = document.createElement('canvas');
+  cv.width = 256; cv.height = 64;
+  const g = cv.getContext('2d');
+  if (!g) return null;
+  g.font = 'bold 30px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,0.75)'; g.strokeText(name, 128, 34, 244);
+  g.fillStyle = '#ffffff'; g.fillText(name, 128, 34, 244);
+  const tex = new THREE.CanvasTexture(cv);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  sp.scale.set(6, 1.5, 1);
+  sp.position.set(0, 3.2, 0);
+  sp.userData.map = tex;
+  return sp;
+}
+
 export class RemoteCar {
   // scene : où ajouter la voiture ; info : { id, name, colorIndex } ; onTeleport(pos) : effet à l'apparition après un retour au checkpoint
   constructor(scene, { id, name, colorIndex = 0 }, { onTeleport = null, delay } = {}) {
@@ -49,22 +67,7 @@ export class RemoteCar {
     this._c = new THREE.Color();
   }
 
-  _makeLabel(name) {
-    if (typeof document === 'undefined') return null;
-    const cv = document.createElement('canvas');
-    cv.width = 256; cv.height = 64;
-    const g = cv.getContext('2d');
-    if (!g) return null;
-    g.font = 'bold 34px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,0.75)'; g.strokeText(name, 128, 34);
-    g.fillStyle = '#ffffff'; g.fillText(name, 128, 34);
-    const tex = new THREE.CanvasTexture(cv);
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
-    sp.scale.set(6, 1.5, 1);
-    sp.position.set(0, 3.2, 0);
-    sp.userData.map = tex;
-    return sp;
-  }
+  _makeLabel(name) { return makeNameLabel(name); }
 
   // Un paquet d'état reçu de ce joueur.
   push(snap, nowMs) { return this.buffer.push(snap, nowMs); }

@@ -11,6 +11,7 @@ import { DECO_CATS, DECO_COLORS, DECO_ICONS } from '../decoData.js';
 import { keyLabel } from '../input.js';
 import { esc } from '../dom.js';
 import { ERASE_FILTERS, ERASE_FILTER_ORDER } from '../editorPick.js';
+import { SKY_CHOICES, FOG_CHOICES, MUSIC_CHOICES } from '../ambiance.js';
 import { MODS, NO_OPTS, OPT_KEYS, PALETTE_ORDER, SNAPS, TOOLS, fillBase, isFill, pieceLabel } from './shared.js';
 // Options proposées dans l'onglet « Options » : bascules (route) et choix exclusifs (checkpoint, thème, mouvement).
 // Avec une pièce choisie, elles s'ajoutent à la pose (aperçu compris) ; sans pièce, elles s'appliquent à la pièce cliquée.
@@ -146,7 +147,49 @@ const ICONS = {
   'mod:tn': svg(`<path d="M6 44V22a18 18 0 0 1 36 0v22" stroke="#7fe9ff" stroke-width="3.5" fill="none"/><rect x="14" y="22" width="20" height="24" fill="${ROAD}"/>`),
 };
 
+// Mode guidé de l'éditeur (nouveau joueur) : l'essentiel seulement, pour commencer sans se perdre : les familles « Droite » (avec ses pentes) et « Virage », le départ, l'arrivée et le checkpoint.
+// (La pente est un réglage de la famille « Droite », le grand virage un réglage de la famille « Virage » : ni l'une ni l'autre n'est une pièce à part.)
+// Rien n'est retiré à qui connaît déjà l'éditeur (le mode ne s'active que pour un nouveau joueur, ou à la demande dans Options) ; « Tout afficher » le quitte.
+export const GUIDED = { pieces: new Set(['start', 'finish']), fams: new Set(['straight', 'turn']), flags: new Set(['cp']), tabs: new Set(['pieces', 'mods']) };
+
 export const paletteMethods = {
+  guidedOn() { return this.app.settings.editorGuided === true; },
+
+  // Cet outil est-il proposé ? (mode complet : tout ; mode guidé : les six pièces, le checkpoint et les quatre outils.)
+  guidedAllows(id) {
+    if (!this.guidedOn()) return true;
+    if (TOOLS.some((t) => t.id === id)) return true;
+    const base = fillBase(id);
+    if (id.startsWith('mod:')) return GUIDED.flags.has(MODS.find((m) => m.id === id)?.flag);
+    if (base.startsWith('surf:') || base.startsWith('deco:')) return false;
+    if (GUIDED.pieces.has(base)) return true;
+    const f = familyOf(base);
+    return !!(f && GUIDED.fams.has(f.fam));
+  },
+
+  // Met la palette dans l'état voulu (guidé ou complet) : boutons, onglets, familles, groupes d'options, bandeau.
+  _applyGuided() {
+    const pal = document.getElementById('ed-palette');
+    if (!pal) return;
+    const on = this.guidedOn();
+    pal.classList.toggle('guided', on);
+    for (const b of pal.querySelectorAll('.pal-row:not(.surf):not(.decos) > .piece-btn[data-piece]')) b.hidden = on && !GUIDED.pieces.has(b.dataset.piece);
+    for (const c of pal.querySelectorAll('.fam-card')) c.hidden = on && !GUIDED.fams.has(c.dataset.fam);
+    for (const t of pal.querySelectorAll('.pal-tab[data-tab]')) t.hidden = on && !GUIDED.tabs.has(t.dataset.tab);
+    for (const g of pal.querySelectorAll('.opt-group')) g.hidden = on && ![...g.querySelectorAll('[data-flag]')].some((b) => GUIDED.flags.has(b.dataset.flag));
+    const banner = pal.querySelector('.pal-guided');
+    if (banner) banner.hidden = !on;
+    if (on && !GUIDED.tabs.has(this.tab)) this.setTab('pieces');
+    if (on && !this.guidedAllows(this.tool)) this.tool = 'straight';
+  },
+
+  setGuided(on) {
+    this.app.settings.editorGuided = !!on;
+    this.app.saveSettings();
+    this._applyGuided();
+    if (this._refreshUI) this._refreshUI();
+  },
+
   // ---------------------------------------------------------------- UI
   _toolButton(parent, id, k, label = pieceLabel(id)) {
     const b = document.createElement('button');
@@ -162,10 +205,15 @@ export const paletteMethods = {
   _buildPalette() {
     const pal = document.getElementById('ed-palette');
     pal.innerHTML = '';
+    const guide = document.createElement('div');
+    guide.className = 'pal-guided';
+    guide.innerHTML = '<span>🎓 <b>Mode guidé</b> : l’essentiel pour commencer (droite et pentes, virages, départ, arrivée, checkpoint).</span><button class="btn small" type="button">Tout afficher</button>';
+    guide.querySelector('button').addEventListener('click', () => { this.setGuided(false); this.app.audio.click(); });
+    pal.appendChild(guide);
     const tabs = document.createElement('div');
     tabs.className = 'pal-tabs';
     const panels = {};
-    for (const [id, label] of [['pieces', 'Pièces'], ['mods', 'Options'], ['surf', 'Revêtements'], ['decos', 'Décors']]) {   // Options à côté de Pièces
+    for (const [id, label] of [['pieces', 'Pièces'], ['mods', 'Options'], ['surf', 'Revêtements'], ['decos', 'Décors'], ['prefabs', 'Prefabs']]) {   // Options à côté de Pièces
       const b = document.createElement('button');
       b.className = 'pal-tab';
       b.dataset.tab = id;
@@ -246,6 +294,7 @@ export const paletteMethods = {
     const rowD = document.createElement('div'); rowD.className = 'pal-row decos'; rowD.id = 'ed-deco-row';
     panels.decos.appendChild(rowD);
     for (const p of Object.values(panels)) pal.appendChild(p);
+    this._buildPrefabPanel();
 
     // Réglages des revêtements
     const range = document.getElementById('ed-param');
@@ -279,6 +328,7 @@ export const paletteMethods = {
 
     this.setTab(fillBase(this.tool).startsWith('surf:') ? 'surf' : this.tool.startsWith('mod:') ? 'mods' : this.tool.startsWith('deco:') ? 'decos' : 'pieces');
     this._buildTools();
+    this._applyGuided();
   },
 
   // Grille « Outils » : Sélection, Inspecter, Gomme, Pot de peinture (ils ne posent rien : à part des pièces).
@@ -411,6 +461,7 @@ export const paletteMethods = {
   // Clic sur une option : avec une pièce choisie elle est « armée » (posée avec elle) ; sans pièce, elle devient l'outil
   // « appliquer à une pièce posée » (comme avant).
   _optClick(flag, val) {
+    if (this.guidedOn() && !GUIDED.flags.has(flag)) { this.app.ui.flash('Option du mode complet : « Tout afficher » dans la palette.', 2.5); return; }
     if (PIECES[this.tool]) {
       this.opts = armOption(this.opts, flag, val);
       this.previewKey = '';
@@ -621,7 +672,11 @@ export const paletteMethods = {
       <label>Gravité de départ<span class="inl"><input type="range" id="pp-g0" min="15" max="250" step="5"><b id="pp-g0v"></b></span></label>
       <label>Véhicule de départ<select id="pp-veh">${Object.entries(veh).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
       <label title="La course commence en gravité inversée : la voiture est plaquée au plafond (départ posé sur une pièce à l'envers)">Inversion de gravité au départ<input type="checkbox" id="pp-ig"></label>
-      <p class="meta">Départ, tours, gravité et véhicule changent la course : à revérifier.</p>`;
+      <p class="meta">Départ, tours, gravité et véhicule changent la course : à revérifier.</p>
+      <h4 class="opt-h">Ambiance (sans effet sur la course ni les temps)</h4>
+      <label>Moment de la journée<select id="pp-sky">${SKY_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+      <label>Brume<select id="pp-fog">${FOG_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+      <label>Musique<select id="pp-music">${MUSIC_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>`;
     const $f = (id) => f.querySelector('#' + id);
     $f('pp-name').value = T.name || '';
     $f('pp-desc').value = T.desc || '';
@@ -632,6 +687,7 @@ export const paletteMethods = {
     $f('pp-g0').value = T.g0 || 100;
     $f('pp-veh').value = T.veh0 || 'car';
     $f('pp-ig').checked = !!T.flip0;
+    $f('pp-sky').value = T.ambiance.sky; $f('pp-fog').value = T.ambiance.fog; $f('pp-music').value = T.ambiance.music;
     const show = () => {
       $f('pp-v0v').textContent = +$f('pp-v0').value ? `${$f('pp-v0').value} km/h` : 'arrêt';
       $f('pp-g0v').textContent = `${$f('pp-g0').value} % · ${(SURF_PHYS.gravity * $f('pp-g0').value / 100).toFixed(1).replace('.', ',')} m/s²`;
@@ -646,8 +702,11 @@ export const paletteMethods = {
         T.laps = laps;
         const nm = $f('pp-name').value.trim().slice(0, 40);
         if (nm) T.name = nm;
-        T.setParams({ desc: $f('pp-desc').value, offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value, flip0: $f('pp-ig').checked });
+        const amb = { sky: $f('pp-sky').value, fog: $f('pp-fog').value, music: $f('pp-music').value };
+        const ambChanged = JSON.stringify(amb) !== JSON.stringify(T.ambiance);
+        T.setParams({ desc: $f('pp-desc').value, offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value, flip0: $f('pp-ig').checked, ambiance: amb });
         if ($f('pp-decor').value !== T.decor) { T.decor = $f('pp-decor').value; this._applyDecor(); this.gridKey = ''; }
+        else if (ambChanged) this._applyDecor();
         this._changed(false);
         this._commit();
         return true;

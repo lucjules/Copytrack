@@ -2,7 +2,7 @@
 // circuit le même jour, sans serveur. Le pilote automatique vérifie qu'il est faisable
 // et fixe les médailles, comme pour les circuits intégrés.
 import { scriptTrack } from './track.js';
-import { DECORS } from './themes.js';
+import { DAILY_DECORS } from './themes.js';
 import { CAR } from './physics/specs.js';
 import { Simulation } from './simulation.js';
 import { Autopilot } from './autopilot.js';
@@ -62,7 +62,7 @@ function botTime(track, latK = 0.8) {
 const cache = new Map();
 export function dailyChallenge(day = dayKey()) {
   if (cache.has(day)) return cache.get(day);
-  const decors = Object.keys(DECORS);
+  const decors = DAILY_DECORS;
   for (let attempt = 0; attempt < 40; attempt++) {
     const r = rng(day + '#' + attempt);
     const decor = decors[Math.floor(r() * decors.length)];

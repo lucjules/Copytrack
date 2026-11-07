@@ -103,7 +103,7 @@ export class GameAudio {
     const vol = (state.throttle ? 0.16 : 0.09) + rpm * 0.05;
     this.engGain.gain.setTargetAtTime(vol, t, 0.05);
     this.skid.g.gain.setTargetAtTime(Math.min(0.22, Math.max(0, state.slip - 3) * 0.03), t, 0.04);
-    this.wind.g.gain.setTargetAtTime(Math.min(0.25, sp * sp * 0.00006), t, 0.1);
+    this.wind.g.gain.setTargetAtTime(Math.min(0.3, sp * sp * 0.00006 + (state.draft || 0) * 0.07), t, 0.1);      // draft : aspiration derrière une voiture (feel.js), le vent siffle un peu plus
   }
 
   _env(node, t, a, d, peak) {

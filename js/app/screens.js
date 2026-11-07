@@ -9,7 +9,8 @@ import { DECORS } from '../themes.js';
 import { PIECES } from '../pieces.js';
 import { thumbnail } from '../editorTools.js';
 import { dailyChallenge, dayKey } from '../daily.js';
-import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked, chapterState, careerSummary } from '../career.js';
+import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked, chapterState, careerSummary, prerequisiteOf, nextBuiltinIndex } from '../career.js';
+import { locale } from '../i18n.js';
 import { getRecord, listMyTracks, deleteMyTrack, formatTime } from '../storage.js';
 export const screenMethods = {
   showMenu(screen = 'menu') {
@@ -73,7 +74,8 @@ export const screenMethods = {
             <li><b>Plaques</b> : moto 🏍, bateau ⛵ (sur l'eau), deltaplane 🪂. Repasser dessus te rend ta voiture.</li>
             <li><b>${touch ? '⟲' : K('respawn')}</b> : revenir au dernier checkpoint · <b>${touch ? '↺' : K('restart')}</b> : recommencer.</li>
             <li><b>Obstacles</b> : piques mortelles, boules et marteaux bousculent. Leur rythme est fixe.</li>
-            <li><b>Carrière</b> : 11 chapitres de 6 circuits, un objectif bonus ★ chacun.</li>
+            <li><b>Carrière</b> : 11 chapitres de 6 circuits, un objectif bonus ★ chacun, plus l’<b>Atelier</b> bonus (obstacles et pièces mobiles).</li>
+            <li><b>Académie</b> (menu principal) : six leçons guidées, sur le dérapage, le mini-turbo, la réception…</li>
             <li>Un <b>défi du jour</b> chaque jour. Replays et fantômes partageables.</li>
           </ul>`,
       },
@@ -82,19 +84,30 @@ export const screenMethods = {
     const actions = [];
     if (step > 0) actions.push({ label: '← Précédent', onClick: () => { setTimeout(() => this.tutorial(step - 1), 0); return true; } });
     if (step < steps.length - 1) actions.push({ label: 'Suivant →', primary: true, onClick: () => { setTimeout(() => this.tutorial(step + 1), 0); return true; } });
-    else actions.push({ label: 'C\'est parti !', primary: true, onClick: () => { this.settings.tutorialDone = true; this.saveSettings(); return true; } });
-    if (step < steps.length - 1) actions.push({ label: 'Passer', onClick: () => { this.settings.tutorialDone = true; this.saveSettings(); return true; } });
+    else {
+      actions.push({ label: '🎓 Commencer l’Académie', primary: true, onClick: () => { this._tutorialDone(); setTimeout(() => this.academyMenu(), 0); return true; } });
+      actions.push({ label: 'C\'est parti !', onClick: () => { this._tutorialDone(); return true; } });
+    }
+    if (step < steps.length - 1) actions.push({ label: 'Passer', onClick: () => { this._tutorialDone(); return true; } });
     this.ui.modal({ title: `${s.title} (${step + 1}/${steps.length})`, body: s.body, actions });
+  },
+
+  // Fin du tutoriel. Premier passage d'un NOUVEAU joueur : l'éditeur démarre en mode guidé (six pièces, voir editor/palette.js) ; ceux qui l'ont déjà utilisé n'y perdent rien.
+  _tutorialDone() {
+    if (!this.settings.tutorialDone && this.settings.editorGuided == null) this.settings.editorGuided = true;
+    this.settings.tutorialDone = true;
+    this.saveSettings();
   },
 
   nextTrack() {
     const opts = this.session ? this.session.opts : {};
-    if (opts.builtinIndex == null || opts.builtinIndex >= this.builtins.length - 1) return;
-    const next = opts.builtinIndex + 1;
+    if (opts.builtinIndex == null) return;
+    const next = nextBuiltinIndex(opts.builtinIndex, this.builtins.length);
+    if (next == null) return;
     const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(rec.time, b.def.medals) : null; };
     const ch = Math.floor(next / CHAPTER_SIZE);
     if (!chapterUnlocked(ch, medalOf, this.builtins.length)) {
-      this.ui.flash(`Chapitre ${ch + 1} verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${ch}.`, 2.6);
+      this.ui.flash(`Chapitre ${ch + 1} verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${prerequisiteOf(ch) + 1}.`, 2.6);
       this.audio.error();
       return;
     }
@@ -116,7 +129,7 @@ export const screenMethods = {
       box.innerHTML = `<div class="cs-main"><b>${sm.pct} %</b><span>de la carrière</span></div>
         <div class="cs-bar"><i style="width:${sm.pct}%"></i></div>
         <div class="cs-stats">${sm.medals} / ${sm.total} médailles · ${sm.crystal} cristal · ${sm.goals} / ${sm.total} objectifs bonus</div>
-        ${sm.complete ? '<p class="cs-msg">✦ Carrière complète : 66 cristaux et 66 objectifs. Il n’y a plus rien à finir ici.</p>' : sm.finished ? '<p class="cs-msg">🏁 Carrière terminée : une médaille sur chaque circuit. Reste les cristaux et les objectifs bonus.</p>' : ''}`;
+        ${sm.complete ? `<p class="cs-msg">✦ Carrière complète : ${sm.total} cristaux et ${sm.total} objectifs. Il n’y a plus rien à finir ici.</p>` : sm.finished ? '<p class="cs-msg">🏁 Carrière terminée : une médaille sur chaque circuit. Reste les cristaux et les objectifs bonus.</p>' : ''}`;
       list.appendChild(box);
     }
     // Défi du jour
@@ -158,7 +171,7 @@ export const screenMethods = {
       g.className = 'track-group' + (cst.id !== 'open' ? ' ch-' + cst.id : '');
       g.innerHTML = `<div class="chapter-head"><h3 class="group-title"><i style="background:${open ? '#5ff2ff' : '#555'}"></i>Chapitre ${ch + 1} · ${esc(C.name)}${open ? '' : ' 🔒'}</h3>
         <span class="prog">${medals} / ${idx.length} médailles · ${goals} / ${idx.length} objectifs bonus</span>${cst.label ? `<span class="ch-badge ${cst.id}">${cst.label}</span>` : ''}</div>
-        <p class="chapter-desc">${esc(C.desc)}${open ? '' : ` — Gagne ${UNLOCK_MEDALS} médailles au chapitre ${ch} pour l’ouvrir.`}</p>`;
+        <p class="chapter-desc">${esc(C.desc)}${open ? '' : ` — Gagne ${UNLOCK_MEDALS} médailles au chapitre ${prerequisiteOf(ch) + 1} pour l’ouvrir.`}</p>`;
       const grid = document.createElement('div');
       grid.className = 'card-grid';
       for (const i of idx) {
@@ -184,7 +197,7 @@ export const screenMethods = {
         card.querySelector('[data-board]').addEventListener('click', (e) => { e.stopPropagation(); this.audio.click(); this.leaderboardModal(b.key, b.def.name, b.track); });
         const go = () => {
           this.audio.click();
-          if (!open) { this.ui.flash(`Chapitre verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${ch}.`); this.audio.error(); return; }
+          if (!open) { this.ui.flash(`Chapitre verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${prerequisiteOf(ch) + 1}.`); this.audio.error(); return; }
           this.playBuiltin(i);
         };
         card.addEventListener('click', go);
@@ -245,7 +258,7 @@ export const screenMethods = {
       card.className = 'card';
       card.innerHTML = `${track ? `<img class="thumb" alt="" src="${thumbnail(track, 'u-' + entry.code.length + '-' + hashString(entry.code))}">` : ''}
         <h3>${esc(entry.name)}</h3>
-        <div class="meta">${track ? track.tiles.length : '?'} pièces${track && track.laps > 1 ? ` · ${track.laps} tours` : ''} · modifié le ${new Date(entry.updated || Date.now()).toLocaleDateString('fr-FR')}</div>
+        <div class="meta">${track ? track.tiles.length : '?'} pièces${track && track.laps > 1 ? ` · ${track.laps} tours` : ''} · modifié le ${new Date(entry.updated || Date.now()).toLocaleDateString(locale())}</div>
         <div class="best">${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}</div>
         <div class="actions">
           <button class="btn primary" data-a="play">Jouer</button>

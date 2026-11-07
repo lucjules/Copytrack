@@ -182,6 +182,23 @@ class OnlineClient {
     return this._fetch('/rest/v1/tracks?' + q.toString());
   }
 
+  // Les circuits les plus joués ces derniers jours (étape 8). Renvoie les lignes complètes (comme listTracks), dans l'ordre, avec week_players ; [] si la fonction n'existe pas.
+  async trending({ days = 7, limit = 24, offset = 0 } = {}) {
+    let ranks;
+    try { ranks = await this._fetch('/rest/v1/rpc/trending_tracks', { method: 'POST', body: { days, lim: limit, off: offset } }); }
+    catch (e) { if (e && e.code === 'http' && /trending_tracks|function|404/i.test(e.message)) return null; throw e; }
+    if (!Array.isArray(ranks) || !ranks.length) return [];
+    const ids = ranks.map((r) => r.id).filter((id) => /^[0-9a-f-]{36}$/.test(id));
+    const q = new URLSearchParams();
+    q.set('select', OnlineClient.FIELDS + (this.hasDesc === false ? '' : ',description'));
+    q.set('id', 'in.(' + ids.join(',') + ')');
+    let rows;
+    try { rows = await this._fetch('/rest/v1/tracks?' + q.toString()); }
+    catch (e) { if (!OnlineClient.noDesc(e)) throw e; this.hasDesc = false; q.set('select', OnlineClient.FIELDS); rows = await this._fetch('/rest/v1/tracks?' + q.toString()); }
+    const by = new Map((rows || []).map((r) => [r.id, r]));
+    return ranks.filter((r) => by.has(r.id)).map((r) => ({ ...by.get(r.id), week_players: +r.week_players || 0 }));
+  }
+
   async publish(track, playerName) {
     const code = track.encode();
     if (code.length > MAX_PUBLISH_CHARS) throw new OnlineError(`Circuit trop gros (${code.length} / ${MAX_PUBLISH_CHARS} caractères).`, 'too-big');
@@ -222,6 +239,12 @@ class OnlineClient {
     await this._fetch('/rest/v1/tracks?id=eq.' + encodeURIComponent(id), { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
   }
 
+  // Titre affiché à côté de mon pseudo dans les classements (décoratif ; liste blanche côté serveur : supabase/etape8-decouverte.sql). '' = aucun.
+  async setTitle(id) {
+    await this.ensureSession();
+    return this._fetch('/rest/v1/rpc/set_title', { method: 'POST', body: { t: id || '' } });
+  }
+
   // Statistiques de jeu anonymes (voir telemetry.js, supabase/etape6-telemetrie.sql) : pas de session, pas de pseudo.
   async logRuns(events) {
     return this._fetch('/rest/v1/rpc/log_runs', { method: 'POST', body: { events }, auth: false });
@@ -250,12 +273,17 @@ class OnlineClient {
 
   async leaderboard(trackKey, physVer, limit = 10) {
     const q = new URLSearchParams();
-    q.set('select', 'time,player,updated_at,players!scores_player_fkey(name)');
     q.set('track_key', 'eq.' + trackKey);
     q.set('phys_ver', 'eq.' + physVer);
     q.set('order', 'time.asc,updated_at.asc');
     q.set('limit', String(limit));
-    const top = await this._fetch('/rest/v1/scores?' + q.toString());
+    // has_ghost (étape 7) et players.title (étape 8) : colonnes récentes ; absentes (étape pas lancée), on relit sans elles, de la plus complète à la plus simple.
+    let top, lastErr;
+    for (const sel of ['time,player,updated_at,has_ghost,players!scores_player_fkey(name,title)', 'time,player,updated_at,has_ghost,players!scores_player_fkey(name)', 'time,player,updated_at,players!scores_player_fkey(name)']) {
+      q.set('select', sel);
+      try { top = await this._fetch('/rest/v1/scores?' + q.toString()); lastErr = null; break; } catch (e) { lastErr = e; }
+    }
+    if (lastErr) throw lastErr;
     // Ma place, si j'ai un temps.
     let me = null;
     if (this.uid) {
@@ -267,6 +295,13 @@ class OnlineClient {
     }
     const total = await this._count(`track_key=eq.${encodeURIComponent(trackKey)}&phys_ver=eq.${physVer}`);
     return { top: top || [], me, total };
+  }
+
+  // Le fantôme du n° rank (1 à 10) du classement d'un circuit : { name, time, ghost (base64), veh } ou null (record d'avant l'étape 7, ou hors du top 10).
+  async ghost(trackKey, rank, physVer) {
+    const rows = await this._fetch('/rest/v1/rpc/get_ghost', { method: 'POST', body: { k: trackKey, r: rank, pv: physVer } });
+    const g = Array.isArray(rows) ? rows[0] : null;
+    return g && typeof g.ghost === 'string' ? { name: String(g.name || '?'), time: +g.time, ghost: g.ghost, veh: g.ghost_veh || [] } : null;
   }
 
   async _count(query) {

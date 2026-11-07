@@ -5,6 +5,7 @@ import { KEY_ACTIONS, PAD_ACTIONS, keyLabel, padLabel } from '../input.js';
 import { $, esc } from '../dom.js';
 import { Benchmark, PROFILES, PROFILE_LABELS, BENCH_VERSION, hardwareHints } from '../quality.js';
 import { fovText } from './shared.js';
+import { feelScale } from '../feel.js';
 export const settingsMethods = {
   // Profil réellement appliqué : le choix du joueur, ou (automatique) le résultat de la détection (« Haute » en attendant).
   _qualityName() {
@@ -181,6 +182,7 @@ export const settingsMethods = {
     $('opt-ghostimp').checked = s.ghostImported !== false;
     $('opt-onlinescores').checked = s.onlineScores !== false;
     $('opt-telemetry').checked = s.telemetry === true;
+    $('opt-editor-guided').checked = s.editorGuided === true;
     $('opt-name').value = s.playerName;
     $('opt-name').readOnly = this.identity.kind === 'account';     // le pseudo d'un compte ne change pas
     $('opt-name').title = this.identity.kind === 'account' ? 'Pseudo du compte (non modifiable)' : '';
@@ -192,6 +194,7 @@ export const settingsMethods = {
     $('opt-cb').checked = !!s.colorblind;
     $('opt-fov').value = s.fovAdd; $('opt-fov-v').textContent = fovText(s.fovAdd);
     $('opt-shake').value = s.shakeAmt; $('opt-shake-v').textContent = Math.round(s.shakeAmt * 100) + ' %';
+    $('opt-feel').value = s.feel ?? 1; $('opt-feel-v').textContent = Math.round(feelScale(s.feel) * 100) + ' %';
     $('opt-ui').value = s.uiScale; $('opt-ui-v').textContent = Math.round(s.uiScale * 100) + ' %';
   },
 

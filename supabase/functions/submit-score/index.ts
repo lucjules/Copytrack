@@ -4119,6 +4119,10 @@ var DECORS = {
   factory: {
     label: "Usine m\xE9canique",
     chip: "#ffb070"
+  },
+  atelier: {
+    label: "Atelier des m\xE9canismes",
+    chip: "#ffd23e"
   }
 };
 var DEFAULT_DECOR = "desert";
@@ -4133,8 +4137,10 @@ var CAREER_ORDER = [
   "reef",
   "factory",
   "sky",
-  "caves"
+  "caves",
+  "atelier"
 ];
+var DAILY_DECORS = Object.keys(DECORS).slice(0, 11);
 
 // js/track/shared.js
 var WATER_DROP = 0.35;
@@ -5070,6 +5076,7 @@ function scriptTrack(name, script, opts = {}) {
     nb: 0,
     tn: 0
   };
+  let moverTok = 0;
   const place = (t, px, pz, lv, r, reverse = false, noPath = false, curOver = null) => {
     const tile = {
       t,
@@ -5079,6 +5086,11 @@ function scriptTrack(name, script, opts = {}) {
       r: r & 3,
       ...curOver || cur
     };
+    const mp = cur.mv && opts.movers ? opts.movers[cur.mvTok - 1] : null;
+    if (mp) {
+      tile.ms = mp.ms || 0;
+      tile.ma = mp.ma || 0;
+    }
     if (cur.s && !surfaceAllowed(t, cur.s, cur.o | 0)) throw new Error(`${name} : rev\xEAtement ${cur.s} interdit sur ${t}`);
     for (const f of [
       "v",
@@ -5196,7 +5208,7 @@ function scriptTrack(name, script, opts = {}) {
     z += d.z;
   };
   for (const tok of script.trim().split(/\s+/)) {
-    const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=<>]*)$/.exec(tok);
+    const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>]*)$/.exec(tok);
     const m = gm ? [
       tok,
       "@" + gm[1],
@@ -5204,7 +5216,7 @@ function scriptTrack(name, script, opts = {}) {
       gm[3],
       gm[4],
       gm[5]
-    ] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=<>]*)$/.exec(tok);
+    ] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>]*)$/.exec(tok);
     if (!m) throw new Error("Instruction invalide : " + tok);
     let op = m[1];
     const n = m[2] ? parseInt(m[2], 10) : 1;
@@ -5214,9 +5226,10 @@ function scriptTrack(name, script, opts = {}) {
       v: m[5].includes("^") ? 1 : 0,
       nb: m[5].includes("_") ? 1 : 0,
       tn: m[5].includes("#") ? 1 : 0,
-      mv: m[5].includes("~") ? 1 : m[5].includes("=") ? 2 : 0,
+      mv: m[5].includes("~") ? 1 : m[5].includes("=") ? 2 : m[5].includes("%") ? 3 : 0,
       o: m[5].includes("<") ? 1 : m[5].includes(">") ? 2 : 0
     };
+    cur.mvTok = cur.mv ? ++moverTok : 0;
     if (m[3]) {
       cur.s = SURF_CODE[m[3]];
       if (!cur.s) throw new Error("Rev\xEAtement inconnu : " + tok);
@@ -7411,13 +7424,298 @@ var BUILTIN_TRACKS = [
       argent: 33.2,
       bronze: 38.9
     }
+  },
+  // ---- Atelier des mécanismes (chapitre BONUS, 12e) : obstacles puis pièces mobiles, un à un ----
+  {
+    // Chapitre 12 (Atelier, bonus) · 1/6 — MÉCANISME : bumpers et piques fixes sur les bords : ils ne gênent que si l’on coupe les virages.
+    // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    id: "garde",
+    name: "Garde-Fous",
+    decor: "atelier",
+    difficulty: 1,
+    profil: "atelier",
+    meca: [
+      "bumper",
+      "spikes"
+    ],
+    appris: "D\xE9part : quatre boosters \u2192 vague. Au programme : les premiers obstacles, bumpers (ils repoussent) et piques fixes, sur les bords : rester sur la route les \xE9vite, couper un virage les r\xE9veille.",
+    goal: {
+      id: "nowall"
+    },
+    opts: {
+      l: 6
+    },
+    pilot: {
+      vCap: 66
+    },
+    obst: [
+      {
+        k: "bumper",
+        at: 0.3,
+        side: -7.5,
+        s: 0.8
+      },
+      {
+        k: "spikes",
+        at: 0.55,
+        side: 7.5,
+        s: 0.7
+      },
+      {
+        k: "bumper",
+        at: 0.8,
+        side: 7.5,
+        s: 0.8
+      }
+    ],
+    script: "start B4 [cds1] S [crs1] S2 B HR S2 C S HL S B [cdi1] [dn2] [cdo1] B2 finish",
+    medals: {
+      cristal: 17,
+      or: 17.9,
+      argent: 20.5,
+      bronze: 24.1
+    }
+  },
+  {
+    // Chapitre 12 (Atelier, bonus) · 2/6 — MÉCANISME : piques escamotables en travers de la route : on passe quand elles sont rentrées.
+    // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    id: "cadence",
+    name: "En Cadence",
+    decor: "atelier",
+    difficulty: 1,
+    profil: "atelier",
+    meca: [
+      "spikesPop"
+    ],
+    appris: "D\xE9part : trois boosters \u2192 trois cases. Au programme : des piques escamotables en travers de la route (trois secondes de cycle, une et demie dehors) : on passe quand elles sont rentr\xE9es.",
+    goal: {
+      id: "norespawn"
+    },
+    opts: {
+      l: 6
+    },
+    pilot: {
+      vCap: 66
+    },
+    obst: [
+      {
+        k: "spikesPop",
+        at: 0.1,
+        side: 0,
+        s: 1.1,
+        ph: 0.438
+      },
+      {
+        k: "spikesPop",
+        at: 0.25,
+        side: 0,
+        s: 1.1,
+        ph: 0
+      }
+    ],
+    script: "start B3 S3 [crs1] S B HR S2 C S2 HL S B [cdi1] [dn2] [cdo1] B2 finish",
+    medals: {
+      cristal: 16.8,
+      or: 17.7,
+      argent: 20.4,
+      bronze: 23.9
+    }
+  },
+  {
+    // Chapitre 12 (Atelier, bonus) · 3/6 — MÉCANISME : une boule balancier puis un mur coulissant : il faut lire leur rythme.
+    // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    id: "pendule",
+    name: "Le Pendule",
+    decor: "atelier",
+    difficulty: 2,
+    profil: "atelier",
+    meca: [
+      "pendulum",
+      "slider"
+    ],
+    appris: "D\xE9part : deux boosters \u2192 vague. Au programme : une boule balancier qui balaie la route, puis un mur coulissant : on lit leur rythme et on passe dans le vide.",
+    goal: {
+      id: "nowall"
+    },
+    opts: {
+      l: 6
+    },
+    pilot: {
+      vCap: 66
+    },
+    obst: [
+      {
+        k: "pendulum",
+        at: 0.1,
+        side: 0,
+        s: 1,
+        ph: 0
+      },
+      {
+        k: "slider",
+        at: 0.6,
+        side: 0,
+        s: 1,
+        ph: 0.75
+      }
+    ],
+    script: "start B2 [crs1] S2 [cds1] S2 HR S B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
+    medals: {
+      cristal: 17.4,
+      or: 18.3,
+      argent: 21.1,
+      bronze: 24.7
+    }
+  },
+  {
+    // Chapitre 12 (Atelier, bonus) · 4/6 — MÉCANISME : un marteau tournant puis un balayeur : des obstacles qui tournent.
+    // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    id: "rotors",
+    name: "Rotors",
+    decor: "atelier",
+    difficulty: 2,
+    profil: "atelier",
+    meca: [
+      "hammer",
+      "sweeper"
+    ],
+    appris: "D\xE9part : trois cases \u2192 trois boosters. Au programme : un marteau tournant au milieu de la route, puis un balayeur : des obstacles qui tournent, on entre juste apr\xE8s leur passage.",
+    goal: {
+      id: "norespawn"
+    },
+    opts: {
+      l: 6
+    },
+    pilot: {
+      vCap: 66
+    },
+    obst: [
+      {
+        k: "hammer",
+        at: 0.1,
+        side: 0,
+        s: 1,
+        ph: 0.438
+      },
+      {
+        k: "sweeper",
+        at: 0.3,
+        side: 0,
+        s: 1,
+        ph: 0
+      }
+    ],
+    script: "start S3 B3 [cds1] S [crs1] S2 HR S B C S2 HL S B [cdi1] [dn2] [cdo1] B2 finish",
+    medals: {
+      cristal: 18.8,
+      or: 19.7,
+      argent: 22.7,
+      bronze: 26.7
+    }
+  },
+  {
+    // Chapitre 12 (Atelier, bonus) · 5/6 — MÉCANISME : un ascenseur et une glissière : la route elle-même bouge.
+    // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    id: "montecharge",
+    name: "Monte-Charge",
+    decor: "atelier",
+    difficulty: 3,
+    profil: "atelier",
+    meca: [
+      "lift",
+      "slide"
+    ],
+    appris: "D\xE9part : cinq boosters \u2192 vague. Au programme : la route bouge, un ascenseur (la dalle monte puis redescend) et une glissi\xE8re (elle se d\xE9cale sur le c\xF4t\xE9), comme dans l\u2019\xE9diteur.",
+    goal: {
+      id: "nowall"
+    },
+    opts: {
+      l: 6
+    },
+    pilot: {
+      vCap: 66
+    },
+    movers: [
+      {
+        ms: 100,
+        ma: 1
+      },
+      {
+        ms: 100,
+        ma: 1
+      }
+    ],
+    script: "start B5 S [crs1] S2~ B HR S2= C S HL S B [cdi1] [dn2] [cdo1] B2 finish",
+    medals: {
+      cristal: 16.8,
+      or: 17.7,
+      argent: 20.4,
+      bronze: 23.9
+    }
+  },
+  {
+    // Chapitre 12 (Atelier, bonus) · 6/6 — MÉCANISME : marteau, balancier et mur coulissant à la suite : tout le chapitre d’un coup.
+    // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    id: "grandatelier",
+    name: "Le Grand Atelier",
+    decor: "atelier",
+    difficulty: 3,
+    profil: "atelier",
+    meca: [
+      "hammer",
+      "pendulum",
+      "slider"
+    ],
+    appris: "D\xE9part : deux boosters \u2192 deux cases. Au programme : le tour d\u2019horizon, un marteau, un balancier puis un mur coulissant \xE0 la suite : les m\xE9canismes des circuits d\u2019avant reviennent d\u2019un coup.",
+    goal: {
+      id: "norespawn"
+    },
+    opts: {
+      l: 6
+    },
+    pilot: {
+      vCap: 66
+    },
+    obst: [
+      {
+        k: "hammer",
+        at: 0.1,
+        side: 0,
+        s: 1,
+        ph: 0.938
+      },
+      {
+        k: "pendulum",
+        at: 0.35,
+        side: 0,
+        s: 1,
+        ph: 0.313
+      },
+      {
+        k: "slider",
+        at: 0.6,
+        side: 0,
+        s: 1,
+        ph: 0.188
+      }
+    ],
+    script: "start B2 S2 [cds1] S2 [crs1] S B HR S2 C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
+    medals: {
+      cristal: 18,
+      or: 19,
+      argent: 21.8,
+      bronze: 25.6
+    }
   }
 ];
 BUILTIN_TRACKS.sort((a, b) => CAREER_ORDER.indexOf(a.decor) - CAREER_ORDER.indexOf(b.decor) || a.difficulty - b.difficulty);
 function buildBuiltin(def) {
   const t = scriptTrack(def.name, def.script, {
     ...def.opts || {},
-    decor: def.decor || "desert"
+    decor: def.decor || "desert",
+    ...def.movers ? {
+      movers: def.movers
+    } : {}
   });
   t.author = "Copytrack";
   if (def.params) t.setParams(def.params);
@@ -10017,7 +10315,7 @@ function botTime(track, latK = 0.8) {
 var cache2 = /* @__PURE__ */ new Map();
 function dailyChallenge(day = dayKey()) {
   if (cache2.has(day)) return cache2.get(day);
-  const decors = Object.keys(DECORS);
+  const decors = DAILY_DECORS;
   for (let attempt = 0; attempt < 40; attempt++) {
     const r = rng(day + "#" + attempt);
     const decor = decors[Math.floor(r() * decors.length)];
@@ -10095,6 +10393,92 @@ function dailyChallenge(day = dayKey()) {
 // js/version.js
 var PHYS_VER = 26;
 
+// js/ghostFormat.js
+var GHOST_EVERY = 4;
+var GHOST_STRIDE = 7;
+var GHOST_VEHICLES = [
+  "car",
+  "moto",
+  "boat",
+  "glider"
+];
+function poseQuat(p, out = [
+  0,
+  0,
+  0,
+  1
+]) {
+  let ux = p.n.x, uy = p.n.y, uz = p.n.z;
+  if (!p.grounded) {
+    ux = 0;
+    uy = 1;
+    uz = 0;
+  }
+  let fx = p.fwd.x, fy = p.fwd.y, fz = p.fwd.z;
+  const d = fx * ux + fy * uy + fz * uz;
+  fx -= ux * d;
+  fy -= uy * d;
+  fz -= uz * d;
+  if (fx * fx + fy * fy + fz * fz < 1e-6) {
+    fx = -dsin(p.yaw);
+    fy = 0;
+    fz = -dcos(p.yaw);
+  }
+  let l = Math.sqrt(fx * fx + fy * fy + fz * fz) || 1;
+  fx /= l;
+  fy /= l;
+  fz /= l;
+  let rx = fy * uz - fz * uy, ry = fz * ux - fx * uz, rz = fx * uy - fy * ux;
+  l = Math.sqrt(rx * rx + ry * ry + rz * rz) || 1;
+  rx /= l;
+  ry /= l;
+  rz /= l;
+  const m11 = rx, m12 = ux, m13 = -fx, m21 = ry, m22 = uy, m23 = -fy, m31 = rz, m32 = uz, m33 = -fz;
+  const tr = m11 + m22 + m33;
+  let x, y, z, w;
+  if (tr > 0) {
+    const s = 0.5 / Math.sqrt(tr + 1);
+    w = 0.25 / s;
+    x = (m32 - m23) * s;
+    y = (m13 - m31) * s;
+    z = (m21 - m12) * s;
+  } else if (m11 > m22 && m11 > m33) {
+    const s = 2 * Math.sqrt(1 + m11 - m22 - m33);
+    w = (m32 - m23) / s;
+    x = 0.25 * s;
+    y = (m12 + m21) / s;
+    z = (m13 + m31) / s;
+  } else if (m22 > m33) {
+    const s = 2 * Math.sqrt(1 + m22 - m11 - m33);
+    w = (m13 - m31) / s;
+    x = (m12 + m21) / s;
+    y = 0.25 * s;
+    z = (m23 + m32) / s;
+  } else {
+    const s = 2 * Math.sqrt(1 + m33 - m11 - m22);
+    w = (m21 - m12) / s;
+    x = (m13 + m31) / s;
+    y = (m23 + m32) / s;
+    z = 0.25 * s;
+  }
+  out[0] = x;
+  out[1] = y;
+  out[2] = z;
+  out[3] = w;
+  return out;
+}
+function encodeFloats(arr) {
+  if (!ArrayBuffer.isView(arr)) return "";
+  const bytes = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
+  let bin = "";
+  const CH = 32768;
+  for (let i = 0; i < bytes.length; i += CH) {
+    const slice = bytes.subarray(i, Math.min(i + CH, bytes.length));
+    bin += String.fromCharCode.apply(null, slice);
+  }
+  return btoa(bin);
+}
+
 // js/replay.js
 function decodeInputs(b64) {
   const bin = atob(b64);
@@ -10140,7 +10524,16 @@ var VEH_IDS = [
   "glider"
 ];
 var GhostRunner = class {
-  constructor(track, { inputs = null, bot = false, latK = 0.8 } = {}) {
+  // ghost : enregistre aussi le fantôme (une pose tous les GHOST_EVERY pas, comme la course en direct) : c'est ce que la fonction serveur range avec un record.
+  constructor(track, { inputs = null, bot = false, latK = 0.8, ghost = false } = {}) {
+    this.gRec = ghost ? [] : null;
+    this.gVeh = [];
+    this._q = [
+      0,
+      0,
+      0,
+      1
+    ];
     this.sim = new Simulation(track);
     this.phys = this.sim.phys;
     this.logic = this.sim.logic;
@@ -10161,13 +10554,44 @@ var GhostRunner = class {
   step() {
     if (this.done) return;
     const inp = this.bot ? this.bot.control(this.phys) : inputAt(this.rep, this.k);
-    if (inp.respawn) this.sim.rewind();
+    if (inp.respawn) {
+      this.sim.rewind();
+      this._gTrim();
+    }
     const ev = this.sim.step(inp);
-    if (this.sim.lost) this.sim.rewind();
+    if (this.gRec) this._gSample();
+    if (this.sim.lost) {
+      this.sim.rewind();
+      this._gTrim();
+    }
     if (ev && ev.type === "finish") this.done = true;
     if (this.rep && this.k >= this.rep.length + 240) this.done = true;
     this.k++;
     this._record(this.k);
+  }
+  // Fantôme enregistré (comme RaceSession) : un échantillon quand le chrono tombe sur un multiple de GHOST_EVERY ; un retour au checkpoint efface ce qui suit le checkpoint.
+  _gSample() {
+    const steps = this.logic.steps;
+    if (steps % GHOST_EVERY !== 0) return;
+    const p = this.phys, q = poseQuat(p, this._q);
+    const vid = GHOST_VEHICLES.indexOf(p.vehicle), last = this.gVeh.length ? this.gVeh[this.gVeh.length - 1][1] : 0;
+    if (vid !== last) this.gVeh.push([
+      this.gRec.length / GHOST_STRIDE,
+      vid
+    ]);
+    this.gRec.push(p.pos.x, p.pos.y, p.pos.z, q[0], q[1], q[2], q[3]);
+  }
+  _gTrim() {
+    if (!this.gRec) return;
+    this.gRec.length = Math.min(this.gRec.length, Math.floor(this.logic.steps / GHOST_EVERY) * GHOST_STRIDE);
+    while (this.gVeh.length && this.gVeh[this.gVeh.length - 1][0] >= this.gRec.length / GHOST_STRIDE) this.gVeh.pop();
+  }
+  // Le fantôme enregistré : { data: Float32Array, veh } (nécessite l'option ghost).
+  ghostResult() {
+    return {
+      data: new Float32Array(this.gRec),
+      veh: this.gVeh.map((c) => c.slice())
+    };
   }
   // Avance jusqu'au pas k (les lignes de l'historique jusque-là existent) ; renvoie false si le fantôme a terminé avant.
   seek(k) {
@@ -10261,7 +10685,7 @@ function trackForKey(key2, code = "") {
   }
   throw new Error("Cl\xE9 de circuit invalide.");
 }
-function replayTime(track, inputs) {
+function replayRun(track, inputs, { ghost = false } = {}) {
   if (!inputs || inputs.length > MAX_INPUTS_CHARS) return null;
   let rep;
   try {
@@ -10271,12 +10695,22 @@ function replayTime(track, inputs) {
   }
   if (!rep.length || rep.length > MAX_RUN_STEPS) return null;
   const g = new GhostRunner(track, {
-    inputs
+    inputs,
+    ghost
   });
   while (!g.done && g.k < MAX_RUN_STEPS) g.step();
-  return g.logic.finished ? g.logic.time : null;
+  if (!g.logic.finished) return null;
+  const out = {
+    time: g.logic.time
+  };
+  if (ghost) {
+    const r = g.ghostResult();
+    out.ghost = encodeFloats(r.data);
+    out.ghostVeh = r.veh;
+  }
+  return out;
 }
-function verifyRun({ trackKey, code, inputs, time, physVer }) {
+function verifyRun({ trackKey, code, inputs, time, physVer, withGhost = false }) {
   if (physVer !== PHYS_VER) return {
     ok: false,
     error: `Version du jeu diff\xE9rente (jeu ${physVer}, serveur ${PHYS_VER}).`,
@@ -10291,20 +10725,26 @@ function verifyRun({ trackKey, code, inputs, time, physVer }) {
       error: e.message
     };
   }
-  const sim = replayTime(t.track, inputs);
-  if (sim == null) return {
+  const run = replayRun(t.track, inputs, {
+    ghost: withGhost
+  });
+  if (run == null) return {
     ok: false,
     error: "La course rejou\xE9e n\u2019atteint pas l\u2019arriv\xE9e."
   };
-  if (Math.abs(sim - time) > 5e-4) return {
+  if (Math.abs(run.time - time) > 5e-4) return {
     ok: false,
     error: "Le temps ne correspond pas \xE0 la course rejou\xE9e."
   };
   return {
     ok: true,
-    time: sim,
+    time: run.time,
     name: t.name,
-    kind: t.kind
+    kind: t.kind,
+    ...withGhost ? {
+      ghost: run.ghost,
+      ghostVeh: run.ghostVeh
+    } : {}
   };
 }
 
@@ -10314,6 +10754,7 @@ var RATE_LIMIT = {
   max: 8,
   windowMs: 6e4
 };
+var MAX_GHOST_CHARS = 8e5;
 function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, allowedOrigin = "*", now = Date.now, rateLimit = RATE_LIMIT, log = console.error }) {
   const cors = {
     "Access-Control-Allow-Origin": allowedOrigin,
@@ -10425,7 +10866,8 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
         code,
         inputs,
         time,
-        physVer
+        physVer,
+        withGhost: true
       });
       if (!res.ok || typeof res.time !== "number") return json(422, {
         error: res.error ?? "Course non confirm\xE9e.",
@@ -10439,31 +10881,57 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
         error: "Profil pilote manquant."
       });
       const key2 = encodeURIComponent(trackKey);
-      const prev = await (await db(`scores?track_key=eq.${key2}&player=eq.${uid}&select=time,phys_ver`)).json();
+      let prevRes = await db(`scores?track_key=eq.${key2}&player=eq.${uid}&select=time,phys_ver,has_ghost`);
+      if (!prevRes.ok) prevRes = await db(`scores?track_key=eq.${key2}&player=eq.${uid}&select=time,phys_ver`);
+      const prev = await prevRes.json();
       let best = simTime;
       let improved = true;
       if (Array.isArray(prev) && prev.length && prev[0].phys_ver === physVer && prev[0].time <= simTime) {
         best = prev[0].time;
         improved = false;
       }
+      const ghost = typeof res.ghost === "string" && res.ghost.length <= MAX_GHOST_CHARS ? {
+        ghost: res.ghost,
+        ghost_veh: res.ghostVeh ?? []
+      } : null;
+      const backfill = !improved && ghost && prev[0].has_ghost === false && Math.abs(prev[0].time - simTime) < 1e-6;
       if (improved) {
-        const up = await db("scores", {
+        const row = {
+          track_key: trackKey,
+          player: uid,
+          time: simTime,
+          inputs,
+          phys_ver: physVer,
+          track_name: String(res.name ?? "").slice(0, 60),
+          updated_at: new Date(now()).toISOString()
+        };
+        let up = await db("scores", {
           method: "POST",
           headers: {
             Prefer: "resolution=merge-duplicates,return=minimal"
           },
-          body: JSON.stringify({
-            track_key: trackKey,
-            player: uid,
-            time: simTime,
-            inputs,
-            phys_ver: physVer,
-            track_name: String(res.name ?? "").slice(0, 60),
-            updated_at: new Date(now()).toISOString()
-          })
+          body: JSON.stringify(ghost ? {
+            ...row,
+            ...ghost
+          } : row)
+        });
+        if (!up.ok && ghost && up.status === 400) up = await db("scores", {
+          method: "POST",
+          headers: {
+            Prefer: "resolution=merge-duplicates,return=minimal"
+          },
+          body: JSON.stringify(row)
         });
         if (!up.ok) return json(500, {
           error: "Enregistrement impossible."
+        });
+      } else if (backfill) {
+        await db(`scores?track_key=eq.${key2}&player=eq.${uid}`, {
+          method: "PATCH",
+          headers: {
+            Prefer: "return=minimal"
+          },
+          body: JSON.stringify(ghost)
         });
       }
       const base = `track_key=eq.${key2}&phys_ver=eq.${physVer}`;

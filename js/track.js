@@ -6,6 +6,7 @@ import { centerlineWorld } from './ribbons.js';
 import { isObstacle, buildObstacleGrid } from './obstacles.js';
 import { DECO_ORDER } from './decoData.js';
 import { DECORS, DEFAULT_DECOR } from './themes.js';
+import { DEFAULT_AMBIANCE, cleanAmbiance, ambianceToArray, ambianceFromArray } from './ambiance.js';
 import { COLOR_KEYS, MP, W2, cleanColors } from './track/shared.js';
 import { surfaceMethods } from './track/surfaces.js';
 import { editMethods } from './track/edit.js';
@@ -51,6 +52,7 @@ export class Track {
     this.laps = 1;    // nombre de tours (circuit fermé)
     // Paramètres du niveau : la description (affichée dans la communauté) et les règles de course (table RULES)
     this.desc = '';
+    this.ambiance = { ...DEFAULT_AMBIANCE };    // moment de la journée, brume, musique (visuel et sonore : hors signature, voir ambiance.js)
     this.resetRules();
     this.vt = 0;      // temps de vérification (secondes) de l'auteur
     this.vh = '';     // signature du circuit au moment de la vérification
@@ -211,6 +213,7 @@ export class Track {
     this.vt = 0; this.vh = '';
     this.laps = 1;
     this.desc = '';
+    this.ambiance = { ...DEFAULT_AMBIANCE };
     this.resetRules();
     this.version++;
   }
@@ -269,6 +272,7 @@ export class Track {
   // accepte aussi un autre circuit, dont on lit les mêmes champs).
   setParams(p = {}) {
     if (p.desc !== undefined) this.desc = String(p.desc || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (p.ambiance !== undefined) this.ambiance = cleanAmbiance(p.ambiance);
     for (const r of RULES) if (p[r.key] !== undefined) this[r.key] = r.clean(p[r.key]);
   }
 
@@ -315,6 +319,7 @@ export class Track {
     t.vt = this.vt; t.vh = this.vh;
     t.laps = this.laps;
     t.desc = this.desc;
+    t.ambiance = { ...this.ambiance };
     for (const r of RULES) t[r.key] = this[r.key];
     return t;
   }
@@ -352,6 +357,8 @@ export class Track {
     if (decos.length) data.o = decos;
     if (this.laps > 1) data.lp = this.laps;
     if (this.desc) data.ds = this.desc;
+    const am = ambianceToArray(this.ambiance);
+    if (am) data.am = am;
     for (const r of RULES) if (this[r.key] !== r.def) data[r.code] = this[r.key] === true ? 1 : this[r.key];
     if (this.verified) { data.vt = this.vt; data.vh = this.vh; }
     return 'SHW3:' + b64encode(JSON.stringify(data));
@@ -400,7 +407,7 @@ export class Track {
       }
     }
     tr.laps = Math.max(1, Math.min(9, data.lp | 0 || 1));
-    tr.setParams({ desc: data.ds, ...Object.fromEntries(RULES.map((r) => [r.key, data[r.code]])) });
+    tr.setParams({ desc: data.ds, ambiance: ambianceFromArray(data.am), ...Object.fromEntries(RULES.map((r) => [r.key, data[r.code]])) });
     if (data.vt > 0 && data.vh) { tr.vt = +data.vt; tr.vh = String(data.vh); }
     return tr;
   }
@@ -493,8 +500,11 @@ export function scriptTrack(name, script, opts = {}) {
   let x = opts.x || 0, z = opts.z || 0, h = opts.h || 0, l = opts.l || 0;
   const path = [];
   let cur = { s: '', p: 0, v: 0, nb: 0, tn: 0 };
+  let moverTok = 0;       // numéro de l'instruction à pièce mobile (opts.movers[n - 1] = { ms, ma } : vitesse en % et amplitude de ses pièces)
   const place = (t, px, pz, lv, r, reverse = false, noPath = false, curOver = null) => {
     const tile = { t, x: px, z: pz, l: lv, r: r & 3, ...(curOver || cur) };
+    const mp = cur.mv && opts.movers ? opts.movers[cur.mvTok - 1] : null;
+    if (mp) { tile.ms = mp.ms || 0; tile.ma = mp.ma || 0; }
     if (cur.s && !surfaceAllowed(t, cur.s, cur.o | 0)) throw new Error(`${name} : revêtement ${cur.s} interdit sur ${t}`);
     for (const f of ['v', 'nb', 'tn', 'mv']) if (cur[f] && !flagAllowed(t, f, tile)) throw new Error(`${name} : drapeau ${f} interdit sur ${t}`);
     if (cur.o && !flagAllowed(t, 'o', tile, cur.o)) throw new Error(`${name} : orientation ${cur.o} interdite sur ${t}`);
@@ -574,15 +584,16 @@ export function scriptTrack(name, script, opts = {}) {
 
   for (const tok of script.trim().split(/\s+/)) {
     // [id] : n'importe quelle pièce par son identifiant (ex. [dn1] [cro2] [tr01s] [cvd1]) ; le niveau suit la pente de la pièce.
-    const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=<>]*)$/.exec(tok);
-    const m = gm ? [tok, '@' + gm[1], gm[2], gm[3], gm[4], gm[5]] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=<>]*)$/.exec(tok);
+    const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>]*)$/.exec(tok);
+    const m = gm ? [tok, '@' + gm[1], gm[2], gm[3], gm[4], gm[5]] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>]*)$/.exec(tok);
     if (!m) throw new Error('Instruction invalide : ' + tok);
     let op = m[1];
     const n = m[2] ? parseInt(m[2], 10) : 1;
     cur = {
-      s: '', p: 0, v: m[5].includes('^') ? 1 : 0, nb: m[5].includes('_') ? 1 : 0, tn: m[5].includes('#') ? 1 : 0, mv: m[5].includes('~') ? 1 : m[5].includes('=') ? 2 : 0,
+      s: '', p: 0, v: m[5].includes('^') ? 1 : 0, nb: m[5].includes('_') ? 1 : 0, tn: m[5].includes('#') ? 1 : 0, mv: m[5].includes('~') ? 1 : m[5].includes('=') ? 2 : m[5].includes('%') ? 3 : 0,
       o: m[5].includes('<') ? 1 : m[5].includes('>') ? 2 : 0,      // < : mur gauche, > : mur droit
     };
+    cur.mvTok = cur.mv ? ++moverTok : 0;
     if (m[3]) {
       cur.s = SURF_CODE[m[3]];
       if (!cur.s) throw new Error('Revêtement inconnu : ' + tok);

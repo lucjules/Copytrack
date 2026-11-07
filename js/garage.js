@@ -5,8 +5,9 @@ import { Track } from './track.js';
 import { TrackView } from './trackMesh.js';
 import { createCar } from './carModel.js';
 import {
-  CATALOG, COLOR_CHOICES, PRESETS, sanitizeLoadout,
+  CATALOG, COLOR_CHOICES, PRESETS, sanitizeLoadout, exclusiveOf,
 } from './cosmetics.js';
+import { COLLECTIONS, COLLECTION_COINS, collectionProgress } from './rewards.js';
 import { profile, saveProfile, owns, missingItems, totalCost, buy, setLoadout } from './profile.js';
 import { $, esc } from './dom.js';
 import { DEFAULT_DECOR } from './themes.js';
@@ -127,6 +128,17 @@ export class GarageSession {
         row.appendChild(sw);
         list.appendChild(row);
       }
+    } else if (this.cat === 'collections') {
+      const h0 = document.createElement('div');
+      h0.className = 'ghead';
+      h0.textContent = `Quatre éléments qui vont ensemble : les posséder tous rapporte ${COLLECTION_COINS} ◆ (une fois)`;
+      list.appendChild(h0);
+      for (const col of COLLECTIONS) {
+        const pr = collectionProgress(col), claimed = !!(p.collections && p.collections[col.id]);
+        const c = this._card(`${col.label} · ${pr.have}/${pr.total}`, pr.done ? (claimed ? '✔ Complète' : '★ Complète') : col.items.map(([cat, id]) => ((CATALOG[cat] || []).find((x) => x.id === id) || {}).label || id).join(' · '), { on: pr.done, locked: !pr.done });
+        c.onclick = () => { this.app.audio.click(); const first = col.items.find(([cat, id]) => !owns(cat, id)) || col.items[0]; this.setCat(first[0]); };
+        list.appendChild(c);
+      }
     } else if (this.cat === 'presets') {
       for (const pr of PRESETS) {
         const miss = missingItems(pr.loadout);
@@ -156,7 +168,8 @@ export class GarageSession {
     } else {
       for (const it of CATALOG[this.cat]) {
         const own = owns(this.cat, it.id);
-        const c = this._card(it.label, own ? (it.cost ? '✔ Débloqué' : 'Gratuit') : `🔒 ${it.cost} ◆`, { on: this.draft[this.cat] === it.id, locked: !own });
+        const ex = exclusiveOf(this.cat, it.id);
+        const c = this._card(it.label, own ? (it.cost ? '✔ Débloqué' : ex ? '★ Exclusif' : 'Gratuit') : ex ? `🔒 ${ex}` : `🔒 ${it.cost} ◆`, { on: this.draft[this.cat] === it.id, locked: !own });
         c.onclick = () => {
           this.setDraft({ [this.cat]: it.id });
           if (this.cat === 'horn') this.app.audio.horn(it.id);
@@ -171,9 +184,12 @@ export class GarageSession {
     const bar = $('garage-buy');
     if (miss.length) {
       const cost = totalCost(miss);
+      const lock = miss.map(([c, id]) => exclusiveOf(c, id)).find(Boolean);         // un exclusif ne s'achète pas : on dit comment l'obtenir
       bar.classList.remove('hidden');
-      $('garage-buy-text').innerHTML = `Aperçu : <b>${miss.length}</b> élément${miss.length > 1 ? 's' : ''} à débloquer · <b>${cost} ◆</b>${cost > p.coins ? ' <span class="warn">(pièces insuffisantes)</span>' : ''}`;
-      $('garage-buy-btn').disabled = cost > p.coins;
+      $('garage-buy-text').innerHTML = lock
+        ? `Aperçu : élément <b>exclusif</b> — ${esc(lock)}`
+        : `Aperçu : <b>${miss.length}</b> élément${miss.length > 1 ? 's' : ''} à débloquer · <b>${cost} ◆</b>${cost > p.coins ? ' <span class="warn">(pièces insuffisantes)</span>' : ''}`;
+      $('garage-buy-btn').disabled = !!lock || cost > p.coins;
     } else bar.classList.add('hidden');
   }
 

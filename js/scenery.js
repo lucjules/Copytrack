@@ -9,6 +9,7 @@ import { GeoBuilder } from './geo.js';
 import { CELL } from './constants.js';
 import { PIECES } from './pieces.js';
 import { DEFAULT_DECOR } from './themes.js';
+import { resolveAmbiance, isDefaultAmbiance } from './ambiance.js';
 import { hash2 } from './scenery/shared.js';
 import { decorMethods } from './scenery/decor.js';
 
@@ -118,6 +119,18 @@ export const THEMES = {
     hills: 28,
     plates: true,
     dust: '#d8b890',
+  },
+  // Atelier des mécanismes (chapitre bonus) : une halle claire et propre, des couleurs de signalisation (jaune, bleu) : on y VOIT les mécanismes.
+  atelier: {
+    sky: { top: '#2b3f6b', mid: '#6f8fc0', horizon: '#f3e6c4', sun: '#fff4c8', aurora: 0, stars: 0, skyline: 1 },
+    fog: '#b9c6d8', fogNear: 170, fogFar: 900,
+    sunDir: [0.4, 0.55, -0.7], sunColor: '#fff0cc', sunIntensity: 2.6,
+    hemi: ['#e8f0ff', '#6a6f7c', 1.6],
+    ground: ['#8f95a3', '#9aa0ae', '#848a98'],
+    rock: ['#7a8398', '#8a93a8', '#6a7388', '#c9a23a', '#4d5668'],
+    hills: 24,
+    plates: true,
+    dust: '#e8dcc0',
   },
   isles: {
     sky: { top: '#2a7fd8', mid: '#6cc0f0', horizon: '#ffe3b0', sun: '#fff7d6', aurora: 0, stars: 0 },
@@ -420,8 +433,10 @@ export class Scenery {
     } catch { /* WebGL sans rendu flottant : pas d'environnement, le reste fonctionne */ }
   }
 
-  setTheme(id) {
-    const T = THEMES[id] || THEMES[DEFAULT_DECOR];
+  // ambiance : moment de la journée / brume choisis par l'auteur du circuit (ambiance.js) ; absente, le décor tel quel.
+  setTheme(id, ambiance = null) {
+    const base = THEMES[id] || THEMES[DEFAULT_DECOR];
+    const T = isDefaultAmbiance(ambiance) ? base : resolveAmbiance(base, ambiance);
     this.themeId = THEMES[id] ? id : DEFAULT_DECOR;
     this.theme = T;
     const u = this.sky.material.uniforms;
@@ -455,7 +470,7 @@ export class Scenery {
   // Reconstruit le terrain et le décor autour d'un circuit.
   setTrack(track, seedStr = 'copytrack', opts = {}) {
     this._last = [track, seedStr, opts];
-    this.setTheme(opts.theme || track.decor || DEFAULT_DECOR);
+    this.setTheme(opts.theme || track.decor || DEFAULT_DECOR, track.ambiance);
     const T = this.theme;
     const ceiling = track.tiles.some((t) => t.v);
     this.under.color.set(T.hemi[0]);
@@ -559,7 +574,7 @@ export class Scenery {
     else if (this.themeId === 'caves') this._cavesDecor(ctx);
     else if (this.themeId === 'sky') this._skyDecor(ctx);
     else if (this.themeId === 'reef') this._reefDecor(ctx);
-    else if (this.themeId === 'factory') this._factoryDecor(ctx);
+    else if (this.themeId === 'factory' || this.themeId === 'atelier') this._factoryDecor(ctx);
     else this._desertDecor(ctx);
   }
 

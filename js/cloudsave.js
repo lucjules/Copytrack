@@ -71,11 +71,16 @@ export function mergeProfile(local, remote) {
   const eggs = { ...obj(b.eggs), ...obj(a.eggs) };
   const shards = { ...obj(b.shards), ...obj(a.shards) };
   const stats = { ...obj(b.stats), ...obj(a.stats), races: Math.max(num(a.stats && a.stats.races), num(b.stats && b.stats.races)), earned: Math.max(num(a.stats && a.stats.earned), num(b.stats && b.stats.earned)) };
+  const academy = { ...obj(b.academy), ...obj(a.academy) };                   // leçons réussies : on réunit
+  const collections = { ...obj(b.collections), ...obj(a.collections) };      // collections récompensées : on réunit
+  const dailyDays = [...new Set([...(Array.isArray(a.dailyDays) ? a.dailyDays : []), ...(Array.isArray(b.dailyDays) ? b.dailyDays : [])])].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().slice(-400);
+  const titlesSeen = [...new Set([...(Array.isArray(a.titlesSeen) ? a.titlesSeen : []), ...(Array.isArray(b.titlesSeen) ? b.titlesSeen : [])])].slice(0, 40);
+  stats.turbos = Math.max(num(a.stats && a.stats.turbos), num(b.stats && b.stats.turbos));
   const presets = Array.isArray(a.presets) && a.presets.some(Boolean) ? a.presets : (Array.isArray(b.presets) ? b.presets : a.presets);
   return {
     ...b, ...a,
     id: b.id || a.id,                    // l'identifiant du joueur reste celui du compte
-    coins: mergeCoins(a, b, owned), owned, medals, eggs, shards, stats, presets,
+    coins: mergeCoins(a, b, owned), owned, medals, eggs, shards, stats, presets, academy, collections, dailyDays, titlesSeen,
     loadout: a.loadout || b.loadout,     // l'appareil courant garde sa personnalisation
   };
 }

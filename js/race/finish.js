@@ -7,6 +7,7 @@ import { saveRecord, encodeFloats, formatTime } from '../storage.js';
 import { rewardCoins } from '../profile.js';
 import { MEDALS, medalFor } from '../medals.js';
 import { PHYS_VER } from '../version.js';
+import { noteRace } from '../rewards.js';
 import { goalMet, goalLabel, completeGoal, goalDone } from '../career.js';
 export const finishMethods = {
   _event(ev) {
@@ -65,6 +66,11 @@ export const finishMethods = {
     app.audio.engine(null);          // plus de bruit de moteur une fois le niveau terminé
     this.finishT = 0;
     if (this.replay) { this._replayEnded(); return; }
+    if (this.opts.academy) {       // leçon de l'Académie : ni record, ni pièces de circuit, ni statistiques ; l'écran de bilan est celui de l'Académie
+      app.audio.finish(false);
+      app.onAcademyFinished(this, time);
+      return;
+    }
     if (this.cup) {
       // Championnat : le temps part à tous, l'hôte clôt la manche ; la place et les points s'affichent dans le panneau de manche (app/multi.js).
       this._sendNet(F_FINISHED);
@@ -105,8 +111,12 @@ export const finishMethods = {
       saveRecord(this.trackKey, rec);
     }
     app.audio.finish(isRecord);
+    if (this.rivals.length) {
+      app.ui.flash('👻 ' + this.rivals.map((r) => (time < r.time ? `tu bats ${r.name} de ${(r.time - time).toFixed(3)} s` : `${r.name} reste devant de ${(time - r.time).toFixed(3)} s`)).join(' · '), 6);
+    }
     const medal = medalFor(time, this.medals);
     this._tmDone = true;
+    if (!this.opts.fromEditor && !this.opts.spawn) noteRace({ turbos: this.stats.turbos, dailyDay: this.opts.daily && this.trackKey ? String(this.trackKey).slice(6) : '' });
     if (!this.opts.fromEditor && !this.opts.spawn) app.telemetry.record({ trackKey: this.trackKey, outcome: 'finish', time, respawns: this.stats.respawns, medal: medal && medal.id });
     const prevMedal = prev ? medalFor(prev.time, this.medals) : null;
     let reward = null;
@@ -128,6 +138,7 @@ export const finishMethods = {
       if (coins) app.ui.updateCoins();
       goal = { label: goalLabel(this.opts.goal), met, coins, already };
     }
+    app.checkRewards();
     app.ui.showFinish({
       goal,
       reward,

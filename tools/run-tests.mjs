@@ -14,7 +14,7 @@ import { dirname, join } from 'node:path';
 const dir = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const filter = args.find((a) => !a.startsWith('--'));
-const files = readdirSync(dir).filter((f) => /^test-.*\.mjs$/.test(f) && f !== 'test-browser.mjs').sort();
+const files = readdirSync(dir).filter((f) => /^test-.*\.mjs$/.test(f) && !f.startsWith('test-browser')).sort();
 if (args.includes('--list')) { console.log(files.join('\n')); process.exit(0); }
 
 // Contrôles qui ne sont pas des suites de tests : [fichier, muet ?]. « check-generated » réécrit sw.js un instant : il passe seul, avant le reste.

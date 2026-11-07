@@ -6,6 +6,130 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.21 — le jeu parle anglais (français / anglais)
+
+`PHYS_VER` inchangé (26) ; rien à redéployer, côté serveur comme côté physique. **Rien ici ne touche à la course** (empreinte de physique, records, replays, classements identiques).
+
+- **Deux langues** : français et anglais, une seule base de code. Le français reste la langue **source** et sert de clé : le code, le HTML et les données du jeu ne sont pas réécrits (~25 000 lignes) ; en anglais, le texte réellement affiché est traduit au dernier moment. Pas de dictionnaire chargé en français : rien ne change pour un joueur francophone (ni poids, ni écritures dans la page).
+- **Choix de la langue** : au premier lancement d'un *nouvel appareil*, celle du navigateur (français si le navigateur est en français, anglais sinon) ; un appareil qui a déjà des données de jeu **reste en français** (on ne change pas la langue de quelqu'un sans qu'il l'ait demandé). Un sélecteur **Français / English** est sur l'écran d'accueil, et **Profil › Options › Langue** bascule en direct, sans recharger, dans les deux sens ; le français revient exactement à l'identique. La langue est un réglage de l'**appareil** (elle est connue avant l'identification du joueur).
+- **Couverture : ~1 700 entrées** : accueil, menus, carrière (chapitres, objectifs bonus, **noms et descriptions des 72 circuits**), profil, options, commandes et noms de touches, tutoriel, Académie, garage et cosmétiques, titres, communauté, multijoueur, bandeau d'aide et messages de course, arrivée, replay, **éditeur** (barre d'outils, palette, catalogue de pièces et de **décorations**, inspecteur, prefabs, raccourcis, messages), erreurs du serveur et du réseau.
+- **Comment ça marche** (`js/i18n.js`, `js/i18n/`) : un traducteur DOM (`MutationObserver`, qui s'exécute avant le dessin : aucun flash de français) traduit les textes, les infobulles (`title`, `aria-label`, `placeholder`) et les paragraphes à balises (`<b>…</b>`) *d'un bloc*, car l'ordre des mots change d'une langue à l'autre. Les textes à valeurs (« Tour 2/3 », « 12 pièces · modifié le… ») sont reconnus par des **modèles à trous** (`{n}`, `{name:t}` : valeur traduite à son tour, `{n:w}` : un seul mot, pour qu'un modèle « Montée {n} » n'avale pas une phrase) ; les pluriels anglais sont des fonctions. Dates et heures suivent la langue. `t('Tour {n}', {n})` existe pour le texte qui ne passe pas par la page (presse-papiers, partage).
+- **Un trou de traduction est une phrase française, jamais un écran cassé** : un texte sans entrée reste tel quel.
+- **Limites assumées** : (1) la traduction **n'a pas été relue par un anglophone natif** ; (2) le texte écrit par les joueurs (pseudos, noms et descriptions de circuits publiés) n'est évidemment pas traduit — et un pseudo qui serait *exactement* un mot de l'interface (« Jouer », « Retour ») s'afficherait traduit, cas très rare ; (3) les écrans qui demandent un salon réseau réel (salle multijoueur en cours, classements en ligne détaillés) sont couverts par le scan du code et les modèles, pas par une vérification en navigateur ; (4) le README, les docs `supabase/` et les messages de console restent en français ; (5) ajouter une troisième langue = un fichier `js/i18n/<code>.js` + une ligne dans `DICTIONARIES` (`i18n/boot.js`) et `LANGS` (`i18n.js`).
+- **Corrigé au passage** : le message de fin de carrière (« ✦ Carrière complète : … ») affichait littéralement `${sm.total}` (apostrophes au lieu d'une chaîne gabarit).
+- **Outils** : `tools/i18n-scan.mjs` (inventaire des textes français et de leur couverture ; `--keys` pour amorcer un dictionnaire), `tools/i18n-crawl.mjs` (parcourt les écrans en anglais dans un vrai navigateur et liste ce qui reste en français).
+- **Tests** : `tools/test-i18n.mjs` (noyau, intégrité du dictionnaire — trous et balises conservés, pas de traduction contradictoire —, **couverture de `index.html` et de toutes les données**, y compris les 72 descriptions de circuits) ; `tools/test-browser-i18n.mjs` (langue au premier lancement dans les trois cas, bascule en direct dans les deux sens, retour exact au français, aucun reste de français sur les écrans principaux, en course, à la pause, à l'arrivée et dans l'éditeur). `test-browser.mjs` impose maintenant la locale `fr-FR` (Playwright démarre en `en-US`).
+
+## Bêta 0.9.20 — le ressenti de course : de la ponctuation autour de la conduite
+
+`PHYS_VER` inchangé (26) ; rien à redéployer. **Rien ici ne touche à la physique** : la voiture roule exactement pareil avec ou sans (empreinte de physique, records et replays identiques) ; ce sont des retours visuels, sonores et tactiles.
+
+- **Lignes de vitesse graduées** : elles naissent dès 126 km/h et montent jusqu'au plein effet vers 360 km/h (avant : rien avant 223 km/h, puis tout d'un coup).
+- **Coup de champ de vision** (+5°, retombe en 0,4 s) au départ d'un turbo ou d'un mini-turbo.
+- **Tassement de la caméra à la réception** : plus le choc est fort, plus elle descend (jusqu'à 65 cm), puis remonte doucement.
+- **Aspiration** : rouler derrière une autre voiture (fantôme du record, fantôme d'or ou importé, rival du classement, joueur distant), dans son axe et à moins de 30 m, renforce les lignes de vitesse et fait siffler le vent.
+- **Vibrations de manette graduées** (avant : seulement des coups ponctuels) : un grondement léger qui monte avec la vitesse, plus fort hors piste et en dérapage, des pulsations en turbo.
+- **Bruit de croisement** quand on double ou croise une autre voiture à moins de 6 m en travers.
+- **Réglage « Sensations de course »** (Profil › Options, 0 à 150 %, 100 % par défaut) : à 0, aucun de ces effets (et les lignes de vitesse reviennent à l'ancien comportement).
+- `js/feel.js` : fonctions pures (sans rendu), testées. **Limite assumée** : ces dosages (intensités, durées, seuils) sont raisonnables d'après les ordres de grandeur du jeu mais **n'ont pas été jugés à la manette** : c'est le seul point du diagnostic qui demande un joueur
+  aux commandes ; le réglage « Sensations » et les constantes en tête de `feel.js` sont faits pour être ajustés.
+- Tests : `tools/test-ressenti.mjs` ; test navigateur (coup de FOV, aspiration, vibrations, réglage à 0).
+
+## Bêta 0.9.19 — l'éditeur : des prefabs et une ambiance par circuit
+
+`PHYS_VER` inchangé (26) ; rien à redéployer côté serveur.
+
+- **Prefabs** (onglet « Prefabs » de la palette) : six morceaux fournis — *Chicane*, *Épingle*, *Slalom*, *Saut*, *Looping*, *Wall-ride* — qu'on colle comme le presse-papiers (clic sur la grille, `R` pour pivoter, aux quatre orientations et à tout niveau).
+  « Enregistrer la sélection » (outil Sélection) crée **ses propres prefabs** (jusqu'à 40, dans ce navigateur) ; ⧉ copie le **code `SHP1:`** à envoyer à un ami, « Importer un code » ajoute celui d'un ami. Un code venu de l'extérieur est validé
+  (préfixe, taille, 400 pièces et 300 décorations au plus, circuit non vide) avec un message lisible. Absents du mode guidé de l'éditeur.
+- **Ambiance par circuit** (Paramètres du niveau) : **moment de la journée** (aube, plein jour, coucher de soleil, nuit), **brume** (dégagé, brumeux, épais) et **musique** (chill de course, groove du menu, aucune), par-dessus le décor : ciel, soleil, lumière,
+  étoiles, brouillard. L'ambiance voyage dans le code de partage (champ `am`, absent par défaut : **le code d'un circuit sans ambiance ne change pas d'un octet**) et dans les circuits publiés, mais elle est **hors signature** : la changer ne fait perdre ni la
+  vérification ni les records. Valeurs inconnues ou hostiles ignorées. Elle ne s'applique pas en multijoueur ni en leçon pour la musique (toujours le chill).
+- Nouveaux modules : `js/ambiance.js` (réglages purs, sans rendu), `js/prefabs.js` (format, code, morceaux fournis), `js/editor/prefabs.js` (interface). La zone « Zones » (vitesse imposée, caméra spéciale) du diagnostic **n'est pas faite** : elle changerait la physique
+  des circuits (donc `PHYS_VER` et la vérification serveur) ; à décider à part.
+- Tests : `tools/test-ambiance.mjs` (code, signature, rendu de chaque décor × moment de la journée), `tools/test-prefabs.mjs` (morceaux collés aux quatre orientations, codes hostiles, bibliothèque), test navigateur (ambiance appliquée à la scène, prefab collé, enregistré, exporté, supprimé, importé, caché en mode guidé).
+
+## Bêta 0.9.18 — trouver de bons circuits, et des récompenses qui se méritent
+
+`PHYS_VER` inchangé (26) ; **facultatif côté serveur** : `supabase/etape8-decouverte.sql` (sans lui, rien ne casse : l'onglet « Cette semaine » retombe sur « Plus joués », les titres restent locaux).
+
+- **Découverte dans la communauté** : un onglet **🔥 Cette semaine** (les circuits où le plus de pilotes *différents* ont couru ces 7 derniers jours, d'après `track_plays`) et, en tête de l'écran, le **⭐ Circuit de la semaine**
+  (le premier de cette liste, à partir de deux pilotes). Chaque carte affiche une **difficulté estimée** (◆◆◆◇◇ + libellé) et la fenêtre de publication la montre avant de publier.
+- **Indice de difficulté** (`js/difficulty.js`) : estimé d'après la **géométrie** seulement (virages serrés, murs, loopings, rubans, plaques, obstacles pondérés, pièces mobiles, pièges, longueur, tours), sans simulation : instantané, valable
+  pour tout circuit d'éditeur (qui n'a pas de ligne centrale pour le pilote automatique). Les seuils des étoiles sont les centiles des 72 circuits intégrés. **Limite assumée** : c'est une indication, pas une mesure ; elle ne voit
+  pas, par exemple, un enchaînement de sauts très délicat.
+- **Titres** : neuf titres décoratifs (Diplômé, Mécano, Globe-trotter, Cristallin, Légende, Fidèle, Collectionneur, Vétéran, Maître du dérapage), calculés d'après la progression ; on en choisit un dans Profil, il s'affiche à côté du pseudo dans
+  les classements en ligne. Le serveur ne vérifie que la liste (il ne connaît pas la progression) : un titre est cosmétique.
+- **Exclusifs du garage** (jamais en vente) : *Traînée dorée* (7 défis du jour différents), *LED Émeraude* (une médaille sur chacun des 6 circuits de l'Atelier), *LED Crépuscule* (diplôme de l'Académie) ; le garage dit comment les obtenir.
+- **Collections** à thème (Néon, Feu, Royal, Course) : quatre éléments qui vont ensemble ; les posséder tous rapporte **100 ◆ une fois** ; un nouvel onglet « Collections » du garage montre l'avancement.
+- Le profil retient les jours de défi du jour et les mini-turbos cumulés ; la fusion des sauvegardes cloud réunit leçons, collections, jours de défi et titres vus. Les récompenses sont données (et annoncées) à la fin d'une course, d'une leçon, et au démarrage
+  pour un joueur qui les mérite déjà.
+- Tests : `tools/test-difficulte.mjs`, `tools/test-recompenses.mjs` (dont la liste blanche SQL comparée à celle du jeu), SQL (étape 8 : tendances, fenêtre, pagination, titres), navigateur (communauté simulée, profil, garage).
+
+## Bêta 0.9.17 — partager un record : un lien qui lance le défi, et le replay en vidéo
+
+`PHYS_VER` inchangé (26) ; rien à redéployer côté serveur.
+
+- **Lien de défi** : « Partager mon fantôme » propose maintenant **Copier le lien** en plus du code. Le lien (`…#g=SHG1…`) ouvre le jeu sur « Défi partagé » : *X t'envoie son fantôme, saurais-tu le battre ?* ;
+  « Courir contre lui » importe le fantôme (violet) et lance le circuit (circuits intégrés et défi du jour ; pour un circuit de joueur, le fantôme est gardé jusqu'à ce que tu joues ce circuit). Le code reste dans la
+  partie « # » de l'adresse : il ne part jamais vers un serveur. Un lien trop long pour certaines messageries (plus de 7 000 caractères) est signalé, avec le code à copier à la place ; un lien cassé, coupé
+  ou d'une autre version du jeu donne un message lisible.
+- **Export vidéo du replay** : la barre de replay a un bouton **🎬 Vidéo** : le replay repart du début, la scène 3D est enregistrée (`MediaRecorder`, WebM VP9/VP8, 8 Mb/s, 60 i/s, sans son ni interface) et le fichier
+  `copytrack-<circuit>-<temps>.webm` est proposé au téléchargement, après une seconde et demie sur la ligne d'arrivée ; un second appui, Échap ou la fermeture du replay annule. Le navigateur qui ne sait pas enregistrer
+  (anciens Safari, notamment) l'annonce au lieu de planter. **Pas de GIF** : un GIF de plusieurs secondes pèse bien plus lourd qu'un WebM et demande un encodeur à embarquer ; le WebM s'importe partout où un GIF animé servirait.
+- Nouveaux modules : `js/videoExport.js` (enregistreur de canvas, sans dépendance au jeu) ; `ghostLink` / `ghostFromHash` dans `js/replay.js`.
+- Tests : `tools/test-partage.mjs` (aller-retour du lien, liens cassés ou coupés, formats vidéo, enregistreur, nom de fichier) ; test navigateur : lien ouvert dans un autre onglet, course contre le fantôme partagé,
+  **export vidéo réel** (fichier WebM reçu en téléchargement).
+
+## Bêta 0.9.16 — l'Académie : six leçons guidées et un éditeur qui démarre simple
+
+`PHYS_VER` inchangé (26) ; rien à redéployer côté serveur.
+
+- **Académie** (menu principal) : six leçons de deux minutes, chacune sur un seul geste — *Prise en main*, *Dérapage et mini-turbo*, *Mini-turbos en série*, *Saut et réception parfaite*, *Plaque de transformation*, *Obstacles* —
+  chacune avec un court circuit, une introduction (avec les touches réelles du joueur, ou les boutons à l'écran sur tactile), une consigne qui s'affiche au départ, un **objectif** (les mêmes règles que les objectifs bonus
+  de la carrière) et un bilan qui dit quoi corriger. Pas de chrono, de médaille ni de statistique. **+20 ◆** la première fois qu'une leçon est réussie, **+60 ◆** au diplôme. Jusqu'ici le dérapage et le mini-turbo, le cœur
+  de la conduite, ne se découvraient que par hasard.
+- Le **tutoriel** de premier lancement propose de commencer l'Académie, et mentionne l'Atelier.
+- **Éditeur guidé** : pour un **nouveau** joueur (à la fin du premier tutoriel), l'éditeur n'affiche que l'essentiel — les familles Droite (avec les pentes) et Virage, le départ, l'arrivée et le checkpoint ; les autres pièces,
+  options, revêtements et décors se débloquent d'un clic sur « Tout afficher » (ou dans Profil › Options : « Éditeur guidé »). Rien n'est retiré à qui connaît déjà l'éditeur : le mode ne s'active pas pour les joueurs existants.
+- Vérifié : le pilote automatique réussit les objectifs des leçons 1, 4, 5 et 6 (muret, réception parfaite, moto, piques sans réapparition, à 90 et 110 % de sa vitesse) ; pour le mini-turbo, le **geste décrit dans la leçon**
+  (volant à fond, frein 0,8 s) déclenche bien un mini-turbo dans le grand virage sans toucher de muret. **Limite assumée** : l'objectif de la leçon 3 (deux mini-turbos d'affilée) n'a pas de joueur automatique qui le prouve ;
+  il se joue à la main.
+- Tests : `tools/test-academy.mjs` ; test navigateur (menu, leçon jouée et réussie, bilan, récompense unique ; éditeur guidé, pièces refusées, « Tout afficher »).
+
+## Bêta 0.9.15 — l'Atelier des mécanismes : un chapitre bonus qui montre chaque obstacle et chaque pièce mobile
+
+**`PHYS_VER` inchangé (26)** : records, replays et fantômes sont conservés, et le défi du jour est identique à celui d'avant (vérifié). Six circuits s'ajoutent : **la fonction `submit-score` doit être
+redéployée** (`npm run build:function`, puis `index.ts`) pour qu'elle connaisse leurs clés ; tant qu'elle ne l'est pas, leurs classements en ligne refusent les temps (« Circuit intégré inconnu »).
+
+- **Chapitre 12, l'Atelier** (nouveau décor « Atelier des mécanismes ») : six circuits courts du profil *Mécanisme* qui enseignent les sept obstacles du jeu et l'ascenseur / la glissière **un par un** :
+  *Garde-Fous* (bumpers et piques fixes) → *En Cadence* (piques escamotables sur la route) → *Le Pendule* (balancier + mur coulissant) → *Rotors* (marteau + balayeur) → *Monte-Charge* (ascenseur + glissière)
+  → *Le Grand Atelier* (tout ensemble). Jusqu'ici 6 circuits sur 66 portaient un obstacle et aucun une pièce mobile : la moitié de ce que l'éditeur sait faire ne se voyait jamais en carrière.
+- Chaque circuit a été **placé par recherche** avec le pilote automatique (positions et phases des obstacles) : il passe sans choc ni réapparition à 90, 100 et 110 % de sa vitesse, et peut repartir de chaque
+  checkpoint à l'arrêt ; la fenêtre de passage est large (les phases voisines passent aussi). Nouveau contrat de profil `atelier` dans `tools/contract.mjs` (temps, mécanismes déclarés présents).
+- **Chapitre bonus** : il vient en dernier de la liste mais s'ouvre avec 4 médailles dans le **premier** chapitre ; il ne fait pas partie de l'enchaînement « circuit suivant » (rien ne bouge pour qui a déjà progressé).
+- Le **défi du jour** ne tire que dans les onze décors d'origine (`DAILY_DECORS`) : en ajouter un douzième aurait changé le circuit de chaque jour.
+- `scriptTrack` : paramètres des pièces mobiles dans les circuits scriptés (`movers`) et drapeau `%` (rotation). La **rotation n'est pas utilisée** : elle réserve une couronne de cases autour d'elle, donc ne se pose pas
+  au milieu d'une route (voir `Track.cellsOf`) ; elle reste un outil d'éditeur.
+- `tools/phys-fingerprint.mjs` distingue désormais un circuit *ajouté* (nouveaux scénarios : on enregistre, sans toucher à `PHYS_VER`) d'une physique *modifiée*.
+- Tests : `tools/test-atelier.mjs` ; `test-niveaux` / `test-registres` passent à 72 circuits et 12 décors ; le test navigateur compte 72 cartes.
+
+## Bêta 0.9.14 — affronter le top 10 : fantômes des classements en ligne
+
+**`PHYS_VER` inchangé (26)** : records, replays et fantômes sont conservés. **La fonction `submit-score` doit être redéployée** (`npm run build:function`, puis `index.ts`) et `supabase/etape7-fantomes.sql`
+lancé dans Supabase (dans n'importe quel ordre : sans les colonnes, le temps est enregistré sans fantôme).
+
+- **Fantôme du record côté serveur** : la fonction qui rejoue déjà chaque course (pour en vérifier le temps) en tire aussi le fantôme : une pose (position + orientation) tous les 4 pas et les
+  changements de véhicule, au format exact du fantôme enregistré en local. Le fantôme ne contient **jamais les commandes** : il ne permet pas de renvoyer la course d'un autre sous son nom
+  (c'est pourquoi l'étape 5 avait rendu les replays illisibles). Un record d'avant l'étape 7 en reçoit un quand son auteur renvoie le même temps, ou via `tools/backfill-ghosts.mjs`.
+- **Classement** : un bouton 👻 sur chacun des dix premiers (là où le fantôme existe) ; il lance (ou relance) le circuit avec ce rival affiché, étiqueté de son nom et de son temps (jusqu'à trois à la fois
+  côté code), et le jeu indique à l'arrivée de combien tu le bats (ou de combien il reste devant).
+- Lecture : la fonction SQL `get_ghost` (n° 1 à 10 d'un circuit et d'une version de physique) ; la colonne n'est pas lisible directement. Tout fantôme reçu est validé (format, bornes) avant d'être dessiné.
+- `js/ghostFormat.js` (nouveau, sans rendu) regroupe le format des fantômes (constantes, orientation d'après la pose, codec) : il sert au jeu et à la fonction serveur. `GhostRunner` sait enregistrer le fantôme
+  pendant le rejeu (même règle que la course en direct : un retour au checkpoint efface les poses qui le suivent).
+- Tests : `tools/test-fantomes.mjs` (orientation identique à celle du jeu, enregistrement, retour au checkpoint, client, outil de rattrapage), test du gestionnaire serveur (fantôme rangé, colonnes absentes, rattrapage),
+  SQL (colonne illisible, `get_ghost`), test navigateur (rival affiché et étiqueté).
+
 ## Bêta 0.9.13 — multijoueur « championnat », salons publics, relais TURN, télémétrie et médailles calibrées sur de vrais joueurs
 
 `PHYS_VER` reste à 26 (physique inchangée) : **records, replays et fantômes sont conservés**, et la fonction `submit-score` n'a pas à être redéployée. Le **protocole réseau**

@@ -18,11 +18,15 @@ import { VERSION, PHYS_VER } from './version.js';
 import { online } from './online.js';
 import { account } from './account.js';
 import { runWelcome } from './welcome.js';
-import { goalFor } from './career.js';
+import { initI18n } from './i18n/boot.js';
+import { goalFor, nextBuiltinIndex } from './career.js';
 import { loadSettings, saveSettings, getRecord, saveRecord, saveMyTrack, newId, formatTime, purgeOldRecords, getJSON, setJSON } from './storage.js';
 import { Telemetry } from './telemetry.js';
+import { ghostFromHash } from './replay.js';
 import { QualityManager, PROFILE_LABELS, wantAntialias } from './quality.js';
 import { multiMethods } from './app/multi.js';
+import { academyMethods } from './app/academy.js';
+import { rewardsMethods } from './app/rewards.js';
 import { communityMethods } from './app/community.js';
 import { screenMethods } from './app/screens.js';
 import { settingsMethods } from './app/settings.js';
@@ -117,7 +121,7 @@ class App {
   playBuiltin(i) {
     const b = this.builtins[i];
     this.playTrack(b.track, {
-      trackKey: b.key, medals: b.def.medals, difficulty: b.def.difficulty, hasNext: i < this.builtins.length - 1, builtinIndex: i, seed: b.key,
+      trackKey: b.key, medals: b.def.medals, difficulty: b.def.difficulty, hasNext: nextBuiltinIndex(i, this.builtins.length) != null, builtinIndex: i, seed: b.key,
       goal: goalFor(b.def, i), goalKey: b.key + '#goal',
     });
   }
@@ -132,7 +136,9 @@ class App {
     this.ui.setMode('race');
     $('replay-bar').classList.add('hidden');
     this.session = new RaceSession(this, track, opts);
-    this.audio.music.play('game');
+    // Musique du circuit : celle de l'auteur (ambiance.js) ou le chill de course ; en multijoueur ou en leçon, toujours le chill.
+    const mus = !(opts && (opts.multi || opts.academy)) && track.ambiance ? track.ambiance.music : '';
+    if (mus === 'none') this.audio.music.stop(); else this.audio.music.play(mus === 'menu' ? 'menu' : 'game');
     this._resize();
   }
 
@@ -169,6 +175,7 @@ class App {
   quitRace() {
     const opts = this.session ? this.session.opts : {};
     if (opts.multi) { this._leaveRaceToLobby(opts.multi.room); return; }
+    if (opts.academy) { this.showMenu('menu'); this.academyMenu(); return; }
     if (opts.fromEditor) this.openEditor(this.editorState);
     else if (opts.builtinIndex != null || opts.daily) this.showMenu('tracks');
     else if (opts.userEntry) this.showMenu('mytracks');
@@ -274,8 +281,16 @@ class App {
     this._startBench();
     this.telemetry.scheduleFlush(15000);
     setTimeout(() => this.askTelemetry(), 4000);
+    setTimeout(() => this.checkRewards(), 2500);          // rattrape ce qui est déjà mérité (joueur existant)
     // Premier lancement : petit tutoriel (sauf si on arrive par un lien de circuit).
-    if (!this.settings.tutorialDone && !hash.startsWith('#t=')) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
+    if (!this.settings.tutorialDone && !hash.startsWith('#t=') && !hash.startsWith('#g=')) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
+    if (hash.startsWith('#g=')) {
+      try {
+        const ghost = ghostFromHash(hash);
+        history.replaceState(null, '', location.pathname + location.search);
+        setTimeout(() => this.openGhostLink(ghost), 400);
+      } catch (e) { history.replaceState(null, '', location.pathname + location.search); this.ui.flash(e.message, 4); }
+    }
     if (hash.startsWith('#t=')) {
       try {
         const track = Track.decode(hash);
@@ -341,7 +356,7 @@ class App {
 }
 
 // Les familles de méthodes vivent dans app/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(App.prototype, multiMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods);
+Object.assign(App.prototype, multiMethods, academyMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods);
 
 
 // Application installable et jouable hors ligne (service worker), si le contexte le permet.
@@ -351,6 +366,8 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 
 (async () => {
   try {
+    // 0. La langue d'abord (réglage de l'appareil) : l'écran d'accueil lui-même est traduit.
+    await initI18n();
     // 1. Pseudo d'abord : invité (session) ou compte. Le menu et le jeu ne se chargent qu'ensuite.
     const identity = await runWelcome();
     // 2. Le jeu, avec la progression du bon joueur (la portée de stockage est déjà choisie).

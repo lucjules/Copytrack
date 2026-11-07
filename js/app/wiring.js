@@ -45,6 +45,7 @@ export const wiringMethods = {
     $('opt-ghostimp').addEventListener('change', (e) => { this.settings.ghostImported = e.target.checked; this.saveSettings(); });
     $('opt-onlinescores').addEventListener('change', (e) => { this.settings.onlineScores = e.target.checked; this.saveSettings(); });
     $('opt-telemetry').addEventListener('change', (e) => this.setTelemetry(e.target.checked));
+    $('opt-editor-guided').addEventListener('change', (e) => { this.settings.editorGuided = e.target.checked; this.saveSettings(); if (this.session && this.session.kind === 'editor') this.session.setGuided(e.target.checked); });
     $('opt-music').addEventListener('input', (e) => {
       this.settings.musicVolume = parseFloat(e.target.value);
       this.audio.setMusicVolume(this.settings.musicVolume);
@@ -64,6 +65,7 @@ export const wiringMethods = {
     };
     slider('opt-fov', 'fovAdd', fovText);
     slider('opt-shake', 'shakeAmt', (v) => Math.round(v * 100) + ' %');
+    slider('opt-feel', 'feel', (v) => Math.round(v * 100) + ' %');
     slider('opt-ui', 'uiScale', (v) => Math.round(v * 100) + ' %');
     $('opt-touch').addEventListener('change', (e) => {
       this.settings.touchMode = e.target.value;
@@ -97,6 +99,7 @@ export const wiringMethods = {
       case 'community': this.showScreen('community'); break;
       case 'multi': this.multiMenu(); break;
       case 'tutorial': this.tutorial(); break;
+      case 'academy': this.academyMenu(); break;
       case 'editor': this.openEditor(); break;
       case 'mytracks': this.showScreen('mytracks'); break;
       case 'import': this.importModal(false); break;
@@ -125,6 +128,7 @@ export const wiringMethods = {
       case 'quit': this.quitRace(); break;
       case 'watch-replay': this.watchReplay(); break;
       case 'share-ghost': this.shareGhost(); break;
+      case 'export-video': if (s && s.exportVideo) s.exportVideo(); break;
       case 'leaderboard': {
         const s = this.session;
         if (s && s.trackKey) this.leaderboardModal(s.trackKey, s.track.name, s.track);

@@ -3,6 +3,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { frameWorld } from '../physics/ribbon.js';
 import { CAM_MODES, REPLAY_CAMS, tmpV, tmpV2 } from './shared.js';
+import { fovPunch, landingDip, feelScale } from '../feel.js';
 const UP = new THREE.Vector3(0, 1, 0);
 
 function lerpAngle(a, b, t) {
@@ -80,7 +81,7 @@ export const cameraMethods = {
       cam.quaternion.copy(car.quaternion);
       this.camPos.copy(tmpV);
       this.camYaw = p.yaw;
-      this._fov(mode.fov + Math.min(16, Math.abs(p.fwdSpeed) * 0.2));
+      this._fov(mode.fov + Math.min(16, Math.abs(p.fwdSpeed) * 0.2) + this._feelFov());
       return;
     }
 
@@ -117,7 +118,7 @@ export const cameraMethods = {
       tmpV2.copy(car.position).addScaledVector(tmpV, mode.look).addScaledVector(up, mode.lookUp);
       cam.lookAt(tmpV2);
       this.camYaw = p.yaw;
-      this._fov(mode.fov + Math.min(18, sp * 0.24));
+      this._fov(mode.fov + Math.min(18, sp * 0.24) + this._feelFov());
       return;
     }
     // En gravité inversée, la caméra se retourne : le « haut » est vers le bas du monde.
@@ -180,6 +181,7 @@ export const cameraMethods = {
       if (Number.isFinite(s.h) && this.camPos.y > s.h - 1.2) this.camPos.y = s.h - 1.2;
     }
     cam.position.copy(this.camPos);
+    cam.position.y -= landingDip(this._feel.dipI, this._feel.dipT, this._feelScale());     // tassement à la réception (feel.js)
     if (this.shake > 0) {
       const k = this.shake * 0.25 * (this.app.settings.shakeAmt ?? 1);
       cam.position.x += (Math.random() - 0.5) * k;
@@ -187,8 +189,11 @@ export const cameraMethods = {
     }
     const lookUp = underBridge ? Math.min(mode.lookUp, 0.8) : mode.lookUp;
     cam.lookAt(car.position.x + fx * mode.look, car.position.y + lookUp * gs, car.position.z + fz * mode.look);
-    this._fov(mode.fov + Math.min(18, sp * 0.24) + (p.boost > 0 ? 5 : 0));
+    this._fov(mode.fov + Math.min(18, sp * 0.24) + (p.boost > 0 ? 5 : 0) + this._feelFov());
   },
+
+  _feelScale() { return feelScale(this.app.settings.feel); },
+  _feelFov() { return fovPunch(this._feel.punchT, this._feelScale()); },
 
   _fov(target) {
     const cam = this.app.camera;
