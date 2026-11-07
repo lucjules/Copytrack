@@ -95,6 +95,15 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `weather.js` | Météo décorative (lot 12) : pluie, neige, braises, poussière, pétales. Un nuage de points qui suit la caméra ; aucun effet sur la course. |
 | `welcome.js` | Écran d'accueil : le menu principal ne s'ouvre qu'une fois le pseudo défini. |
 
+## `js/analysis/`
+
+| Fichier | Rôle |
+| --- | --- |
+| `events.js` | Bilan des évènements d'une course (analysis/trace.js) : chocs, réapparitions, réceptions, mini-turbos, temps en l'air. Module pur. |
+| `reference.js` | Référence de parcours : une ligne le long du circuit, graduée en mètres, sur laquelle on projette toute course pour la comparer à une autre (« à 820 m du départ, tu avais 0,4 s de retard »). Module pur, testé sous Node. |
+| `sectors.js` | Secteurs et écarts entre deux courses projetées sur la même référence (analysis/reference.js). Module pur, testé sous Node. |
+| `trace.js` | Trace d'une course (Copytrack Evolution, analyse) : ce qui s'est passé, échantillonné comme les fantômes (un point tous les GHOST_EVERY pas, soit 30 par seconde). Module pur, sans DOM ni rendu : testé sous Node (tools/test-analyse.mjs). |
+
 ## `js/app/`
 
 | Fichier | Rôle |
