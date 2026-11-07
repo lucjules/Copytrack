@@ -182,6 +182,18 @@ class OnlineClient {
     return this._fetch('/rest/v1/tracks?' + q.toString());
   }
 
+  // Un circuit de la communauté par son identifiant (favoris du Race Hub) : la ligne complète, ou null s'il a été retiré.
+  async trackById(id) {
+    if (!/^[0-9a-f-]{36}$/.test(String(id))) return null;
+    const q = new URLSearchParams();
+    q.set('select', OnlineClient.FIELDS + (this.hasDesc === false ? '' : ',description'));
+    q.set('id', 'eq.' + id);
+    let rows;
+    try { rows = await this._fetch('/rest/v1/tracks?' + q.toString()); }
+    catch (e) { if (!OnlineClient.noDesc(e)) throw e; this.hasDesc = false; q.set('select', OnlineClient.FIELDS); rows = await this._fetch('/rest/v1/tracks?' + q.toString()); }
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  }
+
   // Les circuits les plus joués ces derniers jours (étape 8). Renvoie les lignes complètes (comme listTracks), dans l'ordre, avec week_players ; [] si la fonction n'existe pas.
   async trending({ days = 7, limit = 24, offset = 0 } = {}) {
     let ranks;
@@ -279,7 +291,8 @@ class OnlineClient {
     q.set('limit', String(limit));
     // has_ghost (étape 7) et players.title (étape 8) : colonnes récentes ; absentes (étape pas lancée), on relit sans elles, de la plus complète à la plus simple.
     let top, lastErr;
-    for (const sel of ['time,player,updated_at,has_ghost,players!scores_player_fkey(name,title)', 'time,player,updated_at,has_ghost,players!scores_player_fkey(name)', 'time,player,updated_at,players!scores_player_fkey(name)']) {
+    // ghost_veh (étape 7) : les véhicules de la course (Race Hub : véhicule à l'arrivée).
+    for (const sel of ['time,player,updated_at,has_ghost,ghost_veh,players!scores_player_fkey(name,title)', 'time,player,updated_at,has_ghost,ghost_veh,players!scores_player_fkey(name)', 'time,player,updated_at,players!scores_player_fkey(name)']) {
       q.set('select', sel);
       try { top = await this._fetch('/rest/v1/scores?' + q.toString()); lastErr = null; break; } catch (e) { lastErr = e; }
     }

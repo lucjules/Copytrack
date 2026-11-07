@@ -4,13 +4,16 @@
 // et sur leur forme cloud {clé: valeur JSON} (jsonb côté base). La fusion ne perd jamais de progression :
 //  - records : le meilleur temps gagne (à version de physique égale) ;
 //  - circuits : union par identifiant, le plus récent gagne ; les pierres tombales effacent les circuits supprimés ;
-//  - profil : médailles et objets réunis, statistiques au maximum, pièces sans jamais en inventer.
+//  - profil : médailles et objets réunis, statistiques au maximum, pièces sans jamais en inventer ; favoris réunis (pierres tombales) ;
+//  - dernières courses (runs.*) : réunies, les plus récentes gardées.
 import { itemCost } from './cosmetics.js';
+import { mergeFavorites } from './favorites.js';
+import { cleanRuns } from './storage.js';
 
 // Ce qui suit un compte d'un appareil à l'autre : progression, circuits créés, records. Les réglages
 // (volume, touches, qualité...) restent propres à chaque appareil, le brouillon de l'éditeur aussi.
 export const isSyncKey = (k) =>
-  k === 'profile' || k === 'tracks' || k === 'tracksDel' || k === 'recReset' || /^(rec3|daily|ghostImp)\./.test(k);
+  k === 'profile' || k === 'tracks' || k === 'tracksDel' || k === 'recReset' || /^(rec3|daily|ghostImp|runs)\./.test(k);
 
 export const pickSynced = (dump) => Object.fromEntries(Object.entries(dump || {}).filter(([k, v]) => isSyncKey(k) && typeof v === 'string'));
 
@@ -77,8 +80,9 @@ export function mergeProfile(local, remote) {
   const titlesSeen = [...new Set([...(Array.isArray(a.titlesSeen) ? a.titlesSeen : []), ...(Array.isArray(b.titlesSeen) ? b.titlesSeen : [])])].slice(0, 40);
   stats.turbos = Math.max(num(a.stats && a.stats.turbos), num(b.stats && b.stats.turbos));
   const presets = Array.isArray(a.presets) && a.presets.some(Boolean) ? a.presets : (Array.isArray(b.presets) ? b.presets : a.presets);
+  const fav = (a.favorites || b.favorites || a.favDel || b.favDel) ? mergeFavorites(a, b) : {};      // favoris du Race Hub (favorites.js)
   return {
-    ...b, ...a,
+    ...b, ...a, ...fav,
     id: b.id || a.id,                    // l'identifiant du joueur reste celui du compte
     coins: mergeCoins(a, b, owned), owned, medals, eggs, shards, stats, presets, academy, collections, dailyDays, titlesSeen,
     loadout: a.loadout || b.loadout,     // l'appareil courant garde sa personnalisation
@@ -93,7 +97,8 @@ export function mergeSaves(local, remote) {
   // record, meilleur, l'emporterait sur le nouveau puis serait supprimé).
   const resetAt = Math.max(num(a.recReset), num(b.recReset));
   if (resetAt) {
-    const clean = (o) => Object.fromEntries(Object.entries(o).filter(([k, v]) => !(k.startsWith('rec3.') && num(obj(v).date) <= resetAt)));
+    const clean = (o) => Object.fromEntries(Object.entries(o).filter(([k, v]) => !(k.startsWith('rec3.') && num(obj(v).date) <= resetAt))
+      .map(([k, v]) => [k, k.startsWith('runs.') && Array.isArray(v) ? v.filter((r) => num(r && r.date) > resetAt) : v]));
     a = clean(a); b = clean(b);
   }
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
@@ -105,6 +110,7 @@ export function mergeSaves(local, remote) {
     else if (k === 'tracks') out[k] = mergeTracks(a[k], b[k], gone);
     else if (k === 'profile') out[k] = mergeProfile(a[k], b[k]);
     else if (k.startsWith('rec3.')) out[k] = mergeRecord(a[k], b[k]);
+    else if (k.startsWith('runs.')) out[k] = cleanRuns([...(Array.isArray(a[k]) ? a[k] : []), ...(Array.isArray(b[k]) ? b[k] : [])]);    // dernières courses : réunies, les plus récentes
     else out[k] = a[k] !== undefined ? a[k] : b[k];                 // fantômes importés, défi du jour : le local d'abord
   }
   if (resetAt) out.recReset = resetAt;

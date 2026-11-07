@@ -3,7 +3,7 @@
 import { DT } from '../constants.js';
 import { MSG, PRIO } from '../hudMessages.js';
 import { F_FINISHED } from '../net/snapshot.js';
-import { saveRecord, encodeFloats, formatTime } from '../storage.js';
+import { saveRecord, pushRun, encodeFloats, formatTime } from '../storage.js';
 import { rewardCoins } from '../profile.js';
 import { MEDALS, medalFor } from '../medals.js';
 import { PHYS_VER } from '../version.js';
@@ -115,6 +115,8 @@ export const finishMethods = {
       };
       saveRecord(this.trackKey, rec);
     }
+    // Dernières courses du circuit (Race Hub, onglet Personnel) : toutes les arrivées classables, record ou non.
+    if (this.trackKey && /^(b-|daily-|u-)/.test(this.trackKey) && !this.opts.fromEditor && !this.opts.spawn) pushRun(this.trackKey, { time, date: Date.now() });
     app.audio.finish(isRecord);
     if (this.rivals.length) {
       app.ui.flash('👻 ' + this.rivals.map((r) => (time < r.time ? `tu bats ${r.name} de ${(r.time - time).toFixed(3)} s` : `${r.name} reste devant de ${(time - r.time).toFixed(3)} s`)).join(' · '), 6);
@@ -160,6 +162,7 @@ export const finishMethods = {
       hasNext: !!this.opts.hasNext,
       canReplay: true,
       canBoard: !!(this.trackKey && /^(b-|daily-|u-)/.test(this.trackKey) && !this.opts.spawn && !this.opts.fromEditor),
+      canHub: !!(this.trackKey && /^(b-|daily-|u-)/.test(this.trackKey) && !this.opts.spawn && !this.opts.fromEditor && app._lastDesc && app._lastDesc.key === this.trackKey),
       canShareGhost: !!(this.trackKey && (isRecord || (this.record && this.record.inputs)) && !this.opts.spawn),
     });
     if (isRecord) this.loadRecord();

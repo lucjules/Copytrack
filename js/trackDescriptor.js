@@ -44,6 +44,7 @@ function base(source, track, key) {
 export function describeBuiltin(b, { total, builtins = null, getRecord = null }) {
   const i = b.index, d = base('builtin', b.track, b.key);
   d.name = b.def.name;
+  d.builtinId = b.def.id;
   d.stars = b.def.difficulty;
   d.medals = b.def.medals;
   d.goal = goalFor(b.def, i);
@@ -108,4 +109,25 @@ export function describeCommunity(track, row) {
 export function personalRecord(desc, getRecord) {
   for (const k of desc.recordKeys) { const r = getRecord(k); if (r) return r; }
   return null;
+}
+
+// Course rapide : le premier circuit de la carrière, dans l'ordre, qui est ouvert et n'a pas encore de médaille. null : tout est médaillé (ou
+// verrouillé) : l'appelant lance alors le défi du jour.
+export function quickRaceIndex(builtins, getRecord) {
+  for (const b of builtins) {
+    if (chapterLock(b.index, builtins, getRecord)) continue;
+    const rec = getRecord(b.key);
+    if (!rec || !medalFor(rec.time, b.def.medals)) return b.index;
+  }
+  return null;
+}
+
+// Véhicule à l'arrivée d'une course classée, d'après les changements de véhicule enregistrés avec son fantôme ([[échantillon, id], …] ; id dans
+// l'ordre de ghostFormat.GHOST_VEHICLES). null : course d'avant l'étape 7 (pas de fantôme), on ne sait pas.
+const VEH = ['car', 'moto', 'boat', 'glider'];
+export function finishVehicle(ghostVeh, hasGhost = true) {
+  if (!hasGhost && !(Array.isArray(ghostVeh) && ghostVeh.length)) return null;
+  if (!Array.isArray(ghostVeh)) return hasGhost ? 'car' : null;
+  const last = ghostVeh[ghostVeh.length - 1];
+  return last && Array.isArray(last) ? VEH[last[1] | 0] || 'car' : 'car';
 }

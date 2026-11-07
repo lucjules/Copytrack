@@ -35,6 +35,7 @@ import { wiringMethods } from './app/wiring.js';
 import { editorFlowMethods } from './app/editorFlow.js';
 import { uiCustomMethods } from './app/uicustom.js';
 import { modesMethods } from './app/modes.js';
+import { raceHubMethods } from './app/raceHub.js';
 
 const MENU_FPS_CAP = 30;     // images par seconde au plus dans les menus
 
@@ -126,9 +127,8 @@ class App {
     return describeBuiltin(this.builtins[i], { total: this.builtins.length, builtins: this.builtins, getRecord });
   }
 
-  playBuiltin(i) {
-    const d = this.describeBuiltin(i);
-    this.playTrack(d.track, d.launch);
+  playBuiltin(i, extra = {}) {
+    this.launchDesc(this.describeBuiltin(i), extra);
   }
 
   playTrack(track, opts) {
@@ -151,7 +151,7 @@ class App {
     let track;
     try { track = Track.decode(code); } catch { this.ui.flash('Code de circuit invalide.'); return; }
     // Circuits de joueurs : médailles déduites du temps de l'auteur, seulement s'il l'a fini (trackDescriptor.js).
-    this.playTrack(track, describeUser(track, entryId ? { id: entryId } : null).launch);
+    this.launchDesc(describeUser(track, entryId ? { id: entryId } : null));
   }
 
   // ---- Replays et fantômes ------------------------------------------------
@@ -174,6 +174,7 @@ class App {
     const back = this._replayBack;
     this._replayBack = null;
     if (!back) { this.showMenu('menu'); return; }
+    if (back.hub) { this._backToHub(back.hub, back.from); return; }        // replay ouvert depuis la fiche du circuit (raceHub.js)
     this.playTrack(back.track, back.opts);
   }
 
@@ -183,6 +184,7 @@ class App {
     if (opts.academy) { this.showMenu('menu'); this.academyMenu(); return; }
     if (opts.mode) { this.showMenu('menu'); this.modesMenu(); return; }
     if (opts.fromEditor) this.openEditor(this.editorState);
+    else if (opts.fromHub && this._lastDesc && this._lastDesc.key === opts.trackKey) this._backToHub(this._lastDesc, opts.fromHub);     // course lancée depuis la fiche : on y revient
     else if (opts.builtinIndex != null || opts.daily) this.showMenu('tracks');
     else if (opts.userEntry) this.showMenu('mytracks');
     else if (opts.community) this.showMenu('community');
@@ -332,7 +334,7 @@ class App {
       }
       if (this._disco && this.scenery) this.scenery.sky.material.uniforms.horizon.value.setHSL((now / 4000) % 1, 0.8, 0.55);
       if (this.ui.modalOpen && this.input.hit('Escape')) this.ui.closeModal();
-      if (this.mode === 'menu' && !this.ui.modalOpen && this.input.hit('Escape')) this.showScreen('menu');
+      if (this.mode === 'menu' && !this.ui.modalOpen && this.input.hit('Escape')) { if (this._screen === 'race-hub') this.closeRaceHub(); else this.showScreen('menu'); }
       if (this.session) this.session.update(dt);
       // Profil Ultra Potato : on ne dessine qu'une image sur deux (la physique et les commandes continuent à pleine vitesse). Dans les menus (rien à
       // piloter, une simple animation de fond) on dessine à 30 images/s au plus : la machine chauffe moins et la batterie dure. Le banc d'essai de la
@@ -362,7 +364,7 @@ class App {
 }
 
 // Les familles de méthodes vivent dans app/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(App.prototype, multiMethods, academyMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods);
+Object.assign(App.prototype, multiMethods, academyMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods);
 
 
 // Application installable et jouable hors ligne (service worker), si le contexte le permet.

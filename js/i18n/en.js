@@ -8,6 +8,7 @@ import pieces from './en/pieces.js';
 import data from './en/data.js';
 import tracks from './en/tracks.js';
 import custom from './en/custom.js';
+import hub from './en/hub.js';
 
-export const PARTS = { shell, race, online, editor, pieces, data, tracks, custom };
+export const PARTS = { shell, race, online, editor, pieces, data, tracks, custom, hub };
 export default Object.assign({}, ...Object.values(PARTS));

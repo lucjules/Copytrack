@@ -84,6 +84,8 @@ try {
     await waitApp(() => document.querySelectorAll('#track-list .card:not(.daily-card)').length === 72);
     await shot('03-carriere');
     await click('#track-list .track-group:not(.ch-open) .card:not(.daily-card):not(.locked)');
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'));     // une carte ouvre la fiche du circuit (Race Hub)
+    await click('#hub-play');
     await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.state);
     await waitApp(() => window.copytrack.session.state === 'racing', null, 40000);
     await page.keyboard.down('ArrowUp');
@@ -117,10 +119,76 @@ try {
 
   await test('défi du jour et circuit en plusieurs tours', async () => {
     await click('[data-action="daily"]');
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 40000);
+    assert.match(await page.evaluate(() => document.getElementById('hub-sub').textContent), /Défi du jour · \d\d\/\d\d\/\d{4}/);
+    await click('#hub-play');
     await waitApp(() => window.copytrack.mode === 'race', null, 40000);
     await page.waitForTimeout(600);
     await app(() => window.copytrack.quitRace());
     await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  await test('Race Hub : fiche immédiate (carte, légende, onglets), favori, dernières courses, replay du record, retour à la fiche', async () => {
+    await app(async () => { const m = await import('/js/storage.js'); m.clearRecords(); const { profile, saveProfile } = await import('/js/profile.js'); profile().favorites = []; profile().favDel = {}; saveProfile(); });
+    const ms = await app(() => { const t = performance.now(); window.copytrack.showMenu('tracks'); window.copytrack.openBuiltinHub(1, 'tracks'); return performance.now() - t; });
+    assert.ok(!(await app(() => document.getElementById('race-hub').classList.contains('hidden'))), 'la fiche est affichée');
+    assert.ok(ms < 1500, `fiche affichée en ${ms.toFixed(0)} ms (menu compris)`);
+    const t2 = await app(() => { const t = performance.now(); window.copytrack.openBuiltinHub(1, 'tracks'); return performance.now() - t; });
+    assert.ok(t2 < 100, `ouvrir la fiche ne doit pas attendre le réseau (${t2.toFixed(0)} ms)`);
+    // la carte est dessinée (des pixels de route), la légende et les faits sont là
+    const lit = await app(() => { const c = document.getElementById('hub-map'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 0; i < d.length; i += 4 * 7) if (d[i] + d[i + 1] + d[i + 2] > 200) n++; return n; });
+    assert.ok(lit > 200, 'la carte doit montrer le circuit (' + lit + ' pixels clairs)');
+    assert.match(await page.evaluate(() => document.getElementById('hub-legend').textContent), /Départ[\s\S]*Arrivée/);
+    assert.match(await page.evaluate(() => document.getElementById('hub-facts').textContent), /Distance de course[\s\S]*Médailles[\s\S]*Objectif bonus/);
+    const tabs = await page.evaluate(() => [...document.querySelectorAll('#hub-board .lb-tabs .tab')].map((t) => t.textContent));
+    assert.deepEqual(tabs, ['🌍 Mondial', '👤 Personnel'], 'seulement les onglets dont les données existent');
+    await waitApp(() => /Classement indisponible/.test(document.getElementById('hub-board').textContent), null, 15000);     // hors ligne ici : un état propre, pas un faux classement
+    await click('#hub-board .lb-tabs [data-tab="personal"]');
+    assert.match(await page.evaluate(() => document.getElementById('hub-board').textContent), /Pas encore de temps sur ce circuit/);
+    assert.equal(await page.evaluate(() => document.getElementById('hub-watch').disabled), true, 'pas de record : rien à regarder');
+    // zoom de la carte
+    await click('[data-action="hub-zoom-in"]');
+    assert.ok(await app(() => window.copytrack._hub.map.zoom > 1));
+    await click('[data-action="hub-zoom-fit"]');
+    // favori
+    await click('#hub-fav');
+    assert.equal(await page.evaluate(() => document.getElementById('hub-fav').getAttribute('aria-pressed')), 'true');
+    await shot('07a-race-hub');
+    // course depuis la fiche, arrivée simulée : elle compte dans les dernières courses et devient le record à regarder
+    await click('#hub-play');
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session.state === 'racing', null, 40000);
+    await page.keyboard.down('ArrowUp'); await page.waitForTimeout(800); await page.keyboard.up('ArrowUp');
+    await app(() => window.copytrack.session._finish(window.copytrack.session.logic.steps / 120));
+    await waitApp(() => !document.getElementById('finish').classList.contains('hidden'));
+    assert.equal(await page.evaluate(() => document.getElementById('fin-hub').classList.contains('hidden')), false, '« Fiche du circuit » à l’arrivée');
+    await click('#fin-hub');
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
+    await click('#hub-board .lb-tabs [data-tab="personal"]');
+    assert.match(await page.evaluate(() => document.getElementById('hub-board').textContent), /Mon record[\s\S]*Ma dernière course/);
+    assert.equal(await page.evaluate(() => document.getElementById('hub-watch').disabled), false);
+    await click('#hub-watch');
+    await waitApp(() => window.copytrack.session && window.copytrack.session.replay && !document.getElementById('replay-bar').classList.contains('hidden'), null, 20000);
+    await app(() => window.copytrack.endReplay());
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
+    // Retour : vers la liste d'où l'on vient, avec le favori en tête
+    await page.keyboard.press('Escape');
+    await waitApp(() => !document.getElementById('tracks').classList.contains('hidden'));
+    assert.match(await page.evaluate(() => (document.querySelector('#track-list .fav-group') || {}).textContent || ''), /Favoris/);
+    await click('#track-list .fav-group .card');
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'));
+    await click('#race-hub [data-action="hub-back"]');
+    await waitApp(() => !document.getElementById('tracks').classList.contains('hidden'));
+    await click('#tracks [data-action="back"]');
+  });
+
+  await test('course rapide : un clic lance le prochain circuit sans médaille', async () => {
+    const expect = await app(async () => { const d = await import('/js/trackDescriptor.js'); const s = await import('/js/storage.js'); return d.quickRaceIndex(window.copytrack.builtins, s.getRecord); });
+    await click('[data-action="quick"]');
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session, null, 40000);
+    assert.equal(await app(() => window.copytrack.session.opts.builtinIndex), expect);
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu');
+    await app(() => window.copytrack.showScreen('menu'));
   });
 
   await test('éditeur : ouverture, pose d\'une pièce, annuler / rétablir, vérificateur, test', async () => {
@@ -620,6 +688,12 @@ try {
     const stars = await page.evaluate(() => [...document.querySelectorAll('#comm-list .card .meta.diff')].map((e) => e.textContent.trim()));
     assert.equal(stars.length, 2); assert.ok(stars.every((x) => /^[◆◇]{5} \S/.test(x)), stars.join(' | '));
     await shot('19-communaute-semaine');
+    await page.evaluate(() => document.querySelector('#comm-list .card h3').click());           // la carte (hors boutons) ouvre la fiche
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'));
+    assert.match(await page.evaluate(() => document.getElementById('hub-sub').textContent), /Communauté/);
+    assert.match(await page.evaluate(() => document.getElementById('hub-facts').textContent), /Joué/);
+    await click('#race-hub [data-action="hub-back"]');
+    await waitApp(() => !document.getElementById('community').classList.contains('hidden'));
     await click('#community [data-action="back"]');
     await waitApp(() => window.copytrack.mode === 'menu');
   });

@@ -95,7 +95,14 @@ export const wiringMethods = {
     const s = this.session;
     switch (a) {
       case 'play': this.showScreen('tracks'); break;
-      case 'daily': this.playDaily(); break;
+      case 'quick': this.quickRace(); break;
+      case 'daily': this.openDailyHub('menu'); break;
+      case 'hub-back': this.closeRaceHub(); break;
+      case 'hub-fav': this.toggleHubFavorite(); break;
+      case 'hub-zoom-in': if (this._hub && this._hub.map) this._hub.map.zoomBy(1.4); break;
+      case 'hub-zoom-out': if (this._hub && this._hub.map) this._hub.map.zoomBy(1 / 1.4); break;
+      case 'hub-zoom-fit': if (this._hub && this._hub.map) this._hub.map.fit(); break;
+      case 'race-hub': this.openSessionHub(); break;
       case 'community': this.showScreen('community'); break;
       case 'multi': this.multiMenu(); break;
       case 'tutorial': this.tutorial(); break;
@@ -271,7 +278,7 @@ export const wiringMethods = {
     if (!root) return;
     if (m.back) {
       if (this.ui.modalOpen) { this.ui.closeModal(); return; }
-      const back = root.querySelector('[data-action="back"], [data-action="garage-back"], [data-action="options"]');
+      const back = root.querySelector('[data-action="back"], [data-action="hub-back"], [data-action="garage-back"], [data-action="options"]');
       if (back) back.click();
       return;
     }

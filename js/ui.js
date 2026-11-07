@@ -10,7 +10,7 @@ export function medalIcon(m) {
   return `<i class="medal ${m ? m.id : 'none'}" title="${m ? m.label : 'Aucune médaille'}"></i>`;
 }
 
-const SCREENS = ['loading', 'menu', 'tracks', 'mytracks', 'community', 'profile'];
+const SCREENS = ['loading', 'menu', 'tracks', 'race-hub', 'mytracks', 'community', 'profile'];
 
 class Hud {
   constructor() {
@@ -201,6 +201,7 @@ export class UI {
     $('fin-replay').classList.toggle('hidden', !info.canReplay);
     $('fin-online').classList.add('hidden');
     $('fin-board').classList.toggle('hidden', !info.canBoard);
+    $('fin-hub').classList.toggle('hidden', !info.canHub);
     const gl = $('fin-goal');
     if (gl) {
       gl.classList.toggle('hidden', !info.goal);
