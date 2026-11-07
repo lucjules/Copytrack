@@ -36,6 +36,7 @@ import { editorFlowMethods } from './app/editorFlow.js';
 import { uiCustomMethods } from './app/uicustom.js';
 import { modesMethods } from './app/modes.js';
 import { raceHubMethods } from './app/raceHub.js';
+import { theaterAppMethods } from './app/theater.js';
 
 const MENU_FPS_CAP = 30;     // images par seconde au plus dans les menus
 
@@ -155,18 +156,13 @@ class App {
   }
 
   // ---- Replays et fantômes ------------------------------------------------
+  // « Revoir la course » (écran d'arrivée) : le Replay Theater, avec le record d'avant (ou le record) à côté pour comparer.
   watchReplay() {
     const s = this.session;
     if (!(s instanceof RaceSession) || !s.lastRun) return;
-    const back = { track: s.track, opts: { ...s.opts } };
-    this._replayBack = back;
-    this._dispose();
-    this.mode = 'race';
-    this.ui.showScreen(null);
-    this.ui.setMode('race');
-    this.session = new RaceSession(this, back.track, { ...back.opts, replay: s.lastRun, trackKey: null, medals: back.opts.medals });
-    $('replay-bar').classList.remove('hidden');
-    this._resize();
+    const compare = [];
+    if (s.prevRun && Math.abs(s.prevRun.time - s.lastRun.time) > 1e-9) compare.push({ kind: 'inputs', label: s.lastRunWasRecord ? 'Ancien record' : 'Mon record', inputs: s.prevRun.inputs, time: s.prevRun.time });
+    this.openTheater({ track: s.track, opts: s.opts, main: { ...s.lastRun, label: 'Cette course' }, compare, back: { track: s.track, opts: { ...s.opts } } });
   }
 
   endReplay() {
@@ -364,7 +360,7 @@ class App {
 }
 
 // Les familles de méthodes vivent dans app/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(App.prototype, multiMethods, academyMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods);
+Object.assign(App.prototype, multiMethods, academyMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods, theaterAppMethods);
 
 
 // Application installable et jouable hors ligne (service worker), si le contexte le permet.

@@ -12,10 +12,7 @@ import { PHYS_VER } from '../version.js';
 import { online } from '../online.js';
 import { formatTime } from '../storage.js';
 import { decodeFloats } from '../ghostFormat.js';
-import { Simulation } from '../simulation.js';
-import { Autopilot } from '../autopilot.js';
-import { InputRecorder, quantSteer } from '../replay.js';
-import { traceFromInputs, traceFromGhost } from '../analysis/trace.js';
+import { traceFromInputs, traceFromGhost, traceFromBot } from '../analysis/trace.js';
 import { makeReference, alignTrace } from '../analysis/reference.js';
 import { brakingPoints } from '../analysis/sectors.js';
 import { createLiveTracker } from '../analysis/live.js';
@@ -28,23 +25,6 @@ const cache = new Map();           // références déjà calculées (un nouvel 
 const CACHE_MAX = 6;
 const remember = (k, v) => { if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value); cache.set(k, v); return v; };
 const later = () => new Promise((r) => setTimeout(r, 0));
-
-// Le fantôme or : les commandes du pilote automatique (mêmes réglages que le fantôme or de la course), rejouées en trace.
-function goldTrace(track) {
-  const sim = new Simulation(track), rec = new InputRecorder();
-  sim.start();
-  const bot = new Autopilot(track.path, { latLimit: 56 * 0.8 });
-  bot.reset(sim.phys);
-  for (let i = 0; i < 120 * 300; i++) {
-    const inp = bot.control(sim.phys);
-    inp.steer = quantSteer(inp.steer);
-    rec.push(inp, false);
-    const ev = sim.step(inp);
-    if (sim.lost) { sim.rewind(); bot.reset(sim.phys); }
-    if (ev && ev.type === 'finish') return traceFromInputs(track, rec.encode());
-  }
-  return null;
-}
 
 export const trainingMethods = {
   _trainSetup() {
@@ -91,7 +71,7 @@ export const trainingMethods = {
         } else if (kind === 'gold') {
           if (this.track.path) {
             const k = `${this.trackKey}|gold`;
-            tr = cache.get(k) || remember(k, goldTrace(this.track));
+            tr = cache.get(k) || remember(k, traceFromBot(this.track));
             label = tr ? `Référence : fantôme or · ${formatTime(tr.time)}` : '';
           }
         } else if (kind === 'world' && this.trackKey && /^(b-|daily-|u-)/.test(this.trackKey)) {

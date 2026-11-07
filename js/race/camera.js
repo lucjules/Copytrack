@@ -39,6 +39,8 @@ export const cameraMethods = {
     this.shake = Math.max(0, this.shake - dt * 1.8);
 
     const rc = this.replay && this.replayCam >= this.camList.length ? REPLAY_CAMS[this.replayCam - this.camList.length] : null;
+    if (rc && rc.free) { this._freeCamera(dt); return; }
+    if (rc && rc.cine) { this._cineCamera(dt); return; }
     if (rc && rc.tv) {
       // Caméra TV : un poste fixe près de la route, qui change quand la voiture s'éloigne.
       if (!this.tvPos || this.tvPos.distanceTo(car.position) > 70) {

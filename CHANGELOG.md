@@ -6,6 +6,20 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.29 — Replay Theater
+
+Étape E6 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.
+
+- **Le replay devient une salle d'analyse.** « 🎬 Revoir la course » (arrivée) et « 🎬 Regarder mon record » (fiche du circuit) ouvrent le Theater :
+  - **barre de temps** : on va et vient dans la course (en arrière comme en avant), avec les **secteurs**, les **retours au checkpoint** et les **chocs** marqués dessus ; lecture, pause, ×0,25 à ×4, comme avant au clavier (Espace, ← →, C, Entrée, Échap) ;
+  - **comparaison** : jusqu'à trois courses sur la piste en même temps que celle regardée, chacune de sa couleur, avec son temps et son écart. À l'arrivée : la course contre le record (ou l'ancien record, si elle en est un nouveau). Depuis la fiche : « Comparer avec » le fantôme or, le record mondial ou les rivaux choisis ;
+  - **caméras** : en plus des caméras de course, de la TV et de l'orbite, **Libre** (glisser pour tourner autour de la voiture, molette pour s'approcher) et **Cinématique** (poursuite basse, travelling, grue, poste fixe qui s'enchaînent) ;
+  - **📈 Analyse** : les trajectoires de toutes les courses sur la carte du circuit (avec les voitures en direct), la vitesse de chacune et l'écart avec la course regardée le long du parcours, et le tableau des 12 secteurs (meilleur temps en violet).
+- **Exact** : revenir en arrière recommence la course et la rejoue sans image ni son jusqu'au pas voulu ; on retombe sur exactement la même voiture qu'en lecture continue (vérifié dans le test navigateur, retour au checkpoint compris) ; aller au bout d'une course d'une minute prend quelques dizaines de millisecondes.
+- **Construit sur le mode replay de la course** (même rendu, mêmes caméras, même export vidéo WebM) plutôt que sur une nouvelle session comme le prévoyait le document d'architecture : rien n'est dupliqué, et tout ce qui marchait dans le replay marche dans le Theater.
+- **Limites assumées** : les caméras suivent la course regardée (pas une course comparée) ; un fantôme en ligne n'a que des positions (pas de courbes de commandes) ; avant un retour au checkpoint, le panneau d'analyse ne montre que la course finale (la partie effacée par le retour n'a pas de secteurs) ; le nombre d'images par seconde avec quatre courses n'a pas été mesuré sur une vraie carte graphique (le test navigateur tourne en rendu logiciel) : seul le coût de l'interface du Theater l'est.
+- Tests : test navigateur (record comparé au fantôme or, déplacement dans le temps exact, temps final identique, repères, secteurs, caméras, retour à la fiche, « Revoir la course » avec l'ancien record) et anglais.
+
 ## Bêta 0.9.28 — HUD d'entraînement et profils de HUD
 
 Étapes E4 et E5 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer. **Rien ne change pour qui garde le profil Classique** (le profil par défaut).

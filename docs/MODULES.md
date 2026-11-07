@@ -121,6 +121,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `screens.js` | Écrans de liste : carrière, circuits du joueur, défi du jour, circuit suivant, menu, tutoriel. |
 | `settings.js` | Réglages : qualité graphique et banc d'essai, commandes (clavier, manette), options, accessibilité. |
 | `shared.js` | Éléments partagés par les familles de méthodes de App (voir main.js). |
+| `theater.js` | Replay Theater : point d'entrée de l'application (« Revoir la course » à l'arrivée, « Regarder mon record » de la fiche du circuit). |
 | `uicustom.js` | Personnalisation de l'interface (lot 11) : thème, couleurs, police, compteur de vitesse, éditeur de HUD (glisser-déposer) et éditeur de caméras. |
 | `wiring.js` | Branchement de l'interface : clics, actions du menu, de l'éditeur, tactile, manette, clins d'œil cachés. |
 
@@ -218,6 +219,14 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | --- | --- |
 | `decor.js` | Décors de chaque thème (désert, pôles, jungle, ville, îles, volcan, orbite, grottes, ciel, récif, usine) et terrain. |
 | `shared.js` | Éléments partagés par les familles de méthodes de Scenery (voir scenery.js). |
+
+## `js/theater/`
+
+| Fichier | Rôle |
+| --- | --- |
+| `cameras.js` | Caméras du Replay Theater (en plus des caméras de course, de la TV et de l'orbite) : « Libre » (glisser pour tourner autour de la voiture, molette pour s'approcher) et « Cinématique » (plans qui s'enchaînent : poursuite basse, travelling latéral, grue, poste TV). |
+| `panel.js` | Interface du Replay Theater : barre de temps (repères de secteurs et d'incidents), commandes, légende des courses, et panneau d'analyse (trajectoires sur la carte du circuit, vitesses et écart le long du parcours, tableau des secteurs). Voir theater/session.js. |
+| `session.js` | Replay Theater (Copytrack Evolution, E6) : le replay devient une salle d'analyse. Jusqu'à quatre courses sur la piste en même temps (la course regardée, rejouée EXACTEMENT par ses commandes, et jusqu'à trois à comparer : un autre record, le fantôme or, un fantôme en ligne), une barre de temps où l'on se déplace (en avant comme en arrière), les secteurs et les incidents marqués dessus, et un panneau d'analyse (trajectoires sur la carte, vitesses, écarts, secteurs). Construit SUR le mode replay de la course (même rendu, mêmes caméras, même export vidéo) : rien n'est dupliqué. |
 
 ## `js/track/`
 

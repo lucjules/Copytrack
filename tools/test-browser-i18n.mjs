@@ -186,6 +186,24 @@ try {
     await ctx.close();
   });
 
+  await test('Replay Theater en anglais : barre de temps, légende, panneau d\'analyse', async () => {
+    const { ctx, page } = await device('en-US');
+    await enter(page);
+    await page.evaluate(async () => {
+      const C = await (await fetch('/tools/compat/corpus.json')).json();
+      const r = C.runs.find((x) => /retour/.test(x.label));
+      const a = window.copytrack, i = a.builtins.findIndex((b) => b.def.id === 'eclats'), s = await import('/js/storage.js');
+      s.saveRecord(a.builtins[i].key, { time: r.time, inputs: r.inputs, pv: 26, date: Date.now(), splits: [] });
+      a.showMenu('tracks'); a.openBuiltinHub(i, 'tracks');
+      await a.watchRecord(a._hub.desc, s.getRecord(a.builtins[i].key), 'gold');
+    });
+    await page.waitForFunction(() => window.copytrack.session && window.copytrack.session._th && window.copytrack.session._th.traces, null, { timeout: 30000 });
+    await page.waitForTimeout(600);
+    assert.match(await text(page, '#th-runs'), /My record[\s\S]*Gold ghost/);
+    assert.deepEqual(await frenchLeft(page), [], 'Theater : texte resté en français');
+    await ctx.close();
+  });
+
   await test('Options › Langue : bascule en direct dans les deux sens, sans recharger, textes dynamiques compris', async () => {
     const { ctx, page } = await device('fr-FR');
     await enter(page);

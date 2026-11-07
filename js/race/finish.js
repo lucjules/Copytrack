@@ -102,6 +102,9 @@ export const finishMethods = {
     // Un record d'une autre version de la physique n'est plus comparable (et n'a pas de commandes rejouables) : il ne bloque pas le nouveau.
     const prevValid = prev && prev.pv === PHYS_VER;
     const isRecord = (!prevValid || time < prev.time - 1e-9) && !this.opts.spawn;
+    // Replay Theater (« Revoir la course ») : la course à comparer, le record d'avant (ou le record, si celle-ci n'en est pas un).
+    this.prevRun = prevValid && prev.inputs ? { inputs: prev.inputs, time: prev.time } : null;
+    this.lastRunWasRecord = isRecord;
     if (isRecord && this.trackKey) {
       const ghost = new Float32Array(this.ghostRec);
       const rec = {

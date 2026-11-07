@@ -231,6 +231,63 @@ try {
     await click('#tracks [data-action="back"]');
   });
 
+  await test('Replay Theater : record comparé au fantôme or, se déplacer dans le temps donne exactement la lecture continue, analyse, caméras, retour', async () => {
+    const corpus = JSON.parse(readFileSync(join(root, 'tools/compat/corpus.json'), 'utf8'));
+    const run = corpus.runs.find((r) => /retour/.test(r.label));
+    await app(async (r) => {
+      const a = window.copytrack, i = a.builtins.findIndex((b) => b.def.id === 'eclats'), s = await import('/js/storage.js');
+      s.saveRecord(a.builtins[i].key, { time: r.time, inputs: r.inputs, pv: 26, date: Date.now(), splits: [] });
+      a.showMenu('tracks'); a.openBuiltinHub(i, 'tracks');
+    }, run);
+    await page.locator('#hub-cmp').selectOption('gold');
+    await click('#hub-watch');
+    await waitApp(() => window.copytrack.session && window.copytrack.session._th && window.copytrack.session._th.traces, null, 30000);
+    assert.equal(await page.evaluate(() => document.querySelectorAll('#th-runs li').length), 2, 'deux courses : le record et le fantôme or');
+    assert.ok(await app(() => window.copytrack.session._th.marks.some((m) => m.kind === 'respawn')), 'le retour au checkpoint est marqué sur la barre de temps');
+    const exact = await app(() => {
+      const s = window.copytrack.session; s.replayPaused = true;
+      s.theaterSeek(1800); const a = [s.phys.pos.x, s.phys.pos.y, s.phys.pos.z, s.phys.vel.x, s.logic.steps];
+      s.theaterSeek(300); s.theaterSeek(1800); const b = [s.phys.pos.x, s.phys.pos.y, s.phys.pos.z, s.phys.vel.x, s.logic.steps];
+      s.theaterSeek(s._th.total);
+      return { same: a.every((v, i) => v === b[i]), finished: s.state, time: s.logic.time };
+    });
+    assert.ok(exact.same, 'revenir en arrière puis avancer redonne exactement la même voiture');
+    assert.equal(exact.finished, 'finished'); assert.equal(exact.time, run.time, 'le replay redonne le temps du record');
+    // le curseur de la barre de temps suit
+    await app(() => window.copytrack.session.theaterSeek(1200));
+    assert.equal(await page.evaluate(() => +document.getElementById('th-seek').value), 1200);
+    // panneau d'analyse : secteurs (12) et écarts
+    if (await page.evaluate(() => document.getElementById('theater-panel').classList.contains('hidden'))) await click('#theater [data-th="panel"]');
+    await waitApp(() => document.querySelectorAll('#th-sectors tbody tr').length === 2);
+    assert.equal(await page.evaluate(() => document.querySelectorAll('#th-sectors thead th').length), 13);
+    // caméras : Libre puis Cinématique
+    const cams = await app(() => { const s = window.copytrack.session, out = []; for (let i = 0; i < s.camList.length + 4; i++) { s.theaterCamera(); out.push(s.theaterCameraName()); } return out; });
+    assert.ok(cams.includes('Libre') && cams.includes('Cinématique'), cams.join(', '));
+    await app(() => { const s = window.copytrack.session; s.replayCam = s.camList.length + 3; s.replayPaused = false; });
+    await page.waitForTimeout(1500);
+    const cost = await app(() => { const T = window.copytrack.session._th; return T.cost / T.costN; });
+    assert.ok(cost < 3, `interface du Theater : ${cost.toFixed(2)} ms par image en moyenne`);
+    await shot('07d-replay-theater');
+    await click('#theater [data-th="quit"]');
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
+    assert.ok(await page.evaluate(() => document.getElementById('theater').classList.contains('hidden')));
+    // « Revoir la course » à l'arrivée : le Theater, avec le record à côté
+    await click('#hub-play');
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session.state === 'racing', null, 40000);
+    await page.keyboard.down('ArrowUp'); await page.waitForTimeout(600); await page.keyboard.up('ArrowUp');
+    await app(() => window.copytrack.session._finish(window.copytrack.session.logic.steps / 120));
+    await waitApp(() => !document.getElementById('finish').classList.contains('hidden'));
+    await click('#fin-replay');
+    await waitApp(() => window.copytrack.session && window.copytrack.session._th, null, 20000);
+    assert.deepEqual(await app(() => window.copytrack.session._th.runs.map((r) => r.label)), ['Cette course', 'Ancien record'], 'nouveau record : comparé à l’ancien');
+    await app(() => window.copytrack.endReplay());
+    await waitApp(() => window.copytrack.session && !window.copytrack.session.replay && window.copytrack.mode === 'race', null, 20000);
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
+    await click('#race-hub [data-action="hub-back"]');
+    await click('#tracks [data-action="back"]');
+  });
+
   await test('course rapide : un clic lance le prochain circuit sans médaille', async () => {
     const expect = await app(async () => { const d = await import('/js/trackDescriptor.js'); const s = await import('/js/storage.js'); return d.quickRaceIndex(window.copytrack.builtins, s.getRecord); });
     await click('[data-action="quick"]');

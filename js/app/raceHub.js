@@ -222,25 +222,35 @@ export const raceHubMethods = {
     const d = this._hub.desc;
     const rec = personalRecord(d, getRecord);
     const can = !!(rec && rec.inputs && rec.pv === PHYS_VER);
+    const h = this._hub, ranked = d.key && /^(b-|daily-|u-)/.test(d.key);
+    const opts = [['', 'Rien'], ...(d.track.path ? [['gold', 'Le fantôme or']] : []), ...(ranked ? [['world', 'Le record mondial']] : []), ...(h.rivals.size ? [['rivals', `Mes rivaux choisis (${h.rivals.size})`]] : [])];
+    if (!opts.some(([k]) => k === h.compare)) h.compare = '';
     $('hub-records').innerHTML = `<h3>Records</h3>
+      <label class="hub-cmp"><span>Comparer avec</span><select id="hub-cmp"${can ? '' : ' disabled'}>${opts.map(([k, l]) => `<option value="${k}"${k === h.compare ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
       <button class="btn" id="hub-watch"${can ? '' : ' disabled'}>🎬 Regarder mon record${rec ? ` (${formatTime(rec.time)})` : ''}</button>
-      <p class="meta">${can ? 'Le replay rejoue ta course exacte : caméras au choix (C), pause, vitesse.' : rec ? 'Ce record vient d’une ancienne version du jeu : il ne se rejoue plus.' : 'Termine une course pour pouvoir la revoir.'}</p>
-      ${d.key && /^(b-|daily-|u-)/.test(d.key) ? '<p class="meta">Les meilleurs temps en ligne se regardent en course : choisis-les comme rivaux 👻.</p>' : ''}`;
-    if (can) $('hub-watch').onclick = () => { this.audio.click(); this.watchRecord(d, rec); };
+      <p class="meta">${can ? 'Replay Theater : ta course exacte, une barre de temps pour aller et venir, caméras libre et cinématique, et l’analyse (trajectoires, vitesses, secteurs) face à la course choisie.' : rec ? 'Ce record vient d’une ancienne version du jeu : il ne se rejoue plus.' : 'Termine une course pour pouvoir la revoir.'}</p>`;
+    if (can) {
+      $('hub-cmp').onchange = (e) => { h.compare = e.target.value; };
+      $('hub-watch').onclick = () => { this.audio.click(); this.watchRecord(d, rec, h.compare); };
+    }
   },
 
-  // Replay du record personnel (commandes enregistrées : la course exacte), puis retour à la fiche.
-  watchRecord(desc, rec) {
-    const from = this._hub ? this._hub.from : 'tracks';
-    if (this._hub && this._hub.map) { this._hub.map.dispose(); this._hub.map = null; }
-    this._replayBack = { hub: desc, from };
-    this._dispose();
-    this.mode = 'race';
-    this.ui.showScreen(null);
-    this.ui.setMode('race');
-    this.session = new RaceSession(this, desc.track, { ...desc.launch, replay: { inputs: rec.inputs, time: rec.time }, trackKey: null, medals: desc.medals });
-    $('replay-bar').classList.remove('hidden');
-    this._resize();
+  // Replay Theater du record personnel (commandes enregistrées : la course exacte), comparé à `cmp` ('' | 'gold' | 'world' | 'rivals'), puis retour à la fiche.
+  async watchRecord(desc, rec, cmp = '') {
+    const h = this._hub, from = h ? h.from : 'tracks';
+    const compare = [];
+    if (cmp === 'gold') compare.push({ kind: 'gold', label: 'Fantôme or' });
+    if (cmp === 'rivals' && h) for (const [rank, g] of [...h.rivals.entries()].sort((a, b) => a[0] - b[0])) compare.push({ kind: 'ghost', label: `${rank}. ${g.name}`, ghost: g.ghost, veh: g.veh, time: g.time });
+    if (cmp === 'world') {
+      try {
+        const g = await online.ghost(desc.key, 1, PHYS_VER);
+        if (g) compare.push({ kind: 'ghost', label: `1. ${g.name}`, ghost: g.ghost, veh: g.veh, time: g.time });
+        else this.ui.flash('Pas de fantôme pour le record mondial : replay seul.', 2.5);
+      } catch (e) { this.ui.flash(`Record mondial indisponible (${e.message}) : replay seul.`, 3); }
+      if (this._hub !== h) return;
+    }
+    if (h && h.map) { h.map.dispose(); h.map = null; }
+    this.openTheater({ track: desc.track, opts: desc.launch, main: { inputs: rec.inputs, time: rec.time, label: 'Mon record' }, compare, back: { hub: desc, from }, panel: compare.length > 0 });
   },
 
   // Fiche du circuit de la course en cours (écran d'arrivée).

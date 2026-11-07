@@ -28,6 +28,8 @@ import { finishMethods } from './race/finish.js';
 import { replayMethods } from './race/replayMode.js';
 import { scriptMethods } from './race/scriptsRun.js';
 import { trainingMethods } from './race/training.js';
+import { theaterMethods } from './theater/session.js';
+import { theaterCameraMethods } from './theater/cameras.js';
 
 const CAR_COLOR = '#ffd23e';   // éclat quand la voiture retrouve sa forme d'origine (les plaques ont la couleur de leur revêtement : SURFACES)
 
@@ -96,6 +98,7 @@ export class RaceSession {
     this.loadRecord();
     this.restart();
     this._trainSetup();          // HUD d'entraînement (profil « Entraînement » : race/training.js)
+    this._theaterSetup();        // Replay Theater (opts.theater : theater/session.js)
   }
 
   // Message au centre de l'écran (court, trié par importance : voir hudMessages.js). m = [texte, importance, durée en s].
@@ -621,6 +624,7 @@ export class RaceSession {
   dispose() {
     this._telemetryQuit();
     this._trainDispose();
+    this._theaterDispose();
     this.app.camera.up.set(0, 1, 0);
     this.view.dispose();
     this.car.dispose();
@@ -641,4 +645,4 @@ export class RaceSession {
 }
 
 // Les familles de méthodes vivent dans race/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(RaceSession.prototype, cameraMethods, ghostMethods, netMethods, finishMethods, replayMethods, scriptMethods, trainingMethods);
+Object.assign(RaceSession.prototype, cameraMethods, ghostMethods, netMethods, finishMethods, replayMethods, scriptMethods, trainingMethods, theaterMethods, theaterCameraMethods);

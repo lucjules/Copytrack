@@ -8,7 +8,9 @@
 // RunTrace : { every, n, t, pos (x, y, z), v, thr, brk, steer, air, lat, lon, events, source, time, finished }
 //   t[i] = (i + 1) × every × DT (chrono de la course) ; un retour au checkpoint efface ce qui suit le checkpoint, comme le fantôme.
 //   events : [{ k, i, step, q }] k = 'cp' | 'land' | 'wall' | 'turbo' | 'respawn' | 'veh' (i : échantillon le plus proche, q : détail)
-import { GhostRunner, inputAt } from '../replay.js';
+import { GhostRunner, inputAt, InputRecorder, quantSteer } from '../replay.js';
+import { Simulation } from '../simulation.js';
+import { Autopilot } from '../autopilot.js';
 import { GHOST_EVERY, GHOST_STRIDE, GHOST_VEHICLES } from '../ghostFormat.js';
 import { DT, MAX_RUN_STEPS } from '../constants.js';
 
@@ -19,7 +21,7 @@ class TraceRunner extends GhostRunner {
   constructor(track, inputs, every) {
     super(track, { inputs, ghost: true });
     this.every = every;
-    this.ch = { t: [], x: [], y: [], z: [], v: [], thr: [], brk: [], steer: [], air: [], lat: [], lon: [] };
+    this.ch = { t: [], k: [], x: [], y: [], z: [], v: [], thr: [], brk: [], steer: [], air: [], lat: [], lon: [] };
     this.events = [];
     this._cps = 0; this._veh = this.phys.vehicle; this._v = 0; this._wallAt = -1000;
   }
@@ -36,7 +38,7 @@ class TraceRunner extends GhostRunner {
     if (p.vehicle !== this._veh) { this._note('veh', GHOST_VEHICLES.indexOf(p.vehicle)); this._veh = p.vehicle; }
     if (L.steps % this.every !== 0) return;
     const c = this.ch, inp = inputAt(this.rep, this.k), v = p.speed;
-    c.t.push(L.steps * DT);
+    c.t.push(L.steps * DT); c.k.push(this.k + 1);        // k : pas de lecture des commandes (ne recule jamais, contrairement au chrono)
     c.x.push(p.pos.x); c.y.push(p.pos.y); c.z.push(p.pos.z);
     c.v.push(v);
     c.thr.push(inp.throttle ? 1 : 0); c.brk.push(inp.brake ? 1 : 0); c.steer.push(Math.round(inp.steer * 100));
@@ -61,7 +63,7 @@ function pack(ch, extra) {
   const pos = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) { pos[i * 3] = ch.x[i]; pos[i * 3 + 1] = ch.y[i]; pos[i * 3 + 2] = ch.z[i]; }
   return {
-    n, t: Float64Array.from(ch.t), pos, v: Float32Array.from(ch.v),
+    n, t: Float64Array.from(ch.t), k: ch.k ? Int32Array.from(ch.k) : null, pos, v: Float32Array.from(ch.v),
     thr: ch.thr ? Uint8Array.from(ch.thr) : null, brk: ch.brk ? Uint8Array.from(ch.brk) : null, steer: ch.steer ? Int8Array.from(ch.steer) : null,
     air: ch.air ? Uint8Array.from(ch.air) : null, lat: ch.lat ? Float32Array.from(ch.lat) : null, lon: ch.lon ? Float32Array.from(ch.lon) : null,
     ...extra,
@@ -97,4 +99,23 @@ export function posAt(trace, i, out = { x: 0, y: 0, z: 0 }) {
   const k = Math.max(0, Math.min(trace.n - 1, i)) * 3;
   out.x = trace.pos[k]; out.y = trace.pos[k + 1]; out.z = trace.pos[k + 2];
   return out;
+}
+
+// Le fantôme or : les commandes du pilote automatique (mêmes réglages que le fantôme or de la course : latLimit 56 × 0,8), rejouées en trace.
+// Circuits à ligne de course seulement (track.path) ; null s'il ne finit pas.
+export function traceFromBot(track, { latK = 0.8, maxSeconds = 300 } = {}) {
+  if (!track.path) return null;
+  const sim = new Simulation(track), rec = new InputRecorder();
+  sim.start();
+  const bot = new Autopilot(track.path, { latLimit: 56 * latK });
+  bot.reset(sim.phys);
+  for (let i = 0; i < Math.round(maxSeconds / DT); i++) {
+    const inp = bot.control(sim.phys);
+    inp.steer = quantSteer(inp.steer);
+    rec.push(inp, false);
+    const ev = sim.step(inp);
+    if (sim.lost) { sim.rewind(); bot.reset(sim.phys); }
+    if (ev && ev.type === 'finish') { const tr = traceFromInputs(track, rec.encode()); tr.inputs = rec.encode(); return tr; }
+  }
+  return null;
 }
