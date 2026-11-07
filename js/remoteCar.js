@@ -28,6 +28,9 @@ export class RemoteCar {
     this.buffer = new SnapshotBuffer(delay !== undefined ? { delay } : {});
     this.onTeleport = onTeleport;
     this.vehicle = 'car';
+    this.shown = false;           // a déjà été vue (la première apparition n'anime pas de transformation)
+    this.spin = 0;                // rotation des roues (rad)
+    this.lastMs = null;
     this.dark = 0;
     this.teleports = 0;
     // Les matériaux fantômes sont propres à cette voiture : on peut les modifier sans toucher aux autres.
@@ -67,7 +70,14 @@ export class RemoteCar {
     this.group.visible = true;
     this.group.position.copy(s.pos);
     this.group.quaternion.copy(s.quat);
-    if (s.vehicle !== this.vehicle) { this.vehicle = s.vehicle; this.car.setVehicle(s.vehicle, true); }
+    // Même animation de transformation que le joueur (instantanée à la première apparition et après une téléportation), roues qui tournent avec la vitesse.
+    const dt = this.lastMs == null ? 0 : Math.min(0.1, Math.max(0, (nowMs - this.lastMs) / 1000));
+    this.lastMs = nowMs;
+    if (s.vehicle !== this.vehicle) { this.vehicle = s.vehicle; this.car.setVehicle(s.vehicle, !this.shown || s.teleported); }
+    this.shown = true;
+    this.car.update(dt, nowMs / 1000);
+    this.spin += (s.speed / 0.44) * dt;
+    for (const w of this.car.wheels) w.spin.rotation.x = -this.spin;
     if (s.teleported) { this.teleports++; if (this.onTeleport) this.onTeleport(s.pos); }
     this.setDistance(this.group.position.distanceTo(cameraPos));
     return true;

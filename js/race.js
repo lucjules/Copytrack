@@ -434,7 +434,7 @@ export class RaceSession {
     this.view.updateMoving(this.obsT);
     this.view.updateLights(app.camera.position, this.obsT);
     // Dalles de verre brisées : visibles de nouveau dès qu'un (re)départ les restaure.
-    if (this.phys.broken.size !== this._brokenN) { this._brokenN = this.phys.broken.size; this.view.setBroken(this.phys.broken); }
+    if (this.phys.brokenVer !== this._brokenV) { this._brokenV = this.phys.brokenVer; this.view.setBroken(this.phys.broken); }
     // Interpolation entre deux pas physiques
     this.renderPos.set(
       p.prev.x + (p.pos.x - p.prev.x) * alpha,
@@ -476,7 +476,7 @@ export class RaceSession {
       if (frozen) continue;
       if (sliding && !lean && w < wheelsX.length) {
         tmpV.set(wheelsX[w], 0, 1.3).applyQuaternion(g.quaternion).add(g.position);
-        this.skids.add(w, tmpV.x, tmpV.y, tmpV.z, tmpV2.x, tmpV2.z, this.car.isMoto ? 0.22 : 0.3);
+        this.skids.add(w, tmpV.x, tmpV.y, tmpV.z, tmpV2.x, tmpV2.z, this.car.isMoto ? 0.22 : 0.3, p.gSign < 0 ? -0.04 : 0.04);
       } else this.skids.lift(w);
     }
     if (p.driftCharge > 0.15 && p.grounded && !lean && !frozen) {

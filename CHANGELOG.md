@@ -19,6 +19,7 @@ référence des 66 circuits et leurs médailles sont inchangés**. **La fonction
 - **Fantômes** : ils se transforment avec la même animation que le joueur (instantanément après un retour au checkpoint ou un redémarrage). **Particules** : un retour au checkpoint efface celles de l'endroit quitté.
 - **Pause** : le monde est vraiment figé (plus de particules de boost, de poussière ni de traces qui naissent autour de la voiture arrêtée, plus de scintillement des flammes) ; la voiture ne recule plus d'un pas à l'instant de la pause. Même chose en replay mis en pause.
 - **Après l'arrivée** : l'horloge des obstacles et des pièces mobiles continue pour la physique (elle restait figée alors que leur dessin bougeait : on pouvait heurter un obstacle là où il n'était plus).
+- **Autres joueurs (multijoueur)** : ils se transforment avec l'animation et leurs roues tournent. **Dalles de verre** : le rendu suit un numéro de version, plus le nombre de dalles brisées. **Traces de pneus** : collées à la chaussée retournée en gravité inversée.
 - `tools/test-decors.mjs` : aucun élément de ces décors ne flotte (testé sur plusieurs graines).
 
 ### Physique et vérification des temps

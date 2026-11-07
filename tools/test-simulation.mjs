@@ -142,6 +142,23 @@ test('après l\'arrivée, l\'horloge des obstacles et des pièces mobiles contin
   sim.start();
   assert.equal(sim.idle, 0, 'remise à zéro au départ');
 });
+test('dalles brisées : brokenVer change à chaque dalle brisée et à chaque restauration (même si leur nombre est identique)', () => {
+  const sim = new Simulation(scriptTrack('s', 'start S2 finish'));
+  sim.start();
+  const v0 = sim.phys.brokenVer, t = sim.track.tiles[1];
+  sim.phys.broken.add(t); sim.phys.brokenVer++;       // (comme _glassCheck)
+  sim.start();                                          // restauration au départ
+  assert.ok(sim.phys.brokenVer > v0 + 1);
+  assert.equal(sim.phys.broken.size, 0);
+});
+test('traces de pneus : décalage le long du haut de la route (négatif au plafond)', async () => {
+  globalThis.document = { createElement: () => ({ getContext: () => null }) };
+  const { SkidMarks } = await import('../js/skids.js');
+  const THREE = await import('../js/vendor/three.module.min.js');
+  const sk = new SkidMarks(new THREE.Scene());
+  sk.add(0, 0, 10, 0, 1, 0, 0.3, -0.04); sk.add(0, 1, 10, 0, 1, 0, 0.3, -0.04);
+  assert.ok(Math.abs(sk.pos[1] - 9.96) < 1e-5, 'trace sous le plafond : ' + sk.pos[1]);
+});
 test('fantôme enregistré : le véhicule suit les changements enregistrés (moto, bateau, retour voiture), les anciens records restent des voitures', async () => {
   const { ghostVehicleAt } = await import('../js/race/shared.js');
   const ch = [[0, 1], [10, 2], [25, 0]];

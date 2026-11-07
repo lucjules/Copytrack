@@ -8573,6 +8573,7 @@ var CarPhysics = class {
     this.vehicle = "car";
     this.gravMul = 1;
     this.glassTime = /* @__PURE__ */ new Map();
+    this.brokenVer = 0;
     this.broken = /* @__PURE__ */ new Set();
     this.setBounds();
     this.place(0, 0.4, 0, 0);
@@ -8646,6 +8647,7 @@ var CarPhysics = class {
     this.cutT = 0;
     this.glassTime.clear();
     this.broken.clear();
+    this.brokenVer++;
     this.graceT = 1.5;
     this.beltX = 0;
     this.beltZ = 0;
@@ -8785,6 +8787,7 @@ var CarPhysics = class {
     this.glassTime.set(tile, t);
     if (t < glassSeconds(this._pct(tile))) return false;
     this.broken.add(tile);
+    this.brokenVer++;
     this.ev.glass = true;
     this.ev.glassTile = tile;
     return true;
@@ -9570,6 +9573,7 @@ var Simulation = class {
     });
     this.offTrackLimit = offTrackLimit;
     this.groundT = 0;
+    this.idle = 0;
     this.sank = false;
     this.lost = "";
   }
@@ -9586,6 +9590,7 @@ var Simulation = class {
     };
     placeAtStart(this.phys, this.logic, sp);
     this.groundT = 0;
+    this.idle = 0;
     this.sank = false;
     this.lost = "";
     return sp;
@@ -9603,7 +9608,7 @@ var Simulation = class {
   }
   // Phase 1 d'un pas : horloge de la course puis physique.
   drive(inp) {
-    this.phys.clock = this.logic.steps;
+    this.phys.clock = this.logic.steps + (this.logic.finished ? this.idle++ : 0);
     this.phys.step(inp);
     this.sank = this.phys.ev.sink;
   }
