@@ -9,15 +9,13 @@
 import { Emitter, SupabaseSignaling, LocalSignaling } from './signaling.js';
 import { PeerMesh } from './transport.js';
 import { packSnapshot, unpackSnapshot } from './snapshot.js';
-import { PHYS_VER } from '../replay.js';
+import { PHYS_VER } from '../version.js';
+import { MAX_RUN_STEPS, MAX_TRACK_CODE_CHARS } from '../constants.js';
 
-export const ROOM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';     // sans 0 / O / 1 / I : pas de confusion à la dictée
+const ROOM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';     // sans 0 / O / 1 / I : pas de confusion à la dictée
 export const MAX_PLAYERS = 8;
-export const START_DELAY_MS = 4000;                                // entre « Lancer » et « GO »
-export const SEND_EVERY_STEPS = 6;                                 // 120 / 6 = 20 paquets par seconde
-export const MAX_CODE_CHARS = 400000;                             // taille maximale d'un circuit transmis par un joueur
+const START_DELAY_MS = 4000;                                // entre « Lancer » et « GO »
 const CODE_CHUNK = 12000;                                          // un message fiable ne dépasse pas ~12 Ko (compatibilité entre navigateurs)
-const MAX_RUN_STEPS = 120 * 600;                                   // 10 minutes : au-delà, un temps annoncé est refusé
 const MAX_PACKETS_PER_SEC = 80;                                    // au-delà, un joueur inonde : on ignore l'excédent
 
 export const ROOM_RE = /^[A-HJ-NP-Z2-9]{6}$/;
@@ -26,7 +24,7 @@ export function newRoomCode(random = (n) => crypto.getRandomValues(new Uint8Arra
   const r = random(6);
   return Array.from(r, (b) => ROOM_CHARS[b % ROOM_CHARS.length]).join('');
 }
-export const newPeerId = () => (globalThis.crypto && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
+const newPeerId = () => (globalThis.crypto && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
 
 export class RoomError extends Error {
   constructor(message, code) { super(message); this.code = code; }
@@ -210,7 +208,7 @@ export class Room extends Emitter {
   // spec : { id, name, sig, code? } ; code : seulement pour les circuits 'u:…' (envoyé à chaque joueur par morceaux).
   selectTrack(spec) {
     if (!this.isHost || !spec || typeof spec.id !== 'string') return;
-    if (spec.code && spec.code.length > MAX_CODE_CHARS) throw new RoomError('Circuit trop gros pour être envoyé.', 'too-big');
+    if (spec.code && spec.code.length > MAX_TRACK_CODE_CHARS) throw new RoomError('Circuit trop gros pour être envoyé.', 'too-big');
     this.track = { id: spec.id, name: spec.name || '', sig: spec.sig || '' };
     if (spec.code) this.trackCodes.set(spec.id, spec.code);
     this._sendTrack();
@@ -230,7 +228,7 @@ export class Room extends Emitter {
   _onCodeChunk(from, d) {
     if (from !== this.hostId || typeof d.id !== 'string' || !d.id.startsWith('u:') || typeof d.d !== 'string') return;
     const n = d.n | 0, i = d.i | 0;
-    if (n < 1 || n > Math.ceil(MAX_CODE_CHARS / CODE_CHUNK) || i < 0 || i >= n || d.d.length > CODE_CHUNK) return;
+    if (n < 1 || n > Math.ceil(MAX_TRACK_CODE_CHARS / CODE_CHUNK) || i < 0 || i >= n || d.d.length > CODE_CHUNK) return;
     let a = this._asm.get(d.id);
     if (!a || a.n !== n) { a = { n, parts: new Array(n).fill(null), got: 0 }; this._asm.set(d.id, a); }
     if (a.parts[i] === null) { a.parts[i] = d.d; a.got++; }

@@ -2,9 +2,9 @@
 // la longueur et la largeur suivent la vitesse et le boost. Un ruban 3D avec une opacité par sommet (additif) : pas de particules qui
 // apparaissent et disparaissent.
 import * as THREE from './vendor/three.module.min.js';
+import { clamp } from './mathutil.js';
 
 const N = 72;                                   // échantillons au plus
-const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const tmp = new THREE.Color();
 
 // Intensité (0 à 1) selon la vitesse (m/s) et le boost (0 à 1) : discrète à l'arrêt, pleine à ~180 km/h, renforcée par le boost.

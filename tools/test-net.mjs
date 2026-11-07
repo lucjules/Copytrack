@@ -8,15 +8,12 @@ import { SnapshotBuffer } from '../js/net/interp.js';
 import { RemoteCar, darkness, FADE_NEAR, FADE_FAR, MAX_DARKEN } from '../js/remoteCar.js';
 import { SupabaseSignaling, Emitter } from '../js/net/signaling.js';
 import { PeerMesh } from '../js/net/transport.js';
-import { Room, newRoomCode, normalizeCode, ROOM_RE, RoomError } from '../js/net/room.js';
+import { Room, newRoomCode, normalizeCode, ROOM_RE } from '../js/net/room.js';
 import { RaceLogic } from '../js/raceLogic.js';
 import { Track } from '../js/track.js';
-import { PHYS_VER } from '../js/replay.js';
+import { PHYS_VER } from '../js/version.js';
+import { test, finish } from './harness.mjs';
 
-let failures = 0;
-async function test(name, fn) {
-  try { await fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e).split('\n').slice(0, 4).join('\n       ')); }
-}
 const snap = (steps, x, o = {}) => ({ steps, flags: 0, tele: 0, vehicle: 'car', seq: steps, pos: { x, y: 1, z: 0 }, quat: new THREE.Quaternion(), vel: { x: 0, y: 0, z: 0 }, cp: 0, lap: 1, ...o });
 // Reçoit une suite de paquets (émetteur à 20 Hz) avec une latence fixe de 30 ms.
 function feed(buf, list, lat = 30) { for (const s of list) { const u = unpackSnapshot(packSnapshot(s)); buf.push(u, s.steps * DT * 1000 + lat); } }
@@ -132,7 +129,7 @@ await test('RemoteCar : invisible avant le premier paquet ; téléportation sign
   const rc = new RemoteCar(scene, { id: 'a', name: 'A' }, { onTeleport: () => tp++ });
   assert.equal(rc.update(0, new THREE.Vector3()), false); assert.equal(rc.group.visible, false);
   const pk = (s, x, t) => unpackSnapshot(packSnapshot(snap(s, x, { tele: t })));
-  [pk(0, 0, 0), pk(6, 10, 0), pk(12, 900, 1), pk(18, 910, 1)].forEach((p, i) => rc.push(p, p.steps * DT * 1000));
+  [pk(0, 0, 0), pk(6, 10, 0), pk(12, 900, 1), pk(18, 910, 1)].forEach((p) => rc.push(p, p.steps * DT * 1000));
   for (let ms = 0; ms < 400; ms += 8) rc.update(ms + 100, new THREE.Vector3());
   assert.equal(tp, 1); assert.equal(rc.group.visible, true);
   rc.dispose();
@@ -256,7 +253,7 @@ await test('une seule offre par paire (le plus petit identifiant initie), candid
 });
 await test('signalisation invalide ou tardive : ignorée sans planter', async () => {
   const hub = new Hub(); const s = new FakeSignaling(hub, 'aaa');
-  const m = new PeerMesh({ selfId: 'aaa', signaling: s, RTC: FakePC, handlers: { onMessage() {}, onLink() {} } });
+  new PeerMesh({ selfId: 'aaa', signaling: s, RTC: FakePC, handlers: { onMessage() {}, onLink() {} } });
   for (const bad of [null, 5, 'x', { k: 'desc' }, { k: 'desc', d: { type: 'rien' } }, { k: 'ice', c: { candidate: 'x' } }]) s.emit('signal', 'zzz', bad);
   await new Promise((r) => setTimeout(r, 10));
 });
@@ -293,7 +290,6 @@ await test('créer puis rejoindre par code ; code inconnu, code pris, salle plei
   host.signaling.peers.set('old', { name: 'Vieux', v: PHYS_VER - 1 }); host._onPeer('old', { name: 'Vieux', v: PHYS_VER - 1 });
   assert.equal(host.members.get('old').link, 'incompatible');
   // hôte parti : migration vers l'identifiant le plus petit
-  const ids = [guest.selfId];
   host.leave();
   assert.equal(guest.isHost, true, 'le seul restant devient hôte');
   guest.leave();
@@ -301,7 +297,7 @@ await test('créer puis rejoindre par code ; code inconnu, code pris, salle plei
 await test('le départ est donné par l\'hôte seulement, avec un délai commun', async () => {
   const env = fakeRoomEnv();
   const opts = (name) => ({ name, makeSignaling: ({ code, selfId }) => env.make(selfId, code), makeMesh: env.makeMesh });
-  let t = 1000; const now = () => t;
+  const t = 1000; const now = () => t;
   const host = await Room.create({ ...opts('H'), code: 'ABC234', now }); const g = await Room.join('ABC234', { ...opts('G'), now });
   let started = null; g.on('start', (e) => { started = e; });
   host.selectTrack({ id: 'b-1-xyz', name: 'Premiers Éclats' });
@@ -320,7 +316,7 @@ console.log('Boucle asynchrone : essais à son rythme, arrivants, circuits trans
 await test('on peut rejoindre une salle où la course a déjà commencé : départ immédiat, sans attendre personne', async () => {
   const env = fakeRoomEnv();
   const opts = (name) => ({ name, makeSignaling: ({ code, selfId }) => env.make(selfId, code), makeMesh: env.makeMesh });
-  let t = 5000; const now = () => t;
+  const t = 5000; const now = () => t;
   const host = await Room.create({ ...opts('H'), code: 'ABC234', now });
   host.selectTrack({ id: 'b-1-xyz', name: 'T' }); host.start();
   const g = await Room.join('ABC234', { ...opts('G'), now });                  // plus de refus « course en cours »
@@ -403,11 +399,10 @@ await test('nouvel essai : l\'horloge d\'envoi ne recule pas et la téléportati
   const feed2 = (tick, x, tele) => buf.push(unpackSnapshot(packSnapshot(snap(tick, x, { tele }))), tick * DT * 1000 + 30);
   for (let k = 0; k <= 10; k++) feed2(k * 6, k * 20, 0);                     // essai 1 : va de 0 à 200
   for (let k = 11; k <= 20; k++) feed2(k * 6, 5 + (k - 11) * 20, 1);         // essai 2 : retour au départ, tele = 1
-  let tp = 0, accepted = true; for (let ms = 0; ms < 20 * 6 * DT * 1000 + 300; ms += 8) { if (buf.sample(ms + 30).teleported) tp++; }
+  let tp = 0; for (let ms = 0; ms < 20 * 6 * DT * 1000 + 300; ms += 8) { if (buf.sample(ms + 30).teleported) tp++; }
   assert.equal(tp, 1); assert.equal(buf.length, 21, 'aucun paquet refusé');
   // le piège : si l\'horloge reculait, les paquets du nouvel essai seraient rejetés comme périmés
   const bad = new SnapshotBuffer(); feed.call(null, bad, [snap(600, 0)]); assert.equal(bad.push(unpackSnapshot(packSnapshot(snap(5, 0, { tele: 1 }))), 5000), false, 'rappel : une horloge qui recule est refusée');
 });
 
-if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }
-console.log('\nTous les tests réseau passent.');
+await finish('Tous les tests réseau passent.');

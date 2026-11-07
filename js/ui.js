@@ -1,15 +1,10 @@
 // Interface DOM : écrans, HUD, fenêtres modales, notifications.
 import { formatTime } from './storage.js';
-import { MEDALS, medalFor } from './race.js';
+import { MEDALS } from './medals.js';
 import { keyLabel } from './input.js';
 import { profile } from './profile.js';
 import { MessageGate, PRIO } from './hudMessages.js';
-
-export const $ = (id) => document.getElementById(id);
-
-export function esc(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
+import { $ } from './dom.js';
 
 export function medalIcon(m) {
   return `<i class="medal ${m ? m.id : 'none'}" title="${m ? m.label : 'Aucune médaille'}"></i>`;
@@ -241,4 +236,3 @@ export class UI {
   }
 }
 
-export { medalFor };

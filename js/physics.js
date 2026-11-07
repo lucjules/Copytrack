@@ -9,196 +9,23 @@
 // routes à l'envers) : seul change le plan de la route, avec la gravité projetée.
 // La personnalisation du véhicule (forme, LED, dessins...) est purement visuelle :
 // aucune de ces constantes n'en dépend.
-import { CELL, DT, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T, LEVEL_H, ROAD_TOP, SURF_PHYS } from './constants.js';
-import {
-  PIECES, PLATES, RING_R, RING_Y, toLocal, sampleLocal, rotVec, tileCenter, isRibbon, isFloor, isCeilingFloor, tileParam, baseY,
-  beltSpeed, glassSeconds, TUNNEL_TOP, isSideTile, hasNoRails,
-} from './pieces.js';
-import { ribbonOf, frameLocal } from './ribbons.js';
-import { OBST, obstacleLocal, toLocalObs, obstacleRadius } from './obstacles.js';
+import { CELL, DT, LEVEL_H, ROAD_TOP } from './constants.js';
+import { PLATES, RING_R, RING_Y, toLocal, sampleLocal, rotVec, tileParam, beltSpeed, glassSeconds } from './pieces.js';
+import { CAR, SPECS, GLIDE, surfaceCoeffs } from './physics/specs.js';
+import { clamp } from './mathutil.js';
+import { wallMethods } from './physics/walls.js';
+import { obstacleMethods } from './physics/obstacles.js';
+import { ribbonMethods } from './physics/ribbon.js';
+import { dacos, dasin, datan, datan2, dcos, dexp, dpow, dsin, dtan, hypot2, hypot3 } from './dmath.js';
 
-export const CAR = {
-  accel: 11,          // m/s² à l'arrêt ; la poussée décroît ensuite selon accelCurve (0.9.4 : 28 -> 9, 0 à 100 km/h en ~4 s, 180 km/h en ~8 s, 220 km/h en ~12 s)
-  accelCurve: 1.5,    // poussée = accel × (1 - (v / vmax)^accelCurve) : plus c'est petit, plus la fin de la courbe est longue
-  maxSpeed: SURF_PHYS.maxSpeed,       // vitesse visée moteur (m/s)
-  boostSpeed: SURF_PHYS.boostSpeed,
-  boostAccel: 10,
-  boostTime: 1.2,
-  brake: 52,
-  reverseAccel: 15,
-  reverseMax: 15,
-  roll: 0.6,
-  drag: 0.0009,       // traînée de forme (m/s² par (m/s)²) : plus faible, la vitesse de pointe monte à 250 km/h et plus
-  coast: 2.0,
-  // Châssis (modèle bicyclette)
-  a: 1.35,            // centre de gravité -> essieu avant (m)
-  b: 1.4,             // centre de gravité -> essieu arrière (m)
-  yawK: 1.9,          // inertie de lacet ramenée à la masse (m²)
-  corner: 230,        // rigidité de dérive d'un essieu (m/s² par rad)
-  latGrip: 80,        // adhérence latérale totale (m/s²), partagée avant / arrière (0.9.11 : 56 -> 80, la voiture tient mieux dans les virages)
-  frontShare: 0.42,   // part avant (0.9.11 : 0,48 -> 0,42 : l'arrière accroche plus que l'avant, la voiture PERD l'avant avant de partir en tête-à-queue : pardonne un volant tardif)
-  steerMax: 0.65,     // angle de braquage maxi des roues (rad) à basse vitesse
-  steerAlat: 52,      // l'angle utile diminue avec la vitesse (le volant reste précis)
-  driftRear: 0.65,    // adhérence arrière restante quand on freine en virage (dérapage)
-  driftSteer: 1.3,    // braquage autorisé en plus pendant le dérapage
-  driftMin: 12,       // vitesse mini (m/s) pour qu'un freinage en virage fasse déraper
-  driftBrake: 0.75,   // part du freinage absorbée par la glisse quand on dérape
-  yawDamp: 0.6,
-  steerIn: 8,         // vitesse de braquage
-  steerOut: 13,       // retour au centre
-  gravity: SURF_PHYS.gravity,
-  snap: 0.7,
-  step: 1.6,
-  magnetRange: 4,     // aimant : portée de l'attraction au-dessus d'une route aimantée (m)
-  magnetAcc: 80,      // ... et accélération maximale vers la route, le long de sa normale (m/s²)
-  launch: 0.6,        // vitesse normale (m/s) au-delà de laquelle la route « tombe » sous la voiture : elle décolle (0.9.11 : 2,0 -> 0,6, sans exemption d'angle)
-  airPitchAcc: 4.2,  // tangage en l'air : gaz = nez vers le bas, frein = nez vers le haut (rad/s²)
-  airPitchDamp: 2.6,
-  airPitchUpK: 1.6,   // relever le nez est 1,6 fois plus vif que le plonger
-  airSteer: 1.4,      // contrôle de lacet en l'air (rad/s²), volontairement faible
-  airSteerMax: 0.45,  // vitesse de rotation maxi due au volant en l'air (rad/s)
-  landOk: 0.38,      // écart d'angle toléré à la réception (rad) sans perte de vitesse (une bosse de pente passe)
-  mtTime1: 0.7,      // durée de glisse pour un mini-turbo (s)
-  mtTime2: 1.5,      // durée pour un mini-turbo renforcé
-  flipKick: 7,        // impulsion donnée par une plaque d'inversion de gravité (m/s)
-  lipHopMin: 2,      // saut en haut d'un L : hauteur mini (m)
-  lipHopMax: 4,      // hauteur maxi (m), atteinte vers 180 km/h
-  lipHopK: 600,      // hauteur = vitesse² / lipHopK, bornée
-  bounce: SURF_PHYS.bounce,         // vitesse verticale donnée par un revêtement Rebond (100 %)
-  wind: SURF_PHYS.wind,             // accélération latérale du vent à pleine force (m/s²)
-  spring: SURF_PHYS.spring,         // poussée latérale du ressort à pleine force (m/s) : à 150 %, saut d’une voie (24 m)
-  springHop: 11,      // saut du ressort (passe par-dessus la bordure)
-  cutTime: 1.0,       // moteur coupé : durée après la dernière plaque
-  shockE: 0.5,        // obstacles : rebond (0 = mou, 1 = élastique)
-  shockKick: 6,       // ... et petite poussée en plus pour bien sentir le choc
-  // 0.9.4 : un mur se paie. Choc = rebond + perte de vitesse proportionnelle à l'impact + coup de volant forcé + moteur et adhérence
-  // réduits un instant (la voiture « encaisse »), et frottement continu tant qu'on racle.
-  wallE: 0.35,        // rebond sur le mur (0 = mou)
-  wallLoss: 0.05,     // part de la vitesse perdue par m/s d'impact normal (borné par wallLossMax) : 10 m/s = -50 %
-  wallLossMax: 0.65,
-  wallScrape: 2.0,    // frottement : part de la vitesse perdue par seconde de contact (racler un mur à 200 km/h freine fort)
-  wallSpin: 0.14,     // rotation provoquée (rad/s par m/s d'impact), bornée par wallSpinMax
-  wallSpinMax: 2.5,
-  wallStun: 0.04,     // durée de l'encaissement (s par m/s d'impact), 0,1 s en plus, bornée à 0,8 s
-  stunTraction: 0.3,  // poussée du moteur pendant l'encaissement
-  stunGrip: 0.6,      // adhérence pendant l'encaissement
-  radius: 1.0,
-  probe: 1.25,
-  height: 1.3,
-};
-
-// Réglages propres à la moto (plaque moto) : plus vive et plus agile que la voiture,
-// un peu moins rapide en pointe. Les personnalisations du garage, elles, ne changent rien.
-export const MOTO = {
-  ...CAR,
-  accel: 10,          // démarre plus fort
-  maxSpeed: 90,       // vitesse de pointe un peu plus basse
-  brake: 44,          // freine un peu moins (une seule roue avant)
-  a: 1.15, b: 1.2,    // empattement plus court : tourne plus serré
-  yawK: 1.25,         // plus légère, change de cap plus vite
-  latGrip: 78,        // penche dans les virages : un peu plus d'appui latéral
-  frontShare: 0.45,
-  steerMax: 0.75,     // braque plus à basse vitesse
-  steerAlat: 66,      // et garde plus de braquage à haute vitesse
-  driftRear: 0.76,    // glisse moins au freinage en virage
-  driftSteer: 1.15,
-  steerIn: 9,
-  steerOut: 14,
-  airPitchAcc: 5.2,   // plus vive en l'air
-};
-
-// Bateau (plaque bateau) : rapide sur l'eau, glisse un peu, se traîne sur la route.
-export const BOAT = {
-  ...CAR,
-  accel: 8,
-  maxSpeed: 85,
-  brake: 32,
-  latGrip: 58,        // la coque glisse plus qu'un pneu
-  frontShare: 0.41,
-  steerMax: 0.55,
-  steerAlat: 48,
-  yawK: 2.1,
-  yawDamp: 0.9,
-  driftRear: 0.7,
-};
-
-// Voiture-deltaplane (plaque deltaplane) : une voiture un peu plus lourde au sol,
-// qui plane en l'air et s'y dirige en inclinant l'aile.
-export const GLIDER = {
-  ...CAR,
-  accel: 8,
-  maxSpeed: 90,
-  airPitchAcc: 3.4,
-};
-const SPECS = { car: CAR, moto: MOTO, boat: BOAT, glider: GLIDER };
-
-// Vol plané : portance proportionnelle à v² et à l'incidence, traînée, virage incliné.
-export const GLIDE = {
-  lift: 0.021,         // portance (m/s² par (m/s)²) à incidence de vol
-  liftMaxG: 1.6,       // portance maxi (en g)
-  drag: 0.0009,        // traînée de forme
-  induced: 0.03,       // traînée induite (part de la portance)
-  trim: 0.08,          // incidence sans action (rad)
-  up: 0.34,            // incidence en cabrant (frein)
-  down: -0.16,         // incidence en piquant (gaz)
-  turn: 1.7,           // vitesse de virage maxi (rad/s) (0.9.2 : 0,95 -> 1,7, le deltaplane vire beaucoup plus franchement)
-  turnSpeed: 9,        // vitesse (m/s) à partir de laquelle il vire à plein régime
-  turnRamp: 7,         // réactivité du roulis (1/s)
-};
-// Route sur le côté (pièces 90°) : appui aérodynamique (m/s² par (m/s)²) ajouté à l'appui réel. Pour tenir contre la gravité sur un
-// plan vertical il faut environ 21 m/s (75 km/h) ; en dessous, la voiture glisse le long du plan et tombe par le bord.
-export const SIDE_AERO = 0.03;
-// Compensation de la glissade sur un plan vertical (m/s² par (m/s)²) : g / 22² => tenue complète à partir de 22 m/s (80 km/h).
-export const SIDE_HOLD = 25 / (30 * 30);
-// 0.9.4 : vitesse minimale sur un mur. En dessous (108 km/h), la gravité reprend toute la paroi ; si l'élan manque encore SIDE_GRACE secondes
-// une fois la route penchée de plus de 45°, la voiture décroche et tombe (vitesse conservée : elle quitte le mur comme une balle).
-export const SIDE_MIN_SPEED = 30;
-export const SIDE_GRACE = 0.3;
-
-const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
-const L1 = { lx: 0, lz: 0 }, L2 = { lx: 0, lz: 0 };
-const S1 = {}, S2 = {};
+const L1 = { lx: 0, lz: 0 };
+const L2 = { lx: 0, lz: 0 };
+const S1 = {};
 const W1 = { x: 0, z: 0 };
 const BELT = { x: 0, z: 0 };
-const OB = {}, OL = {}, MOV = {}, MQ1 = {}, MQ2 = {};
-const FL = {};
-const CC = { x: 0, z: 0 };
+const MOV = {};
 const TMP = { x: 0, z: 0 };
-const HIT = { dx: 0, dz: 0, nx: 0, nz: 0 };
 const BK = { vx: 0, vy: 0, w: 0 };
-
-// Coefficients des revêtements : UNE seule source pour le sol et pour les rubans (loopings, tubes, plafond...).
-// Ils ne dépendent ni du sens de la gravité ni de la position de la voiture : endroit ou envers, mêmes valeurs.
-// f = paramètre de la pièce (1 = 100 %). Les effets propres à un repère (vent, tapis, eau, plaques) restent à l'appelant.
-const COEF = { grip: 1, traction: 1, vmaxK: 1, extraDrag: 0, rearK: 1 };
-export function surfaceCoeffs(mod, f, out = COEF) {
-  out.grip = 1; out.traction = 1; out.vmaxK = 1; out.extraDrag = 0; out.rearK = 1;
-  switch (mod) {
-    case 'ice': out.grip = clamp(0.2 / f, 0.05, 0.85); out.traction = 0.45; break;
-    case 'magnet': out.grip = 1.6; break;
-    // Dérive : l'arrière n'accroche presque plus (l'avant, si) : au moindre coup de volant la voiture part en glisse.
-    case 'drift': out.rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85); break;
-    case 'slow': out.extraDrag = 14 * f; break;
-    // Poudreuse : on s'enfonce un peu, l'adhérence est molle et le moteur patine.
-    case 'powder': out.grip = clamp(0.62 / Math.sqrt(f), 0.3, 0.9); out.traction = 0.75; out.vmaxK = clamp(1 - 0.28 * f, 0.4, 1); out.extraDrag = 2.5 * f; break;
-    default: break;
-  }
-  return out;
-}
-
-// Repère d'un ruban en coordonnées monde.
-export function frameWorld(tile, rib, u, F) {
-  frameLocal(rib, u, FL);
-  const c = tileCenter(tile, CC);
-  const r = tile.r;
-  rotVec(r, FL.px, FL.pz, TMP); F.px = TMP.x + c.x; F.pz = TMP.z + c.z; F.py = FL.py;
-  rotVec(r, FL.tx, FL.tz, TMP); F.tx = TMP.x; F.tz = TMP.z; F.ty = FL.ty;
-  rotVec(r, FL.nx, FL.nz, TMP); F.nx = TMP.x; F.nz = TMP.z; F.ny = FL.ny;
-  rotVec(r, FL.rx, FL.rz, TMP); F.rx = TMP.x; F.rz = TMP.z; F.ry = FL.ry;
-  F.ds = FL.ds;
-  F.kc = FL.kc; F.hw = FL.hw; F.wrap = FL.wrap;
-  return F;
-}
 
 export class CarPhysics {
   constructor(track) {
@@ -213,7 +40,7 @@ export class CarPhysics {
     this.F = {}; this.F0 = {}; this.F2 = {}; this.F3 = {};
     this.ev = {
       wall: 0, land: 0, boostHit: false, bounce: false, loopIn: false, loopOut: false, loopFall: false,
-      moto: false, gravity: false, miniTurbo: 0, landQ: '', sink: false, ring: false, flip: false, glass: false, spring: false, reverse: false, cut: false, spike: false, shock: 0,
+      transform: false, gravity: false, miniTurbo: 0, landQ: '', sink: false, ring: false, flip: false, glass: false, spring: false, reverse: false, cut: false, spike: false, shock: 0,
     };
     this.rib = null;
     this.vehicle = 'car';
@@ -228,14 +55,16 @@ export class CarPhysics {
     return CAR.gravity * this.gravMul;
   }
 
+  // Chrono de la course (s) : donne la position des pièces mobiles et des obstacles. this.clock = pas de course, fixé par l'appelant
+  // avant chaque pas (même valeur en course, en replay, après un retour au checkpoint et dans la vérification en ligne).
+  get time() {
+    return (this.clock || 0) * DT;
+  }
+
   // Réglages du véhicule actuel (voiture ou moto).
   get k() {
     return SPECS[this.vehicle] || CAR;
   }
-
-  // Compatibilité : « moto » est un des véhicules possibles.
-  get moto() { return this.vehicle === 'moto'; }
-  set moto(v) { this.vehicle = v ? 'moto' : 'car'; }
 
   // Hors piste : sur le terrain, ou perdue dans le ciel en gravité inversée.
   get offTrack() {
@@ -278,7 +107,7 @@ export class CarPhysics {
     this.plateLock = '';
     this.sinkT = 0;
     this.hazardGrace = 0.8; // sécurité après respawn pour éviter les réapparitions en boucle
-    const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3, this.broken) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3, this.broken);
+    const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3, this.broken, this.time) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3, this.broken);
     if (this.gSign < 0) {
       this.n.x = 0; this.n.y = -1; this.n.z = 0;
       if (!Number.isFinite(s.h)) { s.h = y; s.type = 'none'; }
@@ -309,7 +138,7 @@ export class CarPhysics {
 
   _updateFwd() {
     if (this.rib) return;
-    this.fwd.x = -Math.sin(this.yaw); this.fwd.y = 0; this.fwd.z = -Math.cos(this.yaw);
+    this.fwd.x = -dsin(this.yaw); this.fwd.y = 0; this.fwd.z = -dcos(this.yaw);
   }
 
   _setGround(s, triggers = true) {
@@ -329,14 +158,9 @@ export class CarPhysics {
       if (this.plateLock !== 'spring') { this.plateLock = 'spring'; this.lockTile = s.tile; this._springNow = true; this.ev.spring = true; }
       return;
     }
-    if (mod === 'boost') {
-      if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
-      this.boost = CAR.boostTime;
-      this.boostF = this.surfP;
-    } else if (mod === 'gravity') {
-      const gm = this.surfP;
-      if (Math.abs(gm - this.gravMul) > 0.01) { this.gravMul = gm; this.ev.gravity = true; }
-    } else if (mod === 'flip' && this.plateLock !== 'flip') {
+    if (mod === 'boost') this._boostPad(this.surfP);
+    else if (mod === 'gravity') this._gravityPad(this.surfP);
+    else if (mod === 'flip' && this.plateLock !== 'flip') {
       // Inversion de gravité : une suite de plaques collées ne compte qu'une fois.
       this.plateLock = 'flip';
       this.lockTile = s.tile;
@@ -348,13 +172,28 @@ export class CarPhysics {
     if (mod === 'flip') return;
     // Plaques de transformation (moto, bateau, deltaplane) : une suite de plaques collées
     // ne compte que pour UNE transformation ; repasser sur la même plaque ramène la voiture.
-    if (PLATES[mod]) {
-      if (this.plateLock !== mod) {
-        this.plateLock = mod;
-        this.vehicle = this.vehicle === PLATES[mod] ? 'car' : PLATES[mod];
-        this.ev.moto = true;
-      }
-    } else this.plateLock = '';
+    if (PLATES[mod]) this._transformPlate(mod);
+    else this.plateLock = '';
+  }
+
+  // Pastilles et plaques : mêmes effets au sol (_setGround) et sur un ruban (_ribStep).
+  _boostPad(f) {
+    if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
+    this.boost = CAR.boostTime;
+    this.boostF = f;
+  }
+
+  _gravityPad(f) {
+    if (Math.abs(f - this.gravMul) > 0.01) { this.gravMul = f; this.ev.gravity = true; }
+  }
+
+  // Plaques de transformation (moto, bateau, deltaplane) : une suite de plaques collées ne compte que pour UNE transformation ;
+  // repasser sur la même plaque ramène la voiture.
+  _transformPlate(mod) {
+    if (this.plateLock === mod) return;
+    this.plateLock = mod;
+    this.vehicle = this.vehicle === PLATES[mod] ? 'car' : PLATES[mod];
+    this.ev.transform = true;
   }
 
   // Revêtements qui modifient les commandes (volant inversé, moteur coupé) : actifs tant
@@ -398,7 +237,7 @@ export class CarPhysics {
     const v2 = Math.max(1, speed * speed);
     // Angle géométrique du virage limite + marge de dérive du pneu avant (saturation).
     const slipSat = (K.latGrip * K.frontShare) / K.corner;
-    let max = Math.min(K.steerMax, Math.atan((K.a + K.b) * K.steerAlat / v2) + slipSat);
+    let max = Math.min(K.steerMax, datan((K.a + K.b) * K.steerAlat / v2) + slipSat);
     max *= 1 + (K.driftSteer - 1) * drift;
     return this.steer * max;
   }
@@ -421,16 +260,16 @@ export class CarPhysics {
       vx += ax * dt;
       const lateralDamp = clamp(0.35 + grip * 0.3, 0.35, 0.85);
       BK.vx = vx; BK.vy = vy * lateralDamp;
-      BK.w = (vx * Math.tan(delta) / L) * clamp(grip, 0.2, 1);
+      BK.w = (vx * dtan(delta) / L) * clamp(grip, 0.2, 1);
       return BK;
     }
     const den = Math.max(Math.abs(vx), 6);
     const sgn = vx >= 0 ? 1 : -1;
-    const af = Math.atan2(vy + K.a * w, den) - delta * sgn;
-    const ar = Math.atan2(vy - K.b * w, den);
+    const af = datan2(vy + K.a * w, den) - delta * sgn;
+    const ar = datan2(vy - K.b * w, den);
     const Ff = clamp(-K.corner * af, -maxF, maxF);
     const Fr = clamp(-K.corner * ar, -maxR, maxR);
-    const cd = Math.cos(delta), sd = Math.sin(delta);
+    const cd = dcos(delta), sd = dsin(delta);
     // (La rotation du repère est prise en compte en reprojetant la vitesse à chaque pas.)
     vx += (ax - Ff * sd) * dt;
     vy += (Ff * cd + Fr) * dt;
@@ -440,15 +279,29 @@ export class CarPhysics {
   }
 
   step(inp) {
-    const dt = DT, p = this.pos, v = this.vel, ev = this.ev;
-    this.track.time = (this.clock || 0) * dt;   // position des pièces mobiles
+    this._beginStep();
+    inp = this._controls(inp);
+    this._driftState(inp);
+    if (this.rib) { this._ribStep(inp); return; }
+    if (this.grounded) { if (this._driveGround(inp)) return; } else this._flyAir(inp);
+    if (this._collide()) return;
+    this._roadContact();
+  }
+
+  // Début de pas : minuteries, évènements remis à zéro, position précédente.
+  _beginStep() {
+    const dt = DT, p = this.pos, ev = this.ev;
     if (this.graceT > 0) this.graceT -= dt;
     ev.wall = 0; ev.land = 0; ev.boostHit = false; ev.bounce = false;
     if (this.hazardGrace > 0) this.hazardGrace = Math.max(0, this.hazardGrace - dt);
-    ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.moto = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false; ev.glass = false; ev.glassTile = null; ev.spring = false; ev.reverse = false; ev.cut = false; ev.spike = false; ev.shock = 0; ev.wallOff = false;
+    ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.transform = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false; ev.glass = false; ev.glassTile = null; ev.spring = false; ev.reverse = false; ev.cut = false; ev.spike = false; ev.shock = 0; ev.wallOff = false;
     this.prev.x = p.x; this.prev.y = p.y; this.prev.z = p.z;
     this.prevYaw = this.yaw;
+  }
 
+  // Commandes : volant inversé / moteur coupé, volant progressif, minuteries du boost, du rebond et du choc. Renvoie les commandes à appliquer.
+  _controls(inp) {
+    const dt = DT;
     // Volant inversé / moteur coupé : les commandes sont modifiées un court instant.
     // Volant inversé : seulement tant que les roues touchent une pièce qui l'a (ruban : la pièce sous les roues ;
     // sol : surfMod est celui du dernier contact, donc il ne compte que si on est posé). En l'air, volant normal.
@@ -464,6 +317,12 @@ export class CarPhysics {
     if (this.boost > 0) this.boost = Math.max(0, this.boost - dt);
     if (this.bounceCD > 0) this.bounceCD -= dt;
     if (this.stunT > 0) this.stunT = Math.max(0, this.stunT - dt);
+    return inp;
+  }
+
+  // État de dérapage et mini-turbo.
+  _driftState(inp) {
+    const dt = DT, K = this.k, ev = this.ev;
     // Dérapage : il n'y a plus de bouton, c'est le frein pris en virage à bonne vitesse
     // qui fait décrocher l'arrière. Tant qu'on garde le volant et que ça glisse,
     // la dérive se prolonge doucement ; sinon l'arrière raccroche vite.
@@ -489,138 +348,153 @@ export class CarPhysics {
       }
       this.driftCharge = 0;
     }
+  }
 
-    if (this.rib) { this._ribStep(inp); return; }
+  // Voiture posée sur une route ou sur le terrain : dynamique dans le plan du sol, revêtement, tapis, pièces mobiles. Renvoie true si le pas se termine ici (noyade).
+  _driveGround(inp) {
+    const dt = DT, v = this.vel, K = this.k;
+    let fx = -dsin(this.yaw), fy = 0, fz = -dcos(this.yaw);
+    const n = this.n;
+    const d = fx * n.x + fy * n.y + fz * n.z;
+    fx -= n.x * d; fy -= n.y * d; fz -= n.z * d;
+    let len = Math.sqrt(fx * fx + fy * fy + fz * fz) || 1;
+    fx /= len; fy /= len; fz /= len;
+    let rx = fy * n.z - fz * n.y, ry = fz * n.x - fx * n.z, rz = fx * n.y - fy * n.x;
+    len = Math.sqrt(rx * rx + ry * ry + rz * rz) || 1;
+    rx /= len; ry /= len; rz /= len;
 
-    let fx = -Math.sin(this.yaw), fy = 0, fz = -Math.cos(this.yaw);
-
-    if (this.grounded) {
-      const n = this.n;
-      const d = fx * n.x + fy * n.y + fz * n.z;
-      fx -= n.x * d; fy -= n.y * d; fz -= n.z * d;
-      let len = Math.sqrt(fx * fx + fy * fy + fz * fz) || 1;
-      fx /= len; fy /= len; fz /= len;
-      let rx = fy * n.z - fz * n.y, ry = fz * n.x - fx * n.z, rz = fx * n.y - fy * n.x;
-      len = Math.sqrt(rx * rx + ry * ry + rz * rz) || 1;
-      rx /= len; ry /= len; rz /= len;
-
-      // Tapis roulant : la voiture roule sur une bande qui avance ; la dynamique se fait
-      // dans le repère de la bande, puis on rajoute sa vitesse.
-      // En montant sur la bande, la voiture prend sa vitesse d'un coup (et la garde en sortant).
-      let belt = this.surfMod === 'conveyor' && this.surfTile ? this._belt(this.surfTile, this.surfLx, this.surfLz, BELT) : null;
-      // Pièce mobile (glissière, rotation) : la voiture est portée par la pièce, comme par un tapis.
-      // Rotation : vitesse du sol au point de contact = ω × r ; la voiture tourne aussi avec la pièce (même cap).
-      if (this.surfTile && this.surfTile.mv >= 2) {
-        const o = this.track.moverOffset(this.surfTile, this.track.time, MOV);
-        if (!belt) { belt = BELT; BELT.x = 0; BELT.z = 0; }
-        if (this.surfTile.mv === 2) { belt.x += o.vx; belt.z += o.vz; }
-        else {
-          belt.x += o.w * (this.pos.z - o.cz); belt.z -= o.w * (this.pos.x - o.cx);
-          this.yaw += o.w * dt;
-        }
+    // Tapis roulant : la voiture roule sur une bande qui avance ; la dynamique se fait
+    // dans le repère de la bande, puis on rajoute sa vitesse.
+    // En montant sur la bande, la voiture prend sa vitesse d'un coup (et la garde en sortant).
+    let belt = this.surfMod === 'conveyor' && this.surfTile ? this._belt(this.surfTile, this.surfLx, this.surfLz, BELT) : null;
+    // Pièce mobile (glissière, rotation) : la voiture est portée par la pièce, comme par un tapis.
+    // Rotation : vitesse du sol au point de contact = ω × r ; la voiture tourne aussi avec la pièce (même cap).
+    if (this.surfTile && this.surfTile.mv >= 2) {
+      const o = this.track.moverOffset(this.surfTile, this.time, MOV);
+      if (!belt) { belt = BELT; BELT.x = 0; BELT.z = 0; }
+      if (this.surfTile.mv === 2) { belt.x += o.vx; belt.z += o.vz; }
+      else {
+        belt.x += o.w * (this.pos.z - o.cz); belt.z -= o.w * (this.pos.x - o.cx);
+        this.yaw += o.w * dt;
       }
-      if (belt) {
-        v.x += belt.x - this.beltX; v.z += belt.z - this.beltZ;
-        this.beltX = belt.x; this.beltZ = belt.z;
-        v.x -= belt.x; v.z -= belt.z;
-      } else { this.beltX = 0; this.beltZ = 0; }
-      let vf = v.x * fx + v.y * fy + v.z * fz;
-      let vr = v.x * rx + v.y * ry + v.z * rz;
-      const g = this.g * this.gSign;
-      vf -= g * fy * dt;
-      vr -= g * ry * dt;
+    }
+    if (belt) {
+      v.x += belt.x - this.beltX; v.z += belt.z - this.beltZ;
+      this.beltX = belt.x; this.beltZ = belt.z;
+      v.x -= belt.x; v.z -= belt.z;
+    } else { this.beltX = 0; this.beltZ = 0; }
+    let vf = v.x * fx + v.y * fy + v.z * fz;
+    let vr = v.x * rx + v.y * ry + v.z * rz;
+    const g = this.g * this.gSign;
+    vf -= g * fy * dt;
+    vr -= g * ry * dt;
 
-      // Effet du revêtement (le paramètre f vaut 1 à 100 %).
-      const mod = this.surfMod, f = this.surfP;
-      const ground = this.surfType === 'ground';
-      const C = surfaceCoeffs(ground ? '' : mod, f);
-      let grip = C.grip, traction = C.traction, vmaxK = C.vmaxK, extraDrag = C.extraDrag, rearK = C.rearK;
-      if (this.stunT > 0) { grip *= CAR.stunGrip; traction *= CAR.stunTraction; }       // choc contre un mur : la voiture encaisse
-      if (ground) { grip = 0.55; traction = 0.7; vmaxK = 0.45; extraDrag = 5; }
-      else if (mod === 'water' || (mod === 'boat' && this.vehicle === 'boat')) {      // la plaque bateau agit comme de l'eau pour un bateau seulement (route normale pour les autres)
-        if (this.vehicle === 'boat') { grip = 0.85; traction = 1; vmaxK = 1; }
-        else {
-          // Une voiture dans l'eau : elle patine, se noie si elle s'arrête.
-          grip = 0.35; traction = 0.3; vmaxK = 0.3; extraDrag = 9;
-          if (this.graceT <= 0 && Math.abs(vf) < 5) this.sinkT += dt; else this.sinkT = Math.max(0, this.sinkT - dt);
-          if (this.sinkT > 1.2) { this.sinkT = 0; this.ev.sink = true; }
-        }
+    // Effet du revêtement (le paramètre f vaut 1 à 100 %).
+    const mod = this.surfMod, f = this.surfP;
+    const ground = this.surfType === 'ground';
+    const C = surfaceCoeffs(ground ? '' : mod, f);
+    let grip = C.grip, traction = C.traction, vmaxK = C.vmaxK, extraDrag = C.extraDrag;
+    const rearK = C.rearK;
+    if (this.stunT > 0) { grip *= CAR.stunGrip; traction *= CAR.stunTraction; }       // choc contre un mur : la voiture encaisse
+    if (ground) { grip = 0.55; traction = 0.7; vmaxK = 0.45; extraDrag = 5; }
+    else if (mod === 'water' || (mod === 'boat' && this.vehicle === 'boat')) {      // la plaque bateau agit comme de l'eau pour un bateau seulement (route normale pour les autres)
+      if (this.vehicle === 'boat') { grip = 0.85; traction = 1; vmaxK = 1; }
+      else {
+        // Une voiture dans l'eau : elle patine, se noie si elle s'arrête.
+        grip = 0.35; traction = 0.3; vmaxK = 0.3; extraDrag = 9;
+        if (this.graceT <= 0 && Math.abs(vf) < 5) this.sinkT += dt; else this.sinkT = Math.max(0, this.sinkT - dt);
+        if (this.sinkT > 1.2) { this.sinkT = 0; this.ev.sink = true; }
       }
-      else if (mod === 'wind') {
-        const a = ((this._pct(this.surfTile) - 100) / 100) * CAR.wind;
-        rotVec(this.surfTile.r, 1, 0, TMP);
-        vf += (TMP.x * fx + TMP.z * fz) * a * dt;
-        vr += (TMP.x * rx + TMP.z * rz) * a * dt;
-      }
-
-      // Le bateau hors de l'eau racle la route.
-      const wet = mod === 'water' || mod === 'boat';
-      if (this.vehicle === 'boat' && !wet) { grip = Math.min(grip, 0.8); traction *= 0.4; vmaxK = Math.min(vmaxK, 0.3); extraDrag += 7; }
-      if (!wet) this.sinkT = 0;
-      const ax = (this._longitudinal(vf, inp, K.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
-      this.rearK = rearK;
-      const r = this._tires(vf, vr, this.omega, ax, grip, dt);
-      this.rearK = 1;
-      vf = r.vx; vr = r.vy; this.omega = r.w;
-      const us = this._upSign();
-      this.yaw -= this.omega * us * dt;   // rotation autour du haut local
-      this.yawRate = -this.omega * us;
-
-      v.x = fx * vf + rx * vr;
-      v.y = fy * vf + ry * vr;
-      v.z = fz * vf + rz * vr;
-      if (belt) { v.x += belt.x; v.z += belt.z; }
-      if (this._glassCheck(mod === 'glass', this.surfTile, dt)) this.grounded = false;      // la dalle cède : la voiture tombe
-      if (this.ev.sink) return;
-      this.slip = Math.abs(vr);
-      this.fwdSpeed = vf;
-      this.airTime = 0;
-      this.pitch = Math.asin(clamp(fy, -1, 1));   // assiette au sol : sert d'assiette de départ en l'air
-      this.pitchRate = 0;
-    } else {
-      // En l'air : trajectoire balistique, la voiture garde son cap (le volant ne
-      // tourne que les roues). La rotation acquise au décollage s'amortit doucement.
-      // Exception : le deltaplane plane et vire en inclinant son aile.
-      if (this.vehicle === 'glider') { this._glide(inp, dt); fx = -Math.sin(this.yaw); fz = -Math.cos(this.yaw); }
-      else v.y -= this.g * this.gSign * dt;
-      this.omega *= Math.exp(-1.5 * dt);
-      // Un tout petit peu de contrôle en l'air : le volant fait pivoter la voiture lentement.
-      if (this.vehicle !== 'glider') this.omega = clamp(this.omega + this.steer * CAR.airSteer * dt, -CAR.airSteerMax, CAR.airSteerMax);
-      const us = this._upSign();
-      this.yaw -= this.omega * us * dt;
-      this.yawRate = -this.omega * us;
-      this.steerAngle = this._steerAngle(Math.hypot(v.x, v.z), this.driftT);
-      const k = 1 - 0.0006 * this.speed * dt;
-      v.x *= k; v.y *= k; v.z *= k;
-      this.slip = 0;
-      this.fwdSpeed = v.x * fx + v.z * fz;
-      this.airTime += dt;
-      // Tangage : gaz = le nez plonge, frein = le nez se lève. Sans action, la voiture
-      // garde son assiette (sa rotation s'amortit).
-      const pin = this.vehicle === 'glider' ? 0 : (inp.brake ? 1 : 0) - (inp.throttle ? 1 : 0);
-      // Relever le nez (S) est plus vif que plonger : on remet vite la voiture à plat.
-      this.pitchRate += pin * this.gSign * K.airPitchAcc * (pin > 0 ? CAR.airPitchUpK : 1) * dt;   // au plafond, « nez en haut » = vers le bas du monde
-      this.pitchRate *= Math.exp(-CAR.airPitchDamp * dt);
-      if (this.vehicle === 'glider') this.pitch = this.glidePitch;
-      else this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
+    }
+    else if (mod === 'wind') {
+      const a = ((this._pct(this.surfTile) - 100) / 100) * CAR.wind;
+      rotVec(this.surfTile.r, 1, 0, TMP);
+      vf += (TMP.x * fx + TMP.z * fz) * a * dt;
+      vr += (TMP.x * rx + TMP.z * rz) * a * dt;
     }
 
+    // Le bateau hors de l'eau racle la route.
+    const wet = mod === 'water' || mod === 'boat';
+    if (this.vehicle === 'boat' && !wet) { grip = Math.min(grip, 0.8); traction *= 0.4; vmaxK = Math.min(vmaxK, 0.3); extraDrag += 7; }
+    if (!wet) this.sinkT = 0;
+    const ax = (this._longitudinal(vf, inp, K.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
+    this.rearK = rearK;
+    const r = this._tires(vf, vr, this.omega, ax, grip, dt);
+    this.rearK = 1;
+    vf = r.vx; vr = r.vy; this.omega = r.w;
+    const us = this._upSign();
+    this.yaw -= this.omega * us * dt;   // rotation autour du haut local
+    this.yawRate = -this.omega * us;
+
+    v.x = fx * vf + rx * vr;
+    v.y = fy * vf + ry * vr;
+    v.z = fz * vf + rz * vr;
+    if (belt) { v.x += belt.x; v.z += belt.z; }
+    if (this._glassCheck(mod === 'glass', this.surfTile, dt)) this.grounded = false;      // la dalle cède : la voiture tombe
+    if (this.ev.sink) return true;
+    this.slip = Math.abs(vr);
+    this.fwdSpeed = vf;
+    this.airTime = 0;
+    this.pitch = dasin(clamp(fy, -1, 1));   // assiette au sol : sert d'assiette de départ en l'air
+    this.pitchRate = 0;
+    return false;
+  }
+
+  // En l'air : trajectoire balistique, rotation, tangage, vol plané.
+  _flyAir(inp) {
+    const dt = DT, v = this.vel, K = this.k;
+    let fx = -dsin(this.yaw), fz = -dcos(this.yaw);
+    // En l'air : trajectoire balistique, la voiture garde son cap (le volant ne
+    // tourne que les roues). La rotation acquise au décollage s'amortit doucement.
+    // Exception : le deltaplane plane et vire en inclinant son aile.
+    if (this.vehicle === 'glider') { this._glide(inp, dt); fx = -dsin(this.yaw); fz = -dcos(this.yaw); }
+    else v.y -= this.g * this.gSign * dt;
+    this.omega *= dexp(-1.5 * dt);
+    // Un tout petit peu de contrôle en l'air : le volant fait pivoter la voiture lentement.
+    if (this.vehicle !== 'glider') this.omega = clamp(this.omega + this.steer * CAR.airSteer * dt, -CAR.airSteerMax, CAR.airSteerMax);
+    const us = this._upSign();
+    this.yaw -= this.omega * us * dt;
+    this.yawRate = -this.omega * us;
+    this.steerAngle = this._steerAngle(hypot2(v.x, v.z), this.driftT);
+    const k = 1 - 0.0006 * this.speed * dt;
+    v.x *= k; v.y *= k; v.z *= k;
+    this.slip = 0;
+    this.fwdSpeed = v.x * fx + v.z * fz;
+    this.airTime += dt;
+    // Tangage : gaz = le nez plonge, frein = le nez se lève. Sans action, la voiture
+    // garde son assiette (sa rotation s'amortit).
+    const pin = this.vehicle === 'glider' ? 0 : (inp.brake ? 1 : 0) - (inp.throttle ? 1 : 0);
+    // Relever le nez (S) est plus vif que plonger : on remet vite la voiture à plat.
+    this.pitchRate += pin * this.gSign * K.airPitchAcc * (pin > 0 ? CAR.airPitchUpK : 1) * dt;   // au plafond, « nez en haut » = vers le bas du monde
+    this.pitchRate *= dexp(-CAR.airPitchDamp * dt);
+    if (this.vehicle === 'glider') this.pitch = this.glidePitch;
+    else this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
+  }
+
+  // Déplacement puis collisions (anneaux, entrée de ruban, murs, toits, dalles, obstacles, limites). Renvoie true si le pas se termine ici.
+  _collide() {
+    const dt = DT, p = this.pos, v = this.vel;
     p.x += v.x * dt; p.y += v.y * dt; p.z += v.z * dt;
     this._rings();
-    if (this.ev.sink) return;
-    if (this._tryEnterRibbon()) return;
-    if (!this.grounded && this._tryLandRibbon()) return;
+    if (this.ev.sink) return true;
+    if (this._tryEnterRibbon()) return true;
+    if (!this.grounded && this._tryLandRibbon()) return true;
     this._walls();
     this._tunnelRoof();
     this._slabs();
     this._obstacles();
-    if (this.ev.sink) return; // fin immédiate du pas après un contact létal
+    if (this.ev.sink) return true; // fin immédiate du pas après un contact létal
     this._bounds();
+    return false;
+  }
 
+  // Contact avec la chaussée : adhérence, décollage, réception, revêtements à effet unique (rebond, inversion, ressort).
+  _roadContact() {
+    const dt = DT, p = this.pos, v = this.vel, ev = this.ev;
     // Contact avec la chaussée.
     // En gravité inversée, le « sol » est le dessous des pièces posées à l'envers.
     const gs = this.gSign;
-    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken);
+    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken);
     const gap = gs * (p.y - s.h);
     const vn = v.x * s.nx + v.y * s.ny + v.z * s.nz;
     // Aimant : la voiture reste collée à la route quoi qu'il arrive (bosses, vitesse).
@@ -630,20 +504,16 @@ export class CarPhysics {
     // Aimant : au-dessus d'une route aimantée, la voiture est attirée vers la surface le long de SA normale, pas selon
     // la gravité du monde. Endroit ou envers, c'est la même règle (au plafond, la normale pointe vers le bas du monde).
     if (!this.grounded) {
-      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken);
+      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken);
       const mg = gs * (p.y - m.h);
       if (m.mod === 'magnet' && mg > 0.02 && mg < CAR.magnetRange) {
         const a = CAR.magnetAcc * (1 - mg / CAR.magnetRange) * dt;
         v.x -= m.nx * a; v.y -= m.ny * a; v.z -= m.nz * a;
       }
     }
-    // Petit défaut de raccord (pente douce, bord d'un virage incliné, raccord doux pris à très grande vitesse) : si la normale de la route ne
-    // tourne que de quelques degrés d'un pas à l'autre, la voiture suit la route au lieu de décoller. Un vrai décrochement (pente nette, tremplin,
-    // tremplin, virage incliné raide : plus de ~12°) la fait toujours décoller.
-    // 0.9.11 : plus d'exemption d'angle. Avant, un défaut de raccord de moins de 12° (pente, bosse, sommet de côte) ne faisait JAMAIS décoller, à
-    // n'importe quelle vitesse : la voiture restait collée à la route comme avec un aimant. Maintenant seule compte la vitesse avec laquelle la
-    // route « tombe » sous la voiture (vn = vitesse × sinus de l'angle de raccord) : un raccord doux pris lentement reste collé, le même pris à
-    // 300 km/h décolle, comme dans la vraie vie. Un vol de moins de 0,35 s ne coûte rien à la réception.
+    // Décollage : seule compte la vitesse avec laquelle la route « tombe » sous la voiture (vn = vitesse × sinus de l'angle de raccord), sans
+    // exemption d'angle. Un raccord doux (pente, bosse, sommet de côte) pris lentement reste collé à la route, le même pris à 300 km/h décolle.
+    // Un vol de moins de 0,35 s ne coûte rien à la réception.
     const stick = vn < launch;
     if (this.grounded && gap < snap && gap > -CAR.step && stick) {
       p.y = s.h;
@@ -684,7 +554,7 @@ export class CarPhysics {
       const n = this.n;
       v.x += n.x * CAR.flipKick; v.y += n.y * CAR.flipKick; v.z += n.z * CAR.flipKick;
       this.grounded = false;
-      this.pitch = Math.asin(clamp(this.fwd.y, -1, 1));
+      this.pitch = dasin(clamp(this.fwd.y, -1, 1));
       this.airTime = 0;
     }
     // Ressort latéral : poussée sur le côté (vers la droite de la pièce si réglage > 100 %)
@@ -699,7 +569,7 @@ export class CarPhysics {
         const n = this.n;
         v.x += W1.x * k + n.x * CAR.springHop; v.y += n.y * CAR.springHop; v.z += W1.z * k + n.z * CAR.springHop;
         this.grounded = false;
-        this.pitch = Math.asin(clamp(this.fwd.y, -1, 1));
+        this.pitch = dasin(clamp(this.fwd.y, -1, 1));
         this.airTime = 0;
       }
     }
@@ -715,7 +585,7 @@ export class CarPhysics {
     let a = 0;
     if (inp.throttle) {
       if (vf < -0.5) a += K.brake * traction;
-      else { const x = Math.max(0, vf / vmax); a += K.accel * traction * (1 - Math.pow(x, CAR.accelCurve)); }
+      else { const x = Math.max(0, vf / vmax); a += K.accel * traction * (1 - dpow(x, CAR.accelCurve)); }
     }
     if (inp.brake) {
       // En dérapage, l'énergie part surtout dans la glisse : on ralentit moins.
@@ -739,358 +609,14 @@ export class CarPhysics {
     return vf + a * dt;
   }
 
-  _bounds() {
-    const p = this.pos, v = this.vel;
-    if (p.x < this.bx0) { p.x = this.bx0; if (v.x < 0) v.x = 0; }
-    if (p.x > this.bx1) { p.x = this.bx1; if (v.x > 0) v.x = 0; }
-    if (p.z < this.bz0) { p.z = this.bz0; if (v.z < 0) v.z = 0; }
-    if (p.z > this.bz1) { p.z = this.bz1; if (v.z > 0) v.z = 0; }
-  }
-
-  // Bordures : la voiture glisse le long du mur, perd un peu de vitesse au choc,
-  // et le choc freine sa rotation. Pas de réalignement automatique.
-  // Toit d'un tunnel : une voiture qui saute à l'intérieur n'en sort pas par le haut (les parois la retiennent déjà sur les côtés).
-  // Seule une voiture déjà dessous est retenue : celle qui survole le tunnel passe au-dessus.
-  _tunnelRoof() {
-    if (this.gSign < 0) return;
-    const p = this.pos, q = this.prev, v = this.vel;
-    const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
-    for (let i = 0; i < tiles.length; i++) {
-      const tile = tiles[i];
-      if (!tile.tn || tile.v || this.broken.has(tile) || !isFloor(tile)) continue;
-      toLocal(tile, p.x, p.z, L1);
-      sampleLocal(tile, L1.lx, L1.lz, S1);
-      if (!S1.inFootprint || Math.abs(S1.d) > ROAD_HALF + RAIL_W) continue;
-      const roof = S1.h + TUNNEL_TOP;
-      if (p.y + CAR.height > roof && q.y + CAR.height <= roof + 0.05) {
-        p.y = roof - CAR.height;
-        if (v.y > 0) v.y = -v.y * 0.2;
-      }
-    }
-  }
-
-  // Dalles pleines (gravité normale, véhicule en l'air) : le dessous et la tranche d'une dalle arrêtent la voiture.
-  // Sans cela, un deltaplane (ou un saut) qui arrive sous une rampe ou contre la face d'une plate-forme la traversait, ou était
-  // téléporté dessus par l'aide de montée. Trois cas selon la position au pas précédent :
-  //   au-dessus de la dalle  : réception normale (rien à faire) ;
-  //   en dessous             : la voiture est plaquée sous la dalle (comme le toit d'un tunnel) ;
-  //   hors de l'emprise      : choc de face, la voiture reste devant la tranche.
-  _slabs() {
-    if (this.gSign < 0 || this.grounded || this.rib) return;
-    const p = this.pos, q = this.prev, v = this.vel, H = CAR.height;
-    const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
-    for (let i = 0; i < tiles.length; i++) {
-      const tile = tiles[i];
-      if (tile.mv || tile.v || this.broken.has(tile) || !isFloor(tile) || PIECES[tile.t].kind === 'loop') continue;
-      const area = PIECES[tile.t].kind === 'area';
-      toLocal(tile, p.x, p.z, L1);
-      sampleLocal(tile, L1.lx, L1.lz, S1);
-      if (!S1.inFootprint || (!area && Math.abs(S1.d) > ROAD_HALF)) continue;
-      const hP = S1.h;
-      if (!(p.y < hP - 0.3 && p.y + H > hP - SLAB_T)) continue;       // pas dans la dalle (ou à peine : réception normale)
-      toLocal(tile, q.x, q.z, L2);
-      sampleLocal(tile, L2.lx, L2.lz, S2);
-      const qIn = S2.inFootprint && (area || Math.abs(S2.d) <= ROAD_HALF);
-      if (qIn) {
-        const hQ = S2.h;
-        if (q.y >= hQ - 0.3) continue;                                  // arrivait par le haut
-        if (q.y + H <= hQ - SLAB_T + 0.3) {                             // arrivait par le dessous
-          p.y = hP - SLAB_T - H;
-          if (v.y > 0) v.y = -v.y * 0.2;
-          this.ev.wall = Math.max(this.ev.wall, 2);
-        }
-        continue;                                                       // déjà dans la dalle (cas ancien) : inchangé
-      }
-      // Rebord bas (moins de CAR.step sous le dessus) : aide de montée, la voiture est posée sur la dalle.
-      if (p.y >= hP - CAR.step) { p.y = hP + 0.02; continue; }
-      // Face de la dalle : on revient devant, et on annule la vitesse qui pousse contre elle.
-      const dx = p.x - q.x, dz = p.z - q.z, dl = Math.hypot(dx, dz);
-      p.x = q.x; p.z = q.z;
-      if (dl > 1e-6) {
-        const nx = dx / dl, nz = dz / dl, vn = v.x * nx + v.z * nz;
-        if (vn > 0) { v.x -= nx * vn * 1.2; v.z -= nz * vn * 1.2; this.ev.wall = Math.max(this.ev.wall, vn); }
-      }
-    }
-  }
-
-  _walls() {
-    const p = this.pos, v = this.vel;
-    const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
-    const pfx = -Math.sin(this.prevYaw), pfz = -Math.cos(this.prevYaw);
-    let hit = 0, touch = false, sx = 0, sz = 0;
-    for (let k = -1; k <= 1; k += 2) {
-      const off = CAR.probe * k;
-      for (let iter = 0; iter < 2; iter++) {
-        const c = this._probe(p.x + fx * off, p.z + fz * off,
-          this.prev.x + pfx * off, this.prev.z + pfz * off, p.y);
-        if (!c) break;
-        touch = true;
-        p.x += c.dx; p.z += c.dz;
-        const vn = v.x * c.nx + v.z * c.nz;
-        if (vn < 0) {
-          v.x -= c.nx * vn * (1 + CAR.wallE);
-          v.z -= c.nz * vn * (1 + CAR.wallE);
-          if (-vn > hit) { hit = -vn; sx = c.nx; sz = c.nz; }
-        }
-      }
-    }
-    if (touch) {
-      // Frottement : racler un mur freine tout le temps, même sans vrai choc.
-      const k = Math.max(0, 1 - CAR.wallScrape * DT);
-      v.x *= k; v.y *= k; v.z *= k;
-    }
-    if (hit > 0) {
-      const loss = Math.min(CAR.wallLossMax, hit * CAR.wallLoss);
-      v.x *= 1 - loss; v.y *= 1 - loss; v.z *= 1 - loss;
-      this.ev.wall = hit;
-      if (hit > 1.5) {
-        // Le choc fait pivoter la voiture (dans le sens où le mur la repousse) et lui coupe le moteur un instant.
-        const side = sx * fz - sz * fx;
-        this.omega += (side >= 0 ? 1 : -1) * this._upSign() * Math.min(CAR.wallSpinMax, hit * CAR.wallSpin);      // (autour du haut local : même choc au plafond)
-        this.stunT = Math.max(this.stunT, Math.min(0.8, 0.1 + hit * CAR.wallStun));
-      }
-    }
-  }
-
   // ---------------------------------------------------------------- Obstacles
-  // Le temps des obstacles est le chrono de la course (this.clock = pas de course, fixé
-  // par l'appelant avant chaque pas) : même mouvement en replay et après un retour (R).
-  _obstacles() {
-    const obs = this.track.obstacles;
-    if (!obs.length || this.hazardGrace > 0) return;
-    const t = (this.clock || 0) * DT;
-    const p = this.pos, v = this.vel, n0 = this.n;
-    let cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
-    // Index spatial paresseux : éviter de parcourir tous les obstacles à chaque pas
-    // physique sur les circuits chargés. La course garde une liste d'obstacles stable.
-    if (this._obstacleGridSource !== obs) {
-      const grid = new Map(), cell = 20;
-      for (const d of obs) {
-        if (!d || !Number.isFinite(d.x) || !Number.isFinite(d.z)) continue;
-        const key = `${Math.floor(d.x / cell)},${Math.floor(d.z / cell)}`;
-        let bucket = grid.get(key);
-        if (!bucket) grid.set(key, bucket = []);
-        bucket.push(d);
-      }
-      this._obstacleGridSource = obs;
-      this._obstacleGrid = grid;
-    }
-    const candidates = [], grid = this._obstacleGrid, cell = 20;
-    const gx = Math.floor(cx / cell), gz = Math.floor(cz / cell);
-    for (let ix = gx - 3; ix <= gx + 3; ix++) {
-      for (let iz = gz - 3; iz <= gz + 3; iz++) {
-        const bucket = grid.get(`${ix},${iz}`);
-        if (bucket) for (const d of bucket) candidates.push(d);
-      }
-    }
-    for (const d of candidates) {
-      // Recalculer le centre après chaque correction de contact : plusieurs obstacles
-      // proches ne doivent pas être testés contre la position d'avant le premier choc.
-      cx = p.x + n0.x * 0.8; cy = p.y + n0.y * 0.8; cz = p.z + n0.z * 0.8;
-      if (!d || !OBST[d.k] || !Number.isFinite(d.x) || !Number.isFinite(d.y) || !Number.isFinite(d.z) || !Number.isFinite(d.s || 1) || !Number.isFinite(d.ry || 0)) continue;
-      if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) continue;
-      const rr = obstacleRadius(d) + 3;
-      if ((cx - d.x) ** 2 + (cz - d.z) ** 2 > rr * rr) continue;
-      const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
-      if (!(k > 0) || !Number.isFinite(rc)) continue;
-      obstacleLocal(d, t, OB);
-      toLocalObs(d, cx, cy, cz, OL);
-      if (![OB.x, OB.y, OB.z, OB.vx, OB.vy, OB.vz, OB.on, OL.x, OL.y, OL.z].every(Number.isFinite)) continue;
-      let nx = 0, ny = 0, nz = 0, pen = 0, ovx = 0, ovy = 0, ovz = 0;
-      if (def.type === 'spike') {
-        if (OB.on < 0.4 || this.graceT > 0) continue;
-        if (Math.abs(OL.x) < def.hx + rc * 0.6 && Math.abs(OL.z) < def.hz + rc * 0.6 && OL.y < def.hy * OB.on + rc && OL.y > -1.5) {
-          this.ev.spike = true; this.ev.sink = true;
-          return;
-        }
-        continue;
-      } else if (def.type === 'ball') {
-        const dx = OL.x - OB.x, dy = OL.y - OB.y, dz = OL.z;
-        const dd = Math.hypot(dx, dy, dz);
-        if (dd >= def.r + rc) continue;
-        if (dd < 1e-6) { nx = 0; ny = 1; nz = 0; pen = def.r + rc; }
-        else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd; }
-        ovx = OB.vx; ovy = OB.vy;
-      } else if (def.type === 'box') {
-        const qx = clamp(OL.x, OB.x - def.hx, OB.x + def.hx), qy = clamp(OL.y, 0, def.hy * 2), qz = clamp(OL.z, -def.hz, def.hz);
-        const dx = OL.x - qx, dy = OL.y - qy, dz = OL.z - qz;
-        const dd = Math.hypot(dx, dy, dz);
-        if (dd >= rc) continue;
-        if (dd < 1e-6) {
-          // Centre de la voiture dans la boîte : choisir la face la plus proche,
-          // au lieu de toujours pousser sur X (source de coincements/jitter).
-          const ex = def.hx - Math.abs(OL.x - OB.x);
-          const ey0 = OL.y, ey1 = def.hy * 2 - OL.y;
-          const ez = def.hz - Math.abs(OL.z);
-          const face = Math.min(ex, ey0, ey1, ez);
-          if (face === ey0 || face === ey1) { nx = 0; ny = ey0 <= ey1 ? -1 : 1; nz = 0; }
-          else if (face === ez) { nx = 0; ny = 0; nz = OL.z >= 0 ? 1 : -1; }
-          else { nx = OL.x >= OB.x ? 1 : -1; ny = 0; nz = 0; }
-          pen = Math.max(0.01, rc + Math.max(0, face));
-        } else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = rc - dd; }
-        ovx = OB.vx;
-      } else if (def.type === 'bar') {
-        const ca = Math.cos(OB.a), sa = Math.sin(OB.a);
-        const s = clamp(OL.x * ca + OL.z * sa, -def.len, def.len);
-        const dx = OL.x - ca * s, dy = OL.y - def.y, dz = OL.z - sa * s;
-        const dd = Math.hypot(dx, dy, dz);
-        if (dd >= def.r + rc) continue;
-        if (dd < 1e-6) { nx = -sa; ny = 0; nz = ca; pen = def.r + rc; }
-        else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd; }
-        ovx = -sa * s * OB.w; ovz = ca * s * OB.w;
-      } else {
-        // Bumper : poteau vertical qui renvoie fort.
-        if (OL.y > def.h + rc) continue;
-        const dd = Math.hypot(OL.x, OL.z);
-        if (dd >= def.r + rc) continue;
-        if (dd < 1e-6) { nx = 1; nz = 0; pen = def.r + rc; }
-        else { nx = OL.x / dd; nz = OL.z / dd; pen = def.r + rc - dd; }
-      }
-      // Normale et vitesse de l'obstacle en repère monde.
-      const c = Math.cos(d.ry || 0), sn = Math.sin(d.ry || 0);
-      const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
-      const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
-      if (![wx, wy, wz, vwx, vwy, vwz].every(Number.isFinite)) continue;
-      // Séparer les corps en contact, mais ne pas ré-appliquer un choc si la voiture
-      // s'éloigne déjà de l'obstacle. L'ancien code ajoutait shockKick à chaque pas
-      // tant que les volumes se chevauchaient : obstacles mobiles = impulsions répétées,
-      // tremblements, catapultage et parfois état physique instable.
-      const correction = Math.min(pen * k, 2.5);
-      p.x += wx * correction; p.y += wy * correction; p.z += wz * correction;
-      const vn = (v.x - vwx) * wx + (v.y - vwy) * wy + (v.z - vwz) * wz;
-      let add = 0;
-      if (vn < -0.05) {
-        add = -(1 + CAR.shockE) * vn;
-        if (def.type === 'post') {
-          add = Math.max(add, Math.max(0, def.kick - add));
-        } else {
-          add += CAR.shockKick;
-        }
-      }
-      if (add > 0) {
-        v.x += wx * add; v.y += wy * add; v.z += wz * add;
-        this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;   // le choc fait pivoter un peu
-        if (wy * this.gSign > 0.45) this.grounded = false;
-        this.ev.shock = Math.max(this.ev.shock, add);
-      }
-    }
-  }
-
-  _probe(x, z, px, pz, y) {
-    const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
-    const tiles = this.track.tilesAt(cx, cz);
-    for (let i = 0; i < tiles.length; i++) {
-      const tile = tiles[i];
-      if (tile.mv || this.broken.has(tile)) continue;
-      if (this._probeTile(tile, x, z, px, pz, y, 0)) return HIT;
-    }
-    // Pièces mobiles : bordures à leur position du moment.
-    const mv = this.track.movers;
-    for (let i = 0; i < mv.length; i++) {
-      if (this.broken.has(mv[i])) continue;
-      const o = this.track.moverOffset(mv[i], this.track.time, MOV);
-      if (o.a) {
-        // Pièce tournante : on interroge sa géométrie « au repos », puis on remet le résultat dans le repère du monde.
-        const q = this.track.moverLocal(o, x, z, MQ1), q2 = this.track.moverLocal(o, px, pz, MQ2);
-        if (this._probeTile(mv[i], q.x, q.z, q2.x, q2.z, y - o.y, 0)) {
-          const c = Math.cos(o.a), sn = Math.sin(o.a), dx = HIT.dx, dz = HIT.dz, nx = HIT.nx, nz = HIT.nz;
-          HIT.dx = c * dx + sn * dz; HIT.dz = -sn * dx + c * dz;
-          HIT.nx = c * nx + sn * nz; HIT.nz = -sn * nx + c * nz;
-          return HIT;
-        }
-      } else if (this._probeTile(mv[i], x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y, 0)) return HIT;
-    }
-    return null;
-  }
-
-  _probeTile(tile, x, z, px, pz, y) {
-    const P = PIECES[tile.t];
-    if (P.kind === 'area' || (tile.nb && !tile.tn) || !(isFloor(tile) || isCeilingFloor(tile))) return false;
-    toLocal(tile, x, z, L1);
-    sampleLocal(tile, L1.lx, L1.lz, S1);
-    if (!S1.inFootprint) return false;
-    // Pièce à l'envers : rails et dalle sont symétriques par rapport à la base.
-    const H = CAR.height, gsg = this.gSign;
-    const ylo = gsg > 0 ? y : y - H, yhi = gsg > 0 ? y + H : y;
-    if (tile.v) {
-      const hv = 2 * baseY(tile) - S1.h;
-      if (ylo > hv + SLAB_T + 0.2 || yhi < hv - RAIL_H + 0.15) return false;
-    } else if (ylo > S1.h + (tile.tn ? TUNNEL_TOP : RAIL_H) - 0.15 || yhi < S1.h - SLAB_T - 0.2) return false;      // tunnel : les parois montent jusqu'au toit
-    const ad = Math.abs(S1.d), R = CAR.radius;
-    const inner = ROAD_HALF, outer = ROAD_HALF + RAIL_W;
-    if (ad + R <= inner || ad - R >= outer) return false;
-    toLocal(tile, px, pz, L2);
-    sampleLocal(tile, L2.lx, L2.lz, S2);
-    const inside = Math.abs(S2.d) < (inner + outer) * 0.5;
-    const sgn = S1.d >= 0 ? 1 : -1;
-    const targetD = inside ? inner - R : outer + R;
-    const push = (targetD - ad) * sgn;
-    rotVec(tile.r, S1.gx, S1.gz, W1);
-    HIT.dx = W1.x * push; HIT.dz = W1.z * push;
-    const ns = inside ? -sgn : sgn;
-    HIT.nx = W1.x * ns; HIT.nz = W1.z * ns;
-    return true;
-  }
-
   // ---------------------------------------------------------------- Rubans
-  // Sur un ruban, l'état est exprimé dans le plan de la route :
-  //   e1 = sens de parcours, e2 = droite, n = normale.
-  //   vs, vd : vitesse le long de e1 / e2 ; psi : cap de la voiture par rapport à e1.
-  _basis(R, F) {
-    const d = R.dir;
-    return {
-      e1x: F.tx * d, e1y: F.ty * d, e1z: F.tz * d,
-      e2x: F.rx * d, e2y: F.ry * d, e2z: F.rz * d,
-    };
-  }
-
-  // Détecte le franchissement d'une extrémité de ruban (plan perpendiculaire à la route).
-  _tryEnterRibbon() {
-    const p = this.pos, q = this.prev, v = this.vel;
-    if (this.speed < 3) return false;
-    const c1x = Math.floor(p.x / CELL), c1z = Math.floor(p.z / CELL);
-    const c2x = Math.floor(q.x / CELL), c2z = Math.floor(q.z / CELL);
-    for (let pass = 0; pass < 2; pass++) {
-      if (pass === 1 && c1x === c2x && c1z === c2z) break;
-      const tiles = pass === 0 ? this.track.tilesAt(c1x, c1z) : this.track.tilesAt(c2x, c2z);
-      for (const tile of tiles) {
-        if (!isRibbon(tile) || this.broken.has(tile)) continue;
-        const rib = ribbonOf(tile);
-        for (let end = 0; end < 2; end++) {
-          const F = frameWorld(tile, rib, end, this.F);
-          const sg = end === 0 ? 1 : -1;
-          const tx = F.tx * sg, ty = F.ty * sg, tz = F.tz * sg;
-          const dc = (p.x - F.px) * tx + (p.y - F.py) * ty + (p.z - F.pz) * tz;
-          const dp = (q.x - F.px) * tx + (q.y - F.py) * ty + (q.z - F.pz) * tz;
-          if (!(dp < 0 && dc >= 0)) continue;
-          const dl = (p.x - F.px) * F.rx + (p.y - F.py) * F.ry + (p.z - F.pz) * F.rz;
-          const dn = (p.x - F.px) * F.nx + (p.y - F.py) * F.ny + (p.z - F.pz) * F.nz;
-          if (Math.abs(dl) > ROAD_HALF + 0.6 || dn < -1.4 || dn > 3.2) continue;
-          const vs = v.x * tx + v.y * ty + v.z * tz;
-          if (vs < 2.5) continue;
-          if (this.grounded && (this.n.x * F.nx + this.n.y * F.ny + this.n.z * F.nz) < 0.35) continue;
-          const R = { tile, rib, u: clamp(end === 0 ? dc / F.ds : 1 - dc / F.ds, 0, 1), dir: sg, dl: clamp(dl, -ROAD_HALF + 1, ROAD_HALF - 1), vs: 0, vd: 0, psi: 0 };
-          const B = this._basis(R, F);
-          R.vs = v.x * B.e1x + v.y * B.e1y + v.z * B.e1z;
-          R.vd = v.x * B.e2x + v.y * B.e2y + v.z * B.e2z;
-          const h = this.fwd;
-          R.psi = Math.atan2(h.x * B.e2x + h.y * B.e2y + h.z * B.e2z, h.x * B.e1x + h.y * B.e1y + h.z * B.e1z);
-          this.rib = R;
-          this.ev.loopIn = true;
-          this._ribPlace(R);
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
   // Vol plané du deltaplane : portance perpendiculaire à la vitesse, traînée,
   // incidence pilotée (gaz = piquer, frein = cabrer), virage incliné au volant.
   _glide(inp, dt) {
     const v = this.vel, G = GLIDE;
-    const hv = Math.hypot(v.x, v.z);
-    const sp = Math.max(1e-3, Math.hypot(hv, v.y));
+    const hv = hypot2(v.x, v.z);
+    const sp = Math.max(1e-3, hypot2(hv, v.y));
     const aoaT = inp.brake ? G.up : inp.throttle ? G.down : G.trim;
     this.aoa += (aoaT - this.aoa) * Math.min(1, dt * 3);
     let L = G.lift * sp * sp * Math.max(0, 0.6 + 4 * this.aoa);
@@ -1099,7 +625,7 @@ export class CarPhysics {
     const dx = v.x / sp, dy = v.y / sp, dz = v.z / sp;
     const gu = this.gSign;   // « haut » selon la gravité
     let lx = -dx * dy * gu, ly = (1 - dy * dy) * gu, lz = -dz * dy * gu;
-    const ll = Math.hypot(lx, ly, lz) || 1;
+    const ll = hypot3(lx, ly, lz) || 1;
     lx /= ll; ly /= ll; lz /= ll;
     v.x += (L * lx - D * dx) * dt;
     v.y += (L * ly - D * dy - this.g * gu) * dt;
@@ -1108,12 +634,12 @@ export class CarPhysics {
     // Roulis : le virage suit le volant avec un petit retard (aile qui s'incline), plus vif et utilisable dès 9 m/s.
     this.bankT = (this.bankT || 0) + (this.steer - (this.bankT || 0)) * Math.min(1, dt * G.turnRamp);
     const yr = this.bankT * G.turn * Math.min(1, hv / G.turnSpeed);
-    const a = -yr * gu * dt, c = Math.cos(a), s = Math.sin(a);
+    const a = -yr * gu * dt, c = dcos(a), s = dsin(a);
     const vx = v.x * c + v.z * s, vz = v.z * c - v.x * s;
     v.x = vx; v.z = vz;
     this.yaw += a;
     this.omega = yr;
-    const traj = Math.atan2(v.y, Math.max(1e-3, Math.hypot(v.x, v.z)));
+    const traj = datan2(v.y, Math.max(1e-3, hypot2(v.x, v.z)));
     this.glidePitch = traj + this.aoa;
   }
 
@@ -1129,7 +655,7 @@ export class CarPhysics {
       const k = L2.lz / (L2.lz - L1.lz);
       const lx = L2.lx + (L1.lx - L2.lx) * k, y = q.y + (p.y - q.y) * k;
       const cy = tile.l * LEVEL_H + ROAD_TOP + RING_Y;
-      if (Math.hypot(lx, y - cy) > RING_R) continue;
+      if (hypot2(lx, y - cy) > RING_R) continue;
       this.boost = Math.max(this.boost, 1.3);
       this.boostF = Math.max(this.boost > 0 ? this.boostF : 0, 0.9);
       this.ev.ring = true;
@@ -1143,14 +669,14 @@ export class CarPhysics {
   _landing(nx, ny, nz) {
     if (this.airTime < 0.35) return 1;
     const v = this.vel;
-    const c = Math.cos(this.pitch), sn = Math.sin(this.pitch);
-    const fx = -Math.sin(this.yaw) * c, fy = sn, fz = -Math.cos(this.yaw) * c;
-    const mis = Math.abs(Math.asin(clamp(fx * nx + fy * ny + fz * nz, -1, 1)));
-    const hv = Math.hypot(v.x, v.z);
+    const c = dcos(this.pitch), sn = dsin(this.pitch);
+    const fx = -dsin(this.yaw) * c, fy = sn, fz = -dcos(this.yaw) * c;
+    const mis = Math.abs(dasin(clamp(fx * nx + fy * ny + fz * nz, -1, 1)));
+    const hv = hypot2(v.x, v.z);
     let side = 0;
     if (hv > 4) {
-      const hx = -Math.sin(this.yaw), hz = -Math.cos(this.yaw);
-      side = Math.acos(clamp((v.x * hx + v.z * hz) / hv, -1, 1));
+      const hx = -dsin(this.yaw), hz = -dcos(this.yaw);
+      side = dacos(clamp((v.x * hx + v.z * hz) / hv, -1, 1));
       if (side > Math.PI / 2) side = Math.PI - side;   // en marche arrière, on compare à l'arrière
     }
     const loss = clamp((mis - CAR.landOk) * 0.45, 0, 0.35) + clamp((side - 0.35) * 0.3, 0, 0.2);
@@ -1162,345 +688,7 @@ export class CarPhysics {
     return 1 - loss;
   }
 
-  // Atterrissage en plein milieu d'un ruban (retombée sur le haut d'un L, au fond d'un looping...).
-  _tryLandRibbon() {
-    const p = this.pos, q = this.prev, v = this.vel;
-    const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
-    for (const tile of tiles) {
-      if (!isRibbon(tile) || this.broken.has(tile)) continue;
-      const rib = ribbonOf(tile);
-      // Point du ruban le plus proche (recherche grossière puis affinage).
-      let bu = -1, bd = Infinity;
-      for (let i = 0; i <= 32; i++) {
-        const F = frameWorld(tile, rib, i / 32, this.F);
-        const d = (p.x - F.px) ** 2 + (p.y - F.py) ** 2 + (p.z - F.pz) ** 2;
-        if (d < bd) { bd = d; bu = i / 32; }
-      }
-      let u = bu;
-      for (let it = 0; it < 4; it++) {
-        const F = frameWorld(tile, rib, u, this.F);
-        const dt = (p.x - F.px) * F.tx + (p.y - F.py) * F.ty + (p.z - F.pz) * F.tz;
-        u = clamp(u + dt / F.ds, 0, 1);
-      }
-      if (u <= 0.002 || u >= 0.998) continue;          // les extrémités passent par _tryEnterRibbon
-      const F = frameWorld(tile, rib, u, this.F);
-      const dl = (p.x - F.px) * F.rx + (p.y - F.py) * F.ry + (p.z - F.pz) * F.rz;
-      if (F.kc > 1e-4) this._cross({ dl }, F); else { F.qx = F.px; F.qy = F.py; F.qz = F.pz; }
-      if (F.ny * this.gSign < 0.2) continue;            // on ne se pose que sur une route face à la gravité
-      const dn = (p.x - F.qx) * F.nx + (p.y - F.qy) * F.ny + (p.z - F.qz) * F.nz;
-      const dq = (q.x - F.qx) * F.nx + (q.y - F.qy) * F.ny + (q.z - F.qz) * F.nz;
-      const vn = v.x * F.nx + v.y * F.ny + v.z * F.nz;
-      if (!(dn <= 0.05 && dq >= -0.3 && dn > -1.5 && vn < 0)) continue;
-      if (Math.abs(dl) > ROAD_HALF + (hasNoRails(tile) ? 0 : 0.3)) continue;
-      const vt = v.x * F.tx + v.y * F.ty + v.z * F.tz;
-      const R = { tile, rib, u, dir: vt >= 0 ? 1 : -1, dl: 0, vs: 0, vd: 0, psi: 0 };
-      R.dl = clamp(dl * R.dir, -ROAD_HALF + 1, ROAD_HALF - 1) * R.dir;
-      const B = this._basis(R, F);
-      R.vs = v.x * B.e1x + v.y * B.e1y + v.z * B.e1z;
-      R.vd = v.x * B.e2x + v.y * B.e2y + v.z * B.e2z;
-      const h = this.fwd;
-      R.psi = Math.atan2(h.x * B.e2x + h.y * B.e2y + h.z * B.e2z, h.x * B.e1x + h.y * B.e1y + h.z * B.e1z);
-      this.ev.land = -vn;
-      const kq = this._landing(F.nx, F.ny, F.nz);
-      R.vs *= kq; R.vd *= kq;
-      this.rib = R;
-      this._ribPlace(R);
-      return true;
-    }
-    return false;
-  }
-
-  // Section courbe (tube) : repère de la route au point de la voiture.
-  // Avec kc = courbure transversale et phi = kc * dl, la chaussée remonte de chaque côté :
-  // position = centre + r sin(phi)/kc + n (1 - cos(phi))/kc, normale tournée de phi.
-  // Remplit F.qx/qy/qz (point de contact) et remplace n et r par leurs valeurs locales.
-  _cross(R, F) {
-    const kc = F.kc || 0;
-    if (F.wrap && kc > 0) {
-      const C = (2 * Math.PI) / kc;
-      R.dl = ((((R.dl + C / 2) % C) + C) % C) - C / 2;
-    }
-    let X = R.dl, Y = 0, c = 1, s = 0;
-    if (kc > 1e-5) {
-      const phi = kc * R.dl;
-      c = Math.cos(phi); s = Math.sin(phi);
-      X = s / kc; Y = (1 - c) / kc;
-    }
-    F.qx = F.px + F.rx * X + F.nx * Y;
-    F.qy = F.py + F.ry * X + F.ny * Y;
-    F.qz = F.pz + F.rz * X + F.nz * Y;
-    if (s !== 0) {
-      const nx = F.nx * c - F.rx * s, ny = F.ny * c - F.ry * s, nz = F.nz * c - F.rz * s;
-      const rx = F.rx * c + F.nx * s, ry = F.ry * c + F.ny * s, rz = F.rz * c + F.nz * s;
-      F.nx = nx; F.ny = ny; F.nz = nz; F.rx = rx; F.ry = ry; F.rz = rz;
-    }
-    F.cc = c; F.cs = s;
-    return F;
-  }
-
-  _ribStep(inp) {
-    const R = this.rib, dt = DT, tile = R.tile, rib = R.rib;
-    let F = frameWorld(tile, rib, R.u, this.F);
-
-    // La route tourne sous la voiture : son cap relatif change d'autant
-    // (il faut braquer pour suivre un virage à l'envers).
-    const dU = 0.006;
-    const u0 = Math.max(0, R.u - dU), u1 = Math.min(1, R.u + dU);
-    const A0 = frameWorld(tile, rib, u0, this.F0), A2 = frameWorld(tile, rib, u1, this.F2);
-    const k = 1 / (F.ds * (u1 - u0));
-    const kg0 = ((A2.tx - A0.tx) * F.rx + (A2.ty - A0.ty) * F.ry + (A2.tz - A0.tz) * F.rz) * k;
-    const kn0 = ((A2.tx - A0.tx) * F.nx + (A2.ty - A0.ty) * F.ny + (A2.tz - A0.tz) * F.nz) * k;
-    // Au point de la voiture (section courbe) : normale et axe latéral tournés.
-    this._cross(R, F);
-    const kc = F.kc || 0;
-    const kn = kn0 * F.cc - kg0 * F.cs, kg = kg0 * F.cc + kn0 * F.cs;
-    let B = this._basis(R, F);
-
-    // Inversion de gravité sur un ruban (vrille, looping, transition mur <-> plafond...) : la gravité suit la route. Sur le plan vertical
-    // exact (mur) la gravité reste normale : la marge de 3° évite de rester « à l'envers » en revenant d'un plafond sur un mur.
-    if (tile.s === 'flip' || PIECES[tile.t].autoFlip) {
-      const ng = F.ny >= -0.05 ? 1 : -1;
-      if (ng !== this.gSign) { this.gSign = ng; this.ev.flip = true; }
-    }
-    // Gravité projetée dans le plan de la route (vrille, mur, envers, paroi du tube...).
-    const g = this.g * this.gSign;
-    // Route sur le côté (pièces 90°) : l'appui aérodynamique (vitesse²) compense la glissade le long du plan ; la gravité, elle, ne change pas.
-    // En dessous de ~80 km/h il ne compense plus assez : la voiture glisse vers le bord du bas et tombe.
-    const sidePiece = isSideTile(tile);
-    const hold = sidePiece ? Math.min(1, SIDE_HOLD * R.vs * R.vs / Math.max(1, this.g)) : 0;
-    R.vs -= g * B.e1y * dt;
-    R.vd -= g * B.e2y * dt * (1 - hold);
-    // Décrochage : sur un plan penché de plus de 45°, sans la vitesse minimale la voiture ne tient pas (plus de « magie »). Après un court
-    // délai elle quitte la paroi et tombe, avec la vitesse qu'elle avait.
-    if (sidePiece && Math.abs(F.ny) < 0.7 && Math.abs(R.vs) < SIDE_MIN_SPEED) {
-      R.lowT = (R.lowT || 0) + dt;
-      if (R.lowT > SIDE_GRACE) { this.ev.wallOff = true; this._ribPlace(R); this._ribDetach(); return; }
-    } else if (R.lowT) R.lowT = Math.max(0, R.lowT - 2 * dt);
-    R.psi -= R.dir * kg * R.vs * dt;
-
-    // Revêtements actifs sur ce ruban : mêmes effets qu'au sol, sans aide particulière.
-    const mod = tile.s, f = tileParam(tile) / 100;
-    const C = surfaceCoeffs(mod, f);
-    let extraDrag = C.extraDrag, gripK = C.grip, tractK = C.traction, vmaxK = C.vmaxK, beltE1 = 0, rearK = C.rearK;
-    if (this.stunT > 0) { gripK *= CAR.stunGrip; tractK *= CAR.stunTraction; }       // choc contre une paroi : la voiture encaisse
-    if (mod === 'boost') {
-      if (this.boost < CAR.boostTime - 0.2) this.ev.boostHit = true;
-      this.boost = CAR.boostTime; this.boostF = f;
-    } else if (mod === 'gravity') {
-      if (Math.abs(f - this.gravMul) > 0.01) { this.gravMul = f; this.ev.gravity = true; }
-    }
-    else if (mod === 'wind') {
-      // Vent : soufflé selon l'axe latéral de la pièce, projeté dans le plan de la route.
-      const a = ((tileParam(tile) - 100) / 100) * CAR.wind;
-      rotVec(tile.r, 1, 0, TMP);
-      R.vs += (TMP.x * B.e1x + TMP.z * B.e1z) * a * dt;
-      R.vd += (TMP.x * B.e2x + TMP.z * B.e2z) * a * dt;
-    } else if (mod === 'conveyor') beltE1 = beltSpeed(tileParam(tile)) * R.dir;
-    else if (mod === 'spring' && this.plateLock !== 'spring') {
-      this.plateLock = 'spring'; this.ev.spring = true;
-      R.vd += ((tileParam(tile) - 100) / 100) * CAR.spring * R.dir;
-    } else if (PLATES[mod]) {
-      if (this.plateLock !== mod) { this.plateLock = mod; this.vehicle = this.vehicle === PLATES[mod] ? 'car' : PLATES[mod]; this.ev.moto = true; }
-    } else this._timedMods(mod);
-    if (!PLATES[mod] && mod !== 'spring' && mod !== 'flip') this.plateLock = '';
-    R.vs += beltE1 - this.beltS;   // même prise de vitesse en montant sur un tapis de ruban
-    this.beltS = beltE1;
-
-    // Pneus dans le repère voiture.
-    // Appui réel des roues : gravité normale + effet de la courbure (centrifuge).
-    // Au sol plat il vaut g ; sur un mur vertical, 0 ; à l'envers sur du plat, -g.
-    // Route sur le côté (90°) : l'appui vient aussi de la vitesse (SIDE_AERO), jamais d'un changement de gravité.
-    let press = R.vs * R.vs * kn + R.vd * R.vd * kc + g * F.ny;
-    if (sidePiece) press += SIDE_AERO * R.vs * R.vs * Math.sqrt(Math.max(0, 1 - F.ny * F.ny));      // appui aérodynamique, nul à plat, maximal à la verticale
-    const gAbs = this.g;
-    // Conduite identique au sol sur les pièces spéciales (virages relevés, tubes, loopings,
-    // tire-bouchons) tant que la voiture est plaquée. Seule la montée en L garde la
-    // physique d'appui réelle : sur le mur vertical, plus d'adhérence ni de moteur.
-    const lPiece = tile.t === 'wall' || tile.t === 'ramp90' || tile.t === 'crest90' || !!sidePiece;
-    // Vrille : la voiture est guidée par la route sur toute la pièce, appui ou pas (elle garde son adhérence et son moteur).
-    const guided = tile.t === 'twist';
-    const load = lPiece ? clamp(press / gAbs, 0, 1.6) : press > 0 || guided ? 1 : 0;
-    this.press = press;
-    R.vs -= beltE1;   // tapis roulant : dynamique dans le repère de la bande
-    const c = Math.cos(R.psi), s = Math.sin(R.psi);
-    let vx = R.vs * c + R.vd * s, vy = -R.vs * s + R.vd * c;
-    const ax = (this._longitudinal(vx, inp, this.k.maxSpeed * vmaxK, Math.min(1, load) * tractK, extraDrag, dt, Math.min(1, load)) - vx) / dt;
-    // Ruban posé à l'envers (miroir) : son axe latéral pointe vers la gauche du pilote.
-    // Les commandes restent dans le repère du pilote, même sur une pièce inversée.
-    // Le repère latéral du ruban est déjà orienté par sa normale : ne pas inverser
-    // le volant une seconde fois sur les sections retournées.
-    this.rearK = rearK;
-    const t = this._tires(vx, vy, this.omega, ax, load * gripK, dt);
-    this.rearK = 1;
-    vx = t.vx; vy = t.vy; this.omega = t.w;
-    // Retour dans le plan de la route avec le MÊME cap, puis la voiture pivote.
-    R.vs = vx * c - vy * s + beltE1;
-    R.vd = vx * s + vy * c;
-    if (this._glassCheck(mod === 'glass', tile, dt)) { this._ribPlace(R); this._ribDetach(); return; }      // la dalle cède : la voiture se détache et tombe
-    if (this.ev.sink) { this._ribPlace(R); return; }
-    R.psi += this.omega * dt;
-    this.yawRate = -this.omega;
-    this.fwdSpeed = vx;
-    this.slip = Math.abs(vy);
-
-    // Avancée le long du ruban et écart latéral.
-    R.dl += R.dir * R.vd * dt;
-    const hw = F.hw || ROAD_HALF;
-    if (F.wrap) {
-      // Tube : pas de bord, on peut faire le tour.
-    } else if (hasNoRails(tile) || Math.abs(R.dl) > hw + 1.5) {
-      // Sans bordure, ou voiture restée haut sur la paroi quand le tube se rouvre.
-      if (Math.abs(R.dl) > hw + 0.3) { this._ribPlace(R); this._ribDetach(); return; }
-    } else {
-      const lim = hw - CAR.radius - 0.2;
-      if (Math.abs(R.dl) > lim) {
-        const side = Math.sign(R.dl) * R.dir;          // côté du mur, dans l'axe e2
-        const into = R.vd * side;                      // vitesse vers le mur
-        R.vs *= Math.max(0, 1 - CAR.wallScrape * dt);    // frottement contre la paroi
-        if (into > 0) {
-          if (into > 2) this.ev.wall = into;
-          R.vs *= 1 - Math.min(CAR.wallLossMax, into * CAR.wallLoss);      // perte proportionnelle à l'impact
-          R.vd -= side * into * (1 + CAR.wallE);                            // rebond
-          if (into > 1.5) {
-            R.psi += -side * Math.min(CAR.wallSpinMax, into * CAR.wallSpin) * 0.3;       // le choc fait pivoter la voiture
-            this.stunT = Math.max(this.stunT, Math.min(0.8, 0.1 + into * CAR.wallStun));
-          }
-        }
-        R.dl = clamp(R.dl, -lim, lim);
-      }
-    }
-    const uBefore = R.u;
-    R.u += (R.dir * R.vs * dt) / F.ds;
-    if (R.u > 1 || R.u < 0) { this._ribEnd(R.u > 1 ? 1 : 0); return; }
-
-    // Décrochage : rien ne retient la voiture contre la route si l'appui devient négatif
-    // (route plate à l'envers, sommet bombé pris trop vite, haut d'un looping trop lent).
-    // Sur un mur vertical l'appui est nul : pas de décrochage, mais ni adhérence ni moteur.
-    const mu = rib.minU || 0;
-    // Haut d'un L pris en montant : le rebord guide la voiture le long de l'arrondi
-    // (sans adhérence), puis la fait sauter un petit peu en arrivant sur le plateau.
-    // Trop lente, elle s'arrête dans l'arrondi et redescend en arrière.
-    if (tile.t === 'crest90' && R.dir === 1) {
-      if (uBefore < rib.lipU && R.u >= rib.lipU && R.vs > 3) {
-        this._ribPlace(R);
-        // Hauteur du saut selon la vitesse : ~2 m en arrivant doucement, ~4 m à fond.
-        const hop = clamp((R.vs * R.vs) / CAR.lipHopK, CAR.lipHopMin, CAR.lipHopMax);
-        this.vel.y += Math.sqrt(2 * this.g * hop) * this.gSign;
-        this._ribDetach();
-        return;
-      }
-    } else if (press < -0.6 && R.u > mu && R.u < 1 - mu && mod !== 'magnet') {
-      this._ribPlace(R);
-      this._ribDetach();
-      return;
-    }
-    this._ribPlace(R);
-  }
-
-  // Place la voiture sur le ruban (position, vitesse, orientation monde).
-  _ribPlace(R) {
-    const F = this._cross(R, frameWorld(R.tile, R.rib, R.u, this.F));
-    const B = this._basis(R, F);
-    const p = this.pos, v = this.vel;
-    p.x = F.qx; p.y = F.qy; p.z = F.qz;
-    v.x = B.e1x * R.vs + B.e2x * R.vd;
-    v.y = B.e1y * R.vs + B.e2y * R.vd;
-    v.z = B.e1z * R.vs + B.e2z * R.vd;
-    this.n.x = F.nx; this.n.y = F.ny; this.n.z = F.nz;
-    const c = Math.cos(R.psi), s = Math.sin(R.psi);
-    this.fwd.x = B.e1x * c + B.e2x * s; this.fwd.y = B.e1y * c + B.e2y * s; this.fwd.z = B.e1z * c + B.e2z * s;
-    if (Math.hypot(this.fwd.x, this.fwd.z) > 0.3) this.yaw = Math.atan2(-this.fwd.x, -this.fwd.z);
-    this.grounded = true;
-    this.surfType = 'road';
-    this.surfMod = R.tile.s || '';
-  }
-
-  _ribDetach() {
-    this.pitch = Math.asin(clamp(this.fwd.y, -1, 1)); this.pitchRate = 0; this.airTime = 0;
-    const t = this.rib && this.rib.tile;
-    this.fallWhy = this.ev.wallOff ? 'wall' : t && PIECES[t.t].kind === 'loop' ? 'loop' : t && t.t === 'twist' ? 'twist' : t && t.v ? 'inv' : 'crest';
-    this.rib = null;
-    this.grounded = false;
-    this.ev.loopFall = true;
-  }
-
-  // Fin de ruban : passe au ruban suivant s'il est raccordé, sinon retour au sol.
-  _ribEnd(endU) {
-    const R = this.rib;
-    R.u = endU;
-    this._ribPlace(R);
-    const F = frameWorld(R.tile, R.rib, endU, this.F);
-    // Sens de sortie : vers l'extérieur du ruban (la voiture peut redescendre en arrière).
-    const d = endU === 1 ? 1 : -1;
-    const fx = F.tx * d, fy = F.ty * d, fz = F.tz * d;
-    const px = this.pos.x, py = this.pos.y, pz = this.pos.z;
-    const next = this._matchRibbon(R.tile, F, fx, fy, fz);
-    if (next) {
-      const N = { tile: next.tile, rib: next.rib, u: next.end, dir: next.end === 0 ? 1 : -1, dl: 0, vs: 0, vd: 0, psi: R.psi };
-      const F2 = frameWorld(next.tile, next.rib, next.end, this.F2);
-      const v = this.vel;
-      if (F.kc > 1e-4 && F2.kc > 1e-4) {
-        // Tube -> tube : on garde la position sur la paroi (même au plafond).
-        N.dl = R.dl * Math.sign(F.rx * F2.rx + F.ry * F2.ry + F.rz * F2.rz || 1);
-      } else {
-        N.dl = clamp((px - F2.px) * F2.rx + (py - F2.py) * F2.ry + (pz - F2.pz) * F2.rz, -ROAD_HALF + 1, ROAD_HALF - 1);
-      }
-      this._cross(N, F2);
-      const B2 = this._basis(N, F2);
-      N.vs = v.x * B2.e1x + v.y * B2.e1y + v.z * B2.e1z;
-      N.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
-      const h = this.fwd;
-      N.psi = Math.atan2(h.x * B2.e2x + h.y * B2.e2y + h.z * B2.e2z, h.x * B2.e1x + h.y * B2.e1y + h.z * B2.e1z);
-      this.rib = N;
-      this._ribPlace(N);
-      return;
-    }
-    // Retour au sol : on garde la vitesse et le cap réels de la voiture.
-    this.rib = null;
-    this.ev.loopOut = true;
-    const h = this.fwd;
-    if (Math.hypot(h.x, h.z) > 0.2) this.yaw = Math.atan2(-h.x, -h.z);
-    this.prevYaw = this.yaw;
-    const gsx = this.gSign;
-    if (this.n.y * gsx > 0.6 && F.ny * gsx > 0.6) {
-      this.grounded = true;
-      this.vel.y = gsx > 0 ? Math.min(this.vel.y, 0) : Math.max(this.vel.y, 0);
-      this.n.x = 0; this.n.y = gsx; this.n.z = 0;
-    } else {
-      this.grounded = false;
-    }
-    this._updateFwd();
-  }
-
-  _matchRibbon(curTile, F, fx, fy, fz) {
-    const seen = new Set();
-    const px = F.px, py = F.py, pz = F.pz;
-    const cells = new Set();
-    for (const off of [0, 1.5]) {
-      // Les extrémités tombent pile sur une frontière de case : on regarde les cases voisines.
-      for (const dx of [-0.6, 0, 0.6]) {
-        for (const dz of [-0.6, 0, 0.6]) {
-          cells.add(Math.floor((px + fx * off + dx) / CELL) + ',' + Math.floor((pz + fz * off + dz) / CELL));
-        }
-      }
-    }
-    for (const c of cells) {
-      const [cx, cz] = c.split(',').map(Number);
-      for (const tile of this.track.tilesAt(cx, cz)) {
-        if (tile === curTile || seen.has(tile) || !isRibbon(tile) || this.broken.has(tile)) continue;
-        seen.add(tile);
-        const rib = ribbonOf(tile);
-        for (let end = 0; end < 2; end++) {
-          const G = frameWorld(tile, rib, end, this.F3);
-          const dist = Math.hypot(G.px - px, G.py - py, G.pz - pz);
-          if (dist > 3.5) continue;
-          const sg = end === 0 ? 1 : -1;
-          if (G.tx * sg * fx + G.ty * sg * fy + G.tz * sg * fz < 0.7) continue;
-          if (G.nx * F.nx + G.ny * F.ny + G.nz * F.nz < 0.6) continue;
-          return { tile, rib, end };
-        }
-      }
-    }
-    return null;
-  }
 }
+
+// Les familles de méthodes vivent dans physics/ ; elles s'ajoutent au prototype (`this` est la voiture).
+Object.assign(CarPhysics.prototype, wallMethods, obstacleMethods, ribbonMethods);

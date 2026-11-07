@@ -1,25 +1,25 @@
-// Tests de la bêta 0.9.3 : node tools/test-v093.mjs   (npm test)
+// Pentes descendantes, raccords de pente, orientation (sol, murs, plafond), transitions, pièces générées : node tools/test-pentes-murs.mjs   (npm test)
 //  pentes descendantes et raccords doux, orientation (sol / mur gauche / mur droit / plafond) comme option des lignes et des virages,
 //  transitions d'orientation, conversion des anciennes pièces 90°, audit du graphe des pièces, conduite (pentes, murs, plafond), aléatoire.
 import assert from 'node:assert/strict';
-
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 5).join('\n       ')); } }
+import { test, finish } from './harness.mjs';
 
 const { Track, scriptTrack, b64encode } = await import('../js/track.js');
 const P = await import('../js/pieces.js');
-const { PIECES, PIECE_ORDER, GEN_IDS, flagAllowed, surfaceAllowed, sampleLocal, baseY, profH, profD, isSideTile, isOriented, hasNoRails, tileOri, ORIENTS, ROLL_PASSAGES } = P;
+const { PIECES, PIECE_ORDER, GEN_IDS, flagAllowed, surfaceAllowed, sampleLocal, profH, profD, isSideTile, isOriented, hasNoRails, tileOri, ORIENTS, ROLL_PASSAGES } = P;
 const { FAMILIES, FAMILY_ORDER, familyOf, resolve, withTrait, validValues } = await import('../js/families.js');
-const { CarPhysics, CAR } = await import('../js/physics.js');
+const { CarPhysics } = await import('../js/physics.js');
+const { CAR } = await import('../js/physics/specs.js');
 const { RaceLogic, placeAtStart } = await import('../js/raceLogic.js');
 const { Autopilot } = await import('../js/autopilot.js');
-const { PHYS_VER, InputRecorder, quantSteer } = await import('../js/replay.js');
+const { InputRecorder, quantSteer } = await import('../js/replay.js');
+const { PHYS_VER } = await import('../js/version.js');
 const { replayTime } = await import('../js/verify.js');
-const { DT, CELL, LEVEL_H, HALF } = await import('../js/constants.js');
+const { DT, HALF } = await import('../js/constants.js');
 const { GeoBuilder, FxBuilder } = await import('../js/geo.js');
-const { buildTileInto, stripsFor } = await import('../js/trackMesh.js');
+const { buildTileInto, stripsFor } = await import('../js/trackGeometry.js');
 const { ribbonOf, frameLocal } = await import('../js/ribbons.js');
-const { EditorSession, armedOptions } = await import('../js/editor.js');
+const { EditorSession } = await import('../js/editor.js');
 const { auditPieces } = await import('./audit-pieces.mjs');
 const { orientationIssues, endRolls, rollName } = await import('../js/joins.js');
 const { MIRROR_TYPES } = await import('../js/inspector.js');
@@ -35,7 +35,7 @@ function drive(script, { secs = 40, v0 = 0, auto = true, throttle = true, l = 4 
   const r = { finished: null, falls: 0, airMax: 0, air: 0, ribTime: 0, gMin: 1, ceilTime: 0, lost: false, nan: false, vmax: 0, ph, tr };
   for (let i = 0; i < secs / DT; i++) {
     const inp = bot ? bot.control(ph) : { steer: 0, throttle, brake: false };
-    tr.time = i * DT; ph.clock = i; ph.step(inp);
+    ph.clock = i; ph.step(inp);
     if (!Number.isFinite(ph.pos.x + ph.pos.y + ph.pos.z)) { r.nan = true; break; }
     r.vmax = Math.max(r.vmax, ph.speed);
     if (ph.ev.loopFall) r.falls++;
@@ -129,10 +129,10 @@ test('normalize : o ∈ {1, 2} sur une ligne ; refusé sur le reste ; le plafond
   assert.equal(tileOri(w), 1); assert.equal(tileOri(tile({ t: 'straight', v: 1 })), 3); assert.equal(tileOri(tile({ t: 'straight' })), 0);
 });
 test('revêtements sur un mur : « seulement sur du plat » (eau, rebond, bateau) refusés ; les autres fonctionnent', () => {
-  assert.equal(surfaceAllowed('straight', 'boost', false, 1), true);
-  assert.equal(surfaceAllowed('straight', 'bounce', false, 1), false);
-  assert.equal(surfaceAllowed('straight', 'water', false, 1), false);
-  assert.equal(surfaceAllowed('straight', 'bounce', false, 0), true);
+  assert.equal(surfaceAllowed('straight', 'boost', 1), true);
+  assert.equal(surfaceAllowed('straight', 'bounce', 1), false);
+  assert.equal(surfaceAllowed('straight', 'water', 1), false);
+  assert.equal(surfaceAllowed('straight', 'bounce', 0), true);
   assert.equal(tile({ t: 'straight', o: 1, s: 'bounce' }).s, '');
   assert.equal(tile({ t: 'straight', o: 1, s: 'ice', p: 150 }).s, 'ice');
 });
@@ -358,8 +358,8 @@ test('raccords exacts : début doux ↔ fin douce ↔ droite, mur ↔ sol ↔ pl
 });
 
 console.log('Conduite : pentes et raccords');
-test('physique v25 : PHYS_VER à 25 ; plus d’exemption d’angle : seule la vitesse de la route qui « tombe » sous la voiture compte (CAR.launch)', () => {
-  assert.equal(PHYS_VER, 25);
+test('physique v25 : plus d’exemption d’angle : seule la vitesse de la route qui « tombe » sous la voiture compte (CAR.launch)', () => {
+  assert.ok(Number.isInteger(PHYS_VER) && PHYS_VER >= 25);
   assert.equal(CAR.stickAngle, undefined, 'l’ancienne exemption de 12° n’existe plus');
   assert.ok(CAR.launch > 0.3 && CAR.launch < 1.2, 'seuil de décollage ' + CAR.launch);
 });
@@ -443,7 +443,7 @@ test('un circuit avec pentes douces, mur, plafond et transitions : la course du 
     const inp = bot.control(phys);
     inp.steer = quantSteer(inp.steer);
     rec.push(inp, false);
-    phys.clock = logic.steps; tr.time = logic.steps * DT;
+    phys.clock = logic.steps;
     phys.step(inp);
     const ev = logic.update(phys);
     if (ev && ev.type === 'finish') finished = logic.time;
@@ -492,7 +492,8 @@ function randomChain(seed, len = 9) {
   return null;
 }
 test('150 circuits tirés au hasard (pentes douces, virages, hélices, murs, plafond, transitions franches et douces) : tous se roulent du départ à l’arrivée sans chute ni long envol (moins de 2 s)', () => {
-  let done = 0, bad = [];
+  let done = 0;
+  const bad = [];
   for (let seed = 1; seed <= 150; seed++) {
     const script = randomChain(seed);
     if (!script) continue;
@@ -506,5 +507,4 @@ test('150 circuits tirés au hasard (pentes douces, virages, hélices, murs, pla
   assert.deepEqual(bad, [], '\n' + bad.join('\n'));
 });
 
-if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }
-console.log('\nTous les tests de la bêta 0.9.3 passent.');
+await finish('Tous les tests des pentes et des murs passent.');

@@ -15,14 +15,28 @@ export const OBST = {
   sweeper:   { label: 'Balayeur', type: 'bar', period: 4, len: 9, r: 0.6, y: 1.2 },
   bumper:    { label: 'Bumper', type: 'post', period: 0, r: 1.8, h: 2.2, kick: 18 },
 };
-export const OBST_KINDS = Object.keys(OBST);
 export const isObstacle = (k) => !!OBST[k];
+
+// Index spatial des obstacles : cases de 20 m, clé numérique (aucune chaîne construite à chaque requête). Le circuit en tient un
+// (Track.obstacleGrid), reconstruit quand il change ; la physique le parcourt à chaque pas. Les seaux gardent l'ordre du circuit.
+export const OBSTACLE_CELL = 20;
+export const obstacleKey = (ix, iz) => ix * 1048576 + iz;
+export function buildObstacleGrid(list) {
+  const grid = new Map();
+  for (const d of list) {
+    if (!d || !Number.isFinite(d.x) || !Number.isFinite(d.z)) continue;
+    const k = obstacleKey(Math.floor(d.x / OBSTACLE_CELL), Math.floor(d.z / OBSTACLE_CELL));
+    const bucket = grid.get(k);
+    if (bucket) bucket.push(d); else grid.set(k, [d]);
+  }
+  return grid;
+}
 
 const TAU = Math.PI * 2;
 
 // Hauteur des piques escamotables (0 = rentrées, 1 = sorties) : 1,5 s dehors, 1,5 s dedans,
 // avec des transitions rapides.
-export function spikeLevel(def, t) {
+function spikeLevel(def, t) {
   if (!def.period) return 1;
   const u = ((t / def.period) % 1 + 1) % 1;
   const ramp = 0.07;
@@ -38,23 +52,23 @@ export function obstacleLocal(d, t, out) {
   const def = OBST[d.k];
   const ph = (d.ph || 0) * (def.period || 1);
   const tt = t + ph;
-  out.x = 0; out.y = 0; out.z = 0; out.vx = 0; out.vy = 0; out.vz = 0; out.a = 0; out.on = 1;
+  out.x = 0; out.y = 0; out.z = 0; out.vx = 0; out.vy = 0; out.vz = 0; out.a = 0; out.w = 0; out.on = 1;
   if (def.type === 'spike') {
     out.on = spikeLevel(def, tt);
   } else if (d.k === 'pendulum') {
     const w = TAU / def.period;
-    const th = def.amp * Math.sin(w * tt), dth = def.amp * w * Math.cos(w * tt);
-    out.x = Math.sin(th) * def.arm; out.y = def.pivot - Math.cos(th) * def.arm;
-    out.vx = Math.cos(th) * def.arm * dth; out.vy = Math.sin(th) * def.arm * dth;
+    const th = def.amp * dsin(w * tt), dth = def.amp * w * dcos(w * tt);
+    out.x = dsin(th) * def.arm; out.y = def.pivot - dcos(th) * def.arm;
+    out.vx = dcos(th) * def.arm * dth; out.vy = dsin(th) * def.arm * dth;
     out.a = th;
   } else if (d.k === 'hammer') {
     const w = TAU / def.period, th = w * tt;
-    out.x = Math.sin(th) * def.arm; out.y = def.pivot - Math.cos(th) * def.arm;
-    out.vx = Math.cos(th) * def.arm * w; out.vy = Math.sin(th) * def.arm * w;
+    out.x = dsin(th) * def.arm; out.y = def.pivot - dcos(th) * def.arm;
+    out.vx = dcos(th) * def.arm * w; out.vy = dsin(th) * def.arm * w;
     out.a = th;
   } else if (d.k === 'slider') {
     const w = TAU / def.period;
-    out.x = def.travel * Math.sin(w * tt); out.y = def.hy; out.vx = def.travel * w * Math.cos(w * tt);
+    out.x = def.travel * dsin(w * tt); out.y = def.hy; out.vx = def.travel * w * dcos(w * tt);
   } else if (d.k === 'sweeper') {
     const w = TAU / def.period;
     out.a = w * tt; out.y = def.y; out.w = w;
@@ -62,17 +76,9 @@ export function obstacleLocal(d, t, out) {
   return out;
 }
 
-// Passage repère local -> monde (rotation ry autour de y, échelle s, position).
-export function toWorld(d, lx, ly, lz, out) {
-  const c = Math.cos(d.ry || 0), s = Math.sin(d.ry || 0), k = d.s || 1;
-  out.x = d.x + (lx * c + lz * s) * k;
-  out.y = d.y + ly * k;
-  out.z = d.z + (-lx * s + lz * c) * k;
-  return out;
-}
 
 export function toLocalObs(d, wx, wy, wz, out) {
-  const c = Math.cos(d.ry || 0), s = Math.sin(d.ry || 0), k = d.s || 1;
+  const c = dcos(d.ry || 0), s = dsin(d.ry || 0), k = d.s || 1;
   const dx = (wx - d.x) / k, dz = (wz - d.z) / k;
   out.x = dx * c - dz * s;
   out.y = (wy - d.y) / k;
@@ -83,9 +89,11 @@ export function toLocalObs(d, wx, wy, wz, out) {
 // Rayon englobant (m) pour un tri rapide.
 export function obstacleRadius(d) {
   const def = OBST[d.k], k = d.s || 1;
-  if (def.type === 'spike') return (Math.hypot(def.hx, def.hz) + 1) * k;
+  if (def.type === 'spike') return (hypot2(def.hx, def.hz) + 1) * k;
   if (def.type === 'ball') return (def.arm + def.r + 1) * k + 2;
-  if (def.type === 'box') return (def.travel + Math.hypot(def.hx, def.hz) + 1) * k;
+  if (def.type === 'box') return (def.travel + hypot2(def.hx, def.hz) + 1) * k;
   if (def.type === 'bar') return (def.len + def.r + 1) * k;
   return (def.r + 1) * k;
 }
+
+import { dcos, dsin, hypot2 } from './dmath.js';

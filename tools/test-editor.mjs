@@ -62,7 +62,7 @@ const add = (track, t, x, z, extra = {}) => track.add({ t, x, z, l: 0, r: 0, s: 
 }
 // 6. Gros circuit : 6000 pièces, pas de dépassement de pile, rapide
 {
-  const { self, track, calls } = mk('fill-surf:ice', [0, 0]);
+  const { self, track } = mk('fill-surf:ice', [0, 0]);
   for (let x = 0; x < 80; x++) for (let z = 0; z < 75; z++) add(track, 'straight', x, z);
   const t0 = performance.now(); self._floodFill(); const dt = performance.now() - t0;
   assert.equal(track.tiles.filter((t) => t.s === 'ice').length, 6000);

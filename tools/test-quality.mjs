@@ -1,12 +1,10 @@
 // Tests de la qualité graphique : node tools/test-quality.mjs   (npm test)
 import assert from 'node:assert/strict';
 import * as THREE from '../js/vendor/three.module.min.js';
+import { test, finish } from './harness.mjs';
 import {
   PROFILES, PROFILE_ORDER, Benchmark, frameStats, hardwareHints, pixelRatioFor, wantAntialias, stepDown, swapMaterials, QualityManager,
 } from '../js/quality.js';
-
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 5).join('\n       ')); } }
 
 // Simule l'animation du menu : fpsOf(profil) i/s, avec des à-coups éventuels (instants en ms → durée ajoutée).
 function simulate(fpsOf, { start = 'ultra', hitches = {}, active = () => true, limit = 120000 } = {}) {
@@ -111,7 +109,7 @@ test('une machine lente n’est PAS sauvée par les à-coups ignorés : elle éc
   assert.equal(result.profile, 'high');
 });
 test('pause : fenêtre ouverte / onglet masqué = le temps ne compte pas ; la détection reprend ensuite', () => {
-  let paused = true;
+  const paused = true;
   const { result, t } = simulate(() => 60, { start: 'ultra', active: (t) => !(t > 2000 && t < 20000) });
   assert.equal(result.profile, 'ultra'); assert.ok(t > 20000, 'rien n’a été conclu pendant la pause'); void paused;
 });
@@ -191,5 +189,4 @@ test('filet de sécurité en course : sous 42 i/s pendant 5 s on descend d’un 
   delete globalThis.document;
 });
 
-console.log(failures ? `\n${failures} test(s) en échec` : '\nTous les tests de qualité passent.');
-process.exit(failures ? 1 : 0);
+await finish('Tous les tests de qualité passent.');

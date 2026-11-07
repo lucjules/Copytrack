@@ -1,8 +1,6 @@
 // Régressions des corrections de l'audit : node tools/test-fixes.mjs   (npm test)
 import assert from 'node:assert/strict';
-
-let failures = 0;
-const test = (name, fn) => { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.message).split('\n').join('\n       ')); } };
+import { test, finish } from './harness.mjs';
 
 // Stockage du navigateur simulé (records, profil).
 const m = new Map();
@@ -14,7 +12,8 @@ const { CarPhysics } = await import('../js/physics.js');
 const { RaceLogic, placeAtStart } = await import('../js/raceLogic.js');
 const { CELL, LEVEL_H } = await import('../js/constants.js');
 const { saveRecord, getRecord, clearRecords } = await import('../js/storage.js');
-const { decodeInputs, MAX_REPLAY_STEPS } = await import('../js/replay.js');
+const { decodeInputs } = await import('../js/replay.js');
+const { MAX_RUN_STEPS: MAX_REPLAY_STEPS } = await import('../js/constants.js');
 const { trackForKey, replayTime } = await import('../js/verify.js');
 const { mergeSaves } = await import('../js/cloudsave.js');
 const { rewardCoins, profile } = await import('../js/profile.js');
@@ -83,7 +82,7 @@ test('défi du jour : seules les dates plausibles sont acceptées', () => {
 console.log('Dalles solides');
 test('un deltaplane qui monte sous une dalle ne la traverse pas, ni la face d\'une plate-forme', () => {
   const tr = scriptTrack('t', 'start S U S4 finish');
-  const phys = new CarPhysics(tr); const { DT } = { DT: 1 / 120 };
+  const phys = new CarPhysics(tr);
   const fly = (x, y, z, yaw, vy, brake) => {
     phys.place(x, y, z, yaw, 1); phys.vehicle = 'glider'; phys.grounded = false; phys.graceT = 0; phys.hazardGrace = 0;
     phys.pos.y = y; phys.prev.y = y; phys.vel.x = -Math.sin(yaw) * 35; phys.vel.z = -Math.cos(yaw) * 35; phys.vel.y = vy;
@@ -99,5 +98,4 @@ test('un deltaplane qui monte sous une dalle ne la traverse pas, ni la face d\'u
   assert.equal(fly(12, 3, -8 * CELL, Math.PI, 3, false), 0, 'de face');
 });
 
-if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }
-console.log('\nTous les tests des corrections passent.');
+await finish('Tous les tests des corrections passent.');

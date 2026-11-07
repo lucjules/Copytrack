@@ -15,10 +15,11 @@
 //  ring              : anneau flottant (turbo ou checkpoint aérien)
 // Une pièce line/arc peut aussi être posée « à l'envers » (drapeau v) : elle
 // devient alors un ruban au plafond.
-import { CELL, HALF, LEVEL_H, ROAD_TOP, LOOP_R, LOOP_LANE, ROAD_HALF, RAIL_W, SURF_PHYS } from './constants.js';
+import { CELL, HALF, LEVEL_H, ROAD_TOP, LOOP_R, LOOP_LANE, ROAD_HALF, RAIL_W, SURF_PHYS, WORLD_SCALE } from './constants.js';
+import { datan2, dcos, dsin } from './dmath.js';
 
 // 0.9.11 : les pièces ne sont plus écrites en mètres fixes mais en proportion de la case (CELL = 24 m avant la 0.9.11, 32 m depuis) : K = 1 reproduit l'ancien monde.
-const K = CELL / 24;
+const K = WORLD_SCALE;
 
 export const PIECES = {
   straight:   { label: 'Ligne droite', kind: 'line', size: 1, rise: 0 },
@@ -92,14 +93,12 @@ export const PIECES = {
   crv1:       { label: 'Courbe · inclinaison 1', kind: 'line', size: 1, rise: 1, curv: 1 },
   crv2:       { label: 'Courbe · inclinaison 2', kind: 'line', size: 1, rise: 2, curv: 1 },
   crv4:       { label: 'Courbe · inclinaison 4', kind: 'line', size: 1, rise: 4, curv: 1 },
-  // Pièces à 90° (0.9.2) : la route bascule autour de son axe jusqu'à un plan VERTICAL (route « sur le côté »).
-  // La gravité ne change pas : à vitesse insuffisante la voiture glisse le long du plan et tombe par le bord (pas de bordures).
-  // `side` : 1 transition, 2 ligne droite (l'appui vient en partie de la vitesse, voir physics.js) ; `pivot` : côté du plan (-1 gauche, 1 droite) ;
-  // `below` : niveaux réservés SOUS la pièce (la moitié basse du plan descend de 9 m : la pièce ne se pose donc pas au niveau 0 ou 1).
-  rollL:      { label: 'Transition côté ↰', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, side: 1, pivot: -1, noRails: true },
-  rollR:      { label: 'Transition côté ↱', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, side: 1, pivot: 1, noRails: true },
-  sideL:      { label: 'Ligne droite côté ↰', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, side: 2, pivot: -1, noRails: true },
-  sideR:      { label: 'Ligne droite côté ↱', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, side: 2, pivot: 1, noRails: true },
+  // Anciennes pièces à 90° (0.9.2) : elles ne sont plus posées (Track.normalize les convertit en pièce + orientation, voir LEGACY_TILE) ; leurs
+  // définitions ne servent qu'à garder leur numéro dans PIECE_ORDER. `below` : niveaux réservés SOUS la pièce (la moitié basse du plan descend de 9 m).
+  rollL:      { label: 'Transition côté ↰', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, noRails: true },
+  rollR:      { label: 'Transition côté ↱', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, noRails: true },
+  sideL:      { label: 'Ligne droite côté ↰', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, noRails: true },
+  sideR:      { label: 'Ligne droite côté ↱', kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, noRails: true },
 };
 
 // ---- 0.9.3 : pentes descendantes, raccords doux de pente, virages descendants, transitions d'orientation --------------------------
@@ -107,7 +106,7 @@ export const PIECES = {
 //   l : droite (pente constante)               i : entrée douce — plate au départ, de plus en plus raide (la pente finale vaut 2·rise / longueur)
 //   o : sortie douce — raide au départ, plate à l'arrivée   s : en S — plate aux deux bouts (raccord entre deux niveaux)
 // Une « entrée douce » de rise ½ / 1 / 2 se raccorde donc à une droite de pente 1 / 2 / 4 ; la « sortie douce » correspondante la ramène à plat.
-export const V_PROFILES = {
+const V_PROFILES = {
   l: { H: (t) => t, D: () => 1 },
   i: { H: (t) => t * t, D: (t) => 2 * t },
   o: { H: (t) => 2 * t - t * t, D: (t) => 2 - 2 * t },
@@ -225,9 +224,6 @@ export const SURFACE_ORDER = ['', 'ice', 'boost', 'bounce', 'magnet', 'drift', '
 // s'y réfèrent par numéro). « tread » et « invert » sont d'anciens doublons : on sait encore les lire, on ne les propose plus.
 export const SURFACE_CODES = ['', 'ice', 'boost', 'bounce', 'sand', 'magnet', 'mud', 'drift', 'slow', 'wind', 'gravity', 'moto', 'water', 'boat', 'glider', 'flip', 'conveyor', 'tread', 'spring', 'glass', 'powder', 'reverse', 'invert', 'cut'];
 export const SURFACE_ALIAS = { tread: 'conveyor', invert: 'reverse' };
-// Revêtements supprimés (Phase 3) : leurs numéros restent réservés dans SURFACE_CODES, et les anciens circuits qui les
-// utilisaient se lisent avec une route normale à leur place.
-export const REMOVED_SURFACES = new Set(['sand', 'mud']);
 // Plaques de transformation : véhicule obtenu (repasser sur la même plaque ramène la voiture).
 export const PLATES = { moto: 'moto', boat: 'boat', glider: 'glider' };
 
@@ -256,7 +252,7 @@ export function paramText(s, p) {
     case 'spring': { const k = ((v - 100) / 100) * SURF_PHYS.spring * 3.6; return Math.abs(k) < 0.5 ? 'nulle' : `${k > 0 ? '→' : '←'} ${Math.round(Math.abs(k))} km/h`; }
     case 'glass': return `${fmt1(glassSeconds(v))} s`;
     case 'boost': return `jusqu'à ${Math.round((SURF_PHYS.maxSpeed + (SURF_PHYS.boostSpeed - SURF_PHYS.maxSpeed) * (v / 100)) * 3.6)} km/h`;
-    case 'bounce': return `${fmt1((SURF_PHYS.bounce * (v / 100)) ** 2 / (2 * SURF_PHYS.gravity))} m`;
+    case 'bounce': { const vb = SURF_PHYS.bounce * (v / 100); return `${fmt1(vb * vb / (2 * SURF_PHYS.gravity))} m`; }
     case 'gravity': return `${fmt1(SURF_PHYS.gravity * (v / 100))} m/s²`;
     default: return `${v} %`;
   }
@@ -268,10 +264,10 @@ export function isRibbonKind(type) {
 }
 
 // Route « sur le côté » : roulée à 90° autour de son axe (mur gauche / droit, ou transition d'orientation). La gravité ne change pas :
-// l'appui vient de la vitesse (voir physics.js, SIDE_HOLD). Les anciens types de la 0.9.2 (side) en font partie.
+// l'appui vient de la vitesse (voir physics.js, SIDE_HOLD).
 export function isSideTile(tile) {
   const p = PIECES[tile.t];
-  return !!(tile.o || p.side || p.roll);
+  return !!(tile.o || p.roll);
 }
 
 // Une ligne ou un virage posé sur un mur (tile.o) se parcourt en mode ruban, comme une transition.
@@ -297,6 +293,50 @@ export function isRibbon(tile) {
 // Sans bordures : choix de la pièce, pièces à plan vertical, ou route sur un mur (les rebords sortiraient sur le côté).
 export const hasNoRails = (tile) => !!(tile.nb || tile.o || PIECES[tile.t].noRails);
 
+// Options qui ne vont pas ensemble : { drapeau : [drapeaux incompatibles avec lui] } (relation symétrique ; le mouvement et le tunnel, eux, cohabitent).
+// C'est la SEULE description de ces exclusions ; trois comportements s'en déduisent :
+//   - flagAllowed : sur une pièce où l'un est déjà posé, l'autre est refusé ;
+//   - Track.toggleFlag : le plafond (v) et l'orientation (o) retirent les incompatibles (le dernier choix l'emporte) ;
+//   - armOption : avant la pose, chaque option choisie retire les incompatibles.
+// Cas particulier : un checkpoint de valeur 2 (l'ancien anneau aérien) est aussi incompatible avec le plafond.
+export const OPTION_CONFLICTS = {
+  v: ['o', 'tn', 'mv', 'tb'],
+  o: ['v', 'tn', 'mv', 'cp', 'tb'],
+  tn: ['v', 'o', 'cp', 'tb'],
+  mv: ['v', 'o', 'cp', 'tb'],
+  cp: ['o', 'tn', 'mv', 'tb'],
+  tb: ['v', 'o', 'tn', 'mv', 'cp'],
+};
+const hasConflict = (flag, tile) => !!tile && OPTION_CONFLICTS[flag].some((f) => tile[f]);
+
+// Retire de `opts` (une pièce ou un jeu d'options) tout ce qui est incompatible avec `flag` : c'est ce que fait « le dernier choix l'emporte ».
+// Un mouvement retiré perd aussi ses réglages (vitesse, amplitude) quand l'objet en porte.
+export function clearConflicts(opts, flag) {
+  for (const f of OPTION_CONFLICTS[flag] || []) {
+    opts[f] = 0;
+    if (f === 'mv' && 'ms' in opts) { opts.ms = 0; opts.ma = 0; }
+  }
+  if (flag === 'v' && opts.cp === 2) opts.cp = 0;            // l'anneau aérien ne va pas au plafond
+  if (flag === 'cp' && opts.cp === 2) opts.v = 0;
+  return opts;
+}
+
+// Options « armées » dans l'éditeur avant la pose (elles s'ajoutent à la pièce choisie, aperçu compris) : bascule l'option `flag` (valeur `val` pour les
+// choix exclusifs : orientation, checkpoint, thème, mouvement) et retire ce qui lui est incompatible. Renvoie un nouvel objet.
+export function armOption(opts, flag, val) {
+  const o = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ...opts };
+  if (flag === 'o') {
+    // Orientation : sol, mur gauche (1), mur droit (2) ; le plafond est le drapeau v. Un seul choix à la fois.
+    o.o = val === 0 || o.o === val ? 0 : val;
+    if (val === 0) o.v = 0;                                   // « Sol » : remet aussi la pièce à l'endroit
+  } else {
+    const bool = flag === 'v' || flag === 'nb' || flag === 'tn';
+    if (bool) o[flag] = o[flag] ? 0 : 1; else o[flag] = o[flag] === val ? 0 : val;
+  }
+  if (o[flag]) clearConflicts(o, flag);
+  return o;
+}
+
 // Drapeaux possibles : v (à l'envers), nb (sans bordures), tn (tunnel), mv (mouvement 1/2/3),
 // cp (checkpoint : 1 portique, 2 anneau aérien), th (thème visuel).
 export function flagAllowed(type, flag, tile = null, val = 0) {
@@ -310,21 +350,21 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
   if (p.kind === 'ring' || p.kind === 'fork') return false;
   // 0.9.3 : orientation « mur gauche / droit » : une ligne ou un virage ordinaire peut être posé sur un mur (val 1 = gauche, 2 = droit).
   // Une route sur un mur n'a ni tunnel, ni checkpoint, ni anneau, ni mouvement, ni bordures ; le plafond (v) se choisit à part.
-  if (flag === 'o') return lineLike && !p.special && !p.noRails && !(tile && (tile.v || tile.tn || tile.cp || tile.tb || tile.mv));
+  if (flag === 'o') return lineLike && !p.special && !p.noRails && !hasConflict('o', tile);
   if (flag === 'nb') return !p.noRails && (lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube')));
-  if (flag === 'tn') return lineLike && !p.special && !(tile && (tile.v || tile.o || tile.cp || tile.tb));
+  if (flag === 'tn') return lineLike && !p.special && !hasConflict('tn', tile);
   // Pièce mobile : route « simple » (droite, virage, pente, plateforme), pas à l'envers, pas de checkpoint dessus.
-  if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !(tile && (tile.v || tile.o || tile.cp || tile.tb));
+  if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !hasConflict('mv', tile);
   // Checkpoint en option : sur une route plate (ligne ou virage) ; l'anneau aérien seulement sur une ligne droite à l'endroit.
   if (flag === 'cp') {
     // 0.9.2 : le checkpoint est une simple case à cocher (portique sur route, balise sur plateforme). L'ancien anneau aérien (val 2)
     // n'est plus proposé ; les anciens circuits qui l'utilisent continuent de fonctionner (voir cpKind).
-    if (!((lineLike || p.kind === 'area') && !p.special && !p.rise) || (tile && (tile.mv || tile.tn || tile.tb || tile.o))) return false;
+    if (!((lineLike || p.kind === 'area') && !p.special && !p.rise) || hasConflict('cp', tile)) return false;
     if (val === 2) return p.kind === 'line' && !(tile && tile.v);
     return true;
   }
   // Anneau turbo en option (Phase 3) : comme le checkpoint aérien, sur une ligne droite plate à l'endroit.
-  if (flag === 'tb') return p.kind === 'line' && !p.special && !p.rise && !(tile && (tile.v || tile.o || tile.mv || tile.tn || tile.cp));
+  if (flag === 'tb') return p.kind === 'line' && !p.special && !p.rise && !hasConflict('tb', tile);
   return false;
 }
 
@@ -376,7 +416,7 @@ export const THEMES = [
   { id: 3, label: 'Roche' },
 ];
 
-export function surfaceAllowed(type, s, v = false, o = 0) {
+export function surfaceAllowed(type, s, o = 0) {
   if (!s) return true;
   const p = PIECES[type];
   const S = SURFACES[s];
@@ -417,7 +457,7 @@ export function toLocal(tile, wx, wz, out) {
 }
 
 // Monde -> local (vecteur)
-export function toLocalVec(r, dx, dz, out) {
+function toLocalVec(r, dx, dz, out) {
   switch (r & 3) {
     case 0: out.lx = dx; out.lz = dz; break;
     case 1: out.lx = dz; out.lz = -dx; break;
@@ -486,7 +526,7 @@ export function sampleLocal(tile, lx, lz, out) {
     const dx = mir * lx - a.cx, dz = lz - a.cz;
     const dist = Math.sqrt(dx * dx + dz * dz) || 1e-6;
     out.d = dist - a.R; out.gx = (mir * dx) / dist; out.gz = dz / dist;
-    let ang = Math.atan2(dz, dx);
+    let ang = datan2(dz, dx);
     if (ang < 0) ang += Math.PI * 2;
     out.along = (ang - Math.PI) / (Math.PI / 2);
     if (p.rise) {
@@ -497,7 +537,7 @@ export function sampleLocal(tile, lx, lz, out) {
       out.h = base + rise * t;
       const k = rise / ((Math.PI / 2) * dist);
       const inv = 1 / Math.sqrt(1 + k * k);
-      const tx = -Math.sin(ang), tz = Math.cos(ang);
+      const tx = -dsin(ang), tz = dcos(ang);
       out.nx = -mir * k * tx * inv; out.ny = inv; out.nz = -k * tz * inv;
     }
   } else if (p.kind === 'fork') {
@@ -538,7 +578,7 @@ function forkSample(p, lx, lz, out) {
   const da = lx - xa, db = (lx - xb) * cb;
   const sep = forkSep(t);
   const between = (lx - xa) * (lx - xb) < 0;
-  if (between && sep < 2 * 9 + 0.05) {
+  if (between && sep < 2 * ROAD_HALF + 0.05) {
     // Les deux chaussées se touchent encore : tout l'entre-deux est de la route, sans muret.
     out.d = 0; out.gx = 1; out.gz = 0;
   } else if (Math.abs(da) <= Math.abs(db)) {

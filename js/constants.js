@@ -1,8 +1,7 @@
-// Dimensions du monde (en mètres).
-// v1.1 : pistes élargies (14 -> 18 m) et cases agrandies (20 -> 24 m).
-// Les circuits étant stockés en positions de grille, tous les anciens
-// circuits sont convertis automatiquement.
-export const VERSION = 'bêta 0.9.11';   // à incrémenter à chaque modification livrée : 0.9.1, 0.9.2, 0.9.3…
+// Dimensions du monde (en mètres) : case de 32 m, route de 24 m de large, niveau de 6,4 m.
+// Les circuits sont stockés en positions de grille et les pièces sont écrites en proportion de la case (voir pieces.js) :
+// un changement d'échelle (la 0.9.11 est passée de 24 à 32 m) agrandit donc tous les circuits sans les convertir. Il impose en revanche de
+// repasser sur chaque valeur « en mètres » écrite en dur ailleurs ; tools/test-scale.mjs en vérifie quelques-unes par homothétie.
 export const CELL = 32;            // taille d'une case de grille
 export const HALF = CELL / 2;
 export const LEVEL_H = 6.4;        // hauteur d'un niveau (pentes identiques à la v1.0)
@@ -29,12 +28,26 @@ export const SURF_PHYS = {
 // Nombre maximal de décorations par circuit.
 export const MAX_DECOS = 500;
 
+// Facteur d'échelle du monde par rapport à la case de 24 m d'origine : les pièces sont écrites en proportion de la case (rayon d'un looping,
+// ouverture d'un virage…), pas en mètres fixes. WORLD_SCALE = 1 reproduit l'ancien monde.
+export const WORLD_SCALE = CELL / 24;
+
 // Looping : rayon et décalage latéral (une demi-case de chaque côté).
-export const LOOP_R = 12 * (CELL / 24);
+export const LOOP_R = 12 * WORLD_SCALE;
 export const LOOP_LANE = HALF;
 
 // Pas de simulation fixe.
 export const DT = 1 / 120;
+
+// Limites partagées par le jeu, les salons multijoueurs et la fonction serveur de vérification (un seul endroit pour les changer).
+export const MAX_RUN_SECONDS = 600;                        // une course dure 10 minutes au plus : au-delà, un enregistrement ou un temps est refusé
+export const MAX_RUN_STEPS = Math.round(MAX_RUN_SECONDS / DT);
+export const MAX_TRACK_CODE_CHARS = 400000;                // taille maximale d'un code de circuit reçu ou transmis
+export const MAX_INPUTS_CHARS = 400000;                    // taille maximale d'un enregistrement de commandes
+export const OFF_TRACK_RESPAWN_S = 0.5;                    // temps passé hors piste avant la réapparition automatique
+
+// Véhicules possibles (le véhicule de départ d'un circuit, les plaques de transformation, les paquets réseau).
+export const VEHICLES = ['car', 'moto', 'boat', 'glider'];
 
 // Directions de grille : 0 = nord (-z), 1 = est (+x), 2 = sud (+z), 3 = ouest (-x).
 export const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];

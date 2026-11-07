@@ -1,4 +1,4 @@
-// Tests de la Phase 2 : node tools/test-phase2.mjs   (npm test)
+// Familles de pièces, schéma JSON du circuit, courbes, options, mouvements, revêtements : node tools/test-familles.mjs   (npm test)
 //  - familles et caractéristiques de pièces ; anciens codes toujours lisibles ; nouveaux champs optionnels ;
 //  - géométrie des pièces paramétriques (courbes montantes, très grand virage, loopings ×2 / ×3) ;
 //  - options : checkpoint (portique / anneau), thème, couleurs, 2e revêtement de bifurcation ;
@@ -6,10 +6,10 @@
 //  - conduite du pilote automatique sur un circuit qui utilise les nouvelles pièces.
 import assert from 'node:assert/strict';
 import { GeoBuilder } from '../js/geo.js';
-import { buildTileInto, stripsFor, styleFor } from '../js/trackMesh.js';
+import { buildTileInto, stripsFor, styleFor } from '../js/trackGeometry.js';
 import { Track, scriptTrack, b64encode } from '../js/track.js';
 import {
-  PIECES, PIECE_ORDER, sampleLocal, baseY, flagAllowed, cpKind, MOVER, moverParams, clampMover, profH, profD,
+  PIECES, PIECE_ORDER, sampleLocal, baseY, flagAllowed, cpKind, moverParams, clampMover, profH, profD,
 } from '../js/pieces.js';
 import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, isFamilyMember } from '../js/families.js';
 import { CarPhysics } from '../js/physics.js';
@@ -18,10 +18,10 @@ import { Autopilot } from '../js/autopilot.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
 import { DT, CELL, LEVEL_H, HALF, ROAD_HALF } from '../js/constants.js';
 import { arrowPose, retypePlacement, traitsOf } from '../js/tileInfo.js';
-import { EditorSession, armedOptions } from '../js/editor.js';
+import { EditorSession } from '../js/editor.js';
+import { armOption as armedOptions } from '../js/pieces.js';
+import { test, finish } from './harness.mjs';
 
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 6).join('\n       ')); } }
 const tile = (o) => Track.normalize({ x: 0, z: 0, l: 0, r: 0, ...o });
 
 console.log('Familles et caractéristiques');
@@ -357,7 +357,7 @@ test('Rotation : une voiture posée sur la plateforme tourne avec elle (cap et p
   phys.place(cx + 6, baseY(p) + 0.4, cz, 0, 1);
   const steps = Math.round(4 / DT);
   const yaw0 = phys.yaw;
-  for (let i = 0; i < steps; i++) { tr.time = i * DT; phys.clock = i; phys.step({ throttle: 0, brake: 0, steer: 0, handbrake: false, boost: false }); }
+  for (let i = 0; i < steps; i++) { phys.clock = i; phys.step({ throttle: 0, brake: 0, steer: 0, handbrake: false, boost: false }); }
   const A = (Math.PI * 2 * 4) / 12;
   const r = Math.hypot(phys.pos.x - cx, phys.pos.z - cz);
   const ang = Math.atan2(-(phys.pos.z - cz), phys.pos.x - cx);        // angle de la voiture autour du pivot (x vers z négatif = sens trigo de la vue de dessus)
@@ -373,15 +373,13 @@ test('Rotation : la route tournante porte sa surface (surfaceAt) là où elle es
   const p = tr.add({ t: 'straight', x: 0, z: 0, l: 0, r: 0, mv: 3, s: 'boost' });
   const cx = HALF, cz = HALF;
   const o = {}, s = {};
-  tr.time = 3;                              // 90° (quart de tour)
-  tr.moverOffset(p, tr.time, o);
+  const T = 3;                              // chrono de la course : 90° (quart de tour)
+  tr.moverOffset(p, T, o);
   // Au repos la route couvre x ∈ [-9, 9] autour du centre (axe nord-sud) ; après un quart de tour elle est est-ouest.
-  tr.time = 0;
-  tr.surfaceAt(cx, 1, cz + HALF - 1, s); assert.equal(s.type, 'road', 'au repos la route va du nord au sud');
-  tr.surfaceAt(cx + ROAD_HALF + 2, 1, cz, s); assert.equal(s.type, 'ground');
-  tr.time = 3;
-  tr.surfaceAt(cx + ROAD_HALF + 2, 1, cz, s); assert.equal(s.type, 'road', 'après un quart de tour elle va de l’ouest à l’est');
-  tr.surfaceAt(cx, 1, cz + ROAD_HALF + 2, s); assert.equal(s.type, 'ground', 'au nord/sud, la route est partie');
+  tr.surfaceAt(cx, 1, cz + HALF - 1, s, 1.6, null, 0); assert.equal(s.type, 'road', 'au repos la route va du nord au sud');
+  tr.surfaceAt(cx + ROAD_HALF + 2, 1, cz, s, 1.6, null, 0); assert.equal(s.type, 'ground');
+  tr.surfaceAt(cx + ROAD_HALF + 2, 1, cz, s, 1.6, null, T); assert.equal(s.type, 'road', 'après un quart de tour elle va de l’ouest à l’est');
+  tr.surfaceAt(cx, 1, cz + ROAD_HALF + 2, s, 1.6, null, T); assert.equal(s.type, 'ground', 'au nord/sud, la route est partie');
   assert.equal(o.a > 0, true);
 });
 test('Bifurcation à deux revêtements : la voie déportée a le sien (physique)', () => {
@@ -399,7 +397,6 @@ test('Bifurcation à deux revêtements : la voie déportée a le sien (physique)
   tr.surfaceAt(8 * CELL + 36, 1, 2, o); assert.equal(o.mod, 'drift', 'sans s2, toute la pièce garde s');
   void f; void g; void h;
 });
-
 
 console.log('Éditeur : pose combinée pièce + options, inspecteur');
 function mkEd(tool, opts = {}) {
@@ -532,7 +529,6 @@ function drive(track, maxTime = 150) {
   for (let i = 0; i < steps; i++) {
     const inp = bot.control(phys);
     phys.clock = logic.steps;
-    track.time = logic.steps * DT;
     phys.step(inp);
     const ev = logic.update(phys);
     if (ev && ev.type === 'finish') return { ok: true, time: logic.time, respawns, cps: logic.collected.size };
@@ -567,5 +563,4 @@ test('checkpoints en option (portique, anneau, virage) : indispensables pour fin
   assert.equal(new RaceLogic(tr).cps.length, 3);
 });
 
-console.log(failures ? `\n${failures} test(s) en échec` : '\nTous les tests de la Phase 2 passent.');
-process.exit(failures ? 1 : 0);
+await finish('Tous les tests de la Phase 2 passent.');

@@ -1,18 +1,18 @@
-// Tests de la bêta 0.9.2 : node tools/test-v092.mjs   (npm test)
+// Pot de peinture (zones fermées, remplissage), bifurcation à deux revêtements, raccourcis de l'éditeur : node tools/test-pot-peinture.mjs   (npm test)
 //  pot de peinture (zones vides fermées), bifurcation, plaque bateau, pièces à 90°, checkpoint sur plateforme, Ctrl+D,
 //  raccourcis, décorations (véhicules, Noël, Halloween, lumières), traînée.
 import assert from 'node:assert/strict';
-
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 4).join('\n       ')); } }
+import { test, finish } from './harness.mjs';
 
 const { Track } = await import('../js/track.js');
 const { PIECES, PIECE_ORDER, cpKind, flagAllowed, sampleLocal, isRibbon, hasNoRails } = await import('../js/pieces.js');
 const { enclosedRegion, tileRegion } = await import('../js/editorTools.js');
-const { EditorSession, PALETTE_ORDER, TOOLS } = await import('../js/editor.js');
+const { EditorSession } = await import('../js/editor.js');
+const { PALETTE_ORDER, TOOLS } = await import('../js/editor/shared.js');
 const { Inspector } = await import('../js/inspector.js');
 const { KEY_ACTIONS } = await import('../js/input.js');
-const { CarPhysics, SIDE_HOLD } = await import('../js/physics.js');
+const { CarPhysics } = await import('../js/physics.js');
+const { SIDE_HOLD } = await import('../js/physics/specs.js');
 const { RaceLogic, placeAtStart } = await import('../js/raceLogic.js');
 const { CELL, HALF, LEVEL_H, DT } = await import('../js/constants.js');
 const { DECO_ORDER, DECO_CATS, DECO_LABELS, LIGHT_DECOS } = await import('../js/decoData.js');
@@ -281,5 +281,4 @@ test('le deltaplane vire franchement : plus de 1,2 rad/s au volant à fond, dès
   assert.ok(turn(12) > 0.8, 'à 12 m/s : ' + turn(12));
 });
 
-if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }
-console.log('\nTous les tests de la bêta 0.9.2 passent.');
+await finish('Tous les tests du pot de peinture passent.');

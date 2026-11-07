@@ -1,4 +1,4 @@
-// Audit du graphe des pièces : node tools/audit-pieces.mjs   (utilisé aussi par tools/test-v093.mjs)
+// Audit du graphe des pièces : node tools/audit-pieces.mjs   (utilisé aussi par tools/test-pentes-murs.mjs)
 //
 // Pour chaque pièce de route (ligne, virage, ruban) et chaque orientation (sol, mur gauche, mur droit) on relève, dans le repère de la pièce,
 // l'état de la route à l'ENTRÉE et à la SORTIE : pente (tan de l'inclinaison), roulis ψ autour de l'axe (0 sol, ±90° mur, ±180° plafond),

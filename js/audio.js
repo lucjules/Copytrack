@@ -1,4 +1,4 @@
-// Effets sonores synthétisés (Web Audio API) ; la musique est un MP3 en boucle (voir music.js).
+// Effets sonores synthétisés (Web Audio API). La musique est gérée à part (voir music.js).
 import { Music } from './music.js';
 
 export class GameAudio {

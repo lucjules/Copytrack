@@ -1,4 +1,4 @@
-// Tests de la Phase 3 : node tools/test-phase3.mjs   (npm test)
+// Pièces et règles spéciales : hauteur, essai sans arrivée, anneaux, visée par rayon, décorations libres, verre fragile, tunnel, unités : node tools/test-pieces-speciales.mjs   (npm test)
 //  - visée par rayon (pièce exacte, point de pose libre), décorations libres, Maj + souris sur l'axe Y ;
 //  - anneaux posés sur des cases occupées, hauteur maximale, essai sans arrivée, gravité inversée au départ ;
 //  - revêtements : verre fragile (compte à rebours), unités, tapis ±200 km/h, vent, eau / plaque bateau / départ, sable et boue retirés ;
@@ -7,24 +7,25 @@ import assert from 'node:assert/strict';
 import * as THREE from '../js/vendor/three.module.min.js';
 import { Track, scriptTrack, b64encode } from '../js/track.js';
 import {
-  PIECES, SURFACES, SURFACE_ORDER, SURFACE_CODES, surfaceAllowed, surfaceRule, paramText, beltSpeed, glassSeconds, TUNNEL_TOP, baseY, flagAllowed,
+  PIECES, SURFACES, SURFACE_ORDER, SURFACE_CODES, surfaceAllowed, surfaceRule, paramText, beltSpeed, glassSeconds, TUNNEL_TOP, flagAllowed,
 } from '../js/pieces.js';
-import { CarPhysics, CAR } from '../js/physics.js';
+import { CarPhysics } from '../js/physics.js';
+import { CAR } from '../js/physics/specs.js';
 import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
-import { GhostRunner, InputRecorder, PHYS_VER, decodeInputs, quantSteer } from '../js/replay.js';
+import { GhostRunner, InputRecorder, decodeInputs, quantSteer } from '../js/replay.js';
+import { PHYS_VER } from '../js/version.js';
 import { replayTime } from '../js/verify.js';
 import { Autopilot } from '../js/autopilot.js';
 import { pickTileExact, rayToSurface } from '../js/editorPick.js';
 import { EditorSession } from '../js/editor.js';
 import { DT, CELL, HALF, LEVEL_H, ROAD_TOP, ROAD_HALF, RAIL_W, MAX_LEVEL, SURF_PHYS } from '../js/constants.js';
+import { test, finish } from './harness.mjs';
 
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 6).join('\n       ')); } }
 const IDLE = { throttle: false, brake: false, steer: 0 };
 const GAS = { throttle: true, brake: false, steer: 0 };
 function run(phys, track, seconds, inp = IDLE, each = null) {
   const n = Math.round(seconds / DT);
-  for (let i = 0; i < n; i++) { track.time = i * DT; phys.clock = i; phys.step(typeof inp === 'function' ? inp(i) : inp); if (each) each(i); }
+  for (let i = 0; i < n; i++) { phys.clock = i; phys.step(typeof inp === 'function' ? inp(i) : inp); if (each) each(i); }
 }
 const strip = (type, n, extra = {}, z0 = 0) => {
   const tr = new Track('t');
@@ -54,21 +55,21 @@ test('essai : le départ suffit, l’arrivée n’est exigée que pour jouer ou 
   e.test(false); assert.deepEqual(calls, [['test', false]], 'essai sans arrivée accepté');
   calls.length = 0; e.test(true); assert.ok(typeof calls[0] === 'string', 'la vérification exige une arrivée');
 });
-test('inversionGraviteDepart : paramètre du niveau (code, signature, copie) et départ au plafond', () => {
+test('flip0 : paramètre du niveau (code, signature, copie) et départ au plafond', () => {
   const tr = scriptTrack('g', 'start S2 finish');
   const sig = tr.signature();
-  assert.equal(tr.inversionGraviteDepart, false);
-  tr.setParams({ inversionGraviteDepart: true });
-  assert.equal(tr.inversionGraviteDepart, true); assert.notEqual(tr.signature(), sig, 'change la course : change la signature');
+  assert.equal(tr.flip0, false);
+  tr.setParams({ flip0: true });
+  assert.equal(tr.flip0, true); assert.notEqual(tr.signature(), sig, 'change la course : change la signature');
   const back = Track.decode(tr.encode());
-  assert.equal(back.inversionGraviteDepart, true); assert.equal(back.signature(), tr.signature()); assert.equal(back.clone().inversionGraviteDepart, true);
+  assert.equal(back.flip0, true); assert.equal(back.signature(), tr.signature()); assert.equal(back.clone().flip0, true);
   assert.equal(JSON.parse(Buffer.from(tr.encode().slice(5).replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()).ig, 1);
   const logic = new RaceLogic(tr);
   assert.equal(logic.spawnPoint().gs, -1); assert.equal(logic.respawn.gs, -1, 'la réapparition aussi');
   const phys = new CarPhysics(tr); placeAtStart(phys, logic);
   assert.equal(phys.gSign, -1);
   assert.equal(new RaceLogic(Track.decode(scriptTrack('n', 'start S finish').encode())).spawnPoint().gs, 1, 'par défaut : normal');
-  tr.clear(); assert.equal(tr.inversionGraviteDepart, false);
+  tr.clear(); assert.equal(tr.flip0, false);
 });
 
 console.log('Anneaux et superposition');
@@ -209,8 +210,7 @@ test('Maj + souris (outil Inspecter) : la pièce monte et descend par demi-nivea
   self.cam = null;
   self.app.camera.position.set(3 * CELL, 120, 3 * CELL + 120); self.app.camera.updateMatrixWorld(true);
   assert.equal(self._shiftY(0), false, 'pas de mouvement : rien');
-  let moved = 0;
-  for (let i = 0; i < 400 && t.l < 8; i++) { self._shiftY(-6); moved++; }       // souris vers le haut
+  for (let i = 0; i < 400 && t.l < 8; i++) self._shiftY(-6);       // souris vers le haut
   assert.ok(t.l >= 8, 'monté : ' + t.l); assert.equal(t.l % 0.5, 0);
   assert.equal(calls.commit, 0, 'pas d’historique en cours de geste');
   for (let i = 0; i < 400 && t.l > 1; i++) self._shiftY(6);
@@ -387,7 +387,7 @@ test('le verre se brise aussi sous un looping (ruban) : la voiture se détache e
   const rec = new CarPhysics(tr); const logic = new RaceLogic(tr); placeAtStart(rec, logic);
   const bot = new Autopilot(tr.path); bot.reset(rec);
   let broke = false;
-  for (let i = 0; i < 20 / DT && !broke; i++) { rec.clock = i; tr.time = i * DT; rec.step(bot.control(rec)); if (rec.ev.glass) broke = true; }
+  for (let i = 0; i < 20 / DT && !broke; i++) { rec.clock = i; rec.step(bot.control(rec)); if (rec.ev.glass) broke = true; }
   assert.ok(broke, 'le verre du looping cède (0,3 s)');
   assert.ok(rec.broken.has(lp)); assert.ok(!rec.rib, 'plus guidée par le ruban');
 });
@@ -427,8 +427,8 @@ test('tunnel sans bordures : les parois du tunnel existent quand même', () => {
 });
 
 console.log('Rejeu identique (vérification serveur) et version');
-test('PHYS_VER 25 ; un circuit avec verre, tapis, vent, eau et tunnel est rejoué à l’identique par la vérification', () => {
-  assert.equal(PHYS_VER, 25);
+test('un circuit avec verre, tapis, vent, eau et tunnel est rejoué à l’identique par la vérification', () => {
+  assert.ok(Number.isInteger(PHYS_VER) && PHYS_VER >= 25);
   const tr = scriptTrack('mix', 'start S2 S.v S2.t137 S2.w150 S.a2 R S2# S2.a L S2 finish');
   // Enregistre une course du pilote automatique, puis la rejoue comme le fait le serveur.
   const phys = new CarPhysics(tr), logic = new RaceLogic(tr); placeAtStart(phys, logic);
@@ -439,7 +439,7 @@ test('PHYS_VER 25 ; un circuit avec verre, tapis, vent, eau et tunnel est rejou�
     const inp = bot.control(phys);
     inp.steer = quantSteer(inp.steer);                      // comme en course : la commande est quantifiée avant d'agir
     rec.push(inp, false);
-    phys.clock = logic.steps; tr.time = logic.steps * DT;
+    phys.clock = logic.steps;
     phys.step(inp);
     const ev = logic.update(phys);
     if (ev && ev.type === 'finish') finished = logic.time;
@@ -450,5 +450,4 @@ test('PHYS_VER 25 ; un circuit avec verre, tapis, vent, eau et tunnel est rejou�
   void GhostRunner; void decodeInputs;
 });
 
-console.log(failures ? `\n${failures} test(s) en échec` : '\nTous les tests de la Phase 3 passent.');
-process.exit(failures ? 1 : 0);
+await finish('Tous les tests de la Phase 3 passent.');

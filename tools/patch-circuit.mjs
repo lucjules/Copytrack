@@ -13,10 +13,10 @@ export function patchTracks(patches, file = new URL('../js/tracks.js', import.me
     const m = re.exec(s);
     if (!m) throw new Error('entrée introuvable : ' + id);
     let e = m[1];
-    if (f.script != null) e = e.replace(/(\n    script: )'(?:[^'\\]|\\.)*',/, (_, a) => a + q(f.script) + ',');
-    if (f.medals) e = e.replace(/(\n    medals: )\{[^}]*\},/, (_, a) => a + obj(f.medals) + ',');
-    if (f.goal) e = e.replace(/(\n    goal: )\{[^}]*\},/, (_, a) => a + obj(f.goal) + ',');
-    if (f.obst) e = e.replace(/(\n    obst: )\[[^\n]*\],/, (_, a) => a + '[' + f.obst.map(obj).join(', ') + '],');
+    if (f.script != null) e = e.replace(/(\n {4}script: )'(?:[^'\\]|\\.)*',/, (_, a) => a + q(f.script) + ',');
+    if (f.medals) e = e.replace(/(\n {4}medals: )\{[^}]*\},/, (_, a) => a + obj(f.medals) + ',');
+    if (f.goal) e = e.replace(/(\n {4}goal: )\{[^}]*\},/, (_, a) => a + obj(f.goal) + ',');
+    if (f.obst) e = e.replace(/(\n {4}obst: )\[[^\n]*\],/, (_, a) => a + '[' + f.obst.map(obj).join(', ') + '],');
     for (const k of ['opts', 'pilot', 'params']) {
       if (f[k] === undefined) continue;
       // champs sur la ligne « opts: {...}, pilot: {...}, » (ou isolés)

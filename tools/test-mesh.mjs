@@ -3,12 +3,10 @@
 //  - vrille et revêtements : ce qui touche aux pièces (doublons retirés, anciens codes lisibles).
 import assert from 'node:assert/strict';
 import { GeoBuilder } from '../js/geo.js';
-import { buildTileInto } from '../js/trackMesh.js';
+import { buildTileInto } from '../js/trackGeometry.js';
 import { Track } from '../js/track.js';
 import { PIECES, SURFACES, SURFACE_ORDER, SURFACE_CODES } from '../js/pieces.js';
-
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.message).split('\n').join('\n       ')); } }
+import { test, finish } from './harness.mjs';
 
 // Triangles tournés vers le haut (presque plats) : { pts: [[x, y, z] × 3] }
 function upTriangles(tile) {
@@ -97,5 +95,4 @@ test('la vrille occupe 2×2 cases, comme le tire-bouchon', () => {
   assert.equal(PIECES.twist.size, 2); assert.equal(Track.cellsOf({ t: 'twist', x: 3, z: 4, l: 0, r: 0 }).length, 4);
 });
 
-if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }
-console.log('\nTous les tests de maillage passent.');
+await finish('Tous les tests de maillage passent.');

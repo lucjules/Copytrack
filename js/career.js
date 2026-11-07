@@ -2,10 +2,11 @@
 // sont regroupés en chapitres de 6. Un chapitre s'ouvre avec 4 médailles dans le
 // précédent. Chaque circuit a un objectif bonus qui rapporte des pièces une fois.
 import { profile, saveProfile, addCoins } from './profile.js';
+import { CAREER_ORDER, DECORS } from './themes.js';
 
 export const CHAPTER_SIZE = 6;
 export const UNLOCK_MEDALS = 4;
-export const GOAL_COINS = 50;
+const GOAL_COINS = 50;
 
 // 0.9.6 : profils de circuits (champ `profil` des circuits intégrés). Chaque circuit est conçu pour une expérience précise ; la pastille
 // de la carte de carrière l'annonce. Les mesures qui définissent chaque profil sont vérifiées par tools/contract.mjs (appliqué à tous les circuits par tools/test-niveaux.mjs).
@@ -17,20 +18,21 @@ export const PROFILS = {
   acrobatique: { cls: 'p-acrobatique', label: 'Acrobatique', tip: 'Sauts et réceptions : l’élan décide de tout.' },
 };
 
-// 0.9 : un chapitre par thème, dans l'ordre de THEME_ORDER (tracks.js).
-export const CHAPTERS = [
-  { name: 'Désert crépuscule', decor: 'desert', desc: 'Sprint, speedway, tremplins, épingles et grand huit : tous les profils de circuits, avec un wall-ride dès le premier.' },
-  { name: 'Jungle néon', decor: 'jungle', desc: 'Rampe de lancement, tube, rebonds de champignons et slalom en moto : la jungle au grand complet.' },
-  { name: 'Archipel tropical', decor: 'isles', desc: 'Descente en moto, slalom en bateau et décollage en deltaplane autour du phare.' },
-  { name: 'Ville futuriste', decor: 'city', desc: 'Tapis roulant express, boucles, métro aérien, toits et lift hill : la ville monte en puissance.' },
-  { name: 'Nuit polaire', decor: 'polar', desc: 'Départ sur la glace, rebonds en terrasses, toboggan aimanté, hélices et poudreuse.' },
-  { name: 'Volcan', decor: 'volcano', desc: 'Collines de braises, plaque de dérive, cheminée verticale, caldeira à deux tours et éruptions.' },
-  { name: 'Station orbitale', decor: 'orbit', desc: 'Tube d’amarrage, basse gravité, moto, grand anneau à trois tours et apesanteur.' },
-  { name: 'Fonds marins', decor: 'reef', desc: 'Contre-courants, gravité lourde, pont de verre et plongée vers les abysses.' },
-  { name: 'Usine mécanique', decor: 'factory', desc: 'Moteur coupé, bifurcation, pistons, marteau et ralentisseurs : l’usine ne pardonne rien.' },
-  { name: 'Ville dans les nuages', decor: 'sky', desc: 'Vent de travers, îles sans bordures, gravité réduite, pont des vents et départ en deltaplane.' },
-  { name: 'Canyon de cristal', decor: 'caves', desc: 'Volant inversé, vrilles, inversions de gravité, plafonds et verre fragile.' },
-];
+// Un chapitre par décor, dans l'ordre de CAREER_ORDER (themes.js) ; le nom du chapitre est celui du décor.
+const CHAPTER_DESC = {
+  desert: 'Sprint, speedway, tremplins, épingles et grand huit : tous les profils de circuits, avec un wall-ride dès le premier.',
+  jungle: 'Rampe de lancement, tube, rebonds de champignons et slalom en moto : la jungle au grand complet.',
+  isles: 'Descente en moto, slalom en bateau et décollage en deltaplane autour du phare.',
+  city: 'Tapis roulant express, boucles, métro aérien, toits et lift hill : la ville monte en puissance.',
+  polar: 'Départ sur la glace, rebonds en terrasses, toboggan aimanté, hélices et poudreuse.',
+  volcano: 'Collines de braises, plaque de dérive, cheminée verticale, caldeira à deux tours et éruptions.',
+  orbit: 'Tube d’amarrage, basse gravité, moto, grand anneau à trois tours et apesanteur.',
+  reef: 'Contre-courants, gravité lourde, pont de verre et plongée vers les abysses.',
+  factory: 'Moteur coupé, bifurcation, pistons, marteau et ralentisseurs : l’usine ne pardonne rien.',
+  sky: 'Vent de travers, îles sans bordures, gravité réduite, pont des vents et départ en deltaplane.',
+  caves: 'Volant inversé, vrilles, inversions de gravité, plafonds et verre fragile.',
+};
+export const CHAPTERS = CAREER_ORDER.map((decor) => ({ name: DECORS[decor].label, decor, desc: CHAPTER_DESC[decor] }));
 
 // Objectifs bonus.
 export const GOALS = {
@@ -83,7 +85,6 @@ export function completeGoal(key) {
   return GOAL_COINS;
 }
 
-export const chapterOf = (i) => Math.floor(i / CHAPTER_SIZE);
 
 // medalOf(i) -> médaille du joueur sur le circuit i (ou null).
 export function chapterUnlocked(ch, medalOf, total) {

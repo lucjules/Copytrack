@@ -1,0 +1,8 @@
+# Fins de ligne identiques partout (les empreintes de sw.js et de la fonction serveur en dépendent).
+* text=auto eol=lf
+*.mp3 binary
+*.png binary
+# Fichiers générés (npm run sw, npm run build:function) : repliés dans les relectures de pull requests.
+sw.js linguist-generated=true
+supabase/functions/submit-score/index.ts linguist-generated=true -diff
+js/vendor/* linguist-vendored=true

@@ -7,7 +7,7 @@ import { SnapshotBuffer } from './net/interp.js';
 export const FADE_NEAR = 30;      // m : en deçà, couleur pleine
 export const FADE_FAR = 260;      // m : au-delà, assombrissement maximal
 export const MAX_DARKEN = 0.88;   // part maximale de noir mélangée à la couleur (0 = aucune, 1 = noir complet)
-export const PLAYER_COLORS = ['#ff6b57', '#5ff2ff', '#ffd23e', '#7cf06b', '#ff7ad9', '#8f7cff', '#ffb84d', '#3ec1ff'];
+const PLAYER_COLORS = ['#ff6b57', '#5ff2ff', '#ffd23e', '#7cf06b', '#ff7ad9', '#8f7cff', '#ffb84d', '#3ec1ff'];
 const DARK = new THREE.Color('#05050b');
 
 // Intensité d'assombrissement (0 à 1) selon la distance : lissée (smoothstep), pour qu'aucune « marche » ne se voie.

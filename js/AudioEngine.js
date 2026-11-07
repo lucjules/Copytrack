@@ -10,7 +10,8 @@
 // jetables, un tampon de bruit partagé), aucun travail dans la boucle de rendu : updateWithCarSpeed ne fait que viser des valeurs.
 //
 // Sidechain : à chaque kick, les bus « basse » et « synthés » s'abaissent puis remontent (GainNode programmé à l'avance, calé sur le kick).
-const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+import { clamp } from './mathutil.js';
+
 const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
 // Harmonie relevée sur le morceau de référence (Rally House #4, ~123 BPM) : pédale de ré (D) sur toute la boucle, accords

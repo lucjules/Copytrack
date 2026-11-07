@@ -3,8 +3,8 @@
 //   Compte   : pseudo + mot de passe, progression sauvegardée dans le cloud (récupérable depuis n'importe quel appareil).
 // Un compte déjà connecté sur cet appareil, ou un invité de la session en cours, passe directement.
 import { account, checkPseudo, checkPassword } from './account.js';
+import { $ } from './dom.js';
 
-const $ = (id) => document.getElementById(id);
 
 const MODES = {
   guest: {

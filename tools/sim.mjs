@@ -3,11 +3,10 @@
 //   node tools/sim.mjs            -> tous les circuits
 //   node tools/sim.mjs 2 --map    -> circuit n°2 avec la carte
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
-import { CarPhysics } from '../js/physics.js';
-import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
+import { RaceLogic } from '../js/raceLogic.js';
+import { Simulation, placeAtRespawn } from '../js/simulation.js';
 import { Autopilot } from '../js/autopilot.js';
 import { Track } from '../js/track.js';
-import { PIECES } from '../js/pieces.js';
 import { DT, CELL } from '../js/constants.js';
 
 const args = process.argv.slice(2);
@@ -40,22 +39,20 @@ function map(track) {
 }
 
 function run(track, maxTime = 240) {
-  const phys = new CarPhysics(track);
-  const logic = new RaceLogic(track);
-  placeAtStart(phys, logic);
+  const sim = new Simulation(track), { phys, logic } = sim;
+  sim.start();
   const bot = new Autopilot(track.path);
   bot.reset(phys);
   let respawns = 0, stuck = 0, maxSpeed = 0, airMax = 0, lastIdx = 0, loops = 0, falls = 0;
   const steps = Math.round(maxTime / DT);
   for (let i = 0; i < steps; i++) {
     const inp = bot.control(phys);
-    phys.clock = logic.steps;
-    phys.step(inp);
+    sim.drive(inp);
     maxSpeed = Math.max(maxSpeed, phys.speed);
     airMax = Math.max(airMax, phys.airTime);
     if (phys.ev.loopOut) loops++;
     if (phys.ev.loopFall) falls++;
-    const ev = logic.update(phys);
+    const ev = sim.score();
     if (ev && ev.type === 'finish') {
       return { ok: true, time: logic.time, respawns, maxSpeed, airMax, loops, falls };
     }
@@ -68,8 +65,7 @@ function run(track, maxTime = 240) {
     if (fell || stuck > 4) {
       respawns++;
       if (respawns > 8) return { ok: false, reason: `trop de réapparitions (idx ${bot.idx}/${track.path.length}, pos ${phys.pos.x.toFixed(1)},${phys.pos.y.toFixed(1)},${phys.pos.z.toFixed(1)})`, time: logic.time };
-      const r = logic.respawn;
-      phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
+      placeAtRespawn(phys, logic.respawn);
       bot.reset(phys);
       stuck = 0;
     }

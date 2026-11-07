@@ -9,13 +9,12 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { test, finish } from './harness.mjs';
 
-let failures = 0;
-function test(name, fn) { try { const r = fn(); if (r && typeof r.then === 'function') throw new Error('test asynchrone : ses assertions ne seraient jamais vérifiées'); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 8).join('\n       ')); } }
-
-const { BUILTIN_TRACKS, THEME_ORDER, buildBuiltin } = await import('../js/tracks.js');
+const { BUILTIN_TRACKS, buildBuiltin } = await import('../js/tracks.js');
+const { CAREER_ORDER: THEME_ORDER } = await import('../js/themes.js');
 const { PROFILS, CHAPTERS, CHAPTER_SIZE, GOALS } = await import('../js/career.js');
-const { VERSION } = await import('../js/constants.js');
+const { VERSION } = await import('../js/version.js');
 const { OBST } = await import('../js/obstacles.js');
 const { RaceLogic } = await import('../js/raceLogic.js');
 const { checkDef, openingOf, vocabulary } = await import('./contract.mjs');
@@ -28,9 +27,10 @@ const { checkTrack } = await import('../js/editorTools.js');
 const { CarPhysics } = await import('../js/physics.js');
 const { placeAtStart } = await import('../js/raceLogic.js');
 const { Autopilot } = await import('../js/autopilot.js');
-const { DT } = await import('../js/constants.js');
 
 const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+// Le code de l'application est réparti entre js/main.js et js/app/*.js (familles de méthodes) : ces contrôles de texte lisent l'ensemble.
+const readApp = () => ['js/main.js', ...readdirSync(new URL('../js/app', import.meta.url)).map((f) => 'js/app/' + f)].map(read).join('\n');
 const by = Object.fromEntries(BUILTIN_TRACKS.map((d) => [d.id, d]));
 const chapters = [];
 for (let c = 0; c * CHAPTER_SIZE < BUILTIN_TRACKS.length; c++) chapters.push(BUILTIN_TRACKS.slice(c * CHAPTER_SIZE, (c + 1) * CHAPTER_SIZE));
@@ -112,7 +112,7 @@ test('chaque profil a un libellé et une infobulle', () => {
   for (const [k, p] of Object.entries(PROFILS)) assert.ok(p.label && p.tip, k);
 });
 test('la carte de carrière affiche la pastille du profil', () => {
-  assert.match(read('js/main.js'), /tag profil \$\{pf\.cls\}/);
+  assert.match(readApp(), /tag profil \$\{pf\.cls\}/);
   for (const p of Object.values(PROFILS)) assert.match(read('css/style.css'), new RegExp('\\.card \\.tag\\.' + p.cls));
 });
 test('chaque chapitre a une description propre', () => {
@@ -173,7 +173,7 @@ for (const d of BUILTIN_TRACKS) {
 console.log('Finitions (0.9.10)');
 test('chaque circuit a son texte « ce qu’il enseigne » (infobulle de la carte de carrière)', () => {
   for (const d of BUILTIN_TRACKS) assert.ok(d.appris && d.appris.length > 40 && d.appris.length < 260 && d.appris.startsWith('Départ : '), d.id + ' : ' + d.appris);
-  assert.match(read('js/main.js'), /card\.title = b\.def\.appris/);
+  assert.match(readApp(), /card\.title = b\.def\.appris/);
 });
 test('étoiles de difficulté : le premier circuit d’un chapitre a au plus 3 étoiles, l’avant-dernier au moins 3, le dernier au moins 4, et un sprint n’a jamais plus de 2', () => {
   for (const ch of chapters) { assert.ok(ch[0].difficulty <= 3, ch[0].id); assert.ok(ch[4].difficulty >= 3 && ch[5].difficulty >= 4, ch[5].id); }
@@ -196,7 +196,7 @@ test('état d’un chapitre et bilan de carrière (écran de carrière)', () => 
   assert.deepEqual([all.pct, all.finished, all.complete], [100, true, true]);
   const mid = careerSummary([...Array(33).fill('or'), ...Array(33).fill(null)], 10);
   assert.ok(mid.pct > 0 && mid.pct < 100 && !mid.finished);
-  const m = read('js/main.js');
+  const m = readApp();
   assert.match(m, /careerSummary\(ids, gd\)/); assert.match(m, /chapterState\(/); assert.match(m, /class="ch-badge/);
   assert.match(read('css/style.css'), /\.career-summary/);
 });
@@ -273,5 +273,4 @@ test('les anciennes listes d’obstacles figés ont disparu (js/builtinObstacles
   for (const f of walk(new URL('../js', import.meta.url).pathname)) assert.ok(!/builtinObstacles/.test(readFileSync(f, 'utf8')), f);
 });
 
-console.log(failures ? `\n${failures} test(s) en échec.` : '\nTous les tests des niveaux passent.');
-process.exit(failures ? 1 : 0);
+await finish('Tous les tests des niveaux passent.');

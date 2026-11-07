@@ -274,6 +274,8 @@ export function checkTrack(track) {
 }
 
 // ---- Miniature vue de dessus ----------------------------------------------------
+// Cache des miniatures (images en data:URL, de quelques Ko chacune) : borné, une liste de communauté ou de circuits peut en demander des centaines.
+const THUMB_CACHE_MAX = 300;
 const thumbCache = new Map();
 export function thumbnail(track, key, w = 168, h = 104) {
   if (key && thumbCache.has(key)) return thumbCache.get(key);
@@ -324,6 +326,9 @@ export function thumbnail(track, key, w = 168, h = 104) {
     }
   }
   const url = cv.toDataURL('image/png');
-  if (key) thumbCache.set(key, url);
+  if (key) {
+    if (thumbCache.size >= THUMB_CACHE_MAX) thumbCache.delete(thumbCache.keys().next().value);       // la plus ancienne
+    thumbCache.set(key, url);
+  }
   return url;
 }

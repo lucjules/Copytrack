@@ -1,18 +1,20 @@
-// Tests de la bêta 0.9.5 (audit : problèmes visibles en jeu, texte, CSS, vérificateur) : node tools/test-v095.mjs   (npm test)
+// Textes affichés (version, turbo, effet de vitesse, tutoriel), vérificateur de l'éditeur (checkTrack) et feuille de style (classes et identifiants vivants) : node tools/test-textes-et-style.mjs   (npm test)
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { test, finish } from './harness.mjs';
 
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 5).join('\n       ')); } }
-
-const { VERSION } = await import('../js/constants.js');
+const { VERSION } = await import('../js/version.js');
 const { BUILTIN_TRACKS, buildBuiltin } = await import('../js/tracks.js');
 const { checkTrack } = await import('../js/editorTools.js');
 const { paramText } = await import('../js/pieces.js');
 const { scriptTrack } = await import('../js/track.js');
 
 const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+// Le code de l'application est réparti entre js/main.js et js/app/*.js (familles de méthodes) : ces contrôles de texte lisent l'ensemble.
+const readApp = () => ['js/main.js', ...readdirSync(new URL('../js/app', import.meta.url)).map((f) => 'js/app/' + f)].map(read).join('\n');
+// Le code de l'éditeur est réparti entre js/editor.js et js/editor/*.js (familles de méthodes) : ces contrôles de texte lisent l'ensemble.
+const readEditor = () => ['js/editor.js', ...readdirSync(new URL('../js/editor', import.meta.url)).map((f) => 'js/editor/' + f)].map(read).join('\n');
 function walk(dir, out = []) {
   for (const f of readdirSync(dir)) {
     const p = join(dir, f);
@@ -35,7 +37,7 @@ test('le réglage « effet de vitesse » annonce un seuil réaliste (220 km/h) e
   assert.match(read('js/race.js'), /fwdSpeed\) - 62\) \/ 38/);
 });
 test('le tutoriel parle des murs et de la vitesse', () => {
-  const m = read('js/main.js');
+  const m = readApp();
   assert.match(m, /<b>Murs<\/b>/);
   assert.match(m, /<b>Vitesse<\/b>/);
 });
@@ -56,7 +58,7 @@ test('une extrémité libre est signalée, avec sa pièce', () => {
   assert.ok(issues.some((i) => i.tile && /extrémité/.test(i.msg)), JSON.stringify(issues.map((i) => i.msg)));
 });
 test('l’éditeur branche checkTrack et _markIssues (plus de code mort)', () => {
-  const e = read('js/editor.js');
+  const e = readEditor();
   assert.match(e, /checkTrack\(this\.track\)/);
   assert.match(e, /this\._markIssues\(this\._tileIssues\(\)\)/);
 });
@@ -84,11 +86,10 @@ test('listes déroulantes d’options : jamais plus larges que l’écran', () =
   assert.match(css, /\.form select \{[^}]*max-width: 100%/);
 });
 test('palette de l’éditeur repliable, choix mémorisé', () => {
-  const e = read('js/editor.js');
+  const e = readEditor();
   assert.match(e, /pal-fold/);
   assert.match(e, /copytrack\.edFold/);
   assert.match(css, /\.ed-palette\.folded/);
 });
 
-console.log(failures ? `\n${failures} test(s) en échec.` : '\nTous les tests de la bêta 0.9.5 passent.');
-process.exit(failures ? 1 : 0);
+await finish('Tous les tests des textes et du style passent.');

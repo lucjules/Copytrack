@@ -1,6 +1,6 @@
 {
   "name": "copytrack",
-  "version": "0.9.11",
+  "version": "0.9.12",
   "private": true,
   "type": "module",
   "description": "Jeu de course contre-la-montre low-poly avec éditeur de circuits, dans le navigateur.",
@@ -8,9 +8,14 @@
     "start": "node tools/serve.mjs",
     "sim": "node tools/sim.mjs",
     "sw": "node tools/gen-sw.mjs",
+    "docs": "node tools/gen-docs.mjs",
     "build:function": "node tools/build-function.mjs",
-    "test": "node tools/test-editor.mjs && node tools/test-physics.mjs && node tools/test-camera.mjs && node tools/test-pick.mjs && node tools/test-mesh.mjs && node tools/test-phase2.mjs && node tools/test-phase3.mjs && node tools/test-quality.mjs && node tools/test-records.mjs && node tools/test-hud.mjs && node tools/test-account.mjs && node tools/test-net.mjs && node tools/test-fixes.mjs && node tools/test-v092.mjs && node tools/test-v093.mjs && node tools/test-v094.mjs && node tools/test-v095.mjs && node tools/test-maniabilite.mjs && node tools/test-niveaux.mjs && node tools/audit-pieces.mjs > /dev/null && node tools/check-generated.mjs && node tools/sim.mjs",
-    "test:sql": "bash tools/test-accounts-sql.sh"
+    "lint": "npx --yes eslint@10.1.0 .",
+    "test": "node tools/run-tests.mjs",
+    "test:deno": "npx --yes deno@2.9.6 run -A tools/test-dmath.mjs && npx --yes deno@2.9.6 run -A tools/phys-fingerprint.mjs",
+    "test:sql": "bash tools/test-accounts-sql.sh",
+    "test:browser": "node tools/test-browser.mjs",
+    "fingerprint": "node tools/phys-fingerprint.mjs"
   },
   "license": "MIT"
 }

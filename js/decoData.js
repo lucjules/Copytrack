@@ -1,7 +1,12 @@
+// Données des décorations (sans dépendance au rendu).
+//
+// DEUX choses seulement à tenir à jour pour ajouter une décoration :
+//   1. DECO_ORDER : l'ordre de SÉRIALISATION. Ne jamais réordonner, seulement ajouter à la fin (les codes de circuit s'y réfèrent par numéro) ;
+//      un test (tools/test-registres.mjs) en garde une empreinte.
+//   2. une ligne [identifiant, nom, icône] dans un groupe de BASE (ci-dessous) ou dans PACK (decoPackData.js) ;
+//      sa géométrie s'écrit dans decos.js (ou decoPack.js). Catégories, noms et icônes de l'éditeur en sont déduits.
 import { PACK, PACK_IDS } from './decoPackData.js';
 
-// Données des décorations (sans dépendance au rendu) : ordre de sérialisation et métadonnées.
-// Ne jamais réordonner DECO_ORDER, seulement ajouter à la fin.
 export const DECO_ORDER = [
   'sign_left', 'sign_right', 'sign_up', 'sign_stop', 'sign_speed', 'sign_warn', 'banner',
   'cube', 'sphere', 'cylinder', 'cone', 'pyramid', 'arch',
@@ -37,54 +42,92 @@ export const LIGHT_DECOS = {
   streetLamp:  { type: 'point', y: 8.3, range: 60, power: 1500, color: '#ffe9b0' },
 };
 
-export const DECO_CATS = {
-  signs: { label: 'Panneaux', kinds: ['sign_left', 'sign_right', 'sign_up', 'sign_stop', 'sign_speed', 'sign_warn', 'banner'] },
-  shapes: { label: 'Formes', kinds: ['cube', 'sphere', 'cylinder', 'cone', 'pyramid', 'arch'] },
-  build: { label: 'Murs et toits', kinds: ['wall', 'wallLow', 'roofFlat', 'roofGable', 'dome'] },
-  nature: { label: 'Nature', kinds: ['pine', 'palm', 'tree', 'bush', 'rock', 'cactus', 'crystal', 'mushroom', 'flower'] },
-  image: { label: 'Image', kinds: ['plaque'] },
-  cave: { label: 'Souterrain', kinds: ['stalagmite', 'cavePillar', 'crystalCluster', 'glowMushroom', 'minecart', 'lantern'] },
-  sky: { label: 'Nuages', kinds: ['cloud', 'balloon', 'floatIsle', 'windmill', 'airship', 'skyTower'] },
-  sea: { label: 'Fonds marins', kinds: ['coral', 'seaweed', 'fishSchool', 'shell', 'anchor', 'jellyfish', 'treasure'] },
-  factory: { label: 'Usine', kinds: ['gear', 'pipe', 'chimney', 'crate', 'barrel', 'crane', 'warnLight'] },
-  space: { label: 'Espace', kinds: ['satellite', 'asteroid', 'antenna', 'rocket', 'planetMini'] },
-  race: { label: 'Circuit', kinds: ['trafficCone', 'tireStack', 'flagPole', 'grandstand'] },
-  lights: { label: 'Lumières', kinds: ['searchlight', 'spotlight', 'lanternPost', 'lanternHang', 'streetLamp'] },
-  vehicles: { label: 'Véhicules', kinds: ['plane', 'biplane', 'helicopter', 'bus', 'truck', 'locomotive', 'sedan', 'ufo', 'sailboat'] },
-  xmas: { label: 'Noël', kinds: ['xmasTree', 'snowman', 'gift', 'candyCane', 'xmasStar', 'wreath', 'sleigh', 'reindeer', 'gingerHouse'] },
-  halloween: { label: 'Halloween', kinds: ['pumpkin', 'ghost', 'tombstone', 'bats', 'witchHat', 'cauldron', 'spookyTree', 'hauntedHouse', 'skull'] },
-  obstacles: { label: 'Obstacles', kinds: ['spikes', 'spikesPop', 'pendulum', 'hammer', 'slider', 'sweeper', 'bumper'] },
-};
+// Décorations d'origine, rangées par catégorie de l'éditeur : [clé, titre, [[identifiant, nom, icône], …], options]. Une catégorie « hidden »
+// n'est pas proposée dans la palette (décorations secrètes).
+const BASE = [
+  ['signs', 'Panneaux', [
+    ['sign_left', 'Flèche gauche', '⬅'], ['sign_right', 'Flèche droite', '➡'], ['sign_up', 'Tout droit', '⬆'], ['sign_stop', 'Stop', '⛔'],
+    ['sign_speed', 'Limite', '🅿'], ['sign_warn', 'Danger', '⚠'], ['banner', 'Banderole', '🚩'],
+  ]],
+  ['shapes', 'Formes', [
+    ['cube', 'Cube', '⬛'], ['sphere', 'Sphère', '⚪'], ['cylinder', 'Cylindre', '🛢'], ['cone', 'Cône', '🔺'],
+    ['pyramid', 'Pyramide', '🔻'], ['arch', 'Arche', '🌉'],
+  ]],
+  ['build', 'Murs et toits', [
+    ['wall', 'Mur', '🧱'], ['wallLow', 'Muret', '▬'], ['roofFlat', 'Toit plat', '⬜'], ['roofGable', 'Toit en pente', '🏠'],
+    ['dome', 'Dôme', '🛖'],
+  ]],
+  ['nature', 'Nature', [
+    ['pine', 'Sapin', '🌲'], ['palm', 'Palmier', '🌴'], ['tree', 'Arbre', '🌳'], ['bush', 'Buisson', '🌿'],
+    ['rock', 'Rocher', '🪨'], ['cactus', 'Cactus', '🌵'], ['crystal', 'Cristal', '💎'], ['mushroom', 'Champignon', '🍄'],
+    ['flower', 'Fleur', '🌸'],
+  ]],
+  ['image', 'Image', [
+    ['plaque', 'Plaque image', '🖼'],
+  ]],
+  ['cave', 'Souterrain', [
+    ['stalagmite', 'Stalagmite', '🗻'], ['cavePillar', 'Pilier de grotte', '🏛'], ['crystalCluster', 'Amas de cristaux', '💠'], ['glowMushroom', 'Champignon lumineux', '🍄'],
+    ['minecart', 'Wagonnet', '🛒'], ['lantern', 'Lanterne', '🏮'],
+  ]],
+  ['sky', 'Nuages', [
+    ['cloud', 'Nuage', '☁'], ['balloon', 'Montgolfière', '🎈'], ['floatIsle', 'Île flottante', '🏝'], ['windmill', 'Éolienne', '🌬'],
+    ['airship', 'Dirigeable', '🛸'], ['skyTower', 'Tour céleste', '🗼'],
+  ]],
+  ['sea', 'Fonds marins', [
+    ['coral', 'Corail', '🪸'], ['seaweed', 'Algues', '🌿'], ['fishSchool', 'Banc de poissons', '🐟'], ['shell', 'Coquillage', '🐚'],
+    ['anchor', 'Ancre', '⚓'], ['jellyfish', 'Méduse', '🪼'], ['treasure', 'Coffre au trésor', '💰'],
+  ]],
+  ['factory', 'Usine', [
+    ['gear', 'Engrenage', '⚙'], ['pipe', 'Tuyau', '🔧'], ['chimney', 'Cheminée', '🏭'], ['crate', 'Caisses', '📦'],
+    ['barrel', 'Barils', '🛢'], ['crane', 'Grue', '🏗'], ['warnLight', 'Gyrophare', '🚨'],
+  ]],
+  ['space', 'Espace', [
+    ['satellite', 'Satellite', '🛰'], ['asteroid', 'Astéroïde', '☄'], ['antenna', 'Antenne', '📡'], ['rocket', 'Fusée', '🚀'],
+    ['planetMini', 'Planète miniature', '🪐'],
+  ]],
+  ['race', 'Circuit', [
+    ['trafficCone', 'Plot', '🚧'], ['tireStack', 'Pile de pneus', '⭕'], ['flagPole', 'Drapeau à damier', '🏁'], ['grandstand', 'Tribune', '🏟'],
+  ]],
+  ['lights', 'Lumières', [
+    ['searchlight', 'Projecteur tournant', '🔦'], ['spotlight', 'Projecteur', '💡'], ['lanternPost', 'Lanterne sur pied', '🏮'], ['lanternHang', 'Lanterne suspendue', '🏮'],
+    ['streetLamp', 'Lampadaire', '🛣'],
+  ]],
+  ['vehicles', 'Véhicules', [
+    ['plane', 'Avion de ligne', '✈'], ['biplane', 'Avion à hélice', '🛩'], ['helicopter', 'Hélicoptère', '🚁'], ['bus', 'Bus', '🚌'],
+    ['truck', 'Camion', '🚚'], ['locomotive', 'Locomotive', '🚂'], ['sedan', 'Voiture', '🚗'], ['ufo', 'Soucoupe', '🛸'],
+    ['sailboat', 'Voilier', '⛵'],
+  ]],
+  ['xmas', 'Noël', [
+    ['xmasTree', 'Sapin de Noël', '🎄'], ['snowman', 'Bonhomme de neige', '⛄'], ['gift', 'Cadeau', '🎁'], ['candyCane', 'Sucre d’orge', '🍭'],
+    ['xmasStar', 'Étoile', '⭐'], ['wreath', 'Couronne', '🎍'], ['sleigh', 'Traîneau', '🛷'], ['reindeer', 'Renne', '🦌'],
+    ['gingerHouse', 'Maison en pain d’épices', '🍪'],
+  ]],
+  ['halloween', 'Halloween', [
+    ['pumpkin', 'Citrouille', '🎃'], ['ghost', 'Fantôme', '👻'], ['tombstone', 'Pierre tombale', '🪦'], ['bats', 'Chauves-souris', '🦇'],
+    ['witchHat', 'Chapeau de sorcière', '🧙'], ['cauldron', 'Chaudron', '🫕'], ['spookyTree', 'Arbre mort', '🌳'], ['hauntedHouse', 'Maison hantée', '🏚'],
+    ['skull', 'Crâne', '💀'],
+  ]],
+  ['obstacles', 'Obstacles', [
+    ['spikes', 'Piques', '🔱'], ['spikesPop', 'Piques escamotables', '⏫'], ['pendulum', 'Boule balancier', '🔴'], ['hammer', 'Marteau tournant', '🔨'],
+    ['slider', 'Mur coulissant', '↔'], ['sweeper', 'Balayeur', '🌀'], ['bumper', 'Bumper', '🟣'],
+  ]],
+  ['secret', 'Secrets', [
+    ['shard', 'Éclat secret', '✦'],
+  ], { hidden: true }],
+];
 
-export const DECO_LABELS = {
-  ...Object.fromEntries(PACK.flatMap(([, , items]) => items.map(([id, name]) => [id, name]))),
-  sign_left: 'Flèche gauche', sign_right: 'Flèche droite', sign_up: 'Tout droit', sign_stop: 'Stop',
-  sign_speed: 'Limite', sign_warn: 'Danger', banner: 'Banderole',
-  cube: 'Cube', sphere: 'Sphère', cylinder: 'Cylindre', cone: 'Cône', pyramid: 'Pyramide', arch: 'Arche',
-  wall: 'Mur', wallLow: 'Muret', roofFlat: 'Toit plat', roofGable: 'Toit en pente', dome: 'Dôme',
-  pine: 'Sapin', palm: 'Palmier', tree: 'Arbre', bush: 'Buisson', rock: 'Rocher', cactus: 'Cactus',
-  crystal: 'Cristal', mushroom: 'Champignon', flower: 'Fleur', plaque: 'Plaque image', shard: 'Éclat secret',
-  spikes: 'Piques', spikesPop: 'Piques escamotables', pendulum: 'Boule balancier', hammer: 'Marteau tournant',
-  slider: 'Mur coulissant', sweeper: 'Balayeur', bumper: 'Bumper',
-  stalagmite: 'Stalagmite', cavePillar: 'Pilier de grotte', crystalCluster: 'Amas de cristaux', glowMushroom: 'Champignon lumineux', minecart: 'Wagonnet', lantern: 'Lanterne',
-  cloud: 'Nuage', balloon: 'Montgolfière', floatIsle: 'Île flottante', windmill: 'Éolienne', airship: 'Dirigeable', skyTower: 'Tour céleste',
-  coral: 'Corail', seaweed: 'Algues', fishSchool: 'Banc de poissons', shell: 'Coquillage', anchor: 'Ancre', jellyfish: 'Méduse', treasure: 'Coffre au trésor',
-  gear: 'Engrenage', pipe: 'Tuyau', chimney: 'Cheminée', crate: 'Caisses', barrel: 'Barils', crane: 'Grue', warnLight: 'Gyrophare',
-  satellite: 'Satellite', asteroid: 'Astéroïde', antenna: 'Antenne', rocket: 'Fusée', planetMini: 'Planète miniature',
-  trafficCone: 'Plot', tireStack: 'Pile de pneus', flagPole: 'Drapeau à damier', grandstand: 'Tribune',
-  searchlight: 'Projecteur tournant', spotlight: 'Projecteur', lanternPost: 'Lanterne sur pied', lanternHang: 'Lanterne suspendue', streetLamp: 'Lampadaire',
-  plane: 'Avion de ligne', biplane: 'Avion à hélice', helicopter: 'Hélicoptère', bus: 'Bus', truck: 'Camion', locomotive: 'Locomotive', sedan: 'Voiture', ufo: 'Soucoupe', sailboat: 'Voilier',
-  xmasTree: 'Sapin de Noël', snowman: 'Bonhomme de neige', gift: 'Cadeau', candyCane: 'Sucre d’orge', xmasStar: 'Étoile', wreath: 'Couronne', sleigh: 'Traîneau', reindeer: 'Renne', gingerHouse: 'Maison en pain d’épices',
-  pumpkin: 'Citrouille', ghost: 'Fantôme', tombstone: 'Pierre tombale', bats: 'Chauves-souris', witchHat: 'Chapeau de sorcière', cauldron: 'Chaudron', spookyTree: 'Arbre mort', hauntedHouse: 'Maison hantée', skull: 'Crâne',
-};
+// Catégories, noms et icônes : déduits des tables BASE et PACK. Les clés « xmas » et « halloween » du pack complètent celles d'origine.
+export const DECO_CATS = {};
+export const DECO_LABELS = {};
+export const DECO_ICONS = {};
+for (const [key, title, items, opts = {}] of [...BASE, ...PACK]) {
+  if (!opts.hidden && !DECO_CATS[key]) DECO_CATS[key] = { label: title, kinds: [] };
+  for (const [id, name, icon] of items) {
+    if (!opts.hidden) DECO_CATS[key].kinds.push(id);
+    DECO_LABELS[id] = name;
+    DECO_ICONS[id] = icon;
+  }
+}
 
 // Couleurs proposées (index 0 = couleurs naturelles de l'objet).
 export const DECO_COLORS = ['#ff6b57', '#ffbf3c', '#7cf06b', '#2fd3b5', '#3ec1ff', '#8f7cff', '#ff7ad9', '#f4f1ea', '#2f3247'];
-
-// Pack 0.9.3 : nouvelles catégories, et ajouts aux catégories Noël / Halloween existantes.
-for (const [key, label, items] of PACK) {
-  const kinds = items.map((i) => i[0]);
-  if (DECO_CATS[key]) DECO_CATS[key].kinds.push(...kinds);
-  else DECO_CATS[key] = { label, kinds };
-}
-export const DECO_PACK_ICONS = Object.fromEntries(PACK.flatMap(([, , items]) => items.map(([id, , icon]) => [id, icon])));

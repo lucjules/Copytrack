@@ -23,15 +23,14 @@
 //    NAT symétrique) échouent sans relais : il faut alors un serveur TURN (payant, ou à héberger) à ajouter dans ICE_SERVERS.
 //    Une paire qui échoue est signalée (état « failed ») : le joueur reste dans la salle mais ne voit pas / n'est pas vu de cet autre.
 // 7. Coût : N joueurs = N·(N−1)/2 connexions ; chacun envoie son état N−1 fois. À 8 joueurs : 7 liens, ~0,8 Ko/s chacun.
-export const ICE_SERVERS = [
-  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-  // { urls: 'turn:turn.example.com:3478', username: '…', credential: '…' },   // relais pour les réseaux qui bloquent le P2P
-];
+import { CONFIG } from '../config.js';
 
-export const MAX_BUFFERED = 16 * 1024;
-export const MAX_LINKS = 7;
+const ICE_SERVERS = CONFIG.iceServers;      // STUN par défaut ; un relais TURN s'ajoute dans js/config.js
 
-export class PeerLink {
+const MAX_BUFFERED = 16 * 1024;
+const MAX_LINKS = 7;
+
+class PeerLink {
   constructor(mesh, id, initiator) {
     this.mesh = mesh; this.id = id; this.initiator = initiator;
     this.pc = null; this.state = null; this.ctl = null;

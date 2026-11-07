@@ -184,7 +184,7 @@ export function saveRecord(trackKey, rec) {
   const tiers = [rec, { ...rec, ghost: null }, slim(rec)];
   const tryWrite = () => tiers.some((t) => write(REC + trackKey, t));
   if (tryWrite()) return true;
-  let keys = [];
+  let keys;
   try { keys = Object.keys(localStorage).filter((k) => k.startsWith(PREFIX + REC) && k !== PREFIX + REC + trackKey); } catch { return false; }
   const others = keys.map((k) => { try { return { k, v: JSON.parse(localStorage.getItem(k)) }; } catch { return null; } })
     .filter((o) => o && o.v && (o.v.ghost || o.v.inputs)).sort((a, b) => (a.v.date || 0) - (b.v.date || 0));

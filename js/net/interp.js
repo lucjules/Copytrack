@@ -11,7 +11,7 @@
 // emplacement : la voiture reste à l'ancien jusqu'à l'instant du premier paquet « après », puis apparaît à l'autre.
 import * as THREE from '../vendor/three.module.min.js';
 
-export const DEFAULT_DELAY = 0.1;       // s
+const DEFAULT_DELAY = 0.1;       // s
 const MAX_EXTRAP = 0.25;                // s : au-delà, la voiture s'arrête sur place plutôt que de dériver
 const HERMITE_MAX_GAP = 0.15;           // s : au-delà (paquets perdus), interpolation linéaire
 const KEEP = 1.5;                       // s d'historique conservé

@@ -4,15 +4,13 @@
 // de la base (voir supabase/etape1-communaute.sql). Sans réseau, le jeu marche
 // normalement et ces fonctions répondent simplement « hors ligne ».
 import { getJSON, setJSON } from './storage.js';
+import { CONFIG } from './config.js';
 
-export const ONLINE = {
-  url: 'https://vakhnbmqnwvkekwuntbz.supabase.co',
-  key: 'sb_publishable_wBsMno7Qs4N-dM7usIm5OQ_0aEv-N1o',
-};
+export const ONLINE = CONFIG.supabase;      // { url, key } : voir js/config.js
 
 // Limites de la base (voir supabase/etape1-communaute.sql).
-export const MAX_PUBLISH_CHARS = 100000;
-export const MAX_PUBLISH_PIECES = 5000;
+const MAX_PUBLISH_CHARS = 100000;
+const MAX_PUBLISH_PIECES = 5000;
 
 export class OnlineError extends Error {
   constructor(message, code = '') { super(message); this.code = code; }
@@ -52,7 +50,7 @@ class OnlineClient {
   }
 
   // Passe en mode compte : la session est celle du compte, jamais une session anonyme de remplacement.
-  useAccount(session, username) {
+  useAccount(session) {
     this.kind = 'account';
     this.session = session;
     this.player = null;                  // le profil en ligne (table players) est créé au premier besoin : ensurePlayer
@@ -92,7 +90,7 @@ class OnlineClient {
       throw new OnlineError('Serveur injoignable (connexion internet ?).', 'offline');
     }
     const text = await res.text();
-    let data = null;
+    let data;
     try { data = text ? JSON.parse(text) : null; } catch { data = text; }
     if (!res.ok) throw explain(res.status, data);
     return data;
