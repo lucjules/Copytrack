@@ -11046,9 +11046,208 @@ var GhostRunner = class {
   }
 };
 
+// js/rulesCore.js
+var VEHICLE_CHOICES = [
+  [
+    "",
+    "Celui du circuit"
+  ],
+  [
+    "car",
+    "Voiture"
+  ],
+  [
+    "moto",
+    "Moto"
+  ],
+  [
+    "boat",
+    "Bateau"
+  ],
+  [
+    "glider",
+    "Deltaplane"
+  ]
+];
+var DEFAULT_RULES = Object.freeze({
+  laps: 0,
+  g0: 0,
+  veh0: "",
+  v0: -1,
+  offroad: -1,
+  obstacles: "",
+  sameCars: 0
+});
+var VEHICLES2 = VEHICLE_CHOICES.map(([k]) => k).filter(Boolean);
+var int = (v, lo, hi, def) => {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : def;
+};
+function sanitizeRules(r) {
+  const o = r && typeof r === "object" ? r : {};
+  return {
+    laps: o.laps ? int(o.laps, 1, 5, 0) : 0,
+    g0: o.g0 ? int(o.g0, 15, 250, 0) : 0,
+    veh0: VEHICLES2.includes(o.veh0) ? o.veh0 : "",
+    v0: o.v0 >= 0 ? int(o.v0, 0, 300, -1) : -1,
+    offroad: o.offroad === 1 || o.offroad === true ? 1 : o.offroad === 0 || o.offroad === false ? 0 : -1,
+    obstacles: o.obstacles === "off" ? "off" : "",
+    sameCars: o.sameCars ? 1 : 0
+  };
+}
+var isDefaultRules = (r) => JSON.stringify(sanitizeRules(r)) === JSON.stringify(DEFAULT_RULES);
+function applyRules(track, rules) {
+  const r = sanitizeRules(rules);
+  if (isDefaultRules(r)) return track;
+  const t = track.clone();
+  if (track.path) t.path = track.path;
+  const p = {};
+  if (r.g0) p.g0 = r.g0;
+  if (r.veh0) p.veh0 = r.veh0;
+  if (r.v0 >= 0) p.v0 = r.v0;
+  if (r.offroad >= 0) p.offroad = r.offroad;
+  t.setParams(p);
+  if (r.laps && t.laps > 1) {
+    if (t.path) {
+      const L4 = Math.round((t.path.length - 1) / t.laps) + 1, one = t.path.slice(0, L4), pilot = t.path.pilot;
+      const path = one.slice();
+      for (let k = 1; k < r.laps; k++) path.push(...one.slice(1));
+      if (pilot) path.pilot = pilot;
+      t.path = path;
+    }
+    t.laps = r.laps;
+  }
+  if (r.obstacles === "off") {
+    for (const d of t.decos.slice()) if (isObstacle(d.k)) t.removeDeco(d);
+  }
+  return t;
+}
+
+// js/variants.js
+var VARIANT_VER = "v1";
+var VARIANTS = {
+  g: {
+    values: [
+      "40",
+      "70",
+      "130",
+      "180"
+    ],
+    rule: (v) => ({
+      g0: +v
+    })
+  },
+  lap: {
+    values: [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+    ],
+    rule: (v) => ({
+      laps: +v
+    })
+  },
+  obs: {
+    values: [
+      "0"
+    ],
+    rule: () => ({
+      obstacles: "off"
+    })
+  },
+  off: {
+    values: [
+      "0",
+      "1"
+    ],
+    rule: (v) => ({
+      offroad: +v
+    })
+  },
+  v0: {
+    values: [
+      "0",
+      "100",
+      "200"
+    ],
+    rule: (v) => ({
+      v0: +v
+    })
+  },
+  veh: {
+    values: [
+      "car",
+      "moto",
+      "boat",
+      "glider"
+    ],
+    rule: (v) => ({
+      veh0: v
+    })
+  }
+};
+var NAMES = Object.keys(VARIANTS).sort();
+function rulesOfVariant(v) {
+  const r = {};
+  for (const n of NAMES) if (v[n] != null) Object.assign(r, VARIANTS[n].rule(String(v[n])));
+  return r;
+}
+function formatVariant(v) {
+  const parts = [];
+  for (const n of Object.keys(v || {})) if (!Object.hasOwn(VARIANTS, n)) throw new Error("Cat\xE9gorie de record inconnue.");
+  for (const n of NAMES) {
+    if (v[n] == null) continue;
+    const val = String(v[n]);
+    if (!VARIANTS[n].values.includes(val)) throw new Error("Cat\xE9gorie de record inconnue.");
+    parts.push(`${n}-${val}`);
+  }
+  return parts.length ? `${VARIANT_VER}.${parts.join(".")}` : "";
+}
+function parseVariant(s) {
+  const str = String(s || "");
+  const m = /^v1((?:\.[a-z0-9]+-[a-z0-9]+)+)$/.exec(str);
+  if (!m) throw new Error("Cat\xE9gorie de record inconnue.");
+  const v = {};
+  for (const p of m[1].slice(1).split(".")) {
+    const i = p.indexOf("-"), n = p.slice(0, i), val = p.slice(i + 1);
+    if (!Object.hasOwn(VARIANTS, n) || Object.hasOwn(v, n) || !VARIANTS[n].values.includes(val)) throw new Error("Cat\xE9gorie de record inconnue.");
+    v[n] = val;
+  }
+  if (formatVariant(v) !== str) throw new Error("Cat\xE9gorie de record inconnue.");
+  return v;
+}
+function splitKey(key2) {
+  const k = String(key2 || ""), i = k.indexOf("~");
+  return i < 0 ? {
+    base: k,
+    variant: ""
+  } : {
+    base: k.slice(0, i),
+    variant: k.slice(i + 1)
+  };
+}
+function applyVariant(track, v) {
+  const t = applyRules(track, rulesOfVariant(v));
+  if (t === track || t.signature() === track.signature() && t.laps === track.laps) throw new Error("Cette cat\xE9gorie ne change rien sur ce circuit.");
+  return t;
+}
+
 // js/verify.js
 function trackForKey(key2, code = "") {
   key2 = String(key2 || "");
+  const { base, variant } = splitKey(key2);
+  if (key2.includes("~")) {
+    const off = trackForKey(base, code);
+    const v = parseVariant(variant);
+    return {
+      ...off,
+      track: applyVariant(off.track, v),
+      name: `${off.name} \xB7 ${variant}`,
+      variant: v
+    };
+  }
   if (key2.startsWith("b-")) {
     const def = BUILTIN_TRACKS.find((d) => key2.startsWith(`b-${d.id}-`));
     if (!def) throw new Error("Circuit int\xE9gr\xE9 inconnu.");

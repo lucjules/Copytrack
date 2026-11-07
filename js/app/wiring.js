@@ -144,7 +144,7 @@ export const wiringMethods = {
       case 'export-video': if (s && s.exportVideo) s.exportVideo(); break;
       case 'leaderboard': {
         const s = this.session;
-        if (s && s.trackKey) this.leaderboardModal(s.trackKey, s.track.name, s.track);
+        if (s && s.trackKey) this.leaderboardModal(s.trackKey, s.track.name, s.opts.officialTrack || s.track);      // variante : le circuit d'origine (code envoyé au serveur)
         break;
       }
       case 'next': this.nextTrack(); break;

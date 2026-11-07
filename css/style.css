@@ -1213,6 +1213,11 @@ body.hud-editing > section, body.hud-editing #touch { display: none !important; 
 .hub-ghosts .chip.on { color: var(--text); background: rgba(95, 242, 255, 0.16); border-color: var(--cyan); }
 .hub-ghosts .chip.rival.on { background: rgba(199, 125, 255, 0.22); border-color: #c77dff; }
 .hub-ghosts .chip:disabled { opacity: 0.45; cursor: default; }
+.hub-cats { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+.hub-cats .meta { width: 100%; font-size: 13px; }
+.hub-cats .chip { font: inherit; font-size: 13px; color: var(--muted); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.hub-cats .chip.on { color: #1a1030; background: var(--amber); border-color: transparent; font-weight: 700; }
+.hub-cats .hub-hint { width: 100%; margin: 4px 0 0; }
 .hub-hint { font-size: 13px; margin: 0 0 8px; }
 .hub-lock { color: var(--amber); margin: 0 0 8px; }
 .hub-play { width: 100%; text-align: center; font-size: 22px; }

@@ -6,7 +6,7 @@ import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
 import { Track, hashString } from '../js/track.js';
 import { dailyChallenge } from '../js/daily.js';
 import { goalFor, nextBuiltinIndex, CHAPTER_SIZE } from '../js/career.js';
-import { describeBuiltin, describeDaily, describeUser, describeCommunity, personalRecord, trackLength, chapterLock, quickRaceIndex, finishVehicle } from '../js/trackDescriptor.js';
+import { describeBuiltin, describeDaily, describeUser, describeCommunity, personalRecord, trackLength, chapterLock, quickRaceIndex, finishVehicle, describeVariant, hubCategories } from '../js/trackDescriptor.js';
 import { toggleFavorite, isFavorite, mergeFavorites, cleanFavorites, isFavRef } from '../js/favorites.js';
 import { cleanRuns, RUNS_MAX } from '../js/storage.js';
 import { mergeSaves, mergeProfile, isSyncKey } from '../js/cloudsave.js';
@@ -152,6 +152,32 @@ test('favoris : la fusion de deux appareils réunit, et un retrait plus récent 
   const merged = mergeProfile({ id: 'A', coins: 1, favorites: a.favorites, favDel: a.favDel }, { id: 'B', coins: 1, favorites: b.favorites });
   assert.deepEqual(merged.favorites.map((f) => f.ref), ['b:lagon', 'b:eclats']);
   assert.equal(mergeProfile({ id: 'A', coins: 1 }, { id: 'B', coins: 1 }).favorites, undefined, 'sans favoris, le profil ne gagne aucun champ');
+});
+
+console.log('Catégories de records');
+test('descripteur d’une catégorie : sa clé, son record, ni médailles ni objectif ; le circuit d’origine part au serveur', () => {
+  const b = builtins.find((x) => x.def.id === 'eclats');
+  const d = describeBuiltin(b, { total, builtins, getRecord: noRecords });
+  const v = describeVariant(d, { veh: 'moto' });
+  assert.equal(v.key, b.key + '~v1.veh-moto');
+  assert.deepEqual(v.recordKeys, [v.key]);
+  assert.equal(v.medals, null); assert.equal(v.goal, null);
+  assert.equal(v.track.veh0, 'moto'); assert.equal(d.track.veh0, 'car', 'l’officiel ne change pas');
+  assert.deepEqual(Object.keys(v.launch).sort(), ['difficulty', 'officialTrack', 'seed', 'trackKey', 'variant']);
+  assert.equal(v.launch.officialTrack, b.track);
+  assert.equal(v.launch.trackKey, v.key);
+  assert.equal(describeVariant(v, {}), d, 'revenir à « Officiel » rend le descripteur d’origine');
+  assert.equal(describeVariant(v, { veh: 'boat' }).key, b.key + '~v1.veh-boat', 'une catégorie se choisit depuis l’officiel, pas en cascade');
+  assert.equal(v.builtinId, 'eclats', 'le favori reste celui du circuit');
+});
+test('catégories proposées : seulement celles qui changent la course, seulement sur un circuit classé', () => {
+  const ids = (id) => hubCategories(describeBuiltin(builtins.find((x) => x.def.id === id), { total })).map((c) => c.id);
+  assert.deepEqual(ids('eclats'), ['veh-moto', 'veh-boat', 'veh-glider']);
+  assert.ok(ids('chaine').includes('obs-0'), 'circuit à obstacles : « sans obstacles »');
+  const tr = Track.decode(builtins[2].track.encode());
+  assert.ok(hubCategories(describeUser(tr)).length >= 3, 'circuit de joueur : classé en ligne (clé u-)');
+  assert.deepEqual(hubCategories({ key: null, track: tr }), [], 'sans clé de classement : aucune catégorie');
+  assert.ok(hubCategories(describeDaily(dailyChallenge('2026-03-14'))).length >= 3);
 });
 
 await finish('Tous les tests du Race Hub passent.');

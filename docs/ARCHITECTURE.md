@@ -95,6 +95,10 @@ ou un temps changé fait échouer le test. Ne régénérer le corpus que pour un
 - **Circuit** : liste de pièces sur une grille (`CELL` = 32 m, niveaux de 6,4 m), plus décorations et règles. Code de partage `SHW3:` + JSON en base 64 ; chaque pièce est un **type concret** (index dans `PIECE_ORDER`, qui ne fait qu'ajouter), `SURFACE_CODES` et `DECO_ORDER`
   suivent la même règle (un test garde leur empreinte). La **signature** d'un circuit (clé des classements) ignore le nom, la description, le thème et les couleurs. Détails : README, « Format des circuits ».
 - **Clés de classement** : `b-<id>-<empreinte>` (circuit intégré), `daily-AAAA-MM-JJ` (défi du jour), `u-<signature>` (circuit de joueur, dont le code est fourni).
+  **Catégories de records** (`js/variants.js`, 0.9.27) : `<clé>~v1.<nom>-<valeur>…` (départ en moto, sans obstacles, gravité…), un classement à part sur le même
+  circuit, sans migration de la base. Le module est dans la fermeture de la vérification : le serveur applique exactement la même variante (règles de
+  `js/rulesCore.js` sur une copie du circuit) ; une écriture non canonique ou une variante sans effet est refusée. Fiche du circuit : `js/app/raceHub.js`,
+  descripteur `js/trackDescriptor.js`.
 - **Stockage local** : `localStorage` sous le préfixe `shardway.*` (nom d'origine du projet, conservé pour ne pas perdre les sauvegardes existantes). Records : `shardway.rec3.<clé>` avec temps, commandes, `pv`.
 - **Sauvegarde cloud** (comptes) : fusion par `cloudsave.js` ; invités : local seulement.
 

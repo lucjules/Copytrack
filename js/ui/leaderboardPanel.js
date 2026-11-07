@@ -104,7 +104,7 @@ export function renderWorldBoard(el, desc, ctx) {
       send.disabled = true; send.textContent = 'Vérification…';
       try {
         if (profile().title) online.setTitle(profile().title).catch(() => { /* sans l'étape 8 : le titre reste local */ });
-        await online.submitScore({ trackKey: key, code: key.startsWith('u-') ? desc.track.encode() : '', inputs: rec.inputs, time: rec.time, physVer: PHYS_VER }, app ? app.settings.playerName : '');
+        await online.submitScore({ trackKey: key, code: key.startsWith('u-') ? (desc.official || desc).track.encode() : '', inputs: rec.inputs, time: rec.time, physVer: PHYS_VER }, app ? app.settings.playerName : '');
         renderWorldBoard(el, desc, ctx);
         if (ctx.onChange) ctx.onChange();
       } catch (e) { send.textContent = e.message; }

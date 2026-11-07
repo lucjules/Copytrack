@@ -19,7 +19,7 @@ import { starsText, STAR_LABELS } from '../difficulty.js';
 import { getRecord, getImportedGhost, listMyTracks, formatTime } from '../storage.js';
 import { profile, saveProfile } from '../profile.js';
 import { isFavorite, toggleFavorite, cleanFavorites } from '../favorites.js';
-import { describeDaily, describeUser, describeCommunity, personalRecord, quickRaceIndex } from '../trackDescriptor.js';
+import { describeDaily, describeUser, describeCommunity, personalRecord, quickRaceIndex, describeVariant, hubCategories } from '../trackDescriptor.js';
 import { createTrackMap } from '../ui/trackMap.js';
 import { SURFACES } from '../pieces.js';
 import { mountLeaderboard } from '../ui/leaderboardPanel.js';
@@ -48,7 +48,7 @@ export const raceHubMethods = {
   // from : l'écran où revenir (tracks, mytracks, community, menu).
   openRaceHub(desc, { from = 'tracks' } = {}) {
     if (this._hub && this._hub.map) this._hub.map.dispose();
-    this._hub = { desc, from, rivals: new Map(), map: null, board: null };
+    this._hub = { desc, base: desc.official || desc, from, rivals: new Map(), map: null, board: null };
     this.showScreen('race-hub');
     const play = $('hub-play');
     if (play && !play.disabled && matchMedia('(pointer: fine)').matches) play.focus({ preventScroll: true });
@@ -144,12 +144,17 @@ export const raceHubMethods = {
     if (d.track.path && d.medals) chips.push(['ghostGold', 'Fantôme or', s.ghostGold !== false, true]);
     if (d.key && getImportedGhost(d.key)) chips.push(['ghostImported', 'Fantôme importé', s.ghostImported !== false, true]);
     const rivals = [...h.rivals.entries()].sort((a, b) => a[0] - b[0]);
+    const cats = hubCategories(h.base);
     $('hub-launch').innerHTML = `<div class="hub-pb">${rec ? `<span class="meta">Mon record</span><b>${medal ? medalIcon(medal) + ' ' : ''}${formatTime(rec.time)}</b>` : '<span class="meta">Pas encore de temps : à toi d’ouvrir la voie.</span>'}</div>
       <div class="hub-ghosts" role="group" aria-label="Fantômes"><span class="meta">Fantômes</span>
         ${chips.map(([k, l, on, ok]) => `<button class="chip${on ? ' on' : ''}" data-ghost="${k}" aria-pressed="${on}"${ok ? '' : ' disabled title="Pas encore de record sur ce circuit"'}>${esc(l)}</button>`).join('')}
         ${rivals.map(([rank, g]) => `<button class="chip on rival" data-rival="${rank}" aria-pressed="true" title="Retirer ce rival">👻 ${rank}. ${esc(g.name)} · ${formatTime(g.time)} ✕</button>`).join('')}
       </div>
       ${rivals.length < MAX_RIVALS && h.board && h.board.boards.some((b) => b.id === 'world') ? '<p class="meta hub-hint">Ajoute jusqu’à 3 rivaux en ligne avec 👻 dans le classement mondial.</p>' : ''}
+      ${cats.length ? `<div class="hub-cats" role="radiogroup" aria-label="Catégorie de record"><span class="meta">Catégorie de record</span>
+        <button class="chip${d.variant ? '' : ' on'}" role="radio" aria-checked="${!d.variant}" data-cat="">🏁 Officiel</button>
+        ${cats.map((c) => { const on = d.variantStr && d.key.endsWith('~v1.' + c.id); return `<button class="chip${on ? ' on' : ''}" role="radio" aria-checked="${!!on}" data-cat="${c.id}">${esc(c.label)}</button>`; }).join('')}
+        ${d.variant ? '<p class="meta hub-hint">Classement et record à part, sans médailles ni pièces : le record officiel ne bouge pas.</p>' : ''}</div>` : ''}
       ${d.locked ? `<p class="hub-lock" role="status">🔒 ${esc(d.locked)}</p>` : ''}
       <button class="btn big primary hub-play" id="hub-play"${d.locked ? ' disabled' : ''}>▶ Jouer <kbd>Entrée</kbd></button>`;
     for (const b of $('hub-launch').querySelectorAll('[data-ghost]')) b.onclick = () => {
@@ -160,7 +165,23 @@ export const raceHubMethods = {
       this._renderHubLaunch();
     };
     for (const b of $('hub-launch').querySelectorAll('[data-rival]')) b.onclick = () => { this.audio.click(); h.rivals.delete(+b.dataset.rival); this._renderHubLaunch(); if (h.board) h.board.refresh(); };
+    for (const b of $('hub-launch').querySelectorAll('[data-cat]')) b.onclick = () => {
+      this.audio.click();
+      const c = cats.find((x) => x.id === b.dataset.cat);
+      this._setHubCategory(c ? c.v : null);
+    };
     $('hub-play').onclick = () => this.hubPlay();
+  },
+
+  // Catégorie de record (variante) : même fiche, autre clé de classement ; les rivaux choisis appartenaient à l'autre classement.
+  _setHubCategory(v) {
+    const h = this._hub;
+    if (!h) return;
+    h.desc = v ? describeVariant(h.base, v) : h.base;
+    h.rivals.clear();
+    this._renderHub();
+    const b = $('hub-launch').querySelector('[data-cat][aria-checked="true"]');
+    if (b) b.focus({ preventScroll: true });
   },
 
   async _toggleHubRival(row, rank, btn) {
@@ -185,6 +206,7 @@ export const raceHubMethods = {
     const rivals = [...h.rivals.entries()].sort((a, b) => a[0] - b[0]).map(([, g]) => g);
     if (h.map) { h.map.dispose(); h.map = null; }
     this.launchDesc(h.desc, { fromHub: h.from, ...(rivals.length ? { rivals } : {}) });
+    if (h.desc.variant) { const c = hubCategories(h.base).find((x) => h.desc.key.endsWith('~v1.' + x.id)); if (c) this.ui.flash(`Catégorie : ${c.label} · classement à part`, 2.2); }
   },
 
   _renderHubRecords() {

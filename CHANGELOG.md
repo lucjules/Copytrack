@@ -6,6 +6,16 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.27 — catégories de records : départ en moto, en bateau, en deltaplane, sans obstacles
+
+Étape E3 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), **aucune étape SQL** : une catégorie voyage dans la clé de classement (`<clé officielle>~v1.veh-moto`, 80 caractères au plus comme avant). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des catégories (« Clé de circuit invalide »), le reste marche.
+
+- **Fiche du circuit › Catégorie de record** : *Officiel*, *Départ en moto*, *en bateau*, *en deltaplane* (ou *en voiture* sur un circuit qui part autrement) et *Sans obstacles* (circuits à obstacles). Seules les catégories qui changent vraiment la course sont proposées. Chacune a **son classement mondial, son record et ses dernières courses** ; le record officiel n'est jamais touché. Pas de médailles ni de pièces dans une catégorie (elles sont calibrées sur le circuit officiel). Après la course, « Retour » ramène à la fiche dans la même catégorie.
+- **Vérifié par le serveur** comme le reste : `js/variants.js` (dans la fermeture de la vérification) lit la catégorie, `js/rulesCore.js` (les règles des modes, sorties de `rules.js` sans changer son interface) l'applique à une copie du circuit, puis la course est rejouée. Une écriture non canonique (noms dans le désordre, valeur hors liste, doublon) ou une catégorie sans effet sur ce circuit est refusée : deux écritures d'une même catégorie ne feront jamais deux classements.
+- Autres catégories prêtes côté serveur pour la suite (modes publiés, défi du jour) : gravité de départ (40, 70, 130, 180 %), vitesse de départ, hors-piste, nombre de tours ; elles ne sont pas proposées dans la fiche.
+- Circuit de joueur : c'est le code du circuit **d'origine** qui part au serveur (il applique la catégorie lui-même), depuis l'arrivée comme depuis le classement.
+- Tests : `tools/test-variants.mjs` (grammaire, refus, copie, clés des 72 circuits, vérification d'une vraie course en moto acceptée dans sa catégorie et refusée au classement officiel, fonction serveur avec Supabase simulé), `tools/test-hub.mjs` (descripteur et catégories proposées) ; test navigateur (choix « Départ en moto », la course part en moto, sans médailles, retour dans la catégorie).
+
 ## Bêta 0.9.26 — la fiche du circuit (Race Hub), la course rapide, et un filet de compatibilité
 
 Première livraison de **Copytrack Evolution** (étapes E0 à E2 du plan d'architecture). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). Le Race Hub lit les tables existantes (classement, fantômes de l'étape 7, titres de l'étape 8) : aucune étape SQL nouvelle. Aucun record, code ou replay ne change.

@@ -48,6 +48,20 @@ export default {
   '▶ Jouer <kbd>Entrée</kbd>': '▶ Play <kbd>Enter</kbd>',
   'Trois rivaux au plus : retires-en un d’abord.': 'Three rivals at most: remove one first.',
 
+  // ---------------------------------------------------------------- catégories de records (variantes)
+  'Catégorie de record': 'Record category',
+  '🏁 Officiel': '🏁 Official',
+  '🚗 Départ en voiture': '🚗 Car start',
+  '🏍 Départ en moto': '🏍 Motorbike start',
+  '⛵ Départ en bateau': '⛵ Boat start',
+  '🪂 Départ en deltaplane': '🪂 Hang-glider start',
+  '🚫 Sans obstacles': '🚫 No obstacles',
+  'Classement et record à part, sans médailles ni pièces : le record officiel ne bouge pas.': 'A separate leaderboard and record, with no medals or coins: the official record is untouched.',
+  'Catégorie : {c:t} · classement à part': 'Category: {c:t} · separate leaderboard',
+  'Catégorie de record inconnue.': 'Unknown record category.',
+  'Cette catégorie ne change rien sur ce circuit.': 'This category changes nothing on this track.',
+  'Catégorie trop longue pour ce circuit.': 'Category too long for this track.',
+
   // ---------------------------------------------------------------- records
   'Records': 'Records',
   '🎬 Regarder mon record': '🎬 Watch my record',

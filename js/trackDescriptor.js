@@ -15,6 +15,7 @@ import { hashString } from './track.js';
 import { medalFor } from './medals.js';
 import { goalFor, nextBuiltinIndex, chapterUnlocked, prerequisiteOf, CHAPTER_SIZE, UNLOCK_MEDALS } from './career.js';
 import { estimateDifficulty } from './difficulty.js';
+import { formatVariant, variantKey, applyVariant, variantFits, MAX_KEY } from './variants.js';
 
 const plen = (pts) => { let d = 0; for (let i = 1; i < pts.length; i++) d += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]); return d; };
 
@@ -130,4 +131,35 @@ export function finishVehicle(ghostVeh, hasGhost = true) {
   if (!Array.isArray(ghostVeh)) return hasGhost ? 'car' : null;
   const last = ghostVeh[ghostVeh.length - 1];
   return last && Array.isArray(last) ? VEH[last[1] | 0] || 'car' : 'car';
+}
+
+// ---- Catégories de records (variantes, variants.js) ---------------------------------------------------------------------------------
+// Le descripteur d'une variante : même circuit transformé (copie), sa propre clé de classement, son propre record. Ni médailles ni objectif
+// (calibrés sur le circuit officiel : pas de pièces gagnées par une catégorie plus facile). officialTrack : le circuit d'origine, dont le code
+// part au serveur pour un circuit de joueur (le serveur applique la variante lui-même).
+export function describeVariant(desc, v) {
+  const official = desc.official || desc;
+  if (!formatVariant(v)) return official;
+  const key = variantKey(official.key, v);
+  const track = applyVariant(official.track, v);
+  return {
+    ...official, official, variant: v, variantStr: formatVariant(v), key, track,
+    medals: null, goal: null, goalKey: '', recordKeys: [key],
+    launch: { trackKey: key, seed: official.launch.seed, difficulty: official.launch.difficulty, variant: formatVariant(v), officialTrack: official.track },
+  };
+}
+
+// Catégories proposées dans la fiche (les autres variantes existent pour les modes et le défi du jour, sans encombrer la fiche).
+export const HUB_CATEGORIES = [
+  { id: 'veh-car', v: { veh: 'car' }, label: '🚗 Départ en voiture' },
+  { id: 'veh-moto', v: { veh: 'moto' }, label: '🏍 Départ en moto' },
+  { id: 'veh-boat', v: { veh: 'boat' }, label: '⛵ Départ en bateau' },
+  { id: 'veh-glider', v: { veh: 'glider' }, label: '🪂 Départ en deltaplane' },
+  { id: 'obs-0', v: { obs: 0 }, label: '🚫 Sans obstacles' },
+];
+// Celles qui ont un sens sur ce circuit (classé en ligne, et la variante change vraiment la course).
+export function hubCategories(desc) {
+  const official = desc.official || desc;
+  if (!official.key || !/^(b-|daily-|u-)/.test(official.key)) return [];
+  return HUB_CATEGORIES.filter((c) => { try { return variantKey(official.key, c.v).length <= MAX_KEY && variantFits(official.track, c.v); } catch { return false; } });
 }

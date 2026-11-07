@@ -181,6 +181,27 @@ try {
     await click('#tracks [data-action="back"]');
   });
 
+  await test('catégorie de record : départ en moto, classement à part, retour à la fiche dans la même catégorie', async () => {
+    await app(() => { window.copytrack.showMenu('tracks'); window.copytrack.openBuiltinHub(0, 'tracks'); });
+    await waitApp(() => document.querySelector('#hub-launch [data-cat="veh-moto"]'));
+    await click('#hub-launch [data-cat="veh-moto"]');
+    assert.equal(await page.evaluate(() => document.querySelector('#hub-launch [data-cat="veh-moto"]').getAttribute('aria-checked')), 'true');
+    assert.match(await app(() => window.copytrack._hub.desc.key), /~v1\.veh-moto$/);
+    assert.match(await page.evaluate(() => document.getElementById('hub-launch').textContent), /Classement et record à part/);
+    await click('#hub-play');
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.state, null, 40000);
+    assert.equal(await app(() => window.copytrack.session.phys.vehicle), 'moto', 'la course part en moto');
+    assert.match(await app(() => window.copytrack.session.trackKey), /~v1\.veh-moto$/);
+    assert.equal(await app(() => window.copytrack.session.medals), null, 'pas de médailles dans une catégorie');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
+    assert.equal(await page.evaluate(() => document.querySelector('#hub-launch [data-cat="veh-moto"]').getAttribute('aria-checked')), 'true', 'la fiche revient dans la catégorie choisie');
+    await click('#hub-launch [data-cat=""]');
+    assert.doesNotMatch(await app(() => window.copytrack._hub.desc.key), /~/);
+    await click('#race-hub [data-action="hub-back"]');
+    await click('#tracks [data-action="back"]');
+  });
+
   await test('course rapide : un clic lance le prochain circuit sans médaille', async () => {
     const expect = await app(async () => { const d = await import('/js/trackDescriptor.js'); const s = await import('/js/storage.js'); return d.quickRaceIndex(window.copytrack.builtins, s.getRecord); });
     await click('[data-action="quick"]');

@@ -209,7 +209,7 @@ class App {
     el.textContent = '🌍 Envoi au classement…';
     try {
       const r = await online.submitScore({
-        trackKey: key, code: key.startsWith('u-') ? session.track.encode() : '',
+        trackKey: key, code: key.startsWith('u-') ? (session.opts.officialTrack || session.track).encode() : '',      // variante : le code du circuit d'origine
         inputs: session.lastRun.inputs, time, physVer: PHYS_VER,
       }, this.settings.playerName);
       // Le serveur a accepté la course : on s'assure que la progression locale la contient (mise à jour sûre si l'écriture de
