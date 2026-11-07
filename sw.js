@@ -1,7 +1,7 @@
 // Service worker généré par tools/gen-sw.mjs : ne pas modifier à la main.
 // Jeu hors ligne : les fichiers du jeu sont gardés en cache ; le réseau reste prioritaire
 // pour récupérer les mises à jour quand il est disponible.
-const CACHE = 'copytrack-09b2f62d51';
+const CACHE = 'copytrack-0edd177c15';
 const FILES = [
   "./",
   "assets/README.txt",
@@ -14,6 +14,7 @@ const FILES = [
   "js/AudioEngine.js",
   "js/academy.js",
   "js/account.js",
+  "js/ambiance.js",
   "js/app/academy.js",
   "js/app/community.js",
   "js/app/editorFlow.js",
@@ -46,6 +47,7 @@ const FILES = [
   "js/editor/history.js",
   "js/editor/palette.js",
   "js/editor/pointer.js",
+  "js/editor/prefabs.js",
   "js/editor/selection.js",
   "js/editor/shared.js",
   "js/editor/tools.js",
@@ -87,6 +89,7 @@ const FILES = [
   "js/physics/specs.js",
   "js/physics/walls.js",
   "js/pieces.js",
+  "js/prefabs.js",
   "js/profile.js",
   "js/quality.js",
   "js/race.js",

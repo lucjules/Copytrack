@@ -237,7 +237,7 @@ try {
     assert.notEqual(refused, 'loop', 'une pièce du mode complet est refusée');
     await app(() => document.querySelector('#ed-palette .pal-guided button').click());
     const f = await vis();
-    assert.ok(!f.guided && !f.banner); assert.ok(f.fams >= 5 && f.singles > 10 && f.tabs === 4 && f.groups > 3, JSON.stringify(f));
+    assert.ok(!f.guided && !f.banner); assert.ok(f.fams >= 5 && f.singles > 10 && f.tabs === 5 && f.groups > 3, JSON.stringify(f));
     assert.equal(await app(() => window.copytrack.settings.editorGuided), false);
     assert.equal(await app(() => { const s = window.copytrack.session; s.setTool('loop'); return s.tool; }), 'loop');
     await app(() => window.copytrack.leaveEditor());
@@ -331,6 +331,53 @@ try {
     assert.equal(st.n, 1); assert.ok(st.label, 'étiquette'); assert.ok(st.visible && st.dist > 2, 'le rival roule devant (distance ' + st.dist.toFixed(1) + ' m)');
     await shot('04b-fantome-rival');
     await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  await test('éditeur : ambiance du circuit (nuit, brume épaisse) appliquée à la scène et gardée dans le code ; prefabs : coller un morceau fourni, enregistrer sa sélection, exporter, supprimer, importer', async () => {
+    await app(() => { window.copytrack.settings.editorGuided = null; window.copytrack.openEditor({ name: 'Essai prefabs', code: null, fresh: true }); });
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.openParams, null, 20000);
+    // --- ambiance
+    const before = await app(() => ({ far: window.copytrack.scenery.theme.fogFar, sun: window.copytrack.scenery.sun.intensity }));   // (l'éditeur éloigne le brouillard de la scène : on lit celui du décor)
+    await app(() => window.copytrack.session.openParams());
+    await waitApp(() => document.getElementById('pp-sky'));
+    await page.evaluate(() => { for (const [id, v] of [['pp-sky', 'night'], ['pp-fog', 'thick'], ['pp-music', 'none']]) { const e = document.getElementById(id); e.value = v; } [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent.trim() === 'Appliquer').click(); });
+    await waitApp(() => window.copytrack.session.track.ambiance.sky === 'night');
+    const after = await app(() => ({ far: window.copytrack.scenery.theme.fogFar, sun: window.copytrack.scenery.sun.intensity, am: window.copytrack.session.track.ambiance, code: window.copytrack.session.track.encode() }));
+    assert.ok(after.far < before.far * 0.5, `brume : ${before.far} -> ${after.far}`); assert.ok(after.sun < before.sun, `lumière : ${before.sun} -> ${after.sun}`);
+    assert.deepEqual(after.am, { sky: 'night', fog: 'thick', music: 'none' });
+    assert.ok(await app((c) => { const t = window.copytrack.session.track.constructor.decode(c); return t.ambiance.fog === 'thick'; }, after.code), 'le code relu garde l\'ambiance');
+    await shot('22-ambiance-nuit');
+    // --- prefabs
+    await page.evaluate(() => document.querySelector('#ed-palette .pal-tab[data-tab="prefabs"]').click());
+    await waitApp(() => document.querySelectorAll('#ed-palette [data-pf-starter]').length >= 6);
+    const n0 = await app(() => window.copytrack.session.track.tiles.length);
+    await page.evaluate(() => document.querySelector('#ed-palette [data-pf-starter="chicane"]').click());
+    assert.ok(await app(() => window.copytrack.session.pasting && window.copytrack.session.clip.tiles.length === 4), 'collage armé');
+    await app(() => { const s = window.copytrack.session; s.hover = { cx: 5, cz: 5 }; s.doPaste(); s.clearSel(); });
+    assert.equal(await app(() => window.copytrack.session.track.tiles.length), n0 + 4, 'quatre pièces posées');
+    await app(() => { const s = window.copytrack.session; s.setTool('select'); s.sel = { x0: 5, z0: 2, x1: 8, z1: 9 }; });
+    await page.evaluate(() => document.querySelector('#ed-palette [data-pf="save"]').click());
+    await waitApp(() => document.getElementById('pf-name'));
+    await page.evaluate(() => { document.getElementById('pf-name').value = 'Ma chicane'; [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent.trim() === 'Enregistrer').click(); });
+    await waitApp(() => document.querySelectorAll('#ed-palette .pf-mine').length === 1);
+    assert.match(await page.evaluate(() => document.querySelector('#ed-palette .pf-mine').textContent), /Ma chicane/);
+    const code = await app(async () => (await import('/js/storage.js')).listPrefabs()[0].code);
+    assert.ok(code.startsWith('SHP1:'));
+    await shot('23-prefabs');
+    await page.evaluate(() => document.querySelector('#ed-palette [data-pf-del]').click());
+    await waitApp(() => document.querySelectorAll('#ed-palette .pf-mine').length === 0);
+    await page.evaluate(() => document.querySelector('#ed-palette [data-pf="import"]').click());
+    await waitApp(() => document.getElementById('pf-code'));
+    await page.evaluate(() => { document.getElementById('pf-code').value = 'SHP1:cassé'; [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent.trim() === 'Importer').click(); });
+    assert.match(await page.evaluate(() => document.getElementById('pf-err').textContent), /invalide ou coupé/);
+    await page.evaluate((c) => { document.getElementById('pf-code').value = c; [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent.trim() === 'Importer').click(); }, code);
+    await waitApp(() => document.querySelectorAll('#ed-palette .pf-mine').length === 1);
+    // guidé : l'onglet Prefabs disparaît
+    await app(() => window.copytrack.session.setGuided(true));
+    assert.equal(await page.evaluate(() => document.querySelector('#ed-palette .pal-tab[data-tab="prefabs"]').hidden), true, 'mode guidé : pas de prefabs');
+    await app(async () => { window.copytrack.session.setGuided(false); const m = await import('/js/storage.js'); for (const p of m.listPrefabs()) m.deletePrefab(p.id); window.copytrack.settings.editorGuided = null; });
+    await app(() => window.copytrack.leaveEditor());
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 

@@ -10,6 +10,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | --- | --- |
 | `academy.js` | Académie : six leçons guidées, de très courts circuits qui apprennent UNE chose chacune (conduite, dérapage, mini-turbo, réception, plaque de transformation, obstacles), avec un objectif à réussir. Données et règles pures ; l'écran et le lancement sont dans app/academy.js. Aucune médaille, aucun record, aucune statistique : on s'entraîne. |
 | `account.js` | Comptes Copytrack : pseudo + mot de passe, sauvegarde cloud entre appareils. Les invités restent locaux. |
+| `ambiance.js` | Ambiance d'un circuit (0.9.18) : le MOMENT de la journée, la BRUME et la MUSIQUE, au choix de l'auteur, par-dessus le décor. Purement visuel et sonore : aucun effet sur la physique, les temps ni la signature du circuit (changer l'ambiance ne fait perdre ni la vérification ni les records). Module sans rendu : resolveAmbiance renvoie les réglages à appliquer à la scène (scenery.js). |
 | `audio.js` | Effets sonores synthétisés (Web Audio API). La musique est gérée à part (voir music.js). |
 | `AudioEngine.js` | Moteur de musique procédurale « French Touch / rally house / nu-disco » à ~124 BPM, 100 % Web Audio API (aucun fichier audio). |
 | `autopilot.js` | Pilote automatique simple qui suit la ligne centrale d'un circuit scripté. |
@@ -50,6 +51,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `particles.js` | Particules low-poly (petits tétraèdres instanciés) : poussière, étincelles, éclats. |
 | `physics.js` | Physique de la voiture : pas fixe, déterministe, sans moteur externe. |
 | `pieces.js` | Définition des pièces de circuit, des revêtements et de leur géométrie "analytique" (utilisée à la fois par la physique et par les maillages). |
+| `prefabs.js` | Prefabs de l'éditeur (0.9.18) : des morceaux de circuit réutilisables (chicane, looping + sortie, saut…), qu'on colle comme le presse-papiers ; on peut aussi enregistrer SA sélection, la nommer et la partager par un code « SHP1: ». Un prefab est un presse-papiers (editorTools.copyRect) : { w, h, tiles, decos } en coordonnées relatives. Module sans rendu ni stockage : la bibliothèque locale est dans storage.js. |
 | `profile.js` | Profil du joueur : pièces, objets débloqués, équipement, code de sauvegarde. |
 | `quality.js` | Qualité graphique : profils (Ultra → Potato), détection automatique (benchmark invisible sur l'animation du menu), gestionnaire qui applique un profil au WebGLRenderer et à la scène, et filet de sécurité en course. |
 | `race.js` | Session de course : boucle à pas fixe, caméra, fantôme, HUD, effets. |
@@ -99,6 +101,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `history.js` | État du circuit dans l'éditeur : instantanés, annuler / rétablir, enregistrement, nouveau circuit, essai. |
 | `palette.js` | Palette de l'éditeur : boutons d'outils, familles de pièces, options, paramètres, aide à la compatibilité, menu. |
 | `pointer.js` | Souris, tactile et manette dans l'éditeur : événements, survol, aperçu de la pose, case et décoration visées. |
+| `prefabs.js` | Onglet « Prefabs » de la palette : coller un morceau tout fait (chicane, saut, looping…), enregistrer SA sélection sous un nom, la partager par code, importer le code d'un ami. |
 | `selection.js` | Sélection rectangulaire, copier / couper / coller, vue par niveau et repérage des problèmes. |
 | `shared.js` | Éléments partagés par les familles de méthodes de EditorSession (voir editor.js). |
 | `tools.js` | Outils d'édition : poser, peindre, remplir, gomme, pipette, options des pièces, décorations, niveau. |

@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.18** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.9.19** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -22,6 +22,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 
 - **72 circuits** dans 12 décors (*Désert crépuscule*, *Jungle néon*, *Archipel tropical*, *Ville futuriste*, *Nuit polaire*, *Volcan*, *Station orbitale*, *Fonds marins*, *Usine mécanique*, *Ville dans les nuages*, *Canyon de cristal* et l'*Atelier des mécanismes*),
   rangés **du plus facile au plus dur** en 11 chapitres de carrière (un par décor, 6 circuits chacun), plus un **chapitre bonus, l'Atelier** (6 circuits qui montrent chaque obstacle et chaque pièce mobile, un par un ; il s'ouvre avec 4 médailles dans le premier chapitre). Chaque circuit a un **profil** (Sprint, Speedway, Technique, Rollercoaster, Acrobatique) et une ouverture qui lui est propre ; 2 circuits se courent en plusieurs tours (Caldeira, Grand Anneau).
+- **Éditeur** : onglet **Prefabs** (chicane, épingle, slalom, saut, looping, wall-ride : on les colle comme le presse-papiers ; « Enregistrer la sélection » crée les tiens, partageables par un code `SHP1:`) et **ambiance** par circuit (moment de la journée, brume, musique : Paramètres du niveau ; sans effet sur la course ni sur les records).
 - **Communauté** : onglet **Cette semaine** (circuits où le plus de pilotes différents ont couru), **Circuit de la semaine**, **difficulté estimée** (◆◇) sur chaque carte et à la publication. **Titres** affichés au classement, **exclusifs** du garage qui se méritent (défis du jour, Atelier, Académie) et **collections** à thème (+100 ◆).
 - **Partage** : un lien de **défi** (« Partager mon fantôme » › « Copier le lien ») ouvre directement la course contre ton fantôme ; le **replay** s'exporte en **vidéo WebM** (bouton 🎬 de la barre de replay).
 - **Académie** : six leçons guidées de deux minutes (conduite, dérapage, mini-turbo en série, réception parfaite, plaque de transformation, obstacles), chacune avec un objectif ; l'éditeur démarre en **mode guidé** (l'essentiel seulement) pour un nouveau joueur.

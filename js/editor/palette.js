@@ -11,6 +11,7 @@ import { DECO_CATS, DECO_COLORS, DECO_ICONS } from '../decoData.js';
 import { keyLabel } from '../input.js';
 import { esc } from '../dom.js';
 import { ERASE_FILTERS, ERASE_FILTER_ORDER } from '../editorPick.js';
+import { SKY_CHOICES, FOG_CHOICES, MUSIC_CHOICES } from '../ambiance.js';
 import { MODS, NO_OPTS, OPT_KEYS, PALETTE_ORDER, SNAPS, TOOLS, fillBase, isFill, pieceLabel } from './shared.js';
 // Options proposées dans l'onglet « Options » : bascules (route) et choix exclusifs (checkpoint, thème, mouvement).
 // Avec une pièce choisie, elles s'ajoutent à la pose (aperçu compris) ; sans pièce, elles s'appliquent à la pièce cliquée.
@@ -212,7 +213,7 @@ export const paletteMethods = {
     const tabs = document.createElement('div');
     tabs.className = 'pal-tabs';
     const panels = {};
-    for (const [id, label] of [['pieces', 'Pièces'], ['mods', 'Options'], ['surf', 'Revêtements'], ['decos', 'Décors']]) {   // Options à côté de Pièces
+    for (const [id, label] of [['pieces', 'Pièces'], ['mods', 'Options'], ['surf', 'Revêtements'], ['decos', 'Décors'], ['prefabs', 'Prefabs']]) {   // Options à côté de Pièces
       const b = document.createElement('button');
       b.className = 'pal-tab';
       b.dataset.tab = id;
@@ -293,6 +294,7 @@ export const paletteMethods = {
     const rowD = document.createElement('div'); rowD.className = 'pal-row decos'; rowD.id = 'ed-deco-row';
     panels.decos.appendChild(rowD);
     for (const p of Object.values(panels)) pal.appendChild(p);
+    this._buildPrefabPanel();
 
     // Réglages des revêtements
     const range = document.getElementById('ed-param');
@@ -670,7 +672,11 @@ export const paletteMethods = {
       <label>Gravité de départ<span class="inl"><input type="range" id="pp-g0" min="15" max="250" step="5"><b id="pp-g0v"></b></span></label>
       <label>Véhicule de départ<select id="pp-veh">${Object.entries(veh).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
       <label title="La course commence en gravité inversée : la voiture est plaquée au plafond (départ posé sur une pièce à l'envers)">Inversion de gravité au départ<input type="checkbox" id="pp-ig"></label>
-      <p class="meta">Départ, tours, gravité et véhicule changent la course : à revérifier.</p>`;
+      <p class="meta">Départ, tours, gravité et véhicule changent la course : à revérifier.</p>
+      <h4 class="opt-h">Ambiance (sans effet sur la course ni les temps)</h4>
+      <label>Moment de la journée<select id="pp-sky">${SKY_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+      <label>Brume<select id="pp-fog">${FOG_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+      <label>Musique<select id="pp-music">${MUSIC_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>`;
     const $f = (id) => f.querySelector('#' + id);
     $f('pp-name').value = T.name || '';
     $f('pp-desc').value = T.desc || '';
@@ -681,6 +687,7 @@ export const paletteMethods = {
     $f('pp-g0').value = T.g0 || 100;
     $f('pp-veh').value = T.veh0 || 'car';
     $f('pp-ig').checked = !!T.flip0;
+    $f('pp-sky').value = T.ambiance.sky; $f('pp-fog').value = T.ambiance.fog; $f('pp-music').value = T.ambiance.music;
     const show = () => {
       $f('pp-v0v').textContent = +$f('pp-v0').value ? `${$f('pp-v0').value} km/h` : 'arrêt';
       $f('pp-g0v').textContent = `${$f('pp-g0').value} % · ${(SURF_PHYS.gravity * $f('pp-g0').value / 100).toFixed(1).replace('.', ',')} m/s²`;
@@ -695,8 +702,11 @@ export const paletteMethods = {
         T.laps = laps;
         const nm = $f('pp-name').value.trim().slice(0, 40);
         if (nm) T.name = nm;
-        T.setParams({ desc: $f('pp-desc').value, offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value, flip0: $f('pp-ig').checked });
+        const amb = { sky: $f('pp-sky').value, fog: $f('pp-fog').value, music: $f('pp-music').value };
+        const ambChanged = JSON.stringify(amb) !== JSON.stringify(T.ambiance);
+        T.setParams({ desc: $f('pp-desc').value, offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value, flip0: $f('pp-ig').checked, ambiance: amb });
         if ($f('pp-decor').value !== T.decor) { T.decor = $f('pp-decor').value; this._applyDecor(); this.gridKey = ''; }
+        else if (ambChanged) this._applyDecor();
         this._changed(false);
         this._commit();
         return true;

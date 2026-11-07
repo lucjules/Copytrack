@@ -6,6 +6,7 @@ import { centerlineWorld } from './ribbons.js';
 import { isObstacle, buildObstacleGrid } from './obstacles.js';
 import { DECO_ORDER } from './decoData.js';
 import { DECORS, DEFAULT_DECOR } from './themes.js';
+import { DEFAULT_AMBIANCE, cleanAmbiance, ambianceToArray, ambianceFromArray } from './ambiance.js';
 import { COLOR_KEYS, MP, W2, cleanColors } from './track/shared.js';
 import { surfaceMethods } from './track/surfaces.js';
 import { editMethods } from './track/edit.js';
@@ -51,6 +52,7 @@ export class Track {
     this.laps = 1;    // nombre de tours (circuit fermé)
     // Paramètres du niveau : la description (affichée dans la communauté) et les règles de course (table RULES)
     this.desc = '';
+    this.ambiance = { ...DEFAULT_AMBIANCE };    // moment de la journée, brume, musique (visuel et sonore : hors signature, voir ambiance.js)
     this.resetRules();
     this.vt = 0;      // temps de vérification (secondes) de l'auteur
     this.vh = '';     // signature du circuit au moment de la vérification
@@ -211,6 +213,7 @@ export class Track {
     this.vt = 0; this.vh = '';
     this.laps = 1;
     this.desc = '';
+    this.ambiance = { ...DEFAULT_AMBIANCE };
     this.resetRules();
     this.version++;
   }
@@ -269,6 +272,7 @@ export class Track {
   // accepte aussi un autre circuit, dont on lit les mêmes champs).
   setParams(p = {}) {
     if (p.desc !== undefined) this.desc = String(p.desc || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (p.ambiance !== undefined) this.ambiance = cleanAmbiance(p.ambiance);
     for (const r of RULES) if (p[r.key] !== undefined) this[r.key] = r.clean(p[r.key]);
   }
 
@@ -315,6 +319,7 @@ export class Track {
     t.vt = this.vt; t.vh = this.vh;
     t.laps = this.laps;
     t.desc = this.desc;
+    t.ambiance = { ...this.ambiance };
     for (const r of RULES) t[r.key] = this[r.key];
     return t;
   }
@@ -352,6 +357,8 @@ export class Track {
     if (decos.length) data.o = decos;
     if (this.laps > 1) data.lp = this.laps;
     if (this.desc) data.ds = this.desc;
+    const am = ambianceToArray(this.ambiance);
+    if (am) data.am = am;
     for (const r of RULES) if (this[r.key] !== r.def) data[r.code] = this[r.key] === true ? 1 : this[r.key];
     if (this.verified) { data.vt = this.vt; data.vh = this.vh; }
     return 'SHW3:' + b64encode(JSON.stringify(data));
@@ -400,7 +407,7 @@ export class Track {
       }
     }
     tr.laps = Math.max(1, Math.min(9, data.lp | 0 || 1));
-    tr.setParams({ desc: data.ds, ...Object.fromEntries(RULES.map((r) => [r.key, data[r.code]])) });
+    tr.setParams({ desc: data.ds, ambiance: ambianceFromArray(data.am), ...Object.fromEntries(RULES.map((r) => [r.key, data[r.code]])) });
     if (data.vt > 0 && data.vh) { tr.vt = +data.vt; tr.vh = String(data.vh); }
     return tr;
   }

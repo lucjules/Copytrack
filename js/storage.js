@@ -212,6 +212,23 @@ export function saveMyTrack(entry) {
   return entry;
 }
 
+// ---- Prefabs de l'éditeur (bibliothèque locale : jusqu'à PREFAB_MAX ; elle ne se synchronise pas avec le compte, le partage se fait par le code « SHP1: ») ----
+export const PREFAB_MAX = 40;
+export function listPrefabs() {
+  const l = read('prefabs', []);
+  return Array.isArray(l) ? l.filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string' && typeof p.code === 'string' && p.code.startsWith('SHP1:')).slice(0, PREFAB_MAX) : [];
+}
+export function savePrefab({ id, name, code }) {
+  const entry = { id: String(id).slice(0, 30), name: String(name).slice(0, 40) || 'Prefab', code: String(code), updated: Date.now() };
+  const list = listPrefabs().filter((p) => p.id !== entry.id);
+  list.unshift(entry);
+  write('prefabs', list.slice(0, PREFAB_MAX));
+  return entry;
+}
+export function deletePrefab(id) {
+  write('prefabs', listPrefabs().filter((p) => p.id !== id));
+}
+
 export function deleteMyTrack(id) {
   write('tracks', listMyTracks().filter((t) => t.id !== id));
   // Pierre tombale : sans elle, la synchronisation du compte ressusciterait le circuit depuis un autre appareil.

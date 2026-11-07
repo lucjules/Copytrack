@@ -6,6 +6,20 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.19 — l'éditeur : des prefabs et une ambiance par circuit
+
+`PHYS_VER` inchangé (26) ; rien à redéployer côté serveur.
+
+- **Prefabs** (onglet « Prefabs » de la palette) : six morceaux fournis — *Chicane*, *Épingle*, *Slalom*, *Saut*, *Looping*, *Wall-ride* — qu'on colle comme le presse-papiers (clic sur la grille, `R` pour pivoter, aux quatre orientations et à tout niveau).
+  « Enregistrer la sélection » (outil Sélection) crée **ses propres prefabs** (jusqu'à 40, dans ce navigateur) ; ⧉ copie le **code `SHP1:`** à envoyer à un ami, « Importer un code » ajoute celui d'un ami. Un code venu de l'extérieur est validé
+  (préfixe, taille, 400 pièces et 300 décorations au plus, circuit non vide) avec un message lisible. Absents du mode guidé de l'éditeur.
+- **Ambiance par circuit** (Paramètres du niveau) : **moment de la journée** (aube, plein jour, coucher de soleil, nuit), **brume** (dégagé, brumeux, épais) et **musique** (chill de course, groove du menu, aucune), par-dessus le décor : ciel, soleil, lumière,
+  étoiles, brouillard. L'ambiance voyage dans le code de partage (champ `am`, absent par défaut : **le code d'un circuit sans ambiance ne change pas d'un octet**) et dans les circuits publiés, mais elle est **hors signature** : la changer ne fait perdre ni la
+  vérification ni les records. Valeurs inconnues ou hostiles ignorées. Elle ne s'applique pas en multijoueur ni en leçon pour la musique (toujours le chill).
+- Nouveaux modules : `js/ambiance.js` (réglages purs, sans rendu), `js/prefabs.js` (format, code, morceaux fournis), `js/editor/prefabs.js` (interface). La zone « Zones » (vitesse imposée, caméra spéciale) du diagnostic **n'est pas faite** : elle changerait la physique
+  des circuits (donc `PHYS_VER` et la vérification serveur) ; à décider à part.
+- Tests : `tools/test-ambiance.mjs` (code, signature, rendu de chaque décor × moment de la journée), `tools/test-prefabs.mjs` (morceaux collés aux quatre orientations, codes hostiles, bibliothèque), test navigateur (ambiance appliquée à la scène, prefab collé, enregistré, exporté, supprimé, importé, caché en mode guidé).
+
 ## Bêta 0.9.18 — trouver de bons circuits, et des récompenses qui se méritent
 
 `PHYS_VER` inchangé (26) ; **facultatif côté serveur** : `supabase/etape8-decouverte.sql` (sans lui, rien ne casse : l'onglet « Cette semaine » retombe sur « Plus joués », les titres restent locaux).

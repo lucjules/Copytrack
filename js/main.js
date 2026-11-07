@@ -135,7 +135,9 @@ class App {
     this.ui.setMode('race');
     $('replay-bar').classList.add('hidden');
     this.session = new RaceSession(this, track, opts);
-    this.audio.music.play('game');
+    // Musique du circuit : celle de l'auteur (ambiance.js) ou le chill de course ; en multijoueur ou en leçon, toujours le chill.
+    const mus = !(opts && (opts.multi || opts.academy)) && track.ambiance ? track.ambiance.music : '';
+    if (mus === 'none') this.audio.music.stop(); else this.audio.music.play(mus === 'menu' ? 'menu' : 'game');
     this._resize();
   }
 

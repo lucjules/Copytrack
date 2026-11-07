@@ -9,6 +9,7 @@ import { GeoBuilder } from './geo.js';
 import { CELL } from './constants.js';
 import { PIECES } from './pieces.js';
 import { DEFAULT_DECOR } from './themes.js';
+import { resolveAmbiance, isDefaultAmbiance } from './ambiance.js';
 import { hash2 } from './scenery/shared.js';
 import { decorMethods } from './scenery/decor.js';
 
@@ -432,8 +433,10 @@ export class Scenery {
     } catch { /* WebGL sans rendu flottant : pas d'environnement, le reste fonctionne */ }
   }
 
-  setTheme(id) {
-    const T = THEMES[id] || THEMES[DEFAULT_DECOR];
+  // ambiance : moment de la journée / brume choisis par l'auteur du circuit (ambiance.js) ; absente, le décor tel quel.
+  setTheme(id, ambiance = null) {
+    const base = THEMES[id] || THEMES[DEFAULT_DECOR];
+    const T = isDefaultAmbiance(ambiance) ? base : resolveAmbiance(base, ambiance);
     this.themeId = THEMES[id] ? id : DEFAULT_DECOR;
     this.theme = T;
     const u = this.sky.material.uniforms;
@@ -467,7 +470,7 @@ export class Scenery {
   // Reconstruit le terrain et le décor autour d'un circuit.
   setTrack(track, seedStr = 'copytrack', opts = {}) {
     this._last = [track, seedStr, opts];
-    this.setTheme(opts.theme || track.decor || DEFAULT_DECOR);
+    this.setTheme(opts.theme || track.decor || DEFAULT_DECOR, track.ambiance);
     const T = this.theme;
     const ceiling = track.tiles.some((t) => t.v);
     this.under.color.set(T.hemi[0]);
