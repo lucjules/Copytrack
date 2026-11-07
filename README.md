@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.12** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.9.13** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -80,7 +80,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 
 ### Multijoueur en direct
 
-- *Communauté > Multijoueur* : créer une salle ou rejoindre avec un **code de 6 caractères** ; jusqu'à 8 joueurs, en voitures fantômes (sans collision).
+- *Communauté > Multijoueur* : créer une salle, rejoindre avec un **code de 6 caractères** ou choisir un **salon public** ; jusqu'à 8 joueurs. **Course libre** (chacun à son rythme, voitures fantômes) ou **Championnat** : plusieurs circuits à la suite, départ commun sur une grille, points par place, classement en direct, collisions douces en option.
 - **Boucle asynchrone** : chacun a son chrono et recommence quand il veut (**R après l'arrivée**, sans repasser par le salon) ; on peut arriver en cours de route.
 - **Circuits** : intégrés, de la communauté (par ID) ou par code. **Retour au checkpoint : le chrono ne se remet pas à zéro.** Les adversaires lointains s'assombrissent.
 - Supabase Realtime ne sert qu'à se trouver et à négocier ; les positions (20 Hz) passent en **WebRTC pair à pair**. Voir `supabase/MULTI.md`.
@@ -116,6 +116,11 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
    sauvegarde cloud retrouvée sur n'importe quel appareil). Mots de passe hachés (bcrypt + sel) par Supabase Auth, jamais stockés par le jeu.
 
 5. **Durcissement** : `supabase/etape5-securite.sql` (replays des classements privés, plafond de temps par pilote, signalements et parties moins faciles à truquer). À lancer après l'étape 4.
+
+6. **Statistiques anonymes** (facultatif) : `supabase/etape6-telemetrie.sql` crée la table `run_stats` (fermée en lecture) et la fonction `log_runs` (cadence limitée). Le jeu n'envoie rien sans l'accord du joueur ; voir `supabase/TELEMETRIE.md`.
+   Sans ce script, le jeu fonctionne, simplement sans statistiques.
+
+7. **Relais TURN du multijoueur** (facultatif) : la fonction serveur `ice` (`supabase/functions/ice/index.ts`, générée par `npm run build:function`) donne STUN + TURN à identifiants à durée limitée ; voir `supabase/MULTI.md`.
 
 Les scripts sont relançables et testés sur PostgreSQL (`npm run test:sql`).
 

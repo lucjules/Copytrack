@@ -13,7 +13,7 @@ jobs:
       - run: npm test
       # La fonction serveur générée doit correspondre au code du jeu (physique, circuits) : sinon la vérification des temps rejouerait une autre physique.
       - run: npm run build:function
-      - run: git diff --exit-code supabase/functions/submit-score/index.ts
+      - run: git diff --exit-code supabase/functions/submit-score/index.ts supabase/functions/ice/index.ts
       # sw.js (cache hors ligne) et le préchargement des modules de index.html (déjà contrôlés par npm test, répétés ici pour un message clair)
       - run: npm run sw
       - run: git diff --exit-code sw.js index.html

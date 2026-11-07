@@ -2,7 +2,7 @@
 //
 // Le reste de la suite ne teste que le noyau (Node, sans DOM). Ce script ouvre le jeu et parcourt les écrans et les flux principaux :
 // accueil invité, menu, carrière, course (décompte, conduite, pause, recommencer), éditeur (pose, annuler, test), garage, profil
-// (compte, sauvegardes, options, commandes), communauté hors ligne, mes circuits. Il échoue à la moindre erreur JavaScript de la page.
+// (compte, sauvegardes, options, commandes), communauté hors ligne, mes circuits, et un championnat multijoueur à DEUX onglets (vraie liaison WebRTC sur la machine, signalisation locale ?net=local). Il échoue à la moindre erreur JavaScript de la page.
 // Playwright n'est pas une dépendance du projet : sans lui (ou sans Chromium), le test est ignoré (CI : voir .github/workflows).
 //   PW_SHOTS=/dossier  enregistre une capture de chaque étape
 import { spawn } from 'node:child_process';
@@ -24,7 +24,7 @@ const shots = process.env.PW_SHOTS;
 if (shots) mkdirSync(shots, { recursive: true });
 
 let browser;
-try { browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--mute-audio'] }); }
+try { browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--mute-audio', '--disable-features=WebRtcHideLocalIpsWithMdns'] }); }
 catch (e) { server.kill(); console.log('  skip Chromium introuvable : test navigateur ignoré (' + String(e.message).split('\n')[0] + ')'); process.exit(0); }
 
 let failures = 0;
@@ -36,12 +36,15 @@ async function test(name, fn) {
 }
 
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1, serviceWorkers: 'block' });
-const page = await ctx.newPage();
 // Les polices Google et Supabase ne sont pas joignables ici : ces échecs réseau ne sont pas des erreurs du jeu.
 const OFFLINE = /fonts\.(googleapis|gstatic)|supabase\.co|net::ERR|Failed to load resource|ERR_INTERNET_DISCONNECTED/;
-page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
-page.on('console', (m) => { if (m.type() === 'error' && !OFFLINE.test(m.text() + (m.location().url || ''))) errors.push('console: ' + m.text()); });
-await page.route(/fonts\.(googleapis|gstatic)\.com|supabase\.co/, (r) => r.abort());
+async function hook(p) {
+  p.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  p.on('console', (m) => { if (m.type() === 'error' && !OFFLINE.test(m.text() + (m.location().url || ''))) errors.push('console: ' + m.text()); });
+  await p.route(/fonts\.(googleapis|gstatic)\.com|supabase\.co/, (r) => r.abort());
+  return p;
+}
+const page = await hook(await ctx.newPage());
 
 const shot = async (n) => { if (shots) await page.screenshot({ path: join(shots, n + '.png') }); };
 const app = (fn, arg) => page.evaluate(fn, arg);
@@ -210,6 +213,98 @@ try {
     await page.keyboard.press('Escape');
     await app(() => window.copytrack.showMenu('menu'));
     await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  // Deux onglets du même navigateur : vraie liaison WebRTC, signalisation par BroadcastChannel (?net=local). Les temps d'arrivée sont donnés par le test (_finish) : on
+  // vérifie le branchement complet (salon, grille, classement en direct, collisions, clôture par l'hôte, points, manche suivante, podium), pas la conduite.
+  await test('multijoueur : championnat à deux onglets (grille, avancement, collisions, résultats, manche suivante, podium)', async () => {
+    const B = await hook(await ctx.newPage());
+    try {
+      await app(() => history.replaceState(null, '', '?net=local'));
+      await B.goto(`http://127.0.0.1:${PORT}/?net=local`, { waitUntil: 'load' });
+      if (await B.locator('#wl-name').isVisible()) { await B.locator('#wl-name').fill('Bea'); await B.locator('#wl-submit').evaluate((el) => el.click()); }
+      await B.waitForFunction(() => window.copytrack && window.copytrack.mode === 'menu', null, { timeout: 30000 });
+      await B.evaluate(() => { window.copytrack.settings.playerName = 'Bea'; });
+      await app(() => { window.copytrack.settings.playerName = 'Ana'; });
+      const text = (p, sel) => p.evaluate((q) => (document.querySelector(q) || {}).textContent || '', sel);
+      const clickBtn = (p, label) => p.evaluate((l) => { const b = [...document.querySelectorAll('#modal-actions button, #mp-cup button')].find((x) => x.textContent.trim() === l); if (!b) throw new Error('bouton introuvable : ' + l); b.click(); }, label);
+      // Salle : Ana crée (par l'interface), Bea rejoint avec le code.
+      await app(() => window.copytrack.multiMenu());
+      await clickBtn(page, 'Créer une salle');
+      await waitApp(() => document.querySelector('.mp-code b'));
+      const code = (await text(page, '.mp-code b')).trim();
+      assert.match(code, /^[A-HJ-NP-Z2-9]{6}$/);
+      await B.evaluate(() => window.copytrack.multiMenu());
+      await B.locator('#mp-code').fill(code);
+      await clickBtn(B, 'Rejoindre');
+      await B.waitForFunction(() => window.copytrack.room && window.copytrack.room.list.some((m) => m.link === 'open'), null, { timeout: 20000 });
+      await waitApp(() => window.copytrack.room.list.some((m) => m.link === 'open'), null, 20000);
+      await shot('12-salon-championnat');
+      // L'hôte choisit le championnat (2 manches, circuits faciles, collisions douces) et lance.
+      await page.evaluate(() => { document.querySelector('input[name="mp-mode"][value="cup"]').click(); });
+      await page.evaluate(() => { const r = document.querySelector('select[data-k="rounds"]'); r.value = '2'; r.dispatchEvent(new Event('change')); const p = document.querySelector('select[data-k="pool"]'); p.value = 'easy'; p.dispatchEvent(new Event('change')); });
+      assert.match(await text(page, '#modal-actions [data-mp="start"]'), /Lancer le championnat/);
+      await clickBtn(page, 'Lancer le championnat');
+      await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.cup, null, 30000);
+      await B.waitForFunction(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.cup, null, { timeout: 30000 });
+      const info = (p) => p.evaluate(() => { const s = window.copytrack.session; return { n: s.cup.n, total: s.cup.total, slot: s.cup.slot, count: s.cup.count, collisions: s.cup.collisions, x: s.phys.pos.x, z: s.phys.pos.z, track: s.track.name }; });
+      const ia = await info(page), ib = await info(B);
+      assert.deepEqual([ia.n, ia.total, ia.count, ia.collisions], [0, 2, 2, true]); assert.equal(ib.track, ia.track, 'même circuit');
+      assert.deepEqual([ia.slot, ib.slot].sort(), [0, 1]);
+      assert.ok(Math.hypot(ia.x - ib.x, ia.z - ib.z) >= 5, 'sur la grille, pas superposés');
+      assert.ok((await text(page, '#mp-board')).includes('Manche 1/2'), 'tableau de manche');
+      // Après le « GO » : chacun voit l'autre, et son avancement circule.
+      await waitApp(() => window.copytrack.session.state === 'racing', null, 30000);
+      await B.waitForFunction(() => window.copytrack.session.state === 'racing', null, { timeout: 30000 });
+      await waitApp(() => [...window.copytrack.session.remote.values()].some((rc) => rc.ready), null, 20000);
+      await B.waitForFunction(() => [...window.copytrack.session.remote.values()].some((rc) => rc.ready), null, { timeout: 20000 });
+      // Collision douce : on pose la voiture d'Ana sur celle de Bea (immobile) ; elle doit en être repoussée.
+      const gap = await page.evaluate(async () => {
+        const s = window.copytrack.session, rc = [...s.remote.values()][0];
+        s.protectUntil = 0;
+        s.phys.pos.x = rc.pos.x + 0.4; s.phys.pos.z = rc.pos.z; s.phys.pos.y = rc.pos.y; s.phys.vel.x = s.phys.vel.y = s.phys.vel.z = 0;
+        await new Promise((r) => setTimeout(r, 600));
+        return Math.hypot(s.phys.pos.x - rc.pos.x, s.phys.pos.z - rc.pos.z);
+      });
+      assert.ok(gap > 1.5, 'repoussée de la voiture de Bea : écart ' + gap.toFixed(2) + ' m');
+      // Conduite : Bea accélère quelques secondes ; Ana voit son avancement grimper.
+      await B.keyboard.down('ArrowUp');
+      await page.waitForTimeout(3500);
+      await B.keyboard.up('ArrowUp');
+      const prog = await page.evaluate(() => { const s = window.copytrack.session, id = [...s.remote.keys()][0]; return s.progOf(id); });
+      assert.ok(prog > 0.002 && prog < 0.5, 'avancement de Bea vu par Ana : ' + prog);
+      assert.ok((await text(page, '#mp-board')).includes('Bea'), 'classement en direct');
+      await shot('13-manche-en-direct');
+      // Arrivées : Bea 30,0 s puis Ana 30,5 s ; l'hôte clôt la manche, les points s'affichent chez les deux.
+      await B.evaluate(() => window.copytrack.session._finish(30.0));
+      await page.evaluate(() => window.copytrack.session._finish(30.5));
+      await waitApp(() => document.getElementById('mp-cup'), null, 15000);
+      await B.waitForFunction(() => document.getElementById('mp-cup'), null, { timeout: 15000 });
+      const panel = await text(page, '#mp-cup');
+      assert.ok(panel.includes('Manche 1/2') && panel.includes('+10') && panel.includes('+8'), 'points de la manche : ' + panel.replace(/\s+/g, ' '));
+      assert.ok(panel.indexOf('Bea') < panel.indexOf('Ana'), 'Bea (30,0 s) devant Ana (30,5 s)');
+      assert.ok(/Manche suivante.* dans \d+ s/.test(panel));
+      await shot('14-resultats-manche');
+      // Manche suivante : départ automatique, la grille suit le classement (Bea devant).
+      await waitApp(() => window.copytrack.session && window.copytrack.session.cup && window.copytrack.session.cup.n === 1, null, 30000);
+      await B.waitForFunction(() => window.copytrack.session && window.copytrack.session.cup && window.copytrack.session.cup.n === 1, null, { timeout: 30000 });
+      assert.equal((await info(B)).slot, 0, 'la meilleure de la manche 1 part devant');
+      assert.ok(!(await page.evaluate(() => !!document.getElementById('mp-cup'))), 'le panneau disparaît au départ');
+      await waitApp(() => window.copytrack.session.state === 'racing', null, 30000);
+      await B.waitForFunction(() => window.copytrack.session.state === 'racing', null, { timeout: 30000 });
+      await B.evaluate(() => window.copytrack.session._finish(31.0));
+      await page.evaluate(() => window.copytrack.session._finish(32.0));
+      await waitApp(() => (document.getElementById('mp-cup') || {}).textContent && document.getElementById('mp-cup').textContent.includes('Championnat terminé'), null, 15000);
+      const fin = await text(page, '#mp-cup');
+      assert.ok(fin.includes('20 pts') && fin.includes('16 pts'), 'classement final : ' + fin.replace(/\s+/g, ' '));
+      assert.ok(fin.indexOf('Bea') < fin.indexOf('Ana') && fin.includes('🥇'));
+      await shot('15-podium');
+      await clickBtn(page, 'Retour au salon');
+      await waitApp(() => window.copytrack.mode === 'menu' && window.copytrack.ui.modalOpen);
+    } finally {
+      await app(() => { if (window.copytrack.room) window.copytrack.room.leave(); window.copytrack.ui.closeModal(); window.copytrack.showMenu('menu'); }).catch(() => {});
+      await B.close();
+    }
   });
 
   await test('chaque profil de qualité se règle sans erreur', async () => {

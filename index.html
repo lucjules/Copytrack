@@ -40,6 +40,7 @@
   <link rel="modulepreload" href="js/welcome.js">
   <link rel="modulepreload" href="js/career.js">
   <link rel="modulepreload" href="js/storage.js">
+  <link rel="modulepreload" href="js/telemetry.js">
   <link rel="modulepreload" href="js/quality.js">
   <link rel="modulepreload" href="js/app/multi.js">
   <link rel="modulepreload" href="js/app/community.js">
@@ -65,6 +66,7 @@
   <link rel="modulepreload" href="js/hudMessages.js">
   <link rel="modulepreload" href="js/camflip.js">
   <link rel="modulepreload" href="js/net/snapshot.js">
+  <link rel="modulepreload" href="js/net/progress.js">
   <link rel="modulepreload" href="js/simulation.js">
   <link rel="modulepreload" href="js/autopilot.js">
   <link rel="modulepreload" href="js/skids.js">
@@ -84,6 +86,9 @@
   <link rel="modulepreload" href="js/config.js">
   <link rel="modulepreload" href="js/cloudsave.js">
   <link rel="modulepreload" href="js/net/room.js">
+  <link rel="modulepreload" href="js/net/championship.js">
+  <link rel="modulepreload" href="js/net/directory.js">
+  <link rel="modulepreload" href="js/net/ice.js">
   <link rel="modulepreload" href="js/editorTools.js">
   <link rel="modulepreload" href="js/daily.js">
   <link rel="modulepreload" href="js/app/shared.js">
@@ -97,6 +102,7 @@
   <link rel="modulepreload" href="js/mathutil.js">
   <link rel="modulepreload" href="js/physics/ribbon.js">
   <link rel="modulepreload" href="js/remoteCar.js">
+  <link rel="modulepreload" href="js/net/collide.js">
   <link rel="modulepreload" href="js/net/signaling.js">
   <link rel="modulepreload" href="js/net/transport.js">
   <link rel="modulepreload" href="js/physics/walls.js">
@@ -243,6 +249,7 @@
       <label><span>Fantôme de la médaille d'or (tant qu'elle n'est pas gagnée)</span><input type="checkbox" id="opt-ghostgold"></label>
       <label><span>Fantôme importé (code d'un ami)</span><input type="checkbox" id="opt-ghostimp"></label>
       <label><span>Envoyer mes records aux classements en ligne</span><input type="checkbox" id="opt-onlinescores"></label>
+      <label title="Temps, abandons et essais par circuit, sans nom ni compte : ils servent à régler la difficulté et les médailles."><span>Statistiques de jeu anonymes (aide à équilibrer les circuits)</span><input type="checkbox" id="opt-telemetry"></label>
       <label><span>Nom du pilote</span><input type="text" id="opt-name" maxlength="20"></label>
       <label><span>Commandes tactiles</span>
         <select id="opt-touch"><option value="buttons">Boutons ◀ ▶</option><option value="drag">Glisser le pouce à gauche</option></select>

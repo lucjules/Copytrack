@@ -180,6 +180,7 @@ export const settingsMethods = {
     $('opt-ghostgold').checked = s.ghostGold !== false;
     $('opt-ghostimp').checked = s.ghostImported !== false;
     $('opt-onlinescores').checked = s.onlineScores !== false;
+    $('opt-telemetry').checked = s.telemetry === true;
     $('opt-name').value = s.playerName;
     $('opt-name').readOnly = this.identity.kind === 'account';     // le pseudo d'un compte ne change pas
     $('opt-name').title = this.identity.kind === 'account' ? 'Pseudo du compte (non modifiable)' : '';
@@ -195,6 +196,29 @@ export const settingsMethods = {
   },
 
   // Taille de l'interface, compteur d'images, couleurs adaptées.
+  // Accord pour les statistiques anonymes (voir telemetry.js) : demandé une fois, retrouvable dans Options.
+  setTelemetry(on) {
+    this.settings.telemetry = !!on;
+    this.saveSettings();
+    if (on) { this.telemetry.scheduleFlush(3000); this.ui.flash('Merci : statistiques anonymes activées.'); } else this.telemetry.forget();
+    if ($('opt-telemetry')) $('opt-telemetry').checked = !!on;
+  },
+
+  askTelemetry() {
+    if (this.settings.telemetry != null) return;
+    if (this.ui.modalOpen || this.mode !== 'menu') { setTimeout(() => this.askTelemetry(), 8000); return; }
+    this.ui.modal({
+      title: 'Aider à équilibrer les circuits ?',
+      body: `<p>Copytrack peut envoyer, <b>sans nom ni compte</b>, le temps de tes arrivées, tes abandons et ton nombre d'essais sur chaque circuit
+        (avec un identifiant aléatoire propre à cet appareil). Cela sert à régler la difficulté et les médailles sur de vrais joueurs.</p>
+        <p class="meta">Rien d'autre ne part : ni pseudo, ni position, ni commandes. Tu peux changer d'avis à tout moment dans Profil › Options.</p>`,
+      actions: [
+        { label: 'Accepter', primary: true, onClick: () => { this.setTelemetry(true); return true; } },
+        { label: 'Refuser', onClick: () => { this.setTelemetry(false); return true; } },
+      ],
+    });
+  },
+
   _applyAccess() {
     const s = this.settings;
     document.documentElement.style.setProperty('--ui-scale', String(s.uiScale || 1));

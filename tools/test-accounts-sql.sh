@@ -16,7 +16,7 @@ create table auth.users (id uuid primary key default gen_random_uuid(), email te
 create function auth.uid() returns uuid language sql stable as $f$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $f$;
 grant usage on schema auth to anon, authenticated;
 SQL
-for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
+for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape6-telemetrie.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
 $P -d $DB <<'SQL'
 \set ON_ERROR_STOP off
 create function public.as_user(u uuid) returns void language plpgsql as $$ begin perform set_config('request.jwt.claim.sub', u::text, false); end $$;
@@ -101,8 +101,37 @@ do $$ declare refuse boolean := false; begin
   begin insert into scores (track_key, player, time, inputs, phys_ver) values ('k-de-trop', '00000000-0000-0000-0000-0000000000b1', 30, 'A', 26); exception when others then refuse := true; end;
   perform public.check('étape 5 : 2000 temps au plus par pilote', refuse and (select count(*) from scores where player = '00000000-0000-0000-0000-0000000000b1') = 2000);
 end $$;
--- 10. aucun mot de passe en clair dans nos tables
+-- 10. statistiques de jeu anonymes (étape 6) : écriture par log_runs seulement, lignes invalides ignorées, cadence limitée
+reset role;
+set role anon;
+do $$ declare n int; begin
+  n := public.log_runs('[
+    {"install":"00000000000000a1","track":"eclats","outcome":"finish","time":21.5,"respawns":0,"attempt":2,"pv":26,"medal":"or"},
+    {"install":"00000000000000a1","track":"eclats","outcome":"quit","time":12.2,"progress":0.4,"attempt":3,"pv":26},
+    {"install":"pas-un-id","track":"eclats","outcome":"finish","time":20,"pv":26},
+    {"install":"00000000000000a2","track":"BAD TRACK","outcome":"finish","time":20,"pv":26},
+    {"install":"00000000000000a2","track":"eclats","outcome":"finish","time":-4,"pv":26}
+  ]'::jsonb);
+  perform public.check('étape 6 : seules les lignes valides sont enregistrées', n = 2);
+end $$;
+do $$ declare refuse boolean := false; begin
+  begin perform 1 from run_stats limit 1; exception when insufficient_privilege then refuse := true; end;
+  perform public.check('étape 6 : le jeu ne peut pas lire les statistiques', refuse);
+end $$;
+do $$ declare refuse boolean := false; begin
+  begin perform public.log_runs((select jsonb_agg('{"install":"00000000000000a3","track":"x","outcome":"quit","time":5,"pv":26}'::jsonb) from generate_series(1, 51))); exception when others then refuse := true; end;
+  perform public.check('étape 6 : un lot de plus de 50 lignes est refusé', refuse);
+end $$;
+do $$ declare total int := 0; begin
+  for i in 1..8 loop
+    total := total + public.log_runs((select jsonb_agg('{"install":"00000000000000a4","track":"x","outcome":"quit","time":5,"pv":26}'::jsonb) from generate_series(1, 50)));
+  end loop;
+  perform public.check('étape 6 : au plus 300 lignes par heure et par installation', total = 300);
+end $$;
+reset role;
+select public.check('étape 6 : la clé de service lit les statistiques', (select count(*) from run_stats where install = '00000000000000a1') = 2);
+-- 11. aucun mot de passe en clair dans nos tables
 select public.check('aucune colonne mot de passe dans le schéma public', not exists (select 1 from information_schema.columns where table_schema='public' and column_name ilike '%pass%'));
 select case when ok then '  ok   ' else '  FAIL ' end || name from public.res order by ok, name;
-select 'RESULT ' || case when bool_and(ok) and count(*) = 28 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
+select 'RESULT ' || case when bool_and(ok) and count(*) = 33 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
 SQL

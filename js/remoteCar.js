@@ -28,11 +28,17 @@ export class RemoteCar {
     this.buffer = new SnapshotBuffer(delay !== undefined ? { delay } : {});
     this.onTeleport = onTeleport;
     this.vehicle = 'car';
+    this.pos = new THREE.Vector3();    // dernière position affichée et vitesse (collisions douces d'une manche)
+    this.vel = new THREE.Vector3();
+    this.prog = 0;                       // avancement sur le circuit (0 à 1), du dernier paquet reçu
+    this.finished = false;               // a franchi l'arrivée (drapeau du dernier paquet)
     this.shown = false;           // a déjà été vue (la première apparition n'anime pas de transformation)
     this.spin = 0;                // rotation des roues (rad)
     this.lastMs = null;
     this.dark = 0;
     this.teleports = 0;
+    this.ready = false;
+    this.teleportedAtMs = -1e9;      // dernier retour au checkpoint vu (protection : on ne bouscule pas une voiture qui vient d'apparaître)
     // Les matériaux fantômes sont propres à cette voiture : on peut les modifier sans toucher aux autres.
     // Chaque matériau garde SA couleur d'origine (corps, effets...) : l'assombrissement part de celle-là.
     this.mats = new Set();
@@ -66,10 +72,14 @@ export class RemoteCar {
   // À appeler à chaque image. cameraPos : position de la caméra du joueur local.
   update(nowMs, cameraPos) {
     const s = this.buffer.sample(nowMs);
-    if (!s.ready) { this.group.visible = false; return false; }
+    if (!s.ready) { this.group.visible = false; this.ready = false; return false; }
+    this.ready = true;
     this.group.visible = true;
     this.group.position.copy(s.pos);
     this.group.quaternion.copy(s.quat);
+    this.pos.copy(s.pos); this.vel.copy(s.vel);
+    const last = this.buffer.latest;
+    if (last) { this.prog = last.prog; this.finished = !!(last.flags & 1); }
     // Même animation de transformation que le joueur (instantanée à la première apparition et après une téléportation), roues qui tournent avec la vitesse.
     const dt = this.lastMs == null ? 0 : Math.min(0.1, Math.max(0, (nowMs - this.lastMs) / 1000));
     this.lastMs = nowMs;
@@ -78,7 +88,7 @@ export class RemoteCar {
     this.car.update(dt, nowMs / 1000);
     this.spin += (s.speed / 0.44) * dt;
     for (const w of this.car.wheels) w.spin.rotation.x = -this.spin;
-    if (s.teleported) { this.teleports++; if (this.onTeleport) this.onTeleport(s.pos); }
+    if (s.teleported) { this.teleports++; this.teleportedAtMs = nowMs; if (this.onTeleport) this.onTeleport(s.pos); }
     this.setDistance(this.group.position.distanceTo(cameraPos));
     return true;
   }

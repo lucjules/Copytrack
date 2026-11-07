@@ -47,12 +47,33 @@ export const finishMethods = {
     }
   },
 
+  // Abandon (recommencer, quitter) d'une course commencée depuis au moins 3 s : une statistique anonyme avec la progression atteinte (voir telemetry.js).
+  _telemetryQuit() {
+    if (this._tmDone || this.demo || this.replay || this.multi || this.opts.fromEditor || this.opts.spawn) return;
+    if (this.state !== 'racing' && this.state !== 'paused') return;
+    const steps = this.logic.steps;
+    if (steps < 360) return;
+    this._tmDone = true;
+    const cps = this.logic.cps.length, laps = this.logic.laps;
+    const progress = Math.min(1, ((this.logic.lap - 1) * (cps + 1) + this.logic.collected.size) / (laps * (cps + 1)));
+    this.app.telemetry.record({ trackKey: this.trackKey, outcome: 'quit', time: steps * DT, progress, respawns: this.stats.respawns });
+  },
+
   _finish(time) {
     const app = this.app;
     this.state = 'finished';
     app.audio.engine(null);          // plus de bruit de moteur une fois le niveau terminé
     this.finishT = 0;
     if (this.replay) { this._replayEnded(); return; }
+    if (this.cup) {
+      // Championnat : le temps part à tous, l'hôte clôt la manche ; la place et les points s'affichent dans le panneau de manche (app/multi.js).
+      this._sendNet(F_FINISHED);
+      this.multi.room.reportFinish(Math.round(time / DT));
+      app.audio.finish(false);
+      app.ui.hud.time(time, true);
+      app.ui.hud.message(`🏁 ${formatTime(time)} · en attente des autres`, 8, PRIO.final);
+      return;
+    }
     if (this.multi) {
       // Multijoueur : ni record, ni pièces, ni classement en ligne (le chrono y suit des règles différentes). Le temps est
       // annoncé aux autres ; on peut recommencer tout de suite (R ou T), sans jamais repasser par le salon.
@@ -85,6 +106,8 @@ export const finishMethods = {
     }
     app.audio.finish(isRecord);
     const medal = medalFor(time, this.medals);
+    this._tmDone = true;
+    if (!this.opts.fromEditor && !this.opts.spawn) app.telemetry.record({ trackKey: this.trackKey, outcome: 'finish', time, respawns: this.stats.respawns, medal: medal && medal.id });
     const prevMedal = prev ? medalFor(prev.time, this.medals) : null;
     let reward = null;
     if (this.opts.fromEditor && this.opts.spawn) {

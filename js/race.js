@@ -4,6 +4,7 @@ import { DT } from './constants.js';
 import { CamFlip } from './camflip.js';
 import { MSG } from './hudMessages.js';
 import { SEND_EVERY_STEPS, F_FINISHED } from './net/snapshot.js';
+import { ProgressTracker, gridSpawn } from './net/progress.js';
 import { Simulation } from './simulation.js';
 import { SURFACES } from './pieces.js';
 import { Autopilot } from './autopilot.js';
@@ -59,6 +60,9 @@ export class RaceSession {
     this.ghosts = [];
     // Multijoueur (opts.multi = { room, startLocal }) : pas de fantômes enregistrés, des voitures distantes à la place.
     this.multi = opts.multi || null;
+    this.cup = this.multi && this.multi.cup || null;          // manche d'un championnat : { n, total, slot, count, roster, collisions } (départ commun sur une grille)
+    this.progress = this.multi ? new ProgressTracker(track.path) : null;       // avancement 0..1 sur le circuit (classement en direct)
+    this.prog = 0; this._jumped = false; this.protectUntil = 0; this._dnf = false;
     this.remote = new Map();
     this.teleSeq = 0;
     this.netTick = 0;     // horloge d'envoi : ne recule JAMAIS, même quand on recommence un essai (le tampon des autres joueurs en dépend)
@@ -96,7 +100,15 @@ export class RaceSession {
 
   restart() {
     const app = this.app;
-    const sp = this.sim.start(this.opts.spawn);
+    this._telemetryQuit();
+    this._tmDone = false;
+    // Manche d'un championnat : chacun part de sa place sur la grille (le premier devant, quatre de front).
+    let spawn = this.opts.spawn;
+    if (this.cup && !spawn) { this.logic.reset(); spawn = gridSpawn(this.logic.spawnPoint(), this.cup.slot, this.cup.count); }
+    const sp = this.sim.start(spawn);
+    if (this.cup && !this.opts.spawn) this.logic.respawn.snap = this.logic._snap();      // le point de départ sert de retour, avec l'état de la course à ce moment-là
+    this.prog = 0; this._jumped = true; this.protectUntil = 0; this._dnf = false;
+    if (this.progress) this.progress.reset();
     this.car.setVehicle(this.phys.vehicle, true);
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
     this._orient();
@@ -151,7 +163,7 @@ export class RaceSession {
     // tourner : la téléportation coûte tout le temps perdu, et le compteur de téléportation prévient les autres joueurs.
     const r = this.sim.rewind({ keepClock: !!this.multi });      // (remet aussi la voiture au point de retour, avec son véhicule et sa gravité)
     Object.assign(this.stats, this.statsSnap);       // les réceptions, turbos et anneaux d'après le checkpoint ne comptent plus
-    if (this.multi) this.teleSeq = (this.teleSeq + 1) & 255;
+    if (this.multi) { this.teleSeq = (this.teleSeq + 1) & 255; this._jumped = true; this.protectUntil = this.tick + 240; }       // 2 s sans collision après un retour au checkpoint
     const steps = this.logic.steps;
     this.ghostRec.length = Math.min(this.ghostRec.length, Math.floor(steps / GHOST_EVERY) * 7);
     while (this.ghostVeh.length && this.ghostVeh[this.ghostVeh.length - 1][0] >= this.ghostRec.length / 7) this.ghostVeh.pop();
@@ -221,9 +233,10 @@ export class RaceSession {
     if (this.state === 'racing') this.tick++;
     this.lastInput = inp;
     this.prevQuat.copy(this.quat);
+    if (this.cup && this.cup.collisions && this.state === 'racing') this._collide();      // collisions douces entre voitures (net/collide.js)
     this.sim.drive(inp);      // horloge des obstacles et pièces mobiles = chrono, puis un pas de physique
     this._orient();
-    if (this.multi && ++this.netTick % SEND_EVERY_STEPS === 0) this._sendNet(this.state === 'finished' ? F_FINISHED : 0);
+    if (this.multi && ++this.netTick % SEND_EVERY_STEPS === 0) { this._updateProgress(); this._sendNet(this.state === 'finished' && !this._dnf ? F_FINISHED : 0); }
     const ev = this.phys.ev;
     if (this.state === 'racing') {
       if (ev.wall > 4) this.stats.wallHits++;
@@ -364,8 +377,9 @@ export class RaceSession {
         return;
       }
       if (this.state === 'paused') return this.render(dt, this.acc / DT);      // (même interpolation qu'avant la pause : la voiture ne recule pas d'un pas)
-      if (input.act('restart') || input.hit('NumpadEnter')) { if (this.multi) this._newAttempt(); else { this.restart(); return; } }
-      if (input.act('respawn') && !this.replay) { if (this.multi && this.state === 'finished') this._newAttempt(); else this.respawn(true); }
+      // Manche d'un championnat : pas de nouvel essai (une seule course par manche) ; le retour au checkpoint (R), lui, reste possible.
+      if (input.act('restart') || input.hit('NumpadEnter')) { if (this.cup) { /* une seule course par manche */ } else if (this.multi) this._newAttempt(); else { this.restart(); return; } }
+      if (input.act('respawn') && !this.replay) { if (this.multi && this.state === 'finished') { if (!this.cup) this._newAttempt(); } else this.respawn(true); }
       if (input.act('camera')) this.cycleCamera();
       if (input.act('horn')) app.audio.horn(profile().loadout.horn);
     }
@@ -525,7 +539,11 @@ export class RaceSession {
 
     // Caméra
     this._camera(dt);
-    if (this.multi) { const now = performance.now(); for (const rc of this.remote.values()) rc.update(now, app.camera.position); }
+    if (this.multi) {
+      const now = performance.now();
+      for (const rc of this.remote.values()) rc.update(now, app.camera.position);
+      if (this.cup && now - (this._boardT || 0) > 250) { this._boardT = now; app._updateBoard(); }       // classement en direct : 4 fois par seconde suffisent
+    }
     app.scenery.update(this.renderPos, app.camera);
 
     // Audio & HUD
@@ -545,6 +563,7 @@ export class RaceSession {
   }
 
   dispose() {
+    this._telemetryQuit();
     this.app.camera.up.set(0, 1, 0);
     this.view.dispose();
     this.car.dispose();
