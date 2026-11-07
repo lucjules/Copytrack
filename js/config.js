@@ -16,10 +16,14 @@ const DEFAULTS = {
   iceServers: [
     { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
   ],
+  // Fonction serveur « ice » (supabase/functions/ice) : renvoie STUN + relais TURN à identifiants à DURÉE LIMITÉE, demandés à l'ouverture d'une salle. Absente ou en panne :
+  // le jeu retombe sur iceServers ci-dessus (STUN seul). '' la désactive. Voir supabase/MULTI.md.
+  iceUrl: undefined,
 };
 
 const override = (typeof globalThis !== 'undefined' && globalThis.COPYTRACK_CONFIG) || {};
 export const CONFIG = {
   supabase: { ...DEFAULTS.supabase, ...(override.supabase || {}) },
   iceServers: Array.isArray(override.iceServers) ? override.iceServers : DEFAULTS.iceServers,
+  iceUrl: typeof override.iceUrl === 'string' ? override.iceUrl : `${(override.supabase && override.supabase.url) || DEFAULTS.supabase.url}/functions/v1/ice`,
 };

@@ -153,12 +153,19 @@ export const decorMethods = {
     const trunk = gb.build();
     const trees = low ? 50 : 100;
     const caps = new THREE.IcosahedronGeometry(1, 1);
+    // Les canopées se posent AU SOMMET d'un tronc (avant, elles étaient semées à part, au hasard : des chapeaux flottaient dans le vide).
+    const tops = [];
     this._instanced(trunk, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }), trees,
-      (put) => scatter(trees, (x, y, z) => { const s = 0.8 + rand() * 1.8; put(x, y, z, 0, rand() * 6, 0, s, s * (0.9 + rand() * 0.6), s); }));
-    for (const [col, n] of [['#2dffb0', 0.4], ['#8f5bff', 0.35], ['#ff4fd8', 0.25]]) {
-      const cnt = Math.round(trees * n);
-      this._instanced(caps, new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.5, flatShading: true, roughness: 0.5 }), cnt,
-        (put) => scatter(cnt, (x, y, z) => { const s = 5 + rand() * 7; put(x, y + 16 + rand() * 8, z, 0, rand() * 6, 0, s, s * 0.55, s); }));
+      (put) => scatter(trees, (x, y, z) => {
+        const s = 0.8 + rand() * 1.8, sy = s * (0.9 + rand() * 0.6);
+        put(x, y, z, 0, rand() * 6, 0, s, sy, s);
+        tops.push([x, y + 22 * sy, z]);        // 22 m : hauteur du tronc non mis à l'échelle
+      }));
+    let from = 0;
+    for (const [col, share] of [['#2dffb0', 0.4], ['#8f5bff', 0.35], ['#ff4fd8', 0.25]]) {
+      const mine = tops.slice(from, from += Math.round(tops.length * share));
+      this._instanced(caps, new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.5, flatShading: true, roughness: 0.5 }), Math.max(1, mine.length),
+        (put) => { for (const [x, y, z] of mine) { const s = 5 + rand() * 7; put(x, y - s * 0.2, z, 0, rand() * 6, 0, s, s * 0.55, s); } });
     }
     this._scatterMerged(ctx, ['mushroom'], low ? 25 : 55, { min: 2, max: 5, colors: [0, 5, 7, 4] });
     this._scatterMerged(ctx, ['bush', 'flower'], low ? 40 : 90, { min: 1, max: 2.2, colors: [0, 4, 7] });
@@ -191,15 +198,22 @@ export const decorMethods = {
     box.translate(0, 0.5, 0);
     const mat = new THREE.MeshStandardMaterial({ color: '#232845', emissive: '#ffffff', emissiveMap: tex, emissiveIntensity: 0.9, flatShading: true, roughness: 0.7 });
     const n = low ? 90 : 190;
+    const towers = [];
     this._instanced(box, mat, n, (put) => scatter(n, (x, y, z) => {
-      const w = 14 + rand() * 30, hgt = 40 + rand() * (rand() < 0.2 ? 260 : 130);
-      put(x, y, z, 0, 0, 0, w, hgt, w * (0.7 + rand() * 0.6));
+      const w = 14 + rand() * 30, hgt = 40 + rand() * (rand() < 0.2 ? 260 : 130), d = w * (0.7 + rand() * 0.6);
+      put(x, y, z, 0, 0, 0, w, hgt, d);
+      towers.push([x, y, z, w, hgt, d]);
     }));
-    // Néons : enseignes lumineuses sur de petits immeubles
+    // Néons : enseignes lumineuses COLLÉES à la façade d'un immeuble (avant, semées au hasard à 30-150 m de haut, elles flottaient dans le vide).
     for (const col of ['#ff3d8a', '#36e9ff', '#8f5bff']) {
       const cnt = low ? 14 : 30;
-      this._instanced(box, new THREE.MeshBasicMaterial({ color: col, toneMapped: false }), cnt,
-        (put) => scatter(cnt, (x, y, z) => put(x, y + 30 + rand() * 120, z, 0, rand() * 3, 0, 1.2 + rand() * 1.6, 3 + rand() * 6, 10 + rand() * 18)));
+      this._instanced(box, new THREE.MeshBasicMaterial({ color: col, toneMapped: false }), cnt, (put) => {
+        for (let i = 0; i < cnt && towers.length; i++) {
+          const [x, y, z, w, hgt, d] = towers[Math.floor(rand() * towers.length)];
+          const sh = Math.min(3 + rand() * 6, hgt * 0.2), side = rand() < 0.5 ? 1 : -1;
+          put(x + side * (w / 2 + 0.5), y + hgt * (0.25 + rand() * 0.5), z, 0, 0, 0, 1, sh, d * (0.3 + rand() * 0.4));       // enseigne sur la face ±x
+        }
+      });
     }
     // Pylônes et lampadaires
     this._scatterMerged(ctx, ['sign_up', 'sign_warn', 'cube'], low ? 30 : 60, { min: 1.5, max: 3, colors: [3, 5, 7] });

@@ -937,6 +937,28 @@ body.touch kbd { display: none; }
 .mp-board-r i { font-style: normal; font-variant-numeric: tabular-nums; }
 .mp-board-r em { font-style: normal; color: var(--muted); font-size: 11px; }
 .mp-board-f { margin-top: 4px; color: var(--muted); font-size: 11px; }
+.mp-board-r.gone { opacity: 0.45; }
+.mp-board-pos { font-size: 34px; font-weight: 800; line-height: 1; margin: 2px 0 6px; color: var(--cyan); }
+.mp-board-pos small { font-size: 16px; font-weight: 600; color: var(--muted); }
+.mp-mode { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+.mp-mode > span { color: var(--muted); font-size: 13px; }
+.mp-mode label, .chk { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.mp-cupcfg { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 6px; }
+.mp-cupcfg label { display: flex; align-items: center; gap: 6px; }
+.mp-cupcfg select { font: inherit; color: var(--text); background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); border-radius: 6px; padding: 5px; }
+.mp-pubchk { margin-top: 8px; font-size: 13px; }
+.mp-public { display: flex; flex-direction: column; gap: 4px; max-height: 50vh; overflow: auto; }
+.mp-pub { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 6px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); }
+.mp-pub i { color: var(--muted); font-style: normal; font-size: 13px; }
+.mp-cup { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 60; width: min(92vw, 460px); max-height: 86vh; overflow: auto; padding: 16px 18px; border-radius: 16px; background: rgba(20, 14, 44, 0.94); border: 1px solid var(--line); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); }
+.mp-cup h2 { margin: 0 0 2px; font-size: 22px; }
+.mp-cup h3 { margin: 12px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.mp-tab .mp-row { display: grid; grid-template-columns: 1.8em 1fr auto 3em; gap: 8px; padding: 3px 0; align-items: baseline; }
+.mp-row.me { color: var(--cyan); }
+.mp-row i { font-style: normal; font-variant-numeric: tabular-nums; }
+.mp-row em { font-style: normal; color: #ffd23e; text-align: right; font-size: 13px; }
+.mp-next { margin: 12px 0 4px; text-align: center; color: var(--muted); }
+.mp-cup-act { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
 @media (max-width: 760px) { .mp-board { top: auto; bottom: 10px; right: 10px; max-width: 200px; } }
 #profile .screen-head, #mytracks .screen-head, #tracks .screen-head { padding-right: 96px; }   /* laisse la place au compteur de pièces */
 

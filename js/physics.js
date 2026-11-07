@@ -46,6 +46,7 @@ export class CarPhysics {
     this.vehicle = 'car';
     this.gravMul = 1;
     this.glassTime = new Map();   // dalle de verre -> secondes de contact cumulées
+    this.brokenVer = 0;           // change à chaque dalle brisée ou restaurée (le rendu compare ce numéro, pas la taille de l'ensemble)
     this.broken = new Set();      // dalles de verre brisées (sans collision) jusqu'au prochain place()
     this.setBounds();
     this.place(0, 0.4, 0, 0);
@@ -101,7 +102,7 @@ export class CarPhysics {
     this.cutT = 0;
     // Verre fragile (Phase 3) : temps de contact cumulé par dalle, et dalles brisées dans cette course (elles n'ont plus de collision).
     // Tout (re)départ — départ, réapparition, retour au checkpoint — les restaure.
-    this.glassTime.clear(); this.broken.clear();
+    this.glassTime.clear(); this.broken.clear(); this.brokenVer++;
     this.graceT = 1.5;   // protection après un (re)départ : ni verre cassé ni piques (évite les boucles de retours)
     this.beltX = 0; this.beltZ = 0; this.beltS = 0;
     this.plateLock = '';
@@ -225,7 +226,7 @@ export class CarPhysics {
     const t = (this.glassTime.get(tile) || 0) + dt;
     this.glassTime.set(tile, t);
     if (t < glassSeconds(this._pct(tile))) return false;
-    this.broken.add(tile);
+    this.broken.add(tile); this.brokenVer++;
     this.ev.glass = true; this.ev.glassTile = tile;
     return true;
   }

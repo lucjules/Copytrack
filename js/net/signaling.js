@@ -23,9 +23,10 @@ const JOIN_TIMEOUT = 6000;
 
 // ---- Supabase Realtime (protocole Phoenix, version 1.0.0 : messages JSON {topic, event, payload, ref}) ----------------
 export class SupabaseSignaling extends Emitter {
-  constructor({ code, selfId, getToken = null, WebSocketImpl = globalThis.WebSocket, url = ONLINE.url, key = ONLINE.key, heartbeatMs = 25000 }) {
+  // observe : écouter l'annuaire d'un canal sans s'y inscrire (liste des salons publics : on regarde, on n'apparaît pas).
+  constructor({ code, selfId, getToken = null, observe = false, WebSocketImpl = globalThis.WebSocket, url = ONLINE.url, key = ONLINE.key, heartbeatMs = 25000 }) {
     super();
-    this.code = code; this.selfId = selfId; this.getToken = getToken;
+    this.code = code; this.selfId = selfId; this.getToken = getToken; this.observe = observe;
     this.WS = WebSocketImpl; this.url = url; this.key = key; this.heartbeatMs = heartbeatMs;
     this.topic = `realtime:copytrack-room-${code}`;
     this.peers = new Map();
@@ -62,7 +63,7 @@ export class SupabaseSignaling extends Emitter {
           clearTimeout(timer);
           if (m.payload && m.payload.status === 'ok') {
             this.joined = true;
-            this._send(this.topic, 'presence', { type: 'presence', event: 'track', payload: this.meta });
+            if (!this.observe) this._send(this.topic, 'presence', { type: 'presence', event: 'track', payload: this.meta });
             this.hb = setInterval(() => this._send('phoenix', 'heartbeat', {}), this.heartbeatMs);
             // La liste des présents (presence_state) arrive juste après la réponse : on laisse un instant.
             setTimeout(() => { if (!done) { done = true; resolve(); } }, 250);

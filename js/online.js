@@ -222,6 +222,11 @@ class OnlineClient {
     await this._fetch('/rest/v1/tracks?id=eq.' + encodeURIComponent(id), { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
   }
 
+  // Statistiques de jeu anonymes (voir telemetry.js, supabase/etape6-telemetrie.sql) : pas de session, pas de pseudo.
+  async logRuns(events) {
+    return this._fetch('/rest/v1/rpc/log_runs', { method: 'POST', body: { events }, auth: false });
+  }
+
   async played(id) {
     try { await this._fetch('/rest/v1/rpc/track_played', { method: 'POST', body: { t: id } }); } catch { /* sans importance */ }
   }

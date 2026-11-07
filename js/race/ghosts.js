@@ -5,7 +5,7 @@ import { createCar } from '../carModel.js';
 import { getRecord, getImportedGhost } from '../storage.js';
 import { GhostRunner, newGhostPose } from '../replay.js';
 import { PHYS_VER } from '../version.js';
-import { GHOST_EVERY, tmpM, tmpV, tmpV2 } from './shared.js';
+import { GHOST_EVERY, ghostVehicleAt, tmpM, tmpV, tmpV2 } from './shared.js';
 const tmpV3 = new THREE.Vector3();
 
 export const ghostMethods = {
@@ -38,8 +38,15 @@ export const ghostMethods = {
   },
 
   // Fantômes simulés (or, importé) : la pose vient de l'historique du fantôme au pas de course du joueur (voir GhostRunner.poseAt).
-  _renderSimGhosts(alpha) {
+  // Change le véhicule d'un fantôme avec la même animation que le joueur ; instantanément après un saut dans le temps (retour au checkpoint, redémarrage).
+  _ghostVehicle(car, kind, jumped) {
+    if (car.vehicle === kind && !car.anim) return;
+    car.setVehicle(kind, jumped);
+  },
+
+  _renderSimGhosts(alpha, dt = 0) {
     const steps = this.logic.steps;
+    const now = performance.now() / 1000;
     for (const g of this.ghosts) {
       const p = g.runner.poseAt(steps, g.pose);
       const show = this.state !== 'countdown' && !p.done;
@@ -49,12 +56,14 @@ export const ghostMethods = {
       this._ghostQuat(g.runner.poseAt(Math.max(0, steps - 1), g.pose0), g.pq);
       g.car.group.position.set(p.prev.x + (p.pos.x - p.prev.x) * alpha, p.prev.y + (p.pos.y - p.prev.y) * alpha, p.prev.z + (p.pos.z - p.prev.z) * alpha);
       g.car.group.quaternion.slerpQuaternions(g.pq, g.q, alpha);
-      if (g.car.vehicle !== p.vehicle) g.car.setVehicle(p.vehicle, true);
+      this._ghostVehicle(g.car, p.vehicle, Math.abs(steps - (g.lastSteps ?? steps)) > 2);
+      g.lastSteps = steps;
+      g.car.update(dt, now);
       if (g.car.group.position.distanceToSquared(this.renderPos) < 4) g.car.group.visible = false;
     }
   },
 
-  _renderGhost(alpha) {
+  _renderGhost(alpha, dt = 0) {
     const gd = this.ghostData;
     const gc = this.ghostCar.group;
     if (!gd || !this.app.settings.ghost || this.demo) { gc.visible = false; return; }
@@ -69,6 +78,10 @@ export const ghostMethods = {
     const qa = new THREE.Quaternion(gd[a + 3], gd[a + 4], gd[a + 5], gd[a + 6]);
     const qb = new THREE.Quaternion(gd[b + 3], gd[b + 4], gd[b + 5], gd[b + 6]);
     gc.quaternion.slerpQuaternions(qa, qb, f);
+    // Véhicule du fantôme à cette image (voiture, moto, bateau, deltaplane) : sans cela il restait une voiture quand le joueur se transformait.
+    this._ghostVehicle(this.ghostCar, ghostVehicleAt(this.ghostVehData, i), Math.abs(this.logic.steps - (this._ghostLast ?? this.logic.steps)) > 2);
+    this._ghostLast = this.logic.steps;
+    this.ghostCar.update(dt, performance.now() / 1000);
     // On masque le fantôme quand il est collé à la caméra / au joueur.
     gc.visible = gc.position.distanceToSquared(this.renderPos) > 4;
   },

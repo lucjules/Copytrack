@@ -6,6 +6,44 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.13 — multijoueur « championnat », salons publics, relais TURN, télémétrie et médailles calibrées sur de vrais joueurs
+
+`PHYS_VER` reste à 26 (physique inchangée) : **records, replays et fantômes sont conservés**, et la fonction `submit-score` n'a pas à être redéployée. Le **protocole réseau**
+change (`NET_VER` 2 : le paquet d'état passe de 38 à 40 octets) : un joueur resté sur l'ancienne version ne peut plus courir avec ceux de la nouvelle (la nouvelle version le signale « autre version » et refuse de rejoindre l'hôte d'une ancienne : « Version du jeu
+différente »). Côté serveur, deux ajouts facultatifs : `supabase/etape6-telemetrie.sql` (statistiques anonymes) et la fonction `ice` (relais TURN) ; sans eux, tout marche comme avant.
+
+### Multijoueur : le mode « Championnat » (manches)
+- **Plusieurs circuits à la suite**, tirés au sort sans doublon du plus facile au plus dur (tous les circuits, faciles, moyens, difficiles, ou un thème au hasard), de 2 à 6 manches.
+  Départ **commun** (décompte synchronisé) sur une **grille** de huit places, quatre de front ; la grille de la manche suivante suit le classement général.
+- **Points par place** (10, 8, 6, 5, 4, 3, 2, 1 ; rien sans arrivée) et **classement général** (égalité : victoires, puis somme des places). Une manche se clôt quand tous ont fini ou quitté,
+  30 s après la première arrivée, ou après 10 min ; les résultats, le classement et le compte à rebours de la manche suivante s'affichent sans repasser par le salon ; podium à la fin.
+- **Classement en direct** pendant la course (place, avancement sur le circuit — mesuré sur la ligne centrale, envoyé dans le paquet d'état — ou temps d'arrivée).
+- **Collisions douces** en option : les voitures se repoussent (poussée plafonnée, rien en loopings, rien 2 s après un retour au checkpoint, rien contre une voiture arrivée).
+- L'hôte ne fait que donner les départs et clore les manches ; **s'il part, l'identifiant le plus petit prend la suite** (l'état du championnat est copié chez tous). Un arrivant en cours de route
+  reçoit le championnat, suit la manche et part à la suivante. Un résultat manqué est rattrapé au départ suivant.
+- **Salons publics** : « Salon public » dans le salon publie une fiche (hôte, circuit, joueurs, mode) dans un annuaire commun (`js/net/directory.js`) ; « Salons publics » dans le menu multijoueur la liste, sans code à échanger.
+- **Relais TURN** : `js/net/ice.js` demande à la fonction serveur `supabase/functions/ice` des serveurs STUN + TURN à identifiants **à durée limitée** (Cloudflare Realtime TURN ou coturn auto-hébergé),
+  avec repli sur le STUN de `js/config.js`. Sans relais, 10 à 20 % des paires de joueurs (réseaux d'entreprise, 4G) ne se voyaient pas.
+- Limites assumées : chacun reste seul juge de son temps (pas de serveur de jeu : un tricheur peut annoncer un faux temps ; aucun record, aucune pièce, aucun classement en ligne n'en dépend) ;
+  les collisions sont calculées chez chacun d'après la position affichée de l'autre (décalage de ~100 ms).
+
+### Télémétrie anonyme et médailles sur de vrais joueurs
+- **Statistiques de jeu anonymes**, seulement avec l'accord du joueur (réglage + question posée une fois) : identifiant d'installation aléatoire, circuit intégré, issue (arrivée ou abandon), temps, progression
+  à l'abandon, retours au checkpoint, numéro d'essai, médaille, version de la physique. Rien d'autre (ni pseudo, ni compte, ni position, ni commandes). File locale bornée, envoi par lots, reprise après échec.
+  Côté serveur : `supabase/etape6-telemetrie.sql` (table `run_stats` fermée en lecture, fonction `log_runs` à cadence limitée). `node tools/telemetry-report.mjs` lit les données et signale
+  les circuits trop durs / trop faciles ; `tools/medals.mjs --humain` propose de nouveaux temps de médailles d'après les percentiles réels (3 / 12 / 40 / 75 %).
+
+### Corrections en jeu
+- **Fantôme du record** : il restait une voiture quand le joueur se transformait en moto, bateau ou deltaplane (l'enregistrement ne gardait que position et orientation). Les changements de véhicule sont maintenant enregistrés avec le record (`ghostVeh`) ; les anciens records restent des voitures.
+- **Décor « Ville »** : les enseignes néon étaient semées au hasard entre 30 et 150 m de haut, sans immeuble : elles flottaient. Elles sont collées à la façade d'un immeuble.
+- **Décor « Jungle »** : les canopées lumineuses étaient semées à part des troncs et flottaient ; elles se posent au sommet d'un tronc.
+- **Fantômes** : ils se transforment avec la même animation que le joueur (instantanément après un retour au checkpoint ou un redémarrage). **Particules** : un retour au checkpoint efface celles de l'endroit quitté.
+- **Pause** : le monde est vraiment figé (plus de particules de boost, de poussière ni de traces qui naissent autour de la voiture arrêtée, plus de scintillement des flammes) ; la voiture ne recule plus d'un pas à l'instant de la pause. Même chose en replay mis en pause.
+- **Après l'arrivée** : l'horloge des obstacles et des pièces mobiles continue pour la physique (elle restait figée alors que leur dessin bougeait : on pouvait heurter un obstacle là où il n'était plus).
+- **Autres joueurs (multijoueur)** : ils se transforment avec l'animation et leurs roues tournent. **Dalles de verre** : le rendu suit un numéro de version, plus le nombre de dalles brisées. **Traces de pneus** : collées à la chaussée retournée en gravité inversée.
+- `tools/test-decors.mjs` : aucun élément de ces décors ne flotte (testé sur plusieurs graines).
+
+
 ## Bêta 0.9.12 — audit d'architecture : une seule physique partout, un code découpé, des garde-fous
 
 Aucune nouvelle fonction de jeu : un audit complet du dépôt (code mort, chantiers inachevés, dette technique, performances) a été traité de bout en bout.

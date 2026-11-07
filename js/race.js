@@ -4,6 +4,7 @@ import { DT } from './constants.js';
 import { CamFlip } from './camflip.js';
 import { MSG } from './hudMessages.js';
 import { SEND_EVERY_STEPS, F_FINISHED } from './net/snapshot.js';
+import { ProgressTracker, gridSpawn } from './net/progress.js';
 import { Simulation } from './simulation.js';
 import { SURFACES } from './pieces.js';
 import { Autopilot } from './autopilot.js';
@@ -16,7 +17,7 @@ import { SkidMarks } from './skids.js';
 import { TrailRibbon } from './trail.js';
 import { InputRecorder, decodeInputs, inputAt, quantSteer } from './replay.js';
 import { PHYS_VER } from './version.js';
-import { GHOST_EVERY, tmpM, tmpV, tmpV2 } from './race/shared.js';
+import { GHOST_VEHICLES, GHOST_EVERY, tmpM, tmpV, tmpV2 } from './race/shared.js';
 
 import { cameraMethods } from './race/camera.js';
 import { ghostMethods } from './race/ghosts.js';
@@ -59,6 +60,9 @@ export class RaceSession {
     this.ghosts = [];
     // Multijoueur (opts.multi = { room, startLocal }) : pas de fantômes enregistrés, des voitures distantes à la place.
     this.multi = opts.multi || null;
+    this.cup = this.multi && this.multi.cup || null;          // manche d'un championnat : { n, total, slot, count, roster, collisions } (départ commun sur une grille)
+    this.progress = this.multi ? new ProgressTracker(track.path) : null;       // avancement 0..1 sur le circuit (classement en direct)
+    this.prog = 0; this._jumped = false; this.protectUntil = 0; this._dnf = false;
     this.remote = new Map();
     this.teleSeq = 0;
     this.netTick = 0;     // horloge d'envoi : ne recule JAMAIS, même quand on recommence un essai (le tampon des autres joueurs en dépend)
@@ -88,6 +92,7 @@ export class RaceSession {
     // Les records d'une autre version de la physique n'ont pas de commandes rejouables.
     if (this.record && this.record.pv !== PHYS_VER) this.record = { ...this.record, inputs: null };
     this.ghostData = null;
+    this.ghostVehData = this.record && Array.isArray(this.record.ghostVeh) ? this.record.ghostVeh : [];
     if (this.record && this.record.ghost) {
       try { this.ghostData = decodeFloats(this.record.ghost); } catch { this.ghostData = null; }
     }
@@ -95,7 +100,15 @@ export class RaceSession {
 
   restart() {
     const app = this.app;
-    const sp = this.sim.start(this.opts.spawn);
+    this._telemetryQuit();
+    this._tmDone = false;
+    // Manche d'un championnat : chacun part de sa place sur la grille (le premier devant, quatre de front).
+    let spawn = this.opts.spawn;
+    if (this.cup && !spawn) { this.logic.reset(); spawn = gridSpawn(this.logic.spawnPoint(), this.cup.slot, this.cup.count); }
+    const sp = this.sim.start(spawn);
+    if (this.cup && !this.opts.spawn) this.logic.respawn.snap = this.logic._snap();      // le point de départ sert de retour, avec l'état de la course à ce moment-là
+    this.prog = 0; this._jumped = true; this.protectUntil = 0; this._dnf = false;
+    if (this.progress) this.progress.reset();
     this.car.setVehicle(this.phys.vehicle, true);
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
     this._orient();
@@ -114,6 +127,7 @@ export class RaceSession {
     this.countShown = -1;
     this.acc = 0;
     this.ghostRec = [];
+    this.ghostVeh = [];          // changements de véhicule du fantôme enregistré : [image, id]
     this.finishT = 0;
     this.lastSplitShown = 0;
     this.wheelSpin = 0;
@@ -149,9 +163,10 @@ export class RaceSession {
     // tourner : la téléportation coûte tout le temps perdu, et le compteur de téléportation prévient les autres joueurs.
     const r = this.sim.rewind({ keepClock: !!this.multi });      // (remet aussi la voiture au point de retour, avec son véhicule et sa gravité)
     Object.assign(this.stats, this.statsSnap);       // les réceptions, turbos et anneaux d'après le checkpoint ne comptent plus
-    if (this.multi) this.teleSeq = (this.teleSeq + 1) & 255;
+    if (this.multi) { this.teleSeq = (this.teleSeq + 1) & 255; this._jumped = true; this.protectUntil = this.tick + 240; }       // 2 s sans collision après un retour au checkpoint
     const steps = this.logic.steps;
     this.ghostRec.length = Math.min(this.ghostRec.length, Math.floor(steps / GHOST_EVERY) * 7);
+    while (this.ghostVeh.length && this.ghostVeh[this.ghostVeh.length - 1][0] >= this.ghostRec.length / 7) this.ghostVeh.pop();
     if (!this.demo) {
       this.app.ui.hud.checkpoints(this.logic.collected.size, this.logic.cps.length, this.logic.lap, this.logic.laps);
       this.app.ui.hud.time(steps * DT);
@@ -164,6 +179,7 @@ export class RaceSession {
     if (this.trailRib) this.trailRib.reset();      // pas de traînée qui traverse la téléportation
     if (this.multi) { this._sendNet(); this._say(MSG.keepClock); }
     this.app.audio.respawn();
+    this.app.particles.clear();        // les étincelles, la poussière et la fumée de l'endroit d'où l'on vient ne suivent pas la voiture
     this.app.particles.burst(r.x, r.y + 1.5, r.z, 24, 8, 0.6, 0.7, '#5ff2ff', 0);
   }
 
@@ -217,9 +233,10 @@ export class RaceSession {
     if (this.state === 'racing') this.tick++;
     this.lastInput = inp;
     this.prevQuat.copy(this.quat);
+    if (this.cup && this.cup.collisions && this.state === 'racing') this._collide();      // collisions douces entre voitures (net/collide.js)
     this.sim.drive(inp);      // horloge des obstacles et pièces mobiles = chrono, puis un pas de physique
     this._orient();
-    if (this.multi && ++this.netTick % SEND_EVERY_STEPS === 0) this._sendNet(this.state === 'finished' ? F_FINISHED : 0);
+    if (this.multi && ++this.netTick % SEND_EVERY_STEPS === 0) { this._updateProgress(); this._sendNet(this.state === 'finished' && !this._dnf ? F_FINISHED : 0); }
     const ev = this.phys.ev;
     if (this.state === 'racing') {
       if (ev.wall > 4) this.stats.wallHits++;
@@ -329,6 +346,8 @@ export class RaceSession {
       const res = this.sim.score();
       if (!this.demo && this.logic.steps % GHOST_EVERY === 0) {
         const p = this.phys.pos, q = this.quat;
+        const vid = GHOST_VEHICLES.indexOf(this.phys.vehicle), last = this.ghostVeh.length ? this.ghostVeh[this.ghostVeh.length - 1][1] : 0;
+        if (vid !== last) this.ghostVeh.push([this.ghostRec.length / 7, vid]);
         this.ghostRec.push(p.x, p.y, p.z, q.x, q.y, q.z, q.w);
       }
       if (res) this._event(res);
@@ -357,9 +376,10 @@ export class RaceSession {
         else app.quitRace();
         return;
       }
-      if (this.state === 'paused') return this.render(dt, 0);
-      if (input.act('restart') || input.hit('NumpadEnter')) { if (this.multi) this._newAttempt(); else { this.restart(); return; } }
-      if (input.act('respawn') && !this.replay) { if (this.multi && this.state === 'finished') this._newAttempt(); else this.respawn(true); }
+      if (this.state === 'paused') return this.render(dt, this.acc / DT);      // (même interpolation qu'avant la pause : la voiture ne recule pas d'un pas)
+      // Manche d'un championnat : pas de nouvel essai (une seule course par manche) ; le retour au checkpoint (R), lui, reste possible.
+      if (input.act('restart') || input.hit('NumpadEnter')) { if (this.cup) { /* une seule course par manche */ } else if (this.multi) this._newAttempt(); else { this.restart(); return; } }
+      if (input.act('respawn') && !this.replay) { if (this.multi && this.state === 'finished') { if (!this.cup) this._newAttempt(); } else this.respawn(true); }
       if (input.act('camera')) this.cycleCamera();
       if (input.act('horn')) app.audio.horn(profile().loadout.horn);
     }
@@ -428,7 +448,7 @@ export class RaceSession {
     this.view.updateMoving(this.obsT);
     this.view.updateLights(app.camera.position, this.obsT);
     // Dalles de verre brisées : visibles de nouveau dès qu'un (re)départ les restaure.
-    if (this.phys.broken.size !== this._brokenN) { this._brokenN = this.phys.broken.size; this.view.setBroken(this.phys.broken); }
+    if (this.phys.brokenVer !== this._brokenV) { this._brokenV = this.phys.brokenVer; this.view.setBroken(this.phys.broken); }
     // Interpolation entre deux pas physiques
     this.renderPos.set(
       p.prev.x + (p.pos.x - p.prev.x) * alpha,
@@ -453,10 +473,12 @@ export class RaceSession {
     const inp = this.lastInput || {};
     const pitch = p.grounded ? (inp.throttle ? 0.012 : 0) - (inp.brake && p.fwdSpeed > 2 ? 0.03 : 0) : 0;
     this.car.body.rotation.x += (pitch - this.car.body.rotation.x) * Math.min(1, dt * 6);
+    // Pause (course ou replay) : le monde est figé, il ne naît ni particule, ni trace, ni scintillement de flamme.
+    const frozen = this.state === 'paused' || (this.replay && this.replayPaused);
     const boosting = p.boost > 0;
     for (const f of this.car.flames) {
       f.visible = boosting;
-      if (boosting) f.scale.set(1, 1.2 + Math.random() * 1.2, 1);
+      if (boosting && !frozen) f.scale.set(1, 1.2 + Math.random() * 1.2, 1);
     }
 
     // Traces de pneus (glisse ou gros freinage) et étincelles du mini-turbo en charge.
@@ -465,12 +487,13 @@ export class RaceSession {
     tmpV2.set(1, 0, 0).applyQuaternion(g.quaternion);
     const lean = !!(app.quality && app.quality.profile && app.quality.profile.lean);   // Ultra Potato : ni traces de pneus, ni étincelles, ni traînée
     for (let w = 0; w < 2; w++) {
+      if (frozen) continue;
       if (sliding && !lean && w < wheelsX.length) {
         tmpV.set(wheelsX[w], 0, 1.3).applyQuaternion(g.quaternion).add(g.position);
-        this.skids.add(w, tmpV.x, tmpV.y, tmpV.z, tmpV2.x, tmpV2.z, this.car.isMoto ? 0.22 : 0.3);
+        this.skids.add(w, tmpV.x, tmpV.y, tmpV.z, tmpV2.x, tmpV2.z, this.car.isMoto ? 0.22 : 0.3, p.gSign < 0 ? -0.04 : 0.04);
       } else this.skids.lift(w);
     }
-    if (p.driftCharge > 0.15 && p.grounded && !lean) {
+    if (p.driftCharge > 0.15 && p.grounded && !lean && !frozen) {
       const col = p.driftCharge >= 1.5 ? '#ffb84d' : p.driftCharge >= 0.7 ? '#5ff2ff' : '#ffffff';
       for (const sx of wheelsX) {
         if (Math.random() < 0.6) {
@@ -483,40 +506,44 @@ export class RaceSession {
     const trail = this._trail || (this._trail = (CATALOG.trail.find((x) => x.id === profile().loadout.trail) || CATALOG.trail[0]));
     if (trail.id !== 'none' && !this.demo && !this.replay && !lean) {
       if (!this.trailRib) this.trailRib = new TrailRibbon(app.scene);
-      if (this.state !== 'paused') {
+      if (!frozen) {
         tmpV.set(0, 0.7, 2.3).applyQuaternion(g.quaternion).add(g.position);
         tmpV2.set(1, 0, 0).applyQuaternion(g.quaternion);
         this.trailRib.update(dt, tmpV, tmpV2, p.speed, Math.min(1, p.boost), trail.rainbow ? null : trail.color, performance.now() / 1000, app.camera.position);
       }
     } else if (this.trailRib) this.trailRib.reset();
     // Sillage du bateau (ou éclaboussures d'un véhicule dans l'eau).
-    if (p.grounded && p.surfMod === 'water' && p.speed > 4 && Math.random() < 0.9) {
+    if (!frozen && p.grounded && p.surfMod === 'water' && p.speed > 4 && Math.random() < 0.9) {
       for (const sx of [-1.1, 1.1]) {
         tmpV.set(sx, 0.2, 2.2).applyQuaternion(g.quaternion).add(g.position);
         app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, sx * (1 + Math.random() * 2), 1.5 + Math.random() * 2.5, (Math.random() - 0.5) * 2, 0.6, 0.55, Math.random() < 0.5 ? '#e8f8ff' : '#9fe3ff', 7);
       }
     }
     // Particules : poussière de dérapage, étincelles de boost
-    if (p.grounded && p.slip > 5 && p.speed > 6 && p.surfMod !== 'water') {
+    if (!frozen && p.grounded && p.slip > 5 && p.speed > 6 && p.surfMod !== 'water') {
       for (const sx of [-1, 1]) {
         tmpV.set(sx * 1.0, 0.15, 1.4).applyQuaternion(g.quaternion).add(g.position);
         const dust = p.surfMod === 'ice' ? '#e8f8ff' : app.scenery.theme.dust;
         app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, (Math.random() - 0.5) * 2, 1 + Math.random() * 2, (Math.random() - 0.5) * 2, 0.7, 0.9, dust, -1);
       }
     }
-    if (boosting && Math.random() < 0.8) {
+    if (boosting && !frozen && Math.random() < 0.8) {
       tmpV.set((Math.random() - 0.5) * 0.8, 0.4, 2.4).applyQuaternion(g.quaternion).add(g.position);
       app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, -p.vel.x * 0.2 + (Math.random() - 0.5) * 3, Math.random() * 2, -p.vel.z * 0.2 + (Math.random() - 0.5) * 3, 0.35, 0.5, '#5ff2ff', 0);
     }
     app.particles.update(dt);
 
     // Fantômes
-    this._renderGhost(alpha);
-    this._renderSimGhosts(alpha);
+    this._renderGhost(alpha, dt);
+    this._renderSimGhosts(alpha, dt);
 
     // Caméra
     this._camera(dt);
-    if (this.multi) { const now = performance.now(); for (const rc of this.remote.values()) rc.update(now, app.camera.position); }
+    if (this.multi) {
+      const now = performance.now();
+      for (const rc of this.remote.values()) rc.update(now, app.camera.position);
+      if (this.cup && now - (this._boardT || 0) > 250) { this._boardT = now; app._updateBoard(); }       // classement en direct : 4 fois par seconde suffisent
+    }
     app.scenery.update(this.renderPos, app.camera);
 
     // Audio & HUD
@@ -536,6 +563,7 @@ export class RaceSession {
   }
 
   dispose() {
+    this._telemetryQuit();
     this.app.camera.up.set(0, 1, 0);
     this.view.dispose();
     this.car.dispose();

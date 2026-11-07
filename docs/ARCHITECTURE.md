@@ -34,7 +34,7 @@ index.html ─► js/main.js (App) ─► écrans, course, éditeur, garage ─�
 | **Simulation** | `simulation.js`, `physics.js` (+ `physics/`), `raceLogic.js`, `autopilot.js`, `obstacles.js`, `ribbons.js`, `dmath.js`, `replay.js`, `verify.js`, `daily.js` | Une voiture, ses règles, ses réapparitions ; enregistrement et rejeu des commandes ; vérification serveur. **Sans rendu, sans DOM, déterministe.** |
 | **Rendu** | `trackGeometry.js`, `trackMesh.js`, `geo.js`, `decos.js`, `decoPack.js`, `scenery.js` (+ `scenery/`), `carModel.js`, `particles.js`, `trail.js`, `skids.js`, `remoteCar.js`, `renderOptions.js` | three.js : maillages du circuit (par tronçons), décors, voitures, effets. |
 | **Application** | `main.js` (+ `app/`), `race.js` (+ `race/`), `editor.js` (+ `editor/`), `inspector.js` (+ `inspector/`), `garage.js`, `ui.js`, `input.js`, `audio.js`, `music.js`, `quality.js`, `welcome.js` | Orchestration, écrans, éditeur, interface, commandes, son, qualité graphique. |
-| **En ligne** | `config.js`, `online.js`, `account.js`, `cloudsave.js`, `net/` | Supabase (REST, authentification, Realtime), comptes, sauvegarde cloud, multijoueur WebRTC. |
+| **En ligne** | `config.js`, `online.js`, `account.js`, `cloudsave.js`, `telemetry.js`, `net/` | Supabase (REST, authentification, Realtime), comptes, sauvegarde cloud, statistiques anonymes (avec accord : `supabase/TELEMETRIE.md`), multijoueur WebRTC. |
 | **Données locales** | `storage.js`, `profile.js`, `cosmetics.js` | Réglages, records, brouillons, profil (code joueur), catalogue visuel. |
 
 ### Familles de méthodes
@@ -97,7 +97,7 @@ la recalcule sous Deno (`deno run -A tools/phys-fingerprint.mjs`) et dans un nav
   (même `GhostRunner` que les fantômes) et n'écrit le temps que s'il est confirmé à 0,5 ms. `npm run build:function` regroupe le tout en `supabase/functions/submit-score/index.ts` (un fichier autonome : Supabase
   refuse les imports depuis un site quelconque). La clé secrète n'est jamais dans le jeu. `tools/test-submit-handler.mjs` teste le gestionnaire avec un Supabase simulé.
 - **Configuration** : `js/config.js` (URL du projet, clé publique, serveurs ICE / TURN du multijoueur), surchargeable par `window.COPYTRACK_CONFIG` sans toucher au code. Variables de la fonction : `ALLOWED_ORIGIN` (facultative).
-- **Multijoueur** : Supabase Realtime ne sert qu'à se trouver ; les positions (20 Hz) passent en WebRTC pair à pair (`js/net/`). Les adversaires sont des voitures fantômes sans collision.
+- **Multijoueur** : Supabase Realtime ne sert qu'à se trouver ; les positions (20 Hz) passent en WebRTC pair à pair (`js/net/`). En course libre les adversaires sont des voitures fantômes sans collision ; en championnat (`net/championship.js`, `progress.js`, `collide.js`), le salon enchaîne des manches avec départ commun, points et collisions douces (protocole décrit dans `supabase/MULTI.md`). Les serveurs STUN/TURN viennent de la fonction serveur `ice` (`net/ice.js`), les salons publics de `net/directory.js`.
 
 ## Rendu
 

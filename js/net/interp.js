@@ -23,7 +23,7 @@ export class SnapshotBuffer {
     this.samples = [];                   // triés par t croissant
     this.offsets = [];
     this._tele = null;                   // compteur de téléportation du segment affiché à l'appel précédent
-    this.out = { pos: new THREE.Vector3(), quat: new THREE.Quaternion(), speed: 0, vehicle: 'car', flags: 0, cp: 0, lap: 0, teleported: false, ready: false };
+    this.out = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), quat: new THREE.Quaternion(), speed: 0, vehicle: 'car', flags: 0, cp: 0, lap: 0, prog: 0, teleported: false, ready: false };
     this._q0 = new THREE.Quaternion(); this._q1 = new THREE.Quaternion();
   }
 
@@ -39,7 +39,7 @@ export class SnapshotBuffer {
     while (i > 0 && arr[i - 1].t > s.t) i--;
     if (i > 0 && Math.abs(arr[i - 1].t - s.t) < 1e-9) return false;
     arr.splice(i, 0, {
-      t: s.t, tele: s.tele, vehicle: s.vehicle, flags: s.flags, cp: s.cp, lap: s.lap,
+      t: s.t, tele: s.tele, vehicle: s.vehicle, flags: s.flags, cp: s.cp, lap: s.lap, prog: s.prog || 0,
       pos: new THREE.Vector3(s.pos.x, s.pos.y, s.pos.z), vel: new THREE.Vector3(s.vel.x, s.vel.y, s.vel.z),
       quat: new THREE.Quaternion(s.quat.x, s.quat.y, s.quat.z, s.quat.w),
     });
@@ -79,7 +79,7 @@ export class SnapshotBuffer {
     this._tele = a.tele;
 
     out.ready = true;
-    out.vehicle = a.vehicle; out.flags = a.flags; out.cp = a.cp; out.lap = a.lap;
+    out.vehicle = a.vehicle; out.flags = a.flags; out.cp = a.cp; out.lap = a.lap; out.prog = a.prog; out.vel.copy(a.vel);
     if (mode === 'lerp') {
       const h = b.t - a.t, u = Math.max(0, Math.min(1, (rt - a.t) / h));
       if (h > HERMITE_MAX_GAP) out.pos.lerpVectors(a.pos, b.pos, u);
@@ -97,6 +97,7 @@ export class SnapshotBuffer {
       out.speed = a.vel.length() + (b.vel.length() - a.vel.length()) * u;
       out.vehicle = u < 0.5 ? a.vehicle : b.vehicle; out.flags = u < 0.5 ? a.flags : b.flags;
       out.cp = u < 0.5 ? a.cp : b.cp; out.lap = u < 0.5 ? a.lap : b.lap;
+      out.prog = a.prog + (b.prog - a.prog) * u; out.vel.lerpVectors(a.vel, b.vel, u);
     } else if (mode === 'extrap') {
       const dt = Math.max(0, Math.min(MAX_EXTRAP, rt - a.t));
       out.pos.copy(a.pos).addScaledVector(a.vel, dt);

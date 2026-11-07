@@ -59,6 +59,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `simulation.js` | Simulation d'une course : UNE voiture (CarPhysics), ses règles (RaceLogic) et l'enchaînement exact d'un pas, en un seul endroit. |
 | `skids.js` | Traces de pneus : bandes sombres posées sur la route pendant les glisses et les gros freinages. |
 | `storage.js` | Persistance locale (navigateur) : réglages, records + fantômes, circuits perso. |
+| `telemetry.js` | Statistiques de jeu ANONYMES (avec l'accord du joueur) : temps de fin, abandons, essais par circuit intégré. |
 | `themes.js` | Les 11 décors (thèmes visuels) du jeu : identité, nom et ordre de la carrière. Module de données pur (aucun rendu). |
 | `tileInfo.js` | Aides « pures » (sans DOM ni 3D) de l'éditeur et de l'inspecteur, faciles à tester. |
 | `track.js` | Modèle de circuit : liste de pièces posées sur une grille, index spatial, requêtes de surface pour la physique, sérialisation en code partageable. |
@@ -77,7 +78,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | --- | --- |
 | `community.js` | Communauté : partage, classements en ligne, publication, import de circuits et de fantômes, aide. |
 | `editorFlow.js` | Passages entre le menu et l'éditeur : ouverture, aide, retour, essai d'un circuit. |
-| `multi.js` | Multijoueur : salons, circuit commun, lobby, départ en course à plusieurs, classement du salon. |
+| `multi.js` | Multijoueur : salons (privés par code, ou publics), circuit commun, lobby, départ en course à plusieurs, classement du salon, championnat (manches). |
 | `profile.js` | Profil : compte, sauvegardes, import et export de sauvegarde. |
 | `screens.js` | Écrans de liste : carrière, circuits du joueur, défi du jour, circuit suivant, menu, tutoriel. |
 | `settings.js` | Réglages : qualité graphique et banc d'essai, commandes (clavier, manette), options, accessibilité. |
@@ -108,10 +109,15 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 
 | Fichier | Rôle |
 | --- | --- |
+| `championship.js` | Championnat multijoueur (« manche ») : plusieurs circuits à la suite, des points par place, un classement général. Logique pure, sans réseau ni rendu : le salon (room.js) y range les résultats ; chaque joueur reçoit les mêmes temps, donc calcule le même classement. |
+| `collide.js` | Collisions douces entre voitures (manche multijoueur, option « collisions ») : chaque voiture est un disque de rayon CAR_R ; deux voitures qui se chevauchent se repoussent. Aucun serveur, aucun arbitre : CHAQUE joueur applique SA moitié du choc à SA voiture, à partir de la position (interpolée) que l'autre affiche. Le résultat est symétrique à quelques centimètres près et reste doux : la poussée par pas est plafonnée, une voiture qui vient d'apparaître (retour au checkpoint) ou qui a fini ne bouscule personne et n'est pas bousculée. |
+| `directory.js` | Annuaire des salons PUBLICS : une liste de salons ouverts à tous, sans devoir échanger un code. |
+| `ice.js` | Serveurs ICE du multijoueur : STUN (gratuit) + relais TURN (réseaux fermés : entreprise, 4G à NAT symétrique), demandés à la fonction serveur « ice » (supabase/functions/ice) qui fabrique des identifiants à DURÉE LIMITÉE : rien de permanent n'est lisible dans le jeu. |
 | `interp.js` | Tampon d'interpolation d'un joueur distant. |
+| `progress.js` | Avancement d'une voiture sur le circuit (0 à 1) et grille de départ : sert au classement en direct d'une manche et à placer les voitures sans qu'elles se superposent au départ. Logique pure. |
 | `room.js` | Salon multijoueur : code à 6 caractères, liste des joueurs, choix du circuit, départ commun, résultats. |
 | `signaling.js` | Signalisation du multijoueur : annuaire des joueurs d'une salle + relais des messages WebRTC (offres, réponses, ICE). |
-| `snapshot.js` | Paquet d'état d'une voiture (multijoueur) : 38 octets, envoyé 20 fois par seconde sur le canal WebRTC « state ». |
+| `snapshot.js` | Paquet d'état d'une voiture (multijoueur) : 40 octets, envoyé 20 fois par seconde sur le canal WebRTC « state ». |
 | `transport.js` | Transport de jeu : WebRTC pair à pair en maillage complet (chaque joueur est relié directement à tous les autres). |
 
 ## `js/physics/`
@@ -148,6 +154,13 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `edit.js` | Modifications du circuit : revêtements, options des pièces, mouvement, couleurs, décorations. |
 | `shared.js` | Éléments partagés par les familles de méthodes de Track (voir track.js). |
 | `surfaces.js` | Requêtes de surface pour la physique et la caméra : sol sous un point, plafond, pièces mobiles. |
+
+## `supabase/functions/ice/`
+
+| Fichier | Rôle |
+| --- | --- |
+| `handler.js` | Copytrack : logique de la fonction serveur « ice » (sans rien de propre à Deno : elle se teste sous Node, voir tools/test-ice.mjs). |
+| `server.ts` | Copytrack : fonction serveur « ice » (Supabase Edge Function, Deno) : serveurs STUN + relais TURN à identifiants à durée limitée pour le multijoueur. |
 
 ## `supabase/functions/submit-score/`
 

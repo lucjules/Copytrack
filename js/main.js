@@ -19,7 +19,8 @@ import { online } from './online.js';
 import { account } from './account.js';
 import { runWelcome } from './welcome.js';
 import { goalFor } from './career.js';
-import { loadSettings, saveSettings, getRecord, saveRecord, saveMyTrack, newId, formatTime, purgeOldRecords } from './storage.js';
+import { loadSettings, saveSettings, getRecord, saveRecord, saveMyTrack, newId, formatTime, purgeOldRecords, getJSON, setJSON } from './storage.js';
+import { Telemetry } from './telemetry.js';
 import { QualityManager, PROFILE_LABELS, wantAntialias } from './quality.js';
 import { multiMethods } from './app/multi.js';
 import { communityMethods } from './app/community.js';
@@ -54,6 +55,7 @@ class App {
       resize: () => this._resize(), views: () => (this.session && this.session.view ? [this.session.view] : []), setDecoHidden: (v) => { renderOptions.hideDecos = !!v; }, setLights: (b) => { renderOptions.lightBudget = b || { point: 0, spot: 0 }; },
     });
     this.input = new Input();
+    this.telemetry = new Telemetry({ store: { get: getJSON, set: setJSON }, send: (events) => online.logRuns(events), enabled: () => this.settings.telemetry === true });
     this.input.setBindings(this.settings.keys, this.settings.pad);
     this.input.setPadConfig({ deadzone: this.settings.padDeadzone, sens: this.settings.padSens, rumble: this.settings.haptics });
     purgeOldRecords();
@@ -270,6 +272,8 @@ class App {
     const hash = location.hash;
     this.showMenu('menu');
     this._startBench();
+    this.telemetry.scheduleFlush(15000);
+    setTimeout(() => this.askTelemetry(), 4000);
     // Premier lancement : petit tutoriel (sauf si on arrive par un lien de circuit).
     if (!this.settings.tutorialDone && !hash.startsWith('#t=')) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
     if (hash.startsWith('#t=')) {

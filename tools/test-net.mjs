@@ -11,7 +11,7 @@ import { PeerMesh } from '../js/net/transport.js';
 import { Room, newRoomCode, normalizeCode, ROOM_RE } from '../js/net/room.js';
 import { RaceLogic } from '../js/raceLogic.js';
 import { Track } from '../js/track.js';
-import { PHYS_VER } from '../js/version.js';
+import { PHYS_VER, NET_VER } from '../js/version.js';
 import { test, finish } from './harness.mjs';
 
 const snap = (steps, x, o = {}) => ({ steps, flags: 0, tele: 0, vehicle: 'car', seq: steps, pos: { x, y: 1, z: 0 }, quat: new THREE.Quaternion(), vel: { x: 0, y: 0, z: 0 }, cp: 0, lap: 1, ...o });
@@ -19,14 +19,17 @@ const snap = (steps, x, o = {}) => ({ steps, flags: 0, tele: 0, vehicle: 'car', 
 function feed(buf, list, lat = 30) { for (const s of list) { const u = unpackSnapshot(packSnapshot(s)); buf.push(u, s.steps * DT * 1000 + lat); } }
 
 console.log('Paquets');
-await test('un paquet fait 38 octets et se relit à l\'identique (précision de la quantification)', () => {
+await test('un paquet fait 40 octets et se relit à l\'identique (précision de la quantification, avancement compris)', () => {
   const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0.3, 1, 0.2).normalize(), 2.1);
-  const s = snap(123456, -1234.5678, { flags: F_FINISHED, tele: 7, vehicle: 'glider', cp: 3, lap: 2, quat: q, vel: { x: 55.5, y: -3.25, z: 120 } });
+  const s = snap(123456, -1234.5678, { flags: F_FINISHED, tele: 7, vehicle: 'glider', cp: 3, lap: 2, prog: 0.4321, quat: q, vel: { x: 55.5, y: -3.25, z: 120 } });
   const ab = packSnapshot(s);
-  assert.equal(ab.byteLength, SNAPSHOT_BYTES); assert.equal(SNAPSHOT_BYTES, 38);
+  assert.equal(ab.byteLength, SNAPSHOT_BYTES); assert.equal(SNAPSHOT_BYTES, 40);
   const u = unpackSnapshot(ab);
   assert.equal(u.steps, 123456); assert.equal(u.tele, 7); assert.equal(u.vehicle, 'glider'); assert.equal(u.cp, 3); assert.equal(u.lap, 2); assert.equal(u.flags, F_FINISHED);
   assert.ok(Math.abs(u.pos.x - -1234.5678) < 1e-3);
+  assert.ok(Math.abs(u.prog - 0.4321) < 2e-5, 'avancement ' + u.prog);
+  assert.equal(unpackSnapshot(packSnapshot(snap(1, 0))).prog, 0, 'sans avancement : 0');
+  assert.equal(unpackSnapshot(packSnapshot(snap(1, 0, { prog: 7 }))).prog, 1, 'borné à 1');
   assert.ok(Math.abs(u.vel.x - 55.5) < 0.02 && Math.abs(u.vel.z - 120) < 0.02);
   const dq = new THREE.Quaternion(u.quat.x, u.quat.y, u.quat.z, u.quat.w).angleTo(q);
   assert.ok(dq < 0.001, 'orientation à 0,06° près : ' + dq);
@@ -289,6 +292,8 @@ await test('créer puis rejoindre par code ; code inconnu, code pris, salle plei
   // version différente : l'hôte ne s'y connecte pas
   host.signaling.peers.set('old', { name: 'Vieux', v: PHYS_VER - 1 }); host._onPeer('old', { name: 'Vieux', v: PHYS_VER - 1 });
   assert.equal(host.members.get('old').link, 'incompatible');
+  host._onPeer('old2', { name: 'Autre protocole', v: PHYS_VER, net: NET_VER - 1 });
+  assert.equal(host.members.get('old2').link, 'incompatible', 'même physique mais autre protocole réseau');
   // hôte parti : migration vers l'identifiant le plus petit
   host.leave();
   assert.equal(guest.isHost, true, 'le seul restant devient hôte');

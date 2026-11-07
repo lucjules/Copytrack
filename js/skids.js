@@ -29,10 +29,11 @@ export class SkidMarks {
   }
 
   // Ajoute un point de trace pour la roue « w » (x, y, z : contact ; rx, rz : axe latéral).
-  add(w, x, y, z, rx, rz, width = 0.32) {
+  // lift : décalage le long du « haut » de la route (négatif au plafond : la trace reste collée à la chaussée retournée).
+  add(w, x, y, z, rx, rz, width = 0.32, lift = 0.04) {
     const L = this.last[w];
     const hx = rx * width, hz = rz * width;
-    const pt = { lx: x - hx, ly: y + 0.04, lz: z - hz, rx: x + hx, ry: y + 0.04, rz: z + hz, x, z };
+    const pt = { lx: x - hx, ly: y + lift, lz: z - hz, rx: x + hx, ry: y + lift, rz: z + hz, x, z };
     if (L) {
       const d = Math.hypot(x - L.x, z - L.z);
       if (d < 0.35) return;

@@ -114,6 +114,7 @@ export const DEFAULT_SETTINGS = {
   ghostGold: true,
   ghostImported: true,
   onlineScores: true,
+  telemetry: null,        // statistiques anonymes (voir telemetry.js) : null = pas encore demandé, true = accepté, false = refusé
 };
 
 export function loadSettings() {

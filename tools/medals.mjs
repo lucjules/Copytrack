@@ -3,7 +3,8 @@
 //   node tools/medals.mjs --check              -> écart entre les médailles écrites et la proposition (circuits qui ont un `profil`)
 //   node tools/medals.mjs --humain temps.json [--ecrire]
 //                                              -> médailles calées sur de vrais temps de joueurs : { "eclats": [15.4, 16.2, 17.9], … } (un meilleur temps par testeur,
-//                                                 voir docs/FICHE-ESSAI.md). Cristal = le meilleur temps observé, Or = ×1,05, Argent = ×1,2, Bronze = ×1,4.
+//                                                 voir docs/FICHE-ESSAI.md). Moins de 20 temps : Cristal = le meilleur temps observé, Or = ×1,05, Argent = ×1,2, Bronze = ×1,4 ;
+//                                                 20 temps ou plus (statistiques de jeu, tools/telemetry-report.mjs) : centiles 3 / 12 / 40 / 75 %.
 //                                                 Avec --ecrire, js/tracks.js est mis à jour et le circuit porte `medalsBy: 'humain'` (le contrat ne le recale plus sur le pilote).
 //
 // Règle de calibrage (celle de toute la carrière depuis la 0.9.4) : or = temps du pilote, cristal = 0,95 ×, argent = 1,15 ×, bronze = 1,35 ×.
@@ -18,6 +19,25 @@ export const proposeFrom = (time) => Object.fromEntries(Object.entries(RATIOS).m
 
 export const RATIOS_HUMAIN = { cristal: 1, or: 1.05, argent: 1.2, bronze: 1.4 };
 export const proposeFromHumans = (times) => { const best = Math.min(...times); return Object.fromEntries(Object.entries(RATIOS_HUMAIN).map(([k, r]) => [k, r1(best * r)])); };
+
+// Médailles calées sur un ÉCHANTILLON de joueurs (un meilleur temps par joueur) : Cristal = les 3 % les plus rapides, Or = 12 %, Argent = 40 %, Bronze = 75 %.
+// Sous MIN_SAMPLE temps, un centile n'a pas de sens : on retombe sur la règle des testeurs (proposeFromHumans). Les valeurs sont arrondies au dixième et
+// strictement croissantes (au moins 0,1 s entre deux médailles).
+export const MIN_SAMPLE = 20;
+export const SAMPLE_QUANTILES = { cristal: 0.03, or: 0.12, argent: 0.4, bronze: 0.75 };
+export function quantile(sorted, q) {
+  if (!sorted.length) return NaN;
+  const pos = (sorted.length - 1) * q, lo = Math.floor(pos), hi = Math.ceil(pos);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+}
+export function proposeFromSample(times) {
+  const t = times.filter((x) => Number.isFinite(x) && x > 0).sort((a, b) => a - b);
+  if (t.length < MIN_SAMPLE) return proposeFromHumans(t);
+  const out = {};
+  let prev = 0;
+  for (const [k, q] of Object.entries(SAMPLE_QUANTILES)) { out[k] = Math.max(r1(quantile(t, q)), r1(prev + 0.1)); prev = out[k]; }
+  return out;
+}
 
 export function proposeMedals(def) {
   const S = runTrack(buildBuiltin(def));
@@ -36,7 +56,7 @@ if (process.argv[1] && process.argv[1].endsWith('medals.mjs') && process.argv.in
     if (!def) { console.log(id.padEnd(14), 'circuit inconnu'); process.exitCode = 1; continue; }
     const t = (times || []).filter((x) => x > 0);
     if (!t.length) continue;
-    const m = proposeFromHumans(t);
+    const m = proposeFromSample(t);
     console.log(`${id.padEnd(14)} ${t.length} temps, meilleur ${Math.min(...t).toFixed(2)} s   proposé ${JSON.stringify(m).replace(/"/g, '')}   écrit ${JSON.stringify(def.medals).replace(/"/g, '')}`);
     if (process.argv.includes('--ecrire')) {
       const re = new RegExp("(    id: '" + id + "',[\\s\\S]*?\\n    medals: )\\{[^}]*\\},?\\n");

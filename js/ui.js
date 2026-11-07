@@ -159,7 +159,10 @@ export class UI {
   }
 
   // actions : [{ label, primary, danger, onClick }] ; onClick renvoie false pour garder la fenêtre ouverte.
-  modal({ title, body, actions = [], wide = false }) {
+  // onClose : appelé une fois quand la fenêtre se ferme (bouton, Échap, ou remplacée par une autre) : arrêter une écoute, un minuteur...
+  modal({ title, body, actions = [], wide = false, onClose = null }) {
+    this._fireModalClose();
+    this._onModalClose = onClose;
     $('modal-title').textContent = title;
     $('modal').querySelector('.modal-panel').classList.toggle('wide', !!wide);     // large : raccourcis, listes en colonnes
     const b = $('modal-body');
@@ -183,9 +186,12 @@ export class UI {
     this.modalOpen = true;
   }
 
+  _fireModalClose() { const f = this._onModalClose; this._onModalClose = null; if (f) f(); }
+
   closeModal() {
     $('modal').classList.add('hidden');
     this.modalOpen = false;
+    this._fireModalClose();
   }
 
   showFinish(info) {

@@ -44,6 +44,7 @@ export const wiringMethods = {
     $('opt-ghostgold').addEventListener('change', (e) => { this.settings.ghostGold = e.target.checked; this.saveSettings(); });
     $('opt-ghostimp').addEventListener('change', (e) => { this.settings.ghostImported = e.target.checked; this.saveSettings(); });
     $('opt-onlinescores').addEventListener('change', (e) => { this.settings.onlineScores = e.target.checked; this.saveSettings(); });
+    $('opt-telemetry').addEventListener('change', (e) => this.setTelemetry(e.target.checked));
     $('opt-music').addEventListener('input', (e) => {
       this.settings.musicVolume = parseFloat(e.target.value);
       this.audio.setMusicVolume(this.settings.musicVolume);
