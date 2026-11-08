@@ -198,6 +198,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `interp.js` | Tampon d'interpolation d'un joueur distant. |
 | `progress.js` | Avancement d'une voiture sur le circuit (0 à 1) et grille de départ : sert au classement en direct d'une manche et à placer les voitures sans qu'elles se superposent au départ. Logique pure. |
 | `resume.js` | Reconnexion au salon (Copytrack Evolution, E16, NET_VER 4). Une coupure (Wi-Fi qui saute, passage en 4G, onglet rechargé) ne fait plus sortir de la salle : - le joueur coupé retente de rejoindre le même canal, avec le MÊME identifiant, pendant RESUME_MS (délais croissants RETRY_MS) ; sa course continue chez lui pendant ce temps ; |
+| `rollback.js` | PROTOTYPE de multijoueur à rollback (Copytrack Evolution, E18) : de vraies collisions déterministes entre 2 à 4 voitures. Hors interface : il n'est branché sur aucun écran, seulement mesuré (tools/bench-rollback.mjs) et testé (tools/test-rollback.mjs). Décision et mesures : docs/ROLLBACK.md. |
 | `room.js` | Salon multijoueur : code à 6 caractères, liste des joueurs, choix du circuit, départ commun, résultats. |
 | `signaling.js` | Signalisation du multijoueur : annuaire des joueurs d'une salle + relais des messages WebRTC (offres, réponses, ICE). |
 | `snapshot.js` | Paquet d'état d'une voiture (multijoueur) : 40 octets, envoyé 20 fois par seconde sur le canal WebRTC « state ». |

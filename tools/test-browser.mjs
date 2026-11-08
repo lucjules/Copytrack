@@ -64,6 +64,11 @@ try {
     assert.equal(fp.version, ref.version);
     const bad = Object.keys(ref.scenarios).filter((k) => fp.scenarios[k] !== ref.scenarios[k]);
     assert.deepEqual(bad, [], `${bad.length} scénario(s) de physique différent(s) dans Chromium`);
+    // Prototype de rollback (E18) : le monde à 4 voitures qui se percutent est le même dans Chromium que sous Node (condition d'un vrai rollback).
+    const { referenceRace } = await import('./bench-rollback.mjs'), { BUILTIN_TRACKS: BT, buildBuiltin: bb } = await import('../js/tracks.js');
+    const node = referenceRace(bb(BT.find((d) => d.id === 'eclats')), 4, 600).hash;
+    const web = await page.evaluate(async () => { const { referenceRace: rr } = await import('/tools/bench-rollback.mjs'), { BUILTIN_TRACKS: B, buildBuiltin: b } = await import('/js/tracks.js'); return rr(b(B.find((d) => d.id === 'eclats')), 4, 600).hash; });
+    assert.equal(web, node, 'monde de rollback : Chromium = Node');
   });
 
   await test('le jeu démarre : accueil invité puis menu', async () => {

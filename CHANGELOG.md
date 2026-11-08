@@ -6,6 +6,29 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.40 — prototype de rollback : décision GO (hors interface)
+
+Étape E18 de Copytrack Evolution (fin du bloc 5). `PHYS_VER` inchangé (26), `NET_VER` inchangé (4), rien à redéployer. **Rien ne change pour le joueur** : le prototype n'est branché sur aucun écran, et les collisions douces d'E16 restent celles du jeu.
+
+- **La question** : de vraies collisions déterministes entre 2 à 4 voitures sont-elles possibles ? Le rapport complet est dans [docs/ROLLBACK.md](docs/ROLLBACK.md).
+- **Le prototype** (`js/net/rollback.js`) :
+  - un monde à plusieurs voitures (la simulation du jeu pour chacune), avec des chocs entre voitures déterministes (+ − × ÷ √ seulement) ;
+  - la sauvegarde et la restauration exactes de son état ;
+  - un joueur qui prédit les commandes des autres et revient jusqu'à 15 pas en arrière quand la vraie arrive (au-delà, il attend).
+- **Mesures**, conteneur à 4 processeurs virtuels, Xeon à 2,1 GHz :
+  - coût du pire cas par image (4 voitures, 15 pas rejoués à chaque image), au 95e centile : 3,3 ms sous Node, 2,2 ms dans Chromium (critère : moins de 4 ms) ;
+  - **aucune désynchronisation** sur 10 000 pas : 4 joueurs, 0 à 10 pas de retard, 10 % de paquets perdus, 16 717 pas avec contact, environ 13 000 retours en arrière ;
+  - le même monde sous Node, Deno et Chromium.
+- **Décision : GO** pour le prototype : les deux critères sont tenus.
+- **Réserves** :
+  - à mesurer sur des appareils modestes (un téléphone peut être 3 à 5 fois plus lent) ;
+  - circuits à logique non pris en charge (refusés plutôt que désynchronisés) ;
+  - l'intégration reste à faire : transport des commandes, horloges, affichage, arrivées en cours de route, `NET_VER` 5.
+- **Corrigé en chemin, dans le banc lui-même** :
+  - une commande perdue trois fois de suite laissait un trou que rien ne comblait (les paquets répètent maintenant toute la fenêtre de retour) ;
+  - le banc comparait les mondes avant l'arrivée des derniers paquets.
+- Tests : `tools/test-rollback.mjs` (déterminisme, 300 retours au hasard au bit près, chocs, réseau simulé, attente, circuit à logique refusé ; aussi sous Deno) ; test navigateur (même monde dans Chromium que sous Node) ; `node tools/bench-rollback.mjs` pour la mesure complète.
+
 ## Bêta 0.9.39 — compétition asynchrone : duels classés, tournois privés
 
 Étape E17 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (4). **Infrastructure à mettre en place** (le jeu dit ce qui manque, sans faux résultat) :
