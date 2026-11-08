@@ -121,14 +121,54 @@ try {
   });
 
   await test('défi du jour et circuit en plusieurs tours', async () => {
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.dailyDays = []; p.mutDays = []; p.dailyBest = 0; saveProfile(); });
     await click('[data-action="daily"]');
     await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 40000);
     assert.match(await page.evaluate(() => document.getElementById('hub-sub').textContent), /Défi du jour · \d\d\/\d\d\/\d{4}/);
+    // Défi du jour 2 : la série, et la mutation du jour en tête des catégories de record
+    assert.match(await page.evaluate(() => document.querySelector('.hub-daily').textContent), /Série : 0 jour[\s\S]*Mutation du jour : /);
+    assert.match(await page.evaluate(() => document.querySelector('.hub-cats [data-cat]:not([data-cat=""])').textContent), /Mutation du jour : /);
+    await click('.hub-cats [data-cat]:not([data-cat=""])');
+    await waitApp(() => /^daily-\d{4}-\d\d-\d\d~v1\./.test(window.copytrack._hub.desc.key));
+    await click('#hub-play');
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session.state === 'racing', null, 40000);
+    assert.equal(await app(() => window.copytrack.session.opts.mutation), true);
+    await app(() => window.copytrack.session._finish(window.copytrack.session.logic.steps / 120 + 30));
+    await waitApp(() => !document.getElementById('finish').classList.contains('hidden'));
+    await waitApp(() => /🔥 Série : 1 jour · mutation du jour \+30 ◆ · \+30 ◆/.test(document.getElementById('toast').textContent), null, 5000);
+    assert.deepEqual(await app(async () => { const p = (await import('/js/profile.js')).profile(); return [p.dailyDays.length, p.mutDays.length]; }), [1, 1]);
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu' || !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
+    await app(() => { window.copytrack._hub && window.copytrack.closeRaceHub && window.copytrack.closeRaceHub(); window.copytrack.showMenu('menu'); });
+    await click('[data-action="daily"]');
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 40000);
+    assert.match(await page.evaluate(() => document.querySelector('.hub-daily').textContent), /Série : 1 jour \(défi du jour fait\)[\s\S]*✓ terminée aujourd’hui/);
     await click('#hub-play');
     await waitApp(() => window.copytrack.mode === 'race', null, 40000);
     await page.waitForTimeout(600);
     await app(() => window.copytrack.quitRace());
-    await waitApp(() => window.copytrack.mode === 'menu');
+    await waitApp(() => window.copytrack.mode === 'menu' || !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
+    await app(() => window.copytrack.showMenu('menu'));
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.dailyDays = []; p.mutDays = []; p.dailyBest = 0; saveProfile(); });
+  });
+
+  await test('progression du pilote : expérience à l’arrivée, défi de maîtrise dans la fiche, niveau et licences dans le profil', async () => {
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.xp = 0; p.mastery = {}; p.licences = {}; p.xpDay = null; saveProfile(); });
+    await app(() => { window.copytrack.showMenu('tracks'); window.copytrack.openBuiltinHub(0, 'tracks'); });
+    await waitApp(() => /Maîtrise/.test(document.getElementById('hub-facts').textContent) && /0 \/ 4/.test(document.querySelector('.hub-mastery').textContent));
+    await click('#hub-play');
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session.state === 'racing', null, 40000);
+    await app(() => window.copytrack.session._finish(window.copytrack.session.logic.steps / 120 + 25));
+    await waitApp(() => !document.getElementById('finish').classList.contains('hidden') && !document.getElementById('fin-xp').classList.contains('hidden'));
+    assert.match(await page.evaluate(() => document.getElementById('fin-xp').textContent), /^\+\d+ XP\s+Niveau \d+[\s\S]*Première arrivée du jour sur ce circuit \+20[\s\S]*Défi de maîtrise \+40/);
+    assert.ok(await app(async () => (await import('/js/profile.js')).profile().xp >= 60));
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
+    assert.match(await page.evaluate(() => document.querySelector('.hub-mastery').textContent), /1 \/ 4/, 'arrivée sans choc : un défi de maîtrise');
+    await app(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('profile'); });
+    await waitApp(() => document.querySelector('.prof-progress') && /Niveau \d+/.test(document.querySelector('.prof-progress').textContent));
+    assert.match(await page.evaluate(() => document.querySelector('.prof-progress').textContent), /Licence C[\s\S]*Licence S[\s\S]*Pour la Licence C[\s\S]*Défis de maîtrise : 1 \/ 288/);
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.xp = 0; p.mastery = {}; p.xpDay = null; saveProfile(); window.copytrack.showMenu('menu'); });
   });
 
   await test('Race Hub : fiche immédiate (carte, légende, onglets), favori, dernières courses, replay du record, retour à la fiche', async () => {
@@ -288,6 +328,7 @@ try {
     assert.ok(await page.evaluate(() => document.querySelectorAll('#fin-coach li').length >= 1));
     assert.match(await page.evaluate(() => document.querySelector('#fin-coach li').textContent), /^Secteur \d+ : .*\d+(\.\d+)? s perdues/);
     assert.match(await page.evaluate(() => document.querySelector('#fin-coach h3').textContent), /comparé à ton record/);
+    assert.match(await page.evaluate(() => (document.getElementById('fin-coach-train') || {}).textContent || ''), /^🎓 S’entraîner : /, 'conseil adapté : un exercice de l’Académie');
     await click('#fin-replay');
     await waitApp(() => window.copytrack.session && window.copytrack.session._th, null, 20000);
     assert.deepEqual(await app(() => window.copytrack.session._th.runs.map((r) => r.label)), ['Cette course', 'Ancien record'], 'nouveau record : comparé à l’ancien');
@@ -591,7 +632,7 @@ try {
   await test('académie : menu des six leçons, leçon 1 jouée et réussie, bilan, retour au menu des leçons', async () => {
     const btn = (label) => page.evaluate((l) => { const b = [...document.querySelectorAll('#modal-actions button')].find((x) => x.textContent.trim() === l); if (!b) throw new Error('bouton introuvable : ' + l); b.click(); }, label);
     await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.academy = {}; saveProfile(); window.copytrack.academyMenu(); });
-    await waitApp(() => document.querySelectorAll('.academy-list li').length === 6);
+    await waitApp(() => document.querySelectorAll('.academy-list:not(.ac-drills) li').length === 6 && document.querySelectorAll('.ac-drills li').length === 4);
     await shot('16-academie');
     await app(() => document.querySelector('[data-lesson="0"]').click());
     await waitApp(() => window.copytrack.ui.modalOpen && /Leçon 1/.test(document.getElementById('modal-title').textContent));
@@ -603,8 +644,37 @@ try {
     assert.equal(await app(async () => (await import('/js/profile.js')).profile().academy.prise), 1);
     await shot('17-lecon-reussie');
     await btn('Académie');
-    await waitApp(() => window.copytrack.mode === 'menu' && document.querySelectorAll('.academy-list li.done').length === 1, null, 10000);
+    await waitApp(() => window.copytrack.mode === 'menu' && document.querySelectorAll('.academy-list:not(.ac-drills) li.done').length === 1, null, 10000);
     await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.academy = {}; p.coins = 0; saveProfile(); window.copytrack.ui.closeModal(); });
+  });
+
+  await test('académie, exercices évalués : point faible, consignes et objectifs, course mesurée (rejouée) et notée or, retour au menu', async () => {
+    const btn = (label) => page.evaluate((l) => { const b = [...document.querySelectorAll('#modal-actions button')].find((x) => x.textContent.trim() === l); if (!b) throw new Error('bouton introuvable : ' + l); b.click(); }, label);
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.drills = {}; p.coins = 0; saveProfile(); window.copytrack.academyMenu(); });
+    await waitApp(() => document.querySelectorAll('.ac-drills li').length === 4);
+    assert.match(await page.evaluate(() => document.querySelector('.ac-weak').textContent), /Point faible : Trajectoire — exercice conseillé : Chicanes/);
+    await app(() => document.querySelector('[data-drill="0"]').click());
+    await waitApp(() => window.copytrack.ui.modalOpen && /Exercice · Chicanes/.test(document.getElementById('modal-title').textContent));
+    assert.equal(await page.evaluate(() => document.querySelectorAll('.ac-goals li').length), 3);
+    await btn('Commencer');
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.opts.academy, null, 30000);
+    await waitApp(() => window.copytrack.session.state === 'racing', null, 30000);
+    // La course : les commandes du pilote automatique à 100 % de son adhérence (le niveau de l'or), mesurées comme celles d'un joueur.
+    await app(async () => {
+      const s = window.copytrack.session, { traceFromBot } = await import('/js/analysis/trace.js');
+      const run = traceFromBot(s.track, { latK: 1 });
+      s.recorder = { encode: () => run.inputs };
+      s._finish(run.time);
+    });
+    await waitApp(() => /Note : or/.test(document.getElementById('modal-title').textContent), null, 20000);
+    assert.match(await page.evaluate(() => document.querySelector('.ac-measure').textContent), /^\d+ km\/h de moyenne dans les chicanes/);
+    assert.equal(await page.evaluate(() => document.querySelectorAll('.ac-goals li.done').length), 3);
+    assert.deepEqual(await app(async () => { const p = (await import('/js/profile.js')).profile(); return [p.drills.chicanes.lvl, p.coins]; }), [3, 50]);
+    await shot('17b-exercice-or');
+    await btn('Académie');
+    await waitApp(() => window.copytrack.mode === 'menu' && document.querySelectorAll('.ac-drills li.done').length === 1, null, 10000);
+    assert.match(await page.evaluate(() => document.querySelector('.ac-weak').textContent), /Point faible : Freinage/);
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.drills = {}; p.coins = 0; saveProfile(); window.copytrack.ui.closeModal(); });
   });
 
   await test('éditeur guidé : l\'essentiel seulement, les autres pièces refusées, « Tout afficher » rend tout', async () => {

@@ -4,7 +4,7 @@ import { MEDALS } from './medals.js';
 import { keyLabel } from './input.js';
 import { profile } from './profile.js';
 import { MessageGate, PRIO } from './hudMessages.js';
-import { $ } from './dom.js';
+import { $, esc } from './dom.js';
 
 export function medalIcon(m) {
   return `<i class="medal ${m ? m.id : 'none'}" title="${m ? m.label : 'Aucune médaille'}"></i>`;
@@ -240,6 +240,17 @@ export class UI {
       lines.push(MEDALS.slice().reverse().map((m) => `${medalIcon(m)}<b>${formatTime(info.derived[m.id])}</b>`).join(' · '));
     }
     $('fin-detail').innerHTML = lines.join('<br>');
+    // Progression du pilote (E14) : l'expérience gagnée et le niveau.
+    const fx = $('fin-xp');
+    if (fx) {
+      fx.classList.toggle('hidden', !info.xp);
+      if (info.xp) {
+        const x = info.xp, pct = x.max ? 100 : Math.round((x.into / Math.max(1, x.need)) * 100);
+        fx.innerHTML = `<span class="xp-gain">+${x.xp} XP</span> <span class="xp-lv">Niveau ${x.level}${x.level > x.prevLevel ? ' ⬆' : ''}</span>
+          <span class="xp-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></span>
+          <small class="xp-why">${x.parts.map(([w, n]) => `<span>${esc(w)} +${n}</span>`).join(' · ')}</small>`;
+      }
+    }
     $('fin-next').classList.toggle('hidden', !info.hasNext);
     $('fin-quit').textContent = info.fromEditor ? 'Retour à l’éditeur' : 'Menu';
     this.showOverlay('finish');

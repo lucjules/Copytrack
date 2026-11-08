@@ -9,6 +9,18 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import assert from 'node:assert/strict';
 
+// Bilan d'un exercice de l'Académie (E12) sans passer par la course : les commandes du pilote automatique, mesurées comme celles d'un joueur.
+async function drillResult(page, i, latK) {
+  await page.evaluate(async ([i, latK]) => {
+    const a = window.copytrack, { DRILLS } = await import('/js/skills.js'), { buildBuiltin } = await import('/js/tracks.js'), { traceFromBot } = await import('/js/analysis/trace.js');
+    const d = DRILLS[i], track = buildBuiltin({ ...d, id: 'drill-' + d.id, name: d.name }), run = traceFromBot(track, { latK });
+    a.onDrillFinished({ opts: { academy: { drill: i } }, track, recorder: { encode: () => run.inputs }, restart() {} }, run.time);
+  }, [i, latK]);
+  await page.waitForFunction(() => /^🥇 Grade: gold$|^No grade yet$/.test(document.getElementById('modal-title').textContent) && document.querySelector('.ac-advice'), null, { timeout: 20000 });
+  console.log('       ' + (await page.evaluate(() => document.getElementById('modal-title').textContent + ' | ' + document.querySelector('.ac-measure').textContent + ' | ' + document.querySelector('.ac-advice').textContent)));
+}
+
+
 const require = createRequire(import.meta.url);
 let chromium;
 try { ({ chromium } = require('playwright')); } catch { console.log('  skip playwright introuvable : test navigateur ignoré'); process.exit(0); }
@@ -129,6 +141,7 @@ try {
       ['carrière', async () => { await click(page, '[data-action="play"]'); await page.waitForFunction(() => document.querySelectorAll('#track-list .card').length > 60); }],
       ['fiche du circuit', async () => { await page.evaluate(() => window.copytrack.openBuiltinHub(4, 'tracks')); await page.waitForTimeout(400); }],
       ['fiche › personnel', async () => { await click(page, '#hub-board [data-tab="personal"]'); }],
+      ['fiche du défi du jour (série, mutation)', async () => { await page.evaluate(() => window.copytrack.openDailyHub('tracks')); await page.waitForTimeout(600); }],
       ['mes circuits', async () => { await page.evaluate(() => window.copytrack.showScreen('mytracks')); }],
       ['communauté', async () => { await page.evaluate(() => window.copytrack.showScreen('community')); await page.waitForTimeout(500); }],
       ['profil › compte', async () => { await page.evaluate(() => window.copytrack.showScreen('profile')); }],
@@ -138,6 +151,9 @@ try {
       ['garage', async () => { await page.evaluate(() => window.copytrack.showScreen('menu')); await click(page, '[data-action="garage"]'); await page.waitForTimeout(300); }],
       ['académie', async () => { await page.evaluate(() => window.copytrack.showScreen('menu')); await page.evaluate(() => window.copytrack.academyMenu()); }],
       ['leçon', async () => { await page.evaluate(() => { window.copytrack.ui.closeModal(); window.copytrack.lessonIntro(1); }); }],
+      ['exercice', async () => { await page.evaluate(() => { window.copytrack.ui.closeModal(); window.copytrack.drillIntro(2); }); }],
+      ['bilan d’exercice (zones, conseil du coach)', async () => { await page.evaluate(() => window.copytrack.ui.closeModal()); await drillResult(page, 0, 0.5); }],
+      ['bilan d’exercice (réceptions)', async () => { await page.evaluate(() => window.copytrack.ui.closeModal()); await drillResult(page, 3, 1); }],
       ['statistiques anonymes', async () => { await page.evaluate(() => { window.copytrack.ui.closeModal(); window.copytrack.settings.telemetry = null; window.copytrack.askTelemetry(); }); }],
       ['multijoueur', async () => { await page.evaluate(() => { window.copytrack.ui.closeModal(); window.copytrack.multiMenu(); }); }],
     ];

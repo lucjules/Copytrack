@@ -7,11 +7,15 @@ import { medalFor } from '../medals.js';
 import { lessonsDone } from '../academy.js';
 import { online } from '../online.js';
 import { TITLES, emptyContext, earnedTitles, grantRewards, chooseTitle, titleLabel } from '../rewards.js';
+import { streakOf } from '../mutations.js';
+import { levelOf, ensureXp, grantLicences, masteryCount, LICENCES } from '../progression.js';
+import { SKILLS, skillLevel } from '../skills.js';
 
 export const rewardsMethods = {
   _rewardContext() {
     const p = profile(), ctx = emptyContext();
     const medals = this.builtins.map((b) => { const rec = getRecord(b.key); return rec ? medalFor(rec.time, b.def.medals) : null; });
+    ensureXp(this.builtins.map((b) => b.key));
     this.builtins.forEach((b, i) => {
       const m = medals[i];
       if (!m) return;
@@ -20,14 +24,25 @@ export const rewardsMethods = {
     });
     return Object.assign(ctx, {
       totalTracks: this.builtins.length, academy: lessonsDone(), dailyDays: (p.dailyDays || []).length, races: (p.stats && p.stats.races) || 0, turbos: (p.stats && p.stats.turbos) || 0,
-      collections: Object.keys(p.collections || {}).length,
+      collections: Object.keys(p.collections || {}).length, dailyBest: Math.max(p.dailyBest | 0, streakOf(p.dailyDays).best), mutations: (p.mutDays || []).length,
+      level: levelOf(p.xp).level,
     });
   },
 
   // À appeler après une course, une leçon, une collection… : donne ce qui est mérité et le dit (un message à la fois, pour qu'on les lise).
+  // Contexte des licences (E14) : niveau, Académie, médailles de la carrière, compétences, défis de maîtrise.
+  _licenceContext(ctx = this._rewardContext()) {
+    const medals = this.builtins.map((b) => { const rec = getRecord(b.key); return rec ? medalFor(rec.time, b.def.medals) : null; });
+    const at = (ids) => medals.filter((m) => m && ids.includes(m.id)).length;
+    return { level: ctx.level, lessons: ctx.academy, silver: at(['argent', 'or', 'cristal']), gold: at(['or', 'cristal']), crystals: ctx.crystals, skillsMin: Math.min(...SKILLS.map((s) => skillLevel(s.id))), mastery: masteryCount() };
+  },
+
   checkRewards() {
-    const r = grantRewards(this._rewardContext());
+    const ctx = this._rewardContext();
+    const lic = grantLicences(this._licenceContext(ctx));
+    const r = grantRewards(ctx);
     const msgs = [
+      ...lic.map((id) => `🪪 ${(LICENCES.find((L) => L.id === id) || {}).label} obtenue ! (Profil)`),
       ...r.exclusives.map((e) => `🎁 Exclusif débloqué : ${e.label} (garage)`),
       ...r.collections.map((c) => `🏆 Collection « ${c.label} » complète : +${c.coins} ◆`),
       ...r.titles.map((t) => `🎖 Nouveau titre : ${titleLabel(t)} (Profil)`),

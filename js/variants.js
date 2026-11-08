@@ -4,7 +4,7 @@
 //
 //   clé      ::= cléOfficielle [ '~' variante ]                    (80 caractères au plus : contrainte de la table scores)
 //   variante ::= 'v1' ( '.' nom '-' valeur )+                       noms triés, chacun une fois, valeurs prises dans une liste fermée
-//   exemples : b-eclats-k3f9a~v1.veh-moto     daily-2026-12-01~v1.g-40     u-1blo03c~v1.obs-0.veh-boat
+//   exemples : b-eclats-k3f9a~v1.veh-moto     daily-2026-12-01~v1.g-40     u-1blo03c~v1.obs-0.veh-boat     daily-2026-12-07~v1.gp-60
 //
 // Ce module est dans la fermeture de la vérification serveur (verify.js) : le jeu et le serveur appliquent EXACTEMENT la même variante.
 // Une variante sans effet sur le circuit (départ en voiture sur un circuit qui part déjà en voiture, tours sur un circuit ouvert…) est refusée :
@@ -12,16 +12,19 @@
 import { applyRules } from './rulesCore.js';
 
 export const VARIANT_VER = 'v1';
+export const WIND_DIRS = ['n', 'ne', 'e', 'se', 's', 'so', 'o', 'no'];        // vers où souffle le vent (le nord est en haut de l'éditeur)
 export const MAX_KEY = 80;
 
 // Nom -> valeurs permises (texte canonique) et règle correspondante. Ajouter une catégorie = une ligne (ordre alphabétique des noms).
 export const VARIANTS = {
   g: { values: ['40', '70', '130', '180'], rule: (v) => ({ g0: +v }) },            // gravité de départ (%)
+  gp: { values: ['60', '80'], rule: (v) => ({ grip: +v }) },                       // adhérence de tout le circuit (%) : verglas (E13)
   lap: { values: ['1', '2', '3', '4', '5'], rule: (v) => ({ laps: +v }) },         // nombre de tours (circuits fermés)
   obs: { values: ['0'], rule: () => ({ obstacles: 'off' }) },                       // sans obstacles
   off: { values: ['0', '1'], rule: (v) => ({ offroad: +v }) },                      // hors-piste interdit / permis
   v0: { values: ['0', '100', '200'], rule: (v) => ({ v0: +v }) },                   // vitesse de départ (km/h)
   veh: { values: ['car', 'moto', 'boat', 'glider'], rule: (v) => ({ veh0: v }) },  // véhicule de départ
+  wd: { values: WIND_DIRS, rule: (v) => ({ wind: 25, windDir: WIND_DIRS.indexOf(v) * 45 }) },   // vent de 25 % vers une direction (n, ne, e… ; E13)
 };
 const NAMES = Object.keys(VARIANTS).sort();
 

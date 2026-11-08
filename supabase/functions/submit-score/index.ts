@@ -11640,8 +11640,20 @@ function sanitizeRules(r) {
     v0: o.v0 >= 0 ? int2(o.v0, 0, 300, -1) : -1,
     offroad: o.offroad === 1 || o.offroad === true ? 1 : o.offroad === 0 || o.offroad === false ? 0 : -1,
     obstacles: o.obstacles === "off" ? "off" : "",
-    sameCars: o.sameCars ? 1 : 0
+    sameCars: o.sameCars ? 1 : 0,
+    ...extraRules(o)
   };
+}
+function extraRules(o) {
+  const out = {};
+  const grip = o.grip ? int2(o.grip, 25, 150, 0) : 0;
+  if (grip && grip !== 100) out.grip = grip;
+  const wind = o.wind ? int2(o.wind, 0, 100, 0) : 0;
+  if (wind) {
+    out.wind = wind;
+    out.windDir = (Math.round(int2(o.windDir, -3600, 3600, 0) / 15) * 15 % 360 + 360) % 360;
+  }
+  return out;
 }
 var isDefaultRules = (r) => JSON.stringify(sanitizeRules(r)) === JSON.stringify(DEFAULT_RULES);
 function applyRules(track, rules) {
@@ -11654,6 +11666,11 @@ function applyRules(track, rules) {
   if (r.veh0) p.veh0 = r.veh0;
   if (r.v0 >= 0) p.v0 = r.v0;
   if (r.offroad >= 0) p.offroad = r.offroad;
+  if (r.grip) p.grip = r.grip;
+  if (r.wind) {
+    p.wind = r.wind;
+    p.windDir = r.windDir;
+  }
   t.setParams(p);
   if (r.laps && t.laps > 1) {
     if (t.path) {
@@ -11673,6 +11690,16 @@ function applyRules(track, rules) {
 
 // js/variants.js
 var VARIANT_VER = "v1";
+var WIND_DIRS = [
+  "n",
+  "ne",
+  "e",
+  "se",
+  "s",
+  "so",
+  "o",
+  "no"
+];
 var VARIANTS = {
   g: {
     values: [
@@ -11683,6 +11710,15 @@ var VARIANTS = {
     ],
     rule: (v) => ({
       g0: +v
+    })
+  },
+  gp: {
+    values: [
+      "60",
+      "80"
+    ],
+    rule: (v) => ({
+      grip: +v
     })
   },
   lap: {
@@ -11733,6 +11769,13 @@ var VARIANTS = {
     ],
     rule: (v) => ({
       veh0: v
+    })
+  },
+  wd: {
+    values: WIND_DIRS,
+    rule: (v) => ({
+      wind: 25,
+      windDir: WIND_DIRS.indexOf(v) * 45
     })
   }
 };

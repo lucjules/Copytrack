@@ -5,6 +5,8 @@ import { $, esc } from '../dom.js';
 import { account } from '../account.js';
 import { loadSettings } from '../storage.js';
 import { locale } from '../i18n.js';
+import { levelOf, ensureXp, LICENCES, hasLicence, masteryCount, MASTERY, LEVEL_REWARDS } from '../progression.js';
+import { CATALOG } from '../cosmetics.js';
 export const profileMethods = {
   async _renderProfile() {
     const tab = ['account', 'saves', 'options', 'controls'].includes(this.profileTab) ? this.profileTab : 'account';
@@ -29,9 +31,11 @@ export const profileMethods = {
         <span>Pièces gagnées au total</span><b>${p.stats.earned}</b>
         <span>Médailles obtenues</span><b>${medals.length}</b>
       </div>
+      <div class="prof-progress" id="prof-progress"></div>
       <div class="prof-account" id="prof-account"></div>
       <div class="prof-titles" id="prof-titles"></div>
       <p class="prof-note">Code joueur et import / export : onglet <b>Sauvegardes</b>.</p>`;
+    this._renderProgressBox(body.querySelector('#prof-progress'));
     this._renderAccountBox(body.querySelector('#prof-account'));
     this._renderTitlesBox(body.querySelector('#prof-titles'));
   },
@@ -68,6 +72,23 @@ export const profileMethods = {
       const f = file.files[0];
       if (f) this._askImport(await f.text());
     };
+  },
+
+  // Progression du pilote (E14) : niveau et expérience, licences (et ce qui manque pour la suivante), défis de maîtrise, récompenses de niveau.
+  _renderProgressBox(box) {
+    ensureXp(this.builtins.map((b) => b.key));
+    const p = profile(), L = levelOf(p.xp), ctx = this._licenceContext();
+    const pct = L.max ? 100 : Math.round((L.into / Math.max(1, L.need)) * 100);
+    const next = LICENCES.find((x) => !hasLicence(x.id));
+    const label = (cat, id) => ((CATALOG[cat] || []).find((x) => x.id === id) || {}).label || id;
+    box.innerHTML = `<h3>Pilote</h3>
+      <p class="prof-level"><b>Niveau ${L.level}</b> <span class="meta">${L.max ? 'niveau maximal' : `${L.into} / ${L.need} XP`}</span></p>
+      <span class="xp-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></span>
+      <p class="meta">L’expérience vient des courses terminées et des objectifs : médailles, objectifs bonus, défi du jour, Académie, défis de maîtrise. Elle ne rend jamais une voiture plus rapide.</p>
+      <div class="prof-licences">${LICENCES.map((x) => `<span class="licence${hasLicence(x.id) ? ' got' : ''}">🪪 <span>${esc(x.label)}</span></span>`).join('')}</div>
+      ${next ? `<p class="meta">Pour la <b>${esc(next.label)}</b> :</p><ul class="lic-req">${next.req.map(([k, n, txt]) => `<li class="${(ctx[k] || 0) >= n ? 'done' : ''}">${(ctx[k] || 0) >= n ? '✓' : '·'} <span>${esc(txt)}</span> <small>(${Math.min(ctx[k] || 0, n)} / ${n})</small></li>`).join('')}</ul>` : '<p class="meta">Toutes les licences sont à toi.</p>'}
+      <p><span>Défis de maîtrise : <b>${masteryCount()} / ${this.builtins.length * MASTERY.length}</b></span> <small class="meta">${MASTERY.map((m) => `${m.icon} <span>${esc(m.label)}</span>`).join(' · ')}</small></p>
+      <div class="lvl-rewards meta"><span>Récompenses de niveau (garage) :</span><ul>${LEVEL_REWARDS.map(([lvl, cat, id]) => `<li class="${L.level >= lvl ? 'got' : ''}"><span>${L.level >= lvl ? '✓' : '🔒'}</span> <span>Niveau ${lvl} : ${esc(label(cat, id))}</span></li>`).join('')}</ul></div>`;
   },
 
   // Bloc « compte » de l'écran Profil : état de la synchronisation, déconnexion, suppression.

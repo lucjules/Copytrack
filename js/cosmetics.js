@@ -52,6 +52,9 @@ export const CATALOG = {
     { id: 'rainbow', label: 'Arc-en-ciel', cost: 220, rainbow: true },
     // Exclusivité (0.9.18) : ne s'achète pas, se mérite (champ `exclusive` : comment). Voir rewards.js.
     { id: 'gold', label: 'Traînée dorée', cost: 0, color: '#ffd23e', exclusive: 'Terminer 7 défis du jour différents' },
+    { id: 'frost', label: 'Traînée givrée', cost: 0, color: '#bfeaff', exclusive: 'Une série de 7 défis du jour d’affilée' },
+    { id: 'violet', label: 'Traînée violette', cost: 0, color: '#b07bff', exclusive: 'Atteindre le niveau 10' },
+    { id: 'plasma', label: 'Plasma', cost: 0, color: '#ff5cf0', exclusive: 'Atteindre le niveau 30' },
   ],
   // Klaxon (touche H).
   horn: [
@@ -71,6 +74,9 @@ export const CATALOG = {
     { id: 'rainbow', label: 'Arc-en-ciel', cost: 250, rainbow: true },
     { id: 'emerald', label: 'Émeraude', cost: 0, color: '#2dffb0', exclusive: 'Une médaille sur les 6 circuits de l’Atelier' },
     { id: 'sunset', label: 'Crépuscule', cost: 0, color: '#ff8c5a', exclusive: 'Réussir les 6 leçons de l’Académie' },
+    { id: 'toxic', label: 'Toxique', cost: 0, color: '#b6ff3b', exclusive: 'Terminer 10 mutations du jour' },
+    { id: 'mint', label: 'Menthe', cost: 0, color: '#7dffcf', exclusive: 'Atteindre le niveau 5' },
+    { id: 'pale', label: 'Or pâle', cost: 0, color: '#ffe9a3', exclusive: 'Atteindre le niveau 20' },
   ],
   decal: [
     { id: 'none', label: 'Aucun', cost: 0 },
