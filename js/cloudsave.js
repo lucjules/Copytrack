@@ -6,11 +6,13 @@
 //  - circuits : union par identifiant, le plus récent gagne ; les pierres tombales effacent les circuits supprimés ;
 //  - profil : médailles et objets réunis, statistiques au maximum, pièces sans jamais en inventer ; favoris réunis (pierres tombales) ;
 //    exercices de l'Académie : meilleur niveau et meilleure mesure ; mutations du jour réunies, meilleure série au maximum ;
+//    expérience au maximum, licences réunies (date la plus ancienne), défis de maîtrise réunis ;
 //  - dernières courses (runs.*) : réunies, les plus récentes gardées.
 import { itemCost } from './cosmetics.js';
 import { mergeFavorites } from './favorites.js';
 import { cleanRuns } from './storage.js';
 import { mergeDrills } from './skills.js';
+import { mergeProgress } from './progression.js';
 
 // Ce qui suit un compte d'un appareil à l'autre : progression, circuits créés, records. Les réglages
 // (volume, touches, qualité...) restent propres à chaque appareil, le brouillon de l'éditeur aussi.
@@ -87,7 +89,7 @@ export function mergeProfile(local, remote) {
   const fav = (a.favorites || b.favorites || a.favDel || b.favDel) ? mergeFavorites(a, b) : {};      // favoris du Race Hub (favorites.js)
   const drills = a.drills || b.drills ? { drills: mergeDrills(a.drills, b.drills) } : {};         // exercices de l'Académie (skills.js) : meilleur niveau, meilleure mesure
   return {
-    ...b, ...a, ...fav, ...drills, ...daily2,
+    ...b, ...a, ...fav, ...drills, ...daily2, ...mergeProgress(a, b),
     id: b.id || a.id,                    // l'identifiant du joueur reste celui du compte
     coins: mergeCoins(a, b, owned), owned, medals, eggs, shards, stats, presets, academy, collections, dailyDays, titlesSeen,
     loadout: a.loadout || b.loadout,     // l'appareil courant garde sa personnalisation

@@ -16,6 +16,7 @@ import { online } from '../online.js';
 import { dailyChallenge } from '../daily.js';
 import { dailyMutation, streakOf } from '../mutations.js';
 import { MUTATION_COINS, STREAK_STEPS } from '../rewards.js';
+import { masteryBits, MASTERY } from '../progression.js';
 import { goalLabel, goalDone, PROFILS } from '../career.js';
 import { starsText, STAR_LABELS } from '../difficulty.js';
 import { getRecord, getImportedGhost, listMyTracks, formatTime } from '../storage.js';
@@ -126,6 +127,10 @@ export const raceHubMethods = {
     if (d.source === 'community') rows.push(['Joué', `▶ ${d.plays} · ♥ ${d.likes}`]);
     if (d.medals) rows.push(['Médailles', `<span class="hub-medals">${MEDALS.map((m) => `<span title="${esc(m.label)}">${medalIcon(m)} ${formatTime(d.medals[m.id])}</span>`).join('')}</span>`]);
     if (d.goal) { const done = goalDone(d.goalKey); rows.push(['Objectif bonus', `<span class="${done ? 'goal-done' : ''}">★ ${esc(goalLabel(d.goal))}${done ? ' ✓' : ''}</span>`]); }
+    if (d.source === 'builtin' && !d.variant) {      // défis de maîtrise (E14) : quatre par circuit de la carrière
+      const bits = masteryBits(d.key);
+      rows.push(['Maîtrise', `<span class="hub-mastery">${MASTERY.map((m) => `<span class="${bits & m.bit ? 'got' : ''}" title="${esc(m.label)}">${m.icon}</span>`).join('')} <small class="meta">${MASTERY.filter((m) => bits & m.bit).length} / ${MASTERY.length}</small></span>`]);
+    }
     $('hub-facts').innerHTML = `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>${d.desc ? `<p class="hub-desc">${esc(d.desc)}</p>` : ''}${d.learn ? `<p class="hub-desc meta">${esc(d.learn)}</p>` : ''}`;
   },
 

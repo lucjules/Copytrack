@@ -6,6 +6,26 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.36 — progression du pilote : expérience, niveaux, licences, défis de maîtrise
+
+Étape E14 de Copytrack Evolution (fin du bloc 4). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.
+
+- **Expérience et niveaux** (1 à 50 ; niveau 2 à 100 XP, niveau 10 à 4 500 XP). L'expérience vient **seulement des courses terminées et des objectifs** :
+  - première arrivée du jour sur un circuit : 20 XP ; les suivantes : 2 XP ;
+  - chaque palier de médaille atteint pour la première fois (bronze 20, argent 40, or 60, cristal 100 ; carrière et défi du jour) ;
+  - objectif bonus 30, défi du jour 40, mutation du jour 30, palier de série 50 ;
+  - leçon de l'Académie 30 ; note d'exercice 20, 30, 50 ;
+  - défi de maîtrise 40.
+  Les arrivées répétées sur le même circuit, le même jour, ne rapportent presque rien. Les médailles d'un circuit de joueur ne comptent pas, et un circuit non vérifié n'a pas de bonus de première arrivée : on ne fabrique pas son expérience. L'écran d'arrivée détaille ce que la course a rapporté, avec la barre de niveau.
+- **Défis de maîtrise** : quatre par circuit de la carrière (or, cristal, objectif bonus, arrivée sans choc ni réapparition), affichés dans la fiche du circuit.
+- **Licences C, B, A et S** : des paliers mesurés sur ce qui a été accompli (niveau, leçons, médailles, compétences de l'Académie, défis de maîtrise). Elles ne verrouillent rien : le profil montre celles obtenues et ce qui manque pour la suivante.
+- **Déblocages cosmétiques** : quatre éléments exclusifs du garage, aux niveaux 5, 10, 20 et 30 (lumières et traînées). **Aucun avantage de vitesse**, et c'est vérifié :
+  - aucun module de la simulation ni de la vérification serveur n'importe le profil, la progression ou le garage (le test parcourt leurs imports) ;
+  - la même course donne le même résultat au bit près avec un profil débutant et un profil niveau 50 tout équipé.
+- **Profils existants** : l'expérience de départ est calculée une fois d'après ce qui a déjà été accompli (médailles, objectifs, leçons, exercices, défis, courses). Les défis de maîtrise déjà acquis (or, cristal, objectif) sont déduits ; « sans choc » demande une nouvelle arrivée.
+- Sous le capot : `js/progression.js` (barème, niveaux, maîtrise, licences, expérience de départ, fusion) ; profil `xp`, `licences`, `mastery` (fusion cloud : maximum, union avec la date la plus ancienne, OU bit à bit).
+- Tests : `tools/test-progression.mjs` (niveaux, barème, arrivées répétées, médailles, maîtrise, origine de l'expérience, expérience de départ, licences, fusion, récompenses, absence d'avantage) ; test navigateur (expérience à l'arrivée, maîtrise dans la fiche, profil) et anglais.
+
 ## Bêta 0.9.35 — Défi du jour 2 : mutation du jour, séries, récompenses
 
 Étape E13 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des mutations « verglas » et « vent » (catégories `gp` et `wd`, nouvelles). Le défi du jour et toutes les autres catégories sont vérifiés comme avant.

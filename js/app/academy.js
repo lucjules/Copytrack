@@ -8,6 +8,7 @@ import { LESSONS, lessonDone, lessonsDone, nextLesson, completeLesson, LESSON_CO
 import { SKILLS, DRILLS, GRADE_NAMES, GRADE_ICONS, DRILL_COINS, drillLevel, drillBest, skillLevel, weakestDrill, gradeDrill, valueOf, describeMeasure, goalTexts, recordDrill } from '../skills.js';
 import { measureRun, drillAdvice } from '../analysis/drill.js';
 import { formatTime } from '../storage.js';
+import { addXp, XP } from '../progression.js';
 
 const bestText = (d, v) => (v == null ? '' : d.measure === 'zoneSpeed' ? `${Math.round(v)} km/h` : d.measure === 'zoneTime' ? `${v.toFixed(2).replace('.', ',')} s`
   : d.measure === 'landings' ? `${v} / 3` : v >= 21 ? 'renforcé sans choc' : v >= 20 ? 'mini-turbo renforcé' : v >= 10 ? 'mini-turbo simple' : '');
@@ -68,6 +69,10 @@ export const academyMethods = {
     try { m = measureRun(session.track, session.recorder.encode(), d); } catch { m = null; }
     const g = gradeDrill(d, m), r = recordDrill(d.id, g, valueOf(d, m));
     if (r.coins) this.ui.updateCoins();
+    let xp = 0;                                                      // expérience (E14) : chaque note atteinte pour la première fois
+    for (let k = r.prev + 1; k <= r.lvl; k++) xp += XP.drill[k];
+    if (xp) addXp(xp);
+    if (xp) this.checkRewards();
     let advice = '';
     try { advice = drillAdvice(d, m, session.track, g); } catch { advice = d.tip; }
     const weak = weakestDrill();
@@ -78,7 +83,7 @@ export const academyMethods = {
       title: g ? `${GRADE_ICONS[g]} Note : ${GRADE_NAMES[g]}` : 'Pas encore de note',
       body: `<p class="ac-measure"><b>${esc(describeMeasure(d, m))}</b> <small>(${esc(formatTime(time))})</small></p>
         <ol class="ac-goals">${goalTexts(d).map((txt, k) => `<li class="${g > k ? 'done' : ''}">${GRADE_ICONS[k + 1]} <span>${esc(txt)}</span></li>`).join('')}</ol>`
-        + (r.lvl > r.prev ? `<p>Nouvelle note : <b>${GRADE_NAMES[r.lvl]}</b>${r.coins ? ` · +${r.coins} ◆` : ''}</p>` : r.newBest ? '<p>Meilleure mesure battue.</p>' : '')
+        + (r.lvl > r.prev ? `<p>Nouvelle note : <b>${GRADE_NAMES[r.lvl]}</b>${r.coins ? ` · +${r.coins} ◆` : ''}${xp ? ` · +${xp} XP` : ''}</p>` : r.newBest ? '<p>Meilleure mesure battue.</p>' : '')
         + (advice ? `<p class="ac-advice">💡 ${esc(advice)}</p>` : ''),
       actions,
     });
@@ -106,7 +111,7 @@ export const academyMethods = {
     if (session.opts.academy.drill != null) { this.onDrillFinished(session, time); return; }
     const i = session.opts.academy.index, L = LESSONS[i];
     const r = completeLesson(i, { ...session.stats, vehicle: session.phys.vehicle, time });
-    if (r.coins) this.ui.updateCoins();
+    if (r.coins) { this.ui.updateCoins(); addXp(XP.lesson); }                  // expérience (E14) : la première réussite d'une leçon
     if (r.passed) this.checkRewards();
     const next = i + 1 < LESSONS.length ? i + 1 : null;
     const actions = [];
@@ -121,7 +126,7 @@ export const academyMethods = {
     this.ui.modal({
       title: r.passed ? (r.graduated ? '🎓 Diplôme !' : '✓ Leçon réussie') : 'Pas tout à fait…',
       body: `<p>${r.passed ? `Objectif atteint : <b>${esc(r.text)}</b>.` : `Objectif : <b>${esc(r.text)}</b>. ${esc(hints[L.goal.id] || '')}`}</p>`
-        + (r.coins ? `<p>+${r.coins} ◆${r.graduated ? ' (dont le bonus de diplôme)' : ''}</p>` : '')
+        + (r.coins ? `<p>+${r.coins} ◆${r.graduated ? ' (dont le bonus de diplôme)' : ''} · +${XP.lesson} XP</p>` : '')
         + (r.graduated ? '<p>Les six leçons sont réussies. L’éditeur et la carrière n’ont plus de secret pour toi : essaie le chapitre bonus <b>Atelier</b>.</p>' : ''),
       actions,
     });

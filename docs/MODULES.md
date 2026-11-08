@@ -65,6 +65,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `pieces.js` | Définition des pièces de circuit, des revêtements et de leur géométrie "analytique" (utilisée à la fois par la physique et par les maillages). |
 | `prefabs.js` | Prefabs de l'éditeur (0.9.18) : des morceaux de circuit réutilisables (chicane, looping + sortie, saut…), qu'on colle comme le presse-papiers ; on peut aussi enregistrer SA sélection, la nommer et la partager par un code « SHP1: ». Un prefab est un presse-papiers (editorTools.copyRect) : { w, h, tiles, decos } en coordonnées relatives. Module sans rendu ni stockage : la bibliothèque locale est dans storage.js. |
 | `profile.js` | Profil du joueur : pièces, objets débloqués, équipement, code de sauvegarde. |
+| `progression.js` | Progression du pilote (Copytrack Evolution, E14) : EXPÉRIENCE et NIVEAUX, LICENCES, DÉFIS DE MAÎTRISE, et cosmétiques débloqués par le niveau. |
 | `quality.js` | Qualité graphique : profils (Ultra → Potato), détection automatique (benchmark invisible sur l'animation du menu), gestionnaire qui applique un profil au WebGLRenderer et à la scène, et filet de sécurité en course. |
 | `race.js` | Session de course : boucle à pas fixe, caméra, fantôme, HUD, effets. |
 | `raceLogic.js` | Règles de course (sans rendu) : checkpoints, arrivée, points de réapparition. |

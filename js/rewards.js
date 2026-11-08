@@ -3,6 +3,7 @@
 import { CATALOG } from './cosmetics.js';
 import { profile, saveProfile, addCoins, owns } from './profile.js';
 import { streakOf } from './mutations.js';
+import { LEVEL_REWARDS } from './progression.js';
 
 // ---- Titres ----------------------------------------------------------------------------------------------------------------------------
 // id : ^[a-z0-9-]{1,20}$ (la fonction SQL set_title, supabase/etape8-decouverte.sql, a la même liste : un test les compare).
@@ -26,6 +27,7 @@ export const EXCLUSIVES = [
   { cat: 'led', id: 'sunset', test: (c) => c.academy >= 6 },
   { cat: 'trail', id: 'frost', test: (c) => c.dailyBest >= 7 },          // E13 : une série de 7 jours
   { cat: 'led', id: 'toxic', test: (c) => c.mutations >= 10 },           // E13 : dix mutations du jour terminées
+  ...LEVEL_REWARDS.map(([lvl, cat, id]) => ({ cat, id, test: (c) => c.level >= lvl })),   // E14 : niveaux du pilote
 ];
 
 // ---- Collections : quatre éléments du garage qui vont ensemble ; les posséder tous rapporte une fois COLLECTION_COINS ----------------------------------
@@ -44,7 +46,7 @@ export function collectionProgress(col, has = owns) {
 }
 
 // Contexte vide (tous les compteurs à zéro) : app/rewards.js le remplit d'après le profil et les records.
-export const emptyContext = () => ({ academy: 0, atelierMedals: 0, coreMedals: 0, crystals: 0, totalTracks: 0, dailyDays: 0, collections: 0, races: 0, turbos: 0, dailyBest: 0, mutations: 0 });
+export const emptyContext = () => ({ academy: 0, atelierMedals: 0, coreMedals: 0, crystals: 0, totalTracks: 0, dailyDays: 0, collections: 0, races: 0, turbos: 0, dailyBest: 0, mutations: 0, level: 1 });
 
 export const earnedTitles = (ctx) => TITLES.filter((t) => t.test(ctx)).map((t) => t.id);
 
@@ -78,14 +80,14 @@ export const STREAK_STEPS = [[3, 30], [7, 70], [14, 140], [30, 300]];
 export const MUTATION_COINS = 30;          // la première arrivée de la mutation du jour, chaque jour
 
 // Compteurs cumulés du profil, mis à jour en fin de course (finish.js). dailyDay : jour du défi terminé (défi ou mutation) ; mutation : c'était la
-// mutation du jour. Renvoie { streak, best, coins, steps, mutation } (pièces déjà versées) ; streak est null hors défi du jour.
+// mutation du jour. Renvoie { streak, best, coins, steps, mutation, newDay } (pièces déjà versées) ; streak est null hors défi du jour.
 export function noteRace({ turbos = 0, dailyDay = '', mutation = false } = {}) {
   const p = profile();
-  const out = { streak: null, best: 0, coins: 0, steps: [], mutation: 0 };
+  const out = { streak: null, best: 0, coins: 0, steps: [], mutation: 0, newDay: false };
   if (turbos > 0) p.stats.turbos = Math.min(1e6, (p.stats.turbos || 0) + turbos);
   if (/^\d{4}-\d{2}-\d{2}$/.test(dailyDay)) {
     const days = Array.isArray(p.dailyDays) ? p.dailyDays : [];
-    if (!days.includes(dailyDay)) { days.push(dailyDay); days.sort(); p.dailyDays = days.slice(-400); }
+    if (!days.includes(dailyDay)) { days.push(dailyDay); days.sort(); p.dailyDays = days.slice(-400); out.newDay = true; }
     const st = streakOf(p.dailyDays, dailyDay), prevBest = p.dailyBest | 0;
     out.streak = st.current;
     out.best = p.dailyBest = Math.max(prevBest, st.best);

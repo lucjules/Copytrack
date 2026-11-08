@@ -152,6 +152,25 @@ try {
     await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.dailyDays = []; p.mutDays = []; p.dailyBest = 0; saveProfile(); });
   });
 
+  await test('progression du pilote : expérience à l’arrivée, défi de maîtrise dans la fiche, niveau et licences dans le profil', async () => {
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.xp = 0; p.mastery = {}; p.licences = {}; p.xpDay = null; saveProfile(); });
+    await app(() => { window.copytrack.showMenu('tracks'); window.copytrack.openBuiltinHub(0, 'tracks'); });
+    await waitApp(() => /Maîtrise/.test(document.getElementById('hub-facts').textContent) && /0 \/ 4/.test(document.querySelector('.hub-mastery').textContent));
+    await click('#hub-play');
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session.state === 'racing', null, 40000);
+    await app(() => window.copytrack.session._finish(window.copytrack.session.logic.steps / 120 + 25));
+    await waitApp(() => !document.getElementById('finish').classList.contains('hidden') && !document.getElementById('fin-xp').classList.contains('hidden'));
+    assert.match(await page.evaluate(() => document.getElementById('fin-xp').textContent), /^\+\d+ XP\s+Niveau \d+[\s\S]*Première arrivée du jour sur ce circuit \+20[\s\S]*Défi de maîtrise \+40/);
+    assert.ok(await app(async () => (await import('/js/profile.js')).profile().xp >= 60));
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
+    assert.match(await page.evaluate(() => document.querySelector('.hub-mastery').textContent), /1 \/ 4/, 'arrivée sans choc : un défi de maîtrise');
+    await app(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('profile'); });
+    await waitApp(() => document.querySelector('.prof-progress') && /Niveau \d+/.test(document.querySelector('.prof-progress').textContent));
+    assert.match(await page.evaluate(() => document.querySelector('.prof-progress').textContent), /Licence C[\s\S]*Licence S[\s\S]*Pour la Licence C[\s\S]*Défis de maîtrise : 1 \/ 288/);
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.xp = 0; p.mastery = {}; p.xpDay = null; saveProfile(); window.copytrack.showMenu('menu'); });
+  });
+
   await test('Race Hub : fiche immédiate (carte, légende, onglets), favori, dernières courses, replay du record, retour à la fiche', async () => {
     await app(async () => { const m = await import('/js/storage.js'); m.clearRecords(); const { profile, saveProfile } = await import('/js/profile.js'); profile().favorites = []; profile().favDel = {}; saveProfile(); });
     const ms = await app(() => { const t = performance.now(); window.copytrack.showMenu('tracks'); window.copytrack.openBuiltinHub(1, 'tracks'); return performance.now() - t; });
