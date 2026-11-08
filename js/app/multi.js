@@ -9,13 +9,16 @@ import { Room, defaultSignaling, normalizeCode, ROOM_RE, MAX_PLAYERS } from '../
 import { buildPlaylist, poolFor, POOLS, liveOrder } from '../net/championship.js';
 import { PublicDirectory, describeRoom, LOBBY_CODE } from '../net/directory.js';
 import { createIceLoader } from '../net/ice.js';
+import { saveResume, loadResume, clearResume } from '../net/resume.js';
 import { listMyTracks, formatTime } from '../storage.js';
 const STEPS_PER_S = 120;
 const fmtSteps = (steps) => (steps == null ? '—' : formatTime(steps / STEPS_PER_S));
 export const multiMethods = {
-  _roomOpts() {
+  // code : pour rejoindre une salle ; si cet onglet y était il y a moins de 20 s (rechargement), il reprend sa place (même identifiant, resume.js).
+  _roomOpts(code = null) {
     this._iceLoader = this._iceLoader || createIceLoader();
-    return { name: this.settings.playerName, makeSignaling: (o) => defaultSignaling(o, this._tokenFn()), getIce: this._iceLoader };
+    const back = code ? loadResume(normalizeCode(code)) : null;
+    return { name: this.settings.playerName, makeSignaling: (o) => defaultSignaling(o, this._tokenFn()), getIce: this._iceLoader, ...(back ? { selfId: back.selfId, token: back.token } : {}) };
   },
 
   _bindRoom(room) {
@@ -33,7 +36,16 @@ export const multiMethods = {
       if (this.session && this.session.cup && this.session.multi.room === room) this._leaveRaceToLobby(room);
       else this.ui.flash('L\'hôte a arrêté le championnat.', 3);
     });
+    // Reconnexion (E16) : la place est gardée 20 s ; la course continue pendant ce temps.
+    const keep = () => { if (!room.closed) saveResume({ code: room.code, selfId: room.selfId, token: room.token }); };
+    keep();
+    room.on('members', keep);
+    room.on('reconnecting', () => this.ui.flash('📶 Connexion perdue : reconnexion à la salle… (ta course continue)', 4));
+    room.on('reconnected', () => this.ui.flash('📶 Reconnecté à la salle.', 2.4));
+    room.on('away', (id) => { const m = room.members.get(id); this.ui.flash(`⏳ ${m ? m.name : 'Un joueur'} a perdu la connexion : sa place est gardée 20 s.`, 3); });
+    room.on('hostover', () => this.ui.flash('★ Tu es maintenant l’hôte de la salle.', 3));
     room.on('closed', () => {
+      clearResume();
       this._removeBoard(); this._removeCupPanel();
       if (this._dir) this._dir.retract();
       if (this.room === room) this.room = null;
@@ -70,7 +82,7 @@ export const multiMethods = {
     let stop = null, closed = false;
     const join = async (code) => {
       err.textContent = '';
-      try { const room = await Room.join(code, this._roomOpts()); this.room = room; this._bindRoom(room); this.ui.closeModal(); this.multiLobby(room); }
+      try { const room = await Room.join(code, this._roomOpts(code)); this.room = room; this._bindRoom(room); this.ui.closeModal(); this.multiLobby(room); }
       catch (e) { err.textContent = e.message || 'Impossible de rejoindre.'; }
     };
     const render = (rows) => {
@@ -153,7 +165,7 @@ export const multiMethods = {
         { label: 'Rejoindre', onClick: () => {
           const code = normalizeCode(wrap.querySelector('#mp-code').value);
           if (!ROOM_RE.test(code)) { err('Code invalide : 6 caractères (lettres et chiffres, sans 0, O, 1, I).'); return false; }
-          go(() => Room.join(code, this._roomOpts())); return false;
+          go(() => Room.join(code, this._roomOpts(code))); return false;
         } },
         { label: 'Salons publics', onClick: () => { this.multiPublic(); return false; } },
         { label: 'Fermer' },
@@ -180,7 +192,7 @@ export const multiMethods = {
     const msg = document.createElement('p');
     msg.className = 'mp-err'; msg.setAttribute('role', 'alert');
     body.append(code, list, modeRow, trackRow, pick, msg, note);
-    const LINK = { self: '', open: '● connecté', connecting: '… connexion', failed: '✕ liaison impossible', closed: '✕ déconnecté', incompatible: '✕ autre version' };
+    const LINK = { self: '', open: '● connecté', connecting: '… connexion', failed: '✕ liaison impossible', closed: '✕ déconnecté', incompatible: '✕ autre version', away: '⏳ reconnexion' };
     // Choix de l'hôte, gardés d'une ouverture du salon à l'autre : circuits ajoutés à la liste, mode, nombre de manches, sélection, collisions, salon public.
     const extra = this._mpExtra = Object.assign({ mine: [], community: [], mode: 'free', rounds: 3, pool: 'all', collisions: true, pub: false }, this._mpExtra);
     const render = () => {

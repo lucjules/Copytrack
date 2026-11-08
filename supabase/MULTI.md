@@ -41,6 +41,26 @@ Déploiement (une fois, Supabase > Edge Functions) :
 
 Sans secret configuré, la fonction répond 501 et le jeu n'insiste pas avant 10 minutes. Elle limite à 30 demandes par minute et par adresse.
 
+## Coupures et reconnexion (0.9.38, protocole `NET_VER` 4)
+
+Une coupure (Wi-Fi qui saute, passage en 4G, onglet rechargé) ne fait plus sortir de la salle (`js/net/resume.js`) :
+- **le joueur coupé** garde sa salle ouverte et sa course continue ; il retente de rejoindre le canal avec le **même identifiant** (après 0,8, 1,5, 2,5, 4 et 6 s) ;
+  un onglet rechargé reprend sa place s'il revient dans les 20 s (identifiant et jeton gardés en `sessionStorage`) ;
+- **les autres** lui gardent sa place **20 s** (« ⏳ reconnexion » dans la liste) : il reste sur la grille, la manche ne se clôt pas sans lui (dans la limite
+  des délais habituels), et son arrivée compte s'il finit ; au-delà, sa place est rendue ;
+- **à son retour**, chacun lui envoie `hello`, l'hôte lui renvoie l'état complet (règles, circuit ou championnat **avec les arrivées de la manche en cours**) et
+  lui renvoie l'arrivée qu'il aurait annoncée pendant la coupure ;
+- **un départ volontaire** (« Quitter la salle ») envoie `bye` : sa place n'est pas gardée ;
+- **hôte remplacé** : l'hôte coupé plus de 20 s est remplacé par l'identifiant le plus petit, qui se **marque** hôte (`hostover`) ; l'ancien, s'il revient,
+  ne reprend pas la main (son état pourrait être périmé).
+
+**Collisions unifiées** : la voiture de l'autre est affichée avec ~100 ms d'interpolation et une demi-latence de retard. Pour les collisions douces, elle est
+ramenée **au même instant** que la sienne (position + vitesse × retard, plafonné à 0,25 s) : les deux joueurs voient le même contact au même moment, au lieu
+d'un choc contre une voiture fantôme d'un côté et d'un passage au travers de l'autre.
+
+**Relais TURN** : le code est prêt depuis 0.9.21 (fonction `ice`, plus haut). Sa **mise en service** demande un compte TURN (Cloudflare Realtime ou coturn) et
+ses secrets dans Supabase : sans eux, 10 à 20 % des paires de joueurs (NAT symétrique) ne peuvent pas se relier.
+
 ## Championnat (manches)
 
 L'hôte choisit *Championnat* dans le salon : nombre de manches (2 à 6), sélection de circuits (tous, faciles, moyens, difficiles, un thème), collisions douces.

@@ -373,4 +373,10 @@ export default {
   'Tu suis {a} : ses circuits sont dans Communauté › Abonnements.': 'You follow {a}: their tracks are in Community › Following.',
   'Ce circuit ne fait pas partie de cette saison.': 'This track is not part of this season.', 'Cette saison n’a pas encore commencé.': 'This season has not started yet.',
   'Cette saison est terminée : les temps ne comptent plus.': 'This season is over: times no longer count.',
+  // ---------------------------------------------------------------- Multijoueur robuste : reconnexion (0.9.38)
+  '📶 Connexion perdue : reconnexion à la salle… (ta course continue)': '📶 Connection lost: reconnecting to the room… (your race goes on)',
+  '📶 Reconnecté à la salle.': '📶 Reconnected to the room.',
+  '⏳ {n} a perdu la connexion : sa place est gardée 20 s.': '⏳ {n} lost the connection: their place is kept for 20 s.',
+  '★ Tu es maintenant l’hôte de la salle.': '★ You are now the host of the room.',
+  '⏳ reconnexion': '⏳ reconnecting',
 };

@@ -47,7 +47,13 @@ export class PeerMesh {
     this.selfId = selfId; this.signaling = signaling; this.h = handlers; this.ice = iceServers; this.RTC = RTC;
     this.links = new Map();
     this.stats = { sent: 0, recv: 0, skipped: 0 };
-    signaling.on('signal', (from, data) => this._onSignal(from, data));
+    signaling.on('signal', (from, data) => { if (signaling === this.signaling) this._onSignal(from, data); });
+  }
+
+  // Reconnexion (resume.js) : la nouvelle signalisation remplace l'ancienne pour les liaisons à refaire.
+  setSignaling(sig) {
+    this.signaling = sig;
+    sig.on('signal', (from, data) => { if (sig === this.signaling) this._onSignal(from, data); });
   }
 
   // Un joueur est apparu dans la salle : on ouvre (ou on attend) la connexion.

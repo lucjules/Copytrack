@@ -1081,6 +1081,15 @@ try {
       assert.ok(prog > 0.002 && prog < 0.5, 'avancement de Bea vu par Ana : ' + prog);
       assert.ok((await text(page, '#mp-board')).includes('Bea'), 'classement en direct');
       await shot('13-manche-en-direct');
+      // Reconnexion (E16) : coupure simulée de 3 s chez Bea ; sa place est gardée, elle revient seule, les liaisons se refont, la manche continue.
+      const beaId = await B.evaluate(() => window.copytrack.room.selfId);
+      await B.evaluate(() => window.copytrack.room.signaling.simulateCut(3000));
+      await waitApp((id) => (window.copytrack.room.members.get(id) || {}).link === 'away', beaId, 10000);
+      assert.equal(await B.evaluate(() => window.copytrack.room.reconnecting && !window.copytrack.room.closed), true, 'Bea se sait coupée, la salle reste ouverte chez elle');
+      assert.equal(await B.evaluate(() => window.copytrack.session && window.copytrack.session.state), 'racing', 'sa course continue');
+      await waitApp((id) => (window.copytrack.room.members.get(id) || {}).link === 'open', beaId, 30000);
+      await B.waitForFunction(() => !window.copytrack.room.reconnecting && window.copytrack.room.list.some((m) => !m.self && m.link === 'open'), null, { timeout: 30000 });
+      assert.equal(await page.evaluate(() => window.copytrack.room.cupState.roster.length), 2, 'Bea est toujours sur la grille');
       // Arrivées : Bea 30,0 s puis Ana 30,5 s ; l'hôte clôt la manche, les points s'affichent chez les deux.
       await B.evaluate(() => window.copytrack.session._finish(30.0));
       await page.evaluate(() => window.copytrack.session._finish(30.5));

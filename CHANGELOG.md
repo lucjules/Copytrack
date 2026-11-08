@@ -6,6 +6,24 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.38 — multijoueur robuste : reconnexion, hôte remplacé, collisions unifiées
+
+Étape E16 de Copytrack Evolution. `PHYS_VER` inchangé (26). **`NET_VER` passe à 4** : un joueur de 0.9.37 et un joueur de 0.9.38 ne peuvent plus être dans la même salle (le salon le dit, comme à chaque changement de protocole). Rien à redéployer. **Infrastructure facultative** : un relais TURN (voir `supabase/MULTI.md`).
+
+- **Une coupure ne fait plus sortir de la salle** (`js/net/resume.js`) :
+  - le joueur coupé garde sa salle ouverte et sa course continue ; il retente seul de la rejoindre, avec le même identifiant ;
+  - les autres lui gardent sa place 20 s (« ⏳ reconnexion ») : il reste sur la grille, la manche ne se clôt pas sans lui, son arrivée compte ;
+  - à son retour, l'hôte lui renvoie l'état complet, arrivées de la manche en cours comprises, et lui renvoie l'arrivée qu'il aurait annoncée pendant la coupure ;
+  - un onglet rechargé retrouve sa place s'il revient dans les 20 s.
+  Messages : `hello`, `bye` (départ volontaire : la place n'est pas gardée), `hostover`.
+- **Hôte remplacé** : la migration d'hôte existait déjà. Le nouvel hôte se **marque** désormais : l'ancien, revenu après coup, ne reprend pas la main avec un état périmé, et le championnat se termine avec le même classement chez tous.
+- **Collisions unifiées** : pour les collisions douces, la voiture de l'autre est ramenée au même instant que la sienne (interpolation et demi-latence rattrapées). Avec 160 ms de retard d'affichage, les deux joueurs voyaient le contact à 0,3 s et à 1,4 s d'intervalle ; ils le voient maintenant ensemble, au bon moment.
+- **Corrigé** : la fermeture d'une liaison WebRTC écrasait l'état « reconnexion » d'un joueur par « déconnecté ».
+- **TURN** : le code est prêt depuis 0.9.21 (fonction `ice`). Sa **mise en service** demande des identifiants TURN (Cloudflare Realtime ou coturn) dans les secrets Supabase : sans eux, 10 à 20 % des paires de joueurs (NAT symétrique) ne se relient pas. Je ne peux pas le faire à ta place.
+- Tests :
+  - protocole (`tools/test-manche.mjs`) : coupure de 10 s en pleine manche (place gardée, arrivée pendant la coupure comptée à sa place) ; arrivées manquées rattrapées sans remettre la manche à zéro ; coupure de plus de 20 s ; hôte coupé, remplacé, revenu sans reprendre la main, championnat terminé ; mémoire de la place ; collisions unifiées ;
+  - navigateur : championnat à **deux onglets** avec une **coupure simulée de 3 s** (vraie liaison WebRTC refaite, manche poursuivie jusqu'au podium).
+
 ## Bêta 0.9.37 — social, saisons hebdomadaires, classements par secteur
 
 Étape E15 de Copytrack Evolution (début du bloc 5). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **Infrastructure à mettre en place** (rien ne marche en ligne sans elle, et le jeu le dit) :

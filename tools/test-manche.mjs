@@ -5,8 +5,9 @@ import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
 import { POINTS, Championship, buildPlaylist, poolFor, liveOrder, pointsFor, MAX_ROUNDS } from '../js/net/championship.js';
 import { ProgressTracker, checkpointProgress, gridSpawn, GRID_COLS } from '../js/net/progress.js';
-import { softCollide, CAR_R, MAX_DV_STEP } from '../js/net/collide.js';
+import { softCollide, presentState, CAR_R, MAX_DV_STEP, MAX_LEAD_S } from '../js/net/collide.js';
 import { Room, FINISH_GRACE_MS, RESULTS_MS, MAX_ROUND_MS } from '../js/net/room.js';
+import { RESUME_MS, RETRY_MS, saveResume, loadResume, clearResume, newToken } from '../js/net/resume.js';
 import { Emitter } from '../js/net/signaling.js';
 import { PublicDirectory, cleanListing, describeRoom } from '../js/net/directory.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
@@ -176,13 +177,37 @@ test('échange symétrique : chacun applique sa moitié, la quantité de mouveme
   assert.ok(a.vel.x < 10 && b.vel.x > -10, 'ils se freinent mutuellement');
 });
 
+test('collisions unifiées (E16) : avec 160 ms de retard d\'affichage, les deux joueurs voient le contact au même instant (et au bon), au lieu de 0,3 s et 1,4 s', () => {
+  // A (40 m/s) rattrape B (30 m/s), 10 m devant, sur la même ligne : le vrai contact est à t ≈ 0,77 s. Chaque joueur voit l'autre avec D de retard.
+  const D = 0.16, dt = 1 / 120, stateAt = (x0, v, t) => ({ pos: { x: x0 + v * t, y: 0, z: 0 }, vel: { x: v, y: 0, z: 0 } });
+  const A = (t) => stateAt(-10, 40, t), B = (t) => stateAt(0, 30, t);
+  const touch = (me, other) => softCollide({ pos: { ...me.pos }, vel: { ...me.vel } }, [other]) > 0;
+  const firstContact = (lead) => {
+    let ta = null, tb = null;
+    for (let t = 0; t < 3 && (ta == null || tb == null); t += dt) {
+      if (ta == null && touch(A(t), lead ? presentState(B(t - D), D) : B(t - D))) ta = t;
+      if (tb == null && touch(B(t), lead ? presentState(A(t - D), D) : A(t - D))) tb = t;
+    }
+    return { ta, tb };
+  };
+  const truth = (10 - 2 * CAR_R) / 10;
+  const old = firstContact(false), now = firstContact(true);
+  assert.ok(old.ta < truth - 0.4 && old.tb > truth + 0.5, `sans rattrapage : contact vu à ${old.ta.toFixed(2)} s et ${old.tb.toFixed(2)} s`);
+  assert.ok(Math.abs(now.ta - now.tb) <= 2 * dt, `les deux le voient ensemble : ${now.ta.toFixed(3)} / ${now.tb.toFixed(3)}`);
+  assert.ok(Math.abs(now.ta - truth) <= 2 * dt, 'au bon moment');
+  assert.deepEqual(presentState({ pos: { x: 0, y: 0, z: 0 }, vel: { x: 10, y: 0, z: 0 } }, 9).pos.x, 10 * MAX_LEAD_S, 'retard plafonné');
+});
+
 // ---- Salon : réseau simulé en mémoire --------------------------------------------------------------------------------
 function lan(ids, { code = 'ABC234' } = {}) {
   const clock = { t: 1000 };
-  const reg = new Map(), rooms = [];
+  const reg = new Map(), rooms = [], cut = new Set(), timers = [];
   const sigFor = (id) => {
     const sig = new Emitter(); sig.peers = new Map(); sig.id = id;
-    sig.join = async (meta) => { sig.meta = meta; for (const [oid, o] of reg) sig.peers.set(oid, o.meta); reg.set(id, sig); for (const [oid, o] of reg) if (oid !== id) { o.peers.set(id, meta); o.emit('join', id, meta); } };
+    sig.join = async (meta) => {
+      if (cut.has(id)) throw new Error('réseau coupé');
+      sig.meta = meta; for (const [oid, o] of reg) sig.peers.set(oid, o.meta); reg.set(id, sig); for (const [oid, o] of reg) if (oid !== id) { o.peers.set(id, meta); o.emit('join', id, meta); }
+    };
     sig.track = (meta) => { sig.meta = meta; for (const [oid, o] of reg) if (oid !== id) { o.peers.set(id, meta); o.emit('meta', id, meta); } };
     sig.send = () => true;
     sig.leave = () => { reg.delete(id); for (const o of reg.values()) { o.peers.delete(id); o.emit('leave', id); } };
@@ -192,13 +217,33 @@ function lan(ids, { code = 'ABC234' } = {}) {
     selfId, handlers, sent: [],
     addPeer() {}, removePeer() {}, closeAll() {}, broadcastState() {},
     sendCtl(msg, to) {
+      if (cut.has(selfId)) return;                                       // réseau coupé : rien ne part
       const m = JSON.parse(JSON.stringify(msg)); this.sent.push([m, to]);
-      for (const r of [...rooms]) if (r.selfId !== selfId && !r.closed && (!to || r.selfId === to)) r._onMessage(selfId, 'ctl', m);
+      for (const r of [...rooms]) if (r.selfId !== selfId && !r.closed && !cut.has(r.selfId) && (!to || r.selfId === to)) r._onMessage(selfId, 'ctl', m);
     },
+    setSignaling() {},
   });
-  const opts = (name, selfId) => ({ name, selfId, code, makeSignaling: ({ selfId: s }) => sigFor(s), makeMesh, now: () => clock.t });
-  const open = () => { for (const r of rooms) for (const o of rooms) if (r !== o && !r.closed && !o.closed && r.members.has(o.selfId)) r._onLink(o.selfId, 'open'); };
-  const env = { clock, rooms, open, events: {} };
+  const opts = (name, selfId) => ({ name, selfId, code, makeSignaling: ({ selfId: s }) => sigFor(s), makeMesh, now: () => clock.t, schedule: (fn, ms) => timers.push({ fn, at: clock.t + ms }) });
+  const open = () => { for (const r of rooms) for (const o of rooms) if (r !== o && !r.closed && !o.closed && !cut.has(r.selfId) && !cut.has(o.selfId) && r.members.has(o.selfId) && r.members.get(o.selfId).link !== 'away') r._onLink(o.selfId, 'open'); };
+  const env = { clock, rooms, open, events: {}, timers };
+  // Coupure réseau d'un joueur (sans « bye ») : il disparaît de l'annuaire des autres, sa signalisation se ferme chez lui.
+  env.cut = (id) => {
+    cut.add(id);
+    const sig = reg.get(id);
+    reg.delete(id);
+    for (const o of reg.values()) { o.peers.delete(id); o.emit('leave', id); }
+    if (sig) sig.emit('closed', 'réseau coupé');
+  };
+  env.heal = (id) => { cut.delete(id); };
+  // Fait avancer l'horloge en exécutant les tentatives de reconnexion dues.
+  env.advance = async (ms, step = 100) => {
+    const end = clock.t + ms;
+    while (clock.t < end) {
+      clock.t = Math.min(end, clock.t + step);
+      for (const t of timers.filter((x) => x.at <= clock.t)) { timers.splice(timers.indexOf(t), 1); await t.fn(); }
+      for (const r of rooms) if (!r.closed) r._cupTick();
+    }
+  };
   const spy = (r) => {
     const ev = env.events[r.selfId] = { start: [], round: [], stop: 0, wait: [], cup: 0 };
     r.on('start', (e) => ev.start.push(e)); r.on('cupround', (e) => ev.round.push(e)); r.on('cupstop', () => ev.stop++); r.on('cupwait', (e) => ev.wait.push(e)); r.on('cup', () => ev.cup++);
@@ -266,6 +311,91 @@ await test('un joueur qui quitte ne bloque pas la manche ; si c\'est l\'hôte, l
   assert.deepEqual(env.events.b.start[1].cup.roster, ['b'], 'seul sur la grille');
   b.leave();
 });
+console.log('Reconnexion (E16)');
+await test('coupure de 10 s en pleine manche : la place est gardée, la manche attend, l\'arrivée annoncée pendant la coupure compte, à sa place', async () => {
+  const env = lan(); const [a, b, c] = [await env.add('Ana', 'a'), await env.add('Ben', 'b'), await env.add('Cléo', 'c')];
+  env.open(); a.startCup({ rounds: ROUNDS });
+  env.cut('b');
+  assert.equal(b.reconnecting, true, 'Ben se sait coupé'); assert.equal(b.closed, false, 'il reste dans la salle, sa course continue');
+  assert.equal(a.members.get('b').link, 'away', 'chez l\'hôte : « reconnexion », pas « parti »');
+  assert.equal(b.reportFinish(4050), true, 'Ben finit pendant la coupure (personne ne le sait encore)');
+  a.reportFinish(4100); c.reportFinish(4300);
+  await env.advance(3000);
+  assert.equal(a.cupState.phase, 'racing', 'la manche attend Ben (place gardée)');
+  await env.advance(7000);
+  env.heal('b');
+  await env.advance(RETRY_MS[RETRY_MS.length - 1] + 200);
+  assert.equal(b.reconnecting, false, 'Ben est revenu'); assert.equal(a.members.get('b').link, 'connecting');
+  env.open();                                                                  // les liaisons se refont : hello, état complet, arrivée renvoyée
+  const ev = env.events.a.round; assert.equal(ev.length, 1, 'la manche se clôt dès que l\'hôte a l\'arrivée de Ben');
+  assert.deepEqual(ev[0].result.order, ['b', 'a', 'c'], 'Ben, plus rapide, gagne la manche malgré la coupure');
+  assert.equal(env.events.b.round.length, 1, 'Ben reçoit la clôture comme les autres');
+  assert.deepEqual(b.cup.standings().map((r) => [r.id, r.points]), [['b', 10], ['a', 8], ['c', 6]]);
+  assert.equal(env.events.b.start.length, 1, 'aucun nouveau départ ne lui a été imposé : sa course a simplement continué');
+  env.end();
+});
+await test('l\'état renvoyé au retour complète les arrivées manquées, sans remettre la manche à zéro', async () => {
+  const env = lan(); const [a, b, c] = [await env.add('Ana', 'a'), await env.add('Ben', 'b'), await env.add('Cléo', 'c')];
+  env.open(); a.startCup({ rounds: ROUNDS });
+  env.cut('c');
+  b.reportFinish(4000);                                                        // Cléo ne le voit pas : elle est coupée
+  assert.equal(c.cupState.finishes.has('b'), false);
+  env.heal('c'); await env.advance(RETRY_MS[0] + 50); env.open();
+  assert.equal(c.cupState.finishes.get('b'), 4000, 'l\'arrivée de Ben est rattrapée');
+  assert.equal(c.cupState.n, 0); assert.equal(env.events.c.start.length, 1);
+  env.end();
+});
+await test('coupure trop longue : au-delà de 20 s la place est rendue, la manche se clôt sans lui ; lui sort de la salle', async () => {
+  const env = lan(); const [a, b] = [await env.add('Ana', 'a'), await env.add('Ben', 'b')];
+  env.open(); a.startCup({ rounds: ROUNDS });
+  env.cut('b');
+  a.reportFinish(4100);
+  await env.advance(RESUME_MS - 500);
+  assert.equal(env.events.a.round.length, 0, 'encore dans les 20 s');
+  await env.advance(1000);
+  assert.equal(a.members.has('b'), false, 'place rendue');
+  assert.deepEqual(env.events.a.round[0].result.order, ['a', 'b']);
+  await env.advance(5000);
+  assert.equal(b.closed, true, 'Ben, toujours coupé, a fini par sortir');
+  env.end();
+});
+await test('l\'hôte coupé trop longtemps : le suivant prend la suite et se marque (hostover) ; l\'ancien, revenu, ne reprend pas la main ; le championnat se termine', async () => {
+  const env = lan(); const [a, b, c] = [await env.add('Ana', 'a'), await env.add('Ben', 'b'), await env.add('Cléo', 'c')];
+  env.open(); a.startCup({ rounds: ROUNDS });
+  const retry = a.schedule; a.schedule = () => {};          // Ana reste coupée sans abandonner (ses tentatives sont mises de côté)
+  env.cut('a');
+  b.reportFinish(4000); c.reportFinish(4200);
+  assert.equal(b.isHost, false, 'pendant la coupure, Ana reste l\'hôte (place gardée)');
+  await env.advance(RESUME_MS + 400);
+  assert.equal(b.isHost, true); assert.equal(b.meta.host, true, 'le nouvel hôte se marque');
+  assert.equal(env.events.b.round.length, 1, 'il clôt la manche');
+  env.heal('a'); a.schedule = retry; a._retry(0);           // Ana revient après coup
+  await env.advance(RETRY_MS[0] + 100);
+  assert.equal(a.reconnecting, false);
+  env.open();
+  assert.equal(a.meta.host, false, 'revenue, Ana ne se dit plus hôte'); assert.equal(a.isHost, false); assert.equal(c.hostId, 'b'); assert.equal(a.hostId, 'b');
+  assert.equal(a.cup.played, 1, 'elle reçoit le championnat du nouvel hôte (la manche close en son absence)');
+  await env.advance(RESULTS_MS + 500);
+  assert.equal(env.events.b.start.length, 2, 'Ben lance la manche suivante');
+  assert.equal(env.events.a.start.length, 2, 'Ana y part aussi');
+  b.reportFinish(5000); c.reportFinish(5100); a.reportFinish(5200);
+  await env.advance(FINISH_GRACE_MS + 1000);
+  for (const r of [a, b, c]) assert.equal(r.cup.finished, true, 'fin de championnat correcte chez tous : ' + r.selfId);
+  assert.deepEqual(c.cup.standings().map((r) => r.id), ['b', 'c', 'a']);
+  assert.deepEqual(a.cup.standings(), c.cup.standings(), 'le même classement chez l\'ancien hôte');
+  env.end();
+});
+test('mémoire de la place (onglet rechargé) : identifiant et jeton gardés 20 s pour ce salon seulement', () => {
+  const mem = new Map(), store = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v), removeItem: (k) => mem.delete(k) };
+  const token = newToken(); assert.match(token, /^[0-9a-f]{16}$/);
+  saveResume({ code: 'ABC234', selfId: 'id-1', token }, store, 1000);
+  assert.deepEqual(loadResume('ABC234', store, 1000 + RESUME_MS - 1), { code: 'ABC234', selfId: 'id-1', token, at: 1000 });
+  assert.equal(loadResume('XYZ789', store, 1500), null, 'un autre salon');
+  assert.equal(loadResume('ABC234', store, 1000 + RESUME_MS), null, 'trop tard');
+  clearResume(store); assert.equal(loadResume('ABC234', store, 1100), null);
+  assert.equal(loadResume('ABC234', { getItem: () => { throw new Error('refusé'); } }, 0), null, 'stockage refusé : pas d\'erreur');
+});
+
 await test('plafond : une manche qui ne se termine jamais est close au bout de 10 minutes', async () => {
   const env = lan(); const a = await env.add('Ana', 'a'); await env.add('Ben', 'b');
   env.open(); a.startCup({ rounds: ROUNDS });

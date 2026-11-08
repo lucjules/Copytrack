@@ -13,6 +13,8 @@
 //     L'hôte ne fait que donner les départs et clore chaque manche ; son rôle passe à l'identifiant le plus petit s'il part (l'état du championnat est
 //     copié chez tous les joueurs). Messages fiables : cup (le championnat) · round (départ de la manche n) · finish{rn} (mon temps) · rend (manche close,
 //     temps de tous) · cupstop (l'hôte arrête). Une manche se clôt quand tous ont fini ou quitté, FINISH_GRACE_MS après la première arrivée, ou au plafond.
+// Reconnexion (E16, NET_VER 4 ; voir resume.js) : hello (à l'ouverture d'une liaison) · bye (départ volontaire) · hostover (un nouvel hôte se marque).
+//     Une coupure n'est pas un départ : la place est gardée RESUME_MS (« away »), le joueur coupé retente de rejoindre la salle avec le même identifiant.
 import { Emitter, SupabaseSignaling, LocalSignaling } from './signaling.js';
 import { PeerMesh } from './transport.js';
 import { packSnapshot, unpackSnapshot } from './snapshot.js';
@@ -20,6 +22,7 @@ import { Championship, MAX_ROUNDS } from './championship.js';
 import { PHYS_VER, NET_VER } from '../version.js';
 import { sanitizeRules, isDefaultRules } from '../rules.js';
 import { MAX_RUN_STEPS, MAX_TRACK_CODE_CHARS } from '../constants.js';
+import { RESUME_MS, RETRY_MS, newToken } from './resume.js';
 
 const ROOM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';     // sans 0 / O / 1 / I : pas de confusion à la dictée
 export const MAX_PLAYERS = 8;
@@ -43,9 +46,11 @@ export class RoomError extends Error {
 }
 
 export class Room extends Emitter {
-  constructor({ code, name, selfId = newPeerId(), makeSignaling, makeMesh = null, getIce = null, now = () => performance.now() }) {
+  constructor({ code, name, selfId = newPeerId(), token = newToken(), makeSignaling, makeMesh = null, getIce = null, now = () => performance.now(), schedule = (fn, ms) => setTimeout(fn, ms) }) {
     super();
-    this.code = code; this.selfId = selfId; this.now = now;
+    this.code = code; this.selfId = selfId; this.now = now; this.token = token; this.schedule = schedule;
+    this.reconnecting = false;          // signalisation perdue : on retente de rejoindre la salle (resume.js)
+    this._pendingFinish = null;         // championnat : mon arrivée de la manche en cours, renvoyée à l'hôte si une liaison se rouvre
     this.makeSignaling = makeSignaling; this.makeMesh = makeMesh; this.getIce = getIce;
     this.meta = { name: String(name).slice(0, 20), host: false, ready: false, racing: false, v: PHYS_VER, net: NET_VER, t: Date.now() };
     this.members = new Map();           // id → { id, name, host, ready, racing, v, t, link, rtt }
@@ -96,10 +101,7 @@ export class Room extends Emitter {
       selfId: this.selfId, signaling: sig, ...(iceServers ? { iceServers } : {}),
       handlers: { onMessage: (id, kind, data) => this._onMessage(id, kind, data), onLink: (id, st) => this._onLink(id, st) },
     });
-    sig.on('join', (id, meta) => this._onPeer(id, meta));
-    sig.on('meta', (id, meta) => this._onPeer(id, meta));
-    sig.on('leave', (id) => this._onLeave(id));
-    sig.on('closed', (why) => { if (!this.closed) { this.emit('error', new RoomError(why || 'Connexion perdue.', 'closed')); this._dispose(); this.emit('closed'); } });
+    this._wire(sig);
     try { await sig.join(this.meta); }
     catch (e) { throw new RoomError(e.message || 'Connexion au serveur de salons impossible.', 'network'); }
 
@@ -115,9 +117,93 @@ export class Room extends Emitter {
       if (host[1].v !== PHYS_VER || host[1].net !== NET_VER) throw new RoomError('Version du jeu différente de celle de l\'hôte : recharge la page.', 'version');
     }
     for (const [id, meta] of present) this._onPeer(id, meta);
-    this._pingTimer = setInterval(() => this._pingAll(), 2000);
+    this._pingTimer = setInterval(() => { this._pingAll(); this._expireAway(); }, 2000);
     this._cupTimer = setInterval(() => this._cupTick(), 400);
     this.emit('members');
+  }
+
+  _wire(sig) {
+    sig.on('join', (id, meta) => { if (sig === this.signaling) this._onPeer(id, meta); });
+    sig.on('meta', (id, meta) => { if (sig === this.signaling) this._onPeer(id, meta); });
+    sig.on('leave', (id) => { if (sig === this.signaling) this._onLeave(id); });
+    sig.on('closed', (why) => { if (sig === this.signaling) this._lost(why); });
+  }
+
+  // ---- Reconnexion (E16) ---------------------------------------------------------------------------------------------
+  // La signalisation est perdue (réseau coupé) : la salle reste ouverte chez nous (la course continue) et on retente de la rejoindre, avec le même
+  // identifiant, pendant RESUME_MS ; au-delà, on sort pour de bon.
+  _lost(why) {
+    if (this.closed || this.reconnecting) return;
+    this.reconnecting = true;
+    this._lostAt = this.now();
+    this._lostWhy = why;
+    for (const id of [...this.members.keys()]) this._markAway(id);
+    this.emit('reconnecting');
+    this.emit('members');
+    this._retry(0);
+  }
+
+  _retry(i) {
+    this.schedule(async () => {
+      if (this.closed) return;
+      const sig = this.makeSignaling({ code: this.code, selfId: this.selfId });
+      try {
+        this.signaling = sig;
+        this._wire(sig);
+        if (this.mesh.setSignaling) this.mesh.setSignaling(sig);       // avant join : les offres WebRTC des retrouvailles passent par la nouvelle signalisation
+        await sig.join(this.meta);
+      } catch {
+        if (this.closed) return;
+        if (i + 1 < RETRY_MS.length && this.now() - this._lostAt + RETRY_MS[i + 1] < RESUME_MS) { this._retry(i + 1); return; }
+        this.emit('error', new RoomError(this._lostWhy || 'Connexion perdue.', 'closed'));
+        this._dispose(); this.emit('closed');
+        return;
+      }
+      if (this.closed) { try { sig.leave(); } catch { /* fermé */ } return; }
+      // Un autre a pris la place d'hôte pendant l'absence (hostover) : on ne la reprend pas avec un état peut-être périmé.
+      if (this.meta.host && [...sig.peers.values()].some((m) => m && m.host)) { this.meta.host = false; sig.track(this.meta); }
+      this.reconnecting = false;
+      for (const [id, meta] of sig.peers.entries()) this._onPeer(id, meta);
+      this.emit('reconnected');
+      this.emit('members');
+    }, RETRY_MS[i]);
+  }
+
+  // Un joueur disparaît de l'annuaire sans dire au revoir (coupure) : sa place est gardée RESUME_MS.
+  _markAway(id) {
+    const m = this.members.get(id);
+    if (!m) return;
+    if (m.link !== 'away') m.awaySince = this.now();
+    m.link = 'away';
+    this.mesh.removePeer(id);
+  }
+
+  _expireAway() {
+    const now = this.now();
+    if (this.reconnecting) return;                                   // c'est NOUS qui sommes coupés : on ne juge pas les autres
+    for (const m of [...this.members.values()]) if (m.link === 'away' && now - m.awaySince >= RESUME_MS) this._drop(m.id);
+  }
+
+  // Départ définitif (au revoir, ou absence au-delà de RESUME_MS).
+  _drop(id) {
+    if (!this.members.has(id)) return;
+    const wasHost = this.isHost;
+    this.members.delete(id);
+    this.mesh.removePeer(id);
+    this.buffers.delete(id);
+    this.emit('members');
+    this.emit('left', id);
+    if (!wasHost && this.isHost) this._becomeHost();
+    this._cupTick();                 // un joueur qui part ne doit pas bloquer la manche (ni, si c'était l'hôte, la rendre orpheline)
+  }
+
+  // Nouvel hôte (l'ancien est parti) : il se marque, pour que l'ancien, s'il revient, ne reprenne pas la main.
+  _becomeHost() {
+    if (this.meta.host || this.closed) return;
+    this.meta.host = true;
+    try { this.signaling.track(this.meta); } catch { /* fermé */ }
+    this.mesh.sendCtl({ k: 'hostover' });
+    this.emit('hostover');
   }
 
   _dispose() {
@@ -129,6 +215,7 @@ export class Room extends Emitter {
 
   leave() {
     if (this.closed) return;
+    try { this.mesh.sendCtl({ k: 'bye' }); } catch { /* liaisons déjà fermées */ }       // départ volontaire : les autres ne gardent pas la place
     this._dispose();
     this.emit('closed');
   }
@@ -148,27 +235,34 @@ export class Room extends Emitter {
   _onPeer(id, meta) {
     if (id === this.selfId || !meta) return;
     const prev = this.members.get(id);
-    const m = { id, name: String(meta.name || '?').slice(0, 20), host: !!meta.host, ready: !!meta.ready, racing: !!meta.racing, v: meta.v, net: meta.net, t: meta.t || 0, link: prev ? prev.link : 'connecting', rtt: prev ? prev.rtt : 0 };
+    const back = prev && prev.link === 'away';                     // retour d'un joueur coupé : sa liaison est à refaire
+    if (back) this.mesh.removePeer(id);
+    const m = { id, name: String(meta.name || '?').slice(0, 20), host: !!meta.host, ready: !!meta.ready, racing: !!meta.racing, v: meta.v, net: meta.net, t: meta.t || 0, link: prev && !back ? prev.link : 'connecting', rtt: prev ? prev.rtt : 0, token: prev ? prev.token : null, everOpen: !!(prev && prev.everOpen) };
     this.members.set(id, m);
     if (m.v === PHYS_VER && m.net === NET_VER && !this.closed) this.mesh.addPeer(id);     // un joueur d'une autre version ne peut pas courir avec nous
     else m.link = 'incompatible';
     this.emit('members');
   }
 
+  // Disparu de l'annuaire : coupure ou départ ; sans « bye », on garde sa place RESUME_MS.
   _onLeave(id) {
-    this.members.delete(id);
-    this.mesh.removePeer(id);
-    this.buffers.delete(id);
+    const m = this.members.get(id);
+    if (!m) return;
+    if (!m.everOpen) { this._drop(id); return; }                   // jamais relié (salle prise, introuvable, autre version…) : rien à garder
+    this._markAway(id);
     this.emit('members');
-    this.emit('left', id);
-    this._cupTick();                 // un joueur qui part ne doit pas bloquer la manche (ni, si c'était l'hôte, la rendre orpheline)
+    this.emit('away', id);
   }
 
   _onLink(id, status) {
     const m = this.members.get(id);
-    if (m) m.link = status;
+    if (m && !(m.link === 'away' && status !== 'open')) m.link = status;      // une liaison fermée d'un joueur coupé : il reste « en reconnexion »
+    if (m && status === 'open') m.everOpen = true;
     // L'hôte informe un nouvel arrivant du circuit choisi.
     if (status === 'open') {
+      this.mesh.sendCtl({ k: 'hello', token: this.token }, id);
+      // Mon arrivée de la manche, annoncée pendant une coupure : renvoyée à l'hôte (il l'ignore s'il l'a déjà).
+      if (this._pendingFinish && id === this.hostId && this.cupState && this.cupState.n === this._pendingFinish.rn) this.mesh.sendCtl({ k: 'finish', steps: this._pendingFinish.steps, rn: this._pendingFinish.rn }, id);
       if (this.isHost && this.rules) this.mesh.sendCtl({ k: 'rules', r: this.rules }, id);        // les règles d'abord : elles s'appliquent au circuit qui suit
       if (this.isHost && this.cup && !this.cup.finished) this._sendCup(id);       // en championnat, un arrivant reçoit le championnat, pas le circuit seul
       else if (this.isHost && this.track) this._sendTrack(id);
@@ -186,6 +280,9 @@ export class Room extends Emitter {
     const m = this.members.get(from);
     switch (data.k) {
       case 'ping': this.mesh.sendCtl({ k: 'pong', id: data.id }, from); break;
+      case 'hello': if (m && typeof data.token === 'string' && data.token.length <= 32) m.token = data.token; break;
+      case 'bye': this._drop(from); break;
+      case 'hostover': this.emit('members'); break;
       case 'pong': {
         const rtt = this.now() - (this._pings && this._pings.get(from + ':' + data.id));
         if (m && Number.isFinite(rtt) && rtt >= 0) m.rtt = m.rtt ? Math.min(m.rtt * 0.7 + rtt * 0.3, rtt * 3) : rtt;
@@ -322,6 +419,7 @@ export class Room extends Emitter {
     if (this.cup && st && st.phase === 'racing') {                    // championnat : un seul temps par manche, annoncé avec son numéro
       if (!st.roster.includes(this.selfId) || st.finishes.has(this.selfId)) return false;
       this._noteFinish(this.selfId, steps);
+      this._pendingFinish = { steps, rn: st.n };
       this.mesh.sendCtl({ k: 'finish', steps, rn: st.n });
       this.emit('live'); this._cupTick();
       return true;
@@ -405,7 +503,7 @@ export class Room extends Emitter {
 
   _sendCup(to) {
     const st = this.cupState, now = this.now();
-    const state = st ? { phase: st.phase, n: st.n, roster: st.roster, nextIn: st.until ? Math.max(0, st.until - now) : 0 } : null;
+    const state = st ? { phase: st.phase, n: st.n, roster: st.roster, nextIn: st.until ? Math.max(0, st.until - now) : 0, finishes: Object.fromEntries(st.finishes) } : null;
     this.mesh.sendCtl({ k: 'cup', cup: this.cup.toJSON(), state }, to);
   }
 
@@ -416,9 +514,17 @@ export class Room extends Emitter {
     this.cup = Championship.from(d.cup);
     this.started = true;
     const s = d.state;
-    // Un arrivant en cours de route : il suit la manche (sans y participer) puis part à la suivante.
+    // Un arrivant en cours de route : il suit la manche (sans y participer) puis part à la suivante. Un joueur qui revient d'une coupure (E16) garde
+    // sa manche en cours (il est sur la grille, sa course a continué) : on complète seulement les arrivées qu'il a manquées.
+    const mine = this.cupState;
     if (s && ['racing', 'results'].includes(s.phase) && Array.isArray(s.roster)) {
-      this.cupState = { phase: s.phase, n: s.n | 0, roster: s.roster.filter((x) => typeof x === 'string').slice(0, MAX_PLAYERS), finishes: new Map(), t0: this.now(), firstAt: null, until: s.phase === 'results' ? this.now() + Math.max(0, +s.nextIn || 0) : 0 };
+      const fin = new Map();
+      for (const [id, v] of Object.entries(s.finishes && typeof s.finishes === 'object' ? s.finishes : {})) { const st = +v | 0; if (typeof id === 'string' && st > 0 && st <= MAX_RUN_STEPS) fin.set(id, st); }
+      if (mine && mine.phase === 'racing' && s.phase === 'racing' && mine.n === (s.n | 0)) {
+        for (const [id, st] of fin) if (!mine.finishes.has(id) && mine.roster.includes(id)) this._noteFinish(id, st);
+      } else {
+        this.cupState = { phase: s.phase, n: s.n | 0, roster: s.roster.filter((x) => typeof x === 'string').slice(0, MAX_PLAYERS), finishes: fin, t0: this.now(), firstAt: fin.size ? this.now() : null, until: s.phase === 'results' ? this.now() + Math.max(0, +s.nextIn || 0) : 0 };
+      }
     } else this.cupState = null;
     this.emit('cup');
     this.emit('members');
@@ -455,8 +561,9 @@ export class Room extends Emitter {
 
   // Horloge du championnat (toutes les 400 ms, et à chaque arrivée / départ) : seul l'hôte décide de clore une manche et d'en lancer une autre.
   _cupTick() {
+    if (!this.closed) this._expireAway();
     const st = this.cupState, cup = this.cup;
-    if (!cup || !st || this.closed || !this.isHost) return;
+    if (!cup || !st || this.closed || !this.isHost || this.reconnecting) return;
     const now = this.now();
     if (st.phase === 'racing') {
       const present = (id) => id === this.selfId || this.members.has(id);
@@ -477,6 +584,7 @@ export class Room extends Emitter {
   _onRoundEnd(n, times, nextIn) {
     const st = this.cupState, cup = this.cup;
     if (!cup || !st || st.phase !== 'racing' || st.n !== n) return;
+    this._pendingFinish = null;
     const clean = {};
     for (const id of st.roster) { const v = +times[id]; clean[id] = v > 0 && v <= MAX_RUN_STEPS ? v | 0 : null; }
     const result = cup.scoreRound(n, clean, st.roster);
@@ -495,6 +603,7 @@ export class Room extends Emitter {
       id, name: this.cup.names.get(id) || '?', self: id === this.selfId,
       finished: st.finishes.has(id) ? st.finishes.get(id) : null, prog: progOf(id),
       gone: id !== this.selfId && !this.members.has(id),
+      away: id !== this.selfId && (this.members.get(id) || {}).link === 'away',
     }));
   }
 
