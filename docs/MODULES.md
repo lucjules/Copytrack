@@ -84,7 +84,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `skids.js` | Traces de pneus : bandes sombres posées sur la route pendant les glisses et les gros freinages. |
 | `skills.js` | Académie 2 (Copytrack Evolution, E12) : des COMPÉTENCES (trajectoire, freinage, dérapage, sauts) et des EXERCICES ÉVALUÉS. Chaque exercice est un court circuit avec un objectif MESURÉ par l'analyse (analysis/drill.js : la course rejouée à partir de ses commandes), noté bronze, argent ou or. |
 | `storage.js` | Persistance locale (navigateur) : réglages, records + fantômes, circuits perso. |
-| `telemetry.js` | Statistiques de jeu ANONYMES (avec l'accord du joueur) : temps de fin, abandons, essais par circuit intégré. |
+| `telemetry.js` | Statistiques de jeu ANONYMES (avec l'accord du joueur) : temps de fin, abandons, essais par circuit (intégré, défi du jour, de joueur). |
 | `themes.js` | Les 12 décors (thèmes visuels) du jeu : identité, nom et ordre de la carrière. Module de données pur (aucun rendu). |
 | `tileInfo.js` | Aides « pures » (sans DOM ni 3D) de l'éditeur et de l'inspecteur, faciles à tester. |
 | `track.js` | Modèle de circuit : liste de pièces posées sur une grille, index spatial, requêtes de surface pour la physique, sérialisation en code partageable. |
@@ -206,6 +206,12 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `signaling.js` | Signalisation du multijoueur : annuaire des joueurs d'une salle + relais des messages WebRTC (offres, réponses, ICE). |
 | `snapshot.js` | Paquet d'état d'une voiture (multijoueur) : 40 octets, envoyé 20 fois par seconde sur le canal WebRTC « state ». |
 | `transport.js` | Transport de jeu : WebRTC pair à pair en maillage complet (chaque joueur est relié directement à tous les autres). |
+
+## `js/online/`
+
+| Fichier | Rôle |
+| --- | --- |
+| `community.js` | Communauté 2 (Copytrack Evolution, E21) : le client des fonctions de supabase/etape13-communaute.sql. Commentaires, playlists, sélection, découverte au hasard, recommandations, statistiques de circuit (depuis run_stats), modes publiés. Tout passe par des fonctions de la base, qui vérifient les droits, le débit et la modération : ce module ne fait que les appeler et remettre en forme leurs réponses. |
 
 ## `js/physics/`
 

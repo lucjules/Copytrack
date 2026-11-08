@@ -132,6 +132,7 @@
   <link rel="modulepreload" href="js/mutations.js">
   <link rel="modulepreload" href="js/editorTools.js">
   <link rel="modulepreload" href="js/ui/leaderboardPanel.js">
+  <link rel="modulepreload" href="js/online/community.js">
   <link rel="modulepreload" href="js/daily.js">
   <link rel="modulepreload" href="js/app/shared.js">
   <link rel="modulepreload" href="js/uitheme.js">
@@ -270,6 +271,7 @@
         <div class="hub-panel hub-launch" id="hub-launch"></div>
         <div class="hub-panel" id="hub-board"></div>
         <div class="hub-panel hub-records" id="hub-records"></div>
+        <div class="hub-panel hub-comments hidden" id="hub-comments"></div>
       </aside>
     </div>
   </section>
@@ -297,7 +299,11 @@
         <button class="tab" data-sort="trending" title="Les circuits où le plus de pilotes différents ont couru ces 7 derniers jours">🔥 Cette semaine</button>
         <button class="tab" data-sort="followed" title="Les circuits des auteurs que tu suis">⭐ Abonnements</button>
         <button class="tab" data-sort="mine">Mes publications</button>
+        <button class="tab" data-sort="picks" title="Les circuits choisis par les modérateurs">🏅 Sélection</button>
+        <button class="tab" data-sort="foryou" title="Les circuits aimés par les pilotes qui aiment les mêmes circuits que toi">✨ Pour toi</button>
+        <button class="tab" data-sort="playlists" title="Des listes de circuits à enchaîner">🎵 Playlists</button>
       </div>
+      <button class="btn" id="comm-random" title="Un circuit au hasard, de préférence un que tu n’as jamais joué">🎲 Au hasard</button>
       <input id="comm-search" class="comm-search" type="search" placeholder="Rechercher un circuit…" maxlength="40" aria-label="Rechercher un circuit">
     </header>
     <div id="comm-featured" class="comm-featured hidden"></div>

@@ -6,6 +6,40 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.43 — communauté : commentaires, playlists, sélection, découverte, statistiques, modes publiés
+
+Étape E21 de Copytrack Evolution. `PHYS_VER` inchangé (26), rien ne change dans la course. **Lancer l'étape SQL 13** (`supabase/etape13-communaute.sql`) et **ajouter les modérateurs** à la main (voir le README) ; `submit-score` n'a pas besoin d'être redéployée pour cette étape.
+
+Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les j'aime, les signalements de circuits (masqués à 3), les abonnements, les tendances de la semaine, la recherche, les favoris. Nouveau :
+- **Commentaires** sur la fiche d'un circuit de la communauté :
+  - comptes seulement, 280 caractères ;
+  - **limitation de débit** en base : un toutes les 20 s, 10 par heure, 40 par jour ;
+  - **masqués après 3 signalements** de comptes distincts ;
+  - supprimables par leur auteur, l'auteur du circuit ou un modérateur.
+- **Playlists** (🎵 sur la fiche, onglet *Playlists*) :
+  - listes ordonnées de 50 circuits au plus, publiques ou privées, 20 par pilote ;
+  - *Jouer dans l'ordre* : la fiche de chaque circuit indique la position et propose le suivant.
+- **Sélection** (onglet 🏅) : les circuits choisis par les modérateurs.
+- **Découverte** :
+  - 🎲 *Au hasard* : un circuit jamais joué de préférence, sans retomber sur les derniers tirés ;
+  - ✨ *Pour toi* : les circuits aimés par les pilotes qui aiment les mêmes circuits que toi, puis ceux des auteurs suivis.
+- **Statistiques de circuit** sur la fiche : pilotes, part des parties qui vont au bout, temps médian, temps des 10 % les plus rapides.
+  - Elles sont calculées par la base depuis les statistiques anonymes (`run_stats`).
+  - Rien n'est affiché sous 5 installations.
+  - Les circuits de joueur y entrent désormais, identifiés par leur seule empreinte (avec l'accord déjà demandé pour les statistiques, qui couvrait « chaque circuit »).
+  - Le rapport d'équilibrage des médailles reste limité à la carrière et au défi.
+- **Modes publiés** (🌐 dans *Mes modes*, liste *Modes publiés*) :
+  - les règles d'un mode sont une **catégorie de record** : sur chaque circuit de la carrière, son classement est celui de cette catégorie ;
+  - *Jouer (classé)* ouvre la fiche sur cette catégorie ;
+  - un mode dont les règles ne correspondent à aucune catégorie ne se publie pas ;
+  - 5 publications par jour, 20 par pilote, masqués après 3 signalements.
+- **Modération** : table `moderators` ; `pick_track` (Sélection) et `mod_hide` (masquer ou rétablir un circuit, un commentaire, un mode) leur sont réservés.
+- Sous le capot :
+  - `js/online/community.js` ;
+  - `tools/test-communaute2.mjs` (client, correspondance mode ↔ catégorie) ;
+  - 29 vérifications SQL de plus (débit, masquage, suppression, RLS, quotas, statistiques sous le seuil) ;
+  - test navigateur avec un serveur simulé.
+
 ## Bêta 0.9.42 — véhicules v2, profils physiques, laboratoire
 
 Étape E20 de Copytrack Evolution. `PHYS_VER` inchangé (26) : les modèles de toujours restent identiques au bit près (les 186 scénarios de l'empreinte sont identiques), les nouveaux modèles n'entrent en service que par une règle du circuit ou une catégorie de record. **Redéployer `submit-score`** (déjà régénérée ici) : nouvelles règles et catégories.

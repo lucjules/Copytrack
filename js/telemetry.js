@@ -1,8 +1,8 @@
-// Statistiques de jeu ANONYMES (avec l'accord du joueur) : temps de fin, abandons, essais par circuit intégré.
+// Statistiques de jeu ANONYMES (avec l'accord du joueur) : temps de fin, abandons, essais par circuit (intégré, défi du jour, de joueur).
 // Elles servent à une seule chose : régler la difficulté et les médailles sur de vrais joueurs, pas sur le pilote automatique
 // (voir tools/telemetry-report.mjs et supabase/etape6-telemetrie.sql).
 //
-// Ce qui part : un identifiant d'installation aléatoire (jamais lié au pseudo, au compte ni à l'adresse), l'identifiant du circuit intégré, l'issue
+// Ce qui part : un identifiant d'installation aléatoire (jamais lié au pseudo, au compte ni à l'adresse), l'identifiant du circuit, l'issue
 // (arrivée ou abandon), le temps, la progression au moment de l'abandon, le nombre de retours au checkpoint, le numéro d'essai, la médaille, la version
 // de la physique. Rien d'autre : ni nom, ni position, ni commandes. Rien ne part tant que le joueur n'a pas accepté (réglage `telemetry`).
 //
@@ -16,11 +16,15 @@ export const BATCH = 50;                  // évènements par envoi (le serveur 
 export const MAX_AGE_MS = 14 * 86400000;  // un évènement plus vieux que ça n'est plus envoyé
 const MIN_BACKOFF_MS = 30000, MAX_BACKOFF_MS = 3600000;
 
-// Identifiant d'un circuit pour les statistiques : « b-<id>-<empreinte> » (circuit intégré) -> <id> ; « daily-… » -> « daily » ; le reste n'est pas suivi.
+// Identifiant d'un circuit pour les statistiques : « b-<id>-<empreinte> » (circuit intégré) -> <id> ; « daily-… » -> « daily » ;
+// « u-<empreinte> » (circuit de joueur, E21 : statistiques de circuit de la communauté) -> « u_<empreinte> » (l'empreinte seule, rien sur
+// l'auteur ni le joueur). Le reste (catégories de record, modes, essais de l'éditeur) n'est pas suivi.
 export function trackIdOf(trackKey) {
   const k = String(trackKey || '');
   const b = /^b-([a-z0-9_]{1,40})-[a-z0-9]+$/.exec(k);
   if (b) return b[1];
+  const u = /^u-([a-z0-9]{1,38})$/.exec(k);
+  if (u) return 'u_' + u[1];
   return /^daily-\d{4}-\d{2}-\d{2}$/.test(k) ? 'daily' : null;
 }
 

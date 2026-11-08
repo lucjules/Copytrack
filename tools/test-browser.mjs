@@ -1189,6 +1189,101 @@ try {
     }
   });
 
+  // E21 : communauté 2 (commentaires, playlists, hasard, recommandations, statistiques, modes publiés), serveur Supabase SIMULÉ.
+  await test('communauté 2 : pour toi, au hasard, statistiques, commentaires, playlist jouée dans l’ordre, mode publié classé (serveur simulé)', async () => {
+    const ME = '00000000-0000-0000-0000-0000000000e1';
+    const ctx3 = await browser.newContext({ locale: 'fr-FR', viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1, serviceWorkers: 'block' });
+    const p3 = await ctx3.newPage();
+    p3.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+    p3.on('console', (m) => { if (m.type() === 'error' && !OFFLINE.test(m.text() + (m.location().url || ''))) errors.push('console: ' + m.text()); });
+    await p3.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    const calls = [];
+    let rows = [], cmts = [{ id: 1, author: 'x', name: 'Ana', title: null, body: 'Joli virage !', created_at: '2026-11-17T10:00:00Z', mine: false, can_delete: false }], lists = [];
+    await p3.route(/supabase\.co/, async (route) => {
+      const req = route.request(), url = decodeURIComponent(req.url()), body = req.postData() ? JSON.parse(req.postData()) : null;
+      calls.push({ url, body });
+      const J = (b) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
+      if (url.includes('/auth/v1/')) return J({ access_token: 'jeton', refresh_token: 'r', expires_in: 3600, user: { id: ME } });
+      const rpc = /\/rpc\/(\w+)/.exec(url);
+      if (rpc) {
+        switch (rpc[1]) {
+          case 'recommended_tracks': return J([{ id: rows[1].id, score: 2 }, { id: rows[0].id, score: 1 }]);
+          case 'random_track': return J(rows[2].id);
+          case 'track_stats': return J([{ players: 12, runs: 40, finishes: 30, finish_rate: 0.75, median_time: 41.5, top_time: 35.2, avg_respawns: 1, quit_progress: 0.4 }]);
+          case 'track_comments_list': return J(cmts);
+          case 'comment_add': cmts = [{ id: 2, author: ME, name: 'Testeur', title: null, body: body.msg, created_at: '2026-11-18T10:00:00Z', mine: true, can_delete: true }, ...cmts]; return J(2);
+          case 'playlists_list': return J(body.mine ? lists : lists.filter((l) => l.public));
+          case 'playlist_save': lists = [{ id: 5, owner: ME, name: body.pname, owner_name: 'Testeur', public: body.is_public, n: body.items.length, tracks: body.items, updated_at: '2026-11-18' }]; return J(5);
+          case 'modes_list': return J([{ id: 3, owner: 'x', owner_name: 'Ana', name: 'Lune', description: 'Gravité basse', variant: 'v1.g-40', goal: { id: 'norespawn' }, plays: 4, created_at: '2026-11-17' }]);
+          case 'mode_played': return J(null);
+          case 'friends_board': case 'sector_board': return J([]);
+          default: return J(null);
+        }
+      }
+      if (url.includes('/rest/v1/tracks')) {
+        const ids = /id=in\.\(([^)]*)\)/.exec(url), one = /id=eq\.([0-9a-f-]{36})/.exec(url);
+        if (ids) return J(rows.filter((r) => ids[1].split(',').includes(r.id)));
+        if (one) return J(rows.filter((r) => r.id === one[1]));
+        return J(rows);
+      }
+      if (url.includes('/rest/v1/track_likes') || url.includes('/rest/v1/follows')) return J([]);
+      if (url.includes('/rest/v1/scores')) return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'content-range': '*/0' }, body: '[]' });
+      return J([]);
+    });
+    const ap = (fn, arg) => p3.evaluate(fn, arg), wait = (fn, arg, timeout = 30000) => p3.waitForFunction(fn, arg, { timeout });
+    const clk = (sel) => p3.locator(sel).first().evaluate((el) => el.click());
+    const until = async (fn, ms = 10000) => { const t0 = Date.now(); while (!fn()) { if (Date.now() - t0 > ms) throw new Error('délai dépassé'); await new Promise((r) => setTimeout(r, 50)); } };
+    try {
+      await p3.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'load' });
+      await p3.locator('#wl-name').fill('Testeur');
+      await clk('#wl-submit');
+      await wait(() => window.copytrack && window.copytrack.mode === 'menu');
+      rows = await ap(() => [0, 3, 5].map((i, k) => { const b = window.copytrack.builtins[i]; return { id: `00000000-0000-0000-0000-0000000000a${k}`, name: ['Alpha', 'Bravo', 'Charlie'][k], decor: b.def.decor, code: b.track.encode(), author_time: 20, pieces: b.track.tiles.length, laps: 1, plays: 3, likes: 1, created_at: '2026-11-01', author: 'x', players: { name: 'Ana' }, description: '' }; }));
+      await ap(async () => { const { online } = await import('/js/online.js'); online.kind = 'account'; window.copytrack.identity = { kind: 'account', username: 'Testeur' }; window.copytrack._comm = null; });
+      // Pour toi : dans l'ordre des recommandations
+      await ap(() => window.copytrack.showMenu('community'));
+      await wait(() => document.querySelectorAll('#comm-list .card').length >= 1);
+      await clk('#comm-tabs [data-sort="foryou"]');
+      await wait(() => [...document.querySelectorAll('#comm-list .card h3')].map((h) => h.textContent).join() === 'Bravo,Alpha');
+      // Au hasard : la fiche du circuit tiré, avec ses statistiques et ses commentaires
+      await clk('#comm-random');
+      await wait(() => window.copytrack._hub && document.getElementById('hub-name').textContent === 'Charlie');
+      await wait(() => /12 pilotes/.test(document.getElementById('hub-stats').textContent));
+      assert.match(await p3.evaluate(() => document.getElementById('hub-stats').textContent), /75 % des parties vont au bout.*temps médian/);
+      await wait(() => /Joli virage/.test(document.getElementById('hub-clist').textContent));
+      await p3.locator('#hub-cmsg').fill('  Bravo pour le saut  ');
+      await clk('#hub-csend');
+      await wait(() => /Bravo pour le saut/.test(document.getElementById('hub-clist').textContent));
+      assert.equal(calls.find((c) => c.url.includes('/rpc/comment_add')).body.msg, 'Bravo pour le saut');
+      assert.ok(await p3.evaluate(() => !!document.querySelector('#hub-clist [data-c="2"] [data-ca="del"]')), 'mon commentaire : supprimable');
+      // Playlist : créée depuis la fiche, puis jouée dans l'ordre
+      await clk('#hub-sub [data-hub="playlist"]');
+      await wait(() => document.getElementById('pl-new'));
+      await p3.locator('#pl-new').fill('Ma liste');
+      await clk('#pl-create');
+      await until(() => calls.some((c) => c.url.includes('/rpc/playlist_save')));
+      assert.deepEqual(calls.find((c) => c.url.includes('/rpc/playlist_save')).body.items, [rows[2].id]);
+      await ap((ids) => { const pl = { id: 5, name: 'Ma liste', public: true, n: 2, tracks: ids }; window.copytrack.openPlaylist(pl, true); }, [rows[2].id, rows[0].id]);
+      await wait(() => document.querySelectorAll('.playlist-list li').length === 2);
+      await clk('.playlist [data-pk="run"]');
+      await wait(() => document.getElementById('hub-name').textContent === 'Charlie' && /Ma liste · 1 \/ 2/.test(document.getElementById('hub-sub').textContent));
+      await clk('#hub-sub [data-pl-next]');
+      await wait(() => document.getElementById('hub-name').textContent === 'Alpha' && /2 \/ 2/.test(document.getElementById('hub-sub').textContent));
+      // Mode publié : sa fiche s'ouvre sur sa catégorie (son classement)
+      await ap(() => { window.copytrack.closeRaceHub(); window.copytrack.communityModesDialog(); });
+      await wait(() => document.querySelector('[data-cmode="3"]'));
+      assert.match(await p3.evaluate(() => document.querySelector('[data-cmode="3"]').textContent), /Lune.*par Ana.*Gravité de départ 40 %/);
+      await p3.evaluate(() => [...document.querySelectorAll('[data-cmode="3"] button')].find((b) => b.textContent === 'Jouer (classé)').click());
+      await wait(() => [...document.querySelectorAll('#modal-actions button')].some((b) => b.textContent === 'Ouvrir la fiche'));
+      await p3.evaluate(() => [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent === 'Ouvrir la fiche').click());
+      await wait(() => window.copytrack._hub && /~v1\.g-40$/.test(window.copytrack._hub.desc.key));
+      assert.match(await p3.evaluate(() => document.querySelector('#hub-launch [data-cat="__cur"]').textContent), /🌐 Lune/);
+      await until(() => calls.some((c) => c.url.includes('/rpc/mode_played')));
+    } finally {
+      await ctx3.close();
+    }
+  });
+
   // E15 : saisons, secteurs, amis, abonnements, avec un serveur Supabase SIMULÉ (routes Playwright) et l'horloge de la saison 2 (mercredi 18 novembre 2026).
   await test('saison de la semaine, classements par secteur et entre amis, amis du profil, abonnements, compétition (serveur simulé)', async () => {
     const ME = '00000000-0000-0000-0000-0000000000e1', ANA = '00000000-0000-0000-0000-0000000000e2';

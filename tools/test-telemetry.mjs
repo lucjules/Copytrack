@@ -21,11 +21,12 @@ function setup({ enabled = true, failing = false } = {}) {
 const KEY = 'b-eclats-1a2b3c';
 
 console.log('Identifiants');
-test('trackIdOf : circuits intégrés et défi du jour seulement', () => {
+test('trackIdOf : circuits intégrés, défi du jour, circuits de joueur (par leur empreinte, E21) ; ni catégories ni le reste', () => {
   assert.equal(trackIdOf(KEY), 'eclats');
   assert.equal(trackIdOf('b-grand_tour-zz9'), 'grand_tour');
   assert.equal(trackIdOf('daily-2026-11-07'), 'daily');
-  for (const k of ['u-abc', 'c:1234', '', null, undefined, 'b--x', 'b-UPPER-x', 'daily-x']) assert.equal(trackIdOf(k), null, String(k));
+  assert.equal(trackIdOf('u-1blo03c'), 'u_1blo03c');
+  for (const k of ['u-', 'u-ABC', 'u-abc~v1.veh-moto', 'b-eclats-1a2b~v1.g-40', 'c:1234', '', null, undefined, 'b--x', 'b-UPPER-x', 'daily-x']) assert.equal(trackIdOf(k), null, String(k));
 });
 test('l\'identifiant d\'installation : 16 hexadécimaux, aléatoire, conservé', () => {
   const a = newInstallId(), b = newInstallId();
@@ -62,7 +63,7 @@ test('arrivée : temps, essai, médaille, retours au checkpoint ; abandon : prog
 });
 test('entrées invalides ou circuits non suivis : refusés', () => {
   const { tm } = setup();
-  for (const ev of [{ trackKey: 'u-abc', outcome: 'finish', time: 20 }, { trackKey: KEY, outcome: 'win', time: 20 }, { trackKey: KEY, outcome: 'finish', time: 0.1 },
+  for (const ev of [{ trackKey: 'u-abc~v1.g-40', outcome: 'finish', time: 20 }, { trackKey: KEY, outcome: 'win', time: 20 }, { trackKey: KEY, outcome: 'finish', time: 0.1 },
     { trackKey: KEY, outcome: 'finish', time: 99999 }, { trackKey: KEY, outcome: 'finish', time: NaN }]) assert.equal(tm.record(ev), false);
   assert.equal(tm.queue.length, 0);
 });

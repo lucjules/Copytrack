@@ -1324,6 +1324,11 @@ body.hud-editing > section, body.hud-editing #touch { display: none !important; 
 .duel-list, .tour-list { list-style: none; margin: 4px 0 8px; padding: 0; display: grid; gap: 6px; }
 .duel-list li, .tour-list li { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; } .duel-win small { color: #7dffb0; } .duel-void { opacity: 0.6; }
 .duel-new, .tour-new, .tour-join { flex-wrap: wrap; gap: 6px; margin: 6px 0; } .tour-new input, .tour-join input { flex: 1; min-width: 120px; }
+.hub-comments h3 { margin: 0 0 6px; } .hub-cform { display: flex; gap: 6px; align-items: flex-start; margin: 0 0 8px; } .hub-cform textarea { flex: 1; min-width: 0; resize: vertical; }
+.hub-clist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 260px; overflow: auto; } .hub-clist p { margin: 2px 0 0; overflow-wrap: anywhere; } .hub-clist .btn { padding: 0 6px; float: right; }
+.hub-stats { margin: 6px 0; font-size: 13px; } .hub-playlist { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
+.playlist-h { grid-column: 1 / -1; margin: 6px 0 0; } .playlist-list { margin: 0 0 10px; padding-left: 22px; display: grid; gap: 6px; } .playlist-list .btn { margin-left: 6px; }
+.playlist-pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
 .lab-pick { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 6px 0 10px; } .lab-pick label { display: flex; gap: 6px; align-items: center; }
 .lab-res, .lab-sec { border-collapse: collapse; font-size: 13px; margin: 6px 0; } .lab-res td, .lab-res th, .lab-sec td, .lab-sec th { padding: 2px 8px; text-align: left; }
 .lab-sec td:not(:first-child) { font-variant-numeric: tabular-nums; } .lab-pos { color: var(--good); } .lab-neg { color: var(--bad); }

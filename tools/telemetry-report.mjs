@@ -29,7 +29,8 @@ export function analyse(rows, { defs = BUILTIN_TRACKS, golden = {}, pv = null, m
     .filter((r) => r.install && r.track && (r.outcome === 'finish' || r.outcome === 'quit') && r.time > 0);
   const version = pv ?? Math.max(...clean.map((r) => r.pv || 0), 0);
   const byTrack = new Map();
-  for (const r of clean) { if (r.pv !== version) continue; if (!byTrack.has(r.track)) byTrack.set(r.track, []); byTrack.get(r.track).push(r); }
+  // (les circuits de joueur « u_… », E21, servent aux statistiques de la communauté, pas au réglage des médailles de la carrière)
+  for (const r of clean) { if (r.pv !== version || r.track.startsWith('u_')) continue; if (!byTrack.has(r.track)) byTrack.set(r.track, []); byTrack.get(r.track).push(r); }
   const out = [];
   for (const [track, list] of [...byTrack].sort(([a], [b]) => a.localeCompare(b))) {
     const def = defs.find((d) => d.id === track) || null, bot = golden[track] || (def && def.medals && def.medals.or) || null;

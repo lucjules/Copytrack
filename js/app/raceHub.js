@@ -94,8 +94,18 @@ export const raceHubMethods = {
         this.ui.flash(on ? `Tu ne suis plus ${d.author || 'cet auteur'}.` : `Tu suis ${d.author || 'cet auteur'} : ses circuits sont dans Communauté › Abonnements.`, 2.4);
       };
     }
+    // Communauté 2 (E21) : ajouter à une playlist, position dans la playlist en cours.
+    if (d.source === 'community' && d.communityId) {
+      const pb = document.createElement('button');
+      pb.className = 'btn small'; pb.type = 'button'; pb.textContent = '🎵 Playlist'; pb.dataset.hub = 'playlist';
+      pb.onclick = () => { this.audio.click(); this.addToPlaylist(d); };
+      $('hub-sub').append(' ', pb);
+      const bar = this._hubPlaylistBar(d);
+      if (bar) $('hub-sub').append(' ', bar);
+    }
     this._renderHubFav();
     this._renderHubFacts();
+    this._renderHubComments(d);
     this._renderHubMap();
     this._renderHubLaunch();
     this._renderHubRecords();
@@ -150,7 +160,8 @@ export const raceHubMethods = {
       const bits = masteryBits(d.key);
       rows.push(['Maîtrise', `<span class="hub-mastery">${MASTERY.map((m) => `<span class="${bits & m.bit ? 'got' : ''}" title="${esc(m.label)}">${m.icon}</span>`).join('')} <small class="meta">${MASTERY.filter((m) => bits & m.bit).length} / ${MASTERY.length}</small></span>`]);
     }
-    $('hub-facts').innerHTML = `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>${d.desc ? `<p class="hub-desc">${esc(d.desc)}</p>` : ''}${d.learn ? `<p class="hub-desc meta">${esc(d.learn)}</p>` : ''}`;
+    $('hub-facts').innerHTML = `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl><p class="hub-stats" id="hub-stats"></p>${d.desc ? `<p class="hub-desc">${esc(d.desc)}</p>` : ''}${d.learn ? `<p class="hub-desc meta">${esc(d.learn)}</p>` : ''}`;
+    this._loadHubStats(d);      // statistiques des joueurs (E21, run_stats)
   },
 
   _renderHubMap() {
@@ -186,6 +197,7 @@ export const raceHubMethods = {
       ${cats.length ? `<div class="hub-cats" role="radiogroup" aria-label="Catégorie de record"><span class="meta">Catégorie de record</span>
         <button class="chip${d.variant ? '' : ' on'}" role="radio" aria-checked="${!d.variant}" data-cat="">🏁 Officiel</button>
         ${cats.map((c) => { const on = d.variantStr && d.key.endsWith('~v1.' + c.id); return `<button class="chip${on ? ' on' : ''}" role="radio" aria-checked="${!!on}" data-cat="${c.id}">${esc(c.label)}</button>`; }).join('')}
+        ${d.variant && !cats.some((c) => d.key.endsWith('~v1.' + c.id)) ? `<button class="chip on" role="radio" aria-checked="true" data-cat="__cur">${esc(h.modeLabel ? '🌐 ' + h.modeLabel : d.variantStr)}</button>` : ''}
         ${d.variant ? '<p class="meta hub-hint">Classement et record à part, sans médailles ni pièces : le record officiel ne bouge pas.</p>' : ''}</div>` : ''}
       ${d.locked ? `<p class="hub-lock" role="status">🔒 ${esc(d.locked)}</p>` : ''}
       <button class="btn big primary hub-play" id="hub-play"${d.locked ? ' disabled' : ''}>▶ Jouer <kbd>Entrée</kbd></button>`;
@@ -199,7 +211,9 @@ export const raceHubMethods = {
     for (const b of $('hub-launch').querySelectorAll('[data-rival]')) b.onclick = () => { this.audio.click(); h.rivals.delete(+b.dataset.rival); this._renderHubLaunch(); if (h.board) h.board.refresh(); };
     for (const b of $('hub-launch').querySelectorAll('[data-cat]')) b.onclick = () => {
       this.audio.click();
+      if (b.dataset.cat === '__cur') return;                // catégorie d'un mode publié (E21) : déjà choisie
       const c = cats.find((x) => x.id === b.dataset.cat);
+      h.modeLabel = '';
       this._setHubCategory(c ? c.v : null);
     };
     $('hub-launch').querySelector('[data-hudtrain]').onclick = () => {
