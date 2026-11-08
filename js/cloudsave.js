@@ -5,7 +5,7 @@
 //  - records : le meilleur temps gagne (à version de physique égale) ;
 //  - circuits : union par identifiant, le plus récent gagne ; les pierres tombales effacent les circuits supprimés ;
 //  - profil : médailles et objets réunis, statistiques au maximum, pièces sans jamais en inventer ; favoris réunis (pierres tombales) ;
-//    exercices de l'Académie : meilleur niveau et meilleure mesure ;
+//    exercices de l'Académie : meilleur niveau et meilleure mesure ; mutations du jour réunies, meilleure série au maximum ;
 //  - dernières courses (runs.*) : réunies, les plus récentes gardées.
 import { itemCost } from './cosmetics.js';
 import { mergeFavorites } from './favorites.js';
@@ -79,13 +79,15 @@ export function mergeProfile(local, remote) {
   const academy = { ...obj(b.academy), ...obj(a.academy) };                   // leçons réussies : on réunit
   const collections = { ...obj(b.collections), ...obj(a.collections) };      // collections récompensées : on réunit
   const dailyDays = [...new Set([...(Array.isArray(a.dailyDays) ? a.dailyDays : []), ...(Array.isArray(b.dailyDays) ? b.dailyDays : [])])].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().slice(-400);
+  const mutDays = [...new Set([...(Array.isArray(a.mutDays) ? a.mutDays : []), ...(Array.isArray(b.mutDays) ? b.mutDays : [])])].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().slice(-400);   // mutations du jour terminées (E13)
   const titlesSeen = [...new Set([...(Array.isArray(a.titlesSeen) ? a.titlesSeen : []), ...(Array.isArray(b.titlesSeen) ? b.titlesSeen : [])])].slice(0, 40);
   stats.turbos = Math.max(num(a.stats && a.stats.turbos), num(b.stats && b.stats.turbos));
+  const daily2 = a.mutDays || b.mutDays || a.dailyBest || b.dailyBest ? { mutDays, dailyBest: Math.max(num(a.dailyBest), num(b.dailyBest)) } : {};   // meilleure série : au maximum
   const presets = Array.isArray(a.presets) && a.presets.some(Boolean) ? a.presets : (Array.isArray(b.presets) ? b.presets : a.presets);
   const fav = (a.favorites || b.favorites || a.favDel || b.favDel) ? mergeFavorites(a, b) : {};      // favoris du Race Hub (favorites.js)
   const drills = a.drills || b.drills ? { drills: mergeDrills(a.drills, b.drills) } : {};         // exercices de l'Académie (skills.js) : meilleur niveau, meilleure mesure
   return {
-    ...b, ...a, ...fav, ...drills,
+    ...b, ...a, ...fav, ...drills, ...daily2,
     id: b.id || a.id,                    // l'identifiant du joueur reste celui du compte
     coins: mergeCoins(a, b, owned), owned, medals, eggs, shards, stats, presets, academy, collections, dailyDays, titlesSeen,
     loadout: a.loadout || b.loadout,     // l'appareil courant garde sa personnalisation

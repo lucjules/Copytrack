@@ -7,6 +7,7 @@ import { medalFor } from '../medals.js';
 import { lessonsDone } from '../academy.js';
 import { online } from '../online.js';
 import { TITLES, emptyContext, earnedTitles, grantRewards, chooseTitle, titleLabel } from '../rewards.js';
+import { streakOf } from '../mutations.js';
 
 export const rewardsMethods = {
   _rewardContext() {
@@ -20,7 +21,7 @@ export const rewardsMethods = {
     });
     return Object.assign(ctx, {
       totalTracks: this.builtins.length, academy: lessonsDone(), dailyDays: (p.dailyDays || []).length, races: (p.stats && p.stats.races) || 0, turbos: (p.stats && p.stats.turbos) || 0,
-      collections: Object.keys(p.collections || {}).length,
+      collections: Object.keys(p.collections || {}).length, dailyBest: Math.max(p.dailyBest | 0, streakOf(p.dailyDays).best), mutations: (p.mutDays || []).length,
     });
   },
 

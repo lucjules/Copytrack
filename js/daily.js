@@ -14,7 +14,7 @@ export function dayKey(d = new Date()) {
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`;
 }
 
-function rng(seedStr) {
+export function rng(seedStr) {
   let h = 2166136261;
   for (let i = 0; i < seedStr.length; i++) { h ^= seedStr.charCodeAt(i); h = Math.imul(h, 16777619); }
   let s = h >>> 0 || 1;
@@ -46,7 +46,7 @@ function tryBuild(tokens, decor) {
 }
 
 // Course du pilote automatique ; renvoie le temps ou null (sortie de piste, noyade ou réapparition : le défi doit se finir proprement).
-function botTime(track, latK = 0.8) {
+export function botTime(track, latK = 0.8) {
   const sim = new Simulation(track, { offTrackLimit: 0.3 });
   sim.start();
   const bot = new Autopilot(track.path, { latLimit: CAR.latGrip * latK, brakeDecel: 36 });

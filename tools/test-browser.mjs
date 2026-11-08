@@ -121,14 +121,35 @@ try {
   });
 
   await test('défi du jour et circuit en plusieurs tours', async () => {
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.dailyDays = []; p.mutDays = []; p.dailyBest = 0; saveProfile(); });
     await click('[data-action="daily"]');
     await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 40000);
     assert.match(await page.evaluate(() => document.getElementById('hub-sub').textContent), /Défi du jour · \d\d\/\d\d\/\d{4}/);
+    // Défi du jour 2 : la série, et la mutation du jour en tête des catégories de record
+    assert.match(await page.evaluate(() => document.querySelector('.hub-daily').textContent), /Série : 0 jour[\s\S]*Mutation du jour : /);
+    assert.match(await page.evaluate(() => document.querySelector('.hub-cats [data-cat]:not([data-cat=""])').textContent), /Mutation du jour : /);
+    await click('.hub-cats [data-cat]:not([data-cat=""])');
+    await waitApp(() => /^daily-\d{4}-\d\d-\d\d~v1\./.test(window.copytrack._hub.desc.key));
+    await click('#hub-play');
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session.state === 'racing', null, 40000);
+    assert.equal(await app(() => window.copytrack.session.opts.mutation), true);
+    await app(() => window.copytrack.session._finish(window.copytrack.session.logic.steps / 120 + 30));
+    await waitApp(() => !document.getElementById('finish').classList.contains('hidden'));
+    await waitApp(() => /🔥 Série : 1 jour · mutation du jour \+30 ◆ · \+30 ◆/.test(document.getElementById('toast').textContent), null, 5000);
+    assert.deepEqual(await app(async () => { const p = (await import('/js/profile.js')).profile(); return [p.dailyDays.length, p.mutDays.length]; }), [1, 1]);
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu' || !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
+    await app(() => { window.copytrack._hub && window.copytrack.closeRaceHub && window.copytrack.closeRaceHub(); window.copytrack.showMenu('menu'); });
+    await click('[data-action="daily"]');
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 40000);
+    assert.match(await page.evaluate(() => document.querySelector('.hub-daily').textContent), /Série : 1 jour \(défi du jour fait\)[\s\S]*✓ terminée aujourd’hui/);
     await click('#hub-play');
     await waitApp(() => window.copytrack.mode === 'race', null, 40000);
     await page.waitForTimeout(600);
     await app(() => window.copytrack.quitRace());
-    await waitApp(() => window.copytrack.mode === 'menu');
+    await waitApp(() => window.copytrack.mode === 'menu' || !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
+    await app(() => window.copytrack.showMenu('menu'));
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.dailyDays = []; p.mutDays = []; p.dailyBest = 0; saveProfile(); });
   });
 
   await test('Race Hub : fiche immédiate (carte, légende, onglets), favori, dernières courses, replay du record, retour à la fiche', async () => {

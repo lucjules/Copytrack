@@ -19,7 +19,18 @@ export function sanitizeRules(r) {
     offroad: o.offroad === 1 || o.offroad === true ? 1 : o.offroad === 0 || o.offroad === false ? 0 : -1,
     obstacles: o.obstacles === 'off' ? 'off' : '',
     sameCars: o.sameCars ? 1 : 0,                                              // toutes les voitures du salon ont la même apparence (visuel seul)
+    ...extraRules(o),
   };
+}
+// Adhérence et vent de tout le circuit (E8 ; règles depuis E13, pour les mutations du défi du jour) : les clés n'existent que si elles changent
+// quelque chose, pour que les règles d'avant (modes partagés, salons) gardent exactement la même forme.
+function extraRules(o) {
+  const out = {};
+  const grip = o.grip ? int(o.grip, 25, 150, 0) : 0;
+  if (grip && grip !== 100) out.grip = grip;
+  const wind = o.wind ? int(o.wind, 0, 100, 0) : 0;
+  if (wind) { out.wind = wind; out.windDir = (((Math.round(int(o.windDir, -3600, 3600, 0) / 15) * 15) % 360) + 360) % 360; }   // comme Track (pas de 15°)
+  return out;
 }
 export const isDefaultRules = (r) => JSON.stringify(sanitizeRules(r)) === JSON.stringify(DEFAULT_RULES);
 
@@ -34,6 +45,8 @@ export function applyRules(track, rules) {
   if (r.veh0) p.veh0 = r.veh0;
   if (r.v0 >= 0) p.v0 = r.v0;
   if (r.offroad >= 0) p.offroad = r.offroad;
+  if (r.grip) p.grip = r.grip;
+  if (r.wind) { p.wind = r.wind; p.windDir = r.windDir; }
   t.setParams(p);
   if (r.laps && t.laps > 1) {
     if (t.path) {                                   // la ligne centrale répète un tour : on la refait pour le nouveau nombre de tours (voir tracks.js)

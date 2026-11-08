@@ -141,6 +141,7 @@ try {
       ['carrière', async () => { await click(page, '[data-action="play"]'); await page.waitForFunction(() => document.querySelectorAll('#track-list .card').length > 60); }],
       ['fiche du circuit', async () => { await page.evaluate(() => window.copytrack.openBuiltinHub(4, 'tracks')); await page.waitForTimeout(400); }],
       ['fiche › personnel', async () => { await click(page, '#hub-board [data-tab="personal"]'); }],
+      ['fiche du défi du jour (série, mutation)', async () => { await page.evaluate(() => window.copytrack.openDailyHub('tracks')); await page.waitForTimeout(600); }],
       ['mes circuits', async () => { await page.evaluate(() => window.copytrack.showScreen('mytracks')); }],
       ['communauté', async () => { await page.evaluate(() => window.copytrack.showScreen('community')); await page.waitForTimeout(500); }],
       ['profil › compte', async () => { await page.evaluate(() => window.copytrack.showScreen('profile')); }],

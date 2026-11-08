@@ -8,6 +8,8 @@ import { rewardCoins } from '../profile.js';
 import { MEDALS, medalFor } from '../medals.js';
 import { PHYS_VER } from '../version.js';
 import { noteRace } from '../rewards.js';
+import { dayOfKey } from '../mutations.js';
+import { t } from '../i18n.js';
 import { goalMet, goalLabel, completeGoal, goalDone } from '../career.js';
 export const finishMethods = {
   _event(ev) {
@@ -127,7 +129,15 @@ export const finishMethods = {
     }
     const medal = medalFor(time, this.medals);
     this._tmDone = true;
-    if (!this.opts.fromEditor && !this.opts.spawn) noteRace({ turbos: this.stats.turbos, dailyDay: this.opts.daily && this.trackKey ? String(this.trackKey).slice(6) : '' });
+    // Défi du jour (le défi, sa mutation ou une autre catégorie) : la série de jours, ses paliers et le bonus de la mutation (E13).
+    const daily = !this.opts.fromEditor && !this.opts.spawn ? noteRace({ turbos: this.stats.turbos, dailyDay: dayOfKey(this.trackKey), mutation: !!this.opts.mutation }) : null;
+    if (daily && daily.streak != null) {
+      const bits = [t(daily.streak > 1 ? '🔥 Série : {n} jours' : '🔥 Série : {n} jour', { n: daily.streak })];
+      if (daily.mutation) bits.push(t('mutation du jour +{c} ◆', { c: daily.mutation }));
+      for (const n of daily.steps) bits.push(t('palier de {n} jours atteint', { n }));
+      if (daily.coins) { bits.push(`+${daily.coins} ◆`); app.ui.updateCoins(); }
+      setTimeout(() => app.ui.flash(bits.join(' · '), 3.4), 900);
+    }
     if (!this.opts.fromEditor && !this.opts.spawn) app.telemetry.record({ trackKey: this.trackKey, outcome: 'finish', time, respawns: this.stats.respawns, medal: medal && medal.id });
     const prevMedal = prev ? medalFor(prev.time, this.medals) : null;
     let reward = null;

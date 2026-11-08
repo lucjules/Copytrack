@@ -15,7 +15,7 @@ import { hashString } from './track.js';
 import { medalFor } from './medals.js';
 import { goalFor, nextBuiltinIndex, chapterUnlocked, prerequisiteOf, CHAPTER_SIZE, UNLOCK_MEDALS } from './career.js';
 import { estimateDifficulty } from './difficulty.js';
-import { formatVariant, variantKey, applyVariant, variantFits, MAX_KEY } from './variants.js';
+import { formatVariant, variantKey, applyVariant, variantFits, MAX_KEY, VARIANT_VER } from './variants.js';
 
 const plen = (pts) => { let d = 0; for (let i = 1; i < pts.length; i++) d += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]); return d; };
 
@@ -69,8 +69,10 @@ export function chapterLock(i, builtins, getRecord) {
   return chapterUnlocked(ch, medalOf, builtins.length) ? null : `Chapitre verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${prerequisiteOf(ch) + 1}.`;
 }
 
-export function describeDaily(c) {
+// mutation : la mutation du jour (mutations.js : dailyMutation), proposée comme catégorie de record dans la fiche ; null si on ne l'a pas calculée.
+export function describeDaily(c, mutation = null) {
   const d = base('daily', c.track, c.key);
+  d.mutation = mutation && mutation.day === c.day ? mutation : null;
   d.name = c.track.name;
   d.day = c.day;
   d.medals = c.medals;
@@ -142,10 +144,13 @@ export function describeVariant(desc, v) {
   if (!formatVariant(v)) return official;
   const key = variantKey(official.key, v);
   const track = applyVariant(official.track, v);
+  // Mutation du jour (E13) : une catégorie du défi, avec son ambiance (le brouillard : visuel seul, hors signature).
+  const mutation = official.mutation && official.mutation.variant === formatVariant(v) ? official.mutation : null;
+  if (mutation && mutation.ambiance) track.ambiance = { ...track.ambiance, ...mutation.ambiance };
   return {
-    ...official, official, variant: v, variantStr: formatVariant(v), key, track,
+    ...official, official, variant: v, variantStr: formatVariant(v), key, track, mutation,
     medals: null, goal: null, goalKey: '', recordKeys: [key],
-    launch: { trackKey: key, seed: official.launch.seed, difficulty: official.launch.difficulty, variant: formatVariant(v), officialTrack: official.track },
+    launch: { trackKey: key, seed: official.launch.seed, difficulty: official.launch.difficulty, variant: formatVariant(v), officialTrack: official.track, ...(mutation ? { mutation: true } : {}) },
   };
 }
 
@@ -161,5 +166,9 @@ export const HUB_CATEGORIES = [
 export function hubCategories(desc) {
   const official = desc.official || desc;
   if (!official.key || !/^(b-|daily-|u-)/.test(official.key)) return [];
-  return HUB_CATEGORIES.filter((c) => { try { return variantKey(official.key, c.v).length <= MAX_KEY && variantFits(official.track, c.v); } catch { return false; } });
+  const cats = HUB_CATEGORIES.filter((c) => { try { return variantKey(official.key, c.v).length <= MAX_KEY && variantFits(official.track, c.v); } catch { return false; } });
+  const M = official.mutation;
+  if (!M) return cats;
+  const id = M.variant.slice(VARIANT_VER.length + 1);
+  return [{ id, v: M.v, label: `🧪 Mutation du jour : ${M.label}`, mutation: true }, ...cats.filter((c) => c.id !== id)];
 }

@@ -6,6 +6,29 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.35 — Défi du jour 2 : mutation du jour, séries, récompenses
+
+Étape E13 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des mutations « verglas » et « vent » (catégories `gp` et `wd`, nouvelles). Le défi du jour et toutes les autres catégories sont vérifiés comme avant.
+
+- **Mutation du jour** : chaque défi du jour a sa mutation, la même pour tout le monde, proposée en tête des catégories de record de sa fiche, avec son propre classement. Une par jour de la semaine (UTC) :
+  - lundi : verglas (adhérence à 60 %) ;
+  - mardi : vent de travers (25 %, direction tirée de la date) ;
+  - mercredi : moto imposée ;
+  - jeudi : gravité légère (70 %) ;
+  - vendredi : verglas dans le brouillard (adhérence à 80 %, brouillard épais, purement visuel) ;
+  - samedi : moto sur la Lune (moto et gravité à 70 %) ;
+  - dimanche : gravité lourde (130 %).
+  Une mutation n'est retenue que si le pilote automatique finit le défi muté ; sinon, la suivante dans la semaine. Aucune ne rend une voiture plus rapide : elles changent la piste pour tout le monde.
+- **Le défi lui-même ne change pas** : la mutation est une catégorie (une variante d'E3 : `daily-AAAA-MM-JJ~v1.gp-60`…), pas un autre circuit. Les défis passés, ceux de l'empreinte de la physique et leurs records restent identiques au bit près. Le document d'architecture prévoyait des mutateurs datés dans le défi : l'empreinte fige justement des défis de décembre 2026, et une catégorie fait le même travail sans rien casser.
+- **Séries** : nombre de jours consécutifs avec un défi du jour terminé (le défi, sa mutation ou une autre catégorie), calculé depuis les jours déjà enregistrés (`dailyDays`) ; la série est encore vivante tant que le défi d'hier est fait. Elle s'affiche sur la carte du défi, dans sa fiche (meilleure série, prochain palier) et à l'arrivée.
+- **Récompenses** :
+  - paliers de série : 3, 7, 14 et 30 jours (30, 70, 140 et 300 ◆), une seule fois chacun, quand la meilleure série les atteint ;
+  - mutation du jour : +30 ◆ à la première arrivée, chaque jour ;
+  - deux exclusifs du garage : la traînée givrée (une série de 7 jours) et la lumière toxique (10 mutations terminées).
+- Sous le capot : `js/mutations.js` (mutations, `dailyMutation`, `streakOf`), règles `grip` et `wind` dans `rulesCore.js` (absentes tant qu'elles ne changent rien : les règles, modes et salons d'avant gardent exactement leur forme), catégories `gp` et `wd` dans `variants.js`, profil `mutDays` et `dailyBest` (fusion cloud : union, maximum).
+- **Limite assumée** : pas de « sens inversé » ni de miroir pour l'instant. Il faudrait transformer géométriquement chaque type de pièce (virages, bifurcations, pièces dissymétriques), avec une empreinte dédiée : c'est un chantier à part.
+- Tests : `tools/test-defi.mjs` (défi inchangé, deux semaines de mutations, vérification serveur d'une mutation, règles, fiche, séries, paliers, exclusifs, fusion) ; test navigateur (série et mutation dans la fiche, course de la mutation, bonus, série) et anglais.
+
 ## Bêta 0.9.34 — Académie 2 : compétences et exercices évalués
 
 Étape E12 de Copytrack Evolution (début du bloc 4). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer (rien ne touche à la course ni au serveur).

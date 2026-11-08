@@ -14,6 +14,8 @@ import { medalFor, MEDALS } from '../medals.js';
 import { medalIcon } from '../ui.js';
 import { online } from '../online.js';
 import { dailyChallenge } from '../daily.js';
+import { dailyMutation, streakOf } from '../mutations.js';
+import { MUTATION_COINS, STREAK_STEPS } from '../rewards.js';
 import { goalLabel, goalDone, PROFILS } from '../career.js';
 import { starsText, STAR_LABELS } from '../difficulty.js';
 import { getRecord, getImportedGhost, listMyTracks, formatTime } from '../storage.js';
@@ -150,7 +152,7 @@ export const raceHubMethods = {
     const rivals = [...h.rivals.entries()].sort((a, b) => a[0] - b[0]);
     const cats = hubCategories(h.base);
     const train = isTraining(s.hudProfile);
-    $('hub-launch').innerHTML = `<div class="hub-pb">${rec ? `<span class="meta">Mon record</span><b>${medal ? medalIcon(medal) + ' ' : ''}${formatTime(rec.time)}</b>` : '<span class="meta">Pas encore de temps : à toi d’ouvrir la voie.</span>'}</div>
+    $('hub-launch').innerHTML = `${d.source === 'daily' ? this._hubDailyBox(d) : ''}<div class="hub-pb">${rec ? `<span class="meta">Mon record</span><b>${medal ? medalIcon(medal) + ' ' : ''}${formatTime(rec.time)}</b>` : '<span class="meta">Pas encore de temps : à toi d’ouvrir la voie.</span>'}</div>
       <div class="hub-ghosts" role="group" aria-label="Fantômes"><span class="meta">Fantômes</span>
         ${chips.map(([k, l, on, ok]) => `<button class="chip${on ? ' on' : ''}" data-ghost="${k}" aria-pressed="${on}"${ok ? '' : ' disabled title="Pas encore de record sur ce circuit"'}>${esc(l)}</button>`).join('')}
         ${rivals.map(([rank, g]) => `<button class="chip on rival" data-rival="${rank}" aria-pressed="true" title="Retirer ce rival">👻 ${rank}. ${esc(g.name)} · ${formatTime(g.time)} ✕</button>`).join('')}
@@ -183,6 +185,17 @@ export const raceHubMethods = {
       this._renderHubLaunch();
     };
     $('hub-play').onclick = () => this.hubPlay();
+  },
+
+  // Défi du jour 2 (E13) : la série de jours et la mutation du jour (une catégorie de record, proposée en tête des catégories).
+  _hubDailyBox(d) {
+    const p = profile(), st = streakOf(p.dailyDays), best = Math.max(p.dailyBest | 0, st.best);
+    const next = STREAK_STEPS.find(([n]) => n > best);
+    const M = (d.official || d).mutation, mutDone = M && Array.isArray(p.mutDays) && p.mutDays.includes(M.day);
+    return `<div class="hub-daily">
+      <p class="hub-streak"><span>🔥 Série : <b>${st.current} jour${st.current > 1 ? 's' : ''}</b></span>${st.today ? ' <span>(défi du jour fait)</span>' : st.current ? ' <span>— termine le défi aujourd’hui pour la prolonger</span>' : ''}
+        <span>· meilleure : ${best}</span>${next ? ` <span>· prochain palier : ${next[0]} jours (+${next[1]} ◆)</span>` : ''}</p>
+      ${M ? `<p class="hub-mutation"><span>${M.icon}</span> <span>Mutation du jour : <b>${esc(M.label)}</b></span> — <span>${esc(M.desc)}</span> <span>${mutDone ? '✓ terminée aujourd’hui' : `+${MUTATION_COINS} ◆ à la première arrivée`}</span></p>` : ''}</div>`;
   },
 
   // Catégorie de record (variante) : même fiche, autre clé de classement ; les rivaux choisis appartenaient à l'autre classement.
@@ -271,7 +284,9 @@ export const raceHubMethods = {
     const c = dailyChallenge();
     if (!c) { this.ui.flash('Le défi du jour n’a pas pu être généré.'); return; }
     if (from === 'menu') this.showMenu('menu');
-    this.openRaceHub(describeDaily(c), { from });
+    let m = null;
+    try { m = dailyMutation(c.day); } catch { m = null; }
+    this.openRaceHub(describeDaily(c, m), { from });
   },
 
   openUserHub(entry, from = 'mytracks') {

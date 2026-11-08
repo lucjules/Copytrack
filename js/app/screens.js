@@ -9,9 +9,11 @@ import { DECORS } from '../themes.js';
 import { PIECES } from '../pieces.js';
 import { thumbnail } from '../editorTools.js';
 import { dailyChallenge, dayKey } from '../daily.js';
+import { streakOf } from '../mutations.js';
 import { describeDaily } from '../trackDescriptor.js';
 import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked, chapterState, careerSummary, prerequisiteOf, nextBuiltinIndex } from '../career.js';
 import { locale } from '../i18n.js';
+import { profile } from '../profile.js';
 import { getRecord, listMyTracks, deleteMyTrack, formatTime } from '../storage.js';
 export const screenMethods = {
   showMenu(screen = 'menu') {
@@ -146,8 +148,10 @@ export const screenMethods = {
     dc.tabIndex = 0;
     const today = dayKey();
     const drec = getRecord('daily-' + today);
+    const dstreak = streakOf(profile().dailyDays, today);
     dc.innerHTML = `<h3>Défi du ${today.split('-').reverse().join('/')}</h3>
-      <div class="meta">Un nouveau circuit chaque jour, le même pour tout le monde.</div>
+      <div class="meta">Un nouveau circuit chaque jour, le même pour tout le monde, et sa mutation.</div>
+      ${dstreak.current ? `<div class="daily-streak">🔥 Série : ${dstreak.current} jour${dstreak.current > 1 ? 's' : ''}${dstreak.today ? '' : ' — à prolonger aujourd’hui'}</div>` : ''}
       <div class="best">${drec ? formatTime(drec.time) : '<span class="meta">Pas encore de temps aujourd’hui</span>'}<button class="btn board-btn" data-board="1" title="Classement du jour">🏆</button></div>`;
     dc.querySelector('[data-board]').addEventListener('click', (e) => {
       e.stopPropagation(); this.audio.click();

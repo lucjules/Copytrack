@@ -17,6 +17,8 @@ export function describeRules(rules) {
   if (r.offroad === 1) out.push('Hors piste autorisé'); else if (r.offroad === 0) out.push('Hors piste interdit');
   if (r.laps) out.push(`${r.laps} tour${r.laps > 1 ? 's' : ''} (circuits fermés)`);
   if (r.obstacles === 'off') out.push('Sans obstacles');
+  if (r.grip) out.push(`Adhérence ${r.grip} %`);
+  if (r.wind) out.push(`Vent ${r.wind} %`);
   if (r.sameCars) out.push('Voitures identiques');
   return out;
 }
