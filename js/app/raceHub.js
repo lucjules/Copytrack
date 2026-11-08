@@ -27,6 +27,7 @@ import { mountLeaderboard } from '../ui/leaderboardPanel.js';
 import { thumbnail } from '../editorTools.js';
 
 const MAX_RIVALS = 3;
+const WIND_LABEL = ['vers le nord', 'vers le nord-est', 'vers l’est', 'vers le sud-est', 'vers le sud', 'vers le sud-ouest', 'vers l’ouest', 'vers le nord-ouest'];
 const SOURCE_LABEL = { builtin: 'Carrière', daily: 'Défi du jour', user: 'Mes circuits', community: 'Communauté' };
 const km = (m) => (m >= 1000 ? `${(m / 1000).toFixed(1).replace('.', ',')} km` : `${m} m`);
 
@@ -118,6 +119,8 @@ export const raceHubMethods = {
     if (d.laps > 1) rows.push(['Tours', String(d.laps)]);
     rows.push(['Pièces', String(d.tiles)]);
     if (d.profil && PROFILS[d.profil]) rows.push(['Profil', esc(PROFILS[d.profil].label)]);
+    if (d.track.grip !== 100) rows.push(['Adhérence', `${d.track.grip} %`]);
+    if (d.track.wind) rows.push(['Vent', `${d.track.wind} % · ${WIND_LABEL[Math.round(d.track.windDir / 45) % 8]}`]);
     if (d.source === 'community') rows.push(['Joué', `▶ ${d.plays} · ♥ ${d.likes}`]);
     if (d.medals) rows.push(['Médailles', `<span class="hub-medals">${MEDALS.map((m) => `<span title="${esc(m.label)}">${medalIcon(m)} ${formatTime(d.medals[m.id])}</span>`).join('')}</span>`]);
     if (d.goal) { const done = goalDone(d.goalKey); rows.push(['Objectif bonus', `<span class="${done ? 'goal-done' : ''}">★ ${esc(goalLabel(d.goal))}${done ? ' ✓' : ''}</span>`]); }

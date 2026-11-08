@@ -235,7 +235,7 @@ export const pointerMethods = {
   // ---------------------------------------------------------------- Actions
   _hoverTile() {
     if (!this.hover) return null;
-    const tiles = this.track.tilesAt(this.hover.cx, this.hover.cz);
+    const tiles = this.track.tilesAt(this.hover.cx, this.hover.cz).filter((t) => this._layerOk(t));
     if (!tiles.length) return null;
     for (const t of tiles) {
       const [lo, hi] = Track.range(t);
@@ -250,7 +250,7 @@ export const pointerMethods = {
   _targetTile() {
     if (this.ndc && this.raycaster && Math.abs(this.ndc.x) <= 1 && Math.abs(this.ndc.y) <= 1 && this.app && this.app.camera) {
       this.raycaster.setFromCamera(this.ndc, this.app.camera);
-      const hit = pickTileExact(this.track, this.raycaster.ray);
+      const hit = pickTileExact(this.track, this.raycaster.ray, (o) => this._layerOk(o));
       if (hit) return hit.obj;
     }
     return this._hoverTile();
@@ -301,7 +301,7 @@ export const pointerMethods = {
   _pickTarget(mask) {
     if (Math.abs(this.ndc.x) > 1 || Math.abs(this.ndc.y) > 1) return null;
     this.raycaster.setFromCamera(this.ndc, this.app.camera);
-    return pickObjects(this.track, this.raycaster.ray, mask);
+    return pickObjects(this.track, this.raycaster.ray, mask, (o) => this._layerOk(o));
   },
 
   // ---------------------------------------------------------------- Boucle

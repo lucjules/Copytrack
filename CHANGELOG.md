@@ -6,6 +6,60 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.33 — logique du circuit : des règles « quand… si… alors… »
+
+Étapes E10 et E11 de Copytrack Evolution (fin du bloc 3). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des **seuls** circuits qui ont une logique (comme pour l'adhérence et le vent de 0.9.31) ; tous les autres sont vérifiés comme avant.
+
+- **Logique du circuit** (éditeur, bouton ⚙ ou **F6**) : des règles **ÉVÉNEMENT → CONDITIONS → ACTIONS** qui agissent sur les groupes d'E9.
+  - Événements : le départ, le passage d'un checkpoint (le n-ième, ou chacun), le début d'un tour, un temps de course, la voiture qui entre sur un groupe, la voiture qui change de véhicule.
+  - Conditions (toutes vraies) : checkpoints passés, tour, compteurs, véhicule, groupe visible ou caché.
+  - Actions : **montrer, cacher, basculer un groupe** (une pièce cachée n'est plus dessinée et n'a plus de collision, ses obstacles non plus ; un checkpoint ou une arrivée cachés ne comptent pas), régler la **gravité**, changer un **compteur** (jusqu'à 4), jouer un **effet** visuel ou sonore (les mêmes que les déclencheurs de cases, sans effet sur la course).
+  - « Une seule fois par essai », groupes **cachés au départ**. Bornes : 32 règles, 8 conditions et 8 actions par règle.
+- **Jouée dans la simulation**, donc identique en course, dans les fantômes, les replays et la **vérification serveur**. Un retour au checkpoint revient à l'état de ce checkpoint : une porte ouverte en le passant reste ouverte. La logique (et l'appartenance aux groupes qu'elle touche) entre dans la signature du circuit : à revérifier après chaque changement.
+- **L'éditeur de logique** : la liste des règles, chacune **lue en une phrase** (« Quand le checkpoint n° 1 est passé, si compteur 1 ≥ 2 : montrer « Porte », gravité à 60 %. (une fois) »), à monter, descendre, modifier ou supprimer ; un éditeur de règle par menus (la phrase se met à jour en direct) ; des **vérifications sans rouler** (une arrivée cachée que rien ne montre : erreur ; groupe vide, checkpoint ou tour qui n'arrivera jamais, compteur absent : avertissements). Pendant un essai depuis l'éditeur (T), chaque règle déclenchée s'affiche.
+- **Conversion** des déclencheurs de cases (lot 12) : chaque case devient un groupe, ses effets une règle « quand la voiture entre sur ce groupe ». Les déclencheurs de cases restent lus comme avant tant qu'on ne convertit pas.
+- **Additif, et c'est vérifié** : un circuit sans logique roule exactement comme avant (sans logique, l'ensemble exclu de la physique est celui du verre brisé lui-même) ; les **177 scénarios** de l'empreinte sont identiques, **5 nouveaux** (porte, zones, obstacles cachés) s'y ajoutent, identiques sous Node, Deno et Chromium.
+- Sous le capot : `js/sim/logic.js` (dans la fermeture de la vérification : ni horloge, ni hasard, ni trigonométrie), champ `lg` du circuit (format 4), `CarPhysics.excl`, état de la logique dans l'instantané d'un checkpoint (`RaceLogic`, champ `ext`), `RaceSession._logicSync` (groupes montrés ou cachés sans reconstruire la piste, effets) ; `js/logicText.js` (phrases, vérifications, conversion ; une table de phrases par langue) et `js/editor/logicUi.js`.
+- **Limites assumées** : pas encore d'actions sur les pièces mobiles ni sur les revêtements (elles demandent d'autres états dans la simulation) ; pas d'éditeur visuel en nœuds : des règles en phrases, plus simples à lire.
+- Tests : `tools/test-logique.mjs` (format, signature, porte fermée puis ouverte, retour au checkpoint, compteurs, zones, une seule fois, effets sans effet, vérification serveur, fantômes, phrases en français et en anglais, vérifications, conversion ; aussi sous Deno), empreinte (182 scénarios), test navigateur (une porte qui s'ouvre au checkpoint, construite dans l'éditeur, essayée, puis vérifiée) et anglais.
+
+## Bêta 0.9.32 — groupes et calques dans l'éditeur, aperçu 3D des pièces perso
+
+Étape E9 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer (les groupes n'ont aucun effet sur la course : ils n'entrent pas dans la signature ; la logique du circuit, E10, s'en servira).
+
+- **Groupes et calques** (éditeur, bouton ▦ ou **F4**) : ranger des pièces et des décorations dans des **groupes** numérotés (1 à 63) et **nommés**, puis, pendant l'édition, **masquer** un calque (ni dessiné ni visable) ou le **verrouiller** (visible mais ni sélectionnable ni modifiable) ; sélectionner tout un groupe ; sortir la sélection de son groupe. Les groupes et leurs noms voyagent dans le code du circuit (format 4) ; masquer et verrouiller restent des états de l'éditeur. Tout s'annule comme le reste.
+- **Vue par niveau** (◐, Z) : la sélection (copier, couper, supprimer, monter, descendre) ne prend plus que les pièces du niveau affiché.
+- **Atelier « Mes pièces »** : un **aperçu 3D** de la pièce en plus des vues de face et de dessus, construit exactement comme sur la piste ; il tourne seul, glisser pour le tourner soi-même.
+- **Corrigé** : annuler une action dans l'éditeur effaçait toutes les **pièces perso** posées (leurs formes n'étaient pas gardées par l'historique, depuis 0.9.24).
+- Sous le capot : champ `g` des pièces (table `TILE_FIELDS`) et des décorations, noms dans `gn` ; `TrackView` dessine chaque groupe dans son propre maillage et sait le montrer ou le cacher sans tout reconstruire (`setGroupVisible`), ce dont la logique du circuit aura besoin en course ; filtres de visée et de sélection (`js/editor/groups.js`, `js/editor/preview3d.js`).
+- **Reportés** (ils étaient dans le plan d'E9) : la bibliothèque de matériaux (couleurs nommées réutilisables) et une caméra libre dédiée dans l'éditeur ; ils iront avec les finitions (E22).
+- Tests : `tools/test-groups.mjs` (bornes, noms, code, signature inchangée, annulation avec pièces perso, filtre de copie) ; test navigateur (panneau, masquer, verrouiller, nommer, code, annuler, aperçu 3D) et anglais.
+
+## Bêta 0.9.31 — adhérence et vent sur tout le circuit (paramètres de simulation)
+
+Étape E8 de Copytrack Evolution (début du bloc 3). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des **seuls** circuits qui utilisent ces réglages ; tous les autres sont vérifiés comme avant.
+
+- **Éditeur › Paramètres du niveau** : **Adhérence de la piste** (25 à 150 %, en plus de celle des revêtements) et **Vent** (0 à 100 %, huit directions ; le nord est en haut de l'éditeur), sur le sol comme sur les loopings, murs et tubes. Ils changent la course : ils entrent dans la signature du circuit (donc dans sa clé de classement) et le code passe au format 4. La fiche du circuit les affiche.
+- **Additifs, et c'est vérifié** : à leur valeur par défaut, rien ne change, ni la course (la physique ne fait même pas l'opération), ni la signature, ni le code. Les **173 scénarios** de l'empreinte de la physique sont identiques ; **4 scénarios nouveaux** (adhérence 70 % et 140 %, vent sur la route et dans les loopings) s'y ajoutent, identiques sous Node, Deno et Chromium.
+- Sous le capot : trois lignes de la table `RULES` de `js/track.js` (`grip`, `wind`, `windDir` : constructeur, copie, signature, code, historique de l'éditeur s'en déduisent), `js/sim/params.js` (`paramsOf`, mathématiques déterministes). Le document d'architecture parlait d'un champ `sp` séparé : la table existante fait le même travail sans rien ajouter au format. Le vent garde la direction choisie même sans vent : l'éditeur la remet à zéro pour ne pas toucher à la signature.
+- **Limites assumées** : le vent ne souffle que sur la route (pas en vol : le deltaplane n'y est pas sensible) et il est constant (les rafales et la météo qui change en course viendront avec les environnements, E19).
+- Tests : `tools/test-sim-params.mjs` (défauts sans effet, bornes, signature, code, course plus lente, poussée du vent dans sa direction, vérification serveur d'un circuit à paramètres), empreinte (177 scénarios), test navigateur (réglages de l'éditeur, signature).
+
+## Bêta 0.9.30 — le coach
+
+Étape E7 de Copytrack Evolution (dernière du bloc 2). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.
+
+- **Conseils à l'arrivée** : jusqu'à trois conseils, chacun **à un endroit** (un secteur) et **chiffré**, face à une référence plus rapide (ton record, sinon le fantôme or) :
+  - retour au checkpoint (le temps qu'il a coûté), chocs contre le mur ;
+  - freinage **trop tardif** (« tu freines 45 m plus tard que la référence et tu en ressors à 59 km/h au lieu de 91 ») ou **trop tôt** ;
+  - **vitesse mini** trop basse dans un virage, **temps en l'air** de trop, **trajectoire** plus large que la référence ;
+  - sinon, le secteur où le temps se perd, avec les vitesses maxi.
+  Rien n'est conseillé là où aucun temps n'a été perdu : une course identique à la référence n'a aucun conseil. Calculé après l'affichage de l'écran (deux courses rejouées), jamais pendant la course. Bouton « 🎬 Voir ces passages dans le Replay Theater ».
+- **Dans le Replay Theater** : face à la première course comparée, les conseils sont marqués sur la barre de temps (repères bleus) et listés dans le panneau d'analyse ; ▶ amène trois secondes avant le passage.
+- `js/analysis/coach.js` (pur) ; un freinage est montré là où il a lieu (la cause), même si le temps se perd un peu plus loin.
+- **Limites assumées** : les règles sont des seuils simples (8 m pour un freinage, 3 m/s de vitesse mini, 0,3 s en l'air, 3 m de trajectoire), pas un apprentissage ; les conseils de freinage demandent les commandes des deux courses (pas face à un fantôme en ligne) ; le pilote automatique freine peu (il lève le pied) : la règle du freinage tardif est testée sur des courses synthétiques, les autres sur de vraies courses modifiées.
+- Tests : `tools/test-coach.mjs` (course identique : aucun conseil ; freinage avancé, retour au checkpoint et virages prudents sur de vraies courses ; freinage tardif sur des traces synthétiques ; traduction anglaise de chaque conseil) ; test navigateur (conseils à l'arrivée, repères et conseils cliquables dans le Theater).
+
 ## Bêta 0.9.29 — Replay Theater
 
 Étape E6 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.

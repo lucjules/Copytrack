@@ -20,6 +20,8 @@ import { InputRecorder, decodeInputs, inputAt, quantSteer } from './replay.js';
 import { PHYS_VER } from './version.js';
 import { GHOST_VEHICLES, GHOST_EVERY, CAM_MODES, tmpM, tmpV, tmpV2 } from './race/shared.js';
 import { cameraList, clampCamIndex } from './camprefs.js';
+import { describeRule } from './logicText.js';
+import { t } from './i18n.js';
 
 import { cameraMethods } from './race/camera.js';
 import { ghostMethods } from './race/ghosts.js';
@@ -98,7 +100,20 @@ export class RaceSession {
     this.loadRecord();
     this.restart();
     this._trainSetup();          // HUD d'entraînement (profil « Entraînement » : race/training.js)
+    if (this.sim.lgc && opts.fromEditor) this.sim.lgc.setDebug(true);      // essai depuis l'éditeur : règles annoncées quand elles se déclenchent
     this._theaterSetup();        // Replay Theater (opts.theater : theater/session.js)
+  }
+
+  // Logique du circuit (sim/logic.js) : la scène suit l'état de la simulation (groupes montrés ou cachés) et joue ses effets visuels et sonores.
+  _logicSync() {
+    const L = this.sim.lgc;
+    if (L.state.ver !== this._lgVer) {
+      this._lgVer = L.state.ver;
+      for (const g of this.track.usedGroups()) this.view.setGroupVisible(g, !L.state.hidden.has(g));
+    }
+    while (L.fx.length) { const f = L.fx.shift(); if (!this.demo) this._runScript(f); }
+    // Essai depuis l'éditeur : chaque règle déclenchée est annoncée (pour mettre au point sa logique).
+    while (L.log.length) { const i = L.log.shift(); this.app.ui.flash(t('⚙ Règle {n:w} : {r}', { n: i + 1, r: describeRule(L.logic.rules[i], this.track) }), 2.6); }
   }
 
   // Message au centre de l'écran (court, trié par importance : voir hudMessages.js). m = [texte, importance, durée en s].
@@ -465,6 +480,7 @@ export class RaceSession {
   render(dt, alpha) {
     const app = this.app;
     const p = this.phys;
+    if (this.sim.lgc) this._logicSync();
     // Obstacles et pièces mobiles : même temps que la physique (chrono), interpolé.
     if (this.state === 'racing') this.obsT = Math.max(0, (this.logic.steps - 1 + alpha) * DT);
     else if (this.state === 'finished') this.obsT = (this.obsT || 0) + dt;

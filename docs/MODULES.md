@@ -50,6 +50,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `input.js` | Entrées : clavier (codes physiques => QWERTY et AZERTY), manette, tactile. |
 | `inspector.js` | Mode Inspection de l'éditeur : sélection d'une pièce ou d'une décoration, panneau de propriétés généré selon l'objet, et gizmos 3D (TransformControls : flèches de déplacement, cercles de rotation). |
 | `joins.js` | Raccords d'orientation (0.9.3) : une route sur un mur ne se raccorde pas directement au sol, il faut une transition. |
+| `logicText.js` | Logique du circuit en phrases, et ses vérifications (éditeur de logique, E11). Module pur, testé sous Node (tools/test-logique.mjs). |
 | `main.js` | Point d'entrée : crée le moteur de rendu et orchestre menu / course / éditeur. |
 | `mathutil.js` | Petits utilitaires numériques partagés (la physique, l'audio, les traînées). Ne dépend de rien. |
 | `medals.js` | Médailles : leur ordre (de la meilleure à la moins bonne) et leur attribution selon un temps. |
@@ -100,6 +101,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 
 | Fichier | Rôle |
 | --- | --- |
+| `coach.js` | Coach (Copytrack Evolution, E7) : des conseils LOCALISÉS (un secteur, un endroit) et JUSTIFIÉS par les mesures de deux courses projetées sur la même référence (analysis/reference.js). On ne conseille que là où du temps a été perdu : une course identique à la référence ne reçoit aucun conseil. Module pur, testé sous Node (tools/test-coach.mjs) ; le texte est en français (la clé de la traduction, comme partout). |
 | `events.js` | Bilan des évènements d'une course (analysis/trace.js) : chocs, réapparitions, réceptions, mini-turbos, temps en l'air. Module pur. |
 | `live.js` | Suivi en direct contre une course de référence (HUD d'entraînement) : à chaque image, la position de la voiture est projetée sur la référence de parcours (recherche fenêtrée : quelques dizaines de segments), et l'écart est le chrono moins le temps de la référence à cette distance. |
 | `reference.js` | Référence de parcours : une ligne le long du circuit, graduée en mètres, sur laquelle on projette toute course pour la comparer à une autre (« à 820 m du départ, tu avais 0,4 s de retard »). Module pur, testé sous Node. |
@@ -130,10 +132,13 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | Fichier | Rôle |
 | --- | --- |
 | `cdeco.js` | « Mes pièces » : l'atelier de pièces décoratives de l'éditeur (lot 12). On assemble des formes simples, on voit la pièce de face et de dessus, on l'enregistre dans sa bibliothèque, puis on la pose comme n'importe quelle décoration. Les règles sont dans customDeco.js. Ces méthodes s'ajoutent au prototype de EditorSession. |
+| `groups.js` | Groupes et calques de l'éditeur (Copytrack Evolution, E9) : des pièces et décorations rangées dans des groupes numérotés (1 à 63) et nommés. |
 | `history.js` | État du circuit dans l'éditeur : instantanés, annuler / rétablir, enregistrement, nouveau circuit, essai. |
+| `logicUi.js` | Éditeur de la logique du circuit (Copytrack Evolution, E11) : créer des règles ÉVÉNEMENT → CONDITIONS → ACTIONS sans écrire de code, les lire en phrases, voir ce qui empêcherait de finir, et les essayer (T : en essai depuis l'éditeur, chaque règle déclenchée est annoncée). Les règles agissent sur les groupes (▦, editor/groups.js). Ces méthodes s'ajoutent au prototype d'EditorSession : `this` est l'instance. Moteur : sim/logic.js. |
 | `palette.js` | Palette de l'éditeur : boutons d'outils, familles de pièces, options, paramètres, aide à la compatibilité, menu. |
 | `pointer.js` | Souris, tactile et manette dans l'éditeur : événements, survol, aperçu de la pose, case et décoration visées. |
 | `prefabs.js` | Onglet « Prefabs » de la palette : coller un morceau tout fait (chicane, saut, looping…), enregistrer SA sélection sous un nom, la partager par code, importer le code d'un ami. |
+| `preview3d.js` | Aperçu 3D d'une pièce perso (atelier « Mes pièces » de l'éditeur, E9) : les formes construites EXACTEMENT comme sur la piste (customDecoBuild.js, mêmes matières que le circuit), sur un petit canvas qui tourne lentement ; glisser pour tourner soi-même. Un seul rendu WebGL de plus, libéré à la fermeture de l'atelier (dispose). |
 | `scriptsUi.js` | Déclencheurs de circuit dans l'éditeur (lot 12) : on pose des effets visuels et sonores sur des cases ; la voiture les joue en passant dessus. |
 | `selection.js` | Sélection rectangulaire, copier / couper / coller, vue par niveau et repérage des problèmes. |
 | `shared.js` | Éléments partagés par les familles de méthodes de EditorSession (voir editor.js). |
@@ -219,6 +224,13 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | --- | --- |
 | `decor.js` | Décors de chaque thème (désert, pôles, jungle, ville, îles, volcan, orbite, grottes, ciel, récif, usine) et terrain. |
 | `shared.js` | Éléments partagés par les familles de méthodes de Scenery (voir scenery.js). |
+
+## `js/sim/`
+
+| Fichier | Rôle |
+| --- | --- |
+| `logic.js` | Logique du circuit (Copytrack Evolution, E10) : des règles ÉVÉNEMENT → CONDITIONS → ACTIONS exécutées DANS la simulation, donc identiques en course, dans les fantômes, les replays et la vérification serveur (ce module est dans la fermeture de js/verify.js : aucune horloge, aucun hasard, aucune trigonométrie). Elles agissent sur les GROUPES de pièces et de décorations (E9) : montrer, cacher (une pièce cachée n'a plus de collision, comme une dalle de verre brisée), basculer ; et sur la gravité, des compteurs, et des effets visuels ou sonores (sans effet sur la course). |
+| `params.js` | Paramètres de simulation d'un circuit (Copytrack Evolution, E8) : ce que la physique lit en plus du circuit lui-même. Additifs : à leur valeur par défaut (adhérence 100 %, pas de vent), la course est celle d'avant au bit près (l'empreinte des scénarios existants ne change pas ; la physique ne fait même pas la multiplication). Les valeurs viennent des règles du circuit (track.js, table RULES : grip, wind, windDir), qui entrent dans sa signature dès qu'elles ne sont plus par défaut. Dans la fermeture de la vérification serveur : dmath seulement. |
 
 ## `js/theater/`
 

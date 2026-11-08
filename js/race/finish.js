@@ -169,6 +169,7 @@ export const finishMethods = {
       canHub: !!(this.trackKey && /^(b-|daily-|u-)/.test(this.trackKey) && !this.opts.spawn && !this.opts.fromEditor && app._lastDesc && app._lastDesc.key === this.trackKey),
       canShareGhost: !!(this.trackKey && (isRecord || (this.record && this.record.inputs)) && !this.opts.spawn),
     });
+    app._finishCoach(this, time);
     if (isRecord) this.loadRecord();
     // Classement en ligne : le record est envoyé (et vérifié par rejeu côté serveur).
     app.onRaceFinished(this, time, isRecord);

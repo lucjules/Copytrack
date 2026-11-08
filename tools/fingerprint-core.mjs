@@ -154,6 +154,38 @@ function customScenarios() {
   const veh = scriptTrack('vehicules', 'start S2 S.o S2 S.a S2 S.n S2 S.e S2 S.f V4 S2^ S.f^ V-4 S2 finish');
   out['custom:vehicles:bot'] = runGhost(veh, { bot: true }, 120 * 90);
   out['custom:vehicles:noise'] = runGhost(veh, { inputs: randomInputs(53, 4000) }, 4000);
+  // 6. Paramètres de simulation (E8, sim/params.js) : adhérence de tout le circuit, vent de tout le circuit (sol et rubans).
+  const byId = (id) => buildBuiltin(BUILTIN_TRACKS.find((d) => d.id === id));
+  const gp = byId('eclats'); gp.setParams({ grip: 70 });
+  out['sp:grip70:bot'] = runGhost(gp, { bot: true }, 120 * 60);
+  const gi = byId('verglas'); gi.setParams({ grip: 140 });
+  out['sp:grip140:noise'] = runGhost(gi, { inputs: randomInputs(61, 3000) }, 3000);
+  const wd = byId('canyon'); wd.setParams({ wind: 80, windDir: 90 });
+  out['sp:wind80e:bot'] = runGhost(wd, { bot: true }, 120 * 60);
+  const wl = byId('spirale'); wl.setParams({ wind: 100, windDir: 225, grip: 85 });
+  out['sp:wind-loops:noise'] = runGhost(wl, { inputs: randomInputs(67, 3000) }, 3000);
+  // 7. Logique du circuit (E10, sim/logic.js) : une porte qui s'ouvre au checkpoint, un pont qui disparaît et revient, gravité et compteurs par zone,
+  // un obstacle d'un groupe caché puis montré.
+  const door = scriptTrack('logique-porte', 'start S3 S3 C S3 S3 S3 S3 finish');
+  const dc = door.tiles.findIndex((x) => x.t === 'checkpoint');
+  door.tiles[dc + 2].g = 2; door.tiles[dc + 3].g = 2;
+  door.setLogic({ off: [2], rules: [{ on: ['cp', 1], do: [['show', 2]], once: true }] });
+  out['logic:door:bot'] = runGhost(door, { bot: true }, 120 * 60);
+  out['logic:door:noise'] = runGhost(door, { inputs: randomInputs(71, 3000) }, 3000);
+  const zt = scriptTrack('logique-zones', 'start S3 S3 S3 C S3 S3 S3 S3 finish');
+  zt.tiles[2].g = 4; zt.tiles[6].g = 6; zt.tiles[7].g = 6;
+  zt.setLogic({ vars: 2, rules: [
+    { on: ['zone', 4], do: [['grav', 70], ['var', 0, '+', 1], ['hide', 6]] },
+    { on: ['cp', 0], if: [['var', 0, '>=', 1], ['hidden', 6]], do: [['toggle', 6], ['grav', 120], ['var', 1, '=', 3]] },
+    { on: ['time', 900], if: [['var', 1, '==', 3]], do: [['grav', 100]], once: true },
+  ] });
+  out['logic:zones:bot'] = runGhost(zt, { bot: true }, 120 * 60);
+  out['logic:zones:noise'] = runGhost(zt, { inputs: randomInputs(73, 3000) }, 3000);
+  const ob = scriptTrack('logique-obstacle', 'start S3 S3 S3 C S3 S3 S3 finish');
+  placeObstacles(ob, [{ k: 'pendulum', at: 0.3 }, { k: 'hammer', at: 0.7 }]);
+  ob.decos.forEach((d, i) => { d.g = 5 + i; });
+  ob.setLogic({ off: [5], rules: [{ on: ['cp', 1], do: [['show', 5], ['hide', 6]] }] });
+  out['logic:obstacles:bot'] = runGhost(ob, { bot: true }, 120 * 60);
   return out;
 }
 

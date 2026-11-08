@@ -35,6 +35,8 @@ export const KEY_ACTIONS = {
     ['ed.levelView', 'Vue par niveau (estomper les autres)', ['KeyZ', '']],
     ['ed.verify', 'Vérifier le circuit (course complète)', ['F2', '']],
     ['ed.params', 'Paramètres du niveau', ['F3', '']],
+    ['ed.groups', 'Groupes et calques', ['F4', '']],
+    ['ed.logic', 'Logique du circuit', ['F6', '']],
   ],
 };
 

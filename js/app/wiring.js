@@ -183,6 +183,8 @@ export const wiringMethods = {
       case 'params': ed.openParams(); break;
       case 'testhere': ed.testHere(); break;
       case 'levelview': ed.toggleLevelView(); break;
+      case 'groups': ed.openGroups(); break;
+      case 'logic': ed.openLogic(); break;
       case 'export': this.shareModal(ed.track.encode(), ed.track.name, ed.track); break;
       case 'import': this.importModal(true); break;
       case 'new':

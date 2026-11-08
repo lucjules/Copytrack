@@ -156,7 +156,7 @@ export default {
   'Pièce « {name} » importée.': 'Part “{name}” imported.',
   'Pièce « {name} » enregistrée.': 'Part “{name}” saved.',
   'Hauteur de la forme': 'Shape height', 'Profondeur': 'Depth',
-  'Vue de face (à gauche) et de dessus (à droite) ; 1 case = 2 m. La pièce se pose ensuite comme une décoration (taille, rotation, couleur réglables).': 'Front view (left) and top view (right); 1 square = 2 m. The part is then placed like a decoration (size, rotation and colour adjustable).',
+  'Vue de face (à gauche), de dessus (au milieu) et en 3D (glisser pour tourner) ; 1 case = 2 m. La pièce se pose ensuite comme une décoration (taille, rotation, couleur réglables).': 'Front view (left), top view (middle) and 3D (drag to turn); 1 square = 2 m. The part is then placed like a decoration (size, rotation and colour adjustable).',
   'Modifier la pièce': 'Edit the part', 'Créer une pièce': 'Create a part', 'Ajoute au moins une forme.': 'Add at least one shape.',
   'Pièce perso': 'Custom part', 'Mes pièces': 'My parts',
   '{n:w} forme': '{n} shape', '{n:w} formes': '{n} shapes',

@@ -34,7 +34,7 @@ export const wallMethods = {
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
-      if (!tile.tn || tile.v || this.broken.has(tile) || !isFloor(tile)) continue;
+      if (!tile.tn || tile.v || this.excl.has(tile) || !isFloor(tile)) continue;
       toLocal(tile, p.x, p.z, L1);
       sampleLocal(tile, L1.lx, L1.lz, S1);
       if (!S1.inFootprint || Math.abs(S1.d) > ROAD_HALF + RAIL_W) continue;
@@ -58,7 +58,7 @@ export const wallMethods = {
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
-      if (tile.mv || tile.v || this.broken.has(tile) || !isFloor(tile) || PIECES[tile.t].kind === 'loop') continue;
+      if (tile.mv || tile.v || this.excl.has(tile) || !isFloor(tile) || PIECES[tile.t].kind === 'loop') continue;
       const area = PIECES[tile.t].kind === 'area';
       toLocal(tile, p.x, p.z, L1);
       sampleLocal(tile, L1.lx, L1.lz, S1);
@@ -134,7 +134,7 @@ export const wallMethods = {
     const tiles = this.track.tilesAt(cx, cz);
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
-      if (tile.mv || this.broken.has(tile)) continue;
+      if (tile.mv || this.excl.has(tile)) continue;
       if (this._probeTile(tile, x, z, px, pz, y, 0)) return HIT;
     }
     // Pièces mobiles : bordures à leur position du moment. L'index les range dans toutes les cases qu'elles balaient : celles de cette case suffisent.
@@ -142,7 +142,7 @@ export const wallMethods = {
     const time = this.time;
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
-      if (!tile.mv || this.broken.has(tile)) continue;
+      if (!tile.mv || this.excl.has(tile)) continue;
       const o = this.track.moverOffset(tile, time, MOV);
       if (o.a) {
         // Pièce tournante : on interroge sa géométrie « au repos », puis on remet le résultat dans le repère du monde.

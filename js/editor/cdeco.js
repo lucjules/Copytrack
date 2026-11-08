@@ -1,6 +1,7 @@
 // « Mes pièces » : l'atelier de pièces décoratives de l'éditeur (lot 12). On assemble des formes simples, on voit la pièce de face et de dessus, on l'enregistre dans sa
 // bibliothèque, puis on la pose comme n'importe quelle décoration. Les règles sont dans customDeco.js. Ces méthodes s'ajoutent au prototype de EditorSession.
 import { h } from '../dom.js';
+import { createPartsPreview } from './preview3d.js';
 import { listCustomDecos, saveCustomDeco, deleteCustomDeco, newId } from '../storage.js';
 import { MAX_DECO_PARTS, DECO_SHAPES, DECO_SHAPE_LABELS, sanitizeDecoPart, sanitizeDecoParts, encodeDeco, decodeDeco, MAX_CUSTOM_DECOS } from '../customDeco.js';
 
@@ -66,7 +67,9 @@ export const cdecoMethods = {
     const name = h('input', { type: 'text', maxlength: 24, value: existing ? existing.name : 'Ma pièce' });
     const front = h('canvas', { width: 240, height: 180, class: 'pixcv cdv' }), top = h('canvas', { width: 240, height: 240, class: 'pixcv cdv' });
     const ctl = h('div', { class: 'studio' });
-    const redraw = () => { drawDeco(front, parts, sel, 'front'); drawDeco(top, parts, sel, 'top'); };
+    const p3d = h('canvas', { width: 240, height: 180, class: 'pixcv cdv cdv3d', title: 'Aperçu 3D : glisser pour tourner', 'aria-label': 'Aperçu 3D de la pièce' });
+    const preview = createPartsPreview(p3d);
+    const redraw = () => { drawDeco(front, parts, sel, 'front'); drawDeco(top, parts, sel, 'top'); if (preview) preview.set(parts); };
     const row = (label, min, max, step, key) => {
       const p = parts[sel], out = h('output', {}, String(p[key])), r = h('input', { type: 'range', min, max, step, value: p[key] });
       r.oninput = () => { parts[sel] = sanitizeDecoPart({ ...parts[sel], [key]: Number(r.value) }); out.textContent = parts[sel][key]; redraw(); };
@@ -88,9 +91,9 @@ export const cdecoMethods = {
         h('div', { class: 'row' }, h('button', { class: 'btn small', type: 'button', disabled: parts.length >= MAX_DECO_PARTS, onclick: () => { parts.push({ ...parts[sel], x: parts[sel].x + 0.5 }); sel = parts.length - 1; build(); redraw(); } }, 'Dupliquer'),
           h('button', { class: 'btn small danger', type: 'button', disabled: parts.length <= 1, onclick: () => { parts.splice(sel, 1); sel = Math.max(0, sel - 1); build(); redraw(); } }, 'Supprimer la forme')));
     };
-    const body = h('div', {}, h('div', { class: 'srow' }, h('span', {}, 'Nom'), name), h('div', { class: 'row wrap' }, front, top), h('p', { class: 'meta' }, 'Vue de face (à gauche) et de dessus (à droite) ; 1 case = 2 m. La pièce se pose ensuite comme une décoration (taille, rotation, couleur réglables).'), ctl);
+    const body = h('div', {}, h('div', { class: 'srow' }, h('span', {}, 'Nom'), name), h('div', { class: 'row wrap' }, front, top, ...(preview ? [p3d] : [])), h('p', { class: 'meta' }, 'Vue de face (à gauche), de dessus (au milieu) et en 3D (glisser pour tourner) ; 1 case = 2 m. La pièce se pose ensuite comme une décoration (taille, rotation, couleur réglables).'), ctl);
     build(); redraw();
-    this.app.ui.modal({ title: existing ? 'Modifier la pièce' : 'Créer une pièce', body, wide: true, actions: [{ label: 'Annuler' }, { label: 'Enregistrer', primary: true, onClick: () => {
+    this.app.ui.modal({ title: existing ? 'Modifier la pièce' : 'Créer une pièce', body, wide: true, onClose: () => { if (preview) preview.dispose(); }, actions: [{ label: 'Annuler' }, { label: 'Enregistrer', primary: true, onClick: () => {
       const clean = sanitizeDecoParts(parts);
       if (!clean.length) { this.app.ui.flash('Ajoute au moins une forme.'); return false; }
       const e = saveCustomDeco({ id: existing ? existing.id : newId(), name: name.value.trim() || 'Ma pièce', parts: clean });

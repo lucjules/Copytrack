@@ -277,9 +277,28 @@ try {
     await page.keyboard.down('ArrowUp'); await page.waitForTimeout(600); await page.keyboard.up('ArrowUp');
     await app(() => window.copytrack.session._finish(window.copytrack.session.logic.steps / 120));
     await waitApp(() => !document.getElementById('finish').classList.contains('hidden'));
+    // Coach à l'arrivée : une course prudente (pilote automatique lent) face au record : des conseils localisés, avec leurs mesures.
+    await app(async (r) => {
+      const a = window.copytrack, s = a.session, { traceFromBot } = await import('/js/analysis/trace.js');
+      const slow = traceFromBot(s.track, { latK: 0.4 });
+      s.lastRun = { inputs: slow.inputs, time: slow.time }; s.prevRun = { inputs: r.inputs, time: r.time };
+      await a._finishCoach(s, slow.time);
+    }, run);
+    await waitApp(() => !document.getElementById('fin-coach').classList.contains('hidden'), null, 20000);
+    assert.ok(await page.evaluate(() => document.querySelectorAll('#fin-coach li').length >= 1));
+    assert.match(await page.evaluate(() => document.querySelector('#fin-coach li').textContent), /^Secteur \d+ : .*\d+(\.\d+)? s perdues/);
+    assert.match(await page.evaluate(() => document.querySelector('#fin-coach h3').textContent), /comparé à ton record/);
     await click('#fin-replay');
     await waitApp(() => window.copytrack.session && window.copytrack.session._th, null, 20000);
     assert.deepEqual(await app(() => window.copytrack.session._th.runs.map((r) => r.label)), ['Cette course', 'Ancien record'], 'nouveau record : comparé à l’ancien');
+    // Coach dans le Theater : la course prudente perd du temps face au record ; repères sur la barre et conseils cliquables.
+    await waitApp(() => window.copytrack.session._th.traces, null, 30000);
+    if (await page.evaluate(() => document.getElementById('theater-panel').classList.contains('hidden'))) await click('#theater [data-th="panel"]');
+    await waitApp(() => document.querySelectorAll('#th-coach li').length >= 1, null, 10000);
+    assert.ok(await app(() => window.copytrack.session._th.marks.some((m) => m.kind === 'coach')), 'repère du coach sur la barre de temps');
+    await app(() => { window.copytrack.session.replayPaused = true; });       // (en lecture, le pas avancerait entre le clic et la vérification)
+    await click('#th-coach [data-tip="0"]');
+    assert.ok(await app(() => { const s = window.copytrack.session; return Math.abs(s.tick - Math.max(0, s._th.tips[0].tick - 360)) <= 1; }), 'le conseil amène 3 s avant le passage');
     await app(() => window.copytrack.endReplay());
     await waitApp(() => window.copytrack.session && !window.copytrack.session.replay && window.copytrack.mode === 'race', null, 20000);
     await app(() => window.copytrack.quitRace());
@@ -510,7 +529,7 @@ try {
     await app(() => window.copytrack.ui.closeModal());
     await app(() => window.copytrack.session._cdecoDialog(null));
     await page.waitForTimeout(300);
-    assert.equal(await page.locator('#modal-body canvas.cdv').count(), 2, 'vues de face et de dessus');
+    assert.equal(await page.locator('#modal-body canvas.cdv').count(), 3, 'vues de face, de dessus et en 3D (E9)');
     await click('#modal-actions button.primary');
     const lib = await app(async () => (await import('/js/storage.js')).listCustomDecos().length);
     assert.equal(lib, 1, 'la pièce est dans la bibliothèque');
@@ -742,6 +761,16 @@ try {
     assert.deepEqual(after.am, { sky: 'night', fog: 'thick', music: 'none', weather: '', sunAz: -1, tint: '', gtint: '', fogC: '', cycle: '' });
     assert.ok(await app((c) => { const t = window.copytrack.session.track.constructor.decode(c); return t.ambiance.fog === 'thick'; }, after.code), 'le code relu garde l\'ambiance');
     await shot('22-ambiance-nuit');
+    // --- adhérence et vent (paramètres de simulation, E8) : ils changent la course, donc la signature
+    const sig0 = await app(() => window.copytrack.session.track.signature());
+    await app(() => window.copytrack.session.openParams());
+    await waitApp(() => document.getElementById('pp-grip'));
+    await page.evaluate(() => { const g = document.getElementById('pp-grip'); g.value = '70'; g.dispatchEvent(new Event('input')); const w = document.getElementById('pp-wind'); w.value = '40'; w.dispatchEvent(new Event('input')); document.getElementById('pp-winddir').value = '90'; [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent.trim() === 'Appliquer').click(); });
+    await waitApp(() => window.copytrack.session.track.grip === 70);
+    assert.deepEqual(await app(() => { const t = window.copytrack.session.track; return [t.grip, t.wind, t.windDir]; }), [70, 40, 90]);
+    assert.notEqual(await app(() => window.copytrack.session.track.signature()), sig0, 'la signature change');
+    await app(() => window.copytrack.session.track.setParams({ grip: 100, wind: 0, windDir: 0 }));
+    assert.equal(await app(() => window.copytrack.session.track.signature()), sig0, 'revenue aux valeurs par défaut, la signature aussi');
     // --- prefabs
     await page.evaluate(() => document.querySelector('#ed-palette .pal-tab[data-tab="prefabs"]').click());
     await waitApp(() => document.querySelectorAll('#ed-palette [data-pf-starter]').length >= 6);
@@ -771,6 +800,83 @@ try {
     await app(() => window.copytrack.session.setGuided(true));
     assert.equal(await page.evaluate(() => document.querySelector('#ed-palette .pal-tab[data-tab="prefabs"]').hidden), true, 'mode guidé : pas de prefabs');
     await app(async () => { window.copytrack.session.setGuided(false); const m = await import('/js/storage.js'); for (const p of m.listPrefabs()) m.deletePrefab(p.id); window.copytrack.settings.editorGuided = null; });
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  await test('éditeur : groupes et calques (ranger la sélection, nommer, masquer = ni dessiné ni visable, verrouiller), aperçu 3D des pièces perso', async () => {
+    await app(() => window.copytrack.openEditor({ code: window.copytrack.builtins[1].track.encode(), name: 'Groupes' }));
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.openGroups, null, 20000);
+    await app(() => { const s = window.copytrack.session; s.setTool('select'); s.sel = { x0: -500, z0: -500, x1: 500, z1: 500 }; });
+    await click('[data-ed="groups"]');
+    await waitApp(() => document.querySelector('.ed-groups [data-a="new"]'));
+    await click('.ed-groups [data-a="new"]');
+    await waitApp(() => document.querySelectorAll('.ed-gtable tr[data-g]').length === 1);
+    const n = await app(() => window.copytrack.session.track.tiles.filter((t) => t.g === 1).length);
+    assert.equal(n, await app(() => window.copytrack.session.track.tiles.length), 'toutes les pièces sélectionnées sont dans le groupe 1');
+    await page.locator('.ed-gtable tr[data-g="1"] input').fill('Tout');
+    await page.locator('.ed-gtable tr[data-g="1"] input').dispatchEvent('change');
+    assert.deepEqual(await app(() => window.copytrack.session.track.groupNames()), [[1, 'Tout']]);
+    // masquer : le maillage du groupe disparaît et rien n'est plus visable
+    await click('.ed-gtable tr[data-g="1"] [data-a="hide"]');
+    assert.ok(await app(() => { const v = window.copytrack.session.view; const gs = v.group.children.filter((c) => c.userData.g === 1); return gs.length > 0 && gs.every((c) => !c.visible); }), 'calque masqué');
+    assert.equal(await app(() => window.copytrack.session._selTiles().length), 0, 'un calque masqué ne se sélectionne pas');
+    await click('.ed-gtable tr[data-g="1"] [data-a="hide"]');
+    assert.ok(await app(() => window.copytrack.session.view.group.children.filter((c) => c.userData.g === 1).every((c) => c.visible)));
+    await click('.ed-gtable tr[data-g="1"] [data-a="lock"]');
+    assert.equal(await app(() => window.copytrack.session._selTiles().length), 0, 'un calque verrouillé ne se sélectionne pas');
+    await click('.ed-gtable tr[data-g="1"] [data-a="lock"]');
+    await shot('23-groupes');
+    // le code garde les groupes ; annuler les retire
+    assert.deepEqual(await app(() => { const T = window.copytrack.session.track.constructor; const u = T.decode(window.copytrack.session.track.encode()); return [u.usedGroups(), u.groupNames()]; }), [[1], [[1, 'Tout']]]);
+    await app(() => window.copytrack.ui.closeModal());
+    await app(() => window.copytrack.session.undo());
+    await app(() => window.copytrack.session.undo());
+    assert.equal(await app(() => window.copytrack.session.track.usedGroups().length), 0, 'annuler retire le groupe');
+    // atelier des pièces perso : aperçu 3D
+    await app(() => window.copytrack.session._cdecoDialog(null));
+    await waitApp(() => document.querySelector('#modal canvas.cdv3d'));
+    await page.waitForTimeout(300);
+    await app(() => window.copytrack.ui.closeModal());
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  await test('éditeur de logique : une porte qui s’ouvre au checkpoint (règle créée au clic, groupe caché au départ), essai : la règle s’annonce et la porte s’ouvre', async () => {
+    await app(async () => {
+      const { scriptTrack } = await import('/js/track.js');
+      const t = scriptTrack('Porte', 'start S3 S3 C S3 S3 S3 S3 finish');
+      const cp = t.tiles.findIndex((x) => x.t === 'checkpoint');
+      t.tiles[cp + 2].g = 2; t.tiles[cp + 3].g = 2; t.setGroupName(2, 'Porte');
+      window.copytrack.openEditor({ code: t.encode(), name: 'Porte' });
+    });
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.openLogic, null, 20000);
+    await click('[data-ed="logic"]');
+    await waitApp(() => document.getElementById('lg-new'));
+    await click('#lg-new');
+    await waitApp(() => document.getElementById('lg-ok'));
+    assert.match(await page.evaluate(() => document.querySelector('.ed-lsentence').textContent), /Quand le checkpoint n° 1 est passé : montrer « Porte »/);
+    await click('#lg-ok');
+    await waitApp(() => document.querySelector('[data-off="2"]'));
+    await page.locator('[data-off="2"]').check();
+    assert.equal(await page.evaluate(() => document.querySelectorAll('.ed-lissues li').length), 0, 'aucun problème signalé');
+    await click('#modal-actions button.primary');
+    await waitApp(() => window.copytrack.session.track.lg);
+    assert.deepEqual(await app(() => window.copytrack.session.track.lg.off), [2]);
+    // essai depuis l'éditeur : la porte est cachée au départ, la règle s'annonce au checkpoint
+    await app(() => window.copytrack.session.test());
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session.state === 'racing', null, 40000);
+    assert.ok(await app(() => window.copytrack.session.sim.lgc.state.hidden.has(2)), 'porte cachée au départ');
+    assert.ok(await app(() => window.copytrack.session.view.group.children.filter((c) => c.userData.g === 2).every((c) => !c.visible)), 'porte invisible');
+    await page.keyboard.down('ArrowUp');
+    await waitApp(() => !window.copytrack.session.sim.lgc.state.hidden.has(2), null, 20000);
+    await page.keyboard.up('ArrowUp');
+    await waitApp(() => /⚙ Règle 1 : Quand le checkpoint n° 1 est passé/.test(document.getElementById('flash') ? document.getElementById('flash').textContent : document.body.textContent), null, 5000);
+    await page.waitForTimeout(100);
+    assert.ok(await app(() => window.copytrack.session.view.group.children.filter((c) => c.userData.g === 2).every((c) => c.visible)), 'la porte apparaît');
+    await shot('24-logique-porte');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'editor', null, 20000);
     await app(() => window.copytrack.leaveEditor());
     await waitApp(() => window.copytrack.mode === 'menu');
   });

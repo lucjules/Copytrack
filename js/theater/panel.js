@@ -49,6 +49,12 @@ export function renderTheaterRuns(T) {
 // Repères de la barre de temps et tableau des secteurs (quand l'analyse est prête).
 export function renderTheaterSectors(s, T) {
   $('th-marks').innerHTML = T.marks.map((m) => `<i class="th-mark ${m.kind}" style="left:${(100 * m.tick / Math.max(1, T.total)).toFixed(2)}%" title="${esc(m.label)}"></i>`).join('');
+  const tipsEl = $('th-coach');
+  tipsEl.classList.toggle('hidden', !(T.tips && T.tips.length));
+  if (T.tips && T.tips.length) {
+    tipsEl.innerHTML = `<h4>💡 Conseils face à « ${esc(T.runs[1].label)} »</h4><ol>${T.tips.map((t, i) => `<li><button class="btn small" type="button" data-tip="${i}" title="Aller à ce passage (3 s avant)">▶</button> ${esc(t.text)}</li>`).join('')}</ol>`;
+    for (const b of tipsEl.querySelectorAll('[data-tip]')) b.onclick = () => { s.app.audio.click(); s.theaterSeek(Math.max(0, T.tips[+b.dataset.tip].tick - 360)); };
+  }
   const S = T.sectors, main = S[0];
   if (!main || !main.length) { $('th-sectors').innerHTML = '<p class="meta">Secteurs indisponibles pour cette course.</p>'; return; }
   const best = main.map((_, k) => Math.min(...S.filter(Boolean).map((x) => (x[k] ? x[k].dt : Infinity))));

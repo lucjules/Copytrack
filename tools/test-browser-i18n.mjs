@@ -183,6 +183,22 @@ try {
     await page.evaluate(() => window.copytrack.session.openParams());
     await page.waitForTimeout(250);
     assert.deepEqual(await frenchLeft(page), [], 'paramètres du niveau : texte resté en français');
+    await page.evaluate(() => { window.copytrack.ui.closeModal(); const s = window.copytrack.session; s.setTool('select'); s.sel = { x0: -50, z0: -50, x1: 50, z1: 50 }; s.openGroups(); });
+    await page.waitForTimeout(250);
+    assert.deepEqual(await frenchLeft(page), [], 'groupes et calques : texte resté en français');
+    await page.evaluate(() => {
+      window.copytrack.ui.closeModal();
+      const s = window.copytrack.session, t = s.track;
+      if (t.tiles.length) { t.tiles[0].g = 2; t.setGroupName(2, 'Door'); }
+      t.setLogic({ vars: 1, off: [], rules: [{ on: ['cp', 1], if: [['var', 0, '>=', 1]], do: [['show', 2], ['grav', 60]], once: true }, { on: ['time', 600], do: [['fx', 'sound', 'ding']] }] });
+      s.openLogic();
+    });
+    await page.waitForTimeout(250);
+    assert.match(await text(page, '.ed-lrules'), /When checkpoint no\. 1 is passed, if counter 1 ≥ 1: show « Door », gravity at 60 %\. \(once\)/);
+    assert.deepEqual(await frenchLeft(page), [], 'logique du circuit : texte resté en français');
+    await page.evaluate(() => document.querySelector('[data-ed-rule="0"]').click());
+    await page.waitForTimeout(200);
+    assert.deepEqual(await frenchLeft(page), [], 'règle en cours de modification : texte resté en français');
     await ctx.close();
   });
 

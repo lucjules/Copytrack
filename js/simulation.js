@@ -10,6 +10,7 @@
 import { CarPhysics } from './physics.js';
 import { RaceLogic, placeAtStart } from './raceLogic.js';
 import { DT, OFF_TRACK_RESPAWN_S } from './constants.js';
+import { createLogic } from './sim/logic.js';
 
 // Replace la voiture au point de réapparition r (retour au checkpoint) : position, véhicule et gravité de ce moment-là.
 export function placeAtRespawn(phys, r) {
@@ -24,6 +25,9 @@ export class Simulation {
     this.track = track;
     this.phys = new CarPhysics(track);
     this.logic = new RaceLogic(track, { partial });
+    // Logique du circuit (sim/logic.js) : null sans règles. Son état suit les règles de course (départ, instantané des checkpoints, retour).
+    this.lgc = createLogic(track, this.phys, this.logic);
+    if (this.lgc) this.logic.ext = this.lgc;
     this.offTrackLimit = offTrackLimit;
     this.groundT = 0;       // temps passé hors piste (s)
     this.idle = 0;          // pas joués depuis l'arrivée (le chrono de la course est figé, pas les obstacles ni les pièces mobiles)
@@ -67,7 +71,15 @@ export class Simulation {
 
   // Phase 2 d'un pas : règles de course puis suivi du hors-piste. Renvoie l'évènement de course (checkpoint, tour, arrivée...) ou null.
   score() {
+    const before = this.logic.respawn;
     const ev = this.logic.update(this.phys);
+    if (this.lgc) {
+      this.lgc.onStep(ev);                // règles de la logique du circuit (leurs actions valent à partir du pas suivant)
+      // Un checkpoint (ou un tour) vient de devenir le point de retour, déjà pris : il ne redéclenchera pas ses règles. L'instantané garde donc l'état
+      // de la logique APRÈS elles (sinon une porte ouverte à ce checkpoint resterait fermée après un retour). Anneau : instantané d'avant (pre).
+      const r = this.logic.respawn;
+      if (r !== before && r.snap && !r.snap.pre) { r.snap.ext = this.lgc.snapshot(); r.grav = this.phys.gravMul; }
+    }
     if (this.phys.offTrack) this.groundT += DT; else this.groundT = 0;
     // L'arrivée franchie l'emporte : on ne rappelle pas au checkpoint une voiture qui vient de passer la ligne (la course en direct, le fantôme et
     // la vérification serveur doivent conclure pareil).

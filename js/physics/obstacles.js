@@ -27,7 +27,10 @@ export const obstacleMethods = {
       for (let iz = gz - 3; iz <= gz + 3; iz++) {
         const bucket = grid.get(obstacleKey(ix, iz));
         if (bucket === undefined) continue;
-        for (let i = 0; i < bucket.length; i++) if (this._obstacleContact(bucket[i], t)) return;
+        for (let i = 0; i < bucket.length; i++) {
+          if (this.hiddenDecos && this.hiddenDecos.has(bucket[i])) continue;      // obstacle d'un groupe caché par la logique du circuit
+          if (this._obstacleContact(bucket[i], t)) return;
+        }
       }
     }
   },

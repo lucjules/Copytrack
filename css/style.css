@@ -1292,3 +1292,28 @@ body.hud-editing > section, body.hud-editing #touch { display: none !important; 
 .th-sectors { overflow-x: auto; }
 @media (max-width: 720px), (max-height: 520px) { .theater { bottom: calc(58px + env(safe-area-inset-bottom)); padding: 6px 8px; } .theater-panel { max-height: 45vh; } .theater-panel .th-map { height: 150px; } }
 .theater-on .replay-bar .rh, .theater-on #hud-hint { display: none; }
+.fin-coach { margin: 10px 0 4px; padding: 10px 14px; border-radius: 10px; background: rgba(95, 242, 255, 0.08); border: 1px solid rgba(95, 242, 255, 0.35); text-align: left; max-width: 640px; }
+.fin-coach h3 { margin: 0 0 6px; font-size: 16px; } .fin-coach h3 small { color: var(--muted); font-weight: 400; font-size: 12px; }
+.fin-coach ol { margin: 0 0 8px; padding-left: 20px; font-size: 14px; display: grid; gap: 4px; }
+.th-coach h4 { margin: 0 0 4px; font-size: 13px; } .th-coach ol { margin: 0; padding-left: 18px; font-size: 12px; display: grid; gap: 4px; } .th-coach .btn { padding: 0 6px; font-size: 11px; }
+
+/* ---------- Éditeur : groupes et calques, logique du circuit (js/editor/groups.js, logicUi.js) ---------- */
+.ed-gtable { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0 10px; }
+.ed-gtable th, .ed-gtable td { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+.ed-gtable input[type="text"] { width: 100%; min-width: 90px; }
+.ed-gtable .btn.small { padding: 2px 8px; margin-right: 4px; }
+.ed-gtable .btn[aria-pressed="true"] { border-color: var(--amber); }
+.ed-logic { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.ed-lrow { display: grid; grid-template-columns: minmax(120px, 190px) minmax(0, 1fr); gap: 8px; align-items: start; }
+.ed-lrow > span:first-child { color: var(--muted); padding-top: 4px; }
+.ed-loff { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.ed-lrules { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+.ed-lrules li { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.ed-lbtns { display: flex; gap: 4px; flex-shrink: 0; }
+.ed-lissues { margin: 0; padding-left: 18px; font-size: 13px; }
+.ed-lissues .error { color: var(--bad); } .ed-lissues .warn { color: var(--amber); }
+.ed-lconds, .ed-lacts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ed-lconds li, .ed-lacts li { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.ed-logic input[type="number"] { width: 6em; }
+.ed-lsentence { margin: 4px 0; padding: 8px 10px; border-radius: 8px; background: rgba(95, 242, 255, 0.08); border: 1px solid rgba(95, 242, 255, 0.3); }
+@media (max-width: 600px) { .ed-lrow { grid-template-columns: minmax(0, 1fr); } }

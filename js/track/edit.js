@@ -103,6 +103,8 @@ export const editMethods = {
       k: d.k, x: +d.x, y: +d.y, z: +d.z, ry: +d.ry || 0, s: Math.max(0.2, Math.min(20, +d.s || 1)),
       c: d.c | 0, u: d.u ? String(d.u).slice(0, 400) : '',
     };
+    const g = Math.max(0, Math.min(63, d.g | 0));
+    if (g) deco.g = g;                     // groupe (calque de l'éditeur ; logique du circuit)
     // Obstacles : décalage de phase (0 à 1) pour désynchroniser plusieurs obstacles.
     if (isObstacle(deco.k)) { deco.ph = Math.max(0, Math.min(0.95, Math.round((+d.ph || 0) * 20) / 20)); deco.s = Math.max(0.5, Math.min(2.5, deco.s)); }
     if (!DECO_ORDER.includes(deco.k)) return null;
