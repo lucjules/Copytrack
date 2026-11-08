@@ -13,6 +13,7 @@ import { PHYS_VER } from '../version.js';
 import { medalFor, MEDALS } from '../medals.js';
 import { medalIcon } from '../ui.js';
 import { online } from '../online.js';
+import { aidsActive } from '../aids.js';
 import { dailyChallenge } from '../daily.js';
 import { dailyMutation, streakOf } from '../mutations.js';
 import { MUTATION_COINS, STREAK_STEPS } from '../rewards.js';
@@ -199,6 +200,7 @@ export const raceHubMethods = {
         ${cats.map((c) => { const on = d.variantStr && d.key.endsWith('~v1.' + c.id); return `<button class="chip${on ? ' on' : ''}" role="radio" aria-checked="${!!on}" data-cat="${c.id}">${esc(c.label)}</button>`; }).join('')}
         ${d.variant && !cats.some((c) => d.key.endsWith('~v1.' + c.id)) ? `<button class="chip on" role="radio" aria-checked="true" data-cat="__cur">${esc(h.modeLabel ? '🌐 ' + h.modeLabel : d.variantStr)}</button>` : ''}
         ${d.variant ? '<p class="meta hub-hint">Classement et record à part, sans médailles ni pièces : le record officiel ne bouge pas.</p>' : ''}</div>` : ''}
+      ${aidsActive(s.aids) ? '<p class="meta hub-hint hub-aids">🦾 Aides à la conduite activées : tes courses vont dans la catégorie « assisté » (Options › Aides).</p>' : ''}
       ${d.locked ? `<p class="hub-lock" role="status">🔒 ${esc(d.locked)}</p>` : ''}
       <button class="btn big primary hub-play" id="hub-play"${d.locked ? ' disabled' : ''}>▶ Jouer <kbd>Entrée</kbd></button>`;
     for (const b of $('hub-launch').querySelectorAll('[data-ghost]')) b.onclick = () => {

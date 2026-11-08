@@ -33,6 +33,7 @@ import { trainingMethods } from './race/training.js';
 import { theaterMethods } from './theater/session.js';
 import { theaterCameraMethods } from './theater/cameras.js';
 import { EnvFx } from './envFx.js';
+import { DrivingAids, aidsActive, aidedKey, steerCurve } from './aids.js';
 
 const CAR_COLOR = '#ffd23e';   // éclat quand la voiture retrouve sa forme d'origine (les plaques ont la couleur de leur revêtement : SURFACES)
 
@@ -44,6 +45,16 @@ export class RaceSession {
     this.demo = !!opts.demo;
     this.trackKey = opts.trackKey;
     this.medals = opts.medals || null;
+    // Aides à la conduite (aids.js) : la course va dans la catégorie « assisté » (clé « …as-1 »), sans médailles ; pas d'aides en saison,
+    // duel ou tournoi (aidedKey renvoie null : elles sont coupées pour cette course).
+    this.aids = null; this.aidsOff = false;
+    if (aidsActive(app.settings.aids) && !opts.replay && !this.demo) {
+      const k = opts.trackKey ? aidedKey(opts.trackKey) : opts.trackKey;
+      if (k === null) this.aidsOff = true;
+      else { this.trackKey = k; this.medals = null; this.aids = new DrivingAids(track, app.settings.aids); }
+    }
+    if (this.aids) app.ui.flash('🦾 Aides à la conduite : course classée « assisté », sans médailles.', 2.6);
+    else if (this.aidsOff) app.ui.flash('Aides coupées pour cette course : elles ne comptent pas en saison, duel ou tournoi.', 3);
 
     this.view = new TrackView(track, app.materials);
     app.scenery.trackGroup.add(this.view.group);
@@ -171,6 +182,7 @@ export class RaceSession {
     this.skids.clear();
     if (this.trailRib) this.trailRib.reset();
     if (this.bot) this.bot.reset(this.phys);
+    if (this.aids) this.aids.reset(this.phys);
     if (!this.demo) {
       app.ui.hud.reset(this);
       app.ui.hideOverlay('finish');
@@ -200,6 +212,7 @@ export class RaceSession {
     // tourner : la téléportation coûte tout le temps perdu, et le compteur de téléportation prévient les autres joueurs.
     const r = this.sim.rewind({ keepClock: !!this.multi });      // (remet aussi la voiture au point de retour, avec son véhicule et sa gravité)
     if (this._train) this._trainRespawn();
+    if (this.aids) this.aids.reset(this.phys);
     Object.assign(this.stats, this.statsSnap);       // les réceptions, turbos et anneaux d'après le checkpoint ne comptent plus
     if (this.multi) { this.teleSeq = (this.teleSeq + 1) & 255; this._jumped = true; this.protectUntil = this.tick + 240; }       // 2 s sans collision après un retour au checkpoint
     const steps = this.logic.steps;
@@ -257,7 +270,9 @@ export class RaceSession {
     }
     if (this.bot) return this.bot.control(this.phys);
     if (this.state === 'finished') return { steer: 0, throttle: false, brake: true, drift: false };
-    return this.app.input.drive();
+    const raw = this.app.input.drive();
+    raw.steer = steerCurve(raw.steer, this.app.settings.steerCurve);      // réponse du volant (réglage du ressenti)
+    return this.aids && this.state === 'racing' ? this.aids.apply(raw, this.phys) : raw;      // commandes effectives : ce sont elles qui sont enregistrées
   }
 
   _stepOnce() {

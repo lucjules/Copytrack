@@ -178,6 +178,7 @@ export class EditorSession {
     if (input.act('ed.inspect')) this.setTool(this.tool === 'inspect' ? 'straight' : 'inspect');
     if (input.act('ed.recenter')) this.recenter();
     if (input.act('ed.topView')) this.toggleTopView();
+    if (input.act('ed.freeCam')) this.toggleFreeCam();
     if (input.act('ed.grid')) { this.showGrid = !this.showGrid; this.app.ui.flash(this.showGrid ? 'Grille' : 'Sans grille', 1.2); }
     if (input.act('ed.help')) { this.app.editorHelp(); return; }
     if (input.act('ed.test')) { if (shift) this.testHere(); else this.test(); return; }
@@ -192,7 +193,7 @@ export class EditorSession {
       if (input.held('left')) mx -= 1;
       if (input.held('right')) mx += 1;
       const pad = input.padEditor();
-      if (pad) { mx += pad.moveX; mz -= pad.moveZ; this.yaw -= pad.orbit * dt * 2; this.dist = Math.max(25, Math.min(700, this.dist * (1 + pad.zoom * dt * 1.5))); }
+      if (pad) { mx += pad.moveX; mz -= pad.moveZ; this.yaw -= pad.orbit * dt * 2; this.dist = Math.max(this.minDist(), Math.min(700, this.dist * (1 + pad.zoom * dt * 1.5))); }
       if (mx || mz) {
         const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
         const rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);
@@ -228,6 +229,7 @@ export class EditorSession {
       this.target.y + Math.sin(this.pitch) * this.dist,
       this.target.z + Math.cos(this.yaw) * cp * this.dist,
     );
+    if (this.freeCam && cam.position.y < 0.8) cam.position.y = 0.8;      // caméra libre : jamais sous le terrain
     cam.lookAt(this.target);
     this._updateGrid();
     if (!this.pointers.size || this.painting) this._updateHover();

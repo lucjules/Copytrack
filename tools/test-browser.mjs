@@ -29,7 +29,10 @@ catch (e) { server.kill(); console.log('  skip Chromium introuvable : test navig
 
 let failures = 0;
 const errors = [];
+// PW_ONLY=<texte>[|<texte>…] : ne lance que les tests dont le nom contient l'un des textes (mise au point ; certains tests supposent l'état
+// laissé par les précédents).
 async function test(name, fn) {
+  if (process.env.PW_ONLY && !process.env.PW_ONLY.split('|').some((x) => name.includes(x))) return;
   const before = errors.length;
   try { await fn(); if (errors.length > before) throw new Error('erreurs de la page : ' + errors.slice(before).join(' | ')); console.log('  ok   ' + name); }
   catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 5).join('\n       ')); }
@@ -956,10 +959,11 @@ try {
     assert.deepEqual(await app(() => window.copytrack.session.track.groupNames()), [[1, 'Tout']]);
     // masquer : le maillage du groupe disparaît et rien n'est plus visable
     await click('.ed-gtable tr[data-g="1"] [data-a="hide"]');
-    assert.ok(await app(() => { const v = window.copytrack.session.view; const gs = v.group.children.filter((c) => c.userData.g === 1); return gs.length > 0 && gs.every((c) => !c.visible); }), 'calque masqué');
+    // (le maillage se reconstruit à l'image suivante : on l'attend, sans quoi le test dépend de la charge de la machine)
+    await waitApp(() => { const v = window.copytrack.session.view; const gs = v.group.children.filter((c) => c.userData.g === 1); return gs.length > 0 && gs.every((c) => !c.visible); }, null, 10000);      // calque masqué
     assert.equal(await app(() => window.copytrack.session._selTiles().length), 0, 'un calque masqué ne se sélectionne pas');
     await click('.ed-gtable tr[data-g="1"] [data-a="hide"]');
-    assert.ok(await app(() => window.copytrack.session.view.group.children.filter((c) => c.userData.g === 1).every((c) => c.visible)));
+    await waitApp(() => window.copytrack.session.view.group.children.filter((c) => c.userData.g === 1).every((c) => c.visible), null, 10000);
     await click('.ed-gtable tr[data-g="1"] [data-a="lock"]');
     assert.equal(await app(() => window.copytrack.session._selTiles().length), 0, 'un calque verrouillé ne se sélectionne pas');
     await click('.ed-gtable tr[data-g="1"] [data-a="lock"]');
@@ -1186,6 +1190,91 @@ try {
     } finally {
       await app(() => { if (window.copytrack.room) window.copytrack.room.leave(); window.copytrack.ui.closeModal(); window.copytrack.showMenu('menu'); }).catch(() => {});
       await B.close();
+    }
+  });
+
+  // E22 : aides à la conduite (catégorie « assisté »), animations réduites, caméra libre de l'éditeur, parcours complet au tactile.
+  await test('aides à la conduite : course rangée dans « assisté » sans médailles, commandes effectives enregistrées ; animations réduites ; caméra libre', async () => {
+    await app(() => { const A = window.copytrack; A.settings.aids = { autoGas: true, antiSpin: true }; A.saveSettings(); A.playBuiltin(0); });
+    await waitApp(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    await page.waitForTimeout(1500);
+    const r = await app(() => { const S = window.copytrack.session; return { key: S.trackKey, medals: S.medals, aids: !!S.aids, thr: S.lastInput && S.lastInput.throttle, speed: S.phys.fwdSpeed }; });
+    assert.match(r.key, /~v1\.as-1$/, 'catégorie « assisté »');
+    assert.equal(r.medals, null, 'sans médailles');
+    assert.ok(r.aids && r.thr === true && r.speed > 5, `accélération automatique sans toucher au clavier (${r.speed.toFixed(1)} m/s)`);
+    const rec = await app(async () => {
+      const S = window.copytrack.session, { decodeInputs, inputAt } = await import('/js/replay.js');
+      const d = decodeInputs(S.recorder.encode()), last = inputAt(d, Math.max(0, S.tick - 2));
+      return !!last.throttle;
+    });
+    assert.ok(rec, 'les gaz de l’aide sont dans les commandes enregistrées');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu');
+    await app(() => { const A = window.copytrack; A.settings.aids = {}; A.saveSettings(); });
+    // Animations réduites : le réglage, puis le système
+    await app(() => { const A = window.copytrack; A.settings.reduceMotion = 'on'; A._applyAccess(); });
+    const m = await page.evaluate(() => ({ cls: document.body.classList.contains('reduce-motion'), off: window.copytrack.motionOff, dur: getComputedStyle(document.querySelector('.screen:not(.hidden)') || document.body).animationDuration }));
+    assert.ok(m.cls && m.off, 'réglage « Oui »');
+    assert.ok(/^(0s|1e-06s|0\.000001s)$/.test(m.dur) || parseFloat(m.dur) < 0.001, `transition coupée (${m.dur})`);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await app(() => { const A = window.copytrack; A.settings.reduceMotion = 'auto'; A._applyAccess(); });
+    assert.equal(await page.evaluate(() => document.body.classList.contains('reduce-motion')), true, '« Système » suit prefers-reduced-motion');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await waitApp(() => !document.body.classList.contains('reduce-motion'), null, 10000);      // et suit son changement
+    // Caméra libre de l'éditeur : au ras du sol, puis retour aux bornes habituelles
+    await app(() => window.copytrack.openEditor({ code: window.copytrack.builtins[1].track.encode(), name: 'Caméra' }));
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.toggleFreeCam, null, 20000);
+    await click('[data-ed="freecam"]');
+    const fc = await app(() => { const s = window.copytrack.session; s.dist = 2; s.dist = Math.max(s.minDist(), s.dist); return { on: s.freeCam, min: s.minDist(), pitch: s.pitch, pressed: document.querySelector('[data-ed="freecam"]').getAttribute('aria-pressed') }; });
+    assert.deepEqual([fc.on, fc.min, fc.pressed], [true, 3, 'true']); assert.ok(fc.pitch <= 0.12);
+    await page.waitForTimeout(150);
+    assert.ok(await app(() => window.copytrack.camera.position.y >= 0.8), 'jamais sous le terrain');
+    await click('[data-ed="freecam"]');
+    assert.deepEqual(await app(() => { const s = window.copytrack.session; return [s.freeCam, s.pitch >= 0.2, s.dist >= 25]; }), [false, true, true]);
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  await test('parcours complet au tactile : accueil, carrière, fiche, course aux boutons tactiles, pause, quitter', async () => {
+    const ctxT = await browser.newContext({ locale: 'fr-FR', viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true, serviceWorkers: 'block' });
+    const pt = await ctxT.newPage();
+    pt.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+    pt.on('console', (m) => { if (m.type() === 'error' && !OFFLINE.test(m.text() + (m.location().url || ''))) errors.push('console: ' + m.text()); });
+    await pt.route(/fonts\.(googleapis|gstatic)\.com|supabase\.co/, (r) => r.abort());
+    const wait = (fn, arg, timeout = 30000) => pt.waitForFunction(fn, arg, { timeout });
+    const tap = async (sel) => { const l = pt.locator(sel).first(); await l.scrollIntoViewIfNeeded(); await l.tap({ timeout: 30000 }); };      // un vrai toucher : échoue si un autre élément le recouvre
+    // Deux pages en WebGL logiciel sur la même machine : on allège le rendu des deux (ce n'est pas l'objet du test), puis on rend celui d'avant.
+    const q0 = await app(() => window.copytrack.scenery.quality);
+    await app(() => window.copytrack.quality.apply('ultrapotato'));
+    try {
+      await pt.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'load' });
+      await pt.locator('#wl-name').fill('Pouce');
+      await tap('#wl-submit');
+      await wait(() => window.copytrack && window.copytrack.mode === 'menu');
+      assert.ok(await pt.evaluate(() => document.body.classList.contains('touch')), 'appareil tactile reconnu');
+      await pt.evaluate(() => { const A = window.copytrack; A.settings.telemetry = false; A.settings.tutorialDone = true; A.saveSettings(); A.ui.closeModal(); A.quality.apply('ultrapotato'); });
+      await pt.waitForTimeout(300);
+      await pt.evaluate(() => window.copytrack.ui.closeModal());
+      await tap('[data-action="play"]');
+      await wait(() => !document.getElementById('tracks').classList.contains('hidden') && document.querySelector('#track-list .card .num'));
+      await tap('#track-list .card:has(.num) .thumb');
+      await wait(() => !document.getElementById('race-hub').classList.contains('hidden'));
+      await tap('#hub-play');
+      await wait(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+      assert.equal(await pt.evaluate(() => document.getElementById('touch').classList.contains('hidden')), false, 'commandes tactiles affichées');
+      await pt.locator('#touch [data-t="gas"]').dispatchEvent('pointerdown');
+      await pt.waitForTimeout(1500);
+      const sp = await pt.evaluate(() => window.copytrack.session.phys.fwdSpeed);
+      await pt.locator('#touch [data-t="gas"]').dispatchEvent('pointerup');
+      assert.ok(sp > 5, `le bouton ▲ fait avancer la voiture (${sp.toFixed(1)} m/s)`);
+      await pt.locator('#touch [data-t="pause"]').dispatchEvent('pointerdown');
+      await pt.locator('#touch [data-t="pause"]').dispatchEvent('pointerup');
+      await wait(() => window.copytrack.session && window.copytrack.session.state === 'paused');
+      await tap('#pause [data-action="quit"]');
+      await wait(() => window.copytrack.mode !== 'race');
+    } finally {
+      await ctxT.close();
+      await app((q) => window.copytrack.quality.apply(q), q0);
     }
   });
 

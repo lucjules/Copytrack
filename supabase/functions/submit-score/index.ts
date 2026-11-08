@@ -12126,6 +12126,11 @@ var WIND_DIRS = [
 ];
 var RAIN_SEED = 17;
 var VARIANTS = {
+  as: {
+    re: /^1$/,
+    tag: true,
+    rule: () => ({})
+  },
   duel: {
     re: /^[1-9][0-9]{0,9}$/,
     tag: true,

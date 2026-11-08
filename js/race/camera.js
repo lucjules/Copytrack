@@ -185,7 +185,7 @@ export const cameraMethods = {
     cam.position.copy(this.camPos);
     cam.position.y -= landingDip(this._feel.dipI, this._feel.dipT, this._feelScale());     // tassement à la réception (feel.js)
     if (this.shake > 0) {
-      const k = this.shake * 0.25 * (this.app.settings.shakeAmt ?? 1);
+      const k = this.app.motionOff ? 0 : this.shake * 0.25 * (this.app.settings.shakeAmt ?? 1);      // animations réduites (a11y.js) : pas de tremblement
       cam.position.x += (Math.random() - 0.5) * k;
       cam.position.y += (Math.random() - 0.5) * k;
     }
@@ -194,7 +194,7 @@ export const cameraMethods = {
     this._fov(mode.fov + Math.min(18, sp * 0.24) + (p.boost > 0 ? 5 : 0) + this._feelFov());
   },
 
-  _feelScale() { return feelScale(this.app.settings.feel); },
+  _feelScale() { return this.app.motionOff ? 0 : feelScale(this.app.settings.feel); },      // animations réduites : aucun effet de caméra ajouté
   _feelFov() { return fovPunch(this._feel.punchT, this._feelScale()); },
 
   _fov(target) {

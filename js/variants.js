@@ -20,6 +20,7 @@ export const RAIN_SEED = 17;                       // graine des flaques de la c
 
 // Nom -> valeurs permises (texte canonique) et règle correspondante. Ajouter une catégorie = une ligne (ordre alphabétique des noms).
 export const VARIANTS = {
+  as: { re: /^1$/, tag: true, rule: () => ({}) },                                 // course avec aides à la conduite (E22, aids.js) : même circuit, classement à part
   duel: { re: /^[1-9][0-9]{0,9}$/, tag: true, rule: () => ({}) },                 // duel entre amis n° N (E17) : étiquette, fenêtre et duellistes vérifiés en base
   g: { values: ['40', '70', '130', '180'], rule: (v) => ({ g0: +v }) },            // gravité de départ (%)
   gp: { values: ['60', '80'], rule: (v) => ({ grip: +v }) },                       // adhérence de tout le circuit (%) : verglas (E13)

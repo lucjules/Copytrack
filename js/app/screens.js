@@ -45,6 +45,7 @@ export const screenMethods = {
     if (name === 'options' || name === 'controls') { this.profileTab = name; name = 'profile'; }
     if (name === 'profile') this._renderProfile();
     this.ui.showScreen(name);
+    this._fsButton();              // (le bouton plein écran du tactile dépend de l'écran affiché)
   },
 
   // ---- Tutoriel (premier lancement, ou Options > Revoir le tutoriel) -------------

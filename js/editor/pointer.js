@@ -34,7 +34,7 @@ export const pointerMethods = {
           this.previewKey = ''; this._refreshDeco();
           return;
         }
-        this.dist = Math.max(25, Math.min(700, this.dist * Math.pow(1.0015, e.deltaY)));
+        this.dist = Math.max(this.minDist(), Math.min(700, this.dist * Math.pow(1.0015, e.deltaY)));
       },
       ctx: (e) => e.preventDefault(),
       keyup: (e) => { if (e.key === 'Shift') this._endShiftY(); },
@@ -115,7 +115,7 @@ export const pointerMethods = {
         const d = Math.hypot(a.x - b.x, a.y - b.y);
         const ang = Math.atan2(b.y - a.y, b.x - a.x);
         if (this._pinch) {
-          this.dist = Math.max(25, Math.min(700, this.dist * (this._pinch.d / d)));
+          this.dist = Math.max(this.minDist(), Math.min(700, this.dist * (this._pinch.d / d)));
           this.yaw -= ang - this._pinch.ang;
           this._pan(dx * 0.5, dy * 0.5);
         }
@@ -130,7 +130,7 @@ export const pointerMethods = {
     }
     if (p.button === 2 && p.moved) {
       this.yaw -= dx * 0.006;
-      this.pitch = Math.max(0.2, Math.min(1.5, this.pitch + dy * 0.005));
+      this.pitch = Math.max(this.freeCam ? -0.3 : 0.2, Math.min(1.5, this.pitch + dy * 0.005));      // caméra libre (E22) : jusqu'au ras du sol
     } else if (p.button === 1 && p.moved) {
       this._pan(dx, dy);
     } else if (p.button === 0 && this.selDrag) {

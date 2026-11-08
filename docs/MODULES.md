@@ -8,8 +8,10 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 
 | Fichier | Rôle |
 | --- | --- |
+| `a11y.js` | Accessibilité (Copytrack Evolution, E22) : réduction des animations. Réglage `reduceMotion` : 'auto' suit le système (prefers-reduced-motion), 'on' réduit toujours, 'off' jamais. Réduites : transitions des écrans et des fenêtres coupées (classe body.reduce-motion, css/style.css), tremblements et effets de caméra du ressenti à zéro (race/camera.js). Rien ne change dans la course. |
 | `academy.js` | Académie : six leçons guidées, de très courts circuits qui apprennent UNE chose chacune (conduite, dérapage, mini-turbo, réception, plaque de transformation, obstacles), avec un objectif à réussir. Données et règles pures ; l'écran et le lancement sont dans app/academy.js. Aucune médaille, aucun record, aucune statistique : on s'entraîne. |
 | `account.js` | Comptes Copytrack : pseudo + mot de passe, sauvegarde cloud entre appareils. Les invités restent locaux. |
+| `aids.js` | Aides à la conduite (Copytrack Evolution, E22) et réglage de la réponse du volant. Elles agissent sur les COMMANDES, avant leur enregistrement : le replay, les fantômes et la vérification serveur rejouent les commandes effectives, sans relancer les aides (la course se rejoue à l'identique). Une course avec aides va dans la catégorie de record « assisté » (étiquette « as-1 », variants.js) : son propre classement, sans médailles ni pièces ; elle ne compte ni en saison, ni en duel, ni en tournoi. |
 | `ambiance.js` | Ambiance d'un circuit (0.9.18) : le MOMENT de la journée, la BRUME et la MUSIQUE, au choix de l'auteur, par-dessus le décor. Purement visuel et sonore : aucun effet sur la physique, les temps ni la signature du circuit (changer l'ambiance ne fait perdre ni la vérification ni les records). Module sans rendu : resolveAmbiance renvoie les réglages à appliquer à la scène (scenery.js). |
 | `audio.js` | Effets sonores synthétisés (Web Audio API). La musique est gérée à part (voir music.js). |
 | `AudioEngine.js` | Moteur de musique procédurale « French Touch / rally house / nu-disco » à ~124 BPM, 100 % Web Audio API (aucun fichier audio). |

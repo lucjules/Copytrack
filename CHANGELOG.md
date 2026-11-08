@@ -6,6 +6,38 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.44 — aides à la conduite, accessibilité, ressenti, caméra libre de l'éditeur
+
+Étape E22 de Copytrack Evolution (fin du bloc 6). `PHYS_VER` inchangé (26). **Redéployer `submit-score`** (déjà régénérée ici) : elle connaît la catégorie « assisté ».
+
+- **Aides à la conduite** (Profil › Options) :
+  - accélération automatique ;
+  - freinage assisté et direction assistée (guidés par la ligne de course : carrière et défi du jour) ;
+  - anti-tête-à-queue ;
+  - volant adouci.
+
+  Elles agissent sur les **commandes**, avant leur enregistrement : le replay, les fantômes et le serveur rejouent les commandes effectives, et la course se rejoue à l'identique (un test le vérifie au pas près).
+- **Catégorie « assisté »** : une course aidée a son propre classement (étiquette `as-1` ajoutée à sa catégorie). Elle se joue sans médailles ni pièces. Elle ne compte ni en saison, ni en duel, ni en tournoi : les aides y sont coupées, et le serveur refuse de toute façon ces combinaisons. La fiche du circuit et le départ le rappellent.
+- **Réglage du ressenti** : *Réponse du volant* (manette et pouce : linéaire à très progressive).
+
+  S'ajoute aux réglages existants : sensations de course, tremblements, champ de vision, effet de vitesse, zone morte et sensibilité de la manette.
+- **Animations réduites** : nouveau réglage *Réduire les animations* (Système, Oui, Non). Quand il est actif :
+  - les transitions des écrans et des fenêtres sont coupées ;
+  - les tremblements et les effets de caméra du ressenti sont à zéro.
+
+  Avec *Système*, le jeu suit `prefers-reduced-motion` et ses changements.
+- **Transitions** : les écrans et les fenêtres apparaissent en fondu court.
+- **Parcours complet au tactile**, testé sur un téléphone en paysage simulé : accueil, carrière, fiche, course aux boutons tactiles, pause, quitter. Ce test a trouvé un vrai défaut, corrigé : le bouton plein écran recouvrait « ▶ Jouer » de la fiche. Il ne s'affiche plus qu'en course et sur l'écran d'accueil.
+- **Caméra libre de l'éditeur** (🎥, touche V ; reportée depuis E9) : inclinaison jusqu'au ras du sol, approche jusqu'à 3 m, jamais sous le terrain.
+- Sous le capot :
+  - `js/aids.js`, `js/a11y.js` ;
+  - `tools/test-aids.mjs` ;
+  - tests navigateur : aides, animations réduites, caméra libre, parcours tactile ;
+  - `PW_ONLY` pour lancer un seul test navigateur pendant la mise au point.
+- **Limites** :
+  - le réglage final du ressenti (aides, profils, véhicules v2) demande des essais manette en main par un humain ;
+  - la **bibliothèque de matériaux** de l'éditeur, reportée depuis E9, n'est **pas faite** : elle reste à concevoir (quels matériaux, effet ou non sur la course, compatibilité du format).
+
 ## Bêta 0.9.43 — communauté : commentaires, playlists, sélection, découverte, statistiques, modes publiés
 
 Étape E21 de Copytrack Evolution. `PHYS_VER` inchangé (26), rien ne change dans la course. **Lancer l'étape SQL 13** (`supabase/etape13-communaute.sql`) et **ajouter les modérateurs** à la main (voir le README) ; `submit-score` n'a pas besoin d'être redéployée pour cette étape.

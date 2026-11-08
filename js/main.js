@@ -112,7 +112,13 @@ class App {
     if (this.session && this.session.kind === 'editor') this.session._refreshUI();
     const portrait = h > w && document.body.classList.contains('touch');
     $('rotate-hint').classList.toggle('hidden', !(portrait && (this.mode === 'race' || this.mode === 'editor')));
-    $('fs-btn').classList.toggle('hidden', !(document.body.classList.contains('touch') && (this.mode === 'race' || this.mode === 'menu') && !document.fullscreenElement));
+    this._fsButton();
+  }
+
+  // Bouton plein écran (tactile) : en course et sur l'écran d'accueil seulement ; sur les autres écrans, il recouvrirait leurs boutons du bas
+  // (sur un téléphone en paysage, « Jouer » de la fiche d'un circuit : trouvé par le parcours tactile, E22). Profil › Options › Plein écran reste là.
+  _fsButton() {
+    $('fs-btn').classList.toggle('hidden', !(document.body.classList.contains('touch') && (this.mode === 'race' || (this.mode === 'menu' && (this._screen || 'menu') === 'menu')) && !document.fullscreenElement));
   }
 
   // ------------------------------------------------------------ Navigation

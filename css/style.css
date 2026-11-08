@@ -747,6 +747,12 @@ body.touch kbd { display: none; }
 }
 @keyframes speedfx-spin { to { transform: rotate(1.2deg); } }
 @media (prefers-reduced-motion: reduce) { #speedfx { animation: none; } }
+/* Transitions des écrans et des fenêtres (E22), coupées quand les animations sont réduites (a11y.js : réglage ou prefers-reduced-motion). */
+@keyframes screen-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes panel-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
+.screen:not(.hidden) { animation: screen-in 0.18s ease-out; }
+#modal:not(.hidden) .modal-panel { animation: panel-in 0.16s ease-out; }
+body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
 
 #fps { position: fixed; left: calc(10px + env(safe-area-inset-left)); bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 60; font: 600 12px/1 ui-monospace, monospace; color: #b8ffcf; background: rgba(10, 8, 24, 0.6); padding: 4px 6px; border-radius: 6px; pointer-events: none; }
 .opt-h { margin: 10px 0 0; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #a99fd0); }

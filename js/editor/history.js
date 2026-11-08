@@ -126,6 +126,18 @@ export const historyMethods = {
     this.dist = c.dist;
   },
 
+  // Caméra libre (E22) : inclinaison jusqu'au ras du sol (et légèrement en contre-plongée), rapprochement à 3 m, pour voir le circuit comme
+  // le pilote. Sortie : la vue revient dans les bornes habituelles.
+  toggleFreeCam() {
+    this.freeCam = !this.freeCam;
+    if (!this.freeCam) { this.pitch = Math.max(0.2, this.pitch); this.dist = Math.max(25, this.dist); }
+    else { this.pitch = Math.min(this.pitch, 0.12); this.dist = Math.min(this.dist, 40); }
+    this.app.ui.flash(this.freeCam ? 'Caméra libre : au ras du sol, approche jusqu’à 3 m (V pour revenir)' : 'Caméra habituelle', 2);
+    const b = document.querySelector('[data-ed="freecam"]');
+    if (b) b.setAttribute('aria-pressed', this.freeCam ? 'true' : 'false');
+  },
+  minDist() { return this.freeCam ? 3 : 25; },
+
   toggleTopView() {
     if (this.pitch < 1.4) { this._prevPitch = this.pitch; this.pitch = 1.5; }
     else this.pitch = this._prevPitch || 0.95;
