@@ -288,6 +288,7 @@ try {
     assert.ok(await page.evaluate(() => document.querySelectorAll('#fin-coach li').length >= 1));
     assert.match(await page.evaluate(() => document.querySelector('#fin-coach li').textContent), /^Secteur \d+ : .*\d+(\.\d+)? s perdues/);
     assert.match(await page.evaluate(() => document.querySelector('#fin-coach h3').textContent), /comparé à ton record/);
+    assert.match(await page.evaluate(() => (document.getElementById('fin-coach-train') || {}).textContent || ''), /^🎓 S’entraîner : /, 'conseil adapté : un exercice de l’Académie');
     await click('#fin-replay');
     await waitApp(() => window.copytrack.session && window.copytrack.session._th, null, 20000);
     assert.deepEqual(await app(() => window.copytrack.session._th.runs.map((r) => r.label)), ['Cette course', 'Ancien record'], 'nouveau record : comparé à l’ancien');
@@ -591,7 +592,7 @@ try {
   await test('académie : menu des six leçons, leçon 1 jouée et réussie, bilan, retour au menu des leçons', async () => {
     const btn = (label) => page.evaluate((l) => { const b = [...document.querySelectorAll('#modal-actions button')].find((x) => x.textContent.trim() === l); if (!b) throw new Error('bouton introuvable : ' + l); b.click(); }, label);
     await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.academy = {}; saveProfile(); window.copytrack.academyMenu(); });
-    await waitApp(() => document.querySelectorAll('.academy-list li').length === 6);
+    await waitApp(() => document.querySelectorAll('.academy-list:not(.ac-drills) li').length === 6 && document.querySelectorAll('.ac-drills li').length === 4);
     await shot('16-academie');
     await app(() => document.querySelector('[data-lesson="0"]').click());
     await waitApp(() => window.copytrack.ui.modalOpen && /Leçon 1/.test(document.getElementById('modal-title').textContent));
@@ -603,8 +604,37 @@ try {
     assert.equal(await app(async () => (await import('/js/profile.js')).profile().academy.prise), 1);
     await shot('17-lecon-reussie');
     await btn('Académie');
-    await waitApp(() => window.copytrack.mode === 'menu' && document.querySelectorAll('.academy-list li.done').length === 1, null, 10000);
+    await waitApp(() => window.copytrack.mode === 'menu' && document.querySelectorAll('.academy-list:not(.ac-drills) li.done').length === 1, null, 10000);
     await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.academy = {}; p.coins = 0; saveProfile(); window.copytrack.ui.closeModal(); });
+  });
+
+  await test('académie, exercices évalués : point faible, consignes et objectifs, course mesurée (rejouée) et notée or, retour au menu', async () => {
+    const btn = (label) => page.evaluate((l) => { const b = [...document.querySelectorAll('#modal-actions button')].find((x) => x.textContent.trim() === l); if (!b) throw new Error('bouton introuvable : ' + l); b.click(); }, label);
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.drills = {}; p.coins = 0; saveProfile(); window.copytrack.academyMenu(); });
+    await waitApp(() => document.querySelectorAll('.ac-drills li').length === 4);
+    assert.match(await page.evaluate(() => document.querySelector('.ac-weak').textContent), /Point faible : Trajectoire — exercice conseillé : Chicanes/);
+    await app(() => document.querySelector('[data-drill="0"]').click());
+    await waitApp(() => window.copytrack.ui.modalOpen && /Exercice · Chicanes/.test(document.getElementById('modal-title').textContent));
+    assert.equal(await page.evaluate(() => document.querySelectorAll('.ac-goals li').length), 3);
+    await btn('Commencer');
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.opts.academy, null, 30000);
+    await waitApp(() => window.copytrack.session.state === 'racing', null, 30000);
+    // La course : les commandes du pilote automatique à 100 % de son adhérence (le niveau de l'or), mesurées comme celles d'un joueur.
+    await app(async () => {
+      const s = window.copytrack.session, { traceFromBot } = await import('/js/analysis/trace.js');
+      const run = traceFromBot(s.track, { latK: 1 });
+      s.recorder = { encode: () => run.inputs };
+      s._finish(run.time);
+    });
+    await waitApp(() => /Note : or/.test(document.getElementById('modal-title').textContent), null, 20000);
+    assert.match(await page.evaluate(() => document.querySelector('.ac-measure').textContent), /^\d+ km\/h de moyenne dans les chicanes/);
+    assert.equal(await page.evaluate(() => document.querySelectorAll('.ac-goals li.done').length), 3);
+    assert.deepEqual(await app(async () => { const p = (await import('/js/profile.js')).profile(); return [p.drills.chicanes.lvl, p.coins]; }), [3, 50]);
+    await shot('17b-exercice-or');
+    await btn('Académie');
+    await waitApp(() => window.copytrack.mode === 'menu' && document.querySelectorAll('.ac-drills li.done').length === 1, null, 10000);
+    assert.match(await page.evaluate(() => document.querySelector('.ac-weak').textContent), /Point faible : Freinage/);
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.drills = {}; p.coins = 0; saveProfile(); window.copytrack.ui.closeModal(); });
   });
 
   await test('éditeur guidé : l\'essentiel seulement, les autres pièces refusées, « Tout afficher » rend tout', async () => {

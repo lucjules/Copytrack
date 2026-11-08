@@ -6,6 +6,7 @@ import { traceFromInputs, traceFromBot } from '../analysis/trace.js';
 import { makeReference, alignTrace } from '../analysis/reference.js';
 import { coach } from '../analysis/coach.js';
 import { formatTime } from '../storage.js';
+import { drillForTip } from '../skills.js';
 
 const later = () => new Promise((r) => setTimeout(r, 0));
 
@@ -48,9 +49,13 @@ export const theaterAppMethods = {
       alignTrace(refTr, ref); alignTrace(mine, ref);
       const tips = coach(mine, refTr).slice(0, 3);
       if (!tips.length) return;
+      // Conseil adapté (E12) : le premier conseil qui désigne un geste mène à l'exercice de l'Académie qui le travaille.
+      const train = tips.map((t) => drillForTip(t.id)).find(Boolean);
       el.innerHTML = `<h3>💡 Conseils <small>${esc(refLabel)}</small></h3><ol>${tips.map((t) => `<li>${esc(t.text)}</li>`).join('')}</ol>
-        <button class="btn small" type="button" id="fin-coach-watch">🎬 Voir ces passages dans le Replay Theater</button>`;
+        <button class="btn small" type="button" id="fin-coach-watch">🎬 Voir ces passages dans le Replay Theater</button>
+        ${train ? `<button class="btn small" type="button" id="fin-coach-train">🎓 S’entraîner : ${esc(train.drill.name)}</button>` : ''}`;
       el.classList.remove('hidden');
+      if (train) $('fin-coach-train').onclick = () => { this.audio.click(); this.quitRace(); setTimeout(() => this.drillIntro(train.index), 0); };
       $('fin-coach-watch').onclick = () => {
         this.audio.click();
         this.openTheater({ track: session.track, opts: session.opts, main: { ...session.lastRun, label: 'Cette course' }, compare: [refRun], back: { track: session.track, opts: { ...session.opts } }, panel: true });

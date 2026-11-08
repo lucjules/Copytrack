@@ -6,6 +6,25 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.34 — Académie 2 : compétences et exercices évalués
+
+Étape E12 de Copytrack Evolution (début du bloc 4). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer (rien ne touche à la course ni au serveur).
+
+- **Exercices évalués** (Académie, sous les six leçons) : quatre **compétences** (trajectoire, freinage, dérapage, sauts et réceptions), un exercice chacune, noté **bronze, argent ou or**. Le niveau d'une compétence est la meilleure note de ses exercices.
+  - **Chicanes** (trajectoire) : la vitesse moyenne dans deux séries de quatre virages serrés (100, 114, 124 km/h).
+  - **Freiner tard** (freinage) : le temps passé dans les deux zones de freinage, de l'approche à la sortie du virage (6,26, 5,87, 5,62 s).
+  - **Mini-turbo renforcé** (dérapage) : un mini-turbo, puis un renforcé, puis un renforcé sans choc avec une arrivée en 11,5 s ou moins.
+  - **Trois réceptions** (sauts) : une, deux ou trois réceptions parfaites.
+- **Mesuré par l'analyse** : à l'arrivée, la course est rejouée à partir de ses commandes et mesurée (`js/analysis/drill.js`), exactement comme dans les tests. Les seuils sont calés sur le pilote automatique : à 60 % de son adhérence, bronze ; à 80 %, argent ; à 100 %, or. Chaque note est démontrée par une course scriptée dans `tools/test-skills.mjs` (pilote automatique à plusieurs niveaux, geste de dérapage, frein tenu en l'air), pas seulement par un humain.
+- **Conseils adaptés** :
+  - le menu de l'Académie désigne le **point faible** (la compétence la plus basse) et son exercice ;
+  - le bilan d'un exercice donne la mesure, les trois objectifs et un conseil : celui du coach face au pilote de référence dans la zone mesurée, ou ce que le geste a manqué (« Mini-turbo simple : la glisse s'est arrêtée trop tôt… ») ;
+  - à l'arrivée d'une course, quand un conseil du coach désigne un geste (freinage, trajectoire, saut), un bouton « 🎓 S'entraîner » mène à l'exercice correspondant.
+- **Les six leçons** restent jouables et comptées comme avant (diplôme, titre, exclusif). Pièces : 10, 15 et 25 ◆ la première fois qu'une note est atteinte, une seule fois par note.
+- Sous le capot : `js/skills.js` (compétences, exercices, notes, profil `drills` : `{ id: { lvl, best } }`), `js/analysis/drill.js` (mesure et conseil), fusion cloud `mergeDrills` (meilleur niveau, meilleure mesure dans le bon sens). Le document d'architecture parlait d'un champ `skills` par compétence : il est rangé par exercice, le niveau de compétence s'en déduit.
+- **Limite assumée** : un exercice par compétence pour l'instant. Le dérapage se juge sur un seul virage, car aucun geste scripté fiable n'enchaîne plusieurs mini-turbos (la leçon « en série » de 0.9.15 non plus) : une note qui ne serait démontrée par aucune course n'aurait pas sa place.
+- Tests : `tools/test-skills.mjs` (exercices, notes démontrées, conseils, profil, fusion) ; test navigateur (menu, consignes, course mesurée notée or, conseil adapté à l'arrivée) et anglais (consignes, bilans).
+
 ## Bêta 0.9.33 — logique du circuit : des règles « quand… si… alors… »
 
 Étapes E10 et E11 de Copytrack Evolution (fin du bloc 3). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des **seuls** circuits qui ont une logique (comme pour l'adhérence et le vent de 0.9.31) ; tous les autres sont vérifiés comme avant.
