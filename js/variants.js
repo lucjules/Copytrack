@@ -6,6 +6,7 @@
 //   variante ::= 'v1' ( '.' nom '-' valeur )+                       noms triés, chacun une fois, valeurs prises dans une liste fermée
 //                (sauf l'étiquette de saison « sea-N », un numéro : elle ne change pas le circuit, le serveur vérifie sa semaine, voir seasons.js)
 //   exemples : b-eclats-k3f9a~v1.veh-moto     daily-2026-12-01~v1.g-40     u-1blo03c~v1.obs-0.veh-boat     daily-2026-12-07~v1.gp-60
+//              b-canyon-x2b1~v1.rn-60 (sous la pluie, E19)
 //
 // Ce module est dans la fermeture de la vérification serveur (verify.js) : le jeu et le serveur appliquent EXACTEMENT la même variante.
 // Une variante sans effet sur le circuit (départ en voiture sur un circuit qui part déjà en voiture, tours sur un circuit ouvert…) est refusée :
@@ -15,6 +16,7 @@ import { applyRules } from './rulesCore.js';
 export const VARIANT_VER = 'v1';
 export const WIND_DIRS = ['n', 'ne', 'e', 'se', 's', 'so', 'o', 'no'];        // vers où souffle le vent (le nord est en haut de l'éditeur)
 export const MAX_KEY = 80;
+export const RAIN_SEED = 17;                       // graine des flaques de la catégorie « sous la pluie » : les mêmes pour tout le monde
 
 // Nom -> valeurs permises (texte canonique) et règle correspondante. Ajouter une catégorie = une ligne (ordre alphabétique des noms).
 export const VARIANTS = {
@@ -24,6 +26,7 @@ export const VARIANTS = {
   lap: { values: ['1', '2', '3', '4', '5'], rule: (v) => ({ laps: +v }) },         // nombre de tours (circuits fermés)
   obs: { values: ['0'], rule: () => ({ obstacles: 'off' }) },                       // sans obstacles
   off: { values: ['0', '1'], rule: (v) => ({ offroad: +v }) },                      // hors-piste interdit / permis
+  rn: { values: ['60'], rule: (v) => ({ rain: +v, envSeed: RAIN_SEED }) },          // sous la pluie (%), flaques d'une graine fixe (E19)
   sea: { re: /^[1-9][0-9]{0,3}$/, tag: true, rule: () => ({}) },                   // saison hebdomadaire N (seasons.js) : une étiquette, le circuit ne change pas (E15)
   tour: { re: /^[1-9][0-9]{0,9}$/, tag: true, rule: () => ({}) },                 // tournoi privé n° N (E17) : étiquette, fenêtre et inscrits vérifiés en base
   v0: { values: ['0', '100', '200'], rule: (v) => ({ v0: +v }) },                   // vitesse de départ (km/h)

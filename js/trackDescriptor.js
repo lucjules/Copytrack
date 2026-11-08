@@ -164,6 +164,7 @@ export const HUB_CATEGORIES = [
   { id: 'veh-boat', v: { veh: 'boat' }, label: '⛵ Départ en bateau' },
   { id: 'veh-glider', v: { veh: 'glider' }, label: '🪂 Départ en deltaplane' },
   { id: 'obs-0', v: { obs: 0 }, label: '🚫 Sans obstacles' },
+  { id: 'rn-60', v: { rn: '60' }, label: '🌧️ Sous la pluie' },
 ];
 // Celles qui ont un sens sur ce circuit (classé en ligne, et la variante change vraiment la course).
 export function hubCategories(desc) {

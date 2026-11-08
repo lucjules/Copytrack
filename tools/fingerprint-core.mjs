@@ -186,6 +186,15 @@ function customScenarios() {
   ob.decos.forEach((d, i) => { d.g = 5 + i; });
   ob.setLogic({ off: [5], rules: [{ on: ['cp', 1], do: [['show', 5], ['hide', 6]] }] });
   out['logic:obstacles:bot'] = runGhost(ob, { bot: true }, 120 * 60);
+  // 8. Environnements déterministes (E19, sim/env.js) : pluie et flaques, givre, rafales (sol et rubans), conditions qui varient.
+  const rn = byId('eclats'); rn.setParams({ rain: 80, envSeed: 7 });
+  out['env:rain80:bot'] = runGhost(rn, { bot: true }, 120 * 60);
+  const fr = byId('canyon'); fr.setParams({ frost: 70, envSeed: 3 });
+  out['env:frost70:noise'] = runGhost(fr, { inputs: randomInputs(79, 3000) }, 3000);
+  const gu = byId('spirale'); gu.setParams({ gust: 100, windDir: 135 });
+  out['env:gust-loops:bot'] = runGhost(gu, { bot: true }, 120 * 60);
+  const vy = byId('canyon'); vy.setParams({ rain: 100, frost: 30, gust: 40, wind: 20, windDir: 270, envSeed: 42, envVary: true });
+  out['env:storm-vary:bot'] = runGhost(vy, { bot: true }, 120 * 90);
   return out;
 }
 

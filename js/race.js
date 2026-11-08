@@ -32,6 +32,7 @@ import { scriptMethods } from './race/scriptsRun.js';
 import { trainingMethods } from './race/training.js';
 import { theaterMethods } from './theater/session.js';
 import { theaterCameraMethods } from './theater/cameras.js';
+import { EnvFx } from './envFx.js';
 
 const CAR_COLOR = '#ffd23e';   // éclat quand la voiture retrouve sa forme d'origine (les plaques ont la couleur de leur revêtement : SURFACES)
 
@@ -51,6 +52,7 @@ export class RaceSession {
     this.sim = new Simulation(track, { partial: !!opts.spawn });
     this.phys = this.sim.phys;
     this.logic = this.sim.logic;
+    this.envFx = this.phys.env ? new EnvFx(app.scene, this.phys.env, app.scenery.q.particles) : null;      // pluie, flaques, givre, rafales (E19)
     // Voitures identiques (règle de la partie) : tout le monde, moi compris, avec l'apparence d'origine.
     const sameCars = opts.multi && opts.multi.room.rules && opts.multi.room.rules.sameCars;
     this.car = createCar(sameCars ? DEFAULT_LOADOUT : profile().loadout);
@@ -495,6 +497,7 @@ export class RaceSession {
       p.prev.y + (p.pos.y - p.prev.y) * alpha,
       p.prev.z + (p.pos.z - p.prev.z) * alpha,
     );
+    if (this.envFx) this.envFx.frame(dt, app.camera, this.logic.steps, this.renderPos, p.fwdSpeed, p.grounded, app);
     const g = this.car.group;
     g.position.copy(this.renderPos);
     g.quaternion.slerpQuaternions(this.prevQuat, this.quat, alpha);
@@ -654,6 +657,7 @@ export class RaceSession {
       this.remote.clear();
     }
     if (this.trailRib) { this.trailRib.dispose(); this.trailRib = null; }
+    if (this.envFx) { this.envFx.dispose(); this.envFx = null; }
     this.ghostCar.dispose();
     this.app.particles.clear();
     this.app.audio.engine(null);

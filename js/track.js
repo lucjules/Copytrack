@@ -35,6 +35,12 @@ export const RULES = [
   { key: 'grip', def: 100, clean: (v) => clampInt(v, 25, 150, 100), code: 'gp', sig: (v) => (v !== 100 ? '#P' + v : ''), v4: true },     // adhérence de toute la piste (%)
   { key: 'wind', def: 0, clean: (v) => clampInt(v, 0, 100, 0), code: 'wd', sig: (v) => (v ? '#W' + v : ''), v4: true },                 // vent sur toute la piste (% de sa force maxi)
   { key: 'windDir', def: 0, clean: (v) => (((Math.round((+v || 0) / 15) * 15) % 360) + 360) % 360, code: 'wa', sig: (v) => (v ? '#A' + v : ''), v4: true },   // vers où il souffle (degrés : 0 nord, 90 est)
+  // Environnements déterministes (Copytrack Evolution, E19 ; sim/env.js) : absents par défaut, ils n'entrent ni dans la course, ni dans la signature.
+  { key: 'rain', def: 0, clean: (v) => clampInt(v, 0, 100, 0), code: 'rn', sig: (v) => (v ? '#R' + v : ''), v4: true },                 // pluie (%) : piste mouillée, flaques
+  { key: 'frost', def: 0, clean: (v) => clampInt(v, 0, 100, 0), code: 'fr', sig: (v) => (v ? '#F' + v : ''), v4: true },                // givre (%) : plaques de verglas
+  { key: 'gust', def: 0, clean: (v) => clampInt(v, 0, 100, 0), code: 'gu', sig: (v) => (v ? '#U' + v : ''), v4: true },                 // rafales (%), dans la direction du vent
+  { key: 'envSeed', def: 0, clean: (v) => clampInt(v, 0, 999, 0), code: 'es', sig: (v) => (v ? '#S' + v : ''), v4: true },              // graine des flaques, plaques et rafales
+  { key: 'envVary', def: false, clean: (v) => !!v, code: 'ev', sig: (v) => (v ? '#Y' : ''), v4: true },                                 // la pluie forcit et faiblit pendant la course
 ];
 
 // Champs d'une pièce, dans l'ordre des instantanés de l'historique de l'éditeur (en mémoire seulement : jamais écrits, l'ordre est libre), avec

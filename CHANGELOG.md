@@ -6,6 +6,31 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.41 — environnements déterministes : pluie et flaques, givre, rafales
+
+Étape E19 de Copytrack Evolution (début du bloc 6). `PHYS_VER` inchangé (26) : les circuits, records et replays existants courent exactement comme avant (les 182 scénarios de l'empreinte de la physique sont identiques). **Redéployer `submit-score`** (déjà régénérée ici) : la vérification connaît les nouvelles règles du circuit et la catégorie « sous la pluie ».
+
+- **Cinq règles de circuit**, dans *Paramètres du niveau* de l'éditeur, absentes par défaut :
+  - **Pluie** (0 à 100 %) : la piste glisse un peu partout (jusqu'à 15 % d'adhérence en moins), et beaucoup dans les **flaques** (jusqu'à moitié moins) ;
+  - **Givre** (0 à 100 %) : des plaques de verglas (35 % de l'adhérence) ;
+  - **Rafales** (0 à 100 %) : des coups de vent, par à-coups, dans la direction du vent du circuit ;
+  - **Conditions qui varient** : la pluie forcit et faiblit pendant la course ;
+  - **Graine des conditions** (🎲) : elle place les flaques, les plaques et les rafales.
+- **Déterministe, au pas près** : tout vient de la graine et du chrono de la course, en entiers et en `dmath`. Même graine, mêmes flaques au même endroit et mêmes rafales au même instant, pour tout le monde, dans les fantômes, les replays et la vérification serveur. Les flaques et les plaques ne vont que sur des lignes droites plates, en route ordinaire, fixes, au sol.
+- Ces règles entrent dans la signature du circuit (leur propre classement) et passent son code au format 4. Le Race Hub les affiche.
+- **Effets** (purement visuels et sonores) :
+  - flaques et plaques de givre posées sur la route ;
+  - pluie dont la densité suit l'intensité de la course, avec son bruit continu ;
+  - éclaboussure et bruit d'eau dans une flaque, crissement sur le givre, souffle quand une rafale se lève.
+- **Catégorie de record « 🌧️ Sous la pluie »** (variante `rn-60`, graine fixe) dans la fiche de chaque circuit classé.
+- **Défi du jour** : nouvelle mutation **Averse** (pluie à 60 %). À partir du vendredi 20 novembre 2026, le vendredi alterne averse et brouillard. Les jours d'avant gardent leur mutation et leur classement.
+- Sous le capot :
+  - `js/sim/env.js` ;
+  - la physique ne fait aucune opération de plus sans conditions (`envOf` renvoie `null`) ;
+  - 4 scénarios `env:*` dans l'empreinte (identiques sous Node, Deno et Chromium) ;
+  - `tools/test-env.mjs` : même graine mêmes flaques, adhérence, variation, rafales jamais à contre-sens, course vérifiée par le serveur et refusée sur le circuit sec ;
+  - tests navigateur (réglages de l'éditeur, effets en course).
+
 ## Bêta 0.9.40 — prototype de rollback : décision GO (hors interface)
 
 Étape E18 de Copytrack Evolution (fin du bloc 5). `PHYS_VER` inchangé (26), `NET_VER` inchangé (4), rien à redéployer. **Rien ne change pour le joueur** : le prototype n'est branché sur aucun écran, et les collisions douces d'E16 restent celles du jeu.

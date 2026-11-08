@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
 import { dailyChallenge, dayKey } from '../js/daily.js';
-import { MUTATIONS, WEEK, dailyMutation, streakOf, dayOfKey } from '../js/mutations.js';
+import { MUTATIONS, WEEK, AVERSE_FROM, weekOrder, dailyMutation, streakOf, dayOfKey } from '../js/mutations.js';
 import { parseVariant, splitKey, applyVariant, VARIANTS, WIND_DIRS } from '../js/variants.js';
 import { sanitizeRules, applyRules, DEFAULT_RULES, isDefaultRules } from '../js/rulesCore.js';
 import { verifyRun } from '../js/verify.js';
@@ -32,12 +32,12 @@ test('deux semaines de mutations : une par jour, dans l’ordre de la semaine (o
   for (const d of days('2026-11-09', 14)) {
     const m = dailyMutation(d);
     assert.ok(m, d);
-    assert.ok(MUTATIONS[m.id] && WEEK.includes(m.id), d);
+    assert.ok(MUTATIONS[m.id] && weekOrder(d).includes(m.id), d);
     const { base, variant } = splitKey(m.key);
     assert.equal(base, 'daily-' + d); assert.equal(variant, m.variant);
     assert.deepEqual(parseVariant(variant), m.v);
     assert.equal(dayOfKey(m.key), d);
-    if (m.id === WEEK[new Date(d + 'T00:00:00Z').getUTCDay()]) first++;
+    if (m.id === weekOrder(d)[new Date(d + 'T00:00:00Z').getUTCDay()]) first++;
     assert.equal(dailyMutation(d), m, 'calculée une fois par jour');
   }
   assert.ok(first >= 9, `la mutation de la semaine est le plus souvent retenue (${first} / 14)`);
@@ -46,8 +46,15 @@ test('la même date donne la même mutation (même vent, même direction) : tout
   for (const id of Object.keys(MUTATIONS)) { const a = MUTATIONS[id].v(() => 0.3), b = MUTATIONS[id].v(() => 0.3); assert.deepEqual(a, b); }
   assert.ok(Object.values(MUTATIONS).every((M) => M.label && M.icon && M.desc.length > 10));
 });
-test('une mutation ne rend aucune voiture plus rapide : elle ne touche qu’à la piste (adhérence, vent, gravité, véhicule de départ) ; le brouillard est visuel', () => {
-  const allowed = new Set(['gp', 'wd', 'g', 'veh']);
+test('vendredi : les jours passés gardent leur mutation ; depuis l’averse (E19), averse et brouillard alternent', () => {
+  assert.equal(weekOrder('2026-11-13'), WEEK);
+  assert.equal(weekOrder(AVERSE_FROM)[5], 'averse');
+  assert.equal(weekOrder('2026-11-27')[5], 'brouillard');
+  assert.equal(weekOrder('2026-12-04')[5], 'averse');
+  assert.deepEqual(weekOrder('2026-12-04').filter((id) => id !== 'averse'), WEEK.filter((id) => id !== 'brouillard'));
+});
+test('une mutation ne rend aucune voiture plus rapide : elle ne touche qu’à la piste (adhérence, vent, pluie, gravité, véhicule de départ) ; le brouillard est visuel', () => {
+  const allowed = new Set(['gp', 'wd', 'rn', 'g', 'veh']);
   for (const M of Object.values(MUTATIONS)) for (const k of Object.keys(M.v(() => 0))) assert.ok(allowed.has(k), k);
   for (const v of VARIANTS.gp.values) assert.ok(+v < 100, 'le verglas réduit l’adhérence, jamais ne l’augmente');
   assert.deepEqual(MUTATIONS.brouillard.ambiance, { fog: 'thick' });

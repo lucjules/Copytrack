@@ -56,6 +56,8 @@ export class GameAudio {
     this.skid = this._loopNoise('bandpass', 1400, 2.5);
     // Vent
     this.wind = this._loopNoise('lowpass', 500, 0.7);
+    // Pluie (environnements, E19 : envFx.js)
+    this.rainLoop = this._loopNoise('highpass', 2600, 0.4);
     this.music.resume();
   }
 
@@ -95,6 +97,7 @@ export class GameAudio {
       this.engGain.gain.setTargetAtTime(0, t, 0.08);
       this.skid.g.gain.setTargetAtTime(0, t, 0.05);
       this.wind.g.gain.setTargetAtTime(0, t, 0.1);
+      this.rainLoop.g.gain.setTargetAtTime(0, t, 0.2);
       return;
     }
     const sp = Math.abs(state.speed);
@@ -112,6 +115,17 @@ export class GameAudio {
     this.engGain.gain.setTargetAtTime(vol, t, 0.05);
     this.skid.g.gain.setTargetAtTime(Math.min(0.22, Math.max(0, state.slip - 3) * 0.03), t, 0.04);
     this.wind.g.gain.setTargetAtTime(Math.min(0.3, sp * sp * 0.00006 + (state.draft || 0) * 0.07), t, 0.1);      // draft : aspiration derrière une voiture (feel.js), le vent siffle un peu plus
+  }
+
+  // Bruit de la pluie (0 à 1, environnements E19) : continu, suit l'intensité de la course.
+  envLevel(k) {
+    if (!this.ctx || !this.rainLoop) return;
+    this.rainLoop.g.gain.setTargetAtTime(Math.min(0.12, Math.max(0, k) * 0.12), this.ctx.currentTime, 0.4);
+  }
+
+  // Une voiture traverse une flaque (0 à 1 selon la vitesse).
+  splash(k = 0.5) {
+    this.noise(0.35 + k * 0.25, 1200, 0.1 + k * 0.18, 'bandpass', 0, 350);
   }
 
   _env(node, t, a, d, peak) {

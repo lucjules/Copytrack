@@ -521,6 +521,32 @@ try {
     assert.equal(await app(() => document.body.dataset.speedo), 'default');
   });
 
+  await test('environnements (E19) : flaques et givre posés sur la route, pluie à la densité de la course, éclaboussure dans une flaque, tout retiré en quittant', async () => {
+    await app(async () => {
+      const A = window.copytrack;
+      const { scriptTrack } = await import('/js/track.js'); const { envOf } = await import('/js/sim/env.js');
+      const t = scriptTrack('Pluie', 'start S3 S3 S3 S3 finish');
+      for (let s = 1; s < 999; s++) { t.setParams({ rain: 100, frost: 60, envSeed: s, envVary: true }); const E = envOf(t); if (E.patches.some((p) => p.kind === 'puddle') && E.patches.some((p) => p.kind === 'frost')) break; }
+      A.playTrack(t, { trackKey: null });
+    });
+    await waitApp(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    const r = await app(() => {
+      const A = window.copytrack, S = A.session, F = S.envFx, E = S.phys.env;
+      const pud = E.patches.find((p) => p.kind === 'puddle');
+      F.frame(0.016, A.camera, S.logic.steps, { x: pud.x, y: pud.y, z: pud.z }, 30, true, A);
+      return { fx: !!F, meshes: F.group.children.length, inScene: !!A.scene.getObjectByName('env'), q: A.scenery.q.particles, rain: !!F.rain, obj: !!(F.rain && F.rain.obj), range: F.rain && F.rain.obj ? F.rain.obj.geometry.drawRange.count : 0, n: F.rain && F.rain.n, inPatch: F.inPatch === pud };
+    });
+    assert.ok(r.fx && r.inScene, 'les effets d’environnement sont en place');
+    assert.equal(r.meshes, 2, 'flaques et plaques de givre');
+    assert.ok(r.rain, 'la pluie existe');
+    if (r.q > 0) assert.ok(r.obj && r.range > 0 && r.range <= r.n * 2, `pluie visible (${r.range} / ${r.n * 2})`);
+    else assert.equal(r.obj, false, 'qualité sans particules : pas de gouttes (les flaques restent)');
+    assert.ok(r.inPatch, 'la voiture est dans la flaque');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu');
+    assert.equal(await app(() => !!window.copytrack.scene.getObjectByName('env')), false, 'retiré en quittant');
+  });
+
   await test('décors réglables, pièce perso et déclencheurs : météo et heure qui défile, pièce posée dans le circuit, message et éclat joués en course', async () => {
     const r = await app(async () => {
       const A = window.copytrack;
@@ -846,6 +872,21 @@ try {
     assert.notEqual(await app(() => window.copytrack.session.track.signature()), sig0, 'la signature change');
     await app(() => window.copytrack.session.track.setParams({ grip: 100, wind: 0, windDir: 0 }));
     assert.equal(await app(() => window.copytrack.session.track.signature()), sig0, 'revenue aux valeurs par défaut, la signature aussi');
+    // --- conditions (environnements déterministes, E19) : pluie, givre, rafales, graine
+    await app(() => window.copytrack.session.openParams());
+    await waitApp(() => document.getElementById('pp-rain'));
+    const dis = await page.evaluate(() => [document.getElementById('pp-ev').disabled, document.getElementById('pp-es').disabled]);
+    assert.deepEqual(dis, [true, true], 'sans pluie : ni variation ni graine');
+    await page.evaluate(() => {
+      const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input')); };
+      set('pp-rain', '60'); set('pp-gust', '30'); document.getElementById('pp-ev').checked = true; document.getElementById('pp-es').value = '33';
+      [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent.trim() === 'Appliquer').click();
+    });
+    await waitApp(() => window.copytrack.session.track.rain === 60);
+    assert.deepEqual(await app(() => { const t = window.copytrack.session.track; return [t.rain, t.frost, t.gust, t.envVary, t.envSeed]; }), [60, 0, 30, true, 33]);
+    assert.notEqual(await app(() => window.copytrack.session.track.signature()), sig0, 'les conditions changent la signature');
+    await app(() => window.copytrack.session.track.setParams({ rain: 0, gust: 0, envVary: false, envSeed: 0 }));
+    assert.equal(await app(() => window.copytrack.session.track.signature()), sig0);
     // --- prefabs
     await page.evaluate(() => document.querySelector('#ed-palette .pal-tab[data-tab="prefabs"]').click());
     await waitApp(() => document.querySelectorAll('#ed-palette [data-pf-starter]').length >= 6);

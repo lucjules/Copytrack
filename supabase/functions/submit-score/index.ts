@@ -5334,6 +5334,47 @@ var RULES = [
     code: "wa",
     sig: (v) => v ? "#A" + v : "",
     v4: true
+  },
+  // Environnements déterministes (Copytrack Evolution, E19 ; sim/env.js) : absents par défaut, ils n'entrent ni dans la course, ni dans la signature.
+  {
+    key: "rain",
+    def: 0,
+    clean: (v) => clampInt(v, 0, 100, 0),
+    code: "rn",
+    sig: (v) => v ? "#R" + v : "",
+    v4: true
+  },
+  {
+    key: "frost",
+    def: 0,
+    clean: (v) => clampInt(v, 0, 100, 0),
+    code: "fr",
+    sig: (v) => v ? "#F" + v : "",
+    v4: true
+  },
+  {
+    key: "gust",
+    def: 0,
+    clean: (v) => clampInt(v, 0, 100, 0),
+    code: "gu",
+    sig: (v) => v ? "#U" + v : "",
+    v4: true
+  },
+  {
+    key: "envSeed",
+    def: 0,
+    clean: (v) => clampInt(v, 0, 999, 0),
+    code: "es",
+    sig: (v) => v ? "#S" + v : "",
+    v4: true
+  },
+  {
+    key: "envVary",
+    def: false,
+    clean: (v) => !!v,
+    code: "ev",
+    sig: (v) => v ? "#Y" : "",
+    v4: true
   }
 ];
 var Track = class _Track {
@@ -8823,6 +8864,122 @@ function paramsOf(track) {
   });
 }
 
+// js/sim/env.js
+var PUDDLE_GRIP = 0.5;
+var RAIN_GRIP = 0.15;
+var FROST_GRIP = 0.35;
+var PATCH_RATE = 0.4;
+function h01(seed, a, b, c, salt) {
+  let x = Math.imul(seed + 40503, 2246822507) ^ Math.imul(a + 7, 3266489909) ^ Math.imul(b + 13, 668265263) ^ Math.imul(c + 101, 374761393) ^ Math.imul(salt + 1, 2654435761);
+  x ^= x >>> 15;
+  x = Math.imul(x, 739982445);
+  x ^= x >>> 12;
+  x = Math.imul(x, 695872825);
+  x ^= x >>> 15;
+  return (x >>> 0) / 4294967296;
+}
+var cellKey = (cx, cz) => cx + 4096 << 13 | cz + 4096;
+function patchesOf(track, rain, frost, seed) {
+  const cells = /* @__PURE__ */ new Map(), list = [];
+  for (const t of track.tiles) {
+    const P = PIECES[t.t];
+    if (!P || P.kind !== "line" || P.rise || P.size !== 1 || t.o || t.v || t.s || t.mv) continue;
+    for (const [kind, amount, salt] of [
+      [
+        "puddle",
+        rain,
+        1
+      ],
+      [
+        "frost",
+        frost,
+        2
+      ]
+    ]) {
+      if (!amount || h01(seed, t.x, t.z, t.l, salt) >= amount / 100 * PATCH_RATE) continue;
+      const c = tileCenter(t), along = (h01(seed, t.x, t.z, t.l, salt + 10) - 0.5) * (CELL - 12), side = (h01(seed, t.x, t.z, t.l, salt + 20) - 0.5) * (ROAD_HALF * 2 - 7);
+      const r = 2.6 + h01(seed, t.x, t.z, t.l, salt + 30) * 2.4;
+      const alongX = t.r % 2 === 1;
+      const p = {
+        kind,
+        x: c.x + (alongX ? along : side),
+        z: c.z + (alongX ? side : along),
+        y: baseY(t),
+        r,
+        r2: r * r
+      };
+      list.push(p);
+      const k = cellKey(t.x, t.z);
+      if (!cells.has(k)) cells.set(k, []);
+      cells.get(k).push(p);
+      break;
+    }
+  }
+  return {
+    cells,
+    list
+  };
+}
+function envOf(track) {
+  const rain = (track && track.rain) | 0, frost = (track && track.frost) | 0, gust = (track && track.gust) | 0;
+  if (!rain && !frost && !gust) return null;
+  const seed = track.envSeed | 0 || 0, vary = !!track.envVary;
+  const { cells, list } = patchesOf(track, rain, frost, seed);
+  const ph1 = h01(seed, 1, 2, 3, 40) * 6.283, ph2 = h01(seed, 4, 5, 6, 41) * 6.283, ph3 = h01(seed, 7, 8, 9, 42) * 6.283;
+  const a = (track.windDir || 0) * Math.PI / 180, gk = gust / 100 * CAR.wind * WIND_MAX * 1.6, gx = dsin(a), gz = -dcos(a);
+  const out = {
+    x: 0,
+    z: 0
+  };
+  return Object.freeze({
+    rain,
+    frost,
+    gust,
+    vary,
+    seed,
+    patches: list,
+    // Intensité de la pluie (0 à 1) au pas `step` : constante, ou qui forcit et faiblit (période d'environ deux minutes) si les conditions varient.
+    rainAt(step) {
+      return rain ? rain / 100 * (vary ? 0.55 + 0.45 * dsin(step * DT * 0.05 + ph3) : 1) : 0;
+    },
+    // Multiplicateur d'adhérence au sol, à la position (x, y, z) de la voiture, au pas `step`.
+    gripAt(x, y, z, step) {
+      let k = 1;
+      const w = this.rainAt(step);
+      if (w) k *= 1 - RAIN_GRIP * w;
+      const ps = cells.get(cellKey(Math.floor(x / CELL), Math.floor(z / CELL)));
+      if (ps) {
+        for (const p of ps) {
+          const dx = x - p.x, dz = z - p.z, dy = y - p.y;
+          if (dx * dx + dz * dz < p.r2 && dy < 2.5 && dy > -2.5) k *= p.kind === "frost" ? FROST_GRIP : 1 - PUDDLE_GRIP * w;
+        }
+      }
+      return k;
+    },
+    // Dans quelle plaque est la voiture ? (effets : éclaboussures, crissement) ; null sinon.
+    patchAt(x, y, z) {
+      const ps = cells.get(cellKey(Math.floor(x / CELL), Math.floor(z / CELL)));
+      if (ps) for (const p of ps) {
+        const dx = x - p.x, dz = z - p.z, dy = y - p.y;
+        if (dx * dx + dz * dz < p.r2 && dy < 2.5 && dy > -2.5) return p;
+      }
+      return null;
+    },
+    // Rafale au pas `step` : accélération dans le monde (m/s²), dans la direction du vent du circuit ; jamais à contre-sens.
+    gustAt(step) {
+      if (!gust) {
+        out.x = 0;
+        out.z = 0;
+        return out;
+      }
+      const t = step * DT, s = 0.6 * dsin(t * 0.9 + ph1) + 0.4 * dsin(t * 2.3 + ph2), k = s > 0 ? s * gk : 0;
+      out.x = gx * k;
+      out.z = gz * k;
+      return out;
+    }
+  });
+}
+
 // js/physics/walls.js
 var L1 = {
   lx: 0,
@@ -9461,6 +9618,16 @@ var ribbonMethods = {
       R.vs += (P.windX * B2.e1x + P.windZ * B2.e1z) * dt;
       R.vd += (P.windX * B2.e2x + P.windZ * B2.e2z) * dt;
     }
+    const E = this.env;
+    if (E) {
+      const st = this.clock || 0;
+      if (E.rain && mod !== "water") gripK *= 1 - RAIN_GRIP * E.rainAt(st);
+      if (E.gust) {
+        const g2 = E.gustAt(st);
+        R.vs += (g2.x * B2.e1x + g2.z * B2.e1z) * dt;
+        R.vd += (g2.x * B2.e2x + g2.z * B2.e2z) * dt;
+      }
+    }
     if (mod === "boost") this._boostPad(f);
     else if (mod === "gravity") this._gravityPad(f);
     else if (mod === "wind") {
@@ -9726,6 +9893,7 @@ var CarPhysics = class {
   constructor(track) {
     this.track = track;
     this.params = paramsOf(track);
+    this.env = envOf(track);
     this.pos = {
       x: 0,
       y: 0,
@@ -10251,6 +10419,16 @@ var CarPhysics = class {
     if (P.windOn) {
       vf += (P.windX * fx + P.windZ * fz) * dt;
       vr += (P.windX * rx + P.windZ * rz) * dt;
+    }
+    const E = this.env;
+    if (E) {
+      const st = this.clock || 0;
+      if (!wet) grip *= E.gripAt(this.pos.x, this.pos.y, this.pos.z, st);
+      if (E.gust) {
+        const g2 = E.gustAt(st);
+        vf += (g2.x * fx + g2.z * fz) * dt;
+        vr += (g2.x * rx + g2.z * rz) * dt;
+      }
     }
     const ax = (this._longitudinal(vf, inp, K2.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
     this.rearK = rearK;
@@ -11653,6 +11831,19 @@ function extraRules(o) {
     out.wind = wind;
     out.windDir = (Math.round(int2(o.windDir, -3600, 3600, 0) / 15) * 15 % 360 + 360) % 360;
   }
+  for (const k of [
+    "rain",
+    "frost",
+    "gust"
+  ]) {
+    const v = o[k] ? int2(o[k], 0, 100, 0) : 0;
+    if (v) out[k] = v;
+  }
+  if (out.rain || out.frost || out.gust) {
+    const seed = o.envSeed ? int2(o.envSeed, 0, 999, 0) : 0;
+    if (seed) out.envSeed = seed;
+    if (out.rain && o.envVary) out.envVary = true;
+  }
   return out;
 }
 var isDefaultRules = (r) => JSON.stringify(sanitizeRules(r)) === JSON.stringify(DEFAULT_RULES);
@@ -11671,6 +11862,13 @@ function applyRules(track, rules) {
     p.wind = r.wind;
     p.windDir = r.windDir;
   }
+  if (r.rain || r.frost || r.gust) Object.assign(p, {
+    rain: r.rain || 0,
+    frost: r.frost || 0,
+    gust: r.gust || 0,
+    envSeed: r.envSeed || 0,
+    envVary: !!r.envVary
+  });
   t.setParams(p);
   if (r.laps && t.laps > 1) {
     if (t.path) {
@@ -11700,6 +11898,7 @@ var WIND_DIRS = [
   "o",
   "no"
 ];
+var RAIN_SEED = 17;
 var VARIANTS = {
   duel: {
     re: /^[1-9][0-9]{0,9}$/,
@@ -11753,6 +11952,15 @@ var VARIANTS = {
     ],
     rule: (v) => ({
       offroad: +v
+    })
+  },
+  rn: {
+    values: [
+      "60"
+    ],
+    rule: (v) => ({
+      rain: +v,
+      envSeed: RAIN_SEED
     })
   },
   sea: {

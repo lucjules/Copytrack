@@ -676,7 +676,12 @@ export const paletteMethods = {
       <label title="L'adhérence de toute la piste, en plus de celle des revêtements (100 % : normale)">Adhérence de la piste<span class="inl"><input type="range" id="pp-grip" min="25" max="150" step="5"><b id="pp-gripv"></b></span></label>
       <label title="Un vent constant sur toute la route (0 : aucun)">Vent<span class="inl"><input type="range" id="pp-wind" min="0" max="100" step="5"><b id="pp-windv"></b></span></label>
       <label title="Vers où souffle le vent (le nord est en haut de l'éditeur)">Direction du vent<select id="pp-winddir">${WIND_DIRS.map(([a, l]) => `<option value="${a}">${l}</option>`).join('')}</select></label>
-      <p class="meta">Départ, tours, gravité, véhicule, adhérence et vent changent la course : à revérifier.</p>
+      <label title="La piste mouillée glisse un peu partout, et beaucoup dans les flaques (0 : temps sec)">Pluie<span class="inl"><input type="range" id="pp-rain" min="0" max="100" step="10"><b id="pp-rainv"></b></span></label>
+      <label title="Des plaques de verglas sur les lignes droites (0 : aucune)">Givre<span class="inl"><input type="range" id="pp-frost" min="0" max="100" step="10"><b id="pp-frostv"></b></span></label>
+      <label title="Des coups de vent, par à-coups, dans la direction du vent (0 : aucune)">Rafales<span class="inl"><input type="range" id="pp-gust" min="0" max="100" step="10"><b id="pp-gustv"></b></span></label>
+      <label title="La pluie forcit et faiblit pendant la course, toujours de la même façon">Conditions qui varient<input type="checkbox" id="pp-ev"></label>
+      <label title="Place les flaques, les plaques de givre et les rafales : même graine, mêmes conditions pour tout le monde">Graine des conditions<span class="inl"><input type="number" id="pp-es" min="0" max="999" step="1"><button class="btn small" type="button" id="pp-es-dice" title="Tirer une autre graine">🎲</button></span></label>
+      <p class="meta">Départ, tours, gravité, véhicule, adhérence, vent et conditions changent la course : à revérifier.</p>
       <h4 class="opt-h">Ambiance (sans effet sur la course ni les temps)</h4>
       <label>Moment de la journée<select id="pp-sky">${SKY_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
       <label>Brume<select id="pp-fog">${FOG_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
@@ -708,8 +713,17 @@ export const paletteMethods = {
       $f('pp-v0v').textContent = +$f('pp-v0').value ? `${$f('pp-v0').value} km/h` : 'arrêt';
       $f('pp-g0v').textContent = `${$f('pp-g0').value} % · ${(SURF_PHYS.gravity * $f('pp-g0').value / 100).toFixed(1).replace('.', ',')} m/s²`;
     };
-    const showP = () => { $f('pp-gripv').textContent = `${$f('pp-grip').value} %`; $f('pp-windv').textContent = +$f('pp-wind').value ? `${$f('pp-wind').value} %` : 'aucun'; $f('pp-winddir').disabled = !+$f('pp-wind').value; };
-    $f('pp-grip').oninput = showP; $f('pp-wind').oninput = showP; showP();
+    $f('pp-rain').value = T.rain; $f('pp-frost').value = T.frost; $f('pp-gust').value = T.gust; $f('pp-ev').checked = !!T.envVary; $f('pp-es').value = T.envSeed;
+    const showP = () => {
+      const pct = (id, none) => { const v = +$f(id).value; $f(id + 'v').textContent = v ? `${v} %` : none; return v; };
+      pct('pp-grip', ''); const wind = pct('pp-wind', 'aucun'), rain = pct('pp-rain', 'aucune'), frost = pct('pp-frost', 'aucun'), gust = pct('pp-gust', 'aucune');
+      $f('pp-winddir').disabled = !wind && !gust;                          // les rafales soufflent aussi dans la direction du vent
+      $f('pp-ev').disabled = !rain;
+      $f('pp-es').disabled = $f('pp-es-dice').disabled = !rain && !frost && !gust;
+    };
+    for (const id of ['pp-grip', 'pp-wind', 'pp-rain', 'pp-frost', 'pp-gust']) $f(id).oninput = showP;
+    showP();
+    $f('pp-es-dice').onclick = () => { $f('pp-es').value = String(1 + Math.floor(Math.random() * 999)); };
     $f('pp-v0').oninput = show; $f('pp-g0').oninput = show; show();
     $f('pp-scripts').onclick = () => { this.app.ui.closeModal(); setTimeout(() => this._scriptsDialog(), 0); };
     $f('pp-logic').onclick = () => { this.app.ui.closeModal(); setTimeout(() => this.openLogic(), 0); };
@@ -728,9 +742,11 @@ export const paletteMethods = {
           tint: $f('pp-tint-on').checked ? $f('pp-tint').value : '', gtint: $f('pp-gtint-on').checked ? $f('pp-gtint').value : '', fogC: $f('pp-fogc-on').checked ? $f('pp-fogc').value : '',
         };
         const ambChanged = JSON.stringify(amb) !== JSON.stringify(T.ambiance);
-        const wind = +$f('pp-wind').value;
+        const wind = +$f('pp-wind').value, rain = +$f('pp-rain').value, frost = +$f('pp-frost').value, gust = +$f('pp-gust').value;
+        // Sans vent ni rafales, pas de direction ; sans conditions, pas de graine (elles compteraient dans la signature sans rien changer).
         T.setParams({ desc: $f('pp-desc').value, offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value, flip0: $f('pp-ig').checked, ambiance: amb,
-          grip: +$f('pp-grip').value, wind, windDir: wind ? +$f('pp-winddir').value : 0 });      // sans vent, pas de direction (elle compterait dans la signature)
+          grip: +$f('pp-grip').value, wind, windDir: wind || gust ? +$f('pp-winddir').value : 0,
+          rain, frost, gust, envVary: !!rain && $f('pp-ev').checked, envSeed: rain || frost || gust ? +$f('pp-es').value : 0 });
         if ($f('pp-decor').value !== T.decor) { T.decor = $f('pp-decor').value; this._applyDecor(); this.gridKey = ''; }
         else if (ambChanged) this._applyDecor();
         this._changed(false);

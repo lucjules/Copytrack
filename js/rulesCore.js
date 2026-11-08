@@ -22,7 +22,7 @@ export function sanitizeRules(r) {
     ...extraRules(o),
   };
 }
-// Adhérence et vent de tout le circuit (E8 ; règles depuis E13, pour les mutations du défi du jour) : les clés n'existent que si elles changent
+// Adhérence et vent de tout le circuit (E8 ; règles depuis E13), conditions (E19), pour les mutations du défi du jour) : les clés n'existent que si elles changent
 // quelque chose, pour que les règles d'avant (modes partagés, salons) gardent exactement la même forme.
 function extraRules(o) {
   const out = {};
@@ -30,6 +30,13 @@ function extraRules(o) {
   if (grip && grip !== 100) out.grip = grip;
   const wind = o.wind ? int(o.wind, 0, 100, 0) : 0;
   if (wind) { out.wind = wind; out.windDir = (((Math.round(int(o.windDir, -3600, 3600, 0) / 15) * 15) % 360) + 360) % 360; }   // comme Track (pas de 15°)
+  // Environnements déterministes (E19, sim/env.js) : pluie, givre, rafales, leur graine, conditions qui varient (pour la catégorie « sous la pluie »).
+  for (const k of ['rain', 'frost', 'gust']) { const v = o[k] ? int(o[k], 0, 100, 0) : 0; if (v) out[k] = v; }
+  if (out.rain || out.frost || out.gust) {
+    const seed = o.envSeed ? int(o.envSeed, 0, 999, 0) : 0;
+    if (seed) out.envSeed = seed;
+    if (out.rain && o.envVary) out.envVary = true;
+  }
   return out;
 }
 export const isDefaultRules = (r) => JSON.stringify(sanitizeRules(r)) === JSON.stringify(DEFAULT_RULES);
@@ -47,6 +54,7 @@ export function applyRules(track, rules) {
   if (r.offroad >= 0) p.offroad = r.offroad;
   if (r.grip) p.grip = r.grip;
   if (r.wind) { p.wind = r.wind; p.windDir = r.windDir; }
+  if (r.rain || r.frost || r.gust) Object.assign(p, { rain: r.rain || 0, frost: r.frost || 0, gust: r.gust || 0, envSeed: r.envSeed || 0, envVary: !!r.envVary });      // les conditions remplacent celles du circuit
   t.setParams(p);
   if (r.laps && t.laps > 1) {
     if (t.path) {                                   // la ligne centrale répète un tour : on la refait pour le nouveau nombre de tours (voir tracks.js)

@@ -19,6 +19,9 @@ export function describeRules(rules) {
   if (r.obstacles === 'off') out.push('Sans obstacles');
   if (r.grip) out.push(`Adhérence ${r.grip} %`);
   if (r.wind) out.push(`Vent ${r.wind} %`);
+  if (r.rain) out.push(`Pluie ${r.rain} %`);
+  if (r.frost) out.push(`Givre ${r.frost} %`);
+  if (r.gust) out.push(`Rafales ${r.gust} %`);
   if (r.sameCars) out.push('Voitures identiques');
   return out;
 }

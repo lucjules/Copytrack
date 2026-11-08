@@ -138,6 +138,9 @@ export const raceHubMethods = {
     if (d.profil && PROFILS[d.profil]) rows.push(['Profil', esc(PROFILS[d.profil].label)]);
     if (d.track.grip !== 100) rows.push(['Adhérence', `${d.track.grip} %`]);
     if (d.track.wind) rows.push(['Vent', `${d.track.wind} % · ${WIND_LABEL[Math.round(d.track.windDir / 45) % 8]}`]);
+    if (d.track.rain) rows.push(['Pluie', d.track.envVary ? `${d.track.rain} % · variable` : `${d.track.rain} %`]);      // environnements (E19)
+    if (d.track.frost) rows.push(['Givre', `${d.track.frost} %`]);
+    if (d.track.gust) rows.push(['Rafales', `${d.track.gust} % · ${WIND_LABEL[Math.round(d.track.windDir / 45) % 8]}`]);
     if (d.source === 'community') rows.push(['Joué', `▶ ${d.plays} · ♥ ${d.likes}`]);
     if (d.medals) rows.push(['Médailles', `<span class="hub-medals">${MEDALS.map((m) => `<span title="${esc(m.label)}">${medalIcon(m)} ${formatTime(d.medals[m.id])}</span>`).join('')}</span>`]);
     if (d.goal) { const done = goalDone(d.goalKey); rows.push(['Objectif bonus', `<span class="${done ? 'goal-done' : ''}">★ ${esc(goalLabel(d.goal))}${done ? ' ✓' : ''}</span>`]); }

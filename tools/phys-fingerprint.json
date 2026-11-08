@@ -1,6 +1,6 @@
 {
  "version": 26,
- "combined": "5ac5217ee8dd5d35",
+ "combined": "538c0a9c098eb3dc",
  "scenarios": {
   "bot:eclats": "3694d918a22cedd6",
   "noise:eclats": "c385d9f46247b37c",
@@ -183,6 +183,10 @@
   "logic:door:noise": "50576cd3b6f68a71",
   "logic:zones:bot": "dc58dfb6b92f3950",
   "logic:zones:noise": "a13335ec84eaffa2",
-  "logic:obstacles:bot": "94ad204b3b8ee691"
+  "logic:obstacles:bot": "94ad204b3b8ee691",
+  "env:rain80:bot": "5cd033f80d0d7434",
+  "env:frost70:noise": "aa03b88bd3931fa3",
+  "env:gust-loops:bot": "ef68b8d32c4bf1f5",
+  "env:storm-vary:bot": "870f4b2edca8f5f4"
  }
 }

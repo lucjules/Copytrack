@@ -405,4 +405,16 @@ export default {
   'Ce duel est terminé.': 'This duel is over.', 'Tu ne fais pas partie de ce duel.': 'You are not part of this duel.', 'Tournoi introuvable sur ce circuit.': 'Tournament not found on this track.',
   'Tu n\'es pas inscrit à ce tournoi.': 'You are not signed up for this tournament.', 'Compétition inconnue.': 'Unknown competition.',
   'Compétitions indisponibles sur ce serveur (étape SQL 12).': 'Competitions unavailable on this server (SQL step 12).', 'Compétition possible seulement sur un circuit de la carrière.': 'Competition is only possible on a career track.',
+  // ---------------------------------------------------------------- Environnements déterministes : pluie, givre, rafales (0.9.41)
+  'Givre': 'Frost', '{w:w} % · variable': '{w} % · changing',
+  'La piste mouillée glisse un peu partout, et beaucoup dans les flaques (0 : temps sec)': 'The wet track is a little slippery everywhere, and very slippery in puddles (0: dry weather)',
+  'Des plaques de verglas sur les lignes droites (0 : aucune)': 'Patches of black ice on the straights (0: none)',
+  'Des coups de vent, par à-coups, dans la direction du vent (0 : aucune)': 'Bursts of wind, on and off, in the wind direction (0: none)',
+  'Conditions qui varient': 'Changing conditions', 'La pluie forcit et faiblit pendant la course, toujours de la même façon': 'The rain gets heavier and lighter during the race, always the same way',
+  'Graine des conditions': 'Conditions seed', 'Place les flaques, les plaques de givre et les rafales : même graine, mêmes conditions pour tout le monde': 'Places the puddles, the frost patches and the gusts: same seed, same conditions for everyone',
+  'Tirer une autre graine': 'Draw another seed', 'aucune': 'none',
+  'Départ, tours, gravité, véhicule, adhérence, vent et conditions changent la course : à revérifier.': 'Start, laps, gravity, vehicle, grip, wind and conditions change the race: verify again.',
+  'Pluie {n} %': 'Rain {n}%', 'Givre {n} %': 'Frost {n}%', 'Rafales {n} %': 'Gusts {n}%',
+  'Averse': 'Downpour', 'Pluie à 60 % : la piste glisse, des flaques se forment.': 'Rain at 60%: the track gets slippery, puddles form.',
+  '🌧️ Sous la pluie': '🌧️ In the rain',
 };
