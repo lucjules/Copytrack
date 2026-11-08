@@ -26,11 +26,13 @@ export const VARIANTS = {
   lap: { values: ['1', '2', '3', '4', '5'], rule: (v) => ({ laps: +v }) },         // nombre de tours (circuits fermés)
   obs: { values: ['0'], rule: () => ({ obstacles: 'off' }) },                       // sans obstacles
   off: { values: ['0', '1'], rule: (v) => ({ offroad: +v }) },                      // hors-piste interdit / permis
+  pm: { values: ['arcade', 'sim'], rule: (v) => ({ pm: v }) },                     // profil physique Arcade / Simulation (E20)
   rn: { values: ['60'], rule: (v) => ({ rain: +v, envSeed: RAIN_SEED }) },          // sous la pluie (%), flaques d'une graine fixe (E19)
   sea: { re: /^[1-9][0-9]{0,3}$/, tag: true, rule: () => ({}) },                   // saison hebdomadaire N (seasons.js) : une étiquette, le circuit ne change pas (E15)
   tour: { re: /^[1-9][0-9]{0,9}$/, tag: true, rule: () => ({}) },                 // tournoi privé n° N (E17) : étiquette, fenêtre et inscrits vérifiés en base
   v0: { values: ['0', '100', '200'], rule: (v) => ({ v0: +v }) },                   // vitesse de départ (km/h)
   veh: { values: ['car', 'moto', 'boat', 'glider'], rule: (v) => ({ veh0: v }) },  // véhicule de départ
+  vm: { values: ['2'], rule: () => ({ vm: 2 }) },                                  // modèles de véhicules v2 : moto, bateau, deltaplane (E20)
   wd: { values: WIND_DIRS, rule: (v) => ({ wind: 25, windDir: WIND_DIRS.indexOf(v) * 45 }) },   // vent de 25 % vers une direction (n, ne, e… ; E13)
 };
 const NAMES = Object.keys(VARIANTS).sort();

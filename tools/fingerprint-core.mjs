@@ -195,6 +195,20 @@ function customScenarios() {
   out['env:gust-loops:bot'] = runGhost(gu, { bot: true }, 120 * 60);
   const vy = byId('canyon'); vy.setParams({ rain: 100, frost: 30, gust: 40, wind: 20, windDir: 270, envSeed: 42, envVary: true });
   out['env:storm-vary:bot'] = runGhost(vy, { bot: true }, 120 * 90);
+  // 9. Véhicules v2 et profils physiques (E20, physics/profiles.js, physics/vehicles/) : moto, bateau, deltaplane v2 ; Arcade, Simulation.
+  const pa = byId('eclats'); pa.setParams({ pm: 'arcade' });
+  out['pm:arcade:bot'] = runGhost(pa, { bot: true }, 120 * 60);
+  const ps = byId('canyon'); ps.setParams({ pm: 'sim' });
+  out['pm:sim:noise'] = runGhost(ps, { inputs: randomInputs(83, 3000) }, 3000);
+  const mo = byId('serpent'); mo.setParams({ vm: 2 });
+  out['v2:moto:bot'] = runGhost(mo, { bot: true }, 120 * 90);
+  out['v2:moto:noise'] = runGhost(mo, { inputs: randomInputs(89, 3000) }, 3000);
+  const bo = byId('recif'); bo.setParams({ vm: 2 });
+  out['v2:boat:bot'] = runGhost(bo, { bot: true }, 120 * 90);
+  const gl = byId('phare'); gl.setParams({ vm: 2, wind: 30, windDir: 45, envSeed: 5, gust: 20 });
+  out['v2:glider:bot'] = runGhost(gl, { bot: true }, 120 * 90);
+  const vs = scriptTrack('vehicules-v2', 'start S2 S.o S2 S.a S2 S.n S2 S.e S2 S.f V4 S2^ S.f^ V-4 S2 finish'); vs.setParams({ pm: 'sim' });
+  out['v2:all-sim:noise'] = runGhost(vs, { inputs: randomInputs(97, 4000) }, 4000);
   return out;
 }
 

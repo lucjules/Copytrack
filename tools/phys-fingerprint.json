@@ -1,6 +1,6 @@
 {
  "version": 26,
- "combined": "538c0a9c098eb3dc",
+ "combined": "49449ae3313587a4",
  "scenarios": {
   "bot:eclats": "3694d918a22cedd6",
   "noise:eclats": "c385d9f46247b37c",
@@ -187,6 +187,13 @@
   "env:rain80:bot": "5cd033f80d0d7434",
   "env:frost70:noise": "aa03b88bd3931fa3",
   "env:gust-loops:bot": "ef68b8d32c4bf1f5",
-  "env:storm-vary:bot": "870f4b2edca8f5f4"
+  "env:storm-vary:bot": "870f4b2edca8f5f4",
+  "pm:arcade:bot": "82cebc84ebbcfa08",
+  "pm:sim:noise": "967b72fa36898df4",
+  "v2:moto:bot": "80a942aaacbf50a4",
+  "v2:moto:noise": "cd2892b1c5b4bf39",
+  "v2:boat:bot": "852c18441b851c92",
+  "v2:glider:bot": "474a70050e4e56f7",
+  "v2:all-sim:noise": "79dd244785a42033"
  }
 }

@@ -6,6 +6,31 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.42 — véhicules v2, profils physiques, laboratoire
+
+Étape E20 de Copytrack Evolution. `PHYS_VER` inchangé (26) : les modèles de toujours restent identiques au bit près (les 186 scénarios de l'empreinte sont identiques), les nouveaux modèles n'entrent en service que par une règle du circuit ou une catégorie de record. **Redéployer `submit-score`** (déjà régénérée ici) : nouvelles règles et catégories.
+
+- **Profils physiques** (règle `pm` du circuit, catégories de record « 🕹️ Profil Arcade » et « 🎛️ Profil Simulation ») :
+  - **Arcade** : plus d'adhérence latérale, lacet plus amorti, arrière qui décroche moins, volant qui revient plus vite ;
+  - **Classique** : la physique de toujours (par défaut) ;
+  - **Simulation** : pneus plus progressifs, moins d'adhérence et d'amortissement, freins plus longs, et les véhicules v2 en service ;
+  - **aucun profil ne rend un véhicule plus rapide en ligne droite** : vitesse de pointe, accélération et boost sont les mêmes (un test le vérifie). Ce sont des catégories de classement, jamais des achats.
+- **Véhicules v2** (règle `vm`, case *Véhicules v2* de l'éditeur, catégorie « 🧪 Véhicules v2 » sur les circuits qui ont autre chose qu'une voiture) :
+  - **moto** : elle penche selon l'accélération latérale, avec un temps de bascule (changer de cap plus vite coûte de l'adhérence) ; au freinage la charge passe sur l'avant, à l'accélération sur l'arrière (à basse vitesse, plein gaz lève l'avant) ; le frein mord moins sur l'angle. La moto penche aussi à l'écran ;
+  - **bateau** : houle déterministe (monter une vague freine, la descendre relance, la coque la suit à l'écran) et courant le long de chaque pièce d'eau ;
+  - **deltaplane** : ascendances tirées de la graine des conditions, portance qui baisse en altitude, vent et rafales du circuit qui portent l'aile.
+- **Laboratoire** (🧪, fiche du circuit, section Records) : les commandes de ton record rejouées à l'identique sous deux réglages au choix :
+  - circuit tel quel, Classique v1 ou v2, Arcade, Simulation, adhérence 80 %, pluie ;
+  - l'écran affiche les deux résultats, le secteur où les courses se séparent, la courbe de l'écart le long du circuit et le tableau des secteurs (analyse d'E4) ;
+  - le circuit n'est jamais modifié.
+- Sous le capot :
+  - `js/physics/profiles.js`, `js/physics/vehicles/moto2.js`, `boat2.js`, `glider2.js` ;
+  - `js/analysis/lab.js`, `js/app/lab.js` ;
+  - 7 scénarios `pm:*` et `v2:*` dans l'empreinte ;
+  - `tools/test-vehicles2.mjs` ;
+  - tests navigateur (réglages de l'éditeur, laboratoire).
+- **Limite** : le réglage fin du ressenti des profils et des véhicules v2 demande des essais manette en main ; les valeurs actuelles sont un premier jet mesuré par les tests et le pilote automatique.
+
 ## Bêta 0.9.41 — environnements déterministes : pluie et flaques, givre, rafales
 
 Étape E19 de Copytrack Evolution (début du bloc 6). `PHYS_VER` inchangé (26) : les circuits, records et replays existants courent exactement comme avant (les 182 scénarios de l'empreinte de la physique sont identiques). **Redéployer `submit-score`** (déjà régénérée ici) : la vérification connaît les nouvelles règles du circuit et la catégorie « sous la pluie ».

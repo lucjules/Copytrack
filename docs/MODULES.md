@@ -109,6 +109,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `coach.js` | Coach (Copytrack Evolution, E7) : des conseils LOCALISÉS (un secteur, un endroit) et JUSTIFIÉS par les mesures de deux courses projetées sur la même référence (analysis/reference.js). On ne conseille que là où du temps a été perdu : une course identique à la référence ne reçoit aucun conseil. Module pur, testé sous Node (tools/test-coach.mjs) ; le texte est en français (la clé de la traduction, comme partout). |
 | `drill.js` | Mesure d'un exercice de l'Académie (Copytrack Evolution, E12) : la course est REJOUÉE à partir de ses commandes (traceFromInputs, le même pas que la course et le serveur), puis mesurée par l'analyse : temps et vitesse moyenne dans des zones du circuit, chocs, réceptions, mini-turbos. |
 | `events.js` | Bilan des évènements d'une course (analysis/trace.js) : chocs, réapparitions, réceptions, mini-turbos, temps en l'air. Module pur. |
+| `lab.js` | Laboratoire de comparaison (Copytrack Evolution, E20) : rejoue les MÊMES commandes (une course enregistrée) sous deux réglages physiques et mesure l'écart avec l'analyse d'E4 (trace rejouée au bit près, référence de parcours, secteurs, écart de temps le long du circuit). Le circuit n'est jamais modifié : chaque réglage s'applique à une copie. Module pur, testé sous Node (tools/test-vehicles2.mjs). |
 | `live.js` | Suivi en direct contre une course de référence (HUD d'entraînement) : à chaque image, la position de la voiture est projetée sur la référence de parcours (recherche fenêtrée : quelques dizaines de segments), et l'écart est le chrono moins le temps de la référence à cette distance. |
 | `reference.js` | Référence de parcours : une ligne le long du circuit, graduée en mètres, sur laquelle on projette toute course pour la comparer à une autre (« à 820 m du départ, tu avais 0,4 s de retard »). Module pur, testé sous Node. |
 | `sectors.js` | Secteurs et écarts entre deux courses projetées sur la même référence (analysis/reference.js). Module pur, testé sous Node. |
@@ -122,6 +123,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `community.js` | Communauté : partage, classements en ligne, publication, import de circuits et de fantômes, aide. |
 | `competition.js` | Compétition asynchrone (Copytrack Evolution, E17) : duels classés entre amis (Elo) et tournois privés. Tout se joue sur des circuits de la carrière, sous des catégories de record « …~v1.duel-N » et « …~v1.tour-N » (variants.js) : la course est rejouée par le serveur comme toute autre, et les résultats, le classement Elo et la clôture sont calculés en base (supabase/etape12-competition.sql). Ces méthodes s'ajoutent au prototype de App. |
 | `editorFlow.js` | Passages entre le menu et l'éditeur : ouverture, aide, retour, essai d'un circuit. |
+| `lab.js` | Laboratoire de comparaison (Copytrack Evolution, E20) : depuis la fiche d'un circuit, rejoue les commandes du record personnel sous deux réglages physiques (profils, véhicules v1 / v2, adhérence, pluie) et affiche l'écart secteur par secteur et le long du circuit. Le calcul est dans analysis/lab.js ; le circuit n'est jamais modifié. Ces méthodes s'ajoutent au prototype de App. |
 | `modes.js` | Modes de jeu, règles de partie et paquets (lot 13) : l'interface. Les règles et validations sont dans rules.js et mods.js. Ces méthodes s'ajoutent au prototype de App. |
 | `multi.js` | Multijoueur : salons (privés par code, ou publics), circuit commun, lobby, départ en course à plusieurs, classement du salon, championnat (manches). |
 | `profile.js` | Profil : compte, sauvegardes, import et export de sauvegarde. |
@@ -210,9 +212,18 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | Fichier | Rôle |
 | --- | --- |
 | `obstacles.js` | Contacts de la voiture avec les obstacles (piques, balanciers, marteaux, murs coulissants, balayeurs, bumpers). |
+| `profiles.js` | Profils physiques (Copytrack Evolution, E20) : Arcade, Classique, Simulation. Une règle du circuit (`pm`, table RULES de track.js) ou une catégorie de record (variante `pm-…`) : jamais un achat, jamais une amélioration. Classique est la physique de toujours : sans profil, specsOf renvoie null et la voiture lit SPECS tel quel (mêmes objets, mêmes nombres : l'empreinte ne change pas). |
 | `ribbon.js` | Conduite sur les rubans 3D (loopings, vrilles, tubes, murs, plafond) : entrée, conduite, sortie et raccord d'un ruban à l'autre. |
 | `specs.js` | Réglages des véhicules et des revêtements pour la physique (voiture, moto, bateau, deltaplane) : des nombres, aucune logique. |
 | `walls.js` | Collisions de la voiture avec les murs (bordures), les toits de tunnel, les dalles et les limites du monde. |
+
+## `js/physics/vehicles/`
+
+| Fichier | Rôle |
+| --- | --- |
+| `boat2.js` | Bateau v2 (Copytrack Evolution, E20) : flottabilité, vagues, courants. En service seulement avec les modèles v2 (règle vm = 2 ou profil Simulation) et sur l'eau ; sinon le bateau est celui de toujours. |
+| `glider2.js` | Deltaplane v2 (Copytrack Evolution, E20) : courants aériens et altitude. En service seulement avec les modèles v2 (règle vm = 2 ou profil Simulation) et en vol ; sinon le deltaplane est celui de toujours. |
+| `moto2.js` | Moto v2 (Copytrack Evolution, E20) : inclinaison, transfert de masse, roue arrière, freins avant et arrière. En service seulement avec les modèles v2 (règle vm = 2 ou profil Simulation, physics/profiles.js) ; sinon la moto est celle de toujours (aucune de ces lignes ne s'exécute). |
 
 ## `js/race/`
 

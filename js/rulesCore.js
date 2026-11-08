@@ -37,7 +37,15 @@ function extraRules(o) {
     if (seed) out.envSeed = seed;
     if (out.rain && o.envVary) out.envVary = true;
   }
+  // Véhicules v2 et profils physiques (E20, physics/profiles.js) : catégories de record « profil Arcade / Simulation », « véhicules v2 ».
+  if (+o.vm === 2) out.vm = 2;
+  if (o.pm === 'arcade' || o.pm === 'sim') out.pm = o.pm;
   return out;
+}
+// Le circuit fait-il rouler autre chose qu'une voiture (départ, ou plaque moto / bateau / deltaplane) ?
+export function usesVehicles(track) {
+  const V = ['moto', 'boat', 'glider'];
+  return V.includes(track.veh0) || track.tiles.some((t) => V.includes(t.s) || V.includes(t.s2));
 }
 export const isDefaultRules = (r) => JSON.stringify(sanitizeRules(r)) === JSON.stringify(DEFAULT_RULES);
 
@@ -54,6 +62,8 @@ export function applyRules(track, rules) {
   if (r.offroad >= 0) p.offroad = r.offroad;
   if (r.grip) p.grip = r.grip;
   if (r.wind) { p.wind = r.wind; p.windDir = r.windDir; }
+  if (r.pm) p.pm = r.pm;
+  if (r.vm && usesVehicles(track)) p.vm = r.vm;      // sur un circuit tout en voiture, les modèles v2 ne changent rien : la catégorie n'a pas lieu d'être
   if (r.rain || r.frost || r.gust) Object.assign(p, { rain: r.rain || 0, frost: r.frost || 0, gust: r.gust || 0, envSeed: r.envSeed || 0, envVary: !!r.envVary });      // les conditions remplacent celles du circuit
   t.setParams(p);
   if (r.laps && t.laps > 1) {

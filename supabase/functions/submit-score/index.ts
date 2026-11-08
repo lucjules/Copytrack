@@ -1693,18 +1693,18 @@ function rolledNormal(t, psi, o) {
 function buildRolled(tile) {
   const P = PIECES[tile.t];
   const psi = tile.o === 1 ? Math.PI / 2 : -Math.PI / 2;
-  const C3 = {};
+  const C4 = {};
   const half = P.size * HALF;
   const len = P.kind === "arc" ? hypot2(Math.PI / 2 * arcParams(P).R, P.rise * LEVEL_H) : hypot2(2 * half, P.rise * LEVEL_H);
   return {
     minU: 0.5,
     len: len * 1.2,
     pos(u, o) {
-      floorCenter(tile, u, C3);
-      o.x = C3.x;
-      o.y = C3.y;
-      o.z = C3.z;
-      rolledNormal(C3, psi, o);
+      floorCenter(tile, u, C4);
+      o.x = C4.x;
+      o.y = C4.y;
+      o.z = C4.z;
+      rolledNormal(C4, psi, o);
     }
   };
 }
@@ -5268,6 +5268,223 @@ function createLogic(track, phys, race) {
   };
 }
 
+// js/mathutil.js
+var clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+
+// js/physics/specs.js
+var CAR = {
+  accel: 11,
+  accelCurve: 1.5,
+  maxSpeed: SURF_PHYS.maxSpeed,
+  boostSpeed: SURF_PHYS.boostSpeed,
+  boostAccel: 10,
+  boostTime: 1.2,
+  brake: 52,
+  reverseAccel: 15,
+  reverseMax: 15,
+  roll: 0.6,
+  drag: 9e-4,
+  coast: 2,
+  // Châssis (modèle bicyclette)
+  a: 1.35,
+  b: 1.4,
+  yawK: 1.9,
+  corner: 230,
+  latGrip: 80,
+  frontShare: 0.42,
+  steerMax: 0.65,
+  steerAlat: 52,
+  driftRear: 0.65,
+  driftSteer: 1.3,
+  driftMin: 12,
+  driftBrake: 0.75,
+  yawDamp: 0.6,
+  steerIn: 8,
+  steerOut: 13,
+  gravity: SURF_PHYS.gravity,
+  snap: 0.7,
+  step: 1.6,
+  magnetRange: 4,
+  magnetAcc: 80,
+  launch: 0.6,
+  airPitchAcc: 4.2,
+  airPitchDamp: 2.6,
+  airPitchUpK: 1.6,
+  airSteer: 1.4,
+  airSteerMax: 0.45,
+  landOk: 0.38,
+  mtTime1: 0.7,
+  mtTime2: 1.5,
+  flipKick: 7,
+  lipHopMin: 2,
+  lipHopMax: 4,
+  lipHopK: 600,
+  bounce: SURF_PHYS.bounce,
+  wind: SURF_PHYS.wind,
+  spring: SURF_PHYS.spring,
+  springHop: 11,
+  cutTime: 1,
+  shockE: 0.5,
+  shockKick: 6,
+  // 0.9.4 : un mur se paie. Choc = rebond + perte de vitesse proportionnelle à l'impact + coup de volant forcé + moteur et adhérence
+  // réduits un instant (la voiture « encaisse »), et frottement continu tant qu'on racle.
+  wallE: 0.35,
+  wallLoss: 0.05,
+  wallLossMax: 0.65,
+  wallScrape: 2,
+  wallSpin: 0.14,
+  wallSpinMax: 2.5,
+  wallStun: 0.04,
+  stunTraction: 0.3,
+  stunGrip: 0.6,
+  radius: 1,
+  probe: 1.25,
+  height: 1.3
+};
+var MOTO = {
+  ...CAR,
+  accel: 10,
+  maxSpeed: 90,
+  brake: 44,
+  a: 1.15,
+  b: 1.2,
+  yawK: 1.25,
+  latGrip: 78,
+  frontShare: 0.45,
+  steerMax: 0.75,
+  steerAlat: 66,
+  driftRear: 0.76,
+  driftSteer: 1.15,
+  steerIn: 9,
+  steerOut: 14,
+  airPitchAcc: 5.2
+};
+var BOAT = {
+  ...CAR,
+  accel: 8,
+  maxSpeed: 85,
+  brake: 32,
+  latGrip: 58,
+  frontShare: 0.41,
+  steerMax: 0.55,
+  steerAlat: 48,
+  yawK: 2.1,
+  yawDamp: 0.9,
+  driftRear: 0.7
+};
+var GLIDER = {
+  ...CAR,
+  accel: 8,
+  maxSpeed: 90,
+  airPitchAcc: 3.4
+};
+var SPECS = {
+  car: CAR,
+  moto: MOTO,
+  boat: BOAT,
+  glider: GLIDER
+};
+var GLIDE = {
+  lift: 0.021,
+  liftMaxG: 1.6,
+  drag: 9e-4,
+  induced: 0.03,
+  trim: 0.08,
+  up: 0.34,
+  down: -0.16,
+  turn: 1.7,
+  turnSpeed: 9,
+  turnRamp: 7
+};
+var SIDE_AERO = 0.03;
+var SIDE_HOLD = 25 / (30 * 30);
+var SIDE_MIN_SPEED = 30;
+var SIDE_GRACE = 0.3;
+var COEF = {
+  grip: 1,
+  traction: 1,
+  vmaxK: 1,
+  extraDrag: 0,
+  rearK: 1
+};
+function surfaceCoeffs(mod, f, out = COEF) {
+  out.grip = 1;
+  out.traction = 1;
+  out.vmaxK = 1;
+  out.extraDrag = 0;
+  out.rearK = 1;
+  switch (mod) {
+    case "ice":
+      out.grip = clamp(0.2 / f, 0.05, 0.85);
+      out.traction = 0.45;
+      break;
+    case "magnet":
+      out.grip = 1.6;
+      break;
+    // Dérive : l'arrière n'accroche presque plus (l'avant, si) : au moindre coup de volant la voiture part en glisse.
+    case "drift":
+      out.rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85);
+      break;
+    case "slow":
+      out.extraDrag = 14 * f;
+      break;
+    // Poudreuse : on s'enfonce un peu, l'adhérence est molle et le moteur patine.
+    case "powder":
+      out.grip = clamp(0.62 / Math.sqrt(f), 0.3, 0.9);
+      out.traction = 0.75;
+      out.vmaxK = clamp(1 - 0.28 * f, 0.4, 1);
+      out.extraDrag = 2.5 * f;
+      break;
+    default:
+      break;
+  }
+  return out;
+}
+
+// js/physics/profiles.js
+var PROFILE_IDS = [
+  "arcade",
+  "sim"
+];
+var MUL = {
+  arcade: {
+    latGrip: 1.15,
+    yawDamp: 1.45,
+    steerOut: 1.3,
+    brake: 1.08,
+    airPitchAcc: 1.2,
+    corner: 1.1
+  },
+  sim: {
+    latGrip: 0.93,
+    yawDamp: 0.75,
+    corner: 0.82,
+    brake: 0.9,
+    steerAlat: 0.9
+  }
+};
+var REAR = {
+  arcade: (r) => Math.min(0.92, r + 0.12),
+  sim: (r) => r
+};
+var cache2 = /* @__PURE__ */ new Map();
+function specsOf(profile) {
+  if (!MUL[profile]) return null;
+  if (cache2.has(profile)) return cache2.get(profile);
+  const out = {};
+  for (const [veh, K3] of Object.entries(SPECS)) {
+    const k = {
+      ...K3
+    };
+    for (const [f, m] of Object.entries(MUL[profile])) k[f] = K3[f] * m;
+    k.driftRear = REAR[profile](K3.driftRear);
+    out[veh] = Object.freeze(k);
+  }
+  cache2.set(profile, Object.freeze(out));
+  return cache2.get(profile);
+}
+var v2Of = (track) => !!track && (track.vm === 2 || track.pm === "sim");
+
 // js/track.js
 var MAX_GROUP = 63;
 var EMPTY = Object.freeze([]);
@@ -5374,6 +5591,23 @@ var RULES = [
     clean: (v) => !!v,
     code: "ev",
     sig: (v) => v ? "#Y" : "",
+    v4: true
+  },
+  // Véhicules v2 et profils physiques (Copytrack Evolution, E20 ; physics/profiles.js, physics/vehicles/) : absents par défaut, rien ne change.
+  {
+    key: "vm",
+    def: 1,
+    clean: (v) => +v === 2 ? 2 : 1,
+    code: "vm",
+    sig: (v) => v === 2 ? "#M2" : "",
+    v4: true
+  },
+  {
+    key: "pm",
+    def: "",
+    clean: (v) => PROFILE_IDS.includes(v) ? v : "",
+    code: "pm",
+    sig: (v) => v ? "#Q" + v : "",
     v4: true
   }
 ];
@@ -8671,179 +8905,6 @@ function buildBuiltin(def) {
   return t;
 }
 
-// js/mathutil.js
-var clamp = (v, a, b) => v < a ? a : v > b ? b : v;
-
-// js/physics/specs.js
-var CAR = {
-  accel: 11,
-  accelCurve: 1.5,
-  maxSpeed: SURF_PHYS.maxSpeed,
-  boostSpeed: SURF_PHYS.boostSpeed,
-  boostAccel: 10,
-  boostTime: 1.2,
-  brake: 52,
-  reverseAccel: 15,
-  reverseMax: 15,
-  roll: 0.6,
-  drag: 9e-4,
-  coast: 2,
-  // Châssis (modèle bicyclette)
-  a: 1.35,
-  b: 1.4,
-  yawK: 1.9,
-  corner: 230,
-  latGrip: 80,
-  frontShare: 0.42,
-  steerMax: 0.65,
-  steerAlat: 52,
-  driftRear: 0.65,
-  driftSteer: 1.3,
-  driftMin: 12,
-  driftBrake: 0.75,
-  yawDamp: 0.6,
-  steerIn: 8,
-  steerOut: 13,
-  gravity: SURF_PHYS.gravity,
-  snap: 0.7,
-  step: 1.6,
-  magnetRange: 4,
-  magnetAcc: 80,
-  launch: 0.6,
-  airPitchAcc: 4.2,
-  airPitchDamp: 2.6,
-  airPitchUpK: 1.6,
-  airSteer: 1.4,
-  airSteerMax: 0.45,
-  landOk: 0.38,
-  mtTime1: 0.7,
-  mtTime2: 1.5,
-  flipKick: 7,
-  lipHopMin: 2,
-  lipHopMax: 4,
-  lipHopK: 600,
-  bounce: SURF_PHYS.bounce,
-  wind: SURF_PHYS.wind,
-  spring: SURF_PHYS.spring,
-  springHop: 11,
-  cutTime: 1,
-  shockE: 0.5,
-  shockKick: 6,
-  // 0.9.4 : un mur se paie. Choc = rebond + perte de vitesse proportionnelle à l'impact + coup de volant forcé + moteur et adhérence
-  // réduits un instant (la voiture « encaisse »), et frottement continu tant qu'on racle.
-  wallE: 0.35,
-  wallLoss: 0.05,
-  wallLossMax: 0.65,
-  wallScrape: 2,
-  wallSpin: 0.14,
-  wallSpinMax: 2.5,
-  wallStun: 0.04,
-  stunTraction: 0.3,
-  stunGrip: 0.6,
-  radius: 1,
-  probe: 1.25,
-  height: 1.3
-};
-var MOTO = {
-  ...CAR,
-  accel: 10,
-  maxSpeed: 90,
-  brake: 44,
-  a: 1.15,
-  b: 1.2,
-  yawK: 1.25,
-  latGrip: 78,
-  frontShare: 0.45,
-  steerMax: 0.75,
-  steerAlat: 66,
-  driftRear: 0.76,
-  driftSteer: 1.15,
-  steerIn: 9,
-  steerOut: 14,
-  airPitchAcc: 5.2
-};
-var BOAT = {
-  ...CAR,
-  accel: 8,
-  maxSpeed: 85,
-  brake: 32,
-  latGrip: 58,
-  frontShare: 0.41,
-  steerMax: 0.55,
-  steerAlat: 48,
-  yawK: 2.1,
-  yawDamp: 0.9,
-  driftRear: 0.7
-};
-var GLIDER = {
-  ...CAR,
-  accel: 8,
-  maxSpeed: 90,
-  airPitchAcc: 3.4
-};
-var SPECS = {
-  car: CAR,
-  moto: MOTO,
-  boat: BOAT,
-  glider: GLIDER
-};
-var GLIDE = {
-  lift: 0.021,
-  liftMaxG: 1.6,
-  drag: 9e-4,
-  induced: 0.03,
-  trim: 0.08,
-  up: 0.34,
-  down: -0.16,
-  turn: 1.7,
-  turnSpeed: 9,
-  turnRamp: 7
-};
-var SIDE_AERO = 0.03;
-var SIDE_HOLD = 25 / (30 * 30);
-var SIDE_MIN_SPEED = 30;
-var SIDE_GRACE = 0.3;
-var COEF = {
-  grip: 1,
-  traction: 1,
-  vmaxK: 1,
-  extraDrag: 0,
-  rearK: 1
-};
-function surfaceCoeffs(mod, f, out = COEF) {
-  out.grip = 1;
-  out.traction = 1;
-  out.vmaxK = 1;
-  out.extraDrag = 0;
-  out.rearK = 1;
-  switch (mod) {
-    case "ice":
-      out.grip = clamp(0.2 / f, 0.05, 0.85);
-      out.traction = 0.45;
-      break;
-    case "magnet":
-      out.grip = 1.6;
-      break;
-    // Dérive : l'arrière n'accroche presque plus (l'avant, si) : au moindre coup de volant la voiture part en glisse.
-    case "drift":
-      out.rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85);
-      break;
-    case "slow":
-      out.extraDrag = 14 * f;
-      break;
-    // Poudreuse : on s'enfonce un peu, l'adhérence est molle et le moteur patine.
-    case "powder":
-      out.grip = clamp(0.62 / Math.sqrt(f), 0.3, 0.9);
-      out.traction = 0.75;
-      out.vmaxK = clamp(1 - 0.28 * f, 0.4, 1);
-      out.extraDrag = 2.5 * f;
-      break;
-    default:
-      break;
-  }
-  return out;
-}
-
 // js/sim/params.js
 var WIND_MAX = 0.5;
 var DEFAULT_PARAMS = Object.freeze({
@@ -8980,6 +9041,115 @@ function envOf(track) {
   });
 }
 
+// js/physics/vehicles/moto2.js
+var MAX_LEAN = 0.95;
+var LEAN_RATE = 2.4;
+var LAG_COST = 0.3;
+var TRANSFER = 0.35;
+var WHEELIE_SPEED = 14;
+function moto2Ground(phys, inp, vf, g, dt) {
+  const latA = phys.omega * vf;
+  const target = clamp(datan(latA / Math.max(1, g)), -MAX_LEAN, MAX_LEAN);
+  const step = LEAN_RATE * dt;
+  phys.lean += clamp(target - phys.lean, -step, step);
+  const lag = Math.abs(target - phys.lean);
+  let grip = 1 - LAG_COST * clamp(lag / 0.5, 0, 1);
+  const leanK = Math.abs(phys.lean) / MAX_LEAN;
+  if (inp.brake && vf > 2) grip *= 1 - 0.22 * leanK;
+  let tr = clamp(-phys.mAx / Math.max(1, g) * TRANSFER, -0.25, 0.3);
+  if (inp.throttle && !inp.brake && vf > 0 && vf < WHEELIE_SPEED && phys.mAx > 3) tr = Math.min(tr, -0.22);
+  phys.v2F = clamp(1 + 2.2 * tr, 0.35, 1.6);
+  phys.v2R = clamp(1 - 1.7 * tr, 0.45, 1.5);
+  return grip;
+}
+function moto2Idle(phys, dt) {
+  phys.lean -= clamp(phys.lean, -LEAN_RATE * dt, LEAN_RATE * dt);
+  phys.v2F = 1;
+  phys.v2R = 1;
+}
+
+// js/physics/vehicles/boat2.js
+var WAVE_A = 0.55;
+var K1 = 0.085;
+var W1 = 1.6;
+var K2 = 0.12;
+var W22 = 1.15;
+var CURRENT = 2.6;
+var SLOPE_K = 0.75;
+var C3 = {
+  x: 0,
+  z: 0
+};
+function waveAt(x, z, t) {
+  return WAVE_A * (0.6 * dsin(x * K1 + t * W1) + 0.4 * dsin(z * K2 - t * W22 + x * 0.03));
+}
+var OUT = {
+  dvf: 0,
+  dvr: 0,
+  grip: 1
+};
+function boat2Water(phys, tile, fx, fz, rx, rz, g, dt) {
+  const p = phys.pos, t = phys.time;
+  const sx = WAVE_A * 0.6 * K1 * dcos(p.x * K1 + t * W1) + WAVE_A * 0.4 * 0.03 * dcos(p.z * K2 - t * W22 + p.x * 0.03);
+  const sz = WAVE_A * 0.4 * K2 * dcos(p.z * K2 - t * W22 + p.x * 0.03);
+  const h = waveAt(p.x, p.z, t);
+  const rise = (h - phys.heave) / dt;
+  phys.heave = h;
+  OUT.dvf = -g * SLOPE_K * (sx * fx + sz * fz) * dt;
+  OUT.dvr = -g * SLOPE_K * (sx * rx + sz * rz) * dt;
+  OUT.grip = rise > 0.4 ? Math.max(0.75, 1 - (rise - 0.4) * 0.12) : 1;
+  if (tile) {
+    rotVec(tile.r, 0, -1, C3);
+    OUT.dvf += CURRENT * (C3.x * fx + C3.z * fz) * dt;
+    OUT.dvr += CURRENT * (C3.x * rx + C3.z * rz) * dt;
+  }
+  return OUT;
+}
+
+// js/physics/vehicles/glider2.js
+var THERMAL_RATE = 0.1;
+var THERMAL_ACC = 7;
+var THERMAL_R = 14;
+var THERMAL_TOP = 26 * LEVEL_H;
+var ALT0 = 18 * LEVEL_H;
+var ALT_SPAN = 40 * LEVEL_H;
+var ALT_MIN_K = 0.45;
+var BIG = CELL * 2;
+function hash01(seed, a, b, salt) {
+  let x = Math.imul(seed + 9541, 2654435761) ^ Math.imul(a + 3, 2246822507) ^ Math.imul(b + 5, 3266489909) ^ Math.imul(salt + 11, 668265263);
+  x ^= x >>> 15;
+  x = Math.imul(x, 739982445);
+  x ^= x >>> 12;
+  x = Math.imul(x, 695872825);
+  x ^= x >>> 15;
+  return (x >>> 0) / 4294967296;
+}
+function thermalOf(seed, cx, cz) {
+  if (hash01(seed, cx, cz, 1) >= THERMAL_RATE) return null;
+  return {
+    x: (cx + 0.25 + hash01(seed, cx, cz, 2) * 0.5) * BIG,
+    z: (cz + 0.25 + hash01(seed, cx, cz, 3) * 0.5) * BIG
+  };
+}
+function thermalLift(seed, x, y, z) {
+  if (y > THERMAL_TOP) return 0;
+  const cx = Math.floor(x / BIG), cz = Math.floor(z / BIG);
+  let a = 0;
+  for (let i = -1; i <= 1; i++) {
+    for (let j = -1; j <= 1; j++) {
+      const th = thermalOf(seed, cx + i, cz + j);
+      if (!th) continue;
+      const dx = x - th.x, dz = z - th.z, d2 = dx * dx + dz * dz;
+      if (d2 < THERMAL_R * THERMAL_R) a += THERMAL_ACC * (1 - Math.sqrt(d2) / THERMAL_R);
+    }
+  }
+  return a * (1 - y / THERMAL_TOP * 0.5);
+}
+function altitudeK(y) {
+  if (y <= ALT0) return 1;
+  return Math.max(ALT_MIN_K, 1 - (y - ALT0) / ALT_SPAN * (1 - ALT_MIN_K));
+}
+
 // js/physics/walls.js
 var L1 = {
   lx: 0,
@@ -8991,7 +9161,7 @@ var L2 = {
 };
 var S1 = {};
 var S2 = {};
-var W1 = {
+var W12 = {
   x: 0,
   z: 0
 };
@@ -9187,12 +9357,12 @@ var wallMethods = {
     const sgn = S1.d >= 0 ? 1 : -1;
     const targetD = inside ? inner - R : outer + R;
     const push = (targetD - ad) * sgn;
-    rotVec(tile.r, S1.gx, S1.gz, W1);
-    HIT.dx = W1.x * push;
-    HIT.dz = W1.z * push;
+    rotVec(tile.r, S1.gx, S1.gz, W12);
+    HIT.dx = W12.x * push;
+    HIT.dz = W12.z * push;
     const ns = inside ? -sgn : sgn;
-    HIT.nx = W1.x * ns;
-    HIT.nz = W1.z * ns;
+    HIT.nx = W12.x * ns;
+    HIT.nz = W12.z * ns;
     return true;
   }
 };
@@ -9541,8 +9711,8 @@ var ribbonMethods = {
   _cross(R, F) {
     const kc = F.kc || 0;
     if (F.wrap && kc > 0) {
-      const C3 = 2 * Math.PI / kc;
-      R.dl = ((R.dl + C3 / 2) % C3 + C3) % C3 - C3 / 2;
+      const C4 = 2 * Math.PI / kc;
+      R.dl = ((R.dl + C4 / 2) % C4 + C4) % C4 - C4 / 2;
     }
     let X = R.dl, Y = 0, c = 1, s = 0;
     if (kc > 1e-5) {
@@ -9605,9 +9775,9 @@ var ribbonMethods = {
     } else if (R.lowT) R.lowT = Math.max(0, R.lowT - 2 * dt);
     R.psi -= R.dir * kg * R.vs * dt;
     const mod = tile.s, f = tileParam(tile) / 100;
-    const C3 = surfaceCoeffs(mod, f);
-    const extraDrag = C3.extraDrag, vmaxK = C3.vmaxK, rearK = C3.rearK;
-    let gripK = C3.grip, tractK = C3.traction, beltE1 = 0;
+    const C4 = surfaceCoeffs(mod, f);
+    const extraDrag = C4.extraDrag, vmaxK = C4.vmaxK, rearK = C4.rearK;
+    let gripK = C4.grip, tractK = C4.traction, beltE1 = 0;
     if (this.stunT > 0) {
       gripK *= CAR.stunGrip;
       tractK *= CAR.stunTraction;
@@ -9871,7 +10041,7 @@ var L22 = {
   lz: 0
 };
 var S12 = {};
-var W12 = {
+var W13 = {
   x: 0,
   z: 0
 };
@@ -9894,6 +10064,13 @@ var CarPhysics = class {
     this.track = track;
     this.params = paramsOf(track);
     this.env = envOf(track);
+    this._specs = specsOf(track && track.pm);
+    this.v2 = v2Of(track);
+    this.lean = 0;
+    this.mAx = 0;
+    this.heave = 0;
+    this.v2F = 0;
+    this.v2R = 0;
     this.pos = {
       x: 0,
       y: 0,
@@ -9977,7 +10154,8 @@ var CarPhysics = class {
   }
   // Réglages du véhicule actuel (voiture ou moto).
   get k() {
-    return SPECS[this.vehicle] || CAR;
+    const S4 = this._specs || SPECS;
+    return S4[this.vehicle] || S4.car;
   }
   // Hors piste : sur le terrain, ou perdue dans le ciel en gravité inversée.
   get offTrack() {
@@ -10026,6 +10204,13 @@ var CarPhysics = class {
     this.aoa = 0.08;
     this.glidePitch = 0;
     this.bankT = 0;
+    if (this.v2) {
+      this.lean = 0;
+      this.mAx = 0;
+      this.heave = 0;
+      this.v2F = 1;
+      this.v2R = 1;
+    }
     this.rib = null;
     this.gravMul = 1;
     this.vehicle = "car";
@@ -10162,9 +10347,9 @@ var CarPhysics = class {
   _belt(tile, lx, lz, out) {
     sampleLocal(tile, lx, lz, S12);
     const sp = beltSpeed(this._pct(tile));
-    rotVec(tile.r, S12.gz, -S12.gx, W12);
-    out.x = W12.x * sp;
-    out.z = W12.z * sp;
+    rotVec(tile.r, S12.gz, -S12.gx, W13);
+    out.x = W13.x * sp;
+    out.z = W13.z * sp;
     return out;
   }
   // Verre fragile (Phase 3) : plus de condition de vitesse. Chaque dalle a un compte à rebours de contact CUMULÉ (réglage de la
@@ -10184,22 +10369,26 @@ var CarPhysics = class {
   // ---------------------------------------------------------------- Pneus
   // Angle des roues avant selon la vitesse : à haute vitesse, un petit angle suffit.
   _steerAngle(speed, drift) {
-    const K2 = this.k;
+    const K3 = this.k;
     const v2 = Math.max(1, speed * speed);
-    const slipSat = K2.latGrip * K2.frontShare / K2.corner;
-    let max = Math.min(K2.steerMax, datan((K2.a + K2.b) * K2.steerAlat / v2) + slipSat);
-    max *= 1 + (K2.driftSteer - 1) * drift;
+    const slipSat = K3.latGrip * K3.frontShare / K3.corner;
+    let max = Math.min(K3.steerMax, datan((K3.a + K3.b) * K3.steerAlat / v2) + slipSat);
+    max *= 1 + (K3.driftSteer - 1) * drift;
     return this.steer * max;
   }
   // Modèle bicyclette, repère voiture (x avant, y droite, w lacet > 0 = vers la droite).
   // ax : accélération longitudinale (moteur, freins) ; grip : multiplicateur d'adhérence.
   _tires(vx, vy, w, ax, grip, dt) {
-    const drift = this.driftT, K2 = this.k;
+    const drift = this.driftT, K3 = this.k;
     const delta = this._steerAngle(Math.abs(vx), drift);
     this.steerAngle = delta;
-    const L4 = K2.a + K2.b;
-    const maxF = K2.latGrip * grip * K2.frontShare;
-    const maxR = K2.latGrip * grip * (1 - K2.frontShare) * (1 - (1 - K2.driftRear) * drift) * (this.rearK ?? 1);
+    const L4 = K3.a + K3.b;
+    let maxF = K3.latGrip * grip * K3.frontShare;
+    let maxR = K3.latGrip * grip * (1 - K3.frontShare) * (1 - (1 - K3.driftRear) * drift) * (this.rearK ?? 1);
+    if (this.v2F) {
+      maxF *= this.v2F;
+      maxR *= this.v2R;
+    }
     if (Math.abs(vx) < 1.5) {
       vx += ax * dt;
       const lateralDamp = clamp(0.35 + grip * 0.3, 0.35, 0.85);
@@ -10210,14 +10399,14 @@ var CarPhysics = class {
     }
     const den = Math.max(Math.abs(vx), 6);
     const sgn = vx >= 0 ? 1 : -1;
-    const af = datan2(vy + K2.a * w, den) - delta * sgn;
-    const ar = datan2(vy - K2.b * w, den);
-    const Ff = clamp(-K2.corner * af, -maxF, maxF);
-    const Fr = clamp(-K2.corner * ar, -maxR, maxR);
+    const af = datan2(vy + K3.a * w, den) - delta * sgn;
+    const ar = datan2(vy - K3.b * w, den);
+    const Ff = clamp(-K3.corner * af, -maxF, maxF);
+    const Fr = clamp(-K3.corner * ar, -maxR, maxR);
     const cd = dcos(delta), sd = dsin(delta);
     vx += (ax - Ff * sd) * dt;
     vy += (Ff * cd + Fr) * dt;
-    w += ((K2.a * Ff * cd - K2.b * Fr) / K2.yawK - w * K2.yawDamp) * dt;
+    w += ((K3.a * Ff * cd - K3.b * Fr) / K3.yawK - w * K3.yawDamp) * dt;
     BK.vx = vx;
     BK.vy = vy;
     BK.w = w;
@@ -10227,6 +10416,7 @@ var CarPhysics = class {
     this._beginStep();
     inp = this._controls(inp);
     this._driftState(inp);
+    if (this.v2 && (this.vehicle !== "moto" || !this.grounded || this.rib)) moto2Idle(this, DT);
     if (this.rib) {
       this._ribStep(inp);
       return;
@@ -10286,8 +10476,8 @@ var CarPhysics = class {
     }
     const target = clamp(inp.steer || 0, -1, 1);
     const back = Math.abs(target) < Math.abs(this.steer) || target * this.steer < 0;
-    const K2 = this.k;
-    const sr = (back ? K2.steerOut : K2.steerIn) * dt;
+    const K3 = this.k;
+    const sr = (back ? K3.steerOut : K3.steerIn) * dt;
     this.steer += clamp(target - this.steer, -sr, sr);
     if (this.boost > 0) this.boost = Math.max(0, this.boost - dt);
     if (this.bounceCD > 0) this.bounceCD -= dt;
@@ -10296,11 +10486,11 @@ var CarPhysics = class {
   }
   // État de dérapage et mini-turbo.
   _driftState(inp) {
-    const dt = DT, K2 = this.k, ev = this.ev;
+    const dt = DT, K3 = this.k, ev = this.ev;
     const turning = Math.abs(this.steer) > 0.5;
-    if (inp.brake && !inp.throttle && turning && this.fwdSpeed > K2.driftMin && this.grounded) {
+    if (inp.brake && !inp.throttle && turning && this.fwdSpeed > K3.driftMin && this.grounded) {
       this.driftT = Math.min(1, this.driftT + dt * 5);
-    } else if (turning && this.driftT > 0 && this.fwdSpeed > K2.driftMin * 0.7) {
+    } else if (turning && this.driftT > 0 && this.fwdSpeed > K3.driftMin * 0.7) {
       this.driftT = Math.max(0, this.driftT - dt * 0.3);
     } else {
       this.driftT = Math.max(0, this.driftT - dt * 3.5);
@@ -10320,7 +10510,7 @@ var CarPhysics = class {
   }
   // Voiture posée sur une route ou sur le terrain : dynamique dans le plan du sol, revêtement, tapis, pièces mobiles. Renvoie true si le pas se termine ici (noyade).
   _driveGround(inp) {
-    const dt = DT, v = this.vel, K2 = this.k;
+    const dt = DT, v = this.vel, K3 = this.k;
     let fx = -dsin(this.yaw), fy = 0, fz = -dcos(this.yaw);
     const n = this.n;
     const d = fx * n.x + fy * n.y + fz * n.z;
@@ -10371,9 +10561,9 @@ var CarPhysics = class {
     vr -= g * ry * dt;
     const mod = this.surfMod, f = this.surfP;
     const ground = this.surfType === "ground";
-    const C3 = surfaceCoeffs(ground ? "" : mod, f);
-    let grip = C3.grip, traction = C3.traction, vmaxK = C3.vmaxK, extraDrag = C3.extraDrag;
-    const rearK = C3.rearK;
+    const C4 = surfaceCoeffs(ground ? "" : mod, f);
+    let grip = C4.grip, traction = C4.traction, vmaxK = C4.vmaxK, extraDrag = C4.extraDrag;
+    const rearK = C4.rearK;
     if (this.stunT > 0) {
       grip *= CAR.stunGrip;
       traction *= CAR.stunTraction;
@@ -10430,7 +10620,17 @@ var CarPhysics = class {
         vr += (g2.x * rx + g2.z * rz) * dt;
       }
     }
-    const ax = (this._longitudinal(vf, inp, K2.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
+    if (this.v2) {
+      if (this.vehicle === "moto") grip *= moto2Ground(this, inp, vf, this.g, dt);
+      if (this.vehicle === "boat" && wet) {
+        const b = boat2Water(this, this.surfTile, fx, fz, rx, rz, this.g, dt);
+        vf += b.dvf;
+        vr += b.dvr;
+        grip *= b.grip;
+      } else this.heave = 0;
+    }
+    const ax = (this._longitudinal(vf, inp, K3.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
+    if (this.v2) this.mAx = ax;
     this.rearK = rearK;
     const r = this._tires(vf, vr, this.omega, ax, grip, dt);
     this.rearK = 1;
@@ -10458,7 +10658,7 @@ var CarPhysics = class {
   }
   // En l'air : trajectoire balistique, rotation, tangage, vol plané.
   _flyAir(inp) {
-    const dt = DT, v = this.vel, K2 = this.k;
+    const dt = DT, v = this.vel, K3 = this.k;
     let fx = -dsin(this.yaw), fz = -dcos(this.yaw);
     if (this.vehicle === "glider") {
       this._glide(inp, dt);
@@ -10479,7 +10679,7 @@ var CarPhysics = class {
     this.fwdSpeed = v.x * fx + v.z * fz;
     this.airTime += dt;
     const pin = this.vehicle === "glider" ? 0 : (inp.brake ? 1 : 0) - (inp.throttle ? 1 : 0);
-    this.pitchRate += pin * this.gSign * K2.airPitchAcc * (pin > 0 ? CAR.airPitchUpK : 1) * dt;
+    this.pitchRate += pin * this.gSign * K3.airPitchAcc * (pin > 0 ? CAR.airPitchUpK : 1) * dt;
     this.pitchRate *= dexp(-CAR.airPitchDamp * dt);
     if (this.vehicle === "glider") this.pitch = this.glidePitch;
     else this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
@@ -10581,12 +10781,12 @@ var CarPhysics = class {
       const t = this.surfTile;
       if (t) {
         sampleLocal(t, this.surfLx, this.surfLz, S12);
-        rotVec(t.r, S12.gx, S12.gz, W12);
+        rotVec(t.r, S12.gx, S12.gz, W13);
         const k = (this._pct(t) - 100) / 100 * CAR.spring;
         const n = this.n;
-        v.x += W12.x * k + n.x * CAR.springHop;
+        v.x += W13.x * k + n.x * CAR.springHop;
         v.y += n.y * CAR.springHop;
-        v.z += W12.z * k + n.z * CAR.springHop;
+        v.z += W13.z * k + n.z * CAR.springHop;
         this.grounded = false;
         this.pitch = dasin(clamp(this.fwd.y, -1, 1));
         this.airTime = 0;
@@ -10598,17 +10798,17 @@ var CarPhysics = class {
   // Nouvelle vitesse longitudinale : moteur, freins, résistances.
   // load : part du poids qui appuie les roues sur la route (1 au sol, 0 sur un mur vertical).
   _longitudinal(vf, inp, vmax, traction, extraDrag, dt, load = 1) {
-    const K2 = this.k;
+    const K3 = this.k;
     let a = 0;
     if (inp.throttle) {
-      if (vf < -0.5) a += K2.brake * traction;
+      if (vf < -0.5) a += K3.brake * traction;
       else {
         const x = Math.max(0, vf / vmax);
-        a += K2.accel * traction * (1 - dpow(x, CAR.accelCurve));
+        a += K3.accel * traction * (1 - dpow(x, CAR.accelCurve));
       }
     }
     if (inp.brake) {
-      if (vf > 0.5) a -= K2.brake * traction * (1 - CAR.driftBrake * this.driftT);
+      if (vf > 0.5) a -= K3.brake * traction * (1 - CAR.driftBrake * this.driftT);
       else if (!inp.throttle) {
         const x = Math.max(0, -vf) / CAR.reverseMax;
         a -= CAR.reverseAccel * traction * (1 - x * x);
@@ -10616,7 +10816,7 @@ var CarPhysics = class {
     }
     if (this.boost > 0) {
       const f = this.boostF;
-      const vb = K2.maxSpeed + (CAR.boostSpeed - K2.maxSpeed) * f;
+      const vb = K3.maxSpeed + (CAR.boostSpeed - K3.maxSpeed) * f;
       const x = Math.max(0, vf) / vb;
       a += CAR.boostAccel * f * Math.max(0, 1 - x * x);
     }
@@ -10640,6 +10840,7 @@ var CarPhysics = class {
     this.aoa += (aoaT - this.aoa) * Math.min(1, dt * 3);
     let L4 = G.lift * sp * sp * Math.max(0, 0.6 + 4 * this.aoa);
     L4 = Math.min(L4, G.liftMaxG * this.g);
+    if (this.v2) L4 *= altitudeK(this.pos.y);
     const D = G.drag * sp * sp + G.induced * L4;
     const dx = v.x / sp, dy = v.y / sp, dz = v.z / sp;
     const gu = this.gSign;
@@ -10651,6 +10852,19 @@ var CarPhysics = class {
     v.x += (L4 * lx - D * dx) * dt;
     v.y += (L4 * ly - D * dy - this.g * gu) * dt;
     v.z += (L4 * lz - D * dz) * dt;
+    if (this.v2) {
+      v.y += thermalLift(this.track.envSeed | 0, this.pos.x, this.pos.y, this.pos.z) * gu * dt;
+      const P = this.params;
+      if (P.windOn) {
+        v.x += P.windX * dt;
+        v.z += P.windZ * dt;
+      }
+      if (this.env && this.env.gust) {
+        const w = this.env.gustAt(this.clock || 0);
+        v.x += w.x * dt;
+        v.z += w.z * dt;
+      }
+    }
     this.bankT = (this.bankT || 0) + (this.steer - (this.bankT || 0)) * Math.min(1, dt * G.turnRamp);
     const yr = this.bankT * G.turn * Math.min(1, hv / G.turnSpeed);
     const a = -yr * gu * dt, c = dcos(a), s = dsin(a);
@@ -11437,9 +11651,9 @@ function botTime(track, latK = 0.8) {
   }
   return null;
 }
-var cache2 = /* @__PURE__ */ new Map();
+var cache3 = /* @__PURE__ */ new Map();
 function dailyChallenge(day = dayKey()) {
-  if (cache2.has(day)) return cache2.get(day);
+  if (cache3.has(day)) return cache3.get(day);
   const decors = DAILY_DECORS;
   for (let attempt = 0; attempt < 40; attempt++) {
     const r = rng(day + "#" + attempt);
@@ -11509,7 +11723,7 @@ function dailyChallenge(day = dayKey()) {
       key: "daily-" + day,
       script: tokens.join(" ")
     };
-    cache2.set(day, out);
+    cache3.set(day, out);
     return out;
   }
   return null;
@@ -11844,7 +12058,17 @@ function extraRules(o) {
     if (seed) out.envSeed = seed;
     if (out.rain && o.envVary) out.envVary = true;
   }
+  if (+o.vm === 2) out.vm = 2;
+  if (o.pm === "arcade" || o.pm === "sim") out.pm = o.pm;
   return out;
+}
+function usesVehicles(track) {
+  const V = [
+    "moto",
+    "boat",
+    "glider"
+  ];
+  return V.includes(track.veh0) || track.tiles.some((t) => V.includes(t.s) || V.includes(t.s2));
 }
 var isDefaultRules = (r) => JSON.stringify(sanitizeRules(r)) === JSON.stringify(DEFAULT_RULES);
 function applyRules(track, rules) {
@@ -11862,6 +12086,8 @@ function applyRules(track, rules) {
     p.wind = r.wind;
     p.windDir = r.windDir;
   }
+  if (r.pm) p.pm = r.pm;
+  if (r.vm && usesVehicles(track)) p.vm = r.vm;
   if (r.rain || r.frost || r.gust) Object.assign(p, {
     rain: r.rain || 0,
     frost: r.frost || 0,
@@ -11954,6 +12180,15 @@ var VARIANTS = {
       offroad: +v
     })
   },
+  pm: {
+    values: [
+      "arcade",
+      "sim"
+    ],
+    rule: (v) => ({
+      pm: v
+    })
+  },
   rn: {
     values: [
       "60"
@@ -11992,6 +12227,14 @@ var VARIANTS = {
     ],
     rule: (v) => ({
       veh0: v
+    })
+  },
+  vm: {
+    values: [
+      "2"
+    ],
+    rule: () => ({
+      vm: 2
     })
   },
   wd: {

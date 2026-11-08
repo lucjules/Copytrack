@@ -13,6 +13,7 @@ import { COLOR_KEYS, MP, W2, cleanColors } from './track/shared.js';
 import { surfaceMethods } from './track/surfaces.js';
 import { editMethods } from './track/edit.js';
 import { sanitizeLogic, logicToArray, logicFromArray, logicSig } from './sim/logic.js';
+import { PROFILE_IDS } from './physics/profiles.js';
 export const MAX_GROUP = 63;          // groupes 1 à 63 (pièces et décorations) : voir setGroupName, usedGroups
 
 const EMPTY = Object.freeze([]);
@@ -41,6 +42,9 @@ export const RULES = [
   { key: 'gust', def: 0, clean: (v) => clampInt(v, 0, 100, 0), code: 'gu', sig: (v) => (v ? '#U' + v : ''), v4: true },                 // rafales (%), dans la direction du vent
   { key: 'envSeed', def: 0, clean: (v) => clampInt(v, 0, 999, 0), code: 'es', sig: (v) => (v ? '#S' + v : ''), v4: true },              // graine des flaques, plaques et rafales
   { key: 'envVary', def: false, clean: (v) => !!v, code: 'ev', sig: (v) => (v ? '#Y' : ''), v4: true },                                 // la pluie forcit et faiblit pendant la course
+  // Véhicules v2 et profils physiques (Copytrack Evolution, E20 ; physics/profiles.js, physics/vehicles/) : absents par défaut, rien ne change.
+  { key: 'vm', def: 1, clean: (v) => (+v === 2 ? 2 : 1), code: 'vm', sig: (v) => (v === 2 ? '#M2' : ''), v4: true },                       // modèles de véhicules (1 : ceux de toujours, 2 : v2)
+  { key: 'pm', def: '', clean: (v) => (PROFILE_IDS.includes(v) ? v : ''), code: 'pm', sig: (v) => (v ? '#Q' + v : ''), v4: true },         // profil physique ('' : Classique)
 ];
 
 // Champs d'une pièce, dans l'ordre des instantanés de l'historique de l'éditeur (en mémoire seulement : jamais écrits, l'ordre est libre), avec

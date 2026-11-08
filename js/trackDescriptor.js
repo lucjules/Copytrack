@@ -165,6 +165,9 @@ export const HUB_CATEGORIES = [
   { id: 'veh-glider', v: { veh: 'glider' }, label: '🪂 Départ en deltaplane' },
   { id: 'obs-0', v: { obs: 0 }, label: '🚫 Sans obstacles' },
   { id: 'rn-60', v: { rn: '60' }, label: '🌧️ Sous la pluie' },
+  { id: 'pm-arcade', v: { pm: 'arcade' }, label: '🕹️ Profil Arcade' },
+  { id: 'pm-sim', v: { pm: 'sim' }, label: '🎛️ Profil Simulation' },
+  { id: 'vm-2', v: { vm: '2' }, label: '🧪 Véhicules v2' },
 ];
 // Celles qui ont un sens sur ce circuit (classé en ligne, et la variante change vraiment la course).
 export function hubCategories(desc) {

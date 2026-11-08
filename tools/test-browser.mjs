@@ -547,6 +547,25 @@ try {
     assert.equal(await app(() => !!window.copytrack.scene.getObjectByName('env')), false, 'retiré en quittant');
   });
 
+  await test('laboratoire (E20) : les commandes d’un record rejouées sous deux réglages, écart par secteur et courbe, circuit intact', async () => {
+    const sig = await app(async () => {
+      const A = window.copytrack;
+      const { BUILTIN_TRACKS, buildBuiltin } = await import('/js/tracks.js'); const { traceFromBot } = await import('/js/analysis/trace.js');
+      const track = buildBuiltin(BUILTIN_TRACKS.find((d) => d.id === 'serpent')), run = traceFromBot(track);
+      window.__lab = track;
+      A.openLab({ track }, { inputs: run.inputs, time: run.time });
+      return track.signature();
+    });
+    await waitApp(() => document.querySelector('#lab-out table.lab-sec'), null, 30000);
+    const r = await page.evaluate(() => ({ rows: document.querySelectorAll('#lab-out .lab-sec tr').length, chart: !!document.querySelector('#lab-out svg.lab-chart polyline'), text: document.getElementById('lab-out').textContent }));
+    assert.ok(r.rows >= 3 && r.chart, `${r.rows} lignes, courbe ${r.chart}`);
+    assert.match(r.text, /Profil Simulation/); assert.match(r.text, /se séparent au secteur/);
+    await page.evaluate(() => { document.getElementById('lab-b').value = 'classic'; [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent.trim() === 'Comparer').click(); });
+    await waitApp(() => /même circuit/.test(document.getElementById('lab-out').textContent), null, 30000);
+    assert.equal(await app(() => window.__lab.signature()), sig, 'le circuit n’a pas changé');
+    await app(() => window.copytrack.ui.closeModal());
+  });
+
   await test('décors réglables, pièce perso et déclencheurs : météo et heure qui défile, pièce posée dans le circuit, message et éclat joués en course', async () => {
     const r = await app(async () => {
       const A = window.copytrack;
@@ -880,12 +899,14 @@ try {
     await page.evaluate(() => {
       const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input')); };
       set('pp-rain', '60'); set('pp-gust', '30'); document.getElementById('pp-ev').checked = true; document.getElementById('pp-es').value = '33';
+      document.getElementById('pp-pm').value = 'arcade'; document.getElementById('pp-vm').checked = true;
       [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent.trim() === 'Appliquer').click();
     });
     await waitApp(() => window.copytrack.session.track.rain === 60);
     assert.deepEqual(await app(() => { const t = window.copytrack.session.track; return [t.rain, t.frost, t.gust, t.envVary, t.envSeed]; }), [60, 0, 30, true, 33]);
+    assert.deepEqual(await app(() => { const t = window.copytrack.session.track; return [t.pm, t.vm]; }), ['arcade', 2], 'profil et véhicules v2 (E20)');
     assert.notEqual(await app(() => window.copytrack.session.track.signature()), sig0, 'les conditions changent la signature');
-    await app(() => window.copytrack.session.track.setParams({ rain: 0, gust: 0, envVary: false, envSeed: 0 }));
+    await app(() => window.copytrack.session.track.setParams({ rain: 0, gust: 0, envVary: false, envSeed: 0, pm: '', vm: 1 }));
     assert.equal(await app(() => window.copytrack.session.track.signature()), sig0);
     // --- prefabs
     await page.evaluate(() => document.querySelector('#ed-palette .pal-tab[data-tab="prefabs"]').click());

@@ -22,6 +22,8 @@ export function describeRules(rules) {
   if (r.rain) out.push(`Pluie ${r.rain} %`);
   if (r.frost) out.push(`Givre ${r.frost} %`);
   if (r.gust) out.push(`Rafales ${r.gust} %`);
+  if (r.pm) out.push(r.pm === 'arcade' ? 'Profil Arcade' : 'Profil Simulation');
+  if (r.vm === 2) out.push('Véhicules v2');
   if (r.sameCars) out.push('Voitures identiques');
   return out;
 }

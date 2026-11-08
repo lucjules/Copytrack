@@ -500,6 +500,7 @@ export class RaceSession {
     if (this.envFx) this.envFx.frame(dt, app.camera, this.logic.steps, this.renderPos, p.fwdSpeed, p.grounded, app);
     const g = this.car.group;
     g.position.copy(this.renderPos);
+    if (p.v2 && p.vehicle === 'boat' && p.heave) g.position.y += p.heave;      // bateau v2 : la coque suit la houle (physics/vehicles/boat2.js)
     g.quaternion.slerpQuaternions(this.prevQuat, this.quat, alpha);
 
     this.car.update(dt, performance.now() / 1000);
@@ -511,7 +512,8 @@ export class RaceSession {
     }
     // Roulis : léger au sol, franc pour le deltaplane qui vire en l'air.
     const gliding = p.vehicle === 'glider' && !p.grounded;
-    const roll = gliding ? -(p.steer || 0) * 0.45 : Math.max(-0.07, Math.min(0.07, p.yawRate * p.fwdSpeed * 0.0022));
+    // Moto v2 (physics/vehicles/moto2.js) : l'inclinaison est celle de la physique, la moto penche dans le virage.
+    const roll = gliding ? -(p.steer || 0) * 0.45 : p.v2 && p.vehicle === 'moto' && p.grounded ? -p.lean : Math.max(-0.07, Math.min(0.07, p.yawRate * p.fwdSpeed * 0.0022));
     this.car.body.rotation.z += (roll - this.car.body.rotation.z) * Math.min(1, dt * 8);
     const inp = this.lastInput || {};
     const pitch = p.grounded ? (inp.throttle ? 0.012 : 0) - (inp.brake && p.fwdSpeed > 2 ? 0.03 : 0) : 0;

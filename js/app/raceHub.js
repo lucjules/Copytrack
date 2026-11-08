@@ -140,6 +140,8 @@ export const raceHubMethods = {
     if (d.track.wind) rows.push(['Vent', `${d.track.wind} % · ${WIND_LABEL[Math.round(d.track.windDir / 45) % 8]}`]);
     if (d.track.rain) rows.push(['Pluie', d.track.envVary ? `${d.track.rain} % · variable` : `${d.track.rain} %`]);      // environnements (E19)
     if (d.track.frost) rows.push(['Givre', `${d.track.frost} %`]);
+    if (d.track.pm) rows.push(['Profil physique', d.track.pm === 'arcade' ? 'Arcade' : 'Simulation']);      // E20
+    if (d.track.vm === 2) rows.push(['Véhicules', 'v2']);
     if (d.track.gust) rows.push(['Rafales', `${d.track.gust} % · ${WIND_LABEL[Math.round(d.track.windDir / 45) % 8]}`]);
     if (d.source === 'community') rows.push(['Joué', `▶ ${d.plays} · ♥ ${d.likes}`]);
     if (d.medals) rows.push(['Médailles', `<span class="hub-medals">${MEDALS.map((m) => `<span title="${esc(m.label)}">${medalIcon(m)} ${formatTime(d.medals[m.id])}</span>`).join('')}</span>`]);
@@ -267,10 +269,12 @@ export const raceHubMethods = {
     $('hub-records').innerHTML = `<h3>Records</h3>
       <label class="hub-cmp"><span>Comparer avec</span><select id="hub-cmp"${can ? '' : ' disabled'}>${opts.map(([k, l]) => `<option value="${k}"${k === h.compare ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
       <button class="btn" id="hub-watch"${can ? '' : ' disabled'}>🎬 Regarder mon record${rec ? ` (${formatTime(rec.time)})` : ''}</button>
+      <button class="btn" id="hub-lab"${can ? '' : ' disabled'} title="Rejouer les commandes de ton record sous deux réglages physiques et comparer">🧪 Laboratoire</button>
       <p class="meta">${can ? 'Replay Theater : ta course exacte, une barre de temps pour aller et venir, caméras libre et cinématique, et l’analyse (trajectoires, vitesses, secteurs) face à la course choisie.' : rec ? 'Ce record vient d’une ancienne version du jeu : il ne se rejoue plus.' : 'Termine une course pour pouvoir la revoir.'}</p>`;
     if (can) {
       $('hub-cmp').onchange = (e) => { h.compare = e.target.value; };
       $('hub-watch').onclick = () => { this.audio.click(); this.watchRecord(d, rec, h.compare); };
+      $('hub-lab').onclick = () => { this.audio.click(); this.openLab(d, rec); };
     }
   },
 
