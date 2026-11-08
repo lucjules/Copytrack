@@ -1,7 +1,13 @@
 // Replay Theater : point d'entrée de l'application (« Revoir la course » à l'arrivée, « Regarder mon record » de la fiche du circuit).
 // Ces méthodes s'ajoutent au prototype de App (voir main.js) : `this` est l'instance. La salle elle-même : theater/session.js.
-import { $ } from '../dom.js';
+import { $, esc } from '../dom.js';
 import { RaceSession } from '../race.js';
+import { traceFromInputs, traceFromBot } from '../analysis/trace.js';
+import { makeReference, alignTrace } from '../analysis/reference.js';
+import { coach } from '../analysis/coach.js';
+import { formatTime } from '../storage.js';
+
+const later = () => new Promise((r) => setTimeout(r, 0));
 
 export const theaterAppMethods = {
   // main : la course regardée ({ inputs, time, label }, rejouée exactement) ; compare : jusqu'à 3 courses ({ kind: 'inputs' | 'gold' | 'ghost', label, … }) ;
@@ -15,5 +21,40 @@ export const theaterAppMethods = {
     this.session = new RaceSession(this, track, { ...opts, replay: { inputs: main.inputs, time: main.time }, trackKey: null, medals: opts.medals || null, theater: { label: main.label, compare, panel } });
     $('replay-bar').classList.remove('hidden');
     this._resize();
+  },
+
+  // Écran d'arrivée : trois conseils du coach (analysis/coach.js) face à une référence PLUS RAPIDE (le record, sinon le fantôme or). Calculés après
+  // l'affichage de l'écran (deux courses rejouées : une fraction de seconde), jamais pendant la course.
+  async _finishCoach(session, time) {
+    const el = $('fin-coach');
+    el.classList.add('hidden'); el.innerHTML = '';
+    const o = session.opts;
+    if (!session.lastRun || o.fromEditor || o.spawn || o.multi || o.academy || o.mode || session.replay) return;
+    await later(); await later();
+    if (this.session !== session) return;
+    let refTr = null, refLabel = '', refRun = null;
+    try {
+      const prev = session.prevRun;
+      if (prev && prev.time < time - 1e-9) { refTr = traceFromInputs(session.track, prev.inputs); refLabel = `comparé à ton record (${formatTime(prev.time)})`; refRun = { kind: 'inputs', label: 'Mon record', inputs: prev.inputs, time: prev.time }; }
+      else if (session.track.path) {
+        await later();
+        const g = traceFromBot(session.track);
+        if (g && g.time < time - 1e-9) { refTr = g; refLabel = `comparé au fantôme or (${formatTime(g.time)})`; refRun = { kind: 'gold', label: 'Fantôme or' }; }
+      }
+      if (!refTr || this.session !== session) return;
+      await later();
+      const mine = traceFromInputs(session.track, session.lastRun.inputs), ref = makeReference(session.track, refTr);
+      if (!ref || this.session !== session) return;
+      alignTrace(refTr, ref); alignTrace(mine, ref);
+      const tips = coach(mine, refTr).slice(0, 3);
+      if (!tips.length) return;
+      el.innerHTML = `<h3>💡 Conseils <small>${esc(refLabel)}</small></h3><ol>${tips.map((t) => `<li>${esc(t.text)}</li>`).join('')}</ol>
+        <button class="btn small" type="button" id="fin-coach-watch">🎬 Voir ces passages dans le Replay Theater</button>`;
+      el.classList.remove('hidden');
+      $('fin-coach-watch').onclick = () => {
+        this.audio.click();
+        this.openTheater({ track: session.track, opts: session.opts, main: { ...session.lastRun, label: 'Cette course' }, compare: [refRun], back: { track: session.track, opts: { ...session.opts } }, panel: true });
+      };
+    } catch { el.classList.add('hidden'); }
   },
 };

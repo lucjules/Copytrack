@@ -277,9 +277,27 @@ try {
     await page.keyboard.down('ArrowUp'); await page.waitForTimeout(600); await page.keyboard.up('ArrowUp');
     await app(() => window.copytrack.session._finish(window.copytrack.session.logic.steps / 120));
     await waitApp(() => !document.getElementById('finish').classList.contains('hidden'));
+    // Coach à l'arrivée : une course prudente (pilote automatique lent) face au record : des conseils localisés, avec leurs mesures.
+    await app(async (r) => {
+      const a = window.copytrack, s = a.session, { traceFromBot } = await import('/js/analysis/trace.js');
+      const slow = traceFromBot(s.track, { latK: 0.4 });
+      s.lastRun = { inputs: slow.inputs, time: slow.time }; s.prevRun = { inputs: r.inputs, time: r.time };
+      await a._finishCoach(s, slow.time);
+    }, run);
+    await waitApp(() => !document.getElementById('fin-coach').classList.contains('hidden'), null, 20000);
+    assert.ok(await page.evaluate(() => document.querySelectorAll('#fin-coach li').length >= 1));
+    assert.match(await page.evaluate(() => document.querySelector('#fin-coach li').textContent), /^Secteur \d+ : .*\d+(\.\d+)? s perdues/);
+    assert.match(await page.evaluate(() => document.querySelector('#fin-coach h3').textContent), /comparé à ton record/);
     await click('#fin-replay');
     await waitApp(() => window.copytrack.session && window.copytrack.session._th, null, 20000);
     assert.deepEqual(await app(() => window.copytrack.session._th.runs.map((r) => r.label)), ['Cette course', 'Ancien record'], 'nouveau record : comparé à l’ancien');
+    // Coach dans le Theater : la course prudente perd du temps face au record ; repères sur la barre et conseils cliquables.
+    await waitApp(() => window.copytrack.session._th.traces, null, 30000);
+    if (await page.evaluate(() => document.getElementById('theater-panel').classList.contains('hidden'))) await click('#theater [data-th="panel"]');
+    await waitApp(() => document.querySelectorAll('#th-coach li').length >= 1, null, 10000);
+    assert.ok(await app(() => window.copytrack.session._th.marks.some((m) => m.kind === 'coach')), 'repère du coach sur la barre de temps');
+    await click('#th-coach [data-tip="0"]');
+    assert.ok(await app(() => { const s = window.copytrack.session; return Math.abs(s.tick - Math.max(0, s._th.tips[0].tick - 360)) <= 1; }), 'le conseil amène 3 s avant le passage');
     await app(() => window.copytrack.endReplay());
     await waitApp(() => window.copytrack.session && !window.copytrack.session.replay && window.copytrack.mode === 'race', null, 20000);
     await app(() => window.copytrack.quitRace());

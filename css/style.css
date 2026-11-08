@@ -1292,3 +1292,7 @@ body.hud-editing > section, body.hud-editing #touch { display: none !important; 
 .th-sectors { overflow-x: auto; }
 @media (max-width: 720px), (max-height: 520px) { .theater { bottom: calc(58px + env(safe-area-inset-bottom)); padding: 6px 8px; } .theater-panel { max-height: 45vh; } .theater-panel .th-map { height: 150px; } }
 .theater-on .replay-bar .rh, .theater-on #hud-hint { display: none; }
+.fin-coach { margin: 10px 0 4px; padding: 10px 14px; border-radius: 10px; background: rgba(95, 242, 255, 0.08); border: 1px solid rgba(95, 242, 255, 0.35); text-align: left; max-width: 640px; }
+.fin-coach h3 { margin: 0 0 6px; font-size: 16px; } .fin-coach h3 small { color: var(--muted); font-weight: 400; font-size: 12px; }
+.fin-coach ol { margin: 0 0 8px; padding-left: 20px; font-size: 14px; display: grid; gap: 4px; }
+.th-coach h4 { margin: 0 0 4px; font-size: 13px; } .th-coach ol { margin: 0; padding-left: 18px; font-size: 12px; display: grid; gap: 4px; } .th-coach .btn { padding: 0 6px; font-size: 11px; }

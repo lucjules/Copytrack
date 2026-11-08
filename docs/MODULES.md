@@ -100,6 +100,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 
 | Fichier | Rôle |
 | --- | --- |
+| `coach.js` | Coach (Copytrack Evolution, E7) : des conseils LOCALISÉS (un secteur, un endroit) et JUSTIFIÉS par les mesures de deux courses projetées sur la même référence (analysis/reference.js). On ne conseille que là où du temps a été perdu : une course identique à la référence ne reçoit aucun conseil. Module pur, testé sous Node (tools/test-coach.mjs) ; le texte est en français (la clé de la traduction, comme partout). |
 | `events.js` | Bilan des évènements d'une course (analysis/trace.js) : chocs, réapparitions, réceptions, mini-turbos, temps en l'air. Module pur. |
 | `live.js` | Suivi en direct contre une course de référence (HUD d'entraînement) : à chaque image, la position de la voiture est projetée sur la référence de parcours (recherche fenêtrée : quelques dizaines de segments), et l'écart est le chrono moins le temps de la référence à cette distance. |
 | `reference.js` | Référence de parcours : une ligne le long du circuit, graduée en mètres, sur laquelle on projette toute course pour la comparer à une autre (« à 820 m du départ, tu avais 0,4 s de retard »). Module pur, testé sous Node. |

@@ -18,6 +18,7 @@ import { REPLAY_CAMS } from '../race/shared.js';
 import { traceFromInputs, traceFromGhost, traceFromBot } from '../analysis/trace.js';
 import { makeReference, alignTrace } from '../analysis/reference.js';
 import { sectors } from '../analysis/sectors.js';
+import { coach } from '../analysis/coach.js';
 import { buildTheaterUi, drawTheaterPanel, renderTheaterSectors, renderTheaterRuns } from './panel.js';
 
 export const THEATER_COLORS = ['#ffd23e', '#ff7ad9', '#5ff2ff', '#57f2a6'];
@@ -86,6 +87,10 @@ export const theaterMethods = {
     T.marks = [];
     for (const s of T.sectors[0] || []) if (s.k < 12) T.marks.push({ kind: 'sector', tick: tickOf(iAtT(s.t1)), label: `S${s.k + 1}` });
     for (const e of main.events) if (e.k === 'respawn' || e.k === 'wall') T.marks.push({ kind: e.k, tick: tickOf(e.i), label: e.k === 'respawn' ? 'Retour au checkpoint' : 'Choc' });
+    // Coach : où la course regardée perd du temps face à la première course comparée.
+    T.tips = traces[1] ? coach(main, traces[1]).slice(0, 5) : [];
+    const iAtS = (s) => { let i = 0; while (i < main.n - 1 && main.sm[i] < s) i++; return i; };
+    for (const t of T.tips) { t.tick = tickOf(iAtS(t.s)); T.marks.push({ kind: 'coach', tick: t.tick, label: '💡 ' + t.text }); }
     renderTheaterSectors(this, T);
     if (this._onTheaterAnalysed) this._onTheaterAnalysed(T);
   },

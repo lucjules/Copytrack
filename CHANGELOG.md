@@ -6,6 +6,21 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.30 — le coach
+
+Étape E7 de Copytrack Evolution (dernière du bloc 2). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.
+
+- **Conseils à l'arrivée** : jusqu'à trois conseils, chacun **à un endroit** (un secteur) et **chiffré**, face à une référence plus rapide (ton record, sinon le fantôme or) :
+  - retour au checkpoint (le temps qu'il a coûté), chocs contre le mur ;
+  - freinage **trop tardif** (« tu freines 45 m plus tard que la référence et tu en ressors à 59 km/h au lieu de 91 ») ou **trop tôt** ;
+  - **vitesse mini** trop basse dans un virage, **temps en l'air** de trop, **trajectoire** plus large que la référence ;
+  - sinon, le secteur où le temps se perd, avec les vitesses maxi.
+  Rien n'est conseillé là où aucun temps n'a été perdu : une course identique à la référence n'a aucun conseil. Calculé après l'affichage de l'écran (deux courses rejouées), jamais pendant la course. Bouton « 🎬 Voir ces passages dans le Replay Theater ».
+- **Dans le Replay Theater** : face à la première course comparée, les conseils sont marqués sur la barre de temps (repères bleus) et listés dans le panneau d'analyse ; ▶ amène trois secondes avant le passage.
+- `js/analysis/coach.js` (pur) ; un freinage est montré là où il a lieu (la cause), même si le temps se perd un peu plus loin.
+- **Limites assumées** : les règles sont des seuils simples (8 m pour un freinage, 3 m/s de vitesse mini, 0,3 s en l'air, 3 m de trajectoire), pas un apprentissage ; les conseils de freinage demandent les commandes des deux courses (pas face à un fantôme en ligne) ; le pilote automatique freine peu (il lève le pied) : la règle du freinage tardif est testée sur des courses synthétiques, les autres sur de vraies courses modifiées.
+- Tests : `tools/test-coach.mjs` (course identique : aucun conseil ; freinage avancé, retour au checkpoint et virages prudents sur de vraies courses ; freinage tardif sur des traces synthétiques ; traduction anglaise de chaque conseil) ; test navigateur (conseils à l'arrivée, repères et conseils cliquables dans le Theater).
+
 ## Bêta 0.9.29 — Replay Theater
 
 Étape E6 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.
