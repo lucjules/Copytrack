@@ -22,7 +22,7 @@ test('chaque règle a sa valeur par défaut sur un circuit neuf, après clear() 
 test('les règles sont bornées : vitesse 0-300, gravité 15-250, véhicule connu, booléens', () => {
   const t = new Track('t');
   t.setParams({ v0: 9999, g0: 5, veh0: 'avion', offroad: 'oui', flip0: 1 });
-  assert.deepEqual(t.rulesState(), { offroad: 1, v0: 300, g0: 15, veh0: 'car', flip0: true, grip: 100, wind: 0, windDir: 0 });      // (adhérence et vent : E8, par défaut)
+  assert.deepEqual(t.rulesState(), { offroad: 1, v0: 300, g0: 15, veh0: 'car', flip0: true, grip: 100, wind: 0, windDir: 0, rain: 0, frost: 0, gust: 0, envSeed: 0, envVary: false, vm: 1, pm: '' });      // (adhérence et vent : E8 ; conditions : E19 ; profils : E20 ; par défaut)
   t.setParams({ v0: -4, g0: 9999, veh0: 'glider' });
   assert.deepEqual([t.v0, t.g0, t.veh0], [0, 250, 'glider']);
   t.setParams({});                                                  // rien de précisé : rien ne change

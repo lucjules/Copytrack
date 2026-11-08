@@ -6,6 +6,9 @@ import { $, esc } from '../dom.js';
 import { Benchmark, PROFILES, PROFILE_LABELS, BENCH_VERSION, hardwareHints } from '../quality.js';
 import { fovText } from './shared.js';
 import { feelScale } from '../feel.js';
+import { reducedMotion, watchSystemMotion } from '../a11y.js';
+import { AID_IDS } from '../aids.js';
+export const steerCurveText = (v) => (v <= 1 ? 'linéaire' : `progressive ×${String(Math.round(v * 100) / 100).replace('.', ',')}`);
 export const settingsMethods = {
   // Profil réellement appliqué : le choix du joueur, ou (automatique) le résultat de la détection (« Haute » en attendant).
   _qualityName() {
@@ -196,6 +199,9 @@ export const settingsMethods = {
     $('opt-shake').value = s.shakeAmt; $('opt-shake-v').textContent = Math.round(s.shakeAmt * 100) + ' %';
     $('opt-feel').value = s.feel ?? 1; $('opt-feel-v').textContent = Math.round(feelScale(s.feel) * 100) + ' %';
     $('opt-ui').value = s.uiScale; $('opt-ui-v').textContent = Math.round(s.uiScale * 100) + ' %';
+    $('opt-motion').value = s.reduceMotion || 'auto';
+    $('opt-steercurve').value = s.steerCurve || 1; $('opt-steercurve-v').textContent = steerCurveText(s.steerCurve || 1);
+    for (const k of AID_IDS) $('opt-aid-' + k).checked = !!(s.aids && s.aids[k]);
     this._renderUiCustom();
   },
 
@@ -227,6 +233,9 @@ export const settingsMethods = {
     const s = this.settings;
     document.documentElement.style.setProperty('--ui-scale', String(s.uiScale || 1));
     document.body.classList.toggle('cb', !!s.colorblind);
+    this.motionOff = reducedMotion(s.reduceMotion);                  // animations réduites (a11y.js) : transitions coupées, caméra calme
+    document.body.classList.toggle('reduce-motion', this.motionOff);
+    if (!this._motionWatch) this._motionWatch = watchSystemMotion(() => this._applyAccess());
     $('fps').classList.toggle('hidden', !s.showFps);
     if (this._cbApplied !== !!s.colorblind) {
       this._cbApplied = !!s.colorblind;

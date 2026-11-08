@@ -30,6 +30,7 @@ export const KEY_ACTIONS = {
     ['ed.test', 'Tester le circuit', ['KeyT', '']],
     ['ed.recenter', 'Recentrer la vue', ['KeyF', 'Home']],
     ['ed.topView', 'Vue de dessus', ['KeyH', '']],
+    ['ed.freeCam', 'Caméra libre (au ras du sol)', ['KeyV', '']],
     ['ed.grid', 'Afficher / masquer la grille', ['KeyG', '']],
     ['ed.help', 'Liste des raccourcis', ['F1', '']],
     ['ed.levelView', 'Vue par niveau (estomper les autres)', ['KeyZ', '']],

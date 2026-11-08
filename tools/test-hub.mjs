@@ -172,7 +172,8 @@ test('descripteur d’une catégorie : sa clé, son record, ni médailles ni obj
 });
 test('catégories proposées : seulement celles qui changent la course, seulement sur un circuit classé', () => {
   const ids = (id) => hubCategories(describeBuiltin(builtins.find((x) => x.def.id === id), { total })).map((c) => c.id);
-  assert.deepEqual(ids('eclats'), ['veh-moto', 'veh-boat', 'veh-glider']);
+  assert.deepEqual(ids('eclats'), ['veh-moto', 'veh-boat', 'veh-glider', 'rn-60', 'pm-arcade', 'pm-sim']);      // (sous la pluie : E19 ; profils : E20)
+  assert.ok(ids('lagon').includes('vm-2') && !ids('eclats').includes('vm-2'), 'véhicules v2 : seulement s’il y a autre chose qu’une voiture');
   assert.ok(ids('chaine').includes('obs-0'), 'circuit à obstacles : « sans obstacles »');
   const tr = Track.decode(builtins[2].track.encode());
   assert.ok(hubCategories(describeUser(tr)).length >= 3, 'circuit de joueur : classé en ligne (clé u-)');

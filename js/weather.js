@@ -44,6 +44,13 @@ export class Weather {
     this.scene.add(this.obj);
   }
 
+  // Densité visible (0 à 1) sans refaire le nuage : la pluie des environnements (envFx.js) forcit et faiblit pendant la course.
+  setIntensity(k) {
+    if (!this.obj) return;
+    const n = Math.max(1, Math.round(this.n * Math.min(1, Math.max(0, k))));
+    this.obj.geometry.setDrawRange(0, WEATHER_KINDS[this.kind].line ? n * 2 : n);
+  }
+
   update(dt, cam) {
     if (!this.obj) return;
     const W = WEATHER_KINDS[this.kind], p = this.p, n = this.n;

@@ -27,6 +27,7 @@ import { QualityManager, PROFILE_LABELS, wantAntialias } from './quality.js';
 import { multiMethods } from './app/multi.js';
 import { academyMethods } from './app/academy.js';
 import { competitionMethods } from './app/competition.js';
+import { labMethods } from './app/lab.js';
 import { rewardsMethods } from './app/rewards.js';
 import { communityMethods } from './app/community.js';
 import { screenMethods } from './app/screens.js';
@@ -111,7 +112,13 @@ class App {
     if (this.session && this.session.kind === 'editor') this.session._refreshUI();
     const portrait = h > w && document.body.classList.contains('touch');
     $('rotate-hint').classList.toggle('hidden', !(portrait && (this.mode === 'race' || this.mode === 'editor')));
-    $('fs-btn').classList.toggle('hidden', !(document.body.classList.contains('touch') && (this.mode === 'race' || this.mode === 'menu') && !document.fullscreenElement));
+    this._fsButton();
+  }
+
+  // Bouton plein écran (tactile) : en course et sur l'écran d'accueil seulement ; sur les autres écrans, il recouvrirait leurs boutons du bas
+  // (sur un téléphone en paysage, « Jouer » de la fiche d'un circuit : trouvé par le parcours tactile, E22). Profil › Options › Plein écran reste là.
+  _fsButton() {
+    $('fs-btn').classList.toggle('hidden', !(document.body.classList.contains('touch') && (this.mode === 'race' || (this.mode === 'menu' && (this._screen || 'menu') === 'menu')) && !document.fullscreenElement));
   }
 
   // ------------------------------------------------------------ Navigation
@@ -361,7 +368,7 @@ class App {
 }
 
 // Les familles de méthodes vivent dans app/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(App.prototype, multiMethods, academyMethods, competitionMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods, theaterAppMethods);
+Object.assign(App.prototype, multiMethods, academyMethods, competitionMethods, labMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods, theaterAppMethods);
 
 
 // Application installable et jouable hors ligne (service worker), si le contexte le permet.

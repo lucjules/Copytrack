@@ -7,6 +7,8 @@ import { $ } from '../dom.js';
 import { checkPseudo } from '../account.js';
 import { clearRecords } from '../storage.js';
 import { fovText } from './shared.js';
+import { AID_IDS, cleanAids } from '../aids.js';
+import { steerCurveText } from './settings.js';
 export const wiringMethods = {
   // ------------------------------------------------------------ Câblage
   _wire() {
@@ -67,6 +69,13 @@ export const wiringMethods = {
     slider('opt-shake', 'shakeAmt', (v) => Math.round(v * 100) + ' %');
     slider('opt-feel', 'feel', (v) => Math.round(v * 100) + ' %');
     slider('opt-ui', 'uiScale', (v) => Math.round(v * 100) + ' %');
+    $('opt-motion').addEventListener('change', (e) => { this.settings.reduceMotion = e.target.value; this._applyAccess(); this.saveSettings(); });
+    slider('opt-steercurve', 'steerCurve', steerCurveText);
+    for (const k of AID_IDS) $('opt-aid-' + k).addEventListener('change', (e) => {
+      this.settings.aids = { ...cleanAids(this.settings.aids), [k]: e.target.checked };
+      this.saveSettings();
+      if (e.target.checked) this.ui.flash('Aides à la conduite : tes courses vont dans la catégorie « assisté », sans médailles.', 3);
+    });
     $('opt-touch').addEventListener('change', (e) => {
       this.settings.touchMode = e.target.value;
       document.body.classList.toggle('drag-steer', e.target.value === 'drag');
@@ -185,6 +194,7 @@ export const wiringMethods = {
       case 'testhere': ed.testHere(); break;
       case 'levelview': ed.toggleLevelView(); break;
       case 'groups': ed.openGroups(); break;
+      case 'freecam': ed.toggleFreeCam(); break;
       case 'logic': ed.openLogic(); break;
       case 'export': this.shareModal(ed.track.encode(), ed.track.name, ed.track); break;
       case 'import': this.importModal(true); break;

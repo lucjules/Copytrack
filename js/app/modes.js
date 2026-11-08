@@ -13,6 +13,9 @@ import {
 import { PACK_KINDS, encodePack, decodePack, describePack, ownedCar } from '../mods.js';
 import { MAX_CUSTOM_CAMS } from '../camprefs.js';
 import { listCustomDecos } from '../storage.js';
+import { communityModes, publishMode, reportMode, deleteCommunityMode, modePlayed, modeRulesOf } from '../online/community.js';
+import { parseVariant, variantFits } from '../variants.js';
+import { online } from '../online.js';
 
 const sel = (options, value, onChange) => {
   const s = h('select', {}, ...options.map(([v, t]) => { const o = h('option', { value: String(v) }, t); if (String(v) === String(value)) o.selected = true; return o; }));
@@ -55,12 +58,15 @@ export const modesMethods = {
     const body = h('div', { class: 'studio' });
     const render = () => {
       body.replaceChildren();
-      body.appendChild(h('p', { class: 'meta' }, 'Un mode = des règles + un objectif, à jouer sur le circuit de ton choix (sans records ni classements). Pas de pièces à gagner : tout est pour le plaisir.'));
+      body.appendChild(h('p', { class: 'meta' }, 'Un mode = des règles + un objectif, à jouer sur le circuit de ton choix (sans records ni classements). Pas de pièces à gagner : tout est pour le plaisir. Publié (🌐), un mode a son classement sur chaque circuit de la carrière.'));
       const card = (m, own) => h('div', { class: 'srow mode-row', 'data-mode': m.id },
         h('span', { class: 'mode-name' }, h('b', {}, m.name), h('small', {}, ...[m.desc, ...describeRules(m.rules), m.goal ? '🎯 ' + goalLabel(m.goal) : ''].filter(Boolean).flatMap((x, i) => (i ? [' · ', x] : [x])))),
         h('button', { class: 'btn small primary', type: 'button', onclick: () => { this.ui.closeModal(); this._pickTrackForMode(m); } }, 'Jouer'),
         ...(own ? [
           h('button', { class: 'btn small', type: 'button', title: 'Modifier', onclick: () => { this.ui.closeModal(); this._modeDialog(m); } }, '✎'),
+          h('button', { class: 'btn small', type: 'button', title: 'Publier dans la communauté : ce mode aura son classement sur chaque circuit', 'data-md-pub': m.id, onclick: async () => {
+            try { await publishMode(m, this.settings.playerName); this.ui.flash(`Mode « ${m.name} » publié : Modes de jeu › Modes publiés.`, 3); } catch (e) { this.ui.flash(e.message, 4); }
+          } }, '🌐'),
           h('button', { class: 'btn small', type: 'button', title: 'Copier le code (à partager)', onclick: async () => { try { await navigator.clipboard.writeText(encodeMode(m)); this.ui.flash('Code du mode copié : envoie-le à un ami (Importer un code).'); } catch { this.ui.flash('Copie impossible.'); } } }, '⧉'),
           h('button', { class: 'btn small danger', type: 'button', title: 'Supprimer', onclick: () => { deleteMode(m.id); render(); } }, '✕')] : []));
       body.appendChild(h('h4', { class: 'opt-h' }, 'Modes fournis'));
@@ -72,6 +78,7 @@ export const modesMethods = {
       body.appendChild(h('div', { class: 'row wrap' },
         h('button', { class: 'btn small', type: 'button', 'data-md': 'new', disabled: mine.length >= MODES_MAX, onclick: () => { this.ui.closeModal(); this._modeDialog(null); } }, '✦ Créer un mode'),
         h('button', { class: 'btn small', type: 'button', 'data-md': 'import', onclick: () => { this.ui.closeModal(); this._modeImportDialog(); } }, 'Importer un code'),
+        h('button', { class: 'btn small', type: 'button', 'data-md': 'published', onclick: () => { this.ui.closeModal(); this.communityModesDialog(); } }, '🌐 Modes publiés'),
         h('button', { class: 'btn small', type: 'button', 'data-md': 'packs', onclick: () => { this.ui.closeModal(); this.packsDialog(); } }, '📦 Paquets (mods)')));
     };
     render();
@@ -110,6 +117,48 @@ export const modesMethods = {
       saveMode({ ...clean, id: existing ? existing.id : newId() });
       this.ui.flash(`Mode « ${clean.name} » enregistré.`);
       setTimeout(() => this.modesMenu(), 0);
+      return true;
+    } }] });
+  },
+
+  // ---------------------------------------------------------------- modes publiés (E21)
+  // Les modes de la communauté : leurs règles sont une catégorie de record, donc leur classement sur chaque circuit est celui de cette catégorie.
+  async communityModesDialog() {
+    const body = h('div', { class: 'studio' }, h('p', { class: 'meta' }, 'Chargement…'));
+    this.ui.modal({ title: '🌐 Modes publiés', body, wide: true, actions: [{ label: 'Retour', onClick: () => { setTimeout(() => this.modesMenu(), 0); return true; } }] });
+    let rows;
+    try { rows = await communityModes(); } catch (e) { body.replaceChildren(h('p', { class: 'lb-off' }, `Modes publiés indisponibles : ${e.message}`)); return; }
+    if (!document.body.contains(body)) return;
+    body.replaceChildren(h('p', { class: 'meta' }, 'Choisis un mode puis un circuit de la carrière : sa fiche s’ouvre sur la catégorie du mode, avec son classement. L’objectif du mode reste à titre indicatif.'));
+    if (!rows.length) body.appendChild(h('p', { class: 'meta' }, 'Aucun mode publié pour l’instant : publie le tien avec 🌐 dans « Mes modes ».'));
+    for (const r of rows) {
+      let rules;
+      try { rules = modeRulesOf(r.variant); } catch { continue; }
+      const goal = sanitizeGoal(r.goal);
+      const mine = r.owner === online.uid;
+      body.appendChild(h('div', { class: 'srow mode-row', 'data-cmode': r.id },
+        h('span', { class: 'mode-name' }, h('b', {}, r.name), h('small', {}, ...[`par ${r.owner_name || '—'}`, r.description, ...describeRules(rules), goal ? '🎯 ' + goalLabel(goal) : '', `▶ ${r.plays}`].filter(Boolean).flatMap((x, i) => (i ? [' · ', x] : [x])))),
+        h('button', { class: 'btn small primary', type: 'button', onclick: () => { this.ui.closeModal(); this._pickTrackForPublishedMode(r); } }, 'Jouer (classé)'),
+        mine ? h('button', { class: 'btn small danger', type: 'button', title: 'Retirer de la communauté', onclick: async () => { try { await deleteCommunityMode(r.id); this.ui.flash('Mode retiré.'); this.ui.closeModal(); this.communityModesDialog(); } catch (e) { this.ui.flash(e.message, 3); } } }, '✕')
+          : h('button', { class: 'btn small subtle', type: 'button', title: 'Signaler (masqué après 3 signalements)', onclick: async () => { try { await reportMode(r.id); this.ui.flash('Merci, le signalement est enregistré.'); } catch (e) { this.ui.flash(e.message, 3); } } }, '⚑')));
+    }
+  },
+
+  _pickTrackForPublishedMode(r) {
+    const opts = this.builtins.map((b) => [String(b.index), b.def.name]);
+    let chosen = opts[0][0];
+    const body = h('div', {}, h('p', {}, h('b', {}, r.name)), row('Circuit', sel(opts, chosen, (v) => { chosen = v; })));
+    this.ui.modal({ title: 'Jouer le mode (classé)', body, actions: [{ label: 'Retour', onClick: () => { setTimeout(() => this.communityModesDialog(), 0); return true; } }, { label: 'Ouvrir la fiche', primary: true, onClick: () => {
+      const i = +chosen, b = this.builtins[i];
+      setTimeout(() => {
+        this.openBuiltinHub(i, 'tracks');
+        modePlayed(r.id);
+        if (!r.variant) { this.ui.flash('Ce mode ne change aucune règle de course : classement officiel.', 3); return; }
+        const v = parseVariant(r.variant);
+        if (!variantFits(b.track, v)) { this.ui.flash('Ce mode ne change rien sur ce circuit : classement officiel.', 3); return; }
+        this._hub.modeLabel = r.name;
+        this._setHubCategory(v);
+      }, 0);
       return true;
     } }] });
   },

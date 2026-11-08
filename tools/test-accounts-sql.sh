@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Teste les étapes SQL de supabase/ (communauté, classements, comptes, durcissement, secteurs, amis, saisons) sur un PostgreSQL local (faux schéma « auth » de Supabase).
+# Teste les étapes SQL de supabase/ (communauté, classements, comptes, durcissement, secteurs, amis, saisons, compétition, communauté 2) sur un PostgreSQL local (faux schéma « auth » de Supabase).
 # Usage : PGHOST=/tmp PGPORT=54329 PGUSER=postgres tools/test-accounts-sql.sh   (pas inclus dans npm test : il faut un serveur PostgreSQL)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -16,7 +16,7 @@ create table auth.users (id uuid primary key default gen_random_uuid(), email te
 create function auth.uid() returns uuid language sql stable as $f$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $f$;
 grant usage on schema auth to anon, authenticated;
 SQL
-for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape6-telemetrie.sql supabase/etape7-fantomes.sql supabase/etape7-fantomes.sql supabase/etape8-decouverte.sql supabase/etape8-decouverte.sql supabase/etape9-secteurs.sql supabase/etape9-secteurs.sql supabase/etape10-social.sql supabase/etape10-social.sql supabase/etape11-saisons.sql supabase/etape11-saisons.sql supabase/etape12-competition.sql supabase/etape12-competition.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
+for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape6-telemetrie.sql supabase/etape7-fantomes.sql supabase/etape7-fantomes.sql supabase/etape8-decouverte.sql supabase/etape8-decouverte.sql supabase/etape9-secteurs.sql supabase/etape9-secteurs.sql supabase/etape10-social.sql supabase/etape10-social.sql supabase/etape11-saisons.sql supabase/etape11-saisons.sql supabase/etape12-competition.sql supabase/etape12-competition.sql supabase/etape13-communaute.sql supabase/etape13-communaute.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
 $P -d $DB <<'SQL'
 \set ON_ERROR_STOP off
 create function public.as_user(u uuid) returns void language plpgsql as $$ begin perform set_config('request.jwt.claim.sub', u::text, false); end $$;
@@ -437,8 +437,143 @@ end $$;
 reset role;
 select public.check('étape 12 : fenêtre fermée après la fin', public.competition_open('tour', :tour1, '00000000-0000-0000-0000-0000000000d3', 'b-tour-1') <> '');
 reset copytrack.now;
+-- 18. communauté 2 (étape 13) : commentaires (débit, signalements, suppression), playlists, sélection, hasard, recommandations, statistiques, modes publiés
+reset role;
+set copytrack.now = '2026-12-20 10:00:00+00';
+insert into auth.users (id, email, raw_user_meta_data) values ('00000000-0000-0000-0000-0000000000e1', 'eve@accounts.copytrack.invalid', '{"username":"Eve"}');
+insert into players (id, name) values ('00000000-0000-0000-0000-0000000000e1', 'Eve');
+insert into tracks (id, author, name, decor, code, signature, author_time, pieces) values
+  ('00000000-0000-0000-0000-00000000e001', '00000000-0000-0000-0000-0000000000e1', 'Com Un', 'desert', 'X', 'sig-com1', 20, 10),
+  ('00000000-0000-0000-0000-00000000e002', '00000000-0000-0000-0000-0000000000e1', 'Com Deux', 'desert', 'X', 'sig-com2', 20, 10),
+  ('00000000-0000-0000-0000-00000000e003', '00000000-0000-0000-0000-0000000000e1', 'Com Masqué', 'desert', 'X', 'sig-com3', 20, 10);
+update tracks set hidden = true where id = '00000000-0000-0000-0000-00000000e003';
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000b1');
+do $$ declare refuse boolean := false; begin
+  begin perform public.comment_add('00000000-0000-0000-0000-00000000e001', 'Salut'); exception when others then refuse := true; end;
+  perform public.check('étape 13 : une session invitée ne commente pas', refuse);
+end $$;
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+select public.comment_add('00000000-0000-0000-0000-00000000e001', '  Super circuit !  ') as c1 \gset
+select public.check('étape 13 : commentaire publié (espaces retirés), visible avec le pseudo', (select body = 'Super circuit !' and name = 'Ana' and mine from public.track_comments_list('00000000-0000-0000-0000-00000000e001') where id = :c1));
+do $$ declare refuse boolean := false; refuse2 boolean := false; refuse3 boolean := false; begin
+  begin perform public.comment_add('00000000-0000-0000-0000-00000000e001', 'Encore'); exception when others then refuse := true; end;
+  begin perform public.comment_add('00000000-0000-0000-0000-00000000e003', 'Masqué ?'); exception when others then refuse2 := true; end;
+  begin perform public.comment_add('00000000-0000-0000-0000-00000000e002', repeat('x', 281)); exception when others then refuse3 := true; end;
+  perform public.check('étape 13 : débit (20 s), circuit masqué, longueur : refusés', refuse and refuse2 and refuse3);
+end $$;
+do $$ declare refuse boolean := false; begin
+  for i in 1..9 loop perform set_config('copytrack.now', (timestamptz '2026-12-20 10:00:00+00' + make_interval(secs => 30 * i))::text, false); perform public.comment_add('00000000-0000-0000-0000-00000000e002', 'Message ' || i); end loop;
+  perform set_config('copytrack.now', '2026-12-20 10:05:30+00', false);
+  begin perform public.comment_add('00000000-0000-0000-0000-00000000e002', 'Un de trop'); exception when others then refuse := true; end;
+  perform public.check('étape 13 : 10 commentaires par heure au plus', refuse and (select count(*) from track_comments where author = '00000000-0000-0000-0000-0000000000d1') = 10);
+end $$;
+do $$ declare refuse boolean := false; begin
+  begin insert into track_comments (track_id, author, body) values ('00000000-0000-0000-0000-00000000e001', '00000000-0000-0000-0000-0000000000d1', 'direct'); exception when others then refuse := true; end;
+  perform public.check('étape 13 : le jeu n''écrit pas directement un commentaire (RLS)', refuse);
+end $$;
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+do $$ declare refuse boolean := false; begin
+  begin perform public.comment_report((select min(id) from track_comments)); exception when others then refuse := true; end;
+  perform public.check('étape 13 : on ne signale pas son propre commentaire', refuse);
+end $$;
+select public.as_user('00000000-0000-0000-0000-0000000000d2'); select public.comment_report(:c1); select public.comment_report(:c1);
+select public.as_user('00000000-0000-0000-0000-0000000000d3'); select public.comment_report(:c1);
+select public.check('étape 13 : deux comptes distincts (un signalement en double ne compte pas) : encore visible', (select count(*) from public.track_comments_list('00000000-0000-0000-0000-00000000e001') where id = :c1) = 1);
+select public.as_user('00000000-0000-0000-0000-0000000000e1'); select public.comment_report(:c1);
+select public.check('étape 13 : masqué au 3e signalement', (select count(*) from public.track_comments_list('00000000-0000-0000-0000-00000000e001') where id = :c1) = 0);
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+select public.check('étape 13 : son auteur le voit encore (RLS), pas les autres', (select count(*) from track_comments where id = :c1) = 1);
+select public.as_user('00000000-0000-0000-0000-0000000000d3');
+select public.check('étape 13 : … les autres non', (select count(*) from track_comments where id = :c1) = 0);
+do $$ declare refuse boolean := false; begin
+  begin perform public.comment_delete((select max(id) from public.track_comments_list('00000000-0000-0000-0000-00000000e002'))); exception when others then refuse := true; end;
+  perform public.check('étape 13 : on ne supprime pas le commentaire d''un autre', refuse);
+end $$;
+select public.as_user('00000000-0000-0000-0000-0000000000e1');
+select public.comment_delete((select max(id) from public.track_comments_list('00000000-0000-0000-0000-00000000e002')));
+select public.check('étape 13 : l''auteur du circuit supprime un commentaire de son circuit', (select count(*) from public.track_comments_list('00000000-0000-0000-0000-00000000e002')) = 8);
+-- playlists
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+select public.playlist_save(null, 'Mes favoris', true, array['00000000-0000-0000-0000-00000000e002', '00000000-0000-0000-0000-00000000e003', '00000000-0000-0000-0000-00000000e001', '00000000-0000-0000-0000-00000000e002']::uuid[]) as pl1 \gset
+select public.playlist_save(null, 'Secrète', false, array['00000000-0000-0000-0000-00000000e001']::uuid[]) as pl2 \gset
+select public.check('étape 13 : playlist : ordre gardé, doublons et circuits masqués retirés', (select tracks from playlists where id = :pl1) = array['00000000-0000-0000-0000-00000000e002', '00000000-0000-0000-0000-00000000e001']::uuid[]);
+do $$ declare refuse boolean := false; begin
+  begin perform public.playlist_save(null, 'Trop', true, array_fill('00000000-0000-0000-0000-00000000e001'::uuid, array[51])); exception when others then refuse := true; end;
+  perform public.check('étape 13 : 50 circuits au plus', refuse);
+end $$;
+select public.as_user('00000000-0000-0000-0000-0000000000d2');
+select public.check('étape 13 : une playlist publique se voit, une privée non', (select count(*) from public.playlists_list(false) where id = :pl1) = 1 and (select count(*) from playlists where id = :pl2) = 0);
+do $$ declare refuse boolean := false; refuse2 boolean := false; begin
+  begin perform public.playlist_save((select min(id) from playlists), 'Volée', true, '{}'); exception when others then refuse := true; end;
+  begin perform public.playlist_delete((select min(id) from playlists)); exception when others then refuse2 := true; end;
+  perform public.check('étape 13 : on ne modifie ni ne supprime la playlist d''un autre', refuse and refuse2);
+end $$;
+-- sélection et modération
+do $$ declare refuse boolean := false; begin
+  begin perform public.pick_track('00000000-0000-0000-0000-00000000e001', true); exception when others then refuse := true; end;
+  perform public.check('étape 13 : la sélection est réservée aux modérateurs', refuse);
+end $$;
+reset role;
+insert into moderators values ('00000000-0000-0000-0000-0000000000e1') on conflict do nothing;
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000e1');
+select public.pick_track('00000000-0000-0000-0000-00000000e001', true);
+select public.mod_hide('comment', (select max(id) from public.track_comments_list('00000000-0000-0000-0000-00000000e002'))::text, true);
+select public.check('étape 13 : un modérateur choisit la sélection et masque un commentaire', (select picked_at is not null from tracks where id = '00000000-0000-0000-0000-00000000e001') and (select count(*) from public.track_comments_list('00000000-0000-0000-0000-00000000e002')) = 7);
+-- hasard et recommandations
+select public.as_user('00000000-0000-0000-0000-0000000000d3');
+select public.check('étape 13 : au hasard : jamais un circuit masqué', not exists (select 1 from generate_series(1, 30) where public.random_track() = '00000000-0000-0000-0000-00000000e003'));
+select public.check('étape 13 : au hasard : la liste à éviter est respectée', public.random_track((select array_agg(id) from tracks where id <> '00000000-0000-0000-0000-00000000e002')) = '00000000-0000-0000-0000-00000000e002');
+reset role;
+insert into track_likes (track_id, player) values ('00000000-0000-0000-0000-00000000e001', '00000000-0000-0000-0000-0000000000d1'), ('00000000-0000-0000-0000-00000000e001', '00000000-0000-0000-0000-0000000000d2'), ('00000000-0000-0000-0000-00000000e002', '00000000-0000-0000-0000-0000000000d2');
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+select public.check('étape 13 : recommandation : aimé par qui aime ce que j''aime, en tête ; ni aimé par moi, ni masqué',
+  (select id from public.recommended_tracks(5) limit 1) = '00000000-0000-0000-0000-00000000e002'
+  and not exists (select 1 from public.recommended_tracks(50) where id in ('00000000-0000-0000-0000-00000000e001', '00000000-0000-0000-0000-00000000e003')));
+-- statistiques (run_stats)
+reset role;
+insert into run_stats (install, track, outcome, time, progress, respawns, phys_ver) select lpad(to_hex(i), 16, '0'), 'statique', 'finish', 30 + i, null, i % 2, 26 from generate_series(1, 4) i;
+set role authenticated;
+select public.check('étape 13 : statistiques : rien sous 5 installations', (select count(*) from public.track_stats('statique', 26)) = 0);
+reset role;
+insert into run_stats (install, track, outcome, time, progress, respawns, phys_ver) values ('00000000000000ff', 'statique', 'quit', 12, 0.4, 0, 26), ('00000000000000fe', 'statique', 'finish', 40, null, 0, 26);
+set role anon;
+select public.check('étape 13 : statistiques depuis run_stats (lisibles sans compte) : pilotes, taux d''arrivée, temps médian',
+  (select players = 6 and runs = 6 and finishes = 5 and abs(finish_rate - 5.0 / 6) < 1e-4 and median_time = 33 and abs(quit_progress - 0.4) < 1e-4 from public.track_stats('statique', 26)));
+do $$ declare refuse boolean := false; begin
+  begin perform count(*) from run_stats; exception when others then refuse := true; end;
+  perform public.check('étape 13 : run_stats reste illisible directement', refuse);
+end $$;
+-- modes publiés
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000b1');
+do $$ declare refuse boolean := false; begin
+  begin perform public.mode_publish('Invité', '', 'v1.g-40', null); exception when others then refuse := true; end;
+  perform public.check('étape 13 : une session invitée ne publie pas de mode', refuse);
+end $$;
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+do $$ declare refuse boolean := false; refuse2 boolean := false; begin
+  begin perform public.mode_publish('Faux', '', 'v1.turbo-9', null); exception when others then refuse := true; end;
+  begin perform public.mode_publish('Saison', '', 'v1.sea-3', null); exception when others then refuse2 := true; end;
+  perform public.check('étape 13 : catégorie inconnue ou étiquette (saison) refusée', refuse and refuse2);
+end $$;
+select public.mode_publish('Lune', 'Gravité basse', 'v1.g-40.veh-moto', '{"id":"perfect","n":2}') as m1 \gset
+select public.check('étape 13 : mode publié, listé avec sa catégorie', (select variant = 'v1.g-40.veh-moto' and owner_name = 'Ana' from public.modes_list(false) where id = :m1));
+do $$ declare refuse boolean := false; begin
+  for i in 2..5 loop perform public.mode_publish('Mode ' || i, '', '', null); end loop;
+  begin perform public.mode_publish('Mode 6', '', '', null); exception when others then refuse := true; end;
+  perform public.check('étape 13 : 5 modes publiés par jour au plus', refuse);
+end $$;
+select public.as_user('00000000-0000-0000-0000-0000000000d2'); select public.mode_report(:m1);
+select public.as_user('00000000-0000-0000-0000-0000000000d3'); select public.mode_report(:m1);
+select public.as_user('00000000-0000-0000-0000-0000000000e1'); select public.mode_report(:m1);
+select public.check('étape 13 : mode masqué au 3e signalement', (select count(*) from public.modes_list(false) where id = :m1) = 0);
+reset role;
+reset copytrack.now;
 -- 13. aucun mot de passe en clair dans nos tables
 select public.check('aucune colonne mot de passe dans le schéma public', not exists (select 1 from information_schema.columns where table_schema='public' and column_name ilike '%pass%'));
 select case when ok then '  ok   ' else '  FAIL ' end || name from public.res order by ok, name;
-select 'RESULT ' || case when bool_and(ok) and count(*) = 107 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
+select 'RESULT ' || case when bool_and(ok) and count(*) = 107 + 29 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
 SQL

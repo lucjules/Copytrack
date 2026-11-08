@@ -6,6 +6,122 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.44 — aides à la conduite, accessibilité, ressenti, caméra libre de l'éditeur
+
+Étape E22 de Copytrack Evolution (fin du bloc 6). `PHYS_VER` inchangé (26). **Redéployer `submit-score`** (déjà régénérée ici) : elle connaît la catégorie « assisté ».
+
+- **Aides à la conduite** (Profil › Options) :
+  - accélération automatique ;
+  - freinage assisté et direction assistée (guidés par la ligne de course : carrière et défi du jour) ;
+  - anti-tête-à-queue ;
+  - volant adouci.
+
+  Elles agissent sur les **commandes**, avant leur enregistrement : le replay, les fantômes et le serveur rejouent les commandes effectives, et la course se rejoue à l'identique (un test le vérifie au pas près).
+- **Catégorie « assisté »** : une course aidée a son propre classement (étiquette `as-1` ajoutée à sa catégorie). Elle se joue sans médailles ni pièces. Elle ne compte ni en saison, ni en duel, ni en tournoi : les aides y sont coupées, et le serveur refuse de toute façon ces combinaisons. La fiche du circuit et le départ le rappellent.
+- **Réglage du ressenti** : *Réponse du volant* (manette et pouce : linéaire à très progressive).
+
+  S'ajoute aux réglages existants : sensations de course, tremblements, champ de vision, effet de vitesse, zone morte et sensibilité de la manette.
+- **Animations réduites** : nouveau réglage *Réduire les animations* (Système, Oui, Non). Quand il est actif :
+  - les transitions des écrans et des fenêtres sont coupées ;
+  - les tremblements et les effets de caméra du ressenti sont à zéro.
+
+  Avec *Système*, le jeu suit `prefers-reduced-motion` et ses changements.
+- **Transitions** : les écrans et les fenêtres apparaissent en fondu court.
+- **Parcours complet au tactile**, testé sur un téléphone en paysage simulé : accueil, carrière, fiche, course aux boutons tactiles, pause, quitter. Ce test a trouvé un vrai défaut, corrigé : le bouton plein écran recouvrait « ▶ Jouer » de la fiche. Il ne s'affiche plus qu'en course et sur l'écran d'accueil.
+- **Caméra libre de l'éditeur** (🎥, touche V ; reportée depuis E9) : inclinaison jusqu'au ras du sol, approche jusqu'à 3 m, jamais sous le terrain.
+- Sous le capot :
+  - `js/aids.js`, `js/a11y.js` ;
+  - `tools/test-aids.mjs` ;
+  - tests navigateur : aides, animations réduites, caméra libre, parcours tactile ;
+  - `PW_ONLY` pour lancer un seul test navigateur pendant la mise au point.
+- **Limites** :
+  - le réglage final du ressenti (aides, profils, véhicules v2) demande des essais manette en main par un humain ;
+  - la **bibliothèque de matériaux** de l'éditeur, reportée depuis E9, n'est **pas faite** : elle reste à concevoir (quels matériaux, effet ou non sur la course, compatibilité du format).
+
+## Bêta 0.9.43 — communauté : commentaires, playlists, sélection, découverte, statistiques, modes publiés
+
+Étape E21 de Copytrack Evolution. `PHYS_VER` inchangé (26), rien ne change dans la course. **Lancer l'étape SQL 13** (`supabase/etape13-communaute.sql`) et **ajouter les modérateurs** à la main (voir le README) ; `submit-score` n'a pas besoin d'être redéployée pour cette étape.
+
+Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les j'aime, les signalements de circuits (masqués à 3), les abonnements, les tendances de la semaine, la recherche, les favoris. Nouveau :
+- **Commentaires** sur la fiche d'un circuit de la communauté :
+  - comptes seulement, 280 caractères ;
+  - **limitation de débit** en base : un toutes les 20 s, 10 par heure, 40 par jour ;
+  - **masqués après 3 signalements** de comptes distincts ;
+  - supprimables par leur auteur, l'auteur du circuit ou un modérateur.
+- **Playlists** (🎵 sur la fiche, onglet *Playlists*) :
+  - listes ordonnées de 50 circuits au plus, publiques ou privées, 20 par pilote ;
+  - *Jouer dans l'ordre* : la fiche de chaque circuit indique la position et propose le suivant.
+- **Sélection** (onglet 🏅) : les circuits choisis par les modérateurs.
+- **Découverte** :
+  - 🎲 *Au hasard* : un circuit jamais joué de préférence, sans retomber sur les derniers tirés ;
+  - ✨ *Pour toi* : les circuits aimés par les pilotes qui aiment les mêmes circuits que toi, puis ceux des auteurs suivis.
+- **Statistiques de circuit** sur la fiche : pilotes, part des parties qui vont au bout, temps médian, temps des 10 % les plus rapides.
+  - Elles sont calculées par la base depuis les statistiques anonymes (`run_stats`).
+  - Rien n'est affiché sous 5 installations.
+  - Les circuits de joueur y entrent désormais, identifiés par leur seule empreinte (avec l'accord déjà demandé pour les statistiques, qui couvrait « chaque circuit »).
+  - Le rapport d'équilibrage des médailles reste limité à la carrière et au défi.
+- **Modes publiés** (🌐 dans *Mes modes*, liste *Modes publiés*) :
+  - les règles d'un mode sont une **catégorie de record** : sur chaque circuit de la carrière, son classement est celui de cette catégorie ;
+  - *Jouer (classé)* ouvre la fiche sur cette catégorie ;
+  - un mode dont les règles ne correspondent à aucune catégorie ne se publie pas ;
+  - 5 publications par jour, 20 par pilote, masqués après 3 signalements.
+- **Modération** : table `moderators` ; `pick_track` (Sélection) et `mod_hide` (masquer ou rétablir un circuit, un commentaire, un mode) leur sont réservés.
+- Sous le capot :
+  - `js/online/community.js` ;
+  - `tools/test-communaute2.mjs` (client, correspondance mode ↔ catégorie) ;
+  - 29 vérifications SQL de plus (débit, masquage, suppression, RLS, quotas, statistiques sous le seuil) ;
+  - test navigateur avec un serveur simulé.
+
+## Bêta 0.9.42 — véhicules v2, profils physiques, laboratoire
+
+Étape E20 de Copytrack Evolution. `PHYS_VER` inchangé (26) : les modèles de toujours restent identiques au bit près (les 186 scénarios de l'empreinte sont identiques), les nouveaux modèles n'entrent en service que par une règle du circuit ou une catégorie de record. **Redéployer `submit-score`** (déjà régénérée ici) : nouvelles règles et catégories.
+
+- **Profils physiques** (règle `pm` du circuit, catégories de record « 🕹️ Profil Arcade » et « 🎛️ Profil Simulation ») :
+  - **Arcade** : plus d'adhérence latérale, lacet plus amorti, arrière qui décroche moins, volant qui revient plus vite ;
+  - **Classique** : la physique de toujours (par défaut) ;
+  - **Simulation** : pneus plus progressifs, moins d'adhérence et d'amortissement, freins plus longs, et les véhicules v2 en service ;
+  - **aucun profil ne rend un véhicule plus rapide en ligne droite** : vitesse de pointe, accélération et boost sont les mêmes (un test le vérifie). Ce sont des catégories de classement, jamais des achats.
+- **Véhicules v2** (règle `vm`, case *Véhicules v2* de l'éditeur, catégorie « 🧪 Véhicules v2 » sur les circuits qui ont autre chose qu'une voiture) :
+  - **moto** : elle penche selon l'accélération latérale, avec un temps de bascule (changer de cap plus vite coûte de l'adhérence) ; au freinage la charge passe sur l'avant, à l'accélération sur l'arrière (à basse vitesse, plein gaz lève l'avant) ; le frein mord moins sur l'angle. La moto penche aussi à l'écran ;
+  - **bateau** : houle déterministe (monter une vague freine, la descendre relance, la coque la suit à l'écran) et courant le long de chaque pièce d'eau ;
+  - **deltaplane** : ascendances tirées de la graine des conditions, portance qui baisse en altitude, vent et rafales du circuit qui portent l'aile.
+- **Laboratoire** (🧪, fiche du circuit, section Records) : les commandes de ton record rejouées à l'identique sous deux réglages au choix :
+  - circuit tel quel, Classique v1 ou v2, Arcade, Simulation, adhérence 80 %, pluie ;
+  - l'écran affiche les deux résultats, le secteur où les courses se séparent, la courbe de l'écart le long du circuit et le tableau des secteurs (analyse d'E4) ;
+  - le circuit n'est jamais modifié.
+- Sous le capot :
+  - `js/physics/profiles.js`, `js/physics/vehicles/moto2.js`, `boat2.js`, `glider2.js` ;
+  - `js/analysis/lab.js`, `js/app/lab.js` ;
+  - 7 scénarios `pm:*` et `v2:*` dans l'empreinte ;
+  - `tools/test-vehicles2.mjs` ;
+  - tests navigateur (réglages de l'éditeur, laboratoire).
+- **Limite** : le réglage fin du ressenti des profils et des véhicules v2 demande des essais manette en main ; les valeurs actuelles sont un premier jet mesuré par les tests et le pilote automatique.
+
+## Bêta 0.9.41 — environnements déterministes : pluie et flaques, givre, rafales
+
+Étape E19 de Copytrack Evolution (début du bloc 6). `PHYS_VER` inchangé (26) : les circuits, records et replays existants courent exactement comme avant (les 182 scénarios de l'empreinte de la physique sont identiques). **Redéployer `submit-score`** (déjà régénérée ici) : la vérification connaît les nouvelles règles du circuit et la catégorie « sous la pluie ».
+
+- **Cinq règles de circuit**, dans *Paramètres du niveau* de l'éditeur, absentes par défaut :
+  - **Pluie** (0 à 100 %) : la piste glisse un peu partout (jusqu'à 15 % d'adhérence en moins), et beaucoup dans les **flaques** (jusqu'à moitié moins) ;
+  - **Givre** (0 à 100 %) : des plaques de verglas (35 % de l'adhérence) ;
+  - **Rafales** (0 à 100 %) : des coups de vent, par à-coups, dans la direction du vent du circuit ;
+  - **Conditions qui varient** : la pluie forcit et faiblit pendant la course ;
+  - **Graine des conditions** (🎲) : elle place les flaques, les plaques et les rafales.
+- **Déterministe, au pas près** : tout vient de la graine et du chrono de la course, en entiers et en `dmath`. Même graine, mêmes flaques au même endroit et mêmes rafales au même instant, pour tout le monde, dans les fantômes, les replays et la vérification serveur. Les flaques et les plaques ne vont que sur des lignes droites plates, en route ordinaire, fixes, au sol.
+- Ces règles entrent dans la signature du circuit (leur propre classement) et passent son code au format 4. Le Race Hub les affiche.
+- **Effets** (purement visuels et sonores) :
+  - flaques et plaques de givre posées sur la route ;
+  - pluie dont la densité suit l'intensité de la course, avec son bruit continu ;
+  - éclaboussure et bruit d'eau dans une flaque, crissement sur le givre, souffle quand une rafale se lève.
+- **Catégorie de record « 🌧️ Sous la pluie »** (variante `rn-60`, graine fixe) dans la fiche de chaque circuit classé.
+- **Défi du jour** : nouvelle mutation **Averse** (pluie à 60 %). À partir du vendredi 20 novembre 2026, le vendredi alterne averse et brouillard. Les jours d'avant gardent leur mutation et leur classement.
+- Sous le capot :
+  - `js/sim/env.js` ;
+  - la physique ne fait aucune opération de plus sans conditions (`envOf` renvoie `null`) ;
+  - 4 scénarios `env:*` dans l'empreinte (identiques sous Node, Deno et Chromium) ;
+  - `tools/test-env.mjs` : même graine mêmes flaques, adhérence, variation, rafales jamais à contre-sens, course vérifiée par le serveur et refusée sur le circuit sec ;
+  - tests navigateur (réglages de l'éditeur, effets en course).
+
 ## Bêta 0.9.40 — prototype de rollback : décision GO (hors interface)
 
 Étape E18 de Copytrack Evolution (fin du bloc 5). `PHYS_VER` inchangé (26), `NET_VER` inchangé (4), rien à redéployer. **Rien ne change pour le joueur** : le prototype n'est branché sur aucun écran, et les collisions douces d'E16 restent celles du jeu.

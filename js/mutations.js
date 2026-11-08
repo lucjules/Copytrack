@@ -18,9 +18,18 @@ export const MUTATIONS = {
   brouillard: { label: 'Verglas dans le brouillard', icon: '🌫️', desc: 'Adhérence à 80 % et brouillard épais.', v: () => ({ gp: '80' }), ambiance: { fog: 'thick' } },
   motolune: { label: 'Moto sur la Lune', icon: '🚀', desc: 'Départ en moto et gravité à 70 %.', v: () => ({ veh: 'moto', g: '70' }) },
   plomb: { label: 'Gravité lourde', icon: '🪨', desc: 'Gravité à 130 % : les sauts retombent vite.', v: () => ({ g: '130' }) },
+  averse: { label: 'Averse', icon: '🌧️', desc: 'Pluie à 60 % : la piste glisse, des flaques se forment.', v: () => ({ rn: '60' }), ambiance: { fog: 'misty' } },   // E19
 };
 // Jour de la semaine (UTC, 0 = dimanche) -> mutation proposée en premier.
 export const WEEK = ['plomb', 'verglas', 'vent', 'moto', 'lune', 'brouillard', 'motolune'];
+// Depuis AVERSE_FROM (un vendredi, après la mise en ligne d'E19), le vendredi alterne : averse une semaine, brouillard la suivante. Les jours
+// d'avant gardent exactement leur mutation (leurs classements existent déjà).
+export const AVERSE_FROM = '2026-11-20';
+export function weekOrder(day) {
+  if (day < AVERSE_FROM) return WEEK;
+  const weeks = Math.floor((Date.parse(day + 'T00:00:00Z') - Date.parse(AVERSE_FROM + 'T00:00:00Z')) / (7 * 86400000));
+  return weeks % 2 ? WEEK : WEEK.map((id) => (id === 'brouillard' ? 'averse' : id));
+}
 
 const cache = new Map();
 // La mutation du jour : { day, id, label, icon, desc, v, variant, key, ambiance, time } ou null (défi absent, ou aucune mutation faisable).
@@ -31,8 +40,9 @@ export function dailyMutation(day = dayKey()) {
   if (c) {
     const r = rng(day + '#mutation');
     const w = new Date(Date.parse(day + 'T00:00:00Z')).getUTCDay();
-    for (let k = 0; k < WEEK.length && !out; k++) {
-      const id = WEEK[(w + k) % WEEK.length], M = MUTATIONS[id], v = M.v(r);
+    const order = weekOrder(day);
+    for (let k = 0; k < order.length && !out; k++) {
+      const id = order[(w + k) % order.length], M = MUTATIONS[id], v = M.v(r);
       let track, key;
       try { track = applyVariant(c.track, v); key = variantKey(c.key, v); } catch { continue; }
       // Le pilote automatique doit finir le défi muté ; sur une piste moins adhérente, il vise moins d'adhérence lui aussi.

@@ -13,6 +13,11 @@ import { CELL, DT, LEVEL_H, ROAD_TOP } from './constants.js';
 import { PLATES, RING_R, RING_Y, toLocal, sampleLocal, rotVec, tileParam, beltSpeed, glassSeconds } from './pieces.js';
 import { CAR, SPECS, GLIDE, surfaceCoeffs } from './physics/specs.js';
 import { paramsOf } from './sim/params.js';
+import { envOf } from './sim/env.js';
+import { specsOf, v2Of } from './physics/profiles.js';
+import { moto2Ground, moto2Idle } from './physics/vehicles/moto2.js';
+import { boat2Water } from './physics/vehicles/boat2.js';
+import { thermalLift, altitudeK } from './physics/vehicles/glider2.js';
 import { clamp } from './mathutil.js';
 import { wallMethods } from './physics/walls.js';
 import { obstacleMethods } from './physics/obstacles.js';
@@ -32,6 +37,10 @@ export class CarPhysics {
   constructor(track) {
     this.track = track;
     this.params = paramsOf(track);     // adhérence et vent de tout le circuit (sim/params.js) : par défaut, rien ne change
+    this.env = envOf(track);           // pluie, flaques, givre, rafales (sim/env.js) : null par défaut, et alors rien ne change
+    this._specs = specsOf(track && track.pm);      // profil physique Arcade / Simulation (physics/profiles.js) : null en Classique (SPECS tel quel)
+    this.v2 = v2Of(track);             // modèles de véhicules v2 (physics/vehicles/) : faux par défaut, et alors aucune de leurs lignes ne s'exécute
+    this.lean = 0; this.mAx = 0; this.heave = 0; this.v2F = 0; this.v2R = 0;      // état des modèles v2 (inclinaison, charge, houle)
     this.pos = { x: 0, y: 0, z: 0 };
     this.prev = { x: 0, y: 0, z: 0 };
     this.vel = { x: 0, y: 0, z: 0 };
@@ -76,7 +85,8 @@ export class CarPhysics {
 
   // Réglages du véhicule actuel (voiture ou moto).
   get k() {
-    return SPECS[this.vehicle] || CAR;
+    const S = this._specs || SPECS;
+    return S[this.vehicle] || S.car;
   }
 
   // Hors piste : sur le terrain, ou perdue dans le ciel en gravité inversée.
@@ -104,6 +114,7 @@ export class CarPhysics {
     this.steer = 0; this.steerAngle = 0; this.boost = 0; this.boostF = 1; this.slip = 0; this.airTime = 0; this.fwdSpeed = 0;
     this.driftT = 0; this.bounceCD = 0; this.driftCharge = 0; this.stunT = 0;
     this.pitch = 0; this.pitchRate = 0; this.landQ = ''; this.aoa = 0.08; this.glidePitch = 0; this.bankT = 0;
+    if (this.v2) { this.lean = 0; this.mAx = 0; this.heave = 0; this.v2F = 1; this.v2R = 1; }
     this.rib = null;
     this.gravMul = 1;
     this.vehicle = 'car';
@@ -262,8 +273,9 @@ export class CarPhysics {
     const delta = this._steerAngle(Math.abs(vx), drift);
     this.steerAngle = delta;
     const L = K.a + K.b;
-    const maxF = K.latGrip * grip * K.frontShare;
-    const maxR = K.latGrip * grip * (1 - K.frontShare) * (1 - (1 - K.driftRear) * drift) * (this.rearK ?? 1);
+    let maxF = K.latGrip * grip * K.frontShare;
+    let maxR = K.latGrip * grip * (1 - K.frontShare) * (1 - (1 - K.driftRear) * drift) * (this.rearK ?? 1);
+    if (this.v2F) { maxF *= this.v2F; maxR *= this.v2R; }      // moto v2 : transfert de masse (physics/vehicles/moto2.js)
     if (Math.abs(vx) < 1.5) {
       // À très basse vitesse, le modèle de dérive (angles calculés avec une
       // vitesse plancher) peut générer une force latérale qui annule la traction,
@@ -295,6 +307,7 @@ export class CarPhysics {
     this._beginStep();
     inp = this._controls(inp);
     this._driftState(inp);
+    if (this.v2 && (this.vehicle !== 'moto' || !this.grounded || this.rib)) moto2Idle(this, DT);      // (moto v2 : redressée hors du sol)
     if (this.rib) { this._ribStep(inp); return; }
     if (this.grounded) { if (this._driveGround(inp)) return; } else this._flyAir(inp);
     if (this._collide()) return;
@@ -433,7 +446,19 @@ export class CarPhysics {
     const P = this.params;
     if (P.grip !== 1) grip *= P.grip;                                       // adhérence de tout le circuit
     if (P.windOn) { vf += (P.windX * fx + P.windZ * fz) * dt; vr += (P.windX * rx + P.windZ * rz) * dt; }      // vent de tout le circuit
+    const E = this.env;
+    if (E) {                                                                // environnement (sim/env.js) : pluie et flaques hors de l'eau, givre, rafales
+      const st = this.clock || 0;
+      if (!wet) grip *= E.gripAt(this.pos.x, this.pos.y, this.pos.z, st);
+      if (E.gust) { const g = E.gustAt(st); vf += (g.x * fx + g.z * fz) * dt; vr += (g.x * rx + g.z * rz) * dt; }
+    }
+    if (this.v2) {                                                          // modèles de véhicules v2 (physics/vehicles/)
+      if (this.vehicle === 'moto') grip *= moto2Ground(this, inp, vf, this.g, dt);
+      if (this.vehicle === 'boat' && wet) { const b = boat2Water(this, this.surfTile, fx, fz, rx, rz, this.g, dt); vf += b.dvf; vr += b.dvr; grip *= b.grip; }
+      else this.heave = 0;
+    }
     const ax = (this._longitudinal(vf, inp, K.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
+    if (this.v2) this.mAx = ax;
     this.rearK = rearK;
     const r = this._tires(vf, vr, this.omega, ax, grip, dt);
     this.rearK = 1;
@@ -637,6 +662,7 @@ export class CarPhysics {
     this.aoa += (aoaT - this.aoa) * Math.min(1, dt * 3);
     let L = G.lift * sp * sp * Math.max(0, 0.6 + 4 * this.aoa);
     L = Math.min(L, G.liftMaxG * this.g);
+    if (this.v2) L *= altitudeK(this.pos.y);                               // deltaplane v2 : l'air se raréfie en altitude (physics/vehicles/glider2.js)
     const D = G.drag * sp * sp + G.induced * L;
     const dx = v.x / sp, dy = v.y / sp, dz = v.z / sp;
     const gu = this.gSign;   // « haut » selon la gravité
@@ -646,6 +672,12 @@ export class CarPhysics {
     v.x += (L * lx - D * dx) * dt;
     v.y += (L * ly - D * dy - this.g * gu) * dt;
     v.z += (L * lz - D * dz) * dt;
+    if (this.v2) {                                                          // deltaplane v2 : ascendances, vent et rafales du circuit portent l'aile
+      v.y += thermalLift(this.track.envSeed | 0, this.pos.x, this.pos.y, this.pos.z) * gu * dt;
+      const P = this.params;
+      if (P.windOn) { v.x += P.windX * dt; v.z += P.windZ * dt; }
+      if (this.env && this.env.gust) { const w = this.env.gustAt(this.clock || 0); v.x += w.x * dt; v.z += w.z * dt; }
+    }
     // Virage : l'aile s'incline, la trajectoire et le nez tournent ensemble.
     // Roulis : le virage suit le volant avec un petit retard (aile qui s'incline), plus vif et utilisable dès 9 m/s.
     this.bankT = (this.bankT || 0) + (this.steer - (this.bankT || 0)) * Math.min(1, dt * G.turnRamp);

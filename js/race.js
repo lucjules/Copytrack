@@ -32,6 +32,8 @@ import { scriptMethods } from './race/scriptsRun.js';
 import { trainingMethods } from './race/training.js';
 import { theaterMethods } from './theater/session.js';
 import { theaterCameraMethods } from './theater/cameras.js';
+import { EnvFx } from './envFx.js';
+import { DrivingAids, aidsActive, aidedKey, steerCurve } from './aids.js';
 
 const CAR_COLOR = '#ffd23e';   // éclat quand la voiture retrouve sa forme d'origine (les plaques ont la couleur de leur revêtement : SURFACES)
 
@@ -43,6 +45,16 @@ export class RaceSession {
     this.demo = !!opts.demo;
     this.trackKey = opts.trackKey;
     this.medals = opts.medals || null;
+    // Aides à la conduite (aids.js) : la course va dans la catégorie « assisté » (clé « …as-1 »), sans médailles ; pas d'aides en saison,
+    // duel ou tournoi (aidedKey renvoie null : elles sont coupées pour cette course).
+    this.aids = null; this.aidsOff = false;
+    if (aidsActive(app.settings.aids) && !opts.replay && !this.demo) {
+      const k = opts.trackKey ? aidedKey(opts.trackKey) : opts.trackKey;
+      if (k === null) this.aidsOff = true;
+      else { this.trackKey = k; this.medals = null; this.aids = new DrivingAids(track, app.settings.aids); }
+    }
+    if (this.aids) app.ui.flash('🦾 Aides à la conduite : course classée « assisté », sans médailles.', 2.6);
+    else if (this.aidsOff) app.ui.flash('Aides coupées pour cette course : elles ne comptent pas en saison, duel ou tournoi.', 3);
 
     this.view = new TrackView(track, app.materials);
     app.scenery.trackGroup.add(this.view.group);
@@ -51,6 +63,7 @@ export class RaceSession {
     this.sim = new Simulation(track, { partial: !!opts.spawn });
     this.phys = this.sim.phys;
     this.logic = this.sim.logic;
+    this.envFx = this.phys.env ? new EnvFx(app.scene, this.phys.env, app.scenery.q.particles) : null;      // pluie, flaques, givre, rafales (E19)
     // Voitures identiques (règle de la partie) : tout le monde, moi compris, avec l'apparence d'origine.
     const sameCars = opts.multi && opts.multi.room.rules && opts.multi.room.rules.sameCars;
     this.car = createCar(sameCars ? DEFAULT_LOADOUT : profile().loadout);
@@ -169,6 +182,7 @@ export class RaceSession {
     this.skids.clear();
     if (this.trailRib) this.trailRib.reset();
     if (this.bot) this.bot.reset(this.phys);
+    if (this.aids) this.aids.reset(this.phys);
     if (!this.demo) {
       app.ui.hud.reset(this);
       app.ui.hideOverlay('finish');
@@ -198,6 +212,7 @@ export class RaceSession {
     // tourner : la téléportation coûte tout le temps perdu, et le compteur de téléportation prévient les autres joueurs.
     const r = this.sim.rewind({ keepClock: !!this.multi });      // (remet aussi la voiture au point de retour, avec son véhicule et sa gravité)
     if (this._train) this._trainRespawn();
+    if (this.aids) this.aids.reset(this.phys);
     Object.assign(this.stats, this.statsSnap);       // les réceptions, turbos et anneaux d'après le checkpoint ne comptent plus
     if (this.multi) { this.teleSeq = (this.teleSeq + 1) & 255; this._jumped = true; this.protectUntil = this.tick + 240; }       // 2 s sans collision après un retour au checkpoint
     const steps = this.logic.steps;
@@ -255,7 +270,9 @@ export class RaceSession {
     }
     if (this.bot) return this.bot.control(this.phys);
     if (this.state === 'finished') return { steer: 0, throttle: false, brake: true, drift: false };
-    return this.app.input.drive();
+    const raw = this.app.input.drive();
+    raw.steer = steerCurve(raw.steer, this.app.settings.steerCurve);      // réponse du volant (réglage du ressenti)
+    return this.aids && this.state === 'racing' ? this.aids.apply(raw, this.phys) : raw;      // commandes effectives : ce sont elles qui sont enregistrées
   }
 
   _stepOnce() {
@@ -495,8 +512,10 @@ export class RaceSession {
       p.prev.y + (p.pos.y - p.prev.y) * alpha,
       p.prev.z + (p.pos.z - p.prev.z) * alpha,
     );
+    if (this.envFx) this.envFx.frame(dt, app.camera, this.logic.steps, this.renderPos, p.fwdSpeed, p.grounded, app);
     const g = this.car.group;
     g.position.copy(this.renderPos);
+    if (p.v2 && p.vehicle === 'boat' && p.heave) g.position.y += p.heave;      // bateau v2 : la coque suit la houle (physics/vehicles/boat2.js)
     g.quaternion.slerpQuaternions(this.prevQuat, this.quat, alpha);
 
     this.car.update(dt, performance.now() / 1000);
@@ -508,7 +527,8 @@ export class RaceSession {
     }
     // Roulis : léger au sol, franc pour le deltaplane qui vire en l'air.
     const gliding = p.vehicle === 'glider' && !p.grounded;
-    const roll = gliding ? -(p.steer || 0) * 0.45 : Math.max(-0.07, Math.min(0.07, p.yawRate * p.fwdSpeed * 0.0022));
+    // Moto v2 (physics/vehicles/moto2.js) : l'inclinaison est celle de la physique, la moto penche dans le virage.
+    const roll = gliding ? -(p.steer || 0) * 0.45 : p.v2 && p.vehicle === 'moto' && p.grounded ? -p.lean : Math.max(-0.07, Math.min(0.07, p.yawRate * p.fwdSpeed * 0.0022));
     this.car.body.rotation.z += (roll - this.car.body.rotation.z) * Math.min(1, dt * 8);
     const inp = this.lastInput || {};
     const pitch = p.grounded ? (inp.throttle ? 0.012 : 0) - (inp.brake && p.fwdSpeed > 2 ? 0.03 : 0) : 0;
@@ -654,6 +674,7 @@ export class RaceSession {
       this.remote.clear();
     }
     if (this.trailRib) { this.trailRib.dispose(); this.trailRib = null; }
+    if (this.envFx) { this.envFx.dispose(); this.envFx = null; }
     this.ghostCar.dispose();
     this.app.particles.clear();
     this.app.audio.engine(null);

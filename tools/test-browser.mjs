@@ -29,7 +29,10 @@ catch (e) { server.kill(); console.log('  skip Chromium introuvable : test navig
 
 let failures = 0;
 const errors = [];
+// PW_ONLY=<texte>[|<texte>…] : ne lance que les tests dont le nom contient l'un des textes (mise au point ; certains tests supposent l'état
+// laissé par les précédents).
 async function test(name, fn) {
+  if (process.env.PW_ONLY && !process.env.PW_ONLY.split('|').some((x) => name.includes(x))) return;
   const before = errors.length;
   try { await fn(); if (errors.length > before) throw new Error('erreurs de la page : ' + errors.slice(before).join(' | ')); console.log('  ok   ' + name); }
   catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 5).join('\n       ')); }
@@ -521,6 +524,51 @@ try {
     assert.equal(await app(() => document.body.dataset.speedo), 'default');
   });
 
+  await test('environnements (E19) : flaques et givre posés sur la route, pluie à la densité de la course, éclaboussure dans une flaque, tout retiré en quittant', async () => {
+    await app(async () => {
+      const A = window.copytrack;
+      const { scriptTrack } = await import('/js/track.js'); const { envOf } = await import('/js/sim/env.js');
+      const t = scriptTrack('Pluie', 'start S3 S3 S3 S3 finish');
+      for (let s = 1; s < 999; s++) { t.setParams({ rain: 100, frost: 60, envSeed: s, envVary: true }); const E = envOf(t); if (E.patches.some((p) => p.kind === 'puddle') && E.patches.some((p) => p.kind === 'frost')) break; }
+      A.playTrack(t, { trackKey: null });
+    });
+    await waitApp(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    const r = await app(() => {
+      const A = window.copytrack, S = A.session, F = S.envFx, E = S.phys.env;
+      const pud = E.patches.find((p) => p.kind === 'puddle');
+      F.frame(0.016, A.camera, S.logic.steps, { x: pud.x, y: pud.y, z: pud.z }, 30, true, A);
+      return { fx: !!F, meshes: F.group.children.length, inScene: !!A.scene.getObjectByName('env'), q: A.scenery.q.particles, rain: !!F.rain, obj: !!(F.rain && F.rain.obj), range: F.rain && F.rain.obj ? F.rain.obj.geometry.drawRange.count : 0, n: F.rain && F.rain.n, inPatch: F.inPatch === pud };
+    });
+    assert.ok(r.fx && r.inScene, 'les effets d’environnement sont en place');
+    assert.equal(r.meshes, 2, 'flaques et plaques de givre');
+    assert.ok(r.rain, 'la pluie existe');
+    if (r.q > 0) assert.ok(r.obj && r.range > 0 && r.range <= r.n * 2, `pluie visible (${r.range} / ${r.n * 2})`);
+    else assert.equal(r.obj, false, 'qualité sans particules : pas de gouttes (les flaques restent)');
+    assert.ok(r.inPatch, 'la voiture est dans la flaque');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu');
+    assert.equal(await app(() => !!window.copytrack.scene.getObjectByName('env')), false, 'retiré en quittant');
+  });
+
+  await test('laboratoire (E20) : les commandes d’un record rejouées sous deux réglages, écart par secteur et courbe, circuit intact', async () => {
+    const sig = await app(async () => {
+      const A = window.copytrack;
+      const { BUILTIN_TRACKS, buildBuiltin } = await import('/js/tracks.js'); const { traceFromBot } = await import('/js/analysis/trace.js');
+      const track = buildBuiltin(BUILTIN_TRACKS.find((d) => d.id === 'serpent')), run = traceFromBot(track);
+      window.__lab = track;
+      A.openLab({ track }, { inputs: run.inputs, time: run.time });
+      return track.signature();
+    });
+    await waitApp(() => document.querySelector('#lab-out table.lab-sec'), null, 30000);
+    const r = await page.evaluate(() => ({ rows: document.querySelectorAll('#lab-out .lab-sec tr').length, chart: !!document.querySelector('#lab-out svg.lab-chart polyline'), text: document.getElementById('lab-out').textContent }));
+    assert.ok(r.rows >= 3 && r.chart, `${r.rows} lignes, courbe ${r.chart}`);
+    assert.match(r.text, /Profil Simulation/); assert.match(r.text, /se séparent au secteur/);
+    await page.evaluate(() => { document.getElementById('lab-b').value = 'classic'; [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent.trim() === 'Comparer').click(); });
+    await waitApp(() => /même circuit/.test(document.getElementById('lab-out').textContent), null, 30000);
+    assert.equal(await app(() => window.__lab.signature()), sig, 'le circuit n’a pas changé');
+    await app(() => window.copytrack.ui.closeModal());
+  });
+
   await test('décors réglables, pièce perso et déclencheurs : météo et heure qui défile, pièce posée dans le circuit, message et éclat joués en course', async () => {
     const r = await app(async () => {
       const A = window.copytrack;
@@ -846,6 +894,23 @@ try {
     assert.notEqual(await app(() => window.copytrack.session.track.signature()), sig0, 'la signature change');
     await app(() => window.copytrack.session.track.setParams({ grip: 100, wind: 0, windDir: 0 }));
     assert.equal(await app(() => window.copytrack.session.track.signature()), sig0, 'revenue aux valeurs par défaut, la signature aussi');
+    // --- conditions (environnements déterministes, E19) : pluie, givre, rafales, graine
+    await app(() => window.copytrack.session.openParams());
+    await waitApp(() => document.getElementById('pp-rain'));
+    const dis = await page.evaluate(() => [document.getElementById('pp-ev').disabled, document.getElementById('pp-es').disabled]);
+    assert.deepEqual(dis, [true, true], 'sans pluie : ni variation ni graine');
+    await page.evaluate(() => {
+      const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input')); };
+      set('pp-rain', '60'); set('pp-gust', '30'); document.getElementById('pp-ev').checked = true; document.getElementById('pp-es').value = '33';
+      document.getElementById('pp-pm').value = 'arcade'; document.getElementById('pp-vm').checked = true;
+      [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent.trim() === 'Appliquer').click();
+    });
+    await waitApp(() => window.copytrack.session.track.rain === 60);
+    assert.deepEqual(await app(() => { const t = window.copytrack.session.track; return [t.rain, t.frost, t.gust, t.envVary, t.envSeed]; }), [60, 0, 30, true, 33]);
+    assert.deepEqual(await app(() => { const t = window.copytrack.session.track; return [t.pm, t.vm]; }), ['arcade', 2], 'profil et véhicules v2 (E20)');
+    assert.notEqual(await app(() => window.copytrack.session.track.signature()), sig0, 'les conditions changent la signature');
+    await app(() => window.copytrack.session.track.setParams({ rain: 0, gust: 0, envVary: false, envSeed: 0, pm: '', vm: 1 }));
+    assert.equal(await app(() => window.copytrack.session.track.signature()), sig0);
     // --- prefabs
     await page.evaluate(() => document.querySelector('#ed-palette .pal-tab[data-tab="prefabs"]').click());
     await waitApp(() => document.querySelectorAll('#ed-palette [data-pf-starter]').length >= 6);
@@ -894,10 +959,11 @@ try {
     assert.deepEqual(await app(() => window.copytrack.session.track.groupNames()), [[1, 'Tout']]);
     // masquer : le maillage du groupe disparaît et rien n'est plus visable
     await click('.ed-gtable tr[data-g="1"] [data-a="hide"]');
-    assert.ok(await app(() => { const v = window.copytrack.session.view; const gs = v.group.children.filter((c) => c.userData.g === 1); return gs.length > 0 && gs.every((c) => !c.visible); }), 'calque masqué');
+    // (le maillage se reconstruit à l'image suivante : on l'attend, sans quoi le test dépend de la charge de la machine)
+    await waitApp(() => { const v = window.copytrack.session.view; const gs = v.group.children.filter((c) => c.userData.g === 1); return gs.length > 0 && gs.every((c) => !c.visible); }, null, 10000);      // calque masqué
     assert.equal(await app(() => window.copytrack.session._selTiles().length), 0, 'un calque masqué ne se sélectionne pas');
     await click('.ed-gtable tr[data-g="1"] [data-a="hide"]');
-    assert.ok(await app(() => window.copytrack.session.view.group.children.filter((c) => c.userData.g === 1).every((c) => c.visible)));
+    await waitApp(() => window.copytrack.session.view.group.children.filter((c) => c.userData.g === 1).every((c) => c.visible), null, 10000);
     await click('.ed-gtable tr[data-g="1"] [data-a="lock"]');
     assert.equal(await app(() => window.copytrack.session._selTiles().length), 0, 'un calque verrouillé ne se sélectionne pas');
     await click('.ed-gtable tr[data-g="1"] [data-a="lock"]');
@@ -1124,6 +1190,186 @@ try {
     } finally {
       await app(() => { if (window.copytrack.room) window.copytrack.room.leave(); window.copytrack.ui.closeModal(); window.copytrack.showMenu('menu'); }).catch(() => {});
       await B.close();
+    }
+  });
+
+  // E22 : aides à la conduite (catégorie « assisté »), animations réduites, caméra libre de l'éditeur, parcours complet au tactile.
+  await test('aides à la conduite : course rangée dans « assisté » sans médailles, commandes effectives enregistrées ; animations réduites ; caméra libre', async () => {
+    await app(() => { const A = window.copytrack; A.settings.aids = { autoGas: true, antiSpin: true }; A.saveSettings(); A.playBuiltin(0); });
+    await waitApp(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    await page.waitForTimeout(1500);
+    const r = await app(() => { const S = window.copytrack.session; return { key: S.trackKey, medals: S.medals, aids: !!S.aids, thr: S.lastInput && S.lastInput.throttle, speed: S.phys.fwdSpeed }; });
+    assert.match(r.key, /~v1\.as-1$/, 'catégorie « assisté »');
+    assert.equal(r.medals, null, 'sans médailles');
+    assert.ok(r.aids && r.thr === true && r.speed > 5, `accélération automatique sans toucher au clavier (${r.speed.toFixed(1)} m/s)`);
+    const rec = await app(async () => {
+      const S = window.copytrack.session, { decodeInputs, inputAt } = await import('/js/replay.js');
+      const d = decodeInputs(S.recorder.encode()), last = inputAt(d, Math.max(0, S.tick - 2));
+      return !!last.throttle;
+    });
+    assert.ok(rec, 'les gaz de l’aide sont dans les commandes enregistrées');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu');
+    await app(() => { const A = window.copytrack; A.settings.aids = {}; A.saveSettings(); });
+    // Animations réduites : le réglage, puis le système
+    await app(() => { const A = window.copytrack; A.settings.reduceMotion = 'on'; A._applyAccess(); });
+    const m = await page.evaluate(() => ({ cls: document.body.classList.contains('reduce-motion'), off: window.copytrack.motionOff, dur: getComputedStyle(document.querySelector('.screen:not(.hidden)') || document.body).animationDuration }));
+    assert.ok(m.cls && m.off, 'réglage « Oui »');
+    assert.ok(/^(0s|1e-06s|0\.000001s)$/.test(m.dur) || parseFloat(m.dur) < 0.001, `transition coupée (${m.dur})`);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await app(() => { const A = window.copytrack; A.settings.reduceMotion = 'auto'; A._applyAccess(); });
+    assert.equal(await page.evaluate(() => document.body.classList.contains('reduce-motion')), true, '« Système » suit prefers-reduced-motion');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await waitApp(() => !document.body.classList.contains('reduce-motion'), null, 10000);      // et suit son changement
+    // Caméra libre de l'éditeur : au ras du sol, puis retour aux bornes habituelles
+    await app(() => window.copytrack.openEditor({ code: window.copytrack.builtins[1].track.encode(), name: 'Caméra' }));
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.toggleFreeCam, null, 20000);
+    await click('[data-ed="freecam"]');
+    const fc = await app(() => { const s = window.copytrack.session; s.dist = 2; s.dist = Math.max(s.minDist(), s.dist); return { on: s.freeCam, min: s.minDist(), pitch: s.pitch, pressed: document.querySelector('[data-ed="freecam"]').getAttribute('aria-pressed') }; });
+    assert.deepEqual([fc.on, fc.min, fc.pressed], [true, 3, 'true']); assert.ok(fc.pitch <= 0.12);
+    await page.waitForTimeout(150);
+    assert.ok(await app(() => window.copytrack.camera.position.y >= 0.8), 'jamais sous le terrain');
+    await click('[data-ed="freecam"]');
+    assert.deepEqual(await app(() => { const s = window.copytrack.session; return [s.freeCam, s.pitch >= 0.2, s.dist >= 25]; }), [false, true, true]);
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  await test('parcours complet au tactile : accueil, carrière, fiche, course aux boutons tactiles, pause, quitter', async () => {
+    const ctxT = await browser.newContext({ locale: 'fr-FR', viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true, serviceWorkers: 'block' });
+    const pt = await ctxT.newPage();
+    pt.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+    pt.on('console', (m) => { if (m.type() === 'error' && !OFFLINE.test(m.text() + (m.location().url || ''))) errors.push('console: ' + m.text()); });
+    await pt.route(/fonts\.(googleapis|gstatic)\.com|supabase\.co/, (r) => r.abort());
+    const wait = (fn, arg, timeout = 30000) => pt.waitForFunction(fn, arg, { timeout });
+    const tap = async (sel) => { const l = pt.locator(sel).first(); await l.scrollIntoViewIfNeeded(); await l.tap({ timeout: 30000 }); };      // un vrai toucher : échoue si un autre élément le recouvre
+    // Deux pages en WebGL logiciel sur la même machine : on allège le rendu des deux (ce n'est pas l'objet du test), puis on rend celui d'avant.
+    const q0 = await app(() => window.copytrack.scenery.quality);
+    await app(() => window.copytrack.quality.apply('ultrapotato'));
+    try {
+      await pt.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'load' });
+      await pt.locator('#wl-name').fill('Pouce');
+      await tap('#wl-submit');
+      await wait(() => window.copytrack && window.copytrack.mode === 'menu');
+      assert.ok(await pt.evaluate(() => document.body.classList.contains('touch')), 'appareil tactile reconnu');
+      await pt.evaluate(() => { const A = window.copytrack; A.settings.telemetry = false; A.settings.tutorialDone = true; A.saveSettings(); A.ui.closeModal(); A.quality.apply('ultrapotato'); });
+      await pt.waitForTimeout(300);
+      await pt.evaluate(() => window.copytrack.ui.closeModal());
+      await tap('[data-action="play"]');
+      await wait(() => !document.getElementById('tracks').classList.contains('hidden') && document.querySelector('#track-list .card .num'));
+      await tap('#track-list .card:has(.num) .thumb');
+      await wait(() => !document.getElementById('race-hub').classList.contains('hidden'));
+      await tap('#hub-play');
+      await wait(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+      assert.equal(await pt.evaluate(() => document.getElementById('touch').classList.contains('hidden')), false, 'commandes tactiles affichées');
+      await pt.locator('#touch [data-t="gas"]').dispatchEvent('pointerdown');
+      await pt.waitForTimeout(1500);
+      const sp = await pt.evaluate(() => window.copytrack.session.phys.fwdSpeed);
+      await pt.locator('#touch [data-t="gas"]').dispatchEvent('pointerup');
+      assert.ok(sp > 5, `le bouton ▲ fait avancer la voiture (${sp.toFixed(1)} m/s)`);
+      await pt.locator('#touch [data-t="pause"]').dispatchEvent('pointerdown');
+      await pt.locator('#touch [data-t="pause"]').dispatchEvent('pointerup');
+      await wait(() => window.copytrack.session && window.copytrack.session.state === 'paused');
+      await tap('#pause [data-action="quit"]');
+      await wait(() => window.copytrack.mode !== 'race');
+    } finally {
+      await ctxT.close();
+      await app((q) => window.copytrack.quality.apply(q), q0);
+    }
+  });
+
+  // E21 : communauté 2 (commentaires, playlists, hasard, recommandations, statistiques, modes publiés), serveur Supabase SIMULÉ.
+  await test('communauté 2 : pour toi, au hasard, statistiques, commentaires, playlist jouée dans l’ordre, mode publié classé (serveur simulé)', async () => {
+    const ME = '00000000-0000-0000-0000-0000000000e1';
+    const ctx3 = await browser.newContext({ locale: 'fr-FR', viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1, serviceWorkers: 'block' });
+    const p3 = await ctx3.newPage();
+    p3.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+    p3.on('console', (m) => { if (m.type() === 'error' && !OFFLINE.test(m.text() + (m.location().url || ''))) errors.push('console: ' + m.text()); });
+    await p3.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    const calls = [];
+    let rows = [], cmts = [{ id: 1, author: 'x', name: 'Ana', title: null, body: 'Joli virage !', created_at: '2026-11-17T10:00:00Z', mine: false, can_delete: false }], lists = [];
+    await p3.route(/supabase\.co/, async (route) => {
+      const req = route.request(), url = decodeURIComponent(req.url()), body = req.postData() ? JSON.parse(req.postData()) : null;
+      calls.push({ url, body });
+      const J = (b) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
+      if (url.includes('/auth/v1/')) return J({ access_token: 'jeton', refresh_token: 'r', expires_in: 3600, user: { id: ME } });
+      const rpc = /\/rpc\/(\w+)/.exec(url);
+      if (rpc) {
+        switch (rpc[1]) {
+          case 'recommended_tracks': return J([{ id: rows[1].id, score: 2 }, { id: rows[0].id, score: 1 }]);
+          case 'random_track': return J(rows[2].id);
+          case 'track_stats': return J([{ players: 12, runs: 40, finishes: 30, finish_rate: 0.75, median_time: 41.5, top_time: 35.2, avg_respawns: 1, quit_progress: 0.4 }]);
+          case 'track_comments_list': return J(cmts);
+          case 'comment_add': cmts = [{ id: 2, author: ME, name: 'Testeur', title: null, body: body.msg, created_at: '2026-11-18T10:00:00Z', mine: true, can_delete: true }, ...cmts]; return J(2);
+          case 'playlists_list': return J(body.mine ? lists : lists.filter((l) => l.public));
+          case 'playlist_save': lists = [{ id: 5, owner: ME, name: body.pname, owner_name: 'Testeur', public: body.is_public, n: body.items.length, tracks: body.items, updated_at: '2026-11-18' }]; return J(5);
+          case 'modes_list': return J([{ id: 3, owner: 'x', owner_name: 'Ana', name: 'Lune', description: 'Gravité basse', variant: 'v1.g-40', goal: { id: 'norespawn' }, plays: 4, created_at: '2026-11-17' }]);
+          case 'mode_played': return J(null);
+          case 'friends_board': case 'sector_board': return J([]);
+          default: return J(null);
+        }
+      }
+      if (url.includes('/rest/v1/tracks')) {
+        const ids = /id=in\.\(([^)]*)\)/.exec(url), one = /id=eq\.([0-9a-f-]{36})/.exec(url);
+        if (ids) return J(rows.filter((r) => ids[1].split(',').includes(r.id)));
+        if (one) return J(rows.filter((r) => r.id === one[1]));
+        return J(rows);
+      }
+      if (url.includes('/rest/v1/track_likes') || url.includes('/rest/v1/follows')) return J([]);
+      if (url.includes('/rest/v1/scores')) return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'content-range': '*/0' }, body: '[]' });
+      return J([]);
+    });
+    const ap = (fn, arg) => p3.evaluate(fn, arg), wait = (fn, arg, timeout = 30000) => p3.waitForFunction(fn, arg, { timeout });
+    const clk = (sel) => p3.locator(sel).first().evaluate((el) => el.click());
+    const until = async (fn, ms = 10000) => { const t0 = Date.now(); while (!fn()) { if (Date.now() - t0 > ms) throw new Error('délai dépassé'); await new Promise((r) => setTimeout(r, 50)); } };
+    try {
+      await p3.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'load' });
+      await p3.locator('#wl-name').fill('Testeur');
+      await clk('#wl-submit');
+      await wait(() => window.copytrack && window.copytrack.mode === 'menu');
+      rows = await ap(() => [0, 3, 5].map((i, k) => { const b = window.copytrack.builtins[i]; return { id: `00000000-0000-0000-0000-0000000000a${k}`, name: ['Alpha', 'Bravo', 'Charlie'][k], decor: b.def.decor, code: b.track.encode(), author_time: 20, pieces: b.track.tiles.length, laps: 1, plays: 3, likes: 1, created_at: '2026-11-01', author: 'x', players: { name: 'Ana' }, description: '' }; }));
+      await ap(async () => { const { online } = await import('/js/online.js'); online.kind = 'account'; window.copytrack.identity = { kind: 'account', username: 'Testeur' }; window.copytrack._comm = null; });
+      // Pour toi : dans l'ordre des recommandations
+      await ap(() => window.copytrack.showMenu('community'));
+      await wait(() => document.querySelectorAll('#comm-list .card').length >= 1);
+      await clk('#comm-tabs [data-sort="foryou"]');
+      await wait(() => [...document.querySelectorAll('#comm-list .card h3')].map((h) => h.textContent).join() === 'Bravo,Alpha');
+      // Au hasard : la fiche du circuit tiré, avec ses statistiques et ses commentaires
+      await clk('#comm-random');
+      await wait(() => window.copytrack._hub && document.getElementById('hub-name').textContent === 'Charlie');
+      await wait(() => /12 pilotes/.test(document.getElementById('hub-stats').textContent));
+      assert.match(await p3.evaluate(() => document.getElementById('hub-stats').textContent), /75 % des parties vont au bout.*temps médian/);
+      await wait(() => /Joli virage/.test(document.getElementById('hub-clist').textContent));
+      await p3.locator('#hub-cmsg').fill('  Bravo pour le saut  ');
+      await clk('#hub-csend');
+      await wait(() => /Bravo pour le saut/.test(document.getElementById('hub-clist').textContent));
+      assert.equal(calls.find((c) => c.url.includes('/rpc/comment_add')).body.msg, 'Bravo pour le saut');
+      assert.ok(await p3.evaluate(() => !!document.querySelector('#hub-clist [data-c="2"] [data-ca="del"]')), 'mon commentaire : supprimable');
+      // Playlist : créée depuis la fiche, puis jouée dans l'ordre
+      await clk('#hub-sub [data-hub="playlist"]');
+      await wait(() => document.getElementById('pl-new'));
+      await p3.locator('#pl-new').fill('Ma liste');
+      await clk('#pl-create');
+      await until(() => calls.some((c) => c.url.includes('/rpc/playlist_save')));
+      assert.deepEqual(calls.find((c) => c.url.includes('/rpc/playlist_save')).body.items, [rows[2].id]);
+      await ap((ids) => { const pl = { id: 5, name: 'Ma liste', public: true, n: 2, tracks: ids }; window.copytrack.openPlaylist(pl, true); }, [rows[2].id, rows[0].id]);
+      await wait(() => document.querySelectorAll('.playlist-list li').length === 2);
+      await clk('.playlist [data-pk="run"]');
+      await wait(() => document.getElementById('hub-name').textContent === 'Charlie' && /Ma liste · 1 \/ 2/.test(document.getElementById('hub-sub').textContent));
+      await clk('#hub-sub [data-pl-next]');
+      await wait(() => document.getElementById('hub-name').textContent === 'Alpha' && /2 \/ 2/.test(document.getElementById('hub-sub').textContent));
+      // Mode publié : sa fiche s'ouvre sur sa catégorie (son classement)
+      await ap(() => { window.copytrack.closeRaceHub(); window.copytrack.communityModesDialog(); });
+      await wait(() => document.querySelector('[data-cmode="3"]'));
+      assert.match(await p3.evaluate(() => document.querySelector('[data-cmode="3"]').textContent), /Lune.*par Ana.*Gravité de départ 40 %/);
+      await p3.evaluate(() => [...document.querySelectorAll('[data-cmode="3"] button')].find((b) => b.textContent === 'Jouer (classé)').click());
+      await wait(() => [...document.querySelectorAll('#modal-actions button')].some((b) => b.textContent === 'Ouvrir la fiche'));
+      await p3.evaluate(() => [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent === 'Ouvrir la fiche').click());
+      await wait(() => window.copytrack._hub && /~v1\.g-40$/.test(window.copytrack._hub.desc.key));
+      assert.match(await p3.evaluate(() => document.querySelector('#hub-launch [data-cat="__cur"]').textContent), /🌐 Lune/);
+      await until(() => calls.some((c) => c.url.includes('/rpc/mode_played')));
+    } finally {
+      await ctx3.close();
     }
   });
 

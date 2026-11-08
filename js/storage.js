@@ -121,6 +121,9 @@ export const DEFAULT_SETTINGS = {
   feel: 1,                // sensations de course : 0 (aucun effet ajouté) à 1,5 ; voir feel.js
   editorGuided: null,     // éditeur en mode guidé (l'essentiel) : null = non (joueur qui connaît déjà l'éditeur), true = oui (voir editor/palette.js)
   telemetry: null,        // statistiques anonymes (voir telemetry.js) : null = pas encore demandé, true = accepté, false = refusé
+  aids: {},               // aides à la conduite (aids.js) : { autoGas, brakeAssist, steerAssist, antiSpin, smoothSteer } ; une course aidée est classée « assisté »
+  steerCurve: 1,          // réponse du volant analogique (manette, pouce) : 1 linéaire à 2 très progressive (aids.js)
+  reduceMotion: 'auto',   // animations : 'auto' (réglage du système), 'on' (réduites), 'off' (normales) ; voir a11y.js
 };
 
 export function loadSettings() {

@@ -3,6 +3,7 @@
 import { CELL, DT, ROAD_HALF } from '../constants.js';
 import { PIECES, PLATES, rotVec, tileCenter, isRibbon, tileParam, beltSpeed, isSideTile, hasNoRails } from '../pieces.js';
 import { ribbonOf, frameLocal } from '../ribbons.js';
+import { RAIN_GRIP } from '../sim/env.js';
 import { CAR, SIDE_AERO, SIDE_HOLD, SIDE_MIN_SPEED, SIDE_GRACE, surfaceCoeffs } from './specs.js';
 import { clamp } from '../mathutil.js';
 import { dasin, datan2, dcos, dsin, hypot2, hypot3 } from '../dmath.js';
@@ -205,6 +206,12 @@ export const ribbonMethods = {
     const P = this.params;
     if (P.grip !== 1) gripK *= P.grip;                                       // adhérence de tout le circuit (sim/params.js)
     if (P.windOn) { R.vs += (P.windX * B.e1x + P.windZ * B.e1z) * dt; R.vd += (P.windX * B.e2x + P.windZ * B.e2z) * dt; }      // vent de tout le circuit
+    const E = this.env;
+    if (E) {                                                                 // environnement (sim/env.js) : la pluie mouille aussi les rubans (pas de flaques), rafales
+      const st = this.clock || 0;
+      if (E.rain && mod !== 'water') gripK *= 1 - RAIN_GRIP * E.rainAt(st);
+      if (E.gust) { const g = E.gustAt(st); R.vs += (g.x * B.e1x + g.z * B.e1z) * dt; R.vd += (g.x * B.e2x + g.z * B.e2z) * dt; }
+    }
     if (mod === 'boost') this._boostPad(f);
     else if (mod === 'gravity') this._gravityPad(f);
     else if (mod === 'wind') {
