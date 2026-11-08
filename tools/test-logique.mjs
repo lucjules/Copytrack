@@ -8,6 +8,8 @@ import { InputRecorder, quantSteer, GhostRunner } from '../js/replay.js';
 import { verifyRun, replayRun } from '../js/verify.js';
 import { PHYS_VER } from '../js/version.js';
 import { sanitizeLogic, logicToArray, logicFromArray, createLogic } from '../js/sim/logic.js';
+import { describeRule, checkLogic, scriptsToLogic } from '../js/logicText.js';
+import { setLang } from '../js/i18n.js';
 
 // Une ligne droite : départ, checkpoint, puis une « porte » (deux pièces du groupe 2), puis l'arrivée.
 function doorTrack(lg) {
@@ -137,6 +139,59 @@ test('le serveur rejoue la logique : course acceptée ; les mêmes commandes sur
   const g = new GhostRunner(Track.decode(t.encode()), { inputs: r.inputs });
   while (!g.done) g.step();
   assert.equal(g.logic.time, r.time, 'le fantôme suit la même logique');
+});
+
+console.log('Éditeur de logique (phrases, vérifications, conversion)');
+test('chaque règle se lit en une phrase', () => {
+  const t = doorTrack(DOOR);
+  const L = sanitizeLogic({ vars: 1, rules: [
+    { on: ['cp', 1], if: [['var', 0, '>=', 2], ['veh', 'moto']], do: [['show', 2], ['grav', 60]], once: true },
+    { on: ['zone', 2], do: [['var', 0, '+', 1], ['fx', 'msg', 'Bravo']] },
+    { on: ['time', 600], do: [['toggle', 2]] },
+  ] });
+  const p = L.rules.map((r) => describeRule(r, t));
+  assert.equal(p[0], 'Quand le checkpoint n° 1 est passé, si compteur 1 ≥ 2 et en moto : montrer « Porte », gravité à 60 %. (une fois)');
+  assert.equal(p[1], 'Quand la voiture entre sur « Porte » : compteur 1 + 1, afficher un message « Bravo ».');
+  assert.equal(p[2], 'À 5,0 s de course : basculer « Porte ».');
+});
+test('en anglais, les phrases et les vérifications ont leur propre table (et non des modèles généraux dans le dictionnaire de la page)', () => {
+  const t = doorTrack(null);
+  setLang('en');
+  try {
+    const L = sanitizeLogic({ vars: 1, rules: [{ on: ['cp', 1], if: [['var', 0, '>=', 2], ['veh', 'moto']], do: [['show', 2], ['grav', 60]], once: true }, { on: ['time', 600], do: [['toggle', 2]] }] });
+    assert.equal(describeRule(L.rules[0], t), 'When checkpoint no. 1 is passed, if counter 1 ≥ 2 and as a motorbike: show « Porte », gravity at 60 %. (once)');
+    assert.equal(describeRule(L.rules[1], t), 'At 5.0 s of race time: toggle « Porte ».');
+    t.tiles.find((x) => x.t === 'finish').g = 7;
+    const txt = checkLogic(t, { off: [7], rules: [{ on: ['lap', 3], do: [['show', 2]] }] }).map((i) => i.msg).join('\n');
+    assert.match(txt, /« Group 7 » is hidden at the start and no rule shows it: it contains the finish/);
+    assert.match(txt, /Rule 1: the track only has 1 lap\./);
+  } finally { setLang('fr'); }
+});
+test('vérifications : arrivée cachée pour toujours (erreur), groupes vides, checkpoint qui n’existe pas, compteur absent', () => {
+  const t = doorTrack(null);
+  t.tiles.find((x) => x.t === 'finish').g = 7;
+  const issues = checkLogic(t, { off: [7, 9], rules: [{ on: ['cp', 5], if: [['var', 2, '==', 1]], do: [['show', 9]] }] });
+  const txt = issues.map((i) => `${i.level}:${i.msg}`).join('\n');
+  assert.match(txt, /error:« Groupe 7 » est caché au départ et aucune règle ne le montre : il contient l’arrivée/);
+  assert.match(txt, /warn:« Groupe 9 » est caché au départ mais ne contient rien/);
+  assert.match(txt, /le n° 5 n’arrivera jamais/);
+  assert.match(txt, /le compteur 3 n’existe pas/);
+  assert.deepEqual(checkLogic(doorTrack(DOOR), DOOR), [], 'la porte de l’exemple est correcte');
+});
+test('les déclencheurs de cases (lot 12) se convertissent en groupes et en règles « quand la voiture entre »', () => {
+  const t = doorTrack(null);
+  const c = t.tiles[1];
+  t.setParams({ scripts: [{ x: c.x, z: c.z, a: 'msg', v: 'Salut' }, { x: c.x, z: c.z, a: 'sound', v: 'ding' }, { x: 900, z: 900, a: 'msg', v: 'dans le vide' }] });
+  const r = scriptsToLogic(t);
+  assert.equal(r.names.length, 1, 'une case avec pièce : un groupe (la case vide est laissée)');
+  const g = r.names[0][0];
+  assert.notEqual(g, 2, 'un groupe libre (le 2 est déjà pris par la porte)');
+  assert.deepEqual(r.lg.rules[0], { on: ['zone', g], if: [], do: [['fx', 'msg', 'Salut'], ['fx', 'sound', 'ding']], once: true });
+  for (const [tile, gg] of r.assign) { t.remove(tile); t.add({ ...tile, g: gg }); }
+  t.setLogic(r.lg); t.setParams({ scripts: [] });
+  const res = bot(t);
+  assert.ok(res.finished);
+  assert.ok(res.sim.lgc.state.fired[0], 'la règle convertie s’est déclenchée en passant sur la case');
 });
 
 await finish('Tous les tests de la logique du circuit passent.');

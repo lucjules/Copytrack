@@ -687,7 +687,8 @@ export const paletteMethods = {
       <label>Teinte du ciel<span class="inl"><input type="checkbox" id="pp-tint-on" title="Teinte choisie"><input type="color" id="pp-tint"></span></label>
       <label>Teinte du sol<span class="inl"><input type="checkbox" id="pp-gtint-on" title="Teinte choisie"><input type="color" id="pp-gtint"></span></label>
       <label>Couleur de la brume<span class="inl"><input type="checkbox" id="pp-fogc-on" title="Couleur choisie"><input type="color" id="pp-fogc"></span></label>
-      <div class="opt-row"><span>Effets sur les cases du circuit</span><button class="btn small" type="button" id="pp-scripts">Déclencheurs…</button></div>`;
+      <div class="opt-row"><span>Effets sur les cases du circuit</span><button class="btn small" type="button" id="pp-scripts">Déclencheurs…</button></div>
+      <div class="opt-row"><span>Règles « quand… si… alors… » (portes, routes secrètes, gravité…)</span><button class="btn small" type="button" id="pp-logic">Logique…</button></div>`;
     const $f = (id) => f.querySelector('#' + id);
     $f('pp-name').value = T.name || '';
     $f('pp-desc').value = T.desc || '';
@@ -711,6 +712,7 @@ export const paletteMethods = {
     $f('pp-grip').oninput = showP; $f('pp-wind').oninput = showP; showP();
     $f('pp-v0').oninput = show; $f('pp-g0').oninput = show; show();
     $f('pp-scripts').onclick = () => { this.app.ui.closeModal(); setTimeout(() => this._scriptsDialog(), 0); };
+    $f('pp-logic').onclick = () => { this.app.ui.closeModal(); setTimeout(() => this.openLogic(), 0); };
     this.app.ui.modal({
       title: 'Paramètres du niveau',
       body: f,

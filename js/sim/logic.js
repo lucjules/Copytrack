@@ -93,6 +93,8 @@ export function createLogic(track, phys, race) {
   const hiddenTiles = new Set(), hiddenDecos = new Set();
   const st = { hidden: new Set(), vars: new Int16Array(LOGIC_MAX.vars), fired: new Uint8Array(L.rules.length), zone: 0, veh: '', started: false, ver: 0 };
   const fx = [];                             // effets visuels et sonores à jouer (la course en direct les lit ; ailleurs, ils sont ignorés)
+  const log = [];                            // règles déclenchées (essai depuis l'éditeur seulement : setDebug) ; sans effet sur la course
+  let debug = false;
   const apply = () => {
     hiddenTiles.clear(); hiddenDecos.clear();
     for (const g of st.hidden) { for (const t of tilesOf.get(g) || []) hiddenTiles.add(t); for (const d of decosOf.get(g) || []) hiddenDecos.add(d); }
@@ -117,6 +119,7 @@ export function createLogic(track, phys, race) {
     if (r.once && st.fired[i]) return;
     for (const c of r.if) if (!condOk(c)) return;
     st.fired[i] = 1;
+    if (debug && log.length < 32) log.push(i);
     let vis = false;
     for (const a of r.do) {
       switch (a[0]) {
@@ -134,9 +137,10 @@ export function createLogic(track, phys, race) {
   const fire = (kind, test) => { L.rules.forEach((r, i) => { if (r.on[0] === kind && test(r.on)) run(r, i); }); };
 
   return {
-    logic: L, state: st, fx, hiddenTiles, hiddenDecos,
+    logic: L, state: st, fx, log, hiddenTiles, hiddenDecos,
+    setDebug(v) { debug = !!v; },
     reset() {
-      st.hidden = new Set(L.off); st.vars.fill(0); st.fired.fill(0); st.zone = 0; st.veh = ''; st.started = false; fx.length = 0;
+      st.hidden = new Set(L.off); st.vars.fill(0); st.fired.fill(0); st.zone = 0; st.veh = ''; st.started = false; fx.length = 0; log.length = 0;
       apply();
     },
     snapshot() { return { hidden: [...st.hidden], vars: [...st.vars], fired: [...st.fired], zone: st.zone, veh: st.veh, started: st.started }; },

@@ -92,6 +92,11 @@ Leur état (groupes cachés, compteurs, déclenchements) fait partie de l'instan
 garde l'état d'APRÈS ses règles. La logique et l'appartenance aux groupes entrent dans la signature. Effets visuels et sonores : une file que seule la course
 en direct lit (`RaceSession._logicSync`).
 
+L'éditeur de logique (`js/editor/logicUi.js`, bouton ⚙ ou F6) n'écrit que ce format, par `Track.setLogic` (donc annulable). Chaque règle s'y lit en une
+phrase et le circuit y est vérifié sans rouler (`js/logicText.js` : `describeRule`, `checkLogic`, et `scriptsToLogic` qui convertit les déclencheurs
+de cases du lot 12). Ces phrases ont leur propre petite table par langue : des modèles aussi généraux que « {e} : {a}. », déposés dans le dictionnaire
+de la page, attraperaient d'autres textes (le traducteur DOM essaie chaque modèle sur chaque texte).
+
 ### Compatibilité avec ce que les joueurs ont déjà
 
 L'empreinte garde la physique ; le **corpus de compatibilité** (`tools/compat/corpus.json`, figé par `node tools/compat-gen.mjs --update`) garde tout le reste :

@@ -842,6 +842,45 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  await test('éditeur de logique : une porte qui s’ouvre au checkpoint (règle créée au clic, groupe caché au départ), essai : la règle s’annonce et la porte s’ouvre', async () => {
+    await app(async () => {
+      const { scriptTrack } = await import('/js/track.js');
+      const t = scriptTrack('Porte', 'start S3 S3 C S3 S3 S3 S3 finish');
+      const cp = t.tiles.findIndex((x) => x.t === 'checkpoint');
+      t.tiles[cp + 2].g = 2; t.tiles[cp + 3].g = 2; t.setGroupName(2, 'Porte');
+      window.copytrack.openEditor({ code: t.encode(), name: 'Porte' });
+    });
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.openLogic, null, 20000);
+    await click('[data-ed="logic"]');
+    await waitApp(() => document.getElementById('lg-new'));
+    await click('#lg-new');
+    await waitApp(() => document.getElementById('lg-ok'));
+    assert.match(await page.evaluate(() => document.querySelector('.ed-lsentence').textContent), /Quand le checkpoint n° 1 est passé : montrer « Porte »/);
+    await click('#lg-ok');
+    await waitApp(() => document.querySelector('[data-off="2"]'));
+    await page.locator('[data-off="2"]').check();
+    assert.equal(await page.evaluate(() => document.querySelectorAll('.ed-lissues li').length), 0, 'aucun problème signalé');
+    await click('#modal-actions button.primary');
+    await waitApp(() => window.copytrack.session.track.lg);
+    assert.deepEqual(await app(() => window.copytrack.session.track.lg.off), [2]);
+    // essai depuis l'éditeur : la porte est cachée au départ, la règle s'annonce au checkpoint
+    await app(() => window.copytrack.session.test());
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session.state === 'racing', null, 40000);
+    assert.ok(await app(() => window.copytrack.session.sim.lgc.state.hidden.has(2)), 'porte cachée au départ');
+    assert.ok(await app(() => window.copytrack.session.view.group.children.filter((c) => c.userData.g === 2).every((c) => !c.visible)), 'porte invisible');
+    await page.keyboard.down('ArrowUp');
+    await waitApp(() => !window.copytrack.session.sim.lgc.state.hidden.has(2), null, 20000);
+    await page.keyboard.up('ArrowUp');
+    await waitApp(() => /⚙ Règle 1 : Quand le checkpoint n° 1 est passé/.test(document.getElementById('flash') ? document.getElementById('flash').textContent : document.body.textContent), null, 5000);
+    await page.waitForTimeout(100);
+    assert.ok(await app(() => window.copytrack.session.view.group.children.filter((c) => c.userData.g === 2).every((c) => c.visible)), 'la porte apparaît');
+    await shot('24-logique-porte');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'editor', null, 20000);
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
   await test('communauté : onglet « Cette semaine », circuit de la semaine, difficulté estimée sur chaque carte (serveur simulé)', async () => {
     await app(async () => {
       const { online } = await import('/js/online.js');

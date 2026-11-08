@@ -5119,6 +5119,8 @@ function createLogic(track, phys, race) {
     ver: 0
   };
   const fx = [];
+  const log = [];
+  let debug = false;
   const apply = () => {
     hiddenTiles.clear();
     hiddenDecos.clear();
@@ -5152,6 +5154,7 @@ function createLogic(track, phys, race) {
     if (r.once && st.fired[i]) return;
     for (const c of r.if) if (!condOk(c)) return;
     st.fired[i] = 1;
+    if (debug && log.length < 32) log.push(i);
     let vis = false;
     for (const a of r.do) {
       switch (a[0]) {
@@ -5198,8 +5201,12 @@ function createLogic(track, phys, race) {
     logic: L4,
     state: st,
     fx,
+    log,
     hiddenTiles,
     hiddenDecos,
+    setDebug(v) {
+      debug = !!v;
+    },
     reset() {
       st.hidden = new Set(L4.off);
       st.vars.fill(0);
@@ -5208,6 +5215,7 @@ function createLogic(track, phys, race) {
       st.veh = "";
       st.started = false;
       fx.length = 0;
+      log.length = 0;
       apply();
     },
     snapshot() {

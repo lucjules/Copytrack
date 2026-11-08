@@ -15,6 +15,7 @@ import { paletteMethods } from './editor/palette.js';
 import { pointerMethods } from './editor/pointer.js';
 import { toolMethods } from './editor/tools.js';
 import { groupMethods } from './editor/groups.js';
+import { logicUiMethods } from './editor/logicUi.js';
 import { selectionMethods } from './editor/selection.js';
 import { historyMethods } from './editor/history.js';
 import { prefabMethods } from './editor/prefabs.js';
@@ -165,6 +166,7 @@ export class EditorSession {
     if (input.act('ed.verify')) { this.verify(); return; }
     if (input.act('ed.params')) { this.openParams(); return; }
     if (input.act('ed.groups')) { this.openGroups(); return; }
+    if (input.act('ed.logic')) { this.openLogic(); return; }
     if (input.act('ed.nextPiece')) this.cyclePiece(shift ? -1 : 1);
     if (input.act('ed.surface')) this.cycleSurface();
     if (input.act('ed.fill')) this.toggleFill();
@@ -280,4 +282,4 @@ export class EditorSession {
 }
 
 // Les familles de méthodes vivent dans editor/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(EditorSession.prototype, paletteMethods, pointerMethods, toolMethods, selectionMethods, historyMethods, prefabMethods, cdecoMethods, scriptsUiMethods, groupMethods);
+Object.assign(EditorSession.prototype, paletteMethods, pointerMethods, toolMethods, selectionMethods, historyMethods, prefabMethods, cdecoMethods, scriptsUiMethods, groupMethods, logicUiMethods);
