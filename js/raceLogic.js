@@ -28,6 +28,7 @@ export class RaceLogic {
   }
 
   reset() {
+    if (this.ext) this.ext.reset();        // logique du circuit (sim/logic.js) : son état de départ, avant l'instantané du départ
     this.lastGround = null;
     this.collected = new Set();
     this.splits = [];
@@ -41,7 +42,9 @@ export class RaceLogic {
 
   // État de course au passage d'un checkpoint : y revenir remet le chrono à ce temps.
   _snap() {
-    return { steps: this.steps, splits: this.splits.length, collected: [...this.collected], lap: this.lap };
+    const s = { steps: this.steps, splits: this.splits.length, collected: [...this.collected], lap: this.lap };
+    if (this.ext) s.ext = this.ext.snapshot();      // l'état de la logique du circuit revient avec le checkpoint
+    return s;
   }
 
   // Retour au dernier checkpoint passé (touche R ou réapparition automatique) :
@@ -56,6 +59,7 @@ export class RaceLogic {
       this.splits.length = Math.min(this.splits.length, s.splits);
       this.collected = new Set(s.collected);
       this.lap = s.lap;
+      if (this.ext && s.ext) this.ext.restore(s.ext);
     }
     this.finished = false;
     this.inFinish = false;
@@ -87,6 +91,7 @@ export class RaceLogic {
     let event = null;
     let onFinish = false;
     for (const tile of this.track.tilesAt(cx, cz)) {
+      if (this.excluded && this.excluded.has(tile)) continue;      // checkpoint ou arrivée d'un groupe caché par la logique : ni pris ni franchi
       const P = PIECES[tile.t];
       const ck = cpKind(tile);
       // 'checkpoint' : pièce checkpoint d'origine ou option cp (portique / anneau) ; 'finish' : arrivée.
@@ -107,6 +112,7 @@ export class RaceLogic {
         // les checkpoints reviennent à CE moment-là (l'anneau est à repasser) : sinon le temps passé en l'air serait gagné gratuitement.
         const gl = this.lastGround;
         const snap = this._snap();                       // avant l'anneau : il reste à passer
+        snap.pre = true;                                 // (instantané d'AVANT l'évènement : la logique du circuit le garde tel quel, voir Simulation.score)
         if (gl) snap.steps = gl.steps;
         const rr = this._ringRespawn(tile, phys);
         this.collected.add(tile);

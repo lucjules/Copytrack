@@ -227,6 +227,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 
 | Fichier | Rôle |
 | --- | --- |
+| `logic.js` | Logique du circuit (Copytrack Evolution, E10) : des règles ÉVÉNEMENT → CONDITIONS → ACTIONS exécutées DANS la simulation, donc identiques en course, dans les fantômes, les replays et la vérification serveur (ce module est dans la fermeture de js/verify.js : aucune horloge, aucun hasard, aucune trigonométrie). Elles agissent sur les GROUPES de pièces et de décorations (E9) : montrer, cacher (une pièce cachée n'a plus de collision, comme une dalle de verre brisée), basculer ; et sur la gravité, des compteurs, et des effets visuels ou sonores (sans effet sur la course). |
 | `params.js` | Paramètres de simulation d'un circuit (Copytrack Evolution, E8) : ce que la physique lit en plus du circuit lui-même. Additifs : à leur valeur par défaut (adhérence 100 %, pas de vent), la course est celle d'avant au bit près (l'empreinte des scénarios existants ne change pas ; la physique ne fait même pas la multiplication). Les valeurs viennent des règles du circuit (track.js, table RULES : grip, wind, windDir), qui entrent dans sa signature dès qu'elles ne sont plus par défaut. Dans la fermeture de la vérification serveur : dmath seulement. |
 
 ## `js/theater/`

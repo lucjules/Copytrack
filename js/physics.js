@@ -50,8 +50,18 @@ export class CarPhysics {
     this.glassTime = new Map();   // dalle de verre -> secondes de contact cumulées
     this.brokenVer = 0;           // change à chaque dalle brisée ou restaurée (le rendu compare ce numéro, pas la taille de l'ensemble)
     this.broken = new Set();      // dalles de verre brisées (sans collision) jusqu'au prochain place()
+    this.excl = this.broken;      // ce qui n'a plus de collision : le verre brisé ; avec une logique de circuit, aussi les groupes cachés (setLogicExclusion)
+    this.hiddenDecos = null;      // décorations (obstacles) des groupes cachés par la logique
     this.setBounds();
     this.place(0, 0.4, 0, 0);
+  }
+
+  // Logique du circuit (sim/logic.js) : les pièces et décorations des groupes cachés n'ont plus de collision. Les ensembles sont tenus à jour par le
+  // moteur de logique ; sans logique, rien de tout cela n'existe et this.excl reste l'ensemble du verre brisé (mêmes calculs qu'avant, au bit près).
+  setLogicExclusion(tiles, decos) {
+    const broken = () => this.broken;
+    this.excl = { has: (t) => broken().has(t) || tiles.has(t) };
+    this.hiddenDecos = decos;
   }
 
   get g() {
@@ -110,7 +120,7 @@ export class CarPhysics {
     this.plateLock = '';
     this.sinkT = 0;
     this.hazardGrace = 0.8; // sécurité après respawn pour éviter les réapparitions en boucle
-    const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3, this.broken, this.time) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3, this.broken);
+    const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3, this.excl, this.time) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3, this.excl);
     if (this.gSign < 0) {
       this.n.x = 0; this.n.y = -1; this.n.z = 0;
       if (!Number.isFinite(s.h)) { s.h = y; s.type = 'none'; }
@@ -500,7 +510,7 @@ export class CarPhysics {
     // Contact avec la chaussée.
     // En gravité inversée, le « sol » est le dessous des pièces posées à l'envers.
     const gs = this.gSign;
-    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken);
+    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.excl, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.excl);
     const gap = gs * (p.y - s.h);
     const vn = v.x * s.nx + v.y * s.ny + v.z * s.nz;
     // Aimant : la voiture reste collée à la route quoi qu'il arrive (bosses, vitesse).
@@ -510,7 +520,7 @@ export class CarPhysics {
     // Aimant : au-dessus d'une route aimantée, la voiture est attirée vers la surface le long de SA normale, pas selon
     // la gravité du monde. Endroit ou envers, c'est la même règle (au plafond, la normale pointe vers le bas du monde).
     if (!this.grounded) {
-      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken);
+      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.excl, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.excl);
       const mg = gs * (p.y - m.h);
       if (m.mod === 'magnet' && mg > 0.02 && mg < CAR.magnetRange) {
         const a = CAR.magnetAcc * (1 - mg / CAR.magnetRange) * dt;
@@ -655,6 +665,7 @@ export class CarPhysics {
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
     for (const tile of tiles) {
       if (tile.t !== 'ring' && !tile.tb) continue;      // anneau turbo : pièce flottante ou option d'une ligne droite
+      if (this.excl !== this.broken && this.excl.has(tile)) continue;      // caché par la logique du circuit
       toLocal(tile, p.x, p.z, L1);
       toLocal(tile, q.x, q.z, L2);
       if (L1.lz * L2.lz > 0 || L1.lz === L2.lz) continue;

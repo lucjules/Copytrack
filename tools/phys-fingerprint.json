@@ -1,6 +1,6 @@
 {
  "version": 26,
- "combined": "d286a720c2273862",
+ "combined": "5ac5217ee8dd5d35",
  "scenarios": {
   "bot:eclats": "3694d918a22cedd6",
   "noise:eclats": "c385d9f46247b37c",
@@ -178,6 +178,11 @@
   "sp:grip70:bot": "ed90726335a1573b",
   "sp:grip140:noise": "adef5092f61d1448",
   "sp:wind80e:bot": "2cd6322599fca8c7",
-  "sp:wind-loops:noise": "c784250104500319"
+  "sp:wind-loops:noise": "c784250104500319",
+  "logic:door:bot": "94ad204b3b8ee691",
+  "logic:door:noise": "50576cd3b6f68a71",
+  "logic:zones:bot": "dc58dfb6b92f3950",
+  "logic:zones:noise": "a13335ec84eaffa2",
+  "logic:obstacles:bot": "94ad204b3b8ee691"
  }
 }

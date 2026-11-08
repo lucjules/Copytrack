@@ -4874,6 +4874,392 @@ var editMethods = {
   }
 };
 
+// js/sim/logic.js
+var LOGIC_MAX = {
+  rules: 32,
+  conds: 8,
+  acts: 8,
+  vars: 4
+};
+var LOGIC_EVENTS = [
+  "start",
+  "cp",
+  "lap",
+  "time",
+  "zone",
+  "veh"
+];
+var LOGIC_CONDS = [
+  "cps",
+  "lap",
+  "var",
+  "veh",
+  "shown",
+  "hidden"
+];
+var LOGIC_ACTS = [
+  "show",
+  "hide",
+  "toggle",
+  "grav",
+  "var",
+  "fx"
+];
+var LOGIC_OPS = [
+  "==",
+  "!=",
+  ">=",
+  "<=",
+  ">",
+  "<"
+];
+var VEHS = [
+  "car",
+  "moto",
+  "boat",
+  "glider"
+];
+var int = (v, lo, hi) => {
+  const n = Math.trunc(Number(v));
+  return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : lo;
+};
+var grp = (v) => int(v, 1, 63);
+function cleanEvent(o) {
+  if (!Array.isArray(o) || !LOGIC_EVENTS.includes(o[0])) return null;
+  switch (o[0]) {
+    case "start":
+      return [
+        "start"
+      ];
+    case "cp":
+      return [
+        "cp",
+        int(o[1], 0, 999)
+      ];
+    case "lap":
+      return [
+        "lap",
+        int(o[1], 1, 99)
+      ];
+    case "time":
+      return [
+        "time",
+        int(o[1], 1, 120 * 900)
+      ];
+    case "zone":
+      return [
+        "zone",
+        grp(o[1])
+      ];
+    case "veh":
+      return VEHS.includes(o[1]) ? [
+        "veh",
+        o[1]
+      ] : null;
+    default:
+      return null;
+  }
+}
+function cleanCond(c) {
+  if (!Array.isArray(c) || !LOGIC_CONDS.includes(c[0])) return null;
+  const op = (x) => LOGIC_OPS.includes(x) ? x : "==";
+  switch (c[0]) {
+    case "cps":
+      return [
+        "cps",
+        op(c[1]),
+        int(c[2], 0, 999)
+      ];
+    case "lap":
+      return [
+        "lap",
+        op(c[1]),
+        int(c[2], 1, 99)
+      ];
+    case "var":
+      return [
+        "var",
+        int(c[1], 0, LOGIC_MAX.vars - 1),
+        op(c[2]),
+        int(c[3], -999, 999)
+      ];
+    case "veh":
+      return VEHS.includes(c[1]) ? [
+        "veh",
+        c[1]
+      ] : null;
+    case "shown":
+    case "hidden":
+      return [
+        c[0],
+        grp(c[1])
+      ];
+    default:
+      return null;
+  }
+}
+function cleanAct(a) {
+  if (!Array.isArray(a) || !LOGIC_ACTS.includes(a[0])) return null;
+  switch (a[0]) {
+    case "show":
+    case "hide":
+    case "toggle":
+      return [
+        a[0],
+        grp(a[1])
+      ];
+    case "grav":
+      return [
+        "grav",
+        int(a[1], 15, 250)
+      ];
+    case "var":
+      return [
+        "var",
+        int(a[1], 0, LOGIC_MAX.vars - 1),
+        [
+          "=",
+          "+",
+          "-"
+        ].includes(a[2]) ? a[2] : "=",
+        int(a[3], -999, 999)
+      ];
+    case "fx": {
+      const s = sanitizeScript({
+        x: 0,
+        z: 0,
+        a: a[1],
+        v: a[2]
+      });
+      return s ? [
+        "fx",
+        s.a,
+        s.v
+      ] : null;
+    }
+    default:
+      return null;
+  }
+}
+function sanitizeLogic(lg) {
+  if (!lg || typeof lg !== "object" || !Array.isArray(lg.rules)) return null;
+  const rules = [];
+  for (const r of lg.rules.slice(0, LOGIC_MAX.rules)) {
+    if (!r || typeof r !== "object") continue;
+    const on = cleanEvent(r.on);
+    const acts = (Array.isArray(r.do) ? r.do : []).slice(0, LOGIC_MAX.acts).map(cleanAct).filter(Boolean);
+    if (!on || !acts.length) continue;
+    const conds = (Array.isArray(r.if) ? r.if : []).slice(0, LOGIC_MAX.conds).map(cleanCond).filter(Boolean);
+    rules.push({
+      on,
+      if: conds,
+      do: acts,
+      once: !!r.once
+    });
+  }
+  if (!rules.length) return null;
+  const off = [
+    ...new Set((Array.isArray(lg.off) ? lg.off : []).map(grp))
+  ].sort((a, b) => a - b);
+  return {
+    v: 1,
+    off,
+    vars: int(lg.vars, 0, LOGIC_MAX.vars),
+    rules
+  };
+}
+var logicToArray = (lg) => {
+  const L4 = sanitizeLogic(lg);
+  return L4 ? [
+    L4.off,
+    L4.vars,
+    L4.rules.map((r) => [
+      r.on,
+      r.if,
+      r.do,
+      r.once ? 1 : 0
+    ])
+  ] : null;
+};
+var logicFromArray = (a) => Array.isArray(a) ? sanitizeLogic({
+  off: a[0],
+  vars: a[1],
+  rules: (Array.isArray(a[2]) ? a[2] : []).map((r) => Array.isArray(r) ? {
+    on: r[0],
+    if: r[1],
+    do: r[2],
+    once: !!r[3]
+  } : null)
+}) : null;
+var logicSig = (lg) => {
+  const a = logicToArray(lg);
+  return a ? JSON.stringify(a) : "";
+};
+var cmp = (a, op, b) => op === "==" ? a === b : op === "!=" ? a !== b : op === ">=" ? a >= b : op === "<=" ? a <= b : op === ">" ? a > b : a < b;
+function createLogic(track, phys, race) {
+  const L4 = sanitizeLogic(track.lg);
+  if (!L4) return null;
+  const tilesOf = /* @__PURE__ */ new Map(), decosOf = /* @__PURE__ */ new Map();
+  for (const t of track.tiles) if (t.g) {
+    if (!tilesOf.has(t.g)) tilesOf.set(t.g, []);
+    tilesOf.get(t.g).push(t);
+  }
+  for (const d of track.decos) if (d.g) {
+    if (!decosOf.has(d.g)) decosOf.set(d.g, []);
+    decosOf.get(d.g).push(d);
+  }
+  const hiddenTiles = /* @__PURE__ */ new Set(), hiddenDecos = /* @__PURE__ */ new Set();
+  const st = {
+    hidden: /* @__PURE__ */ new Set(),
+    vars: new Int16Array(LOGIC_MAX.vars),
+    fired: new Uint8Array(L4.rules.length),
+    zone: 0,
+    veh: "",
+    started: false,
+    ver: 0
+  };
+  const fx = [];
+  const apply = () => {
+    hiddenTiles.clear();
+    hiddenDecos.clear();
+    for (const g of st.hidden) {
+      for (const t of tilesOf.get(g) || []) hiddenTiles.add(t);
+      for (const d of decosOf.get(g) || []) hiddenDecos.add(d);
+    }
+    st.ver++;
+  };
+  phys.setLogicExclusion(hiddenTiles, hiddenDecos);
+  race.excluded = hiddenTiles;
+  const condOk = (c) => {
+    switch (c[0]) {
+      case "cps":
+        return cmp(race.splits.length, c[1], c[2]);
+      case "lap":
+        return cmp(race.lap, c[1], c[2]);
+      case "var":
+        return cmp(st.vars[c[1]], c[2], c[3]);
+      case "veh":
+        return phys.vehicle === c[1];
+      case "shown":
+        return !st.hidden.has(c[1]);
+      case "hidden":
+        return st.hidden.has(c[1]);
+      default:
+        return false;
+    }
+  };
+  const run = (r, i) => {
+    if (r.once && st.fired[i]) return;
+    for (const c of r.if) if (!condOk(c)) return;
+    st.fired[i] = 1;
+    let vis = false;
+    for (const a of r.do) {
+      switch (a[0]) {
+        case "show":
+          if (st.hidden.delete(a[1])) vis = true;
+          break;
+        case "hide":
+          if (!st.hidden.has(a[1])) {
+            st.hidden.add(a[1]);
+            vis = true;
+          }
+          break;
+        case "toggle":
+          if (!st.hidden.delete(a[1])) st.hidden.add(a[1]);
+          vis = true;
+          break;
+        case "grav":
+          phys.gravMul = a[1] / 100;
+          break;
+        case "var": {
+          const v = a[2] === "=" ? a[3] : a[2] === "+" ? st.vars[a[1]] + a[3] : st.vars[a[1]] - a[3];
+          st.vars[a[1]] = Math.max(-999, Math.min(999, v));
+          break;
+        }
+        case "fx":
+          if (fx.length < 64) fx.push({
+            a: a[1],
+            v: a[2]
+          });
+          break;
+        // (seule la course en direct les lit : fantômes et serveur les laissent)
+        default:
+          break;
+      }
+    }
+    if (vis) apply();
+  };
+  const fire = (kind, test) => {
+    L4.rules.forEach((r, i) => {
+      if (r.on[0] === kind && test(r.on)) run(r, i);
+    });
+  };
+  return {
+    logic: L4,
+    state: st,
+    fx,
+    hiddenTiles,
+    hiddenDecos,
+    reset() {
+      st.hidden = new Set(L4.off);
+      st.vars.fill(0);
+      st.fired.fill(0);
+      st.zone = 0;
+      st.veh = "";
+      st.started = false;
+      fx.length = 0;
+      apply();
+    },
+    snapshot() {
+      return {
+        hidden: [
+          ...st.hidden
+        ],
+        vars: [
+          ...st.vars
+        ],
+        fired: [
+          ...st.fired
+        ],
+        zone: st.zone,
+        veh: st.veh,
+        started: st.started
+      };
+    },
+    restore(s) {
+      st.hidden = new Set(s.hidden);
+      st.vars.set(s.vars);
+      st.fired.set(s.fired);
+      st.zone = s.zone;
+      st.veh = s.veh;
+      st.started = s.started;
+      apply();
+    },
+    // Après les règles de course d'un pas (Simulation.score) : ev = l'évènement de course de ce pas (checkpoint, tour, arrivée) ou null.
+    onStep(ev) {
+      if (race.finished && !(ev && ev.type === "finish")) return;
+      if (!st.started) {
+        st.started = true;
+        st.veh = phys.vehicle;
+        fire("start", () => true);
+      }
+      if (ev && ev.type === "checkpoint") fire("cp", (on) => on[1] === 0 || on[1] === ev.index);
+      if (ev && ev.type === "lap") fire("lap", (on) => on[1] === race.lap);
+      fire("time", (on) => on[1] === race.steps);
+      const zt = phys.rib ? phys.rib.tile : phys.surfTile;
+      const z = zt && zt.g ? zt.g : 0;
+      if (z !== st.zone) {
+        st.zone = z;
+        if (z) fire("zone", (on) => on[1] === z);
+      }
+      if (phys.vehicle !== st.veh) {
+        st.veh = phys.vehicle;
+        fire("veh", (on) => on[1] === st.veh);
+      }
+    }
+  };
+}
+
 // js/track.js
 var MAX_GROUP = 63;
 var EMPTY = Object.freeze([]);
@@ -4958,6 +5344,7 @@ var Track = class _Track {
       ...DEFAULT_AMBIANCE
     };
     this.groups = {};
+    this.lg = null;
     this.resetRules();
     this.vt = 0;
     this.vh = "";
@@ -5155,6 +5542,7 @@ var Track = class _Track {
     };
     this.scripts = [];
     this.groups = {};
+    this.lg = null;
     this.resetRules();
     this.version++;
   }
@@ -5234,7 +5622,19 @@ var Track = class _Track {
     const parts = this.tiles.map((t) => `${t.t}:${t.x}:${t.z}:${t.l}:${t.r}:${t.s}:${t.p}:${t.v}${t.nb}${t.tn}${t.mv ? "m" + t.mv : ""}${tileExtras(t)}`).sort().join("|");
     const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}` : ""}`).join("|");
     const rules = RULES.map((r) => r.sig(this[r.key])).join("");
-    return hashString(this.decor + "#" + parts + "#" + d + (this.laps > 1 ? "#L" + this.laps : "") + rules);
+    return hashString(this.decor + "#" + parts + "#" + d + (this.laps > 1 ? "#L" + this.laps : "") + rules + this._logicSig());
+  }
+  // Logique du circuit : elle change la course, donc la signature ; avec elle, l'appartenance des pièces et décorations aux groupes aussi (une
+  // règle « cache le groupe 2 » n'a pas le même effet selon ce qu'il contient). Sans logique : rien (les signatures d'avant ne bougent pas).
+  _logicSig() {
+    const L4 = logicSig(this.lg);
+    if (!L4) return "";
+    const m = this.tiles.filter((t) => t.g).map((t) => `${t.x}:${t.z}:${t.l}:${t.g}`).sort().join(",") + "/" + this.decos.map((o, i) => o.g ? `${i}:${o.g}` : "").filter(Boolean).join(",");
+    return "#LG" + hashString(L4 + "|" + m);
+  }
+  setLogic(lg) {
+    this.lg = sanitizeLogic(lg);
+    this.version++;
   }
   // Clé de classement d'un circuit de joueur : stable si on renomme le circuit.
   get userKey() {
@@ -5278,6 +5678,7 @@ var Track = class _Track {
     t.groups = {
       ...this.groups
     };
+    t.lg = this.lg ? JSON.parse(JSON.stringify(this.lg)) : null;
     for (const r of RULES) t[r.key] = this[r.key];
     return t;
   }
@@ -5359,7 +5760,7 @@ var Track = class _Track {
       ]
     ]);
     const data = {
-      v: extras.length || this.decos.some((d) => d.cc || d.cp || d.g) || this.groupNames().length || RULES.some((r) => r.v4 && this[r.key] !== r.def) ? 4 : 3,
+      v: extras.length || this.decos.some((d) => d.cc || d.cp || d.g) || this.groupNames().length || this.lg || RULES.some((r) => r.v4 && this[r.key] !== r.def) ? 4 : 3,
       n: this.name,
       a: this.author || "",
       d: this.decor,
@@ -5375,6 +5776,8 @@ var Track = class _Track {
     if (sc) data.sc = sc;
     const gn = this.groupNames();
     if (gn.length) data.gn = gn;
+    const lg = logicToArray(this.lg);
+    if (lg) data.lg = lg;
     for (const r of RULES) if (this[r.key] !== r.def) data[r.code] = this[r.key] === true ? 1 : this[r.key];
     if (this.verified) {
       data.vt = this.vt;
@@ -5474,6 +5877,7 @@ var Track = class _Track {
     if (Array.isArray(data.gn)) {
       for (const e of data.gn.slice(0, MAX_GROUP)) if (Array.isArray(e)) tr.setGroupName(e[0], e[1]);
     }
+    tr.lg = logicFromArray(data.lg);
     if (data.vt > 0 && data.vh) {
       tr.vt = +data.vt;
       tr.vh = String(data.vh);
@@ -8465,7 +8869,7 @@ var wallMethods = {
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
-      if (!tile.tn || tile.v || this.broken.has(tile) || !isFloor(tile)) continue;
+      if (!tile.tn || tile.v || this.excl.has(tile) || !isFloor(tile)) continue;
       toLocal(tile, p.x, p.z, L1);
       sampleLocal(tile, L1.lx, L1.lz, S1);
       if (!S1.inFootprint || Math.abs(S1.d) > ROAD_HALF + RAIL_W) continue;
@@ -8488,7 +8892,7 @@ var wallMethods = {
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
-      if (tile.mv || tile.v || this.broken.has(tile) || !isFloor(tile) || PIECES[tile.t].kind === "loop") continue;
+      if (tile.mv || tile.v || this.excl.has(tile) || !isFloor(tile) || PIECES[tile.t].kind === "loop") continue;
       const area = PIECES[tile.t].kind === "area";
       toLocal(tile, p.x, p.z, L1);
       sampleLocal(tile, L1.lx, L1.lz, S1);
@@ -8574,14 +8978,14 @@ var wallMethods = {
     const tiles = this.track.tilesAt(cx, cz);
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
-      if (tile.mv || this.broken.has(tile)) continue;
+      if (tile.mv || this.excl.has(tile)) continue;
       if (this._probeTile(tile, x, z, px, pz, y, 0)) return HIT;
     }
     if (!this.track.hasMovers) return null;
     const time = this.time;
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
-      if (!tile.mv || this.broken.has(tile)) continue;
+      if (!tile.mv || this.excl.has(tile)) continue;
       const o = this.track.moverOffset(tile, time, MOV);
       if (o.a) {
         const q = this.track.moverLocal(o, x, z, MQ1), q2 = this.track.moverLocal(o, px, pz, MQ2);
@@ -8649,7 +9053,10 @@ var obstacleMethods = {
       for (let iz = gz - 3; iz <= gz + 3; iz++) {
         const bucket = grid.get(obstacleKey(ix, iz));
         if (bucket === void 0) continue;
-        for (let i = 0; i < bucket.length; i++) if (this._obstacleContact(bucket[i], t)) return;
+        for (let i = 0; i < bucket.length; i++) {
+          if (this.hiddenDecos && this.hiddenDecos.has(bucket[i])) continue;
+          if (this._obstacleContact(bucket[i], t)) return;
+        }
       }
     }
   },
@@ -8856,7 +9263,7 @@ var ribbonMethods = {
       if (pass === 1 && c1x === c2x && c1z === c2z) break;
       const tiles = pass === 0 ? this.track.tilesAt(c1x, c1z) : this.track.tilesAt(c2x, c2z);
       for (const tile of tiles) {
-        if (!isRibbon(tile) || this.broken.has(tile)) continue;
+        if (!isRibbon(tile) || this.excl.has(tile)) continue;
         const rib = ribbonOf(tile);
         for (let end = 0; end < 2; end++) {
           const F = frameWorld(tile, rib, end, this.F);
@@ -8900,7 +9307,7 @@ var ribbonMethods = {
     const p = this.pos, q = this.prev, v = this.vel;
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
     for (const tile of tiles) {
-      if (!isRibbon(tile) || this.broken.has(tile)) continue;
+      if (!isRibbon(tile) || this.excl.has(tile)) continue;
       const rib = ribbonOf(tile);
       let bu = -1, bd = Infinity;
       for (let i = 0; i <= 32; i++) {
@@ -9257,7 +9664,7 @@ var ribbonMethods = {
     for (const c of cells) {
       const [cx, cz] = c.split(",").map(Number);
       for (const tile of this.track.tilesAt(cx, cz)) {
-        if (tile === curTile || seen.has(tile) || !isRibbon(tile) || this.broken.has(tile)) continue;
+        if (tile === curTile || seen.has(tile) || !isRibbon(tile) || this.excl.has(tile)) continue;
         seen.add(tile);
         const rib = ribbonOf(tile);
         for (let end = 0; end < 2; end++) {
@@ -9370,8 +9777,19 @@ var CarPhysics = class {
     this.glassTime = /* @__PURE__ */ new Map();
     this.brokenVer = 0;
     this.broken = /* @__PURE__ */ new Set();
+    this.excl = this.broken;
+    this.hiddenDecos = null;
     this.setBounds();
     this.place(0, 0.4, 0, 0);
+  }
+  // Logique du circuit (sim/logic.js) : les pièces et décorations des groupes cachés n'ont plus de collision. Les ensembles sont tenus à jour par le
+  // moteur de logique ; sans logique, rien de tout cela n'existe et this.excl reste l'ensemble du verre brisé (mêmes calculs qu'avant, au bit près).
+  setLogicExclusion(tiles, decos) {
+    const broken = () => this.broken;
+    this.excl = {
+      has: (t) => broken().has(t) || tiles.has(t)
+    };
+    this.hiddenDecos = decos;
   }
   get g() {
     return CAR.gravity * this.gravMul;
@@ -9450,7 +9868,7 @@ var CarPhysics = class {
     this.plateLock = "";
     this.sinkT = 0;
     this.hazardGrace = 0.8;
-    const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3, this.broken, this.time) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3, this.broken);
+    const s = this.gSign > 0 ? this.track.surfaceAt(x, y + 0.5, z, this.surf, 3, this.excl, this.time) : this.track.ceilingSurfaceAt(x, y - 0.5, z, this.surf, 3, this.excl);
     if (this.gSign < 0) {
       this.n.x = 0;
       this.n.y = -1;
@@ -9902,14 +10320,14 @@ var CarPhysics = class {
   _roadContact() {
     const dt = DT, p = this.pos, v = this.vel, ev = this.ev;
     const gs = this.gSign;
-    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.broken);
+    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.excl, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.excl);
     const gap = gs * (p.y - s.h);
     const vn = v.x * s.nx + v.y * s.ny + v.z * s.nz;
     const magnet = s.mod === "magnet";
     const launch = magnet ? Infinity : CAR.launch;
     const snap = magnet ? CAR.step : CAR.snap;
     if (!this.grounded) {
-      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.broken);
+      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.excl, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.excl);
       const mg = gs * (p.y - m.h);
       if (m.mod === "magnet" && mg > 0.02 && mg < CAR.magnetRange) {
         const a = CAR.magnetAcc * (1 - mg / CAR.magnetRange) * dt;
@@ -10064,6 +10482,7 @@ var CarPhysics = class {
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
     for (const tile of tiles) {
       if (tile.t !== "ring" && !tile.tb) continue;
+      if (this.excl !== this.broken && this.excl.has(tile)) continue;
       toLocal(tile, p.x, p.z, L12);
       toLocal(tile, q.x, q.z, L22);
       if (L12.lz * L22.lz > 0 || L12.lz === L22.lz) continue;
@@ -10149,6 +10568,7 @@ var RaceLogic = class {
     };
   }
   reset() {
+    if (this.ext) this.ext.reset();
     this.lastGround = null;
     this.collected = /* @__PURE__ */ new Set();
     this.splits = [];
@@ -10166,7 +10586,7 @@ var RaceLogic = class {
   }
   // État de course au passage d'un checkpoint : y revenir remet le chrono à ce temps.
   _snap() {
-    return {
+    const s = {
       steps: this.steps,
       splits: this.splits.length,
       collected: [
@@ -10174,6 +10594,8 @@ var RaceLogic = class {
       ],
       lap: this.lap
     };
+    if (this.ext) s.ext = this.ext.snapshot();
+    return s;
   }
   // Retour au dernier checkpoint passé (touche R ou réapparition automatique) :
   // le chrono, les temps intermédiaires et le tour reviennent à ce moment-là.
@@ -10187,6 +10609,7 @@ var RaceLogic = class {
       this.splits.length = Math.min(this.splits.length, s.splits);
       this.collected = new Set(s.collected);
       this.lap = s.lap;
+      if (this.ext && s.ext) this.ext.restore(s.ext);
     }
     this.finished = false;
     this.inFinish = false;
@@ -10233,6 +10656,7 @@ var RaceLogic = class {
     let event = null;
     let onFinish = false;
     for (const tile of this.track.tilesAt(cx, cz)) {
+      if (this.excluded && this.excluded.has(tile)) continue;
       const P = PIECES[tile.t];
       const ck = cpKind(tile);
       const sp = ck ? "checkpoint" : P.special;
@@ -10249,6 +10673,7 @@ var RaceLogic = class {
         if (hypot2(lx, y - (h + RING_Y)) > RING_R + 0.5) continue;
         const gl = this.lastGround;
         const snap = this._snap();
+        snap.pre = true;
         if (gl) snap.steps = gl.steps;
         const rr = this._ringRespawn(tile, phys);
         this.collected.add(tile);
@@ -10372,6 +10797,8 @@ var Simulation = class {
     this.logic = new RaceLogic(track, {
       partial
     });
+    this.lgc = createLogic(track, this.phys, this.logic);
+    if (this.lgc) this.logic.ext = this.lgc;
     this.offTrackLimit = offTrackLimit;
     this.groundT = 0;
     this.idle = 0;
@@ -10415,7 +10842,16 @@ var Simulation = class {
   }
   // Phase 2 d'un pas : règles de course puis suivi du hors-piste. Renvoie l'évènement de course (checkpoint, tour, arrivée...) ou null.
   score() {
+    const before = this.logic.respawn;
     const ev = this.logic.update(this.phys);
+    if (this.lgc) {
+      this.lgc.onStep(ev);
+      const r = this.logic.respawn;
+      if (r !== before && r.snap && !r.snap.pre) {
+        r.snap.ext = this.lgc.snapshot();
+        r.grav = this.phys.gravMul;
+      }
+    }
     if (this.phys.offTrack) this.groundT += DT;
     else this.groundT = 0;
     const crossed = !!ev && ev.type === "finish";
@@ -11183,17 +11619,17 @@ var DEFAULT_RULES = Object.freeze({
   sameCars: 0
 });
 var VEHICLES2 = VEHICLE_CHOICES.map(([k]) => k).filter(Boolean);
-var int = (v, lo, hi, def) => {
+var int2 = (v, lo, hi, def) => {
   const n = Math.round(Number(v));
   return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : def;
 };
 function sanitizeRules(r) {
   const o = r && typeof r === "object" ? r : {};
   return {
-    laps: o.laps ? int(o.laps, 1, 5, 0) : 0,
-    g0: o.g0 ? int(o.g0, 15, 250, 0) : 0,
+    laps: o.laps ? int2(o.laps, 1, 5, 0) : 0,
+    g0: o.g0 ? int2(o.g0, 15, 250, 0) : 0,
     veh0: VEHICLES2.includes(o.veh0) ? o.veh0 : "",
-    v0: o.v0 >= 0 ? int(o.v0, 0, 300, -1) : -1,
+    v0: o.v0 >= 0 ? int2(o.v0, 0, 300, -1) : -1,
     offroad: o.offroad === 1 || o.offroad === true ? 1 : o.offroad === 0 || o.offroad === false ? 0 : -1,
     obstacles: o.obstacles === "off" ? "off" : "",
     sameCars: o.sameCars ? 1 : 0

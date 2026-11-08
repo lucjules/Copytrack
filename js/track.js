@@ -12,6 +12,7 @@ import { DEFAULT_AMBIANCE, cleanAmbiance, ambianceToArray, ambianceFromArray } f
 import { COLOR_KEYS, MP, W2, cleanColors } from './track/shared.js';
 import { surfaceMethods } from './track/surfaces.js';
 import { editMethods } from './track/edit.js';
+import { sanitizeLogic, logicToArray, logicFromArray, logicSig } from './sim/logic.js';
 export const MAX_GROUP = 63;          // groupes 1 à 63 (pièces et décorations) : voir setGroupName, usedGroups
 
 const EMPTY = Object.freeze([]);
@@ -62,6 +63,7 @@ export class Track {
     this.scripts = [];                          // déclencheurs visuels et sonores posés sur des cases (scripts.js ; hors signature)
     this.ambiance = { ...DEFAULT_AMBIANCE };    // moment de la journée, brume, musique (visuel et sonore : hors signature, voir ambiance.js)
     this.groups = {};                           // noms des groupes { numéro: nom } (éditeur : calques ; hors signature)
+    this.lg = null;                             // logique du circuit (sim/logic.js) : null = aucune ; sinon elle entre dans la signature
     this.resetRules();
     this.vt = 0;      // temps de vérification (secondes) de l'auteur
     this.vh = '';     // signature du circuit au moment de la vérification
@@ -226,6 +228,7 @@ export class Track {
     this.ambiance = { ...DEFAULT_AMBIANCE };
     this.scripts = [];
     this.groups = {};
+    this.lg = null;
     this.resetRules();
     this.version++;
   }
@@ -299,8 +302,19 @@ export class Track {
       .join('|');
     const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}` : ''}`).join('|');
     const rules = RULES.map((r) => r.sig(this[r.key])).join('');
-    return hashString(this.decor + '#' + parts + '#' + d + (this.laps > 1 ? '#L' + this.laps : '') + rules);
+    return hashString(this.decor + '#' + parts + '#' + d + (this.laps > 1 ? '#L' + this.laps : '') + rules + this._logicSig());
   }
+
+  // Logique du circuit : elle change la course, donc la signature ; avec elle, l'appartenance des pièces et décorations aux groupes aussi (une
+  // règle « cache le groupe 2 » n'a pas le même effet selon ce qu'il contient). Sans logique : rien (les signatures d'avant ne bougent pas).
+  _logicSig() {
+    const L = logicSig(this.lg);
+    if (!L) return '';
+    const m = this.tiles.filter((t) => t.g).map((t) => `${t.x}:${t.z}:${t.l}:${t.g}`).sort().join(',') + '/' + this.decos.map((o, i) => (o.g ? `${i}:${o.g}` : '')).filter(Boolean).join(',');
+    return '#LG' + hashString(L + '|' + m);
+  }
+
+  setLogic(lg) { this.lg = sanitizeLogic(lg); this.version++; }
 
   // Clé de classement d'un circuit de joueur : stable si on renomme le circuit.
   get userKey() {
@@ -335,6 +349,7 @@ export class Track {
     t.ambiance = { ...this.ambiance };
     t.scripts = this.scripts.map((s) => ({ ...s }));
     t.groups = { ...this.groups };
+    t.lg = this.lg ? JSON.parse(JSON.stringify(this.lg)) : null;
     for (const r of RULES) t[r.key] = this[r.key];
     return t;
   }
@@ -385,7 +400,7 @@ export class Track {
         : d.cp && d.cp.length ? [d.ph || 0, d.cc ? d.cc.slice(1) : '', packDecoParts(d.cp)] : [...(d.ph || d.cc ? [d.ph || 0] : []), ...(d.cc ? [d.cc.slice(1)] : [])]),
     ]);
     // v3 tant que rien de la Phase 2 n'est utilisé : les codes existants ne changent pas.
-    const data = { v: extras.length || this.decos.some((d) => d.cc || d.cp || d.g) || this.groupNames().length || RULES.some((r) => r.v4 && this[r.key] !== r.def) ? 4 : 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
+    const data = { v: extras.length || this.decos.some((d) => d.cc || d.cp || d.g) || this.groupNames().length || this.lg || RULES.some((r) => r.v4 && this[r.key] !== r.def) ? 4 : 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
     if (extras.length) data.e = extras;
     if (decos.length) data.o = decos;
     if (this.laps > 1) data.lp = this.laps;
@@ -396,6 +411,8 @@ export class Track {
     if (sc) data.sc = sc;
     const gn = this.groupNames();
     if (gn.length) data.gn = gn;
+    const lg = logicToArray(this.lg);
+    if (lg) data.lg = lg;
     for (const r of RULES) if (this[r.key] !== r.def) data[r.code] = this[r.key] === true ? 1 : this[r.key];
     if (this.verified) { data.vt = this.vt; data.vh = this.vh; }
     return 'SHW3:' + b64encode(JSON.stringify(data));
@@ -446,6 +463,7 @@ export class Track {
     tr.laps = Math.max(1, Math.min(9, data.lp | 0 || 1));
     tr.setParams({ desc: data.ds, ambiance: ambianceFromArray(data.am), scripts: scriptsFromArray(data.sc), ...Object.fromEntries(RULES.map((r) => [r.key, data[r.code]])) });
     if (Array.isArray(data.gn)) for (const e of data.gn.slice(0, MAX_GROUP)) if (Array.isArray(e)) tr.setGroupName(e[0], e[1]);
+    tr.lg = logicFromArray(data.lg);
     if (data.vt > 0 && data.vh) { tr.vt = +data.vt; tr.vh = String(data.vh); }
     return tr;
   }

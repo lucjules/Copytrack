@@ -48,7 +48,7 @@ export const ribbonMethods = {
       if (pass === 1 && c1x === c2x && c1z === c2z) break;
       const tiles = pass === 0 ? this.track.tilesAt(c1x, c1z) : this.track.tilesAt(c2x, c2z);
       for (const tile of tiles) {
-        if (!isRibbon(tile) || this.broken.has(tile)) continue;
+        if (!isRibbon(tile) || this.excl.has(tile)) continue;
         const rib = ribbonOf(tile);
         for (let end = 0; end < 2; end++) {
           const F = frameWorld(tile, rib, end, this.F);
@@ -84,7 +84,7 @@ export const ribbonMethods = {
     const p = this.pos, q = this.prev, v = this.vel;
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
     for (const tile of tiles) {
-      if (!isRibbon(tile) || this.broken.has(tile)) continue;
+      if (!isRibbon(tile) || this.excl.has(tile)) continue;
       const rib = ribbonOf(tile);
       // Point du ruban le plus proche (recherche grossière puis affinage).
       let bu = -1, bd = Infinity;
@@ -404,7 +404,7 @@ export const ribbonMethods = {
     for (const c of cells) {
       const [cx, cz] = c.split(',').map(Number);
       for (const tile of this.track.tilesAt(cx, cz)) {
-        if (tile === curTile || seen.has(tile) || !isRibbon(tile) || this.broken.has(tile)) continue;
+        if (tile === curTile || seen.has(tile) || !isRibbon(tile) || this.excl.has(tile)) continue;
         seen.add(tile);
         const rib = ribbonOf(tile);
         for (let end = 0; end < 2; end++) {

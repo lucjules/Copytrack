@@ -101,6 +101,16 @@ export class RaceSession {
     this._theaterSetup();        // Replay Theater (opts.theater : theater/session.js)
   }
 
+  // Logique du circuit (sim/logic.js) : la scène suit l'état de la simulation (groupes montrés ou cachés) et joue ses effets visuels et sonores.
+  _logicSync() {
+    const L = this.sim.lgc;
+    if (L.state.ver !== this._lgVer) {
+      this._lgVer = L.state.ver;
+      for (const g of this.track.usedGroups()) this.view.setGroupVisible(g, !L.state.hidden.has(g));
+    }
+    while (L.fx.length) { const f = L.fx.shift(); if (!this.demo) this._runScript(f); }
+  }
+
   // Message au centre de l'écran (court, trié par importance : voir hudMessages.js). m = [texte, importance, durée en s].
   _say(m) { if (!this.demo && m) this.app.ui.hud.message(m[0], m[2], m[1]); }
 
@@ -465,6 +475,7 @@ export class RaceSession {
   render(dt, alpha) {
     const app = this.app;
     const p = this.phys;
+    if (this.sim.lgc) this._logicSync();
     // Obstacles et pièces mobiles : même temps que la physique (chrono), interpolé.
     if (this.state === 'racing') this.obsT = Math.max(0, (this.logic.steps - 1 + alpha) * DT);
     else if (this.state === 'finished') this.obsT = (this.obsT || 0) + dt;
