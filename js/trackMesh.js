@@ -128,6 +128,10 @@ export class TrackView {
       return b;
     };
     const sigs = new Map();
+    // Pièces et décorations d'un groupe (éditeur : calques ; course : logique du circuit) : un maillage à part par groupe, qu'on montre ou cache
+    // sans tout reconstruire (setGroupVisible).
+    const grouped = new Map();
+    const groupBuild = (g) => { let b = grouped.get(g); if (!b) grouped.set(g, b = { gb: new GeoBuilder(), glow: new GeoBuilder(), fx: new FxBuilder() }); return b; };
     for (const tile of track.tiles) {
       const P = PIECES[tile.t];
       const hi = tile.l + Math.max(P.rise || 0, 0) + (P.clearance || tile.cp ? 1 : 0) + (tile.o ? 2 : 0);
@@ -145,10 +149,12 @@ export class TrackView {
         grp.add(m1);
         if (!g2.empty) grp.add(new THREE.Mesh(g2.build(), this.materials.glow));
         if (!g3.empty && this.materials.fx) grp.add(this._fxMesh(g3));
+        if (tile.g) grp.userData.g = tile.g;
         this.group.add(grp);
         if (tile.mv) this.movers.push({ tile, grp });
         if (glassy) this.glassGroups.push({ tile, grp });
       } else if (dim) buildTileInto(dimG, dimGlow, tile, track);
+      else if (tile.g) { const b = groupBuild(tile.g); buildTileInto(b.gb, b.glow, tile, track, b.fx); }
       else bucket(Math.floor(tile.x / CHUNK), Math.floor(tile.z / CHUNK)).tiles.push(tile);
     }
     if (!dimG.empty) {
@@ -161,17 +167,31 @@ export class TrackView {
       if (renderOptions.hideDecos && !this.showAllDecos && !isObstacle(d.k)) continue;
       if (d.k === 'plaque') {
         const mesh = createPlaque(d);
+        if (d.g) mesh.userData.g = d.g;
         this.group.add(mesh);
         this.plaques.push(mesh);
       } else if (isObstacle(d.k)) {
         const o = createObstacleMesh(d, this.materials);
+        if (d.g) o.userData.g = d.g;
         this.group.add(o);
         this.obstacles.push(o);
+      } else if (d.g) {
+        const b = groupBuild(d.g);
+        buildDecoInto(b.gb, b.glow, d);
       } else {
         bucket(Math.floor(d.x / span), Math.floor(d.z / span)).decos.push(d);
         if (LIGHT_DECOS[d.k]) this._addLamp(d);
       }
     }
+    for (const [g, b] of grouped) {
+      const grp = new THREE.Group();
+      grp.userData.g = g;
+      if (!b.gb.empty) { const m = new THREE.Mesh(b.gb.build(), this.materials.solid); m.castShadow = true; m.receiveShadow = true; grp.add(m); }
+      if (!b.glow.empty) grp.add(new THREE.Mesh(b.glow.build(), this.materials.glow));
+      if (!b.fx.empty && this.materials.fx) grp.add(this._fxMesh(b.fx));
+      this.group.add(grp);
+    }
+    this._applyGroupVis();
     this._initLightPool();
 
     // Signature d'un tronçon : ses pièces, ses décorations, et les pièces voisines (la case d'à côté, comprise) dont dépend l'emplacement de
@@ -195,6 +215,17 @@ export class TrackView {
     }
     for (const [key, b] of buckets) if (!this.chunks.has(key)) this.chunks.set(key, this._buildChunk(b));
     this.builtVersion = track.version;
+  }
+
+  // Groupe visible ou non (éditeur : calque masqué ; course : logique du circuit). Gardé d'une reconstruction à l'autre.
+  setGroupVisible(g, visible) {
+    if (!this.groupVis) this.groupVis = new Map();
+    this.groupVis.set(g | 0, !!visible);
+    for (const c of this.group.children) if (c.userData.g === (g | 0)) c.visible = !!visible;
+  }
+  _applyGroupVis() {
+    if (!this.groupVis || !this.groupVis.size) return;
+    for (const c of this.group.children) if (c.userData.g && this.groupVis.get(c.userData.g) === false) c.visible = false;
   }
 
   _buildChunk(b) {
@@ -361,7 +392,7 @@ export class TrackView {
 
   // Dalles de verre brisées (voir CarPhysics.broken) : elles disparaissent ; vide = tout est restauré.
   setBroken(set) {
-    for (const g of this.glassGroups) g.grp.visible = !(set && set.has(g.tile));
+    for (const g of this.glassGroups) g.grp.visible = !(set && set.has(g.tile)) && !(g.tile.g && this.groupVis && this.groupVis.get(g.tile.g) === false);      // (une dalle d'un groupe caché reste cachée)
   }
 
   dispose() {

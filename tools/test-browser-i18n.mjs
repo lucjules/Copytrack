@@ -183,6 +183,9 @@ try {
     await page.evaluate(() => window.copytrack.session.openParams());
     await page.waitForTimeout(250);
     assert.deepEqual(await frenchLeft(page), [], 'paramètres du niveau : texte resté en français');
+    await page.evaluate(() => { window.copytrack.ui.closeModal(); const s = window.copytrack.session; s.setTool('select'); s.sel = { x0: -50, z0: -50, x1: 50, z1: 50 }; s.openGroups(); });
+    await page.waitForTimeout(250);
+    assert.deepEqual(await frenchLeft(page), [], 'groupes et calques : texte resté en français');
     await ctx.close();
   });
 

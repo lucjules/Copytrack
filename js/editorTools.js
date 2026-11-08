@@ -82,9 +82,9 @@ export function decosInRect(track, r) {
 }
 
 // Copie : coordonnées relatives au coin du rectangle, niveaux relatifs au plus bas.
-export function copyRect(track, r) {
-  const tiles = tilesInRect(track, r);
-  const decos = decosInRect(track, r);
+export function copyRect(track, r, ok = null) {
+  const tiles = tilesInRect(track, r).filter((t) => !ok || ok(t));
+  const decos = decosInRect(track, r).filter((d) => !ok || ok(d));
   if (!tiles.length && !decos.length) return null;
   const baseL = tiles.length ? Math.min(...tiles.map((t) => t.l)) : 0;
   return {

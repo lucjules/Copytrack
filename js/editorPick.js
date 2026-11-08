@@ -60,16 +60,19 @@ const B = new THREE.Box3();
 // Objet touché par le rayon, limité aux calques de `mask`. Renvoie { kind: 'tile' | 'deco', obj, dist } ou null.
 // Une décoration posée sur une route est DANS la boîte de la pièce : elle l'emporte tant qu'elle n'est pas
 // entièrement cachée derrière (son entrée dans la boîte vient avant la sortie de celle de la pièce).
-export function pickObjects(track, ray, mask = LAYER_ALL) {
+// ok(obj) : objet visable (éditeur : pas dans un calque masqué ou verrouillé).
+export function pickObjects(track, ray, mask = LAYER_ALL, ok = null) {
   let tile = null, deco = null;
   if (mask & LAYER_TRACK) {
     for (const t of track.tiles) {
+      if (ok && !ok(t)) continue;
       const r = rayBox(ray, tileBounds(t, B));
       if (r && (!tile || r[0] < tile.dist)) tile = { kind: 'tile', obj: t, dist: r[0], exit: r[1] };
     }
   }
   if (mask & LAYER_DECO) {
     for (const d of track.decos) {
+      if (ok && !ok(d)) continue;
       const r = rayBox(ray, decoBounds(d, B));
       if (r && (!deco || r[0] < deco.dist)) deco = { kind: 'deco', obj: d, dist: r[0], exit: r[1] };
     }
@@ -86,9 +89,10 @@ const LQ = { lx: 0, lz: 0 }, SQ = {};
 // les candidats (du plus proche au plus lointain) ; pour une route à plat (droite, virage, plateforme, bifurcation) on vérifie que
 // le rayon traverse bien sa chaussée (pas seulement le volume vide au-dessus d'une pièce basse) ; les rubans, loopings et anneaux
 // se contentent de leur boîte (comme une route posée sur un mur). Renvoie { kind: 'tile', obj, dist, x, y, z } ou null.
-export function pickTileExact(track, ray) {
+export function pickTileExact(track, ray, ok = null) {
   const cand = [];
   for (const t of track.tiles) {
+    if (ok && !ok(t)) continue;
     const r = rayBox(ray, tileBounds(t, B));
     if (r) cand.push({ t, t0: r[0], t1: r[1] });
   }

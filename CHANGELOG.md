@@ -6,6 +6,18 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.32 — groupes et calques dans l'éditeur, aperçu 3D des pièces perso
+
+Étape E9 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer (les groupes n'ont aucun effet sur la course : ils n'entrent pas dans la signature ; la logique du circuit, E10, s'en servira).
+
+- **Groupes et calques** (éditeur, bouton ▦ ou **F4**) : ranger des pièces et des décorations dans des **groupes** numérotés (1 à 63) et **nommés**, puis, pendant l'édition, **masquer** un calque (ni dessiné ni visable) ou le **verrouiller** (visible mais ni sélectionnable ni modifiable) ; sélectionner tout un groupe ; sortir la sélection de son groupe. Les groupes et leurs noms voyagent dans le code du circuit (format 4) ; masquer et verrouiller restent des états de l'éditeur. Tout s'annule comme le reste.
+- **Vue par niveau** (◐, Z) : la sélection (copier, couper, supprimer, monter, descendre) ne prend plus que les pièces du niveau affiché.
+- **Atelier « Mes pièces »** : un **aperçu 3D** de la pièce en plus des vues de face et de dessus, construit exactement comme sur la piste ; il tourne seul, glisser pour le tourner soi-même.
+- **Corrigé** : annuler une action dans l'éditeur effaçait toutes les **pièces perso** posées (leurs formes n'étaient pas gardées par l'historique, depuis 0.9.24).
+- Sous le capot : champ `g` des pièces (table `TILE_FIELDS`) et des décorations, noms dans `gn` ; `TrackView` dessine chaque groupe dans son propre maillage et sait le montrer ou le cacher sans tout reconstruire (`setGroupVisible`), ce dont la logique du circuit aura besoin en course ; filtres de visée et de sélection (`js/editor/groups.js`, `js/editor/preview3d.js`).
+- **Reportés** (ils étaient dans le plan d'E9) : la bibliothèque de matériaux (couleurs nommées réutilisables) et une caméra libre dédiée dans l'éditeur ; ils iront avec les finitions (E22).
+- Tests : `tools/test-groups.mjs` (bornes, noms, code, signature inchangée, annulation avec pièces perso, filtre de copie) ; test navigateur (panneau, masquer, verrouiller, nommer, code, annuler, aperçu 3D) et anglais.
+
 ## Bêta 0.9.31 — adhérence et vent sur tout le circuit (paramètres de simulation)
 
 Étape E8 de Copytrack Evolution (début du bloc 3). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des **seuls** circuits qui utilisent ces réglages ; tous les autres sont vérifiés comme avant.

@@ -1,7 +1,7 @@
 // Sélection rectangulaire, copier / couper / coller, vue par niveau et repérage des problèmes.
 // Ces méthodes s'ajoutent au prototype de EditorSession (voir editor.js) : `this` est l'instance.
 import * as THREE from '../vendor/three.module.min.js';
-import { CELL, MAX_LEVEL } from '../constants.js';
+import { CELL, MAX_LEVEL, LEVEL_H } from '../constants.js';
 import { PIECES } from '../pieces.js';
 import { Track } from '../track.js';
 import { buildTileMesh } from '../trackMesh.js';
@@ -40,9 +40,20 @@ export const selectionMethods = {
     this._selInfo();
   },
 
+  // Ce que la sélection touche : les pièces et décorations du rectangle, sauf celles d'un calque masqué ou verrouillé (editor/groups.js), et, en
+  // vue par niveau, seulement celles du niveau affiché.
+  _selOk(o) {
+    if (!this._layerOk(o)) return false;
+    if (!this.focusLevel) return true;
+    if (o.t) { const [lo, hi] = Track.range(o); return this.level >= lo && this.level <= hi; }
+    return Math.abs(o.y - this.level * LEVEL_H) < LEVEL_H;          // décoration : à la hauteur du niveau (± un niveau)
+  },
+  _selTiles() { return this.sel ? tilesInRect(this.track, this.sel).filter((t) => this._selOk(t)) : []; },
+  _selDecos() { return this.sel ? decosInRect(this.track, this.sel).filter((d) => this._selOk(d)) : []; },
+
   _selInfo() {
     if (!this.sel) return;
-    const n = tilesInRect(this.track, this.sel).length, d = decosInRect(this.track, this.sel).length;
+    const n = this._selTiles().length, d = this._selDecos().length;
     this.app.ui.flash(`${n} pièce${n > 1 ? 's' : ''}${d ? `, ${d} décoration${d > 1 ? 's' : ''}` : ''} sélectionnée${n + d > 1 ? 's' : ''}`, 2);
     this._refreshSelBar();
   },
@@ -64,7 +75,7 @@ export const selectionMethods = {
 
   copySel(silent = false) {
     if (!this.sel) { this.app.ui.flash('Sélectionne d\'abord une zone (outil Sélection, Q).'); return false; }
-    const clip = copyRect(this.track, this.sel);
+    const clip = copyRect(this.track, this.sel, (o) => this._selOk(o));
     if (!clip) { this.app.ui.flash('Rien à copier dans cette zone.'); return false; }
     this.clip = clip;
     if (!silent) this.app.ui.flash(`Copié : ${clip.tiles.length} pièce(s). Ctrl+V pour coller.`);
@@ -81,7 +92,7 @@ export const selectionMethods = {
 
   deleteSel(silent = false) {
     if (!this.sel) return;
-    const tiles = tilesInRect(this.track, this.sel), decos = decosInRect(this.track, this.sel);
+    const tiles = this._selTiles(), decos = this._selDecos();
     for (const t of tiles) this.track.remove(t);
     for (const d of decos) this.track.removeDeco(d);
     if (!silent) this.app.audio.erase();
@@ -91,7 +102,7 @@ export const selectionMethods = {
 
   shiftSel(d) {
     if (!this.sel) return;
-    const tiles = tilesInRect(this.track, this.sel), decos = decosInRect(this.track, this.sel);
+    const tiles = this._selTiles(), decos = this._selDecos();
     if (!tiles.length && !decos.length) return;
     if (!shiftLevel(this.track, tiles, decos, d)) { this.app.ui.flash('Impossible : pièce gênante ou hors niveaux.'); this.app.audio.error(); return; }
     this.app.audio.place();

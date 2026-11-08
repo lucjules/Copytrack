@@ -131,10 +131,12 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | Fichier | Rôle |
 | --- | --- |
 | `cdeco.js` | « Mes pièces » : l'atelier de pièces décoratives de l'éditeur (lot 12). On assemble des formes simples, on voit la pièce de face et de dessus, on l'enregistre dans sa bibliothèque, puis on la pose comme n'importe quelle décoration. Les règles sont dans customDeco.js. Ces méthodes s'ajoutent au prototype de EditorSession. |
+| `groups.js` | Groupes et calques de l'éditeur (Copytrack Evolution, E9) : des pièces et décorations rangées dans des groupes numérotés (1 à 63) et nommés. |
 | `history.js` | État du circuit dans l'éditeur : instantanés, annuler / rétablir, enregistrement, nouveau circuit, essai. |
 | `palette.js` | Palette de l'éditeur : boutons d'outils, familles de pièces, options, paramètres, aide à la compatibilité, menu. |
 | `pointer.js` | Souris, tactile et manette dans l'éditeur : événements, survol, aperçu de la pose, case et décoration visées. |
 | `prefabs.js` | Onglet « Prefabs » de la palette : coller un morceau tout fait (chicane, saut, looping…), enregistrer SA sélection sous un nom, la partager par code, importer le code d'un ami. |
+| `preview3d.js` | Aperçu 3D d'une pièce perso (atelier « Mes pièces » de l'éditeur, E9) : les formes construites EXACTEMENT comme sur la piste (customDecoBuild.js, mêmes matières que le circuit), sur un petit canvas qui tourne lentement ; glisser pour tourner soi-même. Un seul rendu WebGL de plus, libéré à la fermeture de l'atelier (dispose). |
 | `scriptsUi.js` | Déclencheurs de circuit dans l'éditeur (lot 12) : on pose des effets visuels et sonores sur des cases ; la voiture les joue en passant dessus. |
 | `selection.js` | Sélection rectangulaire, copier / couper / coller, vue par niveau et repérage des problèmes. |
 | `shared.js` | Éléments partagés par les familles de méthodes de EditorSession (voir editor.js). |

@@ -239,7 +239,7 @@ export const toolMethods = {
     if (!this.hover) return false;
     if (this.ndc && this.raycaster && Math.abs(this.ndc.x) <= 1 && Math.abs(this.ndc.y) <= 1 && this.app.camera) {
       this.raycaster.setFromCamera(this.ndc, this.app.camera);
-      const hit = pickTileExact(this.track, this.raycaster.ray);
+      const hit = pickTileExact(this.track, this.raycaster.ray, (o) => this._layerOk(o));
       if (hit && Track.cellsOf(hit.obj).some(([x, z]) => x === this.hover.cx && z === this.hover.cz)) return false;
     }
     const [lo, hi] = this._fillRange();

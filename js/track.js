@@ -12,6 +12,7 @@ import { DEFAULT_AMBIANCE, cleanAmbiance, ambianceToArray, ambianceFromArray } f
 import { COLOR_KEYS, MP, W2, cleanColors } from './track/shared.js';
 import { surfaceMethods } from './track/surfaces.js';
 import { editMethods } from './track/edit.js';
+export const MAX_GROUP = 63;          // groupes 1 à 63 (pièces et décorations) : voir setGroupName, usedGroups
 
 const EMPTY = Object.freeze([]);
 
@@ -39,7 +40,7 @@ export const RULES = [
 // leur valeur par défaut. Chaque champ produit par Track.normalize doit y figurer : un test (tools/test-circuit.mjs) le vérifie.
 export const TILE_FIELDS = [
   ['t', ''], ['x', 0], ['z', 0], ['l', 0], ['r', 0], ['s', ''], ['p', 0], ['v', 0], ['nb', 0], ['tn', 0], ['mv', 0], ['cp', 0], ['th', 0],
-  ['ms', 0], ['ma', 0], ['col', null], ['s2', ''], ['p2', 0], ['tb', 0], ['o', 0],
+  ['ms', 0], ['ma', 0], ['col', null], ['s2', ''], ['p2', 0], ['tb', 0], ['o', 0], ['g', 0],
 ];
 
 export const tileToRow = (t) => TILE_FIELDS.map(([k, def]) => (t[k] ?? def));
@@ -60,6 +61,7 @@ export class Track {
     this.desc = '';
     this.scripts = [];                          // déclencheurs visuels et sonores posés sur des cases (scripts.js ; hors signature)
     this.ambiance = { ...DEFAULT_AMBIANCE };    // moment de la journée, brume, musique (visuel et sonore : hors signature, voir ambiance.js)
+    this.groups = {};                           // noms des groupes { numéro: nom } (éditeur : calques ; hors signature)
     this.resetRules();
     this.vt = 0;      // temps de vérification (secondes) de l'auteur
     this.vh = '';     // signature du circuit au moment de la vérification
@@ -115,6 +117,7 @@ export class Track {
     const tile = {
       t: type, x: t.x | 0, z: t.z | 0, l: Math.max(0, Math.min(MAX_LEVEL, Math.round((+t.l || 0) * 2) / 2)), r: t.r & 3,
       s: '', p: 0, v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ms: 0, ma: 0, col: null, s2: '', p2: 0,
+      g: Math.max(0, Math.min(MAX_GROUP, t.g | 0)),      // groupe (calque de l'éditeur ; logique du circuit, E10) : 0 = aucun
     };
     tile.v = t.v && flagAllowed(type, 'v') ? 1 : 0;
     // Orientation (mur gauche 1 / droit 2) : exclusive du plafond, du tunnel, du checkpoint, de l'anneau et du mouvement.
@@ -222,6 +225,7 @@ export class Track {
     this.desc = '';
     this.ambiance = { ...DEFAULT_AMBIANCE };
     this.scripts = [];
+    this.groups = {};
     this.resetRules();
     this.version++;
   }
@@ -330,8 +334,25 @@ export class Track {
     t.desc = this.desc;
     t.ambiance = { ...this.ambiance };
     t.scripts = this.scripts.map((s) => ({ ...s }));
+    t.groups = { ...this.groups };
     for (const r of RULES) t[r.key] = this[r.key];
     return t;
+  }
+
+  // ---- Groupes (calques de l'éditeur ; la logique du circuit s'en sert, E10) -----------------------------------------------------------------
+  setGroupName(g, name) {
+    g = g | 0;
+    if (g < 1 || g > MAX_GROUP) return;
+    const n = String(name == null ? '' : name).replace(/[^\p{L}\p{N} _'’.!?-]/gu, '').trim().slice(0, 24);
+    if (n) this.groups[g] = n; else delete this.groups[g];
+  }
+  groupNames() { return Object.keys(this.groups).map(Number).filter((g) => g >= 1 && g <= MAX_GROUP).sort((a, b) => a - b).map((g) => [g, this.groups[g]]); }
+  // Numéros de groupe utilisés par des pièces ou des décorations (triés).
+  usedGroups() {
+    const s = new Set();
+    for (const t of this.tiles) if (t.g) s.add(t.g);
+    for (const d of this.decos) if (d.g) s.add(d.g);
+    return [...s].sort((a, b) => a - b);
   }
 
   // ---- Sérialisation -----------------------------------------------------
@@ -354,14 +375,17 @@ export class Track {
       if (t.ma) e.ma = t.ma;
       if (t.s2) { e.s2 = t.s2 === '-' ? -1 : Math.max(0, SURFACE_CODES.indexOf(t.s2)); if (t.p2) e.p2 = t.p2; }
       if (t.col) e.col = Object.fromEntries(COLOR_KEYS.filter((k) => t.col[k]).map((k) => [k, t.col[k].slice(1)]));
+      if (t.g) e.g = t.g;
       if (Object.keys(e).length > 1) extras.push(e);
     });
     const decos = this.decos.map((d) => [
       DECO_ORDER.indexOf(d.k), +d.x.toFixed(2), +d.y.toFixed(2), +d.z.toFixed(2), +d.ry.toFixed(3), +d.s.toFixed(2), d.c, d.u || 0,
-      ...(d.cp && d.cp.length ? [d.ph || 0, d.cc ? d.cc.slice(1) : '', packDecoParts(d.cp)] : [...(d.ph || d.cc ? [d.ph || 0] : []), ...(d.cc ? [d.cc.slice(1)] : [])]),
+      // (groupe : 12e valeur ; les précédentes sont alors toutes écrites)
+      ...(d.g ? [d.ph || 0, d.cc ? d.cc.slice(1) : '', d.cp && d.cp.length ? packDecoParts(d.cp) : 0, d.g]
+        : d.cp && d.cp.length ? [d.ph || 0, d.cc ? d.cc.slice(1) : '', packDecoParts(d.cp)] : [...(d.ph || d.cc ? [d.ph || 0] : []), ...(d.cc ? [d.cc.slice(1)] : [])]),
     ]);
     // v3 tant que rien de la Phase 2 n'est utilisé : les codes existants ne changent pas.
-    const data = { v: extras.length || this.decos.some((d) => d.cc || d.cp) || RULES.some((r) => r.v4 && this[r.key] !== r.def) ? 4 : 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
+    const data = { v: extras.length || this.decos.some((d) => d.cc || d.cp || d.g) || this.groupNames().length || RULES.some((r) => r.v4 && this[r.key] !== r.def) ? 4 : 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
     if (extras.length) data.e = extras;
     if (decos.length) data.o = decos;
     if (this.laps > 1) data.lp = this.laps;
@@ -370,6 +394,8 @@ export class Track {
     if (am) data.am = am;
     const sc = scriptsToArray(this.scripts);
     if (sc) data.sc = sc;
+    const gn = this.groupNames();
+    if (gn.length) data.gn = gn;
     for (const r of RULES) if (this[r.key] !== r.def) data[r.code] = this[r.key] === true ? 1 : this[r.key];
     if (this.verified) { data.vt = this.vt; data.vh = this.vh; }
     return 'SHW3:' + b64encode(JSON.stringify(data));
@@ -396,7 +422,7 @@ export class Track {
       const tile = { t: type, x: data.t[i + 1], z: data.t[i + 2], l: data.t[i + 3], r: data.t[i + 4], s: '' };
       const ex = extras.get(i / stride);
       if (ex) {
-        tile.cp = ex.cp | 0; tile.o = ex.o | 0; tile.tb = ex.tb | 0; tile.th = ex.th | 0; tile.ms = ex.ms | 0; tile.ma = +ex.ma || 0;
+        tile.cp = ex.cp | 0; tile.o = ex.o | 0; tile.tb = ex.tb | 0; tile.th = ex.th | 0; tile.ms = ex.ms | 0; tile.ma = +ex.ma || 0; tile.g = ex.g | 0;
         if (ex.s2) { tile.s2 = ex.s2 === -1 ? '-' : SURFACE_CODES[ex.s2] || ''; tile.p2 = ex.p2 | 0; }
         if (ex.col && typeof ex.col === 'object') tile.col = Object.fromEntries(COLOR_KEYS.filter((k) => typeof ex.col[k] === 'string').map((k) => [k, '#' + ex.col[k]]));
       }
@@ -414,11 +440,12 @@ export class Track {
         const k = DECO_ORDER[o[0]];
         if (!k) continue;
         const u = typeof o[7] === 'string' && /^https?:\/\//i.test(o[7]) ? o[7] : '';
-        tr.addDeco({ k, x: o[1], y: o[2], z: o[3], ry: o[4], s: o[5], c: o[6], u, ph: +o[8] || 0, cc: typeof o[9] === 'string' && o[9] ? '#' + o[9] : '', cp: k === 'custom' ? unpackDecoParts(o[10]) : undefined });
+        tr.addDeco({ k, x: o[1], y: o[2], z: o[3], ry: o[4], s: o[5], c: o[6], u, ph: +o[8] || 0, cc: typeof o[9] === 'string' && o[9] ? '#' + o[9] : '', cp: k === 'custom' ? unpackDecoParts(o[10]) : undefined, g: o[11] | 0 });
       }
     }
     tr.laps = Math.max(1, Math.min(9, data.lp | 0 || 1));
     tr.setParams({ desc: data.ds, ambiance: ambianceFromArray(data.am), scripts: scriptsFromArray(data.sc), ...Object.fromEntries(RULES.map((r) => [r.key, data[r.code]])) });
+    if (Array.isArray(data.gn)) for (const e of data.gn.slice(0, MAX_GROUP)) if (Array.isArray(e)) tr.setGroupName(e[0], e[1]);
     if (data.vt > 0 && data.vh) { tr.vt = +data.vt; tr.vh = String(data.vh); }
     return tr;
   }

@@ -4850,6 +4850,8 @@ var editMethods = {
       c: d.c | 0,
       u: d.u ? String(d.u).slice(0, 400) : ""
     };
+    const g = Math.max(0, Math.min(63, d.g | 0));
+    if (g) deco.g = g;
     if (isObstacle(deco.k)) {
       deco.ph = Math.max(0, Math.min(0.95, Math.round((+d.ph || 0) * 20) / 20));
       deco.s = Math.max(0.5, Math.min(2.5, deco.s));
@@ -4873,6 +4875,7 @@ var editMethods = {
 };
 
 // js/track.js
+var MAX_GROUP = 63;
 var EMPTY = Object.freeze([]);
 var key = (x, z) => x + 4096 << 13 | z + 4096;
 var clampInt = (v, lo, hi, fallback) => Math.max(lo, Math.min(hi, Math.round(+v || fallback)));
@@ -4954,6 +4957,7 @@ var Track = class _Track {
     this.ambiance = {
       ...DEFAULT_AMBIANCE
     };
+    this.groups = {};
     this.resetRules();
     this.vt = 0;
     this.vh = "";
@@ -5039,7 +5043,8 @@ var Track = class _Track {
       ma: 0,
       col: null,
       s2: "",
-      p2: 0
+      p2: 0,
+      g: Math.max(0, Math.min(MAX_GROUP, t.g | 0))
     };
     tile.v = t.v && flagAllowed(type, "v") ? 1 : 0;
     tile.o = (ori === 1 || ori === 2) && !tile.v && flagAllowed(type, "o", tile, ori) ? ori : 0;
@@ -5149,6 +5154,7 @@ var Track = class _Track {
       ...DEFAULT_AMBIANCE
     };
     this.scripts = [];
+    this.groups = {};
     this.resetRules();
     this.version++;
   }
@@ -5269,8 +5275,34 @@ var Track = class _Track {
     t.scripts = this.scripts.map((s) => ({
       ...s
     }));
+    t.groups = {
+      ...this.groups
+    };
     for (const r of RULES) t[r.key] = this[r.key];
     return t;
+  }
+  // ---- Groupes (calques de l'éditeur ; la logique du circuit s'en sert, E10) -----------------------------------------------------------------
+  setGroupName(g, name) {
+    g = g | 0;
+    if (g < 1 || g > MAX_GROUP) return;
+    const n = String(name == null ? "" : name).replace(/[^\p{L}\p{N} _'’.!?-]/gu, "").trim().slice(0, 24);
+    if (n) this.groups[g] = n;
+    else delete this.groups[g];
+  }
+  groupNames() {
+    return Object.keys(this.groups).map(Number).filter((g) => g >= 1 && g <= MAX_GROUP).sort((a, b) => a - b).map((g) => [
+      g,
+      this.groups[g]
+    ]);
+  }
+  // Numéros de groupe utilisés par des pièces ou des décorations (triés).
+  usedGroups() {
+    const s = /* @__PURE__ */ new Set();
+    for (const t of this.tiles) if (t.g) s.add(t.g);
+    for (const d of this.decos) if (d.g) s.add(d.g);
+    return [
+      ...s
+    ].sort((a, b) => a - b);
   }
   // ---- Sérialisation -----------------------------------------------------
   encode() {
@@ -5295,6 +5327,7 @@ var Track = class _Track {
         k,
         t.col[k].slice(1)
       ]));
+      if (t.g) e.g = t.g;
       if (Object.keys(e).length > 1) extras.push(e);
     });
     const decos = this.decos.map((d) => [
@@ -5306,7 +5339,13 @@ var Track = class _Track {
       +d.s.toFixed(2),
       d.c,
       d.u || 0,
-      ...d.cp && d.cp.length ? [
+      // (groupe : 12e valeur ; les précédentes sont alors toutes écrites)
+      ...d.g ? [
+        d.ph || 0,
+        d.cc ? d.cc.slice(1) : "",
+        d.cp && d.cp.length ? packDecoParts(d.cp) : 0,
+        d.g
+      ] : d.cp && d.cp.length ? [
         d.ph || 0,
         d.cc ? d.cc.slice(1) : "",
         packDecoParts(d.cp)
@@ -5320,7 +5359,7 @@ var Track = class _Track {
       ]
     ]);
     const data = {
-      v: extras.length || this.decos.some((d) => d.cc || d.cp) || RULES.some((r) => r.v4 && this[r.key] !== r.def) ? 4 : 3,
+      v: extras.length || this.decos.some((d) => d.cc || d.cp || d.g) || this.groupNames().length || RULES.some((r) => r.v4 && this[r.key] !== r.def) ? 4 : 3,
       n: this.name,
       a: this.author || "",
       d: this.decor,
@@ -5334,6 +5373,8 @@ var Track = class _Track {
     if (am) data.am = am;
     const sc = scriptsToArray(this.scripts);
     if (sc) data.sc = sc;
+    const gn = this.groupNames();
+    if (gn.length) data.gn = gn;
     for (const r of RULES) if (this[r.key] !== r.def) data[r.code] = this[r.key] === true ? 1 : this[r.key];
     if (this.verified) {
       data.vt = this.vt;
@@ -5377,6 +5418,7 @@ var Track = class _Track {
         tile.th = ex.th | 0;
         tile.ms = ex.ms | 0;
         tile.ma = +ex.ma || 0;
+        tile.g = ex.g | 0;
         if (ex.s2) {
           tile.s2 = ex.s2 === -1 ? "-" : SURFACE_CODES[ex.s2] || "";
           tile.p2 = ex.p2 | 0;
@@ -5414,7 +5456,8 @@ var Track = class _Track {
           u,
           ph: +o[8] || 0,
           cc: typeof o[9] === "string" && o[9] ? "#" + o[9] : "",
-          cp: k === "custom" ? unpackDecoParts(o[10]) : void 0
+          cp: k === "custom" ? unpackDecoParts(o[10]) : void 0,
+          g: o[11] | 0
         });
       }
     }
@@ -5428,6 +5471,9 @@ var Track = class _Track {
         data[r.code]
       ]))
     });
+    if (Array.isArray(data.gn)) {
+      for (const e of data.gn.slice(0, MAX_GROUP)) if (Array.isArray(e)) tr.setGroupName(e[0], e[1]);
+    }
     if (data.vt > 0 && data.vh) {
       tr.vt = +data.vt;
       tr.vh = String(data.vh);

@@ -529,7 +529,7 @@ try {
     await app(() => window.copytrack.ui.closeModal());
     await app(() => window.copytrack.session._cdecoDialog(null));
     await page.waitForTimeout(300);
-    assert.equal(await page.locator('#modal-body canvas.cdv').count(), 2, 'vues de face et de dessus');
+    assert.equal(await page.locator('#modal-body canvas.cdv').count(), 3, 'vues de face, de dessus et en 3D (E9)');
     await click('#modal-actions button.primary');
     const lib = await app(async () => (await import('/js/storage.js')).listCustomDecos().length);
     assert.equal(lib, 1, 'la pièce est dans la bibliothèque');
@@ -800,6 +800,44 @@ try {
     await app(() => window.copytrack.session.setGuided(true));
     assert.equal(await page.evaluate(() => document.querySelector('#ed-palette .pal-tab[data-tab="prefabs"]').hidden), true, 'mode guidé : pas de prefabs');
     await app(async () => { window.copytrack.session.setGuided(false); const m = await import('/js/storage.js'); for (const p of m.listPrefabs()) m.deletePrefab(p.id); window.copytrack.settings.editorGuided = null; });
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  await test('éditeur : groupes et calques (ranger la sélection, nommer, masquer = ni dessiné ni visable, verrouiller), aperçu 3D des pièces perso', async () => {
+    await app(() => window.copytrack.openEditor({ code: window.copytrack.builtins[1].track.encode(), name: 'Groupes' }));
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.openGroups, null, 20000);
+    await app(() => { const s = window.copytrack.session; s.setTool('select'); s.sel = { x0: -500, z0: -500, x1: 500, z1: 500 }; });
+    await click('[data-ed="groups"]');
+    await waitApp(() => document.querySelector('.ed-groups [data-a="new"]'));
+    await click('.ed-groups [data-a="new"]');
+    await waitApp(() => document.querySelectorAll('.ed-gtable tr[data-g]').length === 1);
+    const n = await app(() => window.copytrack.session.track.tiles.filter((t) => t.g === 1).length);
+    assert.equal(n, await app(() => window.copytrack.session.track.tiles.length), 'toutes les pièces sélectionnées sont dans le groupe 1');
+    await page.locator('.ed-gtable tr[data-g="1"] input').fill('Tout');
+    await page.locator('.ed-gtable tr[data-g="1"] input').dispatchEvent('change');
+    assert.deepEqual(await app(() => window.copytrack.session.track.groupNames()), [[1, 'Tout']]);
+    // masquer : le maillage du groupe disparaît et rien n'est plus visable
+    await click('.ed-gtable tr[data-g="1"] [data-a="hide"]');
+    assert.ok(await app(() => { const v = window.copytrack.session.view; const gs = v.group.children.filter((c) => c.userData.g === 1); return gs.length > 0 && gs.every((c) => !c.visible); }), 'calque masqué');
+    assert.equal(await app(() => window.copytrack.session._selTiles().length), 0, 'un calque masqué ne se sélectionne pas');
+    await click('.ed-gtable tr[data-g="1"] [data-a="hide"]');
+    assert.ok(await app(() => window.copytrack.session.view.group.children.filter((c) => c.userData.g === 1).every((c) => c.visible)));
+    await click('.ed-gtable tr[data-g="1"] [data-a="lock"]');
+    assert.equal(await app(() => window.copytrack.session._selTiles().length), 0, 'un calque verrouillé ne se sélectionne pas');
+    await click('.ed-gtable tr[data-g="1"] [data-a="lock"]');
+    await shot('23-groupes');
+    // le code garde les groupes ; annuler les retire
+    assert.deepEqual(await app(() => { const T = window.copytrack.session.track.constructor; const u = T.decode(window.copytrack.session.track.encode()); return [u.usedGroups(), u.groupNames()]; }), [[1], [[1, 'Tout']]]);
+    await app(() => window.copytrack.ui.closeModal());
+    await app(() => window.copytrack.session.undo());
+    await app(() => window.copytrack.session.undo());
+    assert.equal(await app(() => window.copytrack.session.track.usedGroups().length), 0, 'annuler retire le groupe');
+    // atelier des pièces perso : aperçu 3D
+    await app(() => window.copytrack.session._cdecoDialog(null));
+    await waitApp(() => document.querySelector('#modal canvas.cdv3d'));
+    await page.waitForTimeout(300);
+    await app(() => window.copytrack.ui.closeModal());
     await app(() => window.copytrack.leaveEditor());
     await waitApp(() => window.copytrack.mode === 'menu');
   });
