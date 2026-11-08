@@ -154,6 +154,16 @@ function customScenarios() {
   const veh = scriptTrack('vehicules', 'start S2 S.o S2 S.a S2 S.n S2 S.e S2 S.f V4 S2^ S.f^ V-4 S2 finish');
   out['custom:vehicles:bot'] = runGhost(veh, { bot: true }, 120 * 90);
   out['custom:vehicles:noise'] = runGhost(veh, { inputs: randomInputs(53, 4000) }, 4000);
+  // 6. Paramètres de simulation (E8, sim/params.js) : adhérence de tout le circuit, vent de tout le circuit (sol et rubans).
+  const byId = (id) => buildBuiltin(BUILTIN_TRACKS.find((d) => d.id === id));
+  const gp = byId('eclats'); gp.setParams({ grip: 70 });
+  out['sp:grip70:bot'] = runGhost(gp, { bot: true }, 120 * 60);
+  const gi = byId('verglas'); gi.setParams({ grip: 140 });
+  out['sp:grip140:noise'] = runGhost(gi, { inputs: randomInputs(61, 3000) }, 3000);
+  const wd = byId('canyon'); wd.setParams({ wind: 80, windDir: 90 });
+  out['sp:wind80e:bot'] = runGhost(wd, { bot: true }, 120 * 60);
+  const wl = byId('spirale'); wl.setParams({ wind: 100, windDir: 225, grip: 85 });
+  out['sp:wind-loops:noise'] = runGhost(wl, { inputs: randomInputs(67, 3000) }, 3000);
   return out;
 }
 

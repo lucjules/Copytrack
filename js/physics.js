@@ -12,6 +12,7 @@
 import { CELL, DT, LEVEL_H, ROAD_TOP } from './constants.js';
 import { PLATES, RING_R, RING_Y, toLocal, sampleLocal, rotVec, tileParam, beltSpeed, glassSeconds } from './pieces.js';
 import { CAR, SPECS, GLIDE, surfaceCoeffs } from './physics/specs.js';
+import { paramsOf } from './sim/params.js';
 import { clamp } from './mathutil.js';
 import { wallMethods } from './physics/walls.js';
 import { obstacleMethods } from './physics/obstacles.js';
@@ -30,6 +31,7 @@ const BK = { vx: 0, vy: 0, w: 0 };
 export class CarPhysics {
   constructor(track) {
     this.track = track;
+    this.params = paramsOf(track);     // adhérence et vent de tout le circuit (sim/params.js) : par défaut, rien ne change
     this.pos = { x: 0, y: 0, z: 0 };
     this.prev = { x: 0, y: 0, z: 0 };
     this.vel = { x: 0, y: 0, z: 0 };
@@ -418,6 +420,9 @@ export class CarPhysics {
     const wet = mod === 'water' || mod === 'boat';
     if (this.vehicle === 'boat' && !wet) { grip = Math.min(grip, 0.8); traction *= 0.4; vmaxK = Math.min(vmaxK, 0.3); extraDrag += 7; }
     if (!wet) this.sinkT = 0;
+    const P = this.params;
+    if (P.grip !== 1) grip *= P.grip;                                       // adhérence de tout le circuit
+    if (P.windOn) { vf += (P.windX * fx + P.windZ * fz) * dt; vr += (P.windX * rx + P.windZ * rz) * dt; }      // vent de tout le circuit
     const ax = (this._longitudinal(vf, inp, K.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
     this.rearK = rearK;
     const r = this._tires(vf, vr, this.omega, ax, grip, dt);

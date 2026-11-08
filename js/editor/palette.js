@@ -13,6 +13,7 @@ import { esc } from '../dom.js';
 import { ERASE_FILTERS, ERASE_FILTER_ORDER } from '../editorPick.js';
 import { SKY_CHOICES, FOG_CHOICES, MUSIC_CHOICES, WEATHER_CHOICES, CYCLE_CHOICES } from '../ambiance.js';
 import { MODS, NO_OPTS, OPT_KEYS, PALETTE_ORDER, SNAPS, TOOLS, fillBase, isFill, pieceLabel } from './shared.js';
+const WIND_DIRS = [[0, 'Vers le nord'], [45, 'Vers le nord-est'], [90, 'Vers l’est'], [135, 'Vers le sud-est'], [180, 'Vers le sud'], [225, 'Vers le sud-ouest'], [270, 'Vers l’ouest'], [315, 'Vers le nord-ouest']];
 // Options proposées dans l'onglet « Options » : bascules (route) et choix exclusifs (checkpoint, thème, mouvement).
 // Avec une pièce choisie, elles s'ajoutent à la pose (aperçu compris) ; sans pièce, elles s'appliquent à la pièce cliquée.
 const OPTION_GROUPS = [
@@ -672,7 +673,10 @@ export const paletteMethods = {
       <label>Gravité de départ<span class="inl"><input type="range" id="pp-g0" min="15" max="250" step="5"><b id="pp-g0v"></b></span></label>
       <label>Véhicule de départ<select id="pp-veh">${Object.entries(veh).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
       <label title="La course commence en gravité inversée : la voiture est plaquée au plafond (départ posé sur une pièce à l'envers)">Inversion de gravité au départ<input type="checkbox" id="pp-ig"></label>
-      <p class="meta">Départ, tours, gravité et véhicule changent la course : à revérifier.</p>
+      <label title="L'adhérence de toute la piste, en plus de celle des revêtements (100 % : normale)">Adhérence de la piste<span class="inl"><input type="range" id="pp-grip" min="25" max="150" step="5"><b id="pp-gripv"></b></span></label>
+      <label title="Un vent constant sur toute la route (0 : aucun)">Vent<span class="inl"><input type="range" id="pp-wind" min="0" max="100" step="5"><b id="pp-windv"></b></span></label>
+      <label title="Vers où souffle le vent (le nord est en haut de l'éditeur)">Direction du vent<select id="pp-winddir">${WIND_DIRS.map(([a, l]) => `<option value="${a}">${l}</option>`).join('')}</select></label>
+      <p class="meta">Départ, tours, gravité, véhicule, adhérence et vent changent la course : à revérifier.</p>
       <h4 class="opt-h">Ambiance (sans effet sur la course ni les temps)</h4>
       <label>Moment de la journée<select id="pp-sky">${SKY_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
       <label>Brume<select id="pp-fog">${FOG_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
@@ -694,6 +698,7 @@ export const paletteMethods = {
     $f('pp-g0').value = T.g0 || 100;
     $f('pp-veh').value = T.veh0 || 'car';
     $f('pp-ig').checked = !!T.flip0;
+    $f('pp-grip').value = T.grip; $f('pp-wind').value = T.wind; $f('pp-winddir').value = String(Math.round(T.windDir / 45) * 45 % 360);
     $f('pp-sky').value = T.ambiance.sky; $f('pp-fog').value = T.ambiance.fog; $f('pp-music').value = T.ambiance.music;
     $f('pp-weather').value = T.ambiance.weather; $f('pp-cycle').value = T.ambiance.cycle;
     $f('pp-sun-on').checked = T.ambiance.sunAz >= 0; $f('pp-sun').value = T.ambiance.sunAz >= 0 ? T.ambiance.sunAz : 90;
@@ -702,6 +707,8 @@ export const paletteMethods = {
       $f('pp-v0v').textContent = +$f('pp-v0').value ? `${$f('pp-v0').value} km/h` : 'arrêt';
       $f('pp-g0v').textContent = `${$f('pp-g0').value} % · ${(SURF_PHYS.gravity * $f('pp-g0').value / 100).toFixed(1).replace('.', ',')} m/s²`;
     };
+    const showP = () => { $f('pp-gripv').textContent = `${$f('pp-grip').value} %`; $f('pp-windv').textContent = +$f('pp-wind').value ? `${$f('pp-wind').value} %` : 'aucun'; $f('pp-winddir').disabled = !+$f('pp-wind').value; };
+    $f('pp-grip').oninput = showP; $f('pp-wind').oninput = showP; showP();
     $f('pp-v0').oninput = show; $f('pp-g0').oninput = show; show();
     $f('pp-scripts').onclick = () => { this.app.ui.closeModal(); setTimeout(() => this._scriptsDialog(), 0); };
     this.app.ui.modal({
@@ -719,7 +726,9 @@ export const paletteMethods = {
           tint: $f('pp-tint-on').checked ? $f('pp-tint').value : '', gtint: $f('pp-gtint-on').checked ? $f('pp-gtint').value : '', fogC: $f('pp-fogc-on').checked ? $f('pp-fogc').value : '',
         };
         const ambChanged = JSON.stringify(amb) !== JSON.stringify(T.ambiance);
-        T.setParams({ desc: $f('pp-desc').value, offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value, flip0: $f('pp-ig').checked, ambiance: amb });
+        const wind = +$f('pp-wind').value;
+        T.setParams({ desc: $f('pp-desc').value, offroad: $f('pp-off').checked, v0: +$f('pp-v0').value, g0: +$f('pp-g0').value, veh0: $f('pp-veh').value, flip0: $f('pp-ig').checked, ambiance: amb,
+          grip: +$f('pp-grip').value, wind, windDir: wind ? +$f('pp-winddir').value : 0 });      // sans vent, pas de direction (elle compterait dans la signature)
         if ($f('pp-decor').value !== T.decor) { T.decor = $f('pp-decor').value; this._applyDecor(); this.gridKey = ''; }
         else if (ambChanged) this._applyDecor();
         this._changed(false);

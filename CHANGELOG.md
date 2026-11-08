@@ -6,6 +6,16 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.31 — adhérence et vent sur tout le circuit (paramètres de simulation)
+
+Étape E8 de Copytrack Evolution (début du bloc 3). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des **seuls** circuits qui utilisent ces réglages ; tous les autres sont vérifiés comme avant.
+
+- **Éditeur › Paramètres du niveau** : **Adhérence de la piste** (25 à 150 %, en plus de celle des revêtements) et **Vent** (0 à 100 %, huit directions ; le nord est en haut de l'éditeur), sur le sol comme sur les loopings, murs et tubes. Ils changent la course : ils entrent dans la signature du circuit (donc dans sa clé de classement) et le code passe au format 4. La fiche du circuit les affiche.
+- **Additifs, et c'est vérifié** : à leur valeur par défaut, rien ne change, ni la course (la physique ne fait même pas l'opération), ni la signature, ni le code. Les **173 scénarios** de l'empreinte de la physique sont identiques ; **4 scénarios nouveaux** (adhérence 70 % et 140 %, vent sur la route et dans les loopings) s'y ajoutent, identiques sous Node, Deno et Chromium.
+- Sous le capot : trois lignes de la table `RULES` de `js/track.js` (`grip`, `wind`, `windDir` : constructeur, copie, signature, code, historique de l'éditeur s'en déduisent), `js/sim/params.js` (`paramsOf`, mathématiques déterministes). Le document d'architecture parlait d'un champ `sp` séparé : la table existante fait le même travail sans rien ajouter au format. Le vent garde la direction choisie même sans vent : l'éditeur la remet à zéro pour ne pas toucher à la signature.
+- **Limites assumées** : le vent ne souffle que sur la route (pas en vol : le deltaplane n'y est pas sensible) et il est constant (les rafales et la météo qui change en course viendront avec les environnements, E19).
+- Tests : `tools/test-sim-params.mjs` (défauts sans effet, bornes, signature, code, course plus lente, poussée du vent dans sa direction, vérification serveur d'un circuit à paramètres), empreinte (177 scénarios), test navigateur (réglages de l'éditeur, signature).
+
 ## Bêta 0.9.30 — le coach
 
 Étape E7 de Copytrack Evolution (dernière du bloc 2). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.

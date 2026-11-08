@@ -296,6 +296,7 @@ try {
     if (await page.evaluate(() => document.getElementById('theater-panel').classList.contains('hidden'))) await click('#theater [data-th="panel"]');
     await waitApp(() => document.querySelectorAll('#th-coach li').length >= 1, null, 10000);
     assert.ok(await app(() => window.copytrack.session._th.marks.some((m) => m.kind === 'coach')), 'repère du coach sur la barre de temps');
+    await app(() => { window.copytrack.session.replayPaused = true; });       // (en lecture, le pas avancerait entre le clic et la vérification)
     await click('#th-coach [data-tip="0"]');
     assert.ok(await app(() => { const s = window.copytrack.session; return Math.abs(s.tick - Math.max(0, s._th.tips[0].tick - 360)) <= 1; }), 'le conseil amène 3 s avant le passage');
     await app(() => window.copytrack.endReplay());
@@ -760,6 +761,16 @@ try {
     assert.deepEqual(after.am, { sky: 'night', fog: 'thick', music: 'none', weather: '', sunAz: -1, tint: '', gtint: '', fogC: '', cycle: '' });
     assert.ok(await app((c) => { const t = window.copytrack.session.track.constructor.decode(c); return t.ambiance.fog === 'thick'; }, after.code), 'le code relu garde l\'ambiance');
     await shot('22-ambiance-nuit');
+    // --- adhérence et vent (paramètres de simulation, E8) : ils changent la course, donc la signature
+    const sig0 = await app(() => window.copytrack.session.track.signature());
+    await app(() => window.copytrack.session.openParams());
+    await waitApp(() => document.getElementById('pp-grip'));
+    await page.evaluate(() => { const g = document.getElementById('pp-grip'); g.value = '70'; g.dispatchEvent(new Event('input')); const w = document.getElementById('pp-wind'); w.value = '40'; w.dispatchEvent(new Event('input')); document.getElementById('pp-winddir').value = '90'; [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent.trim() === 'Appliquer').click(); });
+    await waitApp(() => window.copytrack.session.track.grip === 70);
+    assert.deepEqual(await app(() => { const t = window.copytrack.session.track; return [t.grip, t.wind, t.windDir]; }), [70, 40, 90]);
+    assert.notEqual(await app(() => window.copytrack.session.track.signature()), sig0, 'la signature change');
+    await app(() => window.copytrack.session.track.setParams({ grip: 100, wind: 0, windDir: 0 }));
+    assert.equal(await app(() => window.copytrack.session.track.signature()), sig0, 'revenue aux valeurs par défaut, la signature aussi');
     // --- prefabs
     await page.evaluate(() => document.querySelector('#ed-palette .pal-tab[data-tab="prefabs"]').click());
     await waitApp(() => document.querySelectorAll('#ed-palette [data-pf-starter]').length >= 6);

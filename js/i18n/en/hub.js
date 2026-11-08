@@ -179,4 +179,18 @@ export default {
   'Secteur {k:w} : {a:w} s en l’air contre {ar:w} s pour la référence ({loss:w} s perdues). Moins de vitesse au tremplin ou le nez plus bas : on n’accélère pas en vol.': 'Sector {k}: {a} s in the air against {ar} s for the reference ({loss} s lost). Less speed at the ramp or the nose lower: you cannot accelerate while flying.',
   'Secteur {k:w} : ta trajectoire s’écarte de {d:w} m en moyenne de celle de la référence ({loss:w} s perdues). Coupe plus près de la corde.': 'Sector {k}: your line is {d} m away from the reference on average ({loss} s lost). Cut closer to the apex.',
   'Secteur {k:w} : {loss:w} s perdues sans cause nette (vitesse maxi {v:w} km/h contre {vr:w}). Regarde ce passage dans le Replay Theater.': 'Sector {k}: {loss} s lost with no clear cause (top speed {v} km/h against {vr}). Watch this spot in the Replay Theater.',
+  // ---------------------------------------------------------------- paramètres de simulation (0.9.31)
+  'Adhérence de la piste': 'Track grip',
+  "L'adhérence de toute la piste, en plus de celle des revêtements (100 % : normale)": 'The grip of the whole track, on top of the surfaces (100 %: normal)',
+  'Vent': 'Wind',
+  'Un vent constant sur toute la route (0 : aucun)': 'A steady wind over the whole road (0: none)',
+  'Direction du vent': 'Wind direction',
+  "Vers où souffle le vent (le nord est en haut de l'éditeur)": 'Where the wind blows to (north is the top of the editor)',
+  'aucun': 'none',
+  'Départ, tours, gravité, véhicule, adhérence et vent changent la course : à revérifier.': 'Start, laps, gravity, vehicle, grip and wind change the race: verify again.',
+  'Vers le nord': 'Towards the north', 'Vers le nord-est': 'Towards the north-east', 'Vers l’est': 'Towards the east', 'Vers le sud-est': 'Towards the south-east',
+  'Vers le sud': 'Towards the south', 'Vers le sud-ouest': 'Towards the south-west', 'Vers l’ouest': 'Towards the west', 'Vers le nord-ouest': 'Towards the north-west',
+  'Adhérence': 'Grip',
+  '{w:w} % · vers le nord': '{w} % · towards the north', '{w:w} % · vers le nord-est': '{w} % · towards the north-east', '{w:w} % · vers l’est': '{w} % · towards the east', '{w:w} % · vers le sud-est': '{w} % · towards the south-east',
+  '{w:w} % · vers le sud': '{w} % · towards the south', '{w:w} % · vers le sud-ouest': '{w} % · towards the south-west', '{w:w} % · vers l’ouest': '{w} % · towards the west', '{w:w} % · vers le nord-ouest': '{w} % · towards the north-west',
 };

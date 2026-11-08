@@ -33,7 +33,7 @@ index.html ─► js/main.js (App) ─► écrans, course, éditeur, garage ─�
 | **Modèle** | `constants.js`, `pieces.js`, `track.js` (+ `track/`), `families.js`, `tracks.js`, `themes.js`, `decoData.js`, `career.js` | Pièces, circuit (grille, niveaux, règles de course), codes de partage, circuits intégrés, carrière. Sans rendu. |
 | **Simulation** | `simulation.js`, `physics.js` (+ `physics/`), `raceLogic.js`, `autopilot.js`, `obstacles.js`, `ribbons.js`, `dmath.js`, `replay.js`, `verify.js`, `daily.js` | Une voiture, ses règles, ses réapparitions ; enregistrement et rejeu des commandes ; vérification serveur. **Sans rendu, sans DOM, déterministe.** |
 | **Rendu** | `trackGeometry.js`, `trackMesh.js`, `geo.js`, `decos.js`, `decoPack.js`, `scenery.js` (+ `scenery/`), `carModel.js`, `particles.js`, `trail.js`, `skids.js`, `remoteCar.js`, `renderOptions.js` | three.js : maillages du circuit (par tronçons), décors, voitures, effets. |
-| **Application** | `main.js` (+ `app/`), `race.js` (+ `race/`), `editor.js` (+ `editor/`), `inspector.js` (+ `inspector/`), `garage.js` (+ `garage/`), `custom.js`, `customCar.js`, `ui.js` (+ `ui/` : composants réutilisables, dont la mini-carte `ui/trackMap.js`), `trackDescriptor.js`, `theater/` (Replay Theater : familles de méthodes de `RaceSession` en mode replay — comparaison, déplacement dans le temps, caméras libre et cinématique, panneau d'analyse), `analysis/` (analyse d'une course : trace rejouée au bit près, référence de parcours, secteurs, écarts, freinages ; pur, sans rendu), `input.js`, `audio.js`, `music.js`, `quality.js`, `welcome.js`, `i18n.js` (+ `i18n/`) | Orchestration, écrans, éditeur, interface, commandes, son, qualité graphique, **langues** (français source, dictionnaire anglais chargé à la demande, traducteur DOM : voir CHANGELOG 0.9.21). |
+| **Application** | `main.js` (+ `app/`), `race.js` (+ `race/`), `editor.js` (+ `editor/`), `inspector.js` (+ `inspector/`), `garage.js` (+ `garage/`), `custom.js`, `customCar.js`, `ui.js` (+ `ui/` : composants réutilisables, dont la mini-carte `ui/trackMap.js`), `trackDescriptor.js`, `sim/` (paramètres de simulation additifs : `sim/params.js`), `theater/` (Replay Theater : familles de méthodes de `RaceSession` en mode replay — comparaison, déplacement dans le temps, caméras libre et cinématique, panneau d'analyse), `analysis/` (analyse d'une course : trace rejouée au bit près, référence de parcours, secteurs, écarts, freinages ; pur, sans rendu), `input.js`, `audio.js`, `music.js`, `quality.js`, `welcome.js`, `i18n.js` (+ `i18n/`) | Orchestration, écrans, éditeur, interface, commandes, son, qualité graphique, **langues** (français source, dictionnaire anglais chargé à la demande, traducteur DOM : voir CHANGELOG 0.9.21). |
 | **En ligne** | `config.js`, `online.js`, `account.js`, `cloudsave.js`, `telemetry.js`, `net/` | Supabase (REST, authentification, Realtime), comptes, sauvegarde cloud, statistiques anonymes (avec accord : `supabase/TELEMETRIE.md`), multijoueur WebRTC. |
 | **Données locales** | `storage.js`, `profile.js`, `cosmetics.js` | Réglages, records, brouillons, profil (code joueur), catalogue visuel. |
 
@@ -71,9 +71,17 @@ Règles pour tout fichier du noyau (la fermeture des imports de `js/verify.js` :
 - pas d'horloge ni de hasard (le défi du jour dérive d'une graine, la date UTC est une entrée) ;
 - `abs`, `min`, `max`, `floor`, `round`, `trunc`, `sign`, `sqrt` restent permis : leur résultat est imposé.
 
-`tools/phys-fingerprint.mjs` rejoue 173 scénarios (pilote automatique et commandes pseudo-aléatoires sur les 72 circuits, défis du jour, obstacles, pièces mobiles, bifurcation, revêtements, véhicules) et
+`tools/phys-fingerprint.mjs` rejoue 177 scénarios (pilote automatique et commandes pseudo-aléatoires sur les 72 circuits, défis du jour, obstacles, pièces mobiles, bifurcation, revêtements, véhicules) et
 condense l'état exact de la voiture (bits des flottants) en un hachage par scénario, enregistré dans `tools/phys-fingerprint.json`. L'empreinte doit être **identique sous Node, Deno et Chromium** : la CI
 la recalcule sous Deno (`deno run -A tools/phys-fingerprint.mjs`) et dans un navigateur (`tools/test-browser.mjs`).
+
+### Paramètres de simulation additifs (`js/sim/`)
+
+Toute nouvelle physique s'ajoute **derrière une donnée du circuit** : à sa valeur par défaut, la course est celle d'avant au bit près et l'empreinte
+des scénarios existants ne bouge pas ; `PHYS_VER` reste le même. Chaque nouveauté ajoute **ses propres scénarios** à l'empreinte (`node tools/phys-fingerprint.mjs`
+annonce alors des scénarios nouveaux, anciens identiques : `--update` les enregistre). Premier exemple (0.9.31) : adhérence et vent de tout le circuit,
+trois lignes de la table `RULES` de `js/track.js` (`grip`, `wind`, `windDir`), lues par `js/sim/params.js` (`paramsOf`) et appliquées dans `physics.js`
+et `physics/ribbon.js` seulement quand elles ne sont pas par défaut. Elles entrent dans la signature (donc la clé de classement) dès qu'elles changent.
 
 ### Compatibilité avec ce que les joueurs ont déjà
 

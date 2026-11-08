@@ -4912,6 +4912,31 @@ var RULES = [
     code: "ig",
     sig: (v) => v ? "#I" : "",
     v4: true
+  },
+  // Paramètres de simulation (Copytrack Evolution, E8 ; sim/params.js) : à leur valeur par défaut, rien ne change (ni la course, ni la signature, ni le code).
+  {
+    key: "grip",
+    def: 100,
+    clean: (v) => clampInt(v, 25, 150, 100),
+    code: "gp",
+    sig: (v) => v !== 100 ? "#P" + v : "",
+    v4: true
+  },
+  {
+    key: "wind",
+    def: 0,
+    clean: (v) => clampInt(v, 0, 100, 0),
+    code: "wd",
+    sig: (v) => v ? "#W" + v : "",
+    v4: true
+  },
+  {
+    key: "windDir",
+    def: 0,
+    clean: (v) => (Math.round((+v || 0) / 15) * 15 % 360 + 360) % 360,
+    code: "wa",
+    sig: (v) => v ? "#A" + v : "",
+    v4: true
   }
 ];
 var Track = class _Track {
@@ -5295,7 +5320,7 @@ var Track = class _Track {
       ]
     ]);
     const data = {
-      v: extras.length || this.decos.some((d) => d.cc || d.cp) || RULES.some((r) => r.v4 && this[r.key]) ? 4 : 3,
+      v: extras.length || this.decos.some((d) => d.cc || d.cp) || RULES.some((r) => r.v4 && this[r.key] !== r.def) ? 4 : 3,
       n: this.name,
       a: this.author || "",
       d: this.decor,
@@ -8320,6 +8345,26 @@ function surfaceCoeffs(mod, f, out = COEF) {
   return out;
 }
 
+// js/sim/params.js
+var WIND_MAX = 0.5;
+var DEFAULT_PARAMS = Object.freeze({
+  grip: 1,
+  windOn: false,
+  windX: 0,
+  windZ: 0
+});
+function paramsOf(track) {
+  const g = track && track.grip != null ? track.grip : 100, w = track && track.wind ? track.wind : 0;
+  if (g === 100 && !w) return DEFAULT_PARAMS;
+  const a = (track.windDir || 0) * Math.PI / 180, k = w / 100 * CAR.wind * WIND_MAX;
+  return Object.freeze({
+    grip: g / 100,
+    windOn: k > 0,
+    windX: k * dsin(a),
+    windZ: -k * dcos(a)
+  });
+}
+
 // js/physics/walls.js
 var L1 = {
   lx: 0,
@@ -8949,6 +8994,12 @@ var ribbonMethods = {
       gripK *= CAR.stunGrip;
       tractK *= CAR.stunTraction;
     }
+    const P = this.params;
+    if (P.grip !== 1) gripK *= P.grip;
+    if (P.windOn) {
+      R.vs += (P.windX * B2.e1x + P.windZ * B2.e1z) * dt;
+      R.vd += (P.windX * B2.e2x + P.windZ * B2.e2z) * dt;
+    }
     if (mod === "boost") this._boostPad(f);
     else if (mod === "gravity") this._gravityPad(f);
     else if (mod === "wind") {
@@ -9213,6 +9264,7 @@ var BK = {
 var CarPhysics = class {
   constructor(track) {
     this.track = track;
+    this.params = paramsOf(track);
     this.pos = {
       x: 0,
       y: 0,
@@ -9722,6 +9774,12 @@ var CarPhysics = class {
       extraDrag += 7;
     }
     if (!wet) this.sinkT = 0;
+    const P = this.params;
+    if (P.grip !== 1) grip *= P.grip;
+    if (P.windOn) {
+      vf += (P.windX * fx + P.windZ * fz) * dt;
+      vr += (P.windX * rx + P.windZ * rz) * dt;
+    }
     const ax = (this._longitudinal(vf, inp, K2.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
     this.rearK = rearK;
     const r = this._tires(vf, vr, this.omega, ax, grip, dt);

@@ -29,6 +29,10 @@ export const RULES = [
   { key: 'g0', def: 100, clean: (v) => clampInt(v, 15, 250, 100), code: 'g0', sig: (v) => (v !== 100 ? '#G' + v : '') },   // gravité de départ (%)
   { key: 'veh0', def: 'car', clean: (v) => (VEHICLES.includes(v) ? v : 'car'), code: 've', sig: (v) => (v !== 'car' ? '#E' + v : '') },   // véhicule de départ
   { key: 'flip0', def: false, clean: (v) => !!v, code: 'ig', sig: (v) => (v ? '#I' : ''), v4: true },                      // la course démarre en gravité inversée (au plafond) ; v4 : exige le format 4
+  // Paramètres de simulation (Copytrack Evolution, E8 ; sim/params.js) : à leur valeur par défaut, rien ne change (ni la course, ni la signature, ni le code).
+  { key: 'grip', def: 100, clean: (v) => clampInt(v, 25, 150, 100), code: 'gp', sig: (v) => (v !== 100 ? '#P' + v : ''), v4: true },     // adhérence de toute la piste (%)
+  { key: 'wind', def: 0, clean: (v) => clampInt(v, 0, 100, 0), code: 'wd', sig: (v) => (v ? '#W' + v : ''), v4: true },                 // vent sur toute la piste (% de sa force maxi)
+  { key: 'windDir', def: 0, clean: (v) => (((Math.round((+v || 0) / 15) * 15) % 360) + 360) % 360, code: 'wa', sig: (v) => (v ? '#A' + v : ''), v4: true },   // vers où il souffle (degrés : 0 nord, 90 est)
 ];
 
 // Champs d'une pièce, dans l'ordre des instantanés de l'historique de l'éditeur (en mémoire seulement : jamais écrits, l'ordre est libre), avec
@@ -357,7 +361,7 @@ export class Track {
       ...(d.cp && d.cp.length ? [d.ph || 0, d.cc ? d.cc.slice(1) : '', packDecoParts(d.cp)] : [...(d.ph || d.cc ? [d.ph || 0] : []), ...(d.cc ? [d.cc.slice(1)] : [])]),
     ]);
     // v3 tant que rien de la Phase 2 n'est utilisé : les codes existants ne changent pas.
-    const data = { v: extras.length || this.decos.some((d) => d.cc || d.cp) || RULES.some((r) => r.v4 && this[r.key]) ? 4 : 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
+    const data = { v: extras.length || this.decos.some((d) => d.cc || d.cp) || RULES.some((r) => r.v4 && this[r.key] !== r.def) ? 4 : 3, n: this.name, a: this.author || '', d: this.decor, t: arr };
     if (extras.length) data.e = extras;
     if (decos.length) data.o = decos;
     if (this.laps > 1) data.lp = this.laps;

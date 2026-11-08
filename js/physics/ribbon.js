@@ -202,6 +202,9 @@ export const ribbonMethods = {
     const extraDrag = C.extraDrag, vmaxK = C.vmaxK, rearK = C.rearK;
     let gripK = C.grip, tractK = C.traction, beltE1 = 0;
     if (this.stunT > 0) { gripK *= CAR.stunGrip; tractK *= CAR.stunTraction; }       // choc contre une paroi : la voiture encaisse
+    const P = this.params;
+    if (P.grip !== 1) gripK *= P.grip;                                       // adhérence de tout le circuit (sim/params.js)
+    if (P.windOn) { R.vs += (P.windX * B.e1x + P.windZ * B.e1z) * dt; R.vd += (P.windX * B.e2x + P.windZ * B.e2z) * dt; }      // vent de tout le circuit
     if (mod === 'boost') this._boostPad(f);
     else if (mod === 'gravity') this._gravityPad(f);
     else if (mod === 'wind') {
