@@ -7,6 +7,7 @@ import { loadSettings } from '../storage.js';
 import { locale } from '../i18n.js';
 import { levelOf, ensureXp, LICENCES, hasLicence, masteryCount, MASTERY, LEVEL_REWARDS } from '../progression.js';
 import { CATALOG } from '../cosmetics.js';
+import { online } from '../online.js';
 export const profileMethods = {
   async _renderProfile() {
     const tab = ['account', 'saves', 'options', 'controls'].includes(this.profileTab) ? this.profileTab : 'account';
@@ -33,10 +34,12 @@ export const profileMethods = {
       </div>
       <div class="prof-progress" id="prof-progress"></div>
       <div class="prof-account" id="prof-account"></div>
+      <div class="prof-friends" id="prof-friends"></div>
       <div class="prof-titles" id="prof-titles"></div>
       <p class="prof-note">Code joueur et import / export : onglet <b>Sauvegardes</b>.</p>`;
     this._renderProgressBox(body.querySelector('#prof-progress'));
     this._renderAccountBox(body.querySelector('#prof-account'));
+    this._renderFriendsBox(body.querySelector('#prof-friends'));
     this._renderTitlesBox(body.querySelector('#prof-titles'));
   },
 
@@ -89,6 +92,44 @@ export const profileMethods = {
       ${next ? `<p class="meta">Pour la <b>${esc(next.label)}</b> :</p><ul class="lic-req">${next.req.map(([k, n, txt]) => `<li class="${(ctx[k] || 0) >= n ? 'done' : ''}">${(ctx[k] || 0) >= n ? '✓' : '·'} <span>${esc(txt)}</span> <small>(${Math.min(ctx[k] || 0, n)} / ${n})</small></li>`).join('')}</ul>` : '<p class="meta">Toutes les licences sont à toi.</p>'}
       <p><span>Défis de maîtrise : <b>${masteryCount()} / ${this.builtins.length * MASTERY.length}</b></span> <small class="meta">${MASTERY.map((m) => `${m.icon} <span>${esc(m.label)}</span>`).join(' · ')}</small></p>
       <div class="lvl-rewards meta"><span>Récompenses de niveau (garage) :</span><ul>${LEVEL_REWARDS.map(([lvl, cat, id]) => `<li class="${L.level >= lvl ? 'got' : ''}"><span>${L.level >= lvl ? '✓' : '🔒'}</span> <span>Niveau ${lvl} : ${esc(label(cat, id))}</span></li>`).join('')}</ul></div>`;
+  },
+
+  // Amis (E15, supabase/etape10-social.sql) : comptes seulement. Demandes reçues (accepter, refuser), envoyées (annuler), amis (retirer), ajout par pseudo.
+  async _renderFriendsBox(box) {
+    if (!box) return;
+    if (this.identity.kind !== 'account') {
+      box.innerHTML = '<h3>Amis</h3><p class="prof-note">Un compte est nécessaire pour avoir des amis : leurs temps apparaissent dans l’onglet « Amis » des classements.</p>';
+      return;
+    }
+    box.innerHTML = '<h3>Amis</h3><p class="meta">Chargement…</p>';
+    let list;
+    try { list = await online.friends(); } catch (e) { box.innerHTML = `<h3>Amis</h3><p class="prof-note">Amis indisponibles : ${esc(e.message)}</p>`; return; }
+    const inc = list.filter((f) => f.incoming), out = list.filter((f) => f.status === 'pending' && !f.incoming), ok = list.filter((f) => f.status === 'accepted');
+    const row = (f, btns) => `<li><span class="lb-name">${esc(f.name)}</span>${btns}</li>`;
+    box.innerHTML = `<h3>Amis</h3>
+      <form class="friend-add row"><input type="text" maxlength="24" placeholder="Pseudo d’un compte" aria-label="Pseudo d’un compte" required><button class="btn primary" type="submit">Demander en ami</button></form>
+      <p class="mp-err friend-err" role="alert"></p>
+      ${inc.length ? `<p class="meta">Demandes reçues</p><ul class="friend-list">${inc.map((f) => row(f, `<button class="btn small primary" data-fa="yes" data-id="${f.id}">Accepter</button><button class="btn small" data-fa="no" data-id="${f.id}">Refuser</button>`)).join('')}</ul>` : ''}
+      ${ok.length ? `<p class="meta">${ok.length} ami${ok.length > 1 ? 's' : ''}</p><ul class="friend-list">${ok.map((f) => row(f, `<button class="btn small subtle" data-fa="rm" data-id="${f.id}" title="Retirer de mes amis">✕</button>`)).join('')}</ul>` : '<p class="prof-note">Pas encore d’amis : demande un pilote par son pseudo.</p>'}
+      ${out.length ? `<p class="meta">Demandes envoyées</p><ul class="friend-list">${out.map((f) => row(f, `<button class="btn small subtle" data-fa="rm" data-id="${f.id}">Annuler</button>`)).join('')}</ul>` : ''}`;
+    const err = box.querySelector('.friend-err');
+    box.querySelector('.friend-add').onsubmit = async (e) => {
+      e.preventDefault();
+      const input = box.querySelector('.friend-add input');
+      try {
+        const r = await online.friendRequest(input.value, this.settings.playerName);
+        this.ui.flash(r === 'accepted' ? 'Vous êtes amis !' : r === 'already' ? 'Déjà dans ta liste.' : 'Demande envoyée.', 2);
+        this._renderFriendsBox(box);
+      } catch (ex) { err.textContent = ex.message; }
+    };
+    for (const b of box.querySelectorAll('[data-fa]')) b.onclick = async () => {
+      this.audio.click();
+      try {
+        if (b.dataset.fa === 'rm') await online.friendRemove(b.dataset.id);
+        else await online.friendRespond(b.dataset.id, b.dataset.fa === 'yes');
+        this._renderFriendsBox(box);
+      } catch (ex) { err.textContent = ex.message; }
+    };
   },
 
   // Bloc « compte » de l'écran Profil : état de la synchronisation, déconnexion, suppression.

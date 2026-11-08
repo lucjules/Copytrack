@@ -192,8 +192,11 @@ export const communityMethods = {
     let rows, likes;
     try {
       const trending = C.sort === 'trending' && !C.search.trim();
+      // Abonnements (E15) : les circuits des auteurs suivis (supabase/etape10-social.sql).
+      const authors = C.sort === 'followed' ? [...(await online.myFollows())] : null;
+      if (authors && !authors.length) { if (req === this._commReq) { status.textContent = 'Tu ne suis encore personne : ouvre un circuit de la communauté et touche « Suivre ».'; list.innerHTML = ''; } return; }
       const list0 = trending ? online.trending({ offset: C.offset, limit: 24 }).then((r) => (r === null ? online.listTracks({ sort: 'played', offset: C.offset, limit: 24 }) : r))
-        : online.listTracks({ sort: C.sort === 'mine' ? 'recent' : C.sort === 'trending' ? 'played' : C.sort, mine: C.sort === 'mine', search: C.search, offset: C.offset, limit: 24 });
+        : online.listTracks({ sort: C.sort === 'mine' || C.sort === 'followed' ? 'recent' : C.sort === 'trending' ? 'played' : C.sort, mine: C.sort === 'mine', authors, search: C.search, offset: C.offset, limit: 24 });
       [rows, likes] = await Promise.all([list0, online.myLikes().catch(() => new Set())]);
     } catch (e) {
       if (req !== this._commReq) return;

@@ -78,6 +78,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `rulesCore.js` | Règles de partie : le noyau sans dépendance (validation et application au circuit). Il est dans la fermeture de la vérification serveur (js/verify.js, via variants.js : les variantes de records sont des règles) : il n'importe que obstacles.js, jamais le profil ni le stockage. |
 | `scenery.js` | Décors : ciel, lumière, terrain facetté et objets, selon le thème du circuit. |
 | `scripts.js` | Scripts de circuit (lot 12) : des déclencheurs posés sur une case du circuit. Quand la voiture passe dessus, UN effet visuel ou sonore se produit (message, moment de la journée, météo, brume, musique, éclat, secousse, son). Hors signature (comme l'ambiance) : ni records, ni vérification, ni physique. |
+| `seasons.js` | Saisons hebdomadaires (Copytrack Evolution, E15) : la saison N dure une semaine, du lundi 00:00 UTC au lundi suivant (la saison 1 commence le 9 novembre 2026, comme supabase/etape11-saisons.sql : un test compare les deux). Ses trois circuits, tirés de la carrière d'après le numéro, sont les mêmes pour tout le monde ; leurs temps sont des catégories de record « b-…~v1.sea-N » (variants.js), que le serveur n'accepte que pendant la semaine N (verify.js). Les points et les divisions se calculent en base, depuis les temps vérifiés (aucun point n'est déclaré par le jeu). |
 | `simulation.js` | Simulation d'une course : UNE voiture (CarPhysics), ses règles (RaceLogic) et l'enchaînement exact d'un pas, en un seul endroit. |
 | `skids.js` | Traces de pneus : bandes sombres posées sur la route pendant les glisses et les gros freinages. |
 | `skills.js` | Académie 2 (Copytrack Evolution, E12) : des COMPÉTENCES (trajectoire, freinage, dérapage, sauts) et des EXERCICES ÉVALUÉS. Chaque exercice est un court circuit avec un objectif MESURÉ par l'analyse (analysis/drill.js : la course rejouée à partir de ses commandes), noté bronze, argent ou or. |
@@ -256,7 +257,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 
 | Fichier | Rôle |
 | --- | --- |
-| `leaderboardPanel.js` | Classement à onglets (Race Hub, fenêtre « 🏆 ») : chaque onglet est un FOURNISSEUR de données enregistré ici. Un onglet dont le fournisseur n'est pas disponible n'est pas affiché (jamais d'onglet vide ou factice) : « Amis » et « Saison » s'ajouteront avec leur étape SQL. |
+| `leaderboardPanel.js` | Classement à onglets (Race Hub, fenêtre « 🏆 ») : chaque onglet est un FOURNISSEUR de données enregistré ici. Un onglet dont le fournisseur n'est pas disponible n'est pas affiché (jamais d'onglet vide ou factice). Amis, Secteurs et Saison (E15) demandent les étapes SQL 9 à 11 : sans elles, l'onglet dit qu'elles manquent, il ne montre pas de faux classement. |
 | `traceChart.js` | Petites courbes sur un canvas (HUD d'entraînement, Replay Theater) : une fenêtre glissante de N valeurs par série, dessinée sans allocation. |
 | `trackMap.js` | Mini-carte d'un circuit, vue de dessus : un seul noyau de dessin pour les miniatures des cartes (editorTools.thumbnail) et la grande carte zoomable du Race Hub (createTrackMap). Marche pour TOUS les circuits, éditeur compris : elle dessine la ligne centrale de chaque pièce (centerlineWorld), pas track.path (qui n'existe que pour les circuits scriptés). |
 

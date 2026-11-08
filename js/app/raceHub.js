@@ -80,6 +80,20 @@ export const raceHubMethods = {
     const src = d.source === 'builtin' ? `${SOURCE_LABEL.builtin} · Circuit ${d.index + 1}` : d.source === 'daily' ? `${SOURCE_LABEL.daily} · ${String(d.day || '').split('-').reverse().join('/')}`
       : d.source === 'community' && d.author ? `${SOURCE_LABEL.community} · par ${d.author}` : SOURCE_LABEL[d.source] || '';
     $('hub-sub').innerHTML = `<span class="decor-chip" style="color:${dec.chip || 'inherit'}">${esc(dec.label || d.decor)}</span> <span>${esc(src)}</span>`;
+    // Suivre l'auteur d'un circuit de la communauté (E15) : ses circuits dans « Communauté › Abonnements ».
+    if (d.source === 'community' && d.authorId && d.authorId !== online.uid) {
+      const b = document.createElement('button');
+      b.className = 'btn small hub-follow'; b.type = 'button'; b.textContent = '➕ Suivre';
+      $('hub-sub').append(' ', b);
+      online.myFollows().then((set) => { if (set.has(d.authorId)) { b.textContent = '✓ Suivi'; b.classList.add('on'); } }).catch(() => { b.remove(); });
+      b.onclick = async () => {
+        this.audio.click();
+        const on = b.classList.contains('on');
+        try { if (on) await online.unfollow(d.authorId); else await online.follow(d.authorId, this.settings.playerName); } catch (e) { this.ui.flash(e.message, 3); return; }
+        b.classList.toggle('on', !on); b.textContent = on ? '➕ Suivre' : '✓ Suivi';
+        this.ui.flash(on ? `Tu ne suis plus ${d.author || 'cet auteur'}.` : `Tu suis ${d.author || 'cet auteur'} : ses circuits sont dans Communauté › Abonnements.`, 2.4);
+      };
+    }
     this._renderHubFav();
     this._renderHubFacts();
     this._renderHubMap();
@@ -209,6 +223,7 @@ export const raceHubMethods = {
     if (!h) return;
     h.desc = v ? describeVariant(h.base, v) : h.base;
     h.rivals.clear();
+    if (h.desc.season && h.board) h.board.tab = 'season';        // saison (E15) : son classement d'abord
     this._renderHub();
     const b = $('hub-launch').querySelector('[data-cat][aria-checked="true"]');
     if (b) b.focus({ preventScroll: true });
@@ -284,6 +299,11 @@ export const raceHubMethods = {
 
   // ---- Points d'entrée ---------------------------------------------------------------------------------------------------------------
   openBuiltinHub(i, from = 'tracks') { this.openRaceHub(this.describeBuiltin(i), { from }); },
+  // Un circuit de la saison (E15) : sa fiche, catégorie de la saison choisie.
+  openSeasonHub(i, n, from = 'tracks') {
+    this.openRaceHub(this.describeBuiltin(i), { from });
+    if (hubCategories(this._hub.base).some((c) => c.season === n)) this._setHubCategory({ sea: String(n) });
+  },
 
   openDailyHub(from = 'menu') {
     const c = dailyChallenge();

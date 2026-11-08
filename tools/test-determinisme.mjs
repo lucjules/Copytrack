@@ -11,7 +11,7 @@ import { test, finish } from './harness.mjs';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const BANNED = /Math\.(sin|cos|tan|atan2|atan|asin|acos|exp|log|pow|hypot|sinh|cosh|tanh|cbrt|expm1|log1p|log2|log10|random)\b|\*\*|\bperformance\.now\b|\bcrypto\.getRandomValues\b/;
 // Horloge : le jour du défi du jour (UTC) est une donnée d'entrée, pas un calcul de physique.
-const CLOCK_OK = new Set(['js/verify.js', 'js/daily.js']);
+const CLOCK_OK = new Set(['js/verify.js', 'js/daily.js', 'js/seasons.js']);       // l'horloge choisit le défi du jour et la saison ouverte (une clé de classement), jamais la physique
 const CLOCK = /\bDate\.now\b|\bnew Date\b/;
 
 const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
@@ -43,7 +43,7 @@ test('aucune fonction mathématique approximée par le moteur, aucun **, aucun a
   }
   assert.deepEqual(bad, [], 'à remplacer par js/dmath.js :\n  ' + bad.join('\n  '));
 });
-test('aucune horloge hors de verify.js et du défi du jour', () => {
+test('aucune horloge hors de verify.js, du défi du jour et des saisons', () => {
   const bad = files.filter((f) => !CLOCK_OK.has(f) && CLOCK.test(strip(readFileSync(join(root, f), 'utf8'))));
   assert.deepEqual(bad, []);
 });

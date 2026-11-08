@@ -110,12 +110,20 @@ export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = glob
           track_key: trackKey, player: uid, time: simTime, inputs, phys_ver: physVer,
           track_name: String(res.name ?? '').slice(0, 60), updated_at: new Date(now()).toISOString(),
         };
-        let up = await db('scores', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(ghost ? { ...row, ...ghost } : row) });
-        // Colonnes du fantôme absentes (étape 7 pas encore lancée) : le temps est enregistré quand même, sans fantôme.
-        if (!up.ok && ghost && up.status === 400) up = await db('scores', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(row) });
+        // Temps intermédiaires (supabase/etape9-secteurs.sql) : classements par secteur.
+        const splits = Array.isArray(res.splits) && res.splits.length <= 400 ? { splits: res.splits } : {};
+        const post = (r) => db('scores', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(r) });
+        let up = await post({ ...row, ...splits, ...(ghost || {}) });
+        // Colonnes récentes absentes (étapes 7 ou 9 pas encore lancées) : le temps est enregistré quand même, avec ce que la base sait ranger.
+        if (!up.ok && up.status === 400 && ghost && splits.splits) up = await post({ ...row, ...ghost });
+        if (!up.ok && up.status === 400 && (ghost || splits.splits)) up = await post(row);
         if (!up.ok) return json(500, { error: 'Enregistrement impossible.' });
       } else if (backfill) {
         await db(`scores?track_key=eq.${key}&player=eq.${uid}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(ghost) });
+      }
+      // Un record renvoyé à l'identique reçoit ses temps intermédiaires s'il n'en avait pas (records d'avant l'étape 9) ; sans la colonne, rien ne se passe.
+      if (!improved && Array.isArray(res.splits) && res.splits.length && res.splits.length <= 400 && Math.abs(prev[0].time - simTime) < 1e-6) {
+        await db(`scores?track_key=eq.${key}&player=eq.${uid}&splits=is.null`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ splits: res.splits }) });
       }
 
       // 7. Place au classement (même version de physique).

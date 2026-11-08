@@ -1314,6 +1314,12 @@ body.hud-editing > section, body.hud-editing #touch { display: none !important; 
 .lic-req { list-style: none; margin: 4px 0 8px; padding: 0; font-size: 13px; } .lic-req li.done { color: #7dffb0; }
 .lvl-rewards ul { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; } .lvl-rewards li.got { color: #7dffb0; }
 .hub-mastery span { opacity: 0.3; margin-right: 2px; } .hub-mastery span.got, .hub-mastery small { opacity: 1; }
+.prof-friends { margin: 12px 0; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); }
+.prof-friends h3 { margin: 0 0 6px; font-size: 16px; } .friend-add input { flex: 1; min-width: 0; }
+.friend-list { list-style: none; margin: 4px 0 8px; padding: 0; display: grid; gap: 4px; }
+.friend-list li { display: flex; gap: 8px; align-items: center; } .friend-list .lb-name { flex: 1; }
+.lb-sectors { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 8px; } .lb-season-me { margin: 0 0 8px; }
+.season-group .card { cursor: pointer; } .hub-follow.on { background: rgba(125, 255, 176, 0.18); }
 .hub-daily { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(255, 210, 62, 0.08); border: 1px solid rgba(255, 210, 62, 0.3); font-size: 13px; }
 .hub-daily p { margin: 2px 0; }
 .daily-streak { margin-top: 4px; font-size: 13px; color: #ffd23e; }

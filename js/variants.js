@@ -4,6 +4,7 @@
 //
 //   clé      ::= cléOfficielle [ '~' variante ]                    (80 caractères au plus : contrainte de la table scores)
 //   variante ::= 'v1' ( '.' nom '-' valeur )+                       noms triés, chacun une fois, valeurs prises dans une liste fermée
+//                (sauf l'étiquette de saison « sea-N », un numéro : elle ne change pas le circuit, le serveur vérifie sa semaine, voir seasons.js)
 //   exemples : b-eclats-k3f9a~v1.veh-moto     daily-2026-12-01~v1.g-40     u-1blo03c~v1.obs-0.veh-boat     daily-2026-12-07~v1.gp-60
 //
 // Ce module est dans la fermeture de la vérification serveur (verify.js) : le jeu et le serveur appliquent EXACTEMENT la même variante.
@@ -22,11 +23,14 @@ export const VARIANTS = {
   lap: { values: ['1', '2', '3', '4', '5'], rule: (v) => ({ laps: +v }) },         // nombre de tours (circuits fermés)
   obs: { values: ['0'], rule: () => ({ obstacles: 'off' }) },                       // sans obstacles
   off: { values: ['0', '1'], rule: (v) => ({ offroad: +v }) },                      // hors-piste interdit / permis
+  sea: { re: /^[1-9][0-9]{0,3}$/, tag: true, rule: () => ({}) },                   // saison hebdomadaire N (seasons.js) : une étiquette, le circuit ne change pas (E15)
   v0: { values: ['0', '100', '200'], rule: (v) => ({ v0: +v }) },                   // vitesse de départ (km/h)
   veh: { values: ['car', 'moto', 'boat', 'glider'], rule: (v) => ({ veh0: v }) },  // véhicule de départ
   wd: { values: WIND_DIRS, rule: (v) => ({ wind: 25, windDir: WIND_DIRS.indexOf(v) * 45 }) },   // vent de 25 % vers une direction (n, ne, e… ; E13)
 };
 const NAMES = Object.keys(VARIANTS).sort();
+// Valeur permise : dans la liste fermée de la catégorie, ou (étiquette de saison) un numéro sans zéro en tête.
+const allowed = (n, val) => (VARIANTS[n].values ? VARIANTS[n].values.includes(val) : VARIANTS[n].re.test(val));
 
 // Règles d'une variante ({ nom: valeur }).
 export function rulesOfVariant(v) {
@@ -42,7 +46,7 @@ export function formatVariant(v) {
   for (const n of NAMES) {
     if (v[n] == null) continue;
     const val = String(v[n]);
-    if (!VARIANTS[n].values.includes(val)) throw new Error('Catégorie de record inconnue.');
+    if (!allowed(n, val)) throw new Error('Catégorie de record inconnue.');
     parts.push(`${n}-${val}`);
   }
   return parts.length ? `${VARIANT_VER}.${parts.join('.')}` : '';
@@ -56,7 +60,7 @@ export function parseVariant(s) {
   const v = {};
   for (const p of m[1].slice(1).split('.')) {
     const i = p.indexOf('-'), n = p.slice(0, i), val = p.slice(i + 1);
-    if (!Object.hasOwn(VARIANTS, n) || Object.hasOwn(v, n) || !VARIANTS[n].values.includes(val)) throw new Error('Catégorie de record inconnue.');
+    if (!Object.hasOwn(VARIANTS, n) || Object.hasOwn(v, n) || !allowed(n, val)) throw new Error('Catégorie de record inconnue.');
     v[n] = val;
   }
   if (formatVariant(v) !== str) throw new Error('Catégorie de record inconnue.');
@@ -78,7 +82,10 @@ export function variantKey(base, v) {
 }
 
 // Le circuit de la variante : une COPIE (l'original n'est jamais touché). Lève une erreur si la variante ne change rien à la course.
+// Une étiquette seule (saison) ne transforme rien : le circuit lui-même (la clé de classement, elle, est à part).
 export function applyVariant(track, v) {
+  const names = Object.keys(v || {}).filter((n) => v[n] != null);
+  if (names.length && names.every((n) => VARIANTS[n] && VARIANTS[n].tag)) return track;
   const t = applyRules(track, rulesOfVariant(v));
   if (t === track || (t.signature() === track.signature() && t.laps === track.laps)) throw new Error('Cette catégorie ne change rien sur ce circuit.');
   return t;

@@ -1,5 +1,6 @@
 // Classement à onglets (Race Hub, fenêtre « 🏆 ») : chaque onglet est un FOURNISSEUR de données enregistré ici. Un onglet dont le fournisseur
-// n'est pas disponible n'est pas affiché (jamais d'onglet vide ou factice) : « Amis » et « Saison » s'ajouteront avec leur étape SQL.
+// n'est pas disponible n'est pas affiché (jamais d'onglet vide ou factice). Amis, Secteurs et Saison (E15) demandent les étapes SQL 9 à 11 :
+// sans elles, l'onglet dit qu'elles manquent, il ne montre pas de faux classement.
 //
 //   registerBoard({ id, label, order, available(desc, ctx), render(el, desc, ctx) })
 //   mountLeaderboard(root, desc, ctx, { tab })  -> { tab, select(id), refresh(), boards }
@@ -15,6 +16,8 @@ import { profile } from '../profile.js';
 import { locale } from '../i18n.js';
 import { personalRecord, finishVehicle } from '../trackDescriptor.js';
 import { DT } from '../constants.js';            // les temps intermédiaires sont enregistrés en pas de simulation (raceLogic.js)
+import { cpKind } from '../pieces.js';
+import { DIVISIONS, seasonBounds } from '../seasons.js';
 
 const BOARDS = [];
 export function registerBoard(b) {
@@ -126,3 +129,64 @@ export function renderPersonalBoard(el, desc) {
 }
 
 registerBoard({ id: 'personal', label: '👤 Personnel', order: 20, available: (desc) => !!desc.key, render: renderPersonalBoard });
+
+// ---- Amis (E15, supabase/etape10-social.sql) : le classement entre amis, comptes seulement ---------------------------------------------
+const offline = (e) => `<p class="lb-off">Classement indisponible : ${esc(String((e && e.message) || 'hors ligne').replace(/[.\s]+$/, ''))}.</p>`;
+export function renderFriendsBoard(el, desc) {
+  el.innerHTML = '<p class="meta">Chargement…</p>';
+  const req = (el._lbReq = (el._lbReq || 0) + 1);
+  (async () => {
+    let rows;
+    try { rows = await online.friendsBoard(desc.key, PHYS_VER, 20); } catch (e) { if (req === el._lbReq) el.innerHTML = offline(e); return; }
+    if (req !== el._lbReq) return;
+    el.innerHTML = `${rows.length ? `<ol class="board">${rows.map((r) => `<li class="${r.player === online.uid ? 'me' : ''}"><b>${r.rank}</b><span class="lb-name">${esc(r.name || '—')}</span><em>${formatTime(r.time)}</em><small class="lb-date">${day(r.updated_at)}</small></li>`).join('')}</ol>` : '<p>Ni toi ni tes amis n’avez de temps sur ce circuit.</p>'}
+      <p class="meta">${rows.length <= 1 ? 'Ajoute des amis dans <b>Profil › Amis</b> pour comparer vos temps. ' : ''}Mêmes temps vérifiés que le classement mondial.</p>`;
+  })();
+}
+registerBoard({ id: 'friends', label: '👥 Amis', order: 12, available: (desc) => onlineConfigured() && rankedKey(desc) && online.kind === 'account', render: renderFriendsBoard });
+
+// ---- Secteurs (E15, etape9-secteurs.sql) : meilleurs secteurs parmi les records ------------------------------------------------------
+// Un secteur va d'un passage (checkpoint, ou ligne d'un tour) au suivant : il y en a (checkpoints + 1) × tours.
+export const sectorCount = (track) => (track.tiles.filter((t) => cpKind(t)).length + 1) * Math.max(1, track.laps || 1);
+const sectorOf = (splits, time, i) => {           // en pas ; null si les temps intermédiaires manquent
+  if (!Array.isArray(splits) || i < 1 || i > splits.length + 1) return null;
+  const end = i <= splits.length ? splits[i - 1] : Math.round(time / DT), start = i === 1 ? 0 : splits[i - 2];
+  return end - start;
+};
+export function renderSectorBoard(el, desc) {
+  const n = sectorCount(desc.track), rec = personalRecord(desc, getRecord);
+  if (el._sector == null || el._sector > n) el._sector = 1;
+  const draw = () => {
+    const i = el._sector, mine = rec ? sectorOf(rec.splits, rec.time, i) : null;
+    el.innerHTML = `<div class="lb-sectors" role="radiogroup" aria-label="Secteur">${Array.from({ length: n }, (_, k) => `<button class="chip${k + 1 === i ? ' on' : ''}" role="radio" aria-checked="${k + 1 === i}" data-sector="${k + 1}">S${k + 1}</button>`).join('')}</div>
+      <div class="lb-sector-body"><p class="meta">Chargement…</p></div>`;
+    for (const b of el.querySelectorAll('[data-sector]')) b.onclick = () => { el._sector = +b.dataset.sector; draw(); };
+    const body = el.querySelector('.lb-sector-body'), req = (el._lbReq = (el._lbReq || 0) + 1);
+    (async () => {
+      let rows;
+      try { rows = await online.sectorBoard(desc.key, PHYS_VER, i, 10); } catch (e) { if (req === el._lbReq) body.innerHTML = offline(e); return; }
+      if (req !== el._lbReq) return;
+      body.innerHTML = `${rows.length ? `<ol class="board">${rows.map((r) => `<li class="${r.player === online.uid ? 'me' : ''}"><b>${r.rank}</b><span class="lb-name">${esc(r.name || '—')}</span><em>${formatTime(r.sector_steps * DT)}</em><small class="lb-date">🏁 ${formatTime(r.time)}</small></li>`).join('')}</ol>` : '<p>Pas encore de secteur enregistré pour ce circuit.</p>'}
+        <p class="meta">${i === 1 ? 'Du départ au premier passage' : i === n ? 'Du dernier passage à l’arrivée' : `Du passage ${i - 1} au passage ${i}`}${mine != null ? ` · mon record : <b>${formatTime(mine * DT)}</b>` : ''}. Ce sont les secteurs des records vérifiés.</p>`;
+    })();
+  };
+  draw();
+}
+registerBoard({ id: 'sectors', label: '⏱ Secteurs', order: 15, available: (desc) => onlineConfigured() && rankedKey(desc) && !!desc.track, render: renderSectorBoard });
+
+// ---- Saison (E15, etape11-saisons.sql) : le classement de la semaine (points sur ses trois circuits) et ma division ------------------
+export function renderSeasonBoard(el, desc) {
+  const n = desc.season;
+  el.innerHTML = '<p class="meta">Chargement…</p>';
+  const req = (el._lbReq = (el._lbReq || 0) + 1);
+  (async () => {
+    let rows, me = null;
+    try { rows = await online.seasonStandings(n, 20); if (online.uid) me = await online.mySeason(n).catch(() => null); } catch (e) { if (req === el._lbReq) el.innerHTML = offline(e); return; }
+    if (req !== el._lbReq) return;
+    const ends = new Date(seasonBounds(n).ends - 1);
+    el.innerHTML = `${me ? `<p class="lb-season-me"><span>Division <b>${me.division} · ${esc(DIVISIONS[me.division])}</b></span> <span>· ${me.points} points</span>${me.rank ? ` <span>· ${me.rank}${me.rank === 1 ? 'er' : 'e'} sur ${me.in_division}</span>` : ''}${me.closed ? ` <span>${me.moved < 0 ? '· ⬆ montée' : me.moved > 0 ? '· ⬇ descente' : '· maintien'}</span>` : ''}</p>` : ''}
+      ${rows.length ? `<ol class="board">${rows.map((r) => `<li class="${r.player === online.uid ? 'me' : ''}"><b>${r.rank}</b><span class="lb-name">${esc(r.name || '—')} <small class="ttl">D${r.division}</small></span><em>${r.points} pts</em><small class="lb-date">${r.tracks} / 3</small></li>`).join('')}</ol>` : '<p>Personne n’a encore couru cette saison.</p>'}
+      <p class="meta">Saison ${n}, jusqu’au ${ends.getUTCDate()}/${ends.getUTCMonth() + 1} (UTC). Sur chacun des trois circuits : 1000 × meilleur temps ÷ ton temps. À la fin de la semaine, les 20 % premiers de chaque division montent, les 20 % derniers descendent.</p>`;
+  })();
+}
+registerBoard({ id: 'season', label: '📅 Saison', order: 5, available: (desc) => onlineConfigured() && desc.season > 0, render: renderSeasonBoard });

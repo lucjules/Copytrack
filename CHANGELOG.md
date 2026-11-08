@@ -6,6 +6,30 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.37 — social, saisons hebdomadaires, classements par secteur
+
+Étape E15 de Copytrack Evolution (début du bloc 5). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **Infrastructure à mettre en place** (rien ne marche en ligne sans elle, et le jeu le dit) :
+- les étapes SQL 9, 10 et 11 (`supabase/etape9-secteurs.sql`, `etape10-social.sql`, `etape11-saisons.sql`) ;
+- **redéployer `submit-score`** (déjà régénérée ici) : temps intermédiaires des records, et catégorie de saison acceptée seulement pendant sa semaine ;
+- facultatif : l'extension **pg_cron**, pour une clôture des saisons à l'heure dite (sinon, elles se closent à la première consultation après la fin de la semaine) ;
+- facultatif : `tools/backfill-sectors.mjs`, pour les temps intermédiaires des records déjà enregistrés.
+
+- **Classements par secteur** (onglet ⏱ Secteurs de la fiche) : un secteur va d'un passage (checkpoint, ligne d'un tour) au suivant. On voit les meilleurs secteurs parmi les records vérifiés, et le sien à côté. Le serveur range les temps intermédiaires en rejouant la course : ce sont ceux du record, pas le meilleur secteur jamais roulé.
+- **Amis** (Profil › Amis, comptes seulement) : demande par pseudo, acceptée ou refusée par l'autre, retrait. Une demande n'est visible que des deux intéressés. Au plus 20 demandes par jour et 200 amis. Onglet 👥 Amis dans les classements : les mêmes temps vérifiés, entre amis.
+- **Abonnements** : « ➕ Suivre » sur la fiche d'un circuit de la communauté ; onglet « ⭐ Abonnements » de la communauté (les circuits des auteurs suivis). La liste de ses abonnements est privée, le nombre d'abonnés d'un auteur public.
+- **Saisons hebdomadaires** :
+  - chaque semaine (du lundi 00:00 UTC au lundi suivant ; la saison 1 commence le 9 novembre 2026), trois circuits de la carrière, les mêmes pour tout le monde, dans un groupe « Saison de la semaine » de l'écran Circuits et en tête des catégories de leur fiche ;
+  - les temps de saison sont une catégorie à part (`…~v1.sea-N`), qui n'efface pas le record officiel ;
+  - points : sur chaque circuit, 1000 × meilleur temps ÷ ton temps ;
+  - **divisions** 1 (Élite) à 5 (Débutant) : à la clôture, les 20 % premiers de chaque division montent, les 20 % derniers descendent, et l'historique est gardé ;
+  - aucun point n'est déclaré par le jeu : tout est calculé en base, depuis les temps rejoués par le serveur.
+- **Choix à signaler** : les saisons se closent sans pg_cron (`close_due_seasons`, idempotente, appelée par le jeu avant d'afficher une saison) ; pg_cron devient un confort. Les trois circuits sont tirés par le jeu d'après le numéro de la saison (le même code sert au jeu et au serveur), plutôt que rangés dans une table.
+- Sous le capot : `js/seasons.js` (dans la fermeture de la vérification), étiquette `sea` dans `variants.js` (elle ne transforme pas le circuit), `verify.js` (fenêtre de la saison, temps intermédiaires), onglets du classement (`ui/leaderboardPanel.js`), client en ligne (`online.js`).
+- Tests :
+  - SQL (`npm run test:sql`, 82 vérifications) : secteurs ; demandes d'amis invisibles d'un inconnu, refus, retrait, cadence, classement entre amis, abonnements privés ; saisons (points, clôture une seule fois, montées et descentes, ma saison, écritures refusées) ;
+  - `tools/test-seasons.mjs` (dates, circuits, fenêtre du serveur, temps intermédiaires, remplissage) et fonction serveur ;
+  - navigateur, français et anglais, avec un serveur Supabase **simulé** : saison, secteurs, amis, profil, abonnements.
+
 ## Bêta 0.9.36 — progression du pilote : expérience, niveaux, licences, défis de maîtrise
 
 Étape E14 de Copytrack Evolution (fin du bloc 4). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.

@@ -42,7 +42,7 @@ async function test(name, fn) {
 }
 
 // Un contexte = un « appareil » neuf (stockage vide) avec la langue du navigateur demandée.
-async function device(locale, { before } = {}) {
+async function device(locale, { before, server } = {}) {
   const ctx = await browser.newContext({ locale, viewport: { width: 1280, height: 720 }, serviceWorkers: 'block' });
   if (before) await ctx.addInitScript(before);
   const page = await ctx.newPage();
@@ -51,6 +51,7 @@ async function device(locale, { before } = {}) {
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !OFFLINE.test(m.text() + (m.location().url || ''))) errors.push('console: ' + m.text()); });
   await page.route(/fonts\.(googleapis|gstatic)\.com|supabase\.co/, (r) => r.abort());
+  if (server) await page.route(/supabase\.co/, server);            // serveur simulé (prioritaire : déclaré après)
   await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'load' });
   await page.waitForSelector('#wl-name', { state: 'visible', timeout: 20000 });
   return { ctx, page, requests };
@@ -164,6 +165,47 @@ try {
     }
     await page.evaluate(() => window.copytrack.ui.closeModal());
     await ctx.close();
+  });
+
+  await test('saison, secteurs, amis et abonnements en anglais (serveur simulé, horloge de la saison 2)', async () => {
+    const ME = '00000000-0000-0000-0000-0000000000e1', ANA = '00000000-0000-0000-0000-0000000000e2';
+    const server = (route) => {
+      const url = route.request().url(), J = (b, headers = {}) => route.fulfill({ status: 200, contentType: 'application/json', headers, body: JSON.stringify(b) });
+      if (url.includes('/auth/v1/')) return J({ access_token: 'jeton', refresh_token: 'r', expires_in: 3600, user: { id: ME } });
+      const rpc = (/\/rpc\/(\w+)/.exec(url) || [])[1];
+      if (rpc === 'season_standings') return J([{ rank: 1, player: ANA, name: 'Ana', division: 4, points: 2950, tracks: 3 }, { rank: 2, player: ME, name: 'Testeur', division: 5, points: 1890, tracks: 2 }]);
+      if (rpc === 'my_season') return J([{ division: 5, points: 1890, rank: 1, in_division: 6, moved: -1, closed: true }]);
+      if (rpc === 'sector_board') return J([{ rank: 1, player: ANA, name: 'Ana', sector_steps: 601, time: 30.5 }]);
+      if (rpc === 'friends_board') return J([{ rank: 1, player: ANA, name: 'Ana', time: 25.25, updated_at: '2026-11-17T10:00:00Z' }]);
+      if (rpc === 'my_friends') return J([{ id: ANA, name: 'Ana', status: 'pending', incoming: true }, { id: 'x', name: 'Ben', status: 'accepted', incoming: false }, { id: 'y', name: 'Cyd', status: 'pending', incoming: false }]);
+      if (url.includes('/rest/v1/scores')) return J([], { 'content-range': '*/0' });
+      return J(rpc ? null : []);
+    };
+    const { ctx, page } = await device('en-US', { server, before: () => { const real = Date.now.bind(Date), off = Date.UTC(2026, 10, 18, 12) - real(); Date.now = () => real() + off; } });
+    await enter(page);
+    try {
+      await page.evaluate(() => window.copytrack.showMenu('tracks'));
+      await page.waitForFunction(() => document.querySelectorAll('.season-group .season-card').length === 3);
+      await page.waitForTimeout(300);
+      assert.deepEqual(await frenchLeft(page), [], 'écran Circuits (saison de la semaine)');
+      await click(page, '.season-group .season-card');
+      await page.waitForFunction(() => /Division 5[\s\S]*Beginner[\s\S]*promoted[\s\S]*Ana/.test(document.getElementById('hub-board').textContent), null, { timeout: 20000 });
+      assert.deepEqual(await frenchLeft(page), [], 'fiche : saison');
+      await click(page, '#hub-board [data-tab="sectors"]');
+      await page.waitForFunction(() => /From the start to the first pass/.test(document.getElementById('hub-board').textContent), null, { timeout: 20000 });
+      assert.deepEqual(await frenchLeft(page), [], 'fiche : secteurs');
+      await page.evaluate(async () => { const { online } = await import('/js/online.js'); online.kind = 'account'; window.copytrack.identity = { kind: 'account', username: 'Testeur' }; window.copytrack.openBuiltinHub(window.copytrack._hub.base.index, 'tracks'); });
+      await click(page, '#hub-board [data-tab="friends"]');
+      await page.waitForFunction(() => /Add friends in|Same verified times/.test(document.getElementById('hub-board').textContent), null, { timeout: 20000 });
+      assert.deepEqual(await frenchLeft(page), [], 'fiche : amis');
+      await page.evaluate(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('profile'); });
+      await page.waitForFunction(() => /Requests received[\s\S]*1 friend[\s\S]*Requests sent/.test((document.querySelector('.prof-friends') || {}).textContent || ''), null, { timeout: 20000 });
+      assert.deepEqual(await frenchLeft(page), [], 'profil : amis');
+      await page.evaluate(() => window.copytrack.showScreen('community'));
+      await click(page, '#comm-tabs [data-sort="followed"]');
+      await page.waitForFunction(() => /You do not follow anyone yet/.test(document.getElementById('comm-status').textContent), null, { timeout: 20000 });
+      assert.deepEqual(await frenchLeft(page), [], 'communauté : abonnements');
+    } finally { await ctx.close(); }
   });
 
   await test('textes produits en cours de jeu : messages, bandeau d\'aide, pause, arrivée, éditeur', async () => {

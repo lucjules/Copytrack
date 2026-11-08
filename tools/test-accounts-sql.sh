@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Teste les étapes SQL de supabase/ (communauté, classements, comptes, durcissement) sur un PostgreSQL local (faux schéma « auth » de Supabase).
+# Teste les étapes SQL de supabase/ (communauté, classements, comptes, durcissement, secteurs, amis, saisons) sur un PostgreSQL local (faux schéma « auth » de Supabase).
 # Usage : PGHOST=/tmp PGPORT=54329 PGUSER=postgres tools/test-accounts-sql.sh   (pas inclus dans npm test : il faut un serveur PostgreSQL)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -16,7 +16,7 @@ create table auth.users (id uuid primary key default gen_random_uuid(), email te
 create function auth.uid() returns uuid language sql stable as $f$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $f$;
 grant usage on schema auth to anon, authenticated;
 SQL
-for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape6-telemetrie.sql supabase/etape7-fantomes.sql supabase/etape7-fantomes.sql supabase/etape8-decouverte.sql supabase/etape8-decouverte.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
+for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape6-telemetrie.sql supabase/etape7-fantomes.sql supabase/etape7-fantomes.sql supabase/etape8-decouverte.sql supabase/etape8-decouverte.sql supabase/etape9-secteurs.sql supabase/etape9-secteurs.sql supabase/etape10-social.sql supabase/etape10-social.sql supabase/etape11-saisons.sql supabase/etape11-saisons.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
 $P -d $DB <<'SQL'
 \set ON_ERROR_STOP off
 create function public.as_user(u uuid) returns void language plpgsql as $$ begin perform set_config('request.jwt.claim.sub', u::text, false); end $$;
@@ -186,8 +186,153 @@ end $$;
 select public.set_title('');
 select public.check('étape 8 : un titre vide retire le titre', (select title is null from players where id = '00000000-0000-0000-0000-0000000000c1'));
 reset role;
+-- 14. classements par secteur (étape 9) : secteurs calculés depuis les temps intermédiaires des records
+reset role;
+insert into scores (track_key, player, time, inputs, phys_ver, splits) values
+  ('b-secteurs-1', '00000000-0000-0000-0000-0000000000c1', 30.0, 'A', 26, '{1200,2400}'),       -- secteurs (pas) : 1200, 1200, 1200
+  ('b-secteurs-1', '00000000-0000-0000-0000-0000000000c2', 31.0, 'A', 26, '{1100,2500}'),       -- 1100, 1400, 1220
+  ('b-secteurs-1', '00000000-0000-0000-0000-0000000000c3', 29.0, 'A', 26, null);                -- sans temps intermédiaires : ignoré
+set role anon;
+select public.check('étape 9 : secteur 1 : le meilleur départ d''abord (1100 pas), le record sans temps intermédiaires est ignoré',
+  (select array_agg(name order by rank) from public.sector_board('b-secteurs-1', 26, 1, 10)) = array['Moyen', 'Rapide'] and (select sector_steps from public.sector_board('b-secteurs-1', 26, 1, 10) where rank = 1) = 1100);
+select public.check('étape 9 : dernier secteur (dernier passage → arrivée) : 1200 contre 1220 pas',
+  (select array_agg(sector_steps order by rank) from public.sector_board('b-secteurs-1', 26, 3, 10)) = array[1200, 1220]);
+select public.check('étape 9 : secteur hors du circuit, mauvaise physique : rien', (select count(*) from public.sector_board('b-secteurs-1', 26, 4, 10)) = 0 and (select count(*) from public.sector_board('b-secteurs-1', 25, 1, 10)) = 0);
+select public.check('étape 9 : les temps intermédiaires sont lisibles (colonne splits)', (select count(*) from scores where track_key = 'b-secteurs-1' and splits is not null) = 2);
+reset role;
+-- 15. amis et abonnements (étape 10)
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('00000000-0000-0000-0000-0000000000d1', 'ana@accounts.copytrack.invalid', '{"username":"Ana"}'),
+  ('00000000-0000-0000-0000-0000000000d2', 'ben@accounts.copytrack.invalid', '{"username":"Ben"}'),
+  ('00000000-0000-0000-0000-0000000000d3', 'cyd@accounts.copytrack.invalid', '{"username":"Cyd"}');
+insert into players (id, name) values ('00000000-0000-0000-0000-0000000000d1', 'Ana'), ('00000000-0000-0000-0000-0000000000d2', 'Ben'), ('00000000-0000-0000-0000-0000000000d3', 'Cyd');
+insert into scores (track_key, player, time, inputs, phys_ver) values ('b-amis-1', '00000000-0000-0000-0000-0000000000d1', 25, 'A', 26), ('b-amis-1', '00000000-0000-0000-0000-0000000000d2', 24, 'A', 26), ('b-amis-1', '00000000-0000-0000-0000-0000000000d3', 20, 'A', 26);
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000b1');
+do $$ declare refuse boolean := false; begin
+  begin perform public.friend_request('Ana'); exception when others then refuse := true; end;
+  perform public.check('étape 10 : une session invitée ne peut pas demander d''ami', refuse);
+end $$;
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+select public.check('étape 10 : Ana demande Ben (pseudo sans tenir compte de la casse)', public.friend_request('ben') = 'sent');
+select public.check('étape 10 : redemander ne double pas la demande', public.friend_request('Ben') = 'already');
+do $$ declare refuse boolean := false; begin
+  begin perform public.friend_request('Personne'); exception when others then refuse := true; end;
+  perform public.check('étape 10 : pseudo inconnu refusé', refuse);
+end $$;
+do $$ declare refuse boolean := false; begin
+  begin insert into friends (a, b, status) values ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000d3', 'accepted'); exception when others then refuse := true; end;
+  perform public.check('étape 10 : on n''écrit pas directement dans la table des amis (pas d''amitié forcée)', refuse);
+end $$;
+select public.as_user('00000000-0000-0000-0000-0000000000d3');
+select public.check('étape 10 : un inconnu (Cyd) ne voit pas la demande d''Ana à Ben', (select count(*) from friends) = 0 and (select count(*) from public.my_friends()) = 0);
+select public.as_user('00000000-0000-0000-0000-0000000000d2');
+select public.check('étape 10 : Ben voit la demande reçue d''Ana', (select count(*) from public.my_friends() where name = 'Ana' and status = 'pending' and incoming) = 1);
+select public.friend_respond('00000000-0000-0000-0000-0000000000d1', true);
+select public.check('étape 10 : Ben accepte : amis des deux côtés', (select status from friends) = 'accepted');
+select public.check('étape 10 : classement entre amis : Ben et Ana, pas Cyd (pourtant le plus rapide)',
+  (select array_agg(name order by rank) from public.friends_board('b-amis-1', 26, 20)) = array['Ben', 'Ana']);
+select public.as_user('00000000-0000-0000-0000-0000000000d3');
+select public.check('étape 10 : pour Cyd (sans amis), le classement entre amis n''a que lui', (select array_agg(name) from public.friends_board('b-amis-1', 26, 20)) = array['Cyd']);
+select public.check('étape 10 : Cyd demande Ana, Ana refuse : la demande disparaît', public.friend_request('Ana') = 'sent');
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+select public.friend_respond('00000000-0000-0000-0000-0000000000d3', false);
+select public.check('étape 10 : refus', (select count(*) from public.my_friends()) = 1);
+select public.friend_remove('00000000-0000-0000-0000-0000000000d2');
+select public.check('étape 10 : Ana retire Ben', (select count(*) from public.my_friends()) = 0);
+reset role;
+insert into auth.users (email, raw_user_meta_data) select 'ami' || g || '@accounts.copytrack.invalid', jsonb_build_object('username', 'Ami' || g) from generate_series(1, 21) g;
+insert into players (id, name) select user_id, username from accounts where username like 'Ami%';
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+do $$ declare refuse boolean := false; begin
+  for i in 1 .. 20 loop perform public.friend_request('Ami' || i); end loop;
+  begin perform public.friend_request('Ami21'); exception when others then refuse := true; end;
+  perform public.check('étape 10 : au plus 20 demandes d''amis par 24 heures', refuse and (select count(*) from friends where a = '00000000-0000-0000-0000-0000000000d1') = 20);
+end $$;
+reset role;
+delete from friends where a = '00000000-0000-0000-0000-0000000000d1';
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+select public.follow('00000000-0000-0000-0000-0000000000d3');
+select public.follow('00000000-0000-0000-0000-0000000000d3');
+select public.check('étape 10 : Ana suit Cyd (une fois)', (select count(*) from follows) = 1);
+do $$ declare refuse boolean := false; begin
+  begin perform public.follow('00000000-0000-0000-0000-0000000000d1'); exception when others then refuse := true; end;
+  perform public.check('étape 10 : on ne se suit pas soi-même', refuse);
+end $$;
+select public.as_user('00000000-0000-0000-0000-0000000000d3');
+select public.check('étape 10 : les abonnements d''Ana ne sont visibles que d''elle', (select count(*) from follows) = 0);
+reset role;
+set role anon;
+select public.check('étape 10 : le nombre d''abonnés est public', public.follower_count('00000000-0000-0000-0000-0000000000d3') = 1);
+do $$ declare refuse boolean := false; begin
+  begin perform public.my_friends(); exception when insufficient_privilege then refuse := true; end;
+  perform public.check('étape 10 : sans session, pas de liste d''amis', refuse);
+end $$;
+reset role;
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+select public.unfollow('00000000-0000-0000-0000-0000000000d3');
+select public.check('étape 10 : désabonnement', (select count(*) from follows) = 0);
+reset role;
+-- 16. saisons et divisions (étape 11) : heure fixée (saison 2 en cours), points calculés depuis scores, clôture une seule fois, montées et descentes
+set copytrack.now = '2026-11-20 12:00:00+00';
+select public.check('étape 11 : saison en cours et bornes (lundi 00:00 UTC)', public.current_season() = 2 and (select starts from public.season_bounds(2)) = '2026-11-16 00:00:00+00');
+insert into auth.users (email, raw_user_meta_data) select 'saison' || g || '@accounts.copytrack.invalid', jsonb_build_object('username', 'Saison' || g) from generate_series(1, 7) g;
+insert into players (id, name) select user_id, username from accounts where username like 'Saison%';
+insert into scores (track_key, player, time, inputs, phys_ver)
+  select t.k, a.user_id, 20 + (substring(a.username from 7)::int) * t.f, 'A', 26
+  from accounts a, (values ('b-s1a-1~v1.sea-1', 1.0), ('b-s1b-1~v1.sea-1', 0.5), ('b-s1c-1~v1.sea-1', 2.0)) t(k, f) where a.username like 'Saison%';
+insert into scores (track_key, player, time, inputs, phys_ver) values ('b-s1a-1~v1.sea-11', '00000000-0000-0000-0000-0000000000d1', 1, 'A', 26);   -- saison 11 : ne compte pas en saison 1
+set role anon;
+select public.check('étape 11 : points de saison : 1000 par circuit pour le plus rapide, moins pour les autres',
+  (select points from public.season_points(1) sp join players p on p.id = sp.player where p.name = 'Saison1') = 3000
+  and (select points from public.season_points(1) sp join players p on p.id = sp.player where p.name = 'Saison7') < 3000
+  and (select count(*) from public.season_points(1)) = 7);
+select public.check('étape 11 : classement de saison dans l''ordre des points, division 5 pour tous au départ',
+  (select array_agg(name order by rank) from public.season_standings(1, 3)) = array['Saison1', 'Saison2', 'Saison3'] and (select bool_and(division = 5) from public.season_standings(1, 50)));
+do $$ declare refuse boolean := false; begin
+  begin perform public.close_season(1); exception when insufficient_privilege then refuse := true; end;
+  perform public.check('étape 11 : close_season n''est pas appelable par le jeu (seulement close_due_seasons)', refuse);
+end $$;
+select public.check('étape 11 : close_due_seasons clôt la saison 1 finie (7 participants), pas la saison 2 en cours', public.close_due_seasons() = 7);
+select public.check('étape 11 : une seconde fois : rien (une seule clôture)', public.close_due_seasons() = 0);
+reset role;
+select public.check('étape 11 : la saison en cours ne se clôt pas', public.close_season(2) = -1);
+select public.check('étape 11 : division 5 à 7 participants : le premier monte en 4, personne ne descend sous la 5',
+  (select division from season_divisions sd join players p on p.id = sd.player where p.name = 'Saison1') = 4
+  and (select count(*) from season_divisions where division = 4) = 1 and (select count(*) from season_divisions where division = 5) = 6
+  and (select count(*) from division_history where season = 1) = 7 and (select moved from division_history h join players p on p.id = h.player where season = 1 and p.name = 'Saison1') = -1);
+-- saison 2 : cinq pilotes en division 3 : le premier monte, le dernier descend
+update season_divisions set division = 3 where player in (select user_id from accounts where username in ('Saison2', 'Saison3', 'Saison4', 'Saison5', 'Saison6'));
+insert into scores (track_key, player, time, inputs, phys_ver)
+  select 'b-s2a-1~v1.sea-2', a.user_id, 30 + (substring(a.username from 7)::int), 'A', 26 from accounts a where a.username in ('Saison2', 'Saison3', 'Saison4', 'Saison5', 'Saison6');
+select user_id as s6 from accounts where username = 'Saison6' \gset
+set role authenticated;
+select public.as_user(:'s6');
+select public.check('étape 11 : ma saison en cours : division 3, 5e sur 5', (select division = 3 and rank = 5 and in_division = 5 and not closed from public.my_season(2)));
+reset role;
+set copytrack.now = '2026-11-23 00:10:00+00';
+set role anon;
+select public.check('étape 11 : saison 2 finie : clôturée à la demande (5 participants)', public.close_due_seasons() = 5);
+reset role;
+select public.check('étape 11 : division 3 : le premier monte en 2, le dernier descend en 4',
+  (select division from season_divisions sd join players p on p.id = sd.player where p.name = 'Saison2') = 2
+  and (select division from season_divisions sd join players p on p.id = sd.player where p.name = 'Saison6') = 4
+  and (select division from season_divisions sd join players p on p.id = sd.player where p.name = 'Saison4') = 3);
+select user_id as s6 from accounts where username = 'Saison6' \gset
+set role authenticated;
+select public.as_user(:'s6');
+select public.check('étape 11 : après la clôture, ma saison dit : division 3 pendant la saison, descente', (select division = 3 and moved = 1 and closed from public.my_season(2)));
+do $$ declare refuse boolean := false; begin
+  begin insert into season_divisions (player, division) values ('00000000-0000-0000-0000-0000000000d1', 1); exception when others then refuse := true; end;
+  perform public.check('étape 11 : le jeu n''écrit pas sa division', refuse);
+end $$;
+reset role;
+reset copytrack.now;
 -- 13. aucun mot de passe en clair dans nos tables
 select public.check('aucune colonne mot de passe dans le schéma public', not exists (select 1 from information_schema.columns where table_schema='public' and column_name ilike '%pass%'));
 select case when ok then '  ok   ' else '  FAIL ' end || name from public.res order by ok, name;
-select 'RESULT ' || case when bool_and(ok) and count(*) = 45 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
+select 'RESULT ' || case when bool_and(ok) and count(*) = 82 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
 SQL

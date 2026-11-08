@@ -10,6 +10,7 @@ import { PIECES } from '../pieces.js';
 import { thumbnail } from '../editorTools.js';
 import { dailyChallenge, dayKey } from '../daily.js';
 import { streakOf } from '../mutations.js';
+import { seasonOf, seasonTracks, seasonBounds } from '../seasons.js';
 import { describeDaily } from '../trackDescriptor.js';
 import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked, chapterState, careerSummary, prerequisiteOf, nextBuiltinIndex } from '../career.js';
 import { locale } from '../i18n.js';
@@ -164,6 +165,34 @@ export const screenMethods = {
     dGrid.appendChild(dc);
     dailyBox.appendChild(dGrid);
     list.appendChild(dailyBox);
+
+    // Saison de la semaine (E15) : trois circuits de la carrière, un classement de points et des divisions (supabase/etape11-saisons.sql).
+    const sn = seasonOf();
+    if (sn) {
+      const sBox = document.createElement('div');
+      sBox.className = 'track-group season-group';
+      const ends = new Date(seasonBounds(sn).ends - 1);
+      sBox.innerHTML = `<h3 class="group-title"><i style="background:#9b6bff"></i>📅 Saison ${sn} de la semaine</h3>
+        <p class="chapter-desc">Trois circuits jusqu’au ${ends.getUTCDate()}/${ends.getUTCMonth() + 1} (UTC) : un classement à part, des points de saison, des divisions qui montent et descendent. Les temps de la saison n’effacent pas les records officiels.</p>`;
+      const sGrid = document.createElement('div');
+      sGrid.className = 'card-grid';
+      for (const def of seasonTracks(sn)) {
+        const i = this.builtins.findIndex((b) => b.def.id === def.id);
+        if (i < 0) continue;
+        const b = this.builtins[i], srec = getRecord(`${b.key}~v1.sea-${sn}`);
+        const card = document.createElement('div');
+        card.className = 'card season-card ' + b.track.decor;
+        card.tabIndex = 0;
+        card.innerHTML = `<img class="thumb" alt="" src="${thumbnail(b.track, 'b-' + b.key)}"><h3>${esc(def.name)}</h3>
+          <div class="best">${srec ? formatTime(srec.time) : '<span class="meta">Pas encore de temps cette saison</span>'}</div>`;
+        const go = () => { this.audio.click(); this.openSeasonHub(i, sn); };
+        card.addEventListener('click', go);
+        card.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+        sGrid.appendChild(card);
+      }
+      sBox.appendChild(sGrid);
+      list.appendChild(sBox);
+    }
 
     const total = this.builtins.length;
     for (let ch = 0; ch * CHAPTER_SIZE < total; ch++) {

@@ -184,7 +184,7 @@ try {
     assert.match(await page.evaluate(() => document.getElementById('hub-legend').textContent), /Départ[\s\S]*Arrivée/);
     assert.match(await page.evaluate(() => document.getElementById('hub-facts').textContent), /Distance de course[\s\S]*Médailles[\s\S]*Objectif bonus/);
     const tabs = await page.evaluate(() => [...document.querySelectorAll('#hub-board .lb-tabs .tab')].map((t) => t.textContent));
-    assert.deepEqual(tabs, ['🌍 Mondial', '👤 Personnel'], 'seulement les onglets dont les données existent');
+    assert.deepEqual(tabs, ['🌍 Mondial', '⏱ Secteurs', '👤 Personnel'], 'seulement les onglets dont les données existent');
     await waitApp(() => /Classement indisponible/.test(document.getElementById('hub-board').textContent), null, 15000);     // hors ligne ici : un état propre, pas un faux classement
     await click('#hub-board .lb-tabs [data-tab="personal"]');
     assert.match(await page.evaluate(() => document.getElementById('hub-board').textContent), /Pas encore de temps sur ce circuit/);
@@ -1111,6 +1111,86 @@ try {
       await app(() => { if (window.copytrack.room) window.copytrack.room.leave(); window.copytrack.ui.closeModal(); window.copytrack.showMenu('menu'); }).catch(() => {});
       await B.close();
     }
+  });
+
+  // E15 : saisons, secteurs, amis, abonnements, avec un serveur Supabase SIMULÉ (routes Playwright) et l'horloge de la saison 2 (mercredi 18 novembre 2026).
+  await test('saison de la semaine, classements par secteur et entre amis, amis du profil, abonnements (serveur simulé)', async () => {
+    const ME = '00000000-0000-0000-0000-0000000000e1', ANA = '00000000-0000-0000-0000-0000000000e2';
+    const ctx2 = await browser.newContext({ locale: 'fr-FR', viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1, serviceWorkers: 'block' });
+    await ctx2.addInitScript(() => { const real = Date.now.bind(Date), off = Date.UTC(2026, 10, 18, 12) - real(); Date.now = () => real() + off; });
+    const p2 = await ctx2.newPage();
+    p2.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+    p2.on('console', (m) => { if (m.type() === 'error' && !OFFLINE.test(m.text() + (m.location().url || ''))) errors.push('console: ' + m.text()); });
+    await p2.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    const calls = [];
+    let friends = [{ id: ANA, name: 'Ana', status: 'pending', incoming: true, since: '2026-11-17T10:00:00Z' }];
+    await p2.route(/supabase\.co/, async (route) => {
+      const req = route.request(), url = req.url(), body = req.postData() ? JSON.parse(req.postData()) : null;
+      calls.push({ url, method: req.method(), body });
+      const J = (b, headers = {}) => route.fulfill({ status: 200, contentType: 'application/json', headers, body: JSON.stringify(b) });
+      if (url.includes('/auth/v1/')) return J({ access_token: 'jeton', refresh_token: 'r', expires_in: 3600, user: { id: ME } });
+      const rpc = /\/rpc\/(\w+)/.exec(url);
+      if (rpc) {
+        switch (rpc[1]) {
+          case 'close_due_seasons': return J(0);
+          case 'season_standings': return J([{ rank: 1, player: ANA, name: 'Ana', division: 4, points: 2950, tracks: 3 }, { rank: 2, player: ME, name: 'Testeur', division: 5, points: 1890, tracks: 2 }]);
+          case 'my_season': return J([{ division: 5, points: 1890, rank: 1, in_division: 6, moved: null, closed: false }]);
+          case 'sector_board': return J([{ rank: 1, player: ANA, name: 'Ana', sector_steps: 600 + body.i, time: 30.5 }]);
+          case 'friends_board': return J([{ rank: 1, player: ANA, name: 'Ana', time: 25.25, updated_at: '2026-11-17T10:00:00Z' }, { rank: 2, player: ME, name: 'Testeur', time: 26, updated_at: '2026-11-18T10:00:00Z' }]);
+          case 'my_friends': return J(friends);
+          case 'friend_respond': friends = friends.map((f) => ({ ...f, status: 'accepted', incoming: false })); return J(null);
+          case 'friend_request': friends = [...friends, { id: '00000000-0000-0000-0000-0000000000e3', name: 'Ben', status: 'pending', incoming: false }]; return J('sent');
+          default: return J(null);
+        }
+      }
+      if (url.includes('/rest/v1/scores')) return J([], { 'content-range': '*/0' });
+      return J([]);
+    });
+    const ap = (fn, arg) => p2.evaluate(fn, arg), wait = (fn, arg, timeout = 30000) => p2.waitForFunction(fn, arg, { timeout });
+    const clk = (sel) => p2.locator(sel).first().evaluate((el) => el.click());
+    try {
+      await p2.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'load' });
+      await p2.locator('#wl-name').fill('Testeur');
+      await clk('#wl-submit');
+      await wait(() => window.copytrack && window.copytrack.mode === 'menu');
+      // Écran Circuits : la saison de la semaine, ses trois circuits
+      await ap(() => window.copytrack.showMenu('tracks'));
+      await wait(() => document.querySelectorAll('.season-group .season-card').length === 3);
+      assert.match(await p2.evaluate(() => document.querySelector('.season-group .group-title').textContent), /Saison 2 de la semaine/);
+      await clk('.season-group .season-card');
+      await wait(() => window.copytrack._hub && /~v1\.sea-2$/.test(window.copytrack._hub.desc.key));
+      assert.match(await p2.evaluate(() => document.querySelector('.hub-cats [aria-checked="true"]').textContent), /Saison 2/);
+      const tabs = await p2.evaluate(() => [...document.querySelectorAll('#hub-board .lb-tabs .tab')].map((t) => t.textContent));
+      assert.deepEqual(tabs, ['📅 Saison', '🌍 Mondial', '⏱ Secteurs', '👤 Personnel'], 'invité : pas d’onglet Amis');
+      await wait(() => /Division 5 · Débutant[\s\S]*Ana[\s\S]*2950 pts/.test(document.getElementById('hub-board').textContent));
+      assert.ok(calls.some((c) => c.url.includes('/rpc/close_due_seasons')), 'les saisons finies sont closes avant lecture');
+      assert.deepEqual(calls.find((c) => c.url.includes('/rpc/season_standings')).body, { n: 2, lim: 20 });
+      // Secteurs : un bouton par secteur ; le secteur choisi part au serveur
+      await clk('#hub-board [data-tab="sectors"]');
+      await wait(() => document.querySelectorAll('#hub-board [data-sector]').length >= 2 && /Ana[\s\S]*00:05\.008/.test(document.getElementById('hub-board').textContent));
+      await clk('#hub-board [data-sector="2"]');
+      await wait(() => /00:05\.017/.test(document.getElementById('hub-board').textContent));
+      assert.equal(calls.filter((c) => c.url.includes('/rpc/sector_board')).pop().body.i, 2);
+      // Compte : l'onglet Amis apparaît
+      await ap(async () => { const { online } = await import('/js/online.js'); online.kind = 'account'; window.copytrack.identity = { kind: 'account', username: 'Testeur' }; });
+      await ap(() => window.copytrack.openBuiltinHub(window.copytrack._hub.base.index, 'tracks'));
+      await clk('#hub-board [data-tab="friends"]');
+      await wait(() => /Ana[\s\S]*00:25\.250[\s\S]*Testeur/.test(document.getElementById('hub-board').textContent));
+      // Profil › Amis : accepter une demande, en envoyer une
+      await ap(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('profile'); });
+      await wait(() => document.querySelector('.prof-friends [data-fa="yes"]'));
+      await clk('.prof-friends [data-fa="yes"]');
+      await wait(() => /1 ami(?!s)[\s\S]*Ana/.test(document.querySelector('.prof-friends').textContent));
+      assert.deepEqual(calls.find((c) => c.url.includes('/rpc/friend_respond')).body, { other: ANA, accept: true });
+      await p2.locator('.prof-friends .friend-add input').fill('Ben');
+      await clk('.prof-friends .friend-add button');
+      await wait(() => /Demandes envoyées[\s\S]*Ben/.test(document.querySelector('.prof-friends').textContent));
+      assert.equal(calls.find((c) => c.url.includes('/rpc/friend_request')).body.target_name, 'Ben');
+      // Communauté › Abonnements : personne de suivi
+      await ap(() => window.copytrack.showScreen('community'));
+      await clk('#comm-tabs [data-sort="followed"]');
+      await wait(() => /Tu ne suis encore personne/.test(document.getElementById('comm-status').textContent));
+    } finally { await ctx2.close(); }
   });
 
   await test('chaque profil de qualité se règle sans erreur', async () => {
