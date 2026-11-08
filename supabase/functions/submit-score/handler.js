@@ -85,6 +85,15 @@ export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = glob
       if (!res.ok || typeof res.time !== 'number') return json(422, { error: res.error ?? 'Course non confirmée.', ...(res.versionMismatch ? { versionMismatch: true } : {}) });
       const simTime = res.time;
 
+      // 4 bis. Duel ou tournoi (supabase/etape12-competition.sql) : seulement les participants, pendant la compétition (lu en base).
+      if (res.competition) {
+        const { kind, id, base } = res.competition;
+        const w = await db('rpc/competition_open', { method: 'POST', body: JSON.stringify({ kind, cid: id, p: uid, base }) });
+        if (!w.ok) return json(422, { error: 'Compétitions indisponibles sur ce serveur (étape SQL 12).' });
+        const why = await w.json();
+        if (why !== '') return json(422, { error: typeof why === 'string' && why ? why : 'Compétition fermée.' });
+      }
+
       // 5. Le profil du pilote doit exister.
       const prof = await (await db(`players?id=eq.${uid}&select=id`)).json();
       if (!Array.isArray(prof) || !prof.length) return json(400, { error: 'Profil pilote manquant.' });

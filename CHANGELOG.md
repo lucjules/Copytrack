@@ -6,6 +6,25 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.39 — compétition asynchrone : duels classés, tournois privés
+
+Étape E17 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (4). **Infrastructure à mettre en place** (le jeu dit ce qui manque, sans faux résultat) :
+- l'étape SQL 12 (`supabase/etape12-competition.sql`) ;
+- **redéployer `submit-score`** (déjà régénérée ici) : elle vérifie en base la fenêtre d'un duel ou d'un tournoi avant d'accepter un temps ;
+- facultatif : pg_cron, pour régler duels et tournois à l'heure dite (sinon, à la première consultation).
+
+- **Écran Compétition** (menu principal ; comptes seulement) :
+  - **duels entre amis**, sur un circuit de la carrière : on défie, l'autre accepte ou refuse ; 24 h pour courir, son meilleur temps compte ;
+  - à l'échéance : plus rapide gagne, un seul temps gagne contre aucun, égalité parfaite = nul, aucun temps = annulé ;
+  - **classement Elo** (départ 1200, K = 32), le sien et celui de ses amis ; historique des duels avec les deux temps (celui de l'adversaire seulement à la fin) et l'Elo gagné ou perdu ; face-à-face par adversaire (en base : `head_to_head`) ;
+  - **tournois privés** : un nom, un circuit, une durée de 1 à 14 jours, un code à 6 caractères pour entrer ; classement en direct ; **clos automatiquement** à sa date, classement figé.
+- **Aucun résultat déclaré par le jeu** : les temps sont des catégories de record (`…~v1.duel-N`, `…~v1.tour-N`), rejouées par le serveur comme toutes les autres. Le serveur les accepte des seuls participants, pendant la compétition (`competition_open`, lu en base). Les résultats, l'Elo et la clôture sont calculés en SQL depuis la table `scores`.
+- Sous le capot : étiquettes `duel` et `tour` dans `variants.js`, `verify.js` et `submit-score` (fenêtre lue en base), `js/app/competition.js`, client en ligne. Règlement idempotent (`settle_due`, une seule fois par duel et par tournoi), à la demande du jeu ou par pg_cron.
+- Tests :
+  - SQL (107 vérifications en tout) : Elo ; duels réservés aux amis et aux comptes ; fenêtre lue par le serveur ; temps de l'autre caché jusqu'à la fin ; règlement à l'échéance, une seule fois ; victoire, nul, annulation ; Elo non modifiable par le jeu ; tournoi par code, invisible des non-inscrits, clos à sa date, classement figé ;
+  - fonction serveur (fenêtre ouverte, fermée, étape SQL absente ; refus avant la base) ;
+  - navigateur, français et anglais, avec un serveur simulé (accepter, défier, rejoindre, classement, course de duel sous sa clé).
+
 ## Bêta 0.9.38 — multijoueur robuste : reconnexion, hôte remplacé, collisions unifiées
 
 Étape E16 de Copytrack Evolution. `PHYS_VER` inchangé (26). **`NET_VER` passe à 4** : un joueur de 0.9.37 et un joueur de 0.9.38 ne peuvent plus être dans la même salle (le salon le dit, comme à chaque changement de protocole). Rien à redéployer. **Infrastructure facultative** : un relais TURN (voir `supabase/MULTI.md`).

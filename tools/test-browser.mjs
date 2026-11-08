@@ -1123,7 +1123,7 @@ try {
   });
 
   // E15 : saisons, secteurs, amis, abonnements, avec un serveur Supabase SIMULÉ (routes Playwright) et l'horloge de la saison 2 (mercredi 18 novembre 2026).
-  await test('saison de la semaine, classements par secteur et entre amis, amis du profil, abonnements (serveur simulé)', async () => {
+  await test('saison de la semaine, classements par secteur et entre amis, amis du profil, abonnements, compétition (serveur simulé)', async () => {
     const ME = '00000000-0000-0000-0000-0000000000e1', ANA = '00000000-0000-0000-0000-0000000000e2';
     const ctx2 = await browser.newContext({ locale: 'fr-FR', viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1, serviceWorkers: 'block' });
     await ctx2.addInitScript(() => { const real = Date.now.bind(Date), off = Date.UTC(2026, 10, 18, 12) - real(); Date.now = () => real() + off; });
@@ -1132,6 +1132,7 @@ try {
     p2.on('console', (m) => { if (m.type() === 'error' && !OFFLINE.test(m.text() + (m.location().url || ''))) errors.push('console: ' + m.text()); });
     await p2.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     const calls = [];
+    let duelKey = '';
     let friends = [{ id: ANA, name: 'Ana', status: 'pending', incoming: true, since: '2026-11-17T10:00:00Z' }];
     await p2.route(/supabase\.co/, async (route) => {
       const req = route.request(), url = req.url(), body = req.postData() ? JSON.parse(req.postData()) : null;
@@ -1149,6 +1150,17 @@ try {
           case 'my_friends': return J(friends);
           case 'friend_respond': friends = friends.map((f) => ({ ...f, status: 'accepted', incoming: false })); return J(null);
           case 'friend_request': friends = [...friends, { id: '00000000-0000-0000-0000-0000000000e3', name: 'Ben', status: 'pending', incoming: false }]; return J('sent');
+          case 'settle_due': return J(0);
+          case 'my_duels': return J([
+            { id: 5, opponent: ANA, opponent_name: 'Ana', mine: true, track_key: duelKey, track_name: 'Circuit du duel', status: 'accepted', ends_at: '2026-11-19T12:00:00Z', my_time: null, their_time: null, result: null, delta: null },
+            { id: 6, opponent: ANA, opponent_name: 'Ana', mine: false, track_key: duelKey, track_name: 'Circuit du duel', status: 'pending', ends_at: '2026-11-19T12:00:00Z', my_time: null, their_time: null, result: null, delta: null },
+            { id: 4, opponent: ANA, opponent_name: 'Ana', mine: true, track_key: duelKey, track_name: 'Circuit du duel', status: 'settled', ends_at: '2026-11-17T12:00:00Z', my_time: 30, their_time: 31, result: 'win', delta: 16 }]);
+          case 'my_tournaments': return J([{ id: 9, name: 'Coupe', code: 'ABC234', track_key: duelKey, track_name: 'Circuit du duel', ends_at: '2026-11-20T12:00:00Z', closed: false, players: 3, my_rank: null, owner: true }]);
+          case 'friends_ratings': return J([{ rank: 1, player: ME, name: 'Testeur', rating: 1216, games: 1, wins: 1 }, { rank: 2, player: ANA, name: 'Ana', rating: 1184, games: 1, wins: 0 }]);
+          case 'tournament_board': return J([{ rank: 1, player: ANA, name: 'Ana', time: 39 }, { rank: 2, player: ME, name: 'Testeur', time: null }]);
+          case 'duel_challenge': return J(7);
+          case 'tournament_join': return J(10);
+          case 'tournament_create': return J([{ id: 11, code: 'XYZ789' }]);
           default: return J(null);
         }
       }
@@ -1157,6 +1169,7 @@ try {
     });
     const ap = (fn, arg) => p2.evaluate(fn, arg), wait = (fn, arg, timeout = 30000) => p2.waitForFunction(fn, arg, { timeout });
     const clk = (sel) => p2.locator(sel).first().evaluate((el) => el.click());
+    const until = async (fn, ms = 10000) => { const t0 = Date.now(); while (!fn()) { if (Date.now() - t0 > ms) throw new Error('délai dépassé'); await new Promise((r) => setTimeout(r, 50)); } };
     try {
       await p2.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'load' });
       await p2.locator('#wl-name').fill('Testeur');
@@ -1199,6 +1212,27 @@ try {
       await ap(() => window.copytrack.showScreen('community'));
       await clk('#comm-tabs [data-sort="followed"]');
       await wait(() => /Tu ne suis encore personne/.test(document.getElementById('comm-status').textContent));
+      // E17 : Compétition (duels classés, tournois privés)
+      duelKey = await ap(() => window.copytrack.builtins[2].key);
+      await ap(() => { window.copytrack.showMenu('menu'); window.copytrack.competitionMenu(); });
+      await wait(() => document.querySelector('.competition .duel-list'));
+      assert.match(await p2.evaluate(() => document.querySelector('.competition').textContent), /Mon classement : 1216[\s\S]*🏆 Victoire · 00:30\.000 — 00:31\.000 · Elo \+16[\s\S]*Coupe/);
+      await clk('.competition [data-duel-yes="6"]');
+      await until(() => calls.some((c) => c.url.includes('/rpc/duel_respond')));
+      assert.deepEqual(calls.find((c) => c.url.includes('/rpc/duel_respond')).body, { duel: 6, accept: true });
+      await wait(() => document.querySelector('.competition .duel-new'));
+      await ap((k) => { const f = document.querySelector('.competition .duel-new'); f.querySelector('.duel-track').value = k; f.requestSubmit(); }, duelKey);
+      await until(() => calls.some((c) => c.url.includes('/rpc/duel_challenge')));
+      assert.deepEqual(calls.find((c) => c.url.includes('/rpc/duel_challenge')).body.track, duelKey);
+      await wait(() => document.querySelector('.competition .tour-join'));
+      await ap(() => { const f = document.querySelector('.competition .tour-join'); f.querySelector('input').value = 'abc234'; f.requestSubmit(); });
+      await until(() => calls.some((c) => c.url.includes('/rpc/tournament_join')));
+      await wait(() => document.querySelector('.competition [data-tour-board="9"]'));
+      await clk('.competition [data-tour-board="9"]');
+      await wait(() => /Ana[\s\S]*00:39\.000/.test(document.querySelector('.competition .tour-board').textContent));
+      await clk('.competition [data-duel-play="5"]');
+      await wait(() => window.copytrack.mode === 'race' && window.copytrack.session && /~v1\.duel-5$/.test(window.copytrack.session.trackKey), null, 30000);
+      await ap(() => window.copytrack.quitRace());
     } finally { await ctx2.close(); }
   });
 

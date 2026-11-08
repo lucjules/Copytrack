@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.38** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.9.39** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -143,7 +143,9 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
 
 12. **Saisons hebdomadaires** : `supabase/etape11-saisons.sql` (saisons, divisions, historique, clôture). Les saisons se closent d'elles-mêmes : le jeu appelle `close_due_seasons()` avant d'afficher une saison. Pour une clôture à l'heure dite, active l'extension **pg_cron** (Supabase › Database › Extensions) puis lance `select cron.schedule('copytrack-saisons', '5 0 * * 1', 'select public.close_due_seasons()');`. Les temps de saison passent par `submit-score` (à redéployer), qui ne les accepte que pendant la semaine de la saison.
 
-Sans les étapes 9 à 11, le jeu fonctionne : les onglets Secteurs, Amis et Saison des classements disent qu'une étape SQL manque, sans faux classement.
+13. **Compétition asynchrone** : `supabase/etape12-competition.sql` (duels entre amis classés au **Elo**, tournois privés, historique). Puis **redéployer `submit-score`** : elle vérifie en base qu'un temps de duel ou de tournoi vient d'un participant, avant l'échéance. Les duels échus et les tournois finis se règlent d'eux-mêmes (`settle_due()`, appelée par le jeu) ; pour une clôture à l'heure dite : `select cron.schedule('copytrack-competition', '*/10 * * * *', 'select public.settle_due()');` (pg_cron).
+
+Sans les étapes 9 à 12, le jeu fonctionne : les onglets Secteurs, Amis et Saison des classements, et l'écran Compétition, disent qu'une étape SQL manque, sans faux classement.
 
 Les scripts sont relançables et testés sur PostgreSQL (`npm run test:sql`).
 

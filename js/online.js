@@ -23,7 +23,7 @@ function explain(status, body) {
   if (body && body.code === '42P01' || /relation .* does not exist|Could not find the table/i.test(msg)) return new OnlineError('Base non prête (étape 1 SQL manquante).', 'no-schema');
   if (body && body.code === '23505') return new OnlineError('Ce circuit est déjà publié.', 'duplicate');
   if (body && body.code === 'PGRST202' || /Could not find the function/i.test(msg)) return new OnlineError('Fonction en ligne absente : une étape SQL n’est pas encore lancée sur le serveur.', 'no-sql-step');
-  if (/compte est nécessaire|Aucun compte ne porte|propre pseudo|Trop de demandes|Liste d.amis pleine|Trop d.abonnements|On ne se suit pas/.test(msg)) return new OnlineError(msg, 'social');
+  if (/compte est nécessaire|Aucun compte ne porte|propre pseudo|Trop de demandes|Liste d.amis pleine|Trop d.abonnements|On ne se suit pas|ses amis|Dix duels|tournoi|Tournoi|invalide \(circuits/.test(msg)) return new OnlineError(msg, 'social');
   if (status === 404 && body && body.code === 'NOT_FOUND' && /function/i.test(msg)) {
     return new OnlineError('Fonction « submit-score » introuvable sur le serveur.', 'no-function');
   }
@@ -351,6 +351,18 @@ class OnlineClient {
     return Array.isArray(r) ? r : [];
   }
   async mySeason(n) { const r = await this.rpc('my_season', { n }); return Array.isArray(r) && r[0] ? r[0] : null; }
+
+  // ---- Compétition asynchrone (etape12-competition.sql) : la base règle duels et tournois échus avant qu'on les lise ---------------
+  async settleDue() { try { await this.rpc('settle_due'); } catch (e) { if (e.code === 'no-sql-step') throw e; } }
+  async duels() { await this.settleDue(); const r = await this.rpc('my_duels', { lim: 30 }); return Array.isArray(r) ? r : []; }
+  async duelChallenge(targetId, trackKey, trackName, playerName) { await this.ensurePlayer(playerName); return +(await this.rpc('duel_challenge', { target: targetId, track: trackKey, tname: String(trackName || '').slice(0, 60) })); }
+  async duelRespond(id, accept) { return this.rpc('duel_respond', { duel: id, accept: !!accept }); }
+  async friendsRatings() { const r = await this.rpc('friends_ratings'); return Array.isArray(r) ? r : []; }
+  async headToHead(id) { const r = await this.rpc('head_to_head', { other: id }); return Array.isArray(r) && r[0] ? r[0] : { wins: 0, draws: 0, losses: 0 }; }
+  async tournaments() { await this.settleDue(); const r = await this.rpc('my_tournaments'); return Array.isArray(r) ? r : []; }
+  async tournamentCreate(name, trackKey, trackName, days, playerName) { await this.ensurePlayer(playerName); const r = await this.rpc('tournament_create', { tname: name, track: trackKey, trackname: String(trackName || '').slice(0, 60), days }); return Array.isArray(r) ? r[0] : r; }
+  async tournamentJoin(code, playerName) { await this.ensurePlayer(playerName); return +(await this.rpc('tournament_join', { jcode: String(code || '').trim() })); }
+  async tournamentBoard(id) { const r = await this.rpc('tournament_board', { tid: id }); return Array.isArray(r) ? r : []; }
 
   async myLikes() {
     await this.ensureSession();

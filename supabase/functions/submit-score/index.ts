@@ -11701,6 +11701,11 @@ var WIND_DIRS = [
   "no"
 ];
 var VARIANTS = {
+  duel: {
+    re: /^[1-9][0-9]{0,9}$/,
+    tag: true,
+    rule: () => ({})
+  },
   g: {
     values: [
       "40",
@@ -11752,6 +11757,11 @@ var VARIANTS = {
   },
   sea: {
     re: /^[1-9][0-9]{0,3}$/,
+    tag: true,
+    rule: () => ({})
+  },
+  tour: {
+    re: /^[1-9][0-9]{0,9}$/,
     tag: true,
     rule: () => ({})
   },
@@ -11865,6 +11875,20 @@ function trackForKey(key2, code = "") {
   if (key2.includes("~")) {
     const off = trackForKey(base, code);
     const v = parseVariant(variant);
+    if (v.duel != null || v.tour != null) {
+      if (Object.keys(v).length !== 1 || off.kind !== "builtin") throw new Error("Comp\xE9tition possible seulement sur un circuit de la carri\xE8re.");
+      const kind = v.duel != null ? "duel" : "tour";
+      return {
+        ...off,
+        name: `${off.name} \xB7 ${kind === "duel" ? "duel" : "tournoi"} ${v[kind]}`,
+        variant: v,
+        competition: {
+          kind,
+          id: +v[kind],
+          base
+        }
+      };
+    }
     if (v.sea != null) {
       const n = +v.sea;
       if (Object.keys(v).length !== 1 || off.kind !== "builtin" || !seasonTracks(n).some((d) => base.startsWith(`b-${d.id}-`))) throw new Error("Ce circuit ne fait pas partie de cette saison.");
@@ -11979,6 +12003,9 @@ function verifyRun({ trackKey, code, inputs, time, physVer, withGhost = false })
     kind: t.kind,
     ...t.season ? {
       season: t.season
+    } : {},
+    ...t.competition ? {
+      competition: t.competition
     } : {},
     ...withGhost ? {
       ghost: run.ghost,
@@ -12115,6 +12142,25 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
         } : {}
       });
       const simTime = res.time;
+      if (res.competition) {
+        const { kind, id, base: base2 } = res.competition;
+        const w = await db("rpc/competition_open", {
+          method: "POST",
+          body: JSON.stringify({
+            kind,
+            cid: id,
+            p: uid,
+            base: base2
+          })
+        });
+        if (!w.ok) return json(422, {
+          error: "Comp\xE9titions indisponibles sur ce serveur (\xE9tape SQL 12)."
+        });
+        const why = await w.json();
+        if (why !== "") return json(422, {
+          error: typeof why === "string" && why ? why : "Comp\xE9tition ferm\xE9e."
+        });
+      }
       const prof = await (await db(`players?id=eq.${uid}&select=id`)).json();
       if (!Array.isArray(prof) || !prof.length) return json(400, {
         error: "Profil pilote manquant."

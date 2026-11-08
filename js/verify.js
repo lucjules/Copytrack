@@ -19,12 +19,18 @@ import { seasonOpen, seasonTracks } from './seasons.js';
 //                        ignore le nom et la description, qu'on peut modifier après coup
 //   <clé>~v1.…           variante de record (variants.js) : le circuit de la clé officielle, transformé par ses règles
 //   b-…~v1.sea-N         saison hebdomadaire N (seasons.js) : acceptée seulement pendant sa semaine, sur ses trois circuits
+//   b-…~v1.duel-N / tour-N  duel ou tournoi (E17) : le circuit officiel ; la fonction serveur vérifie en base la fenêtre et les participants
 export function trackForKey(key, code = '') {
   key = String(key || '');
   const { base, variant } = splitKey(key);
   if (key.includes('~')) {                       // (une clé terminée par « ~ » est une variante vide : refusée par parseVariant)
     const off = trackForKey(base, code);
     const v = parseVariant(variant);
+    if (v.duel != null || v.tour != null) {      // duel ou tournoi (E17) : seul, sur un circuit de la carrière ; la fenêtre et les participants sont en base (submit-score)
+      if (Object.keys(v).length !== 1 || off.kind !== 'builtin') throw new Error('Compétition possible seulement sur un circuit de la carrière.');
+      const kind = v.duel != null ? 'duel' : 'tour';
+      return { ...off, name: `${off.name} · ${kind === 'duel' ? 'duel' : 'tournoi'} ${v[kind]}`, variant: v, competition: { kind, id: +v[kind], base } };
+    }
     if (v.sea != null) {                         // saison hebdomadaire (E15) : seule, sur un circuit de la saison, pendant sa semaine
       const n = +v.sea;
       if (Object.keys(v).length !== 1 || off.kind !== 'builtin' || !seasonTracks(n).some((d) => base.startsWith(`b-${d.id}-`))) throw new Error('Ce circuit ne fait pas partie de cette saison.');
@@ -87,5 +93,5 @@ export function verifyRun({ trackKey, code, inputs, time, physVer, withGhost = f
   const run = replayRun(t.track, inputs, { ghost: withGhost });
   if (run == null) return { ok: false, error: 'La course rejouée n’atteint pas l’arrivée.' };
   if (Math.abs(run.time - time) > 0.0005) return { ok: false, error: 'Le temps ne correspond pas à la course rejouée.' };
-  return { ok: true, time: run.time, splits: run.splits, name: t.name, kind: t.kind, ...(t.season ? { season: t.season } : {}), ...(withGhost ? { ghost: run.ghost, ghostVeh: run.ghostVeh } : {}) };
+  return { ok: true, time: run.time, splits: run.splits, name: t.name, kind: t.kind, ...(t.season ? { season: t.season } : {}), ...(t.competition ? { competition: t.competition } : {}), ...(withGhost ? { ghost: run.ghost, ghostVeh: run.ghostVeh } : {}) };
 }

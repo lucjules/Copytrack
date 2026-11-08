@@ -167,8 +167,9 @@ try {
     await ctx.close();
   });
 
-  await test('saison, secteurs, amis et abonnements en anglais (serveur simulé, horloge de la saison 2)', async () => {
+  await test('saison, secteurs, amis, abonnements et compétition en anglais (serveur simulé, horloge de la saison 2)', async () => {
     const ME = '00000000-0000-0000-0000-0000000000e1', ANA = '00000000-0000-0000-0000-0000000000e2';
+    let K = 'b-x';                                   // clé d'un vrai circuit de la carrière (lue dans la page) : son nom est traduit avec le jeu
     const server = (route) => {
       const url = route.request().url(), J = (b, headers = {}) => route.fulfill({ status: 200, contentType: 'application/json', headers, body: JSON.stringify(b) });
       if (url.includes('/auth/v1/')) return J({ access_token: 'jeton', refresh_token: 'r', expires_in: 3600, user: { id: ME } });
@@ -178,6 +179,13 @@ try {
       if (rpc === 'sector_board') return J([{ rank: 1, player: ANA, name: 'Ana', sector_steps: 601, time: 30.5 }]);
       if (rpc === 'friends_board') return J([{ rank: 1, player: ANA, name: 'Ana', time: 25.25, updated_at: '2026-11-17T10:00:00Z' }]);
       if (rpc === 'my_friends') return J([{ id: ANA, name: 'Ana', status: 'pending', incoming: true }, { id: 'x', name: 'Ben', status: 'accepted', incoming: false }, { id: 'y', name: 'Cyd', status: 'pending', incoming: false }]);
+      if (rpc === 'my_duels') return J([
+        { id: 5, opponent: ANA, opponent_name: 'Ana', mine: true, track_key: K, track_name: 'Éclats', status: 'accepted', ends_at: '2026-11-19T12:00:00Z', my_time: 30, their_time: null, result: null, delta: null },
+        { id: 6, opponent: ANA, opponent_name: 'Ana', mine: false, track_key: K, track_name: 'Éclats', status: 'pending', ends_at: '2026-11-19T12:00:00Z', my_time: null, their_time: null, result: null, delta: null },
+        { id: 4, opponent: ANA, opponent_name: 'Ana', mine: true, track_key: K, track_name: 'Éclats', status: 'settled', ends_at: '2026-11-17T12:00:00Z', my_time: 30, their_time: 31, result: 'loss', delta: -16 },
+        { id: 3, opponent: ANA, opponent_name: 'Ana', mine: true, track_key: K, track_name: 'Éclats', status: 'void', ends_at: '2026-11-16T12:00:00Z', my_time: null, their_time: null, result: null, delta: null }]);
+      if (rpc === 'my_tournaments') return J([{ id: 9, name: 'Coupe', code: 'ABC234', track_key: K, track_name: 'Éclats', ends_at: '2026-11-20T12:00:00Z', closed: false, players: 3, my_rank: null, owner: true }, { id: 8, name: 'Vieille coupe', code: 'XYZ789', track_key: K, track_name: 'Éclats', ends_at: '2026-11-10T12:00:00Z', closed: true, players: 1, my_rank: 1, owner: true }]);
+      if (rpc === 'friends_ratings') return J([{ rank: 1, player: ME, name: 'Testeur', rating: 1216, games: 1, wins: 1 }, { rank: 2, player: ANA, name: 'Ana', rating: 1184, games: 1, wins: 0 }]);
       if (url.includes('/rest/v1/scores')) return J([], { 'content-range': '*/0' });
       return J(rpc ? null : []);
     };
@@ -205,6 +213,10 @@ try {
       await click(page, '#comm-tabs [data-sort="followed"]');
       await page.waitForFunction(() => /You do not follow anyone yet/.test(document.getElementById('comm-status').textContent), null, { timeout: 20000 });
       assert.deepEqual(await frenchLeft(page), [], 'communauté : abonnements');
+      K = await page.evaluate(() => window.copytrack.builtins[2].key);
+      await page.evaluate(() => { window.copytrack.showMenu('menu'); window.copytrack.competitionMenu(); });
+      await page.waitForFunction(() => /My rating[\s\S]*Loss[\s\S]*void[\s\S]*Private tournaments/.test((document.querySelector('.competition') || {}).textContent || ''), null, { timeout: 20000 });
+      assert.deepEqual(await frenchLeft(page), [], 'compétition');
     } finally { await ctx.close(); }
   });
 

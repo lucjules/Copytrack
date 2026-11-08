@@ -107,6 +107,7 @@ export const wiringMethods = {
       case 'multi': this.multiMenu(); break;
       case 'tutorial': this.tutorial(); break;
       case 'academy': this.academyMenu(); break;
+      case 'competition': this.competitionMenu(); break;
       case 'editor': this.openEditor(); break;
       case 'mytracks': this.showScreen('mytracks'); break;
       case 'import': this.importModal(false); break;

@@ -18,12 +18,14 @@ export const MAX_KEY = 80;
 
 // Nom -> valeurs permises (texte canonique) et règle correspondante. Ajouter une catégorie = une ligne (ordre alphabétique des noms).
 export const VARIANTS = {
+  duel: { re: /^[1-9][0-9]{0,9}$/, tag: true, rule: () => ({}) },                 // duel entre amis n° N (E17) : étiquette, fenêtre et duellistes vérifiés en base
   g: { values: ['40', '70', '130', '180'], rule: (v) => ({ g0: +v }) },            // gravité de départ (%)
   gp: { values: ['60', '80'], rule: (v) => ({ grip: +v }) },                       // adhérence de tout le circuit (%) : verglas (E13)
   lap: { values: ['1', '2', '3', '4', '5'], rule: (v) => ({ laps: +v }) },         // nombre de tours (circuits fermés)
   obs: { values: ['0'], rule: () => ({ obstacles: 'off' }) },                       // sans obstacles
   off: { values: ['0', '1'], rule: (v) => ({ offroad: +v }) },                      // hors-piste interdit / permis
   sea: { re: /^[1-9][0-9]{0,3}$/, tag: true, rule: () => ({}) },                   // saison hebdomadaire N (seasons.js) : une étiquette, le circuit ne change pas (E15)
+  tour: { re: /^[1-9][0-9]{0,9}$/, tag: true, rule: () => ({}) },                 // tournoi privé n° N (E17) : étiquette, fenêtre et inscrits vérifiés en base
   v0: { values: ['0', '100', '200'], rule: (v) => ({ v0: +v }) },                   // vitesse de départ (km/h)
   veh: { values: ['car', 'moto', 'boat', 'glider'], rule: (v) => ({ veh0: v }) },  // véhicule de départ
   wd: { values: WIND_DIRS, rule: (v) => ({ wind: 25, windDir: WIND_DIRS.indexOf(v) * 45 }) },   // vent de 25 % vers une direction (n, ne, e… ; E13)

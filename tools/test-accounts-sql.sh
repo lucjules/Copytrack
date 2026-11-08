@@ -16,7 +16,7 @@ create table auth.users (id uuid primary key default gen_random_uuid(), email te
 create function auth.uid() returns uuid language sql stable as $f$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $f$;
 grant usage on schema auth to anon, authenticated;
 SQL
-for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape6-telemetrie.sql supabase/etape7-fantomes.sql supabase/etape7-fantomes.sql supabase/etape8-decouverte.sql supabase/etape8-decouverte.sql supabase/etape9-secteurs.sql supabase/etape9-secteurs.sql supabase/etape10-social.sql supabase/etape10-social.sql supabase/etape11-saisons.sql supabase/etape11-saisons.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
+for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape6-telemetrie.sql supabase/etape7-fantomes.sql supabase/etape7-fantomes.sql supabase/etape8-decouverte.sql supabase/etape8-decouverte.sql supabase/etape9-secteurs.sql supabase/etape9-secteurs.sql supabase/etape10-social.sql supabase/etape10-social.sql supabase/etape11-saisons.sql supabase/etape11-saisons.sql supabase/etape12-competition.sql supabase/etape12-competition.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
 $P -d $DB <<'SQL'
 \set ON_ERROR_STOP off
 create function public.as_user(u uuid) returns void language plpgsql as $$ begin perform set_config('request.jwt.claim.sub', u::text, false); end $$;
@@ -331,8 +331,114 @@ do $$ declare refuse boolean := false; begin
 end $$;
 reset role;
 reset copytrack.now;
+-- 17. compétition asynchrone (étape 12) : duels entre amis, Elo calculé en base depuis scores, tournois privés clos à leur date
+reset role;
+set copytrack.now = '2026-12-01 10:00:00+00';
+insert into friends (a, b, status, accepted_at) values ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000d2', 'accepted', now());
+select public.check('étape 12 : Elo (K = 32) : à égalité de classement, ±16 ; le favori qui gagne prend peu', public.elo(1200, 1200, 1) = 1216 and public.elo(1200, 1200, 0) = 1184 and public.elo(1400, 1200, 1) = 1408 and public.elo(1200, 1200, 0.5) = 1200);
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000b1');
+do $$ declare refuse boolean := false; begin
+  begin perform public.duel_challenge('00000000-0000-0000-0000-0000000000d2', 'b-duel-1'); exception when others then refuse := true; end;
+  perform public.check('étape 12 : une session invitée ne lance pas de duel', refuse);
+end $$;
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+do $$ declare refuse boolean := false; refuse2 boolean := false; begin
+  begin perform public.duel_challenge('00000000-0000-0000-0000-0000000000d3', 'b-duel-1'); exception when others then refuse := true; end;
+  begin perform public.duel_challenge('00000000-0000-0000-0000-0000000000d2', 'u-abc'); exception when others then refuse2 := true; end;
+  perform public.check('étape 12 : on ne défie que ses amis, sur un circuit de la carrière', refuse and refuse2);
+end $$;
+select public.duel_challenge('00000000-0000-0000-0000-0000000000d2', 'b-duel-1', 'Duel Un') as duel1 \gset
+reset role;
+select public.check('étape 12 : fenêtre du duel (lue par submit-score) : le défiant peut courir, le défié pas encore, un tiers jamais, un autre circuit non',
+  public.competition_open('duel', :duel1, '00000000-0000-0000-0000-0000000000d1', 'b-duel-1') = ''
+  and public.competition_open('duel', :duel1, '00000000-0000-0000-0000-0000000000d2', 'b-duel-1') <> ''
+  and public.competition_open('duel', :duel1, '00000000-0000-0000-0000-0000000000d3', 'b-duel-1') <> ''
+  and public.competition_open('duel', :duel1, '00000000-0000-0000-0000-0000000000d1', 'b-autre-1') <> '');
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000d2');
+select public.duel_respond(:duel1, true);
+reset role;
+select public.check('étape 12 : accepté, le défié peut courir', public.competition_open('duel', :duel1, '00000000-0000-0000-0000-0000000000d2', 'b-duel-1') = '');
+insert into scores (track_key, player, time, inputs, phys_ver) values ('b-duel-1~v1.duel-' || :duel1, '00000000-0000-0000-0000-0000000000d1', 30.0, 'A', 26), ('b-duel-1~v1.duel-' || :duel1, '00000000-0000-0000-0000-0000000000d2', 31.0, 'A', 26);
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+select public.check('étape 12 : pendant le duel, je vois mon temps, pas celui de l''autre', (select my_time = 30 and their_time is null and status = 'accepted' from public.my_duels(30) where id = :duel1));
+select public.as_user('00000000-0000-0000-0000-0000000000d3');
+select public.check('étape 12 : un tiers ne voit pas le duel', (select count(*) from duels) = 0 and (select count(*) from public.my_duels(30)) = 0);
+select public.check('étape 12 : avant l''échéance, rien n''est réglé', public.settle_due() = 0);
+reset role;
+set copytrack.now = '2026-12-02 10:01:00+00';
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000d3');
+select public.check('étape 12 : à l''échéance, le duel est réglé (par n''importe quel joueur connecté)', public.settle_due() = 1);
+select public.check('étape 12 : une seule fois', public.settle_due() = 0);
+reset role;
+select public.check('étape 12 : le plus rapide gagne ; Elo 1216 / 1184 ; deltas et temps figés',
+  (select status = 'settled' and winner = '00000000-0000-0000-0000-0000000000d1' and c_delta = 16 and o_delta = -16 and c_time = 30 and o_time = 31 from duels where id = :duel1)
+  and (select rating from ratings where player = '00000000-0000-0000-0000-0000000000d1') = 1216 and (select rating from ratings where player = '00000000-0000-0000-0000-0000000000d2') = 1184);
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000d2');
+select public.check('étape 12 : après coup, chacun voit les deux temps et son résultat', (select my_time = 31 and their_time = 30 and result = 'loss' and delta = -16 from public.my_duels(30) where id = :duel1));
+select public.check('étape 12 : face-à-face et classement Elo entre amis', (select losses = 1 and wins = 0 from public.head_to_head('00000000-0000-0000-0000-0000000000d1'))
+  and (select array_agg(name order by rank) from public.friends_ratings()) = array['Ana', 'Ben']);
+-- un duel sans réponse, un duel accepté sans temps : annulés, sans Elo ; une égalité parfaite : nul
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+select public.duel_challenge('00000000-0000-0000-0000-0000000000d2', 'b-duel-2') as duel2 \gset
+select public.duel_challenge('00000000-0000-0000-0000-0000000000d2', 'b-duel-3') as duel3 \gset
+select public.duel_challenge('00000000-0000-0000-0000-0000000000d2', 'b-duel-4') as duel4 \gset
+select public.as_user('00000000-0000-0000-0000-0000000000d2');
+select public.duel_respond(:duel3, true);
+select public.duel_respond(:duel4, true);
+reset role;
+insert into scores (track_key, player, time, inputs, phys_ver) values ('b-duel-4~v1.duel-' || :duel4, '00000000-0000-0000-0000-0000000000d1', 25.5, 'A', 26), ('b-duel-4~v1.duel-' || :duel4, '00000000-0000-0000-0000-0000000000d2', 25.5, 'A', 26);
+set copytrack.now = '2026-12-03 11:00:00+00';
+select public.check('étape 12 : trois duels échus réglés', public.settle_due() = 3);
+select public.check('étape 12 : sans réponse ou sans temps : annulé ; égalité : nul (Elo inchangé à classements égaux… ici le favori perd un peu)',
+  (select status from duels where id = :duel2) = 'void' and (select status from duels where id = :duel3) = 'void'
+  and (select status = 'settled' and winner is null from duels where id = :duel4)
+  and (select rating from ratings where player = '00000000-0000-0000-0000-0000000000d1') = 1216 + public.elo(1216, 1184, 0.5) - 1216
+  and (select games from ratings where player = '00000000-0000-0000-0000-0000000000d1') = 2);
+do $$ declare refuse boolean := false; begin
+  set role authenticated;
+  perform public.as_user('00000000-0000-0000-0000-0000000000d1');
+  begin insert into ratings (player, rating) values ('00000000-0000-0000-0000-0000000000d3', 3000); exception when others then refuse := true; end;
+  reset role;
+  perform public.check('étape 12 : le jeu n''écrit pas un classement Elo', refuse);
+end $$;
+-- tournoi privé
+set copytrack.now = '2026-12-10 09:00:00+00';
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+select id as tour1, code as tcode from public.tournament_create('Coupe d''hiver', 'b-tour-1', 'Tour Un', 2) \gset
+select public.check('étape 12 : tournoi créé, code à 6 caractères, le créateur inscrit', :'tcode' ~ '^[A-HJ-NP-Z2-9]{6}$' and (select count(*) from public.my_tournaments()) = 1);
+select public.as_user('00000000-0000-0000-0000-0000000000d3');
+select public.check('étape 12 : Cyd entre avec le code (sans tenir compte de la casse)', public.tournament_join(lower(:'tcode')) = :tour1);
+select public.as_user('00000000-0000-0000-0000-0000000000d2');
+select public.check('étape 12 : un non-inscrit ne voit ni le tournoi ni son classement', (select count(*) from tournaments) = 0 and (select count(*) from public.tournament_board(:tour1)) = 0);
+reset role;
+select public.check('étape 12 : fenêtre du tournoi : les inscrits seulement', public.competition_open('tour', :tour1, '00000000-0000-0000-0000-0000000000d3', 'b-tour-1') = '' and public.competition_open('tour', :tour1, '00000000-0000-0000-0000-0000000000d2', 'b-tour-1') <> '');
+insert into scores (track_key, player, time, inputs, phys_ver) values ('b-tour-1~v1.tour-' || :tour1, '00000000-0000-0000-0000-0000000000d1', 40, 'A', 26), ('b-tour-1~v1.tour-' || :tour1, '00000000-0000-0000-0000-0000000000d3', 39, 'A', 26);
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000d1');
+select public.check('étape 12 : classement du tournoi en cours, depuis scores', (select array_agg(name order by rank) from public.tournament_board(:tour1)) = array['Cyd', 'Ana']);
+reset role;
+set copytrack.now = '2026-12-12 09:00:01+00';
+select public.check('étape 12 : à la date de fin, le tournoi est clos automatiquement', public.settle_due() = 1);
+select public.check('étape 12 : son classement est figé', (select closed_at is not null from tournaments where id = :tour1)
+  and (select rank from tournament_players where tournament = :tour1 and player = '00000000-0000-0000-0000-0000000000d3') = 1
+  and (select rank from tournament_players where tournament = :tour1 and player = '00000000-0000-0000-0000-0000000000d1') = 2);
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000d2');
+do $$ declare refuse boolean := false; begin
+  begin perform public.tournament_join((select code from tournaments limit 1)); exception when others then refuse := true; end;
+  perform public.check('étape 12 : on n''entre plus dans un tournoi terminé', refuse);
+end $$;
+reset role;
+select public.check('étape 12 : fenêtre fermée après la fin', public.competition_open('tour', :tour1, '00000000-0000-0000-0000-0000000000d3', 'b-tour-1') <> '');
+reset copytrack.now;
 -- 13. aucun mot de passe en clair dans nos tables
 select public.check('aucune colonne mot de passe dans le schéma public', not exists (select 1 from information_schema.columns where table_schema='public' and column_name ilike '%pass%'));
 select case when ok then '  ok   ' else '  FAIL ' end || name from public.res order by ok, name;
-select 'RESULT ' || case when bool_and(ok) and count(*) = 82 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
+select 'RESULT ' || case when bool_and(ok) and count(*) = 107 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
 SQL

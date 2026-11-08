@@ -119,6 +119,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | --- | --- |
 | `academy.js` | Académie : menu des six leçons et des exercices évalués (E12), introduction, bilan à l'arrivée. Les données et les règles sont dans academy.js (leçons) et skills.js (compétences, exercices) ; la mesure d'un exercice, dans analysis/drill.js. |
 | `community.js` | Communauté : partage, classements en ligne, publication, import de circuits et de fantômes, aide. |
+| `competition.js` | Compétition asynchrone (Copytrack Evolution, E17) : duels classés entre amis (Elo) et tournois privés. Tout se joue sur des circuits de la carrière, sous des catégories de record « …~v1.duel-N » et « …~v1.tour-N » (variants.js) : la course est rejouée par le serveur comme toute autre, et les résultats, le classement Elo et la clôture sont calculés en base (supabase/etape12-competition.sql). Ces méthodes s'ajoutent au prototype de App. |
 | `editorFlow.js` | Passages entre le menu et l'éditeur : ouverture, aide, retour, essai d'un circuit. |
 | `modes.js` | Modes de jeu, règles de partie et paquets (lot 13) : l'interface. Les règles et validations sont dans rules.js et mods.js. Ces méthodes s'ajoutent au prototype de App. |
 | `multi.js` | Multijoueur : salons (privés par code, ou publics), circuit commun, lobby, départ en course à plusieurs, classement du salon, championnat (manches). |
