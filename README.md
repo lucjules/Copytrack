@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.36** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.9.40** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -136,6 +136,16 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
    Les records d'avant l'étape 7 n'ont pas de fantôme : `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node tools/backfill-ghosts.mjs` leur en fabrique un (ou leur auteur renvoie son temps).
 
 9. **Découverte et titres** (facultatif) : `supabase/etape8-decouverte.sql` ajoute l'onglet « Cette semaine » et le « Circuit de la semaine » de la communauté (`trending_tracks`, d'après `track_plays`) et les titres affichés au classement (`players.title`, `set_title` à liste blanche). Sans lui, le jeu fonctionne : « Cette semaine » retombe sur « Plus joués », les titres restent locaux.
+
+10. **Classements par secteur** : `supabase/etape9-secteurs.sql` (colonne `scores.splits`, fonction `sector_board`). Puis **redéployer `submit-score`** : elle range alors les temps intermédiaires de chaque record. Les records déjà enregistrés : `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node tools/backfill-sectors.mjs` (ou leur auteur renvoie son temps).
+
+11. **Amis et abonnements** : `supabase/etape10-social.sql` (tables `friends` et `follows`, fonctions de demande, de réponse, de classement entre amis et d'abonnement ; une demande n'est visible que des deux intéressés). Les amis sont réservés aux comptes.
+
+12. **Saisons hebdomadaires** : `supabase/etape11-saisons.sql` (saisons, divisions, historique, clôture). Les saisons se closent d'elles-mêmes : le jeu appelle `close_due_seasons()` avant d'afficher une saison. Pour une clôture à l'heure dite, active l'extension **pg_cron** (Supabase › Database › Extensions) puis lance `select cron.schedule('copytrack-saisons', '5 0 * * 1', 'select public.close_due_seasons()');`. Les temps de saison passent par `submit-score` (à redéployer), qui ne les accepte que pendant la semaine de la saison.
+
+13. **Compétition asynchrone** : `supabase/etape12-competition.sql` (duels entre amis classés au **Elo**, tournois privés, historique). Puis **redéployer `submit-score`** : elle vérifie en base qu'un temps de duel ou de tournoi vient d'un participant, avant l'échéance. Les duels échus et les tournois finis se règlent d'eux-mêmes (`settle_due()`, appelée par le jeu) ; pour une clôture à l'heure dite : `select cron.schedule('copytrack-competition', '*/10 * * * *', 'select public.settle_due()');` (pg_cron).
+
+Sans les étapes 9 à 12, le jeu fonctionne : les onglets Secteurs, Amis et Saison des classements, et l'écran Compétition, disent qu'une étape SQL manque, sans faux classement.
 
 Les scripts sont relançables et testés sur PostgreSQL (`npm run test:sql`).
 

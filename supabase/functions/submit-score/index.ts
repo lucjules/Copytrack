@@ -11035,8 +11035,8 @@ var Autopilot = class {
     for (let k = this.idx; k < path.length && this.dist[k] - this.dist[this.idx] < horizon; k++) {
       const vMax = Math.sqrt(this.latLimit * this.radius[k]);
       const dd = this.dist[k] - this.dist[this.idx];
-      const allowed = Math.sqrt(vMax * vMax + 2 * this.brakeDecel * dd);
-      if (allowed < vTarget) vTarget = allowed;
+      const allowed2 = Math.sqrt(vMax * vMax + 2 * this.brakeDecel * dd);
+      if (allowed2 < vTarget) vTarget = allowed2;
     }
     const throttle = v < vTarget - 0.5;
     const brake = v > vTarget + 2.5;
@@ -11701,6 +11701,11 @@ var WIND_DIRS = [
   "no"
 ];
 var VARIANTS = {
+  duel: {
+    re: /^[1-9][0-9]{0,9}$/,
+    tag: true,
+    rule: () => ({})
+  },
   g: {
     values: [
       "40",
@@ -11750,6 +11755,16 @@ var VARIANTS = {
       offroad: +v
     })
   },
+  sea: {
+    re: /^[1-9][0-9]{0,3}$/,
+    tag: true,
+    rule: () => ({})
+  },
+  tour: {
+    re: /^[1-9][0-9]{0,9}$/,
+    tag: true,
+    rule: () => ({})
+  },
   v0: {
     values: [
       "0",
@@ -11780,6 +11795,7 @@ var VARIANTS = {
   }
 };
 var NAMES = Object.keys(VARIANTS).sort();
+var allowed = (n, val) => VARIANTS[n].values ? VARIANTS[n].values.includes(val) : VARIANTS[n].re.test(val);
 function rulesOfVariant(v) {
   const r = {};
   for (const n of NAMES) if (v[n] != null) Object.assign(r, VARIANTS[n].rule(String(v[n])));
@@ -11791,7 +11807,7 @@ function formatVariant(v) {
   for (const n of NAMES) {
     if (v[n] == null) continue;
     const val = String(v[n]);
-    if (!VARIANTS[n].values.includes(val)) throw new Error("Cat\xE9gorie de record inconnue.");
+    if (!allowed(n, val)) throw new Error("Cat\xE9gorie de record inconnue.");
     parts.push(`${n}-${val}`);
   }
   return parts.length ? `${VARIANT_VER}.${parts.join(".")}` : "";
@@ -11803,7 +11819,7 @@ function parseVariant(s) {
   const v = {};
   for (const p of m[1].slice(1).split(".")) {
     const i = p.indexOf("-"), n = p.slice(0, i), val = p.slice(i + 1);
-    if (!Object.hasOwn(VARIANTS, n) || Object.hasOwn(v, n) || !VARIANTS[n].values.includes(val)) throw new Error("Cat\xE9gorie de record inconnue.");
+    if (!Object.hasOwn(VARIANTS, n) || Object.hasOwn(v, n) || !allowed(n, val)) throw new Error("Cat\xE9gorie de record inconnue.");
     v[n] = val;
   }
   if (formatVariant(v) !== str) throw new Error("Cat\xE9gorie de record inconnue.");
@@ -11820,9 +11836,36 @@ function splitKey(key2) {
   };
 }
 function applyVariant(track, v) {
+  const names = Object.keys(v || {}).filter((n) => v[n] != null);
+  if (names.length && names.every((n) => VARIANTS[n] && VARIANTS[n].tag)) return track;
   const t = applyRules(track, rulesOfVariant(v));
   if (t === track || t.signature() === track.signature() && t.laps === track.laps) throw new Error("Cette cat\xE9gorie ne change rien sur ce circuit.");
   return t;
+}
+
+// js/seasons.js
+var SEASON_EPOCH = Date.UTC(2026, 10, 9);
+var SEASON_MS = 7 * 864e5;
+var SEASON_TRACKS = 3;
+var SEASON_GRACE_MS = 10 * 6e4;
+var seasonBounds = (n) => ({
+  starts: SEASON_EPOCH + (n - 1) * SEASON_MS,
+  ends: SEASON_EPOCH + n * SEASON_MS
+});
+function seasonTracks(n) {
+  const pool = BUILTIN_TRACKS.filter((d) => d.decor !== "atelier");
+  const r = rng("season#" + n), out = [];
+  while (out.length < SEASON_TRACKS) {
+    const d = pool[Math.floor(r() * pool.length)];
+    if (!out.includes(d)) out.push(d);
+  }
+  return out;
+}
+function seasonOpen(n, t = Date.now()) {
+  const { starts, ends } = seasonBounds(n);
+  if (!(n >= 1) || t < starts) return "Cette saison n\u2019a pas encore commenc\xE9.";
+  if (t >= ends + SEASON_GRACE_MS) return "Cette saison est termin\xE9e : les temps ne comptent plus.";
+  return "";
 }
 
 // js/verify.js
@@ -11832,6 +11875,32 @@ function trackForKey(key2, code = "") {
   if (key2.includes("~")) {
     const off = trackForKey(base, code);
     const v = parseVariant(variant);
+    if (v.duel != null || v.tour != null) {
+      if (Object.keys(v).length !== 1 || off.kind !== "builtin") throw new Error("Comp\xE9tition possible seulement sur un circuit de la carri\xE8re.");
+      const kind = v.duel != null ? "duel" : "tour";
+      return {
+        ...off,
+        name: `${off.name} \xB7 ${kind === "duel" ? "duel" : "tournoi"} ${v[kind]}`,
+        variant: v,
+        competition: {
+          kind,
+          id: +v[kind],
+          base
+        }
+      };
+    }
+    if (v.sea != null) {
+      const n = +v.sea;
+      if (Object.keys(v).length !== 1 || off.kind !== "builtin" || !seasonTracks(n).some((d) => base.startsWith(`b-${d.id}-`))) throw new Error("Ce circuit ne fait pas partie de cette saison.");
+      const closed = seasonOpen(n);
+      if (closed) throw new Error(closed);
+      return {
+        ...off,
+        name: `${off.name} \xB7 saison ${n}`,
+        variant: v,
+        season: n
+      };
+    }
     return {
       ...off,
       track: applyVariant(off.track, v),
@@ -11890,7 +11959,8 @@ function replayRun(track, inputs, { ghost = false } = {}) {
   while (!g.done && g.k < MAX_RUN_STEPS) g.step();
   if (!g.logic.finished) return null;
   const out = {
-    time: g.logic.time
+    time: g.logic.time,
+    splits: g.logic.splits.slice()
   };
   if (ghost) {
     const r = g.ghostResult();
@@ -11928,8 +11998,15 @@ function verifyRun({ trackKey, code, inputs, time, physVer, withGhost = false })
   return {
     ok: true,
     time: run.time,
+    splits: run.splits,
     name: t.name,
     kind: t.kind,
+    ...t.season ? {
+      season: t.season
+    } : {},
+    ...t.competition ? {
+      competition: t.competition
+    } : {},
     ...withGhost ? {
       ghost: run.ghost,
       ghostVeh: run.ghostVeh
@@ -12065,6 +12142,25 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
         } : {}
       });
       const simTime = res.time;
+      if (res.competition) {
+        const { kind, id, base: base2 } = res.competition;
+        const w = await db("rpc/competition_open", {
+          method: "POST",
+          body: JSON.stringify({
+            kind,
+            cid: id,
+            p: uid,
+            base: base2
+          })
+        });
+        if (!w.ok) return json(422, {
+          error: "Comp\xE9titions indisponibles sur ce serveur (\xE9tape SQL 12)."
+        });
+        const why = await w.json();
+        if (why !== "") return json(422, {
+          error: typeof why === "string" && why ? why : "Comp\xE9tition ferm\xE9e."
+        });
+      }
       const prof = await (await db(`players?id=eq.${uid}&select=id`)).json();
       if (!Array.isArray(prof) || !prof.length) return json(400, {
         error: "Profil pilote manquant."
@@ -12094,23 +12190,26 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
           track_name: String(res.name ?? "").slice(0, 60),
           updated_at: new Date(now()).toISOString()
         };
-        let up = await db("scores", {
+        const splits = Array.isArray(res.splits) && res.splits.length <= 400 ? {
+          splits: res.splits
+        } : {};
+        const post = (r) => db("scores", {
           method: "POST",
           headers: {
             Prefer: "resolution=merge-duplicates,return=minimal"
           },
-          body: JSON.stringify(ghost ? {
-            ...row,
-            ...ghost
-          } : row)
+          body: JSON.stringify(r)
         });
-        if (!up.ok && ghost && up.status === 400) up = await db("scores", {
-          method: "POST",
-          headers: {
-            Prefer: "resolution=merge-duplicates,return=minimal"
-          },
-          body: JSON.stringify(row)
+        let up = await post({
+          ...row,
+          ...splits,
+          ...ghost || {}
         });
+        if (!up.ok && up.status === 400 && ghost && splits.splits) up = await post({
+          ...row,
+          ...ghost
+        });
+        if (!up.ok && up.status === 400 && (ghost || splits.splits)) up = await post(row);
         if (!up.ok) return json(500, {
           error: "Enregistrement impossible."
         });
@@ -12121,6 +12220,17 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
             Prefer: "return=minimal"
           },
           body: JSON.stringify(ghost)
+        });
+      }
+      if (!improved && Array.isArray(res.splits) && res.splits.length && res.splits.length <= 400 && Math.abs(prev[0].time - simTime) < 1e-6) {
+        await db(`scores?track_key=eq.${key2}&player=eq.${uid}&splits=is.null`, {
+          method: "PATCH",
+          headers: {
+            Prefer: "return=minimal"
+          },
+          body: JSON.stringify({
+            splits: res.splits
+          })
         });
       }
       const base = `track_key=eq.${key2}&phys_ver=eq.${physVer}`;

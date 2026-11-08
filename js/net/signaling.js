@@ -135,6 +135,7 @@ export class LocalSignaling extends Emitter {
     this.bc.onmessage = (e) => this._onMessage(e.data);
   }
   async join(meta) {
+    if (Date.now() < LocalSignaling.blockedUntil) throw new Error('réseau coupé (essai)');
     this.meta = meta;
     this.bc.postMessage({ k: 'hello', id: this.selfId, meta });
     await new Promise((r) => setTimeout(r, 250));      // le temps de recevoir les réponses des présents
@@ -153,4 +154,13 @@ export class LocalSignaling extends Emitter {
   track(meta) { this.meta = meta; this.bc.postMessage({ k: 'meta', id: this.selfId, meta }); }
   send(to, data) { this.bc.postMessage({ k: 'signal', id: this.selfId, to, data }); return true; }
   leave() { this.bc.postMessage({ k: 'bye', id: this.selfId }); this.bc.close(); }
+  // Essais (tests, ?net=local) : une coupure réseau de ms millisecondes. Les autres voient le joueur disparaître de l'annuaire (sans « au revoir » du
+  // salon), lui perd sa signalisation, et ne peut pas la retrouver avant la fin de la coupure.
+  simulateCut(ms) {
+    LocalSignaling.blockedUntil = Date.now() + ms;
+    this.bc.postMessage({ k: 'bye', id: this.selfId });
+    this.bc.close();
+    this.emit('closed', 'coupure simulée');
+  }
 }
+LocalSignaling.blockedUntil = 0;

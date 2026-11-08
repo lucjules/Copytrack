@@ -32,7 +32,7 @@ function recordedRun(def) {
 const RUN = recordedRun(BUILTIN_TRACKS[0]);
 
 // Supabase simulé : jeton valide ou non, profil présent ou non, meilleur temps déjà enregistré, journal des écritures.
-function fakeSupabase({ authOk = true, profile = true, previous = [], board = { before: 0, total: 1 }, failWrite = false, boom = false, noGhostColumns = false } = {}) {
+function fakeSupabase({ authOk = true, profile = true, previous = [], board = { before: 0, total: 1 }, failWrite = false, boom = false, noGhostColumns = false, noSplitsColumn = false, competition = null } = {}) {
   const calls = [];
   const fetch = async (url, init = {}) => {
     calls.push({ url: String(url), method: init.method ?? 'GET', body: init.body });
@@ -40,7 +40,8 @@ function fakeSupabase({ authOk = true, profile = true, previous = [], board = { 
     const u = String(url);
     if (u.includes('/auth/v1/user')) return authOk ? new Response(JSON.stringify({ id: UID }), { status: 200 }) : new Response('{}', { status: 401 });
     if (u.includes('/rest/v1/players')) return new Response(JSON.stringify(profile ? [{ id: UID }] : []), { status: 200 });
-    if (u.includes('/rest/v1/scores') && init.method === 'POST') return new Response(null, { status: failWrite ? 500 : noGhostColumns && String(init.body).includes('"ghost"') ? 400 : 201 });
+    if (u.includes('/rest/v1/rpc/competition_open')) return competition === null ? new Response('{"code":"PGRST202"}', { status: 404 }) : new Response(JSON.stringify(competition), { status: 200 });
+    if (u.includes('/rest/v1/scores') && init.method === 'POST') return new Response(null, { status: failWrite ? 500 : (noGhostColumns && String(init.body).includes('"ghost"')) || (noSplitsColumn && String(init.body).includes('"splits"')) ? 400 : 201 });
     if (u.includes('/rest/v1/scores') && init.method === 'PATCH') return new Response(null, { status: 204 });
     if (u.includes('/rest/v1/scores') && u.includes('has_ghost') && noGhostColumns) return new Response('{"message":"column does not exist"}', { status: 400 });
     if (u.includes('/rest/v1/scores') && u.includes('select=time,phys_ver')) return new Response(JSON.stringify(previous), { status: 200 });
@@ -91,8 +92,20 @@ test('étape 7 pas encore lancée (colonnes absentes) : le temps est enregistré
   const sb = fakeSupabase({ noGhostColumns: true }), r = await make(sb)(request(good)), j = await r.json();
   assert.equal(r.status, 200); assert.equal(j.improved, true);
   const writes = sb.calls.filter((c) => c.method === 'POST');
-  assert.equal(writes.length, 2, 'une écriture refusée, une écriture sans fantôme');
-  assert.ok(!('ghost' in JSON.parse(writes[1].body)));
+  assert.equal(writes.length, 3, 'refusée avec fantôme et temps intermédiaires, refusée avec fantôme, acceptée sans');
+  assert.ok(!('ghost' in JSON.parse(writes[2].body)));
+});
+test('temps intermédiaires (étape 9) : rangés avec le record ; sans la colonne, le record est rangé avec son fantôme', async () => {
+  const sb = fakeSupabase(), r = await make(sb)(request(good));
+  assert.equal(r.status, 200);
+  const sent = JSON.parse(sb.calls.find((c) => c.method === 'POST').body);
+  assert.ok(Array.isArray(sent.splits) && sent.splits.length >= 1 && sent.splits.every((x, i) => Number.isInteger(x) && (i === 0 || x > sent.splits[i - 1])), 'en pas, croissants');
+  const old = fakeSupabase({ noSplitsColumn: true }), r2 = await make(old)(request(good));
+  assert.equal(r2.status, 200);
+  const writes = old.calls.filter((c) => c.method === 'POST');
+  assert.equal(writes.length, 2);
+  const last = JSON.parse(writes[1].body);
+  assert.ok(!('splits' in last) && typeof last.ghost === 'string');
 });
 test('un record d\'avant l\'étape 7 reçoit son fantôme quand le même temps est renvoyé ; un record qui en a déjà un n\'est pas touché', async () => {
   const old = fakeSupabase({ previous: [{ time: RUN.time, phys_ver: PHYS_VER, has_ghost: false }] }), j = await (await make(old)(request(good))).json();
@@ -103,8 +116,36 @@ test('un record d\'avant l\'étape 7 reçoit son fantôme quand le même temps e
   for (const prev of [[{ time: RUN.time, phys_ver: PHYS_VER, has_ghost: true }], [{ time: RUN.time, phys_ver: PHYS_VER }], [{ time: RUN.time - 1, phys_ver: PHYS_VER, has_ghost: false }]]) {
     const sb = fakeSupabase({ previous: prev });
     await make(sb)(request(good));
-    assert.equal(sb.calls.filter((c) => c.method === 'PATCH' || c.method === 'POST').length, 0, JSON.stringify(prev));
+    assert.equal(sb.calls.filter((c) => c.method === 'POST').length, 0, JSON.stringify(prev));
+    // Le même temps renvoyé peut recevoir ses temps intermédiaires (étape 9), seulement s'il n'en a pas ; rien d'autre n'est touché.
+    for (const c of sb.calls.filter((x) => x.method === 'PATCH')) {
+      assert.ok(c.url.includes('splits=is.null') && Math.abs(prev[0].time - RUN.time) < 1e-9, JSON.stringify(prev));
+      assert.deepEqual(Object.keys(JSON.parse(c.body)), ['splits']);
+    }
   }
+});
+
+console.log('Duels et tournois (étape 12)');
+test('une course de duel est rejouée sur le circuit officiel, puis acceptée seulement si la base dit que la fenêtre est ouverte pour ce pilote', async () => {
+  const key = RUN.trackKey + '~v1.duel-7', body = { ...good, trackKey: key };
+  const ok = fakeSupabase({ competition: '' }), r = await make(ok)(request(body));
+  assert.equal(r.status, 200);
+  const ask = JSON.parse(ok.calls.find((c) => c.url.includes('competition_open')).body);
+  assert.deepEqual(ask, { kind: 'duel', cid: 7, p: UID, base: RUN.trackKey });
+  assert.equal(JSON.parse(ok.calls.find((c) => c.method === 'POST' && c.url.endsWith('/rest/v1/scores')).body).track_key, key);
+  const closed = fakeSupabase({ competition: 'Ce duel est terminé.' }), r2 = await make(closed)(request(body));
+  assert.equal(r2.status, 422); assert.equal((await r2.json()).error, 'Ce duel est terminé.');
+  assert.equal(closed.calls.filter((c) => c.method === 'POST' && c.url.endsWith('/rest/v1/scores')).length, 0, 'rien d\'écrit');
+  const none = fakeSupabase({ competition: null }), r3 = await make(none)(request({ ...good, trackKey: RUN.trackKey + '~v1.tour-3' }));
+  assert.equal(r3.status, 422); assert.match((await r3.json()).error, /étape SQL 12/);
+});
+test('duel ou tournoi : circuit de la carrière seulement, et seul dans la catégorie', async () => {
+  const sb = fakeSupabase({ competition: '' });
+  for (const key of [RUN.trackKey + '~v1.duel-7.veh-moto', 'daily-2026-12-01~v1.duel-7', RUN.trackKey + '~v1.duel-07']) {
+    const r = await make(sb)(request({ ...good, trackKey: key }));
+    assert.equal(r.status, 422, key);
+  }
+  assert.equal(sb.calls.filter((c) => c.url.includes('competition_open')).length, 0, 'refusé avant même de demander à la base');
 });
 
 console.log('Requêtes refusées');

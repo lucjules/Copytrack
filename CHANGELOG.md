@@ -6,6 +6,90 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.40 — prototype de rollback : décision GO (hors interface)
+
+Étape E18 de Copytrack Evolution (fin du bloc 5). `PHYS_VER` inchangé (26), `NET_VER` inchangé (4), rien à redéployer. **Rien ne change pour le joueur** : le prototype n'est branché sur aucun écran, et les collisions douces d'E16 restent celles du jeu.
+
+- **La question** : de vraies collisions déterministes entre 2 à 4 voitures sont-elles possibles ? Le rapport complet est dans [docs/ROLLBACK.md](docs/ROLLBACK.md).
+- **Le prototype** (`js/net/rollback.js`) :
+  - un monde à plusieurs voitures (la simulation du jeu pour chacune), avec des chocs entre voitures déterministes (+ − × ÷ √ seulement) ;
+  - la sauvegarde et la restauration exactes de son état ;
+  - un joueur qui prédit les commandes des autres et revient jusqu'à 15 pas en arrière quand la vraie arrive (au-delà, il attend).
+- **Mesures**, conteneur à 4 processeurs virtuels, Xeon à 2,1 GHz :
+  - coût du pire cas par image (4 voitures, 15 pas rejoués à chaque image), au 95e centile : 3,3 ms sous Node, 2,2 ms dans Chromium (critère : moins de 4 ms) ;
+  - **aucune désynchronisation** sur 10 000 pas : 4 joueurs, 0 à 10 pas de retard, 10 % de paquets perdus, 16 717 pas avec contact, environ 13 000 retours en arrière ;
+  - le même monde sous Node, Deno et Chromium.
+- **Décision : GO** pour le prototype : les deux critères sont tenus.
+- **Réserves** :
+  - à mesurer sur des appareils modestes (un téléphone peut être 3 à 5 fois plus lent) ;
+  - circuits à logique non pris en charge (refusés plutôt que désynchronisés) ;
+  - l'intégration reste à faire : transport des commandes, horloges, affichage, arrivées en cours de route, `NET_VER` 5.
+- **Corrigé en chemin, dans le banc lui-même** :
+  - une commande perdue trois fois de suite laissait un trou que rien ne comblait (les paquets répètent maintenant toute la fenêtre de retour) ;
+  - le banc comparait les mondes avant l'arrivée des derniers paquets.
+- Tests : `tools/test-rollback.mjs` (déterminisme, 300 retours au hasard au bit près, chocs, réseau simulé, attente, circuit à logique refusé ; aussi sous Deno) ; test navigateur (même monde dans Chromium que sous Node) ; `node tools/bench-rollback.mjs` pour la mesure complète.
+
+## Bêta 0.9.39 — compétition asynchrone : duels classés, tournois privés
+
+Étape E17 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (4). **Infrastructure à mettre en place** (le jeu dit ce qui manque, sans faux résultat) :
+- l'étape SQL 12 (`supabase/etape12-competition.sql`) ;
+- **redéployer `submit-score`** (déjà régénérée ici) : elle vérifie en base la fenêtre d'un duel ou d'un tournoi avant d'accepter un temps ;
+- facultatif : pg_cron, pour régler duels et tournois à l'heure dite (sinon, à la première consultation).
+
+- **Écran Compétition** (menu principal ; comptes seulement) :
+  - **duels entre amis**, sur un circuit de la carrière : on défie, l'autre accepte ou refuse ; 24 h pour courir, son meilleur temps compte ;
+  - à l'échéance : plus rapide gagne, un seul temps gagne contre aucun, égalité parfaite = nul, aucun temps = annulé ;
+  - **classement Elo** (départ 1200, K = 32), le sien et celui de ses amis ; historique des duels avec les deux temps (celui de l'adversaire seulement à la fin) et l'Elo gagné ou perdu ; face-à-face par adversaire (en base : `head_to_head`) ;
+  - **tournois privés** : un nom, un circuit, une durée de 1 à 14 jours, un code à 6 caractères pour entrer ; classement en direct ; **clos automatiquement** à sa date, classement figé.
+- **Aucun résultat déclaré par le jeu** : les temps sont des catégories de record (`…~v1.duel-N`, `…~v1.tour-N`), rejouées par le serveur comme toutes les autres. Le serveur les accepte des seuls participants, pendant la compétition (`competition_open`, lu en base). Les résultats, l'Elo et la clôture sont calculés en SQL depuis la table `scores`.
+- Sous le capot : étiquettes `duel` et `tour` dans `variants.js`, `verify.js` et `submit-score` (fenêtre lue en base), `js/app/competition.js`, client en ligne. Règlement idempotent (`settle_due`, une seule fois par duel et par tournoi), à la demande du jeu ou par pg_cron.
+- Tests :
+  - SQL (107 vérifications en tout) : Elo ; duels réservés aux amis et aux comptes ; fenêtre lue par le serveur ; temps de l'autre caché jusqu'à la fin ; règlement à l'échéance, une seule fois ; victoire, nul, annulation ; Elo non modifiable par le jeu ; tournoi par code, invisible des non-inscrits, clos à sa date, classement figé ;
+  - fonction serveur (fenêtre ouverte, fermée, étape SQL absente ; refus avant la base) ;
+  - navigateur, français et anglais, avec un serveur simulé (accepter, défier, rejoindre, classement, course de duel sous sa clé).
+
+## Bêta 0.9.38 — multijoueur robuste : reconnexion, hôte remplacé, collisions unifiées
+
+Étape E16 de Copytrack Evolution. `PHYS_VER` inchangé (26). **`NET_VER` passe à 4** : un joueur de 0.9.37 et un joueur de 0.9.38 ne peuvent plus être dans la même salle (le salon le dit, comme à chaque changement de protocole). Rien à redéployer. **Infrastructure facultative** : un relais TURN (voir `supabase/MULTI.md`).
+
+- **Une coupure ne fait plus sortir de la salle** (`js/net/resume.js`) :
+  - le joueur coupé garde sa salle ouverte et sa course continue ; il retente seul de la rejoindre, avec le même identifiant ;
+  - les autres lui gardent sa place 20 s (« ⏳ reconnexion ») : il reste sur la grille, la manche ne se clôt pas sans lui, son arrivée compte ;
+  - à son retour, l'hôte lui renvoie l'état complet, arrivées de la manche en cours comprises, et lui renvoie l'arrivée qu'il aurait annoncée pendant la coupure ;
+  - un onglet rechargé retrouve sa place s'il revient dans les 20 s.
+  Messages : `hello`, `bye` (départ volontaire : la place n'est pas gardée), `hostover`.
+- **Hôte remplacé** : la migration d'hôte existait déjà. Le nouvel hôte se **marque** désormais : l'ancien, revenu après coup, ne reprend pas la main avec un état périmé, et le championnat se termine avec le même classement chez tous.
+- **Collisions unifiées** : pour les collisions douces, la voiture de l'autre est ramenée au même instant que la sienne (interpolation et demi-latence rattrapées). Avec 160 ms de retard d'affichage, les deux joueurs voyaient le contact à 0,3 s et à 1,4 s d'intervalle ; ils le voient maintenant ensemble, au bon moment.
+- **Corrigé** : la fermeture d'une liaison WebRTC écrasait l'état « reconnexion » d'un joueur par « déconnecté ».
+- **TURN** : le code est prêt depuis 0.9.21 (fonction `ice`). Sa **mise en service** demande des identifiants TURN (Cloudflare Realtime ou coturn) dans les secrets Supabase : sans eux, 10 à 20 % des paires de joueurs (NAT symétrique) ne se relient pas. Je ne peux pas le faire à ta place.
+- Tests :
+  - protocole (`tools/test-manche.mjs`) : coupure de 10 s en pleine manche (place gardée, arrivée pendant la coupure comptée à sa place) ; arrivées manquées rattrapées sans remettre la manche à zéro ; coupure de plus de 20 s ; hôte coupé, remplacé, revenu sans reprendre la main, championnat terminé ; mémoire de la place ; collisions unifiées ;
+  - navigateur : championnat à **deux onglets** avec une **coupure simulée de 3 s** (vraie liaison WebRTC refaite, manche poursuivie jusqu'au podium).
+
+## Bêta 0.9.37 — social, saisons hebdomadaires, classements par secteur
+
+Étape E15 de Copytrack Evolution (début du bloc 5). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **Infrastructure à mettre en place** (rien ne marche en ligne sans elle, et le jeu le dit) :
+- les étapes SQL 9, 10 et 11 (`supabase/etape9-secteurs.sql`, `etape10-social.sql`, `etape11-saisons.sql`) ;
+- **redéployer `submit-score`** (déjà régénérée ici) : temps intermédiaires des records, et catégorie de saison acceptée seulement pendant sa semaine ;
+- facultatif : l'extension **pg_cron**, pour une clôture des saisons à l'heure dite (sinon, elles se closent à la première consultation après la fin de la semaine) ;
+- facultatif : `tools/backfill-sectors.mjs`, pour les temps intermédiaires des records déjà enregistrés.
+
+- **Classements par secteur** (onglet ⏱ Secteurs de la fiche) : un secteur va d'un passage (checkpoint, ligne d'un tour) au suivant. On voit les meilleurs secteurs parmi les records vérifiés, et le sien à côté. Le serveur range les temps intermédiaires en rejouant la course : ce sont ceux du record, pas le meilleur secteur jamais roulé.
+- **Amis** (Profil › Amis, comptes seulement) : demande par pseudo, acceptée ou refusée par l'autre, retrait. Une demande n'est visible que des deux intéressés. Au plus 20 demandes par jour et 200 amis. Onglet 👥 Amis dans les classements : les mêmes temps vérifiés, entre amis.
+- **Abonnements** : « ➕ Suivre » sur la fiche d'un circuit de la communauté ; onglet « ⭐ Abonnements » de la communauté (les circuits des auteurs suivis). La liste de ses abonnements est privée, le nombre d'abonnés d'un auteur public.
+- **Saisons hebdomadaires** :
+  - chaque semaine (du lundi 00:00 UTC au lundi suivant ; la saison 1 commence le 9 novembre 2026), trois circuits de la carrière, les mêmes pour tout le monde, dans un groupe « Saison de la semaine » de l'écran Circuits et en tête des catégories de leur fiche ;
+  - les temps de saison sont une catégorie à part (`…~v1.sea-N`), qui n'efface pas le record officiel ;
+  - points : sur chaque circuit, 1000 × meilleur temps ÷ ton temps ;
+  - **divisions** 1 (Élite) à 5 (Débutant) : à la clôture, les 20 % premiers de chaque division montent, les 20 % derniers descendent, et l'historique est gardé ;
+  - aucun point n'est déclaré par le jeu : tout est calculé en base, depuis les temps rejoués par le serveur.
+- **Choix à signaler** : les saisons se closent sans pg_cron (`close_due_seasons`, idempotente, appelée par le jeu avant d'afficher une saison) ; pg_cron devient un confort. Les trois circuits sont tirés par le jeu d'après le numéro de la saison (le même code sert au jeu et au serveur), plutôt que rangés dans une table.
+- Sous le capot : `js/seasons.js` (dans la fermeture de la vérification), étiquette `sea` dans `variants.js` (elle ne transforme pas le circuit), `verify.js` (fenêtre de la saison, temps intermédiaires), onglets du classement (`ui/leaderboardPanel.js`), client en ligne (`online.js`).
+- Tests :
+  - SQL (`npm run test:sql`, 82 vérifications) : secteurs ; demandes d'amis invisibles d'un inconnu, refus, retrait, cadence, classement entre amis, abonnements privés ; saisons (points, clôture une seule fois, montées et descentes, ma saison, écritures refusées) ;
+  - `tools/test-seasons.mjs` (dates, circuits, fenêtre du serveur, temps intermédiaires, remplissage) et fonction serveur ;
+  - navigateur, français et anglais, avec un serveur Supabase **simulé** : saison, secteurs, amis, profil, abonnements.
+
 ## Bêta 0.9.36 — progression du pilote : expérience, niveaux, licences, défis de maîtrise
 
 Étape E14 de Copytrack Evolution (fin du bloc 4). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.

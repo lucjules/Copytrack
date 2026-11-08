@@ -26,6 +26,7 @@ import { ghostFromHash } from './replay.js';
 import { QualityManager, PROFILE_LABELS, wantAntialias } from './quality.js';
 import { multiMethods } from './app/multi.js';
 import { academyMethods } from './app/academy.js';
+import { competitionMethods } from './app/competition.js';
 import { rewardsMethods } from './app/rewards.js';
 import { communityMethods } from './app/community.js';
 import { screenMethods } from './app/screens.js';
@@ -360,7 +361,7 @@ class App {
 }
 
 // Les familles de méthodes vivent dans app/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(App.prototype, multiMethods, academyMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods, theaterAppMethods);
+Object.assign(App.prototype, multiMethods, academyMethods, competitionMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods, theaterAppMethods);
 
 
 // Application installable et jouable hors ligne (service worker), si le contexte le permet.

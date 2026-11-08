@@ -22,6 +22,8 @@ function explain(status, body) {
   if (/anonymous/i.test(msg) && /disabled/i.test(msg)) return new OnlineError('Connexion anonyme désactivée sur le serveur.', 'anon-disabled');
   if (body && body.code === '42P01' || /relation .* does not exist|Could not find the table/i.test(msg)) return new OnlineError('Base non prête (étape 1 SQL manquante).', 'no-schema');
   if (body && body.code === '23505') return new OnlineError('Ce circuit est déjà publié.', 'duplicate');
+  if (body && body.code === 'PGRST202' || /Could not find the function/i.test(msg)) return new OnlineError('Fonction en ligne absente : une étape SQL n’est pas encore lancée sur le serveur.', 'no-sql-step');
+  if (/compte est nécessaire|Aucun compte ne porte|propre pseudo|Trop de demandes|Liste d.amis pleine|Trop d.abonnements|On ne se suit pas|ses amis|Dix duels|tournoi|Tournoi|invalide \(circuits/.test(msg)) return new OnlineError(msg, 'social');
   if (status === 404 && body && body.code === 'NOT_FOUND' && /function/i.test(msg)) {
     return new OnlineError('Fonction « submit-score » introuvable sur le serveur.', 'no-function');
   }
@@ -171,10 +173,11 @@ class OnlineClient {
     return this._listTracks(opts, false);
   }
 
-  async _listTracks({ sort = 'recent', search = '', mine = false, limit = 30, offset = 0 } = {}, desc = true) {
+  async _listTracks({ sort = 'recent', search = '', mine = false, authors = null, limit = 30, offset = 0 } = {}, desc = true) {
     const q = new URLSearchParams();
     q.set('select', OnlineClient.FIELDS + (desc ? ',description' : ''));
     if (mine) { await this.ensureSession(); q.set('author', 'eq.' + this.uid); }
+    else if (Array.isArray(authors)) q.set('author', 'in.(' + authors.filter((x) => /^[0-9a-f-]{36}$/.test(x)).join(',') + ')');     // auteurs suivis (E15)
     if (search.trim()) q.set('name', 'ilike.*' + search.trim().replace(/[*,()]/g, ' ') + '*');
     q.set('order', sort === 'popular' ? 'likes.desc,plays.desc,created_at.desc' : sort === 'played' ? 'plays.desc,created_at.desc' : 'created_at.desc');
     q.set('limit', String(limit));
@@ -325,6 +328,41 @@ class OnlineClient {
     if (!r.ok) throw explain(r.status, null);
     return parseInt((r.headers.get('content-range') || '*/0').split('/')[1], 10) || 0;
   }
+
+  // ---- Amis et abonnements (supabase/etape10-social.sql, E15) : comptes seulement pour les amis ---------------------------
+  rpc(name, body = {}) { return this._fetch('/rest/v1/rpc/' + name, { method: 'POST', body }); }
+  async friends() { const r = await this.rpc('my_friends'); return Array.isArray(r) ? r : []; }
+  async friendRequest(name, playerName) { await this.ensurePlayer(playerName); return this.rpc('friend_request', { target_name: String(name || '').trim() }); }
+  async friendRespond(id, accept) { return this.rpc('friend_respond', { other: id, accept: !!accept }); }
+  async friendRemove(id) { return this.rpc('friend_remove', { other: id }); }
+  async friendsBoard(trackKey, physVer, limit = 20) { const r = await this.rpc('friends_board', { k: trackKey, pv: physVer, lim: limit }); return Array.isArray(r) ? r : []; }
+  async follow(authorId, playerName) { await this.ensurePlayer(playerName); return this.rpc('follow', { author_id: authorId }); }
+  async unfollow(authorId) { return this.rpc('unfollow', { author_id: authorId }); }
+  async followerCount(authorId) { return +(await this.rpc('follower_count', { author_id: authorId })) || 0; }
+  async myFollows() { await this.ensureSession(); const r = await this._fetch('/rest/v1/follows?select=author&follower=eq.' + this.uid); return new Set((r || []).map((x) => x.author)); }
+
+  // ---- Classements par secteur (etape9-secteurs.sql) ----------------------------------------------------------------------
+  async sectorBoard(trackKey, physVer, i, limit = 10) { const r = await this.rpc('sector_board', { k: trackKey, pv: physVer, i, lim: limit }); return Array.isArray(r) ? r : []; }
+
+  // ---- Saisons (etape11-saisons.sql) : la base clôt les saisons finies avant qu'on les lise ---------------------------------
+  async seasonStandings(n, limit = 20) {
+    try { await this.rpc('close_due_seasons'); } catch (e) { if (e.code === 'no-sql-step') throw e; }
+    const r = await this.rpc('season_standings', { n, lim: limit });
+    return Array.isArray(r) ? r : [];
+  }
+  async mySeason(n) { const r = await this.rpc('my_season', { n }); return Array.isArray(r) && r[0] ? r[0] : null; }
+
+  // ---- Compétition asynchrone (etape12-competition.sql) : la base règle duels et tournois échus avant qu'on les lise ---------------
+  async settleDue() { try { await this.rpc('settle_due'); } catch (e) { if (e.code === 'no-sql-step') throw e; } }
+  async duels() { await this.settleDue(); const r = await this.rpc('my_duels', { lim: 30 }); return Array.isArray(r) ? r : []; }
+  async duelChallenge(targetId, trackKey, trackName, playerName) { await this.ensurePlayer(playerName); return +(await this.rpc('duel_challenge', { target: targetId, track: trackKey, tname: String(trackName || '').slice(0, 60) })); }
+  async duelRespond(id, accept) { return this.rpc('duel_respond', { duel: id, accept: !!accept }); }
+  async friendsRatings() { const r = await this.rpc('friends_ratings'); return Array.isArray(r) ? r : []; }
+  async headToHead(id) { const r = await this.rpc('head_to_head', { other: id }); return Array.isArray(r) && r[0] ? r[0] : { wins: 0, draws: 0, losses: 0 }; }
+  async tournaments() { await this.settleDue(); const r = await this.rpc('my_tournaments'); return Array.isArray(r) ? r : []; }
+  async tournamentCreate(name, trackKey, trackName, days, playerName) { await this.ensurePlayer(playerName); const r = await this.rpc('tournament_create', { tname: name, track: trackKey, trackname: String(trackName || '').slice(0, 60), days }); return Array.isArray(r) ? r[0] : r; }
+  async tournamentJoin(code, playerName) { await this.ensurePlayer(playerName); return +(await this.rpc('tournament_join', { jcode: String(code || '').trim() })); }
+  async tournamentBoard(id) { const r = await this.rpc('tournament_board', { tid: id }); return Array.isArray(r) ? r : []; }
 
   async myLikes() {
     await this.ensureSession();

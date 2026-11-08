@@ -78,6 +78,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `rulesCore.js` | Règles de partie : le noyau sans dépendance (validation et application au circuit). Il est dans la fermeture de la vérification serveur (js/verify.js, via variants.js : les variantes de records sont des règles) : il n'importe que obstacles.js, jamais le profil ni le stockage. |
 | `scenery.js` | Décors : ciel, lumière, terrain facetté et objets, selon le thème du circuit. |
 | `scripts.js` | Scripts de circuit (lot 12) : des déclencheurs posés sur une case du circuit. Quand la voiture passe dessus, UN effet visuel ou sonore se produit (message, moment de la journée, météo, brume, musique, éclat, secousse, son). Hors signature (comme l'ambiance) : ni records, ni vérification, ni physique. |
+| `seasons.js` | Saisons hebdomadaires (Copytrack Evolution, E15) : la saison N dure une semaine, du lundi 00:00 UTC au lundi suivant (la saison 1 commence le 9 novembre 2026, comme supabase/etape11-saisons.sql : un test compare les deux). Ses trois circuits, tirés de la carrière d'après le numéro, sont les mêmes pour tout le monde ; leurs temps sont des catégories de record « b-…~v1.sea-N » (variants.js), que le serveur n'accepte que pendant la semaine N (verify.js). Les points et les divisions se calculent en base, depuis les temps vérifiés (aucun point n'est déclaré par le jeu). |
 | `simulation.js` | Simulation d'une course : UNE voiture (CarPhysics), ses règles (RaceLogic) et l'enchaînement exact d'un pas, en un seul endroit. |
 | `skids.js` | Traces de pneus : bandes sombres posées sur la route pendant les glisses et les gros freinages. |
 | `skills.js` | Académie 2 (Copytrack Evolution, E12) : des COMPÉTENCES (trajectoire, freinage, dérapage, sauts) et des EXERCICES ÉVALUÉS. Chaque exercice est un court circuit avec un objectif MESURÉ par l'analyse (analysis/drill.js : la course rejouée à partir de ses commandes), noté bronze, argent ou or. |
@@ -118,6 +119,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | --- | --- |
 | `academy.js` | Académie : menu des six leçons et des exercices évalués (E12), introduction, bilan à l'arrivée. Les données et les règles sont dans academy.js (leçons) et skills.js (compétences, exercices) ; la mesure d'un exercice, dans analysis/drill.js. |
 | `community.js` | Communauté : partage, classements en ligne, publication, import de circuits et de fantômes, aide. |
+| `competition.js` | Compétition asynchrone (Copytrack Evolution, E17) : duels classés entre amis (Elo) et tournois privés. Tout se joue sur des circuits de la carrière, sous des catégories de record « …~v1.duel-N » et « …~v1.tour-N » (variants.js) : la course est rejouée par le serveur comme toute autre, et les résultats, le classement Elo et la clôture sont calculés en base (supabase/etape12-competition.sql). Ces méthodes s'ajoutent au prototype de App. |
 | `editorFlow.js` | Passages entre le menu et l'éditeur : ouverture, aide, retour, essai d'un circuit. |
 | `modes.js` | Modes de jeu, règles de partie et paquets (lot 13) : l'interface. Les règles et validations sont dans rules.js et mods.js. Ces méthodes s'ajoutent au prototype de App. |
 | `multi.js` | Multijoueur : salons (privés par code, ou publics), circuit commun, lobby, départ en course à plusieurs, classement du salon, championnat (manches). |
@@ -195,6 +197,8 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `ice.js` | Serveurs ICE du multijoueur : STUN (gratuit) + relais TURN (réseaux fermés : entreprise, 4G à NAT symétrique), demandés à la fonction serveur « ice » (supabase/functions/ice) qui fabrique des identifiants à DURÉE LIMITÉE : rien de permanent n'est lisible dans le jeu. |
 | `interp.js` | Tampon d'interpolation d'un joueur distant. |
 | `progress.js` | Avancement d'une voiture sur le circuit (0 à 1) et grille de départ : sert au classement en direct d'une manche et à placer les voitures sans qu'elles se superposent au départ. Logique pure. |
+| `resume.js` | Reconnexion au salon (Copytrack Evolution, E16, NET_VER 4). Une coupure (Wi-Fi qui saute, passage en 4G, onglet rechargé) ne fait plus sortir de la salle : - le joueur coupé retente de rejoindre le même canal, avec le MÊME identifiant, pendant RESUME_MS (délais croissants RETRY_MS) ; sa course continue chez lui pendant ce temps ; |
+| `rollback.js` | PROTOTYPE de multijoueur à rollback (Copytrack Evolution, E18) : de vraies collisions déterministes entre 2 à 4 voitures. Hors interface : il n'est branché sur aucun écran, seulement mesuré (tools/bench-rollback.mjs) et testé (tools/test-rollback.mjs). Décision et mesures : docs/ROLLBACK.md. |
 | `room.js` | Salon multijoueur : code à 6 caractères, liste des joueurs, choix du circuit, départ commun, résultats. |
 | `signaling.js` | Signalisation du multijoueur : annuaire des joueurs d'une salle + relais des messages WebRTC (offres, réponses, ICE). |
 | `snapshot.js` | Paquet d'état d'une voiture (multijoueur) : 40 octets, envoyé 20 fois par seconde sur le canal WebRTC « state ». |
@@ -256,7 +260,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 
 | Fichier | Rôle |
 | --- | --- |
-| `leaderboardPanel.js` | Classement à onglets (Race Hub, fenêtre « 🏆 ») : chaque onglet est un FOURNISSEUR de données enregistré ici. Un onglet dont le fournisseur n'est pas disponible n'est pas affiché (jamais d'onglet vide ou factice) : « Amis » et « Saison » s'ajouteront avec leur étape SQL. |
+| `leaderboardPanel.js` | Classement à onglets (Race Hub, fenêtre « 🏆 ») : chaque onglet est un FOURNISSEUR de données enregistré ici. Un onglet dont le fournisseur n'est pas disponible n'est pas affiché (jamais d'onglet vide ou factice). Amis, Secteurs et Saison (E15) demandent les étapes SQL 9 à 11 : sans elles, l'onglet dit qu'elles manquent, il ne montre pas de faux classement. |
 | `traceChart.js` | Petites courbes sur un canvas (HUD d'entraînement, Replay Theater) : une fenêtre glissante de N valeurs par série, dessinée sans allocation. |
 | `trackMap.js` | Mini-carte d'un circuit, vue de dessus : un seul noyau de dessin pour les miniatures des cartes (editorTools.thumbnail) et la grande carte zoomable du Race Hub (createTrackMap). Marche pour TOUS les circuits, éditeur compris : elle dessine la ligne centrale de chaque pièce (centerlineWorld), pas track.path (qui n'existe que pour les circuits scriptés). |
 

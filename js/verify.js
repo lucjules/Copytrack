@@ -10,6 +10,7 @@ import { PHYS_VER } from './version.js';
 import { MAX_RUN_STEPS, MAX_INPUTS_CHARS } from './constants.js';
 import { encodeFloats } from './ghostFormat.js';
 import { splitKey, parseVariant, applyVariant } from './variants.js';
+import { seasonOpen, seasonTracks } from './seasons.js';
 
 // Retrouve le circuit correspondant à une clé de classement.
 //   b-<id>-<empreinte>   circuit intégré (l'empreinte garantit la même version)
@@ -17,12 +18,26 @@ import { splitKey, parseVariant, applyVariant } from './variants.js';
 //   u-<signature>        circuit de joueur (son code doit être fourni) ; la signature
 //                        ignore le nom et la description, qu'on peut modifier après coup
 //   <clé>~v1.…           variante de record (variants.js) : le circuit de la clé officielle, transformé par ses règles
+//   b-…~v1.sea-N         saison hebdomadaire N (seasons.js) : acceptée seulement pendant sa semaine, sur ses trois circuits
+//   b-…~v1.duel-N / tour-N  duel ou tournoi (E17) : le circuit officiel ; la fonction serveur vérifie en base la fenêtre et les participants
 export function trackForKey(key, code = '') {
   key = String(key || '');
   const { base, variant } = splitKey(key);
   if (key.includes('~')) {                       // (une clé terminée par « ~ » est une variante vide : refusée par parseVariant)
     const off = trackForKey(base, code);
     const v = parseVariant(variant);
+    if (v.duel != null || v.tour != null) {      // duel ou tournoi (E17) : seul, sur un circuit de la carrière ; la fenêtre et les participants sont en base (submit-score)
+      if (Object.keys(v).length !== 1 || off.kind !== 'builtin') throw new Error('Compétition possible seulement sur un circuit de la carrière.');
+      const kind = v.duel != null ? 'duel' : 'tour';
+      return { ...off, name: `${off.name} · ${kind === 'duel' ? 'duel' : 'tournoi'} ${v[kind]}`, variant: v, competition: { kind, id: +v[kind], base } };
+    }
+    if (v.sea != null) {                         // saison hebdomadaire (E15) : seule, sur un circuit de la saison, pendant sa semaine
+      const n = +v.sea;
+      if (Object.keys(v).length !== 1 || off.kind !== 'builtin' || !seasonTracks(n).some((d) => base.startsWith(`b-${d.id}-`))) throw new Error('Ce circuit ne fait pas partie de cette saison.');
+      const closed = seasonOpen(n);
+      if (closed) throw new Error(closed);
+      return { ...off, name: `${off.name} · saison ${n}`, variant: v, season: n };
+    }
     return { ...off, track: applyVariant(off.track, v), name: `${off.name} · ${variant}`, variant: v };
   }
   if (key.startsWith('b-')) {
@@ -60,7 +75,7 @@ export function replayRun(track, inputs, { ghost = false } = {}) {
   const g = new GhostRunner(track, { inputs, ghost });
   while (!g.done && g.k < MAX_RUN_STEPS) g.step();
   if (!g.logic.finished) return null;
-  const out = { time: g.logic.time };
+  const out = { time: g.logic.time, splits: g.logic.splits.slice() };      // temps intermédiaires (pas) : classements par secteur (E15)
   if (ghost) { const r = g.ghostResult(); out.ghost = encodeFloats(r.data); out.ghostVeh = r.veh; }
   return out;
 }
@@ -78,5 +93,5 @@ export function verifyRun({ trackKey, code, inputs, time, physVer, withGhost = f
   const run = replayRun(t.track, inputs, { ghost: withGhost });
   if (run == null) return { ok: false, error: 'La course rejouée n’atteint pas l’arrivée.' };
   if (Math.abs(run.time - time) > 0.0005) return { ok: false, error: 'Le temps ne correspond pas à la course rejouée.' };
-  return { ok: true, time: run.time, name: t.name, kind: t.kind, ...(withGhost ? { ghost: run.ghost, ghostVeh: run.ghostVeh } : {}) };
+  return { ok: true, time: run.time, splits: run.splits, name: t.name, kind: t.kind, ...(t.season ? { season: t.season } : {}), ...(t.competition ? { competition: t.competition } : {}), ...(withGhost ? { ghost: run.ghost, ghostVeh: run.ghostVeh } : {}) };
 }

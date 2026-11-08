@@ -385,7 +385,7 @@ await test('circuit envoyé par l\'hôte (code de circuit) : morceaux, assemblag
   await assert.rejects(() => g.waitForCode('u:jamais', 30), (e) => e.code === 'no-code');
   // nouvel arrivant : l'hôte renvoie circuit ET morceaux
   host.mesh.ctl.length = 0; host.members.set('n', { id: 'n', name: 'N', link: 'open', rtt: 0 }); host._onLink('n', 'open');
-  assert.deepEqual(host.mesh.ctl.map((c) => c[0].k + (c[1] ? '>' + c[1] : '')), ['track>n', 'tcode>n', 'tcode>n', 'tcode>n']);
+  assert.deepEqual(host.mesh.ctl.map((c) => c[0].k + (c[1] ? '>' + c[1] : '')), ['hello>n', 'track>n', 'tcode>n', 'tcode>n', 'tcode>n'], 'bonjour (E16), puis circuit et morceaux');
   host.leave(); g.leave();
 });
 await test('paquets d\'état : anti-inondation', async () => {
