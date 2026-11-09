@@ -13,7 +13,7 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 - **Pilote automatique** : freinage planifié 10 m/s² (au lieu de 20), vitesse maximale respectée sur les murs, volant inversé pris en compte.
 - **Circuits** (72) : vitesses du pilote, Verglas, Archipel, Cité Céleste, Cadence, Grand Atelier (obstacles) ; médailles, objectifs, temps de référence, fiche d'essai, corpus de compatibilité régénérés. Contrat : speedway > 220 km/h pendant 35 %, freinage ≤ 14 %, technique ≤ 170 km/h.
 - **Académie** : leçons « Obstacles » et « Dérapage » raccourcies (élan d'une case) ; exercices de freinage (seuils 7,0 / 6,5 / 6,05 s) et de mini-turbo recalés.
-- **Menus** : accueil en tuiles inclinées, onglets, cartes de circuits (CSS).
+- **Menus** : accueil en 12 tuiles inclinées avec icônes (logo, deux rangées), onglets, cartes de circuits (CSS).
 - **Tests** : bancs de maniabilité (`tools/maniabilite.mjs`, `tools/test-maniabilite.mjs`) ; tests de sauts, de courbe d'accélération, du coach, du défi du jour et de la moto réécrits sur le comportement mesuré. Aucun humain n'a rejoué les circuits avec ce moteur.
 
 ## Bêta 0.9.44 — aides à la conduite, accessibilité, ressenti, caméra libre de l'éditeur

@@ -1101,6 +1101,7 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 .ch-badge.perfect { background: rgba(255, 210, 62, .2); color: #ffd23e; }
 .ch-badge.crystal { background: rgba(185, 166, 255, .25); color: #d9ccff; }
 
+/* =====================================================================================================================================
    0.9.13 · Lot 2 : refonte des menus (jeu d'écrans : accueil, circuits, mes circuits, communauté).
    Repères mesurés sur les menus de la course de référence (proportions, hiérarchie, états) ; palette, icônes et typographie sont ceux de Copytrack.
    Mesures : tuiles d'accueil 200 × 200 px alignées, barre du bas de 52 px, barre du haut de 64 px, onglets de 115 px, cartes de 216 × 243 px,
@@ -1144,7 +1145,7 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   text-align: center;
   background: linear-gradient(180deg, rgba(20, 20, 45, 0.55) 0%, rgba(20, 20, 45, 0.8) 100%);
   backdrop-filter: blur(5px);
-  padding-bottom: 76px;
+  padding-bottom: 64px;
 }
 #menu .menu-left { display: flex; flex-direction: column; align-items: center; width: 100%; }
 #menu .logo { font-size: clamp(48px, 10vw, 112px); text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), 0 0 28px rgba(255, 122, 89, 0.25); transform: skewX(var(--ui-skew)); }
@@ -1154,10 +1155,10 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   flex-wrap: wrap;
   justify-content: center;
   gap: 12px;
-  width: min(1040px, 100%);
+  width: min(1100px, 100%);
 }
 #menu .menu-buttons .btn.big {
-  --tile: clamp(104px, 15vw, 190px);
+  --tile: clamp(84px, min(12.5vw, 19vh), 170px);   /* 12 tuiles : 6 par rangée, deux rangées, tout tient à l'écran */
   position: relative;
   width: var(--tile);
   height: var(--tile);
@@ -1177,10 +1178,10 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 #menu .menu-buttons .btn.big::before {
   content: '';
   position: absolute;
-  top: 16%;
+  top: 10%;
   left: 50%;
-  width: 46%;
-  height: 46%;
+  width: 38%;
+  height: 38%;
   background: currentColor;
   transform: translateX(-50%) skewX(calc(-1 * var(--ui-skew)));
   -webkit-mask: var(--ico) center / contain no-repeat;
@@ -1194,6 +1195,12 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 #menu [data-action="mytracks"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 5a2 2 0 012-2h4l2 2h8a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2z'/%3E%3C/svg%3E"); }
 #menu [data-action="import"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11 3h2v9l3-3 1.400 1.400L12 16l-5.400-5.600L8 9l3 3zM4 18h16v3H4z'/%3E%3C/svg%3E"); }
 #menu [data-action="profile"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.400 0-8 2.200-8 5v3h16v-3c0-2.800-3.600-5-8-5z'/%3E%3C/svg%3E"); }
+
+/* Icônes des entrées ajoutées depuis (Course rapide, Académie, Compétition, Modes) */
+#menu [data-action="quick"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M13 2L4 14h6l-1 8 9-12h-6z'/%3E%3C/svg%3E"); }
+#menu [data-action="academy"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 3L1 9l11 6 9-4.900V17h2V9zM5 13.200V17c0 1.700 3.100 3 7 3s7-1.300 7-3v-3.800l-7 3.800z'/%3E%3C/svg%3E"); }
+#menu [data-action="competition"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 3h10v2h3v3a4 4 0 01-4 4h-.4A5 5 0 0113 14.900V17h3v3H8v-3h3v-2.100A5 5 0 018.400 12H8a4 4 0 01-4-4V5h3zm-1 4v1a2 2 0 001 1.700V7zm12 0h-1v2.700A2 2 0 0018 8z'/%3E%3C/svg%3E"); }
+#menu [data-action="modes"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 5h10v3H4zm0 5.500h16v3H4zM4 16h7v3H4zM16 3.500a2.500 2.500 0 110 5 2.500 2.500 0 010-5zM13 17.500a2.500 2.500 0 115 0 2.500 2.500 0 01-5 0z'/%3E%3C/svg%3E"); }
 /* Barre du bas (pied de page) */
 #menu .menu-foot {
   position: fixed;
@@ -1279,6 +1286,9 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   #menu .menu-buttons { gap: 8px; }
   #menu .menu-buttons .btn.big small { display: none; }   /* sur téléphone, le libellé seul : le sous-titre déborde sur l'icône */
   .card-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+}
+@media (max-width: 1300px), (max-height: 760px) {
+  #menu .menu-buttons .btn.big small { display: none; }   /* 12 tuiles : le sous-titre ne tient que sur grand écran */
 }
 @media (prefers-reduced-motion: reduce) {
   #menu .btn, .card, .tab { transition: none; }
