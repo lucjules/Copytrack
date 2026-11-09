@@ -682,6 +682,18 @@ try {
     await waitApp(() => !window.copytrack.ui.modalOpen);
   });
 
+  await test('fenêtres hautes (académie) sur un écran de 700 px de haut : le titre et le dernier bouton restent atteignables (la fenêtre défile au lieu de déborder)', async () => {
+    const old = page.viewportSize();
+    await page.setViewportSize({ width: 1280, height: 700 });
+    try {
+      await app(() => { window.copytrack.ui.closeModal(); window.copytrack.academyMenu(); });
+      await page.waitForTimeout(400);
+      const r = await app(() => { const el = document.querySelector('#modal:not(.hidden) .modal-panel'); const b = el.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, h: innerHeight, scroll: el.scrollHeight > el.clientHeight, ov: getComputedStyle(el).overflowY }; });
+      assert.ok(r.top >= -1 && r.bottom <= r.h + 1, `la fenêtre tient dans l'écran (haut ${r.top}, bas ${r.bottom} / ${r.h})`);
+      assert.ok(r.scroll && /auto|scroll/.test(r.ov), 'son contenu défile');
+    } finally { await app(() => window.copytrack.ui.closeModal()); await page.setViewportSize(old); }
+  });
+
   await test('académie : menu des six leçons, leçon 1 jouée et réussie, bilan, retour au menu des leçons', async () => {
     const btn = (label) => page.evaluate((l) => { const b = [...document.querySelectorAll('#modal-actions button')].find((x) => x.textContent.trim() === l); if (!b) throw new Error('bouton introuvable : ' + l); b.click(); }, label);
     await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.academy = {}; saveProfile(); window.copytrack.academyMenu(); });
@@ -1463,6 +1475,8 @@ try {
     });
     const ap = (fn, arg) => p2.evaluate(fn, arg), wait = (fn, arg, timeout = 30000) => p2.waitForFunction(fn, arg, { timeout });
     const clk = (sel) => p2.locator(sel).first().evaluate((el) => el.click());
+    // Le panneau se redessine après chaque réponse du serveur : entre l'attente de l'élément et son usage il peut disparaître un instant. On réessaie.
+    const retry = async (fn, n = 40) => { for (let k = 0; ; k++) { try { return await fn(); } catch (e) { if (k >= n) throw e; await new Promise((r) => setTimeout(r, 100)); } } };
     const until = async (fn, ms = 10000) => { const t0 = Date.now(); while (!fn()) { if (Date.now() - t0 > ms) throw new Error('délai dépassé'); await new Promise((r) => setTimeout(r, 50)); } };
     try {
       await p2.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'load' });
@@ -1515,11 +1529,11 @@ try {
       await until(() => calls.some((c) => c.url.includes('/rpc/duel_respond')));
       assert.deepEqual(calls.find((c) => c.url.includes('/rpc/duel_respond')).body, { duel: 6, accept: true });
       await wait(() => document.querySelector('.competition .duel-new'));
-      await ap((k) => { const f = document.querySelector('.competition .duel-new'); f.querySelector('.duel-track').value = k; f.requestSubmit(); }, duelKey);
+      await retry(() => ap((k) => { const f = document.querySelector('.competition .duel-new'); f.querySelector('.duel-track').value = k; f.requestSubmit(); }, duelKey));
       await until(() => calls.some((c) => c.url.includes('/rpc/duel_challenge')));
       assert.deepEqual(calls.find((c) => c.url.includes('/rpc/duel_challenge')).body.track, duelKey);
       await wait(() => document.querySelector('.competition .tour-join'));
-      await ap(() => { const f = document.querySelector('.competition .tour-join'); f.querySelector('input').value = 'abc234'; f.requestSubmit(); });
+      await retry(() => ap(() => { const f = document.querySelector('.competition .tour-join'); f.querySelector('input').value = 'abc234'; f.requestSubmit(); }));
       await until(() => calls.some((c) => c.url.includes('/rpc/tournament_join')));
       await wait(() => document.querySelector('.competition [data-tour-board="9"]'));
       await clk('.competition [data-tour-board="9"]');

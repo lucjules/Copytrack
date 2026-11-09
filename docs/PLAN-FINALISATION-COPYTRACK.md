@@ -17,10 +17,10 @@ Règles : ne rien supprimer d'utile, corriger les causes, un test de non-régres
 | Phase | Contenu | État |
 | --- | --- | --- |
 | 1. Compréhension | architecture (`docs/ARCHITECTURE.md`, `docs/MODULES.md`), état mesuré, ce plan | fait |
-| 2. Physique | essais aléatoires, collisions, obstacles, verre, surfaces, checkpoints | à faire |
-| 3. Éditeur / circuits | aller-retour des codes, groupes logiques, scripts, replays, progression | à faire |
-| 4. Comptes / sauvegardes / multijoueur | fusion des sauvegardes, validation côté serveur, protocole | à faire |
-| 5. Interface | accueil allégé (fait), cohérence des écrans, responsive | accueil fait |
+| 2. Physique | essais aléatoires (72 circuits × entrées aléatoires ; lancers contre les murs) : aucun défaut trouvé | essais faits ; reste : obstacles / verre ciblés |
+| 3. Éditeur / circuits | codes abîmés (2000 cas) : aucun défaut | essais faits ; reste : logique, scripts |
+| 4. Comptes / sauvegardes / multijoueur | fusion des sauvegardes, validation côté serveur, protocole | essais aléatoires faits (aucun défaut) ; reste : multijoueur |
+| 5. Interface | accueil allégé (fait), fenêtres hautes (fait), cohérence des écrans, responsive | en cours |
 | 6. Global | suite complète, lint, test navigateur, optimisation, PR | à faire |
 
 ## Journal
@@ -30,6 +30,18 @@ Règles : ne rien supprimer d'utile, corriger les causes, un test de non-régres
 - Tests ajoutés : `tools/test-menu.mjs` ; test navigateur : sous-menus sur 844×390, 390×844, 667×375.
 - Courses de vitesse réparées dans `tools/test-browser.mjs` (fermeture des fenêtres du premier lancement ; panneau d'amis redessiné).
 - Suite : 899 vérifications, 0 échec ; test navigateur : tout passe.
+
+### Étape 2 — robustesse et fenêtres hautes (0.9.47)
+- **Défaut corrigé** : fenêtre plus haute que l'écran qui débordait en haut et en bas (titre et boutons inaccessibles) ; `.overlay .panel` défile. Test navigateur, vérifié rouge sans le correctif.
+- **Essais aléatoires, aucun défaut trouvé** : 3 graines × 72 circuits × 40 s d'entrées aléatoires (0 NaN, 0 position aberrante, vitesse < 430 km/h) ; 7 scripts × 60 lancers contre les bords (les seules sorties viennent d'une voiture qui part à reculons de la plateforme de départ, ou de murs pris trop lentement) ; serveur de scores, fusion des sauvegardes, codes de circuit : voir CHANGELOG.
+- Test navigateur : deux courses de vitesse réparées (voir CHANGELOG).
+
+## Reste à faire (honnêtement)
+- Obstacles mobiles, verre et surfaces : essais ciblés à écrire (les circuits d'atelier, qui en ont, passent le contrat).
+- Éditeur : groupes logiques et scripts, à parcourir au navigateur.
+- Multijoueur : le test navigateur couvre un championnat à deux onglets ; pas d'essai de perte de paquets ni d'hôte parti.
+- Ergonomie : une passe écran par écran sur trois tailles (accueil et fenêtres faits).
+- Aucun humain n'a rejoué les circuits avec le moteur 0.9.46.
 
 ## Pour reprendre
 1. `git fetch && git checkout claude/practical-dirac-vtqom0`.

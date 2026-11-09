@@ -260,6 +260,9 @@ kbd {
   gap: 10px;
   min-width: min(340px, 100%);
   max-width: 100%;
+  max-height: calc(100dvh - 32px);      /* 0.9.47 : une fenêtre plus haute que l'écran défile (avant, son titre et ses boutons sortaient de l'écran, hors d'atteinte) */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .overlay h2 { margin: 0 0 6px; font-style: italic; font-size: 30px; }
