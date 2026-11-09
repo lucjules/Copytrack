@@ -1065,3 +1065,186 @@ body.touch kbd { display: none; }
 .ch-badge { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(95, 242, 255, .18); color: #5ff2ff; }
 .ch-badge.perfect { background: rgba(255, 210, 62, .2); color: #ffd23e; }
 .ch-badge.crystal { background: rgba(185, 166, 255, .25); color: #d9ccff; }
+
+/* =====================================================================================================================================
+   0.9.13 · Lot 2 : refonte des menus (jeu d'écrans : accueil, circuits, mes circuits, communauté).
+   Repères mesurés sur les menus de la course de référence (proportions, hiérarchie, états) ; palette, icônes et typographie sont ceux de Copytrack.
+   Mesures : tuiles d'accueil 200 × 200 px alignées, barre du bas de 52 px, barre du haut de 64 px, onglets de 115 px, cartes de 216 × 243 px,
+   titre de carte 32 px, pied « record » 33 px, texte 20 à 25 px, états survol / appui / désactivé en trois tons de la même teinte.
+   ===================================================================================================================================== */
+:root {
+  --ui-text: #ffffff;
+  --ui-text-off: #5d6a7c;
+  --ui-surface: #28346a;
+  --ui-surface-2: #212b58;
+  --ui-surface-3: #192042;
+  --ui-surface-glass: rgba(40, 52, 106, 0.5);
+  --ui-btn: #112052;
+  --ui-btn-hover: #334b77;
+  --ui-btn-active: #151f41;
+  --ui-btn-off: #313d53;
+  --ui-accent: #ff7a59;
+  --ui-skew: -7deg;
+}
+
+/* Boutons des écrans de menu : à plat, inclinés, trois états. Le texte est ré-incliné à l'envers pour rester droit. */
+#menu .btn, #tracks .btn, #mytracks .btn, #community .btn, .screen-head .btn {
+  background: var(--ui-btn);
+  border: 0;
+  border-radius: 2px;
+  transform: skewX(var(--ui-skew));
+  box-shadow: none;
+  transition: background 0.12s, transform 0.08s;
+}
+#menu .btn > *, #tracks .btn > *, #mytracks .btn > *, #community .btn > *, .screen-head .btn > * { display: inline-block; transform: skewX(calc(-1 * var(--ui-skew))); }
+#menu .btn:hover, #tracks .btn:hover, #mytracks .btn:hover, #community .btn:hover, .screen-head .btn:hover { background: var(--ui-btn-hover); border: 0; }
+#menu .btn:active, #tracks .btn:active, #mytracks .btn:active, #community .btn:active, .screen-head .btn:active { background: var(--ui-btn-active); transform: skewX(var(--ui-skew)) scale(0.98); }
+#menu .btn:disabled, #tracks .btn:disabled, #mytracks .btn:disabled, #community .btn:disabled, .screen-head .btn:disabled { background: var(--ui-btn-off); color: var(--ui-text-off); cursor: default; }
+#menu .btn.primary, #tracks .btn.primary, #mytracks .btn.primary, #community .btn.primary, .screen-head .btn.primary { background: var(--ui-accent); color: #1a0f0a; }
+#menu .btn.primary:hover, #tracks .btn.primary:hover, #mytracks .btn.primary:hover, #community .btn.primary:hover, .screen-head .btn.primary:hover { filter: brightness(1.1); background: var(--ui-accent); }
+
+/* ---------- Accueil : logo centré, rangée de tuiles, barre du bas ---------- */
+#menu.screen {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(20, 20, 45, 0.55) 0%, rgba(20, 20, 45, 0.8) 100%);
+  backdrop-filter: blur(5px);
+  padding-bottom: 76px;
+}
+#menu .menu-left { display: flex; flex-direction: column; align-items: center; width: 100%; }
+#menu .logo { font-size: clamp(48px, 10vw, 112px); text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), 0 0 28px rgba(255, 122, 89, 0.25); transform: skewX(var(--ui-skew)); }
+#menu .tagline { margin: 10px 0 clamp(24px, 6vh, 64px); color: #bed8f7; }
+#menu .menu-buttons {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  width: min(1040px, 100%);
+}
+#menu .menu-buttons .btn.big {
+  --tile: clamp(104px, 15vw, 190px);
+  position: relative;
+  width: var(--tile);
+  height: var(--tile);
+  padding: 0 6px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  text-align: center;
+  white-space: normal;
+  font-size: clamp(14px, 1.7vw, 22px);
+  line-height: 1.1;
+}
+#menu .menu-buttons .btn.big small { display: block; margin: 3px 0 0; font-size: clamp(10px, 1.1vw, 13px); color: #bed8f7; font-style: normal; font-weight: 500; }
+#menu .menu-buttons .btn.big.primary small { color: #4a1f12; }
+/* Icônes (dessins propres à Copytrack), en masque pour suivre la couleur du texte. */
+#menu .menu-buttons .btn.big::before {
+  content: '';
+  position: absolute;
+  top: 16%;
+  left: 50%;
+  width: 46%;
+  height: 46%;
+  background: currentColor;
+  transform: translateX(-50%) skewX(calc(-1 * var(--ui-skew)));
+  -webkit-mask: var(--ico) center / contain no-repeat;
+  mask: var(--ico) center / contain no-repeat;
+}
+#menu [data-action="play"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 3v18l15-9z'/%3E%3C/svg%3E"); }
+#menu [data-action="daily"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 2v3H4v17h16V5h-3V2h-2v3H9V2zM6 9h12v11H6zm2 2v3h3v-3z'/%3E%3C/svg%3E"); }
+#menu [data-action="community"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2a10 10 0 100 20 10 10 0 000-20zm0 2c1.2 1.5 2 3.6 2.4 6H9.6C10 7.6 10.800 5.500 12 4zM4.300 10h3.300c-.1.700-.1 1.300-.1 2s0 1.300.1 2H4.300a8 8 0 010-4zm5.300 4h4.800c-.4 2.400-1.200 4.500-2.400 6-1.200-1.500-2-3.600-2.400-6zm6.800 0h3.300a8 8 0 000-4h-3.300c.1.700.1 1.300.1 2s0 1.300-.1 2z'/%3E%3C/svg%3E"); }
+#menu [data-action="editor"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 17.500V21h3.500l10-10-3.500-3.500zM20.700 7a1 1 0 000-1.400l-2.300-2.300a1 1 0 00-1.400 0L15.200 5l3.500 3.500z'/%3E%3C/svg%3E"); }
+#menu [data-action="garage"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 11l1.500-4.500A2 2 0 018.400 5h7.200a2 2 0 011.900 1.500L19 11a2 2 0 011 1.700V18h-2v-1.500H6V18H4v-5.300A2 2 0 015 11zm2.100 0h9.800l-1-3H8.100zM7 14a1 1 0 100 2 1 1 0 000-2zm10 0a1 1 0 100 2 1 1 0 000-2z'/%3E%3C/svg%3E"); }
+#menu [data-action="mytracks"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 5a2 2 0 012-2h4l2 2h8a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2z'/%3E%3C/svg%3E"); }
+#menu [data-action="import"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11 3h2v9l3-3 1.400 1.400L12 16l-5.400-5.600L8 9l3 3zM4 18h16v3H4z'/%3E%3C/svg%3E"); }
+#menu [data-action="profile"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.400 0-8 2.200-8 5v3h16v-3c0-2.800-3.600-5-8-5z'/%3E%3C/svg%3E"); }
+/* Barre du bas (pied de page) */
+#menu .menu-foot {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 14px 16px;
+  background: var(--ui-surface-glass);
+  color: #bed8f7;
+  font-size: 14px;
+  font-style: italic;
+  opacity: 1;
+  text-align: center;
+}
+
+/* ---------- Écrans de liste : barre du haut, onglets, rubriques, cartes ---------- */
+#tracks, #mytracks, #community { background: linear-gradient(180deg, rgba(20, 20, 45, 0.8), rgba(20, 20, 45, 0.9)); padding-top: 0; }
+.screen-head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 0 calc(-1 * clamp(16px, 4vw, 56px)) 22px;
+  padding: 8px clamp(16px, 4vw, 56px);
+  background: var(--ui-surface);
+  gap: 12px;
+}
+.screen-head h2 { font-size: 26px; color: var(--ui-text); }
+
+.tabs { gap: 0; margin: 0 0 14px; }
+.tab {
+  flex: 1;
+  min-height: 56px;
+  font-size: clamp(16px, 2.2vw, 26px);
+  font-style: italic;
+  font-weight: 700;
+  background: var(--ui-surface-2);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  color: #bed8f7;
+  transition: background 0.12s, color 0.12s;
+}
+.tab:hover { background: var(--ui-btn-hover); color: var(--ui-text); }
+.tab.on { background: var(--ui-surface); color: var(--ui-text); border-bottom-color: var(--ui-accent); }
+
+.track-group h3.group-title {
+  color: var(--ui-text);
+  font-size: clamp(22px, 3vw, 34px);
+  padding-bottom: 6px;
+  border-bottom: 3px solid rgba(190, 216, 247, 0.85);
+}
+.track-group h3.group-title i { background: var(--ui-accent); }
+
+.card-grid { grid-template-columns: repeat(auto-fill, minmax(216px, 1fr)); gap: 20px; }
+.card {
+  background: var(--ui-surface-3);
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 0;
+  gap: 0;
+  box-shadow: none;
+  transform: skewX(var(--ui-skew));
+  transition: transform 0.12s, background 0.12s;
+}
+.card > * { transform: skewX(calc(-1 * var(--ui-skew))); padding-left: 14px; padding-right: 14px; }
+.card:hover { transform: skewX(var(--ui-skew)) translateY(-3px); background: var(--ui-btn-hover); border: 0; }
+.card h3 {
+  margin: 0;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-size: 20px;
+  text-align: center;
+  background: var(--ui-surface);
+}
+.card .meta { padding-top: 8px; color: #bed8f7; font-size: 14px; }
+.card .tags { padding-top: 4px; }
+.card .best { margin-top: auto; padding-top: 8px; padding-bottom: 8px; text-align: center; background: var(--ui-surface-2); font-size: 20px; }
+.card .actions { padding: 8px 14px; }
+.card .num { right: 18px; top: 40px; opacity: 0.1; }
+.card.polar { background: var(--ui-surface-3); }
+.card .tag { border-radius: 2px; background: rgba(190, 216, 247, 0.12); color: #bed8f7; }
+@media (max-width: 640px) {
+  #menu .menu-buttons { gap: 8px; }
+  .card-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #menu .btn, .card, .tab { transition: none; }
+}
