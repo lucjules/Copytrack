@@ -64,13 +64,18 @@ function listPrefixedKeys() {
 export function getJSON(key, fallback) { return read(key, fallback); }
 export function setJSON(key, value) { return write(key, value); }
 
+// Clés qui n'appartiennent qu'à CET appareil et ne doivent JAMAIS voyager dans un code joueur, une sauvegarde partagée ou une restauration : la session en ligne
+// de l'invité (jeton d'accès et de renouvellement = son identité en ligne : classements, circuits publiés) et son profil en ligne. Un code joueur se copie, se
+// poste, se confie ; s'il contenait la session, quiconque l'importerait deviendrait ce pilote (et l'importer chez soi écraserait sa propre identité en ligne).
+export const DEVICE_ONLY_KEYS = ['online.session', 'online.player'];
+
 // Toutes les données du jeu (clés « shardway.* », gardées pour ne perdre aucune sauvegarde) sous forme d'objet.
-export function dumpAll() {
+export function dumpAll({ shareable = false } = {}) {
   const out = {};
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.startsWith(PREFIX)) out[k.slice(PREFIX.length)] = localStorage.getItem(k);
+      if (k && k.startsWith(PREFIX)) { const name = k.slice(PREFIX.length); if (!(shareable && DEVICE_ONLY_KEYS.includes(name))) out[name] = localStorage.getItem(k); }
     }
   } catch { /* stockage indisponible */ }
   return out;

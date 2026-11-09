@@ -107,7 +107,7 @@ export function mergeSaves(local, remote) {
   // record, meilleur, l'emporterait sur le nouveau puis serait supprimé).
   const resetAt = Math.max(num(a.recReset), num(b.recReset));
   if (resetAt) {
-    const clean = (o) => Object.fromEntries(Object.entries(o).filter(([k, v]) => !(k.startsWith('rec3.') && num(obj(v).date) <= resetAt))
+    const clean = (o) => Object.fromEntries(Object.entries(o).filter(([k, v]) => !(k.startsWith('rec3.') && num(obj(v).date) <= resetAt && num(obj(v).rt) <= resetAt))      // (rt : record restauré APRÈS la remise à zéro, voir profile.applySave)
       .map(([k, v]) => [k, k.startsWith('runs.') && Array.isArray(v) ? v.filter((r) => num(r && r.date) > resetAt) : v]));
     a = clean(a); b = clean(b);
   }

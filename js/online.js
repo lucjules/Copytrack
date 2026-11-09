@@ -13,11 +13,16 @@ const MAX_PUBLISH_CHARS = 100000;
 const MAX_PUBLISH_PIECES = 5000;
 
 export class OnlineError extends Error {
-  constructor(message, code = '') { super(message); this.code = code; }
+  constructor(message, code = '', status = 0) { super(message); this.code = code; this.status = status; }
 }
 
 // Messages d'erreur compréhensibles.
 function explain(status, body) {
+  const e = explain1(status, body);
+  e.status = status;
+  return e;
+}
+function explain1(status, body) {
   const msg = (body && (body.message || body.msg || body.error_description || body.error)) || '';
   if (/anonymous/i.test(msg) && /disabled/i.test(msg)) return new OnlineError('Connexion anonyme désactivée sur le serveur.', 'anon-disabled');
   if (body && body.code === '42P01' || /relation .* does not exist|Could not find the table/i.test(msg)) return new OnlineError('Base non prête (étape 1 SQL manquante).', 'no-schema');
@@ -41,6 +46,10 @@ function explain(status, body) {
   if (status === 401 || status === 403) return new OnlineError('Accès refusé par le serveur.', 'denied');
   return new OnlineError(msg || `Erreur du serveur (${status}).`, 'http');
 }
+
+// Le serveur a-t-il REFUSÉ le jeton de renouvellement (périmé, déjà utilisé, révoqué) ? 400 / 401 / 403 ; tout le reste (réseau, 5xx, 429) est passager.
+const refusedToken = (e) => !!e && (e.status === 400 || e.status === 401 || e.status === 403);
+const transient = (e) => (e && e.code === 'offline' ? e : new OnlineError('Serveur momentanément indisponible : réessaie dans un instant.', 'offline', e && e.status));
 
 class OnlineClient {
   constructor() {
@@ -110,7 +119,7 @@ class OnlineClient {
             try {
               this.session = this._norm(await this._fetch('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: { refresh_token: s && s.refresh_token }, auth: false }));
             } catch (e) {
-              if (e.code === 'offline') throw e;
+              if (!refusedToken(e)) throw transient(e);      // réseau coupé, serveur en panne ou trop d'essais : la session est conservée, on réessaiera
               throw new OnlineError('Session expirée : reconnecte-toi.', 'session-expired');
             }
             this._save();
@@ -121,7 +130,11 @@ class OnlineClient {
               this.session = this._norm(await this._fetch('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: { refresh_token: s.refresh_token }, auth: false }));
               this._save();
               return this.session;
-            } catch { /* jeton périmé : nouvelle session anonyme */ }
+            } catch (e) {
+              // Seul un jeton REFUSÉ par le serveur donne une nouvelle session anonyme (donc un autre pilote). Une panne passagère (réseau, 5xx, trop
+              // d'essais) ne doit pas faire perdre son identité à l'invité : l'erreur remonte et la session est gardée pour le prochain essai.
+              if (!refusedToken(e)) throw transient(e);
+            }
           }
           this.session = this._norm(await this._fetch('/auth/v1/signup', { method: 'POST', body: { data: {} }, auth: false }));
           this.player = null;
