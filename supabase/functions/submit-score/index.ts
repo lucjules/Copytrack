@@ -19,9 +19,17 @@ var SURF_PHYS = {
   belt: 200 / 3.6,
   spring: 56,
   bounce: 14,
-  gravity: 25,
-  maxSpeed: 95,
-  boostSpeed: 112
+  // 0.9.12 : moteur et gravité calés sur des mesures de la course de référence (lancer arrêté à plat, décélération à vide, vol libre ; trajectoires relevées
+  // à 60 Hz, 1 unité du monde = 1 m). Poussée a = ENGINE_ACCEL − DRIVE_DRAG·v sous les gaz (ajustement sur la distance parcourue, écart 0,12 m), a = −COAST_DRAG·v
+  // à vide, vol libre y'' = −GRAVITY. Murs / wall-ride, freinage et marche arrière : pas mesurables dans ce relevé, donc inchangés.
+  gravity: 16,
+  engineAccel: 19,
+  driveDrag: 0.08,
+  coastDrag: 0.1065,
+  maxSpeed: 19 / 0.08,
+  boostSpeed: 19 / 0.08 * (112 / 95),
+  boostAccel: 10,
+  boostTime: 1.2
 };
 var MAX_DECOS = 500;
 var LOOP_R = 12 * (CELL / 24);
@@ -6852,18 +6860,19 @@ function buildBuiltin(def) {
 
 // js/physics.js
 var CAR = {
-  accel: 11,
-  accelCurve: 1.5,
+  accel: SURF_PHYS.engineAccel,
+  accelCurve: 1,
   maxSpeed: SURF_PHYS.maxSpeed,
   boostSpeed: SURF_PHYS.boostSpeed,
-  boostAccel: 10,
-  boostTime: 1.2,
+  boostAccel: SURF_PHYS.boostAccel,
+  boostTime: SURF_PHYS.boostTime,
   brake: 52,
   reverseAccel: 15,
   reverseMax: 15,
-  roll: 0.6,
-  drag: 9e-4,
-  coast: 2,
+  roll: 0,
+  drag: 0,
+  coast: 0,
+  coastDrag: SURF_PHYS.coastDrag,
   // Châssis (modèle bicyclette)
   a: 1.35,
   b: 1.4,
@@ -6922,8 +6931,8 @@ var CAR = {
 };
 var MOTO = {
   ...CAR,
-  accel: 10,
-  maxSpeed: 90,
+  accel: SURF_PHYS.engineAccel * (10 / 11),
+  maxSpeed: SURF_PHYS.maxSpeed * (90 / 95),
   brake: 44,
   a: 1.15,
   b: 1.2,
@@ -6940,8 +6949,8 @@ var MOTO = {
 };
 var BOAT = {
   ...CAR,
-  accel: 8,
-  maxSpeed: 85,
+  accel: SURF_PHYS.engineAccel * (8 / 11),
+  maxSpeed: SURF_PHYS.maxSpeed * (85 / 95),
   brake: 32,
   latGrip: 58,
   frontShare: 0.41,
@@ -6953,8 +6962,8 @@ var BOAT = {
 };
 var GLIDER = {
   ...CAR,
-  accel: 8,
-  maxSpeed: 90,
+  accel: SURF_PHYS.engineAccel * (8 / 11),
+  maxSpeed: SURF_PHYS.maxSpeed * (90 / 95),
   airPitchAcc: 3.4
 };
 var SPECS = {
@@ -7748,6 +7757,7 @@ var CarPhysics = class {
       a += CAR.boostAccel * f * Math.max(0, 1 - x * x);
     }
     let res = CAR.roll * load + CAR.drag * vf * vf + extraDrag * load;
+    if (!inp.throttle) res += CAR.coastDrag * Math.abs(vf) * load;
     if (!inp.throttle && !inp.brake) res += CAR.coast * load;
     res += 4 * this.driftT * load;
     const dvr = res * dt;
@@ -9371,7 +9381,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/replay.js
-var PHYS_VER = 25;
+var PHYS_VER = 26;
 var MAX_REPLAY_STEPS = 120 * 600;
 function decodeInputs(b64) {
   const bin = atob(b64);

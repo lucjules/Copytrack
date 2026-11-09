@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.11**
+Version actuelle : **bêta 0.9.12 (lot 1 : moteur calé sur la course de référence, voir docs/CALIBRATION-POLYTRACK.md ; circuits à recaler)**
 
 ## Jouer
 
