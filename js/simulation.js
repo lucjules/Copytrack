@@ -17,6 +17,9 @@ export function placeAtRespawn(phys, r) {
   phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
   phys.vehicle = r.vehicle || 'car';
   phys.gravMul = r.grav || 1;
+  // Verre sous le point de réapparition : il ne cède pas tant que la voiture ne l'a pas quitté (sinon un checkpoint posé sur du verre ramenait
+  // la voiture sur une dalle qui cède, puis dans le vide, puis au checkpoint... sans fin tant que le joueur attend). Le départ, lui, n'est pas concerné.
+  phys.glassSafe = phys.surfMod === 'glass' && phys.surfTile ? phys.surfTile : null;
 }
 
 export class Simulation {

@@ -6,6 +6,12 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.49 — phase 2 (suite) : plus de boucle de réapparition sur du verre
+
+`PHYS_VER` 30. **Redéployer `submit-score`** (déjà régénérée ici).
+- **Boucle sans fin sur le verre** : un checkpoint (ou un point de retour) posé sur une dalle de verre ramenait la voiture sur une dalle qui cède ; un joueur qui attendait voyait « dalle brisée → chute → hors piste → retour au checkpoint » se répéter toutes les 2,6 s à l'infini (reproduit : 16 retours en 100 s). Le verre sous le point de réapparition ne cède plus tant que la voiture ne l'a pas quitté (`glassSafe`, `placeAtRespawn`). Le départ, lui, est inchangé.
+- Tests ajoutés dans `tools/test-physique-phase2.mjs` (rouges avant, verts après). Seul le noyau de la boucle de jeu (pas fixe plafonné à 0,1 s par image, évènements remis à zéro à chaque pas) a été relu : aucun autre gel trouvé.
+
 ## Bêta 0.9.48 — phase 2 : réparation de la physique
 
 `PHYS_VER` 29 (physique changée). **Redéployer `submit-score`** (déjà régénérée ici). Les records, replays, fantômes et classements de la 0.9.47 (physique 28) ne sont plus valables. Suivi du chantier : `docs/PLAN-FINALISATION-COPYTRACK.md`.

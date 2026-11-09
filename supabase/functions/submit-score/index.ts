@@ -10289,6 +10289,7 @@ var CarPhysics = class {
     this.prev.y = s.h;
     this.grounded = true;
     this._setGround(s, false);
+    this.glassSafe = null;
     this._updateFwd();
   }
   get speed() {
@@ -10319,6 +10320,7 @@ var CarPhysics = class {
     this.surfType = s.type;
     this.surfMod = s.mod || "";
     this.surfTile = s.tile;
+    if (triggers && this.glassSafe && s.tile !== this.glassSafe) this.glassSafe = null;
     this.surfPct = s.tile ? tileParam({
       s: s.mod || "",
       p: s.p
@@ -10402,7 +10404,7 @@ var CarPhysics = class {
   // pièce, en secondes). Quand il est écoulé, la dalle est brisée : elle n'a plus aucune collision (la voiture tombe) jusqu'au
   // prochain (re)départ, qui la restaure. Renvoie true à l'instant où la dalle cède.
   _glassCheck(on, tile, dt) {
-    if (!on || !tile || this.graceT > 0 || this.broken.has(tile)) return false;
+    if (!on || !tile || this.graceT > 0 || this.broken.has(tile) || tile === this.glassSafe) return false;
     const t = (this.glassTime.get(tile) || 0) + dt;
     this.glassTime.set(tile, t);
     if (t < glassSeconds(this._pct(tile))) return false;
@@ -11242,6 +11244,7 @@ function placeAtRespawn(phys, r) {
   phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
   phys.vehicle = r.vehicle || "car";
   phys.gravMul = r.grav || 1;
+  phys.glassSafe = phys.surfMod === "glass" && phys.surfTile ? phys.surfTile : null;
 }
 var Simulation = class {
   // partial : test depuis le curseur (pas besoin des checkpoints). offTrackLimit : temps hors piste (s) avant la réapparition automatique.
@@ -11784,7 +11787,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/version.js
-var PHYS_VER = 29;
+var PHYS_VER = 30;
 
 // js/ghostFormat.js
 var GHOST_EVERY = 4;

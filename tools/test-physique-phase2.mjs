@@ -159,6 +159,34 @@ test('verre : un retour au checkpoint ou un redémarrage restaure toutes les dal
   sim.phys.broken.add(g); sim.start(); assert.equal(sim.phys.broken.size, 0);
 });
 
+test('verre sous le point de réapparition : aucune boucle « retour → dalle brisée → vide → retour » quand le joueur attend (avant : un retour toutes les 2,6 s sans fin)', () => {
+  const tr = scriptTrack('c', 'start S4 C S4 finish');
+  for (const t of tr.tiles) if (t.t === 'checkpoint') { t.s = 'glass'; t.p = 40; }
+  tr.version++;
+  const sim = new Simulation(tr); sim.start();
+  let cps = 0, rew = 0;
+  for (let i = 0; i < 6000; i++) {
+    const e = sim.step({ throttle: cps === 0, brake: false, steer: 0 });
+    if (e && e.type === 'checkpoint') cps++;
+    if (sim.lost) { rew++; sim.rewind(); }
+  }
+  assert.equal(cps, 1); assert.ok(rew <= 1, rew + ' retours au checkpoint');
+  assert.ok(sim.phys.grounded && sim.phys.broken.size === 0, 'la voiture attend posée sur le verre du point de réapparition');
+});
+test('ce verre protégé cède de nouveau dès que la voiture l\'a quitté puis y revient', () => {
+  const tr = strip(8); const g = tr.tiles.find((t) => t.z === 4); g.s = 'glass'; g.p = 30; tr.version++;
+  const sim = new Simulation(tr); sim.start();
+  const P = sim.phys; sim.logic.respawn = { x: CELL / 2, y: 0.4, z: 4 * CELL + CELL / 2, yaw: 0, vehicle: 'car', grav: 1, gs: 1, snap: sim.logic.respawn.snap }; sim.rewind(); P.graceT = 0;
+  assert.equal(P.glassSafe, g);
+  for (let i = 0; i < 300; i++) sim.drive(IDLE);
+  assert.ok(!P.broken.has(g), 'protégé tant qu\'on n\'a pas bougé');
+  P.pos.z = 6 * CELL; P.prev.z = P.pos.z; P.vel.z = 0; for (let i = 0; i < 5; i++) sim.drive(IDLE);
+  assert.equal(P.glassSafe, null, 'quitté : plus de protection');
+  P.place(CELL / 2, 0.4, 6 * CELL, 0, 1); P.glassSafe = null; P.graceT = 0; P.pos.z = 4 * CELL + CELL / 2; P.prev.z = P.pos.z;
+  for (let i = 0; i < 300 && !P.broken.has(g); i++) sim.drive(IDLE);
+  assert.ok(P.broken.has(g), 'cède normalement');
+});
+
 console.log('Verre : plusieurs dalles, empilées, voisines, à l\'envers, rejeu');
 test('dalles voisines indépendantes : seule la dalle sous la voiture cède', () => {
   const tr = strip(8); for (const t of tr.tiles) if (t.t === 'straight') { t.s = 'glass'; t.p = 40; } tr.version++;

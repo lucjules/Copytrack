@@ -140,6 +140,7 @@ export class CarPhysics {
     this.prev.y = s.h;
     this.grounded = true;
     this._setGround(s, false);
+    this.glassSafe = null;
     this._updateFwd();
   }
 
@@ -170,6 +171,7 @@ export class CarPhysics {
     this.surfType = s.type;
     this.surfMod = s.mod || '';
     this.surfTile = s.tile;
+    if (triggers && this.glassSafe && s.tile !== this.glassSafe) this.glassSafe = null;
     // Pourcentage de réglage du revêtement touché (celui de la voie touchée pour une bifurcation à deux revêtements).
     this.surfPct = s.tile ? tileParam({ s: s.mod || '', p: s.p }) : 100;
     this.surfP = this.surfPct / 100;
@@ -245,7 +247,7 @@ export class CarPhysics {
   // pièce, en secondes). Quand il est écoulé, la dalle est brisée : elle n'a plus aucune collision (la voiture tombe) jusqu'au
   // prochain (re)départ, qui la restaure. Renvoie true à l'instant où la dalle cède.
   _glassCheck(on, tile, dt) {
-    if (!on || !tile || this.graceT > 0 || this.broken.has(tile)) return false;
+    if (!on || !tile || this.graceT > 0 || this.broken.has(tile) || tile === this.glassSafe) return false;
     const t = (this.glassTime.get(tile) || 0) + dt;
     this.glassTime.set(tile, t);
     if (t < glassSeconds(this._pct(tile))) return false;
