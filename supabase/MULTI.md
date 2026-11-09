@@ -125,3 +125,18 @@ Choisis par l'hôte dans le salon :
 - `npm test` : paquets, interpolation, téléportation, assombrissement, protocole Phoenix (faux WebSocket), négociation WebRTC
   (faux RTCPeerConnection), salon (`tools/test-net.mjs`) ; championnat, avancement, grille, collisions, annuaire (`tools/test-manche.mjs`) ; serveurs ICE et fonction `ice` (`tools/test-ice.mjs`).
 - Essai à deux onglets sans serveur : `?net=local` dans l'URL (signalisation par BroadcastChannel ; le WebRTC est réel).
+
+## Limites de l'architecture actuelle (à lire avant d'attendre plus)
+
+- **Le rollback n'est PAS utilisé.** `js/net/rollback.js` est un prototype mesuré (docs/ROLLBACK.md), branché sur aucun écran. Les collisions de manche sont des
+  **collisions douces** (`js/net/collide.js`) : chaque joueur applique SA moitié d'un choc à sa voiture, à partir de la position interpolée de l'autre. Elles
+  ne sont ni rejouables ni vérifiées, et deux joueurs peuvent voir le même contact à quelques centimètres et quelques dizaines de millisecondes près.
+- **Aucun arbitre** : chaque joueur simule sa propre voiture ; les temps de manche sont ANNONCÉS par leur joueur (jamais vérifiés par le serveur). Un joueur
+  qui triche ne fausse que le classement de sa salle, jamais les classements en ligne (ni records, ni pièces, ni médailles en multijoueur).
+- **Obstacles et pièces mobiles** : ils dépendent du chrono de course de chaque joueur (pas de 1/120 s depuis son départ). Les départs étant synchronisés à
+  quelques dizaines de millisecondes, deux joueurs voient les mêmes obstacles à ce décalage près ; ce n'est pas un état partagé.
+- **Horloge des paquets** : le tampon d'interpolation (`js/net/interp.js`) ignore un paquet isolé à l'horloge fausse (corrompu ou malveillant) et ne croit à un
+  vrai changement d'horloge (chrono remis à zéro, longue coupure) qu'après 3 paquets consécutifs ; avant, une voiture distante dont l'émetteur remettait son
+  chrono à zéro restait figée.
+- **La fonction `ice`** (identifiants TURN à durée limitée) exige maintenant une session Supabase ; sa cadence se compte par pilote, en mémoire de l'instance
+  (pas partagée entre instances : les identifiants expirent seuls, c'est un frein, pas un quota).

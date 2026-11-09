@@ -27,13 +27,16 @@ export function sanitizeIce(list) {
 }
 
 // Fabrique le chargeur : () => Promise<serveurs>. Les paramètres servent aux tests.
-export function createIceLoader({ url = CONFIG.iceUrl, key = CONFIG.supabase.key, fallback = CONFIG.iceServers, fetchImpl = globalThis.fetch, now = Date.now, timeoutMs = 2000 } = {}) {
+export function createIceLoader({ url = CONFIG.iceUrl, key = CONFIG.supabase.key, getToken = null, fallback = CONFIG.iceServers, fetchImpl = globalThis.fetch, now = Date.now, timeoutMs = 2000 } = {}) {
   let cache = null, failedAt = -Infinity, pending = null;
   const fetchOnce = async () => {
     const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : null;
     try {
-      const r = await fetchImpl(url, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: '{}', ...(ctl ? { signal: ctl.signal } : {}) });
+      // La fonction exige une session Supabase (invité ou compte) : on envoie le jeton du pilote ; à défaut, la clé publique (ancien serveur).
+      let token = key;
+      if (getToken) { try { token = (await getToken()) || key; } catch { token = key; } }
+      const r = await fetchImpl(url, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}', ...(ctl ? { signal: ctl.signal } : {}) });
       if (!r.ok) throw new Error('ice ' + r.status);
       const j = await r.json();
       const servers = sanitizeIce(j && j.iceServers);

@@ -12536,9 +12536,41 @@ function verifyRun({ trackKey, code, inputs, time, physVer, withGhost = false })
 var MAX_BODY_CHARS = MAX_INPUTS_CHARS + MAX_TRACK_CODE_CHARS + 4096;
 var RATE_LIMIT = {
   max: 8,
-  windowMs: 6e4
+  windowMs: 6e4,
+  globalMax: 600
 };
 var MAX_GHOST_CHARS = 8e5;
+async function readBodyLimited(req, maxBytes) {
+  if (!req.body) {
+    const t = await req.text();
+    return new TextEncoder().encode(t).length > maxBytes ? null : t;
+  }
+  const reader = req.body.getReader();
+  const chunks = [];
+  let total = 0;
+  for (; ; ) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      try {
+        await reader.cancel();
+      } catch {
+      }
+      return null;
+    }
+    chunks.push(value);
+  }
+  const all = new Uint8Array(total);
+  let o = 0;
+  for (const c of chunks) {
+    all.set(c, o);
+    o += c.byteLength;
+  }
+  return new TextDecoder().decode(all);
+}
+var TRACK_KEY_RE = /^[A-Za-z0-9_~.:-]{1,80}$/;
+var BASE64_RE = /^[A-Za-z0-9+/]*={0,2}$/;
 function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, allowedOrigin = "*", now = Date.now, rateLimit = RATE_LIMIT, log = console.error }) {
   const cors = {
     "Access-Control-Allow-Origin": allowedOrigin,
@@ -12589,6 +12621,30 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
     }
     return 0;
   }
+  let lastWarn = 0;
+  async function sharedWait(uid) {
+    try {
+      const r = await db("rpc/submit_rate_check", {
+        method: "POST",
+        body: JSON.stringify({
+          p: uid,
+          max_hits: rateLimit.max,
+          window_s: Math.round(rateLimit.windowMs / 1e3),
+          global_max: rateLimit.globalMax ?? RATE_LIMIT.globalMax
+        })
+      });
+      if (!r.ok) throw new Error("rpc " + r.status);
+      const n = await r.json();
+      return Number.isInteger(n) && n > 0 ? n : 0;
+    } catch (e) {
+      const t = now();
+      if (t - lastWarn > 6e4) {
+        lastWarn = t;
+        log("submit-score : limite partag\xE9e indisponible (\xE9tape SQL 14 ?) :", e && e.message);
+      }
+      return 0;
+    }
+  }
   return async function handle(req) {
     if (req.method === "OPTIONS") return new Response("ok", {
       headers: cors
@@ -12618,14 +12674,15 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
       if (!/^[0-9a-f-]{36}$/.test(uid)) return json(401, {
         error: "Non connect\xE9."
       });
-      const wait = tooFast(uid);
+      let wait = tooFast(uid);
+      if (!wait) wait = await sharedWait(uid);
       if (wait) return json(429, {
         error: `Trop de courses envoy\xE9es : r\xE9essaie dans ${wait} s.`
       }, {
         "Retry-After": String(wait)
       });
-      const text = await req.text();
-      if (text.length > MAX_BODY_CHARS) return json(413, {
+      const text = await readBodyLimited(req, MAX_BODY_CHARS);
+      if (text === null) return json(413, {
         error: "Requ\xEAte trop volumineuse."
       });
       let body;
@@ -12637,7 +12694,7 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
         });
       }
       const { trackKey, code = "", inputs, time, physVer } = body ?? {};
-      if (typeof trackKey !== "string" || trackKey.length > 80 || typeof inputs !== "string" || typeof time !== "number" || !Number.isFinite(time) || !Number.isInteger(physVer)) {
+      if (typeof trackKey !== "string" || !TRACK_KEY_RE.test(trackKey) || typeof inputs !== "string" || !inputs || inputs.length > MAX_INPUTS_CHARS || !BASE64_RE.test(inputs) || typeof time !== "number" || !Number.isFinite(time) || time <= 0 || time > MAX_RUN_SECONDS || !Number.isInteger(physVer) || physVer < 0 || physVer > 1e5) {
         return json(400, {
           error: "Requ\xEAte invalide."
         });

@@ -1,6 +1,6 @@
 {
   "name": "copytrack",
-  "version": "0.9.50",
+  "version": "0.9.51",
   "private": true,
   "type": "module",
   "description": "Jeu de course contre-la-montre low-poly avec éditeur de circuits, dans le navigateur.",

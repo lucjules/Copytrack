@@ -100,4 +100,28 @@ await test('rien de configuré : 501 (le jeu garde son STUN) ; méthodes et cade
   assert.equal((await createIceHandler({ env: { ALLOWED_ORIGIN: 'https://jeu.example' } })(req())).headers.get('Access-Control-Allow-Origin'), 'https://jeu.example');
 });
 
+console.log('Authentification de la fonction « ice »');
+await test('avec la configuration Supabase, une session valide est exigée : la clé publique seule ne donne plus de relais TURN ; la cadence est comptée par pilote', async () => {
+  const calls = [];
+  const fetch = async (url, init = {}) => { calls.push(String(url)); if (String(url).includes('/auth/v1/user')) { const t = (init.headers || {}).Authorization; return t === 'Bearer jeton-valide' ? new Response(JSON.stringify({ id: '11111111-2222-3333-4444-555555555555' }), { status: 200 }) : new Response('{}', { status: 401 }); } return new Response('{}', { status: 500 }); };
+  const env = { TURN_URLS: 'turn:t.example:3478', TURN_SECRET: 's3cret' };
+  const h = createIceHandler({ env, supabaseUrl: 'https://x.supabase.co', serviceKey: 'cle', fetch });
+  const req = (token) => new Request('https://fn/ice', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'x-forwarded-for': '1.2.3.4' }, body: '{}' });
+  assert.equal((await h(req('cle-publique'))).status, 401, 'clé publique seule : refusé');
+  assert.equal((await h(new Request('https://fn/ice', { method: 'POST', body: '{}' }))).status, 401, 'sans jeton : refusé');
+  const ok = await h(req('jeton-valide'));
+  assert.equal(ok.status, 200); assert.ok((await ok.json()).iceServers.some((s) => s.username));
+  // même pilote, adresses IP différentes : la cadence suit le PILOTE
+  let last = 200;
+  for (let i = 0; i < RATE_LIMIT.max + 2 && last !== 429; i++) last = (await h(new Request('https://fn/ice', { method: 'POST', headers: { Authorization: 'Bearer jeton-valide', 'x-forwarded-for': '9.9.' + i + '.1' }, body: '{}' }))).status;
+  assert.equal(last, 429);
+});
+await test('le chargeur du jeu envoie le jeton du pilote quand il en a un, la clé publique sinon', async () => {
+  const seen = [];
+  const fetchImpl = async (u, init) => { seen.push(init.headers.Authorization); return new Response(JSON.stringify({ iceServers: [{ urls: ['stun:s.example:3478'] }], ttl: 3600 }), { status: 200 }); };
+  await createIceLoader({ url: 'https://fn/ice', key: 'pub', getToken: async () => 'jeton', fallback: [], fetchImpl })();
+  await createIceLoader({ url: 'https://fn/ice', key: 'pub', getToken: async () => { throw new Error('hors ligne'); }, fallback: [], fetchImpl })();
+  assert.deepEqual(seen, ['Bearer jeton', 'Bearer pub']);
+});
+
 await finish('Tous les tests des serveurs ICE passent.');

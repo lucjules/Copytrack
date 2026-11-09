@@ -173,7 +173,8 @@ function stampRestored(imp, cur, now) {
   const out = { ...imp };
   const have = new Set(parse(cur.tracks, []).map((t) => t && t.id));
   const gone = parse(cur.tracksDel, {});
-  const dead = { ...parse(imp.tracksDel, {}), ...gone };
+  const dead = { ...parse(imp.tracksDel, {}) };
+  for (const [id, t] of Object.entries(gone)) dead[id] = Math.max(Number(dead[id]) || 0, Number(t) || 0);      // la suppression la plus récente de chaque circuit
   if (typeof out.tracks === 'string') {
     const list = parse(out.tracks, []);
     if (Array.isArray(list)) {
