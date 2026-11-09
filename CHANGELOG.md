@@ -22,6 +22,17 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
   - *En Cadence* : les phases de ses deux piques sont déplacées (le moteur change l'instant d'arrivée).
   - Médailles, temps de référence, deux objectifs bonus (Aurore, Chaîne) et fiche d'essai recalculés ; contrat des 72 circuits tenu.
 - **Académie** : la leçon « Réception » et l'exercice « Trois réceptions » ont une case de vide au lieu de deux entre la rampe et la réception (le pilote y réussit des réceptions parfaites) ; les exercices de dérapage retrouvent leurs trois cases d'élan ; seuils de l'exercice de freinage recalés.
+- **Affichage** (repéré en parcourant tous les écrans sur ordinateur, téléphone en paysage et en portrait, en français et en anglais) :
+  - **la feuille de style était tronquée** : une fusion de branches y avait laissé un marqueur de conflit (`=======`) et un commentaire jamais fermé, si bien que des règles étaient ignorées sans erreur visible. Réparé, et le nouveau test `tools/test-css.mjs` attrape ce genre de reste ;
+  - **accueil sur téléphone en paysage** : les tuiles s'empilaient en deux colonnes coupées en haut et en bas (une règle de l'ancien menu à six boutons). Désormais six tuiles par rangée, logo réduit, et l'écran défile s'il est encore trop bas ;
+  - **accueil en portrait** : le bouton plein écran recouvrait le pied de page ; il passe en haut à gauche (en course, il reste en bas au centre) ;
+  - **onglets** : ceux du classement de la fiche (« Personnel » coupé) et ceux de la Communauté (9 onglets, dont deux étirés sur toute la largeur) sont plus petits et passent à la ligne ;
+  - **barre du haut** des écrans de liste et de la fiche : elle colle au bord de l'écran (24 px de décor au-dessus) ;
+  - **fiche du circuit** : « Comparer avec » ne recouvre plus sa liste ; en anglais, « Pièces » (nombre de pièces du circuit) s'affichait « Coins » (pièces de monnaie), c'est maintenant « Track pieces » ;
+  - **options** : la liste « Qualité graphique » recouvrait son titre ;
+  - **modes de jeu** : le nom d'un mode et sa description ne forment plus qu'une ligne collée ;
+  - **éditeur** : sur un écran bas, la colonne de droite défile au lieu d'être coupée.
+  - Test navigateur : sur trois tailles de téléphone, les 12 tuiles de l'accueil sont entières, aucune n'est recouverte.
 - **Nettoyage** :
   - le dossier importé `polytrack-recon-…` (34 Mo de données d'un autre jeu) et la note de calibration qui s'y référait sont retirés, et le dossier est ajouté au `.gitignore` ;
   - les deux erreurs de lint de la 0.9.45 sont corrigées ;

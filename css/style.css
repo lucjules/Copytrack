@@ -803,14 +803,7 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 /* ---- v1.5 : tutoriel ---- */
 .tuto { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 8px; line-height: 1.45; }
 
-/* ---- 0.6 : menu principal sur écran bas (téléphone en paysage) ---- */
-@media (max-height: 520px) {
-  .menu-left .logo { font-size: clamp(30px, 6vw, 46px); }
-  .menu-left .tagline { margin: 2px 0 10px; }
-  .menu-buttons { display: grid; grid-template-columns: 1fr 1fr; width: min(560px, 100%); gap: 6px; }
-  .menu-buttons .btn.big { padding: 7px 10px; font-size: 14px; }
-  .menu-foot { display: none; }
-}
+/* (le menu principal sur écran bas est réglé plus bas, avec les tuiles : voir « Accueil sur téléphone ») */
 
 /* ---- Communauté ---- */
 .comm-tabs { flex-wrap: wrap; }
@@ -1243,6 +1236,12 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   color: #bed8f7;
   transition: background 0.12s, color 0.12s;
 }
+/* Onglets dans un panneau étroit (classement de la fiche, garage, fenêtres) et barre de la communauté (9 onglets) : plus petits, qui passent à la ligne (0.9.46). */
+.lb-panel .tabs, .lb-tabs, #garage-tabs, .modal .tabs, .comm-tabs { flex-wrap: wrap; }
+.lb-panel .tab, .lb-tabs .tab, #garage-tabs .tab, .modal .tab { flex: 1 1 auto; min-width: 0; min-height: 40px; padding: 4px 10px; font-size: clamp(13px, 1.3vw, 17px); }
+.comm-tabs .tab { flex: 1 1 auto; min-width: 0; min-height: 46px; padding: 4px 12px; font-size: clamp(14px, 1.5vw, 20px); }
+/* Écrans à barre du haut collante : elle colle au bord de l'écran (le remplissage du haut la décalait de 24 px, avec une bande du décor au-dessus). */
+.screen:has(> .screen-head) { padding-top: 0; }
 .tab:hover { background: var(--ui-btn-hover); color: var(--ui-text); }
 .tab.on { background: var(--ui-surface); color: var(--ui-text); border-bottom-color: var(--ui-accent); }
 
@@ -1293,7 +1292,26 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 @media (prefers-reduced-motion: reduce) {
   #menu .btn, .card, .tab { transition: none; }
 }
-=======
+
+/* ---------- Accueil sur téléphone (0.9.46) ----------
+   Écran bas (téléphone en paysage) : tuiles plus petites, six par rangée, logo réduit, sans sous-titre ; et quand même trop haut, l'écran défile
+   au lieu de couper le haut (centrage « safe »). Portrait : le bouton plein écran quitte le bas (il recouvrait la barre du pied de page). */
+#menu.screen { justify-content: safe center; }
+@media (max-height: 520px) {
+  #menu.screen { padding-top: 8px; padding-bottom: 44px; }
+  #menu .logo { font-size: clamp(30px, 6vw, 46px); }
+  #menu .tagline { display: none; }
+  #menu .menu-left { margin-top: 4px; }
+  #menu .menu-buttons { width: min(900px, 100%); gap: 6px; margin-top: 8px; }
+  #menu .menu-buttons .btn.big { --tile: clamp(66px, min(13vw, 25vh), 100px); font-size: clamp(11px, 1.6vw, 14px); padding: 0 3px 7px; }
+  #menu .menu-foot { padding: 6px 10px; font-size: 11px; }
+}
+body.touch .fs-btn { left: calc(10px + env(safe-area-inset-left)); top: calc(10px + env(safe-area-inset-top)); bottom: auto; transform: none; }
+body.touch.in-race .fs-btn { left: 50%; top: auto; bottom: calc(10px + env(safe-area-inset-bottom)); transform: translateX(-50%); }
+@media (max-width: 520px) and (orientation: portrait) {
+  #menu .menu-buttons .btn.big { font-size: 13px; padding: 0 3px 8px; }
+  #menu .menu-buttons .btn.big::before { top: 12%; width: 34%; height: 34%; }
+}
 /* Éditeur guidé et Académie (0.9.16) */
 #ed-palette [hidden] { display: none !important; }
 .pal-guided { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; padding: 5px 10px; border-radius: 10px; background: rgba(255, 210, 62, 0.12); border: 1px solid rgba(255, 210, 62, 0.35); font-size: 12.5px; }
@@ -1560,4 +1578,17 @@ body.hud-editing > section, body.hud-editing #touch { display: none !important; 
 .ed-logic input[type="number"] { width: 6em; }
 .ed-lsentence { margin: 4px 0; padding: 8px 10px; border-radius: 8px; background: rgba(95, 242, 255, 0.08); border: 1px solid rgba(95, 242, 255, 0.3); }
 @media (max-width: 600px) { .ed-lrow { grid-template-columns: minmax(0, 1fr); } }
-/* ==============================================================================================================================
+
+/* Fiche du circuit : « Comparer avec » (étiquette et liste côte à côte, la liste ne recouvre plus l'étiquette) (0.9.46). */
+.hub-cmp { display: flex; gap: 8px; align-items: center; margin: 0 0 8px; }
+.hub-cmp select { flex: 1; min-width: 0; }
+
+/* Options : la liste « Qualité graphique » (libellés longs) passe sous son titre au lieu de le recouvrir ; éditeur : la colonne de droite défile quand
+   l'écran est bas (téléphone en paysage : ses derniers boutons étaient coupés) (0.9.46). */
+.form label:has(> #opt-quality) { flex-direction: column; align-items: stretch; gap: 6px; }
+.form label:has(> #opt-quality) select { width: 100%; }
+#editor .ed-side { max-height: calc(100vh - var(--ed-top-h, 54px) - var(--ed-pal-h, 270px) - 24px); min-height: 120px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+
+/* Modes de jeu : le nom du mode et sa description sur deux lignes (ils se collaient), sur toute la largeur libre (0.9.46). */
+.srow.mode-row > .mode-name { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; color: var(--text); }
+.srow.mode-row > .mode-name small { color: var(--muted); font-size: 12px; line-height: 1.35; }

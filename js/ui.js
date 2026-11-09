@@ -131,6 +131,7 @@ export class UI {
 
   setMode(mode) {
     if (mode !== 'race') this.speedFx(0);
+    document.body.classList.toggle('in-race', mode === 'race');      // (css : place du bouton plein écran du tactile)
     const showCoins = mode === 'menu';
     $('coins').classList.toggle('hidden', !showCoins);
     this.updateCoins();
