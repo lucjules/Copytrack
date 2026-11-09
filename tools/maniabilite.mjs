@@ -46,7 +46,7 @@ export function virageStabilise(speed) {
   const o = bicycle(speed, () => 1, 5), e = o[o.length - 1];
   const wss = e.w, alat = speed * wss;
   const t90 = o.find((p) => Math.abs(p.w) >= 0.9 * Math.abs(wss));
-  return { v: speed, rayon: +(speed / Math.abs(wss)).toFixed(1), alat: +alat.toFixed(1), g: +(alat / CAR.gravity).toFixed(2), retard90: t90 ? +t90.t.toFixed(2) : null };
+  return { v: speed, rayon: +(speed / Math.abs(wss)).toFixed(1), alat: +alat.toFixed(1), g: +(alat / 9.81).toFixed(2), retard90: t90 ? +t90.t.toFixed(2) : null };
 }
 
 // Stabilité : coup de volant à fond pendant 0,4 s puis lâché. Une voiture saine revient droit (la vitesse de lacet retombe en moins d'une demi-seconde, le

@@ -21,9 +21,17 @@ export const SURF_PHYS = {
   belt: 200 / 3.6,     // vitesse du tapis roulant à son réglage maximal : ±200 km/h
   spring: 56,          // poussée latérale du ressort à pleine force (m/s)
   bounce: 14,          // vitesse verticale d'un rebond à 100 % (m/s)
-  gravity: 25,         // gravité normale (m/s²)
-  maxSpeed: 95,        // vitesse visée par le moteur (m/s) : la courbe d'accélération est très longue, on n'en atteint la fin qu'avec de longues lignes droites et de bonnes sorties de virage (0.9.4 : 54 -> 95)
-  boostSpeed: 112,     // vitesse visée sous turbo à 100 % (m/s)
+  // 0.9.12 : moteur et gravité calés sur des mesures de la course de référence (lancer arrêté à plat, décélération à vide, vol libre ; trajectoires relevées
+  // à 60 Hz, 1 unité du monde = 1 m). Poussée a = ENGINE_ACCEL − DRIVE_DRAG·v sous les gaz (ajustement sur la distance parcourue, écart 0,12 m), a = −COAST_DRAG·v
+  // à vide, vol libre y'' = −GRAVITY. Murs / wall-ride, freinage et marche arrière : pas mesurables dans ce relevé, donc inchangés.
+  gravity: 16,         // gravité normale (m/s²) (0.9.12 : 25 -> 16, mesurée 15,4 à 16,2 en vol libre)
+  engineAccel: 19.0,   // poussée à l'arrêt (m/s²) (0.9.12 : 11 -> 19,0)
+  driveDrag: 0.080,    // résistance linéaire sous les gaz (1/s) : vitesse asymptotique = engineAccel / driveDrag
+  coastDrag: 0.1065,   // résistance linéaire à vide, gaz et frein relâchés (1/s)
+  maxSpeed: 19.0 / 0.080,           // vitesse asymptotique du moteur (m/s) : 237,5 m/s, jamais atteinte (0 -> 100 km/h en 1,7 s, 200 km/h en 3,4 s)
+  boostSpeed: (19.0 / 0.080) * (112 / 95),   // vitesse visée sous turbo à 100 % (m/s), même rapport qu'avant la 0.9.12
+  boostAccel: 10,      // poussée supplémentaire d'un booster à 100 % (m/s²)
+  boostTime: 1.2,      // durée d'un booster (s)
 };
 
 // Nombre maximal de décorations par circuit.

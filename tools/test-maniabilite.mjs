@@ -21,10 +21,10 @@ test('la route est large : 24 m (cases de 32 m), la voiture en fait 5 : on ne se
   assert.equal(CELL, 32);
   assert.ok(ROAD_HALF >= 12);
 });
-test('virage à fond : plus de 2 g latéraux à toute vitesse, sans dépasser 3 g (assez d\'adhérence pour tourner, pas un rail)', () => {
+test('virage à fond : plus de 5 g latéraux (g = 9,81 m/s²) à toute vitesse, sans dépasser 8 g (assez d\'adhérence pour tourner, pas un rail)', () => {
   for (const [kmh, v] of Object.entries(V)) {
     const r = virageStabilise(v);
-    assert.ok(r.g >= 2.0 && r.g <= 3.0, `${kmh} km/h : ${r.g} g`);
+    assert.ok(r.g >= 5.0 && r.g <= 8.0, `${kmh} km/h : ${r.g} g`);
   }
 });
 test('rayon de braquage : ≤ 9 m à 72 km/h, ≤ 30 m à 144 km/h (moins qu\'une case), ≤ 65 m à 216 km/h', () => {

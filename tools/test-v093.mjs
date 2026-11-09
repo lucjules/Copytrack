@@ -358,8 +358,8 @@ test('raccords exacts : début doux ↔ fin douce ↔ droite, mur ↔ sol ↔ pl
 });
 
 console.log('Conduite : pentes et raccords');
-test('physique v25 : PHYS_VER à 25 ; plus d’exemption d’angle : seule la vitesse de la route qui « tombe » sous la voiture compte (CAR.launch)', () => {
-  assert.equal(PHYS_VER, 25);
+test('physique v26 : PHYS_VER à 25 ; plus d’exemption d’angle : seule la vitesse de la route qui « tombe » sous la voiture compte (CAR.launch)', () => {
+  assert.equal(PHYS_VER, 26);
   assert.equal(CAR.stickAngle, undefined, 'l’ancienne exemption de 12° n’existe plus');
   assert.ok(CAR.launch > 0.3 && CAR.launch < 1.2, 'seuil de décollage ' + CAR.launch);
 });
