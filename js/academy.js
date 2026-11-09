@@ -19,7 +19,7 @@ export const LESSONS = [
   },
   {
     id: 'derapage', name: 'Dérapage et mini-turbo', decor: 'desert',
-    script: 'start S RR S2 C S3 RR S finish', opts: {},
+    script: 'start S3 RR S2 C S3 RR S finish', opts: {},
     goal: { id: 'turbo', n: 1 },
     intro: ['Il n’y a pas de bouton de dérapage : c’est le <b>frein pris en virage</b>.', 'Entre dans le grand virage, tourne le volant <b>à fond</b>, puis tiens <b>{brake}</b> environ une seconde sans lâcher le volant : l’arrière glisse.', 'Des étincelles apparaissent : relâche le frein, tu reçois une poussée, le <b>mini-turbo</b>. Plus la glisse dure, plus elle est forte.'],
     tip: 'Volant à fond, puis frein environ une seconde : étincelles, relâche = mini-turbo.',
@@ -33,7 +33,7 @@ export const LESSONS = [
   },
   {
     id: 'reception', name: 'Saut et réception parfaite', decor: 'desert',
-    script: 'start B2 S C B2 S [crv1] UU G2 DD [cdo1] S2 finish', opts: {},
+    script: 'start B2 S C B2 S [crv1] UU G DD [cdo1] S2 finish', opts: {},
     goal: { id: 'perfect', n: 1 },
     intro: ['En l’air, <b>{accelerate}</b> baisse le nez et <b>{brake}</b> le relève : règle l’assiette pour retomber <b>à plat</b> sur la pente.', 'Une réception parfaite (étincelles vertes) conserve ta vitesse ; une mauvaise te secoue.', 'Garde de l’élan avant le tremplin.'],
     tip: 'En l’air : accélérer = nez en bas, freiner = nez en haut. Retombe à plat.',
@@ -47,7 +47,7 @@ export const LESSONS = [
   },
   {
     id: 'obstacles', name: 'Obstacles', decor: 'atelier',
-    script: 'start S2 B S3 C B S3 finish', opts: { l: 6 },
+    script: 'start B2 S3 C B S3 finish', opts: { l: 6 },
     obst: [{ k: 'spikesPop', at: 0.25, side: 0, s: 1.1, ph: 0.4375 }, { k: 'bumper', at: 0.6, side: -7.5, s: 0.8 }, { k: 'spikes', at: 0.7, side: 7.5, s: 0.7 }],
     goal: { id: 'norespawn' },
     intro: ['Des <b>piques escamotables</b> barrent la route : elles sortent et rentrent toutes les trois secondes. Passe quand elles sont rentrées.', 'Les <b>bumpers</b> repoussent et les <b>piques fixes</b> font reculer : reste au milieu.', 'Objectif : finir sans réapparaître. Après ça, le chapitre bonus <b>Atelier</b> de la carrière t’attend.'],

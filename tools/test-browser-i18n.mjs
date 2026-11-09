@@ -279,7 +279,7 @@ try {
       const C = await (await fetch('/tools/compat/corpus.json')).json();
       const r = C.runs.find((x) => /retour/.test(x.label));
       const a = window.copytrack, i = a.builtins.findIndex((b) => b.def.id === 'eclats'), s = await import('/js/storage.js');
-      s.saveRecord(a.builtins[i].key, { time: r.time, inputs: r.inputs, pv: 26, date: Date.now(), splits: [] });
+      s.saveRecord(a.builtins[i].key, { time: r.time, inputs: r.inputs, pv: (await import('/js/version.js')).PHYS_VER, date: Date.now(), splits: [] });
       a.showMenu('tracks'); a.openBuiltinHub(i, 'tracks');
       await a.watchRecord(a._hub.desc, s.getRecord(a.builtins[i].key), 'gold');
     });

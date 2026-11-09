@@ -4,8 +4,8 @@ import { SURF_PHYS } from '../constants.js';
 import { clamp } from '../mathutil.js';
 
 export const CAR = {
-  accel: SURF_PHYS.engineAccel,   // 0.9.12 : mesuré ; sous les gaz a = accel × (1 - v / maxSpeed)
-  accelCurve: 1,
+  accel: SURF_PHYS.engineAccel,   // sous les gaz a = accel × (1 - (v / maxSpeed)^accelCurve)
+  accelCurve: 1.5,    // plus c'est petit, plus la fin de la courbe est longue
   maxSpeed: SURF_PHYS.maxSpeed,       // vitesse visée moteur (m/s)
   boostSpeed: SURF_PHYS.boostSpeed,
   boostAccel: SURF_PHYS.boostAccel,
@@ -13,9 +13,9 @@ export const CAR = {
   brake: 52,
   reverseAccel: 15,
   reverseMax: 15,
-  roll: 0,            // 0.9.12 : résistance mesurée linéaire en v
+  roll: 0,
   drag: 0,
-  coast: 0,
+  coast: 0.8,         // à vide : résistance constante (s'ajoute à coastDrag, proportionnelle à la vitesse)
   coastDrag: SURF_PHYS.coastDrag,
   // Châssis (modèle bicyclette)
   a: 1.35,            // centre de gravité -> essieu avant (m)

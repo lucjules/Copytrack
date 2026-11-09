@@ -85,7 +85,7 @@ export function runTrack(track, { maxTime = 240, vCap, brakeDecel, rewindAtCp = 
     if (last) S.dist += Math.hypot(phys.pos.x - last.x, phys.pos.y - last.y, phys.pos.z - last.z);
     last = { x: phys.pos.x, y: phys.pos.y, z: phys.pos.z };
     if (phys.ev.loopOut) S.loops++;
-    if (phys.ev.wall > 4) S.wallHits++;
+    if (phys.ev.wall > 4) { S.wallHits++; if (process.env.LAB_LOG) console.log('choc', phys.ev.wall.toFixed(1), (i * DT).toFixed(2) + ' s', phys.pos.x.toFixed(0), phys.pos.y.toFixed(0), phys.pos.z.toFixed(0), (sp * 3.6).toFixed(0) + ' km/h', phys.rib ? 'ruban' : 'sol'); }
     if (phys.ev.wall > 1) { if (i - lastContact > 36) { S.contacts++; if (phys.ev.wall > 6) S.contactsHard++; } lastContact = i; }
     if (phys.ev.landQ === 'perfect') S.perfects++;
     if (phys.ev.ring) S.rings++;

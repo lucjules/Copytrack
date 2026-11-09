@@ -492,4 +492,5 @@ export default {
   'Volant adouci': 'Smooth steering', 'Lisse les coups de volant du clavier et des boutons': 'Smooths the steering inputs of the keyboard and buttons',
   'Caméra libre (au ras du sol)': 'Free camera (at ground level)', 'Caméra libre : au ras du sol, approche jusqu’à 3 m (V)': 'Free camera: at ground level, get as close as 3 m (V)',
   'Caméra libre : au ras du sol, approche jusqu’à 3 m (V pour revenir)': 'Free camera: at ground level, get as close as 3 m (V to go back)', 'Caméra habituelle': 'Usual camera',
+  'Pièces de piste': 'Track pieces',
 };

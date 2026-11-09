@@ -103,11 +103,18 @@ test('rafales : par à-coups, dans la direction du vent, jamais à contre-sens',
   }
   assert.ok(calm > 50 && blow > 50, `${calm} calmes, ${blow} rafales`);
 });
-test('la course change : plus lente sous la pluie ; deux courses identiques sous la même graine', () => {
-  const base = botRun(track('eclats'));
-  const wet1 = botRun(track('eclats', { rain: 100, envSeed: 5 })), wet2 = botRun(track('eclats', { rain: 100, envSeed: 5 }));
-  assert.ok(wet1 && wet1.time > base.time, `${base.time} -> ${wet1 && wet1.time}`);
-  assert.deepEqual(wet1, wet2);
+// Un virage pris à plus de 70 m/s, volant à fond : moins d'adhérence, moins de rotation (le pilote automatique, lui, roule sous la limite d'adhérence).
+function corner(t) {
+  const sim = new Simulation(t);
+  sim.start();
+  for (let i = 0; i < 560; i++) sim.step({ throttle: i < 440, brake: false, steer: i > 440 ? 1 : 0 });
+  return { yaw: sim.phys.yaw, x: sim.phys.pos.x, z: sim.phys.pos.z };
+}
+test('la course change : moins d’adhérence sous la pluie et sur le givre (le même virage tourne moins) ; deux courses identiques sous la même graine', () => {
+  const dry = corner(track('eclats')), wet = corner(track('eclats', { rain: 100, envSeed: 5 })), wet2 = corner(track('eclats', { rain: 100, envSeed: 5 }));
+  assert.ok(Math.abs(wet.yaw - dry.yaw) > 0.02, `lacet ${dry.yaw} -> ${wet.yaw}`);
+  assert.deepEqual(wet, wet2);
+  assert.deepEqual(botRun(track('eclats', { rain: 100, envSeed: 5 })), botRun(track('eclats', { rain: 100, envSeed: 5 })));
 });
 test('le serveur vérifie une course sous la pluie (code joueur), et refuse ses commandes sur le circuit sec', () => {
   const t = track('eclats', { rain: 70, gust: 40, windDir: 180, envSeed: 21, envVary: true });

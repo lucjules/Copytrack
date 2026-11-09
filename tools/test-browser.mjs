@@ -92,9 +92,9 @@ try {
 
   await test('carrière : 72 circuits listés, le premier se lance et se conduit', async () => {
     await click('[data-action="play"]');
-    await waitApp(() => document.querySelectorAll('#track-list .card:not(.daily-card)').length === 72);
+    await waitApp(() => document.querySelectorAll('#track-list .card:not(.daily-card):not(.season-card)').length === 72);      // (hors défi du jour et circuits de la saison de la semaine, qui s'ajoutent en tête)
     await shot('03-carriere');
-    await click('#track-list .track-group:not(.ch-open) .card:not(.daily-card):not(.locked)');
+    await click('#track-list .track-group:not(.ch-open) .card:not(.daily-card):not(.season-card):not(.locked)');
     await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'));     // une carte ouvre la fiche du circuit (Race Hub)
     await click('#hub-play');
     await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.state);
@@ -284,7 +284,7 @@ try {
     const run = corpus.runs.find((r) => /retour/.test(r.label));
     await app(async (r) => {
       const a = window.copytrack, i = a.builtins.findIndex((b) => b.def.id === 'eclats'), s = await import('/js/storage.js');
-      s.saveRecord(a.builtins[i].key, { time: r.time, inputs: r.inputs, pv: 26, date: Date.now(), splits: [] });
+      s.saveRecord(a.builtins[i].key, { time: r.time, inputs: r.inputs, pv: (await import('/js/version.js')).PHYS_VER, date: Date.now(), splits: [] });
       a.showMenu('tracks'); a.openBuiltinHub(i, 'tracks');
     }, run);
     await page.locator('#hub-cmp').selectOption('gold');
@@ -1233,6 +1233,40 @@ try {
     assert.deepEqual(await app(() => { const s = window.copytrack.session; return [s.freeCam, s.pitch >= 0.2, s.dist >= 25]; }), [false, true, true]);
     await app(() => window.copytrack.leaveEditor());
     await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  await test('accueil sur téléphone (paysage, portrait) : les 12 tuiles sont entières à l’écran, aucune n’est recouverte, le bouton plein écran ne gêne rien', async () => {
+    const ctxP = await browser.newContext({ locale: 'fr-FR', viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true, serviceWorkers: 'block' });
+    const pp = await ctxP.newPage();
+    pp.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+    await pp.route(/fonts\.(googleapis|gstatic)\.com|supabase\.co/, (r) => r.abort());
+    try {
+      await pp.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'load' });
+      await pp.locator('#wl-name').fill('Pouce');
+      await pp.locator('#wl-submit').evaluate((el) => el.click());
+      await pp.waitForFunction(() => window.copytrack && window.copytrack.mode === 'menu', null, { timeout: 40000 });
+      await pp.evaluate(() => { const A = window.copytrack; A.settings.telemetry = false; A.settings.tutorialDone = true; A.saveSettings(); A.ui.closeModal(); A.quality.apply('ultrapotato'); });
+      await pp.waitForTimeout(1200);
+      await pp.evaluate(() => window.copytrack.ui.closeModal());
+      for (const [w, h] of [[844, 390], [390, 844], [667, 375]]) {
+        await pp.setViewportSize({ width: w, height: h });
+        await pp.waitForTimeout(400);
+        const r = await pp.evaluate(() => {
+          const tiles = [...document.querySelectorAll('#menu .menu-buttons .btn.big')];
+          const fs = document.getElementById('fs-btn').getBoundingClientRect();
+          const out = { n: tiles.length, cut: [], covered: [], fsOver: [] };
+          for (const t of tiles) {
+            const r = t.getBoundingClientRect(), c = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+            if (r.left < -1 || r.top < -1 || r.right > window.innerWidth + 1 || r.bottom > window.innerHeight + 1) out.cut.push(t.dataset.action);
+            if (!c || !t.contains(c)) out.covered.push(t.dataset.action);
+            if (!document.getElementById('fs-btn').classList.contains('hidden') && r.left < fs.right && r.right > fs.left && r.top < fs.bottom && r.bottom > fs.top) out.fsOver.push(t.dataset.action);
+          }
+          return out;
+        });
+        assert.equal(r.n, 12, `${w}x${h} : 12 tuiles`);
+        assert.deepEqual([r.cut, r.covered, r.fsOver], [[], [], []], `${w}x${h} : tuiles coupées, recouvertes, sous le bouton plein écran`);
+      }
+    } finally { await ctxP.close(); }
   });
 
   await test('parcours complet au tactile : accueil, carrière, fiche, course aux boutons tactiles, pause, quitter', async () => {

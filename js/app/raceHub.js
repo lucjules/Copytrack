@@ -145,7 +145,7 @@ export const raceHubMethods = {
     if (d.stars) rows.push(['Difficulté', `<span class="diff" title="${esc(STAR_LABELS[d.stars] || '')}">${starsText(d.stars)}</span>${d.source === 'builtin' ? '' : ' <small class="meta">estimée</small>'}`]);
     rows.push([d.lengthKind === 'race' ? 'Distance de course' : 'Longueur de piste', `${d.lengthKind === 'race' ? '' : '≈ '}${km(d.lengthM)}`]);
     if (d.laps > 1) rows.push(['Tours', String(d.laps)]);
-    rows.push(['Pièces', String(d.tiles)]);
+    rows.push(['Pièces de piste', String(d.tiles)]);
     if (d.profil && PROFILS[d.profil]) rows.push(['Profil', esc(PROFILS[d.profil].label)]);
     if (d.track.grip !== 100) rows.push(['Adhérence', `${d.track.grip} %`]);
     if (d.track.wind) rows.push(['Vent', `${d.track.wind} % · ${WIND_LABEL[Math.round(d.track.windDir / 45) % 8]}`]);
