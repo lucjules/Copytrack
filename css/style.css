@@ -1243,6 +1243,7 @@ body.touch kbd { display: none; }
 .card .tag { border-radius: 2px; background: rgba(190, 216, 247, 0.12); color: #bed8f7; }
 @media (max-width: 640px) {
   #menu .menu-buttons { gap: 8px; }
+  #menu .menu-buttons .btn.big small { display: none; }   /* sur téléphone, le libellé seul : le sous-titre déborde sur l'icône */
   .card-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {

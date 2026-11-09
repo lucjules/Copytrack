@@ -11,4 +11,4 @@ Source : relevé `polytrack-recon-2026-11-09T10-28-57` (trajectoires de la voitu
 
 Non mesurables dans ce relevé, donc **inchangés** : appui et frottement des wall-rides (`SIDE_AERO`, murs), freinage, marche arrière, adhérence latérale (la cinétique relevée en virage, ≈ 60 m/s² à 145 km/h, reste compatible avec `latGrip`).
 
-Conséquence connue : tous les circuits intégrés ont été calés sur l'ancien moteur (0 → 100 km/h en 4 s, gravité 25). `tools/test-niveaux.mjs` (contrat des 66 circuits, temps de référence), `tools/test-v093.mjs` (3 tests de sauts et circuits aléatoires), `tools/test-phase2.mjs` (parcours « ligne inclinée ×4 ») et 3 tests de `tools/test-maniabilite.mjs` (pilote humain sur les 66 circuits) échouent tant que les circuits ne sont pas recalés (sauts, médailles, temps de référence).
+Conséquence : les circuits ont été recalés en 0.9.14 (pilote, médailles, contrat) ; voir le README. Limite : aucune mesure humaine, ni de wall-ride, de freinage ou de marche arrière.
