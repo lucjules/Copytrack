@@ -29,8 +29,8 @@ test('la version affichée suit package.json (bêta 0.9.x)', () => {
   assert.match(v, /^0\.9\.\d+$/);
   assert.equal(VERSION, 'bêta ' + v);
 });
-test('le texte du turbo dit « jusqu’à » (vitesse visée, jamais garantie)', () => {
-  assert.match(paramText('boost', 100), /^jusqu'à \d+ km\/h$/);
+test('le texte du turbo annonce un gain (≈ +N km/h), pas une vitesse visée : le moteur n’a plus de plafond', () => {
+  assert.match(paramText('boost', 100), /^≈ \+\d+ km\/h$/);
 });
 test('le réglage « effet de vitesse » annonce un seuil réaliste (220 km/h) et race.js l’utilise', () => {
   assert.match(read('index.html'), /au-delà de 220 km\/h/);

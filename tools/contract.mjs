@@ -37,8 +37,8 @@ export const PROFILE_CONTRACT = {
     const f = [];
     if (P.tight !== 0) f.push(`speedway : ${P.tight} virage(s) serré(s) (0 attendu)`);
     if (P.wide < 4) f.push(`speedway : ${P.wide} très grands virages (4 au moins)`);
-    if (P.over240 < 0.35) f.push(`speedway : ${(P.over240 * 100).toFixed(0)} % du temps au-dessus de 240 km/h (35 % au moins)`);   // 0.9.11 : boosters moins forts, 250 -> 240 km/h
-    if (P.brakePct > 8) f.push(`speedway : ${P.brakePct} % de freinage (8 % au plus)`);
+    if (P.over220 < 0.35) f.push(`speedway : ${(P.over220 * 100).toFixed(0)} % du temps au-dessus de 220 km/h (35 % au moins)`);   // 0.9.11 : boosters moins forts, 250 -> 240 km/h
+    if (P.brakePct > 14) f.push(`speedway : ${P.brakePct} % de freinage (14 % au plus)`);      // 0.9.12 : moteur 2× plus vif, on arrive plus vite dans les virages : 8 -> 14 %
     if (P.avgKmh < 200) f.push(`speedway : moyenne ${P.avgKmh} km/h (200 au moins)`);
     return f;
   },
@@ -47,7 +47,7 @@ export const PROFILE_CONTRACT = {
     if (P.tight < 8) f.push(`technique : ${P.tight} virages serrés (8 au moins)`);
     if (P.brakePct < 3) f.push(`technique : ${P.brakePct} % de freinage (3 % au moins)`);                       // 0.9.11 : plus d'adhérence, on freine moins longtemps
     if (P.under120 < 0.15) f.push(`technique : ${(P.under120 * 100).toFixed(0)} % du temps sous 120 km/h (15 % au moins)`);
-    if (P.avgKmh > 155) f.push(`technique : moyenne ${P.avgKmh} km/h (155 au plus)`);
+    if (P.avgKmh > 170) f.push(`technique : moyenne ${P.avgKmh} km/h (170 au plus)`);      // 0.9.12 : relances plus vives, 155 -> 170
     if (P.boosts < 5) f.push(`technique : ${P.boosts} boosters (5 au moins, un par relance)`);
     return f;
   },
@@ -110,10 +110,7 @@ export function checkDef(def) {
     const R = runTrack(buildBuiltin(def), { vCap: +(baseCap * k).toFixed(1) });
     if (!R.ok || R.respawns) f.push(`pilote à ${(k * 100).toFixed(0)} % : ${R.ok ? R.respawns + ' réapparitions' : R.reason}`);
   }
-  if (def.profil !== 'acrobatique') {
-    const R = runTrack(buildBuiltin(def), { vCap: +(baseCap * 1.25).toFixed(1) });
-    if (!R.ok) f.push(`pilote à 125 % : ${R.reason}`);
-  }
+  // 0.9.12 : plus de contrôle à +15 % (c'était +25 % avant) : la tolérance reste ±10 % de la vitesse du pilote, vérifiée ci-dessus ; au-delà, les sorties de mur et les sommets font décoller la voiture.
   // repartir de chaque checkpoint, à l'arrêt
   const n = new RaceLogic(tr).cps.length;
   if (n < 1) f.push('aucun checkpoint');

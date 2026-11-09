@@ -4,18 +4,19 @@ import { SURF_PHYS } from '../constants.js';
 import { clamp } from '../mathutil.js';
 
 export const CAR = {
-  accel: 11,          // m/s² à l'arrêt ; la poussée décroît ensuite selon accelCurve (0.9.4 : 28 -> 9, 0 à 100 km/h en ~4 s, 180 km/h en ~8 s, 220 km/h en ~12 s)
-  accelCurve: 1.5,    // poussée = accel × (1 - (v / vmax)^accelCurve) : plus c'est petit, plus la fin de la courbe est longue
+  accel: SURF_PHYS.engineAccel,   // 0.9.12 : mesuré ; sous les gaz a = accel × (1 - v / maxSpeed)
+  accelCurve: 1,
   maxSpeed: SURF_PHYS.maxSpeed,       // vitesse visée moteur (m/s)
   boostSpeed: SURF_PHYS.boostSpeed,
-  boostAccel: 10,
-  boostTime: 1.2,
+  boostAccel: SURF_PHYS.boostAccel,
+  boostTime: SURF_PHYS.boostTime,
   brake: 52,
   reverseAccel: 15,
   reverseMax: 15,
-  roll: 0.6,
-  drag: 0.0009,       // traînée de forme (m/s² par (m/s)²) : plus faible, la vitesse de pointe monte à 250 km/h et plus
-  coast: 2.0,
+  roll: 0,            // 0.9.12 : résistance mesurée linéaire en v
+  drag: 0,
+  coast: 0,
+  coastDrag: SURF_PHYS.coastDrag,
   // Châssis (modèle bicyclette)
   a: 1.35,            // centre de gravité -> essieu avant (m)
   b: 1.4,             // centre de gravité -> essieu arrière (m)
@@ -77,8 +78,8 @@ export const CAR = {
 // un peu moins rapide en pointe. Les personnalisations du garage, elles, ne changent rien.
 export const MOTO = {
   ...CAR,
-  accel: 10,          // démarre plus fort
-  maxSpeed: 90,       // vitesse de pointe un peu plus basse
+  accel: SURF_PHYS.engineAccel * (10 / 11),
+  maxSpeed: SURF_PHYS.maxSpeed * (90 / 95),
   brake: 44,          // freine un peu moins (une seule roue avant)
   a: 1.15, b: 1.2,    // empattement plus court : tourne plus serré
   yawK: 1.25,         // plus légère, change de cap plus vite
@@ -96,8 +97,8 @@ export const MOTO = {
 // Bateau (plaque bateau) : rapide sur l'eau, glisse un peu, se traîne sur la route.
 const BOAT = {
   ...CAR,
-  accel: 8,
-  maxSpeed: 85,
+  accel: SURF_PHYS.engineAccel * (8 / 11),
+  maxSpeed: SURF_PHYS.maxSpeed * (85 / 95),
   brake: 32,
   latGrip: 58,        // la coque glisse plus qu'un pneu
   frontShare: 0.41,
@@ -112,8 +113,8 @@ const BOAT = {
 // qui plane en l'air et s'y dirige en inclinant l'aile.
 const GLIDER = {
   ...CAR,
-  accel: 8,
-  maxSpeed: 90,
+  accel: SURF_PHYS.engineAccel * (8 / 11),
+  maxSpeed: SURF_PHYS.maxSpeed * (90 / 95),
   airPitchAcc: 3.4,
 };
 export const SPECS = { car: CAR, moto: MOTO, boat: BOAT, glider: GLIDER };

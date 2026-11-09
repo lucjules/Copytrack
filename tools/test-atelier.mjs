@@ -93,7 +93,7 @@ test('aucun numéro de circuit existant ne change : les 66 premiers sont ceux de
 console.log('Défi du jour');
 test('le défi du jour ne tire que dans les onze décors d\'origine : le douzième ne change aucun circuit du jour (valeurs relevées sur la version précédente)', () => {
   assert.equal(DAILY_DECORS.length, 11); assert.ok(!DAILY_DECORS.includes('atelier'));
-  const expected = { '2026-11-07': 'usuzez isles', '2026-12-25': '19097ck orbit', '2027-03-14': 'pl8ftj desert', '2025-01-01': '1yoxl5s caves', '2026-07-04': '1ykvnd jungle' };
+  const expected = { '2026-11-07': 'avwm5t factory', '2026-12-25': '921csh factory', '2027-03-14': 'pl8ftj desert', '2025-01-01': 'a228kz reef', '2026-07-04': '1seynj5 city' };   // 0.9.12 : le générateur valide avec le pilote, donc avec la physique (moteur mesuré)
   for (const [day, want] of Object.entries(expected)) { const c = dailyChallenge(day); assert.equal(c.track.signature() + ' ' + c.track.decor, want, day); }
   const seen = new Set();
   for (let i = 0; i < 400; i++) { const c = dailyChallenge(new Date(Date.UTC(2026, 0, 1) + i * 86400000).toISOString().slice(0, 10)); if (c) seen.add(c.track.decor); }

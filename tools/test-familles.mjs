@@ -539,7 +539,7 @@ function drive(track, maxTime = 150) {
 }
 const SHOW = [
   ['courbes montantes (droite et gauche, serrée et grande)', 'start S2 CVR1 S2 CBL1 S3 CVR2 S2 CBR0 S2 finish'],
-  ['très grand virage plat et ligne inclinée ×4', 'start S3 HR S2 UX S2 HL S2 finish'],
+  ['très grand virage plat et ligne inclinée ×4', 'start S3 HR S2 UX S4 HL S2 finish'],
   ['looping ×3 normal', 'start S4 OT S3 finish'],
   ['grand looping ×2 et grand looping ×3', 'start S4 OBD S3 OBT S3 finish'],
 ];

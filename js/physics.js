@@ -643,6 +643,7 @@ export class CarPhysics {
       a += CAR.boostAccel * f * Math.max(0, 1 - x * x);
     }
     let res = CAR.roll * load + CAR.drag * vf * vf + extraDrag * load;
+    if (!inp.throttle) res += CAR.coastDrag * Math.abs(vf) * load;   // 0.9.12 : à vide a = -coastDrag × v (sous les gaz la résistance est dans la poussée)
     if (!inp.throttle && !inp.brake) res += CAR.coast * load;
     res += 4 * this.driftT * load;
     const dvr = res * dt;

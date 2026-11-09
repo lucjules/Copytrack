@@ -96,11 +96,11 @@ test('le circuit change avec le profil ou les modèles v2 (l’autopilote ne fai
 });
 test('moto v2 : elle penche dans un virage (bornée), se redresse en ligne droite ; au freinage la charge passe sur l’avant', () => {
   const t = track('eclats', { vm: 2 });
-  const turn = drive(t, 360, (i) => ({ throttle: true, steer: i > 120 ? 1 : 0 }), 'moto');
+  const turn = drive(t, 200, (i) => ({ throttle: true, steer: i > 60 ? 1 : 0 }), 'moto');   // 0.9.12 : moteur plus vif, on tourne plus tôt (sinon la moto est déjà sortie de la route)
   assert.ok(Math.abs(turn.phys.lean) > 0.15 && Math.abs(turn.phys.lean) <= MAX_LEAN, `inclinaison ${turn.phys.lean}`);
   const straight = drive(t, 400, (i) => ({ throttle: true, steer: i > 100 && i < 200 ? 1 : 0 }), 'moto');
   assert.ok(Math.abs(straight.phys.lean) < 0.05, `redressée ${straight.phys.lean}`);
-  const brake = drive(t, 420, (i) => (i < 400 ? { throttle: true, steer: 0 } : { brake: true, steer: 0 }), 'moto');
+  const brake = drive(t, 200, (i) => (i < 170 ? { throttle: true, steer: 0 } : { brake: true, steer: 0 }), 'moto');   // 0.9.12 : moteur plus vif, on freine plus tôt
   assert.ok(brake.phys.v2F > 1 && brake.phys.v2R < 1, `avant ${brake.phys.v2F}, arrière ${brake.phys.v2R}`);
   const v1 = drive(track('eclats'), 360, (i) => ({ throttle: true, steer: i > 120 ? 1 : 0 }), 'moto');
   assert.equal(v1.phys.lean, 0, 'v1 : pas d’inclinaison physique');

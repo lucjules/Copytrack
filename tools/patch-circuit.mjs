@@ -22,6 +22,7 @@ export function patchTracks(patches, file = new URL('../js/tracks.js', import.me
       // champs sur la ligne « opts: {...}, pilot: {...}, » (ou isolés)
       const has = new RegExp('\\n    (?:[a-z]+: \\{[^}]*\\}, )*' + k + ': \\{[^}]*\\}');
       if (has.test(e)) e = e.replace(new RegExp(k + ': \\{[^}]*\\}'), k + ': ' + obj(f[k]));
+      else if (k === 'pilot' || k === 'params') e = e.replace(/\n    script: /, (m) => '\n    ' + k + ': ' + obj(f[k]) + ',' + m);      // champ absent : ajouté avant le script
       else throw new Error(`${id} : champ ${k} absent, à ajouter à la main`);
     }
     s = s.replace(m[1], () => e);

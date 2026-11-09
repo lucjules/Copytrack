@@ -130,7 +130,7 @@ export function profile(track, S) {
   return {
     pieces: tiles.length, tight, wide, wallCells, loops, boosts, straights, rises,
     heightRange: +((S.yMax - S.yMin) / LEVEL_H).toFixed(1),
-    over180: +share(50).toFixed(2), over240: +share(66.7).toFixed(2), over250: +share(69.4).toFixed(2), over300: +share(83.3).toFixed(2),
+    over180: +share(50).toFixed(2), over220: +share(61.1).toFixed(2), over240: +share(66.7).toFixed(2), over250: +share(69.4).toFixed(2), over300: +share(83.3).toFixed(2),
     under120: S.samples.length ? +(S.samples.filter((s) => s[1] < 33.3).length / S.samples.length).toFixed(2) : 0,
     avgKmh: S.time ? +((S.dist / S.time) * 3.6).toFixed(0) : 0,
     brakePct: S.time ? +((S.brakeT / S.time) * 100).toFixed(0) : 0,

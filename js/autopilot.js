@@ -8,7 +8,7 @@ export class Autopilot {
     this.path = path;
     this.idx = 0;
     this.latLimit = opts.latLimit ?? CAR.latGrip * 0.62;     // 0.9.11 : la voiture est à l'avant limité (frontShare 0,42) : l'adhérence réellement utilisable est ~0,79 × latGrip
-    this.brakeDecel = opts.brakeDecel ?? 20;
+    this.brakeDecel = opts.brakeDecel ?? 10;   // 0.9.12 : 20 -> 10 : le moteur est 2× plus vif et la gravité plus faible (descentes qui décollent) : le pilote anticipe ses freinages
     this.vCap = opts.vCap ?? (path.pilot && path.pilot.vCap) ?? 52;     // 0.9.4 : le moteur monte bien plus haut, mais le pilote reste prudent (glace, murs punitifs, sauts calés pour ~190 km/h)
     const n = path.length;
     // Distances cumulées (3D) et rayon de courbure horizontal en chaque point.
@@ -94,7 +94,8 @@ export class Autopilot {
       const vs = Math.max(8, Math.abs(R.vs));
       const psiDes = dasin(Math.max(-0.5, Math.min(0.5, (-1.2 * d2) / vs)));
       const st = (psiDes - R.psi) * 6 - phys.omega * 0.35;
-      return { throttle: true, brake: false, steer: Math.max(-1, Math.min(1, st)), drift: false };
+      // 0.9.12 : sur un mur le pilote respecte aussi sa vitesse maximale (avant, gaz à fond : avec le moteur mesuré la vitesse montait sans limite).
+      return { throttle: Math.abs(R.vs) < this.vCap, brake: false, steer: Math.max(-1, Math.min(1, st)), drift: false };
     }
     const path = this.path, p = phys.pos;
     if (!phys.grounded && phys.vehicle === 'glider') {

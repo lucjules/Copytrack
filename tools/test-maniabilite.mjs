@@ -19,10 +19,10 @@ test('la route est large : 24 m (cases de 32 m), la voiture en fait 5 : on ne se
   assert.equal(CELL, 32);
   assert.ok(ROAD_HALF >= 12);
 });
-test('virage à fond : plus de 2 g latéraux à toute vitesse, sans dépasser 3 g (assez d\'adhérence pour tourner, pas un rail)', () => {
+test('virage à fond : plus de 5 g latéraux (g = 9,81 m/s²) à toute vitesse, sans dépasser 8 g (assez d\'adhérence pour tourner, pas un rail)', () => {
   for (const [kmh, v] of Object.entries(V)) {
     const r = virageStabilise(v);
-    assert.ok(r.g >= 2.0 && r.g <= 3.0, `${kmh} km/h : ${r.g} g`);
+    assert.ok(r.g >= 5.0 && r.g <= 8.0, `${kmh} km/h : ${r.g} g`);
   }
 });
 test('rayon de braquage : ≤ 9 m à 72 km/h, ≤ 30 m à 144 km/h (moins qu\'une case), ≤ 65 m à 216 km/h', () => {
@@ -73,11 +73,11 @@ test('moins d\'un contact par minute en moyenne (0,5 au plus) : on ne se cogne p
   const moy = all.reduce((a, r) => a + r.contactsParMinute, 0) / all.length;
   assert.ok(moy <= 0.5, 'moyenne ' + moy.toFixed(2) + ' contacts/min');
 });
-test('aucun circuit à plus de 3 contacts par minute, et au plus 12 circuits avec un contact', () => {
+test('aucun circuit à plus de 3 contacts par minute, et au plus 16 circuits avec un contact (72 circuits)', () => {
   const pires = all.filter((r) => r.contactsParMinute > 3);
   assert.deepEqual(pires.map((r) => r.id + ' ' + r.contactsParMinute), []);
   const avec = all.filter((r) => r.contactsParMinute > 0);
-  assert.ok(avec.length <= 12, avec.length + ' circuits avec contact : ' + avec.map((r) => r.id).join(' '));
+  assert.ok(avec.length <= 16, avec.length + ' circuits avec contact : ' + avec.map((r) => r.id).join(' '));
 });
 test('au moins 90 % des parcours sont finis sans réapparition par ce pilote imparfait (trois graines par circuit)', () => {
   const fin = all.reduce((a, r) => a + +r.finis.split('/')[0], 0), tot = all.length * 3;

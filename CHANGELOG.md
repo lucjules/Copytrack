@@ -6,6 +6,16 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.45 — moteur et gravité calés sur des mesures, circuits recalés, menus refaits
+
+`PHYS_VER` 27 (physique changée). **Redéployer `submit-score`** ; les records, les replays et les défis du jour passés changent (le générateur du défi valide avec le pilote). Détail du calibrage : `docs/CALIBRATION-POLYTRACK.md`.
+- **Moteur** : poussée 19,0 m/s² − 0,080·v sous les gaz, résistance à vide −0,1065·v, gravité 16 m/s² (mesures sur trajectoires relevées ; wall-rides, freinage et marche arrière non mesurés, inchangés). Plus de « collage » à la route (`CAR.launch` 0,6), boosters 10 m/s² pendant 1,2 s, voiture plus maniable (adhérence 80, `frontShare` 0,42).
+- **Pilote automatique** : freinage planifié 10 m/s² (au lieu de 20), vitesse maximale respectée sur les murs, volant inversé pris en compte.
+- **Circuits** (72) : vitesses du pilote, Verglas, Archipel, Cité Céleste, Cadence, Grand Atelier (obstacles) ; médailles, objectifs, temps de référence, fiche d'essai, corpus de compatibilité régénérés. Contrat : speedway > 220 km/h pendant 35 %, freinage ≤ 14 %, technique ≤ 170 km/h.
+- **Académie** : leçons « Obstacles » et « Dérapage » raccourcies (élan d'une case) ; exercices de freinage (seuils 7,0 / 6,5 / 6,05 s) et de mini-turbo recalés.
+- **Menus** : accueil en tuiles inclinées, onglets, cartes de circuits (CSS).
+- **Tests** : bancs de maniabilité (`tools/maniabilite.mjs`, `tools/test-maniabilite.mjs`) ; tests de sauts, de courbe d'accélération, du coach, du défi du jour et de la moto réécrits sur le comportement mesuré. Aucun humain n'a rejoué les circuits avec ce moteur.
+
 ## Bêta 0.9.44 — aides à la conduite, accessibilité, ressenti, caméra libre de l'éditeur
 
 Étape E22 de Copytrack Evolution (fin du bloc 6). `PHYS_VER` inchangé (26). **Redéployer `submit-score`** (déjà régénérée ici) : elle connaît la catégorie « assisté ».

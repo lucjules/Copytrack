@@ -77,7 +77,7 @@ test('freinage retardé (règle du coach, traces synthétiques) : « tu freines 
   assert.ok(tips[0].vars.v < tips[0].vars.vr, "ressorti plus lentement");
 });
 test('freinage avancé : « tu freines plus tôt »', () => {
-  const { R, refIn, trace } = setup('eclats');
+  const { R, refIn, trace } = setup('temple');
   const target = brakingPoints(R).filter((b) => b.v0 > 25)[0], from = Math.round(R.t[target.i] * 120);
   const early = edit(refIn, (st, fl) => { for (let k = from - 70; k < from; k++) fl[k] = (fl[k] & ~1) | 2; pad(st, fl); });
   const tips = coach(trace(early), R);
@@ -87,7 +87,7 @@ test('freinage avancé : « tu freines plus tôt »', () => {
 });
 test('un retour au checkpoint coûte du temps : il arrive en tête', () => {
   const { R, refIn, trace } = setup('canyon');
-  const k = Math.round(R.n * 4 * 0.55);
+  const k = Math.round(R.n * 4 * 0.3);
   const resp = edit(refIn, (st, fl) => { fl[k] |= 4; pad(st, fl, 2400); });
   const tips = coach(trace(resp), R);
   assert.equal(tips[0].id, 'respawn', tips.map((x) => x.id).join(', '));

@@ -45,9 +45,9 @@ test('obstacles : le pilote passe les piques sans réapparition, choc ni pique t
   assert.ok(base.ok && base.respawns === 0 && base.spikes === 0 && base.shocks === 0 && base.wallHits === 0);
   for (const k of [0.9, 1.1]) { const R = runTrack(build(L), { vCap: +(66 * k).toFixed(1) }); assert.ok(R.ok && R.respawns === 0, 'vitesse ' + k); }
 });
-test('mini-turbo : un geste de joueur (volant à fond puis frein 0,8 s dans le grand virage) déclenche bien un mini-turbo sans toucher de muret', () => {
+test('mini-turbo : un geste de joueur (volant à fond puis frein 0,6 s dans le grand virage) déclenche bien un mini-turbo sans toucher de muret', () => {
   // Pas de pilote automatique pour le dérapage : on rejoue le geste décrit dans la leçon, en boucle ouverte, dès l'entrée du premier grand virage.
-  const track = scriptTrack('l', 'start S3 RR S2 finish', { decor: 'desert' });
+  const track = scriptTrack('l', 'start S RR S2 finish', { decor: 'desert' })   // 0.9.12 : moteur plus vif, entrée à 34 m/s : une seule case d'élan;
   const sim = new Simulation(track); sim.start();
   const bot = new Autopilot(track.path, { latLimit: 44.8 });
   bot.reset(sim.phys);
@@ -56,7 +56,7 @@ test('mini-turbo : un geste de joueur (volant à fond puis frein 0,8 s dans le g
     const p = sim.phys;
     let inp = bot.control(p);
     if (t0 == null && Math.abs(inp.steer) > 0.12 && p.fwdSpeed > 16) { t0 = i / 120; sign = Math.sign(inp.steer); }
-    if (t0 != null && i / 120 - t0 < 2.5) { const t = i / 120 - t0; inp = { steer: sign, throttle: t >= 0.8, brake: t < 0.8, drift: false }; }
+    if (t0 != null && i / 120 - t0 < 2.5) { const t = i / 120 - t0; inp = { steer: sign, throttle: t >= 0.6, brake: t < 0.6, drift: false }; }
     sim.drive(inp);
     if (p.ev.miniTurbo) turbos++; if (p.ev.wall > 4) walls++;
     sim.score();

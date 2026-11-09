@@ -54,7 +54,7 @@ const CAREER = [
 // Les trois premiers jetons après « start » : l'ouverture de chaque circuit, écrite ici pour que personne ne la change sans le vouloir.
 const OPENINGS = {
   // chapitre 1 : booster → wall-ride · booster → virage relevé · chute libre · booster → looping · épingle descendante · montée verticale
-  eclats: 'B2 [tr01l] S4<', canyon: 'B BRR B3', tremplins: 'V-5 [dn4] [cdo2]', spirale: 'B3 OB S', verglas: '[cvd1] [cvd1] B', grandtour: 'B3 QU WA3',
+  eclats: 'B2 [tr01l] S4<', canyon: 'B BRR B3', tremplins: 'V-5 [dn4] [cdo2]', spirale: 'B3 OB S', verglas: '[cvd05] [cvd05] B', grandtour: 'B3 QU WA3',
   // chapitre 2 : rampe + anneau · tube · rebond géant · bifurcation + moto · plafond · tunnel
   lianes: 'B3 UU GR2', canopee: 'TI TM3.b TO', spores: 'B2 S.j200 G1', serpent: 'Y2.o B S', racines: 'B3^ [tr31s] S<', temple: 'S# R# R#',
   // chapitre 3 : descente en moto · eau · deltaplane · triple looping · basse gravité · pente douce
@@ -72,7 +72,7 @@ const OPENINGS = {
   // chapitre 9 : moteur coupé · bifurcation · hélice · tunnel · pistons · ralentisseurs
   chaine: 'B3 S3.c B', laminoir: 'Y2.b B S', engrenages: 'B2 CBR2 CBR2', fonderie: 'B3 S4# BRR', presse: 'B2 S4.j150 S3', usinefolle: 'B2 S2.x R',
   // chapitre 10 : vent · rampe sans bordures · vent fort · gravité réduite · pont sans bordures · deltaplane
-  envol: 'B3 S3.w150 S', suspendues: 'B3_ [crv1]_ UU_', rafales: 'B2 S2.w180 S', montgolfieres: 'B3 S.g40 OB', pontvents: 'B2_ S2.w150_ BRR_', cite: 'S.e G2 V-6',
+  envol: 'B3 S3.w150 S', suspendues: 'B3_ [crv1]_ UU_', rafales: 'B2 S2.w180 S', montgolfieres: 'B3 S.g40 OB', pontvents: 'B2_ S2.w150_ BRR_', cite: 'S.e S.x G2',
   // chapitre 11 : volant inversé · vrille · inversion de gravité · S en miroir · double looping · verre
   galerie: 'B2 S3.y S2', plafond: 'B TW.f S2^', cristalfele: 'B2 S.f V8', miroir: 'B3 BLL S', vrilles: 'B [cdi1] [dn2]', coeur: 'B S2.v500 S',
   // chapitre 12 (Atelier, bonus) : bumpers et piques · piques escamotables · balancier · marteau + balayeur · ascenseur + glissière · tout ensemble
@@ -268,8 +268,8 @@ test('les circuits à plusieurs tours se referment (l’arrivée jouxte le dépa
   assert.deepEqual(laps.map((d) => d.id).sort(), ['caldeira', 'grandanneau']);
   for (const d of laps) { const S = runTrack(buildBuiltin(d)); assert.ok(S.ok && S.respawns === 0, d.id + ' : ' + S.reason); }
 });
-test('circuit de sauts (Tremplins) : finissable de 56 à 80 m/s (202 à 288 km/h) à l’abord des rampes, sans checkpoint survolable (sans « collage », une rampe prise trop lentement ne se franchit plus)', () => {
-  for (const c of [56, 60, 66, 72, 80]) { const S = runTrack(buildBuiltin(by.tremplins), { vCap: c }); assert.ok(S.ok && S.respawns === 0, `vCap ${c} : ${S.ok ? S.respawns + ' réapparitions' : S.reason}`); }
+test('circuit de sauts (Tremplins) : finissable de 44 à 64 m/s (158 à 230 km/h) à l’abord des rampes, sans checkpoint survolable (gravité 16 : les vols sont longs, une rampe prise à plus de 68 m/s dépasse la réception)', () => {
+  for (const c of [44, 52, 60, 64]) { const S = runTrack(buildBuiltin(by.tremplins), { vCap: c }); assert.ok(S.ok && S.respawns === 0, `vCap ${c} : ${S.ok ? S.respawns + ' réapparitions' : S.reason}`); }
 });
 test('les anciennes listes d’obstacles figés ont disparu (js/builtinObstacles.js) : un circuit n’a que les obstacles de son champ obst', () => {
   assert.ok(!existsSync(new URL('../js/builtinObstacles.js', import.meta.url)));

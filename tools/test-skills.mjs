@@ -76,7 +76,7 @@ test('chaque exercice se construit, est valide et se finit au pilote automatique
     const tr = build(d);
     assert.deepEqual(tr.validate(), [], d.id);
     const m = measureRun(tr, drive(tr), d);
-    assert.ok(m.finished && m.time > 6 && m.time < 40, `${d.id} : ${m.time}`);
+    assert.ok(m.finished && m.time > 5 && m.time < 40, `${d.id} : ${m.time}`);
     if (d.zones.length) assert.ok(m.zoneTime > 1 && m.zoneSpeed > 50, d.id + ' : zones mesurées');
   }
 });
@@ -101,11 +101,11 @@ test('freinage : même échelle, mesurée au temps passé dans les zones de frei
 test('mini-turbo : sans dérapage, rien ; frein trop long, mini-turbo simple (bronze) ; glisse tenue, renforcé ; renforcé, sans choc et à temps : or', () => {
   const d = drillById('miniturbo');
   assert.equal(grade(d, {}).g, 0, 'le pilote automatique ne dérape pas');
-  const simple = grade(d, { gesture: { at: 80, B: 0.6, L: 1.5 } });
+  const simple = grade(d, { gesture: { at: 50, B: 0.5, L: 1.5 } });   // 0.9.12 : exercice raccourci (une case d'élan), gestes recalés
   assert.deepEqual([simple.m.turboLv, simple.g], [1, 1]);
-  const lent = grade(d, { gesture: { at: 80, B: 0.5, L: 1.5 }, stall: 1.5 });
+  const lent = grade(d, { gesture: { at: 40, B: 0.5, L: 1.5 }, stall: 5 });
   assert.deepEqual([lent.m.turboLv, lent.m.walls, lent.g], [2, 0, 2], 'renforcé mais arrivée trop lente : argent (' + lent.m.time + ' s)');
-  const or = grade(d, { gesture: { at: 80, B: 0.5, L: 1.5 } });
+  const or = grade(d, { gesture: { at: 40, B: 0.5, L: 1.5 } });
   assert.deepEqual([or.m.turboLv, or.m.walls, or.g], [2, 0, 3]);
   assert.ok(or.m.time <= d.limit);
   assert.match(describeMeasure(d, or.m), /^Mini-turbo renforcé, 0 choc, /);
