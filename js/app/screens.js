@@ -34,6 +34,7 @@ export const screenMethods = {
   showScreen(name) {
     this._screen = name;
     if (name === 'menu') {
+      this._menuSub(null);
       const r = getRecord('daily-' + dayKey());
       $('daily-best').textContent = r ? formatTime(r.time) : 'nouveau';
     }

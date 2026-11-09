@@ -14,6 +14,7 @@ export const wiringMethods = {
   _wire() {
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action]');
+      if (!e.target.closest('.menu-sub, [data-action^="sub-"]')) this._menuSub(null);     // un clic ailleurs referme le sous-menu
       if (btn) { this.audio.click(); this._action(btn.dataset.action); return; }
       const ed = e.target.closest('[data-ed]');
       if (ed && this.session && this.session.kind === 'editor') { this.audio.click(); this._editorAction(ed.dataset.ed); return; }
@@ -100,9 +101,20 @@ export const wiringMethods = {
     document.querySelectorAll('#bind-tabs .tab').forEach((t) => t.addEventListener('click', () => { this.audio.click(); this._renderControls(t.dataset.tab); }));
   },
 
+  // Sous-menus de l'accueil : name = 'create' | 'online' ; le même nom une seconde fois, ou null, referme.
+  _menuSub(name) {
+    const open = name && !$('menu-sub-' + name).classList.contains('hidden') ? null : name;
+    for (const n of ['create', 'online']) {
+      $('menu-sub-' + n).classList.toggle('hidden', n !== open);
+      const t = document.querySelector(`#menu [data-action="sub-${n}"]`);
+      if (t) { t.setAttribute('aria-expanded', String(n === open)); t.classList.toggle('open', n === open); }
+    }
+  },
+
   _action(a) {
     const s = this.session;
     switch (a) {
+      case 'sub-create': case 'sub-online': this._menuSub(a.slice(4)); break;
       case 'play': this.showScreen('tracks'); break;
       case 'quick': this.quickRace(); break;
       case 'daily': this.openDailyHub('menu'); break;

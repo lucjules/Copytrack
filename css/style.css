@@ -1151,7 +1151,7 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   width: min(1100px, 100%);
 }
 #menu .menu-buttons .btn.big {
-  --tile: clamp(84px, min(12.5vw, 19vh), 170px);   /* 12 tuiles : 6 par rangée, deux rangées, tout tient à l'écran */
+  --tile: clamp(84px, min(12.5vw, 19vh), 170px);   /* 6 tuiles, deux rangées, tout tient à l'écran */
   position: relative;
   width: var(--tile);
   height: var(--tile);
@@ -1592,3 +1592,22 @@ body.hud-editing > section, body.hud-editing #touch { display: none !important; 
 /* Modes de jeu : le nom du mode et sa description sur deux lignes (ils se collaient), sur toute la largeur libre (0.9.46). */
 .srow.mode-row > .mode-name { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; color: var(--text); }
 .srow.mode-row > .mode-name small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+
+/* ---------- 0.9.47 · Accueil allégé : six tuiles, deux sous-menus, une barre d'accès rapides ---------- */
+#menu .menu-buttons .btn.big { --tile: clamp(96px, min(14.5vw, 23vh), 190px); }
+#menu [data-action="sub-create"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 17.500V21h3.500l10-10-3.500-3.500zM20.700 7a1 1 0 000-1.400l-2.300-2.300a1 1 0 00-1.400 0L15.200 5l3.500 3.500z'/%3E%3C/svg%3E"); }
+#menu [data-action="sub-online"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2a10 10 0 100 20 10 10 0 000-20zm0 2c1.200 1.500 2 3.600 2.400 6H9.600C10 7.600 10.800 5.500 12 4zM4.300 10h3.300c-.1.700-.1 1.300-.1 2s0 1.300.1 2H4.300a8 8 0 010-4zm5.300 4h4.800c-.4 2.400-1.200 4.500-2.400 6-1.200-1.500-2-3.600-2.400-6zm6.800 0h3.300a8 8 0 000-4h-3.300c.1.700.1 1.300.1 2s0 1.300-.1 2z'/%3E%3C/svg%3E"); }
+#menu .menu-buttons .btn.big.open { background: var(--ui-btn-hover); outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+#menu .menu-sub, #menu .menu-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; width: min(900px, 100%); }
+#menu .menu-sub.hidden { display: none; }
+#menu .menu-sub .btn, #menu .menu-bar .btn { padding: 8px 18px; font-size: clamp(14px, 1.5vw, 18px); font-style: italic; font-weight: 700; }
+#menu .menu-sub .btn small, #menu .menu-bar .btn small { margin-left: 8px; font-size: 12px; font-weight: 500; font-style: normal; color: #bed8f7; }
+#menu .menu-sub { padding: 8px 12px; background: var(--ui-surface-glass); border-top: 3px solid var(--ui-accent); animation: menuSubIn 0.14s ease-out; }
+#menu .menu-bar { margin-top: clamp(14px, 4vh, 40px); }
+@keyframes menuSubIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (max-width: 640px), (max-height: 520px) {
+  #menu .menu-sub .btn small, #menu .menu-bar .btn small { display: none; }
+  #menu .menu-sub .btn, #menu .menu-bar .btn { padding: 6px 12px; font-size: 13px; }
+  #menu .menu-bar { margin-top: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { #menu .menu-sub { animation: none; } }

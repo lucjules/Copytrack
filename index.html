@@ -222,19 +222,28 @@
     <div class="menu-left">
       <h1 class="logo">COPY<span>TRACK</span></h1>
       <p class="tagline">Course contre-la-montre low-poly</p>
-      <nav class="menu-buttons">
+      <nav class="menu-buttons" aria-label="Menu principal">
         <button data-action="quick" class="btn big primary" title="Le prochain circuit de la carrière sans médaille, sinon le défi du jour">Course rapide <small>un clic, c’est parti</small></button>
         <button data-action="play" class="btn big">Carrière</button>
         <button data-action="daily" class="btn big">Défi du jour <small id="daily-best"></small></button>
-        <button data-action="academy" class="btn big">Académie <small>6 leçons guidées</small></button>
-        <button data-action="community" class="btn big">Communauté <small>circuits en ligne</small></button>
-        <button data-action="competition" class="btn big">Compétition <small>duels entre amis, tournois</small></button>
-        <button data-action="editor" class="btn big">Éditeur de circuits</button>
-        <button data-action="modes" class="btn big">Modes <small>règles, défis et paquets</small></button>
+        <button data-action="sub-create" class="btn big" aria-haspopup="true" aria-expanded="false" aria-controls="menu-sub-create">Créer <small>éditeur, circuits, modes</small></button>
+        <button data-action="sub-online" class="btn big" aria-haspopup="true" aria-expanded="false" aria-controls="menu-sub-online">En ligne <small>communauté, compétition</small></button>
         <button data-action="garage" class="btn big">Garage <small>personnalisation</small></button>
-        <button data-action="mytracks" class="btn big">Mes circuits</button>
-        <button data-action="import" class="btn big">Importer un code</button>
-        <button data-action="profile" class="btn big">Profil <small>compte, sauvegardes, options, commandes</small></button>
+      </nav>
+      <!-- Sous-menus : les mêmes actions qu'avant, rangées par thème (un seul ouvert à la fois ; js/app/wiring.js, _menuSub) -->
+      <div class="menu-sub hidden" id="menu-sub-create" role="group" aria-label="Créer">
+        <button data-action="editor" class="btn">Éditeur de circuits</button>
+        <button data-action="mytracks" class="btn">Mes circuits</button>
+        <button data-action="import" class="btn">Importer un code</button>
+        <button data-action="modes" class="btn">Modes <small>règles, défis et paquets</small></button>
+      </div>
+      <div class="menu-sub hidden" id="menu-sub-online" role="group" aria-label="En ligne">
+        <button data-action="community" class="btn">Communauté <small>circuits en ligne</small></button>
+        <button data-action="competition" class="btn">Compétition <small>duels entre amis, tournois</small></button>
+      </div>
+      <nav class="menu-bar" aria-label="Accès rapides">
+        <button data-action="academy" class="btn">Académie <small>6 leçons guidées</small></button>
+        <button data-action="profile" class="btn">Profil <small>compte, sauvegardes, options, commandes</small></button>
       </nav>
     </div>
     <footer class="menu-foot" id="menu-foot">Copytrack · un jeu de course original · propulsé par three.js</footer>

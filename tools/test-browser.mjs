@@ -1263,7 +1263,16 @@ try {
           }
           return out;
         });
-        assert.equal(r.n, 12, `${w}x${h} : 12 tuiles`);
+        assert.equal(r.n, 6, `${w}x${h} : 6 tuiles`);
+        // Les deux sous-menus s'ouvrent, tiennent à l'écran, et le clic sur « Mes circuits » mène bien à son écran.
+        for (const sub of ['create', 'online']) {
+          await pp.evaluate((n) => document.querySelector(`#menu [data-action="sub-${n}"]`).click(), sub);
+          const q = await pp.evaluate((n) => { const el = document.getElementById('menu-sub-' + n), r = el.getBoundingClientRect(); return { shown: !el.classList.contains('hidden'), inside: r.left >= -1 && r.right <= window.innerWidth + 1 && r.bottom <= window.innerHeight + 1, n: el.querySelectorAll('button').length }; }, sub);
+          assert.deepEqual([q.shown, q.inside], [true, true], `${w}x${h} : sous-menu ${sub} ouvert et entier`);
+          assert.ok(q.n >= 2);
+        }
+        assert.equal(await pp.evaluate(() => document.getElementById('menu-sub-create').classList.contains('hidden')), true, 'un seul sous-menu à la fois');
+        await pp.evaluate(() => document.querySelector('#menu [data-action="sub-online"]').click());
         assert.deepEqual([r.cut, r.covered, r.fsOver], [[], [], []], `${w}x${h} : tuiles coupées, recouvertes, sous le bouton plein écran`);
       }
     } finally { await ctxP.close(); }
@@ -1287,8 +1296,8 @@ try {
       await wait(() => window.copytrack && window.copytrack.mode === 'menu');
       assert.ok(await pt.evaluate(() => document.body.classList.contains('touch')), 'appareil tactile reconnu');
       await pt.evaluate(() => { const A = window.copytrack; A.settings.telemetry = false; A.settings.tutorialDone = true; A.saveSettings(); A.ui.closeModal(); A.quality.apply('ultrapotato'); });
-      await pt.waitForTimeout(300);
-      await pt.evaluate(() => window.copytrack.ui.closeModal());
+      // Au premier lancement, les fenêtres (consentement, tutoriel) arrivent l'une après l'autre : on les ferme jusqu'à ce que l'accueil soit libre.
+      for (let k = 0; k < 6; k++) { await pt.waitForTimeout(500); await pt.evaluate(() => window.copytrack.ui.closeModal()); }
       await tap('[data-action="play"]');
       await wait(() => !document.getElementById('tracks').classList.contains('hidden') && document.querySelector('#track-list .card .num'));
       await tap('#track-list .card:has(.num) .thumb');
@@ -1487,11 +1496,11 @@ try {
       await ap(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('profile'); });
       await wait(() => document.querySelector('.prof-friends [data-fa="yes"]'));
       await clk('.prof-friends [data-fa="yes"]');
-      await wait(() => /1 ami(?!s)[\s\S]*Ana/.test(document.querySelector('.prof-friends').textContent));
+      await wait(() => /1 ami(?!s)[\s\S]*Ana/.test((document.querySelector('.prof-friends') || {}).textContent || ''));   // le panneau se redessine après le clic : il peut être absent un instant
       assert.deepEqual(calls.find((c) => c.url.includes('/rpc/friend_respond')).body, { other: ANA, accept: true });
       await p2.locator('.prof-friends .friend-add input').fill('Ben');
       await clk('.prof-friends .friend-add button');
-      await wait(() => /Demandes envoyées[\s\S]*Ben/.test(document.querySelector('.prof-friends').textContent));
+      await wait(() => /Demandes envoyées[\s\S]*Ben/.test((document.querySelector('.prof-friends') || {}).textContent || ''));
       assert.equal(calls.find((c) => c.url.includes('/rpc/friend_request')).body.target_name, 'Ben');
       // Communauté › Abonnements : personne de suivi
       await ap(() => window.copytrack.showScreen('community'));

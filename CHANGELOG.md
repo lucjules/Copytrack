@@ -6,6 +6,12 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.47 — remise à niveau : accueil allégé
+
+`PHYS_VER` inchangé (28). Suivi du chantier : `docs/PLAN-FINALISATION-COPYTRACK.md`.
+- **Accueil** : 8 boutons visibles au lieu de 12 : **6 tuiles** (Course rapide, Carrière, Défi du jour, Créer, En ligne, Garage), deux **sous-menus** (Créer : éditeur, mes circuits, importer, modes ; En ligne : communauté, compétition) et une barre d'accès rapides (Académie, Profil). Un clic ailleurs referme le sous-menu ; `aria-expanded` et `aria-controls` pour les lecteurs d'écran. Rien n'est supprimé : toutes les actions restent atteignables.
+- **Tests** : `tools/test-menu.mjs` (au plus 8 boutons visibles, aucune action perdue, aucun bouton mort) ; le test navigateur parcourt les sous-menus sur trois tailles d'écran. Deux courses de vitesse du test navigateur sont réparées : l'enchaînement des fenêtres du premier lancement bloquait le toucher sur « Carrière », et un panneau d'amis redessiné laissait une lecture sur `null`.
+
 ## Bêta 0.9.46 — moteur propre à Copytrack, avec une vraie vitesse de pointe
 
 `PHYS_VER` 28 (physique changée). **Redéployer `submit-score`** (déjà régénérée ici). Les records, replays, fantômes et classements de la 0.9.45 (physique 27) ne sont plus valables, comme ceux d'avant (physique 26 ou moins).
