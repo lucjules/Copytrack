@@ -395,6 +395,35 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  await test('éditeur : sélection (Tout), pivoter, déplacer d\'une case, dupliquer, annuler : boutons actifs, aucune erreur, le circuit revient exactement', async () => {
+    await click('[data-action="editor"]');
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track);
+    await page.waitForTimeout(400);
+    const r = await app(async () => {
+      const E = window.copytrack.session, T = E.track;
+      const { scriptTrack } = await import('/js/track.js');
+      const src = scriptTrack('s', 'start S4 O S3 finish');
+      T.clear(); for (const t of src.tiles) T.add(t); E._commit(); E._changed();
+      const before = T.encode(), btn = (a) => document.querySelector(`#ed-selbar [data-sel="${a}"]`);
+      E.setTool('select'); E.selAction('all');
+      const enabled = ['copy', 'cut', 'del', 'rot', 'dup', 'mv-l', 'mv-r', 'mv-u', 'mv-d'].map((a) => [a, !btn(a).disabled]);
+      btn('rot').click();                                  // pivoter la sélection entière
+      const rotated = T.encode() !== before;
+      btn('mv-r').click(); btn('mv-d').click();
+      const moved = T.encode();
+      E.undo(); E.undo(); E.undo();                        // déplacements puis rotation annulés
+      const back = T.encode() === before;
+      btn('dup').click();
+      return { enabled, rotated, moved: moved !== before, back, pasting: !!E.pasting, tiles: T.tiles.length };
+    });
+    assert.ok(r.enabled.every(([, on]) => on), 'boutons de sélection actifs : ' + JSON.stringify(r.enabled));
+    assert.ok(r.rotated && r.moved, 'pivoter et déplacer modifient le circuit');
+    assert.ok(r.back, 'trois annulations : le circuit d\'origine, exactement');
+    assert.ok(r.pasting, 'Dupliquer met en mode collage');
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
   await test('éditeur : un circuit complet se teste depuis l\'éditeur', async () => {
     await app(() => window.copytrack.openEditor({ code: window.copytrack.builtins[0].track.encode(), name: 'Essai' }));
     await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session.track.tiles.length > 10);

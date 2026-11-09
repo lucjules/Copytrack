@@ -20,7 +20,7 @@ import { MUTATION_COINS, STREAK_STEPS } from '../rewards.js';
 import { masteryBits, MASTERY } from '../progression.js';
 import { goalLabel, goalDone, PROFILS } from '../career.js';
 import { starsText, STAR_LABELS } from '../difficulty.js';
-import { getRecord, getImportedGhost, listMyTracks, formatTime } from '../storage.js';
+import { getRecord, medalTime, getImportedGhost, listMyTracks, formatTime } from '../storage.js';
 import { profile, saveProfile } from '../profile.js';
 import { isFavorite, toggleFavorite, cleanFavorites } from '../favorites.js';
 import { describeDaily, describeUser, describeCommunity, personalRecord, quickRaceIndex, describeVariant, hubCategories } from '../trackDescriptor.js';
@@ -181,7 +181,7 @@ export const raceHubMethods = {
   _renderHubLaunch() {
     const h = this._hub, d = h.desc, s = this.settings;
     const rec = personalRecord(d, getRecord);
-    const medal = rec && d.medals ? medalFor(rec.time, d.medals) : null;
+    const medal = rec && d.medals ? medalFor(medalTime(rec), d.medals) : null;
     const chips = [['ghost', 'Mon record', s.ghost !== false, !!rec]];
     if (d.track.path && d.medals) chips.push(['ghostGold', 'Fantôme or', s.ghostGold !== false, true]);
     if (d.key && getImportedGhost(d.key)) chips.push(['ghostImported', 'Fantôme importé', s.ghostImported !== false, true]);

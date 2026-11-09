@@ -189,7 +189,14 @@ export function getRecord(trackKey) {
 // Écrit le record, quitte à perdre ce qui prend de la place : d'abord le fantôme, puis les commandes enregistrées, puis (si
 // le stockage est vraiment plein) le fantôme et les commandes des AUTRES circuits, du plus ancien au plus récent. Le temps, lui,
 // n'est jamais perdu. Renvoie true si le record est bien sur le disque.
+// Meilleur temps JAMAIS réalisé sur ce circuit, toutes versions de la physique confondues (rec.bt) : c'est lui qui donne les médailles et les déblocages.
+// Une mise à jour de la physique rend les anciens temps non comparables (le record est alors remplacé par la première arrivée sous la nouvelle
+// physique, même plus lente) : sans cette mémoire, une médaille d'or gagnée avant la mise à jour pouvait redescendre en argent, et reverrouiller
+// la suite de la carrière. Le temps du record (rec.time), lui, reste celui de la physique courante (classements, fantôme, replay).
+export const medalTime = (rec) => (rec ? Math.min(rec.time, Number.isFinite(+rec.bt) && +rec.bt > 0 ? +rec.bt : rec.time) : null);
 export function saveRecord(trackKey, rec) {
+  const old = getRecord(trackKey);
+  if (old) { const bt = Math.min(medalTime(old), medalTime(rec)); if (bt < rec.time - 1e-9) rec = { ...rec, bt }; }
   memRec.set(PREFIX + trackKey, slim(rec));
   const tiers = [rec, { ...rec, ghost: null }, slim(rec)];
   const tryWrite = () => tiers.some((t) => write(REC + trackKey, t));

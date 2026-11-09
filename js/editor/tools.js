@@ -6,7 +6,7 @@ import { retypePlacement } from '../tileInfo.js';
 import { Track } from '../track.js';
 import { safeUrl } from '../decos.js';
 import { DECO_CATS, DECO_LABELS } from '../decoData.js';
-import { enclosedRegion, tileRegion } from '../editorTools.js';
+import { enclosedRegion, tileRegion, fillZone } from '../editorTools.js';
 import { MIRROR_TYPES, LEGACY_CP } from '../inspector.js';
 import { pickTileExact, ERASE_FILTERS, LAYER_ALL, LAYER_DECO } from '../editorPick.js';
 import { MODS, OPT_KEYS, PALETTE_ORDER, SNAPS, fillBase, isFill, pieceLabel, toFill } from './shared.js';
@@ -189,25 +189,13 @@ export const toolMethods = {
 
     const surfMode = this.tool.startsWith('fill-surf:');
     const value = fillBase(this.tool).slice(surfMode ? 5 : 0);       // revêtement ou type voulu
-    const matches = surfMode ? (t) => (t.s || '') === (start.s || '') : (t) => t.t === start.t;
+    const matches = this._fillMatcher(start);
     if (surfMode ? (start.s || '') === value : start.t === value) return;   // rien à remplacer
 
-    // 1. Parcours en largeur ITÉRATIF (file + index de lecture, aucune récursion) : on ne fait que collecter.
-    const visited = new Set([start]);
-    const queue = [start];
-    let head = 0;
-    while (head < queue.length) {
-      const t = queue[head++];
-      for (const [cx, cz] of Track.cellsOf(t)) {                      // une pièce 2×2 occupe plusieurs cases
-        for (const [dx, dz] of FILL_DIRS) {
-          for (const n of this.track.tilesAt(cx + dx, cz + dz)) {
-            if (visited.has(n) || !matches(n) || Math.abs(n.l - t.l) > FILL_MAX_DL) continue;
-            visited.add(n);
-            queue.push(n);
-          }
-        }
-      }
-    }
+    // 1. Zone connectée (editorTools.fillZone : parcours itératif, borné, qui ne modifie rien).
+    const zone = fillZone(this.track, start, matches, { maxDl: FILL_MAX_DL });
+    if (zone.truncated) { this.app.ui.flash('Zone trop grande : rien n\'a été modifié.'); this.app.audio.error(); return; }
+    const queue = zone.tiles;
 
     // 2. Application, après le parcours : l'index du circuit ne change pas pendant la lecture.
     let done = 0, skipped = 0;
@@ -224,6 +212,28 @@ export const toolMethods = {
       this._commit();                                                 // UN SEUL commit : un seul Ctrl+Z annule tout
     } else this.app.audio.error();
     this.app.ui.flash(`${done} pièce${done > 1 ? 's' : ''} modifiée${done > 1 ? 's' : ''}` + (skipped ? ` · ${skipped} ignorée${skipped > 1 ? 's' : ''}` : ''));
+  },
+
+  // Prédicat de la zone : mêmes pièces que la cible (même revêtement pour un remplissage de revêtement, même type pour un remplissage de type).
+  _fillMatcher(start) {
+    return this.tool.startsWith('fill-surf:') ? (t) => (t.s || '') === (start.s || '') : (t) => t.t === start.t;
+  },
+
+  // Aperçu AVANT validation : les cases de la zone que le clic modifierait (cache par pièce visée, outil et état du circuit : le parcours n'est pas
+  // refait à chaque image). Renvoie { cells, count, truncated } ou null si la cible ne convient pas.
+  _fillPreview(start) {
+    if (this._fillRefusal(start)) return null;
+    const surfMode = this.tool.startsWith('fill-surf:');
+    const value = fillBase(this.tool).slice(surfMode ? 5 : 0);
+    if (surfMode ? (start.s || '') === value : start.t === value) return null;
+    const key = `${this.tool}|${this.track.version}|${this.track.tiles.indexOf(start)}`;
+    if (this._fillPrevKey === key) return this._fillPrev;
+    const zone = fillZone(this.track, start, this._fillMatcher(start), { maxDl: FILL_MAX_DL });
+    const cells = [];
+    for (const t of zone.tiles) if (!isStartFinish(t.t)) for (const c of Track.cellsOf(t).slice(0, PIECES[t.t].size ** 2)) cells.push([c[0], c[1], this.levelY(t.l) + 0.6]);
+    this._fillPrevKey = key;
+    this._fillPrev = { cells, count: zone.tiles.length, truncated: zone.truncated };
+    return this._fillPrev;
   },
 
   // Niveaux [lo, hi] occupés par la pièce que le pot de peinture poserait au niveau courant.

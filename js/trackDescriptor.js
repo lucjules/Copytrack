@@ -13,6 +13,7 @@ import { PIECES } from './pieces.js';
 import { centerlineWorld } from './ribbons.js';
 import { hashString } from './track.js';
 import { medalFor } from './medals.js';
+import { medalTime } from './storage.js';
 import { goalFor, nextBuiltinIndex, chapterUnlocked, prerequisiteOf, CHAPTER_SIZE, UNLOCK_MEDALS } from './career.js';
 import { estimateDifficulty } from './difficulty.js';
 import { formatVariant, variantKey, applyVariant, variantFits, MAX_KEY, VARIANT_VER } from './variants.js';
@@ -65,7 +66,7 @@ export function describeBuiltin(b, { total, builtins = null, getRecord = null })
 }
 // Verrou de chapitre de la carrière : null si ouvert, sinon la raison (même texte que la carte de la carrière).
 export function chapterLock(i, builtins, getRecord) {
-  const medalOf = (k) => { const b = builtins[k]; const rec = getRecord(b.key); return rec ? medalFor(rec.time, b.def.medals) : null; };
+  const medalOf = (k) => { const b = builtins[k]; const rec = getRecord(b.key); return rec ? medalFor(medalTime(rec), b.def.medals) : null; };
   const ch = Math.floor(i / CHAPTER_SIZE);
   return chapterUnlocked(ch, medalOf, builtins.length) ? null : `Chapitre verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${prerequisiteOf(ch) + 1}.`;
 }
@@ -122,7 +123,7 @@ export function quickRaceIndex(builtins, getRecord) {
   for (const b of builtins) {
     if (chapterLock(b.index, builtins, getRecord)) continue;
     const rec = getRecord(b.key);
-    if (!rec || !medalFor(rec.time, b.def.medals)) return b.index;
+    if (!rec || !medalFor(medalTime(rec), b.def.medals)) return b.index;
   }
   return null;
 }

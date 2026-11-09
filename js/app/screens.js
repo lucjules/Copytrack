@@ -15,7 +15,7 @@ import { describeDaily } from '../trackDescriptor.js';
 import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked, chapterState, careerSummary, prerequisiteOf, nextBuiltinIndex } from '../career.js';
 import { locale } from '../i18n.js';
 import { profile } from '../profile.js';
-import { getRecord, listMyTracks, deleteMyTrack, formatTime } from '../storage.js';
+import { getRecord, medalTime, listMyTracks, deleteMyTrack, formatTime } from '../storage.js';
 export const screenMethods = {
   showMenu(screen = 'menu') {
     this._dispose();
@@ -111,7 +111,7 @@ export const screenMethods = {
     if (opts.builtinIndex == null) return;
     const next = nextBuiltinIndex(opts.builtinIndex, this.builtins.length);
     if (next == null) return;
-    const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(rec.time, b.def.medals) : null; };
+    const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(medalTime(rec), b.def.medals) : null; };
     const ch = Math.floor(next / CHAPTER_SIZE);
     if (!chapterUnlocked(ch, medalOf, this.builtins.length)) {
       this.ui.flash(`Chapitre ${ch + 1} verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${prerequisiteOf(ch) + 1}.`, 2.6);
@@ -125,7 +125,7 @@ export const screenMethods = {
   _renderTracks() {
     const list = $('track-list');
     list.innerHTML = '';
-    const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(rec.time, b.def.medals) : null; };
+    const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(medalTime(rec), b.def.medals) : null; };
     // Bilan de la carrière
     {
       const ids = this.builtins.map((b, i) => { const m = medalOf(i); return m ? m.id : null; });
@@ -215,7 +215,7 @@ export const screenMethods = {
       for (const i of idx) {
         const b = this.builtins[i];
         const rec = getRecord(b.key);
-        const medal = rec ? medalFor(rec.time, b.def.medals) : null;
+        const medal = rec ? medalFor(medalTime(rec), b.def.medals) : null;
         const goal = goalFor(b.def, i);
         const gdone = goalDone(b.key + '#goal');
         const tags = this._trackTags(b.track);

@@ -9759,6 +9759,11 @@ var ribbonMethods = {
   },
   _ribStep(inp) {
     const R = this.rib, dt = DT, tile = R.tile, rib = R.rib;
+    if (this.excl.has(tile)) {
+      this._ribPlace(R);
+      this._ribDetach();
+      return;
+    }
     const F = frameWorld(tile, rib, R.u, this.F);
     const dU = 6e-3;
     const u0 = Math.max(0, R.u - dU), u1 = Math.min(1, R.u + dU);
@@ -11787,7 +11792,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/version.js
-var PHYS_VER = 30;
+var PHYS_VER = 31;
 
 // js/ghostFormat.js
 var GHOST_EVERY = 4;

@@ -159,6 +159,9 @@ export const ribbonMethods = {
 
   _ribStep(inp) {
     const R = this.rib, dt = DT, tile = R.tile, rib = R.rib;
+    // Pièce cachée par la logique du circuit (ou verre brisé) pendant que la voiture la parcourt : elle n'a plus de collision, la voiture se détache
+    // et tombe (avant 0.9.50, elle continuait sur la route invisible jusqu'au bout du looping).
+    if (this.excl.has(tile)) { this._ribPlace(R); this._ribDetach(); return; }
     const F = frameWorld(tile, rib, R.u, this.F);
 
     // La route tourne sous la voiture : son cap relatif change d'autant

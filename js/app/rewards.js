@@ -2,7 +2,7 @@
 // Les règles sont dans rewards.js. Ces méthodes s'ajoutent au prototype de App (voir main.js) : `this` est l'instance.
 import { esc } from '../dom.js';
 import { profile } from '../profile.js';
-import { getRecord } from '../storage.js';
+import { getRecord, medalTime } from '../storage.js';
 import { medalFor } from '../medals.js';
 import { lessonsDone } from '../academy.js';
 import { online } from '../online.js';
@@ -14,7 +14,7 @@ import { SKILLS, skillLevel } from '../skills.js';
 export const rewardsMethods = {
   _rewardContext() {
     const p = profile(), ctx = emptyContext();
-    const medals = this.builtins.map((b) => { const rec = getRecord(b.key); return rec ? medalFor(rec.time, b.def.medals) : null; });
+    const medals = this.builtins.map((b) => { const rec = getRecord(b.key); return rec ? medalFor(medalTime(rec), b.def.medals) : null; });
     ensureXp(this.builtins.map((b) => b.key));
     this.builtins.forEach((b, i) => {
       const m = medals[i];
@@ -32,7 +32,7 @@ export const rewardsMethods = {
   // À appeler après une course, une leçon, une collection… : donne ce qui est mérité et le dit (un message à la fois, pour qu'on les lise).
   // Contexte des licences (E14) : niveau, Académie, médailles de la carrière, compétences, défis de maîtrise.
   _licenceContext(ctx = this._rewardContext()) {
-    const medals = this.builtins.map((b) => { const rec = getRecord(b.key); return rec ? medalFor(rec.time, b.def.medals) : null; });
+    const medals = this.builtins.map((b) => { const rec = getRecord(b.key); return rec ? medalFor(medalTime(rec), b.def.medals) : null; });
     const at = (ids) => medals.filter((m) => m && ids.includes(m.id)).length;
     return { level: ctx.level, lessons: ctx.academy, silver: at(['argent', 'or', 'cristal']), gold: at(['or', 'cristal']), crystals: ctx.crystals, skillsMin: Math.min(...SKILLS.map((s) => skillLevel(s.id))), mastery: masteryCount() };
   },

@@ -1,5 +1,5 @@
 // Interface DOM : écrans, HUD, fenêtres modales, notifications.
-import { formatTime } from './storage.js';
+import { formatTime, medalTime } from './storage.js';
 import { MEDALS } from './medals.js';
 import { keyLabel } from './input.js';
 import { profile } from './profile.js';
@@ -33,7 +33,7 @@ class Hud {
     const medals = session.medals;
     if (medals) {
       e.medals.innerHTML = MEDALS.map((m) => {
-        const got = rec && rec.time <= medals[m.id];
+        const got = rec && medalTime(rec) <= medals[m.id];
         return `<div class="${got ? 'got' : ''}">${medalIcon(m)}${formatTime(medals[m.id])}</div>`;
       }).join('');
     } else e.medals.innerHTML = '';
