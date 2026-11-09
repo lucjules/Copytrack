@@ -6,16 +6,16 @@
 // La caméra de l'éditeur n'est pas un OrbitControls : elle est verrouillée (ed.camLocked) tant qu'un gizmo est saisi.
 import * as THREE from './vendor/three.module.min.js';
 import { TransformControls } from './vendor/TransformControls.js';
-import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL, DIRS } from './constants.js';
+import { MAX_LEVEL, DIRS } from './constants.js';
 import { Track } from './track.js';
-import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, tileCenter, baseY, THEMES, MOVER, moverParams, paramText, ORIENTS, tileOri } from './pieces.js';
-import { FAMILIES, familyOf, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from './families.js';
-import { arrowPose } from './tileInfo.js';
-import { styleFor } from './trackMesh.js';
-import { DECO_LABELS, DECO_COLORS } from './decoData.js';
-import { safeUrl } from './decos.js';
-import { isObstacle } from './obstacles.js';
+import { PIECES } from './pieces.js';
+import { DECO_LABELS } from './decoData.js';
 import { tileBounds, decoBounds, pickObjects, LAYER_ALL } from './editorPick.js';
+import { h } from './dom.js';
+import { TAU } from './inspector/shared.js';
+import { gizmoMethods } from './inspector/gizmo.js';
+import { widgetMethods } from './inspector/widgets.js';
+import { bodyMethods } from './inspector/bodies.js';
 
 // Pièces qui ont une version « miroir » (même empreinte).
 export const MIRROR_TYPES = {
@@ -29,27 +29,14 @@ export const MIRROR_TYPES = {
   ...Object.fromEntries(['05', '1', '2', '4'].flatMap((k) => [['cvd' + k, 'cvdL' + k], ['cvdL' + k, 'cvd' + k], ['cvdBig' + k, 'cvdBigL' + k], ['cvdBigL' + k, 'cvdBig' + k]])),
   ...Object.fromEntries(['s', 'l'].flatMap((f) => [['01', '02'], ['10', '20'], ['13', '23'], ['31', '32']].flatMap(([a, b]) => [[`tr${a}${f}`, `tr${b}${f}`], [`tr${b}${f}`, `tr${a}${f}`]]))),
 };
+
 // Anciennes pièces « Checkpoint » : [pièce de route, valeur de l'option cp] pour les convertir en option.
 export const LEGACY_CP = { checkpoint: ['straight', 1], cpCurve: ['curve', 1], cpRing: ['straight', 2] };
-const isStartFinish = (type) => { const sp = PIECES[type] && PIECES[type].special; return sp === 'start' || sp === 'finish'; };
-const TAU = Math.PI * 2;
 
 // Cap (rotation autour de Y) d'un objet 3D, sans dépendre de la représentation d'Euler.
 export function yawOf(q) {
   const v = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
   return Math.atan2(-v.x, -v.z);
-}
-
-function h(tag, attrs = {}, ...kids) {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k === 'class') e.className = v;
-    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
-    else if (v === true) e.setAttribute(k, '');
-    else if (v !== false && v != null) e.setAttribute(k, v);
-  }
-  for (const k of kids.flat()) if (k != null) e.append(k);
-  return e;
 }
 
 // Flèche à plat (plan XZ) pointant vers -z, de longueur 1 : tige + pointe.
@@ -186,86 +173,6 @@ export class Inspector {
     this.ed.camLocked = false;
   }
 
-  // ---- Gizmo ---------------------------------------------------------------------------------------------------------
-  setMode(mode) {
-    this.mode = mode;
-    this._applyMode();
-    this._syncPanel();
-  }
-
-  _applyMode() {
-    const tile = this.sel && this.sel.kind === 'tile';
-    this.tc.setMode(this.mode);
-    if (this.mode === 'rotate') {
-      this.tc.showX = false; this.tc.showZ = false; this.tc.showY = true;       // seulement autour de la verticale
-      this.tc.setRotationSnap(tile ? Math.PI / 2 : Math.PI / 36);                 // pièce : quarts de tour ; déco : 5°
-    } else {
-      this.tc.showX = true; this.tc.showY = true; this.tc.showZ = true;
-      this.tc.setTranslationSnap(null);
-    }
-  }
-
-  // Place l'objet fantôme du gizmo sur l'objet sélectionné (position et cap exacts de ses données).
-  _syncGizmo() {
-    if (!this.sel) return;
-    const { kind, obj } = this.sel;
-    if (kind === 'tile') {
-      const c = tileCenter(obj);
-      this.proxy.position.set(c.x, baseY(obj), c.z);
-      this.proxy.rotation.set(0, -obj.r * Math.PI / 2, 0);
-    } else {
-      this.proxy.position.set(obj.x, obj.y, obj.z);
-      this.proxy.rotation.set(0, obj.ry || 0, 0);
-    }
-    this.proxy.updateMatrixWorld(true);
-    this._syncArrow();
-  }
-
-  // Flèche de direction : posée sur la ligne centrale de la pièce, orientée dans son sens de parcours.
-  _syncArrow() {
-    if (!this.sel || this.sel.kind !== 'tile') { this.arrow.visible = false; return; }
-    const a = arrowPose(this.sel.obj);
-    this.arrow.position.set(a.x, a.y, a.z);
-    this.arrow.rotation.set(0, a.yaw, 0);
-    this.arrow.scale.set(a.len, 1, a.len);
-    this.arrow.visible = this.ed.tool === 'inspect';
-  }
-
-  _onDrag(on) {
-    this.dragging = on;
-    this.ed.camLocked = on;                // pas de rotation / déplacement de caméra pendant le geste
-    if (on) { this._before = this.ed._snapshot(); this._warned = false; return; }
-    this._syncGizmo();                     // au relâchement, le gizmo se cale sur la grille
-    if (this.ed._snapshot() !== this._before) { this.ed._changed(); this.ed._commit(); }
-  }
-
-  // Le gizmo bouge : le circuit suit en temps réel, calé sur la grille (pièces) ou libre / aimanté (décos).
-  _onGizmo() {
-    if (!this.sel) return;
-    const { kind, obj } = this.sel, p = this.proxy, ed = this.ed;
-    if (kind === 'tile') {
-      let patch;
-      if (this.mode === 'translate') {
-        const size = PIECES[obj.t].size;
-        patch = {
-          x: Math.round(p.position.x / CELL - size / 2),
-          z: Math.round(p.position.z / CELL - size / 2),
-          l: Math.max(0, Math.min(MAX_LEVEL, Math.round((p.position.y - ROAD_TOP) / LEVEL_H))),
-        };
-      } else patch = { r: ((Math.round(-yawOf(p.quaternion) / (Math.PI / 2)) % 4) + 4) % 4 };
-      if (Object.keys(patch).every((k) => patch[k] === obj[k])) return;
-      if (ed._applyTilePatch(obj, patch)) ed._changed();
-      else if (!this._warned) { this._warned = true; ed.app.ui.flash('Place occupée : la pièce reste où elle est'); }
-    } else {
-      if (this.mode === 'translate') {
-        const [x, z] = ed._snapPos(p.position.x, p.position.z);
-        obj.x = x; obj.z = z; obj.y = p.position.y;
-      } else obj.ry = ((yawOf(p.quaternion) % TAU) + TAU) % TAU;
-      ed.track.version++;
-      ed._changed();
-    }
-  }
-
   // ---- Panneau de propriétés (généré selon l'objet) ------------------------------------------------------------------
   _structKey() {
     if (!this.sel) return '';
@@ -316,257 +223,6 @@ export class Inspector {
     if (tab === this.tab) return;
     this.tab = tab;
     if (this.sel) this._build();
-  }
-
-  _modeBtn(mode, label) {
-    const b = h('button', { class: 'btn', onclick: () => this.setMode(mode) }, label);
-    this._sync.push(() => b.classList.toggle('on', this.mode === mode));
-    return b;
-  }
-
-  // Un champ numérique lié : relit le modèle (sauf pendant la saisie), écrit à la validation.
-  _num(label, get, set, { step = 1, min, max, live = false } = {}) {
-    const input = h('input', { type: 'number', step, min, max, inputmode: 'decimal' });
-    const commit = () => {
-      const v = parseFloat(input.value);
-      if (!Number.isFinite(v)) { this._syncPanel(); return; }
-      this._apply(() => set(v));
-    };
-    input.addEventListener('change', commit);
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } });
-    this._sync.push(() => { if (document.activeElement !== input) { const v = get(); input.value = Number.isInteger(v) ? v : +v.toFixed(2); } });
-    return h('label', { class: 'insp-row' }, h('span', {}, label), input);
-  }
-
-  _range(label, get, set, { min, max, step, fmt = (v) => v }) {
-    const input = h('input', { type: 'range', min, max, step });
-    const out = h('b', {});
-    input.addEventListener('input', () => { this._apply(() => set(parseFloat(input.value)), { live: true }); out.textContent = fmt(parseFloat(input.value)); });
-    input.addEventListener('change', () => this.ed._commit());
-    this._sync.push(() => { const v = get(); if (document.activeElement !== input) input.value = v; out.textContent = fmt(v); });
-    return h('label', { class: 'insp-row' }, h('span', {}, label), input, out);
-  }
-
-  // optDisabled(valeur) : grise les choix impossibles (ex. checkpoint aérien sur une pente).
-  _select(label, options, get, set, disabled = false, optDisabled = null) {
-    const sel = h('select', { disabled }, options.map(([v, text]) => h('option', { value: v }, text)));
-    sel.addEventListener('change', () => this._apply(() => set(sel.value)));
-    this._sync.push(() => {
-      sel.value = get();
-      if (optDisabled) for (const o of sel.options) o.disabled = o.value !== sel.value && !!optDisabled(o.value);
-    });
-    return h('label', { class: 'insp-row' }, h('span', {}, label), sel);
-  }
-
-  _check(label, get, set, disabled = false, hint = '') {
-    const c = h('input', { type: 'checkbox', disabled });
-    c.addEventListener('change', () => this._apply(() => set(c.checked)));
-    this._sync.push(() => { c.checked = !!get(); });
-    return h('label', { class: 'insp-check', title: hint }, c, h('span', {}, label));
-  }
-
-  _tileBody(t) {
-    const ed = this.ed, P = PIECES[t.t];
-    const rows = [];
-    const group = (text) => rows.push(h('div', { class: 'insp-group' }, text));
-    group('Position');
-    rows.push(this._num('Case X', () => t.x, (v) => ed._applyTilePatch(t, { x: Math.round(v) }), { step: 1 }));
-    rows.push(this._num('Case Z', () => t.z, (v) => ed._applyTilePatch(t, { z: Math.round(v) }), { step: 1 }));
-    rows.push(this._num('Niveau', () => t.l, (v) => ed._applyTilePatch(t, { l: v }), { step: 0.5, min: 0, max: MAX_LEVEL }));
-    // Rotation : quatre boutons liés à tile.r
-    const rot = h('div', { class: 'insp-rot', role: 'group', 'aria-label': 'Rotation' }, [0, 1, 2, 3].map((r) => {
-      const b = h('button', { class: 'btn', onclick: () => this._apply(() => ed._applyTilePatch(t, { r })) }, `${r * 90}°`);
-      this._sync.push(() => { b.classList.toggle('on', t.r === r); b.setAttribute('aria-pressed', String(t.r === r)); });
-      return b;
-    }));
-    rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Rotation'), rot));
-
-    // Caractéristiques (pièce d'une famille : listes déroulantes) ou Type (autres pièces de même empreinte)
-    const fam = familyOf(t.t);
-    if (fam) {
-      group('Caractéristiques · ' + FAMILIES[fam.fam].label);
-      for (const tr of FAMILIES[fam.fam].traits) rows.push(this._traitSelect(t, fam.fam, tr));
-      rows.push(h('div', { class: 'insp-note' }, `Empreinte ${P.size}×${P.size} case${P.size > 1 ? 's' : ''}.`));
-    } else {
-      group('Type');
-      const types = Object.keys(PIECES).filter((k) => PIECES[k].size === P.size && (k === t.t || (!isStartFinish(k) && !isFamilyMember(k) && !REPLACED_BY_OPTION.has(k))));
-      rows.push(this._select('Type', types.map((k) => [k, PIECES[k].label]), () => t.t, (v) => ed._retypeTile(t, v), isStartFinish(t.t)));
-      if (MIRROR_TYPES[t.t]) {
-        rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Miroir'),
-          h('button', { class: 'btn', title: 'Version gauche / droite de la pièce', onclick: () => this._apply(() => ed._retypeTile(t, MIRROR_TYPES[t.t])) }, '⇋ Inverser gauche / droite')));
-      }
-      if (LEGACY_CP[t.t]) {
-        rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Checkpoint'),
-          h('button', { class: 'btn', title: 'Remplace cette pièce par une route normale portant l’option Checkpoint', onclick: () => this._apply(() => ed._legacyToOption(t)) }, '→ Convertir en option')));
-      }
-    }
-
-    // Revêtement (une bifurcation en a deux : voie directe / voie déportée)
-    const fork = P.kind === 'fork';
-    group(fork ? 'Revêtement · voie directe' : 'Revêtement');
-    const surfs = SURFACE_ORDER.filter((s) => s === (t.s || '') || surfaceAllowed(t.t, s, !!t.v, t.o | 0));
-    rows.push(this._select('Type', surfs.map((s) => [s, SURFACES[s].label]), () => t.s || '', (v) => ed.track.setSurface(t, v, SURFACES[v] && SURFACES[v].def != null ? ed._surfParamValue(v) : 0) || true));
-    const S = SURFACES[t.s || ''];
-    if (S && S.def != null) {
-      rows.push(this._range(S.param || 'Intensité', () => t.p || S.def, (v) => ed.track.setSurface(t, t.s, v) || true, { min: S.min, max: S.max, step: 1, fmt: (v) => paramText(t.s, v) }));
-    }
-    if (fork) {
-      group('Revêtement · voie déportée');
-      const s2s = SURFACE_ORDER.filter((s) => s && (s === (t.s2 || '') || surfaceAllowed(t.t, s, !!t.v, t.o | 0)));
-      rows.push(this._select('Type', [['', 'Comme la voie directe'], ['-', 'Route normale'], ...s2s.map((s) => [s, SURFACES[s].label])], () => t.s2 || '',
-        (v) => ed.track.setSurface2(t, v, v && SURFACES[v] && SURFACES[v].def != null ? ed._surfParamValue(v) : 0) || true));
-      const S2 = SURFACES[t.s2 || ''];
-      if (S2 && S2.def != null) {
-        rows.push(this._range(S2.param || 'Intensité', () => t.p2 || S2.def, (v) => ed.track.setSurface2(t, t.s2, v) || true, { min: S2.min, max: S2.max, step: 1, fmt: (v) => paramText(t.s2, v) }));
-      }
-    }
-
-    // Options
-    group('Options');
-    const flag = (f, label, hint) => this._check(label, () => t[f], (on) => (on !== !!t[f] ? ed.track.toggleFlag(t, f) || false : true), !flagAllowed(t.t, f, t) && !t[f], hint);
-    // Orientation (0.9.3) : sol, mur gauche / droit (vus dans le sens de la flèche), plafond (à l'envers : gravité inversée).
-    rows.push(this._select('Orientation', ORIENTS.map((x) => [String(x.id), x.label]), () => String(tileOri(t)),
-      (v) => {
-        const n = +v;
-        if (n === tileOri(t)) return true;
-        const ok = n === 3 ? ed.track.toggleFlag(t, 'v') : ed.track.toggleFlag(t, 'o', n);
-        if (!ok) ed.app.ui.flash(n === 3 ? 'Pas la place à l’envers : monte d’abord, ou libère le niveau en dessous.' : n ? 'Pas la place pour un mur : la route descend de 2 niveaux sous son niveau (monte d’abord, libère le dessous).' : 'Pas la place pour remettre la route à plat.');
-        return ok || false;
-      }, false, (v) => +v === 1 || +v === 2 ? !flagAllowed(t.t, 'o', null, +v) : false));
-    rows.push(flag('nb', 'Sans bordures', 'Plus de rebord'));
-    rows.push(flag('tn', 'Tunnel', 'Voûte autour de la route'));
-    // Checkpoint : simple case à cocher (portique sur route, balise sur plateforme). L'ancien anneau aérien (cp = 2) reste lisible :
-    // il s'affiche « aérien (ancien) » et se convertit en portique en cochant / décochant.
-    rows.push(this._check(t.cp === 2 ? 'Checkpoint (aérien, ancien)' : 'Checkpoint', () => !!t.cp,
-      (on) => { if (on === !!t.cp) return true; return ed.track.toggleFlag(t, 'cp', t.cp || 1) || false; },
-      !!P.special || (!flagAllowed(t.t, 'cp', t, 1) && !t.cp), 'Route : portique. Plateforme : balise au sol.'));
-    rows.push(flag('tb', 'Anneau turbo', 'Anneau à traverser pour un coup de turbo (ligne droite plate, à l’endroit)'));
-    // Thème (visuel)
-    rows.push(this._select('Thème', THEMES.map((x) => [String(x.id), x.label]), () => String(t.th || 0),
-      (v) => { const n = +v, cur = t.th || 0; if (n === cur) return true; return ed.track.toggleFlag(t, 'th', n === 0 ? cur : n) || false; },
-      !flagAllowed(t.t, 'th', t)));
-    // Mouvement + réglages
-    const mvOk = flagAllowed(t.t, 'mv', t) || !!t.mv;
-    rows.push(this._select('Mouvement', [['0', 'Aucun'], ['1', 'Ascenseur'], ['2', 'Glissière'], ['3', 'Rotation']], () => String(t.mv || 0),
-      (v) => { const n = +v; if (n === (t.mv || 0)) return true; return ed.track.toggleFlag(t, 'mv', n === 0 ? t.mv : n) || false; }, !mvOk));
-    if (t.mv) rows.push(...this._moverRows(t));
-    return rows;
-  }
-
-  // Vitesse et amplitude de l'ascenseur / de la glissière / de la rotation.
-  _moverRows(t) {
-    const ed = this.ed, M = MOVER[t.mv];
-    const rows = [];
-    const sign = () => (moverParams(t).speed < 0 ? -1 : 1);
-    rows.push(this._range('Vitesse', () => Math.abs(moverParams(t).speed), (v) => ed.track.setMover(t, v * sign(), undefined),
-      { min: Math.abs(M.speed.min) === M.speed.max ? 25 : M.speed.min, max: M.speed.max, step: 5, fmt: (v) => v + ' %' }));
-    rows.push(this._range(t.mv === 1 ? 'Hauteur' : t.mv === 2 ? 'Distance' : 'Angle', () => moverParams(t).amp, (v) => ed.track.setMover(t, undefined, v),
-      { min: M.amp.min, max: M.amp.max, step: M.amp.step, fmt: (v) => (t.mv === 3 && v >= 360 ? 'Tour complet' : v + M.amp.unit) }));
-    if (t.mv === 3) {
-      rows.push(this._check('Sens inverse', () => moverParams(t).speed < 0, (on) => ed.track.setMover(t, (on ? -1 : 1) * Math.abs(moverParams(t).speed), undefined), false, 'Tourne dans l’autre sens'));
-    }
-    rows.push(h('div', { class: 'insp-row' }, h('span', {}, ''),
-      h('button', { class: 'btn', title: `Vitesse et amplitude d’origine (${M.label})`, onclick: () => this._apply(() => ed.track.setMover(t, 0, 0)) }, '↺ Valeurs par défaut')));
-    return rows;
-  }
-
-  // Menu déroulant d'une caractéristique de famille : les combinaisons qui n'existent pas sont grisées.
-  _traitSelect(t, fam, tr) {
-    const sel = h('select', {}, tr.values.map(([v, text]) => h('option', { value: v }, text)));
-    sel.setAttribute('aria-label', tr.label);
-    sel.addEventListener('change', () => this._apply(() => this._setTrait(t, fam, tr.id, sel.value)));
-    this._sync.push(() => {
-      const cur = familyOf(t.t);
-      if (!cur) return;
-      const ok = validValues(fam, cur.traits, tr.id);
-      sel.value = cur.traits[tr.id];
-      for (const o of sel.options) o.disabled = !ok.has(o.value) && o.value !== cur.traits[tr.id];
-    });
-    return h('label', { class: 'insp-row' }, h('span', {}, tr.label), sel);
-  }
-
-  _setTrait(t, fam, id, value) {
-    const cur = familyOf(t.t);
-    if (!cur) return false;
-    const type = withTrait(fam, cur.traits, id, value);
-    if (!type || type === t.t) return true;
-    if (this.ed._retypeFamily(t, type)) return true;
-    this.ed.app.ui.flash(`Pas la place (${PIECES[type].size}×${PIECES[type].size}).`, 2.4);
-    return false;
-  }
-
-  // Onglet Couleurs : couleurs de la chaussée, des lignes et des bordures d'une pièce ; couleur d'une décoration.
-  _colorsBody(obj) {
-    return this.sel.kind === 'tile' ? this._tileColors(obj) : this._decoColors(obj);
-  }
-
-  _colorRow(label, get, def, set, reset) {
-    const input = h('input', { type: 'color', 'aria-label': label });
-    const code = h('span', { class: 'code' });
-    const undo = h('button', { class: 'btn', title: 'Revenir à la couleur d’origine', 'aria-label': `${label} : couleur d’origine`, onclick: () => this._apply(() => reset()) }, '↺');
-    input.addEventListener('input', () => this._apply(() => set(input.value), { live: true }));
-    input.addEventListener('change', () => this.ed._commit());
-    this._sync.push(() => {
-      const own = get();
-      if (document.activeElement !== input) input.value = own || def();
-      code.textContent = own ? own : 'origine';
-      undo.disabled = !own;
-    });
-    return h('div', { class: 'insp-color' }, h('span', {}, label), input, code, undo);
-  }
-
-  _tileColors(t) {
-    const ed = this.ed;
-    const rows = [h('div', { class: 'insp-group' }, 'Couleurs de la pièce')];
-    const defaults = () => { const b = styleFor({ ...t, col: null }); return { road: b.road[0], line: b.line, rail: b.railA }; };
-    for (const [key, label] of [['road', 'Route'], ['line', 'Lignes'], ['rail', 'Bordures']]) {
-      rows.push(this._colorRow(label, () => (t.col && t.col[key]) || '', () => defaults()[key],
-        (v) => ed.track.setColors(t, { ...t.col, [key]: v }), () => ed.track.setColors(t, { ...t.col, [key]: undefined })));
-    }
-    rows.push(h('div', { class: 'insp-row' }, h('span', {}, ''),
-      h('button', { class: 'btn', onclick: () => this._apply(() => ed.track.setColors(t, null)) }, '↺ Tout réinitialiser')));
-    rows.push(h('div', { class: 'insp-note' }, 'Visuel seulement : aucun effet sur le jeu ni la vérification.'));
-    return rows;
-  }
-
-  _decoColors(d) {
-    const ed = this.ed;
-    const touch = () => { ed.track.version++; return true; };
-    const rows = [h('div', { class: 'insp-group' }, 'Couleur de la décoration')];
-    const sw = h('div', { class: 'insp-swatches', role: 'group', 'aria-label': 'Couleurs prédéfinies' }, DECO_COLORS.map((c, i) => {
-      const b = h('button', { class: 'swatch', style: `background:${c}`, title: `Couleur ${i + 1}`, onclick: () => this._apply(() => { d.c = i + 1; d.cc = ''; return touch(); }) });
-      this._sync.push(() => b.classList.toggle('on', !d.cc && (d.c | 0) === i + 1));
-      return b;
-    }));
-    rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Palette'), sw));
-    rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Naturelle'),
-      h('button', { class: 'btn', onclick: () => this._apply(() => { d.c = 0; d.cc = ''; return touch(); }) }, 'Couleurs d’origine')));
-    rows.push(this._colorRow('Libre', () => d.cc || '', () => (d.c > 0 ? DECO_COLORS[d.c - 1] : '#ffffff'),
-      (v) => { d.cc = v; return touch(); }, () => { d.cc = ''; return touch(); }));
-    return rows;
-  }
-
-  _decoBody(d) {
-    const ed = this.ed;
-    const touch = () => { ed.track.version++; return true; };
-    const rows = [h('div', { class: 'insp-group' }, 'Position')];
-    rows.push(this._num('X', () => d.x, (v) => { d.x = v; return touch(); }, { step: 0.5 }));
-    rows.push(this._num('Hauteur', () => d.y, (v) => { d.y = v; return touch(); }, { step: 0.5 }));
-    rows.push(this._num('Z', () => d.z, (v) => { d.z = v; return touch(); }, { step: 0.5 }));
-    rows.push(this._range('Rotation', () => Math.round(((d.ry || 0) * 180 / Math.PI + 360) % 360), (v) => { d.ry = v * Math.PI / 180; return touch(); }, { min: 0, max: 359, step: 1, fmt: (v) => v + '°' }));
-    const obst = isObstacle(d.k);
-    rows.push(this._range('Taille', () => d.s, (v) => { d.s = v; return touch(); }, { min: obst ? 0.5 : 0.3, max: obst ? 2.5 : 6, step: 0.05, fmt: (v) => '×' + (+v).toFixed(2) }));
-    if (d.k === 'plaque') {
-      const url = h('input', { type: 'text', maxlength: 400, placeholder: 'https://…', spellcheck: false });
-      url.addEventListener('change', () => {
-        if (url.value && !safeUrl(url.value)) { ed.app.ui.flash('URL https:// invalide.'); ed.app.audio.error(); this._syncPanel(); return; }
-        this._apply(() => { d.u = url.value; return touch(); });
-      });
-      this._sync.push(() => { if (document.activeElement !== url) url.value = d.u || ''; });
-      rows.push(h('label', { class: 'insp-row' }, h('span', {}, 'Image'), url));
-    }
-    if (obst) rows.push(this._range('Décalage', () => d.ph || 0, (v) => { d.ph = Math.max(0, Math.min(0.95, Math.round(v * 20) / 20)); return touch(); }, { min: 0, max: 0.95, step: 0.05, fmt: (v) => Math.round(v * 100) + ' %' }));
-    return rows;
   }
 
   // ---- Actions ---------------------------------------------------------------------------------------------------------
@@ -624,3 +280,6 @@ export class Inspector {
     return true;
   }
 }
+
+// Les familles de méthodes vivent dans inspector/ ; elles s'ajoutent au prototype (`this` est l'instance).
+Object.assign(Inspector.prototype, gizmoMethods, widgetMethods, bodyMethods);

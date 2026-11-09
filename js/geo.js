@@ -2,12 +2,16 @@
 // par sommet => rendu "facetté" en un seul appel de dessin).
 import * as THREE from './vendor/three.module.min.js';
 
+// Couleur « #rrggbb » -> [r, g, b] linéaires. Les couleurs de la palette sont peu nombreuses, mais le joueur peut en choisir n'importe laquelle
+// (couleurs personnalisées) : le cache est borné pour ne pas grossir sans fin au fil d'une longue séance d'édition.
+const COLOR_CACHE_MAX = 2048;
 const colorCache = new Map();
-export function lin(hex) {
+function lin(hex) {
   let c = colorCache.get(hex);
   if (!c) {
     const col = new THREE.Color(hex);
     c = [col.r, col.g, col.b];
+    if (colorCache.size >= COLOR_CACHE_MAX) colorCache.clear();
     colorCache.set(hex, c);
   }
   return c;

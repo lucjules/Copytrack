@@ -1,4 +1,4 @@
-// Fiche d'essai des 66 circuits : node tools/fiche-essai.mjs   -> docs/FICHE-ESSAI.md et docs/temps-humains.json (gabarit vide)
+// Fiche d'essai des circuits intégrés : node tools/fiche-essai.mjs   -> docs/FICHE-ESSAI.md et docs/temps-humains.json (gabarit vide)
 // Un circuit n'a été parcouru que par le pilote automatique : cette fiche sert à les jouer une fois, à la main, et à noter ce qui cloche.
 // Les meilleurs temps relevés se recopient dans docs/temps-humains.json, puis : node tools/medals.mjs --humain docs/temps-humains.json --ecrire
 import { writeFileSync } from 'node:fs';
@@ -7,7 +7,7 @@ import { PROFILS, CHAPTERS, CHAPTER_SIZE, goalFor, goalLabel } from '../js/caree
 import { runTrack } from './lab.mjs';
 
 const L = [];
-L.push('# Fiche d\'essai — les 66 circuits', '',
+L.push('# Fiche d\'essai — les 72 circuits', '',
   'À remplir en jouant, **un circuit après l\'autre, dans l\'ordre de la carrière** (un chapitre s\'ouvre avec 4 médailles dans le précédent). Pour essayer un circuit précis sans progresser : ouvrir la console du navigateur (F12) et taper `copytrack.playBuiltin(N)`, où N = numéro du circuit − 1.',
   'Pour chaque circuit, coche ce qui est vrai et note le meilleur temps. Le temps du pilote automatique sert de repère : **Or = son temps**.', '',
   '| Case | Question |', '| --- | --- |',

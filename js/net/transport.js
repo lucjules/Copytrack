@@ -23,15 +23,14 @@
 //    NAT symétrique) échouent sans relais : il faut alors un serveur TURN (payant, ou à héberger) à ajouter dans ICE_SERVERS.
 //    Une paire qui échoue est signalée (état « failed ») : le joueur reste dans la salle mais ne voit pas / n'est pas vu de cet autre.
 // 7. Coût : N joueurs = N·(N−1)/2 connexions ; chacun envoie son état N−1 fois. À 8 joueurs : 7 liens, ~0,8 Ko/s chacun.
-export const ICE_SERVERS = [
-  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-  // { urls: 'turn:turn.example.com:3478', username: '…', credential: '…' },   // relais pour les réseaux qui bloquent le P2P
-];
+import { CONFIG } from '../config.js';
 
-export const MAX_BUFFERED = 16 * 1024;
-export const MAX_LINKS = 7;
+const ICE_SERVERS = CONFIG.iceServers;      // STUN par défaut ; un relais TURN s'ajoute dans js/config.js
 
-export class PeerLink {
+const MAX_BUFFERED = 16 * 1024;
+const MAX_LINKS = 7;
+
+class PeerLink {
   constructor(mesh, id, initiator) {
     this.mesh = mesh; this.id = id; this.initiator = initiator;
     this.pc = null; this.state = null; this.ctl = null;
@@ -48,7 +47,13 @@ export class PeerMesh {
     this.selfId = selfId; this.signaling = signaling; this.h = handlers; this.ice = iceServers; this.RTC = RTC;
     this.links = new Map();
     this.stats = { sent: 0, recv: 0, skipped: 0 };
-    signaling.on('signal', (from, data) => this._onSignal(from, data));
+    signaling.on('signal', (from, data) => { if (signaling === this.signaling) this._onSignal(from, data); });
+  }
+
+  // Reconnexion (resume.js) : la nouvelle signalisation remplace l'ancienne pour les liaisons à refaire.
+  setSignaling(sig) {
+    this.signaling = sig;
+    sig.on('signal', (from, data) => { if (sig === this.signaling) this._onSignal(from, data); });
   }
 
   // Un joueur est apparu dans la salle : on ouvre (ou on attend) la connexion.

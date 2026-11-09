@@ -30,11 +30,14 @@ export const KEY_ACTIONS = {
     ['ed.test', 'Tester le circuit', ['KeyT', '']],
     ['ed.recenter', 'Recentrer la vue', ['KeyF', 'Home']],
     ['ed.topView', 'Vue de dessus', ['KeyH', '']],
+    ['ed.freeCam', 'Caméra libre (au ras du sol)', ['KeyV', '']],
     ['ed.grid', 'Afficher / masquer la grille', ['KeyG', '']],
     ['ed.help', 'Liste des raccourcis', ['F1', '']],
     ['ed.levelView', 'Vue par niveau (estomper les autres)', ['KeyZ', '']],
     ['ed.verify', 'Vérifier le circuit (course complète)', ['F2', '']],
     ['ed.params', 'Paramètres du niveau', ['F3', '']],
+    ['ed.groups', 'Groupes et calques', ['F4', '']],
+    ['ed.logic', 'Logique du circuit', ['F6', '']],
   ],
 };
 
@@ -109,7 +112,7 @@ export function keyLabel(code) {
   return code;
 }
 
-export const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Select', 'Start', 'L3', 'R3', '↑', '↓', '←', '→', 'Home'];
+const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Select', 'Start', 'L3', 'R3', '↑', '↓', '←', '→', 'Home'];
 export function padLabel(i) {
   return i == null || i < 0 ? '—' : PAD_NAMES[i] || 'Bouton ' + i;
 }

@@ -4,13 +4,11 @@
 //  2. un pilote humain imparfait (réaction, volant qui tremble, braquage moins sec) sur les 66 circuits : contacts avec les bordures par minute et taux d'arrivée.
 // Les seuils sont ceux de la 0.9.11 avec une marge ; la 0.9.10 donnait 1,1 contact par minute (26 circuits sur 66 avec au moins un contact) pour 178 arrivées sur 198.
 import assert from 'node:assert/strict';
-
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 5).join('\n       ')); } }
+import { test, finish } from './harness.mjs';
 
 const { virageStabilise, recuperation, changementDeVoie, pilotHumain, mesureHumain } = await import('./maniabilite.mjs');
 const { CELL, ROAD_HALF, ROAD_W } = await import('../js/constants.js');
-const { CAR } = await import('../js/physics.js');
+const { CAR } = await import('../js/physics/specs.js');
 const { BUILTIN_TRACKS } = await import('../js/tracks.js');
 
 const V = { 72: 20, 144: 40, 216: 60, 288: 80 };    // km/h -> m/s
@@ -75,11 +73,11 @@ test('moins d\'un contact par minute en moyenne (0,5 au plus) : on ne se cogne p
   const moy = all.reduce((a, r) => a + r.contactsParMinute, 0) / all.length;
   assert.ok(moy <= 0.5, 'moyenne ' + moy.toFixed(2) + ' contacts/min');
 });
-test('aucun circuit à plus de 3 contacts par minute, et au plus 12 circuits avec un contact', () => {
+test('aucun circuit à plus de 3 contacts par minute, et au plus 16 circuits avec un contact (72 circuits)', () => {
   const pires = all.filter((r) => r.contactsParMinute > 3);
   assert.deepEqual(pires.map((r) => r.id + ' ' + r.contactsParMinute), []);
   const avec = all.filter((r) => r.contactsParMinute > 0);
-  assert.ok(avec.length <= 12, avec.length + ' circuits avec contact : ' + avec.map((r) => r.id).join(' '));
+  assert.ok(avec.length <= 16, avec.length + ' circuits avec contact : ' + avec.map((r) => r.id).join(' '));
 });
 test('au moins 90 % des parcours sont finis sans réapparition par ce pilote imparfait (trois graines par circuit)', () => {
   const fin = all.reduce((a, r) => a + +r.finis.split('/')[0], 0), tot = all.length * 3;
@@ -91,5 +89,4 @@ test('les sprints et les speedways, les plus rapides, restent sans contact (hors
   assert.ok(touches.length <= 1, 'circuits rapides à plus d\'1 contact/min : ' + touches.map((r) => r.id + ' ' + r.contactsParMinute).join(', '));
 });
 
-console.log(failures ? `\n${failures} échec(s)` : '\nTous les tests de maniabilité passent.');
-process.exit(failures ? 1 : 0);
+await finish('Tous les tests de maniabilité passent.');

@@ -4,13 +4,20 @@
 // et sur leur forme cloud {clé: valeur JSON} (jsonb côté base). La fusion ne perd jamais de progression :
 //  - records : le meilleur temps gagne (à version de physique égale) ;
 //  - circuits : union par identifiant, le plus récent gagne ; les pierres tombales effacent les circuits supprimés ;
-//  - profil : médailles et objets réunis, statistiques au maximum, pièces sans jamais en inventer.
+//  - profil : médailles et objets réunis, statistiques au maximum, pièces sans jamais en inventer ; favoris réunis (pierres tombales) ;
+//    exercices de l'Académie : meilleur niveau et meilleure mesure ; mutations du jour réunies, meilleure série au maximum ;
+//    expérience au maximum, licences réunies (date la plus ancienne), défis de maîtrise réunis ;
+//  - dernières courses (runs.*) : réunies, les plus récentes gardées.
 import { itemCost } from './cosmetics.js';
+import { mergeFavorites } from './favorites.js';
+import { cleanRuns } from './storage.js';
+import { mergeDrills } from './skills.js';
+import { mergeProgress } from './progression.js';
 
 // Ce qui suit un compte d'un appareil à l'autre : progression, circuits créés, records. Les réglages
 // (volume, touches, qualité...) restent propres à chaque appareil, le brouillon de l'éditeur aussi.
 export const isSyncKey = (k) =>
-  k === 'profile' || k === 'tracks' || k === 'tracksDel' || k === 'recReset' || /^(rec3|daily|ghostImp)\./.test(k);
+  k === 'profile' || k === 'tracks' || k === 'tracksDel' || k === 'recReset' || /^(rec3|daily|ghostImp|runs)\./.test(k);
 
 export const pickSynced = (dump) => Object.fromEntries(Object.entries(dump || {}).filter(([k, v]) => isSyncKey(k) && typeof v === 'string'));
 
@@ -71,11 +78,20 @@ export function mergeProfile(local, remote) {
   const eggs = { ...obj(b.eggs), ...obj(a.eggs) };
   const shards = { ...obj(b.shards), ...obj(a.shards) };
   const stats = { ...obj(b.stats), ...obj(a.stats), races: Math.max(num(a.stats && a.stats.races), num(b.stats && b.stats.races)), earned: Math.max(num(a.stats && a.stats.earned), num(b.stats && b.stats.earned)) };
+  const academy = { ...obj(b.academy), ...obj(a.academy) };                   // leçons réussies : on réunit
+  const collections = { ...obj(b.collections), ...obj(a.collections) };      // collections récompensées : on réunit
+  const dailyDays = [...new Set([...(Array.isArray(a.dailyDays) ? a.dailyDays : []), ...(Array.isArray(b.dailyDays) ? b.dailyDays : [])])].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().slice(-400);
+  const mutDays = [...new Set([...(Array.isArray(a.mutDays) ? a.mutDays : []), ...(Array.isArray(b.mutDays) ? b.mutDays : [])])].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().slice(-400);   // mutations du jour terminées (E13)
+  const titlesSeen = [...new Set([...(Array.isArray(a.titlesSeen) ? a.titlesSeen : []), ...(Array.isArray(b.titlesSeen) ? b.titlesSeen : [])])].slice(0, 40);
+  stats.turbos = Math.max(num(a.stats && a.stats.turbos), num(b.stats && b.stats.turbos));
+  const daily2 = a.mutDays || b.mutDays || a.dailyBest || b.dailyBest ? { mutDays, dailyBest: Math.max(num(a.dailyBest), num(b.dailyBest)) } : {};   // meilleure série : au maximum
   const presets = Array.isArray(a.presets) && a.presets.some(Boolean) ? a.presets : (Array.isArray(b.presets) ? b.presets : a.presets);
+  const fav = (a.favorites || b.favorites || a.favDel || b.favDel) ? mergeFavorites(a, b) : {};      // favoris du Race Hub (favorites.js)
+  const drills = a.drills || b.drills ? { drills: mergeDrills(a.drills, b.drills) } : {};         // exercices de l'Académie (skills.js) : meilleur niveau, meilleure mesure
   return {
-    ...b, ...a,
+    ...b, ...a, ...fav, ...drills, ...daily2, ...mergeProgress(a, b),
     id: b.id || a.id,                    // l'identifiant du joueur reste celui du compte
-    coins: mergeCoins(a, b, owned), owned, medals, eggs, shards, stats, presets,
+    coins: mergeCoins(a, b, owned), owned, medals, eggs, shards, stats, presets, academy, collections, dailyDays, titlesSeen,
     loadout: a.loadout || b.loadout,     // l'appareil courant garde sa personnalisation
   };
 }
@@ -88,7 +104,8 @@ export function mergeSaves(local, remote) {
   // record, meilleur, l'emporterait sur le nouveau puis serait supprimé).
   const resetAt = Math.max(num(a.recReset), num(b.recReset));
   if (resetAt) {
-    const clean = (o) => Object.fromEntries(Object.entries(o).filter(([k, v]) => !(k.startsWith('rec3.') && num(obj(v).date) <= resetAt)));
+    const clean = (o) => Object.fromEntries(Object.entries(o).filter(([k, v]) => !(k.startsWith('rec3.') && num(obj(v).date) <= resetAt))
+      .map(([k, v]) => [k, k.startsWith('runs.') && Array.isArray(v) ? v.filter((r) => num(r && r.date) > resetAt) : v]));
     a = clean(a); b = clean(b);
   }
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
@@ -100,6 +117,7 @@ export function mergeSaves(local, remote) {
     else if (k === 'tracks') out[k] = mergeTracks(a[k], b[k], gone);
     else if (k === 'profile') out[k] = mergeProfile(a[k], b[k]);
     else if (k.startsWith('rec3.')) out[k] = mergeRecord(a[k], b[k]);
+    else if (k.startsWith('runs.')) out[k] = cleanRuns([...(Array.isArray(a[k]) ? a[k] : []), ...(Array.isArray(b[k]) ? b[k] : [])]);    // dernières courses : réunies, les plus récentes
     else out[k] = a[k] !== undefined ? a[k] : b[k];                 // fantômes importés, défi du jour : le local d'abord
   }
   if (resetAt) out.recReset = resetAt;

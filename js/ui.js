@@ -1,21 +1,16 @@
 // Interface DOM : écrans, HUD, fenêtres modales, notifications.
 import { formatTime } from './storage.js';
-import { MEDALS, medalFor } from './race.js';
+import { MEDALS } from './medals.js';
 import { keyLabel } from './input.js';
 import { profile } from './profile.js';
 import { MessageGate, PRIO } from './hudMessages.js';
-
-export const $ = (id) => document.getElementById(id);
-
-export function esc(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
+import { $, esc } from './dom.js';
 
 export function medalIcon(m) {
   return `<i class="medal ${m ? m.id : 'none'}" title="${m ? m.label : 'Aucune médaille'}"></i>`;
 }
 
-const SCREENS = ['loading', 'menu', 'tracks', 'mytracks', 'community', 'profile'];
+const SCREENS = ['loading', 'menu', 'tracks', 'race-hub', 'mytracks', 'community', 'profile'];
 
 class Hud {
   constructor() {
@@ -24,6 +19,7 @@ class Hud {
       medals: $('hud-medals'), speed: $('hud-speed'), boost: $('hud-boost'), center: $('hud-center'),
       msg: $('hud-msg'), hint: $('hud-hint'), track: $('hud-track'),
     };
+    this.root = $('hud');
     this._last = {};
     this.gate = new MessageGate();
   }
@@ -83,6 +79,8 @@ class Hud {
     if (v !== this._last.speed) { this.el.speed.textContent = v; this._last.speed = v; }
     const b = Math.round((boost / 1.6) * 100);
     if (b !== this._last.boost) { this.el.boost.style.width = b + '%'; this._last.boost = b; }
+    const s = Math.min(100, Math.round((kmh / 400) * 100));
+    if (s !== this._last.spd) { this.root.style.setProperty('--spd', String(s / 100)); this._last.spd = s; }
   }
 
   center(text, pop = false) {
@@ -164,7 +162,10 @@ export class UI {
   }
 
   // actions : [{ label, primary, danger, onClick }] ; onClick renvoie false pour garder la fenêtre ouverte.
-  modal({ title, body, actions = [], wide = false }) {
+  // onClose : appelé une fois quand la fenêtre se ferme (bouton, Échap, ou remplacée par une autre) : arrêter une écoute, un minuteur...
+  modal({ title, body, actions = [], wide = false, onClose = null }) {
+    this._fireModalClose();
+    this._onModalClose = onClose;
     $('modal-title').textContent = title;
     $('modal').querySelector('.modal-panel').classList.toggle('wide', !!wide);     // large : raccourcis, listes en colonnes
     const b = $('modal-body');
@@ -188,15 +189,19 @@ export class UI {
     this.modalOpen = true;
   }
 
+  _fireModalClose() { const f = this._onModalClose; this._onModalClose = null; if (f) f(); }
+
   closeModal() {
     $('modal').classList.add('hidden');
     this.modalOpen = false;
+    this._fireModalClose();
   }
 
   showFinish(info) {
     $('fin-replay').classList.toggle('hidden', !info.canReplay);
     $('fin-online').classList.add('hidden');
     $('fin-board').classList.toggle('hidden', !info.canBoard);
+    $('fin-hub').classList.toggle('hidden', !info.canHub);
     const gl = $('fin-goal');
     if (gl) {
       gl.classList.toggle('hidden', !info.goal);
@@ -235,10 +240,20 @@ export class UI {
       lines.push(MEDALS.slice().reverse().map((m) => `${medalIcon(m)}<b>${formatTime(info.derived[m.id])}</b>`).join(' · '));
     }
     $('fin-detail').innerHTML = lines.join('<br>');
+    // Progression du pilote (E14) : l'expérience gagnée et le niveau.
+    const fx = $('fin-xp');
+    if (fx) {
+      fx.classList.toggle('hidden', !info.xp);
+      if (info.xp) {
+        const x = info.xp, pct = x.max ? 100 : Math.round((x.into / Math.max(1, x.need)) * 100);
+        fx.innerHTML = `<span class="xp-gain">+${x.xp} XP</span> <span class="xp-lv">Niveau ${x.level}${x.level > x.prevLevel ? ' ⬆' : ''}</span>
+          <span class="xp-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></span>
+          <small class="xp-why">${x.parts.map(([w, n]) => `<span>${esc(w)} +${n}</span>`).join(' · ')}</small>`;
+      }
+    }
     $('fin-next').classList.toggle('hidden', !info.hasNext);
     $('fin-quit').textContent = info.fromEditor ? 'Retour à l’éditeur' : 'Menu';
     this.showOverlay('finish');
   }
 }
 
-export { medalFor };

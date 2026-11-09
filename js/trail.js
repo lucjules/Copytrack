@@ -2,9 +2,9 @@
 // la longueur et la largeur suivent la vitesse et le boost. Un ruban 3D avec une opacité par sommet (additif) : pas de particules qui
 // apparaissent et disparaissent.
 import * as THREE from './vendor/three.module.min.js';
+import { clamp } from './mathutil.js';
 
 const N = 72;                                   // échantillons au plus
-const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const tmp = new THREE.Color();
 
 // Intensité (0 à 1) selon la vitesse (m/s) et le boost (0 à 1) : discrète à l'arrêt, pleine à ~180 km/h, renforcée par le boost.
@@ -36,9 +36,9 @@ export class TrailRibbon {
 
   // anchor : arrière de la voiture (monde) ; right : axe latéral (vecteur unitaire) ; color : '#rrggbb' ou null (arc-en-ciel).
   // cam : position de la caméra (monde), ou null : les points trop près d'elle s'effacent (sinon le ruban passe devant l'objectif).
-  update(dt, anchor, right, speed, boost, color, time, cam = null) {
+  update(dt, anchor, right, speed, boost, color, time, cam = null, len = 1) {
     const k = clamp((speed - 4) / 46, 0, 1), strength = trailStrength(speed, boost);
-    const maxAge = 0.2 + 0.75 * k + 0.35 * boost, half = 0.22 + 0.5 * k + 0.5 * boost;
+    const maxAge = (0.2 + 0.75 * k + 0.35 * boost) * len, half = 0.22 + 0.5 * k + 0.5 * boost;
     for (const p of this.pts) p.age += dt;
     while (this.pts.length && this.pts[0].age > maxAge) this.pts.shift();
     const last = this.pts[this.pts.length - 1];

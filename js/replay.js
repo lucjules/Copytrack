@@ -1,13 +1,13 @@
 // Replays et fantômes (v1.5). La physique est déterministe (pas fixe) : il suffit
 // d'enregistrer les commandes de chaque pas pour rejouer une course à l'identique.
 // Une commande = volant quantifié au centième + gaz / frein / réapparition.
-import { CarPhysics } from './physics.js';
-import { RaceLogic, placeAtStart } from './raceLogic.js';
+import { Simulation } from './simulation.js';
 import { Autopilot } from './autopilot.js';
 import { b64encode, b64decode } from './track.js';
+import { PHYS_VER } from './version.js';
+import { MAX_RUN_STEPS } from './constants.js';
+import { GHOST_EVERY, GHOST_STRIDE, GHOST_VEHICLES, poseQuat } from './ghostFormat.js';
 
-// À incrémenter dès que la physique change : les replays d'une autre version sont ignorés.
-export const PHYS_VER = 26;
 
 export const quantSteer = (s) => Math.round(Math.max(-1, Math.min(1, s || 0)) * 100) / 100;
 
@@ -35,7 +35,6 @@ export class InputRecorder {
   }
 }
 
-export const MAX_REPLAY_STEPS = 120 * 600;     // 10 minutes : au-delà, un enregistrement est refusé AVANT d'être déplié en mémoire
 
 export function decodeInputs(b64) {
   const bin = atob(b64);
@@ -43,7 +42,7 @@ export function decodeInputs(b64) {
   // Un petit texte peut se déplier en des dizaines de millions de pas (255 répétitions par triplet) : on compte d'abord.
   let total = 0;
   for (let i = 0; i + 2 < bin.length; i += 3) total += bin.charCodeAt(i);
-  if (total > MAX_REPLAY_STEPS) throw new Error('Enregistrement trop long.');
+  if (total > MAX_RUN_STEPS) throw new Error('Enregistrement trop long.');       // refusé AVANT d'être déplié en mémoire
   for (let i = 0; i + 2 < bin.length; i += 3) {
     const n = bin.charCodeAt(i), s = (bin.charCodeAt(i + 1) << 24) >> 24, f = bin.charCodeAt(i + 2);
     for (let k = 0; k < n; k++) { steer.push(s); flags.push(f); }
@@ -62,8 +61,21 @@ export function encodeGhost({ trackKey, time, name, inputs }) {
   return 'SHG1:' + b64encode(JSON.stringify({ k: trackKey, t: time, n: name || '—', i: inputs, v: PHYS_VER }));
 }
 
+// Lien de partage d'un fantôme : le code voyage dans la partie « # » de l'adresse (elle ne part jamais vers un serveur). Une messagerie qui coupe les longs liens perd la fin du code :
+// au-delà de GHOST_LINK_MAX caractères, le jeu prévient et propose le code à copier plutôt que le lien.
+export const GHOST_LINK_MAX = 7000;
+export const ghostLink = (base, code) => String(base).split('#')[0] + '#g=' + encodeURIComponent(code);
+// Fantôme contenu dans un fragment d'adresse (« #g=… ») ; null si ce n'en est pas un ; lève une erreur lisible si le code est invalide.
+export function ghostFromHash(hash) {
+  const h = String(hash || '');
+  if (!h.startsWith('#g=')) return null;
+  let code;
+  try { code = decodeURIComponent(h.slice(3)); } catch { throw new Error('Lien de fantôme invalide.'); }
+  try { return decodeGhost(code); } catch (e) { throw new Error(e.message === 'Ce n\'est pas un code de fantôme.' ? 'Lien de fantôme invalide.' : 'Code de fantôme invalide ou coupé (le lien est-il complet ?).'); }
+}
+
 export function decodeGhost(code) {
-  let s = String(code || '').trim();
+  const s = String(code || '').trim();
   if (!/^SHG1:/.test(s)) throw new Error('Ce n\'est pas un code de fantôme.');
   const d = JSON.parse(b64decode(s.slice(5)));
   if (!d || !d.k || !d.i) throw new Error('Code de fantôme invalide.');
@@ -73,48 +85,97 @@ export function decodeGhost(code) {
 // ---- Fantôme simulé ----------------------------------------------------------------
 // Une seconde voiture qui roule en même temps que le joueur, pilotée soit par un
 // replay (commandes enregistrées), soit par le pilote automatique (fantôme « or »).
+// C'est aussi ce qui rejoue une course côté serveur (verify.js) : le pas est celui de Simulation, le même que la course en direct.
+//
+// Historique : le fantôme ne dépend pas du joueur, c'est une suite déterministe. Chaque pas laisse donc une ligne dans `hist` (assez pour dessiner
+// la voiture), et la course en direct lit la ligne qui correspond à SON chrono. Quand le joueur revient à un checkpoint, il suffit de relire une ligne plus
+// ancienne : on ne rejoue plus le fantôme depuis le départ (ce qui figeait l'image à chaque retour tardif dans une longue course).
+const HIST_STRIDE = 17;
+const VEH_IDS = ['car', 'moto', 'boat', 'glider'];
+
 export class GhostRunner {
-  constructor(track, { inputs = null, bot = false, latK = 0.8 } = {}) {
-    this.phys = new CarPhysics(track);
-    this.logic = new RaceLogic(track);
+  // ghost : enregistre aussi le fantôme (une pose tous les GHOST_EVERY pas, comme la course en direct) : c'est ce que la fonction serveur range avec un record.
+  constructor(track, { inputs = null, bot = false, latK = 0.8, ghost = false } = {}) {
+    this.gRec = ghost ? [] : null;       // x, y, z, qx, qy, qz, qw par échantillon
+    this.gVeh = [];                      // changements de véhicule : [image, id]
+    this._q = [0, 0, 0, 1];
+    this.sim = new Simulation(track);
+    this.phys = this.sim.phys;
+    this.logic = this.sim.logic;
     this.rep = inputs ? decodeInputs(inputs) : null;
     this.bot = bot && track.path ? new Autopilot(track.path, { latLimit: 56 * latK }) : null;
+    this.hist = new Float32Array(HIST_STRIDE * 1024);
     this.reset();
   }
 
   reset() {
-    this.logic.reset();
-    placeAtStart(this.phys, this.logic);
+    this.sim.start();
     if (this.bot) this.bot.reset(this.phys);
     this.k = 0;
-    this.groundT = 0;
     this.done = false;
+    this._record(0);
   }
 
   step() {
     if (this.done) return;
-    let inp;
-    if (this.bot) inp = this.bot.control(this.phys);
-    else inp = inputAt(this.rep, this.k);
-    if (inp.respawn) {
-      const r = this.logic.rewind();
-      this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
-      this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
-    }
-    this.phys.clock = this.logic.steps;
-    this.phys.step(inp);
-    const sink = this.phys.ev.sink;
-    const ev = this.logic.update(this.phys);
-    // Mêmes réapparitions automatiques qu'en course (hors piste 0,5 s, noyade).
-    if (this.phys.offTrack) this.groundT += 1 / 120; else this.groundT = 0;
-    if (this.groundT > 0.5 || sink) {
-      this.groundT = 0;
-      const r = this.logic.rewind();
-      this.phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
-      this.phys.vehicle = r.vehicle || 'car'; this.phys.gravMul = r.grav || 1;
-    }
+    const inp = this.bot ? this.bot.control(this.phys) : inputAt(this.rep, this.k);
+    if (inp.respawn) { this.sim.rewind(); this._gTrim(); }
+    const ev = this.sim.step(inp);
+    if (this.gRec) this._gSample();
+    if (this.sim.lost) { this.sim.rewind(); this._gTrim(); }      // mêmes réapparitions automatiques qu'en course (hors piste 0,5 s, noyade)
     if (ev && ev.type === 'finish') this.done = true;
     if (this.rep && this.k >= this.rep.length + 240) this.done = true;
     this.k++;
+    this._record(this.k);
+  }
+
+  // Fantôme enregistré (comme RaceSession) : un échantillon quand le chrono tombe sur un multiple de GHOST_EVERY ; un retour au checkpoint efface ce qui suit le checkpoint.
+  _gSample() {
+    const steps = this.logic.steps;
+    if (steps % GHOST_EVERY !== 0) return;
+    const p = this.phys, q = poseQuat(p, this._q);
+    const vid = GHOST_VEHICLES.indexOf(p.vehicle), last = this.gVeh.length ? this.gVeh[this.gVeh.length - 1][1] : 0;
+    if (vid !== last) this.gVeh.push([this.gRec.length / GHOST_STRIDE, vid]);
+    this.gRec.push(p.pos.x, p.pos.y, p.pos.z, q[0], q[1], q[2], q[3]);
+  }
+  _gTrim() {
+    if (!this.gRec) return;
+    this.gRec.length = Math.min(this.gRec.length, Math.floor(this.logic.steps / GHOST_EVERY) * GHOST_STRIDE);
+    while (this.gVeh.length && this.gVeh[this.gVeh.length - 1][0] >= this.gRec.length / GHOST_STRIDE) this.gVeh.pop();
+  }
+  // Le fantôme enregistré : { data: Float32Array, veh } (nécessite l'option ghost).
+  ghostResult() { return { data: new Float32Array(this.gRec), veh: this.gVeh.map((c) => c.slice()) }; }
+
+  // Avance jusqu'au pas k (les lignes de l'historique jusque-là existent) ; renvoie false si le fantôme a terminé avant.
+  seek(k) {
+    while (this.k < k && !this.done) this.step();
+    return k <= this.k;
+  }
+
+  _record(k) {
+    if ((k + 1) * HIST_STRIDE > this.hist.length) { const h = new Float32Array(this.hist.length * 2); h.set(this.hist); this.hist = h; }
+    const p = this.phys, h = this.hist, o = k * HIST_STRIDE;
+    h[o] = p.pos.x; h[o + 1] = p.pos.y; h[o + 2] = p.pos.z;
+    h[o + 3] = p.prev.x; h[o + 4] = p.prev.y; h[o + 5] = p.prev.z;
+    h[o + 6] = p.n.x; h[o + 7] = p.n.y; h[o + 8] = p.n.z;
+    h[o + 9] = p.fwd.x; h[o + 10] = p.fwd.y; h[o + 11] = p.fwd.z;
+    h[o + 12] = p.yaw; h[o + 13] = p.grounded ? 1 : 0; h[o + 14] = VEH_IDS.indexOf(p.vehicle);
+    h[o + 15] = this.done ? 1 : 0; h[o + 16] = 0;
+  }
+
+  // Ce qu'il faut pour dessiner la voiture après k pas (out : pos, prev, n, fwd, yaw, grounded, vehicle, done). Avance le fantôme si besoin.
+  poseAt(k, out) {
+    this.seek(k);
+    const i = Math.min(k, this.k), h = this.hist, o = i * HIST_STRIDE;
+    out.pos.x = h[o]; out.pos.y = h[o + 1]; out.pos.z = h[o + 2];
+    out.prev.x = h[o + 3]; out.prev.y = h[o + 4]; out.prev.z = h[o + 5];
+    out.n.x = h[o + 6]; out.n.y = h[o + 7]; out.n.z = h[o + 8];
+    out.fwd.x = h[o + 9]; out.fwd.y = h[o + 10]; out.fwd.z = h[o + 11];
+    out.yaw = h[o + 12]; out.grounded = h[o + 13] === 1; out.vehicle = VEH_IDS[h[o + 14]] || 'car';
+    out.done = k > this.k || h[o + 15] === 1;
+    return out;
   }
 }
+
+// Support d'une pose de fantôme pour le rendu (réutilisé d'une image à l'autre).
+export const newGhostPose = () => ({ pos: { x: 0, y: 0, z: 0 }, prev: { x: 0, y: 0, z: 0 }, n: { x: 0, y: 1, z: 0 }, fwd: { x: 0, y: 0, z: -1 }, yaw: 0, grounded: true, vehicle: 'car', done: false });

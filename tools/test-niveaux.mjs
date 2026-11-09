@@ -1,4 +1,4 @@
-// Tests de la refonte du level design (0.9.6 → 0.9.9 : les 66 circuits intégrés) : node tools/test-niveaux.mjs   (npm test)
+// Tests de la refonte du level design (0.9.6 → 0.9.9 : les 66 circuits d'origine ; 0.9.15 : un 12e chapitre bonus de 6 circuits « Mécanismes ») : node tools/test-niveaux.mjs   (npm test)
 //
 // Chaque circuit porte un champ `profil` (sprint, speedway, technique, rollercoaster, acrobatique). Le CONTRAT de ces profils, et de tout circuit
 // « bien fait », est écrit une seule fois, dans tools/contract.mjs (checkDef) : chaque profil est défini par des mesures (virages serrés, vitesse,
@@ -9,13 +9,12 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { test, finish } from './harness.mjs';
 
-let failures = 0;
-function test(name, fn) { try { const r = fn(); if (r && typeof r.then === 'function') throw new Error('test asynchrone : ses assertions ne seraient jamais vérifiées'); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 8).join('\n       ')); } }
-
-const { BUILTIN_TRACKS, THEME_ORDER, buildBuiltin } = await import('../js/tracks.js');
+const { BUILTIN_TRACKS, buildBuiltin } = await import('../js/tracks.js');
+const { CAREER_ORDER: THEME_ORDER } = await import('../js/themes.js');
 const { PROFILS, CHAPTERS, CHAPTER_SIZE, GOALS } = await import('../js/career.js');
-const { VERSION } = await import('../js/constants.js');
+const { VERSION } = await import('../js/version.js');
 const { OBST } = await import('../js/obstacles.js');
 const { RaceLogic } = await import('../js/raceLogic.js');
 const { checkDef, openingOf, vocabulary } = await import('./contract.mjs');
@@ -28,14 +27,15 @@ const { checkTrack } = await import('../js/editorTools.js');
 const { CarPhysics } = await import('../js/physics.js');
 const { placeAtStart } = await import('../js/raceLogic.js');
 const { Autopilot } = await import('../js/autopilot.js');
-const { DT } = await import('../js/constants.js');
 
 const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+// Le code de l'application est réparti entre js/main.js et js/app/*.js (familles de méthodes) : ces contrôles de texte lisent l'ensemble.
+const readApp = () => ['js/main.js', ...readdirSync(new URL('../js/app', import.meta.url)).map((f) => 'js/app/' + f)].map(read).join('\n');
 const by = Object.fromEntries(BUILTIN_TRACKS.map((d) => [d.id, d]));
 const chapters = [];
 for (let c = 0; c * CHAPTER_SIZE < BUILTIN_TRACKS.length; c++) chapters.push(BUILTIN_TRACKS.slice(c * CHAPTER_SIZE, (c + 1) * CHAPTER_SIZE));
 
-// L'ordre de la carrière : 11 chapitres de 6. Ajouter ou déplacer un circuit, c'est changer ce tableau, donc le décider.
+// L'ordre de la carrière : 11 chapitres de 6, plus le chapitre bonus de l'Atelier. Ajouter ou déplacer un circuit, c'est changer ce tableau, donc le décider.
 const CAREER = [
   ['eclats', 'canyon', 'tremplins', 'spirale', 'verglas', 'grandtour'],
   ['lianes', 'canopee', 'spores', 'serpent', 'racines', 'temple'],
@@ -48,6 +48,7 @@ const CAREER = [
   ['chaine', 'laminoir', 'engrenages', 'fonderie', 'presse', 'usinefolle'],
   ['envol', 'suspendues', 'rafales', 'montgolfieres', 'pontvents', 'cite'],
   ['galerie', 'plafond', 'cristalfele', 'miroir', 'vrilles', 'coeur'],
+  ['garde', 'cadence', 'pendule', 'rotors', 'montecharge', 'grandatelier'],       // chapitre bonus : les mécanismes, un à un
 ];
 
 // Les trois premiers jetons après « start » : l'ouverture de chaque circuit, écrite ici pour que personne ne la change sans le vouloir.
@@ -74,6 +75,8 @@ const OPENINGS = {
   envol: 'B3 S3.w150 S', suspendues: 'B3_ [crv1]_ UU_', rafales: 'B2 S2.w180 S', montgolfieres: 'B3 S.g40 OB', pontvents: 'B2_ S2.w150_ BRR_', cite: 'S.e S.x G2',
   // chapitre 11 : volant inversé · vrille · inversion de gravité · S en miroir · double looping · verre
   galerie: 'B2 S3.y S2', plafond: 'B TW.f S2^', cristalfele: 'B2 S.f V8', miroir: 'B3 BLL S', vrilles: 'B [cdi1] [dn2]', coeur: 'B S2.v500 S',
+  // chapitre 12 (Atelier, bonus) : bumpers et piques · piques escamotables · balancier · marteau + balayeur · ascenseur + glissière · tout ensemble
+  garde: 'B4 [cds1] S', cadence: 'B3 S3 [crs1]', pendule: 'B2 [crs1] S2', rotors: 'S3 B3 [cds1]', montecharge: 'B5 S [crs1]', grandatelier: 'B2 S2 [cds1]',
 };
 
 console.log('Version et profils');
@@ -82,24 +85,24 @@ test('version 0.9.9 ou plus (bêta 0.9.x suit package.json)', () => {
   assert.equal(VERSION, 'bêta ' + v);
   assert.ok(+v.split('.')[2] >= 9, v);
 });
-test('les 66 circuits sont refaits : chacun a un profil connu', () => {
-  assert.equal(BUILTIN_TRACKS.length, 66);
+test('les 72 circuits (66 + 6 de l’Atelier) ont chacun un profil connu', () => {
+  assert.equal(BUILTIN_TRACKS.length, 72);
   assert.deepEqual(BUILTIN_TRACKS.filter((d) => !d.profil).map((d) => d.id), []);
   for (const d of BUILTIN_TRACKS) assert.ok(PROFILS[d.profil], d.id + ' : profil inconnu ' + d.profil);
 });
-test('onze chapitres de six circuits, un thème par chapitre, dans l’ordre de THEME_ORDER et des CHAPTERS de la carrière', () => {
-  assert.equal(chapters.length, 11);
+test('douze chapitres de six circuits, un thème par chapitre, dans l’ordre de THEME_ORDER et des CHAPTERS de la carrière', () => {
+  assert.equal(chapters.length, 12);
   chapters.forEach((ch, i) => {
     assert.equal(ch.length, CHAPTER_SIZE, 'chapitre ' + (i + 1));
     assert.ok(ch.every((d) => d.decor === THEME_ORDER[i]), 'thème du chapitre ' + (i + 1));
     assert.equal(CHAPTERS[i].decor, THEME_ORDER[i]);
   });
 });
-test('chaque chapitre propose les cinq profils', () => {
-  chapters.forEach((ch, i) => assert.deepEqual([...new Set(ch.map((d) => d.profil))].sort(), Object.keys(PROFILS).sort(), 'chapitre ' + (i + 1) + ' : ' + ch.map((d) => d.profil).join(' ')));
+test('chaque chapitre (sauf l’Atelier, bonus) propose les cinq profils', () => {
+  chapters.slice(0, 11).forEach((ch, i) => assert.deepEqual([...new Set(ch.map((d) => d.profil))].sort(), Object.keys(PROFILS).filter((k) => k !== 'atelier').sort(), 'chapitre ' + (i + 1) + ' : ' + ch.map((d) => d.profil).join(' ')));
 });
-test('deux circuits consécutifs d’un chapitre n’ont jamais le même profil', () => {
-  for (const ch of chapters) for (let i = 0; i + 1 < ch.length; i++) assert.notEqual(ch[i].profil, ch[i + 1].profil, `${ch[i].id} puis ${ch[i + 1].id} : ${ch[i].profil} deux fois de suite`);
+test('deux circuits consécutifs d’un chapitre n’ont jamais le même profil (sauf l’Atelier : un seul profil, « mécanisme »)', () => {
+  for (const ch of chapters.slice(0, 11)) for (let i = 0; i + 1 < ch.length; i++) assert.notEqual(ch[i].profil, ch[i + 1].profil, `${ch[i].id} puis ${ch[i + 1].id} : ${ch[i].profil} deux fois de suite`);
 });
 test('l’ordre de la carrière est celui du tableau CAREER (chapitre par chapitre)', () => {
   assert.deepEqual(chapters.map((ch) => ch.map((d) => d.id)), CAREER);
@@ -112,7 +115,7 @@ test('chaque profil a un libellé et une infobulle', () => {
   for (const [k, p] of Object.entries(PROFILS)) assert.ok(p.label && p.tip, k);
 });
 test('la carte de carrière affiche la pastille du profil', () => {
-  assert.match(read('js/main.js'), /tag profil \$\{pf\.cls\}/);
+  assert.match(readApp(), /tag profil \$\{pf\.cls\}/);
   for (const p of Object.values(PROFILS)) assert.match(read('css/style.css'), new RegExp('\\.card \\.tag\\.' + p.cls));
 });
 test('chaque chapitre a une description propre', () => {
@@ -124,7 +127,7 @@ console.log('Départs');
 test('aucun départ « classique » (booster, deux droites, virage) : le contrat le vérifie, ici sur la liste écrite', () => {
   for (const d of BUILTIN_TRACKS) assert.ok(!/^(B S2? R|S2 B|S B|B S2 B|B S2 R)/.test(d.script.replace(/^start /, '')), d.id + ' : ' + openingOf(d));
 });
-test('les 66 ouvertures sont toutes différentes', () => {
+test('les 72 ouvertures sont toutes différentes', () => {
   const o = BUILTIN_TRACKS.map(openingOf);
   const dup = o.filter((x, i) => o.indexOf(x) !== i);
   assert.deepEqual(dup, [], 'ouvertures en double');
@@ -173,10 +176,11 @@ for (const d of BUILTIN_TRACKS) {
 console.log('Finitions (0.9.10)');
 test('chaque circuit a son texte « ce qu’il enseigne » (infobulle de la carte de carrière)', () => {
   for (const d of BUILTIN_TRACKS) assert.ok(d.appris && d.appris.length > 40 && d.appris.length < 260 && d.appris.startsWith('Départ : '), d.id + ' : ' + d.appris);
-  assert.match(read('js/main.js'), /card\.title = b\.def\.appris/);
+  assert.match(readApp(), /card\.title = b\.def\.appris/);
 });
 test('étoiles de difficulté : le premier circuit d’un chapitre a au plus 3 étoiles, l’avant-dernier au moins 3, le dernier au moins 4, et un sprint n’a jamais plus de 2', () => {
-  for (const ch of chapters) { assert.ok(ch[0].difficulty <= 3, ch[0].id); assert.ok(ch[4].difficulty >= 3 && ch[5].difficulty >= 4, ch[5].id); }
+  for (const ch of chapters.slice(0, 11)) { assert.ok(ch[0].difficulty <= 3, ch[0].id); assert.ok(ch[4].difficulty >= 3 && ch[5].difficulty >= 4, ch[5].id); }
+  assert.ok(chapters[11].every((d) => d.difficulty <= 3), 'l’Atelier est un chapitre d’apprentissage : trois étoiles au plus');
   for (const d of BUILTIN_TRACKS.filter((x) => x.profil === 'sprint')) assert.ok(d.difficulty <= 2, d.id);
 });
 test('temps de référence : le pilote met le même temps qu’à la dernière validation (tools/golden-temps.json ; node tools/golden.mjs --update après un changement voulu)', () => {
@@ -196,14 +200,14 @@ test('état d’un chapitre et bilan de carrière (écran de carrière)', () => 
   assert.deepEqual([all.pct, all.finished, all.complete], [100, true, true]);
   const mid = careerSummary([...Array(33).fill('or'), ...Array(33).fill(null)], 10);
   assert.ok(mid.pct > 0 && mid.pct < 100 && !mid.finished);
-  const m = read('js/main.js');
+  const m = readApp();
   assert.match(m, /careerSummary\(ids, gd\)/); assert.match(m, /chapterState\(/); assert.match(m, /class="ch-badge/);
   assert.match(read('css/style.css'), /\.career-summary/);
 });
-test('fiche d’essai et calage humain : 66 sections, gabarit de temps vide, médailles proposées à partir du meilleur temps', () => {
+test('fiche d’essai et calage humain : 72 sections, gabarit de temps vide, médailles proposées à partir du meilleur temps', () => {
   const f = read('docs/FICHE-ESSAI.md'), tpl = JSON.parse(read('docs/temps-humains.json'));
-  assert.equal((f.match(/^### \d+\. /gm) || []).length, 66);
-  assert.equal((f.match(/^## Chapitre /gm) || []).length, 11);
+  assert.equal((f.match(/^### \d+\. /gm) || []).length, 72);
+  assert.equal((f.match(/^## Chapitre /gm) || []).length, 12);
   assert.deepEqual(Object.keys(tpl), BUILTIN_TRACKS.map((d) => d.id));
   assert.deepEqual(proposeFromHumans([16.2, 15.4, 17.9]), { cristal: 15.4, or: 16.2, argent: 18.5, bronze: 21.6 });
   for (const d of BUILTIN_TRACKS) assert.ok(f.includes('### ' + (BUILTIN_TRACKS.indexOf(d) + 1) + '. ' + d.name), d.id);
@@ -273,5 +277,4 @@ test('les anciennes listes d’obstacles figés ont disparu (js/builtinObstacles
   for (const f of walk(new URL('../js', import.meta.url).pathname)) assert.ok(!/builtinObstacles/.test(readFileSync(f, 'utf8')), f);
 });
 
-console.log(failures ? `\n${failures} test(s) en échec.` : '\nTous les tests des niveaux passent.');
-process.exit(failures ? 1 : 0);
+await finish('Tous les tests des niveaux passent.');

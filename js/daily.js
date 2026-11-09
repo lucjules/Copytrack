@@ -1,9 +1,10 @@
 // Défi du jour (v1.5) : un circuit généré à partir de la date. Tout le monde a le même
 // circuit le même jour, sans serveur. Le pilote automatique vérifie qu'il est faisable
 // et fixe les médailles, comme pour les circuits intégrés.
-import { scriptTrack, DECORS } from './track.js';
-import { CarPhysics, CAR } from './physics.js';
-import { RaceLogic, placeAtStart } from './raceLogic.js';
+import { scriptTrack } from './track.js';
+import { DAILY_DECORS } from './themes.js';
+import { CAR } from './physics/specs.js';
+import { Simulation } from './simulation.js';
 import { Autopilot } from './autopilot.js';
 
 // 0.9 : la date est prise en temps universel (UTC) : le même défi pour tout le monde,
@@ -13,7 +14,7 @@ export function dayKey(d = new Date()) {
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`;
 }
 
-function rng(seedStr) {
+export function rng(seedStr) {
   let h = 2166136261;
   for (let i = 0; i < seedStr.length; i++) { h ^= seedStr.charCodeAt(i); h = Math.imul(h, 16777619); }
   let s = h >>> 0 || 1;
@@ -44,22 +45,16 @@ function tryBuild(tokens, decor) {
   try { return scriptTrack('Défi du jour', tokens.join(' '), { decor }); } catch { return null; }
 }
 
-// Course du pilote automatique ; renvoie le temps ou null.
+// Course du pilote automatique ; renvoie le temps ou null (sortie de piste, noyade ou réapparition : le défi doit se finir proprement).
 export function botTime(track, latK = 0.8) {
-  const phys = new CarPhysics(track), logic = new RaceLogic(track);
-  placeAtStart(phys, logic);
+  const sim = new Simulation(track, { offTrackLimit: 0.3 });
+  sim.start();
   const bot = new Autopilot(track.path, { latLimit: CAR.latGrip * latK, brakeDecel: 36 });
-  bot.reset(phys);
-  let groundT = 0, respawns = 0;
+  bot.reset(sim.phys);
   for (let i = 0; i < 120 * 120; i++) {
-    phys.clock = logic.steps;
-    phys.step(bot.control(phys));
-    const ev = logic.update(phys);
-    if (ev && ev.type === 'finish') return respawns ? null : logic.time;
-    if (phys.offTrack || phys.ev.sink) {
-      groundT += 1 / 120;
-      if (groundT > 0.3 || phys.ev.sink) return null;
-    } else groundT = 0;
+    const ev = sim.step(bot.control(sim.phys));
+    if (ev && ev.type === 'finish') return sim.logic.time;
+    if (sim.lost) return null;
   }
   return null;
 }
@@ -67,7 +62,7 @@ export function botTime(track, latK = 0.8) {
 const cache = new Map();
 export function dailyChallenge(day = dayKey()) {
   if (cache.has(day)) return cache.get(day);
-  const decors = Object.keys(DECORS);
+  const decors = DAILY_DECORS;
   for (let attempt = 0; attempt < 40; attempt++) {
     const r = rng(day + '#' + attempt);
     const decor = decors[Math.floor(r() * decors.length)];

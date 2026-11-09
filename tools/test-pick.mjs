@@ -2,16 +2,13 @@
 import assert from 'node:assert/strict';
 import * as THREE from '../js/vendor/three.module.min.js';
 import { Track } from '../js/track.js';
-import { CELL, LEVEL_H, ROAD_TOP } from '../js/constants.js';
+import { CELL, ROAD_TOP } from '../js/constants.js';
 import { pickObjects, rayBox, LAYER_TRACK, LAYER_DECO, LAYER_ALL, ERASE_FILTERS } from '../js/editorPick.js';
 import { yawOf } from '../js/inspector.js';
-
-let failures = 0;
-function test(name, fn) { try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + e.message); } }
+import { test, finish } from './harness.mjs';
 
 // Rayon descendant verticalement sur (x, z), ou oblique depuis une caméra.
 const down = (x, z, y = 100) => new THREE.Ray(new THREE.Vector3(x, y, z), new THREE.Vector3(0, -1, 0));
-const from = (o, to) => new THREE.Ray(new THREE.Vector3(...o), new THREE.Vector3(...to).sub(new THREE.Vector3(...o)).normalize());
 const mid = (c) => (c + 0.5) * CELL;
 
 function scene() {
@@ -79,5 +76,4 @@ test('yawOf : cap d’une rotation autour de Y, sans ambiguïté d’Euler (tour
   assert.equal(((Math.round(-yawOf(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2)) / (Math.PI / 2)) % 4) + 4) % 4, 1);
 });
 
-if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }
-console.log('\nTous les tests de sélection passent.');
+await finish('Tous les tests de sélection passent.');

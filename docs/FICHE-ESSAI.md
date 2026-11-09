@@ -1,4 +1,4 @@
-# Fiche d'essai — les 66 circuits
+# Fiche d'essai — les 72 circuits
 
 À remplir en jouant, **un circuit après l'autre, dans l'ordre de la carrière** (un chapitre s'ouvre avec 4 médailles dans le précédent). Pour essayer un circuit précis sans progresser : ouvrir la console du navigateur (F12) et taper `copytrack.playBuiltin(N)`, où N = numéro du circuit − 1.
 Pour chaque circuit, coche ce qui est vrai et note le meilleur temps. Le temps du pilote automatique sert de repère : **Or = son temps**.
@@ -26,7 +26,7 @@ _Sprint, speedway, tremplins, épingles et grand huit : tous les profils de circ
 
 ### 2. Canyon Corail — Speedway, ◆◆◇◇◇
 
-- Départ : un booster → directement un très grand virage relevé. Au programme : virages relevés 3×3 à plus de 240 km/h, wall-ride de 6 cases sur la paroi du canyon, descente douce.
+- Départ : un booster → directement un très grand virage relevé. Au programme : virages relevés 3×3 à plus de 220 km/h, wall-ride de 6 cases sur la paroi du canyon, descente douce.
 - Pilote automatique : **27.1 s** · médailles : cristal 25.8 · or 27.1 · argent 31.2 · bronze 36.6
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -78,7 +78,7 @@ _Rampe de lancement, tube, rebonds de champignons et slalom en moto : la jungle 
 
 ### 8. Canopée — Speedway, ◆◆◆◇◇
 
-- Départ : en tube propulsé, qui débouche sur un virage relevé 3×3. Au programme : S relevés, wall-ride de 5 cases sur le mur gauche, tube à pleine vitesse, 35 % du temps au-dessus de 240 km/h.
+- Départ : en tube propulsé, qui débouche sur un virage relevé 3×3. Au programme : S relevés, wall-ride de 5 cases sur le mur gauche, tube à pleine vitesse, 79 % du temps au-dessus de 220 km/h.
 - Pilote automatique : **33.8 s** · médailles : cristal 32.1 · or 33.8 · argent 38.9 · bronze 45.6
 - Objectif bonus ★ : Finir en moins de 35.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -162,7 +162,7 @@ _Descente en moto, slalom en bateau et décollage en deltaplane autour du phare.
 
 ### 18. Grand Archipel — Speedway, ◆◆◆◆◆
 
-- Départ : aucun booster : une pente douce de six cases lance dans un très grand virage relevé. Au programme : cinq virages relevés, wall-ride de quatre cases, plongeon, 61 % du tour au-dessus de 240 km/h.
+- Départ : aucun booster : une pente douce de six cases lance dans un très grand virage relevé. Au programme : cinq virages relevés, wall-ride de quatre cases, plongeon, 85 % du tour au-dessus de 220 km/h.
 - Pilote automatique : **26.7 s** · médailles : cristal 25.3 · or 26.7 · argent 30.7 · bronze 36
 - Objectif bonus ★ : Finir en moins de 28 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -174,7 +174,7 @@ _Tapis roulant express, boucles, métro aérien, toits et lift hill : la ville m
 
 ### 19. Néons Express — Speedway, ◆◆◇◇◇
 
-- Départ : tapis roulant à +200 km/h (trois cases) : près de 290 km/h sans booster. Au programme : quatre virages relevés, wall-ride sur la façade d’une tour, 88 % au-dessus de 240 km/h.
+- Départ : tapis roulant à +200 km/h (trois cases) : près de 290 km/h sans booster. Au programme : quatre virages relevés, wall-ride sur la façade d’une tour, 93 % au-dessus de 220 km/h.
 - Pilote automatique : **20.2 s** · médailles : cristal 19.2 · or 20.2 · argent 23.2 · bronze 27.2
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -258,7 +258,7 @@ _Départ sur la glace, rebonds en terrasses, toboggan aimanté, hélices et poud
 
 ### 29. Couronne Boréale — Speedway, ◆◆◆◆◆
 
-- Départ : directement dans un très grand virage relevé, sans booster. Au programme : six virages relevés en couronne, wall-ride, 60 % du tour au-dessus de 240 km/h.
+- Départ : directement dans un très grand virage relevé, sans booster. Au programme : six virages relevés en couronne, wall-ride, 84 % du tour au-dessus de 220 km/h.
 - Pilote automatique : **24.2 s** · médailles : cristal 23 · or 24.2 · argent 27.9 · bronze 32.7
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -310,7 +310,7 @@ _Collines de braises, plaque de dérive, cheminée verticale, caldeira à deux t
 
 ### 35. Caldeira — Speedway, ◆◆◆◆◆
 
-- Départ : deux boosters → montée douce vers la crête ; circuit fermé, 2 tours. Au programme : quatre virages relevés en anneau, wall-ride, 64 % du temps au-dessus de 240 km/h.
+- Départ : deux boosters → montée douce vers la crête ; circuit fermé, 2 tours. Au programme : quatre virages relevés en anneau, wall-ride, 94 % du temps au-dessus de 220 km/h.
 - Pilote automatique : **50.1 s** · médailles : cristal 47.6 · or 50.1 · argent 57.6 · bronze 67.7
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -354,7 +354,7 @@ _Tube d’amarrage, basse gravité, moto, grand anneau à trois tours et apesant
 
 ### 40. Grand Anneau — Speedway, ◆◆◆◆◇
 
-- Départ : deux boosters → tube court ; circuit fermé, 3 tours. Au programme : quatre virages relevés, wall-ride, 58 % au-dessus de 240 km/h.
+- Départ : deux boosters → tube court ; circuit fermé, 3 tours. Au programme : quatre virages relevés, wall-ride, 95 % au-dessus de 220 km/h.
 - Pilote automatique : **63.7 s** · médailles : cristal 60.5 · or 63.7 · argent 73.2 · bronze 86
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -422,7 +422,7 @@ _Contre-courants, gravité lourde, pont de verre et plongée vers les abysses._
 
 ### 48. Grande Barrière — Speedway, ◆◆◆◆◆
 
-- Départ : deux boosters → pont de verre → virage relevé. Au programme : cinq virages relevés, wall-ride, courant favorable, 62 % au-dessus de 240 km/h.
+- Départ : deux boosters → pont de verre → virage relevé. Au programme : cinq virages relevés, wall-ride, courant favorable, 87 % au-dessus de 220 km/h.
 - Pilote automatique : **22.5 s** · médailles : cristal 21.3 · or 22.5 · argent 25.8 · bronze 30.3
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -518,7 +518,7 @@ _Vent de travers, îles sans bordures, gravité réduite, pont des vents et dép
 
 ### 59. Pont des Vents — Speedway, ◆◆◆◆◆
 
-- Départ : deux boosters → vent sur un pont sans bordures → virage relevé sans bordure. Au programme : quatre virages relevés, wall-ride, 60 % au-dessus de 240 km/h.
+- Départ : deux boosters → vent sur un pont sans bordures → virage relevé sans bordure. Au programme : quatre virages relevés, wall-ride, 86 % au-dessus de 220 km/h.
 - Pilote automatique : **20.2 s** · médailles : cristal 19.2 · or 20.2 · argent 23.2 · bronze 27.3
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -580,6 +580,58 @@ _Volant inversé, vrilles, inversions de gravité, plafonds et verre fragile._
 
 - Départ : un booster → deux dalles de verre fragile (5 s de résistance) → slalom. Au programme : huit virages serrés, chicane sur un mur : le dernier circuit.
 - Pilote automatique : **28.2 s** · médailles : cristal 26.8 · or 28.2 · argent 32.4 · bronze 38.1
+- Objectif bonus ★ : Finir sans réapparition
+- [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
+- Mon meilleur temps : ______ s · Notes : ____________________________________________
+
+## Chapitre 12 · Atelier des mécanismes
+
+_Piques, balancier, marteau, balayeur, ascenseur, glissière : chaque mécanisme, un par un. Les mêmes outils que dans l’éditeur._
+
+### 67. Garde-Fous — Mécanisme, ◆◇◇◇◇
+
+- Départ : quatre boosters → vague. Au programme : les premiers obstacles, bumpers (ils repoussent) et piques fixes, sur les bords : rester sur la route les évite, couper un virage les réveille.
+- Pilote automatique : **16.3 s** · médailles : cristal 15.4 · or 16.3 · argent 18.7 · bronze 21.9
+- Objectif bonus ★ : Finir sans toucher de muret
+- [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
+- Mon meilleur temps : ______ s · Notes : ____________________________________________
+
+### 68. En Cadence — Mécanisme, ◆◇◇◇◇
+
+- Départ : trois boosters → trois cases. Au programme : des piques escamotables en travers de la route (trois secondes de cycle, une et demie dehors) : on passe quand elles sont rentrées.
+- Pilote automatique : **17.3 s** · médailles : cristal 16.4 · or 17.3 · argent 19.9 · bronze 23.3
+- Objectif bonus ★ : Finir sans réapparition
+- [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
+- Mon meilleur temps : ______ s · Notes : ____________________________________________
+
+### 69. Le Pendule — Mécanisme, ◆◆◇◇◇
+
+- Départ : deux boosters → vague. Au programme : une boule balancier qui balaie la route, puis un mur coulissant : on lit leur rythme et on passe dans le vide.
+- Pilote automatique : **16.2 s** · médailles : cristal 15.4 · or 16.2 · argent 18.7 · bronze 21.9
+- Objectif bonus ★ : Finir sans toucher de muret
+- [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
+- Mon meilleur temps : ______ s · Notes : ____________________________________________
+
+### 70. Rotors — Mécanisme, ◆◆◇◇◇
+
+- Départ : trois cases → trois boosters. Au programme : un marteau tournant au milieu de la route, puis un balayeur : des obstacles qui tournent, on entre juste après leur passage.
+- Pilote automatique : **18.2 s** · médailles : cristal 17.3 · or 18.2 · argent 20.9 · bronze 24.5
+- Objectif bonus ★ : Finir sans réapparition
+- [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
+- Mon meilleur temps : ______ s · Notes : ____________________________________________
+
+### 71. Monte-Charge — Mécanisme, ◆◆◆◇◇
+
+- Départ : cinq boosters → vague. Au programme : la route bouge, un ascenseur (la dalle monte puis redescend) et une glissière (elle se décale sur le côté), comme dans l’éditeur.
+- Pilote automatique : **18.1 s** · médailles : cristal 17.2 · or 18.1 · argent 20.8 · bronze 24.5
+- Objectif bonus ★ : Finir sans toucher de muret
+- [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
+- Mon meilleur temps : ______ s · Notes : ____________________________________________
+
+### 72. Le Grand Atelier — Mécanisme, ◆◆◆◇◇
+
+- Départ : deux boosters → deux cases. Au programme : le tour d’horizon, un marteau, un balancier puis un mur coulissant à la suite : les mécanismes des circuits d’avant reviennent d’un coup.
+- Pilote automatique : **19.4 s** · médailles : cristal 18.4 · or 19.4 · argent 22.3 · bronze 26.1
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________

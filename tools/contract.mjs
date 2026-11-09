@@ -10,7 +10,7 @@ import { GEN_IDS } from '../js/pieces.js';
 import { checkTrack } from '../js/editorTools.js';
 import { orientationIssues } from '../js/joins.js';
 import { RaceLogic } from '../js/raceLogic.js';
-import { SIDE_MIN_SPEED } from '../js/physics.js';
+import { SIDE_MIN_SPEED } from '../js/physics/specs.js';
 import { Track } from '../js/track.js';
 import { runTrack, profile, asciiMap } from './lab.mjs';
 import { proposeFrom } from './medals.mjs';
@@ -59,6 +59,19 @@ export const PROFILE_CONTRACT = {
     if (!(tr.tiles.some((t) => t.o === 1) && tr.tiles.some((t) => t.o === 2))) f.push('rollercoaster : wall-rides des deux côtés requis');
     return f;
   },
+  // Chapitre « Mécanismes » : un circuit court qui montre un ou deux mécanismes (obstacles, pièces mobiles) AU PILOTE, qui les franchit sans choc ni réapparition.
+  // def.meca : les mécanismes qu'il enseigne (clés d'obstacles de js/obstacles.js, ou « lift » / « slide » pour l'ascenseur et la glissière) ; chacun doit être présent.
+  atelier: (P, S, tr, def) => {
+    const f = [];
+    if (S.time < 14 || S.time > 32) f.push(`atelier : ${S.time.toFixed(1)} s (14 à 32 s)`);
+    const meca = def.meca || [];
+    if (!meca.length) f.push('atelier : aucun mécanisme déclaré (champ meca)');
+    for (const m of meca) {
+      const has = m === 'lift' ? tr.tiles.some((t) => t.mv === 1) : m === 'slide' ? tr.tiles.some((t) => t.mv === 2) : tr.decos.some((d) => d.k === m);
+      if (!has) f.push(`atelier : le mécanisme « ${m} » n'est pas dans le circuit`);
+    }
+    return f;
+  },
   acrobatique: (P, S) => {
     const f = [];
     if (S.airTotal < 6) f.push(`acrobatique : ${S.airTotal.toFixed(1)} s en l'air (6 s au moins)`);
@@ -88,7 +101,7 @@ export function checkDef(def) {
   if (S.wallHits) f.push(`pilote : ${S.wallHits} chocs contre une bordure`);
   if (S.spikes) f.push(`pilote : ${S.spikes} piques touchées`);
   if (S.shocks) f.push(`pilote : ${S.shocks} chocs contre un obstacle`);
-  if (PROFILE_CONTRACT[def.profil]) f.push(...PROFILE_CONTRACT[def.profil](P, S, tr)); else f.push('pas de contrat pour le profil ' + def.profil);
+  if (PROFILE_CONTRACT[def.profil]) f.push(...PROFILE_CONTRACT[def.profil](P, S, tr, def)); else f.push('pas de contrat pour le profil ' + def.profil);
   if (S.wallVmin < Infinity && !(S.wallVmin * 3.6 >= 130 && S.wallVmin > SIDE_MIN_SPEED)) f.push(`wall-ride pris à ${(S.wallVmin * 3.6).toFixed(0)} km/h (130 au moins)`);
   const chk = checkTrack(tr).map((i) => i.msg).concat(orientationIssues(tr).map((i) => i.msg));
   if (chk.length) f.push('vérificateur de l\'éditeur : ' + [...new Set(chk)].join(' / '));

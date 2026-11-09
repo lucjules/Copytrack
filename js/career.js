@@ -2,10 +2,11 @@
 // sont regroupés en chapitres de 6. Un chapitre s'ouvre avec 4 médailles dans le
 // précédent. Chaque circuit a un objectif bonus qui rapporte des pièces une fois.
 import { profile, saveProfile, addCoins } from './profile.js';
+import { CAREER_ORDER, DECORS } from './themes.js';
 
 export const CHAPTER_SIZE = 6;
 export const UNLOCK_MEDALS = 4;
-export const GOAL_COINS = 50;
+const GOAL_COINS = 50;
 
 // 0.9.6 : profils de circuits (champ `profil` des circuits intégrés). Chaque circuit est conçu pour une expérience précise ; la pastille
 // de la carte de carrière l'annonce. Les mesures qui définissent chaque profil sont vérifiées par tools/contract.mjs (appliqué à tous les circuits par tools/test-niveaux.mjs).
@@ -15,22 +16,40 @@ export const PROFILS = {
   technique: { cls: 'p-technique', label: 'Technique', tip: 'Freinages forts et relances rapides : la courbe d’accélération se travaille.' },
   rollercoaster: { cls: 'p-rollercoaster', label: 'Rollercoaster', tip: 'Verticalité extrême : murs, boucles et chutes.' },
   acrobatique: { cls: 'p-acrobatique', label: 'Acrobatique', tip: 'Sauts et réceptions : l’élan décide de tout.' },
+  atelier: { cls: 'p-atelier', label: 'Mécanisme', tip: 'Un mécanisme à apprivoiser : obstacles et pièces mobiles, un par un. Le même vocabulaire que dans l’éditeur.' },
 };
 
-// 0.9 : un chapitre par thème, dans l'ordre de THEME_ORDER (tracks.js).
-export const CHAPTERS = [
-  { name: 'Désert crépuscule', decor: 'desert', desc: 'Sprint, speedway, tremplins, épingles et grand huit : tous les profils de circuits, avec un wall-ride dès le premier.' },
-  { name: 'Jungle néon', decor: 'jungle', desc: 'Rampe de lancement, tube, rebonds de champignons et slalom en moto : la jungle au grand complet.' },
-  { name: 'Archipel tropical', decor: 'isles', desc: 'Descente en moto, slalom en bateau et décollage en deltaplane autour du phare.' },
-  { name: 'Ville futuriste', decor: 'city', desc: 'Tapis roulant express, boucles, métro aérien, toits et lift hill : la ville monte en puissance.' },
-  { name: 'Nuit polaire', decor: 'polar', desc: 'Départ sur la glace, rebonds en terrasses, toboggan aimanté, hélices et poudreuse.' },
-  { name: 'Volcan', decor: 'volcano', desc: 'Collines de braises, plaque de dérive, cheminée verticale, caldeira à deux tours et éruptions.' },
-  { name: 'Station orbitale', decor: 'orbit', desc: 'Tube d’amarrage, basse gravité, moto, grand anneau à trois tours et apesanteur.' },
-  { name: 'Fonds marins', decor: 'reef', desc: 'Contre-courants, gravité lourde, pont de verre et plongée vers les abysses.' },
-  { name: 'Usine mécanique', decor: 'factory', desc: 'Moteur coupé, bifurcation, pistons, marteau et ralentisseurs : l’usine ne pardonne rien.' },
-  { name: 'Ville dans les nuages', decor: 'sky', desc: 'Vent de travers, îles sans bordures, gravité réduite, pont des vents et départ en deltaplane.' },
-  { name: 'Canyon de cristal', decor: 'caves', desc: 'Volant inversé, vrilles, inversions de gravité, plafonds et verre fragile.' },
-];
+// Un chapitre par décor, dans l'ordre de CAREER_ORDER (themes.js) ; le nom du chapitre est celui du décor.
+const CHAPTER_DESC = {
+  desert: 'Sprint, speedway, tremplins, épingles et grand huit : tous les profils de circuits, avec un wall-ride dès le premier.',
+  jungle: 'Rampe de lancement, tube, rebonds de champignons et slalom en moto : la jungle au grand complet.',
+  isles: 'Descente en moto, slalom en bateau et décollage en deltaplane autour du phare.',
+  city: 'Tapis roulant express, boucles, métro aérien, toits et lift hill : la ville monte en puissance.',
+  polar: 'Départ sur la glace, rebonds en terrasses, toboggan aimanté, hélices et poudreuse.',
+  volcano: 'Collines de braises, plaque de dérive, cheminée verticale, caldeira à deux tours et éruptions.',
+  orbit: 'Tube d’amarrage, basse gravité, moto, grand anneau à trois tours et apesanteur.',
+  reef: 'Contre-courants, gravité lourde, pont de verre et plongée vers les abysses.',
+  factory: 'Moteur coupé, bifurcation, pistons, marteau et ralentisseurs : l’usine ne pardonne rien.',
+  sky: 'Vent de travers, îles sans bordures, gravité réduite, pont des vents et départ en deltaplane.',
+  caves: 'Volant inversé, vrilles, inversions de gravité, plafonds et verre fragile.',
+  atelier: 'Piques, balancier, marteau, balayeur, ascenseur, glissière : chaque mécanisme, un par un. Les mêmes outils que dans l’éditeur.',
+};
+// Chapitre BONUS : il vient en dernier de la liste mais s'ouvre avec 4 médailles dans un chapitre précis (ici le premier), pas dans le précédent ; il ne fait pas partie de l'enchaînement
+// « circuit suivant » de la carrière. (Rien ne bouge pour qui a déjà progressé : les circuits sont repérés par leur clé, et l'enchaînement des onze chapitres d'origine est intact.)
+const BONUS = { atelier: 'desert' };
+export const CHAPTERS = CAREER_ORDER.map((decor) => ({
+  name: DECORS[decor].label, decor, desc: CHAPTER_DESC[decor],
+  ...(BONUS[decor] ? { bonus: true, after: CAREER_ORDER.indexOf(BONUS[decor]) } : {}),
+}));
+// Chapitre à réussir (4 médailles) pour ouvrir le chapitre ch : le précédent, sauf chapitre bonus.
+export const prerequisiteOf = (ch) => (CHAPTERS[ch] && CHAPTERS[ch].after != null ? CHAPTERS[ch].after : ch - 1);
+// « Circuit suivant » après le circuit i : le suivant de la liste, sauf en changeant de chapitre vers un chapitre bonus (ou en en sortant).
+export function nextBuiltinIndex(i, total) {
+  const n = i + 1;
+  if (n >= total) return null;
+  const a = Math.floor(i / CHAPTER_SIZE), b = Math.floor(n / CHAPTER_SIZE);
+  return a !== b && ((CHAPTERS[b] && CHAPTERS[b].bonus) || (CHAPTERS[a] && CHAPTERS[a].bonus)) ? null : n;
+}
 
 // Objectifs bonus.
 export const GOALS = {
@@ -83,13 +102,13 @@ export function completeGoal(key) {
   return GOAL_COINS;
 }
 
-export const chapterOf = (i) => Math.floor(i / CHAPTER_SIZE);
 
 // medalOf(i) -> médaille du joueur sur le circuit i (ou null).
 export function chapterUnlocked(ch, medalOf, total) {
   if (ch <= 0 || profile().eggs?.unlockAll) return true;
+  const from = prerequisiteOf(ch);
   let n = 0;
-  for (let i = (ch - 1) * CHAPTER_SIZE; i < Math.min(total, ch * CHAPTER_SIZE); i++) if (medalOf(i)) n++;
+  for (let i = from * CHAPTER_SIZE; i < Math.min(total, (from + 1) * CHAPTER_SIZE); i++) if (medalOf(i)) n++;
   return n >= UNLOCK_MEDALS;
 }
 

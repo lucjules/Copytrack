@@ -2,8 +2,8 @@
 // Le jeu est 100 % statique (aucun serveur) : le « code joueur » est la sauvegarde
 // elle-même, compressée, à copier / coller ou à télécharger sous forme de fichier.
 import { getJSON, setJSON, dumpAll, restoreAll } from './storage.js';
-import { DEFAULT_LOADOUT, itemCost, sanitizeLoadout, itemsOf } from './cosmetics.js';
-import { b64encode, b64decode, hashString } from './track.js';
+import { DEFAULT_LOADOUT, itemCost, sanitizeLoadout, itemsOf, exclusiveOf } from './cosmetics.js';
+import { hashString } from './track.js';
 
 const ID_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -44,7 +44,7 @@ export function reloadProfile() {
   return profile();
 }
 
-export const owns = (cat, id) => itemCost(cat, id) === 0 || !!profile().owned[cat + ':' + id];
+export const owns = (cat, id) => (itemCost(cat, id) === 0 && !exclusiveOf(cat, id)) || !!profile().owned[cat + ':' + id];
 
 export function missingItems(loadout) {
   return itemsOf(loadout).filter(([c, id]) => !owns(c, id));
@@ -58,6 +58,7 @@ export function buy(items) {
   const p = profile();
   const cost = totalCost(items);
   if (cost > p.coins) return false;
+  if (items.some(([c, id]) => exclusiveOf(c, id))) return false;       // un exclusif ne s'achète jamais
   p.coins -= cost;
   for (const [c, id] of items) p.owned[c + ':' + id] = 1;
   saveProfile();
@@ -193,5 +194,4 @@ export function applySave(obj, mode = 'replace') {
   return reloadProfile();
 }
 
-export { b64encode, b64decode };
 

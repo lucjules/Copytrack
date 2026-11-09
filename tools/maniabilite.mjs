@@ -6,8 +6,9 @@
 //  2. un pilote HUMAIN imparfait sur les vrais circuits : le pilote automatique, mais avec un temps de réaction (il agit sur ce qu'il voyait
 //     il y a ~0,15 s), un volant qui tremble et un jugement approximatif des freinages. On compte les contacts avec les bordures par minute :
 //     c'est la mesure de « je me cogne toutes les 2 secondes ».
-import { CarPhysics, CAR } from '../js/physics.js';
-import { Track, scriptTrack } from '../js/track.js';
+import { CarPhysics } from '../js/physics.js';
+import { CAR } from '../js/physics/specs.js';
+import { scriptTrack } from '../js/track.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
 import { DT, CELL, ROAD_HALF } from '../js/constants.js';
 import { runTrack } from './lab.mjs';
@@ -32,7 +33,7 @@ function bicycle(speed, script, T = 4) {
     const vf = wx * fx + wz * fz, vr = wx * rx + wz * rz;
     const r = ph._tires(Math.max(vf, 1), vr, w, 0, 1, DT);
     w = r.w;
-    let nvx = fx * r.vx + rx * r.vy, nvz = fz * r.vx + rz * r.vy;
+    const nvx = fx * r.vx + rx * r.vy, nvz = fz * r.vx + rz * r.vy;
     const k = speed / Math.hypot(nvx, nvz);                                                 // le moteur tient la vitesse
     wx = nvx * k; wz = nvz * k;
     yaw += w * DT;
@@ -85,7 +86,8 @@ export function pilotHumain({ reaction = 0.1, tremblement = 0.18, jugement = 0.1
   const rnd = () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
   const gauss = () => Math.sqrt(-2 * Math.log(rnd() + 1e-9)) * Math.cos(2 * Math.PI * rnd());
   const delayN = Math.max(0, Math.round(reaction / DT)), buf = [];
-  let noise = 0, bias = 1 + jugement * gauss() * 0.5;
+  let noise = 0;
+  const bias = 1 + jugement * gauss() * 0.5;
   return {
     control(phys, bot) {
       const c = bot.control(phys);
@@ -102,7 +104,7 @@ export function pilotHumain({ reaction = 0.1, tremblement = 0.18, jugement = 0.1
 }
 
 export function mesureHumain(def, opts = {}, graines = [1, 2, 3]) {
-  let t = 0, contacts = 0, durs = 0, fini = 0, durs2 = 0;
+  let t = 0, contacts = 0, durs = 0, fini = 0;
   for (const g of graines) {
     const S = runTrack(buildBuiltin(def), { driver: pilotHumain({ ...opts, graine: g * 7919 }) });
     contacts += S.contacts; durs += S.time; if (S.ok && S.respawns === 0) fini++; t++;

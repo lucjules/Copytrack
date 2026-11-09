@@ -2,11 +2,8 @@
 import assert from 'node:assert/strict';
 import * as THREE from '../js/vendor/three.module.min.js';
 import { CamFlip, FLIP_DURATION } from '../js/camflip.js';
+import { test, finish } from './harness.mjs';
 
-let failures = 0;
-function test(name, fn) {
-  try { fn(); console.log('  ok   ' + name); } catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + e.message); }
-}
 const DT = 1 / 60;
 const view = (tiltDeg) => new THREE.Vector3(0, -Math.sin(tiltDeg * Math.PI / 180), -Math.cos(tiltDeg * Math.PI / 180));
 
@@ -62,5 +59,4 @@ test('visée presque verticale : pas de NaN', () => {
   for (let i = 0; i < 40; i++) { f.update(DT, -1, axis, up); assert.ok(Number.isFinite(up.x + up.y + up.z)); }
 });
 
-if (failures) { console.log(`\n${failures} test(s) en échec`); process.exit(1); }
-console.log('\nTous les tests de caméra passent.');
+await finish('Tous les tests de caméra passent.');

@@ -114,6 +114,16 @@ export const DEFAULT_SETTINGS = {
   ghostGold: true,
   ghostImported: true,
   onlineScores: true,
+  ui: {},                 // thème et disposition de l'interface (uitheme.js)
+  hudProfile: 'classic',  // profil du HUD : classic | competitive | training | minimal (hudProfile.js)
+  training: null,         // HUD d'entraînement : { ref, w } (hudProfile.js : sanitizeTraining) ; null = réglages par défaut
+  cameras: [],            // caméras de course personnalisées (camprefs.js)
+  feel: 1,                // sensations de course : 0 (aucun effet ajouté) à 1,5 ; voir feel.js
+  editorGuided: null,     // éditeur en mode guidé (l'essentiel) : null = non (joueur qui connaît déjà l'éditeur), true = oui (voir editor/palette.js)
+  telemetry: null,        // statistiques anonymes (voir telemetry.js) : null = pas encore demandé, true = accepté, false = refusé
+  aids: {},               // aides à la conduite (aids.js) : { autoGas, brakeAssist, steerAssist, antiSpin, smoothSteer } ; une course aidée est classée « assisté »
+  steerCurve: 1,          // réponse du volant analogique (manette, pouce) : 1 linéaire à 2 très progressive (aids.js)
+  reduceMotion: 'auto',   // animations : 'auto' (réglage du système), 'on' (réduites), 'off' (normales) ; voir a11y.js
 };
 
 export function loadSettings() {
@@ -157,7 +167,7 @@ export function clearRecords() {
   for (const k of [...memRec.keys()]) if (k.startsWith(PREFIX)) memRec.delete(k);
   try {
     Object.keys(localStorage)
-      .filter((k) => k.startsWith(PREFIX + 'rec'))
+      .filter((k) => k.startsWith(PREFIX + 'rec') || k.startsWith(PREFIX + RUNS))
       .forEach((k) => localStorage.removeItem(k));
   } catch { /* stockage indisponible */ }
   // Pierre tombale : sans elle, la synchronisation du compte ramènerait les records effacés depuis le cloud.
@@ -184,7 +194,7 @@ export function saveRecord(trackKey, rec) {
   const tiers = [rec, { ...rec, ghost: null }, slim(rec)];
   const tryWrite = () => tiers.some((t) => write(REC + trackKey, t));
   if (tryWrite()) return true;
-  let keys = [];
+  let keys;
   try { keys = Object.keys(localStorage).filter((k) => k.startsWith(PREFIX + REC) && k !== PREFIX + REC + trackKey); } catch { return false; }
   const others = keys.map((k) => { try { return { k, v: JSON.parse(localStorage.getItem(k)) }; } catch { return null; } })
     .filter((o) => o && o.v && (o.v.ghost || o.v.inputs)).sort((a, b) => (a.v.date || 0) - (b.v.date || 0));
@@ -193,6 +203,26 @@ export function saveRecord(trackKey, rec) {
     if (tryWrite()) return true;
   }
   return false;
+}
+
+// ---- Dernières courses d'un circuit (Race Hub, onglet Personnel) ---------------------------------------------------------------------------
+// « runs.<clé> » : les RUNS_MAX dernières courses terminées, de la plus récente à la plus ancienne : { time, date } (ni fantôme ni commandes :
+// le record garde les siennes). Synchronisé avec le compte (cloudsave.js : fusion par date).
+const RUNS = 'runs.';
+export const RUNS_MAX = 10;
+export function cleanRuns(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  return list.filter((r) => r && Number.isFinite(+r.time) && +r.time > 0 && Number.isFinite(+r.date))
+    .map((r) => ({ time: +r.time, date: +r.date }))
+    .sort((a, b) => b.date - a.date)
+    .filter((r) => { const k = r.date + ':' + r.time; if (seen.has(k)) return false; seen.add(k); return true; })
+    .slice(0, RUNS_MAX);
+}
+export function listRuns(trackKey) { return cleanRuns(read(RUNS + trackKey, [])); }
+export function pushRun(trackKey, run) {
+  if (!trackKey) return false;
+  return write(RUNS + trackKey, cleanRuns([{ time: run.time, date: run.date || Date.now() }, ...listRuns(trackKey)]));
 }
 
 // ---- Circuits personnels ---------------------------------------------------
@@ -209,6 +239,53 @@ export function saveMyTrack(entry) {
   write('tracks', list);
   return entry;
 }
+
+// ---- Prefabs de l'éditeur (bibliothèque locale : jusqu'à PREFAB_MAX ; elle ne se synchronise pas avec le compte, le partage se fait par le code « SHP1: ») ----
+export const PREFAB_MAX = 40;
+export function listPrefabs() {
+  const l = read('prefabs', []);
+  return Array.isArray(l) ? l.filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string' && typeof p.code === 'string' && p.code.startsWith('SHP1:')).slice(0, PREFAB_MAX) : [];
+}
+export function savePrefab({ id, name, code }) {
+  const entry = { id: String(id).slice(0, 30), name: String(name).slice(0, 40) || 'Prefab', code: String(code), updated: Date.now() };
+  const list = listPrefabs().filter((p) => p.id !== entry.id);
+  list.unshift(entry);
+  write('prefabs', list.slice(0, PREFAB_MAX));
+  return entry;
+}
+export function deletePrefab(id) {
+  write('prefabs', listPrefabs().filter((p) => p.id !== id));
+}
+
+// ---- Pièces décoratives perso (bibliothèque locale, customDeco.js) : jusqu'à CDECO_MAX ; le partage se fait par le code « SHD1: » ----
+export const CDECO_MAX = 30;
+export function listCustomDecos() {
+  const l = read('cdecos', []);
+  return Array.isArray(l) ? l.filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string' && Array.isArray(p.parts)).slice(0, CDECO_MAX) : [];
+}
+export function saveCustomDeco({ id, name, parts }) {
+  const entry = { id: String(id).slice(0, 30), name: String(name).slice(0, 24) || 'Ma pièce', parts, updated: Date.now() };
+  const list = listCustomDecos().filter((p) => p.id !== entry.id);
+  list.unshift(entry);
+  write('cdecos', list.slice(0, CDECO_MAX));
+  return entry;
+}
+export function deleteCustomDeco(id) { write('cdecos', listCustomDecos().filter((p) => p.id !== id)); }
+
+// ---- Modes de jeu du joueur (rules.js) : jusqu'à MAX_MODES ; ils se partagent par le code « SHM1: » ----
+export const MODES_MAX = 20;
+export function listModes() {
+  const l = read('modes', []);
+  return Array.isArray(l) ? l.filter((m) => m && typeof m.id === 'string' && typeof m.name === 'string' && m.rules && typeof m.rules === 'object').slice(0, MODES_MAX) : [];
+}
+export function saveMode(mode) {
+  const entry = { id: String(mode.id).slice(0, 30), name: String(mode.name).slice(0, 24), desc: String(mode.desc || '').slice(0, 100), rules: mode.rules, goal: mode.goal || null, updated: Date.now() };
+  const list = listModes().filter((m) => m.id !== entry.id);
+  list.unshift(entry);
+  write('modes', list.slice(0, MODES_MAX));
+  return entry;
+}
+export function deleteMode(id) { write('modes', listModes().filter((m) => m.id !== id)); }
 
 export function deleteMyTrack(id) {
   write('tracks', listMyTracks().filter((t) => t.id !== id));
@@ -229,30 +306,8 @@ export function setEditorDraft(d) {
   write('draft', d);
 }
 
-// ---- Fantômes : Float32Array <-> base64 -----------------------------------
-export function encodeFloats(arr) {
-  if (!ArrayBuffer.isView(arr)) return '';
-  const bytes = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
-  let bin = '';
-  const CH = 0x8000;
-  for (let i = 0; i < bytes.length; i += CH) {
-    const slice = bytes.subarray(i, Math.min(i + CH, bytes.length));
-    bin += String.fromCharCode.apply(null, slice);
-  }
-  return btoa(bin);
-}
-
-export function decodeFloats(b64) {
-  if (typeof b64 !== 'string' || !b64) return new Float32Array(0);
-  try {
-    const bin = atob(b64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return new Float32Array(bytes.buffer);
-  } catch {
-    return new Float32Array(0);
-  }
-}
+// ---- Fantômes : Float32Array <-> base64 (le codec vit dans ghostFormat.js, partagé avec la fonction serveur) ----
+export { encodeFloats, decodeFloats } from './ghostFormat.js';
 
 export function formatTime(sec, sign = false) {
   if (sec == null || !isFinite(sec)) return '--:--.---';

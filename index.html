@@ -13,8 +13,169 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap" rel="stylesheet">
+  <!-- Police : chargée sans bloquer le premier affichage (texte de secours d'abord, police ensuite : display=swap) -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap"></noscript>
   <link rel="stylesheet" href="css/style.css">
+  <!-- modulepreload:start (généré par tools/gen-sw.mjs : ne pas modifier à la main) -->
+  <link rel="modulepreload" href="js/main.js">
+  <link rel="modulepreload" href="js/vendor/three.module.min.js">
+  <link rel="modulepreload" href="js/scenery.js">
+  <link rel="modulepreload" href="js/trackMesh.js">
+  <link rel="modulepreload" href="js/renderOptions.js">
+  <link rel="modulepreload" href="js/particles.js">
+  <link rel="modulepreload" href="js/input.js">
+  <link rel="modulepreload" href="js/garage.js">
+  <link rel="modulepreload" href="js/cosmetics.js">
+  <link rel="modulepreload" href="js/profile.js">
+  <link rel="modulepreload" href="js/audio.js">
+  <link rel="modulepreload" href="js/ui.js">
+  <link rel="modulepreload" href="js/dom.js">
+  <link rel="modulepreload" href="js/race.js">
+  <link rel="modulepreload" href="js/tracks.js">
+  <link rel="modulepreload" href="js/track.js">
+  <link rel="modulepreload" href="js/version.js">
+  <link rel="modulepreload" href="js/online.js">
+  <link rel="modulepreload" href="js/account.js">
+  <link rel="modulepreload" href="js/welcome.js">
+  <link rel="modulepreload" href="js/i18n/boot.js">
+  <link rel="modulepreload" href="js/trackDescriptor.js">
+  <link rel="modulepreload" href="js/storage.js">
+  <link rel="modulepreload" href="js/telemetry.js">
+  <link rel="modulepreload" href="js/replay.js">
+  <link rel="modulepreload" href="js/quality.js">
+  <link rel="modulepreload" href="js/app/multi.js">
+  <link rel="modulepreload" href="js/app/academy.js">
+  <link rel="modulepreload" href="js/app/competition.js">
+  <link rel="modulepreload" href="js/app/lab.js">
+  <link rel="modulepreload" href="js/app/rewards.js">
+  <link rel="modulepreload" href="js/app/community.js">
+  <link rel="modulepreload" href="js/app/screens.js">
+  <link rel="modulepreload" href="js/app/settings.js">
+  <link rel="modulepreload" href="js/app/profile.js">
+  <link rel="modulepreload" href="js/app/wiring.js">
+  <link rel="modulepreload" href="js/app/editorFlow.js">
+  <link rel="modulepreload" href="js/app/uicustom.js">
+  <link rel="modulepreload" href="js/app/modes.js">
+  <link rel="modulepreload" href="js/app/raceHub.js">
+  <link rel="modulepreload" href="js/app/theater.js">
+  <link rel="modulepreload" href="js/geo.js">
+  <link rel="modulepreload" href="js/constants.js">
+  <link rel="modulepreload" href="js/pieces.js">
+  <link rel="modulepreload" href="js/themes.js">
+  <link rel="modulepreload" href="js/ambiance.js">
+  <link rel="modulepreload" href="js/weather.js">
+  <link rel="modulepreload" href="js/scenery/shared.js">
+  <link rel="modulepreload" href="js/scenery/decor.js">
+  <link rel="modulepreload" href="js/decos.js">
+  <link rel="modulepreload" href="js/decoData.js">
+  <link rel="modulepreload" href="js/obstacles.js">
+  <link rel="modulepreload" href="js/obstacleMesh.js">
+  <link rel="modulepreload" href="js/trackGeometry.js">
+  <link rel="modulepreload" href="js/carModel.js">
+  <link rel="modulepreload" href="js/rewards.js">
+  <link rel="modulepreload" href="js/garage/studio.js">
+  <link rel="modulepreload" href="js/custom.js">
+  <link rel="modulepreload" href="js/music.js">
+  <link rel="modulepreload" href="js/medals.js">
+  <link rel="modulepreload" href="js/hudMessages.js">
+  <link rel="modulepreload" href="js/camflip.js">
+  <link rel="modulepreload" href="js/net/snapshot.js">
+  <link rel="modulepreload" href="js/net/progress.js">
+  <link rel="modulepreload" href="js/feel.js">
+  <link rel="modulepreload" href="js/simulation.js">
+  <link rel="modulepreload" href="js/autopilot.js">
+  <link rel="modulepreload" href="js/skids.js">
+  <link rel="modulepreload" href="js/trail.js">
+  <link rel="modulepreload" href="js/race/shared.js">
+  <link rel="modulepreload" href="js/camprefs.js">
+  <link rel="modulepreload" href="js/logicText.js">
+  <link rel="modulepreload" href="js/i18n.js">
+  <link rel="modulepreload" href="js/race/camera.js">
+  <link rel="modulepreload" href="js/race/ghosts.js">
+  <link rel="modulepreload" href="js/race/net.js">
+  <link rel="modulepreload" href="js/race/finish.js">
+  <link rel="modulepreload" href="js/race/replayMode.js">
+  <link rel="modulepreload" href="js/race/scriptsRun.js">
+  <link rel="modulepreload" href="js/race/training.js">
+  <link rel="modulepreload" href="js/theater/session.js">
+  <link rel="modulepreload" href="js/theater/cameras.js">
+  <link rel="modulepreload" href="js/envFx.js">
+  <link rel="modulepreload" href="js/aids.js">
+  <link rel="modulepreload" href="js/dmath.js">
+  <link rel="modulepreload" href="js/ribbons.js">
+  <link rel="modulepreload" href="js/customDeco.js">
+  <link rel="modulepreload" href="js/scripts.js">
+  <link rel="modulepreload" href="js/track/shared.js">
+  <link rel="modulepreload" href="js/track/surfaces.js">
+  <link rel="modulepreload" href="js/track/edit.js">
+  <link rel="modulepreload" href="js/sim/logic.js">
+  <link rel="modulepreload" href="js/physics/profiles.js">
+  <link rel="modulepreload" href="js/config.js">
+  <link rel="modulepreload" href="js/cloudsave.js">
+  <link rel="modulepreload" href="js/i18n/dom.js">
+  <link rel="modulepreload" href="js/career.js">
+  <link rel="modulepreload" href="js/difficulty.js">
+  <link rel="modulepreload" href="js/variants.js">
+  <link rel="modulepreload" href="js/seasons.js">
+  <link rel="modulepreload" href="js/ghostFormat.js">
+  <link rel="modulepreload" href="js/rules.js">
+  <link rel="modulepreload" href="js/net/room.js">
+  <link rel="modulepreload" href="js/net/championship.js">
+  <link rel="modulepreload" href="js/net/directory.js">
+  <link rel="modulepreload" href="js/net/ice.js">
+  <link rel="modulepreload" href="js/net/resume.js">
+  <link rel="modulepreload" href="js/academy.js">
+  <link rel="modulepreload" href="js/skills.js">
+  <link rel="modulepreload" href="js/analysis/drill.js">
+  <link rel="modulepreload" href="js/progression.js">
+  <link rel="modulepreload" href="js/analysis/lab.js">
+  <link rel="modulepreload" href="js/mutations.js">
+  <link rel="modulepreload" href="js/editorTools.js">
+  <link rel="modulepreload" href="js/ui/leaderboardPanel.js">
+  <link rel="modulepreload" href="js/online/community.js">
+  <link rel="modulepreload" href="js/daily.js">
+  <link rel="modulepreload" href="js/app/shared.js">
+  <link rel="modulepreload" href="js/a11y.js">
+  <link rel="modulepreload" href="js/uitheme.js">
+  <link rel="modulepreload" href="js/hudProfile.js">
+  <link rel="modulepreload" href="js/mods.js">
+  <link rel="modulepreload" href="js/favorites.js">
+  <link rel="modulepreload" href="js/ui/trackMap.js">
+  <link rel="modulepreload" href="js/analysis/trace.js">
+  <link rel="modulepreload" href="js/analysis/reference.js">
+  <link rel="modulepreload" href="js/analysis/coach.js">
+  <link rel="modulepreload" href="js/decoPack.js">
+  <link rel="modulepreload" href="js/decoPrimitives.js">
+  <link rel="modulepreload" href="js/customDecoBuild.js">
+  <link rel="modulepreload" href="js/decoPackData.js">
+  <link rel="modulepreload" href="js/customCar.js">
+  <link rel="modulepreload" href="js/AudioEngine.js">
+  <link rel="modulepreload" href="js/physics.js">
+  <link rel="modulepreload" href="js/raceLogic.js">
+  <link rel="modulepreload" href="js/physics/specs.js">
+  <link rel="modulepreload" href="js/mathutil.js">
+  <link rel="modulepreload" href="js/physics/ribbon.js">
+  <link rel="modulepreload" href="js/remoteCar.js">
+  <link rel="modulepreload" href="js/net/collide.js">
+  <link rel="modulepreload" href="js/videoExport.js">
+  <link rel="modulepreload" href="js/analysis/sectors.js">
+  <link rel="modulepreload" href="js/analysis/live.js">
+  <link rel="modulepreload" href="js/ui/traceChart.js">
+  <link rel="modulepreload" href="js/theater/panel.js">
+  <link rel="modulepreload" href="js/rulesCore.js">
+  <link rel="modulepreload" href="js/net/signaling.js">
+  <link rel="modulepreload" href="js/net/transport.js">
+  <link rel="modulepreload" href="js/analysis/events.js">
+  <link rel="modulepreload" href="js/sim/params.js">
+  <link rel="modulepreload" href="js/sim/env.js">
+  <link rel="modulepreload" href="js/physics/vehicles/moto2.js">
+  <link rel="modulepreload" href="js/physics/vehicles/boat2.js">
+  <link rel="modulepreload" href="js/physics/vehicles/glider2.js">
+  <link rel="modulepreload" href="js/physics/walls.js">
+  <link rel="modulepreload" href="js/physics/obstacles.js">
+  <link rel="modulepreload" href="js/net/interp.js">
+  <!-- modulepreload:end -->
 </head>
 <body>
   <canvas id="gl"></canvas>
@@ -27,6 +188,10 @@
   <!-- Écran d'accueil : pseudo obligatoire (invité ou compte) avant le menu principal -->
   <section id="welcome" class="welcome hidden" role="dialog" aria-modal="true" aria-labelledby="wl-title">
     <div class="welcome-card">
+      <div class="wl-lang" role="group" aria-label="Langue">
+        <button type="button" data-lang="fr" aria-pressed="true" lang="fr">Français</button>
+        <button type="button" data-lang="en" aria-pressed="false" lang="en">English</button>
+      </div>
       <div class="logo">COPY<span>TRACK</span></div>
       <h2 id="wl-title">Qui joue ?</h2>
       <div class="wl-tabs" role="tablist" aria-label="Mode de connexion">
@@ -58,10 +223,14 @@
       <h1 class="logo">COPY<span>TRACK</span></h1>
       <p class="tagline">Course contre-la-montre low-poly</p>
       <nav class="menu-buttons">
-        <button data-action="play" class="btn big primary">Carrière</button>
+        <button data-action="quick" class="btn big primary" title="Le prochain circuit de la carrière sans médaille, sinon le défi du jour">Course rapide <small>un clic, c’est parti</small></button>
+        <button data-action="play" class="btn big">Carrière</button>
         <button data-action="daily" class="btn big">Défi du jour <small id="daily-best"></small></button>
+        <button data-action="academy" class="btn big">Académie <small>6 leçons guidées</small></button>
         <button data-action="community" class="btn big">Communauté <small>circuits en ligne</small></button>
+        <button data-action="competition" class="btn big">Compétition <small>duels entre amis, tournois</small></button>
         <button data-action="editor" class="btn big">Éditeur de circuits</button>
+        <button data-action="modes" class="btn big">Modes <small>règles, défis et paquets</small></button>
         <button data-action="garage" class="btn big">Garage <small>personnalisation</small></button>
         <button data-action="mytracks" class="btn big">Mes circuits</button>
         <button data-action="import" class="btn big">Importer un code</button>
@@ -78,6 +247,35 @@
       <h2>Circuits</h2>
     </header>
     <div id="track-list"></div>
+  </section>
+
+  <!-- Race Hub : la fiche d'un circuit avant de courir (js/app/raceHub.js) -->
+  <section id="race-hub" class="screen hidden" aria-labelledby="hub-name">
+    <header class="screen-head">
+      <button class="btn" data-action="hub-back">← Retour</button>
+      <div class="hub-title"><h2 id="hub-name"></h2><div class="hub-sub" id="hub-sub"></div></div>
+      <button class="btn hidden" id="hub-fav" data-action="hub-fav" aria-pressed="false">☆ Favori</button>
+    </header>
+    <div class="hub">
+      <div class="hub-main">
+        <div class="hub-map-wrap">
+          <canvas id="hub-map" tabindex="0" aria-label="Carte du circuit : molette ou pincement pour zoomer, glisser pour déplacer, double clic pour tout voir"></canvas>
+          <div class="hub-map-tools">
+            <button class="btn icon" data-action="hub-zoom-in" title="Zoomer (+)" aria-label="Zoomer">+</button>
+            <button class="btn icon" data-action="hub-zoom-out" title="Dézoomer (−)" aria-label="Dézoomer">−</button>
+            <button class="btn icon" data-action="hub-zoom-fit" title="Tout le circuit (0)" aria-label="Tout le circuit">⤢</button>
+          </div>
+        </div>
+        <ul class="hub-legend" id="hub-legend"></ul>
+        <div class="hub-facts" id="hub-facts"></div>
+      </div>
+      <aside class="hub-side">
+        <div class="hub-panel hub-launch" id="hub-launch"></div>
+        <div class="hub-panel" id="hub-board"></div>
+        <div class="hub-panel hub-records" id="hub-records"></div>
+        <div class="hub-panel hub-comments hidden" id="hub-comments"></div>
+      </aside>
+    </div>
   </section>
 
   <!-- Mes circuits -->
@@ -100,18 +298,22 @@
         <button class="tab on" data-sort="recent">Récents</button>
         <button class="tab" data-sort="popular">Populaires</button>
         <button class="tab" data-sort="played">Plus joués</button>
+        <button class="tab" data-sort="trending" title="Les circuits où le plus de pilotes différents ont couru ces 7 derniers jours">🔥 Cette semaine</button>
+        <button class="tab" data-sort="followed" title="Les circuits des auteurs que tu suis">⭐ Abonnements</button>
         <button class="tab" data-sort="mine">Mes publications</button>
+        <button class="tab" data-sort="picks" title="Les circuits choisis par les modérateurs">🏅 Sélection</button>
+        <button class="tab" data-sort="foryou" title="Les circuits aimés par les pilotes qui aiment les mêmes circuits que toi">✨ Pour toi</button>
+        <button class="tab" data-sort="playlists" title="Des listes de circuits à enchaîner">🎵 Playlists</button>
       </div>
+      <button class="btn" id="comm-random" title="Un circuit au hasard, de préférence un que tu n’as jamais joué">🎲 Au hasard</button>
       <input id="comm-search" class="comm-search" type="search" placeholder="Rechercher un circuit…" maxlength="40" aria-label="Rechercher un circuit">
     </header>
+    <div id="comm-featured" class="comm-featured hidden"></div>
     <div id="comm-status" class="comm-status"></div>
     <div id="comm-list" class="card-grid"></div>
     <div class="comm-more"><button class="btn hidden" id="comm-more">Voir plus</button></div>
   </section>
 
-  <!-- Options -->
-
-  <!-- Profil -->
   <!-- Profil : compte, sauvegardes, options, commandes -->
   <section id="profile" class="screen hidden">
     <header class="screen-head">
@@ -128,6 +330,7 @@
     <div class="prof-panel hidden" data-ppanel="saves"><div class="panel form" id="saves-body"></div></div>
     <div class="prof-panel hidden" data-ppanel="options">
       <div class="panel form">
+      <label><span>Langue</span><select id="opt-lang" data-i18n="off"></select></label>
       <h3 class="opt-h">Son</h3>
       <label><span>Volume des effets</span><input type="range" id="opt-volume" min="0" max="1" step="0.05"></label>
       <label><span>Volume de la musique</span><input type="range" id="opt-music" min="0" max="1" step="0.05"></label>
@@ -149,8 +352,10 @@
       <label><span>Champ de vision <output id="opt-fov-v"></output></span><input type="range" id="opt-fov" min="-10" max="20" step="1"></label>
       <label><span>Effet de vitesse (au-delà de 220 km/h)</span><input type="checkbox" id="opt-speedfx"></label>
       <h3 class="opt-h">Accessibilité</h3>
+      <label title="Lignes de vitesse graduées, coup de champ de vision au turbo, tassement à la réception, aspiration derrière une voiture, vibrations de manette graduées, bruit de croisement. Aucun effet sur la course."><span>Sensations de course <output id="opt-feel-v"></output></span><input type="range" id="opt-feel" min="0" max="1.5" step="0.25"></label>
       <label><span>Tremblements de caméra <output id="opt-shake-v"></output></span><input type="range" id="opt-shake" min="0" max="1" step="0.25"></label>
       <label><span>Couleurs adaptées (daltonisme)</span><input type="checkbox" id="opt-cb"></label>
+      <label title="Coupe les transitions des écrans et des fenêtres, les tremblements et les effets de caméra. « Système » suit le réglage de l'appareil."><span>Réduire les animations</span><select id="opt-motion"><option value="auto">Système</option><option value="on">Oui</option><option value="off">Non</option></select></label>
       <label><span>Taille de l'interface <output id="opt-ui-v"></output></span><input type="range" id="opt-ui" min="0.85" max="1.3" step="0.05"></label>
       <div class="opt-row"><span>Revoir le tutoriel</span><button class="btn" data-action="tutorial">Tutoriel</button></div>
       <h3 class="opt-h">Jeu</h3>
@@ -158,11 +363,38 @@
       <label><span>Fantôme de la médaille d'or (tant qu'elle n'est pas gagnée)</span><input type="checkbox" id="opt-ghostgold"></label>
       <label><span>Fantôme importé (code d'un ami)</span><input type="checkbox" id="opt-ghostimp"></label>
       <label><span>Envoyer mes records aux classements en ligne</span><input type="checkbox" id="opt-onlinescores"></label>
+      <label title="L'éditeur n'affiche que l'essentiel (droite et pentes, virages, départ, arrivée, checkpoint) pour commencer."><span>Éditeur guidé (l'essentiel seulement)</span><input type="checkbox" id="opt-editor-guided"></label>
+      <label title="Temps, abandons et essais par circuit, sans nom ni compte : ils servent à régler la difficulté et les médailles."><span>Statistiques de jeu anonymes (aide à équilibrer les circuits)</span><input type="checkbox" id="opt-telemetry"></label>
+      <h3 class="opt-h">Personnalisation</h3>
+      <label><span>Thème de l'interface</span><select id="opt-ui-theme"></select></label>
+      <label><span>Couleur d'accent</span><span class="opt-pick"><input type="color" id="opt-ui-accent"><input type="color" id="opt-ui-accent2" title="Deuxième couleur"><button class="btn small" type="button" id="opt-ui-accent-reset">Défaut</button></span></label>
+      <label><span>Opacité des panneaux <output id="opt-ui-panel-v"></output></span><input type="range" id="opt-ui-panel" min="0.3" max="1" step="0.05"></label>
+      <label><span>Arrondi des boutons <output id="opt-ui-radius-v"></output></span><input type="range" id="opt-ui-radius" min="0" max="28" step="1"></label>
+      <label><span>Police</span><select id="opt-ui-font"></select></label>
+      <label><span>Compteur de vitesse</span><select id="opt-ui-speedo"></select></label>
+      <label><span>Taille du chrono</span><select id="opt-ui-timer"></select></label>
+      <label><span>Taille du HUD <output id="opt-ui-hud-v"></output></span><input type="range" id="opt-ui-hud" min="0.7" max="1.5" step="0.05"></label>
+      <label title="Classique : tout ; Compétitif : l'essentiel pour la course ; Entraînement : les outils d'analyse en direct ; Minimaliste : chrono et vitesse"><span>Profil du HUD</span><select id="opt-hud-profile"></select></label>
+      <div id="opt-train-box" class="opt-train">
+        <label><span>Entraînement : référence</span><select id="opt-train-ref"></select></label>
+        <div class="opt-row"><span>Entraînement : outils affichés</span><span class="opt-hide" id="opt-train-w"></span></div>
+      </div>
+      <div class="opt-row"><span>Cacher des éléments du HUD</span><span class="opt-hide" id="opt-ui-hide"></span></div>
+      <div class="opt-row"><span>Place des éléments du HUD</span><button class="btn" type="button" data-action="hud-editor">Disposer le HUD</button></div>
+      <div class="opt-row"><span>Caméras de course</span><button class="btn" type="button" data-action="cameras">Mes caméras</button></div>
+      <div class="opt-row"><span>Interface par défaut</span><button class="btn subtle" type="button" data-action="ui-reset">Réinitialiser</button></div>
       <label><span>Nom du pilote</span><input type="text" id="opt-name" maxlength="20"></label>
       <label><span>Commandes tactiles</span>
         <select id="opt-touch"><option value="buttons">Boutons ◀ ▶</option><option value="drag">Glisser le pouce à gauche</option></select>
       </label>
       <label><span>Vibrations (manette / téléphone)</span><input type="checkbox" id="opt-haptics"></label>
+      <label title="Manette et pouce : une réponse progressive rend les petits coups de volant plus fins (le clavier ne change pas)"><span>Réponse du volant <output id="opt-steercurve-v"></output></span><input type="range" id="opt-steercurve" min="1" max="2" step="0.25"></label>
+      <h4 class="opt-h">Aides à la conduite <small>(catégorie « assisté », sans médailles)</small></h4>
+      <label title="Les gaz restent ouverts tant que tu ne freines pas"><span>Accélération automatique</span><input type="checkbox" id="opt-aid-autoGas"></label>
+      <label title="Freine quand la ligne de course demande de ralentir (circuits de la carrière et défi du jour)"><span>Freinage assisté</span><input type="checkbox" id="opt-aid-brakeAssist"></label>
+      <label title="Guide le volant vers la ligne de course (circuits de la carrière et défi du jour)"><span>Direction assistée</span><input type="checkbox" id="opt-aid-steerAssist"></label>
+      <label title="Freiner en virage ne fait plus décrocher l'arrière, et le volant se modère quand la voiture glisse"><span>Anti-tête-à-queue</span><input type="checkbox" id="opt-aid-antiSpin"></label>
+      <label title="Lisse les coups de volant du clavier et des boutons"><span>Volant adouci</span><input type="checkbox" id="opt-aid-smoothSteer"></label>
       <div class="opt-row"><span>Plein écran</span><button class="btn" data-action="fullscreen">Activer</button></div>
       <div class="opt-row"><span>Touches du clavier et de la manette</span><button class="btn primary" data-action="controls">Personnaliser les commandes</button></div>
       <button class="btn subtle" data-action="reset-records">Effacer tous les records</button>
@@ -223,10 +455,13 @@
     </div>
     <div class="hud-br">
       <div class="speed-wrap"><div id="hud-speed" class="speed">0</div><div class="speed-unit">km/h</div></div>
+      <div class="speed-bar"><i></i></div>
       <div class="boost-bar"><i id="hud-boost"></i></div>
     </div>
+    <div id="hud-train" class="hud-train hidden"></div>
     <div id="hud-center" class="hud-center"></div>
     <div id="hud-msg" class="hud-msg"></div>
+    <div id="hud-edit-bar" class="hud-edit-bar hidden"><b>Glisse les éléments pour les placer</b><button class="btn small" type="button" data-action="hud-reset">Remettre</button><button class="btn small primary" type="button" data-action="hud-done">Terminé</button></div>
     <div id="hud-hint" class="hud-hint">↑ ↓ ← → · frein en virage : dérapage · R : checkpoint · Entrée : recommencer · C : caméra · Échap : pause</div>
   </div>
 
@@ -236,7 +471,7 @@
       <h2>Pause</h2>
       <button class="btn big primary" data-action="resume">Reprendre</button>
       <button class="btn big" data-action="restart">Recommencer</button>
-      <button class="btn big" data-action="quit" id="pause-quit">Quitter</button>
+      <button class="btn big" data-action="quit">Quitter</button>
     </div>
   </div>
 
@@ -247,9 +482,11 @@
       <h2 id="fin-title">Arrivée !</h2>
       <div id="fin-time" class="fin-time"></div>
       <div id="fin-reward" class="fin-reward"></div>
+      <div id="fin-xp" class="fin-xp hidden"></div>
       <div id="fin-detail" class="fin-detail"></div>
       <div id="fin-goal" class="fin-goal hidden"></div>
       <div id="fin-online" class="fin-online hidden"></div>
+      <div id="fin-coach" class="fin-coach hidden" aria-live="polite"></div>
       <div class="row">
         <button class="btn big primary" data-action="restart">Rejouer <kbd>Entrée</kbd></button>
         <button class="btn big" data-action="next" id="fin-next">Circuit suivant</button>
@@ -259,10 +496,13 @@
         <button class="btn" data-action="watch-replay" id="fin-replay">🎬 Revoir la course</button>
         <button class="btn" data-action="share-ghost" id="fin-ghost">👻 Partager mon fantôme</button>
         <button class="btn" data-action="leaderboard" id="fin-board">🏆 Classement</button>
+        <button class="btn" data-action="race-hub" id="fin-hub">🗺 Fiche du circuit</button>
       </div>
     </div>
   </div>
-  <div id="replay-bar" class="replay-bar hidden"><b>REPLAY</b><span class="rs">▶ ×1</span><span class="rh">Espace : pause · ← → : vitesse · C : caméra · Entrée : recommencer · Échap : quitter</span></div>
+  <div id="theater" class="theater hidden" aria-label="Replay Theater"></div>
+  <div id="theater-panel" class="theater-panel hidden" aria-label="Analyse des courses"></div>
+  <div id="replay-bar" class="replay-bar hidden"><b>REPLAY</b><span class="rs">▶ ×1</span><button class="btn small" id="replay-export" data-action="export-video" title="Enregistrer ce replay en vidéo (WebM, sans son)">🎬 Vidéo</button><span class="rh">Espace : pause · ← → : vitesse · C : caméra · Entrée : recommencer · Échap : quitter</span></div>
 
   <!-- Éditeur -->
   <div id="editor" class="hidden">
@@ -308,7 +548,10 @@
       <div id="ed-level" class="ed-level">Niv. 0</div>
       <button class="btn icon" data-ed="lvl-down" title="Descendre (C / Page↓)">▼</button>
       <button class="btn icon" data-ed="rotate" title="Pivoter (R)">⟳</button>
-      <button class="btn icon" data-ed="levelview" title="Vue par niveau (Z)">◐</button>
+      <button class="btn icon" data-ed="levelview" title="Vue par niveau (Z) : la sélection ne prend alors que ce niveau">◐</button>
+      <button class="btn icon" data-ed="groups" title="Groupes et calques (F4)">▦</button>
+      <button class="btn icon" data-ed="freecam" aria-pressed="false" title="Caméra libre : au ras du sol, approche jusqu’à 3 m (V)">🎥</button>
+      <button class="btn icon" data-ed="logic" title="Logique du circuit (F6)">⚙</button>
       <button class="btn icon" data-ed="help" title="Raccourcis (F1 ou ?)">?</button>
     </div>
   </div>

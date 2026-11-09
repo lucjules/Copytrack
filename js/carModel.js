@@ -2,9 +2,11 @@
 // Tout est visuel : la physique ne dépend d'aucune dimension de ces modèles.
 import * as THREE from './vendor/three.module.min.js';
 import { CATALOG, DEFAULT_LOADOUT, sanitizeLoadout } from './cosmetics.js';
+import { addParts, addLivery } from './customCar.js';
 
-export const CAR_COLORS = ['#ffd23e', '#ff5a5f', '#3ec1ff', '#7cf06b', '#c77dff', '#ff8c42', '#f4f1ea', '#2f3247'];
 const TAU = Math.PI * 2;
+// Couleurs de la LED « pulsation » (créées une fois : pas d'allocation ni d'analyse de texte à chaque image).
+const PULSE_FROM = new THREE.Color('#36e9ff'), PULSE_TO = new THREE.Color('#ff4fd8');
 
 function extrudeProfile(points, width, offsetX = 0) {
   const shape = new THREE.Shape(points.map(([x, y]) => new THREE.Vector2(x, y)));
@@ -128,6 +130,11 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
       sideShape(poly(c));
     }
   }
+
+  // Personnalisation libre (lot 10) : livrée sur les flancs, plaque, pièces posées par le joueur (voiture et deltaplane ; pas la moto ni le bateau).
+  const C = L.custom;
+  const freeLivery = ghost ? null : addLivery(body, C, lowerUp, B, (m) => own.push(m));
+  addParts(body, C.parts, (c, glow) => (glow && !ghost ? basic(c) : mk({ color: c, roughness: 0.5, metalness: 0.1 })));
 
   // Ailerons
   const rear = (B.lower[0][0] * -1) - 0.2;
@@ -497,15 +504,11 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
     },
     setMoto(on, instant = false) { return this.setVehicle(on ? 'moto' : 'car', instant); },
     update(dt, time = 0) {
-      for (const m of leds) {
-        // pulsation / arc-en-ciel
-        void m;
-      }
       if (ledMat) {
         if (ledDef.rainbow) { ledMat.color.setHSL((time * 0.4) % 1, 1, 0.55); ledBar.color.copy(ledMat.color); }
         else if (ledDef.pulse) {
           const k = 0.5 + 0.5 * Math.sin(time * 5);
-          ledMat.color.set('#36e9ff').lerp(new THREE.Color('#ff4fd8'), k); ledBar.color.copy(ledMat.color);
+          ledMat.color.copy(PULSE_FROM).lerp(PULSE_TO, k); ledBar.color.copy(ledMat.color);
         }
         ledMat.opacity = ledDef.pulse ? 0.65 + 0.35 * Math.sin(time * 5) : 0.9;
       }
@@ -516,7 +519,7 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
       const T = Math.min(1, a.t / 0.85);
       const k = T < 0.5 ? 1 - T * 2 : (T - 0.5) * 2;       // 1 -> 0 -> 1
       const e = k * k * (3 - 2 * k);
-      root.rotation.y = T * TAU * 1.5 * (T < 0.5 ? 1 : 1) * (this.isMoto ? 1 : 1);
+      root.rotation.y = T * TAU * 1.5;
       root.scale.set(0.2 + 0.8 * e, 0.45 + 0.55 * e, 1 + (1 - e) * 0.7);
       if (T >= 0.5 && !a.swapped) {
         a.swapped = true; this.vehicle = a.to; show(a.to);
@@ -538,6 +541,7 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
         if (o.isMesh && o.geometry) o.geometry.dispose();
       });
       for (const m of own) m.dispose();
+      if (freeLivery) freeLivery();
       group.removeFromParent();
     },
   };

@@ -11,8 +11,8 @@ export class Music {
     this.kind = null;       // morceau en cours
     this.want = null;       // morceau demandé (lancé dès que l'audio est débloqué)
     this._timer = null;
-    this.src = null;        // lecteur du MP3 de course
-    this.bufs = {};         // MP3 décodés ; null : fichier absent
+    this.src = null;        // lecteur du MP3 du menu
+    this.menuBuf = undefined; // MP3 du menu décodé ; null : fichier absent ; undefined : pas encore cherché
   }
 
   setVolume(v) {
@@ -36,7 +36,7 @@ export class Music {
     this._timer = setTimeout(async () => {
       if (this.want !== kind) return;
       if (kind === 'menu') {
-        const buf = await this._load('menu');
+        const buf = await this._loadMenu();
         if (this.want !== kind) return;
         if (buf) { this._playFile(buf); return; }
       }
@@ -46,15 +46,15 @@ export class Music {
     }, wasPlaying ? 450 : 0);
   }
 
-  // Cherche assets/music-<kind>.mp3 (une seule fois) ; null s'il n'existe pas ou ne se décode pas.
-  async _load(kind) {
-    if (this.bufs[kind] !== undefined) return this.bufs[kind];
+  // Cherche assets/music-menu.mp3 (une seule fois) ; null s'il n'existe pas ou ne se décode pas.
+  async _loadMenu() {
+    if (this.menuBuf !== undefined) return this.menuBuf;
     try {
-      const r = await fetch(`assets/music-${kind}.mp3`);
+      const r = await fetch('assets/music-menu.mp3');
       if (!r.ok) throw new Error(r.status);
-      this.bufs[kind] = await this.audio.ctx.decodeAudioData(await r.arrayBuffer());
-    } catch (e) { this.bufs[kind] = null; }
-    return this.bufs[kind];
+      this.menuBuf = await this.audio.ctx.decodeAudioData(await r.arrayBuffer());
+    } catch { this.menuBuf = null; }
+    return this.menuBuf;
   }
 
   _playFile(buf) {

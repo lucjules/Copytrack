@@ -4,6 +4,7 @@ import { CELL, LEVEL_H, MAX_LEVEL, SURF_PHYS } from './constants.js';
 import { PIECES, forkBranchX, localToWorld, baseY, cpKind } from './pieces.js';
 import { Track } from './track.js';
 import { centerlineWorld } from './ribbons.js';
+import { mapGeometry, fitView, drawTrackMap } from './ui/trackMap.js';
 
 // ---- Pot de peinture : zones VIDES fermées -----------------------------------------------------------------------
 // Algorithme (0.9.2). Une « zone vide » est un ensemble de cases libres, reliées par leurs 4 côtés, au niveau de pose. Elle est
@@ -81,9 +82,9 @@ export function decosInRect(track, r) {
 }
 
 // Copie : coordonnées relatives au coin du rectangle, niveaux relatifs au plus bas.
-export function copyRect(track, r) {
-  const tiles = tilesInRect(track, r);
-  const decos = decosInRect(track, r);
+export function copyRect(track, r, ok = null) {
+  const tiles = tilesInRect(track, r).filter((t) => !ok || ok(t));
+  const decos = decosInRect(track, r).filter((d) => !ok || ok(d));
   if (!tiles.length && !decos.length) return null;
   const baseL = tiles.length ? Math.min(...tiles.map((t) => t.l)) : 0;
   return {
@@ -274,56 +275,19 @@ export function checkTrack(track) {
 }
 
 // ---- Miniature vue de dessus ----------------------------------------------------
+// Cache des miniatures (images en data:URL, de quelques Ko chacune) : borné, une liste de communauté ou de circuits peut en demander des centaines.
+const THUMB_CACHE_MAX = 300;
 const thumbCache = new Map();
 export function thumbnail(track, key, w = 168, h = 104) {
   if (key && thumbCache.has(key)) return thumbCache.get(key);
   if (typeof document === 'undefined') return '';
   const cv = document.createElement('canvas');
   cv.width = w; cv.height = h;
-  const g = cv.getContext('2d');
-  g.fillStyle = '#16122b'; g.fillRect(0, 0, w, h);
-  const b = track.bounds();
-  const sx = (w - 12) / Math.max(1, b.maxX - b.minX), sz = (h - 12) / Math.max(1, b.maxZ - b.minZ);
-  const s = Math.min(sx, sz);
-  const ox = (w - (b.maxX - b.minX) * s) / 2, oz = (h - (b.maxZ - b.minZ) * s) / 2;
-  const X = (x) => ox + (x - b.minX) * s, Z = (z) => oz + (z - b.minZ) * s;
-  const maxL = Math.max(1, ...track.tiles.map((t) => t.l));
-  const sorted = [...track.tiles].sort((a, c) => a.l - c.l);
-  g.lineCap = 'round'; g.lineJoin = 'round';
-  for (const pass of [0, 1]) {
-    for (const t of sorted) {
-      const P = PIECES[t.t];
-      if (P.kind === 'ring') {
-        if (pass) { g.strokeStyle = cpKind(t) ? '#ffbf3c' : '#36e9ff'; g.lineWidth = 1.5; g.beginPath(); g.arc(X((t.x + 0.5) * CELL), Z((t.z + 0.5) * CELL), 3, 0, 7); g.stroke(); }
-        continue;
-      }
-      if (P.kind === 'area') {
-        if (!pass) { g.fillStyle = '#4d5276'; g.fillRect(X(t.x * CELL), Z(t.z * CELL), CELL * s, CELL * s); }
-        continue;
-      }
-      let lines;
-      if (P.kind === 'fork') {
-        const half = P.size * CELL / 2;
-        lines = [0, 1].map((br) => Array.from({ length: 9 }, (_, i) => {
-          const tt = i / 8;
-          const p = localToWorld(t, forkBranchX(P, tt, br), half - 2 * half * tt);
-          return [p.x, 0, p.z];
-        }));
-      } else lines = [centerlineWorld(t, 6)];
-      const k = t.l / maxL;
-      for (const pts of lines) {
-        g.beginPath();
-        pts.forEach((p, i) => (i ? g.lineTo(X(p[0]), Z(p[2])) : g.moveTo(X(p[0]), Z(p[2]))));
-        if (!pass) { g.strokeStyle = "#0b0918"; g.lineWidth = Math.max(5, 18 * s + 2); }
-        else {
-          g.strokeStyle = t.s === 'water' ? '#3fa7ff' : P.special === 'start' ? '#2fd3b5' : P.special === 'finish' ? '#ff4f9a' : cpKind(t) ? '#ffbf3c' : `hsl(${250 - k * 200}, 70%, ${55 + k * 15}%)`;
-          g.lineWidth = Math.max(3.2, 18 * s);
-        }
-        g.stroke();
-      }
-    }
-  }
+  drawTrackMap(cv.getContext('2d'), mapGeometry(track), fitView(track.bounds(), w, h, 6), { style: 'thumb' });      // noyau commun avec la grande carte (ui/trackMap.js)
   const url = cv.toDataURL('image/png');
-  if (key) thumbCache.set(key, url);
+  if (key) {
+    if (thumbCache.size >= THUMB_CACHE_MAX) thumbCache.delete(thumbCache.keys().next().value);       // la plus ancienne
+    thumbCache.set(key, url);
+  }
   return url;
 }

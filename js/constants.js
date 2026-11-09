@@ -1,8 +1,7 @@
-// Dimensions du monde (en mètres).
-// v1.1 : pistes élargies (14 -> 18 m) et cases agrandies (20 -> 24 m).
-// Les circuits étant stockés en positions de grille, tous les anciens
-// circuits sont convertis automatiquement.
-export const VERSION = 'bêta 0.9.14';   // à incrémenter à chaque modification livrée : 0.9.1, 0.9.2, 0.9.3…
+// Dimensions du monde (en mètres) : case de 32 m, route de 24 m de large, niveau de 6,4 m.
+// Les circuits sont stockés en positions de grille et les pièces sont écrites en proportion de la case (voir pieces.js) :
+// un changement d'échelle (la 0.9.11 est passée de 24 à 32 m) agrandit donc tous les circuits sans les convertir. Il impose en revanche de
+// repasser sur chaque valeur « en mètres » écrite en dur ailleurs ; tools/test-scale.mjs en vérifie quelques-unes par homothétie.
 export const CELL = 32;            // taille d'une case de grille
 export const HALF = CELL / 2;
 export const LEVEL_H = 6.4;        // hauteur d'un niveau (pentes identiques à la v1.0)
@@ -21,28 +20,40 @@ export const SURF_PHYS = {
   belt: 200 / 3.6,     // vitesse du tapis roulant à son réglage maximal : ±200 km/h
   spring: 56,          // poussée latérale du ressort à pleine force (m/s)
   bounce: 14,          // vitesse verticale d'un rebond à 100 % (m/s)
-  // 0.9.12 : moteur et gravité calés sur des mesures de la course de référence (lancer arrêté à plat, décélération à vide, vol libre ; trajectoires relevées
-  // à 60 Hz, 1 unité du monde = 1 m). Poussée a = ENGINE_ACCEL − DRIVE_DRAG·v sous les gaz (ajustement sur la distance parcourue, écart 0,12 m), a = −COAST_DRAG·v
-  // à vide, vol libre y'' = −GRAVITY. Murs / wall-ride, freinage et marche arrière : pas mesurables dans ce relevé, donc inchangés.
+  // 0.9.12 : moteur et gravité calés sur des mesures de la course de référence (docs/CALIBRATION-POLYTRACK.md).
   gravity: 16,         // gravité normale (m/s²) (0.9.12 : 25 -> 16, mesurée 15,4 à 16,2 en vol libre)
-  engineAccel: 19.0,   // poussée à l'arrêt (m/s²) (0.9.12 : 11 -> 19,0)
-  driveDrag: 0.080,    // résistance linéaire sous les gaz (1/s) : vitesse asymptotique = engineAccel / driveDrag
-  coastDrag: 0.1065,   // résistance linéaire à vide, gaz et frein relâchés (1/s)
-  maxSpeed: 19.0 / 0.080,           // vitesse asymptotique du moteur (m/s) : 237,5 m/s, jamais atteinte (0 -> 100 km/h en 1,7 s, 200 km/h en 3,4 s)
-  boostSpeed: (19.0 / 0.080) * (112 / 95),   // vitesse visée sous turbo à 100 % (m/s), même rapport qu'avant la 0.9.12
+  engineAccel: 19.0,   // poussée à l'arrêt (m/s²) (0.9.12 : 11 -> 19,0) ; sous les gaz a = engineAccel − driveDrag·v
+  driveDrag: 0.080,    // résistance linéaire sous les gaz (1/s)
+  coastDrag: 0.1065,   // résistance linéaire à vide (1/s) : a = −coastDrag·v
   boostAccel: 10,      // poussée supplémentaire d'un booster à 100 % (m/s²)
   boostTime: 1.2,      // durée d'un booster (s)
+  maxSpeed: 19.0 / 0.080,           // vitesse asymptotique du moteur (m/s), jamais atteinte (0 -> 100 km/h en 1,7 s)
+  boostSpeed: (19.0 / 0.080) * (112 / 95),   // vitesse visée sous turbo à 100 % (m/s)
 };
 
 // Nombre maximal de décorations par circuit.
 export const MAX_DECOS = 500;
 
+// Facteur d'échelle du monde par rapport à la case de 24 m d'origine : les pièces sont écrites en proportion de la case (rayon d'un looping,
+// ouverture d'un virage…), pas en mètres fixes. WORLD_SCALE = 1 reproduit l'ancien monde.
+export const WORLD_SCALE = CELL / 24;
+
 // Looping : rayon et décalage latéral (une demi-case de chaque côté).
-export const LOOP_R = 12 * (CELL / 24);
+export const LOOP_R = 12 * WORLD_SCALE;
 export const LOOP_LANE = HALF;
 
 // Pas de simulation fixe.
 export const DT = 1 / 120;
+
+// Limites partagées par le jeu, les salons multijoueurs et la fonction serveur de vérification (un seul endroit pour les changer).
+export const MAX_RUN_SECONDS = 600;                        // une course dure 10 minutes au plus : au-delà, un enregistrement ou un temps est refusé
+export const MAX_RUN_STEPS = Math.round(MAX_RUN_SECONDS / DT);
+export const MAX_TRACK_CODE_CHARS = 400000;                // taille maximale d'un code de circuit reçu ou transmis
+export const MAX_INPUTS_CHARS = 400000;                    // taille maximale d'un enregistrement de commandes
+export const OFF_TRACK_RESPAWN_S = 0.5;                    // temps passé hors piste avant la réapparition automatique
+
+// Véhicules possibles (le véhicule de départ d'un circuit, les plaques de transformation, les paquets réseau).
+export const VEHICLES = ['car', 'moto', 'boat', 'glider'];
 
 // Directions de grille : 0 = nord (-z), 1 = est (+x), 2 = sud (+z), 3 = ouest (-x).
 export const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
