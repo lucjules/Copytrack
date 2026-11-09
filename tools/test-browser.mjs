@@ -682,6 +682,53 @@ try {
     await waitApp(() => !window.copytrack.ui.modalOpen);
   });
 
+  await test('aucun bouton inaccessible : écrans et fenêtres principaux sur cinq tailles d\'écran (dans l\'écran, ou dans un conteneur qui défile jusqu\'à lui)', async () => {
+    const old = page.viewportSize();
+    const REACH = () => {
+  const vw = innerWidth, vh = innerHeight, bad = [];
+  const root = [...document.querySelectorAll('#modal:not(.hidden), .screen:not(.hidden)')].pop();
+  const scope = document.querySelector('#modal:not(.hidden)') || document.querySelector('.screen:not(.hidden)') || document.body;
+  for (const el of scope.querySelectorAll('button, a[href], input:not([type=hidden]), select, textarea')) {
+    const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden' || el.disabled) continue;
+    let r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
+    if (el.closest('.hidden')) continue;
+    // atteignable : dans l'écran, ou dans un conteneur qui défile et dont le contenu est accessible en défilant (haut >= début du contenu)
+    const inside = r.left >= -2 && r.right <= vw + 2 && r.top >= -2 && r.bottom <= vh + 2;
+    if (inside) continue;
+    let p = el.parentElement, ok = false;
+    while (p && p !== document.body) {
+      const o = getComputedStyle(p); const sy = /(auto|scroll)/.test(o.overflowY), sx = /(auto|scroll)/.test(o.overflowX);
+      if ((sy && p.scrollHeight > p.clientHeight + 1) || (sx && p.scrollWidth > p.clientWidth + 1)) {
+        // l'élément doit pouvoir être amené à l'écran : son décalage dans le conteneur est >= 0
+        const pr = p.getBoundingClientRect();
+        if (r.top >= pr.top - 2 + (-p.scrollTop) - 2 && r.left >= pr.left - 2 - p.scrollLeft - 2 || true) { const offTop = r.top - pr.top + p.scrollTop, offLeft = r.left - pr.left + p.scrollLeft; if (offTop >= -2 && offLeft >= -2) { ok = true; break; } }
+      }
+      p = p.parentElement;
+    }
+    if (!ok) bad.push((el.dataset.action || el.id || el.className || el.tagName).toString().slice(0, 40) + ` @${Math.round(r.left)},${Math.round(r.top)}-${Math.round(r.right)},${Math.round(r.bottom)}`);
+  }
+  return bad.slice(0, 6);
+};
+    const states = [['menu', () => window.copytrack.showMenu('menu')], ['tracks', () => window.copytrack.showScreen('tracks')], ['mytracks', () => window.copytrack.showScreen('mytracks')], ['community', () => window.copytrack.showScreen('community')],
+      ['profil', () => { window.copytrack.profileTab = 'account'; window.copytrack.showScreen('profile'); }], ['options', () => window.copytrack.showScreen('options')], ['commandes', () => window.copytrack.showScreen('controls')],
+      ['académie', () => window.copytrack.academyMenu()], ['compétition', () => window.copytrack.competitionMenu()], ['multijoueur', () => window.copytrack.multiMenu()], ['import', () => window.copytrack.importModal(false)],
+      ['aide', () => window.copytrack.helpModal()], ['tutoriel', () => window.copytrack.tutorial()]];
+    const bad = [];
+    try {
+      for (const [w, h] of [[1280, 720], [1366, 768], [1024, 600], [390, 844], [844, 390]]) {
+        await page.setViewportSize({ width: w, height: h });
+        for (const [n, f] of states) {
+          await app(() => { window.copytrack.ui.closeModal(); window.copytrack.showMenu('menu'); });
+          await page.waitForTimeout(150);
+          await app(f); await page.waitForTimeout(350);
+          const r = await app(REACH);
+          if (r.length) bad.push(`${w}x${h} ${n} : ${r.join(' | ')}`);
+        }
+      }
+    } finally { await app(() => { window.copytrack.ui.closeModal(); window.copytrack.showMenu('menu'); }); await page.setViewportSize(old); }
+    assert.deepEqual(bad, [], 'boutons hors d\'atteinte :\n' + bad.join('\n'));
+  });
+
   await test('fenêtres hautes (académie) sur un écran de 700 px de haut : le titre et le dernier bouton restent atteignables (la fenêtre défile au lieu de déborder)', async () => {
     const old = page.viewportSize();
     await page.setViewportSize({ width: 1280, height: 700 });

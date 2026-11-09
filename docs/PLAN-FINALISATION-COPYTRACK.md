@@ -34,13 +34,13 @@ Règles : ne rien supprimer d'utile, corriger les causes, un test de non-régres
 ### Étape 2 — robustesse et fenêtres hautes (0.9.47)
 - **Défaut corrigé** : fenêtre plus haute que l'écran qui débordait en haut et en bas (titre et boutons inaccessibles) ; `.overlay .panel` défile. Test navigateur, vérifié rouge sans le correctif.
 - **Essais aléatoires, aucun défaut trouvé** : 3 graines × 72 circuits × 40 s d'entrées aléatoires (0 NaN, 0 position aberrante, vitesse < 430 km/h) ; 7 scripts × 60 lancers contre les bords (les seules sorties viennent d'une voiture qui part à reculons de la plateforme de départ, ou de murs pris trop lentement) ; serveur de scores, fusion des sauvegardes, codes de circuit : voir CHANGELOG.
-- Test navigateur : deux courses de vitesse réparées (voir CHANGELOG).
+- Test navigateur : deux courses de vitesse réparées (voir CHANGELOG) ; nouveau test « aucun bouton inaccessible » (13 écrans × 5 tailles), vérifié rouge sans le correctif.
 
 ## Reste à faire (honnêtement)
 - Obstacles mobiles, verre et surfaces : essais ciblés à écrire (les circuits d'atelier, qui en ont, passent le contrat).
 - Éditeur : groupes logiques et scripts, à parcourir au navigateur.
 - Multijoueur : le test navigateur couvre un championnat à deux onglets ; pas d'essai de perte de paquets ni d'hôte parti.
-- Ergonomie : une passe écran par écran sur trois tailles (accueil et fenêtres faits).
+- Ergonomie : l'accessibilité des boutons est testée sur 13 écrans × 5 tailles ; reste la lisibilité (textes qui se chevauchent), à regarder captures en main.
 - Aucun humain n'a rejoué les circuits avec le moteur 0.9.46.
 
 ## Pour reprendre
