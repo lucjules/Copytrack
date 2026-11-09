@@ -34,14 +34,14 @@ export const DRILLS = [
   {
     id: 'freinage', skill: 'freinage', name: 'Freiner tard', decor: 'desert',
     script: 'start B3 S2 R S2 C B3 S2 L S3 finish', zones: [[3, 7], [12, 16]],
-    measure: 'zoneTime', better: 'low', unit: sec, thresholds: [7.0, 6.5, 6.05],   // 0.9.12 : recalés sur le moteur mesuré
+    measure: 'zoneTime', better: 'low', unit: sec, thresholds: [7.05, 6.6, 6.12],   // 0.9.46 : recalés sur le moteur propre (zones de freinage à 50, 60, 80 et 100 % d'adhérence : 7,23 / 6,88 / 6,30 / 5,95 s)
     goals: ['Temps dans les deux zones de freinage : {v} s ou moins'],
     intro: ['Deux lignes droites avec turbo, chacune finie par un virage à angle droit. Ce qui compte : le <b>temps entre l’approche et la sortie</b> de chaque virage.', 'Freine <b>tard et fort</b>, d’un coup, puis relâche le frein avant de tourner : on ne freine pas en tournant.', 'Freiner trop tôt fait perdre du temps ; trop tard, la voiture tape le mur.'],
     tip: 'Freine tard et fort, relâche avant de tourner.',
   },
   {
     id: 'miniturbo', skill: 'derapage', name: 'Mini-turbo renforcé', decor: 'desert',
-    script: 'start S RR S2 finish', zones: [],
+    script: 'start S3 RR S2 finish', zones: [],
     measure: 'turbo', better: 'high', limit: 11.5,
     goals: ['Un mini-turbo', 'Un mini-turbo renforcé (glisse de 1,5 s)', 'Un mini-turbo renforcé, sans choc, arrivée en {t} s ou moins'],
     intro: ['Un seul grand virage, pour apprendre le <b>mini-turbo renforcé</b>.', 'Avant le virage : volant à fond, puis <b>{brake}</b> environ une demi-seconde. L’arrière glisse.', 'Accélère en gardant le volant tourné : la glisse se charge. Au bout d’<b>une seconde et demie</b>, les étincelles changent de couleur ; redresse, et la poussée est plus forte.'],
@@ -49,7 +49,7 @@ export const DRILLS = [
   },
   {
     id: 'receptions', skill: 'vol', name: 'Trois réceptions', decor: 'desert',
-    script: 'start B2 S [crv1] UU G2 DD [cdo1] S C B S [crv1] UU G2 DD [cdo1] S C B S [crv1] UU G2 DD [cdo1] S2 finish', zones: [],
+    script: 'start B2 S [crv1] UU G DD [cdo1] S C B S [crv1] UU G DD [cdo1] S C B S [crv1] UU G DD [cdo1] S2 finish', zones: [],
     measure: 'landings', better: 'high', thresholds: [1, 2, 3],
     goals: ['{v} réception(s) parfaite(s) sur 3'],
     intro: ['Trois tremplins. Ce qui compte : le nombre de <b>réceptions parfaites</b> (étincelles vertes).', 'En l’air, <b>{accelerate}</b> baisse le nez et <b>{brake}</b> le relève : retombe à plat sur la pente.', 'Ne touche à rien si l’assiette est déjà bonne : le tremplin est réglé pour.'],

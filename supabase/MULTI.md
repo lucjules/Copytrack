@@ -90,7 +90,7 @@ aucun vrai salon n'en a autant). *Multijoueur > Salons publics* s'y abonne **san
 Le canal est public : n'importe qui peut y publier une fausse fiche, qui ne mène qu'à « Salle introuvable » (les fiches sont validées, bornées à 40, et seules celles d'une version compatible sont affichées).
 Aucune table, aucun script SQL.
 
-## Boucle de jeu asynchrone (à la Polytrack)
+## Boucle de jeu asynchrone
 
 - **Personne n'attend personne.** Chacun a son propre chrono et fait ses essais à son rythme sur le même circuit. Un joueur qui arrive
   quand la course est déjà lancée démarre tout de suite (décompte de 1,5 s).

@@ -20,15 +20,16 @@ export const SURF_PHYS = {
   belt: 200 / 3.6,     // vitesse du tapis roulant à son réglage maximal : ±200 km/h
   spring: 56,          // poussée latérale du ressort à pleine force (m/s)
   bounce: 14,          // vitesse verticale d'un rebond à 100 % (m/s)
-  // 0.9.12 : moteur et gravité calés sur des mesures de la course de référence (docs/CALIBRATION-POLYTRACK.md).
-  gravity: 16,         // gravité normale (m/s²) (0.9.12 : 25 -> 16, mesurée 15,4 à 16,2 en vol libre)
-  engineAccel: 19.0,   // poussée à l'arrêt (m/s²) (0.9.12 : 11 -> 19,0) ; sous les gaz a = engineAccel − driveDrag·v
-  driveDrag: 0.080,    // résistance linéaire sous les gaz (1/s)
-  coastDrag: 0.1065,   // résistance linéaire à vide (1/s) : a = −coastDrag·v
+  // 0.9.46 : moteur propre à Copytrack, avec une VRAIE vitesse de pointe (le réglage de la 0.9.45, linéaire, n'en avait pas : 450 km/h en 10 s).
+  // Sous les gaz : a = engineAccel × (1 − (v / maxSpeed)^1,5) (CAR.accelCurve) : forte au départ, elle s'essouffle près du plafond, qu'on
+  // n'atteint qu'avec de bonnes sorties de virage et de longues lignes droites. Au-delà du plafond la poussée devient un freinage.
+  gravity: 19,         // gravité normale (m/s²) (0.9.45 : 16, trop flottante ; avant : 25)
+  engineAccel: 14,     // poussée à l'arrêt (m/s²) : 0 -> 100 km/h en 2,2 s
+  coastDrag: 0.05,     // résistance à vide proportionnelle à la vitesse (1/s) ; s'y ajoute CAR.coast (constante), pour que lever le pied serve avant un virage
   boostAccel: 10,      // poussée supplémentaire d'un booster à 100 % (m/s²)
   boostTime: 1.2,      // durée d'un booster (s)
-  maxSpeed: 19.0 / 0.080,           // vitesse asymptotique du moteur (m/s), jamais atteinte (0 -> 100 km/h en 1,7 s)
-  boostSpeed: (19.0 / 0.080) * (112 / 95),   // vitesse visée sous turbo à 100 % (m/s)
+  maxSpeed: 290 / 3.6, // plafond du moteur (m/s) : 290 km/h
+  boostSpeed: 340 / 3.6,   // plafond sous turbo à 100 % (m/s) : 340 km/h
 };
 
 // Nombre maximal de décorations par circuit.

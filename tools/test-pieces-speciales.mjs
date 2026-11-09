@@ -246,7 +246,7 @@ console.log('Revêtements : unités et réglages');
 test('unités réelles : km/h, m/s², m, s (et % pour les réglages sans unité physique)', () => {
   assert.equal(paramText('conveyor', 1), '-200 km/h'); assert.equal(paramText('conveyor', 101), '0 km/h'); assert.equal(paramText('conveyor', 201), '+200 km/h');
   assert.equal(paramText('glass', 150), '1,5 s'); assert.equal(paramText('glass', 30), '0,3 s'); assert.equal(paramText('glass', 500), '5 s');
-  assert.equal(paramText('boost', 100), '≈ +43 km/h'); assert.match(paramText('bounce', 100), /^6,1 m$/); assert.equal(paramText('gravity', 40), '6,4 m/s²');
+  assert.equal(paramText('boost', 100), '≈ +43 km/h'); assert.match(paramText('bounce', 100), /^5,2 m$/); assert.equal(paramText('gravity', 40), '7,6 m/s²');
   assert.equal(paramText('wind', 100), 'nul'); assert.equal(paramText('wind', 150), '→ 27 m/s²'); assert.equal(paramText('wind', 50), '← 27 m/s²');
   assert.match(paramText('spring', 150), /^→ \d+ km\/h$/); assert.equal(paramText('ice', 100), '100 %');
   assert.equal(paramText('', 0), ''); assert.equal(paramText('magnet', 0), '');

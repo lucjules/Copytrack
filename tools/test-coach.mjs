@@ -79,7 +79,7 @@ test('freinage retardé (règle du coach, traces synthétiques) : « tu freines 
 test('freinage avancé : « tu freines plus tôt »', () => {
   const { R, refIn, trace } = setup('temple');
   const target = brakingPoints(R).filter((b) => b.v0 > 25)[0], from = Math.round(R.t[target.i] * 120);
-  const early = edit(refIn, (st, fl) => { for (let k = from - 70; k < from; k++) fl[k] = (fl[k] & ~1) | 2; pad(st, fl); });
+  const early = edit(refIn, (st, fl) => { for (let k = from - 140; k < from; k++) fl[k] = (fl[k] & ~1) | 2; pad(st, fl); });
   const tips = coach(trace(early), R);
   assert.equal(tips[0].id, 'early-brake', tips.map((x) => `${x.id}@${x.sector}`).join(', '));
   assert.ok(Math.abs(tips[0].sector - sectorOf(R, target.s)) <= 1);

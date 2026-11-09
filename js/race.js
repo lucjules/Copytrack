@@ -191,7 +191,7 @@ export class RaceSession {
     if (this._train) this._trainReset();
   }
 
-  // Multijoueur asynchrone (à la Polytrack) : un nouvel essai, tout de suite, sans décompte ni retour au salon. Chacun a son
+  // Multijoueur asynchrone : un nouvel essai, tout de suite, sans décompte ni retour au salon. Chacun a son
   // chrono et recommence quand il veut ; les autres voient la voiture « apparaître » au départ (compteur de téléportation).
   _newAttempt() {
     if (!this.multi || (this.state !== 'racing' && this.state !== 'finished')) return;

@@ -6,9 +6,30 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.46 — moteur propre à Copytrack, avec une vraie vitesse de pointe
+
+`PHYS_VER` 28 (physique changée). **Redéployer `submit-score`** (déjà régénérée ici). Les records, replays, fantômes et classements de la 0.9.45 (physique 27) ne sont plus valables, comme ceux d'avant (physique 26 ou moins).
+
+- **Moteur** (le réglage de la 0.9.45 n'avait aucune vraie limite de vitesse : 450 km/h en 10 s, 855 km/h en théorie) :
+  - **plafond à 290 km/h**, et à **340 km/h sous turbo** ;
+  - poussée forte au départ, qui s'essouffle près du plafond : 0 à 100 km/h en 2,2 s, 200 km/h en 5,5 s, 250 km/h en 9 s, environ 280 km/h au bout de 14 s ;
+  - **gravité 19 m/s²** (16 en 0.9.45, 25 avant) : des sauts entre les deux ;
+  - **lever le pied** freine un peu des deux façons (une résistance constante et une résistance proportionnelle à la vitesse), plus doucement qu'avant la 0.9.45.
+  - Moto, bateau et deltaplane gardent leurs écarts avec la voiture.
+- **Circuits** : sur 72, seuls 3 ont dû être retouchés.
+  - *Double Hélice* : une case de plus avant la grande descente, vitesse du pilote 40.
+  - *Monte-Charge* : vitesse du pilote 64.
+  - *En Cadence* : les phases de ses deux piques sont déplacées (le moteur change l'instant d'arrivée).
+  - Médailles, temps de référence, deux objectifs bonus (Aurore, Chaîne) et fiche d'essai recalculés ; contrat des 72 circuits tenu.
+- **Académie** : la leçon « Réception » et l'exercice « Trois réceptions » ont une case de vide au lieu de deux entre la rampe et la réception (le pilote y réussit des réceptions parfaites) ; les exercices de dérapage retrouvent leurs trois cases d'élan ; seuils de l'exercice de freinage recalés.
+- **Nettoyage** :
+  - le dossier importé `polytrack-recon-…` (34 Mo de données d'un autre jeu) et la note de calibration qui s'y référait sont retirés, et le dossier est ajouté au `.gitignore` ;
+  - les deux erreurs de lint de la 0.9.45 sont corrigées ;
+  - nouvel outil `tools/recaler.mjs` pour recaler les médailles après un changement de moteur.
+
 ## Bêta 0.9.45 — moteur et gravité calés sur des mesures, circuits recalés, menus refaits
 
-`PHYS_VER` 27 (physique changée). **Redéployer `submit-score`** ; les records, les replays et les défis du jour passés changent (le générateur du défi valide avec le pilote). Détail du calibrage : `docs/CALIBRATION-POLYTRACK.md`.
+`PHYS_VER` 27 (physique changée). **Redéployer `submit-score`** ; les records, les replays et les défis du jour passés changent (le générateur du défi valide avec le pilote).
 - **Moteur** : poussée 19,0 m/s² − 0,080·v sous les gaz, résistance à vide −0,1065·v, gravité 16 m/s² (mesures sur trajectoires relevées ; wall-rides, freinage et marche arrière non mesurés, inchangés). Plus de « collage » à la route (`CAR.launch` 0,6), boosters 10 m/s² pendant 1,2 s, voiture plus maniable (adhérence 80, `frontShare` 0,42).
 - **Pilote automatique** : freinage planifié 10 m/s² (au lieu de 20), vitesse maximale respectée sur les murs, volant inversé pris en compte.
 - **Circuits** (72) : vitesses du pilote, Verglas, Archipel, Cité Céleste, Cadence, Grand Atelier (obstacles) ; médailles, objectifs, temps de référence, fiche d'essai, corpus de compatibilité régénérés. Contrat : speedway > 220 km/h pendant 35 %, freinage ≤ 14 %, technique ≤ 170 km/h.

@@ -20,28 +20,42 @@ function straight(n = 40, extra = '') {
 const GAS = { steer: 0, throttle: true, brake: false };
 
 console.log('Accélération et vitesse de pointe');
-test('vitesse visée par le moteur et turbo nettement plus hautes qu’avant (54 / 78 m/s)', () => {
-  assert.ok(Number.isInteger(PHYS_VER) && PHYS_VER >= 25);
-  assert.ok(SURF_PHYS.maxSpeed >= 90 && SURF_PHYS.boostSpeed > SURF_PHYS.maxSpeed + 10);
-  assert.ok(MOTO.maxSpeed >= 85);
+test('plafond du moteur et du turbo : 290 et 340 km/h (le réglage linéaire de la 0.9.45 n\u2019en avait pas)', () => {
+  assert.ok(Number.isInteger(PHYS_VER) && PHYS_VER >= 28);
+  assert.ok(Math.abs(SURF_PHYS.maxSpeed * 3.6 - 290) < 0.01 && Math.abs(SURF_PHYS.boostSpeed * 3.6 - 340) < 0.01);
+  assert.ok(MOTO.maxSpeed >= 70 && MOTO.maxSpeed < SURF_PHYS.maxSpeed);
 });
-test('courbe mesurée : 100 km/h en 1,4 à 2,0 s, 200 km/h en 3,0 à 3,8 s, 250 km/h en 4,2 à 5,2 s (a = 19 − 0,080·v)', () => {
-  const { ph } = straight(60);
+test('courbe : 100 km/h en 2,0 à 2,4 s, 200 km/h en 5,0 à 6,0 s, 250 km/h en 8,0 à 9,6 s ; jamais plus de 290 km/h sans turbo, même après une minute', () => {
+  const { ph } = straight(90);
   const t = {};
-  for (let k = 0; k < 40 / DT; k++) {
+  let top = 0;
+  for (let k = 0; k < 60 / DT; k++) {
     ph.clock = k; ph.step(GAS);
+    top = Math.max(top, ph.speed);
     for (const [name, v] of [['100', 27.8], ['200', 55.6], ['250', 69.4]]) if (!(name in t) && ph.speed >= v) t[name] = k * DT;
   }
-  assert.ok(t['100'] > 1.4 && t['100'] < 2.0, '100 km/h : ' + t['100']);
-  assert.ok(t['200'] > 3.0 && t['200'] < 3.8, '200 km/h : ' + t['200']);
-  assert.ok(t['250'] > 4.2 && t['250'] < 5.2, '250 km/h : ' + t['250']);
+  assert.ok(t['100'] > 2.0 && t['100'] < 2.4, '100 km/h : ' + t['100']);
+  assert.ok(t['200'] > 5.0 && t['200'] < 6.0, '200 km/h : ' + t['200']);
+  assert.ok(t['250'] > 8.0 && t['250'] < 9.6, '250 km/h : ' + t['250']);
+  assert.ok(top * 3.6 <= 290.5 && top * 3.6 > 270, 'vitesse maxi après 60 s : ' + (top * 3.6).toFixed(1) + ' km/h');
 });
-test('la poussée décroît linéairement avec la vitesse : ≈ 19 m/s² à l’arrêt, ≈ 15 m/s² à 50 m/s ; à vide, a = −0,1065·v', () => {
+test('sous turbo, la vitesse reste sous 340 km/h', () => {
+  const { ph } = straight(90);
+  let top = 0;
+  for (let k = 0; k < 40 / DT; k++) {
+    ph.clock = k;
+    if (k % 300 === 0) { ph.boost = 1.2; ph.boostF = 1; }
+    ph.step(GAS);
+    top = Math.max(top, ph.speed);
+  }
+  assert.ok(top * 3.6 < 340, 'sous turbo : ' + (top * 3.6).toFixed(1) + ' km/h');
+});
+test('la poussée décroît avec la vitesse : ≈ 14 m/s² à l’arrêt, ≈ 7 m/s² à 50 m/s ; à vide, a = −(0,8 + 0,05·v)', () => {
   const { tr, ph } = straight(60);
   const acc = (v0, gas) => { ph.vel.z = -v0; ph.fwdSpeed = v0; ph.graceT = 0; const v1 = ph.speed; ph.clock = 0; tr.time = 0; ph.step(gas ? GAS : { steer: 0, throttle: false, brake: false }); return (ph.speed - v1) / DT; };
-  assert.ok(Math.abs(acc(0.5, true) - 19) < 1.5, 'à l’arrêt : ' + acc(0.5, true));
-  const a50 = acc(50, true); assert.ok(a50 > 14 && a50 < 16.5, 'à 50 m/s : ' + a50);
-  const c30 = acc(30, false); assert.ok(Math.abs(c30 + 0.1065 * 30) < 0.6, 'à vide, 30 m/s : ' + c30);
+  assert.ok(Math.abs(acc(0.5, true) - 14) < 1.5, 'à l’arrêt : ' + acc(0.5, true));
+  const a50 = acc(50, true); assert.ok(a50 > 6 && a50 < 8.5, 'à 50 m/s : ' + a50);
+  const c30 = acc(30, false); assert.ok(Math.abs(c30 + (0.8 + 0.05 * 30)) < 0.6, 'à vide, 30 m/s : ' + c30);
 });
 test('une voiture lancée à 40 m/s en sortie de virage garde une avance de plus de 50 m sur une voiture lancée à 25 m/s après 8 s (le gain se paie en distance)', () => {
   const run = (v0) => { const { ph } = straight(60); ph.vel.z = -v0; ph.fwdSpeed = v0; ph.graceT = 0; for (let k = 0; k < 8 / DT; k++) { ph.clock = k; ph.step(GAS); } return { d: -ph.pos.z, v: ph.speed }; };
