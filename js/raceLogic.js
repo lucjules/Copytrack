@@ -4,6 +4,14 @@ import { PIECES, RING_R, RING_Y, toLocal, sampleLocal, tileCenter, baseY, cpKind
 import { dcos, dsin, hypot2 } from './dmath.js';
 
 const L = { lx: 0, lz: 0 };
+
+// Sens de la gravité au point de réapparition posé SUR une pièce : une route retournée (tile.v) se roule au plafond, une route normale au sol ;
+// seule une pièce ruban (vrille, looping, mur...) tourne et garde la gravité du moment. Sans cela, un checkpoint pris en l'air au-dessus d'une
+// route à l'envers (ou l'inverse) faisait réapparaître la voiture dans un état impossible (gravité contraire à la route sous elle).
+export function respawnGs(tile, phys) {
+  if (tile.v) return -1;
+  return phys.rib ? phys.gSign : 1;
+}
 const S = {};
 
 export class RaceLogic {
@@ -69,9 +77,9 @@ export class RaceLogic {
   // Point de réapparition d'un checkpoint aérien : la dernière route roulable traversée
   // (mémorisée par la course), sinon l'anneau lui-même au niveau de sa base.
   _ringRespawn(tile, phys) {
-    if (this.lastGround) { const g = this.lastGround; return { x: g.x, y: g.y, z: g.z, yaw: g.yaw }; }
+    if (this.lastGround) { const g = this.lastGround; return { x: g.x, y: g.y, z: g.z, yaw: g.yaw, gs: g.gs || 1 }; }
     const c = tileCenter(tile);
-    return { x: c.x, y: baseY(tile), z: c.z, yaw: phys.yaw };
+    return { x: c.x, y: baseY(tile), z: c.z, yaw: phys.yaw, gs: tile.v ? -1 : 1 };
   }
 
   get time() {
@@ -85,7 +93,7 @@ export class RaceLogic {
     const p = phys.pos;
     // Dernière position stable au sol (sert à réapparaître avant un checkpoint aérien).
     if (phys.grounded && !phys.rib && phys.surfType === 'road' && this.steps % 30 === 0) {
-      this.lastGround = { x: p.x, y: p.y, z: p.z, yaw: phys.yaw, steps: this.steps };
+      this.lastGround = { x: p.x, y: p.y, z: p.z, yaw: phys.yaw, gs: phys.gSign, steps: this.steps };      // (gs : la gravité de CE point, pas celle du moment où l'anneau est franchi)
     }
     const cx = Math.floor(p.x / CELL), cz = Math.floor(p.z / CELL);
     let event = null;
@@ -117,7 +125,7 @@ export class RaceLogic {
         const rr = this._ringRespawn(tile, phys);
         this.collected.add(tile);
         this.splits.push(this.steps);
-        this.respawn = { ...rr, vehicle: phys.vehicle, grav: phys.gravMul, gs: phys.gSign, snap };
+        this.respawn = { ...rr, vehicle: phys.vehicle, grav: phys.gravMul, snap };
         event = { type: 'checkpoint', index: this.splits.length, steps: this.steps };
         continue;
       }
@@ -142,7 +150,7 @@ export class RaceLogic {
         while (da > Math.PI) da -= Math.PI * 2;
         while (da < -Math.PI) da += Math.PI * 2;
         if (Math.abs(da) > Math.PI / 2) yaw = base + Math.PI;
-        this.respawn = { x: c.x, y: h, z: c.z, yaw, vehicle: phys.vehicle, grav: phys.gravMul, gs: phys.gSign, snap: this._snap() };
+        this.respawn = { x: c.x, y: h, z: c.z, yaw, vehicle: phys.vehicle, grav: phys.gravMul, gs: respawnGs(tile, phys), snap: this._snap() };
         event = { type: 'checkpoint', index: this.splits.length, steps: this.steps };
       } else if (sp === 'finish') {
         onFinish = true;
@@ -154,7 +162,7 @@ export class RaceLogic {
             this.collected.clear();
             this.splits.push(this.steps);
             // Le passage de la ligne sert aussi de point de retour pour le nouveau tour.
-            this.respawn = { x: p.x, y: h, z: p.z, yaw: phys.yaw, vehicle: phys.vehicle, grav: phys.gravMul, gs: phys.gSign, snap: this._snap() };
+            this.respawn = { x: p.x, y: h, z: p.z, yaw: phys.yaw, vehicle: phys.vehicle, grav: phys.gravMul, gs: respawnGs(tile, phys), snap: this._snap() };
             event = { type: 'lap', lap: this.lap, laps: this.laps, index: this.splits.length, steps: this.steps };
           } else {
             this.finished = true;

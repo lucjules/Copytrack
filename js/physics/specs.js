@@ -66,6 +66,8 @@ export const CAR = {
   wallScrape: 2.0,    // frottement : part de la vitesse perdue par seconde de contact (racler un mur à 200 km/h freine fort)
   wallSpin: 0.14,     // rotation provoquée (rad/s par m/s d'impact), bornée par wallSpinMax
   wallSpinMax: 2.5,
+  stuckAfter: 0.35,   // 0.9.48 : voiture plaquée contre un mur à l'arrêt depuis ce délai (s) : le volant la fait pivoter sur place
+  stuckPivot: 1.2,    // vitesse de pivot (rad/s, à fond de volant)
   wallStun: 0.04,     // durée de l'encaissement (s par m/s d'impact), 0,1 s en plus, bornée à 0,8 s
   stunTraction: 0.3,  // poussée du moteur pendant l'encaissement
   stunGrip: 0.6,      // adhérence pendant l'encaissement

@@ -5342,6 +5342,8 @@ var CAR = {
   wallScrape: 2,
   wallSpin: 0.14,
   wallSpinMax: 2.5,
+  stuckAfter: 0.35,
+  stuckPivot: 1.2,
   wallStun: 0.04,
   stunTraction: 0.3,
   stunGrip: 0.6,
@@ -9303,6 +9305,8 @@ var wallMethods = {
         }
       }
     }
+    if (touch && this.speed < 2.5) this.stuckT = Math.min(1, this.stuckT + DT);
+    else this.stuckT = Math.max(0, this.stuckT - 2 * DT);
     if (touch) {
       const k = Math.max(0, 1 - CAR.wallScrape * DT);
       v.x *= k;
@@ -9909,6 +9913,33 @@ var ribbonMethods = {
       return;
     }
     this._ribPlace(R);
+    this._ribObstacles(R);
+  },
+  // Obstacles (piques, bumpers, marteaux...) sur un ruban (looping, mur, tube, vrille) : avant 0.9.48 ils n'agissaient que sur les routes
+  // posées au sol (_collide n'est jamais appelé en mode ruban) : la voiture les traversait. Le contact est calculé comme au sol (même
+  // fonction), puis le déplacement et la vitesse obtenus sont ramenés dans le repère du ruban (abscisse u, écart latéral dl, vitesses vs / vd).
+  // Un choc ne détache jamais la voiture du ruban (comme un mur) : seule la physique du ruban décide du décrochage.
+  _ribObstacles(R) {
+    if (!this.track.obstacles.length || this.hazardGrace > 0) return;
+    const p = this.pos, v = this.vel;
+    const x0 = p.x, y0 = p.y, z0 = p.z;
+    this._obstacles();
+    if (this.ev.sink) return;
+    const dx = p.x - x0, dy = p.y - y0, dz = p.z - z0;
+    if (dx === 0 && dy === 0 && dz === 0 && this.ev.shock === 0) {
+      this.grounded = true;
+      return;
+    }
+    const F = this._cross(R, frameWorld(R.tile, R.rib, R.u, this.F));
+    const B2 = this._basis(R, F);
+    R.vs = v.x * B2.e1x + v.y * B2.e1y + v.z * B2.e1z;
+    R.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
+    R.u = clamp(R.u + R.dir * (dx * B2.e1x + dy * B2.e1y + dz * B2.e1z) / F.ds, 0, 1);
+    if (!F.wrap) {
+      const lim = (F.hw || ROAD_HALF) - 0.2;
+      R.dl = clamp(R.dl + R.dir * (dx * B2.e2x + dy * B2.e2y + dz * B2.e2z), -lim, lim);
+    } else R.dl += R.dir * (dx * B2.e2x + dy * B2.e2y + dz * B2.e2z);
+    this._ribPlace(R);
   },
   // Place la voiture sur le ruban (position, vitesse, orientation monde).
   _ribPlace(R) {
@@ -10212,6 +10243,7 @@ var CarPhysics = class {
     this.bounceCD = 0;
     this.driftCharge = 0;
     this.stunT = 0;
+    this.stuckT = 0;
     this.pitch = 0;
     this.pitchRate = 0;
     this.landQ = "";
@@ -10409,6 +10441,7 @@ var CarPhysics = class {
       BK.vx = vx;
       BK.vy = vy * lateralDamp;
       BK.w = vx * dtan(delta) / L4 * clamp(grip, 0.2, 1);
+      if (this.stuckT > CAR.stuckAfter) BK.w = this.steer * CAR.stuckPivot * clamp((this.stuckT - CAR.stuckAfter) * 4, 0, 1);
       return BK;
     }
     const den = Math.max(Math.abs(vx), 6);
@@ -10943,6 +10976,10 @@ var L3 = {
   lx: 0,
   lz: 0
 };
+function respawnGs(tile, phys) {
+  if (tile.v) return -1;
+  return phys.rib ? phys.gSign : 1;
+}
 var S3 = {};
 var RaceLogic = class {
   constructor(track, opts2 = {}) {
@@ -11039,7 +11076,8 @@ var RaceLogic = class {
         x: g.x,
         y: g.y,
         z: g.z,
-        yaw: g.yaw
+        yaw: g.yaw,
+        gs: g.gs || 1
       };
     }
     const c = tileCenter(tile);
@@ -11047,7 +11085,8 @@ var RaceLogic = class {
       x: c.x,
       y: baseY(tile),
       z: c.z,
-      yaw: phys.yaw
+      yaw: phys.yaw,
+      gs: tile.v ? -1 : 1
     };
   }
   get time() {
@@ -11064,6 +11103,7 @@ var RaceLogic = class {
         y: p.y,
         z: p.z,
         yaw: phys.yaw,
+        gs: phys.gSign,
         steps: this.steps
       };
     }
@@ -11097,7 +11137,6 @@ var RaceLogic = class {
           ...rr,
           vehicle: phys.vehicle,
           grav: phys.gravMul,
-          gs: phys.gSign,
           snap
         };
         event = {
@@ -11133,7 +11172,7 @@ var RaceLogic = class {
           yaw,
           vehicle: phys.vehicle,
           grav: phys.gravMul,
-          gs: phys.gSign,
+          gs: respawnGs(tile, phys),
           snap: this._snap()
         };
         event = {
@@ -11156,7 +11195,7 @@ var RaceLogic = class {
               yaw: phys.yaw,
               vehicle: phys.vehicle,
               grav: phys.gravMul,
-              gs: phys.gSign,
+              gs: respawnGs(tile, phys),
               snap: this._snap()
             };
             event = {
@@ -11745,7 +11784,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/version.js
-var PHYS_VER = 28;
+var PHYS_VER = 29;
 
 // js/ghostFormat.js
 var GHOST_EVERY = 4;

@@ -6,6 +6,15 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.48 — phase 2 : réparation de la physique
+
+`PHYS_VER` 29 (physique changée). **Redéployer `submit-score`** (déjà régénérée ici). Les records, replays, fantômes et classements de la 0.9.47 (physique 28) ne sont plus valables. Suivi du chantier : `docs/PLAN-FINALISATION-COPYTRACK.md`.
+- **Obstacles sur les rubans** (looping, mur, tube, vrille) : les piques, bumpers, marteaux, balanciers, murs coulissants et balayeurs n'y avaient **aucun effet** (la collision n'était calculée qu'au sol : la voiture les traversait). Le contact est maintenant calculé sur le ruban avec la même fonction qu'au sol, puis le déplacement et la vitesse sont ramenés dans le repère du ruban (`_ribObstacles`, `js/physics/ribbon.js`). Un choc ne détache pas la voiture du ruban.
+- **Voiture coincée contre un mur** : à l'arrêt, nez au mur, le volant n'avait aucun effet (pas de vitesse, donc pas de rotation) et le gaz ne la libérait pas ; seule la marche arrière la sortait. Après 0,35 s plaquée contre un mur à moins de 2,5 m/s, le volant la fait pivoter sur place (1,2 rad/s à fond de volant) jusqu'à ce qu'elle reparte. Hors contact avec un mur, rien ne change.
+- **Retour au checkpoint : gravité cohérente avec la route** : un point de réapparition posé sur une route retournée (ou normale) a toujours la gravité de CETTE route (`respawnGs`) ; un anneau-checkpoint pris après une inversion de gravité gardait la gravité du moment du franchissement, pas celle du point de réapparition (voiture réapparue dans le ciel, à l'envers sur un sol normal).
+- **Vérifié sans défaut** (essais conservés) : aucun obstacle n'est traversé de 60 à 340 km/h (aucun nombre non fini, aucun enfoncement dans un poteau) ; le verre (voisines indépendantes, dalles empilées, plafond, ruban, retour au checkpoint et redémarrage qui restaurent tout, rejeu identique) ; le volant inversé n'agit que sur une pièce qui l'a ; la caméra se retourne en 0,45 s (essais existants) ; aimant / volant inversé / accélérateur / verre à l'envers ; 72 circuits × 4 000 pas avec surfaces, verre, inversions et obstacles ajoutés au hasard : jamais de voiture figée ni de valeur non finie.
+- **Tests** : `tools/test-physique-phase2.mjs` (échoue sans les correctifs : 4 essais rouges avant, tous verts après). Régénérés : empreinte physique, corpus de compatibilité, `sw.js`, fonction `submit-score`.
+
 ## Bêta 0.9.47 — remise à niveau : accueil allégé
 
 `PHYS_VER` inchangé (28). Suivi du chantier : `docs/PLAN-FINALISATION-COPYTRACK.md`.

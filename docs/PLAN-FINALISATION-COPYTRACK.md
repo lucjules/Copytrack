@@ -17,7 +17,7 @@ Règles : ne rien supprimer d'utile, corriger les causes, un test de non-régres
 | Phase | Contenu | État |
 | --- | --- | --- |
 | 1. Compréhension | architecture (`docs/ARCHITECTURE.md`, `docs/MODULES.md`), état mesuré, ce plan | fait |
-| 2. Physique | essais aléatoires (72 circuits × entrées aléatoires ; lancers contre les murs) : aucun défaut trouvé | essais faits ; reste : obstacles / verre ciblés |
+| 2. Physique | obstacles inertes sur les rubans (looping, mur, tube) corrigés ; voiture coincée nez au mur (volant sans effet à l'arrêt) corrigée ; gravité au point de réapparition cohérente avec la route (anneaux) ; essais : obstacles 60–340 km/h, verre (voisines, empilées, plafond, ruban, retour, rejeu), volant inversé, aimant/accélérateur à l'envers, 72 circuits × 4 000 pas au hasard : aucun gel ni valeur non finie (`tools/test-physique-phase2.mjs`) ; PHYS_VER 29 | fait (0.9.48) ; aucun gel de jeu reproduit dans le noyau : le test navigateur de course avec verre n'a rien montré non plus |
 | 3. Éditeur / circuits | codes abîmés (2000 cas) : aucun défaut | essais faits ; reste : logique, scripts |
 | 4. Comptes / sauvegardes / multijoueur | fusion des sauvegardes, validation côté serveur, protocole | essais aléatoires faits (aucun défaut) ; reste : multijoueur |
 | 5. Interface | accueil allégé (fait), fenêtres hautes (fait), cohérence des écrans, responsive | en cours |

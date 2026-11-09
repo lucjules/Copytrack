@@ -319,6 +319,31 @@ export const ribbonMethods = {
       return;
     }
     this._ribPlace(R);
+    this._ribObstacles(R);
+  },
+
+  // Obstacles (piques, bumpers, marteaux...) sur un ruban (looping, mur, tube, vrille) : avant 0.9.48 ils n'agissaient que sur les routes
+  // posées au sol (_collide n'est jamais appelé en mode ruban) : la voiture les traversait. Le contact est calculé comme au sol (même
+  // fonction), puis le déplacement et la vitesse obtenus sont ramenés dans le repère du ruban (abscisse u, écart latéral dl, vitesses vs / vd).
+  // Un choc ne détache jamais la voiture du ruban (comme un mur) : seule la physique du ruban décide du décrochage.
+  _ribObstacles(R) {
+    if (!this.track.obstacles.length || this.hazardGrace > 0) return;
+    const p = this.pos, v = this.vel;
+    const x0 = p.x, y0 = p.y, z0 = p.z;
+    this._obstacles();
+    if (this.ev.sink) return;                                   // contact létal (piques) : fin du pas
+    const dx = p.x - x0, dy = p.y - y0, dz = p.z - z0;
+    if (dx === 0 && dy === 0 && dz === 0 && this.ev.shock === 0) { this.grounded = true; return; }
+    const F = this._cross(R, frameWorld(R.tile, R.rib, R.u, this.F));
+    const B = this._basis(R, F);
+    R.vs = v.x * B.e1x + v.y * B.e1y + v.z * B.e1z;
+    R.vd = v.x * B.e2x + v.y * B.e2y + v.z * B.e2z;
+    R.u = clamp(R.u + (R.dir * (dx * B.e1x + dy * B.e1y + dz * B.e1z)) / F.ds, 0, 1);
+    if (!F.wrap) {
+      const lim = (F.hw || ROAD_HALF) - 0.2;
+      R.dl = clamp(R.dl + R.dir * (dx * B.e2x + dy * B.e2y + dz * B.e2z), -lim, lim);
+    } else R.dl += R.dir * (dx * B.e2x + dy * B.e2y + dz * B.e2z);
+    this._ribPlace(R);                                          // (remet aussi grounded = true : _obstacles l'avait peut-être levé)
   },
 
   // Place la voiture sur le ruban (position, vitesse, orientation monde).
