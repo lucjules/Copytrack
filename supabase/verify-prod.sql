@@ -91,8 +91,10 @@ checks as (
   union all
   -- ---- 4. étape 15b (attendue SEULEMENT après 15b) -------------------------------------------------------------------------------------------
   select 60, 'APRÈS 15b : insertion directe d''un circuit par le jeu', 'non (après 15b) ; oui avant',
-         case when has_table_privilege('authenticated', 'public.tracks', 'insert') then 'oui (étape 15b NON appliquée)' else 'non (étape 15b appliquée)' end,
-         case when has_table_privilege('authenticated', 'public.tracks', 'insert') then 'info' else 'ok' end
+         -- (has_ANY_column_privilege : depuis l'étape 15 le jeu n'a plus le droit d'insertion sur la table entière mais sur 8 colonnes ; tester le droit de table
+         --  donnerait « 15b appliquée » alors que la publication directe reste ouverte. Constaté sur la production le jour où l'étape 15 y a été jouée.)
+         case when has_any_column_privilege('authenticated', 'public.tracks', 'insert') then 'oui (étape 15b NON appliquée)' else 'non (étape 15b appliquée)' end,
+         case when has_any_column_privilege('authenticated', 'public.tracks', 'insert') then 'info' else 'ok' end
   union all
   -- ---- 5. renseignements ---------------------------------------------------------------------------------------------------------------------
   select 70, 'circuits publiés dont le temps auteur n''est PAS vérifié (publiés avant l''étape 15)', 'info',

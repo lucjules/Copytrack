@@ -842,6 +842,8 @@ do \$\$ begin insert into tracks (name, decor, code, signature, author_time, pie
 SQL
 )
 chk "après l'étape 15b, l'insertion directe d'un circuit est refusée (permission denied)" "$(echo "$R15B" | grep -q "REFUSE" && echo 1 || echo 0)"
+VP15B=$($P -d $DB -At -F'|' -f supabase/verify-prod.sql)
+chk "verify-prod.sql après l'étape 15b : la ligne « APRÈS 15b » passe à ok (et plus aucune ligne MANQUE ni ÉCART)" "$(echo "$VP15B" | grep 'APRÈS 15b' | grep -q '|ok$' && ! echo "$VP15B" | grep -qE '\|(MANQUE|ÉCART)$' && echo 1 || echo 0)"
 chk "après l'étape 15b, publish_track (service) fonctionne encore" "$([ "$(Q "select public.publish_track('$E1', 'Après 15b', 'forest', 'c', 's15-apres', 12.5, 5, 1, '')::jsonb->>'status'")" = created ] && echo 1 || echo 0)"
 $P -d $DB -f supabase/etape15-retour.sql
 chk "retour arrière : submit_rate_check (étape 14) fonctionne, submit_best n'existe plus" "$([ "$(Q "select public.submit_rate_check('$E1', 3, 60)")" = 0 ] && [ "$(Q "select count(*) from pg_proc where proname = 'submit_best'")" = 0 ] && echo 1 || echo 0)"
@@ -853,6 +855,7 @@ chk "l'étape 15 se réapplique après le retour arrière (submit_best revient)"
 # (l'état constaté en production avant l'étape 15) il signale EXACTEMENT les objets manquants : le script de vérification est lui-même vérifié.
 VP=$($P -d $DB -At -F'|' -f supabase/verify-prod.sql)
 chk "verify-prod.sql sur la base complète (étape 15 appliquée) : aucune ligne MANQUE ni ÉCART" "$(echo "$VP" | grep -qE '\|(MANQUE|ÉCART)$' && echo 0 || echo 1)"
+chk "verify-prod.sql avec l'étape 15 SEULE (15b non appliquée, publication directe encore ouverte sur 8 colonnes) : la ligne « APRÈS 15b » dit NON appliquée (info), pas ok" "$(echo "$VP" | grep 'APRÈS 15b' | grep -q 'NON appliquée.*|info$' && echo 1 || echo 0)"
 chk "verify-prod.sql ne modifie rien : aucune instruction d'écriture dans le fichier" "$(grep -iE '^\s*(insert|update|delete|drop|alter|create|grant|revoke|truncate)\b' supabase/verify-prod.sql | grep -q . && echo 0 || echo 1)"
 DB14=copytrack_sqltest14
 $P -d postgres -c "drop database if exists $DB14" -c "create database $DB14" >/dev/null 2>&1
