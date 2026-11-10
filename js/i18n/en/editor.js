@@ -247,6 +247,8 @@ export default {
   'Presse-papiers vide : copie d\'abord une zone.': 'Clipboard empty: copy an area first.',
   'Clique pour coller · R pour pivoter · Échap pour annuler': 'Click to paste · R to rotate · Esc to cancel',
   '{n:w} pièce(s) ignorée(s) (départ en double ou hors des niveaux).': '{n} piece(s) ignored (duplicate start or outside the levels).',
+  'Zone posée {n:w} niveau plus haut : une de ses pièces passerait sous le sol.': 'Area placed {n} level higher: one of its pieces would go below the ground.',
+  'Zone posée {n:w} niveaux plus haut : une de ses pièces passerait sous le sol.': 'Area placed {n} levels higher: one of its pieces would go below the ground.',
   'Tous les niveaux': 'All levels',
 
   // ---------------------------------------------------------------- prefabs

@@ -73,7 +73,10 @@ export class Autopilot {
   // « nez en haut » vise le bas : on traduit les commandes calculées en repère monde.
   control(phys) {
     const c = this._control(phys);
-    if (phys.rib) { if (phys.rib.tile.v) c.steer = -c.steer; }
+    // Sur un ruban, le volant est calculé dans le repère de la route (cap relatif psi, écart dl) : il n'y a rien à retourner, même sur une pièce posée
+    // à l'envers (son repère est déjà orienté par sa normale : droite = tangente × normale, voir ribbons.js frameLocal). Avant 0.9.59 le volant y était
+    // inversé : sur un virage relevé, un tire-bouchon ou un looping posé au plafond, le pilote braquait du mauvais côté et finissait plaqué contre la paroi.
+    if (phys.rib) { /* repère de la route : rien à traduire */ }
     else if (phys.gSign < 0) {
       c.steer = -c.steer;
       if (!phys.grounded && phys.vehicle !== 'glider') { const t = c.throttle; c.throttle = c.brake; c.brake = t; }

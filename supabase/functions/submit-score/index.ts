@@ -11496,7 +11496,6 @@ var Autopilot = class {
   control(phys) {
     const c = this._control(phys);
     if (phys.rib) {
-      if (phys.rib.tile.v) c.steer = -c.steer;
     } else if (phys.gSign < 0) {
       c.steer = -c.steer;
       if (!phys.grounded && phys.vehicle !== "glider") {

@@ -137,27 +137,41 @@ export function rotateClip(clip, keepRect = false) {
   };
 }
 
-// Pièces du presse-papiers placées en (cx, cz) au niveau donné.
-export function placedClip(clip, cx, cz, level) {
+// De combien de niveaux remonter une zone pour qu'AUCUNE de ses pièces ne passe sous le sol. Une pièce peut occuper des niveaux sous le sien (à l'envers, pente
+// descendante, route sur un mur, transition : Track.inBounds) ; dans un presse-papiers les niveaux sont relatifs au plus bas, donc une zone collée au niveau 0 enterrait
+// ces pièces (le prefab « Wall-ride » collé au sol descendait 9 m sous terre). 0 si tout tient déjà, ou si aucun décalage raisonnable ne suffit.
+export function clipLift(tiles) {
+  const fits = (k) => tiles.every((t) => { try { return Track.inBounds(Track.normalize({ ...t, l: t.l + k })); } catch { return true; } });
+  for (let k = 0; k <= 8; k++) if (fits(k)) return k;
+  return 0;
+}
+
+// Pièces du presse-papiers placées en (cx, cz) au niveau donné (remontées d'autant de niveaux qu'il faut pour rester au-dessus du sol : `lift`). L'aperçu et le collage
+// passent tous deux par ici : ce qui est montré est ce qui sera posé.
+export function placedClip(clip, cx, cz, level, canLift = true) {
+  const lift = canLift ? clipLift(clip.tiles.map((t) => ({ ...t, l: t.l + level }))) : 0;
   return {
-    tiles: clip.tiles.map((t) => ({ ...t, x: t.x + cx, z: t.z + cz, l: t.l + level })),
-    decos: clip.decos.map((d) => ({ ...d, x: d.x + cx * CELL, z: d.z + cz * CELL, y: d.y + level * LEVEL_H })),
+    lift,
+    tiles: clip.tiles.map((t) => ({ ...t, x: t.x + cx, z: t.z + cz, l: t.l + level + lift })),
+    decos: clip.decos.map((d) => ({ ...d, x: d.x + cx * CELL, z: d.z + cz * CELL, y: d.y + (level + lift) * LEVEL_H })),
   };
 }
 
-// Collage : remplace ce qui gêne. Un seul départ par circuit.
+// Collage : remplace ce qui gêne. Un seul départ par circuit. Renvoie { added, skipped, lift }.
 export function pasteClip(track, clip, cx, cz, level) {
   const P = placedClip(clip, cx, cz, level);
   let skipped = 0, added = 0;
   const hasStart = !!track.startTile;
   for (const t of P.tiles) {
-    if (t.l < 0 || t.l > MAX_LEVEL || (t.t === 'start' && hasStart)) { skipped++; continue; }
-    for (const c of track.conflicts(Track.normalize(t))) track.remove(c);
+    // Dernier garde-fou (zone trop haute, ou qu'aucun décalage ne sauve) : une pièce hors des niveaux est ignorée et comptée, jamais posée sous le sol.
+    const n = Track.normalize(t);
+    if (t.l < 0 || t.l > MAX_LEVEL || !Track.inBounds(n) || (t.t === 'start' && hasStart)) { skipped++; continue; }
+    for (const c of track.conflicts(n)) track.remove(c);
     track.add(t);
     added++;
   }
   for (const d of P.decos) if (track.addDeco(d)) added++;
-  return { added, skipped };
+  return { added, skipped, lift: P.lift };
 }
 
 // Duplication d'une zone (Ctrl+D) : la première place LIBRE pour une copie de toutes les pièces et décorations sélectionnées, sans rien écraser
@@ -234,7 +248,7 @@ export function rotateSelection(track, rect, tiles, decos) {
   // Le coin haut-gauche du rectangle reste en place : rotateClip recale la zone sur (0, 0) (on rend donc à la zone son rectangle complet, pas seulement
   // l'enveloppe des pièces : une pièce au bord garde sa distance au bord).
   const R = rotateClip({ ...clip, tiles: clip.tiles.concat([]), decos: clip.decos.concat([]) }, true);
-  const P = placedClip(R, rect.x0, rect.z0, 0);
+  const P = placedClip(R, rect.x0, rect.z0, 0, false);      // (rotation en place : les niveaux ne bougent jamais)
   if (!replaceTiles(track, tiles, P.tiles)) return false;
   decos.forEach((d, i) => { Object.assign(d, { x: P.decos[i].x, z: P.decos[i].z, ry: P.decos[i].ry }); });
   const sc = scriptsIn(track, rect);
@@ -243,14 +257,11 @@ export function rotateSelection(track, rect, tiles, decos) {
   return true;
 }
 
-// Monte / descend un groupe de pièces (et décorations). Annule tout si ça coince.
+// Monte / descend un groupe de pièces (et décorations) : tout ou rien, comme le déplacement. Le contrôle se fait SANS toucher au circuit (replaceTiles) : avant 0.9.59 un
+// décalage refusé retirait puis remettait les pièces (nouveaux objets, rangés en fin de liste : l'ordre du circuit changeait sans pas d'annulation, et la pièce inspectée
+// n'était plus celle du circuit) ; et rien ne vérifiait ce qu'une pièce occupe SOUS son niveau (à l'envers, pente descendante, route sur un mur : elle finissait sous le sol).
 export function shiftLevel(track, tiles, decos, d) {
-  if (tiles.some((t) => t.l + d < 0 || t.l + d > MAX_LEVEL)) return false;
-  const moved = tiles.map((t) => ({ ...t, l: t.l + d }));
-  for (const t of tiles) track.remove(t);
-  const blocked = moved.some((t) => track.conflicts(Track.normalize(t)).length);
-  if (blocked) { for (const t of tiles) track.add(t); return false; }
-  for (const t of moved) track.add(t);
+  if (!replaceTiles(track, tiles, tiles.map((t) => ({ ...t, l: t.l + d })))) return false;
   for (const o of decos) { o.y += d * LEVEL_H; }
   if (decos.length) track.version++;
   return true;

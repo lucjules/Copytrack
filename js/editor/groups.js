@@ -3,7 +3,8 @@
 // logique du circuit (E10), de cible aux règles (« montrer le groupe Porte nord au 2e checkpoint »). Masquer et verrouiller sont des états de
 // l'éditeur, pas du circuit : ils ne partent pas dans le code. Ces méthodes s'ajoutent au prototype d'EditorSession : `this` est l'instance.
 import { esc } from '../dom.js';
-import { MAX_GROUP } from '../track.js';
+import { MAX_GROUP, Track } from '../track.js';
+import { CELL } from '../constants.js';
 
 export const groupMethods = {
   _layerOk(o) {
@@ -36,20 +37,26 @@ export const groupMethods = {
     if (!tiles.length && !decos.length) { this.app.ui.flash('Sélectionne d’abord des pièces (outil Sélection, Q).'); return 0; }
     for (const t of tiles) { this.track.remove(t); this.track.add({ ...t, g }); }
     for (const d of decos) { if (g) d.g = g; else delete d.g; }
+    // La sélection était « le groupe N » (selectGroup) : elle suit ses membres dans leur nouveau groupe ; retirés de tout groupe, il n'y a plus de filtre possible :
+    // la zone est abandonnée (sinon le rectangle se mettrait à désigner toutes les pièces qu'il contient).
+    if (this.selGroup) { if (g) this.selGroup = g; else { this.selGroup = 0; this.sel = null; } }
     this.track.version++;
     this._changed();
     this._commit();
     return tiles.length + decos.length;
   },
 
-  // Sélectionne tout un groupe (rectangle qui l'englobe ; la sélection ne retient ensuite que ses membres visibles et déverrouillés).
+  // Sélectionne tout un groupe : le rectangle qui l'englobe, et un FILTRE (`selGroup`) qui ne retient que ses membres visibles et déverrouillés (voir _selOk).
+  // Avant 0.9.59 seul le rectangle était posé (élargi de 2 cases) : « Sélectionner le groupe » prenait donc aussi les pièces voisines hors du groupe — Suppr, déplacer
+  // ou « retirer du groupe » touchaient des pièces qui n'en faisaient pas partie (le départ compris). Le filtre tombe dès qu'une autre zone est tracée (selection.js).
   selectGroup(g) {
     const cells = [];
-    for (const t of this.track.tiles) if (t.g === g) for (let i = 0; i < 2; i++) cells.push([t.x, t.z]);
-    for (const d of this.track.decos) if (d.g === g) cells.push([Math.floor(d.x / 32), Math.floor(d.z / 32)]);
+    for (const t of this.track.tiles) if (t.g === g) cells.push(...Track.cellsOf(t));
+    for (const d of this.track.decos) if (d.g === g) cells.push([Math.floor(d.x / CELL), Math.floor(d.z / CELL)]);
     if (!cells.length) return;
     this.setTool('select');
-    this.sel = { x0: Math.min(...cells.map((c) => c[0])), z0: Math.min(...cells.map((c) => c[1])), x1: Math.max(...cells.map((c) => c[0])) + 2, z1: Math.max(...cells.map((c) => c[1])) + 2 };
+    this.sel = { x0: Math.min(...cells.map((c) => c[0])), z0: Math.min(...cells.map((c) => c[1])), x1: Math.max(...cells.map((c) => c[0])), z1: Math.max(...cells.map((c) => c[1])) };
+    this.selGroup = g;
     this._selInfo();
   },
 
