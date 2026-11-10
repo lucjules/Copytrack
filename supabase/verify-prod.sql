@@ -41,6 +41,19 @@ checks as (
               else 'ANCIENNE version (verrou par joueur seulement)' end,
          case when to_regprocedure('public.submit_rate_check(uuid,integer,integer,integer)') is not null and (select prosrc from pg_proc where oid = to_regprocedure('public.submit_rate_check(uuid,integer,integer,integer)')) like '%rate_check(%' and (select prosrc from pg_proc where oid = to_regprocedure('public.submit_rate_check(uuid,integer,integer,integer)')) like '%''submit''%' then 'ok' else 'ÉCART' end
   union all
+  -- ---- 1b. étapes ANTÉRIEURES dont l'étape 15 dépend (submit_best écrit scores.ghost) : « le fichier existe » ne prouve pas « la base l'a reçu » ------------
+  select 15 + ord, 'étapes 7 / 8 / 13 : ' || label, 'présent', case when ok then 'présent' else 'absent ou ancien' end, case when ok then 'ok' else 'MANQUE' end
+  from (values
+    (0, 'colonnes scores.ghost, ghost_veh, has_ghost (étape 7, fantômes)',
+        (select count(*) = 3 from pg_attribute where attrelid = 'public.scores'::regclass and attname in ('ghost', 'ghost_veh', 'has_ghost') and not attisdropped)),
+    (1, 'colonne players.title (étape 8, titres)',
+        exists (select 1 from pg_attribute where attrelid = 'public.players'::regclass and attname = 'title' and not attisdropped)),
+    (2, 'fonctions get_ghost, set_title, trending_tracks (étapes 7 et 8)',
+        (select count(*) = 3 from pg_proc where pronamespace = 'public'::regnamespace and proname in ('get_ghost', 'set_title', 'trending_tracks'))),
+    (3, 'track_comments_list renvoie le titre de l''auteur (édition à jour de l''étape 13)',
+        coalesce((select pg_get_function_result(oid) like '%title text%' from pg_proc where pronamespace = 'public'::regnamespace and proname = 'track_comments_list'), false))
+  ) v(ord, label, ok)
+  union all
   -- ---- 2. droits sur les fonctions : jamais exécutables par le jeu --------------------------------------------------------------------------
   select 30 + ord, 'exécutable par le jeu (anon, authenticated, public) : ' || sig, 'non',
          case when to_regprocedure(sig) is null then 'fonction absente'
