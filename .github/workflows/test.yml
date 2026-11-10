@@ -46,7 +46,7 @@ jobs:
     timeout-minutes: 30
     env:
       REQUIRE_BROWSER: '1'        # Playwright ou Chromium absent = ÉCHEC (jamais « ignoré avec succès »)
-      PW_FAIL_SHOTS: ${{ runner.temp }}/pw-fail
+      PW_FAIL_SHOTS: pw-fail
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -57,7 +57,7 @@ jobs:
       - name: Capture d'écran de chaque test en échec (pour comprendre un échec)
         if: failure()
         uses: actions/upload-artifact@v4
-        with: { name: pw-fail, path: '${{ runner.temp }}/pw-fail', if-no-files-found: ignore, retention-days: 7 }
+        with: { name: pw-fail, path: pw-fail, if-no-files-found: ignore, retention-days: 7 }
 
   # Les scripts SQL de supabase/ (communauté, classements, comptes, durcissement) sur un vrai PostgreSQL, appliqués deux fois (relançables).
   sql:
