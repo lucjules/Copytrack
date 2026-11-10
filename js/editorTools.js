@@ -160,6 +160,41 @@ export function pasteClip(track, clip, cx, cz, level) {
   return { added, skipped };
 }
 
+// Duplication d'une zone (Ctrl+D) : la première place LIBRE pour une copie de toutes les pièces et décorations sélectionnées, sans rien écraser
+// (contrairement au collage, qui remplace ce qui gêne). Essais dans l'ordre : à droite, en dessous, à gauche, au-dessus (en cases, d'une largeur ou
+// d'une hauteur de zone), puis les mêmes décalages un niveau plus haut, puis un niveau plus bas. Le départ n'est jamais dupliqué (un seul par circuit).
+// Renvoie { dx, dz, dl } ou null s'il n'y a aucune place. Ne modifie PAS le circuit.
+export function findDuplicateSpot(track, rect, tiles) {
+  const w = rect.x1 - rect.x0 + 1, h = rect.z1 - rect.z0 + 1;
+  const src = tiles.filter((t) => t.t !== 'start');
+  const flat = [[w, 0], [0, h], [-w, 0], [0, -h]];
+  const tries = [];
+  for (const dl of [0, 1, -1]) for (const [dx, dz] of flat) tries.push({ dx, dz, dl });
+  for (const { dx, dz, dl } of tries) {
+    const ok = src.every((t) => {
+      const c = Track.normalize({ ...t, col: t.col ? { ...t.col } : null, x: t.x + dx, z: t.z + dz, l: t.l + dl });
+      return t.l + dl >= 0 && t.l + dl <= MAX_LEVEL && Track.inBounds(c) && track.conflicts(c).length === 0;
+    });
+    if (ok) return { dx, dz, dl };
+  }
+  return null;
+}
+
+// Pose les copies à (dx, dz, dl) ; renvoie { tiles, decos } (les objets ajoutés). Une décoration refusée (trop nombreuses) est comptée dans `refused`.
+export function duplicateSelection(track, tiles, decos, { dx, dz, dl }) {
+  const out = { tiles: [], decos: [], refused: 0, skippedStart: 0 };
+  for (const t of tiles) {
+    if (t.t === 'start') { out.skippedStart++; continue; }
+    const a = track.add({ ...t, col: t.col ? { ...t.col } : null, x: t.x + dx, z: t.z + dz, l: t.l + dl });
+    if (a) out.tiles.push(a); else out.refused++;
+  }
+  for (const d of decos) {
+    const a = track.addDeco({ ...d, x: d.x + dx * CELL, z: d.z + dz * CELL, y: d.y + dl * LEVEL_H, cp: d.cp ? d.cp.map((q) => ({ ...q })) : undefined });
+    if (a) out.decos.push(a); else out.refused++;
+  }
+  return out;
+}
+
 // Transformations d'une sélection EN PLACE (déplacer, pivoter) : tout ou rien. Les pièces sélectionnées sont retirées, remises à leur nouvelle place,
 // et si UNE seule gêne (pièce voisine, hors des niveaux ou des bornes du circuit) tout revient comme avant. Les déclencheurs de cases (scripts) posés
 // dans la zone suivent les pièces ; les décorations aussi (obstacles compris : leur cap tourne avec la pièce, même convention que rotateClip).

@@ -5,7 +5,7 @@ import { Track } from './track.js';
 import { TrackView } from './trackMesh.js';
 import { createCar } from './carModel.js';
 import {
-  CATALOG, COLOR_CHOICES, PRESETS, sanitizeLoadout, exclusiveOf,
+  CATALOG, COLOR_CHOICES, PRESETS, THEMES, PALETTES, sanitizeLoadout, exclusiveOf,
 } from './cosmetics.js';
 import { COLLECTIONS, COLLECTION_COINS, collectionProgress } from './rewards.js';
 import { profile, saveProfile, owns, missingItems, totalCost, buy, setLoadout } from './profile.js';
@@ -130,6 +130,23 @@ export class GarageSession {
         row.appendChild(sw);
         list.appendChild(row);
       }
+      // Palettes de thème (0.9.57) : peinture, secondaire et dessins d'un coup (gratuit, visuel seulement).
+      const ph = document.createElement('div');
+      ph.className = 'ghead';
+      ph.textContent = 'Palettes : un clic règle les trois couleurs';
+      list.appendChild(ph);
+      for (const pal of PALETTES) {
+        const th = THEMES.find((x) => x.id === pal.theme);
+        const [c1, c2, c3] = pal.colors;
+        const on = this.draft.color.toLowerCase() === c1 && this.draft.color2.toLowerCase() === c2 && this.draft.decalColor.toLowerCase() === c3;
+        const c = this._card(pal.label, 'Palette', { on });
+        const dots = document.createElement('span');
+        dots.className = 'gpal';
+        dots.innerHTML = (th ? `<i class="gic">${th.icon}</i>` : '') + pal.colors.map((k) => `<i style="background:${k}"></i>`).join('');
+        c.appendChild(dots);
+        c.onclick = () => { this.setDraft({ color: c1, color2: c2, decalColor: c3 }); this.app.audio.click(); };
+        list.appendChild(c);
+      }
     } else if (this.cat === 'studio') {
       this._renderStudio(list);
     } else if (this.cat === 'collections') {
@@ -144,12 +161,23 @@ export class GarageSession {
         list.appendChild(c);
       }
     } else if (this.cat === 'presets') {
-      for (const pr of PRESETS) {
+      const presetCard = (pr) => {
         const miss = missingItems(pr.loadout);
         const cost = totalCost(miss);
         const c = this._card(pr.label, miss.length ? `🔒 ${cost} ◆` : 'Disponible', { on: JSON.stringify(sanitizeLoadout(pr.loadout)) === JSON.stringify(this.draft), locked: miss.length > 0 });
         c.onclick = () => { this.draft = sanitizeLoadout(pr.loadout); this._rebuildCar(); this._commitDraft(); this._render(); this.app.audio.click(); };
-        list.appendChild(c);
+        return c;
+      };
+      for (const pr of PRESETS.filter((x) => !x.theme)) list.appendChild(presetCard(pr));
+      // Thèmes de saison (0.9.57) : un titre par thème, puis ses préréglages.
+      for (const th of THEMES) {
+        const mine = PRESETS.filter((x) => x.theme === th.id);
+        if (!mine.length) continue;
+        const hh = document.createElement('div');
+        hh.className = 'ghead';
+        hh.textContent = `${th.icon} ${th.label}`;
+        list.appendChild(hh);
+        for (const pr of mine) list.appendChild(presetCard(pr));
       }
       const h = document.createElement('div');
       h.className = 'ghead';

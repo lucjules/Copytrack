@@ -53,7 +53,7 @@ export const pointerMethods = {
         else if (k === 'x') { e.preventDefault(); this.cutSel(); }
         else if (k === 'v') { e.preventDefault(); this.startPaste(); }
         else if (k === 'a') { e.preventDefault(); this.selectAll(); }
-        else if (k === 'd') { e.preventDefault(); this.inspector.duplicate(); }      // Ctrl+D : duplique la pièce ou la décoration inspectée
+        else if (k === 'd') { e.preventDefault(); this.duplicateNow(); }      // Ctrl+D : duplique TOUTE la zone sélectionnée, sinon la pièce ou décoration inspectée
       },
     };
     this._h.outside = (e) => { if (this.menuOpen && !e.target.closest('.ed-menu-wrap')) this.toggleMenu(false); };

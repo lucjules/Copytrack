@@ -7,6 +7,7 @@ import { DECO_ORDER } from '../decoData.js';
 import { sanitizeDecoParts, MAX_CUSTOM_DECOS } from '../customDeco.js';
 import { HEX, cleanColors } from './shared.js';
 import { Track } from '../track.js';
+const TAU2 = Math.PI * 2;
 export const editMethods = {
   // Revêtement (avec paramètre en %). Renvoie true si quelque chose a changé.
   setSurface(tile, s, p = 0) {
@@ -108,6 +109,16 @@ export const editMethods = {
     // Obstacles : décalage de phase (0 à 1) pour désynchroniser plusieurs obstacles.
     if (isObstacle(deco.k)) { deco.ph = Math.max(0, Math.min(0.95, Math.round((+d.ph || 0) * 20) / 20)); deco.s = Math.max(0.5, Math.min(2.5, deco.s)); }
     if (!DECO_ORDER.includes(deco.k)) return null;
+    // Inclinaison (rx : nez vers le bas / le haut) et roulis (rz) : purement VISUELS, donc refusés sur un obstacle (sa forme de contact ne tourne qu'autour de la verticale).
+    // Ramenés dans [-π, π] ; absents (0) quand la décoration est droite, pour que les codes existants ne changent pas.
+    if (!isObstacle(deco.k)) {
+      for (const a of ['rx', 'rz']) {
+        let v = +d[a];
+        if (!Number.isFinite(v) || !v) continue;
+        v = ((v % TAU2) + TAU2) % TAU2; if (v > Math.PI) v -= TAU2;
+        if (Math.abs(v) > 1e-4) deco[a] = +v.toFixed(3);
+      }
+    }
     // Couleur personnalisée (#rrggbb) : prend le pas sur l'index de couleur c.
     if (typeof d.cc === 'string' && HEX.test(d.cc)) deco.cc = d.cc.toLowerCase();
     // Pièce perso : ses formes voyagent avec la décoration ; au plus MAX_CUSTOM_DECOS par circuit, jamais vide.

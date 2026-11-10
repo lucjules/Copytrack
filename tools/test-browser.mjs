@@ -493,6 +493,57 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  await test('éditeur : Ctrl+D duplique TOUTE la zone sélectionnée (touche réelle), un seul pas d\'annulation ; l\'inspecteur donne cap, inclinaison et roulis d\'une décoration (un obstacle : le cap seulement)', async () => {
+    await click('[data-action="editor"]');
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track);
+    await page.waitForTimeout(400);
+    const n0 = await app(async () => {
+      const E = window.copytrack.session, T = E.track;
+      const { scriptTrack } = await import('/js/track.js');
+      const src = scriptTrack('s', 'start S4 C S3 finish');
+      T.clear(); for (const t of src.tiles) T.add(t);
+      const t1 = T.tiles[1];
+      T.addDeco({ k: 'tree', x: t1.x * 32 + 5, y: 0, z: t1.z * 32 + 5, ry: 0.3, s: 1, c: 0 });      // (sur une pièce : dans la zone sélectionnée)
+      E._commit(); E._changed(); E.setTool('select'); E.selAction('all');
+      E._h0 = E.hIndex;
+      return T.tiles.length;
+    });
+    await page.keyboard.press('Control+d');
+    await page.waitForTimeout(250);
+    const r = await app(() => { const E = window.copytrack.session, T = E.track; return { tiles: T.tiles.length, starts: T.tiles.filter((t) => t.t === 'start').length, steps: E.hIndex - E._h0, decos: T.decos.length }; });
+    assert.equal(r.starts, 1, 'le départ reste unique');
+    assert.equal(r.tiles, 2 * n0 - 1, 'toutes les pièces sauf le départ sont copiées (' + JSON.stringify(r) + ')');
+    assert.equal(r.decos, 2, 'la décoration aussi');
+    assert.equal(r.steps, 1, 'un seul pas d\'annulation');
+    await app(() => window.copytrack.session.undo());
+    assert.equal(await app(() => window.copytrack.session.track.tiles.length), n0, 'annulé d\'un coup');
+    // inspecteur : décoration non-obstacle
+    await app(async () => { const E = window.copytrack.session; E.clearSel(); E.setTool('inspect'); const d = E.track.decos[0]; E.inspector.select('deco', d); });
+    await page.waitForTimeout(200);
+    const labels = await page.evaluate(() => [...document.querySelectorAll('.insp-row > span, .insp-group')].map((e) => e.textContent.trim()));
+    for (const l of ['Cap (Y)', 'Inclinaison (X)', 'Roulis (Z)']) assert.ok(labels.includes(l), 'inspecteur : ' + l + ' (' + labels.join(' | ') + ')');
+    await page.evaluate(() => { const row = [...document.querySelectorAll('.insp-row')].find((r) => r.textContent.startsWith('Inclinaison (X)')); const i = row.querySelector('input[type=range]'); i.value = '90'; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); });
+    const rx = await app(() => window.copytrack.session.track.decos[0].rx);
+    assert.ok(Math.abs(rx - Math.PI / 2) < 0.01, 'inclinaison de 90° appliquée à la décoration (' + rx + ')');
+    await page.evaluate(() => [...document.querySelectorAll('.insp-rot .btn')].find((b) => b.textContent === 'Remettre droit').click());
+    assert.ok(!(await app(() => window.copytrack.session.track.decos[0].rx)), '« Remettre droit » : inclinaison effacée');
+    // obstacle : cap seulement
+    await app(async () => { const E = window.copytrack.session, { OBST } = await import('/js/obstacles.js'); const o = E.track.addDeco({ k: Object.keys(OBST)[0], x: 80, y: 0, z: 80, ry: 0, s: 1, c: 0 }); E.inspector.select('deco', o); });
+    await page.waitForTimeout(200);
+    const labels2 = await page.evaluate(() => [...document.querySelectorAll('.insp-row > span')].map((e) => e.textContent.trim()));
+    assert.ok(labels2.includes('Cap (Y)') && !labels2.includes('Inclinaison (X)') && !labels2.includes('Roulis (Z)'), 'obstacle : le cap seulement (' + labels2.join(' | ') + ')');
+    // pièce : cap et roulis
+    await app(async () => { const E = window.copytrack.session; E.inspector.select('tile', E.track.tiles[1]); });
+    await page.waitForTimeout(200);
+    const labels3 = await page.evaluate(() => [...document.querySelectorAll('.insp-row > span')].map((e) => e.textContent.trim()));
+    assert.ok(labels3.includes('Cap') && labels3.includes('Roulis'), 'pièce : cap et roulis (' + labels3.join(' | ') + ')');
+    const r0 = await app(() => window.copytrack.session.inspector.sel.obj.r);
+    await page.evaluate(() => document.querySelector('.insp-rot [aria-label="Cap : quart de tour à droite"]').click());
+    assert.equal(await app(() => window.copytrack.session.inspector.sel.obj.r), (r0 + 1) & 3, 'quart de tour à droite (la pièce inspectée est remplacée dans le circuit par sa version tournée)');
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
   await test('éditeur : aperçu du pot de peinture (toute la zone surlignée avant le clic, rien de modifié), puis un seul pas d\'annulation pour le remplissage', async () => {
     await click('[data-action="editor"]');
     await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track);
@@ -544,6 +595,41 @@ try {
     const cats = page.locator('#garage .tab, #garage-cats button');
     if (await cats.count() > 2) await cats.nth(2).click();
     await page.waitForTimeout(200);
+    await click('#garage [data-action="garage-back"]');
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  await test('garage : palettes de thème (un clic = trois couleurs), préréglages regroupés par saison (Noël, Nouvel An, Plage, Été…), éléments saisonniers verrouillés avec leur prix, la voiture change', async () => {
+    await click('[data-action="garage"]');
+    await waitApp(() => window.copytrack.mode === 'garage');
+    await page.waitForTimeout(400);
+    const meshes = () => app(() => { let n = 0; window.copytrack.session.car.group.traverse((o) => { if (o.isMesh) n++; }); return n; });
+    // palettes
+    await click('#garage-tabs [data-cat="colors"]');
+    await page.waitForTimeout(200);
+    const pals = await page.evaluate(() => [...document.querySelectorAll('#garage-list .gcard .gl')].map((e) => e.textContent.trim()));
+    for (const l of ['Noël', 'Nouvel An', 'Plage', 'Été', 'Halloween', 'Hiver', 'Printemps', 'Automne', 'Saint-Valentin']) assert.ok(pals.includes(l), 'palette « ' + l + ' » (' + pals.join(' | ') + ')');
+    await page.evaluate(() => [...document.querySelectorAll('#garage-list .gcard')].find((c) => c.querySelector('.gl').textContent.trim() === 'Noël').click());
+    const col = await app(() => { const d = window.copytrack.session.draft; return [d.color, d.color2, d.decalColor]; });
+    assert.deepEqual(col, ['#c1121f', '#1b6b34', '#f4f1ea'], 'la palette Noël règle peinture, secondaire et dessins');
+    // préréglages par thème
+    await click('#garage-tabs [data-cat="presets"]');
+    await page.waitForTimeout(200);
+    const heads = await page.evaluate(() => [...document.querySelectorAll('#garage-list .ghead')].map((e) => e.textContent.trim()));
+    for (const t of ['🎄 Noël', '🎆 Nouvel An', '🏖️ Plage', '☀️ Été', '🎃 Halloween']) assert.ok(heads.includes(t), 'titre de thème « ' + t + ' » (' + heads.join(' | ') + ')');
+    const base = await meshes();
+    await page.evaluate(() => [...document.querySelectorAll('#garage-list .gcard')].find((c) => c.querySelector('.gl').textContent.trim() === 'Père Noël').click());
+    await page.waitForTimeout(400);
+    const st = await app(() => { const G = window.copytrack.session; return { orn: G.draft.ornament, body: G.draft.body, buy: !document.getElementById('garage-buy').classList.contains('hidden'), btn: document.getElementById('garage-buy-btn').disabled }; });
+    assert.equal(st.orn, 'santahat'); assert.equal(st.body, 'sleigh');
+    assert.ok(st.buy, 'les éléments payants du thème s\'affichent dans la barre d\'achat');
+    assert.ok(st.btn, 'pièces insuffisantes : l\'achat reste bloqué (aucun gain gratuit)');
+    assert.notEqual(await meshes(), base, 'la voiture affichée a changé');
+    // les nouvelles carrosseries sont listées avec leur prix
+    await click('#garage-tabs [data-cat="body"]');
+    await page.waitForTimeout(200);
+    const bodies = await page.evaluate(() => [...document.querySelectorAll('#garage-list .gcard .gl')].map((e) => e.textContent.trim()));
+    for (const l of ['Kart', 'Cabriolet', 'Coupé GT', 'Hot rod', 'Tout-terrain', 'Fourgonnette', 'Bulle', 'Limousine', 'Traîneau']) assert.ok(bodies.includes(l), 'carrosserie « ' + l + ' »');
     await click('#garage [data-action="garage-back"]');
     await waitApp(() => window.copytrack.mode === 'menu');
   });

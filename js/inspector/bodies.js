@@ -20,13 +20,34 @@ export const bodyMethods = {
     rows.push(this._num('Case X', () => t.x, (v) => ed._applyTilePatch(t, { x: Math.round(v) }), { step: 1 }));
     rows.push(this._num('Case Z', () => t.z, (v) => ed._applyTilePatch(t, { z: Math.round(v) }), { step: 1 }));
     rows.push(this._num('Niveau', () => t.l, (v) => ed._applyTilePatch(t, { l: v }), { step: 0.5, min: 0, max: MAX_LEVEL }));
-    // Rotation : quatre boutons liés à tile.r
-    const rot = h('div', { class: 'insp-rot', role: 'group', 'aria-label': 'Rotation' }, [0, 1, 2, 3].map((r) => {
-      const b = h('button', { class: 'btn', onclick: () => this._apply(() => ed._applyTilePatch(t, { r })) }, `${r * 90}°`);
-      this._sync.push(() => { b.classList.toggle('on', t.r === r); b.setAttribute('aria-pressed', String(t.r === r)); });
+    // Rotations d'une pièce : le CAP (lacet, par quarts de tour : la pièce vit sur la grille) et le ROULIS (orientation : sol, mur gauche, mur droit, plafond).
+    // L'inclinaison (pente) est celle du type de pièce : elle se change avec « Type » / « Caractéristiques » plus bas.
+    group('Rotation');
+    const turn = (d) => this._apply(() => ed._applyTilePatch(t, { r: (t.r + d + 4) & 3 }));
+    const rot = h('div', { class: 'insp-rot', role: 'group', 'aria-label': 'Cap' }, [
+      h('button', { class: 'btn', title: 'Tourner d’un quart de tour à gauche (Maj + R)', 'aria-label': 'Cap : quart de tour à gauche', onclick: () => turn(-1) }, '↶ 90°'),
+      ...[0, 1, 2, 3].map((r) => {
+        const b = h('button', { class: 'btn', onclick: () => this._apply(() => ed._applyTilePatch(t, { r })) }, `${r * 90}°`);
+        this._sync.push(() => { b.classList.toggle('on', t.r === r); b.setAttribute('aria-pressed', String(t.r === r)); });
+        return b;
+      }),
+      h('button', { class: 'btn', title: 'Tourner d’un quart de tour à droite (R)', 'aria-label': 'Cap : quart de tour à droite', onclick: () => turn(1) }, '↷ 90°'),
+    ]);
+    rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Cap'), rot));
+    const setOri = (n) => {
+      if (n === tileOri(t)) return true;
+      const ok = n === 3 ? ed.track.toggleFlag(t, 'v') : ed.track.toggleFlag(t, 'o', n);
+      if (!ok) ed.app.ui.flash(n === 3 ? 'Pas la place à l’envers : monte d’abord, ou libère le niveau en dessous.' : n ? 'Pas la place pour un mur : la route descend de 2 niveaux sous son niveau (monte d’abord, libère le niveau en dessous).' : 'Pas la place pour revenir au sol.');
+      return ok || false;
+    };
+    const oriOff = (n) => (n === 1 || n === 2 ? !flagAllowed(t.t, 'o', null, n) : false);
+    const roll = h('div', { class: 'insp-rot', role: 'group', 'aria-label': 'Roulis' }, ORIENTS.map((x) => {
+      const b = h('button', { class: 'btn', title: x.label, onclick: () => this._apply(() => setOri(x.id)) }, x.label);
+      this._sync.push(() => { const on = tileOri(t) === x.id; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); b.disabled = !on && oriOff(x.id); });
       return b;
     }));
-    rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Rotation'), rot));
+    rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Roulis'), roll));
+    rows.push(h('div', { class: 'insp-note' }, 'Inclinaison : celle du type de pièce (pente, montée…), voir « Type » plus bas.'));
 
     // Caractéristiques (pièce d'une famille : listes déroulantes) ou Type (autres pièces de même empreinte)
     const fam = familyOf(t.t);
@@ -72,14 +93,7 @@ export const bodyMethods = {
     group('Options');
     const flag = (f, label, hint) => this._check(label, () => t[f], (on) => (on !== !!t[f] ? ed.track.toggleFlag(t, f) || false : true), !flagAllowed(t.t, f, t) && !t[f], hint);
     // Orientation (0.9.3) : sol, mur gauche / droit (vus dans le sens de la flèche), plafond (à l'envers : gravité inversée).
-    rows.push(this._select('Orientation', ORIENTS.map((x) => [String(x.id), x.label]), () => String(tileOri(t)),
-      (v) => {
-        const n = +v;
-        if (n === tileOri(t)) return true;
-        const ok = n === 3 ? ed.track.toggleFlag(t, 'v') : ed.track.toggleFlag(t, 'o', n);
-        if (!ok) ed.app.ui.flash(n === 3 ? 'Pas la place à l’envers : monte d’abord, ou libère le niveau en dessous.' : n ? 'Pas la place pour un mur : la route descend de 2 niveaux sous son niveau (monte d’abord, libère le dessous).' : 'Pas la place pour remettre la route à plat.');
-        return ok || false;
-      }, false, (v) => +v === 1 || +v === 2 ? !flagAllowed(t.t, 'o', null, +v) : false));
+    rows.push(this._select('Orientation', ORIENTS.map((x) => [String(x.id), x.label]), () => String(tileOri(t)), (v) => setOri(+v), false, (v) => oriOff(+v)));
     rows.push(flag('nb', 'Sans bordures', 'Plus de rebord'));
     rows.push(flag('tn', 'Tunnel', 'Voûte autour de la route'));
     // Checkpoint : simple case à cocher (portique sur route, balise sur plateforme). L'ancien anneau aérien (cp = 2) reste lisible :
@@ -200,8 +214,27 @@ export const bodyMethods = {
     rows.push(this._num('X', () => d.x, (v) => { d.x = v; return touch(); }, { step: 0.5 }));
     rows.push(this._num('Hauteur', () => d.y, (v) => { d.y = v; return touch(); }, { step: 0.5 }));
     rows.push(this._num('Z', () => d.z, (v) => { d.z = v; return touch(); }, { step: 0.5 }));
-    rows.push(this._range('Rotation', () => Math.round(((d.ry || 0) * 180 / Math.PI + 360) % 360), (v) => { d.ry = v * Math.PI / 180; return touch(); }, { min: 0, max: 359, step: 1, fmt: (v) => v + '°' }));
     const obst = isObstacle(d.k);
+    const deg = (r) => Math.round((r || 0) * 180 / Math.PI);
+    const norm = (v) => ((v % 360) + 360) % 360;
+    rows.push(h('div', { class: 'insp-group' }, 'Rotation'));
+    rows.push(this._range('Cap (Y)', () => norm(deg(d.ry)), (v) => { d.ry = v * Math.PI / 180; return touch(); }, { min: 0, max: 359, step: 1, fmt: (v) => v + '°' }));
+    if (!obst) {
+      // Inclinaison et roulis : purement visuels (une décoration n'a pas de contact). Un obstacle, lui, ne tourne qu'autour de la verticale : sa forme de contact est celle du jeu.
+      rows.push(this._range('Inclinaison (X)', () => deg(d.rx), (v) => { d.rx = v * Math.PI / 180; return touch(); }, { min: -180, max: 180, step: 1, fmt: (v) => v + '°' }));
+      rows.push(this._range('Roulis (Z)', () => deg(d.rz), (v) => { d.rz = v * Math.PI / 180; return touch(); }, { min: -180, max: 180, step: 1, fmt: (v) => v + '°' }));
+    }
+    const step = (label, fn, title) => h('button', { class: 'btn', title, onclick: () => this._apply(() => { fn(); return touch(); }) }, label);
+    rows.push(h('div', { class: 'insp-row' }, h('span', {}, ''), h('div', { class: 'insp-rot', role: 'group', 'aria-label': 'Rotations rapides' }, [
+      step('↶ 90°', () => { d.ry = ((d.ry || 0) - Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI); }, 'Cap : quart de tour à gauche'),
+      step('↷ 90°', () => { d.ry = ((d.ry || 0) + Math.PI / 2) % (2 * Math.PI); }, 'Cap : quart de tour à droite'),
+      ...(obst ? [] : [
+        step('Remettre droit', () => { delete d.rx; delete d.rz; }, 'Inclinaison et roulis à 0°'),
+        step('Retourner', () => { d.rx = Math.PI; d.rz = 0; }, 'Tête en bas (inclinaison 180°)'),
+      ]),
+      step('↺ Tout à zéro', () => { d.ry = 0; delete d.rx; delete d.rz; }, 'Cap, inclinaison et roulis à 0°'),
+    ])));
+    if (obst) rows.push(h('div', { class: 'insp-note' }, 'Un obstacle ne tourne qu’autour de la verticale : sa forme de contact est fixée par le jeu.'));
     rows.push(this._range('Taille', () => d.s, (v) => { d.s = v; return touch(); }, { min: obst ? 0.5 : 0.3, max: obst ? 2.5 : 6, step: 0.05, fmt: (v) => '×' + (+v).toFixed(2) }));
     if (d.k === 'plaque') {
       const url = h('input', { type: 'text', maxlength: 400, placeholder: 'https://…', spellcheck: false });

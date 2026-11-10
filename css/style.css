@@ -669,6 +669,9 @@ body.touch .t-top { top: auto; right: auto; left: 12px; bottom: 112px; flex-dire
 .gcard .gs { font-size: 13px; color: var(--muted); }
 .gcard .gsave { position: absolute; top: 6px; right: 8px; cursor: pointer; }
 .crow, .ghead { grid-column: 1 / -1; }
+.gpal { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.gpal i { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.35); display: inline-block; }
+.gpal i.gic { width: auto; height: auto; border: 0; border-radius: 0; font-style: normal; font-size: 14px; margin-right: 2px; }
 .ghead { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .08em; margin-top: 6px; }
 .crow { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 .cpick { width: 30px; height: 30px; padding: 0; border: 2px solid var(--line); border-radius: 8px; background: none; cursor: pointer; }
@@ -908,8 +911,8 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 .insp-row input[type="number"], .insp-row input[type="text"], .insp-row select { width: 100%; min-width: 0; font: inherit; color: var(--text); background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
 .insp-row input[type="range"] { width: 100%; min-width: 0; }
 .insp-row b { color: var(--text); min-width: 3.2em; text-align: right; font-size: 12px; }
-.insp-rot { grid-column: 2 / 4; display: flex; gap: 3px; }
-.insp-rot .btn { flex: 1; padding: 4px 0; font-size: 12px; }
+.insp-rot { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 3px; }
+.insp-rot .btn { flex: 1 1 auto; min-width: 0; padding: 4px 6px; font-size: 12px; }
 .insp-swatches { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 4px; }
 .insp-swatches .swatch { width: 20px; height: 20px; border-radius: 5px; border: 2px solid transparent; cursor: pointer; padding: 0; }
 .insp-swatches .swatch.on { border-color: #fff; }

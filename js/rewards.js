@@ -37,6 +37,16 @@ export const COLLECTIONS = [
   { id: 'feu', label: 'Feu', items: [['trail', 'ember'], ['decal', 'flames'], ['led', 'amber'], ['spoiler', 'duck']] },
   { id: 'royal', label: 'Royal', items: [['ornament', 'crown'], ['wheels', 'gold'], ['body', 'wedge'], ['led', 'violet']] },
   { id: 'course', label: 'Course', items: [['decal', 'checker'], ['ornament', 'flag'], ['spoiler', 'gt'], ['wheels', 'spoke']] },
+  // Collections de saison (0.9.57) : quatre éléments achetables du même thème.
+  { id: 'c-noel', label: 'Noël', items: [['ornament', 'santahat'], ['decal', 'xmastree'], ['led', 'xmas'], ['trail', 'snow']] },
+  { id: 'c-nouvelan', label: 'Nouvel An', items: [['ornament', 'partyhat'], ['decal', 'fireworks'], ['led', 'champagne'], ['trail', 'sparkle']] },
+  { id: 'c-hiver', label: 'Hiver', items: [['ornament', 'snowman'], ['decal', 'snowflakes'], ['wheels', 'snow'], ['finish', 'frost']] },
+  { id: 'c-plage', label: 'Plage', items: [['ornament', 'surfboard'], ['decal', 'waves'], ['led', 'ocean'], ['spoiler', 'surf']] },
+  { id: 'c-ete', label: 'Été', items: [['ornament', 'icecream'], ['decal', 'sun'], ['led', 'sunny'], ['wheels', 'sunny']] },
+  { id: 'c-halloween', label: 'Halloween', items: [['ornament', 'pumpkin'], ['decal', 'bats'], ['led', 'spooky'], ['trail', 'ghost']] },
+  { id: 'c-printemps', label: 'Printemps', items: [['ornament', 'bunny'], ['decal', 'flowers'], ['led', 'blossom'], ['trail', 'petals']] },
+  { id: 'c-automne', label: 'Automne', items: [['decal', 'leaf'], ['led', 'harvest'], ['trail', 'leaves'], ['ornament', 'witchhat']] },
+  { id: 'c-amour', label: 'Saint-Valentin', items: [['ornament', 'heartballoon'], ['decal', 'hearts'], ['led', 'love'], ['trail', 'hearts']] },
 ];
 
 // Avancement d'une collection : { have, total, done }.

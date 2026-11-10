@@ -6,7 +6,7 @@ import { PIECES } from '../pieces.js';
 import { Track } from '../track.js';
 import { buildTileMesh } from '../trackMesh.js';
 import { buildDecoMesh } from '../decos.js';
-import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, moveSelection, rotateSelection, checkTrack } from '../editorTools.js';
+import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, moveSelection, rotateSelection, checkTrack, findDuplicateSpot, duplicateSelection } from '../editorTools.js';
 import { orientationIssues } from '../joins.js';
 export const selectionMethods = {
   // Problèmes repérables sans rouler (0.9.5) : extrémités libres, sauts risqués, pièces inaccessibles (checkTrack), puis raccords d'orientation
@@ -138,6 +138,27 @@ export const selectionMethods = {
   // Duplique la sélection : copie puis collage à poser (le premier clic place le double, l'original ne bouge pas).
   duplicateSel() {
     if (this.copySel(true)) this.startPaste();
+  },
+
+  // Ctrl+D. Une ZONE sélectionnée (outil Sélection) : TOUTES ses pièces et décorations sont copiées d'un coup sur la première place libre
+  // (voir findDuplicateSpot : à droite, en dessous, à gauche, au-dessus, puis un niveau plus haut ou plus bas), rien n'est écrasé, un seul pas
+  // d'annulation, et la copie devient la sélection (Ctrl+D répété enchaîne les copies). Sinon : la pièce ou décoration inspectée (inspector.duplicate).
+  duplicateNow() {
+    if (!(this.tool === 'select' && this.sel && !this.pasting)) return this.inspector.duplicate();
+    const tiles = this._selTiles(), decos = this._selDecos();
+    if (!tiles.length && !decos.length) { this.app.ui.flash('Rien à dupliquer dans cette zone.'); return false; }
+    const spot = findDuplicateSpot(this.track, this.sel, tiles);
+    if (!spot) { this.app.ui.flash('Pas de place pour une copie de toute la sélection.'); this.app.audio.error(); return false; }
+    const res = duplicateSelection(this.track, tiles, decos, spot);
+    const r = this.sel;
+    this.sel = { x0: r.x0 + spot.dx, z0: r.z0 + spot.dz, x1: r.x1 + spot.dx, z1: r.z1 + spot.dz };
+    if (spot.dl && this.focusLevel) this.setLevel(this.level + spot.dl);
+    const n = res.tiles.length, d = res.decos.length;
+    this.app.ui.flash(`Dupliqué : ${n} pièce${n > 1 ? 's' : ''}${d ? `, ${d} décoration${d > 1 ? 's' : ''}` : ''}${res.skippedStart ? ' (le départ reste unique)' : ''}${res.refused ? ` · ${res.refused} refusée(s) (limite atteinte)` : ''}.`, 2.4);
+    this.app.audio.place();
+    this._changed();
+    this._commit();
+    return true;
   },
 
   startPaste() {

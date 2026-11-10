@@ -38,6 +38,7 @@ export function tileBounds(tile, out = new THREE.Box3()) {
 // Boîte englobante d'une décoration (posée en (x, y, z), taille s).
 export function decoBounds(d, out = new THREE.Box3()) {
   const h = 1.5 * d.s;
+  if (d.rx || d.rz) { const r = 4 * d.s; return out.set(new THREE.Vector3(d.x - r, d.y - r, d.z - r), new THREE.Vector3(d.x + r, d.y + r, d.z + r)); }      // inclinée : boîte autour du pied, assez grande pour tout cap
   return out.set(new THREE.Vector3(d.x - h, d.y - 0.2, d.z - h), new THREE.Vector3(d.x + h, d.y + 4 * d.s, d.z + h));
 }
 

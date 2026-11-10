@@ -4736,6 +4736,7 @@ var surfaceMethods = {
 };
 
 // js/track/edit.js
+var TAU2 = Math.PI * 2;
 var editMethods = {
   // Revêtement (avec paramètre en %). Renvoie true si quelque chose a changé.
   setSurface(tile, s, p = 0) {
@@ -4866,6 +4867,18 @@ var editMethods = {
       deco.s = Math.max(0.5, Math.min(2.5, deco.s));
     }
     if (!DECO_ORDER.includes(deco.k)) return null;
+    if (!isObstacle(deco.k)) {
+      for (const a of [
+        "rx",
+        "rz"
+      ]) {
+        let v = +d[a];
+        if (!Number.isFinite(v) || !v) continue;
+        v = (v % TAU2 + TAU2) % TAU2;
+        if (v > Math.PI) v -= TAU2;
+        if (Math.abs(v) > 1e-4) deco[a] = +v.toFixed(3);
+      }
+    }
     if (typeof d.cc === "string" && HEX3.test(d.cc)) deco.cc = d.cc.toLowerCase();
     if (deco.k === "custom") {
       deco.cp = sanitizeDecoParts(d.cp);
@@ -6045,7 +6058,15 @@ var Track = class _Track {
       d.c,
       d.u || 0,
       // (groupe : 12e valeur ; les précédentes sont alors toutes écrites)
-      ...d.g ? [
+      // (inclinaison et roulis : 13e et 14e valeurs, écrites seulement s'ils servent ; toutes les précédentes sont alors écrites)
+      ...d.rx || d.rz ? [
+        d.ph || 0,
+        d.cc ? d.cc.slice(1) : "",
+        d.cp && d.cp.length ? packDecoParts(d.cp) : 0,
+        d.g || 0,
+        +(d.rx || 0).toFixed(3),
+        +(d.rz || 0).toFixed(3)
+      ] : d.g ? [
         d.ph || 0,
         d.cc ? d.cc.slice(1) : "",
         d.cp && d.cp.length ? packDecoParts(d.cp) : 0,
@@ -6064,7 +6085,7 @@ var Track = class _Track {
       ]
     ]);
     const data = {
-      v: extras.length || this.decos.some((d) => d.cc || d.cp || d.g) || this.groupNames().length || this.lg || RULES.some((r) => r.v4 && this[r.key] !== r.def) ? 4 : 3,
+      v: extras.length || this.decos.some((d) => d.cc || d.cp || d.g || d.rx || d.rz) || this.groupNames().length || this.lg || RULES.some((r) => r.v4 && this[r.key] !== r.def) ? 4 : 3,
       n: this.name,
       a: this.author || "",
       d: this.decor,
@@ -6164,7 +6185,9 @@ var Track = class _Track {
           ph: +o[8] || 0,
           cc: typeof o[9] === "string" && o[9] ? "#" + o[9] : "",
           cp: k === "custom" ? unpackDecoParts(o[10]) : void 0,
-          g: o[11] | 0
+          g: o[11] | 0,
+          rx: +o[12] || 0,
+          rz: +o[13] || 0
         });
       }
     }
