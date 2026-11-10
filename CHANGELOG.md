@@ -6,6 +6,15 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.52 — phase 5 : accueil à six catégories, écrans rangés
+
+`PHYS_VER` inchangé (31). Suivi : `docs/PLAN-FINALISATION-COPYTRACK.md`.
+- **Accueil** : six catégories — **Jouer**, **Créer**, **Multijoueur**, **Progression**, **Profil**, **Paramètres** — au lieu de six tuiles mêlant jeu, création et réglages plus deux sous-menus et une barre de raccourcis. Chaque catégorie ouvre un **panneau** d'actions (titre, ← Retour, Échap, bouton retour de la manette), au lieu d'un sous-menu qui s'ouvrait sous les tuiles ; un écran ouvert depuis un panneau y ramène au retour. Chaque action n'apparaît qu'une fois ; rien n'est supprimé : *Multijoueur* (salons) n'était accessible que depuis l'écran Communauté, il est maintenant dans son propre panneau. Aucun bouton ne mène à une fonction absente (pas de « Reprendre une partie » : le jeu n'a pas de sauvegarde de course en cours).
+- **Un écran à onglets pour trois entrées** : *Profil* (Compte, Amis, Sauvegardes), *Progression* (Records et médailles, Niveau et licences, Statistiques, Déblocages) et *Paramètres* (Audio, Graphismes, Accessibilité, Jeu, Interface, Commandes). Avant, tout cela tenait dans un seul onglet « Options » d'une soixantaine de réglages mélangés (le nom du pilote au milieu des commandes tactiles, « Effacer tous les records » au bas des options). Le nom du pilote est dans Compte, « Effacer les records » dans Sauvegardes (zone sensible), la langue dans Audio, les commandes tactiles dans Commandes, la taille de l'interface dans Accessibilité.
+- **Progression** (nouveaux écrans, faits de données déjà présentes) : bilan de la carrière et **tous les records et médailles** circuit par circuit (une ligne ouvre la fiche du circuit), statistiques, chapitres ouverts ou à gagner, titres, récompenses de niveau.
+- **Nettoyage** : boutons de l'ancien accueil (`profile`, `options`, `controls`) et leurs règles CSS retirés ; bouton « Multijoueur » en double dans l'en-tête de la Communauté retiré ; classes CSS orphelines retirées (le test de style les trouvait). Les chemins cités dans les messages du jeu suivent la nouvelle organisation (« Paramètres › Interface », « Multijoueur › Amis »…), en français et en anglais.
+- **Tests** : `tools/test-menu.mjs` réécrit (six catégories, panneaux, aucun bouton mort, chaque onglet a son panneau, aucun réglage perdu ou en double) ; le test navigateur parcourt les trois entrées et tous leurs onglets, les six panneaux sur 5 tailles d'écran (entrées touchables, 40 px au moins), Échap, le retour, et ouvre une fiche depuis les records.
+
 ## Bêta 0.9.51 — phase 4 : comptes, cloud, scores, multijoueur
 
 `PHYS_VER` inchangé (31). **Lancer `supabase/etape14-securite.sql`** (relançable, aucune suppression) et **redéployer les fonctions `submit-score` et `ice`** (`npm run build:function`, déjà régénérées ici). Suivi : `docs/PLAN-FINALISATION-COPYTRACK.md`.

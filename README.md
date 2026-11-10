@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.51** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.9.52** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -97,7 +97,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 - **Garage** (purement visuel) : 8 carrosseries, moto routière ou chopper, couleurs, finitions (brillante, mate, métallisée, nacrée), LED, dessins, ornements, ailerons, roues, traînées lumineuses, klaxons (touche H), presets.
 - **Pièces (monnaie)** gagnées selon la médaille et les objectifs bonus. **Profil** : un code joueur contient toute la progression.
 - **Musique** synthétisée en direct, une ambiance par décor ; sons sans aucun fichier audio.
-- **Profil** (menu principal) : onglets *Compte*, *Sauvegardes*, *Options* et *Commandes*.
+- **Menu principal** : six catégories — **Jouer** (course rapide, carrière, défi du jour, circuits de la communauté, modes, Académie), **Créer** (éditeur, mes circuits, importer un code), **Multijoueur** (salons, compétition, amis), **Progression** (records et médailles, niveau et licences, statistiques, déblocages), **Profil** (compte et pseudonyme, garage, sauvegardes) et **Paramètres** (audio, graphismes, accessibilité, jeu, interface, commandes). Chacune ouvre un panneau avec « ← Retour » (Échap, ou le bouton retour de la manette, fait de même) ; un écran ouvert depuis un panneau y ramène au retour.
 - **Langues** : **français et anglais** (~1 700 textes traduits : menus, carrière et ses 72 circuits, éditeur, communauté, multijoueur, Académie…). La langue suit le navigateur au premier lancement d'un nouvel appareil (un appareil qui a déjà des données reste en français), se change d'un clic sur l'écran d'accueil ou dans Profil › Options › Langue, et se mémorise par appareil. Un texte sans traduction reste en français : jamais d'écran cassé. Voir `js/i18n.js` pour ajouter une langue.
 - **Personnalisation** : **atelier de voiture** (24 pièces libres, peinture et motifs, dessin 16 × 16, effets, code `SHC1:`), **thèmes d'interface** et **HUD déplaçable**, **caméras à toi**, **ambiance avancée** des circuits (météo, soleil, heure qui défile), **pièces décoratives perso**, **déclencheurs** sur les cases, **règles de partie** en multijoueur, **modes de jeu** à toi (codes `SHM1:`) et **paquets** (`SHX1:`) qui regroupent le tout. Rien de tout cela ne change les performances d'une voiture.
 - **Options** : volume des effets et de la musique, qualité graphique (Auto, Ultra, Haute, Moyenne, Basse, Potato), compteur d'images, champ de vision, effet de vitesse, tremblements de caméra, **couleurs adaptées au daltonisme**, taille de l'interface, fantômes.

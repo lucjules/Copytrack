@@ -319,6 +319,7 @@ export default {
   'Boutons ◀ ▶ à gauche': 'Buttons ◀ ▶ on the left',
   'Passe les <b>checkpoints</b> puis l\'<b>arrivée</b>, le plus vite possible.': 'Go through the <b>checkpoints</b> then the <b>finish</b>, as fast as you can.',
   '{a} : accélérer / freiner': '{a}: accelerate / brake',
+  '{a} / {b} : tourner': '{a} / {b}: steer',
   'Manette : gâchettes et stick gauche': 'Gamepad: triggers and left stick',
   '<b>Dérapage</b> : freine en virage, garde le volant.': '<b>Drifting</b>: brake in a turn, keep steering.',
   '<b>Mini-turbo</b> : une longue glisse donne une poussée.': '<b>Mini-turbo</b>: a long slide gives a push.',

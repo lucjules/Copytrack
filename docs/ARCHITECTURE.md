@@ -176,3 +176,7 @@ hors ligne ; il est « réseau d'abord » pour récupérer les mises à jour ; s
 - Multijoueur : STUN seulement par défaut ; les réseaux qui bloquent le pair à pair (environ 10 à 20 % des paires) exigent un relais TURN, à configurer dans `js/config.js` (non fourni).
 - Stockage local : `localStorage` (quelques Mo) ; pas d'IndexedDB.
 - La fonction serveur doit être redéployée à la main après tout changement de physique (aucun déploiement automatique).
+
+## Accueil et écran à onglets (0.9.52)
+
+L'accueil (`index.html`, `#menu`) n'affiche que six tuiles ; chacune ouvre un `.menu-panel` d'actions (`js/app/wiring.js`, `_menuSub`) qui remplace les tuiles (Échap et « ← Retour » les ramènent, `_lastPanel` fait revenir au panneau après un écran). Les entrées `data-action="tab-<onglet>"` ouvrent l'écran `#profile`, un écran à onglets partagé par trois entrées (`js/app/profile.js`, `HUBS` : Profil, Progression, Paramètres) ; `showScreen('<onglet>')` mène directement à un onglet (l'ancien `showScreen('options')` mène aux graphismes). `tools/test-menu.mjs` garde la structure : six tuiles, une action une seule fois, aucun bouton mort, aucun onglet sans panneau, aucun réglage perdu ou en double.

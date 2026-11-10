@@ -99,7 +99,7 @@ export const profileMethods = {
   _renderUnlocks(box) {
     const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(medalTime(rec), b.def.medals) : null; };
     const total = this.builtins.length, chapters = Math.ceil(total / CHAPTER_SIZE);
-    let html = '<h3 class="opt-h">Chapitres de la carrière</h3><ul class="title-list">';
+    let html = '<h3 class="opt-h">Chapitres de la carrière</h3><ul class="chap-list">';
     for (let c = 0; c < chapters; c++) {
       const open = chapterUnlocked(c, medalOf, total), ch = CHAPTERS[c];
       html += `<li class="${open ? 'got' : ''}"><b>${open ? '🔓' : '🔒'} Chapitre ${c + 1}${ch ? ' · ' + esc(ch.name) : ''}</b>${open ? '' : `<small>Gagne ${UNLOCK_MEDALS} médailles au chapitre ${prerequisiteOf(c) + 1}.</small>`}</li>`;
