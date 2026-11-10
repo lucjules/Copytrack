@@ -69,7 +69,7 @@ export class Simulation {
     // restait figée alors que leur dessin, lui, bougeait : on pouvait heurter un obstacle là où il n'était plus).
     this.phys.clock = this.logic.steps + (this.logic.finished ? this.idle++ : 0);
     this.phys.step(inp);
-    this.sank = this.phys.ev.sink;
+    this.sank = this.phys.ev.sink || this.phys.ev.invalid;      // noyade, piques, ou état physique incohérent (NaN, infini) : retour au dernier checkpoint
   }
 
   // Phase 2 d'un pas : règles de course puis suivi du hors-piste. Renvoie l'évènement de course (checkpoint, tour, arrivée...) ou null.

@@ -102,12 +102,15 @@ export function describeCommunity(track, row) {
   d.author = (row.players && row.players.name) || '';
   d.authorId = row.author || null;
   d.communityId = row.id;
-  d.medals = track.derivedMedals;
+  // Le temps de l'auteur n'est cru que s'il a été REJOUÉ par le serveur (author_verified) ET s'il est celui que porte le code : sinon pas de médailles déduites
+  // (un code peut annoncer n'importe quel temps), et la fiche l'indique.
+  d.authorVerified = row.author_verified === true && Math.abs((+row.author_time || 0) - track.vt) < 0.0015;
+  d.medals = d.authorVerified ? track.derivedMedals : null;
   d.stars = estimateDifficulty(track).stars;
   d.plays = row.plays | 0;
   d.likes = row.likes | 0;
   d.authorTime = +row.author_time || 0;
-  d.launch = { trackKey: track.userKey, seed: track.name, userMap: true, medals: track.derivedMedals, difficulty: 2, community: row.id };
+  d.launch = { trackKey: track.userKey, seed: track.name, userMap: true, medals: d.medals, difficulty: 2, community: row.id };
   return d;
 }
 

@@ -6,6 +6,7 @@ import { esc } from '../dom.js';
 import { MEDALS } from '../medals.js';
 import { Track, hashString } from '../track.js';
 import { getEditorDraft, formatTime } from '../storage.js';
+import { saveProof } from '../authorProof.js';
 export const editorFlowMethods = {
   // L'éditeur (et l'inspecteur, les outils de remplissage, les familles de pièces…) pèse un quart du code du jeu : il n'est chargé qu'à la première
   // ouverture, pas au démarrage. Un second appel pendant le chargement est ignoré.
@@ -90,7 +91,11 @@ export const editorFlowMethods = {
   // il choisit alors de publier ou de revenir à l'éditeur.
   onEditorTestFinished(time, track) {
     // « Refaire un meilleur temps » : on garde le meilleur des deux.
-    if (!(track.verified && track.vt <= time)) track.setVerified(time);
+    if (!(track.verified && track.vt <= time)) {
+      track.setVerified(time);
+      const run = this.session && this.session.lastRun;
+      if (run) saveProof(track, run);      // la course de vérification : le serveur la rejouera à la publication (js/authorProof.js)
+    }
     time = track.vt;
     if (this.editorState) this.editorState.code = track.encode();
     const m = track.derivedMedals;

@@ -81,9 +81,13 @@ test('freinage avancé : « tu freines plus tôt »', () => {
   const target = brakingPoints(R).filter((b) => b.v0 > 25)[0], from = Math.round(R.t[target.i] * 120);
   const early = edit(refIn, (st, fl) => { for (let k = from - 140; k < from; k++) fl[k] = (fl[k] & ~1) | 2; pad(st, fl); });
   const tips = coach(trace(early), R);
-  assert.equal(tips[0].id, 'early-brake', tips.map((x) => `${x.id}@${x.sector}`).join(', '));
-  assert.ok(Math.abs(tips[0].sector - sectorOf(R, target.s)) <= 1);
-  assert.match(tips[0].text, /^Secteur \d+ : tu freines \d+ m plus tôt/);
+  // (0.9.54) Les commandes qui suivent le freinage avancé sont rejouées telles quelles, sur une trajectoire qui n'est plus la bonne : la voiture finit au mur (secteur 5). Avant
+  // 0.9.54 elle y restait plaquée à l'arrêt pour toujours (plus aucun choc, donc aucun conseil « mur ») ; elle se dégage maintenant et racle la paroi : le conseil « mur » est
+  // légitime et peut passer devant. Le conseil de freinage avancé doit être là, au bon secteur, avec son texte.
+  const eb = tips.find((x) => x.id === 'early-brake');
+  assert.ok(eb, tips.map((x) => `${x.id}@${x.sector}`).join(', '));
+  assert.ok(Math.abs(eb.sector - sectorOf(R, target.s)) <= 1);
+  assert.match(eb.text, /^Secteur \d+ : tu freines \d+ m plus tôt/);
 });
 test('un retour au checkpoint coûte du temps : il arrive en tête', () => {
   const { R, refIn, trace } = setup('canyon');

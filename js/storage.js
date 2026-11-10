@@ -67,7 +67,7 @@ export function setJSON(key, value) { return write(key, value); }
 // Clés qui n'appartiennent qu'à CET appareil et ne doivent JAMAIS voyager dans un code joueur, une sauvegarde partagée ou une restauration : la session en ligne
 // de l'invité (jeton d'accès et de renouvellement = son identité en ligne : classements, circuits publiés) et son profil en ligne. Un code joueur se copie, se
 // poste, se confie ; s'il contenait la session, quiconque l'importerait deviendrait ce pilote (et l'importer chez soi écraserait sa propre identité en ligne).
-export const DEVICE_ONLY_KEYS = ['online.session', 'online.player'];
+export const DEVICE_ONLY_KEYS = ['online.session', 'online.player', 'vproof'];      // vproof : la course de vérification d'un circuit (js/authorProof.js), lourde et propre à l'appareil
 
 // Toutes les données du jeu (clés « shardway.* », gardées pour ne perdre aucune sauvegarde) sous forme d'objet.
 export function dumpAll({ shareable = false } = {}) {

@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.53** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.9.56** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -147,6 +147,7 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
 
 14. **Communauté 2** : `supabase/etape13-communaute.sql` (commentaires, playlists, sélection, circuit au hasard, recommandations, statistiques de circuit calculées depuis `run_stats`, modes publiés). **Modération** : ajouter les comptes modérateurs à la main, avec la clé de service (`insert into public.moderators values ('<uuid du compte>');`) ; un modérateur choisit la Sélection (`pick_track`) et masque ou rétablit un circuit, un commentaire ou un mode (`mod_hide`). Sans modérateur, la Sélection reste vide, et les signalements (3 comptes distincts) masquent déjà commentaires et modes d'eux-mêmes.
 15. **Durcissement (phase 4)** : `supabase/etape14-securite.sql` (relançable sans danger, aucune suppression de données) : un pilote ne peut plus modifier la date de création de son profil ni son titre directement ; **limitation des soumissions de scores partagée entre toutes les instances** de la fonction `submit-score` (table `submit_rate`, fonction `submit_rate_check`, réservées à la clé de service) ; plafond global de `log_runs`. Sans cette étape la fonction `submit-score` continue de marcher, avec sa seule limite en mémoire (elle le journalise). **Redéployer les fonctions `submit-score` et `ice`** (`npm run build:function`) : `ice` exige désormais une session Supabase.
+16. **Backend sûr (phase 2 backend)** : `supabase/etape15-backend.sql` (relançable sans danger, aucune suppression de données ; **à lancer AVANT** de redéployer les fonctions) : limitation de cadence persistante, partagée et atomique ; plafond de 2 000 temps verrouillé ; écriture atomique du meilleur temps ; circuits de joueurs liés à une empreinte forte ; publication avec temps d'auteur rejoué par le serveur. Puis **redéployer `submit-score` et `ice`**, mettre en ligne le jeu, et seulement ensuite `supabase/etape15b-publication-verifiee.sql`. Ordre, preuves à relever et retour arrière : **`supabase/MIGRATIONS.md`**.
 
 Sans les étapes 9 à 13, le jeu fonctionne : les onglets Secteurs, Amis et Saison des classements, l'écran Compétition, les commentaires, playlists et modes publiés disent qu'une étape SQL manque, sans fausses données.
 

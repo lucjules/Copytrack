@@ -116,9 +116,8 @@ test('la fonction serveur enregistre la course sous la clé de la variante (Supa
     const u = String(url);
     if (u.includes('/auth/v1/user')) return new Response(JSON.stringify({ id: '11111111-2222-3333-4444-555555555555' }), { status: 200 });
     if (u.includes('/rest/v1/players')) return new Response('[{"id":"x"}]', { status: 200 });
-    if (u.includes('/rest/v1/scores') && init.method === 'POST') { writes.push(JSON.parse(init.body)); return new Response(null, { status: 201 }); }
-    if (u.includes('/rest/v1/scores') && u.includes('select=time,phys_ver')) return new Response('[]', { status: 200 });
-    if (u.includes('/rest/v1/scores')) return new Response('[]', { status: 200, headers: { 'content-range': '0-0/1' } });
+    if (u.includes('/rpc/rate_check')) return new Response('0', { status: 200 });
+    if (u.includes('/rpc/submit_best')) { writes.push(JSON.parse(init.body)); return new Response(JSON.stringify({ status: 'ok', improved: true, best: 1, rank: 1, total: 1 }), { status: 200 }); }
     return new Response('{}', { status: 404 });
   };
   const h = createHandler({ supabaseUrl: 'https://x.supabase.co', serviceKey: 'cle', fetch, log: () => {} });
@@ -126,8 +125,8 @@ test('la fonction serveur enregistre la course sous la clé de la variante (Supa
   const j = await res.json();
   assert.equal(res.status, 200, JSON.stringify(j));
   assert.equal(writes.length, 1);
-  assert.equal(writes[0].track_key, vk);
-  assert.ok(writes[0].ghost, 'le fantôme de la variante est enregistré');
+  assert.equal(writes[0].tk, vk);
+  assert.ok(writes[0].gh, 'le fantôme de la variante est enregistré');
 });
 
 await finish('Tous les tests des variantes de records passent.');

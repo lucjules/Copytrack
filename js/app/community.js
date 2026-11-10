@@ -7,6 +7,7 @@ import { Track } from '../track.js';
 import { PHYS_VER } from '../version.js';
 import { thumbnail } from '../editorTools.js';
 import { online } from '../online.js';
+import { loadProof } from '../authorProof.js';
 import { encodeGhost, decodeGhost, ghostLink, GHOST_LINK_MAX } from '../replay.js';
 import { estimateDifficulty, starsText, STAR_LABELS } from '../difficulty.js';
 import { getRecord, medalTime, saveMyTrack, newId, formatTime, setImportedGhost } from '../storage.js';
@@ -130,6 +131,8 @@ export const communityMethods = {
   // Publication : c'est ici (et seulement ici) qu'on choisit le nom et la description du circuit.
   publishTrack(track) {
     if (!track.verified) { this.ui.flash('Vérifie d’abord ton circuit (« ✔ Vérifier » dans l’éditeur) pour pouvoir le publier.'); return Promise.resolve(false); }
+    // Le serveur REJOUE la course de vérification pour confirmer le temps de l'auteur : sans elle (circuit vérifié sur un autre appareil), il faut la refaire.
+    if (!loadProof(track)) { this.ui.flash('Refais la vérification de ce circuit sur cet appareil (« ✔ Vérifier » dans l’éditeur) : le serveur rejoue ta course pour confirmer ton temps.', 5); return Promise.resolve(false); }
     return new Promise((resolve) => {
       const f = document.createElement('div');
       f.className = 'form';
@@ -163,7 +166,7 @@ export const communityMethods = {
   async _doPublish(track) {
     this.ui.flash('Publication en cours…', 6);
     try {
-      await online.publish(track, this.settings.playerName);
+      await online.publish(track, this.settings.playerName, loadProof(track));
       this.ui.flash(`« ${track.name} » est publié ! Retrouve-le dans Communauté › Mes publications.`, 3.5);
       this.audio.checkpoint(true);
     } catch (e) {
@@ -247,7 +250,7 @@ export const communityMethods = {
     const mine = row.author === online.uid;
     const key = track ? track.userKey : '';
     const rec = key ? getRecord(key) : null;
-    const medals = track ? track.derivedMedals : null;
+    const medals = track && row.author_verified === true ? track.derivedMedals : null;      // temps de l'auteur non rejoué par le serveur : pas de médailles déduites
     const medal = rec && medals ? medalFor(medalTime(rec), medals) : null;
     const liked = likes.has(row.id);
     const est = track ? estimateDifficulty(track) : null;
@@ -257,7 +260,7 @@ export const communityMethods = {
       <h3>${esc(row.name)}</h3>
       ${row.description ? `<p class="desc">${esc(row.description)}</p>` : ''}
       <div class="meta">par <b>${esc((row.players && row.players.name) || '—')}</b>${row.laps > 1 ? ` · ${row.laps} tours` : ''}</div>
-      <div class="meta" title="Temps de l’auteur">${medalIcon(MEDALS[0])} <b>${formatTime(row.author_time)}</b> · ▶ ${row.plays}${row.week_players ? ` · 🔥 ${row.week_players} pilote${row.week_players > 1 ? 's' : ''} cette semaine` : ''}</div>
+      <div class="meta" title="${row.author_verified === true ? 'Temps de l’auteur, rejoué et confirmé par le serveur' : 'Temps annoncé par l’auteur, non vérifié par le serveur : aucune médaille n’en est déduite'}">${row.author_verified === true ? medalIcon(MEDALS[0]) : '◌'} <b>${formatTime(row.author_time)}</b>${row.author_verified === true ? '' : ' <i>non vérifié</i>'} · ▶ ${row.plays}${row.week_players ? ` · 🔥 ${row.week_players} pilote${row.week_players > 1 ? 's' : ''} cette semaine` : ''}</div>
       ${est ? `<div class="meta diff" title="Difficulté estimée d’après la géométrie du circuit (virages serrés, murs, loopings, obstacles, pièces mobiles, longueur) : une indication, pas une mesure.">${starsText(est.stars)} ${STAR_LABELS[est.stars]}</div>` : ''}
       <div class="best">${medals ? medalIcon(medal) : ''}${rec ? formatTime(rec.time) : '<span class="meta">Pas encore de temps</span>'}</div>
       <div class="actions main">

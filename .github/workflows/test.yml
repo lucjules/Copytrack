@@ -1,10 +1,17 @@
 name: tests
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
+# Un succès doit être OBSERVABLE : chaque tâche a une durée maximale (un blocage devient un échec visible, pas un statut « annulé » ou « ignoré ») ;
+# la tâche « gate » en bas échoue si UNE des tâches n'a pas fini en « success » (échec, annulée, ignorée). C'est elle qu'il faut exiger dans la protection de branche.
+
 jobs:
   # Qualité du code, tests unitaires (noyau sans DOM), fichiers générés à jour.
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,16 +29,24 @@ jobs:
   # L'empreinte de tools/phys-fingerprint.json a été calculée sous Node ; Deno doit la retrouver bit à bit.
   deno:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
         with: { deno-version: 2.9.6 }
       - run: deno run -A tools/test-dmath.mjs
       - run: deno run -A tools/phys-fingerprint.mjs
+      # La fonction serveur elle-même (rejeu, version, limites, meilleur score, publication) et le serveur ICE, sous le moteur qui les exécute en production.
+      - run: deno run -A tools/test-submit-handler.mjs
+      - run: deno run -A tools/test-ice.mjs
 
   # Le jeu dans un vrai navigateur (Chromium sans écran) : écrans, course, éditeur, garage, profil, et la même empreinte de physique que Node et Deno.
   browser:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      REQUIRE_BROWSER: '1'        # Playwright ou Chromium absent = ÉCHEC (jamais « ignoré avec succès »)
+      PW_FAIL_SHOTS: pw-fail
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,10 +54,15 @@ jobs:
       - run: npm install --no-save playwright@1.63.0
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
+      - name: Capture d'écran de chaque test en échec (pour comprendre un échec)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with: { name: pw-fail, path: pw-fail, if-no-files-found: ignore, retention-days: 7 }
 
   # Les scripts SQL de supabase/ (communauté, classements, comptes, durcissement) sur un vrai PostgreSQL, appliqués deux fois (relançables).
   sql:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16
@@ -58,3 +78,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm run test:sql
+
+  # Verdict unique : réussi seulement si les QUATRE tâches ont réellement abouti. `if: always()` : la tâche s'exécute même quand une autre a échoué
+  # ou a été ignorée, et refuse alors le succès (sans elle, une tâche « skipped » ne serait pas un échec).
+  gate:
+    if: always()
+    needs: [test, deno, browser, sql]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Toutes les tâches doivent être en « success »
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+          DETAIL: ${{ toJSON(needs) }}
+        run: |
+          echo "$DETAIL" | grep -E '"result"' || true
+          n=0; for r in $RESULTS; do n=$((n+1)); if [ "$r" != "success" ]; then echo "::error::une tâche est en « $r » (résultats : $RESULTS)"; exit 1; fi; done
+          if [ "$n" -ne 4 ]; then echo "::error::$n résultat(s) au lieu de 4 : $RESULTS"; exit 1; fi
+          echo "4 tâches sur 4 en success"

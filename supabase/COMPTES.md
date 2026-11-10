@@ -72,11 +72,16 @@ Supabase lève aussi cette vérification. Aucun e-mail n'est jamais envoyé à c
 
 ## Ce que `submit-score` vérifie (dans l'ordre)
 
-Méthode · configuration · taille annoncée (413) · session Supabase valide (401) · cadence en mémoire de l'instance puis **cadence partagée en base** (429, `etape14`) ·
-corps lu **par morceaux avec une limite stricte en octets** (le flux est annulé au-delà : `Content-Length` absent ou mensonger ne sert à rien) · forme des champs
-(clé de circuit, commandes en base64, temps de 0 à 600 s, version de physique : 400) · rejeu COMPLET de la course avec le vrai code du jeu (version de physique,
-circuit reconnu et de la bonne version, arrivée atteinte, temps égal à 0,5 ms près : 422) · compétition (participants et fenêtre, en base) · profil du pilote ·
-meilleur temps conservé. La clé de service n'est jamais renvoyée ; les erreurs internes non plus.
+Méthode (GET : état du service et version de physique déployée) · configuration · taille annoncée (413) · session Supabase valide (401) · cadence en mémoire de l'instance
+puis **cadence persistante, partagée et atomique en base** (429 ; `etape15` : plafond par pilote, global, et sous-plafond des sessions anonymes ; **base indisponible : 503**, jamais « ouvert ») ·
+corps lu **par morceaux avec une limite stricte en octets** · forme des champs (clé de circuit, commandes en base64, temps de 0 à 600 s, version de physique : 400) · profil du pilote ·
+rejeu COMPLET de la course avec le vrai code du jeu (**version de physique exactement égale** à celle du serveur — plus ancienne ou plus récente : 422 `versionMismatch` avec `serverPhysVer` —,
+circuit reconnu et de la bonne version, **tous les checkpoints franchis** pour que l'arrivée compte, temps égal à 0,5 ms près : 422) · compétition (participants et fenêtre, en base) ·
+**écriture atomique** (`submit_best`) : le temps enregistré est celui du REJEU, jamais celui annoncé ; un temps moins bon ne remplace jamais le record, même avec des soumissions simultanées ;
+un circuit de joueur est lié à une empreinte SHA-256 de son contenu (une autre carte de même clé 32 bits : 409) ; plafond de 2 000 temps par pilote (422).
+**Publication** (`action: "publish-track"`) : le code du circuit et la course de vérification de l'auteur sont envoyés ; le serveur rejoue cette course sur ce code ; le temps de l'auteur
+publié (`author_time`, `author_verified = true`) est celui du REJEU et doit égaler le temps inscrit dans le code à la milliseconde près. **Un temps d'auteur n'est jamais accepté parce que le client l'annonce.**
+Les circuits publiés avant l'étape 15 gardent un temps `author_verified = false` : le jeu l'affiche « non vérifié » et n'en déduit aucune médaille, jusqu'à ce que leur auteur les republie.
 
 **Limites connues** : une session anonyme est gratuite, donc la limite par pilote se contourne en changeant de session (le plafond global en base borne le total de
 rejeux) ; `ALLOWED_ORIGIN` est `*` tant qu'il n'est pas réglé (la session Supabase est exigée de toute façon) ; le temps de l'auteur d'un circuit de joueur

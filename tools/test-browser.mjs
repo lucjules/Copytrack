@@ -5,6 +5,7 @@
 // (compte, sauvegardes, options, commandes), communauté hors ligne, mes circuits, et un championnat multijoueur à DEUX onglets (vraie liaison WebRTC sur la machine, signalisation locale ?net=local). Il échoue à la moindre erreur JavaScript de la page.
 // Playwright n'est pas une dépendance du projet : sans lui (ou sans Chromium), le test est ignoré (CI : voir .github/workflows).
 //   PW_SHOTS=/dossier  enregistre une capture de chaque étape
+//   PW_FAIL_SHOTS=/dossier  enregistre une capture de chaque test EN ÉCHEC seulement (utilisé par la CI)
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -15,7 +16,11 @@ import { DMATH_DIGEST_EXPECTED } from './dmath-digest.mjs';
 
 const require = createRequire(import.meta.url);
 let chromium;
-try { ({ chromium } = require('playwright')); } catch { console.log('  skip playwright introuvable : test navigateur ignoré'); process.exit(0); }
+// Playwright / Chromium absents : en local le test est ignoré (message clair) ; en CI, ou si REQUIRE_BROWSER=1, c'est un ÉCHEC — un job « navigateur » ne doit jamais
+// passer au vert sans avoir lancé un seul test.
+const REQUIRED = !!(process.env.CI || process.env.REQUIRE_BROWSER);
+const skip = (why) => { console.log((REQUIRED ? '  FAIL ' : '  skip ') + why + (REQUIRED ? ' : le test navigateur est OBLIGATOIRE ici (CI / REQUIRE_BROWSER)' : ' : test navigateur ignoré')); process.exit(REQUIRED ? 1 : 0); };
+try { ({ chromium } = require('playwright')); } catch { skip('playwright introuvable'); }
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 8300 + Math.floor(Math.random() * 400);
@@ -25,17 +30,23 @@ if (shots) mkdirSync(shots, { recursive: true });
 
 let browser;
 try { browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--mute-audio', '--disable-features=WebRtcHideLocalIpsWithMdns'] }); }
-catch (e) { server.kill(); console.log('  skip Chromium introuvable : test navigateur ignoré (' + String(e.message).split('\n')[0] + ')'); process.exit(0); }
+catch (e) { server.kill(); skip('Chromium introuvable (' + String(e.message).split('\n')[0] + ')'); }
 
-let failures = 0;
+let failures = 0, executed = 0;
 const errors = [];
 // PW_ONLY=<texte>[|<texte>…] : ne lance que les tests dont le nom contient l'un des textes (mise au point ; certains tests supposent l'état
 // laissé par les précédents).
 async function test(name, fn) {
   if (process.env.PW_ONLY && !process.env.PW_ONLY.split('|').some((x) => name.includes(x))) return;
   const before = errors.length;
+  executed++;
   try { await fn(); if (errors.length > before) throw new Error('erreurs de la page : ' + errors.slice(before).join(' | ')); console.log('  ok   ' + name); }
-  catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 5).join('\n       ')); }
+  catch (e) {
+    failures++;
+    // Le journal d'appel de Playwright (ce qu'il attendait, ce qui recouvrait l'élément) dit POURQUOI un clic a expiré : on le garde en entier (14 lignes).
+    console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 14).join('\n       '));
+    if (process.env.PW_FAIL_SHOTS) { try { mkdirSync(process.env.PW_FAIL_SHOTS, { recursive: true }); await page.screenshot({ path: join(process.env.PW_FAIL_SHOTS, 'echec-' + executed + '.png') }); } catch { /* page déjà fermée : pas de capture */ } }
+  }
 }
 
 const ctx = await browser.newContext({ locale: 'fr-FR', viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1, serviceWorkers: 'block' });
@@ -53,6 +64,17 @@ const shot = async (n) => { if (shots) await page.screenshot({ path: join(shots,
 const app = (fn, arg) => page.evaluate(fn, arg);
 const waitApp = (cond, arg, timeout = 30000) => page.waitForFunction(cond, arg, { timeout });
 // Les boutons du menu sont animés : Playwright attendrait indéfiniment qu'ils soient « stables ». On déclenche donc le clic dans la page.
+// Clic SOURIS réel (comme un joueur) : l'élément est amené à l'écran, on VÉRIFIE que le point visé lui appartient (sinon l'échec dit ce qui le recouvre, tout de suite,
+// au lieu d'un délai de 30 s), puis on clique. À préférer à `click` quand le test doit prouver que le bouton est atteignable.
+const realClick = async (sel, timeout = 8000) => {
+  const loc = page.locator(sel).first();
+  await loc.waitFor({ state: 'visible', timeout });
+  await loc.scrollIntoViewIfNeeded({ timeout });
+  await page.waitForTimeout(250);          // (fin de l'animation d'entrée de l'écran)
+  const r = await loc.evaluate((el) => { const b = el.getBoundingClientRect(), x = Math.round(b.x + b.width / 2), y = Math.round(b.y + b.height / 2), hit = document.elementFromPoint(x, y); return { x, y, ok: !!hit && (el === hit || el.contains(hit)), hit: hit ? hit.tagName + (hit.id ? '#' + hit.id : '') + (hit.className && typeof hit.className === 'string' ? '.' + hit.className.split(' ').join('.') : '') : 'rien', modal: (document.getElementById('modal-title') || {}).textContent }; });
+  assert.ok(r.ok, `${sel} est recouvert par ${r.hit} en (${r.x}, ${r.y})${r.hit.startsWith('DIV#modal') ? ' — fenêtre ouverte : « ' + r.modal + ' »' : ''}`);
+  await page.mouse.click(r.x, r.y);
+};
 const click = async (sel) => { await page.locator(sel).first().evaluate((el) => el.click(), null, { timeout: 8000 }); };
 
 try {
@@ -80,8 +102,13 @@ try {
     await shot('01-accueil');
     await click('#wl-submit');
     await waitApp(() => window.copytrack && window.copytrack.mode === 'menu');
-    await page.waitForTimeout(1200);
+    // Le tutoriel du premier lancement s'ouvre 700 ms après le démarrage, par un minuteur DE LA PAGE : sur une machine lente (CI), le fil principal est occupé par la mise en
+    // route de la scène 3D et le minuteur part bien après. Un contrôle unique au bout de 1,2 s le ratait : la fenêtre surgissait plus tard, et tout clic SOURIS réel d'un test
+    // suivant (pixel du garage, onglet Amis du profil) tombait sur son voile (« <div id="modal" class="overlay"> intercepts pointer events »). On ATTEND donc la fenêtre.
+    await page.waitForFunction(() => window.copytrack.ui.modalOpen, null, { timeout: 15000 }).catch(() => {});
     if (await app(() => window.copytrack.ui.modalOpen)) { await shot('01b-tutoriel'); await page.keyboard.press('Escape'); await waitApp(() => !window.copytrack.ui.modalOpen); }
+    await page.waitForTimeout(300);
+    assert.ok(await app(() => !window.copytrack.ui.modalOpen), 'aucune fenêtre ne recouvre le menu');
     await shot('02-menu');
     // La question des statistiques anonymes (posée une fois, puis toutes les 8 s tant qu'elle n'a pas de réponse) : répondue ici pour qu'elle ne s'ouvre
     // pas au milieu d'un autre test ; elle a son propre test (test-browser-i18n.mjs).
@@ -126,6 +153,48 @@ try {
     await page.keyboard.press('h');
     await app(() => window.copytrack.quitRace());
     await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  // La boucle du jeu ne doit jamais s'arrêter (0.9.54) : avant, requestAnimationFrame(loop) était la dernière instruction du corps de la boucle, donc UNE exception
+  // (physique, course, rendu, interface) la tuait pour de bon : écran figé jusqu'au rechargement, boutons de la page encore vivants, aucun message.
+  await test('boucle de jeu : une exception ne l\'arrête plus (menu : l\'image suivante est dessinée ; course : retour au checkpoint, puis au 2e incident la course est abandonnée proprement) et un pas de temps NaN ne fige pas la voiture', async () => {
+    const frames = () => app(() => window.copytrack.renderer.info.render.frame);
+    const alive = async (label) => { const a = await frames(); await page.waitForTimeout(700); const b = await frames(); assert.ok(b > a, `${label} : la boucle de dessin est morte (${a} → ${b})`); };
+    // 1. menu : une seule exception dans une étape de la boucle
+    await alive('avant');
+    await app(() => { const inp = window.copytrack.input, orig = inp.pollGamepad.bind(inp); let done = false; inp.pollGamepad = (...a) => { if (!done) { done = true; throw new Error('exception de test (menu)'); } return orig(...a); }; window.__ctErrors = []; });
+    await page.waitForTimeout(400);
+    await alive('après une exception au menu');
+    assert.ok((await app(() => window.__ctErrors.length)) >= 1, 'l\'erreur est journalisée (window.__ctErrors)');
+    assert.match(await app(() => document.getElementById('toast').textContent), /erreur d’affichage/, 'et le joueur en est informé (message), pas seulement la console');
+    // 2. course : exception dans la mise à jour de la course
+    await app(() => window.copytrack.playBuiltin(0));
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.state === 'racing', null, 30000);
+    await page.keyboard.down('ArrowUp'); await page.waitForTimeout(1500);
+    const steps0 = await app(() => window.copytrack.session.logic.steps);
+    assert.ok(steps0 > 30, 'la course tourne');
+    await app(() => { const S = window.copytrack.session, orig = S.update.bind(S); let n = 0; S.update = (dt) => { if (n++ < 1) throw new Error('exception de test (course)'); return orig(dt); }; window.__ctErrors = []; });
+    await page.waitForTimeout(1200);
+    await alive('après une exception en course');
+    assert.equal(await app(() => window.copytrack.mode), 'race', 'une seule exception : la course continue');
+    assert.ok((await app(() => window.copytrack.session.logic.steps)) > 0, 'et elle avance');
+    // 3. deux exceptions rapprochées : la course est abandonnée proprement, le menu fonctionne
+    await app(() => { const S = window.copytrack.session; S.update = () => { throw new Error('exception de test (répétée)'); }; });
+    await waitApp(() => window.copytrack.mode === 'menu', null, 15000);
+    await page.keyboard.up('ArrowUp');
+    await alive('après l\'abandon de la course');
+    assert.ok(await app(() => window.__ctErrors.length >= 2 && window.copytrack.mode === 'menu'), 'les deux erreurs sont journalisées et le jeu est revenu au menu');
+    // 4. un pas de temps NaN ne fige plus l'accumulateur de la physique
+    await app(() => window.copytrack.playBuiltin(0));
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session.state === 'racing', null, 30000);
+    const before = await app(() => { const S = window.copytrack.session; S.update(NaN); return S.acc; });
+    assert.ok(Number.isFinite(before), 'accumulateur fini après un dt NaN');
+    await page.keyboard.down('ArrowUp'); await page.waitForTimeout(800); await page.keyboard.up('ArrowUp');
+    assert.ok((await app(() => window.copytrack.session.logic.steps)) > 20, 'la voiture avance toujours');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu');
+    // Les erreurs journalisées ci-dessus sont CELLES QU'ON A PROVOQUÉES : elles ne doivent pas compter comme des erreurs de page.
+    for (let i = errors.length - 1; i >= 0; i--) if (/exception de test/.test(errors[i])) errors.splice(i, 1);
   });
 
   await test('défi du jour et circuit en plusieurs tours', async () => {
@@ -504,8 +573,16 @@ try {
     // dessin : un pixel
     await click('.stabs button:has-text("Dessin")');
     const cv = page.locator('canvas.pixcv');
+    // La liste du garage défile : selon les polices (donc la machine), la toile peut se trouver sous le pli. Un vrai joueur la fait défiler ; on fait de même,
+    // puis on VÉRIFIE que le point visé est bien la toile (et pas la barre du bas ou un voile) avant de cliquer : sinon l'échec dit ce qui la recouvre.
+    await cv.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(100);
     const box = await cv.boundingBox();
-    await page.mouse.click(box.x + 10, box.y + 10);
+    const px = Math.round(box.x + 10), py = Math.round(box.y + 10);
+    const hit = await page.evaluate(([x, y]) => { const el = document.elementFromPoint(x, y); return el ? (el.className && el.className.baseVal === undefined ? el.tagName + '.' + el.className : el.tagName) : 'rien'; }, [px, py]);
+    assert.equal(hit, 'CANVAS.pixcv', `le point visé (${px}, ${py}) est recouvert par ${hit} ; toile en ${JSON.stringify(box)}, fenêtre ${await page.evaluate(() => window.innerWidth + "×" + window.innerHeight)}`);
+    await page.mouse.click(px, py);
+    // (le brouillon est modifié tout de suite ; la voiture et le profil le sont 120 ms plus tard)
     assert.notEqual(await app(() => window.copytrack.session.draft.custom.draw), '0'.repeat(256), 'le pixel est posé');
     // effets
     await click('.stabs button:has-text("Effets")');
@@ -541,7 +618,7 @@ try {
       const heading = await page.evaluate(() => document.getElementById('prof-heading').textContent);
       assert.equal(heading, { profile: 'Profil', progress: 'Progression', settings: 'Paramètres' }[hub]);
       for (const tab of tabs) {
-        await page.locator(`#prof-tabs [data-ptab="${tab}"]`).first().click();
+        await realClick(`#prof-tabs [data-ptab="${tab}"]`);
         await page.waitForTimeout(150);
         const shown = await page.evaluate((t) => { const p = document.querySelector(`.prof-panel[data-ppanel="${t}"]`); return p && !p.classList.contains('hidden') && p.getBoundingClientRect().height > 20; }, tab);
         assert.ok(shown, `${hub} › ${tab} : panneau affiché`);
@@ -1361,7 +1438,7 @@ try {
     await app(() => { const A = window.copytrack; A.settings.reduceMotion = 'auto'; A._applyAccess(); });
     assert.equal(await page.evaluate(() => document.body.classList.contains('reduce-motion')), true, '« Système » suit prefers-reduced-motion');
     await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await waitApp(() => !document.body.classList.contains('reduce-motion'), null, 10000);      // et suit son changement
+    await waitApp(() => !document.body.classList.contains('reduce-motion'), null, 30000);      // et suit son changement (évènement du navigateur, livré au prochain rendu : sous charge, bien plus de 10 s)
     // Caméra libre de l'éditeur : au ras du sol, puis retour aux bornes habituelles
     await app(() => window.copytrack.openEditor({ code: window.copytrack.builtins[1].track.encode(), name: 'Caméra' }));
     await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.toggleFreeCam, null, 20000);
@@ -1687,5 +1764,8 @@ try {
   await browser.close();
   server.kill();
 }
-console.log(failures ? `${failures} test(s) en échec` : 'Tous les tests navigateur passent');
+// Un succès sans test exécuté n'est pas un succès (filtre PW_ONLY qui ne correspond à rien, corps de test jamais atteint) ; la suite complète en compte plus de 40.
+const MIN_TESTS = process.env.PW_ONLY ? 1 : 40;
+if (!failures && executed < MIN_TESTS) { console.log(`  FAIL seulement ${executed} test(s) exécuté(s) (minimum ${MIN_TESTS}) : la suite navigateur n'a pas réellement tourné`); failures++; }
+console.log(failures ? `${failures} test(s) en échec` : `Tous les tests navigateur passent (${executed} exécutés)`);
 process.exit(failures ? 1 : 0);
