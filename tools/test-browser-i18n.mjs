@@ -91,7 +91,7 @@ try {
     assert.match(await text(page, '#wl-title'), /Qui joue/);
     assert.ok(!requests.some((u) => /\/js\/i18n\/en/.test(u)), 'le dictionnaire anglais n\'est pas téléchargé en français');
     await enter(page);
-    assert.match(await text(page, '[data-action="play"]'), /Carrière/);
+    assert.match(await text(page, '[data-action="sub-play"]'), /Jouer/);
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('copytrack.lang'))), 'fr', 'la langue détectée est mémorisée');
     await ctx.close();
   });
@@ -139,7 +139,7 @@ try {
     await enter(page);
     const screens = [
       ['menu', async () => {}],
-      ['carrière', async () => { await click(page, '[data-action="play"]'); await page.waitForFunction(() => document.querySelectorAll('#track-list .card').length > 60); }],
+      ['carrière', async () => { await page.evaluate(() => window.copytrack.showScreen('tracks')); await page.waitForFunction(() => document.querySelectorAll('#track-list .card').length > 60); }],
       ['fiche du circuit', async () => { await page.evaluate(() => window.copytrack.openBuiltinHub(4, 'tracks')); await page.waitForTimeout(400); }],
       ['fiche › personnel', async () => { await click(page, '#hub-board [data-tab="personal"]'); }],
       ['fiche du défi du jour (série, mutation)', async () => { await page.evaluate(() => window.copytrack.openDailyHub('tracks')); await page.waitForTimeout(600); }],
@@ -147,8 +147,16 @@ try {
       ['communauté', async () => { await page.evaluate(() => window.copytrack.showScreen('community')); await page.waitForTimeout(500); }],
       ['profil › compte', async () => { await page.evaluate(() => window.copytrack.showScreen('profile')); }],
       ['profil › sauvegardes', async () => { await click(page, '[data-ptab="saves"]'); }],
-      ['profil › options', async () => { await click(page, '[data-ptab="options"]'); }],
-      ['profil › commandes', async () => { await click(page, '[data-ptab="controls"]'); }],
+      ['progression › records', async () => { await page.evaluate(() => window.copytrack.showScreen('records')); }],
+      ['progression › niveau', async () => { await click(page, '[data-ptab="level"]'); }],
+      ['progression › statistiques', async () => { await click(page, '[data-ptab="stats"]'); }],
+      ['progression › déblocages', async () => { await click(page, '[data-ptab="unlocks"]'); }],
+      ['paramètres › audio', async () => { await page.evaluate(() => window.copytrack.showScreen('audio')); }],
+      ['paramètres › graphismes', async () => { await click(page, '[data-ptab="gfx"]'); }],
+      ['paramètres › accessibilité', async () => { await click(page, '[data-ptab="access"]'); }],
+      ['paramètres › jeu', async () => { await click(page, '[data-ptab="game"]'); }],
+      ['paramètres › interface', async () => { await click(page, '[data-ptab="ui"]'); }],
+      ['paramètres › commandes', async () => { await click(page, '[data-ptab="controls"]'); }],
       ['garage', async () => { await page.evaluate(() => window.copytrack.showScreen('menu')); await click(page, '[data-action="garage"]'); await page.waitForTimeout(300); }],
       ['académie', async () => { await page.evaluate(() => window.copytrack.showScreen('menu')); await page.evaluate(() => window.copytrack.academyMenu()); }],
       ['leçon', async () => { await page.evaluate(() => { window.copytrack.ui.closeModal(); window.copytrack.lessonIntro(1); }); }],
@@ -206,8 +214,8 @@ try {
       await click(page, '#hub-board [data-tab="friends"]');
       await page.waitForFunction(() => /Add friends in|Same verified times/.test(document.getElementById('hub-board').textContent), null, { timeout: 20000 });
       assert.deepEqual(await frenchLeft(page), [], 'fiche : amis');
-      await page.evaluate(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('profile'); });
-      await page.waitForFunction(() => /Requests received[\s\S]*1 friend[\s\S]*Requests sent/.test((document.querySelector('.prof-friends') || {}).textContent || ''), null, { timeout: 20000 });
+      await page.evaluate(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('friends'); });
+      await page.waitForFunction(() => /Requests received[\s\S]*1 friend[\s\S]*Requests sent/.test((document.querySelector('#friends-body') || {}).textContent || ''), null, { timeout: 20000 });
       assert.deepEqual(await frenchLeft(page), [], 'profil : amis');
       await page.evaluate(() => window.copytrack.showScreen('community'));
       await click(page, '#comm-tabs [data-sort="followed"]');
@@ -293,24 +301,23 @@ try {
   await test('Options › Langue : bascule en direct dans les deux sens, sans recharger, textes dynamiques compris', async () => {
     const { ctx, page } = await device('fr-FR');
     await enter(page);
-    await page.evaluate(() => window.copytrack.showScreen('profile'));
-    await click(page, '[data-ptab="options"]');
+    await page.evaluate(() => window.copytrack.showScreen('audio'));
     assert.deepEqual((await page.locator('#opt-lang option').allInnerTexts()), ['Français', 'English']);
-    assert.match(await text(page, '[data-ptab="options"]'), /Options/);
-    const menuFr = await page.evaluate(() => { window.copytrack.showScreen('menu'); return document.getElementById('menu').innerText; });
-    await page.evaluate(() => window.copytrack.showScreen('profile'));
+    assert.match(await text(page, '[data-ptab="audio"]'), /Audio/);
+    const menuFr = await page.evaluate(() => { window.copytrack.showScreen('menu'); return document.getElementById('menu').textContent; });
+    await page.evaluate(() => window.copytrack.showScreen('audio'));
     await page.locator('#opt-lang').selectOption('en');
     await page.waitForFunction(() => document.documentElement.lang === 'en');
-    assert.match(await text(page, '[data-ppanel="options"] label'), /Language/);
+    assert.match(await text(page, '[data-ppanel="audio"] label'), /Language/);
     assert.match(await page.locator('#opt-quality option[value="auto"]').innerText(), /Automatic/);
     assert.equal((await page.evaluate(() => { window.copytrack.ui.flash('Records effacés.'); return new Promise((r) => setTimeout(() => r(document.getElementById('toast').innerText), 50)); })).trim(), 'Records erased.', 'une notification écrite après la bascule est traduite');
-    const menuEn = await page.evaluate(() => { window.copytrack.showScreen('menu'); return document.getElementById('menu').innerText; });
+    const menuEn = await page.evaluate(() => { window.copytrack.showScreen('menu'); return document.getElementById('menu').textContent; });
     assert.notEqual(menuEn, menuFr);
     assert.match(menuEn, /Daily challenge/);
-    await page.evaluate(() => window.copytrack.showScreen('profile'));
+    await page.evaluate(() => window.copytrack.showScreen('audio'));
     await page.locator('#opt-lang').selectOption('fr');
     await page.waitForFunction(() => document.documentElement.lang === 'fr');
-    const menuBack = await page.evaluate(() => { window.copytrack.showScreen('menu'); return document.getElementById('menu').innerText; });
+    const menuBack = await page.evaluate(() => { window.copytrack.showScreen('menu'); return document.getElementById('menu').textContent; });
     assert.equal(menuBack, menuFr, 'retour au français à l\'identique');
     await ctx.close();
   });

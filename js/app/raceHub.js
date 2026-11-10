@@ -192,7 +192,7 @@ export const raceHubMethods = {
       <div class="hub-ghosts" role="group" aria-label="Fantômes"><span class="meta">Fantômes</span>
         ${chips.map(([k, l, on, ok]) => `<button class="chip${on ? ' on' : ''}" data-ghost="${k}" aria-pressed="${on}"${ok ? '' : ' disabled title="Pas encore de record sur ce circuit"'}>${esc(l)}</button>`).join('')}
         ${rivals.map(([rank, g]) => `<button class="chip on rival" data-rival="${rank}" aria-pressed="true" title="Retirer ce rival">👻 ${rank}. ${esc(g.name)} · ${formatTime(g.time)} ✕</button>`).join('')}
-        <button class="chip${train ? ' on' : ''}" data-hudtrain aria-pressed="${train}" title="Écart en direct, secteurs, courbes, ligne et freinages de la référence (Options › Personnalisation)">🎯 HUD d’entraînement</button>
+        <button class="chip${train ? ' on' : ''}" data-hudtrain aria-pressed="${train}" title="Écart en direct, secteurs, courbes, ligne et freinages de la référence (Paramètres › Interface)">🎯 HUD d’entraînement</button>
       </div>
       ${rivals.length < MAX_RIVALS && h.board && h.board.boards.some((b) => b.id === 'world') ? '<p class="meta hub-hint">Ajoute jusqu’à 3 rivaux en ligne avec 👻 dans le classement mondial.</p>' : ''}
       ${cats.length ? `<div class="hub-cats" role="radiogroup" aria-label="Catégorie de record"><span class="meta">Catégorie de record</span>
@@ -200,7 +200,7 @@ export const raceHubMethods = {
         ${cats.map((c) => { const on = d.variantStr && d.key.endsWith('~v1.' + c.id); return `<button class="chip${on ? ' on' : ''}" role="radio" aria-checked="${!!on}" data-cat="${c.id}">${esc(c.label)}</button>`; }).join('')}
         ${d.variant && !cats.some((c) => d.key.endsWith('~v1.' + c.id)) ? `<button class="chip on" role="radio" aria-checked="true" data-cat="__cur">${esc(h.modeLabel ? '🌐 ' + h.modeLabel : d.variantStr)}</button>` : ''}
         ${d.variant ? '<p class="meta hub-hint">Classement et record à part, sans médailles ni pièces : le record officiel ne bouge pas.</p>' : ''}</div>` : ''}
-      ${aidsActive(s.aids) ? '<p class="meta hub-hint hub-aids">🦾 Aides à la conduite activées : tes courses vont dans la catégorie « assisté » (Options › Aides).</p>' : ''}
+      ${aidsActive(s.aids) ? '<p class="meta hub-hint hub-aids">🦾 Aides à la conduite activées : tes courses vont dans la catégorie « assisté » (Paramètres › Accessibilité).</p>' : ''}
       ${d.locked ? `<p class="hub-lock" role="status">🔒 ${esc(d.locked)}</p>` : ''}
       <button class="btn big primary hub-play" id="hub-play"${d.locked ? ' disabled' : ''}>▶ Jouer <kbd>Entrée</kbd></button>`;
     for (const b of $('hub-launch').querySelectorAll('[data-ghost]')) b.onclick = () => {

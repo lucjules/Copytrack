@@ -221,7 +221,7 @@ export const settingsMethods = {
       title: 'Aider à équilibrer les circuits ?',
       body: `<p>Copytrack peut envoyer, <b>sans nom ni compte</b>, le temps de tes arrivées, tes abandons et ton nombre d'essais sur chaque circuit
         (avec un identifiant aléatoire propre à cet appareil). Cela sert à régler la difficulté et les médailles sur de vrais joueurs.</p>
-        <p class="meta">Rien d'autre ne part : ni pseudo, ni position, ni commandes. Tu peux changer d'avis à tout moment dans Profil › Options.</p>`,
+        <p class="meta">Rien d'autre ne part : ni pseudo, ni position, ni commandes. Tu peux changer d'avis à tout moment dans Paramètres › Jeu.</p>`,
       actions: [
         { label: 'Accepter', primary: true, onClick: () => { this.setTelemetry(true); return true; } },
         { label: 'Refuser', onClick: () => { this.setTelemetry(false); return true; } },

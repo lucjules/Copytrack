@@ -1,5 +1,5 @@
 // Entrées : clavier (codes physiques => QWERTY et AZERTY), manette, tactile.
-// Toutes les actions sont reconfigurables (Options > Commandes).
+// Toutes les actions sont reconfigurables (Paramètres › Commandes).
 
 // [action, libellé, touches par défaut]
 export const KEY_ACTIONS = {

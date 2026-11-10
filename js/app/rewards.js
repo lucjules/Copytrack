@@ -42,10 +42,10 @@ export const rewardsMethods = {
     const lic = grantLicences(this._licenceContext(ctx));
     const r = grantRewards(ctx);
     const msgs = [
-      ...lic.map((id) => `🪪 ${(LICENCES.find((L) => L.id === id) || {}).label} obtenue ! (Profil)`),
+      ...lic.map((id) => `🪪 ${(LICENCES.find((L) => L.id === id) || {}).label} obtenue ! (Progression)`),
       ...r.exclusives.map((e) => `🎁 Exclusif débloqué : ${e.label} (garage)`),
       ...r.collections.map((c) => `🏆 Collection « ${c.label} » complète : +${c.coins} ◆`),
-      ...r.titles.map((t) => `🎖 Nouveau titre : ${titleLabel(t)} (Profil)`),
+      ...r.titles.map((t) => `🎖 Nouveau titre : ${titleLabel(t)} (Progression)`),
     ];
     if (r.collections.length) this.ui.updateCoins();
     msgs.forEach((m, i) => setTimeout(() => this.ui.flash(m, 3.2), 600 + i * 3400));

@@ -74,7 +74,7 @@ export default {
   'Monte-Charge': 'Freight Lift',
   'Le Grand Atelier': 'The Grand Workshop',
 
-  // ---------------------------------------------------------------- commandes (Profil › Commandes)
+  // ---------------------------------------------------------------- commandes (Paramètres › Commandes)
   'Freiner / marche arrière': 'Brake / reverse',
   'Tourner à gauche': 'Turn left',
   'Tourner à droite': 'Turn right',

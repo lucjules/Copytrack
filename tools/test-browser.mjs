@@ -173,9 +173,9 @@ try {
     await app(() => window.copytrack.quitRace());
     await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
     assert.match(await page.evaluate(() => document.querySelector('.hub-mastery').textContent), /1 \/ 4/, 'arrivée sans choc : un défi de maîtrise');
-    await app(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('profile'); });
-    await waitApp(() => document.querySelector('.prof-progress') && /Niveau \d+/.test(document.querySelector('.prof-progress').textContent));
-    assert.match(await page.evaluate(() => document.querySelector('.prof-progress').textContent), /Licence C[\s\S]*Licence S[\s\S]*Pour la Licence C[\s\S]*Défis de maîtrise : 1 \/ 288/);
+    await app(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('level'); });
+    await waitApp(() => document.querySelector('#prog-level') && /Niveau \d+/.test(document.querySelector('#prog-level').textContent));
+    assert.match(await page.evaluate(() => document.querySelector('#prog-level').textContent), /Licence C[\s\S]*Licence S[\s\S]*Pour la Licence C[\s\S]*Défis de maîtrise : 1 \/ 288/);
     await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.xp = 0; p.mastery = {}; p.xpDay = null; saveProfile(); window.copytrack.showMenu('menu'); });
   });
 
@@ -502,21 +502,48 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
-  await test('profil : compte, sauvegardes, options, commandes', async () => {
-    await click('[data-action="profile"]');
-    await waitApp(() => !document.getElementById('profile').classList.contains('hidden'));
-    for (const tab of ['account', 'saves', 'options', 'controls']) {
-      const t = page.locator(`#prof-tabs [data-ptab="${tab}"]`);
-      if (await t.count()) { await t.first().click(); await page.waitForTimeout(250); }
+  await test('profil, progression, paramètres : chaque entrée du menu ouvre son écran à onglets, tous les onglets s\'affichent sans erreur, « ← Retour » ramène au panneau', async () => {
+    const tour = { profile: ['account', 'friends', 'saves'], progress: ['records', 'level', 'stats', 'unlocks'], settings: ['audio', 'gfx', 'access', 'game', 'ui', 'controls'] };
+    for (const [hub, tabs] of Object.entries(tour)) {
+      await click(`#menu [data-action="sub-${hub}"]`);
+      await waitApp((h) => !document.getElementById('menu-sub-' + h).classList.contains('hidden') && document.getElementById('menu-tiles').classList.contains('hidden'), hub);
+      await click(`#menu-sub-${hub} .menu-entry:not([data-action="garage"])`);
+      await waitApp(() => !document.getElementById('profile').classList.contains('hidden'));
+      const heading = await page.evaluate(() => document.getElementById('prof-heading').textContent);
+      assert.equal(heading, { profile: 'Profil', progress: 'Progression', settings: 'Paramètres' }[hub]);
+      for (const tab of tabs) {
+        await page.locator(`#prof-tabs [data-ptab="${tab}"]`).first().click();
+        await page.waitForTimeout(150);
+        const shown = await page.evaluate((t) => { const p = document.querySelector(`.prof-panel[data-ppanel="${t}"]`); return p && !p.classList.contains('hidden') && p.getBoundingClientRect().height > 20; }, tab);
+        assert.ok(shown, `${hub} › ${tab} : panneau affiché`);
+      }
+      assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#prof-tabs .tab')].map((t) => t.dataset.ptab)), tabs, hub + ' : ses onglets, et seulement eux');
+      await shot('10-' + hub);
+      await click('#profile [data-action="back"]');
+      await waitApp((h) => window.copytrack.mode === 'menu' && !document.getElementById('menu-sub-' + h).classList.contains('hidden'), hub);
+      await click(`#menu-sub-${hub} [data-action="sub-back"]`);
+      await waitApp(() => !document.getElementById('menu-tiles').classList.contains('hidden'));
     }
-    await shot('10-profil-commandes');
-    await click('#profile [data-action="back"]');
+    // Échap referme un panneau ; le focus revient sur sa tuile.
+    await click('#menu [data-action="sub-play"]');
+    await page.keyboard.press('Escape');
+    await waitApp(() => !document.getElementById('menu-tiles').classList.contains('hidden'));
+  });
+
+  await test('records et médailles : une ligne par circuit officiel, une ligne ouvre la fiche du circuit, « ← Retour » revient aux records', async () => {
+    await app(() => window.copytrack.showScreen('records'));
+    const n = await page.evaluate(() => document.querySelectorAll('#prog-records .rec-row').length);
+    assert.equal(n, await app(() => window.copytrack.builtins.length));
+    await click('#prog-records .rec-row');
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'));
+    await click('#race-hub [data-action="hub-back"]');
+    await waitApp(() => !document.getElementById('profile').classList.contains('hidden') && document.querySelector('.prof-panel[data-ppanel="records"]:not(.hidden)'));
+    await app(() => window.copytrack.showMenu('menu'));
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
   await test('personnalisation de l\'interface : thème, accent, compteur, HUD déplaçable, caméra du joueur utilisée en course', async () => {
-    await app(() => window.copytrack.showScreen('profile'));
-    await click('#prof-tabs [data-ptab="options"]');
+    await app(() => window.copytrack.showScreen('ui'));
     await page.locator('#opt-ui-theme').selectOption('midnight');
     assert.equal(await app(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()), '#070b1c', 'le thème est posé sur la page');
     await page.locator('#opt-ui-speedo').selectOption('ring');
@@ -739,7 +766,7 @@ try {
   return bad.slice(0, 6);
 };
     const states = [['menu', () => window.copytrack.showMenu('menu')], ['tracks', () => window.copytrack.showScreen('tracks')], ['mytracks', () => window.copytrack.showScreen('mytracks')], ['community', () => window.copytrack.showScreen('community')],
-      ['profil', () => { window.copytrack.profileTab = 'account'; window.copytrack.showScreen('profile'); }], ['options', () => window.copytrack.showScreen('options')], ['commandes', () => window.copytrack.showScreen('controls')],
+      ['profil', () => { window.copytrack.profileTab = 'account'; window.copytrack.showScreen('profile'); }], ['audio', () => window.copytrack.showScreen('audio')], ['graphismes', () => window.copytrack.showScreen('gfx')], ['accessibilité', () => window.copytrack.showScreen('access')], ['jeu', () => window.copytrack.showScreen('game')], ['interface', () => window.copytrack.showScreen('ui')], ['commandes', () => window.copytrack.showScreen('controls')], ['records', () => window.copytrack.showScreen('records')], ['niveau', () => window.copytrack.showScreen('level')], ['statistiques', () => window.copytrack.showScreen('stats')], ['déblocages', () => window.copytrack.showScreen('unlocks')], ['amis', () => window.copytrack.showScreen('friends')], ['sauvegardes', () => window.copytrack.showScreen('saves')],
       ['académie', () => window.copytrack.academyMenu()], ['compétition', () => window.copytrack.competitionMenu()], ['multijoueur', () => window.copytrack.multiMenu()], ['import', () => window.copytrack.importModal(false)],
       ['aide', () => window.copytrack.helpModal()], ['tutoriel', () => window.copytrack.tutorial()]];
     const bad = [];
@@ -1142,8 +1169,8 @@ try {
 
   await test('profil : les titres (aucun mérité au départ, conditions lisibles) ; garage : collections et exclusifs verrouillés avec leur condition', async () => {
     await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.owned = {}; p.title = ''; p.collections = {}; p.academy = {}; p.dailyDays = []; saveProfile(); });
-    await click('[data-action="profile"]');
-    await waitApp(() => document.querySelector('#prof-titles select'));
+    await click('[data-action="tab-unlocks"]');
+    await waitApp(() => document.querySelector('#unl-titles select'));
     assert.equal(await page.evaluate(() => document.querySelectorAll('#prof-title option').length), 1, 'seulement « Aucun »');
     assert.equal(await page.evaluate(() => document.querySelectorAll('.title-list li').length), 9);
     assert.ok((await page.evaluate(() => document.querySelector('.title-list').textContent)).includes('Réussir les 6 leçons de l’Académie'));
@@ -1165,9 +1192,7 @@ try {
   });
 
   await test('multijoueur : le menu des salons s\'ouvre sans serveur', async () => {
-    await click('[data-action="community"]');
-    await waitApp(() => !document.getElementById('community').classList.contains('hidden'));
-    await click('#community [data-action="multi"]');
+    await click('#menu-sub-multi [data-action="multi"]');
     await waitApp(() => window.copytrack.ui.modalOpen);
     await shot('11-multijoueur');
     await page.keyboard.press('Escape');
@@ -1352,15 +1377,18 @@ try {
           return out;
         });
         assert.equal(r.n, 6, `${w}x${h} : 6 tuiles`);
-        // Les deux sous-menus s'ouvrent, tiennent à l'écran, et le clic sur « Mes circuits » mène bien à son écran.
-        for (const sub of ['create', 'online']) {
+        // Les six panneaux s'ouvrent l'un après l'autre à la place des tuiles, tiennent à l'écran (ou défilent), et leurs entrées sont touchables (44 px au moins).
+        for (const sub of ['play', 'create', 'multi', 'progress', 'profile', 'settings']) {
           await pp.evaluate((n) => document.querySelector(`#menu [data-action="sub-${n}"]`).click(), sub);
-          const q = await pp.evaluate((n) => { const el = document.getElementById('menu-sub-' + n), r = el.getBoundingClientRect(); return { shown: !el.classList.contains('hidden'), inside: r.left >= -1 && r.right <= window.innerWidth + 1 && r.bottom <= window.innerHeight + 1, n: el.querySelectorAll('button').length }; }, sub);
-          assert.deepEqual([q.shown, q.inside], [true, true], `${w}x${h} : sous-menu ${sub} ouvert et entier`);
-          assert.ok(q.n >= 2);
+          const q = await pp.evaluate((n) => {
+            const el = document.getElementById('menu-sub-' + n), r = el.getBoundingClientRect();
+            const small = [...el.querySelectorAll('.menu-entry')].filter((b) => b.getBoundingClientRect().height < 40).length;
+            return { shown: !el.classList.contains('hidden'), tilesHidden: document.getElementById('menu-tiles').classList.contains('hidden'), wide: r.left >= -1 && r.right <= window.innerWidth + 1, n: el.querySelectorAll('.menu-entry').length, small, back: !!el.querySelector('[data-action="sub-back"]') };
+          }, sub);
+          assert.deepEqual([q.shown, q.tilesHidden, q.wide, q.back, q.small], [true, true, true, true, 0], `${w}x${h} : panneau ${sub} ouvert, large comme l'écran, avec Retour, entrées touchables`);
+          assert.ok(q.n >= 3);
+          await pp.evaluate((n) => document.querySelector(`#menu-sub-${n} [data-action="sub-back"]`).click(), sub);
         }
-        assert.equal(await pp.evaluate(() => document.getElementById('menu-sub-create').classList.contains('hidden')), true, 'un seul sous-menu à la fois');
-        await pp.evaluate(() => document.querySelector('#menu [data-action="sub-online"]').click());
         assert.deepEqual([r.cut, r.covered, r.fsOver], [[], [], []], `${w}x${h} : tuiles coupées, recouvertes, sous le bouton plein écran`);
       }
     } finally { await ctxP.close(); }
@@ -1386,7 +1414,7 @@ try {
       await pt.evaluate(() => { const A = window.copytrack; A.settings.telemetry = false; A.settings.tutorialDone = true; A.saveSettings(); A.ui.closeModal(); A.quality.apply('ultrapotato'); });
       // Au premier lancement, les fenêtres (consentement, tutoriel) arrivent l'une après l'autre : on les ferme jusqu'à ce que l'accueil soit libre.
       for (let k = 0; k < 6; k++) { await pt.waitForTimeout(500); await pt.evaluate(() => window.copytrack.ui.closeModal()); }
-      await tap('[data-action="play"]');
+      await tap('[data-action="sub-play"]'); await tap('[data-action="play"]');
       await wait(() => !document.getElementById('tracks').classList.contains('hidden') && document.querySelector('#track-list .card .num'));
       await tap('#track-list .card:has(.num) .thumb');
       await wait(() => !document.getElementById('race-hub').classList.contains('hidden'));
@@ -1583,14 +1611,14 @@ try {
       await clk('#hub-board [data-tab="friends"]');
       await wait(() => /Ana[\s\S]*00:25\.250[\s\S]*Testeur/.test(document.getElementById('hub-board').textContent));
       // Profil › Amis : accepter une demande, en envoyer une
-      await ap(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('profile'); });
-      await wait(() => document.querySelector('.prof-friends [data-fa="yes"]'));
-      await clk('.prof-friends [data-fa="yes"]');
-      await wait(() => /1 ami(?!s)[\s\S]*Ana/.test((document.querySelector('.prof-friends') || {}).textContent || ''));   // le panneau se redessine après le clic : il peut être absent un instant
+      await ap(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('friends'); });
+      await wait(() => document.querySelector('#friends-body [data-fa="yes"]'));
+      await clk('#friends-body [data-fa="yes"]');
+      await wait(() => /1 ami(?!s)[\s\S]*Ana/.test((document.querySelector('#friends-body') || {}).textContent || ''));   // le panneau se redessine après le clic : il peut être absent un instant
       assert.deepEqual(calls.find((c) => c.url.includes('/rpc/friend_respond')).body, { other: ANA, accept: true });
-      await p2.locator('.prof-friends .friend-add input').fill('Ben');
-      await clk('.prof-friends .friend-add button');
-      await wait(() => /Demandes envoyées[\s\S]*Ben/.test((document.querySelector('.prof-friends') || {}).textContent || ''));
+      await p2.locator('#friends-body .friend-add input').fill('Ben');
+      await clk('#friends-body .friend-add button');
+      await wait(() => /Demandes envoyées[\s\S]*Ben/.test((document.querySelector('#friends-body') || {}).textContent || ''));
       assert.equal(calls.find((c) => c.url.includes('/rpc/friend_request')).body.target_name, 'Ben');
       // Communauté › Abonnements : personne de suivi
       await ap(() => window.copytrack.showScreen('community'));

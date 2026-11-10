@@ -9,13 +9,17 @@ import { clearRecords } from '../storage.js';
 import { fovText } from './shared.js';
 import { AID_IDS, cleanAids } from '../aids.js';
 import { steerCurveText } from './settings.js';
+import { TAB_HUB } from './profile.js';
 export const wiringMethods = {
   // ------------------------------------------------------------ Câblage
   _wire() {
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action]');
-      if (!e.target.closest('.menu-sub, [data-action^="sub-"]')) this._menuSub(null);     // un clic ailleurs referme le sous-menu
-      if (btn) { this.audio.click(); this._action(btn.dataset.action); return; }
+      if (btn) {
+        const panel = btn.closest('.menu-panel');
+        if (panel) this._lastPanel = panel.id.replace('menu-sub-', '');      // « ← Retour » d'un écran ouvert depuis un panneau y ramène (et non aux six tuiles)
+        this.audio.click(); this._action(btn.dataset.action); return;
+      }
       const ed = e.target.closest('[data-ed]');
       if (ed && this.session && this.session.kind === 'editor') { this.audio.click(); this._editorAction(ed.dataset.ed); return; }
       const sel = e.target.closest('[data-sel]');
@@ -32,7 +36,7 @@ export const wiringMethods = {
       if (this.bench) { this.bench.finished = true; this.bench = null; }
       this._applyQuality();
       this.saveSettings();
-      this.showMenu('options');
+      this.showMenu('gfx');
       this._startBench();
     });
     $('opt-quality-redo').addEventListener('click', () => {
@@ -40,7 +44,7 @@ export const wiringMethods = {
       this.settings.gfxProfile = '';
       $('opt-quality').value = 'auto';
       this.saveSettings();
-      this.showMenu('options');
+      this.showMenu('gfx');
       this._startBench(true);
     });
     $('opt-ghost').addEventListener('change', (e) => { this.settings.ghost = e.target.checked; this.saveSettings(); });
@@ -97,24 +101,43 @@ export const wiringMethods = {
     $('opt-name').addEventListener('blur', (e) => {
       if (this.identity.kind !== 'account' && !checkPseudo(e.target.value).ok) { e.target.value = this.settings.playerName; e.target.classList.remove('bad'); this.ui.flash('Pseudo inchangé : ' + checkPseudo(e.target.value).error); }
     });
-    document.querySelectorAll('#prof-tabs .tab').forEach((t) => t.addEventListener('click', () => { this.audio.click(); this.setProfileTab(t.dataset.ptab); }));
+    $('prof-tabs').addEventListener('click', (e) => { const t = e.target.closest('[data-ptab]'); if (t) { this.audio.click(); this.setProfileTab(t.dataset.ptab); } });      // (les onglets sont reconstruits selon l'entrée : Profil, Progression, Paramètres)
+    // Échap dans un panneau de l'accueil : retour aux six catégories (ni modale ouverte, ni autre écran).
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || this._screen !== 'menu' || this.ui.modalOpen || !this._menuSubOpen) return;
+      e.preventDefault(); this._menuSub(null, true);
+    });
     document.querySelectorAll('#bind-tabs .tab').forEach((t) => t.addEventListener('click', () => { this.audio.click(); this._renderControls(t.dataset.tab); }));
   },
 
-  // Sous-menus de l'accueil : name = 'create' | 'online' ; le même nom une seconde fois, ou null, referme.
-  _menuSub(name) {
-    const open = name && !$('menu-sub-' + name).classList.contains('hidden') ? null : name;
-    for (const n of ['create', 'online']) {
-      $('menu-sub-' + n).classList.toggle('hidden', n !== open);
+  // Panneaux de l'accueil : name = 'play' | 'create' | 'multi' | 'progress' | 'profile' | 'settings'. Ouvrir un panneau remplace les six tuiles (un seul niveau de profondeur) ;
+  // « ← Retour » ou Échap les ramène, le focus revenant sur la tuile d'où l'on vient. name = null : tout fermer (retour à l'accueil, clic ailleurs impossible ici).
+  _menuSub(name, focus = false) {
+    const names = ['play', 'create', 'multi', 'progress', 'profile', 'settings'];
+    const from = this._menuSubOpen;
+    this._menuSubOpen = names.includes(name) ? name : null;
+    $('menu-tiles').classList.toggle('hidden', !!this._menuSubOpen);
+    for (const n of names) {
+      $('menu-sub-' + n).classList.toggle('hidden', n !== this._menuSubOpen);
       const t = document.querySelector(`#menu [data-action="sub-${n}"]`);
-      if (t) { t.setAttribute('aria-expanded', String(n === open)); t.classList.toggle('open', n === open); }
+      if (t) { t.setAttribute('aria-expanded', String(n === this._menuSubOpen)); }
+    }
+    if (this._menuSubOpen) {
+      const first = document.querySelector(`#menu-sub-${this._menuSubOpen} .menu-entry`);
+      if (first && matchMedia('(pointer: fine)').matches) first.focus({ preventScroll: true });
+    } else if (from && focus) {
+      const t = document.querySelector(`#menu [data-action="sub-${from}"]`);
+      if (t) t.focus({ preventScroll: true });
     }
   },
 
   _action(a) {
     const s = this.session;
+    // Entrées des panneaux Progression, Profil, Paramètres : « tab-<onglet> » ouvre l'écran à onglets sur cet onglet (app/profile.js, HUBS).
+    if (a.startsWith('tab-') && TAB_HUB[a.slice(4)]) { this.showScreen(a.slice(4)); return; }
     switch (a) {
-      case 'sub-create': case 'sub-online': this._menuSub(a.slice(4)); break;
+      case 'sub-play': case 'sub-create': case 'sub-multi': case 'sub-progress': case 'sub-profile': case 'sub-settings': this._menuSub(a.slice(4)); break;
+      case 'sub-back': this._lastPanel = null; this._menuSub(null, true); break;
       case 'play': this.showScreen('tracks'); break;
       case 'quick': this.quickRace(); break;
       case 'daily': this.openDailyHub('menu'); break;
@@ -132,9 +155,6 @@ export const wiringMethods = {
       case 'editor': this.openEditor(); break;
       case 'mytracks': this.showScreen('mytracks'); break;
       case 'import': this.importModal(false); break;
-      case 'options': this.showScreen('options'); break;
-      case 'controls': this.showScreen('controls'); break;
-      case 'profile': this.profileTab = 'account'; this.showScreen('profile'); break;
       case 'garage': this.openGarage(); break;
       case 'garage-back': this.showMenu('menu'); break;
       case 'garage-buy': if (s instanceof GarageSession) s.buyDraft(); break;
@@ -156,7 +176,7 @@ export const wiringMethods = {
       case 'cameras': this.openCameraEditor(); break;
       case 'modes': this.modesMenu(); break;
       case 'ui-reset': this.resetUi(); break;
-      case 'back': this.showScreen('menu'); break;
+      case 'back': { const p = this._lastPanel; this.showScreen('menu'); if (p) this._menuSub(p); break; }
       case 'new-track': this.openEditor({ name: 'Mon circuit', code: null, fresh: true }); break;
       case 'resume': if (s && s.resume) s.resume(); break;
       case 'restart': if (s && s.restart) { this.ui.hideOverlay('pause'); s.restart(); } break;
@@ -303,7 +323,7 @@ export const wiringMethods = {
     if (!root) return;
     if (m.back) {
       if (this.ui.modalOpen) { this.ui.closeModal(); return; }
-      const back = root.querySelector('[data-action="back"], [data-action="hub-back"], [data-action="garage-back"], [data-action="options"]');
+      const back = root.querySelector('.menu-panel:not(.hidden) [data-action="sub-back"], [data-action="back"], [data-action="hub-back"], [data-action="garage-back"]');
       if (back) back.click();
       return;
     }

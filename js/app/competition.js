@@ -46,7 +46,7 @@ export const competitionMethods = {
         <p class="meta">Calculé par le serveur à la fin de chaque duel (départ 1200). Personne ne déclare de résultat : seuls comptent les temps rejoués par le serveur.</p></section>
       <section><h3>Duels</h3>
         ${duels.length ? `<ul class="duel-list">${duels.map(duelRow).join('')}</ul>` : '<p class="meta">Aucun duel pour l’instant.</p>'}
-        ${okFriends.length ? `<form class="duel-new row"><select class="duel-friend" aria-label="Ami à défier">${okFriends.map((f) => opt(f.id, f.name)).join('')}</select><select class="duel-track" aria-label="Circuit du duel">${tracks}</select><button class="btn primary" type="submit">Défier (24 h)</button></form>` : '<p class="meta">Ajoute des amis (Profil › Amis) pour les défier.</p>'}
+        ${okFriends.length ? `<form class="duel-new row"><select class="duel-friend" aria-label="Ami à défier">${okFriends.map((f) => opt(f.id, f.name)).join('')}</select><select class="duel-track" aria-label="Circuit du duel">${tracks}</select><button class="btn primary" type="submit">Défier (24 h)</button></form>` : '<p class="meta">Ajoute des amis (Multijoueur › Amis) pour les défier.</p>'}
         <p class="meta">Un duel dure 24 h : chacun court quand il veut, son meilleur temps compte. Plus rapide gagne ; égalité parfaite : nul ; aucun temps : annulé.</p></section>
       <section><h3>Tournois privés</h3>
         ${tours.length ? `<ul class="tour-list">${tours.map(tourRow).join('')}</ul>` : '<p class="meta">Aucun tournoi.</p>'}
