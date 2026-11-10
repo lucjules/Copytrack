@@ -3,6 +3,36 @@
 Ce document ne dit **pas** ce qui est appliqué en production : seul le projet Supabase le sait. Il dit dans quel ordre appliquer, comment **le prouver**, et comment revenir en arrière.
 Tant qu'une vérification ci-dessous n'a pas été faite et lue par quelqu'un, une migration n'est **pas** « appliquée » et une fonction n'est **pas** « déployée ».
 
+## Procédure de mise à jour complète (production)
+
+**Rien de ce document n'a été exécuté sur la production par l'auteur de ce dépôt** : l'environnement de développement n'y accède pas. L'audit indépendant a constaté sur le projet réel : `submit-score` en version 23 avec `PHYS_VER` 31 (le jeu est en 33), `ice` en version 3 ; absents : `rate_hits`, `rate_check`, `track_binds`, `submit_best`, `publish_track`, `author_verified` ; présents : `submit_rate`, `submit_rate_check` (verrou par joueur seulement, pas de limite globale exacte), `scores_limit` (simple `COUNT`). Ce n'était PAS tout à fait l'état « étapes 1 à 14 » : la lecture de la base réelle (phase 8, comparaison objet par objet, corps de fonction par corps de fonction, droits et politiques, à une base de référence montée avec les étapes 1 à 14) a montré que **les étapes 7 (fantômes) et 8 (titres, circuits de la semaine) n'avaient jamais été jouées** (`scores.ghost`, `ghost_veh`, `has_ghost`, `players.title`, `get_ghost`, `set_title`, `trending_tracks` absents) et que `track_comments_list` était une **ancienne édition** de l'étape 13 (sans le titre de l'auteur). Tout le reste (130 objets, 65 fonctions, droits, politiques, contraintes, index, déclencheurs) était identique. Or `submit_best` (étape 15) écrit dans `scores.ghost` : lancer l'étape 15 seule aurait donné une fonction créée mais en échec à chaque temps soumis. Ne jamais supposer qu'une étape est appliquée parce que son fichier existe : `verify-prod.sql` contrôle maintenant aussi les étapes 7, 8 et 13.
+
+Chaque étape ci-dessous a une **vérification** : tant qu'elle n'a pas été lue, l'étape n'est pas faite. Aucune étape ne supprime de donnée. En cas de doute, s'arrêter et revenir en arrière (section « Retour arrière »).
+
+| Étape | Action | Vérification (à lire) | Si la vérification échoue |
+|---|---|---|---|
+| 0 | **État des lieux** : coller `supabase/verify-prod.sql` dans le SQL Editor ; lancer `node tools/check-deployed.mjs` | Les lignes `MANQUE` / `ÉCART` doivent être celles attendues AVANT l'étape 15 (liste ci-dessus). Une autre différence = la base n'est pas dans l'état supposé : **ne rien appliquer** | Comprendre l'écart d'abord |
+| 1 | **Sauvegarde** : Supabase > Database > Backups (ou `pg_dump` des tables `scores`, `tracks`, `players`) | Une sauvegarde datée existe et se télécharge | Ne pas continuer |
+| 1b | **Rattrapage, seulement si `verify-prod.sql` montre `MANQUE` sur les lignes des étapes 7 / 8 / 13** : dans l'ordre `etape7-fantomes.sql`, `etape8-decouverte.sql`, `etape13-communaute.sql` (elle remplace `track_comments_list`), `etape14-securite.sql` (elle pose les droits de `players.title`) : chacune relançable, aucune ne supprime de donnée | Relancer `verify-prod.sql` : plus aucun `MANQUE` sur ces lignes ; les droits sont ceux de la base de référence (voir `tools/test-accounts-sql.sh`) | Elles ne s'annulent pas (colonnes et fonctions ajoutées, sans effet tant que personne ne s'en sert) ; s'arrêter et comprendre |
+| 2 | `etape15-backend.sql` (SQL Editor) : relançable, ne supprime rien ; **compatible avec l'ancienne fonction serveur** ; **suppose les étapes 7 et 8 jouées** (`submit_best` écrit `ghost`) | Relancer `verify-prod.sql` : plus aucun `MANQUE` ; seules les lignes « APRÈS 15b » et « info » restent | `etape15-retour.sql` |
+| 3 | Redéployer **`submit-score`** (`npm run build:function`, puis `supabase/functions/submit-score/index.ts`) | `node tools/check-deployed.mjs` : `physVer` = 33 (= `js/version.js`), actions `submit` + `publish-track` | Redéployer l'ancien fichier (historique Git) |
+| 4 | Redéployer **`ice`** (`supabase/functions/ice/index.ts`) ; secrets TURN inchangés | `check-deployed.mjs` : `ice` répond 401 sans session ; avec une session de test : 200 et `ttl` 3600 | Redéployer l'ancien fichier |
+| 5 | **Essai de bout en bout** avec un compte de test : une course validée (record enregistré, rang renvoyé) et une publication de circuit (circuit créé, `author_verified` vrai) | La ligne apparaît dans `scores` / `tracks` ; `submit-score` journalise sans erreur | Retour arrière (étapes 3-4), pas encore 15b |
+| 6 | Mettre en ligne le jeu **0.9.58 ou plus** (PHYS_VER 33) | Un joueur peut publier et courir | Remettre le jeu précédent |
+| 7 | `etape15b-publication-verifiee.sql` | `verify-prod.sql` : la ligne « APRÈS 15b » passe à `ok` ; essai : une publication par l'ancienne voie (insertion directe) est refusée | `grant insert on public.tracks to authenticated;` |
+| 8 | **Vérification finale** | `verify-prod.sql` : **aucune** ligne `MANQUE` ni `ÉCART` ; `check-deployed.mjs` : « aucun écart constaté » | Corriger avant d'annoncer quoi que ce soit |
+
+### Compatibilité avec les anciennes versions du jeu
+
+| Version du jeu | Après les étapes 2 à 6 | Après 15b (étape 7) |
+|---|---|---|
+| ≤ 0.9.57 (PHYS_VER ≤ 32) | **Ne peut plus enregistrer de temps** : la nouvelle `submit-score` refuse une autre version de physique (422, « recharge le jeu ») ; ses records locaux et ses fantômes restent | Idem ; **ne peut plus publier** de circuit (plus d'insertion directe) |
+| 0.9.58 ou plus (PHYS_VER 33) | Tout fonctionne | Tout fonctionne |
+| Records déjà en base avec `phys_ver` 31 | Conservés ; un temps de physique 33 les remplace (même plus lent), un temps d'une physique plus ancienne ne remplace jamais un record plus récent ; les classements n'affichent qu'une version de physique à la fois | — |
+| Circuits publiés avant l'étape 15 | Conservés ; leur temps auteur reste **non vérifié** (`author_verified` faux) jusqu'à ce que leur auteur les republie | — |
+
+Avant l'étape 6, laisser un temps de cohabitation n'est pas possible pour les temps : une seule version de physique est vérifiée à la fois par `submit-score` (c'est voulu : une course ne se rejoue que sur la physique qui l'a produite).
+
 ## Ordre
 
 | # | Quoi | Où | Dépend de | Compatible avec l'ancienne fonction serveur ? |
@@ -37,6 +67,8 @@ Colle ensuite le contenu de `supabase/functions/submit-score/index.ts` et de `su
 
 ## Preuves observables (à lancer par toi, résultat à lire)
 
+Le plus simple : `supabase/verify-prod.sql` (lecture seule, une ligne par vérification, statut `ok` / `MANQUE` / `ÉCART` / `info`) et `node tools/check-deployed.mjs`. Les requêtes ci-dessous détaillent les mêmes contrôles à la main.
+
 **1. Étape 15 appliquée.** Dans le SQL Editor :
 
 ```sql
@@ -64,7 +96,7 @@ select has_column_privilege('authenticated', 'public.tracks', 'created_at', 'ins
 curl -s "https://<projet>.supabase.co/functions/v1/submit-score" -H "apikey: <clé publique>"
 ```
 
-Attendu : `{"ok":true,"service":"submit-score","physVer":31,…,"actions":["submit","publish-track"]}`. `physVer` doit être égal à `PHYS_VER` de `js/version.js` ; l'absence de `actions` signifie que l'**ancienne** fonction est encore en ligne.
+Attendu : `{"ok":true,"service":"submit-score","physVer":33,…,"actions":["submit","publish-track"]}`. `physVer` doit être égal à `PHYS_VER` de `js/version.js` ; l'absence de `actions` signifie que l'**ancienne** fonction est encore en ligne.
 
 **4. `ice` refuse sans session** (la clé publique seule ne donne plus de relais) :
 
@@ -82,6 +114,22 @@ Attendu : `401` `{"error":"Non connecté."}`.
 
 L'ancienne fonction `ice` ne demande rien à l'étape 15 : elle peut rester.
 
+## Journal des opérations réellement faites sur la production
+
+**10 novembre 2026** (accès : API de gestion Supabase avec un jeton d'accès personnel, fourni par le propriétaire du projet pour cette opération ; **à révoquer** sur supabase.com/dashboard/account/tokens). Chaque étape a été vérifiée avant la suivante ; tout SQL a d'abord été rejoué sur une copie locale reproduisant la production (identique à la photo de la base réelle, avec ses 187 temps réels) :
+
+| # | Opération | Preuve |
+|---|---|---|
+| 0 | Lecture seule : `verify-prod.sql`, audit des étapes 1 à 14 objet par objet, corps de fonction par corps de fonction, droits, politiques, contraintes | Seules les étapes 7 et 8 et l'édition de `track_comments_list` différaient de la référence |
+| 1 | Sauvegarde logique des tables `players`, `scores`, `tracks`, `submit_rate` et photo des droits, politiques, déclencheurs et fonctions (aucune sauvegarde automatique : plan sans) | 11 / 187 / 14 / 2 lignes, **conservée hors dépôt** (données de joueurs) |
+| 2 | Étapes 7, 8, 13 (corrigée), 14 | Photo de la production = photo de la base de référence « étapes 1 à 14 » : aucune différence |
+| 3 | Étape 15 | Photo = référence « étapes 1 à 15 » : aucune différence ; `verify-prod.sql` : plus aucun `MANQUE` ni `ÉCART` |
+| 4 | Déploiement de `ice` (v3 → v4) puis `submit-score` (v23 → v24), `verify_jwt` conservé | `check-deployed.mjs` : `physVer` 33, actions `submit` et `publish-track`, limites annoncées ; `ice` 401 sans session |
+| 5 | Essai de bout en bout (session invité jetable, vraie course rejouée, publication) : **a trouvé le défaut du profil (403)** | Corrigé (étape 15 relancée) ; second essai : 20 vérifications sur 21 ; la 21e (`ice` avec session) répond 501 « Aucun relais TURN configuré » : **attendu**, aucun relais n'est paramétré (le jeu garde son STUN) |
+| 6 | Retrait des lignes de test, par identifiant exact | Retour à 11 joueurs / 187 temps / 14 circuits, 0 session de test restante |
+
+**Pas encore fait** : l'étape 15b (voir l'ordre : après la mise en ligne du jeu 0.9.58) ; les circuits publiés avant l'étape 15 (14 sur 14) gardent un temps auteur **non vérifié** jusqu'à ce que leur auteur les republie.
+
 ## Ce qui n'est pas vérifié ici
 
-Le projet Supabase réel (Auth, limites de débit de la plateforme, droits effectifs du rôle `service_role`) n'est pas testé : le SQL l'est sur un PostgreSQL local (`npm run test:sql`, dont des **sessions simultanées** réelles), les fonctions contre un faux Supabase avec la vraie vérification de course. L'état de la production (étapes appliquées, fonctions déployées) n'est connu que par les preuves ci-dessus.
+Le SQL est testé sur un PostgreSQL local (`npm run test:sql`, dont des **sessions simultanées** réelles), les fonctions contre un faux Supabase avec la vraie vérification de course : ces tests ne voient PAS les droits effectifs du rôle `authenticated` à travers PostgREST (c'est ce qui a laissé passer le défaut du profil, voir le journal). Ce qui a été éprouvé sur le projet réel le 10 novembre 2026 : la chaîne session invité → profil → course rejouée → record → fantôme, la publication à temps auteur vérifié, et les refus des écritures directes (journal ci-dessus). **Non éprouvé** : la tenue sous charge réelle (limites de débit de la plateforme, instances multiples de la fonction), l'étape 15b, un compte avec e-mail (sauvegarde cloud), le multijoueur avec relais TURN. L'état de la production n'est connu que par les preuves ci-dessus.

@@ -437,4 +437,71 @@ test('stress : 1 500 obstacles dans la même case de 20 m (densité extrême) �
   assert.ok(performance.now() - t0 < 5000);
 });
 
+
+// ---- Phase 7 : volant tenu à fond -----------------------------------------------------------------------------------------------------------------------
+const bigField = () => { const tr = new Track('champ'); tr.add({ t: 'start', x: 20, z: 41, l: 0, r: 0 }); for (let x = 0; x < 41; x++) for (let z = 1; z < 41; z++) tr.add({ t: 'platform', x, z, l: 0, r: 0 }); tr.add({ t: 'finish', x: 20, z: 0, l: 0, r: 0 }); return tr; };
+test('volant tenu à FOND, gaz à fond, au milieu d\'une grande plateforme : la voiture n\'est PAS prisonnière d\'un petit cercle à 2 m/s (avant 0.9.58 : vitesse bloquée à 1,9 m/s indéfiniment)', () => {
+  for (const sgn of [1, -1]) {
+    const sim = fresh(bigField()); const P = sim.phys;
+    let top = 0, dist = 0, px = P.pos.x, pz = P.pos.z;
+    run(sim, 120 * 20, () => ({ throttle: true, brake: false, steer: sgn }), { onStep: (i, s) => { top = Math.max(top, s.phys.speed); dist += Math.hypot(s.phys.pos.x - px, s.phys.pos.z - pz); px = s.phys.pos.x; pz = s.phys.pos.z; } });
+    assert.ok(top > 8, `volant ${sgn} : vitesse maximale ${top.toFixed(1)} m/s (prisonnière d'un cercle à vitesse de marche)`);
+    assert.ok(dist > 120, `volant ${sgn} : ${dist.toFixed(0)} m parcourus en 20 s`);
+  }
+});
+test('volant à fond CONTRE un mur (gaz, impact de 15° à 60°, 60 et 100 km/h, des deux côtés) : jamais prisonnière sans issue (elle repart, ou le jeu la ramène au checkpoint), et relâcher le volant la remet en route', () => {
+  let cases = 0;
+  for (const yawDeg of [15, 30, 60]) for (const kmh of [60, 100]) for (const sgn of [1, -1]) {
+    cases++;
+    const sim = fresh(strip(14)); const P = sim.phys;
+    const yaw = -yawDeg * Math.PI / 180, sp = kmh / 3.6; P.pos.x = 19; P.pos.z = 500; P.yaw = yaw; P.vel.x = -Math.sin(yaw) * sp; P.vel.z = -Math.cos(yaw) * sp;
+    let hit = false, peak = 0, still = 0;
+    const log = run(sim, 120 * 16, () => ({ throttle: true, brake: false, steer: sgn }), { onStep: (i, s) => { if (s.phys.ev.wall > 0.5) hit = true; if (hit && i > 120 * 4) peak = Math.max(peak, s.phys.speed); if (hit && s.phys.speed < 1) still++; } });
+    assert.ok(hit, `${yawDeg}° ${kmh} km/h : la voiture a bien heurté le mur`);
+    assert.ok(peak > 6 || log.rewinds > 0, `${yawDeg}° ${kmh} km/h volant ${sgn} : en 16 s la voiture n'a jamais dépassé ${peak.toFixed(1)} m/s et n'a pas été ramenée au checkpoint`);
+    assert.ok(still / 120 < 9, `${yawDeg}° ${kmh} km/h volant ${sgn} : ${(still / 120).toFixed(1)} s presque immobile`);
+    // on relâche le volant : elle repart droit
+    let v2 = 0; run(sim, 120 * 8, () => GAS, { onStep: (i, s) => { v2 = Math.max(v2, s.phys.speed); } });
+    assert.ok(v2 > 10, `${yawDeg}° ${kmh} km/h : volant relâché, vitesse maximale ${v2.toFixed(1)} m/s`);
+  }
+  assert.equal(cases, 12);
+});
+
+
+// ---- Phase 7 : gravité inversée sous une dalle pleine ou un tunnel ------------------------------------------------------------------------------------------
+const slabCase = (kind) => {
+  const tr = new Track('inv'); tr.add({ t: 'start', x: 3, z: 12, l: 0, r: 0 });
+  for (let z = 11; z >= 2; z--) tr.add({ t: 'straight', x: 3, z, l: 0, r: 0, ...(kind === 'tunnel' ? { tn: 1 } : {}) });
+  tr.add({ t: 'finish', x: 3, z: 1, l: 0, r: 0 });
+  if (kind === 'slab') for (let x = 1; x <= 5; x++) for (let z = 4; z <= 9; z++) tr.add({ t: 'platform', x, z, l: 2, r: 0 });
+  return tr;
+};
+const invRun = (tr, vz, steps) => {
+  const sim = fresh(tr), P = sim.phys; P.pos.x = 3.5 * CELL; P.pos.z = 6.5 * CELL; P.pos.y = 0.6; P.vel.z = vz; P.gSign = -1; P.grounded = false;
+  let maxY = -1e9, lostAt = -1, rew = 0, maxVy = 0;
+  run(sim, steps, () => GAS, { onStep: (i, s) => { maxY = Math.max(maxY, s.phys.pos.y); maxVy = Math.max(maxVy, s.phys.vel.y); if (s.lost && lostAt < 0) lostAt = i; if (s.lost) { rew++; s.phys.gSign = -1; s.phys.grounded = false; } } });
+  return { maxY, lostAt, rew, maxVy, P };
+};
+test('gravité INVERSÉE sous une dalle pleine : la voiture la traverse, VOLONTAIREMENT (« Cristal Fêlé » monte ainsi de 8 niveaux : la bloquer fait passer ce circuit de 33 s à 70 s) ; le test fige ce choix et son effet', () => {
+  for (const vz of [0, -10]) {
+    const r = invRun(slabCase('slab'), vz, 120 * 5);
+    assert.ok(r.maxY > baseY({ l: 2 }) + 1, `vitesse ${vz} : la voiture devrait traverser la dalle (y maximal ${r.maxY.toFixed(1)} m)`);
+  }
+  // le circuit officiel qui en dépend : le pilote automatique le termine dans son temps de référence
+  const cf = BUILTIN_TRACKS.find((d) => d.id === 'cristalfele'), t = buildBuiltin(cf), sim = fresh(t), bot = new Autopilot(t.path); bot.reset(sim.phys);
+  let fin = -1; run(sim, 120 * 60, () => bot.control(sim.phys), { onStep: (i, s) => { if (s.logic.finished && fin < 0) fin = i; } });
+  assert.ok(fin >= 0 && fin / 120 < 36, `Cristal Fêlé : arrivée en ${(fin / 120).toFixed(1)} s (référence 33,1 s) : la traversée des dalles en gravité inversée ne doit pas être bloquée`);
+});
+test('gravité INVERSÉE dans un tunnel : le toit retient la voiture (elle n\'en sort plus par le haut) et elle est ramenée au checkpoint', () => {
+  const r = invRun(slabCase('tunnel'), 0, 120 * 5);
+  const roof = baseY({ l: 0 }) + 0.0; void roof;
+  assert.ok(r.maxY < 14, `le toit n'a pas retenu la voiture : y maximal ${r.maxY.toFixed(1)} m`);
+  assert.ok(r.lostAt >= 0 && r.lostAt < 120 * 4.8, `plaquée sous le toit sans retour (${r.lostAt})`);
+});
+test('gravité inversée SANS dalle ni tunnel : comportement inchangé (la voiture monte, puis est déclarée perdue dans le ciel et ramenée)', () => {
+  const r = invRun(slabCase('open'), 0, 120 * 25);
+  assert.ok(r.maxY > 60, `la voiture devrait monter librement (y max ${r.maxY.toFixed(1)})`);
+  assert.ok(r.lostAt >= 0, 'jamais ramenée');
+});
+
 await finish('Tous les tests de contacts réels passent.');

@@ -68,6 +68,11 @@ export const CAR = {
   wallSpinMax: 2.5,
   stuckAfter: 0.35,   // 0.9.48 : voiture plaquée contre un mur à l'arrêt depuis ce délai (s) : le volant la fait pivoter sur place
   stuckPivot: 1.2,    // vitesse de pivot (rad/s, à fond de volant)
+  wallFresh: 0.12,    // 0.9.58 : durée (s) d'un contact avec un mur pendant laquelle un choc « coûte » (perte de vitesse, rotation, moteur coupé) ; au-delà c'est du frottement (wallScrape)
+  wallFreshSpeed: 8,  //   … et seulement sous cette vitesse (m/s) : racler un mur à vive allure coûte comme avant
+  scrubAngle: 0.4,    // 0.9.58 : braquage (rad) au-delà duquel la poussée longitudinale « de frottement » du pneu avant est plafonnée à basse vitesse (voir _tires)
+  scrubSpeed: 8,      //   … en dessous de cette vitesse (m/s)
+  scrubShare: 0.6,    //   … à cette part de la poussée du moteur : volant à fond, la voiture finit toujours par accélérer au lieu de tourner à 2 m/s sans fin
   stuckAlign: 1.4,    // 0.9.54 : voiture plaquée nez au mur : le contact la fait pivoter d'elle-même vers la tangente du mur (rad/s), sans qu'il faille braquer
   wallStun: 0.04,     // durée de l'encaissement (s par m/s d'impact), 0,1 s en plus, bornée à 0,8 s
   stunTraction: 0.3,  // poussée du moteur pendant l'encaissement

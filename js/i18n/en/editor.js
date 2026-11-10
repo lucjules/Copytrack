@@ -339,4 +339,8 @@ export default {
   'Cap, inclinaison et roulis à 0°': 'Heading, pitch and roll to 0°',
   'Un obstacle ne tourne qu’autour de la verticale : sa forme de contact est fixée par le jeu.': 'An obstacle only turns around the vertical: its contact shape is set by the game.',
   'Rotations rapides': 'Quick rotations',
+  'Pas du gizmo': 'Gizmo step',
+  'Le départ est unique : il ne se duplique pas.': 'The start is unique: it cannot be duplicated.',
+  'Copie impossible : limite de décorations atteinte (rien n\'a été modifié).': 'Cannot copy: decoration limit reached (nothing was changed).',
+  'Rien n\'a été dupliqué.': 'Nothing was duplicated.',
 };

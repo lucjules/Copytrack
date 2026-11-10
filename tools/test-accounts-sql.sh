@@ -807,6 +807,33 @@ wait
 chk "plafond GLOBAL (2) : la 3e requête (autre pilote), arrivée pendant que la 2e est en cours, est REFUSÉE" "$([ "$RG" -ge 1 ] 2>/dev/null && echo 1 || echo 0)"
 rm -f /tmp/ct-f1.txt /tmp/ct-f2.txt
 
+echo "Concurrence : publication d'un même circuit, droits d'écriture directs"
+# Deux pilotes publient EN MÊME TEMPS la même signature : exactement un « created », l'autre « taken » (jamais une erreur de contrainte d'unicité).
+( $P -d $DB -At -c "begin; select public.publish_track('$E2', 'Course A', 'forest', 'c', 'sig-race', 20, 5, 1, ''); select pg_sleep(2); commit;" >/tmp/ct-p1.txt 2>&1 ) &
+sleep 0.7
+$P -d $DB -At -c "select public.publish_track('$E3', 'Course B', 'forest', 'c', 'sig-race', 19, 5, 1, '');" >/tmp/ct-p2.txt 2>&1 || true
+wait
+chk "même signature publiée par deux pilotes simultanément : un « created », un « taken », une seule ligne, aucune erreur de contrainte" "$([ "$(grep -c created /tmp/ct-p1.txt)" = 1 ] && [ "$(grep -c taken /tmp/ct-p2.txt)" = 1 ] && ! grep -qi "duplicate\|unique" /tmp/ct-p2.txt && [ "$(Q "select count(*) from tracks where signature = 'sig-race'")" = 1 ] && [ "$(Q "select author_time from tracks where signature = 'sig-race'")" = 20 ] && echo 1 || echo 0)"
+rm -f /tmp/ct-p1.txt /tmp/ct-p2.txt
+chk "publish_track refuse des valeurs hors bornes (nom vide, tour à 0, temps négatif, code énorme)" "$([ "$(for a in "'', 'forest', 'c', 'sv1', 20, 5, 1" "'N', 'forest', 'c', 'sv2', 20, 5, 0" "'N', 'forest', 'c', 'sv3', -1, 5, 1" "'N', 'forest', repeat('x', 100001), 'sv4', 20, 5, 1"; do Q "select public.publish_track('$E2', $a, '')" | grep -c "Paramètres invalides"; done | paste -sd+ | bc)" = 4 ] && [ "$(Q "select count(*) from tracks where signature like 'sv%'")" = 0 ] && echo 1 || echo 0)"
+# Le jeu (rôle authenticated) ne peut JAMAIS écrire directement dans les circuits (hors insertion des colonnes autorisées) ni dans les temps.
+DENY=$($P -d $DB -At 2>&1 <<SQL
+set role authenticated; select set_config('request.jwt.claim.sub', '$E2', false);
+do \$\$ declare n int := 0; begin
+  begin update tracks set author_verified = true where author = '$E2'; exception when insufficient_privilege then n := n + 1; end;
+  begin update tracks set author_time = 0.001 where author = '$E2'; exception when insufficient_privilege then n := n + 1; end;
+  begin update tracks set signature = 'pirate' where author = '$E2'; exception when insufficient_privilege then n := n + 1; end;
+  begin update scores set time = 0.001 where player = '$E1'; exception when insufficient_privilege then n := n + 1; end;
+  begin insert into scores (track_key, player, time, inputs, phys_ver) values ('direct', '$E2', 0.001, 'A', 32); exception when insufficient_privilege then n := n + 1; end;
+  begin delete from scores where player = '$E2'; exception when insufficient_privilege then n := n + 1; end;
+  raise notice 'REFUSES=%', n;
+end \$\$;
+SQL
+)
+chk "le jeu ne peut ni modifier author_verified / author_time / signature, ni écrire ou effacer des temps (permission refusée, par droits et non par simple absence de politique)" "$(echo "$DENY" | grep -q "REFUSES=6" && echo 1 || echo 0)"
+chk "les tables internes (rate_hits, track_binds) sont fermées au jeu" "$([ "$(Q "select has_table_privilege('authenticated', 'public.rate_hits', 'select') or has_table_privilege('anon', 'public.track_binds', 'select')")" = f ] && echo 1 || echo 0)"
+chk "aucune fonction de l'étape 15 n'est exécutable par anon ou authenticated" "$([ "$(Q "select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname in ('rate_check','submit_best','publish_track','submit_rate_check','rate_purge') and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('public', p.oid, 'execute'))")" = 0 ] && echo 1 || echo 0)"
+
 echo "Étape 15b (verrouillage de la publication) et retour arrière"
 $P -d $DB -f supabase/etape15b-publication-verifiee.sql; $P -d $DB -f supabase/etape15b-publication-verifiee.sql
 R15B=$($P -d $DB -At 2>&1 <<SQL
@@ -815,12 +842,53 @@ do \$\$ begin insert into tracks (name, decor, code, signature, author_time, pie
 SQL
 )
 chk "après l'étape 15b, l'insertion directe d'un circuit est refusée (permission denied)" "$(echo "$R15B" | grep -q "REFUSE" && echo 1 || echo 0)"
+VP15B=$($P -d $DB -At -F'|' -f supabase/verify-prod.sql)
+chk "verify-prod.sql après l'étape 15b : la ligne « APRÈS 15b » passe à ok (et plus aucune ligne MANQUE ni ÉCART)" "$(echo "$VP15B" | grep 'APRÈS 15b' | grep -q '|ok$' && ! echo "$VP15B" | grep -qE '\|(MANQUE|ÉCART)$' && echo 1 || echo 0)"
 chk "après l'étape 15b, publish_track (service) fonctionne encore" "$([ "$(Q "select public.publish_track('$E1', 'Après 15b', 'forest', 'c', 's15-apres', 12.5, 5, 1, '')::jsonb->>'status'")" = created ] && echo 1 || echo 0)"
 $P -d $DB -f supabase/etape15-retour.sql
 chk "retour arrière : submit_rate_check (étape 14) fonctionne, submit_best n'existe plus" "$([ "$(Q "select public.submit_rate_check('$E1', 3, 60)")" = 0 ] && [ "$(Q "select count(*) from pg_proc where proname = 'submit_best'")" = 0 ] && echo 1 || echo 0)"
 chk "retour arrière : l'insertion directe des circuits est rétablie (étape 1)" "$([ "$(Q "select has_table_privilege('authenticated', 'public.tracks', 'insert')")" = t ] && echo 1 || echo 0)"
 $P -d $DB -f supabase/etape15-backend.sql
 chk "l'étape 15 se réapplique après le retour arrière (submit_best revient)" "$([ "$(Q "select count(*) from pg_proc where proname = 'submit_best'")" = 1 ] && echo 1 || echo 0)"
+
+# Profils : l'instruction EXACTE que PostgREST produit pour « POST /rest/v1/players » avec « Prefer: resolution=merge-duplicates » (js/online.js, ensurePlayer).
+# Elle exige update sur CHAQUE colonne du SET (id ET name), même sans conflit : avec l'étape 14 seule, un nouveau joueur recevait « 403 permission denied ».
+# Défaut trouvé sur la production par un essai de bout en bout ; corrigé par l'étape 15 (grant update (id, name)). Ici : le correctif ET ses limites.
+echo "Profils : l'upsert du jeu"
+U1=00000000-0000-0000-0000-00000000e301; U2=00000000-0000-0000-0000-00000000e302
+RUP=$($P -d $DB -At 2>&1 <<SQL
+insert into auth.users (id, is_anonymous) values ('$U1', true), ('$U2', true) on conflict do nothing;
+set role authenticated; select set_config('request.jwt.claim.sub', '$U1', false);
+insert into players (id, name) values ('$U1', 'Upsert1') on conflict (id) do update set id = excluded.id, name = excluded.name;
+do \$\$ begin raise notice 'CREE=%', (select name from players where id = '$U1'); end \$\$;
+insert into players (id, name) values ('$U1', 'Upsert1b') on conflict (id) do update set id = excluded.id, name = excluded.name;
+do \$\$ begin raise notice 'RENOMME=%', (select name from players where id = '$U1'); end \$\$;
+do \$\$ begin begin insert into players (id, name) values ('$U2', 'Pirate') on conflict (id) do update set id = excluded.id, name = excluded.name; raise notice 'AUTRE=ACCEPTE'; exception when others then raise notice 'AUTRE=REFUSE'; end; end \$\$;
+do \$\$ begin begin update players set id = '$U2' where id = '$U1'; if found then raise notice 'ID=ACCEPTE'; else raise notice 'ID=REFUSE'; end if; exception when others then raise notice 'ID=REFUSE'; end; end \$\$;
+do \$\$ begin begin update players set created_at = now() - interval '2 years' where id = '$U1'; raise notice 'DATE=ACCEPTE'; exception when others then raise notice 'DATE=REFUSE'; end; end \$\$;
+do \$\$ begin raise notice 'FIN=%', (select id::text from players where name = 'Upsert1b'); end \$\$;
+SQL
+)
+chk "profil : l'upsert du jeu crée un NOUVEAU profil (le cas qui renvoyait 403)" "$(echo "$RUP" | grep -q 'CREE=Upsert1$' && echo 1 || echo 0)"
+chk "profil : le même upsert renomme le profil existant" "$(echo "$RUP" | grep -q 'RENOMME=Upsert1b' && echo 1 || echo 0)"
+chk "profil : l'upsert au nom d'UN AUTRE pilote est refusé, et son profil n'est pas créé" "$(echo "$RUP" | grep -q 'AUTRE=REFUSE' && [ "$(Q "select count(*) from players where id = '$U2'")" = 0 ] && echo 1 || echo 0)"
+chk "profil : on ne peut pas prendre l'identifiant d'un autre (update id)" "$(echo "$RUP" | grep -q 'ID=REFUSE' && echo 1 || echo 0)"
+chk "profil : la date de création reste fermée (étape 14)" "$(echo "$RUP" | grep -q 'DATE=REFUSE' && echo 1 || echo 0)"
+chk "profil : après ces essais le profil est toujours sous son identifiant" "$(echo "$RUP" | grep -q "FIN=$U1" && echo 1 || echo 0)"
+
+# Script de vérification de la base réelle (supabase/verify-prod.sql, LECTURE SEULE) : sur la base complète il ne signale rien ; sur une base « étapes 1 à 14 »
+# (l'état constaté en production avant l'étape 15) il signale EXACTEMENT les objets manquants : le script de vérification est lui-même vérifié.
+VP=$($P -d $DB -At -F'|' -f supabase/verify-prod.sql)
+chk "verify-prod.sql sur la base complète (étape 15 appliquée) : aucune ligne MANQUE ni ÉCART" "$(echo "$VP" | grep -qE '\|(MANQUE|ÉCART)$' && echo 0 || echo 1)"
+chk "verify-prod.sql avec l'étape 15 SEULE (15b non appliquée, publication directe encore ouverte sur 8 colonnes) : la ligne « APRÈS 15b » dit NON appliquée (info), pas ok" "$(echo "$VP" | grep 'APRÈS 15b' | grep -q 'NON appliquée.*|info$' && echo 1 || echo 0)"
+chk "verify-prod.sql ne modifie rien : aucune instruction d'écriture dans le fichier" "$(grep -iE '^\s*(insert|update|delete|drop|alter|create|grant|revoke|truncate)\b' supabase/verify-prod.sql | grep -q . && echo 0 || echo 1)"
+DB14=copytrack_sqltest14
+$P -d postgres -c "drop database if exists $DB14" -c "create database $DB14" >/dev/null 2>&1
+for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape7-fantomes.sql supabase/etape8-decouverte.sql supabase/etape9-secteurs.sql supabase/etape10-social.sql supabase/etape11-saisons.sql supabase/etape12-competition.sql supabase/etape13-communaute.sql supabase/etape14-securite.sql; do $P -d $DB14 -f $f >/dev/null 2>&1; done
+VP14=$($P -d $DB14 -At -F'|' -f supabase/verify-prod.sql)
+MISS=$(echo "$VP14" | grep -cE '\|MANQUE$'); ECART=$(echo "$VP14" | grep -E '\|ÉCART$' | grep -c "scores_limit verrouille\|enveloppe de rate_check")
+chk "verify-prod.sql sur une base « étapes 1 à 14 » (état constaté en production) : signale les objets de l'étape 15 manquants (tables, fonctions, colonne) et les deux anciennes fonctions" "$([ "$MISS" -ge 9 ] && [ "$ECART" = 2 ] && echo 1 || echo 0)"
+$P -d postgres -c "drop database if exists $DB14" >/dev/null 2>&1
 
 if ! grep -q "RESULT tous les tests SQL passent" /tmp/ct-sql-out.txt || grep -q "^  FAIL" /tmp/ct-sql-out.txt; then echo "ÉCHEC : des tests SQL ont échoué"; exit 1; fi
 if [ "$FAILS" != 0 ]; then echo "ÉCHEC : $FAILS test(s) de concurrence en échec"; exit 1; fi

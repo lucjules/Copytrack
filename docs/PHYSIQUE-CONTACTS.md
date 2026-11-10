@@ -1,4 +1,4 @@
-# Contacts, gels et blocages : causes profondes (phase 3, version 0.9.55)
+# Contacts, gels et blocages : causes profondes (phase 3, version 0.9.55 ; phase 7, version 0.9.58)
 
 Ce document dit **ce qui a été trouvé, comment c'est prouvé, ce qui a été changé, et ce qui reste**. Aucun gel n'est déclaré corrigé « parce que le jeu ne plante plus pendant un test » : chaque cause ci-dessous a un scénario reproductible qui échoue sans la correction (épreuve par mutation : on retire la correction dans une copie, le test doit échouer).
 
@@ -33,13 +33,21 @@ Ce document dit **ce qui a été trouvé, comment c'est prouvé, ce qui a été 
 
 Le **gel complet** décrit au départ (« gels complets et crashs aux contacts avec les obstacles et le verre ») n'a pas pu être reproduit tel quel sur le code actuel : aucune exception levée par la physique dans ~1 000 scénarios. Les causes 1 et 2 sont des mécanismes **démontrés** qui produisent exactement ce symptôme (jeu figé sans message ; voiture qui tombe sans fin sans retour) ; on ne peut pas affirmer qu'elles sont les seules. Si un gel survient encore, `window.__ctErrors` (console du navigateur) donne désormais l'erreur et sa pile.
 
-## Limites connues (non corrigées, volontairement)
+## Phase 7 (version 0.9.58, `PHYS_VER` 33) : les deux limites reprises
 
-- **Gravité inversée sous une dalle pleine ou un tunnel** : `_slabs` et `_tunnelRoof` ne s'appliquent pas en gravité inversée. Une voiture inversée qui s'élève sous une route normale ou le toit d'un tunnel la traverse (mesuré : y max 84 m) et finit « perdue dans le ciel », donc rappelée au checkpoint. Les bloquer à la place la laisserait collée contre la dalle, en l'air, sans sol : pire. Un vrai miroir demanderait que le dessous d'une dalle soit roulable pour une voiture inversée (changement de conception).
-- **Volant tenu à fond contre le mur** : la voiture tourne en rond à vitesse réduite tant que le joueur le tient (c'est sa commande). Au gaz seul, ou avec un volant faible, elle se dégage.
-- **Bumpers voisins** : un poteau frontal renvoie la voiture (conception) ; elle contourne ou recule.
+| Cas | Constat (reproduit sur le vrai moteur) | Décision |
+|---|---|---|
+| **Volant tenu à fond** (au milieu d'une plateforme ou contre un mur) | À basse vitesse la composante longitudinale de la force du pneu avant braqué (Ff·sin δ ≈ 20 m/s²) dépasse la poussée du moteur (14 m/s²) : la voiture se stabilise à **1,9 m/s sur un petit cercle, gaz à fond, indéfiniment**. Contre un mur, chaque pas de pression comptait comme un NOUVEAU choc (2 % de vitesse perdus par pas à 120 pas/s, moteur recoupé) : voiture écrasée sous 2 m/s. | **Corrigé.** Frottement du pneu plafonné à 60 % de la poussée du moteur (volant > 0,4 rad, vitesse < 8 m/s) ; après 0,12 s de contact continu à moins de 8 m/s c'est du frottement et non un choc. Les chocs réels et le raclage à vive allure coûtent comme avant. |
+| **Gravité inversée, toit d'un tunnel** | La voiture sortait par le haut (y jusqu'à 84 m) et finissait perdue dans le ciel. | **Corrigé.** Le toit la retient ; plaquée dessous sans surface roulable, elle est ramenée au checkpoint après 1 s. |
+| **Gravité inversée, dalle pleine** (route, plate-forme) | La voiture traverse la dalle. | **Non bloqué, volontairement.** Le circuit officiel « Cristal Fêlé » est CONÇU ainsi : après une plaque d'inversion la voiture « tombe » au plafond, 8 niveaux plus haut, en traversant les routes intermédiaires. Essai fait : bloquer les dalles le fait passer de 33 s à 70 s (et casse le temps de référence et ses médailles). Le test `test-contacts.mjs` fige ce choix et vérifie le circuit. Conséquence à connaître : un circuit de joueur peut donc, avec une plaque d'inversion, traverser ses propres dalles (raccourci possible, comme dans les circuits officiels). Une vraie solution demanderait que le dessous d'une dalle soit roulable pour une voiture inversée ET de revoir ce circuit : changement de conception, pas un correctif. |
+
+## Limites connues (non corrigées)
+
+- **Voiture tenue contre un mur par le volant** : elle ne reste plus prisonnière sous 2 m/s, mais peut mettre plusieurs secondes (mesuré : jusqu'à ~6 s presque immobile après un impact presque de face) avant de repartir ; le jeu la ramène au checkpoint si elle reste bloquée (`stuck`). Relâcher le volant la libère.
+- **Bumpers voisins** : un poteau frontal renvoie la voiture (conception) ; trois bumpers rapprochés peuvent la figer 6 s gaz à fond (exploration aléatoire, seed 109, identique avant les corrections).
+- **Boucles de retours** : l'exploration aléatoire force des inversions de gravité au hasard ; elles produisent des séries de retours sans que ce soit un défaut du moteur (mêmes cas avant les corrections).
 - **Écrasement** : une voiture arrêtée dans la trajectoire d'un mur coulissant est poussée d'au plus 2,5 m par pas (plafond conservé) ; elle reste sur la route.
-- **Effet sur les records** : `PHYS_VER` passe à 32 ; les records, fantômes et classements de la version 31 ne sont plus comparables.
+- **Effet sur les records** : `PHYS_VER` passe à 33 ; les records, fantômes et classements des versions 31 et 32 ne sont plus comparables.
 
 ## Tests
 

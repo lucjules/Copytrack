@@ -7,10 +7,12 @@
 //   Cloudflare Realtime TURN : TURN_KEY_ID + TURN_KEY_API_TOKEN (le relais fabrique les identifiants) ;
 //   coturn auto-hébergé      : TURN_URLS (séparées par des virgules, ex. turn:turn.exemple.fr:3478?transport=udp,turns:turn.exemple.fr:5349) + TURN_SECRET
 //                              (la valeur de « static-auth-secret » de coturn : identifiants au format « REST API » = horodatage d'expiration + HMAC-SHA1).
-// Facultatifs : STUN_URLS (par défaut les STUN publics de Google), ICE_TTL_S (durée de vie, 6 h par défaut), ALLOWED_ORIGIN.
+// Facultatifs : STUN_URLS (par défaut les STUN publics de Google), ICE_TTL_S (durée de vie, 1 h par défaut, 2 h au plus), ALLOWED_ORIGIN.
 // Rien de configuré : 501, et le jeu garde son STUN par défaut. Les erreurs internes ne sont jamais renvoyées telles quelles.
-export const DEFAULT_TTL_S = 2 * 3600;      // durée de vie des identifiants (modifiable par ICE_TTL_S, 6 h au plus) : assez pour une session de salon, pas pour les revendre
-export const MAX_TTL_S = 6 * 3600;
+// Durée de vie des identifiants : 1 h par défaut (2 h au plus, modifiable par ICE_TTL_S). Le jeu les redemande à 3/4 de leur durée de vie (js/net/ice.js) et les
+// identifiants ne servent qu'à ÉTABLIR une liaison : une session de salon n'en a pas besoin plus longtemps, et un identifiant volé ne sert qu'une heure.
+export const DEFAULT_TTL_S = 3600;
+export const MAX_TTL_S = 2 * 3600;
 // Cadence : en base (supabase/etape15-backend.sql, rate_check) — persistante, partagée entre toutes les instances, atomique — avec un plafond global et un
 // sous-plafond pour les sessions anonymes (gratuites) ; en mémoire de l'instance, un frein de première ligne. Si la base ne répond pas : 503 (jamais « ouvert »).
 export const RATE_LIMIT = { max: 10, windowMs: 60_000, globalMax: 300, anonMax: 200 };

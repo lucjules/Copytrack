@@ -6,7 +6,7 @@ import { PIECES } from '../pieces.js';
 import { Track } from '../track.js';
 import { buildTileMesh } from '../trackMesh.js';
 import { buildDecoMesh } from '../decos.js';
-import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, moveSelection, rotateSelection, checkTrack, findDuplicateSpot, duplicateSelection } from '../editorTools.js';
+import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, moveSelection, rotateSelection, checkTrack, findDuplicateSpot, duplicateSelection, duplicable } from '../editorTools.js';
 import { orientationIssues } from '../joins.js';
 export const selectionMethods = {
   // Problèmes repérables sans rouler (0.9.5) : extrémités libres, sauts risqués, pièces inaccessibles (checkTrack), puis raccords d'orientation
@@ -146,15 +146,26 @@ export const selectionMethods = {
   duplicateNow() {
     if (!(this.tool === 'select' && this.sel && !this.pasting)) return this.inspector.duplicate();
     const tiles = this._selTiles(), decos = this._selDecos();
-    if (!tiles.length && !decos.length) { this.app.ui.flash('Rien à dupliquer dans cette zone.'); return false; }
+    // Jamais de « succès » sans objet créé : on regarde d'abord ce qui sera réellement copié (le départ ne l'est jamais).
+    const src = duplicable(tiles, decos);
+    if (!src.tiles.length && !src.decos.length) {
+      this.app.ui.flash(src.skippedStart ? 'Le départ est unique : il ne se duplique pas.' : 'Rien à dupliquer dans cette zone.');
+      this.app.audio.error();
+      return false;
+    }
     const spot = findDuplicateSpot(this.track, this.sel, tiles);
     if (!spot) { this.app.ui.flash('Pas de place pour une copie de toute la sélection.'); this.app.audio.error(); return false; }
     const res = duplicateSelection(this.track, tiles, decos, spot);
+    if (!res.ok) {
+      this.app.ui.flash(res.reason === 'limit' ? 'Copie impossible : limite de décorations atteinte (rien n\'a été modifié).' : 'Rien n\'a été dupliqué.');
+      this.app.audio.error();
+      return false;      // ni sélection déplacée, ni pas d'historique : le circuit est exactement comme avant
+    }
     const r = this.sel;
     this.sel = { x0: r.x0 + spot.dx, z0: r.z0 + spot.dz, x1: r.x1 + spot.dx, z1: r.z1 + spot.dz };
     if (spot.dl && this.focusLevel) this.setLevel(this.level + spot.dl);
     const n = res.tiles.length, d = res.decos.length;
-    this.app.ui.flash(`Dupliqué : ${n} pièce${n > 1 ? 's' : ''}${d ? `, ${d} décoration${d > 1 ? 's' : ''}` : ''}${res.skippedStart ? ' (le départ reste unique)' : ''}${res.refused ? ` · ${res.refused} refusée(s) (limite atteinte)` : ''}.`, 2.4);
+    this.app.ui.flash(`Dupliqué : ${n} pièce${n > 1 ? 's' : ''}${d ? `, ${d} décoration${d > 1 ? 's' : ''}` : ''}${res.skippedStart ? ' (le départ reste unique)' : ''}.`, 2.4);
     this.app.audio.place();
     this._changed();
     this._commit();

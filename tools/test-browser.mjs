@@ -119,6 +119,10 @@ try {
     await shot('01-accueil');
     await click('#wl-submit');
     await waitApp(() => window.copytrack && window.copytrack.mode === 'menu');
+    // Course de temporisation du TEST (échec constaté sur GitHub, passage 180, alors que le code testé n'avait pas changé) : la question des statistiques anonymes s'ouvre 4 s après le démarrage
+    // (puis toutes les 8 s) ; sur un exécuteur lent elle surgissait pendant les 300 ms qui suivent la fermeture du tutoriel, juste avant l'assertion ci-dessous. On y répond DÈS l'arrivée au menu
+    // (askTelemetry s'arrête dès qu'une réponse existe) : le tutoriel reste testé exactement comme avant, l'assertion est inchangée, et la question a son propre test (test-browser-i18n.mjs).
+    await app(() => { window.copytrack.settings.telemetry = false; window.copytrack.saveSettings(); });
     // Le tutoriel du premier lancement s'ouvre 700 ms après le démarrage, par un minuteur DE LA PAGE : sur une machine lente (CI), le fil principal est occupé par la mise en
     // route de la scène 3D et le minuteur part bien après. Un contrôle unique au bout de 1,2 s le ratait : la fenêtre surgissait plus tard, et tout clic SOURIS réel d'un test
     // suivant (pixel du garage, onglet Amis du profil) tombait sur son voile (« <div id="modal" class="overlay"> intercepts pointer events »). On ATTEND donc la fenêtre.
@@ -561,6 +565,109 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  await test('éditeur : Ctrl+D réel dans tous les cas (départ seul, une pièce, décorations seules, mélange, répétition) ; Ctrl+Z et Ctrl+Y défont et refont exactement ; jamais de succès sans création', async () => {
+    await click('[data-action="editor"]');
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track);
+    await page.waitForTimeout(400);
+    const st = () => app(() => { const E = window.copytrack.session, T = E.track; return { tiles: T.tiles.length, decos: T.decos.length, hist: E.hIndex, code: T.encode(), toast: document.getElementById('toast').textContent, sel: E.sel && { ...E.sel }, starts: T.tiles.filter((t) => t.t === 'start').length }; });
+    const ctrl = async (k) => { await page.keyboard.press('Control+' + k); await page.waitForTimeout(200); };
+    await app(async () => {
+      const E = window.copytrack.session, T = E.track, { scriptTrack } = await import('/js/track.js');
+      T.clear(); for (const t of scriptTrack('s', 'start S3 C S3 finish').tiles) T.add(t);
+      E._commit(); E._changed(); E.setTool('select');
+    });
+    // 1. le départ SEUL : aucun objet créé, aucun pas d'historique, aucun message de succès, la sélection ne bouge pas
+    const startCell = await app(() => { const t = window.copytrack.session.track.tiles.find((p) => p.t === 'start'); return [t.x, t.z]; });
+    await app((c) => { const E = window.copytrack.session; E.sel = { x0: c[0], z0: c[1], x1: c[0], z1: c[1] }; E._refreshSelBar && E._refreshSelBar(); }, startCell);
+    const a0 = await st();
+    await ctrl('d');
+    const a1 = await st();
+    assert.equal(a1.tiles, a0.tiles, 'départ seul : aucune pièce créée'); assert.equal(a1.hist, a0.hist, 'départ seul : aucun pas d\'historique');
+    assert.equal(a1.code, a0.code); assert.deepEqual(a1.sel, a0.sel, 'la sélection n\'a pas bougé');
+    assert.ok(/départ est unique/.test(a1.toast) && !/Dupliqué/.test(a1.toast), 'message honnête : ' + a1.toast);
+    // 2. une seule pièce (la dernière : une ligne droite) : une copie, un pas
+    await app(() => { const E = window.copytrack.session, t = E.track.tiles.find((p) => p.t === 'straight'); E.sel = { x0: t.x, z0: t.z, x1: t.x, z1: t.z }; });
+    const b0 = await st(); await ctrl('d'); const b1 = await st();
+    assert.equal(b1.tiles, b0.tiles + 1, 'une pièce copiée'); assert.equal(b1.hist, b0.hist + 1, 'un pas');
+    // Ctrl+Z défait exactement, Ctrl+Y refait exactement
+    await ctrl('z'); const b2 = await st();
+    assert.equal(b2.code, b0.code, 'Ctrl+Z : le circuit d\'avant, exactement'); await ctrl('y'); const b3 = await st();
+    assert.equal(b3.code, b1.code, 'Ctrl+Y : le circuit d\'après, exactement');
+    // 3. répétition : trois Ctrl+D de suite = trois copies, trois pas ; trois Ctrl+Z reviennent au départ
+    const c0 = await st(); await ctrl('d'); await ctrl('d'); await ctrl('d'); const c1 = await st();
+    assert.equal(c1.tiles, c0.tiles + 3); assert.equal(c1.hist, c0.hist + 3);
+    assert.equal(new Set(await app(() => window.copytrack.session.track.tiles.map((t) => t.x + ',' + t.z + ',' + t.l))).size, c1.tiles, 'aucune pièce superposée');
+    await ctrl('z'); await ctrl('z'); await ctrl('z'); assert.equal((await st()).code, c0.code, 'trois Ctrl+Z');
+    // 4. décorations seules (hors de toute pièce), puis mélange avec pièces
+    await app(async () => { const E = window.copytrack.session; E.track.addDeco({ k: 'tree', x: 600, y: 0, z: 600, ry: 0.4, s: 1.2, c: 2, rx: 0.3, rz: 0.2 }); E.track.addDeco({ k: 'rock', x: 610, y: 0, z: 610, ry: 1, s: 1, c: 0 }); E._commit(); E.sel = { x0: 18, z0: 18, x1: 19, z1: 19 }; });
+    const d0 = await st(); await ctrl('d'); const d1 = await st();
+    assert.equal(d1.decos, d0.decos + 2, 'décorations seules copiées'); assert.equal(d1.tiles, d0.tiles); assert.equal(d1.hist, d0.hist + 1);
+    const copy = await app(() => { const d = window.copytrack.session.track.decos; return { rx: d[d.length - 2].rx, rz: d[d.length - 2].rz, ry: d[d.length - 2].ry }; });
+    assert.deepEqual(copy, { rx: 0.3, rz: 0.2, ry: 0.4 }, 'rotations personnalisées conservées');
+    await ctrl('z'); assert.equal((await st()).decos, d0.decos, 'Ctrl+Z retire les deux décorations');
+    await app(() => { const E = window.copytrack.session; E.selectAll(); });
+    const e0 = await st(); await ctrl('d'); const e1 = await st();
+    assert.equal(e1.starts, 1, 'le départ reste unique'); assert.ok(e1.tiles > e0.tiles && e1.hist === e0.hist + 1, 'sélection complète : copiée en un pas (' + e1.toast + ')');
+    // (zone occupée : la répétition ci-dessus pose chaque copie sur la première place libre ; le refus total est couvert par tools/test-duplicate.mjs)
+    await ctrl('z');
+    assert.notEqual((await st()).code, e1.code, 'annulé');
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  await test('éditeur : rotations réelles : saisie d\'angle au demi-degré, gizmo X / Y / Z des décorations (pas réglable), obstacle et pièce limités au cap ; annuler les défait', async () => {
+    await click('[data-action="editor"]');
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track);
+    await page.waitForTimeout(400);
+    await app(async () => {
+      const E = window.copytrack.session, T = E.track, { scriptTrack } = await import('/js/track.js');
+      T.clear(); for (const t of scriptTrack('s', 'start S3 C S3 finish').tiles) T.add(t);
+      T.addDeco({ k: 'tree', x: 70, y: 0, z: 70, ry: 0.5, s: 1, c: 0 }); E._commit(); E._changed(); E.setTool('inspect');
+      E.inspector.select('deco', T.decos[0]);
+    });
+    await page.waitForTimeout(250);
+    // 1. saisie précise d'un angle (37,5° d'inclinaison), puis du roulis
+    const typeAngle = (label, v) => page.evaluate(([l, val]) => { const row = [...document.querySelectorAll('.insp-row')].find((r) => r.textContent.startsWith(l)); const i = row.querySelector('input.insp-deg'); i.value = val; i.dispatchEvent(new Event('change', { bubbles: true })); }, [label, v]);
+    await typeAngle('Inclinaison (X)', '37.5'); await typeAngle('Roulis (Z)', '-20');
+    const d1 = await app(() => { const d = window.copytrack.session.track.decos[0]; return [d.rx, d.rz, d.ry]; });
+    assert.ok(Math.abs(d1[0] - 37.5 * Math.PI / 180) < 1e-6 && Math.abs(d1[1] + 20 * Math.PI / 180) < 1e-6, 'angles saisis : ' + JSON.stringify(d1));
+    assert.equal(await page.evaluate(() => [...document.querySelectorAll('.insp-row')].find((r) => r.textContent.startsWith('Inclinaison (X)')).querySelector('input.insp-deg').value), '37.5');
+    // 2. gizmo : les trois cercles sont proposés ; un geste du gizmo (orientation imposée au proxy) met à jour les TROIS angles
+    const g = await app(() => {
+      const I = window.copytrack.session.inspector; I.setMode('rotate');
+      const out = { x: I.tc.showX, y: I.tc.showY, z: I.tc.showZ, snap: I.tc.rotationSnap };
+      I.proxy.rotation.set(0.4, 1.0, -0.3); I.proxy.updateMatrixWorld(true); I._onGizmo();
+      const d = I.sel.obj; out.angles = [d.rx, d.ry, d.rz]; return out;
+    });
+    assert.ok(g.x && g.y && g.z, 'décoration : cercles X, Y et Z'); assert.ok(Math.abs(g.snap - 5 * Math.PI / 180) < 1e-9, 'pas de 5° par défaut');
+    assert.ok(Math.abs(g.angles[0] - 0.4) < 1e-3 && Math.abs(g.angles[1] - 1.0) < 1e-3 && Math.abs(g.angles[2] + 0.3) < 1e-3, 'geste du gizmo : ' + JSON.stringify(g.angles));
+    // 3. pas du gizmo réglable (15°)
+    await page.evaluate(() => { const row = [...document.querySelectorAll('.insp-row')].find((r) => r.textContent.startsWith('Pas du gizmo')); const sel = row.querySelector('select'); sel.value = '15'; sel.dispatchEvent(new Event('change', { bubbles: true })); });
+    assert.ok(Math.abs((await app(() => window.copytrack.session.inspector.tc.rotationSnap)) - 15 * Math.PI / 180) < 1e-9, 'pas de 15°');
+    // 4. annuler / rétablir : les deux angles saisis se défont puis reviennent exactement (un pas par saisie)
+    const hist = await app(() => { const E = window.copytrack.session; E._commit(); return { i: E.hIndex }; });
+    let undone = 0; while (undone < 4 && (await app(() => { const d = window.copytrack.session.track.decos[0]; return !!(d.rx || d.rz); }))) { await app(() => window.copytrack.session.undo()); undone++; }
+    assert.ok(undone >= 1 && undone <= 4, 'Ctrl+Z défait les angles (' + undone + ' pas)');
+    assert.equal(await app(() => { const d = window.copytrack.session.track.decos[0]; return d.rx || d.rz || 0; }), 0, 'plus d\'inclinaison ni de roulis');
+    for (let i = 0; i < undone; i++) await app(() => window.copytrack.session.redo());
+    assert.equal(await app(() => window.copytrack.session.hIndex), hist.i, 'rétabli au même point de l\'historique');
+    const back = await app(() => { const d = window.copytrack.session.track.decos[0]; return [d.rx, d.rz]; });
+    assert.ok(Math.abs(back[0] - 0.4) < 1e-3 && Math.abs(back[1] + 0.3) < 1e-3, 'rétabli exactement : ' + JSON.stringify(back));
+    // 5. obstacle : seul le cercle Y ; pièce : seul le cercle Y, par quarts de tour
+    const o = await app(async () => {
+      const E = window.copytrack.session, { OBST } = await import('/js/obstacles.js'), I = E.inspector;
+      const ob = E.track.addDeco({ k: Object.keys(OBST)[0], x: 90, y: 0, z: 90, ry: 0, s: 1, c: 0 }); I.select('deco', ob); I.setMode('rotate');
+      const a = { x: I.tc.showX, y: I.tc.showY, z: I.tc.showZ };
+      I.select('tile', E.track.tiles[1]); I.setMode('rotate');
+      return { obstacle: a, tile: { x: I.tc.showX, y: I.tc.showY, z: I.tc.showZ, snap: I.tc.rotationSnap } };
+    });
+    assert.deepEqual(o.obstacle, { x: false, y: true, z: false }, 'obstacle : cap seulement');
+    assert.deepEqual([o.tile.x, o.tile.y, o.tile.z], [false, true, false], 'pièce : cap seulement'); assert.ok(Math.abs(o.tile.snap - Math.PI / 2) < 1e-9, 'pièce : quarts de tour');
+    assert.equal(await page.evaluate(() => [...document.querySelectorAll('.insp-row input.insp-deg')].length), 0, 'une pièce n\'a pas de saisie d\'angle libre');
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
   await test('éditeur : aperçu du pot de peinture (toute la zone surlignée avant le clic, rien de modifié), puis un seul pas d\'annulation pour le remplissage', async () => {
     await click('[data-action="editor"]');
     await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track);
@@ -655,6 +762,63 @@ try {
     for (const l of ['Kart', 'Cabriolet', 'Coupé GT', 'Hot rod', 'Tout-terrain', 'Fourgonnette', 'Bulle', 'Limousine', 'Traîneau']) assert.ok(bodies.includes(l), 'carrosserie « ' + l + ' »');
     await click('#garage [data-action="garage-back"]');
     await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  await test('garage : un équipement ACHETÉ est enregistré dans le profil et retrouvé intact dans une NOUVELLE page ; les quatre klaxons et toutes les traînées se jouent sans erreur', async () => {
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.coins = 100000; saveProfile(); });
+    await click('[data-action="garage"]');
+    await waitApp(() => window.copytrack.mode === 'garage');
+    await page.waitForTimeout(300);
+    await click('#garage-tabs [data-cat="presets"]');
+    await page.waitForTimeout(200);
+    await page.evaluate(() => [...document.querySelectorAll('#garage-list .gcard')].find((c) => c.querySelector('.gl').textContent.trim() === 'Père Noël').click());
+    await page.waitForTimeout(300);
+    assert.equal(await app(() => document.getElementById('garage-buy-btn').disabled), false, 'achat possible avec assez de pièces');
+    await click('#garage-buy-btn');
+    await page.waitForTimeout(300);
+    const want = await app(() => { const L = window.copytrack.session.draft; return JSON.stringify([L.body, L.ornament, L.decal, L.led, L.wheels, L.finish, L.trail, L.color, L.color2]); });
+    assert.equal(JSON.parse(want)[0], 'sleigh');
+    const saved = await app(async () => { const { profile } = await import('/js/profile.js'); const L = profile().loadout; return JSON.stringify([L.body, L.ornament, L.decal, L.led, L.wheels, L.finish, L.trail, L.color, L.color2]); });
+    assert.equal(saved, want, 'le profil contient exactement l\'équipement acheté');
+    // klaxons : les quatre
+    const horns = await app(async () => { const { CATALOG } = await import('/js/cosmetics.js'); const out = []; for (const h of CATALOG.horn) { try { window.copytrack.audio.horn(h.id); out.push(h.id); } catch (e) { out.push('ERREUR ' + h.id + ' ' + e.message); } } return out; });
+    assert.deepEqual(horns, ['classic', 'duo', 'tuba', 'arcade']);
+    await click('#garage [data-action="garage-back"]');
+    await waitApp(() => window.copytrack.mode === 'menu');
+    // NOUVELLE page du même site (même stockage) : l'équipement est retrouvé, et la voiture construite est celle du profil
+    const p2 = await hook(await ctx.newPage());
+    try {
+      await p2.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'load' });
+      await p2.waitForFunction(() => (window.copytrack && window.copytrack.mode === 'menu') || (document.getElementById('wl-name') && document.getElementById('wl-name').offsetParent), null, { timeout: 30000 });
+      // Un invité n'est reconnu que dans son onglet (sessionStorage) : un nouvel onglet montre l'accueil, avec le pseudo déjà rempli ; sa progression (profil) est, elle, sur l'appareil.
+      if (await p2.locator('#wl-name').isVisible().catch(() => false)) {
+        assert.equal(await p2.locator('#wl-name').inputValue(), 'Testeur', 'le dernier pseudo invité est proposé');
+        await p2.locator('#wl-submit').evaluate((el) => el.click());
+      }
+      await p2.waitForFunction(() => window.copytrack && window.copytrack.mode === 'menu', null, { timeout: 30000 });
+      await p2.evaluate(() => { window.copytrack.settings.tutorialDone = true; window.copytrack.ui.closeModal(); });
+      const again = await p2.evaluate(async () => { const { profile } = await import('/js/profile.js'); const L = profile().loadout; return JSON.stringify([L.body, L.ornament, L.decal, L.led, L.wheels, L.finish, L.trail, L.color, L.color2]); });
+      assert.equal(again, want, 'après rechargement : le même équipement');
+      await p2.evaluate(() => document.querySelector('[data-action="garage"]').click());
+      await p2.waitForFunction(() => window.copytrack.mode === 'garage', null, { timeout: 30000 });
+      const shown = await p2.evaluate(() => { const L = window.copytrack.session.draft; return JSON.stringify([L.body, L.ornament, L.decal, L.led, L.wheels, L.finish, L.trail, L.color, L.color2]); });
+      assert.equal(shown, want, 'le garage rouvert montre l\'équipement enregistré');
+      // chaque traînée : choisie, puis une course tourne quelques images sans erreur
+      const trails = await p2.evaluate(async () => {
+        const { CATALOG } = await import('/js/cosmetics.js'), { profile, saveProfile } = await import('/js/profile.js'), A = window.copytrack, bad = [];
+        A.showMenu('menu');
+        for (const t of CATALOG.trail) {
+          profile().loadout.trail = t.id; saveProfile();
+          A.playBuiltin(0);
+          await new Promise((r) => { const t0 = Date.now(); const w = () => (A.session && A.session.state === 'racing') || Date.now() - t0 > 20000 ? r() : setTimeout(w, 50); w(); });
+          try { const S = A.session; S._trail = null; for (let i = 0; i < 20; i++) S.update(0.05); } catch (e) { bad.push(t.id + ' : ' + e.message); }
+          A.quitRace(); await new Promise((r) => { const t0 = Date.now(); const w = () => A.mode === 'menu' || Date.now() - t0 > 10000 ? r() : setTimeout(w, 50); w(); });
+        }
+        return { n: CATALOG.trail.length, bad };
+      });
+      assert.deepEqual(trails.bad, [], 'traînées en échec');
+      assert.ok(trails.n >= 18, trails.n + ' traînées essayées');
+    } finally { await p2.close(); }
   });
 
   await test('garage : atelier de voiture (pièces libres, peinture, dessin, effets, code) : la voiture change, le profil garde, le code revient', async () => {

@@ -4,8 +4,8 @@
 // deno-lint-ignore-file
 // @ts-nocheck
 // supabase/functions/ice/handler.js
-var DEFAULT_TTL_S = 2 * 3600;
-var MAX_TTL_S = 6 * 3600;
+var DEFAULT_TTL_S = 3600;
+var MAX_TTL_S = 2 * 3600;
 var RATE_LIMIT = {
   max: 10,
   windowMs: 6e4,

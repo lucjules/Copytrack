@@ -94,9 +94,9 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
   };
 
   // Finition : brillante, mate, métallisée ou nacrée (aspect uniquement).
-  const FIN = { gloss: [0.45, 0.15], matte: [0.95, 0.0], metal: [0.22, 0.85], pearl: [0.3, 0.35], glitter: [0.25, 0.7], frost: [0.15, 0.2], candy: [0.12, 0.1], chrome: [0.05, 1.0] }[L.finish] || [0.45, 0.15];
+  const FIN = { gloss: [0.45, 0.15], matte: [0.95, 0.0], metal: [0.22, 0.85], pearl: [0.3, 0.35], glitter: [0.3, 0.5], frost: [0.6, 0.05], candy: [0.2, 0.0], chrome: [0.05, 1.0] }[L.finish] || [0.45, 0.15];
   // Lueur propre de certaines finitions (aspect seulement) : [couleur, intensité]
-  const GLOW = { pearl: [L.color2, 0.12], glitter: [L.color2, 0.28], frost: ['#bfeaff', 0.2], candy: [L.color, 0.25] }[L.finish];
+  const GLOW = { pearl: [L.color2, 0.12], glitter: [L.color, 0.14], frost: [L.color, 0.2], candy: [L.color, 0.3] }[L.finish];      // (une lueur BLANCHE délave une couleur sombre : le vert et le bleu d'un rouge profond sont presque nuls, un peu de blanc les décuple ; la lueur reprend donc la teinte de la peinture)
   const paint = mk({ color: L.color, roughness: FIN[0], metalness: FIN[1], ...(GLOW && !ghost ? { emissive: GLOW[0], emissiveIntensity: GLOW[1] } : {}) });
   const trim = mk({ color: L.color2, roughness: 0.8 });
   const dark = mk({ color: '#23242f', roughness: 0.8 });
@@ -121,22 +121,43 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
   carRoot.add(body);
   const B = BODIES[L.body] || BODIES.buggy;
 
-  body.add(new THREE.Mesh(extrudeProfile(B.lower, B.w), paint));
-  body.add(new THREE.Mesh(extrudeProfile([[-2.05, 0.22], [1.7, 0.22], [1.75, 0.36], [-2.1, 0.4]], B.w + 0.1), dark));
-  body.add(new THREE.Mesh(extrudeProfile(B.cabin, B.cw), glass));
+  const hull = (m) => { m.userData.hull = true; return m; };      // (la coque : repère des contrôles de géométrie, tools/test-garage-geometry.mjs)
+  body.add(hull(new THREE.Mesh(extrudeProfile(B.lower, B.w), paint)));
+  body.add(hull(new THREE.Mesh(extrudeProfile([[-2.05, 0.22], [1.7, 0.22], [1.75, 0.36], [-2.1, 0.4]], B.w + 0.1), dark)));
+  body.add(hull(new THREE.Mesh(extrudeProfile(B.cabin, B.cw), glass)));
+  if (L.body === 'sleigh') {      // traîneau : deux patins sous la caisse, relevés à l'avant, reliés par des montants
+    for (const side of [-1, 1]) {
+      body.add(new THREE.Mesh(extrudeProfile([[-2.5, 0.04], [2.1, 0.04], [2.6, 0.22], [2.75, 0.55], [2.6, 0.58], [2.05, 0.15], [-2.5, 0.14]], 0.1, side * 0.72), dark));
+      for (const px of [-1.5, 0, 1.5]) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.1), dark); st.position.set(side * 0.72, 0.3, -px); body.add(st); }
+    }
+  }
   // Bande décorative d'origine (couleur secondaire)
   const lowerUp = B.lower.map(([x, y]) => [x, y + 0.012]);
   if (L.decal !== 'stripe' && L.decal !== 'twin') body.add(new THREE.Mesh(extrudeProfile(lowerUp, 0.3), trim));
 
   // Dessins
+  // Les motifs sont dessinés pour une bande de flanc de 0,40 m centrée à 0,55 m ; chaque carrosserie a la sienne (un kart est bas, une fourgonnette haute) : le motif est
+  // recentré et mis à l'échelle sur la bande réelle du flanc (entre le seuil et l'arête haute de la caisse au milieu), sinon il flotterait au-dessus d'une caisse basse.
+  const flankTop = (() => { const f = B.lower.reduce((m, p, i) => (p[0] > B.lower[m][0] ? i : m), 0), top = B.lower.slice(f); for (let i = 0; i + 1 < top.length; i++) { const [x1, y1] = top[i], [x2, y2] = top[i + 1]; if (x2 <= 0 && x1 >= 0 && x1 !== x2) return y1 + ((y2 - y1) * (0 - x1)) / (x2 - x1); } return 0.7; })();
+  const flankLo = Math.min(...B.lower.map((p) => p[1])) + 0.06, flankHi = flankTop - 0.05;
+  const flankMid = (flankLo + flankHi) / 2, flankK = Math.max(0.7, Math.min(1.5, (1.2 * (flankHi - flankLo)) / 0.4));      // (motifs 20 % plus grands que le dessin d'origine, bornés)
+  const flankHalf = Math.min(-Math.min(...B.lower.map((p) => p[0])), Math.max(...B.lower.map((p) => p[0]))) - 0.2;
+  const flankKx = Math.min(1, (Math.min(-Math.min(...B.lower.map((p) => p[0])), Math.max(...B.lower.map((p) => p[0]))) - 0.35) / 1.95);      // (les motifs d'origine s'étalent sur ±1,95 m)
   const sideShape = (shape, scale = 1, x0 = 0, y0 = 0) => {
     for (const side of [-1, 1]) {
       const g = new THREE.ShapeGeometry(shape);
       g.scale(scale, scale, 1);
       g.translate(x0, y0, 0);
+      // chaque motif est agrandi / réduit sur SON centre (sa forme ne se déforme pas) ; ses positions le long de la caisse sont comprimées pour rester sur la longueur réelle
+      g.computeBoundingBox(); const bb = g.boundingBox, cx = (bb.min.x + bb.max.x) / 2, cy = (bb.min.y + bb.max.y) / 2;
+      const k = Math.max(0.4, Math.min(flankK, (flankHalf - Math.abs(cx * flankKx)) / Math.max((bb.max.x - bb.min.x) / 2, 1e-6)));      // (un motif long, comme les vagues, ne déborde pas de la caisse)
+      let kk = k; const hh = (bb.max.y - bb.min.y) / 2;
+      for (let i = 0; i < 16; i++) { const yc = flankMid + (cy - 0.55) * kk; if (yc + hh * kk <= flankHi && yc - hh * kk >= flankLo) break; kk *= 0.92; }      // (…ni plus haut que la bande du flanc)
+      g.translate(-cx, -cy, 0); g.scale(kk, kk, 1); g.translate(cx * flankKx, flankMid + (cy - 0.55) * kk, 0);
       g.rotateY(Math.PI / 2);
       g.translate(side * (B.w / 2 + 0.012), 0, 0);
-      body.add(new THREE.Mesh(g, decalMat));
+      const m = new THREE.Mesh(g, decalMat); m.userData.decal = true;
+      body.add(m);
     }
   };
   const poly = (pts) => new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y)));
@@ -174,34 +195,36 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
   const freeLivery = ghost ? null : addLivery(body, C, lowerUp, B, (m) => own.push(m));
   addParts(body, C.parts, (c, glow) => (glow && !ghost ? basic(c) : mk({ color: c, roughness: 0.5, metalness: 0.1 })));
 
-  // Ailerons
+  // Ailerons (groupe « spoiler » : contrôlé par tools/test-garage-geometry.mjs : relié à la coque, d'un seul tenant)
+  const spG = new THREE.Group(); spG.name = 'spoiler'; body.add(spG);
   const rear = (B.lower[0][0] * -1) - 0.2;
   const plate = (w, d, y, z, rx = -0.12, mat = paint) => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, d), mat);
-    m.position.set(0, y, z); m.rotation.x = rx; body.add(m);
+    m.position.set(0, y, z); m.rotation.x = rx; spG.add(m);
   };
   const post = (x, h, z, y0) => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(0.1, h, 0.28), dark);
-    m.position.set(x, y0 + h / 2, z); body.add(m);
+    m.position.set(x, y0 + h / 2, z); spG.add(m);
   };
   const fin = (x, y, z, h, d) => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(0.06, h, d), trim);
-    m.position.set(x, y, z); body.add(m);
+    m.position.set(x, y, z); spG.add(m);
   };
   const ty = B.trunkY;
   switch (L.spoiler) {
     case 'wing': plate(2.1, 0.55, ty + 0.42, rear - 0.25); post(-0.65, 0.45, rear - 0.25, ty - 0.02); post(0.65, 0.45, rear - 0.25, ty - 0.02); fin(-1.05, ty + 0.46, rear - 0.25, 0.3, 0.62); fin(1.05, ty + 0.46, rear - 0.25, 0.3, 0.62); break;
     case 'low': plate(1.9, 0.5, ty + 0.12, rear - 0.1, -0.05); post(-0.7, 0.14, rear - 0.1, ty - 0.02); post(0.7, 0.14, rear - 0.1, ty - 0.02); break;
-    case 'duck': { const m = new THREE.Mesh(new THREE.BoxGeometry(B.w, 0.16, 0.5), paint); m.position.set(0, ty + 0.06, rear - 0.05); m.rotation.x = -0.35; body.add(m); break; }
+    case 'duck': { const m = new THREE.Mesh(new THREE.BoxGeometry(B.w, 0.16, 0.5), paint); m.position.set(0, ty + 0.06, rear - 0.05); m.rotation.x = -0.35; spG.add(m); break; }
     case 'gt': plate(2.2, 0.5, ty + 0.78, rear - 0.3, -0.1, trim); post(-0.7, 0.8, rear - 0.3, ty - 0.02); post(0.7, 0.8, rear - 0.3, ty - 0.02); fin(-1.1, ty + 0.78, rear - 0.3, 0.4, 0.58); fin(1.1, ty + 0.78, rear - 0.3, 0.4, 0.58); break;
     case 'double': plate(2.1, 0.5, ty + 0.4, rear - 0.25); plate(2.1, 0.5, ty + 0.75, rear - 0.2, -0.2, trim); post(-0.7, 0.8, rear - 0.25, ty - 0.02); post(0.7, 0.8, rear - 0.25, ty - 0.02); fin(-1.05, ty + 0.55, rear - 0.22, 0.6, 0.62); fin(1.05, ty + 0.55, rear - 0.22, 0.6, 0.62); break;
     case 'big': plate(2.5, 0.8, ty + 0.9, rear - 0.35, -0.15, trim); post(-0.9, 0.9, rear - 0.35, ty - 0.02); post(0.9, 0.9, rear - 0.35, ty - 0.02); fin(-1.25, ty + 0.95, rear - 0.35, 0.7, 0.9); fin(1.25, ty + 0.95, rear - 0.35, 0.7, 0.9); break;
-    case 'surf': { const m = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), mk({ color: L.color2, roughness: 0.5 })); m.scale.set(0.2, 0.9, 0.05); m.position.set(0, ty + 0.55, rear - 0.25); m.rotation.x = -0.1; body.add(m); post(-0.55, 0.5, rear - 0.25, ty - 0.02); post(0.55, 0.5, rear - 0.25, ty - 0.02); break; }
-    case 'ring': { const m = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.07, 5, 14), trim); m.position.set(0, ty + 0.75, rear - 0.2); body.add(m); post(-0.55, 0.45, rear - 0.2, ty - 0.02); post(0.55, 0.45, rear - 0.2, ty - 0.02); break; }
+    case 'surf': { const m = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 8), mk({ color: L.color2, roughness: 0.45 })); m.scale.set(0.5, 1.7, 0.09); m.position.set(0, ty + 0.62, rear - 0.2); m.rotation.x = -0.1; spG.add(m); post(-0.17, 0.5, rear - 0.2, ty - 0.02); post(0.17, 0.5, rear - 0.2, ty - 0.02); break; }
+    case 'ring': { const m = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.08, 6, 16), trim); m.position.set(0, ty + 0.62, rear - 0.2); spG.add(m); post(0, 0.2, rear - 0.2, ty - 0.02); break; }
     default: break;
   }
 
-  // Ornements
+  // Ornements (groupe « ornament » : contrôlé par tools/test-garage-geometry.mjs : posé sur la coque)
+  const ornG = new THREE.Group(); ornG.name = 'ornament'; body.add(ornG);
   const roofY = Math.max(...B.cabin.map((p) => p[1]));
   const roofX = B.cabin.reduce((a, p) => a + p[0], 0) / B.cabin.length;
   const roofZ = -roofX;
@@ -211,48 +234,48 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
   switch (L.ornament) {
     case 'antenna': case 'flag': {
       const r = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 1.8, 5), dark);
-      r.position.set(0.7, roofY - 0.1 + 0.9, roofZ + 0.5); r.rotation.z = -0.05; body.add(r);
+      r.position.set(0.7, roofY - 0.1 + 0.9, roofZ + 0.5); r.rotation.z = -0.05; ornG.add(r);
       if (L.ornament === 'flag') {
         const f = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.4), decalMat);
-        f.position.set(0.7 - 0.36, roofY + 1.5, roofZ + 0.5); f.rotation.y = Math.PI / 2; body.add(f);
+        f.position.set(0.7 - 0.36, roofY + 1.5, roofZ + 0.5); f.rotation.y = Math.PI / 2; ornG.add(f);
       } else {
         const t = new THREE.Mesh(new THREE.SphereGeometry(0.07, 5, 4), lamp);
-        t.position.set(0.7, roofY + 1.62, roofZ + 0.5); body.add(t);
+        t.position.set(0.7, roofY + 1.62, roofZ + 0.5); ornG.add(t);
       }
       break;
     }
     case 'cone': {
       const c = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.6, 6), mk({ color: '#ff7a1c', roughness: 0.7 }));
-      c.position.set(0, roofY + 0.3, roofZ); body.add(c);
+      c.position.set(0, roofY + 0.3, roofZ); ornG.add(c);
       const s = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.1, 6), mk({ color: '#f4f1ea', roughness: 0.7 }));
-      s.position.set(0, roofY + 0.28, roofZ); body.add(s);
+      s.position.set(0, roofY + 0.28, roofZ); ornG.add(s);
       break;
     }
     case 'fin': {
       const f = new THREE.Mesh(extrudeProfile([[-0.9, roofY - 0.05], [0.7, roofY - 0.05], [-0.7, roofY + 0.75]], 0.07), trim);
-      f.position.z = roofZ * 0.0; body.add(f);
+      f.position.z = roofZ * 0.0; ornG.add(f);
       break;
     }
     case 'beacon': {
       const base = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.12, 8), dark);
-      base.position.set(0, roofY + 0.06, roofZ); body.add(base);
+      base.position.set(0, roofY + 0.06, roofZ); ornG.add(base);
       beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.26, 8), lamp);
-      beacon.position.set(0, roofY + 0.25, roofZ); body.add(beacon);
+      beacon.position.set(0, roofY + 0.25, roofZ); ornG.add(beacon);
       break;
     }
     case 'horns':
       for (const s of [-1, 1]) {
         const h = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.8, 5), mk({ color: '#f1e6d2', roughness: 0.6 }));
-        h.position.set(s * 0.65, B.lower[2][1] + 0.55, -B.lower[2][0] + 0.7); h.rotation.set(-0.5, 0, -s * 0.5); body.add(h);
+        h.position.set(s * 0.65, B.lower[2][1] + 0.55, -B.lower[2][0] + 0.7); h.rotation.set(-0.5, 0, -s * 0.5); ornG.add(h);
       }
       break;
     case 'crown':
       for (let i = 0; i < 6; i++) {
         const a = (i / 6) * TAU;
         const c = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.42, 4), gold);
-        c.position.set(Math.cos(a) * 0.34, roofY + 0.25, roofZ + Math.sin(a) * 0.34); body.add(c);
+        c.position.set(Math.cos(a) * 0.34, roofY + 0.25, roofZ + Math.sin(a) * 0.34); ornG.add(c);
       }
-      { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.37, 0.37, 0.12, 12), gold); r.position.set(0, roofY + 0.06, roofZ); body.add(r); }
+      { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.37, 0.37, 0.12, 12), gold); r.position.set(0, roofY + 0.06, roofZ); ornG.add(r); }
       break;
     default: break;
   }
@@ -269,7 +292,7 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
       case 'snowman': { const w = M('#f8fbff', 0.9); add(new THREE.SphereGeometry(0.34, 8, 6), w, 0, 0.3); add(new THREE.SphereGeometry(0.25, 8, 6), w, 0, 0.78); add(new THREE.SphereGeometry(0.17, 8, 6), w, 0, 1.1); add(new THREE.ConeGeometry(0.04, 0.22, 5), M('#ff7a1c'), 0, 1.1, -0.2, -Math.PI / 2); add(new THREE.CylinderGeometry(0.15, 0.15, 0.2, 7), M('#17171f'), 0, 1.36); add(new THREE.CylinderGeometry(0.22, 0.22, 0.03, 7), M('#17171f'), 0, 1.27); for (const [x, y] of [[-0.06, 1.15], [0.06, 1.15]]) add(new THREE.SphereGeometry(0.025, 4, 3), M('#17171f'), x, y, -0.16); break; }
       case 'partyhat': add(new THREE.ConeGeometry(0.24, 0.6, 8), M('#ff4fd8', 0.5), 0, 0.3); add(new THREE.SphereGeometry(0.07, 5, 4), M('#ffd23e', 0.3), 0, 0.62); add(new THREE.TorusGeometry(0.17, 0.02, 4, 8), M('#ffd23e', 0.3), 0, 0.22, 0, Math.PI / 2); break;
       case 'umbrella': add(new THREE.CylinderGeometry(0.03, 0.03, 1.5, 5), M('#f4f1ea'), 0, 0.75, 0, 0, 0, 0.12); add(new THREE.ConeGeometry(1.0, 0.4, 8), M('#ff5a5f'), 0.08, 1.45, 0, 0, 0, 0.12); add(new THREE.ConeGeometry(1.0, 0.4, 8, 1, false, 0, Math.PI / 4), M('#f4f1ea'), 0.08, 1.455, 0, 0, 0, 0.12); add(new THREE.SphereGeometry(0.06, 5, 4), M('#f4f1ea'), 0.1, 1.7); break;
-      case 'surfboard': { add(new THREE.SphereGeometry(0.5, 8, 6), M(L.color2, 0.4), 0, 0.14, 0, 0, 0, 0, [0.3, 0.06, 2.4]); add(new THREE.BoxGeometry(0.06, 0.012, 2.2), M('#ffffff', 0.4), 0, 0.2); add(new THREE.ConeGeometry(0.05, 0.22, 4), M('#17171f'), 0, 0.02, 1.0, Math.PI, 0, 0); break; }
+      case 'surfboard': { add(new THREE.SphereGeometry(0.5, 10, 8), M('#ff8c42', 0.4), 0, 0.2, 0, 0, 0, 0, [0.62, 0.14, 2.6]); add(new THREE.BoxGeometry(0.1, 0.02, 2.3), M('#ffffff', 0.4), 0, 0.28); for (const px of [-0.7, 0.7]) add(new THREE.BoxGeometry(0.06, 0.2, 0.06), M('#17171f'), px * 0.25, 0.08, px); add(new THREE.ConeGeometry(0.05, 0.22, 4), M('#17171f'), 0, 0.12, 1.15, Math.PI / 2, 0, 0); break; }
       case 'ringfloat': add(new THREE.TorusGeometry(0.5, 0.17, 6, 14), M('#ff5a5f', 0.5), 0, 0.2, 0, Math.PI / 2); for (let i = 0; i < 4; i++) add(new THREE.BoxGeometry(0.2, 0.2, 0.2), M('#f4f1ea', 0.5), Math.cos((i / 4) * TAU) * 0.5, 0.2, Math.sin((i / 4) * TAU) * 0.5); break;
       case 'icecream': add(new THREE.ConeGeometry(0.2, 0.55, 6), M('#e0a458'), 0, 0.28, 0, Math.PI); add(new THREE.SphereGeometry(0.24, 7, 6), M('#ffb3d1', 0.6), 0, 0.68); add(new THREE.SphereGeometry(0.2, 7, 6), M('#a7f3d0', 0.6), 0, 0.98); add(new THREE.SphereGeometry(0.06, 5, 4), M('#c1121f', 0.4), 0, 1.2); break;
       case 'witchhat': add(new THREE.CylinderGeometry(0.55, 0.55, 0.05, 10), M('#1a0f2e'), 0, 0.03); add(new THREE.ConeGeometry(0.32, 0.95, 8), M('#2b1055'), 0, 0.5, 0.05, 0.2); add(new THREE.CylinderGeometry(0.33, 0.35, 0.1, 8), M('#ff7a1c'), 0, 0.12); break;
@@ -280,7 +303,7 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
     }
     return g;
   };
-  if (NEW_ORNAMENTS.has(L.ornament)) { const o = orn(L.ornament); o.position.set(0, roofY, roofZ); body.add(o); }
+  if (NEW_ORNAMENTS.has(L.ornament)) { const o = orn(L.ornament); o.position.set(0, roofY, roofZ); ornG.add(o); }
 
   // Feux
   const lightMat = ghost ? paint : new THREE.MeshBasicMaterial({ color: '#fff4d6', toneMapped: false });

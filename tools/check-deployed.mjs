@@ -1,5 +1,5 @@
 // Compare le dépôt à ce qui est RÉELLEMENT en ligne, en LECTURE SEULE (deux GET avec la clé publique du jeu ; rien n'est écrit, rien n'est supprimé).
-// Usage : node tools/check-deployed.mjs            (réseau nécessaire ; l'URL et la clé viennent de js/config.js)
+// Usage : node tools/check-deployed.mjs            (réseau nécessaire ; l'URL et la clé viennent de js/config.js ; derrière un proxy : NODE_USE_ENV_PROXY=1 node tools/check-deployed.mjs)
 // Sortie : une ligne par constat, « ok » / « ÉCART » / « inconnu » ; code de sortie 1 s'il y a un écart.
 //   - submit-score déployé : version de physique (GET d'état) = celle du dépôt ?  actions publish-track présentes ?  limites annoncées ?
 //   - base : le schéma public exposé (racine PostgREST) contient-il les objets de l'étape SQL 15 (colonne tracks.author_verified, fonctions rate_check / submit_best / publish_track) ?
@@ -15,8 +15,10 @@ const say = (kind, msg) => { if (kind === 'ÉCART') bad++; if (kind === 'inconnu
 const get = async (path, headers = {}) => { const r = await fetch(url + path, { headers, signal: globalThis.AbortSignal.timeout(15000) }); let body = null; try { body = await r.json(); } catch { /* corps non JSON */ } return { status: r.status, body }; };
 
 try {
-  const s = await get('/functions/v1/submit-score');
-  if (s.status !== 200 || !s.body) say('ÉCART', `submit-score : le GET d'état répond ${s.status} (fonction absente, ou version antérieure à 0.9.54 qui n'a pas de GET d'état)`);
+  const fh = { apikey: key, Authorization: `Bearer ${key}` };      // (la passerelle des fonctions exige un en-tête d'autorisation, comme le jeu en envoie)
+  const s = await get('/functions/v1/submit-score', fh);
+  if (s.status === 405) say('ÉCART', 'submit-score : le GET d\'état répond 405 « Méthode non autorisée » : c\'est l\'ANCIENNE fonction (avant 0.9.54), qui ne sait ni annoncer sa version de physique ni publier un circuit → la redéployer');
+  else if (s.status !== 200 || !s.body) say('ÉCART', `submit-score : le GET d'état répond ${s.status} (fonction absente ou inattendue)`);
   else {
     say(s.body.physVer === PHYS_VER ? 'ok' : 'ÉCART', `submit-score : version de physique déployée ${s.body.physVer}, dépôt ${PHYS_VER}${s.body.physVer === PHYS_VER ? '' : ' → REDÉPLOYER la fonction (ou le jeu est en avance/retard sur elle)'}`);
     const acts = Array.isArray(s.body.actions) ? s.body.actions : [];
@@ -26,8 +28,8 @@ try {
 } catch (e) { say('inconnu', 'submit-score : ' + e.message); }
 
 try {
-  const i = await get('/functions/v1/ice');
-  say(i.status === 401 || i.status === 403 ? 'ok' : (i.status === 404 ? 'ÉCART' : 'inconnu'), `ice : réponse ${i.status} sans jeton (401/403 = authentification exigée, attendu ; 404 = fonction non déployée ; 200 = ancienne version ouverte à tous)`);
+  const i = await fetch(url + '/functions/v1/ice', { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: '{}', signal: globalThis.AbortSignal.timeout(15000) }).then((r) => ({ status: r.status }));
+  say(i.status === 401 || i.status === 403 ? 'ok' : (i.status === 404 ? 'ÉCART' : 'inconnu'), `ice : réponse ${i.status} avec la seule clé publique (401/403 = session exigée, attendu ; 404 = fonction non déployée ; 200 = version ouverte à tous). Cette réponse ne distingue PAS la version d'avant 0.9.54 (déjà authentifiée) de la nouvelle : seul le déploiement dit la version`);
 } catch (e) { say('inconnu', 'ice : ' + e.message); }
 
 try {

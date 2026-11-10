@@ -86,6 +86,9 @@ begin
 end $$;
 
 -- Les commentaires visibles d'un circuit, du plus récent au plus ancien, avec le pseudo et le titre de leur auteur.
+-- (« drop » d'abord : une base qui a reçu une édition plus ancienne de cette étape, sans la colonne title, ne peut pas la remplacer par « create or replace » : PostgreSQL
+-- refuse de changer les colonnes renvoyées d'une fonction existante. Constaté sur la production, qui avait l'ancienne édition. Aucune donnée n'est touchée.)
+drop function if exists public.track_comments_list(uuid, int, int);
 create or replace function public.track_comments_list(t uuid, lim int default 30, off int default 0)
 returns table (id bigint, author uuid, name text, title text, body text, created_at timestamptz, mine boolean, can_delete boolean)
 language sql stable security definer set search_path = public as $$

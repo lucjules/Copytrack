@@ -215,14 +215,16 @@ export const bodyMethods = {
     rows.push(this._num('Hauteur', () => d.y, (v) => { d.y = v; return touch(); }, { step: 0.5 }));
     rows.push(this._num('Z', () => d.z, (v) => { d.z = v; return touch(); }, { step: 0.5 }));
     const obst = isObstacle(d.k);
-    const deg = (r) => Math.round((r || 0) * 180 / Math.PI);
-    const norm = (v) => ((v % 360) + 360) % 360;
+    const deg = (r) => Math.round((r || 0) * 1800 / Math.PI) / 10;          // (au dixième de degré : une saisie de 37,5° s'affiche 37,5°)
+    const norm = (v) => (((v % 360) + 360) % 360);
     rows.push(h('div', { class: 'insp-group' }, 'Rotation'));
-    rows.push(this._range('Cap (Y)', () => norm(deg(d.ry)), (v) => { d.ry = v * Math.PI / 180; return touch(); }, { min: 0, max: 359, step: 1, fmt: (v) => v + '°' }));
+    rows.push(this._angle('Cap (Y)', () => norm(deg(d.ry)), (v) => { d.ry = norm(v) * Math.PI / 180; return touch(); }, { min: 0, max: 359 }));
     if (!obst) {
       // Inclinaison et roulis : purement visuels (une décoration n'a pas de contact). Un obstacle, lui, ne tourne qu'autour de la verticale : sa forme de contact est celle du jeu.
-      rows.push(this._range('Inclinaison (X)', () => deg(d.rx), (v) => { d.rx = v * Math.PI / 180; return touch(); }, { min: -180, max: 180, step: 1, fmt: (v) => v + '°' }));
-      rows.push(this._range('Roulis (Z)', () => deg(d.rz), (v) => { d.rz = v * Math.PI / 180; return touch(); }, { min: -180, max: 180, step: 1, fmt: (v) => v + '°' }));
+      rows.push(this._angle('Inclinaison (X)', () => deg(d.rx), (v) => { d.rx = v * Math.PI / 180; return touch(); }));
+      rows.push(this._angle('Roulis (Z)', () => deg(d.rz), (v) => { d.rz = v * Math.PI / 180; return touch(); }));
+      // Pas d'angle du gizmo 3D (cercles de rotation) : 1°, 5°, 15°, 45° ou 90°.
+      rows.push(this._select('Pas du gizmo', [['1', '1°'], ['5', '5°'], ['15', '15°'], ['45', '45°'], ['90', '90°']], () => String(this.angleStep || 5), (v) => { this.angleStep = +v; this._applyMode(); return true; }));
     }
     const step = (label, fn, title) => h('button', { class: 'btn', title, onclick: () => this._apply(() => { fn(); return touch(); }) }, label);
     rows.push(h('div', { class: 'insp-row' }, h('span', {}, ''), h('div', { class: 'insp-rot', role: 'group', 'aria-label': 'Rotations rapides' }, [
