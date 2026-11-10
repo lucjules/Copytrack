@@ -1,7 +1,9 @@
 // Manipulation directe dans la scène : mode (déplacer, tourner), poignées, flèche d'orientation, glisser.
 // Ces méthodes s'ajoutent au prototype de Inspector (voir inspector.js) : `this` est l'instance.
 import { CELL, LEVEL_H, ROAD_TOP, MAX_LEVEL } from '../constants.js';
+import * as THREE from '../vendor/three.module.min.js';
 import { PIECES, tileCenter, baseY } from '../pieces.js';
+import { isObstacle } from '../obstacles.js';
 import { arrowPose } from '../tileInfo.js';
 import { TAU } from './shared.js';
 import { yawOf } from '../inspector.js';
@@ -17,8 +19,11 @@ export const gizmoMethods = {
     const tile = this.sel && this.sel.kind === 'tile';
     this.tc.setMode(this.mode);
     if (this.mode === 'rotate') {
-      this.tc.showX = false; this.tc.showZ = false; this.tc.showY = true;       // seulement autour de la verticale
-      this.tc.setRotationSnap(tile ? Math.PI / 2 : Math.PI / 36);                 // pièce : quarts de tour ; déco : 5°
+      // Pièce : seulement autour de la verticale, par quarts de tour (elle vit sur la grille : voir docs/ROTATIONS.md). Obstacle : autour de la verticale (sa forme de
+      // contact est celle du jeu). Autre décoration : les TROIS axes (cap Y, inclinaison X, roulis Z), au pas d'angle choisi dans l'inspecteur (5° par défaut).
+      const free = !tile && this.sel && !isObstacle(this.sel.obj.k);
+      this.tc.showX = free; this.tc.showZ = free; this.tc.showY = true;
+      this.tc.setRotationSnap(tile ? Math.PI / 2 : (this.angleStep || 5) * Math.PI / 180);
     } else {
       this.tc.showX = true; this.tc.showY = true; this.tc.showZ = true;
       this.tc.setTranslationSnap(null);
@@ -35,7 +40,8 @@ export const gizmoMethods = {
       this.proxy.rotation.set(0, -obj.r * Math.PI / 2, 0);
     } else {
       this.proxy.position.set(obj.x, obj.y, obj.z);
-      this.proxy.rotation.set(0, obj.ry || 0, 0);
+      this.proxy.rotation.order = 'YXZ';                                    // même ordre que le rendu (decos.js, setDecoRotation)
+      this.proxy.rotation.set(obj.rx || 0, obj.ry || 0, obj.rz || 0);
     }
     this.proxy.updateMatrixWorld(true);
     this._syncArrow();
@@ -80,7 +86,13 @@ export const gizmoMethods = {
       if (this.mode === 'translate') {
         const [x, z] = ed._snapPos(p.position.x, p.position.z);
         obj.x = x; obj.z = z; obj.y = p.position.y;
-      } else obj.ry = ((yawOf(p.quaternion) % TAU) + TAU) % TAU;
+      } else if (isObstacle(obj.k)) obj.ry = ((yawOf(p.quaternion) % TAU) + TAU) % TAU;
+      else {
+        // Les trois angles, relus de l'orientation du gizmo dans l'ordre du rendu (cap, inclinaison, roulis) ; une inclinaison ou un roulis nuls ne sont pas écrits.
+        const e = new THREE.Euler().setFromQuaternion(p.quaternion, 'YXZ');
+        obj.ry = ((e.y % TAU) + TAU) % TAU;
+        for (const [k, v] of [['rx', e.x], ['rz', e.z]]) { if (Math.abs(v) > 1e-4) obj[k] = +v.toFixed(4); else delete obj[k]; }
+      }
       ed.track.version++;
       ed._changed();
     }
