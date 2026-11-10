@@ -10,13 +10,14 @@ cat > /tmp/ct-stub.sql <<'SQL'
 do $$ begin
   if not exists (select 1 from pg_roles where rolname='anon') then create role anon nologin; end if;
   if not exists (select 1 from pg_roles where rolname='authenticated') then create role authenticated nologin; end if;
+  if not exists (select 1 from pg_roles where rolname='service_role') then create role service_role nologin; end if;
 end $$;
 create schema auth;
 create table auth.users (id uuid primary key default gen_random_uuid(), email text unique, raw_user_meta_data jsonb default '{}'::jsonb, is_anonymous boolean default false, encrypted_password text);
 create function auth.uid() returns uuid language sql stable as $f$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $f$;
 grant usage on schema auth to anon, authenticated;
 SQL
-for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape6-telemetrie.sql supabase/etape7-fantomes.sql supabase/etape7-fantomes.sql supabase/etape8-decouverte.sql supabase/etape8-decouverte.sql supabase/etape9-secteurs.sql supabase/etape9-secteurs.sql supabase/etape10-social.sql supabase/etape10-social.sql supabase/etape11-saisons.sql supabase/etape11-saisons.sql supabase/etape12-competition.sql supabase/etape12-competition.sql supabase/etape13-communaute.sql supabase/etape13-communaute.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
+for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape6-telemetrie.sql supabase/etape7-fantomes.sql supabase/etape7-fantomes.sql supabase/etape8-decouverte.sql supabase/etape8-decouverte.sql supabase/etape9-secteurs.sql supabase/etape9-secteurs.sql supabase/etape10-social.sql supabase/etape10-social.sql supabase/etape11-saisons.sql supabase/etape11-saisons.sql supabase/etape12-competition.sql supabase/etape12-competition.sql supabase/etape13-communaute.sql supabase/etape13-communaute.sql supabase/etape14-securite.sql supabase/etape14-securite.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
 $P -d $DB <<'SQL'
 \set ON_ERROR_STOP off
 create function public.as_user(u uuid) returns void language plpgsql as $$ begin perform set_config('request.jwt.claim.sub', u::text, false); end $$;
@@ -572,8 +573,45 @@ select public.as_user('00000000-0000-0000-0000-0000000000e1'); select public.mod
 select public.check('étape 13 : mode masqué au 3e signalement', (select count(*) from public.modes_list(false) where id = :m1) = 0);
 reset role;
 reset copytrack.now;
+-- 14. étape 14 : profils (colonnes), limitation des soumissions de scores
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-0000000000b1');
+do $$ declare refuse boolean := false; begin
+  begin update players set created_at = now() - interval '30 days' where id = '00000000-0000-0000-0000-0000000000b1'; exception when others then refuse := true; end;
+  perform public.check('étape 14 : un pilote ne peut plus modifier la date de création de son profil', refuse);
+end $$;
+do $$ declare refuse boolean := false; begin
+  begin update players set title = 'legende' where id = '00000000-0000-0000-0000-0000000000b1'; exception when others then refuse := true; end;
+  perform public.check('étape 14 : le titre ne s''écrit pas directement (seulement par set_title)', refuse);
+end $$;
+update players set name = 'Zoé2' where id = '00000000-0000-0000-0000-0000000000b1';
+select public.check('étape 14 : le pilote change toujours son pseudo', exists (select 1 from players where id = '00000000-0000-0000-0000-0000000000b1' and name = 'Zoé2'));
+do $$ declare refuse boolean := false; begin
+  begin perform public.submit_rate_check('00000000-0000-0000-0000-0000000000b1', 8, 60, 0); exception when others then refuse := true; end;
+  perform public.check('étape 14 : le jeu (authenticated) ne peut pas appeler submit_rate_check', refuse);
+end $$;
+do $$ declare refuse boolean := false; begin
+  begin perform count(*) from public.submit_rate; exception when others then refuse := true; end;
+  perform public.check('étape 14 : la table submit_rate est illisible pour le jeu', refuse);
+end $$;
+reset role;
+set role service_role;
+do $$ declare r0 int; r1 int; r2 int; i int; ok_first boolean := true; begin
+  for i in 1..3 loop if public.submit_rate_check('00000000-0000-0000-0000-0000000000c1', 3, 60) <> 0 then ok_first := false; end if; end loop;
+  r1 := public.submit_rate_check('00000000-0000-0000-0000-0000000000c1', 3, 60);
+  r2 := public.submit_rate_check('00000000-0000-0000-0000-0000000000c2', 3, 60);
+  perform public.check('étape 14 : 3 soumissions acceptées, la 4e refusée avec un délai (1 à 60 s)', ok_first and r1 between 1 and 60);
+  perform public.check('étape 14 : la limite est PAR pilote', r2 = 0);
+end $$;
+reset role;
+update public.submit_rate set at = now() - interval '2 minutes' where player = '00000000-0000-0000-0000-0000000000c1';
+set role service_role;
+select public.check('étape 14 : la fenêtre glisse : après 2 minutes, de nouveau accepté', public.submit_rate_check('00000000-0000-0000-0000-0000000000c1', 3, 60) = 0);
+select public.check('étape 14 : plafond GLOBAL : un autre pilote (session neuve) est refusé quand le total de la fenêtre est atteint', public.submit_rate_check('00000000-0000-0000-0000-0000000000c3', 3, 60, 2) = 60);
+select public.check('étape 14 : le ménage supprime les lignes de plus d''une heure', (select public.submit_rate_purge()) >= 0);
+reset role;
 -- 13. aucun mot de passe en clair dans nos tables
 select public.check('aucune colonne mot de passe dans le schéma public', not exists (select 1 from information_schema.columns where table_schema='public' and column_name ilike '%pass%'));
 select case when ok then '  ok   ' else '  FAIL ' end || name from public.res order by ok, name;
-select 'RESULT ' || case when bool_and(ok) and count(*) = 107 + 29 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
+select 'RESULT ' || case when bool_and(ok) and count(*) = 107 + 29 + 10 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
 SQL

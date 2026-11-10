@@ -140,7 +140,7 @@ export function renderFriendsBoard(el, desc) {
     try { rows = await online.friendsBoard(desc.key, PHYS_VER, 20); } catch (e) { if (req === el._lbReq) el.innerHTML = offline(e); return; }
     if (req !== el._lbReq) return;
     el.innerHTML = `${rows.length ? `<ol class="board">${rows.map((r) => `<li class="${r.player === online.uid ? 'me' : ''}"><b>${r.rank}</b><span class="lb-name">${esc(r.name || '—')}</span><em>${formatTime(r.time)}</em><small class="lb-date">${day(r.updated_at)}</small></li>`).join('')}</ol>` : '<p>Ni toi ni tes amis n’avez de temps sur ce circuit.</p>'}
-      <p class="meta">${rows.length <= 1 ? 'Ajoute des amis dans <b>Profil › Amis</b> pour comparer vos temps. ' : ''}Mêmes temps vérifiés que le classement mondial.</p>`;
+      <p class="meta">${rows.length <= 1 ? 'Ajoute des amis dans <b>Multijoueur › Amis</b> pour comparer vos temps. ' : ''}Mêmes temps vérifiés que le classement mondial.</p>`;
   })();
 }
 registerBoard({ id: 'friends', label: '👥 Amis', order: 12, available: (desc) => onlineConfigured() && rankedKey(desc) && online.kind === 'account', render: renderFriendsBoard });

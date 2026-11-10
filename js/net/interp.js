@@ -16,6 +16,8 @@ const MAX_EXTRAP = 0.25;                // s : au-delà, la voiture s'arrête su
 const HERMITE_MAX_GAP = 0.15;           // s : au-delà (paquets perdus), interpolation linéaire
 const KEEP = 1.5;                       // s d'historique conservé
 const OFFSET_WINDOW = 40;
+const FAR_S = 5;                        // s : écart d'horloge au-delà duquel un paquet est « hors horloge » (voir push)
+const FAR_CONFIRM = 3;                  // paquets consécutifs hors horloge qu'il faut pour croire à un vrai changement d'horloge
 
 export class SnapshotBuffer {
   constructor({ delay = DEFAULT_DELAY } = {}) {
@@ -23,6 +25,7 @@ export class SnapshotBuffer {
     this.samples = [];                   // triés par t croissant
     this.offsets = [];
     this._tele = null;                   // compteur de téléportation du segment affiché à l'appel précédent
+    this._far = 0;                       // paquets consécutifs hors horloge
     this.out = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), quat: new THREE.Quaternion(), speed: 0, vehicle: 'car', flags: 0, cp: 0, lap: 0, prog: 0, teleported: false, ready: false };
     this._q0 = new THREE.Quaternion(); this._q1 = new THREE.Quaternion();
   }
@@ -33,6 +36,17 @@ export class SnapshotBuffer {
   // s : résultat de unpackSnapshot ; nowMs : horloge locale (performance.now()).
   push(s, nowMs) {
     const arr = this.samples;
+    // Paquet « hors horloge » (à plus de FAR_S du dernier reçu) : un paquet isolé (corrompu, malveillant) est IGNORÉ : il ne doit pas fausser l'estimation de
+    // l'horloge ni figer la voiture. Mais si l'émetteur a vraiment changé d'horloge (chrono remis à zéro, longue coupure puis reprise), les paquets suivants
+    // le confirment : après FAR_CONFIRM paquets consécutifs on repart de zéro sur la nouvelle horloge (avant, tous ces paquets étaient écartés comme
+    // « trop anciens » et la voiture distante restait figée pour toujours).
+    if (arr.length) {
+      const last = arr[arr.length - 1];
+      if (s.t > last.t + FAR_S || s.t < last.t - FAR_S) {
+        if (++this._far < FAR_CONFIRM) return false;
+        arr.length = 0; this.offsets.length = 0; this._tele = null;
+      } else this._far = 0;
+    }
     // Doublon ou trop ancien : ignoré.
     if (arr.length && s.t <= arr[0].t - 0.001) return false;
     let i = arr.length;

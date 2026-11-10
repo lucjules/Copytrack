@@ -6,7 +6,7 @@ import { PIECES } from '../pieces.js';
 import { Track } from '../track.js';
 import { buildTileMesh } from '../trackMesh.js';
 import { buildDecoMesh } from '../decos.js';
-import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, checkTrack } from '../editorTools.js';
+import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, moveSelection, rotateSelection, checkTrack } from '../editorTools.js';
 import { orientationIssues } from '../joins.js';
 export const selectionMethods = {
   // Problèmes repérables sans rouler (0.9.5) : extrémités libres, sauts risqués, pièces inaccessibles (checkTrack), puis raccords d'orientation
@@ -110,6 +110,36 @@ export const selectionMethods = {
     this._commit();
   },
 
+  // Déplace la sélection d'une case (tout ou rien : si une pièce gêne, rien ne bouge). La zone sélectionnée suit.
+  moveSel(dx, dz) {
+    if (!this.sel) return;
+    const tiles = this._selTiles(), decos = this._selDecos();
+    if (!tiles.length && !decos.length) return;
+    if (!moveSelection(this.track, this.sel, tiles, decos, dx, dz)) { this.app.ui.flash('Impossible : une pièce gêne ou la zone sortirait du circuit.'); this.app.audio.error(); return; }
+    this.sel = { x0: this.sel.x0 + dx, z0: this.sel.z0 + dz, x1: this.sel.x1 + dx, z1: this.sel.z1 + dz };
+    this.app.audio.place();
+    this._changed();
+    this._commit();
+  },
+
+  // Pivote la sélection d'un quart de tour autour de son coin haut-gauche (tout ou rien, comme le déplacement).
+  rotateSel() {
+    if (!this.sel) return;
+    const tiles = this._selTiles(), decos = this._selDecos();
+    if (!tiles.length && !decos.length) return;
+    if (!rotateSelection(this.track, this.sel, tiles, decos)) { this.app.ui.flash('Impossible : une pièce gêne ou la zone sortirait du circuit.'); this.app.audio.error(); return; }
+    const r = this.sel;
+    this.sel = { x0: r.x0, z0: r.z0, x1: r.x0 + (r.z1 - r.z0), z1: r.z0 + (r.x1 - r.x0) };
+    this.app.audio.place();
+    this._changed();
+    this._commit();
+  },
+
+  // Duplique la sélection : copie puis collage à poser (le premier clic place le double, l'original ne bouge pas).
+  duplicateSel() {
+    if (this.copySel(true)) this.startPaste();
+  },
+
   startPaste() {
     if (!this.clip) { this.app.ui.flash('Presse-papiers vide : copie d\'abord une zone.'); return; }
     if (this.tool !== 'select') this.setTool('select');
@@ -177,7 +207,7 @@ export const selectionMethods = {
     bar.classList.toggle('hidden', this.tool !== 'select');
     bar.querySelectorAll('[data-sel]').forEach((b) => {
       const a = b.dataset.sel;
-      b.disabled = (['copy', 'cut', 'del', 'up', 'down'].includes(a) && !this.sel) || (a === 'paste' && !this.clip) || (a === 'rot' && !this.pasting);
+      b.disabled = (['copy', 'cut', 'del', 'up', 'down', 'dup', 'mv-l', 'mv-r', 'mv-u', 'mv-d'].includes(a) && !this.sel) || (a === 'paste' && !this.clip) || (a === 'rot' && !this.pasting && !this.sel);
     });
   },
 
@@ -186,7 +216,12 @@ export const selectionMethods = {
       case 'copy': this.copySel(); break;
       case 'cut': this.cutSel(); break;
       case 'paste': this.startPaste(); break;
-      case 'rot': this.rotateClipboard(); break;
+      case 'rot': if (this.pasting) this.rotateClipboard(); else this.rotateSel(); break;
+      case 'dup': this.duplicateSel(); break;
+      case 'mv-l': this.moveSel(-1, 0); break;
+      case 'mv-r': this.moveSel(1, 0); break;
+      case 'mv-u': this.moveSel(0, -1); break;
+      case 'mv-d': this.moveSel(0, 1); break;
       case 'del': this.deleteSel(); break;
       case 'up': this.shiftSel(1); break;
       case 'down': this.shiftSel(-1); break;

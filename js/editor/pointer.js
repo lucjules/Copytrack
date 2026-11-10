@@ -12,6 +12,8 @@ import { isObstacle } from '../obstacles.js';
 import { enclosedRegion } from '../editorTools.js';
 import { pickObjects, pickTileExact, rayToSurface, ERASE_FILTERS, LAYER_ALL } from '../editorPick.js';
 import { MODS, OPT_KEYS, fillBase, isFill } from './shared.js';
+
+const FILL_PREVIEW_MAX = 2500;      // cases surlignées au plus (la zone d'un remplissage est bornée à FILL_MAX_TILES pièces, editorTools.js)
 export const pointerMethods = {
   // ---------------------------------------------------------------- Entrées
   _bind() {
@@ -376,7 +378,7 @@ export const pointerMethods = {
   // Cases surlignées par le pot de peinture sur une zone vide (null : on les cache).
   _showFillCells(cells, color) {
     if (!this.fillCells) {
-      this.fillCells = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#7dffb2', transparent: true, opacity: 0.4, depthWrite: false }), 700);
+      this.fillCells = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#7dffb2', transparent: true, opacity: 0.4, depthWrite: false }), FILL_PREVIEW_MAX);
       this.fillCells.frustumCulled = false;
       this.fillCells.count = 0;
       this.app.scene.add(this.fillCells);
@@ -386,8 +388,8 @@ export const pointerMethods = {
     m.visible = true;
     m.material.color.set(color);
     const mat = new THREE.Matrix4();
-    const n = Math.min(cells.length, 700);
-    for (let i = 0; i < n; i++) { mat.makeScale(CELL - 0.8, 1, CELL - 0.8).setPosition((cells[i][0] + 0.5) * CELL, this.levelY() + 0.12, (cells[i][1] + 0.5) * CELL); m.setMatrixAt(i, mat); }
+    const n = Math.min(cells.length, FILL_PREVIEW_MAX);
+    for (let i = 0; i < n; i++) { mat.makeScale(CELL - 0.8, 1, CELL - 0.8).setPosition((cells[i][0] + 0.5) * CELL, cells[i][2] !== undefined ? cells[i][2] : this.levelY() + 0.12, (cells[i][1] + 0.5) * CELL); m.setMatrixAt(i, mat); }
     m.count = n;
     m.instanceMatrix.needsUpdate = true;
   },
@@ -450,7 +452,11 @@ export const pointerMethods = {
       const t = this._targetTile();
       if (t) {
         if (isFill(this.tool)) {
-          this._highlightTile(t, this._fillRefusal(t) ? '#ff3b5c' : '#ffb347');
+          // Prévisualisation du remplissage : toute la zone qui changerait (orange), la pièce visée seule en rouge si elle est refusée ou si la zone
+          // est trop grande pour être appliquée.
+          const pv = this._fillPreview(t);
+          if (pv && !pv.truncated && pv.cells.length) this._showFillCells(pv.cells, '#ffb347');
+          this._highlightTile(t, !pv || pv.truncated ? '#ff3b5c' : '#ffb347');
         } else if (this.tool.startsWith('surf:')) {
           const s = this.tool.slice(5);
           this._highlightTile(t, surfaceAllowed(t.t, s, t.o | 0) ? (s ? tint(s, this._surfParamValue(s)) : '#ffffff') : '#ff3b5c');

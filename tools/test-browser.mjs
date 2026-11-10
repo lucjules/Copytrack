@@ -173,9 +173,9 @@ try {
     await app(() => window.copytrack.quitRace());
     await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
     assert.match(await page.evaluate(() => document.querySelector('.hub-mastery').textContent), /1 \/ 4/, 'arrivée sans choc : un défi de maîtrise');
-    await app(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('profile'); });
-    await waitApp(() => document.querySelector('.prof-progress') && /Niveau \d+/.test(document.querySelector('.prof-progress').textContent));
-    assert.match(await page.evaluate(() => document.querySelector('.prof-progress').textContent), /Licence C[\s\S]*Licence S[\s\S]*Pour la Licence C[\s\S]*Défis de maîtrise : 1 \/ 288/);
+    await app(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('level'); });
+    await waitApp(() => document.querySelector('#prog-level') && /Niveau \d+/.test(document.querySelector('#prog-level').textContent));
+    assert.match(await page.evaluate(() => document.querySelector('#prog-level').textContent), /Licence C[\s\S]*Licence S[\s\S]*Pour la Licence C[\s\S]*Défis de maîtrise : 1 \/ 288/);
     await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.xp = 0; p.mastery = {}; p.xpDay = null; saveProfile(); window.copytrack.showMenu('menu'); });
   });
 
@@ -395,6 +395,64 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  await test('éditeur : sélection (Tout), pivoter, déplacer d\'une case, dupliquer, annuler : boutons actifs, aucune erreur, le circuit revient exactement', async () => {
+    await click('[data-action="editor"]');
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track);
+    await page.waitForTimeout(400);
+    const r = await app(async () => {
+      const E = window.copytrack.session, T = E.track;
+      const { scriptTrack } = await import('/js/track.js');
+      const src = scriptTrack('s', 'start S4 O S3 finish');
+      T.clear(); for (const t of src.tiles) T.add(t); E._commit(); E._changed();
+      const before = T.encode(), btn = (a) => document.querySelector(`#ed-selbar [data-sel="${a}"]`);
+      E.setTool('select'); E.selAction('all');
+      const enabled = ['copy', 'cut', 'del', 'rot', 'dup', 'mv-l', 'mv-r', 'mv-u', 'mv-d'].map((a) => [a, !btn(a).disabled]);
+      btn('rot').click();                                  // pivoter la sélection entière
+      const rotated = T.encode() !== before;
+      btn('mv-r').click(); btn('mv-d').click();
+      const moved = T.encode();
+      E.undo(); E.undo(); E.undo();                        // déplacements puis rotation annulés
+      const back = T.encode() === before;
+      btn('dup').click();
+      return { enabled, rotated, moved: moved !== before, back, pasting: !!E.pasting, tiles: T.tiles.length };
+    });
+    assert.ok(r.enabled.every(([, on]) => on), 'boutons de sélection actifs : ' + JSON.stringify(r.enabled));
+    assert.ok(r.rotated && r.moved, 'pivoter et déplacer modifient le circuit');
+    assert.ok(r.back, 'trois annulations : le circuit d\'origine, exactement');
+    assert.ok(r.pasting, 'Dupliquer met en mode collage');
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
+  await test('éditeur : aperçu du pot de peinture (toute la zone surlignée avant le clic, rien de modifié), puis un seul pas d\'annulation pour le remplissage', async () => {
+    await click('[data-action="editor"]');
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track);
+    await page.waitForTimeout(400);
+    const r = await app(async () => {
+      const E = window.copytrack.session, T = E.track;
+      T.clear(); T.add({ t: 'start', x: 0, z: 0, l: 0, r: 0 });
+      for (let i = 1; i <= 8; i++) T.add({ t: 'straight', x: i, z: 0, l: 0, r: 1, s: 'ice' });
+      T.add({ t: 'straight', x: 20, z: 0, l: 0, r: 1, s: 'ice' });
+      E._commit(); E._changed();
+      E.setTool('fill-surf:slow');
+      const start = T.tilesAt(3, 0)[0], before = T.encode();
+      const pv = E._fillPreview(start);
+      E._showFillCells(pv.cells, '#ffb347');
+      const shown = { visible: E.fillCells.visible, count: E.fillCells.count, zone: pv.count };
+      const unchanged = T.encode() === before;
+      E.hover = { cx: 3, cz: 0 }; E._floodFill();
+      const slow = T.tiles.filter((t) => t.s === 'slow').length, far = T.tilesAt(20, 0)[0].s;
+      E.undo();
+      return { shown, unchanged, slow, far, afterUndo: T.tiles.filter((t) => t.s === 'ice').length };
+    });
+    assert.deepEqual(r.shown, { visible: true, count: 8, zone: 8 }, 'aperçu : 8 cases');
+    assert.ok(r.unchanged, 'l\'aperçu ne modifie rien');
+    assert.equal(r.slow, 8); assert.equal(r.far, 'ice', 'la zone séparée n\'est pas touchée');
+    assert.equal(r.afterUndo, 9, 'un seul Ctrl+Z annule tout le remplissage');
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
   await test('éditeur : un circuit complet se teste depuis l\'éditeur', async () => {
     await app(() => window.copytrack.openEditor({ code: window.copytrack.builtins[0].track.encode(), name: 'Essai' }));
     await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session.track.tiles.length > 10);
@@ -473,21 +531,48 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
-  await test('profil : compte, sauvegardes, options, commandes', async () => {
-    await click('[data-action="profile"]');
-    await waitApp(() => !document.getElementById('profile').classList.contains('hidden'));
-    for (const tab of ['account', 'saves', 'options', 'controls']) {
-      const t = page.locator(`#prof-tabs [data-ptab="${tab}"]`);
-      if (await t.count()) { await t.first().click(); await page.waitForTimeout(250); }
+  await test('profil, progression, paramètres : chaque entrée du menu ouvre son écran à onglets, tous les onglets s\'affichent sans erreur, « ← Retour » ramène au panneau', async () => {
+    const tour = { profile: ['account', 'friends', 'saves'], progress: ['records', 'level', 'stats', 'unlocks'], settings: ['audio', 'gfx', 'access', 'game', 'ui', 'controls'] };
+    for (const [hub, tabs] of Object.entries(tour)) {
+      await click(`#menu [data-action="sub-${hub}"]`);
+      await waitApp((h) => !document.getElementById('menu-sub-' + h).classList.contains('hidden') && document.getElementById('menu-tiles').classList.contains('hidden'), hub);
+      await click(`#menu-sub-${hub} .menu-entry:not([data-action="garage"])`);
+      await waitApp(() => !document.getElementById('profile').classList.contains('hidden'));
+      const heading = await page.evaluate(() => document.getElementById('prof-heading').textContent);
+      assert.equal(heading, { profile: 'Profil', progress: 'Progression', settings: 'Paramètres' }[hub]);
+      for (const tab of tabs) {
+        await page.locator(`#prof-tabs [data-ptab="${tab}"]`).first().click();
+        await page.waitForTimeout(150);
+        const shown = await page.evaluate((t) => { const p = document.querySelector(`.prof-panel[data-ppanel="${t}"]`); return p && !p.classList.contains('hidden') && p.getBoundingClientRect().height > 20; }, tab);
+        assert.ok(shown, `${hub} › ${tab} : panneau affiché`);
+      }
+      assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#prof-tabs .tab')].map((t) => t.dataset.ptab)), tabs, hub + ' : ses onglets, et seulement eux');
+      await shot('10-' + hub);
+      await click('#profile [data-action="back"]');
+      await waitApp((h) => window.copytrack.mode === 'menu' && !document.getElementById('menu-sub-' + h).classList.contains('hidden'), hub);
+      await click(`#menu-sub-${hub} [data-action="sub-back"]`);
+      await waitApp(() => !document.getElementById('menu-tiles').classList.contains('hidden'));
     }
-    await shot('10-profil-commandes');
-    await click('#profile [data-action="back"]');
+    // Échap referme un panneau ; le focus revient sur sa tuile.
+    await click('#menu [data-action="sub-play"]');
+    await page.keyboard.press('Escape');
+    await waitApp(() => !document.getElementById('menu-tiles').classList.contains('hidden'));
+  });
+
+  await test('records et médailles : une ligne par circuit officiel, une ligne ouvre la fiche du circuit, « ← Retour » revient aux records', async () => {
+    await app(() => window.copytrack.showScreen('records'));
+    const n = await page.evaluate(() => document.querySelectorAll('#prog-records .rec-row').length);
+    assert.equal(n, await app(() => window.copytrack.builtins.length));
+    await click('#prog-records .rec-row');
+    await waitApp(() => !document.getElementById('race-hub').classList.contains('hidden'));
+    await click('#race-hub [data-action="hub-back"]');
+    await waitApp(() => !document.getElementById('profile').classList.contains('hidden') && document.querySelector('.prof-panel[data-ppanel="records"]:not(.hidden)'));
+    await app(() => window.copytrack.showMenu('menu'));
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
   await test('personnalisation de l\'interface : thème, accent, compteur, HUD déplaçable, caméra du joueur utilisée en course', async () => {
-    await app(() => window.copytrack.showScreen('profile'));
-    await click('#prof-tabs [data-ptab="options"]');
+    await app(() => window.copytrack.showScreen('ui'));
     await page.locator('#opt-ui-theme').selectOption('midnight');
     assert.equal(await app(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()), '#070b1c', 'le thème est posé sur la page');
     await page.locator('#opt-ui-speedo').selectOption('ring');
@@ -680,6 +765,64 @@ try {
     await waitApp(() => window.copytrack.ui.modalOpen);
     await page.keyboard.press('Escape');
     await waitApp(() => !window.copytrack.ui.modalOpen);
+  });
+
+  await test('aucun bouton inaccessible : écrans et fenêtres principaux sur cinq tailles d\'écran (dans l\'écran, ou dans un conteneur qui défile jusqu\'à lui)', async () => {
+    const old = page.viewportSize();
+    const REACH = () => {
+  const vw = window.innerWidth, vh = window.innerHeight, bad = [];
+  const scope = document.querySelector('#modal:not(.hidden)') || document.querySelector('.screen:not(.hidden)') || document.body;
+  for (const el of scope.querySelectorAll('button, a[href], input:not([type=hidden]), select, textarea')) {
+    const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden' || el.disabled) continue;
+    const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
+    if (el.closest('.hidden')) continue;
+    // atteignable : dans l'écran, ou dans un conteneur qui défile et dont le contenu est accessible en défilant (haut >= début du contenu)
+    const inside = r.left >= -2 && r.right <= vw + 2 && r.top >= -2 && r.bottom <= vh + 2;
+    if (inside) continue;
+    let p = el.parentElement, ok = false;
+    while (p && p !== document.body) {
+      const o = getComputedStyle(p); const sy = /(auto|scroll)/.test(o.overflowY), sx = /(auto|scroll)/.test(o.overflowX);
+      if ((sy && p.scrollHeight > p.clientHeight + 1) || (sx && p.scrollWidth > p.clientWidth + 1)) {
+        // l'élément doit pouvoir être amené à l'écran : son décalage dans le conteneur est >= 0
+        const pr = p.getBoundingClientRect();
+        if (r.top >= pr.top - 2 + (-p.scrollTop) - 2 && r.left >= pr.left - 2 - p.scrollLeft - 2 || true) { const offTop = r.top - pr.top + p.scrollTop, offLeft = r.left - pr.left + p.scrollLeft; if (offTop >= -2 && offLeft >= -2) { ok = true; break; } }
+      }
+      p = p.parentElement;
+    }
+    if (!ok) bad.push((el.dataset.action || el.id || el.className || el.tagName).toString().slice(0, 40) + ` @${Math.round(r.left)},${Math.round(r.top)}-${Math.round(r.right)},${Math.round(r.bottom)}`);
+  }
+  return bad.slice(0, 6);
+};
+    const states = [['menu', () => window.copytrack.showMenu('menu')], ['tracks', () => window.copytrack.showScreen('tracks')], ['mytracks', () => window.copytrack.showScreen('mytracks')], ['community', () => window.copytrack.showScreen('community')],
+      ['profil', () => { window.copytrack.profileTab = 'account'; window.copytrack.showScreen('profile'); }], ['audio', () => window.copytrack.showScreen('audio')], ['graphismes', () => window.copytrack.showScreen('gfx')], ['accessibilité', () => window.copytrack.showScreen('access')], ['jeu', () => window.copytrack.showScreen('game')], ['interface', () => window.copytrack.showScreen('ui')], ['commandes', () => window.copytrack.showScreen('controls')], ['records', () => window.copytrack.showScreen('records')], ['niveau', () => window.copytrack.showScreen('level')], ['statistiques', () => window.copytrack.showScreen('stats')], ['déblocages', () => window.copytrack.showScreen('unlocks')], ['amis', () => window.copytrack.showScreen('friends')], ['sauvegardes', () => window.copytrack.showScreen('saves')],
+      ['académie', () => window.copytrack.academyMenu()], ['compétition', () => window.copytrack.competitionMenu()], ['multijoueur', () => window.copytrack.multiMenu()], ['import', () => window.copytrack.importModal(false)],
+      ['aide', () => window.copytrack.helpModal()], ['tutoriel', () => window.copytrack.tutorial()]];
+    const bad = [];
+    try {
+      for (const [w, h] of [[1280, 720], [1366, 768], [1024, 600], [390, 844], [844, 390]]) {
+        await page.setViewportSize({ width: w, height: h });
+        for (const [n, f] of states) {
+          await app(() => { window.copytrack.ui.closeModal(); window.copytrack.showMenu('menu'); });
+          await page.waitForTimeout(150);
+          await app(f); await page.waitForTimeout(350);
+          const r = await app(REACH);
+          if (r.length) bad.push(`${w}x${h} ${n} : ${r.join(' | ')}`);
+        }
+      }
+    } finally { await app(() => { window.copytrack.ui.closeModal(); window.copytrack.showMenu('menu'); }); await page.setViewportSize(old); }
+    assert.deepEqual(bad, [], 'boutons hors d\'atteinte :\n' + bad.join('\n'));
+  });
+
+  await test('fenêtres hautes (académie) sur un écran de 700 px de haut : le titre et le dernier bouton restent atteignables (la fenêtre défile au lieu de déborder)', async () => {
+    const old = page.viewportSize();
+    await page.setViewportSize({ width: 1280, height: 700 });
+    try {
+      await app(() => { window.copytrack.ui.closeModal(); window.copytrack.academyMenu(); });
+      await page.waitForTimeout(400);
+      const r = await app(() => { const el = document.querySelector('#modal:not(.hidden) .modal-panel'); const b = el.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, h: window.innerHeight, scroll: el.scrollHeight > el.clientHeight, ov: getComputedStyle(el).overflowY }; });
+      assert.ok(r.top >= -1 && r.bottom <= r.h + 1, `la fenêtre tient dans l'écran (haut ${r.top}, bas ${r.bottom} / ${r.h})`);
+      assert.ok(r.scroll && /auto|scroll/.test(r.ov), 'son contenu défile');
+    } finally { await app(() => window.copytrack.ui.closeModal()); await page.setViewportSize(old); }
   });
 
   await test('académie : menu des six leçons, leçon 1 jouée et réussie, bilan, retour au menu des leçons', async () => {
@@ -1054,8 +1197,8 @@ try {
 
   await test('profil : les titres (aucun mérité au départ, conditions lisibles) ; garage : collections et exclusifs verrouillés avec leur condition', async () => {
     await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.owned = {}; p.title = ''; p.collections = {}; p.academy = {}; p.dailyDays = []; saveProfile(); });
-    await click('[data-action="profile"]');
-    await waitApp(() => document.querySelector('#prof-titles select'));
+    await click('[data-action="tab-unlocks"]');
+    await waitApp(() => document.querySelector('#unl-titles select'));
     assert.equal(await page.evaluate(() => document.querySelectorAll('#prof-title option').length), 1, 'seulement « Aucun »');
     assert.equal(await page.evaluate(() => document.querySelectorAll('.title-list li').length), 9);
     assert.ok((await page.evaluate(() => document.querySelector('.title-list').textContent)).includes('Réussir les 6 leçons de l’Académie'));
@@ -1077,9 +1220,7 @@ try {
   });
 
   await test('multijoueur : le menu des salons s\'ouvre sans serveur', async () => {
-    await click('[data-action="community"]');
-    await waitApp(() => !document.getElementById('community').classList.contains('hidden'));
-    await click('#community [data-action="multi"]');
+    await click('#menu-sub-multi [data-action="multi"]');
     await waitApp(() => window.copytrack.ui.modalOpen);
     await shot('11-multijoueur');
     await page.keyboard.press('Escape');
@@ -1263,7 +1404,19 @@ try {
           }
           return out;
         });
-        assert.equal(r.n, 12, `${w}x${h} : 12 tuiles`);
+        assert.equal(r.n, 6, `${w}x${h} : 6 tuiles`);
+        // Les six panneaux s'ouvrent l'un après l'autre à la place des tuiles, tiennent à l'écran (ou défilent), et leurs entrées sont touchables (44 px au moins).
+        for (const sub of ['play', 'create', 'multi', 'progress', 'profile', 'settings']) {
+          await pp.evaluate((n) => document.querySelector(`#menu [data-action="sub-${n}"]`).click(), sub);
+          const q = await pp.evaluate((n) => {
+            const el = document.getElementById('menu-sub-' + n), r = el.getBoundingClientRect();
+            const small = [...el.querySelectorAll('.menu-entry')].filter((b) => b.getBoundingClientRect().height < 40).length;
+            return { shown: !el.classList.contains('hidden'), tilesHidden: document.getElementById('menu-tiles').classList.contains('hidden'), wide: r.left >= -1 && r.right <= window.innerWidth + 1, n: el.querySelectorAll('.menu-entry').length, small, back: !!el.querySelector('[data-action="sub-back"]') };
+          }, sub);
+          assert.deepEqual([q.shown, q.tilesHidden, q.wide, q.back, q.small], [true, true, true, true, 0], `${w}x${h} : panneau ${sub} ouvert, large comme l'écran, avec Retour, entrées touchables`);
+          assert.ok(q.n >= 3);
+          await pp.evaluate((n) => document.querySelector(`#menu-sub-${n} [data-action="sub-back"]`).click(), sub);
+        }
         assert.deepEqual([r.cut, r.covered, r.fsOver], [[], [], []], `${w}x${h} : tuiles coupées, recouvertes, sous le bouton plein écran`);
       }
     } finally { await ctxP.close(); }
@@ -1287,9 +1440,9 @@ try {
       await wait(() => window.copytrack && window.copytrack.mode === 'menu');
       assert.ok(await pt.evaluate(() => document.body.classList.contains('touch')), 'appareil tactile reconnu');
       await pt.evaluate(() => { const A = window.copytrack; A.settings.telemetry = false; A.settings.tutorialDone = true; A.saveSettings(); A.ui.closeModal(); A.quality.apply('ultrapotato'); });
-      await pt.waitForTimeout(300);
-      await pt.evaluate(() => window.copytrack.ui.closeModal());
-      await tap('[data-action="play"]');
+      // Au premier lancement, les fenêtres (consentement, tutoriel) arrivent l'une après l'autre : on les ferme jusqu'à ce que l'accueil soit libre.
+      for (let k = 0; k < 6; k++) { await pt.waitForTimeout(500); await pt.evaluate(() => window.copytrack.ui.closeModal()); }
+      await tap('[data-action="sub-play"]'); await tap('[data-action="play"]');
       await wait(() => !document.getElementById('tracks').classList.contains('hidden') && document.querySelector('#track-list .card .num'));
       await tap('#track-list .card:has(.num) .thumb');
       await wait(() => !document.getElementById('race-hub').classList.contains('hidden'));
@@ -1454,6 +1607,8 @@ try {
     });
     const ap = (fn, arg) => p2.evaluate(fn, arg), wait = (fn, arg, timeout = 30000) => p2.waitForFunction(fn, arg, { timeout });
     const clk = (sel) => p2.locator(sel).first().evaluate((el) => el.click());
+    // Le panneau se redessine après chaque réponse du serveur : entre l'attente de l'élément et son usage il peut disparaître un instant. On réessaie.
+    const retry = async (fn, n = 40) => { for (let k = 0; ; k++) { try { return await fn(); } catch (e) { if (k >= n) throw e; await new Promise((r) => setTimeout(r, 100)); } } };
     const until = async (fn, ms = 10000) => { const t0 = Date.now(); while (!fn()) { if (Date.now() - t0 > ms) throw new Error('délai dépassé'); await new Promise((r) => setTimeout(r, 50)); } };
     try {
       await p2.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'load' });
@@ -1484,14 +1639,14 @@ try {
       await clk('#hub-board [data-tab="friends"]');
       await wait(() => /Ana[\s\S]*00:25\.250[\s\S]*Testeur/.test(document.getElementById('hub-board').textContent));
       // Profil › Amis : accepter une demande, en envoyer une
-      await ap(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('profile'); });
-      await wait(() => document.querySelector('.prof-friends [data-fa="yes"]'));
-      await clk('.prof-friends [data-fa="yes"]');
-      await wait(() => /1 ami(?!s)[\s\S]*Ana/.test(document.querySelector('.prof-friends').textContent));
+      await ap(() => { window.copytrack.closeRaceHub(); window.copytrack.showScreen('friends'); });
+      await wait(() => document.querySelector('#friends-body [data-fa="yes"]'));
+      await clk('#friends-body [data-fa="yes"]');
+      await wait(() => /1 ami(?!s)[\s\S]*Ana/.test((document.querySelector('#friends-body') || {}).textContent || ''));   // le panneau se redessine après le clic : il peut être absent un instant
       assert.deepEqual(calls.find((c) => c.url.includes('/rpc/friend_respond')).body, { other: ANA, accept: true });
-      await p2.locator('.prof-friends .friend-add input').fill('Ben');
-      await clk('.prof-friends .friend-add button');
-      await wait(() => /Demandes envoyées[\s\S]*Ben/.test(document.querySelector('.prof-friends').textContent));
+      await p2.locator('#friends-body .friend-add input').fill('Ben');
+      await clk('#friends-body .friend-add button');
+      await wait(() => /Demandes envoyées[\s\S]*Ben/.test((document.querySelector('#friends-body') || {}).textContent || ''));
       assert.equal(calls.find((c) => c.url.includes('/rpc/friend_request')).body.target_name, 'Ben');
       // Communauté › Abonnements : personne de suivi
       await ap(() => window.copytrack.showScreen('community'));
@@ -1506,11 +1661,11 @@ try {
       await until(() => calls.some((c) => c.url.includes('/rpc/duel_respond')));
       assert.deepEqual(calls.find((c) => c.url.includes('/rpc/duel_respond')).body, { duel: 6, accept: true });
       await wait(() => document.querySelector('.competition .duel-new'));
-      await ap((k) => { const f = document.querySelector('.competition .duel-new'); f.querySelector('.duel-track').value = k; f.requestSubmit(); }, duelKey);
+      await retry(() => ap((k) => { const f = document.querySelector('.competition .duel-new'); f.querySelector('.duel-track').value = k; f.requestSubmit(); }, duelKey));
       await until(() => calls.some((c) => c.url.includes('/rpc/duel_challenge')));
       assert.deepEqual(calls.find((c) => c.url.includes('/rpc/duel_challenge')).body.track, duelKey);
       await wait(() => document.querySelector('.competition .tour-join'));
-      await ap(() => { const f = document.querySelector('.competition .tour-join'); f.querySelector('input').value = 'abc234'; f.requestSubmit(); });
+      await retry(() => ap(() => { const f = document.querySelector('.competition .tour-join'); f.querySelector('input').value = 'abc234'; f.requestSubmit(); }));
       await until(() => calls.some((c) => c.url.includes('/rpc/tournament_join')));
       await wait(() => document.querySelector('.competition [data-tour-board="9"]'));
       await clk('.competition [data-tour-board="9"]');

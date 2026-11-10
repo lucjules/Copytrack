@@ -64,13 +64,18 @@ function listPrefixedKeys() {
 export function getJSON(key, fallback) { return read(key, fallback); }
 export function setJSON(key, value) { return write(key, value); }
 
+// Clés qui n'appartiennent qu'à CET appareil et ne doivent JAMAIS voyager dans un code joueur, une sauvegarde partagée ou une restauration : la session en ligne
+// de l'invité (jeton d'accès et de renouvellement = son identité en ligne : classements, circuits publiés) et son profil en ligne. Un code joueur se copie, se
+// poste, se confie ; s'il contenait la session, quiconque l'importerait deviendrait ce pilote (et l'importer chez soi écraserait sa propre identité en ligne).
+export const DEVICE_ONLY_KEYS = ['online.session', 'online.player'];
+
 // Toutes les données du jeu (clés « shardway.* », gardées pour ne perdre aucune sauvegarde) sous forme d'objet.
-export function dumpAll() {
+export function dumpAll({ shareable = false } = {}) {
   const out = {};
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.startsWith(PREFIX)) out[k.slice(PREFIX.length)] = localStorage.getItem(k);
+      if (k && k.startsWith(PREFIX)) { const name = k.slice(PREFIX.length); if (!(shareable && DEVICE_ONLY_KEYS.includes(name))) out[name] = localStorage.getItem(k); }
     }
   } catch { /* stockage indisponible */ }
   return out;
@@ -183,13 +188,24 @@ export function getRecord(trackKey) {
   const disk = read(REC + trackKey, null);
   const mem = memRec.get(PREFIX + trackKey);
   if (!disk) return mem || null;
-  return mem && mem.time < disk.time - 1e-9 ? mem : disk;
+  // La copie en mémoire de cette session ne l'emporte que si elle est de la même physique et meilleure, ou d'une physique plus récente : sinon une synchronisation qui
+  // rapporte le record d'une physique plus récente (autre appareil) restait cachée derrière un meilleur temps d'une ancienne physique.
+  if (!mem) return disk;
+  const mp = +mem.pv || 0, dp = +disk.pv || 0;
+  return mp === dp ? (mem.time < disk.time - 1e-9 ? mem : disk) : (mp > dp ? mem : disk);
 }
 
 // Écrit le record, quitte à perdre ce qui prend de la place : d'abord le fantôme, puis les commandes enregistrées, puis (si
 // le stockage est vraiment plein) le fantôme et les commandes des AUTRES circuits, du plus ancien au plus récent. Le temps, lui,
 // n'est jamais perdu. Renvoie true si le record est bien sur le disque.
+// Meilleur temps JAMAIS réalisé sur ce circuit, toutes versions de la physique confondues (rec.bt) : c'est lui qui donne les médailles et les déblocages.
+// Une mise à jour de la physique rend les anciens temps non comparables (le record est alors remplacé par la première arrivée sous la nouvelle
+// physique, même plus lente) : sans cette mémoire, une médaille d'or gagnée avant la mise à jour pouvait redescendre en argent, et reverrouiller
+// la suite de la carrière. Le temps du record (rec.time), lui, reste celui de la physique courante (classements, fantôme, replay).
+export const medalTime = (rec) => (rec ? Math.min(rec.time, Number.isFinite(+rec.bt) && +rec.bt > 0 ? +rec.bt : rec.time) : null);
 export function saveRecord(trackKey, rec) {
+  const old = getRecord(trackKey);
+  if (old) { const bt = Math.min(medalTime(old), medalTime(rec)); if (bt < rec.time - 1e-9) rec = { ...rec, bt }; }
   memRec.set(PREFIX + trackKey, slim(rec));
   const tiers = [rec, { ...rec, ghost: null }, slim(rec)];
   const tryWrite = () => tiers.some((t) => write(REC + trackKey, t));

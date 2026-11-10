@@ -6,4 +6,8 @@
 // coturn : TURN_URLS + TURN_SECRET). Ne rien y mettre : le jeu garde alors son STUN par défaut.
 import { createIceHandler } from './handler.js';
 
-Deno.serve(createIceHandler({ env: Deno.env.toObject() }));
+Deno.serve(createIceHandler({
+  env: Deno.env.toObject(),
+  supabaseUrl: Deno.env.get('SUPABASE_URL') ?? '',
+  serviceKey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',      // fournies automatiquement par Supabase : la fonction exige une session valide
+}));

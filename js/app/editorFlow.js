@@ -67,7 +67,7 @@ export const editorFlowMethods = {
       title: 'Raccourcis de l’éditeur',
       wide: true,
       body: `<div class="kbd-list">${rows.map(([k, v]) => `<b>${esc(k)}</b><span>${esc(v)}</span>`).join('')}</div>
-        <p style="margin-top:14px">Touches modifiables : Profil › Commandes.</p>`,
+        <p style="margin-top:14px">Touches modifiables : Paramètres › Commandes.</p>`,
       actions: [{ label: 'OK', primary: true }],
     });
   },

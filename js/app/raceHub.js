@@ -20,7 +20,7 @@ import { MUTATION_COINS, STREAK_STEPS } from '../rewards.js';
 import { masteryBits, MASTERY } from '../progression.js';
 import { goalLabel, goalDone, PROFILS } from '../career.js';
 import { starsText, STAR_LABELS } from '../difficulty.js';
-import { getRecord, getImportedGhost, listMyTracks, formatTime } from '../storage.js';
+import { getRecord, medalTime, getImportedGhost, listMyTracks, formatTime } from '../storage.js';
 import { profile, saveProfile } from '../profile.js';
 import { isFavorite, toggleFavorite, cleanFavorites } from '../favorites.js';
 import { describeDaily, describeUser, describeCommunity, personalRecord, quickRaceIndex, describeVariant, hubCategories } from '../trackDescriptor.js';
@@ -181,7 +181,7 @@ export const raceHubMethods = {
   _renderHubLaunch() {
     const h = this._hub, d = h.desc, s = this.settings;
     const rec = personalRecord(d, getRecord);
-    const medal = rec && d.medals ? medalFor(rec.time, d.medals) : null;
+    const medal = rec && d.medals ? medalFor(medalTime(rec), d.medals) : null;
     const chips = [['ghost', 'Mon record', s.ghost !== false, !!rec]];
     if (d.track.path && d.medals) chips.push(['ghostGold', 'Fantôme or', s.ghostGold !== false, true]);
     if (d.key && getImportedGhost(d.key)) chips.push(['ghostImported', 'Fantôme importé', s.ghostImported !== false, true]);
@@ -192,7 +192,7 @@ export const raceHubMethods = {
       <div class="hub-ghosts" role="group" aria-label="Fantômes"><span class="meta">Fantômes</span>
         ${chips.map(([k, l, on, ok]) => `<button class="chip${on ? ' on' : ''}" data-ghost="${k}" aria-pressed="${on}"${ok ? '' : ' disabled title="Pas encore de record sur ce circuit"'}>${esc(l)}</button>`).join('')}
         ${rivals.map(([rank, g]) => `<button class="chip on rival" data-rival="${rank}" aria-pressed="true" title="Retirer ce rival">👻 ${rank}. ${esc(g.name)} · ${formatTime(g.time)} ✕</button>`).join('')}
-        <button class="chip${train ? ' on' : ''}" data-hudtrain aria-pressed="${train}" title="Écart en direct, secteurs, courbes, ligne et freinages de la référence (Options › Personnalisation)">🎯 HUD d’entraînement</button>
+        <button class="chip${train ? ' on' : ''}" data-hudtrain aria-pressed="${train}" title="Écart en direct, secteurs, courbes, ligne et freinages de la référence (Paramètres › Interface)">🎯 HUD d’entraînement</button>
       </div>
       ${rivals.length < MAX_RIVALS && h.board && h.board.boards.some((b) => b.id === 'world') ? '<p class="meta hub-hint">Ajoute jusqu’à 3 rivaux en ligne avec 👻 dans le classement mondial.</p>' : ''}
       ${cats.length ? `<div class="hub-cats" role="radiogroup" aria-label="Catégorie de record"><span class="meta">Catégorie de record</span>
@@ -200,7 +200,7 @@ export const raceHubMethods = {
         ${cats.map((c) => { const on = d.variantStr && d.key.endsWith('~v1.' + c.id); return `<button class="chip${on ? ' on' : ''}" role="radio" aria-checked="${!!on}" data-cat="${c.id}">${esc(c.label)}</button>`; }).join('')}
         ${d.variant && !cats.some((c) => d.key.endsWith('~v1.' + c.id)) ? `<button class="chip on" role="radio" aria-checked="true" data-cat="__cur">${esc(h.modeLabel ? '🌐 ' + h.modeLabel : d.variantStr)}</button>` : ''}
         ${d.variant ? '<p class="meta hub-hint">Classement et record à part, sans médailles ni pièces : le record officiel ne bouge pas.</p>' : ''}</div>` : ''}
-      ${aidsActive(s.aids) ? '<p class="meta hub-hint hub-aids">🦾 Aides à la conduite activées : tes courses vont dans la catégorie « assisté » (Options › Aides).</p>' : ''}
+      ${aidsActive(s.aids) ? '<p class="meta hub-hint hub-aids">🦾 Aides à la conduite activées : tes courses vont dans la catégorie « assisté » (Paramètres › Accessibilité).</p>' : ''}
       ${d.locked ? `<p class="hub-lock" role="status">🔒 ${esc(d.locked)}</p>` : ''}
       <button class="btn big primary hub-play" id="hub-play"${d.locked ? ' disabled' : ''}>▶ Jouer <kbd>Entrée</kbd></button>`;
     for (const b of $('hub-launch').querySelectorAll('[data-ghost]')) b.onclick = () => {

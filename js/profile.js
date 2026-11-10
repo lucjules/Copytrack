@@ -1,7 +1,7 @@
 // Profil du joueur : pièces, objets débloqués, équipement, code de sauvegarde.
 // Le jeu est 100 % statique (aucun serveur) : le « code joueur » est la sauvegarde
 // elle-même, compressée, à copier / coller ou à télécharger sous forme de fichier.
-import { getJSON, setJSON, dumpAll, restoreAll } from './storage.js';
+import { getJSON, setJSON, dumpAll, restoreAll, DEVICE_ONLY_KEYS } from './storage.js';
 import { DEFAULT_LOADOUT, itemCost, sanitizeLoadout, itemsOf, exclusiveOf } from './cosmetics.js';
 import { hashString } from './track.js';
 
@@ -119,7 +119,7 @@ const fromB64 = (s) => {
 
 export async function exportCode() {
   saveProfile();
-  const data = dumpAll();
+  const data = dumpAll({ shareable: true });      // sans la session en ligne de cet appareil (storage.DEVICE_ONLY_KEYS)
   const json = JSON.stringify({ v: 1, id: profile().id, t: Date.now(), data });
   const raw = new TextEncoder().encode(json);
   const chk = hashString(json);
@@ -155,14 +155,60 @@ export async function parseCode(code) {
   return obj;
 }
 
+// Ce qu'une restauration accepte d'un code joueur : des clés de forme connue, des valeurs texte, et jamais la session en ligne d'un autre appareil
+// (les anciens codes la contenaient : l'importer faisait de vous le pilote qui l'avait exporté, et effaçait votre propre identité en ligne).
+const importable = (data) => {
+  const out = {};
+  for (const [k, v] of Object.entries(data || {})) if (typeof v === 'string' && /^[\w.~:-]{1,160}$/.test(k) && !DEVICE_ONLY_KEYS.includes(k)) out[k] = v;
+  return out;
+};
+const parse = (txt, fallback) => { try { const x = JSON.parse(txt); return x == null ? fallback : x; } catch { return fallback; } };
+
+// Restaurer une ancienne sauvegarde est un geste VOLONTAIRE plus récent que les suppressions déjà synchronisées (pierres tombales de circuits, remise
+// à zéro des records : voir cloudsave.js). Sans marque, la synchronisation suivante supprimait de nouveau ce que la restauration vient de rendre :
+//  - circuits absents (ou supprimés) ici : `updated` passe à maintenant, il bat la pierre tombale ; la pierre tombale locale est retirée ;
+//  - records absents ou meilleurs que ceux d'ici : `rt` (restauré le) = maintenant ; la remise à zéro ne retire que les records NI plus récents NI restaurés après elle.
+// Ce qui existait déjà ici avec le même identifiant garde sa date : la règle habituelle (le plus récent gagne) s'applique.
+function stampRestored(imp, cur, now) {
+  const out = { ...imp };
+  const have = new Set(parse(cur.tracks, []).map((t) => t && t.id));
+  const gone = parse(cur.tracksDel, {});
+  const dead = { ...parse(imp.tracksDel, {}) };
+  for (const [id, t] of Object.entries(gone)) dead[id] = Math.max(Number(dead[id]) || 0, Number(t) || 0);      // la suppression la plus récente de chaque circuit
+  if (typeof out.tracks === 'string') {
+    const list = parse(out.tracks, []);
+    if (Array.isArray(list)) {
+      const revived = [];
+      out.tracks = JSON.stringify(list.map((t) => {
+        if (!t || t.id == null || (have.has(t.id) && !(t.id in dead))) return t;
+        revived.push(t.id);
+        return { ...t, updated: Math.max(Number(t.updated) || 0, now) };
+      }));
+      const keep = { ...dead };
+      for (const id of revived) delete keep[id];
+      out.tracksDel = JSON.stringify(keep);
+    }
+  }
+  for (const [k, v] of Object.entries(out)) {
+    if (!/^rec3\./.test(k)) continue;
+    const r = parse(v, null), c = parse(cur[k], null);
+    if (r && typeof r === 'object' && (!c || Number(r.time) < Number(c.time) - 1e-9)) out[k] = JSON.stringify({ ...r, rt: now });
+  }
+  return out;
+}
+
 // mode : 'replace' remplace tout ; 'merge' garde les meilleurs records et réunit les circuits.
-export function applySave(obj, mode = 'replace') {
+export function applySave(obj, mode = 'replace', now = Date.now()) {
   if (!obj || !obj.data || typeof obj.data !== 'object') return reloadProfile();
+  const cur = dumpAll();
+  const imp = stampRestored(importable(obj.data), cur, now);
+  obj = { ...obj, data: imp };
 
   if (mode === 'replace') {
-    restoreAll(obj.data);
+    const own = {};
+    for (const k of DEVICE_ONLY_KEYS) if (typeof cur[k] === 'string') own[k] = cur[k];      // l'identité en ligne de CET appareil survit à une restauration
+    restoreAll({ ...obj.data, ...own });
   } else {
-    const cur = dumpAll();
     const out = { ...cur };
     for (const [k, v] of Object.entries(obj.data)) {
       if ((k.startsWith('rec.') || k.startsWith('rec2.') || k.startsWith('rec3.')) && typeof v === 'string') {
@@ -170,6 +216,16 @@ export function applySave(obj, mode = 'replace') {
           const a = JSON.parse(cur[k] || 'null'), b = JSON.parse(v);
           if (!a || (b && b.time < a.time)) out[k] = v;
         } catch { out[k] = v; }
+      } else if (k === 'tracksDel' && typeof v === 'string') {
+        // Pierres tombales : réunies (la plus récente suppression de chaque circuit) ; stampRestored a déjà retiré celles des circuits restaurés.
+        const a = parse(cur[k], {}), b = parse(v, {}), u = { ...a };
+        for (const [id, t] of Object.entries(b)) u[id] = Math.max(Number(u[id]) || 0, Number(t) || 0);
+        for (const id of Object.keys(u)) if (!(id in b) && !(id in a)) delete u[id];
+        const kept = parse(imp.tracks, null);
+        if (Array.isArray(kept)) for (const t of kept) if (t && t.id in u && (Number(t.updated) || 0) > u[t.id]) delete u[t.id];
+        out[k] = JSON.stringify(u);
+      } else if (k === 'recReset' && typeof v === 'string') {
+        out[k] = String(Math.max(Number(cur[k]) || 0, Number(v) || 0));
       } else if (k === 'tracks' && typeof v === 'string') {
         try {
           const a = JSON.parse(cur[k] || '[]'), b = JSON.parse(v);

@@ -112,7 +112,7 @@ export class CarPhysics {
     this.vel.x = 0; this.vel.y = 0; this.vel.z = 0;
     this.yaw = yaw; this.prevYaw = yaw; this.yawRate = 0; this.omega = 0;
     this.steer = 0; this.steerAngle = 0; this.boost = 0; this.boostF = 1; this.slip = 0; this.airTime = 0; this.fwdSpeed = 0;
-    this.driftT = 0; this.bounceCD = 0; this.driftCharge = 0; this.stunT = 0;
+    this.driftT = 0; this.bounceCD = 0; this.driftCharge = 0; this.stunT = 0; this.stuckT = 0;
     this.pitch = 0; this.pitchRate = 0; this.landQ = ''; this.aoa = 0.08; this.glidePitch = 0; this.bankT = 0;
     if (this.v2) { this.lean = 0; this.mAx = 0; this.heave = 0; this.v2F = 1; this.v2R = 1; }
     this.rib = null;
@@ -140,6 +140,7 @@ export class CarPhysics {
     this.prev.y = s.h;
     this.grounded = true;
     this._setGround(s, false);
+    this.glassSafe = null;
     this._updateFwd();
   }
 
@@ -170,6 +171,7 @@ export class CarPhysics {
     this.surfType = s.type;
     this.surfMod = s.mod || '';
     this.surfTile = s.tile;
+    if (triggers && this.glassSafe && s.tile !== this.glassSafe) this.glassSafe = null;
     // Pourcentage de réglage du revêtement touché (celui de la voie touchée pour une bifurcation à deux revêtements).
     this.surfPct = s.tile ? tileParam({ s: s.mod || '', p: s.p }) : 100;
     this.surfP = this.surfPct / 100;
@@ -245,7 +247,7 @@ export class CarPhysics {
   // pièce, en secondes). Quand il est écoulé, la dalle est brisée : elle n'a plus aucune collision (la voiture tombe) jusqu'au
   // prochain (re)départ, qui la restaure. Renvoie true à l'instant où la dalle cède.
   _glassCheck(on, tile, dt) {
-    if (!on || !tile || this.graceT > 0 || this.broken.has(tile)) return false;
+    if (!on || !tile || this.graceT > 0 || this.broken.has(tile) || tile === this.glassSafe) return false;
     const t = (this.glassTime.get(tile) || 0) + dt;
     this.glassTime.set(tile, t);
     if (t < glassSeconds(this._pct(tile))) return false;
@@ -286,6 +288,8 @@ export class CarPhysics {
       const lateralDamp = clamp(0.35 + grip * 0.3, 0.35, 0.85);
       BK.vx = vx; BK.vy = vy * lateralDamp;
       BK.w = (vx * dtan(delta) / L) * clamp(grip, 0.2, 1);
+      // Plaquée contre un mur à l'arrêt : sans vitesse le volant n'a aucun effet et la voiture restait coincée nez au mur (seule la marche arrière la libérait).
+      if (this.stuckT > CAR.stuckAfter) BK.w = this.steer * CAR.stuckPivot * clamp((this.stuckT - CAR.stuckAfter) * 4, 0, 1);
       return BK;
     }
     const den = Math.max(Math.abs(vx), 6);

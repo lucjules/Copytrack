@@ -22,7 +22,10 @@ export async function coturnCredentials(secret, expiresAtS, subtle = globalThis.
   return { username, credential: b64(await subtle.sign('HMAC', key, new TextEncoder().encode(username))) };
 }
 
-export function createIceHandler({ env = {}, fetch: fetchImpl = globalThis.fetch, now = Date.now, subtle = globalThis.crypto && globalThis.crypto.subtle, log = console.error } = {}) {
+// Authentification (supabaseUrl + serviceKey fournis) : sans elle, n'importe qui, avec la clé PUBLIQUE du jeu (lisible dans la page), obtenait un relais TURN
+// (bande passante facturée) sans même avoir une session. Désormais il faut une session Supabase valide (invité anonyme ou compte), comme pour submit-score ;
+// la cadence se compte alors PAR PILOTE (et non par adresse IP, falsifiable). Sans ces deux valeurs (essais), la fonction reste ouverte comme avant.
+export function createIceHandler({ env = {}, supabaseUrl = '', serviceKey = '', fetch: fetchImpl = globalThis.fetch, now = Date.now, subtle = globalThis.crypto && globalThis.crypto.subtle, log = console.error } = {}) {
   const cors = {
     'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -46,7 +49,15 @@ export function createIceHandler({ env = {}, fetch: fetchImpl = globalThis.fetch
     if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
     if (req.method !== 'POST' && req.method !== 'GET') return json(405, { error: 'Méthode non autorisée.' });
     try {
-      const who = (req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'anon').split(',')[0].trim();
+      let who = (req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'anon').split(',')[0].trim();
+      if (supabaseUrl && serviceKey) {
+        const ures = await fetchImpl(`${supabaseUrl}/auth/v1/user`, { headers: { Authorization: req.headers.get('Authorization') ?? '', apikey: serviceKey } });
+        if (!ures.ok) return json(401, { error: 'Non connecté.' });
+        const user = await ures.json();
+        const uid = String((user && user.id) || '');
+        if (!/^[0-9a-f-]{36}$/.test(uid)) return json(401, { error: 'Non connecté.' });
+        who = uid;
+      }
       if (tooFast(who)) return json(429, { error: 'Trop de demandes.' }, { 'Retry-After': '60' });
       const stun = list(env.STUN_URLS).length ? list(env.STUN_URLS) : DEFAULT_STUN;
 

@@ -159,7 +159,7 @@ export class EditorSession {
     // Ctrl / Cmd enfoncé : la touche sert au raccourci (copier, coller, annuler...),
     // pas à son action seule (C = niveau −, V = vrille, X = gomme...).
     if (ctrl) { this._render(dt); return; }
-    if (input.act('ed.rotate')) { if (this.pasting) this.rotateClipboard(); else this.rotate(shift ? -1 : 1); }
+    if (input.act('ed.rotate')) { if (this.pasting) this.rotateClipboard(); else if (selMode) this.rotateSel(); else this.rotate(shift ? -1 : 1); }
     if (input.act('ed.levelUp')) { if (selMode) this.shiftSel(1); else this.setLevel(this.level + 1); }
     if (input.act('ed.levelDown')) { if (selMode) this.shiftSel(-1); else this.setLevel(this.level - 1); }
     if (input.act('ed.levelView') && !ctrl) this.toggleLevelView();

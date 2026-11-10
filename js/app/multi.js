@@ -16,7 +16,7 @@ const fmtSteps = (steps) => (steps == null ? '—' : formatTime(steps / STEPS_PE
 export const multiMethods = {
   // code : pour rejoindre une salle ; si cet onglet y était il y a moins de 20 s (rechargement), il reprend sa place (même identifiant, resume.js).
   _roomOpts(code = null) {
-    this._iceLoader = this._iceLoader || createIceLoader();
+    this._iceLoader = this._iceLoader || createIceLoader({ getToken: this._tokenFn() });
     const back = code ? loadResume(normalizeCode(code)) : null;
     return { name: this.settings.playerName, makeSignaling: (o) => defaultSignaling(o, this._tokenFn()), getIce: this._iceLoader, ...(back ? { selfId: back.selfId, token: back.token } : {}) };
   },

@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.46** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.9.53** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -97,7 +97,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 - **Garage** (purement visuel) : 8 carrosseries, moto routière ou chopper, couleurs, finitions (brillante, mate, métallisée, nacrée), LED, dessins, ornements, ailerons, roues, traînées lumineuses, klaxons (touche H), presets.
 - **Pièces (monnaie)** gagnées selon la médaille et les objectifs bonus. **Profil** : un code joueur contient toute la progression.
 - **Musique** synthétisée en direct, une ambiance par décor ; sons sans aucun fichier audio.
-- **Profil** (menu principal) : onglets *Compte*, *Sauvegardes*, *Options* et *Commandes*.
+- **Menu principal** : six catégories — **Jouer** (course rapide, carrière, défi du jour, circuits de la communauté, modes, Académie), **Créer** (éditeur, mes circuits, importer un code), **Multijoueur** (salons, compétition, amis), **Progression** (records et médailles, niveau et licences, statistiques, déblocages), **Profil** (compte et pseudonyme, garage, sauvegardes) et **Paramètres** (audio, graphismes, accessibilité, jeu, interface, commandes). Chacune ouvre un panneau avec « ← Retour » (Échap, ou le bouton retour de la manette, fait de même) ; un écran ouvert depuis un panneau y ramène au retour.
 - **Langues** : **français et anglais** (~1 700 textes traduits : menus, carrière et ses 72 circuits, éditeur, communauté, multijoueur, Académie…). La langue suit le navigateur au premier lancement d'un nouvel appareil (un appareil qui a déjà des données reste en français), se change d'un clic sur l'écran d'accueil ou dans Profil › Options › Langue, et se mémorise par appareil. Un texte sans traduction reste en français : jamais d'écran cassé. Voir `js/i18n.js` pour ajouter une langue.
 - **Personnalisation** : **atelier de voiture** (24 pièces libres, peinture et motifs, dessin 16 × 16, effets, code `SHC1:`), **thèmes d'interface** et **HUD déplaçable**, **caméras à toi**, **ambiance avancée** des circuits (météo, soleil, heure qui défile), **pièces décoratives perso**, **déclencheurs** sur les cases, **règles de partie** en multijoueur, **modes de jeu** à toi (codes `SHM1:`) et **paquets** (`SHX1:`) qui regroupent le tout. Rien de tout cela ne change les performances d'une voiture.
 - **Options** : volume des effets et de la musique, qualité graphique (Auto, Ultra, Haute, Moyenne, Basse, Potato), compteur d'images, champ de vision, effet de vitesse, tremblements de caméra, **couleurs adaptées au daltonisme**, taille de l'interface, fantômes.
@@ -146,6 +146,7 @@ Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un proj
 13. **Compétition asynchrone** : `supabase/etape12-competition.sql` (duels entre amis classés au **Elo**, tournois privés, historique). Puis **redéployer `submit-score`** : elle vérifie en base qu'un temps de duel ou de tournoi vient d'un participant, avant l'échéance. Les duels échus et les tournois finis se règlent d'eux-mêmes (`settle_due()`, appelée par le jeu) ; pour une clôture à l'heure dite : `select cron.schedule('copytrack-competition', '*/10 * * * *', 'select public.settle_due()');` (pg_cron).
 
 14. **Communauté 2** : `supabase/etape13-communaute.sql` (commentaires, playlists, sélection, circuit au hasard, recommandations, statistiques de circuit calculées depuis `run_stats`, modes publiés). **Modération** : ajouter les comptes modérateurs à la main, avec la clé de service (`insert into public.moderators values ('<uuid du compte>');`) ; un modérateur choisit la Sélection (`pick_track`) et masque ou rétablit un circuit, un commentaire ou un mode (`mod_hide`). Sans modérateur, la Sélection reste vide, et les signalements (3 comptes distincts) masquent déjà commentaires et modes d'eux-mêmes.
+15. **Durcissement (phase 4)** : `supabase/etape14-securite.sql` (relançable sans danger, aucune suppression de données) : un pilote ne peut plus modifier la date de création de son profil ni son titre directement ; **limitation des soumissions de scores partagée entre toutes les instances** de la fonction `submit-score` (table `submit_rate`, fonction `submit_rate_check`, réservées à la clé de service) ; plafond global de `log_runs`. Sans cette étape la fonction `submit-score` continue de marcher, avec sa seule limite en mémoire (elle le journalise). **Redéployer les fonctions `submit-score` et `ice`** (`npm run build:function`) : `ice` exige désormais une session Supabase.
 
 Sans les étapes 9 à 13, le jeu fonctionne : les onglets Secteurs, Amis et Saison des classements, l'écran Compétition, les commentaires, playlists et modes publiés disent qu'une étape SQL manque, sans fausses données.
 
@@ -230,7 +231,7 @@ docs/                           ARCHITECTURE.md (comment ça s'emboîte), MODULE
 
 Lire d'abord [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Avant de proposer un changement :
 
-- `npm run lint` et `npm test` (≈ 20 s) ; `npm run test:browser` si Playwright et Chromium sont installés ; `npm run test:deno` pour la physique sous Deno (le moteur de la fonction serveur) ;
+- `npm run lint` et `npm test` (≈ 30 s) (toutes les procédures de test : [docs/TESTS.md](docs/TESTS.md)) ; `npm run test:browser` si Playwright et Chromium sont installés ; `npm run test:deno` pour la physique sous Deno (le moteur de la fonction serveur) ;
 - le **noyau de simulation** (physique, pièces, circuits, pilote automatique…) n'utilise pas `Math.sin`, `Math.atan2`, `Math.pow`, `**`… mais `js/dmath.js` : sinon la vérification serveur et les replays divergent d'un moteur à l'autre ;
 - un changement de physique incrémente `PHYS_VER` (`js/version.js`) ; `tools/phys-fingerprint.mjs` échoue tant que ce n'est pas fait ;
 - les fichiers générés (`sw.js`, `supabase/functions/submit-score/index.ts`, `docs/MODULES.md`, `tools/phys-fingerprint.json`) se régénèrent, ils ne se modifient pas à la main ;

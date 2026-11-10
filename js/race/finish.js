@@ -3,7 +3,7 @@
 import { DT } from '../constants.js';
 import { MSG, PRIO } from '../hudMessages.js';
 import { F_FINISHED } from '../net/snapshot.js';
-import { saveRecord, pushRun, encodeFloats, formatTime } from '../storage.js';
+import { saveRecord, medalTime, pushRun, encodeFloats, formatTime } from '../storage.js';
 import { rewardCoins, profile } from '../profile.js';
 import { awardRace, levelOf } from '../progression.js';
 import { MEDALS, medalFor } from '../medals.js';
@@ -140,7 +140,7 @@ export const finishMethods = {
       setTimeout(() => app.ui.flash(bits.join(' · '), 3.4), 900);
     }
     if (!this.opts.fromEditor && !this.opts.spawn) app.telemetry.record({ trackKey: this.trackKey, outcome: 'finish', time, respawns: this.stats.respawns, medal: medal && medal.id });
-    const prevMedal = prev ? medalFor(prev.time, this.medals) : null;
+    const prevMedal = prev ? medalFor(medalTime(prev), this.medals) : null;
     let reward = null, tierBefore;
     if (this.opts.fromEditor && this.opts.spawn) {
       // Test partiel : pas de vérification ni de médaille.

@@ -15,7 +15,8 @@ import { describeDaily } from '../trackDescriptor.js';
 import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked, chapterState, careerSummary, prerequisiteOf, nextBuiltinIndex } from '../career.js';
 import { locale } from '../i18n.js';
 import { profile } from '../profile.js';
-import { getRecord, listMyTracks, deleteMyTrack, formatTime } from '../storage.js';
+import { TAB_HUB } from './profile.js';
+import { getRecord, medalTime, listMyTracks, deleteMyTrack, formatTime } from '../storage.js';
 export const screenMethods = {
   showMenu(screen = 'menu') {
     this._dispose();
@@ -34,6 +35,7 @@ export const screenMethods = {
   showScreen(name) {
     this._screen = name;
     if (name === 'menu') {
+      this._menuSub(null);
       const r = getRecord('daily-' + dayKey());
       $('daily-best').textContent = r ? formatTime(r.time) : 'nouveau';
     }
@@ -41,14 +43,15 @@ export const screenMethods = {
     if (name === 'race-hub') this._renderHub();
     if (name === 'mytracks') this._renderMyTracks();
     if (name === 'community') this._renderCommunity(true);
-    // Options et Commandes sont des onglets de l'écran Profil (les anciens appels showScreen('options') y mènent toujours).
-    if (name === 'options' || name === 'controls') { this.profileTab = name; name = 'profile'; }
+    // Profil, Progression et Paramètres sont un seul écran à onglets (app/profile.js, HUBS) : showScreen('gfx'), ('records'), ('controls')… ouvrent l'onglet
+    // voulu ; showScreen('options') (ancien nom) mène aux graphismes.
+    if (name === 'options' || TAB_HUB[name]) { this.profileTab = name; name = 'profile'; }
     if (name === 'profile') this._renderProfile();
     this.ui.showScreen(name);
     this._fsButton();              // (le bouton plein écran du tactile dépend de l'écran affiché)
   },
 
-  // ---- Tutoriel (premier lancement, ou Options > Revoir le tutoriel) -------------
+  // ---- Tutoriel (premier lancement, ou Paramètres › Jeu › Revoir le tutoriel) -------------
   tutorial(step = 0) {
     const touch = document.body.classList.contains('touch');
     const K = (a) => this._keysOf(a);
@@ -81,7 +84,7 @@ export const screenMethods = {
             <li><b>${touch ? '⟲' : K('respawn')}</b> : revenir au dernier checkpoint · <b>${touch ? '↺' : K('restart')}</b> : recommencer.</li>
             <li><b>Obstacles</b> : piques mortelles, boules et marteaux bousculent. Leur rythme est fixe.</li>
             <li><b>Carrière</b> : 11 chapitres de 6 circuits, un objectif bonus ★ chacun, plus l’<b>Atelier</b> bonus (obstacles et pièces mobiles).</li>
-            <li><b>Académie</b> (menu principal) : six leçons guidées, sur le dérapage, le mini-turbo, la réception…</li>
+            <li><b>Académie</b> (menu Jouer) : six leçons guidées, sur le dérapage, le mini-turbo, la réception…</li>
             <li>Un <b>défi du jour</b> chaque jour. Replays et fantômes partageables.</li>
           </ul>`,
       },
@@ -110,7 +113,7 @@ export const screenMethods = {
     if (opts.builtinIndex == null) return;
     const next = nextBuiltinIndex(opts.builtinIndex, this.builtins.length);
     if (next == null) return;
-    const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(rec.time, b.def.medals) : null; };
+    const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(medalTime(rec), b.def.medals) : null; };
     const ch = Math.floor(next / CHAPTER_SIZE);
     if (!chapterUnlocked(ch, medalOf, this.builtins.length)) {
       this.ui.flash(`Chapitre ${ch + 1} verrouillé : gagne ${UNLOCK_MEDALS} médailles au chapitre ${prerequisiteOf(ch) + 1}.`, 2.6);
@@ -124,7 +127,7 @@ export const screenMethods = {
   _renderTracks() {
     const list = $('track-list');
     list.innerHTML = '';
-    const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(rec.time, b.def.medals) : null; };
+    const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(medalTime(rec), b.def.medals) : null; };
     // Bilan de la carrière
     {
       const ids = this.builtins.map((b, i) => { const m = medalOf(i); return m ? m.id : null; });
@@ -214,7 +217,7 @@ export const screenMethods = {
       for (const i of idx) {
         const b = this.builtins[i];
         const rec = getRecord(b.key);
-        const medal = rec ? medalFor(rec.time, b.def.medals) : null;
+        const medal = rec ? medalFor(medalTime(rec), b.def.medals) : null;
         const goal = goalFor(b.def, i);
         const gdone = goalDone(b.key + '#goal');
         const tags = this._trackTags(b.track);

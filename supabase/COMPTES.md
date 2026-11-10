@@ -54,3 +54,30 @@ Supabase lève aussi cette vérification. Aucun e-mail n'est jamais envoyé à c
 
 - `npm test` : client (pseudos, mots de passe, comptes, fusion, hors ligne, session expirée) avec un Supabase simulé.
 - `npm run test:sql` : le script SQL sur un vrai PostgreSQL local (variables `PGHOST`, `PGPORT`, `PGUSER`), avec un faux schéma `auth`.
+
+## Invité, code joueur, restauration (phase 4)
+
+- **Identité en ligne de l'invité** : une session anonyme Supabase, stockée sur l'appareil (clé `online.session`). C'est ce qui lui donne ses scores et ses
+  circuits publiés. **Elle ne quitte jamais l'appareil** : le *code joueur* (Profil > Exporter) n'en contient ni la session ni le profil en ligne, et importer un
+  code ne les remplace jamais (les anciens codes, qui la contenaient, sont filtrés à l'import : sans cela, importer un code revenait à *devenir* le pilote qui
+  l'avait exporté). Un invité ne se récupère donc pas sur un autre appareil : pour retrouver ses données ailleurs, il crée un compte (*Reprendre la progression
+  de cet appareil*), ou exporte/importe son code joueur, qui transporte la **progression** (records, circuits, objets, médailles) mais pas l'identité en ligne.
+- **Panne du serveur ≠ session expirée** : seul un jeton de renouvellement REFUSÉ par le serveur (400, 401, 403) déconnecte un compte ou donne une nouvelle identité
+  anonyme à un invité. Réseau coupé, erreur 5xx ou trop d'essais (429) gardent la session et réessaient plus tard.
+- **Restaurer une ancienne sauvegarde** (Profil > Importer, fusion ou remplacement) est un geste volontaire, plus récent que les suppressions déjà synchronisées :
+  les circuits qu'elle rend (absents ou supprimés ici) sont datés de la restauration et battent leur pierre tombale ; les records qu'elle apporte sont marqués
+  `rt` et survivent à une remise à zéro des records faite avant. Ce qui existait déjà garde ses dates (le plus récent gagne) ; une remise à zéro volontaire reste
+  valable pour tout ce qui n'a PAS été restauré après.
+- **Meilleur temps de toutes les physiques** (`bt`) : les médailles et déblocages ne redescendent pas quand une mise à jour de la physique remplace le record.
+
+## Ce que `submit-score` vérifie (dans l'ordre)
+
+Méthode · configuration · taille annoncée (413) · session Supabase valide (401) · cadence en mémoire de l'instance puis **cadence partagée en base** (429, `etape14`) ·
+corps lu **par morceaux avec une limite stricte en octets** (le flux est annulé au-delà : `Content-Length` absent ou mensonger ne sert à rien) · forme des champs
+(clé de circuit, commandes en base64, temps de 0 à 600 s, version de physique : 400) · rejeu COMPLET de la course avec le vrai code du jeu (version de physique,
+circuit reconnu et de la bonne version, arrivée atteinte, temps égal à 0,5 ms près : 422) · compétition (participants et fenêtre, en base) · profil du pilote ·
+meilleur temps conservé. La clé de service n'est jamais renvoyée ; les erreurs internes non plus.
+
+**Limites connues** : une session anonyme est gratuite, donc la limite par pilote se contourne en changeant de session (le plafond global en base borne le total de
+rejeux) ; `ALLOWED_ORIGIN` est `*` tant qu'il n'est pas réglé (la session Supabase est exigée de toute façon) ; le temps de l'auteur d'un circuit de joueur
+(`author_time`, qui donne les médailles de ce circuit) est vérifié par le jeu à la publication mais pas rejoué par la base.

@@ -3,44 +3,112 @@
 import { profile, exportCode, parseCode, applySave } from '../profile.js';
 import { $, esc } from '../dom.js';
 import { account } from '../account.js';
-import { loadSettings } from '../storage.js';
+import { loadSettings, getRecord, medalTime, formatTime } from '../storage.js';
+import { medalFor } from '../medals.js';
+import { medalIcon } from '../ui.js';
+import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, goalDone, chapterUnlocked, careerSummary, prerequisiteOf } from '../career.js';
 import { locale } from '../i18n.js';
 import { levelOf, ensureXp, LICENCES, hasLicence, masteryCount, MASTERY, LEVEL_REWARDS } from '../progression.js';
 import { CATALOG } from '../cosmetics.js';
 import { online } from '../online.js';
+// Un seul écran à onglets sert trois entrées de l'accueil : Profil, Progression et Paramètres. Chaque entrée a son titre et ses onglets ; l'onglet courant
+// (this.profileTab) dit laquelle est ouverte. Les anciens noms d'onglet ('options') mènent au premier onglet des paramètres liés à l'image.
+export const HUBS = {
+  profile: { title: 'Profil', tabs: [['account', 'Compte'], ['friends', 'Amis'], ['saves', 'Sauvegardes']] },
+  progress: { title: 'Progression', tabs: [['records', 'Records et médailles'], ['level', 'Niveau et licences'], ['stats', 'Statistiques'], ['unlocks', 'Déblocages']] },
+  settings: { title: 'Paramètres', tabs: [['audio', 'Audio'], ['gfx', 'Graphismes'], ['access', 'Accessibilité'], ['game', 'Jeu'], ['ui', 'Interface'], ['controls', 'Commandes']] },
+};
+export const TAB_HUB = Object.fromEntries(Object.entries(HUBS).flatMap(([hub, h]) => h.tabs.map(([t]) => [t, hub])));
+export const LEGACY_TABS = { options: 'gfx' };
+
 export const profileMethods = {
   async _renderProfile() {
-    const tab = ['account', 'saves', 'options', 'controls'].includes(this.profileTab) ? this.profileTab : 'account';
+    const tab = TAB_HUB[LEGACY_TABS[this.profileTab] || this.profileTab] ? (LEGACY_TABS[this.profileTab] || this.profileTab) : 'account';
     this.profileTab = tab;
-    document.querySelectorAll('#prof-tabs .tab').forEach((t) => { const on = t.dataset.ptab === tab; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); });
+    const hub = HUBS[TAB_HUB[tab]];
+    $('prof-heading').textContent = hub.title;
+    const tabs = $('prof-tabs');
+    tabs.innerHTML = hub.tabs.map(([id, label]) => `<button class="tab${id === tab ? ' on' : ''}" role="tab" aria-selected="${id === tab}" data-ptab="${id}">${esc(label)}</button>`).join('');
     document.querySelectorAll('.prof-panel').forEach((el) => el.classList.toggle('hidden', el.dataset.ppanel !== tab));
-    if (tab === 'account') this._renderProfileAccount();
+    if (tab === 'account') { this._renderOptions(); this._renderProfileAccount(); }       // (_renderOptions remplit aussi le champ du pseudonyme)
+    else if (tab === 'friends') this._renderFriendsBox($('friends-body'));
     else if (tab === 'saves') this._renderSaves();
-    else if (tab === 'options') this._renderOptions();
-    else this._renderControls();
+    else if (tab === 'level') this._renderProgressBox($('prog-level'));
+    else if (tab === 'records') this._renderRecords($('prog-records'));
+    else if (tab === 'stats') this._renderStats($('prog-stats'));
+    else if (tab === 'unlocks') this._renderUnlocks($('prog-unlocks'));
+    else if (tab === 'controls') { this._renderOptions(); this._renderControls(); }
+    else this._renderOptions();                 // audio, graphismes, accessibilité, jeu, interface : les réglages sont remplis depuis les préférences
   },
 
   _renderProfileAccount() {
     const p = profile();
     const body = $('profile-body');
-    const medals = Object.values(p.medals);
     body.innerHTML = `
       <div><div class="meta">Identifiant joueur</div><div class="prof-id">${esc(p.id)}</div></div>
-      <div class="prof-grid">
-        <span>Pièces</span><b>◆ ${p.coins}</b>
-        <span>Courses terminées</span><b>${p.stats.races}</b>
-        <span>Pièces gagnées au total</span><b>${p.stats.earned}</b>
-        <span>Médailles obtenues</span><b>${medals.length}</b>
-      </div>
-      <div class="prof-progress" id="prof-progress"></div>
       <div class="prof-account" id="prof-account"></div>
-      <div class="prof-friends" id="prof-friends"></div>
-      <div class="prof-titles" id="prof-titles"></div>
-      <p class="prof-note">Code joueur et import / export : onglet <b>Sauvegardes</b>.</p>`;
-    this._renderProgressBox(body.querySelector('#prof-progress'));
+      <p class="prof-note">Records, médailles, niveau et titres : menu <b>Progression</b>. Code joueur, import et export : onglet <b>Sauvegardes</b>.</p>`;
     this._renderAccountBox(body.querySelector('#prof-account'));
-    this._renderFriendsBox(body.querySelector('#prof-friends'));
-    this._renderTitlesBox(body.querySelector('#prof-titles'));
+  },
+
+  // Progression > Statistiques : les compteurs du profil, rien d'autre.
+  _renderStats(box) {
+    const p = profile(), st = p.stats || {};
+    const gd = this.builtins.filter((b) => goalDone(b.key + '#goal')).length;
+    const row = (label, value) => `<span>${esc(label)}</span><b>${value}</b>`;
+    box.innerHTML = `<h3 class="opt-h">Statistiques</h3>
+      <div class="prof-grid">
+        ${row('Courses terminées', st.races | 0)}
+        ${row('Pièces', '◆ ' + (p.coins | 0))}
+        ${row('Pièces gagnées au total', st.earned | 0)}
+        ${row('Médailles obtenues', Object.keys(p.medals || {}).length)}
+        ${row('Objectifs bonus réussis', `${gd} / ${this.builtins.length}`)}
+        ${row('Turbos pris', st.turbos | 0)}
+        ${row('Jours de défi du jour', (p.dailyDays || []).length)}
+        ${row('Meilleure série de jours', Math.max(p.dailyBest | 0, 0))}
+        ${row('Mutations du jour terminées', (p.mutDays || []).length)}
+        ${row('Leçons de l’Académie', Object.keys(p.academy || {}).length)}
+        ${row('Collections complétées', Object.keys(p.collections || {}).length)}
+      </div>`;
+  },
+
+  // Progression > Records et médailles : bilan de la carrière puis chaque circuit officiel, chapitre par chapitre ; une ligne ouvre la fiche du circuit.
+  _renderRecords(box) {
+    const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(medalTime(rec), b.def.medals) : null; };
+    const ids = this.builtins.map((b, i) => { const m = medalOf(i); return m ? m.id : null; });
+    const gd = this.builtins.filter((b) => goalDone(b.key + '#goal')).length;
+    const sm = careerSummary(ids, gd);
+    let html = `<div class="career-summary${sm.complete ? ' complete' : sm.finished ? ' finished' : ''}"><div class="cs-main"><b>${sm.pct} %</b><span>de la carrière</span></div>
+      <div class="cs-bar"><i style="width:${sm.pct}%"></i></div>
+      <div class="cs-stats">${sm.medals} / ${sm.total} médailles · ${sm.crystal} cristal · ${sm.goals} / ${sm.total} objectifs bonus</div></div>`;
+    for (let c = 0; c * CHAPTER_SIZE < this.builtins.length; c++) {
+      const idx = this.builtins.map((b, i) => i).filter((i) => Math.floor(i / CHAPTER_SIZE) === c);
+      const ch = CHAPTERS[c];
+      html += `<h3 class="opt-h">Chapitre ${c + 1}${ch ? ' · ' + esc(ch.name) : ''}</h3><ul class="rec-list">`;
+      for (const i of idx) {
+        const b = this.builtins[i], rec = getRecord(b.key), m = medalOf(i);
+        html += `<li><button class="btn rec-row" data-rec="${i}"><span class="rec-name">${esc(b.def.name)}</span>${medalIcon(m)}<b class="rec-time">${rec ? formatTime(rec.time) : '—'}</b>${goalDone(b.key + '#goal') ? '<span class="rec-goal" title="Objectif bonus réussi">★</span>' : '<span class="rec-goal off">☆</span>'}</button></li>`;
+      }
+      html += '</ul>';
+    }
+    box.innerHTML = html;
+    for (const b of box.querySelectorAll('[data-rec]')) b.onclick = () => { this.audio.click(); this.openBuiltinHub(+b.dataset.rec, 'profile'); };
+  },
+
+  // Progression > Déblocages : chapitres de la carrière (ouverts ou à gagner), titres, récompenses de niveau.
+  _renderUnlocks(box) {
+    const medalOf = (i) => { const b = this.builtins[i]; const rec = getRecord(b.key); return rec ? medalFor(medalTime(rec), b.def.medals) : null; };
+    const total = this.builtins.length, chapters = Math.ceil(total / CHAPTER_SIZE);
+    let html = '<h3 class="opt-h">Chapitres de la carrière</h3><ul class="chap-list">';
+    for (let c = 0; c < chapters; c++) {
+      const open = chapterUnlocked(c, medalOf, total), ch = CHAPTERS[c];
+      html += `<li class="${open ? 'got' : ''}"><b>${open ? '🔓' : '🔒'} Chapitre ${c + 1}${ch ? ' · ' + esc(ch.name) : ''}</b>${open ? '' : `<small>Gagne ${UNLOCK_MEDALS} médailles au chapitre ${prerequisiteOf(c) + 1}.</small>`}</li>`;
+    }
+    html += '</ul><div id="unl-titles"></div><div id="unl-rewards" class="lvl-rewards meta"></div>';
+    box.innerHTML = html;
+    this._renderTitlesBox(box.querySelector('#unl-titles'));
+    const L = levelOf(profile().xp), label = (cat, id) => ((CATALOG[cat] || []).find((x) => x.id === id) || {}).label || id;
+    box.querySelector('#unl-rewards').innerHTML = `<span>Récompenses de niveau (garage) :</span><ul>${LEVEL_REWARDS.map(([lvl, cat, id]) => `<li class="${L.level >= lvl ? 'got' : ''}"><span>${L.level >= lvl ? '✓' : '🔒'}</span> <span>Niveau ${lvl} : ${esc(label(cat, id))}</span></li>`).join('')}</ul>`;
   },
 
   _renderSaves() {
@@ -54,7 +122,9 @@ export const profileMethods = {
         <button class="btn" data-p="paste">Importer un code</button>
         <button class="btn" data-p="file">Importer un fichier</button>
       </div>
-      <input type="file" id="prof-file" accept=".shw,.txt" class="hidden">`;
+      <input type="file" id="prof-file" accept=".shw,.txt" class="hidden">
+      <h3 class="opt-h">Zone sensible</h3>
+      <div class="opt-row"><span>Effacer tous les records de cet appareil</span><button class="btn subtle" data-action="reset-records">Effacer les records</button></div>`;
     body.querySelector('[data-p="copy"]').onclick = async () => {
       const code = await exportCode();
       try { await navigator.clipboard.writeText(code); this.ui.flash(`Code copié (${Math.round(code.length / 1024)} Ko)`); }
@@ -83,15 +153,13 @@ export const profileMethods = {
     const p = profile(), L = levelOf(p.xp), ctx = this._licenceContext();
     const pct = L.max ? 100 : Math.round((L.into / Math.max(1, L.need)) * 100);
     const next = LICENCES.find((x) => !hasLicence(x.id));
-    const label = (cat, id) => ((CATALOG[cat] || []).find((x) => x.id === id) || {}).label || id;
     box.innerHTML = `<h3>Pilote</h3>
       <p class="prof-level"><b>Niveau ${L.level}</b> <span class="meta">${L.max ? 'niveau maximal' : `${L.into} / ${L.need} XP`}</span></p>
       <span class="xp-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></span>
       <p class="meta">L’expérience vient des courses terminées et des objectifs : médailles, objectifs bonus, défi du jour, Académie, défis de maîtrise. Elle ne rend jamais une voiture plus rapide.</p>
       <div class="prof-licences">${LICENCES.map((x) => `<span class="licence${hasLicence(x.id) ? ' got' : ''}">🪪 <span>${esc(x.label)}</span></span>`).join('')}</div>
       ${next ? `<p class="meta">Pour la <b>${esc(next.label)}</b> :</p><ul class="lic-req">${next.req.map(([k, n, txt]) => `<li class="${(ctx[k] || 0) >= n ? 'done' : ''}">${(ctx[k] || 0) >= n ? '✓' : '·'} <span>${esc(txt)}</span> <small>(${Math.min(ctx[k] || 0, n)} / ${n})</small></li>`).join('')}</ul>` : '<p class="meta">Toutes les licences sont à toi.</p>'}
-      <p><span>Défis de maîtrise : <b>${masteryCount()} / ${this.builtins.length * MASTERY.length}</b></span> <small class="meta">${MASTERY.map((m) => `${m.icon} <span>${esc(m.label)}</span>`).join(' · ')}</small></p>
-      <div class="lvl-rewards meta"><span>Récompenses de niveau (garage) :</span><ul>${LEVEL_REWARDS.map(([lvl, cat, id]) => `<li class="${L.level >= lvl ? 'got' : ''}"><span>${L.level >= lvl ? '✓' : '🔒'}</span> <span>Niveau ${lvl} : ${esc(label(cat, id))}</span></li>`).join('')}</ul></div>`;
+      <p><span>Défis de maîtrise : <b>${masteryCount()} / ${this.builtins.length * MASTERY.length}</b></span> <small class="meta">${MASTERY.map((m) => `${m.icon} <span>${esc(m.label)}</span>`).join(' · ')}</small></p>`;
   },
 
   // Amis (E15, supabase/etape10-social.sql) : comptes seulement. Demandes reçues (accepter, refuser), envoyées (annuler), amis (retirer), ajout par pseudo.

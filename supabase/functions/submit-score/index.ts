@@ -5342,6 +5342,8 @@ var CAR = {
   wallScrape: 2,
   wallSpin: 0.14,
   wallSpinMax: 2.5,
+  stuckAfter: 0.35,
+  stuckPivot: 1.2,
   wallStun: 0.04,
   stunTraction: 0.3,
   stunGrip: 0.6,
@@ -9303,6 +9305,8 @@ var wallMethods = {
         }
       }
     }
+    if (touch && this.speed < 2.5) this.stuckT = Math.min(1, this.stuckT + DT);
+    else this.stuckT = Math.max(0, this.stuckT - 2 * DT);
     if (touch) {
       const k = Math.max(0, 1 - CAR.wallScrape * DT);
       v.x *= k;
@@ -9755,6 +9759,11 @@ var ribbonMethods = {
   },
   _ribStep(inp) {
     const R = this.rib, dt = DT, tile = R.tile, rib = R.rib;
+    if (this.excl.has(tile)) {
+      this._ribPlace(R);
+      this._ribDetach();
+      return;
+    }
     const F = frameWorld(tile, rib, R.u, this.F);
     const dU = 6e-3;
     const u0 = Math.max(0, R.u - dU), u1 = Math.min(1, R.u + dU);
@@ -9908,6 +9917,33 @@ var ribbonMethods = {
       this._ribDetach();
       return;
     }
+    this._ribPlace(R);
+    this._ribObstacles(R);
+  },
+  // Obstacles (piques, bumpers, marteaux...) sur un ruban (looping, mur, tube, vrille) : avant 0.9.48 ils n'agissaient que sur les routes
+  // posées au sol (_collide n'est jamais appelé en mode ruban) : la voiture les traversait. Le contact est calculé comme au sol (même
+  // fonction), puis le déplacement et la vitesse obtenus sont ramenés dans le repère du ruban (abscisse u, écart latéral dl, vitesses vs / vd).
+  // Un choc ne détache jamais la voiture du ruban (comme un mur) : seule la physique du ruban décide du décrochage.
+  _ribObstacles(R) {
+    if (!this.track.obstacles.length || this.hazardGrace > 0) return;
+    const p = this.pos, v = this.vel;
+    const x0 = p.x, y0 = p.y, z0 = p.z;
+    this._obstacles();
+    if (this.ev.sink) return;
+    const dx = p.x - x0, dy = p.y - y0, dz = p.z - z0;
+    if (dx === 0 && dy === 0 && dz === 0 && this.ev.shock === 0) {
+      this.grounded = true;
+      return;
+    }
+    const F = this._cross(R, frameWorld(R.tile, R.rib, R.u, this.F));
+    const B2 = this._basis(R, F);
+    R.vs = v.x * B2.e1x + v.y * B2.e1y + v.z * B2.e1z;
+    R.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
+    R.u = clamp(R.u + R.dir * (dx * B2.e1x + dy * B2.e1y + dz * B2.e1z) / F.ds, 0, 1);
+    if (!F.wrap) {
+      const lim = (F.hw || ROAD_HALF) - 0.2;
+      R.dl = clamp(R.dl + R.dir * (dx * B2.e2x + dy * B2.e2y + dz * B2.e2z), -lim, lim);
+    } else R.dl += R.dir * (dx * B2.e2x + dy * B2.e2y + dz * B2.e2z);
     this._ribPlace(R);
   },
   // Place la voiture sur le ruban (position, vitesse, orientation monde).
@@ -10212,6 +10248,7 @@ var CarPhysics = class {
     this.bounceCD = 0;
     this.driftCharge = 0;
     this.stunT = 0;
+    this.stuckT = 0;
     this.pitch = 0;
     this.pitchRate = 0;
     this.landQ = "";
@@ -10257,6 +10294,7 @@ var CarPhysics = class {
     this.prev.y = s.h;
     this.grounded = true;
     this._setGround(s, false);
+    this.glassSafe = null;
     this._updateFwd();
   }
   get speed() {
@@ -10287,6 +10325,7 @@ var CarPhysics = class {
     this.surfType = s.type;
     this.surfMod = s.mod || "";
     this.surfTile = s.tile;
+    if (triggers && this.glassSafe && s.tile !== this.glassSafe) this.glassSafe = null;
     this.surfPct = s.tile ? tileParam({
       s: s.mod || "",
       p: s.p
@@ -10370,7 +10409,7 @@ var CarPhysics = class {
   // pièce, en secondes). Quand il est écoulé, la dalle est brisée : elle n'a plus aucune collision (la voiture tombe) jusqu'au
   // prochain (re)départ, qui la restaure. Renvoie true à l'instant où la dalle cède.
   _glassCheck(on, tile, dt) {
-    if (!on || !tile || this.graceT > 0 || this.broken.has(tile)) return false;
+    if (!on || !tile || this.graceT > 0 || this.broken.has(tile) || tile === this.glassSafe) return false;
     const t = (this.glassTime.get(tile) || 0) + dt;
     this.glassTime.set(tile, t);
     if (t < glassSeconds(this._pct(tile))) return false;
@@ -10409,6 +10448,7 @@ var CarPhysics = class {
       BK.vx = vx;
       BK.vy = vy * lateralDamp;
       BK.w = vx * dtan(delta) / L4 * clamp(grip, 0.2, 1);
+      if (this.stuckT > CAR.stuckAfter) BK.w = this.steer * CAR.stuckPivot * clamp((this.stuckT - CAR.stuckAfter) * 4, 0, 1);
       return BK;
     }
     const den = Math.max(Math.abs(vx), 6);
@@ -10943,6 +10983,10 @@ var L3 = {
   lx: 0,
   lz: 0
 };
+function respawnGs(tile, phys) {
+  if (tile.v) return -1;
+  return phys.rib ? phys.gSign : 1;
+}
 var S3 = {};
 var RaceLogic = class {
   constructor(track, opts2 = {}) {
@@ -11039,7 +11083,8 @@ var RaceLogic = class {
         x: g.x,
         y: g.y,
         z: g.z,
-        yaw: g.yaw
+        yaw: g.yaw,
+        gs: g.gs || 1
       };
     }
     const c = tileCenter(tile);
@@ -11047,7 +11092,8 @@ var RaceLogic = class {
       x: c.x,
       y: baseY(tile),
       z: c.z,
-      yaw: phys.yaw
+      yaw: phys.yaw,
+      gs: tile.v ? -1 : 1
     };
   }
   get time() {
@@ -11064,6 +11110,7 @@ var RaceLogic = class {
         y: p.y,
         z: p.z,
         yaw: phys.yaw,
+        gs: phys.gSign,
         steps: this.steps
       };
     }
@@ -11097,7 +11144,6 @@ var RaceLogic = class {
           ...rr,
           vehicle: phys.vehicle,
           grav: phys.gravMul,
-          gs: phys.gSign,
           snap
         };
         event = {
@@ -11133,7 +11179,7 @@ var RaceLogic = class {
           yaw,
           vehicle: phys.vehicle,
           grav: phys.gravMul,
-          gs: phys.gSign,
+          gs: respawnGs(tile, phys),
           snap: this._snap()
         };
         event = {
@@ -11156,7 +11202,7 @@ var RaceLogic = class {
               yaw: phys.yaw,
               vehicle: phys.vehicle,
               grav: phys.gravMul,
-              gs: phys.gSign,
+              gs: respawnGs(tile, phys),
               snap: this._snap()
             };
             event = {
@@ -11203,6 +11249,7 @@ function placeAtRespawn(phys, r) {
   phys.place(r.x, r.y, r.z, r.yaw, r.gs || 1);
   phys.vehicle = r.vehicle || "car";
   phys.gravMul = r.grav || 1;
+  phys.glassSafe = phys.surfMod === "glass" && phys.surfTile ? phys.surfTile : null;
 }
 var Simulation = class {
   // partial : test depuis le curseur (pas besoin des checkpoints). offTrackLimit : temps hors piste (s) avant la réapparition automatique.
@@ -11745,7 +11792,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/version.js
-var PHYS_VER = 28;
+var PHYS_VER = 31;
 
 // js/ghostFormat.js
 var GHOST_EVERY = 4;
@@ -12489,9 +12536,41 @@ function verifyRun({ trackKey, code, inputs, time, physVer, withGhost = false })
 var MAX_BODY_CHARS = MAX_INPUTS_CHARS + MAX_TRACK_CODE_CHARS + 4096;
 var RATE_LIMIT = {
   max: 8,
-  windowMs: 6e4
+  windowMs: 6e4,
+  globalMax: 600
 };
 var MAX_GHOST_CHARS = 8e5;
+async function readBodyLimited(req, maxBytes) {
+  if (!req.body) {
+    const t = await req.text();
+    return new TextEncoder().encode(t).length > maxBytes ? null : t;
+  }
+  const reader = req.body.getReader();
+  const chunks = [];
+  let total = 0;
+  for (; ; ) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      try {
+        await reader.cancel();
+      } catch {
+      }
+      return null;
+    }
+    chunks.push(value);
+  }
+  const all = new Uint8Array(total);
+  let o = 0;
+  for (const c of chunks) {
+    all.set(c, o);
+    o += c.byteLength;
+  }
+  return new TextDecoder().decode(all);
+}
+var TRACK_KEY_RE = /^[A-Za-z0-9_~.:-]{1,80}$/;
+var BASE64_RE = /^[A-Za-z0-9+/]*={0,2}$/;
 function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, allowedOrigin = "*", now = Date.now, rateLimit = RATE_LIMIT, log = console.error }) {
   const cors = {
     "Access-Control-Allow-Origin": allowedOrigin,
@@ -12542,6 +12621,30 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
     }
     return 0;
   }
+  let lastWarn = 0;
+  async function sharedWait(uid) {
+    try {
+      const r = await db("rpc/submit_rate_check", {
+        method: "POST",
+        body: JSON.stringify({
+          p: uid,
+          max_hits: rateLimit.max,
+          window_s: Math.round(rateLimit.windowMs / 1e3),
+          global_max: rateLimit.globalMax ?? RATE_LIMIT.globalMax
+        })
+      });
+      if (!r.ok) throw new Error("rpc " + r.status);
+      const n = await r.json();
+      return Number.isInteger(n) && n > 0 ? n : 0;
+    } catch (e) {
+      const t = now();
+      if (t - lastWarn > 6e4) {
+        lastWarn = t;
+        log("submit-score : limite partag\xE9e indisponible (\xE9tape SQL 14 ?) :", e && e.message);
+      }
+      return 0;
+    }
+  }
   return async function handle(req) {
     if (req.method === "OPTIONS") return new Response("ok", {
       headers: cors
@@ -12571,14 +12674,15 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
       if (!/^[0-9a-f-]{36}$/.test(uid)) return json(401, {
         error: "Non connect\xE9."
       });
-      const wait = tooFast(uid);
+      let wait = tooFast(uid);
+      if (!wait) wait = await sharedWait(uid);
       if (wait) return json(429, {
         error: `Trop de courses envoy\xE9es : r\xE9essaie dans ${wait} s.`
       }, {
         "Retry-After": String(wait)
       });
-      const text = await req.text();
-      if (text.length > MAX_BODY_CHARS) return json(413, {
+      const text = await readBodyLimited(req, MAX_BODY_CHARS);
+      if (text === null) return json(413, {
         error: "Requ\xEAte trop volumineuse."
       });
       let body;
@@ -12590,7 +12694,7 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
         });
       }
       const { trackKey, code = "", inputs, time, physVer } = body ?? {};
-      if (typeof trackKey !== "string" || trackKey.length > 80 || typeof inputs !== "string" || typeof time !== "number" || !Number.isFinite(time) || !Number.isInteger(physVer)) {
+      if (typeof trackKey !== "string" || !TRACK_KEY_RE.test(trackKey) || typeof inputs !== "string" || !inputs || inputs.length > MAX_INPUTS_CHARS || !BASE64_RE.test(inputs) || typeof time !== "number" || !Number.isFinite(time) || time <= 0 || time > MAX_RUN_SECONDS || !Number.isInteger(physVer) || physVer < 0 || physVer > 1e5) {
         return json(400, {
           error: "Requ\xEAte invalide."
         });

@@ -27,7 +27,7 @@ export const historyMethods = {
       gn: this.track.groupNames(),
       lg: this.track.lg,
       lp: this.track.laps || 1,
-      pr: { name: this.track.name, desc: this.track.desc, decor: this.track.decor, ...this.track.rulesState() },
+      pr: { name: this.track.name, desc: this.track.desc, decor: this.track.decor, ambiance: this.track.ambiance, scripts: this.track.scripts, ...this.track.rulesState() },      // (ambiance et scripts : sans eux, annuler / rétablir les remettait à zéro)
     });
   },
 

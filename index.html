@@ -222,20 +222,71 @@
     <div class="menu-left">
       <h1 class="logo">COPY<span>TRACK</span></h1>
       <p class="tagline">Course contre-la-montre low-poly</p>
-      <nav class="menu-buttons">
-        <button data-action="quick" class="btn big primary" title="Le prochain circuit de la carrière sans médaille, sinon le défi du jour">Course rapide <small>un clic, c’est parti</small></button>
-        <button data-action="play" class="btn big">Carrière</button>
-        <button data-action="daily" class="btn big">Défi du jour <small id="daily-best"></small></button>
-        <button data-action="academy" class="btn big">Académie <small>6 leçons guidées</small></button>
-        <button data-action="community" class="btn big">Communauté <small>circuits en ligne</small></button>
-        <button data-action="competition" class="btn big">Compétition <small>duels entre amis, tournois</small></button>
-        <button data-action="editor" class="btn big">Éditeur de circuits</button>
-        <button data-action="modes" class="btn big">Modes <small>règles, défis et paquets</small></button>
-        <button data-action="garage" class="btn big">Garage <small>personnalisation</small></button>
-        <button data-action="mytracks" class="btn big">Mes circuits</button>
-        <button data-action="import" class="btn big">Importer un code</button>
-        <button data-action="profile" class="btn big">Profil <small>compte, sauvegardes, options, commandes</small></button>
+      <!-- Six grandes catégories ; chacune ouvre un panneau d'actions (js/app/wiring.js, _menuSub) avec « ← Retour » et Échap. Les profils, la progression et les paramètres
+           mènent aux onglets de l'écran « profile » (data-action="tab-…" : js/app/profile.js, HUBS). -->
+      <nav class="menu-buttons" id="menu-tiles" aria-label="Menu principal">
+        <button data-action="sub-play" class="btn big primary" aria-haspopup="true" aria-expanded="false" aria-controls="menu-sub-play">Jouer <small>carrière, défi du jour, rapide</small></button>
+        <button data-action="sub-create" class="btn big" aria-haspopup="true" aria-expanded="false" aria-controls="menu-sub-create">Créer <small>éditeur, mes circuits</small></button>
+        <button data-action="sub-multi" class="btn big" aria-haspopup="true" aria-expanded="false" aria-controls="menu-sub-multi">Multijoueur <small>salons, compétition</small></button>
+        <button data-action="sub-progress" class="btn big" aria-haspopup="true" aria-expanded="false" aria-controls="menu-sub-progress">Progression <small>records, médailles</small></button>
+        <button data-action="sub-profile" class="btn big" aria-haspopup="true" aria-expanded="false" aria-controls="menu-sub-profile">Profil <small>compte, garage, sauvegardes</small></button>
+        <button data-action="sub-settings" class="btn big" aria-haspopup="true" aria-expanded="false" aria-controls="menu-sub-settings">Paramètres <small>son, image, commandes</small></button>
       </nav>
+      <div class="menu-panel hidden" id="menu-sub-play" role="group" aria-labelledby="mp-play">
+        <header class="menu-panel-head"><button class="btn" data-action="sub-back">← Retour</button><h2 id="mp-play">Jouer</h2></header>
+        <div class="menu-panel-grid">
+          <button data-action="quick" class="btn menu-entry primary" title="Le prochain circuit de la carrière sans médaille, sinon le défi du jour"><b>Course rapide</b><small>un clic, c’est parti</small></button>
+          <button data-action="play" class="btn menu-entry"><b>Carrière</b><small>circuits officiels, chapitres, médailles</small></button>
+          <button data-action="daily" class="btn menu-entry"><b>Défi du jour</b><small id="daily-best"></small></button>
+          <button data-action="community" class="btn menu-entry"><b>Circuits de la communauté</b><small>les circuits publiés par les joueurs</small></button>
+          <button data-action="modes" class="btn menu-entry"><b>Modes</b><small>règles, défis et paquets</small></button>
+          <button data-action="academy" class="btn menu-entry"><b>Académie</b><small>6 leçons guidées</small></button>
+        </div>
+      </div>
+      <div class="menu-panel hidden" id="menu-sub-create" role="group" aria-labelledby="mp-create">
+        <header class="menu-panel-head"><button class="btn" data-action="sub-back">← Retour</button><h2 id="mp-create">Créer</h2></header>
+        <div class="menu-panel-grid">
+          <button data-action="editor" class="btn menu-entry primary"><b>Éditeur de circuits</b><small>poser, tester et vérifier un circuit</small></button>
+          <button data-action="mytracks" class="btn menu-entry"><b>Mes circuits</b><small>jouer, modifier, partager et publier</small></button>
+          <button data-action="import" class="btn menu-entry"><b>Importer un code</b><small>un circuit reçu d’un ami</small></button>
+        </div>
+      </div>
+      <div class="menu-panel hidden" id="menu-sub-multi" role="group" aria-labelledby="mp-multi">
+        <header class="menu-panel-head"><button class="btn" data-action="sub-back">← Retour</button><h2 id="mp-multi">Multijoueur</h2></header>
+        <div class="menu-panel-grid">
+          <button data-action="multi" class="btn menu-entry primary" title="Courir en direct avec d'autres joueurs, sur un circuit de la communauté ou le tien"><b>Salons</b><small>rejoindre ou créer une salle, championnats</small></button>
+          <button data-action="competition" class="btn menu-entry"><b>Compétition</b><small>duels entre amis, tournois</small></button>
+          <button data-action="tab-friends" class="btn menu-entry"><b>Amis</b><small>demandes et liste d’amis (compte)</small></button>
+        </div>
+      </div>
+      <div class="menu-panel hidden" id="menu-sub-progress" role="group" aria-labelledby="mp-progress">
+        <header class="menu-panel-head"><button class="btn" data-action="sub-back">← Retour</button><h2 id="mp-progress">Progression</h2></header>
+        <div class="menu-panel-grid">
+          <button data-action="tab-records" class="btn menu-entry primary"><b>Records et médailles</b><small>tes temps, circuit par circuit</small></button>
+          <button data-action="tab-level" class="btn menu-entry"><b>Niveau et licences</b><small>expérience, licences, défis de maîtrise</small></button>
+          <button data-action="tab-stats" class="btn menu-entry"><b>Statistiques</b><small>courses, pièces, séries</small></button>
+          <button data-action="tab-unlocks" class="btn menu-entry"><b>Déblocages</b><small>chapitres, titres, récompenses</small></button>
+        </div>
+      </div>
+      <div class="menu-panel hidden" id="menu-sub-profile" role="group" aria-labelledby="mp-profile">
+        <header class="menu-panel-head"><button class="btn" data-action="sub-back">← Retour</button><h2 id="mp-profile">Profil</h2></header>
+        <div class="menu-panel-grid">
+          <button data-action="tab-account" class="btn menu-entry primary"><b>Compte et pseudonyme</b><small>invité ou compte, synchronisation</small></button>
+          <button data-action="garage" class="btn menu-entry"><b>Garage</b><small>cosmétiques de la voiture</small></button>
+          <button data-action="tab-saves" class="btn menu-entry"><b>Sauvegardes</b><small>code joueur, import, export</small></button>
+        </div>
+      </div>
+      <div class="menu-panel hidden" id="menu-sub-settings" role="group" aria-labelledby="mp-settings">
+        <header class="menu-panel-head"><button class="btn" data-action="sub-back">← Retour</button><h2 id="mp-settings">Paramètres</h2></header>
+        <div class="menu-panel-grid">
+          <button data-action="tab-audio" class="btn menu-entry"><b>Audio</b><small>effets, musique, langue</small></button>
+          <button data-action="tab-gfx" class="btn menu-entry"><b>Graphismes</b><small>qualité, champ de vision, plein écran</small></button>
+          <button data-action="tab-access" class="btn menu-entry"><b>Accessibilité</b><small>animations, daltonisme, aides à la conduite</small></button>
+          <button data-action="tab-controls" class="btn menu-entry"><b>Commandes</b><small>clavier, manette, tactile</small></button>
+          <button data-action="tab-game" class="btn menu-entry"><b>Jeu</b><small>fantômes, classements, tutoriel</small></button>
+          <button data-action="tab-ui" class="btn menu-entry"><b>Interface</b><small>thème, HUD, caméras</small></button>
+        </div>
+      </div>
     </div>
     <footer class="menu-foot" id="menu-foot">Copytrack · un jeu de course original · propulsé par three.js</footer>
   </section>
@@ -293,7 +344,6 @@
     <header class="screen-head">
       <button class="btn" data-action="back">← Retour</button>
       <h2>Communauté</h2>
-      <button class="btn primary" data-action="multi" title="Courir en direct avec d'autres joueurs, sur un circuit de la communauté ou le tien">👥 Multijoueur</button>
       <div class="tabs comm-tabs" id="comm-tabs">
         <button class="tab on" data-sort="recent">Récents</button>
         <button class="tab" data-sort="popular">Populaires</button>
@@ -315,25 +365,32 @@
   </section>
 
   <!-- Profil : compte, sauvegardes, options, commandes -->
-  <section id="profile" class="screen hidden">
+  <section id="profile" class="screen hidden" aria-labelledby="prof-heading">
+    <!-- Écran à onglets partagé par trois entrées de l'accueil : Profil, Progression, Paramètres (js/app/profile.js, HUBS : titre et onglets selon l'entrée) -->
     <header class="screen-head">
       <button class="btn" data-action="back">← Retour</button>
-      <h2>Profil</h2>
-      <div class="tabs" id="prof-tabs" role="tablist" aria-label="Sections du profil">
-        <button class="tab on" role="tab" data-ptab="account">Compte</button>
-        <button class="tab" role="tab" data-ptab="saves">Sauvegardes</button>
-        <button class="tab" role="tab" data-ptab="options">Options</button>
-        <button class="tab" role="tab" data-ptab="controls">Commandes</button>
-      </div>
+      <h2 id="prof-heading">Profil</h2>
+      <div class="tabs" id="prof-tabs" role="tablist" aria-label="Sections"></div>
     </header>
-    <div class="prof-panel" data-ppanel="account"><div class="panel form" id="profile-body"></div></div>
-    <div class="prof-panel hidden" data-ppanel="saves"><div class="panel form" id="saves-body"></div></div>
-    <div class="prof-panel hidden" data-ppanel="options">
+    <div class="prof-panel" data-ppanel="account">
       <div class="panel form">
+      <label><span>Nom du pilote</span><input type="text" id="opt-name" maxlength="20"></label>
+      </div>
+      <div class="panel form" id="profile-body"></div>
+    </div>
+    <div class="prof-panel hidden" data-ppanel="friends"><div class="panel form" id="friends-body"></div></div>
+    <div class="prof-panel hidden" data-ppanel="saves"><div class="panel form" id="saves-body"></div></div>
+    <div class="prof-panel hidden" data-ppanel="level"><div class="panel form" id="prog-level"></div></div>
+    <div class="prof-panel hidden" data-ppanel="records"><div class="panel form" id="prog-records"></div></div>
+    <div class="prof-panel hidden" data-ppanel="stats"><div class="panel form" id="prog-stats"></div></div>
+    <div class="prof-panel hidden" data-ppanel="unlocks"><div class="panel form" id="prog-unlocks"></div></div>
+    <div class="prof-panel hidden" data-ppanel="audio"><div class="panel form">
       <label><span>Langue</span><select id="opt-lang" data-i18n="off"></select></label>
       <h3 class="opt-h">Son</h3>
       <label><span>Volume des effets</span><input type="range" id="opt-volume" min="0" max="1" step="0.05"></label>
       <label><span>Volume de la musique</span><input type="range" id="opt-music" min="0" max="1" step="0.05"></label>
+    </div></div>
+    <div class="prof-panel hidden" data-ppanel="gfx"><div class="panel form">
       <h3 class="opt-h">Image</h3>
       <label><span>Qualité graphique</span>
         <select id="opt-quality">
@@ -351,21 +408,34 @@
       <label><span>Afficher les images par seconde</span><input type="checkbox" id="opt-fps"></label>
       <label><span>Champ de vision <output id="opt-fov-v"></output></span><input type="range" id="opt-fov" min="-10" max="20" step="1"></label>
       <label><span>Effet de vitesse (au-delà de 220 km/h)</span><input type="checkbox" id="opt-speedfx"></label>
-      <h3 class="opt-h">Accessibilité</h3>
+      <div class="opt-row"><span>Plein écran</span><button class="btn" data-action="fullscreen">Activer</button></div>
+    </div></div>
+    <div class="prof-panel hidden" data-ppanel="access"><div class="panel form">
+      <h3 class="opt-h">Confort visuel</h3>
       <label title="Lignes de vitesse graduées, coup de champ de vision au turbo, tassement à la réception, aspiration derrière une voiture, vibrations de manette graduées, bruit de croisement. Aucun effet sur la course."><span>Sensations de course <output id="opt-feel-v"></output></span><input type="range" id="opt-feel" min="0" max="1.5" step="0.25"></label>
       <label><span>Tremblements de caméra <output id="opt-shake-v"></output></span><input type="range" id="opt-shake" min="0" max="1" step="0.25"></label>
       <label><span>Couleurs adaptées (daltonisme)</span><input type="checkbox" id="opt-cb"></label>
       <label title="Coupe les transitions des écrans et des fenêtres, les tremblements et les effets de caméra. « Système » suit le réglage de l'appareil."><span>Réduire les animations</span><select id="opt-motion"><option value="auto">Système</option><option value="on">Oui</option><option value="off">Non</option></select></label>
       <label><span>Taille de l'interface <output id="opt-ui-v"></output></span><input type="range" id="opt-ui" min="0.85" max="1.3" step="0.05"></label>
-      <div class="opt-row"><span>Revoir le tutoriel</span><button class="btn" data-action="tutorial">Tutoriel</button></div>
-      <h3 class="opt-h">Jeu</h3>
+      <h4 class="opt-h">Aides à la conduite <small>(catégorie « assisté », sans médailles)</small></h4>
+      <label title="Les gaz restent ouverts tant que tu ne freines pas"><span>Accélération automatique</span><input type="checkbox" id="opt-aid-autoGas"></label>
+      <label title="Freine quand la ligne de course demande de ralentir (circuits de la carrière et défi du jour)"><span>Freinage assisté</span><input type="checkbox" id="opt-aid-brakeAssist"></label>
+      <label title="Guide le volant vers la ligne de course (circuits de la carrière et défi du jour)"><span>Direction assistée</span><input type="checkbox" id="opt-aid-steerAssist"></label>
+      <label title="Freiner en virage ne fait plus décrocher l'arrière, et le volant se modère quand la voiture glisse"><span>Anti-tête-à-queue</span><input type="checkbox" id="opt-aid-antiSpin"></label>
+      <label title="Lisse les coups de volant du clavier et des boutons"><span>Volant adouci</span><input type="checkbox" id="opt-aid-smoothSteer"></label>
+    </div></div>
+    <div class="prof-panel hidden" data-ppanel="game"><div class="panel form">
+      <h3 class="opt-h">Courses</h3>
       <label><span>Afficher le fantôme du record</span><input type="checkbox" id="opt-ghost"></label>
       <label><span>Fantôme de la médaille d'or (tant qu'elle n'est pas gagnée)</span><input type="checkbox" id="opt-ghostgold"></label>
       <label><span>Fantôme importé (code d'un ami)</span><input type="checkbox" id="opt-ghostimp"></label>
       <label><span>Envoyer mes records aux classements en ligne</span><input type="checkbox" id="opt-onlinescores"></label>
       <label title="L'éditeur n'affiche que l'essentiel (droite et pentes, virages, départ, arrivée, checkpoint) pour commencer."><span>Éditeur guidé (l'essentiel seulement)</span><input type="checkbox" id="opt-editor-guided"></label>
       <label title="Temps, abandons et essais par circuit, sans nom ni compte : ils servent à régler la difficulté et les médailles."><span>Statistiques de jeu anonymes (aide à équilibrer les circuits)</span><input type="checkbox" id="opt-telemetry"></label>
-      <h3 class="opt-h">Personnalisation</h3>
+      <div class="opt-row"><span>Revoir le tutoriel</span><button class="btn" data-action="tutorial">Tutoriel</button></div>
+    </div></div>
+    <div class="prof-panel hidden" data-ppanel="ui"><div class="panel form">
+      <h3 class="opt-h">Apparence</h3>
       <label><span>Thème de l'interface</span><select id="opt-ui-theme"></select></label>
       <label><span>Couleur d'accent</span><span class="opt-pick"><input type="color" id="opt-ui-accent"><input type="color" id="opt-ui-accent2" title="Deuxième couleur"><button class="btn small" type="button" id="opt-ui-accent-reset">Défaut</button></span></label>
       <label><span>Opacité des panneaux <output id="opt-ui-panel-v"></output></span><input type="range" id="opt-ui-panel" min="0.3" max="1" step="0.05"></label>
@@ -383,24 +453,17 @@
       <div class="opt-row"><span>Place des éléments du HUD</span><button class="btn" type="button" data-action="hud-editor">Disposer le HUD</button></div>
       <div class="opt-row"><span>Caméras de course</span><button class="btn" type="button" data-action="cameras">Mes caméras</button></div>
       <div class="opt-row"><span>Interface par défaut</span><button class="btn subtle" type="button" data-action="ui-reset">Réinitialiser</button></div>
-      <label><span>Nom du pilote</span><input type="text" id="opt-name" maxlength="20"></label>
+    </div></div>
+    <div class="prof-panel hidden" data-ppanel="controls">
+      <div class="panel form">
+      <h3 class="opt-h">Tactile et manette</h3>
       <label><span>Commandes tactiles</span>
         <select id="opt-touch"><option value="buttons">Boutons ◀ ▶</option><option value="drag">Glisser le pouce à gauche</option></select>
       </label>
       <label><span>Vibrations (manette / téléphone)</span><input type="checkbox" id="opt-haptics"></label>
       <label title="Manette et pouce : une réponse progressive rend les petits coups de volant plus fins (le clavier ne change pas)"><span>Réponse du volant <output id="opt-steercurve-v"></output></span><input type="range" id="opt-steercurve" min="1" max="2" step="0.25"></label>
-      <h4 class="opt-h">Aides à la conduite <small>(catégorie « assisté », sans médailles)</small></h4>
-      <label title="Les gaz restent ouverts tant que tu ne freines pas"><span>Accélération automatique</span><input type="checkbox" id="opt-aid-autoGas"></label>
-      <label title="Freine quand la ligne de course demande de ralentir (circuits de la carrière et défi du jour)"><span>Freinage assisté</span><input type="checkbox" id="opt-aid-brakeAssist"></label>
-      <label title="Guide le volant vers la ligne de course (circuits de la carrière et défi du jour)"><span>Direction assistée</span><input type="checkbox" id="opt-aid-steerAssist"></label>
-      <label title="Freiner en virage ne fait plus décrocher l'arrière, et le volant se modère quand la voiture glisse"><span>Anti-tête-à-queue</span><input type="checkbox" id="opt-aid-antiSpin"></label>
-      <label title="Lisse les coups de volant du clavier et des boutons"><span>Volant adouci</span><input type="checkbox" id="opt-aid-smoothSteer"></label>
-      <div class="opt-row"><span>Plein écran</span><button class="btn" data-action="fullscreen">Activer</button></div>
-      <div class="opt-row"><span>Touches du clavier et de la manette</span><button class="btn primary" data-action="controls">Personnaliser les commandes</button></div>
-      <button class="btn subtle" data-action="reset-records">Effacer tous les records</button>
       </div>
-    </div>
-    <div class="prof-panel hidden" data-ppanel="controls">
+      <h3 class="opt-h prof-sub">Touches du clavier et de la manette</h3>
       <div class="tabs" id="bind-tabs">
         <button class="tab on" data-tab="race">Course</button>
         <button class="tab" data-tab="editor">Éditeur</button>
@@ -535,7 +598,12 @@
       <button class="btn" data-sel="copy" title="Copier (Ctrl+C)">Copier</button>
       <button class="btn" data-sel="cut" title="Couper (Ctrl+X) puis déplacer">Déplacer</button>
       <button class="btn" data-sel="paste" title="Coller (Ctrl+V)">Coller</button>
-      <button class="btn icon" data-sel="rot" title="Pivoter le collage (R)">⟳</button>
+      <button class="btn" data-sel="dup" title="Dupliquer : le double est à poser ailleurs">Dupliquer</button>
+      <button class="btn icon" data-sel="rot" title="Pivoter la sélection ou le collage (R)">⟳</button>
+      <button class="btn icon" data-sel="mv-l" title="Déplacer la sélection d'une case vers la gauche" aria-label="Déplacer à gauche">←</button>
+      <button class="btn icon" data-sel="mv-u" title="Déplacer la sélection d'une case vers le haut de l'écran (nord)" aria-label="Déplacer au nord">↑</button>
+      <button class="btn icon" data-sel="mv-d" title="Déplacer la sélection d'une case vers le bas de l'écran (sud)" aria-label="Déplacer au sud">↓</button>
+      <button class="btn icon" data-sel="mv-r" title="Déplacer la sélection d'une case vers la droite" aria-label="Déplacer à droite">→</button>
       <button class="btn icon" data-sel="up" title="Monter la sélection (E)">▲</button>
       <button class="btn icon" data-sel="down" title="Descendre la sélection (C)">▼</button>
       <button class="btn" data-sel="del" title="Supprimer (Suppr)">Supprimer</button>

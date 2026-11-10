@@ -9,7 +9,7 @@ import { thumbnail } from '../editorTools.js';
 import { online } from '../online.js';
 import { encodeGhost, decodeGhost, ghostLink, GHOST_LINK_MAX } from '../replay.js';
 import { estimateDifficulty, starsText, STAR_LABELS } from '../difficulty.js';
-import { getRecord, saveMyTrack, newId, formatTime, setImportedGhost } from '../storage.js';
+import { getRecord, medalTime, saveMyTrack, newId, formatTime, setImportedGhost } from '../storage.js';
 import { describeUser, describeCommunity } from '../trackDescriptor.js';
 import { renderWorldBoard } from '../ui/leaderboardPanel.js';
 import { trackIdOf } from '../telemetry.js';
@@ -248,7 +248,7 @@ export const communityMethods = {
     const key = track ? track.userKey : '';
     const rec = key ? getRecord(key) : null;
     const medals = track ? track.derivedMedals : null;
-    const medal = rec && medals ? medalFor(rec.time, medals) : null;
+    const medal = rec && medals ? medalFor(medalTime(rec), medals) : null;
     const liked = likes.has(row.id);
     const est = track ? estimateDifficulty(track) : null;
     const card = document.createElement('div');

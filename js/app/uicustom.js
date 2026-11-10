@@ -26,7 +26,7 @@ export const uiCustomMethods = {
     b.dataset.hudProfile = prof;
   },
 
-  // Profil du HUD et réglages du HUD d'entraînement (Options › Personnalisation, et la puce « Entraînement » de la fiche du circuit).
+  // Profil du HUD et réglages du HUD d'entraînement (Paramètres › Interface, et la puce « Entraînement » de la fiche du circuit).
   setHudProfile(p) {
     this.settings.hudProfile = sanitizeHudProfile(p);
     this.applyUiPrefs(); this.saveSettings();

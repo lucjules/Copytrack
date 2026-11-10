@@ -45,8 +45,11 @@ function mergeRecord(a, b) {
   if (!b) return a;
   // Une physique plus récente remplace l'ancienne (les temps ne sont plus comparables) ; sinon le meilleur temps.
   const pa = num(a.pv), pb = num(b.pv);
-  if (pa !== pb) return pb > pa ? b : a;
-  return num(b.time) < num(a.time) ? b : a;
+  const pick = pa !== pb ? (pb > pa ? b : a) : (num(b.time) < num(a.time) ? b : a);
+  // Le meilleur temps de toutes les physiques (bt, voir storage.medalTime) ne se perd jamais : médailles et déblocages en dépendent.
+  const best = (r) => (num(r.bt) > 0 ? Math.min(num(r.bt), num(r.time) || Infinity) : num(r.time) || Infinity);
+  const bt = Math.min(best(a), best(b));
+  return Number.isFinite(bt) && bt < num(pick.time) - 1e-9 ? { ...pick, bt } : pick;
 }
 
 function mergeTracks(a, b, gone) {
@@ -104,7 +107,7 @@ export function mergeSaves(local, remote) {
   // record, meilleur, l'emporterait sur le nouveau puis serait supprimé).
   const resetAt = Math.max(num(a.recReset), num(b.recReset));
   if (resetAt) {
-    const clean = (o) => Object.fromEntries(Object.entries(o).filter(([k, v]) => !(k.startsWith('rec3.') && num(obj(v).date) <= resetAt))
+    const clean = (o) => Object.fromEntries(Object.entries(o).filter(([k, v]) => !(k.startsWith('rec3.') && num(obj(v).date) <= resetAt && num(obj(v).rt) <= resetAt))      // (rt : record restauré APRÈS la remise à zéro, voir profile.applySave)
       .map(([k, v]) => [k, k.startsWith('runs.') && Array.isArray(v) ? v.filter((r) => num(r && r.date) > resetAt) : v]));
     a = clean(a); b = clean(b);
   }

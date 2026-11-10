@@ -6,15 +6,43 @@
 // Défenses, dans l'ordre : méthode, configuration, taille de la requête (avant de la lire), identité du pilote (jeton Supabase), cadence par pilote
 // (le rejeu coûte du processeur), forme des données, rejeu de la course, profil du pilote. Les erreurs internes ne sont jamais renvoyées telles quelles.
 import { verifyRun } from '../../../js/verify.js';
-import { MAX_TRACK_CODE_CHARS, MAX_INPUTS_CHARS } from '../../../js/constants.js';
+import { MAX_TRACK_CODE_CHARS, MAX_INPUTS_CHARS, MAX_RUN_SECONDS } from '../../../js/constants.js';
 
 // Taille maximale d'une requête : les commandes + le code d'un circuit de joueur + le reste du JSON.
 export const MAX_BODY_CHARS = MAX_INPUTS_CHARS + MAX_TRACK_CODE_CHARS + 4096;
-// Cadence : au plus `max` courses soumises par pilote et par fenêtre (chaque soumission rejoue toute la course). La mémoire est celle de l'instance de la
-// fonction : c'est un frein contre les rafales, pas un quota exact (les instances sont indépendantes).
-export const RATE_LIMIT = { max: 8, windowMs: 60_000 };
+// Cadence : au plus `max` courses soumises par pilote et par fenêtre (chaque soumission rejoue toute la course). DEUX niveaux :
+//  - en base (supabase/etape14-securite.sql, submit_rate_check) : partagé entre TOUTES les instances de la fonction, atomique : c'est la vraie limite ;
+//  - en mémoire de l'instance : un frein de première ligne, sans aller-retour réseau, qui protège aussi quand la base ne répond pas ou que l'étape 14 n'est
+//    pas installée. Seule, la mémoire ne suffit pas (chaque instance a la sienne : une rafale répartie sur plusieurs instances la contourne).
+export const RATE_LIMIT = { max: 8, windowMs: 60_000, globalMax: 600 };      // globalMax : rejeux par fenêtre, tous pilotes confondus (en base)
 // Taille maximale d'un fantôme enregistré (base64) : 60 000 poses de 28 octets = 2,2 Mo ; une vraie course en fait 100 Ko.
 export const MAX_GHOST_CHARS = 800_000;
+
+
+// Lecture PROGRESSIVE du corps de la requête avec une limite stricte en octets : la lecture s'arrête (et le flux est annulé) dès que la limite est dépassée,
+// sans jamais tenir le corps entier en mémoire. L'en-tête Content-Length n'est qu'une indication (absent en transfert fragmenté, ou mensonger).
+// Renvoie le texte, ou null si le corps dépasse `maxBytes`.
+export async function readBodyLimited(req, maxBytes) {
+  if (!req.body) { const t = await req.text(); return new TextEncoder().encode(t).length > maxBytes ? null : t; }
+  const reader = req.body.getReader();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) { try { await reader.cancel(); } catch { /* flux déjà fermé */ } return null; }
+    chunks.push(value);
+  }
+  const all = new Uint8Array(total);
+  let o = 0;
+  for (const c of chunks) { all.set(c, o); o += c.byteLength; }
+  return new TextDecoder().decode(all);
+}
+
+// Formes acceptées (tout le reste est refusé avant le moindre calcul) : clé de circuit, commandes enregistrées (base64), version de physique.
+const TRACK_KEY_RE = /^[A-Za-z0-9_~.:-]{1,80}$/;
+const BASE64_RE = /^[A-Za-z0-9+/]*={0,2}$/;
 
 export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, allowedOrigin = '*', now = Date.now, rateLimit = RATE_LIMIT, log = console.error }) {
   const cors = {
@@ -49,6 +77,22 @@ export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = glob
     return 0;
   }
 
+  // Limite partagée (base). Renvoie les secondes d'attente (0 = accepté). Si la base ne répond pas ou si l'étape 14 n'est pas installée, on ne bloque pas
+  // les pilotes honnêtes (la limite en mémoire reste en place) ; l'indisponibilité est journalisée une fois par minute au plus.
+  let lastWarn = 0;
+  async function sharedWait(uid) {
+    try {
+      const r = await db('rpc/submit_rate_check', { method: 'POST', body: JSON.stringify({ p: uid, max_hits: rateLimit.max, window_s: Math.round(rateLimit.windowMs / 1000), global_max: rateLimit.globalMax ?? RATE_LIMIT.globalMax }) });
+      if (!r.ok) throw new Error('rpc ' + r.status);
+      const n = await r.json();
+      return Number.isInteger(n) && n > 0 ? n : 0;
+    } catch (e) {
+      const t = now();
+      if (t - lastWarn > 60_000) { lastWarn = t; log('submit-score : limite partagée indisponible (étape SQL 14 ?) :', e && e.message); }
+      return 0;
+    }
+  }
+
   return async function handle(req) {
     if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
     if (req.method !== 'POST') return json(405, { error: 'Méthode non autorisée.' });
@@ -65,17 +109,19 @@ export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = glob
       const uid = String(user.id ?? '');
       if (!/^[0-9a-f-]{36}$/.test(uid)) return json(401, { error: 'Non connecté.' });
 
-      // 2. Cadence.
-      const wait = tooFast(uid);
+      // 2. Cadence : d'abord la mémoire de l'instance (gratuit), puis la base (partagée entre instances).
+      let wait = tooFast(uid);
+      if (!wait) wait = await sharedWait(uid);
       if (wait) return json(429, { error: `Trop de courses envoyées : réessaie dans ${wait} s.` }, { 'Retry-After': String(wait) });
 
       // 3. Données de la course.
-      const text = await req.text();
-      if (text.length > MAX_BODY_CHARS) return json(413, { error: 'Requête trop volumineuse.' });
+      const text = await readBodyLimited(req, MAX_BODY_CHARS);
+      if (text === null) return json(413, { error: 'Requête trop volumineuse.' });
       let body;
       try { body = JSON.parse(text); } catch { return json(400, { error: 'Requête invalide.' }); }
       const { trackKey, code = '', inputs, time, physVer } = body ?? {};
-      if (typeof trackKey !== 'string' || trackKey.length > 80 || typeof inputs !== 'string' || typeof time !== 'number' || !Number.isFinite(time) || !Number.isInteger(physVer)) {
+      if (typeof trackKey !== 'string' || !TRACK_KEY_RE.test(trackKey) || typeof inputs !== 'string' || !inputs || inputs.length > MAX_INPUTS_CHARS || !BASE64_RE.test(inputs)
+        || typeof time !== 'number' || !Number.isFinite(time) || time <= 0 || time > MAX_RUN_SECONDS || !Number.isInteger(physVer) || physVer < 0 || physVer > 100000) {
         return json(400, { error: 'Requête invalide.' });
       }
       if (typeof code !== 'string' || code.length > MAX_TRACK_CODE_CHARS) return json(400, { error: 'Code de circuit invalide.' });

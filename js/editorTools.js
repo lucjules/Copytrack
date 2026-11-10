@@ -65,6 +65,31 @@ export function tileRegion(cells, n = 1) {
   return { spots, left: free.size };
 }
 
+// ---- Pot de peinture : zone connectée de pièces -------------------------------------------------------------------
+// Pièces reliées à `start` par un côté partagé (écart de niveau <= maxDl) qui satisfont `matches`. Parcours en largeur ITÉRATIF (file + index de
+// lecture) qui ne fait que COLLECTER : rien n'est modifié ici (c'est ce qui sert aussi à la prévisualisation). Borné : au-delà de `max` pièces la zone est
+// déclarée tronquée et l'outil refuse de l'appliquer (jamais de remplissage partiel d'une zone qu'on ne voit pas en entier).
+export const FILL_MAX_TILES = 8000;      // au-dessus du maximum publiable (5 000 pièces) : on peut remplir tout un circuit, jamais une zone sans fin
+const FILL_NEIGHBOURS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+export function fillZone(track, start, matches, { maxDl = 2, max = FILL_MAX_TILES } = {}) {
+  const visited = new Set([start]);
+  const queue = [start];
+  for (let head = 0; head < queue.length; head++) {
+    const t = queue[head];
+    for (const [cx, cz] of Track.cellsOf(t)) {                      // une pièce 2×2 occupe plusieurs cases
+      for (const [dx, dz] of FILL_NEIGHBOURS) {
+        for (const n of track.tilesAt(cx + dx, cz + dz)) {
+          if (visited.has(n) || !matches(n) || Math.abs(n.l - t.l) > maxDl) continue;
+          if (queue.length >= max) return { tiles: queue, truncated: true };
+          visited.add(n);
+          queue.push(n);
+        }
+      }
+    }
+  }
+  return { tiles: queue, truncated: false };
+}
+
 // ---- Sélection -----------------------------------------------------------------
 export function normRect(a, b) {
   return { x0: Math.min(a.cx, b.cx), z0: Math.min(a.cz, b.cz), x1: Math.max(a.cx, b.cx), z1: Math.max(a.cz, b.cz) };
@@ -95,14 +120,16 @@ export function copyRect(track, r, ok = null) {
 }
 
 // Rotation d'un quart de tour (le nord devient l'est), puis recalage sur (0, 0).
-export function rotateClip(clip) {
+export function rotateClip(clip, keepRect = false) {
   const tiles = clip.tiles.map((t) => {
     const s = PIECES[t.t].size;
     return { ...t, x: -t.z - s, z: t.x, r: (t.r + 1) & 3 };
   });
-  const decos = clip.decos.map((d) => ({ ...d, x: -d.z, z: d.x, ry: (d.ry || 0) - Math.PI / 2 }));
-  const mx = Math.min(...tiles.map((t) => t.x), ...decos.map((d) => Math.floor(d.x / CELL)));
-  const mz = Math.min(...tiles.map((t) => t.z), ...decos.map((d) => Math.floor(d.z / CELL)));
+  const turn = (a) => { let r = a - Math.PI / 2; if (r <= -Math.PI) r += Math.PI * 2; return r; };      // cap ramené dans ]-π, π] : quatre quarts de tour = le cap d'origine
+  const decos = clip.decos.map((d) => ({ ...d, x: -d.z, z: d.x, ry: turn(d.ry || 0) }));
+  // Presse-papiers : recalage sur l'enveloppe des pièces. Rotation en place (keepRect) : la zone entière (h × w cases) retombe sur (0, 0), d'où le décalage fixe.
+  const mx = keepRect ? -clip.h : Math.min(...tiles.map((t) => t.x), ...decos.map((d) => Math.floor(d.x / CELL)));
+  const mz = keepRect ? 0 : Math.min(...tiles.map((t) => t.z), ...decos.map((d) => Math.floor(d.z / CELL)));
   return {
     w: clip.h, h: clip.w,
     tiles: tiles.map((t) => ({ ...t, x: t.x - mx, z: t.z - mz })),
@@ -131,6 +158,49 @@ export function pasteClip(track, clip, cx, cz, level) {
   }
   for (const d of P.decos) if (track.addDeco(d)) added++;
   return { added, skipped };
+}
+
+// Transformations d'une sélection EN PLACE (déplacer, pivoter) : tout ou rien. Les pièces sélectionnées sont retirées, remises à leur nouvelle place,
+// et si UNE seule gêne (pièce voisine, hors des niveaux ou des bornes du circuit) tout revient comme avant. Les déclencheurs de cases (scripts) posés
+// dans la zone suivent les pièces ; les décorations aussi (obstacles compris : leur cap tourne avec la pièce, même convention que rotateClip).
+// Renvoie true si la transformation a eu lieu.
+const scriptsIn = (track, r) => (track.scripts || []).filter((s) => inRect(r, s.x, s.z));
+function replaceTiles(track, tiles, moved) {
+  // 1. Contrôle SANS toucher au circuit : chaque pièce à sa nouvelle place doit être dans les bornes et ne gêner aucune pièce qui reste.
+  const sel = new Set(tiles);
+  for (const t of moved) {
+    const n = Track.normalize(t);
+    if (!Track.inBounds(n) || t.l < 0 || t.l > MAX_LEVEL || track.conflicts(n).some((c) => !sel.has(c))) return false;
+  }
+  // 2. Application : l'ordre des pièces dans le circuit est conservé (le code partagé et la signature n'en changent pas pour rien).
+  const order = track.tiles.slice(), repl = new Map();
+  for (const t of tiles) track.remove(t);
+  tiles.forEach((t, i) => repl.set(t, track.add(moved[i])));
+  track.tiles = order.map((t) => repl.get(t) || t);
+  return true;
+}
+export function moveSelection(track, rect, tiles, decos, dx, dz) {
+  if (!dx && !dz) return false;
+  if (!replaceTiles(track, tiles, tiles.map((t) => ({ ...t, x: t.x + dx, z: t.z + dz })))) return false;
+  const sc = scriptsIn(track, rect);
+  for (const o of decos) { o.x += dx * CELL; o.z += dz * CELL; }
+  for (const s of sc) { s.x += dx; s.z += dz; }
+  track.version++;
+  return true;
+}
+export function rotateSelection(track, rect, tiles, decos) {
+  const clip = { w: rect.x1 - rect.x0 + 1, h: rect.z1 - rect.z0 + 1, tiles: tiles.map((t) => ({ ...t, x: t.x - rect.x0, z: t.z - rect.z0 })), decos: decos.map((d) => ({ ...d, x: d.x - rect.x0 * CELL, z: d.z - rect.z0 * CELL })) };
+  if (!clip.tiles.length && !clip.decos.length) return false;
+  // Le coin haut-gauche du rectangle reste en place : rotateClip recale la zone sur (0, 0) (on rend donc à la zone son rectangle complet, pas seulement
+  // l'enveloppe des pièces : une pièce au bord garde sa distance au bord).
+  const R = rotateClip({ ...clip, tiles: clip.tiles.concat([]), decos: clip.decos.concat([]) }, true);
+  const P = placedClip(R, rect.x0, rect.z0, 0);
+  if (!replaceTiles(track, tiles, P.tiles)) return false;
+  decos.forEach((d, i) => { Object.assign(d, { x: P.decos[i].x, z: P.decos[i].z, ry: P.decos[i].ry }); });
+  const sc = scriptsIn(track, rect);
+  for (const s of sc) { const rx = s.x - rect.x0, rz = s.z - rect.z0; s.x = rect.x0 + (clip.h - 1 - rz); s.z = rect.z0 + rx; }
+  track.version++;
+  return true;
 }
 
 // Monte / descend un groupe de pièces (et décorations). Annule tout si ça coince.

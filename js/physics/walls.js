@@ -111,6 +111,8 @@ export const wallMethods = {
         }
       }
     }
+    // Voiture arrêtée contre un mur (voir _tires) : le délai ne court que tant qu'elle touche et ne roule pas.
+    if (touch && this.speed < 2.5) this.stuckT = Math.min(1, this.stuckT + DT); else this.stuckT = Math.max(0, this.stuckT - 2 * DT);
     if (touch) {
       // Frottement : racler un mur freine tout le temps, même sans vrai choc.
       const k = Math.max(0, 1 - CAR.wallScrape * DT);
