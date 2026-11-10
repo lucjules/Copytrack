@@ -119,6 +119,10 @@ try {
     await shot('01-accueil');
     await click('#wl-submit');
     await waitApp(() => window.copytrack && window.copytrack.mode === 'menu');
+    // Course de temporisation du TEST (échec constaté sur GitHub, passage 180, alors que le code testé n'avait pas changé) : la question des statistiques anonymes s'ouvre 4 s après le démarrage
+    // (puis toutes les 8 s) ; sur un exécuteur lent elle surgissait pendant les 300 ms qui suivent la fermeture du tutoriel, juste avant l'assertion ci-dessous. On y répond DÈS l'arrivée au menu
+    // (askTelemetry s'arrête dès qu'une réponse existe) : le tutoriel reste testé exactement comme avant, l'assertion est inchangée, et la question a son propre test (test-browser-i18n.mjs).
+    await app(() => { window.copytrack.settings.telemetry = false; window.copytrack.saveSettings(); });
     // Le tutoriel du premier lancement s'ouvre 700 ms après le démarrage, par un minuteur DE LA PAGE : sur une machine lente (CI), le fil principal est occupé par la mise en
     // route de la scène 3D et le minuteur part bien après. Un contrôle unique au bout de 1,2 s le ratait : la fenêtre surgissait plus tard, et tout clic SOURIS réel d'un test
     // suivant (pixel du garage, onglet Amis du profil) tombait sur son voile (« <div id="modal" class="overlay"> intercepts pointer events »). On ATTEND donc la fenêtre.
