@@ -51,7 +51,7 @@ export class CarPhysics {
     this.F = {}; this.F0 = {}; this.F2 = {}; this.F3 = {};
     this.ev = {
       wall: 0, land: 0, boostHit: false, bounce: false, loopIn: false, loopOut: false, loopFall: false,
-      transform: false, gravity: false, miniTurbo: 0, landQ: '', sink: false, ring: false, flip: false, glass: false, spring: false, reverse: false, cut: false, spike: false, shock: 0,
+      transform: false, gravity: false, miniTurbo: 0, landQ: '', sink: false, ring: false, flip: false, glass: false, spring: false, reverse: false, cut: false, spike: false, shock: 0, invalid: false,
     };
     this.rib = null;
     this.vehicle = 'car';
@@ -103,6 +103,7 @@ export class CarPhysics {
     const m = CELL * 3;
     this.bx0 = b.minX - m; this.bx1 = b.maxX + m;
     this.skyY = b.maxY + 140;   // au-delà, une voiture en gravité inversée est perdue
+    this.floorY = b.minY - 60;  // en dessous, une voiture en gravité normale est perdue : avant 0.9.54 elle tombait SANS FIN (aucun sol sous le niveau de la route, aucun retour automatique)
     this.bz0 = b.minZ - m; this.bz1 = b.maxZ + m;
   }
 
@@ -112,7 +113,7 @@ export class CarPhysics {
     this.vel.x = 0; this.vel.y = 0; this.vel.z = 0;
     this.yaw = yaw; this.prevYaw = yaw; this.yawRate = 0; this.omega = 0;
     this.steer = 0; this.steerAngle = 0; this.boost = 0; this.boostF = 1; this.slip = 0; this.airTime = 0; this.fwdSpeed = 0;
-    this.driftT = 0; this.bounceCD = 0; this.driftCharge = 0; this.stunT = 0; this.stuckT = 0;
+    this.driftT = 0; this.bounceCD = 0; this.driftCharge = 0; this.stunT = 0; this.stuckT = 0; this.unstick = 0; this.unstickT = 0; this.unstickDir = 0; this.crawlT = 0;
     this.pitch = 0; this.pitchRate = 0; this.landQ = ''; this.aoa = 0.08; this.glidePitch = 0; this.bankT = 0;
     if (this.v2) { this.lean = 0; this.mAx = 0; this.heave = 0; this.v2F = 1; this.v2R = 1; }
     this.rib = null;
@@ -289,7 +290,7 @@ export class CarPhysics {
       BK.vx = vx; BK.vy = vy * lateralDamp;
       BK.w = (vx * dtan(delta) / L) * clamp(grip, 0.2, 1);
       // Plaquée contre un mur à l'arrêt : sans vitesse le volant n'a aucun effet et la voiture restait coincée nez au mur (seule la marche arrière la libérait).
-      if (this.stuckT > CAR.stuckAfter) BK.w = this.steer * CAR.stuckPivot * clamp((this.stuckT - CAR.stuckAfter) * 4, 0, 1);
+      if (this.stuckT > CAR.stuckAfter) BK.w = this.steer * CAR.stuckPivot * clamp((this.stuckT - CAR.stuckAfter) * 4, 0, 1);      // (unstick : le dégagement automatique de walls.js, dans le sens de rotation de la voiture)
       return BK;
     }
     const den = Math.max(Math.abs(vx), 6);
@@ -307,7 +308,24 @@ export class CarPhysics {
     return BK;
   }
 
+  // État physique cohérent : nombres finis et ni position ni vitesse démesurées (une valeur NaN ou infinie se propage à tout, positions, rendu, caméra).
+  _sane() {
+    const p = this.pos, v = this.vel;
+    return Number.isFinite(p.x + p.y + p.z + v.x + v.y + v.z + this.yaw + this.omega + this.pitch + this.steer)
+      && Math.abs(p.x) < 1e6 && Math.abs(p.y) < 1e6 && Math.abs(p.z) < 1e6 && Math.abs(v.x) < 1e4 && Math.abs(v.y) < 1e4 && Math.abs(v.z) < 1e4;
+  }
+
+  // Un pas de physique. Si l'état devient incohérent (ev.invalid), la course demande un retour au checkpoint (comme une noyade) : le même contrôle
+  // tourne au rejeu et sur le serveur, la décision est donc la même partout.
   step(inp) {
+    this._stepCore(inp);
+    if (!this._sane()) this.ev.invalid = true;
+    // Chute sans fin : une voiture passée SOUS le niveau du sol (poussée à travers la route par un obstacle, éjectée d'un circuit sans terrain) ne retrouve jamais de surface
+    // (le contact ne cherche qu'à CAR.step autour de la voiture). Elle est déclarée perdue : même retour automatique que la voiture perdue dans le ciel en gravité inversée.
+    else if (this.gSign > 0 && this.pos.y < this.floorY) this.lost = true;
+  }
+
+  _stepCore(inp) {
     this._beginStep();
     inp = this._controls(inp);
     this._driftState(inp);
@@ -324,7 +342,7 @@ export class CarPhysics {
     if (this.graceT > 0) this.graceT -= dt;
     ev.wall = 0; ev.land = 0; ev.boostHit = false; ev.bounce = false;
     if (this.hazardGrace > 0) this.hazardGrace = Math.max(0, this.hazardGrace - dt);
-    ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.transform = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false; ev.glass = false; ev.glassTile = null; ev.spring = false; ev.reverse = false; ev.cut = false; ev.spike = false; ev.shock = 0; ev.wallOff = false;
+    ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.transform = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false; ev.glass = false; ev.glassTile = null; ev.spring = false; ev.reverse = false; ev.cut = false; ev.spike = false; ev.shock = 0; ev.wallOff = false; ev.invalid = false;
     this.prev.x = p.x; this.prev.y = p.y; this.prev.z = p.z;
     this.prevYaw = this.yaw;
   }
@@ -468,6 +486,8 @@ export class CarPhysics {
     this.rearK = 1;
     vf = r.vx; vr = r.vy; this.omega = r.w;
     const us = this._upSign();
+    // Plaquée nez au mur (walls.js, unstick) : la paroi la fait pivoter vers sa tangente, quel que soit le volant (voir CAR.stuckAlign). Armé seulement quand la voiture est plaquée à l'arrêt (walls.js) : une voiture qui roule n'est jamais touchée.
+    if (this.unstick) { const want = this.unstick * us; if (want * this.omega < want * want) this.omega = want; }      // (jamais moins de rotation que ce que le volant fait déjà dans ce sens)
     this.yaw -= this.omega * us * dt;   // rotation autour du haut local
     this.yawRate = -this.omega * us;
 
@@ -527,8 +547,12 @@ export class CarPhysics {
     this._walls();
     this._tunnelRoof();
     this._slabs();
+    const ox = p.x, oy = p.y, oz = p.z;
     this._obstacles();
     if (this.ev.sink) return true; // fin immédiate du pas après un contact létal
+    // Un obstacle mobile (mur coulissant, marteau...) a poussé la voiture : les bordures ont le dernier mot. Sans cette seconde passe, la voiture écrasée contre
+    // une bordure était repoussée au-delà de sa moitié : au pas suivant, `_walls` la croyait DEHORS et la plaquait contre l'extérieur (voiture éjectée de la route).
+    if (p.x !== ox || p.y !== oy || p.z !== oz) this._walls(true);
     this._bounds();
     return false;
   }

@@ -156,6 +156,24 @@ class App {
     this._resize();
   }
 
+  // Une erreur dans une image de la boucle (voir `loop`). Rien n'est avalé en silence : elle est journalisée (console, window.__ctErrors). Pendant une course :
+  // 1re erreur d'une série : retour au dernier checkpoint (l'état de la course est peut-être incohérent) ; 2e dans les 5 s : la course est abandonnée proprement
+  // (retour au menu, message) ; au-delà, le jeu continue de tourner sans rien tenter de plus.
+  _loopError(e) {
+    const now = performance.now();
+    (window.__ctErrors || (window.__ctErrors = [])).push({ t: Math.round(now), msg: String(e && e.message || e), stack: String(e && e.stack || '').split('\n').slice(0, 4).join(' | ') });
+    if (window.__ctErrors.length > 20) window.__ctErrors.shift();
+    if (this.mode !== 'race' || !this.session) { this._errTimes = []; if (window.__ctErrors.length <= 2) console.error('Copytrack : erreur dans la boucle de jeu', e); return; }      // (hors course : rien à reprendre, la boucle continue)
+    this._errTimes = (this._errTimes || []).filter((x) => now - x < 5000);
+    this._errTimes.push(now);
+    if (this._errTimes.length === 1 || this._errTimes.length === 2) console.error('Copytrack : erreur dans la boucle de jeu', e);
+    try {
+      const S = this.session;
+      if (this._errTimes.length === 1 && S.state === 'racing' && !S.replay && typeof S.respawn === 'function') { S.respawn(); this.ui.flash('Incident : retour au dernier checkpoint.', 2.5); }
+      else if (this._errTimes.length === 2) { this.quitRace(); this.ui.flash('Une erreur est survenue : la course a été interrompue.', 4); }
+    } catch (e2) { console.error('Copytrack : la reprise après erreur a échoué', e2); }
+  }
+
   playCode(code, entryId = null) {
     let track;
     try { track = Track.decode(code); } catch { this.ui.flash('Code de circuit invalide.'); return; }
@@ -323,7 +341,7 @@ class App {
     }
     let last = performance.now();
     let rawLast = last;
-    const loop = (now) => {
+    const frame = (now) => {
       const dt = Math.min(0.1, (now - last) / 1000);
       rawLast = last;
       last = now;
@@ -360,8 +378,15 @@ class App {
         this._fpsN = (this._fpsN || 0) + 1; this._fpsT = (this._fpsT || 0) + dt;
         if (this._fpsT >= 0.5) { $('fps').textContent = `${Math.round(this._fpsN / this._fpsT)} i/s`; this._fpsN = 0; this._fpsT = 0; }
       }
-      this.input.clearHits();
-      requestAnimationFrame(loop);
+    };
+    // La boucle du jeu NE DOIT JAMAIS S'ARRÊTER : avant 0.9.54, `requestAnimationFrame(loop)` était la dernière instruction du corps, donc UNE exception (physique, course,
+    // rendu, interface) la tuait pour de bon : écran figé jusqu'au rechargement, sans message, alors que les boutons de la page répondaient encore (le « gel complet »).
+    // Désormais la prochaine image est toujours demandée, les touches « appuyées cette image » toujours effacées, et l'erreur est traitée (voir _loopError).
+    const loop = (now) => {
+      try { frame(now); } catch (e) { this._loopError(e); } finally {
+        try { this.input.clearHits(); } catch { /* sans importance */ }
+        requestAnimationFrame(loop);
+      }
     };
     requestAnimationFrame(loop);
   }

@@ -264,8 +264,8 @@ export class Track {
   }
 
   bounds() {
-    if (!this.tiles.length) return { minX: -CELL * 2, maxX: CELL * 2, minZ: -CELL * 2, maxZ: CELL * 2, maxY: 0 };
-    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, maxL = 0;
+    if (!this.tiles.length) return { minX: -CELL * 2, maxX: CELL * 2, minZ: -CELL * 2, maxZ: CELL * 2, maxY: 0, minY: 0 };
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, maxL = 0, minL = 0;
     for (const t of this.tiles) {
       const s = PIECES[t.t].size;
       minX = Math.min(minX, t.x * CELL);
@@ -273,8 +273,9 @@ export class Track {
       maxX = Math.max(maxX, (t.x + s) * CELL);
       maxZ = Math.max(maxZ, (t.z + s) * CELL);
       maxL = Math.max(maxL, Track.range(t)[1]);
+      minL = Math.min(minL, Track.range(t)[0]);
     }
-    return { minX, maxX, minZ, maxZ, maxY: maxL * LEVEL_H };
+    return { minX, maxX, minZ, maxZ, maxY: maxL * LEVEL_H, minY: minL * LEVEL_H };
   }
 
   // Le circuit a-t-il des pièces mobiles ? (mis en cache par version : évite de balayer la case une seconde fois pour rien)

@@ -90,18 +90,19 @@ export const wallMethods = {
     }
   },
 
-  _walls() {
+  // again : seconde passe du même pas (après un obstacle qui a poussé la voiture) : même correction de position et de vitesse, sans recompter le frottement ni l'arrêt.
+  _walls(again = false) {
     const p = this.pos, v = this.vel;
     const fx = -dsin(this.yaw), fz = -dcos(this.yaw);
     const pfx = -dsin(this.prevYaw), pfz = -dcos(this.prevYaw);
-    let hit = 0, touch = false, sx = 0, sz = 0;
+    let hit = 0, touch = false, sx = 0, sz = 0, lnx = 0, lnz = 0;
     for (let k = -1; k <= 1; k += 2) {
       const off = CAR.probe * k;
       for (let iter = 0; iter < 2; iter++) {
         const c = this._probe(p.x + fx * off, p.z + fz * off,
           this.prev.x + pfx * off, this.prev.z + pfz * off, p.y);
         if (!c) break;
-        touch = true;
+        touch = true; lnx = c.nx; lnz = c.nz;
         p.x += c.dx; p.z += c.dz;
         const vn = v.x * c.nx + v.z * c.nz;
         if (vn < 0) {
@@ -112,8 +113,26 @@ export const wallMethods = {
       }
     }
     // Voiture arrêtée contre un mur (voir _tires) : le délai ne court que tant qu'elle touche et ne roule pas.
-    if (touch && this.speed < 2.5) this.stuckT = Math.min(1, this.stuckT + DT); else this.stuckT = Math.max(0, this.stuckT - 2 * DT);
-    if (touch) {
+    if (!again) {
+      if (touch && this.speed < 2.5) this.stuckT = Math.min(1, this.stuckT + DT); else this.stuckT = Math.max(0, this.stuckT - 2 * DT);
+      // Plaquée à l'arrêt contre un mur (stuckT), le contact la fait pivoter vers la tangente du mur, puis jusqu'à ce que le nez s'en écarte (≈ 12°). Avant 0.9.54 seul le
+      // volant pouvait la dégager : un braquage faible, ou du mauvais côté, la laissait collée indéfiniment, gaz à fond, vitesse nulle, sans retour automatique ; et une fois
+      // la voiture un peu tournée, le frottement du mur (wallScrape) mangeait toute la poussée du moteur (elle rampait à ~3 m/s le long de la paroi). Le dégagement est donc
+      // ARMÉ quand elle est vraiment plaquée (touche, < 4 m/s, depuis 0,25 s), puis maintenu tant qu'elle touche, reste lente (< 8 m/s) et au plus 5 s ;
+      // il ne concerne jamais une voiture qui frôle un mur en roulant.
+      this.unstick = 0;
+      if (touch && this.speed < 4) this.crawlT = Math.min(1, this.crawlT + DT); else this.crawlT = Math.max(0, this.crawlT - 2 * DT);      // (à l'arrêt OU rampant : le frottement tient la voiture à ~3 m/s)
+      if (touch && this.crawlT > 0.25) this.unstickT = 5;
+      else if (this.unstickT > 0) this.unstickT = touch ? this.unstickT - DT : this.unstickT - 3 * DT;
+      if (touch && this.unstickT > 0 && this.speed < 8) {
+        const into = fx * lnx + fz * lnz;                      // < 0 : le nez regarde le mur ; > 0 : il s'en écarte
+        const cross = fx * lnz - fz * lnx;                     // sens de rotation le plus court vers la tangente ; ≈ 0 de plein fouet : on garde le sens déjà pris (sinon il change à chaque pas)
+        if (Math.abs(cross) > 0.15 || !this.unstickDir) this.unstickDir = cross >= 0 ? 1 : -1;
+        if (into < 0.2) this.unstick = this.unstickDir * CAR.stuckAlign * Math.min(1, Math.max(0.25, (0.2 - into) * 3));
+      }
+      if (this.unstickT <= 0) this.unstickDir = 0;
+    }
+    if (touch && !again) {
       // Frottement : racler un mur freine tout le temps, même sans vrai choc.
       const k = Math.max(0, 1 - CAR.wallScrape * DT);
       v.x *= k; v.y *= k; v.z *= k;

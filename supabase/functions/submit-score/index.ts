@@ -5346,6 +5346,7 @@ var CAR = {
   wallSpinMax: 2.5,
   stuckAfter: 0.35,
   stuckPivot: 1.2,
+  stuckAlign: 1.4,
   wallStun: 0.04,
   stunTraction: 0.3,
   stunGrip: 0.6,
@@ -5864,9 +5865,10 @@ var Track = class _Track {
       maxX: CELL * 2,
       minZ: -CELL * 2,
       maxZ: CELL * 2,
-      maxY: 0
+      maxY: 0,
+      minY: 0
     };
-    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, maxL = 0;
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, maxL = 0, minL = 0;
     for (const t of this.tiles) {
       const s = PIECES[t.t].size;
       minX = Math.min(minX, t.x * CELL);
@@ -5874,13 +5876,15 @@ var Track = class _Track {
       maxX = Math.max(maxX, (t.x + s) * CELL);
       maxZ = Math.max(maxZ, (t.z + s) * CELL);
       maxL = Math.max(maxL, _Track.range(t)[1]);
+      minL = Math.min(minL, _Track.range(t)[0]);
     }
     return {
       minX,
       maxX,
       minZ,
       maxZ,
-      maxY: maxL * LEVEL_H
+      maxY: maxL * LEVEL_H,
+      minY: minL * LEVEL_H
     };
   }
   // Le circuit a-t-il des pièces mobiles ? (mis en cache par version : évite de balayer la case une seconde fois pour rien)
@@ -9287,17 +9291,20 @@ var wallMethods = {
       }
     }
   },
-  _walls() {
+  // again : seconde passe du même pas (après un obstacle qui a poussé la voiture) : même correction de position et de vitesse, sans recompter le frottement ni l'arrêt.
+  _walls(again = false) {
     const p = this.pos, v = this.vel;
     const fx = -dsin(this.yaw), fz = -dcos(this.yaw);
     const pfx = -dsin(this.prevYaw), pfz = -dcos(this.prevYaw);
-    let hit = 0, touch = false, sx = 0, sz = 0;
+    let hit = 0, touch = false, sx = 0, sz = 0, lnx = 0, lnz = 0;
     for (let k = -1; k <= 1; k += 2) {
       const off = CAR.probe * k;
       for (let iter = 0; iter < 2; iter++) {
         const c = this._probe(p.x + fx * off, p.z + fz * off, this.prev.x + pfx * off, this.prev.z + pfz * off, p.y);
         if (!c) break;
         touch = true;
+        lnx = c.nx;
+        lnz = c.nz;
         p.x += c.dx;
         p.z += c.dz;
         const vn = v.x * c.nx + v.z * c.nz;
@@ -9312,9 +9319,23 @@ var wallMethods = {
         }
       }
     }
-    if (touch && this.speed < 2.5) this.stuckT = Math.min(1, this.stuckT + DT);
-    else this.stuckT = Math.max(0, this.stuckT - 2 * DT);
-    if (touch) {
+    if (!again) {
+      if (touch && this.speed < 2.5) this.stuckT = Math.min(1, this.stuckT + DT);
+      else this.stuckT = Math.max(0, this.stuckT - 2 * DT);
+      this.unstick = 0;
+      if (touch && this.speed < 4) this.crawlT = Math.min(1, this.crawlT + DT);
+      else this.crawlT = Math.max(0, this.crawlT - 2 * DT);
+      if (touch && this.crawlT > 0.25) this.unstickT = 5;
+      else if (this.unstickT > 0) this.unstickT = touch ? this.unstickT - DT : this.unstickT - 3 * DT;
+      if (touch && this.unstickT > 0 && this.speed < 8) {
+        const into = fx * lnx + fz * lnz;
+        const cross = fx * lnz - fz * lnx;
+        if (Math.abs(cross) > 0.15 || !this.unstickDir) this.unstickDir = cross >= 0 ? 1 : -1;
+        if (into < 0.2) this.unstick = this.unstickDir * CAR.stuckAlign * Math.min(1, Math.max(0.25, (0.2 - into) * 3));
+      }
+      if (this.unstickT <= 0) this.unstickDir = 0;
+    }
+    if (touch && !again) {
       const k = Math.max(0, 1 - CAR.wallScrape * DT);
       v.x *= k;
       v.y *= k;
@@ -9469,10 +9490,11 @@ var obstacleMethods = {
         const ex = def.hx - Math.abs(OL.x - OB.x);
         const ey0 = OL.y, ey1 = def.hy * 2 - OL.y;
         const ez = def.hz - Math.abs(OL.z);
-        const face = Math.min(ex, ey0, ey1, ez);
-        if (face === ey0 || face === ey1) {
+        const eUp = this.gSign > 0 ? ey1 : ey0;
+        const face = Math.min(ex, eUp, ez);
+        if (face === eUp) {
           nx = 0;
-          ny = ey0 <= ey1 ? -1 : 1;
+          ny = this.gSign > 0 ? 1 : -1;
           nz = 0;
         } else if (face === ez) {
           nx = 0;
@@ -9511,7 +9533,7 @@ var obstacleMethods = {
       ovx = -sa * s * OB.w;
       ovz = ca * s * OB.w;
     } else {
-      if (OL.y > def.h + rc) return false;
+      if (OL.y > def.h + rc || OL.y < -1.5) return false;
       const dd = hypot2(OL.x, OL.z);
       if (dd >= def.r + rc) return false;
       if (dd < 1e-6) {
@@ -9525,9 +9547,16 @@ var obstacleMethods = {
       }
     }
     const c = dcos(d.ry || 0), sn = dsin(d.ry || 0);
-    const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
+    let wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
     const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
     if (!(fin(wx) && fin(wy) && fin(wz) && fin(vwx) && fin(vwy) && fin(vwz))) return false;
+    if (this.grounded && wy * this.gSign < 0) {
+      const hl = hypot2(wx, wz);
+      if (hl < 1e-6) return false;
+      wx /= hl;
+      wz /= hl;
+      wy = 0;
+    }
     const correction = Math.min(pen * k, 2.5);
     p.x += wx * correction;
     p.y += wy * correction;
@@ -10179,7 +10208,8 @@ var CarPhysics = class {
       reverse: false,
       cut: false,
       spike: false,
-      shock: 0
+      shock: 0,
+      invalid: false
     };
     this.rib = null;
     this.vehicle = "car";
@@ -10227,6 +10257,7 @@ var CarPhysics = class {
     this.bx0 = b.minX - m;
     this.bx1 = b.maxX + m;
     this.skyY = b.maxY + 140;
+    this.floorY = b.minY - 60;
     this.bz0 = b.minZ - m;
     this.bz1 = b.maxZ + m;
   }
@@ -10256,6 +10287,10 @@ var CarPhysics = class {
     this.driftCharge = 0;
     this.stunT = 0;
     this.stuckT = 0;
+    this.unstick = 0;
+    this.unstickT = 0;
+    this.unstickDir = 0;
+    this.crawlT = 0;
     this.pitch = 0;
     this.pitchRate = 0;
     this.landQ = "";
@@ -10473,7 +10508,19 @@ var CarPhysics = class {
     BK.w = w;
     return BK;
   }
+  // État physique cohérent : nombres finis et ni position ni vitesse démesurées (une valeur NaN ou infinie se propage à tout, positions, rendu, caméra).
+  _sane() {
+    const p = this.pos, v = this.vel;
+    return Number.isFinite(p.x + p.y + p.z + v.x + v.y + v.z + this.yaw + this.omega + this.pitch + this.steer) && Math.abs(p.x) < 1e6 && Math.abs(p.y) < 1e6 && Math.abs(p.z) < 1e6 && Math.abs(v.x) < 1e4 && Math.abs(v.y) < 1e4 && Math.abs(v.z) < 1e4;
+  }
+  // Un pas de physique. Si l'état devient incohérent (ev.invalid), la course demande un retour au checkpoint (comme une noyade) : le même contrôle
+  // tourne au rejeu et sur le serveur, la décision est donc la même partout.
   step(inp) {
+    this._stepCore(inp);
+    if (!this._sane()) this.ev.invalid = true;
+    else if (this.gSign > 0 && this.pos.y < this.floorY) this.lost = true;
+  }
+  _stepCore(inp) {
     this._beginStep();
     inp = this._controls(inp);
     this._driftState(inp);
@@ -10515,6 +10562,7 @@ var CarPhysics = class {
     ev.spike = false;
     ev.shock = 0;
     ev.wallOff = false;
+    ev.invalid = false;
     this.prev.x = p.x;
     this.prev.y = p.y;
     this.prev.z = p.z;
@@ -10699,6 +10747,10 @@ var CarPhysics = class {
     vr = r.vy;
     this.omega = r.w;
     const us = this._upSign();
+    if (this.unstick) {
+      const want = this.unstick * us;
+      if (want * this.omega < want * want) this.omega = want;
+    }
     this.yaw -= this.omega * us * dt;
     this.yawRate = -this.omega * us;
     v.x = fx * vf + rx * vr;
@@ -10758,8 +10810,10 @@ var CarPhysics = class {
     this._walls();
     this._tunnelRoof();
     this._slabs();
+    const ox = p.x, oy = p.y, oz = p.z;
     this._obstacles();
     if (this.ev.sink) return true;
+    if (p.x !== ox || p.y !== oy || p.z !== oz) this._walls(true);
     this._bounds();
     return false;
   }
@@ -11176,6 +11230,7 @@ var RaceLogic = class {
         if (!P.special && P.kind === "arc") base -= Math.PI / 4;
         let yaw = base;
         let da = phys.yaw - base;
+        if (!Number.isFinite(da)) da = 0;
         while (da > Math.PI) da -= Math.PI * 2;
         while (da < -Math.PI) da += Math.PI * 2;
         if (Math.abs(da) > Math.PI / 2) yaw = base + Math.PI;
@@ -11307,7 +11362,7 @@ var Simulation = class {
   drive(inp) {
     this.phys.clock = this.logic.steps + (this.logic.finished ? this.idle++ : 0);
     this.phys.step(inp);
-    this.sank = this.phys.ev.sink;
+    this.sank = this.phys.ev.sink || this.phys.ev.invalid;
   }
   // Phase 2 d'un pas : règles de course puis suivi du hors-piste. Renvoie l'évènement de course (checkpoint, tour, arrivée...) ou null.
   score() {
@@ -11799,7 +11854,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/version.js
-var PHYS_VER = 31;
+var PHYS_VER = 32;
 
 // js/ghostFormat.js
 var GHOST_EVERY = 4;

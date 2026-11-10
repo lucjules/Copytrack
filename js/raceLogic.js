@@ -147,6 +147,7 @@ export class RaceLogic {
         if (!P.special && P.kind === 'arc') base -= Math.PI / 4;       // cap de la route au milieu de l'arc (nord-est local)
         let yaw = base;
         let da = phys.yaw - base;
+        if (!Number.isFinite(da)) da = 0;      // (jamais de boucle infinie sur un angle NaN ou infini)
         while (da > Math.PI) da -= Math.PI * 2;
         while (da < -Math.PI) da += Math.PI * 2;
         if (Math.abs(da) > Math.PI / 2) yaw = base + Math.PI;

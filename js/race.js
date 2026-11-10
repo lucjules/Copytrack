@@ -369,13 +369,15 @@ export class RaceSession {
     // Noyade : la réapparition se fait après la mise à jour de la course, dans le même
     // ordre que le rejeu (replay.js) — indispensable pour que la vérification des temps
     // en ligne retrouve exactement la même course.
-    const sank = ev.sink && this.state === 'racing';
+    const sank = (ev.sink || ev.invalid) && this.state === 'racing';
     if (sank && ev.spike) {
       const p = this.phys.pos;
       app.audio.thud(24);
       this.shake = Math.max(this.shake, 0.8);
       app.particles.burst(p.x, p.y + 0.6, p.z, 36, 9, 0.7, 0.5, '#ff5a6e', 3, 1);
       this._say(MSG.spikes);
+    } else if (sank && ev.invalid) {
+      this._say(MSG.invalid);      // état physique incohérent (NaN, infini) : pas d'effet à la position, qui n'a plus de sens
     } else if (sank) {
       const p = this.phys.pos;
       app.particles.burst(p.x, p.y + 0.5, p.z, 30, 8, 0.7, 0.6, '#9fe3ff', 4, 2);
@@ -469,7 +471,7 @@ export class RaceSession {
     }
 
     if (this.state === 'racing' || this.state === 'finished') {
-      this.acc += Math.min(dt, 0.1);
+      this.acc += Number.isFinite(dt) ? Math.min(dt, 0.1) : 0;      // (un dt NaN rendait l'accumulateur NaN pour toujours : plus aucun pas de physique, voiture figée)
       while (this.acc >= DT) {
         this._stepOnce();
         this.acc -= DT;

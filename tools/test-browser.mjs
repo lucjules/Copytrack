@@ -128,6 +128,47 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  // La boucle du jeu ne doit jamais s'arrêter (0.9.54) : avant, requestAnimationFrame(loop) était la dernière instruction du corps de la boucle, donc UNE exception
+  // (physique, course, rendu, interface) la tuait pour de bon : écran figé jusqu'au rechargement, boutons de la page encore vivants, aucun message.
+  await test('boucle de jeu : une exception ne l\'arrête plus (menu : l\'image suivante est dessinée ; course : retour au checkpoint, puis au 2e incident la course est abandonnée proprement) et un pas de temps NaN ne fige pas la voiture', async () => {
+    const frames = () => app(() => window.copytrack.renderer.info.render.frame);
+    const alive = async (label) => { const a = await frames(); await page.waitForTimeout(700); const b = await frames(); assert.ok(b > a, `${label} : la boucle de dessin est morte (${a} → ${b})`); };
+    // 1. menu : une seule exception dans une étape de la boucle
+    await alive('avant');
+    await app(() => { const inp = window.copytrack.input, orig = inp.pollGamepad.bind(inp); let done = false; inp.pollGamepad = (...a) => { if (!done) { done = true; throw new Error('exception de test (menu)'); } return orig(...a); }; window.__ctErrors = []; });
+    await page.waitForTimeout(400);
+    await alive('après une exception au menu');
+    assert.ok((await app(() => window.__ctErrors.length)) >= 1, 'l\'erreur est journalisée (window.__ctErrors)');
+    // 2. course : exception dans la mise à jour de la course
+    await app(() => window.copytrack.playBuiltin(0));
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.state === 'racing', null, 30000);
+    await page.keyboard.down('ArrowUp'); await page.waitForTimeout(1500);
+    const steps0 = await app(() => window.copytrack.session.logic.steps);
+    assert.ok(steps0 > 30, 'la course tourne');
+    await app(() => { const S = window.copytrack.session, orig = S.update.bind(S); let n = 0; S.update = (dt) => { if (n++ < 1) throw new Error('exception de test (course)'); return orig(dt); }; window.__ctErrors = []; });
+    await page.waitForTimeout(1200);
+    await alive('après une exception en course');
+    assert.equal(await app(() => window.copytrack.mode), 'race', 'une seule exception : la course continue');
+    assert.ok((await app(() => window.copytrack.session.logic.steps)) > 0, 'et elle avance');
+    // 3. deux exceptions rapprochées : la course est abandonnée proprement, le menu fonctionne
+    await app(() => { const S = window.copytrack.session; S.update = () => { throw new Error('exception de test (répétée)'); }; });
+    await waitApp(() => window.copytrack.mode === 'menu', null, 15000);
+    await page.keyboard.up('ArrowUp');
+    await alive('après l\'abandon de la course');
+    assert.ok(await app(() => window.__ctErrors.length >= 2 && window.copytrack.mode === 'menu'), 'les deux erreurs sont journalisées et le jeu est revenu au menu');
+    // 4. un pas de temps NaN ne fige plus l'accumulateur de la physique
+    await app(() => window.copytrack.playBuiltin(0));
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session.state === 'racing', null, 30000);
+    const before = await app(() => { const S = window.copytrack.session; S.update(NaN); return S.acc; });
+    assert.ok(Number.isFinite(before), 'accumulateur fini après un dt NaN');
+    await page.keyboard.down('ArrowUp'); await page.waitForTimeout(800); await page.keyboard.up('ArrowUp');
+    assert.ok((await app(() => window.copytrack.session.logic.steps)) > 20, 'la voiture avance toujours');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu');
+    // Les erreurs journalisées ci-dessus sont CELLES QU'ON A PROVOQUÉES : elles ne doivent pas compter comme des erreurs de page.
+    for (let i = errors.length - 1; i >= 0; i--) if (/exception de test/.test(errors[i])) errors.splice(i, 1);
+  });
+
   await test('défi du jour et circuit en plusieurs tours', async () => {
     await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.dailyDays = []; p.mutDays = []; p.dailyBest = 0; saveProfile(); });
     await click('[data-action="daily"]');

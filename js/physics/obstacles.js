@@ -77,8 +77,11 @@ export const obstacleMethods = {
         const ex = def.hx - Math.abs(OL.x - OB.x);
         const ey0 = OL.y, ey1 = def.hy * 2 - OL.y;
         const ez = def.hz - Math.abs(OL.z);
-        const face = Math.min(ex, ey0, ey1, ez);
-        if (face === ey0 || face === ey1) { nx = 0; ny = ey0 <= ey1 ? -1 : 1; nz = 0; }
+        // La face du côté du SOL n'est jamais un choix (0.9.54) : pousser la voiture vers le bas la faisait traverser la route (écrasée contre une bordure par un mur
+        // coulissant, elle sortait par le dessous du bloc, à 2 m sous la chaussée, et tombait sans fin). On choisit parmi les autres faces : le dessus, ou les côtés.
+        const eUp = this.gSign > 0 ? ey1 : ey0;                           // distance à la face opposée au sol
+        const face = Math.min(ex, eUp, ez);
+        if (face === eUp) { nx = 0; ny = this.gSign > 0 ? 1 : -1; nz = 0; }
         else if (face === ez) { nx = 0; ny = 0; nz = OL.z >= 0 ? 1 : -1; }
         else { nx = OL.x >= OB.x ? 1 : -1; ny = 0; nz = 0; }
         pen = Math.max(0.01, rc + Math.max(0, face));
@@ -94,8 +97,8 @@ export const obstacleMethods = {
       else { nx = dx / dd; ny = dy / dd; nz = dz / dd; pen = def.r + rc - dd; }
       ovx = -sa * s * OB.w; ovz = ca * s * OB.w;
     } else {
-      // Bumper : poteau vertical qui renvoie fort.
-      if (OL.y > def.h + rc) return false;
+      // Bumper : poteau vertical qui renvoie fort. Borné en bas comme les piques (0.9.54) : sans cela un bumper posé sur un pont frappait les voitures qui passent dessous, à n'importe quelle hauteur.
+      if (OL.y > def.h + rc || OL.y < -1.5) return false;
       const dd = hypot2(OL.x, OL.z);
       if (dd >= def.r + rc) return false;
       if (dd < 1e-6) { nx = 1; nz = 0; pen = def.r + rc; }
@@ -103,9 +106,15 @@ export const obstacleMethods = {
     }
     // Normale et vitesse de l'obstacle en repère monde.
     const c = dcos(d.ry || 0), sn = dsin(d.ry || 0);
-    const wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
+    let wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
     const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
     if (!(fin(wx) && fin(wy) && fin(wz) && fin(vwx) && fin(vwy) && fin(vwz))) return false;
+    // Voiture posée : le sol résiste, un obstacle ne peut pas la pousser DANS la route (un pendule ou un marteau qui l'écrase par le dessus). Seule la part horizontale compte.
+    if (this.grounded && wy * this.gSign < 0) {
+      const hl = hypot2(wx, wz);
+      if (hl < 1e-6) return false;
+      wx /= hl; wz /= hl; wy = 0;
+    }
     // Séparer les corps en contact, mais ne donner l'impulsion du choc (shockKick) que si la voiture ne s'éloigne pas déjà de l'obstacle :
     // sinon un obstacle mobile qui chevauche la voiture la pousserait à chaque pas (tremblements, catapultage).
     const correction = Math.min(pen * k, 2.5);

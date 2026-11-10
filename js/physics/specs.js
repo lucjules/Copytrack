@@ -68,6 +68,7 @@ export const CAR = {
   wallSpinMax: 2.5,
   stuckAfter: 0.35,   // 0.9.48 : voiture plaquée contre un mur à l'arrêt depuis ce délai (s) : le volant la fait pivoter sur place
   stuckPivot: 1.2,    // vitesse de pivot (rad/s, à fond de volant)
+  stuckAlign: 1.4,    // 0.9.54 : voiture plaquée nez au mur : le contact la fait pivoter d'elle-même vers la tangente du mur (rad/s), sans qu'il faille braquer
   wallStun: 0.04,     // durée de l'encaissement (s par m/s d'impact), 0,1 s en plus, bornée à 0,8 s
   stunTraction: 0.3,  // poussée du moteur pendant l'encaissement
   stunGrip: 0.6,      // adhérence pendant l'encaissement

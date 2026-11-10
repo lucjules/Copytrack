@@ -28,6 +28,7 @@ export const MSG = {
   spikes: ['Piques', PRIO.penalty, 1.1],
   glass: ['Verre brisé', PRIO.penalty, 1.1],
   sink: ['Coulé', PRIO.penalty, 1.1],
+  invalid: ['Incident physique : retour au checkpoint', PRIO.penalty, 2.2],
   missing: (n) => [n > 1 ? `${n} checkpoints manquants` : 'Checkpoint manquant', PRIO.penalty, 1.2],
   fall: { loop: ['Trop lent', PRIO.penalty, 1.1], twist: ['Décroché', PRIO.penalty, 1.1], wall: ['Trop lent', PRIO.penalty, 1.1], inv: ['Gravité', PRIO.penalty, 1.1] },   // « crest » : plus de message
   gravity: (pct) => [`Gravité ${pct} %`, PRIO.event, 1.1],
