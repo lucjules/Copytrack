@@ -74,6 +74,7 @@ Annuler / rétablir ; pivoter, déplacer, dupliquer une sélection (tout ou rien
 - Écrans de la communauté et de l'éditeur : accessibilité des boutons testée, harmonisation visuelle non poussée.
 - Aperçu du pot de peinture : testé en logique, pas en rendu 3D.
 - Aucun humain n'a rejoué les 72 circuits avec le moteur actuel.
+- Essai navigateur « aides à la conduite » : un délai de 10 s a été dépassé une fois, pendant que Deno et le SQL tournaient en même temps ; rejoué seul, il passe (deux fois). Sensible à la charge de la machine, non reproduit seul : à surveiller en CI.
 
 ## Pour reprendre
 1. `git fetch && git checkout claude/practical-dirac-vtqom0`.
