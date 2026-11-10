@@ -45,6 +45,8 @@ async function test(name, fn) {
     failures++;
     // Le journal d'appel de Playwright (ce qu'il attendait, ce qui recouvrait l'élément) dit POURQUOI un clic a expiré : on le garde en entier (14 lignes).
     console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 14).join('\n       '));
+    // Les erreurs de la page survenues PENDANT ce test (exception dans un gestionnaire de clic, par exemple : l'écran reste alors tel quel, sans fenêtre ni blocage) ; l'attente expirée seule ne les montre pas.
+    if (errors.length > before) console.log('       erreurs de la page pendant ce test : ' + errors.slice(before).join(' | ').slice(0, 1500));
     if (process.env.PW_FAIL_SHOTS) { try { mkdirSync(process.env.PW_FAIL_SHOTS, { recursive: true }); await page.screenshot({ path: join(process.env.PW_FAIL_SHOTS, 'echec-' + executed + '.png') }); } catch { /* page déjà fermée : pas de capture */ } }
   }
 }
