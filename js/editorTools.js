@@ -180,18 +180,23 @@ export function findDuplicateSpot(track, rect, tiles) {
   return null;
 }
 
-// Pose les copies à (dx, dz, dl) ; renvoie { tiles, decos } (les objets ajoutés). Une décoration refusée (trop nombreuses) est comptée dans `refused`.
+// Ce qui SERA copié : les pièces sauf le départ (un seul par circuit) et toutes les décorations. Une sélection réduite au départ ne contient donc RIEN à copier.
+export const duplicable = (tiles, decos) => ({ tiles: tiles.filter((t) => t.t !== 'start'), decos: decos.slice(), skippedStart: tiles.filter((t) => t.t === 'start').length });
+
+// Pose les copies à (dx, dz, dl). TOUT OU RIEN : si une copie est refusée (limite de décorations, de pièces perso), tout ce qui vient d'être posé est retiré et le circuit
+// revient exactement comme avant. Renvoie { ok, tiles, decos, skippedStart, reason } ; `ok` n'est vrai que si au moins un objet a réellement été créé.
 export function duplicateSelection(track, tiles, decos, { dx, dz, dl }) {
-  const out = { tiles: [], decos: [], refused: 0, skippedStart: 0 };
-  for (const t of tiles) {
-    if (t.t === 'start') { out.skippedStart++; continue; }
-    const a = track.add({ ...t, col: t.col ? { ...t.col } : null, x: t.x + dx, z: t.z + dz, l: t.l + dl });
-    if (a) out.tiles.push(a); else out.refused++;
-  }
-  for (const d of decos) {
+  const src = duplicable(tiles, decos);
+  const out = { ok: false, tiles: [], decos: [], skippedStart: src.skippedStart, reason: '' };
+  if (!src.tiles.length && !src.decos.length) { out.reason = src.skippedStart ? 'start-only' : 'empty'; return out; }
+  const undo = () => { for (const t of out.tiles) track.remove(t); for (const d of out.decos) track.removeDeco(d); out.tiles = []; out.decos = []; };
+  for (const t of src.tiles) out.tiles.push(track.add({ ...t, col: t.col ? { ...t.col } : null, x: t.x + dx, z: t.z + dz, l: t.l + dl }));
+  for (const d of src.decos) {
     const a = track.addDeco({ ...d, x: d.x + dx * CELL, z: d.z + dz * CELL, y: d.y + dl * LEVEL_H, cp: d.cp ? d.cp.map((q) => ({ ...q })) : undefined });
-    if (a) out.decos.push(a); else out.refused++;
+    if (!a) { undo(); out.reason = 'limit'; return out; }
+    out.decos.push(a);
   }
+  out.ok = out.tiles.length + out.decos.length > 0;
   return out;
 }
 

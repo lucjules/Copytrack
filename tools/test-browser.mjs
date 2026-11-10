@@ -561,6 +561,56 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  await test('éditeur : Ctrl+D réel dans tous les cas (départ seul, une pièce, décorations seules, mélange, répétition) ; Ctrl+Z et Ctrl+Y défont et refont exactement ; jamais de succès sans création', async () => {
+    await click('[data-action="editor"]');
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track);
+    await page.waitForTimeout(400);
+    const st = () => app(() => { const E = window.copytrack.session, T = E.track; return { tiles: T.tiles.length, decos: T.decos.length, hist: E.hIndex, code: T.encode(), toast: document.getElementById('toast').textContent, sel: E.sel && { ...E.sel }, starts: T.tiles.filter((t) => t.t === 'start').length }; });
+    const ctrl = async (k) => { await page.keyboard.press('Control+' + k); await page.waitForTimeout(200); };
+    await app(async () => {
+      const E = window.copytrack.session, T = E.track, { scriptTrack } = await import('/js/track.js');
+      T.clear(); for (const t of scriptTrack('s', 'start S3 C S3 finish').tiles) T.add(t);
+      E._commit(); E._changed(); E.setTool('select');
+    });
+    // 1. le départ SEUL : aucun objet créé, aucun pas d'historique, aucun message de succès, la sélection ne bouge pas
+    const startCell = await app(() => { const t = window.copytrack.session.track.tiles.find((p) => p.t === 'start'); return [t.x, t.z]; });
+    await app((c) => { const E = window.copytrack.session; E.sel = { x0: c[0], z0: c[1], x1: c[0], z1: c[1] }; E._refreshSelBar && E._refreshSelBar(); }, startCell);
+    const a0 = await st();
+    await ctrl('d');
+    const a1 = await st();
+    assert.equal(a1.tiles, a0.tiles, 'départ seul : aucune pièce créée'); assert.equal(a1.hist, a0.hist, 'départ seul : aucun pas d\'historique');
+    assert.equal(a1.code, a0.code); assert.deepEqual(a1.sel, a0.sel, 'la sélection n\'a pas bougé');
+    assert.ok(/départ est unique/.test(a1.toast) && !/Dupliqué/.test(a1.toast), 'message honnête : ' + a1.toast);
+    // 2. une seule pièce (la dernière : une ligne droite) : une copie, un pas
+    await app(() => { const E = window.copytrack.session, t = E.track.tiles.find((p) => p.t === 'straight'); E.sel = { x0: t.x, z0: t.z, x1: t.x, z1: t.z }; });
+    const b0 = await st(); await ctrl('d'); const b1 = await st();
+    assert.equal(b1.tiles, b0.tiles + 1, 'une pièce copiée'); assert.equal(b1.hist, b0.hist + 1, 'un pas');
+    // Ctrl+Z défait exactement, Ctrl+Y refait exactement
+    await ctrl('z'); const b2 = await st();
+    assert.equal(b2.code, b0.code, 'Ctrl+Z : le circuit d\'avant, exactement'); await ctrl('y'); const b3 = await st();
+    assert.equal(b3.code, b1.code, 'Ctrl+Y : le circuit d\'après, exactement');
+    // 3. répétition : trois Ctrl+D de suite = trois copies, trois pas ; trois Ctrl+Z reviennent au départ
+    const c0 = await st(); await ctrl('d'); await ctrl('d'); await ctrl('d'); const c1 = await st();
+    assert.equal(c1.tiles, c0.tiles + 3); assert.equal(c1.hist, c0.hist + 3);
+    assert.equal(new Set(await app(() => window.copytrack.session.track.tiles.map((t) => t.x + ',' + t.z + ',' + t.l))).size, c1.tiles, 'aucune pièce superposée');
+    await ctrl('z'); await ctrl('z'); await ctrl('z'); assert.equal((await st()).code, c0.code, 'trois Ctrl+Z');
+    // 4. décorations seules (hors de toute pièce), puis mélange avec pièces
+    await app(async () => { const E = window.copytrack.session; E.track.addDeco({ k: 'tree', x: 600, y: 0, z: 600, ry: 0.4, s: 1.2, c: 2, rx: 0.3, rz: 0.2 }); E.track.addDeco({ k: 'rock', x: 610, y: 0, z: 610, ry: 1, s: 1, c: 0 }); E._commit(); E.sel = { x0: 18, z0: 18, x1: 19, z1: 19 }; });
+    const d0 = await st(); await ctrl('d'); const d1 = await st();
+    assert.equal(d1.decos, d0.decos + 2, 'décorations seules copiées'); assert.equal(d1.tiles, d0.tiles); assert.equal(d1.hist, d0.hist + 1);
+    const copy = await app(() => { const d = window.copytrack.session.track.decos; return { rx: d[d.length - 2].rx, rz: d[d.length - 2].rz, ry: d[d.length - 2].ry }; });
+    assert.deepEqual(copy, { rx: 0.3, rz: 0.2, ry: 0.4 }, 'rotations personnalisées conservées');
+    await ctrl('z'); assert.equal((await st()).decos, d0.decos, 'Ctrl+Z retire les deux décorations');
+    await app(() => { const E = window.copytrack.session; E.selectAll(); });
+    const e0 = await st(); await ctrl('d'); const e1 = await st();
+    assert.equal(e1.starts, 1, 'le départ reste unique'); assert.ok(e1.tiles > e0.tiles && e1.hist === e0.hist + 1, 'sélection complète : copiée en un pas (' + e1.toast + ')');
+    // (zone occupée : la répétition ci-dessus pose chaque copie sur la première place libre ; le refus total est couvert par tools/test-duplicate.mjs)
+    await ctrl('z');
+    assert.notEqual((await st()).code, e1.code, 'annulé');
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
   await test('éditeur : aperçu du pot de peinture (toute la zone surlignée avant le clic, rien de modifié), puis un seul pas d\'annulation pour le remplissage', async () => {
     await click('[data-action="editor"]');
     await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track);
