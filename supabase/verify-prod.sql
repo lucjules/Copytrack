@@ -66,6 +66,10 @@ checks as (
   select 50, 'RLS activée : ' || c.relname, 'oui', case when c.relrowsecurity then 'oui' else 'NON' end, case when c.relrowsecurity then 'ok' else 'ÉCART' end
   from pg_class c where c.relnamespace = 'public'::regnamespace and c.relname in ('tracks', 'scores', 'rate_hits', 'track_binds', 'players') and c.relkind = 'r'
   union all
+  select 55, 'le jeu peut créer / renommer son profil par « upsert » (update sur players.id ET players.name ; sans cela, un nouveau joueur reçoit 403)', 'oui',
+         case when has_column_privilege('authenticated', 'public.players', 'id', 'update') and has_column_privilege('authenticated', 'public.players', 'name', 'update') then 'oui' else 'NON' end,
+         case when has_column_privilege('authenticated', 'public.players', 'id', 'update') and has_column_privilege('authenticated', 'public.players', 'name', 'update') then 'ok' else 'ÉCART' end
+  union all
   select 51, 'le jeu peut LIRE les tables internes (rate_hits, track_binds)', 'non',
          case when to_regclass('public.rate_hits') is null or to_regclass('public.track_binds') is null then 'tables absentes'
               when has_table_privilege('authenticated', 'public.rate_hits', 'select') or has_table_privilege('anon', 'public.rate_hits', 'select') or has_table_privilege('authenticated', 'public.track_binds', 'select') or has_table_privilege('anon', 'public.track_binds', 'select') then 'OUI' else 'non' end,

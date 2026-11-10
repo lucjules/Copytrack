@@ -15,6 +15,7 @@
 --     32 bits, on pouvait fabriquer un AUTRE circuit de même clé et poster un temps sur le classement d'un circuit existant.
 --  4. Circuits publiés : plus d'insertion libre de created_at / picked_at / plays… (droits par colonne), et un temps auteur VÉRIFIÉ : publish_track
 --     (appelée par la fonction serveur après rejeu de la course de l'auteur) est la seule voie qui pose author_verified.
+--  5. Profils : correctif de l'étape 14 (l'upsert du jeu exige update sur id ET name ; sans cela, un nouveau joueur ne pouvait pas créer son profil).
 -- =====================================================================================
 
 -- ---------------------------------------------------------------------------- 1. Limitation de cadence
@@ -194,5 +195,14 @@ end $$;
 drop function if exists public.publish_track(uuid, text, text, text, text, double precision, int, int, text);
 revoke all on function public.publish_track(uuid, text, text, text, text, double precision, int, int, text, text) from public, anon, authenticated;
 grant execute on function public.publish_track(uuid, text, text, text, text, double precision, int, int, text, text) to service_role;
+
+-- ---------------------------------------------------------------------------- 5. Profils : l'« upsert » du jeu (défaut de l'étape 14)
+-- Le jeu crée et renomme son profil par POST /rest/v1/players avec « Prefer: resolution=merge-duplicates », que PostgREST traduit en
+--   INSERT … ON CONFLICT (id) DO UPDATE SET id = EXCLUDED.id, name = EXCLUDED.name.
+-- PostgreSQL exige le droit UPDATE sur CHAQUE colonne du SET, même quand aucune ligne n'est en conflit. L'étape 14 n'accordait que update (name) : tout NOUVEAU
+-- profil recevait « 403 permission denied for table players » (l'insertion simple passait, l'upsert du jeu non) et ne pouvait donc rien enregistrer. Constaté sur la
+-- production par un essai de bout en bout (les profils existants dataient d'avant l'étape 14). Aucun risque ajouté : la politique « Modifier son profil » impose
+-- id = auth.uid() avant ET après la mise à jour (using + with check) : on ne peut écrire que SA ligne, sous SON identifiant ; created_at et title restent fermés.
+grant update (id, name) on public.players to authenticated;
 
 notify pgrst, 'reload schema';

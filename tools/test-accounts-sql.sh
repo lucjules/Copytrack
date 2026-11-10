@@ -851,6 +851,31 @@ chk "retour arrière : l'insertion directe des circuits est rétablie (étape 1)
 $P -d $DB -f supabase/etape15-backend.sql
 chk "l'étape 15 se réapplique après le retour arrière (submit_best revient)" "$([ "$(Q "select count(*) from pg_proc where proname = 'submit_best'")" = 1 ] && echo 1 || echo 0)"
 
+# Profils : l'instruction EXACTE que PostgREST produit pour « POST /rest/v1/players » avec « Prefer: resolution=merge-duplicates » (js/online.js, ensurePlayer).
+# Elle exige update sur CHAQUE colonne du SET (id ET name), même sans conflit : avec l'étape 14 seule, un nouveau joueur recevait « 403 permission denied ».
+# Défaut trouvé sur la production par un essai de bout en bout ; corrigé par l'étape 15 (grant update (id, name)). Ici : le correctif ET ses limites.
+echo "Profils : l'upsert du jeu"
+U1=00000000-0000-0000-0000-00000000e301; U2=00000000-0000-0000-0000-00000000e302
+RUP=$($P -d $DB -At 2>&1 <<SQL
+insert into auth.users (id, is_anonymous) values ('$U1', true), ('$U2', true) on conflict do nothing;
+set role authenticated; select set_config('request.jwt.claim.sub', '$U1', false);
+insert into players (id, name) values ('$U1', 'Upsert1') on conflict (id) do update set id = excluded.id, name = excluded.name;
+do \$\$ begin raise notice 'CREE=%', (select name from players where id = '$U1'); end \$\$;
+insert into players (id, name) values ('$U1', 'Upsert1b') on conflict (id) do update set id = excluded.id, name = excluded.name;
+do \$\$ begin raise notice 'RENOMME=%', (select name from players where id = '$U1'); end \$\$;
+do \$\$ begin begin insert into players (id, name) values ('$U2', 'Pirate') on conflict (id) do update set id = excluded.id, name = excluded.name; raise notice 'AUTRE=ACCEPTE'; exception when others then raise notice 'AUTRE=REFUSE'; end; end \$\$;
+do \$\$ begin begin update players set id = '$U2' where id = '$U1'; if found then raise notice 'ID=ACCEPTE'; else raise notice 'ID=REFUSE'; end if; exception when others then raise notice 'ID=REFUSE'; end; end \$\$;
+do \$\$ begin begin update players set created_at = now() - interval '2 years' where id = '$U1'; raise notice 'DATE=ACCEPTE'; exception when others then raise notice 'DATE=REFUSE'; end; end \$\$;
+do \$\$ begin raise notice 'FIN=%', (select id::text from players where name = 'Upsert1b'); end \$\$;
+SQL
+)
+chk "profil : l'upsert du jeu crée un NOUVEAU profil (le cas qui renvoyait 403)" "$(echo "$RUP" | grep -q 'CREE=Upsert1$' && echo 1 || echo 0)"
+chk "profil : le même upsert renomme le profil existant" "$(echo "$RUP" | grep -q 'RENOMME=Upsert1b' && echo 1 || echo 0)"
+chk "profil : l'upsert au nom d'UN AUTRE pilote est refusé, et son profil n'est pas créé" "$(echo "$RUP" | grep -q 'AUTRE=REFUSE' && [ "$(Q "select count(*) from players where id = '$U2'")" = 0 ] && echo 1 || echo 0)"
+chk "profil : on ne peut pas prendre l'identifiant d'un autre (update id)" "$(echo "$RUP" | grep -q 'ID=REFUSE' && echo 1 || echo 0)"
+chk "profil : la date de création reste fermée (étape 14)" "$(echo "$RUP" | grep -q 'DATE=REFUSE' && echo 1 || echo 0)"
+chk "profil : après ces essais le profil est toujours sous son identifiant" "$(echo "$RUP" | grep -q "FIN=$U1" && echo 1 || echo 0)"
+
 # Script de vérification de la base réelle (supabase/verify-prod.sql, LECTURE SEULE) : sur la base complète il ne signale rien ; sur une base « étapes 1 à 14 »
 # (l'état constaté en production avant l'étape 15) il signale EXACTEMENT les objets manquants : le script de vérification est lui-même vérifié.
 VP=$($P -d $DB -At -F'|' -f supabase/verify-prod.sql)
