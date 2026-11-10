@@ -81,9 +81,10 @@ export default {
   'Interface': 'Interface', 'thème, HUD, caméras': 'theme, HUD, cameras', 'Sections': 'Sections',
   'Confort visuel': 'Visual comfort', 'Courses': 'Races', 'Apparence': 'Appearance', 'Tactile et manette': 'Touch and gamepad',
   'Records, médailles, niveau et titres : menu <b>Progression</b>. Code joueur, import et export : onglet <b>Sauvegardes</b>.': 'Records, medals, level and titles: <b>Progress</b> menu. Player code, import and export: <b>Saves</b> tab.',
+  'Jours de défi du jour': 'Daily challenge days', 'Meilleure série de jours': 'Best streak (days)',
   'Objectifs bonus réussis': 'Bonus goals completed', 'Turbos pris': 'Boosts taken', 'Mutations du jour terminées': 'Daily mutations completed',
   'Leçons de l’Académie': 'Academy lessons', 'Collections complétées': 'Collections completed', 'Objectif bonus réussi': 'Bonus goal completed',
-  'Chapitres de la carrière': 'Career chapters', 'Gagne {a} médailles au chapitre {b}.': 'Win {a} medals in chapter {b}.',
+  'Chapitres de la carrière': 'Career chapters',
   'Zone sensible': 'Sensitive area', 'Effacer tous les records de cet appareil': 'Erase every record on this device', 'Effacer les records': 'Erase records',
   'Menu principal': 'Main menu',
   'Accès rapides': 'Quick access',
@@ -116,6 +117,8 @@ export default {
 
   // ---------------------------------------------------------------- carrière (écran des circuits)
   'Chapitre {n:w}': 'Chapter {n}',
+  'Chapitre {n:w} · {d:t}': 'Chapter {n} · {d}', '🔓 Chapitre {n:w} · {d:t}': '🔓 Chapter {n} · {d}', '🔒 Chapitre {n:w} · {d:t}': '🔒 Chapter {n} · {d}',
+  'Gagne {a:w} médailles au chapitre {b:w}.': 'Win {a} medals in chapter {b}.',
   '<i style="{s}"></i>Chapitre {n:w} · {d:t}': '<i style="{s}"></i>Chapter {n} · {d}',
   '<i style="{s}"></i>Chapitre {n:w} · {d:t} 🔒': '<i style="{s}"></i>Chapter {n} · {d} 🔒',
   '★ {g:t}': '★ {g}',
