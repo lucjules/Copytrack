@@ -68,6 +68,7 @@ export default {
   'circuits officiels, chapitres, médailles': 'official tracks, chapters, medals',
   'Circuits de la communauté': 'Community tracks', 'les circuits publiés par les joueurs': 'tracks published by players',
   'poser, tester et vérifier un circuit': 'place, test and verify a track', 'jouer, modifier, partager et publier': 'play, edit, share and publish',
+  'un circuit reçu d’un ami': 'a track received from a friend',
   'Salons': 'Rooms', 'rejoindre ou créer une salle, championnats': 'join or create a room, championships', 'Compétition': 'Competition',
   'demandes et liste d’amis (compte)': 'requests and friends list (account)',
   'Records et médailles': 'Records and medals', 'tes temps, circuit par circuit': 'your times, track by track',

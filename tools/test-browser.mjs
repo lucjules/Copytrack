@@ -424,6 +424,35 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  await test('éditeur : aperçu du pot de peinture (toute la zone surlignée avant le clic, rien de modifié), puis un seul pas d\'annulation pour le remplissage', async () => {
+    await click('[data-action="editor"]');
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track);
+    await page.waitForTimeout(400);
+    const r = await app(async () => {
+      const E = window.copytrack.session, T = E.track;
+      T.clear(); T.add({ t: 'start', x: 0, z: 0, l: 0, r: 0 });
+      for (let i = 1; i <= 8; i++) T.add({ t: 'straight', x: i, z: 0, l: 0, r: 1, s: 'ice' });
+      T.add({ t: 'straight', x: 20, z: 0, l: 0, r: 1, s: 'ice' });
+      E._commit(); E._changed();
+      E.setTool('fill-surf:slow');
+      const start = T.tilesAt(3, 0)[0], before = T.encode();
+      const pv = E._fillPreview(start);
+      E._showFillCells(pv.cells, '#ffb347');
+      const shown = { visible: E.fillCells.visible, count: E.fillCells.count, zone: pv.count };
+      const unchanged = T.encode() === before;
+      E.hover = { cx: 3, cz: 0 }; E._floodFill();
+      const slow = T.tiles.filter((t) => t.s === 'slow').length, far = T.tilesAt(20, 0)[0].s;
+      E.undo();
+      return { shown, unchanged, slow, far, afterUndo: T.tiles.filter((t) => t.s === 'ice').length };
+    });
+    assert.deepEqual(r.shown, { visible: true, count: 8, zone: 8 }, 'aperçu : 8 cases');
+    assert.ok(r.unchanged, 'l\'aperçu ne modifie rien');
+    assert.equal(r.slow, 8); assert.equal(r.far, 'ice', 'la zone séparée n\'est pas touchée');
+    assert.equal(r.afterUndo, 9, 'un seul Ctrl+Z annule tout le remplissage');
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
   await test('éditeur : un circuit complet se teste depuis l\'éditeur', async () => {
     await app(() => window.copytrack.openEditor({ code: window.copytrack.builtins[0].track.encode(), name: 'Essai' }));
     await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session.track.tiles.length > 10);

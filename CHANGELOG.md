@@ -6,6 +6,17 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.53 — phase 6 : consolidation finale
+
+`PHYS_VER` inchangé (31). Bilan détaillé, avec l'état de chaque problème (confirmé, corrigé, testé, validé, non validé, restant) : `docs/PLAN-FINALISATION-COPYTRACK.md`. Procédures de test : `docs/TESTS.md`.
+- **Lint** : 19 erreurs ESLint dans les fichiers de test écrits pendant ce chantier (variables inutilisées, `const`, globaux du navigateur) : la CI aurait échoué. Corrigées ; `npm run lint` passe.
+- **Record en mémoire** (`storage.getRecord`) : la copie du record faite pendant la session passait devant un record synchronisé d'une physique plus récente dès qu'elle avait un meilleur temps (d'une ancienne physique). La physique la plus récente l'emporte maintenant ; à physique égale, le meilleur temps.
+- **Traduction** : « un circuit reçu d'un ami » s'affichait « d'un friend » en anglais (trouvé par le test navigateur de langue).
+- **Essais croisés** (`tools/test-croises.mjs`, dans `npm test`) : verre × obstacles mobiles × gravité inversée × aimant × volant inversé × checkpoints × retours sur chaque surface spéciale × groupes logiques × replays (avec retours volontaires) × circuits personnalisés × vérification des scores (code modifié, temps falsifié, autre physique, circuit officiel mis à jour) × code découpé en morceaux (multijoueur) × sauvegardes de deux appareils × invité → compte × 300 opérations d'édition au hasard (aucune pièce ne se chevauche, l'index reste cohérent).
+- **Performances mesurées** : 8 µs par pas de physique (budget : 8 300 µs à 120 Hz), identique avant et après les corrections de ce chantier ; les écouteurs d'événements de l'éditeur sont bien retirés à sa fermeture ; aucune dégradation de la précision physique.
+- **Test navigateur** : aperçu du pot de peinture (zone surlignée avant le clic, circuit inchangé, un seul pas d'annulation).
+- **Documentation** : `docs/TESTS.md` (toutes les procédures, PostgreSQL jetable, limites), plan de suivi avec le bilan final.
+
 ## Bêta 0.9.52 — phase 5 : accueil à six catégories, écrans rangés
 
 `PHYS_VER` inchangé (31). Suivi : `docs/PLAN-FINALISATION-COPYTRACK.md`.
