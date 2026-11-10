@@ -85,7 +85,9 @@ const frenchLeft = (page) => page.evaluate(async () => {
   };
   walk(document.documentElement);
   // Les descriptions des circuits (infobulles « Départ : … ») sont vérifiées par le test Node ; ici on ne regarde que l'interface.
-  return out.filter((s) => s !== 'Français');
+  // (Le code joueur — 5 + 5 caractères tirés au hasard — est une DONNÉE, pas du texte : certains tirages commencent par « DU », « LE »… et l'heuristique y voit un mot français.
+  //  Échec constaté sur GitHub, passage 186 : « DU86P-Y43D9 ».)
+  return out.filter((s) => s !== 'Français' && !/^[A-Z0-9]{5}-[A-Z0-9]{5}$/.test(s));
 });
 
 try {
