@@ -807,6 +807,33 @@ wait
 chk "plafond GLOBAL (2) : la 3e requête (autre pilote), arrivée pendant que la 2e est en cours, est REFUSÉE" "$([ "$RG" -ge 1 ] 2>/dev/null && echo 1 || echo 0)"
 rm -f /tmp/ct-f1.txt /tmp/ct-f2.txt
 
+echo "Concurrence : publication d'un même circuit, droits d'écriture directs"
+# Deux pilotes publient EN MÊME TEMPS la même signature : exactement un « created », l'autre « taken » (jamais une erreur de contrainte d'unicité).
+( $P -d $DB -At -c "begin; select public.publish_track('$E2', 'Course A', 'forest', 'c', 'sig-race', 20, 5, 1, ''); select pg_sleep(2); commit;" >/tmp/ct-p1.txt 2>&1 ) &
+sleep 0.7
+$P -d $DB -At -c "select public.publish_track('$E3', 'Course B', 'forest', 'c', 'sig-race', 19, 5, 1, '');" >/tmp/ct-p2.txt 2>&1 || true
+wait
+chk "même signature publiée par deux pilotes simultanément : un « created », un « taken », une seule ligne, aucune erreur de contrainte" "$([ "$(grep -c created /tmp/ct-p1.txt)" = 1 ] && [ "$(grep -c taken /tmp/ct-p2.txt)" = 1 ] && ! grep -qi "duplicate\|unique" /tmp/ct-p2.txt && [ "$(Q "select count(*) from tracks where signature = 'sig-race'")" = 1 ] && [ "$(Q "select author_time from tracks where signature = 'sig-race'")" = 20 ] && echo 1 || echo 0)"
+rm -f /tmp/ct-p1.txt /tmp/ct-p2.txt
+chk "publish_track refuse des valeurs hors bornes (nom vide, tour à 0, temps négatif, code énorme)" "$([ "$(for a in "'', 'forest', 'c', 'sv1', 20, 5, 1" "'N', 'forest', 'c', 'sv2', 20, 5, 0" "'N', 'forest', 'c', 'sv3', -1, 5, 1" "'N', 'forest', repeat('x', 100001), 'sv4', 20, 5, 1"; do Q "select public.publish_track('$E2', $a, '')" | grep -c "Paramètres invalides"; done | paste -sd+ | bc)" = 4 ] && [ "$(Q "select count(*) from tracks where signature like 'sv%'")" = 0 ] && echo 1 || echo 0)"
+# Le jeu (rôle authenticated) ne peut JAMAIS écrire directement dans les circuits (hors insertion des colonnes autorisées) ni dans les temps.
+DENY=$($P -d $DB -At 2>&1 <<SQL
+set role authenticated; select set_config('request.jwt.claim.sub', '$E2', false);
+do \$\$ declare n int := 0; begin
+  begin update tracks set author_verified = true where author = '$E2'; exception when insufficient_privilege then n := n + 1; end;
+  begin update tracks set author_time = 0.001 where author = '$E2'; exception when insufficient_privilege then n := n + 1; end;
+  begin update tracks set signature = 'pirate' where author = '$E2'; exception when insufficient_privilege then n := n + 1; end;
+  begin update scores set time = 0.001 where player = '$E1'; exception when insufficient_privilege then n := n + 1; end;
+  begin insert into scores (track_key, player, time, inputs, phys_ver) values ('direct', '$E2', 0.001, 'A', 32); exception when insufficient_privilege then n := n + 1; end;
+  begin delete from scores where player = '$E2'; exception when insufficient_privilege then n := n + 1; end;
+  raise notice 'REFUSES=%', n;
+end \$\$;
+SQL
+)
+chk "le jeu ne peut ni modifier author_verified / author_time / signature, ni écrire ou effacer des temps (permission refusée, par droits et non par simple absence de politique)" "$(echo "$DENY" | grep -q "REFUSES=6" && echo 1 || echo 0)"
+chk "les tables internes (rate_hits, track_binds) sont fermées au jeu" "$([ "$(Q "select has_table_privilege('authenticated', 'public.rate_hits', 'select') or has_table_privilege('anon', 'public.track_binds', 'select')")" = f ] && echo 1 || echo 0)"
+chk "aucune fonction de l'étape 15 n'est exécutable par anon ou authenticated" "$([ "$(Q "select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname in ('rate_check','submit_best','publish_track','submit_rate_check','rate_purge') and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('public', p.oid, 'execute'))")" = 0 ] && echo 1 || echo 0)"
+
 echo "Étape 15b (verrouillage de la publication) et retour arrière"
 $P -d $DB -f supabase/etape15b-publication-verifiee.sql; $P -d $DB -f supabase/etape15b-publication-verifiee.sql
 R15B=$($P -d $DB -At 2>&1 <<SQL

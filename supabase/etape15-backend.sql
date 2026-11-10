@@ -34,7 +34,7 @@ revoke all on public.rate_hits from public, anon, authenticated;
 --   global_max  plafond TOUS pilotes confondus (0 = aucun) ; is_anon + anon_max : sous-plafond des sessions anonymes (0 = aucun)
 -- Un verrou transactionnel par type sérialise les appels : pas de dépassement possible entre deux requêtes simultanées, d'où qu'elles viennent.
 create or replace function public.rate_check(k text, p uuid, max_hits int, window_s int, global_max int default 0, is_anon boolean default false, anon_max int default 0) returns int
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public, pg_temp as $$
 declare recent int; oldest timestamptz; w interval; t0 timestamptz;
 begin
   if k is null or k !~ '^[a-z0-9_]{1,20}$' or p is null or max_hits < 1 or window_s < 1 then raise exception 'Paramètres invalides'; end if;
@@ -61,7 +61,7 @@ grant execute on function public.rate_check(text, uuid, int, int, int, boolean, 
 -- Enveloppe de compatibilité : la fonction serveur de l'étape 14 appelle submit_rate_check(p, max_hits, window_s, global_max).
 drop function if exists public.submit_rate_check(uuid, int, int, int);
 create or replace function public.submit_rate_check(p uuid, max_hits int, window_s int, global_max int default 0) returns int
-language sql security definer set search_path = public as $$
+language sql security definer set search_path = public, pg_temp as $$
   select public.rate_check('submit', p, max_hits, window_s, global_max, false, 0);
 $$;
 revoke all on function public.submit_rate_check(uuid, int, int, int) from public, anon, authenticated;
@@ -69,7 +69,7 @@ grant execute on function public.submit_rate_check(uuid, int, int, int) to servi
 
 -- Ménage manuel (rate_check nettoie déjà son type à chaque appel) : lignes de plus d'une heure.
 create or replace function public.rate_purge() returns int
-language sql security definer set search_path = public as $$
+language sql security definer set search_path = public, pg_temp as $$
   with d as (delete from rate_hits where at < clock_timestamp() - interval '1 hour' returning 1) select count(*)::int from d;
 $$;
 revoke all on function public.rate_purge() from public, anon, authenticated;
@@ -77,7 +77,7 @@ grant execute on function public.rate_purge() to service_role;
 
 -- ---------------------------------------------------------------------------- 2. Plafond de 2 000 temps par pilote
 create or replace function public.scores_limit() returns trigger
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public, pg_temp as $$
 begin
   -- Un verrou par pilote : deux insertions simultanées passent l'une après l'autre (la seconde recompte après la validation de la première).
   perform pg_advisory_xact_lock(hashtextextended('scores:' || new.player::text, 0));
@@ -108,7 +108,7 @@ revoke all on public.track_binds from public, anon, authenticated;
 -- Le record porte TOUJOURS le fantôme et les temps intermédiaires de la course retenue (jamais ceux d'une course plus lente).
 create or replace function public.submit_best(p uuid, tk text, t double precision, inp text, pv int, tname text,
   sp jsonb default null, gh text default null, gveh jsonb default null, strong text default null) returns jsonb
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public, pg_temp as $$
 declare cur record; sarr int[]; bound text; imp boolean := false; best double precision; before_n bigint; total_n bigint;
 begin
   if p is null or tk is null or char_length(tk) > 80 or t is null or t <= 0 or t >= 3600 or pv is null then raise exception 'Paramètres invalides'; end if;
@@ -151,16 +151,30 @@ alter table public.tracks add column if not exists author_verified boolean not n
 -- réservée aux modérateurs), id, plays, likes, reports, hidden, author_verified. (L'ancien client reste compatible : il n'envoie que ces colonnes.)
 revoke insert on public.tracks from authenticated;
 grant insert (name, decor, code, signature, author_time, pieces, laps, description) on public.tracks to authenticated;
+-- Défense en profondeur : aucune modification directe de la table par le jeu (author_time, author_verified, signature, code…). Jusqu'ici seule l'ABSENCE de
+-- politique RLS « update » l'empêchait ; un droit accordé par erreur (ou par les droits par défaut de Supabase) ne doit pas suffire à ouvrir la porte.
+-- Les modifications légitimes passent par des fonctions : update_track_meta (nom, description), toggle_like, report_track, track_played, publish_track.
+revoke update, truncate, references, trigger on public.tracks from anon, authenticated;
+revoke insert, update, delete, truncate, references, trigger on public.scores from anon, authenticated;     -- (les temps ne s'écrivent que par submit_best, via la fonction serveur)
+revoke all on public.track_binds, public.rate_hits from anon, authenticated;
 
 -- Publication VÉRIFIÉE : appelée par la fonction serveur (clé de service) après avoir rejoué la course de l'auteur sur ce code. author_time est donc le
 -- temps REJOUÉ par le serveur, jamais une affirmation du client. Un même circuit (même signature) republié par SON auteur est mis à jour (c'est ainsi
 -- qu'un circuit publié avant l'étape 15, au temps non vérifié, peut le devenir) ; par un autre pilote, il est refusé.
 create or replace function public.publish_track(p uuid, nm text, dc text, cd text, sg text, atime double precision, pc int, lp int, ds text default '', strong text default null) returns jsonb
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public, pg_temp as $$
 declare ex record; nid uuid; bound text;
 begin
-  if p is null or atime is null or atime <= 0 or atime >= 3600 then raise exception 'Paramètres invalides'; end if;
+  -- Les valeurs sont celles que la fonction serveur a RECALCULÉES après rejeu ; on les revérifie quand même (défense en profondeur, mêmes bornes que la table).
+  if p is null or atime is null or atime <= 0 or atime >= 3600 or nm is null or char_length(nm) not between 1 and 40 or dc is null or char_length(dc) > 20
+     or cd is null or char_length(cd) > 100000 or sg is null or char_length(sg) not between 1 and 40 or pc is null or pc not between 2 and 5000
+     or lp is null or lp not between 1 and 9 or char_length(coalesce(ds, '')) > 200 then
+    raise exception 'Paramètres invalides';
+  end if;
   perform pg_advisory_xact_lock(hashtextextended('tracks:' || p::text, 0));
+  -- Deux pilotes qui publient EN MÊME TEMPS la même signature : le second attend le premier (sinon la contrainte d'unicité le ferait échouer en erreur 500
+  -- au lieu de « signature déjà prise »).
+  perform pg_advisory_xact_lock(hashtextextended('tracksig:' || sg, 0));
   -- Empreinte forte du circuit liée à sa clé de classement (voir submit_best) : un autre circuit de même signature 32 bits est refusé.
   if strong is not null then
     insert into track_binds (track_key, strong, first_player) values ('u-' || sg, strong, p) on conflict (track_key) do nothing;
