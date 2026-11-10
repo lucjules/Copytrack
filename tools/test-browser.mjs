@@ -62,7 +62,22 @@ const page = await hook(await ctx.newPage());
 
 const shot = async (n) => { if (shots) await page.screenshot({ path: join(shots, n + '.png') }); };
 const app = (fn, arg) => page.evaluate(fn, arg);
-const waitApp = (cond, arg, timeout = 30000) => page.waitForFunction(cond, arg, { timeout });
+// Sondage par INTERVALLE (100 ms) et non à chaque image : sur une machine lente, le rendu logiciel (SwiftShader) espace les images de plusieurs secondes, et un sondage lié aux images
+// attendrait d'autant. Si l'attente expire, l'échec dit dans quel état était la page (écran visible, fenêtre ouverte, images dessinées ou non) : « page bloquée » (fil principal occupé,
+// plus aucune image) et « condition fausse » (la page vit mais n'a pas fait ce qu'on attendait) sont deux pannes différentes.
+const pageState = async () => {
+  const probe = page.evaluate(async () => {
+    const A = window.copytrack, f0 = A.renderer.info.render.frame, t0 = performance.now();
+    await new Promise((r) => setTimeout(r, 1500));
+    return { mode: A.mode, ecrans: [...document.querySelectorAll('.screen:not(.hidden)')].map((e) => e.id).join('+') || 'aucun', fenetre: A.ui.modalOpen ? (document.getElementById('modal-title') || {}).textContent : 'aucune', images: A.renderer.info.render.frame - f0, ms: Math.round(performance.now() - t0), erreurs: (window.__ctErrors || []).length };
+  });
+  const r = await Promise.race([probe, new Promise((res) => setTimeout(() => res(null), 6000))]);
+  return r ? `état de la page : ${JSON.stringify(r)}${r.images === 0 ? ' → AUCUNE image dessinée en 1,5 s (page bloquée ou rendu à l\'arrêt)' : ''}` : 'état de la page : aucune réponse en 6 s → fil principal BLOQUÉ';
+};
+const waitApp = async (cond, arg, timeout = 30000) => {
+  try { await page.waitForFunction(cond, arg, { timeout, polling: 100 }); }
+  catch (e) { throw new Error(`${String(e.message).split('\n')[0]} — ${await pageState().catch((x) => 'état de la page illisible : ' + x.message)}`); }
+};
 // Les boutons du menu sont animés : Playwright attendrait indéfiniment qu'ils soient « stables ». On déclenche donc le clic dans la page.
 // Clic SOURIS réel (comme un joueur) : l'élément est amené à l'écran, on VÉRIFIE que le point visé lui appartient (sinon l'échec dit ce qui le recouvre, tout de suite,
 // au lieu d'un délai de 30 s), puis on clique. À préférer à `click` quand le test doit prouver que le bouton est atteignable.
