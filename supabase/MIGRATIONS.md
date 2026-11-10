@@ -114,6 +114,22 @@ Attendu : `401` `{"error":"Non connecté."}`.
 
 L'ancienne fonction `ice` ne demande rien à l'étape 15 : elle peut rester.
 
+## Journal des opérations réellement faites sur la production
+
+**10 novembre 2026** (accès : API de gestion Supabase avec un jeton d'accès personnel, fourni par le propriétaire du projet pour cette opération ; **à révoquer** sur supabase.com/dashboard/account/tokens). Chaque étape a été vérifiée avant la suivante ; tout SQL a d'abord été rejoué sur une copie locale reproduisant la production (identique à la photo de la base réelle, avec ses 187 temps réels) :
+
+| # | Opération | Preuve |
+|---|---|---|
+| 0 | Lecture seule : `verify-prod.sql`, audit des étapes 1 à 14 objet par objet, corps de fonction par corps de fonction, droits, politiques, contraintes | Seules les étapes 7 et 8 et l'édition de `track_comments_list` différaient de la référence |
+| 1 | Sauvegarde logique des tables `players`, `scores`, `tracks`, `submit_rate` et photo des droits, politiques, déclencheurs et fonctions (aucune sauvegarde automatique : plan sans) | 11 / 187 / 14 / 2 lignes, **conservée hors dépôt** (données de joueurs) |
+| 2 | Étapes 7, 8, 13 (corrigée), 14 | Photo de la production = photo de la base de référence « étapes 1 à 14 » : aucune différence |
+| 3 | Étape 15 | Photo = référence « étapes 1 à 15 » : aucune différence ; `verify-prod.sql` : plus aucun `MANQUE` ni `ÉCART` |
+| 4 | Déploiement de `ice` (v3 → v4) puis `submit-score` (v23 → v24), `verify_jwt` conservé | `check-deployed.mjs` : `physVer` 33, actions `submit` et `publish-track`, limites annoncées ; `ice` 401 sans session |
+| 5 | Essai de bout en bout (session invité jetable, vraie course rejouée, publication) : **a trouvé le défaut du profil (403)** | Corrigé (étape 15 relancée) ; second essai : 20 vérifications sur 21 ; la 21e (`ice` avec session) répond 501 « Aucun relais TURN configuré » : **attendu**, aucun relais n'est paramétré (le jeu garde son STUN) |
+| 6 | Retrait des lignes de test, par identifiant exact | Retour à 11 joueurs / 187 temps / 14 circuits, 0 session de test restante |
+
+**Pas encore fait** : l'étape 15b (voir l'ordre : après la mise en ligne du jeu 0.9.58) ; les circuits publiés avant l'étape 15 (14 sur 14) gardent un temps auteur **non vérifié** jusqu'à ce que leur auteur les republie.
+
 ## Ce qui n'est pas vérifié ici
 
-Le projet Supabase réel (Auth, limites de débit de la plateforme, droits effectifs du rôle `service_role`) n'est pas testé : le SQL l'est sur un PostgreSQL local (`npm run test:sql`, dont des **sessions simultanées** réelles), les fonctions contre un faux Supabase avec la vraie vérification de course. L'état de la production (étapes appliquées, fonctions déployées) n'est connu que par les preuves ci-dessus.
+Le SQL est testé sur un PostgreSQL local (`npm run test:sql`, dont des **sessions simultanées** réelles), les fonctions contre un faux Supabase avec la vraie vérification de course : ces tests ne voient PAS les droits effectifs du rôle `authenticated` à travers PostgREST (c'est ce qui a laissé passer le défaut du profil, voir le journal). Ce qui a été éprouvé sur le projet réel le 10 novembre 2026 : la chaîne session invité → profil → course rejouée → record → fantôme, la publication à temps auteur vérifié, et les refus des écritures directes (journal ci-dessus). **Non éprouvé** : la tenue sous charge réelle (limites de débit de la plateforme, instances multiples de la fonction), l'étape 15b, un compte avec e-mail (sauvegarde cloud), le multijoueur avec relais TURN. L'état de la production n'est connu que par les preuves ci-dessus.
