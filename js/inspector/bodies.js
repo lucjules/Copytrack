@@ -215,8 +215,8 @@ export const bodyMethods = {
     rows.push(this._num('Hauteur', () => d.y, (v) => { d.y = v; return touch(); }, { step: 0.5 }));
     rows.push(this._num('Z', () => d.z, (v) => { d.z = v; return touch(); }, { step: 0.5 }));
     const obst = isObstacle(d.k);
-    const deg = (r) => Math.round((r || 0) * 180 / Math.PI);
-    const norm = (v) => ((v % 360) + 360) % 360;
+    const deg = (r) => Math.round((r || 0) * 1800 / Math.PI) / 10;          // (au dixième de degré : une saisie de 37,5° s'affiche 37,5°)
+    const norm = (v) => (((v % 360) + 360) % 360);
     rows.push(h('div', { class: 'insp-group' }, 'Rotation'));
     rows.push(this._angle('Cap (Y)', () => norm(deg(d.ry)), (v) => { d.ry = norm(v) * Math.PI / 180; return touch(); }, { min: 0, max: 359 }));
     if (!obst) {

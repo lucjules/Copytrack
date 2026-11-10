@@ -611,6 +611,59 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  await test('éditeur : rotations réelles : saisie d\'angle au demi-degré, gizmo X / Y / Z des décorations (pas réglable), obstacle et pièce limités au cap ; annuler les défait', async () => {
+    await click('[data-action="editor"]');
+    await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track);
+    await page.waitForTimeout(400);
+    await app(async () => {
+      const E = window.copytrack.session, T = E.track, { scriptTrack } = await import('/js/track.js');
+      T.clear(); for (const t of scriptTrack('s', 'start S3 C S3 finish').tiles) T.add(t);
+      T.addDeco({ k: 'tree', x: 70, y: 0, z: 70, ry: 0.5, s: 1, c: 0 }); E._commit(); E._changed(); E.setTool('inspect');
+      E.inspector.select('deco', T.decos[0]);
+    });
+    await page.waitForTimeout(250);
+    // 1. saisie précise d'un angle (37,5° d'inclinaison), puis du roulis
+    const typeAngle = (label, v) => page.evaluate(([l, val]) => { const row = [...document.querySelectorAll('.insp-row')].find((r) => r.textContent.startsWith(l)); const i = row.querySelector('input.insp-deg'); i.value = val; i.dispatchEvent(new Event('change', { bubbles: true })); }, [label, v]);
+    await typeAngle('Inclinaison (X)', '37.5'); await typeAngle('Roulis (Z)', '-20');
+    const d1 = await app(() => { const d = window.copytrack.session.track.decos[0]; return [d.rx, d.rz, d.ry]; });
+    assert.ok(Math.abs(d1[0] - 37.5 * Math.PI / 180) < 1e-6 && Math.abs(d1[1] + 20 * Math.PI / 180) < 1e-6, 'angles saisis : ' + JSON.stringify(d1));
+    assert.equal(await page.evaluate(() => [...document.querySelectorAll('.insp-row')].find((r) => r.textContent.startsWith('Inclinaison (X)')).querySelector('input.insp-deg').value), '37.5');
+    // 2. gizmo : les trois cercles sont proposés ; un geste du gizmo (orientation imposée au proxy) met à jour les TROIS angles
+    const g = await app(() => {
+      const I = window.copytrack.session.inspector; I.setMode('rotate');
+      const out = { x: I.tc.showX, y: I.tc.showY, z: I.tc.showZ, snap: I.tc.rotationSnap };
+      I.proxy.rotation.set(0.4, 1.0, -0.3); I.proxy.updateMatrixWorld(true); I._onGizmo();
+      const d = I.sel.obj; out.angles = [d.rx, d.ry, d.rz]; return out;
+    });
+    assert.ok(g.x && g.y && g.z, 'décoration : cercles X, Y et Z'); assert.ok(Math.abs(g.snap - 5 * Math.PI / 180) < 1e-9, 'pas de 5° par défaut');
+    assert.ok(Math.abs(g.angles[0] - 0.4) < 1e-3 && Math.abs(g.angles[1] - 1.0) < 1e-3 && Math.abs(g.angles[2] + 0.3) < 1e-3, 'geste du gizmo : ' + JSON.stringify(g.angles));
+    // 3. pas du gizmo réglable (15°)
+    await page.evaluate(() => { const row = [...document.querySelectorAll('.insp-row')].find((r) => r.textContent.startsWith('Pas du gizmo')); const sel = row.querySelector('select'); sel.value = '15'; sel.dispatchEvent(new Event('change', { bubbles: true })); });
+    assert.ok(Math.abs((await app(() => window.copytrack.session.inspector.tc.rotationSnap)) - 15 * Math.PI / 180) < 1e-9, 'pas de 15°');
+    // 4. annuler / rétablir : les deux angles saisis se défont puis reviennent exactement (un pas par saisie)
+    const hist = await app(() => { const E = window.copytrack.session; E._commit(); return { i: E.hIndex }; });
+    let undone = 0; while (undone < 4 && (await app(() => { const d = window.copytrack.session.track.decos[0]; return !!(d.rx || d.rz); }))) { await app(() => window.copytrack.session.undo()); undone++; }
+    assert.ok(undone >= 1 && undone <= 4, 'Ctrl+Z défait les angles (' + undone + ' pas)');
+    assert.equal(await app(() => { const d = window.copytrack.session.track.decos[0]; return d.rx || d.rz || 0; }), 0, 'plus d\'inclinaison ni de roulis');
+    for (let i = 0; i < undone; i++) await app(() => window.copytrack.session.redo());
+    assert.equal(await app(() => window.copytrack.session.hIndex), hist.i, 'rétabli au même point de l\'historique');
+    const back = await app(() => { const d = window.copytrack.session.track.decos[0]; return [d.rx, d.rz]; });
+    assert.ok(Math.abs(back[0] - 0.4) < 1e-3 && Math.abs(back[1] + 0.3) < 1e-3, 'rétabli exactement : ' + JSON.stringify(back));
+    // 5. obstacle : seul le cercle Y ; pièce : seul le cercle Y, par quarts de tour
+    const o = await app(async () => {
+      const E = window.copytrack.session, { OBST } = await import('/js/obstacles.js'), I = E.inspector;
+      const ob = E.track.addDeco({ k: Object.keys(OBST)[0], x: 90, y: 0, z: 90, ry: 0, s: 1, c: 0 }); I.select('deco', ob); I.setMode('rotate');
+      const a = { x: I.tc.showX, y: I.tc.showY, z: I.tc.showZ };
+      I.select('tile', E.track.tiles[1]); I.setMode('rotate');
+      return { obstacle: a, tile: { x: I.tc.showX, y: I.tc.showY, z: I.tc.showZ, snap: I.tc.rotationSnap } };
+    });
+    assert.deepEqual(o.obstacle, { x: false, y: true, z: false }, 'obstacle : cap seulement');
+    assert.deepEqual([o.tile.x, o.tile.y, o.tile.z], [false, true, false], 'pièce : cap seulement'); assert.ok(Math.abs(o.tile.snap - Math.PI / 2) < 1e-9, 'pièce : quarts de tour');
+    assert.equal(await page.evaluate(() => [...document.querySelectorAll('.insp-row input.insp-deg')].length), 0, 'une pièce n\'a pas de saisie d\'angle libre');
+    await app(() => window.copytrack.leaveEditor());
+    await waitApp(() => window.copytrack.mode === 'menu');
+  });
+
   await test('éditeur : aperçu du pot de peinture (toute la zone surlignée avant le clic, rien de modifié), puis un seul pas d\'annulation pour le remplissage', async () => {
     await click('[data-action="editor"]');
     await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track);
