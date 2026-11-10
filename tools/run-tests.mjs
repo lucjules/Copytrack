@@ -57,7 +57,10 @@ for (const r of all.sort((a, b) => a.file.localeCompare(b.file))) {
   const lines = r.out.split('\n');
   const nOk = lines.filter((l) => /^ {2}ok {3}/.test(l)).length;
   const nFail = lines.filter((l) => /^ {2}FAIL /.test(l)).length + (r.code !== 0 && !lines.some((l) => /^ {2}FAIL /.test(l)) ? 1 : 0);
-  ok += nOk; bad += nFail;
+  // Un fichier qui sort en code 0 sans AUCUNE vérification (ni ligne « ok », ni « OK » final) n'a rien testé : c'est un échec, pas un succès silencieux.
+  const nothing = r.code === 0 && nOk === 0 && r.quiet !== true && !/\bOK\b/.test(r.out);      // (les contrôles muets par contrat, comme audit-pieces, n'affichent rien quand tout va bien : leur code de sortie fait foi)
+  ok += nOk; bad += nFail + (nothing ? 1 : 0);
+  if (nothing) { r.out += '\n  FAIL ' + r.file + ' : aucune vérification exécutée (code 0 mais ni « ok » ni « OK »)'; failedFiles.push(r.file); }
   console.log(`\n▶ ${r.file}  (${(r.ms / 1000).toFixed(1)} s, ${nOk} ok${nFail ? `, ${nFail} échec(s)` : ''})`);
   if (r.quiet === true && r.code === 0) continue;
   if (r.quiet === 'summary' && r.code === 0) { const n = lines.filter((l) => /\bOK\b/.test(l)).length; console.log(`  ${n} circuits terminés par le pilote automatique`); continue; }
@@ -65,4 +68,4 @@ for (const r of all.sort((a, b) => a.file.localeCompare(b.file))) {
   if (r.code !== 0) failedFiles.push(r.file);
 }
 console.log(`\n${'='.repeat(60)}\n${all.length} fichiers, ${ok} vérifications réussies, ${bad} échec(s) en ${((Date.now() - t0) / 1000).toFixed(1)} s`);
-if (failedFiles.length) { console.log('À regarder : ' + failedFiles.join(', ')); process.exit(1); }
+if (failedFiles.length || bad) { console.log('À regarder : ' + [...new Set(failedFiles)].join(', ')); process.exit(1); }

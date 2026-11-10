@@ -163,7 +163,12 @@ class App {
     const now = performance.now();
     (window.__ctErrors || (window.__ctErrors = [])).push({ t: Math.round(now), msg: String(e && e.message || e), stack: String(e && e.stack || '').split('\n').slice(0, 4).join(' | ') });
     if (window.__ctErrors.length > 20) window.__ctErrors.shift();
-    if (this.mode !== 'race' || !this.session) { this._errTimes = []; if (window.__ctErrors.length <= 2) console.error('Copytrack : erreur dans la boucle de jeu', e); return; }      // (hors course : rien à reprendre, la boucle continue)
+    if (this.mode !== 'race' || !this.session) {      // hors course : rien à reprendre, la boucle continue ; mais le joueur doit le savoir (au plus un message toutes les 15 s : une erreur peut revenir à chaque image)
+      this._errTimes = [];
+      if (window.__ctErrors.length <= 2) console.error('Copytrack : erreur dans la boucle de jeu', e);
+      if (!this._errFlashAt || now - this._errFlashAt > 15000) { this._errFlashAt = now; try { this.ui.flash('Une erreur d’affichage est survenue (détails dans la console du navigateur).', 3.5); } catch { /* l'interface elle-même peut être la cause */ } }
+      return;
+    }
     this._errTimes = (this._errTimes || []).filter((x) => now - x < 5000);
     this._errTimes.push(now);
     if (this._errTimes.length === 1 || this._errTimes.length === 2) console.error('Copytrack : erreur dans la boucle de jeu', e);

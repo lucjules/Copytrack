@@ -10526,6 +10526,7 @@ var CarPhysics = class {
     this._driftState(inp);
     if (this.v2 && (this.vehicle !== "moto" || !this.grounded || this.rib)) moto2Idle(this, DT);
     if (this.rib) {
+      this.unstick = 0;
       this._ribStep(inp);
       return;
     }

@@ -330,7 +330,7 @@ export class CarPhysics {
     inp = this._controls(inp);
     this._driftState(inp);
     if (this.v2 && (this.vehicle !== 'moto' || !this.grounded || this.rib)) moto2Idle(this, DT);      // (moto v2 : redressée hors du sol)
-    if (this.rib) { this._ribStep(inp); return; }
+    if (this.rib) { this.unstick = 0; this._ribStep(inp); return; }      // (le dégagement du mur ne concerne que le sol : valeur périmée remise à zéro sur un ruban)
     if (this.grounded) { if (this._driveGround(inp)) return; } else this._flyAir(inp);
     if (this._collide()) return;
     this._roadContact();

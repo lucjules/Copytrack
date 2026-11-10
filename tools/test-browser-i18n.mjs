@@ -23,20 +23,24 @@ async function drillResult(page, i, latK) {
 
 const require = createRequire(import.meta.url);
 let chromium;
-try { ({ chromium } = require('playwright')); } catch { console.log('  skip playwright introuvable : test navigateur ignoré'); process.exit(0); }
+// Playwright / Chromium absents : ignoré en local, ÉCHEC en CI ou avec REQUIRE_BROWSER=1 (un job « navigateur » ne passe jamais au vert sans avoir rien lancé).
+const REQUIRED = !!(process.env.CI || process.env.REQUIRE_BROWSER);
+const skip = (why) => { console.log((REQUIRED ? '  FAIL ' : '  skip ') + why + (REQUIRED ? ' : le test navigateur est OBLIGATOIRE ici (CI / REQUIRE_BROWSER)' : ' : test navigateur ignoré')); process.exit(REQUIRED ? 1 : 0); };
+try { ({ chromium } = require('playwright')); } catch { skip('playwright introuvable'); }
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 8700 + Math.floor(Math.random() * 90);
 const server = spawn(process.execPath, [join(root, 'tools/serve.mjs'), String(PORT)], { stdio: 'ignore' });
 let browser;
 try { browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--mute-audio'] }); }
-catch (e) { server.kill(); console.log('  skip Chromium introuvable : test navigateur ignoré (' + String(e.message).split('\n')[0] + ')'); process.exit(0); }
+catch (e) { server.kill(); skip('Chromium introuvable (' + String(e.message).split('\n')[0] + ')'); }
 
-let failures = 0;
+let failures = 0, executed = 0;
 const errors = [];
 const OFFLINE = /fonts\.(googleapis|gstatic)|supabase\.co|net::ERR|Failed to load resource|ERR_INTERNET_DISCONNECTED/;
 async function test(name, fn) {
   const before = errors.length;
+  executed++;
   try { await fn(); if (errors.length > before) throw new Error('erreurs de la page : ' + errors.slice(before).join(' | ')); console.log('  ok   ' + name); }
   catch (e) { failures++; console.log('  FAIL ' + name + '\n       ' + String(e.stack || e.message).split('\n').slice(0, 6).join('\n       ')); }
 }
@@ -325,5 +329,6 @@ try {
   await browser.close();
   server.kill();
 }
-console.log(failures ? `${failures} test(s) en échec` : 'Tous les tests navigateur i18n passent');
+if (!failures && executed < 5) { console.log(`  FAIL seulement ${executed} test(s) exécuté(s) (minimum 5) : la suite i18n n'a pas réellement tourné`); failures++; }
+console.log(failures ? `${failures} test(s) en échec` : `Tous les tests navigateur i18n passent (${executed} exécutés)`);
 process.exit(failures ? 1 : 0);
