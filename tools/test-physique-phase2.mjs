@@ -4,12 +4,11 @@
 import assert from 'node:assert/strict';
 import { Track, scriptTrack } from '../js/track.js';
 import { Simulation } from '../js/simulation.js';
-import { CarPhysics } from '../js/physics.js';
 import { Autopilot } from '../js/autopilot.js';
 import { OBST } from '../js/obstacles.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
-import { DT, CELL } from '../js/constants.js';
-import { respawnGs, RaceLogic } from '../js/raceLogic.js';
+import { CELL } from '../js/constants.js';
+import { respawnGs } from '../js/raceLogic.js';
 import { test, finish } from './harness.mjs';
 
 const GAS = { throttle: true, brake: false, steer: 0 };
@@ -214,11 +213,11 @@ test('verre + gravité inversée : au plafond, la dalle de verre cède aussi et 
   for (const t of tr.tiles) if (t.v && t.t === 'straight') { t.s = 'glass'; t.p = 40; }
   tr.version++;
   const sim = new Simulation(tr); sim.start(); const bot = new Autopilot(tr.path); bot.reset(sim.phys);
-  let broke = 0, rew = 0;
+  let broke = 0;
   for (let i = 0; i < 9000; i++) {
     sim.step(bot.control(sim.phys)); assert.ok(fin(sim.phys), 'non fini au pas ' + i);
     if (sim.phys.ev.glass) broke++;
-    if (sim.lost) { rew++; sim.rewind(); }
+    if (sim.lost) sim.rewind();
     if (sim.logic.finished) break;
   }
   assert.ok(broke >= 1 || sim.logic.finished, 'le verre du plafond cède (ou le circuit est fini)');

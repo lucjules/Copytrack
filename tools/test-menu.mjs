@@ -12,7 +12,7 @@ const sectionOf = (id) => { const a = html.indexOf(`<section id="${id}"`); retur
 const menu = sectionOf('menu'), profile = sectionOf('profile');
 const tiles = menu.slice(menu.indexOf('<nav class="menu-buttons"'), menu.indexOf('</nav>'));
 const tileButtons = [...tiles.matchAll(/<button[^>]*data-action="([^"]+)"[^>]*>/g)].map((m) => ({ action: m[1], tag: m[0] }));
-const panels = [...menu.matchAll(/<div class="menu-panel hidden" id="menu-sub-([a-z]+)"[\s\S]*?\n      <\/div>\n(?=      <div class="menu-panel|    <\/div>)/g)].map((m) => ({ name: m[1], html: m[0] }));
+const panels = [...menu.matchAll(/<div class="menu-panel hidden" id="menu-sub-([a-z]+)"[\s\S]*?\n {6}<\/div>\n(?= {6}<div class="menu-panel| {4}<\/div>)/g)].map((m) => ({ name: m[1], html: m[0] }));
 const entries = panels.flatMap((p) => [...p.html.matchAll(/<button[^>]*data-action="([^"]+)"[^>]*class="btn menu-entry[^"]*"/g)].map((m) => m[1]));
 
 console.log('Menu principal');

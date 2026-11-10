@@ -29,8 +29,6 @@ function outOfBounds(tile) {
 const FILL_MAX_DL = 2;
 
                                   // écart de niveau toléré entre voisines (un tremplin monte de 2)
-const FILL_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-
 const isStartFinish = (type) => { const sp = PIECES[type] && PIECES[type].special; return sp === 'start' || sp === 'finish'; };
 
 export const toolMethods = {

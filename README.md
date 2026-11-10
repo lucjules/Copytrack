@@ -231,7 +231,7 @@ docs/                           ARCHITECTURE.md (comment ça s'emboîte), MODULE
 
 Lire d'abord [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Avant de proposer un changement :
 
-- `npm run lint` et `npm test` (≈ 20 s) ; `npm run test:browser` si Playwright et Chromium sont installés ; `npm run test:deno` pour la physique sous Deno (le moteur de la fonction serveur) ;
+- `npm run lint` et `npm test` (≈ 30 s) (toutes les procédures de test : [docs/TESTS.md](docs/TESTS.md)) ; `npm run test:browser` si Playwright et Chromium sont installés ; `npm run test:deno` pour la physique sous Deno (le moteur de la fonction serveur) ;
 - le **noyau de simulation** (physique, pièces, circuits, pilote automatique…) n'utilise pas `Math.sin`, `Math.atan2`, `Math.pow`, `**`… mais `js/dmath.js` : sinon la vérification serveur et les replays divergent d'un moteur à l'autre ;
 - un changement de physique incrémente `PHYS_VER` (`js/version.js`) ; `tools/phys-fingerprint.mjs` échoue tant que ce n'est pas fait ;
 - les fichiers générés (`sw.js`, `supabase/functions/submit-score/index.ts`, `docs/MODULES.md`, `tools/phys-fingerprint.json`) se régénèrent, ils ne se modifient pas à la main ;

@@ -1,6 +1,5 @@
 // Faux navigateur (un « appareil » = un localStorage + un sessionStorage) et faux Supabase (Auth + REST) en mémoire, pour les tests du client (comptes, cloud).
 // Extrait de test-account.mjs : refreshStatus simule une panne du serveur (500, 429) au renouvellement de session.
-import assert from 'node:assert/strict';
 
 // ---- Faux navigateur : un « appareil » = un localStorage + un sessionStorage ------------------------------------
 class Store {

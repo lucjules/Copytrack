@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { EditorSession } from '../js/editor.js';
 import { Track, scriptTrack } from '../js/track.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
-import { CELL, LEVEL_H } from '../js/constants.js';
+import { CELL } from '../js/constants.js';
 import { moveSelection, rotateSelection, tilesInRect, decosInRect, fillZone, FILL_MAX_TILES, checkTrack } from '../js/editorTools.js';
 import { Simulation } from '../js/simulation.js';
 import { Autopilot } from '../js/autopilot.js';

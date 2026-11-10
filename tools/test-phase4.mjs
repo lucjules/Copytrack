@@ -7,9 +7,9 @@ import { device, srv } from './fake-supabase.mjs';
 
 device('A');
 const storage = await import('../js/storage.js');
-const { online, OnlineError } = await import('../js/online.js');
+const { online } = await import('../js/online.js');
 const { account } = await import('../js/account.js');
-const { mergeSaves, toCloud, fromCloud } = await import('../js/cloudsave.js');
+const { mergeSaves, toCloud } = await import('../js/cloudsave.js');
 const { profile, saveProfile, reloadProfile, exportCode, parseCode, applySave } = await import('../js/profile.js');
 
 function boot(name) {
@@ -19,7 +19,6 @@ function boot(name) {
   storage.setScope('');
   reloadProfile();
 }
-const hostile = (u) => ({ ...u });
 const lcg = (s) => () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
 const rec = (time, extra = {}) => ({ time, pv: 31, splits: [], inputs: 'x', date: 10, name: 'x', ghost: null, ...extra });
 
@@ -201,7 +200,7 @@ await test('l\'émetteur remet son chrono à zéro (nouvelle horloge confirmée 
 });
 await test('paquets perdus et désordre : interpolation sans saut, jamais d\'état non fini', () => {
   const rnd = lcg(5), b = new SnapshotBuffer({ delay: 0.1 });
-  let now = 1000, prev = null, maxJump = 0;
+  let prev = null, maxJump = 0;
   const pkts = [];
   for (let i = 0; i < 300; i++) if (rnd() > 0.3) pkts.push({ s: snap(i * 0.05, i), at: i * 50 + rnd() * 40 });      // 30 % de pertes, gigue 40 ms
   pkts.sort((a, c) => a.at - c.at);

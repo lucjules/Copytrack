@@ -188,7 +188,11 @@ export function getRecord(trackKey) {
   const disk = read(REC + trackKey, null);
   const mem = memRec.get(PREFIX + trackKey);
   if (!disk) return mem || null;
-  return mem && mem.time < disk.time - 1e-9 ? mem : disk;
+  // La copie en mémoire de cette session ne l'emporte que si elle est de la même physique et meilleure, ou d'une physique plus récente : sinon une synchronisation qui
+  // rapporte le record d'une physique plus récente (autre appareil) restait cachée derrière un meilleur temps d'une ancienne physique.
+  if (!mem) return disk;
+  const mp = +mem.pv || 0, dp = +disk.pv || 0;
+  return mp === dp ? (mem.time < disk.time - 1e-9 ? mem : disk) : (mp > dp ? mem : disk);
 }
 
 // Écrit le record, quitte à perdre ce qui prend de la place : d'abord le fantôme, puis les commandes enregistrées, puis (si

@@ -741,12 +741,11 @@ try {
   await test('aucun bouton inaccessible : écrans et fenêtres principaux sur cinq tailles d\'écran (dans l\'écran, ou dans un conteneur qui défile jusqu\'à lui)', async () => {
     const old = page.viewportSize();
     const REACH = () => {
-  const vw = innerWidth, vh = innerHeight, bad = [];
-  const root = [...document.querySelectorAll('#modal:not(.hidden), .screen:not(.hidden)')].pop();
+  const vw = window.innerWidth, vh = window.innerHeight, bad = [];
   const scope = document.querySelector('#modal:not(.hidden)') || document.querySelector('.screen:not(.hidden)') || document.body;
   for (const el of scope.querySelectorAll('button, a[href], input:not([type=hidden]), select, textarea')) {
     const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden' || el.disabled) continue;
-    let r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
+    const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
     if (el.closest('.hidden')) continue;
     // atteignable : dans l'écran, ou dans un conteneur qui défile et dont le contenu est accessible en défilant (haut >= début du contenu)
     const inside = r.left >= -2 && r.right <= vw + 2 && r.top >= -2 && r.bottom <= vh + 2;
@@ -791,7 +790,7 @@ try {
     try {
       await app(() => { window.copytrack.ui.closeModal(); window.copytrack.academyMenu(); });
       await page.waitForTimeout(400);
-      const r = await app(() => { const el = document.querySelector('#modal:not(.hidden) .modal-panel'); const b = el.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, h: innerHeight, scroll: el.scrollHeight > el.clientHeight, ov: getComputedStyle(el).overflowY }; });
+      const r = await app(() => { const el = document.querySelector('#modal:not(.hidden) .modal-panel'); const b = el.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, h: window.innerHeight, scroll: el.scrollHeight > el.clientHeight, ov: getComputedStyle(el).overflowY }; });
       assert.ok(r.top >= -1 && r.bottom <= r.h + 1, `la fenêtre tient dans l'écran (haut ${r.top}, bas ${r.bottom} / ${r.h})`);
       assert.ok(r.scroll && /auto|scroll/.test(r.ov), 'son contenu défile');
     } finally { await app(() => window.copytrack.ui.closeModal()); await page.setViewportSize(old); }

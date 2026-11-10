@@ -1,6 +1,7 @@
 // Fonction serveur « submit-score » : le gestionnaire (supabase/functions/submit-score/handler.js) avec un Supabase simulé et la VRAIE vérification de
 // course (rejeu des commandes) : node tools/test-submit-handler.mjs   (npm test)
 import assert from 'node:assert/strict';
+const { ReadableStream } = globalThis;
 import { test, finish } from './harness.mjs';
 import { createHandler, MAX_BODY_CHARS, MAX_GHOST_CHARS, RATE_LIMIT } from '../supabase/functions/submit-score/handler.js';
 import { MAX_TRACK_CODE_CHARS } from '../js/constants.js';
