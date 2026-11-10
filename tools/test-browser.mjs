@@ -760,6 +760,63 @@ try {
     await waitApp(() => window.copytrack.mode === 'menu');
   });
 
+  await test('garage : un équipement ACHETÉ est enregistré dans le profil et retrouvé intact dans une NOUVELLE page ; les quatre klaxons et toutes les traînées se jouent sans erreur', async () => {
+    await app(async () => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(); p.coins = 100000; saveProfile(); });
+    await click('[data-action="garage"]');
+    await waitApp(() => window.copytrack.mode === 'garage');
+    await page.waitForTimeout(300);
+    await click('#garage-tabs [data-cat="presets"]');
+    await page.waitForTimeout(200);
+    await page.evaluate(() => [...document.querySelectorAll('#garage-list .gcard')].find((c) => c.querySelector('.gl').textContent.trim() === 'Père Noël').click());
+    await page.waitForTimeout(300);
+    assert.equal(await app(() => document.getElementById('garage-buy-btn').disabled), false, 'achat possible avec assez de pièces');
+    await click('#garage-buy-btn');
+    await page.waitForTimeout(300);
+    const want = await app(() => { const L = window.copytrack.session.draft; return JSON.stringify([L.body, L.ornament, L.decal, L.led, L.wheels, L.finish, L.trail, L.color, L.color2]); });
+    assert.equal(JSON.parse(want)[0], 'sleigh');
+    const saved = await app(async () => { const { profile } = await import('/js/profile.js'); const L = profile().loadout; return JSON.stringify([L.body, L.ornament, L.decal, L.led, L.wheels, L.finish, L.trail, L.color, L.color2]); });
+    assert.equal(saved, want, 'le profil contient exactement l\'équipement acheté');
+    // klaxons : les quatre
+    const horns = await app(async () => { const { CATALOG } = await import('/js/cosmetics.js'); const out = []; for (const h of CATALOG.horn) { try { window.copytrack.audio.horn(h.id); out.push(h.id); } catch (e) { out.push('ERREUR ' + h.id + ' ' + e.message); } } return out; });
+    assert.deepEqual(horns, ['classic', 'duo', 'tuba', 'arcade']);
+    await click('#garage [data-action="garage-back"]');
+    await waitApp(() => window.copytrack.mode === 'menu');
+    // NOUVELLE page du même site (même stockage) : l'équipement est retrouvé, et la voiture construite est celle du profil
+    const p2 = await hook(await ctx.newPage());
+    try {
+      await p2.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'load' });
+      await p2.waitForFunction(() => (window.copytrack && window.copytrack.mode === 'menu') || (document.getElementById('wl-name') && document.getElementById('wl-name').offsetParent), null, { timeout: 30000 });
+      // Un invité n'est reconnu que dans son onglet (sessionStorage) : un nouvel onglet montre l'accueil, avec le pseudo déjà rempli ; sa progression (profil) est, elle, sur l'appareil.
+      if (await p2.locator('#wl-name').isVisible().catch(() => false)) {
+        assert.equal(await p2.locator('#wl-name').inputValue(), 'Testeur', 'le dernier pseudo invité est proposé');
+        await p2.locator('#wl-submit').evaluate((el) => el.click());
+      }
+      await p2.waitForFunction(() => window.copytrack && window.copytrack.mode === 'menu', null, { timeout: 30000 });
+      await p2.evaluate(() => { window.copytrack.settings.tutorialDone = true; window.copytrack.ui.closeModal(); });
+      const again = await p2.evaluate(async () => { const { profile } = await import('/js/profile.js'); const L = profile().loadout; return JSON.stringify([L.body, L.ornament, L.decal, L.led, L.wheels, L.finish, L.trail, L.color, L.color2]); });
+      assert.equal(again, want, 'après rechargement : le même équipement');
+      await p2.evaluate(() => document.querySelector('[data-action="garage"]').click());
+      await p2.waitForFunction(() => window.copytrack.mode === 'garage', null, { timeout: 30000 });
+      const shown = await p2.evaluate(() => { const L = window.copytrack.session.draft; return JSON.stringify([L.body, L.ornament, L.decal, L.led, L.wheels, L.finish, L.trail, L.color, L.color2]); });
+      assert.equal(shown, want, 'le garage rouvert montre l\'équipement enregistré');
+      // chaque traînée : choisie, puis une course tourne quelques images sans erreur
+      const trails = await p2.evaluate(async () => {
+        const { CATALOG } = await import('/js/cosmetics.js'), { profile, saveProfile } = await import('/js/profile.js'), A = window.copytrack, bad = [];
+        A.showMenu('menu');
+        for (const t of CATALOG.trail) {
+          profile().loadout.trail = t.id; saveProfile();
+          A.playBuiltin(0);
+          await new Promise((r) => { const t0 = Date.now(); const w = () => (A.session && A.session.state === 'racing') || Date.now() - t0 > 20000 ? r() : setTimeout(w, 50); w(); });
+          try { const S = A.session; S._trail = null; for (let i = 0; i < 20; i++) S.update(0.05); } catch (e) { bad.push(t.id + ' : ' + e.message); }
+          A.quitRace(); await new Promise((r) => { const t0 = Date.now(); const w = () => A.mode === 'menu' || Date.now() - t0 > 10000 ? r() : setTimeout(w, 50); w(); });
+        }
+        return { n: CATALOG.trail.length, bad };
+      });
+      assert.deepEqual(trails.bad, [], 'traînées en échec');
+      assert.ok(trails.n >= 18, trails.n + ' traînées essayées');
+    } finally { await p2.close(); }
+  });
+
   await test('garage : atelier de voiture (pièces libres, peinture, dessin, effets, code) : la voiture change, le profil garde, le code revient', async () => {
     await click('[data-action="garage"]');
     await waitApp(() => window.copytrack.mode === 'garage');
