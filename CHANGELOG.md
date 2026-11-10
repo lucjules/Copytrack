@@ -6,6 +6,16 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.56 — phase 4 : validation finale, aucun succès silencieux
+
+`PHYS_VER` inchangé (**32**) : l'empreinte de la physique (193 scénarios) est identique ; le bundle `submit-score` est régénéré (`npm run build:function`) parce qu'il embarque `js/physics.js` (une remise à zéro sans effet sur les empreintes) : **redéployer `submit-score` une seule fois**, avec la version 0.9.55.
+- **Les deux anciens échecs navigateur (« pixel du garage », « onglet Amis du profil »)** : cause trouvée et reproduite. Le tutoriel du premier lancement s'ouvre 700 ms après le démarrage par un minuteur de la page ; sur une machine lente le minuteur part tard, après le contrôle unique du test, et le voile de la fenêtre (`<div id="modal" class="overlay">`) intercepte alors tout clic SOURIS réel (les autres tests cliquaient par script, qui traverse le voile). Le test ATTEND la fenêtre, vérifie ce qui recouvre un élément avant de cliquer (`realClick`, message explicite au lieu d'un délai de 30 s). Le jeu n'était pas en cause. Suite complète : 49/49 sous charge (2 cœurs saturés).
+- **Aucun succès sans résultat observable** : `tools/test-browser*.mjs` échouent (au lieu d'« ignorer ») si Playwright ou Chromium manquent en CI (`CI` ou `REQUIRE_BROWSER`), et si moins de 40 / 5 tests ont tourné ; `tools/run-tests.mjs` échoue si un fichier de tests n'exécute aucune vérification ou cache une ligne `FAIL` ; le journal complet d'appel de Playwright et une capture sont gardés pour chaque test en échec.
+- **Workflow `.github/workflows/test.yml`** : permissions minimales, durée maximale par tâche, `test-submit-handler` et `test-ice` exécutés aussi sous Deno (le moteur de production), tâche `gate` qui échoue si UNE des quatre tâches n'est pas en `success` (échec, annulée ou ignorée) : à exiger dans la protection de branche. Un premier essai de ce fichier était invalide (`runner` non permis dans `env` d'une tâche) : GitHub n'a lancé aucune tâche, ce que `gate` rend désormais visible.
+- **`js/main.js`** : une erreur de la boucle hors course est maintenant SIGNALÉE au joueur (au plus un message toutes les 15 s), pas seulement journalisée.
+- **`js/physics.js`** : le dégagement du mur (`unstick`) est remis à zéro sur un ruban (valeur périmée sans effet visible, mais non déterministe par construction).
+- **`tools/check-deployed.mjs`** (nouveau, LECTURE SEULE) : compare le dépôt à ce qui est en ligne (version de physique de `submit-score`, actions, authentification de `ice`, colonne `tracks.author_verified`).
+
 ## Bêta 0.9.55 — phase 3 : causes profondes des gels et blocages au contact
 
 `PHYS_VER` 31 → **32** (la physique change : records, fantômes et classements de la version 31 ne sont plus comparables ; **redéployer `submit-score`** : `npm run build:function`). Analyse complète, preuves et limites : `docs/PHYSIQUE-CONTACTS.md`.
