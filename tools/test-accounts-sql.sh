@@ -849,6 +849,19 @@ chk "retour arrière : l'insertion directe des circuits est rétablie (étape 1)
 $P -d $DB -f supabase/etape15-backend.sql
 chk "l'étape 15 se réapplique après le retour arrière (submit_best revient)" "$([ "$(Q "select count(*) from pg_proc where proname = 'submit_best'")" = 1 ] && echo 1 || echo 0)"
 
+# Script de vérification de la base réelle (supabase/verify-prod.sql, LECTURE SEULE) : sur la base complète il ne signale rien ; sur une base « étapes 1 à 14 »
+# (l'état constaté en production avant l'étape 15) il signale EXACTEMENT les objets manquants : le script de vérification est lui-même vérifié.
+VP=$($P -d $DB -At -F'|' -f supabase/verify-prod.sql)
+chk "verify-prod.sql sur la base complète (étape 15 appliquée) : aucune ligne MANQUE ni ÉCART" "$(echo "$VP" | grep -qE '\|(MANQUE|ÉCART)$' && echo 0 || echo 1)"
+chk "verify-prod.sql ne modifie rien : aucune instruction d'écriture dans le fichier" "$(grep -iE '^\s*(insert|update|delete|drop|alter|create|grant|revoke|truncate)\b' supabase/verify-prod.sql | grep -q . && echo 0 || echo 1)"
+DB14=copytrack_sqltest14
+$P -d postgres -c "drop database if exists $DB14" -c "create database $DB14" >/dev/null 2>&1
+for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape7-fantomes.sql supabase/etape8-decouverte.sql supabase/etape9-secteurs.sql supabase/etape10-social.sql supabase/etape11-saisons.sql supabase/etape12-competition.sql supabase/etape13-communaute.sql supabase/etape14-securite.sql; do $P -d $DB14 -f $f >/dev/null 2>&1; done
+VP14=$($P -d $DB14 -At -F'|' -f supabase/verify-prod.sql)
+MISS=$(echo "$VP14" | grep -cE '\|MANQUE$'); ECART=$(echo "$VP14" | grep -E '\|ÉCART$' | grep -c "scores_limit verrouille\|enveloppe de rate_check")
+chk "verify-prod.sql sur une base « étapes 1 à 14 » (état constaté en production) : signale les objets de l'étape 15 manquants (tables, fonctions, colonne) et les deux anciennes fonctions" "$([ "$MISS" -ge 9 ] && [ "$ECART" = 2 ] && echo 1 || echo 0)"
+$P -d postgres -c "drop database if exists $DB14" >/dev/null 2>&1
+
 if ! grep -q "RESULT tous les tests SQL passent" /tmp/ct-sql-out.txt || grep -q "^  FAIL" /tmp/ct-sql-out.txt; then echo "ÉCHEC : des tests SQL ont échoué"; exit 1; fi
 if [ "$FAILS" != 0 ]; then echo "ÉCHEC : $FAILS test(s) de concurrence en échec"; exit 1; fi
 echo "RESULT concurrence, étape 15b et retour arrière : tout passe"

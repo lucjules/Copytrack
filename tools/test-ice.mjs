@@ -172,10 +172,10 @@ await test('base de limitation indisponible (étape 15 absente, panne) : 503, ja
   const r = await createIceHandler({ env: ICE_ENV, supabaseUrl: 'https://x.supabase.co', serviceKey: 'cle', fetch: sb.fetch, log: () => {} })(iceReq(1));
   assert.equal(r.status, 503); assert.ok(!(await r.text()).includes('username'));
 });
-await test('durée des identifiants : 2 h par défaut, bornée entre 10 minutes et 6 heures', async () => {
+await test('durée des identifiants : 1 h par défaut, bornée entre 10 minutes et 2 heures', async () => {
   const ttlOf = async (extra) => (await (await createIceHandler({ allowAnonymous: true, env: { ...ICE_ENV, ...extra } })(req())).json()).ttl;
-  assert.equal(DEFAULT_TTL_S, 7200); assert.equal(await ttlOf({}), 7200);
-  assert.equal(await ttlOf({ ICE_TTL_S: '999999' }), 21600, 'plafonnée à 6 h');
+  assert.equal(DEFAULT_TTL_S, 3600); assert.equal(await ttlOf({}), 3600);
+  assert.equal(await ttlOf({ ICE_TTL_S: '999999' }), 7200, 'plafonnée à 2 h');
   assert.equal(await ttlOf({ ICE_TTL_S: '5' }), 600, 'plancher de 10 minutes');
 });
 await test('le chargeur du jeu envoie le jeton du pilote quand il en a un, la clé publique sinon', async () => {
