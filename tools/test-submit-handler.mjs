@@ -9,16 +9,16 @@ import { Simulation } from '../js/simulation.js';
 import { InputRecorder, quantSteer } from '../js/replay.js';
 import { Autopilot } from '../js/autopilot.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
-import { hashString } from '../js/track.js';
+import { hashString, scriptTrack, Track } from '../js/track.js';
 import { PHYS_VER } from '../js/version.js';
 
 const UID = '11111111-2222-3333-4444-555555555555';
 
 // Une vraie course : le pilote automatique, ses commandes enregistrées comme le fait le jeu, le temps obtenu.
-function recordedRun(def) {
-  const track = buildBuiltin(def), sim = new Simulation(track), rec = new InputRecorder();
+function recordedRun(def, latLimit = 56 * 0.8, trackIn = null) {
+  const track = trackIn || buildBuiltin(def), sim = new Simulation(track), rec = new InputRecorder();
   sim.start();
-  const bot = new Autopilot(track.path, { latLimit: 56 * 0.8 });
+  const bot = new Autopilot(track.path, { latLimit });
   bot.reset(sim.phys);
   for (let i = 0; i < 120 * 150; i++) {
     const inp = bot.control(sim.phys);
@@ -26,35 +26,64 @@ function recordedRun(def) {
     rec.push(inp, false);
     const ev = sim.step(inp);
     if (sim.lost) sim.rewind();
-    if (ev && ev.type === 'finish') return { trackKey: `b-${def.id}-${hashString(track.encode())}`, inputs: rec.encode(), time: sim.logic.time };
+    if (ev && ev.type === 'finish') return { trackKey: trackIn ? track.userKey : `b-${def.id}-${hashString(track.encode())}`, inputs: rec.encode(), time: sim.logic.time };
   }
   throw new Error('le pilote automatique ne termine pas ' + def.id);
 }
 const RUN = recordedRun(BUILTIN_TRACKS[0]);
 
-// Supabase simulé : jeton valide ou non, profil présent ou non, meilleur temps déjà enregistré, journal des écritures.
-function fakeSupabase({ rateRpc = 'absent', authOk = true, profile = true, previous = [], board = { before: 0, total: 1 }, failWrite = false, boom = false, noGhostColumns = false, noSplitsColumn = false, competition = null } = {}) {
+// Supabase simulé AVEC ÉTAT : il reproduit la sémantique des fonctions SQL de supabase/etape15-backend.sql (rate_check, submit_best, publish_track). Chaque
+// fonction passe par un verrou par pilote (file de promesses), comme le verrou consultatif de la base : le test d'entrelacement réel est dans
+// tools/test-accounts-sql.sh (sessions psql simultanées) ; ici on vérifie que le gestionnaire s'appuie bien sur ces fonctions ATOMIQUES.
+function fakeSupabase({ rate = 0, authOk = true, anonymous = false, profile = true, failWrite = null, boom = false, competition = null, db = null, collisionFor = null, publishStatus = null } = {}) {
   const calls = [];
+  const state = db || { scores: new Map(), binds: new Map(), tracks: new Map(), rateRows: [], locks: new Map() };
+  const lock = (key, fn) => { const prev = state.locks.get(key) || Promise.resolve(); const run = prev.then(fn); state.locks.set(key, run.catch(() => {})); return run; };
+  const ok = (v, status = 200) => new Response(JSON.stringify(v), { status, headers: { 'Content-Type': 'application/json' } });
   const fetch = async (url, init = {}) => {
-    calls.push({ url: String(url), method: init.method ?? 'GET', body: init.body });
+    const u = String(url), body = init.body ? (() => { try { return JSON.parse(init.body); } catch { return init.body; } })() : undefined;
+    calls.push({ url: u, method: init.method ?? 'GET', body: init.body, args: body });
     if (boom) throw new Error('secret interne : mot de passe de la base');
-    const u = String(url);
-    if (u.includes('/auth/v1/user')) return authOk ? new Response(JSON.stringify({ id: UID }), { status: 200 }) : new Response('{}', { status: 401 });
-    if (u.includes('/rest/v1/players')) return new Response(JSON.stringify(profile ? [{ id: UID }] : []), { status: 200 });
-    if (u.includes('/rest/v1/rpc/submit_rate_check')) {
-      if (rateRpc === 'absent') return new Response('{"code":"PGRST202"}', { status: 404 });
-      if (typeof rateRpc === 'function') return new Response(JSON.stringify(rateRpc(JSON.parse(init.body))), { status: 200 });
-      return new Response(JSON.stringify(rateRpc), { status: 200 });
+    if (u.includes('/auth/v1/user')) return authOk ? ok({ id: UID, is_anonymous: anonymous }) : ok({}, 401);
+    if (u.includes('/rest/v1/players')) return ok(profile ? [{ id: UID }] : []);
+    if (u.includes('/rest/v1/rpc/rate_check')) {
+      if (rate === 'down') return ok({ code: 'PGRST202' }, 404);
+      if (typeof rate === 'function') return ok(rate(body));
+      return ok(rate);
     }
-    if (u.includes('/rest/v1/rpc/competition_open')) return competition === null ? new Response('{"code":"PGRST202"}', { status: 404 }) : new Response(JSON.stringify(competition), { status: 200 });
-    if (u.includes('/rest/v1/scores') && init.method === 'POST') return new Response(null, { status: failWrite ? 500 : (noGhostColumns && String(init.body).includes('"ghost"')) || (noSplitsColumn && String(init.body).includes('"splits"')) ? 400 : 201 });
-    if (u.includes('/rest/v1/scores') && init.method === 'PATCH') return new Response(null, { status: 204 });
-    if (u.includes('/rest/v1/scores') && u.includes('has_ghost') && noGhostColumns) return new Response('{"message":"column does not exist"}', { status: 400 });
-    if (u.includes('/rest/v1/scores') && u.includes('select=time,phys_ver')) return new Response(JSON.stringify(previous), { status: 200 });
-    if (u.includes('/rest/v1/scores')) return new Response('[]', { status: 200, headers: { 'content-range': `0-0/${u.includes('time=lt.') ? board.before : board.total}` } });
-    return new Response('{}', { status: 404 });
+    if (u.includes('/rest/v1/rpc/competition_open')) return competition === null ? ok({ code: 'PGRST202' }, 404) : ok(competition);
+    if (u.includes('/rest/v1/rpc/submit_best')) {
+      if (failWrite) return ok({ message: failWrite }, 400);
+      const a = body;
+      return lock('p:' + a.p, async () => {
+        await new Promise((r) => setTimeout(r, 5));        // la base « travaille » : sans verrou, deux requêtes s'entrelaceraient ici
+        if (collisionFor && collisionFor === a.tk) return ok({ status: 'collision' });
+        if (a.strong) { if (!state.binds.has(a.tk)) state.binds.set(a.tk, a.strong); if (state.binds.get(a.tk) !== a.strong) return ok({ status: 'collision' }); }
+        const k = a.tk + '|' + a.p, cur = state.scores.get(k);
+        let improved = false;
+        if (!cur || a.pv > cur.pv || (a.pv === cur.pv && a.t < cur.t)) { state.scores.set(k, { t: a.t, inp: a.inp, pv: a.pv, gh: a.gh, sp: a.sp }); improved = true; }
+        const best = state.scores.get(k).t;
+        const all = [...state.scores.entries()].filter(([kk, v]) => kk.startsWith(a.tk + '|') && v.pv === a.pv);
+        return ok({ status: 'ok', improved, best, rank: all.filter(([, v]) => v.t < best).length + 1, total: all.length });
+      });
+    }
+    if (u.includes('/rest/v1/rpc/publish_track')) {
+      if (failWrite) return ok({ message: failWrite }, 400);
+      const a = body;
+      return lock('t:' + a.p, async () => {
+        if (publishStatus) return ok({ status: publishStatus });
+        if (state.binds.has('u-' + a.sg) && state.binds.get('u-' + a.sg) !== a.strong) return ok({ status: 'collision' });
+        state.binds.set('u-' + a.sg, a.strong);
+        const ex = state.tracks.get(a.sg);
+        if (ex && ex.author !== a.p) return ok({ status: 'taken' });
+        state.tracks.set(a.sg, { author: a.p, atime: a.atime, verified: true, name: a.nm, ds: a.ds, cd: a.cd });
+        return ok({ status: ex ? 'updated' : 'created', id: 'id-' + a.sg });
+      });
+    }
+    if (u.includes('/rest/v1/scores') || u.includes('/rest/v1/tracks')) throw new Error('accès direct à une table interdit : ' + u);
+    return ok({}, 404);
   };
-  return { fetch, calls };
+  return { fetch, calls, state };
 }
 const request = (body, { method = 'POST', headers = {} } = {}) =>
   new Request('https://fn.example/submit-score', { method, headers: { Authorization: 'Bearer jeton', 'Content-Type': 'application/json', ...headers }, body: method === 'POST' ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined });
@@ -62,113 +91,212 @@ const make = (sb, extra = {}) => createHandler({ supabaseUrl: 'https://x.supabas
 const good = { ...RUN, physVer: PHYS_VER };
 
 console.log('Course valide');
-test('une course rejouée et confirmée est enregistrée, avec son rang', async () => {
-  const sb = fakeSupabase({ board: { before: 2, total: 9 } }), h = make(sb);
+const submitCalls = (sb) => sb.calls.filter((c) => c.url.includes('/rpc/submit_best'));
+test('une course rejouée et confirmée est enregistrée par UNE écriture atomique, avec son rang', async () => {
+  const sb = fakeSupabase(), h = make(sb);
   const r = await h(request(good)), j = await r.json();
   assert.equal(r.status, 200);
-  assert.deepEqual({ ok: j.ok, improved: j.improved, rank: j.rank, total: j.total }, { ok: true, improved: true, rank: 3, total: 9 });
+  assert.deepEqual({ ok: j.ok, improved: j.improved, rank: j.rank, total: j.total }, { ok: true, improved: true, rank: 1, total: 1 });
   assert.ok(Math.abs(j.best - RUN.time) < 1e-9);
-  const write = sb.calls.find((c) => c.method === 'POST' && c.url.includes('/rest/v1/scores'));
-  const sent = JSON.parse(write.body);
-  assert.equal(sent.player, UID); assert.equal(sent.track_key, RUN.trackKey); assert.equal(sent.phys_ver, PHYS_VER); assert.equal(sent.inputs, RUN.inputs);
+  assert.equal(submitCalls(sb).length, 1, 'une seule écriture');
+  const a = submitCalls(sb)[0].args;
+  assert.equal(a.p, UID); assert.equal(a.tk, RUN.trackKey); assert.equal(a.pv, PHYS_VER); assert.equal(a.inp, RUN.inputs); assert.ok(Math.abs(a.t - RUN.time) < 1e-9, 'le temps REJOUÉ');
+  assert.equal(a.strong, null, 'circuit officiel : pas d\'empreinte à lier (le serveur le régénère lui-même)');
   assert.ok(r.headers.get('Cache-Control') === 'no-store' && r.headers.get('Access-Control-Allow-Origin') === '*');
 });
-test('un temps moins bon que le meilleur déjà enregistré n\'écrase rien', async () => {
-  const sb = fakeSupabase({ previous: [{ time: RUN.time - 1, phys_ver: PHYS_VER }] }), h = make(sb);
-  const j = await (await h(request(good))).json();
-  assert.equal(j.improved, false);
-  assert.ok(Math.abs(j.best - (RUN.time - 1)) < 1e-9);
-  assert.equal(sb.calls.filter((c) => c.method === 'POST' && c.url.includes('/rest/v1/scores')).length, 0, 'aucune écriture');
+test('aucune lecture-puis-écriture : le gestionnaire ne touche jamais la table des scores (tout passe par submit_best, atomique)', async () => {
+  const sb = fakeSupabase();
+  await make(sb)(request(good));
+  assert.ok(sb.calls.every((c) => !/\/rest\/v1\/scores/.test(c.url)), 'aucun accès direct à scores');
 });
-test('un meilleur temps d\'une ancienne version de la physique est remplacé', async () => {
-  const sb = fakeSupabase({ previous: [{ time: RUN.time - 5, phys_ver: PHYS_VER - 1 }] }), h = make(sb);
-  assert.equal((await (await h(request(good))).json()).improved, true);
+test('le temps annoncé n\'est jamais retenu : le temps enregistré est celui du rejeu', async () => {
+  const sb = fakeSupabase();
+  const r = await make(sb)(request({ ...good, time: good.time + 0.0004 }));      // dans la tolérance de 0,5 ms
+  assert.equal(r.status, 200);
+  assert.ok(Math.abs(submitCalls(sb)[0].args.t - RUN.time) < 1e-9);
+  assert.equal((await make(fakeSupabase())(request({ ...good, time: good.time + 0.0011 }))).status, 422, 'au-delà de la tolérance : refusé');
+});
+test('un meilleur temps remplace le record, un temps moins bon ou d\'une physique plus ancienne ne le remplace pas (la base décide, atomiquement)', async () => {
+  const db = { scores: new Map(), binds: new Map(), tracks: new Map(), rateRows: [], locks: new Map() };
+  db.scores.set(RUN.trackKey + '|' + UID, { t: RUN.time - 1, inp: 'X', pv: PHYS_VER });
+  const j = await (await make(fakeSupabase({ db }))(request(good))).json();
+  assert.equal(j.improved, false); assert.ok(Math.abs(j.best - (RUN.time - 1)) < 1e-9);
+  assert.equal(db.scores.get(RUN.trackKey + '|' + UID).inp, 'X', 'le record n\'a pas bougé');
+  db.scores.set(RUN.trackKey + '|' + UID, { t: RUN.time - 5, inp: 'Y', pv: PHYS_VER - 1 });
+  assert.equal((await (await make(fakeSupabase({ db }))(request(good))).json()).improved, true, 'physique plus récente : remplacé');
 });
 
-console.log('Fantôme du record (étape 7)');
+console.log('Deux soumissions simultanées');
+const SLOW = recordedRun(BUILTIN_TRACKS[0], 56 * 0.35);
+test('deux courses simultanées (une rapide, une lente), dans les deux ordres d\'arrivée : le record final est TOUJOURS la plus rapide', async () => {
+  assert.ok(SLOW.time > RUN.time + 0.05, 'les deux courses diffèrent : ' + RUN.time + ' / ' + SLOW.time);
+  for (const order of [[SLOW, RUN], [RUN, SLOW]]) {
+    const sb = fakeSupabase(), h = make(sb, { rateLimit: { ...RATE_LIMIT, max: 100 } });
+    const out = await Promise.all(order.map((run) => h(request({ ...run, physVer: PHYS_VER }))));
+    assert.deepEqual(out.map((r) => r.status), [200, 200]);
+    assert.ok(Math.abs(sb.state.scores.get(RUN.trackKey + '|' + UID).t - RUN.time) < 1e-9, 'le plus rapide gagne quel que soit l\'ordre');
+    assert.equal(sb.state.scores.get(RUN.trackKey + '|' + UID).inp, RUN.inputs);
+  }
+});
+test('douze soumissions simultanées du même pilote : un seul record, le meilleur', async () => {
+  const sb = fakeSupabase(), h = make(sb, { rateLimit: { ...RATE_LIMIT, max: 100 } });
+  const runs = [SLOW, RUN, SLOW, RUN, SLOW, SLOW, RUN, SLOW, SLOW, RUN, SLOW, SLOW];
+  await Promise.all(runs.map((run) => h(request({ ...run, physVer: PHYS_VER }))));
+  assert.equal(sb.state.scores.size, 1); assert.ok(Math.abs([...sb.state.scores.values()][0].t - RUN.time) < 1e-9);
+});
+
+console.log('Fantôme du record (étape 7) et temps intermédiaires (étape 9)');
 test('un record est rangé avec son fantôme : positions et véhicules, jamais en lieu et place des commandes', async () => {
   const sb = fakeSupabase(), r = await make(sb)(request(good));
   assert.equal(r.status, 200);
-  const sent = JSON.parse(sb.calls.find((c) => c.method === 'POST' && c.url.includes('/rest/v1/scores')).body);
-  assert.ok(typeof sent.ghost === 'string' && sent.ghost.length > 1000 && sent.ghost.length <= MAX_GHOST_CHARS);
-  assert.ok(Array.isArray(sent.ghost_veh)); assert.equal(sent.inputs, RUN.inputs);
-  assert.ok(!JSON.stringify(await r.json()).includes(sent.ghost.slice(0, 40)), 'la réponse au joueur ne contient pas le fantôme');
+  const a = submitCalls(sb)[0].args;
+  assert.ok(typeof a.gh === 'string' && a.gh.length > 1000 && a.gh.length <= MAX_GHOST_CHARS);
+  assert.ok(Array.isArray(a.gveh)); assert.equal(a.inp, RUN.inputs);
+  assert.ok(!JSON.stringify(await r.json()).includes(a.gh.slice(0, 40)), 'la réponse au joueur ne contient pas le fantôme');
 });
-test('étape 7 pas encore lancée (colonnes absentes) : le temps est enregistré quand même, sans fantôme', async () => {
-  const sb = fakeSupabase({ noGhostColumns: true }), r = await make(sb)(request(good)), j = await r.json();
-  assert.equal(r.status, 200); assert.equal(j.improved, true);
-  const writes = sb.calls.filter((c) => c.method === 'POST' && c.url.includes('/rest/v1/scores'));
-  assert.equal(writes.length, 3, 'refusée avec fantôme et temps intermédiaires, refusée avec fantôme, acceptée sans');
-  assert.ok(!('ghost' in JSON.parse(writes[2].body)));
-});
-test('temps intermédiaires (étape 9) : rangés avec le record ; sans la colonne, le record est rangé avec son fantôme', async () => {
-  const sb = fakeSupabase(), r = await make(sb)(request(good));
-  assert.equal(r.status, 200);
-  const sent = JSON.parse(sb.calls.find((c) => c.method === 'POST' && c.url.includes('/rest/v1/scores')).body);
-  assert.ok(Array.isArray(sent.splits) && sent.splits.length >= 1 && sent.splits.every((x, i) => Number.isInteger(x) && (i === 0 || x > sent.splits[i - 1])), 'en pas, croissants');
-  const old = fakeSupabase({ noSplitsColumn: true }), r2 = await make(old)(request(good));
-  assert.equal(r2.status, 200);
-  const writes = old.calls.filter((c) => c.method === 'POST' && c.url.includes('/rest/v1/scores'));
-  assert.equal(writes.length, 2);
-  const last = JSON.parse(writes[1].body);
-  assert.ok(!('splits' in last) && typeof last.ghost === 'string');
-});
-test('un record d\'avant l\'étape 7 reçoit son fantôme quand le même temps est renvoyé ; un record qui en a déjà un n\'est pas touché', async () => {
-  const old = fakeSupabase({ previous: [{ time: RUN.time, phys_ver: PHYS_VER, has_ghost: false }] }), j = await (await make(old)(request(good))).json();
-  assert.equal(j.improved, false);
-  const patch = old.calls.find((c) => c.method === 'PATCH');
-  assert.ok(patch && patch.url.includes('/rest/v1/scores?track_key='), 'mise à jour de la ligne existante');
-  assert.ok(JSON.parse(patch.body).ghost.length > 1000); assert.ok(!('inputs' in JSON.parse(patch.body)) && !('time' in JSON.parse(patch.body)));
-  for (const prev of [[{ time: RUN.time, phys_ver: PHYS_VER, has_ghost: true }], [{ time: RUN.time, phys_ver: PHYS_VER }], [{ time: RUN.time - 1, phys_ver: PHYS_VER, has_ghost: false }]]) {
-    const sb = fakeSupabase({ previous: prev });
-    await make(sb)(request(good));
-    assert.equal(sb.calls.filter((c) => c.method === 'POST' && c.url.includes('/rest/v1/scores')).length, 0, JSON.stringify(prev));
-    // Le même temps renvoyé peut recevoir ses temps intermédiaires (étape 9), seulement s'il n'en a pas ; rien d'autre n'est touché.
-    for (const c of sb.calls.filter((x) => x.method === 'PATCH')) {
-      assert.ok(c.url.includes('splits=is.null') && Math.abs(prev[0].time - RUN.time) < 1e-9, JSON.stringify(prev));
-      assert.deepEqual(Object.keys(JSON.parse(c.body)), ['splits']);
-    }
-  }
+test('temps intermédiaires : en pas, croissants, rangés avec le record', async () => {
+  const sb = fakeSupabase(); await make(sb)(request(good));
+  const a = submitCalls(sb)[0].args;
+  assert.ok(Array.isArray(a.sp) && a.sp.length >= 1 && a.sp.every((x, i) => Number.isInteger(x) && (i === 0 || x > a.sp[i - 1])));
 });
 
-console.log('Duels et tournois (étape 12)');
-test('une course de duel est rejouée sur le circuit officiel, puis acceptée seulement si la base dit que la fenêtre est ouverte pour ce pilote', async () => {
-  const key = RUN.trackKey + '~v1.duel-7', body = { ...good, trackKey: key };
-  const ok = fakeSupabase({ competition: '' }), r = await make(ok)(request(body));
-  assert.equal(r.status, 200);
-  const ask = JSON.parse(ok.calls.find((c) => c.url.includes('competition_open')).body);
-  assert.deepEqual(ask, { kind: 'duel', cid: 7, p: UID, base: RUN.trackKey });
-  assert.equal(JSON.parse(ok.calls.find((c) => c.method === 'POST' && c.url.endsWith('/rest/v1/scores')).body).track_key, key);
-  const closed = fakeSupabase({ competition: 'Ce duel est terminé.' }), r2 = await make(closed)(request(body));
-  assert.equal(r2.status, 422); assert.equal((await r2.json()).error, 'Ce duel est terminé.');
-  assert.equal(closed.calls.filter((c) => c.method === 'POST' && c.url.endsWith('/rest/v1/scores')).length, 0, 'rien d\'écrit');
-  const none = fakeSupabase({ competition: null }), r3 = await make(none)(request({ ...good, trackKey: RUN.trackKey + '~v1.tour-3' }));
-  assert.equal(r3.status, 422); assert.match((await r3.json()).error, /étape SQL 12/);
+console.log('Circuits de joueurs : empreinte forte et collisions de signature');
+const CUSTOM = scriptTrack('Mon circuit', 'start S4 C S4 finish');
+const CUSTOM_RUN = recordedRun(null, 56 * 0.8, CUSTOM);
+const customBody = (track, run) => ({ trackKey: track.userKey, code: track.encode(), inputs: run.inputs, time: run.time, physVer: PHYS_VER });
+test('un circuit de joueur est enregistré avec une empreinte SHA-256 de son contenu (64 hexadécimaux), identique pour le même circuit et différente pour un autre', async () => {
+  const sb = fakeSupabase(); const r = await make(sb)(request(customBody(CUSTOM, CUSTOM_RUN)));
+  assert.equal(r.status, 200, JSON.stringify(await r.clone().json()));
+  const strong = submitCalls(sb)[0].args.strong;
+  assert.match(strong, /^[0-9a-f]{64}$/);
+  const other = scriptTrack('Mon circuit', 'start S5 C S4 finish'); const run2 = recordedRun(null, 56 * 0.8, other);
+  const sb2 = fakeSupabase(); await make(sb2)(request(customBody(other, run2)));
+  assert.notEqual(submitCalls(sb2)[0].args.strong, strong);
 });
-test('duel ou tournoi : circuit de la carrière seulement, et seul dans la catégorie', async () => {
-  const sb = fakeSupabase({ competition: '' });
-  for (const key of [RUN.trackKey + '~v1.duel-7.veh-moto', 'daily-2026-12-01~v1.duel-7', RUN.trackKey + '~v1.duel-07']) {
-    const r = await make(sb)(request({ ...good, trackKey: key }));
-    assert.equal(r.status, 422, key);
+// La signature du jeu (clé u-…) n'a que 32 bits (FNV-1a) : DEUX circuits différents peuvent avoir la même clé. Paire trouvée par recherche (voir l'audit) :
+// seule la position d'un arbre, loin de la route, diffère — la course est identique, donc une course de A est « valide » sur B.
+const decoVariant = (xi, zi) => { const t = scriptTrack('Mon circuit', 'start S4 C S4 finish'); t.decos = [{ k: 'tree', x: -500 - xi * 0.1, y: 0, z: -500 - zi * 0.1, ry: 0, s: 1, ph: 0 }]; return t; };
+test('collision de signature (32 bits) : un AUTRE circuit de même clé est refusé (409) une fois le premier lié ; sans l\'empreinte forte il aurait été accepté', async () => {
+  const A = decoVariant(834, 87), B = decoVariant(3218, 80);
+  assert.equal(A.userKey, B.userKey, 'même clé de classement');
+  assert.notEqual(A.signatureText(), B.signatureText(), 'circuits différents');
+  const run = recordedRun(null, 56 * 0.8, A);
+  // le rejeu seul ne voit pas la différence (c\'est la faiblesse) :
+  assert.ok(verifyRun({ ...customBody(B, run), trackKey: A.userKey }).ok, 'B accepté sous la clé de A par le seul rejeu');
+  const sb = fakeSupabase(), h = make(sb, { rateLimit: { ...RATE_LIMIT, max: 100 } });
+  assert.equal((await h(request({ ...customBody(A, run), trackKey: A.userKey }))).status, 200, 'A lie la clé');
+  const r = await h(request({ ...customBody(B, run), trackKey: A.userKey }));
+  assert.equal(r.status, 409); assert.equal((await r.json()).collision, true);
+  assert.equal(sb.state.scores.size, 1, 'rien d\'écrit pour B');
+});
+test('la base répond « collision » : 409, jamais présenté comme un succès', async () => {
+  const r = await make(fakeSupabase({ collisionFor: CUSTOM.userKey }))(request(customBody(CUSTOM, CUSTOM_RUN)));
+  assert.equal(r.status, 409);
+});
+
+console.log('Checkpoints : l\'arrivée ne compte que si tous sont franchis');
+import { RaceLogic } from '../js/raceLogic.js';
+import { tileCenter } from '../js/pieces.js';
+test('franchir la ligne d\'arrivée sans avoir pris le checkpoint ne termine PAS la course (« missing ») ; avec le checkpoint, si ; la vérification serveur s\'appuie sur cette règle', () => {
+  const tr = scriptTrack('c', 'start S3 C S3 finish');
+  const cp = tr.tiles.find((t) => t.t === 'checkpoint'), fin = tr.tiles.find((t) => t.t === 'finish');
+  const fake = (tile) => { const c = tileCenter(tile); return { pos: { x: c.x, y: 0.4, z: c.z }, prev: { x: c.x, y: 0.4, z: c.z + 0.1 }, grounded: true, rib: false, surfType: 'road', yaw: 0, gSign: 1, gravMul: 1, vehicle: 'car' }; };
+  const skip = new RaceLogic(tr);
+  const ev = skip.update(fake(fin));
+  assert.equal(ev && ev.type, 'missing'); assert.equal(ev.remaining, 1); assert.equal(skip.finished, false);
+  const ok = new RaceLogic(tr);
+  assert.equal(ok.update(fake(cp)).type, 'checkpoint');
+  ok.update(fake(scriptTrack('x', 'start S3 finish').tiles[0]));      // sort de l'arrivée
+  assert.equal(ok.update(fake(fin)).type, 'finish'); assert.equal(ok.finished, true);
+  assert.equal(new RaceLogic(tr, { partial: true }).update(fake(fin)).type, 'finish', 'seul le test partiel de l\'éditeur (jamais la vérification ni le serveur) se passe des checkpoints');
+});
+test('le serveur ne rejoue jamais en mode partiel : une course enregistrée depuis le curseur de l\'éditeur n\'est pas une arrivée', () => {
+  const r = verifyRun({ ...customBody(CUSTOM, CUSTOM_RUN), physVer: PHYS_VER });
+  assert.ok(r.ok);
+  // mêmes commandes sur un circuit dont la ligne d'arrivée est AVANT le checkpoint : l'arrivée n'est pas atteinte
+  const swapped = scriptTrack('Mon circuit', 'start S4 finish S4 C');
+  const bad = verifyRun({ trackKey: swapped.userKey, code: swapped.encode(), inputs: CUSTOM_RUN.inputs, time: CUSTOM_RUN.time, physVer: PHYS_VER });
+  assert.equal(bad.ok, false);
+});
+
+console.log('Publication d\'un circuit : temps auteur rejoué par le serveur');
+import { verifyRun } from '../js/verify.js';
+const PUB = scriptTrack('Mon circuit', 'start S4 C S4 finish');
+const PUB_RUN = recordedRun(null, 56 * 0.8, PUB);
+PUB.setVerified(PUB_RUN.time);
+const pubBody = (extra = {}) => ({ action: 'publish-track', code: PUB.encode(), inputs: PUB_RUN.inputs, time: PUB_RUN.time, physVer: PHYS_VER, name: 'Mon beau circuit', description: 'Une description', ...extra });
+const pubCalls = (sb) => sb.calls.filter((c) => c.url.includes('/rpc/publish_track'));
+test('un circuit vérifié est publié ; author_time est le temps REJOUÉ (jamais celui du corps de la requête), vérifié = vrai', async () => {
+  const sb = fakeSupabase(), r = await make(sb)(request(pubBody({ author_time: 0.001, authorTime: 0.001, atime: 0.001 }))), j = await r.json();
+  assert.equal(r.status, 200, JSON.stringify(j));
+  assert.deepEqual({ ok: j.ok, status: j.status, authorVerified: j.authorVerified }, { ok: true, status: 'created', authorVerified: true });
+  const a = pubCalls(sb)[0].args;
+  assert.ok(Math.abs(a.atime - PUB_RUN.time) < 1e-9, 'temps rejoué'); assert.equal(a.sg, PUB.signature()); assert.equal(a.nm, 'Mon beau circuit'); assert.equal(a.ds, 'Une description');
+  assert.match(a.strong, /^[0-9a-f]{64}$/); assert.equal(a.cd, PUB.encode());
+  assert.ok(sb.calls.every((c) => !/\/rest\/v1\/tracks/.test(c.url)), 'jamais d\'insertion directe');
+});
+test('temps auteur falsifié : le code annonce un temps meilleur que la course (vt trafiqué), ou la course ne le confirme pas : 422, rien de publié', async () => {
+  const fake = scriptTrack('Mon circuit', 'start S4 C S4 finish'); fake.setVerified(PUB_RUN.time - 5);       // le code ose affirmer 5 s de mieux
+  const sb = fakeSupabase();
+  let r = await make(sb)(request(pubBody({ code: fake.encode() })));
+  assert.equal(r.status, 422); assert.match((await r.json()).error, /temps de l’auteur|ne correspond pas/);
+  r = await make(sb)(request(pubBody({ time: PUB_RUN.time - 5 })));
+  assert.equal(r.status, 422, 'le temps annoncé ne correspond pas à la course');
+  assert.equal(pubCalls(sb).length, 0);
+});
+test('circuit non vérifié (pas de vt), marque de vérification d\'un autre contenu (vh), course qui n\'arrive pas : 422', async () => {
+  const sb = fakeSupabase(), h = make(sb, { rateLimit: { ...RATE_LIMIT, max: 100 } });
+  const raw = scriptTrack('Mon circuit', 'start S4 C S4 finish');
+  assert.equal((await h(request(pubBody({ code: raw.encode() })))).status, 422, 'jamais vérifié');
+  const edited = Track.decode(PUB.encode()); edited.decos = [{ k: 'tree', x: -900, y: 0, z: -900, ry: 0, s: 1, ph: 0 }];        // contenu modifié APRÈS la vérification : vh ne colle plus
+  edited.vt = PUB.vt; edited.vh = PUB.vh;
+  assert.equal((await h(request(pubBody({ code: edited.encode() })))).status, 422, 'contenu modifié depuis la vérification');
+  assert.equal((await h(request(pubBody({ inputs: 'QUJDREVGR0g=' })))).status, 422, 'commandes qui n\'arrivent pas');
+  assert.equal(pubCalls(sb).length, 0);
+});
+test('publication : mauvaise version de physique (ancienne ou plus récente), action inconnue, circuit trop gros : refusés avant toute écriture', async () => {
+  const sb = fakeSupabase(), h = make(sb, { rateLimit: { ...RATE_LIMIT, max: 100 } });
+  for (const pv of [0, PHYS_VER - 1, PHYS_VER + 1]) {
+    const r = await h(request(pubBody({ physVer: pv })));
+    assert.equal(r.status, 422, 'physVer ' + pv); const j = await r.json(); assert.equal(j.versionMismatch, true); assert.equal(j.serverPhysVer, PHYS_VER);
   }
-  assert.equal(sb.calls.filter((c) => c.url.includes('competition_open')).length, 0, 'refusé avant même de demander à la base');
+  assert.equal((await h(request(pubBody({ action: 'delete-everything' })))).status, 400);
+  assert.equal(pubCalls(sb).length, 0);
+});
+test('publication : signature déjà prise par un autre pilote (409), collision d\'empreinte (409), limite de publications (429), nom nettoyé', async () => {
+  assert.equal((await make(fakeSupabase({ publishStatus: 'taken' }))(request(pubBody()))).status, 409);
+  assert.equal((await make(fakeSupabase({ publishStatus: 'collision' }))(request(pubBody()))).status, 409);
+  const lim = await make(fakeSupabase({ failWrite: 'Trop de publications : réessaie dans une heure.' }))(request(pubBody()));
+  assert.equal(lim.status, 429); assert.ok(lim.headers.get('Retry-After'));
+  const sb = fakeSupabase(); await make(sb)(request(pubBody({ name: '   Un   nom \n  trop long ' + 'x'.repeat(100), description: 'd'.repeat(500) })));
+  const a = pubCalls(sb)[0].args; assert.ok(a.nm.length <= 40 && !/\s{2}/.test(a.nm) && a.ds.length === 200);
+});
+test('republication par l\'auteur (circuit publié avant l\'étape 15, temps non vérifié) : mis à jour, vérifié', async () => {
+  const sb = fakeSupabase(); const h = make(sb, { rateLimit: { ...RATE_LIMIT, max: 100 } });
+  assert.equal((await (await h(request(pubBody()))).json()).status, 'created');
+  assert.equal((await (await h(request(pubBody({ name: 'Nouveau nom' })))).json()).status, 'updated');
+  assert.equal(sb.state.tracks.size, 1);
 });
 
 console.log('Requêtes refusées');
-test('méthode : OPTIONS répond aux navigateurs, GET est refusé', async () => {
-  const h = make(fakeSupabase());
+test('méthode : OPTIONS répond aux navigateurs, PUT / DELETE sont refusés ; GET donne l\'état du service (version de physique déployée) sans authentification ni lecture de la base', async () => {
+  const sb = fakeSupabase(), h = make(sb);
   assert.equal((await h(new Request('https://fn.example/', { method: 'OPTIONS' }))).status, 200);
-  assert.equal((await h(request(null, { method: 'GET' }))).status, 405);
+  assert.equal((await h(request(null, { method: 'PUT' }))).status, 405);
+  assert.equal((await h(request(null, { method: 'DELETE' }))).status, 405);
+  const r = await h(new Request('https://fn.example/', { method: 'GET' })), j = await r.json();
+  assert.equal(r.status, 200); assert.equal(j.physVer, PHYS_VER); assert.equal(j.service, 'submit-score'); assert.deepEqual(j.actions, ['submit', 'publish-track']);
+  assert.equal(sb.calls.length, 0, 'aucun appel à la base');
 });
 test('pas de jeton valide : 401, et rien n\'est rejoué ni écrit', async () => {
   const sb = fakeSupabase({ authOk: false }), r = await make(sb)(request(good));
   assert.equal(r.status, 401);
-  assert.equal(sb.calls.filter((c) => !c.url.includes('/rpc/')).length, 1);
+  assert.equal(sb.calls.length, 1, 'seul l\'appel d\'authentification a eu lieu');
 });
 test('temps falsifié : la course rejouée ne le confirme pas (422)', async () => {
   const sb = fakeSupabase(), r = await make(sb)(request({ ...good, time: good.time - 3 }));
   assert.equal(r.status, 422);
-  assert.equal(sb.calls.filter((c) => c.method === 'POST' && c.url.includes('/rest/v1/scores')).length, 0);
+  assert.equal(submitCalls(sb).length, 0);
 });
 test('commandes tronquées ou inventées : 422', async () => {
   const h = make(fakeSupabase());
@@ -176,9 +304,17 @@ test('commandes tronquées ou inventées : 422', async () => {
   assert.equal((await h(request({ ...good, inputs: '!!!pas du base64!!!' }))).status, 400, 'pas du base64 : refusé avant tout rejeu');
   assert.equal((await h(request({ ...good, inputs: 'QUJDREVGR0g=' }))).status, 422, 'base64 valide mais sans course : rejeu refusé');
 });
-test('autre version de la physique : 422 et versionMismatch', async () => {
-  const r = await make(fakeSupabase())(request({ ...good, physVer: PHYS_VER - 1 })), j = await r.json();
-  assert.equal(r.status, 422); assert.equal(j.versionMismatch, true);
+test('autre version de la physique (plus ancienne, plus récente, zéro) : 422, versionMismatch, les deux versions dans le message, rien rejoué ni écrit', async () => {
+  for (const pv of [PHYS_VER - 1, PHYS_VER + 1, 0, 1]) {
+    const sb = fakeSupabase(), r = await make(sb)(request({ ...good, physVer: pv })), j = await r.json();
+    assert.equal(r.status, 422, 'physVer ' + pv); assert.equal(j.versionMismatch, true); assert.equal(j.serverPhysVer, PHYS_VER);
+    assert.ok(j.error.includes(String(pv)) && j.error.includes(String(PHYS_VER)), j.error);
+    assert.equal(submitCalls(sb).length, 0, 'rien d\'écrit');
+  }
+});
+test('une ancienne version ne contourne aucune validation : sa course (même valide pour elle) n\'est ni rejouée avec l\'ancienne physique ni enregistrée', async () => {
+  const sb = fakeSupabase(), r = await make(sb)(request({ ...good, physVer: PHYS_VER - 1, time: 1 }));
+  assert.equal(r.status, 422); assert.equal(submitCalls(sb).length, 0);
 });
 test('clé de circuit inconnue ou d\'une autre version du circuit : 422', async () => {
   const h = make(fakeSupabase());
@@ -198,7 +334,7 @@ test('requête trop volumineuse : 413, annoncée ou non, sans rien rejouer', asy
   const sb = fakeSupabase(), h = make(sb);
   assert.equal((await h(request(good, { headers: { 'content-length': String(MAX_BODY_CHARS + 1) } }))).status, 413);
   assert.equal((await h(request('{"inputs":"' + 'A'.repeat(MAX_BODY_CHARS) + '"}'))).status, 413);
-  assert.equal(sb.calls.filter((c) => c.method === 'POST' && c.url.includes('/rest/v1/scores')).length, 0);
+  assert.equal(submitCalls(sb).length, 0);
 });
 test('pilote sans profil : 400', async () => {
   assert.equal((await make(fakeSupabase({ profile: false }))(request(good))).status, 400);
@@ -224,9 +360,12 @@ test('erreur interne : réponse générique, rien de secret ne sort, l\'erreur e
   assert.ok(!JSON.stringify(j).includes('mot de passe'));
   assert.equal(logged.length, 1);
 });
-test('échec d\'écriture en base : 500 sans détail', async () => {
-  const r = await make(fakeSupabase({ failWrite: true }))(request(good));
-  assert.equal(r.status, 500);
+test('échec d\'écriture en base : 500 sans détail ; plafond de 2 000 temps : 422 avec un message clair', async () => {
+  const logged = [];
+  const r = await make(fakeSupabase({ failWrite: 'connexion perdue (mot de passe=secret)' }), { log: (...a) => logged.push(a) })(request(good)), t = await r.text();
+  assert.equal(r.status, 500); assert.ok(!t.includes('secret') && !t.includes('connexion'));
+  const cap = await make(fakeSupabase({ failWrite: 'Trop de temps enregistrés pour ce pilote.' }))(request(good)), j = await cap.json();
+  assert.equal(cap.status, 422); assert.equal(j.capReached, true); assert.match(j.error, /2 000/);
 });
 test('configuration absente : 500 explicite', async () => {
   const h = createHandler({ supabaseUrl: '', serviceKey: '', log: () => {} });
@@ -276,26 +415,41 @@ test('temps impossibles ou hors bornes, clé et commandes mal formées : 400 san
 
 console.log('Limite partagée entre instances (base)');
 test('la base refuse (délai en secondes) : 429 avec Retry-After, sans rejouer la course', async () => {
-  const sb = fakeSupabase({ rateRpc: 37 });
+  const sb = fakeSupabase({ rate: 37 });
   const r = await make(sb)(request(good));
   assert.equal(r.status, 429); assert.equal(r.headers.get('Retry-After'), '37');
-  assert.equal(sb.calls.filter((c) => c.url.includes('/rest/v1/scores')).length, 0);
+  assert.equal(submitCalls(sb).length, 0);
 });
-test('deux instances de la fonction (mémoires séparées) partagent la même limite en base : la rafale répartie ne passe plus', async () => {
-  const hits = new Map(), max = 3;
-  const rate = (b) => { const n = (hits.get(b.p) || 0); if (n >= b.max_hits) return 30; hits.set(b.p, n + 1); return 0; };
-  const A = make(fakeSupabase({ rateRpc: rate }), { rateLimit: { max, windowMs: 60_000 } });
-  const B = make(fakeSupabase({ rateRpc: rate }), { rateLimit: { max, windowMs: 60_000 } });
-  const statuses = [];
-  for (let i = 0; i < 6; i++) statuses.push((await (i % 2 ? A : B)(request({ ...good, time: 1 }))).status);
-  assert.deepEqual(statuses.filter((x) => x === 429).length, 3, JSON.stringify(statuses));
+test('la limite en base est PERSISTANTE et partagée : trois instances (mémoires séparées), 30 requêtes simultanées d\'un même pilote — exactement « max » acceptées', async () => {
+  const rows = []; const max = 8;
+  const rate = (b) => { const n = rows.filter((x) => x.p === b.p).length; if (n >= b.max_hits) return 30; rows.push({ p: b.p, anon: b.is_anon }); return 0; };
+  const sb = fakeSupabase({ rate });
+  const cfg = { rateLimit: { ...RATE_LIMIT, max } };       // chaque instance admet jusqu'à « max » (3 × max au total) : seule la base les relie et tranche
+  const hs = [make(sb, cfg), make(sb, cfg), make(sb, cfg)];
+  const out = await Promise.all(Array.from({ length: 30 }, (_, i) => hs[i % 3](request({ ...good, time: 1 }))));
+  const accepted = out.filter((r) => r.status !== 429).length;
+  assert.equal(accepted, max, 'exactement ' + max + ' passent le contrôle (puis 422 : temps falsifié), pas ' + accepted);
+  // redémarrage : une instance neuve (mémoire vide) ne rouvre pas la limite
+  assert.equal((await make(sb, cfg)(request({ ...good, time: 1 }))).status, 429);
 });
-test('la base ne répond pas ou l\'étape 14 manque : les pilotes honnêtes passent (limite en mémoire), le problème est journalisé une fois', async () => {
-  const logged = [];
-  const h = make(fakeSupabase({ rateRpc: 'absent' }), { log: (...a) => logged.push(a) });
-  assert.equal((await h(request(good))).status, 200);
-  assert.equal((await h(request({ ...good, time: 1 }))).status, 422);
-  assert.equal(logged.length, 1);
+test('la requête transmet le type, le pilote, la fenêtre, le plafond global et le drapeau anonyme', async () => {
+  const sb = fakeSupabase({ anonymous: true }); await make(sb)(request({ ...good, time: 1 }));
+  const a = sb.calls.find((c) => c.url.includes('rate_check')).args;
+  assert.deepEqual(a, { k: 'submit', p: UID, max_hits: RATE_LIMIT.max, window_s: 60, global_max: RATE_LIMIT.globalMax, is_anon: true, anon_max: RATE_LIMIT.anonMax });
+  assert.ok(RATE_LIMIT.anonMax < RATE_LIMIT.globalMax, 'les comptes gardent une réserve');
+  const sb2 = fakeSupabase({ anonymous: false }); await make(sb2)(request({ ...good, time: 1 }));
+  assert.equal(sb2.calls.find((c) => c.url.includes('rate_check')).args.is_anon, false);
+});
+test('FAIL-CLOSED : la base de limitation absente ou en panne (étape 15 non appliquée) — 503 et Retry-After, la course n\'est ni rejouée ni enregistrée', async () => {
+  for (const rate of ['down', 'texte', -5, 1.5]) {
+    const sb = fakeSupabase({ rate }), h = make(sb, { log: () => {} });
+    const r = await h(request(good));
+    assert.equal(r.status, 503, String(rate)); assert.ok(r.headers.get('Retry-After'));
+    assert.equal(submitCalls(sb).length, 0);
+  }
+  const logged = [], once = make(fakeSupabase({ rate: 'down' }), { log: (...a) => logged.push(a) });
+  for (let i = 0; i < 3; i++) await once(request(good));
+  assert.equal(logged.length, 1, 'journalisé une fois par minute au plus');
 });
 
 await finish('Tous les tests de la fonction serveur passent.');

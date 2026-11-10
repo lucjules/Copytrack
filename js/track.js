@@ -305,14 +305,18 @@ export class Track {
   // Signature du contenu (pièces, décorations, règles de course), utilisée pour la
   // vérification et comme clé des classements en ligne. Le nom, la description et l'auteur
   // n'en font pas partie : on peut les modifier sans perdre la vérification ni les temps.
-  signature() {
+  signature() { return hashString(this.signatureText()); }
+
+  // Le texte dont signature() prend l'empreinte (32 bits, FNV-1a : pratique pour une clé, mais on peut FABRIQUER un autre circuit de même clé). Le serveur en
+  // prend une empreinte forte (SHA-256) pour lier une clé de classement u-… à UN seul circuit (supabase/etape15-backend.sql, track_binds).
+  signatureText() {
     const parts = this.tiles
       .map((t) => `${t.t}:${t.x}:${t.z}:${t.l}:${t.r}:${t.s}:${t.p}:${t.v}${t.nb}${t.tn}${t.mv ? 'm' + t.mv : ''}${tileExtras(t)}`)
       .sort()
       .join('|');
     const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}` : ''}`).join('|');
     const rules = RULES.map((r) => r.sig(this[r.key])).join('');
-    return hashString(this.decor + '#' + parts + '#' + d + (this.laps > 1 ? '#L' + this.laps : '') + rules + this._logicSig());
+    return this.decor + '#' + parts + '#' + d + (this.laps > 1 ? '#L' + this.laps : '') + rules + this._logicSig();
   }
 
   // Logique du circuit : elle change la course, donc la signature ; avec elle, l'appartenance des pièces et décorations aux groupes aussi (une

@@ -17,8 +17,8 @@ create table auth.users (id uuid primary key default gen_random_uuid(), email te
 create function auth.uid() returns uuid language sql stable as $f$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $f$;
 grant usage on schema auth to anon, authenticated;
 SQL
-for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape6-telemetrie.sql supabase/etape7-fantomes.sql supabase/etape7-fantomes.sql supabase/etape8-decouverte.sql supabase/etape8-decouverte.sql supabase/etape9-secteurs.sql supabase/etape9-secteurs.sql supabase/etape10-social.sql supabase/etape10-social.sql supabase/etape11-saisons.sql supabase/etape11-saisons.sql supabase/etape12-competition.sql supabase/etape12-competition.sql supabase/etape13-communaute.sql supabase/etape13-communaute.sql supabase/etape14-securite.sql supabase/etape14-securite.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
-$P -d $DB <<'SQL'
+for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape6-telemetrie.sql supabase/etape7-fantomes.sql supabase/etape7-fantomes.sql supabase/etape8-decouverte.sql supabase/etape8-decouverte.sql supabase/etape9-secteurs.sql supabase/etape9-secteurs.sql supabase/etape10-social.sql supabase/etape10-social.sql supabase/etape11-saisons.sql supabase/etape11-saisons.sql supabase/etape12-competition.sql supabase/etape12-competition.sql supabase/etape13-communaute.sql supabase/etape13-communaute.sql supabase/etape14-securite.sql supabase/etape14-securite.sql supabase/etape15-backend.sql supabase/etape15-backend.sql; do $P -d $DB -f $f; done   # 2 fois : relançable
+$P -d $DB <<'SQL' | tee /tmp/ct-sql-out.txt
 \set ON_ERROR_STOP off
 create function public.as_user(u uuid) returns void language plpgsql as $$ begin perform set_config('request.jwt.claim.sub', u::text, false); end $$;
 grant execute on function public.as_user(uuid) to public;
@@ -604,14 +604,224 @@ do $$ declare r0 int; r1 int; r2 int; i int; ok_first boolean := true; begin
   perform public.check('étape 14 : la limite est PAR pilote', r2 = 0);
 end $$;
 reset role;
-update public.submit_rate set at = now() - interval '2 minutes' where player = '00000000-0000-0000-0000-0000000000c1';
+update public.rate_hits set at = now() - interval '2 minutes' where kind = 'submit' and player = '00000000-0000-0000-0000-0000000000c1';
 set role service_role;
 select public.check('étape 14 : la fenêtre glisse : après 2 minutes, de nouveau accepté', public.submit_rate_check('00000000-0000-0000-0000-0000000000c1', 3, 60) = 0);
 select public.check('étape 14 : plafond GLOBAL : un autre pilote (session neuve) est refusé quand le total de la fenêtre est atteint', public.submit_rate_check('00000000-0000-0000-0000-0000000000c3', 3, 60, 2) = 60);
 select public.check('étape 14 : le ménage supprime les lignes de plus d''une heure', (select public.submit_rate_purge()) >= 0);
 reset role;
+-- 12b. ÉTAPE 15 : limitation globale, plafond de 2 000 temps, meilleur temps atomique, circuits publiés
+insert into auth.users (id, is_anonymous) select ('00000000-0000-0000-0000-00000000f15' || i)::uuid, true from generate_series(1, 6) i;
+insert into players (id, name) select ('00000000-0000-0000-0000-00000000f15' || i)::uuid, 'Pilote15-' || i from generate_series(1, 6) i;
+do $$ declare ok1 boolean := true; r int; i int; begin
+  for i in 1..3 loop if public.rate_check('t15', '00000000-0000-0000-0000-00000000f151', 3, 60) <> 0 then ok1 := false; end if; end loop;
+  r := public.rate_check('t15', '00000000-0000-0000-0000-00000000f151', 3, 60);
+  perform public.check('étape 15 : rate_check — 3 acceptées puis la 4e refusée avec un délai de 1 à 60 s', ok1 and r between 1 and 60);
+  perform public.check('étape 15 : rate_check — un refus n''est pas compté (pas d''allongement du blocage)', (select count(*) from rate_hits where kind = 't15' and player = '00000000-0000-0000-0000-00000000f151') = 3);
+  perform public.check('étape 15 : rate_check — les types de limite sont indépendants', public.rate_check('t15b', '00000000-0000-0000-0000-00000000f151', 3, 60) = 0);
+end $$;
+do $$ declare i int; n_ok int := 0; r int; begin
+  for i in 2..6 loop if public.rate_check('t15g', ('00000000-0000-0000-0000-00000000f15' || i)::uuid, 5, 60, 3) = 0 then n_ok := n_ok + 1; end if; end loop;
+  perform public.check('étape 15 : rate_check — plafond GLOBAL de 3 : exactement 3 pilotes différents acceptés sur 5', n_ok = 3);
+end $$;
+do $$ declare a int := 0; b int; i int; begin
+  for i in 1..5 loop if public.rate_check('t15a', ('00000000-0000-0000-0000-00000000f15' || ((i % 5) + 1))::uuid, 5, 60, 4, true, 2) = 0 then a := a + 1; end if; end loop;
+  b := public.rate_check('t15a', '00000000-0000-0000-0000-00000000f156', 5, 60, 4, false, 2);
+  perform public.check('étape 15 : rate_check — sous-plafond anonyme (2) : au plus 2 sessions anonymes acceptées', a = 2);
+  perform public.check('étape 15 : rate_check — un compte (non anonyme) passe encore malgré le sous-plafond anonyme atteint', b = 0);
+end $$;
+do $$ declare r int; begin
+  r := public.submit_rate_check('00000000-0000-0000-0000-00000000f151', 5, 60);
+  perform public.check('étape 15 : submit_rate_check (étape 14) compte dans la même table persistante', r = 0 and exists (select 1 from rate_hits where kind = 'submit' and player = '00000000-0000-0000-0000-00000000f151'));
+end $$;
+select public.check('étape 15 : rate_purge disponible', (select public.rate_purge()) >= 0);
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-00000000f151');
+do $$ declare refuse boolean := false; begin
+  begin perform public.rate_check('x', '00000000-0000-0000-0000-00000000f151', 1, 1); exception when others then refuse := true; end;
+  perform public.check('étape 15 : le jeu ne peut pas appeler rate_check', refuse);
+end $$;
+do $$ declare refuse boolean := false; begin
+  begin perform count(*) from public.rate_hits; exception when others then refuse := true; end;
+  perform public.check('étape 15 : rate_hits illisible pour le jeu', refuse);
+end $$;
+do $$ declare refuse boolean := false; begin
+  begin perform public.submit_best('00000000-0000-0000-0000-00000000f151', 'x', 10, 'A', 31, 'x'); exception when others then refuse := true; end;
+  perform public.check('étape 15 : le jeu ne peut pas appeler submit_best', refuse);
+end $$;
+do $$ declare refuse boolean := false; begin
+  begin perform public.publish_track('00000000-0000-0000-0000-00000000f151', 'x', 'forest', 'c', 's15x', 10, 5, 1, '', null); exception when others then refuse := true; end;
+  perform public.check('étape 15 : le jeu ne peut pas appeler publish_track', refuse);
+end $$;
+reset role;
+
+-- Plafond de 2 000 temps : 1 999 lignes, puis les cas limites.
+insert into scores (track_key, player, time, inputs, phys_ver) select 'cap' || i, '00000000-0000-0000-0000-00000000f152', 30, 'A', 31 from generate_series(1, 1999) i;
+do $$ declare refuse boolean := false; begin
+  insert into scores (track_key, player, time, inputs, phys_ver) values ('cap-2000', '00000000-0000-0000-0000-00000000f152', 30, 'A', 31);
+  begin insert into scores (track_key, player, time, inputs, phys_ver) values ('cap-2001', '00000000-0000-0000-0000-00000000f152', 30, 'A', 31); exception when others then refuse := true; end;
+  perform public.check('étape 15 : plafond — la 2000e ligne est acceptée, la 2001e refusée', refuse and (select count(*) from scores where player = '00000000-0000-0000-0000-00000000f152') = 2000);
+end $$;
+do $$ declare n int; begin
+  insert into scores (track_key, player, time, inputs, phys_ver) values ('cap5', '00000000-0000-0000-0000-00000000f152', 20, 'B', 31)
+    on conflict (track_key, player) do update set time = excluded.time, inputs = excluded.inputs;
+  select count(*) into n from scores where player = '00000000-0000-0000-0000-00000000f152';
+  perform public.check('étape 15 : plafond — améliorer un temps existant à 2 000 lignes (upsert) fonctionne, sans ajouter de ligne', n = 2000 and (select time from scores where track_key = 'cap5' and player = '00000000-0000-0000-0000-00000000f152') = 20);
+end $$;
+do $$ declare r jsonb; refuse boolean := false; begin
+  r := public.submit_best('00000000-0000-0000-0000-00000000f152', 'cap6', 15, 'A', 31, 'c');
+  perform public.check('étape 15 : plafond — submit_best améliore un temps existant à 2 000 lignes', (r->>'improved')::boolean and (select time from scores where track_key = 'cap6' and player = '00000000-0000-0000-0000-00000000f152') = 15);
+  begin perform public.submit_best('00000000-0000-0000-0000-00000000f152', 'cap-nouveau', 15, 'A', 31, 'c'); exception when others then refuse := true; end;
+  perform public.check('étape 15 : plafond — submit_best refuse une NOUVELLE clé à 2 000 lignes', refuse and not exists (select 1 from scores where track_key = 'cap-nouveau'));
+end $$;
+delete from scores where track_key = 'cap7' and player = '00000000-0000-0000-0000-00000000f152';
+do $$ declare refuse boolean := false; begin
+  insert into scores (track_key, player, time, inputs, phys_ver) values ('cap-apres-suppression', '00000000-0000-0000-0000-00000000f152', 30, 'A', 31);
+  begin insert into scores (track_key, player, time, inputs, phys_ver) values ('cap-encore', '00000000-0000-0000-0000-00000000f152', 30, 'A', 31); exception when others then refuse := true; end;
+  perform public.check('étape 15 : plafond — une suppression libère exactement une place', refuse and (select count(*) from scores where player = '00000000-0000-0000-0000-00000000f152') = 2000);
+end $$;
+
+-- submit_best : jamais de régression du record.
+do $$ declare r jsonb; begin
+  r := public.submit_best('00000000-0000-0000-0000-00000000f153', 'sb-1', 24.775, 'LENT', 31, 'Essai', '[10,20]', 'GHOSTLENT', '[[0,"car"]]');
+  perform public.check('étape 15 : submit_best — premier temps enregistré (rang 1 sur 1)', (r->>'improved')::boolean and (r->>'rank')::int = 1 and (r->>'total')::int = 1);
+  r := public.submit_best('00000000-0000-0000-0000-00000000f153', 'sb-1', 22.767, 'RAPIDE', 31, 'Essai', '[11,21]', 'GHOSTRAPIDE', '[[0,"car"]]');
+  perform public.check('étape 15 : submit_best — un meilleur temps remplace le record, avec SON fantôme et ses temps intermédiaires', (r->>'improved')::boolean
+    and (select time = 22.767 and inputs = 'RAPIDE' and ghost = 'GHOSTRAPIDE' and splits = '{11,21}' from scores where track_key = 'sb-1' and player = '00000000-0000-0000-0000-00000000f153'));
+  r := public.submit_best('00000000-0000-0000-0000-00000000f153', 'sb-1', 24.775, 'LENT', 31, 'Essai', '[10,20]', 'GHOSTLENT', '[[0,"car"]]');
+  perform public.check('étape 15 : submit_best — un temps moins bon ne remplace JAMAIS le record', not (r->>'improved')::boolean and (r->>'best')::float = 22.767
+    and (select time = 22.767 and inputs = 'RAPIDE' and ghost = 'GHOSTRAPIDE' from scores where track_key = 'sb-1' and player = '00000000-0000-0000-0000-00000000f153'));
+  r := public.submit_best('00000000-0000-0000-0000-00000000f153', 'sb-1', 20, 'ANCIEN', 30, 'Essai');
+  perform public.check('étape 15 : submit_best — une physique plus ancienne ne remplace jamais un record, même plus rapide', not (r->>'improved')::boolean and (select time from scores where track_key = 'sb-1' and player = '00000000-0000-0000-0000-00000000f153') = 22.767);
+  r := public.submit_best('00000000-0000-0000-0000-00000000f153', 'sb-1', 40, 'NEUVE', 32, 'Essai');
+  perform public.check('étape 15 : submit_best — une physique plus récente remplace le record (les temps ne sont plus comparables)', (r->>'improved')::boolean and (select phys_ver = 32 and time = 40 and ghost is null from scores where track_key = 'sb-1' and player = '00000000-0000-0000-0000-00000000f153'));
+  perform public.submit_best('00000000-0000-0000-0000-00000000f154', 'sb-2', 30, 'A', 31, 'E');
+  r := public.submit_best('00000000-0000-0000-0000-00000000f154', 'sb-2', 30, 'A', 31, 'E', '[5]', 'GH', '[]');
+  perform public.check('étape 15 : submit_best — le même temps renvoyé complète le fantôme et les temps intermédiaires manquants', not (r->>'improved')::boolean and (select ghost = 'GH' and splits = '{5}' from scores where track_key = 'sb-2' and player = '00000000-0000-0000-0000-00000000f154'));
+  perform public.submit_best('00000000-0000-0000-0000-00000000f155', 'sb-2', 28, 'A', 31, 'E');
+  r := public.submit_best('00000000-0000-0000-0000-00000000f156', 'sb-2', 29, 'A', 31, 'E');
+  perform public.check('étape 15 : submit_best — rang et total (29 s derrière 28 s, devant 30 s)', (r->>'rank')::int = 2 and (r->>'total')::int = 3);
+end $$;
+-- Empreinte forte : une clé u-… liée à un circuit refuse un autre circuit de même clé.
+do $$ declare r jsonb; begin
+  r := public.submit_best('00000000-0000-0000-0000-00000000f154', 'u-abc12', 30, 'A', 31, 'E', null, null, null, repeat('a', 64));
+  perform public.check('étape 15 : première course sur un circuit de joueur — empreinte forte liée', r->>'status' = 'ok' and exists (select 1 from track_binds where track_key = 'u-abc12'));
+  r := public.submit_best('00000000-0000-0000-0000-00000000f155', 'u-abc12', 1, 'A', 31, 'E', null, null, null, repeat('b', 64));
+  perform public.check('étape 15 : un AUTRE circuit de même clé (collision de signature 32 bits) est refusé, rien n''est écrit', r->>'status' = 'collision' and not exists (select 1 from scores where track_key = 'u-abc12' and player = '00000000-0000-0000-0000-00000000f155'));
+  r := public.submit_best('00000000-0000-0000-0000-00000000f155', 'u-abc12', 31, 'A', 31, 'E', null, null, null, repeat('a', 64));
+  perform public.check('étape 15 : le même circuit (même empreinte) est accepté pour un autre pilote', r->>'status' = 'ok');
+end $$;
+
+-- Circuits publiés : droits par colonne, publication vérifiée.
+set role authenticated;
+select public.as_user('00000000-0000-0000-0000-00000000f151');
+do $$ declare refuse boolean := false; begin
+  begin insert into tracks (name, decor, code, signature, author_time, pieces, created_at) values ('Antidaté', 'forest', 'x', 's15a', 30, 5, now() - interval '3 hours'); exception when others then refuse := true; end;
+  perform public.check('étape 15 : created_at n''est plus écrivable (limite de 10 publications par heure non contournable)', refuse);
+end $$;
+do $$ declare refuse boolean := false; begin
+  begin insert into tracks (name, decor, code, signature, author_time, pieces, picked_at) values ('Faux choix', 'forest', 'x', 's15b', 30, 5, now()); exception when others then refuse := true; end;
+  perform public.check('étape 15 : picked_at (Sélection) n''est plus écrivable par le jeu', refuse);
+end $$;
+do $$ declare refuse boolean := false; begin
+  begin insert into tracks (name, decor, code, signature, author_time, pieces, author_verified) values ('Faux vérifié', 'forest', 'x', 's15c', 0.001, 5, true); exception when others then refuse := true; end;
+  perform public.check('étape 15 : author_verified n''est pas écrivable par le jeu', refuse);
+end $$;
+insert into tracks (name, decor, code, signature, author_time, pieces, laps, description) values ('Normal', 'forest', 'x', 's15d', 0.001, 5, 1, 'ok');
+select public.check('étape 15 : une publication directe reste possible (ancien client) mais son temps n''est PAS vérifié', (select not author_verified and abs(author_time - 0.001) < 1e-6 from tracks where signature = 's15d'));
+reset role;
+do $$ declare r jsonb; begin
+  r := public.publish_track('00000000-0000-0000-0000-00000000f151', 'Vérifié', 'forest', 'code', 's15e', 41.234, 6, 1, 'desc');
+  perform public.check('étape 15 : publish_track — circuit créé, temps auteur = temps rejoué, vérifié', r->>'status' = 'created' and (select author_verified and abs(author_time - 41.234) < 1e-4 and author = '00000000-0000-0000-0000-00000000f151' from tracks where signature = 's15e'));
+  r := public.publish_track('00000000-0000-0000-0000-00000000f152', 'Pirate', 'forest', 'code', 's15e', 5, 6, 1, '');
+  perform public.check('étape 15 : publish_track — un autre pilote ne peut pas reprendre la signature d''un circuit', r->>'status' = 'taken' and (select abs(author_time - 41.234) < 1e-4 from tracks where signature = 's15e'));
+  r := public.publish_track('00000000-0000-0000-0000-00000000f151', 'Vérifié v2', 'forest', 'code2', 's15d', 33.3, 6, 1, '');
+  perform public.check('étape 15 : publish_track — l''auteur d''un circuit non vérifié le republie : il devient vérifié (pas de doublon)', r->>'status' = 'updated' and (select author_verified and abs(author_time - 33.3) < 1e-4 and name = 'Vérifié v2' from tracks where signature = 's15d') and (select count(*) from tracks where signature = 's15d') = 1);
+  r := public.publish_track('00000000-0000-0000-0000-00000000f152', 'Faux', 'forest', 'code', 'abc12', 5, 6, 1, '', repeat('b', 64));
+  perform public.check('étape 15 : publish_track — un circuit de même clé mais d''empreinte forte différente (collision 32 bits) est refusé', r->>'status' = 'collision' and not exists (select 1 from tracks where signature = 'abc12'));
+end $$;
 -- 13. aucun mot de passe en clair dans nos tables
 select public.check('aucune colonne mot de passe dans le schéma public', not exists (select 1 from information_schema.columns where table_schema='public' and column_name ilike '%pass%'));
 select case when ok then '  ok   ' else '  FAIL ' end || name from public.res order by ok, name;
-select 'RESULT ' || case when bool_and(ok) and count(*) = 107 + 29 + 10 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
+select 'RESULT ' || case when bool_and(ok) and count(*) = 181 then 'tous les tests SQL passent' else 'ÉCHEC' end from public.res;
 SQL
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------
+# Concurrence RÉELLE (étape 15) : plusieurs sessions psql en même temps sur la base de test. Les entrelacements sont forcés (une session garde sa
+# transaction ouverte avec pg_sleep pendant qu'une autre arrive) : sans les verrous de l'étape 15, ces tests échouent.
+# ---------------------------------------------------------------------------------------------------------------------------------------------------
+FAILS=0
+chk() { if [ "$2" = "1" ]; then echo "  ok   $1"; else echo "  FAIL $1"; FAILS=$((FAILS + 1)); fi; }
+Q() { $P -d $DB -At -c "$1" 2>&1 || true; }
+E1=00000000-0000-0000-0000-0000000e0001; E2=00000000-0000-0000-0000-0000000e0002; E3=00000000-0000-0000-0000-0000000e0003
+Q "insert into auth.users (id, is_anonymous) values ('$E1', true), ('$E2', true), ('$E3', true); insert into players (id, name) values ('$E1','Conc-1'), ('$E2','Conc-2'), ('$E3','Conc-3');" >/dev/null
+Q "insert into scores (track_key, player, time, inputs, phys_ver) select 'cc' || i, '$E1', 30, 'A', 31 from generate_series(1, 1999) i;" >/dev/null
+
+echo "Concurrence : plafond de 2 000 temps"
+( $P -d $DB -At -c "begin; insert into scores (track_key, player, time, inputs, phys_ver) values ('race-A', '$E1', 30, 'A', 31); select pg_sleep(2); commit;" >/tmp/ct-c1a.txt 2>&1 ) &
+sleep 0.7
+$P -d $DB -At -c "insert into scores (track_key, player, time, inputs, phys_ver) values ('race-B', '$E1', 30, 'A', 31);" >/tmp/ct-c1b.txt 2>&1 && RB=0 || RB=1
+wait
+chk "1 999 temps puis deux insertions simultanées : une seule passe, jamais 2 001 lignes" "$([ "$(Q "select count(*) from scores where player = '$E1'")" = 2000 ] && [ $RB = 1 ] && grep -q "Trop de temps" /tmp/ct-c1b.txt && echo 1 || echo 0)"
+
+echo "Concurrence : meilleur temps"
+for ORDER in lent-puis-rapide rapide-puis-lent; do
+  K="race-$ORDER"
+  if [ $ORDER = lent-puis-rapide ]; then T1=24.775; I1=LENT; T2=22.767; I2=RAPIDE; else T1=22.767; I1=RAPIDE; T2=24.775; I2=LENT; fi
+  ( $P -d $DB -At -c "begin; select public.submit_best('$E2', '$K', $T1, '$I1', 31, 'x'); select pg_sleep(2); commit;" >/dev/null 2>&1 ) &
+  sleep 0.7
+  Q "select public.submit_best('$E2', '$K', $T2, '$I2', 31, 'x')" >/dev/null
+  wait
+  chk "deux soumissions simultanées ($ORDER) : le record final est TOUJOURS le plus rapide (22,767)" "$([ "$(Q "select time || ':' || inputs from scores where track_key = '$K' and player = '$E2'")" = "22.767:RAPIDE" ] && echo 1 || echo 0)"
+done
+for i in $(seq 1 12); do
+  T=$(awk "BEGIN { printf \"%.2f\", 30 - $i * 0.37 }"); ( Q "select public.submit_best('$E3', 'race-rafale', $T, 'I$i', 31, 'x')" >/dev/null ) &
+done
+wait
+chk "12 soumissions simultanées de temps différents : le record final est le plus rapide, une seule ligne" "$([ "$(Q "select count(*) || ':' || min(time) from scores where track_key = 'race-rafale' and player = '$E3'")" = "1:25.56" ] && echo 1 || echo 0)"
+
+echo "Concurrence : limitation de cadence"
+for i in $(seq 1 30); do ( Q "select public.rate_check('conc', '$E1', 8, 60)" > /tmp/ct-rc-$i.txt ) & done
+wait
+OKN=$(cat /tmp/ct-rc-*.txt | grep -c '^0$' || true)
+chk "30 appels simultanés d'un même pilote (limite 8) : exactement 8 acceptés" "$([ "$OKN" = 8 ] && echo 1 || echo 0)"
+for i in $(seq 1 30); do ( Q "select public.rate_check('concg', ('00000000-0000-0000-0000-0000000e1' || lpad('$i', 3, '0'))::uuid, 8, 60, 5)" > /tmp/ct-rg-$i.txt ) & done
+wait
+OKG=$(cat /tmp/ct-rg-*.txt | grep -c '^0$' || true)
+chk "30 pilotes différents en même temps (plafond global 5) : exactement 5 acceptés" "$([ "$OKG" = 5 ] && echo 1 || echo 0)"
+rm -f /tmp/ct-rc-*.txt /tmp/ct-rg-*.txt /tmp/ct-c1a.txt /tmp/ct-c1b.txt
+# Entrelacement FORCÉ : A prend la dernière place et garde sa transaction ouverte ; B arrive pendant ce temps. Sans le verrou de rate_check, B ne voit pas la ligne
+# de A (non validée), compte une place libre et passe : « max » dépassé. Avec le verrou, B attend la validation de A puis est refusé.
+E4=00000000-0000-0000-0000-0000000e0004; E5=00000000-0000-0000-0000-0000000e0005
+Q "select public.rate_check('forcee', '$E4', 3, 60), public.rate_check('forcee', '$E4', 3, 60)" >/dev/null
+( $P -d $DB -At -c "begin; select public.rate_check('forcee', '$E4', 3, 60); select pg_sleep(2); commit;" >/tmp/ct-f1.txt 2>&1 ) &
+sleep 0.7
+RB=$(Q "select public.rate_check('forcee', '$E4', 3, 60)")
+wait
+chk "limite par pilote (3) : la 4e requête, arrivée pendant que la 3e est en cours, est REFUSÉE (avec délai), pas acceptée" "$([ "$RB" -ge 1 ] 2>/dev/null && echo 1 || echo 0)"
+Q "select public.rate_check('forceeg', '$E4', 9, 60, 2)" >/dev/null
+( $P -d $DB -At -c "begin; select public.rate_check('forceeg', '$E5', 9, 60, 2); select pg_sleep(2); commit;" >/tmp/ct-f2.txt 2>&1 ) &
+sleep 0.7
+RG=$(Q "select public.rate_check('forceeg', '$E1', 9, 60, 2)")
+wait
+chk "plafond GLOBAL (2) : la 3e requête (autre pilote), arrivée pendant que la 2e est en cours, est REFUSÉE" "$([ "$RG" -ge 1 ] 2>/dev/null && echo 1 || echo 0)"
+rm -f /tmp/ct-f1.txt /tmp/ct-f2.txt
+
+echo "Étape 15b (verrouillage de la publication) et retour arrière"
+$P -d $DB -f supabase/etape15b-publication-verifiee.sql; $P -d $DB -f supabase/etape15b-publication-verifiee.sql
+R15B=$($P -d $DB -At 2>&1 <<SQL
+set role authenticated; select set_config('request.jwt.claim.sub', '$E1', false);
+do \$\$ begin insert into tracks (name, decor, code, signature, author_time, pieces) values ('Direct', 'forest', 'x', 's15-direct', 0.001, 5); raise exception 'insertion acceptée'; exception when insufficient_privilege then raise notice 'REFUSE'; end \$\$;
+SQL
+)
+chk "après l'étape 15b, l'insertion directe d'un circuit est refusée (permission denied)" "$(echo "$R15B" | grep -q "REFUSE" && echo 1 || echo 0)"
+chk "après l'étape 15b, publish_track (service) fonctionne encore" "$([ "$(Q "select public.publish_track('$E1', 'Après 15b', 'forest', 'c', 's15-apres', 12.5, 5, 1, '')::jsonb->>'status'")" = created ] && echo 1 || echo 0)"
+$P -d $DB -f supabase/etape15-retour.sql
+chk "retour arrière : submit_rate_check (étape 14) fonctionne, submit_best n'existe plus" "$([ "$(Q "select public.submit_rate_check('$E1', 3, 60)")" = 0 ] && [ "$(Q "select count(*) from pg_proc where proname = 'submit_best'")" = 0 ] && echo 1 || echo 0)"
+chk "retour arrière : l'insertion directe des circuits est rétablie (étape 1)" "$([ "$(Q "select has_table_privilege('authenticated', 'public.tracks', 'insert')")" = t ] && echo 1 || echo 0)"
+$P -d $DB -f supabase/etape15-backend.sql
+chk "l'étape 15 se réapplique après le retour arrière (submit_best revient)" "$([ "$(Q "select count(*) from pg_proc where proname = 'submit_best'")" = 1 ] && echo 1 || echo 0)"
+
+if ! grep -q "RESULT tous les tests SQL passent" /tmp/ct-sql-out.txt || grep -q "^  FAIL" /tmp/ct-sql-out.txt; then echo "ÉCHEC : des tests SQL ont échoué"; exit 1; fi
+if [ "$FAILS" != 0 ]; then echo "ÉCHEC : $FAILS test(s) de concurrence en échec"; exit 1; fi
+echo "RESULT concurrence, étape 15b et retour arrière : tout passe"

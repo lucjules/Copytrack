@@ -38,6 +38,8 @@ var DT = 1 / 120;
 var MAX_RUN_SECONDS = 600;
 var MAX_RUN_STEPS = Math.round(MAX_RUN_SECONDS / DT);
 var MAX_TRACK_CODE_CHARS = 4e5;
+var MAX_PUBLISH_CHARS = 1e5;
+var MAX_PUBLISH_PIECES = 5e3;
 var MAX_INPUTS_CHARS = 4e5;
 var OFF_TRACK_RESPAWN_S = 0.5;
 var VEHICLES = [
@@ -5912,10 +5914,15 @@ var Track = class _Track {
   // vérification et comme clé des classements en ligne. Le nom, la description et l'auteur
   // n'en font pas partie : on peut les modifier sans perdre la vérification ni les temps.
   signature() {
+    return hashString(this.signatureText());
+  }
+  // Le texte dont signature() prend l'empreinte (32 bits, FNV-1a : pratique pour une clé, mais on peut FABRIQUER un autre circuit de même clé). Le serveur en
+  // prend une empreinte forte (SHA-256) pour lier une clé de classement u-… à UN seul circuit (supabase/etape15-backend.sql, track_binds).
+  signatureText() {
     const parts = this.tiles.map((t) => `${t.t}:${t.x}:${t.z}:${t.l}:${t.r}:${t.s}:${t.p}:${t.v}${t.nb}${t.tn}${t.mv ? "m" + t.mv : ""}${tileExtras(t)}`).sort().join("|");
     const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}` : ""}`).join("|");
     const rules = RULES.map((r) => r.sig(this[r.key])).join("");
-    return hashString(this.decor + "#" + parts + "#" + d + (this.laps > 1 ? "#L" + this.laps : "") + rules + this._logicSig());
+    return this.decor + "#" + parts + "#" + d + (this.laps > 1 ? "#L" + this.laps : "") + rules + this._logicSig();
   }
   // Logique du circuit : elle change la course, donc la signature ; avec elle, l'appartenance des pièces et décorations aux groupes aussi (une
   // règle « cache le groupe 2 » n'a pas le même effet selon ce qu'il contient). Sans logique : rien (les signatures d'avant ne bougent pas).
@@ -12456,7 +12463,8 @@ function trackForKey(key2, code = "") {
     return {
       track,
       kind: "user",
-      name: track.name
+      name: track.name,
+      sigText: track.signatureText()
     };
   }
   throw new Error("Cl\xE9 de circuit invalide.");
@@ -12487,12 +12495,14 @@ function replayRun(track, inputs, { ghost = false } = {}) {
   }
   return out;
 }
+var versionError = (physVer) => ({
+  ok: false,
+  error: `Version du jeu diff\xE9rente (jeu ${physVer}, serveur ${PHYS_VER}) : recharge le jeu pour le mettre \xE0 jour.`,
+  versionMismatch: true,
+  serverPhysVer: PHYS_VER
+});
 function verifyRun({ trackKey, code, inputs, time, physVer, withGhost = false }) {
-  if (physVer !== PHYS_VER) return {
-    ok: false,
-    error: `Version du jeu diff\xE9rente (jeu ${physVer}, serveur ${PHYS_VER}).`,
-    versionMismatch: true
-  };
+  if (physVer !== PHYS_VER) return versionError(physVer);
   let t;
   try {
     t = trackForKey(trackKey, code);
@@ -12519,6 +12529,9 @@ function verifyRun({ trackKey, code, inputs, time, physVer, withGhost = false })
     splits: run.splits,
     name: t.name,
     kind: t.kind,
+    ...t.sigText ? {
+      sigText: t.sigText
+    } : {},
     ...t.season ? {
       season: t.season
     } : {},
@@ -12531,13 +12544,55 @@ function verifyRun({ trackKey, code, inputs, time, physVer, withGhost = false })
     } : {}
   };
 }
+var AUTHOR_TIME_TOLERANCE = 1e-3;
+function verifyPublish({ code, inputs, time, physVer }) {
+  if (physVer !== PHYS_VER) return versionError(physVer);
+  let track;
+  try {
+    track = Track.decode(String(code || ""));
+  } catch (e) {
+    return {
+      ok: false,
+      error: "Code de circuit invalide : " + e.message
+    };
+  }
+  if (!track.verified) return {
+    ok: false,
+    error: "Circuit non v\xE9rifi\xE9 : termine-le d\u2019abord depuis l\u2019\xE9diteur (\xAB \u2714 V\xE9rifier \xBB)."
+  };
+  const run = replayRun(track, inputs);
+  if (run == null) return {
+    ok: false,
+    error: "La course de v\xE9rification rejou\xE9e n\u2019atteint pas l\u2019arriv\xE9e."
+  };
+  if (Math.abs(run.time - time) > 5e-4) return {
+    ok: false,
+    error: "Le temps ne correspond pas \xE0 la course rejou\xE9e."
+  };
+  if (Math.abs(run.time - track.vt) > AUTHOR_TIME_TOLERANCE) return {
+    ok: false,
+    error: "Le temps de l\u2019auteur inscrit dans le circuit ne correspond pas \xE0 la course rejou\xE9e."
+  };
+  return {
+    ok: true,
+    time: run.time,
+    key: track.userKey,
+    signature: track.signature(),
+    sigText: track.signatureText(),
+    name: track.name,
+    decor: track.decor,
+    pieces: track.tiles.length,
+    laps: track.laps || 1
+  };
+}
 
 // supabase/functions/submit-score/handler.js
 var MAX_BODY_CHARS = MAX_INPUTS_CHARS + MAX_TRACK_CODE_CHARS + 4096;
 var RATE_LIMIT = {
   max: 8,
   windowMs: 6e4,
-  globalMax: 600
+  globalMax: 600,
+  anonMax: 400
 };
 var MAX_GHOST_CHARS = 8e5;
 async function readBodyLimited(req, maxBytes) {
@@ -12571,11 +12626,22 @@ async function readBodyLimited(req, maxBytes) {
 }
 var TRACK_KEY_RE = /^[A-Za-z0-9_~.:-]{1,80}$/;
 var BASE64_RE = /^[A-Za-z0-9+/]*={0,2}$/;
+var sha256hex = async (text) => [
+  ...new Uint8Array(await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)))
+].map((b) => b.toString(16).padStart(2, "0")).join("");
+var dbMessage = async (r) => {
+  try {
+    const j = JSON.parse(await r.text());
+    return String(j && j.message || "");
+  } catch {
+    return "";
+  }
+};
 function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, allowedOrigin = "*", now = Date.now, rateLimit = RATE_LIMIT, log = console.error }) {
   const cors = {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     Vary: "Origin"
   };
   const json = (status, body, extra = {}) => new Response(JSON.stringify(body), {
@@ -12596,16 +12662,10 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
       ...init.headers ?? {}
     }
   });
-  async function count(query) {
-    const r = await db(`scores?${query}&select=player`, {
-      headers: {
-        Prefer: "count=exact",
-        Range: "0-0"
-      }
-    });
-    const range = r.headers.get("content-range") ?? "*/0";
-    return parseInt(range.split("/")[1] ?? "0", 10) || 0;
-  }
+  const rpc = (name, args) => db(`rpc/${name}`, {
+    method: "POST",
+    body: JSON.stringify(args)
+  });
   const hits = /* @__PURE__ */ new Map();
   function tooFast(uid) {
     const t = now();
@@ -12622,32 +12682,68 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
     return 0;
   }
   let lastWarn = 0;
-  async function sharedWait(uid) {
+  async function sharedWait(uid, anon) {
     try {
-      const r = await db("rpc/submit_rate_check", {
-        method: "POST",
-        body: JSON.stringify({
-          p: uid,
-          max_hits: rateLimit.max,
-          window_s: Math.round(rateLimit.windowMs / 1e3),
-          global_max: rateLimit.globalMax ?? RATE_LIMIT.globalMax
-        })
+      const r = await rpc("rate_check", {
+        k: "submit",
+        p: uid,
+        max_hits: rateLimit.max,
+        window_s: Math.round(rateLimit.windowMs / 1e3),
+        global_max: rateLimit.globalMax ?? RATE_LIMIT.globalMax,
+        is_anon: anon,
+        anon_max: rateLimit.anonMax ?? RATE_LIMIT.anonMax
       });
       if (!r.ok) throw new Error("rpc " + r.status);
       const n = await r.json();
-      return Number.isInteger(n) && n > 0 ? n : 0;
+      if (!Number.isInteger(n) || n < 0) throw new Error("r\xE9ponse inattendue");
+      return {
+        wait: n
+      };
     } catch (e) {
       const t = now();
       if (t - lastWarn > 6e4) {
         lastWarn = t;
-        log("submit-score : limite partag\xE9e indisponible (\xE9tape SQL 14 ?) :", e && e.message);
+        log("submit-score : limite partag\xE9e indisponible (\xE9tape SQL 15 appliqu\xE9e ?) :", e && e.message);
       }
-      return 0;
+      return {
+        down: true
+      };
     }
+  }
+  async function failWrite(r, what) {
+    const msg = await dbMessage(r);
+    if (/Trop de temps enregistrés/.test(msg)) return json(422, {
+      error: "Limite de 2 000 temps enregistr\xE9s atteinte : efface d\u2019anciens records pour en ajouter.",
+      capReached: true
+    });
+    if (/Trop de publications/.test(msg)) return json(429, {
+      error: msg
+    }, {
+      "Retry-After": "3600"
+    });
+    log("submit-score :", what, r.status, msg);
+    return json(500, {
+      error: "Enregistrement impossible."
+    });
   }
   return async function handle(req) {
     if (req.method === "OPTIONS") return new Response("ok", {
       headers: cors
+    });
+    if (req.method === "GET") return json(200, {
+      ok: true,
+      service: "submit-score",
+      physVer: PHYS_VER,
+      rate: {
+        max: rateLimit.max,
+        windowS: Math.round(rateLimit.windowMs / 1e3),
+        globalMax: rateLimit.globalMax,
+        anonMax: rateLimit.anonMax
+      },
+      actions: [
+        "submit",
+        "publish-track"
+      ]
     });
     if (req.method !== "POST") return json(405, {
       error: "M\xE9thode non autoris\xE9e."
@@ -12674,8 +12770,17 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
       if (!/^[0-9a-f-]{36}$/.test(uid)) return json(401, {
         error: "Non connect\xE9."
       });
+      const anon = user.is_anonymous === true;
       let wait = tooFast(uid);
-      if (!wait) wait = await sharedWait(uid);
+      if (!wait) {
+        const shared = await sharedWait(uid, anon);
+        if (shared.down) return json(503, {
+          error: "Service de scores momentan\xE9ment indisponible : r\xE9essaie dans un instant."
+        }, {
+          "Retry-After": "30"
+        });
+        wait = shared.wait;
+      }
       if (wait) return json(429, {
         error: `Trop de courses envoy\xE9es : r\xE9essaie dans ${wait} s.`
       }, {
@@ -12693,14 +12798,31 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
           error: "Requ\xEAte invalide."
         });
       }
-      const { trackKey, code = "", inputs, time, physVer } = body ?? {};
-      if (typeof trackKey !== "string" || !TRACK_KEY_RE.test(trackKey) || typeof inputs !== "string" || !inputs || inputs.length > MAX_INPUTS_CHARS || !BASE64_RE.test(inputs) || typeof time !== "number" || !Number.isFinite(time) || time <= 0 || time > MAX_RUN_SECONDS || !Number.isInteger(physVer) || physVer < 0 || physVer > 1e5) {
+      const { action = "submit", trackKey, code = "", inputs, time, physVer } = body ?? {};
+      if (action !== "submit" && action !== "publish-track") return json(400, {
+        error: "Action inconnue."
+      });
+      const publishing = action === "publish-track";
+      if (!publishing && (typeof trackKey !== "string" || !TRACK_KEY_RE.test(trackKey)) || typeof inputs !== "string" || !inputs || inputs.length > MAX_INPUTS_CHARS || !BASE64_RE.test(inputs) || typeof time !== "number" || !Number.isFinite(time) || time <= 0 || time > MAX_RUN_SECONDS || !Number.isInteger(physVer) || physVer < 0 || physVer > 1e5) {
         return json(400, {
           error: "Requ\xEAte invalide."
         });
       }
       if (typeof code !== "string" || code.length > MAX_TRACK_CODE_CHARS) return json(400, {
         error: "Code de circuit invalide."
+      });
+      const profRes = await db(`players?id=eq.${uid}&select=id`);
+      const prof = profRes.ok ? await profRes.json() : null;
+      if (!Array.isArray(prof) || !prof.length) return json(400, {
+        error: "Profil pilote manquant."
+      });
+      if (publishing) return await publish({
+        uid,
+        body,
+        code,
+        inputs,
+        time,
+        physVer
       });
       const res = verifyRun({
         trackKey,
@@ -12713,110 +12835,60 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
       if (!res.ok || typeof res.time !== "number") return json(422, {
         error: res.error ?? "Course non confirm\xE9e.",
         ...res.versionMismatch ? {
-          versionMismatch: true
+          versionMismatch: true,
+          serverPhysVer: res.serverPhysVer ?? PHYS_VER
         } : {}
       });
       const simTime = res.time;
       if (res.competition) {
-        const { kind, id, base: base2 } = res.competition;
-        const w = await db("rpc/competition_open", {
-          method: "POST",
-          body: JSON.stringify({
-            kind,
-            cid: id,
-            p: uid,
-            base: base2
-          })
+        const { kind, id, base } = res.competition;
+        const w2 = await rpc("competition_open", {
+          kind,
+          cid: id,
+          p: uid,
+          base
         });
-        if (!w.ok) return json(422, {
+        if (!w2.ok) return json(422, {
           error: "Comp\xE9titions indisponibles sur ce serveur (\xE9tape SQL 12)."
         });
-        const why = await w.json();
+        const why = await w2.json();
         if (why !== "") return json(422, {
           error: typeof why === "string" && why ? why : "Comp\xE9tition ferm\xE9e."
         });
       }
-      const prof = await (await db(`players?id=eq.${uid}&select=id`)).json();
-      if (!Array.isArray(prof) || !prof.length) return json(400, {
-        error: "Profil pilote manquant."
+      const ghost = typeof res.ghost === "string" && res.ghost.length <= MAX_GHOST_CHARS ? res.ghost : null;
+      const splits = Array.isArray(res.splits) && res.splits.length <= 400 ? res.splits : null;
+      const strong = typeof res.sigText === "string" ? await sha256hex("copytrack-circuit-v1|" + res.sigText) : null;
+      const w = await rpc("submit_best", {
+        p: uid,
+        tk: trackKey,
+        t: simTime,
+        inp: inputs,
+        pv: physVer,
+        tname: String(res.name ?? "").slice(0, 60),
+        sp: splits,
+        gh: ghost,
+        gveh: ghost ? res.ghostVeh ?? [] : null,
+        strong
       });
-      const key2 = encodeURIComponent(trackKey);
-      let prevRes = await db(`scores?track_key=eq.${key2}&player=eq.${uid}&select=time,phys_ver,has_ghost`);
-      if (!prevRes.ok) prevRes = await db(`scores?track_key=eq.${key2}&player=eq.${uid}&select=time,phys_ver`);
-      const prev = await prevRes.json();
-      let best = simTime;
-      let improved = true;
-      if (Array.isArray(prev) && prev.length && prev[0].phys_ver === physVer && prev[0].time <= simTime) {
-        best = prev[0].time;
-        improved = false;
-      }
-      const ghost = typeof res.ghost === "string" && res.ghost.length <= MAX_GHOST_CHARS ? {
-        ghost: res.ghost,
-        ghost_veh: res.ghostVeh ?? []
-      } : null;
-      const backfill = !improved && ghost && prev[0].has_ghost === false && Math.abs(prev[0].time - simTime) < 1e-6;
-      if (improved) {
-        const row = {
-          track_key: trackKey,
-          player: uid,
-          time: simTime,
-          inputs,
-          phys_ver: physVer,
-          track_name: String(res.name ?? "").slice(0, 60),
-          updated_at: new Date(now()).toISOString()
-        };
-        const splits = Array.isArray(res.splits) && res.splits.length <= 400 ? {
-          splits: res.splits
-        } : {};
-        const post = (r) => db("scores", {
-          method: "POST",
-          headers: {
-            Prefer: "resolution=merge-duplicates,return=minimal"
-          },
-          body: JSON.stringify(r)
-        });
-        let up = await post({
-          ...row,
-          ...splits,
-          ...ghost || {}
-        });
-        if (!up.ok && up.status === 400 && ghost && splits.splits) up = await post({
-          ...row,
-          ...ghost
-        });
-        if (!up.ok && up.status === 400 && (ghost || splits.splits)) up = await post(row);
-        if (!up.ok) return json(500, {
+      if (!w.ok) return await failWrite(w, "submit_best");
+      const out = await w.json();
+      if (out && out.status === "collision") return json(409, {
+        error: "Ce code de circuit ne correspond pas au circuit d\xE9j\xE0 enregistr\xE9 sous cette cl\xE9.",
+        collision: true
+      });
+      if (!out || out.status !== "ok") {
+        log("submit-score : r\xE9ponse submit_best inattendue", out);
+        return json(500, {
           error: "Enregistrement impossible."
         });
-      } else if (backfill) {
-        await db(`scores?track_key=eq.${key2}&player=eq.${uid}`, {
-          method: "PATCH",
-          headers: {
-            Prefer: "return=minimal"
-          },
-          body: JSON.stringify(ghost)
-        });
       }
-      if (!improved && Array.isArray(res.splits) && res.splits.length && res.splits.length <= 400 && Math.abs(prev[0].time - simTime) < 1e-6) {
-        await db(`scores?track_key=eq.${key2}&player=eq.${uid}&splits=is.null`, {
-          method: "PATCH",
-          headers: {
-            Prefer: "return=minimal"
-          },
-          body: JSON.stringify({
-            splits: res.splits
-          })
-        });
-      }
-      const base = `track_key=eq.${key2}&phys_ver=eq.${physVer}`;
-      const before = await count(`${base}&time=lt.${best}`);
-      const total = await count(base);
       return json(200, {
         ok: true,
-        improved,
-        best,
-        rank: before + 1,
-        total
+        improved: !!out.improved,
+        best: out.best,
+        rank: out.rank,
+        total: out.total
       });
     } catch (e) {
       log("submit-score :", e);
@@ -12825,6 +12897,67 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
       });
     }
   };
+  async function publish({ uid, body, code, inputs, time, physVer }) {
+    if (code.length > MAX_PUBLISH_CHARS) return json(413, {
+      error: `Circuit trop gros (${code.length} / ${MAX_PUBLISH_CHARS} caract\xE8res).`
+    });
+    const res = verifyPublish({
+      code,
+      inputs,
+      time,
+      physVer
+    });
+    if (!res.ok) return json(422, {
+      error: res.error,
+      ...res.versionMismatch ? {
+        versionMismatch: true,
+        serverPhysVer: res.serverPhysVer ?? PHYS_VER
+      } : {}
+    });
+    if (res.pieces < 2 || res.pieces > MAX_PUBLISH_PIECES) return json(422, {
+      error: `Circuit trop gros ou trop petit (${res.pieces} pi\xE8ces, de 2 \xE0 ${MAX_PUBLISH_PIECES}).`
+    });
+    const clean = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
+    const name = clean(body.name, 40) || clean(res.name, 40) || "Sans titre";
+    const desc = clean(body.description, 200);
+    const decor = clean(res.decor, 20);
+    const strong = await sha256hex("copytrack-circuit-v1|" + res.sigText);
+    const w = await rpc("publish_track", {
+      p: uid,
+      nm: name,
+      dc: decor,
+      cd: code,
+      sg: res.signature,
+      atime: res.time,
+      pc: res.pieces,
+      lp: res.laps,
+      ds: desc,
+      strong
+    });
+    if (!w.ok) return await failWrite(w, "publish_track");
+    const out = await w.json();
+    if (out && out.status === "taken") return json(409, {
+      error: "Ce circuit est d\xE9j\xE0 publi\xE9 par un autre pilote.",
+      taken: true
+    });
+    if (out && out.status === "collision") return json(409, {
+      error: "Ce code de circuit ne correspond pas au circuit d\xE9j\xE0 enregistr\xE9 sous cette cl\xE9.",
+      collision: true
+    });
+    if (!out || out.status !== "created" && out.status !== "updated") {
+      log("submit-score : r\xE9ponse publish_track inattendue", out);
+      return json(500, {
+        error: "Publication impossible."
+      });
+    }
+    return json(200, {
+      ok: true,
+      id: out.id,
+      status: out.status,
+      authorTime: res.time,
+      authorVerified: true
+    });
+  }
 }
 
 // supabase/functions/submit-score/server.ts

@@ -5,12 +5,10 @@
 // normalement et ces fonctions répondent simplement « hors ligne ».
 import { getJSON, setJSON } from './storage.js';
 import { CONFIG } from './config.js';
+import { MAX_PUBLISH_CHARS, MAX_PUBLISH_PIECES } from './constants.js';
+import { PHYS_VER } from './version.js';
 
 export const ONLINE = CONFIG.supabase;      // { url, key } : voir js/config.js
-
-// Limites de la base (voir supabase/etape1-communaute.sql).
-const MAX_PUBLISH_CHARS = 100000;
-const MAX_PUBLISH_PIECES = 5000;
 
 export class OnlineError extends Error {
   constructor(message, code = '', status = 0) { super(message); this.code = code; this.status = status; }
@@ -87,7 +85,20 @@ class OnlineClient {
     setJSON('online.player', this.player);
   }
 
-  async _fetch(path, { method = 'GET', body, headers = {}, auth = true } = {}) {
+  // Toute lecture de circuits demande aussi author_verified (étape SQL 15 : le temps de l'auteur a-t-il été REJOUÉ par le serveur ?). Colonne absente (étape pas
+  // lancée) : on relit sans elle, et tous les temps d'auteur sont alors « non vérifiés » (jamais présumés exacts).
+  async _fetch(path, opts = {}) {
+    const wantsVerified = (opts.method || 'GET') === 'GET' && this.hasVerified !== false && /^\/rest\/v1\/tracks\?/.test(path) && path.includes('author_time') && !path.includes('author_verified');
+    if (!wantsVerified) return this._fetchRaw(path, opts);
+    try { return await this._fetchRaw(path.replace('author_time', 'author_time%2Cauthor_verified'), opts); }
+    catch (e) {
+      if (!/author_verified/i.test((e && e.message) || '')) throw e;
+      this.hasVerified = false;
+      return this._fetchRaw(path, opts);
+    }
+  }
+
+  async _fetchRaw(path, { method = 'GET', body, headers = {}, auth = true } = {}) {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new OnlineError('Pas de connexion internet.', 'offline');
     const h = { apikey: ONLINE.key, 'Content-Type': 'application/json', ...headers };
     if (auth) {
@@ -227,30 +238,18 @@ class OnlineClient {
     return ranks.filter((r) => by.has(r.id)).map((r) => ({ ...by.get(r.id), week_players: +r.week_players || 0 }));
   }
 
-  async publish(track, playerName) {
+  // Publication VÉRIFIÉE : le code du circuit et la course de vérification de l'auteur (proof : { inputs, time }, voir js/authorProof.js) partent à la fonction
+  // serveur, qui rejoue la course sur ce code. Le temps de l'auteur publié est celui du rejeu ; plus aucune insertion directe dans la base.
+  async publish(track, playerName, proof) {
     const code = track.encode();
     if (code.length > MAX_PUBLISH_CHARS) throw new OnlineError(`Circuit trop gros (${code.length} / ${MAX_PUBLISH_CHARS} caractères).`, 'too-big');
     if (track.tiles.length > MAX_PUBLISH_PIECES) throw new OnlineError(`Circuit trop gros (${track.tiles.length} / ${MAX_PUBLISH_PIECES} pièces).`, 'too-big');
+    if (!proof || typeof proof.inputs !== 'string' || !(proof.time > 0)) throw new OnlineError('Refais la vérification de ton circuit (« ✔ Vérifier » dans l’éditeur) : le serveur rejoue ta course pour confirmer ton temps.', 'no-proof');
     await this.ensurePlayer(playerName);
-    const body = {
-      name: track.name.slice(0, 40) || 'Sans titre',
-      decor: track.decor,
-      code,
-      signature: track.signature(),
-      author_time: track.vt,
-      pieces: track.tiles.length,
-      laps: track.laps || 1,
-    };
-    const send = (b) => this._fetch('/rest/v1/tracks', { method: 'POST', headers: { Prefer: 'return=representation' }, body: b });
-    let rows;
-    try {
-      rows = await send(this.hasDesc === false ? body : { ...body, description: track.desc || '' });
-    } catch (e) {
-      if (!OnlineClient.noDesc(e)) throw e;
-      this.hasDesc = false;
-      rows = await send(body);
-    }
-    return rows && rows[0];
+    return this._fetch('/functions/v1/submit-score', { method: 'POST', body: {
+      action: 'publish-track', code, inputs: proof.inputs, time: proof.time, physVer: PHYS_VER,
+      name: track.name.slice(0, 40) || 'Sans titre', description: track.desc || '',
+    } });
   }
 
   // Modifier le nom et la description d'un circuit publié (le sien seulement).

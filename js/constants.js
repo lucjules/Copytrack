@@ -50,6 +50,8 @@ export const DT = 1 / 120;
 export const MAX_RUN_SECONDS = 600;                        // une course dure 10 minutes au plus : au-delà, un enregistrement ou un temps est refusé
 export const MAX_RUN_STEPS = Math.round(MAX_RUN_SECONDS / DT);
 export const MAX_TRACK_CODE_CHARS = 400000;                // taille maximale d'un code de circuit reçu ou transmis
+export const MAX_PUBLISH_CHARS = 100000;                    // limites de la base (supabase/etape1-communaute.sql) : code d'un circuit publié, nombre de pièces
+export const MAX_PUBLISH_PIECES = 5000;
 export const MAX_INPUTS_CHARS = 400000;                    // taille maximale d'un enregistrement de commandes
 export const OFF_TRACK_RESPAWN_S = 0.5;                    // temps passé hors piste avant la réapparition automatique
 

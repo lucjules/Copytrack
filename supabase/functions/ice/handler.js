@@ -9,8 +9,11 @@
 //                              (la valeur de « static-auth-secret » de coturn : identifiants au format « REST API » = horodatage d'expiration + HMAC-SHA1).
 // Facultatifs : STUN_URLS (par défaut les STUN publics de Google), ICE_TTL_S (durée de vie, 6 h par défaut), ALLOWED_ORIGIN.
 // Rien de configuré : 501, et le jeu garde son STUN par défaut. Les erreurs internes ne sont jamais renvoyées telles quelles.
-export const DEFAULT_TTL_S = 6 * 3600;
-export const RATE_LIMIT = { max: 30, windowMs: 60_000 };
+export const DEFAULT_TTL_S = 2 * 3600;      // durée de vie des identifiants (modifiable par ICE_TTL_S, 6 h au plus) : assez pour une session de salon, pas pour les revendre
+export const MAX_TTL_S = 6 * 3600;
+// Cadence : en base (supabase/etape15-backend.sql, rate_check) — persistante, partagée entre toutes les instances, atomique — avec un plafond global et un
+// sous-plafond pour les sessions anonymes (gratuites) ; en mémoire de l'instance, un frein de première ligne. Si la base ne répond pas : 503 (jamais « ouvert »).
+export const RATE_LIMIT = { max: 10, windowMs: 60_000, globalMax: 300, anonMax: 200 };
 const DEFAULT_STUN = ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'];
 
 const b64 = (buf) => { let s = ''; for (const b of new Uint8Array(buf)) s += String.fromCharCode(b); return btoa(s); };
@@ -22,10 +25,11 @@ export async function coturnCredentials(secret, expiresAtS, subtle = globalThis.
   return { username, credential: b64(await subtle.sign('HMAC', key, new TextEncoder().encode(username))) };
 }
 
-// Authentification (supabaseUrl + serviceKey fournis) : sans elle, n'importe qui, avec la clé PUBLIQUE du jeu (lisible dans la page), obtenait un relais TURN
-// (bande passante facturée) sans même avoir une session. Désormais il faut une session Supabase valide (invité anonyme ou compte), comme pour submit-score ;
-// la cadence se compte alors PAR PILOTE (et non par adresse IP, falsifiable). Sans ces deux valeurs (essais), la fonction reste ouverte comme avant.
-export function createIceHandler({ env = {}, supabaseUrl = '', serviceKey = '', fetch: fetchImpl = globalThis.fetch, now = Date.now, subtle = globalThis.crypto && globalThis.crypto.subtle, log = console.error } = {}) {
+// Authentification OBLIGATOIRE : sans elle, n'importe qui, avec la clé PUBLIQUE du jeu (lisible dans la page), obtiendrait un relais TURN (bande passante facturée)
+// sans même avoir une session. Il faut une session Supabase valide (invité anonyme ou compte), comme pour submit-score ; la cadence se compte PAR PILOTE (et non
+// par adresse IP, falsifiable). Si supabaseUrl / serviceKey manquent (fonction mal configurée), la fonction REFUSE (500) au lieu de s'ouvrir ; seul un essai
+// explicite (allowAnonymous: true, tools/test-ice.mjs) la laisse ouverte.
+export function createIceHandler({ env = {}, supabaseUrl = '', serviceKey = '', fetch: fetchImpl = globalThis.fetch, now = Date.now, subtle = globalThis.crypto && globalThis.crypto.subtle, log = console.error, allowAnonymous = false, rateLimit = RATE_LIMIT } = {}) {
   const cors = {
     'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -33,32 +37,60 @@ export function createIceHandler({ env = {}, supabaseUrl = '', serviceKey = '', 
     Vary: 'Origin',
   };
   const json = (status, body, extra = {}) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...extra } });
-  const ttl = Math.max(600, Math.min(86400, parseInt(env.ICE_TTL_S, 10) || DEFAULT_TTL_S));
+  const ttl = Math.max(600, Math.min(MAX_TTL_S, parseInt(env.ICE_TTL_S, 10) || DEFAULT_TTL_S));
   const list = (v) => String(v || '').split(',').map((x) => x.trim()).filter(Boolean);
   const hits = new Map();
 
   const tooFast = (who) => {
-    const t = now(), recent = (hits.get(who) || []).filter((x) => t - x < RATE_LIMIT.windowMs);
-    if (recent.length >= RATE_LIMIT.max) { hits.set(who, recent); return true; }
+    const t = now(), recent = (hits.get(who) || []).filter((x) => t - x < rateLimit.windowMs);
+    if (recent.length >= rateLimit.max) { hits.set(who, recent); return true; }
     recent.push(t); hits.set(who, recent);
-    if (hits.size > 2000) for (const k of hits.keys()) { if (!(hits.get(k) || []).some((x) => t - x < RATE_LIMIT.windowMs)) hits.delete(k); }
+    if (hits.size > 2000) for (const k of hits.keys()) { if (!(hits.get(k) || []).some((x) => t - x < rateLimit.windowMs)) hits.delete(k); }
     return false;
   };
+
+  // Limite partagée (base) : { wait } (0 = accepté) ou { down: true } si la base ne la tient pas.
+  let lastWarn = 0;
+  async function sharedWait(uid, anon) {
+    try {
+      const r = await fetchImpl(`${supabaseUrl}/rest/v1/rpc/rate_check`, {
+        method: 'POST', headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ k: 'ice', p: uid, max_hits: rateLimit.max, window_s: Math.round(rateLimit.windowMs / 1000), global_max: rateLimit.globalMax, is_anon: anon, anon_max: rateLimit.anonMax }),
+      });
+      if (!r.ok) throw new Error('rpc ' + r.status);
+      const n = await r.json();
+      if (!Number.isInteger(n) || n < 0) throw new Error('réponse inattendue');
+      return { wait: n };
+    } catch (e) {
+      const t = now();
+      if (t - lastWarn > 60_000) { lastWarn = t; log('ice : limite partagée indisponible (étape SQL 15 appliquée ?) :', e && e.message); }
+      return { down: true };
+    }
+  }
 
   return async function handle(req) {
     if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
     if (req.method !== 'POST' && req.method !== 'GET') return json(405, { error: 'Méthode non autorisée.' });
     try {
       let who = (req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'anon').split(',')[0].trim();
-      if (supabaseUrl && serviceKey) {
+      let anon = true;
+      const configured = !!(supabaseUrl && serviceKey);
+      if (!configured && !allowAnonymous) { log('ice : SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY absentes : refus (la fonction ne s\'ouvre jamais sans authentification)'); return json(500, { error: 'Fonction mal configurée.' }); }
+      if (configured) {
         const ures = await fetchImpl(`${supabaseUrl}/auth/v1/user`, { headers: { Authorization: req.headers.get('Authorization') ?? '', apikey: serviceKey } });
         if (!ures.ok) return json(401, { error: 'Non connecté.' });
         const user = await ures.json();
         const uid = String((user && user.id) || '');
         if (!/^[0-9a-f-]{36}$/.test(uid)) return json(401, { error: 'Non connecté.' });
         who = uid;
+        anon = !!(user && user.is_anonymous === true);
       }
       if (tooFast(who)) return json(429, { error: 'Trop de demandes.' }, { 'Retry-After': '60' });
+      if (configured) {
+        const shared = await sharedWait(who, anon);
+        if (shared.down) return json(503, { error: 'Service momentanément indisponible.' }, { 'Retry-After': '30' });
+        if (shared.wait) return json(429, { error: 'Trop de demandes.' }, { 'Retry-After': String(shared.wait) });
+      }
       const stun = list(env.STUN_URLS).length ? list(env.STUN_URLS) : DEFAULT_STUN;
 
       if (env.TURN_KEY_ID && env.TURN_KEY_API_TOKEN) {

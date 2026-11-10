@@ -37,10 +37,17 @@ test('défi du jour, code ouvert, Mes circuits, communauté : mêmes options qu�
   assert.deepEqual(du.launch, { trackKey: tr.userKey, userEntry: 'abc', seed: tr.name, userMap: true, medals: tr.derivedMedals, difficulty: 2 });
   assert.equal(du.name, 'Le mien');
   assert.deepEqual(du.recordKeys, [tr.userKey, 'u-' + hashString(tr.encode())], 'ancienne clé de « Mes circuits » comprise');
-  const row = { id: 'r1', name: 'Publié', description: 'Super', players: { name: 'Zoé' }, plays: 12, likes: 3, author_time: 31.5 };
+  // Le temps de l'auteur n'est cru que REJOUÉ par le serveur (author_verified) et égal à celui que porte le code ; sinon aucune médaille déduite.
+  tr.setVerified(31.5);
+  const row = { id: 'r1', name: 'Publié', description: 'Super', players: { name: 'Zoé' }, plays: 12, likes: 3, author_time: 31.5, author_verified: true };
   const dc = describeCommunity(tr, row);
   assert.deepEqual(dc.launch, { trackKey: tr.userKey, seed: tr.name, userMap: true, medals: tr.derivedMedals, difficulty: 2, community: 'r1' });
+  assert.ok(dc.authorVerified && dc.medals);
   assert.deepEqual([dc.name, dc.author, dc.desc, dc.plays, dc.likes, dc.authorTime], ['Publié', 'Zoé', 'Super', 12, 3, 31.5]);
+  for (const bad of [{ ...row, author_verified: false }, { ...row, author_verified: undefined }, { ...row, author_verified: 'true' }, { ...row, author_time: 5 }]) {
+    const d = describeCommunity(tr, bad);
+    assert.equal(d.authorVerified, false, JSON.stringify(bad)); assert.equal(d.medals, null, 'pas de médailles sur un temps non rejoué'); assert.equal(d.launch.medals, null);
+  }
 });
 test('verrou de chapitre : même règle que la carte de la carrière', () => {
   assert.equal(chapterLock(0, builtins, noRecords), null, 'le chapitre 1 est toujours ouvert');

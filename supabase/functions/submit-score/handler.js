@@ -3,18 +3,25 @@
 // Reçoit une course terminée (clé du circuit, commandes enregistrées, temps), la REJOUE avec le vrai code du jeu (js/verify.js), et n'enregistre le
 // temps que s'il est confirmé. server.ts n'est que le fil qui la branche sur Deno.serve ; `npm run build:function` regroupe le tout en un seul fichier.
 //
-// Défenses, dans l'ordre : méthode, configuration, taille de la requête (avant de la lire), identité du pilote (jeton Supabase), cadence par pilote
-// (le rejeu coûte du processeur), forme des données, rejeu de la course, profil du pilote. Les erreurs internes ne sont jamais renvoyées telles quelles.
-import { verifyRun } from '../../../js/verify.js';
-import { MAX_TRACK_CODE_CHARS, MAX_INPUTS_CHARS, MAX_RUN_SECONDS } from '../../../js/constants.js';
+// Deux actions : l'envoi d'une course (par défaut) et la PUBLICATION d'un circuit (action « publish-track », temps auteur rejoué par le serveur).
+// GET : l'état du service (version de physique du serveur, limites) — la preuve observable de la version réellement déployée.
+//
+// Défenses, dans l'ordre : méthode, configuration, taille de la requête (avant de la lire), identité du pilote (jeton Supabase), cadence (le rejeu coûte du
+// processeur), forme des données, rejeu de la course, profil du pilote, écriture ATOMIQUE en base (submit_best / publish_track). Les erreurs internes ne
+// sont jamais renvoyées telles quelles. Prérequis : supabase/etape15-backend.sql (voir supabase/MIGRATIONS.md).
+import { verifyRun, verifyPublish } from '../../../js/verify.js';
+import { PHYS_VER } from '../../../js/version.js';
+import { MAX_TRACK_CODE_CHARS, MAX_INPUTS_CHARS, MAX_RUN_SECONDS, MAX_PUBLISH_CHARS, MAX_PUBLISH_PIECES } from '../../../js/constants.js';
 
 // Taille maximale d'une requête : les commandes + le code d'un circuit de joueur + le reste du JSON.
 export const MAX_BODY_CHARS = MAX_INPUTS_CHARS + MAX_TRACK_CODE_CHARS + 4096;
 // Cadence : au plus `max` courses soumises par pilote et par fenêtre (chaque soumission rejoue toute la course). DEUX niveaux :
-//  - en base (supabase/etape14-securite.sql, submit_rate_check) : partagé entre TOUTES les instances de la fonction, atomique : c'est la vraie limite ;
-//  - en mémoire de l'instance : un frein de première ligne, sans aller-retour réseau, qui protège aussi quand la base ne répond pas ou que l'étape 14 n'est
-//    pas installée. Seule, la mémoire ne suffit pas (chaque instance a la sienne : une rafale répartie sur plusieurs instances la contourne).
-export const RATE_LIMIT = { max: 8, windowMs: 60_000, globalMax: 600 };      // globalMax : rejeux par fenêtre, tous pilotes confondus (en base)
+//  - en base (supabase/etape15-backend.sql, rate_check) : persistant, partagé entre TOUTES les instances, atomique (un verrou par type) : c'est la vraie limite.
+//    Le plafond global borne le processeur dépensé quoi qu'il arrive ; les sessions ANONYMES (gratuites) se partagent un sous-plafond (anonMax) pour ne pas
+//    pouvoir épuiser le plafond global au détriment des comptes ;
+//  - en mémoire de l'instance : un frein de première ligne, sans aller-retour réseau. Seule, elle ne suffit pas (une rafale répartie sur plusieurs instances
+//    la contourne). Si la base ne répond pas, la requête est REFUSÉE (503) : on ne rejoue pas sans limite fiable.
+export const RATE_LIMIT = { max: 8, windowMs: 60_000, globalMax: 600, anonMax: 400 };
 // Taille maximale d'un fantôme enregistré (base64) : 60 000 poses de 28 octets = 2,2 Mo ; une vraie course en fait 100 Ko.
 export const MAX_GHOST_CHARS = 800_000;
 
@@ -43,12 +50,15 @@ export async function readBodyLimited(req, maxBytes) {
 // Formes acceptées (tout le reste est refusé avant le moindre calcul) : clé de circuit, commandes enregistrées (base64), version de physique.
 const TRACK_KEY_RE = /^[A-Za-z0-9_~.:-]{1,80}$/;
 const BASE64_RE = /^[A-Za-z0-9+/]*={0,2}$/;
+const sha256hex = async (text) => [...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map((b) => b.toString(16).padStart(2, '0')).join('');
+// Message d'une erreur PostgREST (raise exception … → { message }), pour distinguer les refus voulus des pannes.
+const dbMessage = async (r) => { try { const j = JSON.parse(await r.text()); return String((j && j.message) || ''); } catch { return ''; } };
 
 export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, allowedOrigin = '*', now = Date.now, rateLimit = RATE_LIMIT, log = console.error }) {
   const cors = {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     Vary: 'Origin',
   };
   const json = (status, body, extra = {}) =>
@@ -59,12 +69,7 @@ export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = glob
       ...init,
       headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
     });
-
-  async function count(query) {
-    const r = await db(`scores?${query}&select=player`, { headers: { Prefer: 'count=exact', Range: '0-0' } });
-    const range = r.headers.get('content-range') ?? '*/0';
-    return parseInt(range.split('/')[1] ?? '0', 10) || 0;
-  }
+  const rpc = (name, args) => db(`rpc/${name}`, { method: 'POST', body: JSON.stringify(args) });
 
   const hits = new Map();       // pilote -> instants (ms) de ses dernières soumissions
   function tooFast(uid) {
@@ -77,24 +82,39 @@ export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = glob
     return 0;
   }
 
-  // Limite partagée (base). Renvoie les secondes d'attente (0 = accepté). Si la base ne répond pas ou si l'étape 14 n'est pas installée, on ne bloque pas
-  // les pilotes honnêtes (la limite en mémoire reste en place) ; l'indisponibilité est journalisée une fois par minute au plus.
+  // Limite partagée (base). Renvoie { wait } (secondes d'attente, 0 = accepté) ou { down: true } quand la base ne la tient pas (étape 15 absente, panne) :
+  // FAIL-CLOSED, la requête est refusée plutôt que rejouée sans limite fiable. Journalisé une fois par minute au plus.
   let lastWarn = 0;
-  async function sharedWait(uid) {
+  async function sharedWait(uid, anon) {
     try {
-      const r = await db('rpc/submit_rate_check', { method: 'POST', body: JSON.stringify({ p: uid, max_hits: rateLimit.max, window_s: Math.round(rateLimit.windowMs / 1000), global_max: rateLimit.globalMax ?? RATE_LIMIT.globalMax }) });
+      const r = await rpc('rate_check', {
+        k: 'submit', p: uid, max_hits: rateLimit.max, window_s: Math.round(rateLimit.windowMs / 1000),
+        global_max: rateLimit.globalMax ?? RATE_LIMIT.globalMax, is_anon: anon, anon_max: rateLimit.anonMax ?? RATE_LIMIT.anonMax,
+      });
       if (!r.ok) throw new Error('rpc ' + r.status);
       const n = await r.json();
-      return Number.isInteger(n) && n > 0 ? n : 0;
+      if (!Number.isInteger(n) || n < 0) throw new Error('réponse inattendue');
+      return { wait: n };
     } catch (e) {
       const t = now();
-      if (t - lastWarn > 60_000) { lastWarn = t; log('submit-score : limite partagée indisponible (étape SQL 14 ?) :', e && e.message); }
-      return 0;
+      if (t - lastWarn > 60_000) { lastWarn = t; log('submit-score : limite partagée indisponible (étape SQL 15 appliquée ?) :', e && e.message); }
+      return { down: true };
     }
+  }
+
+  // Écritures : « Enregistrement impossible » = panne ; les refus voulus de la base (plafond, collision de circuit) ont leur message.
+  async function failWrite(r, what) {
+    const msg = await dbMessage(r);
+    if (/Trop de temps enregistrés/.test(msg)) return json(422, { error: 'Limite de 2 000 temps enregistrés atteinte : efface d’anciens records pour en ajouter.', capReached: true });
+    if (/Trop de publications/.test(msg)) return json(429, { error: msg }, { 'Retry-After': '3600' });
+    log('submit-score :', what, r.status, msg);
+    return json(500, { error: 'Enregistrement impossible.' });
   }
 
   return async function handle(req) {
     if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+    // État du service : la version de physique que CE déploiement vérifie (sans authentification, rien de secret).
+    if (req.method === 'GET') return json(200, { ok: true, service: 'submit-score', physVer: PHYS_VER, rate: { max: rateLimit.max, windowS: Math.round(rateLimit.windowMs / 1000), globalMax: rateLimit.globalMax, anonMax: rateLimit.anonMax }, actions: ['submit', 'publish-track'] });
     if (req.method !== 'POST') return json(405, { error: 'Méthode non autorisée.' });
     try {
       if (!supabaseUrl || !serviceKey) return json(500, { error: 'Fonction mal configurée (clés Supabase absentes).' });
@@ -108,10 +128,15 @@ export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = glob
       const user = await ures.json();
       const uid = String(user.id ?? '');
       if (!/^[0-9a-f-]{36}$/.test(uid)) return json(401, { error: 'Non connecté.' });
+      const anon = user.is_anonymous === true;
 
-      // 2. Cadence : d'abord la mémoire de l'instance (gratuit), puis la base (partagée entre instances).
+      // 2. Cadence : d'abord la mémoire de l'instance (gratuit), puis la base (persistante, partagée entre instances, atomique).
       let wait = tooFast(uid);
-      if (!wait) wait = await sharedWait(uid);
+      if (!wait) {
+        const shared = await sharedWait(uid, anon);
+        if (shared.down) return json(503, { error: 'Service de scores momentanément indisponible : réessaie dans un instant.' }, { 'Retry-After': '30' });
+        wait = shared.wait;
+      }
       if (wait) return json(429, { error: `Trop de courses envoyées : réessaie dans ${wait} s.` }, { 'Retry-After': String(wait) });
 
       // 3. Données de la course.
@@ -119,76 +144,75 @@ export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = glob
       if (text === null) return json(413, { error: 'Requête trop volumineuse.' });
       let body;
       try { body = JSON.parse(text); } catch { return json(400, { error: 'Requête invalide.' }); }
-      const { trackKey, code = '', inputs, time, physVer } = body ?? {};
-      if (typeof trackKey !== 'string' || !TRACK_KEY_RE.test(trackKey) || typeof inputs !== 'string' || !inputs || inputs.length > MAX_INPUTS_CHARS || !BASE64_RE.test(inputs)
+      const { action = 'submit', trackKey, code = '', inputs, time, physVer } = body ?? {};
+      if (action !== 'submit' && action !== 'publish-track') return json(400, { error: 'Action inconnue.' });
+      const publishing = action === 'publish-track';
+      if ((!publishing && (typeof trackKey !== 'string' || !TRACK_KEY_RE.test(trackKey))) || typeof inputs !== 'string' || !inputs || inputs.length > MAX_INPUTS_CHARS || !BASE64_RE.test(inputs)
         || typeof time !== 'number' || !Number.isFinite(time) || time <= 0 || time > MAX_RUN_SECONDS || !Number.isInteger(physVer) || physVer < 0 || physVer > 100000) {
         return json(400, { error: 'Requête invalide.' });
       }
       if (typeof code !== 'string' || code.length > MAX_TRACK_CODE_CHARS) return json(400, { error: 'Code de circuit invalide.' });
 
+      // 3 bis. Profil du pilote (contrôle peu coûteux, avant le rejeu).
+      const profRes = await db(`players?id=eq.${uid}&select=id`);
+      const prof = profRes.ok ? await profRes.json() : null;
+      if (!Array.isArray(prof) || !prof.length) return json(400, { error: 'Profil pilote manquant.' });
+
+      if (publishing) return await publish({ uid, body, code, inputs, time, physVer });
+
       // 4. Rejeu de la course avec le code du jeu.
       const res = verifyRun({ trackKey, code, inputs, time, physVer, withGhost: true });
-      if (!res.ok || typeof res.time !== 'number') return json(422, { error: res.error ?? 'Course non confirmée.', ...(res.versionMismatch ? { versionMismatch: true } : {}) });
+      if (!res.ok || typeof res.time !== 'number') return json(422, { error: res.error ?? 'Course non confirmée.', ...(res.versionMismatch ? { versionMismatch: true, serverPhysVer: res.serverPhysVer ?? PHYS_VER } : {}) });
       const simTime = res.time;
 
       // 4 bis. Duel ou tournoi (supabase/etape12-competition.sql) : seulement les participants, pendant la compétition (lu en base).
       if (res.competition) {
         const { kind, id, base } = res.competition;
-        const w = await db('rpc/competition_open', { method: 'POST', body: JSON.stringify({ kind, cid: id, p: uid, base }) });
+        const w = await rpc('competition_open', { kind, cid: id, p: uid, base });
         if (!w.ok) return json(422, { error: 'Compétitions indisponibles sur ce serveur (étape SQL 12).' });
         const why = await w.json();
         if (why !== '') return json(422, { error: typeof why === 'string' && why ? why : 'Compétition fermée.' });
       }
 
-      // 5. Le profil du pilote doit exister.
-      const prof = await (await db(`players?id=eq.${uid}&select=id`)).json();
-      if (!Array.isArray(prof) || !prof.length) return json(400, { error: 'Profil pilote manquant.' });
-
-      // 6. On garde le meilleur temps du pilote sur ce circuit.
-      const key = encodeURIComponent(trackKey);
-      // (has_ghost : colonne de supabase/etape7-fantomes.sql ; absente, la requête échoue et on retombe sur la lecture sans elle.)
-      let prevRes = await db(`scores?track_key=eq.${key}&player=eq.${uid}&select=time,phys_ver,has_ghost`);
-      if (!prevRes.ok) prevRes = await db(`scores?track_key=eq.${key}&player=eq.${uid}&select=time,phys_ver`);
-      const prev = await prevRes.json();
-      let best = simTime;
-      let improved = true;
-      if (Array.isArray(prev) && prev.length && prev[0].phys_ver === physVer && prev[0].time <= simTime) {
-        best = prev[0].time;
-        improved = false;
-      }
-      // Fantôme du record (jouable par les autres : il ne dévoile pas les commandes, donc ne permet pas de rejouer la course sous un autre nom).
-      const ghost = typeof res.ghost === 'string' && res.ghost.length <= MAX_GHOST_CHARS ? { ghost: res.ghost, ghost_veh: res.ghostVeh ?? [] } : null;
-      // Un record déjà enregistré sans fantôme (avant l'étape 7) en reçoit un quand le même temps est renvoyé.
-      const backfill = !improved && ghost && prev[0].has_ghost === false && Math.abs(prev[0].time - simTime) < 1e-6;
-      if (improved) {
-        const row = {
-          track_key: trackKey, player: uid, time: simTime, inputs, phys_ver: physVer,
-          track_name: String(res.name ?? '').slice(0, 60), updated_at: new Date(now()).toISOString(),
-        };
-        // Temps intermédiaires (supabase/etape9-secteurs.sql) : classements par secteur.
-        const splits = Array.isArray(res.splits) && res.splits.length <= 400 ? { splits: res.splits } : {};
-        const post = (r) => db('scores', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(r) });
-        let up = await post({ ...row, ...splits, ...(ghost || {}) });
-        // Colonnes récentes absentes (étapes 7 ou 9 pas encore lancées) : le temps est enregistré quand même, avec ce que la base sait ranger.
-        if (!up.ok && up.status === 400 && ghost && splits.splits) up = await post({ ...row, ...ghost });
-        if (!up.ok && up.status === 400 && (ghost || splits.splits)) up = await post(row);
-        if (!up.ok) return json(500, { error: 'Enregistrement impossible.' });
-      } else if (backfill) {
-        await db(`scores?track_key=eq.${key}&player=eq.${uid}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(ghost) });
-      }
-      // Un record renvoyé à l'identique reçoit ses temps intermédiaires s'il n'en avait pas (records d'avant l'étape 9) ; sans la colonne, rien ne se passe.
-      if (!improved && Array.isArray(res.splits) && res.splits.length && res.splits.length <= 400 && Math.abs(prev[0].time - simTime) < 1e-6) {
-        await db(`scores?track_key=eq.${key}&player=eq.${uid}&splits=is.null`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ splits: res.splits }) });
-      }
-
-      // 7. Place au classement (même version de physique).
-      const base = `track_key=eq.${key}&phys_ver=eq.${physVer}`;
-      const before = await count(`${base}&time=lt.${best}`);
-      const total = await count(base);
-      return json(200, { ok: true, improved, best, rank: before + 1, total });
+      // 5. Écriture ATOMIQUE du meilleur temps (supabase/etape15-backend.sql, submit_best) : lecture, comparaison et écriture dans une seule transaction
+      //    verrouillée par pilote. Un temps moins bon, ou d'une physique plus ancienne, ne remplace jamais le record, même avec deux requêtes simultanées.
+      //    Fantôme du record (jouable par les autres : il ne dévoile pas les commandes, donc ne permet pas de rejouer la course sous un autre nom) et temps
+      //    intermédiaires : ceux de la course RETENUE. Circuit de joueur : empreinte forte liée à la clé (la signature du jeu n'a que 32 bits).
+      const ghost = typeof res.ghost === 'string' && res.ghost.length <= MAX_GHOST_CHARS ? res.ghost : null;
+      const splits = Array.isArray(res.splits) && res.splits.length <= 400 ? res.splits : null;
+      const strong = typeof res.sigText === 'string' ? await sha256hex('copytrack-circuit-v1|' + res.sigText) : null;
+      const w = await rpc('submit_best', {
+        p: uid, tk: trackKey, t: simTime, inp: inputs, pv: physVer, tname: String(res.name ?? '').slice(0, 60),
+        sp: splits, gh: ghost, gveh: ghost ? (res.ghostVeh ?? []) : null, strong,
+      });
+      if (!w.ok) return await failWrite(w, 'submit_best');
+      const out = await w.json();
+      if (out && out.status === 'collision') return json(409, { error: 'Ce code de circuit ne correspond pas au circuit déjà enregistré sous cette clé.', collision: true });
+      if (!out || out.status !== 'ok') { log('submit-score : réponse submit_best inattendue', out); return json(500, { error: 'Enregistrement impossible.' }); }
+      return json(200, { ok: true, improved: !!out.improved, best: out.best, rank: out.rank, total: out.total });
     } catch (e) {
       log('submit-score :', e);
       return json(500, { error: 'Erreur interne.' });
     }
   };
+
+  // Publication d'un circuit : la course de vérification de l'auteur est REJOUÉE sur ce code ; author_time = temps rejoué (jamais l'affirmation du client).
+  async function publish({ uid, body, code, inputs, time, physVer }) {
+    if (code.length > MAX_PUBLISH_CHARS) return json(413, { error: `Circuit trop gros (${code.length} / ${MAX_PUBLISH_CHARS} caractères).` });
+    const res = verifyPublish({ code, inputs, time, physVer });
+    if (!res.ok) return json(422, { error: res.error, ...(res.versionMismatch ? { versionMismatch: true, serverPhysVer: res.serverPhysVer ?? PHYS_VER } : {}) });
+    if (res.pieces < 2 || res.pieces > MAX_PUBLISH_PIECES) return json(422, { error: `Circuit trop gros ou trop petit (${res.pieces} pièces, de 2 à ${MAX_PUBLISH_PIECES}).` });
+    const clean = (v, n) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
+    const name = clean(body.name, 40) || clean(res.name, 40) || 'Sans titre';
+    const desc = clean(body.description, 200);
+    const decor = clean(res.decor, 20);
+    const strong = await sha256hex('copytrack-circuit-v1|' + res.sigText);
+    const w = await rpc('publish_track', { p: uid, nm: name, dc: decor, cd: code, sg: res.signature, atime: res.time, pc: res.pieces, lp: res.laps, ds: desc, strong });
+    if (!w.ok) return await failWrite(w, 'publish_track');
+    const out = await w.json();
+    if (out && out.status === 'taken') return json(409, { error: 'Ce circuit est déjà publié par un autre pilote.', taken: true });
+    if (out && out.status === 'collision') return json(409, { error: 'Ce code de circuit ne correspond pas au circuit déjà enregistré sous cette clé.', collision: true });
+    if (!out || (out.status !== 'created' && out.status !== 'updated')) { log('submit-score : réponse publish_track inattendue', out); return json(500, { error: 'Publication impossible.' }); }
+    return json(200, { ok: true, id: out.id, status: out.status, authorTime: res.time, authorVerified: true });
+  }
 }

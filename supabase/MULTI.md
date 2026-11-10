@@ -28,18 +28,18 @@ Trafic : environ 0,8 Ko/s par liaison, rien sur Supabase pendant la course.
 Les serveurs STUN publics (`iceServers` de `js/config.js`) suffisent pour la plupart des box. Un réseau d'entreprise, ou certaines connexions
 mobiles (NAT symétrique : 10 à 20 % des paires), empêche la liaison directe : la salle affiche alors « ✕ liaison impossible » pour cet adversaire.
 Il faut pour cela un **relais TURN**. Le jeu l'obtient **à l'ouverture de chaque salle** auprès de la fonction serveur `ice`, qui fabrique des identifiants
-**à durée limitée** (6 h par défaut) : aucun secret durable n'est lisible dans le jeu. Sans la fonction (ou en cas de panne), le jeu retombe sur le STUN seul, sans attendre plus de 2,5 s.
+**à durée limitée** (2 h par défaut, 6 h au plus) : aucun secret durable n'est lisible dans le jeu. Sans la fonction (ou en cas de panne), le jeu retombe sur le STUN seul, sans attendre plus de 2,5 s.
 
 Déploiement (une fois, Supabase > Edge Functions) :
-1. Nouvelle fonction **`ice`**, code = `supabase/functions/ice/index.ts` (généré : `npm run build:function`). Laisser « Verify JWT » activé (le jeu envoie sa clé publique).
+1. Nouvelle fonction **`ice`**, code = `supabase/functions/ice/index.ts` (généré : `npm run build:function`). Laisser « Verify JWT » activé (le jeu envoie sa clé publique) : la fonction exige en plus une **session Supabase valide** (invité ou compte) et **refuse** de répondre si `SUPABASE_URL` / la clé de service lui manquent. Prérequis : `supabase/etape15-backend.sql` (limitation en base).
 2. Secrets de la fonction, **l'un ou l'autre** :
    - **Cloudflare Realtime TURN** (gratuit jusqu'à un quota généreux) : `TURN_KEY_ID` et `TURN_KEY_API_TOKEN` (créés dans le tableau de bord Cloudflare > Realtime > TURN) ;
    - **coturn auto-hébergé** : `TURN_URLS` (séparées par des virgules, ex. `turn:turn.exemple.fr:3478?transport=udp,turns:turn.exemple.fr:5349`) et `TURN_SECRET`
      (la valeur de `static-auth-secret` de coturn, avec `use-auth-secret` activé).
-   Facultatifs : `STUN_URLS`, `ICE_TTL_S` (durée de vie en secondes, 600 à 86 400), `ALLOWED_ORIGIN`.
+   Facultatifs : `STUN_URLS`, `ICE_TTL_S` (durée de vie en secondes, 600 à 21 600 ; 7 200 par défaut), `ALLOWED_ORIGIN`.
 3. Rien à changer dans le jeu : `iceUrl` (`js/config.js`) vise déjà `<projet>/functions/v1/ice` ; `iceUrl: ''` désactive l'appel.
 
-Sans secret configuré, la fonction répond 501 et le jeu n'insiste pas avant 10 minutes. Elle limite à 30 demandes par minute et par adresse.
+Sans secret configuré, la fonction répond 501 et le jeu n'insiste pas avant 10 minutes. Elle limite à 10 demandes par minute et par **pilote**, 300 par minute pour tous (dont 200 au plus pour les sessions anonymes), **en base** : la limite survit aux redémarrages et vaut pour toutes les instances. Si la base de limitation ne répond pas, la fonction répond 503 (jamais d'identifiants distribués sans limite fiable).
 
 ## Coupures et reconnexion (0.9.38, protocole `NET_VER` 4)
 

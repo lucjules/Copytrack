@@ -60,7 +60,7 @@ export function trackForKey(key, code = '') {
   if (key.startsWith('u-')) {
     const track = Track.decode(code);
     if (track.userKey !== key) throw new Error('Le code du circuit ne correspond pas.');
-    return { track, kind: 'user', name: track.name };
+    return { track, kind: 'user', name: track.name, sigText: track.signatureText() };
   }
   throw new Error('Clé de circuit invalide.');
 }
@@ -85,13 +85,32 @@ export function replayTime(track, inputs) {
   return r ? r.time : null;
 }
 
+// Refus pour version de physique différente : le message dit les deux versions, et serverPhysVer permet au jeu d'expliquer quoi faire.
+const versionError = (physVer) => ({ ok: false, error: `Version du jeu différente (jeu ${physVer}, serveur ${PHYS_VER}) : recharge le jeu pour le mettre à jour.`, versionMismatch: true, serverPhysVer: PHYS_VER });
+
 // Vérification complète : même version de physique, circuit reconnu, temps confirmé.
 export function verifyRun({ trackKey, code, inputs, time, physVer, withGhost = false }) {
-  if (physVer !== PHYS_VER) return { ok: false, error: `Version du jeu différente (jeu ${physVer}, serveur ${PHYS_VER}).`, versionMismatch: true };
+  if (physVer !== PHYS_VER) return versionError(physVer);
   let t;
   try { t = trackForKey(trackKey, code); } catch (e) { return { ok: false, error: e.message }; }
   const run = replayRun(t.track, inputs, { ghost: withGhost });
   if (run == null) return { ok: false, error: 'La course rejouée n’atteint pas l’arrivée.' };
   if (Math.abs(run.time - time) > 0.0005) return { ok: false, error: 'Le temps ne correspond pas à la course rejouée.' };
-  return { ok: true, time: run.time, splits: run.splits, name: t.name, kind: t.kind, ...(t.season ? { season: t.season } : {}), ...(t.competition ? { competition: t.competition } : {}), ...(withGhost ? { ghost: run.ghost, ghostVeh: run.ghostVeh } : {}) };
+  return { ok: true, time: run.time, splits: run.splits, name: t.name, kind: t.kind, ...(t.sigText ? { sigText: t.sigText } : {}), ...(t.season ? { season: t.season } : {}), ...(t.competition ? { competition: t.competition } : {}), ...(withGhost ? { ghost: run.ghost, ghostVeh: run.ghostVeh } : {}) };
+}
+
+// Publication d'un circuit (temps auteur VÉRIFIÉ) : le client envoie le code du circuit et la course de vérification de l'auteur ; le serveur rejoue cette
+// course sur CE code. Le temps auteur retenu est celui du rejeu, jamais celui que le client affirme. Le code doit porter la marque « vérifié » (vt + vh = signature
+// du contenu) avec un temps égal au rejeu à la milliseconde près (le jeu arrondit vt au millième).
+export const AUTHOR_TIME_TOLERANCE = 0.001;
+export function verifyPublish({ code, inputs, time, physVer }) {
+  if (physVer !== PHYS_VER) return versionError(physVer);
+  let track;
+  try { track = Track.decode(String(code || '')); } catch (e) { return { ok: false, error: 'Code de circuit invalide : ' + e.message }; }
+  if (!track.verified) return { ok: false, error: 'Circuit non vérifié : termine-le d’abord depuis l’éditeur (« ✔ Vérifier »).' };
+  const run = replayRun(track, inputs);
+  if (run == null) return { ok: false, error: 'La course de vérification rejouée n’atteint pas l’arrivée.' };
+  if (Math.abs(run.time - time) > 0.0005) return { ok: false, error: 'Le temps ne correspond pas à la course rejouée.' };
+  if (Math.abs(run.time - track.vt) > AUTHOR_TIME_TOLERANCE) return { ok: false, error: 'Le temps de l’auteur inscrit dans le circuit ne correspond pas à la course rejouée.' };
+  return { ok: true, time: run.time, key: track.userKey, signature: track.signature(), sigText: track.signatureText(), name: track.name, decor: track.decor, pieces: track.tiles.length, laps: track.laps || 1 };
 }

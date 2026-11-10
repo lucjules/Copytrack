@@ -34,9 +34,9 @@ function fakeSupabase() {
     if (u.includes('/auth/v1/user')) return new Response(JSON.stringify({ id: UID.slice(0, -6) + String(++n).padStart(6, '0') }), { status: 200 });
     if (u.includes('/rest/v1/players')) return new Response(JSON.stringify([{ id: UID }]), { status: 200 });
     if (u.includes('/rpc/competition_open')) return new Response('{"code":"PGRST202"}', { status: 404 });
-    if (u.includes('/rest/v1/scores') && (init.method === 'POST' || init.method === 'PATCH')) { writes.push(JSON.parse(init.body || 'null')); return new Response(null, { status: 204 }); }
-    if (u.includes('select=time,phys_ver')) return new Response('[]', { status: 200 });
-    if (u.includes('/rest/v1/scores')) return new Response('[]', { status: 200, headers: { 'content-range': '0-0/1' } });
+    if (u.includes('/rpc/rate_check')) return new Response('0', { status: 200 });
+    if (u.includes('/rpc/submit_best') || u.includes('/rpc/publish_track')) { writes.push(JSON.parse(init.body || 'null')); return new Response(JSON.stringify({ status: u.includes('publish') ? 'created' : 'ok', improved: true, best: 1, rank: 1, total: 1, id: 'x' }), { status: 200 }); }
+    if (u.includes('/rest/v1/scores') || u.includes('/rest/v1/tracks')) throw new Error('accès direct à une table interdit');
     return new Response('{}', { status: 404 });
   };
   return { fetch, writes };
@@ -51,7 +51,7 @@ function mutate(body) {
   for (let n = 1 + Math.floor(rnd() * 3); n > 0; n--) {
     const k = pick(keys), r = rnd();
     if (r < 0.15) delete b[k];
-    else if (r < 0.3) b[pick(['isAdmin', 'player', 'phys_ver', 'rank', '__proto__', 'constructor', 'ghost', 'time2'])] = pick(WEIRD);
+    else if (r < 0.3) b[pick(['isAdmin', 'player', 'phys_ver', 'rank', '__proto__', 'constructor', 'ghost', 'time2', 'action', 'atime', 'author_time'])] = pick(WEIRD);
     else if (r < 0.4 && typeof b[k] === 'string') b[k] = b[k].slice(0, Math.floor(rnd() * b[k].length)) + pick(['\u0000', '"', '\\', '😀', '\n']);
     else if (r < 0.5 && typeof b[k] === 'number') b[k] = b[k] * pick([-1, 0, 1e-9, 1e9, 1.0000001]);
     else b[k] = pick(WEIRD);
@@ -79,7 +79,7 @@ test('corps qui n\'est pas du JSON, tronqué, vide, gigantesque, ou méthode ina
   for (const body of ['', '{', 'null', '[]', '"texte"', '{"inputs":' + '9'.repeat(200000) + '}', JSON.stringify(RUN).slice(0, 100)]) {
     const r = await h(asRequest(body)); assert.ok(r.status >= 400 && r.status < 500, `corps « ${body.slice(0, 20)}… » : ${r.status}`); await r.text();
   }
-  for (const method of ['GET', 'PUT', 'DELETE']) { const r = await h(new Request('https://fn.example/submit-score', { method, headers: { Authorization: 'Bearer jeton' } })); assert.ok(r.status === 405 || r.status === 204 || r.status === 200, method + ' : ' + r.status); await r.text(); }
+  for (const method of ['PUT', 'DELETE']) { const r = await h(new Request('https://fn.example/submit-score', { method, headers: { Authorization: 'Bearer jeton' } })); assert.ok(r.status === 405 || r.status === 204 || r.status === 200, method + ' : ' + r.status); await r.text(); }
   assert.equal(sb.writes.length, 0);
 });
 test('jeton absent, vide ou en trop mauvais format : 401, aucune écriture', async () => {

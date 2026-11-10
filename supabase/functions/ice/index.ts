@@ -4,10 +4,13 @@
 // deno-lint-ignore-file
 // @ts-nocheck
 // supabase/functions/ice/handler.js
-var DEFAULT_TTL_S = 6 * 3600;
+var DEFAULT_TTL_S = 2 * 3600;
+var MAX_TTL_S = 6 * 3600;
 var RATE_LIMIT = {
-  max: 30,
-  windowMs: 6e4
+  max: 10,
+  windowMs: 6e4,
+  globalMax: 300,
+  anonMax: 200
 };
 var DEFAULT_STUN = [
   "stun:stun.l.google.com:19302",
@@ -31,7 +34,7 @@ async function coturnCredentials(secret, expiresAtS, subtle = globalThis.crypto.
     credential: b64(await subtle.sign("HMAC", key, new TextEncoder().encode(username)))
   };
 }
-function createIceHandler({ env = {}, supabaseUrl = "", serviceKey = "", fetch: fetchImpl = globalThis.fetch, now = Date.now, subtle = globalThis.crypto && globalThis.crypto.subtle, log = console.error } = {}) {
+function createIceHandler({ env = {}, supabaseUrl = "", serviceKey = "", fetch: fetchImpl = globalThis.fetch, now = Date.now, subtle = globalThis.crypto && globalThis.crypto.subtle, log = console.error, allowAnonymous = false, rateLimit = RATE_LIMIT } = {}) {
   const cors = {
     "Access-Control-Allow-Origin": env.ALLOWED_ORIGIN || "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -47,22 +50,59 @@ function createIceHandler({ env = {}, supabaseUrl = "", serviceKey = "", fetch: 
       ...extra
     }
   });
-  const ttl = Math.max(600, Math.min(86400, parseInt(env.ICE_TTL_S, 10) || DEFAULT_TTL_S));
+  const ttl = Math.max(600, Math.min(MAX_TTL_S, parseInt(env.ICE_TTL_S, 10) || DEFAULT_TTL_S));
   const list = (v) => String(v || "").split(",").map((x) => x.trim()).filter(Boolean);
   const hits = /* @__PURE__ */ new Map();
   const tooFast = (who) => {
-    const t = now(), recent = (hits.get(who) || []).filter((x) => t - x < RATE_LIMIT.windowMs);
-    if (recent.length >= RATE_LIMIT.max) {
+    const t = now(), recent = (hits.get(who) || []).filter((x) => t - x < rateLimit.windowMs);
+    if (recent.length >= rateLimit.max) {
       hits.set(who, recent);
       return true;
     }
     recent.push(t);
     hits.set(who, recent);
     if (hits.size > 2e3) for (const k of hits.keys()) {
-      if (!(hits.get(k) || []).some((x) => t - x < RATE_LIMIT.windowMs)) hits.delete(k);
+      if (!(hits.get(k) || []).some((x) => t - x < rateLimit.windowMs)) hits.delete(k);
     }
     return false;
   };
+  let lastWarn = 0;
+  async function sharedWait(uid, anon) {
+    try {
+      const r = await fetchImpl(`${supabaseUrl}/rest/v1/rpc/rate_check`, {
+        method: "POST",
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          k: "ice",
+          p: uid,
+          max_hits: rateLimit.max,
+          window_s: Math.round(rateLimit.windowMs / 1e3),
+          global_max: rateLimit.globalMax,
+          is_anon: anon,
+          anon_max: rateLimit.anonMax
+        })
+      });
+      if (!r.ok) throw new Error("rpc " + r.status);
+      const n = await r.json();
+      if (!Number.isInteger(n) || n < 0) throw new Error("r\xE9ponse inattendue");
+      return {
+        wait: n
+      };
+    } catch (e) {
+      const t = now();
+      if (t - lastWarn > 6e4) {
+        lastWarn = t;
+        log("ice : limite partag\xE9e indisponible (\xE9tape SQL 15 appliqu\xE9e ?) :", e && e.message);
+      }
+      return {
+        down: true
+      };
+    }
+  }
   return async function handle(req) {
     if (req.method === "OPTIONS") return new Response("ok", {
       headers: cors
@@ -72,7 +112,15 @@ function createIceHandler({ env = {}, supabaseUrl = "", serviceKey = "", fetch: 
     });
     try {
       let who = (req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "anon").split(",")[0].trim();
-      if (supabaseUrl && serviceKey) {
+      let anon = true;
+      const configured = !!(supabaseUrl && serviceKey);
+      if (!configured && !allowAnonymous) {
+        log("ice : SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY absentes : refus (la fonction ne s'ouvre jamais sans authentification)");
+        return json(500, {
+          error: "Fonction mal configur\xE9e."
+        });
+      }
+      if (configured) {
         const ures = await fetchImpl(`${supabaseUrl}/auth/v1/user`, {
           headers: {
             Authorization: req.headers.get("Authorization") ?? "",
@@ -88,12 +136,26 @@ function createIceHandler({ env = {}, supabaseUrl = "", serviceKey = "", fetch: 
           error: "Non connect\xE9."
         });
         who = uid;
+        anon = !!(user && user.is_anonymous === true);
       }
       if (tooFast(who)) return json(429, {
         error: "Trop de demandes."
       }, {
         "Retry-After": "60"
       });
+      if (configured) {
+        const shared = await sharedWait(who, anon);
+        if (shared.down) return json(503, {
+          error: "Service momentan\xE9ment indisponible."
+        }, {
+          "Retry-After": "30"
+        });
+        if (shared.wait) return json(429, {
+          error: "Trop de demandes."
+        }, {
+          "Retry-After": String(shared.wait)
+        });
+      }
       const stun = list(env.STUN_URLS).length ? list(env.STUN_URLS) : DEFAULT_STUN;
       if (env.TURN_KEY_ID && env.TURN_KEY_API_TOKEN) {
         const r = await fetchImpl(`https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(env.TURN_KEY_ID)}/credentials/generate-ice-servers`, {
