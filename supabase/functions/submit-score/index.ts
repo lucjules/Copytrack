@@ -5359,6 +5359,11 @@ var CAR = {
   wallSpinMax: 2.5,
   stuckAfter: 0.35,
   stuckPivot: 1.2,
+  wallFresh: 0.12,
+  wallFreshSpeed: 8,
+  scrubAngle: 0.4,
+  scrubSpeed: 8,
+  scrubShare: 0.6,
   stuckAlign: 1.4,
   wallStun: 0.04,
   stunTraction: 0.3,
@@ -9249,7 +9254,7 @@ var wallMethods = {
   // Toit d'un tunnel : une voiture qui saute à l'intérieur n'en sort pas par le haut (les parois la retiennent déjà sur les côtés).
   // Seule une voiture déjà dessous est retenue : celle qui survole le tunnel passe au-dessus.
   _tunnelRoof() {
-    if (this.gSign < 0) return;
+    const inv = this.gSign < 0;
     const p = this.pos, q = this.prev, v = this.vel;
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
     for (let i = 0; i < tiles.length; i++) {
@@ -9258,10 +9263,11 @@ var wallMethods = {
       toLocal(tile, p.x, p.z, L1);
       sampleLocal(tile, L1.lx, L1.lz, S1);
       if (!S1.inFootprint || Math.abs(S1.d) > ROAD_HALF + RAIL_W) continue;
-      const roof = S1.h + TUNNEL_TOP;
-      if (p.y + CAR.height > roof && q.y + CAR.height <= roof + 0.05) {
-        p.y = roof - CAR.height;
+      const roof = S1.h + TUNNEL_TOP, top = inv ? p.y : p.y + CAR.height, qTop = inv ? q.y : q.y + CAR.height;
+      if (top > roof && qTop <= roof + 0.05) {
+        p.y = inv ? roof : roof - CAR.height;
         if (v.y > 0) v.y = -v.y * 0.2;
+        if (inv) this._pinned = true;
       }
     }
   },
@@ -9364,13 +9370,15 @@ var wallMethods = {
       v.y *= k;
       v.z *= k;
     }
+    if (!again) this.wallRun = touch ? Math.min(2, this.wallRun + DT) : Math.max(0, this.wallRun - 0.5 * DT);
+    const fresh = this.wallRun <= CAR.wallFresh || this.speed > CAR.wallFreshSpeed;
     if (hit > 0) {
-      const loss = Math.min(CAR.wallLossMax, hit * CAR.wallLoss);
+      const loss = fresh ? Math.min(CAR.wallLossMax, hit * CAR.wallLoss) : 0;
       v.x *= 1 - loss;
       v.y *= 1 - loss;
       v.z *= 1 - loss;
       this.ev.wall = hit;
-      if (hit > 1.5) {
+      if (hit > 1.5 && fresh) {
         const side = sx * fz - sz * fx;
         this.omega += (side >= 0 ? 1 : -1) * this._upSign() * Math.min(CAR.wallSpinMax, hit * CAR.wallSpin);
         this.stunT = Math.max(this.stunT, Math.min(0.8, 0.1 + hit * CAR.wallStun));
@@ -10310,6 +10318,9 @@ var CarPhysics = class {
     this.driftCharge = 0;
     this.stunT = 0;
     this.stuckT = 0;
+    this.wallRun = 0;
+    this.pinT = 0;
+    this._pinned = false;
     this.unstick = 0;
     this.unstickT = 0;
     this.unstickDir = 0;
@@ -10523,7 +10534,8 @@ var CarPhysics = class {
     const Ff = clamp(-K3.corner * af, -maxF, maxF);
     const Fr = clamp(-K3.corner * ar, -maxR, maxR);
     const cd = dcos(delta), sd = dsin(delta);
-    vx += (ax - Ff * sd) * dt;
+    const scrub = Ff * sd, cap = ax > 0 && Math.abs(delta) > CAR.scrubAngle && Math.abs(vx) < CAR.scrubSpeed ? ax * CAR.scrubShare : Infinity;
+    vx += (ax - (scrub > cap ? cap : scrub)) * dt;
     vy += (Ff * cd + Fr) * dt;
     w += ((K3.a * Ff * cd - K3.b * Fr) / K3.yawK - w * K3.yawDamp) * dt;
     BK.vx = vx;
@@ -10832,8 +10844,11 @@ var CarPhysics = class {
     if (this._tryEnterRibbon()) return true;
     if (!this.grounded && this._tryLandRibbon()) return true;
     this._walls();
+    this._pinned = false;
     this._tunnelRoof();
     this._slabs();
+    this.pinT = this._pinned ? this.pinT + DT : Math.max(0, this.pinT - 2 * DT);
+    if (this.pinT > 1) this.lost = true;
     const ox = p.x, oy = p.y, oz = p.z;
     this._obstacles();
     if (this.ev.sink) return true;
@@ -11878,7 +11893,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/version.js
-var PHYS_VER = 32;
+var PHYS_VER = 33;
 
 // js/ghostFormat.js
 var GHOST_EVERY = 4;

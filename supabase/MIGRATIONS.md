@@ -5,7 +5,7 @@ Tant qu'une vérification ci-dessous n'a pas été faite et lue par quelqu'un, u
 
 ## Procédure de mise à jour complète (production)
 
-**Rien de ce document n'a été exécuté sur la production par l'auteur de ce dépôt** : l'environnement de développement n'y accède pas. L'audit indépendant a constaté sur le projet réel : `submit-score` en version 23 avec `PHYS_VER` 31 (le jeu est en 32), `ice` en version 3 ; absents : `rate_hits`, `rate_check`, `track_binds`, `submit_best`, `publish_track`, `author_verified` ; présents : `submit_rate`, `submit_rate_check` (verrou par joueur seulement, pas de limite globale exacte), `scores_limit` (simple `COUNT`). C'est exactement l'état « étapes 1 à 14 » : `tools/test-accounts-sql.sh` le fabrique et vérifie que `verify-prod.sql` le décrit fidèlement.
+**Rien de ce document n'a été exécuté sur la production par l'auteur de ce dépôt** : l'environnement de développement n'y accède pas. L'audit indépendant a constaté sur le projet réel : `submit-score` en version 23 avec `PHYS_VER` 31 (le jeu est en 33), `ice` en version 3 ; absents : `rate_hits`, `rate_check`, `track_binds`, `submit_best`, `publish_track`, `author_verified` ; présents : `submit_rate`, `submit_rate_check` (verrou par joueur seulement, pas de limite globale exacte), `scores_limit` (simple `COUNT`). C'est exactement l'état « étapes 1 à 14 » : `tools/test-accounts-sql.sh` le fabrique et vérifie que `verify-prod.sql` le décrit fidèlement.
 
 Chaque étape ci-dessous a une **vérification** : tant qu'elle n'a pas été lue, l'étape n'est pas faite. Aucune étape ne supprime de donnée. En cas de doute, s'arrêter et revenir en arrière (section « Retour arrière »).
 
@@ -14,10 +14,10 @@ Chaque étape ci-dessous a une **vérification** : tant qu'elle n'a pas été lu
 | 0 | **État des lieux** : coller `supabase/verify-prod.sql` dans le SQL Editor ; lancer `node tools/check-deployed.mjs` | Les lignes `MANQUE` / `ÉCART` doivent être celles attendues AVANT l'étape 15 (liste ci-dessus). Une autre différence = la base n'est pas dans l'état supposé : **ne rien appliquer** | Comprendre l'écart d'abord |
 | 1 | **Sauvegarde** : Supabase > Database > Backups (ou `pg_dump` des tables `scores`, `tracks`, `players`) | Une sauvegarde datée existe et se télécharge | Ne pas continuer |
 | 2 | `etape15-backend.sql` (SQL Editor) : relançable, ne supprime rien ; **compatible avec l'ancienne fonction serveur** | Relancer `verify-prod.sql` : plus aucun `MANQUE` ; seules les lignes « APRÈS 15b » et « info » restent | `etape15-retour.sql` |
-| 3 | Redéployer **`submit-score`** (`npm run build:function`, puis `supabase/functions/submit-score/index.ts`) | `node tools/check-deployed.mjs` : `physVer` = 32 (= `js/version.js`), actions `submit` + `publish-track` | Redéployer l'ancien fichier (historique Git) |
+| 3 | Redéployer **`submit-score`** (`npm run build:function`, puis `supabase/functions/submit-score/index.ts`) | `node tools/check-deployed.mjs` : `physVer` = 33 (= `js/version.js`), actions `submit` + `publish-track` | Redéployer l'ancien fichier (historique Git) |
 | 4 | Redéployer **`ice`** (`supabase/functions/ice/index.ts`) ; secrets TURN inchangés | `check-deployed.mjs` : `ice` répond 401 sans session ; avec une session de test : 200 et `ttl` 3600 | Redéployer l'ancien fichier |
 | 5 | **Essai de bout en bout** avec un compte de test : une course validée (record enregistré, rang renvoyé) et une publication de circuit (circuit créé, `author_verified` vrai) | La ligne apparaît dans `scores` / `tracks` ; `submit-score` journalise sans erreur | Retour arrière (étapes 3-4), pas encore 15b |
-| 6 | Mettre en ligne le jeu **0.9.54 ou plus** (PHYS_VER 32) | Un joueur peut publier et courir | Remettre le jeu précédent |
+| 6 | Mettre en ligne le jeu **0.9.58 ou plus** (PHYS_VER 33) | Un joueur peut publier et courir | Remettre le jeu précédent |
 | 7 | `etape15b-publication-verifiee.sql` | `verify-prod.sql` : la ligne « APRÈS 15b » passe à `ok` ; essai : une publication par l'ancienne voie (insertion directe) est refusée | `grant insert on public.tracks to authenticated;` |
 | 8 | **Vérification finale** | `verify-prod.sql` : **aucune** ligne `MANQUE` ni `ÉCART` ; `check-deployed.mjs` : « aucun écart constaté » | Corriger avant d'annoncer quoi que ce soit |
 
@@ -25,9 +25,9 @@ Chaque étape ci-dessous a une **vérification** : tant qu'elle n'a pas été lu
 
 | Version du jeu | Après les étapes 2 à 6 | Après 15b (étape 7) |
 |---|---|---|
-| ≤ 0.9.53 (PHYS_VER ≤ 31) | **Ne peut plus enregistrer de temps** : la nouvelle `submit-score` refuse une autre version de physique (422, « recharge le jeu ») ; ses records locaux et ses fantômes restent | Idem ; **ne peut plus publier** de circuit (plus d'insertion directe) |
-| 0.9.54 ou plus (PHYS_VER 32) | Tout fonctionne | Tout fonctionne |
-| Records déjà en base avec `phys_ver` 31 | Conservés ; un temps de physique 32 les remplace (même plus lent), un temps de physique 31 ne remplace jamais un record 32 ; les classements n'affichent qu'une version de physique à la fois | — |
+| ≤ 0.9.57 (PHYS_VER ≤ 32) | **Ne peut plus enregistrer de temps** : la nouvelle `submit-score` refuse une autre version de physique (422, « recharge le jeu ») ; ses records locaux et ses fantômes restent | Idem ; **ne peut plus publier** de circuit (plus d'insertion directe) |
+| 0.9.58 ou plus (PHYS_VER 33) | Tout fonctionne | Tout fonctionne |
+| Records déjà en base avec `phys_ver` 31 | Conservés ; un temps de physique 33 les remplace (même plus lent), un temps d'une physique plus ancienne ne remplace jamais un record plus récent ; les classements n'affichent qu'une version de physique à la fois | — |
 | Circuits publiés avant l'étape 15 | Conservés ; leur temps auteur reste **non vérifié** (`author_verified` faux) jusqu'à ce que leur auteur les republie | — |
 
 Avant l'étape 6, laisser un temps de cohabitation n'est pas possible pour les temps : une seule version de physique est vérifiée à la fois par `submit-score` (c'est voulu : une course ne se rejoue que sur la physique qui l'a produite).
@@ -95,7 +95,7 @@ select has_column_privilege('authenticated', 'public.tracks', 'created_at', 'ins
 curl -s "https://<projet>.supabase.co/functions/v1/submit-score" -H "apikey: <clé publique>"
 ```
 
-Attendu : `{"ok":true,"service":"submit-score","physVer":32,…,"actions":["submit","publish-track"]}`. `physVer` doit être égal à `PHYS_VER` de `js/version.js` ; l'absence de `actions` signifie que l'**ancienne** fonction est encore en ligne.
+Attendu : `{"ok":true,"service":"submit-score","physVer":33,…,"actions":["submit","publish-track"]}`. `physVer` doit être égal à `PHYS_VER` de `js/version.js` ; l'absence de `actions` signifie que l'**ancienne** fonction est encore en ligne.
 
 **4. `ice` refuse sans session** (la clé publique seule ne donne plus de relais) :
 

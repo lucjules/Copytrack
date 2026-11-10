@@ -29,7 +29,7 @@ export const wallMethods = {
   // Toit d'un tunnel : une voiture qui saute à l'intérieur n'en sort pas par le haut (les parois la retiennent déjà sur les côtés).
   // Seule une voiture déjà dessous est retenue : celle qui survole le tunnel passe au-dessus.
   _tunnelRoof() {
-    if (this.gSign < 0) return;
+    const inv = this.gSign < 0;      // gravité inversée : la voiture « tombe » vers le haut, SA tête est le point de contact (pos.y) et son corps est dessous
     const p = this.pos, q = this.prev, v = this.vel;
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
     for (let i = 0; i < tiles.length; i++) {
@@ -38,10 +38,11 @@ export const wallMethods = {
       toLocal(tile, p.x, p.z, L1);
       sampleLocal(tile, L1.lx, L1.lz, S1);
       if (!S1.inFootprint || Math.abs(S1.d) > ROAD_HALF + RAIL_W) continue;
-      const roof = S1.h + TUNNEL_TOP;
-      if (p.y + CAR.height > roof && q.y + CAR.height <= roof + 0.05) {
-        p.y = roof - CAR.height;
+      const roof = S1.h + TUNNEL_TOP, top = inv ? p.y : p.y + CAR.height, qTop = inv ? q.y : q.y + CAR.height;
+      if (top > roof && qTop <= roof + 0.05) {
+        p.y = inv ? roof : roof - CAR.height;
         if (v.y > 0) v.y = -v.y * 0.2;
+        if (inv) this._pinned = true;      // gravité inversée : le toit est le « plafond » de la voiture, mais il n'a pas de surface roulable : la voiture reste plaquée en l'air (voir pinT)
       }
     }
   },
@@ -53,6 +54,9 @@ export const wallMethods = {
   //   en dessous             : la voiture est plaquée sous la dalle (comme le toit d'un tunnel) ;
   //   hors de l'emprise      : choc de face, la voiture reste devant la tranche.
   _slabs() {
+    // GRAVITÉ INVERSÉE : les dalles sont volontairement ignorées. Les circuits officiels s'en servent (« Cristal Fêlé » : après une plaque d'inversion, la voiture « tombe » au
+    // plafond, 8 niveaux plus haut, en traversant les routes intermédiaires) : les bloquer fait passer ce circuit de 33 s à 70 s (voir docs/PHYSIQUE-CONTACTS.md). Le toit d'un
+    // TUNNEL, lui, retient la voiture inversée (_tunnelRoof).
     if (this.gSign < 0 || this.grounded || this.rib) return;
     const p = this.pos, q = this.prev, v = this.vel, H = CAR.height;
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
@@ -89,6 +93,7 @@ export const wallMethods = {
       }
     }
   },
+
 
   // again : seconde passe du même pas (après un obstacle qui a poussé la voiture) : même correction de position et de vitesse, sans recompter le frottement ni l'arrêt.
   _walls(again = false) {
@@ -137,11 +142,16 @@ export const wallMethods = {
       const k = Math.max(0, 1 - CAR.wallScrape * DT);
       v.x *= k; v.y *= k; v.z *= k;
     }
+    // Un CHOC se paie une fois : perte de vitesse, rotation, moteur coupé. Une voiture PRESSÉE contre le mur (volant tenu vers lui) le heurte de nouveau à chaque pas,
+    // d'une fraction de m/s : à 120 pas par seconde, ces « chocs » répétés (2 % de vitesse perdue chacun) l'écrasaient à ~1,6 m/s et recoupaient le moteur sans fin, volant à fond
+    // contre le mur. Après `wallFresh` secondes de contact continu, c'est du frottement : seul wallScrape (plus bas) freine.
+    if (!again) this.wallRun = touch ? Math.min(2, this.wallRun + DT) : Math.max(0, this.wallRun - 0.5 * DT);      // (le contact « clignote » quand la voiture rebondit puis est repoussée : il ne redevient un choc neuf qu'après un moment sans contact)
+    const fresh = this.wallRun <= CAR.wallFresh || this.speed > CAR.wallFreshSpeed;      // (à vitesse élevée, racler un mur garde sa pénalité d'origine : seul l'écrasement à l'arrêt est concerné)
     if (hit > 0) {
-      const loss = Math.min(CAR.wallLossMax, hit * CAR.wallLoss);
+      const loss = fresh ? Math.min(CAR.wallLossMax, hit * CAR.wallLoss) : 0;
       v.x *= 1 - loss; v.y *= 1 - loss; v.z *= 1 - loss;
       this.ev.wall = hit;
-      if (hit > 1.5) {
+      if (hit > 1.5 && fresh) {
         // Le choc fait pivoter la voiture (dans le sens où le mur la repousse) et lui coupe le moteur un instant.
         const side = sx * fz - sz * fx;
         this.omega += (side >= 0 ? 1 : -1) * this._upSign() * Math.min(CAR.wallSpinMax, hit * CAR.wallSpin);      // (autour du haut local : même choc au plafond)

@@ -113,7 +113,7 @@ export class CarPhysics {
     this.vel.x = 0; this.vel.y = 0; this.vel.z = 0;
     this.yaw = yaw; this.prevYaw = yaw; this.yawRate = 0; this.omega = 0;
     this.steer = 0; this.steerAngle = 0; this.boost = 0; this.boostF = 1; this.slip = 0; this.airTime = 0; this.fwdSpeed = 0;
-    this.driftT = 0; this.bounceCD = 0; this.driftCharge = 0; this.stunT = 0; this.stuckT = 0; this.unstick = 0; this.unstickT = 0; this.unstickDir = 0; this.crawlT = 0;
+    this.driftT = 0; this.bounceCD = 0; this.driftCharge = 0; this.stunT = 0; this.stuckT = 0; this.wallRun = 0; this.pinT = 0; this._pinned = false; this.unstick = 0; this.unstickT = 0; this.unstickDir = 0; this.crawlT = 0;
     this.pitch = 0; this.pitchRate = 0; this.landQ = ''; this.aoa = 0.08; this.glidePitch = 0; this.bankT = 0;
     if (this.v2) { this.lean = 0; this.mAx = 0; this.heave = 0; this.v2F = 1; this.v2R = 1; }
     this.rib = null;
@@ -301,7 +301,12 @@ export class CarPhysics {
     const Fr = clamp(-K.corner * ar, -maxR, maxR);
     const cd = dcos(delta), sd = dsin(delta);
     // (La rotation du repère est prise en compte en reprojetant la vitesse à chaque pas.)
-    vx += (ax - Ff * sd) * dt;
+    // Pneu avant braqué : sa force latérale a une composante LONGITUDINALE qui freine (Ff·sin δ). À fond de volant et à basse vitesse elle atteint ~20 m/s², plus que la poussée
+    // du moteur (14 m/s²) : la voiture se stabilisait à ~1,9 m/s sur un petit cercle, gaz à fond, indéfiniment (« volant tenu à fond contre un mur : tourne en rond »). Ici le
+    // frottement est plafonné à une part de la poussée du moteur : la voiture accélère toujours, ses rayons de braquage s'élargissent avec la vitesse. Au-delà de scrubSpeed,
+    // ou volant modéré, rien ne change.
+    const scrub = Ff * sd, cap = ax > 0 && Math.abs(delta) > CAR.scrubAngle && Math.abs(vx) < CAR.scrubSpeed ? ax * CAR.scrubShare : Infinity;
+    vx += (ax - (scrub > cap ? cap : scrub)) * dt;
     vy += (Ff * cd + Fr) * dt;
     w += ((K.a * Ff * cd - K.b * Fr) / K.yawK - w * K.yawDamp) * dt;
     BK.vx = vx; BK.vy = vy; BK.w = w;
@@ -545,8 +550,12 @@ export class CarPhysics {
     if (this._tryEnterRibbon()) return true;
     if (!this.grounded && this._tryLandRibbon()) return true;
     this._walls();
+    this._pinned = false;
     this._tunnelRoof();
     this._slabs();
+    // Gravité inversée, plaquée EN L'AIR sous une dalle ou un toit de tunnel (rien de roulable) : au bout d'une seconde la voiture est ramenée au checkpoint (même décision au rejeu et sur le serveur).
+    this.pinT = this._pinned ? this.pinT + DT : Math.max(0, this.pinT - 2 * DT);
+    if (this.pinT > 1) this.lost = true;
     const ox = p.x, oy = p.y, oz = p.z;
     this._obstacles();
     if (this.ev.sink) return true; // fin immédiate du pas après un contact létal
