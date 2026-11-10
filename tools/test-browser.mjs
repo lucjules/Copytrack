@@ -618,6 +618,9 @@ try {
     const heads = await page.evaluate(() => [...document.querySelectorAll('#garage-list .ghead')].map((e) => e.textContent.trim()));
     for (const t of ['🎄 Noël', '🎆 Nouvel An', '🏖️ Plage', '☀️ Été', '🎃 Halloween']) assert.ok(heads.includes(t), 'titre de thème « ' + t + ' » (' + heads.join(' | ') + ')');
     const base = await meshes();
+    // Le solde de pièces dépend des tests précédents (courses gagnées) : on le fixe, puis on le rend.
+    const setCoins = (n) => app(async (n) => { const { profile, saveProfile } = await import('/js/profile.js'); const p = profile(), old = p.coins; p.coins = n; saveProfile(); window.copytrack.session._render(); return old; }, n);
+    const savedCoins = await setCoins(0);
     await page.evaluate(() => [...document.querySelectorAll('#garage-list .gcard')].find((c) => c.querySelector('.gl').textContent.trim() === 'Père Noël').click());
     await page.waitForTimeout(400);
     const st = await app(() => { const G = window.copytrack.session; return { orn: G.draft.ornament, body: G.draft.body, buy: !document.getElementById('garage-buy').classList.contains('hidden'), btn: document.getElementById('garage-buy-btn').disabled }; });
@@ -625,6 +628,9 @@ try {
     assert.ok(st.buy, 'les éléments payants du thème s\'affichent dans la barre d\'achat');
     assert.ok(st.btn, 'pièces insuffisantes : l\'achat reste bloqué (aucun gain gratuit)');
     assert.notEqual(await meshes(), base, 'la voiture affichée a changé');
+    await setCoins(100000);
+    assert.equal(await app(() => document.getElementById('garage-buy-btn').disabled), false, 'avec assez de pièces : l\'achat est possible');
+    await setCoins(savedCoins);
     // les nouvelles carrosseries sont listées avec leur prix
     await click('#garage-tabs [data-cat="body"]');
     await page.waitForTimeout(200);
