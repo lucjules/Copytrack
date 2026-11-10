@@ -5,7 +5,7 @@ import { GeoBuilder, FxBuilder } from './geo.js';
 import { CELL, ROAD_HALF } from './constants.js';
 import { PIECES } from './pieces.js';
 import { tileToRow } from './track.js';
-import { buildDecoInto, createPlaque, decoColor } from './decos.js';
+import { buildDecoInto, createPlaque, decoColor, setDecoRotation } from './decos.js';
 import { LIGHT_DECOS } from './decoData.js';
 import { isObstacle } from './obstacles.js';
 import { createObstacleMesh } from './obstacleMesh.js';
@@ -93,7 +93,7 @@ export function createTrackMaterials() {
 const CHUNK = 4;
 const chunkKey = (cx, cz) => cx * 8192 + cz;
 const tileSig = (t, flags) => flags + JSON.stringify(tileToRow(t));
-const decoSig = (d) => `${d.k}|${d.x}|${d.y}|${d.z}|${d.ry || 0}|${d.s || 1}|${d.c || 0}|${d.cc || ''}|${d.u || ''}`;
+const decoSig = (d) => `${d.k}|${d.x}|${d.y}|${d.z}|${d.ry || 0}|${d.rx || 0}|${d.rz || 0}|${d.s || 1}|${d.c || 0}|${d.cc || ''}|${d.u || ''}`;
 
 export class TrackView {
   constructor(track, materials, { showAllDecos = false } = {}) {
@@ -272,7 +272,7 @@ export class TrackView {
   _addLamp(d) {
     const L = LIGHT_DECOS[d.k];
     const grp = new THREE.Group();
-    grp.position.set(d.x, d.y, d.z); grp.rotation.y = d.ry || 0; grp.scale.setScalar(d.s || 1);
+    grp.position.set(d.x, d.y, d.z); setDecoRotation(grp, d); grp.scale.setScalar(d.s || 1);
     grp.userData.lamp = true;
     const hex = decoColor(d) || L.color;
     const col = new THREE.Color(hex);

@@ -729,8 +729,14 @@ const mat4 = new THREE.Matrix4();
 const q = new THREE.Quaternion();
 const up = new THREE.Vector3(0, 1, 0);
 
+// Rotation d'une décoration : cap (ry, autour de la verticale), puis inclinaison (rx) et roulis (rz), ordre « YXZ » : faire tourner TOUTE une zone d'un quart de
+// tour autour de la verticale (copier-coller, pivoter la sélection) ne change donc que ry. rx et rz valent 0 pour presque toutes les décorations.
+const eul = new THREE.Euler(0, 0, 0, 'YXZ');
+export function setDecoRotation(obj, d) { obj.rotation.order = 'YXZ'; obj.rotation.set(d.rx || 0, d.ry || 0, d.rz || 0); return obj; }
+
 function decoMatrix(d) {
-  q.setFromAxisAngle(up, d.ry || 0);
+  if (d.rx || d.rz) q.setFromEuler(eul.set(d.rx || 0, d.ry || 0, d.rz || 0, 'YXZ'));
+  else q.setFromAxisAngle(up, d.ry || 0);
   return mat4.compose(new THREE.Vector3(d.x, d.y, d.z), q, new THREE.Vector3(d.s, d.s, d.s)).clone();
 }
 
@@ -758,7 +764,7 @@ export function createPlaque(d, onLoad) {
   const mesh = new THREE.Mesh(geo, mat);
   mesh.userData.own = true;
   mesh.position.set(d.x, d.y + 2.25 * d.s + 1, d.z);
-  mesh.rotation.y = d.ry || 0;
+  setDecoRotation(mesh, d);
   mesh.scale.set(d.s, d.s, d.s);
   if (safeUrl(d.u)) {
     loader.load(d.u, (tex) => {
@@ -779,11 +785,11 @@ export function buildDecoMesh(d, material, glowMaterial) {
   if (isObstacle(d.k)) return createObstacleMesh(d, { solid: material, glow: glowMaterial || material });
   const g = new THREE.Group();
   if (d.k === 'plaque') {
-    const m = createPlaque({ ...d, x: 0, y: 0, z: 0, ry: 0 });
+    const m = createPlaque({ ...d, x: 0, y: 0, z: 0, ry: 0, rx: 0, rz: 0 });
     m.material.opacity = 0.8; m.material.transparent = true;
     g.add(m);
     g.position.set(d.x, d.y, d.z);
-    g.rotation.y = d.ry || 0;
+    setDecoRotation(g, d);
     return g;
   }
   const gb = new GeoBuilder(), glow = new GeoBuilder();
@@ -793,7 +799,7 @@ export function buildDecoMesh(d, material, glowMaterial) {
   g.add(new THREE.Mesh(gb.build(), material));
   if (!glow.empty) g.add(new THREE.Mesh(glow.build(), glowMaterial || material));
   g.position.set(d.x, d.y, d.z);
-  g.rotation.y = d.ry || 0;
+  setDecoRotation(g, d);
   g.scale.setScalar(d.s);
   return g;
 }

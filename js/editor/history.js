@@ -23,7 +23,7 @@ export const historyMethods = {
   _snapshot() {
     return JSON.stringify({
       t: this.track.tiles.map(tileToRow),
-      d: this.track.decos.map((o) => [o.k, o.x, o.y, o.z, o.ry, o.s, o.c, o.u, o.ph || 0, o.cc || '', o.cp || null, o.g || 0]),      // (cp : formes d'une pièce perso, sans elles l'annulation la perdait)
+      d: this.track.decos.map((o) => [o.k, o.x, o.y, o.z, o.ry, o.s, o.c, o.u, o.ph || 0, o.cc || '', o.cp || null, o.g || 0, o.rx || 0, o.rz || 0]),      // (cp : formes d'une pièce perso, sans elles l'annulation la perdait)
       gn: this.track.groupNames(),
       lg: this.track.lg,
       lp: this.track.laps || 1,
@@ -37,7 +37,7 @@ export const historyMethods = {
     this.track.clear();
     this.track.vt = vt; this.track.vh = vh;
     for (const row of data.t) this.track.add(rowToTile(row));
-    for (const [k, x, y, z, ry, sc, c, u, ph, cc, cp, g] of data.d) this.track.addDeco({ k, x, y, z, ry, s: sc, c, u, ph, cc, cp: cp || undefined, g });
+    for (const [k, x, y, z, ry, sc, c, u, ph, cc, cp, g, rx, rz] of data.d) this.track.addDeco({ k, x, y, z, ry, s: sc, c, u, ph, cc, cp: cp || undefined, g, rx, rz });
     for (const [g, n] of data.gn || []) this.track.setGroupName(g, n);
     this.track.lg = data.lg || null;
     this.track.laps = data.lp || 1;

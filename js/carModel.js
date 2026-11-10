@@ -25,8 +25,40 @@ const BODIES = {
   rally: { w: 2.1, lower: [[-2.2, 0.4], [1.8, 0.34], [2.3, 0.46], [2.25, 0.72], [1.2, 0.9], [-1.2, 0.94], [-2.25, 0.9]], cabin: [[-1.3, 0.92], [0.9, 0.9], [0.3, 1.5], [-1.0, 1.46]], cw: 1.55, trunkY: 0.9 },
   pickup: { w: 2.1, lower: [[-2.35, 0.4], [1.8, 0.36], [2.3, 0.48], [2.25, 0.82], [0.9, 0.92], [-2.35, 0.95]], cabin: [[-0.5, 0.94], [0.85, 0.92], [0.55, 1.62], [-0.45, 1.64]], cw: 1.6, trunkY: 0.95 },
   formula: { w: 1.5, lower: [[-2.3, 0.25], [2.3, 0.2], [2.7, 0.28], [2.6, 0.4], [0.6, 0.62], [-1.0, 0.8], [-2.3, 0.62]], cabin: [[-0.95, 0.74], [0.2, 0.7], [-0.25, 1.05], [-0.8, 1.04]], cw: 0.8, trunkY: 0.7 },
+  // 0.9.57 : nouvelles carrosseries (profils seulement).
+  kart: { w: 1.6, lower: [[-1.9, 0.3], [1.6, 0.26], [2.0, 0.32], [1.95, 0.46], [1.0, 0.55], [-1.7, 0.6]], cabin: [[-0.6, 0.58], [0.5, 0.56], [0.3, 0.95], [-0.4, 0.95]], cw: 0.6, trunkY: 0.62 },
+  cabrio: { w: 1.95, lower: [[-2.15, 0.3], [1.9, 0.26], [2.35, 0.36], [2.3, 0.52], [1.3, 0.74], [-1.2, 0.84], [-2.2, 0.76]], cabin: [[-0.5, 0.82], [0.5, 0.78], [0.4, 1.05], [-0.45, 1.05]], cw: 1.3, trunkY: 0.8 },
+  coupe: { w: 2.0, lower: [[-2.3, 0.32], [2.1, 0.28], [2.6, 0.36], [2.55, 0.52], [1.6, 0.66], [-1.5, 0.8], [-2.3, 0.74]], cabin: [[-1.7, 0.78], [0.4, 0.7], [-0.2, 1.15], [-1.2, 1.18]], cw: 1.5, trunkY: 0.78 },
+  hotrod: { w: 1.9, lower: [[-2.0, 0.45], [1.7, 0.42], [2.3, 0.55], [2.25, 0.9], [1.2, 1.05], [-1.6, 1.08], [-2.0, 0.95]], cabin: [[-1.1, 1.04], [0.5, 1.0], [0.2, 1.5], [-0.9, 1.5]], cw: 1.4, trunkY: 1.0 },
+  jeep: { w: 2.1, lower: [[-2.2, 0.5], [1.8, 0.46], [2.25, 0.58], [2.2, 0.95], [1.0, 1.0], [-2.2, 1.05]], cabin: [[-2.0, 1.0], [0.9, 0.98], [0.7, 1.65], [-1.9, 1.7]], cw: 1.75, trunkY: 1.05 },
+  van: { w: 2.05, lower: [[-2.3, 0.36], [1.8, 0.32], [2.25, 0.46], [2.2, 0.9], [1.4, 1.2], [-2.3, 1.25]], cabin: [[-2.2, 1.22], [1.3, 1.18], [0.9, 1.9], [-2.2, 1.95]], cw: 1.75, trunkY: 1.25 },
+  bubble: { w: 1.9, lower: [[-1.9, 0.4], [1.5, 0.36], [2.0, 0.5], [1.95, 0.75], [1.1, 1.0], [-1.8, 1.0]], cabin: [[-1.7, 0.98], [1.0, 0.96], [0.6, 1.75], [-1.3, 1.78]], cw: 1.7, trunkY: 1.0 },
+  limo: { w: 1.95, lower: [[-2.6, 0.32], [2.0, 0.28], [2.5, 0.4], [2.45, 0.6], [1.5, 0.78], [-2.6, 0.82]], cabin: [[-2.3, 0.8], [1.2, 0.78], [0.9, 1.3], [-2.1, 1.32]], cw: 1.55, trunkY: 0.84 },
+  sleigh: { w: 1.8, lower: [[-2.2, 0.5], [1.5, 0.4], [2.3, 0.8], [2.3, 1.1], [1.0, 0.95], [-2.2, 1.2]], cabin: [[-1.0, 1.0], [0.6, 0.96], [0.5, 1.25], [-0.9, 1.3]], cw: 1.2, trunkY: 1.2 },
   wedge: { w: 2.0, lower: [[-2.2, 0.3], [2.5, 0.28], [2.56, 0.34], [1.0, 0.78], [-1.4, 0.86], [-2.2, 0.8]], cabin: [[-1.3, 0.82], [0.6, 0.76], [-0.2, 1.22], [-0.9, 1.2]], cw: 1.45, trunkY: 0.82 },
 };
+
+// ---- Motifs de dessins (0.9.57) : polygones dans le repère du flanc (x le long du véhicule, y la hauteur). Un seul aplat de la couleur « Dessins ».
+const ring = (cx, cy, r, n = 10) => Array.from({ length: n }, (_, i) => [cx + Math.cos((i / n) * TAU) * r, cy + Math.sin((i / n) * TAU) * r]);
+const starPts = (cx, cy, ro, ri, n, rot = Math.PI / 2) => Array.from({ length: n * 2 }, (_, i) => { const a = rot + (i / (n * 2)) * TAU, r = i % 2 ? ri : ro; return [cx + Math.cos(a) * r, cy + Math.sin(a) * r]; });
+const heartPts = (cx, cy, s) => Array.from({ length: 18 }, (_, i) => { const t = (i / 18) * TAU; return [cx + (16 * Math.sin(t) ** 3) * s / 17, cy + (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * s / 17]; });
+const turnPts = (pts, cx, cy, a) => pts.map(([x, y]) => [cx + (x - cx) * Math.cos(a) - (y - cy) * Math.sin(a), cy + (x - cx) * Math.sin(a) + (y - cy) * Math.cos(a)]);
+const waveBand = (y, amp, thick, x0 = -1.9, x1 = 1.9) => { const top = [], bot = []; for (let i = 0; i <= 16; i++) { const x = x0 + ((x1 - x0) * i) / 16, w = amp * Math.sin(i * 1.1); top.push([x, y + w + thick / 2]); bot.push([x, y + w - thick / 2]); } return top.concat(bot.reverse()); };
+const DECAL_ART = {
+  xmastree: () => [1.3, 0.2, -0.9, -1.7].map((x) => [[x, 0.84], [x - 0.15, 0.62], [x - 0.07, 0.62], [x - 0.2, 0.46], [x - 0.09, 0.46], [x - 0.09, 0.38], [x + 0.09, 0.38], [x + 0.09, 0.46], [x + 0.2, 0.46], [x + 0.07, 0.62], [x + 0.15, 0.62]]),
+  snowflakes: () => [[1.3, 0.6, 0.16], [0.2, 0.64, 0.2], [-0.9, 0.56, 0.15], [-1.7, 0.64, 0.17]].map(([x, y, r]) => starPts(x, y, r, r * 0.3, 6)),
+  fireworks: () => [[1.2, 0.62, 0.24], [0.0, 0.58, 0.2], [-1.1, 0.64, 0.26], [-1.8, 0.52, 0.15]].map(([x, y, r]) => starPts(x, y, r, r * 0.28, 8)),
+  confetti: () => Array.from({ length: 16 }, (_, i) => { const x = -1.8 + (i * 0.243) % 3.7, y = 0.44 + ((i * 7) % 5) * 0.075; return turnPts([[x - 0.05, y - 0.03], [x + 0.05, y - 0.03], [x + 0.05, y + 0.03], [x - 0.05, y + 0.03]], x, y, i * 0.7); }),
+  waves: () => [waveBand(0.5, 0.05, 0.08), waveBand(0.66, 0.05, 0.07)],
+  palm: () => [1.0, -1.0].flatMap((x) => [[[x - 0.025, 0.4], [x + 0.025, 0.4], [x + 0.02, 0.68], [x - 0.02, 0.68]], ...[0, 1, 2, 3, 4].map((k) => turnPts([[x, 0.7], [x + 0.24, 0.74], [x + 0.2, 0.68]], x, 0.7, (k / 5) * TAU))]),
+  sun: () => [[1.0, 0.6], [-1.0, 0.6]].flatMap(([x, y]) => [starPts(x, y, 0.3, 0.19, 10), ring(x, y, 0.13)]),
+  bats: () => [[1.2, 0.6], [0.1, 0.66], [-1.0, 0.58], [-1.7, 0.66]].map(([x, y]) => [[x, y], [x + 0.05, y + 0.05], [x + 0.1, y], [x + 0.16, y + 0.09], [x + 0.14, y - 0.03], [x + 0.08, y - 0.07], [x, y - 0.03], [x - 0.08, y - 0.07], [x - 0.14, y - 0.03], [x - 0.16, y + 0.09], [x - 0.1, y], [x - 0.05, y + 0.05]]),
+  flowers: () => [[1.2, 0.6], [0.1, 0.66], [-1.0, 0.56], [-1.7, 0.64]].flatMap(([x, y]) => [starPts(x, y, 0.17, 0.09, 5), ring(x, y, 0.045, 6)]),
+  leaf: () => [[1.2, 0.6, 0.5], [0.3, 0.66, -0.6], [-0.7, 0.56, 0.4], [-1.6, 0.64, -0.4]].map(([x, y, a]) => turnPts([[x, y + 0.2], [x + 0.1, y + 0.07], [x + 0.1, y - 0.06], [x, y - 0.2], [x - 0.1, y - 0.06], [x - 0.1, y + 0.07]], x, y, a)),
+  hearts: () => [[1.3, 0.6, 0.2], [0.3, 0.66, 0.24], [-0.7, 0.56, 0.2], [-1.6, 0.64, 0.22]].map(([x, y, sc]) => heartPts(x, y, sc)),
+};
+// Ornements ajoutés en 0.9.57 (les anciens restent codés à leur place) : construits autour de leur point d'attache (origine, y vers le haut).
+const NEW_ORNAMENTS = new Set(['santahat', 'antlers', 'xtree', 'snowman', 'partyhat', 'umbrella', 'surfboard', 'ringfloat', 'icecream', 'witchhat', 'pumpkin', 'bunny', 'heartballoon']);
 
 let glowTex = null;
 function glowTexture() {
@@ -62,13 +94,16 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
   };
 
   // Finition : brillante, mate, métallisée ou nacrée (aspect uniquement).
-  const FIN = { gloss: [0.45, 0.15], matte: [0.95, 0.0], metal: [0.22, 0.85], pearl: [0.3, 0.35] }[L.finish] || [0.45, 0.15];
-  const paint = mk({ color: L.color, roughness: FIN[0], metalness: FIN[1], ...(L.finish === 'pearl' && !ghost ? { emissive: L.color2, emissiveIntensity: 0.12 } : {}) });
+  const FIN = { gloss: [0.45, 0.15], matte: [0.95, 0.0], metal: [0.22, 0.85], pearl: [0.3, 0.35], glitter: [0.25, 0.7], frost: [0.15, 0.2], candy: [0.12, 0.1], chrome: [0.05, 1.0] }[L.finish] || [0.45, 0.15];
+  // Lueur propre de certaines finitions (aspect seulement) : [couleur, intensité]
+  const GLOW = { pearl: [L.color2, 0.12], glitter: [L.color2, 0.28], frost: ['#bfeaff', 0.2], candy: [L.color, 0.25] }[L.finish];
+  const paint = mk({ color: L.color, roughness: FIN[0], metalness: FIN[1], ...(GLOW && !ghost ? { emissive: GLOW[0], emissiveIntensity: GLOW[1] } : {}) });
   const trim = mk({ color: L.color2, roughness: 0.8 });
   const dark = mk({ color: '#23242f', roughness: 0.8 });
   const glass = mk({ color: '#1b2444', roughness: 0.15, metalness: 0.4 });
   const rubber = mk({ color: '#17171f', roughness: 0.95 });
-  const rimMat = mk({ color: L.wheels === 'gold' ? '#f2c14e' : '#c9ccd8', roughness: 0.35, metalness: 0.6 });
+  const RIM = { gold: ['#f2c14e', 0.35, 0.6], chrome: ['#f4f6ff', 0.08, 1.0], snow: ['#eaf6ff', 0.4, 0.3], sunny: ['#ffd21f', 0.35, 0.3] }[L.wheels] || ['#c9ccd8', 0.35, 0.6];
+  const rimMat = mk({ color: RIM[0], roughness: RIM[1], metalness: RIM[2] });
   const decalMat = ghost ? mk({}) : new THREE.MeshBasicMaterial({ color: L.decalColor, toneMapped: false, side: THREE.DoubleSide });
   if (!ghost) own.push(decalMat);
 
@@ -131,6 +166,9 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
     }
   }
 
+  const art = DECAL_ART[L.decal];
+  if (art) for (const pts of art()) sideShape(poly(pts));
+
   // Personnalisation libre (lot 10) : livrée sur les flancs, plaque, pièces posées par le joueur (voiture et deltaplane ; pas la moto ni le bateau).
   const C = L.custom;
   const freeLivery = ghost ? null : addLivery(body, C, lowerUp, B, (m) => own.push(m));
@@ -158,6 +196,8 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
     case 'gt': plate(2.2, 0.5, ty + 0.78, rear - 0.3, -0.1, trim); post(-0.7, 0.8, rear - 0.3, ty - 0.02); post(0.7, 0.8, rear - 0.3, ty - 0.02); fin(-1.1, ty + 0.78, rear - 0.3, 0.4, 0.58); fin(1.1, ty + 0.78, rear - 0.3, 0.4, 0.58); break;
     case 'double': plate(2.1, 0.5, ty + 0.4, rear - 0.25); plate(2.1, 0.5, ty + 0.75, rear - 0.2, -0.2, trim); post(-0.7, 0.8, rear - 0.25, ty - 0.02); post(0.7, 0.8, rear - 0.25, ty - 0.02); fin(-1.05, ty + 0.55, rear - 0.22, 0.6, 0.62); fin(1.05, ty + 0.55, rear - 0.22, 0.6, 0.62); break;
     case 'big': plate(2.5, 0.8, ty + 0.9, rear - 0.35, -0.15, trim); post(-0.9, 0.9, rear - 0.35, ty - 0.02); post(0.9, 0.9, rear - 0.35, ty - 0.02); fin(-1.25, ty + 0.95, rear - 0.35, 0.7, 0.9); fin(1.25, ty + 0.95, rear - 0.35, 0.7, 0.9); break;
+    case 'surf': { const m = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), mk({ color: L.color2, roughness: 0.5 })); m.scale.set(0.2, 0.9, 0.05); m.position.set(0, ty + 0.55, rear - 0.25); m.rotation.x = -0.1; body.add(m); post(-0.55, 0.5, rear - 0.25, ty - 0.02); post(0.55, 0.5, rear - 0.25, ty - 0.02); break; }
+    case 'ring': { const m = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.07, 5, 14), trim); m.position.set(0, ty + 0.75, rear - 0.2); body.add(m); post(-0.55, 0.45, rear - 0.2, ty - 0.02); post(0.55, 0.45, rear - 0.2, ty - 0.02); break; }
     default: break;
   }
 
@@ -217,6 +257,31 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
     default: break;
   }
 
+  // Ornements de saison (0.9.57), posés sur le toit
+  const orn = (kind) => {
+    const g = new THREE.Group();
+    const add = (geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sc = null) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); if (sc) m.scale.set(...sc); g.add(m); return m; };
+    const M = (color, rough = 0.7) => mk({ color, roughness: rough });
+    switch (kind) {
+      case 'santahat': add(new THREE.ConeGeometry(0.32, 0.75, 8), M('#c1121f'), 0, 0.38, 0.05, 0.3); add(new THREE.CylinderGeometry(0.34, 0.34, 0.12, 8), M('#f4f1ea', 0.9), 0, 0.06); add(new THREE.SphereGeometry(0.1, 6, 5), M('#f4f1ea', 0.9), 0, 0.72, 0.28); break;
+      case 'antlers': for (const sd of [-1, 1]) { const br = M('#7a4a2b'); add(new THREE.CylinderGeometry(0.035, 0.05, 0.75, 5), br, sd * 0.3, 0.36, 0, 0, 0, -sd * 0.35); add(new THREE.CylinderGeometry(0.025, 0.035, 0.4, 5), br, sd * 0.5, 0.55, 0, 0, 0, -sd * 0.9); add(new THREE.CylinderGeometry(0.025, 0.035, 0.3, 5), br, sd * 0.36, 0.3, 0, 0, 0, sd * 0.6); } add(new THREE.SphereGeometry(0.08, 5, 4), M('#ff2d3a', 0.4), 0, 0.02, -0.7); break;
+      case 'xtree': { const gr = M('#1b6b34'); add(new THREE.CylinderGeometry(0.06, 0.07, 0.2, 5), M('#7a4a2b'), 0, 0.1); add(new THREE.ConeGeometry(0.4, 0.5, 7), gr, 0, 0.42); add(new THREE.ConeGeometry(0.3, 0.42, 7), gr, 0, 0.72); add(new THREE.ConeGeometry(0.2, 0.34, 7), gr, 0, 0.98); add(new THREE.OctahedronGeometry(0.1), M('#ffd23e', 0.3), 0, 1.22); for (const [x, y, z, c] of [[0.2, 0.34, 0.18, '#ff2d3a'], [-0.18, 0.5, -0.2, '#ffd23e'], [0.1, 0.7, -0.18, '#3ec1ff'], [-0.12, 0.84, 0.12, '#ff2d3a']]) add(new THREE.SphereGeometry(0.05, 5, 4), basic(c), x, y, z); break; }
+      case 'snowman': { const w = M('#f8fbff', 0.9); add(new THREE.SphereGeometry(0.34, 8, 6), w, 0, 0.3); add(new THREE.SphereGeometry(0.25, 8, 6), w, 0, 0.78); add(new THREE.SphereGeometry(0.17, 8, 6), w, 0, 1.1); add(new THREE.ConeGeometry(0.04, 0.22, 5), M('#ff7a1c'), 0, 1.1, -0.2, -Math.PI / 2); add(new THREE.CylinderGeometry(0.15, 0.15, 0.2, 7), M('#17171f'), 0, 1.36); add(new THREE.CylinderGeometry(0.22, 0.22, 0.03, 7), M('#17171f'), 0, 1.27); for (const [x, y] of [[-0.06, 1.15], [0.06, 1.15]]) add(new THREE.SphereGeometry(0.025, 4, 3), M('#17171f'), x, y, -0.16); break; }
+      case 'partyhat': add(new THREE.ConeGeometry(0.24, 0.6, 8), M('#ff4fd8', 0.5), 0, 0.3); add(new THREE.SphereGeometry(0.07, 5, 4), M('#ffd23e', 0.3), 0, 0.62); add(new THREE.TorusGeometry(0.17, 0.02, 4, 8), M('#ffd23e', 0.3), 0, 0.22, 0, Math.PI / 2); break;
+      case 'umbrella': add(new THREE.CylinderGeometry(0.03, 0.03, 1.5, 5), M('#f4f1ea'), 0, 0.75, 0, 0, 0, 0.12); add(new THREE.ConeGeometry(1.0, 0.4, 8), M('#ff5a5f'), 0.08, 1.45, 0, 0, 0, 0.12); add(new THREE.ConeGeometry(1.0, 0.4, 8, 1, false, 0, Math.PI / 4), M('#f4f1ea'), 0.08, 1.455, 0, 0, 0, 0.12); add(new THREE.SphereGeometry(0.06, 5, 4), M('#f4f1ea'), 0.1, 1.7); break;
+      case 'surfboard': { add(new THREE.SphereGeometry(0.5, 8, 6), M(L.color2, 0.4), 0, 0.14, 0, 0, 0, 0, [0.3, 0.06, 2.4]); add(new THREE.BoxGeometry(0.06, 0.012, 2.2), M('#ffffff', 0.4), 0, 0.2); add(new THREE.ConeGeometry(0.05, 0.22, 4), M('#17171f'), 0, 0.02, 1.0, Math.PI, 0, 0); break; }
+      case 'ringfloat': add(new THREE.TorusGeometry(0.5, 0.17, 6, 14), M('#ff5a5f', 0.5), 0, 0.2, 0, Math.PI / 2); for (let i = 0; i < 4; i++) add(new THREE.BoxGeometry(0.2, 0.2, 0.2), M('#f4f1ea', 0.5), Math.cos((i / 4) * TAU) * 0.5, 0.2, Math.sin((i / 4) * TAU) * 0.5); break;
+      case 'icecream': add(new THREE.ConeGeometry(0.2, 0.55, 6), M('#e0a458'), 0, 0.28, 0, Math.PI); add(new THREE.SphereGeometry(0.24, 7, 6), M('#ffb3d1', 0.6), 0, 0.68); add(new THREE.SphereGeometry(0.2, 7, 6), M('#a7f3d0', 0.6), 0, 0.98); add(new THREE.SphereGeometry(0.06, 5, 4), M('#c1121f', 0.4), 0, 1.2); break;
+      case 'witchhat': add(new THREE.CylinderGeometry(0.55, 0.55, 0.05, 10), M('#1a0f2e'), 0, 0.03); add(new THREE.ConeGeometry(0.32, 0.95, 8), M('#2b1055'), 0, 0.5, 0.05, 0.2); add(new THREE.CylinderGeometry(0.33, 0.35, 0.1, 8), M('#ff7a1c'), 0, 0.12); break;
+      case 'pumpkin': add(new THREE.SphereGeometry(0.4, 8, 6), M('#ff7a1c', 0.6), 0, 0.3, 0, 0, 0, 0, [1, 0.8, 1]); add(new THREE.BoxGeometry(0.08, 0.16, 0.08), M('#2d6a2d'), 0, 0.66); for (const sx of [-0.14, 0.14]) add(new THREE.ConeGeometry(0.06, 0.1, 3), basic('#ffd23e'), sx, 0.36, -0.37, -Math.PI / 2); add(new THREE.BoxGeometry(0.3, 0.05, 0.04), basic('#ffd23e'), 0, 0.2, -0.38); break;
+      case 'bunny': for (const sd of [-1, 1]) { add(new THREE.SphereGeometry(0.5, 6, 5), M('#f4f1ea', 0.9), sd * 0.2, 0.5, 0, 0, 0, -sd * 0.18, [0.16, 0.9, 0.08]); add(new THREE.SphereGeometry(0.5, 6, 5), M('#ffb3d1', 0.9), sd * 0.2, 0.5, -0.04, 0, 0, -sd * 0.18, [0.08, 0.7, 0.04]); } break;
+      case 'heartballoon': add(new THREE.CylinderGeometry(0.008, 0.008, 1.0, 3), M('#f4f1ea'), 0, 0.5); for (const sd of [-1, 1]) add(new THREE.SphereGeometry(0.2, 7, 6), M('#ff2e5a', 0.25), sd * 0.13, 1.3, 0); add(new THREE.ConeGeometry(0.33, 0.45, 4), M('#ff2e5a', 0.25), 0, 1.07, 0, 0, Math.PI / 4, Math.PI); break;
+      default: break;
+    }
+    return g;
+  };
+  if (NEW_ORNAMENTS.has(L.ornament)) { const o = orn(L.ornament); o.position.set(0, roofY, roofZ); body.add(o); }
+
   // Feux
   const lightMat = ghost ? paint : new THREE.MeshBasicMaterial({ color: '#fff4d6', toneMapped: false });
   const tailMat = ghost ? paint : new THREE.MeshBasicMaterial({ color: '#ff3355', toneMapped: false });
@@ -258,7 +323,10 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
     const spin = new THREE.Group();
     spin.add(new THREE.Mesh(tireGeo, rubber));
     spin.add(new THREE.Mesh(rimGeo, rimMat));
-    if (L.wheels === 'spoke') {
+    if (L.wheels === 'snow') {        // chaînes à neige : deux anneaux blancs autour du pneu
+      for (const dx of [-0.1, 0.1]) { const c = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.028, 4, 10), rimMat); c.rotation.y = Math.PI / 2; c.position.x = dx; spin.add(c); }
+    }
+    if (L.wheels === 'spoke' || L.wheels === 'snow') {
       for (let i = 0; i < 4; i++) {
         const sp = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.05, 0.62), rimMat);
         sp.rotation.x = (i / 4) * Math.PI; spin.add(sp);
@@ -351,6 +419,7 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
     const t = L.ornament === 'flag' ? new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.34), decalMat) : new THREE.Mesh(new THREE.SphereGeometry(0.06, 5, 4), lamp);
     t.position.set(0.3, 2.1, L.ornament === 'flag' ? 1.55 : 1.85); t.rotation.y = Math.PI / 2; bikeBody.add(t);
   }
+  if (NEW_ORNAMENTS.has(L.ornament)) { const o = orn(L.ornament); o.position.set(0, 2.5, 0.2); o.scale.setScalar(0.55); bikeBody.add(o); }
   const bikeFlames = [];
   for (const s of [-0.2, 0.2]) {
     const f = new THREE.Mesh(new THREE.ConeGeometry(0.13, 1, 6), flameMat);

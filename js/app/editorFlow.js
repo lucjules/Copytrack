@@ -47,7 +47,7 @@ export const editorFlowMethods = {
       [L('ed.nextPiece'), 'Pièce suivante (Maj : précédente)'],
       ['Q', 'Sélection de zone'],
       [L('ed.inspect'), 'Inspecter (propriétés, gizmos)'],
-      ['Ctrl + D', 'Dupliquer la pièce inspectée'],
+      ['Ctrl + D', 'Dupliquer toute la zone sélectionnée (ou la pièce inspectée)'],
       ['Ctrl + C / X / V / A', 'Copier / couper / coller / tout'],
       [L('ed.levelView'), 'Vue par niveau'],
       [L('ed.verify'), 'Vérifier le circuit'],
