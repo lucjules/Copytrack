@@ -38,10 +38,11 @@ rejeu) et Node (outils, tests). `PHYS_VER` lie records, replays, fantômes, clas
 | Suite | Résultat |
 |---|---|
 | `npm test` (avant l'audit) | 85 fichiers, 1 085 vérifications, 0 échec |
-| `npm test` (après) | **88 fichiers, 1 100+ vérifications, 0 échec** |
+| `npm test` (après) | **88 fichiers, 1 108 vérifications, 0 échec** |
 | `npm run test:browser` | `test-browser` 54 essais, `test-browser-i18n` 9, **`test-browser-audit` 8** : 0 échec |
 | `npm run test:sql` (PostgreSQL 16 local jetable) | 181 vérifications + concurrence + 15b + retour arrière : tout passe ; **étape 16** : 11 contrôles de droits, 14 parcours avant et après |
 | `npm run lint` | 0 erreur |
+| `npm run test:deno` | mathématiques déterministes et empreinte de la physique (`PHYS_VER` 34, 193 scénarios) : identiques à Node |
 | Exploration physique | 5 000 circuits distincts tirés au hasard, ~30 millions de pas après correction (21 millions avant), invariants à chaque pas |
 | Grille des revêtements | 41 760 simulations de 12 s (13 revêtements × réglages × 4 véhicules × 5 règles × 72 départs) |
 | Exploration de l'éditeur | 150 000 opérations au hasard (1 500 séquences × 100), structure et historique vérifiés après chacune : 0 anomalie après correction |
@@ -50,8 +51,8 @@ rejeu) et Node (outils, tests). `PHYS_VER` lie records, replays, fantômes, clas
 ### Environnements réellement utilisés
 
 Node 22.23 (Linux), Chromium 1243 sans écran via Playwright avec **WebGL logiciel** (SwiftShader), PostgreSQL 16 local, API de gestion Supabase en lecture seule.
-**Non disponibles, donc non testés** : Firefox, Safari, un vrai téléphone, un vrai processeur graphique, Deno (`npm run test:deno` non lancé), un réseau réel pour le
-multijoueur.
+Deno 2.9.6 (`npm run test:deno` : mathématiques et empreinte de la physique 34 identiques à Node). **Non disponibles, donc non testés** : Firefox, Safari, un vrai
+téléphone, un vrai processeur graphique, un réseau réel pour le multijoueur.
 
 ## B. Bugs découverts
 
@@ -216,7 +217,7 @@ CHANGELOG).
 
 - **Non corrigés, demandent ta décision** : rebond sur place (PHY-7) ; étape 15b ; étape 16 ; longueur du mot de passe côté serveur ; cibles tactiles de l'éditeur.
 - **Éditeur** : annuler ne restaure pas le rectangle de sélection (le circuit, lui, est exact) ; coller par-dessus le départ le retire sans le dire (le circuit se retrouve sans départ, signalé seulement à l'essai) ; « ranger dans un groupe » remplace les objets des pièces (la pièce inspectée peut ne plus être celle du circuit) — constatés à la lecture, **non reproduits dans le navigateur, non corrigés**.
-- **Non testés** : Firefox, Safari, appareil tactile réel, manette, multijoueur à travers un vrai réseau et relais TURN, comptes sur le vrai serveur (création, mauvais mot de passe, session expirée : couverts seulement par le faux Supabase des tests existants), perte de connexion pendant une sauvegarde au-delà des tests existants, import / export de fichier, replay theater, académie, compétition, saisons, export vidéo, sons et klaxons à l'oreille, déterminisme sous Deno pour la physique 34 (`npm run test:deno` : à lancer ; l'empreinte dans Chromium, elle, est vérifiée par `test-browser`).
+- **Non testés** : Firefox, Safari, appareil tactile réel, manette, multijoueur à travers un vrai réseau et relais TURN, comptes sur le vrai serveur (création, mauvais mot de passe, session expirée : couverts seulement par le faux Supabase des tests existants), perte de connexion pendant une sauvegarde au-delà des tests existants, import / export de fichier, replay theater, académie, compétition, saisons, export vidéo, sons et klaxons à l'oreille.
 - **Inspection visuelle partielle** : voir C.
 - **Fragilité relevée** : une fenêtre peut s'ouvrir pendant une course en multijoueur sans la mettre en pause (voulu : les autres courent).
 
@@ -227,7 +228,7 @@ CHANGELOG).
 | Physique au sol, revêtements, basses vitesses | **VALIDÉE AVEC RÉSERVES** (rebond sur place, équilibres voulus) |
 | Collisions (bordures, obstacles, verre, dalles) | **VALIDÉE AVEC RÉSERVES** (bout de route ouvert ; dalles traversées en gravité inversée, voulu) |
 | Gravité inversée, sens des commandes | **VALIDÉE** |
-| Déterminisme, replays, vérification serveur (Node, Chromium) | **VALIDÉE** ; sous Deno pour la physique 34 : **NON TESTÉE** |
+| Déterminisme, replays, vérification serveur (Node, Deno, Chromium : même empreinte) | **VALIDÉE** |
 | Checkpoints, retours, tours | **VALIDÉE AVEC RÉSERVES** (checkpoint aérien : retour à vitesse nulle) |
 | Éditeur : poser, déplacer, pivoter, Ctrl+D, niveaux, copier-coller, groupes, annuler / rétablir | **VALIDÉE AVEC RÉSERVES** (sélection non restaurée par annuler ; coller sur le départ) |
 | Éditeur : décorations, rotations X / Y / Z, pot de peinture, logique, import / export | **NON TESTÉE** par cet audit (tests existants seulement) |
