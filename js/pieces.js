@@ -133,17 +133,37 @@ for (const [pre, size, mir, lab] of [['cvd', 1, 1, 'serré'], ['cvdBig', 2, 1, '
   for (const r of RISES) gen(pre + rtag(r), { label: `Virage descendant ${lab} · ${rtxt(r)}`, kind: 'arc', size, rise: -r, ...(mir < 0 ? { mirror: -1 } : {}) });
 }
 
-// Orientation d'une route : 0 sol, 1 mur gauche (le mur est à gauche du pilote : le toit de la voiture pointe vers la droite),
-// 2 mur droit, 3 plafond (la route retournée : drapeau v, roulable en gravité inversée). Roulis autour de l'axe de la route :
-// normale = cos ψ · (haut de la route) + sin ψ · (droite de la route), ψ = +90° pour un mur gauche, -90° pour un mur droit.
+// Phase 3 : rubans qu'on peut rouler autour de leur axe d'entrée (loopings sur un mur / latéraux / inclinés, vrilles et tire-bouchons inclinés…).
+for (const id of Object.keys(PIECES)) {
+  const P = PIECES[id];
+  if (P.kind === 'loop' || id === 'twist' || id === 'cork' || id === 'corkL') P.rollable = true;
+}
+
+// Orientation d'une route : roulis ψ autour de l'axe de la route : normale = cos ψ · (haut de la route) + sin ψ · (droite de la route).
+// Ids d'orientation (utilisés par les transitions et la matrice) :
+//   0 sol · 1 mur gauche (+90°) · 2 mur droit (−90°) · 3 plafond (±180°, drapeau v) ·
+//   4 incliné gauche (+45°) · 5 incliné droit (−45°) · 6 surplomb gauche (+135°) · 7 surplomb droit (−135°)   [phase 3]
+// La pièce porte son roulis dans `tile.o` : 1, 2 (90°, depuis la 0.9.3) et, depuis la phase 3, 3 (+45°), 4 (−45°), 5 (+135°), 6 (−135°). Le plafond reste le drapeau `v`.
 export const ORIENTS = [
   { id: 0, label: 'Sol' }, { id: 1, label: 'Mur gauche' }, { id: 2, label: 'Mur droit' }, { id: 3, label: 'Plafond' },
+  { id: 4, label: 'Incliné gauche 45°' }, { id: 5, label: 'Incliné droit 45°' }, { id: 6, label: 'Surplomb gauche 135°' }, { id: 7, label: 'Surplomb droit 135°' },
 ];
-export const oriAngle = (code, other = 0) => (code === 1 ? Math.PI / 2 : code === 2 ? -Math.PI / 2 : code === 3 ? (other === 2 ? -Math.PI : Math.PI) : 0);
-export const tileOri = (tile) => (tile.v ? 3 : (tile.o | 0));
+const D45 = Math.PI / 4;
+const ORI_ANGLE = [0, 2 * D45, -2 * D45, 4 * D45, D45, -D45, 3 * D45, -3 * D45];      // par id d'orientation (le plafond : voir oriAngle)
+// Valeur de tile.o -> id d'orientation, et inverse.
+export const O_TO_ORI = [0, 1, 2, 4, 5, 6, 7];
+export const ORI_TO_O = [0, 1, 2, 0, 3, 4, 5, 6];
+export const MAX_O = 6;
+export const oriAngle = (code, other = 0) => (code === 3 ? (other === 2 || other === 5 || other === 7 ? -Math.PI : Math.PI) : ORI_ANGLE[code] || 0);
+// Roulis (rad) d'une pièce posée avec tile.o.
+export const rollOfO = (o) => ORI_ANGLE[O_TO_ORI[o | 0]] || 0;
+export const tileOri = (tile) => (tile.v ? 3 : O_TO_ORI[tile.o | 0] || 0);
 // Passages d'une orientation à une autre : « 01 » = du sol au mur gauche… Franche : 1 case ; douce : 2×2 (la route dans la colonne de gauche).
 export const ROLL_PASSAGES = ['01', '10', '02', '20', '13', '31', '23', '32'];
-const ORI_NAME = ['sol', 'mur gauche', 'mur droit', 'plafond'];
+// Phase 3 : passages de 45° entre deux orientations voisines de l'anneau 0 · 4 · 1 · 6 · 3 · 7 · 2 · 5 · 0 (une case, progressifs : deux fois moins de roulis qu'une franche).
+export const ROLL_PASSAGES45 = ['04', '40', '41', '14', '16', '61', '63', '36', '37', '73', '72', '27', '25', '52', '50', '05'];
+const ORI_NAME = ['sol', 'mur gauche', 'mur droit', 'plafond', 'incliné gauche', 'incliné droit', 'surplomb gauche', 'surplomb droit'];
+export const ORI_NAMES = ORI_NAME;
 for (const long of [false, true]) {
   for (const pas of ROLL_PASSAGES) {
     const a = +pas[0], b = +pas[1];
@@ -155,6 +175,13 @@ for (const long of [false, true]) {
       ...(a === 3 || b === 3 ? { autoFlip: true } : {}),
     });
   }
+}
+// (phase 3 : à la suite de GEN_IDS dans PIECE_ORDER, jamais avant : l'index d'un type est celui des circuits sauvegardés)
+export const GEN45_IDS = [];
+const gen45 = (id, def) => { PIECES[id] = def; GEN45_IDS.push(id); };
+for (const pas of ROLL_PASSAGES45) {
+  const a = +pas[0], b = +pas[1];
+  gen45(`tr${pas}s`, { label: `Transition ${ORI_NAME[a]} → ${ORI_NAME[b]} (45°)`, kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, roll: [a, b], rollLong: false, noRails: true });
 }
 // Anciens types de la 0.9.2 (routes « sur le côté ») : toujours lisibles, convertis à la lecture en pièce + orientation.
 //   rollL / rollR : transitions sol → mur droit / gauche ;  sideL / sideR : ligne droite sur un mur droit / gauche.
@@ -187,6 +214,8 @@ export const PIECE_ORDER = [
   'crv05', 'crv1', 'crv2', 'crv4', 'rollL', 'rollR', 'sideL', 'sideR',
   // 0.9.3 (à la suite : ne jamais réordonner ; l'ordre est celui de GEN_IDS, vérifié par les tests)
   ...GEN_IDS,
+  // Phase 3 (0.9.62) : transitions de 45° (à la suite : ne jamais réordonner)
+  ...GEN45_IDS,
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -271,7 +300,9 @@ export function isSideTile(tile) {
 }
 
 // Une ligne ou un virage posé sur un mur (tile.o) se parcourt en mode ruban, comme une transition.
-export const isOriented = (tile) => !!tile.o && (PIECES[tile.t].kind === 'line' || PIECES[tile.t].kind === 'arc');
+export const isOriented = (tile) => !!tile.o && (PIECES[tile.t].kind === 'line' || PIECES[tile.t].kind === 'arc' || !!PIECES[tile.t].rollable);
+// Branché par ribbons.js (qui connaît la géométrie) : (type, val) -> la pièce roulée tient-elle dans son empreinte ?
+export const rollFitHook = { fits: null };
 
 // Sol roulable (physique « au sol ») ? Les rubans, les routes sur un mur et les routes à l'envers ne le sont pas.
 export function isFloor(tile) {
@@ -350,7 +381,13 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
   if (p.kind === 'ring' || p.kind === 'fork') return false;
   // 0.9.3 : orientation « mur gauche / droit » : une ligne ou un virage ordinaire peut être posé sur un mur (val 1 = gauche, 2 = droit).
   // Une route sur un mur n'a ni tunnel, ni checkpoint, ni anneau, ni mouvement, ni bordures ; le plafond (v) se choisit à part.
-  if (flag === 'o') return lineLike && !p.special && !p.noRails && !hasConflict('o', tile);
+  // Phase 3 : le roulis (val 1..6 : ±90°, ±45°, ±135°) s'applique à toute ligne / tout virage ordinaire ET aux rubans « roulables » (loopings, tire-bouchons, vrilles, virages relevés)
+  // dont la géométrie roulée tient dans l'empreinte de la pièce (ribbons.js : rollFits, branché par rollFitHook).
+  if (flag === 'o') {
+    if (!(val >= 1 && val <= MAX_O) || p.special || p.noRails || hasConflict('o', tile)) return false;
+    if (lineLike) return true;
+    return !!p.rollable && (!rollFitHook.fits || rollFitHook.fits(type, val));
+  }
   if (flag === 'nb') return !p.noRails && (lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube')));
   if (flag === 'tn') return lineLike && !p.special && !hasConflict('tn', tile);
   // Pièce mobile : route « simple » (droite, virage, pente, plateforme), pas à l'envers, pas de checkpoint dessus.

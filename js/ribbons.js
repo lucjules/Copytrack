@@ -12,8 +12,8 @@
 //  cork*   : tire-bouchon (hélice d'un tour)
 // Un ruban peut avoir une section courbe : kc (courbure transversale), hw (demi-largeur
 // mesurée le long de la section) et wrap (section fermée : on peut en faire le tour).
-import { HALF, LEVEL_H, ROAD_HALF } from './constants.js';
-import { PIECES, baseY, arcParams, localToWorld, isOriented, oriAngle, profH, profD } from './pieces.js';
+import { CELL, HALF, LEVEL_H, ROAD_HALF } from './constants.js';
+import { PIECES, baseY, arcParams, localToWorld, isOriented, oriAngle, rollOfO, rollFitHook, MAX_O, profH, profD } from './pieces.js';
 import { dcos, dsin, hypot2, hypot3 } from './dmath.js';
 
 const smooth = (u) => u * u * (3 - 2 * u);
@@ -95,11 +95,11 @@ function rolledNormal(t, psi, o) {
   o.nx = c * ux + s * rx; o.ny = c * uy + s * ry; o.nz = c * uz + s * rz;
 }
 
-// Ligne ou virage posé sur un mur (tile.o : 1 = mur gauche, ψ = +90° ; 2 = mur droit, ψ = -90°) : la chaussée est roulée de 90° autour de
+// Ligne ou virage posé sur un mur (tile.o : 1 = mur gauche, ψ = +90° ; 2 = mur droit, ψ = -90° ; phase 3 : 3 / 4 = ±45°, 5 / 6 = ±135°) : la chaussée est roulée de ψ autour de
 // son axe, partout. L'axe reste celui de la route plate (même ligne centrale, même profil vertical) ; la moitié basse du plan descend de 9 m.
 function buildRolled(tile) {
   const P = PIECES[tile.t];
-  const psi = tile.o === 1 ? Math.PI / 2 : -Math.PI / 2;
+  const psi = rollOfO(tile.o);
   const C = {};
   const half = P.size * HALF;
   const len = P.kind === 'arc' ? hypot2((Math.PI / 2) * arcParams(P).R, P.rise * LEVEL_H) : hypot2(2 * half, P.rise * LEVEL_H);
@@ -114,13 +114,64 @@ function buildRolled(tile) {
   };
 }
 
+// ---- Phase 3 : roulis générique d'un ruban ---------------------------------------------------------------------------------------------------
+// Un ruban (looping, vrille, tire-bouchon, virage relevé) posé avec tile.o est son propre ruban « à plat » tourné de ψ autour de l'axe de son ENTRÉE (la droite qui passe par
+// le point d'entrée, parallèle au sens d'entrée, ici l'axe z local) : position et normale sont tournées d'un même angle, donc le raccord d'entrée est celui d'une route roulée de ψ
+// (le roulis d'une ligne ordinaire) et rien d'autre ne change : une règle pour toutes les pièces, sans exception par pièce. Le décalage latéral d'un looping devient un décalage
+// vertical (une hélice), le bombé d'un looping devient latéral (un looping « sur un mur » est un cercle dans le plan horizontal).
+function rollWrap(inner, psi) {
+  const c = dcos(psi), s = dsin(psi);
+  const e = {};
+  inner.pos(0, e);
+  const x0 = e.x, y0 = e.y;
+  return {
+    ...inner,
+    minU: 0.5,      // (comme une ligne sur un mur : l'appui ne lâche jamais la voiture, la vitesse décide via SIDE_HOLD)
+    pos(u, o) {
+      inner.pos(u, o);
+      const dx = o.x - x0, dy = o.y - y0;
+      o.x = x0 + dx * c + dy * s;
+      o.y = y0 - dx * s + dy * c;
+      const nx = o.nx, ny = o.ny;
+      o.nx = nx * c + ny * s;
+      o.ny = -nx * s + ny * c;
+    },
+  };
+}
+
+// Looping roulé : les deux voies d'accès au sol deviennent des tronçons de RUBAN (la route est sur un mur), de la bordure de la pièce au début du cercle puis du cercle à l'autre bordure.
+function loopWithLeads(tile, P) {
+  const base = baseY(tile), half = P.size * HALF, m = P.mirror;
+  const circle = buildBase(tile);
+  const Lc = circle.len, Ll = half, tot = 2 * Ll + Lc;
+  const f1 = Ll / tot, f2 = (Ll + Lc) / tot;
+  return {
+    minU: 0.5,
+    len: tot,
+    pos(u, o) {
+      if (u < f1) { o.x = -m * P.lane; o.y = base; o.z = half - Ll * (u / f1); o.nx = 0; o.ny = 1; o.nz = 0; }
+      else if (u > f2) { o.x = m * P.lane; o.y = base; o.z = -Ll * ((u - f2) / (1 - f2)); o.nx = 0; o.ny = 1; o.nz = 0; }
+      else circle.pos((u - f1) / (f2 - f1), o);
+    },
+  };
+}
+
 function build(tile) {
+  const P = PIECES[tile.t];
+  if (isOriented(tile)) {
+    if (P.kind === 'line' || P.kind === 'arc') return buildRolled(tile);
+    const flat = { ...tile, o: 0 };
+    return rollWrap(P.kind === 'loop' ? loopWithLeads(flat, P) : buildBase(flat), rollOfO(tile.o));
+  }
+  return buildBase(tile);
+}
+
+function buildBase(tile) {
   const P = PIECES[tile.t];
   const base = baseY(tile);
   const half = P.size * HALF;
   const R90 = 2 * LEVEL_H;
 
-  if (isOriented(tile)) return buildRolled(tile);
   if (P.kind === 'loop') {
     const total = Math.PI * 2 * P.turns;
     const { R, lane, mirror: m } = P;
@@ -324,12 +375,12 @@ function centerlineLocal(tile, n) {
       pts.push([o.x, o.y, o.z, flag]);
     }
   };
-  if (p.kind === 'loop') {
+  if (p.kind === 'loop' && !tile.o) {
     const m = p.mirror;
     for (let i = 0; i < 4; i++) pts.push([-m * p.lane, base, half - (half * i) / 4, 0]);
     sampleRibbon(32 * p.turns);
     for (let i = 1; i <= 4; i++) pts.push([m * p.lane, base, -(half * i) / 4, 0]);
-  } else if (p.kind === 'ribbon') {
+  } else if (p.kind === 'ribbon' || p.kind === 'loop') {
     const rib = ribbonOf(tile, true);
     // drapeau 2 : virage relevé (le pilote automatique doit y doser sa vitesse).
     sampleRibbon(Math.max(8, Math.round(rib.len / 3)), p.arc ? 2 : 1);
@@ -357,4 +408,62 @@ export function centerlineWorld(tile, n, reverse = false) {
     return [w.x, y, w.z, f];
   });
   return reverse ? out.reverse() : out;
+}
+
+// ---- Phase 3 : emprise d'un ruban roulé -------------------------------------------------------------------------------------------------------
+// Étendue verticale (m, relative au niveau de la pièce) et horizontale (m, dans le repère local) d'un ruban, bords de la chaussée compris : sert à réserver les niveaux au-dessus et
+// au-dessous (Track.range), à décider si un roulis tient dans l'empreinte de la pièce (rollFits) et à placer les obstacles. Calculé une fois par géométrie.
+const extentCache = new WeakMap();
+const FR = {};
+export function ribbonExtent(tile) {
+  const rib = ribbonOf(tile);
+  if (!rib) return null;
+  let e = extentCache.get(rib);
+  if (e) return e;
+  const base = baseY(tile);
+  e = { minY: Infinity, maxY: -Infinity, minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity };
+  const n = 48;
+  for (let i = 0; i <= n; i++) {
+    frameLocal(rib, i / n, FR);
+    for (const sg of [-1, 0, 1]) {
+      const w = sg * Math.min(FR.hw || ROAD_HALF, ROAD_HALF);
+      const x = FR.px + FR.rx * w, y = FR.py + FR.ry * w - base, z = FR.pz + FR.rz * w;
+      e.minX = Math.min(e.minX, x); e.maxX = Math.max(e.maxX, x);
+      e.minY = Math.min(e.minY, y); e.maxY = Math.max(e.maxY, y);
+      e.minZ = Math.min(e.minZ, z); e.maxZ = Math.max(e.maxZ, z);
+    }
+  }
+  extentCache.set(rib, e);
+  return e;
+}
+
+// Le roulis `val` (1..MAX_O) de la pièce `type` tient-il dans l'empreinte (size × size cases) ? Le ruban roulé ne doit pas sortir des cases de la pièce : la physique et l'éditeur
+// retrouvent un ruban par les cases qu'il occupe (index spatial), une portion hors empreinte serait invisible pour les autres pièces et pour les obstacles.
+const fitCache = new Map();
+export function rollFits(type, val) {
+  const key = type + '/' + val;
+  let r = fitCache.get(key);
+  if (r !== undefined) return r;
+  const P = PIECES[type];
+  if (!P || !P.rollable || !(val >= 1 && val <= MAX_O)) { fitCache.set(key, false); return false; }
+  const tile = { t: type, l: 0, o: val, v: 0 };
+  const e = ribbonExtent(tile), half = P.size * HALF;
+  r = !!e && e.minX >= -half - 0.5 && e.maxX <= half + 0.5 && e.minZ >= -half - 0.5 && e.maxZ <= half + 0.5;
+  // Le raccord de sortie doit tomber sur la grille (décalage latéral en cases entières, hauteur en demi-niveaux) : sans cela aucune pièce ne peut se poser derrière.
+  if (r) {
+    const rib = ribbonOf(tile), a = {}, b = {};
+    rib.pos(0, a); rib.pos(1, b);
+    const dx = b.x - a.x, dy = b.y - a.y;
+    r = Math.abs(dx - Math.round(dx / CELL) * CELL) < 1 && Math.abs(dy - Math.round(dy / (LEVEL_H / 2)) * (LEVEL_H / 2)) < 0.4;
+  }
+  fitCache.set(key, r);
+  return r;
+}
+rollFitHook.fits = rollFits;
+
+// Niveaux réservés par un ruban roulé : [au-dessous, au-dessus] (entiers, au moins 2 : le plan vertical mesure 24 m de large).
+export function rollLevels(tile) {
+  const e = ribbonExtent(tile);
+  if (!e) return [2, 2];
+  return [Math.max(2, Math.ceil(-e.minY / LEVEL_H - 1e-6)), Math.max(2, Math.ceil(e.maxY / LEVEL_H - 1e-6))];
 }

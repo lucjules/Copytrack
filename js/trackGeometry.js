@@ -206,7 +206,7 @@ function boatRamp(strip, tile) {
 export function stripsFor(tile) {
   const p = PIECES[tile.t];
   const base = baseY(tile);
-  if (p.kind === 'loop') {
+  if (p.kind === 'loop' && !tile.o) {
     const m = p.mirror, half = p.size * HALF;
     return [
       lineStrip(-m * p.lane, half, 0, base, base, 3),
@@ -864,7 +864,7 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
   } else if ((ck === 'ring' || tile.tb) && p.kind !== 'ring') ringMesh(gb, glow, tile);       // anneau (checkpoint aérien ou turbo) posé en option sur une route
   else if (ck === 'pad') checkpointPad(gb, glow, tile);       // checkpoint sur une plateforme : balise au sol (pas de sens de route)
   else if ((p.special === 'start' || p.special === 'finish' || ck === 'gate') && p.kind !== 'ring') gate(gb, glow, tile);
-  if (p.kind === 'loop') loopTowers(gb, glow, tile);
+  if (p.kind === 'loop' && !tile.o) loopTowers(gb, glow, tile);
 
   // Piliers (pas sous un ruban vertical / une route à l'envers)
   if ((tile.l > 0 || p.rise > 0) && p.kind !== 'ribbon' && p.kind !== 'ring' && !tile.v && !tile.o && !tile.mv) {

@@ -1,8 +1,8 @@
 // Modèle de circuit : liste de pièces posées sur une grille, index spatial,
 // requêtes de surface pour la physique, sérialisation en code partageable.
 import { CELL, DIRS, MAX_LEVEL, LEVEL_H, MAX_DECOS, VEHICLES } from './constants.js';
-import { PIECES, PIECE_ORDER, SURFACE_CODES, SURFACE_ALIAS, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, forkBranchX, rotVec, moverParams, clampMover, THEMES, LEGACY_TILE } from './pieces.js';
-import { centerlineWorld } from './ribbons.js';
+import { PIECES, MAX_O, PIECE_ORDER, SURFACE_CODES, SURFACE_ALIAS, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, forkBranchX, rotVec, moverParams, clampMover, THEMES, LEGACY_TILE } from './pieces.js';
+import { centerlineWorld, rollLevels } from './ribbons.js';
 import { isObstacle, buildObstacleGrid } from './obstacles.js';
 import { DECO_ORDER } from './decoData.js';
 import { packDecoParts, unpackDecoParts } from './customDeco.js';
@@ -108,8 +108,10 @@ export class Track {
     const p = PIECES[t.t];
     const up = Math.max(0, p.rise || 0), down = Math.min(0, p.rise || 0);
     // Un checkpoint en option réserve la hauteur de son portique (1 niveau) ou de son anneau (2 niveaux).
-    const h = up + Math.max(p.clearance || 0, t.cp === 2 || t.tb ? 2 : t.cp === 1 ? 1 : 0, t.o ? 2 : 0);
-    const below = Math.max(p.below || 0, t.o ? 2 : 0);       // pièces qui descendent sous leur niveau (plan vertical : 9 m plus bas)
+    let h = up + Math.max(p.clearance || 0, t.cp === 2 || t.tb ? 2 : t.cp === 1 ? 1 : 0, t.o ? 2 : 0);
+    let below = Math.max(p.below || 0, t.o ? 2 : 0);       // pièces qui descendent sous leur niveau (plan vertical : 9 m plus bas)
+    // Phase 3 : un ruban roulé (looping sur un mur, vrille inclinée…) occupe l'étendue verticale de sa géométrie roulée (le décalage d'un looping devient une hélice de plusieurs niveaux).
+    if (t.o && p.rollable) { const [lo, hi] = rollLevels(t); below = Math.max(below, lo); h = Math.max(h, hi); }
     // Une pièce à l'envers est retournée sous son niveau : elle occupe les niveaux en dessous.
     if (t.v) return [t.l - h, t.l - down + below];
     return [t.l + down - below, t.l + h + (t.mv === 1 ? Math.ceil(moverParams(t, MP).amp) : 0)];   // l'ascenseur monte de 2 niveaux (réglable)
@@ -138,7 +140,7 @@ export class Track {
     };
     tile.v = t.v && flagAllowed(type, 'v') ? 1 : 0;
     // Orientation (mur gauche 1 / droit 2) : exclusive du plafond, du tunnel, du checkpoint, de l'anneau et du mouvement.
-    tile.o = (ori === 1 || ori === 2) && !tile.v && flagAllowed(type, 'o', tile, ori) ? ori : 0;
+    tile.o = ori >= 1 && ori <= MAX_O && !tile.v && flagAllowed(type, 'o', tile, ori) ? ori : 0;
     tile.nb = PIECES[type].noRails || (t.nb && flagAllowed(type, 'nb')) ? 1 : 0;
     tile.tn = t.tn && flagAllowed(type, 'tn', tile) ? 1 : 0;
     tile.mv = t.mv && flagAllowed(type, 'mv', tile) ? (t.mv | 0) & 3 : 0;
@@ -662,14 +664,14 @@ export function scriptTrack(name, script, opts = {}) {
 
   for (const tok of script.trim().split(/\s+/)) {
     // [id] : n'importe quelle pièce par son identifiant (ex. [dn1] [cro2] [tr01s] [cvd1]) ; le niveau suit la pente de la pièce.
-    const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>]*)$/.exec(tok);
-    const m = gm ? [tok, '@' + gm[1], gm[2], gm[3], gm[4], gm[5]] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>]*)$/.exec(tok);
+    const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>(){}]*)$/.exec(tok);
+    const m = gm ? [tok, '@' + gm[1], gm[2], gm[3], gm[4], gm[5]] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>(){}]*)$/.exec(tok);
     if (!m) throw new Error('Instruction invalide : ' + tok);
     let op = m[1];
     const n = m[2] ? parseInt(m[2], 10) : 1;
     cur = {
       s: '', p: 0, v: m[5].includes('^') ? 1 : 0, nb: m[5].includes('_') ? 1 : 0, tn: m[5].includes('#') ? 1 : 0, mv: m[5].includes('~') ? 1 : m[5].includes('=') ? 2 : m[5].includes('%') ? 3 : 0,
-      o: m[5].includes('<') ? 1 : m[5].includes('>') ? 2 : 0,      // < : mur gauche, > : mur droit
+      o: m[5].includes('<') ? 1 : m[5].includes('>') ? 2 : m[5].includes('(') ? 3 : m[5].includes(')') ? 4 : m[5].includes('{') ? 5 : m[5].includes('}') ? 6 : 0,      // < : mur gauche, > : mur droit ; ( ) : incliné 45° gauche / droit ; { } : surplomb 135° gauche / droit
     };
     cur.mvTok = cur.mv ? ++moverTok : 0;
     if (m[3]) {

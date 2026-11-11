@@ -13,8 +13,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { Track } from '../js/track.js';
-import { PIECES, PIECE_ORDER, LEGACY_TILE, flagAllowed } from '../js/pieces.js';
-import { tileEnds, compatiblePlacement, rollNameOf, endsTouch, rollGap, ROLL_TOLERANCE } from '../js/connect.js';
+import { PIECES, PIECE_ORDER, LEGACY_TILE, flagAllowed, ORI_NAMES } from '../js/pieces.js';
+import { oriIdOfEnd, optsOfOri, transitionPath, entryOrientation } from '../js/orient.js';
+import { tileEnds, compatiblePlacement, endsTouch, rollGap, ROLL_TOLERANCE } from '../js/connect.js';
 import { centerlineWorld } from '../js/ribbons.js';
 import { CarPhysics } from '../js/physics.js';
 import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
@@ -28,15 +29,17 @@ export const COLS = [
   { id: 'murG', label: 'Mur gauche', opts: { o: 1 } },
   { id: 'murD', label: 'Mur droit', opts: { o: 2 } },
   { id: 'plafond', label: 'Plafond', opts: { v: 1 } },
+  // Phase 3 : orientations intermédiaires (roulis ±45° et ±135°)
+  { id: 'incG', label: 'Incliné gauche 45°', opts: { o: 3 } },
+  { id: 'incD', label: 'Incliné droit 45°', opts: { o: 4 } },
+  { id: 'surG', label: 'Surplomb gauche 135°', opts: { o: 5 } },
+  { id: 'surD', label: 'Surplomb droit 135°', opts: { o: 6 } },
 ];
 export const SPEEDS = [80, 150, 250];       // km/h de croisière
 const L0 = 12;                                // niveau de la chaîne : de la place sous la route (murs : 2 niveaux, pièces descendantes) et au-dessus du terrain
 
-const nameOfEnd = (e) => {
-  const n = [e.nx, e.ny, e.nz], t = [e.exit ? e.dx : -e.dx, e.exit ? e.dy : -e.dy, e.exit ? e.dz : -e.dz];
-  return Math.abs(n[1]) > 0.7 ? (n[1] > 0 ? 'sol' : 'plafond') : rollNameOf(n, t);
-};
-const OPTS_OF = { sol: {}, 'mur gauche': { o: 1 }, 'mur droit': { o: 2 }, plafond: { v: 1 } };
+const oriOfEnd = oriIdOfEnd;
+const nameOfEnd = (e) => { const i = oriOfEnd(e); return i === null ? null : ORI_NAMES[i]; };
 
 // ---- Construction d'une chaîne ----------------------------------------------------------------------------------------------------------
 class Chain {
@@ -61,29 +64,26 @@ class Chain {
     return added;
   }
   orient() { return this.end ? nameOfEnd(this.end) : null; }
+  orientId() { return this.end ? oriOfEnd(this.end) : null; }
   // Route droite dans l'orientation courante.
-  straight() { return this.add('straight', OPTS_OF[this.orient()] || {}); }
-  // Amène la route au sol (depuis un mur ou le plafond), ou du sol vers `target`.
+  straight() { return this.add('straight', optsOfOri(this.orientId())); }
+  // Amène la route au sol (depuis un mur, une inclinaison ou le plafond).
   toFloor() {
-    const o = this.orient();
-    if (o === 'sol' || !o) return;
-    if (o === 'mur gauche') this.add('tr10s');
-    else if (o === 'mur droit') this.add('tr20s');
-    else if (o === 'plafond') this.add('twist', { s: 'flip' }, true);
+    const o = this.orientId();
+    if (o === 0 || o === null) return;
+    if (o === 3) { this.add('twist', { s: 'flip' }, true); return; }
+    const path = transitionPath(o, 0);
+    if (!path) { this.fail = `aucun passage de « ${this.orient()} » au sol`; return; }
+    for (const id of path) this.add(id);
   }
+  // Du sol vers l'orientation d'id `target`.
   fromFloor(target) {
-    if (target === 'sol') return;
-    if (target === 'mur gauche') this.add('tr01s');
-    else if (target === 'mur droit') this.add('tr02s');
-    else if (target === 'plafond') this.add('twist', { s: 'flip' });
+    if (target === 0) return;
+    if (target === 3) { this.add('twist', { s: 'flip' }); return; }
+    const path = transitionPath(0, target);
+    if (!path) { this.fail = `aucun passage du sol vers l'orientation ${target}`; return; }
+    for (const id of path) this.add(id);
   }
-}
-
-// Orientation d'entrée d'une pièce (d'après la normale de son entrée) ; null si elle n'est pas lisible (route verticale).
-function entryOrientation(type, opts) {
-  const t = Track.normalize({ t: type, x: 0, z: 0, l: L0, r: 0, s: '', p: 0, ...opts });
-  const e = tileEnds(t).find((x) => x.entry);
-  return e ? nameOfEnd(e) : null;
 }
 
 export function buildChain(type, opts) {
@@ -93,9 +93,9 @@ export function buildChain(type, opts) {
   // Montée en L (ramp90 → mur → sommet) : les trois pièces ne se raccordent qu'entre elles (la route y est verticale) : la chaîne les pose toujours ensemble.
   const L = ['ramp90', 'wall', 'crest90'].includes(type);
   const need = entryOrientation(L ? 'ramp90' : type, opts);
-  if (!need) { c.fail = 'orientation d\'entrée illisible'; return c; }
+  if (need === null) { c.fail = 'orientation d\'entrée illisible'; return c; }
   c.fromFloor(need);
-  if (need !== 'sol') c.straight();
+  if (need !== 0) c.straight();
   if (L) {
     c.add('ramp90', opts);
     if (type === 'wall') c.add('wall', opts);
@@ -103,7 +103,7 @@ export function buildChain(type, opts) {
   } else c.add(type, opts);
   c.straight();
   c.toFloor();
-  if (!c.fail && c.orient() !== 'sol') c.fail = `la route finit en « ${c.orient()} » : impossible de revenir au sol`;
+  if (!c.fail && c.orientId() !== 0) c.fail = `la route finit en « ${c.orient()} » : impossible de revenir au sol`;
   c.add('straight');
   c.add('finish');
   return c;

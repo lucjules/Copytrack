@@ -5,7 +5,7 @@
 // Une extrémité : { x, y, z } position, { dx, dy, dz } direction SORTANTE (hors de la pièce), { nx, ny, nz } normale de la route en ce point,
 // `entry` / `exit` pour une pièce à deux bouts (sens nominal : de l'entrée sud vers la sortie nord de son repère local).
 import { CELL, LEVEL_H } from './constants.js';
-import { PIECES, baseY, localToWorld, rotVec, isRibbon, forkBranchX } from './pieces.js';
+import { PIECES, ORI_NAMES, baseY, localToWorld, rotVec, isRibbon, forkBranchX } from './pieces.js';
 import { centerlineWorld, ribbonOf } from './ribbons.js';
 import { hypot3 } from './dmath.js';
 
@@ -55,6 +55,11 @@ export function endsTouch(e, f) {
 
 // Angle (rad, 0 à π) entre les normales de la route de part et d'autre d'un raccord : 0 = même roulis ; ≈ 1,57 = sol contre mur ; ≈ 3,14 = endroit contre envers.
 export function rollGap(e, f) {
+  // Phase 3 : on compare les ROULIS (angle de la normale autour du sens de marche) quand les deux bouts en ont un, pas les normales brutes : une route en pente roulée de 45° a une normale
+  // inclinée de l'angle de la pente par rapport à une route plate roulée de 45°, ce qui n'est pas un raccord manqué (la voiture suit la route, pas le sol).
+  const te = e.exit ? [e.dx, e.dy, e.dz] : [-e.dx, -e.dy, -e.dz], tf = f.entry ? [-f.dx, -f.dy, -f.dz] : [f.dx, f.dy, f.dz];
+  const oe = orientationOf([e.nx, e.ny, e.nz], te), of = orientationOf([f.nx, f.ny, f.nz], tf);
+  if (oe && of) { let d = Math.abs(oe.angle - of.angle); if (d > Math.PI) d = 2 * Math.PI - d; return d; }
   const d = e.nx * f.nx + e.ny * f.ny + e.nz * f.nz;
   return Math.acos(Math.max(-1, Math.min(1, d)));
 }
@@ -63,9 +68,26 @@ export const ROLL_TOLERANCE = 0.35;       // 20° : même seuil que joins.js
 // Nom lisible d'une orientation d'après la normale n et le sens de marche t (horizontal) : un mur est « gauche » quand le toit de la voiture pointe vers
 // la droite du sens de marche (convention de pieces.js : ORIENTS). Une route dont la tangente est verticale n'a pas de gauche ni de droite : null.
 export function rollNameOf(n, t) {
-  if (Math.abs(n[1]) > 0.7) return n[1] > 0 ? 'sol' : 'plafond';
-  if (Math.hypot(t[0], t[2]) < 0.3) return null;
-  return n[0] * -t[2] + n[2] * t[0] > 0 ? 'mur gauche' : 'mur droit';       // droite du sens de marche = t × haut = (-tz, 0, tx)
+  const o = orientationOf(n, t);
+  return o ? o.name : null;
+}
+
+// Phase 3 : orientation d'une route d'après sa normale n et son sens de marche t, au pas de 45° : { id (0 sol, 1 mur gauche, 2 mur droit, 3 plafond, 4 incliné gauche, 5 incliné droit,
+// 6 surplomb gauche, 7 surplomb droit : pieces.js ORIENTS), name, angle (roulis, rad), err (écart au pas de 45° le plus proche, rad) } ; null si la route est verticale (pas de gauche ni de droite).
+const ORI_BY_STEP = { 0: 0, 1: 4, 2: 1, 3: 6, 4: 3, '-1': 5, '-2': 2, '-3': 7, '-4': 3 };
+export function orientationOf(n, t) {
+  const h = Math.hypot(t[0], t[2]);
+  if (h < 0.3) return null;
+  const rx = -t[2] / h, rz = t[0] / h;                       // droite du sens de marche (horizontale)
+  // « Haut de la route » sans roulis : le haut du monde projeté dans le plan perpendiculaire à t (une route en pente n'est pas roulée). Le roulis ψ est l'angle de la normale autour de t.
+  let ux = -t[0] * t[1], uy = 1 - t[1] * t[1], uz = -t[2] * t[1];
+  const ul = Math.hypot(ux, uy, uz) || 1;
+  ux /= ul; uy /= ul; uz /= ul;
+  const side = n[0] * rx + n[2] * rz;                         // composante vers la droite
+  const ang = Math.atan2(side, n[0] * ux + n[1] * uy + n[2] * uz);
+  const step = Math.round(ang / (Math.PI / 4));
+  const id = ORI_BY_STEP[step];
+  return { id, name: ORI_NAMES[id], angle: ang, err: Math.abs(ang - step * (Math.PI / 4)) };
 }
 
 // Cherche la pièce `type` (avec les options `opts`) dont l'ENTRÉE se raccorde à l'extrémité `end` d'une autre pièce : position, hauteur et sens

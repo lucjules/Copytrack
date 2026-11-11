@@ -1,7 +1,7 @@
 // Contenu du panneau selon la sélection : pièce, pièce mobile, caractéristiques, couleurs, décoration.
 // Ces méthodes s'ajoutent au prototype de Inspector (voir inspector.js) : `this` est l'instance.
 import { MAX_LEVEL } from '../constants.js';
-import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, THEMES, MOVER, moverParams, paramText, ORIENTS, tileOri } from '../pieces.js';
+import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, THEMES, MOVER, moverParams, paramText, ORIENTS, ORI_TO_O, tileOri } from '../pieces.js';
 import { FAMILIES, familyOf, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from '../families.js';
 import { styleFor } from '../trackGeometry.js';
 import { DECO_COLORS } from '../decoData.js';
@@ -36,11 +36,11 @@ export const bodyMethods = {
     rows.push(h('div', { class: 'insp-row' }, h('span', {}, 'Cap'), rot));
     const setOri = (n) => {
       if (n === tileOri(t)) return true;
-      const ok = n === 3 ? ed.track.toggleFlag(t, 'v') : ed.track.toggleFlag(t, 'o', n);
+      const ok = n === 3 ? ed.track.toggleFlag(t, 'v') : ed.track.toggleFlag(t, 'o', ORI_TO_O[n]);      // (id d'orientation -> valeur de tile.o : 4 = incliné gauche -> 3…)
       if (!ok) ed.app.ui.flash(n === 3 ? 'Pas la place à l’envers : monte d’abord, ou libère le niveau en dessous.' : n ? 'Pas la place pour un mur : la route descend de 2 niveaux sous son niveau (monte d’abord, libère le niveau en dessous).' : 'Pas la place pour revenir au sol.');
       return ok || false;
     };
-    const oriOff = (n) => (n === 1 || n === 2 ? !flagAllowed(t.t, 'o', null, n) : false);
+    const oriOff = (n) => (n === 0 || n === 3 ? false : !flagAllowed(t.t, 'o', null, ORI_TO_O[n]));
     const roll = h('div', { class: 'insp-rot', role: 'group', 'aria-label': 'Roulis' }, ORIENTS.map((x) => {
       const b = h('button', { class: 'btn', title: x.label, onclick: () => this._apply(() => setOri(x.id)) }, x.label);
       this._sync.push(() => { const on = tileOri(t) === x.id; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); b.disabled = !on && oriOff(x.id); });
@@ -219,6 +219,11 @@ export const bodyMethods = {
     const norm = (v) => (((v % 360) + 360) % 360);
     rows.push(h('div', { class: 'insp-group' }, 'Rotation'));
     rows.push(this._angle('Cap (Y)', () => norm(deg(d.ry)), (v) => { d.ry = norm(v) * Math.PI / 180; return touch(); }, { min: 0, max: 359 }));
+    if (obst) {
+      // Phase 3 : un obstacle se pose aussi sur un mur, un plan incliné ou au plafond : son roulis (autour de l'axe de la route) est un multiple de 45° ; sa forme de contact tourne avec lui.
+      const ROLLS = [['0', 'À plat (sol)'], ['45', 'Incliné 45° ◣'], ['90', 'Sur un mur ◣'], ['135', 'Surplomb 135° ◣'], ['180', 'Au plafond'], ['-135', 'Surplomb 135° ◢'], ['-90', 'Sur un mur ◢'], ['-45', 'Incliné 45° ◢']];
+      rows.push(this._select('Roulis (mur, plafond)', ROLLS, () => String(Math.round(deg(d.rz) / 45) * 45 > 180 ? Math.round(deg(d.rz) / 45) * 45 - 360 : Math.round(deg(d.rz) / 45) * 45), (v) => { if (+v) d.rz = +v * Math.PI / 180; else delete d.rz; return touch(); }));
+    }
     if (!obst) {
       // Inclinaison et roulis : purement visuels (une décoration n'a pas de contact). Un obstacle, lui, ne tourne qu'autour de la verticale : sa forme de contact est celle du jeu.
       rows.push(this._angle('Inclinaison (X)', () => deg(d.rx), (v) => { d.rx = v * Math.PI / 180; return touch(); }));
@@ -236,7 +241,7 @@ export const bodyMethods = {
       ]),
       step('↺ Tout à zéro', () => { d.ry = 0; delete d.rx; delete d.rz; }, 'Cap, inclinaison et roulis à 0°'),
     ])));
-    if (obst) rows.push(h('div', { class: 'insp-note' }, 'Un obstacle ne tourne qu’autour de la verticale : sa forme de contact est fixée par le jeu.'));
+    if (obst) rows.push(h('div', { class: 'insp-note' }, 'Un obstacle tourne autour de la verticale (cap) et autour de l’axe de la route (roulis, par pas de 45°) : sa forme de contact tourne avec lui. Visé sur un mur ou au plafond, il se pose tout seul à plat sur la route.'));
     rows.push(this._range('Taille', () => d.s, (v) => { d.s = v; return touch(); }, { min: obst ? 0.5 : 0.3, max: obst ? 2.5 : 6, step: 0.05, fmt: (v) => '×' + (+v).toFixed(2) }));
     if (d.k === 'plaque') {
       const url = h('input', { type: 'text', maxlength: 400, placeholder: 'https://…', spellcheck: false });

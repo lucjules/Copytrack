@@ -1,13 +1,14 @@
 // Contacts de la voiture avec les obstacles (piques, balanciers, marteaux, murs coulissants, balayeurs, bumpers).
 // Ces méthodes s'ajoutent au prototype de CarPhysics (voir physics.js) : `this` est la voiture.
 import { DT } from '../constants.js';
-import { OBST, OBSTACLE_CELL, obstacleKey, obstacleLocal, toLocalObs, obstacleRadius } from '../obstacles.js';
+import { OBST, OBSTACLE_CELL, obstacleKey, obstacleLocal, toLocalObs, rollLocalToWorld, obstacleRadius } from '../obstacles.js';
 import { CAR } from './specs.js';
 import { clamp } from '../mathutil.js';
 import { dcos, dsin, hypot2, hypot3 } from '../dmath.js';
 
 const OB = {};
 const OL = {};
+const RW = {};
 const fin = Number.isFinite;
 
 export const obstacleMethods = {
@@ -43,7 +44,7 @@ export const obstacleMethods = {
     const cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
     if (!d || !OBST[d.k] || !fin(d.x) || !fin(d.y) || !fin(d.z) || !fin(d.s || 1) || !fin(d.ry || 0)) return false;
     if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) return false;
-    const rr = obstacleRadius(d) + 3;
+    const rr = obstacleRadius(d) + 3 + (d.rz ? 14 * (d.s || 1) : 0);      // (roulé : la hauteur du pivot d'un balancier devient horizontale)
     const ox = cx - d.x, oz = cz - d.z;
     if (ox * ox + oz * oz > rr * rr) return false;
     const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
@@ -79,9 +80,10 @@ export const obstacleMethods = {
         const ez = def.hz - Math.abs(OL.z);
         // La face du côté du SOL n'est jamais un choix (0.9.54) : pousser la voiture vers le bas la faisait traverser la route (écrasée contre une bordure par un mur
         // coulissant, elle sortait par le dessous du bloc, à 2 m sous la chaussée, et tombait sans fin). On choisit parmi les autres faces : le dessus, ou les côtés.
-        const eUp = this.gSign > 0 ? ey1 : ey0;                           // distance à la face opposée au sol
+        const upIsLocalUp = d.rz ? true : this.gSign > 0;                  // (obstacle roulé : sa base est posée sur la route, le « sol » est toujours son y local = 0)
+        const eUp = upIsLocalUp ? ey1 : ey0;                              // distance à la face opposée au sol
         const face = Math.min(ex, eUp, ez);
-        if (face === eUp) { nx = 0; ny = this.gSign > 0 ? 1 : -1; nz = 0; }
+        if (face === eUp) { nx = 0; ny = upIsLocalUp ? 1 : -1; nz = 0; }
         else if (face === ez) { nx = 0; ny = 0; nz = OL.z >= 0 ? 1 : -1; }
         else { nx = OL.x >= OB.x ? 1 : -1; ny = 0; nz = 0; }
         pen = Math.max(0.01, rc + Math.max(0, face));
@@ -106,11 +108,23 @@ export const obstacleMethods = {
     }
     // Normale et vitesse de l'obstacle en repère monde.
     const c = dcos(d.ry || 0), sn = dsin(d.ry || 0);
+    if (d.rz) { rollLocalToWorld(d.rz, nx, ny, RW); nx = RW.x; ny = RW.y; rollLocalToWorld(d.rz, ovx, ovy, RW); ovx = RW.x; ovy = RW.y; }      // obstacle roulé (mur, plafond, plan incliné) : du repère roulé au repère de cap
     let wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
     const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
     if (!(fin(wx) && fin(wy) && fin(wz) && fin(vwx) && fin(vwy) && fin(vwz))) return false;
     // Voiture posée : le sol résiste, un obstacle ne peut pas la pousser DANS la route (un pendule ou un marteau qui l'écrase par le dessus). Seule la part horizontale compte.
-    if (this.grounded && wy * this.gSign < 0) {
+    if (d.rz) {
+      // Obstacle roulé : « le sol » est la route sous la voiture (sa normale n0), pas l'horizontale. On retire la part qui pousse la voiture dans la route.
+      if (this.grounded) {
+        const dn = wx * n0.x + wy * n0.y + wz * n0.z;
+        if (dn < 0) {
+          wx -= n0.x * dn; wy -= n0.y * dn; wz -= n0.z * dn;
+          const hl = Math.sqrt(wx * wx + wy * wy + wz * wz);
+          if (hl < 1e-6) return false;
+          wx /= hl; wy /= hl; wz /= hl;
+        }
+      }
+    } else if (this.grounded && wy * this.gSign < 0) {
       const hl = hypot2(wx, wz);
       if (hl < 1e-6) return false;
       wx /= hl; wz /= hl; wy = 0;
@@ -132,7 +146,7 @@ export const obstacleMethods = {
     if (add > 0) {
       v.x += wx * add; v.y += wy * add; v.z += wz * add;
       this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;   // le choc fait pivoter un peu
-      if (wy * this.gSign > 0.45) this.grounded = false;
+      if ((d.rz ? wx * n0.x + wy * n0.y + wz * n0.z : wy * this.gSign) > 0.45) this.grounded = false;
       this.ev.shock = Math.max(this.ev.shock, add);
     }
     return false;

@@ -6,6 +6,18 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.62 — phase 3 : construction 3D (orientations, rubans roulés, raccord automatique)
+
+**`PHYS_VER` inchangé (35)** : la physique n'a pas bougé (empreinte, temps de référence, médailles et corpus de compatibilité identiques), seuls la géométrie des pièces, l'éditeur et les obstacles évoluent. **Redéployer `submit-score`** à la mise en ligne : la vérification rejoue le circuit avec le code du serveur, une version plus ancienne ignorerait les nouvelles pièces. Compte-rendu complet (familles, mesures, limites et leurs raisons) : [docs/AUDIT-PHASE3-CONSTRUCTION-3D.md](docs/AUDIT-PHASE3-CONSTRUCTION-3D.md).
+
+- **Huit orientations** : en plus du sol, des murs et du plafond, des routes **inclinées à 45°** et en **surplomb à 135°** (`tile.o` de 1 à 6), pour 64 types de lignes, virages, pentes et courbes ; **16 transitions de 45°** (une case) pour passer du sol au plafond par pas de 45°.
+- **Rubans roulés** (une seule règle, `ribbons.js : rollWrap`) : **loopings sur un mur** (cercle dans le plan horizontal, hélice de 5 à 15 niveaux), **vrilles inclinées**, **tire-bouchons sur un mur** ; quelle pièce dans quelle orientation est décidé par la géométrie (le ruban roulé doit tenir dans son empreinte et sortir sur la grille).
+- **Obstacles** : roulis `rz` par pas de 45°, la forme de contact tourne avec l'obstacle ; posé **à plat** tout seul sur un mur, un plan incliné, un surplomb ou le plafond (rayon de l'éditeur sur les rubans).
+- **Éditeur** : sept pastilles d'orientation + Plafond, miroir pour tous les roulis, **raccordement automatique** (Prolonger insère les transitions manquantes, un seul pas d'annulation, refus expliqué), vérificateur qui compare les roulis et nomme les transitions à intercaler, script `( ) { }`.
+- **Matrice de compatibilité** : 128 pièces × 8 orientations, mesurée par le vrai moteur ; une confusion roulis / pente (60 faux « RACCORD ») corrigée dans `rollGap`.
+- Tests : `test-orientations-3d` (34), banc `tools/chain3d.mjs` ; `test-browser-editeur` (orientation et raccord automatique) ; plusieurs tests existants adaptés (`test-pentes-murs`, `test-continuite`, `test-deco-rotation`, `test-editeur-phase1`).
+- **Ce qui reste** : plateformes inclinées / courbes / verticales (une surface à deux dimensions demande un nouveau mode de contact), transitions courbes, loopings à 45°, 30 cases CHUTE de la famille des montées raides, ressenti à valider par des essais humains.
+
 ## Bêta 0.9.61 — phase 2 : corrections physiques (gravité, murs, dérapage, sauts)
 
 `PHYS_VER` 34 → **35** (un seul changement, tout groupé). **Redéployer `submit-score`** à la mise en ligne (voir « Opérations serveur » du compte-rendu) : sans cela le serveur refuse les temps de la 35.

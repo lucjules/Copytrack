@@ -58,8 +58,8 @@ const FROZEN_GEN = [
 ];
 test('l’ordre des 52 nouvelles pièces est figé (c’est l’index des circuits sauvegardés) et suit les 67 anciennes', () => {
   assert.deepEqual(GEN_IDS, FROZEN_GEN);
-  assert.equal(PIECE_ORDER.length, 67 + 52);
-  assert.deepEqual(PIECE_ORDER.slice(67), FROZEN_GEN);
+  assert.equal(PIECE_ORDER.length, 67 + 52 + 16);      // (phase 3 : + 16 transitions de 45°, à la suite, voir test-orientations-3d)
+  assert.deepEqual(PIECE_ORDER.slice(67, 67 + 52), FROZEN_GEN);
   assert.equal(PIECE_ORDER[66], 'sideR'); assert.equal(PIECE_ORDER[59], 'crv05');
   assert.equal(new Set(PIECE_ORDER).size, PIECE_ORDER.length);
 });
@@ -108,7 +108,7 @@ test('niveaux occupés : une descente occupe les niveaux SOUS son niveau d’ent
 
 console.log('Orientation (sol / mur gauche / mur droit / plafond)');
 test('ORIENTS, ROLL_PASSAGES et les transitions : de et vers chaque orientation, franche et douce', () => {
-  assert.deepEqual(ORIENTS.map((o) => o.label), ['Sol', 'Mur gauche', 'Mur droit', 'Plafond']);
+  assert.deepEqual(ORIENTS.map((o) => o.label).slice(0, 4), ['Sol', 'Mur gauche', 'Mur droit', 'Plafond']);      // (phase 3 : quatre orientations de plus, 45° et 135°)
   assert.deepEqual(ROLL_PASSAGES, ['01', '10', '02', '20', '13', '31', '23', '32']);
   for (const pas of ROLL_PASSAGES) for (const f of ['s', 'l']) {
     const T = PIECES[`tr${pas}${f}`]; assert.deepEqual(T.roll, [+pas[0], +pas[1]]); assert.equal(T.size, f === 'l' ? 2 : 1); assert.equal(T.noRails, true);
@@ -117,11 +117,14 @@ test('ORIENTS, ROLL_PASSAGES et les transitions : de et vers chaque orientation,
 });
 test('flagAllowed(o) : ligne droite et virage oui (pentes comprises) ; pas les pièces spéciales, ni plateformes, loopings, transitions', () => {
   for (const id of ['straight', 'curve', 'bigcurve', 'hugecurve', 'slope', 'dn1', 'cro2', 'cvd1', 'crv1']) assert.equal(flagAllowed(id, 'o', null, 1), true, id);
-  for (const id of ['start', 'finish', 'checkpoint', 'platform', 'loop', 'twist', 'tr01s', 'tube', 'fork', 'ring', 'cpCurve']) assert.equal(flagAllowed(id, 'o', null, 1), false, id);
+  for (const id of ['start', 'finish', 'checkpoint', 'platform', 'tr01s', 'tube', 'fork', 'ring', 'cpCurve']) assert.equal(flagAllowed(id, 'o', null, 1), false, id);
+  // Phase 3 : les loopings, la vrille et le tire-bouchon se roulent aussi (loopings : le côté du mur est celui où le cercle tient dans l'empreinte de la pièce).
+  for (const id of ['loop', 'twist', 'cork']) assert.equal(flagAllowed(id, 'o', null, 1), true, id);
+  assert.equal(flagAllowed('loop', 'o', null, 2), false, 'le looping ↱ sur un mur droit sortirait de son empreinte'); assert.equal(flagAllowed('loopL', 'o', null, 2), true);
 });
 test('normalize : o ∈ {1, 2} sur une ligne ; refusé sur le reste ; le plafond (v) et le mur s’excluent ; sans bordures d’office ; tunnel retiré', () => {
-  assert.equal(tile({ t: 'straight', o: 1 }).o, 1); assert.equal(tile({ t: 'straight', o: 2 }).o, 2); assert.equal(tile({ t: 'straight', o: 3 }).o, 0);
-  assert.equal(tile({ t: 'loop', o: 1 }).o, 0); assert.equal(tile({ t: 'start', o: 1 }).o, 0);
+  assert.equal(tile({ t: 'straight', o: 1 }).o, 1); assert.equal(tile({ t: 'straight', o: 2 }).o, 2); assert.equal(tile({ t: 'straight', o: 3 }).o, 3); assert.equal(tile({ t: 'straight', o: 7 }).o, 0);
+  assert.equal(tile({ t: 'loop', o: 1 }).o, 1); assert.equal(tile({ t: 'loop', o: 2 }).o, 0); assert.equal(tile({ t: 'start', o: 1 }).o, 0);
   const both = tile({ t: 'straight', o: 1, v: 1 }); assert.deepEqual([both.o, both.v], [0, 1], 'le plafond l’emporte');
   const w = tile({ t: 'straight', o: 1, tn: 1, mv: 1, cp: 1, tb: 1 }); assert.deepEqual([w.o, w.tn, w.mv, w.cp, w.tb], [1, 0, 0, 0, 0]);
   assert.equal(hasNoRails(w), true); assert.equal(w.nb, 0, 'l’absence de bordure est déduite, pas stockée');

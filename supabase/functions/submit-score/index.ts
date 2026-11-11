@@ -845,7 +845,33 @@ for (const [pre, size, mir, lab] of [
     } : {}
   });
 }
-var oriAngle = (code, other = 0) => code === 1 ? Math.PI / 2 : code === 2 ? -Math.PI / 2 : code === 3 ? other === 2 ? -Math.PI : Math.PI : 0;
+for (const id of Object.keys(PIECES)) {
+  const P = PIECES[id];
+  if (P.kind === "loop" || id === "twist" || id === "cork" || id === "corkL") P.rollable = true;
+}
+var D45 = Math.PI / 4;
+var ORI_ANGLE = [
+  0,
+  2 * D45,
+  -2 * D45,
+  4 * D45,
+  D45,
+  -D45,
+  3 * D45,
+  -3 * D45
+];
+var O_TO_ORI = [
+  0,
+  1,
+  2,
+  4,
+  5,
+  6,
+  7
+];
+var MAX_O = 6;
+var oriAngle = (code, other = 0) => code === 3 ? other === 2 || other === 5 || other === 7 ? -Math.PI : Math.PI : ORI_ANGLE[code] || 0;
+var rollOfO = (o) => ORI_ANGLE[O_TO_ORI[o | 0]] || 0;
 var ROLL_PASSAGES = [
   "01",
   "10",
@@ -856,11 +882,33 @@ var ROLL_PASSAGES = [
   "23",
   "32"
 ];
+var ROLL_PASSAGES45 = [
+  "04",
+  "40",
+  "41",
+  "14",
+  "16",
+  "61",
+  "63",
+  "36",
+  "37",
+  "73",
+  "72",
+  "27",
+  "25",
+  "52",
+  "50",
+  "05"
+];
 var ORI_NAME = [
   "sol",
   "mur gauche",
   "mur droit",
-  "plafond"
+  "plafond",
+  "inclin\xE9 gauche",
+  "inclin\xE9 droit",
+  "surplomb gauche",
+  "surplomb droit"
 ];
 for (const long of [
   false,
@@ -888,6 +936,28 @@ for (const long of [
       } : {}
     });
   }
+}
+var GEN45_IDS = [];
+var gen45 = (id, def) => {
+  PIECES[id] = def;
+  GEN45_IDS.push(id);
+};
+for (const pas of ROLL_PASSAGES45) {
+  const a = +pas[0], b = +pas[1];
+  gen45(`tr${pas}s`, {
+    label: `Transition ${ORI_NAME[a]} \u2192 ${ORI_NAME[b]} (45\xB0)`,
+    kind: "ribbon",
+    size: 1,
+    rise: 0,
+    clearance: 2,
+    below: 2,
+    roll: [
+      a,
+      b
+    ],
+    rollLong: false,
+    noRails: true
+  });
 }
 var LEGACY_TILE = {
   rollL: {
@@ -985,7 +1055,9 @@ var PIECE_ORDER = [
   "sideL",
   "sideR",
   // 0.9.3 (à la suite : ne jamais réordonner ; l'ordre est celui de GEN_IDS, vérifié par les tests)
-  ...GEN_IDS
+  ...GEN_IDS,
+  // Phase 3 (0.9.62) : transitions de 45° (à la suite : ne jamais réordonner)
+  ...GEN45_IDS
 ];
 var SURFACES = {
   "": {
@@ -1251,7 +1323,10 @@ function isSideTile(tile) {
   const p = PIECES[tile.t];
   return !!(tile.o || p.roll);
 }
-var isOriented = (tile) => !!tile.o && (PIECES[tile.t].kind === "line" || PIECES[tile.t].kind === "arc");
+var isOriented = (tile) => !!tile.o && (PIECES[tile.t].kind === "line" || PIECES[tile.t].kind === "arc" || !!PIECES[tile.t].rollable);
+var rollFitHook = {
+  fits: null
+};
 function isFloor(tile) {
   const k = PIECES[tile.t].kind;
   return !tile.v && !tile.o && k !== "ribbon" && k !== "ring";
@@ -1324,7 +1399,11 @@ function flagAllowed(type, flag, tile = null, val = 0) {
   if (flag === "v") return true;
   if (flag === "th") return p.kind !== "ring";
   if (p.kind === "ring" || p.kind === "fork") return false;
-  if (flag === "o") return lineLike && !p.special && !p.noRails && !hasConflict("o", tile);
+  if (flag === "o") {
+    if (!(val >= 1 && val <= MAX_O) || p.special || p.noRails || hasConflict("o", tile)) return false;
+    if (lineLike) return true;
+    return !!p.rollable && (!rollFitHook.fits || rollFitHook.fits(type, val));
+  }
   if (flag === "nb") return !p.noRails && (lineLike && !p.special || p.kind === "ribbon" && !type.startsWith("tube"));
   if (flag === "tn") return lineLike && !p.special && !hasConflict("tn", tile);
   if (flag === "mv") return (lineLike || p.kind === "area") && !p.special && !hasConflict("mv", tile);
@@ -1717,7 +1796,7 @@ function rolledNormal(t, psi, o) {
 }
 function buildRolled(tile) {
   const P = PIECES[tile.t];
-  const psi = tile.o === 1 ? Math.PI / 2 : -Math.PI / 2;
+  const psi = rollOfO(tile.o);
   const C4 = {};
   const half = P.size * HALF;
   const len = P.kind === "arc" ? hypot2(Math.PI / 2 * arcParams(P).R, P.rise * LEVEL_H) : hypot2(2 * half, P.rise * LEVEL_H);
@@ -1733,12 +1812,69 @@ function buildRolled(tile) {
     }
   };
 }
+function rollWrap(inner, psi) {
+  const c = dcos(psi), s = dsin(psi);
+  const e = {};
+  inner.pos(0, e);
+  const x0 = e.x, y0 = e.y;
+  return {
+    ...inner,
+    minU: 0.5,
+    pos(u, o) {
+      inner.pos(u, o);
+      const dx = o.x - x0, dy = o.y - y0;
+      o.x = x0 + dx * c + dy * s;
+      o.y = y0 - dx * s + dy * c;
+      const nx = o.nx, ny = o.ny;
+      o.nx = nx * c + ny * s;
+      o.ny = -nx * s + ny * c;
+    }
+  };
+}
+function loopWithLeads(tile, P) {
+  const base = baseY(tile), half = P.size * HALF, m = P.mirror;
+  const circle = buildBase(tile);
+  const Lc = circle.len, Ll = half, tot = 2 * Ll + Lc;
+  const f1 = Ll / tot, f2 = (Ll + Lc) / tot;
+  return {
+    minU: 0.5,
+    len: tot,
+    pos(u, o) {
+      if (u < f1) {
+        o.x = -m * P.lane;
+        o.y = base;
+        o.z = half - Ll * (u / f1);
+        o.nx = 0;
+        o.ny = 1;
+        o.nz = 0;
+      } else if (u > f2) {
+        o.x = m * P.lane;
+        o.y = base;
+        o.z = -Ll * ((u - f2) / (1 - f2));
+        o.nx = 0;
+        o.ny = 1;
+        o.nz = 0;
+      } else circle.pos((u - f1) / (f2 - f1), o);
+    }
+  };
+}
 function build(tile) {
+  const P = PIECES[tile.t];
+  if (isOriented(tile)) {
+    if (P.kind === "line" || P.kind === "arc") return buildRolled(tile);
+    const flat = {
+      ...tile,
+      o: 0
+    };
+    return rollWrap(P.kind === "loop" ? loopWithLeads(flat, P) : buildBase(flat), rollOfO(tile.o));
+  }
+  return buildBase(tile);
+}
+function buildBase(tile) {
   const P = PIECES[tile.t];
   const base = baseY(tile);
   const half = P.size * HALF;
   const R90 = 2 * LEVEL_H;
-  if (isOriented(tile)) return buildRolled(tile);
   if (P.kind === "loop") {
     const total = Math.PI * 2 * P.turns;
     const { R, lane, mirror: m } = P;
@@ -1988,7 +2124,7 @@ function centerlineLocal(tile, n) {
       ]);
     }
   };
-  if (p.kind === "loop") {
+  if (p.kind === "loop" && !tile.o) {
     const m = p.mirror;
     for (let i = 0; i < 4; i++) pts.push([
       -m * p.lane,
@@ -2003,7 +2139,7 @@ function centerlineLocal(tile, n) {
       -(half * i) / 4,
       0
     ]);
-  } else if (p.kind === "ribbon") {
+  } else if (p.kind === "ribbon" || p.kind === "loop") {
     const rib = ribbonOf(tile, true);
     sampleRibbon(Math.max(8, Math.round(rib.len / 3)), p.arc ? 2 : 1);
   } else if (p.kind === "arc") {
@@ -2043,6 +2179,83 @@ function centerlineWorld(tile, n, reverse = false) {
     ];
   });
   return reverse ? out.reverse() : out;
+}
+var extentCache = /* @__PURE__ */ new WeakMap();
+var FR = {};
+function ribbonExtent(tile) {
+  const rib = ribbonOf(tile);
+  if (!rib) return null;
+  let e = extentCache.get(rib);
+  if (e) return e;
+  const base = baseY(tile);
+  e = {
+    minY: Infinity,
+    maxY: -Infinity,
+    minX: Infinity,
+    maxX: -Infinity,
+    minZ: Infinity,
+    maxZ: -Infinity
+  };
+  const n = 48;
+  for (let i = 0; i <= n; i++) {
+    frameLocal(rib, i / n, FR);
+    for (const sg of [
+      -1,
+      0,
+      1
+    ]) {
+      const w = sg * Math.min(FR.hw || ROAD_HALF, ROAD_HALF);
+      const x = FR.px + FR.rx * w, y = FR.py + FR.ry * w - base, z = FR.pz + FR.rz * w;
+      e.minX = Math.min(e.minX, x);
+      e.maxX = Math.max(e.maxX, x);
+      e.minY = Math.min(e.minY, y);
+      e.maxY = Math.max(e.maxY, y);
+      e.minZ = Math.min(e.minZ, z);
+      e.maxZ = Math.max(e.maxZ, z);
+    }
+  }
+  extentCache.set(rib, e);
+  return e;
+}
+var fitCache = /* @__PURE__ */ new Map();
+function rollFits(type, val) {
+  const key2 = type + "/" + val;
+  let r = fitCache.get(key2);
+  if (r !== void 0) return r;
+  const P = PIECES[type];
+  if (!P || !P.rollable || !(val >= 1 && val <= MAX_O)) {
+    fitCache.set(key2, false);
+    return false;
+  }
+  const tile = {
+    t: type,
+    l: 0,
+    o: val,
+    v: 0
+  };
+  const e = ribbonExtent(tile), half = P.size * HALF;
+  r = !!e && e.minX >= -half - 0.5 && e.maxX <= half + 0.5 && e.minZ >= -half - 0.5 && e.maxZ <= half + 0.5;
+  if (r) {
+    const rib = ribbonOf(tile), a = {}, b = {};
+    rib.pos(0, a);
+    rib.pos(1, b);
+    const dx = b.x - a.x, dy = b.y - a.y;
+    r = Math.abs(dx - Math.round(dx / CELL) * CELL) < 1 && Math.abs(dy - Math.round(dy / (LEVEL_H / 2)) * (LEVEL_H / 2)) < 0.4;
+  }
+  fitCache.set(key2, r);
+  return r;
+}
+rollFitHook.fits = rollFits;
+function rollLevels(tile) {
+  const e = ribbonExtent(tile);
+  if (!e) return [
+    2,
+    2
+  ];
+  return [
+    Math.max(2, Math.ceil(-e.minY / LEVEL_H - 1e-6)),
+    Math.max(2, Math.ceil(e.maxY / LEVEL_H - 1e-6))
+  ];
 }
 
 // js/obstacles.js
@@ -2182,6 +2395,17 @@ function toLocalObs(d, wx, wy, wz, out) {
   out.x = dx * c - dz * s;
   out.y = (wy - d.y) / k;
   out.z = dx * s + dz * c;
+  if (d.rz) {
+    const cr = dcos(d.rz), sr = dsin(d.rz), x = out.x, y = out.y;
+    out.x = x * cr - y * sr;
+    out.y = x * sr + y * cr;
+  }
+  return out;
+}
+function rollLocalToWorld(rz, x, y, out) {
+  const c = dcos(rz), s = dsin(rz);
+  out.x = x * c + y * s;
+  out.y = -x * s + y * c;
   return out;
 }
 function obstacleRadius(d) {
@@ -4883,7 +5107,15 @@ var editMethods = {
       deco.s = Math.max(0.5, Math.min(2.5, deco.s));
     }
     if (!DECO_ORDER.includes(deco.k)) return null;
-    if (!isObstacle(deco.k)) {
+    if (isObstacle(deco.k)) {
+      let v = +d.rz;
+      if (Number.isFinite(v) && v) {
+        v = (v % TAU2 + TAU2) % TAU2;
+        if (v > Math.PI + 1e-6) v -= TAU2;
+        v = Math.round(v / (Math.PI / 4)) * (Math.PI / 4);
+        if (Math.abs(v) > 1e-4) deco.rz = +v.toFixed(3);
+      }
+    } else {
       for (const a of [
         "rx",
         "rz"
@@ -5758,8 +5990,13 @@ var Track = class _Track {
   static range(t) {
     const p = PIECES[t.t];
     const up = Math.max(0, p.rise || 0), down = Math.min(0, p.rise || 0);
-    const h = up + Math.max(p.clearance || 0, t.cp === 2 || t.tb ? 2 : t.cp === 1 ? 1 : 0, t.o ? 2 : 0);
-    const below = Math.max(p.below || 0, t.o ? 2 : 0);
+    let h = up + Math.max(p.clearance || 0, t.cp === 2 || t.tb ? 2 : t.cp === 1 ? 1 : 0, t.o ? 2 : 0);
+    let below = Math.max(p.below || 0, t.o ? 2 : 0);
+    if (t.o && p.rollable) {
+      const [lo, hi] = rollLevels(t);
+      below = Math.max(below, lo);
+      h = Math.max(h, hi);
+    }
     if (t.v) return [
       t.l - h,
       t.l - down + below
@@ -5811,7 +6048,7 @@ var Track = class _Track {
       g: Math.max(0, Math.min(MAX_GROUP, t.g | 0))
     };
     tile.v = t.v && flagAllowed(type, "v") ? 1 : 0;
-    tile.o = (ori === 1 || ori === 2) && !tile.v && flagAllowed(type, "o", tile, ori) ? ori : 0;
+    tile.o = ori >= 1 && ori <= MAX_O && !tile.v && flagAllowed(type, "o", tile, ori) ? ori : 0;
     tile.nb = PIECES[type].noRails || t.nb && flagAllowed(type, "nb") ? 1 : 0;
     tile.tn = t.tn && flagAllowed(type, "tn", tile) ? 1 : 0;
     tile.mv = t.mv && flagAllowed(type, "mv", tile) ? (t.mv | 0) & 3 : 0;
@@ -6477,7 +6714,7 @@ function scriptTrack(name, script, opts2 = {}) {
     z += d.z;
   };
   for (const tok of script.trim().split(/\s+/)) {
-    const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>]*)$/.exec(tok);
+    const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>(){}]*)$/.exec(tok);
     const m = gm ? [
       tok,
       "@" + gm[1],
@@ -6485,7 +6722,7 @@ function scriptTrack(name, script, opts2 = {}) {
       gm[3],
       gm[4],
       gm[5]
-    ] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>]*)$/.exec(tok);
+    ] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>(){}]*)$/.exec(tok);
     if (!m) throw new Error("Instruction invalide : " + tok);
     let op = m[1];
     const n = m[2] ? parseInt(m[2], 10) : 1;
@@ -6496,7 +6733,7 @@ function scriptTrack(name, script, opts2 = {}) {
       nb: m[5].includes("_") ? 1 : 0,
       tn: m[5].includes("#") ? 1 : 0,
       mv: m[5].includes("~") ? 1 : m[5].includes("=") ? 2 : m[5].includes("%") ? 3 : 0,
-      o: m[5].includes("<") ? 1 : m[5].includes(">") ? 2 : 0
+      o: m[5].includes("<") ? 1 : m[5].includes(">") ? 2 : m[5].includes("(") ? 3 : m[5].includes(")") ? 4 : m[5].includes("{") ? 5 : m[5].includes("}") ? 6 : 0
     };
     cur.mvTok = cur.mv ? ++moverTok : 0;
     if (m[3]) {
@@ -9554,6 +9791,7 @@ var wallMethods = {
 // js/physics/obstacles.js
 var OB = {};
 var OL = {};
+var RW = {};
 var fin = Number.isFinite;
 var obstacleMethods = {
   // Le temps des obstacles est le chrono de la course (this.clock = pas de course, fixé
@@ -9585,7 +9823,7 @@ var obstacleMethods = {
     const cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
     if (!d || !OBST[d.k] || !fin(d.x) || !fin(d.y) || !fin(d.z) || !fin(d.s || 1) || !fin(d.ry || 0)) return false;
     if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) return false;
-    const rr = obstacleRadius(d) + 3;
+    const rr = obstacleRadius(d) + 3 + (d.rz ? 14 * (d.s || 1) : 0);
     const ox = cx - d.x, oz = cz - d.z;
     if (ox * ox + oz * oz > rr * rr) return false;
     const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
@@ -9628,11 +9866,12 @@ var obstacleMethods = {
         const ex = def.hx - Math.abs(OL.x - OB.x);
         const ey0 = OL.y, ey1 = def.hy * 2 - OL.y;
         const ez = def.hz - Math.abs(OL.z);
-        const eUp = this.gSign > 0 ? ey1 : ey0;
+        const upIsLocalUp = d.rz ? true : this.gSign > 0;
+        const eUp = upIsLocalUp ? ey1 : ey0;
         const face = Math.min(ex, eUp, ez);
         if (face === eUp) {
           nx = 0;
-          ny = this.gSign > 0 ? 1 : -1;
+          ny = upIsLocalUp ? 1 : -1;
           nz = 0;
         } else if (face === ez) {
           nx = 0;
@@ -9685,10 +9924,32 @@ var obstacleMethods = {
       }
     }
     const c = dcos(d.ry || 0), sn = dsin(d.ry || 0);
+    if (d.rz) {
+      rollLocalToWorld(d.rz, nx, ny, RW);
+      nx = RW.x;
+      ny = RW.y;
+      rollLocalToWorld(d.rz, ovx, ovy, RW);
+      ovx = RW.x;
+      ovy = RW.y;
+    }
     let wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
     const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
     if (!(fin(wx) && fin(wy) && fin(wz) && fin(vwx) && fin(vwy) && fin(vwz))) return false;
-    if (this.grounded && wy * this.gSign < 0) {
+    if (d.rz) {
+      if (this.grounded) {
+        const dn = wx * n0.x + wy * n0.y + wz * n0.z;
+        if (dn < 0) {
+          wx -= n0.x * dn;
+          wy -= n0.y * dn;
+          wz -= n0.z * dn;
+          const hl = Math.sqrt(wx * wx + wy * wy + wz * wz);
+          if (hl < 1e-6) return false;
+          wx /= hl;
+          wy /= hl;
+          wz /= hl;
+        }
+      }
+    } else if (this.grounded && wy * this.gSign < 0) {
       const hl = hypot2(wx, wz);
       if (hl < 1e-6) return false;
       wx /= hl;
@@ -9714,7 +9975,7 @@ var obstacleMethods = {
       v.y += wy * add;
       v.z += wz * add;
       this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;
-      if (wy * this.gSign > 0.45) this.grounded = false;
+      if ((d.rz ? wx * n0.x + wy * n0.y + wz * n0.z : wy * this.gSign) > 0.45) this.grounded = false;
       this.ev.shock = Math.max(this.ev.shock, add);
     }
     return false;

@@ -6,7 +6,9 @@
 // et du mode Inspection ne voit que les objets du calque demandé. Module pur (aucun rendu).
 import * as THREE from './vendor/three.module.min.js';
 import { LEVEL_H, ROAD_TOP, RAIL_H, SLAB_T, CELL, ROAD_HALF, RAIL_W } from './constants.js';
-import { PIECES, baseY, toLocal, sampleLocal } from './pieces.js';
+import { PIECES, baseY, toLocal, sampleLocal, isRibbon, isCeilingFloor } from './pieces.js';
+import { ribbonOf, centerlineWorld } from './ribbons.js';
+import { frameWorld } from './physics/ribbon.js';
 import { Track } from './track.js';
 
 export const LAYER_TRACK = 1;   // pièces de piste
@@ -145,4 +147,62 @@ export function rayToSurface(track, ray, maxDist = 3000) {
     py = y;
   }
   return null;
+}
+
+// Phase 3 : point où le rayon touche une route en RUBAN (mur, plafond, plan incliné, looping, vrille…), que rayToSurface (champ de hauteur du sol) ne voit pas.
+// Renvoie { x, y, z, tile, n: [nx, ny, nz], t: [tx, ty, tz], dist } (normale de la route et sens de marche au point touché) ou null. On échantillonne chaque ruban (33 repères), on écarte
+// ceux que le rayon ne peut pas toucher (boîte englobante des repères, marge = demi-largeur de route) puis on avance le long du rayon jusqu'au passage de l'extérieur à l'intérieur du plan.
+const RF = {};
+export function rayToRibbon(track, ray, maxDist = 3000) {
+  const o = ray.origin, d = ray.direction;
+  let best = null;
+  const N = 32, M = ROAD_HALF + 2;
+  for (const tile of track.tiles) {
+    const ceil = isCeilingFloor(tile) && !tile.mv;            // route posée à l'envers : un sol retourné (pas un ruban), sa normale pointe vers le bas
+    if (!(isRibbon(tile) || ceil) || tile.mv) continue;
+    const rib = ceil ? null : ribbonOf(tile);
+    if (!ceil && !rib) continue;
+    const fr = [];
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    const cl = ceil ? centerlineWorld(tile, N) : null;
+    for (let i = 0; i <= N; i++) {
+      if (ceil) {
+        const a = cl[Math.max(0, i - 1)], b = cl[Math.min(N, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) || 1;
+        const t = [(b[0] - a[0]) / l, (b[1] - a[1]) / l, (b[2] - a[2]) / l];
+        const rh = Math.hypot(t[0], t[2]) || 1;
+        const rr = [-t[2] / rh, 0, t[0] / rh];                   // droite du sens de marche, horizontale
+        RF.px = cl[i][0]; RF.py = cl[i][1]; RF.pz = cl[i][2]; RF.nx = 0; RF.ny = -1; RF.nz = 0; RF.rx = rr[0]; RF.ry = rr[1]; RF.rz = rr[2]; RF.tx = t[0]; RF.ty = t[1]; RF.tz = t[2];
+      } else frameWorld(tile, rib, i / N, RF);
+      fr.push({ p: [RF.px, RF.py, RF.pz], n: [RF.nx, RF.ny, RF.nz], r: [RF.rx, RF.ry, RF.rz], t: [RF.tx, RF.ty, RF.tz] });
+      x0 = Math.min(x0, RF.px); x1 = Math.max(x1, RF.px); y0 = Math.min(y0, RF.py); y1 = Math.max(y1, RF.py); z0 = Math.min(z0, RF.pz); z1 = Math.max(z1, RF.pz);
+    }
+    x0 -= M; x1 += M; y0 -= M; y1 += M; z0 -= M; z1 += M;
+    // Intersection rayon / boîte (méthode des plans) : [tmin, tmax].
+    let tmin = 0, tmax = maxDist, ok = true;
+    for (const [oo, dd, lo, hi] of [[o.x, d.x, x0, x1], [o.y, d.y, y0, y1], [o.z, d.z, z0, z1]]) {
+      if (Math.abs(dd) < 1e-9) { if (oo < lo || oo > hi) { ok = false; break; } continue; }
+      let a = (lo - oo) / dd, b = (hi - oo) / dd;
+      if (a > b) [a, b] = [b, a];
+      tmin = Math.max(tmin, a); tmax = Math.min(tmax, b);
+      if (tmin > tmax) { ok = false; break; }
+    }
+    if (!ok || (best && tmin > best.dist)) continue;
+    let prevDn = null;
+    for (let t = tmin; t <= tmax; t += 0.75) {
+      const px = o.x + d.x * t, py = o.y + d.y * t, pz = o.z + d.z * t;
+      // Repère le plus proche (le long de la route), puis position dans son plan.
+      let bi = 0, bd = Infinity;
+      for (let i = 0; i <= N; i++) { const q = fr[i].p, dd2 = (px - q[0]) ** 2 + (py - q[1]) ** 2 + (pz - q[2]) ** 2; if (dd2 < bd) { bd = dd2; bi = i; } }
+      const f = fr[bi];
+      const dx = px - f.p[0], dy = py - f.p[1], dz = pz - f.p[2];
+      const dn = dx * f.n[0] + dy * f.n[1] + dz * f.n[2], dl = dx * f.r[0] + dy * f.r[1] + dz * f.r[2];
+      const inside = Math.abs(dl) <= ROAD_HALF && bd < (ROAD_HALF * 2) ** 2;
+      if (prevDn !== null && prevDn > 0 && dn <= 0 && inside) {
+        if (!best || t < best.dist) best = { x: px - f.n[0] * dn, y: py - f.n[1] * dn, z: pz - f.n[2] * dn, tile, n: f.n, t: f.t, dist: t };
+        break;
+      }
+      prevDn = inside ? dn : null;
+    }
+  }
+  return best;
 }

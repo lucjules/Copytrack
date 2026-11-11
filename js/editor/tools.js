@@ -100,8 +100,8 @@ export const toolMethods = {
     const base = fillBase(this.tool);
     if (MIRROR[base]) { this.setTool(MIRROR[base]); return; }
     // 0.9.3 : une ligne droite ou un virage armé « Mur gauche » devient « Mur droit », et inversement.
-    if (PIECES[base] && this.opts && (this.opts.o === 1 || this.opts.o === 2)) {
-      this.opts = armOption({ ...this.opts, o: 0 }, 'o', this.opts.o === 1 ? 2 : 1);
+    if (PIECES[base] && this.opts && this.opts.o >= 1 && this.opts.o <= 6) {
+      this.opts = armOption({ ...this.opts, o: 0 }, 'o', [0, 2, 1, 4, 3, 6, 5][this.opts.o]);      // gauche ↔ droite pour chaque roulis (90°, 45°, 135°)
       this.previewKey = '';
       this._refreshUI();
     }
@@ -153,7 +153,8 @@ export const toolMethods = {
     const armed = {}; for (const k of OPT_KEYS) if (this.opts && this.opts[k]) armed[k] = this.opts[k];
     const r = extendPlan(this.track, from, type, armed);
     if (!r.tile) { this.app.ui.flash(r.why, 4); this.app.audio.error(); return false; }
-    this.track.add(r.tile);
+    if (r.chain) for (const t of r.chain) this.track.add(t);      // raccordement automatique : les transitions manquantes, puis la pièce (un seul pas d'annulation)
+    else this.track.add(r.tile);
     this._lastTile = this.track.tiles[this.track.tiles.length - 1];
     this.app.audio.place();
     this._prepareAutoLevel(this._lastTile);
@@ -162,7 +163,8 @@ export const toolMethods = {
     // La vue suit la route quand le nouveau bout sort de l'écran.
     const P = PIECES[r.tile.t], cx = (r.tile.x + P.size / 2) * CELL, cz = (r.tile.z + P.size / 2) * CELL;
     if (Math.hypot(cx - this.target.x, cz - this.target.z) > this.dist * 0.45) { this.target.x = cx; this.target.z = cz; }
-    this.app.ui.flash(`${P.label} posée${r.reverse ? ' à contresens (retour de la pièce)' : r.inferred ? ' (orientation de la route reprise)' : ''}`, 1.4);
+    if (r.note) this.app.ui.flash(`Orientation choisie impossible à raccorder (${r.note}) : la route reprend son orientation.`, 4);
+    else this.app.ui.flash(`${P.label} posée${r.reverse ? ' à contresens (retour de la pièce)' : r.bridged ? ` après ${r.chain.length - 1} transition${r.chain.length > 2 ? 's' : ''} d'orientation (raccord automatique)` : r.inferred ? ' (orientation de la route reprise)' : ''}`, 1.4);
     return true;
   },
 

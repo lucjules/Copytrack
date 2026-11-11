@@ -83,6 +83,22 @@ try {
     assert.equal(await page.locator('.ed-issue.error button.primary').count(), 0, 'plus de correction en un clic : la règle « invert » n\'existe plus');
     await ctx.close();
   });
+  await test('orientations 3D (phase 3) : huit pastilles d\'orientation ; une orientation armée qui n\'est pas celle de la route insère les transitions et pose la pièce, en un seul pas d\'annulation ; la pastille de la barre reste sans erreur', async () => {
+    const { ctx, page } = await open(1280, 720);
+    await ed(page, (t) => window.copytrack.session.setTool(t), 'straight'); await press(page, 'KeyP', 2);
+    const chips = await page.evaluate(() => [...document.querySelectorAll('.chip[data-flag="o"]')].map((b) => b.textContent));
+    assert.equal(chips.length, 7, 'orientation : ' + chips.join(' | '));      // (+ « Plafond », qui est le drapeau v : 8 orientations en tout)
+    assert.ok(await page.evaluate(() => !!document.querySelector('.chip[data-flag="v"]')));
+    const before = await ed(page, () => window.copytrack.session.track.tiles.length);
+    await ed(page, () => window.copytrack.session._optClick('o', 3));
+    await press(page, 'KeyP', 1);
+    const r = await ed(page, () => window.copytrack.session.track.tiles.map((t) => t.t + (t.o ? '/o' + t.o : '')));
+    assert.equal(r.length, before + 2, r.join(' '));
+    assert.deepEqual(r.slice(-2), ['tr04s', 'straight/o3']);
+    await page.keyboard.press('Control+z'); await page.waitForTimeout(200);
+    assert.equal(await ed(page, () => window.copytrack.session.track.tiles.length), before, 'annuler retire la transition ET la pièce');
+    await ctx.close();
+  });
   await test('sélection de zone : supprimer puis Ctrl+Z redonne les pièces ET le rectangle (avant : le rectangle restait tel quel) ; la barre de sélection suit', async () => {
     const { ctx, page } = await open(1280, 720);
     await ed(page, (t) => window.copytrack.session.setTool(t), 'straight'); await press(page, 'KeyP', 5);

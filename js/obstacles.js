@@ -83,6 +83,21 @@ export function toLocalObs(d, wx, wy, wz, out) {
   out.x = dx * c - dz * s;
   out.y = (wy - d.y) / k;
   out.z = dx * s + dz * c;
+  // Phase 3 : un obstacle posé sur un mur, un plan incliné ou au plafond est roulé de rz autour de son axe z (le long de la route) : son « haut » est la normale de la route.
+  // Même convention que le roulis des pièces (ribbons.js : rollWrap) : le haut local (0, 1, 0) devient (sin rz, cos rz, 0). Absent (0) : rien ne change, à l'identique près.
+  if (d.rz) {
+    const cr = dcos(d.rz), sr = dsin(d.rz), x = out.x, y = out.y;
+    out.x = x * cr - y * sr;
+    out.y = x * sr + y * cr;
+  }
+  return out;
+}
+
+// Rotation inverse (local → monde) d'un vecteur local (x, y) d'un obstacle roulé : à appliquer AVANT la rotation de cap ry.
+export function rollLocalToWorld(rz, x, y, out) {
+  const c = dcos(rz), s = dsin(rz);
+  out.x = x * c + y * s;
+  out.y = -x * s + y * c;
   return out;
 }
 
