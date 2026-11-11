@@ -251,7 +251,7 @@ export const ribbonMethods = {
     R.vs -= beltE1;   // tapis roulant : dynamique dans le repère de la bande
     const c = dcos(R.psi), s = dsin(R.psi);
     let vx = R.vs * c + R.vd * s, vy = -R.vs * s + R.vd * c;
-    const ax = (this._longitudinal(vx, inp, this.k.maxSpeed * vmaxK, Math.min(1, load) * tractK, extraDrag, dt, Math.min(1, load)) - vx) / dt;
+    const ax = (this._longitudinal(vx, inp, this.k.maxSpeed * vmaxK, Math.min(1, load) * tractK, extraDrag, dt, Math.min(1, load), mod === 'slow') - vx) / dt;
     // Ruban posé à l'envers (miroir) : son axe latéral pointe vers la gauche du pilote.
     // Les commandes restent dans le repère du pilote, même sur une pièce inversée.
     // Le repère latéral du ruban est déjà orienté par sa normale : ne pas inverser
@@ -294,7 +294,12 @@ export const ribbonMethods = {
           }
         }
         R.dl = clamp(R.dl, -lim, lim);
-      }
+        // 0.9.59 : plaquée nez dans la paroi d'un ruban, presque à l'arrêt, la voiture y restait pour toujours gaz à fond (sans vitesse le volant ne fait rien, et rien ne
+        // la faisait pivoter : le dégagement de 0.9.54 ne valait qu'au sol). Même règle ici : après 0,25 s de contact à moins de 4 m/s, la paroi la fait pivoter vers
+        // sa tangente jusqu'à ce que le nez s'en écarte (12°). Une voiture qui roule n'est jamais touchée.
+        R.pinT = Math.abs(this.fwdSpeed) < 4 ? Math.min(1, (R.pinT || 0) + dt) : 0;
+        if (R.pinT > 0.25 && dsin(R.psi) * side > -0.2) R.psi -= side * (dcos(R.psi) >= 0 ? 1 : -1) * CAR.stuckAlign * dt;
+      } else if (R.pinT) R.pinT = Math.max(0, R.pinT - 2 * dt);
     }
     const uBefore = R.u;
     R.u += (R.dir * R.vs * dt) / F.ds;

@@ -254,11 +254,23 @@ export class GarageSession {
     const c = new THREE.Vector3(12, 1.1, 12);
     const cp = Math.cos(this.pitch);
     const cam = this.app.camera;
-    // Le véhicule est décalé vers la gauche de l'écran pour laisser la place au panneau.
-    cam.position.set(c.x + Math.sin(this.angle) * cp * this.dist, c.y + Math.sin(this.pitch) * this.dist, c.z + Math.cos(this.angle) * cp * this.dist);
+    // Le véhicule est décalé vers la gauche de l'écran pour laisser la place au panneau. Écran étroit (téléphone en portrait : le panneau couvre 62 % de la largeur) :
+    // avant 0.9.59 la vue n'y était pas décalée et la voiture restait au milieu de l'écran, donc SOUS le panneau (on n'en voyait qu'une roue). Elle est maintenant
+    // centrée dans la partie libre, et la caméra recule assez pour qu'elle y tienne en entier.
+    const w = window.innerWidth, h = window.innerHeight;
+    let dist = this.dist, shift = w * 0.17;
+    if (w <= 800) {
+      if (this._frameKey !== w + 'x' + h) {
+        const el = document.getElementById('garage'), pw = el ? el.getBoundingClientRect().width : 0;
+        if (pw > 0) { this._frameKey = w + 'x' + h; this._panelW = Math.min(pw, w * 0.75); }
+      }
+      const panel = this._panelW || 0, free = Math.max(80, w - panel);
+      shift = panel / 2;
+      dist = Math.max(dist, (5.4 * h) / (2 * Math.tan((cam.fov * Math.PI) / 360) * 0.9 * free));      // 5,4 m (le plus long véhicule et son aileron) dans 90 % de la largeur libre
+    }
+    cam.position.set(c.x + Math.sin(this.angle) * cp * dist, c.y + Math.sin(this.pitch) * dist, c.z + Math.cos(this.angle) * cp * dist);
     cam.lookAt(c);
-    const w = window.innerWidth;
-    if (w > 800) cam.setViewOffset(w, window.innerHeight, w * 0.17, 0, w, window.innerHeight);
+    if (shift > 0) cam.setViewOffset(w, h, shift, 0, w, h);
     else cam.clearViewOffset();
     this.app.scenery.update(c, cam, 30);
   }

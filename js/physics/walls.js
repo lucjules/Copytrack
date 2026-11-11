@@ -105,7 +105,7 @@ export const wallMethods = {
       const off = CAR.probe * k;
       for (let iter = 0; iter < 2; iter++) {
         const c = this._probe(p.x + fx * off, p.z + fz * off,
-          this.prev.x + pfx * off, this.prev.z + pfz * off, p.y);
+          this.prev.x + pfx * off, this.prev.z + pfz * off, p.y, p.x, p.z);
         if (!c) break;
         touch = true; lnx = c.nx; lnz = c.nz;
         p.x += c.dx; p.z += c.dz;
@@ -160,13 +160,14 @@ export const wallMethods = {
     }
   },
 
-  _probe(x, z, px, pz, y) {
+  // (mx, mz) : centre de la voiture, pour juger la hauteur d'une sonde sur une pièce en pente (voir _probeTile).
+  _probe(x, z, px, pz, y, mx, mz) {
     const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
     const tiles = this.track.tilesAt(cx, cz);
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
       if (tile.mv || this.excl.has(tile)) continue;
-      if (this._probeTile(tile, x, z, px, pz, y, 0)) return HIT;
+      if (this._probeTile(tile, x, z, px, pz, y, mx, mz)) return HIT;
     }
     // Pièces mobiles : bordures à leur position du moment. L'index les range dans toutes les cases qu'elles balaient : celles de cette case suffisent.
     if (!this.track.hasMovers) return null;
@@ -178,23 +179,34 @@ export const wallMethods = {
       if (o.a) {
         // Pièce tournante : on interroge sa géométrie « au repos », puis on remet le résultat dans le repère du monde.
         const q = this.track.moverLocal(o, x, z, MQ1), q2 = this.track.moverLocal(o, px, pz, MQ2);
-        if (this._probeTile(tile, q.x, q.z, q2.x, q2.z, y - o.y, 0)) {
+        if (this._probeTile(tile, q.x, q.z, q2.x, q2.z, y - o.y)) {
           const c = dcos(o.a), sn = dsin(o.a), dx = HIT.dx, dz = HIT.dz, nx = HIT.nx, nz = HIT.nz;
           HIT.dx = c * dx + sn * dz; HIT.dz = -sn * dx + c * dz;
           HIT.nx = c * nx + sn * nz; HIT.nz = -sn * nx + c * nz;
           return HIT;
         }
-      } else if (this._probeTile(tile, x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y, 0)) return HIT;
+      } else if (this._probeTile(tile, x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y)) return HIT;
     }
     return null;
   },
 
-  _probeTile(tile, x, z, px, pz, y) {
+  _probeTile(tile, x, z, px, pz, y, mx, mz) {
     const P = PIECES[tile.t];
     if (P.kind === 'area' || (tile.nb && !tile.tn) || !(isFloor(tile) || isCeilingFloor(tile))) return false;
+    // 0.9.59 : voiture POSÉE sur une pièce en pente. La hauteur de la bordure est celle de la route SOUS LA SONDE (1,25 m devant ou derrière le centre), alors que
+    // `y` est celle du centre : sur une pente raide l'écart dépassait la hauteur de la bordure. Au bord intérieur d'un virage montant serré (rayon 4 m), la route monte
+    // de plusieurs mètres en 1,25 m : aucune des deux sondes ne « voyait » la bordure et la voiture la traversait ; sur une ligne droite d'inclinaison 4, la sonde du
+    // bas ne la voyait pas non plus. On juge donc la sonde à la hauteur qu'a la voiture AU-DESSUS DE LA ROUTE (elle épouse la pente). En l'air, rien ne change.
+    let dh = 0;
+    if (P.rise && this.grounded && mx !== undefined) {
+      toLocal(tile, mx, mz, L2);
+      sampleLocal(tile, L2.lx, L2.lz, S2);
+      if (S2.inFootprint) dh = S2.h;
+    }
     toLocal(tile, x, z, L1);
     sampleLocal(tile, L1.lx, L1.lz, S1);
     if (!S1.inFootprint) return false;
+    if (dh) { dh = S1.h - dh; y += tile.v ? -dh : dh; }
     // Pièce à l'envers : rails et dalle sont symétriques par rapport à la base.
     const H = CAR.height, gsg = this.gSign;
     const ylo = gsg > 0 ? y : y - H, yhi = gsg > 0 ? y + H : y;

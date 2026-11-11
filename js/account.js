@@ -9,7 +9,7 @@
 // au lieu d'écraser : aucune progression perdue si deux appareils ont joué.
 import { online, OnlineError } from './online.js';
 import {
-  getGlobal, setGlobal, setScope, getSessionFlag, setSessionFlag, dumpAll, restoreAll, onWrite, loadSettings, saveSettings,
+  getGlobal, setGlobal, setScope, getSessionFlag, setSessionFlag, dumpAll, restoreAll, onWrite, loadSettings, saveSettings, removeKeys,
 } from './storage.js';
 import { toCloud, fromCloud, mergeSaves, sameData, pickSynced, withoutGhosts, isSyncKey } from './cloudsave.js';
 import { reloadProfile } from './profile.js';
@@ -237,7 +237,14 @@ class Account {
       const local = toCloud(dumpAll());
       const merged = row ? mergeSaves(local, row.data) : local;
       // Le résultat fusionné devient aussi la version locale (sans déclencher de nouvelle synchronisation).
-      if (!sameData(merged, local)) { restoreAll(fromCloud(merged), true); reloadProfile(); }
+      if (!sameData(merged, local)) {
+        restoreAll(fromCloud(merged), true);
+        // Ce que la fusion a ÉCARTÉ doit aussi quitter cet appareil : les records d'avant un « Effacer les records » fait ailleurs. Avant 0.9.59 ils restaient sur le
+        // disque (restoreAll ajoute et remplace, ne retire rien) : effacés sur un appareil, toujours affichés sur l'autre, pour toujours.
+        const dropped = Object.keys(local).filter((k) => !(k in merged));
+        if (dropped.length) removeKeys(dropped);
+        reloadProfile();
+      }
       if (row && sameData(merged, row.data)) return 'à jour';
       let data = merged;
       if (JSON.stringify(data).length > MAX_CLOUD_BYTES) data = withoutGhosts(data);

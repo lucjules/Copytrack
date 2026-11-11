@@ -5364,6 +5364,8 @@ var CAR = {
   scrubAngle: 0.4,
   scrubSpeed: 8,
   scrubShare: 0.6,
+  crawlSpeed: 3,
+  crawlAccel: 3,
   stuckAlign: 1.4,
   wallStun: 0.04,
   stunTraction: 0.3,
@@ -5517,6 +5519,7 @@ function specsOf(profile) {
 var v2Of = (track) => !!track && (track.vm === 2 || track.pm === "sim");
 
 // js/track.js
+var MAX_CELL = 4e3;
 var MAX_GROUP = 63;
 var EMPTY = Object.freeze([]);
 var key = (x, z) => x + 4096 << 13 | z + 4096;
@@ -5724,10 +5727,11 @@ var Track = class _Track {
       if (lg.o) ori = lg.o;
     }
     if (!PIECES[type]) throw new Error("Pi\xE8ce inconnue : " + type);
+    const cell2 = (v) => Math.max(-MAX_CELL, Math.min(MAX_CELL, v | 0));
     const tile = {
       t: type,
-      x: t.x | 0,
-      z: t.z | 0,
+      x: cell2(t.x),
+      z: cell2(t.z),
       l: Math.max(0, Math.min(MAX_LEVEL, Math.round((+t.l || 0) * 2) / 2)),
       r: t.r & 3,
       s: "",
@@ -5764,12 +5768,12 @@ var Track = class _Track {
     if (surfaceAllowed(type, s, tile.o)) {
       tile.s = s;
       const S22 = SURFACES[s];
-      if (S22 && S22.def != null) tile.p = Math.max(S22.min, Math.min(S22.max, t.p || S22.def));
+      if (S22 && S22.def != null) tile.p = Math.max(S22.min, Math.min(S22.max, +t.p || S22.def));
     }
     if (PIECES[type].kind === "fork" && t.s2 && (t.s2 === "-" || surfaceAllowed(type, t.s2, tile.o))) {
       tile.s2 = t.s2 === "-" ? "-" : SURFACE_ALIAS[t.s2] || t.s2;
       const S32 = SURFACES[tile.s2];
-      if (S32 && S32.def != null) tile.p2 = Math.max(S32.min, Math.min(S32.max, t.p2 || S32.def));
+      if (S32 && S32.def != null) tile.p2 = Math.max(S32.min, Math.min(S32.max, +t.p2 || S32.def));
     }
     return tile;
   }
@@ -9329,7 +9333,7 @@ var wallMethods = {
     for (let k = -1; k <= 1; k += 2) {
       const off = CAR.probe * k;
       for (let iter = 0; iter < 2; iter++) {
-        const c = this._probe(p.x + fx * off, p.z + fz * off, this.prev.x + pfx * off, this.prev.z + pfz * off, p.y);
+        const c = this._probe(p.x + fx * off, p.z + fz * off, this.prev.x + pfx * off, this.prev.z + pfz * off, p.y, p.x, p.z);
         if (!c) break;
         touch = true;
         lnx = c.nx;
@@ -9385,13 +9389,14 @@ var wallMethods = {
       }
     }
   },
-  _probe(x, z, px, pz, y) {
+  // (mx, mz) : centre de la voiture, pour juger la hauteur d'une sonde sur une pièce en pente (voir _probeTile).
+  _probe(x, z, px, pz, y, mx, mz) {
     const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
     const tiles = this.track.tilesAt(cx, cz);
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
       if (tile.mv || this.excl.has(tile)) continue;
-      if (this._probeTile(tile, x, z, px, pz, y, 0)) return HIT;
+      if (this._probeTile(tile, x, z, px, pz, y, mx, mz)) return HIT;
     }
     if (!this.track.hasMovers) return null;
     const time = this.time;
@@ -9401,7 +9406,7 @@ var wallMethods = {
       const o = this.track.moverOffset(tile, time, MOV);
       if (o.a) {
         const q = this.track.moverLocal(o, x, z, MQ1), q2 = this.track.moverLocal(o, px, pz, MQ2);
-        if (this._probeTile(tile, q.x, q.z, q2.x, q2.z, y - o.y, 0)) {
+        if (this._probeTile(tile, q.x, q.z, q2.x, q2.z, y - o.y)) {
           const c = dcos(o.a), sn = dsin(o.a), dx = HIT.dx, dz = HIT.dz, nx = HIT.nx, nz = HIT.nz;
           HIT.dx = c * dx + sn * dz;
           HIT.dz = -sn * dx + c * dz;
@@ -9409,16 +9414,26 @@ var wallMethods = {
           HIT.nz = -sn * nx + c * nz;
           return HIT;
         }
-      } else if (this._probeTile(tile, x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y, 0)) return HIT;
+      } else if (this._probeTile(tile, x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y)) return HIT;
     }
     return null;
   },
-  _probeTile(tile, x, z, px, pz, y) {
+  _probeTile(tile, x, z, px, pz, y, mx, mz) {
     const P = PIECES[tile.t];
     if (P.kind === "area" || tile.nb && !tile.tn || !(isFloor(tile) || isCeilingFloor(tile))) return false;
+    let dh = 0;
+    if (P.rise && this.grounded && mx !== void 0) {
+      toLocal(tile, mx, mz, L2);
+      sampleLocal(tile, L2.lx, L2.lz, S2);
+      if (S2.inFootprint) dh = S2.h;
+    }
     toLocal(tile, x, z, L1);
     sampleLocal(tile, L1.lx, L1.lz, S1);
     if (!S1.inFootprint) return false;
+    if (dh) {
+      dh = S1.h - dh;
+      y += tile.v ? -dh : dh;
+    }
     const H = CAR.height, gsg = this.gSign;
     const ylo = gsg > 0 ? y : y - H, yhi = gsg > 0 ? y + H : y;
     if (tile.v) {
@@ -9915,7 +9930,7 @@ var ribbonMethods = {
     R.vs -= beltE1;
     const c = dcos(R.psi), s = dsin(R.psi);
     let vx = R.vs * c + R.vd * s, vy = -R.vs * s + R.vd * c;
-    const ax = (this._longitudinal(vx, inp, this.k.maxSpeed * vmaxK, Math.min(1, load) * tractK, extraDrag, dt, Math.min(1, load)) - vx) / dt;
+    const ax = (this._longitudinal(vx, inp, this.k.maxSpeed * vmaxK, Math.min(1, load) * tractK, extraDrag, dt, Math.min(1, load), mod === "slow") - vx) / dt;
     this.rearK = rearK;
     const t = this._tires(vx, vy, this.omega, ax, load * gripK, dt);
     this.rearK = 1;
@@ -9962,7 +9977,9 @@ var ribbonMethods = {
           }
         }
         R.dl = clamp(R.dl, -lim, lim);
-      }
+        R.pinT = Math.abs(this.fwdSpeed) < 4 ? Math.min(1, (R.pinT || 0) + dt) : 0;
+        if (R.pinT > 0.25 && dsin(R.psi) * side > -0.2) R.psi -= side * (dcos(R.psi) >= 0 ? 1 : -1) * CAR.stuckAlign * dt;
+      } else if (R.pinT) R.pinT = Math.max(0, R.pinT - 2 * dt);
     }
     const uBefore = R.u;
     R.u += R.dir * R.vs * dt / F.ds;
@@ -10774,7 +10791,7 @@ var CarPhysics = class {
         grip *= b.grip;
       } else this.heave = 0;
     }
-    const ax = (this._longitudinal(vf, inp, K3.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
+    const ax = (this._longitudinal(vf, inp, K3.maxSpeed * vmaxK, traction, extraDrag, dt, 1, !ground && mod === "slow" || this.vehicle === "boat" && !wet) - vf) / dt;
     if (this.v2) this.mAx = ax;
     this.rearK = rearK;
     const r = this._tires(vf, vr, this.omega, ax, grip, dt);
@@ -10951,8 +10968,12 @@ var CarPhysics = class {
   }
   // Nouvelle vitesse longitudinale : moteur, freins, résistances.
   // load : part du poids qui appuie les roues sur la route (1 au sol, 0 sur un mur vertical).
-  _longitudinal(vf, inp, vmax, traction, extraDrag, dt, load = 1) {
+  // crawl : revêtement dont la résistance peut dépasser la poussée du moteur (ralentisseur à 100 % et plus : 14 m/s² contre 14 ; bateau hors de l'eau : 7 contre 4).
+  // Avant 0.9.59 un véhicule qui s'y arrêtait ne repartait plus jamais, gaz à fond (0,1 m/s). Sous les gaz, il garde maintenant au moins CAR.crawlAccel jusqu'à
+  // CAR.crawlSpeed : il traverse au pas. Au-dessus de cette vitesse, rien ne change (le ralentisseur freine toujours autant).
+  _longitudinal(vf, inp, vmax, traction, extraDrag, dt, load = 1, crawl = false) {
     const K3 = this.k;
+    const vf0 = vf;
     let a = 0;
     if (inp.throttle) {
       if (vf < -0.5) a += K3.brake * traction;
@@ -10981,7 +11002,12 @@ var CarPhysics = class {
     const dvr = res * dt;
     if (Math.abs(vf) <= dvr) vf = 0;
     else vf -= Math.sign(vf) * dvr;
-    return vf + a * dt;
+    vf += a * dt;
+    if (crawl && inp.throttle && vf0 > -0.5 && vf < CAR.crawlSpeed) {
+      const up = Math.min(CAR.crawlSpeed, vf0 + CAR.crawlAccel * load * dt);
+      if (vf < up) vf = up;
+    }
+    return vf;
   }
   // ---------------------------------------------------------------- Obstacles
   // ---------------------------------------------------------------- Rubans
@@ -11187,13 +11213,17 @@ var RaceLogic = class {
         gs: g.gs || 1
       };
     }
-    const c = tileCenter(tile);
+    const c = tileCenter(tile), gs = tile.v ? -1 : 1, y = baseY(tile);
+    if (!this.track.offroad) {
+      const s = gs > 0 ? this.track.surfaceAt(c.x, y + 0.5, c.z, S3, 3, phys.excl, phys.time) : this.track.ceilingSurfaceAt(c.x, y - 0.5, c.z, S3, 3, phys.excl);
+      if (s.type !== "road") return null;
+    }
     return {
       x: c.x,
-      y: baseY(tile),
+      y,
       z: c.z,
       yaw: phys.yaw,
-      gs: tile.v ? -1 : 1
+      gs
     };
   }
   get time() {
@@ -11240,10 +11270,20 @@ var RaceLogic = class {
         const rr = this._ringRespawn(tile, phys);
         this.collected.add(tile);
         this.splits.push(this.steps);
-        this.respawn = {
+        const old = this.respawn;
+        this.respawn = rr ? {
           ...rr,
           vehicle: phys.vehicle,
           grav: phys.gravMul,
+          snap
+        } : {
+          x: old.x,
+          y: old.y,
+          z: old.z,
+          yaw: old.yaw,
+          gs: old.gs,
+          vehicle: old.vehicle,
+          grav: old.grav,
           snap
         };
         event = {
@@ -11296,10 +11336,17 @@ var RaceLogic = class {
             this.lap++;
             this.collected.clear();
             this.splits.push(this.steps);
+            let rx = p.x, rz = p.z;
+            const lim = ROAD_HALF - 1.2;
+            if (!this.track.offroad && Math.abs(L3.lx) > lim) {
+              const w = localToWorld(tile, L3.lx > 0 ? lim : -lim, L3.lz);
+              rx = w.x;
+              rz = w.z;
+            }
             this.respawn = {
-              x: p.x,
+              x: rx,
               y: h,
-              z: p.z,
+              z: rz,
               yaw: phys.yaw,
               vehicle: phys.vehicle,
               grav: phys.gravMul,
@@ -11496,7 +11543,6 @@ var Autopilot = class {
   control(phys) {
     const c = this._control(phys);
     if (phys.rib) {
-      if (phys.rib.tile.v) c.steer = -c.steer;
     } else if (phys.gSign < 0) {
       c.steer = -c.steer;
       if (!phys.grounded && phys.vehicle !== "glider") {
@@ -11893,7 +11939,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/version.js
-var PHYS_VER = 33;
+var PHYS_VER = 34;
 
 // js/ghostFormat.js
 var GHOST_EVERY = 4;

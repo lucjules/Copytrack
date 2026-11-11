@@ -1,11 +1,11 @@
 {
- "version": 33,
- "combined": "219e47779b0aeca6",
+ "version": 34,
+ "combined": "44156904dd91956b",
  "scenarios": {
   "bot:eclats": "23f32863cb8d6235",
   "noise:eclats": "43b5b67e913f95fc",
   "bot:canyon": "b07a04383c20a482",
-  "noise:canyon": "9ba89a5854c0f45e",
+  "noise:canyon": "272e5600096971a4",
   "bot:tremplins": "5bc28ace6ed0a026",
   "noise:tremplins": "6b9d4351ddc6e277",
   "bot:spirale": "3bf675d2ca7efe38",
@@ -59,7 +59,7 @@
   "bot:helice": "07d8c8f7d68809f3",
   "noise:helice": "b2a0c4788b676cea",
   "bot:couronne": "6402cc8b8c09ee4b",
-  "noise:couronne": "428c59d521ccdfe7",
+  "noise:couronne": "608bee58214246be",
   "bot:blizzard": "d2f91bd6d5e833aa",
   "noise:blizzard": "9b07e28c72744486",
   "bot:braises": "292b55b5724df3c7",

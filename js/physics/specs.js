@@ -73,6 +73,8 @@ export const CAR = {
   scrubAngle: 0.4,    // 0.9.58 : braquage (rad) au-delà duquel la poussée longitudinale « de frottement » du pneu avant est plafonnée à basse vitesse (voir _tires)
   scrubSpeed: 8,      //   … en dessous de cette vitesse (m/s)
   scrubShare: 0.6,    //   … à cette part de la poussée du moteur : volant à fond, la voiture finit toujours par accélérer au lieu de tourner à 2 m/s sans fin
+  crawlSpeed: 3,      // 0.9.59 : sur un ralentisseur (ou pour un bateau hors de l'eau), la résistance dépasse la poussée du moteur : une voiture arrêtée ne repartait JAMAIS.
+  crawlAccel: 3,      //   Sous les gaz elle garde donc au moins cette accélération (m/s²) jusqu'à cette vitesse (m/s, 11 km/h) : très lente, jamais prisonnière (voir _longitudinal)
   stuckAlign: 1.4,    // 0.9.54 : voiture plaquée nez au mur : le contact la fait pivoter d'elle-même vers la tangente du mur (rad/s), sans qu'il faille braquer
   wallStun: 0.04,     // durée de l'encaissement (s par m/s d'impact), 0,1 s en plus, bornée à 0,8 s
   stunTraction: 0.3,  // poussée du moteur pendant l'encaissement

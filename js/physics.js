@@ -484,7 +484,8 @@ export class CarPhysics {
       if (this.vehicle === 'boat' && wet) { const b = boat2Water(this, this.surfTile, fx, fz, rx, rz, this.g, dt); vf += b.dvf; vr += b.dvr; grip *= b.grip; }
       else this.heave = 0;
     }
-    const ax = (this._longitudinal(vf, inp, K.maxSpeed * vmaxK, traction, extraDrag, dt) - vf) / dt;
+    // (dernier argument : le « pas rampant » des revêtements dont la résistance dépasse la poussée — ralentisseur, bateau hors de l'eau ; voir _longitudinal)
+    const ax = (this._longitudinal(vf, inp, K.maxSpeed * vmaxK, traction, extraDrag, dt, 1, (!ground && mod === 'slow') || (this.vehicle === 'boat' && !wet)) - vf) / dt;
     if (this.v2) this.mAx = ax;
     this.rearK = rearK;
     const r = this._tires(vf, vr, this.omega, ax, grip, dt);
@@ -658,8 +659,12 @@ export class CarPhysics {
 
   // Nouvelle vitesse longitudinale : moteur, freins, résistances.
   // load : part du poids qui appuie les roues sur la route (1 au sol, 0 sur un mur vertical).
-  _longitudinal(vf, inp, vmax, traction, extraDrag, dt, load = 1) {
+  // crawl : revêtement dont la résistance peut dépasser la poussée du moteur (ralentisseur à 100 % et plus : 14 m/s² contre 14 ; bateau hors de l'eau : 7 contre 4).
+  // Avant 0.9.59 un véhicule qui s'y arrêtait ne repartait plus jamais, gaz à fond (0,1 m/s). Sous les gaz, il garde maintenant au moins CAR.crawlAccel jusqu'à
+  // CAR.crawlSpeed : il traverse au pas. Au-dessus de cette vitesse, rien ne change (le ralentisseur freine toujours autant).
+  _longitudinal(vf, inp, vmax, traction, extraDrag, dt, load = 1, crawl = false) {
     const K = this.k;
+    const vf0 = vf;
     let a = 0;
     if (inp.throttle) {
       if (vf < -0.5) a += K.brake * traction;
@@ -685,7 +690,12 @@ export class CarPhysics {
     res += 4 * this.driftT * load;
     const dvr = res * dt;
     if (Math.abs(vf) <= dvr) vf = 0; else vf -= Math.sign(vf) * dvr;
-    return vf + a * dt;
+    vf += a * dt;
+    if (crawl && inp.throttle && vf0 > -0.5 && vf < CAR.crawlSpeed) {
+      const up = Math.min(CAR.crawlSpeed, vf0 + CAR.crawlAccel * load * dt);
+      if (vf < up) vf = up;
+    }
+    return vf;
   }
 
   // ---------------------------------------------------------------- Obstacles

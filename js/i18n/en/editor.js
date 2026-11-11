@@ -210,6 +210,7 @@ export default {
   'Maximum de {n:w} décorations atteint.': 'Maximum of {n} decorations reached.',
   'Place occupée à cette hauteur': 'Spot occupied at this height',
   'Circuit enregistré dans « Mes circuits »': 'Track saved in “My tracks”',
+  'Enregistrement impossible : le stockage du navigateur est plein ou bloqué. Copie le code du circuit (Partager) pour ne pas le perdre.': 'Could not save: the browser storage is full or blocked. Copy the track code (Share) so you do not lose it.',
   'Vise une pièce de route.': 'Aim at a road piece.',
   'Teste depuis une route au sol (ou une transition qui part du sol) : on ne démarre pas sur un mur.': 'Test from a road on the ground (or a transition starting from the ground): you do not start on a wall.',
   '{a:t} : une extrémité n\'est reliée à rien.': '{a}: one end is not connected to anything.',
@@ -217,6 +218,7 @@ export default {
   'Saut de {n:w} cases sans tremplin : la voiture risque de tomber.': 'Jump of {n} cells without a ramp: the car may fall.',
   'Arrivée de saut plus haute que le départ.': 'Jump landing higher than the take-off.',
   '{a:t} inaccessible depuis le départ.': '{a} unreachable from the start.',
+  'Gravité inversée au départ, mais le départ n’est pas posé au plafond : la voiture tombera vers le ciel. Pose le départ à l’envers (orientation Plafond) ou décoche la règle.': 'Inverted gravity at the start, but the start is not on the ceiling: the car will fall into the sky. Place the start upside down (Ceiling orientation) or untick the rule.',
   'Essai libre : ce circuit n’a pas d’arrivée (Échap pour revenir à l’éditeur).': 'Free test: this track has no finish (Esc to go back to the editor).',
   'Test depuis la pièce visée : sans checkpoints, médaille ni vérification.': 'Test from the targeted piece: no checkpoints, medal or verification.',
   'Vérification : termine le circuit. Ton temps deviendra la médaille cristal.': 'Verification: finish the track. Your time will become the crystal medal.',
@@ -247,6 +249,8 @@ export default {
   'Presse-papiers vide : copie d\'abord une zone.': 'Clipboard empty: copy an area first.',
   'Clique pour coller · R pour pivoter · Échap pour annuler': 'Click to paste · R to rotate · Esc to cancel',
   '{n:w} pièce(s) ignorée(s) (départ en double ou hors des niveaux).': '{n} piece(s) ignored (duplicate start or outside the levels).',
+  'Zone posée {n:w} niveau plus haut : une de ses pièces passerait sous le sol.': 'Area placed {n} level higher: one of its pieces would go below the ground.',
+  'Zone posée {n:w} niveaux plus haut : une de ses pièces passerait sous le sol.': 'Area placed {n} levels higher: one of its pieces would go below the ground.',
   'Tous les niveaux': 'All levels',
 
   // ---------------------------------------------------------------- prefabs

@@ -223,6 +223,7 @@ export default {
   'Classement': 'Leaderboard',
   'Copier dans Mes circuits': 'Copy to My tracks',
   'Copié dans « Mes circuits ».': 'Copied to “My tracks”.',
+  'Copie impossible : le stockage du navigateur est plein ou bloqué.': 'Could not copy: the browser storage is full or blocked.',
   'Nom et description': 'Name and description',
   'Retirer de la communauté': 'Remove from the community',
   'Modifier le circuit publié': 'Edit the published track',

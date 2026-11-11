@@ -98,6 +98,25 @@ class App {
     this._wireEggs();
     window.addEventListener('orientationchange', () => this._resize());
     document.addEventListener('fullscreenchange', () => this._resize());
+    document.addEventListener('visibilitychange', () => this._onVisibility());
+  }
+
+  // Course en solo interrompue par autre chose que le joueur (onglet masqué, téléphone verrouillé, écran « tourne ton téléphone ») : elle passe en pause. Avant 0.9.59 la
+  // boucle s'arrêtait seulement (plus d'images dans un onglet masqué) et la course reprenait d'elle-même au retour, voiture lancée, sans prévenir ; en portrait sur un
+  // téléphone elle continuait même SOUS l'écran qui demande de tourner l'appareil. En multijoueur il n'y a pas de pause (les autres courent) : rien ne change.
+  _autoPause() {
+    const S = this.session;
+    if (this.mode === 'race' && S && !S.multi && !S.replay && !S.demo && (S.state === 'racing' || S.state === 'countdown') && typeof S.pause === 'function') S.pause();
+  }
+
+  // Onglet masqué : pause (voir _autoPause) et son coupé (la musique continuait de jouer dans un onglet en arrière-plan) ; il revient avec l'onglet.
+  _onVisibility() {
+    const hidden = document.visibilityState === 'hidden';
+    if (hidden) this._autoPause();
+    const ctx = this.audio && this.audio.ctx;
+    if (!ctx || typeof ctx.suspend !== 'function') return;
+    if (hidden && ctx.state === 'running') { this._audioHeld = true; ctx.suspend().catch(() => {}); }
+    else if (!hidden && this._audioHeld) { this._audioHeld = false; if (ctx.state === 'suspended') ctx.resume().catch(() => {}); }
   }
 
   saveSettings() {
@@ -111,7 +130,9 @@ class App {
     this.camera.updateProjectionMatrix();
     if (this.session && this.session.kind === 'editor') this.session._refreshUI();
     const portrait = h > w && document.body.classList.contains('touch');
-    $('rotate-hint').classList.toggle('hidden', !(portrait && (this.mode === 'race' || this.mode === 'editor')));
+    const rotate = portrait && (this.mode === 'race' || this.mode === 'editor');
+    $('rotate-hint').classList.toggle('hidden', !rotate);
+    if (rotate) this._autoPause();          // l'écran « tourne ton téléphone » recouvre tout : la course n'avance pas derrière lui
     this._fsButton();
   }
 

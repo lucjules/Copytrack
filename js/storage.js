@@ -42,13 +42,27 @@ function read(key, fallback) {
   }
 }
 
+// lastWriteOk : la DERNIÈRE écriture a-t-elle réussi ? (stockage plein, navigation privée, quota : setItem lève une exception). Les appelants dont la donnée ne se
+// refabrique pas (un circuit qu'on enregistre) s'en servent pour le dire au joueur au lieu d'annoncer un succès.
+let lastWriteOk = true;
+export const wroteOk = () => lastWriteOk;
 function write(key, value) {
   try {
     localStorage.setItem(PREFIX + key, JSON.stringify(value));
     if (writeHook) writeHook(key);
+    lastWriteOk = true;
     return true;
   } catch {
+    lastWriteOk = false;
     return false;
+  }
+}
+
+// Retire des clés de la portée courante (synchronisation du compte : ce que la fusion a écarté, voir account.js) ; la copie en mémoire des records suit.
+export function removeKeys(keys) {
+  for (const k of keys) {
+    try { localStorage.removeItem(PREFIX + k); } catch { /* stockage indisponible */ }
+    if (k.startsWith(REC)) memRec.delete(PREFIX + k.slice(REC.length));
   }
 }
 
@@ -208,10 +222,15 @@ export function saveRecord(trackKey, rec) {
   if (old) { const bt = Math.min(medalTime(old), medalTime(rec)); if (bt < rec.time - 1e-9) rec = { ...rec, bt }; }
   memRec.set(PREFIX + trackKey, slim(rec));
   const tiers = [rec, { ...rec, ghost: null }, slim(rec)];
-  const tryWrite = () => tiers.some((t) => write(REC + trackKey, t));
+  return makeRoom(() => tiers.some((t) => write(REC + trackKey, t)), PREFIX + REC + trackKey);
+}
+
+// Stockage plein : on libère de la place en retirant le fantôme et les commandes des records (du plus ancien au plus récent, sauf `except`), en réessayant après
+// chacun. Les temps, eux, ne sont jamais perdus. Renvoie true dès que `tryWrite` réussit.
+function makeRoom(tryWrite, except = '') {
   if (tryWrite()) return true;
   let keys;
-  try { keys = Object.keys(localStorage).filter((k) => k.startsWith(PREFIX + REC) && k !== PREFIX + REC + trackKey); } catch { return false; }
+  try { keys = Object.keys(localStorage).filter((k) => k.startsWith(PREFIX + REC) && k !== except); } catch { return false; }
   const others = keys.map((k) => { try { return { k, v: JSON.parse(localStorage.getItem(k)) }; } catch { return null; } })
     .filter((o) => o && o.v && (o.v.ghost || o.v.inputs)).sort((a, b) => (a.v.date || 0) - (b.v.date || 0));
   for (const o of others) {
@@ -252,7 +271,9 @@ export function saveMyTrack(entry) {
   const i = list.findIndex((t) => t.id === entry.id);
   entry.updated = Date.now();
   if (i >= 0) list[i] = entry; else list.unshift(entry);
-  write('tracks', list);
+  // Un circuit ne se refabrique pas : si le stockage est plein, on fait de la place (fantômes des records) avant de renoncer. L'appelant vérifie wroteOk() :
+  // avant 0.9.59 l'écriture ratée passait inaperçue et l'éditeur annonçait « Circuit enregistré » (circuit perdu à la fermeture de la page).
+  makeRoom(() => write('tracks', list));
   return entry;
 }
 
@@ -328,10 +349,10 @@ export { encodeFloats, decodeFloats } from './ghostFormat.js';
 export function formatTime(sec, sign = false) {
   if (sec == null || !isFinite(sec)) return '--:--.---';
   const neg = sec < 0;
-  const s = Math.abs(sec);
-  const m = Math.floor(s / 60);
-  const r = s - m * 60;
-  const txt = String(m).padStart(2, '0') + ':' + r.toFixed(3).padStart(6, '0');
+  // Arrondi au millième AVANT de séparer minutes et secondes : 59,9996 s s'écrivait « 00:60.000 » (le chrono l'affichait une image à chaque passage de minute).
+  const ms = Math.round(Math.abs(sec) * 1000);
+  const m = Math.floor(ms / 60000);
+  const txt = String(m).padStart(2, '0') + ':' + ((ms - m * 60000) / 1000).toFixed(3).padStart(6, '0');
   if (sign) return (neg ? '-' : '+') + txt;
   return (neg ? '-' : '') + txt;
 }

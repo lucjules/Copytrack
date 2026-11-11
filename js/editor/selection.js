@@ -26,6 +26,7 @@ export const selectionMethods = {
     if (!this.hover) return;
     if (this.pasting) { this.doPaste(); return; }
     this.selDrag = { cx: this.hover.cx, cz: this.hover.cz };
+    this.selGroup = 0;                                              // une zone tracée à la main n'est plus « le groupe »
     this.sel = normRect(this.selDrag, this.selDrag);
     if (tap) { this.selDrag = null; this._selInfo(); }
   },
@@ -44,6 +45,7 @@ export const selectionMethods = {
   // vue par niveau, seulement celles du niveau affiché.
   _selOk(o) {
     if (!this._layerOk(o)) return false;
+    if (this.selGroup && o.g !== this.selGroup) return false;      // « Sélectionner le groupe » (groups.js) : seulement ses membres, pas ce qui se trouve dans le même rectangle
     if (!this.focusLevel) return true;
     if (o.t) { const [lo, hi] = Track.range(o); return this.level >= lo && this.level <= hi; }
     return Math.abs(o.y - this.level * LEVEL_H) < LEVEL_H;          // décoration : à la hauteur du niveau (± un niveau)
@@ -61,6 +63,7 @@ export const selectionMethods = {
   selectAll() {
     if (!this.track.tiles.length) return;
     this.setTool('select');
+    this.selGroup = 0;
     const xs = this.track.tiles.flatMap((t) => Track.cellsOf(t).map((c) => c[0]));
     const zs = this.track.tiles.flatMap((t) => Track.cellsOf(t).map((c) => c[1]));
     this.sel = { x0: Math.min(...xs), z0: Math.min(...zs), x1: Math.max(...xs), z1: Math.max(...zs) };
@@ -68,7 +71,7 @@ export const selectionMethods = {
   },
 
   clearSel() {
-    this.sel = null; this.selDrag = null; this.pasting = false; this.previewKey = '';
+    this.sel = null; this.selDrag = null; this.pasting = false; this.previewKey = ''; this.selGroup = 0;
     this._clearPreview();
     this._refreshSelBar();
   },
@@ -176,7 +179,7 @@ export const selectionMethods = {
     if (!this.clip) { this.app.ui.flash('Presse-papiers vide : copie d\'abord une zone.'); return; }
     if (this.tool !== 'select') this.setTool('select');
     this.pasting = true;
-    this.sel = null;
+    this.sel = null; this.selGroup = 0;
     this.previewKey = '';
     this.app.ui.flash('Clique pour coller · R pour pivoter · Échap pour annuler', 2.6);
     this._refreshSelBar();
@@ -194,6 +197,7 @@ export const selectionMethods = {
     const res = pasteClip(this.track, this.clip, this.hover.cx, this.hover.cz, this.level);
     this.app.audio.place();
     if (res.skipped) this.app.ui.flash(`${res.skipped} pièce(s) ignorée(s) (départ en double ou hors des niveaux).`);
+    else if (res.lift) this.app.ui.flash(`Zone posée ${res.lift} niveau${res.lift > 1 ? 'x' : ''} plus haut : une de ses pièces passerait sous le sol.`, 3);
     this._changed();
     this._commit();
   },

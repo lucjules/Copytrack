@@ -78,8 +78,15 @@ export class RaceLogic {
   // (mémorisée par la course), sinon l'anneau lui-même au niveau de sa base.
   _ringRespawn(tile, phys) {
     if (this.lastGround) { const g = this.lastGround; return { x: g.x, y: g.y, z: g.z, yaw: g.yaw, gs: g.gs || 1 }; }
-    const c = tileCenter(tile);
-    return { x: c.x, y: baseY(tile), z: c.z, yaw: phys.yaw, gs: tile.v ? -1 : 1 };
+    const c = tileCenter(tile), gs = tile.v ? -1 : 1, y = baseY(tile);
+    // 0.9.59 : aucune position au sol n'a encore été relevée (anneau franchi dans le premier quart de seconde : vitesse de départ, anneau juste après le départ). Le
+    // centre de l'anneau n'est un point de retour que s'il y a une ROUTE dessous : un anneau flotte le plus souvent au-dessus d'un vide, et la voiture y réapparaissait
+    // sur le terrain, hors piste, donc rappelée 0,5 s plus tard au même endroit… sans fin. Sinon (null) le point de retour précédent est gardé.
+    if (!this.track.offroad) {
+      const s = gs > 0 ? this.track.surfaceAt(c.x, y + 0.5, c.z, S, 3, phys.excl, phys.time) : this.track.ceilingSurfaceAt(c.x, y - 0.5, c.z, S, 3, phys.excl);
+      if (s.type !== 'road') return null;
+    }
+    return { x: c.x, y, z: c.z, yaw: phys.yaw, gs };
   }
 
   get time() {
@@ -125,7 +132,9 @@ export class RaceLogic {
         const rr = this._ringRespawn(tile, phys);
         this.collected.add(tile);
         this.splits.push(this.steps);
-        this.respawn = { ...rr, vehicle: phys.vehicle, grav: phys.gravMul, snap };
+        // (pas de point sûr près de l'anneau : la voiture reviendra au point de retour précédent, avec le véhicule et la gravité qu'elle y avait ; l'anneau reste à repasser)
+        const old = this.respawn;
+        this.respawn = rr ? { ...rr, vehicle: phys.vehicle, grav: phys.gravMul, snap } : { x: old.x, y: old.y, z: old.z, yaw: old.yaw, gs: old.gs, vehicle: old.vehicle, grav: old.grav, snap };
         event = { type: 'checkpoint', index: this.splits.length, steps: this.steps };
         continue;
       }
@@ -162,8 +171,13 @@ export class RaceLogic {
             this.lap++;
             this.collected.clear();
             this.splits.push(this.steps);
-            // Le passage de la ligne sert aussi de point de retour pour le nouveau tour.
-            this.respawn = { x: p.x, y: h, z: p.z, yaw: phys.yaw, vehicle: phys.vehicle, grav: phys.gravMul, gs: respawnGs(tile, phys), snap: this._snap() };
+            // Le passage de la ligne sert aussi de point de retour pour le nouveau tour. 0.9.59 : la ligne se franchit jusqu'à 1,5 m AU-DELÀ du bord de la route (en
+            // l'air, par-dessus la bordure) ; le point de retour gardait cette position hors route : la voiture réapparaissait sur le terrain, donc hors piste, donc
+            // rappelée au même endroit sans fin. Il est ramené sur la chaussée (sauf si le hors-piste est permis).
+            let rx = p.x, rz = p.z;
+            const lim = ROAD_HALF - 1.2;
+            if (!this.track.offroad && Math.abs(L.lx) > lim) { const w = localToWorld(tile, L.lx > 0 ? lim : -lim, L.lz); rx = w.x; rz = w.z; }
+            this.respawn = { x: rx, y: h, z: rz, yaw: phys.yaw, vehicle: phys.vehicle, grav: phys.gravMul, gs: respawnGs(tile, phys), snap: this._snap() };
             event = { type: 'lap', lap: this.lap, laps: this.laps, index: this.splits.length, steps: this.steps };
           } else {
             this.finished = true;
