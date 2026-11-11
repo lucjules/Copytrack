@@ -11,7 +11,8 @@ import { Track, scriptTrack, b64encode, MAX_CELL } from '../js/track.js';
 import { PIECES, PIECE_ORDER, SURFACE_ORDER, SURFACES, LEGACY_PIECE, LEGACY_SURFACE, LEGACY_TILE } from '../js/pieces.js';
 import { MAX_DECOS } from '../js/constants.js';
 import { DECO_ORDER } from '../js/decoData.js';
-import { shiftLevel, pasteClip, copyRect, clipLift, placedClip } from '../js/editorTools.js';
+import { shiftLevel, pasteClip, copyRect, clipLift, placedClip, checkTrack } from '../js/editorTools.js';
+import { Simulation } from '../js/simulation.js';
 import { STARTERS, starterClip } from '../js/prefabs.js';
 import { test, finish } from './harness.mjs';
 
@@ -221,6 +222,23 @@ test('aucune opération ne corrompt le circuit ; l\'état courant est toujours u
     cleanup(s);
   }
   assert.equal(ops, 120 * 70);
+});
+
+console.log('Vérificateur');
+test('règle « gravité inversée au départ » sans départ au plafond : le vérificateur le signale (la voiture tombait vers le ciel et réapparaissait sans fin) ; un départ au plafond ne signale rien', () => {
+  const bad = scriptTrack('f', 'start S3 finish'); bad.setParams({ flip0: true });
+  const msgs = checkTrack(bad).filter((i) => /Gravité inversée au départ/.test(i.msg));
+  assert.equal(msgs.length, 1);
+  assert.equal(msgs[0].level, 'error'); assert.equal(msgs[0].tile, bad.startTile);
+  // La situation est réelle : la course ne peut pas commencer (rappel automatique en boucle).
+  const sim = new Simulation(bad); sim.start();
+  let lost = 0;
+  for (let i = 0; i < 120 * 30; i++) { sim.step({ steer: 0, throttle: true, brake: false }); if (sim.lost) { lost++; sim.rewind(); } }
+  assert.ok(lost >= 2 && !sim.logic.finished, 'sans plafond : la voiture est rappelée en boucle (' + lost + ' fois en 30 s)');
+  const good = scriptTrack('g', 'start^ S3^ finish^', { l: 6 }); good.setParams({ flip0: true });
+  assert.equal(checkTrack(good).filter((i) => /Gravité inversée/.test(i.msg)).length, 0);
+  const plain = scriptTrack('p', 'start S3 finish');
+  assert.equal(checkTrack(plain).filter((i) => /Gravité inversée/.test(i.msg)).length, 0);
 });
 
 console.log('Codes de circuit fabriqués');

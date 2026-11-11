@@ -218,6 +218,7 @@ export default {
   'Saut de {n:w} cases sans tremplin : la voiture risque de tomber.': 'Jump of {n} cells without a ramp: the car may fall.',
   'Arrivée de saut plus haute que le départ.': 'Jump landing higher than the take-off.',
   '{a:t} inaccessible depuis le départ.': '{a} unreachable from the start.',
+  'Gravité inversée au départ, mais le départ n’est pas posé au plafond : la voiture tombera vers le ciel. Pose le départ à l’envers (orientation Plafond) ou décoche la règle.': 'Inverted gravity at the start, but the start is not on the ceiling: the car will fall into the sky. Place the start upside down (Ceiling orientation) or untick the rule.',
   'Essai libre : ce circuit n’a pas d’arrivée (Échap pour revenir à l’éditeur).': 'Free test: this track has no finish (Esc to go back to the editor).',
   'Test depuis la pièce visée : sans checkpoints, médaille ni vérification.': 'Test from the targeted piece: no checkpoints, medal or verification.',
   'Vérification : termine le circuit. Ton temps deviendra la médaille cristal.': 'Verification: finish the track. Your time will become the crystal medal.',

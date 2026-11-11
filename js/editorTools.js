@@ -392,6 +392,10 @@ export function checkTrack(track) {
     }
   }
   for (const e of track.validate()) issues.push({ tile: null, level: 'error', msg: e });
+  // 0.9.59 : « Inversion de gravité au départ » sans plafond au départ. La voiture part en gravité inversée ; si le départ n'est pas une pièce posée à l'envers, il n'y a
+  // rien pour la retenir : elle « tombe » vers le ciel, est rappelée au départ, retombe… sans fin (trouvé par l'exploration aléatoire). On prévient l'auteur.
+  const st = track.startTile;
+  if (track.flip0 && st && !st.v) issues.push({ tile: st, level: 'error', msg: 'Gravité inversée au départ, mais le départ n’est pas posé au plafond : la voiture tombera vers le ciel. Pose le départ à l’envers (orientation Plafond) ou décoche la règle.' });
   return issues;
 }
 

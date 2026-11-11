@@ -6,6 +6,47 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.59 — audit complet (physique, éditeur, interface, sauvegardes, sécurité)
+
+`PHYS_VER` 33 → **34** : la physique et les règles de course changent (dernier commit de la série, isolé : voir « Physique » ci-dessous). **Redéployer `submit-score`**
+après la mise en ligne, sinon le serveur refuse les nouveaux temps (« serveur d'une autre version ») ; les records restent affichés, leurs replays et les classements de la
+version 33 ne sont plus comparables (au moment de l'audit la production ne comptait que 2 temps en version 33). Le rapport complet, avec ce qui n'a PAS été corrigé et ce
+qui n'a PAS pu être testé, est dans [docs/AUDIT-0.9.59.md](docs/AUDIT-0.9.59.md).
+- **Méthode** : exploration aléatoire du vrai moteur (5 000 circuits tirés au hasard, 30 millions de pas, invariants vérifiés à chaque pas, rejeu comparé à la course),
+  150 000 opérations d'éditeur au hasard (structure du circuit et historique vérifiés après chacune), parcours de tous les écrans à huit tailles dans Chromium
+  (360 × 640 à 1920 × 1080), cycles répétés course / éditeur / garage (fuites), lecture seule de la base de production.
+- **Physique** (`PHYS_VER` 34 ; empreinte : 2 scénarios sur 193 changent ; temps de référence des 72 circuits, médailles et corpus de compatibilité **inchangés**) :
+  - *Ralentisseur* à 100 % et plus (100 % est le réglage par défaut) : sa résistance égalait ou dépassait la poussée du moteur, une voiture arrêtée dessus ne repartait
+    **jamais** (0,1 m/s gaz à fond). Elle garde maintenant, sous les gaz, 3 m/s² jusqu'à 11 km/h : elle traverse au pas. Au-dessus, le ralentisseur freine comme avant.
+  - *Bateau hors de l'eau* : totalement immobile (poussée 4 m/s², résistance 7) alors qu'il devait « se traîner sur la route » : même pas rampant.
+  - *Nez dans la paroi d'un ruban* (virage relevé, looping, vrille, tire-bouchon) presque à l'arrêt : plaquée pour toujours gaz à fond (le dégagement de la 0.9.54 ne
+    valait qu'au sol). La paroi fait maintenant pivoter la voiture le long d'elle.
+  - *Bordure intérieure d'un virage montant serré* : une voiture qui glissait de côté vers elle la traversait (13 cas sur 300, jusqu'à 2,8 m au-delà). La hauteur de la
+    bordure est maintenant jugée à la hauteur de la voiture au-dessus de la route, pour une voiture posée sur une pièce en pente.
+  - *Checkpoint aérien franchi avant le premier relevé de position* (vitesse de départ, anneau juste après le départ, au-dessus d'un vide) : le point de retour était
+    le vide sous l'anneau → retour automatique en boucle, sans issue. Le point de retour précédent est gardé.
+  - *Nouveau tour franchi en l'air à côté de la route* : le point de retour gardait la position hors route → même boucle. Il est ramené sur la chaussée.
+- **Pilote automatique** : volant inversé à tort sur les rubans posés à l'envers (virage relevé, tire-bouchon, looping au plafond) : il finissait contre la paroi.
+- **Éditeur** : coller une zone ou descendre une sélection pouvait enterrer des pièces (à l'envers, pente descendante, route sur un mur : le prefab « Wall-ride » collé
+  au sol descendait 9 m sous terre) → la zone collée est remontée, le décalage refusé ; un décalage de niveau **refusé** modifiait quand même le circuit (ordre des
+  pièces, objets recréés, sans pas d'annulation) ; « Sélectionner le groupe » prenait toutes les pièces du rectangle englobant, départ compris ; le vérificateur signale
+  la règle « gravité inversée au départ » sans départ au plafond (retours en boucle) ; codes de circuit fabriqués : cases bornées, réglage non numérique écarté.
+- **Interface** : accueil à six tuiles sur 5 + 1 (1366 × 768 et 1920 × 1080) → une rangée ou 3 + 3 ; garage sur téléphone en portrait : la voiture était sous le
+  panneau ; garage en paysage bas : un seul élément visible ; Paramètres › Commandes : titre, onglets et consigne des touches à même la scène 3D ; arrivée franchie au
+  plafond : la caméra d'arrivée (et l'orbite et le poste TV des replays) passait derrière la route retournée ; « 3 » du décompte effacé après un recommencement
+  rapide ; chrono « 00:60.000 » au passage d'une minute.
+- **Comportement** : onglet masqué ou écran « tourne ton téléphone » pendant une course en solo → pause (la course reprenait seule, ou avançait derrière l'écran) ; son
+  suspendu dans un onglet masqué ; voiture immobile gaz à fond depuis 3 s → message « Bloqué ? R : retour au checkpoint ».
+- **Sauvegardes** : « Effacer les records » sur un appareil ne retirait pas les records du stockage de l'autre appareil du même compte ; enregistrer un circuit avec un
+  stockage plein annonçait « Circuit enregistré » sans rien écrire (on libère d'abord la place des fantômes des plus anciens records, l'échec est annoncé).
+- **Supabase** (production lue en LECTURE SEULE, rien n'a été modifié) : étapes 1 à 15 conformes, 15b toujours à appliquer, sécurité au niveau des lignes active sur
+  les 27 tables, commandes des courses et fantômes non lisibles par le jeu. Proposé, **non appliqué** : `supabase/etape16-durcissement.sql` (retrait des droits de
+  table par défaut de Supabase que le jeu n'utilise pas : uniquement des `revoke`, testé par `tools/test-etape16-sql.sh`).
+- **Tests ajoutés** : `tools/test-audit-physique.mjs`, `tools/test-audit-editeur.mjs`, `tools/test-audit-sauvegardes.mjs` (dans `npm test` : 88 fichiers),
+  `tools/test-browser-audit.mjs` (8 essais dans Chromium, `npm run test:browser`), `tools/test-etape16-sql.sh` (`npm run test:sql`). Chaque test de correction échoue
+  sur le code d'avant. Un test existant a été ajusté, avec sa justification mesurée : `test-coach` (le conseil « retour au checkpoint » n'est plus forcément le
+  premier : la voiture qui restait plaquée contre un ruban se dégage maintenant et racle les murs, que le coach signale à juste titre).
+
 ## Bêta 0.9.58 — phase 7 : finalisation (physique, duplication, rotation, garage, serveur)
 
 `PHYS_VER` 32 → **33** (la physique change : records, fantômes et classements de la version 32 ne sont plus comparables ; la 32 n'a JAMAIS été déployée : la production est en 31, **il n'y a donc qu'un seul changement de version à subir**) ; **redéployer `submit-score`** (`npm run build:function`). Les 72 temps de référence du pilote automatique sont **inchangés** (`tools/golden.mjs`).

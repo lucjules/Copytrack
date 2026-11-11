@@ -89,13 +89,19 @@ test('freinage avancé : « tu freines plus tôt »', () => {
   assert.ok(Math.abs(eb.sector - sectorOf(R, target.s)) <= 1);
   assert.match(eb.text, /^Secteur \d+ : tu freines \d+ m plus tôt/);
 });
-test('un retour au checkpoint coûte du temps : il arrive en tête', () => {
+test('un retour au checkpoint coûte du temps : il est signalé, avec sa perte, en tête ou juste derrière les chocs de mur qui le suivent', () => {
   const { R, refIn, trace } = setup('canyon');
   const k = Math.round(R.n * 4 * 0.3);
   const resp = edit(refIn, (st, fl) => { fl[k] |= 4; pad(st, fl, 2400); });
   const tips = coach(trace(resp), R);
-  assert.equal(tips[0].id, 'respawn', tips.map((x) => x.id).join(', '));
-  assert.ok(tips[0].loss > 0.5);
+  // (0.9.59) Même situation que le freinage avancé ci-dessus : après le retour, les commandes de la référence sont rejouées telles quelles sur une trajectoire qui n'est plus la
+  // bonne, et la voiture finit contre la paroi d'un ruban. Avant 0.9.59 elle y restait plaquée, presque à l'arrêt, jusqu'à la fin (2 609 pas sous 2 m/s, plus aucun choc : les
+  // 21,9 s perdues étaient toutes mises au compte du retour). Elle se dégage maintenant et racle les murs (2 305 pas de contact) : le conseil « mur » (16,7 s) est légitime
+  // et passe devant ; le retour au checkpoint (7,9 s) doit toujours être là, avec sa perte, dans les deux premiers.
+  const rs = tips.find((x) => x.id === 'respawn');
+  assert.ok(rs, tips.map((x) => x.id).join(', '));
+  assert.ok(rs.loss > 0.5);
+  assert.ok(tips.indexOf(rs) <= 1 && tips.slice(0, tips.indexOf(rs)).every((x) => x.id === 'wall'), tips.map((x) => x.id).join(', '));
 });
 test('virages pris trop prudemment : vitesse mini ou freinage, jamais un conseil sans mesure', () => {
   const { track, R, trace } = setup('eclats');

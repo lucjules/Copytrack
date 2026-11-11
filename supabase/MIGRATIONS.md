@@ -96,7 +96,7 @@ select has_column_privilege('authenticated', 'public.tracks', 'created_at', 'ins
 curl -s "https://<projet>.supabase.co/functions/v1/submit-score" -H "apikey: <clé publique>"
 ```
 
-Attendu : `{"ok":true,"service":"submit-score","physVer":33,…,"actions":["submit","publish-track"]}`. `physVer` doit être égal à `PHYS_VER` de `js/version.js` ; l'absence de `actions` signifie que l'**ancienne** fonction est encore en ligne.
+Attendu : `{"ok":true,"service":"submit-score","physVer":34,… (33 tant que la fonction de la 0.9.58 est en ligne),"actions":["submit","publish-track"]}`. `physVer` doit être égal à `PHYS_VER` de `js/version.js` ; l'absence de `actions` signifie que l'**ancienne** fonction est encore en ligne.
 
 **4. `ice` refuse sans session** (la clé publique seule ne donne plus de relais) :
 
@@ -129,6 +129,17 @@ L'ancienne fonction `ice` ne demande rien à l'étape 15 : elle peut rester.
 | 6 | Retrait des lignes de test, par identifiant exact | Retour à 11 joueurs / 187 temps / 14 circuits, 0 session de test restante |
 
 **Pas encore fait** : l'étape 15b (voir l'ordre : après la mise en ligne du jeu 0.9.58) ; les circuits publiés avant l'étape 15 (14 sur 14) gardent un temps auteur **non vérifié** jusqu'à ce que leur auteur les republie.
+
+## Audit 0.9.59 (11 novembre 2026) : lecture seule de la production, étape 16 proposée
+
+Accès : API de gestion Supabase en **lecture seule** (`read_only: true`, rôle `supabase_read_only_user`, transaction en lecture seule) : aucune écriture, aucune migration, aucun déploiement.
+
+- `verify-prod.sql` : 35 lignes, aucun `MANQUE` ni `ÉCART` ; étape 15b **toujours non appliquée** (publication directe encore possible sur 8 colonnes : un temps auteur peut être affirmé sans rejeu) ; 14 circuits sur 14 au temps auteur non vérifié ; temps par version de physique : 24 : 48 · 25 : 25 · 26 : 101 · 27 : 9 · 28 : 2 · 31 : 2 · 33 : 2.
+- Sécurité au niveau des lignes active sur les **27** tables ; 24 politiques, aucune écriture ouverte au rôle `anon`. `scores` : le jeu ne lit que `track_key, player, time, phys_ver, track_name, updated_at, splits, has_ghost` (ni `inputs` ni `ghost`) ; `get_ghost` renvoie des poses, jamais des commandes : on ne peut pas rejouer la course d'un autre sous son nom.
+- **Droits de table par défaut de Supabase encore présents** (tout accordé à `anon` et `authenticated`) sur `accounts`, `cloud_saves`, `track_likes`, `track_plays`, `track_reports`, et en écriture pour `anon` sur `players` et `tracks`. Rien n'est exposé (RLS le refuse), mais c'est une seule barrière. → `supabase/etape16-durcissement.sql` (**proposée, non appliquée** ; uniquement des `revoke` ; `npm run test:sql` vérifie les droits obtenus et 14 parcours du jeu identiques avant et après).
+- Réglages Auth relevés : longueur minimale du mot de passe **6** côté serveur (le jeu en exige 8 : à aligner dans Authentication › Policies), confirmation d'e-mail automatique (voulu : pas d'e-mail), sessions anonymes actives (30 par heure et par adresse), pas de captcha.
+- Fonctions : `submit-score` v24 et `ice` v4, `verify_jwt` actif, `physVer` 33.
+- **`PHYS_VER` 34 (jeu 0.9.59)** : après la mise en ligne du jeu, redéployer `submit-score` (`npm run build:function`, puis coller `supabase/functions/submit-score/index.ts`). Tant que ce n'est pas fait, le serveur répond « Version du jeu différente » : les records restent sur l'appareil et pourront être envoyés ensuite depuis le classement.
 
 ## Ce qui n'est pas vérifié ici
 
