@@ -189,7 +189,9 @@ test('tous les obstacles mobiles (mur coulissant, marteau, balayeur, balancier) 
   let contacts = 0, cases = 0;
   for (const k of ['slider', 'hammer', 'sweeper', 'pendulum']) for (const side of [0, 5, 7.5]) for (const s of [1, 2]) for (const ph of [0, 0.25, 0.5, 0.75]) {
     cases++;
-    const tr = strip(12); tr.addDeco({ k, x: CELL / 2 + side, y: 0.4, z: 300, ry: 0, s, ph }); tr.version++;
+    // (phase 2 : bande de 30 cases au lieu de 12. Le choc d'un balancier envoie la voiture à 30 m/s le long de la route ; elle garde désormais son élan en frôlant la bordure
+    // et, en 12 s, dépassait le BOUT de la bande de 12 cases (384 m) : « hors de la route » par la fin du circuit, pas par le côté.)
+    const tr = strip(30); tr.addDeco({ k, x: CELL / 2 + side, y: 0.4, z: 300, ry: 0, s, ph }); tr.version++;
     const sim = new Simulation(tr); sim.start();
     sim.phys.place(CELL / 2 + side * 0.9, 0.4, 301, 0, 1); sim.phys.graceT = 0; sim.phys.hazardGrace = 0; sim.logic.steps = 0;
     let maxX = 0;

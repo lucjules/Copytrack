@@ -126,11 +126,11 @@ test('circuit avec looping, mur et vrille construit avec l\'outil : le vérifica
   assert.deepEqual(continuityIssues(tr).filter((i) => i.level !== 'info'), []);
   const r = ride(tr, seq, 200); assert.ok(r.finished && !r.fell, JSON.stringify(r));
 });
-test('la même construction SANS l\'inversion de gravité de la vrille : le vérificateur la signale et la voiture tombe (le diagnostic correspond à la réalité)', () => {
+test('la même construction SANS l\'inversion de gravité de la vrille (phase 2) : plus aucun constat, et la voiture finit — la gravité suit la route de toute pièce qui la retourne', () => {
   const seq = [['straight'], ['straight'], ['twist'], ['straight'], ['twist'], ['straight'], ['finish']];
   const { tr, steps } = build(seq, 12); ok(steps);
-  assert.ok(continuityIssues(tr).some((i) => i.code === 'invert'));
-  const r = ride(tr, seq, 150); assert.ok(!r.finished || r.fell, JSON.stringify(r));
+  assert.deepEqual(continuityIssues(tr).filter((i) => i.level !== 'info'), []);
+  const r = ride(tr, seq, 150); assert.ok(r.finished && !r.fell, JSON.stringify(r));
 });
 
 console.log('\nSession d\'éditeur : sélection et annulation, aide à la pose');
@@ -187,23 +187,12 @@ test('s.extend() sur un refus : message explicite, circuit inchangé', () => {
   assert.equal(tr.tiles.length, 1);
   clearTimeout(s._draftT);
 });
-test('aide à la pose : la vrille prévient qu\'il faut l\'inversion de gravité, un mur annonce 108 km/h, une ligne droite ne dit rien', () => {
-  assert.match(pieceHint('twist'), /Inversion de gravité/);
+test('aide à la pose : un mur annonce 108 km/h, une ligne droite, la vrille et une transition retournée ne disent rien (la gravité suit la route : plus besoin de « Inversion de gravité »)', () => {
+  assert.equal(pieceHint('twist'), '');
   assert.match(pieceHint('straight', { o: 1 }), /108 km\/h/);
   assert.equal(pieceHint('straight'), '');
   assert.equal(pieceHint('platform'), '');
-  assert.match(pieceHint('tr10s', { v: 1 }), /Inversion de gravité/, 'une transition posée à l\'envers retourne aussi la voiture');
-});
-test('correction en un clic : « Inversion de gravité » sur la vrille répare le circuit (et s\'annule)', () => {
-  const seq = [['straight'], ['twist'], ['straight'], ['twist'], ['straight'], ['finish']];
-  const { tr } = build(seq, 12);
-  const s = session(tr);
-  const bad = continuityIssues(tr).find((i) => i.code === 'invert');
-  assert.equal(bad.action, 'flip');
-  assert.ok(tr.setSurface(bad.tile, 'flip', 0)); s._changed(); s._commit();
-  assert.ok(!continuityIssues(tr).some((i) => i.code === 'invert' && i.tile === bad.tile));
-  s.undo(); assert.ok(continuityIssues(tr).some((i) => i.code === 'invert'));
-  clearTimeout(s._draftT);
+  assert.doesNotMatch(pieceHint('tr10s', { v: 1 }), /Inversion de gravité/, 'une transition posée à l\'envers retourne la voiture d\'elle-même : seul le conseil de vitesse sur mur reste');
 });
 test('les nouveaux raccourcis existent et ne sont pas en double dans l\'éditeur', async () => {
   const { KEY_ACTIONS } = await import('../js/input.js');

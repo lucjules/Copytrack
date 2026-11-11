@@ -7,6 +7,10 @@ correction n'avait été intégrée depuis l'audit**, donc rien n'a été ré-in
 `tools/phys-fingerprint.json`, `supabase/` ; l'empreinte des 193 scénarios est identique (`npm test`) ; les temps de référence, médailles et le corpus de compatibilité sont inchangés ;
 aucune fonction serveur, aucune donnée Supabase, aucun déploiement. La caméra n'est pas dans la fermeture de `js/verify.js` (test).
 
+> **Mise à jour (phase 2, 0.9.61, `PHYS_VER` 35)** : la règle de gravité est devenue commune (toute pièce qui retourne la voiture fait suivre la gravité) ; le code `invert` du vérificateur et la
+> correction en un clic de la vrille décrits ci-dessous **n'existent plus**, et la matrice passe de 29 à 16 cases CHUTE (voir [AUDIT-PHASE2-PHYSIQUE.md](AUDIT-PHASE2-PHYSIQUE.md)). Le reste de ce
+> compte-rendu décrit l'état de la 0.9.60.
+
 Marques : **[VÉRIFIÉ]** exécuté et mesuré ici · **[CODE]** lu, non exécuté · **[HYPOTHÈSE]** à confirmer par un humain / un GPU réel.
 
 ---

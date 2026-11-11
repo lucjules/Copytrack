@@ -225,6 +225,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 
 | Fichier | Rôle |
 | --- | --- |
+| `contact.js` | Réponse d'un contact de paroi (bordure, mur, paroi d'un ruban) : UNE seule règle, partagée par le sol (walls.js) et les rubans (ribbon.js). |
 | `obstacles.js` | Contacts de la voiture avec les obstacles (piques, balanciers, marteaux, murs coulissants, balayeurs, bumpers). |
 | `profiles.js` | Profils physiques (Copytrack Evolution, E20) : Arcade, Classique, Simulation. Une règle du circuit (`pm`, table RULES de track.js) ou une catégorie de record (variante `pm-…`) : jamais un achat, jamais une amélioration. Classique est la physique de toujours : sans profil, specsOf renvoie null et la voiture lit SPECS tel quel (mêmes objets, mêmes nombres : l'empreinte ne change pas). |
 | `ribbon.js` | Conduite sur les rubans 3D (loopings, vrilles, tubes, murs, plafond) : entrée, conduite, sortie et raccord d'un ruban à l'autre. |

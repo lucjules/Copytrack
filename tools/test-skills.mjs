@@ -20,8 +20,11 @@ import { DT } from '../js/constants.js';
 const build = (d) => buildBuiltin({ ...d, id: 'drill-' + d.id });
 
 // Course scriptée : le pilote automatique (latK : part de son adhérence), et en option un geste de dérapage déclenché à une distance du départ
-// (volant à fond, frein B s, puis accélérateur jusqu'à L s), un coup de frein de `stall` s sur la dernière ligne droite, ou le frein tenu en l'air
-// (le nez se relève).
+// (volant à S1 pendant le frein, B s, puis accélérateur ; le volant reste tourné au moins à `floor` en suivant la route, jusqu'à L s), un coup de frein de `stall` s sur
+// la dernière ligne droite, ou le frein tenu en l'air (le nez se relève).
+// (Phase 2, PHYS_VER 35 : avant, le geste était « volant à fond pendant toute la glisse » à 50-60 m du départ. L'ancien dérapage faisait tourner la voiture sur place (cap de −238°
+// en 1,5 s, vitesse 27 → 9 m/s) et la récompensait quand même d'un mini-turbo ; le nouveau conserve la vitesse et la TRAJECTOIRE, donc un volant à fond pendant 1,5 s, tenu 40 m
+// avant le virage, finit dans la bordure intérieure. Le geste est maintenant celui d'un joueur : il commence à l'entrée du virage et suit la route.)
 function drive(track, { latK = 0.8, gesture = null, airBrake = false, stall = 0 } = {}) {
   const sim = new Simulation(track), rec = new InputRecorder();
   sim.start();
@@ -37,13 +40,13 @@ function drive(track, { latK = 0.8, gesture = null, airBrake = false, stall = 0 
       if (!done && g0 == null && o.s >= gesture.at) g0 = now;
       if (g0 != null) {
         const dt = now - g0;
-        if (dt < gesture.L) inp = { steer: 1, throttle: dt >= gesture.B, brake: dt < gesture.B, drift: false };
+        if (dt < gesture.L) inp = { steer: dt < gesture.B ? (gesture.S1 ?? 1) : Math.max(inp.steer, gesture.floor ?? 1), throttle: dt >= gesture.B, brake: dt < gesture.B, drift: false };
         else { g0 = null; done = true; bot.reset(p); }
       }
     }
     if (stall) {
       if (gesture == null) project(ref, p.pos.x, p.pos.y, p.pos.z, o.j, o);
-      if (stall0 == null && o.s >= ref.length - 110) stall0 = now;
+      if (stall0 == null && o.s >= ref.length - 80) stall0 = now;      // (phase 2 : 80 m avant l’arrivée, après la sortie du virage du mini-turbo, au lieu de 110 m : le frein finissait dans la glisse)
       if (stall0 != null && now - stall0 < stall) inp = { ...inp, throttle: false, brake: true };
     }
     if (airBrake && !p.grounded && !p.rib) inp = { ...inp, throttle: false, brake: true };
@@ -101,11 +104,11 @@ test('freinage : même échelle, mesurée au temps passé dans les zones de frei
 test('mini-turbo : sans dérapage, rien ; frein trop long, mini-turbo simple (bronze) ; glisse tenue, renforcé ; renforcé, sans choc et à temps : or', () => {
   const d = drillById('miniturbo');
   assert.equal(grade(d, {}).g, 0, 'le pilote automatique ne dérape pas');
-  const simple = grade(d, { gesture: { at: 50, B: 0.5, L: 1.5 } });
+  const simple = grade(d, { gesture: { at: 134, B: 0.45, L: 1.6, S1: 0.8, floor: 0.45 } });
   assert.deepEqual([simple.m.turboLv, simple.g], [1, 1]);
-  const lent = grade(d, { gesture: { at: 60, B: 0.5, L: 1.5 }, stall: 5 });
+  const lent = grade(d, { gesture: { at: 134, B: 0.45, L: 2.0, S1: 0.8, floor: 0.45 }, stall: 5 });
   assert.deepEqual([lent.m.turboLv, lent.m.walls, lent.g], [2, 0, 2], 'renforcé mais arrivée trop lente : argent (' + lent.m.time + ' s)');
-  const or = grade(d, { gesture: { at: 60, B: 0.5, L: 1.5 } });
+  const or = grade(d, { gesture: { at: 134, B: 0.45, L: 2.0, S1: 0.8, floor: 0.45 } });
   assert.deepEqual([or.m.turboLv, or.m.walls, or.g], [2, 0, 3]);
   assert.ok(or.m.time <= d.limit);
   assert.match(describeMeasure(d, or.m), /^Mini-turbo renforcé, 0 choc, /);
@@ -114,7 +117,9 @@ test('réceptions : à plat, trois parfaites (or) ; le frein tenu en l’air rel
   const d = drillById('receptions');
   const bien = grade(d, {}), mal = grade(d, { airBrake: true });
   assert.deepEqual([bien.m.perfect, bien.g], [3, 3]);
-  assert.equal(mal.m.perfect, 0); assert.equal(mal.g, 0); assert.ok(mal.m.bad >= 2);
+  // Phase 2 : le frein tenu en l'air relève le nez d'un angle BORNÉ (airTrim) au lieu de le faire basculer : la réception n'est plus « ratée » mais « correcte » (ni parfaite, ni punie
+  // d'une perte démesurée). Ce que l'exercice mesure, les réceptions parfaites, reste à zéro : la leçon (retomber à plat) est intacte.
+  assert.equal(mal.m.perfect, 0); assert.equal(mal.g, 0); assert.ok(mal.m.bad <= 1, 'pas de réception désastreuse : ' + mal.m.bad);
 });
 test('le conseil du bilan suit la mesure : coach face à la référence dans la zone, ou ce que le geste a manqué', () => {
   const ch = drillById('chicanes'), tr = build(ch), m = measureRun(tr, drive(tr, { latK: 0.5 }), ch);

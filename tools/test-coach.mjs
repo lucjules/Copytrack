@@ -79,8 +79,11 @@ test('freinage retardé (règle du coach, traces synthétiques) : « tu freines 
 test('freinage avancé : « tu freines plus tôt »', () => {
   const { R, refIn, trace } = setup('temple');
   const target = brakingPoints(R).filter((b) => b.v0 > 25)[0], from = Math.round(R.t[target.i] * 120);
-  const early = edit(refIn, (st, fl) => { for (let k = from - 140; k < from; k++) fl[k] = (fl[k] & ~1) | 2; pad(st, fl); });
+  const early = edit(refIn, (st, fl) => { for (let k = from - 100; k < from; k++) fl[k] = (fl[k] & ~1) | 2; pad(st, fl); });
   const tips = coach(trace(early), R);
+  // (phase 2 physique, PHYS_VER 35) Le freinage est maintenant limité par le cercle d'adhérence (brakeCorner) et le transfert de charge : 140 pas de frein (1,17 s) avant le
+  // point de la référence ralentissent assez la voiture pour que les commandes suivantes, rejouées telles quelles, l'amènent hors du tracé (course jamais finie, aucun conseil
+  // mesurable). 100 pas (0,83 s, ≈ 40 m) : même défaut, la course reste lisible.
   // (0.9.54) Les commandes qui suivent le freinage avancé sont rejouées telles quelles, sur une trajectoire qui n'est plus la bonne : la voiture finit au mur (secteur 5). Avant
   // 0.9.54 elle y restait plaquée à l'arrêt pour toujours (plus aucun choc, donc aucun conseil « mur ») ; elle se dégage maintenant et racle la paroi : le conseil « mur » est
   // légitime et peut passer devant. Le conseil de freinage avancé doit être là, au bon secteur, avec son texte.
@@ -110,7 +113,7 @@ test('virages pris trop prudemment : vitesse mini ou freinage, jamais un conseil
   assert.ok(tips.length >= 2);
   assert.ok(['slow-corner', 'early-brake', 'late-brake'].includes(tips[0].id), tips.map((x) => x.id).join(', '));
   for (const t of tips) {
-    assert.ok(t.loss > 0.05 && t.sector >= 1 && t.sector <= 12 && t.s >= t.s0 - 150 && t.s <= t.s1);
+    assert.ok(t.loss > 0.05 && t.sector >= 1 && t.sector <= 12 && t.s >= t.s0 - 210 && t.s <= t.s1);   // le point montré est celui de la référence : jusqu'à 60 m avant le freinage retenu, lui-même jusqu'à 150 m avant le secteur
     assert.ok(!/\{\w+\}/.test(t.text), 'texte complet : ' + t.text);
   }
 });

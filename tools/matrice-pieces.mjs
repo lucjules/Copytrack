@@ -20,6 +20,7 @@ import { CarPhysics } from '../js/physics.js';
 import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
 import { Autopilot } from '../js/autopilot.js';
 import { DT } from '../js/constants.js';
+import { PHYS_VER } from '../js/version.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const COLS = [
@@ -226,7 +227,7 @@ export function renderMarkdown(m) {
   const lines = [
     '# Matrice de compatibilité des pièces (générée)', '',
     'Générée par `node tools/matrice-pieces.mjs --update` : **ne pas modifier à la main**. Chaque case est un vrai circuit (départ → pièce → arrivée, avec les',
-    'transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 34) au pilote automatique, à 80, 150 et 250 km/h de croisière.', '',
+    `transitions nécessaires) roulé par le moteur de physique actuel (\`PHYS_VER\` ${PHYS_VER}) au pilote automatique, à 80, 150 et 250 km/h de croisière.`, '',
     '| Code | Sens |', '|---|---|',
     '| OK | finit aux trois vitesses, sans quitter la route ni décoller |',
     '| SAUT | finit, mais la voiture décolle plus de 0,35 s (rupture de pente, tremplin, bascule) |',

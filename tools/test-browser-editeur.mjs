@@ -1,5 +1,5 @@
 // Éditeur dans un vrai navigateur (Chromium) : node tools/test-browser-editeur.mjs   (npm run test:browser)
-// Phase 1 après l'audit 0.9.59 : touche P (Prolonger) pour dérouler une route, pastille et fenêtre des problèmes (vrille sans inversion de gravité), correction en un clic,
+// Phase 1 après l'audit 0.9.59 : touche P (Prolonger) pour dérouler une route, pastille et fenêtre des problèmes (raccord impossible),
 // annuler / rétablir (Ctrl+Z) avec la sélection de zone, fenêtre lisible sur un petit écran. Playwright absent : test ignoré (REQUIRE_BROWSER / CI : échec).
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
@@ -66,9 +66,11 @@ try {
     assert.equal(r.free, 1, 'une seule extrémité libre : le bout de la route');
     await ctx.close();
   });
-  await test('vrille sans inversion de gravité : la pastille devient ⛔, la fenêtre dit où / pourquoi / conséquence / remède, « Corriger » répare, Ctrl+Z redonne le défaut', async () => {
+  await test('raccord impossible (route à l\'endroit contre une route au plafond) : la pastille devient ⛔, la fenêtre dit où / pourquoi / conséquence / remède', async () => {
     const { ctx, page } = await open(1280, 720);
-    for (const [t, k] of [['straight', 2], ['twist', 1], ['straight', 1], ['twist', 1], ['straight', 1]]) { await ed(page, (t) => window.copytrack.session.setTool(t), t); await press(page, 'KeyP', k); }
+    await ed(page, (t) => window.copytrack.session.setTool(t), 'straight'); await press(page, 'KeyP', 3);
+    // (phase 2 : la vrille sans « Inversion de gravité » n\'est plus une erreur, la gravité suit la route : on fabrique un vrai défaut, une route posée à l\'envers face à une route à l\'endroit)
+    await ed(page, async () => { const E = window.copytrack.session; const { Track } = await import('/js/track.js'); const last = E.track.tiles[E.track.tiles.length - 1]; E.track.add(Track.normalize({ t: 'straight', x: last.x, z: last.z - 1, l: last.l, r: last.r, v: 1 })); E._changed(); });
     await page.waitForTimeout(300);
     const badge = await page.locator('#ed-warn').textContent();
     assert.match(badge, /⛔/, 'pastille : ' + badge);
@@ -77,15 +79,8 @@ try {
     assert.ok(!/reliée à rien/.test(await page.locator('.ed-issue.error').first().innerText()), 'une extrémité libre n\'est pas une erreur bloquante');
     if (shots) await page.screenshot({ path: join(shots, 'editeur-problemes.png') });
     const txt = await page.locator('.ed-issue.error').first().innerText();
-    assert.match(txt, /Où \/ pourquoi/); assert.match(txt, /Conséquence/); assert.match(txt, /Comment corriger/); assert.match(txt, /Inversion de gravité/);
-    await page.locator('.ed-issue.error button.primary').first().evaluate((el) => el.click());
-    await page.waitForTimeout(300);
-    const after = await ed(page, async () => { const { continuityIssues } = await import('/js/continuity.js'); return continuityIssues(window.copytrack.session.track).filter((i) => i.code === 'invert').length; });
-    assert.ok(after < 2, 'au moins une vrille réparée : ' + after);
-    await page.evaluate(() => window.copytrack.ui.closeModal());
-    await page.keyboard.press('Control+z'); await page.waitForTimeout(200);
-    const undone = await ed(page, async () => { const { continuityIssues } = await import('/js/continuity.js'); return continuityIssues(window.copytrack.session.track).filter((i) => i.code === 'invert').length; });
-    assert.equal(undone, after + 1, 'annuler redonne le défaut');
+    assert.match(txt, /Où \/ pourquoi/); assert.match(txt, /Conséquence/); assert.match(txt, /Comment corriger/);
+    assert.equal(await page.locator('.ed-issue.error button.primary').count(), 0, 'plus de correction en un clic : la règle « invert » n\'existe plus');
     await ctx.close();
   });
   await test('sélection de zone : supprimer puis Ctrl+Z redonne les pièces ET le rectangle (avant : le rectangle restait tel quel) ; la barre de sélection suit', async () => {

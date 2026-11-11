@@ -6,6 +6,29 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.61 — phase 2 : corrections physiques (gravité, murs, dérapage, sauts)
+
+`PHYS_VER` 34 → **35** (un seul changement, tout groupé). **Redéployer `submit-score`** à la mise en ligne (voir « Opérations serveur » du compte-rendu) : sans cela le serveur refuse les temps de la 35.
+Les records, replays et classements de la 34 restent affichés mais ne sont plus rejouables ni comparables ; rien n'est supprimé, aucune migration SQL. Compte-rendu complet (avant / après mesurés, ce qui
+reste, pourquoi) : [docs/AUDIT-PHASE2-PHYSIQUE.md](docs/AUDIT-PHASE2-PHYSIQUE.md). Aucune pièce, aucun circuit, véhicule ou profil supprimé ; aucune nouvelle famille de pièces.
+
+- **Gravité, une seule règle** (`js/ribbons.js : ribbonInverts`) : toute pièce-ruban qui retourne la voiture (entrée et sortie de côtés opposés) fait suivre la gravité à la route, sans liste de pièces.
+  La vrille et les transitions retournées n'ont plus besoin du revêtement « Inversion de gravité » (qui reste un choix volontaire). Matrice des pièces : 29 → 16 cases CHUTE, aucune nouvelle ;
+  l'erreur `invert` du vérificateur de l'éditeur et son bouton « Corriger » disparaissent (inatteignables).
+- **Murs et bordures, une réponse à un impact** (`js/physics/contact.js`, sol et rubans) : frôlement (l'élan est conservé : 100 km/h à 2° ne passe plus à 23 km/h collé 7 s mais accélère), modéré
+  (rotation, encaissement), violent (perte globale plafonnée) selon la vitesse d'approche normale ; restitution nulle sous 2 m/s ; frottement visqueux de contact 2/s → 0,12/s ; la voiture pressée contre
+  une bordure repart seule (contact retenu 0,2 s pour le dégagement) ; mêmes règles au plafond.
+- **Dérapage, une mécanique de pilotage** : déclenché par frein + volant, avec ou sans gaz ; la vitesse est conservée (≈ 70 à 77 % à 1,7 s contre 14 % ou aucun dérapage) ; angle réglé par le volant
+  (≈ 16° à 60 %, 22° à plein volant) ; sortie progressive ; mini-turbo gagné par une glisse contrôlée (+20 puis +30 km/h), perdu sur un mur ou un tête-à-queue (bug de lecture de l'impact corrigé) ;
+  fonctionne sur glace, moto, profils Arcade / Simulation ; les revêtements Dérapage et Ralentisseur gardent leur identité.
+- **Sauts et réceptions** : les gaz ou le frein tenus en l'air ne coûtent plus −43 % (réception « ratée », tangage 1,4 rad) mais −11 à −17 % ; l'assiette au décollage est conservée, stabilisée en vol,
+  alignée en partie sur la pente à l'approche du sol, corrigée par un compensateur borné.
+- Temps de référence des 72 circuits : 22 bougent, au plus −1,4 % (`viaduc`), moyenne −0,03 % ; médailles et contrats de niveau inchangés dans leurs écarts. Empreinte identique sous Deno.
+- Tests : `test-physique-corrections` (23 tests, banc `tools/mesures-physique.mjs`) ; adaptés : `test-coach`, `test-vitesse-et-murs`, `test-contacts`, `test-continuite`, `test-editeur-phase1`,
+  `test-skills`, `test-vehicles2`, `test-browser-editeur`.
+- **Ce qui reste** : 16 cases CHUTE (montées raides roulées sur un mur, rampe `cvd4`) ; le dérapage reste ~18 % plus lent que la trajectoire à l'adhérence sur un virage isolé (choix assumé) ; textes de
+  l'Académie à reprendre ; ressenti à valider par des essais humains.
+
 ## Bêta 0.9.60 — phase 1 après l'audit d'expérience : caméra, éditeur, matrice des pièces
 
 **`PHYS_VER` inchangé (34)** : aucune ligne de physique, de collision, de gravité ni de circuit intégré n'a changé ; l'empreinte des 193 scénarios, les temps de référence, les

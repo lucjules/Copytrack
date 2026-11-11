@@ -56,9 +56,16 @@ Trouvés par une exploration aléatoire plus large (5 000 circuits au hasard, 30
 | **Rebond, vitesse horizontale nulle** | La voiture retombe et rebondit dans le même pas : jamais posée au début d'un pas, donc jamais de poussée ; 0,25 m en 20 s gaz à fond. | **Non corrigé** (choix de conception : un trampoline ne se quitte pas sans élan). Le message « Bloqué ? R » s'affiche. Proposition dans `docs/AUDIT-0.9.59.md`. |
 | **Moteur coupé**, vent de niveau > 52 %, montée en L, looping ou tire-bouchon abordés à l'arrêt, limite invisible du monde (hors-piste permis) | Équilibres voulus par le circuit ou sa règle ; la marche arrière ou le retour au checkpoint en sortent. | **Non corrigés**, documentés. |
 
+## Phase 2 (0.9.61, `PHYS_VER` 35) : le contact est une réponse à un impact
+
+Le modèle « perte globale + frottement visqueux de 2/s » est remplacé (`js/physics/contact.js`, partagé sol et rubans) : rebond sur la normale (nul sous 2 m/s d'approche), frottement de Coulomb sur la
+tangente, rotation et encaissement au-delà de 4 m/s d'approche, perte globale seulement au-delà de 12 m/s ; frottement visqueux de contact 0,12/s ; dégagement automatique qui retient le contact 0,2 s.
+Un frôlement garde son élan, un choc violent reste puni, la voiture n'est plus clouée. Le cas « voiture collée nez au mur » de la ligne 5 du tableau ci-dessus est ainsi traité à la racine.
+Mesures avant / après, régimes et limites : [AUDIT-PHASE2-PHYSIQUE.md](AUDIT-PHASE2-PHYSIQUE.md) ; tests : `tools/test-physique-corrections.mjs`.
+
 ## Limites connues (non corrigées)
 
-- **Voiture tenue contre un mur par le volant** : elle ne reste plus prisonnière sous 2 m/s, mais peut mettre plusieurs secondes (mesuré : jusqu'à ~6 s presque immobile après un impact presque de face) avant de repartir ; relâcher le volant la libère. (Correction de l'audit 0.9.59 : ce document affirmait qu'un retour automatique au checkpoint existait pour une voiture bloquée ; il n'y en a **pas** — seul un message « Bloqué ? R : retour au checkpoint » s'affiche après 3 s d'immobilité gaz à fond.)
+- **Voiture tenue contre un mur par le volant** (*phase 2 : elle repart seule en ≈ 3 s, vitesse maximale > 6 m/s sur les 12 cas de `test-contacts`*) : elle ne reste plus prisonnière sous 2 m/s, mais pouvait mettre plusieurs secondes (mesuré : jusqu'à ~6 s presque immobile après un impact presque de face) avant de repartir ; relâcher le volant la libère. (Correction de l'audit 0.9.59 : ce document affirmait qu'un retour automatique au checkpoint existait pour une voiture bloquée ; il n'y en a **pas** — seul un message « Bloqué ? R : retour au checkpoint » s'affiche après 3 s d'immobilité gaz à fond.)
 - **Bumpers voisins** : un poteau frontal renvoie la voiture (conception) ; trois bumpers rapprochés peuvent la figer 6 s gaz à fond (exploration aléatoire, seed 109, identique avant les corrections).
 - **Boucles de retours** : l'exploration aléatoire force des inversions de gravité au hasard ; elles produisent des séries de retours sans que ce soit un défaut du moteur (mêmes cas avant les corrections).
 - **Écrasement** : une voiture arrêtée dans la trajectoire d'un mur coulissant est poussée d'au plus 2,5 m par pas (plafond conservé) ; elle reste sur la route.

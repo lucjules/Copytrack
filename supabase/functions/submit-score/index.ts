@@ -1662,6 +1662,22 @@ function ribbonOf(tile, raw = false) {
   }
   return c.flipped;
 }
+var invertsCache = /* @__PURE__ */ new WeakMap();
+function ribbonInverts(tile) {
+  const rib = ribbonOf(tile);
+  if (!rib) return false;
+  let r = invertsCache.get(rib);
+  if (r === void 0) {
+    const o = {};
+    rib.pos(0, o);
+    const a = o.ny < -0.7;
+    rib.pos(1, o);
+    const b = o.ny < -0.7;
+    r = a !== b;
+    invertsCache.set(rib, r);
+  }
+  return r;
+}
 function floorCenter(tile, u, out) {
   const P = PIECES[tile.t], base = baseY(tile), half = P.size * HALF;
   let dx, dy, dz;
@@ -5317,10 +5333,20 @@ var CAR = {
   frontShare: 0.42,
   steerMax: 0.65,
   steerAlat: 52,
-  driftRear: 0.65,
-  driftSteer: 1.3,
+  driftGrip: 0.5,
+  driftRear: 0.6,
+  driftSteer: 1.4,
   driftMin: 12,
-  driftBrake: 0.75,
+  driftBrake: 0.9,
+  brakeCorner: 0.65,
+  driftAngle: 0.22,
+  driftAssist: 30,
+  driftAssistMax: 14,
+  driftBuild: 8,
+  driftHold: 0.5,
+  driftHoldGas: 0.12,
+  driftOut: 2.2,
+  driftCounter: 3,
   yawDamp: 0.6,
   steerIn: 8,
   steerOut: 13,
@@ -5333,11 +5359,30 @@ var CAR = {
   airPitchAcc: 4.2,
   airPitchDamp: 2.6,
   airPitchUpK: 1.6,
+  airSpring: 18,
+  airTrim: 0.25,
+  airLevelH: 14,
+  airLevelW: 0.35,
+  airAero: 0.15,
   airSteer: 1.4,
   airSteerMax: 0.45,
   landOk: 0.38,
-  mtTime1: 0.7,
-  mtTime2: 1.5,
+  // Mini-turbo (phase 2) : une glisse CONTRÔLÉE se charge ; la récompense dépend de sa durée (et un peu de son angle, plafonné). Avant : +6 / +16 km/h pour 100 km/h perdus.
+  mtTime1: 0.6,
+  mtTime2: 1.4,
+  mtAngleMin: 0.06,
+  mtAngleMax: 0.8,
+  mtAngleRef: 0.17,
+  mtF1: 0.9,
+  mtT1: 0.8,
+  mtF2: 1,
+  mtT2: 1.3,
+  // Transfert de charge (phase 2) : un coup de volant brusque, un freinage ou une accélération déplacent l'appui et font varier l'adhérence de l'arrière.
+  xferRate: 9,
+  xferOut: 3.5,
+  xferRear: 0.25,
+  xferAx: 40,
+  xferLong: 0.05,
   flipKick: 7,
   lipHopMin: 2,
   lipHopMax: 4,
@@ -5351,12 +5396,26 @@ var CAR = {
   shockKick: 6,
   // 0.9.4 : un mur se paie. Choc = rebond + perte de vitesse proportionnelle à l'impact + coup de volant forcé + moteur et adhérence
   // réduits un instant (la voiture « encaisse »), et frottement continu tant qu'on racle.
+  // Phase 2 (PHYS_VER 35) : le contact d'un mur est une RÉPONSE À UN IMPACT, proportionnelle à la composante normale de la vitesse (ap = vitesse d'approche, m/s), et non plus une perte
+  // globale de vitesse doublée d'un frottement continu de 2 /s (un frôlement de 2° à 200 km/h passait à 51 km/h en 0,5 s puis restait collé à 23 km/h : mesuré, docs/AUDIT-PHASE2-PHYSIQUE.md).
+  //   frôlement  (ap < 4 m/s)   : rebond sur la composante normale + frottement de Coulomb sur la tangente ; ni rotation ni encaissement ; l'élan est conservé
+  //   modéré     (4 à 12 m/s)   : en plus une rotation et un encaissement croissants (la voiture se récupère)
+  //   violent    (> 12 m/s)     : en plus une perte de vitesse globale croissante, plafonnée
   wallE: 0.35,
-  wallLoss: 0.05,
-  wallLossMax: 0.65,
-  wallScrape: 2,
-  wallSpin: 0.14,
+  wallRest: 2,
+  wallMu: 0.2,
+  wallScrape: 0.12,
+  wallYaw: 0.25,
+  wallYawMax: 1.2,
+  wallHardFrom: 12,
+  wallHardK: 0.016,
+  wallHardMax: 0.4,
+  wallSpinFrom: 6,
+  wallSpin: 0.1,
   wallSpinMax: 2.5,
+  wallStunFrom: 4,
+  wallStun: 0.035,
+  wallStunMax: 0.6,
   stuckAfter: 0.35,
   stuckPivot: 1.2,
   wallFresh: 0.12,
@@ -5366,10 +5425,10 @@ var CAR = {
   scrubShare: 0.6,
   crawlSpeed: 3,
   crawlAccel: 3,
+  touchMemory: 0.2,
   stuckAlign: 1.4,
-  wallStun: 0.04,
-  stunTraction: 0.3,
-  stunGrip: 0.6,
+  stunTraction: 0.5,
+  stunGrip: 0.75,
   radius: 1,
   probe: 1.25,
   height: 1.3
@@ -9209,6 +9268,18 @@ function altitudeK(y) {
   return Math.max(ALT_MIN_K, 1 - (y - ALT0) / ALT_SPAN * (1 - ALT_MIN_K));
 }
 
+// js/physics/contact.js
+var wallBounce = (K3, ap) => ap < K3.wallRest ? K3.wallE * ap / K3.wallRest : K3.wallE;
+var wallFriction = (K3, ap) => K3.wallMu * ap * (1 + wallBounce(K3, ap));
+var wallHardLoss = (K3, ap) => ap > K3.wallHardFrom ? Math.min(K3.wallHardMax, (ap - K3.wallHardFrom) * K3.wallHardK) : 0;
+var wallSpinOf = (K3, ap) => ap > K3.wallSpinFrom ? Math.min(K3.wallSpinMax, (ap - K3.wallSpinFrom) * K3.wallSpin) : 0;
+var wallStunOf = (K3, ap) => ap > K3.wallStunFrom ? Math.min(K3.wallStunMax, (ap - K3.wallStunFrom) * K3.wallStun) : 0;
+function wallYawTarget(K3, ap, k, fx, fz, nx, nz, cy, sy) {
+  const along = Math.abs(fx * -nz + fz * nx);
+  const dn = -cy * nx + sy * nz;
+  return -k * (dn >= 0 ? 1 : -1) * Math.min(K3.wallYawMax, K3.wallYaw * ap * along);
+}
+
 // js/physics/walls.js
 var L1 = {
   lx: 0,
@@ -9326,10 +9397,10 @@ var wallMethods = {
   },
   // again : seconde passe du même pas (après un obstacle qui a poussé la voiture) : même correction de position et de vitesse, sans recompter le frottement ni l'arrêt.
   _walls(again = false) {
-    const p = this.pos, v = this.vel;
+    const p = this.pos, v = this.vel, K3 = this.k;
     const fx = -dsin(this.yaw), fz = -dcos(this.yaw);
     const pfx = -dsin(this.prevYaw), pfz = -dcos(this.prevYaw);
-    let hit = 0, touch = false, sx = 0, sz = 0, lnx = 0, lnz = 0;
+    let hit = 0, touch = false, sx = 0, sz = 0, lnx = 0, lnz = 0, kHit = 1;
     for (let k = -1; k <= 1; k += 2) {
       const off = CAR.probe * k;
       for (let iter = 0; iter < 2; iter++) {
@@ -9342,12 +9413,23 @@ var wallMethods = {
         p.z += c.dz;
         const vn = v.x * c.nx + v.z * c.nz;
         if (vn < 0) {
-          v.x -= c.nx * vn * (1 + CAR.wallE);
-          v.z -= c.nz * vn * (1 + CAR.wallE);
-          if (-vn > hit) {
-            hit = -vn;
+          const ap = -vn;
+          const e1 = 1 + wallBounce(K3, ap);
+          v.x -= c.nx * vn * e1;
+          v.z -= c.nz * vn * e1;
+          const tx = v.x - c.nx * (v.x * c.nx + v.z * c.nz), tz = v.z - c.nz * (v.x * c.nx + v.z * c.nz), tl = Math.sqrt(tx * tx + tz * tz);
+          if (tl > 1e-6) {
+            const dv = Math.min(tl, wallFriction(K3, ap)) / tl;
+            v.x -= tx * dv;
+            v.z -= tz * dv;
+          }
+          const want = wallYawTarget(K3, ap, k, fx, fz, c.nx, c.nz, dcos(this.yaw), dsin(this.yaw)) * this._upSign();
+          if (want * this.omega < want * want) this.omega = want;
+          if (ap > hit) {
+            hit = ap;
             sx = c.nx;
             sz = c.nz;
+            kHit = k;
           }
         }
       }
@@ -9356,20 +9438,26 @@ var wallMethods = {
       if (touch && this.speed < 2.5) this.stuckT = Math.min(1, this.stuckT + DT);
       else this.stuckT = Math.max(0, this.stuckT - 2 * DT);
       this.unstick = 0;
-      if (touch && this.speed < 4) this.crawlT = Math.min(1, this.crawlT + DT);
+      if (touch) {
+        this.touchT = CAR.touchMemory;
+        this.wnx = lnx;
+        this.wnz = lnz;
+      } else this.touchT = Math.max(0, this.touchT - DT);
+      const near = touch || this.touchT > 0;
+      if (near && this.speed < 4) this.crawlT = Math.min(1, this.crawlT + DT);
       else this.crawlT = Math.max(0, this.crawlT - 2 * DT);
-      if (touch && this.crawlT > 0.25) this.unstickT = 5;
-      else if (this.unstickT > 0) this.unstickT = touch ? this.unstickT - DT : this.unstickT - 3 * DT;
-      if (touch && this.unstickT > 0 && this.speed < 8) {
-        const into = fx * lnx + fz * lnz;
-        const cross = fx * lnz - fz * lnx;
+      if (near && this.crawlT > 0.25) this.unstickT = 5;
+      else if (this.unstickT > 0) this.unstickT = near ? this.unstickT - DT : this.unstickT - 3 * DT;
+      if (near && this.unstickT > 0 && this.speed < 8) {
+        const into = fx * this.wnx + fz * this.wnz;
+        const cross = fx * this.wnz - fz * this.wnx;
         if (Math.abs(cross) > 0.15 || !this.unstickDir) this.unstickDir = cross >= 0 ? 1 : -1;
         if (into < 0.2) this.unstick = this.unstickDir * CAR.stuckAlign * Math.min(1, Math.max(0.25, (0.2 - into) * 3));
       }
       if (this.unstickT <= 0) this.unstickDir = 0;
     }
     if (touch && !again) {
-      const k = Math.max(0, 1 - CAR.wallScrape * DT);
+      const k = Math.max(0, 1 - K3.wallScrape * DT);
       v.x *= k;
       v.y *= k;
       v.z *= k;
@@ -9377,16 +9465,20 @@ var wallMethods = {
     if (!again) this.wallRun = touch ? Math.min(2, this.wallRun + DT) : Math.max(0, this.wallRun - 0.5 * DT);
     const fresh = this.wallRun <= CAR.wallFresh || this.speed > CAR.wallFreshSpeed;
     if (hit > 0) {
-      const loss = fresh ? Math.min(CAR.wallLossMax, hit * CAR.wallLoss) : 0;
-      v.x *= 1 - loss;
-      v.y *= 1 - loss;
-      v.z *= 1 - loss;
-      this.ev.wall = hit;
-      if (hit > 1.5 && fresh) {
-        const side = sx * fz - sz * fx;
-        this.omega += (side >= 0 ? 1 : -1) * this._upSign() * Math.min(CAR.wallSpinMax, hit * CAR.wallSpin);
-        this.stunT = Math.max(this.stunT, Math.min(0.8, 0.1 + hit * CAR.wallStun));
+      if (fresh) {
+        const loss = wallHardLoss(K3, hit);
+        v.x *= 1 - loss;
+        v.y *= 1 - loss;
+        v.z *= 1 - loss;
       }
+      this.ev.wall = hit;
+      const spin = fresh ? wallSpinOf(K3, hit) : 0;
+      if (spin > 0) {
+        const dn = -dcos(this.yaw) * sx + dsin(this.yaw) * sz;
+        this.omega += -kHit * (dn >= 0 ? 1 : -1) * this._upSign() * spin;
+      }
+      const stun = fresh ? wallStunOf(K3, hit) : 0;
+      if (stun > 0) this.stunT = Math.max(this.stunT, stun);
     }
   },
   // (mx, mz) : centre de la voiture, pour juger la hauteur d'une sonde sur une pièce en pente (voir _probeTile).
@@ -9857,7 +9949,7 @@ var ribbonMethods = {
     const kc = F.kc || 0;
     const kn = kn0 * F.cc - kg0 * F.cs, kg = kg0 * F.cc + kn0 * F.cs;
     const B2 = this._basis(R, F);
-    if (tile.s === "flip" || PIECES[tile.t].autoFlip) {
+    if (tile.s === "flip" || ribbonInverts(tile)) {
       const ng = F.ny >= -0.05 ? 1 : -1;
       if (ng !== this.gSign) {
         this.gSign = ng;
@@ -9936,7 +10028,7 @@ var ribbonMethods = {
     this.rearK = 1;
     vx = t.vx;
     vy = t.vy;
-    this.omega = t.w;
+    this.omega = t.w + this._driftAssist(vx, vy, dt);
     R.vs = vx * c - vy * s + beltE1;
     R.vd = vx * s + vy * c;
     if (this._glassCheck(mod === "glass", tile, dt)) {
@@ -9952,6 +10044,7 @@ var ribbonMethods = {
     this.yawRate = -this.omega;
     this.fwdSpeed = vx;
     this.slip = Math.abs(vy);
+    this.slipV = vy;
     R.dl += R.dir * R.vd * dt;
     const hw = F.hw || ROAD_HALF;
     if (F.wrap) {
@@ -9966,15 +10059,18 @@ var ribbonMethods = {
       if (Math.abs(R.dl) > lim) {
         const side = Math.sign(R.dl) * R.dir;
         const into = R.vd * side;
-        R.vs *= Math.max(0, 1 - CAR.wallScrape * dt);
+        const K3 = this.k;
+        R.vs *= Math.max(0, 1 - K3.wallScrape * dt);
         if (into > 0) {
           if (into > 2) this.ev.wall = into;
-          R.vs *= 1 - Math.min(CAR.wallLossMax, into * CAR.wallLoss);
-          R.vd -= side * into * (1 + CAR.wallE);
-          if (into > 1.5) {
-            R.psi += -side * Math.min(CAR.wallSpinMax, into * CAR.wallSpin) * 0.3;
-            this.stunT = Math.max(this.stunT, Math.min(0.8, 0.1 + into * CAR.wallStun));
-          }
+          R.vd -= side * into * (1 + wallBounce(K3, into));
+          const dv = Math.min(Math.abs(R.vs), wallFriction(K3, into));
+          R.vs -= Math.sign(R.vs) * dv;
+          R.vs *= 1 - wallHardLoss(K3, into);
+          const spin = wallSpinOf(K3, into);
+          if (spin > 0) R.psi += -side * spin * 0.3;
+          const stun = wallStunOf(K3, into);
+          if (stun > 0) this.stunT = Math.max(this.stunT, stun);
         }
         R.dl = clamp(R.dl, -lim, lim);
         R.pinT = Math.abs(this.fwdSpeed) < 4 ? Math.min(1, (R.pinT || 0) + dt) : 0;
@@ -9993,7 +10089,7 @@ var ribbonMethods = {
         this._ribPlace(R);
         const hop = clamp(R.vs * R.vs / CAR.lipHopK, CAR.lipHopMin, CAR.lipHopMax);
         this.vel.y += Math.sqrt(2 * this.g * hop) * this.gSign;
-        this._ribDetach();
+        this._ribDetach("crest");
         return;
       }
     } else if (press < -0.6 && R.u > mu && R.u < 1 - mu && mod !== "magnet") {
@@ -10053,12 +10149,12 @@ var ribbonMethods = {
     this.surfType = "road";
     this.surfMod = R.tile.s || "";
   },
-  _ribDetach() {
+  _ribDetach(why = "") {
     this.pitch = dasin(clamp(this.fwd.y, -1, 1));
     this.pitchRate = 0;
     this.airTime = 0;
     const t = this.rib && this.rib.tile;
-    this.fallWhy = this.ev.wallOff ? "wall" : t && PIECES[t.t].kind === "loop" ? "loop" : t && t.t === "twist" ? "twist" : t && t.v ? "inv" : "crest";
+    this.fallWhy = why ? why : this.ev.wallOff ? "wall" : t && PIECES[t.t].kind === "loop" ? "loop" : t && t.t === "twist" ? "twist" : t && t.v ? "inv" : "crest";
     this.rib = null;
     this.grounded = false;
     this.ev.loopFall = true;
@@ -10166,6 +10262,10 @@ var ribbonMethods = {
 };
 
 // js/physics.js
+var smoothSpeed = (v) => {
+  const t = clamp((Math.abs(v) - 12) / 18, 0, 1);
+  return t * t * (3 - 2 * t);
+};
 var L12 = {
   lx: 0,
   lz: 0
@@ -10333,6 +10433,10 @@ var CarPhysics = class {
     this.driftT = 0;
     this.bounceCD = 0;
     this.driftCharge = 0;
+    this.slipV = 0;
+    this.xfer = 0;
+    this.prevSteerIn = 0;
+    this.wallT = 0;
     this.stunT = 0;
     this.stuckT = 0;
     this.wallRun = 0;
@@ -10342,8 +10446,13 @@ var CarPhysics = class {
     this.unstickT = 0;
     this.unstickDir = 0;
     this.crawlT = 0;
+    this.touchT = 0;
+    this.wnx = 0;
+    this.wnz = 0;
+    this.wallPrev = 0;
     this.pitch = 0;
     this.pitchRate = 0;
+    this.pitch0 = 0;
     this.landQ = "";
     this.aoa = 0.08;
     this.glidePitch = 0;
@@ -10529,8 +10638,12 @@ var CarPhysics = class {
     const delta = this._steerAngle(Math.abs(vx), drift);
     this.steerAngle = delta;
     const L4 = K3.a + K3.b;
-    let maxF = K3.latGrip * grip * K3.frontShare;
-    let maxR = K3.latGrip * grip * (1 - K3.frontShare) * (1 - (1 - K3.driftRear) * drift) * (this.rearK ?? 1);
+    const gd = 1 - K3.driftGrip * drift;
+    let maxF = K3.latGrip * grip * K3.frontShare * gd;
+    let maxR = K3.latGrip * grip * gd * (1 - K3.frontShare) * (1 - (1 - K3.driftRear) * drift) * (this.rearK ?? 1) * (1 - CAR.xferRear * this.xfer);
+    const lt = clamp(ax / CAR.xferAx, -1, 1);
+    maxR *= 1 + CAR.xferLong * lt;
+    maxF *= 1 - CAR.xferLong * 0.6 * lt;
     if (this.v2F) {
       maxF *= this.v2F;
       maxR *= this.v2R;
@@ -10592,6 +10705,7 @@ var CarPhysics = class {
   _beginStep() {
     const dt = DT, p = this.pos, ev = this.ev;
     if (this.graceT > 0) this.graceT -= dt;
+    this.wallPrev = ev.wall;
     ev.wall = 0;
     ev.land = 0;
     ev.boostHit = false;
@@ -10646,29 +10760,56 @@ var CarPhysics = class {
     if (this.stunT > 0) this.stunT = Math.max(0, this.stunT - dt);
     return inp;
   }
-  // État de dérapage et mini-turbo.
+  // État de dérapage et mini-turbo (phase 2, PHYS_VER 35). Le dérapage est une MÉCANIQUE DE PILOTAGE, plus un freinage :
+  //  - Déclenchement : frein + volant franchement tourné à vitesse suffisante, AVEC ou SANS les gaz (frein bref pour décrocher l'arrière, puis gaz). Avant : gaz levés obligatoires et freinage
+  //    plein pendant toute la glisse (150 → 23 km/h en 1 s).
+  //  - Entretien : tant que le volant reste tourné, la glisse dure (longtemps sous les gaz, moins longtemps sans) ; le freinage y est presque annulé (driftBrake) : la vitesse se conserve.
+  //  - Sortie PROGRESSIVE : volant relâché ou contre-braqué (volant du côté où la voiture glisse), l'adhérence de l'arrière revient en ~0,5 s (avant : instantanément).
+  //  - Mini-turbo : la durée d'une glisse CONTRÔLÉE (angle de glisse entre 6° et 45°, vitesse > 10 m/s, sans choc de mur) se charge ; une glisse qui part en tête-à-queue ou finit au mur ne donne rien.
   _driftState(inp) {
     const dt = DT, K3 = this.k, ev = this.ev;
     const turning = Math.abs(this.steer) > 0.5;
-    if (inp.brake && !inp.throttle && turning && this.fwdSpeed > K3.driftMin && this.grounded) {
-      this.driftT = Math.min(1, this.driftT + dt * 5);
-    } else if (turning && this.driftT > 0 && this.fwdSpeed > K3.driftMin * 0.7) {
-      this.driftT = Math.max(0, this.driftT - dt * 0.3);
+    const fast = this.fwdSpeed > K3.driftMin;
+    const sa = datan2(this.slip, Math.max(Math.abs(this.fwdSpeed), 4));
+    const counter = this.steer * this.slipV > 0 && Math.abs(this.steer) > 0.25 && sa > 0.12;
+    if (inp.brake && turning && fast && this.grounded && !counter) {
+      this.driftT = Math.min(1, this.driftT + dt * K3.driftBuild);
+    } else if (this.driftT > 0 && !counter && Math.abs(this.steer) > 0.3 && this.fwdSpeed > K3.driftMin * 0.6 && this.grounded) {
+      this.driftT = Math.max(0, this.driftT - dt * (inp.throttle ? K3.driftHoldGas : K3.driftHold));
     } else {
-      this.driftT = Math.max(0, this.driftT - dt * 3.5);
+      this.driftT = Math.max(0, this.driftT - dt * (counter ? K3.driftCounter : K3.driftOut));
     }
-    if (this.driftT > 0.3 && this.grounded && this.slip > 0.04 * this.fwdSpeed && this.fwdSpeed > 10) {
-      this.driftCharge += dt;
+    this.wallT = this.wallPrev > 3 ? 0.4 : Math.max(0, this.wallT - dt);
+    if (this.wallT > 0) this.driftCharge = 0;
+    const controlled = sa > CAR.mtAngleMin && sa < CAR.mtAngleMax;
+    if (this.driftT > 0.5 && this.grounded && controlled && this.fwdSpeed > 10 && this.wallT <= 0) {
+      this.driftCharge += dt * clamp(sa / CAR.mtAngleRef, 0.6, 1.3);
     } else if (this.driftT < 0.25) {
-      if (this.driftCharge >= CAR.mtTime1 && this.grounded) {
+      if (this.driftCharge >= CAR.mtTime1 && this.grounded && sa < CAR.mtAngleMax) {
         const lvl = this.driftCharge >= CAR.mtTime2 ? 2 : 1;
-        const f = lvl === 2 ? 0.55 : 0.32;
+        const f = lvl === 2 ? CAR.mtF2 : CAR.mtF1;
         this.boostF = this.boost > 0 ? Math.max(this.boostF, f) : f;
-        this.boost = Math.max(this.boost, lvl === 2 ? 0.8 : 0.55);
+        this.boost = Math.max(this.boost, lvl === 2 ? CAR.mtT2 : CAR.mtT1);
         ev.miniTurbo = lvl;
       }
       this.driftCharge = 0;
-    }
+    } else if (this.driftT <= 0.5 && !controlled) this.driftCharge = Math.max(0, this.driftCharge - 2 * dt);
+    const reversal = (inp.steer || 0) * this.prevSteerIn < 0 && Math.abs(this.prevSteerIn) > 0.3;
+    const dSteer = reversal ? Math.abs(this.steer - this.prevSteerIn) / dt : 0;
+    this.prevSteerIn = this.steer;
+    const kick = clamp((dSteer - CAR.xferRate) / CAR.xferRate, 0, 1) * smoothSpeed(this.fwdSpeed);
+    this.xfer = kick > this.xfer ? kick : Math.max(0, this.xfer - dt * CAR.xferOut);
+  }
+  // Pilotage de la glisse : tant que le dérapage est établi, un couple de rappel tient l'ANGLE DE GLISSE près de la valeur que le volant demande (plein volant = driftAngle, volant au centre
+  // = 0, contre-braquage = la glisse se referme). Sans lui, le modèle de pneus n'a que deux états : « sur rails » (≤ 6°) ou tête-à-queue (> 50°) ; avec lui l'angle se CONTRÔLE, donc se
+  // maintient, se corrige et se récupère. vx, vy : vitesses d'avance et latérale (repère voiture, y à droite). Renvoie la variation de lacet (rad/s) de ce pas.
+  _driftAssist(vx, vy, dt) {
+    const d = this.driftT;
+    if (d <= 0.05 || vx < 6) return 0;
+    const K3 = this.k;
+    const beta = datan2(vy, vx);
+    const want = -this.steer * K3.driftAngle;
+    return clamp((beta - want) * K3.driftAssist, -K3.driftAssistMax, K3.driftAssistMax) * d * dt;
   }
   // Voiture posée sur une route ou sur le terrain : dynamique dans le plan du sol, revêtement, tapis, pièces mobiles. Renvoie true si le pas se termine ici (noyade).
   _driveGround(inp) {
@@ -10798,7 +10939,7 @@ var CarPhysics = class {
     this.rearK = 1;
     vf = r.vx;
     vr = r.vy;
-    this.omega = r.w;
+    this.omega = r.w + this._driftAssist(vf, vr, dt);
     const us = this._upSign();
     if (this.unstick) {
       const want = this.unstick * us;
@@ -10816,6 +10957,7 @@ var CarPhysics = class {
     if (this._glassCheck(mod === "glass", this.surfTile, dt)) this.grounded = false;
     if (this.ev.sink) return true;
     this.slip = Math.abs(vr);
+    this.slipV = vr;
     this.fwdSpeed = vf;
     this.airTime = 0;
     this.pitch = dasin(clamp(fy, -1, 1));
@@ -10844,11 +10986,27 @@ var CarPhysics = class {
     this.slip = 0;
     this.fwdSpeed = v.x * fx + v.z * fz;
     this.airTime += dt;
-    const pin = this.vehicle === "glider" ? 0 : (inp.brake ? 1 : 0) - (inp.throttle ? 1 : 0);
-    this.pitchRate += pin * this.gSign * K3.airPitchAcc * (pin > 0 ? CAR.airPitchUpK : 1) * dt;
-    this.pitchRate *= dexp(-CAR.airPitchDamp * dt);
     if (this.vehicle === "glider") this.pitch = this.glidePitch;
-    else this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
+    else {
+      const pin = (inp.brake ? 1 : 0) - (inp.throttle ? 1 : 0);
+      const gs = this.gSign, hv = hypot2(v.x, v.z);
+      const flight = datan2(v.y * gs, Math.max(hv, 1));
+      if (this.airTime <= dt * 1.01) this.pitch0 = this.pitch;
+      let tgt = this.pitch0 + (flight - this.pitch0) * CAR.airAero, w = 0;
+      const p = this.pos;
+      const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, S12, 0.5, this.excl, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, S12, 0.5, this.excl);
+      if (s.type === "road" && Number.isFinite(s.h)) {
+        const height = (p.y - s.h) * gs;
+        if (height >= -0.5 && height < CAR.airLevelH) {
+          w = CAR.airLevelW * (1 - Math.max(0, height) / CAR.airLevelH);
+          const slope = -(s.nx * fx + s.nz * fz) / Math.max(0.3, Math.abs(s.ny));
+          tgt += (datan(slope * gs) - tgt) * w;
+        }
+      }
+      const want = clamp(tgt + pin * gs * CAR.airTrim * (pin > 0 ? CAR.airPitchUpK / 1.6 : 1), -1.4, 1.4);
+      this.pitchRate += (CAR.airSpring * (want - this.pitch) - CAR.airPitchDamp * 3 * this.pitchRate) * dt * K3.airPitchAcc / CAR.airPitchAcc;
+      this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
+    }
   }
   // Déplacement puis collisions (anneaux, entrée de ruban, murs, toits, dalles, obstacles, limites). Renvoie true si le pas se termine ici.
   _collide() {
@@ -10983,7 +11141,7 @@ var CarPhysics = class {
       }
     }
     if (inp.brake) {
-      if (vf > 0.5) a -= K3.brake * traction * (1 - CAR.driftBrake * this.driftT);
+      if (vf > 0.5) a -= K3.brake * traction * (1 - CAR.driftBrake * this.driftT) * (1 - CAR.brakeCorner * Math.abs(this.steer) * smoothSpeed(vf));
       else if (!inp.throttle) {
         const x = Math.max(0, -vf) / CAR.reverseMax;
         a -= CAR.reverseAccel * traction * (1 - x * x);
@@ -11939,7 +12097,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/version.js
-var PHYS_VER = 34;
+var PHYS_VER = 35;
 
 // js/ghostFormat.js
 var GHOST_EVERY = 4;

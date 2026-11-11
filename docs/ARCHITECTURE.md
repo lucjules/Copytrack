@@ -181,12 +181,21 @@ hors ligne ; il est « réseau d'abord » pour récupérer les mises à jour ; s
 
 L'accueil (`index.html`, `#menu`) n'affiche que six tuiles ; chacune ouvre un `.menu-panel` d'actions (`js/app/wiring.js`, `_menuSub`) qui remplace les tuiles (Échap et « ← Retour » les ramènent, `_lastPanel` fait revenir au panneau après un écran). Les entrées `data-action="tab-<onglet>"` ouvrent l'écran `#profile`, un écran à onglets partagé par trois entrées (`js/app/profile.js`, `HUBS` : Profil, Progression, Paramètres) ; `showScreen('<onglet>')` mène directement à un onglet (l'ancien `showScreen('options')` mène aux graphismes). `tools/test-menu.mjs` garde la structure : six tuiles, une action une seule fois, aucun bouton mort, aucun onglet sans panneau, aucun réglage perdu ou en double.
 
+## Physique : règles communes (0.9.61, `PHYS_VER` 35)
+
+Quatre règles valent pour **toutes** les pièces, véhicules et revêtements (détail et mesures : [AUDIT-PHASE2-PHYSIQUE.md](AUDIT-PHASE2-PHYSIQUE.md)) :
+- **Gravité** : `ribbonInverts(tile)` (`js/ribbons.js`) — une pièce-ruban dont l'entrée et la sortie sont de côtés opposés fait suivre la gravité à la route (`physics/ribbon.js`). Le vérificateur de l'éditeur lit la même règle.
+- **Contacts** : `js/physics/contact.js` — une réponse à un impact en fonction de la vitesse d'approche normale (frôlement / modéré / violent), partagée par le sol (`walls.js`) et les rubans (`ribbon.js`) ; constantes lues dans `this.k`.
+- **Dérapage** : `physics.js : _driftState` (déclenchement, entretien, mini-turbo), `_driftAssist` (angle de glisse tenu par le volant), `_tires` (adhérence des deux essieux, transfert de charge).
+- **Vol** : `physics.js : _flyAir` — assiette conservée, stabilité aérodynamique faible, alignement partiel sur la pente proche, compensateur borné.
+Banc de mesures : `tools/mesures-physique.mjs` (avant / après sur n'importe quelle copie : `COPYTRACK_ROOT`) ; garde-fous : `tools/test-physique-corrections.mjs`.
+
 ## Raccords, continuité, caméra (0.9.60, hors noyau de simulation)
 
 Rien ici n'est dans la fermeture de la vérification serveur (`js/verify.js`) : aucun de ces modules ne peut changer un temps, un replay ni `PHYS_VER` (test : `tools/test-camrig.mjs`).
 
 - `js/connect.js` (pur) : extrémités d'une pièce (position, sens sortant, normale de la route), `placementsAfter` / `compatiblePlacement` (la pièce qui se raccorde à une extrémité : position, hauteur, cap, roulis).
-- `js/continuity.js` (pur) : `continuityIssues(track)` — raccords de roulis, gravité propagée depuis le départ, pièces qui retournent la voiture sans gravité, raccords manqués de peu, combinaisons mesurées
+- `js/continuity.js` (pur) : `continuityIssues(track)` — raccords de roulis, gravité propagée depuis le départ (depuis la phase 2 toute pièce qui retourne la voiture fait suivre la gravité : plus d'erreur `invert`), raccords manqués de peu, combinaisons mesurées
   par la matrice (`js/pieceFacts.js`, **générée** par `node tools/matrice-pieces.mjs --update` avec `docs/MATRICE-PIECES.md`), conseils. Niveaux `error` / `warn` / `info`. L'éditeur l'affiche (`editor/selection.js : showIssues`).
 - `js/extend.js` (pur) : l'outil « Prolonger » (`editor/tools.js : extend`, touche P).
 - `js/camrig.js` (pur, visuel) : aides de la caméra de poursuite (anticipation, compensation du retard, pente, visée de réception, sortie de ruban) ; `js/race/camera.js` n'y lit que l'état de la voiture.

@@ -21,9 +21,10 @@ import { labCompare, labTrack, LAB_SETUPS } from '../js/analysis/lab.js';
 const def = (id) => BUILTIN_TRACKS.find((d) => d.id === id);
 const track = (id, p) => { const t = buildBuiltin(def(id)); if (p) t.setParams(p); return t; };
 const keyOf = (id) => `b-${id}-${hashString(buildBuiltin(def(id)).encode())}`;
-function botRun(t) {
+function botRun(t, veh) {
   const sim = new Simulation(t), rec = new InputRecorder();
   sim.start();
+  if (veh) sim.phys.vehicle = veh;
   const bot = new Autopilot(t.path, { latLimit: 56 * 0.8 });
   bot.reset(sim.phys);
   for (let i = 0; i < 120 * 240; i++) {
@@ -89,16 +90,22 @@ test('profils : aucun véhicule plus rapide en ligne droite (pointe, accélérat
 });
 test('le circuit change avec le profil ou les modèles v2 (l’autopilote ne fait pas le même temps), et pas sans eux', () => {
   const b = botRun(track('serpent'));
-  const v2 = botRun(track('serpent', { vm: 2 })), sim = botRun(track('serpent', { pm: 'sim' })), arc = botRun(track('serpent', { pm: 'arcade' }));
-  assert.ok(b && v2 && sim && arc, 'le pilote automatique finit');
-  assert.notEqual(v2.time, b.time); assert.notEqual(sim.time, b.time); assert.notEqual(arc.time, b.time);
+  // (phase 2 : les modèles v2 concernent la moto, le bateau et le deltaplane ; la voiture n'en utilise aucun. Avant, « la voiture change avec vm = 2 » ne tenait qu'à une image d'écart
+  // (31,217 contre 31,225 s) due à l'ancien modèle de dérapage ; on mesure donc l'effet des modèles v2 sur la moto, qui les utilise.)
+  const mb = botRun(track('serpent'), 'moto'), mv2 = botRun(track('serpent', { vm: 2 }), 'moto');
+  const sim = botRun(track('serpent', { pm: 'sim' })), arc = botRun(track('serpent', { pm: 'arcade' }));
+  assert.ok(b && mb && mv2 && sim && arc, 'le pilote automatique finit');
+  assert.notEqual(mv2.time, mb.time); assert.notEqual(sim.time, b.time); assert.notEqual(arc.time, b.time);
   assert.deepEqual(botRun(track('serpent')), b, 'v1 : toujours la même course');
 });
 test('moto v2 : elle penche dans un virage (bornée), se redresse en ligne droite ; au freinage la charge passe sur l’avant', () => {
   const t = track('eclats', { vm: 2 });
   const turn = drive(t, 200, (i) => ({ throttle: true, steer: i > 60 ? 1 : 0 }), 'moto');   // 0.9.12 : moteur plus vif, on tourne plus tôt (sinon la moto est déjà sortie de la route)
   assert.ok(Math.abs(turn.phys.lean) > 0.15 && Math.abs(turn.phys.lean) <= MAX_LEAN, `inclinaison ${turn.phys.lean}`);
-  const straight = drive(t, 400, (i) => ({ throttle: true, steer: i > 100 && i < 200 ? 1 : 0 }), 'moto');
+  // (phase 2 : volant tenu 0,4 s au lieu de 0,83 s. Tenu 100 pas, la moto finissait de plein fouet dans la bordure (cap −82°, vitesse 15 → 0), restait nez au mur le temps du
+  // dégagement automatique (~1 s, la bordure ne rebondit plus qu'en proportion du choc) puis pivotait : son inclinaison, qui suit le taux de lacet, n'était plus nulle à 400 pas.
+  // Le test mesure le redressement en ligne droite, pas un choc de plein fouet.)
+  const straight = drive(t, 400, (i) => ({ throttle: true, steer: i > 100 && i < 150 ? 1 : 0 }), 'moto');
   assert.ok(Math.abs(straight.phys.lean) < 0.05, `redressée ${straight.phys.lean}`);
   const brake = drive(t, 200, (i) => (i < 170 ? { throttle: true, steer: 0 } : { brake: true, steer: 0 }), 'moto');   // 0.9.12 : moteur plus vif, on freine plus tôt
   assert.ok(brake.phys.v2F > 1 && brake.phys.v2R < 1, `avant ${brake.phys.v2F}, arrière ${brake.phys.v2R}`);

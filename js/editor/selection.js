@@ -34,7 +34,7 @@ export const selectionMethods = {
     const list = this._tileIssues();
     const body = document.createElement('div');
     body.className = 'ed-issues';
-    const TITLES = { 'free-end': 'Extrémité libre', 'roll-mismatch': 'Raccord impossible', gravity: 'Gravité incohérente', invert: 'Route retournée sans gravité', 'near-miss': 'Raccord manqué de peu', 'piece-fact': 'Combinaison qui ne passe pas', 'wall-speed': 'Route sur un mur', 'slope-break': 'Rupture de pente' };
+    const TITLES = { 'free-end': 'Extrémité libre', 'roll-mismatch': 'Raccord impossible', gravity: 'Gravité incohérente', 'near-miss': 'Raccord manqué de peu', 'piece-fact': 'Combinaison qui ne passe pas', 'wall-speed': 'Route sur un mur', 'slope-break': 'Rupture de pente' };
     const ICON = { error: '⛔', warn: '⚠', info: 'ℹ' }, WHAT = { error: 'Bloquant probable', warn: 'À vérifier', info: 'Conseil' };
     if (!list.length) body.textContent = 'Aucun problème repéré. (Ce contrôle lit la géométrie ; « ✔ Vérifier » fait rouler la voiture sur tout le circuit.)';
     for (const lvl of ['error', 'warn', 'info']) {
@@ -57,17 +57,6 @@ export const selectionMethods = {
           b.textContent = 'Voir';
           b.addEventListener('click', () => { this.app.ui.closeModal(); this.focusTile(i.tile); this._markIssues([i, ...(i.other ? [{ ...i, tile: i.other }] : [])]); });
           d.appendChild(b);
-          if (i.action === 'flip') {
-            // Correction en un clic (annulable) : le revêtement « Inversion de gravité » sur la pièce qui retourne la voiture.
-            const f = document.createElement('button');
-            f.className = 'btn small primary';
-            f.textContent = 'Corriger : ajouter « Inversion de gravité »';
-            f.addEventListener('click', () => {
-              if (this.track.setSurface(i.tile, 'flip', 0)) { this._changed(); this._commit(); this.app.ui.flash('Inversion de gravité ajoutée (Ctrl+Z pour annuler)', 2.5); }
-              this.app.ui.closeModal(); this._refreshUI(); this.showIssues();
-            });
-            d.appendChild(f);
-          }
         }
         body.appendChild(d);
       }

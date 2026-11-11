@@ -1,7 +1,7 @@
 # Matrice de compatibilité des pièces (générée)
 
 Générée par `node tools/matrice-pieces.mjs --update` : **ne pas modifier à la main**. Chaque case est un vrai circuit (départ → pièce → arrivée, avec les
-transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 34) au pilote automatique, à 80, 150 et 250 km/h de croisière.
+transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 35) au pilote automatique, à 80, 150 et 250 km/h de croisière.
 
 | Code | Sens |
 |---|---|
@@ -13,7 +13,7 @@ transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 34
 | — | orientation non proposée par l'éditeur (`flagAllowed`) |
 | n/a | pièce sans route roulable (raison dans le fichier JSON) |
 
-Totaux : CHUTE 29 · OK 56 · SAUT 62 · n/a 28 · v≥150 165 · v≥80 26 · — 82.
+Totaux : CHUTE 16 · OK 58 · SAUT 65 · n/a 28 · v≥150 173 · v≥80 26 · — 82.
 
 **Limites** : pilote automatique (pas un humain), voiture classique, sans revêtement ni obstacle, une seule pièce testée par chaîne, vitesse de croisière régulée.
 Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles) sont dans `tools/compat/matrice-pieces.json`.
@@ -125,10 +125,10 @@ Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles)
 
 | Pièce | Sol | Mur gauche | Mur droit | Plafond |
 |---|---|---|---|---|
-| `twist` Vrille | CHUTE | — | — | CHUTE |
-| `ramp90` Montée en L | SAUT | — | — | CHUTE |
-| `wall` Mur vertical | v≥150 | — | — | CHUTE |
-| `crest90` Sommet du L | SAUT | — | — | CHUTE |
+| `twist` Vrille | OK | — | — | OK |
+| `ramp90` Montée en L | SAUT | — | — | SAUT |
+| `wall` Mur vertical | v≥150 | — | — | SAUT |
+| `crest90` Sommet du L | SAUT | — | — | SAUT |
 | `bank` Virage relevé | OK | — | — | OK |
 | `bankBig` Très grand virage relevé | OK | — | — | OK |
 | `tube` Tube | OK | — | — | OK |
@@ -148,18 +148,18 @@ Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles)
 
 | Pièce | Sol | Mur gauche | Mur droit | Plafond |
 |---|---|---|---|---|
-| `tr01s` Transition sol → mur gauche | v≥150 | — | — | CHUTE |
-| `tr10s` Transition mur gauche → sol | v≥150 | — | — | CHUTE |
-| `tr02s` Transition sol → mur droit | v≥150 | — | — | CHUTE |
-| `tr20s` Transition mur droit → sol | v≥150 | — | — | CHUTE |
+| `tr01s` Transition sol → mur gauche | v≥150 | — | — | v≥150 |
+| `tr10s` Transition mur gauche → sol | v≥150 | — | — | v≥150 |
+| `tr02s` Transition sol → mur droit | v≥150 | — | — | v≥150 |
+| `tr20s` Transition mur droit → sol | v≥150 | — | — | v≥150 |
 | `tr13s` Transition mur gauche → plafond | v≥150 | — | — | v≥150 |
 | `tr31s` Transition plafond → mur gauche | v≥150 | — | — | v≥150 |
 | `tr23s` Transition mur droit → plafond | v≥150 | — | — | v≥150 |
 | `tr32s` Transition plafond → mur droit | v≥150 | — | — | v≥150 |
-| `tr01l` Transition sol → mur gauche (douce 2×2) | v≥150 | — | — | CHUTE |
-| `tr10l` Transition mur gauche → sol (douce 2×2) | v≥150 | — | — | CHUTE |
-| `tr02l` Transition sol → mur droit (douce 2×2) | v≥150 | — | — | CHUTE |
-| `tr20l` Transition mur droit → sol (douce 2×2) | v≥150 | — | — | CHUTE |
+| `tr01l` Transition sol → mur gauche (douce 2×2) | v≥150 | — | — | v≥150 |
+| `tr10l` Transition mur gauche → sol (douce 2×2) | v≥150 | — | — | v≥150 |
+| `tr02l` Transition sol → mur droit (douce 2×2) | v≥150 | — | — | v≥150 |
+| `tr20l` Transition mur droit → sol (douce 2×2) | v≥150 | — | — | v≥150 |
 | `tr13l` Transition mur gauche → plafond (douce 2×2) | v≥150 | — | — | v≥150 |
 | `tr31l` Transition plafond → mur gauche (douce 2×2) | v≥150 | — | — | v≥150 |
 | `tr23l` Transition mur droit → plafond (douce 2×2) | v≥150 | — | — | v≥150 |

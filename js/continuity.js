@@ -10,13 +10,13 @@
 // Règles :
 //   roll-mismatch    deux pièces qui se touchent n'ont pas le même roulis (sol contre mur, mur gauche contre mur droit, endroit contre envers…)
 //   gravity          une route est abordée avec la mauvaise gravité (route retournée en gravité normale, ou l'inverse) : la voiture la traverse
-//   invert           une pièce retourne la voiture (sortie à l'envers) sans mécanisme de gravité (revêtement Inversion, transition vers le plafond)
 //   near-miss        deux extrémités se frôlent sans se raccorder (écart de hauteur, de cap ou de position) : semble raccordé, ne l'est pas
 //   piece-fact       la matrice de compatibilité (tools/matrice-pieces.mjs) a mesuré que cette pièce dans cette orientation ne se franchit à aucune vitesse
 //   wall-speed       conseil : une route sur un mur exige plus de 108 km/h
 //   slope-break      conseil : rupture de pente convexe entre deux pièces : la voiture décolle
 import { LEVEL_H } from './constants.js';
 import { PIECES, isRibbon } from './pieces.js';
+import { ribbonInverts } from './ribbons.js';
 import { tileEnds, endsTouch, rollGap, ROLL_TOLERANCE, rollNameOf } from './connect.js';
 import { PIECE_FACTS } from './pieceFacts.js';
 import { SIDE_MIN_SPEED } from './physics/specs.js';
@@ -39,7 +39,7 @@ const ORI_AT = { sol: 'au sol', plafond: 'au plafond', 'mur gauche': 'sur un mur
 function bridgeAdvice(a, b) {
   const pair = [a, b].sort().join('|');
   if (pair === 'mur droit|mur gauche') return 'Il n\'existe pas de transition directe entre un mur gauche et un mur droit : repasse par le sol (transition mur → sol, puis sol → mur) ou par le plafond.';
-  if (pair === 'plafond|sol') return 'Pour passer du sol au plafond, utilise une Vrille avec le revêtement « Inversion de gravité », ou passe par un mur (transitions sol → mur → plafond).';
+  if (pair === 'plafond|sol') return 'Pour passer du sol au plafond, utilise une Vrille (la gravité suit la route), ou passe par un mur (transitions sol → mur → plafond).';
   const known = { 'mur gauche|sol': 'Transition « Sol → Mur gauche »', 'mur droit|sol': 'Transition « Sol → Mur droit »', 'mur gauche|plafond': 'Transition « Mur gauche → Plafond »', 'mur droit|plafond': 'Transition « Mur droit → Plafond »' }[pair];
   return known ? `Intercale la ${known.charAt(0).toLowerCase() + known.slice(1)} (famille Transition, franche 1 case ou douce 2×2).` : 'Intercale une transition d\'orientation.';
 }
@@ -89,10 +89,11 @@ export function continuityIssues(track) {
     }
   }
 
-  // ---- gravity / invert : la gravité le long du circuit, propagée depuis le départ à travers les raccords qui se touchent ----------------
+  // ---- gravity : la gravité le long du circuit, propagée depuis le départ à travers les raccords qui se touchent ----------------
+  // (Phase 2 : la règle « invert » de la phase 1 est supprimée. La gravité suit la route de TOUTE pièce qui la retourne (ribbons.js, ribbonInverts) : une vrille ou une transition posée à
+  // l'envers n'a plus besoin du revêtement « Inversion de gravité » ; une sortie à l'envers sans inversion de gravité ne peut plus arriver.)
   const start = track.startTile;
-  const inv = (e) => e.ny < -0.7;                                    // normale vers le bas : route retournée
-  const flipsByNormal = (t) => isRibbon(t) && (t.s === 'flip' || PIECES[t.t].autoFlip);
+  const flipsByNormal = (t) => isRibbon(t) && (t.s === 'flip' || ribbonInverts(t));       // la gravité suit la route : revêtement Inversion, ou pièce qui retourne la voiture (règle commune du moteur, ribbons.js)
   const groundPlate = (t) => t.s === 'flip' && !isRibbon(t);
   if (start) {
     const seenState = new Set();
@@ -126,16 +127,6 @@ export function continuityIssues(track) {
         if (groundPlate(t)) continue;                                // la voiture quitte la route (coup vers le haut) : on ne sait plus rien après une plaque au sol
         let gOut = g;
         if (flipsByNormal(t)) gOut = o.ny >= -0.05 ? 1 : -1;
-        else if (inv(o) && g > 0 && !inv(f)) {
-          // La pièce se termine à l'envers sans rien pour retourner la gravité (vrille sans inversion, transition retournée…) : on s'arrête là (la suite est inconnue).
-          add({
-            tile: t, level: 'error', code: 'invert', action: 'flip',
-            why: `${lab(t)} (${pos(t)}) fait tourner la route jusqu'à l'envers, mais rien n'inverse la gravité pendant la traversée (ni revêtement « Inversion de gravité » sur cette pièce, ni transition vers le plafond).`,
-            effect: 'La voiture reste en gravité normale : arrivée à l\'envers, elle se détache de la route et tombe (chute libre jusqu\'au terrain).',
-            fix: 'Pose le revêtement « Inversion de gravité » sur cette pièce (la gravité suivra alors la route), ou remplace-la par une transition « Mur → Plafond ».',
-          });
-          continue;
-        }
         for (const nf of touching(o)) if (rollGap(o, nf) < ROLL_TOLERANCE) stack.push({ f: nf, g: gOut });       // (un raccord de roulis incompatible est déjà signalé : on ne propage pas)
       }
     }
@@ -177,7 +168,7 @@ export function continuityIssues(track) {
     if (!code) continue;
     // La matrice a mesuré la pièce SANS revêtement : une pièce qui se retourne avec « Inversion de gravité » n'est pas concernée, et ce qui est déjà expliqué
     // plus précisément par une règle de gravité n'est pas répété.
-    if (t.s === 'flip' || issues.some((i) => i.tile === t && (i.code === 'invert' || i.code === 'gravity'))) continue;
+    if (t.s === 'flip' || issues.some((i) => i.tile === t && (i.code === 'gravity'))) continue;
     if (code === 'CHUTE') {
       add({
         tile: t, level: 'warn', code: 'piece-fact', key: col,
@@ -232,11 +223,8 @@ export function continuityIssues(track) {
 export function pieceHint(type, opts = {}) {
   const P = PIECES[type];
   if (!P || P.kind === 'ring' || P.kind === 'area') return '';
-  const probe = { t: type, x: 0, z: 0, l: 12, r: 0, s: '', p: 0, ...opts };
-  const ends = tileEnds(probe);
-  const a = ends.find((e) => e.entry), b = ends.find((e) => e.exit);
   const hints = [];
-  if (a && b && !(P.autoFlip) && b.ny < -0.7 && a.ny > -0.7) hints.push(`${P.label} retourne la voiture : ajoute le revêtement « Inversion de gravité » sur cette pièce, sinon elle tombera à la sortie.`);
+
   if (opts.o || P.roll) hints.push(`Route sur un mur : la voiture doit rouler à plus de ${Math.round(SIDE_MIN_SPEED * KMH)} km/h.`);
   const col = opts.o === 1 ? 'murG' : opts.o === 2 ? 'murD' : opts.v ? 'plafond' : 'sol';
   if (PIECE_FACTS[type] && PIECE_FACTS[type][col] === 'CHUTE' && !hints.length) hints.push(`${P.label} ${col === 'sol' ? '' : 'dans cette orientation '}ne passe à aucune vitesse dans l'essai de compatibilité (docs/MATRICE-PIECES.md).`);

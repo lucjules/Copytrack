@@ -6,7 +6,7 @@ import { test, finish } from './harness.mjs';
 import { Track, scriptTrack } from '../js/track.js';
 import { PIECES, LEGACY_TILE, flagAllowed } from '../js/pieces.js';
 import { tileEnds, placementsAfter, compatiblePlacement, rollGap, endsTouch, ROLL_TOLERANCE } from '../js/connect.js';
-import { continuityIssues, issueText } from '../js/continuity.js';
+import { continuityIssues } from '../js/continuity.js';
 import { orientationIssues } from '../js/joins.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
 import { PIECE_FACTS } from '../js/pieceFacts.js';
@@ -56,24 +56,20 @@ test('roulis : sol contre mur ≈ 90°, endroit contre envers ≈ 180°, mur gau
 });
 
 console.log('\nVérificateur de continuité (continuity.js)');
-test('vrille sans « Inversion de gravité » : erreur « invert » avec où / pourquoi / conséquence / remède ; avec le revêtement, plus rien', () => {
-  const bad = continuityIssues(S('start S2 TW S2^ TWB S2 finish'));
-  const i = bad.find((x) => x.code === 'invert');
-  assert.ok(i && i.level === 'error');
-  assert.match(i.why, /Vrille \(case 0, -4, niveau 4\)/);
-  assert.match(i.effect, /tombe/);
-  assert.match(i.fix, /Inversion de gravité/);
-  assert.match(issueText(i), /Vrille/);
-  assert.deepEqual(codes(S('start S2 TW.f S2^ TWB.f S2 finish'), 'error'), []);
-  assert.deepEqual(codes(S('start S2 TW.f S2^ TWB.f S2 finish'), 'warn'), []);
+test('vrille sans « Inversion de gravité » (phase 2) : aucun constat — la gravité suit la route de toute pièce qui retourne la voiture (règle commune du moteur) ; avec le revêtement, comme avant', () => {
+  for (const s of ['start S2 TW S2^ TWB S2 finish', 'start S2 TW.f S2^ TWB.f S2 finish']) {
+    assert.deepEqual(codes(S(s), 'error'), [], s);
+    assert.deepEqual(codes(S(s), 'warn'), [], s);
+  }
+  assert.ok(!codes(S('start S2 TW S2^ TWB S2 finish')).includes('invert'), 'la règle « invert » de la phase 1 n\'existe plus');
 });
-test('autres pièces qui retournent la voiture sans gravité : transition retournée (wall → sol posée à l\'envers), montée en L à l\'envers', () => {
-  // transition « mur → sol » posée à l'envers = « mur → plafond » sans autoFlip : même famille que la vrille
+test('autres pièces qui retournent la voiture : transition retournée (wall → sol posée à l\'envers) : la gravité suit aussi, aucune erreur (phase 2)', () => {
+  // transition « mur → sol » posée à l'envers = « mur → plafond » : même famille que la vrille
   const t = new Track('t');
   const add = (o) => t.add(Track.normalize({ x: 0, z: 0, l: 10, r: 0, ...o }));
   add({ t: 'start', z: 0 }); add({ t: 'straight', z: -1 }); add({ t: 'tr01s', z: -2 }); add({ t: 'straight', z: -3, o: 1 });
   add({ t: 'tr10s', z: -4, v: 1 });
-  assert.ok(codes(t).includes('invert'), codes(t).join());
+  assert.deepEqual(codes(t, 'error'), [], codes(t).join());
   // le même enchaînement, avec la vraie transition vers le plafond : propre
   assert.deepEqual(codes(S('start S2 [tr01s] S2< [tr13s] S3^ [tr31s] S2< [tr10s] S2 finish', 8), 'error'), []);
 });
@@ -195,11 +191,12 @@ test('le vérificateur est d\'accord avec la physique : une case « OK » ou « 
     if (code === 'CHUTE') { chute++; assert.ok(bad.length, `${type}/${col.id} : la matrice dit CHUTE, le vérificateur ne dit rien`); }
     else { ok++; assert.deepEqual(bad.map((i) => i.code), [], `${type}/${col.id} (${code}) : faux positif`); }
   }
-  assert.ok(ok > 150 && chute >= 20, `${ok} cases saines, ${chute} chutes`);
+  // Phase 2 : 16 chutes (29 avant la règle de gravité commune : 13 corrigées, aucune nouvelle) ; la matrice ne doit pas régresser (voir docs/AUDIT-PHASE2-PHYSIQUE.md pour ce qui reste).
+  assert.ok(ok > 150 && chute >= 1 && chute <= 16, `${ok} cases saines, ${chute} chutes`);
 });
-test('constats de la matrice (documentés dans docs/MATRICE-PIECES.md) : vrille et transitions retournées au sol sans gravité = CHUTE ; les loopings et le tire-bouchon passent', () => {
-  assert.equal(matrix.twist.cells.sol.code, 'CHUTE');
-  for (const t of ['tr10s', 'tr20s', 'tr10l', 'tr20l']) assert.equal(matrix[t].cells.plafond.code, 'CHUTE', t);
+test('constats de la matrice (documentés dans docs/MATRICE-PIECES.md) : la vrille et les transitions retournées au sol passent sans revêtement de gravité (phase 2) ; les loopings et le tire-bouchon aussi', () => {
+  assert.notEqual(matrix.twist.cells.sol.code, 'CHUTE');
+  for (const t of ['tr10s', 'tr20s', 'tr10l', 'tr20l']) assert.notEqual(matrix[t].cells.plafond.code, 'CHUTE', t);
   for (const t of ['loop', 'loopBig', 'loopDouble', 'cork', 'corkL', 'tube', 'bank']) assert.ok(['OK', 'SAUT'].includes(matrix[t].cells.sol.code) || matrix[t].cells.sol.code.startsWith('v≥'), t + ' ' + matrix[t].cells.sol.code);
 });
 
