@@ -3,7 +3,7 @@
 import { CELL } from '../constants.js';
 import { PIECES } from '../pieces.js';
 import { Track, tileToRow, rowToTile } from '../track.js';
-import { setEditorDraft, saveMyTrack, newId } from '../storage.js';
+import { setEditorDraft, saveMyTrack, newId, wroteOk } from '../storage.js';
 import { centerlineWorld } from '../ribbons.js';
 export const historyMethods = {
   exportState() {
@@ -88,8 +88,11 @@ export const historyMethods = {
   save() {
     const entry = saveMyTrack({ id: this.entryId || newId(), name: this.track.name, code: this.track.encode() });
     this.entryId = entry.id;
+    const ok = wroteOk();
     setEditorDraft(this.exportState());
-    this.app.ui.flash('Circuit enregistré dans « Mes circuits »');
+    if (ok) this.app.ui.flash('Circuit enregistré dans « Mes circuits »');
+    else { this.app.ui.flash('Enregistrement impossible : le stockage du navigateur est plein ou bloqué. Copie le code du circuit (Partager) pour ne pas le perdre.', 7); this.app.audio.error(); }
+    return ok;
   },
 
   newTrack() {

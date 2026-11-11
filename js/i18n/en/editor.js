@@ -210,6 +210,7 @@ export default {
   'Maximum de {n:w} décorations atteint.': 'Maximum of {n} decorations reached.',
   'Place occupée à cette hauteur': 'Spot occupied at this height',
   'Circuit enregistré dans « Mes circuits »': 'Track saved in “My tracks”',
+  'Enregistrement impossible : le stockage du navigateur est plein ou bloqué. Copie le code du circuit (Partager) pour ne pas le perdre.': 'Could not save: the browser storage is full or blocked. Copy the track code (Share) so you do not lose it.',
   'Vise une pièce de route.': 'Aim at a road piece.',
   'Teste depuis une route au sol (ou une transition qui part du sol) : on ne démarre pas sur un mur.': 'Test from a road on the ground (or a transition starting from the ground): you do not start on a wall.',
   '{a:t} : une extrémité n\'est reliée à rien.': '{a}: one end is not connected to anything.',

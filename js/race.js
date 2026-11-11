@@ -146,6 +146,7 @@ export class RaceSession {
   restart() {
     const app = this.app;
     this._telemetryQuit();
+    clearTimeout(this._goT);
     this._tmDone = false;
     this._scAmb = null;
     this._scriptsReset();
@@ -173,6 +174,7 @@ export class RaceSession {
     this.countT = 0;
     this.countShown = -1;
     this.acc = 0;
+    this._stuckT = 0; this._stuckSaid = false;
     this.ghostRec = [];
     this.ghostVeh = [];          // changements de véhicule du fantôme enregistré : [image, id]
     this.finishT = 0;
@@ -296,6 +298,12 @@ export class RaceSession {
       if (ev.landQ === 'perfect') this.stats.perfects++;
       if (ev.miniTurbo) this.stats.turbos++;
       if (ev.ring) this.stats.rings++;
+    }
+    // Voiture immobile alors que le joueur accélère depuis 3 s (elle est prise au piège : ralentisseur, bateau au sec, rebond sur place, nez dans une paroi…) : on lui rappelle
+    // le retour au checkpoint. Simple message : aucun effet sur la course ni sur son enregistrement (une fois par blocage ; réarmé quand la voiture a repris de la vitesse).
+    if (this.state === 'racing' && !this.demo && !this.replay) {
+      if (inp.throttle && this.phys.speed < 1) { this._stuckT = (this._stuckT || 0) + DT; if (this._stuckT > 3 && !this._stuckSaid) { this._stuckSaid = true; this._say(MSG.stuck); } }
+      else { this._stuckT = 0; if (this.phys.speed > 4) this._stuckSaid = false; }
     }
     if (ev.boostHit) {
       app.audio.boost();
@@ -460,7 +468,8 @@ export class RaceSession {
         app.audio.countdown(final);
         if (final) {
           this.state = 'racing';
-          setTimeout(() => app.ui.hud.center(''), 600);
+          clearTimeout(this._goT);
+          this._goT = setTimeout(() => app.ui.hud.center(''), 600);      // (minuterie annulée par restart : sinon « GO ! » relancé dans les 0,6 s effaçait le « 3 » du nouveau décompte)
           if (this.opts.academy) this._say([this.opts.academy.tip, 1, 7]);      // consigne de la leçon (Académie)
         }
       }
@@ -661,6 +670,7 @@ export class RaceSession {
 
   dispose() {
     this._telemetryQuit();
+    clearTimeout(this._goT);
     this._trainDispose();
     this._theaterDispose();
     this.app.camera.up.set(0, 1, 0);

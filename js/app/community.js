@@ -10,7 +10,7 @@ import { online } from '../online.js';
 import { loadProof } from '../authorProof.js';
 import { encodeGhost, decodeGhost, ghostLink, GHOST_LINK_MAX } from '../replay.js';
 import { estimateDifficulty, starsText, STAR_LABELS } from '../difficulty.js';
-import { getRecord, medalTime, saveMyTrack, newId, formatTime, setImportedGhost } from '../storage.js';
+import { getRecord, medalTime, saveMyTrack, newId, formatTime, setImportedGhost, wroteOk } from '../storage.js';
 import { describeUser, describeCommunity } from '../trackDescriptor.js';
 import { renderWorldBoard } from '../ui/leaderboardPanel.js';
 import { trackIdOf } from '../telemetry.js';
@@ -292,7 +292,7 @@ export const communityMethods = {
         this.leaderboardModal(key, row.name, track);
       } else if (act === 'copy' && track) {
         saveMyTrack({ id: newId(), name: track.name, code: track.encode() });
-        this.ui.flash('Copié dans « Mes circuits ».');
+        this.ui.flash(wroteOk() ? 'Copié dans « Mes circuits ».' : 'Copie impossible : le stockage du navigateur est plein ou bloqué.', wroteOk() ? 2 : 5);
       } else if (act === 'edit') {
         const f = document.createElement('div');
         f.className = 'form';

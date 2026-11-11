@@ -588,6 +588,10 @@ body.touch .hud-br { bottom: 120px; }
 }
 .tab.on { background: var(--grad); color: #1a1030; border-color: transparent; font-weight: 700; }
 .bind-hint { color: var(--muted); margin: 0 0 12px; }
+.bind-head { max-width: 640px; margin-bottom: 10px; padding: 14px 22px; }
+.bind-head .opt-h { margin: 0 0 8px; }
+.bind-head .bind-hint { margin: 8px 0 0; }
+.bind-head #bind-tabs .tab { flex: 0 0 auto; font-size: 15px; padding: 6px 14px; min-height: 36px; }
 .bind-list { display: grid; grid-template-columns: 1fr auto auto; gap: 8px 10px; align-items: center; max-width: 640px; }
 .bind-list .lbl { font-weight: 500; }
 .bind-key {
@@ -1624,3 +1628,15 @@ body.hud-editing > section, body.hud-editing #touch { display: none !important; 
 .rec-row .rec-goal.off { opacity: 0.35; }
 .prof-sub { margin-top: 18px; }
 #prof-tabs { flex-wrap: wrap; }
+
+/* ---------- 0.9.59 · Audit visuel ----------
+   Accueil : les six tuiles tiennent sur UNE rangée (écran large) ou sur deux rangées de trois (écran étroit). Avant, la largeur du conteneur (1100 px) ne laissait passer
+   que cinq tuiles : « Paramètres » se retrouvait seule sur une seconde rangée (5 + 1) à 1366 × 768 comme à 1920 × 1080. */
+#menu .menu-buttons { display: grid; grid-template-columns: repeat(6, auto); justify-content: center; width: 100%; }
+@media (max-width: 860px) { #menu .menu-buttons { grid-template-columns: repeat(3, auto); } }
+@media (max-height: 520px) and (min-width: 600px) { #menu .menu-buttons { grid-template-columns: repeat(6, auto); width: 100%; } }
+/* Garage sur un écran bas (téléphone en paysage) : les 14 onglets prenaient quatre rangées et ne laissaient voir qu'UN élément de la liste. Ils défilent sur une rangée. */
+@media (max-height: 520px) {
+  #garage-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+  #garage-tabs .tab { flex: 0 0 auto; }
+}

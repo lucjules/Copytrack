@@ -18,6 +18,7 @@ export default {
   'Moteur coupé': 'Engine cut',
   'Réception ratée': 'Bad landing',
   'Chrono maintenu': 'Clock kept running',
+  'Bloqué ? R : retour au checkpoint': 'Stuck? R: back to the checkpoint',
   'Caméra : {name:t}': 'Camera: {name:t}',
   'Poursuite': 'Chase',
   'Proche': 'Close',

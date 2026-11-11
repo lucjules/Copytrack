@@ -14,7 +14,7 @@
     "test": "node tools/run-tests.mjs",
     "test:deno": "npx --yes deno@2.9.6 run -A tools/test-dmath.mjs && npx --yes deno@2.9.6 run -A tools/phys-fingerprint.mjs",
     "test:sql": "bash tools/test-accounts-sql.sh",
-    "test:browser": "node tools/test-browser.mjs && node tools/test-browser-i18n.mjs",
+    "test:browser": "node tools/test-browser.mjs && node tools/test-browser-i18n.mjs && node tools/test-browser-audit.mjs",
     "fingerprint": "node tools/phys-fingerprint.mjs"
   },
   "license": "MIT"

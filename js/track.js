@@ -14,6 +14,7 @@ import { surfaceMethods } from './track/surfaces.js';
 import { editMethods } from './track/edit.js';
 import { sanitizeLogic, logicToArray, logicFromArray, logicSig } from './sim/logic.js';
 import { PROFILE_IDS } from './physics/profiles.js';
+export const MAX_CELL = 4000;          // bornes de la grille, en cases (voir Track.normalize)
 export const MAX_GROUP = 63;          // groupes 1 à 63 (pièces et décorations) : voir setGroupName, usedGroups
 
 const EMPTY = Object.freeze([]);
@@ -126,8 +127,12 @@ export class Track {
     const lg = LEGACY_TILE[type];
     if (lg) { type = lg.t; if (lg.o) ori = lg.o; }
     if (!PIECES[type]) throw new Error('Pièce inconnue : ' + type);
+    // Cases bornées à ±MAX_CELL : l'index spatial range (x, z) sur 13 bits chacun (voir `key`), et la physique refuse une position au-delà de 1 000 km (CarPhysics._sane).
+    // Un code fabriqué avec x = 2 000 000 000 donnait des clés d'index en collision et une course en « incident physique » permanent. Aucun circuit réel n'en approche
+    // (4 000 cases = 128 km).
+    const cell = (v) => Math.max(-MAX_CELL, Math.min(MAX_CELL, v | 0));
     const tile = {
-      t: type, x: t.x | 0, z: t.z | 0, l: Math.max(0, Math.min(MAX_LEVEL, Math.round((+t.l || 0) * 2) / 2)), r: t.r & 3,
+      t: type, x: cell(t.x), z: cell(t.z), l: Math.max(0, Math.min(MAX_LEVEL, Math.round((+t.l || 0) * 2) / 2)), r: t.r & 3,
       s: '', p: 0, v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ms: 0, ma: 0, col: null, s2: '', p2: 0,
       g: Math.max(0, Math.min(MAX_GROUP, t.g | 0)),      // groupe (calque de l'éditeur ; logique du circuit, E10) : 0 = aucun
     };
@@ -146,13 +151,13 @@ export class Track {
     if (surfaceAllowed(type, s, tile.o)) {
       tile.s = s;
       const S2 = SURFACES[s];
-      if (S2 && S2.def != null) tile.p = Math.max(S2.min, Math.min(S2.max, t.p || S2.def));
+      if (S2 && S2.def != null) tile.p = Math.max(S2.min, Math.min(S2.max, +t.p || S2.def));      // (+ : un réglage non numérique dans un code fabriqué donnait NaN)
     }
     // Bifurcation : un 2e revêtement pour la voie déportée (la 1re voie garde s).
     if (PIECES[type].kind === 'fork' && t.s2 && (t.s2 === '-' || surfaceAllowed(type, t.s2, tile.o))) {
       tile.s2 = t.s2 === '-' ? '-' : (SURFACE_ALIAS[t.s2] || t.s2);
       const S3 = SURFACES[tile.s2];
-      if (S3 && S3.def != null) tile.p2 = Math.max(S3.min, Math.min(S3.max, t.p2 || S3.def));
+      if (S3 && S3.def != null) tile.p2 = Math.max(S3.min, Math.min(S3.max, +t.p2 || S3.def));
     }
     return tile;
   }

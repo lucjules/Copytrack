@@ -7,7 +7,7 @@
 //   4. Invariants de structure après chaque opération d'une longue séquence aléatoire (index, conflits, niveaux, code relisible, historique exact).
 import assert from 'node:assert/strict';
 import { EditorSession } from '../js/editor.js';
-import { Track, scriptTrack } from '../js/track.js';
+import { Track, scriptTrack, b64encode, MAX_CELL } from '../js/track.js';
 import { PIECES, PIECE_ORDER, SURFACE_ORDER, SURFACES, LEGACY_PIECE, LEGACY_SURFACE, LEGACY_TILE } from '../js/pieces.js';
 import { MAX_DECOS } from '../js/constants.js';
 import { DECO_ORDER } from '../js/decoData.js';
@@ -221,6 +221,23 @@ test('aucune opération ne corrompt le circuit ; l\'état courant est toujours u
     cleanup(s);
   }
   assert.equal(ops, 120 * 70);
+});
+
+console.log('Codes de circuit fabriqués');
+test('un code aux coordonnées démesurées ou au réglage non numérique est ramené dans les bornes : index sans collision, signature stable, aucun NaN', () => {
+  const code = 'SHW3:' + b64encode(JSON.stringify({ v: 3, n: 'x', a: '', d: 'desert', t: [7, 0, 0, 0, 0, 0, 0, 0, 0, 2000000000, 5, 0, 0, 1, 'abc', 0, 0, -99999, 99999, 0, 0, 2, 'zz', 0, 0, 520192, 0, 0, 0, 0, 0, 0] }));
+  const tr = Track.decode(code);
+  assert.equal(tr.tiles.length, 4);
+  assert.ok(tr.tiles.every((t) => Math.abs(t.x) <= MAX_CELL && Math.abs(t.z) <= MAX_CELL), 'cases bornées');
+  assert.ok(tr.tiles.every((t) => Number.isFinite(t.p)), 'réglages numériques');
+  assert.ok(!/NaN/.test(tr.signatureText()));
+  assert.equal(Track.decode(tr.encode()).signature(), tr.signature(), 'le code relu a la même signature');
+  // Chaque case de l'index ne contient que les pièces qui l'occupent vraiment (avant : x = 520192 retombait dans la case de x = -4096).
+  for (const t of tr.tiles) assert.deepEqual(tr.tilesAt(t.x, t.z), [t]);
+  assert.deepEqual(structure(tr).filter((e) => !/hors des niveaux/.test(e)), []);
+  // Un circuit ordinaire n'est pas touché.
+  const ok = scriptTrack('o', 'start S3 R S2 finish');
+  assert.equal(Track.decode(ok.encode()).encode(), ok.encode());
 });
 
 finish('Tous les tests de l\'audit de l\'éditeur passent.');

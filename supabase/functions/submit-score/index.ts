@@ -5517,6 +5517,7 @@ function specsOf(profile) {
 var v2Of = (track) => !!track && (track.vm === 2 || track.pm === "sim");
 
 // js/track.js
+var MAX_CELL = 4e3;
 var MAX_GROUP = 63;
 var EMPTY = Object.freeze([]);
 var key = (x, z) => x + 4096 << 13 | z + 4096;
@@ -5724,10 +5725,11 @@ var Track = class _Track {
       if (lg.o) ori = lg.o;
     }
     if (!PIECES[type]) throw new Error("Pi\xE8ce inconnue : " + type);
+    const cell2 = (v) => Math.max(-MAX_CELL, Math.min(MAX_CELL, v | 0));
     const tile = {
       t: type,
-      x: t.x | 0,
-      z: t.z | 0,
+      x: cell2(t.x),
+      z: cell2(t.z),
       l: Math.max(0, Math.min(MAX_LEVEL, Math.round((+t.l || 0) * 2) / 2)),
       r: t.r & 3,
       s: "",
@@ -5764,12 +5766,12 @@ var Track = class _Track {
     if (surfaceAllowed(type, s, tile.o)) {
       tile.s = s;
       const S22 = SURFACES[s];
-      if (S22 && S22.def != null) tile.p = Math.max(S22.min, Math.min(S22.max, t.p || S22.def));
+      if (S22 && S22.def != null) tile.p = Math.max(S22.min, Math.min(S22.max, +t.p || S22.def));
     }
     if (PIECES[type].kind === "fork" && t.s2 && (t.s2 === "-" || surfaceAllowed(type, t.s2, tile.o))) {
       tile.s2 = t.s2 === "-" ? "-" : SURFACE_ALIAS[t.s2] || t.s2;
       const S32 = SURFACES[tile.s2];
-      if (S32 && S32.def != null) tile.p2 = Math.max(S32.min, Math.min(S32.max, t.p2 || S32.def));
+      if (S32 && S32.def != null) tile.p2 = Math.max(S32.min, Math.min(S32.max, +t.p2 || S32.def));
     }
     return tile;
   }

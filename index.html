@@ -464,15 +464,18 @@
       <label><span>Vibrations (manette / téléphone)</span><input type="checkbox" id="opt-haptics"></label>
       <label title="Manette et pouce : une réponse progressive rend les petits coups de volant plus fins (le clavier ne change pas)"><span>Réponse du volant <output id="opt-steercurve-v"></output></span><input type="range" id="opt-steercurve" min="1" max="2" step="0.25"></label>
       </div>
-      <h3 class="opt-h prof-sub">Touches du clavier et de la manette</h3>
-      <div class="tabs" id="bind-tabs">
-        <button class="tab on" data-tab="race">Course</button>
-        <button class="tab" data-tab="editor">Éditeur</button>
-        <button class="tab" data-tab="pad">Manette</button>
-        <button class="btn subtle" data-action="help">Aide-mémoire</button>
-        <button class="btn subtle" data-action="reset-keys">Rétablir par défaut</button>
+      <!-- Titre, onglets et consigne dans un panneau (0.9.59) : posés à même la scène 3D, ils étaient illisibles dès qu'une route claire ou la voiture passait derrière. -->
+      <div class="panel bind-head prof-sub">
+        <h3 class="opt-h">Touches du clavier et de la manette</h3>
+        <div class="tabs" id="bind-tabs">
+          <button class="tab on" data-tab="race">Course</button>
+          <button class="tab" data-tab="editor">Éditeur</button>
+          <button class="tab" data-tab="pad">Manette</button>
+          <button class="btn subtle" data-action="help">Aide-mémoire</button>
+          <button class="btn subtle" data-action="reset-keys">Rétablir par défaut</button>
+        </div>
+        <p class="bind-hint" id="bind-hint">Clique une case, puis la touche voulue.</p>
       </div>
-      <p class="bind-hint" id="bind-hint">Clique une case, puis la touche voulue.</p>
       <div class="panel bind-list" id="bind-list"></div>
     </div>
   </section>
