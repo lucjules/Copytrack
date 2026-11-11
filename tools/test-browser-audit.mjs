@@ -7,7 +7,8 @@
 //   5. Onglet masqué : la course en solo passe en pause ; écran « tourne ton téléphone » : la course n'avance pas derrière lui.
 //   6. Recommencer juste après « GO ! » : le « 3 » du nouveau décompte n'est pas effacé par l'ancienne minuterie.
 //   7. Voiture immobile gaz à fond depuis 3 s : le message « Bloqué ? R : retour au checkpoint » s'affiche (une fois).
-//   8. Chrono : jamais « :60.000 » à l'écran.
+//   8. Arrivée franchie au plafond : la caméra d'arrivée reste du côté de la voiture.
+//   9. Chrono : jamais « :60.000 » à l'écran.
 // Playwright absent : test ignoré en local, ÉCHEC en CI (comme tools/test-browser.mjs).
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
@@ -204,6 +205,28 @@ try {
     assert.ok(r.at >= 355 && r.at <= 380, 'message après ~3 s d\'immobilité (pas ' + r.at + ')');
     assert.equal(r.count, 1, 'une seule fois pour ce blocage');
     assert.equal(r.state, 'racing', 'la course continue : simple message');
+    await ctx.close();
+  });
+
+  await test('arrivée franchie au plafond (gravité inversée) : la caméra d\'arrivée tourne du côté de la voiture, tête en bas comme elle (elle se plaçait derrière la dalle : voiture invisible)', async () => {
+    const { ctx, page } = await open(960, 540);
+    const run = async (script, opts) => {
+      await page.evaluate(async ([sc, o]) => { const { scriptTrack } = await import('/js/track.js'); window.copytrack.playTrack(scriptTrack('Essai', sc, o), { trackKey: null }); }, [script, opts]);
+      await page.waitForFunction(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, { timeout: 30000, polling: 100 });
+      await page.evaluate(() => { const S = window.copytrack.session; S.app.input.drive = () => ({ steer: 0, throttle: true, brake: false }); let g = 0; while (S.state === 'racing' && g++ < 6000) S._stepOnce(); });
+      await page.waitForTimeout(1200);
+      return page.evaluate(() => {
+        const S = window.copytrack.session, cam = S.app.camera, car = S.car.group.position;
+        return { state: S.state, gs: S.phys.gSign, below: cam.position.y < car.y, upY: Math.round(cam.up.y) };
+      });
+    };
+    const inv = await run('start^ S3^ finish^', { l: 6 });
+    assert.equal(inv.state, 'finished'); assert.equal(inv.gs, -1, 'arrivée franchie en gravité inversée');
+    assert.equal(inv.below, true, 'la caméra est SOUS la route retournée, du côté de la voiture');
+    assert.equal(inv.upY, -1, 'tête en bas, comme la voiture');
+    await page.evaluate(() => { window.copytrack.quitRace(); window.copytrack.showMenu('menu'); });
+    const norm = await run('start S3 finish', {});
+    assert.deepEqual([norm.state, norm.gs, norm.below, norm.upY], ['finished', 1, false, 1], 'à l\'endroit rien ne change : caméra au-dessus, tête en haut');
     await ctx.close();
   });
 

@@ -46,7 +46,8 @@ export const cameraMethods = {
       if (!this.tvPos || this.tvPos.distanceTo(car.position) > 70) {
         const yaw = p.yaw;
         const ahead = 40 + Math.random() * 20, side = (Math.random() < 0.5 ? -1 : 1) * (16 + Math.random() * 10);
-        this.tvPos = new THREE.Vector3(car.position.x - Math.sin(yaw) * ahead + Math.cos(yaw) * side, car.position.y + 6 + Math.random() * 8, car.position.z - Math.cos(yaw) * ahead - Math.sin(yaw) * side);
+        // (gravité inversée : le poste est SOUS la route retournée, du côté de la voiture ; au-dessus, la dalle la cachait)
+        this.tvPos = new THREE.Vector3(car.position.x - Math.sin(yaw) * ahead + Math.cos(yaw) * side, car.position.y + (6 + Math.random() * 8) * (p.gSign < 0 ? -1 : 1), car.position.z - Math.cos(yaw) * ahead - Math.sin(yaw) * side);
       }
       cam.up.set(0, 1, 0);
       cam.position.copy(this.tvPos);
@@ -57,22 +58,24 @@ export const cameraMethods = {
     }
     if (rc && rc.orbit) {
       this.camT += dt * 0.25;
-      const r = 16;
-      cam.up.set(0, 1, 0);
-      cam.position.set(car.position.x + Math.cos(this.camT) * r, car.position.y + 6, car.position.z + Math.sin(this.camT) * r);
-      cam.lookAt(car.position.x, car.position.y + 1, car.position.z);
+      const r = 16, og = p.gSign < 0 ? -1 : 1;      // au plafond, l'orbite passe sous la route retournée, tête en bas comme la voiture
+      cam.up.set(0, og, 0);
+      cam.position.set(car.position.x + Math.cos(this.camT) * r, car.position.y + 6 * og, car.position.z + Math.sin(this.camT) * r);
+      cam.lookAt(car.position.x, car.position.y + og, car.position.z);
       this._fov(60);
       return;
     }
     if (this.state === 'finished' && !this.demo) {
       // Orbite lente autour de la voiture
+      // Arrivée franchie en gravité inversée (voiture au plafond) : avant 0.9.59 la caméra d'arrivée se plaçait 4,5 m AU-DESSUS de la voiture, donc de l'autre côté de
+      // la route retournée : on ne voyait que le dos de la dalle. Elle tourne maintenant du côté de la voiture, tête en bas comme elle.
       this.camT += dt * 0.35;
-      const r = 13;
-      tmpV.set(car.position.x + Math.cos(this.camT) * r, car.position.y + 4.5, car.position.z + Math.sin(this.camT) * r);
+      const r = 13, fg = p.gSign < 0 ? -1 : 1;
+      tmpV.set(car.position.x + Math.cos(this.camT) * r, car.position.y + 4.5 * fg, car.position.z + Math.sin(this.camT) * r);
       this.camPos.lerp(tmpV, 1 - Math.exp(-dt * 2));
-      cam.up.set(0, 1, 0);
+      cam.up.set(0, fg, 0);
       cam.position.copy(this.camPos);
-      cam.lookAt(car.position.x, car.position.y + 1, car.position.z);
+      cam.lookAt(car.position.x, car.position.y + fg, car.position.z);
       this._fov(mode.fov);
       return;
     }
