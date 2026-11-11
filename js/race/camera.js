@@ -4,7 +4,9 @@ import * as THREE from '../vendor/three.module.min.js';
 import { frameWorld } from '../physics/ribbon.js';
 import { REPLAY_CAMS, tmpV, tmpV2 } from './shared.js';
 import { fovPunch, landingDip, feelScale } from '../feel.js';
+import { CamAssist, RIG, limitedAim } from '../camrig.js';
 const UP = new THREE.Vector3(0, 1, 0);
+const upTarget = new THREE.Vector3(), lookP = new THREE.Vector3(), AIM_A = { x: 0, y: 0, z: 0 }, AIM_B = { x: 0, y: 0, z: 0 }, AIM_O = { x: 0, y: 0, z: 0 };
 
 function lerpAngle(a, b, t) {
   let d = b - a;
@@ -29,7 +31,11 @@ export const cameraMethods = {
     this.camFlip.cut(p.gSign, this.camUp);
     this.camYaw = p.yaw;
     this._camSnap = true;               // la prochaine image pose la caméra sur sa cible au lieu de glisser vers elle
+    this._rig().reset(p);                // anticipation, visée de réception, transition de ruban : repartent de zéro (camrig.js)
   },
+
+  // Aides de caméra (js/camrig.js) : une par course, créée à la demande.
+  _rig() { return this.camRig || (this.camRig = new CamAssist()); },
 
   _camera(dt) {
     const cam = this.app.camera;
@@ -92,6 +98,7 @@ export const cameraMethods = {
 
     const sp = Math.abs(p.fwdSpeed);
     const camUp = this.camUp || (this.camUp = new THREE.Vector3(0, 1, 0));
+    const A = this._rig().update(dt, p, this.track, this._feelScale());      // lecture seule de la physique : rien ici ne touche à la course
 
     // Dans un looping : la caméra se cale derrière la voiture et tourne avec elle.
     if (p.mode === 'ribbon') {
@@ -123,7 +130,7 @@ export const cameraMethods = {
       tmpV2.copy(car.position).addScaledVector(tmpV, mode.look).addScaledVector(up, mode.lookUp);
       cam.lookAt(tmpV2);
       this.camYaw = p.yaw;
-      this._fov(mode.fov + Math.min(18, sp * 0.24) + this._feelFov());
+      this._fov(mode.fov + Math.min(RIG.fovMax, sp * RIG.fovK) + this._feelFov());
       return;
     }
     // En gravité inversée, la caméra se retourne : le « haut » est vers le bas du monde.
@@ -133,7 +140,10 @@ export const cameraMethods = {
     tmpV.copy(car.position).sub(cam.position);
     if (tmpV.lengthSq() < 1e-6) tmpV.set(-Math.sin(p.yaw), 0, -Math.cos(p.yaw)); else tmpV.normalize();
     if (!this.camFlip.update(dt, gs, tmpV, camUp)) {
-      camUp.lerp(gUp, 1 - Math.exp(-dt * 4));         // sortie d'un looping : retour doux au haut du monde
+      // Sortie d'un ruban (mur, looping, vrille) : la caméra accompagne d'abord la voiture, qui se redresse seule, puis rejoint le haut du monde (camrig.js).
+      // Sinon : retour doux au haut du monde.
+      if (A.exiting) { upTarget.copy(this.up).lerp(gUp, A.upMix); if (upTarget.lengthSq() < 1e-4) upTarget.copy(gUp); upTarget.normalize(); } else upTarget.copy(gUp);
+      camUp.lerp(upTarget, 1 - Math.exp(-dt * A.upRate));
       if (camUp.lengthSq() < 1e-3) camUp.copy(gUp);
       camUp.normalize();
     }
@@ -145,10 +155,11 @@ export const cameraMethods = {
     if (p.grounded && hv > 10 && p.fwdSpeed > 0) {
       target = lerpAngle(p.yaw, Math.atan2(-p.vel.x, -p.vel.z), 0.45);
     }
+    target += A.lead;                                 // anticipation : la caméra regarde un peu plus loin dans le virage (camrig.js)
     this.camYaw = lerpAngle(this.camYaw, target, 1 - Math.exp(-dt * (p.grounded ? 5.5 : 2.5)));
     const fx = -Math.sin(this.camYaw), fz = -Math.cos(this.camYaw);
-    let dist = mode.dist + Math.min(2.5, sp * 0.03);
-    let height = mode.height;
+    let dist = mode.dist + Math.min(RIG.pullMax, sp * RIG.pullK);
+    let height = mode.height * A.heightK;
 
     // Sous un pont : on abaisse et on rapproche la caméra pour ne pas traverser la dalle.
     const carTop = car.position.y + 1.6;
@@ -164,7 +175,7 @@ export const cameraMethods = {
       height = Math.max(1.4, ceil - car.position.y - 0.9);
       dist = Math.min(dist, mode.dist * 0.75);
     }
-    tmpV.set(car.position.x - fx * dist, car.position.y + height * gs, car.position.z - fz * dist);
+    tmpV.set(car.position.x - fx * dist + p.vel.x * A.comp, car.position.y + height * gs, car.position.z - fz * dist + p.vel.z * A.comp);      // (+ compensation du retard de suivi horizontal : la caméra garde sa distance à haute vitesse)
     // Horizontal serré, vertical plus doux (sauf sous un pont : réaction immédiate).
     const kx = 1 - Math.exp(-dt * 12);
     const ky = 1 - Math.exp(-dt * (underBridge ? 20 : 6));
@@ -193,8 +204,18 @@ export const cameraMethods = {
       cam.position.y += (Math.random() - 0.5) * k;
     }
     const lookUp = underBridge ? Math.min(mode.lookUp, 0.8) : mode.lookUp;
-    cam.lookAt(car.position.x + fx * mode.look, car.position.y + lookUp * gs, car.position.z + fz * mode.look);
-    this._fov(mode.fov + Math.min(18, sp * 0.24) + (p.boost > 0 ? 5 : 0) + this._feelFov());
+    lookP.set(car.position.x + fx * mode.look, car.position.y + lookUp * gs + A.slope * mode.look, car.position.z + fz * mode.look);      // (la visée suit la pente de la route)
+    if (A.aimW > 0 && !underBridge) {
+      // Pendant un saut : la visée glisse vers la zone de réception prédite, sans jamais s'écarter de plus de ≈ 11° de la visée normale (la voiture reste dans le champ).
+      const dBase = Math.max(8, cam.position.distanceTo(lookP));
+      AIM_A.x = (lookP.x - cam.position.x) / dBase; AIM_A.y = (lookP.y - cam.position.y) / dBase; AIM_A.z = (lookP.z - cam.position.z) / dBase;
+      const dx = A.aim.x - cam.position.x, dy = A.aim.y - cam.position.y, dz = A.aim.z - cam.position.z, dl = Math.hypot(dx, dy, dz) || 1;
+      AIM_B.x = dx / dl; AIM_B.y = dy / dl; AIM_B.z = dz / dl;
+      limitedAim(AIM_A, AIM_B, A.aimW, RIG.aimShiftMax, AIM_O);
+      lookP.set(cam.position.x + AIM_O.x * dBase, cam.position.y + AIM_O.y * dBase, cam.position.z + AIM_O.z * dBase);
+    }
+    cam.lookAt(lookP);
+    this._fov(mode.fov + Math.min(RIG.fovMax, sp * RIG.fovK) + (p.boost > 0 ? 5 : 0) + this._feelFov());
   },
 
   _feelScale() { return this.app.motionOff ? 0 : feelScale(this.app.settings.feel); },      // animations réduites : aucun effet de caméra ajouté

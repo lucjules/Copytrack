@@ -1,7 +1,7 @@
 // Service worker généré par tools/gen-sw.mjs : ne pas modifier à la main.
 // Jeu hors ligne : les fichiers du jeu sont gardés en cache ; le réseau reste prioritaire
 // pour récupérer les mises à jour quand il est disponible.
-const CACHE = 'copytrack-e88569fe77';
+const CACHE = 'copytrack-c6491ab472';
 const FILES = [
   "./",
   "assets/README.txt",
@@ -46,11 +46,14 @@ const FILES = [
   "js/autopilot.js",
   "js/camflip.js",
   "js/camprefs.js",
+  "js/camrig.js",
   "js/carModel.js",
   "js/career.js",
   "js/cloudsave.js",
   "js/config.js",
+  "js/connect.js",
   "js/constants.js",
+  "js/continuity.js",
   "js/cosmetics.js",
   "js/custom.js",
   "js/customCar.js",
@@ -81,6 +84,7 @@ const FILES = [
   "js/editorPick.js",
   "js/editorTools.js",
   "js/envFx.js",
+  "js/extend.js",
   "js/families.js",
   "js/favorites.js",
   "js/feel.js",
@@ -143,6 +147,7 @@ const FILES = [
   "js/physics/vehicles/glider2.js",
   "js/physics/vehicles/moto2.js",
   "js/physics/walls.js",
+  "js/pieceFacts.js",
   "js/pieces.js",
   "js/prefabs.js",
   "js/profile.js",

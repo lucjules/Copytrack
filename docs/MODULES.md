@@ -19,11 +19,14 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `autopilot.js` | Pilote automatique simple qui suit la ligne centrale d'un circuit scripté. |
 | `camflip.js` | Retournement de la caméra quand la gravité s'inverse (plaque d'inversion). |
 | `camprefs.js` | Caméras personnalisées (lot 11) : jusqu'à 6 caméras de course en plus des 4 d'origine, réglées par le joueur. |
+| `camrig.js` | Aides de caméra de poursuite (phase 1 après l'audit 0.9.59) : anticipation des virages, compensation du retard de suivi à haute vitesse, visée vers la zone de réception pendant un saut, pente de la route, et transition « voiture quittant un ruban » (mur, looping, vrille). |
 | `career.js` | Mode carrière (v1.5) : les circuits intégrés, rangés du plus facile au plus dur, sont regroupés en chapitres de 6. Un chapitre s'ouvre avec 4 médailles dans le précédent. Chaque circuit a un objectif bonus qui rapporte des pièces une fois. |
 | `carModel.js` | Modèles 3D de la voiture et de la moto (low-poly, originaux), construits par code. |
 | `cloudsave.js` | Sauvegarde cloud : quelles données partent dans le cloud, et comment fusionner deux versions. |
 | `config.js` | Réglages propres à un DÉPLOIEMENT du jeu : le serveur en ligne (classements, communauté, comptes, salons) et le relais réseau du multijoueur. |
+| `connect.js` | Raccords entre pièces (phase 1 de l'après-audit 0.9.59) : extrémités d'une pièce, repère de la route à chaque bout, et recherche de la pièce qui se raccorde à une extrémité donnée. Module PUR (aucun rendu, aucun DOM, aucune physique) : il sert au vérificateur (continuity.js), à l'outil « prolonger » de l'éditeur et à la matrice de compatibilité (tools/matrice-pieces.mjs). |
 | `constants.js` | Dimensions du monde (en mètres) : case de 32 m, route de 24 m de large, niveau de 6,4 m. |
+| `continuity.js` | Continuité physique d'un circuit (phase 1 après l'audit 0.9.59) : ce que le vérificateur d'extrémités (editorTools.checkTrack) ne voit pas. |
 | `cosmetics.js` | Catalogue de personnalisation du véhicule. 100 % visuel : aucune de ces options ne modifie la physique (voir CAR dans physics.js, qui ne dépend pas du modèle 3D). |
 | `custom.js` | Voiture personnalisée (lot 10) : pièces libres, peinture avancée, dessin 16×16, effets, code partageable « SHC1: ». |
 | `customCar.js` | Rendu de la voiture personnalisée (lot 10) : pièces libres, livrée (dégradé, motif, dessin 16×16, texte, numéro) et plaque d'immatriculation. |
@@ -42,6 +45,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `editorPick.js` | Sélection par rayon dans l'éditeur, avec calques. |
 | `editorTools.js` | Outils de l'éditeur (v1.5) : sélection de zone et presse-papiers, vérificateur de circuit, miniatures vues de dessus. Aucun rendu 3D ici : seulement des données. |
 | `envFx.js` | Effets visuels et sonores des environnements déterministes (E19, sim/env.js) : flaques et plaques de givre posées sur la route, pluie dont la densité suit l'intensité de la course (conditions qui varient), éclaboussures et bruit d'eau dans une flaque, crissement sur le givre, souffle des rafales. Purement visuel et sonore : tout ce qui compte pour la course est dans la physique (sim/env.js), qui ne dépend pas d'ici. |
+| `extend.js` | Outil « Prolonger » de l'éditeur : à partir de l'extrémité libre d'une pièce, trouve où poser la pièce choisie pour qu'elle se RACCORDE (position, hauteur, cap et roulis). Module pur (aucun rendu, aucun DOM) : l'éditeur (editor/tools.js : extend) n'a plus qu'à poser le résultat. |
 | `families.js` | Familles de pièces et « caractéristiques » (Phase 2). |
 | `favorites.js` | Circuits favoris (Race Hub) : une référence par circuit, rangée dans le profil (donc dans la sauvegarde cloud du compte). Module pur, testé sous Node. |
 | `feel.js` | Ressenti de course (0.9.20) : de petits retours visuels, sonores et tactiles qui ponctuent la conduite, calculés d'après l'état de la voiture. Tout est VISUEL / SONORE / TACTILE : rien ici ne touche à la physique, aux temps ni aux replays (la voiture roule exactement pareil avec ou sans). Fonctions pures, sans rendu : race.js les appelle et applique le résultat (caméra, HUD, audio, manette). |
@@ -66,6 +70,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `online.js` | Fonctions en ligne (Supabase) : pilote anonyme, circuits de la communauté. |
 | `particles.js` | Particules low-poly (petits tétraèdres instanciés) : poussière, étincelles, éclats. |
 | `physics.js` | Physique de la voiture : pas fixe, déterministe, sans moteur externe. |
+| `pieceFacts.js` | GÉNÉRÉ par `node tools/matrice-pieces.mjs --update` (docs/MATRICE-PIECES.md) : ne pas modifier à la main. |
 | `pieces.js` | Définition des pièces de circuit, des revêtements et de leur géométrie "analytique" (utilisée à la fois par la physique et par les maillages). |
 | `prefabs.js` | Prefabs de l'éditeur (0.9.18) : des morceaux de circuit réutilisables (chicane, looping + sortie, saut…), qu'on colle comme le presse-papiers ; on peut aussi enregistrer SA sélection, la nommer et la partager par un code « SHP1: ». Un prefab est un presse-papiers (editorTools.copyRect) : { w, h, tiles, decos } en coordonnées relatives. Module sans rendu ni stockage : la bibliothèque locale est dans storage.js. |
 | `profile.js` | Profil du joueur : pièces, objets débloqués, équipement, code de sauvegarde. |

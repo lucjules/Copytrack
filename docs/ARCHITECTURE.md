@@ -180,3 +180,14 @@ hors ligne ; il est « réseau d'abord » pour récupérer les mises à jour ; s
 ## Accueil et écran à onglets (0.9.52)
 
 L'accueil (`index.html`, `#menu`) n'affiche que six tuiles ; chacune ouvre un `.menu-panel` d'actions (`js/app/wiring.js`, `_menuSub`) qui remplace les tuiles (Échap et « ← Retour » les ramènent, `_lastPanel` fait revenir au panneau après un écran). Les entrées `data-action="tab-<onglet>"` ouvrent l'écran `#profile`, un écran à onglets partagé par trois entrées (`js/app/profile.js`, `HUBS` : Profil, Progression, Paramètres) ; `showScreen('<onglet>')` mène directement à un onglet (l'ancien `showScreen('options')` mène aux graphismes). `tools/test-menu.mjs` garde la structure : six tuiles, une action une seule fois, aucun bouton mort, aucun onglet sans panneau, aucun réglage perdu ou en double.
+
+## Raccords, continuité, caméra (0.9.60, hors noyau de simulation)
+
+Rien ici n'est dans la fermeture de la vérification serveur (`js/verify.js`) : aucun de ces modules ne peut changer un temps, un replay ni `PHYS_VER` (test : `tools/test-camrig.mjs`).
+
+- `js/connect.js` (pur) : extrémités d'une pièce (position, sens sortant, normale de la route), `placementsAfter` / `compatiblePlacement` (la pièce qui se raccorde à une extrémité : position, hauteur, cap, roulis).
+- `js/continuity.js` (pur) : `continuityIssues(track)` — raccords de roulis, gravité propagée depuis le départ, pièces qui retournent la voiture sans gravité, raccords manqués de peu, combinaisons mesurées
+  par la matrice (`js/pieceFacts.js`, **générée** par `node tools/matrice-pieces.mjs --update` avec `docs/MATRICE-PIECES.md`), conseils. Niveaux `error` / `warn` / `info`. L'éditeur l'affiche (`editor/selection.js : showIssues`).
+- `js/extend.js` (pur) : l'outil « Prolonger » (`editor/tools.js : extend`, touche P).
+- `js/camrig.js` (pur, visuel) : aides de la caméra de poursuite (anticipation, compensation du retard, pente, visée de réception, sortie de ruban) ; `js/race/camera.js` n'y lit que l'état de la voiture.
+- La matrice est un test de non-régression : une évolution de physique ou de géométrie qui change un résultat fait échouer `tools/test-continuite.mjs` jusqu'à `--update` (changement voulu).

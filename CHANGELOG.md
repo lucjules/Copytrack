@@ -6,6 +6,23 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.60 — phase 1 après l'audit d'expérience : caméra, éditeur, matrice des pièces
+
+**`PHYS_VER` inchangé (34)** : aucune ligne de physique, de collision, de gravité ni de circuit intégré n'a changé ; l'empreinte des 193 scénarios, les temps de référence, les
+médailles et le corpus de compatibilité sont identiques. Pas de redéploiement de `submit-score`. Compte-rendu complet (constats vérifiés, hypothèses, limites) :
+[docs/AUDIT-PHASE1-CAMERA-EDITEUR.md](docs/AUDIT-PHASE1-CAMERA-EDITEUR.md) ; matrice pièces × orientations : [docs/MATRICE-PIECES.md](docs/MATRICE-PIECES.md).
+
+- **Caméra de course** (`js/camrig.js`, `js/race/camera.js`) : anticipation des virages, compensation du retard de suivi (la caméra ne s'éloigne plus de 12 à 18 m quand on accélère :
+  la voiture garde 5,4 % de la largeur à 280 km/h au lieu de 3,5 %), visée qui suit la pente et qui glisse vers la zone de réception pendant un saut, sortie de mur / looping / vrille
+  où la caméra accompagne la voiture puis rejoint l'horizon en ≈ 0,6 s (roulis résiduel à 0,3 s : 6° au lieu de 31°). Purement visuelle, réglage « Sensations » (0 : aucune aide).
+- **Vérificateur de continuité** (`js/continuity.js`, `js/connect.js`) : raccords de roulis de toutes les pièces (sol ↔ plafond, mur gauche ↔ mur droit…), gravité propagée depuis le départ,
+  pièces qui retournent la voiture sans gravité (vrille sans « Inversion de gravité », transition retournée), raccords manqués de peu, combinaisons qui ne passent pas (mesurées),
+  conseils (mur ≥ 108 km/h, rupture de pente). Trois niveaux : bloquant probable / à vérifier / conseil ; rien n'empêche de construire. Fenêtre « Problèmes du circuit » (où, pourquoi,
+  conséquence, remède, bouton « Voir », correction en un clic de la vrille).
+- **Éditeur** : outil **Prolonger** (touche P, bouton ➜, `js/extend.js`), annuler / rétablir restaurent le rectangle de sélection, aide à la pose, pastille qui ne crie plus pendant qu'on construit.
+- **Matrice de compatibilité** (`tools/matrice-pieces.mjs`) : 112 pièces × 4 orientations roulées par le vrai moteur ; la table lue par le vérificateur (`js/pieceFacts.js`) en est générée.
+- Tests : `test-continuite`, `test-camrig`, `test-editeur-phase1` (npm test) ; `test-browser-camera`, `test-browser-editeur` (npm run test:browser).
+
 ## Bêta 0.9.59 — audit complet (physique, éditeur, interface, sauvegardes, sécurité)
 
 `PHYS_VER` 33 → **34** : la physique et les règles de course changent (dernier commit de la série, isolé : voir « Physique » ci-dessous). **Redéployer `submit-score`**

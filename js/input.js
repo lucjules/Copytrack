@@ -19,6 +19,7 @@ export const KEY_ACTIONS = {
     ['ed.levelUp', 'Monter d’un niveau', ['KeyE', 'PageUp']],
     ['ed.levelDown', 'Descendre d’un niveau', ['KeyC', 'PageDown']],
     ['ed.nextPiece', 'Pièce suivante', ['Tab', '']],
+    ['ed.extend', 'Prolonger : poser la pièce choisie au bout de la dernière pièce', ['KeyP', '']],
     ['ed.surface', 'Revêtement suivant', ['KeyB', '']],
     ['ed.fill', 'Pot de peinture (remplir une zone)', ['Backquote', '']],
     ['ed.inspect', 'Inspecter (propriétés et gizmos)', ['KeyI', 'Backslash']],

@@ -49,16 +49,24 @@ export const historyMethods = {
     this._changed(false);
     this.needsRebuild = true;
     this.inspector.restore(this.histSel[this.hIndex]);   // l'objet inspecté revient avec l'état annulé / rétabli
+    // Le rectangle de sélection de zone aussi (copié : le modifier ensuite ne change pas l'historique).
+    const r = this.histRect && this.histRect[this.hIndex];
+    const changed = JSON.stringify(this.sel || null) !== JSON.stringify(r || null) || this.pasting;
+    this.sel = r ? { ...r } : null; this.selDrag = null; this.pasting = false; this.previewKey = '';
+    if (changed) this._refreshSelBar();
   },
 
   _commit() {
+    if (!this.histRect) this.histRect = this.histSel.map(() => null);
     const snap = this._snapshot();
-    if (snap === this.history[this.hIndex]) { this.histSel[this.hIndex] = this.inspector.describe(); return; }
+    if (snap === this.history[this.hIndex]) { this.histSel[this.hIndex] = this.inspector.describe(); this.histRect[this.hIndex] = this.sel ? { ...this.sel } : null; return; }
     this.history.length = this.hIndex + 1;
     this.histSel.length = this.hIndex + 1;
+    this.histRect.length = this.hIndex + 1;
     this.history.push(snap);
     this.histSel.push(this.inspector.describe());
-    if (this.history.length > 200) { this.history.shift(); this.histSel.shift(); }
+    this.histRect.push(this.sel ? { ...this.sel } : null);
+    if (this.history.length > 200) { this.history.shift(); this.histSel.shift(); this.histRect.shift(); }
     this.hIndex = this.history.length - 1;
   },
 

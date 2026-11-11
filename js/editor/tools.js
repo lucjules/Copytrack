@@ -7,6 +7,8 @@ import { Track } from '../track.js';
 import { safeUrl } from '../decos.js';
 import { DECO_CATS, DECO_LABELS } from '../decoData.js';
 import { enclosedRegion, tileRegion, fillZone } from '../editorTools.js';
+import { extendPlan, lastOpenTile } from '../extend.js';
+import { pieceHint } from '../continuity.js';
 import { MIRROR_TYPES, LEGACY_CP } from '../inspector.js';
 import { pickTileExact, ERASE_FILTERS, LAYER_ALL, LAYER_DECO } from '../editorPick.js';
 import { MODS, OPT_KEYS, PALETTE_ORDER, SNAPS, fillBase, isFill, pieceLabel, toFill } from './shared.js';
@@ -43,6 +45,13 @@ export const toolMethods = {
     if (PIECES[fillBase(id)] || fillBase(id).startsWith('surf:')) this._lastBrush = fillBase(id);     // dernière pièce / dernier revêtement : sert au pot de peinture
     this.tool = id;
     this.previewKey = '';
+    // Ce qu'il faut savoir avant de poser cette pièce (une seule fois par pièce et par orientation et par séance d'édition : pas de bavardage).
+    if (PIECES[fillBase(id)]) {
+      const hint = pieceHint(fillBase(id), this.opts || {});
+      const hk = fillBase(id) + '|' + ((this.opts && (this.opts.o || (this.opts.v ? 'v' : ''))) || '');
+      this._hinted = this._hinted || new Set();
+      if (hint && !this._hinted.has(hk)) { this._hinted.add(hk); this.app.ui.flash(hint, 5); }
+    }
     if (fillBase(id).startsWith('surf:')) this.setTab('surf');
     else if (id.startsWith('mod:')) this.setTab('mods');
     else if (id.startsWith('deco:')) {
@@ -127,10 +136,34 @@ export const toolMethods = {
     const dropped = this._droppedOptions(tile, norm);
     if (dropped.length && !painting) this.app.ui.flash(`Option ignorée : ${dropped.map((k) => OPT_NAMES[k]).join(', ')}`, 2.4);
     const added = this.track.add(tile);
+    this._lastTile = added;
     this.app.audio.place();
     this._prepareAutoLevel(added);
     this._changed();
     if (!painting) this._commit();
+  },
+
+  // Prolonger (touche P, bouton ➜) : pose la pièce choisie à l'extrémité libre de la dernière pièce posée (ou de la pièce inspectée), au bon cap, à la bonne
+  // hauteur et dans la bonne orientation (js/extend.js). Répéter pour dérouler une route sans viser chaque case.
+  extend() {
+    const base = fillBase(this.tool);
+    const type = PIECES[base] ? base : (this._lastBrush && PIECES[fillBase(this._lastBrush)] ? fillBase(this._lastBrush) : 'straight');
+    const sel = this.inspector && this.inspector.active && this.inspector.sel.kind === 'tile' ? this.inspector.sel.obj : null;
+    const from = sel || (this._lastTile && this.track.tiles.includes(this._lastTile) ? this._lastTile : null) || lastOpenTile(this.track);
+    const armed = {}; for (const k of OPT_KEYS) if (this.opts && this.opts[k]) armed[k] = this.opts[k];
+    const r = extendPlan(this.track, from, type, armed);
+    if (!r.tile) { this.app.ui.flash(r.why, 4); this.app.audio.error(); return false; }
+    this.track.add(r.tile);
+    this._lastTile = this.track.tiles[this.track.tiles.length - 1];
+    this.app.audio.place();
+    this._prepareAutoLevel(this._lastTile);
+    this._changed();
+    this._commit();
+    // La vue suit la route quand le nouveau bout sort de l'écran.
+    const P = PIECES[r.tile.t], cx = (r.tile.x + P.size / 2) * CELL, cz = (r.tile.z + P.size / 2) * CELL;
+    if (Math.hypot(cx - this.target.x, cz - this.target.z) > this.dist * 0.45) { this.target.x = cx; this.target.z = cz; }
+    this.app.ui.flash(`${P.label} posée${r.reverse ? ' à contresens (retour de la pièce)' : r.inferred ? ' (orientation de la route reprise)' : ''}`, 1.4);
+    return true;
   },
 
   // Après une pente, le niveau suit tout seul quand on vise la case suivante.

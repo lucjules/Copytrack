@@ -991,6 +991,15 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 .ed-menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100%; }
 .ed-warn { font: inherit; font-size: 13px; color: #1a1206; background: var(--amber); border: 0; border-radius: 999px; padding: 4px 10px; cursor: pointer; }
 .ed-warn.hidden { display: none; }
+.ed-warn.tips { background: rgba(255,255,255,.14); color: var(--text, #fff); }
+/* Fenêtre « Problèmes du circuit » (editor/selection.js : showIssues) */
+.ed-issues { max-height: 60vh; overflow-y: auto; text-align: left; }
+.ed-issues h3 { margin: 12px 0 6px; font-size: 14px; }
+.ed-issue { border-left: 4px solid var(--amber); background: rgba(255,255,255,.06); border-radius: 6px; padding: 8px 10px; margin: 0 0 8px; }
+.ed-issue.error { border-left-color: #ff4b6a; }
+.ed-issue.info { border-left-color: #5ff2ff; }
+.ed-issue p { margin: 4px 0; font-size: 13px; line-height: 1.35; }
+.ed-issue .btn { margin-top: 4px; }
 
 /* Grille « Outils » à gauche */
 .ed-tools { position: absolute; left: 10px; top: calc(var(--ed-top-h, 54px) + 14px); display: grid; grid-template-columns: repeat(2, 66px); gap: 6px; padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
