@@ -45,6 +45,7 @@ export const editorFlowMethods = {
       [L('ed.rotate'), 'Pivoter (Maj : sens inverse)'],
       [L('ed.mirror'), 'Miroir gauche / droite'],
       [L('ed.nextPiece'), 'Pièce suivante (Maj : précédente)'],
+      [L('ed.extend'), 'Prolonger : pose la pièce choisie au bout de la dernière pièce, raccordée'],
       ['Q', 'Sélection de zone'],
       [L('ed.inspect'), 'Inspecter (propriétés, gizmos)'],
       ['Ctrl + D', 'Dupliquer toute la zone sélectionnée (ou la pièce inspectée)'],

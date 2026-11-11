@@ -580,14 +580,18 @@ export const paletteMethods = {
       this.eraseBar.querySelectorAll('[data-ef]').forEach((b) => b.classList.toggle('on', b.dataset.ef === this.eraseFilter));
     }
     // Plus de bloc de statistiques en haut à gauche : seulement une pastille quand le circuit a un défaut.
-    const errs = this.track.validate().concat(this._joinWarnings());
+    // Pastille : bloquants et avertissements (les conseils « info » ne comptent pas) ; un clic ouvre la fenêtre des problèmes (selection.js : showIssues).
+    const found = this._tileIssues();
+    const errs = this.track.validate().concat(found.filter((i) => i.level !== 'info').map((i) => i.msg));
+    const hard = found.filter((i) => i.level === 'error').length, tips = found.filter((i) => i.level === 'info').length;
     const warn = document.getElementById('ed-warn');
     if (warn) {
-      warn.classList.toggle('hidden', !errs.length);
-      warn.textContent = errs.length ? `⚠ ${errs.length}` : '';
-      warn.title = errs.join(' ');
-      warn.setAttribute('aria-label', errs.length ? `${errs.length} problème${errs.length > 1 ? 's' : ''} : ${errs.join(' ')}` : '');
-      warn.onclick = () => { this.app.ui.flash(errs.join(' '), 4); this._markIssues(this._tileIssues()); };   // et fait clignoter les pièces en cause
+      warn.classList.toggle('hidden', !errs.length && !tips);
+      warn.classList.toggle('tips', !errs.length && tips > 0);
+      warn.textContent = errs.length ? `${hard ? '⛔' : '⚠'} ${errs.length}` : tips ? `ℹ ${tips}` : '';
+      warn.title = errs.length ? `${errs.length} problème${errs.length > 1 ? 's' : ''} : cliquer pour le détail` : `${tips} conseil${tips > 1 ? 's' : ''} : cliquer pour le détail`;
+      warn.setAttribute('aria-label', warn.title);
+      warn.onclick = () => { this.showIssues(); this._markIssues(found.filter((i) => i.level !== 'info')); };   // la fenêtre détaille ; les pièces en cause clignotent
     }
     const root = document.getElementById('editor');
     const top = document.querySelector('#editor .ed-top'), pal = document.getElementById('ed-palette');

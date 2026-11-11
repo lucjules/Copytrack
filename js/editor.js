@@ -110,6 +110,7 @@ export class EditorSession {
     this.history = [this._snapshot()];
     this.hIndex = 0;
     this.histSel = [null];       // sélection de l'Inspection rangée avec chaque pas d'historique
+    this.histRect = [null];      // et rectangle de sélection de zone (Q) : annuler / rétablir le restaure (avant : il restait tel quel)
 
     // Le gizmo (TransformControls) s'abonne aux clics AVANT l'éditeur : il décide le premier s'il est saisi.
     this.inspector = new Inspector(this);
@@ -138,7 +139,7 @@ export class EditorSession {
     return l * LEVEL_H + ROAD_TOP;
   }
 
-  _joinWarnings() { return this._tileIssues().map((i) => i.msg); }
+  _joinWarnings() { return this._tileIssues().filter((i) => i.level !== 'info').map((i) => i.msg); }
 
   // ---- Menu hamburger (Nouveau, Importer, Partager, Enregistrer, Retour) ---------------------------------------------
   get menuOpen() { const m = document.getElementById('ed-menu'); return !!m && !m.classList.contains('hidden'); }
@@ -168,6 +169,7 @@ export class EditorSession {
     if (input.act('ed.groups')) { this.openGroups(); return; }
     if (input.act('ed.logic')) { this.openLogic(); return; }
     if (input.act('ed.nextPiece')) this.cyclePiece(shift ? -1 : 1);
+    if (input.act('ed.extend')) this.extend();
     if (input.act('ed.surface')) this.cycleSurface();
     if (input.act('ed.fill')) this.toggleFill();
     if (input.act('ed.mirror')) this.mirror();

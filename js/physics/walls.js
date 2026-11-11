@@ -3,6 +3,7 @@
 import { CELL, DT, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T } from '../constants.js';
 import { PIECES, toLocal, sampleLocal, rotVec, isFloor, isCeilingFloor, baseY, TUNNEL_TOP } from '../pieces.js';
 import { CAR } from './specs.js';
+import { wallBounce, wallFriction, wallHardLoss, wallSpinOf, wallStunOf, wallYawTarget } from './contact.js';
 import { dcos, dsin, hypot2 } from '../dmath.js';
 
 const L1 = { lx: 0, lz: 0 };
@@ -97,10 +98,10 @@ export const wallMethods = {
 
   // again : seconde passe du même pas (après un obstacle qui a poussé la voiture) : même correction de position et de vitesse, sans recompter le frottement ni l'arrêt.
   _walls(again = false) {
-    const p = this.pos, v = this.vel;
+    const p = this.pos, v = this.vel, K = this.k;
     const fx = -dsin(this.yaw), fz = -dcos(this.yaw);
     const pfx = -dsin(this.prevYaw), pfz = -dcos(this.prevYaw);
-    let hit = 0, touch = false, sx = 0, sz = 0, lnx = 0, lnz = 0;
+    let hit = 0, touch = false, sx = 0, sz = 0, lnx = 0, lnz = 0, kHit = 1;
     for (let k = -1; k <= 1; k += 2) {
       const off = CAR.probe * k;
       for (let iter = 0; iter < 2; iter++) {
@@ -111,9 +112,18 @@ export const wallMethods = {
         p.x += c.dx; p.z += c.dz;
         const vn = v.x * c.nx + v.z * c.nz;
         if (vn < 0) {
-          v.x -= c.nx * vn * (1 + CAR.wallE);
-          v.z -= c.nz * vn * (1 + CAR.wallE);
-          if (-vn > hit) { hit = -vn; sx = c.nx; sz = c.nz; }
+          // Impact (physics/contact.js) : la composante NORMALE rebondit (wallE) ; sur la tangente, un frottement de Coulomb proportionnel à l'impulsion normale. Rien d'autre
+          // n'est retiré ici : un frôlement (vn faible) conserve l'essentiel de l'élan.
+          const ap = -vn;
+          const e1 = 1 + wallBounce(K, ap);
+          v.x -= c.nx * vn * e1;
+          v.z -= c.nz * vn * e1;
+          const tx = v.x - c.nx * (v.x * c.nx + v.z * c.nz), tz = v.z - c.nz * (v.x * c.nx + v.z * c.nz), tl = Math.sqrt(tx * tx + tz * tz);
+          if (tl > 1e-6) { const dv = Math.min(tl, wallFriction(K, ap)) / tl; v.x -= tx * dv; v.z -= tz * dv; }
+          // Couple du contact : le mur écarte le nez de la paroi (contact avant) ou l'en rapproche (contact arrière) : voir contact.js (wallYawTarget).
+          const want = wallYawTarget(K, ap, k, fx, fz, c.nx, c.nz, dcos(this.yaw), dsin(this.yaw)) * this._upSign();
+          if (want * this.omega < want * want) this.omega = want;
+          if (ap > hit) { hit = ap; sx = c.nx; sz = c.nz; kHit = k; }
         }
       }
     }
@@ -126,37 +136,43 @@ export const wallMethods = {
       // ARMÉ quand elle est vraiment plaquée (touche, < 4 m/s, depuis 0,25 s), puis maintenu tant qu'elle touche, reste lente (< 8 m/s) et au plus 5 s ;
       // il ne concerne jamais une voiture qui frôle un mur en roulant.
       this.unstick = 0;
-      if (touch && this.speed < 4) this.crawlT = Math.min(1, this.crawlT + DT); else this.crawlT = Math.max(0, this.crawlT - 2 * DT);      // (à l'arrêt OU rampant : le frottement tient la voiture à ~3 m/s)
-      if (touch && this.crawlT > 0.25) this.unstickT = 5;
-      else if (this.unstickT > 0) this.unstickT = touch ? this.unstickT - DT : this.unstickT - 3 * DT;
-      if (touch && this.unstickT > 0 && this.speed < 8) {
-        const into = fx * lnx + fz * lnz;                      // < 0 : le nez regarde le mur ; > 0 : il s'en écarte
-        const cross = fx * lnz - fz * lnx;                     // sens de rotation le plus court vers la tangente ; ≈ 0 de plein fouet : on garde le sens déjà pris (sinon il change à chaque pas)
+      // Phase 2 : le contact d'une voiture pressée « clignote » (rebond, repoussée, rebond : un pas sur cinq) ; le dégagement ne tournait donc qu'un pas sur cinq pendant que le volant,
+      // lui, poussait le nez dans la paroi à chaque pas : la voiture restait nez au mur à ~1 m/s pendant dix secondes. Le contact est donc retenu `touchMemory` secondes (et sa normale).
+      if (touch) { this.touchT = CAR.touchMemory; this.wnx = lnx; this.wnz = lnz; } else this.touchT = Math.max(0, this.touchT - DT);
+      const near = touch || this.touchT > 0;
+      if (near && this.speed < 4) this.crawlT = Math.min(1, this.crawlT + DT); else this.crawlT = Math.max(0, this.crawlT - 2 * DT);      // (à l'arrêt OU rampant : le frottement tient la voiture à ~3 m/s)
+      if (near && this.crawlT > 0.25) this.unstickT = 5;
+      else if (this.unstickT > 0) this.unstickT = near ? this.unstickT - DT : this.unstickT - 3 * DT;
+      if (near && this.unstickT > 0 && this.speed < 8) {
+        const into = fx * this.wnx + fz * this.wnz;            // < 0 : le nez regarde le mur ; > 0 : il s'en écarte
+        const cross = fx * this.wnz - fz * this.wnx;           // sens de rotation le plus court vers la tangente ; ≈ 0 de plein fouet : on garde le sens déjà pris (sinon il change à chaque pas)
         if (Math.abs(cross) > 0.15 || !this.unstickDir) this.unstickDir = cross >= 0 ? 1 : -1;
         if (into < 0.2) this.unstick = this.unstickDir * CAR.stuckAlign * Math.min(1, Math.max(0.25, (0.2 - into) * 3));
       }
       if (this.unstickT <= 0) this.unstickDir = 0;
     }
     if (touch && !again) {
-      // Frottement : racler un mur freine tout le temps, même sans vrai choc.
-      const k = Math.max(0, 1 - CAR.wallScrape * DT);
+      // Frottement visqueux de contact : racler un mur longtemps freine un peu (wallScrape, 0,12 /s), sans jamais clouer la voiture (avant 0.9.60 : 2 /s = équilibre à ~23 km/h).
+      const k = Math.max(0, 1 - K.wallScrape * DT);
       v.x *= k; v.y *= k; v.z *= k;
     }
-    // Un CHOC se paie une fois : perte de vitesse, rotation, moteur coupé. Une voiture PRESSÉE contre le mur (volant tenu vers lui) le heurte de nouveau à chaque pas,
-    // d'une fraction de m/s : à 120 pas par seconde, ces « chocs » répétés (2 % de vitesse perdue chacun) l'écrasaient à ~1,6 m/s et recoupaient le moteur sans fin, volant à fond
-    // contre le mur. Après `wallFresh` secondes de contact continu, c'est du frottement : seul wallScrape (plus bas) freine.
+    // Un CHOC se paie une fois : perte globale (choc violent), rotation, moteur réduit. Une voiture PRESSÉE contre le mur (volant tenu vers lui) le heurte de nouveau à chaque pas, d'une
+    // fraction de m/s : après `wallFresh` secondes de contact continu c'est du frottement (impulsion de Coulomb ci-dessus + wallScrape), pas un nouveau choc.
     if (!again) this.wallRun = touch ? Math.min(2, this.wallRun + DT) : Math.max(0, this.wallRun - 0.5 * DT);      // (le contact « clignote » quand la voiture rebondit puis est repoussée : il ne redevient un choc neuf qu'après un moment sans contact)
-    const fresh = this.wallRun <= CAR.wallFresh || this.speed > CAR.wallFreshSpeed;      // (à vitesse élevée, racler un mur garde sa pénalité d'origine : seul l'écrasement à l'arrêt est concerné)
+    const fresh = this.wallRun <= CAR.wallFresh || this.speed > CAR.wallFreshSpeed;
     if (hit > 0) {
-      const loss = fresh ? Math.min(CAR.wallLossMax, hit * CAR.wallLoss) : 0;
-      v.x *= 1 - loss; v.y *= 1 - loss; v.z *= 1 - loss;
+      if (fresh) { const loss = wallHardLoss(K, hit); v.x *= 1 - loss; v.y *= 1 - loss; v.z *= 1 - loss; }
       this.ev.wall = hit;
-      if (hit > 1.5 && fresh) {
-        // Le choc fait pivoter la voiture (dans le sens où le mur la repousse) et lui coupe le moteur un instant.
-        const side = sx * fz - sz * fx;
-        this.omega += (side >= 0 ? 1 : -1) * this._upSign() * Math.min(CAR.wallSpinMax, hit * CAR.wallSpin);      // (autour du haut local : même choc au plafond)
-        this.stunT = Math.max(this.stunT, Math.min(0.8, 0.1 + hit * CAR.wallStun));
+      const spin = fresh ? wallSpinOf(K, hit) : 0;
+      if (spin > 0) {
+        // Le choc fait pivoter la voiture : le mur repousse la sonde qui le touche (avant k = +1, arrière k = −1), donc le nez s'écarte du mur pour un choc de l'avant et s'en rapproche pour un
+        // choc de l'arrière. Avant 0.9.60 le signe était inversé : un choc oblique de l'avant tournait le nez CONTRE le mur (voiture « nez au mur », 5 s pour s'en dégager).
+        // d(cap)/d(yaw) = (-cos yaw, sin yaw) : composante du déplacement du nez le long de la normale du mur.
+        const dn = -dcos(this.yaw) * sx + dsin(this.yaw) * sz;
+        this.omega += -kHit * (dn >= 0 ? 1 : -1) * this._upSign() * spin;      // (autour du haut local : même choc au plafond)
       }
+      const stun = fresh ? wallStunOf(K, hit) : 0;
+      if (stun > 0) this.stunT = Math.max(this.stunT, stun);
     }
   },
 

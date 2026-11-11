@@ -106,8 +106,12 @@ test('racler un mur freine en continu même sans vrai choc', () => {
   assert.ok(contact > 0, 'la voiture atteint la bordure');
   assert.ok(ph.speed < 25, 'vitesse après 3 s de glissade : ' + ph.speed.toFixed(1));
 });
-test('paramètres : choc fortement punitif', () => {
-  assert.ok(CAR.wallLoss * 10 >= 0.4 && CAR.wallLossMax >= 0.6 && CAR.wallScrape >= 1.5 && CAR.wallE > 0);
+test('paramètres : un choc violent reste fortement punitif, un frôlement ne l\u2019est plus (phase 2 : modèle d\u2019impact, PHYS_VER 35)', () => {
+  // Ancien réglage (wallLoss, wallLossMax, wallScrape 2/s) : toute touche coûtait une part de la vitesse, d'où une voiture clouée en quelques secondes. Le modèle d'impact
+  // dépend de la vitesse d'APPROCHE normale : rebond (wallE), frottement de Coulomb (wallMu) et perte globale seulement au-delà de wallHardFrom.
+  assert.ok(CAR.wallE > 0 && CAR.wallMu > 0 && CAR.wallHardFrom >= 8 && CAR.wallHardFrom <= 16 && CAR.wallHardMax >= 0.3);
+  assert.ok(CAR.wallScrape > 0 && CAR.wallScrape <= 0.3, 'frottement visqueux léger : racler longtemps freine sans clouer la voiture');
+  assert.equal(CAR.wallLoss, undefined);
 });
 
 console.log('Décrochage sur les murs à 90°');

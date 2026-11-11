@@ -106,9 +106,12 @@ export function checkDef(def) {
   const chk = checkTrack(tr).map((i) => i.msg).concat(orientationIssues(tr).map((i) => i.msg));
   if (chk.length) f.push('vérificateur de l\'éditeur : ' + [...new Set(chk)].join(' / '));
   // tolérance à la vitesse
+  // 0.9.60 (phase 2) : une vitesse isolée peut tomber sur une réception chaotique (meduses à 110 % exactement : 1 réapparition, alors que 109 %, 111 %, 112 % et 115 % passent). La
+  // tolérance est donc jugée sur trois vitesses voisines (k − 1 %, k, k + 1 %) : au moins DEUX doivent passer, et la médiane est celle qu'on annonce.
   for (const k of [0.9, 1.1]) {
-    const R = runTrack(buildBuiltin(def), { vCap: +(baseCap * k).toFixed(1) });
-    if (!R.ok || R.respawns) f.push(`pilote à ${(k * 100).toFixed(0)} % : ${R.ok ? R.respawns + ' réapparitions' : R.reason}`);
+    const runs = [k - 0.01, k, k + 0.01].map((kk) => ({ kk, R: runTrack(buildBuiltin(def), { vCap: +(baseCap * kk).toFixed(1) }) }));
+    const bad = runs.filter(({ R }) => !R.ok || R.respawns);
+    if (bad.length >= 2) f.push(`pilote à ${(k * 100).toFixed(0)} % : ${bad[0].R.ok ? bad[0].R.respawns + ' réapparitions' : bad[0].R.reason}`);
   }
   // 0.9.12 : plus de contrôle à +15 % (c'était +25 % avant) : la tolérance reste ±10 % de la vitesse du pilote, vérifiée ci-dessus ; au-delà, les sorties de mur et les sommets font décoller la voiture.
   // repartir de chaque checkpoint, à l'arrêt

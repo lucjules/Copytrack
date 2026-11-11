@@ -60,7 +60,9 @@ test('une extrémité libre est signalée, avec sa pièce', () => {
 test('l’éditeur branche checkTrack et _markIssues (plus de code mort)', () => {
   const e = readEditor();
   assert.match(e, /checkTrack\(this\.track\)/);
-  assert.match(e, /this\._markIssues\(this\._tileIssues\(\)\)/);
+  assert.match(e, /this\._markIssues\(/);       // (phase 1 : la pastille ouvre la fenêtre des problèmes — showIssues — puis fait clignoter les pièces en cause)
+  assert.match(e, /this\.showIssues\(\)/);
+  assert.match(e, /continuityIssues\(this\.track\)/);
 });
 
 console.log('Feuille de style');

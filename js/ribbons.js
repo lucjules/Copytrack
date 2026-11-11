@@ -48,6 +48,25 @@ export function ribbonOf(tile, raw = false) {
   return c.flipped;
 }
 
+// Le ruban CHANGE-T-IL LA VOITURE D'ENDROIT À ENVERS (ou l'inverse) entre son entrée et sa sortie ? (phase 2, PHYS_VER 35) : une des deux extrémités a la route à l'envers (normale vers le bas)
+// et pas l'autre. C'est la règle COMMUNE qui remplace la liste `autoFlip` posée à la main sur certaines pièces : la gravité d'une telle pièce suit la route (physics/ribbon.js, _ribStep), qu'il
+// s'agisse d'une vrille, d'une transition vers ou depuis le plafond, d'une montée en L retournée, ou de toute pièce future. Un ruban qui revient du même côté qu'il est parti (looping, tire-bouchon,
+// tube, virage relevé) n'est PAS concerné : sa gravité reste la vraie (appui centripète), qu'il soit posé à l'endroit ou à l'envers. Calculé une fois par géométrie de ruban.
+const invertsCache = new WeakMap();
+export function ribbonInverts(tile) {
+  const rib = ribbonOf(tile);
+  if (!rib) return false;
+  let r = invertsCache.get(rib);
+  if (r === undefined) {
+    const o = {};
+    rib.pos(0, o); const a = o.ny < -0.7;
+    rib.pos(1, o); const b = o.ny < -0.7;
+    r = a !== b;
+    invertsCache.set(rib, r);
+  }
+  return r;
+}
+
 // Ligne centrale d'une ligne ou d'un virage (coordonnées locales) et tangente unitaire à l'avancée u (profil vertical compris).
 export function floorCenter(tile, u, out) {
   const P = PIECES[tile.t], base = baseY(tile), half = P.size * HALF;

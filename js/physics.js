@@ -24,6 +24,8 @@ import { obstacleMethods } from './physics/obstacles.js';
 import { ribbonMethods } from './physics/ribbon.js';
 import { dacos, dasin, datan, datan2, dcos, dexp, dpow, dsin, dtan, hypot2, hypot3 } from './dmath.js';
 
+// Part (0 à 1) de la vitesse à partir de laquelle un transfert de charge compte (rien sous 12 m/s, plein à 30 m/s).
+const smoothSpeed = (v) => { const t = clamp((Math.abs(v) - 12) / 18, 0, 1); return t * t * (3 - 2 * t); };
 const L1 = { lx: 0, lz: 0 };
 const L2 = { lx: 0, lz: 0 };
 const S1 = {};
@@ -113,8 +115,8 @@ export class CarPhysics {
     this.vel.x = 0; this.vel.y = 0; this.vel.z = 0;
     this.yaw = yaw; this.prevYaw = yaw; this.yawRate = 0; this.omega = 0;
     this.steer = 0; this.steerAngle = 0; this.boost = 0; this.boostF = 1; this.slip = 0; this.airTime = 0; this.fwdSpeed = 0;
-    this.driftT = 0; this.bounceCD = 0; this.driftCharge = 0; this.stunT = 0; this.stuckT = 0; this.wallRun = 0; this.pinT = 0; this._pinned = false; this.unstick = 0; this.unstickT = 0; this.unstickDir = 0; this.crawlT = 0;
-    this.pitch = 0; this.pitchRate = 0; this.landQ = ''; this.aoa = 0.08; this.glidePitch = 0; this.bankT = 0;
+    this.driftT = 0; this.bounceCD = 0; this.driftCharge = 0; this.slipV = 0; this.xfer = 0; this.prevSteerIn = 0; this.wallT = 0; this.stunT = 0; this.stuckT = 0; this.wallRun = 0; this.pinT = 0; this._pinned = false; this.unstick = 0; this.unstickT = 0; this.unstickDir = 0; this.crawlT = 0; this.touchT = 0; this.wnx = 0; this.wnz = 0; this.wallPrev = 0;
+    this.pitch = 0; this.pitchRate = 0; this.pitch0 = 0; this.landQ = ''; this.aoa = 0.08; this.glidePitch = 0; this.bankT = 0;
     if (this.v2) { this.lean = 0; this.mAx = 0; this.heave = 0; this.v2F = 1; this.v2R = 1; }
     this.rib = null;
     this.gravMul = 1;
@@ -276,8 +278,12 @@ export class CarPhysics {
     const delta = this._steerAngle(Math.abs(vx), drift);
     this.steerAngle = delta;
     const L = K.a + K.b;
-    let maxF = K.latGrip * grip * K.frontShare;
-    let maxR = K.latGrip * grip * (1 - K.frontShare) * (1 - (1 - K.driftRear) * drift) * (this.rearK ?? 1);
+    const gd = 1 - K.driftGrip * drift;      // en glisse, les DEUX essieux appuient moins fort (virage plus large, vitesse conservée) ; l'arrière un peu plus (driftRear) : la glisse reste pilotable
+    let maxF = K.latGrip * grip * K.frontShare * gd;
+    let maxR = K.latGrip * grip * gd * (1 - K.frontShare) * (1 - (1 - K.driftRear) * drift) * (this.rearK ?? 1) * (1 - CAR.xferRear * this.xfer);
+    // Transfert de charge longitudinal : freiner charge l'avant (plus d'adhérence devant, moins derrière : la voiture « pointe » et l'arrière s'allège), accélérer fait l'inverse.
+    const lt = clamp(ax / CAR.xferAx, -1, 1);
+    maxR *= 1 + CAR.xferLong * lt; maxF *= 1 - CAR.xferLong * 0.6 * lt;
     if (this.v2F) { maxF *= this.v2F; maxR *= this.v2R; }      // moto v2 : transfert de masse (physics/vehicles/moto2.js)
     if (Math.abs(vx) < 1.5) {
       // À très basse vitesse, le modèle de dérive (angles calculés avec une
@@ -345,6 +351,7 @@ export class CarPhysics {
   _beginStep() {
     const dt = DT, p = this.pos, ev = this.ev;
     if (this.graceT > 0) this.graceT -= dt;
+    this.wallPrev = ev.wall;      // (impact du pas précédent : lu par _driftState, qui passe avant les collisions du pas)
     ev.wall = 0; ev.land = 0; ev.boostHit = false; ev.bounce = false;
     if (this.hazardGrace > 0) this.hazardGrace = Math.max(0, this.hazardGrace - dt);
     ev.loopIn = false; ev.loopOut = false; ev.loopFall = false; ev.transform = false; ev.gravity = false; ev.miniTurbo = 0; ev.landQ = ''; ev.sink = false; ev.ring = false; ev.flip = false; ev.glass = false; ev.glassTile = null; ev.spring = false; ev.reverse = false; ev.cut = false; ev.spike = false; ev.shock = 0; ev.wallOff = false; ev.invalid = false;
@@ -373,34 +380,62 @@ export class CarPhysics {
     return inp;
   }
 
-  // État de dérapage et mini-turbo.
+  // État de dérapage et mini-turbo (phase 2, PHYS_VER 35). Le dérapage est une MÉCANIQUE DE PILOTAGE, plus un freinage :
+  //  - Déclenchement : frein + volant franchement tourné à vitesse suffisante, AVEC ou SANS les gaz (frein bref pour décrocher l'arrière, puis gaz). Avant : gaz levés obligatoires et freinage
+  //    plein pendant toute la glisse (150 → 23 km/h en 1 s).
+  //  - Entretien : tant que le volant reste tourné, la glisse dure (longtemps sous les gaz, moins longtemps sans) ; le freinage y est presque annulé (driftBrake) : la vitesse se conserve.
+  //  - Sortie PROGRESSIVE : volant relâché ou contre-braqué (volant du côté où la voiture glisse), l'adhérence de l'arrière revient en ~0,5 s (avant : instantanément).
+  //  - Mini-turbo : la durée d'une glisse CONTRÔLÉE (angle de glisse entre 6° et 45°, vitesse > 10 m/s, sans choc de mur) se charge ; une glisse qui part en tête-à-queue ou finit au mur ne donne rien.
   _driftState(inp) {
     const dt = DT, K = this.k, ev = this.ev;
-    // Dérapage : il n'y a plus de bouton, c'est le frein pris en virage à bonne vitesse
-    // qui fait décrocher l'arrière. Tant qu'on garde le volant et que ça glisse,
-    // la dérive se prolonge doucement ; sinon l'arrière raccroche vite.
     const turning = Math.abs(this.steer) > 0.5;      // volant franchement tourné
-    if (inp.brake && !inp.throttle && turning && this.fwdSpeed > K.driftMin && this.grounded) {
-      this.driftT = Math.min(1, this.driftT + dt * 5);
-    } else if (turning && this.driftT > 0 && this.fwdSpeed > K.driftMin * 0.7) {
-      this.driftT = Math.max(0, this.driftT - dt * 0.3);
+    const fast = this.fwdSpeed > K.driftMin;
+    // Angle de glisse (rad) de la voiture : vitesse latérale / vitesse d'avance ; le volant est « du côté de la glisse » quand il contre-braque.
+    const sa = datan2(this.slip, Math.max(Math.abs(this.fwdSpeed), 4));
+    const counter = this.steer * this.slipV > 0 && Math.abs(this.steer) > 0.25 && sa > 0.12;
+    if (inp.brake && turning && fast && this.grounded && !counter) {
+      this.driftT = Math.min(1, this.driftT + dt * K.driftBuild);
+    } else if (this.driftT > 0 && !counter && Math.abs(this.steer) > 0.3 && this.fwdSpeed > K.driftMin * 0.6 && this.grounded) {
+      this.driftT = Math.max(0, this.driftT - dt * (inp.throttle ? K.driftHoldGas : K.driftHold));
     } else {
-      this.driftT = Math.max(0, this.driftT - dt * 3.5);
+      this.driftT = Math.max(0, this.driftT - dt * (counter ? K.driftCounter : K.driftOut));
     }
-    // Mini-turbo : une glisse assez longue se « charge » ; quand l'arrière raccroche,
-    // la voiture reçoit une petite poussée (plus forte si la glisse a duré).
-    if (this.driftT > 0.3 && this.grounded && this.slip > 0.04 * this.fwdSpeed && this.fwdSpeed > 10) {
-      this.driftCharge += dt;
+    // Un mur touché pendant la glisse la casse (et annule le turbo en cours de charge).
+    this.wallT = this.wallPrev > 3 ? 0.4 : Math.max(0, this.wallT - dt);      // (avant : lisait ev.wall, remis à zéro au début du pas : un mur ne cassait jamais la glisse)
+    if (this.wallT > 0) this.driftCharge = 0;
+    // Mini-turbo : charge pendant une glisse contrôlée ; la récompense tombe quand l'arrière raccroche.
+    const controlled = sa > CAR.mtAngleMin && sa < CAR.mtAngleMax;
+    if (this.driftT > 0.5 && this.grounded && controlled && this.fwdSpeed > 10 && this.wallT <= 0) {
+      this.driftCharge += dt * clamp(sa / CAR.mtAngleRef, 0.6, 1.3);        // plus de glisse = charge un peu plus vite (plafonné : pas de gain à partir en travers)
     } else if (this.driftT < 0.25) {
-      if (this.driftCharge >= CAR.mtTime1 && this.grounded) {
+      if (this.driftCharge >= CAR.mtTime1 && this.grounded && sa < CAR.mtAngleMax) {
         const lvl = this.driftCharge >= CAR.mtTime2 ? 2 : 1;
-        const f = lvl === 2 ? 0.55 : 0.32;
+        const f = lvl === 2 ? CAR.mtF2 : CAR.mtF1;
         this.boostF = this.boost > 0 ? Math.max(this.boostF, f) : f;
-        this.boost = Math.max(this.boost, lvl === 2 ? 0.8 : 0.55);
+        this.boost = Math.max(this.boost, lvl === 2 ? CAR.mtT2 : CAR.mtT1);
         ev.miniTurbo = lvl;
       }
       this.driftCharge = 0;
-    }
+    } else if (this.driftT <= 0.5 && !controlled) this.driftCharge = Math.max(0, this.driftCharge - 2 * dt);       // glisse interrompue ou trop faible : la charge s'évapore doucement
+    // Transfert de charge dû à un coup de volant brusque : l'arrière perd de l'adhérence un instant (survirage d'un changement de direction), puis la retrouve en ~0,3 s.
+    // Seule une INVERSION du volant compte (le clavier tourne à 8 /s et revient au centre à 13 /s : ni l'un ni l'autre n'est un coup de volant).
+    const reversal = (inp.steer || 0) * this.prevSteerIn < 0 && Math.abs(this.prevSteerIn) > 0.3;
+    const dSteer = reversal ? Math.abs(this.steer - this.prevSteerIn) / dt : 0;
+    this.prevSteerIn = this.steer;
+    const kick = clamp((dSteer - CAR.xferRate) / CAR.xferRate, 0, 1) * smoothSpeed(this.fwdSpeed);
+    this.xfer = kick > this.xfer ? kick : Math.max(0, this.xfer - dt * CAR.xferOut);
+  }
+
+  // Pilotage de la glisse : tant que le dérapage est établi, un couple de rappel tient l'ANGLE DE GLISSE près de la valeur que le volant demande (plein volant = driftAngle, volant au centre
+  // = 0, contre-braquage = la glisse se referme). Sans lui, le modèle de pneus n'a que deux états : « sur rails » (≤ 6°) ou tête-à-queue (> 50°) ; avec lui l'angle se CONTRÔLE, donc se
+  // maintient, se corrige et se récupère. vx, vy : vitesses d'avance et latérale (repère voiture, y à droite). Renvoie la variation de lacet (rad/s) de ce pas.
+  _driftAssist(vx, vy, dt) {
+    const d = this.driftT;
+    if (d <= 0.05 || vx < 6) return 0;
+    const K = this.k;
+    const beta = datan2(vy, vx);                                  // angle de glisse (< 0 : la voiture glisse vers la gauche, normal en virage à droite)
+    const want = -this.steer * K.driftAngle;                          // plein volant à droite : glisse de driftAngle vers la gauche
+    return clamp((beta - want) * K.driftAssist, -K.driftAssistMax, K.driftAssistMax) * d * dt;      // couple de rappel (rad/s²) borné, proportionnel à l'établissement de la glisse
   }
 
   // Voiture posée sur une route ou sur le terrain : dynamique dans le plan du sol, revêtement, tapis, pièces mobiles. Renvoie true si le pas se termine ici (noyade).
@@ -490,7 +525,7 @@ export class CarPhysics {
     this.rearK = rearK;
     const r = this._tires(vf, vr, this.omega, ax, grip, dt);
     this.rearK = 1;
-    vf = r.vx; vr = r.vy; this.omega = r.w;
+    vf = r.vx; vr = r.vy; this.omega = r.w + this._driftAssist(vf, vr, dt);
     const us = this._upSign();
     // Plaquée nez au mur (walls.js, unstick) : la paroi la fait pivoter vers sa tangente, quel que soit le volant (voir CAR.stuckAlign). Armé seulement quand la voiture est plaquée à l'arrêt (walls.js) : une voiture qui roule n'est jamais touchée.
     if (this.unstick) { const want = this.unstick * us; if (want * this.omega < want * want) this.omega = want; }      // (jamais moins de rotation que ce que le volant fait déjà dans ce sens)
@@ -504,6 +539,7 @@ export class CarPhysics {
     if (this._glassCheck(mod === 'glass', this.surfTile, dt)) this.grounded = false;      // la dalle cède : la voiture tombe
     if (this.ev.sink) return true;
     this.slip = Math.abs(vr);
+    this.slipV = vr;
     this.fwdSpeed = vf;
     this.airTime = 0;
     this.pitch = dasin(clamp(fy, -1, 1));   // assiette au sol : sert d'assiette de départ en l'air
@@ -532,14 +568,31 @@ export class CarPhysics {
     this.slip = 0;
     this.fwdSpeed = v.x * fx + v.z * fz;
     this.airTime += dt;
-    // Tangage : gaz = le nez plonge, frein = le nez se lève. Sans action, la voiture
-    // garde son assiette (sa rotation s'amortit).
-    const pin = this.vehicle === 'glider' ? 0 : (inp.brake ? 1 : 0) - (inp.throttle ? 1 : 0);
-    // Relever le nez (S) est plus vif que plonger : on remet vite la voiture à plat.
-    this.pitchRate += pin * this.gSign * K.airPitchAcc * (pin > 0 ? CAR.airPitchUpK : 1) * dt;   // au plafond, « nez en haut » = vers le bas du monde
-    this.pitchRate *= dexp(-CAR.airPitchDamp * dt);
+    // Tangage (phase 2, PHYS_VER 35). Avant : gaz tenus = le nez plongeait SANS FIN jusqu'à 80° (tangage = intégrale de la commande), donc une réception « bad » à −43 % de vitesse pour le réflexe
+    // le plus naturel (garder les gaz). Maintenant l'assiette est un système à ressort amorti : elle tend vers la trajectoire de vol, et près du sol vers la pente de la route en dessous
+    // (aide partielle : le joueur garde de quoi faire une réception parfaite) ; gaz = nez plus bas, frein = nez plus haut, DÉCALAGE BORNÉ de ± airTrim autour de cette assiette.
+    // Les gaz tenus pendant tout le vol ne coûtent donc plus qu'un nez 14° plus bas, au lieu d'un plantage.
     if (this.vehicle === 'glider') this.pitch = this.glidePitch;
-    else this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
+    else {
+      const pin = (inp.brake ? 1 : 0) - (inp.throttle ? 1 : 0);
+      const gs = this.gSign, hv = hypot2(v.x, v.z);
+      const flight = datan2(v.y * gs, Math.max(hv, 1));
+      if (this.airTime <= dt * 1.01) this.pitch0 = this.pitch;                      // assiette au décollage : l'inertie la garde, la stabilité aérodynamique ne la rapproche que PEU de la trajectoire
+      let tgt = this.pitch0 + (flight - this.pitch0) * CAR.airAero, w = 0;
+      const p = this.pos;
+      const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, S1, 0.5, this.excl, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, S1, 0.5, this.excl);
+      if (s.type === 'road' && Number.isFinite(s.h)) {
+        const height = (p.y - s.h) * gs;
+        if (height >= -0.5 && height < CAR.airLevelH) {
+          w = CAR.airLevelW * (1 - Math.max(0, height) / CAR.airLevelH);
+          const slope = -(s.nx * fx + s.nz * fz) / Math.max(0.3, Math.abs(s.ny));         // pente de la route le long du cap (montée > 0)
+          tgt += (datan(slope * gs) - tgt) * w;
+        }
+      }
+      const want = clamp(tgt + pin * gs * CAR.airTrim * (pin > 0 ? CAR.airPitchUpK / 1.6 : 1), -1.4, 1.4);
+      this.pitchRate += (CAR.airSpring * (want - this.pitch) - CAR.airPitchDamp * 3 * this.pitchRate) * dt * K.airPitchAcc / CAR.airPitchAcc;
+      this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
+    }
   }
 
   // Déplacement puis collisions (anneaux, entrée de ruban, murs, toits, dalles, obstacles, limites). Renvoie true si le pas se termine ici.
@@ -672,7 +725,8 @@ export class CarPhysics {
     }
     if (inp.brake) {
       // En dérapage, l'énergie part surtout dans la glisse : on ralentit moins.
-      if (vf > 0.5) a -= K.brake * traction * (1 - CAR.driftBrake * this.driftT);
+      // Cercle de friction : un volant tourné à vitesse occupe déjà l'adhérence des pneus, il en reste moins pour freiner (brakeCorner) ; et pendant une glisse le freinage est presque annulé.
+      if (vf > 0.5) a -= K.brake * traction * (1 - CAR.driftBrake * this.driftT) * (1 - CAR.brakeCorner * Math.abs(this.steer) * smoothSpeed(vf));
       else if (!inp.throttle) {
         const x = Math.max(0, -vf) / CAR.reverseMax;
         a -= CAR.reverseAccel * traction * (1 - x * x);

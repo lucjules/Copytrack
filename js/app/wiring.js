@@ -218,6 +218,7 @@ export const wiringMethods = {
       case 'save': ed.save(); break;
       case 'test': ed.test(); break;
       case 'rotate': ed.rotate(1); break;
+      case 'extend': ed.extend(); break;
       case 'lvl-up': ed.setLevel(ed.level + 1); break;
       case 'lvl-down': ed.setLevel(ed.level - 1); break;
       case 'help': this.editorHelp(); break;

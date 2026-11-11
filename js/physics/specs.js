@@ -26,10 +26,20 @@ export const CAR = {
   frontShare: 0.42,   // part avant (0.9.11 : 0,48 -> 0,42 : l'arrière accroche plus que l'avant, la voiture PERD l'avant avant de partir en tête-à-queue : pardonne un volant tardif)
   steerMax: 0.65,     // angle de braquage maxi des roues (rad) à basse vitesse
   steerAlat: 52,      // l'angle utile diminue avec la vitesse (le volant reste précis)
-  driftRear: 0.65,    // adhérence arrière restante quand on freine en virage (dérapage)
-  driftSteer: 1.3,    // braquage autorisé en plus pendant le dérapage
+  driftGrip: 0.5,    // part de l'adhérence latérale perdue par les deux essieux en plein dérapage : la glisse décrit un virage plus large et CONSERVE la vitesse (à 8 g d'adhérence, glisser de 20° coûtait 27 m/s²)
+  driftRear: 0.6,     // adhérence arrière restante en plein dérapage, EN PLUS (l'arrière décroche avant l'avant : avant 0,65 seul)
+  driftSteer: 1.4,    // braquage autorisé en plus pendant le dérapage (avant : 1,3) : de quoi contre-braquer
   driftMin: 12,       // vitesse mini (m/s) pour qu'un freinage en virage fasse déraper
-  driftBrake: 0.75,   // part du freinage absorbée par la glisse quand on dérape
+  driftBrake: 0.9,    // part du freinage absorbée par la glisse quand on dérape (avant : 0,75, et le frein restait entier pendant toute la glisse en pratique)
+  brakeCorner: 0.65,  // part du freinage perdue à plein volant et à vitesse (cercle de friction) : freiner pour décrocher ne coûte plus 150 → 23 km/h
+  driftAngle: 0.22,   // angle de glisse (rad, 16°) tenu à plein volant pendant un dérapage ; le volant le règle (voir physics.js : _driftAssist)
+  driftAssist: 30,    // raideur du pilotage de la glisse (rad/s² par rad d'écart)
+  driftAssistMax: 14, //   … plafond (rad/s²)
+  driftBuild: 8,      // vitesse d'établissement du dérapage (1 / s) : 0,125 s pour décrocher
+  driftHold: 0.5,     // durée de vie de la glisse sans les gaz, volant tenu (1 / s)
+  driftHoldGas: 0.12, //   … avec les gaz : la glisse se tient longtemps
+  driftOut: 2.2,      // sortie de glisse volant relâché (1 / s) : l'arrière raccroche en ~0,5 s (avant : 3,5 /s)
+  driftCounter: 3.0,  // sortie de glisse en contre-braquant (1 / s)
   yawDamp: 0.6,
   steerIn: 8,         // vitesse de braquage
   steerOut: 13,       // retour au centre
@@ -39,14 +49,31 @@ export const CAR = {
   magnetRange: 4,     // aimant : portée de l'attraction au-dessus d'une route aimantée (m)
   magnetAcc: 80,      // ... et accélération maximale vers la route, le long de sa normale (m/s²)
   launch: 0.6,        // vitesse normale (m/s) au-delà de laquelle la route « tombe » sous la voiture : elle décolle (0.9.11 : 2,0 -> 0,6, sans exemption d'angle)
-  airPitchAcc: 4.2,  // tangage en l'air : gaz = nez vers le bas, frein = nez vers le haut (rad/s²)
-  airPitchDamp: 2.6,
+  airPitchAcc: 4.2,  // vivacité du tangage en l'air (relative : la moto est plus vive, le deltaplane moins) ; gaz = nez plus bas, frein = nez plus haut
+  airPitchDamp: 2.6, // amortissement de base (le ressort d'assiette l'utilise ×3)
   airPitchUpK: 1.6,   // relever le nez est 1,6 fois plus vif que le plonger
+  airSpring: 18,     // raideur du ressort d'assiette (rad/s² par rad) : l'assiette rejoint son objectif en ≈ 0,5 s
+  airTrim: 0.25,     // décalage maximal (rad, 14°) que gaz ou frein donnent par rapport à l'assiette d'équilibre
+  airLevelH: 14,     // sous cette hauteur (m) au-dessus de la route, l'assiette tend vers la pente de la route…
+  airLevelW: 0.35,   // … avec au plus cette part (aide partielle : la réception parfaite reste un geste)
+  airAero: 0.15,     // part de l'écart assiette de décollage → trajectoire que la stabilité aérodynamique corrige : l'inertie garde l'assiette (sans commande, comme avant)
   airSteer: 1.4,      // contrôle de lacet en l'air (rad/s²), volontairement faible
   airSteerMax: 0.45,  // vitesse de rotation maxi due au volant en l'air (rad/s)
   landOk: 0.38,      // écart d'angle toléré à la réception (rad) sans perte de vitesse (une bosse de pente passe)
-  mtTime1: 0.7,      // durée de glisse pour un mini-turbo (s)
-  mtTime2: 1.5,      // durée pour un mini-turbo renforcé
+  // Mini-turbo (phase 2) : une glisse CONTRÔLÉE se charge ; la récompense dépend de sa durée (et un peu de son angle, plafonné). Avant : +6 / +16 km/h pour 100 km/h perdus.
+  mtTime1: 0.6,      // charge (s) pour le niveau 1
+  mtTime2: 1.4,      // charge (s) pour le niveau 2
+  mtAngleMin: 0.06,  // angle de glisse (rad) sous lequel la voiture n'est pas vraiment en glisse (≈ 3,5°)
+  mtAngleMax: 0.8,   // … au-delà (≈ 46°) c'est un tête-à-queue : ni charge ni récompense
+  mtAngleRef: 0.17,  // angle de référence de la charge (≈ 10°, l'angle tenu à demi-volant) : plus de glisse charge plus vite, de 0,6 à 1,3 fois
+  mtF1: 0.9, mtT1: 0.8,     // niveau 1 : puissance (part du turbo plein) et durée (s) ≈ +20 km/h
+  mtF2: 1.0, mtT2: 1.3,      // niveau 2 ≈ +40 km/h
+  // Transfert de charge (phase 2) : un coup de volant brusque, un freinage ou une accélération déplacent l'appui et font varier l'adhérence de l'arrière.
+  xferRate: 9,       // vitesse de volant (unité / s) au-delà de laquelle une INVERSION du volant compte comme un coup de volant (le clavier va à 8 /s, revient à 13 /s)
+  xferOut: 3.5,      // retour à la normale (1 / s)
+  xferRear: 0.25,    // part de l'adhérence arrière perdue au maximum
+  xferAx: 40,        // accélération longitudinale (m/s²) qui donne le transfert maximal
+  xferLong: 0.05,    // part de l'adhérence déplacée au transfert maximal (faible : à 0,1 le pilote de référence de « récif » frôlait une bordure)
   flipKick: 7,        // impulsion donnée par une plaque d'inversion de gravité (m/s)
   lipHopMin: 2,      // saut en haut d'un L : hauteur mini (m)
   lipHopMax: 4,      // hauteur maxi (m), atteinte vers 180 km/h
@@ -60,12 +87,26 @@ export const CAR = {
   shockKick: 6,       // ... et petite poussée en plus pour bien sentir le choc
   // 0.9.4 : un mur se paie. Choc = rebond + perte de vitesse proportionnelle à l'impact + coup de volant forcé + moteur et adhérence
   // réduits un instant (la voiture « encaisse »), et frottement continu tant qu'on racle.
-  wallE: 0.35,        // rebond sur le mur (0 = mou)
-  wallLoss: 0.05,     // part de la vitesse perdue par m/s d'impact normal (borné par wallLossMax) : 10 m/s = -50 %
-  wallLossMax: 0.65,
-  wallScrape: 2.0,    // frottement : part de la vitesse perdue par seconde de contact (racler un mur à 200 km/h freine fort)
-  wallSpin: 0.14,     // rotation provoquée (rad/s par m/s d'impact), bornée par wallSpinMax
+  // Phase 2 (PHYS_VER 35) : le contact d'un mur est une RÉPONSE À UN IMPACT, proportionnelle à la composante normale de la vitesse (ap = vitesse d'approche, m/s), et non plus une perte
+  // globale de vitesse doublée d'un frottement continu de 2 /s (un frôlement de 2° à 200 km/h passait à 51 km/h en 0,5 s puis restait collé à 23 km/h : mesuré, docs/AUDIT-PHASE2-PHYSIQUE.md).
+  //   frôlement  (ap < 4 m/s)   : rebond sur la composante normale + frottement de Coulomb sur la tangente ; ni rotation ni encaissement ; l'élan est conservé
+  //   modéré     (4 à 12 m/s)   : en plus une rotation et un encaissement croissants (la voiture se récupère)
+  //   violent    (> 12 m/s)     : en plus une perte de vitesse globale croissante, plafonnée
+  wallE: 0.35,        // rebond sur la composante normale (0 = mou)
+  wallRest: 2,        //   … seuil de restitution : sous cette vitesse d'approche (m/s) le rebond croît linéairement de 0 à wallE (un simple appui ne rebondit pas ; contact.js : wallBounce)
+  wallMu: 0.2,        // frottement de Coulomb : perte de vitesse tangente = wallMu × (1 + wallE) × ap  (impulsion : proportionnelle à la violence, nulle sans appui)
+  wallScrape: 0.12,   // frottement visqueux de contact (part de la vitesse perdue par seconde de contact) : racler longtemps freine, sans jamais clouer la voiture (avant : 2,0 /s)
+  wallYaw: 0.25,      // couple du contact : rotation cible (rad/s) par m/s d'approche et par unité de parallélisme avec le mur (contact.js : wallYawTarget)
+  wallYawMax: 1.2,    //   … plafond (rad/s)
+  wallHardFrom: 12,   // ap (m/s) à partir duquel le choc est « violent » : perte globale de vitesse en plus
+  wallHardK: 0.016,   //   … par m/s d'ap au-delà
+  wallHardMax: 0.4,   //   … plafond
+  wallSpinFrom: 6,    // ap (m/s) à partir duquel un choc ajoute une rotation brutale (modéré et violent)
+  wallSpin: 0.1,      // rotation ajoutée (rad/s par m/s d'ap au-delà du seuil), bornée par wallSpinMax
   wallSpinMax: 2.5,
+  wallStunFrom: 4,    // ap (m/s) à partir duquel la voiture « encaisse » (moteur et adhérence réduits un instant)
+  wallStun: 0.035,    // durée de l'encaissement (s par m/s d'ap au-delà du seuil) ; bornée à wallStunMax
+  wallStunMax: 0.6,
   stuckAfter: 0.35,   // 0.9.48 : voiture plaquée contre un mur à l'arrêt depuis ce délai (s) : le volant la fait pivoter sur place
   stuckPivot: 1.2,    // vitesse de pivot (rad/s, à fond de volant)
   wallFresh: 0.12,    // 0.9.58 : durée (s) d'un contact avec un mur pendant laquelle un choc « coûte » (perte de vitesse, rotation, moteur coupé) ; au-delà c'est du frottement (wallScrape)
@@ -75,10 +116,10 @@ export const CAR = {
   scrubShare: 0.6,    //   … à cette part de la poussée du moteur : volant à fond, la voiture finit toujours par accélérer au lieu de tourner à 2 m/s sans fin
   crawlSpeed: 3,      // 0.9.59 : sur un ralentisseur (ou pour un bateau hors de l'eau), la résistance dépasse la poussée du moteur : une voiture arrêtée ne repartait JAMAIS.
   crawlAccel: 3,      //   Sous les gaz elle garde donc au moins cette accélération (m/s²) jusqu'à cette vitesse (m/s, 11 km/h) : très lente, jamais prisonnière (voir _longitudinal)
+  touchMemory: 0.2,   // phase 2 : durée (s) pendant laquelle un contact de mur reste « récent » pour le dégagement automatique (le contact d'une voiture pressée clignote)
   stuckAlign: 1.4,    // 0.9.54 : voiture plaquée nez au mur : le contact la fait pivoter d'elle-même vers la tangente du mur (rad/s), sans qu'il faille braquer
-  wallStun: 0.04,     // durée de l'encaissement (s par m/s d'impact), 0,1 s en plus, bornée à 0,8 s
-  stunTraction: 0.3,  // poussée du moteur pendant l'encaissement
-  stunGrip: 0.6,      // adhérence pendant l'encaissement
+  stunTraction: 0.5,  // poussée du moteur pendant l'encaissement (avant : 0,3)
+  stunGrip: 0.75,     // adhérence pendant l'encaissement (avant : 0,6)
   radius: 1.0,
   probe: 1.25,
   height: 1.3,

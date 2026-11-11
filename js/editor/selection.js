@@ -7,7 +7,7 @@ import { Track } from '../track.js';
 import { buildTileMesh } from '../trackMesh.js';
 import { buildDecoMesh } from '../decos.js';
 import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, moveSelection, rotateSelection, checkTrack, findDuplicateSpot, duplicateSelection, duplicable } from '../editorTools.js';
-import { orientationIssues } from '../joins.js';
+import { continuityIssues, issueText, issueLevelOrder } from '../continuity.js';
 export const selectionMethods = {
   // Problèmes repérables sans rouler (0.9.5) : extrémités libres, sauts risqués, pièces inaccessibles (checkTrack), puis raccords d'orientation
   // de 0.9.3 (un mur contre le sol : il manque une transition). Calculés une fois par état du circuit ; { tile, level, msg }.
@@ -15,10 +15,61 @@ export const selectionMethods = {
     const v = this.track.version;
     if (this._joinKey !== v) {
       this._joinKey = v;
-      this._joinList = checkTrack(this.track).filter((i) => i.tile)
-        .concat(orientationIssues(this.track).map((i) => ({ tile: i.tile, level: 'warn', msg: i.msg })));
+      const cont = continuityIssues(this.track);
+      const near = new Set(cont.filter((i) => i.code === 'near-miss').flatMap((i) => [i.tile, i.other]));
+      // checkTrack dit « extrémité reliée à rien » ; quand deux extrémités se frôlent, le diagnostic précis (écart de hauteur, de cap…) le remplace.
+      // Une extrémité libre n'est pas une erreur bloquante : c'est le bout d'un circuit en construction, ou un saut voulu. Elle passe en « à vérifier » (checkTrack la classe
+      // « error » pour les sauts impossibles et la vérification complète ; la pastille, elle, ne crie pas pendant qu'on construit).
+      const base = checkTrack(this.track).filter((i) => i.tile && !(near.has(i.tile) && /reliée à rien/.test(i.msg)))
+        .map((i) => (/reliée à rien/.test(i.msg) ? { ...i, level: 'warn', code: 'free-end' } : i));
+      this._joinList = base.concat(cont.map((i) => ({ ...i, msg: issueText(i) })))
+        .sort((a, b) => (issueLevelOrder[a.level] ?? 1) - (issueLevelOrder[b.level] ?? 1));
     }
     return this._joinList;
+  },
+
+  // Fenêtre des problèmes : tous les constats, du plus grave au simple conseil, chacun avec où / pourquoi / conséquence / remède et un bouton « Voir »
+  // qui recentre la vue sur la pièce et la fait clignoter.
+  showIssues() {
+    const list = this._tileIssues();
+    const body = document.createElement('div');
+    body.className = 'ed-issues';
+    const TITLES = { 'free-end': 'Extrémité libre', 'roll-mismatch': 'Raccord impossible', gravity: 'Gravité incohérente', 'near-miss': 'Raccord manqué de peu', 'piece-fact': 'Combinaison qui ne passe pas', 'wall-speed': 'Route sur un mur', 'slope-break': 'Rupture de pente' };
+    const ICON = { error: '⛔', warn: '⚠', info: 'ℹ' }, WHAT = { error: 'Bloquant probable', warn: 'À vérifier', info: 'Conseil' };
+    if (!list.length) body.textContent = 'Aucun problème repéré. (Ce contrôle lit la géométrie ; « ✔ Vérifier » fait rouler la voiture sur tout le circuit.)';
+    for (const lvl of ['error', 'warn', 'info']) {
+      const items = list.filter((i) => i.level === lvl);
+      if (!items.length) continue;
+      const h = document.createElement('h3');
+      h.textContent = `${ICON[lvl]} ${WHAT[lvl]} (${items.length})`;
+      body.appendChild(h);
+      for (const i of items) {
+        const d = document.createElement('div');
+        d.className = 'ed-issue ' + lvl;
+        const t = document.createElement('b');
+        t.textContent = TITLES[i.code] || (i.tile ? PIECES[i.tile.t].label : 'Circuit');
+        d.appendChild(t);
+        const rows = i.why ? [['Où / pourquoi', i.why], ['Conséquence', i.effect], ['Comment corriger', i.fix]] : [['', i.msg]];
+        for (const [k, v] of rows) { const p = document.createElement('p'); p.textContent = (k ? k + ' : ' : '') + v; d.appendChild(p); }
+        if (i.tile) {
+          const b = document.createElement('button');
+          b.className = 'btn small';
+          b.textContent = 'Voir';
+          b.addEventListener('click', () => { this.app.ui.closeModal(); this.focusTile(i.tile); this._markIssues([i, ...(i.other ? [{ ...i, tile: i.other }] : [])]); });
+          d.appendChild(b);
+        }
+        body.appendChild(d);
+      }
+    }
+    this.app.ui.modal({ title: 'Problèmes du circuit', body, wide: true, actions: [{ label: 'Fermer', primary: true }] });
+  },
+
+  // Recentre la vue sur une pièce (et son niveau).
+  focusTile(tile) {
+    const P = PIECES[tile.t];
+    this.level = Math.max(0, Math.round(tile.l));
+    this.target.set((tile.x + P.size / 2) * CELL, this.levelY(), (tile.z + P.size / 2) * CELL);
+    this._refreshUI();
   },
 
   // ---------------------------------------------------------------- Sélection
@@ -28,7 +79,7 @@ export const selectionMethods = {
     this.selDrag = { cx: this.hover.cx, cz: this.hover.cz };
     this.selGroup = 0;                                              // une zone tracée à la main n'est plus « le groupe »
     this.sel = normRect(this.selDrag, this.selDrag);
-    if (tap) { this.selDrag = null; this._selInfo(); }
+    if (tap) { this.selDrag = null; this._selInfo(); this._noteSel(); }
   },
 
   _selectMove() {
@@ -39,7 +90,12 @@ export const selectionMethods = {
   _selectUp() {
     this.selDrag = null;
     this._selInfo();
+    this._noteSel();
   },
+
+  // Le rectangle de sélection est rangé avec l'état d'historique COURANT : annuler une opération (supprimer, déplacer, monter…) redonne la sélection sur laquelle elle
+  // agissait, et non celle d'un état plus ancien (editor/history.js).
+  _noteSel() { if (this.histRect) this.histRect[this.hIndex] = this.sel ? { ...this.sel } : null; },
 
   // Ce que la sélection touche : les pièces et décorations du rectangle, sauf celles d'un calque masqué ou verrouillé (editor/groups.js), et, en
   // vue par niveau, seulement celles du niveau affiché.
@@ -68,12 +124,14 @@ export const selectionMethods = {
     const zs = this.track.tiles.flatMap((t) => Track.cellsOf(t).map((c) => c[1]));
     this.sel = { x0: Math.min(...xs), z0: Math.min(...zs), x1: Math.max(...xs), z1: Math.max(...zs) };
     this._selInfo();
+    this._noteSel();
   },
 
   clearSel() {
     this.sel = null; this.selDrag = null; this.pasting = false; this.previewKey = ''; this.selGroup = 0;
     this._clearPreview();
     this._refreshSelBar();
+    this._noteSel();
   },
 
   copySel(silent = false) {

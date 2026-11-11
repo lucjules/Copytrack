@@ -2,9 +2,10 @@
 // Ces méthodes s'ajoutent au prototype de CarPhysics (voir physics.js) : `this` est la voiture.
 import { CELL, DT, ROAD_HALF } from '../constants.js';
 import { PIECES, PLATES, rotVec, tileCenter, isRibbon, tileParam, beltSpeed, isSideTile, hasNoRails } from '../pieces.js';
-import { ribbonOf, frameLocal } from '../ribbons.js';
+import { ribbonOf, frameLocal, ribbonInverts } from '../ribbons.js';
 import { RAIN_GRIP } from '../sim/env.js';
 import { CAR, SIDE_AERO, SIDE_HOLD, SIDE_MIN_SPEED, SIDE_GRACE, surfaceCoeffs } from './specs.js';
+import { wallBounce, wallFriction, wallHardLoss, wallSpinOf, wallStunOf } from './contact.js';
 import { clamp } from '../mathutil.js';
 import { dasin, datan2, dcos, dsin, hypot2, hypot3 } from '../dmath.js';
 
@@ -178,9 +179,11 @@ export const ribbonMethods = {
     const kn = kn0 * F.cc - kg0 * F.cs, kg = kg0 * F.cc + kn0 * F.cs;
     const B = this._basis(R, F);
 
-    // Inversion de gravité sur un ruban (vrille, looping, transition mur <-> plafond...) : la gravité suit la route. Sur le plan vertical
-    // exact (mur) la gravité reste normale : la marge de 3° évite de rester « à l'envers » en revenant d'un plafond sur un mur.
-    if (tile.s === 'flip' || PIECES[tile.t].autoFlip) {
+    // La gravité suit la route sur un ruban qui retourne la voiture (RÈGLE COMMUNE : ribbonInverts, déduite de la géométrie : vrille, transitions vers / depuis le plafond, montée en L retournée…)
+    // et sur un ruban portant le revêtement « Inversion de gravité » (volontaire : le créateur peut forcer l'inversion sur un looping, par exemple). Avant 0.9.60 seules les transitions avec le
+    // plafond (`autoFlip` posé à la main) la suivaient : une vrille sans plaque, ou une transition posée à l'envers, jetait la voiture à la sortie. Sur le plan vertical exact (mur) la gravité
+    // reste normale : la marge de 3° évite de rester « à l'envers » en revenant d'un plafond sur un mur.
+    if (tile.s === 'flip' || ribbonInverts(tile)) {
       const ng = F.ny >= -0.05 ? 1 : -1;
       if (ng !== this.gSign) { this.gSign = ng; this.ev.flip = true; }
     }
@@ -259,7 +262,7 @@ export const ribbonMethods = {
     this.rearK = rearK;
     const t = this._tires(vx, vy, this.omega, ax, load * gripK, dt);
     this.rearK = 1;
-    vx = t.vx; vy = t.vy; this.omega = t.w;
+    vx = t.vx; vy = t.vy; this.omega = t.w + this._driftAssist(vx, vy, dt);
     // Retour dans le plan de la route avec le MÊME cap, puis la voiture pivote.
     R.vs = vx * c - vy * s + beltE1;
     R.vd = vx * s + vy * c;
@@ -269,6 +272,7 @@ export const ribbonMethods = {
     this.yawRate = -this.omega;
     this.fwdSpeed = vx;
     this.slip = Math.abs(vy);
+    this.slipV = vy;
 
     // Avancée le long du ruban et écart latéral.
     R.dl += R.dir * R.vd * dt;
@@ -283,15 +287,18 @@ export const ribbonMethods = {
       if (Math.abs(R.dl) > lim) {
         const side = Math.sign(R.dl) * R.dir;          // côté du mur, dans l'axe e2
         const into = R.vd * side;                      // vitesse vers le mur
-        R.vs *= Math.max(0, 1 - CAR.wallScrape * dt);    // frottement contre la paroi
+        const K = this.k;
+        R.vs *= Math.max(0, 1 - K.wallScrape * dt);      // frottement visqueux de contact (même règle qu'au sol : physics/contact.js)
         if (into > 0) {
+          // Impact : la composante normale (vd) rebondit, la tangente (vs) subit le frottement de Coulomb proportionnel à l'impulsion ; un choc violent coûte en plus une part de la vitesse.
           if (into > 2) this.ev.wall = into;
-          R.vs *= 1 - Math.min(CAR.wallLossMax, into * CAR.wallLoss);      // perte proportionnelle à l'impact
-          R.vd -= side * into * (1 + CAR.wallE);                            // rebond
-          if (into > 1.5) {
-            R.psi += -side * Math.min(CAR.wallSpinMax, into * CAR.wallSpin) * 0.3;       // le choc fait pivoter la voiture
-            this.stunT = Math.max(this.stunT, Math.min(0.8, 0.1 + into * CAR.wallStun));
-          }
+          R.vd -= side * into * (1 + wallBounce(K, into));
+          const dv = Math.min(Math.abs(R.vs), wallFriction(K, into)); R.vs -= Math.sign(R.vs) * dv;
+          R.vs *= 1 - wallHardLoss(K, into);
+          const spin = wallSpinOf(K, into);
+          if (spin > 0) R.psi += -side * spin * 0.3;                         // le choc fait pivoter la voiture
+          const stun = wallStunOf(K, into);
+          if (stun > 0) this.stunT = Math.max(this.stunT, stun);
         }
         R.dl = clamp(R.dl, -lim, lim);
         // 0.9.59 : plaquée nez dans la paroi d'un ruban, presque à l'arrêt, la voiture y restait pour toujours gaz à fond (sans vitesse le volant ne fait rien, et rien ne
@@ -318,7 +325,7 @@ export const ribbonMethods = {
         // Hauteur du saut selon la vitesse : ~2 m en arrivant doucement, ~4 m à fond.
         const hop = clamp((R.vs * R.vs) / CAR.lipHopK, CAR.lipHopMin, CAR.lipHopMax);
         this.vel.y += Math.sqrt(2 * this.g * hop) * this.gSign;
-        this._ribDetach();
+        this._ribDetach('crest');      // (le saut voulu du rebord : pas « Gravité » quand la pièce est posée à l'envers)
         return;
       }
     } else if (press < -0.6 && R.u > mu && R.u < 1 - mu && mod !== 'magnet') {
@@ -372,10 +379,10 @@ export const ribbonMethods = {
     this.surfMod = R.tile.s || '';
   },
 
-  _ribDetach() {
+  _ribDetach(why = '') {
     this.pitch = dasin(clamp(this.fwd.y, -1, 1)); this.pitchRate = 0; this.airTime = 0;
     const t = this.rib && this.rib.tile;
-    this.fallWhy = this.ev.wallOff ? 'wall' : t && PIECES[t.t].kind === 'loop' ? 'loop' : t && t.t === 'twist' ? 'twist' : t && t.v ? 'inv' : 'crest';
+    this.fallWhy = why ? why : this.ev.wallOff ? 'wall' : t && PIECES[t.t].kind === 'loop' ? 'loop' : t && t.t === 'twist' ? 'twist' : t && t.v ? 'inv' : 'crest';
     this.rib = null;
     this.grounded = false;
     this.ev.loopFall = true;

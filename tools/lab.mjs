@@ -105,6 +105,7 @@ export function runTrack(track, { maxTime = 240, vCap, brakeDecel, rewindAtCp = 
     if (i % 120 === 0) { if (bot.idx === lastIdx) stuck++; else stuck = 0; lastIdx = bot.idx; }
     if (fell || stuck > 4) {
       S.respawns++;
+      if (process.env.LAB_LOG) console.log('réapparition', (i * DT).toFixed(2) + ' s', fell ? (phys.ev.sink ? 'noyade' : 'hors piste') : 'immobile', 'pos', phys.pos.x.toFixed(0), phys.pos.y.toFixed(0), phys.pos.z.toFixed(0), (phys.speed * 3.6).toFixed(0) + ' km/h', phys.rib ? 'ruban' : 'sol', 'air', phys.airTime.toFixed(2), 'land', phys.landQ);
       if (S.respawns > 8) { S.reason = `trop de réapparitions (idx ${bot.idx}/${track.path.length}, pos ${phys.pos.x.toFixed(1)},${phys.pos.y.toFixed(1)},${phys.pos.z.toFixed(1)})`; S.time = logic.time; return S; }
       placeAtRespawn(phys, logic.respawn);
       bot.reset(phys);

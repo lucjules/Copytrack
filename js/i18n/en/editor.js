@@ -1,6 +1,30 @@
 // Dictionnaire anglais — l'éditeur de circuits : barre d'outils, palette, options, niveau, sélection, prefabs, raccourcis, messages.
 
 export default {
+  // Phase 1 (après l'audit 0.9.59) : prolonger, fenêtre des problèmes, aide à la pose.
+  'Prolonger': 'Extend',
+  'Prolonger : pose la pièce choisie au bout de la dernière pièce, raccordée (P)': 'Extend: places the chosen piece at the end of the last piece, connected (P)',
+  'Prolonger : poser la pièce choisie au bout de la dernière pièce': 'Extend: place the chosen piece at the end of the last piece',
+  'Prolonger : pose la pièce choisie au bout de la dernière pièce, raccordée': 'Extend: places the chosen piece at the end of the last piece, connected',
+  'Problèmes du circuit': 'Track problems',
+  'Voir': 'Show',
+  '⛔ Bloquant probable ({n:w})': '⛔ Likely blocker ({n})',
+  '⚠ À vérifier ({n:w})': '⚠ To check ({n})',
+  'ℹ Conseil ({n:w})': 'ℹ Tip ({n})',
+  'Aucun problème repéré. (Ce contrôle lit la géométrie ; « ✔ Vérifier » fait rouler la voiture sur tout le circuit.)': 'No problem found. (This check reads the geometry; “✔ Verify” drives the car around the whole track.)',
+  'Où / pourquoi : {m}': 'Where / why: {m}',
+  'Conséquence : {m}': 'Consequence: {m}',
+  'Comment corriger : {m}': 'How to fix: {m}',
+  'Extrémité libre': 'Open end',
+  'cliquer pour le détail': 'click for details',
+  '{n:w} conseil : {m:t}': '{n} tip: {m}',
+  '{n:w} conseils : {m:t}': '{n} tips: {m}',
+  'Raccord impossible': 'Impossible join',
+  'Gravité incohérente': 'Inconsistent gravity',
+  'Raccord manqué de peu': 'Near-miss join',
+  'Combinaison qui ne passe pas': 'Combination that does not work',
+  'Route sur un mur': 'Road on a wall',
+  'Rupture de pente': 'Slope break',
   // ---------------------------------------------------------------- composition générique des infobulles : « Nom (touche) : description »
   '{a:t} ({k}) : {b:t}': '{a} ({k}): {b}',
   '{a:t} — {b:t}': '{a} — {b}',
