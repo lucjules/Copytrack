@@ -842,7 +842,8 @@ do \$\$ begin insert into tracks (name, decor, code, signature, author_time, pie
 SQL
 )
 chk "après l'étape 15b, l'insertion directe d'un circuit est refusée (permission denied)" "$(echo "$R15B" | grep -q "REFUSE" && echo 1 || echo 0)"
-VP15B=$($P -d $DB -At -F'|' -f supabase/verify-prod.sql)
+# (les lignes « étape 17 », « étape 16 » et « RLS partout » de verify-prod.sql sont éprouvées par tools/test-securite-sql.sh, sur une base où ces étapes sont appliquées)
+VP15B=$($P -d $DB -At -F'|' -f supabase/verify-prod.sql | grep -vE '^(étape 17|étape 16|RLS activée sur TOUTES)')
 chk "verify-prod.sql après l'étape 15b : la ligne « APRÈS 15b » passe à ok (et plus aucune ligne MANQUE ni ÉCART)" "$(echo "$VP15B" | grep 'APRÈS 15b' | grep -q '|ok$' && ! echo "$VP15B" | grep -qE '\|(MANQUE|ÉCART)$' && echo 1 || echo 0)"
 chk "après l'étape 15b, publish_track (service) fonctionne encore" "$([ "$(Q "select public.publish_track('$E1', 'Après 15b', 'forest', 'c', 's15-apres', 12.5, 5, 1, '')::jsonb->>'status'")" = created ] && echo 1 || echo 0)"
 $P -d $DB -f supabase/etape15-retour.sql
@@ -878,14 +879,14 @@ chk "profil : après ces essais le profil est toujours sous son identifiant" "$(
 
 # Script de vérification de la base réelle (supabase/verify-prod.sql, LECTURE SEULE) : sur la base complète il ne signale rien ; sur une base « étapes 1 à 14 »
 # (l'état constaté en production avant l'étape 15) il signale EXACTEMENT les objets manquants : le script de vérification est lui-même vérifié.
-VP=$($P -d $DB -At -F'|' -f supabase/verify-prod.sql)
+VP=$($P -d $DB -At -F'|' -f supabase/verify-prod.sql | grep -vE '^(étape 17|étape 16|RLS activée sur TOUTES)')
 chk "verify-prod.sql sur la base complète (étape 15 appliquée) : aucune ligne MANQUE ni ÉCART" "$(echo "$VP" | grep -qE '\|(MANQUE|ÉCART)$' && echo 0 || echo 1)"
 chk "verify-prod.sql avec l'étape 15 SEULE (15b non appliquée, publication directe encore ouverte sur 8 colonnes) : la ligne « APRÈS 15b » dit NON appliquée (info), pas ok" "$(echo "$VP" | grep 'APRÈS 15b' | grep -q 'NON appliquée.*|info$' && echo 1 || echo 0)"
 chk "verify-prod.sql ne modifie rien : aucune instruction d'écriture dans le fichier" "$(grep -iE '^\s*(insert|update|delete|drop|alter|create|grant|revoke|truncate)\b' supabase/verify-prod.sql | grep -q . && echo 0 || echo 1)"
 DB14=copytrack_sqltest14
 $P -d postgres -c "drop database if exists $DB14" -c "create database $DB14" >/dev/null 2>&1
 for f in /tmp/ct-stub.sql supabase/etape1-communaute.sql supabase/etape2-classements.sql supabase/etape3-description.sql supabase/etape4-comptes.sql supabase/etape5-securite.sql supabase/etape6-telemetrie.sql supabase/etape7-fantomes.sql supabase/etape8-decouverte.sql supabase/etape9-secteurs.sql supabase/etape10-social.sql supabase/etape11-saisons.sql supabase/etape12-competition.sql supabase/etape13-communaute.sql supabase/etape14-securite.sql; do $P -d $DB14 -f $f >/dev/null 2>&1; done
-VP14=$($P -d $DB14 -At -F'|' -f supabase/verify-prod.sql)
+VP14=$($P -d $DB14 -At -F'|' -f supabase/verify-prod.sql | grep -vE '^(étape 17|étape 16|RLS activée sur TOUTES)')
 MISS=$(echo "$VP14" | grep -cE '\|MANQUE$'); ECART=$(echo "$VP14" | grep -E '\|ÉCART$' | grep -c "scores_limit verrouille\|enveloppe de rate_check")
 chk "verify-prod.sql sur une base « étapes 1 à 14 » (état constaté en production) : signale les objets de l'étape 15 manquants (tables, fonctions, colonne) et les deux anciennes fonctions" "$([ "$MISS" -ge 9 ] && [ "$ECART" = 2 ] && echo 1 || echo 0)"
 $P -d postgres -c "drop database if exists $DB14" >/dev/null 2>&1

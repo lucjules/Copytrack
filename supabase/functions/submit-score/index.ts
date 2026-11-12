@@ -13222,7 +13222,20 @@ var dbMessage = async (r) => {
     return "";
   }
 };
-function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, allowedOrigin = "*", now = Date.now, rateLimit = RATE_LIMIT, log = console.error }) {
+var UPSTREAM_TIMEOUT_MS = 8e3;
+var Upstream = class extends Error {
+};
+function createHandler({ supabaseUrl, serviceKey, fetch: rawFetch = globalThis.fetch, allowedOrigin = "*", now = Date.now, rateLimit = RATE_LIMIT, log = console.error, upstreamTimeoutMs = UPSTREAM_TIMEOUT_MS }) {
+  const fetchImpl = async (url, init = {}) => {
+    try {
+      return await rawFetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(upstreamTimeoutMs)
+      });
+    } catch (e) {
+      throw new Upstream(e && e.message);
+    }
+  };
   const cors = {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -13306,6 +13319,10 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
     }, {
       "Retry-After": "3600"
     });
+    if (/Trop de circuits publiés/.test(msg)) return json(422, {
+      error: msg,
+      trackCap: true
+    });
     log("submit-score :", what, r.status, msg);
     return json(500, {
       error: "Enregistrement impossible."
@@ -13350,8 +13367,13 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
       if (!ures.ok) return json(401, {
         error: "Non connect\xE9."
       });
-      const user = await ures.json();
-      const uid = String(user.id ?? "");
+      let user;
+      try {
+        user = await ures.json();
+      } catch (e) {
+        throw new Upstream(e && e.message);
+      }
+      const uid = String((user && user.id) ?? "");
       if (!/^[0-9a-f-]{36}$/.test(uid)) return json(401, {
         error: "Non connect\xE9."
       });
@@ -13477,6 +13499,11 @@ function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.
       });
     } catch (e) {
       log("submit-score :", e);
+      if (e instanceof Upstream) return json(503, {
+        error: "Service momentan\xE9ment indisponible : r\xE9essaie dans un instant."
+      }, {
+        "Retry-After": "10"
+      });
       return json(500, {
         error: "Erreur interne."
       });

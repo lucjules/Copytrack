@@ -36,6 +36,9 @@ Supabase lève aussi cette vérification. Aucun e-mail n'est jamais envoyé à c
 - **Pas d'e-mail, donc pas de récupération de mot de passe** : l'écran de création de compte le dit clairement.
   Un mot de passe perdu = compte inaccessible (on peut en créer un autre).
 - Limites d'essais : celles de Supabase Auth (page *Authentication > Rate Limits*). Rien de plus n'est ajouté ici.
+- **Phase 5 (0.9.64)** : les droits réels de chaque table et fonction sont éprouvés par attaque (`tools/test-securite-sql.sh` : un joueur ne lit, ne modifie ni ne supprime les données d'un autre, y compris
+  en visant leur identifiant) ; réglages à vérifier côté Supabase (longueur minimale du mot de passe **8**, **CAPTCHA** sur les connexions anonymes et les inscriptions, *Allow anonymous sign-ins* activé,
+  *Confirm email* désactivé) : `docs/AUDIT-PHASE5-SECURITE.md`, §7. Une session anonyme est gratuite : tout plafond « par pilote » se contourne en changeant de session, d'où des plafonds globaux en base.
 
 ## Fonctionnement des données
 

@@ -34,7 +34,20 @@ async function coturnCredentials(secret, expiresAtS, subtle = globalThis.crypto.
     credential: b64(await subtle.sign("HMAC", key, new TextEncoder().encode(username)))
   };
 }
-function createIceHandler({ env = {}, supabaseUrl = "", serviceKey = "", fetch: fetchImpl = globalThis.fetch, now = Date.now, subtle = globalThis.crypto && globalThis.crypto.subtle, log = console.error, allowAnonymous = false, rateLimit = RATE_LIMIT } = {}) {
+var UPSTREAM_TIMEOUT_MS = 8e3;
+var Upstream = class extends Error {
+};
+function createIceHandler({ env = {}, supabaseUrl = "", serviceKey = "", fetch: rawFetch = globalThis.fetch, upstreamTimeoutMs = UPSTREAM_TIMEOUT_MS, now = Date.now, subtle = globalThis.crypto && globalThis.crypto.subtle, log = console.error, allowAnonymous = false, rateLimit = RATE_LIMIT } = {}) {
+  const fetchImpl = async (url, init = {}) => {
+    try {
+      return await rawFetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(upstreamTimeoutMs)
+      });
+    } catch (e) {
+      throw new Upstream(e && e.message);
+    }
+  };
   const cors = {
     "Access-Control-Allow-Origin": env.ALLOWED_ORIGIN || "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -130,7 +143,12 @@ function createIceHandler({ env = {}, supabaseUrl = "", serviceKey = "", fetch: 
         if (!ures.ok) return json(401, {
           error: "Non connect\xE9."
         });
-        const user = await ures.json();
+        let user;
+        try {
+          user = await ures.json();
+        } catch (e) {
+          throw new Upstream(e && e.message);
+        }
         const uid = String(user && user.id || "");
         if (!/^[0-9a-f-]{36}$/.test(uid)) return json(401, {
           error: "Non connect\xE9."
@@ -206,6 +224,11 @@ function createIceHandler({ env = {}, supabaseUrl = "", serviceKey = "", fetch: 
       });
     } catch (e) {
       log("ice: erreur interne", e);
+      if (e instanceof Upstream) return json(503, {
+        error: "Service momentan\xE9ment indisponible."
+      }, {
+        "Retry-After": "10"
+      });
       return json(500, {
         error: "Erreur interne."
       });

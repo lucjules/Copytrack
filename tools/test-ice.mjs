@@ -84,7 +84,13 @@ await test('Cloudflare : relayé avec la durée de vie voulue ; une erreur du fo
   const r = await bad(req()), txt = await r.text();
   assert.equal(r.status, 502); assert.ok(!txt.includes('tok-secret'));
   const boom = createIceHandler({ allowAnonymous: true, env: { TURN_KEY_ID: 'kid', TURN_KEY_API_TOKEN: 'tok-secret' }, fetch: async () => { throw new Error('tok-secret'); }, log: () => {} });
-  const r2 = await boom(req()); assert.equal(r2.status, 500); assert.ok(!(await r2.text()).includes('tok-secret'));
+  const r2 = await boom(req()); assert.equal(r2.status, 503, 'fournisseur injoignable : panne passagère (503), jamais « erreur interne »'); assert.equal(r2.headers.get('Retry-After'), '10'); assert.ok(!(await r2.text()).includes('tok-secret'));
+  // Phase 5 : un fournisseur qui ne répond JAMAIS est abandonné au bout du délai (la fonction ne pend pas), 503.
+  const hang = createIceHandler({ allowAnonymous: true, env: { TURN_KEY_ID: 'kid', TURN_KEY_API_TOKEN: 'tok' }, upstreamTimeoutMs: 60, log: () => {}, fetch: (u, init) => new Promise((_, rej) => init.signal.addEventListener('abort', () => rej(new Error('annulé')))) });
+  const keep = setTimeout(() => {}, 10_000);          // (AbortSignal.timeout ne retient pas la boucle d'événements : sous Node, sans ceci le processus s'arrêterait avant le délai)
+  const t0 = Date.now(), r3 = await hang(req());
+  clearTimeout(keep);
+  assert.equal(r3.status, 503); assert.ok(Date.now() - t0 < 2000, 'abandonné au délai');
 });
 await test('rien de configuré : 501 (le jeu garde son STUN) ; méthodes et cadence', async () => {
   const none = createIceHandler({ allowAnonymous: true, env: {} });

@@ -100,6 +100,42 @@ checks as (
          case when has_any_column_privilege('authenticated', 'public.tracks', 'insert') then 'oui (étape 15b NON appliquée)' else 'non (étape 15b appliquée)' end,
          case when has_any_column_privilege('authenticated', 'public.tracks', 'insert') then 'info' else 'ok' end
   union all
+  -- ---- 4 bis. étape 17 (sécurité, phase 5) : « présente » = la version corrigée de chaque fonction -------------------------------------------------------------
+  select 80, 'étape 17 : table mode_plays (une partie par pilote, par mode et par heure)', 'présente', case when to_regclass('public.mode_plays') is not null then 'présente' else 'absente' end,
+         case when to_regclass('public.mode_plays') is not null then 'ok' else 'MANQUE' end
+  union all
+  select 81 + ord, 'étape 17 : ' || label, 'version corrigée',
+         case when to_regprocedure(sig) is null then 'fonction absente' when (select prosrc from pg_proc where oid = to_regprocedure(sig)) like '%' || marker || '%' then 'version corrigée' else 'ANCIENNE version' end,
+         case when to_regprocedure(sig) is null then 'MANQUE' when (select prosrc from pg_proc where oid = to_regprocedure(sig)) like '%' || marker || '%' then 'ok' else 'MANQUE' end
+  from (values
+    (0, 'report_track ne rétablit jamais un circuit masqué', 'public.report_track(uuid)', 'hidden or n >= 3'),
+    (1, 'mode_played : une partie par pilote et par heure', 'public.mode_played(bigint)', 'mode_plays'),
+    (2, 'toggle_like : compteur exact sous concurrence (verrou par circuit)', 'public.toggle_like(uuid)', 'pg_advisory_xact_lock'),
+    (3, 'log_runs : plafonds horaire et quotidien', 'public.log_runs(jsonb)', 'interval ''1 day'''),
+    (4, 'tracks_rate_limit : 100 circuits par auteur', 'public.tracks_rate_limit()', '100 au plus'),
+    (5, 'submit_best : budget de fantômes par pilote', 'public.submit_best(uuid,text,double precision,text,integer,text,jsonb,text,jsonb,text)', '40000000')
+  ) v(ord, label, sig, marker)
+  union all
+  select 90, 'étape 17 : is_moderator / is_account non appelables par le jeu (anon, authenticated, public)', 'non',
+         case when has_function_privilege('anon', 'public.is_moderator(uuid)', 'execute') or has_function_privilege('authenticated', 'public.is_moderator(uuid)', 'execute') or has_function_privilege('anon', 'public.is_account(uuid)', 'execute') or has_function_privilege('authenticated', 'public.is_account(uuid)', 'execute') or has_function_privilege('public', 'public.is_moderator(uuid)', 'execute') then 'OUI' else 'non' end,
+         case when has_function_privilege('anon', 'public.is_moderator(uuid)', 'execute') or has_function_privilege('authenticated', 'public.is_moderator(uuid)', 'execute') or has_function_privilege('anon', 'public.is_account(uuid)', 'execute') or has_function_privilege('authenticated', 'public.is_account(uuid)', 'execute') or has_function_privilege('public', 'public.is_moderator(uuid)', 'execute') then 'ÉCART' else 'ok' end
+  union all
+  select 91, 'étape 17 : fonctions appelables SANS session (anon) hors de la liste attendue (lectures publiques, inscription, statistiques)', 'aucune',
+         coalesce((select string_agg(p.proname, ', ' order by p.proname) from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prokind = 'f' and p.prorettype <> 'trigger'::regtype and has_function_privilege('anon', p.oid, 'execute')
+                   and p.proname not in ('current_season', 'elo', 'follower_count', 'get_ghost', 'log_runs', 'modes_list', 'my_season', 'playlists_list', 'random_track', 'recommended_tracks', 'season_bounds', 'season_clock', 'season_points', 'season_standings', 'sector_board', 'track_comments_list', 'track_stats', 'trending_tracks', 'username_available')), 'aucune'),
+         case when exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prokind = 'f' and p.prorettype <> 'trigger'::regtype and has_function_privilege('anon', p.oid, 'execute')
+                   and p.proname not in ('current_season', 'elo', 'follower_count', 'get_ghost', 'log_runs', 'modes_list', 'my_season', 'playlists_list', 'random_track', 'recommended_tracks', 'season_bounds', 'season_clock', 'season_points', 'season_standings', 'sector_board', 'track_comments_list', 'track_stats', 'trending_tracks', 'username_available')) then 'ÉCART' else 'ok' end
+  union all
+  select 92, 'étape 16 : anon sans aucune écriture directe sur aucune table (INSERT / UPDATE / DELETE)', 'aucune',
+         coalesce((select string_agg(c.relname, ', ' order by c.relname) from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind = 'r'
+                   and (has_table_privilege('anon', c.oid, 'insert') or has_table_privilege('anon', c.oid, 'update') or has_table_privilege('anon', c.oid, 'delete'))), 'aucune'),
+         case when exists (select 1 from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind = 'r'
+                   and (has_table_privilege('anon', c.oid, 'insert') or has_table_privilege('anon', c.oid, 'update') or has_table_privilege('anon', c.oid, 'delete'))) then 'ÉCART' else 'ok' end
+  union all
+  select 93, 'RLS activée sur TOUTES les tables de public', 'aucune table sans RLS',
+         coalesce((select string_agg(c.relname, ', ' order by c.relname) from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind = 'r' and not c.relrowsecurity), 'aucune'),
+         case when exists (select 1 from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind = 'r' and not c.relrowsecurity) then 'ÉCART' else 'ok' end
+  union all
   -- ---- 5. renseignements ---------------------------------------------------------------------------------------------------------------------
   select 70, 'circuits publiés dont le temps auteur n''est PAS vérifié (publiés avant l''étape 15)', 'info',
          case when exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'tracks' and column_name = 'author_verified')

@@ -40,6 +40,13 @@ import { modesMethods } from './app/modes.js';
 import { raceHubMethods } from './app/raceHub.js';
 import { theaterAppMethods } from './app/theater.js';
 
+// Police : la feuille de style est déclarée « media=print » dans index.html (chargement sans bloquer le premier affichage) ; on la rend active ici, car la politique de sécurité du contenu
+// n'autorise aucun gestionnaire en ligne (l'ancien « onload » de la balise).
+{
+  const fontCss = document.getElementById('font-css');
+  if (fontCss) { const on = () => { fontCss.media = 'all'; }; if (fontCss.sheet) on(); else fontCss.addEventListener('load', on, { once: true }); }
+}
+
 const MENU_FPS_CAP = 30;     // images par seconde au plus dans les menus
 
 class App {
