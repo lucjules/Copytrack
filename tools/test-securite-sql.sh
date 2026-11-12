@@ -322,6 +322,57 @@ for round in 1 2 3 4 5 6; do
 done
 $P -d $DB -c "insert into public.res (name, ok) values ('FAILLE 10 : six manches de huit pilotes simultanés (j''aime, signalement, parties) : compteurs EXACTS à chaque manche (8 j''aime, 8 signalements, circuit masqué, 8 parties — le même pilote en quatre sessions n''en compte qu''une)', $([ $BAD -eq 0 ] && echo true || echo false))" >/dev/null
 
+# G. Concurrence des plafonds (log_runs, tracks_rate_limit) : des appels PARALLÈLES ne doivent pas dépasser les limites (avant le verrou, chacun lisait le même compte).
+#    G1 : plafond global par minute (3 000) ; G2 : plafond par installation (300 par heure) ; G3 : 10 publications par heure ; G4 : 100 circuits au total.
+runsql() { $P -d $DB -At -c "$1"; }
+batch() { # <préfixe d'installation> <nombre de lignes> <même installation 0/1>
+  $P -d $DB -At -c "select jsonb_agg(jsonb_build_object('install', case when $3 = 1 then '$1' else substr('$1' || lpad(to_hex(g), 16, '0'), 1, 8) || lpad(to_hex(g), 8, '0') end, 'track', 'eclats', 'outcome', 'finish', 'time', 60, 'pv', 35))::text from generate_series(1, $2) g"
+}
+runsql "delete from run_stats" >/dev/null
+# G1 : 2 990 lignes dans la dernière minute ; huit lots de 50 lignes, installations toutes différentes, lancés ensemble.
+runsql "insert into run_stats (install, track, outcome, time, phys_ver) select lpad(to_hex(g), 16, '0'), 'eclats', 'finish', 60, 35 from generate_series(1, 2990) g" >/dev/null
+pids=""
+for k in 1 2 3 4 5 6 7 8; do
+  B="$(batch "a$k" 50 0 | sed "s/'/''/g")"
+  ( $P -d $DB -c "set role anon" -c "select public.log_runs('$B'::jsonb)" >/dev/null 2>&1 ) & pids="$pids $!"
+done
+wait $pids || true
+N1="$(runsql "select count(*) from run_stats")"
+# G2 : une installation à 250 lignes (il y a 30 minutes) ; six lots de 50 lignes de CETTE installation, ensemble : au plus 300 au total.
+runsql "delete from run_stats" >/dev/null
+runsql "insert into run_stats (install, track, outcome, time, phys_ver, created_at) select 'bbbbbbbbbbbbbbbb', 'eclats', 'finish', 60, 35, now() - interval '30 minutes' from generate_series(1, 250)" >/dev/null
+B2="$(batch bbbbbbbbbbbbbbbb 50 1 | sed "s/'/''/g")"
+pids=""
+for k in 1 2 3 4 5 6; do ( $P -d $DB -c "set role anon" -c "select public.log_runs('$B2'::jsonb)" >/dev/null 2>&1 ) & pids="$pids $!"; done
+wait $pids || true
+N2="$(runsql "select count(*) from run_stats where install = 'bbbbbbbbbbbbbbbb'")"
+# G3 : douze publications simultanées d un même auteur : exactement 10 (limite horaire).
+AU='00000000-0000-0000-0000-0000000000c9'
+runsql "insert into auth.users (id, is_anonymous) values ('$AU', true); insert into players (id, name) values ('$AU', 'gus9')" >/dev/null
+pids=""
+for k in $(seq 1 12); do ( $P -d $DB -c "insert into tracks (author, name, decor, code, signature, author_time, pieces) values ('$AU', 'C$k', 'x', 'c', 'conc$k', 10, 5)" >/dev/null 2>&1 ) & pids="$pids $!"; done
+wait $pids || true
+N3="$(runsql "select count(*) from tracks where author = '$AU'")"
+# G4 : un auteur à 95 circuits anciens ; douze insertions simultanées (hors cadence horaire) : exactement 100 au total.
+AU2='00000000-0000-0000-0000-0000000000ca'
+runsql "insert into auth.users (id, is_anonymous) values ('$AU2', true); insert into players (id, name) values ('$AU2', 'gus10'); insert into tracks (author, name, decor, code, signature, author_time, pieces, created_at) select '$AU2', 'O' || g, 'x', 'c', 'old' || g, 10, 5, now() - interval '5 hours' from generate_series(1, 95) g" >/dev/null
+pids=""
+for k in $(seq 1 12); do ( $P -d $DB -c "insert into tracks (author, name, decor, code, signature, author_time, pieces, created_at) values ('$AU2', 'N$k', 'x', 'c', 'new$k', 10, 5, now() - interval '4 hours')" >/dev/null 2>&1 ) & pids="$pids $!"; done
+wait $pids || true
+N4="$(runsql "select count(*) from tracks where author = '$AU2'")"
+LOCKS="$(runsql "select count(*) from pg_locks where locktype = 'advisory'")"
+ins() { $P -d $DB -c "insert into public.res (name, ok) values ('$1', $2)" >/dev/null; }
+ins "FAILLE 11 : log_runs, huit lots de 50 lignes simultanés à 10 lignes du plafond global par minute : UN seul lot passe (au plus 3 040 lignes), pas huit ($N1 lignes)" "$([ "$N1" -le 3040 ] && echo true || echo false)"
+ins "FAILLE 11b : log_runs, six lots simultanés d une même installation à 250 lignes : exactement 300 au total, jamais plus ($N2)" "$([ "$N2" = 300 ] && echo true || echo false)"
+ins "FAILLE 12 : douze publications simultanées d un même auteur : exactement 10 par heure ($N3)" "$([ "$N3" = 10 ] && echo true || echo false)"
+ins "FAILLE 12b : douze publications simultanées à 95 circuits : exactement 100 au total ($N4)" "$([ "$N4" = 100 ] && echo true || echo false)"
+ins "G5 aucun verrou consultatif ne reste tenu après les appels (pas de blocage durable)" "$([ "$LOCKS" = 0 ] && echo true || echo false)"
+# Légitime : un lot isolé et une publication isolée restent rapides (le verrou n'attend personne).
+T0=$(date +%s%N)
+$P -d $DB -c "set role anon" -c "select public.log_runs('[{\"install\":\"cccccccccccccccc\",\"track\":\"eclats\",\"outcome\":\"finish\",\"time\":61,\"pv\":35}]'::jsonb)" >/dev/null 2>&1
+MS=$(( ($(date +%s%N) - T0) / 1000000 ))
+ins "G6 un lot légitime isolé passe sans attente (verrou libre) : $MS ms, ligne écrite" "$([ "$MS" -lt 2000 ] && [ "$(runsql "select count(*) from run_stats where install = 'cccccccccccccccc'")" = 1 ] && echo true || echo false)"
+
 $P -d $DB -At > "$TMP/out.txt" <<'SQL'
 select case when ok then '  ok   ' else '  FAIL ' end || name from public.res order by n;
 SQL
@@ -340,5 +391,5 @@ if [ -n "${AVANT:-}" ]; then
   exit 0
 fi
 if [ "$VPFAIL" != 0 ]; then echo "ÉCHEC : verify-prod.sql ne passe pas sur la base complète"; exit 1; fi
-if [ "$FAILS" -gt 0 ] || [ "$TOTAL" -lt 65 ]; then echo "ÉCHEC : sécurité SQL ($FAILS échec(s) sur $TOTAL)"; head -5 "$TMP/err.txt" 2>/dev/null || true; exit 1; fi
+if [ "$FAILS" -gt 0 ] || [ "$TOTAL" -lt 72 ]; then echo "ÉCHEC : sécurité SQL ($FAILS échec(s) sur $TOTAL)"; head -5 "$TMP/err.txt" 2>/dev/null || true; exit 1; fi
 echo "RESULT sécurité SQL : $TOTAL contrôles réussis (droits, attaques d'un joueur contre un autre, sans session, failles corrigées, abus, concurrence) + verify-prod.sql sans MANQUE ni ÉCART sur la base complète"
