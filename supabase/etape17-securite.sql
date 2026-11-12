@@ -82,6 +82,9 @@ begin
   if events is null or jsonb_typeof(events) <> 'array' or jsonb_array_length(events) > 50 then
     raise exception 'Lot invalide';
   end if;
+  -- Verrou unique : sans lui, deux lots simultanés lisent le même compte AVANT que l'autre ait validé et dépassent tous deux les plafonds (global ET par installation).
+  -- Transaction courte (au plus 50 lignes), verrou relâché à la fin de l'appel : les lots légitimes passent simplement l'un après l'autre.
+  perform pg_advisory_xact_lock(hashtextextended('log_runs', 0));
   -- Plafonds TOUS appelants confondus (le jeu est anonyme : l'identifiant d'installation est choisi par l'appelant). Au-delà : le lot est ignoré, sans erreur.
   if (select count(*) from run_stats where created_at > now() - interval '1 minute') >= 3000 then return 0; end if;
   if (select count(*) from run_stats where created_at > now() - interval '1 hour') >= 20000 then return 0; end if;
@@ -111,6 +114,8 @@ grant execute on function public.log_runs(jsonb) to anon, authenticated;
 create or replace function public.tracks_rate_limit() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
+  -- Un verrou par auteur (le même que publish_track, réentrant dans une même transaction) : des publications simultanées se comptent l'une après l'autre.
+  perform pg_advisory_xact_lock(hashtextextended('tracks:' || new.author::text, 0));
   if (select count(*) from tracks where author = new.author and created_at > now() - interval '1 hour') >= 10 then
     raise exception 'Trop de publications : réessaie dans une heure.';
   end if;
