@@ -2,6 +2,7 @@
 // REJOUE sur le code publié : le temps de l'auteur est celui du rejeu, jamais une affirmation du client (js/verify.js, verifyPublish).
 // Elle reste sur CET appareil (storage.DEVICE_ONLY_KEYS : ni code joueur, ni sauvegarde partagée) ; au plus 8 circuits, les plus récents.
 import { getJSON, setJSON } from './storage.js';
+import { PHYS_VER } from './version.js';
 
 const KEY = 'vproof';
 const MAX_PROOFS = 8;
@@ -11,7 +12,7 @@ const MAX_PROOFS = 8;
 export function saveProof(track, proof) {
   if (!track.verified || !proof || typeof proof.inputs !== 'string' || !(proof.time > 0)) return false;
   const all = getJSON(KEY, {}) || {};
-  all[track.signature()] = { inputs: proof.inputs, time: proof.time, vt: track.vt, at: Date.now() };
+  all[track.signature()] = { inputs: proof.inputs, time: proof.time, vt: track.vt, pv: PHYS_VER, at: Date.now() };      // (pv : la preuve ne se rejoue qu'avec la physique qui l'a produite)
   const keys = Object.keys(all).sort((a, b) => (all[b].at || 0) - (all[a].at || 0));
   for (const k of keys.slice(MAX_PROOFS)) delete all[k];
   return setJSON(KEY, all) !== false;
@@ -22,5 +23,6 @@ export function loadProof(track) {
   if (!track.verified) return null;
   const p = (getJSON(KEY, {}) || {})[track.signature()];
   if (!p || typeof p.inputs !== 'string' || !(p.time > 0) || Math.abs(p.time - track.vt) > 0.001) return null;
+  if (p.pv !== undefined && p.pv !== PHYS_VER) return null;      // faite avec une autre version de la physique : à refaire (le serveur la refuserait, et le temps de l'auteur ne serait plus celui-là)
   return { inputs: p.inputs, time: p.time };
 }

@@ -13,7 +13,7 @@ import { UI } from './ui.js';
 import { $, esc } from './dom.js';
 import { RaceSession } from './race.js';
 import { BUILTIN_TRACKS, buildBuiltin } from './tracks.js';
-import { Track, hashString } from './track.js';
+import { Track, hashString, lossText, lossBlocking } from './track.js';
 import { VERSION, PHYS_VER } from './version.js';
 import { online } from './online.js';
 import { account } from './account.js';
@@ -351,15 +351,17 @@ class App {
       try {
         const track = Track.decode(hash);
         history.replaceState(null, '', location.pathname + location.search);
+        // Phase 4 : un lien qui perdrait des pièces à la lecture (version plus récente du jeu) peut se jouer (pour voir) mais pas s'enregistrer ni s'ouvrir dans l'éditeur.
+        const loss = lossText(track), blocked = lossBlocking(track);
         this.ui.modal({
           title: 'Circuit partagé',
-          body: `<p>« ${esc(track.name)} » · ${track.tiles.length} pièces${track.author ? ' · par ' + esc(track.author) : ''}</p>`,
+          body: `<p>« ${esc(track.name)} » · ${track.tiles.length} pièces${track.author ? ' · par ' + esc(track.author) : ''}</p>${loss ? `<p class="mp-err" role="alert">${esc(loss)}${blocked ? ' Mets le jeu à jour pour l’enregistrer ou l’éditer.' : ''}</p>` : ''}`,
           actions: [
             { label: 'Jouer', primary: true, onClick: () => this.playCode(track.encode()) },
-            { label: 'Ouvrir dans l’éditeur', onClick: () => {
+            ...(blocked ? [] : [{ label: 'Ouvrir dans l’éditeur', onClick: () => {
               const entry = saveMyTrack({ id: newId(), name: track.name, code: track.encode() });
               this.openEditor({ code: entry.code, entryId: entry.id, name: entry.name });
-            } },
+            } }]),
             { label: 'Annuler' },
           ],
         });

@@ -10,7 +10,7 @@
 //  - dernières courses (runs.*) : réunies, les plus récentes gardées.
 import { itemCost } from './cosmetics.js';
 import { mergeFavorites } from './favorites.js';
-import { cleanRuns } from './storage.js';
+import { cleanRuns, validRecord, validTrackEntry } from './storage.js';
 import { mergeDrills } from './skills.js';
 import { mergeProgress } from './progression.js';
 
@@ -43,6 +43,9 @@ const num = (x) => (Number.isFinite(+x) ? +x : 0);
 function mergeRecord(a, b) {
   if (!a) return b;
   if (!b) return a;
+  // Un record abîmé (temps nul, négatif, non fini ou démesuré) ne l'emporte JAMAIS sur un bon, quel que soit son temps ou sa version (phase 4) ; s'il n'y a que des abîmés on garde le local.
+  const va = validRecord(a), vb = validRecord(b);
+  if (!va || !vb) return va ? a : vb ? b : a;
   // Une physique plus récente remplace l'ancienne (les temps ne sont plus comparables) ; sinon le meilleur temps.
   const pa = num(a.pv), pb = num(b.pv);
   const pick = pa !== pb ? (pb > pa ? b : a) : (num(b.time) < num(a.time) ? b : a);
@@ -57,7 +60,9 @@ function mergeTracks(a, b, gone) {
   for (const t of [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])]) {
     if (!t || t.id == null) continue;
     const cur = map.get(t.id);
-    if (!cur || num(t.updated) > num(cur.updated)) map.set(t.id, t);
+    // Une entrée lisible (id + code) l'emporte sur une entrée abîmée du même id, même plus récente : sinon une copie tronquée effaçait le circuit entier (phase 4).
+    const vt = validTrackEntry(t), vc = cur ? validTrackEntry(cur) : false;
+    if (!cur || (vt && !vc) || (vt === vc && num(t.updated) > num(cur.updated))) map.set(t.id, t);
   }
   // Un circuit supprimé après sa dernière modification disparaît partout.
   return [...map.values()].filter((t) => !(gone[t.id] != null && num(gone[t.id]) >= num(t.updated)));

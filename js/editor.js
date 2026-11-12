@@ -3,7 +3,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { CELL, LEVEL_H, ROAD_TOP } from './constants.js';
 import { PIECES, SURFACES } from './pieces.js';
-import { Track } from './track.js';
+import { Track, lossText, lossBlocking } from './track.js';
 import { DEFAULT_DECOR } from './themes.js';
 import { TrackView } from './trackMesh.js';
 import { DECO_LABELS } from './decoData.js';
@@ -33,8 +33,12 @@ export class EditorSession {
     this.kind = 'editor';      // (l'application reconnaît ses sessions sans importer leur module : l'éditeur est chargé à la demande)
     this.app = app;
     this.state = state;
+    this.loadIssue = '';
     if (state.code) {
-      try { this.track = Track.decode(state.code); } catch { this.track = new Track('Mon circuit'); }
+      try {
+        this.track = Track.decode(state.code);
+        if (lossBlocking(this.track)) this.loadIssue = lossText(this.track);
+      } catch { this.track = new Track('Mon circuit'); this.loadIssue = 'Le code de ce circuit est illisible : l\'éditeur s\'ouvre vide.'; }
     } else {
       this.track = new Track(state.name || 'Mon circuit');
       this.track.decor = state.decor || DEFAULT_DECOR;
@@ -42,6 +46,12 @@ export class EditorSession {
     }
     if (state.name) this.track.name = state.name;
     this.entryId = state.entryId || null;
+    // Phase 4 : un circuit dont la lecture a perdu des pièces (version plus récente du jeu) ou n'a pas pu être lue ne doit JAMAIS réécrire l'original : l'éditeur se détache de l'entrée
+    // (un nouvel enregistrement crée une copie) et le dit. Avant, un code abîmé ouvrait un circuit vide et le premier enregistrement écrasait le circuit d'origine.
+    if (this.loadIssue) {
+      this.entryId = null;
+      setTimeout(() => { try { this.app.ui.flash(this.loadIssue + ' Le circuit d\'origine reste intact dans « Mes circuits » ; ce que tu enregistres ici en fait une copie.', 8); } catch { /* interface fermée */ } }, 700);
+    }
     this.tool = validTool(state.tool) ? state.tool : 'straight';
     this.fillMode = isFill(this.tool);
     this.eraseFilter = ERASE_FILTERS[state.eraseFilter] ? state.eraseFilter : 'all';   // gomme : tout / décorations / pistes

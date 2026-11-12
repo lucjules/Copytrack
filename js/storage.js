@@ -4,6 +4,8 @@
 // valables) ; chaque compte écrit dans « shardwayacct.<id du compte>.* ». Les deux familles de clés ne se
 // recouvrent pas : la progression d'un compte et celle d'un invité ne se mélangent jamais sur un même navigateur.
 // La portée se règle une fois, au lancement, avant que le jeu ne lise quoi que ce soit.
+import { MAX_RUN_SECONDS, MAX_TRACK_CODE_CHARS } from './constants.js';
+
 const GUEST_PREFIX = 'shardway.';
 let PREFIX = GUEST_PREFIX;
 
@@ -95,16 +97,30 @@ export function dumpAll({ shareable = false } = {}) {
   return out;
 }
 
+// Restauration ATOMIQUE (phase 4) : on écrit d'abord tout ce qui vient de la sauvegarde (en gardant l'ancienne valeur de chaque clé touchée), et ce n'est qu'ensuite qu'on retire
+// ce que la sauvegarde ne contient pas. Si une écriture échoue en route (stockage plein, navigation privée), tout est remis comme avant : avant, les clés étaient d'abord TOUTES
+// effacées, puis réécrites une à une : un quota atteint à mi-chemin laissait un joueur avec une moitié de sauvegarde et aucune trace de l'ancienne.
 export function restoreAll(data, keep = false) {
+  const entries = Object.entries(data || {}).filter(([, v]) => typeof v === 'string');
+  const written = [];
   try {
-    if (!keep) {
-      listPrefixedKeys().forEach((k) => localStorage.removeItem(k));
+    const stale = keep ? [] : listPrefixedKeys().filter((k) => !(k.slice(PREFIX.length) in (data || {}) && typeof data[k.slice(PREFIX.length)] === 'string'));
+    const staleVals = stale.map((k) => [k, localStorage.getItem(k)]);
+    for (const [k, v] of entries) {
+      const full = PREFIX + k;
+      const before = localStorage.getItem(full);
+      localStorage.setItem(full, v);
+      written.push([full, before]);
     }
-    for (const [k, v] of Object.entries(data || {})) {
-      if (typeof v === 'string') localStorage.setItem(PREFIX + k, v);
-    }
+    for (const [k] of staleVals) localStorage.removeItem(k);
+    if (!keep) for (const k of [...memRec.keys()]) if (k.startsWith(PREFIX)) memRec.delete(k);      // (la copie en mémoire des records ne doit pas masquer ceux qu'on vient de restaurer)
     return true;
-  } catch { return false; }
+  } catch {
+    for (const [full, before] of written.reverse()) {
+      try { if (before == null) localStorage.removeItem(full); else localStorage.setItem(full, before); } catch { /* on continue : le plus possible est remis */ }
+    }
+    return false;
+  }
 }
 
 export const DEFAULT_SETTINGS = {
@@ -198,8 +214,17 @@ export function clearRecords() {
 const memRec = new Map();
 const slim = (rec) => ({ ...rec, ghost: null, inputs: null });
 
+// Un record lisible (phase 4) : un temps fini, > 0 et dans les bornes d'une course. Un record dont le temps est 0, négatif, NaN ou démesuré (donnée abîmée ou fabriquée) n'est JAMAIS
+// le « meilleur temps » : il donnerait une médaille de cristal et déverrouillerait la carrière. Il reste sur le disque (rien n'est effacé) mais n'est plus lu.
+export function validRecord(rec) {
+  return !!rec && typeof rec === 'object' && Number.isFinite(+rec.time) && +rec.time > 0 && +rec.time <= MAX_RUN_SECONDS
+    && (rec.pv === undefined || (Number.isInteger(+rec.pv) && +rec.pv >= 0 && +rec.pv <= 100000))
+    && (rec.bt === undefined || rec.bt === null || (Number.isFinite(+rec.bt) && +rec.bt > 0 && +rec.bt <= MAX_RUN_SECONDS));
+}
+
 export function getRecord(trackKey) {
-  const disk = read(REC + trackKey, null);
+  const raw = read(REC + trackKey, null);
+  const disk = validRecord(raw) ? raw : null;
   const mem = memRec.get(PREFIX + trackKey);
   if (!disk) return mem || null;
   // La copie en mémoire de cette session ne l'emporte que si elle est de la même physique et meilleure, ou d'une physique plus récente : sinon une synchronisation qui
@@ -218,6 +243,7 @@ export function getRecord(trackKey) {
 // la suite de la carrière. Le temps du record (rec.time), lui, reste celui de la physique courante (classements, fantôme, replay).
 export const medalTime = (rec) => (rec ? Math.min(rec.time, Number.isFinite(+rec.bt) && +rec.bt > 0 ? +rec.bt : rec.time) : null);
 export function saveRecord(trackKey, rec) {
+  if (!validRecord(rec)) { lastWriteOk = false; return false; }      // (jamais un temps impossible dans les records : l'appelant voit false)
   const old = getRecord(trackKey);
   if (old) { const bt = Math.min(medalTime(old), medalTime(rec)); if (bt < rec.time - 1e-9) rec = { ...rec, bt }; }
   memRec.set(PREFIX + trackKey, slim(rec));
@@ -261,19 +287,38 @@ export function pushRun(trackKey, run) {
 }
 
 // ---- Circuits personnels ---------------------------------------------------
-export function listMyTracks() {
-  const tracks = read('tracks', []);
-  return Array.isArray(tracks) ? tracks : [];
+// Une entrée de la liste des circuits est lisible (phase 4) : un identifiant, un code de circuit (texte, d'une taille permise). Une entrée abîmée (null, sans code, code d'un autre
+// type) ne s'affiche pas et ne plante rien ; elle n'est pas effacée pour autant : à la prochaine écriture de la liste elle part en QUARANTAINE (clé « tracksBad »), récupérable.
+export const validTrackEntry = (t) => !!t && typeof t === 'object' && typeof t.id === 'string' && t.id !== '' && typeof t.code === 'string' && t.code.length > 0 && t.code.length <= MAX_TRACK_CODE_CHARS;
+export const TRACKS_BAD_MAX = 30;
+function splitTracks() {
+  const raw = read('tracks', []);
+  const arr = Array.isArray(raw) ? raw : [];
+  const good = [], bad = [];
+  const seen = new Set();
+  for (const t of arr) {
+    if (validTrackEntry(t) && !seen.has(t.id)) { seen.add(t.id); good.push(typeof t.name === 'string' ? t : { ...t, name: 'Circuit' }); } else if (t != null) bad.push(t);
+  }
+  return { good, bad, nonArray: raw != null && !Array.isArray(raw) ? raw : null };
+}
+export function listMyTracks() { return splitTracks().good; }
+export function listBadTracks() { const l = read('tracksBad', []); return Array.isArray(l) ? l : []; }
+// Écrit la liste ; ce qu'elle laisse de côté (entrées abîmées, doublons d'identifiant, liste qui n'était pas un tableau) est mis en quarantaine AVANT l'écriture.
+function writeTracks(list, bad, nonArray) {
+  const q = [...(nonArray != null ? [{ lost: nonArray, at: Date.now() }] : []), ...bad.map((b) => ({ lost: b, at: Date.now() })), ...listBadTracks()].slice(0, TRACKS_BAD_MAX);
+  if (q.length && (bad.length || nonArray != null)) write('tracksBad', q);
+  return write('tracks', list);
 }
 
 export function saveMyTrack(entry) {
-  const list = listMyTracks();
+  if (!validTrackEntry(entry)) { lastWriteOk = false; return entry; }      // (un circuit sans code ne s'enregistre pas ; wroteOk() le dit à l'appelant)
+  const { good: list, bad, nonArray } = splitTracks();
   const i = list.findIndex((t) => t.id === entry.id);
   entry.updated = Date.now();
   if (i >= 0) list[i] = entry; else list.unshift(entry);
   // Un circuit ne se refabrique pas : si le stockage est plein, on fait de la place (fantômes des records) avant de renoncer. L'appelant vérifie wroteOk() :
   // avant 0.9.59 l'écriture ratée passait inaperçue et l'éditeur annonçait « Circuit enregistré » (circuit perdu à la fermeture de la page).
-  makeRoom(() => write('tracks', list));
+  makeRoom(() => writeTracks(list, bad, nonArray));
   return entry;
 }
 
@@ -325,7 +370,8 @@ export function saveMode(mode) {
 export function deleteMode(id) { write('modes', listModes().filter((m) => m.id !== id)); }
 
 export function deleteMyTrack(id) {
-  write('tracks', listMyTracks().filter((t) => t.id !== id));
+  const { good, bad, nonArray } = splitTracks();
+  writeTracks(good.filter((t) => t.id !== id), bad, nonArray);
   // Pierre tombale : sans elle, la synchronisation du compte ressusciterait le circuit depuis un autre appareil.
   const gone = read('tracksDel', {});
   write('tracksDel', { ...(gone && typeof gone === 'object' ? gone : {}), [id]: Date.now() });

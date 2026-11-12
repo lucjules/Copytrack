@@ -12,6 +12,11 @@ import { encodeFloats } from './ghostFormat.js';
 import { splitKey, parseVariant, applyVariant } from './variants.js';
 import { seasonOpen, seasonTracks } from './seasons.js';
 
+// Un circuit écrit par une version PLUS RÉCENTE du jeu peut contenir des pièces que ce code ne connaît pas : la lecture les saute (Track.decode, `lost.unknown`) et la signature ne
+// correspond plus. Le refus est correct ; le message dit la vraie cause (mettre le serveur à jour) au lieu de « le code ne correspond pas ».
+const unknownPieces = (track) => !!(track && track.lost && track.lost.unknown > 0);
+const UNKNOWN_MSG = 'Ce serveur ne connaît pas toutes les pièces de ce circuit (version plus récente du jeu) : son temps ne peut pas être vérifié ici.';
+
 // Retrouve le circuit correspondant à une clé de classement.
 //   b-<id>-<empreinte>   circuit intégré (l'empreinte garantit la même version)
 //   daily-AAAA-MM-JJ     défi du jour (régénéré à partir de la date)
@@ -59,7 +64,7 @@ export function trackForKey(key, code = '') {
   }
   if (key.startsWith('u-')) {
     const track = Track.decode(code);
-    if (track.userKey !== key) throw new Error('Le code du circuit ne correspond pas.');
+    if (track.userKey !== key) throw new Error(unknownPieces(track) ? UNKNOWN_MSG : 'Le code du circuit ne correspond pas.');
     return { track, kind: 'user', name: track.name, sigText: track.signatureText() };
   }
   throw new Error('Clé de circuit invalide.');
@@ -95,7 +100,7 @@ export function verifyRun({ trackKey, code, inputs, time, physVer, withGhost = f
   try { t = trackForKey(trackKey, code); } catch (e) { return { ok: false, error: e.message }; }
   const run = replayRun(t.track, inputs, { ghost: withGhost });
   if (run == null) return { ok: false, error: 'La course rejouée n’atteint pas l’arrivée.' };
-  if (Math.abs(run.time - time) > 0.0005) return { ok: false, error: 'Le temps ne correspond pas à la course rejouée.' };
+  if (!(Math.abs(run.time - time) <= 0.0005)) return { ok: false, error: 'Le temps ne correspond pas à la course rejouée.' };      // (écrit « pas ≤ » : un temps NaN, undefined ou non numérique ne passe plus la comparaison — avant, `NaN > 0.0005` est faux et le temps était CONFIRMÉ)
   return { ok: true, time: run.time, splits: run.splits, name: t.name, kind: t.kind, ...(t.sigText ? { sigText: t.sigText } : {}), ...(t.season ? { season: t.season } : {}), ...(t.competition ? { competition: t.competition } : {}), ...(withGhost ? { ghost: run.ghost, ghostVeh: run.ghostVeh } : {}) };
 }
 
@@ -107,10 +112,11 @@ export function verifyPublish({ code, inputs, time, physVer }) {
   if (physVer !== PHYS_VER) return versionError(physVer);
   let track;
   try { track = Track.decode(String(code || '')); } catch (e) { return { ok: false, error: 'Code de circuit invalide : ' + e.message }; }
+  if (unknownPieces(track)) return { ok: false, error: UNKNOWN_MSG };
   if (!track.verified) return { ok: false, error: 'Circuit non vérifié : termine-le d’abord depuis l’éditeur (« ✔ Vérifier »).' };
   const run = replayRun(track, inputs);
   if (run == null) return { ok: false, error: 'La course de vérification rejouée n’atteint pas l’arrivée.' };
-  if (Math.abs(run.time - time) > 0.0005) return { ok: false, error: 'Le temps ne correspond pas à la course rejouée.' };
-  if (Math.abs(run.time - track.vt) > AUTHOR_TIME_TOLERANCE) return { ok: false, error: 'Le temps de l’auteur inscrit dans le circuit ne correspond pas à la course rejouée.' };
+  if (!(Math.abs(run.time - time) <= 0.0005)) return { ok: false, error: 'Le temps ne correspond pas à la course rejouée.' };
+  if (!(Math.abs(run.time - track.vt) <= AUTHOR_TIME_TOLERANCE)) return { ok: false, error: 'Le temps de l’auteur inscrit dans le circuit ne correspond pas à la course rejouée.' };
   return { ok: true, time: run.time, key: track.userKey, signature: track.signature(), sigText: track.signatureText(), name: track.name, decor: track.decor, pieces: track.tiles.length, laps: track.laps || 1 };
 }

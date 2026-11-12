@@ -6242,7 +6242,7 @@ var Track = class _Track {
   // prend une empreinte forte (SHA-256) pour lier une clé de classement u-… à UN seul circuit (supabase/etape15-backend.sql, track_binds).
   signatureText() {
     const parts = this.tiles.map((t) => `${t.t}:${t.x}:${t.z}:${t.l}:${t.r}:${t.s}:${t.p}:${t.v}${t.nb}${t.tn}${t.mv ? "m" + t.mv : ""}${tileExtras(t)}`).sort().join("|");
-    const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}` : ""}`).join("|");
+    const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}${o.rz ? ":z" + o.rz.toFixed(2) : ""}` : ""}`).join("|");
     const rules = RULES.map((r) => r.sig(this[r.key])).join("");
     return this.decor + "#" + parts + "#" + d + (this.laps > 1 ? "#L" + this.laps : "") + rules + this._logicSig();
   }
@@ -6432,9 +6432,18 @@ var Track = class _Track {
     if (Array.isArray(data.e)) {
       for (const e of data.e) if (e && Number.isInteger(e.i)) extras.set(e.i, e);
     }
+    const lost = {
+      unknown: 0,
+      overlap: 0,
+      options: 0,
+      decos: 0
+    };
     for (let i = 0; i < data.t.length; i += stride) {
       const type = PIECE_ORDER[data.t[i]];
-      if (!type) continue;
+      if (!type) {
+        lost.unknown++;
+        continue;
+      }
       const tile = {
         t: type,
         x: data.t[i + 1],
@@ -6470,13 +6479,23 @@ var Track = class _Track {
         tile.tn = f >> 2 & 1;
         tile.mv = f >> 3 & 3;
       }
-      if (tr.conflicts(_Track.normalize(tile)).length) continue;
+      const norm = _Track.normalize(tile);
+      if (tr.conflicts(norm).length) {
+        lost.overlap++;
+        continue;
+      }
+      const legacy = LEGACY_TILE[tile.t] || LEGACY_SURFACE[tile.t] || LEGACY_PIECE[tile.t];
+      if (!legacy && ((tile.o | 0) !== norm.o || (tile.v ? 1 : 0) !== norm.v || (tile.tn ? 1 : 0) !== norm.tn || (tile.mv | 0) !== norm.mv || (tile.cp | 0) !== norm.cp || (tile.tb | 0) !== norm.tb || (SURFACE_ALIAS[tile.s] || tile.s || "") !== norm.s)) lost.options++;
       tr.add(tile);
     }
     if (Array.isArray(data.o)) {
+      lost.decos += Math.max(0, data.o.length - MAX_DECOS);
       for (const o of data.o.slice(0, MAX_DECOS)) {
         const k = DECO_ORDER[o[0]];
-        if (!k) continue;
+        if (!k) {
+          lost.decos++;
+          continue;
+        }
         const u = typeof o[7] === "string" && /^https?:\/\//i.test(o[7]) ? o[7] : "";
         tr.addDeco({
           k,
@@ -6514,6 +6533,7 @@ var Track = class _Track {
       tr.vt = +data.vt;
       tr.vh = String(data.vh);
     }
+    tr.lost = lost;
     return tr;
   }
 };
@@ -12953,6 +12973,8 @@ function seasonOpen(n, t = Date.now()) {
 }
 
 // js/verify.js
+var unknownPieces = (track) => !!(track && track.lost && track.lost.unknown > 0);
+var UNKNOWN_MSG = "Ce serveur ne conna\xEEt pas toutes les pi\xE8ces de ce circuit (version plus r\xE9cente du jeu) : son temps ne peut pas \xEAtre v\xE9rifi\xE9 ici.";
 function trackForKey(key2, code = "") {
   key2 = String(key2 || "");
   const { base, variant } = splitKey(key2);
@@ -13018,7 +13040,7 @@ function trackForKey(key2, code = "") {
   }
   if (key2.startsWith("u-")) {
     const track = Track.decode(code);
-    if (track.userKey !== key2) throw new Error("Le code du circuit ne correspond pas.");
+    if (track.userKey !== key2) throw new Error(unknownPieces(track) ? UNKNOWN_MSG : "Le code du circuit ne correspond pas.");
     return {
       track,
       kind: "user",
@@ -13078,7 +13100,7 @@ function verifyRun({ trackKey, code, inputs, time, physVer, withGhost = false })
     ok: false,
     error: "La course rejou\xE9e n\u2019atteint pas l\u2019arriv\xE9e."
   };
-  if (Math.abs(run.time - time) > 5e-4) return {
+  if (!(Math.abs(run.time - time) <= 5e-4)) return {
     ok: false,
     error: "Le temps ne correspond pas \xE0 la course rejou\xE9e."
   };
@@ -13115,6 +13137,10 @@ function verifyPublish({ code, inputs, time, physVer }) {
       error: "Code de circuit invalide : " + e.message
     };
   }
+  if (unknownPieces(track)) return {
+    ok: false,
+    error: UNKNOWN_MSG
+  };
   if (!track.verified) return {
     ok: false,
     error: "Circuit non v\xE9rifi\xE9 : termine-le d\u2019abord depuis l\u2019\xE9diteur (\xAB \u2714 V\xE9rifier \xBB)."
@@ -13124,11 +13150,11 @@ function verifyPublish({ code, inputs, time, physVer }) {
     ok: false,
     error: "La course de v\xE9rification rejou\xE9e n\u2019atteint pas l\u2019arriv\xE9e."
   };
-  if (Math.abs(run.time - time) > 5e-4) return {
+  if (!(Math.abs(run.time - time) <= 5e-4)) return {
     ok: false,
     error: "Le temps ne correspond pas \xE0 la course rejou\xE9e."
   };
-  if (Math.abs(run.time - track.vt) > AUTHOR_TIME_TOLERANCE) return {
+  if (!(Math.abs(run.time - track.vt) <= AUTHOR_TIME_TOLERANCE)) return {
     ok: false,
     error: "Le temps de l\u2019auteur inscrit dans le circuit ne correspond pas \xE0 la course rejou\xE9e."
   };

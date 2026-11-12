@@ -6,6 +6,19 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.63 — phase 4 : intégrité et validation globale (signature, lecture des codes, sauvegardes, records)
+
+**`PHYS_VER` inchangé (35)** : empreinte de la physique, temps de référence, médailles et corpus de compatibilité identiques. **Redéployer `submit-score`** (le paquet `supabase/functions/submit-score/index.ts` est régénéré) : sans cela la faille n° 1 ci-dessous reste exploitable côté serveur.
+Aucune migration SQL, aucune donnée supprimée. Compte-rendu complet (problèmes, données incompatibles, risques restants, opérations de production) : [docs/AUDIT-PHASE4-INTEGRITE.md](docs/AUDIT-PHASE4-INTEGRITE.md).
+
+- **Signature des circuits** : le **roulis d'un obstacle** (`rz`, phase 3) est maintenant signé. Avant, deux circuits qui ne différaient que par ce roulis avaient la même clé de classement (un obstacle tourné de 180° tue ou non selon sa forme de contact). Les clés des circuits sans roulis d'obstacle ne changent pas.
+- **Serveur** : un temps NaN / absent / non numérique n'est plus « confirmé » (`NaN > 0,0005` était faux) ; message explicite quand un circuit contient des pièces que le serveur ne connaît pas (version plus récente) au lieu de « le code ne correspond pas ».
+- **Lecture des codes** : `Track.decode` **compte ce qu'il perd** (pièces inconnues, options inconnues, pièces superposées, décorations en trop). L'import refuse un code qui perdrait des pièces ou des options, le lien partagé n'offre plus « Ouvrir dans l'éditeur » dans ce cas, et l'éditeur détache l'entrée d'origine (il n'écrase plus le circuit enregistré).
+- **Sauvegardes locales** : restauration **atomique** (une écriture refusée à mi-chemin remet tout comme avant) ; entrées de circuits abîmées mises en **quarantaine** (`tracksBad`) au lieu d'être affichées ou effacées ; la fusion cloud préfère toujours une entrée valide.
+- **Records** : un temps de 0, négatif, NaN ou démesuré n'est jamais lu comme record, jamais écrit, jamais choisi à la fusion cloud (rien n'est effacé du disque). Preuve de vérification d'auteur liée à `PHYS_VER`.
+- Tests : **`test-integrite`** (29 vérifications : signature, lecture des codes, sauvegardes avec stockage plein et rechargement, records et progression, circuits modifiés / temps falsifiés / versions, simulation locale = rejeu serveur, parcours complet créer → enregistrer → recharger → courir → record → serveur → classement → fantôme, avec déconnexion, actualisation et données incomplètes).
+- **Ce qui reste** : arrondi de position des obstacles à 0,1 m dans la signature, badge « vérifié » en retard après un changement de physique, clients anciens qui ignorent les pièces des versions récentes (détail dans le compte-rendu).
+
 ## Bêta 0.9.62 — phase 3 : construction 3D (orientations, rubans roulés, raccord automatique)
 
 **`PHYS_VER` inchangé (35)** : la physique n'a pas bougé (empreinte, temps de référence, médailles et corpus de compatibilité identiques), seuls la géométrie des pièces, l'éditeur et les obstacles évoluent. **Redéployer `submit-score`** à la mise en ligne : la vérification rejoue le circuit avec le code du serveur, une version plus ancienne ignorerait les nouvelles pièces. Compte-rendu complet (familles, mesures, limites et leurs raisons) : [docs/AUDIT-PHASE3-CONSTRUCTION-3D.md](docs/AUDIT-PHASE3-CONSTRUCTION-3D.md).

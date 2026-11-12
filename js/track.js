@@ -322,7 +322,7 @@ export class Track {
       .map((t) => `${t.t}:${t.x}:${t.z}:${t.l}:${t.r}:${t.s}:${t.p}:${t.v}${t.nb}${t.tn}${t.mv ? 'm' + t.mv : ''}${tileExtras(t)}`)
       .sort()
       .join('|');
-    const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}` : ''}`).join('|');
+    const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}${o.rz ? ':z' + o.rz.toFixed(2) : ''}` : ''}`).join('|');
     const rules = RULES.map((r) => r.sig(this[r.key])).join('');
     return this.decor + '#' + parts + '#' + d + (this.laps > 1 ? '#L' + this.laps : '') + rules + this._logicSig();
   }
@@ -457,9 +457,13 @@ export class Track {
     tr.decor = DECORS[data.d] ? data.d : DEFAULT_DECOR;
     const extras = new Map();
     if (Array.isArray(data.e)) for (const e of data.e) if (e && Number.isInteger(e.i)) extras.set(e.i, e);
+    // Ce que la lecture n'a PAS pu garder (phase 4) : pièces inconnues (code d'une version plus récente), pièces qui en recouvrent une autre, options retirées par la normalisation
+    // (un roulis ou un revêtement que ce jeu ne connaît pas), décorations inconnues ou en trop. Un circuit sans perte se relit à l'identique ; avec perte, l'appelant le DIT au
+    // lieu de réenregistrer sans bruit un circuit tronqué.
+    const lost = { unknown: 0, overlap: 0, options: 0, decos: 0 };
     for (let i = 0; i < data.t.length; i += stride) {
       const type = PIECE_ORDER[data.t[i]];
-      if (!type) continue;
+      if (!type) { lost.unknown++; continue; }
       const tile = { t: type, x: data.t[i + 1], z: data.t[i + 2], l: data.t[i + 3], r: data.t[i + 4], s: '' };
       const ex = extras.get(i / stride);
       if (ex) {
@@ -473,13 +477,18 @@ export class Track {
         const f = data.t[i + 7] | 0;
         tile.v = f & 1; tile.nb = (f >> 1) & 1; tile.tn = (f >> 2) & 1; tile.mv = (f >> 3) & 3;
       }
-      if (tr.conflicts(Track.normalize(tile)).length) continue;
+      const norm = Track.normalize(tile);
+      if (tr.conflicts(norm).length) { lost.overlap++; continue; }
+      // (les anciens types convertis à la lecture — pièces 90°, revêtements-pièces, doublons de revêtement — ne sont pas des pertes : leur conversion est voulue)
+      const legacy = LEGACY_TILE[tile.t] || LEGACY_SURFACE[tile.t] || LEGACY_PIECE[tile.t];
+      if (!legacy && ((tile.o | 0) !== norm.o || (tile.v ? 1 : 0) !== norm.v || (tile.tn ? 1 : 0) !== norm.tn || ((tile.mv | 0) !== norm.mv) || ((tile.cp | 0) !== norm.cp) || ((tile.tb | 0) !== norm.tb) || ((SURFACE_ALIAS[tile.s] || tile.s || '') !== norm.s))) lost.options++;
       tr.add(tile);
     }
     if (Array.isArray(data.o)) {
+      lost.decos += Math.max(0, data.o.length - MAX_DECOS);
       for (const o of data.o.slice(0, MAX_DECOS)) {
         const k = DECO_ORDER[o[0]];
-        if (!k) continue;
+        if (!k) { lost.decos++; continue; }
         const u = typeof o[7] === 'string' && /^https?:\/\//i.test(o[7]) ? o[7] : '';
         tr.addDeco({ k, x: o[1], y: o[2], z: o[3], ry: o[4], s: o[5], c: o[6], u, ph: +o[8] || 0, cc: typeof o[9] === 'string' && o[9] ? '#' + o[9] : '', cp: k === 'custom' ? unpackDecoParts(o[10]) : undefined, g: o[11] | 0, rx: +o[12] || 0, rz: +o[13] || 0 });
       }
@@ -489,6 +498,7 @@ export class Track {
     if (Array.isArray(data.gn)) for (const e of data.gn.slice(0, MAX_GROUP)) if (Array.isArray(e)) tr.setGroupName(e[0], e[1]);
     tr.lg = logicFromArray(data.lg);
     if (data.vt > 0 && data.vh) { tr.vt = +data.vt; tr.vh = String(data.vh); }
+    tr.lost = lost;
     return tr;
   }
 }
@@ -509,6 +519,20 @@ function tileExtras(t) {
   if (t.s2) e += `f${t.s2}:${t.p2 || 0}`;
   return e;
 }
+
+// Phrase qui dit ce que la lecture d'un code n'a pas pu garder (voir Track.decode, `lost`), '' si rien n'a été perdu. `blocking` : vrai quand ENREGISTRER ce circuit effacerait de
+// l'information qu'une version plus récente du jeu saurait lire (pièces inconnues, options inconnues) : l'importeur refuse alors plutôt que de réécrire un circuit tronqué.
+export function lossText(track) {
+  const l = track && track.lost;
+  if (!l) return '';
+  const parts = [];
+  if (l.unknown) parts.push(`${l.unknown} pièce(s) d'une version plus récente du jeu`);
+  if (l.options) parts.push(`${l.options} option(s) de pièce inconnues de cette version`);
+  if (l.overlap) parts.push(`${l.overlap} pièce(s) qui en recouvrent une autre`);
+  if (l.decos) parts.push(`${l.decos} décoration(s)`);
+  return parts.length ? 'Ce code contient ' + parts.join(', ') + ' que ce jeu ne peut pas lire.' : '';
+}
+export const lossBlocking = (track) => !!(track && track.lost && (track.lost.unknown || track.lost.options));
 
 export function b64encode(str) {
   const bytes = new TextEncoder().encode(str);
