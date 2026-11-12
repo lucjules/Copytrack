@@ -3,7 +3,7 @@
 // Module pur (aucun rendu), utilisé par l'éditeur pour afficher un avertissement et par les tests. Pour chaque pièce posée sur un mur ou
 // de type « transition », on cherche les pièces qui touchent chacune de ses extrémités (même point, sens opposés) et on compare le roulis
 // de la route de chaque côté : s'il diffère (mur gauche contre sol, mur droit contre mur gauche...), la voiture ne passe pas.
-import { PIECES, oriAngle, ORIENTS } from './pieces.js';
+import { PIECES, oriAngle, rollOfO, ORIENTS } from './pieces.js';
 import { centerlineWorld } from './ribbons.js';
 import { CELL } from './constants.js';
 
@@ -14,7 +14,7 @@ export function endRolls(tile) {
   const P = PIECES[tile.t];
   if (P.roll) return tile.v ? null : [oriAngle(P.roll[0], P.roll[1]), oriAngle(P.roll[1], P.roll[0])];
   if (P.kind === 'line' || P.kind === 'arc') {
-    const psi = tile.v ? Math.PI : tile.o === 1 ? Math.PI / 2 : tile.o === 2 ? -Math.PI / 2 : 0;
+    const psi = tile.v ? Math.PI : rollOfO(tile.o);
     return [psi, psi];
   }
   return null;
@@ -22,8 +22,8 @@ export function endRolls(tile) {
 
 // Nom de l'orientation d'un roulis (pour les messages).
 export function rollName(psi) {
-  const d = Math.round((psi * 180) / Math.PI);
-  return NAMES[Math.abs(d) === 180 ? 3 : d === 90 ? 1 : d === -90 ? 2 : 0] || 'Sol';
+  const d = Math.round((psi * 180) / Math.PI / 45) * 45;
+  return NAMES[Math.abs(d) === 180 ? 3 : d === 90 ? 1 : d === -90 ? 2 : d === 45 ? 4 : d === -45 ? 5 : d === 135 ? 6 : d === -135 ? 7 : 0] || 'Sol';
 }
 
 const wrap = (a) => { a = ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return a; };

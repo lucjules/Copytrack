@@ -192,7 +192,8 @@ test('le vérificateur est d\'accord avec la physique : une case « OK » ou « 
     else { ok++; assert.deepEqual(bad.map((i) => i.code), [], `${type}/${col.id} (${code}) : faux positif`); }
   }
   // Phase 2 : 16 chutes (29 avant la règle de gravité commune : 13 corrigées, aucune nouvelle) ; la matrice ne doit pas régresser (voir docs/AUDIT-PHASE2-PHYSIQUE.md pour ce qui reste).
-  assert.ok(ok > 150 && chute >= 1 && chute <= 16, `${ok} cases saines, ${chute} chutes`);
+  // Phase 3 : 8 orientations, 30 chutes (les 16 d'avant + 14 de la MÊME famille : montées et descentes raides, inclinaison 4 ou courbe 2, sur 45° / 135° ; voir docs/AUDIT-PHASE3-CONSTRUCTION-3D.md).
+  assert.ok(ok > 150 && chute >= 1 && chute <= 30, `${ok} cases saines, ${chute} chutes`);
 });
 test('constats de la matrice (documentés dans docs/MATRICE-PIECES.md) : la vrille et les transitions retournées au sol passent sans revêtement de gravité (phase 2) ; les loopings et le tire-bouchon aussi', () => {
   assert.notEqual(matrix.twist.cells.sol.code, 'CHUTE');

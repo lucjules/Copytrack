@@ -79,8 +79,12 @@ test('refus expliqués : sol contre mur, pièce sans route, circuit sans départ
   const a = extendPlan(g.tr, g.last, 'straight', { o: 1 });
   assert.ok(a.tile, 'ligne sur mur : refusée par le roulis ET rattrapée par l\'orientation déduite (sol → on garde le sol)');
   const w = build([['straight'], ['tr01s']]);
+  // (phase 3 : un looping ↱ au bout d'un mur gauche reprend l'orientation de la route (looping sur un mur) ; un looping ↰, qui ne tient pas sur ce mur, reçoit la transition qui ramène la route
+  // au sol : raccordement automatique. Détail : tools/test-orientations-3d.mjs.)
   const bad = extendPlan(w.tr, w.last, 'loop', {});
-  assert.ok(!bad.tile && /roulis|mur|orientation|raccorde/.test(bad.why), bad.why);
+  assert.ok(bad.tile && bad.inferred && bad.tile.o === 1, JSON.stringify(bad.why));
+  const br = extendPlan(w.tr, w.last, 'loopL', {});
+  assert.ok(br.bridged && br.chain.length === 2 && br.chain[0].t === 'tr10s' && br.chain[1].t === 'loopL', JSON.stringify(br.why || (br.chain && br.chain.map((t) => t.t))));
   assert.match(extendPlan(g.tr, g.last, 'platform').why, /ne se pose pas au bout d'une route/);
   assert.match(extendPlan(g.tr, null, 'straight').why, /pose d'abord le départ/);
   const occ = build([['straight'], ['straight']]);

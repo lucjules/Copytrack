@@ -13,155 +13,171 @@ transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 35
 | — | orientation non proposée par l'éditeur (`flagAllowed`) |
 | n/a | pièce sans route roulable (raison dans le fichier JSON) |
 
-Totaux : CHUTE 16 · OK 58 · SAUT 65 · n/a 28 · v≥150 173 · v≥80 26 · — 82.
+Totaux : CHUTE 30 · OK 102 · RACCORD 4 · SAUT 67 · n/a 56 · v≥150 413 · v≥250 8 · v≥80 26 · — 318.
 
 **Limites** : pilote automatique (pas un humain), voiture classique, sans revêtement ni obstacle, une seule pièce testée par chaîne, vitesse de croisière régulée.
 Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles) sont dans `tools/compat/matrice-pieces.json`.
 
 ## Lignes droites, pentes et courbes
 
-| Pièce | Sol | Mur gauche | Mur droit | Plafond |
-|---|---|---|---|---|
-| `straight` Ligne droite | OK | v≥150 | v≥150 | OK |
-| `slope` Pente | SAUT | v≥150 | v≥150 | SAUT |
-| `steep` Tremplin | SAUT | v≥150 | v≥150 | v≥80 |
-| `checkpoint` Checkpoint | OK | — | — | OK |
-| `start` Départ | n/a | n/a | n/a | n/a |
-| `finish` Arrivée | n/a | n/a | n/a | n/a |
-| `gentle` Pente douce (½ niveau) | SAUT | v≥150 | v≥150 | SAUT |
-| `steep4` Ligne droite · inclinaison 4 | SAUT | v≥150 | v≥150 | v≥80 |
-| `crv05` Courbe · inclinaison ½ | SAUT | v≥150 | v≥150 | SAUT |
-| `crv1` Courbe · inclinaison 1 | SAUT | v≥150 | v≥150 | v≥80 |
-| `crv2` Courbe · inclinaison 2 | v≥80 | v≥150 | v≥150 | v≥80 |
-| `crv4` Courbe · inclinaison 4 | SAUT | v≥150 | v≥150 | v≥80 |
-| `dn05` Pente descendante ½ | SAUT | v≥150 | v≥150 | SAUT |
-| `dn1` Pente descendante 1 | SAUT | v≥150 | v≥150 | SAUT |
-| `dn2` Pente descendante 2 | SAUT | v≥150 | v≥150 | SAUT |
-| `dn4` Pente descendante 4 | SAUT | v≥150 | v≥150 | SAUT |
-| `cro05` Courbe · fin de montée ½ | OK | v≥150 | v≥150 | OK |
-| `cro1` Courbe · fin de montée 1 | OK | v≥150 | v≥150 | OK |
-| `cro2` Courbe · fin de montée 2 | OK | v≥150 | v≥150 | OK |
-| `cro4` Courbe · fin de montée 4 | OK | CHUTE | CHUTE | v≥80 |
-| `cdi05` Courbe · début de descente ½ | OK | v≥150 | v≥150 | OK |
-| `cdi1` Courbe · début de descente 1 | OK | v≥150 | v≥150 | OK |
-| `cdi2` Courbe · début de descente 2 | OK | v≥150 | v≥150 | OK |
-| `cdi4` Courbe · début de descente 4 | OK | CHUTE | CHUTE | SAUT |
-| `cdo05` Courbe · fin de descente ½ | SAUT | v≥150 | v≥150 | SAUT |
-| `cdo1` Courbe · fin de descente 1 | SAUT | v≥150 | v≥150 | SAUT |
-| `cdo2` Courbe · fin de descente 2 | SAUT | v≥150 | v≥150 | SAUT |
-| `cdo4` Courbe · fin de descente 4 | SAUT | v≥150 | v≥150 | SAUT |
-| `crs05` Courbe en S · montée ½ | OK | v≥150 | v≥150 | OK |
-| `crs1` Courbe en S · montée 1 | OK | v≥150 | v≥150 | SAUT |
-| `cds05` Courbe en S · descente ½ | OK | v≥150 | v≥150 | OK |
-| `cds1` Courbe en S · descente 1 | OK | v≥150 | v≥150 | SAUT |
+| Pièce | Sol | Mur gauche | Mur droit | Plafond | Incliné gauche 45° | Incliné droit 45° | Surplomb gauche 135° | Surplomb droit 135° |
+|---|---|---|---|---|---|---|---|---|
+| `straight` Ligne droite | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `slope` Pente | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `steep` Tremplin | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `checkpoint` Checkpoint | OK | — | — | OK | — | — | — | — |
+| `start` Départ | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| `finish` Arrivée | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| `gentle` Pente douce (½ niveau) | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `steep4` Ligne droite · inclinaison 4 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `crv05` Courbe · inclinaison ½ | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `crv1` Courbe · inclinaison 1 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `crv2` Courbe · inclinaison 2 | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `crv4` Courbe · inclinaison 4 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | CHUTE | CHUTE |
+| `dn05` Pente descendante ½ | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `dn1` Pente descendante 1 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `dn2` Pente descendante 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `dn4` Pente descendante 4 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cro05` Courbe · fin de montée ½ | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cro1` Courbe · fin de montée 1 | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cro2` Courbe · fin de montée 2 | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cro4` Courbe · fin de montée 4 | OK | CHUTE | CHUTE | v≥80 | CHUTE | CHUTE | v≥150 | v≥150 |
+| `cdi05` Courbe · début de descente ½ | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cdi1` Courbe · début de descente 1 | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cdi2` Courbe · début de descente 2 | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cdi4` Courbe · début de descente 4 | OK | CHUTE | CHUTE | SAUT | CHUTE | CHUTE | CHUTE | CHUTE |
+| `cdo05` Courbe · fin de descente ½ | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cdo1` Courbe · fin de descente 1 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cdo2` Courbe · fin de descente 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cdo4` Courbe · fin de descente 4 | SAUT | v≥150 | v≥150 | SAUT | SAUT | SAUT | CHUTE | CHUTE |
+| `crs05` Courbe en S · montée ½ | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
+| `crs1` Courbe en S · montée 1 | OK | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cds05` Courbe en S · descente ½ | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cds1` Courbe en S · descente 1 | OK | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
 
 ## Virages
 
-| Pièce | Sol | Mur gauche | Mur droit | Plafond |
-|---|---|---|---|---|
-| `curve` Virage serré | OK | v≥150 | v≥150 | OK |
-| `bigcurve` Grand virage | OK | v≥150 | v≥150 | OK |
-| `cpCurve` Checkpoint en virage | OK | — | — | OK |
-| `hugecurve` Très grand virage plat | OK | v≥150 | v≥150 | OK |
-| `cv05` Courbe serrée · inclinaison ½ | SAUT | v≥150 | v≥150 | SAUT |
-| `cv1` Courbe serrée · inclinaison 1 | SAUT | v≥150 | v≥150 | v≥80 |
-| `cv2` Courbe serrée · inclinaison 2 | v≥80 | v≥150 | CHUTE | v≥80 |
-| `cv4` Courbe serrée · inclinaison 4 | v≥80 | CHUTE | CHUTE | v≥80 |
-| `cvBig05` Grande courbe · inclinaison ½ | OK | v≥150 | v≥150 | OK |
-| `cvBig1` Grande courbe · inclinaison 1 | SAUT | v≥150 | v≥150 | SAUT |
-| `cvBig2` Grande courbe · inclinaison 2 | SAUT | v≥150 | v≥150 | SAUT |
-| `cvBig4` Grande courbe · inclinaison 4 | SAUT | v≥150 | v≥150 | v≥80 |
-| `cvL05` Courbe serrée ↰ · inclinaison ½ | SAUT | v≥150 | v≥150 | SAUT |
-| `cvL1` Courbe serrée ↰ · inclinaison 1 | SAUT | v≥150 | v≥150 | v≥80 |
-| `cvL2` Courbe serrée ↰ · inclinaison 2 | v≥80 | CHUTE | v≥150 | v≥80 |
-| `cvL4` Courbe serrée ↰ · inclinaison 4 | v≥80 | CHUTE | CHUTE | v≥80 |
-| `cvBigL05` Grande courbe ↰ · inclinaison ½ | OK | v≥150 | v≥150 | OK |
-| `cvBigL1` Grande courbe ↰ · inclinaison 1 | SAUT | v≥150 | v≥150 | SAUT |
-| `cvBigL2` Grande courbe ↰ · inclinaison 2 | SAUT | v≥150 | v≥150 | SAUT |
-| `cvBigL4` Grande courbe ↰ · inclinaison 4 | SAUT | v≥150 | v≥150 | SAUT |
-| `cvd05` Virage descendant serré · ½ | SAUT | v≥150 | v≥150 | SAUT |
-| `cvd1` Virage descendant serré · 1 | SAUT | v≥150 | v≥150 | v≥80 |
-| `cvd2` Virage descendant serré · 2 | v≥80 | v≥150 | v≥150 | v≥80 |
-| `cvd4` Virage descendant serré · 4 | CHUTE | v≥150 | CHUTE | CHUTE |
-| `cvdBig05` Virage descendant grand · ½ | OK | v≥150 | v≥150 | OK |
-| `cvdBig1` Virage descendant grand · 1 | OK | v≥150 | v≥150 | SAUT |
-| `cvdBig2` Virage descendant grand · 2 | SAUT | v≥150 | v≥150 | SAUT |
-| `cvdBig4` Virage descendant grand · 4 | SAUT | v≥150 | v≥150 | v≥80 |
-| `cvdL05` Virage descendant serré ↰ · ½ | SAUT | v≥150 | v≥150 | SAUT |
-| `cvdL1` Virage descendant serré ↰ · 1 | SAUT | v≥150 | v≥150 | v≥80 |
-| `cvdL2` Virage descendant serré ↰ · 2 | v≥80 | v≥150 | v≥150 | v≥80 |
-| `cvdL4` Virage descendant serré ↰ · 4 | CHUTE | CHUTE | v≥150 | CHUTE |
-| `cvdBigL05` Virage descendant grand ↰ · ½ | OK | v≥150 | v≥150 | OK |
-| `cvdBigL1` Virage descendant grand ↰ · 1 | OK | v≥150 | v≥150 | SAUT |
-| `cvdBigL2` Virage descendant grand ↰ · 2 | SAUT | v≥150 | v≥150 | SAUT |
-| `cvdBigL4` Virage descendant grand ↰ · 4 | SAUT | v≥150 | v≥150 | v≥80 |
+| Pièce | Sol | Mur gauche | Mur droit | Plafond | Incliné gauche 45° | Incliné droit 45° | Surplomb gauche 135° | Surplomb droit 135° |
+|---|---|---|---|---|---|---|---|---|
+| `curve` Virage serré | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `bigcurve` Grand virage | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cpCurve` Checkpoint en virage | OK | — | — | OK | — | — | — | — |
+| `hugecurve` Très grand virage plat | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cv05` Courbe serrée · inclinaison ½ | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `cv1` Courbe serrée · inclinaison 1 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cv2` Courbe serrée · inclinaison 2 | v≥80 | v≥150 | CHUTE | v≥80 | v≥150 | CHUTE | v≥150 | v≥150 |
+| `cv4` Courbe serrée · inclinaison 4 | v≥80 | CHUTE | CHUTE | v≥80 | v≥250 | v≥250 | v≥150 | v≥150 |
+| `cvBig05` Grande courbe · inclinaison ½ | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvBig1` Grande courbe · inclinaison 1 | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `cvBig2` Grande courbe · inclinaison 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvBig4` Grande courbe · inclinaison 4 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvL05` Courbe serrée ↰ · inclinaison ½ | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `cvL1` Courbe serrée ↰ · inclinaison 1 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvL2` Courbe serrée ↰ · inclinaison 2 | v≥80 | CHUTE | v≥150 | v≥80 | CHUTE | v≥150 | v≥150 | v≥150 |
+| `cvL4` Courbe serrée ↰ · inclinaison 4 | v≥80 | CHUTE | CHUTE | v≥80 | v≥250 | v≥250 | v≥150 | v≥150 |
+| `cvBigL05` Grande courbe ↰ · inclinaison ½ | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvBigL1` Grande courbe ↰ · inclinaison 1 | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `cvBigL2` Grande courbe ↰ · inclinaison 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvBigL4` Grande courbe ↰ · inclinaison 4 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvd05` Virage descendant serré · ½ | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `cvd1` Virage descendant serré · 1 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvd2` Virage descendant serré · 2 | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | CHUTE |
+| `cvd4` Virage descendant serré · 4 | CHUTE | v≥150 | CHUTE | CHUTE | v≥150 | v≥150 | v≥250 | v≥250 |
+| `cvdBig05` Virage descendant grand · ½ | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvdBig1` Virage descendant grand · 1 | OK | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `cvdBig2` Virage descendant grand · 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvdBig4` Virage descendant grand · 4 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvdL05` Virage descendant serré ↰ · ½ | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `cvdL1` Virage descendant serré ↰ · 1 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvdL2` Virage descendant serré ↰ · 2 | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | CHUTE | v≥150 |
+| `cvdL4` Virage descendant serré ↰ · 4 | CHUTE | CHUTE | v≥150 | CHUTE | v≥150 | v≥150 | v≥250 | v≥250 |
+| `cvdBigL05` Virage descendant grand ↰ · ½ | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvdBigL1` Virage descendant grand ↰ · 1 | OK | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `cvdBigL2` Virage descendant grand ↰ · 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvdBigL4` Virage descendant grand ↰ · 4 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
 
 ## Plateforme et anneaux
 
-| Pièce | Sol | Mur gauche | Mur droit | Plafond |
-|---|---|---|---|---|
-| `platform` Plateforme | n/a | n/a | n/a | n/a |
-| `ring` Anneau turbo | n/a | n/a | n/a | n/a |
-| `cpRing` Checkpoint aérien | n/a | n/a | n/a | n/a |
+| Pièce | Sol | Mur gauche | Mur droit | Plafond | Incliné gauche 45° | Incliné droit 45° | Surplomb gauche 135° | Surplomb droit 135° |
+|---|---|---|---|---|---|---|---|---|
+| `platform` Plateforme | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| `ring` Anneau turbo | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| `cpRing` Checkpoint aérien | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 
 ## Loopings
 
-| Pièce | Sol | Mur gauche | Mur droit | Plafond |
-|---|---|---|---|---|
-| `loop` Looping ↱ | v≥150 | — | — | v≥150 |
-| `loopL` Looping ↰ | v≥150 | — | — | v≥150 |
-| `loopBig` Grand looping ↱ | v≥150 | — | — | v≥150 |
-| `loopBigL` Grand looping ↰ | v≥150 | — | — | v≥150 |
-| `loopDouble` Double looping ↱ | v≥150 | — | — | v≥150 |
-| `loopDoubleL` Double looping ↰ | v≥150 | — | — | v≥150 |
-| `loopBigDouble` Grand looping ×2 ↱ | v≥150 | — | — | v≥150 |
-| `loopBigDoubleL` Grand looping ×2 ↰ | v≥150 | — | — | v≥150 |
-| `loopTriple` Triple looping ↱ | v≥150 | — | — | v≥150 |
-| `loopTripleL` Triple looping ↰ | v≥150 | — | — | v≥150 |
-| `loopBigTriple` Grand looping ×3 ↱ | v≥150 | — | — | v≥150 |
-| `loopBigTripleL` Grand looping ×3 ↰ | v≥150 | — | — | v≥150 |
+| Pièce | Sol | Mur gauche | Mur droit | Plafond | Incliné gauche 45° | Incliné droit 45° | Surplomb gauche 135° | Surplomb droit 135° |
+|---|---|---|---|---|---|---|---|---|
+| `loop` Looping ↱ | v≥150 | v≥150 | — | v≥150 | — | — | — | — |
+| `loopL` Looping ↰ | v≥150 | — | v≥150 | v≥150 | — | — | — | — |
+| `loopBig` Grand looping ↱ | v≥150 | v≥150 | — | v≥150 | — | — | — | — |
+| `loopBigL` Grand looping ↰ | v≥150 | — | v≥150 | v≥150 | — | — | — | — |
+| `loopDouble` Double looping ↱ | v≥150 | v≥150 | — | v≥150 | — | — | — | — |
+| `loopDoubleL` Double looping ↰ | v≥150 | — | v≥150 | v≥150 | — | — | — | — |
+| `loopBigDouble` Grand looping ×2 ↱ | v≥150 | v≥150 | — | v≥150 | — | — | — | — |
+| `loopBigDoubleL` Grand looping ×2 ↰ | v≥150 | — | v≥150 | v≥150 | — | — | — | — |
+| `loopTriple` Triple looping ↱ | v≥150 | RACCORD | — | v≥150 | — | — | — | — |
+| `loopTripleL` Triple looping ↰ | v≥150 | — | RACCORD | v≥150 | — | — | — | — |
+| `loopBigTriple` Grand looping ×3 ↱ | v≥150 | RACCORD | — | v≥150 | — | — | — | — |
+| `loopBigTripleL` Grand looping ×3 ↰ | v≥150 | — | RACCORD | v≥150 | — | — | — | — |
 
 ## Rubans (vrille, tire-bouchon, tubes, virages relevés, montée en L…)
 
-| Pièce | Sol | Mur gauche | Mur droit | Plafond |
-|---|---|---|---|---|
-| `twist` Vrille | OK | — | — | OK |
-| `ramp90` Montée en L | SAUT | — | — | SAUT |
-| `wall` Mur vertical | v≥150 | — | — | SAUT |
-| `crest90` Sommet du L | SAUT | — | — | SAUT |
-| `bank` Virage relevé | OK | — | — | OK |
-| `bankBig` Très grand virage relevé | OK | — | — | OK |
-| `tube` Tube | OK | — | — | OK |
-| `cork` Tire-bouchon ↻ | OK | — | — | OK |
-| `corkL` Tire-bouchon ↺ | OK | — | — | OK |
-| `tubeIn` Entrée de tube | OK | — | — | OK |
-| `tubeMid` Section de tube | OK | — | — | OK |
+| Pièce | Sol | Mur gauche | Mur droit | Plafond | Incliné gauche 45° | Incliné droit 45° | Surplomb gauche 135° | Surplomb droit 135° |
+|---|---|---|---|---|---|---|---|---|
+| `twist` Vrille | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
+| `ramp90` Montée en L | SAUT | — | — | SAUT | — | — | — | — |
+| `wall` Mur vertical | v≥150 | — | — | SAUT | — | — | — | — |
+| `crest90` Sommet du L | SAUT | — | — | SAUT | — | — | — | — |
+| `bank` Virage relevé | OK | — | — | OK | — | — | — | — |
+| `bankBig` Très grand virage relevé | OK | — | — | OK | — | — | — | — |
+| `tube` Tube | OK | — | — | OK | — | — | — | — |
+| `cork` Tire-bouchon ↻ | OK | v≥150 | — | OK | v≥150 | — | v≥150 | — |
+| `corkL` Tire-bouchon ↺ | OK | v≥150 | — | OK | v≥150 | — | v≥150 | — |
+| `tubeIn` Entrée de tube | OK | — | — | OK | — | — | — | — |
+| `tubeMid` Section de tube | OK | — | — | OK | — | — | — | — |
 
 ## Bifurcations
 
-| Pièce | Sol | Mur gauche | Mur droit | Plafond |
-|---|---|---|---|---|
-| `fork` Bifurcation ⑂→ | n/a | n/a | n/a | n/a |
-| `forkL` Bifurcation ←⑂ | n/a | n/a | n/a | n/a |
+| Pièce | Sol | Mur gauche | Mur droit | Plafond | Incliné gauche 45° | Incliné droit 45° | Surplomb gauche 135° | Surplomb droit 135° |
+|---|---|---|---|---|---|---|---|---|
+| `fork` Bifurcation ⑂→ | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| `forkL` Bifurcation ←⑂ | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 
 ## Transitions d'orientation
 
-| Pièce | Sol | Mur gauche | Mur droit | Plafond |
-|---|---|---|---|---|
-| `tr01s` Transition sol → mur gauche | v≥150 | — | — | v≥150 |
-| `tr10s` Transition mur gauche → sol | v≥150 | — | — | v≥150 |
-| `tr02s` Transition sol → mur droit | v≥150 | — | — | v≥150 |
-| `tr20s` Transition mur droit → sol | v≥150 | — | — | v≥150 |
-| `tr13s` Transition mur gauche → plafond | v≥150 | — | — | v≥150 |
-| `tr31s` Transition plafond → mur gauche | v≥150 | — | — | v≥150 |
-| `tr23s` Transition mur droit → plafond | v≥150 | — | — | v≥150 |
-| `tr32s` Transition plafond → mur droit | v≥150 | — | — | v≥150 |
-| `tr01l` Transition sol → mur gauche (douce 2×2) | v≥150 | — | — | v≥150 |
-| `tr10l` Transition mur gauche → sol (douce 2×2) | v≥150 | — | — | v≥150 |
-| `tr02l` Transition sol → mur droit (douce 2×2) | v≥150 | — | — | v≥150 |
-| `tr20l` Transition mur droit → sol (douce 2×2) | v≥150 | — | — | v≥150 |
-| `tr13l` Transition mur gauche → plafond (douce 2×2) | v≥150 | — | — | v≥150 |
-| `tr31l` Transition plafond → mur gauche (douce 2×2) | v≥150 | — | — | v≥150 |
-| `tr23l` Transition mur droit → plafond (douce 2×2) | v≥150 | — | — | v≥150 |
-| `tr32l` Transition plafond → mur droit (douce 2×2) | v≥150 | — | — | v≥150 |
+| Pièce | Sol | Mur gauche | Mur droit | Plafond | Incliné gauche 45° | Incliné droit 45° | Surplomb gauche 135° | Surplomb droit 135° |
+|---|---|---|---|---|---|---|---|---|
+| `tr01s` Transition sol → mur gauche | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr10s` Transition mur gauche → sol | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr02s` Transition sol → mur droit | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr20s` Transition mur droit → sol | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr13s` Transition mur gauche → plafond | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr31s` Transition plafond → mur gauche | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr23s` Transition mur droit → plafond | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr32s` Transition plafond → mur droit | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr01l` Transition sol → mur gauche (douce 2×2) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr10l` Transition mur gauche → sol (douce 2×2) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr02l` Transition sol → mur droit (douce 2×2) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr20l` Transition mur droit → sol (douce 2×2) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr13l` Transition mur gauche → plafond (douce 2×2) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr31l` Transition plafond → mur gauche (douce 2×2) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr23l` Transition mur droit → plafond (douce 2×2) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr32l` Transition plafond → mur droit (douce 2×2) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr04s` Transition sol → incliné gauche (45°) | OK | — | — | v≥150 | — | — | — | — |
+| `tr40s` Transition incliné gauche → sol (45°) | OK | — | — | v≥150 | — | — | — | — |
+| `tr41s` Transition incliné gauche → mur gauche (45°) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr14s` Transition mur gauche → incliné gauche (45°) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr16s` Transition mur gauche → surplomb gauche (45°) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr61s` Transition surplomb gauche → mur gauche (45°) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr63s` Transition surplomb gauche → plafond (45°) | v≥150 | — | — | OK | — | — | — | — |
+| `tr36s` Transition plafond → surplomb gauche (45°) | v≥150 | — | — | OK | — | — | — | — |
+| `tr37s` Transition plafond → surplomb droit (45°) | v≥150 | — | — | OK | — | — | — | — |
+| `tr73s` Transition surplomb droit → plafond (45°) | v≥150 | — | — | OK | — | — | — | — |
+| `tr72s` Transition surplomb droit → mur droit (45°) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr27s` Transition mur droit → surplomb droit (45°) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr25s` Transition mur droit → incliné droit (45°) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr52s` Transition incliné droit → mur droit (45°) | v≥150 | — | — | v≥150 | — | — | — | — |
+| `tr50s` Transition incliné droit → sol (45°) | OK | — | — | v≥150 | — | — | — | — |
+| `tr05s` Transition sol → incliné droit (45°) | OK | — | — | v≥150 | — | — | — | — |
 

@@ -10,7 +10,8 @@ import { tint } from '../trackGeometry.js';
 import { buildDecoMesh } from '../decos.js';
 import { isObstacle } from '../obstacles.js';
 import { enclosedRegion } from '../editorTools.js';
-import { pickObjects, pickTileExact, rayToSurface, ERASE_FILTERS, LAYER_ALL } from '../editorPick.js';
+import { pickObjects, pickTileExact, rayToSurface, rayToRibbon, ERASE_FILTERS, LAYER_ALL } from '../editorPick.js';
+import { obstacleRollOn } from '../orient.js';
 import { MODS, OPT_KEYS, fillBase, isFill } from './shared.js';
 
 const FILL_PREVIEW_MAX = 2500;      // cases surlignées au plus (la zone d'un remplissage est bornée à FILL_MAX_TILES pièces, editorTools.js)
@@ -274,7 +275,15 @@ export const pointerMethods = {
   _surfaceHit() {
     if (!this.ndc || !this.raycaster || Math.abs(this.ndc.x) > 1 || Math.abs(this.ndc.y) > 1) return null;
     this.raycaster.setFromCamera(this.ndc, this.app.camera);
-    return rayToSurface(this.track, this.raycaster.ray);
+    const ray = this.raycaster.ray;
+    const floor = rayToSurface(this.track, ray);
+    // Phase 3 : une route en ruban (mur, plafond, plan incliné…) touchée avant le sol prend le pas : le point et la normale de la route servent à poser un obstacle à plat SUR elle.
+    const rib = rayToRibbon(this.track, ray);
+    if (rib) {
+      const df = floor ? Math.hypot(floor.x - ray.origin.x, floor.y - ray.origin.y, floor.z - ray.origin.z) : Infinity;
+      if (rib.dist <= df + 0.5) return { x: rib.x, y: rib.y, z: rib.z, tile: rib.tile, n: rib.n, t: rib.t };
+    }
+    return floor;
   },
 
   _decoAt() {
@@ -286,7 +295,14 @@ export const pointerMethods = {
     else return null;
     [x, z] = this._snapPos(x, z);                           // « Libre » par défaut ; l'accrochage reste facultatif
     y += this.deco.dy || 0;                                   // décalage vertical réglé avec Maj + souris
-    return { k: kind, x, y, z, ry: this.deco.rot, s: this.deco.scale, c: this.deco.color, u: kind === 'plaque' ? this.deco.url : '', cp: kind === 'custom' ? this.deco.cp : undefined, ph: isObstacle(kind) ? this.deco.ph : 0 };
+    const out = { k: kind, x, y, z, ry: this.deco.rot, s: this.deco.scale, c: this.deco.color, u: kind === 'plaque' ? this.deco.url : '', cp: kind === 'custom' ? this.deco.cp : undefined, ph: isObstacle(kind) ? this.deco.ph : 0 };
+    // Phase 3 : un obstacle visé sur une route roulée (mur, plafond, plan incliné) se pose À PLAT sur elle : son haut est la normale de la route, son cap suit la route (le cap réglé s'y ajoute).
+    if (hit && hit.n && isObstacle(kind)) {
+      const r = obstacleRollOn(hit.n, hit.t);
+      out.ry = r.ry + (this.deco.rot || 0); out.rz = r.rz;
+      out.x = hit.x; out.y = hit.y + (this.deco.dy || 0); out.z = hit.z;
+    }
+    return out;
   },
 
   _nearestDeco(maxD = 8) {

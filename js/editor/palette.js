@@ -18,7 +18,7 @@ const WIND_DIRS = [[0, 'Vers le nord'], [45, 'Vers le nord-est'], [90, 'Vers l�
 // Avec une pièce choisie, elles s'ajoutent à la pose (aperçu compris) ; sans pièce, elles s'appliquent à la pièce cliquée.
 const OPTION_GROUPS = [
   // 0.9.3 : l'orientation est une caractéristique de toute ligne droite ou de tout virage (plus de pièces 90° à part).
-  { id: 'ori', label: 'Orientation', flag: 'o', choices: [['o', 0, 'Sol'], ['o', 1, 'Mur gauche'], ['o', 2, 'Mur droit'], ['v', 1, 'Plafond']] },
+  { id: 'ori', label: 'Orientation', flag: 'o', choices: [['o', 0, 'Sol'], ['o', 3, 'Incliné ◣ 45°'], ['o', 4, 'Incliné ◢ 45°'], ['o', 1, 'Mur gauche'], ['o', 2, 'Mur droit'], ['o', 5, 'Surplomb ◤ 135°'], ['o', 6, 'Surplomb ◥ 135°'], ['v', 1, 'Plafond']] },
   { id: 'route', label: 'Route', multi: true, choices: [['nb', 1, 'Sans bordures'], ['tn', 1, 'Tunnel']] },
   { id: 'cp', label: 'Checkpoint', flag: 'cp', check: true, choices: [['cp', 1, 'Checkpoint']] },
   { id: 'tb', label: 'Anneau turbo', flag: 'tb', choices: [['tb', 0, 'Aucun'], ['tb', 1, 'Turbo']] },

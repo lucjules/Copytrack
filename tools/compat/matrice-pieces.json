@@ -17,6 +17,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
    }
   }
  },
@@ -38,6 +54,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -59,6 +91,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -80,6 +128,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.45 150:ok/vol0.78 250:ok/vol0.6"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -101,6 +165,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol0.87 150:perdue/vol5.16 250:perdue/vol5.42"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -122,6 +202,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -141,6 +237,22 @@
     "why": "ouvre toutes les chaînes (départ)"
    },
    "plafond": {
+    "code": "n/a",
+    "why": "ouvre toutes les chaînes (départ)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "ouvre toutes les chaînes (départ)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "ouvre toutes les chaînes (départ)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "ouvre toutes les chaînes (départ)"
+   },
+   "surD": {
     "code": "n/a",
     "why": "ouvre toutes les chaînes (départ)"
    }
@@ -164,6 +276,22 @@
    "plafond": {
     "code": "n/a",
     "why": "ferme toutes les chaînes (arrivée)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "ferme toutes les chaînes (arrivée)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "ferme toutes les chaînes (arrivée)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "ferme toutes les chaînes (arrivée)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "ferme toutes les chaînes (arrivée)"
    }
   }
  },
@@ -185,6 +313,22 @@
    "plafond": {
     "code": "n/a",
     "why": "plateforme : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plateforme : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plateforme : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plateforme : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plateforme : surface sans extrémité (aucun raccord orienté)"
    }
   }
  },
@@ -196,8 +340,8 @@
     "runs": "80:loop/vol1.98 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
    },
    "murD": {
     "code": "—",
@@ -206,6 +350,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:loop/vol1.96 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -221,12 +381,28 @@
     "why": "non proposé par l'éditeur (flagAllowed)"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥150",
     "runs": "80:loop/vol1.96 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -238,8 +414,8 @@
     "runs": "80:loop/vol4.15 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
    },
    "murD": {
     "code": "—",
@@ -248,6 +424,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:loop/vol5.19 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -263,12 +455,28 @@
     "why": "non proposé par l'éditeur (flagAllowed)"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥150",
     "runs": "80:loop/vol5.19 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -280,8 +488,8 @@
     "runs": "80:loop/vol1.94 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
    },
    "murD": {
     "code": "—",
@@ -290,6 +498,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:loop/vol1.97 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -305,12 +529,28 @@
     "why": "non proposé par l'éditeur (flagAllowed)"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥150",
     "runs": "80:loop/vol1.97 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -322,16 +562,32 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
    }
   }
  },
@@ -353,6 +609,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.91 150:ok/vol0.91 250:ok/vol1.06"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -374,6 +646,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.91 150:ok/vol0.98 250:ok/vol1"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -395,6 +683,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.91 150:ok/vol0.91 250:ok/vol1.06"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -416,6 +720,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -437,6 +757,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -458,6 +794,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -479,6 +831,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -500,6 +868,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -511,8 +895,8 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
    },
    "murD": {
     "code": "—",
@@ -521,6 +905,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.92 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.24 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -532,8 +932,8 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
    },
    "murD": {
     "code": "—",
@@ -542,6 +942,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol1.75 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol5.23 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -561,6 +977,22 @@
     "why": "bifurcation : sa voie directe ne se prolonge que dans un circuit à deux voies parallèles (essayée dans les circuits officiels, pas en chaîne)"
    },
    "plafond": {
+    "code": "n/a",
+    "why": "bifurcation : sa voie directe ne se prolonge que dans un circuit à deux voies parallèles (essayée dans les circuits officiels, pas en chaîne)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "bifurcation : sa voie directe ne se prolonge que dans un circuit à deux voies parallèles (essayée dans les circuits officiels, pas en chaîne)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "bifurcation : sa voie directe ne se prolonge que dans un circuit à deux voies parallèles (essayée dans les circuits officiels, pas en chaîne)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "bifurcation : sa voie directe ne se prolonge que dans un circuit à deux voies parallèles (essayée dans les circuits officiels, pas en chaîne)"
+   },
+   "surD": {
     "code": "n/a",
     "why": "bifurcation : sa voie directe ne se prolonge que dans un circuit à deux voies parallèles (essayée dans les circuits officiels, pas en chaîne)"
    }
@@ -584,6 +1016,22 @@
    "plafond": {
     "code": "n/a",
     "why": "bifurcation : sa voie directe ne se prolonge que dans un circuit à deux voies parallèles (essayée dans les circuits officiels, pas en chaîne)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "bifurcation : sa voie directe ne se prolonge que dans un circuit à deux voies parallèles (essayée dans les circuits officiels, pas en chaîne)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "bifurcation : sa voie directe ne se prolonge que dans un circuit à deux voies parallèles (essayée dans les circuits officiels, pas en chaîne)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "bifurcation : sa voie directe ne se prolonge que dans un circuit à deux voies parallèles (essayée dans les circuits officiels, pas en chaîne)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "bifurcation : sa voie directe ne se prolonge que dans un circuit à deux voies parallèles (essayée dans les circuits officiels, pas en chaîne)"
    }
   }
  },
@@ -603,6 +1051,22 @@
     "why": "anneau flottant : pas de route"
    },
    "plafond": {
+    "code": "n/a",
+    "why": "anneau flottant : pas de route"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "anneau flottant : pas de route"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "anneau flottant : pas de route"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "anneau flottant : pas de route"
+   },
+   "surD": {
     "code": "n/a",
     "why": "anneau flottant : pas de route"
    }
@@ -626,6 +1090,22 @@
    "plafond": {
     "code": "n/a",
     "why": "anneau flottant : pas de route"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "anneau flottant : pas de route"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "anneau flottant : pas de route"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "anneau flottant : pas de route"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "anneau flottant : pas de route"
    }
   }
  },
@@ -647,6 +1127,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -668,6 +1164,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok 150:ok/vol0.43 250:ok/vol0.58"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -689,6 +1201,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol1.46 150:perdue/vol5.88 250:perdue/vol6.31"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -710,6 +1238,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -731,6 +1275,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.42 150:ok/vol0.52 250:ok/vol0.41"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -752,6 +1312,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol0.79 150:perdue/vol4.73 250:perdue/vol4.65"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.05 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.84 150:ok 250:ok"
    }
   }
  },
@@ -773,6 +1349,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol1.18 150:perdue/vol5.46 250:perdue/vol5.28"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.23 150:non fini/vol2.46 250:non fini/vol2.4"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.06 150:ok 250:ok"
    }
   }
  },
@@ -794,6 +1386,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol1.09 150:perdue/vol6.13 250:perdue/vol6.28"
+   },
+   "incG": {
+    "code": "v≥250",
+    "runs": "80:wall/vol0.64 150:wall 250:ok"
+   },
+   "incD": {
+    "code": "v≥250",
+    "runs": "80:wall 150:wall 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.09 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.12 150:ok 250:ok"
    }
   }
  },
@@ -815,6 +1423,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -836,6 +1460,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok 150:ok/vol0.39 250:ok/vol0.48"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -857,6 +1497,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.4 150:ok/vol0.77 250:ok/vol0.66"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -878,6 +1534,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol0.77 150:perdue/vol5.23 250:perdue/vol5.38"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol0.74 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -899,6 +1571,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.41 150:ok/vol0.52 250:ok/vol0.42"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
    }
   }
  },
@@ -920,6 +1608,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol0.79 150:perdue/vol4.74 250:perdue/vol4.66"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.05 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.84 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
    }
   }
  },
@@ -941,6 +1645,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol1.18 150:perdue/vol5.47 250:perdue/vol5.28"
+   },
+   "incG": {
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.23 150:non fini/vol2.46 250:non fini/vol2.4"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.06 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -962,6 +1682,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol1.09 150:perdue/vol6.13 250:perdue/vol6.25"
+   },
+   "incG": {
+    "code": "v≥250",
+    "runs": "80:wall 150:wall 250:ok"
+   },
+   "incD": {
+    "code": "v≥250",
+    "runs": "80:wall/vol0.64 150:wall 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.12 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.09 150:ok 250:ok"
    }
   }
  },
@@ -983,6 +1719,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -1004,6 +1756,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok 150:ok/vol0.39 250:ok/vol0.48"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -1025,6 +1793,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.4 150:ok/vol0.77 250:ok/vol0.66"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
    }
   }
  },
@@ -1046,6 +1830,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.77 150:ok/vol1.22 250:ok/vol1.22"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol0.74 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -1057,8 +1857,8 @@
     "runs": "80:loop/vol2.87 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
    },
    "murD": {
     "code": "—",
@@ -1067,6 +1867,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:loop/vol2.87 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -1082,12 +1898,28 @@
     "why": "non proposé par l'éditeur (flagAllowed)"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥150",
     "runs": "80:loop/vol2.87 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -1099,8 +1931,8 @@
     "runs": "80:loop/vol2.87 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "RACCORD",
+    "why": "loopTriple sort des niveaux"
    },
    "murD": {
     "code": "—",
@@ -1109,6 +1941,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:loop/vol2.82 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -1124,12 +1972,28 @@
     "why": "non proposé par l'éditeur (flagAllowed)"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "RACCORD",
+    "why": "loopTripleL sort des niveaux"
    },
    "plafond": {
     "code": "v≥150",
     "runs": "80:loop/vol2.82 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -1141,8 +2005,8 @@
     "runs": "80:loop/vol2.87 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "RACCORD",
+    "why": "loopBigTriple sort des niveaux"
    },
    "murD": {
     "code": "—",
@@ -1151,6 +2015,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:loop/vol2.61 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -1166,12 +2046,28 @@
     "why": "non proposé par l'éditeur (flagAllowed)"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "RACCORD",
+    "why": "loopBigTripleL sort des niveaux"
    },
    "plafond": {
     "code": "v≥150",
     "runs": "80:loop/vol2.61 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -1193,6 +2089,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.46 150:ok/vol0.79 250:ok/vol0.59"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -1214,6 +2126,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol0.86 150:ok/vol1.61 250:perdue/vol5.38"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -1235,6 +2163,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol1.46 150:perdue/vol5.81 250:gravité/vol3.35"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -1256,6 +2200,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol1.72 150:perdue/vol6.42 250:perdue/vol7.08"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol1.59 150:ok/vol3.36 250:ok/vol3.92"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol1.59 150:ok/vol3.36 250:ok/vol3.92"
+   },
+   "surG": {
+    "code": "CHUTE",
+    "runs": "80:wall/vol4.08 150:perdue/vol2.47 250:perdue/vol2.2"
+   },
+   "surD": {
+    "code": "CHUTE",
+    "runs": "80:wall/vol4.08 150:perdue/vol2.47 250:perdue/vol2.2"
    }
   }
  },
@@ -1277,6 +2237,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok 150:ok/vol0.43 250:ok/vol0.55"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
    }
   }
  },
@@ -1298,6 +2274,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.47 150:ok/vol0.82 250:ok/vol0.82"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.17 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.17 150:ok 250:ok"
    }
   }
  },
@@ -1319,6 +2311,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.93 150:ok/vol1.17 250:ok/vol1.17"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.25 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.25 150:ok 250:ok"
    }
   }
  },
@@ -1340,6 +2348,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol1.65 150:ok/vol1.57 250:ok/vol1.66"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.42 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.42 150:ok 250:ok"
    }
   }
  },
@@ -1361,6 +2385,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -1382,6 +2422,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
    }
   }
  },
@@ -1403,6 +2459,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -1424,6 +2496,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok 150:ok/vol0.63 250:perdue/vol5.96"
+   },
+   "incG": {
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.8 150:wall 250:wall/vol0.89"
+   },
+   "incD": {
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.8 150:wall 250:wall/vol0.89"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.1 150:ok/vol1.56 250:ok/vol1.65"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.1 150:ok/vol1.56 250:ok/vol1.65"
    }
   }
  },
@@ -1445,6 +2533,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
    }
   }
  },
@@ -1466,6 +2570,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.17 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.17 150:ok 250:ok"
    }
   }
  },
@@ -1487,6 +2607,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.25 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.25 150:ok 250:ok"
    }
   }
  },
@@ -1508,6 +2644,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok 150:ok/vol1.57 250:ok/vol1.65"
+   },
+   "incG": {
+    "code": "CHUTE",
+    "runs": "80:wall/vol1.06 150:non fini/vol1.05 250:non fini/vol0.92"
+   },
+   "incD": {
+    "code": "CHUTE",
+    "runs": "80:wall/vol1.06 150:non fini/vol1.05 250:non fini/vol0.92"
+   },
+   "surG": {
+    "code": "CHUTE",
+    "runs": "80:wall/vol4.43 150:wall/vol3.39 250:perdue/vol7.07"
+   },
+   "surD": {
+    "code": "CHUTE",
+    "runs": "80:wall/vol4.43 150:wall/vol3.39 250:perdue/vol7.07"
    }
   }
  },
@@ -1529,6 +2681,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.4 150:ok/vol0.56 250:ok/vol0.58"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
    }
   }
  },
@@ -1550,6 +2718,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.7 150:ok/vol0.82 250:ok/vol0.82"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.17 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.17 150:ok 250:ok"
    }
   }
  },
@@ -1571,6 +2755,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol1.13 150:ok/vol1.17 250:ok/vol1.17"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.26 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.26 150:ok 250:ok"
    }
   }
  },
@@ -1592,6 +2792,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol1.65 150:ok/vol1.57 250:ok/vol1.66"
+   },
+   "incG": {
+    "code": "SAUT",
+    "runs": "80:ok/vol1.65 150:ok/vol1.56 250:ok/vol1.65"
+   },
+   "incD": {
+    "code": "SAUT",
+    "runs": "80:ok/vol1.65 150:ok/vol1.56 250:ok/vol1.65"
+   },
+   "surG": {
+    "code": "CHUTE",
+    "runs": "80:wall/vol4 150:wall 250:wall/vol0.55"
+   },
+   "surD": {
+    "code": "CHUTE",
+    "runs": "80:wall/vol4 150:wall 250:wall/vol0.55"
    }
   }
  },
@@ -1613,6 +2829,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.07 150:ok 250:ok"
    }
   }
  },
@@ -1634,6 +2866,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok 150:ok 250:ok/vol0.7"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
    }
   }
  },
@@ -1655,6 +2903,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
    }
   }
  },
@@ -1676,6 +2940,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok 150:ok 250:ok/vol0.82"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.17 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.17 150:ok 250:ok"
    }
   }
  },
@@ -1697,6 +2977,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.37 150:ok/vol0.54 250:ok/vol0.53"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
    }
   }
  },
@@ -1718,6 +3014,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol0.68 150:perdue/vol4.42 250:perdue/vol4.19"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.56 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.16 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.25 150:ok 250:ok"
    }
   }
  },
@@ -1739,6 +3051,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol1.1 150:perdue/vol4.28 250:perdue/vol4.28"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol1.56 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.25 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "CHUTE",
+    "runs": "80:wall/vol4.42 150:perdue/vol3.62 250:perdue/vol3.52"
    }
   }
  },
@@ -1760,6 +3088,22 @@
    "plafond": {
     "code": "CHUTE",
     "runs": "80:perdue/vol4.42 150:perdue/vol4.44 250:perdue/vol4.45"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol1.32 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥250",
+    "runs": "80:wall/vol4.43 150:wall 250:ok"
+   },
+   "surD": {
+    "code": "v≥250",
+    "runs": "80:wall 150:wall 250:ok"
    }
   }
  },
@@ -1781,6 +3125,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
    }
   }
  },
@@ -1802,6 +3162,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok 150:ok/vol0.38 250:ok/vol0.47"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.17 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.17 150:ok 250:ok"
    }
   }
  },
@@ -1823,6 +3199,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.4 150:ok/vol0.72 250:ok/vol0.85"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.25 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.26 150:ok 250:ok"
    }
   }
  },
@@ -1844,6 +3236,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol0.81 150:perdue/vol4.44 250:perdue/vol4.45"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.42 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.43 150:ok 250:ok"
    }
   }
  },
@@ -1865,6 +3273,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.37 150:ok/vol0.53 250:ok/vol0.53"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
    }
   }
  },
@@ -1886,6 +3310,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol0.68 150:perdue/vol4.42 250:perdue/vol4.19"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.56 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.25 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.16 150:ok 250:ok"
    }
   }
  },
@@ -1907,6 +3347,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol1.1 150:perdue/vol4.27 250:perdue/vol4.28"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol1.56 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "CHUTE",
+    "runs": "80:wall/vol4.42 150:perdue/vol3.62 250:perdue/vol3.52"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.25 150:ok 250:ok"
    }
   }
  },
@@ -1928,6 +3384,22 @@
    "plafond": {
     "code": "CHUTE",
     "runs": "80:perdue/vol4.42 150:perdue/vol4.43 250:perdue/vol4.44"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol1.32 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥250",
+    "runs": "80:wall 150:wall 250:ok"
+   },
+   "surD": {
+    "code": "v≥250",
+    "runs": "80:wall/vol4.43 150:wall 250:ok"
    }
   }
  },
@@ -1949,6 +3421,22 @@
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
    }
   }
  },
@@ -1970,6 +3458,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok 150:ok/vol0.38 250:ok/vol0.47"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.17 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.17 150:ok 250:ok"
    }
   }
  },
@@ -1991,6 +3495,22 @@
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.4 150:ok/vol0.72 250:ok/vol0.85"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.26 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.25 150:ok 250:ok"
    }
   }
  },
@@ -2012,6 +3532,22 @@
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol0.8 150:perdue/vol4.44 250:perdue/vol4.45"
+   },
+   "incG": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.43 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.42 150:ok 250:ok"
    }
   }
  },
@@ -2033,6 +3569,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2054,6 +3606,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2075,6 +3643,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2096,6 +3680,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2117,6 +3717,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2138,6 +3754,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2159,6 +3791,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2180,6 +3828,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2201,6 +3865,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol4.02 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2222,6 +3902,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2243,6 +3939,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol4.02 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2264,6 +3976,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2285,6 +4013,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2306,6 +4050,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol2.8 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2327,6 +4087,22 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  },
@@ -2348,6 +4124,614 @@
    "plafond": {
     "code": "v≥150",
     "runs": "80:wall/vol2.8 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr04s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr40s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr41s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.89 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.11 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr14s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr16s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr61s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.11 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.89 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr63s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr36s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr37s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr73s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr72s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.11 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.89 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr27s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr25s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr52s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.89 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.11 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr50s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "v≥150",
+    "runs": "80:wall 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tr05s": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.08 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
    }
   }
  }

@@ -351,13 +351,45 @@ test('rafale : au-delà de la limite par pilote, 429 avec Retry-After', async ()
   t += RATE_LIMIT.windowMs + 1;
   assert.equal((await h(request(good))).status, 200, 'la fenêtre est écoulée');
 });
-test('erreur interne : réponse générique, rien de secret ne sort, l\'erreur est journalisée', async () => {
+test('Supabase injoignable (le réseau lève une erreur) : 503 + Retry-After, réponse générique, rien de secret, journalisé ; rien rejoué ni écrit', async () => {
   const logged = [];
-  const h = make(fakeSupabase({ boom: true }), { log: (...a) => logged.push(a) });
+  const sb = fakeSupabase({ boom: true });
+  const h = make(sb, { log: (...a) => logged.push(a) });
   const r = await h(request(good)), j = await r.json();
+  assert.equal(r.status, 503);
+  assert.equal(r.headers.get('Retry-After'), '10');
+  assert.match(j.error, /momentanément indisponible/);
+  assert.ok(!JSON.stringify(j).includes('mot de passe'));
+  assert.equal(logged.length, 1);
+  assert.equal(submitCalls(sb).length, 0);
+});
+test('Supabase qui ne répond JAMAIS : abandonné au délai (la fonction ne pend pas), 503 ; la même requête renvoyée ensuite est acceptée (idempotent)', async () => {
+  const sb = fakeSupabase();
+  let hang = true;
+  const slow = (u, init) => (hang && String(u).includes('/rpc/submit_best') ? new Promise((_, rej) => init.signal.addEventListener('abort', () => rej(new Error('annulé')))) : sb.fetch(u, init));
+  const h = createHandler({ supabaseUrl: 'https://x.supabase.co', serviceKey: 'cle', fetch: slow, log: () => {}, upstreamTimeoutMs: 80 });
+  const keep = setTimeout(() => {}, 10_000);          // (AbortSignal.timeout ne retient pas la boucle d'événements : sous Node, sans ceci le processus s'arrêterait avant le délai)
+  const t0 = Date.now(), r = await h(request(good));
+  clearTimeout(keep);
+  assert.equal(r.status, 503); assert.ok(Date.now() - t0 < 3000, 'abandonné au délai');
+  hang = false;
+  const again = await h(request(good)), j = await again.json();
+  assert.equal(again.status, 200); assert.equal(j.ok, true);
+  const twice = await h(request(good));
+  assert.equal(twice.status, 200); assert.equal((await twice.json()).improved, false, 'renvoi : rien n\'est compté deux fois');
+});
+test('réponse d\'authentification illisible (HTML d\'un relais en panne) : 503, pas « erreur interne » ni plantage', async () => {
+  const sb = fakeSupabase();
+  const bad = async (u, init) => (String(u).includes('/auth/v1/user') ? new Response('<html>Bad gateway</html>', { status: 200 }) : sb.fetch(u, init));
+  const r = await createHandler({ supabaseUrl: 'https://x.supabase.co', serviceKey: 'cle', fetch: bad, log: () => {} })(request(good));
+  assert.equal(r.status, 503);
+});
+test('erreur interne INATTENDUE (autre que Supabase) : 500 générique, journalisée, rien ne sort', async () => {
+  const logged = [];
+  const h = make(fakeSupabase(), { log: (...a) => logged.push(a) });
+  const r = await h({ method: 'POST', headers: null, body: null }), j = await r.json();       // une requête cassée fait lever le gestionnaire lui-même
   assert.equal(r.status, 500);
   assert.equal(j.error, 'Erreur interne.');
-  assert.ok(!JSON.stringify(j).includes('mot de passe'));
   assert.equal(logged.length, 1);
 });
 test('échec d\'écriture en base : 500 sans détail ; plafond de 2 000 temps : 422 avec un message clair', async () => {
@@ -450,6 +482,111 @@ test('FAIL-CLOSED : la base de limitation absente ou en panne (étape 15 non app
   const logged = [], once = make(fakeSupabase({ rate: 'down' }), { log: (...a) => logged.push(a) });
   for (let i = 0; i < 3; i++) await once(request(good));
   assert.equal(logged.length, 1, 'journalisé une fois par minute au plus');
+});
+
+console.log('Sécurité (phase 5) : l\'identité et les droits ne viennent JAMAIS du corps de la requête');
+// Aucune information du navigateur n'est crue : le pilote est celui que Supabase Auth reconnaît au jeton, le drapeau « anonyme » aussi, la cadence se compte sur lui,
+// et la clé de service ne sert jamais d'identité ni ne sort dans une réponse.
+const spy = (sb) => { const seen = []; return { seen, fetch: (u, init = {}) => { seen.push({ url: String(u), headers: init.headers || {}, body: init.body }); return sb.fetch(u, init); } }; };
+test('le jeton du joueur est transmis tel quel à l\'authentification ; la clé de service n\'est jamais utilisée comme jeton d\'un joueur', async () => {
+  const sb = fakeSupabase(), s = spy(sb);
+  await make({ fetch: s.fetch })(request(good, { headers: { Authorization: 'Bearer jeton-du-joueur' } }));
+  const auth = s.seen.find((c) => c.url.includes('/auth/v1/user'));
+  assert.equal(auth.headers.Authorization, 'Bearer jeton-du-joueur');
+  assert.ok(s.seen.filter((c) => !c.url.includes('/auth/v1/user')).every((c) => c.headers.Authorization === 'Bearer cle'), 'les appels à la base utilisent la clé de service, ceux d\'authentification le jeton du joueur');
+  // sans en-tête Authorization : l'authentification reçoit une valeur vide, jamais la clé de service
+  const sb2 = fakeSupabase({ authOk: false }), s2 = spy(sb2);
+  const r = await make({ fetch: s2.fetch })(new Request('https://fn.example/submit-score', { method: 'POST', body: JSON.stringify(good) }));
+  assert.equal(r.status, 401);
+  assert.equal(s2.seen.find((c) => c.url.includes('/auth/v1/user')).headers.Authorization, '');
+  assert.equal(s2.seen.filter((c) => !c.url.includes('/auth/v1/user')).length, 0, 'rien d\'autre n\'est appelé sans session valide');
+});
+test('jeton refusé (absent, vide, autre schéma, périmé) : 401 pour chacun, rien rejoué, rien écrit, rien de la base touché', async () => {
+  for (const authorization of [undefined, '', 'Basic dXNlcjpwYXNz', 'Bearer ', 'Bearer jeton.perime.xxx', 'bearer cle']) {
+    const sb = fakeSupabase({ authOk: false });
+    const h = make(sb), headers = authorization === undefined ? {} : { Authorization: authorization };
+    const r = await h(new Request('https://fn.example/submit-score', { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(good) }));
+    assert.equal(r.status, 401, String(authorization));
+    assert.deepEqual(sb.calls.filter((c) => !c.url.includes('/auth/v1/user')), [], String(authorization));
+  }
+});
+test('le pilote ne peut pas être imposé par le corps : player, uid, p, user_id, id, is_anonymous sont ignorés — l\'écriture se fait sous l\'identité du jeton', async () => {
+  const sb = fakeSupabase({ anonymous: true });
+  const body = { ...good, player: 'AUTRE', uid: 'AUTRE', p: '99999999-9999-9999-9999-999999999999', user_id: '99999999-9999-9999-9999-999999999999', id: '99999999-9999-9999-9999-999999999999', is_anonymous: false, anon: false, role: 'service_role' };
+  const r = await make(sb)(request(body));
+  assert.equal(r.status, 200);
+  const w = submitCalls(sb)[0].args;
+  assert.equal(w.p, UID, 'écrit sous le pilote du jeton');
+  assert.equal(sb.calls.find((c) => c.url.includes('rate_check')).args.p, UID);
+  assert.equal(sb.calls.find((c) => c.url.includes('rate_check')).args.is_anon, true, 'le drapeau anonyme vient de l\'authentification, pas du corps');
+  assert.ok(![...sb.state.scores.keys()].some((k) => k.includes('9999')), 'rien n\'a été écrit pour un autre pilote');
+});
+test('la cadence se compte sur le pilote du jeton : changer les champs du corps (ou en répéter) ne donne pas un autre compteur', async () => {
+  const sb = fakeSupabase({ rate: () => 0 });
+  const calls = [];
+  const h = make({ fetch: (u, init) => { if (String(u).includes('rate_check')) calls.push(JSON.parse(init.body).p); return sb.fetch(u, init); } }, { rateLimit: { ...RATE_LIMIT, max: 3 } });
+  const out = [];
+  for (let i = 0; i < 6; i++) out.push((await h(request({ ...good, time: 1, player: 'P' + i, uid: 'U' + i }))).status);
+  assert.deepEqual(out.slice(3), [429, 429, 429], 'la mémoire de l\'instance refuse dès la 4e (même pilote), quel que soit le corps');
+  assert.ok(calls.every((p) => p === UID));
+});
+test('clés de circuit hostiles (injection SQL / chemin / retour à la ligne / unicode / trop longues) : 400 sans rien rejouer ni écrire', async () => {
+  for (const trackKey of ["b-x'; drop table scores;--", '../../etc/passwd', 'b-x\r\nX-Evil: 1', 'b-é', 'b-x y', '%00', 'u-' + 'a'.repeat(200), '', ' ', null, 5, ['b-x'], { k: 1 }]) {
+    const sb = fakeSupabase();
+    const r = await make(sb)(request({ ...good, trackKey }));
+    assert.equal(r.status, 400, JSON.stringify(trackKey));
+    assert.equal(submitCalls(sb).length, 0);
+  }
+});
+test('corps hostiles : __proto__, constructor, JSON profond, tableau, nombre, null — jamais de plantage, jamais d\'écriture', async () => {
+  const bodies = ['{"__proto__":{"admin":true},"trackKey":"b-x"}', '{"constructor":{"prototype":{"x":1}}}', '[]', '5', 'null', '"texte"', '{' .repeat(5000), '[' .repeat(100000), '{"a":' + '['.repeat(200) + ']'.repeat(200) + '}'];
+  for (const b of bodies) {
+    const sb = fakeSupabase();
+    const r = await make(sb)(request(b));
+    assert.ok([400, 413, 422].includes(r.status), b.slice(0, 20) + ' -> ' + r.status);
+    assert.equal(submitCalls(sb).length, 0);
+  }
+  assert.equal({}.admin, undefined, 'aucune pollution du prototype');
+});
+test('types détournés (nombres en texte, objets, tableaux, booléens, NaN codé) : 400, jamais coercés en nombre', async () => {
+  for (const patch of [{ time: String(RUN.time) }, { time: [RUN.time] }, { time: { v: RUN.time } }, { time: true }, { time: null }, { physVer: String(PHYS_VER) }, { physVer: [PHYS_VER] }, { physVer: PHYS_VER + 0.5 }, { physVer: null }, { inputs: [RUN.inputs] }, { inputs: { a: 1 } }, { inputs: 12 }, { code: { a: 1 } }, { code: ['x'] }, { action: ['submit'] }]) {
+    const sb = fakeSupabase();
+    const r = await make(sb)(request({ ...good, ...patch }));
+    assert.ok(r.status === 400, JSON.stringify(patch) + ' -> ' + r.status);
+    assert.equal(submitCalls(sb).length, 0);
+  }
+});
+test('aucune réponse ne contient la clé de service ni le jeton, succès comme refus comme panne', async () => {
+  const scenarios = [fakeSupabase(), fakeSupabase({ authOk: false }), fakeSupabase({ failWrite: 'erreur contenant cle et jeton' }), fakeSupabase({ boom: true }), fakeSupabase({ rate: 'down' }), fakeSupabase({ profile: false })];
+  for (const sb of scenarios) {
+    const h = createHandler({ supabaseUrl: 'https://x.supabase.co', serviceKey: 'CLE-DE-SERVICE-SECRETE', fetch: sb.fetch, log: () => {} });
+    for (const body of [good, { ...good, time: 1 }, { ...good, action: 'publish-track' }]) {
+      const r = await h(request(body, { headers: { Authorization: 'Bearer JETON-SECRET-DU-JOUEUR' } }));
+      const txt = await r.text() + JSON.stringify([...r.headers.entries()]);
+      assert.ok(!txt.includes('CLE-DE-SERVICE-SECRETE') && !txt.includes('JETON-SECRET-DU-JOUEUR'), 'fuite dans la réponse ' + r.status);
+    }
+  }
+});
+test('CORS : aucune permission d\'envoyer des cookies (Allow-Credentials absent) ; l\'origine déclarée suit ALLOWED_ORIGIN ; Vary: Origin', async () => {
+  const h = make(fakeSupabase(), { allowedOrigin: 'https://mon-jeu.example' });
+  const r = await h(request(good, { method: 'OPTIONS' }));
+  assert.equal(r.headers.get('Access-Control-Allow-Origin'), 'https://mon-jeu.example');
+  assert.equal(r.headers.get('Access-Control-Allow-Credentials'), null);
+  assert.equal(r.headers.get('Vary'), 'Origin');
+  assert.ok(!/\*/.test(r.headers.get('Access-Control-Allow-Headers')), 'en-têtes autorisés énumérés, pas de joker');
+  const g = await h(request('', { method: 'GET' }));
+  assert.equal(g.headers.get('Cache-Control'), 'no-store');
+});
+test('publication : nom et description nettoyés (espaces, longueur, rien d\'interprété), nom vide → nom du circuit ; plafond de 100 circuits par auteur : 422 clair', async () => {
+  const sb = fakeSupabase(), h = make(sb, { rateLimit: { ...RATE_LIMIT, max: 100 } });
+  const r = await h(request(pubBody({ name: '  <img src=x onerror=alert(1)>\n\n  ' + 'a'.repeat(100), description: '\t' + 'd'.repeat(500) })));
+  assert.equal(r.status, 200);
+  const a = pubCalls(sb)[0].args;
+  assert.equal(a.nm.length, 40); assert.ok(a.nm.startsWith('<img src=x onerror=alert(1)> a'), 'écrit tel quel (l\'affichage échappe), espaces compactés');
+  assert.equal(a.ds.length, 200);
+  const cap = await make(fakeSupabase({ failWrite: 'Trop de circuits publiés (100 au plus) : retire-en avant d\'en publier un autre.' }))(request(pubBody()));
+  const j = await cap.json();
+  assert.equal(cap.status, 422); assert.equal(j.trackCap, true); assert.match(j.error, /100 au plus/);
 });
 
 await finish('Tous les tests de la fonction serveur passent.');

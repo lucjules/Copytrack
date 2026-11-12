@@ -109,9 +109,18 @@ export const editMethods = {
     // Obstacles : décalage de phase (0 à 1) pour désynchroniser plusieurs obstacles.
     if (isObstacle(deco.k)) { deco.ph = Math.max(0, Math.min(0.95, Math.round((+d.ph || 0) * 20) / 20)); deco.s = Math.max(0.5, Math.min(2.5, deco.s)); }
     if (!DECO_ORDER.includes(deco.k)) return null;
-    // Inclinaison (rx : nez vers le bas / le haut) et roulis (rz) : purement VISUELS, donc refusés sur un obstacle (sa forme de contact ne tourne qu'autour de la verticale).
+    // Inclinaison (rx : nez vers le bas / le haut) et roulis (rz) : purement VISUELS pour une décoration ; pour un obstacle seul le roulis rz compte (physique), par pas de 45°.
     // Ramenés dans [-π, π] ; absents (0) quand la décoration est droite, pour que les codes existants ne changent pas.
-    if (!isObstacle(deco.k)) {
+    if (isObstacle(deco.k)) {
+      // Phase 3 : un obstacle peut être ROULÉ autour de son axe z (posé sur un mur, un plan incliné ou au plafond : son haut est la normale de la route). Multiples de 45° seulement
+      // (la forme de contact tourne avec lui, voir obstacles.js : toLocalObs) ; l'inclinaison rx reste refusée.
+      let v = +d.rz;
+      if (Number.isFinite(v) && v) {
+        v = ((v % TAU2) + TAU2) % TAU2; if (v > Math.PI + 1e-6) v -= TAU2;
+        v = Math.round(v / (Math.PI / 4)) * (Math.PI / 4);
+        if (Math.abs(v) > 1e-4) deco.rz = +v.toFixed(3);
+      }
+    } else {
       for (const a of ['rx', 'rz']) {
         let v = +d[a];
         if (!Number.isFinite(v) || !v) continue;

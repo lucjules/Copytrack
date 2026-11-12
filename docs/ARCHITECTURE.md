@@ -190,6 +190,14 @@ Quatre règles valent pour **toutes** les pièces, véhicules et revêtements (d
 - **Vol** : `physics.js : _flyAir` — assiette conservée, stabilité aérodynamique faible, alignement partiel sur la pente proche, compensateur borné.
 Banc de mesures : `tools/mesures-physique.mjs` (avant / après sur n'importe quelle copie : `COPYTRACK_ROOT`) ; garde-fous : `tools/test-physique-corrections.mjs`.
 
+## Orientations 3D et rubans roulés (0.9.62)
+
+- `tile.o` (1 à 6) = roulis ψ de la pièce autour de l'axe de la route (±90°, ±45°, ±135°) ; le plafond reste `v`. `pieces.js` : `ORIENTS`, `rollOfO`, `flagAllowed('o')` (géométrique, via `rollFitHook`).
+- `ribbons.js : rollWrap` : un ruban roulé est son ruban à plat tourné de ψ autour de l'axe de son entrée ; `loopWithLeads` remplace les voies d'accès au sol d'un looping roulé par des tronçons de ruban ; `ribbonExtent`, `rollFits`, `rollLevels` (empreinte, sortie sur la grille, niveaux réservés).
+- `orient.js` (pur) : orientation d'une extrémité, chemin de transitions (`transitionPath`), orientation d'un obstacle posé sur la route ; `extend.js` s'en sert pour le raccordement automatique.
+- `obstacles.js` / `physics/obstacles.js` : roulis `rz` (pas de 45°) ; `editorPick.js : rayToRibbon` pour viser une route roulée.
+Détail et limites : [AUDIT-PHASE3-CONSTRUCTION-3D.md](AUDIT-PHASE3-CONSTRUCTION-3D.md). La physique n'a pas changé (`PHYS_VER` 35).
+
 ## Raccords, continuité, caméra (0.9.60, hors noyau de simulation)
 
 Rien ici n'est dans la fermeture de la vérification serveur (`js/verify.js`) : aucun de ces modules ne peut changer un temps, un replay ni `PHYS_VER` (test : `tools/test-camrig.mjs`).

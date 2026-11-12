@@ -46,6 +46,27 @@ Avant l'étape 6, laisser un temps de cohabitation n'est pas possible pour les t
 
 Ne jamais lancer 6 avant 3 et 5. Les étapes 2 et 6 sont **relançables sans danger** (idempotentes) et ne **suppriment aucune donnée**.
 
+### Étape 17 (sécurité, phase 5) : `etape17-securite.sql`
+
+**Rien de ceci n'a été exécuté sur la production** (voir `docs/AUDIT-PHASE5-SECURITE.md`). Pré-requis : étapes 1 à 15 (la 16 est recommandée, voir plus bas) ; 15b indifférente. **Aucune donnée supprimée**, aucune signature de fonction changée : **compatible avec le jeu et la fonction serveur actuels**, donc à lancer **avant** de redéployer `submit-score` (qui, lui, n'exige pas l'étape 17).
+
+| Étape | Action | Vérification (à lire) | Si elle échoue |
+|---|---|---|---|
+| 17.0 | `supabase/verify-prod.sql` (lecture seule) | Les lignes « étape 17 » doivent dire `MANQUE` (avant) ; aucune autre différence inattendue | Comprendre l'écart d'abord |
+| 17.1 | **Sauvegarde** (Database › Backups, ou `pg_dump` des tables `scores`, `tracks`, `players`, `cloud_saves`) | Une sauvegarde datée existe | Ne pas continuer |
+| 17.2 | **Étape 16** si `verify-prod.sql` ne la voit pas appliquée (ligne « anon sans aucune écriture directe » en `ÉCART`) : `etape16-durcissement.sql` (uniquement des `REVOKE`) | La ligne passe à `ok` | `grant` correspondants (en-tête du fichier) |
+| 17.3 | `etape17-securite.sql` (SQL Editor) | `verify-prod.sql` : toutes les lignes « étape 17 » à `ok` ; lignes « fonctions appelables SANS session hors liste », « anon sans écriture », « RLS partout » à `ok` | Retour arrière ci-dessous |
+| 17.4 | Redéployer **`submit-score`** puis **`ice`** (`npm run build:function`, puis `supabase/functions/<nom>/index.ts`) | `node tools/check-deployed.mjs` : `physVer` 35, actions `submit` + `publish-track` | Redéployer l'ancien fichier (historique Git) |
+| 17.5 | Mettre en ligne le jeu 0.9.64 (CSP) | Un joueur se connecte, joue, voit les classements et la police | Remettre le jeu précédent |
+
+Ce que corrige l'étape 17 (détail, preuves et gravité : `docs/AUDIT-PHASE5-SECURITE.md`) : `report_track` ne rétablit plus un circuit masqué par la modération (et ne compte que les comptes, jamais l'auteur) ; `mode_played` une partie par pilote et par heure (table `mode_plays`) ; `is_moderator` / `is_account` fermées au jeu ; `log_runs` plafonds horaire (20 000) et quotidien (100 000) ; 100 circuits publiés par auteur au plus ; budget de 40 Mo de fantômes par pilote (le record est toujours écrit) ; compteurs exacts sous concurrence (`toggle_like`, signalements) ; `settle_due`, `close_due_seasons`, `in_tournament` réservées aux sessions ; `random_track` borné.
+
+**Retour arrière de l'étape 17** (aucune donnée n'est touchée ; `mode_plays` reste) : relancer, dans l'ordre, les fichiers qui définissaient ces objets avant (tous relançables) : `etape1-communaute.sql` (`tracks_rate_limit`, `toggle_like`), `etape5-securite.sql` (`report_track`), `etape11-saisons.sql` (`close_due_seasons`), `etape12-competition.sql` (`settle_due`, `in_tournament`), `etape13-communaute.sql` (`mode_played`, `is_moderator`, `is_account`, `random_track`, `comment_report`, `mode_report`), `etape14-securite.sql` (`log_runs`), `etape15-backend.sql` (`submit_best`). **Relancer l'un d'eux APRÈS l'étape 17 annule la correction correspondante** (relancer alors l'étape 17).
+
+**Réglages à vérifier dans le tableau de bord Supabase** (aucun n'est dans le dépôt) : longueur minimale du mot de passe 8 (Authentication › Policies) ; CAPTCHA sur les connexions anonymes et les inscriptions ; *Allow anonymous sign-ins* activé ; *Confirm email* désactivé (voulu) ; schémas exposés par l'API : `public` seulement ; variables des fonctions : `ALLOWED_ORIGIN` (adresse du jeu), `TURN_*` pour `ice`. Jeton d'accès personnel du 10 novembre : à révoquer.
+
+**Tests** : `npm run test:sql` (PostgreSQL requis : `tools/test-securite-sql.sh` rejoue les attaques sous les rôles du jeu avec les droits par défaut de Supabase ; `AVANT=1` les rejoue sans l'étape 17 et doit y voir les failles) ; `node tools/test-submit-handler.mjs`, `node tools/test-ice.mjs`, `node tools/test-securite-client.mjs` (inclus dans `npm test`).
+
 ### Ce que fait l'étape 15 (`etape15-backend.sql`)
 
 - `rate_hits` + `rate_check(...)` : limitation de cadence **persistante** (en base), **partagée** entre les instances, **atomique** (verrou par type de limite : le compte du pilote et le compte global sont exacts même avec des appels simultanés), avec un plafond global et un sous-plafond pour les sessions anonymes. `submit_rate_check` (étape 14) devient une enveloppe de `rate_check` : l'ancienne fonction serveur continue de fonctionner.

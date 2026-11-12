@@ -23,10 +23,12 @@ test('inclinaison et roulis sont gardés (ramenés dans [-π, π]), absents quan
   const c = t.addDeco({ k: 'tree', x: 30, y: 0, z: 10, ry: 0, s: 1, c: 0, rx: NaN, rz: Infinity });
   assert.ok(!('rx' in c) && !('rz' in c), 'valeurs non finies ignorées');
 });
-test('un OBSTACLE ne prend jamais d\'inclinaison ni de roulis (sa forme de contact est celle du jeu)', () => {
+test('un OBSTACLE ne prend jamais d\'inclinaison (rx) ; son roulis (rz, phase 3 : posé sur un mur ou au plafond) est ramené au pas de 45° car sa forme de contact tourne avec lui', () => {
   const t = base();
   const o = t.addDeco({ k: obstacleKind, x: 10, y: 0, z: 10, ry: 1, s: 1, c: 0, rx: 1, rz: 1 });
-  assert.ok(o && !('rx' in o) && !('rz' in o));
+  assert.ok(o && !('rx' in o));
+  assert.equal(o.rz, +(Math.PI / 4).toFixed(3), '1 rad → 45°');
+  assert.ok(!('rz' in t.addDeco({ k: obstacleKind, x: 10, y: 0, z: 10, ry: 1, s: 1, c: 0, rz: 0.1 })), 'moins de 22,5° : posé à plat');
 });
 console.log('Code partagé');
 test('aller-retour dans le code : inclinaison et roulis reviennent, avec groupe, couleur libre et pièce perso en même temps', () => {

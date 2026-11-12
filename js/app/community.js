@@ -3,7 +3,8 @@
 import { medalIcon } from '../ui.js';
 import { $, esc } from '../dom.js';
 import { MEDALS, medalFor } from '../medals.js';
-import { Track } from '../track.js';
+import { Track, lossText, lossBlocking } from '../track.js';
+import { replayTime } from '../verify.js';
 import { PHYS_VER } from '../version.js';
 import { thumbnail } from '../editorTools.js';
 import { online } from '../online.js';
@@ -132,7 +133,12 @@ export const communityMethods = {
   publishTrack(track) {
     if (!track.verified) { this.ui.flash('Vérifie d’abord ton circuit (« ✔ Vérifier » dans l’éditeur) pour pouvoir le publier.'); return Promise.resolve(false); }
     // Le serveur REJOUE la course de vérification pour confirmer le temps de l'auteur : sans elle (circuit vérifié sur un autre appareil), il faut la refaire.
-    if (!loadProof(track)) { this.ui.flash('Refais la vérification de ce circuit sur cet appareil (« ✔ Vérifier » dans l’éditeur) : le serveur rejoue ta course pour confirmer ton temps.', 5); return Promise.resolve(false); }
+    const proof = loadProof(track);
+    if (!proof) { this.ui.flash('Refais la vérification de ce circuit sur cet appareil (« ✔ Vérifier » dans l’éditeur) : le serveur rejoue ta course pour confirmer ton temps.', 5); return Promise.resolve(false); }
+    // La course de vérification doit se rejouer À L'IDENTIQUE avec la physique actuelle (une preuve d'avant une mise à jour de la physique ne donne plus le même temps) : on le sait ici,
+    // sans attendre le refus du serveur et son message de version.
+    const again = replayTime(track, proof.inputs);
+    if (again == null || Math.abs(again - proof.time) > 0.0005) { this.ui.flash('Ta course de vérification ne se rejoue plus à l’identique (le jeu a changé de physique depuis) : refais « ✔ Vérifier » dans l’éditeur.', 5); return Promise.resolve(false); }
     return new Promise((resolve) => {
       const f = document.createElement('div');
       f.className = 'form';
@@ -514,7 +520,13 @@ export const communityMethods = {
     wrap.appendChild(ta);
     const parse = () => {
       if (/^\s*SHG1:/.test(ta.value)) { this.importGhostCode(ta.value); return null; }
-      try { return Track.decode(ta.value); } catch { this.ui.flash('Code de circuit invalide.'); return null; }
+      try {
+        const t = Track.decode(ta.value);
+        // Phase 4 : un code qui perdrait des pièces ou des options à la lecture (version plus récente du jeu) n'est pas réenregistré en silence : il est refusé, avec la raison.
+        if (lossBlocking(t)) { this.ui.flash(lossText(t) + ' Mets le jeu à jour avant de l’importer.', 6); return null; }
+        if (lossText(t)) this.ui.flash(lossText(t), 5);
+        return t;
+      } catch { this.ui.flash('Code de circuit invalide.'); return null; }
     };
     const actions = fromEditor
       ? [

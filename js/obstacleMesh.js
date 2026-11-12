@@ -49,7 +49,9 @@ export function createObstacleMesh(d, materials) {
   const def = OBST[d.k];
   const root = new THREE.Group();
   root.position.set(d.x, d.y, d.z);
+  root.rotation.order = 'YXZ';      // cap d'abord, puis le roulis autour de l'axe z de l'obstacle (phase 3 : sur un mur, au plafond)
   root.rotation.y = d.ry || 0;
+  root.rotation.z = -(d.rz || 0);      // (convention de pièces roulées : le haut local devient (sin rz, cos rz, 0))
   root.scale.setScalar(d.s || 1);
   const st = {};
   let moving = null, update = () => {};

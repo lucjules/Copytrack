@@ -10,7 +10,7 @@ const browser = {
   atob: 'readonly', btoa: 'readonly', TextEncoder: 'readonly', TextDecoder: 'readonly', structuredClone: 'readonly',
   HTMLElement: 'readonly', HTMLCanvasElement: 'readonly', Element: 'readonly', Node: 'readonly', Event: 'readonly', CustomEvent: 'readonly',
   KeyboardEvent: 'readonly', MouseEvent: 'readonly', PointerEvent: 'readonly', MutationObserver: 'readonly', ResizeObserver: 'readonly',
-  IntersectionObserver: 'readonly', AbortController: 'readonly', Promise: 'readonly', Intl: 'readonly', indexedDB: 'readonly',
+  IntersectionObserver: 'readonly', AbortController: 'readonly', AbortSignal: 'readonly', Promise: 'readonly', Intl: 'readonly', indexedDB: 'readonly',
   matchMedia: 'readonly', getComputedStyle: 'readonly', alert: 'readonly', confirm: 'readonly', prompt: 'readonly',
   RTCPeerConnection: 'readonly', RTCSessionDescription: 'readonly', RTCIceCandidate: 'readonly', BroadcastChannel: 'readonly',
   WebSocket: 'readonly', XMLHttpRequest: 'readonly', DOMParser: 'readonly', Worker: 'readonly', SpeechSynthesisUtterance: 'readonly',

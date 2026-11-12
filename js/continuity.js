@@ -15,13 +15,15 @@
 //   wall-speed       conseil : une route sur un mur exige plus de 108 km/h
 //   slope-break      conseil : rupture de pente convexe entre deux pièces : la voiture décolle
 import { LEVEL_H } from './constants.js';
-import { PIECES, isRibbon } from './pieces.js';
+import { PIECES, ORI_NAMES, isRibbon } from './pieces.js';
 import { ribbonInverts } from './ribbons.js';
 import { tileEnds, endsTouch, rollGap, ROLL_TOLERANCE, rollNameOf } from './connect.js';
 import { PIECE_FACTS } from './pieceFacts.js';
+import { transitionPath } from './orient.js';
 import { SIDE_MIN_SPEED } from './physics/specs.js';
 
 const KMH = 3.6;
+const COL_OF_O = ['sol', 'murG', 'murD', 'incG', 'incD', 'surG', 'surD'];      // colonne de la matrice (pieceFacts.js) d'après tile.o
 const pos = (t) => `case ${t.x}, ${t.z}, niveau ${String(t.l).replace('.', ',')}`;
 const lab = (t) => PIECES[t.t].label;
 
@@ -29,19 +31,21 @@ const lab = (t) => PIECES[t.t].label;
 export function endOrientation(e) {
   const t = e.exit ? [e.dx, e.dy, e.dz] : [-e.dx, -e.dy, -e.dz];
   const n = [e.nx, e.ny, e.nz];
-  if (Math.abs(n[1]) > 0.7) return n[1] > 0 ? 'sol' : 'plafond';
   return rollNameOf(n, t) || 'mur';
 }
 
-const ORI_AT = { sol: 'au sol', plafond: 'au plafond', 'mur gauche': 'sur un mur gauche', 'mur droit': 'sur un mur droit', mur: 'sur un mur' };
+const ORI_AT = { sol: 'au sol', plafond: 'au plafond', 'mur gauche': 'sur un mur gauche', 'mur droit': 'sur un mur droit', mur: 'sur un mur', 'incliné gauche': 'incliné à 45° à gauche', 'incliné droit': 'incliné à 45° à droite', 'surplomb gauche': 'en surplomb à 135° à gauche', 'surplomb droit': 'en surplomb à 135° à droite' };
 
 // Que faire entre deux orientations ? (les passages existants : pieces.js, ROLL_PASSAGES)
 function bridgeAdvice(a, b) {
   const pair = [a, b].sort().join('|');
   if (pair === 'mur droit|mur gauche') return 'Il n\'existe pas de transition directe entre un mur gauche et un mur droit : repasse par le sol (transition mur → sol, puis sol → mur) ou par le plafond.';
   if (pair === 'plafond|sol') return 'Pour passer du sol au plafond, utilise une Vrille (la gravité suit la route), ou passe par un mur (transitions sol → mur → plafond).';
-  const known = { 'mur gauche|sol': 'Transition « Sol → Mur gauche »', 'mur droit|sol': 'Transition « Sol → Mur droit »', 'mur gauche|plafond': 'Transition « Mur gauche → Plafond »', 'mur droit|plafond': 'Transition « Mur droit → Plafond »' }[pair];
-  return known ? `Intercale la ${known.charAt(0).toLowerCase() + known.slice(1)} (famille Transition, franche 1 case ou douce 2×2).` : 'Intercale une transition d\'orientation.';
+  // Phase 3 : le chemin de transitions est calculé (orient.js : transitionPath), pour toutes les orientations, 45° comprises.
+  const ia = ORI_NAMES.indexOf(a), ib = ORI_NAMES.indexOf(b);
+  const path = ia >= 0 && ib >= 0 ? transitionPath(ia, ib, true) : null;
+  if (path && path.length) return `Intercale ${path.map((id) => `« ${PIECES[id].label} »`).join(' puis ')} (famille Transition ; Prolonger les pose tout seul).`;
+  return 'Intercale une transition d\'orientation.';
 }
 
 // Index spatial des extrémités : { clé de case de 8 m → [extrémités] }.
@@ -163,7 +167,7 @@ export function continuityIssues(track) {
 
   // ---- piece-fact : ce que la matrice de compatibilité a mesuré ---------------------------------------------------------------------
   for (const t of tiles) {
-    const col = t.o === 1 ? 'murG' : t.o === 2 ? 'murD' : t.v ? 'plafond' : 'sol';
+    const col = t.v ? 'plafond' : COL_OF_O[t.o | 0];
     const code = PIECE_FACTS[t.t] && PIECE_FACTS[t.t][col];
     if (!code) continue;
     // La matrice a mesuré la pièce SANS revêtement : une pièce qui se retourne avec « Inversion de gravité » n'est pas concernée, et ce qui est déjà expliqué
@@ -172,7 +176,7 @@ export function continuityIssues(track) {
     if (code === 'CHUTE') {
       add({
         tile: t, level: 'warn', code: 'piece-fact', key: col,
-        why: `${lab(t)} (${pos(t)}) posée ${col === 'sol' ? 'au sol' : col === 'plafond' ? 'à l\'envers' : col === 'murG' ? 'sur un mur gauche' : 'sur un mur droit'} : dans l'essai de compatibilité, le pilote automatique ne la franchit à aucune vitesse (80, 150 ni 250 km/h).`,
+        why: `${lab(t)} (${pos(t)}) posée ${{ sol: 'au sol', plafond: 'à l\'envers', murG: 'sur un mur gauche', murD: 'sur un mur droit', incG: 'inclinée à 45° à gauche', incD: 'inclinée à 45° à droite', surG: 'en surplomb à gauche', surD: 'en surplomb à droite' }[col]} : dans l'essai de compatibilité, le pilote automatique ne la franchit à aucune vitesse (80, 150 ni 250 km/h).`,
         effect: 'Cette combinaison fait sortir la voiture de la route (essai isolé : au milieu d\'un vrai circuit, un autre enchaînement peut la sauver).',
         fix: 'Change d\'orientation ou de pièce, ou essaie la zone avec « ▶ Ici » avant de continuer. La matrice complète est dans docs/MATRICE-PIECES.md.',
       });
@@ -180,7 +184,8 @@ export function continuityIssues(track) {
   }
 
   // ---- wall-speed : une fois par suite de pièces sur un mur ---------------------------------------------------------------------------
-  const wallish = (t) => !!t.o || !!PIECES[t.t].roll;
+  // (Phase 3 : un roulis de 45° n'est pas un mur : la voiture reste plaquée par la pente ; seuls ±90° et au-delà exigent la vitesse de mur.)
+  const wallish = (t) => t.o === 1 || t.o === 2 || t.o >= 5 || !!(PIECES[t.t].roll && PIECES[t.t].roll.some((i) => [1, 2, 3, 6, 7].includes(i)));
   for (const t of tiles) {
     if (!wallish(t)) continue;
     const ends = endsOf.get(t);
@@ -225,8 +230,8 @@ export function pieceHint(type, opts = {}) {
   if (!P || P.kind === 'ring' || P.kind === 'area') return '';
   const hints = [];
 
-  if (opts.o || P.roll) hints.push(`Route sur un mur : la voiture doit rouler à plus de ${Math.round(SIDE_MIN_SPEED * KMH)} km/h.`);
-  const col = opts.o === 1 ? 'murG' : opts.o === 2 ? 'murD' : opts.v ? 'plafond' : 'sol';
+  if (opts.o === 1 || opts.o === 2 || opts.o >= 5 || P.roll) hints.push(`Route sur un mur : la voiture doit rouler à plus de ${Math.round(SIDE_MIN_SPEED * KMH)} km/h.`);
+  const col = opts.v ? 'plafond' : COL_OF_O[opts.o | 0] || 'sol';
   if (PIECE_FACTS[type] && PIECE_FACTS[type][col] === 'CHUTE' && !hints.length) hints.push(`${P.label} ${col === 'sol' ? '' : 'dans cette orientation '}ne passe à aucune vitesse dans l'essai de compatibilité (docs/MATRICE-PIECES.md).`);
   return hints.join(' ');
 }

@@ -68,6 +68,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `obstacleMesh.js` | Modèles 3D animés des obstacles (voir obstacles.js pour la physique). |
 | `obstacles.js` | Obstacles (0.9) : objets posés librement comme les décorations, mais qui comptent pour la physique. Leur mouvement ne dépend que du chrono de la course (pas fixe), donc il est identique en course, en replay, après un retour au checkpoint et dans la vérification en ligne. Ce module n'a aucune dépendance au rendu. |
 | `online.js` | Fonctions en ligne (Supabase) : pilote anonyme, circuits de la communauté. |
+| `orient.js` | Orientations d'une route et chemins de transitions (phase 3). Module PUR : géométrie des extrémités et table des pièces de transition, rien d'autre. |
 | `particles.js` | Particules low-poly (petits tétraèdres instanciés) : poussière, étincelles, éclats. |
 | `physics.js` | Physique de la voiture : pas fixe, déterministe, sans moteur externe. |
 | `pieceFacts.js` | GÉNÉRÉ par `node tools/matrice-pieces.mjs --update` (docs/MATRICE-PIECES.md) : ne pas modifier à la main. |

@@ -122,8 +122,10 @@ test('la vrille et les transitions retournées passent SANS revêtement « Inver
   for (const t of ['tr10s', 'tr20s', 'tr10l', 'tr20l']) assert.notEqual(PIECE_FACTS[t].plafond, 'CHUTE', t);
   const chutes = [];
   for (const [t, row] of Object.entries(PIECE_FACTS)) for (const [c, code] of Object.entries(row)) if (code === 'CHUTE') chutes.push(t + '/' + c);
-  assert.ok(chutes.length <= 16, `${chutes.length} CHUTE : ${chutes.join(' ')}`);
-  for (const c of chutes) assert.match(c, /^(cv|cro|cdi)/, c + ' : famille non documentée');
+  // (colonnes d'origine seulement : les orientations de la phase 3 ajoutent 4 cases de la même famille de montées raides, voir test-orientations-3d)
+  const old = chutes.filter((c) => /\/(sol|murG|murD|plafond)$/.test(c));
+  assert.ok(old.length <= 16, `${old.length} CHUTE : ${old.join(' ')}`);
+  for (const c of old) assert.match(c, /^(cv|cro|cdi)/, c + ' : famille non documentée');
 });
 
 console.log('\n3. Dérapage');

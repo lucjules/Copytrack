@@ -31,7 +31,15 @@ export async function coturnCredentials(secret, expiresAtS, subtle = globalThis.
 // sans même avoir une session. Il faut une session Supabase valide (invité anonyme ou compte), comme pour submit-score ; la cadence se compte PAR PILOTE (et non
 // par adresse IP, falsifiable). Si supabaseUrl / serviceKey manquent (fonction mal configurée), la fonction REFUSE (500) au lieu de s'ouvrir ; seul un essai
 // explicite (allowAnonymous: true, tools/test-ice.mjs) la laisse ouverte.
-export function createIceHandler({ env = {}, supabaseUrl = '', serviceKey = '', fetch: fetchImpl = globalThis.fetch, now = Date.now, subtle = globalThis.crypto && globalThis.crypto.subtle, log = console.error, allowAnonymous = false, rateLimit = RATE_LIMIT } = {}) {
+// Délai maximal d'un appel à Supabase / au relais : au-delà, 503 (réessayer) plutôt qu'une fonction qui pend jusqu'à la limite de la plateforme.
+export const UPSTREAM_TIMEOUT_MS = 8_000;
+class Upstream extends Error {}
+
+export function createIceHandler({ env = {}, supabaseUrl = '', serviceKey = '', fetch: rawFetch = globalThis.fetch, upstreamTimeoutMs = UPSTREAM_TIMEOUT_MS, now = Date.now, subtle = globalThis.crypto && globalThis.crypto.subtle, log = console.error, allowAnonymous = false, rateLimit = RATE_LIMIT } = {}) {
+  const fetchImpl = async (url, init = {}) => {
+    try { return await rawFetch(url, { ...init, signal: AbortSignal.timeout(upstreamTimeoutMs) }); }
+    catch (e) { throw new Upstream(e && e.message); }
+  };
   const cors = {
     'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -81,7 +89,8 @@ export function createIceHandler({ env = {}, supabaseUrl = '', serviceKey = '', 
       if (configured) {
         const ures = await fetchImpl(`${supabaseUrl}/auth/v1/user`, { headers: { Authorization: req.headers.get('Authorization') ?? '', apikey: serviceKey } });
         if (!ures.ok) return json(401, { error: 'Non connecté.' });
-        const user = await ures.json();
+        let user;
+        try { user = await ures.json(); } catch (e) { throw new Upstream(e && e.message); }
         const uid = String((user && user.id) || '');
         if (!/^[0-9a-f-]{36}$/.test(uid)) return json(401, { error: 'Non connecté.' });
         who = uid;
@@ -112,6 +121,7 @@ export function createIceHandler({ env = {}, supabaseUrl = '', serviceKey = '', 
       return json(501, { error: 'Aucun relais TURN configuré.' });
     } catch (e) {
       log('ice: erreur interne', e);
+      if (e instanceof Upstream) return json(503, { error: 'Service momentanément indisponible.' }, { 'Retry-After': '10' });
       return json(500, { error: 'Erreur interne.' });
     }
   };

@@ -85,7 +85,8 @@ const frenchLeft = (page) => page.evaluate(async () => {
   };
   walk(document.documentElement);
   // Les descriptions des circuits (infobulles « Départ : … ») sont vérifiées par le test Node ; ici on ne regarde que l'interface.
-  return out.filter((s) => s !== 'Français');
+  // (et le « code joueur » aléatoire de l'écran Compte, XXXXX-XXXXX : un mot-outil français entouré de chiffres, comme « 5TU5 », le faisait passer pour du français : échec aléatoire constaté en phase 5)
+  return out.filter((s) => s !== 'Français' && !/^[A-Z0-9]{4,6}-[A-Z0-9]{4,6}$/.test(s));
 });
 
 try {

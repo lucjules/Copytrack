@@ -54,7 +54,17 @@ const sha256hex = async (text) => [...new Uint8Array(await globalThis.crypto.sub
 // Message d'une erreur PostgREST (raise exception … → { message }), pour distinguer les refus voulus des pannes.
 const dbMessage = async (r) => { try { const j = JSON.parse(await r.text()); return String((j && j.message) || ''); } catch { return ''; } };
 
-export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, allowedOrigin = '*', now = Date.now, rateLimit = RATE_LIMIT, log = console.error }) {
+// Délai maximal d'un appel à Supabase (authentification, base) : au-delà, la requête est abandonnée et le joueur reçoit 503 (réessayer), au lieu de laisser la fonction
+// pendre jusqu'à la limite de la plateforme avec un rejeu de course en attente. Le renvoi est sans danger : tout est idempotent (submit_best n'améliore que, publish_track
+// met à jour la même signature).
+export const UPSTREAM_TIMEOUT_MS = 8_000;
+class Upstream extends Error {}      // Supabase injoignable, trop lent, ou réponse illisible : panne passagère (503), jamais « erreur interne » (500)
+
+export function createHandler({ supabaseUrl, serviceKey, fetch: rawFetch = globalThis.fetch, allowedOrigin = '*', now = Date.now, rateLimit = RATE_LIMIT, log = console.error, upstreamTimeoutMs = UPSTREAM_TIMEOUT_MS }) {
+  const fetchImpl = async (url, init = {}) => {
+    try { return await rawFetch(url, { ...init, signal: AbortSignal.timeout(upstreamTimeoutMs) }); }
+    catch (e) { throw new Upstream(e && e.message); }
+  };
   const cors = {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -107,6 +117,7 @@ export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = glob
     const msg = await dbMessage(r);
     if (/Trop de temps enregistrés/.test(msg)) return json(422, { error: 'Limite de 2 000 temps enregistrés atteinte : efface d’anciens records pour en ajouter.', capReached: true });
     if (/Trop de publications/.test(msg)) return json(429, { error: msg }, { 'Retry-After': '3600' });
+    if (/Trop de circuits publiés/.test(msg)) return json(422, { error: msg, trackCap: true });
     log('submit-score :', what, r.status, msg);
     return json(500, { error: 'Enregistrement impossible.' });
   }
@@ -125,8 +136,9 @@ export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = glob
       // 1. Pilote connecté (session anonyme du jeu ou compte).
       const ures = await fetchImpl(`${supabaseUrl}/auth/v1/user`, { headers: { Authorization: req.headers.get('Authorization') ?? '', apikey: serviceKey } });
       if (!ures.ok) return json(401, { error: 'Non connecté.' });
-      const user = await ures.json();
-      const uid = String(user.id ?? '');
+      let user;
+      try { user = await ures.json(); } catch (e) { throw new Upstream(e && e.message); }
+      const uid = String((user && user.id) ?? '');
       if (!/^[0-9a-f-]{36}$/.test(uid)) return json(401, { error: 'Non connecté.' });
       const anon = user.is_anonymous === true;
 
@@ -192,6 +204,7 @@ export function createHandler({ supabaseUrl, serviceKey, fetch: fetchImpl = glob
       return json(200, { ok: true, improved: !!out.improved, best: out.best, rank: out.rank, total: out.total });
     } catch (e) {
       log('submit-score :', e);
+      if (e instanceof Upstream) return json(503, { error: 'Service momentanément indisponible : réessaie dans un instant.' }, { 'Retry-After': '10' });
       return json(500, { error: 'Erreur interne.' });
     }
   };
