@@ -29,6 +29,25 @@ export class Autopilot {
       const len = hypot2(b[0] - a[0], b[2] - a[2]) * 0.5 + hypot2(c[0] - b[0], c[2] - b[2]) * 0.5;
       if (Math.abs(dh) > 1e-3 && len > 0.5) this.radius[i] = Math.max(2, len / Math.abs(dh)) * (b[3] === 2 ? 1.7 : 1);
     }
+    // Sommets ARRONDIS (physique 36) : la voiture n'est plus collée à la route ; un sommet de rayon R pris à plus de √(g · R) la fait décoller, et un plongeon pris trop vite
+    // la jette au-delà de la descente. Le pilote lève donc le pied avant un sommet doux (pièces « Courbe »). Une CASSURE franche (tremplin, pente sans raccord) reste un saut voulu :
+    // elle n'est pas limitée (son angle tient en un seul point du chemin).
+    this.crest = new Float32Array(n).fill(1e4);
+    const slopeOf = (a, b) => { const h = hypot2(b[0] - a[0], b[2] - a[2]); return h > 0.5 ? datan2(b[1] - a[1], h) : null; };
+    let from = -1, total = 0;
+    // Un petit sommet (moins de 17° en tout : fin de montée d'un niveau, bosse) ne se freine pas : la voiture s'y déleste à peine. Seuls les grands sommets et les plongeons comptent.
+    const close = (to) => { if (from >= 0 && total < 0.3) for (let j = from; j < to; j++) this.crest[j] = 1e4; from = -1; total = 0; };
+    for (let i = 1; i < n - 1; i++) {
+      const a = path[i - 1], b = path[i], c = path[i + 1];
+      const s1 = a[3] === 1 || b[3] === 1 || c[3] === 1 ? null : slopeOf(a, b), s2 = s1 === null ? null : slopeOf(b, c);
+      const drop = s1 === null || s2 === null ? 0 : s1 - s2;      // > 0 : la route se dérobe (convexe)
+      if (drop < 0.015 || drop > 0.13) { close(i); continue; }   // plat, ou cassure franche
+      if (from < 0) from = i;
+      total += drop;
+      const len = (this.dist[i + 1] - this.dist[i - 1]) * 0.5;
+      this.crest[i] = Math.sqrt(CAR.gravity * (len / drop) * 1.2);      // (× 1,2 : un petit délestage est sans conséquence)
+    }
+    close(n - 1);
   }
 
   // Hauteur du chemin le plus proche plus loin devant (approximation du sol d'arrivée).
@@ -155,7 +174,7 @@ export class Autopilot {
     let vTarget = this.vCap;
     const horizon = 15 + (v * v) / (2 * this.brakeDecel);
     for (let k = this.idx; k < path.length && this.dist[k] - this.dist[this.idx] < horizon; k++) {
-      const vMax = Math.sqrt(this.latLimit * this.radius[k]);
+      const vMax = Math.min(Math.sqrt(this.latLimit * this.radius[k]), this.crest[k]);
       const dd = this.dist[k] - this.dist[this.idx];
       const allowed = Math.sqrt(vMax * vMax + 2 * this.brakeDecel * dd);
       if (allowed < vTarget) vTarget = allowed;

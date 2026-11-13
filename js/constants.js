@@ -24,13 +24,18 @@ export const SURF_PHYS = {
   // Sous les gaz : a = engineAccel × (1 − (v / maxSpeed)^1,5) (CAR.accelCurve) : forte au départ, elle s'essouffle près du plafond, qu'on
   // n'atteint qu'avec de bonnes sorties de virage et de longues lignes droites. Au-delà du plafond la poussée devient un freinage.
   gravity: 19,         // gravité normale (m/s²) (0.9.45 : 16, trop flottante ; avant : 25)
-  engineAccel: 14,     // poussée à l'arrêt (m/s²) : 0 -> 100 km/h en 2,2 s
+  engineAccel: 16,     // poussée à l'arrêt (m/s²) : 0 -> 100 km/h en 1,8 s, 0 -> 200 en 3,9 s (version 1.0 : 14 -> 16, et courbe plus pleine : CAR.accelCurve ; avant, 0 -> 200 en 5,5 s)
   coastDrag: 0.05,     // résistance à vide proportionnelle à la vitesse (1/s) ; s'y ajoute CAR.coast (constante), pour que lever le pied serve avant un virage
-  boostAccel: 10,      // poussée supplémentaire d'un booster à 100 % (m/s²)
+  boostAccel: 8,       // poussée supplémentaire d'un booster à 100 % (m/s²) (version 1.0 : 10 -> 8 : le moteur est plus fort, le booster reste un coup de pouce et non la moitié de la poussée)
   boostTime: 1.2,      // durée d'un booster (s)
-  maxSpeed: 290 / 3.6, // plafond du moteur (m/s) : 290 km/h
+  maxSpeed: 300 / 3.6, // plafond du moteur (m/s) : 300 km/h (version 1.0 : 290 -> 300)
   boostSpeed: 340 / 3.6,   // plafond sous turbo à 100 % (m/s) : 340 km/h
 };
+
+// Échelle des véhicules (version 1.0) : la voiture est 1,6 fois plus grande qu'avant par rapport à la route (une chaussée de 24 m paraissait une piste d'aéroport
+// autour d'une voiture de 2 m ; elle fait maintenant 7,5 largeurs de voiture). Cette valeur sert au modèle 3D (course, fantômes, adversaires) ET aux dimensions physiques
+// (rayon de collision, empattement, hauteur : physics/specs.js). Le garage garde sa propre mise en scène.
+export const CAR_SCALE = 1.6;
 
 // Nombre maximal de décorations par circuit.
 export const MAX_DECOS = 500;

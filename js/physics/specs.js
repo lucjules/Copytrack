@@ -1,11 +1,11 @@
 // Réglages des véhicules et des revêtements pour la physique (voiture, moto, bateau, deltaplane) : des nombres, aucune logique.
 // Le modèle de pneus, de rubans et de collisions qui les utilise est dans physics.js et physics/.
-import { SURF_PHYS } from '../constants.js';
+import { SURF_PHYS, CAR_SCALE } from '../constants.js';
 import { clamp } from '../mathutil.js';
 
 export const CAR = {
   accel: SURF_PHYS.engineAccel,   // sous les gaz a = accel × (1 - (v / maxSpeed)^accelCurve)
-  accelCurve: 1.5,    // plus c'est petit, plus la fin de la courbe est longue
+  accelCurve: 2.5,    // plus c'est petit, plus la fin de la courbe est longue (version 1.0 : 1,5 -> 2,5 : la poussée tient jusqu'aux hautes vitesses ; 250 -> 280 km/h prenait 5,4 s, 2,1 s maintenant)
   maxSpeed: SURF_PHYS.maxSpeed,       // vitesse visée moteur (m/s)
   boostSpeed: SURF_PHYS.boostSpeed,
   boostAccel: SURF_PHYS.boostAccel,
@@ -18,9 +18,9 @@ export const CAR = {
   coast: 0.8,         // à vide : résistance constante (s'ajoute à coastDrag, proportionnelle à la vitesse)
   coastDrag: SURF_PHYS.coastDrag,
   // Châssis (modèle bicyclette)
-  a: 1.35,            // centre de gravité -> essieu avant (m)
-  b: 1.4,             // centre de gravité -> essieu arrière (m)
-  yawK: 1.9,          // inertie de lacet ramenée à la masse (m²)
+  a: 1.35 * CAR_SCALE, // centre de gravité -> essieu avant (m)
+  b: 1.4 * CAR_SCALE,  // centre de gravité -> essieu arrière (m)
+  yawK: 1.9 * CAR_SCALE,   // inertie de lacet ramenée à la masse (m²) ; suit l'empattement : la voiture agrandie garde la même vivacité au volant
   corner: 230,        // rigidité de dérive d'un essieu (m/s² par rad)
   latGrip: 80,        // adhérence latérale totale (m/s²), partagée avant / arrière (0.9.11 : 56 -> 80, la voiture tient mieux dans les virages)
   frontShare: 0.42,   // part avant (0.9.11 : 0,48 -> 0,42 : l'arrière accroche plus que l'avant, la voiture PERD l'avant avant de partir en tête-à-queue : pardonne un volant tardif)
@@ -46,9 +46,10 @@ export const CAR = {
   gravity: SURF_PHYS.gravity,
   snap: 0.7,
   step: 1.6,
+  kinkLaunch: 3.1,    // PHYS_VER 36 : cassure entre deux rubans (mur, plafond, looping) : vitesse (m/s) avec laquelle le ruban suivant se dérobe au-delà de laquelle la voiture décolle. = √(2 · g · susTravel) : la même cassure qu'au sol
   magnetRange: 4,     // aimant : portée de l'attraction au-dessus d'une route aimantée (m)
   magnetAcc: 80,      // ... et accélération maximale vers la route, le long de sa normale (m/s²)
-  launch: 0.6,        // vitesse normale (m/s) au-delà de laquelle la route « tombe » sous la voiture : elle décolle (0.9.11 : 2,0 -> 0,6, sans exemption d'angle)
+  susTravel: 0.25,    // PHYS_VER 36 : détente de la suspension (m). Tant que la route ne s'est pas dérobée de plus que cela sous la voiture, les roues touchent (voir physics.js : _roadContact). Remplace `launch` (seuil de vitesse normale, 0,6 m/s)
   airPitchAcc: 4.2,  // vivacité du tangage en l'air (relative : la moto est plus vive, le deltaplane moins) ; gaz = nez plus bas, frein = nez plus haut
   airPitchDamp: 2.6, // amortissement de base (le ressort d'assiette l'utilise ×3)
   airPitchUpK: 1.6,   // relever le nez est 1,6 fois plus vif que le plonger
@@ -83,8 +84,10 @@ export const CAR = {
   spring: SURF_PHYS.spring,         // poussée latérale du ressort à pleine force (m/s) : à 150 %, saut d’une voie (24 m)
   springHop: 11,      // saut du ressort (passe par-dessus la bordure)
   cutTime: 1.0,       // moteur coupé : durée après la dernière plaque
-  shockE: 0.5,        // obstacles : rebond (0 = mou, 1 = élastique)
-  shockKick: 6,       // ... et petite poussée en plus pour bien sentir le choc
+  shockE: 0.25,       // obstacles : rebond (0 = mou, 1 = élastique). PHYS_VER 36 : 0,5 -> 0,25 (une voiture qui percute un obstacle n'est plus renvoyée en arrière à la moitié de sa vitesse)
+  shockKick: 2,       // ... et petite poussée en plus pour bien sentir le choc (avant : 6)
+  shockLift: 0.7,     // un choc ne soulève une voiture posée que s'il vient franchement de dessous (cosinus de l'angle avec la normale de la route)
+  curb: 0.9,          // PHYS_VER 36 : marche (m) qu'une voiture franchit en roulant ou en retombant (une roue, soit l'épaisseur d'une dalle). Avant : CAR.step, 1,6 m, pour tout ; il ne sert plus qu'aux pièces mobiles
   // 0.9.4 : un mur se paie. Choc = rebond + perte de vitesse proportionnelle à l'impact + coup de volant forcé + moteur et adhérence
   // réduits un instant (la voiture « encaisse »), et frottement continu tant qu'on racle.
   // Phase 2 (PHYS_VER 35) : le contact d'un mur est une RÉPONSE À UN IMPACT, proportionnelle à la composante normale de la vitesse (ap = vitesse d'approche, m/s), et non plus une perte
@@ -120,9 +123,12 @@ export const CAR = {
   stuckAlign: 1.4,    // 0.9.54 : voiture plaquée nez au mur : le contact la fait pivoter d'elle-même vers la tangente du mur (rad/s), sans qu'il faille braquer
   stunTraction: 0.5,  // poussée du moteur pendant l'encaissement (avant : 0,3)
   stunGrip: 0.75,     // adhérence pendant l'encaissement (avant : 0,6)
-  radius: 1.0,
-  probe: 1.25,
-  height: 1.3,
+  loadFull: 0.5,      // PHYS_VER 36 : appui (en poids de la voiture) à partir duquel l'adhérence est entière sur un looping, un tube, un virage relevé ; en dessous elle diminue jusqu'à zéro (la voiture glisse)
+  radius: 1.0 * CAR_SCALE,
+  probe: 1.25 * CAR_SCALE,
+  height: 1.3 * CAR_SCALE,
+  bodyY: 0.8 * CAR_SCALE,     // obstacles : hauteur du centre de la sphère de contact au-dessus des roues…
+  bodyR: 1.4 * CAR_SCALE,     // … et son rayon
 };
 
 // Réglages propres à la moto (plaque moto) : plus vive et plus agile que la voiture,
@@ -132,8 +138,8 @@ export const MOTO = {
   accel: SURF_PHYS.engineAccel * (10 / 11),
   maxSpeed: SURF_PHYS.maxSpeed * (90 / 95),
   brake: 44,          // freine un peu moins (une seule roue avant)
-  a: 1.15, b: 1.2,    // empattement plus court : tourne plus serré
-  yawK: 1.25,         // plus légère, change de cap plus vite
+  a: 1.15 * CAR_SCALE, b: 1.2 * CAR_SCALE,    // empattement plus court : tourne plus serré
+  yawK: 1.25 * CAR_SCALE,   // plus légère, change de cap plus vite
   latGrip: 78,        // penche dans les virages : un peu plus d'appui latéral
   frontShare: 0.45,
   steerMax: 0.75,     // braque plus à basse vitesse
@@ -155,7 +161,7 @@ const BOAT = {
   frontShare: 0.41,
   steerMax: 0.55,
   steerAlat: 48,
-  yawK: 2.1,
+  yawK: 2.1 * CAR_SCALE,
   yawDamp: 0.9,
   driftRear: 0.7,
 };
@@ -205,7 +211,7 @@ export function surfaceCoeffs(mod, f, out = COEF) {
     case 'magnet': out.grip = 1.6; break;
     // Dérive : l'arrière n'accroche presque plus (l'avant, si) : au moindre coup de volant la voiture part en glisse.
     case 'drift': out.rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85); break;
-    case 'slow': out.extraDrag = 14 * f; break;
+    case 'slow': out.extraDrag = SURF_PHYS.engineAccel * f; break;      // (à 100 % : exactement la poussée du moteur à l'arrêt ; version 1.0 : suit le moteur, 14 -> 16)
     // Poudreuse : on s'enfonce un peu, l'adhérence est molle et le moteur patine.
     case 'powder': out.grip = clamp(0.62 / Math.sqrt(f), 0.3, 0.9); out.traction = 0.75; out.vmaxK = clamp(1 - 0.28 * f, 0.4, 1); out.extraDrag = 2.5 * f; break;
     default: break;

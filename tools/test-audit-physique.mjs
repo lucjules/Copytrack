@@ -328,7 +328,7 @@ test('nez dans la paroi d\'un ruban, presque à l\'arrêt (virage relevé, au so
       const c = bot.control(P);
       if (P.rib) c.steer = -c.steer;
       sim.step(c);
-      if (P.rib && P.speed < 1.5 && Math.abs(P.rib.dl) > 10.5) pinned++;      // contre la paroi, presque à l'arrêt
+      if (P.rib && P.speed < 1.5 && Math.abs(P.rib.dl) > 9.9) pinned++;      // (version 1.0 : voiture de 1,6 m de rayon, butée à 10,2 m)      // contre la paroi, presque à l'arrêt
       if (sim.lost) { sim.rewind(); bot.reset(P); }
     }
     assert.ok(pinned > 20, script + ' : la voiture a bien été plaquée contre la paroi, presque à l\'arrêt (le cas visé) : ' + pinned + ' pas');

@@ -24,10 +24,10 @@ function walk(dir, out = []) {
 }
 
 console.log('Version et textes');
-test('la version affichée suit package.json (bêta 0.9.x)', () => {
+test('la version affichée suit package.json (X.Y.Z ou X.Y.Z-rc.N)', () => {
   const v = JSON.parse(read('package.json')).version;
-  assert.match(v, /^0\.9\.\d+$/);
-  assert.equal(VERSION, 'bêta ' + v);
+  assert.match(v, /^\d+\.\d+\.\d+(-rc\.\d+)?$/);
+  assert.equal(VERSION, v);
 });
 test('le texte du turbo annonce un gain (≈ +N km/h), pas une vitesse visée : le moteur n’a plus de plafond', () => {
   assert.match(paramText('boost', 100), /^≈ \+\d+ km\/h$/);

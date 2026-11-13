@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.9.64** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **1.0.0-rc.1** (candidate à la version 1.0) · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -66,6 +66,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 ### Pilotage
 
 - Physique déterministe (pas fixe de 1/120 s) à modèle « bicyclette » : le volant oriente les roues avant, les pneus font tourner la voiture.
+- **Physique 1.0** : les loopings, tubes et murs sont solides (on glisse sur une paroi, on ne la traverse pas) ; la voiture décolle quand la route se dérobe vraiment (plus de voiture collée à une bosse) ; les chocs ne la soulèvent plus de la route ; la caisse bouge sur sa suspension et lève le nez à l'impact.
 - **Dérapage au frein** (pas de bouton) : freiner en tournant franchement à bonne vitesse fait décrocher l'arrière ; garder le volant prolonge la glisse.
   Une glisse assez longue donne un **mini-turbo** (deux niveaux, étincelles bleues puis orange).
 - **En l'air**, le volant ne tourne que les roues ; accélérer fait plonger le nez, freiner le relève. La **réception** est parfaite, correcte ou ratée (perte de vitesse) selon l'assiette.

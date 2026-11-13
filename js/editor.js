@@ -137,7 +137,7 @@ export class EditorSession {
     const b = this.track.bounds();
     return {
       tx: (b.minX + b.maxX) / 2, tz: (b.minZ + b.maxZ) / 2,
-      dist: Math.max(130, Math.max(b.maxX - b.minX, b.maxZ - b.minZ) * 1.1), yaw: Math.PI * 0.25, pitch: 0.95,
+      dist: Math.max(130, Math.max(b.maxX - b.minX, b.maxZ - b.minZ) * 1.45), yaw: Math.PI * 0.25, pitch: 0.95,
     };
   }
 
@@ -243,6 +243,7 @@ export class EditorSession {
     );
     if (this.freeCam && cam.position.y < 0.8) cam.position.y = 0.8;      // caméra libre : jamais sous le terrain
     cam.lookAt(this.target);
+    this._viewShift();
     this._updateGrid();
     if (!this.pointers.size || this.painting) this._updateHover();
     this._updatePreview();
@@ -258,7 +259,26 @@ export class EditorSession {
     if (fog) { fog.near = Math.max(fog.near, this.dist * 0.7); fog.far = Math.max(fog.far, need); }
   }
 
+  // Version 1.0 : la palette du bas couvre jusqu'à 40 % de l'écran ; le circuit était centré sur l'écran ENTIER, donc en partie caché derrière elle. L'image est décalée vers le
+  // haut de la moitié de la hauteur couverte : le point visé (et « Recentrer ») tombe au milieu de la zone visible. La visée de la souris suit (même matrice de projection).
+  _viewShift() {
+    const cam = this.app.camera, el = this.app.renderer.domElement, W = el.clientWidth, H = el.clientHeight;
+    this._vsN = (this._vsN || 0) + 1;
+    if (this._vsN % 12 === 1 || this._vsH === undefined) {
+      const pal = document.getElementById('ed-palette');
+      let h = 0;
+      if (pal && pal.offsetParent !== null) { const r = pal.getBoundingClientRect(); if (r.width > W * 0.6) h = Math.max(0, Math.min(H * 0.6, H - r.top)); }      // (palette en colonne, sur un téléphone en paysage : pas de décalage)
+      this._vsWant = Math.round(h / 2);
+    }
+    this._vsCur = (this._vsCur || 0) + ((this._vsWant || 0) - (this._vsCur || 0)) * 0.2;
+    const off = Math.round(this._vsCur);
+    if (off === this._vsOff && W === this._vsW && H === this._vsH) return;
+    this._vsOff = off; this._vsW = W; this._vsH = H;
+    if (off > 0 && W > 0 && H > 0) cam.setViewOffset(W, H, 0, off, W, H); else cam.clearViewOffset();
+  }
+
   dispose() {
+    this.app.camera.clearViewOffset();
     for (const c of [...this.marks.children]) { c.geometry.dispose(); c.material.dispose(); }
     this.marks.removeFromParent();
     if (this.fillCells) { this.fillCells.geometry.dispose(); this.fillCells.material.dispose(); this.fillCells.dispose(); this.fillCells.removeFromParent(); this.fillCells = null; }

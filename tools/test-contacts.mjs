@@ -191,9 +191,9 @@ test('tous les obstacles mobiles (mur coulissant, marteau, balayeur, balancier) 
     cases++;
     // (phase 2 : bande de 30 cases au lieu de 12. Le choc d'un balancier envoie la voiture à 30 m/s le long de la route ; elle garde désormais son élan en frôlant la bordure
     // et, en 12 s, dépassait le BOUT de la bande de 12 cases (384 m) : « hors de la route » par la fin du circuit, pas par le côté.)
-    const tr = strip(30); tr.addDeco({ k, x: CELL / 2 + side, y: 0.4, z: 300, ry: 0, s, ph }); tr.version++;
+    const tr = strip(60); tr.addDeco({ k, x: CELL / 2 + side, y: 0.4, z: 1200, ry: 0, s, ph }); tr.version++;      // (version 1.0 : 60 cases ; une voiture immobile n'a plus de frein moteur démesuré, elle roule plus loin après le choc)
     const sim = new Simulation(tr); sim.start();
-    sim.phys.place(CELL / 2 + side * 0.9, 0.4, 301, 0, 1); sim.phys.graceT = 0; sim.phys.hazardGrace = 0; sim.logic.steps = 0;
+    sim.phys.place(CELL / 2 + side * 0.9, 0.4, 1201, 0, 1); sim.phys.graceT = 0; sim.phys.hazardGrace = 0; sim.logic.steps = 0;
     let maxX = 0;
     const log = run(sim, 120 * 12, () => IDLE, { onStep: (i, sm) => { maxX = Math.max(maxX, Math.abs(sm.phys.pos.x - CELL / 2)); }, maxJump: 3 });
     if (log.shock > 0) contacts++;
@@ -207,7 +207,7 @@ test('contacts multiples dans un même pas : 1, 3, 10 ou 40 obstacles superposé
   const speeds = {};
   for (const k of ['bumper', 'sweeper', 'pendulum']) for (const N of [1, 3, 10, 40]) {
     const tr = strip(12); for (let i = 0; i < N; i++) tr.addDeco({ k, x: CELL / 2, y: 0.4, z: 300, ry: 0, s: 1, ph: 0 }); tr.version++;
-    const sim = fresh(tr); sim.phys.vel.z = -100 / 3.6;
+    const sim = fresh(tr); sim.phys.vel.z = -80 / 3.6;      // (80 km/h : avec le moteur de la version 1.0, à 100 km/h la voiture passe entre deux battements du balancier)
     let shockSteps = 0;
     const log = run(sim, 120 * 6, () => GAS, { onStep: (i, s) => { if (s.phys.ev.shock > 0) shockSteps++; } });
     assert.ok(log.shock >= 1, `${k} ×${N} : contact`);

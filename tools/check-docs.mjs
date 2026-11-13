@@ -37,11 +37,11 @@ test('les liens relatifs des fichiers Markdown pointent vers des fichiers qui ex
   assert.deepEqual(broken, []);
 });
 test('la version concorde : js/version.js, package.json, README, dernier titre du CHANGELOG', () => {
-  const v = /bêta (\d+\.\d+\.\d+)/.exec(VERSION);
-  assert.ok(v, 'VERSION doit s\'écrire « bêta X.Y.Z » : ' + VERSION);
+  const v = /^(\d+\.\d+\.\d+(?:-rc\.\d+)?)$/.exec(VERSION);
+  assert.ok(v, 'VERSION doit s\'écrire « X.Y.Z » ou « X.Y.Z-rc.N » : ' + VERSION);
   assert.equal(JSON.parse(read('package.json')).version, v[1], 'package.json');
-  assert.ok(read('README.md').includes(`**bêta ${v[1]}**`), 'README : « Version actuelle : **bêta ' + v[1] + '** »');
-  const top = /^## Bêta (\d+\.\d+\.\d+)/m.exec(read('CHANGELOG.md'));
+  assert.ok(read('README.md').includes(`**${v[1]}**`), 'README : « Version actuelle : **' + v[1] + '** »');
+  const top = /^## (?:Bêta |Version )?(\d+\.\d+\.\d+(?:-rc\.\d+)?)/m.exec(read('CHANGELOG.md'));
   assert.equal(top && top[1], v[1], 'le premier titre de CHANGELOG.md doit être la version actuelle');
 });
 

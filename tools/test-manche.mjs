@@ -154,7 +154,7 @@ test('rattraper une voiture plus lente : la voiture arrière perd de la vitesse 
   const rear = car(0, 0, 0, -40), front = car(0, -2, 0, -30);           // 10 m/s de rapprochement (le -z est l'avant)
   let n = 0;
   while (softCollide(rear, [front]) && n++ < 50) { rear.pos.z += rear.vel.z / 120; front.pos.z += front.vel.z / 120; }
-  assert.ok(rear.vel.z > -40 && rear.vel.z < -25, 'vitesse arrière réduite mais pas inversée : ' + rear.vel.z);
+  assert.ok(rear.vel.z > -40 && rear.vel.z < -20, 'vitesse arrière réduite mais pas inversée : ' + rear.vel.z);
   assert.ok(n < 40, 'le contact finit vite : ' + n + ' pas');
 });
 test('la poussée par pas est plafonnée (douce), même enfoncée de moitié', () => {

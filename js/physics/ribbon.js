@@ -1,6 +1,6 @@
 // Conduite sur les rubans 3D (loopings, vrilles, tubes, murs, plafond) : entrée, conduite, sortie et raccord d'un ruban à l'autre.
 // Ces méthodes s'ajoutent au prototype de CarPhysics (voir physics.js) : `this` est la voiture.
-import { CELL, DT, ROAD_HALF } from '../constants.js';
+import { CELL, DT, ROAD_HALF, SLAB_T } from '../constants.js';
 import { PIECES, PLATES, rotVec, tileCenter, isRibbon, tileParam, beltSpeed, isSideTile, hasNoRails } from '../pieces.js';
 import { ribbonOf, frameLocal, ribbonInverts } from '../ribbons.js';
 import { RAIN_GRIP } from '../sim/env.js';
@@ -81,9 +81,14 @@ export const ribbonMethods = {
     return false;
   },
 
-  // Atterrissage en plein milieu d'un ruban (retombée sur le haut d'un L, au fond d'un looping...).
+  // Contact, EN L'AIR, avec un ruban (looping, tube, mur, virage relevé, vrille…) ailleurs qu'à ses extrémités. PHYS_VER 36 : un ruban est SOLIDE, des deux côtés.
+  //  - Côté route : la voiture s'y pose quelle que soit l'orientation de la surface (avant : seulement sur une face tournée vers la gravité ; une voiture décrochée d'un looping
+  //    à la verticale retombait À TRAVERS la paroi, puis à travers la route, jusqu'au terrain). Posée sur une paroi que rien ne plaque, elle y GLISSE (voir _ribStep : l'adhérence
+  //    suit l'appui), puis la quitte quand l'appui devient négatif.
+  //  - Côté dos (dessous de la dalle) : la voiture rebondit comme sur un mur, elle ne traverse plus.
+  // Section courbe (tube) : la distance à la surface et la position sur la section sont calculées autour du centre de courbure (exactes sur toute la circonférence).
   _tryLandRibbon() {
-    const p = this.pos, q = this.prev, v = this.vel;
+    const p = this.pos, q = this.prev, v = this.vel, gs = this.gSign;
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
     for (const tile of tiles) {
       if (!isRibbon(tile) || this.excl.has(tile)) continue;
@@ -104,22 +109,49 @@ export const ribbonMethods = {
       }
       if (u <= 0.002 || u >= 0.998) continue;          // les extrémités passent par _tryEnterRibbon
       const F = frameWorld(tile, rib, u, this.F);
-      const dl = (p.x - F.px) * F.rx + (p.y - F.py) * F.ry + (p.z - F.pz) * F.rz;
-      if (F.kc > 1e-4) this._cross({ dl }, F); else { F.qx = F.px; F.qy = F.py; F.qz = F.pz; }
-      if (F.ny * this.gSign < 0.2) continue;            // on ne se pose que sur une route face à la gravité
-      const dn = (p.x - F.qx) * F.nx + (p.y - F.qy) * F.ny + (p.z - F.qz) * F.nz;
-      const dq = (q.x - F.qx) * F.nx + (q.y - F.qy) * F.ny + (q.z - F.qz) * F.nz;
+      const hw = F.hw || ROAD_HALF;
+      // Position dans la section (axe latéral r, normale n) : maintenant et au pas précédent.
+      const lx = (p.x - F.px) * F.rx + (p.y - F.py) * F.ry + (p.z - F.pz) * F.rz, ln = (p.x - F.px) * F.nx + (p.y - F.py) * F.ny + (p.z - F.pz) * F.nz;
+      const qx = (q.x - F.px) * F.rx + (q.y - F.py) * F.ry + (q.z - F.pz) * F.rz, qn = (q.x - F.px) * F.nx + (q.y - F.py) * F.ny + (q.z - F.pz) * F.nz;
+      let dl = lx, dn = ln, dq = qn;
+      if (F.kc > 1e-4) {
+        const Rc = 1 / F.kc;
+        dl = datan2(lx, Rc - ln) * Rc;                  // abscisse le long de la section (0 au fond)
+        dn = Rc - hypot2(lx, ln - Rc);                 // > 0 : à l'intérieur (côté route)
+        dq = Rc - hypot2(qx, qn - Rc);
+        if (!F.wrap && Math.abs(dl) > hw + 0.3) continue;
+        this._cross({ dl }, F);
+      } else { F.qx = F.px; F.qy = F.py; F.qz = F.pz; }
+      if (!F.wrap && Math.abs(dl) > hw + (hasNoRails(tile) ? 0 : 0.3)) continue;
       const vn = v.x * F.nx + v.y * F.ny + v.z * F.nz;
-      if (!(dn <= 0.05 && dq >= -0.3 && dn > -1.5 && vn < 0)) continue;
-      if (Math.abs(dl) > ROAD_HALF + (hasNoRails(tile) ? 0 : 0.3)) continue;
+      // Dos du ruban : venue de derrière la dalle, la voiture la heurte (rebond, frottement) au lieu de la traverser.
+      const back = -(SLAB_T + 0.2);
+      if (dq < back && dn >= back && dn < 0.4 && vn > 0) {
+        const K = this.k, push = dn - back + 0.02;
+        p.x -= F.nx * push; p.y -= F.ny * push; p.z -= F.nz * push;
+        v.x -= F.nx * vn * (1 + wallBounce(K, vn)); v.y -= F.ny * vn * (1 + wallBounce(K, vn)); v.z -= F.nz * vn * (1 + wallBounce(K, vn));
+        const tn = v.x * F.nx + v.y * F.ny + v.z * F.nz, tx = v.x - F.nx * tn, ty = v.y - F.ny * tn, tz = v.z - F.nz * tn, tl = hypot3(tx, ty, tz);
+        if (tl > 1e-6) { const dv = Math.min(tl, wallFriction(K, vn)) / tl; v.x -= tx * dv; v.y -= ty * dv; v.z -= tz * dv; }
+        const loss = wallHardLoss(K, vn); v.x *= 1 - loss; v.y *= 1 - loss; v.z *= 1 - loss;
+        if (vn > 2) this.ev.wall = Math.max(this.ev.wall, vn);
+        else this._pinned = true;                       // posée sur le dos d'un ruban (rien de roulable) : comme sous un toit de tunnel, retour au checkpoint au bout d'une seconde (pinT)
+        continue;
+      }
+      if (!(dn <= 0.05 && dq >= -0.3 && dn > -1.5)) continue;
+      // Paroi que la gravité ne plaque pas (verticale, en surplomb) et voiture qui la LONGE (elle vient d'en décrocher et retombe) : ce n'est pas une réception. La paroi reste solide :
+      // la voiture glisse contre elle, en l'air, sans la pénétrer ; elle s'y reposera plus bas, là où la paroi revient sous elle (ou tout de suite si elle arrive vraiment dessus).
+      if (F.ny * gs < 0.2 && vn > -0.5) {
+        if (dn < 0) { p.x -= F.nx * dn; p.y -= F.ny * dn; p.z -= F.nz * dn; }
+        if (vn < 0) { v.x -= F.nx * vn; v.y -= F.ny * vn; v.z -= F.nz * vn; }
+        continue;
+      }
+      if (vn >= 0) continue;
       const vt = v.x * F.tx + v.y * F.ty + v.z * F.tz;
-      const R = { tile, rib, u, dir: vt >= 0 ? 1 : -1, dl: 0, vs: 0, vd: 0, psi: 0 };
-      R.dl = clamp(dl * R.dir, -ROAD_HALF + 1, ROAD_HALF - 1) * R.dir;
+      const R = { tile, rib, u, dir: vt >= 0 ? 1 : -1, dl: F.wrap ? dl : clamp(dl, -hw + 1, hw - 1), vs: 0, vd: 0, psi: 0 };
       const B = this._basis(R, F);
       R.vs = v.x * B.e1x + v.y * B.e1y + v.z * B.e1z;
       R.vd = v.x * B.e2x + v.y * B.e2y + v.z * B.e2z;
-      const h = this.fwd;
-      R.psi = datan2(h.x * B.e2x + h.y * B.e2y + h.z * B.e2z, h.x * B.e1x + h.y * B.e1y + h.z * B.e1z);
+      R.psi = this._headingOn(B, R);
       this.ev.land = -vn;
       const kq = this._landing(F.nx, F.ny, F.nz);
       R.vs *= kq; R.vd *= kq;
@@ -128,6 +160,15 @@ export const ribbonMethods = {
       return true;
     }
     return false;
+  },
+
+  // Cap de la voiture (rad, par rapport au sens de parcours e1) quand elle se pose sur un ruban : son nez réel (cap et assiette de vol) projeté dans le plan de la route. Si le nez
+  // est presque perpendiculaire à la surface (voiture à plat qui touche une paroi verticale), la projection n'a pas de sens : le nez suit alors le mouvement.
+  _headingOn(B, R) {
+    const c = dcos(this.pitch), hx = -dsin(this.yaw) * c, hy = dsin(this.pitch), hz = -dcos(this.yaw) * c;
+    const a = hx * B.e1x + hy * B.e1y + hz * B.e1z, b = hx * B.e2x + hy * B.e2y + hz * B.e2z;
+    if (a * a + b * b > 0.09) return datan2(b, a);
+    return hypot2(R.vs, R.vd) > 1 ? datan2(R.vd, R.vs) : 0;
   },
 
   // Section courbe (tube) : repère de la route au point de la voiture.
@@ -249,7 +290,9 @@ export const ribbonMethods = {
     const lPiece = tile.t === 'wall' || tile.t === 'ramp90' || tile.t === 'crest90' || !!sidePiece;
     // Vrille : la voiture est guidée par la route sur toute la pièce, appui ou pas (elle garde son adhérence et son moteur).
     const guided = tile.t === 'twist';
-    const load = lPiece ? clamp(press / gAbs, 0, 1.6) : press > 0 || guided ? 1 : 0;
+    // PHYS_VER 36 : sur un looping, un tube, un virage relevé, l'adhérence et la poussée SUIVENT L'APPUI quand il devient faible (pleines à partir d'un demi-poids, nulles sans appui) :
+    // une voiture posée sur une paroi que presque rien ne plaque y glisse, elle n'y roule pas comme sur du plat (avant : adhérence entière dès que l'appui était positif).
+    const load = lPiece ? clamp(press / gAbs, 0, 1.6) : guided ? 1 : clamp(press / (CAR.loadFull * gAbs), 0, 1);
     this.press = press;
     R.vs -= beltE1;   // tapis roulant : dynamique dans le repère de la bande
     const c = dcos(R.psi), s = dsin(R.psi);
@@ -415,6 +458,11 @@ export const ribbonMethods = {
       N.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
       const h = this.fwd;
       N.psi = datan2(h.x * B2.e2x + h.y * B2.e2y + h.z * B2.e2z, h.x * B2.e1x + h.y * B2.e1y + h.z * B2.e1z);
+      // Cassure entre deux rubans (PHYS_VER 36) : même règle qu'au sol. Si le ruban suivant se dérobe sous la voiture plus vite que la détente de la suspension ne peut le suivre
+      // (vitesse qui l'éloigne de la nouvelle surface > CAR.kinkLaunch), elle décolle au lieu d'être recollée (avant : collée jusqu'à 45° de cassure, sur un mur comme au plafond).
+      const vnN = v.x * F2.nx + v.y * F2.ny + v.z * F2.nz;
+      // (pas sur une route roulée sur un mur, un plan incliné ou un surplomb : c'est l'appui de la vitesse qui l'y tient, pas la gravité ; la lâcher à une cassure la ferait tomber du mur)
+      if (vnN > CAR.kinkLaunch && N.tile.s !== 'magnet' && !isSideTile(N.tile) && !isSideTile(R.tile)) { this._ribDetach('crest'); return; }
       this.rib = N;
       this._ribPlace(N);
       return;
@@ -427,8 +475,9 @@ export const ribbonMethods = {
     this.prevYaw = this.yaw;
     const gsx = this.gSign;
     if (this.n.y * gsx > 0.6 && F.ny * gsx > 0.6) {
-      this.grounded = true;
-      this.vel.y = gsx > 0 ? Math.min(this.vel.y, 0) : Math.max(this.vel.y, 0);
+      // (PHYS_VER 36 : la vitesse réelle est conservée ; si la sortie du ruban pointe au-dessus de la route qui suit, c'est _roadContact qui décide du décollage, comme pour toute cassure.
+      //  Avant : la vitesse verticale était effacée, la voiture « recollée » à la route.)
+      this.grounded = true; this.lift = 0;
       this.n.x = 0; this.n.y = gsx; this.n.z = 0;
     } else {
       this.grounded = false;

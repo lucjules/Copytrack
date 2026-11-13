@@ -2,6 +2,7 @@
 // le réseau en dit. Plus elle est loin de la caméra du joueur local, plus son matériau s'assombrit.
 import * as THREE from './vendor/three.module.min.js';
 import { createCar } from './carModel.js';
+import { CAR_SCALE } from './constants.js';
 import { SnapshotBuffer } from './net/interp.js';
 
 export const FADE_NEAR = 30;      // m : en deçà, couleur pleine
@@ -39,7 +40,7 @@ export class RemoteCar {
   constructor(scene, { id, name, colorIndex = 0 }, { onTeleport = null, delay } = {}) {
     this.id = id; this.name = name;
     this.baseColor = new THREE.Color(PLAYER_COLORS[colorIndex % PLAYER_COLORS.length]);
-    this.car = createCar(null, { ghost: true, ghostColor: '#' + this.baseColor.getHexString() });
+    this.car = createCar(null, { ghost: true, ghostColor: '#' + this.baseColor.getHexString(), scale: CAR_SCALE });
     this.group = this.car.group;
     this.group.visible = false;
     scene.add(this.group);

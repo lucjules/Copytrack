@@ -78,7 +78,8 @@ test('freinage retardé (règle du coach, traces synthétiques) : « tu freines 
 });
 test('freinage avancé : « tu freines plus tôt »', () => {
   const { R, refIn, trace } = setup('temple');
-  const target = brakingPoints(R).filter((b) => b.v0 > 25)[0], from = Math.round(R.t[target.i] * 120);
+  const target = brakingPoints(R).filter((b) => b.v0 > 25)[1], from      // (physique 36 : le 2e freinage ; rejouée après le 1er avancé, la course ne restait plus lisible)
+  = Math.round(R.t[target.i] * 120);
   const early = edit(refIn, (st, fl) => { for (let k = from - 100; k < from; k++) fl[k] = (fl[k] & ~1) | 2; pad(st, fl); });
   const tips = coach(trace(early), R);
   // (phase 2 physique, PHYS_VER 35) Le freinage est maintenant limité par le cercle d'adhérence (brakeCorner) et le transfert de charge : 140 pas de frein (1,17 s) avant le
@@ -104,7 +105,8 @@ test('un retour au checkpoint coûte du temps : il est signalé, avec sa perte, 
   const rs = tips.find((x) => x.id === 'respawn');
   assert.ok(rs, tips.map((x) => x.id).join(', '));
   assert.ok(rs.loss > 0.5);
-  assert.ok(tips.indexOf(rs) <= 1 && tips.slice(0, tips.indexOf(rs)).every((x) => x.id === 'wall'), tips.map((x) => x.id).join(', '));
+  // (physique 36 : la voiture ne racle plus les murs après le retour, elle prend les virages trop lentement : le conseil qui peut passer devant est « mur » ou « virage lent »)
+  assert.ok(tips.indexOf(rs) <= 1 && tips.slice(0, tips.indexOf(rs)).every((x) => x.id === 'wall' || x.id === 'slow-corner'), tips.map((x) => x.id).join(', '));
 });
 test('virages pris trop prudemment : vitesse mini ou freinage, jamais un conseil sans mesure', () => {
   const { track, R, trace } = setup('eclats');

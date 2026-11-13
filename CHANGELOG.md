@@ -6,6 +6,54 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## 1.0.0-rc.1 — candidate à la version 1.0 : physique réaliste (rubans solides, décollage balistique, chocs), moteur, échelle de la voiture, caméra
+
+**Change la physique : `PHYS_VER` 35 → 36.** Les records, replays et fantômes de la 35 restent affichés mais ne sont plus rejouables ; **la fonction serveur `submit-score` doit être
+redéployée** à la mise en ligne (elle est régénérée dans ce dépôt). Aucune migration SQL. Mesures : `tools/test-physique-v1.mjs` (12 tests, tous rouges sur la physique 35).
+
+### Physique (noyau)
+- **Rubans solides** (`physics/ribbon.js : _tryLandRibbon`). Une voiture décrochée d'un looping à la verticale retombait **à travers** la paroi puis à travers la route, jusqu'au terrain
+  (mesuré : 39 traversées sur 612 essais pour le looping, 13 pour le grand, 30 pour le double, 4 pour le tube). Un ruban est maintenant solide des deux côtés : côté route la voiture
+  s'y repose quelle que soit son orientation, et **glisse** le long d'une paroi que rien ne plaque ; côté dos elle rebondit. 0 traversée sur 3 672 essais. Sur un looping, un tube, un
+  virage relevé, l'adhérence et la poussée **suivent l'appui** (`CAR.loadFull`) : plus de conduite « comme sur du plat » sur une paroi à peine touchée.
+- **Décollage balistique** (`physics.js : _roadContact`, `_driveGround`). La voiture quitte la route quand la route se dérobe plus vite que la gravité ne la ramène, et seulement alors ;
+  tant que l'écart tient dans la détente de la suspension (`CAR.susTravel`, 0,25 m) les roues touchent. Avant : la moindre cassure faisait un saut dès 40 km/h, mais un sommet arrondi
+  gardait la voiture **collée** jusqu'à 290 km/h (72 m/s² d'accélération centripète), et un S partait d'un coup (0 m à 160 km/h, 6,6 m à 260). Maintenant : cassure absorbée à basse
+  vitesse, sommets et S qui décollent progressivement (S d'un niveau : 0,4 m à 120 km/h, 1,9 m à 160, 4 m à 200). Même règle à la sortie d'un ruban et entre deux rubans (`CAR.kinkLaunch`).
+- **Chocs dans le plan de la route** (`physics/walls.js`, `physics/obstacles.js`). En montée, un bumper envoyait la voiture à 5–7 m en l'air, un balayeur à 4 m, une bordure la faisait
+  sautiller : la réponse restait horizontale dans le monde. Elle reste maintenant dans le plan de la chaussée (0 m). Obstacles moins « flipper » (rebond 0,5 → 0,25, poussée 6 → 2 m/s).
+- **Marche franchie d'office** : 1,6 m → 0,9 m (`CAR.curb`, l'épaisseur d'une dalle). Une voiture qui retombe trop bas heurte la tranche de la plateforme au lieu d'être soulevée dessus.
+- **Moteur** : poussée 14 → 16 m/s², courbe plus pleine (`accelCurve` 1,5 → 2,5), pointe 290 → 300 km/h : 0 → 100 en 1,8 s, 0 → 200 en 3,9 s (5,5 s avant), 250 → 280 en 2,1 s (5,4 s).
+  **Boosters** 10 → 8 m/s² (un coup de pouce, plus la moitié de la poussée). Le ralentisseur suit le moteur.
+- **Échelle** : `CAR_SCALE` 1,6. La voiture (modèle, rayon de collision, empattement, sphère de contact des obstacles) est 1,6 fois plus grande par rapport à la route : la chaussée de
+  24 m fait 7,5 largeurs de voiture au lieu de 12 (elle ressemblait à une piste d'aéroport). Le garage garde sa mise en scène.
+- Dégagement d'une voiture plaquée contre une bordure : seuils relevés (le moteur plus fort la faisait ramper au-dessus de l'ancien seuil : 8 s collée à 19 km/h, mesuré puis corrigé).
+
+### Rendu
+- **Caméra** : poursuite plus haute et plus plongeante (on lit le tracé devant la voiture), distances à l'échelle de la voiture ; caméras Proche et Lointaine recalées.
+- **Caisse sur sa suspension** (visuel) : elle se cabre à l'accélération, plonge au freinage, penche en virage, s'écrase à la réception, et **le nez se soulève un instant quand
+  l'avant heurte un obstacle ou une bordure** (≈ 3° à 9° selon la violence, amorti en 0,4 s ; mesuré dans Chromium). Coupé par « animations réduites ».
+
+### Éditeur
+- La vue est centrée sur la zone **visible au-dessus de la palette** (qui couvre jusqu'à 40 % de l'écran) : à l'ouverture et avec « Recentrer », le circuit entier se voit ; avant, une
+  partie restait cachée derrière la palette. La visée de la souris suit le décalage (`editor.js : _viewShift`).
+
+### Circuits et pilote automatique
+- Le pilote lève le pied avant un **grand sommet arrondi** ou un plongeon (`autopilot.js : crest`) : il ne s'y envole plus. Une cassure franche reste un saut.
+- 4 circuits retouchés pour la nouvelle physique : *Spirale Prismatique* (une ligne droite avant le plongeon), *Viaduc* et *Cité Céleste* (vitesse du pilote), *Le Pendule* (phase du mur
+  coulissant). Médailles recalées sur le pilote (`tools/recaler.mjs`), 6 objectifs « moins de N s » recalés. Les 72 circuits respectent leur contrat.
+- Vérificateur de l'éditeur : la vitesse de décollage annoncée à une rupture de pente suit la nouvelle règle ; matrice des pièces régénérée (28 cases CHUTE, 30 avant).
+
+### Tests
+- Nouveau : `tools/test-physique-v1.mjs`. Adaptés, chaque changement justifié dans le test : chiffres du moteur, seuils liés à la taille de la voiture, décollage (`test-pentes-murs`),
+  scénarios rejoués du coach et de l'Académie, tolérance de trois pas sur les circuits tournés (un seuil de décollage amplifie un arrondi de dernier bit), 2 circuits aléatoires sur 150 tolérés
+  (une rampe juste avant un virage est un vrai saut).
+
+### Limites connues
+- Aucun humain n'a conduit cette physique : tout est mesuré par script et sur captures. Le ressenti (taille de la voiture, caméra, moteur) est à valider en jouant.
+- Sur un mur (route roulée), la tenue reste l'appui aérodynamique fictif d'avant : pas de décollage aux cassures entre pièces roulées.
+- Le pilote automatique ne lit pas les rampes franches placées juste avant un virage.
+
 ## Bêta 0.9.64 — phase 5 : sécurité du backend et préparation à la production
 
 **`PHYS_VER` inchangé (35)**. **Rien n'est déployé** : l'étape SQL 17 et le redéploiement de `submit-score` / `ice` attendent une autorisation explicite (ordre et vérifications : `supabase/MIGRATIONS.md`, « Étape 17 »). Compte-rendu complet (failles, preuves, risques restants, opérations de production) : [docs/AUDIT-PHASE5-SECURITE.md](docs/AUDIT-PHASE5-SECURITE.md).

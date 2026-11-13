@@ -368,7 +368,7 @@ test('courses incohérentes : commandes d\'un autre circuit, tronquées, vides, 
   assert.equal(verifyRun({ ...send({ inputs: 'A'.repeat(2_000_000) }) }).ok, false, 'démesurées : refusées avant tout rejeu');
 });
 test('versions : une autre version de la physique (plus ancienne, plus récente, 0, NaN) est refusée avec les deux versions dans le message ; la clé d\'un circuit officiel d\'une autre version aussi', () => {
-  for (const v of [PHYS_VER - 1, PHYS_VER + 1, 0, 34, 36]) { const r = verifyRun({ ...send({ physVer: v }) }); assert.equal(r.ok, false); assert.equal(r.versionMismatch, true); assert.match(r.error, new RegExp(String(PHYS_VER))); }
+  for (const v of [PHYS_VER - 1, PHYS_VER + 1, 0, 34]) { const r = verifyRun({ ...send({ physVer: v }) }); assert.equal(r.ok, false); assert.equal(r.versionMismatch, true); assert.match(r.error, new RegExp(String(PHYS_VER))); }
   assert.equal(verifyRun({ ...send({ physVer: NaN }) }).ok, false);
   const def = BUILTIN_TRACKS[0];
   assert.throws(() => trackForKey(`b-${def.id}-zzzzz`), /Version du circuit différente/);

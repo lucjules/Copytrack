@@ -49,7 +49,7 @@ test('hors piste : la réapparition est demandée après OFF_TRACK_RESPAWN_S, pa
   sim.drive(GAS); sim.score();
   // On pose la voiture sur le terrain, à côté de la route.
   const p = sim.phys;
-  p.pos.x += 60; p.prev.x = p.pos.x; p.vel.x = p.vel.y = p.vel.z = 0;
+  p.pos.x += 60; p.prev.x = p.pos.x; p.pos.y = p.prev.y = 0; p.vel.x = p.vel.y = p.vel.z = 0;      // (posée SUR le terrain : depuis la physique 36 une voiture lâchée 0,4 m au-dessus tombe, elle n'est plus recollée)
   let steps = 0;
   while (!sim.lost && steps < 400) { sim.drive({ steer: 0, throttle: false, brake: true, drift: false }); sim.score(); steps++; }
   assert.equal(sim.lost, 'offTrack');

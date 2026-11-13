@@ -1,6 +1,6 @@
 // Session de course : boucle à pas fixe, caméra, fantôme, HUD, effets.
 import * as THREE from './vendor/three.module.min.js';
-import { DT } from './constants.js';
+import { DT, CAR_SCALE } from './constants.js';
 import { CamFlip } from './camflip.js';
 import { MSG } from './hudMessages.js';
 import { SEND_EVERY_STEPS, F_FINISHED } from './net/snapshot.js';
@@ -66,12 +66,12 @@ export class RaceSession {
     this.envFx = this.phys.env ? new EnvFx(app.scene, this.phys.env, app.scenery.q.particles) : null;      // pluie, flaques, givre, rafales (E19)
     // Voitures identiques (règle de la partie) : tout le monde, moi compris, avec l'apparence d'origine.
     const sameCars = opts.multi && opts.multi.room.rules && opts.multi.room.rules.sameCars;
-    this.car = createCar(sameCars ? DEFAULT_LOADOUT : profile().loadout);
+    this.car = createCar(sameCars ? DEFAULT_LOADOUT : profile().loadout, { scale: CAR_SCALE });
     this.fx = profile().loadout.custom.fx;                       // effets du joueur (custom.js) : traînée, étincelles, fumée, voix
     app.audio.setVoice(this.fx);
     app.scene.add(this.car.group);
     this.skids = new SkidMarks(app.scene);
-    this.ghostCar = createCar(null, { ghost: true });
+    this.ghostCar = createCar(null, { ghost: true, scale: CAR_SCALE });
     this.ghostCar.group.visible = false;
     app.scene.add(this.ghostCar.group);
 
@@ -180,6 +180,7 @@ export class RaceSession {
     this.finishT = 0;
     this.lastSplitShown = 0;
     this.wheelSpin = 0;
+    this._body = { pitch: 0, pitchV: 0, roll: 0, rollV: 0, heave: 0, heaveV: 0, acc: 0, lastV: 0 }; this._preFwd = 0;
     app.particles.clear();
     this.skids.clear();
     if (this.trailRib) this.trailRib.reset();
@@ -311,6 +312,11 @@ export class RaceSession {
     }
     if (ev.boostHit || ev.miniTurbo) this._feel.punchT = 0;                      // coup de champ de vision (feel.js)
     if (ev.land > 4) { this._feel.dipT = 0; this._feel.dipI = ev.land; }          // tassement de la caméra à la réception
+    // Caisse (visuel, version 1.0) : un choc de l'avant soulève le nez un instant, une réception écrase la suspension.
+    if (ev.shock > 0) this._bodyHit(ev.shock, 1);
+    else if (ev.wall > 3) { const p = this.phys, sp = Math.hypot(p.vel.x, p.vel.z) || 1; this._bodyHit(ev.wall, this._preFwd > 2 ? 1 : this._preFwd < -2 ? -1 : 0, (-Math.sin(p.yaw) * p.vel.z - -Math.cos(p.yaw) * p.vel.x) / sp); }
+    if (ev.land > 2) this._body.heaveV -= Math.min(4, ev.land * 0.22);
+    this._preFwd = this.phys.fwdSpeed;
     if (ev.wall > 3) {
       app.audio.thud(ev.wall);
       app.input.rumble(Math.min(1, ev.wall * 0.06), 0.4, 140);
@@ -425,6 +431,14 @@ export class RaceSession {
     }
   }
 
+  // Choc (visuel) : dir = 1 l'avant a touché (le nez se soulève), -1 l'arrière (il plonge), 0 de côté ; side : de quel côté (roulis). L'ampleur suit la violence, bornée.
+  _bodyHit(force, dir, side = 0) {
+    const B = this._body, k = Math.min(1, force / 22);
+    B.pitchV += dir * (0.5 + 1.3 * k);          // ≈ 3° pour un petit choc, ≈ 9° pour un choc violent, amorti en ≈ 0,4 s
+    B.rollV += Math.max(-1, Math.min(1, side * 3)) * 0.9 * k;
+    B.heaveV += 0.6 * k;
+  }
+
   _snapStats() { const s = this.stats; this.statsSnap = { perfects: s.perfects, turbos: s.turbos, rings: s.rings }; }
 
   update(dt) {
@@ -531,7 +545,7 @@ export class RaceSession {
 
     this.car.update(dt, performance.now() / 1000);
     // Roues, roulis, flammes
-    this.wheelSpin += (p.fwdSpeed / 0.44) * dt;
+    this.wheelSpin += (p.fwdSpeed / (0.44 * CAR_SCALE)) * dt;
     for (const w of this.car.wheels) {
       w.spin.rotation.x = -this.wheelSpin;
       if (w.front) w.pivot.rotation.y = -(p.steerAngle || 0);   // angle réel des roues avant
@@ -539,11 +553,22 @@ export class RaceSession {
     // Roulis : léger au sol, franc pour le deltaplane qui vire en l'air.
     const gliding = p.vehicle === 'glider' && !p.grounded;
     // Moto v2 (physics/vehicles/moto2.js) : l'inclinaison est celle de la physique, la moto penche dans le virage.
-    const roll = gliding ? -(p.steer || 0) * 0.45 : p.v2 && p.vehicle === 'moto' && p.grounded ? -p.lean : Math.max(-0.07, Math.min(0.07, p.yawRate * p.fwdSpeed * 0.0022));
-    this.car.body.rotation.z += (roll - this.car.body.rotation.z) * Math.min(1, dt * 8);
     const inp = this.lastInput || {};
-    const pitch = p.grounded ? (inp.throttle ? 0.012 : 0) - (inp.brake && p.fwdSpeed > 2 ? 0.03 : 0) : 0;
-    this.car.body.rotation.x += (pitch - this.car.body.rotation.x) * Math.min(1, dt * 6);
+    // Caisse sur sa suspension (visuel seulement : ni la physique ni le fantôme n'en dépendent). Tangage et roulis sont des ressorts amortis : la caisse se cabre à l'accélération,
+    // plonge au freinage, penche en virage, s'écrase à la réception, et son nez se soulève un instant quand l'avant heurte un obstacle (_bodyHit).
+    const B = this._body, bdt = Math.min(dt, 0.05);
+    const acc = bdt > 0 ? Math.max(-60, Math.min(30, (p.fwdSpeed - B.lastV) / bdt)) : 0; B.lastV = p.fwdSpeed;
+    B.acc += (acc - B.acc) * Math.min(1, bdt * 10);
+    const rollT = gliding ? -(p.steer || 0) * 0.45 : p.v2 && p.vehicle === 'moto' && p.grounded ? -p.lean : Math.max(-0.1, Math.min(0.1, p.yawRate * p.fwdSpeed * 0.0026));
+    const pitchT = p.grounded ? Math.max(-0.07, Math.min(0.035, B.acc * 0.0016)) : 0;
+    const still = this.app.motionOff;
+    B.pitchV += ((pitchT - B.pitch) * 110 - B.pitchV * 11) * bdt; B.pitch += B.pitchV * bdt;
+    B.rollV += ((rollT - B.roll) * 90 - B.rollV * 12) * bdt; B.roll += B.rollV * bdt;
+    B.heaveV += (-B.heave * 160 - B.heaveV * 13) * bdt; B.heave = Math.max(-0.28, Math.min(0.2, B.heave + B.heaveV * bdt));
+    if (still || !Number.isFinite(B.pitch + B.roll + B.heave)) { B.pitch = pitchT; B.roll = rollT; B.heave = 0; B.pitchV = B.rollV = B.heaveV = 0; }
+    const body = this.car.body;
+    if (body._baseY === undefined) body._baseY = body.position.y;
+    body.rotation.z = B.roll; body.rotation.x = B.pitch; body.position.y = body._baseY + B.heave;
     // Pause (course ou replay) : le monde est figé, il ne naît ni particule, ni trace, ni scintillement de flamme.
     const frozen = this.state === 'paused' || (this.replay && this.replayPaused);
     const boosting = p.boost > 0;
@@ -560,15 +585,15 @@ export class RaceSession {
     for (let w = 0; w < 2; w++) {
       if (frozen) continue;
       if (sliding && !lean && w < wheelsX.length) {
-        tmpV.set(wheelsX[w], 0, 1.3).applyQuaternion(g.quaternion).add(g.position);
-        this.skids.add(w, tmpV.x, tmpV.y, tmpV.z, tmpV2.x, tmpV2.z, this.car.isMoto ? 0.22 : 0.3, p.gSign < 0 ? -0.04 : 0.04);
+        tmpV.set(wheelsX[w], 0, 1.3).multiplyScalar(CAR_SCALE).applyQuaternion(g.quaternion).add(g.position);
+        this.skids.add(w, tmpV.x, tmpV.y, tmpV.z, tmpV2.x, tmpV2.z, (this.car.isMoto ? 0.22 : 0.3) * CAR_SCALE, p.gSign < 0 ? -0.04 : 0.04);
       } else this.skids.lift(w);
     }
     if (p.driftCharge > 0.15 && p.grounded && !lean && !frozen) {
       const col = this.fx.spark || (p.driftCharge >= 1.5 ? '#ffb84d' : p.driftCharge >= 0.7 ? '#5ff2ff' : '#ffffff');
       for (const sx of wheelsX) {
         if (Math.random() < 0.6) {
-          tmpV.set(sx, 0.2, 1.4).applyQuaternion(g.quaternion).add(g.position);
+          tmpV.set(sx, 0.2, 1.4).multiplyScalar(CAR_SCALE).applyQuaternion(g.quaternion).add(g.position);
           app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, (Math.random() - 0.5) * 4, 1 + Math.random() * 3, (Math.random() - 0.5) * 4, 0.25, 0.3, col, 4);
         }
       }
@@ -579,7 +604,7 @@ export class RaceSession {
     if ((trail.id !== 'none' || this.fx.trailC) && !this.demo && !this.replay && !lean) {
       if (!this.trailRib) this.trailRib = new TrailRibbon(app.scene);
       if (!frozen) {
-        tmpV.set(0, 0.7, 2.3).applyQuaternion(g.quaternion).add(g.position);
+        tmpV.set(0, 0.7, 2.3).multiplyScalar(CAR_SCALE).applyQuaternion(g.quaternion).add(g.position);
         tmpV2.set(1, 0, 0).applyQuaternion(g.quaternion);
         this.trailRib.update(dt, tmpV, tmpV2, p.speed, Math.min(1, p.boost), trailColor, performance.now() / 1000, app.camera.position, this.fx.trailLen);
       }
@@ -587,20 +612,20 @@ export class RaceSession {
     // Sillage du bateau (ou éclaboussures d'un véhicule dans l'eau).
     if (!frozen && p.grounded && p.surfMod === 'water' && p.speed > 4 && Math.random() < 0.9) {
       for (const sx of [-1.1, 1.1]) {
-        tmpV.set(sx, 0.2, 2.2).applyQuaternion(g.quaternion).add(g.position);
+        tmpV.set(sx, 0.2, 2.2).multiplyScalar(CAR_SCALE).applyQuaternion(g.quaternion).add(g.position);
         app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, sx * (1 + Math.random() * 2), 1.5 + Math.random() * 2.5, (Math.random() - 0.5) * 2, 0.6, 0.55, Math.random() < 0.5 ? '#e8f8ff' : '#9fe3ff', 7);
       }
     }
     // Particules : poussière de dérapage, étincelles de boost
     if (!frozen && p.grounded && p.slip > 5 && p.speed > 6 && p.surfMod !== 'water') {
       for (const sx of [-1, 1]) {
-        tmpV.set(sx * 1.0, 0.15, 1.4).applyQuaternion(g.quaternion).add(g.position);
+        tmpV.set(sx * 1.0, 0.15, 1.4).multiplyScalar(CAR_SCALE).applyQuaternion(g.quaternion).add(g.position);
         const dust = this.fx.smoke || (p.surfMod === 'ice' ? '#e8f8ff' : app.scenery.theme.dust);
         app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, (Math.random() - 0.5) * 2, 1 + Math.random() * 2, (Math.random() - 0.5) * 2, 0.7, 0.9, dust, -1);
       }
     }
     if (boosting && !frozen && Math.random() < 0.8) {
-      tmpV.set((Math.random() - 0.5) * 0.8, 0.4, 2.4).applyQuaternion(g.quaternion).add(g.position);
+      tmpV.set((Math.random() - 0.5) * 0.8, 0.4, 2.4).multiplyScalar(CAR_SCALE).applyQuaternion(g.quaternion).add(g.position);
       app.particles.spawn(tmpV.x, tmpV.y, tmpV.z, -p.vel.x * 0.2 + (Math.random() - 0.5) * 3, Math.random() * 2, -p.vel.z * 0.2 + (Math.random() - 0.5) * 3, 0.35, 0.5, '#5ff2ff', 0);
     }
     app.particles.update(dt);

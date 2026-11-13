@@ -1,7 +1,7 @@
 # Matrice de compatibilité des pièces (générée)
 
 Générée par `node tools/matrice-pieces.mjs --update` : **ne pas modifier à la main**. Chaque case est un vrai circuit (départ → pièce → arrivée, avec les
-transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 35) au pilote automatique, à 80, 150 et 250 km/h de croisière.
+transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 36) au pilote automatique, à 80, 150 et 250 km/h de croisière.
 
 | Code | Sens |
 |---|---|
@@ -13,7 +13,7 @@ transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 35
 | — | orientation non proposée par l'éditeur (`flagAllowed`) |
 | n/a | pièce sans route roulable (raison dans le fichier JSON) |
 
-Totaux : CHUTE 30 · OK 102 · RACCORD 4 · SAUT 67 · n/a 56 · v≥150 413 · v≥250 8 · v≥80 26 · — 318.
+Totaux : CHUTE 28 · OK 103 · RACCORD 4 · SAUT 60 · n/a 56 · v≥150 407 · v≥250 4 · v≥80 44 · — 318.
 
 **Limites** : pilote automatique (pas un humain), voiture classique, sans revêtement ni obstacle, une seule pièce testée par chaîne, vitesse de croisière régulée.
 Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles) sont dans `tools/compat/matrice-pieces.json`.
@@ -23,37 +23,37 @@ Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles)
 | Pièce | Sol | Mur gauche | Mur droit | Plafond | Incliné gauche 45° | Incliné droit 45° | Surplomb gauche 135° | Surplomb droit 135° |
 |---|---|---|---|---|---|---|---|---|
 | `straight` Ligne droite | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
-| `slope` Pente | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
-| `steep` Tremplin | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `slope` Pente | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `steep` Tremplin | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
 | `checkpoint` Checkpoint | OK | — | — | OK | — | — | — | — |
 | `start` Départ | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 | `finish` Arrivée | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 | `gentle` Pente douce (½ niveau) | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
-| `steep4` Ligne droite · inclinaison 4 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
-| `crv05` Courbe · inclinaison ½ | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
-| `crv1` Courbe · inclinaison 1 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `steep4` Ligne droite · inclinaison 4 | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `crv05` Courbe · inclinaison ½ | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `crv1` Courbe · inclinaison 1 | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
 | `crv2` Courbe · inclinaison 2 | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
-| `crv4` Courbe · inclinaison 4 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | CHUTE | CHUTE |
-| `dn05` Pente descendante ½ | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `crv4` Courbe · inclinaison 4 | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | CHUTE | CHUTE |
+| `dn05` Pente descendante ½ | OK | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
 | `dn1` Pente descendante 1 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
 | `dn2` Pente descendante 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
-| `dn4` Pente descendante 4 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
-| `cro05` Courbe · fin de montée ½ | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
-| `cro1` Courbe · fin de montée 1 | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
-| `cro2` Courbe · fin de montée 2 | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
-| `cro4` Courbe · fin de montée 4 | OK | CHUTE | CHUTE | v≥80 | CHUTE | CHUTE | v≥150 | v≥150 |
+| `dn4` Pente descendante 4 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cro05` Courbe · fin de montée ½ | OK | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cro1` Courbe · fin de montée 1 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cro2` Courbe · fin de montée 2 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cro4` Courbe · fin de montée 4 | SAUT | CHUTE | CHUTE | v≥80 | v≥250 | v≥250 | v≥150 | v≥150 |
 | `cdi05` Courbe · début de descente ½ | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
-| `cdi1` Courbe · début de descente 1 | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
-| `cdi2` Courbe · début de descente 2 | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
-| `cdi4` Courbe · début de descente 4 | OK | CHUTE | CHUTE | SAUT | CHUTE | CHUTE | CHUTE | CHUTE |
+| `cdi1` Courbe · début de descente 1 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cdi2` Courbe · début de descente 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cdi4` Courbe · début de descente 4 | SAUT | CHUTE | CHUTE | v≥80 | CHUTE | CHUTE | CHUTE | CHUTE |
 | `cdo05` Courbe · fin de descente ½ | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
 | `cdo1` Courbe · fin de descente 1 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
 | `cdo2` Courbe · fin de descente 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
-| `cdo4` Courbe · fin de descente 4 | SAUT | v≥150 | v≥150 | SAUT | SAUT | SAUT | CHUTE | CHUTE |
-| `crs05` Courbe en S · montée ½ | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
-| `crs1` Courbe en S · montée 1 | OK | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
-| `cds05` Courbe en S · descente ½ | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
-| `cds1` Courbe en S · descente 1 | OK | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cdo4` Courbe · fin de descente 4 | SAUT | v≥150 | v≥150 | v≥80 | SAUT | SAUT | CHUTE | CHUTE |
+| `crs05` Courbe en S · montée ½ | OK | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `crs1` Courbe en S · montée 1 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cds05` Courbe en S · descente ½ | OK | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cds1` Courbe en S · descente 1 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
 
 ## Virages
 
@@ -63,34 +63,34 @@ Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles)
 | `bigcurve` Grand virage | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
 | `cpCurve` Checkpoint en virage | OK | — | — | OK | — | — | — | — |
 | `hugecurve` Très grand virage plat | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
-| `cv05` Courbe serrée · inclinaison ½ | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
-| `cv1` Courbe serrée · inclinaison 1 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cv05` Courbe serrée · inclinaison ½ | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cv1` Courbe serrée · inclinaison 1 | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
 | `cv2` Courbe serrée · inclinaison 2 | v≥80 | v≥150 | CHUTE | v≥80 | v≥150 | CHUTE | v≥150 | v≥150 |
-| `cv4` Courbe serrée · inclinaison 4 | v≥80 | CHUTE | CHUTE | v≥80 | v≥250 | v≥250 | v≥150 | v≥150 |
+| `cv4` Courbe serrée · inclinaison 4 | v≥80 | v≥150 | CHUTE | v≥80 | v≥150 | v≥250 | v≥150 | v≥150 |
 | `cvBig05` Grande courbe · inclinaison ½ | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
 | `cvBig1` Grande courbe · inclinaison 1 | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
 | `cvBig2` Grande courbe · inclinaison 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
-| `cvBig4` Grande courbe · inclinaison 4 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
-| `cvL05` Courbe serrée ↰ · inclinaison ½ | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
-| `cvL1` Courbe serrée ↰ · inclinaison 1 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvBig4` Grande courbe · inclinaison 4 | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvL05` Courbe serrée ↰ · inclinaison ½ | OK | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `cvL1` Courbe serrée ↰ · inclinaison 1 | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
 | `cvL2` Courbe serrée ↰ · inclinaison 2 | v≥80 | CHUTE | v≥150 | v≥80 | CHUTE | v≥150 | v≥150 | v≥150 |
-| `cvL4` Courbe serrée ↰ · inclinaison 4 | v≥80 | CHUTE | CHUTE | v≥80 | v≥250 | v≥250 | v≥150 | v≥150 |
+| `cvL4` Courbe serrée ↰ · inclinaison 4 | v≥80 | CHUTE | v≥150 | v≥80 | v≥250 | v≥150 | v≥150 | v≥150 |
 | `cvBigL05` Grande courbe ↰ · inclinaison ½ | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
 | `cvBigL1` Grande courbe ↰ · inclinaison 1 | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
 | `cvBigL2` Grande courbe ↰ · inclinaison 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
-| `cvBigL4` Grande courbe ↰ · inclinaison 4 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvBigL4` Grande courbe ↰ · inclinaison 4 | v≥80 | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
 | `cvd05` Virage descendant serré · ½ | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
-| `cvd1` Virage descendant serré · 1 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvd1` Virage descendant serré · 1 | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
 | `cvd2` Virage descendant serré · 2 | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | CHUTE |
-| `cvd4` Virage descendant serré · 4 | CHUTE | v≥150 | CHUTE | CHUTE | v≥150 | v≥150 | v≥250 | v≥250 |
+| `cvd4` Virage descendant serré · 4 | CHUTE | v≥150 | CHUTE | CHUTE | v≥150 | v≥150 | v≥150 | CHUTE |
 | `cvdBig05` Virage descendant grand · ½ | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
 | `cvdBig1` Virage descendant grand · 1 | OK | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
 | `cvdBig2` Virage descendant grand · 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
 | `cvdBig4` Virage descendant grand · 4 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
 | `cvdL05` Virage descendant serré ↰ · ½ | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
-| `cvdL1` Virage descendant serré ↰ · 1 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `cvdL1` Virage descendant serré ↰ · 1 | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
 | `cvdL2` Virage descendant serré ↰ · 2 | v≥80 | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | CHUTE | v≥150 |
-| `cvdL4` Virage descendant serré ↰ · 4 | CHUTE | CHUTE | v≥150 | CHUTE | v≥150 | v≥150 | v≥250 | v≥250 |
+| `cvdL4` Virage descendant serré ↰ · 4 | CHUTE | CHUTE | v≥150 | CHUTE | v≥150 | v≥150 | CHUTE | v≥150 |
 | `cvdBigL05` Virage descendant grand ↰ · ½ | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
 | `cvdBigL1` Virage descendant grand ↰ · 1 | OK | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
 | `cvdBigL2` Virage descendant grand ↰ · 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
@@ -108,16 +108,16 @@ Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles)
 
 | Pièce | Sol | Mur gauche | Mur droit | Plafond | Incliné gauche 45° | Incliné droit 45° | Surplomb gauche 135° | Surplomb droit 135° |
 |---|---|---|---|---|---|---|---|---|
-| `loop` Looping ↱ | v≥150 | v≥150 | — | v≥150 | — | — | — | — |
-| `loopL` Looping ↰ | v≥150 | — | v≥150 | v≥150 | — | — | — | — |
+| `loop` Looping ↱ | OK | v≥150 | — | OK | — | — | — | — |
+| `loopL` Looping ↰ | OK | — | v≥150 | OK | — | — | — | — |
 | `loopBig` Grand looping ↱ | v≥150 | v≥150 | — | v≥150 | — | — | — | — |
 | `loopBigL` Grand looping ↰ | v≥150 | — | v≥150 | v≥150 | — | — | — | — |
-| `loopDouble` Double looping ↱ | v≥150 | v≥150 | — | v≥150 | — | — | — | — |
-| `loopDoubleL` Double looping ↰ | v≥150 | — | v≥150 | v≥150 | — | — | — | — |
+| `loopDouble` Double looping ↱ | OK | v≥150 | — | OK | — | — | — | — |
+| `loopDoubleL` Double looping ↰ | OK | — | v≥150 | OK | — | — | — | — |
 | `loopBigDouble` Grand looping ×2 ↱ | v≥150 | v≥150 | — | v≥150 | — | — | — | — |
 | `loopBigDoubleL` Grand looping ×2 ↰ | v≥150 | — | v≥150 | v≥150 | — | — | — | — |
-| `loopTriple` Triple looping ↱ | v≥150 | RACCORD | — | v≥150 | — | — | — | — |
-| `loopTripleL` Triple looping ↰ | v≥150 | — | RACCORD | v≥150 | — | — | — | — |
+| `loopTriple` Triple looping ↱ | OK | RACCORD | — | OK | — | — | — | — |
+| `loopTripleL` Triple looping ↰ | OK | — | RACCORD | OK | — | — | — | — |
 | `loopBigTriple` Grand looping ×3 ↱ | v≥150 | RACCORD | — | v≥150 | — | — | — | — |
 | `loopBigTripleL` Grand looping ×3 ↰ | v≥150 | — | RACCORD | v≥150 | — | — | — | — |
 

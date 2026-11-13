@@ -83,8 +83,8 @@ export const wallMethods = {
         }
         continue;                                                       // déjà dans la dalle (cas ancien) : inchangé
       }
-      // Rebord bas (moins de CAR.step sous le dessus) : aide de montée, la voiture est posée sur la dalle.
-      if (p.y >= hP - CAR.step) { p.y = hP + 0.02; continue; }
+      // Rebord bas (moins de CAR.curb sous le dessus) : aide de montée, la voiture est posée sur la dalle.
+      if (p.y >= hP - CAR.curb) { p.y = hP + 0.02; continue; }      // (PHYS_VER 36 : la hauteur d'une roue, plus 1,6 m : une voiture qui arrive trop bas heurte la tranche au lieu d'être soulevée sur la dalle)
       // Face de la dalle : on revient devant, et on annule la vitesse qui pousse contre elle.
       const dx = p.x - q.x, dz = p.z - q.z, dl = hypot2(dx, dz);
       p.x = q.x; p.z = q.z;
@@ -99,6 +99,10 @@ export const wallMethods = {
   // again : seconde passe du même pas (après un obstacle qui a poussé la voiture) : même correction de position et de vitesse, sans recompter le frottement ni l'arrêt.
   _walls(again = false) {
     const p = this.pos, v = this.vel, K = this.k;
+    // PHYS_VER 36 : voiture posée, la réponse d'une bordure reste DANS LE PLAN de la route. Les bordures sont verticales : sur une route en pente leur réponse horizontale laissait à la
+    // voiture une vitesse qui la décollait de la chaussée (l'avant se soulevait à chaque choc en montée). La part de la vitesse perpendiculaire à la route est donc celle d'avant le contact.
+    const gn = this.grounded ? this.n : null;
+    const vn0 = gn ? v.x * gn.x + v.y * gn.y + v.z * gn.z : 0;
     const fx = -dsin(this.yaw), fz = -dcos(this.yaw);
     const pfx = -dsin(this.prevYaw), pfz = -dcos(this.prevYaw);
     let hit = 0, touch = false, sx = 0, sz = 0, lnx = 0, lnz = 0, kHit = 1;
@@ -140,10 +144,10 @@ export const wallMethods = {
       // lui, poussait le nez dans la paroi à chaque pas : la voiture restait nez au mur à ~1 m/s pendant dix secondes. Le contact est donc retenu `touchMemory` secondes (et sa normale).
       if (touch) { this.touchT = CAR.touchMemory; this.wnx = lnx; this.wnz = lnz; } else this.touchT = Math.max(0, this.touchT - DT);
       const near = touch || this.touchT > 0;
-      if (near && this.speed < 4) this.crawlT = Math.min(1, this.crawlT + DT); else this.crawlT = Math.max(0, this.crawlT - 2 * DT);      // (à l'arrêt OU rampant : le frottement tient la voiture à ~3 m/s)
+      if (near && this.speed < 6.5) this.crawlT = Math.min(1, this.crawlT + DT); else this.crawlT = Math.max(0, this.crawlT - 2 * DT);      // (à l'arrêt OU rampant : le frottement tient la voiture à ~3 m/s)
       if (near && this.crawlT > 0.25) this.unstickT = 5;
       else if (this.unstickT > 0) this.unstickT = near ? this.unstickT - DT : this.unstickT - 3 * DT;
-      if (near && this.unstickT > 0 && this.speed < 8) {
+      if (near && this.unstickT > 0 && this.speed < 11) {      // (version 1.0 : seuils 4 et 8 m/s -> 6,5 et 11 : le moteur plus fort fait ramper la voiture plaquée vers 5 m/s)
         const into = fx * this.wnx + fz * this.wnz;            // < 0 : le nez regarde le mur ; > 0 : il s'en écarte
         const cross = fx * this.wnz - fz * this.wnx;           // sens de rotation le plus court vers la tangente ; ≈ 0 de plein fouet : on garde le sens déjà pris (sinon il change à chaque pas)
         if (Math.abs(cross) > 0.15 || !this.unstickDir) this.unstickDir = cross >= 0 ? 1 : -1;
@@ -174,6 +178,7 @@ export const wallMethods = {
       const stun = fresh ? wallStunOf(K, hit) : 0;
       if (stun > 0) this.stunT = Math.max(this.stunT, stun);
     }
+    if (gn && touch) { const d = v.x * gn.x + v.y * gn.y + v.z * gn.z - vn0; v.x -= gn.x * d; v.y -= gn.y * d; v.z -= gn.z * d; }
   },
 
   // (mx, mz) : centre de la voiture, pour juger la hauteur d'une sonde sur une pièce en pente (voir _probeTile).
