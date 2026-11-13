@@ -211,13 +211,13 @@ export function continuityIssues(track) {
       const drop = ae - af;
       if (drop < 0.09) continue;
       const deg = Math.round((drop * 180) / Math.PI);
-      const vmin = 0.6 / Math.sin(drop);                          // vitesse de décollage : la route doit « tomber » de plus de 0,6 m/s (CAR.launch, voir docs/AUDIT-EXPERIENCE-0.9.59.md §3.2)
+      const vmin = 3.1 / Math.sin(drop);                          // vitesse de décollage (physique 36) : la route se dérobe de plus que la détente de la suspension quand elle « tombe » à plus de √(2 · g · 0,25 m) ≈ 3,1 m/s ; en dessous la cassure est absorbée
       const air120 = ((2 * (120 / KMH) * Math.sin(drop)) / 19).toFixed(1).replace('.', ',');
       add({
         tile: f.tile, other: e.tile, key: pos(e.tile), level: 'info', code: 'slope-break',
         why: `Rupture de pente de ${deg}° entre ${lab(e.tile)} (${pos(e.tile)}) et ${lab(f.tile)} (${pos(f.tile)}) : la route « tombe » sous la voiture.`,
         effect: `Dès ${Math.max(1, Math.round(vmin * KMH))} km/h la voiture décolle ; à 120 km/h elle reste environ ${air120} s en l'air.`,
-        fix: 'Si ce n\'est pas voulu, utilise une pièce de la famille « Courbe » (fin de montée, début de descente, en S) : son profil adouci se raccorde sans cassure.',
+        fix: 'Si ce n\'est pas voulu, utilise une pièce de la famille « Courbe » (fin de montée, début de descente, en S) : son profil adouci se raccorde sans cassure (prise très vite, une vraie bosse fait quand même décoller).',
       });
     }
   }

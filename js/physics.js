@@ -114,7 +114,7 @@ export class CarPhysics {
     this.prev.x = x; this.prev.y = y; this.prev.z = z;
     this.vel.x = 0; this.vel.y = 0; this.vel.z = 0;
     this.yaw = yaw; this.prevYaw = yaw; this.yawRate = 0; this.omega = 0;
-    this.steer = 0; this.steerAngle = 0; this.boost = 0; this.boostF = 1; this.slip = 0; this.airTime = 0; this.fwdSpeed = 0;
+    this.lift = 0; this.steer = 0; this.steerAngle = 0; this.boost = 0; this.boostF = 1; this.slip = 0; this.airTime = 0; this.fwdSpeed = 0;
     this.driftT = 0; this.bounceCD = 0; this.driftCharge = 0; this.slipV = 0; this.xfer = 0; this.prevSteerIn = 0; this.wallT = 0; this.stunT = 0; this.stuckT = 0; this.wallRun = 0; this.pinT = 0; this._pinned = false; this.unstick = 0; this.unstickT = 0; this.unstickDir = 0; this.crawlT = 0; this.touchT = 0; this.wnx = 0; this.wnz = 0; this.wallPrev = 0;
     this.pitch = 0; this.pitchRate = 0; this.pitch0 = 0; this.landQ = ''; this.aoa = 0.08; this.glidePitch = 0; this.bankT = 0;
     if (this.v2) { this.lean = 0; this.mAx = 0; this.heave = 0; this.v2F = 1; this.v2R = 1; }
@@ -476,6 +476,11 @@ export class CarPhysics {
     const g = this.g * this.gSign;
     vf -= g * fy * dt;
     vr -= g * ry * dt;
+    // Vitesse qui ÉLOIGNE la voiture de la route (PHYS_VER 36, voir _roadContact) : la route vient de se dérober (sommet de côte, cassure, fin de ruban). Elle est conservée, et la
+    // gravité la reprend : la voiture suit une vraie trajectoire balistique, roues encore au contact tant que la détente de la suspension le permet. Posée à plat : nulle, rien ne change.
+    let vnK = v.x * n.x + v.y * n.y + v.z * n.z;
+    if (this.lift > 0) vnK -= g * n.y * dt;                            // roues délestées : la gravité agit en entier
+    else vnK = vnK > 1e-6 ? Math.max(0, vnK - g * n.y * dt) : 0;       // au contact : la gravité ne peut qu'annuler la vitesse qui éloigne de la route (la chaussée porte le reste)
 
     // Effet du revêtement (le paramètre f vaut 1 à 100 %).
     const mod = this.surfMod, f = this.surfP;
@@ -532,9 +537,9 @@ export class CarPhysics {
     this.yaw -= this.omega * us * dt;   // rotation autour du haut local
     this.yawRate = -this.omega * us;
 
-    v.x = fx * vf + rx * vr;
-    v.y = fy * vf + ry * vr;
-    v.z = fz * vf + rz * vr;
+    v.x = fx * vf + rx * vr + n.x * vnK;
+    v.y = fy * vf + ry * vr + n.y * vnK;
+    v.z = fz * vf + rz * vr + n.z * vnK;
     if (belt) { v.x += belt.x; v.z += belt.z; }
     if (this._glassCheck(mod === 'glass', this.surfTile, dt)) this.grounded = false;      // la dalle cède : la voiture tombe
     if (this.ev.sink) return true;
@@ -601,10 +606,10 @@ export class CarPhysics {
     p.x += v.x * dt; p.y += v.y * dt; p.z += v.z * dt;
     this._rings();
     if (this.ev.sink) return true;
+    this._pinned = false;
     if (this._tryEnterRibbon()) return true;
     if (!this.grounded && this._tryLandRibbon()) return true;
     this._walls();
-    this._pinned = false;
     this._tunnelRoof();
     this._slabs();
     // Gravité inversée, plaquée EN L'AIR sous une dalle ou un toit de tunnel (rien de roulable) : au bout d'une seconde la voiture est ramenée au checkpoint (même décision au rejeu et sur le serveur).
@@ -631,7 +636,6 @@ export class CarPhysics {
     const vn = v.x * s.nx + v.y * s.ny + v.z * s.nz;
     // Aimant : la voiture reste collée à la route quoi qu'il arrive (bosses, vitesse).
     const magnet = s.mod === 'magnet';
-    const launch = magnet ? Infinity : CAR.launch;
     const snap = magnet ? CAR.step : CAR.snap;
     // Aimant : au-dessus d'une route aimantée, la voiture est attirée vers la surface le long de SA normale, pas selon
     // la gravité du monde. Endroit ou envers, c'est la même règle (au plafond, la normale pointe vers le bas du monde).
@@ -643,18 +647,36 @@ export class CarPhysics {
         v.x -= m.nx * a; v.y -= m.ny * a; v.z -= m.nz * a;
       }
     }
-    // Décollage : seule compte la vitesse avec laquelle la route « tombe » sous la voiture (vn = vitesse × sinus de l'angle de raccord), sans
-    // exemption d'angle. Un raccord doux (pente, bosse, sommet de côte) pris lentement reste collé à la route, le même pris à 300 km/h décolle.
-    // Un vol de moins de 0,35 s ne coûte rien à la réception.
-    const stick = vn < launch;
-    if (this.grounded && gap < snap && gap > -CAR.step && stick) {
+    // Décollage (PHYS_VER 36) : la voiture quitte la route quand la route se DÉROBE plus vite que la gravité ne la ramène, et seulement alors. Sa vitesse réelle est conservée
+    // (_driveGround) ; tant que l'écart avec la chaussée reste dans la détente de la suspension (CAR.susTravel) les roues touchent encore : elle garde adhérence et moteur, et une petite
+    // cassure prise lentement est simplement absorbée. Au-delà, elle vole. Une seule règle pour une cassure franche, un sommet arrondi, une bosse :
+    //   sommet de rayon R pris à la vitesse v : décollage si v² / R > g (avant : jamais, la voiture restait COLLÉE à un sommet arrondi jusqu'à 72 m/s² d'accélération centripète,
+    //   puis partait d'un coup ; et la moindre cassure faisait un saut dès 40 km/h).
+    // Aimant : la voiture reste collée quoi qu'il arrive, comme avant.
+    // Marche franchie d'office (la surface est AU-DESSUS de la voiture) : la hauteur d'une roue. Une pièce mobile (ascenseur) garde l'ancienne tolérance : on y monte en marche.
+    const up = s.tile && s.tile.mv ? CAR.step : CAR.curb;
+    if (this.grounded && magnet && gap < snap && gap > -CAR.step) {
       p.y = s.h;
       const sp = this.speed;
       v.x -= s.nx * vn; v.y -= s.ny * vn; v.z -= s.nz * vn;
       const sp2 = this.speed;
       if (sp2 > 1e-4) { const k = sp / sp2; v.x *= k; v.y *= k; v.z *= k; }
+      this.lift = 0;
       this._setGround(s);
-    } else if (!this.grounded && gap <= 0.02 && gap > -CAR.step && vn <= 0.5) {
+    } else if (this.grounded && gap <= CAR.susTravel && gap > -up) {
+      if (gap <= 0) {
+        // Au contact : la route porte la voiture. Elle absorbe la vitesse qui s'y enfonce ; dans un creux suivi sans quitter la route, la vitesse est conservée (la route guide, sans choc).
+        p.y = s.h;
+        if (vn < 0) {
+          const sp = this.speed;
+          v.x -= s.nx * vn; v.y -= s.ny * vn; v.z -= s.nz * vn;
+          const sp2 = this.speed;
+          if (this.lift <= 0 && sp2 > 1e-4) { const k = sp / sp2; v.x *= k; v.y *= k; v.z *= k; }
+        }
+        this.lift = 0;
+      } else this.lift = gap;       // roues délestées : la gravité ramène la voiture (ou pas)
+      this._setGround(s);
+    } else if (!this.grounded && gap <= 0.02 && gap > -up - Math.max(0, -vn) * dt * 2 && vn <= 0.5) {
       p.y = s.h;
       // Une nouvelle plaque peut agir (mais pas la même, si on retombe dessus).
       if ((this.plateLock === 'flip' || this.plateLock === 'spring') && s.tile !== this.lockTile) this.plateLock = '';
@@ -665,9 +687,11 @@ export class CarPhysics {
         v.x *= k; v.y *= k; v.z *= k;
       }
       this.grounded = true;
+      this.lift = 0;
       this._setGround(s);
     } else {
       this.grounded = false;
+      this.lift = 0;
     }
 
     // Revêtement Rebond : propulse la voiture vers le haut.

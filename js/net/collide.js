@@ -9,8 +9,9 @@
 // fantôme, l'autre passait au travers). presentState ramène l'autre AU MÊME INSTANT (position + vitesse × retard) : les deux joueurs voient le même
 // contact, au même moment, et chacun applique sa moitié.
 
-export const CAR_R = 1.15;               // m : demi-largeur d'une voiture + marge
-export const REACH_Y = 1.8;              // m : au-delà de cet écart de hauteur, on passe au-dessus / en dessous (pont, looping)
+import { CAR_SCALE } from '../constants.js';
+export const CAR_R = 1.15 * CAR_SCALE;   // m : demi-largeur d'une voiture + marge
+export const REACH_Y = 1.8 * CAR_SCALE;  // m : au-delà de cet écart de hauteur, on passe au-dessus / en dessous (pont, looping)
 export const RESTITUTION = 0.35;
 export const MAX_DV_STEP = 0.32;         // m/s ajoutés au plus par pas de 1/120 s (≈ 38 m/s², soit environ 4 g)
 export const MAX_SHIFT_STEP = 0.05;      // m de déplacement de correction au plus par pas

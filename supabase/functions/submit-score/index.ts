@@ -23,13 +23,14 @@ var SURF_PHYS = {
   // Sous les gaz : a = engineAccel × (1 − (v / maxSpeed)^1,5) (CAR.accelCurve) : forte au départ, elle s'essouffle près du plafond, qu'on
   // n'atteint qu'avec de bonnes sorties de virage et de longues lignes droites. Au-delà du plafond la poussée devient un freinage.
   gravity: 19,
-  engineAccel: 14,
+  engineAccel: 16,
   coastDrag: 0.05,
-  boostAccel: 10,
+  boostAccel: 8,
   boostTime: 1.2,
-  maxSpeed: 290 / 3.6,
+  maxSpeed: 300 / 3.6,
   boostSpeed: 340 / 3.6
 };
+var CAR_SCALE = 1.6;
 var MAX_DECOS = 500;
 var WORLD_SCALE = CELL / 24;
 var LOOP_R = 12 * WORLD_SCALE;
@@ -5544,7 +5545,7 @@ var clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 // js/physics/specs.js
 var CAR = {
   accel: SURF_PHYS.engineAccel,
-  accelCurve: 1.5,
+  accelCurve: 2.5,
   maxSpeed: SURF_PHYS.maxSpeed,
   boostSpeed: SURF_PHYS.boostSpeed,
   boostAccel: SURF_PHYS.boostAccel,
@@ -5557,9 +5558,9 @@ var CAR = {
   coast: 0.8,
   coastDrag: SURF_PHYS.coastDrag,
   // Châssis (modèle bicyclette)
-  a: 1.35,
-  b: 1.4,
-  yawK: 1.9,
+  a: 1.35 * CAR_SCALE,
+  b: 1.4 * CAR_SCALE,
+  yawK: 1.9 * CAR_SCALE,
   corner: 230,
   latGrip: 80,
   frontShare: 0.42,
@@ -5585,9 +5586,10 @@ var CAR = {
   gravity: SURF_PHYS.gravity,
   snap: 0.7,
   step: 1.6,
+  kinkLaunch: 3.1,
   magnetRange: 4,
   magnetAcc: 80,
-  launch: 0.6,
+  susTravel: 0.25,
   airPitchAcc: 4.2,
   airPitchDamp: 2.6,
   airPitchUpK: 1.6,
@@ -5624,8 +5626,10 @@ var CAR = {
   spring: SURF_PHYS.spring,
   springHop: 11,
   cutTime: 1,
-  shockE: 0.5,
-  shockKick: 6,
+  shockE: 0.25,
+  shockKick: 2,
+  shockLift: 0.7,
+  curb: 0.9,
   // 0.9.4 : un mur se paie. Choc = rebond + perte de vitesse proportionnelle à l'impact + coup de volant forcé + moteur et adhérence
   // réduits un instant (la voiture « encaisse »), et frottement continu tant qu'on racle.
   // Phase 2 (PHYS_VER 35) : le contact d'un mur est une RÉPONSE À UN IMPACT, proportionnelle à la composante normale de la vitesse (ap = vitesse d'approche, m/s), et non plus une perte
@@ -5661,18 +5665,21 @@ var CAR = {
   stuckAlign: 1.4,
   stunTraction: 0.5,
   stunGrip: 0.75,
-  radius: 1,
-  probe: 1.25,
-  height: 1.3
+  loadFull: 0.5,
+  radius: 1 * CAR_SCALE,
+  probe: 1.25 * CAR_SCALE,
+  height: 1.3 * CAR_SCALE,
+  bodyY: 0.8 * CAR_SCALE,
+  bodyR: 1.4 * CAR_SCALE
 };
 var MOTO = {
   ...CAR,
   accel: SURF_PHYS.engineAccel * (10 / 11),
   maxSpeed: SURF_PHYS.maxSpeed * (90 / 95),
   brake: 44,
-  a: 1.15,
-  b: 1.2,
-  yawK: 1.25,
+  a: 1.15 * CAR_SCALE,
+  b: 1.2 * CAR_SCALE,
+  yawK: 1.25 * CAR_SCALE,
   latGrip: 78,
   frontShare: 0.45,
   steerMax: 0.75,
@@ -5692,7 +5699,7 @@ var BOAT = {
   frontShare: 0.41,
   steerMax: 0.55,
   steerAlat: 48,
-  yawK: 2.1,
+  yawK: 2.1 * CAR_SCALE,
   yawDamp: 0.9,
   driftRear: 0.7
 };
@@ -5750,8 +5757,9 @@ function surfaceCoeffs(mod, f, out = COEF) {
       out.rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85);
       break;
     case "slow":
-      out.extraDrag = 14 * f;
+      out.extraDrag = SURF_PHYS.engineAccel * f;
       break;
+    // (à 100 % : exactement la poussée du moteur à l'arrêt ; version 1.0 : suit le moteur, 14 -> 16)
     // Poudreuse : on s'enfonce un peu, l'adhérence est molle et le moteur patine.
     case "powder":
       out.grip = clamp(0.62 / Math.sqrt(f), 0.3, 0.9);
@@ -7207,10 +7215,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start [cdi1] [dn2] [dn2] [cdo2] B S [crv1] UU GR2 DD [cdo1] B2 S [crv1] UU GR2 DD [cdo1] S B C S3 HL S2 B2 finish",
     medals: {
-      cristal: 20.5,
-      or: 21.6,
-      argent: 24.8,
-      bronze: 29.1
+      cristal: 19.8,
+      or: 20.8,
+      argent: 24,
+      bronze: 28.1
     }
   },
   {
@@ -7234,10 +7242,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start I2 B3 I2 S [crs1] S2 [cds1] B HR S3 B C S2 HL S2 B [cdi1] [dn2] [cdo1] S B2 finish",
     medals: {
-      cristal: 20.7,
-      or: 21.8,
-      argent: 25.1,
-      bronze: 29.4
+      cristal: 20.8,
+      or: 21.9,
+      argent: 25.2,
+      bronze: 29.6
     }
   },
   {
@@ -7262,10 +7270,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 UU GR2 DD [cdo1] B2 S [crs1] S2 [cds1] B S2_ B_ S2_ BR S2 B BL S2 B C S3 HL S B2 finish",
     medals: {
-      cristal: 23.1,
-      or: 24.3,
-      argent: 27.9,
-      bronze: 32.8
+      cristal: 22.6,
+      or: 23.8,
+      argent: 27.4,
+      bronze: 32.2
     }
   },
   {
@@ -7305,7 +7313,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : deux boosters \u2192 colline douce. Au programme : vague en S, S relev\xE9 2\xD72, un tr\xE8s grand virage plat.",
     goal: {
       id: "under",
-      t: 22
+      t: 23
     },
     opts: {
       l: 6
@@ -7315,10 +7323,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 GU3 GD3 B S [crs1] S2 [cds1] B BR S BL S B C S2 HL S2 B [cdi1] [dn2] [cdo1] S B2 finish",
     medals: {
-      cristal: 20.7,
-      or: 21.8,
-      argent: 25,
-      bronze: 29.4
+      cristal: 21,
+      or: 22.1,
+      argent: 25.4,
+      bronze: 29.8
     }
   },
   {
@@ -7369,10 +7377,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B TI TM TO B S.g40 [crs1] UU GR2 G5 V-5 S10 S.g100 B C S HR S B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 22.7,
-      or: 23.9,
-      argent: 27.5,
-      bronze: 32.3
+      cristal: 22.8,
+      or: 24.1,
+      argent: 27.7,
+      bronze: 32.5
     }
   },
   {
@@ -7398,10 +7406,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start V-5 [dn4] [cdo2] S C B2 S [crv1] UU G2 DD [cdo1] S3 CBR1 S [tr01s] S2< [tr10s] S LL S C B2 S2 [crv2] UX G2 DX DX [cdo2] S3 C B2 S UU GR2 DD [cdo1] S2 finish",
     medals: {
-      cristal: 35.8,
-      or: 37.7,
-      argent: 43.3,
-      bronze: 50.9
+      cristal: 34.8,
+      or: 36.6,
+      argent: 42.1,
+      bronze: 49.4
     }
   },
   {
@@ -7424,10 +7432,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 O OL S2 B3 [tr01s] S4< [tr10s] S BR S2 B [tr02s] S4> [tr20s] S C B OB S2 B [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 29.1,
-      or: 30.7,
-      argent: 35.3,
-      bronze: 41.4
+      cristal: 30.4,
+      or: 32,
+      argent: 36.8,
+      bronze: 43.2
     }
   },
   {
@@ -7452,10 +7460,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start TI TM3.b TO BRR S B BLL S [crs1] S2 [cds1] S [tr01l] S5< [tr10l] C B BRR S [crs1] S [cds1] B BLL S2 TB BRR S B BLL S2 B2 finish",
     medals: {
-      cristal: 33,
-      or: 34.8,
-      argent: 40,
-      bronze: 46.9
+      cristal: 32.6,
+      or: 34.3,
+      argent: 39.4,
+      bronze: 46.3
     }
   },
   {
@@ -7477,10 +7485,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 S.j200 G1 V2 S3 RR C B2 S.j200 G1 V2 S3 LL C B2 S.j200 G1 V2 S3 RR C B2 S.j200 G1 V2 S3 LL S B [cdi2] DX [cdo2] B [crs1] S [cds1] B2 finish",
     medals: {
-      cristal: 32.2,
-      or: 33.9,
-      argent: 39,
-      bronze: 45.8
+      cristal: 33.2,
+      or: 35,
+      argent: 40.2,
+      bronze: 47.2
     }
   },
   {
@@ -7505,10 +7513,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S.n S2.a R.a L.a R.a L.a S.a S.n B2 S [tr01s] S2< [tr10s] S3 R R B S2 L S L B S3 [cvd05] [cvdL05] B S C S.n S2.a R.a L.a R.a L.a S2.a finish",
     medals: {
-      cristal: 34,
-      or: 35.8,
-      argent: 41.1,
-      bronze: 48.3
+      cristal: 33.3,
+      or: 35,
+      argent: 40.3,
+      bronze: 47.3
     }
   },
   {
@@ -7555,10 +7563,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start Y2.o B S [cvd05] [cvdL05] [cvd05] [cvdL05] B S S.o S [tr01s] S2< [tr10s] S R L R L B S2 C S.o S R L R L B S2 B finish",
     medals: {
-      cristal: 29,
-      or: 30.6,
-      argent: 35.1,
-      bronze: 41.3
+      cristal: 28.4,
+      or: 29.9,
+      argent: 34.4,
+      bronze: 40.4
     }
   },
   {
@@ -7581,10 +7589,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B BR S BL S BRR S B [tr02l] S4> [tr20l] BLL S2 C B [cdi1] [dn2] [cdo1] BRR S BLL B2 finish",
     medals: {
-      cristal: 22,
-      or: 23.2,
-      argent: 26.6,
-      bronze: 31.3
+      cristal: 22.6,
+      or: 23.7,
+      argent: 27.3,
+      bronze: 32.1
     }
   },
   {
@@ -7605,10 +7613,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S.o B R L R L B S2 C B S R S L B S2 [tr01s] S2< [tr10s] S R B S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 25.1,
-      or: 26.4,
-      argent: 30.4,
-      bronze: 35.6
+      cristal: 24.6,
+      or: 25.9,
+      argent: 29.8,
+      bronze: 35
     }
   },
   {
@@ -7622,7 +7630,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : sans bordures (six cases). Au programme : vague douce, tunnel de quatre cases, un seul tr\xE8s grand virage plat.",
     goal: {
       id: "under",
-      t: 20
+      t: 21
     },
     opts: {
       l: 4
@@ -7632,10 +7640,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2_ S3_ B_ S [crs1] S2 [cds1] B S B2# S2# C B S3 HR S2 B [cdi1] [dn2] [cdo1] S B2 finish",
     medals: {
-      cristal: 18.7,
-      or: 19.7,
-      argent: 22.7,
-      bronze: 26.6
+      cristal: 19.2,
+      or: 20.2,
+      argent: 23.2,
+      bronze: 27.2
     }
   },
   {
@@ -7657,12 +7665,12 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 40
     },
-    script: "start B3 OB S B CBR4 CBR4 CBR4 CBR4 S C [cdi2] DX DX DX [cdo2] B S [tr01s] S2< [tr10s] S [tr02s] S3> [tr20s] S2 B2 finish",
+    script: "start B3 OB S B CBR4 CBR4 CBR4 CBR4 S C S [cdi2] DX DX DX [cdo2] B S [tr01s] S2< [tr10s] S [tr02s] S3> [tr20s] S2 B2 finish",
     medals: {
-      cristal: 36.6,
-      or: 38.5,
-      argent: 44.3,
-      bronze: 52
+      cristal: 37.4,
+      or: 39.4,
+      argent: 45.3,
+      bronze: 53.1
     }
   },
   {
@@ -7684,10 +7692,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start [cvd05] [cvd05] B S3 L I B S R L S B S2 R S R B S2 [tr01s] S2< [tr10s] S3 L S L B I S3 KR S R S2 B finish",
     medals: {
-      cristal: 32.9,
-      or: 34.6,
-      argent: 39.8,
-      bronze: 46.7
+      cristal: 32.2,
+      or: 33.9,
+      argent: 39,
+      bronze: 45.8
     }
   },
   {
@@ -7702,7 +7710,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : verglas, deux boosters, rebond vers une terrasse plus basse. Au programme : quatre rebonds de plus en plus puissants et longs : la Banquise descend de terrasse en terrasse (Spores monte).",
     goal: {
       id: "under",
-      t: 29
+      t: 31
     },
     opts: {
       l: 28
@@ -7712,10 +7720,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start I B2 S.j100 G1 V-2 S3.i C B2 S.j150 G2 V-2 S3.i C B2 S.j200 G2 V-2 S3.i C B2 S.j200 G2 V-2 S2.i [tr01s] S3< [tr10s] S2 [cdi2] DX [cdo2] S2 B finish",
     medals: {
-      cristal: 27.5,
-      or: 29,
-      argent: 33.3,
-      bronze: 39.1
+      cristal: 28.2,
+      or: 29.7,
+      argent: 34.2,
+      bronze: 40.1
     }
   },
   {
@@ -7736,10 +7744,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start^ B3^ [tr31s] S< [tr10s] [tr02s] S> [tr23s] S^ [tr31s] S< [tr10s] S C B [cdi2] DX [cdo2] S BLL S S.d S.w100 S C B3 OD S2 B finish",
     medals: {
-      cristal: 27.4,
-      or: 28.9,
-      argent: 33.2,
-      bronze: 39
+      cristal: 28.5,
+      or: 30,
+      argent: 34.5,
+      bronze: 40.6
     }
   },
   {
@@ -7783,10 +7791,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B CVR2 CVR2 S B R_ L_ R_ L_ S B C B S2 R S R B S [tr01s] S2< [tr10s] S B L S R# L# R# L# S2# B [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 30.7,
-      or: 32.3,
-      argent: 37.1,
-      bronze: 43.6
+      cristal: 30.1,
+      or: 31.7,
+      argent: 36.4,
+      bronze: 42.7
     }
   },
   {
@@ -7806,10 +7814,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2.d B S2 R S L S B R.d L.d S2 C B S [tr01s] S2< [tr10s] S2 R S2.d L B S2 R.d S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 30,
-      or: 31.6,
-      argent: 36.3,
-      bronze: 42.6
+      cristal: 29.2,
+      or: 30.8,
+      argent: 35.4,
+      bronze: 41.5
     }
   },
   {
@@ -7830,10 +7838,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S# R# R# B# S2# B S3 TI TM2 TO S R R B S2 [cdi1] [dn2] [cdo1] S C S [cvd05] [cvd05] [cvd05] [cvd05] S2 B S R# L# R# L# S2# B finish",
     medals: {
-      cristal: 30.5,
-      or: 32.1,
-      argent: 36.9,
-      bronze: 43.4
+      cristal: 29.9,
+      or: 31.5,
+      argent: 36.2,
+      bronze: 42.5
     }
   },
   {
@@ -7883,10 +7891,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S CKL S B3 OBDL S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B TI TM2 TO S B [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 26.6,
-      or: 28,
-      argent: 32.2,
-      bronze: 37.8
+      cristal: 27.3,
+      or: 28.8,
+      argent: 33.1,
+      bronze: 38.9
     }
   },
   {
@@ -7935,10 +7943,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 TI TM2 TO QU WA4 CR S C [cdi2] DX [cdo2] B OB S2 B [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 finish",
     medals: {
-      cristal: 22.4,
-      or: 23.6,
-      argent: 27.2,
-      bronze: 31.9
+      cristal: 23.1,
+      or: 24.3,
+      argent: 28,
+      bronze: 32.8
     }
   },
   {
@@ -7961,10 +7969,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B4 OBT S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B OBDL S C B2 [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 31.9,
-      or: 33.6,
-      argent: 38.6,
-      bronze: 45.3
+      cristal: 32.9,
+      or: 34.6,
+      argent: 39.8,
+      bronze: 46.7
     }
   },
   {
@@ -7985,10 +7993,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 QU WA3 CR S [cdi2] DX [cdo2] B BRR S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 OB S C S [tr01s] S2< [tr13s] S2^ [tr31s] S2< [tr10s] S B2 finish",
     medals: {
-      cristal: 33.6,
-      or: 35.4,
-      argent: 40.7,
-      bronze: 47.7
+      cristal: 34.5,
+      or: 36.3,
+      argent: 41.7,
+      bronze: 49
     }
   },
   {
@@ -8037,10 +8045,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S.g50 G2 V-6 [dn4] [cdo2] S C B2 S [crv1] UU G3 DD [cdo1] [crs1] S2 [cds1] C B2 S [crv1] UU G3 DD [cdo1] [crs1] S2 [cds1] C B2 S [crv1] UU G3 DD [cdo1] S5 finish",
     medals: {
-      cristal: 35.9,
-      or: 37.7,
-      argent: 43.4,
-      bronze: 51
+      cristal: 35.6,
+      or: 37.5,
+      argent: 43.1,
+      bronze: 50.6
     }
   },
   {
@@ -8063,10 +8071,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start BRR B3 S BLL S2 B BRR C S [tr02l] S4> [tr20l] BLL B S2 BRR B S BLL B2 finish",
     medals: {
-      cristal: 24.1,
-      or: 25.4,
-      argent: 29.2,
-      bronze: 34.3
+      cristal: 23.5,
+      or: 24.7,
+      argent: 28.4,
+      bronze: 33.4
     }
   },
   {
@@ -8090,10 +8098,10 @@ var BUILTIN_TRACKS = [
     laps: 2,
     script: "start B2 GU4 S BRR B S [tr02l] S4> [tr20l] BRR B S2 C GD4 S BRR S B S2 B S2 B S2 BRR finish",
     medals: {
-      cristal: 49,
-      or: 51.6,
-      argent: 59.3,
-      bronze: 69.6
+      cristal: 48.4,
+      or: 51,
+      argent: 58.6,
+      bronze: 68.8
     }
   },
   {
@@ -8113,10 +8121,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2.p B S2 R S.w150 L S B S2.p R S L B C B S3.w120 R S R S B S2 [tr01s] S2< [tr10s] S L B S.p R S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 34.7,
-      or: 36.6,
-      argent: 42.1,
-      bronze: 49.4
+      cristal: 33.8,
+      or: 35.6,
+      argent: 40.9,
+      bronze: 48.1
     }
   },
   {
@@ -8135,14 +8143,14 @@ var BUILTIN_TRACKS = [
       l: 2
     },
     pilot: {
-      vCap: 66
+      vCap: 64
     },
     script: "start B3 [crv4] UX.b UX.b [cro4] S5 C S2 [cdi2] DX DX [cdo2] B OB S2 B [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 finish",
     medals: {
-      cristal: 28,
-      or: 29.5,
-      argent: 33.9,
-      bronze: 39.8
+      cristal: 28.7,
+      or: 30.2,
+      argent: 34.7,
+      bronze: 40.8
     }
   },
   {
@@ -8169,8 +8177,8 @@ var BUILTIN_TRACKS = [
     medals: {
       cristal: 26.4,
       or: 27.8,
-      argent: 31.9,
-      bronze: 37.5
+      argent: 32,
+      bronze: 37.6
     }
   },
   {
@@ -8246,10 +8254,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start P2 B S R B S L S R B S2 C B S L R L R B S2 [tr01s] S2< [tr10s] S3 L B S R B [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 29.5,
-      or: 31,
-      argent: 35.7,
-      bronze: 41.9
+      cristal: 28.9,
+      or: 30.5,
+      argent: 35,
+      bronze: 41.1
     }
   },
   // ==== 0.9 : quatre nouveaux thèmes (6 circuits chacun) ============================
@@ -8265,7 +8273,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : deux boosters \u2192 contre-courant (\u2212122 km/h) puis courant favorable (+138 km/h). Au programme : vague, tr\xE8s grand virage plat, tapis de trois cases.",
     goal: {
       id: "under",
-      t: 20.5
+      t: 21.5
     },
     opts: {
       l: 6
@@ -8275,10 +8283,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 S2.t40 S2.t170 S [crs1] S2 [cds1] B HR S3.t137 B C S2 HL S2 B [cdi1] [dn2] [cdo1] S B2 finish",
     medals: {
-      cristal: 19.4,
-      or: 20.4,
-      argent: 23.5,
-      bronze: 27.6
+      cristal: 19.7,
+      or: 20.8,
+      argent: 23.9,
+      bronze: 28
     }
   },
   {
@@ -8324,10 +8332,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 [tr02s] S3> [tr20s] S C B2 OD S2 B [tr01s] S3< [tr10s] S B [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 19.9,
-      or: 21,
-      argent: 24.1,
-      bronze: 28.3
+      cristal: 21.1,
+      or: 22.2,
+      argent: 25.5,
+      bronze: 30
     }
   },
   {
@@ -8352,10 +8360,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B5 S.g130 S2 [crv2] UX G1 DX DX [cdo2] S3 C B3 [crv2] UX G1 DX DX [cdo2] S3 C B3 [crv1] UU G1 DD [cdo1] S [tr01s] S2< [tr10s] S3 C B3 [crv2] UX G1 DX DX [cdo2] S5 finish",
     medals: {
-      cristal: 39.3,
-      or: 41.3,
-      argent: 47.5,
-      bronze: 55.8
+      cristal: 38,
+      or: 40.1,
+      argent: 46.1,
+      bronze: 54.1
     }
   },
   {
@@ -8378,10 +8386,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B [cdi2] DX DX [cdo2] OB S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 S B finish",
     medals: {
-      cristal: 22.3,
-      or: 23.5,
-      argent: 27.1,
-      bronze: 31.8
+      cristal: 22.8,
+      or: 24,
+      argent: 27.6,
+      bronze: 32.4
     }
   },
   {
@@ -8446,10 +8454,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B3 S3.c B S2.t137 S [crs1] S2 [cds1] B HR S2 B C S HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 19.2,
-      or: 20.2,
-      argent: 23.2,
-      bronze: 27.2
+      cristal: 19.5,
+      or: 20.5,
+      argent: 23.6,
+      bronze: 27.7
     }
   },
   {
@@ -8483,10 +8491,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start Y2.b B S R S L S R S L B C B S R S2.x S L B S2 [tr01s] S2< [tr10s] S R B S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 33.4,
-      or: 35.1,
-      argent: 40.4,
-      bronze: 47.4
+      cristal: 32.3,
+      or: 34,
+      argent: 39.1,
+      bronze: 45.9
     }
   },
   {
@@ -8517,10 +8525,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B2 CBR2 CBR2 CBR2 CBR2 S C B2 OTL S2 B [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 28.5,
-      or: 30,
-      argent: 34.4,
-      bronze: 40.4
+      cristal: 29.5,
+      or: 31.1,
+      argent: 35.7,
+      bronze: 42
     }
   },
   {
@@ -8598,10 +8606,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B2 S4.j150 S3 C B2 [crv2] UX G2 DX DX [cdo2] S3 C B2 S.j150 G2 V-2 S3 [tr01s] S2< [tr10s] S C B2 [crv1] UU G2 DD [cdo1] S5 finish",
     medals: {
-      cristal: 31.2,
-      or: 32.8,
-      argent: 37.8,
-      bronze: 44.3
+      cristal: 30.5,
+      or: 32.1,
+      argent: 36.9,
+      bronze: 43.3
     }
   },
   {
@@ -8659,7 +8667,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : trois boosters \u2192 vent lat\xE9ral. Au programme : vague en S, deux tr\xE8s grands virages plats, descente.",
     goal: {
       id: "under",
-      t: 19.5
+      t: 20.5
     },
     opts: {
       l: 6
@@ -8669,10 +8677,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 S3.w150 S [crs1] S2 [cds1] B HR S2 B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 18.4,
-      or: 19.4,
-      argent: 22.3,
-      bronze: 26.1
+      cristal: 18.8,
+      or: 19.7,
+      argent: 22.7,
+      bronze: 26.7
     }
   },
   {
@@ -8745,10 +8753,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 S.g40 OB S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B [cdi2] DX [cdo2] S.g100 B2 finish",
     medals: {
-      cristal: 20.9,
-      or: 22,
-      argent: 25.3,
-      bronze: 29.6
+      cristal: 22.9,
+      or: 24.1,
+      argent: 27.7,
+      bronze: 32.5
     }
   },
   {
@@ -8771,10 +8779,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2_ S2.w150_ BRR_ S_ B_ BLL_ S2_ C B_ [tr02l] S4> [tr20l] BRR_ S2.w100_ B_ BLL_ S_ B2 finish",
     medals: {
-      cristal: 20,
-      or: 21,
-      argent: 24.2,
-      bronze: 28.4
+      cristal: 19.6,
+      or: 20.6,
+      argent: 23.7,
+      bronze: 27.8
     }
   },
   {
@@ -8788,20 +8796,20 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : en deltaplane : plaque sur la ligne, chute de 6 niveaux. Au programme : avenue de 10 cases, rampe raide, wall-ride, rampe douce avec anneau.",
     goal: {
       id: "under",
-      t: 37
+      t: 42
     },
     opts: {
       l: 40
     },
     pilot: {
-      vCap: 60
+      vCap: 66
     },
     script: "start S.e S.x G2 V-6 [dn4] [cdo2] S10 S.e S2 C B2 [crv2] UX G2 DX DX [cdo2] S3 C B2 [tr01s] S2< [tr10s] S C B2 [crv1] UU GR2 DD [cdo1] S5 finish",
     medals: {
-      cristal: 34.8,
-      or: 36.6,
-      argent: 42.1,
-      bronze: 49.4
+      cristal: 37.3,
+      or: 39.3,
+      argent: 45.2,
+      bronze: 53
     }
   },
   // ---- Canyon de cristal : gravité inversée, plafonds, verre, volant inversé ----
@@ -8816,7 +8824,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : deux boosters \u2192 volant invers\xE9 (trois cases en ligne droite). Au programme : vague en S, deux tr\xE8s grands virages plats, descente.",
     goal: {
       id: "under",
-      t: 19.5
+      t: 20.5
     },
     opts: {
       l: 6
@@ -8826,10 +8834,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 S3.y S2 [crs1] S2 [cds1] B HR S2 B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 18.4,
-      or: 19.4,
-      argent: 22.3,
-      bronze: 26.1
+      cristal: 18.7,
+      or: 19.7,
+      argent: 22.7,
+      bronze: 26.6
     }
   },
   {
@@ -9002,10 +9010,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B4 [cds1] S [crs1] S2 B HR S2 C S HL S B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 16.1,
-      or: 16.9,
-      argent: 19.5,
-      bronze: 22.8
+      cristal: 16.4,
+      or: 17.3,
+      argent: 19.9,
+      bronze: 23.3
     }
   },
   {
@@ -9047,10 +9055,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B3 S3 [crs1] S B HR S2 C S2 HL S B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 16.9,
-      or: 17.8,
-      argent: 20.5,
-      bronze: 24
+      cristal: 17.2,
+      or: 18.1,
+      argent: 20.8,
+      bronze: 24.4
     }
   },
   {
@@ -9088,15 +9096,15 @@ var BUILTIN_TRACKS = [
         at: 0.6,
         side: 0,
         s: 1,
-        ph: 0.75
+        ph: 0.5
       }
     ],
     script: "start B2 [crs1] S2 [cds1] S2 HR S B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 16.4,
-      or: 17.3,
-      argent: 19.9,
-      bronze: 23.3
+      cristal: 16.6,
+      or: 17.5,
+      argent: 20.1,
+      bronze: 23.6
     }
   },
   {
@@ -9139,10 +9147,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start S3 B3 [cds1] S [crs1] S2 HR S B C S2 HL S B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 18.1,
-      or: 19,
-      argent: 21.9,
-      bronze: 25.7
+      cristal: 18.2,
+      or: 19.2,
+      argent: 22.1,
+      bronze: 25.9
     }
   },
   {
@@ -9179,10 +9187,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B5 S [crs1] S2~ B HR S2= C S HL S B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 16.2,
-      or: 17.1,
-      argent: 19.6,
-      bronze: 23.1
+      cristal: 16.5,
+      or: 17.4,
+      argent: 20,
+      bronze: 23.5
     }
   },
   {
@@ -9233,10 +9241,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B2 S2 [cds1] S2 [crs1] S B HR S2 C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 18.9,
-      or: 19.9,
-      argent: 22.9,
-      bronze: 26.8
+      cristal: 19,
+      or: 20,
+      argent: 23,
+      bronze: 27
     }
   }
 ];
@@ -9635,7 +9643,7 @@ var wallMethods = {
         }
         continue;
       }
-      if (p.y >= hP - CAR.step) {
+      if (p.y >= hP - CAR.curb) {
         p.y = hP + 0.02;
         continue;
       }
@@ -9655,6 +9663,8 @@ var wallMethods = {
   // again : seconde passe du même pas (après un obstacle qui a poussé la voiture) : même correction de position et de vitesse, sans recompter le frottement ni l'arrêt.
   _walls(again = false) {
     const p = this.pos, v = this.vel, K3 = this.k;
+    const gn = this.grounded ? this.n : null;
+    const vn0 = gn ? v.x * gn.x + v.y * gn.y + v.z * gn.z : 0;
     const fx = -dsin(this.yaw), fz = -dcos(this.yaw);
     const pfx = -dsin(this.prevYaw), pfz = -dcos(this.prevYaw);
     let hit = 0, touch = false, sx = 0, sz = 0, lnx = 0, lnz = 0, kHit = 1;
@@ -9701,11 +9711,11 @@ var wallMethods = {
         this.wnz = lnz;
       } else this.touchT = Math.max(0, this.touchT - DT);
       const near = touch || this.touchT > 0;
-      if (near && this.speed < 4) this.crawlT = Math.min(1, this.crawlT + DT);
+      if (near && this.speed < 6.5) this.crawlT = Math.min(1, this.crawlT + DT);
       else this.crawlT = Math.max(0, this.crawlT - 2 * DT);
       if (near && this.crawlT > 0.25) this.unstickT = 5;
       else if (this.unstickT > 0) this.unstickT = near ? this.unstickT - DT : this.unstickT - 3 * DT;
-      if (near && this.unstickT > 0 && this.speed < 8) {
+      if (near && this.unstickT > 0 && this.speed < 11) {
         const into = fx * this.wnx + fz * this.wnz;
         const cross = fx * this.wnz - fz * this.wnx;
         if (Math.abs(cross) > 0.15 || !this.unstickDir) this.unstickDir = cross >= 0 ? 1 : -1;
@@ -9736,6 +9746,12 @@ var wallMethods = {
       }
       const stun = fresh ? wallStunOf(K3, hit) : 0;
       if (stun > 0) this.stunT = Math.max(this.stunT, stun);
+    }
+    if (gn && touch) {
+      const d = v.x * gn.x + v.y * gn.y + v.z * gn.z - vn0;
+      v.x -= gn.x * d;
+      v.y -= gn.y * d;
+      v.z -= gn.z * d;
     }
   },
   // (mx, mz) : centre de la voiture, pour juger la hauteur d'une sonde sur une pièce en pente (voir _probeTile).
@@ -9825,7 +9841,7 @@ var obstacleMethods = {
     const grid = track.obstacleGrid;
     const t = (this.clock || 0) * DT;
     const p = this.pos, n0 = this.n;
-    const gx = Math.floor((p.x + n0.x * 0.8) / OBSTACLE_CELL), gz = Math.floor((p.z + n0.z * 0.8) / OBSTACLE_CELL);
+    const gx = Math.floor((p.x + n0.x * CAR.bodyY) / OBSTACLE_CELL), gz = Math.floor((p.z + n0.z * CAR.bodyY) / OBSTACLE_CELL);
     for (let ix = gx - 3; ix <= gx + 3; ix++) {
       for (let iz = gz - 3; iz <= gz + 3; iz++) {
         const bucket = grid.get(obstacleKey(ix, iz));
@@ -9840,13 +9856,13 @@ var obstacleMethods = {
   // Contact de la voiture avec l'obstacle d au temps t (s). Renvoie true si le contact est létal (le pas se termine aussitôt).
   _obstacleContact(d, t) {
     const p = this.pos, v = this.vel, n0 = this.n;
-    const cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
+    const cx = p.x + n0.x * CAR.bodyY, cy = p.y + n0.y * CAR.bodyY, cz = p.z + n0.z * CAR.bodyY;
     if (!d || !OBST[d.k] || !fin(d.x) || !fin(d.y) || !fin(d.z) || !fin(d.s || 1) || !fin(d.ry || 0)) return false;
     if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) return false;
     const rr = obstacleRadius(d) + 3 + (d.rz ? 14 * (d.s || 1) : 0);
     const ox = cx - d.x, oz = cz - d.z;
     if (ox * ox + oz * oz > rr * rr) return false;
-    const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
+    const def = OBST[d.k], k = d.s || 1, rc = CAR.bodyR / k;
     if (!(k > 0) || !fin(rc)) return false;
     obstacleLocal(d, t, OB);
     toLocalObs(d, cx, cy, cz, OL);
@@ -9854,7 +9870,7 @@ var obstacleMethods = {
     let nx = 0, ny = 0, nz = 0, pen = 0, ovx = 0, ovy = 0, ovz = 0;
     if (def.type === "spike") {
       if (OB.on < 0.4 || this.graceT > 0) return false;
-      if (Math.abs(OL.x) < def.hx + rc * 0.6 && Math.abs(OL.z) < def.hz + rc * 0.6 && OL.y < def.hy * OB.on + rc && OL.y > -1.5) {
+      if (Math.abs(OL.x) < def.hx + rc * 0.6 && Math.abs(OL.z) < def.hz + rc * 0.6 && OL.y < def.hy * OB.on + rc && OL.y > CAR.bodyY - 2.3) {
         this.ev.spike = true;
         this.ev.sink = true;
         return true;
@@ -9930,7 +9946,7 @@ var obstacleMethods = {
       ovx = -sa * s * OB.w;
       ovz = ca * s * OB.w;
     } else {
-      if (OL.y > def.h + rc || OL.y < -1.5) return false;
+      if (OL.y > def.h + rc || OL.y < CAR.bodyY - 2.3) return false;
       const dd = hypot2(OL.x, OL.z);
       if (dd >= def.r + rc) return false;
       if (dd < 1e-6) {
@@ -9955,26 +9971,18 @@ var obstacleMethods = {
     let wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
     const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
     if (!(fin(wx) && fin(wy) && fin(wz) && fin(vwx) && fin(vwy) && fin(vwz))) return false;
-    if (d.rz) {
-      if (this.grounded) {
-        const dn = wx * n0.x + wy * n0.y + wz * n0.z;
-        if (dn < 0) {
-          wx -= n0.x * dn;
-          wy -= n0.y * dn;
-          wz -= n0.z * dn;
-          const hl = Math.sqrt(wx * wx + wy * wy + wz * wz);
-          if (hl < 1e-6) return false;
-          wx /= hl;
-          wy /= hl;
-          wz /= hl;
-        }
+    if (this.grounded) {
+      const dn = wx * n0.x + wy * n0.y + wz * n0.z;
+      if (dn < CAR.shockLift) {
+        wx -= n0.x * dn;
+        wy -= n0.y * dn;
+        wz -= n0.z * dn;
+        const hl = Math.sqrt(wx * wx + wy * wy + wz * wz);
+        if (hl < 1e-6) return false;
+        wx /= hl;
+        wy /= hl;
+        wz /= hl;
       }
-    } else if (this.grounded && wy * this.gSign < 0) {
-      const hl = hypot2(wx, wz);
-      if (hl < 1e-6) return false;
-      wx /= hl;
-      wz /= hl;
-      wy = 0;
     }
     const correction = Math.min(pen * k, 2.5);
     p.x += wx * correction;
@@ -9995,7 +10003,7 @@ var obstacleMethods = {
       v.y += wy * add;
       v.z += wz * add;
       this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;
-      if ((d.rz ? wx * n0.x + wy * n0.y + wz * n0.z : wy * this.gSign) > 0.45) this.grounded = false;
+      if (this.grounded && wx * n0.x + wy * n0.y + wz * n0.z > 0.45) this.grounded = false;
       this.ev.shock = Math.max(this.ev.shock, add);
     }
     return false;
@@ -10110,9 +10118,14 @@ var ribbonMethods = {
     }
     return false;
   },
-  // Atterrissage en plein milieu d'un ruban (retombée sur le haut d'un L, au fond d'un looping...).
+  // Contact, EN L'AIR, avec un ruban (looping, tube, mur, virage relevé, vrille…) ailleurs qu'à ses extrémités. PHYS_VER 36 : un ruban est SOLIDE, des deux côtés.
+  //  - Côté route : la voiture s'y pose quelle que soit l'orientation de la surface (avant : seulement sur une face tournée vers la gravité ; une voiture décrochée d'un looping
+  //    à la verticale retombait À TRAVERS la paroi, puis à travers la route, jusqu'au terrain). Posée sur une paroi que rien ne plaque, elle y GLISSE (voir _ribStep : l'adhérence
+  //    suit l'appui), puis la quitte quand l'appui devient négatif.
+  //  - Côté dos (dessous de la dalle) : la voiture rebondit comme sur un mur, elle ne traverse plus.
+  // Section courbe (tube) : la distance à la surface et la position sur la section sont calculées autour du centre de courbure (exactes sur toute la circonférence).
   _tryLandRibbon() {
-    const p = this.pos, q = this.prev, v = this.vel;
+    const p = this.pos, q = this.prev, v = this.vel, gs = this.gSign;
     const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
     for (const tile of tiles) {
       if (!isRibbon(tile) || this.excl.has(tile)) continue;
@@ -10135,38 +10148,80 @@ var ribbonMethods = {
       }
       if (u <= 2e-3 || u >= 0.998) continue;
       const F = frameWorld(tile, rib, u, this.F);
-      const dl = (p.x - F.px) * F.rx + (p.y - F.py) * F.ry + (p.z - F.pz) * F.rz;
-      if (F.kc > 1e-4) this._cross({
-        dl
-      }, F);
-      else {
+      const hw = F.hw || ROAD_HALF;
+      const lx = (p.x - F.px) * F.rx + (p.y - F.py) * F.ry + (p.z - F.pz) * F.rz, ln = (p.x - F.px) * F.nx + (p.y - F.py) * F.ny + (p.z - F.pz) * F.nz;
+      const qx = (q.x - F.px) * F.rx + (q.y - F.py) * F.ry + (q.z - F.pz) * F.rz, qn = (q.x - F.px) * F.nx + (q.y - F.py) * F.ny + (q.z - F.pz) * F.nz;
+      let dl = lx, dn = ln, dq = qn;
+      if (F.kc > 1e-4) {
+        const Rc = 1 / F.kc;
+        dl = datan2(lx, Rc - ln) * Rc;
+        dn = Rc - hypot2(lx, ln - Rc);
+        dq = Rc - hypot2(qx, qn - Rc);
+        if (!F.wrap && Math.abs(dl) > hw + 0.3) continue;
+        this._cross({
+          dl
+        }, F);
+      } else {
         F.qx = F.px;
         F.qy = F.py;
         F.qz = F.pz;
       }
-      if (F.ny * this.gSign < 0.2) continue;
-      const dn = (p.x - F.qx) * F.nx + (p.y - F.qy) * F.ny + (p.z - F.qz) * F.nz;
-      const dq = (q.x - F.qx) * F.nx + (q.y - F.qy) * F.ny + (q.z - F.qz) * F.nz;
+      if (!F.wrap && Math.abs(dl) > hw + (hasNoRails(tile) ? 0 : 0.3)) continue;
       const vn = v.x * F.nx + v.y * F.ny + v.z * F.nz;
-      if (!(dn <= 0.05 && dq >= -0.3 && dn > -1.5 && vn < 0)) continue;
-      if (Math.abs(dl) > ROAD_HALF + (hasNoRails(tile) ? 0 : 0.3)) continue;
+      const back = -(SLAB_T + 0.2);
+      if (dq < back && dn >= back && dn < 0.4 && vn > 0) {
+        const K3 = this.k, push = dn - back + 0.02;
+        p.x -= F.nx * push;
+        p.y -= F.ny * push;
+        p.z -= F.nz * push;
+        v.x -= F.nx * vn * (1 + wallBounce(K3, vn));
+        v.y -= F.ny * vn * (1 + wallBounce(K3, vn));
+        v.z -= F.nz * vn * (1 + wallBounce(K3, vn));
+        const tn = v.x * F.nx + v.y * F.ny + v.z * F.nz, tx = v.x - F.nx * tn, ty = v.y - F.ny * tn, tz = v.z - F.nz * tn, tl = hypot3(tx, ty, tz);
+        if (tl > 1e-6) {
+          const dv = Math.min(tl, wallFriction(K3, vn)) / tl;
+          v.x -= tx * dv;
+          v.y -= ty * dv;
+          v.z -= tz * dv;
+        }
+        const loss = wallHardLoss(K3, vn);
+        v.x *= 1 - loss;
+        v.y *= 1 - loss;
+        v.z *= 1 - loss;
+        if (vn > 2) this.ev.wall = Math.max(this.ev.wall, vn);
+        else this._pinned = true;
+        continue;
+      }
+      if (!(dn <= 0.05 && dq >= -0.3 && dn > -1.5)) continue;
+      if (F.ny * gs < 0.2 && vn > -0.5) {
+        if (dn < 0) {
+          p.x -= F.nx * dn;
+          p.y -= F.ny * dn;
+          p.z -= F.nz * dn;
+        }
+        if (vn < 0) {
+          v.x -= F.nx * vn;
+          v.y -= F.ny * vn;
+          v.z -= F.nz * vn;
+        }
+        continue;
+      }
+      if (vn >= 0) continue;
       const vt = v.x * F.tx + v.y * F.ty + v.z * F.tz;
       const R = {
         tile,
         rib,
         u,
         dir: vt >= 0 ? 1 : -1,
-        dl: 0,
+        dl: F.wrap ? dl : clamp(dl, -hw + 1, hw - 1),
         vs: 0,
         vd: 0,
         psi: 0
       };
-      R.dl = clamp(dl * R.dir, -ROAD_HALF + 1, ROAD_HALF - 1) * R.dir;
       const B2 = this._basis(R, F);
       R.vs = v.x * B2.e1x + v.y * B2.e1y + v.z * B2.e1z;
       R.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
-      const h = this.fwd;
-      R.psi = datan2(h.x * B2.e2x + h.y * B2.e2y + h.z * B2.e2z, h.x * B2.e1x + h.y * B2.e1y + h.z * B2.e1z);
+      R.psi = this._headingOn(B2, R);
       this.ev.land = -vn;
       const kq = this._landing(F.nx, F.ny, F.nz);
       R.vs *= kq;
@@ -10176,6 +10231,14 @@ var ribbonMethods = {
       return true;
     }
     return false;
+  },
+  // Cap de la voiture (rad, par rapport au sens de parcours e1) quand elle se pose sur un ruban : son nez réel (cap et assiette de vol) projeté dans le plan de la route. Si le nez
+  // est presque perpendiculaire à la surface (voiture à plat qui touche une paroi verticale), la projection n'a pas de sens : le nez suit alors le mouvement.
+  _headingOn(B2, R) {
+    const c = dcos(this.pitch), hx = -dsin(this.yaw) * c, hy = dsin(this.pitch), hz = -dcos(this.yaw) * c;
+    const a = hx * B2.e1x + hy * B2.e1y + hz * B2.e1z, b = hx * B2.e2x + hy * B2.e2y + hz * B2.e2z;
+    if (a * a + b * b > 0.09) return datan2(b, a);
+    return hypot2(R.vs, R.vd) > 1 ? datan2(R.vd, R.vs) : 0;
   },
   // Section courbe (tube) : repère de la route au point de la voiture.
   // Avec kc = courbure transversale et phi = kc * dl, la chaussée remonte de chaque côté :
@@ -10298,7 +10361,7 @@ var ribbonMethods = {
     const gAbs = this.g;
     const lPiece = tile.t === "wall" || tile.t === "ramp90" || tile.t === "crest90" || !!sidePiece;
     const guided = tile.t === "twist";
-    const load = lPiece ? clamp(press / gAbs, 0, 1.6) : press > 0 || guided ? 1 : 0;
+    const load = lPiece ? clamp(press / gAbs, 0, 1.6) : guided ? 1 : clamp(press / (CAR.loadFull * gAbs), 0, 1);
     this.press = press;
     R.vs -= beltE1;
     const c = dcos(R.psi), s = dsin(R.psi);
@@ -10474,6 +10537,11 @@ var ribbonMethods = {
       N.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
       const h2 = this.fwd;
       N.psi = datan2(h2.x * B2.e2x + h2.y * B2.e2y + h2.z * B2.e2z, h2.x * B2.e1x + h2.y * B2.e1y + h2.z * B2.e1z);
+      const vnN = v.x * F2.nx + v.y * F2.ny + v.z * F2.nz;
+      if (vnN > CAR.kinkLaunch && N.tile.s !== "magnet" && !isSideTile(N.tile) && !isSideTile(R.tile)) {
+        this._ribDetach("crest");
+        return;
+      }
       this.rib = N;
       this._ribPlace(N);
       return;
@@ -10486,7 +10554,7 @@ var ribbonMethods = {
     const gsx = this.gSign;
     if (this.n.y * gsx > 0.6 && F.ny * gsx > 0.6) {
       this.grounded = true;
-      this.vel.y = gsx > 0 ? Math.min(this.vel.y, 0) : Math.max(this.vel.y, 0);
+      this.lift = 0;
       this.n.x = 0;
       this.n.y = gsx;
       this.n.z = 0;
@@ -10704,6 +10772,7 @@ var CarPhysics = class {
     this.prevYaw = yaw;
     this.yawRate = 0;
     this.omega = 0;
+    this.lift = 0;
     this.steer = 0;
     this.steerAngle = 0;
     this.boost = 0;
@@ -11143,6 +11212,9 @@ var CarPhysics = class {
     const g = this.g * this.gSign;
     vf -= g * fy * dt;
     vr -= g * ry * dt;
+    let vnK = v.x * n.x + v.y * n.y + v.z * n.z;
+    if (this.lift > 0) vnK -= g * n.y * dt;
+    else vnK = vnK > 1e-6 ? Math.max(0, vnK - g * n.y * dt) : 0;
     const mod = this.surfMod, f = this.surfP;
     const ground = this.surfType === "ground";
     const C4 = surfaceCoeffs(ground ? "" : mod, f);
@@ -11228,9 +11300,9 @@ var CarPhysics = class {
     }
     this.yaw -= this.omega * us * dt;
     this.yawRate = -this.omega * us;
-    v.x = fx * vf + rx * vr;
-    v.y = fy * vf + ry * vr;
-    v.z = fz * vf + rz * vr;
+    v.x = fx * vf + rx * vr + n.x * vnK;
+    v.y = fy * vf + ry * vr + n.y * vnK;
+    v.z = fz * vf + rz * vr + n.z * vnK;
     if (belt) {
       v.x += belt.x;
       v.z += belt.z;
@@ -11297,10 +11369,10 @@ var CarPhysics = class {
     p.z += v.z * dt;
     this._rings();
     if (this.ev.sink) return true;
+    this._pinned = false;
     if (this._tryEnterRibbon()) return true;
     if (!this.grounded && this._tryLandRibbon()) return true;
     this._walls();
-    this._pinned = false;
     this._tunnelRoof();
     this._slabs();
     this.pinT = this._pinned ? this.pinT + DT : Math.max(0, this.pinT - 2 * DT);
@@ -11320,7 +11392,6 @@ var CarPhysics = class {
     const gap = gs * (p.y - s.h);
     const vn = v.x * s.nx + v.y * s.ny + v.z * s.nz;
     const magnet = s.mod === "magnet";
-    const launch = magnet ? Infinity : CAR.launch;
     const snap = magnet ? CAR.step : CAR.snap;
     if (!this.grounded) {
       const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.excl, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.excl);
@@ -11332,8 +11403,8 @@ var CarPhysics = class {
         v.z -= m.nz * a;
       }
     }
-    const stick = vn < launch;
-    if (this.grounded && gap < snap && gap > -CAR.step && stick) {
+    const up = s.tile && s.tile.mv ? CAR.step : CAR.curb;
+    if (this.grounded && magnet && gap < snap && gap > -CAR.step) {
       p.y = s.h;
       const sp = this.speed;
       v.x -= s.nx * vn;
@@ -11346,8 +11417,28 @@ var CarPhysics = class {
         v.y *= k;
         v.z *= k;
       }
+      this.lift = 0;
       this._setGround(s);
-    } else if (!this.grounded && gap <= 0.02 && gap > -CAR.step && vn <= 0.5) {
+    } else if (this.grounded && gap <= CAR.susTravel && gap > -up) {
+      if (gap <= 0) {
+        p.y = s.h;
+        if (vn < 0) {
+          const sp = this.speed;
+          v.x -= s.nx * vn;
+          v.y -= s.ny * vn;
+          v.z -= s.nz * vn;
+          const sp2 = this.speed;
+          if (this.lift <= 0 && sp2 > 1e-4) {
+            const k = sp / sp2;
+            v.x *= k;
+            v.y *= k;
+            v.z *= k;
+          }
+        }
+        this.lift = 0;
+      } else this.lift = gap;
+      this._setGround(s);
+    } else if (!this.grounded && gap <= 0.02 && gap > -up - Math.max(0, -vn) * dt * 2 && vn <= 0.5) {
       p.y = s.h;
       if ((this.plateLock === "flip" || this.plateLock === "spring") && s.tile !== this.lockTile) this.plateLock = "";
       if (vn < 0) {
@@ -11361,9 +11452,11 @@ var CarPhysics = class {
         v.z *= k;
       }
       this.grounded = true;
+      this.lift = 0;
       this._setGround(s);
     } else {
       this.grounded = false;
+      this.lift = 0;
     }
     if (this.grounded && this.surfMod === "bounce" && this.bounceCD <= 0) {
       const n = this.n;
@@ -11939,6 +12032,31 @@ var Autopilot = class {
       const len = hypot2(b[0] - a[0], b[2] - a[2]) * 0.5 + hypot2(c[0] - b[0], c[2] - b[2]) * 0.5;
       if (Math.abs(dh) > 1e-3 && len > 0.5) this.radius[i] = Math.max(2, len / Math.abs(dh)) * (b[3] === 2 ? 1.7 : 1);
     }
+    this.crest = new Float32Array(n).fill(1e4);
+    const slopeOf = (a, b) => {
+      const h = hypot2(b[0] - a[0], b[2] - a[2]);
+      return h > 0.5 ? datan2(b[1] - a[1], h) : null;
+    };
+    let from = -1, total = 0;
+    const close = (to) => {
+      if (from >= 0 && total < 0.3) for (let j = from; j < to; j++) this.crest[j] = 1e4;
+      from = -1;
+      total = 0;
+    };
+    for (let i = 1; i < n - 1; i++) {
+      const a = path[i - 1], b = path[i], c = path[i + 1];
+      const s1 = a[3] === 1 || b[3] === 1 || c[3] === 1 ? null : slopeOf(a, b), s2 = s1 === null ? null : slopeOf(b, c);
+      const drop = s1 === null || s2 === null ? 0 : s1 - s2;
+      if (drop < 0.015 || drop > 0.13) {
+        close(i);
+        continue;
+      }
+      if (from < 0) from = i;
+      total += drop;
+      const len = (this.dist[i + 1] - this.dist[i - 1]) * 0.5;
+      this.crest[i] = Math.sqrt(CAR.gravity * (len / drop) * 1.2);
+    }
+    close(n - 1);
   }
   // Hauteur du chemin le plus proche plus loin devant (approximation du sol d'arrivée).
   _groundBelow(y) {
@@ -12073,7 +12191,7 @@ var Autopilot = class {
     let vTarget = this.vCap;
     const horizon = 15 + v * v / (2 * this.brakeDecel);
     for (let k = this.idx; k < path.length && this.dist[k] - this.dist[this.idx] < horizon; k++) {
-      const vMax = Math.sqrt(this.latLimit * this.radius[k]);
+      const vMax = Math.min(Math.sqrt(this.latLimit * this.radius[k]), this.crest[k]);
       const dd = this.dist[k] - this.dist[this.idx];
       const allowed2 = Math.sqrt(vMax * vMax + 2 * this.brakeDecel * dd);
       if (allowed2 < vTarget) vTarget = allowed2;
@@ -12378,7 +12496,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/version.js
-var PHYS_VER = 35;
+var PHYS_VER = 36;
 
 // js/ghostFormat.js
 var GHOST_EVERY = 4;

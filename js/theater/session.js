@@ -8,7 +8,7 @@
 // déterministe : on retombe exactement au même endroit qu'en lecture continue ; tools/test-browser.mjs le vérifie).
 import * as THREE from '../vendor/three.module.min.js';
 import { $ } from '../dom.js';
-import { DT } from '../constants.js';
+import { DT, CAR_SCALE } from '../constants.js';
 import { GhostRunner, newGhostPose } from '../replay.js';
 import { parseGhost, decodeFloats } from '../ghostFormat.js';
 import { createCar } from '../carModel.js';
@@ -38,7 +38,7 @@ export const theaterMethods = {
     };
     for (const c of (th.compare || []).slice(0, 3)) {
       const color = THEATER_COLORS[T.runs.length];
-      const car = createCar(null, { ghost: true, ghostColor: color });
+      const car = createCar(null, { ghost: true, ghostColor: color, scale: CAR_SCALE });
       car.group.visible = false;
       const label = makeNameLabel(`${c.label} · ${c.time ? formatTime(c.time) : '—'}`);
       if (label) car.group.add(label);

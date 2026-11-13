@@ -59,7 +59,7 @@ async function begin(script, l, v0, cruise = 0) {
       const A = window.copytrack, cam = A.camera, car = S.car.group.position, p = S.phys, V2 = cam.position.constructor;
       const fw = new V2(); cam.getWorldDirection(fw);
       const proj = (x, y, z) => { const q = new V2(x, y, z).project(cam); return q.x; };
-      const carW = Math.abs(proj(car.x - Math.cos(p.yaw), car.y, car.z + Math.sin(p.yaw)) - proj(car.x + Math.cos(p.yaw), car.y, car.z - Math.sin(p.yaw))) / 2 * 100;
+      const carW = Math.abs(proj(car.x - Math.cos(p.yaw), car.y, car.z + Math.sin(p.yaw)) - proj(car.x + Math.cos(p.yaw), car.y, car.z - Math.sin(p.yaw))) / 2 * 100 * 1.6;      // (version 1.0 : la voiture fait 3,2 m de large, CAR_SCALE 1,6)
       const cf = [-Math.sin(p.yaw), -Math.cos(p.yaw)];
       const yawOff = Math.atan2(fw.x * cf[1] - fw.z * cf[0], fw.x * cf[0] + fw.z * cf[1]) * 180 / Math.PI;
       const perp = (u) => { const d = u.x * fw.x + u.y * fw.y + u.z * fw.z; const r = [u.x - fw.x * d, u.y - fw.y * d, u.z - fw.z * d]; const l = Math.hypot(...r) || 1; return r.map((c) => c / l); };

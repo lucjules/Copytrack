@@ -80,10 +80,10 @@ const OPENINGS = {
 };
 
 console.log('Version et profils');
-test('version 0.9.9 ou plus (bêta 0.9.x suit package.json)', () => {
+test('version 1.0 ou plus (VERSION suit package.json)', () => {
   const v = JSON.parse(read('package.json')).version;
-  assert.equal(VERSION, 'bêta ' + v);
-  assert.ok(+v.split('.')[2] >= 9, v);
+  assert.equal(VERSION, v);
+  assert.ok(+v.split('.')[0] >= 1, v);
 });
 test('les 72 circuits (66 + 6 de l’Atelier) ont chacun un profil connu', () => {
   assert.equal(BUILTIN_TRACKS.length, 72);

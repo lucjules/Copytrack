@@ -23,7 +23,7 @@ export const obstacleMethods = {
     const grid = track.obstacleGrid;
     const t = (this.clock || 0) * DT;
     const p = this.pos, n0 = this.n;
-    const gx = Math.floor((p.x + n0.x * 0.8) / OBSTACLE_CELL), gz = Math.floor((p.z + n0.z * 0.8) / OBSTACLE_CELL);
+    const gx = Math.floor((p.x + n0.x * CAR.bodyY) / OBSTACLE_CELL), gz = Math.floor((p.z + n0.z * CAR.bodyY) / OBSTACLE_CELL);
     for (let ix = gx - 3; ix <= gx + 3; ix++) {
       for (let iz = gz - 3; iz <= gz + 3; iz++) {
         const bucket = grid.get(obstacleKey(ix, iz));
@@ -41,13 +41,13 @@ export const obstacleMethods = {
     const p = this.pos, v = this.vel, n0 = this.n;
     // Le centre est recalculé à chaque obstacle : plusieurs obstacles proches ne doivent pas être testés contre
     // la position d'avant le premier choc.
-    const cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
+    const cx = p.x + n0.x * CAR.bodyY, cy = p.y + n0.y * CAR.bodyY, cz = p.z + n0.z * CAR.bodyY;
     if (!d || !OBST[d.k] || !fin(d.x) || !fin(d.y) || !fin(d.z) || !fin(d.s || 1) || !fin(d.ry || 0)) return false;
     if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) return false;
     const rr = obstacleRadius(d) + 3 + (d.rz ? 14 * (d.s || 1) : 0);      // (roulé : la hauteur du pivot d'un balancier devient horizontale)
     const ox = cx - d.x, oz = cz - d.z;
     if (ox * ox + oz * oz > rr * rr) return false;
-    const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
+    const def = OBST[d.k], k = d.s || 1, rc = CAR.bodyR / k;
     if (!(k > 0) || !fin(rc)) return false;
     obstacleLocal(d, t, OB);
     toLocalObs(d, cx, cy, cz, OL);
@@ -55,7 +55,7 @@ export const obstacleMethods = {
     let nx = 0, ny = 0, nz = 0, pen = 0, ovx = 0, ovy = 0, ovz = 0;
     if (def.type === 'spike') {
       if (OB.on < 0.4 || this.graceT > 0) return false;
-      if (Math.abs(OL.x) < def.hx + rc * 0.6 && Math.abs(OL.z) < def.hz + rc * 0.6 && OL.y < def.hy * OB.on + rc && OL.y > -1.5) {
+      if (Math.abs(OL.x) < def.hx + rc * 0.6 && Math.abs(OL.z) < def.hz + rc * 0.6 && OL.y < def.hy * OB.on + rc && OL.y > CAR.bodyY - 2.3) {
         this.ev.spike = true; this.ev.sink = true;
         return true;
       }
@@ -100,7 +100,7 @@ export const obstacleMethods = {
       ovx = -sa * s * OB.w; ovz = ca * s * OB.w;
     } else {
       // Bumper : poteau vertical qui renvoie fort. Borné en bas comme les piques (0.9.54) : sans cela un bumper posé sur un pont frappait les voitures qui passent dessous, à n'importe quelle hauteur.
-      if (OL.y > def.h + rc || OL.y < -1.5) return false;
+      if (OL.y > def.h + rc || OL.y < CAR.bodyY - 2.3) return false;      // (obstacle posé à plus de 2,3 m au-dessus des roues : la voiture passe dessous)
       const dd = hypot2(OL.x, OL.z);
       if (dd >= def.r + rc) return false;
       if (dd < 1e-6) { nx = 1; nz = 0; pen = def.r + rc; }
@@ -112,22 +112,17 @@ export const obstacleMethods = {
     let wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
     const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
     if (!(fin(wx) && fin(wy) && fin(wz) && fin(vwx) && fin(vwy) && fin(vwz))) return false;
-    // Voiture posée : le sol résiste, un obstacle ne peut pas la pousser DANS la route (un pendule ou un marteau qui l'écrase par le dessus). Seule la part horizontale compte.
-    if (d.rz) {
-      // Obstacle roulé : « le sol » est la route sous la voiture (sa normale n0), pas l'horizontale. On retire la part qui pousse la voiture dans la route.
-      if (this.grounded) {
-        const dn = wx * n0.x + wy * n0.y + wz * n0.z;
-        if (dn < 0) {
-          wx -= n0.x * dn; wy -= n0.y * dn; wz -= n0.z * dn;
-          const hl = Math.sqrt(wx * wx + wy * wy + wz * wz);
-          if (hl < 1e-6) return false;
-          wx /= hl; wy /= hl; wz /= hl;
-        }
+    // Voiture posée : le choc agit DANS LE PLAN de la route (PHYS_VER 36). Le sol résiste (un pendule ou un marteau ne pousse pas la voiture dans la chaussée), et un choc de face ou de côté
+    // ne la soulève pas : avant, la poussée restait horizontale dans le monde, donc sur une route en pente elle décollait la voiture, et un obstacle un peu plus bas que le centre de la
+    // voiture la faisait sauter. Seul un obstacle qui frappe franchement par-dessous (plus de 45° vers le haut de la route) la soulève encore.
+    if (this.grounded) {
+      const dn = wx * n0.x + wy * n0.y + wz * n0.z;
+      if (dn < CAR.shockLift) {
+        wx -= n0.x * dn; wy -= n0.y * dn; wz -= n0.z * dn;
+        const hl = Math.sqrt(wx * wx + wy * wy + wz * wz);
+        if (hl < 1e-6) return false;
+        wx /= hl; wy /= hl; wz /= hl;
       }
-    } else if (this.grounded && wy * this.gSign < 0) {
-      const hl = hypot2(wx, wz);
-      if (hl < 1e-6) return false;
-      wx /= hl; wz /= hl; wy = 0;
     }
     // Séparer les corps en contact, mais ne donner l'impulsion du choc (shockKick) que si la voiture ne s'éloigne pas déjà de l'obstacle :
     // sinon un obstacle mobile qui chevauche la voiture la pousserait à chaque pas (tremblements, catapultage).
@@ -146,7 +141,7 @@ export const obstacleMethods = {
     if (add > 0) {
       v.x += wx * add; v.y += wy * add; v.z += wz * add;
       this.omega += (wx * this.fwd.z - wz * this.fwd.x) * add * 0.04;   // le choc fait pivoter un peu
-      if ((d.rz ? wx * n0.x + wy * n0.y + wz * n0.z : wy * this.gSign) > 0.45) this.grounded = false;
+      if (this.grounded && wx * n0.x + wy * n0.y + wz * n0.z > 0.45) this.grounded = false;
       this.ev.shock = Math.max(this.ev.shock, add);
     }
     return false;

@@ -2,6 +2,7 @@
 // Ces méthodes s'ajoutent au prototype de RaceSession (voir race.js) : `this` est l'instance.
 import * as THREE from '../vendor/three.module.min.js';
 import { createCar } from '../carModel.js';
+import { CAR_SCALE } from '../constants.js';
 import { getRecord, getImportedGhost } from '../storage.js';
 import { GhostRunner, newGhostPose } from '../replay.js';
 import { PHYS_VER } from '../version.js';
@@ -15,7 +16,7 @@ export const ghostMethods = {
   _setupGhosts() {
     const app = this.app, s = app.settings;
     const add = (runner, color, label) => {
-      const car = createCar(null, { ghost: true, ghostColor: color });
+      const car = createCar(null, { ghost: true, ghostColor: color, scale: CAR_SCALE });
       car.group.visible = false;
       app.scene.add(car.group);
       this.ghosts.push({ runner, car, label, q: new THREE.Quaternion(), pq: new THREE.Quaternion(), pose: newGhostPose(), pose0: newGhostPose() });
@@ -34,7 +35,7 @@ export const ghostMethods = {
     for (const r of (list || []).slice(0, 3)) {
       const g = parseGhost(r.ghost, r.veh);
       if (!g) continue;
-      const car = createCar(null, { ghost: true, ghostColor: COLORS[this.rivals.length % COLORS.length] });
+      const car = createCar(null, { ghost: true, ghostColor: COLORS[this.rivals.length % COLORS.length], scale: CAR_SCALE });
       const label = makeNameLabel(`${r.name} · ${formatTime(r.time)}`);
       if (label) car.group.add(label);
       car.group.visible = false;

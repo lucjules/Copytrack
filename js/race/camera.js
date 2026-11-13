@@ -3,6 +3,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { frameWorld } from '../physics/ribbon.js';
 import { REPLAY_CAMS, tmpV, tmpV2 } from './shared.js';
+import { CAR_SCALE } from '../constants.js';
 import { fovPunch, landingDip, feelScale } from '../feel.js';
 import { CamAssist, RIG, limitedAim } from '../camrig.js';
 const UP = new THREE.Vector3(0, 1, 0);
@@ -87,7 +88,7 @@ export const cameraMethods = {
     }
 
     if (mode.hood) {
-      tmpV.set(0, 1.45, -0.2).applyQuaternion(car.quaternion).add(car.position);
+      tmpV.set(0, 1.45, -0.2).multiplyScalar(CAR_SCALE).applyQuaternion(car.quaternion).add(car.position);
       cam.position.copy(tmpV);
       cam.quaternion.copy(car.quaternion);
       this.camPos.copy(tmpV);

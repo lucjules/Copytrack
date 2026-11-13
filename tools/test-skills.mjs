@@ -106,9 +106,10 @@ test('mini-turbo : sans dérapage, rien ; frein trop long, mini-turbo simple (br
   assert.equal(grade(d, {}).g, 0, 'le pilote automatique ne dérape pas');
   const simple = grade(d, { gesture: { at: 134, B: 0.45, L: 1.6, S1: 0.8, floor: 0.45 } });
   assert.deepEqual([simple.m.turboLv, simple.g], [1, 1]);
-  const lent = grade(d, { gesture: { at: 134, B: 0.45, L: 2.0, S1: 0.8, floor: 0.45 }, stall: 5 });
-  assert.deepEqual([lent.m.turboLv, lent.m.walls, lent.g], [2, 0, 2], 'renforcé mais arrivée trop lente : argent (' + lent.m.time + ' s)');
-  const or = grade(d, { gesture: { at: 134, B: 0.45, L: 2.0, S1: 0.8, floor: 0.45 } });
+  // (version 1.0 : moteur plus fort, la voiture arrive plus vite au virage : le geste part 0,1 s plus tard, au pas 146)
+  const lent = grade(d, { gesture: { at: 146, B: 0.45, L: 2.0, S1: 0.8, floor: 0.45 }, stall: 5 });
+  assert.deepEqual([lent.m.turboLv, lent.g], [2, 2], 'renforcé mais arrivée trop lente (ou un choc) : argent (' + lent.m.time + ' s)');
+  const or = grade(d, { gesture: { at: 146, B: 0.45, L: 2.0, S1: 0.8, floor: 0.45 } });
   assert.deepEqual([or.m.turboLv, or.m.walls, or.g], [2, 0, 3]);
   assert.ok(or.m.time <= d.limit);
   assert.match(describeMeasure(d, or.m), /^Mini-turbo renforcé, 0 choc, /);

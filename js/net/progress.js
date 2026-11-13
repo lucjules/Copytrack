@@ -57,7 +57,7 @@ export function checkpointProgress(collected, cps, lap, laps) {
 
 // Place d'une voiture sur la grille de départ. sp : { x, y, z, yaw, … } (le point de départ du circuit) ; slot : 0, 1, 2… dans l'ordre de la grille (le premier devant) ;
 // count : nombre de voitures. Jusqu'à 4 de front (route de 24 m), rangées de 6 m vers l'arrière : 8 voitures tiennent sur la case de départ (32 m).
-export const GRID_COLS = 4, GRID_COL_GAP = 5.5, GRID_ROW_GAP = 6;
+export const GRID_COLS = 4, GRID_COL_GAP = 5.5, GRID_ROW_GAP = 10;      // (version 1.0 : voitures 1,6 fois plus grandes, 7 m de long : rangées espacées de 10 m au lieu de 6)
 export function gridSpawn(sp, slot, count) {
   const cols = Math.max(1, Math.min(GRID_COLS, count)), row = Math.floor(slot / cols), col = slot % cols;
   const fx = -Math.sin(sp.yaw), fz = -Math.cos(sp.yaw), rx = -fz, rz = fx;         // avant et droite (le cap 0 regarde vers -z)

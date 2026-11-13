@@ -107,7 +107,7 @@ test('la matrice (8 orientations) : toutes les cases proposées par l\'éditeur 
   const chutes = [];
   for (const [t, row] of Object.entries(PIECE_FACTS)) for (const c of cols) { assert.ok(row[c], `${t}/${c}`); if (row[c] === 'CHUTE') chutes.push(t + '/' + c); }
   for (const c of chutes) assert.match(c, /^(cv|cro|cdi|cdo|crv)/, c + ' : hors des familles documentées (montées et descentes raides)');
-  assert.ok(chutes.length <= 30, chutes.length + ' chutes');
+  assert.ok(chutes.length <= 32, chutes.length + ' chutes');      // (physique 36 : 32 ; cro4 incliné ne chute plus, quatre virages d'inclinaison 4 roulés s'y ajoutent : même famille)
   assert.ok(Object.values(PIECE_FACTS).flatMap((r) => Object.values(r)).filter((c) => c === 'RACCORD').length <= 4, 'les RACCORD d\'avant (60) étaient une confusion entre roulis et pente : seuls restent les triples loopings (15 niveaux)');
   for (const t of ['loop', 'loopBig', 'loopDouble']) assert.ok(['OK', 'SAUT', 'v≥150'].includes(PIECE_FACTS[t].murG), `${t}/murG ${PIECE_FACTS[t].murG}`);      // (les triples descendent de 15 niveaux : hors des niveaux de la chaîne d'essai, RACCORD)
   for (const t of ['loopL', 'loopBigL']) assert.ok(['OK', 'SAUT', 'v≥150'].includes(PIECE_FACTS[t].murD), `${t}/murD`);
@@ -250,12 +250,12 @@ test('le contact tourne avec l\'obstacle : des piques roulées d\'un quart de to
   const car = (deco) => {
     const tr = new Track('o'); tr.addDeco(deco);
     const ph = new CarPhysics(tr); ph.graceT = 0; ph.hazardGrace = 0; ph.n.x = 0; ph.n.y = 0; ph.n.z = 0;
-    ph.pos.x = 0.5; ph.pos.y = 53; ph.pos.z = 0;
+    ph.pos.x = 0.5; ph.pos.y = 53.5; ph.pos.z = 0;      // (version 1.0 : voiture 1,6 fois plus grande, sphère de contact de 2,24 m)
     return { ph, d: tr.decos[0] };
   };
   const rolled = car({ k: 'spikes', x: 0, y: 50, z: 0, ry: 0, rz: Math.PI / 2, s: 1 }), upright = car({ k: 'spikes', x: 0, y: 50, z: 0, ry: 0, s: 1 });
   assert.equal(rolled.ph._obstacleContact(rolled.d, 0), true, 'roulées : la voiture est dans la boîte');
-  assert.equal(upright.ph._obstacleContact(upright.d, 0), false, 'droites : à 3 m au-dessus, hors de la boîte');
+  assert.equal(upright.ph._obstacleContact(upright.d, 0), false, 'droites : à 3,5 m au-dessus, hors de la boîte');
 });
 test('changement de repère d\'un obstacle : monde → local → monde redonne le point de départ (toutes orientations, tous caps, toutes tailles)', () => {
   const L = {}, W = {};

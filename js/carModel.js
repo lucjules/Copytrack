@@ -79,6 +79,7 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
   const L = typeof loadoutIn === 'string' ? { ...DEFAULT_LOADOUT, color: loadoutIn } : sanitizeLoadout(loadoutIn);
   const ghost = !!opts.ghost;
   const group = new THREE.Group();
+  if (opts.scale) group.scale.setScalar(opts.scale);      // voiture de course : CAR_SCALE (le garage garde l'échelle 1)
   const own = []; // matériaux à libérer
   const mk = (params) => {
     const m = ghost
