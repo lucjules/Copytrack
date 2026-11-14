@@ -3,7 +3,7 @@
 import { DT } from '../constants.js';
 import { MSG, PRIO } from '../hudMessages.js';
 import { F_FINISHED } from '../net/snapshot.js';
-import { saveRecord, medalTime, pushRun, encodeFloats, formatTime } from '../storage.js';
+import { saveRecord, medalTime, pushRun, encodeFloats, packGhost, formatTime } from '../storage.js';
 import { rewardCoins, profile } from '../profile.js';
 import { awardRace, levelOf } from '../progression.js';
 import { MEDALS, medalFor } from '../medals.js';
@@ -113,7 +113,7 @@ export const finishMethods = {
       const rec = {
         time,
         splits: this.logic.splits.slice(),
-        ghost: encodeFloats(ghost),
+        ghost: packGhost(ghost) ?? encodeFloats(ghost),      // format compact « G2 » (×3,9 de place) ; l'ancien format si les données ne s'y prêtent pas
         ghostVeh: this.ghostVeh.slice(),
         inputs: this.recorder.encode(),
         pv: PHYS_VER,

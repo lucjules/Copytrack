@@ -2,11 +2,15 @@
 // Usage : node tools/check-deployed.mjs            (réseau nécessaire ; l'URL et la clé viennent de js/config.js ; derrière un proxy : NODE_USE_ENV_PROXY=1 node tools/check-deployed.mjs)
 // Sortie : une ligne par constat, « ok » / « ÉCART » / « inconnu » ; code de sortie 1 s'il y a un écart.
 //   - submit-score déployé : version de physique (GET d'état) = celle du dépôt ?  actions publish-track présentes ?  limites annoncées ?
+//     EMPREINTE DE BUILD (champ `build` du GET d'état, tools/build-stamp.mjs) = celle du fichier supabase/functions/submit-score/index.ts du dépôt ? C'est ce qui détecte une fonction
+//     périmée quand PHYS_VER n'a pas changé (les corrections de la phase 4 : temps non numérique, roulis d'obstacle dans la clé de classement, n'avaient pas changé PHYS_VER).
 //   - base : le schéma public exposé (racine PostgREST) contient-il les objets de l'étape SQL 15 (colonne tracks.author_verified, fonctions rate_check / submit_best / publish_track) ?
 //     Les fonctions réservées au service (revoke … from anon) ne figurent PAS dans ce schéma : leur absence ici est NORMALE, elle est notée « non exposé » et non comme un écart.
 //   - ice : le déploiement répond-il, et exige-t-il un jeton (401 sans jeton = fail-closed attendu) ?
+import { readFileSync } from 'node:fs';
 import { PHYS_VER } from '../js/version.js';
 import { CONFIG } from '../js/config.js';
+import { readStamp, judgeBuild } from './build-stamp.mjs';
 
 const url = CONFIG && CONFIG.supabase && CONFIG.supabase.url, key = CONFIG && CONFIG.supabase && CONFIG.supabase.key;
 if (!url || !key) { console.log('inconnu : js/config.js ne donne ni URL ni clé Supabase'); process.exit(2); }
@@ -24,6 +28,10 @@ try {
     const acts = Array.isArray(s.body.actions) ? s.body.actions : [];
     say(acts.includes('publish-track') ? 'ok' : 'ÉCART', `submit-score : actions annoncées ${JSON.stringify(acts)} (publish-track attendue)`);
     say(s.body.rate && s.body.rate.globalMax ? 'ok' : 'ÉCART', `submit-score : limites annoncées ${JSON.stringify(s.body.rate)}`);
+    let repoFile = null;
+    try { repoFile = readFileSync(new URL('../supabase/functions/submit-score/index.ts', import.meta.url), 'utf8'); } catch { /* fichier absent : verdict « inconnu » ci-dessous */ }
+    const j = judgeBuild(s.body.build, repoFile ? readStamp(repoFile) : null);
+    say(j.kind, `submit-score : ${j.msg}`);
   }
 } catch (e) { say('inconnu', 'submit-score : ' + e.message); }
 

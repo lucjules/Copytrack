@@ -139,7 +139,7 @@ export class RaceSession {
     this.ghostData = null;
     this.ghostVehData = this.record && Array.isArray(this.record.ghostVeh) ? this.record.ghostVeh : [];
     if (this.record && this.record.ghost) {
-      try { this.ghostData = decodeFloats(this.record.ghost); } catch { this.ghostData = null; }
+      try { const d = decodeFloats(this.record.ghost); this.ghostData = d.length ? d : null; } catch { this.ghostData = null; }      // (un fantôme illisible = pas de fantôme, au lieu d'un tableau vide dessiné en NaN)
     }
   }
 

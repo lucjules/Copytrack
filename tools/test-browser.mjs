@@ -2033,6 +2033,39 @@ try {
     }
     await app(() => window.copytrack.quality.apply('high'));
   });
+
+  // Fantôme du record au format compact « G2 » (js/ghostFormat.js) : en dernier, car il crée un record (circuit 12, rarement utilisé ailleurs) sans qu'aucun autre essai n'en dépende.
+  await test('fantôme du record (format compact G2) : course finie → record rangé en G2 → la course suivante le charge, sans erreur ni valeur NaN ; un ancien record (Float32 en base64) se lit toujours', async () => {
+    await app(() => { window.copytrack.showMenu('tracks'); window.copytrack.playBuiltin(11); });
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    await page.waitForTimeout(2500);      // quelques dizaines d'images de fantôme enregistrées (une toutes les 4 pas)
+    const key = await app(() => window.copytrack.session.trackKey);
+    await app(() => window.copytrack.session._finish(window.copytrack.session.logic.steps / 120 + 0.4));
+    const rec = await app(async (k) => { const s = await import('/js/storage.js'); const r = s.getRecord(k); return r ? { ghost: String(r.ghost || '').slice(0, 3), frames: s.decodeFloats(r.ghost).length / 7, len: String(r.ghost || '').length } : null; }, key);
+    assert.ok(rec, 'un record a été rangé');
+    assert.equal(rec.ghost, 'G2:', 'le fantôme du record neuf est au format compact');
+    assert.ok(rec.frames >= 10, `le fantôme a ${rec.frames} images`);
+    assert.ok(rec.len < rec.frames * 37.3 / 3, `taille ${rec.len} caractères pour ${rec.frames} images : au moins 3 fois plus court que l'ancien format`);
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu' || !!document.getElementById('race-hub') && !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
+    await app(() => { try { window.copytrack.closeRaceHub(); } catch { /* pas de fiche ouverte */ } window.copytrack.showMenu('tracks'); window.copytrack.playBuiltin(11); });
+    await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.state === 'racing', null, 40000);
+    await page.waitForTimeout(800);
+    const g = await app(() => { const S = window.copytrack.session, p = S.ghostCar && S.ghostCar.group.position; return { n: S.ghostData ? S.ghostData.length : -1, finite: !!p && Number.isFinite(p.x + p.y + p.z) }; });
+    assert.ok(g.n >= 70 && g.n % 7 === 0, `la course suivante charge le fantôme (${g.n} valeurs)`);
+    assert.ok(g.finite, 'la voiture fantôme a une position finie');
+    // Ancien record : le même fantôme, réécrit en Float32 base64 (comme avant ce format), est relu et dessiné
+    const legacy = await app(async (k) => {
+      const s = await import('/js/storage.js'), r = s.getRecord(k);
+      s.saveRecord(k, { ...r, ghost: s.encodeFloats(s.decodeFloats(r.ghost)) });
+      window.copytrack.session.loadRecord();
+      return { head: String(s.getRecord(k).ghost).slice(0, 3), n: window.copytrack.session.ghostData ? window.copytrack.session.ghostData.length : -1 };
+    }, key);
+    assert.notEqual(legacy.head, 'G2:', 'le record a bien été réécrit à l\'ancien format');
+    assert.equal(legacy.n, g.n, 'l\'ancien format est relu, avec le même nombre d\'images');
+    await app(() => window.copytrack.quitRace());
+    await waitApp(() => window.copytrack.mode === 'menu' || !!document.getElementById('race-hub') && !document.getElementById('race-hub').classList.contains('hidden'), null, 20000);
+  });
 } finally {
   await browser.close();
   server.kill();
