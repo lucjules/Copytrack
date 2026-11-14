@@ -53,8 +53,114 @@ export function encodeFloats(arr) {
   return btoa(bin);
 }
 
+// ---- Format compact « G2 » : fantôme de RECORD LOCAL (localStorage et sauvegarde du compte) ------------------------------------------------
+// Le format serveur (Float32 en base64, `encodeFloats`) ne change pas. Le record local, lui, ne sert qu'à DESSINER la voiture : position au centimètre et orientation à 3e-5 près
+// suffisent. Chaque image est écrite par prédiction : la position et chacune des 4 composantes du quaternion sont prédites par extrapolation linéaire des deux images précédentes
+// (ordre 2) ; seul le RÉSIDU (petit : la voiture est un corps lisse) est écrit, en entier signé « zigzag » à longueur variable (1 octet le plus souvent). Mesuré sur les 72 circuits
+// intégrés : 7,2 octets par image au lieu de 28 (×3,9 en base64), erreur de position ≤ 0,5 cm. Une téléportation donne seulement un résidu plus long, jamais une erreur.
+// Les quaternions sont rangés dans un même hémisphère (q et −q sont la même rotation ; le rendu interpole par le plus court chemin) : sans cela les composantes sauteraient de signe.
+// Chaîne : « G2: » + base64. Le préfixe est sans ambiguïté (« : » n'existe pas en base64) : decodeFloats lit les deux formats, les anciens records restent donc lisibles.
+// Seulement + − × ÷, sqrt, round, floor (règle du noyau : ce module est dans la fermeture de la vérification serveur).
+export const GHOST_PACK_PREFIX = 'G2:';
+const POS_SCALE = 100;       // 1 cm
+const QUAT_SCALE = 32767;
+const zigzag = (n) => (n < 0 ? -2 * n - 1 : 2 * n);
+const unzigzag = (v) => (v % 2 === 0 ? v / 2 : -(v + 1) / 2);
+const predict = (a, b, i) => (i >= 2 ? 2 * a - b : i === 1 ? a : 0);
+
+// Float32Array (x, y, z, qx, qy, qz, qw par image) -> « G2:… », ou null si les données ne s'y prêtent pas (vide, démesurées, non finies) : l'appelant garde alors encodeFloats.
+export function packGhost(arr) {
+  if (!ArrayBuffer.isView(arr) || !arr.length || arr.length % GHOST_STRIDE !== 0) return null;
+  const n = arr.length / GHOST_STRIDE;
+  if (n > MAX_GHOST_FRAMES) return null;
+  for (let i = 0; i < arr.length; i++) if (!Number.isFinite(arr[i]) || Math.abs(arr[i]) > 1e5) return null;
+  const out = new Uint8Array(8 + n * GHOST_STRIDE * 5);
+  let o = 0;
+  const put = (v) => { while (v >= 128) { out[o++] = (v % 128) + 128; v = Math.floor(v / 128); } out[o++] = v; };
+  put(n);
+  const P0 = [0, 0, 0], P1 = [0, 0, 0], Q0 = [0, 0, 0, 0], Q1 = [0, 0, 0, 0];
+  let pq0 = 0, pq1 = 0, pq2 = 0, pq3 = 1;      // quaternion précédent (pour le signe)
+  for (let i = 0; i < n; i++) {
+    const b = i * GHOST_STRIDE;
+    for (let c = 0; c < 3; c++) {
+      const q = Math.round(arr[b + c] * POS_SCALE);
+      put(zigzag(q - predict(P0[c], P1[c], i)));
+      P1[c] = P0[c]; P0[c] = q;
+    }
+    let x = arr[b + 3], y = arr[b + 4], z = arr[b + 5], w = arr[b + 6];
+    if (x * pq0 + y * pq1 + z * pq2 + w * pq3 < 0) { x = -x; y = -y; z = -z; w = -w; }
+    pq0 = x; pq1 = y; pq2 = z; pq3 = w;
+    const qv = [x, y, z, w];
+    for (let c = 0; c < 4; c++) {
+      const q = Math.round(Math.max(-1, Math.min(1, qv[c])) * QUAT_SCALE);
+      put(zigzag(q - predict(Q0[c], Q1[c], i)));
+      Q1[c] = Q0[c]; Q0[c] = q;
+    }
+  }
+  return GHOST_PACK_PREFIX + bytesToB64(out.subarray(0, o));
+}
+
+// « G2:… » -> Float32Array ; vide si la chaîne est abîmée, tronquée ou démesurée (jamais d'exception : le fantôme est simplement absent).
+export function unpackGhost(s) {
+  try {
+    if (typeof s !== 'string' || !s.startsWith(GHOST_PACK_PREFIX)) return new Float32Array(0);
+    const bin = atob(s.slice(GHOST_PACK_PREFIX.length));
+    const end = bin.length;
+    let o = 0;
+    const get = () => {
+      let v = 0, mul = 1;
+      for (let k = 0; k < 7; k++) {
+        if (o >= end) throw new Error('fin');
+        const byte = bin.charCodeAt(o++);
+        v += (byte % 128) * mul;
+        if (byte < 128) return v;
+        mul *= 128;
+      }
+      throw new Error('entier trop long');
+    };
+    const n = get();
+    if (!(n >= 1 && n <= MAX_GHOST_FRAMES)) return new Float32Array(0);
+    const res = new Float32Array(n * GHOST_STRIDE);
+    const P0 = [0, 0, 0], P1 = [0, 0, 0], Q0 = [0, 0, 0, 0], Q1 = [0, 0, 0, 0];
+    for (let i = 0; i < n; i++) {
+      const b = i * GHOST_STRIDE;
+      for (let c = 0; c < 3; c++) {
+        const q = predict(P0[c], P1[c], i) + unzigzag(get());
+        P1[c] = P0[c]; P0[c] = q;
+        res[b + c] = q / POS_SCALE;
+      }
+      for (let c = 0; c < 4; c++) {
+        const q = predict(Q0[c], Q1[c], i) + unzigzag(get());
+        Q1[c] = Q0[c]; Q0[c] = q;
+      }
+      const l = Math.sqrt(Q0[0] * Q0[0] + Q0[1] * Q0[1] + Q0[2] * Q0[2] + Q0[3] * Q0[3]);      // (renormalisé : la quantification l'écarte de 1 de ~1e-5)
+      if (l > 1e-3) { res[b + 3] = Q0[0] / l; res[b + 4] = Q0[1] / l; res[b + 5] = Q0[2] / l; res[b + 6] = Q0[3] / l; } else res[b + 6] = 1;
+    }
+    for (let i = 0; i < res.length; i++) if (!Number.isFinite(res[i])) return new Float32Array(0);
+    return res;
+  } catch {
+    return new Float32Array(0);
+  }
+}
+
+// Place gagnée en passant un fantôme local de l'ancien format à G2 : la chaîne compacte si elle est plus courte, sinon la chaîne d'origine (déjà compacte, illisible ou à garder telle quelle).
+export function compactGhost(s) {
+  if (typeof s !== 'string' || !s || s.startsWith(GHOST_PACK_PREFIX)) return s;
+  const data = decodeFloats(s);
+  const packed = packGhost(data);
+  return packed && packed.length < s.length ? packed : s;
+}
+
+function bytesToB64(bytes) {
+  let bin = '';
+  const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + CH, bytes.length)));
+  return btoa(bin);
+}
+
 export function decodeFloats(b64) {
   if (typeof b64 !== 'string' || !b64) return new Float32Array(0);
+  if (b64.startsWith(GHOST_PACK_PREFIX)) return unpackGhost(b64);
   try {
     const bin = atob(b64);
     const bytes = new Uint8Array(bin.length);

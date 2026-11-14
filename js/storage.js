@@ -5,6 +5,7 @@
 // recouvrent pas : la progression d'un compte et celle d'un invité ne se mélangent jamais sur un même navigateur.
 // La portée se règle une fois, au lancement, avant que le jeu ne lise quoi que ce soit.
 import { MAX_RUN_SECONDS, MAX_TRACK_CODE_CHARS } from './constants.js';
+import { compactGhost } from './ghostFormat.js';
 
 const GUEST_PREFIX = 'shardway.';
 let PREFIX = GUEST_PREFIX;
@@ -259,6 +260,14 @@ function makeRoom(tryWrite, except = '') {
   try { keys = Object.keys(localStorage).filter((k) => k.startsWith(PREFIX + REC) && k !== except); } catch { return false; }
   const others = keys.map((k) => { try { return { k, v: JSON.parse(localStorage.getItem(k)) }; } catch { return null; } })
     .filter((o) => o && o.v && (o.v.ghost || o.v.inputs)).sort((a, b) => (a.v.date || 0) - (b.v.date || 0));
+  // D'abord on COMPACTE (sans rien perdre) les fantômes de l'ancien format des autres records, du plus ancien au plus récent : ×3,9 de place gagnée, le fantôme reste affiché.
+  for (const o of others) {
+    const g = compactGhost(o.v.ghost);
+    if (g === o.v.ghost) continue;
+    try { localStorage.setItem(o.k, JSON.stringify({ ...o.v, ghost: g })); } catch { /* on continue */ }
+    if (tryWrite()) return true;
+  }
+  // Toujours plein : on retire le fantôme et les commandes (le temps, lui, reste).
   for (const o of others) {
     try { localStorage.setItem(o.k, JSON.stringify(slim(o.v))); } catch { /* on continue */ }
     if (tryWrite()) return true;
@@ -390,7 +399,7 @@ export function setEditorDraft(d) {
 }
 
 // ---- Fantômes : Float32Array <-> base64 (le codec vit dans ghostFormat.js, partagé avec la fonction serveur) ----
-export { encodeFloats, decodeFloats } from './ghostFormat.js';
+export { encodeFloats, decodeFloats, packGhost } from './ghostFormat.js';
 
 export function formatTime(sec, sign = false) {
   if (sec == null || !isFinite(sec)) return '--:--.---';
