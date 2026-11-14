@@ -6,6 +6,9 @@
 //   4. sauts et réceptions : gaz tenus en l'air ≠ −43 %, perte proportionnelle à l'assiette réelle.
 // Les valeurs « avant » citées sont celles de la phase 1 (8241368) ; docs/AUDIT-PHASE2-PHYSIQUE.md donne les tableaux complets. Les seuils laissent de la marge : ils protègent le
 // COMPORTEMENT, pas des décimales (les décimales sont gardées par tools/phys-fingerprint.json et tools/golden-temps.json).
+// PHYS_VER 36 (caractère PolyTrack, docs/ANALYSE-POLYTRACK.md) : mur INÉLASTIQUE à frottement 0,7 (ni rebond, ni pivot ajouté, ni « encaissement »), aucun contrôle
+// en l'air hors aérofrein (le frein fige l'assiette), glisse au frein avec contre-braquage automatique. Les garanties de jouabilité restent : jamais clouée, perte
+// croissante avec la violence du choc, mini-turbo mérité, réception jamais ratée pour une pédale tenue.
 import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
 import { flat, arena, setSpeed, wallContact, driftRun, cornerBench, jumpRun } from './mesures-physique.mjs';
@@ -27,13 +30,14 @@ console.log('1. Contacts de bordure');
 const SPEEDS = [100, 200, 280], ANGLES = [2, 5, 10, 20, 45];
 const walls = {};
 for (const v of SPEEDS) for (const a of ANGLES) walls[v + '/' + a] = wallContact(v, a);
+// (PHYS_VER 36 : le mur n'éjecte plus la voiture ; volant au neutre, nez vers le mur, elle le RACLE (frottement 0,7) jusqu'à se redresser : 1 à 2 s au lieu d'un rebond)
 test('frôlement (2°) : l\'élan est conservé à toutes les vitesses (avant : 100 km/h → 48 en 0,5 s, puis 23 km/h collé à la bordure)', () => {
   for (const v of SPEEDS) {
     const w = walls[v + '/2'];
     assert.ok(w.hit && !w.bad, `${v} km/h : contact attendu`);
     assert.ok(w.vHit >= 0.95 * v, `${v} km/h : ${w.vHit} km/h juste après le contact`);
-    assert.ok(w.v2 >= 0.95 * w.vHit, `${v} km/h : ${w.vHit} → ${w.v2} km/h deux secondes plus tard`);
-    assert.ok(w.contactS < 0.5, `${v} km/h : ${w.contactS} s de contact (avant : 7 s collé)`);
+    assert.ok(w.v2 >= 0.85 * w.vHit, `${v} km/h : ${w.vHit} → ${w.v2} km/h deux secondes plus tard`);
+    assert.ok(w.contactS < 2, `${v} km/h : ${w.contactS} s de contact (avant la phase 2 : 7 s collé)`);
   }
 });
 test('la perte croît avec la violence du choc (2° < 5° < 10° < 20° < 45°) : la vitesse juste après le contact décroît à chaque incidence, à 100, 200 et 280 km/h', () => {
@@ -44,19 +48,21 @@ test('la perte croît avec la violence du choc (2° < 5° < 10° < 20° < 45°) 
     assert.ok(row[2] > 0.5 * v, `${v} km/h : un choc modéré (10°) ne la fauche pas (${row[2]} km/h)`);
   }
 });
-test('la voiture n\'est jamais clouée : cinq secondes après chaque contact, elle roule à au moins la moitié de sa vitesse d\'approche (avant : 17 à 35 km/h dans 12 cas sur 15)', () => {
+// (PHYS_VER 36 : un choc franc à 45° garde cos 45° − 0,7 · sin 45° ≈ 21 % de l'élan, PolyTrack ; volant au neutre, la voiture repart en raclant)
+test('la voiture n\'est jamais clouée : cinq secondes après chaque contact, volant au neutre, elle roule à 50 km/h au moins, et à plus de la moitié de son approche après un choc modéré (≤ 20°)', () => {
   for (const v of SPEEDS) for (const a of ANGLES) {
     const w = walls[v + '/' + a];
     assert.ok(!w.bad && w.hit, `${v}/${a}`);
-    assert.ok(w.v5 >= 0.5 * v, `${v} km/h ${a}° : ${w.v5} km/h à +5 s`);
-    assert.ok(w.v5 >= 60, `${v} km/h ${a}° : ${w.v5} km/h à +5 s, au moins 60`);
+    assert.ok(w.v5 >= 50, `${v} km/h ${a}° : ${w.v5} km/h à +5 s, au moins 50`);
+    if (a <= 20) assert.ok(w.v5 >= 0.5 * v, `${v} km/h ${a}° : ${w.v5} km/h à +5 s`);
   }
 });
-test('le choc fait pivoter la voiture d\'autant plus qu\'il est violent, et la rotation reste bornée (jamais plus de 5 rad/s)', () => {
+// (PHYS_VER 36 : plus de pivot AJOUTÉ par le choc (wallSpinMax 0, PolyTrack) : la rotation ne vient que des pneus et du frottement contre la paroi)
+test('le choc ne fait pas toupiller la voiture : rotation bornée (jamais plus de 5 rad/s), plus forte qu\'un frôlement dès 10°', () => {
   for (const v of SPEEDS) {
     const spins = ANGLES.map((a) => walls[v + '/' + a].spin);
-    for (let i = 1; i < spins.length; i++) assert.ok(spins[i] >= spins[i - 1] - 0.05, `${v} km/h : ${spins.join(', ')}`);
     assert.ok(Math.max(...spins) <= 5, `${v} km/h : rotation maximale ${Math.max(...spins)} rad/s`);
+    for (let i = 2; i < spins.length; i++) assert.ok(spins[i] > spins[0], `${v} km/h : ${spins.join(', ')}`);
   }
 });
 test('le nez est écarté du mur par le choc (jamais « nez au mur » comme avant : voiture 5 s collée)', () => {
@@ -77,7 +83,7 @@ test('gravité inversée (route au plafond) : mêmes règles — frôlement cons
   for (const w of [g, m, h]) assert.ok(w.hit && !w.bad);
   assert.ok(g.vHit >= 190, `frôlement : ${g.vHit}`);
   assert.ok(h.vHit < 0.5 * g.vHit, `violent : ${h.vHit} contre ${g.vHit}`);
-  for (const w of [g, m, h]) assert.ok(w.v5 >= 100, `à +5 s : ${w.v5} km/h`);
+  for (const w of [g, m, h]) assert.ok(w.v5 >= 50, `à +5 s : ${w.v5} km/h`);      // (PHYS_VER 36 : même règle qu'au sol, 50 km/h au moins)
 });
 test('volant tenu CONTRE la bordure : la voiture pressée repart seule (le contact « clignotait » un pas sur cinq et le dégagement automatique ne tournait qu\'à ce rythme : 10 s à 1 m/s)', () => {
   for (const [a, v, sgn] of [[30, 100, 1], [15, 60, 1], [60, 100, 1], [30, 100, -1]]) {
@@ -117,14 +123,15 @@ test('TOUTE pièce-ruban qui retourne la voiture (entrée et sortie de côtés o
   }
   assert.ok(inverting >= 8 && checked > 200, `${inverting} cases qui retournent la voiture sur ${checked}`);
 });
-test('la vrille et les transitions retournées passent SANS revêtement « Inversion de gravité » ; la matrice ne garde que 16 cases CHUTE (29 avant : 13 corrigées, aucune nouvelle), toutes des montées raides sur mur ou la rampe cvd4', () => {
+test('la vrille et les transitions retournées passent SANS revêtement « Inversion de gravité » ; la matrice ne garde que 18 cases CHUTE (29 avant la phase 2), toutes des montées raides sur mur ou la rampe cvd4', () => {
   assert.notEqual(PIECE_FACTS.twist.sol, 'CHUTE');
   for (const t of ['tr10s', 'tr20s', 'tr10l', 'tr20l']) assert.notEqual(PIECE_FACTS[t].plafond, 'CHUTE', t);
   const chutes = [];
   for (const [t, row] of Object.entries(PIECE_FACTS)) for (const [c, code] of Object.entries(row)) if (code === 'CHUTE') chutes.push(t + '/' + c);
   // (colonnes d'origine seulement : les orientations de la phase 3 ajoutent 4 cases de la même famille de montées raides, voir test-orientations-3d)
   const old = chutes.filter((c) => /\/(sol|murG|murD|plafond)$/.test(c));
-  assert.ok(old.length <= 16, `${old.length} CHUTE : ${old.join(' ')}`);
+  // (PHYS_VER 36 : 16 -> 18 ; les deux nouvelles, cvd4 sur le mur gauche et cvdL4 sur le mur droit, sont les miroirs de cases déjà CHUTE de la même rampe)
+  assert.ok(old.length <= 18, `${old.length} CHUTE : ${old.join(' ')}`);
   for (const c of old) assert.match(c, /^(cv|cro|cdi)/, c + ' : famille non documentée');
 });
 
@@ -182,12 +189,13 @@ test('mini-turbo : mérité par une glisse tenue, proportionné (+10 à +40 km/h
   for (const v of [80, 160, 200]) assert.equal(driftRun(v, 'gas').turbo, 0, `${v} km/h gaz seuls : aucun turbo`);
   // un mur touché pendant la glisse la casse : la charge est remise à zéro et rien n'est récompensé (avant la correction, la lecture de l'impact se faisait APRÈS sa remise à zéro : jamais)
   for (const v of [120, 160]) {
+    // (PHYS_VER 36 : volant à fond ; à 0,6 la glisse, contre-braquée d'elle-même, se refermait et livrait son mini-turbo juste avant le mur)
     const { ph } = flat('start S30 finish'); ph.pos.x = 5; setSpeed(ph, v / KMH);
     let hit = null, before = 0, after = null, mt = 0;
     for (let i = 0; i < 120 * 4; i++) {
       const t = i * DT; ph.clock = i;
       const c = ph.driftCharge;
-      ph.step({ steer: 0.6, brake: t > 0.3 && t < 0.55, throttle: t > 0.3 });
+      ph.step({ steer: 1, brake: t > 0.3 && t < 0.55, throttle: t > 0.3 });
       if (hit === null && ph.ev.wall > 3) { hit = t; before = c; }
       if (hit !== null && after === null && t > hit + 0.02) after = ph.driftCharge;
       if (hit !== null && t > hit + 0.02 && t < hit + 0.6 && ph.ev.miniTurbo) mt = ph.ev.miniTurbo;
@@ -203,7 +211,8 @@ test('virage de 90° (porte à 150 m) : le dérapage n\'est ni abandonné ni dis
     assert.ok(grip.t !== null && drift.t !== null, `${v} km/h : porte atteinte`);
     assert.ok(drift.t <= 1.3 * grip.t, `${v} km/h : dérapage ${drift.t} s contre ${grip.t} s`);
     assert.ok(drift.t >= 0.95 * grip.t, `${v} km/h : le dérapage ne bat pas la trajectoire à l'adhérence de plus de 5 % (${drift.t} contre ${grip.t} s) : il ne doit pas devenir la seule bonne façon de tourner`);
-    assert.ok(drift.turbo >= 1 && !drift.spin, `${v} km/h : turbo ${drift.turbo}, cap hors cible ${drift.spin}`);
+    // (PHYS_VER 36 : à 100 km/h le virage se prend au braquage en moins d'une seconde (rayon 22 m) : la glisse n'a pas le temps de charger ; le mini-turbo est dû à 140 et 180)
+    assert.ok((v < 140 || drift.turbo >= 1) && !drift.spin, `${v} km/h : turbo ${drift.turbo}, cap hors cible ${drift.spin}`);
     assert.ok(drift.vGate >= 0.9 * grip.vGate, `${v} km/h : ${drift.vGate} km/h à la porte contre ${grip.vGate}`);
   }
 });
@@ -217,12 +226,16 @@ test('identité des véhicules, revêtements et profils : le dérapage marche pa
     assert.ok(KEEP(m) >= 0.7, `${n} : ${Math.round(100 * KEEP(m))} % conservés`);
     assert.ok(m.turboGain <= 40, `${n} : turbo +${m.turboGain}`);
   }
-  assert.ok(rows.glace.keep > rows.voiture.keep, 'la glace conserve davantage la vitesse (on glisse déjà)');
+  // (PHYS_VER 36 : sur l'asphalte la glisse ne coûte presque plus de vitesse (contre-braquage automatique, PolyTrack) : la glace n'y gagne plus, mais n'y perd pas ; son identité est
+  // de tourner bien moins)
+  assert.ok(rows.glace.keep >= rows.voiture.keep - 0.05, `la glace ne coûte pas plus de vitesse en glisse (${rows.glace.keep} contre ${rows.voiture.keep})`);
+  assert.ok(rows.glace.yaw17 < 0.5 * rows.voiture.yaw17, `sur la glace la voiture tourne bien moins (${rows.glace.yaw17}° contre ${rows.voiture.yaw17}°)`);
   assert.ok(rows.arcade.slipMax < rows.voiture.slipMax, `Arcade glisse moins (${rows.arcade.slipMax}° contre ${rows.voiture.slipMax}°)`);
   // revêtements dont la raison d'être est de glisser ou de freiner : leur identité reste ce qu'elle était
   const drift = driftRun(160, 'gas', { surf: { s: 'drift' } }), slow = driftRun(160, 'tapBoth', { surf: { s: 'slow' } });
   assert.ok(drift.slipMax >= 40, `revêtement Dérapage : la voiture part toujours en glisse (${drift.slipMax}°)`);
-  assert.ok(slow.keep <= 0.5, `revêtement Ralentisseur : il freine toujours (${Math.round(100 * slow.keep)} % conservés)`);
+  // (PHYS_VER 36 : la glisse sur l'asphalte ne coûte plus rien (104 % conservés) ; le ralentisseur en garde 52 % : il divise toujours la vitesse par deux)
+  assert.ok(slow.keep <= 0.55 && slow.keep < 0.6 * rows.voiture.keep, `revêtement Ralentisseur : il freine toujours (${Math.round(100 * slow.keep)} % conservés)`);
   assert.ok(!drift.bad && !slow.bad);
 });
 
@@ -237,17 +250,18 @@ test('gaz ou frein tenus en l\'air : jamais « ratée », perte ≤ 20 % (avant 
     assert.ok(m.pitchPeak <= 0.7, `${v} km/h ${a} : tangage maximal ${m.pitchPeak} rad (avant 1,4)`);
   }
 });
-test('la perte reste PROPORTIONNELLE à l\'assiette : frein tenu = nez plus haut = perte plus grande qu\'à plat, mais bornée ; gaz tenu ne coûte rien de plus que ne rien faire', () => {
+// (PHYS_VER 36, loi PolyTrack : ni gaz ni volant n'agissent en l'air ; le frein est un AÉROFREIN qui fige l'assiette. Avant : gaz = nez plus bas, frein = nez plus haut)
+test('en l\'air, les pédales ne pilotent plus l\'assiette : gaz tenu = ne rien faire ; frein tenu (aérofrein) fige l\'assiette, jamais plus de tangage ni de perte qu\'à vide', () => {
   for (const v of [100, 200]) {
     const none = jumpRun(v, 'none'), gas = jumpRun(v, 'gas'), brake = jumpRun(v, 'brake');
     assert.ok(gas.loss <= none.loss + 2, `${v} km/h : gaz −${gas.loss} % contre −${none.loss} %`);
-    assert.ok(brake.pitchPeak > none.pitchPeak, `${v} km/h : le frein relève le nez (${brake.pitchPeak} contre ${none.pitchPeak} rad)`);
-    assert.ok(brake.loss >= none.loss && brake.loss <= none.loss + 12, `${v} km/h : frein −${brake.loss} % contre −${none.loss} %`);
+    assert.ok(brake.pitchPeak <= none.pitchPeak + 0.01, `${v} km/h : l'aérofrein ne relève pas le nez (${brake.pitchPeak} contre ${none.pitchPeak} rad)`);
+    assert.ok(brake.loss <= none.loss + 2, `${v} km/h : frein −${brake.loss} % contre −${none.loss} %`);
   }
 });
 test('moto : mêmes garanties ; deltaplane : il plane toujours (identité) et un frein tenu ne le jette pas', () => {
   for (const a of ['none', 'gas', 'brake']) {
-    const m = jumpRun(150, a, { vehicle: 'moto' });
+    const m = jumpRun(160, a, { vehicle: 'moto' });      // (PHYS_VER 36 : 160 km/h ; à 150 ce saut d'essai est pile à la frontière entre deux réceptions, et la moto, 2 km/h plus lente au décollage, heurtait le bord de la dalle)
     assert.ok(m.ok && m.q !== 'bad' && m.loss <= 20, `moto ${a} : ${m.q} −${m.loss} %`);
   }
   const g0 = jumpRun(150, 'none', { vehicle: 'glider' }), g1 = jumpRun(150, 'brake', { vehicle: 'glider' });

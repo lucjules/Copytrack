@@ -181,13 +181,14 @@ hors ligne ; il est « réseau d'abord » pour récupérer les mises à jour ; s
 
 L'accueil (`index.html`, `#menu`) n'affiche que six tuiles ; chacune ouvre un `.menu-panel` d'actions (`js/app/wiring.js`, `_menuSub`) qui remplace les tuiles (Échap et « ← Retour » les ramènent, `_lastPanel` fait revenir au panneau après un écran). Les entrées `data-action="tab-<onglet>"` ouvrent l'écran `#profile`, un écran à onglets partagé par trois entrées (`js/app/profile.js`, `HUBS` : Profil, Progression, Paramètres) ; `showScreen('<onglet>')` mène directement à un onglet (l'ancien `showScreen('options')` mène aux graphismes). `tools/test-menu.mjs` garde la structure : six tuiles, une action une seule fois, aucun bouton mort, aucun onglet sans panneau, aucun réglage perdu ou en double.
 
-## Physique : règles communes (0.9.61, `PHYS_VER` 35)
+## Physique : règles communes (0.9.61, `PHYS_VER` 35 ; caractère PolyTrack en 0.9.65, `PHYS_VER` 36)
 
-Quatre règles valent pour **toutes** les pièces, véhicules et revêtements (détail et mesures : [AUDIT-PHASE2-PHYSIQUE.md](AUDIT-PHASE2-PHYSIQUE.md)) :
+Quatre règles valent pour **toutes** les pièces, véhicules et revêtements (détail et mesures : [AUDIT-PHASE2-PHYSIQUE.md](AUDIT-PHASE2-PHYSIQUE.md) ; lois de PolyTrack reprises en 0.9.65 : [ANALYSE-POLYTRACK.md](ANALYSE-POLYTRACK.md)) :
 - **Gravité** : `ribbonInverts(tile)` (`js/ribbons.js`) — une pièce-ruban dont l'entrée et la sortie sont de côtés opposés fait suivre la gravité à la route (`physics/ribbon.js`). Le vérificateur de l'éditeur lit la même règle.
-- **Contacts** : `js/physics/contact.js` — une réponse à un impact en fonction de la vitesse d'approche normale (frôlement / modéré / violent), partagée par le sol (`walls.js`) et les rubans (`ribbon.js`) ; constantes lues dans `this.k`.
-- **Dérapage** : `physics.js : _driftState` (déclenchement, entretien, mini-turbo), `_driftAssist` (angle de glisse tenu par le volant), `_tires` (adhérence des deux essieux, transfert de charge).
-- **Vol** : `physics.js : _flyAir` — assiette conservée, stabilité aérodynamique faible, alignement partiel sur la pente proche, compensateur borné.
+- **Contacts** : `js/physics/contact.js` — une réponse à un impact en fonction de la vitesse d'approche normale, partagée par le sol (`walls.js`) et les rubans (`ribbon.js`) ; constantes lues dans `this.k`. Depuis `PHYS_VER` 36 : inélastique, frottement 0,7, sans perte forfaitaire, pivot ni encaissement (`wallE`, `wallHardMax`, `wallSpinMax`, `wallStunMax` à 0).
+- **Direction et dérapage** : `physics.js : _steerAngle` (angle PERMIS min(`steerMax`, `steerC`·v^−`steerN`) × `envGrip`, l'adhérence d'ambiance : pluie, givre, adhérence du circuit, modèles v2 ; contre-braquage automatique en glisse), `_driftState` (déclenchement, entretien, mini-turbo livré quand la glisse se referme), `_driftAssist`, `_tires` (adhérence des deux essieux, transfert de charge). `physics/specs.js : steerLimitSpeed` donne au pilote automatique la vitesse où l'angle suffit. Sur les routes roulées et les loopings / vrilles / tire-bouchons, la route guide le cap (`pieces.js : headingGuided`, `physics/ribbon.js`).
+- **Vol** : `physics.js : _flyAir` — assiette conservée, stabilité aérodynamique faible, alignement partiel sur la pente proche. Depuis `PHYS_VER` 36 : ni volant ni gaz en l'air, le frein est un aérofrein (`airBrake` : amortit la rotation, fige l'assiette) ; le deltaplane garde ses commandes.
+- **Moteur** : `physics.js : _longitudinal` — a = poussée − (poussée / v_max)·v (loi PolyTrack, aussi à vide), frein `brake` + `brakeV`·v.
 Banc de mesures : `tools/mesures-physique.mjs` (avant / après sur n'importe quelle copie : `COPYTRACK_ROOT`) ; garde-fous : `tools/test-physique-corrections.mjs`.
 
 ## Orientations 3D et rubans roulés (0.9.62)

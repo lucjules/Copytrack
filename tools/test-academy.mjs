@@ -56,7 +56,8 @@ test('mini-turbo : un geste de joueur (volant à fond puis frein 0,6 s dans le g
     const p = sim.phys;
     let inp = bot.control(p);
     if (t0 == null && Math.abs(inp.steer) > 0.6 && p.fwdSpeed > 16) { t0 = i / 120; sign = Math.sign(inp.steer); }
-    if (t0 != null && i / 120 - t0 < 2.5) { const t = i / 120 - t0; inp = { steer: sign, throttle: t >= 0.6, brake: t < 0.6, drift: false }; }
+    // PHYS_VER 36 : le joueur rend le volant dès le mini-turbo (le braquage à fond, borné selon la vitesse, tourne plus serré que le grand virage : le garder 2,5 s menait au muret)
+    if (t0 != null && i / 120 - t0 < 2.5 && !turbos) { const t = i / 120 - t0; inp = { steer: sign, throttle: t >= 0.6, brake: t < 0.6, drift: false }; }
     sim.drive(inp);
     if (p.ev.miniTurbo) turbos++; if (p.ev.wall > 4) walls++;
     sim.score();

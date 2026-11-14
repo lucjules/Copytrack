@@ -299,6 +299,14 @@ export function isSideTile(tile) {
   return !!(tile.o || p.roll);
 }
 
+// PHYS_VER 36 : la route guide le cap de la voiture le long de sa propre courbure (géodésique) sur les routes roulées (mur, 45°, surplomb, transitions) et sur les
+// pièces « attraction » qui tournent autour de leur axe (loopings décalés, vrilles, tire-bouchons). Ailleurs, le cap ne suit que le volant, dont l'angle est
+// borné selon la vitesse (loi PolyTrack) : il ne suffirait pas à suivre ces pièces à la vitesse où elles se prennent.
+export function headingGuided(tile) {
+  const p = PIECES[tile.t];
+  return !!(tile.o || p.roll || p.rollable);
+}
+
 // Une ligne ou un virage posé sur un mur (tile.o) se parcourt en mode ruban, comme une transition.
 export const isOriented = (tile) => !!tile.o && (PIECES[tile.t].kind === 'line' || PIECES[tile.t].kind === 'arc' || !!PIECES[tile.t].rollable);
 // Branché par ribbons.js (qui connaît la géométrie) : (type, val) -> la pièce roulée tient-elle dans son empreinte ?

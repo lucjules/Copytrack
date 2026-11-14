@@ -78,7 +78,9 @@ test('freinage retardé (règle du coach, traces synthétiques) : « tu freines 
 });
 test('freinage avancé : « tu freines plus tôt »', () => {
   const { R, refIn, trace } = setup('temple');
-  const target = brakingPoints(R).filter((b) => b.v0 > 25)[0], from = Math.round(R.t[target.i] * 120);
+  // PHYS_VER 36 : la référence donne maintenant un petit coup de frein à 26 m/s juste après le départ (62 m) ; avancer CELUI-LÀ fait diverger tout le rejeu (murs dès le
+  // secteur 1). On avance le premier vrai freinage (plus de 30 m/s : 469 m, secteur 5).
+  const target = brakingPoints(R).filter((b) => b.v0 > 30)[0], from = Math.round(R.t[target.i] * 120);
   const early = edit(refIn, (st, fl) => { for (let k = from - 100; k < from; k++) fl[k] = (fl[k] & ~1) | 2; pad(st, fl); });
   const tips = coach(trace(early), R);
   // (phase 2 physique, PHYS_VER 35) Le freinage est maintenant limité par le cercle d'adhérence (brakeCorner) et le transfert de charge : 140 pas de frein (1,17 s) avant le

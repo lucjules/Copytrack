@@ -52,11 +52,11 @@ export function measureRun(track, inputs, { zones = [] } = {}) {
 export const DRILL_HINT = {
   none: 'Finis la course pour obtenir une note.',
   'turbo-0': 'Pas de mini-turbo : avant le virage, volant à fond PUIS frein une demi-seconde (pas l’inverse), sans accélérer.',
-  'turbo-1': 'Mini-turbo simple : la glisse s’est arrêtée trop tôt. Après le coup de frein, accélère en gardant le volant tourné une seconde et demie.',
+  'turbo-1': 'Mini-turbo simple : la glisse a été écourtée. Après le coup de frein, accélère en gardant le volant à fond jusqu’à ce qu’elle se referme.',
   'turbo-wall': 'Le renforcé y est, mais un choc a coûté la note : déclenche la glisse un peu plus tôt, avant l’entrée du virage.',
   'turbo-slow': 'Le renforcé y est, mais l’arrivée est trop lente : redresse dès que les étincelles changent de couleur et remets les gaz.',
-  'land-bad': '{n} réception(s) ratée(s) : en l’air, lâche les commandes si l’assiette est bonne ; le frein relève le nez, l’accélérateur le baisse.',
-  'land-ok': 'Réceptions correctes mais pas parfaites : retombe exactement à plat sur la pente, ni nez en haut ni nez en bas.',
+  'land-bad': '{n} réception(s) ratée(s) : la voiture a décollé en tournant. Redresse avant le bord : en l’air, ni le volant ni l’accélérateur n’agissent.',
+  'land-ok': 'Réceptions correctes mais pas parfaites : décolle tout droit, volant au centre, pour retomber à plat et dans l’axe.',
   zone: 'Dans la zone mesurée, le pilote de référence va plus vite : {tip}',
   best: 'Note maximale : tu vas aussi vite que la référence. Essaie de battre ta meilleure mesure.',
 };

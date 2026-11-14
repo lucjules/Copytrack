@@ -21,15 +21,19 @@ const build = (d) => buildBuiltin({ ...d, id: 'drill-' + d.id });
 
 // Course scriptée : le pilote automatique (latK : part de son adhérence), et en option un geste de dérapage déclenché à une distance du départ
 // (volant à S1 pendant le frein, B s, puis accélérateur ; le volant reste tourné au moins à `floor` en suivant la route, jusqu'à L s), un coup de frein de `stall` s sur
-// la dernière ligne droite, ou le frein tenu en l'air (le nez se relève).
+// la dernière ligne droite, ou le volant encore tourné au décollage (kick : 0,4 dans les 12 derniers mètres avant un vide).
+// (PHYS_VER 36 : le geste s'arrête au mini-turbo, comme le joueur qui redresse quand les étincelles partent ; garder le volant tourné ensuite, avec le braquage
+// borné selon la vitesse, menait à la bordure intérieure. En l'air plus aucune commande n'agit : l'erreur de réception est de décoller en tournant.)
 // (Phase 2, PHYS_VER 35 : avant, le geste était « volant à fond pendant toute la glisse » à 50-60 m du départ. L'ancien dérapage faisait tourner la voiture sur place (cap de −238°
 // en 1,5 s, vitesse 27 → 9 m/s) et la récompensait quand même d'un mini-turbo ; le nouveau conserve la vitesse et la TRAJECTOIRE, donc un volant à fond pendant 1,5 s, tenu 40 m
 // avant le virage, finit dans la bordure intérieure. Le geste est maintenant celui d'un joueur : il commence à l'entrée du virage et suit la route.)
-function drive(track, { latK = 0.8, gesture = null, airBrake = false, stall = 0 } = {}) {
+function drive(track, { latK = 0.8, gesture = null, kick = false, stall = 0 } = {}) {
   const sim = new Simulation(track), rec = new InputRecorder();
   sim.start();
   const ref = makeReference(track), o = { s: 0, j: 0, d: 0 };
-  const bot = new Autopilot(track.path, { latLimit: 56 * latK });
+  // PHYS_VER 36 : le braquage permis diminue avec la vitesse (loi PolyTrack) : dans un virage serré c'est lui, plus l'adhérence, qui fixe la vitesse. Le « niveau » du pilote
+  // règle donc aussi sa marge de braquage, en √latK (même échelle de vitesse que l'adhérence : v ∝ √a).
+  const bot = new Autopilot(track.path, { latLimit: 56 * latK, steerMargin: 0.85 * Math.sqrt(latK) });
   bot.reset(sim.phys);
   let g0 = null, done = false, stall0 = null;
   for (let i = 0; i < 90 / DT; i++) {
@@ -49,10 +53,15 @@ function drive(track, { latK = 0.8, gesture = null, airBrake = false, stall = 0 
       if (stall0 == null && o.s >= ref.length - 80) stall0 = now;      // (phase 2 : 80 m avant l’arrivée, après la sortie du virage du mini-turbo, au lieu de 110 m : le frein finissait dans la glisse)
       if (stall0 != null && now - stall0 < stall) inp = { ...inp, throttle: false, brake: true };
     }
-    if (airBrake && !p.grounded && !p.rib) inp = { ...inp, throttle: false, brake: true };
+    if (kick && p.grounded) {
+      const P = track.path; let lip = -1;
+      for (let k = bot.idx; k < Math.min(P.length - 1, bot.idx + 40); k++) if (Math.hypot(P[k + 1][0] - P[k][0], P[k + 1][2] - P[k][2]) > 20) { lip = k; break; }
+      if (lip >= 0 && Math.hypot(P[lip][0] - p.pos.x, P[lip][2] - p.pos.z) < 12) inp = { ...inp, steer: 0.4 };
+    }
     inp.steer = quantSteer(inp.steer);
     rec.push(inp, false);
     const ev = sim.step(inp);
+    if (p.ev.miniTurbo && g0 != null) { g0 = null; done = true; bot.reset(p); }
     if (sim.lost) return null;
     if (ev && ev.type === 'finish') return rec.encode();
   }
@@ -106,20 +115,19 @@ test('mini-turbo : sans dérapage, rien ; frein trop long, mini-turbo simple (br
   assert.equal(grade(d, {}).g, 0, 'le pilote automatique ne dérape pas');
   const simple = grade(d, { gesture: { at: 134, B: 0.45, L: 1.6, S1: 0.8, floor: 0.45 } });
   assert.deepEqual([simple.m.turboLv, simple.g], [1, 1]);
-  const lent = grade(d, { gesture: { at: 134, B: 0.45, L: 2.0, S1: 0.8, floor: 0.45 }, stall: 5 });
+  const lent = grade(d, { gesture: { at: 134, B: 0.6, L: 2.0, S1: 1, floor: 1 }, stall: 5 });      // PHYS_VER 36 : frein 0,6 s puis volant tenu à fond jusqu’à la fin de la glisse (B, S1, floor : 0,45 / 0,8 / 0,45 -> 0,6 / 1 / 1)
   assert.deepEqual([lent.m.turboLv, lent.m.walls, lent.g], [2, 0, 2], 'renforcé mais arrivée trop lente : argent (' + lent.m.time + ' s)');
-  const or = grade(d, { gesture: { at: 134, B: 0.45, L: 2.0, S1: 0.8, floor: 0.45 } });
+  const or = grade(d, { gesture: { at: 134, B: 0.6, L: 2.0, S1: 1, floor: 1 } });
   assert.deepEqual([or.m.turboLv, or.m.walls, or.g], [2, 0, 3]);
   assert.ok(or.m.time <= d.limit);
   assert.match(describeMeasure(d, or.m), /^Mini-turbo renforcé, 0 choc, /);
 });
-test('réceptions : à plat, trois parfaites (or) ; le frein tenu en l’air relève le nez : aucune', () => {
+test('réceptions : décollage droit, trois parfaites (or) ; volant encore tourné au décollage : aucune', () => {
   const d = drillById('receptions');
-  const bien = grade(d, {}), mal = grade(d, { airBrake: true });
+  const bien = grade(d, {}), mal = grade(d, { kick: true });
   assert.deepEqual([bien.m.perfect, bien.g], [3, 3]);
-  // Phase 2 : le frein tenu en l'air relève le nez d'un angle BORNÉ (airTrim) au lieu de le faire basculer : la réception n'est plus « ratée » mais « correcte » (ni parfaite, ni punie
-  // d'une perte démesurée). Ce que l'exercice mesure, les réceptions parfaites, reste à zéro : la leçon (retomber à plat) est intacte.
-  assert.equal(mal.m.perfect, 0); assert.equal(mal.g, 0); assert.ok(mal.m.bad <= 1, 'pas de réception désastreuse : ' + mal.m.bad);
+  // PHYS_VER 36 (loi PolyTrack) : en l'air ni le volant ni les gaz n'agissent, la voiture garde le cap de son décollage : décoller en tournant la fait retomber de travers.
+  assert.equal(mal.m.perfect, 0); assert.equal(mal.g, 0); assert.ok(mal.m.time > bien.m.time, 'retomber de travers coûte du temps');
 });
 test('le conseil du bilan suit la mesure : coach face à la référence dans la zone, ou ce que le geste a manqué', () => {
   const ch = drillById('chicanes'), tr = build(ch), m = measureRun(tr, drive(tr, { latK: 0.5 }), ch);

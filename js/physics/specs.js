@@ -2,33 +2,37 @@
 // Le modèle de pneus, de rubans et de collisions qui les utilise est dans physics.js et physics/.
 import { SURF_PHYS } from '../constants.js';
 import { clamp } from '../mathutil.js';
+import { dpow } from '../dmath.js';
 
 export const CAR = {
-  accel: SURF_PHYS.engineAccel,   // sous les gaz a = accel × (1 - (v / maxSpeed)^accelCurve)
-  accelCurve: 1.5,    // plus c'est petit, plus la fin de la courbe est longue
-  maxSpeed: SURF_PHYS.maxSpeed,       // vitesse visée moteur (m/s)
+  accel: SURF_PHYS.engineAccel,   // poussée constante (m/s²) ; traînée linéaire accel / maxSpeed (1/s) : voir SURF_PHYS (caractère PolyTrack, PHYS_VER 36)
+  maxSpeed: SURF_PHYS.maxSpeed,       // vitesse limite sous les gaz (m/s), approchée exponentiellement
   boostSpeed: SURF_PHYS.boostSpeed,
   boostAccel: SURF_PHYS.boostAccel,
   boostTime: SURF_PHYS.boostTime,
-  brake: 52,
-  reverseAccel: 15,
-  reverseMax: 15,
+  brake: 52,          // frein (m/s²) à l'arrêt… (PolyTrack : 3,3 × la poussée)
+  brakeV: 0.5,        // … plus brakeV × v (m/s² par m/s) : le frein mord plus fort à haute vitesse (PolyTrack : 66 + 0,38·v, traînée comprise)
+  reverseAccel: 8,    // marche arrière : poussée (PolyTrack : ½ poussée avant)…
+  reverseMax: 15,     // … vers cette vitesse (m/s), même loi linéaire
   roll: 0,
   drag: 0,
-  coast: 0.8,         // à vide : résistance constante (s'ajoute à coastDrag, proportionnelle à la vitesse)
-  coastDrag: SURF_PHYS.coastDrag,
   // Châssis (modèle bicyclette)
   a: 1.35,            // centre de gravité -> essieu avant (m)
   b: 1.4,             // centre de gravité -> essieu arrière (m)
   yawK: 1.9,          // inertie de lacet ramenée à la masse (m²)
-  corner: 230,        // rigidité de dérive d'un essieu (m/s² par rad)
+  corner: 500,        // rigidité de dérive d'un essieu (m/s² par rad) ; PHYS_VER 36 : 230 -> 500, pneus raides : la voiture suit presque la géométrie
+                      // de son braquage (PolyTrack : dérive du châssis de 1° à 200 km/h, rayon = empattement / angle)
   latGrip: 80,        // adhérence latérale totale (m/s²), partagée avant / arrière (0.9.11 : 56 -> 80, la voiture tient mieux dans les virages)
   frontShare: 0.42,   // part avant (0.9.11 : 0,48 -> 0,42 : l'arrière accroche plus que l'avant, la voiture PERD l'avant avant de partir en tête-à-queue : pardonne un volant tardif)
-  steerMax: 0.65,     // angle de braquage maxi des roues (rad) à basse vitesse
-  steerAlat: 52,      // l'angle utile diminue avec la vitesse (le volant reste précis)
+  // Braquage maxi des roues (PHYS_VER 36, loi MESURÉE sur PolyTrack) : min(steerMax, steerC · v^−steerN), v en m/s. 23,5° jusqu'à 47 km/h, 7,0° à
+  // 100 km/h, 2,7° à 200, 1,4° à 290 : c’est l’angle permis qui limite le virage, pas l’adhérence (accélération latérale ≈ 35 m/s² à 100 km/h, 56 à 290).
+  steerMax: 0.41,
+  steerC: 22.93,
+  steerN: 1.566,
   driftGrip: 0.5,    // part de l'adhérence latérale perdue par les deux essieux en plein dérapage : la glisse décrit un virage plus large et CONSERVE la vitesse (à 8 g d'adhérence, glisser de 20° coûtait 27 m/s²)
   driftRear: 0.6,     // adhérence arrière restante en plein dérapage, EN PLUS (l'arrière décroche avant l'avant : avant 0,65 seul)
-  driftSteer: 1.4,    // braquage autorisé en plus pendant le dérapage (avant : 1,3) : de quoi contre-braquer
+  autoCounter: 1,     // PHYS_VER 36 : contre-braquage AUTOMATIQUE en glisse (PolyTrack) : établie, la glisse oriente les roues avant vers la trajectoire
+                      // de l'essieu avant ; le volant ajoute son angle permis par-dessus (remplace driftSteer, le braquage en plus qu'il fallait doser)
   driftMin: 12,       // vitesse mini (m/s) pour qu'un freinage en virage fasse déraper
   driftBrake: 0.9,    // part du freinage absorbée par la glisse quand on dérape (avant : 0,75, et le frein restait entier pendant toute la glisse en pratique)
   brakeCorner: 0.65,  // part du freinage perdue à plein volant et à vitesse (cercle de friction) : freiner pour décrocher ne coûte plus 150 → 23 km/h
@@ -36,33 +40,32 @@ export const CAR = {
   driftAssist: 30,    // raideur du pilotage de la glisse (rad/s² par rad d'écart)
   driftAssistMax: 14, //   … plafond (rad/s²)
   driftBuild: 8,      // vitesse d'établissement du dérapage (1 / s) : 0,125 s pour décrocher
-  driftHold: 0.5,     // durée de vie de la glisse sans les gaz, volant tenu (1 / s)
-  driftHoldGas: 0.12, //   … avec les gaz : la glisse se tient longtemps
+  driftHold: 1.0,     // durée de vie de la glisse sans les gaz, volant tenu (1 / s)
+  driftHoldGas: 0.55, //   … avec les gaz (PHYS_VER 36 : 0,12 -> 0,55 : la glisse se REFERME d'elle-même en ≈ 1,5 s, comme dans PolyTrack)
   driftOut: 2.2,      // sortie de glisse volant relâché (1 / s) : l'arrière raccroche en ~0,5 s (avant : 3,5 /s)
   driftCounter: 3.0,  // sortie de glisse en contre-braquant (1 / s)
   yawDamp: 0.6,
-  steerIn: 8,         // vitesse de braquage
-  steerOut: 13,       // retour au centre
+  steerIn: 10,        // vitesse de braquage (PolyTrack : plein braquage en 0,1 s, retour au centre au même rythme)
+  steerOut: 10,       // retour au centre
   gravity: SURF_PHYS.gravity,
   snap: 0.7,
   step: 1.6,
   magnetRange: 4,     // aimant : portée de l'attraction au-dessus d'une route aimantée (m)
   magnetAcc: 80,      // ... et accélération maximale vers la route, le long de sa normale (m/s²)
   launch: 0.6,        // vitesse normale (m/s) au-delà de laquelle la route « tombe » sous la voiture : elle décolle (0.9.11 : 2,0 -> 0,6, sans exemption d'angle)
-  airPitchAcc: 4.2,  // vivacité du tangage en l'air (relative : la moto est plus vive, le deltaplane moins) ; gaz = nez plus bas, frein = nez plus haut
+  airPitchAcc: 4.2,  // vivacité du tangage en l'air (relative : la moto est plus vive, le deltaplane moins)
   airPitchDamp: 2.6, // amortissement de base (le ressort d'assiette l'utilise ×3)
-  airPitchUpK: 1.6,   // relever le nez est 1,6 fois plus vif que le plonger
   airSpring: 18,     // raideur du ressort d'assiette (rad/s² par rad) : l'assiette rejoint son objectif en ≈ 0,5 s
-  airTrim: 0.25,     // décalage maximal (rad, 14°) que gaz ou frein donnent par rapport à l'assiette d'équilibre
+  // PHYS_VER 36 (PolyTrack) : en l'air, NI les gaz NI le volant ne pilotent la voiture (avant : assiette ± 14° aux gaz / au frein, lacet au volant).
+  // Seul le FREIN agit : l'aérofrein amortit la rotation (PolyTrack : tangage 28 → 6 °/s en 1,6 s). Sans lui, la rotation acquise est gardée.
+  airBrake: 1.0,     // amortissement de la rotation par l'aérofrein (1/s), tangage et lacet
   airLevelH: 14,     // sous cette hauteur (m) au-dessus de la route, l'assiette tend vers la pente de la route…
   airLevelW: 0.35,   // … avec au plus cette part (aide partielle : la réception parfaite reste un geste)
   airAero: 0.15,     // part de l'écart assiette de décollage → trajectoire que la stabilité aérodynamique corrige : l'inertie garde l'assiette (sans commande, comme avant)
-  airSteer: 1.4,      // contrôle de lacet en l'air (rad/s²), volontairement faible
-  airSteerMax: 0.45,  // vitesse de rotation maxi due au volant en l'air (rad/s)
   landOk: 0.38,      // écart d'angle toléré à la réception (rad) sans perte de vitesse (une bosse de pente passe)
   // Mini-turbo (phase 2) : une glisse CONTRÔLÉE se charge ; la récompense dépend de sa durée (et un peu de son angle, plafonné). Avant : +6 / +16 km/h pour 100 km/h perdus.
-  mtTime1: 0.6,      // charge (s) pour le niveau 1
-  mtTime2: 1.4,      // charge (s) pour le niveau 2
+  mtTime1: 0.45,     // charge (s) pour le niveau 1 (PHYS_VER 36 : 0,6 -> 0,45 ; les glisses se referment d'elles-mêmes en ≈ 1 s)
+  mtTime2: 0.85,     // charge (s) pour le niveau 2 (PHYS_VER 36 : 1,4 -> 0,85 : la glisse se referme d'elle-même ; volant rendu tôt ≈ 0,7-0,8 s de charge, volant tenu à fond jusqu'au bout ≈ 0,9 s)
   mtAngleMin: 0.06,  // angle de glisse (rad) sous lequel la voiture n'est pas vraiment en glisse (≈ 3,5°)
   mtAngleMax: 0.8,   // … au-delà (≈ 46°) c'est un tête-à-queue : ni charge ni récompense
   mtAngleRef: 0.17,  // angle de référence de la charge (≈ 10°, l'angle tenu à demi-volant) : plus de glisse charge plus vite, de 0,6 à 1,3 fois
@@ -92,21 +95,21 @@ export const CAR = {
   //   frôlement  (ap < 4 m/s)   : rebond sur la composante normale + frottement de Coulomb sur la tangente ; ni rotation ni encaissement ; l'élan est conservé
   //   modéré     (4 à 12 m/s)   : en plus une rotation et un encaissement croissants (la voiture se récupère)
   //   violent    (> 12 m/s)     : en plus une perte de vitesse globale croissante, plafonnée
-  wallE: 0.35,        // rebond sur la composante normale (0 = mou)
+  wallE: 0,            // PHYS_VER 36 (PolyTrack) : choc INÉLASTIQUE, aucun rebond (avant : 0,35)
   wallRest: 2,        //   … seuil de restitution : sous cette vitesse d'approche (m/s) le rebond croît linéairement de 0 à wallE (un simple appui ne rebondit pas ; contact.js : wallBounce)
-  wallMu: 0.2,        // frottement de Coulomb : perte de vitesse tangente = wallMu × (1 + wallE) × ap  (impulsion : proportionnelle à la violence, nulle sans appui)
+  wallMu: 0.7,         // frottement de Coulomb : perte de vitesse le long du mur = wallMu × ap (PolyTrack : μ ≈ 0,7 ; avant : 0,2)
   wallScrape: 0.12,   // frottement visqueux de contact (part de la vitesse perdue par seconde de contact) : racler longtemps freine, sans jamais clouer la voiture (avant : 2,0 /s)
   wallYaw: 0.25,      // couple du contact : rotation cible (rad/s) par m/s d'approche et par unité de parallélisme avec le mur (contact.js : wallYawTarget)
   wallYawMax: 1.2,    //   … plafond (rad/s)
   wallHardFrom: 12,   // ap (m/s) à partir duquel le choc est « violent » : perte globale de vitesse en plus
   wallHardK: 0.016,   //   … par m/s d'ap au-delà
-  wallHardMax: 0.4,   //   … plafond
+  wallHardMax: 0,      // PHYS_VER 36 : pas de perte globale en plus (PolyTrack : le frottement explique toute la perte ; avant : 0,4)
   wallSpinFrom: 6,    // ap (m/s) à partir duquel un choc ajoute une rotation brutale (modéré et violent)
   wallSpin: 0.1,      // rotation ajoutée (rad/s par m/s d'ap au-delà du seuil), bornée par wallSpinMax
-  wallSpinMax: 2.5,
+  wallSpinMax: 0,      // PHYS_VER 36 : pas de rotation brutale : la voiture s'ALIGNE sur le mur (wallYaw) ; avant : 2,5
   wallStunFrom: 4,    // ap (m/s) à partir duquel la voiture « encaisse » (moteur et adhérence réduits un instant)
   wallStun: 0.035,    // durée de l'encaissement (s par m/s d'ap au-delà du seuil) ; bornée à wallStunMax
-  wallStunMax: 0.6,
+  wallStunMax: 0,      // PHYS_VER 36 : pas d'encaissement (moteur et adhérence intacts après un choc, comme PolyTrack) ; avant : 0,6
   stuckAfter: 0.35,   // 0.9.48 : voiture plaquée contre un mur à l'arrêt depuis ce délai (s) : le volant la fait pivoter sur place
   stuckPivot: 1.2,    // vitesse de pivot (rad/s, à fond de volant)
   wallFresh: 0.12,    // 0.9.58 : durée (s) d'un contact avec un mur pendant laquelle un choc « coûte » (perte de vitesse, rotation, moteur coupé) ; au-delà c'est du frottement (wallScrape)
@@ -132,16 +135,16 @@ export const MOTO = {
   accel: SURF_PHYS.engineAccel * (10 / 11),
   maxSpeed: SURF_PHYS.maxSpeed * (90 / 95),
   brake: 44,          // freine un peu moins (une seule roue avant)
+  brakeV: 0.42,
   a: 1.15, b: 1.2,    // empattement plus court : tourne plus serré
   yawK: 1.25,         // plus légère, change de cap plus vite
   latGrip: 78,        // penche dans les virages : un peu plus d'appui latéral
   frontShare: 0.45,
-  steerMax: 0.75,     // braque plus à basse vitesse
-  steerAlat: 66,      // et garde plus de braquage à haute vitesse
+  steerMax: 0.47,     // braque plus à basse vitesse (même proportion qu'avant PHYS_VER 36 : 0,75 / 0,65)
+  steerC: 29.1,       // et garde plus de braquage à haute vitesse (66 / 52 de la voiture)
   driftRear: 0.76,    // glisse moins au freinage en virage
-  driftSteer: 1.15,
-  steerIn: 9,
-  steerOut: 14,
+  steerIn: 11,
+  steerOut: 11,
   airPitchAcc: 5.2,   // plus vive en l'air
 };
 
@@ -151,10 +154,11 @@ const BOAT = {
   accel: SURF_PHYS.engineAccel * (8 / 11),
   maxSpeed: SURF_PHYS.maxSpeed * (85 / 95),
   brake: 32,
+  brakeV: 0.3,
   latGrip: 58,        // la coque glisse plus qu'un pneu
   frontShare: 0.41,
-  steerMax: 0.55,
-  steerAlat: 48,
+  steerMax: 0.35,
+  steerC: 21.2,
   yawK: 2.1,
   yawDamp: 0.9,
   driftRear: 0.7,
@@ -169,6 +173,15 @@ const GLIDER = {
   airPitchAcc: 3.4,
 };
 export const SPECS = { car: CAR, moto: MOTO, boat: BOAT, glider: GLIDER };
+
+// Vitesse maximale (m/s) à laquelle l'angle de braquage permis (min(steerMax, steerC · v^−steerN)) suffit encore pour un virage de rayon r (m) :
+// angle utile ≈ empattement / r. Sert au pilote automatique (autopilot.js) ; seulement des opérations déterministes (dmath).
+// g : adhérence d'ambiance (pluie, flaques, givre, adhérence de tout le circuit), qui borne aussi l'angle permis (voir physics.js, _steerAngle).
+export function steerLimitSpeed(K, r, g = 1) {
+  const need = (K.a + K.b) / Math.max(1, r);
+  if (need >= K.steerMax) return 1;
+  return dpow(K.steerC * g / need, 1 / K.steerN);
+}
 
 // Vol plané : portance proportionnelle à v² et à l'incidence, traînée, virage incliné.
 export const GLIDE = {
@@ -204,8 +217,10 @@ export function surfaceCoeffs(mod, f, out = COEF) {
     case 'ice': out.grip = clamp(0.2 / f, 0.05, 0.85); out.traction = 0.45; break;
     case 'magnet': out.grip = 1.6; break;
     // Dérive : l'arrière n'accroche presque plus (l'avant, si) : au moindre coup de volant la voiture part en glisse.
-    case 'drift': out.rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85); break;
-    case 'slow': out.extraDrag = 14 * f; break;
+    // PHYS_VER 36 : 0,95 − 0,42·f -> 0,85 − 0,5·f (borné 0,12-0,75) : le braquage borné selon la vitesse ne demande plus assez à l'arrière pour le faire décrocher ;
+    // à 100 % l'arrière tient 35 % de son adhérence et la voiture repart en glisse au volant, comme avant.
+    case 'drift': out.rearK = clamp(0.85 - 0.5 * f, 0.12, 0.75); break;
+    case 'slow': out.extraDrag = SURF_PHYS.engineAccel * f; break;      // résistance = poussée du moteur à 100 % (PHYS_VER 36 : 14 -> 16, la poussée)
     // Poudreuse : on s'enfonce un peu, l'adhérence est molle et le moteur patine.
     case 'powder': out.grip = clamp(0.62 / Math.sqrt(f), 0.3, 0.9); out.traction = 0.75; out.vmaxK = clamp(1 - 0.28 * f, 0.4, 1); out.extraDrag = 2.5 * f; break;
     default: break;

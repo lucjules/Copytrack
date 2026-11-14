@@ -26,7 +26,7 @@ export const DRILLS = [
   {
     id: 'chicanes', skill: 'trajectoire', name: 'Chicanes', decor: 'desert',
     script: 'start S2 R L R L S C S2 L R L R S2 finish', zones: [[2, 7], [10, 15]],
-    measure: 'zoneSpeed', better: 'high', unit: kmh, thresholds: [100, 114, 124],
+    measure: 'zoneSpeed', better: 'high', unit: kmh, thresholds: [69, 75.5, 83],   // PHYS_VER 36 : braquage borné selon la vitesse (loi PolyTrack), les chicanes serrées se prennent au volant (pilote à 50, 60, 80 et 100 % : 66,5 / 71,3 / 79,6 / 86,0 km/h ; avant 100 / 114 / 124)
     goals: ['Vitesse moyenne dans les chicanes : {v} km/h ou plus'],
     intro: ['Deux séries de quatre virages serrés. Ce qui compte : la <b>vitesse moyenne dans les chicanes</b>, mesurée de l’entrée à la sortie.', 'Coupe au plus court : passe près de l’intérieur de chaque virage et redresse tôt pour enchaîner le suivant.', 'Freine avant la chicane, pas dedans : chaque correction brusque fait perdre de la vitesse.'],
     tip: 'Vitesse moyenne dans les chicanes : coupe près de l’intérieur, redresse tôt.',
@@ -34,7 +34,7 @@ export const DRILLS = [
   {
     id: 'freinage', skill: 'freinage', name: 'Freiner tard', decor: 'desert',
     script: 'start B3 S2 R S2 C B3 S2 L S3 finish', zones: [[3, 7], [12, 16]],
-    measure: 'zoneTime', better: 'low', unit: sec, thresholds: [7.05, 6.6, 6.12],   // 0.9.46 : recalés sur le moteur propre (zones de freinage à 50, 60, 80 et 100 % d'adhérence : 7,23 / 6,88 / 6,30 / 5,95 s)
+    measure: 'zoneTime', better: 'low', unit: sec, thresholds: [8.8, 8.35, 7.8],   // 0.9.46 : recalés sur le moteur propre (zones de freinage à 50, 60, 80 et 100 % d'adhérence : 7,23 / 6,88 / 6,30 / 5,95 s) ; PHYS_VER 36 : 9,01 / 8,65 / 8,05 / 7,60 s (avant 7,05 / 6,6 / 6,12)
     goals: ['Temps dans les deux zones de freinage : {v} s ou moins'],
     intro: ['Deux lignes droites avec turbo, chacune finie par un virage à angle droit. Ce qui compte : le <b>temps entre l’approche et la sortie</b> de chaque virage.', 'Freine <b>tard et fort</b>, d’un coup, puis relâche le frein avant de tourner : on ne freine pas en tournant.', 'Freiner trop tôt fait perdre du temps ; trop tard, la voiture tape le mur.'],
     tip: 'Freine tard et fort, relâche avant de tourner.',
@@ -42,18 +42,18 @@ export const DRILLS = [
   {
     id: 'miniturbo', skill: 'derapage', name: 'Mini-turbo renforcé', decor: 'desert',
     script: 'start S3 RR S2 finish', zones: [],
-    measure: 'turbo', better: 'high', limit: 11.5,
-    goals: ['Un mini-turbo', 'Un mini-turbo renforcé (glisse de 1,5 s)', 'Un mini-turbo renforcé, sans choc, arrivée en {t} s ou moins'],
-    intro: ['Un seul grand virage, pour apprendre le <b>mini-turbo renforcé</b>.', 'Avant le virage : volant à fond, puis <b>{brake}</b> environ une demi-seconde. L’arrière glisse.', 'Accélère en gardant le volant tourné : la glisse se charge. Au bout d’<b>une seconde et demie</b>, les étincelles changent de couleur ; redresse, et la poussée est plus forte.'],
-    tip: 'Volant à fond, frein une demi-seconde, puis accélère en gardant la glisse 1,5 s.',
+    measure: 'turbo', better: 'high', limit: 9,      // PHYS_VER 36 : 11,5 -> 9 s (le pilote seul : 7,85 s ; renforcé propre : 7,9 s)
+    goals: ['Un mini-turbo', 'Un mini-turbo renforcé (glisse tenue jusqu’au bout)', 'Un mini-turbo renforcé, sans choc, arrivée en {t} s ou moins'],
+    intro: ['Un seul grand virage, pour apprendre le <b>mini-turbo renforcé</b>.', 'Avant le virage : volant à fond, puis <b>{brake}</b> environ une demi-seconde. L’arrière glisse.', 'Accélère en gardant le volant <b>à fond</b> : la glisse se charge, puis se referme d’elle-même en une seconde environ. Tenue jusqu’au bout, les étincelles changent de couleur et la poussée est plus forte : redresse aussitôt.'],
+    tip: 'Volant à fond, frein une demi-seconde, puis accélère volant à fond jusqu’à la fin de la glisse.',
   },
   {
     id: 'receptions', skill: 'vol', name: 'Trois réceptions', decor: 'desert',
-    script: 'start B2 S [crv1] UU G DD [cdo1] S C B S [crv1] UU G DD [cdo1] S C B S [crv1] UU G DD [cdo1] S2 finish', zones: [],
+    script: 'start B S C S2 G1 V-2 S2 R S G1 V-2 S2 L S G1 V-2 S3 finish', opts: { l: 14 }, zones: [],      // PHYS_VER 36 : trois sauts de terrasse en terrasse, deux juste après un virage (avant : trois tremplins vers une pente, rattrapés au tangage en l'air)
     measure: 'landings', better: 'high', thresholds: [1, 2, 3],
     goals: ['{v} réception(s) parfaite(s) sur 3'],
-    intro: ['Trois tremplins. Ce qui compte : le nombre de <b>réceptions parfaites</b> (étincelles vertes).', 'En l’air, <b>{accelerate}</b> baisse le nez et <b>{brake}</b> le relève : retombe à plat sur la pente.', 'Ne touche à rien si l’assiette est déjà bonne : le tremplin est réglé pour.'],
-    tip: 'En l’air : accélérer = nez en bas, freiner = nez en haut. Retombe à plat.',
+    intro: ['Trois sauts d’une terrasse à l’autre, deux juste après un virage. Ce qui compte : le nombre de <b>réceptions parfaites</b> (étincelles vertes).', 'En l’air, rien ne se rattrape : ni le volant ni l’accélérateur n’agissent, la voiture garde le cap et l’assiette de son décollage.', 'Redresse <b>avant</b> le bord : volant droit au décollage, et la voiture retombe à plat, dans l’axe.'],
+    tip: 'Redresse avant le bord : volant droit au décollage. En l’air, plus rien ne se rattrape.',
   },
 ];
 export const drillById = (id) => DRILLS.find((d) => d.id === id) || null;

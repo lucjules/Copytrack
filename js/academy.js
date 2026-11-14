@@ -33,10 +33,10 @@ export const LESSONS = [
   },
   {
     id: 'reception', name: 'Saut et réception parfaite', decor: 'desert',
-    script: 'start B2 S C B2 S [crv1] UU G DD [cdo1] S2 finish', opts: {},
+    script: 'start B S C S2 G1 V-2 S3 finish', opts: { l: 6 },      // PHYS_VER 36 : saut d'une terrasse vers une terrasse plus basse (avant : tremplin puis pente, qu'on rattrapait au tangage en l'air)
     goal: { id: 'perfect', n: 1 },
-    intro: ['En l’air, <b>{accelerate}</b> baisse le nez et <b>{brake}</b> le relève : règle l’assiette pour retomber <b>à plat</b> sur la pente.', 'Une réception parfaite (étincelles vertes) conserve ta vitesse ; une mauvaise te secoue.', 'Garde de l’élan avant le tremplin.'],
-    tip: 'En l’air : accélérer = nez en bas, freiner = nez en haut. Retombe à plat.',
+    intro: ['En l’air, ni le volant ni l’accélérateur n’agissent : la voiture garde le <b>cap</b> et l’<b>assiette</b> de son décollage.', '<b>{brake}</b> en l’air (aérofrein) arrête sa rotation. Décolle bien droit pour retomber <b>à plat</b> et dans l’axe.', 'Une réception parfaite (étincelles vertes) conserve ta vitesse ; une mauvaise te secoue.'],
+    tip: 'Décolle droit, sans tourner : en l’air rien ne se rattrape. Frein en l’air = aérofrein.',
   },
   {
     id: 'plaque', name: 'Plaque de transformation', decor: 'desert',

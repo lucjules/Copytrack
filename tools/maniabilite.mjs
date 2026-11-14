@@ -80,6 +80,9 @@ export function changementDeVoie(speed, decalage = ROAD_HALF) {
 // reaction : retard (s) entre ce que le pilote « voit » et ce qu'il fait ; gain : un humain braque moins sec que le pilote automatique (sa loi de commande
 // oscille dès que le retard dépasse ~0,1 s : c'est une limite du pilote, pas de la voiture) ; tremblement : écart-type du bruit de volant ; jugement : erreur relative sur
 // la vitesse à laquelle il se met à freiner. Générateur pseudo-aléatoire déterministe (le banc doit donner les mêmes chiffres à chaque exécution).
+// PHYS_VER 36 : le gain n'est plus un facteur (volant × 0,8, jamais plus de 80 % du braquage) mais une COURBE, |volant|^(1/gain) : les petites corrections
+// restent plus douces (0,2 -> 0,13), le braquage complet reste possible. Avec le braquage borné selon la vitesse (loi PolyTrack), les grands virages se
+// prennent près du braquage permis : un pilote plafonné à 80 % ne les tenait plus, ce qu'aucun joueur ne ferait (il met le volant à fond).
 export function pilotHumain({ reaction = 0.1, tremblement = 0.18, jugement = 0.12, graine = 1, gain = 0.8 } = {}) {
   let s = graine >>> 0 || 1;
   const rnd = () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
@@ -97,7 +100,8 @@ export function pilotHumain({ reaction = 0.1, tremblement = 0.18, jugement = 0.1
       const brake = d.brake && rnd() < Math.min(1, bias);
       // En l'air la main ne bouge pas : le lacet aérien (physics.js, airSteer) intègre le moindre volant, un tremblement y ferait dériver la voiture de 20 m.
       const air = !phys.grounded && !phys.rib;
-      return { throttle: d.throttle && !brake, brake, steer: Math.max(-1, Math.min(1, d.steer * gain + noise * (air ? 0.15 : 1))), drift: false };
+      const shaped = Math.sign(d.steer) * Math.abs(d.steer) ** (1 / gain);
+      return { throttle: d.throttle && !brake, brake, steer: Math.max(-1, Math.min(1, shaped + noise * (air ? 0.15 : 1))), drift: false };
     },
   };
 }

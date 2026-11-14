@@ -28,8 +28,8 @@ export const PROFILE_CONTRACT = {
     const f = [];
     if (P.tight !== 0) f.push(`sprint : ${P.tight} virage(s) serré(s) (0 attendu)`);
     if (P.wide > 3) f.push(`sprint : ${P.wide} très grands virages (3 au plus)`);
-    if (S.time < 12 || S.time > 26) f.push(`sprint : ${S.time.toFixed(1)} s (12 à 26 s)`);       // 0.9.11 : cases de 32 m au lieu de 24 : 10-20 s -> 12-26 s
-    if (P.over180 < 0.6) f.push(`sprint : ${(P.over180 * 100).toFixed(0)} % du temps au-dessus de 180 km/h (60 % au moins)`);
+    if (S.time < 12 || S.time > 30) f.push(`sprint : ${S.time.toFixed(1)} s (12 à 30 s)`);       // 0.9.11 : cases de 32 m au lieu de 24 : 10-20 s -> 12-26 s ; PHYS_VER 36 (PolyTrack : vitesse approchée exponentiellement) : 26 -> 30 s
+    if (P.over180 < 0.55) f.push(`sprint : ${(P.over180 * 100).toFixed(0)} % du temps au-dessus de 180 km/h (55 % au moins)`);      // PHYS_VER 36 : le pilote de référence garde 15 % de marge de braquage en virage : 60 -> 55 %
     if (P.straights / P.pieces < 0.4) f.push(`sprint : ${(100 * P.straights / P.pieces).toFixed(0)} % de lignes droites (40 % au moins)`);
     return f;
   },
@@ -37,15 +37,15 @@ export const PROFILE_CONTRACT = {
     const f = [];
     if (P.tight !== 0) f.push(`speedway : ${P.tight} virage(s) serré(s) (0 attendu)`);
     if (P.wide < 4) f.push(`speedway : ${P.wide} très grands virages (4 au moins)`);
-    if (P.over220 < 0.35) f.push(`speedway : ${(P.over220 * 100).toFixed(0)} % du temps au-dessus de 220 km/h (35 % au moins)`);   // 0.9.11 : boosters moins forts, 250 -> 240 km/h
+    if (P.over220 < 0.1) f.push(`speedway : ${(P.over220 * 100).toFixed(0)} % du temps au-dessus de 220 km/h (10 % au moins)`);   // 0.9.11 : boosters moins forts, 250 -> 240 km/h ; PHYS_VER 36 : 220 km/h (76 % du plafond) s'atteint plus tard (loi PolyTrack) et le pilote garde 15 % de marge de braquage : 35 -> 10 %
     if (P.brakePct > 14) f.push(`speedway : ${P.brakePct} % de freinage (14 % au plus)`);      // 0.9.12 : moteur 2× plus vif, on arrive plus vite dans les virages : 8 -> 14 %
-    if (P.avgKmh < 200) f.push(`speedway : moyenne ${P.avgKmh} km/h (200 au moins)`);
+    if (P.avgKmh < 185) f.push(`speedway : moyenne ${P.avgKmh} km/h (185 au moins)`);      // PHYS_VER 36 : 200 -> 185 (loi PolyTrack, marge de braquage du pilote)
     return f;
   },
   technique: (P) => {
     const f = [];
     if (P.tight < 8) f.push(`technique : ${P.tight} virages serrés (8 au moins)`);
-    if (P.brakePct < 3) f.push(`technique : ${P.brakePct} % de freinage (3 % au moins)`);                       // 0.9.11 : plus d'adhérence, on freine moins longtemps
+    if (P.brakePct < 1) f.push(`technique : ${P.brakePct} % de freinage (1 % au moins)`);                       // 0.9.11 : plus d'adhérence, on freine moins longtemps ; PHYS_VER 36 : gaz levés la traînée ralentit franchement, le frein sert moins : 3 -> 1 %
     if (P.under120 < 0.15) f.push(`technique : ${(P.under120 * 100).toFixed(0)} % du temps sous 120 km/h (15 % au moins)`);
     if (P.avgKmh > 170) f.push(`technique : moyenne ${P.avgKmh} km/h (170 au plus)`);      // 0.9.12 : relances plus vives, 155 -> 170
     if (P.boosts < 5) f.push(`technique : ${P.boosts} boosters (5 au moins, un par relance)`);
