@@ -10020,6 +10020,20 @@ var BASIS = {
   e2y: 0,
   e2z: 0
 };
+var LAND = {
+  dl: 0
+};
+var MATCH_OFF = [
+  0,
+  1.5
+];
+var MATCH_D = [
+  -0.6,
+  0,
+  0.6
+];
+var MATCH_X = [];
+var MATCH_Z = [];
 function frameWorld(tile, rib, u, F) {
   frameLocal(rib, u, FL);
   const c = tileCenter(tile, CC);
@@ -10136,10 +10150,10 @@ var ribbonMethods = {
       if (u <= 2e-3 || u >= 0.998) continue;
       const F = frameWorld(tile, rib, u, this.F);
       const dl = (p.x - F.px) * F.rx + (p.y - F.py) * F.ry + (p.z - F.pz) * F.rz;
-      if (F.kc > 1e-4) this._cross({
-        dl
-      }, F);
-      else {
+      if (F.kc > 1e-4) {
+        LAND.dl = dl;
+        this._cross(LAND, F);
+      } else {
         F.qx = F.px;
         F.qy = F.py;
         F.qz = F.pz;
@@ -10498,27 +10512,27 @@ var ribbonMethods = {
   _matchRibbon(curTile, F, fx, fy, fz) {
     const seen = /* @__PURE__ */ new Set();
     const px = F.px, py = F.py, pz = F.pz;
-    const cells = /* @__PURE__ */ new Set();
-    for (const off of [
-      0,
-      1.5
-    ]) {
-      for (const dx of [
-        -0.6,
-        0,
-        0.6
-      ]) {
-        for (const dz of [
-          -0.6,
-          0,
-          0.6
-        ]) {
-          cells.add(Math.floor((px + fx * off + dx) / CELL) + "," + Math.floor((pz + fz * off + dz) / CELL));
+    let nc = 0;
+    for (let a = 0; a < 2; a++) {
+      const off = MATCH_OFF[a];
+      for (let b = 0; b < 3; b++) {
+        for (let d = 0; d < 3; d++) {
+          const cx = Math.floor((px + fx * off + MATCH_D[b]) / CELL) + 0, cz = Math.floor((pz + fz * off + MATCH_D[d]) / CELL) + 0;
+          let dup = false;
+          for (let i = 0; i < nc; i++) if (MATCH_X[i] === cx && MATCH_Z[i] === cz) {
+            dup = true;
+            break;
+          }
+          if (!dup) {
+            MATCH_X[nc] = cx;
+            MATCH_Z[nc] = cz;
+            nc++;
+          }
         }
       }
     }
-    for (const c of cells) {
-      const [cx, cz] = c.split(",").map(Number);
+    for (let ci = 0; ci < nc; ci++) {
+      const cx = MATCH_X[ci], cz = MATCH_Z[ci];
       for (const tile of this.track.tilesAt(cx, cz)) {
         if (tile === curTile || seen.has(tile) || !isRibbon(tile) || this.excl.has(tile)) continue;
         seen.add(tile);
@@ -10574,6 +10588,7 @@ var BK = {
   vy: 0,
   w: 0
 };
+var AIR_OMEGA_DECAY = dexp(-1.5 * DT);
 var CarPhysics = class {
   constructor(track) {
     this.track = track;
@@ -11254,7 +11269,7 @@ var CarPhysics = class {
       fx = -dsin(this.yaw);
       fz = -dcos(this.yaw);
     } else v.y -= this.g * this.gSign * dt;
-    this.omega *= dexp(-1.5 * dt);
+    this.omega *= AIR_OMEGA_DECAY;
     if (this.vehicle !== "glider") this.omega = clamp(this.omega + this.steer * CAR.airSteer * dt, -CAR.airSteerMax, CAR.airSteerMax);
     const us = this._upSign();
     this.yaw -= this.omega * us * dt;

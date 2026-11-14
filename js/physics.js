@@ -34,6 +34,7 @@ const BELT = { x: 0, z: 0 };
 const MOV = {};
 const TMP = { x: 0, z: 0 };
 const BK = { vx: 0, vy: 0, w: 0 };
+const AIR_OMEGA_DECAY = dexp(-1.5 * DT);      // amortissement de la rotation en l'air par pas : constante (même valeur, au bit près, que dexp(-1.5 * dt) recalculé à chaque pas)
 
 export class CarPhysics {
   constructor(track) {
@@ -556,7 +557,7 @@ export class CarPhysics {
     // Exception : le deltaplane plane et vire en inclinant son aile.
     if (this.vehicle === 'glider') { this._glide(inp, dt); fx = -dsin(this.yaw); fz = -dcos(this.yaw); }
     else v.y -= this.g * this.gSign * dt;
-    this.omega *= dexp(-1.5 * dt);
+    this.omega *= AIR_OMEGA_DECAY;
     // Un tout petit peu de contrôle en l'air : le volant fait pivoter la voiture lentement.
     if (this.vehicle !== 'glider') this.omega = clamp(this.omega + this.steer * CAR.airSteer * dt, -CAR.airSteerMax, CAR.airSteerMax);
     const us = this._upSign();

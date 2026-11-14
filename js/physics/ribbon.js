@@ -13,6 +13,9 @@ const FL = {};
 const CC = { x: 0, z: 0 };
 const TMP = { x: 0, z: 0 };
 const BASIS = { e1x: 0, e1y: 0, e1z: 0, e2x: 0, e2y: 0, e2z: 0 };
+const LAND = { dl: 0 };                      // tampon de _tryLandRibbon (évite un objet par pas en vol près d'un ruban)
+const MATCH_OFF = [0, 1.5], MATCH_D = [-0.6, 0, 0.6];      // sondes de _matchRibbon (constantes : aucun tableau créé par appel)
+const MATCH_X = [], MATCH_Z = [];            // cases à examiner, dans l'ordre de première apparition
 
 // Repère d'un ruban en coordonnées monde.
 export function frameWorld(tile, rib, u, F) {
@@ -105,7 +108,7 @@ export const ribbonMethods = {
       if (u <= 0.002 || u >= 0.998) continue;          // les extrémités passent par _tryEnterRibbon
       const F = frameWorld(tile, rib, u, this.F);
       const dl = (p.x - F.px) * F.rx + (p.y - F.py) * F.ry + (p.z - F.pz) * F.rz;
-      if (F.kc > 1e-4) this._cross({ dl }, F); else { F.qx = F.px; F.qy = F.py; F.qz = F.pz; }
+      if (F.kc > 1e-4) { LAND.dl = dl; this._cross(LAND, F); } else { F.qx = F.px; F.qy = F.py; F.qz = F.pz; }
       if (F.ny * this.gSign < 0.2) continue;            // on ne se pose que sur une route face à la gravité
       const dn = (p.x - F.qx) * F.nx + (p.y - F.qy) * F.ny + (p.z - F.qz) * F.nz;
       const dq = (q.x - F.qx) * F.nx + (q.y - F.qy) * F.ny + (q.z - F.qz) * F.nz;
@@ -439,17 +442,21 @@ export const ribbonMethods = {
   _matchRibbon(curTile, F, fx, fy, fz) {
     const seen = new Set();
     const px = F.px, py = F.py, pz = F.pz;
-    const cells = new Set();
-    for (const off of [0, 1.5]) {
-      // Les extrémités tombent pile sur une frontière de case : on regarde les cases voisines.
-      for (const dx of [-0.6, 0, 0.6]) {
-        for (const dz of [-0.6, 0, 0.6]) {
-          cells.add(Math.floor((px + fx * off + dx) / CELL) + ',' + Math.floor((pz + fz * off + dz) / CELL));
+    // Les extrémités tombent pile sur une frontière de case : on regarde les cases voisines (sans doublon, dans l'ordre de première apparition : le premier ruban raccordé l'emporte).
+    let nc = 0;
+    for (let a = 0; a < 2; a++) {
+      const off = MATCH_OFF[a];
+      for (let b = 0; b < 3; b++) {
+        for (let d = 0; d < 3; d++) {
+          const cx = Math.floor((px + fx * off + MATCH_D[b]) / CELL) + 0, cz = Math.floor((pz + fz * off + MATCH_D[d]) / CELL) + 0;      // (+ 0 : -0 devient 0)
+          let dup = false;
+          for (let i = 0; i < nc; i++) if (MATCH_X[i] === cx && MATCH_Z[i] === cz) { dup = true; break; }
+          if (!dup) { MATCH_X[nc] = cx; MATCH_Z[nc] = cz; nc++; }
         }
       }
     }
-    for (const c of cells) {
-      const [cx, cz] = c.split(',').map(Number);
+    for (let ci = 0; ci < nc; ci++) {
+      const cx = MATCH_X[ci], cz = MATCH_Z[ci];
       for (const tile of this.track.tilesAt(cx, cz)) {
         if (tile === curTile || seen.has(tile) || !isRibbon(tile) || this.excl.has(tile)) continue;
         seen.add(tile);
