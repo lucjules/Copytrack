@@ -17,6 +17,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `AudioEngine.js` | Moteur de musique procédurale « French Touch / rally house / nu-disco » à ~124 BPM, 100 % Web Audio API (aucun fichier audio). |
 | `authorProof.js` | Preuve du temps de l'auteur (Phase 2 backend) : la course de VÉRIFICATION faite dans l'éditeur. Publier un circuit envoie cette course au serveur, qui la REJOUE sur le code publié : le temps de l'auteur est celui du rejeu, jamais une affirmation du client (js/verify.js, verifyPublish). |
 | `autopilot.js` | Pilote automatique simple qui suit la ligne centrale d'un circuit scripté. |
+| `boot-guard.js` | Garde du démarrage (script classique, chargé AVANT js/main.js : il tourne même quand les modules du jeu ne se chargent pas). |
 | `camflip.js` | Retournement de la caméra quand la gravité s'inverse (plaque d'inversion). |
 | `camprefs.js` | Caméras personnalisées (lot 11) : jusqu'à 6 caméras de course en plus des 4 d'origine, réglées par le joueur. |
 | `camrig.js` | Aides de caméra de poursuite (phase 1 après l'audit 0.9.59) : anticipation des virages, compensation du retard de suivi à haute vitesse, visée vers la zone de réception pendant un saut, pente de la route, et transition « voiture quittant un ruban » (mur, looping, vrille). |

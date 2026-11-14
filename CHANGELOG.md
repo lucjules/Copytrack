@@ -6,6 +6,16 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.66 — démarrage après une mise en ligne
+
+**`PHYS_VER` inchangé (36)** : physique, empreinte, temps de référence et records identiques. Rien à redéployer côté serveur (`submit-score` inchangé).
+
+- **Correction : le jeu pouvait rester bloqué sur « Chargement… » juste après une mise en ligne.** GitHub Pages laisse le navigateur garder chaque fichier 10 minutes ; après la 0.9.65, un ancien `js/pieces.js` resté dans ce cache était chargé à côté des nouveaux modules, qui lui demandaient `headingGuided` : tout le graphe de modules échouait, sans aucun message.
+- **`js/boot-guard.js`** (script classique, chargé avant `js/main.js`) : si les modules ne se chargent pas, il redemande une fois tous les fichiers du jeu au serveur en contournant le cache, vide le cache hors ligne et recharge la page ; si cela ne suffit pas, il affiche un message et un bouton « Réessayer » (jamais de boucle). Rien après 30 s : même message, sans rechargement d'office.
+- **Service worker** : chaque fichier est revalidé auprès du serveur (`cache: 'no-cache'`, une réponse 304 ne coûte presque rien) et la copie hors ligne s'installe depuis le réseau (`cache: 'reload'`) : deux versions ne se mélangent plus.
+- **Test** : `tools/test-browser-boot.mjs` (dans `npm run test:browser`) imite GitHub Pages et sert l'ancien `js/pieces.js` : sans la garde, le jeu reste bloqué (vérifié) ; avec, il démarre après un seul rechargement ; un serveur durablement incohérent donne le message, pas une boucle.
+- **Pour un navigateur déjà bloqué** (avant cette version) : recharger en vidant le cache (Ctrl + Maj + R), ou attendre 10 minutes.
+
 ## Bêta 0.9.65 — physique au caractère PolyTrack (`PHYS_VER` 36)
 
 **`PHYS_VER` 36** : records, replays, fantômes importés, classements en ligne et salons de la 35 ne sont **plus rejouables** (ils restent affichés comme temps). **Redéployer `submit-score`** (paquet régénéré), puis `node tools/check-deployed.mjs`. Aucune migration SQL.

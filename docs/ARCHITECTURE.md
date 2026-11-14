@@ -144,7 +144,10 @@ ou un temps changé fait échouer le test. Ne régénérer le corpus que pour un
 ## Chargement et hors ligne
 
 `index.html` précharge les modules du démarrage (`<link rel="modulepreload">`, bloc généré par `tools/gen-sw.mjs`) ; l'éditeur est chargé à la première ouverture (`import()`). `sw.js` (service worker, généré) met le jeu en cache pour jouer
-hors ligne ; il est « réseau d'abord » pour récupérer les mises à jour ; son nom de cache est une empreinte du contenu.
+hors ligne ; il est « réseau d'abord » pour récupérer les mises à jour, et revalide chaque fichier auprès du serveur (`cache: 'no-cache'`) ; son nom de cache est une empreinte du contenu.
+`js/boot-guard.js` (script classique, chargé avant `js/main.js`) répare un démarrage raté : si le graphe de modules échoue (un ancien fichier gardé par le cache HTTP à
+côté des nouveaux, juste après une mise en ligne), il recharge une fois les fichiers en contournant le cache, sinon il l'affiche avec un bouton « Réessayer » ;
+`js/main.js` le désarme (`window.__copytrackBooted`). Test : `tools/test-browser-boot.mjs`.
 
 ## Fichiers générés (à ne pas modifier à la main)
 
