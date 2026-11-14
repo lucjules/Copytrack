@@ -28,16 +28,16 @@ export const FAMILIES = {
   // L'orientation ne compte que pour un virage incliné : il monte dans son sens de parcours (↱ : à droite, ↰ : à gauche).
   turn: {
     label: 'Virage',
-    hint: 'Serré, grand ou très grand ; plat, relevé ou incliné.',
+    hint: 'Serré, grand, très grand ou géant ; plat, relevé ou incliné.',
     icon: 'curve',
     traits: [
-      { id: 'size', label: 'Rayon', values: [['s', 'Serré'], ['m', 'Grand'], ['l', 'Très grand']] },
+      { id: 'size', label: 'Rayon', values: [['s', 'Serré'], ['m', 'Grand'], ['l', 'Très grand'], ['xl', 'Géant']] },
       { id: 'bank', label: 'Profil', values: [['0', 'Plat'], ['1', 'Relevé']] },
       { id: 'incl', label: 'Inclinaison', values: INCL },
       { id: 'dir', label: 'Sens', values: [['R', 'Droite ↱'], ['L', 'Gauche ↰']] },
     ],
     members: {
-      curve: { size: 's', bank: '0', incl: '0', dir: 'R' }, bigcurve: { size: 'm', bank: '0', incl: '0', dir: 'R' }, hugecurve: { size: 'l', bank: '0', incl: '0', dir: 'R' },
+      curve: { size: 's', bank: '0', incl: '0', dir: 'R' }, bigcurve: { size: 'm', bank: '0', incl: '0', dir: 'R' }, hugecurve: { size: 'l', bank: '0', incl: '0', dir: 'R' }, giantcurve: { size: 'xl', bank: '0', incl: '0', dir: 'R' },
       bank: { size: 'm', bank: '1', incl: '0', dir: 'R' }, bankBig: { size: 'l', bank: '1', incl: '0', dir: 'R' },
       cv05: { size: 's', bank: '0', incl: '0.5', dir: 'R' }, cv1: { size: 's', bank: '0', incl: '1', dir: 'R' }, cv2: { size: 's', bank: '0', incl: '2', dir: 'R' }, cv4: { size: 's', bank: '0', incl: '4', dir: 'R' },
       cvBig05: { size: 'm', bank: '0', incl: '0.5', dir: 'R' }, cvBig1: { size: 'm', bank: '0', incl: '1', dir: 'R' }, cvBig2: { size: 'm', bank: '0', incl: '2', dir: 'R' }, cvBig4: { size: 'm', bank: '0', incl: '4', dir: 'R' },

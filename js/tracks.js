@@ -12,14 +12,15 @@ import { datan2, hypot2 } from './dmath.js';
 
 export const BUILTIN_TRACKS = [
   {
-    // Chapitre 1 · 1/6 — SPRINT d'initiation. Ouverture : deux boosters puis un premier wall-ride (transitions douces 2×2).
-    // Presque tout droit : le chrono se joue sur la vitesse de pointe et sur la trajectoire dans les deux très grands virages plats.
+    // Chapitre 1 · 1/6 — SPRINT d'initiation (0.9.67 : refait deux fois plus long, esprit PolyTrack). Ouverture : deux boosters puis un premier wall-ride (transitions douces 2×2).
+    // Puis une bosse en S, un virage géant, une longue descente qui lance la voiture, une première bifurcation (petit saut tout droit, ou voie de côté), deux virages géants et
+    // un très grand virage plat. Aucun virage serré : le chrono se joue sur la vitesse de pointe et la trajectoire.
     id: 'eclats', name: 'Premiers Éclats', decor: 'desert', difficulty: 1, profil: 'sprint',
-    appris: 'Départ : deux boosters → premier wall-ride (transitions douces 2×2). Au programme : vitesse de pointe, trajectoire dans les très grands virages plats, courbes progressives.',
-    goal: { id: 'under', t: 23.5 },
-    opts: { l: 2 }, pilot: { vCap: 54 },
-    script: 'start B2 [tr01l] S4< [tr10l] S B S [crs1] S [cds1] HR S3 B C S HL S3 B2 finish',
-    medals: { cristal: 22.1, or: 23.3, argent: 26.8, bronze: 31.5 },
+    appris: 'Départ : deux boosters → premier wall-ride (transitions douces 2×2). Au programme : vitesse de pointe, virages géants, longue descente, première bifurcation : petit saut tout droit ou voie de côté.',
+    goal: { id: 'under', t: 50.5 },
+    opts: { l: 8 }, pilot: { vCap: 66 },
+    script: 'start B2 [tr01l] S4< [tr10l] S B S [crs1] S2 [cds1] S2 XR S4 C S2 [cdi1] [dn2] [cdo1] S2 SPL U G1 D S ALT S4 MRG S3 XL S4 B S2 C S2 HR S2 [crs1] S2 [cds1] S2 XL S4 B finish',
+    medals: { cristal: 46, or: 48.4, argent: 55.7, bronze: 65.3 },
   },
   {
     // Chapitre 3 · 1/6 — SPRINT (moto). Ouverture : départ EN MOTO (veh0), lancé par une descente de 7 niveaux au lieu d'un booster. Puis deux
@@ -73,15 +74,15 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 23.7, or: 25, argent: 28.7, bronze: 33.7 },
   },
   {
-    // Chapitre 1 · 2/6 — SPEEDWAY. Ouverture : un booster puis directement un très grand virage relevé. Aucun virage serré : quatre virages
-    // relevés 3×3, un wall-ride de 6 cases sur la paroi du canyon (mur droit) à plus de 220 km/h, une descente douce et des boosters
-    // pour rester au-dessus de 220 km/h sur plus de la moitié du tour (60 %).
+    // Chapitre 1 · 2/6 — SPEEDWAY (0.9.67 : refait, deux fois plus long). Ouverture : un booster puis directement un très grand virage relevé. Aucun virage serré : wall-ride de
+    // 6 cases sur la paroi du canyon (mur droit), trois virages géants pris au-dessus de 200 km/h, une descente douce, une bifurcation (voie directe, ou grand saut à gauche) et peu
+    // de boosters : la vitesse vient des descentes et des grandes courbes.
     id: 'canyon', name: 'Canyon Corail', decor: 'desert', difficulty: 2, profil: 'speedway',
-    appris: 'Départ : un booster → directement un très grand virage relevé. Au programme : virages relevés 3×3 à plus de 220 km/h, wall-ride de 6 cases sur la paroi du canyon, descente douce.',
+    appris: 'Départ : un booster → directement un très grand virage relevé. Au programme : wall-ride de 6 cases sur la paroi du canyon, virages géants au-dessus de 200 km/h, descente douce, bifurcation : voie directe ou grand saut.',
     goal: { id: 'nowall' },
-    opts: { l: 8 }, pilot: { vCap: 70 },
-    script: 'start B BRR B3 S2 [tr02l] S6> [tr20l] C S BRR S [cdi1] [dn2] [cdo1] S C B S BRR S3 B BLL S BRR S2 B2 finish',
-    medals: { cristal: 30.3, or: 31.9, argent: 36.7, bronze: 43 },
+    opts: { l: 8 }, pilot: { vCap: 72 },
+    script: 'start B BRR B3 S2 [tr02l] S6> [tr20l] C S XR S2 [cdi1] [dn2] [cdo1] S BRR S2 C S3 XL S SPLL S4 ALT U G2 D MRG S2 XR S3 [crs1] S2 [cds1] S BLL S2 B C S2 XL S4 B finish',
+    medals: { cristal: 48.4, or: 51, argent: 58.6, bronze: 68.8 },
   },
   {
     // Chapitre 7 · 1/6 — SPRINT (amarrage). Ouverture : un booster puis UN TUBE de trois cases. Après le tube, un saut en BASSE GRAVITÉ (plaque à 40 %) : la voiture flotte sur plus de dix cases,
@@ -94,16 +95,15 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 23.3, or: 24.6, argent: 28.3, bronze: 33.2 },
   },
   {
-    // Chapitre 1 · 3/6 — ACROBATIQUE. Ouverture : chute libre immédiate, depuis l'arrêt (la voiture quitte la plateforme de départ, à 66 m, et
-    // se réceptionne sur une descente à 38°). Puis trois sauts de plus en plus grands (bosse, grand tremplin à 38°, dernier saut avec anneau
-    // turbo) et un petit saut sur un mur. Réceptions en longues pentes descendantes ; chaque checkpoint est suivi de deux boosters
-    // avant la rampe : on peut repartir À L'ARRÊT de n'importe quel checkpoint (la réapparition remet la voiture à l'arrêt) et réussir le saut.
+    // Chapitre 1 · 3/6 — ACROBATIQUE (0.9.67 : refait, deux fois plus long). Ouverture : chute libre immédiate, depuis l'arrêt (la voiture quitte la plateforme de départ et se
+    // réceptionne sur une descente à 38°). Puis six sauts : deux tremplins, un saut sur un mur, une rampe à 38°, une bifurcation (sauter la terrasse ou
+    // descendre la pente) et un dernier saut avec anneau turbo ; il se finit de 158 à 238 km/h à l'abord des rampes (test-niveaux). Chaque checkpoint est suivi de deux boosters avant la rampe : on peut repartir À L'ARRÊT de chacun.
     id: 'tremplins', name: 'Tremplins du Crépuscule', decor: 'desert', difficulty: 2, profil: 'acrobatique',
-    appris: 'Départ : chute libre immédiate depuis 66 m (la voiture quitte la plateforme de départ, à l’arrêt). Au programme : rampes progressives et à 38°, réceptions sur longues pentes, checkpoint aérien, saut sur un mur.',
+    appris: 'Départ : chute libre (la voiture quitte la plateforme de départ, à l’arrêt). Au programme : six sauts de plus en plus grands, saut sur un mur, rampe à 38°, bifurcation : sauter la terrasse ou descendre la pente.',
     goal: { id: 'perfect', n: 1 },
-    opts: { l: 16 }, pilot: { vCap: 60 },
-    script: 'start V-5 [dn4] [cdo2] S C B2 S [crv1] UU G2 DD [cdo1] S3 CBR1 S [tr01s] S2< [tr10s] S LL S C B2 S2 [crv2] UX G2 DX DX [cdo2] S3 C B2 S UU GR2 DD [cdo1] S2 finish',
-    medals: { cristal: 37.5, or: 39.4, argent: 45.4, bronze: 53.2 },
+    opts: { l: 24 }, pilot: { vCap: 60 },
+    script: 'start V-5 [dn4] [cdo2] S C B2 S [crv1] UU G2 DD [cdo1] S XR S C B2 S [crv1] UU G2 DD [cdo1] S2 CBR1 S [tr01s] S2< [tr10s] S LL S C B2 S2 [crv2] UX G2 DX DX [cdo2] S SPL S2 G1 V-2 S ALT [dn2] S3 MRG S XL S C B2 S UU GR2 DD [cdo1] S3 finish',
+    medals: { cristal: 55.9, or: 58.8, argent: 67.6, bronze: 79.4 },
   },
   {
     // Chapitre 4 · 3/6 — ROLLERCOASTER (boucles). Ouverture : trois boosters puis DEUX LOOPINGS qui s'enchaînent en S (droite puis gauche). Ensuite deux wall-rides de quatre cases
@@ -202,27 +202,27 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 19.3, or: 20.3, argent: 23.4, bronze: 27.4 },
   },
   {
-    // Chapitre 1 · 4/6 — ROLLERCOASTER (spirale ; placé avant Lac Gelé pour que deux Rollercoasters ne se suivent pas). Ouverture : trois boosters puis directement un grand looping. Hélice montante de quatre
-    // grandes courbes inclinées (16 niveaux, 78 m), point de contrôle au sommet, plongeon de 16 niveaux à 38° et slalom de wall-rides
-    // gauche / droite en bas. Le plongeon passe à plus de 220 km/h : les murs se prennent avec une grande marge.
+    // Chapitre 1 · 4/6 — ROLLERCOASTER (spirale ; placé avant Lac Gelé pour que deux Rollercoasters ne se suivent pas ; 0.9.67 : refait, deux fois plus long). Ouverture :
+    // trois boosters puis directement un grand looping. Hélice montante de quatre grandes courbes inclinées (16 niveaux), checkpoint au sommet, plongeon à 38°, slalom de wall-rides
+    // gauche / droite, virage géant, tire-bouchon, bifurcation (tout droit, ou par le mur de droite), grand looping à gauche et dernier wall-ride.
     id: 'spirale', name: 'Spirale Prismatique', decor: 'desert', difficulty: 3, profil: 'rollercoaster',
-    appris: 'Départ : trois boosters → directement un grand looping. Au programme : hélice montante de 16 niveaux (quatre grandes courbes inclinées), plongeon de 16 niveaux à 38°, slalom de wall-rides gauche / droite.',
+    appris: 'Départ : trois boosters → directement un grand looping. Au programme : hélice montante de 16 niveaux, plongeon à 38°, slalom de wall-rides, tire-bouchon, bifurcation : tout droit ou par le mur, grand looping à gauche.',
     goal: { id: 'norespawn' },
     opts: { l: 2 },
-    pilot: { vCap: 40 },
-    script: 'start B3 OB S B CBR4 CBR4 CBR4 CBR4 S C [cdi2] DX DX DX [cdo2] B S [tr01s] S2< [tr10s] S [tr02s] S3> [tr20s] S2 B2 finish',
-    medals: { cristal: 38.5, or: 40.5, argent: 46.6, bronze: 54.7 },
+    pilot: { vCap: 52 },
+    script: 'start B3 OB S B CBR4 CBR4 CBR4 CBR4 S C [cdi2] DX DX DX [cdo2] B S [tr01s] S2< [tr10s] S [tr02s] S3> [tr20s] S XL S C B S CK S SPL S4 ALT [tr02s] S2> [tr20s] MRG S XR B S OBL S [tr01s] S3< [tr10s] S B2 finish',
+    medals: { cristal: 60.6, or: 63.8, argent: 73.4, bronze: 86.2 },
   },
   {
-    // Chapitre 1 · 4/6 — TECHNIQUE. Ouverture : une épingle descendante dès le départ. Onze virages serrés, des freinages forts avant chaque
-    // épingle et un booster à chaque sortie pour exploiter la courbe d'accélération ; de la glace avant les épingles (on ne freine plus
-    // dessus), une chicane sur un mur et un checkpoint dans un virage.
+    // Chapitre 1 · 4/6 — TECHNIQUE (0.9.67 : refait, deux fois plus long). Ouverture : une épingle descendante dès le départ. Dix-huit virages serrés, des freinages forts
+    // avant chaque épingle et un booster à chaque relance ; de la glace avant les épingles (on ne freine plus dessus), une chicane sur un mur, une courbe montante serrée, deux
+    // checkpoints dans un virage et une bifurcation (ligne droite verglacée, ou détour qui accroche).
     id: 'verglas', name: 'Lac Gelé', decor: 'desert', difficulty: 3, profil: 'technique',
-    appris: 'Départ : épingle descendante dès le départ. Au programme : 11 virages serrés, un booster à chaque relance, glace avant les épingles, chicane sur un mur.',
+    appris: 'Départ : épingle descendante dès le départ. Au programme : 18 virages serrés, glace avant les épingles, chicane sur un mur, checkpoints dans les virages, bifurcation : ligne verglacée ou détour qui accroche.',
     goal: { id: 'turbo', n: 2 },
-    opts: { l: 5 },
-    script: 'start [cvd05] [cvd05] B S3 L I B S R L S B S2 R S R B S2 [tr01s] S2< [tr10s] S3 L S L B I S3 KR S R S2 B finish',
-    medals: { cristal: 39.5, or: 41.6, argent: 47.8, bronze: 56.1 },
+    opts: { l: 6 },
+    script: 'start [cvd05] [cvd05] B S3 L I B S R L S B S2 R S R B S2 [tr01s] S2< [tr10s] S3 L S L B I S3 KR S R S2 B C S CVR1 L S R S SPLL I3 ALT S3 MRG S L B S2 R [cvd1] S KL S2 B S2 finish',
+    medals: { cristal: 64.1, or: 67.5, argent: 77.6, bronze: 91.1 },
   },
   {
     // Chapitre 5 · 2/6 — ACROBATIQUE (terrasses). Ouverture : un carreau de verglas, deux boosters puis un REBOND qui envoie la voiture sur une terrasse 2 niveaux plus bas. Quatre rebonds de
@@ -339,15 +339,15 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 32.6, or: 34.3, argent: 39.5, bronze: 46.3 },
   },
   {
-    // Chapitre 1 · 5/6 — ROLLERCOASTER. Ouverture : trois boosters puis une montée verticale (montée en L, mur de 3, sommet). Chute depuis le
-    // sommet, un virage relevé, un slalom de wall-rides gauche / droite, un grand looping, puis une arche mur → plafond → mur.
-    // Verticalité : 9 niveaux (45 m) ; plus de 18 cases sur un mur.
+    // Chapitre 1 · 5/6 — ROLLERCOASTER (0.9.67 : refait, la finale du chapitre). Ouverture : trois boosters puis une montée verticale (montée en L, mur de 3, sommet). Chute,
+    // virage relevé, slalom de wall-rides gauche / droite, grand looping, arche mur → plafond → mur, virage géant, bifurcation (petit saut tout droit, ou par le mur de droite),
+    // double looping, hélice montante à gauche, descente, second virage géant, tire-bouchon et bosses en S. Plus de 20 cases sur un mur.
     id: 'grandtour', name: 'Le Grand Tour', decor: 'desert', difficulty: 4, profil: 'rollercoaster',
-    appris: 'Départ : trois boosters → montée verticale (montée en L, mur, sommet). Au programme : chute, slalom de wall-rides gauche / droite, grand looping, arche mur → plafond → mur.',
+    appris: 'Départ : trois boosters → montée verticale (montée en L, mur, sommet). Au programme : slalom de wall-rides, grand looping, arche mur → plafond → mur, bifurcation saut ou mur, double looping, tire-bouchon, virages géants.',
     goal: { id: 'norespawn' },
     opts: { l: 3 },
-    script: 'start B3 QU WA3 CR S [cdi2] DX [cdo2] B BRR S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 OB S C S [tr01s] S2< [tr13s] S2^ [tr31s] S2< [tr10s] S B2 finish',
-    medals: { cristal: 35, or: 36.8, argent: 42.4, bronze: 49.7 },
+    script: 'start B3 QU WA3 CR S [cdi2] DX [cdo2] B BRR S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 OB S C S [tr01s] S2< [tr13s] S2^ [tr31s] S2< [tr10s] S2 XR S2 C S3 SPL U G1 D S ALT [tr02s] S2> [tr20s] MRG S OD S B2 CBL2 CBL2 S [cdi1] [dn2] [cdo1] XR S2 C B3 S CK S [crs1] S [cds1] S2 finish',
+    medals: { cristal: 75.2, or: 79.2, argent: 91.1, bronze: 106.9 },
   },
   {
     // Chapitre 7 · 4/6 — SPEEDWAY (circuit fermé, 3 tours). Ouverture : deux boosters puis UN TUBE COURT (2×2) pris à pleine vitesse, directement suivi du premier virage relevé. Quatre virages

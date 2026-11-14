@@ -64,9 +64,24 @@ export class Autopilot {
     return h > 0.5 ? datan2(b[1] - a[1], h) : 0;
   }
 
+  // Point de reprise (départ, réapparition) : le point du tracé le plus proche, cherché sur TOUT le tracé (0.9.67 : avant, les 400 premiers points seulement ;
+  // sur un circuit long, un checkpoint au-delà se raccrochait au premier passage voisin et le pilote faisait demi-tour), parmi ceux orientés dans le sens
+  // de la voiture (un tronçon voisin parcouru dans l'autre sens n'est pas un point de reprise).
   reset(phys) {
     this.idx = 0;
-    if (phys) this._progress(phys, 400);
+    if (!phys) return;
+    const p = phys.pos, path = this.path, fx = -dsin(phys.yaw), fz = -dcos(phys.yaw);
+    let best = 0, bd = Infinity;
+    for (let i = 0; i < path.length; i++) {
+      const q = path[i], a = path[Math.max(0, i - 1)], b = path[Math.min(path.length - 1, i + 1)];
+      const dx = q[0] - p.x, dz = q[2] - p.z, dy = (q[1] - p.y) * 3;
+      const d = dx * dx + dz * dz + dy * dy;
+      if (d >= bd) continue;
+      const tx = b[0] - a[0], tz = b[2] - a[2];
+      if (tx * fx + tz * fz < 0 && d > 25) continue;      // tronçon parcouru dans l'autre sens (sauf s'il est sous la voiture : à 5 m près)
+      bd = d; best = i;
+    }
+    this.idx = best;
   }
 
   _progress(phys, range = 40) {

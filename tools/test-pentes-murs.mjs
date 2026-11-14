@@ -58,7 +58,8 @@ const FROZEN_GEN = [
 ];
 test('l’ordre des 52 nouvelles pièces est figé (c’est l’index des circuits sauvegardés) et suit les 67 anciennes', () => {
   assert.deepEqual(GEN_IDS, FROZEN_GEN);
-  assert.equal(PIECE_ORDER.length, 67 + 52 + 16);      // (phase 3 : + 16 transitions de 45°, à la suite, voir test-orientations-3d)
+  assert.equal(PIECE_ORDER.length, 67 + 52 + 16 + 1);      // (phase 3 : + 16 transitions de 45°, à la suite, voir test-orientations-3d ; 0.9.67 : + le virage géant)
+  assert.equal(PIECE_ORDER[PIECE_ORDER.length - 1], 'giantcurve');
   assert.deepEqual(PIECE_ORDER.slice(67, 67 + 52), FROZEN_GEN);
   assert.equal(PIECE_ORDER[66], 'sideR'); assert.equal(PIECE_ORDER[59], 'crv05');
   assert.equal(new Set(PIECE_ORDER).size, PIECE_ORDER.length);
@@ -182,10 +183,10 @@ test('anciens circuits : rollL / rollR / sideL / sideR sont lus comme transition
 });
 
 console.log('Familles (éditeur)');
-test('familles : Ligne droite (9 inclinaisons), Virage (+16 descendants), Courbe (20 raccords), Transition (16), Looping ; chaque pièce une seule fois', () => {
+test('familles : Ligne droite (9 inclinaisons), Virage (+16 descendants, + virage géant), Courbe (20 raccords), Transition (16), Looping ; chaque pièce une seule fois', () => {
   assert.deepEqual(FAMILY_ORDER, ['straight', 'turn', 'courbe', 'roll', 'loop']);
   assert.equal(Object.keys(FAMILIES.straight.members).length, 9);
-  assert.equal(Object.keys(FAMILIES.turn.members).length, 5 + 16 + 16);
+  assert.equal(Object.keys(FAMILIES.turn.members).length, 5 + 16 + 16 + 1);      // (0.9.67 : virage géant, rayon « Géant »)
   assert.equal(Object.keys(FAMILIES.courbe.members).length, 20);
   assert.equal(Object.keys(FAMILIES.roll.members).length, 16);
   const seen = new Set();

@@ -35,7 +35,7 @@ test('orientationOf lit le roulis d\'une normale au pas de 45° (8 orientations)
   assert.equal(orientationOf([0, 1, 0], [0, 1, 0]), null, 'route verticale : pas de gauche ni de droite');
 });
 test('16 transitions de 45° (anneau 0·4·1·6·3·7·2·5) : de et vers chaque voisin, tangente conservée, roulis de 45° exactement, ajoutées à la SUITE des types (index des circuits sauvegardés)', () => {
-  assert.equal(GEN45_IDS.length, 16); assert.equal(PIECE_ORDER.slice(-16).join(), GEN45_IDS.join());
+  assert.equal(GEN45_IDS.length, 16); assert.equal(PIECE_ORDER.slice(-17, -1).join(), GEN45_IDS.join());      // (0.9.67 : le virage géant vient ensuite)
   const ring = [0, 4, 1, 6, 3, 7, 2, 5];
   for (let i = 0; i < 8; i++) for (const [a, b] of [[ring[i], ring[(i + 1) % 8]], [ring[(i + 1) % 8], ring[i]]]) {
     const id = `tr${a}${b}s`;

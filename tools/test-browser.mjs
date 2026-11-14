@@ -256,7 +256,9 @@ try {
     await waitApp(() => /Maîtrise/.test(document.getElementById('hub-facts').textContent) && /0 \/ 4/.test(document.querySelector('.hub-mastery').textContent));
     await click('#hub-play');
     await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session.state === 'racing', null, 40000);
-    await app(() => window.copytrack.session._finish(window.copytrack.session.logic.steps / 120 + 25));
+    // Temps forcé entre l'or et l'argent du circuit (une médaille, aucun défi de temps : seul « sans choc » tombe). 0.9.67 : calé sur ses médailles et non plus 25 s figées
+    // (le chapitre 1 refait dure deux fois plus : 25 s battaient le cristal et débloquaient quatre défis).
+    await app(() => { const m = window.copytrack.builtins[0].def.medals; window.copytrack.session._finish(window.copytrack.session.logic.steps / 120 + (m.or + m.argent) / 2); });
     await waitApp(() => !document.getElementById('finish').classList.contains('hidden') && !document.getElementById('fin-xp').classList.contains('hidden'));
     assert.match(await page.evaluate(() => document.getElementById('fin-xp').textContent), /^\+\d+ XP\s+Niveau \d+[\s\S]*Première arrivée du jour sur ce circuit \+20[\s\S]*Défi de maîtrise \+40/);
     assert.ok(await app(async () => (await import('/js/profile.js')).profile().xp >= 60));

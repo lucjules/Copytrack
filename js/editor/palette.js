@@ -70,6 +70,7 @@ const rollIcon = (a, b, long) => svg(`<rect x="2" y="6" width="44" height="36" r
 const ICONS = {
   steep4: svg(`<rect x="10" y="2" width="28" height="44" fill="#3c4160"/><rect x="8" y="2" width="2" height="44" fill="#ff6b57"/><rect x="38" y="2" width="2" height="44" fill="#ff6b57"/><path d="M16 14l8-7 8 7M16 24l8-7 8 7M16 34l8-7 8 7M16 44l8-7 8 7" stroke="#ff6b57" stroke-width="3" fill="none"/>${numTag(4)}`),
   hugecurve: svg(`<path d="M2 48 A46 46 0 0 1 48 2 L48 14 A34 34 0 0 0 14 48Z" fill="#3c4160"/><path d="M2 48 A46 46 0 0 1 48 2" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M14 48 A34 34 0 0 1 48 14" stroke="#ff6b57" stroke-width="2.5" fill="none"/>`),
+  giantcurve: svg(`<path d="M2 48 A46 46 0 0 1 48 2 L48 10 A38 38 0 0 0 10 48Z" fill="#3c4160"/><path d="M2 48 A46 46 0 0 1 48 2" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M10 48 A38 38 0 0 1 48 10" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M14 40 A30 30 0 0 1 40 14" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 4" fill="none"/>`),
   crv05: crvIcon('½'), crv1: crvIcon(1), crv2: crvIcon(2), crv4: crvIcon(4),
   cv05: incIcon(false, '½'), cv1: incIcon(false, 1), cv2: incIcon(false, 2), cv4: incIcon(false, 4),
   cvL05: incIcon(false, '½'), cvL1: incIcon(false, 1), cvL2: incIcon(false, 2), cvL4: incIcon(false, 4),

@@ -13,7 +13,7 @@ transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 36
 | — | orientation non proposée par l'éditeur (`flagAllowed`) |
 | n/a | pièce sans route roulable (raison dans le fichier JSON) |
 
-Totaux : CHUTE 24 · OK 110 · RACCORD 4 · SAUT 70 · n/a 56 · v≥150 421 · v≥250 6 · v≥80 15 · — 318.
+Totaux : CHUTE 24 · OK 114 · RACCORD 4 · SAUT 70 · n/a 56 · v≥150 425 · v≥250 6 · v≥80 15 · — 318.
 
 **Limites** : pilote automatique (pas un humain), voiture classique, sans revêtement ni obstacle, une seule pièce testée par chaîne, vitesse de croisière régulée.
 Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles) sont dans `tools/compat/matrice-pieces.json`.
@@ -95,6 +95,7 @@ Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles)
 | `cvdBigL1` Virage descendant grand ↰ · 1 | OK | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
 | `cvdBigL2` Virage descendant grand ↰ · 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
 | `cvdBigL4` Virage descendant grand ↰ · 4 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
+| `giantcurve` Virage géant | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
 
 ## Plateforme et anneaux
 

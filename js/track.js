@@ -589,7 +589,12 @@ export function hashString(s) {
 //   Y3.b / YL3.b        bifurcation : deux voies parallèles de 3 cases puis jonction ;
 //                       la voie déportée (à droite, ou à gauche pour YL) reçoit le revêtement
 //                       et c'est elle que suit le pilote automatique
+//   0.9.67 : SPL … ALT … MRG   bifurcation à DEUX CHEMINS LIBRES puis fusion : après SPL (voie déportée à droite ; SPLL : à gauche), les
+//                       instructions tracent la voie directe ; ALT passe à la voie déportée (ALTP : c'est elle que suit le pilote
+//                       automatique, sinon il suit la directe) ; MRG pose la fusion. Les deux voies doivent finir côte à côte (la
+//                       déportée du même côté qu'au départ), dans le même sens et au même niveau : ex. une voie qui saute un vide, l'autre qui en fait le tour.
 //   Phase 2 : HR / HL très grand virage plat (3x3)   UX / DX  ligne droite inclinée de 4 niveaux (montée / descente)
+//   0.9.67 : XR / XL virage géant plat (5x5, rayon 144 m)
 //   CVR / CVL  courbe montante serrée droite / gauche, CBR / CBL grande courbe montante (2x2) : le nombre est l'inclinaison
 //   (0 = ½, 1, 2, 4), ex. CVR2, CBL0.   OT / OTL / OBT / OBTL / OBD / OBDL : looping triple, grand ×3, grand ×2
 //   suffixes : .a eau  .n plaque bateau  .e plaque deltaplane  .f inversion de gravité
@@ -617,7 +622,7 @@ export function scriptTrack(name, script, opts = {}) {
     if (!Track.inBounds(Track.normalize(tile))) throw new Error(`${name} : ${t} sort des niveaux en (${px}, ${pz})`);
     const added = tr.add(tile);
     if (noPath) return added;
-    const pts = centerlineWorld(added, PIECES[t].size === 2 ? 12 : 6, reverse);
+    const pts = centerlineWorld(added, PIECES[t].size === 2 ? 12 : PIECES[t].size >= 4 ? 20 : 6, reverse);
     if (path.length) pts.shift();
     path.push(...pts);
     return added;
@@ -675,6 +680,45 @@ export function scriptTrack(name, script, opts = {}) {
     pushPts(forkPath(jT, 1, true));
     adv(h, lanesStart + n + 2);
   };
+  // 0.9.67 : bifurcation à deux chemins libres (SPL / SPLL … ALT / ALTP … MRG). split : état de la fourche ouverte (une seule à la fois).
+  let split = null;
+  const plainSurf = () => ({ s: '', p: 0, v: 0, nb: 0, tn: 0 });
+  const splitOpen = (side) => {
+    if (split) throw new Error(`${name} : bifurcation déjà ouverte (SPL … MRG ne s'imbriquent pas)`);
+    const right = rot(h, side, 0), fwd = rot(h, 0, -1);
+    const cells = [];
+    for (const [cx, cz] of [[x, z], [x + right.x, z + right.z]]) for (const k of [0, 1]) cells.push([cx + fwd.x * k, cz + fwd.z * k]);
+    const fT = place(side > 0 ? 'fork' : 'forkL', Math.min(...cells.map((c) => c[0])), Math.min(...cells.map((c) => c[1])), l, h, false, true, plainSurf());
+    split = { side, h, l, fT, bx: x + right.x + fwd.x * 2, bz: z + right.z + fwd.z * 2, start: path.length, segA: null, endA: null, botB: false };
+    pushPts(forkPath(fT, 0, false));
+    x += fwd.x * 2; z += fwd.z * 2;
+  };
+  const splitAlt = (botB) => {
+    if (!split || split.segA) throw new Error(`${name} : ALT sans SPL (ou deux fois)`);
+    split.segA = path.splice(split.start);
+    split.endA = { x, z, h, l };
+    split.botB = botB;
+    x = split.bx; z = split.bz; h = split.h; l = split.l;
+    pushPts(forkPath(split.fT, 1, false));
+  };
+  const splitMerge = () => {
+    if (!split || !split.segA) throw new Error(`${name} : MRG sans SPL … ALT`);
+    const A = split.endA, segB = path.splice(split.start);
+    const right = rot(A.h, split.side, 0), fwd = rot(A.h, 0, -1);
+    if (h !== A.h || l !== A.l || x !== A.x + right.x || z !== A.z + right.z) {
+      throw new Error(`${name} : les deux voies de la bifurcation ne se rejoignent pas (directe : case ${A.x},${A.z} niveau ${A.l} cap ${A.h} ; déportée : case ${x},${z} niveau ${l} cap ${h} ; attendu : déportée à côté de la directe, même niveau, même cap)`);
+    }
+    const cells = [];
+    for (const [cx, cz] of [[A.x, A.z], [x, z]]) for (const k of [0, 1]) cells.push([cx + fwd.x * k, cz + fwd.z * k]);
+    const jT = place(split.side > 0 ? 'forkL' : 'fork', Math.min(...cells.map((c) => c[0])), Math.min(...cells.map((c) => c[1])), A.l, A.h + 2, false, true, plainSurf());
+    const branch = split.botB ? 1 : 0;
+    pushPts(branch ? segB : split.segA);
+    pushPts(forkPath(jT, branch, true));
+    x = A.x + fwd.x * 2; z = A.z + fwd.z * 2; h = A.h; l = A.l;
+    split = null;
+  };
+  // Ajoute des points au chemin du pilote en évitant le doublon de raccord.
+  function pushPts(pts) { if (!pts.length) return; if (path.length) pts = pts.slice(1); path.push(...pts); }
   const adv = (dir, n = 1) => { x += DIRS[dir][0] * n; z += DIRS[dir][1] * n; };
   const rot = (r, lx, lz) => rotVec(r, lx, lz, { x: 0, z: 0 });
   // Pièce de taille size : ancre à partir de la case d'entrée et du décalage latéral des voies.
@@ -812,6 +856,18 @@ export function scriptTrack(name, script, opts = {}) {
         h = (h + (sgn > 0 ? 1 : 3)) & 3;
         break;
       }
+      // 0.9.67 : XR / XL virage géant plat (5×5, rayon 144 m)
+      case 'XR': case 'XL': {
+        const sgn = op === 'XR' ? 1 : -1;
+        const fwd = rot(h, 0, -1), side = rot(h, sgn, 0);
+        const cells = [];
+        for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) cells.push([x + side.x * i + fwd.x * j, z + side.z * i + fwd.z * j]);
+        const ax = Math.min(...cells.map((c) => c[0])), az = Math.min(...cells.map((c) => c[1]));
+        if (sgn > 0) place('giantcurve', ax, az, l, h); else place('giantcurve', ax, az, l, h + 1, true);
+        x += fwd.x * 4 + side.x * 5; z += fwd.z * 4 + side.z * 5;
+        h = (h + (sgn > 0 ? 1 : 3)) & 3;
+        break;
+      }
       case 'UX': place('steep4', x, z, l, h); l += 4; adv(h); break;
       case 'DX': l -= 4; place('steep4', x, z, l, h + 2, true); adv(h); break;
       case 'CVR': case 'CVL': {
@@ -856,10 +912,16 @@ export function scriptTrack(name, script, opts = {}) {
       }
       case 'Y': fork(n, 1, { ...cur }); break;
       case 'YL': fork(n, -1, { ...cur }); break;
+      case 'SPL': splitOpen(1); break;
+      case 'SPLL': splitOpen(-1); break;
+      case 'ALT': splitAlt(false); break;
+      case 'ALTP': splitAlt(true); break;
+      case 'MRG': splitMerge(); break;
       case 'V': l += n; break;
       default: throw new Error('Instruction inconnue : ' + op);
     }
   }
+  if (split) throw new Error(`${name} : bifurcation SPL sans MRG`);
   for (const d of opts.decos || []) tr.addDeco(d);
   tr.path = path;
   tr.turtle = { x, z, h, l };   // position finale (sert à refermer les circuits à tours)

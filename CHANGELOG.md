@@ -6,6 +6,17 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.67 — chapitre 1 refait, bifurcations à deux chemins, virage géant
+
+**`PHYS_VER` inchangé (36)** : la physique ne change pas. **Redéployer `submit-score`** : le serveur vérifie les records des circuits intégrés avec sa propre copie de `js/tracks.js`, et les six circuits du chapitre 1 ont changé (leurs clés de classement aussi). L'empreinte de physique est régénérée parce que plusieurs de ses scénarios roulent sur ces circuits.
+
+- **Les six circuits du chapitre 1 (Désert) refaits**, deux fois plus longs et plus proches de l'esprit de PolyTrack : relief, longues descentes qui lancent la voiture, sauts, murs, grandes courbes, peu de boosters. Noms, thèmes, profils et ouvertures gardés. Temps du pilote de référence : Premiers Éclats 48 s (avant 23), Canyon Corail 51 s (32), Tremplins du Crépuscule 59 s (39), Spirale Prismatique 64 s (41), Lac Gelé 68 s (42), Le Grand Tour 79 s (37). Médailles, objectifs et textes « ce qu'il enseigne » (français et anglais) refaits ; les 72 circuits respectent leur contrat, et le pilote humain imparfait n'y touche aucune bordure.
+- **Bifurcation à deux chemins libres, puis fusion** (une par circuit du chapitre 1) : dans le langage des circuits, `SPL` (voie déportée à droite ; `SPLL` : à gauche) … voie directe … `ALT` (ou `ALTP` : le pilote automatique prend la déportée) … voie déportée … `MRG`. Chaque voie suit son propre chemin (un saut, un mur, un détour, de la glace) et elles se rejoignent sur une fusion ; le constructeur refuse, avec un message clair, deux voies qui ne se rejoignent pas. Avant, `Y3` ne faisait que deux voies parallèles collées.
+- **Nouvelle pièce : virage géant** (5×5, rayon 144 m ; `XR` / `XL` dans les scripts ; famille « Virage », rayon « Géant » dans l'éditeur). Avec le braquage borné selon la vitesse, c'est le seul virage qui se prenne vers 220-280 km/h (le très grand virage 3×3 plafonne vers 190). Ajoutée à la FIN de l'ordre d'encodage : aucun code de circuit existant ne change.
+- **Pilote automatique** : à la reprise (départ, réapparition, essai « repartir du checkpoint »), il cherche son point sur tout le tracé, dans son sens de marche (avant : les 400 premiers points seulement ; sur un circuit long il se raccrochait au premier passage voisin et faisait demi-tour). Temps de référence des 66 autres circuits identiques.
+- **Contrat du profil sprint** : 12 à 50 s (avant 30) et 6 grands virages au plus (avant 3), pour des sprints plus longs.
+- **Tests** : `tools/test-fusion-geant.mjs` (bifurcations : construction, erreurs, voie suivie par le pilote, partage ; virage géant : géométrie, vitesse, famille, encodage ; chapitre 1 : durées, une bifurcation par circuit). Tremplins se finit de 158 à 238 km/h à l'abord des rampes.
+
 ## Bêta 0.9.66 — démarrage après une mise en ligne
 
 **`PHYS_VER` inchangé (36)** : physique, empreinte, temps de référence et records identiques. Rien à redéployer côté serveur (`submit-score` inchangé).

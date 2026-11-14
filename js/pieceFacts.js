@@ -35,6 +35,7 @@ export const PIECE_FACTS = {
   gentle: {sol:'SAUT',murG:'v≥150',murD:'v≥150',plafond:'SAUT',incG:'OK',incD:'OK',surG:'v≥150',surD:'v≥150'},
   steep4: {sol:'SAUT',murG:'v≥250',murD:'v≥250',plafond:'v≥80',incG:'v≥150',incD:'v≥150',surG:'v≥150',surD:'v≥150'},
   hugecurve: {sol:'OK',murG:'v≥150',murD:'v≥150',plafond:'OK',incG:'OK',incD:'OK',surG:'v≥150',surD:'v≥150'},
+  giantcurve: {sol:'OK',murG:'v≥150',murD:'v≥150',plafond:'OK',incG:'OK',incD:'OK',surG:'v≥150',surD:'v≥150'},
   cv05: {sol:'OK',murG:'v≥150',murD:'v≥150',plafond:'OK',incG:'OK',incD:'OK',surG:'v≥150',surD:'v≥150'},
   cv1: {sol:'SAUT',murG:'v≥150',murD:'v≥150',plafond:'SAUT',incG:'v≥150',incD:'v≥150',surG:'v≥150',surD:'v≥150'},
   cv2: {sol:'SAUT',murG:'v≥150',murD:'CHUTE',plafond:'SAUT',incG:'v≥150',incD:'v≥150',surG:'v≥150',surD:'v≥150'},
