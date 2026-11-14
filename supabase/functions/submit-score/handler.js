@@ -60,7 +60,12 @@ const dbMessage = async (r) => { try { const j = JSON.parse(await r.text()); ret
 export const UPSTREAM_TIMEOUT_MS = 8_000;
 class Upstream extends Error {}      // Supabase injoignable, trop lent, ou réponse illisible : panne passagère (503), jamais « erreur interne » (500)
 
-export function createHandler({ supabaseUrl, serviceKey, fetch: rawFetch = globalThis.fetch, allowedOrigin = '*', now = Date.now, rateLimit = RATE_LIMIT, log = console.error, upstreamTimeoutMs = UPSTREAM_TIMEOUT_MS }) {
+export function createHandler({ supabaseUrl, serviceKey, fetch: rawFetch = globalThis.fetch, allowedOrigin = '*', now = Date.now, rateLimit = RATE_LIMIT, log = console.error, upstreamTimeoutMs = UPSTREAM_TIMEOUT_MS, build = null }) {
+  // Empreinte de build (tools/build-stamp.mjs) : le fichier généré l'écrit en dernière ligne (`globalThis.__COPYTRACK_BUILD__`), APRÈS l'appel de createHandler : on la lit donc à chaque requête.
+  const buildStamp = () => {
+    const b = build ?? globalThis.__COPYTRACK_BUILD__;
+    return typeof b === 'string' && /^[0-9a-f]{16}$/.test(b) ? b : null;
+  };
   const fetchImpl = async (url, init = {}) => {
     try { return await rawFetch(url, { ...init, signal: AbortSignal.timeout(upstreamTimeoutMs) }); }
     catch (e) { throw new Upstream(e && e.message); }
@@ -124,8 +129,8 @@ export function createHandler({ supabaseUrl, serviceKey, fetch: rawFetch = globa
 
   return async function handle(req) {
     if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
-    // État du service : la version de physique que CE déploiement vérifie (sans authentification, rien de secret).
-    if (req.method === 'GET') return json(200, { ok: true, service: 'submit-score', physVer: PHYS_VER, rate: { max: rateLimit.max, windowS: Math.round(rateLimit.windowMs / 1000), globalMax: rateLimit.globalMax, anonMax: rateLimit.anonMax }, actions: ['submit', 'publish-track'] });
+    // État du service : la version de physique que CE déploiement vérifie et l'empreinte de son code (build), sans authentification, rien de secret.
+    if (req.method === 'GET') return json(200, { ok: true, service: 'submit-score', physVer: PHYS_VER, build: buildStamp(), rate: { max: rateLimit.max, windowS: Math.round(rateLimit.windowMs / 1000), globalMax: rateLimit.globalMax, anonMax: rateLimit.anonMax }, actions: ['submit', 'publish-track'] });
     if (req.method !== 'POST') return json(405, { error: 'Méthode non autorisée.' });
     try {
       if (!supabaseUrl || !serviceKey) return json(500, { error: 'Fonction mal configurée (clés Supabase absentes).' });

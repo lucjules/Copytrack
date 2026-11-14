@@ -13240,7 +13240,11 @@ var dbMessage = async (r) => {
 var UPSTREAM_TIMEOUT_MS = 8e3;
 var Upstream = class extends Error {
 };
-function createHandler({ supabaseUrl, serviceKey, fetch: rawFetch = globalThis.fetch, allowedOrigin = "*", now = Date.now, rateLimit = RATE_LIMIT, log = console.error, upstreamTimeoutMs = UPSTREAM_TIMEOUT_MS }) {
+function createHandler({ supabaseUrl, serviceKey, fetch: rawFetch = globalThis.fetch, allowedOrigin = "*", now = Date.now, rateLimit = RATE_LIMIT, log = console.error, upstreamTimeoutMs = UPSTREAM_TIMEOUT_MS, build: build2 = null }) {
+  const buildStamp = () => {
+    const b = build2 ?? globalThis.__COPYTRACK_BUILD__;
+    return typeof b === "string" && /^[0-9a-f]{16}$/.test(b) ? b : null;
+  };
   const fetchImpl = async (url, init = {}) => {
     try {
       return await rawFetch(url, {
@@ -13351,6 +13355,7 @@ function createHandler({ supabaseUrl, serviceKey, fetch: rawFetch = globalThis.f
       ok: true,
       service: "submit-score",
       physVer: PHYS_VER,
+      build: buildStamp(),
       rate: {
         max: rateLimit.max,
         windowS: Math.round(rateLimit.windowMs / 1e3),
@@ -13593,3 +13598,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
+globalThis.__COPYTRACK_BUILD__ = "0d5d3e5c7663d662";

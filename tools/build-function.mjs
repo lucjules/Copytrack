@@ -7,12 +7,14 @@ import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { addStamp, readStamp } from './build-stamp.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FUNCTIONS = {
   'submit-score': '« submit-score »',
   ice: '« ice » (serveurs STUN/TURN du multijoueur)',
 };
+const STAMPED = new Set(['submit-score']);      // l'empreinte de build (tools/build-stamp.mjs) est publiée par le GET d'état de submit-score : tools/check-deployed.mjs la compare
 for (const [name, title] of Object.entries(FUNCTIONS)) {
   const dir = join(root, 'supabase/functions', name);
   const out = join(mkdtempSync(join(tmpdir(), 'ct-fn-')), 'bundle.js');
@@ -25,6 +27,7 @@ for (const [name, title] of Object.entries(FUNCTIONS)) {
 // deno-lint-ignore-file
 // @ts-nocheck
 `;
-  writeFileSync(join(dir, 'index.ts'), header + code);
-  console.log(`${name}/index.ts : ${(code.length / 1024).toFixed(0)} Ko, aucun import`);
+  const file = STAMPED.has(name) ? addStamp(header + code) : header + code;
+  writeFileSync(join(dir, 'index.ts'), file);
+  console.log(`${name}/index.ts : ${(code.length / 1024).toFixed(0)} Ko, aucun import${STAMPED.has(name) ? ', empreinte ' + readStamp(file).stamp : ''}`);
 }

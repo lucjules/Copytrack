@@ -110,7 +110,7 @@ ou un temps changé fait échouer le test. Ne régénérer le corpus que pour un
 1. Modifier le code, puis incrémenter `PHYS_VER` dans `js/version.js`.
 2. `node tools/phys-fingerprint.mjs --update` (nouvelle empreinte), `node tools/golden.mjs` (les temps de référence des 72 circuits ont-ils bougé ? `--update` si c'est voulu) puis `node tools/medals.mjs --check` (médailles) et `node tools/compat-gen.mjs --update` (les temps du corpus).
 3. `npm run build:function` et `npm run sw` (fichiers générés), `npm test`.
-4. **Redéployer la fonction `submit-score`** : sans cela, le serveur rejoue l'ancienne physique et refuse les nouveaux temps. Les records d'avant ne sont plus rejouables (leur `pv` diffère) : ils restent affichés comme temps.
+4. **Redéployer la fonction `submit-score`** : sans cela, le serveur rejoue l'ancienne physique et refuse les nouveaux temps. Vérifier ensuite avec `node tools/check-deployed.mjs` : la ligne « empreinte de build identique » prouve que la fonction en ligne est exactement le fichier du dépôt (la seule comparaison de `physVer` ne voit pas une correction du serveur qui n'a pas changé la physique : voir ci-dessous). Les records d'avant ne sont plus rejouables (leur `pv` diffère) : ils restent affichés comme temps.
 
 ## Données et formats
 
@@ -151,7 +151,7 @@ hors ligne ; il est « réseau d'abord » pour récupérer les mises à jour ; s
 | Fichier | Généré par | Vérifié par |
 | --- | --- | --- |
 | `sw.js`, bloc `modulepreload` de `index.html` | `npm run sw` | `tools/check-generated.mjs` (`npm test`), CI |
-| `supabase/functions/submit-score/index.ts` | `npm run build:function` | CI (`git diff --exit-code`) |
+| `supabase/functions/submit-score/index.ts` | `npm run build:function` ; sa dernière ligne est une **empreinte de build** (SHA-256 du fichier, `tools/build-stamp.mjs`) | CI (`git diff --exit-code`), `tools/test-build-stamp.mjs` ; en ligne : `node tools/check-deployed.mjs` compare l'empreinte annoncée par le GET d'état (`build`) à celle du dépôt |
 | `tools/phys-fingerprint.json` | `node tools/phys-fingerprint.mjs --update` | `npm test`, CI (Node, Deno, Chromium) |
 | `tools/golden-temps.json` | `node tools/golden.mjs --update` | `tools/test-niveaux.mjs` |
 | `tools/compat/corpus.json` | `node tools/compat-gen.mjs --update` (changement voulu seulement) | `tools/test-compat.mjs` (`npm test`) |
