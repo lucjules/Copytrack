@@ -1257,6 +1257,43 @@
    }
   }
  },
+ "giantcurve": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.88 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.09 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.09 150:ok 250:ok"
+   }
+  }
+ },
  "cv05": {
   "kind": "arc",
   "cells": {

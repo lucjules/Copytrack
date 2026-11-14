@@ -221,7 +221,7 @@ export function stripsFor(tile) {
   if (p.kind === 'arc') {
     // Arc de cercle ; un virage incliné monte (ou descend) régulièrement sur le quart de tour (rampe hélicoïdale, chaussée horizontale en travers).
     const a = arcParams(p);
-    const n = (p.size === 2 ? 16 : p.size === 3 ? 24 : 8) * (Math.abs(p.rise) > 1 ? 2 : 1);
+    const n = (p.size === 1 ? 8 : 8 * p.size) * (Math.abs(p.rise) > 1 ? 2 : 1);
     const fr = [], mir = p.mirror < 0 ? -1 : 1;
     for (let i = 0; i <= n; i++) {
       const ang = Math.PI + (Math.PI / 2) * (i / n);

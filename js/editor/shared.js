@@ -5,7 +5,7 @@ import { DECO_LABELS } from '../decoData.js';
 // Pièces proposées dans la palette. 0.9.2 : plus aucun raccourci clavier pour choisir une pièce (les outils gardent les leurs).
 export const PALETTE_ORDER = [
   'straight', 'curve', 'bigcurve', 'slope', 'steep', 'loop', 'loopL', 'loopBig', 'loopBigL', 'loopDouble', 'loopDoubleL', 'twist',
-  'ramp90', 'wall', 'crest90', 'bank', 'bankBig', 'hugecurve', 'steep4', 'cv1', 'crv1',
+  'ramp90', 'wall', 'crest90', 'bank', 'bankBig', 'hugecurve', 'giantcurve', 'steep4', 'cv1', 'crv1',
   'tube', 'tubeIn', 'tubeMid', 'cork', 'corkL', 'fork', 'forkL', 'gentle', 'ring', 'start', 'finish', 'platform',
 ].map((id) => ({ id }));
 

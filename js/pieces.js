@@ -61,6 +61,8 @@ export const PIECES = {
   // Phase 2 : nouvelles pièces (ajoutées en fin de PIECE_ORDER, les anciens codes restent lisibles).
   steep4:     { label: 'Ligne droite · inclinaison 4', kind: 'line', size: 1, rise: 4 },
   hugecurve:  { label: 'Très grand virage plat', kind: 'arc', size: 3, rise: 0 },
+  // 0.9.67 : virage géant 5×5 (rayon 144 m) : avec le braquage borné selon la vitesse (loi PolyTrack), le seul virage qui se prenne vers 280 km/h.
+  giantcurve: { label: 'Virage géant', kind: 'arc', size: 5, rise: 0 },
   // « Courbe » : un tremplin courbé (virage montant). Serré = 1 case, grand = 2×2.
   cv05:       { label: 'Courbe serrée · inclinaison ½', kind: 'arc', size: 1, rise: 0.5 },
   cv1:        { label: 'Courbe serrée · inclinaison 1', kind: 'arc', size: 1, rise: 1 },
@@ -216,6 +218,8 @@ export const PIECE_ORDER = [
   ...GEN_IDS,
   // Phase 3 (0.9.62) : transitions de 45° (à la suite : ne jamais réordonner)
   ...GEN45_IDS,
+  // 0.9.67 (à la suite : ne jamais réordonner)
+  'giantcurve',
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -533,9 +537,8 @@ export function localToWorld(tile, lx, lz, out = {}) {
 }
 
 export function arcParams(p) {
-  if (p.size === 1) return { cx: HALF, cz: HALF, R: HALF };
-  if (p.size === 3) return { cx: CELL * 1.5, cz: CELL * 1.5, R: CELL * 2.5 };
-  return { cx: CELL, cz: CELL, R: CELL * 1.5 };
+  // Centre de l'arc au coin de la pièce, rayon (taille − ½) case : 16 m (1×1), 48 m (2×2), 80 m (3×3), 144 m (5×5).
+  return { cx: p.size * HALF, cz: p.size * HALF, R: (p.size - 0.5) * CELL };
 }
 
 // Échantillonne la géométrie au sol d'une pièce au point local (lx, lz).

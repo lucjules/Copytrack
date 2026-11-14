@@ -2,8 +2,7 @@
 // Générées dans l'ordre de js/tracks.js : une phrase « Départ : … Au programme : … » par circuit.
 
 export default {
-  'Départ : deux boosters → premier wall-ride (transitions douces 2×2). Au programme : vitesse de pointe, trajectoire dans les très grands virages plats, courbes progressives.':
-    'Start: two boost pads → first wall-ride (soft 2×2 transitions). On the menu: top speed, racing line through the very wide flat turns, progressive curves.',
+  'Départ : deux boosters → premier wall-ride (transitions douces 2×2). Au programme : vitesse de pointe, virages géants, longue descente, première bifurcation : petit saut tout droit ou voie de côté.': 'Start: two boosters → first wall-ride (smooth 2×2 transitions). Coming up: top speed, giant turns, a long descent, a first fork: small jump straight ahead or the side lane.',
   'Départ : en moto, lancé par une descente de 7 niveaux (sans booster). Au programme : deux sauts en chapelet avec un anneau turbo chacun, très grand virage plat.':
     'Start: on the motorbike, launched by a 7-level descent (no boost pad). On the menu: two chained jumps with a boost ring each, a very wide flat turn.',
   'Départ : sur la glace : verglas, trois boosters, verglas. Au programme : vague douce, deux très grands virages plats, descente finale.':
@@ -12,12 +11,10 @@ export default {
     'Start: three boost pads → launch ramp with a boost ring in the jump. On the menu: gentle waves, a borderless vine bridge at over 230 km/h, an S of banked turns, a very wide flat turn.',
   'Départ : deux boosters → colline douce. Au programme : vague en S, S relevé 2×2, un très grand virage plat.':
     'Start: two boost pads → gentle hill. On the menu: an S wave, a 2×2 banked S, one very wide flat turn.',
-  'Départ : un booster → directement un très grand virage relevé. Au programme : virages relevés 3×3 à plus de 220 km/h, wall-ride de 6 cases sur la paroi du canyon, descente douce.':
-    'Start: one boost pad → straight into a very wide banked turn. On the menu: 3×3 banked turns at over 220 km/h, a 6-cell wall-ride on the canyon wall, a gentle descent.',
+  'Départ : un booster → directement un très grand virage relevé. Au programme : wall-ride de 6 cases sur la paroi du canyon, virages géants au-dessus de 200 km/h, descente douce, bifurcation : voie directe ou grand saut.': 'Start: a booster → straight into a very wide banked turn. Coming up: a 6-tile wall-ride on the canyon wall, giant turns above 200 km/h, a gentle descent, a fork: direct lane or big jump.',
   'Départ : un booster → tube. Au programme : saut en basse gravité (40 %) avec anneau turbo, très grand virage plat.':
     'Start: one boost pad → tube. On the menu: a low-gravity jump (40%) with a boost ring, a very wide flat turn.',
-  'Départ : chute libre immédiate depuis 66 m (la voiture quitte la plateforme de départ, à l’arrêt). Au programme : rampes progressives et à 38°, réceptions sur longues pentes, checkpoint aérien, saut sur un mur.':
-    'Start: immediate free fall from 66 m (the car leaves the start platform from standstill). On the menu: progressive ramps and 38° ramps, landings on long slopes, an aerial checkpoint, a jump onto a wall.',
+  'Départ : chute libre (la voiture quitte la plateforme de départ, à l’arrêt). Au programme : six sauts de plus en plus grands, saut sur un mur, rampe à 38°, bifurcation : sauter la terrasse ou descendre la pente.': 'Start: free fall (the car leaves the start platform from a standstill). Coming up: six ever bigger jumps, a jump onto a wall, a 38° ramp, a fork: jump the terrace or drive down the slope.',
   'Départ : trois boosters → deux loopings qui s’enchaînent en S. Au programme : trois loopings, deux wall-rides, plongeon de 8 niveaux.':
     'Start: three boost pads → two loops chained in an S. On the menu: three loops, two wall-rides, an 8-level dive.',
   'Départ : en tube propulsé, qui débouche sur un virage relevé 3×3. Au programme : S relevés, wall-ride de 5 cases sur le mur gauche, tube à pleine vitesse, 79 % du temps au-dessus de 220 km/h.':
@@ -36,10 +33,8 @@ export default {
     'Start: on the motorbike (plate), an immediate R L R L slalom. On the menu: eight tight turns, a chicane, finishing on the motorbike (bonus goal).',
   'Départ : sans bordures (six cases). Au programme : vague douce, tunnel de quatre cases, un seul très grand virage plat.':
     'Start: borderless (six cells). On the menu: a gentle wave, a four-cell tunnel, a single very wide flat turn.',
-  'Départ : trois boosters → directement un grand looping. Au programme : hélice montante de 16 niveaux (quatre grandes courbes inclinées), plongeon de 16 niveaux à 38°, slalom de wall-rides gauche / droite.':
-    'Start: three boost pads → straight into a large loop. On the menu: a 16-level rising helix (four large inclined curves), a 16-level dive at 38°, a left / right wall-ride slalom.',
-  'Départ : épingle descendante dès le départ. Au programme : 11 virages serrés, un booster à chaque relance, glace avant les épingles, chicane sur un mur.':
-    'Start: a descending hairpin right from the start. On the menu: 11 tight turns, a boost pad on every exit, ice before the hairpins, a chicane on a wall.',
+  'Départ : trois boosters → directement un grand looping. Au programme : hélice montante de 16 niveaux, plongeon à 38°, slalom de wall-rides, tire-bouchon, bifurcation : tout droit ou par le mur, grand looping à gauche.': 'Start: three boosters → straight into a big loop. Coming up: a 16-level climbing helix, a 38° dive, a wall-ride slalom, a corkscrew, a fork: straight on or along the wall, a big left loop.',
+  'Départ : épingle descendante dès le départ. Au programme : 18 virages serrés, glace avant les épingles, chicane sur un mur, checkpoints dans les virages, bifurcation : ligne verglacée ou détour qui accroche.': 'Start: a downhill hairpin right away. Coming up: 18 tight turns, ice before the hairpins, a chicane on a wall, checkpoints in turns, a fork: icy straight line or a grippy detour.',
   'Départ : verglas, deux boosters, rebond vers une terrasse plus basse. Au programme : quatre rebonds de plus en plus puissants et longs : la Banquise descend de terrasse en terrasse (Spores monte).':
     'Start: ice, two boost pads, a bounce to a lower terrace. On the menu: four ever more powerful and longer bounces: the Ice Floe drops from terrace to terrace (Spores climbs).',
   'Départ : au plafond (la course commence en gravité inversée). Au programme : deux tonneaux complets (plafond → mur gauche → sol → mur droit → plafond), plongeon, virage relevé, boue et vent, double looping.':
@@ -62,8 +57,7 @@ export default {
     'Start: three boost pads → tube → a four-level vertical climb. On the menu: an 8-level dive, a large loop, a wall-ride slalom.',
   'Départ : quatre boosters → looping triple (4×4). Au programme : slalom de wall-rides gauche / droite, grand double looping, plongeon de 8 niveaux : 15 niveaux de dénivelé.':
     'Start: four boost pads → triple loop (4×4). On the menu: a left / right wall-ride slalom, a large double loop, an 8-level dive: 15 levels of elevation change.',
-  'Départ : trois boosters → montée verticale (montée en L, mur, sommet). Au programme : chute, slalom de wall-rides gauche / droite, grand looping, arche mur → plafond → mur.':
-    'Start: three boost pads → vertical climb (L climb, wall, top). On the menu: a drop, a left / right wall-ride slalom, a large loop, a wall → ceiling → wall arch.',
+  'Départ : trois boosters → montée verticale (montée en L, mur, sommet). Au programme : slalom de wall-rides, grand looping, arche mur → plafond → mur, bifurcation saut ou mur, double looping, tire-bouchon, virages géants.': 'Start: three boosters → vertical climb (L-climb, wall, top). Coming up: a wall-ride slalom, a big loop, a wall → ceiling → wall arch, a jump-or-wall fork, a double loop, a corkscrew, giant turns.',
   'Départ : deux boosters → tube court ; circuit fermé, 3 tours. Au programme : quatre virages relevés, wall-ride, 95 % au-dessus de 220 km/h.':
     'Start: two boost pads → short tube; closed circuit, 3 laps. On the menu: four banked turns, a wall-ride, 58% above 220 km/h.',
   'Départ : la plaque de départ règle la gravité à 50 % : la voiture flotte de 6 niveaux. Au programme : trois sauts de cinq cases en basse gravité, longues réceptions.':
