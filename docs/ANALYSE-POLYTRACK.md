@@ -145,6 +145,25 @@ quand on est bloqué. Les seuls retours sont manuels (R : checkpoint ; T : dépa
 3. **Forme** : nouveau profil physique au choix par circuit (records actuels intacts) ou nouvelle physique par défaut (`PHYS_VER` 36 : records,
    fantômes et classements actuels non rejouables, redéploiement du serveur).
 
+## 8. Mise en œuvre dans Copytrack (bêta 0.9.65, `PHYS_VER` 36)
+
+Choix retenus : **caractère PolyTrack, vitesses Copytrack** (mêmes lois, enveloppe de vitesse de Copytrack : 290 km/h, turbo 340), ajouts de Copytrack gardés
+(revêtements, véhicules, mini-turbo), nouvelle physique par défaut. Détail des changements : [CHANGELOG](../CHANGELOG.md), section 0.9.65.
+
+| Loi | PolyTrack (mesuré) | Copytrack 0.9.65 |
+|---|---|---|
+| Poussée | a = a0 − (a0 / v_max)·v, aussi à vide | a0 = 16 m/s², v_max = 290 km/h : 100 km/h en 2,1 s |
+| Frein | ≈ 3,5 × la poussée | 52 + 0,5·v m/s² |
+| Braquage permis | min(23,51° ; 22,93 · v^−1,566) | même loi, × adhérence d'ambiance (pluie −15 %, Arcade +10 %, Simulation −10 %) |
+| Glisse | frein + volant, contre-braquage automatique | même, mini-turbo à 0,45 / 0,85 s de charge |
+| Air | aucun contrôle, aérofrein ≈ 1 /s | même (deltaplane excepté) |
+| Murs | inélastiques, μ ≈ 0,7 | même |
+
+Écarts assumés : la route guide le cap sur les pièces 3D roulées et les loopings (sinon infranchissables au braquage permis) ; la pluie, le givre et
+les modèles v2 jouent sur l'angle permis (sinon sans effet : l'adhérence n'est jamais la limite) ; gravité (19 m/s²) et traînée en l'air de Copytrack.
+Vérifications : banc `tools/mesures-physique.mjs`, `tools/test-maniabilite.mjs` (rayon = empattement / angle permis à 15 % près), `tools/test-vitesse-et-murs.mjs`
+(loi de poussée à 0,1 m/s² près), `tools/test-physique-corrections.mjs` ; 72 circuits recalés (temps du pilote +9,1 % en moyenne).
+
 ## Sources publiques
 
 * Devlog et notes de version : https://kodub.itch.io/polytrack/devlog

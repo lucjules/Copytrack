@@ -2,6 +2,8 @@
 // Ce ne sont pas des tests « ça tourne » : ils mesurent si la voiture est agréable à conduire.
 //  1. le véhicule seul : rayon de braquage, adhérence latérale, rapidité de la réponse, retour droit après un coup de volant, distance pour changer de voie ;
 //  2. un pilote humain imparfait (réaction, volant qui tremble, braquage moins sec) sur les 66 circuits : contacts avec les bordures par minute et taux d'arrivée.
+// PHYS_VER 36 : la partie 1 suit la loi de braquage de PolyTrack (bornée selon la vitesse) ; la partie 2 garde ses seuils (le pilote de référence prend les virages
+// à 85 % de la vitesse où l'angle suffit, et le « braquage moins sec » est une courbe qui permet encore le braquage complet : maniabilite.mjs).
 // Les seuils sont ceux de la 0.9.11 avec une marge ; la 0.9.10 donnait 1,1 contact par minute (26 circuits sur 66 avec au moins un contact) pour 178 arrivées sur 198.
 import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
@@ -19,21 +21,28 @@ test('la route est large : 24 m (cases de 32 m), la voiture en fait 5 : on ne se
   assert.equal(CELL, 32);
   assert.ok(ROAD_HALF >= 12);
 });
-test('virage à fond : plus de 5 g latéraux (g = 9,81 m/s²) à toute vitesse, sans dépasser 8 g (assez d\'adhérence pour tourner, pas un rail)', () => {
+// PHYS_VER 36 (caractère PolyTrack, docs/ANALYSE-POLYTRACK.md) : c'est l'ANGLE DE BRAQUAGE PERMIS, min(23,5° ; 22,93 · v^−1,566), qui borne le virage, pas
+// l'adhérence. La voiture suit presque la géométrie (rayon ≈ empattement / angle) et l'accélération latérale permise CROÎT avec la vitesse (PolyTrack : 35 m/s²
+// à 100 km/h, 67 à 480). Avant : rayon ≤ 9 m à 72 km/h et 5 à 8 g partout (adhérence), réponse ≤ 0,15 s.
+const geo = (v) => (CAR.a + CAR.b) / Math.min(CAR.steerMax, CAR.steerC * Math.pow(v, -CAR.steerN));
+test('virage à fond : c\'est l\'angle permis qui limite (loi PolyTrack) ; 2,5 à 6 g latéraux, de plus en plus avec la vitesse', () => {
+  let prev = 0;
   for (const [kmh, v] of Object.entries(V)) {
     const r = virageStabilise(v);
-    assert.ok(r.g >= 5.0 && r.g <= 8.0, `${kmh} km/h : ${r.g} g`);
+    assert.ok(r.g >= 2.5 && r.g <= 6.0, `${kmh} km/h : ${r.g} g`);
+    assert.ok(r.g > prev, `${kmh} km/h : ${r.g} g, pas plus qu'à la vitesse précédente (${prev} g)`);
+    prev = r.g;
   }
 });
-test('rayon de braquage : ≤ 9 m à 72 km/h, ≤ 30 m à 144 km/h (moins qu\'une case), ≤ 65 m à 216 km/h', () => {
-  assert.ok(virageStabilise(V[72]).rayon <= 9, 'rayon à 72 : ' + virageStabilise(V[72]).rayon);
-  const r144 = virageStabilise(V[144]).rayon;
-  assert.ok(r144 <= 30 && r144 < CELL, 'rayon à 144 : ' + r144);
-  assert.ok(virageStabilise(V[216]).rayon <= 65, 'rayon à 216 : ' + virageStabilise(V[216]).rayon);
+test('rayon de braquage : celui de la géométrie (empattement / angle permis), à 15 % près (les pneus dérivent un peu) : ≈ 13 m à 72 km/h, 40 à 144, 75 à 216, 115 à 288', () => {
+  for (const [kmh, v] of Object.entries(V)) {
+    const r = virageStabilise(v).rayon, g = geo(v);
+    assert.ok(r >= g * 0.98 && r <= g * 1.15, `${kmh} km/h : rayon ${r} m pour ${g.toFixed(1)} m de géométrie`);
+  }
+  assert.ok(virageStabilise(V[144]).rayon < 1.5 * CELL, 'à 144 km/h, un virage d\'une case et demie de rayon se prend volant à fond');
 });
-test('réponse au volant : 90 % de la rotation en moins de 0,3 s à 72 km/h et moins de 0,15 s au-dessus', () => {
-  assert.ok(virageStabilise(V[72]).retard90 <= 0.3, 'à 72 : ' + virageStabilise(V[72]).retard90);
-  for (const k of [144, 216, 288]) assert.ok(virageStabilise(V[k]).retard90 <= 0.15, `à ${k} : ${virageStabilise(V[k]).retard90}`);
+test('réponse au volant : 90 % de la rotation en 0,2 s au plus à toute vitesse (PolyTrack : plein braquage en 0,1 s)', () => {
+  for (const k of [72, 144, 216, 288]) assert.ok(virageStabilise(V[k]).retard90 <= 0.2, `à ${k} : ${virageStabilise(V[k]).retard90}`);
 });
 test('sous-vireuse, donc stable : un coup de volant à fond lâché ramène droit en une demi-seconde, sans tête-à-queue, avec un dérapage ≤ 20 %', () => {
   assert.ok(CAR.frontShare < 0.5, 'frontShare ' + CAR.frontShare);
@@ -43,13 +52,14 @@ test('sous-vireuse, donc stable : un coup de volant à fond lâché ramène droi
     assert.ok(r.derapage <= 0.2, `${kmh} km/h : dérapage ${(r.derapage * 100).toFixed(1)} %`);
   }
 });
-test('changer de voie (une demi-route) : ≤ 1,2 case à 72 km/h, ≤ 2 à 144, ≤ 3,2 à 216, ≤ 5 à 288, toujours en moins de 2 s', () => {
-  const max = { 72: 1.2, 144: 2, 216: 3.2, 288: 5 };
+// PHYS_VER 36 : à grande vitesse l'angle permis est petit (2,7° à 200 km/h) : changer de voie prend de la place, comme dans PolyTrack (avant : ≤ 1,2 / 2 / 3,2 / 5 cases, < 2 s).
+test('changer de voie (une demi-route) : ≤ 1,2 case à 72 km/h, ≤ 3 à 144, ≤ 6 à 216, ≤ 9 à 288, toujours en moins de 3,5 s', () => {
+  const max = { 72: 1.2, 144: 3, 216: 6, 288: 9 };
   for (const [kmh, v] of Object.entries(V)) {
     const r = changementDeVoie(v);
     assert.ok(r.distance, `${kmh} km/h : aucun changement de voie trouvé`);
     assert.ok(r.cases <= max[kmh], `${kmh} km/h : ${r.cases} cases`);
-    assert.ok(r.temps <= 2, `${kmh} km/h : ${r.temps} s`);
+    assert.ok(r.temps <= 3.5, `${kmh} km/h : ${r.temps} s`);
   }
 });
 

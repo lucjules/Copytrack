@@ -19,12 +19,12 @@ var SURF_PHYS = {
   belt: 200 / 3.6,
   spring: 56,
   bounce: 14,
-  // 0.9.46 : moteur propre à Copytrack, avec une VRAIE vitesse de pointe (le réglage de la 0.9.45, linéaire, n'en avait pas : 450 km/h en 10 s).
-  // Sous les gaz : a = engineAccel × (1 − (v / maxSpeed)^1,5) (CAR.accelCurve) : forte au départ, elle s'essouffle près du plafond, qu'on
-  // n'atteint qu'avec de bonnes sorties de virage et de longues lignes droites. Au-delà du plafond la poussée devient un freinage.
+  // PHYS_VER 36 (caractère PolyTrack, docs/ANALYSE-POLYTRACK.md) : poussée CONSTANTE et traînée LINÉAIRE, la loi mesurée sur PolyTrack
+  // (a = 20,19 − 0,107·v là-bas). Sous les gaz : a = engineAccel − (engineAccel / maxSpeed)·v, donc v(t) = maxSpeed·(1 − e^(−t/τ)), τ = maxSpeed / engineAccel
+  // (≈ 5 s) ; gaz levés, la traînée seule ralentit la voiture (au plafond : autant que la poussée). Les VITESSES restent celles de Copytrack
+  // (plafond 290 km/h) : les circuits sont dessinés pour elles.
   gravity: 19,
-  engineAccel: 14,
-  coastDrag: 0.05,
+  engineAccel: 16,
   boostAccel: 10,
   boostTime: 1.2,
   maxSpeed: 290 / 3.6,
@@ -1322,6 +1322,10 @@ function isRibbonKind(type) {
 function isSideTile(tile) {
   const p = PIECES[tile.t];
   return !!(tile.o || p.roll);
+}
+function headingGuided(tile) {
+  const p = PIECES[tile.t];
+  return !!(tile.o || p.roll || p.rollable);
 }
 var isOriented = (tile) => !!tile.o && (PIECES[tile.t].kind === "line" || PIECES[tile.t].kind === "arc" || !!PIECES[tile.t].rollable);
 var rollFitHook = {
@@ -5544,30 +5548,33 @@ var clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 // js/physics/specs.js
 var CAR = {
   accel: SURF_PHYS.engineAccel,
-  accelCurve: 1.5,
   maxSpeed: SURF_PHYS.maxSpeed,
   boostSpeed: SURF_PHYS.boostSpeed,
   boostAccel: SURF_PHYS.boostAccel,
   boostTime: SURF_PHYS.boostTime,
   brake: 52,
-  reverseAccel: 15,
+  brakeV: 0.5,
+  reverseAccel: 8,
   reverseMax: 15,
   roll: 0,
   drag: 0,
-  coast: 0.8,
-  coastDrag: SURF_PHYS.coastDrag,
   // Châssis (modèle bicyclette)
   a: 1.35,
   b: 1.4,
   yawK: 1.9,
-  corner: 230,
+  corner: 500,
+  // de son braquage (PolyTrack : dérive du châssis de 1° à 200 km/h, rayon = empattement / angle)
   latGrip: 80,
   frontShare: 0.42,
-  steerMax: 0.65,
-  steerAlat: 52,
+  // Braquage maxi des roues (PHYS_VER 36, loi MESURÉE sur PolyTrack) : min(steerMax, steerC · v^−steerN), v en m/s. 23,5° jusqu'à 47 km/h, 7,0° à
+  // 100 km/h, 2,7° à 200, 1,4° à 290 : c’est l’angle permis qui limite le virage, pas l’adhérence (accélération latérale ≈ 35 m/s² à 100 km/h, 56 à 290).
+  steerMax: 0.41,
+  steerC: 22.93,
+  steerN: 1.566,
   driftGrip: 0.5,
   driftRear: 0.6,
-  driftSteer: 1.4,
+  autoCounter: 1,
+  // de l'essieu avant ; le volant ajoute son angle permis par-dessus (remplace driftSteer, le braquage en plus qu'il fallait doser)
   driftMin: 12,
   driftBrake: 0.9,
   brakeCorner: 0.65,
@@ -5575,13 +5582,13 @@ var CAR = {
   driftAssist: 30,
   driftAssistMax: 14,
   driftBuild: 8,
-  driftHold: 0.5,
-  driftHoldGas: 0.12,
+  driftHold: 1,
+  driftHoldGas: 0.55,
   driftOut: 2.2,
   driftCounter: 3,
   yawDamp: 0.6,
-  steerIn: 8,
-  steerOut: 13,
+  steerIn: 10,
+  steerOut: 10,
   gravity: SURF_PHYS.gravity,
   snap: 0.7,
   step: 1.6,
@@ -5590,18 +5597,17 @@ var CAR = {
   launch: 0.6,
   airPitchAcc: 4.2,
   airPitchDamp: 2.6,
-  airPitchUpK: 1.6,
   airSpring: 18,
-  airTrim: 0.25,
+  // PHYS_VER 36 (PolyTrack) : en l'air, NI les gaz NI le volant ne pilotent la voiture (avant : assiette ± 14° aux gaz / au frein, lacet au volant).
+  // Seul le FREIN agit : l'aérofrein amortit la rotation (PolyTrack : tangage 28 → 6 °/s en 1,6 s). Sans lui, la rotation acquise est gardée.
+  airBrake: 1,
   airLevelH: 14,
   airLevelW: 0.35,
   airAero: 0.15,
-  airSteer: 1.4,
-  airSteerMax: 0.45,
   landOk: 0.38,
   // Mini-turbo (phase 2) : une glisse CONTRÔLÉE se charge ; la récompense dépend de sa durée (et un peu de son angle, plafonné). Avant : +6 / +16 km/h pour 100 km/h perdus.
-  mtTime1: 0.6,
-  mtTime2: 1.4,
+  mtTime1: 0.45,
+  mtTime2: 0.85,
   mtAngleMin: 0.06,
   mtAngleMax: 0.8,
   mtAngleRef: 0.17,
@@ -5633,21 +5639,21 @@ var CAR = {
   //   frôlement  (ap < 4 m/s)   : rebond sur la composante normale + frottement de Coulomb sur la tangente ; ni rotation ni encaissement ; l'élan est conservé
   //   modéré     (4 à 12 m/s)   : en plus une rotation et un encaissement croissants (la voiture se récupère)
   //   violent    (> 12 m/s)     : en plus une perte de vitesse globale croissante, plafonnée
-  wallE: 0.35,
+  wallE: 0,
   wallRest: 2,
-  wallMu: 0.2,
+  wallMu: 0.7,
   wallScrape: 0.12,
   wallYaw: 0.25,
   wallYawMax: 1.2,
   wallHardFrom: 12,
   wallHardK: 0.016,
-  wallHardMax: 0.4,
+  wallHardMax: 0,
   wallSpinFrom: 6,
   wallSpin: 0.1,
-  wallSpinMax: 2.5,
+  wallSpinMax: 0,
   wallStunFrom: 4,
   wallStun: 0.035,
-  wallStunMax: 0.6,
+  wallStunMax: 0,
   stuckAfter: 0.35,
   stuckPivot: 1.2,
   wallFresh: 0.12,
@@ -5670,17 +5676,17 @@ var MOTO = {
   accel: SURF_PHYS.engineAccel * (10 / 11),
   maxSpeed: SURF_PHYS.maxSpeed * (90 / 95),
   brake: 44,
+  brakeV: 0.42,
   a: 1.15,
   b: 1.2,
   yawK: 1.25,
   latGrip: 78,
   frontShare: 0.45,
-  steerMax: 0.75,
-  steerAlat: 66,
+  steerMax: 0.47,
+  steerC: 29.1,
   driftRear: 0.76,
-  driftSteer: 1.15,
-  steerIn: 9,
-  steerOut: 14,
+  steerIn: 11,
+  steerOut: 11,
   airPitchAcc: 5.2
 };
 var BOAT = {
@@ -5688,10 +5694,11 @@ var BOAT = {
   accel: SURF_PHYS.engineAccel * (8 / 11),
   maxSpeed: SURF_PHYS.maxSpeed * (85 / 95),
   brake: 32,
+  brakeV: 0.3,
   latGrip: 58,
   frontShare: 0.41,
-  steerMax: 0.55,
-  steerAlat: 48,
+  steerMax: 0.35,
+  steerC: 21.2,
   yawK: 2.1,
   yawDamp: 0.9,
   driftRear: 0.7
@@ -5708,6 +5715,11 @@ var SPECS = {
   boat: BOAT,
   glider: GLIDER
 };
+function steerLimitSpeed(K3, r, g = 1) {
+  const need = (K3.a + K3.b) / Math.max(1, r);
+  if (need >= K3.steerMax) return 1;
+  return dpow(K3.steerC * g / need, 1 / K3.steerN);
+}
 var GLIDE = {
   lift: 0.021,
   liftMaxG: 1.6,
@@ -5746,12 +5758,15 @@ function surfaceCoeffs(mod, f, out = COEF) {
       out.grip = 1.6;
       break;
     // Dérive : l'arrière n'accroche presque plus (l'avant, si) : au moindre coup de volant la voiture part en glisse.
+    // PHYS_VER 36 : 0,95 − 0,42·f -> 0,85 − 0,5·f (borné 0,12-0,75) : le braquage borné selon la vitesse ne demande plus assez à l'arrière pour le faire décrocher ;
+    // à 100 % l'arrière tient 35 % de son adhérence et la voiture repart en glisse au volant, comme avant.
     case "drift":
-      out.rearK = clamp(0.95 - 0.42 * f, 0.2, 0.85);
+      out.rearK = clamp(0.85 - 0.5 * f, 0.12, 0.75);
       break;
     case "slow":
-      out.extraDrag = 14 * f;
+      out.extraDrag = SURF_PHYS.engineAccel * f;
       break;
+    // résistance = poussée du moteur à 100 % (PHYS_VER 36 : 14 -> 16, la poussée)
     // Poudreuse : on s'enfonce un peu, l'adhérence est molle et le moteur patine.
     case "powder":
       out.grip = clamp(0.62 / Math.sqrt(f), 0.3, 0.9);
@@ -5776,15 +5791,18 @@ var MUL = {
     yawDamp: 1.45,
     steerOut: 1.3,
     brake: 1.08,
+    brakeV: 1.08,
     airPitchAcc: 1.2,
-    corner: 1.1
+    corner: 1.1,
+    steerC: 1.1
   },
   sim: {
     latGrip: 0.93,
     yawDamp: 0.75,
     corner: 0.82,
     brake: 0.9,
-    steerAlat: 0.9
+    brakeV: 0.9,
+    steerC: 0.9
   }
 };
 var REAR = {
@@ -7177,10 +7195,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 [tr01l] S4< [tr10l] S B S [crs1] S [cds1] HR S3 B C S HL S3 B2 finish",
     medals: {
-      cristal: 21.6,
-      or: 22.8,
-      argent: 26.2,
-      bronze: 30.7
+      cristal: 22.1,
+      or: 23.3,
+      argent: 26.8,
+      bronze: 31.5
     }
   },
   {
@@ -7207,10 +7225,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start [cdi1] [dn2] [dn2] [cdo2] B S [crv1] UU GR2 DD [cdo1] B2 S [crv1] UU GR2 DD [cdo1] S B C S3 HL S2 B2 finish",
     medals: {
-      cristal: 20.5,
-      or: 21.6,
-      argent: 24.8,
-      bronze: 29.1
+      cristal: 20.9,
+      or: 22,
+      argent: 25.3,
+      bronze: 29.7
     }
   },
   {
@@ -7234,10 +7252,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start I2 B3 I2 S [crs1] S2 [cds1] B HR S3 B C S2 HL S2 B [cdi1] [dn2] [cdo1] S B2 finish",
     medals: {
-      cristal: 20.7,
-      or: 21.8,
-      argent: 25.1,
-      bronze: 29.4
+      cristal: 21.6,
+      or: 22.8,
+      argent: 26.2,
+      bronze: 30.7
     }
   },
   {
@@ -7262,10 +7280,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 UU GR2 DD [cdo1] B2 S [crs1] S2 [cds1] B S2_ B_ S2_ BR S2 B BL S2 B C S3 HL S B2 finish",
     medals: {
-      cristal: 23.1,
-      or: 24.3,
-      argent: 27.9,
-      bronze: 32.8
+      cristal: 26.3,
+      or: 27.7,
+      argent: 31.9,
+      bronze: 37.4
     }
   },
   {
@@ -7288,10 +7306,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S3.t201 S BRR S2 B BLL S2 C B [tr02l] S4> [tr20l] BRR S2 B BLL S2 B2 finish",
     medals: {
-      cristal: 19.6,
-      or: 20.6,
-      argent: 23.7,
-      bronze: 27.8
+      cristal: 22.9,
+      or: 24.1,
+      argent: 27.7,
+      bronze: 32.5
     }
   },
   {
@@ -7305,7 +7323,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : deux boosters \u2192 colline douce. Au programme : vague en S, S relev\xE9 2\xD72, un tr\xE8s grand virage plat.",
     goal: {
       id: "under",
-      t: 22
+      t: 26
     },
     opts: {
       l: 6
@@ -7315,10 +7333,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 GU3 GD3 B S [crs1] S2 [cds1] B BR S BL S B C S2 HL S2 B [cdi1] [dn2] [cdo1] S B2 finish",
     medals: {
-      cristal: 20.7,
-      or: 21.8,
-      argent: 25,
-      bronze: 29.4
+      cristal: 23.7,
+      or: 25,
+      argent: 28.7,
+      bronze: 33.7
     }
   },
   {
@@ -7342,10 +7360,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B BRR B3 S2 [tr02l] S6> [tr20l] C S BRR S [cdi1] [dn2] [cdo1] S C B S BRR S3 B BLL S BRR S2 B2 finish",
     medals: {
-      cristal: 26.7,
-      or: 28.1,
-      argent: 32.3,
-      bronze: 37.9
+      cristal: 30.3,
+      or: 31.9,
+      argent: 36.7,
+      bronze: 43
     }
   },
   {
@@ -7369,10 +7387,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B TI TM TO B S.g40 [crs1] UU GR2 G5 V-5 S10 S.g100 B C S HR S B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 22.7,
-      or: 23.9,
-      argent: 27.5,
-      bronze: 32.3
+      cristal: 23.3,
+      or: 24.6,
+      argent: 28.3,
+      bronze: 33.2
     }
   },
   {
@@ -7388,7 +7406,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : chute libre imm\xE9diate depuis 66 m (la voiture quitte la plateforme de d\xE9part, \xE0 l\u2019arr\xEAt). Au programme : rampes progressives et \xE0 38\xB0, r\xE9ceptions sur longues pentes, checkpoint a\xE9rien, saut sur un mur.",
     goal: {
       id: "perfect",
-      n: 2
+      n: 1
     },
     opts: {
       l: 16
@@ -7398,10 +7416,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start V-5 [dn4] [cdo2] S C B2 S [crv1] UU G2 DD [cdo1] S3 CBR1 S [tr01s] S2< [tr10s] S LL S C B2 S2 [crv2] UX G2 DX DX [cdo2] S3 C B2 S UU GR2 DD [cdo1] S2 finish",
     medals: {
-      cristal: 35.8,
-      or: 37.7,
-      argent: 43.3,
-      bronze: 50.9
+      cristal: 37.5,
+      or: 39.4,
+      argent: 45.4,
+      bronze: 53.2
     }
   },
   {
@@ -7424,10 +7442,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 O OL S2 B3 [tr01s] S4< [tr10s] S BR S2 B [tr02s] S4> [tr20s] S C B OB S2 B [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 29.1,
-      or: 30.7,
-      argent: 35.3,
-      bronze: 41.4
+      cristal: 31.1,
+      or: 32.7,
+      argent: 37.6,
+      bronze: 44.2
     }
   },
   {
@@ -7442,7 +7460,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : en tube propuls\xE9, qui d\xE9bouche sur un virage relev\xE9 3\xD73. Au programme : S relev\xE9s, wall-ride de 5 cases sur le mur gauche, tube \xE0 pleine vitesse, 79 % du temps au-dessus de 220 km/h.",
     goal: {
       id: "under",
-      t: 35.5
+      t: 39.5
     },
     opts: {
       l: 5
@@ -7452,10 +7470,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start TI TM3.b TO BRR S B BLL S [crs1] S2 [cds1] S [tr01l] S5< [tr10l] C B BRR S [crs1] S [cds1] B BLL S2 TB BRR S B BLL S2 B2 finish",
     medals: {
-      cristal: 33,
-      or: 34.8,
-      argent: 40,
-      bronze: 46.9
+      cristal: 36.5,
+      or: 38.4,
+      argent: 44.1,
+      bronze: 51.8
     }
   },
   {
@@ -7470,17 +7488,17 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : deux boosters \u2192 rebond g\xE9ant (palier 2 niveaux plus haut). Au programme : quatre champignons en escalier en zigzag (+8 niveaux), plongeon final ; la port\xE9e d\u2019un rebond est proportionnelle \xE0 la vitesse, le circuit est tr\xE8s tol\xE9rant.",
     goal: {
       id: "perfect",
-      n: 4
+      n: 3
     },
     opts: {
       l: 2
     },
     script: "start B2 S.j200 G1 V2 S3 RR C B2 S.j200 G1 V2 S3 LL C B2 S.j200 G1 V2 S3 RR C B2 S.j200 G1 V2 S3 LL S B [cdi2] DX [cdo2] B [crs1] S [cds1] B2 finish",
     medals: {
-      cristal: 32.2,
-      or: 33.9,
-      argent: 39,
-      bronze: 45.8
+      cristal: 35.3,
+      or: 37.1,
+      argent: 42.7,
+      bronze: 50.1
     }
   },
   {
@@ -7505,10 +7523,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S.n S2.a R.a L.a R.a L.a S.a S.n B2 S [tr01s] S2< [tr10s] S3 R R B S2 L S L B S3 [cvd05] [cvdL05] B S C S.n S2.a R.a L.a R.a L.a S2.a finish",
     medals: {
-      cristal: 34,
-      or: 35.8,
-      argent: 41.1,
-      bronze: 48.3
+      cristal: 41.2,
+      or: 43.4,
+      argent: 49.9,
+      bronze: 58.6
     }
   },
   {
@@ -7530,10 +7548,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 S.e UU GR4 DD S5 S.e S C B2 S [crv1] UU GR1 DD [cdo1] S2 CBR2 CBR2 CBR2 CBR2 S C B [cdi2] DX [cdo2] B S2 [crv1] UU GR1 DD [cdo1] S2 B finish",
     medals: {
-      cristal: 37.4,
-      or: 39.4,
-      argent: 45.3,
-      bronze: 53.2
+      cristal: 39.7,
+      or: 41.8,
+      argent: 48.1,
+      bronze: 56.4
     }
   },
   {
@@ -7555,10 +7573,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start Y2.o B S [cvd05] [cvdL05] [cvd05] [cvdL05] B S S.o S [tr01s] S2< [tr10s] S R L R L B S2 C S.o S R L R L B S2 B finish",
     medals: {
-      cristal: 29,
-      or: 30.6,
-      argent: 35.1,
-      bronze: 41.3
+      cristal: 32.3,
+      or: 34.1,
+      argent: 39.2,
+      bronze: 46
     }
   },
   {
@@ -7581,10 +7599,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B BR S BL S BRR S B [tr02l] S4> [tr20l] BLL S2 C B [cdi1] [dn2] [cdo1] BRR S BLL B2 finish",
     medals: {
-      cristal: 22,
-      or: 23.2,
-      argent: 26.6,
-      bronze: 31.3
+      cristal: 26.6,
+      or: 28,
+      argent: 32.2,
+      bronze: 37.9
     }
   },
   {
@@ -7605,10 +7623,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S.o B R L R L B S2 C B S R S L B S2 [tr01s] S2< [tr10s] S R B S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 25.1,
-      or: 26.4,
-      argent: 30.4,
-      bronze: 35.6
+      cristal: 26.5,
+      or: 27.9,
+      argent: 32.1,
+      bronze: 37.7
     }
   },
   {
@@ -7622,7 +7640,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : sans bordures (six cases). Au programme : vague douce, tunnel de quatre cases, un seul tr\xE8s grand virage plat.",
     goal: {
       id: "under",
-      t: 20
+      t: 21.5
     },
     opts: {
       l: 4
@@ -7632,10 +7650,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2_ S3_ B_ S [crs1] S2 [cds1] B S B2# S2# C B S3 HR S2 B [cdi1] [dn2] [cdo1] S B2 finish",
     medals: {
-      cristal: 18.7,
-      or: 19.7,
-      argent: 22.7,
-      bronze: 26.6
+      cristal: 19.3,
+      or: 20.3,
+      argent: 23.4,
+      bronze: 27.4
     }
   },
   {
@@ -7659,10 +7677,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 OB S B CBR4 CBR4 CBR4 CBR4 S C [cdi2] DX DX DX [cdo2] B S [tr01s] S2< [tr10s] S [tr02s] S3> [tr20s] S2 B2 finish",
     medals: {
-      cristal: 36.6,
-      or: 38.5,
-      argent: 44.3,
-      bronze: 52
+      cristal: 38.5,
+      or: 40.5,
+      argent: 46.6,
+      bronze: 54.7
     }
   },
   {
@@ -7684,10 +7702,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start [cvd05] [cvd05] B S3 L I B S R L S B S2 R S R B S2 [tr01s] S2< [tr10s] S3 L S L B I S3 KR S R S2 B finish",
     medals: {
-      cristal: 32.9,
-      or: 34.6,
-      argent: 39.8,
-      bronze: 46.7
+      cristal: 39.5,
+      or: 41.6,
+      argent: 47.8,
+      bronze: 56.1
     }
   },
   {
@@ -7702,7 +7720,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : verglas, deux boosters, rebond vers une terrasse plus basse. Au programme : quatre rebonds de plus en plus puissants et longs : la Banquise descend de terrasse en terrasse (Spores monte).",
     goal: {
       id: "under",
-      t: 29
+      t: 30
     },
     opts: {
       l: 28
@@ -7710,12 +7728,12 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start I B2 S.j100 G1 V-2 S3.i C B2 S.j150 G2 V-2 S3.i C B2 S.j200 G2 V-2 S3.i C B2 S.j200 G2 V-2 S2.i [tr01s] S3< [tr10s] S2 [cdi2] DX [cdo2] S2 B finish",
+    script: "start I B2 S.j100 G1 V-2 S3.i C B2 S.j150 G2 V-2 S3.i C B2 S.j200 G2 V-2 S3.i C B2 S.j200 G2 V-2 S3.i [tr01s] S3< [tr10s] S2 [cdi2] DX [cdo2] S2 B finish",
     medals: {
-      cristal: 27.5,
-      or: 29,
-      argent: 33.3,
-      bronze: 39.1
+      cristal: 28.5,
+      or: 30,
+      argent: 34.5,
+      bronze: 40.5
     }
   },
   {
@@ -7736,10 +7754,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start^ B3^ [tr31s] S< [tr10s] [tr02s] S> [tr23s] S^ [tr31s] S< [tr10s] S C B [cdi2] DX [cdo2] S BLL S S.d S.w100 S C B3 OD S2 B finish",
     medals: {
-      cristal: 27.4,
-      or: 28.9,
-      argent: 33.2,
-      bronze: 39
+      cristal: 28.7,
+      or: 30.2,
+      argent: 34.7,
+      bronze: 40.8
     }
   },
   {
@@ -7760,10 +7778,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start [cdi2] DX [cdo2] S2 I S2 R B S2 L B S I S2 R S L C B S [tr01s] S2< [tr10s] S2 R B S.m [crs1].m S [cds1].m L B S I S2 R S2 L B S2 finish",
     medals: {
-      cristal: 36.1,
-      or: 38,
-      argent: 43.7,
-      bronze: 51.3
+      cristal: 41.9,
+      or: 44.1,
+      argent: 50.7,
+      bronze: 59.6
     }
   },
   {
@@ -7783,10 +7801,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B CVR2 CVR2 S B R_ L_ R_ L_ S B C B S2 R S R B S [tr01s] S2< [tr10s] S B L S R# L# R# L# S2# B [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 30.7,
-      or: 32.3,
-      argent: 37.1,
-      bronze: 43.6
+      cristal: 36.6,
+      or: 38.5,
+      argent: 44.3,
+      bronze: 52
     }
   },
   {
@@ -7806,10 +7824,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2.d B S2 R S L S B R.d L.d S2 C B S [tr01s] S2< [tr10s] S2 R S2.d L B S2 R.d S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 30,
-      or: 31.6,
-      argent: 36.3,
-      bronze: 42.6
+      cristal: 35,
+      or: 36.9,
+      argent: 42.4,
+      bronze: 49.7
     }
   },
   {
@@ -7830,10 +7848,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S# R# R# B# S2# B S3 TI TM2 TO S R R B S2 [cdi1] [dn2] [cdo1] S C S [cvd05] [cvd05] [cvd05] [cvd05] S2 B S R# L# R# L# S2# B finish",
     medals: {
-      cristal: 30.5,
-      or: 32.1,
-      argent: 36.9,
-      bronze: 43.4
+      cristal: 35.9,
+      or: 37.7,
+      argent: 43.4,
+      bronze: 51
     }
   },
   {
@@ -7857,10 +7875,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 O S2 B2 [crv2] UX G2 DX DX [cdo2] S3 C B2 [crv1] UU G2 DD [cdo1] S [tr01s] S2< [tr10s] S C B2 [crv2] UX G2 DX DX [cdo2] S5 finish",
     medals: {
-      cristal: 32.7,
-      or: 34.5,
-      argent: 39.6,
-      bronze: 46.5
+      cristal: 33.7,
+      or: 35.5,
+      argent: 40.8,
+      bronze: 47.9
     }
   },
   {
@@ -7883,10 +7901,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S CKL S B3 OBDL S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B TI TM2 TO S B [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 26.6,
-      or: 28,
-      argent: 32.2,
-      bronze: 37.8
+      cristal: 27.2,
+      or: 28.7,
+      argent: 33,
+      bronze: 38.7
     }
   },
   {
@@ -7909,10 +7927,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2 CK S B2 CBR4 CBR4 CBR4 CBR4 S S C [cvdBigL2] [cvdBigL2] [cvdBigL2] [cvdBigL2] S B OD S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 finish",
     medals: {
-      cristal: 44.8,
-      or: 47.2,
-      argent: 54.3,
-      bronze: 63.7
+      cristal: 47,
+      or: 49.5,
+      argent: 56.9,
+      bronze: 66.8
     }
   },
   {
@@ -7961,10 +7979,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B4 OBT S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B OBDL S C B2 [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 31.9,
-      or: 33.6,
-      argent: 38.6,
-      bronze: 45.3
+      cristal: 32.6,
+      or: 34.3,
+      argent: 39.5,
+      bronze: 46.3
     }
   },
   {
@@ -7985,10 +8003,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 QU WA3 CR S [cdi2] DX [cdo2] B BRR S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 OB S C S [tr01s] S2< [tr13s] S2^ [tr31s] S2< [tr10s] S B2 finish",
     medals: {
-      cristal: 33.6,
-      or: 35.4,
-      argent: 40.7,
-      bronze: 47.7
+      cristal: 35,
+      or: 36.8,
+      argent: 42.4,
+      bronze: 49.7
     }
   },
   {
@@ -8012,10 +8030,10 @@ var BUILTIN_TRACKS = [
     laps: 3,
     script: "start B2 TB S2 BRR B S2 C S2 B BRR S [tr01l] S2< [tr10l] S BRR S B S2 B S2 BRR finish",
     medals: {
-      cristal: 61.8,
-      or: 65,
-      argent: 74.8,
-      bronze: 87.8
+      cristal: 72.6,
+      or: 76.4,
+      argent: 87.9,
+      bronze: 103.2
     }
   },
   {
@@ -8037,10 +8055,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S.g50 G2 V-6 [dn4] [cdo2] S C B2 S [crv1] UU G3 DD [cdo1] [crs1] S2 [cds1] C B2 S [crv1] UU G3 DD [cdo1] [crs1] S2 [cds1] C B2 S [crv1] UU G3 DD [cdo1] S5 finish",
     medals: {
-      cristal: 35.9,
-      or: 37.7,
-      argent: 43.4,
-      bronze: 51
+      cristal: 37,
+      or: 38.9,
+      argent: 44.8,
+      bronze: 52.5
     }
   },
   {
@@ -8063,10 +8081,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start BRR B3 S BLL S2 B BRR C S [tr02l] S4> [tr20l] BLL B S2 BRR B S BLL B2 finish",
     medals: {
-      cristal: 24.1,
-      or: 25.4,
-      argent: 29.2,
-      bronze: 34.3
+      cristal: 28.2,
+      or: 29.7,
+      argent: 34.1,
+      bronze: 40.1
     }
   },
   {
@@ -8090,10 +8108,10 @@ var BUILTIN_TRACKS = [
     laps: 2,
     script: "start B2 GU4 S BRR B S [tr02l] S4> [tr20l] BRR B S2 C GD4 S BRR S B S2 B S2 B S2 BRR finish",
     medals: {
-      cristal: 49,
-      or: 51.6,
-      argent: 59.3,
-      bronze: 69.6
+      cristal: 55.2,
+      or: 58.1,
+      argent: 66.8,
+      bronze: 78.4
     }
   },
   {
@@ -8113,10 +8131,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start S2.p B S2 R S.w150 L S B S2.p R S L B C B S3.w120 R S R S B S2 [tr01s] S2< [tr10s] S L B S.p R S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 34.7,
-      or: 36.6,
-      argent: 42.1,
-      bronze: 49.4
+      cristal: 40.7,
+      or: 42.9,
+      argent: 49.3,
+      bronze: 57.9
     }
   },
   {
@@ -8157,7 +8175,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : aucun booster : une pente douce de six cases lance dans un tr\xE8s grand virage relev\xE9. Au programme : cinq virages relev\xE9s, wall-ride de quatre cases, plongeon, 85 % du tour au-dessus de 220 km/h.",
     goal: {
       id: "under",
-      t: 28
+      t: 33
     },
     opts: {
       l: 8
@@ -8167,10 +8185,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start GD6 BRR S B BLL S2 C B [tr02l] S4> [tr20l] BRR S2 [cdi1] [dn2] [cdo1] B BLL S2 B BRR S2 B2 finish",
     medals: {
-      cristal: 26.4,
-      or: 27.8,
-      argent: 31.9,
-      bronze: 37.5
+      cristal: 30.4,
+      or: 32,
+      argent: 36.8,
+      bronze: 43.2
     }
   },
   {
@@ -8223,10 +8241,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 UX G2 DX DX [cdo2] S3 C B2 [crv1] UU GR2 DD [cdo1] S [tr01s] S2< [tr10s] S C B2 [crv2] UX G2 DX DX [cdo2] S3 C B2 [crv1] UU G2 DD [cdo1] S5 finish",
     medals: {
-      cristal: 34.1,
-      or: 35.9,
-      argent: 41.3,
-      bronze: 48.5
+      cristal: 35,
+      or: 36.9,
+      argent: 42.4,
+      bronze: 49.8
     }
   },
   {
@@ -8246,10 +8264,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start P2 B S R B S L S R B S2 C B S L R L R B S2 [tr01s] S2< [tr10s] S3 L B S R B [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 29.5,
-      or: 31,
-      argent: 35.7,
-      bronze: 41.9
+      cristal: 34.4,
+      or: 36.2,
+      argent: 41.6,
+      bronze: 48.8
     }
   },
   // ==== 0.9 : quatre nouveaux thèmes (6 circuits chacun) ============================
@@ -8265,7 +8283,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : deux boosters \u2192 contre-courant (\u2212122 km/h) puis courant favorable (+138 km/h). Au programme : vague, tr\xE8s grand virage plat, tapis de trois cases.",
     goal: {
       id: "under",
-      t: 20.5
+      t: 23
     },
     opts: {
       l: 6
@@ -8275,10 +8293,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 S2.t40 S2.t170 S [crs1] S2 [cds1] B HR S3.t137 B C S2 HL S2 B [cdi1] [dn2] [cdo1] S B2 finish",
     medals: {
-      cristal: 19.4,
-      or: 20.4,
-      argent: 23.5,
-      bronze: 27.6
+      cristal: 20.5,
+      or: 21.6,
+      argent: 24.9,
+      bronze: 29.2
     }
   },
   {
@@ -8298,10 +8316,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2.t137 S2 R S L S R S L B C B S R S2.v S L B S2 [tr01s] S2< [tr10s] S R B S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 29.3,
-      or: 30.9,
-      argent: 35.5,
-      bronze: 41.7
+      cristal: 34.7,
+      or: 36.5,
+      argent: 41.9,
+      bronze: 49.2
     }
   },
   {
@@ -8378,10 +8396,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B [cdi2] DX DX [cdo2] OB S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 S B finish",
     medals: {
-      cristal: 22.3,
-      or: 23.5,
-      argent: 27.1,
-      bronze: 31.8
+      cristal: 23.6,
+      or: 24.8,
+      argent: 28.6,
+      bronze: 33.5
     }
   },
   {
@@ -8404,10 +8422,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 S3.v BRR S B BLL S2 C B [tr02l] S4> [tr20l] BRR S2.t137 BLL B S BRR S B2 finish",
     medals: {
-      cristal: 22,
-      or: 23.2,
-      argent: 26.7,
-      bronze: 31.3
+      cristal: 26,
+      or: 27.3,
+      argent: 31.4,
+      bronze: 36.9
     }
   },
   // ---- Usine mécanique : obstacles, tapis, moteur coupé, ascenseurs ----
@@ -8422,7 +8440,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : trois boosters \u2192 trois cases \xE0 moteur coup\xE9. Au programme : tapis roulant, vague, deux tr\xE8s grands virages plats ; bumper et piques sur les bords.",
     goal: {
       id: "under",
-      t: 21.5
+      t: 23
     },
     opts: {
       l: 6
@@ -8446,10 +8464,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B3 S3.c B S2.t137 S [crs1] S2 [cds1] B HR S2 B C S HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 19.2,
-      or: 20.2,
-      argent: 23.2,
-      bronze: 27.2
+      cristal: 20.6,
+      or: 21.7,
+      argent: 25,
+      bronze: 29.3
     }
   },
   {
@@ -8483,10 +8501,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start Y2.b B S R S L S R S L B C B S R S2.x S L B S2 [tr01s] S2< [tr10s] S R B S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 33.4,
-      or: 35.1,
-      argent: 40.4,
-      bronze: 47.4
+      cristal: 41.3,
+      or: 43.5,
+      argent: 50,
+      bronze: 58.7
     }
   },
   {
@@ -8517,10 +8535,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B2 CBR2 CBR2 CBR2 CBR2 S C B2 OTL S2 B [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 28.5,
-      or: 30,
-      argent: 34.4,
-      bronze: 40.4
+      cristal: 30.4,
+      or: 32.1,
+      argent: 36.9,
+      bronze: 43.3
     }
   },
   {
@@ -8557,10 +8575,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B3 S4# BRR S B BLL S2 C B [tr02l] S4> [tr20l] BRR S2.c BLL B S BRR S B2 finish",
     medals: {
-      cristal: 23.7,
-      or: 24.9,
-      argent: 28.7,
-      bronze: 33.7
+      cristal: 28.4,
+      or: 29.9,
+      argent: 34.4,
+      bronze: 40.4
     }
   },
   {
@@ -8641,10 +8659,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B2 S2.x R L R L B S2 C B S R S L B S2.c S2 [tr01s] S2< [tr10s] S R B S L B S R B [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 29.4,
-      or: 31,
-      argent: 35.6,
-      bronze: 41.8
+      cristal: 35.4,
+      or: 37.3,
+      argent: 42.8,
+      bronze: 50.3
     }
   },
   // ---- Ville dans les nuages : vent, deltaplane, gravité faible, sauts ----
@@ -8659,7 +8677,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : trois boosters \u2192 vent lat\xE9ral. Au programme : vague en S, deux tr\xE8s grands virages plats, descente.",
     goal: {
       id: "under",
-      t: 19.5
+      t: 21.5
     },
     opts: {
       l: 6
@@ -8669,10 +8687,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 S3.w150 S [crs1] S2 [cds1] B HR S2 B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 18.4,
-      or: 19.4,
-      argent: 22.3,
-      bronze: 26.1
+      cristal: 19.3,
+      or: 20.3,
+      argent: 23.4,
+      bronze: 27.4
     }
   },
   {
@@ -8719,10 +8737,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 S2.w180 S R S L S R B S2 C B S.w150 S2 R S L B S2.w120 S R S L B S [tr01s] S2< [tr10s] S3 R B S2 L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 35.6,
-      or: 37.5,
-      argent: 43.1,
-      bronze: 50.6
+      cristal: 41.4,
+      or: 43.6,
+      argent: 50.1,
+      bronze: 58.8
     }
   },
   {
@@ -8745,10 +8763,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 S.g40 OB S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B [cdi2] DX [cdo2] S.g100 B2 finish",
     medals: {
-      cristal: 20.9,
-      or: 22,
-      argent: 25.3,
-      bronze: 29.6
+      cristal: 21.5,
+      or: 22.7,
+      argent: 26.1,
+      bronze: 30.6
     }
   },
   {
@@ -8771,10 +8789,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2_ S2.w150_ BRR_ S_ B_ BLL_ S2_ C B_ [tr02l] S4> [tr20l] BRR_ S2.w100_ B_ BLL_ S_ B2 finish",
     medals: {
-      cristal: 20,
-      or: 21,
-      argent: 24.2,
-      bronze: 28.4
+      cristal: 23,
+      or: 24.2,
+      argent: 27.9,
+      bronze: 32.7
     }
   },
   {
@@ -8816,7 +8834,7 @@ var BUILTIN_TRACKS = [
     appris: "D\xE9part : deux boosters \u2192 volant invers\xE9 (trois cases en ligne droite). Au programme : vague en S, deux tr\xE8s grands virages plats, descente.",
     goal: {
       id: "under",
-      t: 19.5
+      t: 21.5
     },
     opts: {
       l: 6
@@ -8826,10 +8844,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B2 S3.y S2 [crs1] S2 [cds1] B HR S2 B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 18.4,
-      or: 19.4,
-      argent: 22.3,
-      bronze: 26.1
+      cristal: 19.3,
+      or: 20.3,
+      argent: 23.4,
+      bronze: 27.4
     }
   },
   {
@@ -8849,10 +8867,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B TW.f S2^ B^ R^ S^ L^ S2^ R^ S^ L^ C^ B^ S2^ TWB.f S2 B R S L B S2 [tr01s] S2< [tr10s] S3 R B S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 33.5,
-      or: 35.3,
-      argent: 40.6,
-      bronze: 47.6
+      cristal: 38.8,
+      or: 40.9,
+      argent: 47,
+      bronze: 55.1
     }
   },
   {
@@ -8902,10 +8920,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B3 BLL S BRR S2 C B [tr02l] S4> [tr20l] BRR S BLL S B2 S3.v B BLL S BRR S B2 finish",
     medals: {
-      cristal: 25.2,
-      or: 26.5,
-      argent: 30.5,
-      bronze: 35.8
+      cristal: 29.1,
+      or: 30.6,
+      argent: 35.2,
+      bronze: 41.4
     }
   },
   {
@@ -8951,10 +8969,10 @@ var BUILTIN_TRACKS = [
     },
     script: "start B S2.v500 S R L R L B S2 C B S R S L B S2 [tr01s] S2< [tr10s] S3 R B S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 27.5,
-      or: 29,
-      argent: 33.3,
-      bronze: 39.1
+      cristal: 31.9,
+      or: 33.5,
+      argent: 38.6,
+      bronze: 45.3
     }
   },
   // ---- Atelier des mécanismes (chapitre BONUS, 12e) : obstacles puis pièces mobiles, un à un ----
@@ -9002,10 +9020,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B4 [cds1] S [crs1] S2 B HR S2 C S HL S B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 16.1,
-      or: 16.9,
-      argent: 19.5,
-      bronze: 22.8
+      cristal: 17,
+      or: 17.9,
+      argent: 20.6,
+      bronze: 24.2
     }
   },
   {
@@ -9047,10 +9065,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B3 S3 [crs1] S B HR S2 C S2 HL S B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 16.9,
-      or: 17.8,
-      argent: 20.5,
-      bronze: 24
+      cristal: 17.5,
+      or: 18.4,
+      argent: 21.2,
+      bronze: 24.9
     }
   },
   {
@@ -9093,10 +9111,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B2 [crs1] S2 [cds1] S2 HR S B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 16.4,
-      or: 17.3,
-      argent: 19.9,
-      bronze: 23.3
+      cristal: 17.3,
+      or: 18.2,
+      argent: 20.9,
+      bronze: 24.5
     }
   },
   {
@@ -9139,10 +9157,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start S3 B3 [cds1] S [crs1] S2 HR S B C S2 HL S B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 18.1,
-      or: 19,
-      argent: 21.9,
-      bronze: 25.7
+      cristal: 18.8,
+      or: 19.8,
+      argent: 22.8,
+      bronze: 26.7
     }
   },
   {
@@ -9174,15 +9192,15 @@ var BUILTIN_TRACKS = [
       },
       {
         ms: 100,
-        ma: 1
+        ma: 0.5
       }
     ],
     script: "start B5 S [crs1] S2~ B HR S2= C S HL S B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 16.2,
-      or: 17.1,
-      argent: 19.6,
-      bronze: 23.1
+      cristal: 17.1,
+      or: 18,
+      argent: 20.7,
+      bronze: 24.3
     }
   },
   {
@@ -9233,10 +9251,10 @@ var BUILTIN_TRACKS = [
     ],
     script: "start B2 S2 [cds1] S2 [crs1] S B HR S2 C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 18.9,
-      or: 19.9,
-      argent: 22.9,
-      bronze: 26.8
+      cristal: 19.3,
+      or: 20.4,
+      argent: 23.4,
+      bronze: 27.5
     }
   }
 ];
@@ -9771,7 +9789,7 @@ var wallMethods = {
     const P = PIECES[tile.t];
     if (P.kind === "area" || tile.nb && !tile.tn || !(isFloor(tile) || isCeilingFloor(tile))) return false;
     let dh = 0;
-    if (P.rise && this.grounded && mx !== void 0) {
+    if (P.rise && (this.grounded || this.airTime < 0.25) && mx !== void 0) {
       toLocal(tile, mx, mz, L2);
       sampleLocal(tile, L2.lx, L2.lz, S2);
       if (S2.inFootprint) dh = S2.h;
@@ -10265,7 +10283,7 @@ var ribbonMethods = {
         return;
       }
     } else if (R.lowT) R.lowT = Math.max(0, R.lowT - 2 * dt);
-    R.psi -= R.dir * kg * R.vs * dt;
+    if (!headingGuided(tile)) R.psi -= R.dir * kg * R.vs * dt;
     const mod = tile.s, f = tileParam(tile) / 100;
     const C4 = surfaceCoeffs(mod, f);
     const extraDrag = C4.extraDrag, vmaxK = C4.vmaxK, rearK = C4.rearK;
@@ -10275,6 +10293,7 @@ var ribbonMethods = {
       tractK *= CAR.stunTraction;
     }
     const P = this.params;
+    let envGrip = P.grip;
     if (P.grip !== 1) gripK *= P.grip;
     if (P.windOn) {
       R.vs += (P.windX * B2.e1x + P.windZ * B2.e1z) * dt;
@@ -10283,13 +10302,18 @@ var ribbonMethods = {
     const E = this.env;
     if (E) {
       const st = this.clock || 0;
-      if (E.rain && mod !== "water") gripK *= 1 - RAIN_GRIP * E.rainAt(st);
+      if (E.rain && mod !== "water") {
+        const eg = 1 - RAIN_GRIP * E.rainAt(st);
+        gripK *= eg;
+        envGrip *= eg;
+      }
       if (E.gust) {
         const g2 = E.gustAt(st);
         R.vs += (g2.x * B2.e1x + g2.z * B2.e1z) * dt;
         R.vd += (g2.x * B2.e2x + g2.z * B2.e2z) * dt;
       }
     }
+    this.envGrip = envGrip;
     if (mod === "boost") this._boostPad(f);
     else if (mod === "gravity") this._gravityPad(f);
     else if (mod === "wind") {
@@ -10588,7 +10612,7 @@ var BK = {
   vy: 0,
   w: 0
 };
-var AIR_OMEGA_DECAY = dexp(-1.5 * DT);
+var AIR_BRAKE_DECAY = dexp(-CAR.airBrake * DT);
 var CarPhysics = class {
   constructor(track) {
     this.track = track;
@@ -10596,6 +10620,7 @@ var CarPhysics = class {
     this.env = envOf(track);
     this._specs = specsOf(track && track.pm);
     this.v2 = v2Of(track);
+    this.envGrip = 1;
     this.lean = 0;
     this.mAx = 0;
     this.heave = 0;
@@ -10746,6 +10771,7 @@ var CarPhysics = class {
     this.wnx = 0;
     this.wnz = 0;
     this.wallPrev = 0;
+    this.envGrip = 1;
     this.pitch = 0;
     this.pitchRate = 0;
     this.pitch0 = 0;
@@ -10918,20 +10944,23 @@ var CarPhysics = class {
     return true;
   }
   // ---------------------------------------------------------------- Pneus
-  // Angle des roues avant selon la vitesse : à haute vitesse, un petit angle suffit.
-  _steerAngle(speed, drift) {
+  // Angle des roues avant (PHYS_VER 36, loi mesurée sur PolyTrack) : l'angle PERMIS diminue avec la vitesse, min(steerMax, steerC · v^−steerN) ;
+  // c'est lui, et non l'adhérence, qui borne le virage. En glisse établie (drift), les roues partent en plus vers la trajectoire de l'essieu avant
+  // (counter, rad) : contre-braquage automatique, le volant ne fait qu'ajouter son angle permis par-dessus.
+  // L'adhérence d'AMBIANCE (envGrip : pluie, flaques, givre, adhérence de tout le circuit) réduit aussi cet angle : l'angle permis est une enveloppe
+  // d'accélération latérale (v²·δ/L), qu'une route mouillée rétrécit. Sans cela, la voiture étant bornée par le volant bien avant ses pneus, la pluie ne
+  // changerait rien en virage. Les revêtements (glace…) n'y entrent pas : leurs pneus glissent déjà.
+  _steerAngle(speed, drift, counter = 0) {
     const K3 = this.k;
-    const v2 = Math.max(1, speed * speed);
-    const slipSat = K3.latGrip * K3.frontShare / K3.corner;
-    let max = Math.min(K3.steerMax, datan((K3.a + K3.b) * K3.steerAlat / v2) + slipSat);
-    max *= 1 + (K3.driftSteer - 1) * drift;
-    return this.steer * max;
+    const max = Math.min(K3.steerMax, K3.steerC * this.envGrip * dpow(Math.max(1, speed), -K3.steerN));
+    return this.steer * max + drift * K3.autoCounter * counter;
   }
   // Modèle bicyclette, repère voiture (x avant, y droite, w lacet > 0 = vers la droite).
   // ax : accélération longitudinale (moteur, freins) ; grip : multiplicateur d'adhérence.
   _tires(vx, vy, w, ax, grip, dt) {
     const drift = this.driftT, K3 = this.k;
-    const delta = this._steerAngle(Math.abs(vx), drift);
+    const counter = vx > 1.5 ? clamp(datan2(vy + K3.a * w, Math.max(vx, 6)), -0.6, 0.6) : 0;
+    const delta = this._steerAngle(Math.abs(vx), drift, counter);
     this.steerAngle = delta;
     const L4 = K3.a + K3.b;
     const gd = 1 - K3.driftGrip * drift;
@@ -11080,7 +11109,7 @@ var CarPhysics = class {
     const controlled = sa > CAR.mtAngleMin && sa < CAR.mtAngleMax;
     if (this.driftT > 0.5 && this.grounded && controlled && this.fwdSpeed > 10 && this.wallT <= 0) {
       this.driftCharge += dt * clamp(sa / CAR.mtAngleRef, 0.6, 1.3);
-    } else if (this.driftT < 0.25) {
+    } else if (this.driftT < 0.25 || this.driftCharge > 0 && sa < CAR.mtAngleMin) {
       if (this.driftCharge >= CAR.mtTime1 && this.grounded && sa < CAR.mtAngleMax) {
         const lvl = this.driftCharge >= CAR.mtTime2 ? 2 : 1;
         const f = lvl === 2 ? CAR.mtF2 : CAR.mtF1;
@@ -11204,6 +11233,7 @@ var CarPhysics = class {
     }
     if (!wet) this.sinkT = 0;
     const P = this.params;
+    let envGrip = P.grip;
     if (P.grip !== 1) grip *= P.grip;
     if (P.windOn) {
       vf += (P.windX * fx + P.windZ * fz) * dt;
@@ -11212,7 +11242,11 @@ var CarPhysics = class {
     const E = this.env;
     if (E) {
       const st = this.clock || 0;
-      if (!wet) grip *= E.gripAt(this.pos.x, this.pos.y, this.pos.z, st);
+      if (!wet) {
+        const eg = E.gripAt(this.pos.x, this.pos.y, this.pos.z, st);
+        grip *= eg;
+        envGrip *= eg;
+      }
       if (E.gust) {
         const g2 = E.gustAt(st);
         vf += (g2.x * fx + g2.z * fz) * dt;
@@ -11220,17 +11254,23 @@ var CarPhysics = class {
       }
     }
     if (this.v2) {
-      if (this.vehicle === "moto") grip *= moto2Ground(this, inp, vf, this.g, dt);
+      if (this.vehicle === "moto") {
+        const m = moto2Ground(this, inp, vf, this.g, dt);
+        grip *= m;
+        envGrip *= m;
+      }
       if (this.vehicle === "boat" && wet) {
         const b = boat2Water(this, this.surfTile, fx, fz, rx, rz, this.g, dt);
         vf += b.dvf;
         vr += b.dvr;
         grip *= b.grip;
+        envGrip *= b.grip;
       } else this.heave = 0;
     }
     const ax = (this._longitudinal(vf, inp, K3.maxSpeed * vmaxK, traction, extraDrag, dt, 1, !ground && mod === "slow" || this.vehicle === "boat" && !wet) - vf) / dt;
     if (this.v2) this.mAx = ax;
     this.rearK = rearK;
+    this.envGrip = envGrip;
     const r = this._tires(vf, vr, this.omega, ax, grip, dt);
     this.rearK = 1;
     vf = r.vx;
@@ -11264,13 +11304,13 @@ var CarPhysics = class {
   _flyAir(inp) {
     const dt = DT, v = this.vel, K3 = this.k;
     let fx = -dsin(this.yaw), fz = -dcos(this.yaw);
+    const airBrake = !!inp.brake && this.vehicle !== "glider";
     if (this.vehicle === "glider") {
       this._glide(inp, dt);
       fx = -dsin(this.yaw);
       fz = -dcos(this.yaw);
     } else v.y -= this.g * this.gSign * dt;
-    this.omega *= AIR_OMEGA_DECAY;
-    if (this.vehicle !== "glider") this.omega = clamp(this.omega + this.steer * CAR.airSteer * dt, -CAR.airSteerMax, CAR.airSteerMax);
+    if (airBrake) this.omega *= AIR_BRAKE_DECAY;
     const us = this._upSign();
     this.yaw -= this.omega * us * dt;
     this.yawRate = -this.omega * us;
@@ -11284,7 +11324,6 @@ var CarPhysics = class {
     this.airTime += dt;
     if (this.vehicle === "glider") this.pitch = this.glidePitch;
     else {
-      const pin = (inp.brake ? 1 : 0) - (inp.throttle ? 1 : 0);
       const gs = this.gSign, hv = hypot2(v.x, v.z);
       const flight = datan2(v.y * gs, Math.max(hv, 1));
       if (this.airTime <= dt * 1.01) this.pitch0 = this.pitch;
@@ -11299,8 +11338,9 @@ var CarPhysics = class {
           tgt += (datan(slope * gs) - tgt) * w;
         }
       }
-      const want = clamp(tgt + pin * gs * CAR.airTrim * (pin > 0 ? CAR.airPitchUpK / 1.6 : 1), -1.4, 1.4);
-      this.pitchRate += (CAR.airSpring * (want - this.pitch) - CAR.airPitchDamp * 3 * this.pitchRate) * dt * K3.airPitchAcc / CAR.airPitchAcc;
+      const want = clamp(tgt, -1.4, 1.4);
+      if (airBrake) this.pitchRate *= AIR_BRAKE_DECAY;
+      else this.pitchRate += (CAR.airSpring * (want - this.pitch) - CAR.airPitchDamp * 3 * this.pitchRate) * dt * K3.airPitchAcc / CAR.airPitchAcc;
       this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
     }
   }
@@ -11429,18 +11469,16 @@ var CarPhysics = class {
     const K3 = this.k;
     const vf0 = vf;
     let a = 0;
+    const thrust = K3.accel * traction;
     if (inp.throttle) {
       if (vf < -0.5) a += K3.brake * traction;
-      else {
-        const x = Math.max(0, vf / vmax);
-        a += K3.accel * traction * (1 - dpow(x, CAR.accelCurve));
-      }
+      else a += thrust;
     }
     if (inp.brake) {
-      if (vf > 0.5) a -= K3.brake * traction * (1 - CAR.driftBrake * this.driftT) * (1 - CAR.brakeCorner * Math.abs(this.steer) * smoothSpeed(vf));
+      if (vf > 0.5) a -= (K3.brake + K3.brakeV * vf) * traction * (1 - CAR.driftBrake * this.driftT) * (1 - CAR.brakeCorner * Math.abs(this.steer) * smoothSpeed(vf));
       else if (!inp.throttle) {
         const x = Math.max(0, -vf) / CAR.reverseMax;
-        a -= CAR.reverseAccel * traction * (1 - x * x);
+        a -= CAR.reverseAccel * traction * (1 - x);
       }
     }
     if (this.boost > 0) {
@@ -11449,9 +11487,7 @@ var CarPhysics = class {
       const x = Math.max(0, vf) / vb;
       a += CAR.boostAccel * f * Math.max(0, 1 - x * x);
     }
-    let res = CAR.roll * load + CAR.drag * vf * vf + extraDrag * load;
-    if (!inp.throttle) res += CAR.coastDrag * Math.abs(vf) * load;
-    if (!inp.throttle && !inp.brake) res += CAR.coast * load;
+    let res = CAR.roll * load + CAR.drag * vf * vf + extraDrag * load + thrust / vmax * Math.abs(vf);
     res += 4 * this.driftT * load;
     const dvr = res * dt;
     if (Math.abs(vf) <= dvr) vf = 0;
@@ -11936,6 +11972,12 @@ var Autopilot = class {
     this.latLimit = opts2.latLimit ?? CAR.latGrip * 0.62;
     this.brakeDecel = opts2.brakeDecel ?? 10;
     this.vCap = opts2.vCap ?? (path.pilot && path.pilot.vCap) ?? 52;
+    this.steerMargin = opts2.steerMargin ?? 0.85;
+    this.envGrip = 1;
+    this.K = CAR;
+    this.yawDamp = opts2.yawDamp ?? 0.25;
+    this.lookK = opts2.lookK ?? 0.35;
+    this.steerGain = opts2.steerGain ?? 3.6;
     const n = path.length;
     this.dist = new Float32Array(n);
     for (let i = 1; i < n; i++) {
@@ -11943,6 +11985,7 @@ var Autopilot = class {
       this.dist[i] = this.dist[i - 1] + hypot3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
     }
     this.radius = new Float32Array(n).fill(1e4);
+    this.radiusGeo = new Float32Array(n).fill(1e4);
     for (let i = 1; i < n - 1; i++) {
       const a = path[Math.max(0, i - 2)], b = path[i], c = path[Math.min(n - 1, i + 2)];
       if (a[3] === 1 || b[3] === 1 || c[3] === 1) continue;
@@ -11952,7 +11995,10 @@ var Autopilot = class {
       while (dh > Math.PI) dh -= Math.PI * 2;
       while (dh < -Math.PI) dh += Math.PI * 2;
       const len = hypot2(b[0] - a[0], b[2] - a[2]) * 0.5 + hypot2(c[0] - b[0], c[2] - b[2]) * 0.5;
-      if (Math.abs(dh) > 1e-3 && len > 0.5) this.radius[i] = Math.max(2, len / Math.abs(dh)) * (b[3] === 2 ? 1.7 : 1);
+      if (Math.abs(dh) > 1e-3 && len > 0.5) {
+        this.radiusGeo[i] = Math.max(2, len / Math.abs(dh));
+        this.radius[i] = this.radiusGeo[i] * (b[3] === 2 ? 1.7 : 1);
+      }
     }
   }
   // Hauteur du chemin le plus proche plus loin devant (approximation du sol d'arrivée).
@@ -12009,17 +12055,33 @@ var Autopilot = class {
     if (reverseActive) c.steer = -c.steer;
     return c;
   }
+  // Vitesse cible selon les courbes à venir (adhérence, et angle de braquage permis à cette vitesse : PHYS_VER 36).
+  _vTarget(v) {
+    const path = this.path;
+    let vTarget = this.vCap;
+    const horizon = 15 + v * v / (2 * this.brakeDecel);
+    for (let k = this.idx; k < path.length && this.dist[k] - this.dist[this.idx] < horizon; k++) {
+      const vMax = Math.min(Math.sqrt(this.latLimit * this.radius[k]), steerLimitSpeed(this.K, this.radiusGeo[k], this.envGrip) * this.steerMargin);
+      const dd = this.dist[k] - this.dist[this.idx];
+      const allowed2 = Math.sqrt(vMax * vMax + 2 * this.brakeDecel * dd);
+      if (allowed2 < vTarget) vTarget = allowed2;
+    }
+    return vTarget;
+  }
   _control(phys) {
     this._progress(phys);
+    this.envGrip = phys.envGrip ?? 1;
+    this.K = phys.k || CAR;
     if (phys.rib) {
       const R = phys.rib;
       const d2 = R.dir * R.dl;
       const vs = Math.max(8, Math.abs(R.vs));
       const psiDes = dasin(Math.max(-0.5, Math.min(0.5, -1.2 * d2 / vs)));
       const st2 = (psiDes - R.psi) * 6 - phys.omega * 0.35;
+      const vT = headingGuided(R.tile) ? this.vCap : this._vTarget(Math.abs(R.vs));
       return {
-        throttle: Math.abs(R.vs) < this.vCap,
-        brake: false,
+        throttle: Math.abs(R.vs) < Math.min(this.vCap, vT - 0.5),
+        brake: Math.abs(R.vs) > vT + 6,
         steer: Math.max(-1, Math.min(1, st2)),
         drift: false
       };
@@ -12061,20 +12123,15 @@ var Autopilot = class {
       };
     }
     if (!phys.grounded) {
-      const hv = hypot2(phys.vel.x, phys.vel.z);
-      const tLand = Math.max(0.15, (phys.vel.y + Math.sqrt(Math.max(0, phys.vel.y * phys.vel.y + 2 * phys.g * Math.max(0, p.y - this._groundBelow(p.y))))) / phys.g);
-      const ahead = this._pathSlopeAt(this.dist[this.idx] + hv * tLand);
-      const err = phys.pitch - ahead + phys.pitchRate * 0.35;
-      const steerAir = 0;
       return {
-        throttle: err > 0.03,
-        brake: err < -0.03,
-        steer: steerAir,
+        throttle: false,
+        brake: false,
+        steer: 0,
         drift: false
       };
     }
     const v = Math.max(0, phys.fwdSpeed);
-    const look = 8 + v * 0.32;
+    const look = 8 + v * this.lookK;
     let j = this.idx;
     while (j < path.length - 1 && this.dist[j] - this.dist[this.idx] < look && path[j + 1][3] !== 1) j++;
     if (path[j + 1] && path[j + 1][3] === 1 && j === this.idx) j++;
@@ -12084,15 +12141,8 @@ var Autopilot = class {
     const cross = fx * tz - fz * tx;
     const dot = fx * tx + fz * tz;
     const ang = datan2(cross, dot);
-    const steer = Math.max(-1, Math.min(1, ang * 2.6 - (phys.omega || 0) * 0.25));
-    let vTarget = this.vCap;
-    const horizon = 15 + v * v / (2 * this.brakeDecel);
-    for (let k = this.idx; k < path.length && this.dist[k] - this.dist[this.idx] < horizon; k++) {
-      const vMax = Math.sqrt(this.latLimit * this.radius[k]);
-      const dd = this.dist[k] - this.dist[this.idx];
-      const allowed2 = Math.sqrt(vMax * vMax + 2 * this.brakeDecel * dd);
-      if (allowed2 < vTarget) vTarget = allowed2;
-    }
+    const steer = Math.max(-1, Math.min(1, ang * this.steerGain - (phys.omega || 0) * this.yawDamp));
+    const vTarget = this._vTarget(v);
     const throttle = v < vTarget - 0.5;
     const brake = v > vTarget + 2.5;
     let st = steer;
@@ -12393,7 +12443,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/version.js
-var PHYS_VER = 35;
+var PHYS_VER = 36;
 
 // js/ghostFormat.js
 var GHOST_EVERY = 4;
@@ -13598,4 +13648,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "0d5d3e5c7663d662";
+globalThis.__COPYTRACK_BUILD__ = "440ae9733932685d";

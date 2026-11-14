@@ -41,7 +41,8 @@ test('les mécanismes déclarés sont bien dans le circuit construit (obstacles 
   const mc = buildBuiltin(BUILTIN_TRACKS.find((d) => d.id === 'montecharge'));
   const lift = mc.tiles.filter((t) => t.mv === 1), slide = mc.tiles.filter((t) => t.mv === 2);
   assert.equal(lift.length, 2, 'S2~ : deux dalles d\'ascenseur'); assert.equal(slide.length, 2, 'S2= : deux dalles de glissière');
-  assert.deepEqual([lift[0].ms, lift[0].ma, slide[0].ms, slide[0].ma], [0, 1, 0, 0], 'vitesse 100 % = valeur par défaut (0) ; ascenseur d\'1 niveau (le défaut est 2) ; glissière d\'1 case = défaut (0)');
+  // (PHYS_VER 36 : glissière d'une demi-case : se décaler d'une case entière à 220 km/h demande ~170 m avec le braquage borné selon la vitesse)
+  assert.deepEqual([lift[0].ms, lift[0].ma, slide[0].ms, slide[0].ma], [0, 1, 0, 0.5], 'vitesse 100 % = valeur par défaut (0) ; ascenseur d\'1 niveau (le défaut est 2) ; glissière d\'une demi-case');
 });
 test('des obstacles sont posés SUR la route (pas seulement sur les bords) dans les circuits à rythme : le pilote y passe quand même sans choc', () => {
   for (const id of ['cadence', 'pendule', 'rotors', 'grandatelier']) {

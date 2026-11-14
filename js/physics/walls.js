@@ -214,7 +214,7 @@ export const wallMethods = {
     // de plusieurs mètres en 1,25 m : aucune des deux sondes ne « voyait » la bordure et la voiture la traversait ; sur une ligne droite d'inclinaison 4, la sonde du
     // bas ne la voyait pas non plus. On juge donc la sonde à la hauteur qu'a la voiture AU-DESSUS DE LA ROUTE (elle épouse la pente). En l'air, rien ne change.
     let dh = 0;
-    if (P.rise && this.grounded && mx !== undefined) {
+    if (P.rise && (this.grounded || this.airTime < 0.25) && mx !== undefined) {      // (PHYS_VER 36 : aussi une voiture qui vient de quitter la pente : elle la frôle encore)
       toLocal(tile, mx, mz, L2);
       sampleLocal(tile, L2.lx, L2.lz, S2);
       if (S2.inFootprint) dh = S2.h;

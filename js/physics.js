@@ -34,7 +34,7 @@ const BELT = { x: 0, z: 0 };
 const MOV = {};
 const TMP = { x: 0, z: 0 };
 const BK = { vx: 0, vy: 0, w: 0 };
-const AIR_OMEGA_DECAY = dexp(-1.5 * DT);      // amortissement de la rotation en l'air par pas : constante (même valeur, au bit près, que dexp(-1.5 * dt) recalculé à chaque pas)
+const AIR_BRAKE_DECAY = dexp(-CAR.airBrake * DT);      // aérofrein : amortissement de la rotation par pas (constante, calculée une fois)
 
 export class CarPhysics {
   constructor(track) {
@@ -43,6 +43,7 @@ export class CarPhysics {
     this.env = envOf(track);           // pluie, flaques, givre, rafales (sim/env.js) : null par défaut, et alors rien ne change
     this._specs = specsOf(track && track.pm);      // profil physique Arcade / Simulation (physics/profiles.js) : null en Classique (SPECS tel quel)
     this.v2 = v2Of(track);             // modèles de véhicules v2 (physics/vehicles/) : faux par défaut, et alors aucune de leurs lignes ne s'exécute
+    this.envGrip = 1;                  // adhérence d'ambiance du dernier pas (pluie, givre, adhérence du circuit) : borne aussi le braquage permis
     this.lean = 0; this.mAx = 0; this.heave = 0; this.v2F = 0; this.v2R = 0;      // état des modèles v2 (inclinaison, charge, houle)
     this.pos = { x: 0, y: 0, z: 0 };
     this.prev = { x: 0, y: 0, z: 0 };
@@ -117,6 +118,7 @@ export class CarPhysics {
     this.yaw = yaw; this.prevYaw = yaw; this.yawRate = 0; this.omega = 0;
     this.steer = 0; this.steerAngle = 0; this.boost = 0; this.boostF = 1; this.slip = 0; this.airTime = 0; this.fwdSpeed = 0;
     this.driftT = 0; this.bounceCD = 0; this.driftCharge = 0; this.slipV = 0; this.xfer = 0; this.prevSteerIn = 0; this.wallT = 0; this.stunT = 0; this.stuckT = 0; this.wallRun = 0; this.pinT = 0; this._pinned = false; this.unstick = 0; this.unstickT = 0; this.unstickDir = 0; this.crawlT = 0; this.touchT = 0; this.wnx = 0; this.wnz = 0; this.wallPrev = 0;
+    this.envGrip = 1;
     this.pitch = 0; this.pitchRate = 0; this.pitch0 = 0; this.landQ = ''; this.aoa = 0.08; this.glidePitch = 0; this.bankT = 0;
     if (this.v2) { this.lean = 0; this.mAx = 0; this.heave = 0; this.v2F = 1; this.v2R = 1; }
     this.rib = null;
@@ -261,22 +263,25 @@ export class CarPhysics {
   }
 
   // ---------------------------------------------------------------- Pneus
-  // Angle des roues avant selon la vitesse : à haute vitesse, un petit angle suffit.
-  _steerAngle(speed, drift) {
+  // Angle des roues avant (PHYS_VER 36, loi mesurée sur PolyTrack) : l'angle PERMIS diminue avec la vitesse, min(steerMax, steerC · v^−steerN) ;
+  // c'est lui, et non l'adhérence, qui borne le virage. En glisse établie (drift), les roues partent en plus vers la trajectoire de l'essieu avant
+  // (counter, rad) : contre-braquage automatique, le volant ne fait qu'ajouter son angle permis par-dessus.
+  // L'adhérence d'AMBIANCE (envGrip : pluie, flaques, givre, adhérence de tout le circuit) réduit aussi cet angle : l'angle permis est une enveloppe
+  // d'accélération latérale (v²·δ/L), qu'une route mouillée rétrécit. Sans cela, la voiture étant bornée par le volant bien avant ses pneus, la pluie ne
+  // changerait rien en virage. Les revêtements (glace…) n'y entrent pas : leurs pneus glissent déjà.
+  _steerAngle(speed, drift, counter = 0) {
     const K = this.k;
-    const v2 = Math.max(1, speed * speed);
-    // Angle géométrique du virage limite + marge de dérive du pneu avant (saturation).
-    const slipSat = (K.latGrip * K.frontShare) / K.corner;
-    let max = Math.min(K.steerMax, datan((K.a + K.b) * K.steerAlat / v2) + slipSat);
-    max *= 1 + (K.driftSteer - 1) * drift;
-    return this.steer * max;
+    const max = Math.min(K.steerMax, K.steerC * this.envGrip * dpow(Math.max(1, speed), -K.steerN));
+    return this.steer * max + drift * K.autoCounter * counter;
   }
 
   // Modèle bicyclette, repère voiture (x avant, y droite, w lacet > 0 = vers la droite).
   // ax : accélération longitudinale (moteur, freins) ; grip : multiplicateur d'adhérence.
   _tires(vx, vy, w, ax, grip, dt) {
     const drift = this.driftT, K = this.k;
-    const delta = this._steerAngle(Math.abs(vx), drift);
+    // Contre-braquage automatique : direction de l'essieu avant par rapport au cap (en marche avant seulement), bornée à ±0,6 rad.
+    const counter = vx > 1.5 ? clamp(datan2(vy + K.a * w, Math.max(vx, 6)), -0.6, 0.6) : 0;
+    const delta = this._steerAngle(Math.abs(vx), drift, counter);
     this.steerAngle = delta;
     const L = K.a + K.b;
     const gd = 1 - K.driftGrip * drift;      // en glisse, les DEUX essieux appuient moins fort (virage plus large, vitesse conservée) ; l'arrière un peu plus (driftRear) : la glisse reste pilotable
@@ -408,7 +413,9 @@ export class CarPhysics {
     const controlled = sa > CAR.mtAngleMin && sa < CAR.mtAngleMax;
     if (this.driftT > 0.5 && this.grounded && controlled && this.fwdSpeed > 10 && this.wallT <= 0) {
       this.driftCharge += dt * clamp(sa / CAR.mtAngleRef, 0.6, 1.3);        // plus de glisse = charge un peu plus vite (plafonné : pas de gain à partir en travers)
-    } else if (this.driftT < 0.25) {
+    } else if (this.driftT < 0.25 || (this.driftCharge > 0 && sa < CAR.mtAngleMin)) {
+      // PHYS_VER 36 : la glisse se referme d'elle-même (contre-braquage automatique) : la récompense tombe aussi quand l'arrière a raccroché (angle sous
+      // mtAngleMin), sans attendre que l'état de glisse soit éteint (sinon la charge s'évaporait pendant la fin de glisse).
       if (this.driftCharge >= CAR.mtTime1 && this.grounded && sa < CAR.mtAngleMax) {
         const lvl = this.driftCharge >= CAR.mtTime2 ? 2 : 1;
         const f = lvl === 2 ? CAR.mtF2 : CAR.mtF1;
@@ -507,23 +514,26 @@ export class CarPhysics {
     if (this.vehicle === 'boat' && !wet) { grip = Math.min(grip, 0.8); traction *= 0.4; vmaxK = Math.min(vmaxK, 0.3); extraDrag += 7; }
     if (!wet) this.sinkT = 0;
     const P = this.params;
+    let envGrip = P.grip;
     if (P.grip !== 1) grip *= P.grip;                                       // adhérence de tout le circuit
     if (P.windOn) { vf += (P.windX * fx + P.windZ * fz) * dt; vr += (P.windX * rx + P.windZ * rz) * dt; }      // vent de tout le circuit
     const E = this.env;
     if (E) {                                                                // environnement (sim/env.js) : pluie et flaques hors de l'eau, givre, rafales
       const st = this.clock || 0;
-      if (!wet) grip *= E.gripAt(this.pos.x, this.pos.y, this.pos.z, st);
+      if (!wet) { const eg = E.gripAt(this.pos.x, this.pos.y, this.pos.z, st); grip *= eg; envGrip *= eg; }
       if (E.gust) { const g = E.gustAt(st); vf += (g.x * fx + g.z * fz) * dt; vr += (g.x * rx + g.z * rz) * dt; }
     }
     if (this.v2) {                                                          // modèles de véhicules v2 (physics/vehicles/)
-      if (this.vehicle === 'moto') grip *= moto2Ground(this, inp, vf, this.g, dt);
-      if (this.vehicle === 'boat' && wet) { const b = boat2Water(this, this.surfTile, fx, fz, rx, rz, this.g, dt); vf += b.dvf; vr += b.dvr; grip *= b.grip; }
+      // (PHYS_VER 36 : leur adhérence borne aussi l'angle permis : la moto doit s'être penchée pour tourner à fond, le bateau dans la houle tourne moins)
+      if (this.vehicle === 'moto') { const m = moto2Ground(this, inp, vf, this.g, dt); grip *= m; envGrip *= m; }
+      if (this.vehicle === 'boat' && wet) { const b = boat2Water(this, this.surfTile, fx, fz, rx, rz, this.g, dt); vf += b.dvf; vr += b.dvr; grip *= b.grip; envGrip *= b.grip; }
       else this.heave = 0;
     }
     // (dernier argument : le « pas rampant » des revêtements dont la résistance dépasse la poussée — ralentisseur, bateau hors de l'eau ; voir _longitudinal)
     const ax = (this._longitudinal(vf, inp, K.maxSpeed * vmaxK, traction, extraDrag, dt, 1, (!ground && mod === 'slow') || (this.vehicle === 'boat' && !wet)) - vf) / dt;
     if (this.v2) this.mAx = ax;
     this.rearK = rearK;
+    this.envGrip = envGrip;                                                  // (PHYS_VER 36) borne aussi l'angle de braquage permis
     const r = this._tires(vf, vr, this.omega, ax, grip, dt);
     this.rearK = 1;
     vf = r.vx; vr = r.vy; this.omega = r.w + this._driftAssist(vf, vr, dt);
@@ -552,14 +562,14 @@ export class CarPhysics {
   _flyAir(inp) {
     const dt = DT, v = this.vel, K = this.k;
     let fx = -dsin(this.yaw), fz = -dcos(this.yaw);
-    // En l'air : trajectoire balistique, la voiture garde son cap (le volant ne
-    // tourne que les roues). La rotation acquise au décollage s'amortit doucement.
-    // Exception : le deltaplane plane et vire en inclinant son aile.
+    // En l'air : trajectoire balistique, la voiture garde son cap (le volant ne tourne que les roues). PHYS_VER 36 (PolyTrack) : ni les gaz ni le
+    // volant n'agissent en l'air, la rotation acquise au décollage est GARDÉE ; seul le frein (aérofrein) l'amortit. Avant : lacet au volant,
+    // rotation amortie d'elle-même (1,5 /s).
+    // Exception : le deltaplane plane et vire en inclinant son aile (ses commandes sont les siennes).
+    const airBrake = !!inp.brake && this.vehicle !== 'glider';
     if (this.vehicle === 'glider') { this._glide(inp, dt); fx = -dsin(this.yaw); fz = -dcos(this.yaw); }
     else v.y -= this.g * this.gSign * dt;
-    this.omega *= AIR_OMEGA_DECAY;
-    // Un tout petit peu de contrôle en l'air : le volant fait pivoter la voiture lentement.
-    if (this.vehicle !== 'glider') this.omega = clamp(this.omega + this.steer * CAR.airSteer * dt, -CAR.airSteerMax, CAR.airSteerMax);
+    if (airBrake) this.omega *= AIR_BRAKE_DECAY;
     const us = this._upSign();
     this.yaw -= this.omega * us * dt;
     this.yawRate = -this.omega * us;
@@ -569,13 +579,11 @@ export class CarPhysics {
     this.slip = 0;
     this.fwdSpeed = v.x * fx + v.z * fz;
     this.airTime += dt;
-    // Tangage (phase 2, PHYS_VER 35). Avant : gaz tenus = le nez plongeait SANS FIN jusqu'à 80° (tangage = intégrale de la commande), donc une réception « bad » à −43 % de vitesse pour le réflexe
-    // le plus naturel (garder les gaz). Maintenant l'assiette est un système à ressort amorti : elle tend vers la trajectoire de vol, et près du sol vers la pente de la route en dessous
-    // (aide partielle : le joueur garde de quoi faire une réception parfaite) ; gaz = nez plus bas, frein = nez plus haut, DÉCALAGE BORNÉ de ± airTrim autour de cette assiette.
-    // Les gaz tenus pendant tout le vol ne coûtent donc plus qu'un nez 14° plus bas, au lieu d'un plantage.
+    // Tangage. La voiture n'étant pas un solide en rotation, son assiette est un ressort amorti PASSIF (phase 2) : elle tend vers la trajectoire de vol, et près
+    // du sol vers la pente de la route en dessous. PHYS_VER 36 (PolyTrack) : plus aucune commande ne la décale (avant : gaz = nez plus bas, frein = nez plus haut) ;
+    // l'aérofrein FIGE l'assiette : le ressort ne joue plus et la rotation s'amortit (airBrake). Le joueur choisit donc de garder son attitude ou de la laisser suivre la trajectoire.
     if (this.vehicle === 'glider') this.pitch = this.glidePitch;
     else {
-      const pin = (inp.brake ? 1 : 0) - (inp.throttle ? 1 : 0);
       const gs = this.gSign, hv = hypot2(v.x, v.z);
       const flight = datan2(v.y * gs, Math.max(hv, 1));
       if (this.airTime <= dt * 1.01) this.pitch0 = this.pitch;                      // assiette au décollage : l'inertie la garde, la stabilité aérodynamique ne la rapproche que PEU de la trajectoire
@@ -590,8 +598,9 @@ export class CarPhysics {
           tgt += (datan(slope * gs) - tgt) * w;
         }
       }
-      const want = clamp(tgt + pin * gs * CAR.airTrim * (pin > 0 ? CAR.airPitchUpK / 1.6 : 1), -1.4, 1.4);
-      this.pitchRate += (CAR.airSpring * (want - this.pitch) - CAR.airPitchDamp * 3 * this.pitchRate) * dt * K.airPitchAcc / CAR.airPitchAcc;
+      const want = clamp(tgt, -1.4, 1.4);
+      if (airBrake) this.pitchRate *= AIR_BRAKE_DECAY;
+      else this.pitchRate += (CAR.airSpring * (want - this.pitch) - CAR.airPitchDamp * 3 * this.pitchRate) * dt * K.airPitchAcc / CAR.airPitchAcc;
       this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
     }
   }
@@ -720,17 +729,20 @@ export class CarPhysics {
     const K = this.k;
     const vf0 = vf;
     let a = 0;
+    // PHYS_VER 36 (caractère PolyTrack) : poussée CONSTANTE ; la traînée linéaire (plus bas) l'équilibre exactement à vmax.
+    const thrust = K.accel * traction;
     if (inp.throttle) {
-      if (vf < -0.5) a += K.brake * traction;
-      else { const x = Math.max(0, vf / vmax); a += K.accel * traction * (1 - dpow(x, CAR.accelCurve)); }
+      if (vf < -0.5) a += K.brake * traction;             // gaz en reculant : freine jusqu'à l'arrêt
+      else a += thrust;
     }
     if (inp.brake) {
       // En dérapage, l'énergie part surtout dans la glisse : on ralentit moins.
       // Cercle de friction : un volant tourné à vitesse occupe déjà l'adhérence des pneus, il en reste moins pour freiner (brakeCorner) ; et pendant une glisse le freinage est presque annulé.
-      if (vf > 0.5) a -= K.brake * traction * (1 - CAR.driftBrake * this.driftT) * (1 - CAR.brakeCorner * Math.abs(this.steer) * smoothSpeed(vf));
+      // Le frein mord plus fort à haute vitesse (brakeV). PolyTrack (mesuré) : 66 + 0,38·v m/s² ; Copytrack : brake + brakeV·v = 52 + 0,5·v, ≈ 3,5 × la poussée.
+      if (vf > 0.5) a -= (K.brake + K.brakeV * vf) * traction * (1 - CAR.driftBrake * this.driftT) * (1 - CAR.brakeCorner * Math.abs(this.steer) * smoothSpeed(vf));
       else if (!inp.throttle) {
-        const x = Math.max(0, -vf) / CAR.reverseMax;
-        a -= CAR.reverseAccel * traction * (1 - x * x);
+        const x = Math.max(0, -vf) / CAR.reverseMax;      // marche arrière : même loi linéaire, vers reverseMax
+        a -= CAR.reverseAccel * traction * (1 - x);
       }
     }
     if (this.boost > 0) {
@@ -739,9 +751,10 @@ export class CarPhysics {
       const x = Math.max(0, vf) / vb;
       a += CAR.boostAccel * f * Math.max(0, 1 - x * x);
     }
-    let res = CAR.roll * load + CAR.drag * vf * vf + extraDrag * load;
-    if (!inp.throttle) res += CAR.coastDrag * Math.abs(vf) * load;   // à vide : résistance proportionnelle à la vitesse (sous les gaz, elle est dans la courbe de poussée)
-    if (!inp.throttle && !inp.brake) res += CAR.coast * load;
+    // Traînée LINÉAIRE : thrust / vmax par m/s, gaz ou pas (PolyTrack, mesuré : 0,107·v pour sa vitesse de pointe ; ici 16 / 80,6 = 0,199·v) ; gaz levés elle seule
+    // ralentit la voiture (au plafond, autant que la poussée).
+    // Avant PHYS_VER 36 : 0,8 + 0,05·v à vide seulement, la poussée s'annulant d'elle-même vers le plafond.
+    let res = CAR.roll * load + CAR.drag * vf * vf + extraDrag * load + (thrust / vmax) * Math.abs(vf);
     res += 4 * this.driftT * load;
     const dvr = res * dt;
     if (Math.abs(vf) <= dvr) vf = 0; else vf -= Math.sign(vf) * dvr;

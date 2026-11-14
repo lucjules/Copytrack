@@ -20,12 +20,12 @@ export const SURF_PHYS = {
   belt: 200 / 3.6,     // vitesse du tapis roulant à son réglage maximal : ±200 km/h
   spring: 56,          // poussée latérale du ressort à pleine force (m/s)
   bounce: 14,          // vitesse verticale d'un rebond à 100 % (m/s)
-  // 0.9.46 : moteur propre à Copytrack, avec une VRAIE vitesse de pointe (le réglage de la 0.9.45, linéaire, n'en avait pas : 450 km/h en 10 s).
-  // Sous les gaz : a = engineAccel × (1 − (v / maxSpeed)^1,5) (CAR.accelCurve) : forte au départ, elle s'essouffle près du plafond, qu'on
-  // n'atteint qu'avec de bonnes sorties de virage et de longues lignes droites. Au-delà du plafond la poussée devient un freinage.
-  gravity: 19,         // gravité normale (m/s²) (0.9.45 : 16, trop flottante ; avant : 25)
-  engineAccel: 14,     // poussée à l'arrêt (m/s²) : 0 -> 100 km/h en 2,2 s
-  coastDrag: 0.05,     // résistance à vide proportionnelle à la vitesse (1/s) ; s'y ajoute CAR.coast (constante), pour que lever le pied serve avant un virage
+  // PHYS_VER 36 (caractère PolyTrack, docs/ANALYSE-POLYTRACK.md) : poussée CONSTANTE et traînée LINÉAIRE, la loi mesurée sur PolyTrack
+  // (a = 20,19 − 0,107·v là-bas). Sous les gaz : a = engineAccel − (engineAccel / maxSpeed)·v, donc v(t) = maxSpeed·(1 − e^(−t/τ)), τ = maxSpeed / engineAccel
+  // (≈ 5 s) ; gaz levés, la traînée seule ralentit la voiture (au plafond : autant que la poussée). Les VITESSES restent celles de Copytrack
+  // (plafond 290 km/h) : les circuits sont dessinés pour elles.
+  gravity: 19,         // gravité normale (m/s²) (0.9.45 : 16, trop flottante ; avant : 25) ; gardée : sauts et loopings des circuits sont calés dessus
+  engineAccel: 16,     // poussée (m/s²) : 0 -> 100 km/h en 2,1 s (PHYS_VER 35 : 14, en 1 − (v/vmax)^1,5)
   boostAccel: 10,      // poussée supplémentaire d'un booster à 100 % (m/s²)
   boostTime: 1.2,      // durée d'un booster (s)
   maxSpeed: 290 / 3.6, // plafond du moteur (m/s) : 290 km/h

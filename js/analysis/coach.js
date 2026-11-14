@@ -20,7 +20,7 @@ export const COACH_TEXT = {
   'late-brake': 'Secteur {k} : tu freines {d} m plus tard que la référence et tu en ressors à {v} km/h au lieu de {vr}. Freine plus tôt, ressors plus vite ({loss} s perdues).',
   'early-brake': 'Secteur {k} : tu freines {d} m plus tôt que la référence ({loss} s perdues). Retarde le freinage : la référence passe à {vr} km/h.',
   'slow-corner': 'Secteur {k} : ta vitesse la plus basse est {v} km/h, la référence garde {vr} km/h ({loss} s perdues). Entre moins vite pour ressortir plus vite, ou glisse plus court.',
-  air: 'Secteur {k} : {a} s en l’air contre {ar} s pour la référence ({loss} s perdues). Moins de vitesse au tremplin ou le nez plus bas : on n’accélère pas en vol.',
+  air: 'Secteur {k} : {a} s en l’air contre {ar} s pour la référence ({loss} s perdues). Moins de vitesse au tremplin : on n’accélère pas en vol.',
   'wide-line': 'Secteur {k} : ta trajectoire s’écarte de {d} m en moyenne de celle de la référence ({loss} s perdues). Coupe plus près de la corde.',
   sector: 'Secteur {k} : {loss} s perdues sans cause nette (vitesse maxi {v} km/h contre {vr}). Regarde ce passage dans le Replay Theater.',
 };

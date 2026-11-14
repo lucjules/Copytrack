@@ -1,7 +1,7 @@
 // Conduite sur les rubans 3D (loopings, vrilles, tubes, murs, plafond) : entrée, conduite, sortie et raccord d'un ruban à l'autre.
 // Ces méthodes s'ajoutent au prototype de CarPhysics (voir physics.js) : `this` est la voiture.
 import { CELL, DT, ROAD_HALF } from '../constants.js';
-import { PIECES, PLATES, rotVec, tileCenter, isRibbon, tileParam, beltSpeed, isSideTile, hasNoRails } from '../pieces.js';
+import { PIECES, PLATES, rotVec, tileCenter, isRibbon, tileParam, beltSpeed, isSideTile, hasNoRails, headingGuided } from '../pieces.js';
 import { ribbonOf, frameLocal, ribbonInverts } from '../ribbons.js';
 import { RAIN_GRIP } from '../sim/env.js';
 import { CAR, SIDE_AERO, SIDE_HOLD, SIDE_MIN_SPEED, SIDE_GRACE, surfaceCoeffs } from './specs.js';
@@ -204,7 +204,11 @@ export const ribbonMethods = {
       R.lowT = (R.lowT || 0) + dt;
       if (R.lowT > SIDE_GRACE) { this.ev.wallOff = true; this._ribPlace(R); this._ribDetach(); return; }
     } else if (R.lowT) R.lowT = Math.max(0, R.lowT - 2 * dt);
-    R.psi -= R.dir * kg * R.vs * dt;
+    // PHYS_VER 36 : sur une route ROULÉE (mur, 45°, surplomb, transition) et sur les loopings, vrilles et tire-bouchons (headingGuided), la route guide le cap le long
+    // de sa propre courbure. Le braquage permis (loi PolyTrack, borné selon la vitesse) ne suffit pas pour un virage serré au-dessus de la vitesse minimale de mur
+    // (108 km/h), ni pour le décalage latéral d'un looping pris à 180 km/h : sans ce guidage, ces pièces seraient infranchissables ou jetteraient la voiture contre
+    // la bordure à la sortie. Au sol et sur un virage relevé, le cap ne suit que le volant (comme PolyTrack).
+    if (!headingGuided(tile)) R.psi -= R.dir * kg * R.vs * dt;
 
     // Revêtements actifs sur ce ruban : mêmes effets qu'au sol, sans aide particulière.
     const mod = tile.s, f = tileParam(tile) / 100;
@@ -213,14 +217,16 @@ export const ribbonMethods = {
     let gripK = C.grip, tractK = C.traction, beltE1 = 0;
     if (this.stunT > 0) { gripK *= CAR.stunGrip; tractK *= CAR.stunTraction; }       // choc contre une paroi : la voiture encaisse
     const P = this.params;
+    let envGrip = P.grip;
     if (P.grip !== 1) gripK *= P.grip;                                       // adhérence de tout le circuit (sim/params.js)
     if (P.windOn) { R.vs += (P.windX * B.e1x + P.windZ * B.e1z) * dt; R.vd += (P.windX * B.e2x + P.windZ * B.e2z) * dt; }      // vent de tout le circuit
     const E = this.env;
     if (E) {                                                                 // environnement (sim/env.js) : la pluie mouille aussi les rubans (pas de flaques), rafales
       const st = this.clock || 0;
-      if (E.rain && mod !== 'water') gripK *= 1 - RAIN_GRIP * E.rainAt(st);
+      if (E.rain && mod !== 'water') { const eg = 1 - RAIN_GRIP * E.rainAt(st); gripK *= eg; envGrip *= eg; }
       if (E.gust) { const g = E.gustAt(st); R.vs += (g.x * B.e1x + g.z * B.e1z) * dt; R.vd += (g.x * B.e2x + g.z * B.e2z) * dt; }
     }
+    this.envGrip = envGrip;                                                  // (PHYS_VER 36) borne aussi l'angle de braquage permis (physics.js, _steerAngle)
     if (mod === 'boost') this._boostPad(f);
     else if (mod === 'gravity') this._gravityPad(f);
     else if (mod === 'wind') {

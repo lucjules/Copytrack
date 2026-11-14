@@ -19,7 +19,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'under', t: 23.5 },
     opts: { l: 2 }, pilot: { vCap: 54 },
     script: 'start B2 [tr01l] S4< [tr10l] S B S [crs1] S [cds1] HR S3 B C S HL S3 B2 finish',
-    medals: { cristal: 21.6, or: 22.8, argent: 26.2, bronze: 30.7 },
+    medals: { cristal: 22.1, or: 23.3, argent: 26.8, bronze: 31.5 },
   },
   {
     // Chapitre 3 · 1/6 — SPRINT (moto). Ouverture : départ EN MOTO (veh0), lancé par une descente de 7 niveaux au lieu d'un booster. Puis deux
@@ -29,7 +29,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'rings', n: 2 },
     opts: { l: 8 }, params: { veh0: 'moto' }, pilot: { vCap: 66 },
     script: 'start [cdi1] [dn2] [dn2] [cdo2] B S [crv1] UU GR2 DD [cdo1] B2 S [crv1] UU GR2 DD [cdo1] S B C S3 HL S2 B2 finish',
-    medals: { cristal: 20.5, or: 21.6, argent: 24.8, bronze: 29.1 },
+    medals: { cristal: 20.9, or: 22, argent: 25.3, bronze: 29.7 },
   },
   {
     // Chapitre 5 · 1/6 — SPRINT (glace). Ouverture : DÉPART SUR LA GLACE (deux cases de verglas, trois boosters, deux cases de verglas) : la voiture patine, les boosters la lancent sur une
@@ -39,7 +39,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'under', t: 23 },
     opts: { l: 6 }, pilot: { vCap: 66 },
     script: 'start I2 B3 I2 S [crs1] S2 [cds1] B HR S3 B C S2 HL S2 B [cdi1] [dn2] [cdo1] S B2 finish',
-    medals: { cristal: 20.7, or: 21.8, argent: 25.1, bronze: 29.4 },
+    medals: { cristal: 21.6, or: 22.8, argent: 26.2, bronze: 30.7 },
   },
   {
     // Chapitre 2 · 1/6 — SPRINT. Ouverture : trois boosters → rampe de lancement avec un anneau turbo dans le saut. Puis une vague douce,
@@ -50,7 +50,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'rings', n: 1 },
     opts: { l: 3 }, pilot: { vCap: 66 },
     script: 'start B3 UU GR2 DD [cdo1] B2 S [crs1] S2 [cds1] B S2_ B_ S2_ BR S2 B BL S2 B C S3 HL S B2 finish',
-    medals: { cristal: 23.1, or: 24.3, argent: 27.9, bronze: 32.8 },
+    medals: { cristal: 26.3, or: 27.7, argent: 31.9, bronze: 37.4 },
   },
   {
     // Chapitre 4 · 1/6 — SPEEDWAY. Ouverture : DÉPART SUR UN TAPIS ROULANT à +200 km/h (trois cases) : la voiture est lancée à près de 290 km/h sans un seul booster. Quatre
@@ -60,17 +60,17 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'nowall' },
     opts: { l: 4 }, pilot: { vCap: 70 },
     script: 'start S3.t201 S BRR S2 B BLL S2 C B [tr02l] S4> [tr20l] BRR S2 B BLL S2 B2 finish',
-    medals: { cristal: 19.6, or: 20.6, argent: 23.7, bronze: 27.8 },
+    medals: { cristal: 22.9, or: 24.1, argent: 27.7, bronze: 32.5 },
   },
   {
     // Chapitre 6 · 1/6 — SPRINT (collines). Ouverture : deux boosters puis UNE LONGUE COLLINE DOUCE (trois cases qui montent d'un demi-niveau, trois qui redescendent). Puis une vague en S,
     // un S de virages relevés 2×2, un seul très grand virage plat et une descente finale de 4 niveaux. Presque tout droit.
     id: 'braises', name: 'Braises', decor: 'volcano', difficulty: 2, profil: 'sprint',
     appris: 'Départ : deux boosters → colline douce. Au programme : vague en S, S relevé 2×2, un très grand virage plat.',
-    goal: { id: 'under', t: 22 },
+    goal: { id: 'under', t: 26 },
     opts: { l: 6 }, pilot: { vCap: 66 },
     script: 'start B2 GU3 GD3 B S [crs1] S2 [cds1] B BR S BL S B C S2 HL S2 B [cdi1] [dn2] [cdo1] S B2 finish',
-    medals: { cristal: 20.7, or: 21.8, argent: 25, bronze: 29.4 },
+    medals: { cristal: 23.7, or: 25, argent: 28.7, bronze: 33.7 },
   },
   {
     // Chapitre 1 · 2/6 — SPEEDWAY. Ouverture : un booster puis directement un très grand virage relevé. Aucun virage serré : quatre virages
@@ -81,7 +81,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'nowall' },
     opts: { l: 8 }, pilot: { vCap: 70 },
     script: 'start B BRR B3 S2 [tr02l] S6> [tr20l] C S BRR S [cdi1] [dn2] [cdo1] S C B S BRR S3 B BLL S BRR S2 B2 finish',
-    medals: { cristal: 26.7, or: 28.1, argent: 32.3, bronze: 37.9 },
+    medals: { cristal: 30.3, or: 31.9, argent: 36.7, bronze: 43 },
   },
   {
     // Chapitre 7 · 1/6 — SPRINT (amarrage). Ouverture : un booster puis UN TUBE de trois cases. Après le tube, un saut en BASSE GRAVITÉ (plaque à 40 %) : la voiture flotte sur plus de dix cases,
@@ -91,7 +91,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'rings', n: 1 },
     opts: { l: 14 }, pilot: { vCap: 66 },
     script: 'start B TI TM TO B S.g40 [crs1] UU GR2 G5 V-5 S10 S.g100 B C S HR S B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 22.7, or: 23.9, argent: 27.5, bronze: 32.3 },
+    medals: { cristal: 23.3, or: 24.6, argent: 28.3, bronze: 33.2 },
   },
   {
     // Chapitre 1 · 3/6 — ACROBATIQUE. Ouverture : chute libre immédiate, depuis l'arrêt (la voiture quitte la plateforme de départ, à 66 m, et
@@ -100,10 +100,10 @@ export const BUILTIN_TRACKS = [
     // avant la rampe : on peut repartir À L'ARRÊT de n'importe quel checkpoint (la réapparition remet la voiture à l'arrêt) et réussir le saut.
     id: 'tremplins', name: 'Tremplins du Crépuscule', decor: 'desert', difficulty: 2, profil: 'acrobatique',
     appris: 'Départ : chute libre immédiate depuis 66 m (la voiture quitte la plateforme de départ, à l’arrêt). Au programme : rampes progressives et à 38°, réceptions sur longues pentes, checkpoint aérien, saut sur un mur.',
-    goal: { id: 'perfect', n: 2 },
+    goal: { id: 'perfect', n: 1 },
     opts: { l: 16 }, pilot: { vCap: 60 },
     script: 'start V-5 [dn4] [cdo2] S C B2 S [crv1] UU G2 DD [cdo1] S3 CBR1 S [tr01s] S2< [tr10s] S LL S C B2 S2 [crv2] UX G2 DX DX [cdo2] S3 C B2 S UU GR2 DD [cdo1] S2 finish',
-    medals: { cristal: 35.8, or: 37.7, argent: 43.3, bronze: 50.9 },
+    medals: { cristal: 37.5, or: 39.4, argent: 45.4, bronze: 53.2 },
   },
   {
     // Chapitre 4 · 3/6 — ROLLERCOASTER (boucles). Ouverture : trois boosters puis DEUX LOOPINGS qui s'enchaînent en S (droite puis gauche). Ensuite deux wall-rides de quatre cases
@@ -113,7 +113,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 12 }, pilot: { vCap: 66 },
     script: 'start B3 O OL S2 B3 [tr01s] S4< [tr10s] S BR S2 B [tr02s] S4> [tr20s] S C B OB S2 B [cdi2] DX [cdo2] S B2 finish',
-    medals: { cristal: 29.1, or: 30.7, argent: 35.3, bronze: 41.4 },
+    medals: { cristal: 31.1, or: 32.7, argent: 37.6, bronze: 44.2 },
   },
   {
     // Chapitre 2 · 2/6 — SPEEDWAY. Ouverture : départ en tube, propulsé par trois boosters, qui débouche directement sur un virage relevé 3×3.
@@ -121,10 +121,10 @@ export const BUILTIN_TRACKS = [
     // du chapitre 1) et un tube à pleine vitesse. Aucun virage serré, plus de 240 km/h pendant plus d'un tiers du tour (35 %).
     id: 'canopee', name: 'Canopée', decor: 'jungle', difficulty: 3, profil: 'speedway',
     appris: 'Départ : en tube propulsé, qui débouche sur un virage relevé 3×3. Au programme : S relevés, wall-ride de 5 cases sur le mur gauche, tube à pleine vitesse, 79 % du temps au-dessus de 220 km/h.',
-    goal: { id: 'under', t: 35.5 },
+    goal: { id: 'under', t: 39.5 },
     opts: { l: 5 }, pilot: { vCap: 64 },
     script: 'start TI TM3.b TO BRR S B BLL S [crs1] S2 [cds1] S [tr01l] S5< [tr10l] C B BRR S [crs1] S [cds1] B BLL S2 TB BRR S B BLL S2 B2 finish',
-    medals: { cristal: 33, or: 34.8, argent: 40, bronze: 46.9 },
+    medals: { cristal: 36.5, or: 38.4, argent: 44.1, bronze: 51.8 },
   },
   {
     // Chapitre 2 · 3/6 — ACROBATIQUE (rebonds). Ouverture : deux boosters → rebond géant (palier 2 niveaux plus haut). Quatre champignons en
@@ -132,10 +132,10 @@ export const BUILTIN_TRACKS = [
     // à l'arrêt. La portée d'un rebond est proportionnelle à la vitesse (et non à son carré) : le circuit est finissable à ±40 % de vitesse.
     id: 'spores', name: 'Spores', decor: 'jungle', difficulty: 3, profil: 'acrobatique',
     appris: 'Départ : deux boosters → rebond géant (palier 2 niveaux plus haut). Au programme : quatre champignons en escalier en zigzag (+8 niveaux), plongeon final ; la portée d’un rebond est proportionnelle à la vitesse, le circuit est très tolérant.',
-    goal: { id: 'perfect', n: 4 },
+    goal: { id: 'perfect', n: 3 },
     opts: { l: 2 },
     script: 'start B2 S.j200 G1 V2 S3 RR C B2 S.j200 G1 V2 S3 LL C B2 S.j200 G1 V2 S3 RR C B2 S.j200 G1 V2 S3 LL S B [cdi2] DX [cdo2] B [crs1] S [cds1] B2 finish',
-    medals: { cristal: 32.2, or: 33.9, argent: 39, bronze: 45.8 },
+    medals: { cristal: 35.3, or: 37.1, argent: 42.7, bronze: 50.1 },
   },
   {
     // Chapitre 3 · 2/6 — TECHNIQUE (bateau). Ouverture : départ SUR L'EAU (plaque bateau juste après la ligne, slalom R L R L dans un chenal).
@@ -147,7 +147,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 4 },
     pilot: { vCap: 60 },
     script: 'start S.n S2.a R.a L.a R.a L.a S.a S.n B2 S [tr01s] S2< [tr10s] S3 R R B S2 L S L B S3 [cvd05] [cvdL05] B S C S.n S2.a R.a L.a R.a L.a S2.a finish',
-    medals: { cristal: 34, or: 35.8, argent: 41.1, bronze: 48.3 },
+    medals: { cristal: 41.2, or: 43.4, argent: 49.9, bronze: 58.6 },
   },
   {
     // Chapitre 3 · 3/6 — ACROBATIQUE (deltaplane). Ouverture : trois boosters, plaque deltaplane et vol de cinq cases au-dessus de la mer. Puis
@@ -158,7 +158,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'rings', n: 2 },
     opts: { l: 4 },
     script: 'start B3 S.e UU GR4 DD S5 S.e S C B2 S [crv1] UU GR1 DD [cdo1] S2 CBR2 CBR2 CBR2 CBR2 S C B [cdi2] DX [cdo2] B S2 [crv1] UU GR1 DD [cdo1] S2 B finish',
-    medals: { cristal: 37.4, or: 39.4, argent: 45.3, bronze: 53.2 },
+    medals: { cristal: 39.7, or: 41.8, argent: 48.1, bronze: 56.4 },
   },
   {
     // Chapitre 2 · 4/6 — TECHNIQUE (moto). Ouverture : bifurcation dès le départ ; la voie de droite porte la plaque moto (c'est elle qu'il faut
@@ -169,7 +169,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'vehicle', v: 'moto' },
     opts: { l: 8 },
     script: 'start Y2.o B S [cvd05] [cvdL05] [cvd05] [cvdL05] B S S.o S [tr01s] S2< [tr10s] S R L R L B S2 C S.o S R L R L B S2 B finish',
-    medals: { cristal: 29, or: 30.6, argent: 35.1, bronze: 41.3 },
+    medals: { cristal: 32.3, or: 34.1, argent: 39.2, bronze: 46 },
   },
   {
     // Chapitre 6 · 2/6 — SPEEDWAY (coulée de lave). Ouverture : un booster puis un S de virages relevés 2×2 (droite, gauche) dès les premières cases, avant les virages relevés 3×3.
@@ -179,7 +179,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'nowall' },
     opts: { l: 12 }, pilot: { vCap: 70 },
     script: 'start B BR S BL S BRR S B [tr02l] S4> [tr20l] BLL S2 C B [cdi1] [dn2] [cdo1] BRR S BLL B2 finish',
-    medals: { cristal: 22, or: 23.2, argent: 26.6, bronze: 31.3 },
+    medals: { cristal: 26.6, or: 28, argent: 32.2, bronze: 37.9 },
   },
   {
     // Chapitre 7 · 2/6 — TECHNIQUE (navette, moto). Ouverture : DÉPART EN MOTO (plaque moto sur la case qui suit la ligne de départ) puis un slalom R L R L immédiat. Huit virages serrés,
@@ -189,17 +189,17 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'vehicle', v: 'moto' },
     opts: { l: 8 },
     script: 'start S.o B R L R L B S2 C B S R S L B S2 [tr01s] S2< [tr10s] S R B S L B S [cdi1] [dn2] [cdo1] S B finish',
-    medals: { cristal: 25.1, or: 26.4, argent: 30.4, bronze: 35.6 },
+    medals: { cristal: 26.5, or: 27.9, argent: 32.1, bronze: 37.7 },
   },
   {
     // Chapitre 4 · 2/6 — SPRINT. Ouverture : départ SANS BORDURES (deux boosters, six cases à plus de 200 km/h sans la moindre barrière : la trajectoire se joue dès la première seconde).
     // Puis une vague douce, un tunnel de quatre cases pris à pleine vitesse, un seul très grand virage plat et une descente finale. Presque tout droit.
     id: 'boulevard', name: 'Boulevard Sans Fin', decor: 'city', difficulty: 2, profil: 'sprint',
     appris: 'Départ : sans bordures (six cases). Au programme : vague douce, tunnel de quatre cases, un seul très grand virage plat.',
-    goal: { id: 'under', t: 20 },
+    goal: { id: 'under', t: 21.5 },
     opts: { l: 4 }, pilot: { vCap: 66 },
     script: 'start B2_ S3_ B_ S [crs1] S2 [cds1] B S B2# S2# C B S3 HR S2 B [cdi1] [dn2] [cdo1] S B2 finish',
-    medals: { cristal: 18.7, or: 19.7, argent: 22.7, bronze: 26.6 },
+    medals: { cristal: 19.3, or: 20.3, argent: 23.4, bronze: 27.4 },
   },
   {
     // Chapitre 1 · 4/6 — ROLLERCOASTER (spirale ; placé avant Lac Gelé pour que deux Rollercoasters ne se suivent pas). Ouverture : trois boosters puis directement un grand looping. Hélice montante de quatre
@@ -211,7 +211,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 2 },
     pilot: { vCap: 40 },
     script: 'start B3 OB S B CBR4 CBR4 CBR4 CBR4 S C [cdi2] DX DX DX [cdo2] B S [tr01s] S2< [tr10s] S [tr02s] S3> [tr20s] S2 B2 finish',
-    medals: { cristal: 36.6, or: 38.5, argent: 44.3, bronze: 52 },
+    medals: { cristal: 38.5, or: 40.5, argent: 46.6, bronze: 54.7 },
   },
   {
     // Chapitre 1 · 4/6 — TECHNIQUE. Ouverture : une épingle descendante dès le départ. Onze virages serrés, des freinages forts avant chaque
@@ -222,7 +222,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'turbo', n: 2 },
     opts: { l: 5 },
     script: 'start [cvd05] [cvd05] B S3 L I B S R L S B S2 R S R B S2 [tr01s] S2< [tr10s] S3 L S L B I S3 KR S R S2 B finish',
-    medals: { cristal: 32.9, or: 34.6, argent: 39.8, bronze: 46.7 },
+    medals: { cristal: 39.5, or: 41.6, argent: 47.8, bronze: 56.1 },
   },
   {
     // Chapitre 5 · 2/6 — ACROBATIQUE (terrasses). Ouverture : un carreau de verglas, deux boosters puis un REBOND qui envoie la voiture sur une terrasse 2 niveaux plus bas. Quatre rebonds de
@@ -230,10 +230,10 @@ export const BUILTIN_TRACKS = [
     // plongeon de 10 niveaux. À l'inverse de Spores, qui monte en escalier, la Banquise descend. Un checkpoint avant chaque rebond, suivi de deux boosters (on repart de chacun à l'arrêt).
     id: 'banquise', name: 'Banquise Rebondissante', decor: 'polar', difficulty: 3, profil: 'acrobatique',
     appris: 'Départ : verglas, deux boosters, rebond vers une terrasse plus basse. Au programme : quatre rebonds de plus en plus puissants et longs : la Banquise descend de terrasse en terrasse (Spores monte).',
-    goal: { id: 'under', t: 29 },
+    goal: { id: 'under', t: 30 },
     opts: { l: 28 }, pilot: { vCap: 60 },
-    script: 'start I B2 S.j100 G1 V-2 S3.i C B2 S.j150 G2 V-2 S3.i C B2 S.j200 G2 V-2 S3.i C B2 S.j200 G2 V-2 S2.i [tr01s] S3< [tr10s] S2 [cdi2] DX [cdo2] S2 B finish',
-    medals: { cristal: 27.5, or: 29, argent: 33.3, bronze: 39.1 },
+    script: 'start I B2 S.j100 G1 V-2 S3.i C B2 S.j150 G2 V-2 S3.i C B2 S.j200 G2 V-2 S3.i C B2 S.j200 G2 V-2 S3.i [tr01s] S3< [tr10s] S2 [cdi2] DX [cdo2] S2 B finish',      // PHYS_VER 36 : terrasse de réception allongée d'une case (S2.i -> S3.i) : le dernier rebond retombait au-delà, directement sur le mur, et le braquage borné selon la vitesse ne permet plus de remonter la paroi à 230 km/h
+    medals: { cristal: 28.5, or: 30, argent: 34.5, bronze: 40.5 },
   },
   {
     // Chapitre 2 · 5/6 — ROLLERCOASTER (tonneaux). Ouverture : départ AU PLAFOND (la course commence en gravité inversée, comme des racines qui
@@ -244,7 +244,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 10 },
     script: 'start^ B3^ [tr31s] S< [tr10s] [tr02s] S> [tr23s] S^ [tr31s] S< [tr10s] S C B [cdi2] DX [cdo2] S BLL S S.d S.w100 S C B3 OD S2 B finish',
-    medals: { cristal: 27.4, or: 28.9, argent: 33.2, bronze: 39 },
+    medals: { cristal: 28.7, or: 30.2, argent: 34.7, bronze: 40.8 },
   },
   {
     // Chapitre 5 · 3/6 — TECHNIQUE (glace et aimants). Ouverture : un TOBOGGAN de 10 niveaux dès le départ, qui débouche sur une glace puis une épingle : il faut avoir freiné à temps.
@@ -255,7 +255,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 12 },
     script: 'start [cdi2] DX [cdo2] S2 I S2 R B S2 L B S I S2 R S L C B S [tr01s] S2< [tr10s] S2 R B S.m [crs1].m S [cds1].m L B S I S2 R S2 L B S2 finish',
-    medals: { cristal: 36.1, or: 38, argent: 43.7, bronze: 51.3 },
+    medals: { cristal: 41.9, or: 44.1, argent: 50.7, bronze: 59.6 },
   },
   {
     // Chapitre 4 · 4/6 — TECHNIQUE (métro aérien). Ouverture : un booster puis une MONTÉE EN LACETS (deux courbes montantes serrées : on grimpe jusqu'à la ligne aérienne). Treize virages
@@ -265,7 +265,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 2 },
     script: 'start B CVR2 CVR2 S B R_ L_ R_ L_ S B C B S2 R S R B S [tr01s] S2< [tr10s] S B L S R# L# R# L# S2# B [cdi1] [dn2] [cdo1] S B finish',
-    medals: { cristal: 30.7, or: 32.3, argent: 37.1, bronze: 43.6 },
+    medals: { cristal: 36.6, or: 38.5, argent: 44.3, bronze: 52 },
   },
   {
     // Chapitre 6 · 3/6 — TECHNIQUE (basalte). Ouverture : DÉPART SUR UNE PLAQUE DE DÉRIVE (deux cases où l'arrière n'accroche presque plus : le moindre coup de volant fait glisser la voiture),
@@ -275,7 +275,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 6 },
     script: 'start S2.d B S2 R S L S B R.d L.d S2 C B S [tr01s] S2< [tr10s] S2 R S2.d L B S2 R.d S L B S [cdi1] [dn2] [cdo1] S B finish',
-    medals: { cristal: 30, or: 31.6, argent: 36.3, bronze: 42.6 },
+    medals: { cristal: 35, or: 36.9, argent: 42.4, bronze: 49.7 },
   },
   {
     // Chapitre 2 · 6/6 — TECHNIQUE (tunnels). Ouverture : départ dans un tunnel, avec une épingle immédiate. Douze virages serrés (épingles dans
@@ -286,7 +286,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 8 },
     script: 'start S# R# R# B# S2# B S3 TI TM2 TO S R R B S2 [cdi1] [dn2] [cdo1] S C S [cvd05] [cvd05] [cvd05] [cvd05] S2 B S R# L# R# L# S2# B finish',
-    medals: { cristal: 30.5, or: 32.1, argent: 36.9, bronze: 43.4 },
+    medals: { cristal: 35.9, or: 37.7, argent: 43.4, bronze: 51 },
   },
   {
     // Chapitre 4 · 5/6 — ACROBATIQUE (toits). Ouverture : trois boosters puis un PETIT LOOPING (2×2), pris juste avant la première rampe : la boucle donne l'élan du premier saut de toit.
@@ -296,7 +296,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'under', t: 36 },
     opts: { l: 16 }, pilot: { vCap: 60 },
     script: 'start B3 O S2 B2 [crv2] UX G2 DX DX [cdo2] S3 C B2 [crv1] UU G2 DD [cdo1] S [tr01s] S2< [tr10s] S C B2 [crv2] UX G2 DX DX [cdo2] S5 finish',
-    medals: { cristal: 32.7, or: 34.5, argent: 39.6, bronze: 46.5 },
+    medals: { cristal: 33.7, or: 35.5, argent: 40.8, bronze: 47.9 },
   },
   {
     // Chapitre 7 · 3/6 — ROLLERCOASTER (ceinture d'astéroïdes). Ouverture : un TIRE-BOUCHON à gauche pris à l'élan (une case, aucun booster) puis trois boosters et directement un grand DOUBLE looping
@@ -306,7 +306,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 10 }, pilot: { vCap: 66 },
     script: 'start S CKL S B3 OBDL S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B TI TM2 TO S B [cdi2] DX [cdo2] S B2 finish',
-    medals: { cristal: 26.6, or: 28, argent: 32.2, bronze: 37.8 },
+    medals: { cristal: 27.2, or: 28.7, argent: 33, bronze: 38.7 },
   },
   {
     // Chapitre 5 · 4/6 — ROLLERCOASTER (hélices). Ouverture : un TIRE-BOUCHON dès le départ (deux cases d'élan, aucun booster). Puis une première hélice montante de quatre grandes courbes
@@ -316,7 +316,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 2 }, pilot: { vCap: 40 },
     script: 'start S2 CK S B2 CBR4 CBR4 CBR4 CBR4 S S C [cvdBigL2] [cvdBigL2] [cvdBigL2] [cvdBigL2] S B OD S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 finish',
-    medals: { cristal: 44.8, or: 47.2, argent: 54.3, bronze: 63.7 },
+    medals: { cristal: 47, or: 49.5, argent: 56.9, bronze: 66.8 },
   },
   {
     // Chapitre 6 · 4/6 — ROLLERCOASTER (cheminée). Ouverture : trois boosters → un TUBE de deux sections qui débouche directement sur la cheminée, une montée verticale de quatre niveaux
@@ -336,7 +336,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 8 }, pilot: { vCap: 66 },
     script: 'start B4 OBT S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B OBDL S C B2 [cdi2] DX [cdo2] S B2 finish',
-    medals: { cristal: 31.9, or: 33.6, argent: 38.6, bronze: 45.3 },
+    medals: { cristal: 32.6, or: 34.3, argent: 39.5, bronze: 46.3 },
   },
   {
     // Chapitre 1 · 5/6 — ROLLERCOASTER. Ouverture : trois boosters puis une montée verticale (montée en L, mur de 3, sommet). Chute depuis le
@@ -347,7 +347,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 3 },
     script: 'start B3 QU WA3 CR S [cdi2] DX [cdo2] B BRR S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 OB S C S [tr01s] S2< [tr13s] S2^ [tr31s] S2< [tr10s] S B2 finish',
-    medals: { cristal: 33.6, or: 35.4, argent: 40.7, bronze: 47.7 },
+    medals: { cristal: 35, or: 36.8, argent: 42.4, bronze: 49.7 },
   },
   {
     // Chapitre 7 · 4/6 — SPEEDWAY (circuit fermé, 3 tours). Ouverture : deux boosters puis UN TUBE COURT (2×2) pris à pleine vitesse, directement suivi du premier virage relevé. Quatre virages
@@ -357,7 +357,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'nowall' },
     opts: { l: 6 }, pilot: { vCap: 70 }, laps: 3,
     script: 'start B2 TB S2 BRR B S2 C S2 B BRR S [tr01l] S2< [tr10l] S BRR S B S2 B S2 BRR finish',
-    medals: { cristal: 61.8, or: 65, argent: 74.8, bronze: 87.8 },
+    medals: { cristal: 72.6, or: 76.4, argent: 87.9, bronze: 103.2 },
   },
   {
     // Chapitre 3 · 5/6 — ACROBATIQUE (gravité lunaire). Ouverture : la plaque de départ règle la gravité à 50 % ; la voiture quitte la plateforme au pas, flotte de 6 niveaux et se
@@ -368,7 +368,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'perfect', n: 2 },
     opts: { l: 28 },
     script: 'start S.g50 G2 V-6 [dn4] [cdo2] S C B2 S [crv1] UU G3 DD [cdo1] [crs1] S2 [cds1] C B2 S [crv1] UU G3 DD [cdo1] [crs1] S2 [cds1] C B2 S [crv1] UU G3 DD [cdo1] S5 finish',
-    medals: { cristal: 35.9, or: 37.7, argent: 43.4, bronze: 51 },
+    medals: { cristal: 37, or: 38.9, argent: 44.8, bronze: 52.5 },
   },
   {
     // Chapitre 5 · 5/6 — SPEEDWAY. Ouverture : DIRECTEMENT DANS UN TRÈS GRAND VIRAGE RELEVÉ, sans un seul booster : la voiture l'aborde au pas et les boosters la relancent à la sortie.
@@ -378,7 +378,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'nowall' },
     opts: { l: 6 }, pilot: { vCap: 70 },
     script: 'start BRR B3 S BLL S2 B BRR C S [tr02l] S4> [tr20l] BLL B S2 BRR B S BLL B2 finish',
-    medals: { cristal: 24.1, or: 25.4, argent: 29.2, bronze: 34.3 },
+    medals: { cristal: 28.2, or: 29.7, argent: 34.1, bronze: 40.1 },
   },
   {
     // Chapitre 6 · 5/6 — SPEEDWAY (circuit fermé, 2 tours). Ouverture : deux boosters puis UNE MONTÉE DOUCE de quatre cases (2 niveaux) vers la crête du cratère. Quatre virages relevés 3×3
@@ -388,7 +388,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'nowall' },
     opts: { l: 6 }, pilot: { vCap: 70 }, laps: 2,
     script: 'start B2 GU4 S BRR B S [tr02l] S4> [tr20l] BRR B S2 C GD4 S BRR S B S2 B S2 B S2 BRR finish',
-    medals: { cristal: 49, or: 51.6, argent: 59.3, bronze: 69.6 },
+    medals: { cristal: 55.2, or: 58.1, argent: 66.8, bronze: 78.4 },
   },
   {
     // Chapitre 5 · 6/6 — TECHNIQUE (tempête). Ouverture : départ dans la POUDREUSE (deux cases de neige épaisse qui freinent la voiture, puis un booster). Neuf virages serrés, du vent
@@ -398,7 +398,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 8 },
     script: 'start S2.p B S2 R S.w150 L S B S2.p R S L B C B S3.w120 R S R S B S2 [tr01s] S2< [tr10s] S L B S.p R S L B S [cdi1] [dn2] [cdo1] S B finish',
-    medals: { cristal: 34.7, or: 36.6, argent: 42.1, bronze: 49.4 },
+    medals: { cristal: 40.7, or: 42.9, argent: 49.3, bronze: 57.9 },
   },
   {
     // Chapitre 4 · 6/6 — ROLLERCOASTER (viaduc). Ouverture : trois boosters → LIFT HILL, une montée de 16 niveaux (80 m) en deux rampes à forte pente. Au sommet un checkpoint, puis un
@@ -416,10 +416,10 @@ export const BUILTIN_TRACKS = [
     // moins de 8 % de freinage.
     id: 'archipel', name: 'Grand Archipel', decor: 'isles', difficulty: 5, profil: 'speedway',
     appris: 'Départ : aucun booster : une pente douce de six cases lance dans un très grand virage relevé. Au programme : cinq virages relevés, wall-ride de quatre cases, plongeon, 85 % du tour au-dessus de 220 km/h.',
-    goal: { id: 'under', t: 28 },
+    goal: { id: 'under', t: 33 },
     opts: { l: 8 }, pilot: { vCap: 70 },
     script: 'start GD6 BRR S B BLL S2 C B [tr02l] S4> [tr20l] BRR S2 [cdi1] [dn2] [cdo1] B BLL S2 B BRR S2 B2 finish',
-    medals: { cristal: 26.4, or: 27.8, argent: 31.9, bronze: 37.5 },
+    medals: { cristal: 30.4, or: 32, argent: 36.8, bronze: 43.2 },
   },
   {
     // Chapitre 7 · 5/6 — ACROBATIQUE (apesanteur). Ouverture : deux boosters puis une plaque de gravité à 20 % : la voiture quitte la rampe et flotte sur plus de vingt cases. Trois sauts de
@@ -441,7 +441,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'under', t: 37.5 },
     opts: { l: 16 }, pilot: { vCap: 60 },
     script: 'start B3 UX G2 DX DX [cdo2] S3 C B2 [crv1] UU GR2 DD [cdo1] S [tr01s] S2< [tr10s] S C B2 [crv2] UX G2 DX DX [cdo2] S3 C B2 [crv1] UU G2 DD [cdo1] S5 finish',
-    medals: { cristal: 34.1, or: 35.9, argent: 41.3, bronze: 48.5 },
+    medals: { cristal: 35, or: 36.9, argent: 42.4, bronze: 49.8 },
   },
   {
     // Chapitre 7 · 6/6 — TECHNIQUE (station). Ouverture : DÉPART SUR UNE PLATEFORME d'amarrage (deux cases de plateforme, large et plate), un booster puis une première épingle.
@@ -451,7 +451,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 6 },
     script: 'start P2 B S R B S L S R B S2 C B S L R L R B S2 [tr01s] S2< [tr10s] S3 L B S R B [cdi1] [dn2] [cdo1] S B finish',
-    medals: { cristal: 29.5, or: 31, argent: 35.7, bronze: 41.9 },
+    medals: { cristal: 34.4, or: 36.2, argent: 41.6, bronze: 48.8 },
   },
   // ==== 0.9 : quatre nouveaux thèmes (6 circuits chacun) ============================
   // ---- Fonds marins : courants (tapis roulants), eau et bateau, bulles de verre ----
@@ -460,10 +460,10 @@ export const BUILTIN_TRACKS = [
     // favorable (+138 km/h, deux cases) qui la relance. Puis une vague douce, un très grand virage plat, un tapis de trois cases, un dernier virage et une descente de 4 niveaux. Les tapis sont loin des virages.
     id: 'courant', name: 'Courant Chaud', decor: 'reef', difficulty: 2, profil: 'sprint',
     appris: 'Départ : deux boosters → contre-courant (−122 km/h) puis courant favorable (+138 km/h). Au programme : vague, très grand virage plat, tapis de trois cases.',
-    goal: { id: 'under', t: 20.5 },
+    goal: { id: 'under', t: 23 },
     opts: { l: 6 }, pilot: { vCap: 66 },
     script: 'start B2 S2.t40 S2.t170 S [crs1] S2 [cds1] B HR S3.t137 B C S2 HL S2 B [cdi1] [dn2] [cdo1] S B2 finish',
-    medals: { cristal: 19.4, or: 20.4, argent: 23.5, bronze: 27.6 },
+    medals: { cristal: 20.5, or: 21.6, argent: 24.9, bronze: 29.2 },
   },
   {
     // Chapitre 8 · 2/6 — TECHNIQUE (corail). Ouverture : un booster, puis un COURANT FAVORABLE (+72 km/h sur deux cases) qui lance la voiture vers un premier virage serré. Huit virages serrés,
@@ -473,7 +473,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 6 },
     script: 'start B S2.t137 S2 R S L S R S L B C B S R S2.v S L B S2 [tr01s] S2< [tr10s] S R B S L B S [cdi1] [dn2] [cdo1] S B finish',
-    medals: { cristal: 29.3, or: 30.9, argent: 35.5, bronze: 41.7 },
+    medals: { cristal: 34.7, or: 36.5, argent: 41.9, bronze: 49.2 },
   },
   {
     // Chapitre 8 · 3/6 — ROLLERCOASTER (épave). Ouverture : trois boosters puis directement un WALL-RIDE sur le mur droit (le flanc de la coque, trois cases à plus de 200 km/h). Puis le
@@ -504,7 +504,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 22 }, pilot: { vCap: 66 },
     script: 'start B [cdi2] DX DX [cdo2] OB S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 S B finish',
-    medals: { cristal: 22.3, or: 23.5, argent: 27.1, bronze: 31.8 },
+    medals: { cristal: 23.6, or: 24.8, argent: 28.6, bronze: 33.5 },
   },
   {
     // Chapitre 8 · 6/6 — SPEEDWAY (barrière). Ouverture : deux boosters puis un PONT DE VERRE (trois dalles fragiles, sans danger à grande vitesse) qui débouche sur un virage relevé 3×3.
@@ -514,7 +514,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'nowall' },
     opts: { l: 6 }, pilot: { vCap: 70 },
     script: 'start B2 S3.v BRR S B BLL S2 C B [tr02l] S4> [tr20l] BRR S2.t137 BLL B S BRR S B2 finish',
-    medals: { cristal: 22, or: 23.2, argent: 26.7, bronze: 31.3 },
+    medals: { cristal: 26, or: 27.3, argent: 31.4, bronze: 36.9 },
   },
   // ---- Usine mécanique : obstacles, tapis, moteur coupé, ascenseurs ----
   {
@@ -522,11 +522,11 @@ export const BUILTIN_TRACKS = [
     // (+72 km/h). Puis une vague douce, deux très grands virages plats (droite, gauche) et une descente finale de 4 niveaux. Un bumper et des piques sur les bords de la route.
     id: 'chaine', name: 'Chaîne de Montage', decor: 'factory', difficulty: 2, profil: 'sprint',
     appris: 'Départ : trois boosters → trois cases à moteur coupé. Au programme : tapis roulant, vague, deux très grands virages plats ; bumper et piques sur les bords.',
-    goal: { id: 'under', t: 21.5 },
+    goal: { id: 'under', t: 23 },
     opts: { l: 6 }, pilot: { vCap: 66 },
     obst: [{ k: 'bumper', at: 0.3, side: 7.5, s: 0.8 }, { k: 'spikes', at: 0.6, side: -7.5, s: 0.7 }],
     script: 'start B3 S3.c B S2.t137 S [crs1] S2 [cds1] B HR S2 B C S HL S2 B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 19.2, or: 20.2, argent: 23.2, bronze: 27.2 },
+    medals: { cristal: 20.6, or: 21.7, argent: 25, bronze: 29.3 },
   },
   {
     // Chapitre 9 · 2/6 — TECHNIQUE (laminoir). Ouverture : BIFURCATION dès le départ : la voie de droite porte un booster (c'est la voie rapide, celle que suit le pilote), l'autre reste neutre.
@@ -537,7 +537,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 },
     obst: [{ k: 'bumper', at: 0.3, side: -7.5, s: 0.8 }, { k: 'spikes', at: 0.8, side: 7.5, s: 0.7 }],
     script: 'start Y2.b B S R S L S R S L B C B S R S2.x S L B S2 [tr01s] S2< [tr10s] S R B S L B S [cdi1] [dn2] [cdo1] S B finish',
-    medals: { cristal: 33.4, or: 35.1, argent: 40.4, bronze: 47.4 },
+    medals: { cristal: 41.3, or: 43.5, argent: 50, bronze: 58.7 },
   },
   {
     // Chapitre 9 · 3/6 — ROLLERCOASTER (rouages). Ouverture : deux boosters puis directement une HÉLICE montante (quatre grandes courbes inclinées : 8 niveaux, comme le pas d'une vis). Ensuite le checkpoint,
@@ -548,7 +548,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 10 }, pilot: { vCap: 66 },
     obst: [{ k: 'spikesPop', at: 0.45, side: 6.5, s: 0.75 }],
     script: 'start B2 CBR2 CBR2 CBR2 CBR2 S C B2 OTL S2 B [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B [cdi2] DX [cdo2] S B2 finish',
-    medals: { cristal: 28.5, or: 30, argent: 34.4, bronze: 40.4 },
+    medals: { cristal: 30.4, or: 32.1, argent: 36.9, bronze: 43.3 },
   },
   {
     // Chapitre 9 · 4/6 — SPEEDWAY (fonderie). Ouverture : trois boosters puis UN TUNNEL de quatre cases pris à plus de 220 km/h, directement suivi d'un très grand virage relevé. Cinq virages relevés 3×3,
@@ -559,7 +559,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 70 },
     obst: [{ k: 'bumper', at: 0.35, side: -7.5, s: 0.8 }, { k: 'bumper', at: 0.75, side: 7.5, s: 0.8 }],
     script: 'start B3 S4# BRR S B BLL S2 C B [tr02l] S4> [tr20l] BRR S2.c BLL B S BRR S B2 finish',
-    medals: { cristal: 23.7, or: 24.9, argent: 28.7, bronze: 33.7 },
+    medals: { cristal: 28.4, or: 29.9, argent: 34.4, bronze: 40.4 },
   },
   {
     // Chapitre 9 · 5/6 — ACROBATIQUE (pistons). Ouverture : deux boosters puis UN TAPIS DE QUATRE PISTONS (quatre rebonds à 150 % qui s'enchaînent sans que la voiture touche le sol plus d'un instant).
@@ -581,7 +581,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 8 },
     obst: [{ k: 'hammer', at: 0.35, side: 0, s: 1 }, { k: 'spikes', at: 0.5, side: 7.5, s: 0.7 }, { k: 'bumper', at: 0.9, side: -7.5, s: 0.8 }],
     script: 'start B2 S2.x R L R L B S2 C B S R S L B S2.c S2 [tr01s] S2< [tr10s] S R B S L B S R B [cdi1] [dn2] [cdo1] S B finish',
-    medals: { cristal: 29.4, or: 31, argent: 35.6, bronze: 41.8 },
+    medals: { cristal: 35.4, or: 37.3, argent: 42.8, bronze: 50.3 },
   },
   // ---- Ville dans les nuages : vent, deltaplane, gravité faible, sauts ----
   {
@@ -589,10 +589,10 @@ export const BUILTIN_TRACKS = [
     // Puis une vague en S, deux très grands virages plats (droite, gauche) et une descente finale de 4 niveaux. Presque tout droit.
     id: 'envol', name: 'Premier Envol', decor: 'sky', difficulty: 2, profil: 'sprint',
     appris: 'Départ : trois boosters → vent latéral. Au programme : vague en S, deux très grands virages plats, descente.',
-    goal: { id: 'under', t: 19.5 },
+    goal: { id: 'under', t: 21.5 },
     opts: { l: 6 }, pilot: { vCap: 66 },
     script: 'start B3 S3.w150 S [crs1] S2 [cds1] B HR S2 B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 18.4, or: 19.4, argent: 22.3, bronze: 26.1 },
+    medals: { cristal: 19.3, or: 20.3, argent: 23.4, bronze: 27.4 },
   },
   {
     // Chapitre 10 · 2/6 — ACROBATIQUE (îles suspendues). Ouverture : trois boosters puis une rampe SANS BORDURES (les îles sont des plateformes sans barrière) : la voiture passe un anneau turbo et se pose
@@ -612,7 +612,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 6 },
     script: 'start B2 S2.w180 S R S L S R B S2 C B S.w150 S2 R S L B S2.w120 S R S L B S [tr01s] S2< [tr10s] S3 R B S2 L B S [cdi1] [dn2] [cdo1] S B finish',
-    medals: { cristal: 35.6, or: 37.5, argent: 43.1, bronze: 50.6 },
+    medals: { cristal: 41.4, or: 43.6, argent: 50.1, bronze: 58.8 },
   },
   {
     // Chapitre 10 · 4/6 — ROLLERCOASTER (montgolfières, gravité réduite). Ouverture : trois boosters, une plaque de gravité à 40 % puis directement un grand looping (la boucle se prend plus facilement,
@@ -622,7 +622,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 10 }, pilot: { vCap: 58 },
     script: 'start B3 S.g40 OB S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B [cdi2] DX [cdo2] S.g100 B2 finish',
-    medals: { cristal: 20.9, or: 22, argent: 25.3, bronze: 29.6 },
+    medals: { cristal: 21.5, or: 22.7, argent: 26.1, bronze: 30.6 },
   },
   {
     // Chapitre 10 · 5/6 — SPEEDWAY (pont des vents). Ouverture : deux boosters puis du VENT LATÉRAL sur un pont SANS BORDURES, directement suivi d'un très grand virage relevé lui aussi sans bordure.
@@ -632,7 +632,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'nowall' },
     opts: { l: 6 }, pilot: { vCap: 70 },
     script: 'start B2_ S2.w150_ BRR_ S_ B_ BLL_ S2_ C B_ [tr02l] S4> [tr20l] BRR_ S2.w100_ B_ BLL_ S_ B2 finish',
-    medals: { cristal: 20, or: 21, argent: 24.2, bronze: 28.4 },
+    medals: { cristal: 23, or: 24.2, argent: 27.9, bronze: 32.7 },
   },
   {
     // Chapitre 10 · 6/6 — ACROBATIQUE (cité céleste). Ouverture : DÉPART EN DELTAPLANE depuis le bord du toit (plaque deltaplane juste après la ligne, chute de 6 niveaux) : la voiture plane vers une
@@ -650,10 +650,10 @@ export const BUILTIN_TRACKS = [
     // Puis une vague en S, deux très grands virages plats (droite, gauche) et une descente finale de 4 niveaux. Presque tout droit.
     id: 'galerie', name: 'Galerie de Cristal', decor: 'caves', difficulty: 2, profil: 'sprint',
     appris: 'Départ : deux boosters → volant inversé (trois cases en ligne droite). Au programme : vague en S, deux très grands virages plats, descente.',
-    goal: { id: 'under', t: 19.5 },
+    goal: { id: 'under', t: 21.5 },
     opts: { l: 6 }, pilot: { vCap: 66 },
     script: 'start B2 S3.y S2 [crs1] S2 [cds1] B HR S2 B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 18.4, or: 19.4, argent: 22.3, bronze: 26.1 },
+    medals: { cristal: 19.3, or: 20.3, argent: 23.4, bronze: 27.4 },
   },
   {
     // Chapitre 11 · 2/6 — TECHNIQUE (plafond renversé). Ouverture : un booster puis directement une VRILLE : la route se retourne et l'on roule au plafond, en gravité inversée. Quatre virages serrés
@@ -663,7 +663,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 8 },
     script: 'start B TW.f S2^ B^ R^ S^ L^ S2^ R^ S^ L^ C^ B^ S2^ TWB.f S2 B R S L B S2 [tr01s] S2< [tr10s] S3 R B S L B S [cdi1] [dn2] [cdo1] S B finish',
-    medals: { cristal: 33.5, or: 35.3, argent: 40.6, bronze: 47.6 },
+    medals: { cristal: 38.8, or: 40.9, argent: 47, bronze: 55.1 },
   },
   {
     // Chapitre 11 · 3/6 — ACROBATIQUE (cristal fêlé, inversions de gravité). Ouverture : deux boosters puis une PLAQUE D'INVERSION DE GRAVITÉ : la voiture « tombe » vers le plafond, 8 niveaux plus haut,
@@ -683,7 +683,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'nowall' },
     opts: { l: 6 }, pilot: { vCap: 70 },
     script: 'start B3 BLL S BRR S2 C B [tr02l] S4> [tr20l] BRR S BLL S B2 S3.v B BLL S BRR S B2 finish',
-    medals: { cristal: 25.2, or: 26.5, argent: 30.5, bronze: 35.8 },
+    medals: { cristal: 29.1, or: 30.6, argent: 35.2, bronze: 41.4 },
   },
   {
     // Chapitre 11 · 5/6 — ROLLERCOASTER (vrilles). Ouverture : un booster puis un PLONGEON de 4 niveaux qui débouche directement sur une VRILLE : la route se retourne et l'on roule au plafond (gravité inversée)
@@ -703,7 +703,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'norespawn' },
     opts: { l: 6 },
     script: 'start B S2.v500 S R L R L B S2 C B S R S L B S2 [tr01s] S2< [tr10s] S3 R B S L B S [cdi1] [dn2] [cdo1] S B finish',
-    medals: { cristal: 27.5, or: 29, argent: 33.3, bronze: 39.1 },
+    medals: { cristal: 31.9, or: 33.5, argent: 38.6, bronze: 45.3 },
   },
   // ---- Atelier des mécanismes (chapitre BONUS, 12e) : obstacles puis pièces mobiles, un à un ----
   {
@@ -716,7 +716,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 66 },
     obst: [{ k: 'bumper', at: 0.3, side: -7.5, s: 0.8 }, { k: 'spikes', at: 0.55, side: 7.5, s: 0.7 }, { k: 'bumper', at: 0.8, side: 7.5, s: 0.8 }],
     script: 'start B4 [cds1] S [crs1] S2 B HR S2 C S HL S B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 16.1, or: 16.9, argent: 19.5, bronze: 22.8 },
+    medals: { cristal: 17, or: 17.9, argent: 20.6, bronze: 24.2 },
   },
   {
     // Chapitre 12 (Atelier, bonus) · 2/6 — MÉCANISME : piques escamotables en travers de la route : on passe quand elles sont rentrées.
@@ -728,7 +728,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 60 },
     obst: [{ k: 'spikesPop', at: 0.104, side: 0, s: 1.1, ph: 0.583 }, { k: 'spikesPop', at: 0.213, side: 0, s: 1.1, ph: 0.167 }],
     script: 'start B3 S3 [crs1] S B HR S2 C S2 HL S B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 16.9, or: 17.8, argent: 20.5, bronze: 24 },
+    medals: { cristal: 17.5, or: 18.4, argent: 21.2, bronze: 24.9 },
   },
   {
     // Chapitre 12 (Atelier, bonus) · 3/6 — MÉCANISME : une boule balancier puis un mur coulissant : il faut lire leur rythme.
@@ -740,7 +740,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 66 },
     obst: [{ k: 'pendulum', at: 0.1, side: 0, s: 1, ph: 0 }, { k: 'slider', at: 0.6, side: 0, s: 1, ph: 0.75 }],
     script: 'start B2 [crs1] S2 [cds1] S2 HR S B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 16.4, or: 17.3, argent: 19.9, bronze: 23.3 },
+    medals: { cristal: 17.3, or: 18.2, argent: 20.9, bronze: 24.5 },
   },
   {
     // Chapitre 12 (Atelier, bonus) · 4/6 — MÉCANISME : un marteau tournant puis un balayeur : des obstacles qui tournent.
@@ -752,7 +752,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 62 },
     obst: [{ k: 'hammer', at: 0.1, side: 0, s: 1, ph: 0.438 }, { k: 'sweeper', at: 0.3, side: 0, s: 1, ph: 0 }],
     script: 'start S3 B3 [cds1] S [crs1] S2 HR S B C S2 HL S B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 18.1, or: 19, argent: 21.9, bronze: 25.7 },
+    medals: { cristal: 18.8, or: 19.8, argent: 22.8, bronze: 26.7 },
   },
   {
     // Chapitre 12 (Atelier, bonus) · 5/6 — MÉCANISME : un ascenseur et une glissière : la route elle-même bouge.
@@ -762,9 +762,9 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : cinq boosters → vague. Au programme : la route bouge, un ascenseur (la dalle monte puis redescend) et une glissière (elle se décale sur le côté), comme dans l’éditeur.',
     goal: { id: 'nowall' },
     opts: { l: 6 }, pilot: { vCap: 64 },
-    movers: [{ ms: 100, ma: 1 }, { ms: 100, ma: 1 }],
+    movers: [{ ms: 100, ma: 1 }, { ms: 100, ma: 0.5 }],      // PHYS_VER 36 : glissière d'une demi-case (avant une case) : se décaler de 32 m à 220 km/h demande ~170 m avec le braquage borné selon la vitesse
     script: 'start B5 S [crs1] S2~ B HR S2= C S HL S B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 16.2, or: 17.1, argent: 19.6, bronze: 23.1 },
+    medals: { cristal: 17.1, or: 18, argent: 20.7, bronze: 24.3 },
   },
   {
     // Chapitre 12 (Atelier, bonus) · 6/6 — MÉCANISME : marteau, balancier et mur coulissant à la suite : tout le chapitre d’un coup.
@@ -776,7 +776,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 56 },
     obst: [{ k: 'hammer', at: 0.066, side: 0, s: 1, ph: 0.966 }, { k: 'pendulum', at: 0.347, side: 0, s: 1, ph: 0.7 }, { k: 'slider', at: 0.637, side: 0, s: 1, ph: 0.396 }],
     script: 'start B2 S2 [cds1] S2 [crs1] S B HR S2 C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 18.9, or: 19.9, argent: 22.9, bronze: 26.8 },
+    medals: { cristal: 19.3, or: 20.4, argent: 23.4, bronze: 27.5 },
   },
 ];
 

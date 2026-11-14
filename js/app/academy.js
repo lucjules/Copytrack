@@ -120,7 +120,7 @@ export const academyMethods = {
     actions.push({ label: 'Académie', onClick: () => { setTimeout(() => { this.quitRace(); }, 0); return true; } });
     const hints = {
       nowall: 'Un muret touché : ralentis avant le virage et garde la route.', norespawn: 'Tu as dû réapparaître : regarde les obstacles avant de passer.',
-      turbo: 'Pas assez de mini-turbos : volant à fond d’abord, puis frein environ une seconde, et relâche.', perfect: 'Retombe à plat : accélérer baisse le nez, freiner le relève.',
+      turbo: 'Pas assez de mini-turbos : volant à fond d’abord, puis frein environ une seconde, et relâche.', perfect: 'Décolle droit, volant au centre : en l’air, rien ne se rattrape.',
       vehicle: 'Tu n’es pas en moto à l’arrivée : roule sur la plaque orange et ne repasse pas dessus.',
     };
     this.ui.modal({

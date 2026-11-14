@@ -388,7 +388,8 @@ test('raccords doux : aucun décollage jusqu’à 30 m/s (108 km/h) sur les racc
   // (gravité 19, 0.9.46 : la bosse douce montée-pente-fin d'un niveau ne décolle plus, même à 80 m/s ; la descente de deux niveaux et la rampe d'un demi-niveau, si)
   for (const sc of ['start S S [cdi1] [dn2] [cdo1] S4 S4 S4', 'start S S [crs05] S4 S4 S4']) assert.ok(hop(sc, 80) > 0.5, `${sc} à 80 m/s : ${hop(sc, 80)}`);
   assert.ok(hop('start S S [crv1] [steep] [cro1] S4 S4 S4', 80) < 0.5, 'la bosse douce d’un niveau reste collée à la route');
-  for (const sc of ['start S S [crs1] S4 S4 S4', 'start S S [cds1] S4 S4 S4']) assert.ok(hop(sc, 30) > 0.5, `${sc} : une rampe, elle décolle à 30 m/s : ${hop(sc, 30)}`);
+  // (PHYS_VER 36 : poussée a = 16 − 16·v/vmax, plus faible à 30 m/s qu'avant : la rampe en S d'un niveau vole 0,475 s au lieu de 0,6 ; les raccords doux, eux, restent à 0)
+  for (const sc of ['start S S [crs1] S4 S4 S4', 'start S S [cds1] S4 S4 S4']) assert.ok(hop(sc, 30) > 0.4, `${sc} : une rampe, elle décolle à 30 m/s : ${hop(sc, 30)}`);
   // (gravité 19, 0.9.46 : la rampe de 4 niveaux aux extrémités arrondies ne décolle qu'à grande vitesse : 0 à 50 m/s, 1,6 s à 60 m/s)
   assert.ok(hop('start S S [crv2] [steep4] [cro2] S4 S4 S4', 60) > 0.5, 'la rampe de 4 niveaux décolle à 60 m/s');
 });

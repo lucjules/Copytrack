@@ -286,13 +286,14 @@ test('ralentisseur (100 %, 150 %, 300 %) : une voiture, une moto ou un deltaplan
   }
 });
 test('ralentisseur : au-dessus de 11 km/h il freine exactement comme avant ; sans les gaz la voiture s\'arrête et reste arrêtée ; un ralentisseur faible (30 %) ne change pas', () => {
-  // Entrée à 30 m/s, gaz à fond, ralentisseur 150 % : décélération = 14 × 1,5 − poussée du moteur (formule d'origine, inchangée au-dessus du pas rampant).
+  // Entrée à 30 m/s, gaz à fond, ralentisseur 150 % : décélération = résistance (accélération moteur × 1,5) − poussée nette du moteur (formule inchangée au-dessus du pas rampant).
+  // PHYS_VER 36 (loi PolyTrack, a = 16 − 16·v/vmax) : 24 de résistance + ≈ 5 de traînée moteur à 25-30 m/s − 16 de poussée ≈ 13 m/s² (avant : 21 − ~10,5).
   const sim = parked(lane(8, 'slow', 150)), P = sim.phys;
   P.vel.z = -30; P.fwdSpeed = 30;
   const v = [];
   for (let i = 0; i < 60; i++) { sim.step(GAS); v.push(P.speed); }
   const dec = (v[10] - v[40]) / (30 / 120);
-  assert.ok(dec > 9 && dec < 12, `décélération ${dec.toFixed(1)} m/s² vers 25 m/s (21 de résistance − ~10,5 de poussée)`);
+  assert.ok(dec > 12 && dec < 15, `décélération ${dec.toFixed(1)} m/s² vers 25 m/s (24 de résistance + ~5 de traînée moteur − 16 de poussée)`);
   // Sans les gaz : arrêt complet, et elle y reste (le pas rampant ne vient que du moteur).
   const s2 = parked(lane(6, 'slow', 100)), P2 = s2.phys;
   P2.vel.z = -8;

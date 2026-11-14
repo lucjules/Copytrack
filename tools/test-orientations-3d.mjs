@@ -210,8 +210,9 @@ test('le vérificateur : sol directement contre une route à 45° = erreur de ra
 test('piece-fact : une pièce mesurée CHUTE dans une des nouvelles orientations est signalée (à vérifier), et dite « inclinée à 45° »', () => {
   const tr = new Track('x');
   tr.add(Track.normalize({ t: 'start', x: 0, z: 0, l: 12, r: 0 }));
-  const t = tr.add(Track.normalize({ t: 'cv2', x: 0, z: -1, l: 12, r: 0, o: 4 }));
-  assert.equal(PIECE_FACTS.cv2.incD, 'CHUTE');
+  // (PHYS_VER 36 : le virage montant cv2 incliné ne chute plus, il demande 150 km/h ; l'exemple devient la côte en courbe cro4)
+  const t = tr.add(Track.normalize({ t: 'cro4', x: 0, z: -1, l: 12, r: 0, o: 4 }));
+  assert.equal(PIECE_FACTS.cro4.incD, 'CHUTE');
   const pf = continuityIssues(tr).find((i) => i.code === 'piece-fact' && i.tile === t);
   assert.ok(pf && /inclinée à 45° à droite/.test(pf.why), pf && pf.why);
 });
