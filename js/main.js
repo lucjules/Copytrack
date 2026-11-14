@@ -40,6 +40,9 @@ import { modesMethods } from './app/modes.js';
 import { raceHubMethods } from './app/raceHub.js';
 import { theaterAppMethods } from './app/theater.js';
 
+// Tous les modules sont chargés et liés : la garde du démarrage (js/boot-guard.js) se désarme.
+window.__copytrackBooted = true;
+
 // Police : la feuille de style est déclarée « media=print » dans index.html (chargement sans bloquer le premier affichage) ; on la rend active ici, car la politique de sécurité du contenu
 // n'autorise aucun gestionnaire en ligne (l'ancien « onload » de la balise).
 {

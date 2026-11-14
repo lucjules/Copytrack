@@ -65,7 +65,8 @@ const CACHE = 'copytrack-${version}';
 const FILES = ${JSON.stringify(['./', ...files], null, 2)};
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // cache: 'reload' : la copie hors ligne vient du réseau, jamais d'un cache HTTP qui pourrait encore tenir un fichier de la version précédente.
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -75,8 +76,11 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  // cache: 'no-cache' : chaque fichier est revalidé auprès du serveur (une réponse 304 ne coûte presque rien). Sans cela, juste après une mise en ligne,
+  // le cache HTTP du navigateur (GitHub Pages : 10 min) pouvait servir un ancien module à côté des nouveaux, et le jeu ne démarrait pas (0.9.65).
+  const fresh = req.mode === 'navigate' ? new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' }) : new Request(req, { cache: 'no-cache' });
   e.respondWith(
-    fetch(req).then((res) => {
+    fetch(fresh).then((res) => {
       // Seules les réponses complètes (200) se gardent : une réponse partielle (206, lecture du MP3 par morceaux) ferait échouer cache.put.
       if (res.status === 200) { const copy = res.clone(); e.waitUntil(caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {})); }
       return res;
