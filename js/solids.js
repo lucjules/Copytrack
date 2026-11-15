@@ -11,9 +11,23 @@
 //   - les côtés : la sonde des bordures (physics/walls.js : _probe) les traite comme une bordure : même choc inélastique, même frottement ;
 //   - le dessus : roulable (track/surfaces.js : surfaceAt), comme une route ; une marche de moins de CAR.step se monte ;
 //   - le dessous : une voiture qui saute dessous s'y cogne la tête (physics/walls.js : _solidRoof).
-import { dcos, dsin, hypot2 } from './dmath.js';
+import { dcos, dsin, dtan, hypot2 } from './dmath.js';
 
 const B = (x0, y0, z0, x1, y1, z1) => ({ t: 'box', b: [x0, y0, z0, x1, y1, z1] });
+// 0.9.69 : pièce TOURNÉE dans le repère du solide : pavé de demi-côtés (hx, hz), de y0 à y1, centré en (cx, cz) et tourné de a autour de la verticale
+// (même sens que le cap ry d'une décoration). Le repère de la pièce (f) est figé au chargement (dcos / dsin : déterministe).
+const RB = (cx, cz, a, hx, hz, y0, y1) => ({ t: 'box', b: [-hx, y0, -hz, hx, y1, hz], f: { ox: cx, oz: cz, c: dcos(a), s: dsin(a) } });
+const RAMP = (x0, y0, z0, x1, y1, z1) => ({ t: 'ramp', b: [x0, y0, z0, x1, y1, z1] });
+const PYR = (x0, y0, z0, x1, y1, z1) => ({ t: 'pyr', b: [x0, y0, z0, x1, y1, z1] });
+// Mur courbe : quart de cercle de rayon R (centre (−R/2, R/2) : le mur va de (R/2, R/2) à (−R/2, −R/2)), n pavés tangents qui se chevauchent un peu.
+function arcWall(R, n, th, H) {
+  const out = [], da = Math.PI / 2 / n, hl = R * dtan(da / 2) + th * 0.5;
+  for (let i = 0; i < n; i++) {
+    const a = (i + 0.5) * da;
+    out.push(RB(-R / 2 + R * dcos(a), R / 2 - R * dsin(a), a + Math.PI / 2, hl, th / 2, 0, H));
+  }
+  return out;
+}
 
 export const SOLIDS = {
   // ---- Étape 1 : piliers et poutres (section 3,2 m pour un pilier, 1,6 m pour une poutre)
@@ -26,6 +40,20 @@ export const SOLIDS = {
   beamX:      { label: 'Poutre en croix', parts: [B(-8, 0, -0.8, 8, 1.6, 0.8), B(-0.8, 0, -8, 0.8, 1.6, -0.8), B(-0.8, 0, 0.8, 0.8, 1.6, 8)] },
   beamPost:   { label: 'Potence', parts: [B(-0.8, 0, -0.8, 0.8, 10, 0.8), B(-0.8, 10, -0.8, 12, 11.6, 0.8)] },
   gantry:     { label: 'Portique en poutres', parts: [B(-16.2, 0, -0.8, -14.6, 9, 0.8), B(14.6, 0, -0.8, 16.2, 9, 0.8), B(-16.2, 9, -0.8, 16.2, 10.6, 0.8)] },
+  // ---- Étape 2 (0.9.69) : murs pleins (4 m de haut, 0,8 m d'épaisseur ; le muret : 1,2 m)
+  wallS:      { label: 'Mur plein', parts: [B(-8, 0, -0.4, 8, 4, 0.4)] },
+  wallSLow:   { label: 'Muret plein', parts: [B(-8, 0, -0.4, 8, 1.2, 0.4)] },
+  wallSL:     { label: 'Mur plein en L', parts: [B(-8, 0, -0.4, 0.4, 4, 0.4), B(-0.4, 0, -8, 0.4, 4, -0.4)] },
+  wallST:     { label: 'Mur plein en T', parts: [B(-8, 0, -0.4, 8, 4, 0.4), B(-0.4, 0, -8, 0.4, 4, -0.4)] },
+  wallSX:     { label: 'Mur plein en croix', parts: [B(-8, 0, -0.4, 8, 4, 0.4), B(-0.4, 0, -8, 0.4, 4, -0.4), B(-0.4, 0, 0.4, 0.4, 4, 8)] },
+  wallSC:     { label: 'Mur plein courbe', parts: arcWall(16, 8, 0.8, 4) },
+  // ---- Étape 2 (0.9.69) : blocs pleins (dessus roulable ; la cale et la pyramide se montent)
+  block:      { label: 'Bloc', parts: [B(-4, 0, -4, 4, 8, 4)] },
+  slab:       { label: 'Dalle', parts: [B(-8, 0, -8, 8, 1.2, 8)] },
+  wedge:      { label: 'Cale', parts: [RAMP(-6, 0, -8, 6, 4, 8)] },
+  wedgeSteep: { label: 'Cale raide', parts: [RAMP(-6, 0, -4, 6, 4, 4)] },
+  pyramidS:   { label: 'Pyramide pleine', parts: [PYR(-8, 0, -8, 8, 5, 8)] },
+  archS:      { label: 'Arche pleine', parts: [B(-18, 0, -2, -14.6, 10, 2), B(14.6, 0, -2, 18, 10, 2), B(-18, 10, -2, 18, 12.4, 2)] },
 };
 export const SOLID_IDS = Object.keys(SOLIDS);
 export const isSolid = (k) => !!SOLIDS[k];
@@ -49,7 +77,7 @@ export function solidEntry(d) {
   let r = 0, top = -Infinity, bot = Infinity;
   for (const p of def.parts) {
     const [x0, y0, z0, x1, y1, z1] = p.b;
-    for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) r = Math.max(r, hypot2(x, z));
+    for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) { partOut(p, x, z, PO); r = Math.max(r, hypot2(PO.x, PO.z)); }
     top = Math.max(top, y1); bot = Math.min(bot, y0);
   }
   return { d, def, c, s, k, x: d.x, y: d.y, z: d.z, r: r * k, top: d.y + top * k, bottom: d.y + bot * k };
@@ -75,6 +103,30 @@ export function buildSolidGrid(decos) {
 
 export function solidsAt(index, x, z) {
   return index.grid.get(solidKey(Math.floor(x / SOLID_CELL), Math.floor(z / SOLID_CELL)));
+}
+
+// Repère du solide -> repère d'une pièce tournée (point), et retour (point ou vecteur : `vec`). Sans repère propre : inchangé.
+function partIn(p, x, z, out) {
+  const f = p.f;
+  if (!f) { out.x = x; out.z = z; return out; }
+  const dx = x - f.ox, dz = z - f.oz;
+  out.x = dx * f.c - dz * f.s; out.z = dx * f.s + dz * f.c;
+  return out;
+}
+function partOut(p, x, z, out, vec = false) {
+  const f = p.f;
+  if (!f) { out.x = x; out.z = z; return out; }
+  out.x = x * f.c + z * f.s + (vec ? 0 : f.ox); out.z = -x * f.s + z * f.c + (vec ? 0 : f.oz);
+  return out;
+}
+const PO = { x: 0, z: 0 }, PA = { x: 0, z: 0 }, PB = { x: 0, z: 0 };
+
+// Pente la plus forte du dessus d'une pièce (0 pour un pavé).
+function slopeOf(p) {
+  const [x0, y0, z0, x1, y1, z1] = p.b;
+  if (p.t === 'ramp') return Math.abs((y1 - y0) / (z1 - z0));
+  if (p.t === 'pyr') return Math.max((y1 - y0) / ((x1 - x0) / 2), (y1 - y0) / ((z1 - z0) / 2));
+  return 0;
 }
 
 // Monde -> repère du solide (avant échelle).
@@ -132,13 +184,14 @@ export function solidFloor(index, x, y, z, step, best, out, hidden = null) {
     toLocal(e, x, z, LA);
     const parts = e.def.parts;
     for (let j = 0; j < parts.length; j++) {
-      const p = parts[j], b = p.b;
-      if (LA.x < b[0] || LA.x > b[3] || LA.z < b[2] || LA.z > b[5]) continue;
-      const h = e.y + partTop(p, LA.x, LA.z) * e.k;
+      const p = parts[j], b = p.b, q = partIn(p, LA.x, LA.z, PA);
+      if (q.x < b[0] || q.x > b[3] || q.z < b[2] || q.z > b[5]) continue;
+      const h = e.y + partTop(p, q.x, q.z) * e.k;
       if (h > y + step || h <= best) continue;
       best = h;
-      partNormal(p, LA.x, LA.z, NL);
-      toWorldVec(e, NL.x, NL.z, WV);
+      partNormal(p, q.x, q.z, NL);
+      partOut(p, NL.x, NL.z, PO, true);
+      toWorldVec(e, PO.x, PO.z, WV);
       out.h = h; out.nx = WV.x; out.ny = NL.y; out.nz = WV.z;
       out.tile = null; out.type = 'road'; out.mod = ''; out.p = 0; out.lx = 0; out.lz = 0; out.solid = e.d;
     }
@@ -162,28 +215,31 @@ export function solidSide(index, x, z, px, pz, ylo, yhi, plo, R, step, hit, hidd
     toLocal(e, px, pz, LB);
     const r = R / e.k, parts = e.def.parts;
     for (let j = 0; j < parts.length; j++) {
-      const p = parts[j], b = p.b;
-      const qx = LA.x < b[0] ? b[0] : LA.x > b[3] ? b[3] : LA.x, qz = LA.z < b[2] ? b[2] : LA.z > b[5] ? b[5] : LA.z;
-      const ddx = LA.x - qx, ddz = LA.z - qz, dist = hypot2(ddx, ddz);
+      const p = parts[j], b = p.b, P1 = partIn(p, LA.x, LA.z, PA), P0 = partIn(p, LB.x, LB.z, PB);
+      const qx = P1.x < b[0] ? b[0] : P1.x > b[3] ? b[3] : P1.x, qz = P1.z < b[2] ? b[2] : P1.z > b[5] ? b[5] : P1.z;
+      const ddx = P1.x - qx, ddz = P1.z - qz, dist = hypot2(ddx, ddz);
       if (dist >= r) continue;
       // Hauteurs de la pièce au point de contact (monde).
       const lo = e.y + b[1] * e.k, top = e.y + partTop(p, qx, qz) * e.k;
       if (yhi < lo + 0.2 || ylo > top - 0.05) continue;
-      if (ylo >= top - step || plo >= top - 0.3) continue;      // une marche qui se monte, ou la voiture arrive par-dessus : le sol s'en charge
+      // Une marche qui se monte, ou la voiture arrive par-dessus : le sol s'en charge. Sur une pente (cale, pyramide), la sonde, jusqu'à 2,5 m devant le centre de
+      // la voiture, est plus haut que les roues de pente × 2,5 m : cette différence n'est pas une marche (même idée que la sonde sur une route en pente, walls.js).
+      if (ylo >= top - step - slopeOf(p) * 2.5 * (dist < 1e-6 ? 1 : 0) || plo >= top - 0.3) continue;
       let nx, nz, push;
       if (dist > 1e-6) { nx = ddx / dist; nz = ddz / dist; push = r - dist; }
       else {
         // Centre de la sonde DANS la pièce : on la ressort par la face qu'elle a franchie (celle du côté du point précédent), sinon par la plus proche.
-        const ex0 = LA.x - b[0], ex1 = b[3] - LA.x, ez0 = LA.z - b[2], ez1 = b[5] - LA.z;
+        const ex0 = P1.x - b[0], ex1 = b[3] - P1.x, ez0 = P1.z - b[2], ez1 = b[5] - P1.z;
         let f = 0, m = ex0;
         if (ex1 < m) { m = ex1; f = 1; }
         if (ez0 < m) { m = ez0; f = 2; }
         if (ez1 < m) { m = ez1; f = 3; }
-        if (LB.x < b[0]) f = 0; else if (LB.x > b[3]) f = 1; else if (LB.z < b[2]) f = 2; else if (LB.z > b[5]) f = 3;
+        if (P0.x < b[0]) f = 0; else if (P0.x > b[3]) f = 1; else if (P0.z < b[2]) f = 2; else if (P0.z > b[5]) f = 3;
         nx = f === 0 ? -1 : f === 1 ? 1 : 0; nz = f === 2 ? -1 : f === 3 ? 1 : 0;
         push = (f === 0 ? ex0 : f === 1 ? ex1 : f === 2 ? ez0 : ez1) + r;
       }
-      toWorldVec(e, nx, nz, WV);
+      partOut(p, nx, nz, PO, true);
+      toWorldVec(e, PO.x, PO.z, WV);
       hit.nx = WV.x; hit.nz = WV.z;
       hit.dx = WV.x * push * e.k; hit.dz = WV.z * push * e.k;
       hit.solid = e.d;
@@ -205,8 +261,8 @@ export function solidCeiling(index, x, z, ylo, yhi, pyhi, hidden = null) {
     toLocal(e, x, z, LA);
     const parts = e.def.parts;
     for (let j = 0; j < parts.length; j++) {
-      const b = parts[j].b;
-      if (LA.x < b[0] || LA.x > b[3] || LA.z < b[2] || LA.z > b[5]) continue;
+      const b = parts[j].b, q = partIn(parts[j], LA.x, LA.z, PA);
+      if (q.x < b[0] || q.x > b[3] || q.z < b[2] || q.z > b[5]) continue;
       const lo = e.y + b[1] * e.k;
       if (yhi > lo && pyhi <= lo + 0.05) return lo;
     }

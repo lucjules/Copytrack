@@ -775,7 +775,19 @@ function gbOffset(gb, ox, oy, oz) {
 Object.assign(BUILDERS, PACK_BUILDERS);
 
 // 0.9.68 : solides (solids.js) : la géométrie visible EST la forme de contact (mêmes pavés, rampes, pyramides), plus des liserés sans épaisseur.
-const SOLID_COL = { pillar: '#9aa0b8', pillarBase: '#9aa0b8', pillarThin: '#c9ccd8', beam: '#8d93ad', beamL: '#8d93ad', beamT: '#8d93ad', beamX: '#8d93ad', beamPost: '#8d93ad', gantry: '#ffbf3c' };
+const SOLID_COL = {
+  pillar: '#9aa0b8', pillarBase: '#9aa0b8', pillarThin: '#c9ccd8', beam: '#8d93ad', beamL: '#8d93ad', beamT: '#8d93ad', beamX: '#8d93ad', beamPost: '#8d93ad', gantry: '#ffbf3c',
+  wallS: '#b9bdd0', wallSLow: '#b9bdd0', wallSL: '#b9bdd0', wallST: '#b9bdd0', wallSX: '#b9bdd0', wallSC: '#b9bdd0',
+  block: '#8f7cff', slab: '#6e7398', wedge: '#ffbf3c', wedgeSteep: '#ff8c42', pyramidS: '#d8a476', archS: '#9aa0b8',
+};
+// Pavé tourné (pièce d'un solide avec son propre repère, ex. un tronçon de mur courbe) : 8 coins passés dans le repère du solide.
+function turnedBox(gb, p, col, top) {
+  const [x0, y0, z0, x1, y1, z1] = p.b, f = p.f;
+  const P = (x, y, z) => [f.ox + x * f.c + z * f.s, y, f.oz - x * f.s + z * f.c];
+  const a = P(x0, y0, z0), b = P(x1, y0, z0), c = P(x1, y0, z1), d = P(x0, y0, z1), e = P(x0, y1, z0), g = P(x1, y1, z0), h = P(x1, y1, z1), k = P(x0, y1, z1);
+  gb.quad(e, k, h, g, top); gb.quad(a, b, c, d, col);
+  gb.quad(a, e, g, b, col); gb.quad(b, g, h, c, col); gb.quad(c, h, k, d, col); gb.quad(d, k, e, a, col);
+}
 function solidMesh(gb, glow, id, c) {
   const def = SOLIDS[id], col = c || SOLID_COL[id] || '#9aa0b8';
   for (const p of def.parts) {
@@ -791,8 +803,11 @@ function solidMesh(gb, glow, id, c) {
       const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, T = [cx, y1, cz];
       const q = [[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]];
       for (let i = 0; i < 4; i++) gb.tri(q[i], q[(i + 1) % 4], T, i % 2 ? col : '#c9a46a');
-    } else gb.box(x0, y0, z0, x1, y1, z1, col);
+    } else if (p.f) turnedBox(gb, p, col, '#5a5e82');
+    else gb.box(x0, y0, z0, x1, y1, z1, col);
   }
+  // Murs pleins : chaperon sombre (liseré) ; dalle et bloc : bord clair du dessus.
+  if (id.startsWith('wallS')) for (const p of def.parts) if (!p.f) { const [x0, , z0, x1, y1, z1] = p.b; gb.box(x0 - 0.05, y1, z0 - 0.05, x1 + 0.05, y1 + 0.08, z1 + 0.05, '#5a5e82'); }
   // Repères visuels : bandes de danger sur la traverse d'un portique, liseré sombre en tête de pilier.
   if (id === 'gantry') {
     for (let i = 0; i < 16; i++) {

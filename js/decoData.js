@@ -34,6 +34,8 @@ export const DECO_ORDER = [
   'board_left', 'board_right', 'board_up', 'board_down', 'board_warn', 'board_no', 'sign_down', 'sign_uturn',
   // 0.9.68 : solides (physiques, voir solids.js) : piliers et poutres
   'pillar', 'pillarBase', 'pillarThin', 'beam', 'beamL', 'beamT', 'beamX', 'beamPost', 'gantry',
+  // 0.9.69 : solides : murs pleins et blocs pleins
+  'wallS', 'wallSLow', 'wallSL', 'wallST', 'wallSX', 'wallSC', 'block', 'slab', 'wedge', 'wedgeSteep', 'pyramidS', 'archS',
 ];
 
 // Décorations qui éclairent vraiment la scène (PointLight / SpotLight). La couleur de l'objet (index ou #rrggbb) donne celle de la lumière.
@@ -121,6 +123,14 @@ const BASE = [
     ['pillar', 'Pilier', '▮'], ['pillarBase', 'Pilier sur socle', '🗿'], ['pillarThin', 'Poteau', '│'], ['beam', 'Poutre', '▬'],
     ['beamL', 'Poutre en L', '┗'], ['beamT', 'Poutre en T', '┳'], ['beamX', 'Poutre en croix', '╋'], ['beamPost', 'Potence', '┏'],
     ['gantry', 'Portique en poutres', '⛩'],
+  ]],
+  ['wallsS', 'Murs pleins', [
+    ['wallS', 'Mur plein', '🧱'], ['wallSLow', 'Muret plein', '▭'], ['wallSL', 'Mur plein en L', '└'], ['wallST', 'Mur plein en T', '┴'],
+    ['wallSX', 'Mur plein en croix', '┼'], ['wallSC', 'Mur plein courbe', '◜'],
+  ]],
+  ['blocks', 'Blocs pleins', [
+    ['block', 'Bloc', '■'], ['slab', 'Dalle', '▰'], ['wedge', 'Cale', '◢'], ['wedgeSteep', 'Cale raide', '◣'],
+    ['pyramidS', 'Pyramide pleine', '▲'], ['archS', 'Arche pleine', '⌂'],
   ]],
   ['obstacles', 'Obstacles', [
     ['spikes', 'Piques', '🔱'], ['spikesPop', 'Piques escamotables', '⏫'], ['pendulum', 'Boule balancier', '🔴'], ['hammer', 'Marteau tournant', '🔨'],

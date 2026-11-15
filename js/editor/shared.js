@@ -36,11 +36,13 @@ export const MODS = [
   { id: 'mod:gs1', flag: 'gs', val: 1, label: 'Ligne au sol', hint: 'Portique : seulement la ligne peinte et deux balises (visuel)' },
   { id: 'mod:gs2', flag: 'gs', val: 2, label: 'Arche', hint: 'Portique : grande arche arrondie (visuel)' },
   { id: 'mod:gs3', flag: 'gs', val: 3, label: 'Pylônes', hint: 'Portique : deux hauts pylônes lumineux, sans traverse (visuel)' },
+  // 0.9.69 : bordures d'une plaque (bord par bord dans l'Inspecteur)
+  { id: 'mod:eb15', flag: 'eb', val: 15, label: 'Bordures', hint: 'Plaque : une bordure tout autour (bord par bord dans l’Inspecteur)' },
 ];
 
-export const OPT_KEYS = ['v', 'o', 'nb', 'tn', 'mv', 'cp', 'tb', 'th', 'gs'];
+export const OPT_KEYS = ['v', 'o', 'nb', 'tn', 'mv', 'cp', 'tb', 'th', 'gs', 'eb'];
 
-export const NO_OPTS = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, gs: 0 };
+export const NO_OPTS = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, gs: 0, eb: 0 };
 
 export const SNAPS = [{ id: 0, label: 'Libre' }, { id: 1, label: '1 m' }, { id: 4, label: '4 m' }, { id: CELL / 2, label: 'Demi-case' }, { id: CELL, label: 'Case' }];
 

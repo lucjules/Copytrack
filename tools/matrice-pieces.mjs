@@ -171,6 +171,8 @@ export function probe(type, opts) {
 // ---- Matrice complète ---------------------------------------------------------------------------------------------------------------------------
 const NA = {
   platform: 'plateforme : surface sans extrémité (aucun raccord orienté)',
+  // 0.9.69 : les plaques sont des plateformes (surfaces sans extrémité) de toute taille et forme
+  ...Object.fromEntries(['plate2', 'plate3', 'tri1', 'tri2', 'tri3', 'sec1', 'sec2', 'sec3'].map((id) => [id, 'plaque : surface sans extrémité (aucun raccord orienté)'])),
   ring: 'anneau flottant : pas de route',
   cpRing: 'anneau flottant : pas de route',
   start: 'ouvre toutes les chaînes (départ)',

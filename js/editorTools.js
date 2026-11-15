@@ -1,7 +1,7 @@
 // Outils de l'éditeur (v1.5) : sélection de zone et presse-papiers, vérificateur de
 // circuit, miniatures vues de dessus. Aucun rendu 3D ici : seulement des données.
 import { CELL, LEVEL_H, MAX_LEVEL, SURF_PHYS } from './constants.js';
-import { PIECES, forkBranchX, localToWorld, baseY, cpKind } from './pieces.js';
+import { PIECES, forkBranchX, localToWorld, baseY, cpKind, toLocal, sampleLocal } from './pieces.js';
 import { Track } from './track.js';
 import { centerlineWorld } from './ribbons.js';
 import { mapGeometry, fitView, drawTrackMap } from './ui/trackMap.js';
@@ -300,10 +300,13 @@ function endpoints(tile) {
 
 function platformAt(track, x, z, y) {
   for (const t of track.tilesAt(Math.floor(x / CELL), Math.floor(z / CELL))) {
-    if (PIECES[t.t].kind === 'area' && Math.abs(baseY(t) - y) < 1.2) return t;
+    if (PIECES[t.t].kind !== 'area' || Math.abs(baseY(t) - y) >= 1.2) continue;
+    toLocal(t, x, z, PL); sampleLocal(t, PL.lx, PL.lz, PS);      // (0.9.69 : une plaque triangle ou en quart de disque ne couvre pas toute sa case)
+    if (PS.inFootprint) return t;
   }
   return null;
 }
+const PL = { lx: 0, lz: 0 }, PS = {};
 
 export function checkTrack(track) {
   const issues = [];
@@ -325,11 +328,14 @@ export function checkTrack(track) {
     if (!ok) free.push(e);
   }
   // Plateformes voisines : reliées entre elles.
+  // (0.9.69 : une plaque de plusieurs cases a des voisines tout autour de son empreinte)
   for (const t of track.tiles) {
-    if (PIECES[t.t].kind !== 'area') continue;
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const n = platformAt(track, (t.x + dx + 0.5) * CELL, (t.z + dz + 0.5) * CELL, baseY(t));
-      if (n) join(t, n);
+    const P = PIECES[t.t];
+    if (P.kind !== 'area') continue;
+    for (let i = -1; i <= P.size; i++) for (let j = -1; j <= P.size; j++) {
+      if ((i >= 0 && i < P.size && j >= 0 && j < P.size) || ((i < 0 || i >= P.size) && (j < 0 || j >= P.size))) continue;
+      const n = platformAt(track, (t.x + i + 0.5) * CELL, (t.z + j + 0.5) * CELL, baseY(t));
+      if (n && n !== t) join(t, n);
     }
   }
   const glider = track.tiles.some((t) => t.s === 'glider');

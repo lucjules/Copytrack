@@ -1,6 +1,6 @@
 // Règles de course (sans rendu) : checkpoints, arrivée, points de réapparition.
 import { CELL, LEVEL_H, ROAD_HALF, DT } from './constants.js';
-import { PIECES, RING_R, RING_Y, toLocal, sampleLocal, tileCenter, baseY, cpKind, arcParams, localToWorld } from './pieces.js';
+import { PIECES, RING_R, RING_Y, toLocal, sampleLocal, tileCenter, baseY, cpKind, arcParams, localToWorld, areaCentroid } from './pieces.js';
 import { dcos, dsin, hypot2 } from './dmath.js';
 
 const L = { lx: 0, lz: 0 };
@@ -148,6 +148,7 @@ export class RaceLogic {
         this.splits.push(this.steps);
         // Pièce checkpoint d'origine : son centre ; option sur un virage : le milieu de l'arc (le centre n'est pas sur la route).
         let c = tileCenter(tile);
+        if (P.kind === 'area' && P.shape) { const g = areaCentroid(P); c = localToWorld(tile, g.x, g.z); }      // (0.9.69 : plaque triangle ou quart de disque : son centre de gravité)
         if (!P.special && P.kind === 'arc') {
           const a = arcParams(P), ang = Math.PI * 1.25;
           c = localToWorld(tile, a.cx + a.R * dcos(ang), a.cz + a.R * dsin(ang));

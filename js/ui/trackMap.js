@@ -7,7 +7,7 @@
 //   drawTrackMap(g, geom, view, opts)  dessine dans un contexte 2D (style 'thumb' : la miniature d'origine, au pixel près ; 'map' : la grande carte)
 //   createTrackMap(canvas, track, o)   grande carte interactive : molette, glisser, pincer, double clic, clavier
 import { CELL } from '../constants.js';
-import { PIECES, SURFACES, forkBranchX, localToWorld, cpKind } from '../pieces.js';
+import { PIECES, SURFACES, forkBranchX, localToWorld, cpKind, plateOutline } from '../pieces.js';
 import { centerlineWorld } from '../ribbons.js';
 import { isObstacle } from '../obstacles.js';
 
@@ -31,7 +31,13 @@ export function mapGeometry(track) {
       if (cpKind(t)) markers.checkpoints.push({ ...center, tile: t, ring: true });
       continue;
     }
-    if (P.kind === 'area') { items.push({ type: 'area', x: t.x * CELL, z: t.z * CELL, size: CELL, tile: t }); continue; }
+    if (P.kind === 'area') {
+      // 0.9.69 : plaque de toute taille et forme : son contour (monde), pour la dessiner telle quelle.
+      const poly = plateOutline(P).map(([lx, lz]) => { const w = localToWorld(t, lx, lz); return [w.x, w.z]; });
+      items.push({ type: 'area', x: t.x * CELL, z: t.z * CELL, size: P.size * CELL, poly, tile: t });
+      if (cpKind(t)) markers.checkpoints.push({ ...center, tile: t, ring: false });
+      continue;
+    }
     let lines;
     if (P.kind === 'fork') {
       const half = P.size * CELL / 2;
@@ -92,7 +98,11 @@ export function drawTrackMap(g, geom, view, { style = 'thumb', bg = '#16122b', z
         continue;
       }
       if (it.type === 'area') {
-        if (!pass) { g.fillStyle = '#4d5276'; g.fillRect(X(it.x), Z(it.z), it.size * s, it.size * s); }
+        if (!pass) {
+          g.fillStyle = '#4d5276';
+          if (it.poly) { g.beginPath(); it.poly.forEach(([x, z], i) => (i ? g.lineTo(X(x), Z(z)) : g.moveTo(X(x), Z(z)))); g.closePath(); g.fill(); }
+          else g.fillRect(X(it.x), Z(it.z), it.size * s, it.size * s);
+        }
         continue;
       }
       it.lines.forEach((pts, br) => {

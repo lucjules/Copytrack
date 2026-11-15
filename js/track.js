@@ -1,7 +1,7 @@
 // Modèle de circuit : liste de pièces posées sur une grille, index spatial,
 // requêtes de surface pour la physique, sérialisation en code partageable.
 import { CELL, DIRS, MAX_LEVEL, LEVEL_H, MAX_DECOS, VEHICLES } from './constants.js';
-import { PIECES, MAX_O, PIECE_ORDER, SURFACE_CODES, SURFACE_ALIAS, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, forkBranchX, rotVec, moverParams, clampMover, THEMES, LEGACY_TILE } from './pieces.js';
+import { PIECES, MAX_O, PIECE_ORDER, SURFACE_CODES, SURFACE_ALIAS, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, forkBranchX, rotVec, moverParams, clampMover, THEMES, LEGACY_TILE, plateAllEdges, baseY } from './pieces.js';
 import { centerlineWorld, rollLevels } from './ribbons.js';
 import { isObstacle, buildObstacleGrid } from './obstacles.js';
 import { isSolid, buildSolidGrid } from './solids.js';
@@ -53,7 +53,7 @@ export const RULES = [
 // leur valeur par défaut. Chaque champ produit par Track.normalize doit y figurer : un test (tools/test-circuit.mjs) le vérifie.
 export const TILE_FIELDS = [
   ['t', ''], ['x', 0], ['z', 0], ['l', 0], ['r', 0], ['s', ''], ['p', 0], ['v', 0], ['nb', 0], ['tn', 0], ['mv', 0], ['cp', 0], ['th', 0],
-  ['ms', 0], ['ma', 0], ['col', null], ['s2', ''], ['p2', 0], ['tb', 0], ['o', 0], ['g', 0], ['gs', 0],
+  ['ms', 0], ['ma', 0], ['col', null], ['s2', ''], ['p2', 0], ['tb', 0], ['o', 0], ['g', 0], ['gs', 0], ['eb', 0],
 ];
 
 export const tileToRow = (t) => TILE_FIELDS.map(([k, def]) => (t[k] ?? def));
@@ -136,7 +136,7 @@ export class Track {
     const cell = (v) => Math.max(-MAX_CELL, Math.min(MAX_CELL, v | 0));
     const tile = {
       t: type, x: cell(t.x), z: cell(t.z), l: Math.max(0, Math.min(MAX_LEVEL, Math.round((+t.l || 0) * 2) / 2)), r: t.r & 3,
-      s: '', p: 0, v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ms: 0, ma: 0, col: null, s2: '', p2: 0, gs: 0,
+      s: '', p: 0, v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ms: 0, ma: 0, col: null, s2: '', p2: 0, gs: 0, eb: 0,
       g: Math.max(0, Math.min(MAX_GROUP, t.g | 0)),      // groupe (calque de l'éditeur ; logique du circuit, E10) : 0 = aucun
     };
     tile.v = t.v && flagAllowed(type, 'v') ? 1 : 0;
@@ -151,6 +151,7 @@ export class Track {
     tile.tb = t.tb && flagAllowed(type, 'tb', tile) ? 1 : 0;
     tile.th = THEMES.some((h) => h.id === (t.th | 0)) && flagAllowed(type, 'th') ? (t.th | 0) : 0;
     tile.gs = (t.gs | 0) > 0 && flagAllowed(type, 'gs', tile, t.gs | 0) ? (t.gs | 0) : 0;      // (après le checkpoint : le style suit le portique)
+    tile.eb = (t.eb | 0) > 0 && flagAllowed(type, 'eb', tile, t.eb | 0) ? (t.eb | 0) & plateAllEdges(PIECES[type]) : 0;      // 0.9.69 : bordures d'une plaque (un bit par bord)
     tile.col = cleanColors(t.col);
     if (surfaceAllowed(type, s, tile.o)) {
       tile.s = s;
@@ -419,6 +420,7 @@ export class Track {
       if (t.tb) e.tb = 1;
       if (t.th) e.th = t.th;
       if (t.gs) e.gs = t.gs;
+      if (t.eb) e.eb = t.eb;
       if (t.ms) e.ms = t.ms;
       if (t.ma) e.ma = t.ma;
       if (t.s2) { e.s2 = t.s2 === '-' ? -1 : Math.max(0, SURFACE_CODES.indexOf(t.s2)); if (t.p2) e.p2 = t.p2; }
@@ -478,7 +480,7 @@ export class Track {
       const tile = { t: type, x: data.t[i + 1], z: data.t[i + 2], l: data.t[i + 3], r: data.t[i + 4], s: '' };
       const ex = extras.get(i / stride);
       if (ex) {
-        tile.cp = ex.cp | 0; tile.o = ex.o | 0; tile.tb = ex.tb | 0; tile.th = ex.th | 0; tile.gs = ex.gs | 0; tile.ms = ex.ms | 0; tile.ma = +ex.ma || 0; tile.g = ex.g | 0;
+        tile.cp = ex.cp | 0; tile.o = ex.o | 0; tile.tb = ex.tb | 0; tile.th = ex.th | 0; tile.gs = ex.gs | 0; tile.eb = ex.eb | 0; tile.ms = ex.ms | 0; tile.ma = +ex.ma || 0; tile.g = ex.g | 0;
         if (ex.s2) { tile.s2 = ex.s2 === -1 ? '-' : SURFACE_CODES[ex.s2] || ''; tile.p2 = ex.p2 | 0; }
         if (ex.col && typeof ex.col === 'object') tile.col = Object.fromEntries(COLOR_KEYS.filter((k) => typeof ex.col[k] === 'string').map((k) => [k, '#' + ex.col[k]]));
       }
@@ -492,7 +494,7 @@ export class Track {
       if (tr.conflicts(norm).length) { lost.overlap++; continue; }
       // (les anciens types convertis à la lecture — pièces 90°, revêtements-pièces, doublons de revêtement — ne sont pas des pertes : leur conversion est voulue)
       const legacy = LEGACY_TILE[tile.t] || LEGACY_SURFACE[tile.t] || LEGACY_PIECE[tile.t];
-      if (!legacy && ((tile.o | 0) !== norm.o || (tile.v ? 1 : 0) !== norm.v || (tile.tn ? 1 : 0) !== norm.tn || ((tile.mv | 0) !== norm.mv) || ((tile.cp | 0) !== norm.cp) || ((tile.tb | 0) !== norm.tb) || ((SURFACE_ALIAS[tile.s] || tile.s || '') !== norm.s))) lost.options++;
+      if (!legacy && ((tile.o | 0) !== norm.o || (tile.v ? 1 : 0) !== norm.v || (tile.tn ? 1 : 0) !== norm.tn || ((tile.mv | 0) !== norm.mv) || ((tile.cp | 0) !== norm.cp) || ((tile.tb | 0) !== norm.tb) || ((tile.eb | 0) !== norm.eb) || ((SURFACE_ALIAS[tile.s] || tile.s || '') !== norm.s))) lost.options++;
       tr.add(tile);
     }
     if (Array.isArray(data.o)) {
@@ -528,6 +530,7 @@ function tileExtras(t) {
   if (t.o) e += 'o' + t.o;
   if (t.mv && (t.ms || t.ma)) e += `s${t.ms || 0}a${t.ma || 0}`;
   if (t.s2) e += `f${t.s2}:${t.p2 || 0}`;
+  if (t.eb) e += 'e' + t.eb;      // (0.9.69 : bordures d'une plaque : elles arrêtent la voiture)
   return e;
 }
 
@@ -607,6 +610,7 @@ export function hashString(s) {
 //   Phase 2 : HR / HL très grand virage plat (3x3)   UX / DX  ligne droite inclinée de 4 niveaux (montée / descente)
 //   0.9.67 : XR / XL virage géant plat (5x5, rayon 144 m)
 //   0.9.68 : suffixe *n : style du portique d'un départ, d'une arrivée ou d'un checkpoint : *1 ligne au sol, *2 arche, *3 pylônes (ex. start*2 C*3 finish*1)
+//   0.9.69 : sur une plaque, *n est le masque de ses bordures (un bit par bord, *15 : tout autour), ex. [plate2]*15 P*5
 //   0.9.68 : ZR / ZL chicane (la route se décale d'une colonne à droite / à gauche, même cap) : ZR = 2 cases de long, ZR3 longue, ZR4 rapide ;
 //            ZZR / ZZL grand S (3×3, deux colonnes)
 //   CVR / CVL  courbe montante serrée droite / gauche, CBR / CBL grande courbe montante (2x2) : le nombre est l'inclinaison
@@ -626,12 +630,13 @@ export function scriptTrack(name, script, opts = {}) {
   let moverTok = 0;       // numéro de l'instruction à pièce mobile (opts.movers[n - 1] = { ms, ma } : vitesse en % et amplitude de ses pièces)
   const place = (t, px, pz, lv, r, reverse = false, noPath = false, curOver = null) => {
     const tile = { t, x: px, z: pz, l: lv, r: r & 3, ...(curOver || cur) };
+    if (PIECES[t].kind === 'area' && tile.gs) { tile.eb = tile.gs; tile.gs = 0; }      // (0.9.69 : sur une plaque, « *n » est le masque des bordures)
     const mp = cur.mv && opts.movers ? opts.movers[cur.mvTok - 1] : null;
     if (mp) { tile.ms = mp.ms || 0; tile.ma = mp.ma || 0; }
     if (cur.s && !surfaceAllowed(t, cur.s, cur.o | 0)) throw new Error(`${name} : revêtement ${cur.s} interdit sur ${t}`);
     for (const f of ['v', 'nb', 'tn', 'mv']) if (cur[f] && !flagAllowed(t, f, tile)) throw new Error(`${name} : drapeau ${f} interdit sur ${t}`);
     if (cur.o && !flagAllowed(t, 'o', tile, cur.o)) throw new Error(`${name} : orientation ${cur.o} interdite sur ${t}`);
-    if (cur.gs && !flagAllowed(t, 'gs', tile, cur.gs)) throw new Error(`${name} : style de portique ${cur.gs} impossible sur ${t}`);
+    if (tile.gs && !flagAllowed(t, 'gs', tile, tile.gs)) throw new Error(`${name} : style de portique ${tile.gs} impossible sur ${t}`);
     const c = tr.conflicts(Track.normalize(tile));
     if (c.length) throw new Error(`${name} : conflit en (${px}, ${pz}) niveau ${lv} [${t}]`);
     if (!Track.inBounds(Track.normalize(tile))) throw new Error(`${name} : ${t} sort des niveaux en (${px}, ${pz})`);
@@ -744,6 +749,16 @@ export function scriptTrack(name, script, opts = {}) {
     const d = rot(h, 2 * mirror * laneCells, -size);
     x += d.x; z += d.z;
   };
+  // 0.9.69 : plaque de plusieurs cases : la route y entre par le milieu de son bord arrière (taille paire : la colonne de gauche des deux du milieu)
+  // et en ressort en face ; le tracé du pilote suit la colonne.
+  const platePiece = (type) => {
+    const size = PIECES[type].size, e = rot(h, size % 2 ? 0 : -0.5, (size - 1) / 2);
+    const added = place(type, Math.round(x + 0.5 - e.x - size / 2), Math.round(z + 0.5 - e.z - size / 2), l, h, false, true);
+    const f = DIRS[h], y = baseY(added), pts = [];
+    for (let i = 0; i <= 4 * size; i++) { const k = i / 4 - 0.5; pts.push([(x + 0.5 + f[0] * k) * CELL, y, (z + 0.5 + f[1] * k) * CELL, 0]); }
+    pushPts(pts);
+    adv(h, size);
+  };
   // 0.9.68 : chicane : entrée dans la première colonne (côté opposé au décalage), sortie `shift` colonnes plus loin, même cap.
   const sbendPiece = (type) => {
     const P = PIECES[type], m = P.mirror, size = P.size;
@@ -755,8 +770,8 @@ export function scriptTrack(name, script, opts = {}) {
 
   for (let tok of script.trim().split(/\s+/)) {
     // 0.9.68 : « *n » en fin de jeton : style du portique (1 ligne au sol, 2 arche, 3 pylônes) d'un départ, d'une arrivée ou d'un checkpoint (ex. start*2, C*3).
-    const gsm = /\*(\d)$/.exec(tok);
-    if (gsm) tok = tok.slice(0, -2);
+    const gsm = /\*(\d{1,2})$/.exec(tok);
+    if (gsm) tok = tok.slice(0, -gsm[0].length);
     // [id] : n'importe quelle pièce par son identifiant (ex. [dn1] [cro2] [tr01s] [cvd1]) ; le niveau suit la pente de la pièce.
     const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>(){}]*)$/.exec(tok);
     const m = gm ? [tok, '@' + gm[1], gm[2], gm[3], gm[4], gm[5]] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>(){}]*)$/.exec(tok);
@@ -782,6 +797,7 @@ export function scriptTrack(name, script, opts = {}) {
       for (let i = 0; i < n; i++) {
         const sg = P.mirror < 0 ? -1 : 1, rise = P.rise || 0;
         if (P.kind === 'sbend') sbendPiece(id);
+        else if (P.kind === 'area' && P.size > 1) platePiece(id);
         else if (P.kind === 'arc' && P.size === 2) {
           const c = rot(h, 0.5 * sg, -0.5);
           place(id, Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);

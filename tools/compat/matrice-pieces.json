@@ -1590,6 +1590,302 @@
    }
   }
  },
+ "plate2": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "plate3": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "tri1": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "tri2": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "tri3": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "sec1": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "sec2": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "sec3": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
  "cv05": {
   "kind": "arc",
   "cells": {

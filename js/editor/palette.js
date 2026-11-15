@@ -24,6 +24,7 @@ const OPTION_GROUPS = [
   { id: 'tb', label: 'Anneau turbo', flag: 'tb', choices: [['tb', 0, 'Aucun'], ['tb', 1, 'Turbo']] },
   { id: 'th', label: 'Thème', flag: 'th', choices: [['th', 0, 'Classique'], ['th', 1, 'Herbe'], ['th', 2, 'Sable'], ['th', 3, 'Roche']] },
   { id: 'gs', label: 'Portique', flag: 'gs', choices: [['gs', 0, 'Portique'], ['gs', 1, 'Ligne au sol'], ['gs', 2, 'Arche'], ['gs', 3, 'Pylônes']] },
+  { id: 'eb', label: 'Plaque', flag: 'eb', choices: [['eb', 0, 'Sans bordure'], ['eb', 15, 'Bordures tout autour']] },
   { id: 'mv', label: 'Mouvement', flag: 'mv', choices: [['mv', 0, 'Aucun'], ['mv', 1, 'Ascenseur'], ['mv', 2, 'Glissière'], ['mv', 3, 'Rotation']] },
 ];
 
@@ -47,6 +48,12 @@ const sbIcon = (mir, wide = false, tag = '') => {
   const a = wide ? 9 : 15, b = wide ? 39 : 33, x0 = mir > 0 ? a : b, x1 = mir > 0 ? b : a;
   const d = `M${x0} 48C${x0} 26 ${x1} 22 ${x1} 0`;
   return svg(`<path d="${d}" stroke="${RAIL}" stroke-width="${wide ? 14 : 17}" fill="none"/><path d="${d}" stroke="${ROAD}" stroke-width="${wide ? 10 : 13}" fill="none"/><path d="${d}" stroke="${LINE}" stroke-width="1.6" stroke-dasharray="4 4" fill="none"/>${tag ? `<text x="${mir > 0 ? 3 : 33}" y="44" font-size="11" fill="#ffbf3c" font-family="sans-serif" font-weight="700" stroke="#14142a" stroke-width="2.2" paint-order="stroke">${tag}</text>` : ''}`);
+};
+
+// 0.9.69 : plaques vues de dessus (carré, triangle, quart de disque) ; n : taille.
+const plateIcon = (shape, n) => {
+  const d = shape === 'tri' ? 'M4 4V44H44Z' : shape === 'sec' ? 'M4 44V4A40 40 0 0 1 44 44Z' : 'M4 4H44V44H4Z';
+  return svg(`<path d="${d}" fill="#454a6a" stroke="#ffb84d" stroke-width="2" stroke-linejoin="round"/>${n > 1 ? `<text x="${shape === 'sq' ? 16 : 8}" y="${shape === 'sec' ? 38 : 30}" font-size="13" fill="#ffbf3c" font-family="sans-serif" font-weight="700">${n}×${n}</text>` : ''}`);
 };
 
 // Petit nombre d'inclinaison dans le coin d'une icône.
@@ -80,6 +87,8 @@ const ICONS = {
   hugecurve: svg(`<path d="M2 48 A46 46 0 0 1 48 2 L48 14 A34 34 0 0 0 14 48Z" fill="#3c4160"/><path d="M2 48 A46 46 0 0 1 48 2" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M14 48 A34 34 0 0 1 48 14" stroke="#ff6b57" stroke-width="2.5" fill="none"/>`),
   giantcurve: svg(`<path d="M2 48 A46 46 0 0 1 48 2 L48 10 A38 38 0 0 0 10 48Z" fill="#3c4160"/><path d="M2 48 A46 46 0 0 1 48 2" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M10 48 A38 38 0 0 1 48 10" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M14 40 A30 30 0 0 1 40 14" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 4" fill="none"/>`),
   crv05: crvIcon('½'), crv1: crvIcon(1), crv2: crvIcon(2), crv4: crvIcon(4),
+  plate2: plateIcon('sq', 2), plate3: plateIcon('sq', 3), tri1: plateIcon('tri', 1), tri2: plateIcon('tri', 2), tri3: plateIcon('tri', 3),
+  sec1: plateIcon('sec', 1), sec2: plateIcon('sec', 2), sec3: plateIcon('sec', 3),
   sbend: sbIcon(1), sbendL: sbIcon(-1), sbendLong: sbIcon(1, false, '3'), sbendLongL: sbIcon(-1, false, '3'),
   sbendFast: sbIcon(1, false, '4'), sbendFastL: sbIcon(-1, false, '4'), sbendWide: sbIcon(1, true), sbendWideL: sbIcon(-1, true),
   cv05: incIcon(false, '½'), cv1: incIcon(false, 1), cv2: incIcon(false, 2), cv4: incIcon(false, 4),
@@ -453,7 +462,7 @@ export const paletteMethods = {
           b.prepend(sw);
         }
         const m = val ? MODS.find((x) => x.id === modId(flag, val)) : null;
-        b.title = m ? m.hint : flag === 'cp' ? 'Pas de checkpoint' : flag === 'mv' ? 'Pièce fixe' : flag === 'th' ? 'Aspect d’origine' : flag === 'gs' ? 'Portique classique' : flag === 'o' ? 'Route à plat, au sol' : '';
+        b.title = m ? m.hint : flag === 'cp' ? 'Pas de checkpoint' : flag === 'mv' ? 'Pièce fixe' : flag === 'th' ? 'Aspect d’origine' : flag === 'gs' ? 'Portique classique' : flag === 'eb' ? 'Plaque sans bordure' : flag === 'o' ? 'Route à plat, au sol' : '';
         b.addEventListener('click', () => { this._optClick(flag, val); this.app.audio.click(); });
         chips.appendChild(b);
         this.optChips.push(b);

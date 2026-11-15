@@ -150,8 +150,8 @@ const road = (deco) => {
   return tr;
 };
 test('neuf solides à la suite des décorations, catégorie « Piliers et poutres » ; jamais inclinés ni roulés, échelle bornée', () => {
-  assert.deepEqual(DECO_ORDER.slice(320, 329), SOLID_IDS);
-  assert.deepEqual(DECO_CATS.struct.kinds, SOLID_IDS);
+  assert.deepEqual(DECO_ORDER.slice(320, 329), SOLID_IDS.slice(0, 9));
+  assert.deepEqual(DECO_CATS.struct.kinds, SOLID_IDS.slice(0, 9));
   const tr = new Track('t');
   const d = tr.addDeco({ k: 'pillar', x: 1, y: 0, z: 2, ry: 0.3, s: 50, c: 0, rx: 0.4, rz: 0.7 });
   assert.equal(d.s, 8); assert.ok(!d.rx && !d.rz);

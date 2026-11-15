@@ -2,7 +2,7 @@
 // Le maillage complet (tronçons, objets mobiles, lampes) est assemblé par TrackView dans trackMesh.js.
 import * as THREE from './vendor/three.module.min.js';
 import { CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T } from './constants.js';
-import { PIECES, SURFACES, RING_R, RING_Y, arcParams, sbendPoint, baseY, tileCenter, tileParam, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
+import { PIECES, SURFACES, RING_R, RING_Y, arcParams, sbendPoint, plateShape, plateEdges, plateOutline, areaCentroid, baseY, tileCenter, tileParam, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
 import { WATER_DROP, boatDrop } from './track/shared.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { renderOptions } from './renderOptions.js';
@@ -531,6 +531,8 @@ function surfaceDecals(glow, frames, tile, area = false) {
 }
 
 function platform(gb, glow, tile, fx = null) {
+  const P = PIECES[tile.t];
+  if (P.size > 1 || P.shape || tile.eb) { plate(gb, glow, tile, fx); return; }      // 0.9.69 : plaques (la plateforme 1×1 sans bordure garde sa géométrie d'avant)
   const y = baseY(tile);
   const y0 = y - SLAB_T;
   const s = tile.s || '';
@@ -552,6 +554,71 @@ function platform(gb, glow, tile, fx = null) {
   }
   if (fx && FX_KIND[s] !== undefined) fxLayer(fx, lineStrip(0, HALF, -HALF, y, y, 4), tile, FX_KIND[s], HALF - e);
   if (s) surfaceDecals(glow, lineStrip(0, HALF, -HALF, y, y, 4), tile, true);
+}
+
+// 0.9.69 : plaque de taille et de forme quelconques (carré, triangle, quart de disque : pieces.js plateShape), et ses bordures (option eb).
+// Le contour est un polygone (pieces.js : plateOutline) ; le dessus est un damier de cases de 8 m découpé au contour.
+function plate(gb, glow, tile, fx) {
+  const P = PIECES[tile.t], y = baseY(tile), y0 = y - SLAB_T, h = P.size * HALF;
+  const s = tile.s || '';
+  const sty = tile.col || tile.th ? styleFor(tile) : null;
+  const top = s ? SURFACE_STYLE[s].road : sty ? sty.road : [PALETTE.platA, PALETTE.platB];
+  const side = (sty && sty.pal && sty.pal.slab) || PALETTE.slab, under = (sty && sty.pal && sty.pal.under) || PALETTE.under;
+  const poly = plateOutline(P), n = poly.length;
+  // Dessus : cases du damier (8 m) découpées au contour (Sutherland-Hodgman, polygone convexe).
+  const w = CELL / 4, m = P.size * 4;
+  const clip = (cell) => {
+    let out = cell;
+    for (let i = 0; i < n && out.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % n], inside = (p) => (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]) >= -1e-9;
+      const src = out; out = [];
+      for (let k = 0; k < src.length; k++) {
+        const p = src[k], q = src[(k + 1) % src.length], ip = inside(p), iq = inside(q);
+        if (ip) out.push(p);
+        if (ip !== iq) {
+          const d1 = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]), d2 = (b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0]), t = d1 / (d1 - d2);
+          out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]);
+        }
+      }
+    }
+    return out;
+  };
+  // (le contour doit tourner dans le sens où « inside » est à gauche : on le vérifie par son aire)
+  let area = 0;
+  for (let i = 0; i < n; i++) area += poly[i][0] * poly[(i + 1) % n][1] - poly[(i + 1) % n][0] * poly[i][1];
+  if (area < 0) poly.reverse();
+  for (let i = 0; i < m; i++) for (let j = 0; j < m; j++) {
+    const x0 = -h + i * w, z0 = -h + j * w;
+    const c = clip([[x0, z0], [x0 + w, z0], [x0 + w, z0 + w], [x0, z0 + w]]);
+    for (let k = 1; k + 1 < c.length; k++) gb.tri([c[0][0], y, c[0][1]], [c[k + 1][0], y, c[k + 1][1]], [c[k][0], y, c[k][1]], top[(i + j) % 2]);
+  }
+  // Tranche et dessous.
+  for (let i = 0; i < n; i++) {
+    const a = poly[i], b = poly[(i + 1) % n];
+    gb.quad([a[0], y0, a[1]], [b[0], y0, b[1]], [b[0], y - 0.001, b[1]], [a[0], y - 0.001, a[1]], side);
+  }
+  for (let k = 1; k + 1 < n; k++) gb.tri([poly[0][0], y0, poly[0][1]], [poly[k][0], y0, poly[k][1]], [poly[k + 1][0], y0, poly[k + 1][1]], under);
+  // Bordures choisies : un muret de RAIL_W × RAIL_H à l'intérieur du bord, rayé comme les bordures de route ; liseré sur les autres bords.
+  const style = styleFor(tile), edges = plateEdges(P);
+  edges.forEach((e, bit) => {
+    const on = !!(tile.eb & (1 << bit));
+    const pts = [];
+    if (e.t === 'seg') { const k = Math.max(2, Math.round(e.len / 4)); for (let i = 0; i <= k; i++) pts.push([e.ax + (e.bx - e.ax) * (i / k), e.az + (e.bz - e.az) * (i / k), e.nx, e.nz]); }
+    else { const k = 8 * P.size; for (let i = 0; i <= k; i++) { const a = (Math.PI / 2) * (i / k), c = Math.cos(a), sn = Math.sin(a); pts.push([e.cx + e.R * c, e.cz - e.R * sn, -c, sn]); } }
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const [ax, az, anx, anz] = pts[i], [bx, bz, bnx, bnz] = pts[i + 1];
+      const iw = on ? RAIL_W : 0.4;
+      const A = [ax, az], B = [bx, bz], A2 = [ax + anx * iw, az + anz * iw], B2 = [bx + bnx * iw, bz + bnz * iw];
+      if (!on) { gb.quad([A[0], y + 0.02, A[1]], [B[0], y + 0.02, B[1]], [B2[0], y + 0.02, B2[1]], [A2[0], y + 0.02, A2[1]], s || sty ? style.railA : PALETTE.platEdge); continue; }
+      const col = i % 2 ? style.railA : style.railB, yt = y + RAIL_H;
+      gb.quad([A[0], yt, A[1]], [B[0], yt, B[1]], [B2[0], yt, B2[1]], [A2[0], yt, A2[1]], col);
+      gb.quad([A[0], y, A[1]], [B[0], y, B[1]], [B[0], yt, B[1]], [A[0], yt, A[1]], col);
+      gb.quad([A2[0], yt, A2[1]], [B2[0], yt, B2[1]], [B2[0], y, B2[1]], [A2[0], y, A2[1]], col);
+    }
+  });
+  const sq = plateShape(P) === 'sq';
+  if (fx && FX_KIND[s] !== undefined && sq) fxLayer(fx, lineStrip(0, h, -h, y, y, 4 * P.size), tile, FX_KIND[s], h - 0.4);
+  if (s) { const c = areaCentroid(P); surfaceDecals(glow, lineStrip(c.x, c.z + HALF * 0.6, c.z - HALF * 0.6, y, y, 4), tile, true); }
 }
 
 // Portique (départ / checkpoint / arrivée).
@@ -669,20 +736,23 @@ function gateLine(gb, sp, color, y) {
 // Checkpoint posé sur une plateforme : quatre balises d'angle, un cadre lumineux au sol et un losange central. La plateforme
 // n'a pas de sens de route : un portique n'aurait pas de sens ici, toute la dalle valide le checkpoint.
 function checkpointPad(gb, glow, tile) {
-  const y = baseY(tile), color = PALETTE.checkpoint, c = HALF - 1.6, top = 5.2;
+  // 0.9.69 : sur une plaque triangulaire ou en quart de disque, la balise est centrée sur la plaque (centre de gravité) et rétrécie pour y tenir.
+  const P = PIECES[tile.t], sh = plateShape(P), ctr = areaCentroid(P), h = P.size * HALF;
+  const y = baseY(tile), color = PALETTE.checkpoint, c = Math.min(HALF - 1.6, sh === 'tri' ? 0.4 * h : sh === 'sec' ? 0.55 * h : HALF - 1.6), top = 5.2;
+  const cx0 = ctr.x, cz0 = ctr.z;
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
-      const x = sx * c, z = sz * c, r = 0.5;
+      const x = cx0 + sx * c, z = cz0 + sz * c, r = 0.5;
       gb.taper(x, z, y, y + top, 1.0, 1.0, 0.6, 0.6, color);
       const tip = [x, y + top + 1.4, z], rg = [[x - r, y + top, z], [x, y + top, z - r], [x + r, y + top, z], [x, y + top, z + r]];
       for (let i = 0; i < 4; i++) glow.tri(rg[i], rg[(i + 1) % 4], tip, color);
     }
   }
-  const o = HALF - 1.6, w = 0.7, ly = y + 0.05;
+  const o = c, w = 0.7, ly = y + 0.05;
   for (const [x0, z0, x1, z1] of [[-o, -o, o, -o + w], [-o, o - w, o, o], [-o, -o, -o + w, o], [o - w, -o, o, o]]) {
-    glow.quad([x0, ly, z1], [x1, ly, z1], [x1, ly, z0], [x0, ly, z0], color);
+    glow.quad([cx0 + x0, ly, cz0 + z1], [cx0 + x1, ly, cz0 + z1], [cx0 + x1, ly, cz0 + z0], [cx0 + x0, ly, cz0 + z0], color);
   }
-  const f = { p: [0, y, 0], r: [1, 0, 0], u: [0, 1, 0], t: [0, 0, -1] };
+  const f = { p: [cx0, y, cz0], r: [1, 0, 0], u: [0, 1, 0], t: [0, 0, -1] };
   ring(glow, f, 0, 0, 5.2, 0.7, color);
   ring(glow, f, 0, 0, 2.6, 0.55, color);
 }

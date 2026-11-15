@@ -1,7 +1,7 @@
 // Contenu du panneau selon la sélection : pièce, pièce mobile, caractéristiques, couleurs, décoration.
 // Ces méthodes s'ajoutent au prototype de Inspector (voir inspector.js) : `this` est l'instance.
 import { MAX_LEVEL } from '../constants.js';
-import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, THEMES, GATE_STYLES, MOVER, moverParams, paramText, ORIENTS, ORI_TO_O, tileOri } from '../pieces.js';
+import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, THEMES, GATE_STYLES, plateEdges, plateShape, MOVER, moverParams, paramText, ORIENTS, ORI_TO_O, tileOri } from '../pieces.js';
 import { FAMILIES, familyOf, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from '../families.js';
 import { styleFor } from '../trackGeometry.js';
 import { DECO_COLORS } from '../decoData.js';
@@ -9,6 +9,9 @@ import { safeUrl } from '../decos.js';
 import { isObstacle } from '../obstacles.js';
 import { h } from '../dom.js';
 import { LEGACY_CP, MIRROR_TYPES } from '../inspector.js';
+
+// 0.9.69 : noms des bords d'une plaque, dans l'ordre des bits de l'option eb (pieces.js : plateEdges). Avant = sens de la flèche de la pièce.
+const EDGE_NAMES = { sq: ['Bord avant', 'Bord droit', 'Bord arrière', 'Bord gauche'], tri: ['Bord gauche', 'Bord arrière', 'Diagonale'], sec: ['Bord gauche', 'Bord arrière', 'Arc'] };
 const isStartFinish = (type) => { const sp = PIECES[type] && PIECES[type].special; return sp === 'start' || sp === 'finish'; };
 
 export const bodyMethods = {
@@ -87,6 +90,15 @@ export const bodyMethods = {
       if (S2 && S2.def != null) {
         rows.push(this._range(S2.param || 'Intensité', () => t.p2 || S2.def, (v) => ed.track.setSurface2(t, t.s2, v) || true, { min: S2.min, max: S2.max, step: 1, fmt: (v) => paramText(t.s2, v) }));
       }
+    }
+
+    // 0.9.69 : bordures d'une plaque, bord par bord (repère de la pièce : l'avant est le sens de la flèche)
+    if (P.kind === 'area') {
+      group('Bordures');
+      plateEdges(P).forEach((e, bit) => {
+        const name = EDGE_NAMES[plateShape(P)][bit];
+        rows.push(this._check(name, () => !!(t.eb & (1 << bit)), (on) => (on === !!(t.eb & (1 << bit)) ? true : ed.track.setEdges(t, on ? (t.eb | 0) | (1 << bit) : (t.eb | 0) & ~(1 << bit)) || false)));
+      });
     }
 
     // Options

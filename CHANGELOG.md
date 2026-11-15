@@ -6,6 +6,16 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.69 — nouvelles pièces, étape 2 : murs pleins, plaques, blocs pleins
+
+**`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change (empreinte de physique, temps de référence, corpus de compatibilité ; la plateforme garde sa géométrie au bit près). **Redéployer `submit-score`** (plaques, bordures de plaque et nouveaux solides). Tout est ajouté à la FIN des ordres d'encodage.
+
+- **Murs pleins** (catégorie « Murs pleins », des solides comme les piliers) : mur droit (16 m × 4 m), muret (1,2 m : plus haut qu'une marche, il arrête la voiture), murs en L, en T, en croix, et mur courbe (quart de cercle de 16 m de rayon, fait de pavés tournés sans trou).
+- **Plaques** (surfaces libres, famille « Plaque » de l'éditeur ; la plateforme en est la plaque carrée 1×1) : carrées 2×2 et 3×3, triangles et quarts de disque de 1 à 3 cases. Seule leur forme porte la voiture. **Bordures au choix** : « Bordures tout autour » dans les Options, ou bord par bord dans l'Inspecteur (avant, droit, arrière, gauche ; diagonale ; arc) ; elles arrêtent la voiture comme une bordure de route et entrent dans la signature. Scripts : `[plate3]` (centrée sur la route), suffixe `*n` = masque des bordures (`[plate3]*10` : bords gauche et droit). Un checkpoint posé sur une plaque triangle ou en quart de disque ramène à son centre de gravité. Mini-carte : les plaques sont dessinées à leur forme.
+- **Blocs pleins** (catégorie « Blocs pleins ») : bloc (8 m), dalle (16 × 16 × 1,2 m), cale (4 m sur 16 m) et cale raide (4 m sur 8 m) qu'on monte pour sauter, pyramide (5 m) qui se monte aussi, arche pleine (on passe dessous, 29 m de large). Leur dessus porte la voiture ; une cale prise par sa face haute est un mur.
+- **Vérificateur de l'éditeur** : une plaque de plusieurs cases est reliée à ses voisines tout autour de son empreinte ; une plaque triangle ne couvre que sa moitié de case.
+- **Tests** : `tools/test-etape2.mjs` (17 tests).
+
 ## Bêta 0.9.68 — nouvelles pièces, étape 1 : chicanes, panneaux, portiques, piliers et poutres
 
 **`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change (empreinte de physique, temps de référence et corpus de compatibilité identiques). **Redéployer `submit-score`** : le serveur rejoue les records avec sa propre copie de la physique, qui doit connaître les chicanes et les solides. Toutes les nouveautés sont ajoutées à la FIN des ordres d'encodage : aucun code de circuit existant ne change.

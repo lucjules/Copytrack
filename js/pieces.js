@@ -73,6 +73,16 @@ export const PIECES = {
   sbendFastL: { label: 'Chicane rapide ←', kind: 'sbend', size: 4, rise: 0, mirror: -1, shift: 1 },
   sbendWide:  { label: 'Grand S →', kind: 'sbend', size: 3, rise: 0, mirror: 1, shift: 2 },
   sbendWideL: { label: 'Grand S ←', kind: 'sbend', size: 3, rise: 0, mirror: -1, shift: 2 },
+  // 0.9.69 : plaques (surfaces libres, comme la plateforme) : carrées 2×2 et 3×3, triangles et quarts de disque de 1 à 3 cases (voir plateShape).
+  // Toute la plaque se roule ; des bordures se posent au choix sur chacun de ses bords (option eb).
+  plate2:     { label: 'Plaque 2×2', kind: 'area', size: 2, rise: 0 },
+  plate3:     { label: 'Plaque 3×3', kind: 'area', size: 3, rise: 0 },
+  tri1:       { label: 'Plaque triangle', kind: 'area', size: 1, rise: 0, shape: 'tri' },
+  tri2:       { label: 'Plaque triangle 2×2', kind: 'area', size: 2, rise: 0, shape: 'tri' },
+  tri3:       { label: 'Plaque triangle 3×3', kind: 'area', size: 3, rise: 0, shape: 'tri' },
+  sec1:       { label: 'Plaque quart de disque', kind: 'area', size: 1, rise: 0, shape: 'sec' },
+  sec2:       { label: 'Plaque quart de disque 2×2', kind: 'area', size: 2, rise: 0, shape: 'sec' },
+  sec3:       { label: 'Plaque quart de disque 3×3', kind: 'area', size: 3, rise: 0, shape: 'sec' },
   // « Courbe » : un tremplin courbé (virage montant). Serré = 1 case, grand = 2×2.
   cv05:       { label: 'Courbe serrée · inclinaison ½', kind: 'arc', size: 1, rise: 0.5 },
   cv1:        { label: 'Courbe serrée · inclinaison 1', kind: 'arc', size: 1, rise: 1 },
@@ -232,6 +242,8 @@ export const PIECE_ORDER = [
   'giantcurve',
   // 0.9.68 : chicanes (à la suite : ne jamais réordonner)
   'sbend', 'sbendL', 'sbendLong', 'sbendLongL', 'sbendFast', 'sbendFastL', 'sbendWide', 'sbendWideL',
+  // 0.9.69 : plaques (à la suite : ne jamais réordonner)
+  'plate2', 'plate3', 'tri1', 'tri2', 'tri3', 'sec1', 'sec2', 'sec3',
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -379,7 +391,7 @@ export function clearConflicts(opts, flag) {
 // Options « armées » dans l'éditeur avant la pose (elles s'ajoutent à la pièce choisie, aperçu compris) : bascule l'option `flag` (valeur `val` pour les
 // choix exclusifs : orientation, checkpoint, thème, mouvement) et retire ce qui lui est incompatible. Renvoie un nouvel objet.
 export function armOption(opts, flag, val) {
-  const o = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, gs: 0, ...opts };
+  const o = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, gs: 0, eb: 0, ...opts };
   if (flag === 'o') {
     // Orientation : sol, mur gauche (1), mur droit (2) ; le plafond est le drapeau v. Un seul choix à la fois.
     o.o = val === 0 || o.o === val ? 0 : val;
@@ -404,6 +416,8 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
   if (flag === 'th') return p.kind !== 'ring';
   // 0.9.68 : style du portique (visuel) : là où il y a un portique (départ, arrivée, checkpoint en pièce ou en option sur une route). Sans pièce
   // posée (choix d'options avant la pose), toute ligne ou tout virage, qui peut recevoir l'option Checkpoint.
+  // 0.9.69 : bordures d'une plaque (masque de bits, un par bord : voir plateEdges).
+  if (flag === 'eb') return p.kind === 'area' && (val | 0) >= 0 && (val | 0) <= 15;      // (le masque est ensuite ramené aux bords de la forme : Track.normalize)
   if (flag === 'gs') {
     if (!(val >= 0 && val < GATE_STYLES.length) || !lineLike || p.kind === 'ring') return false;
     if (p.special === 'start' || p.special === 'finish' || p.special === 'checkpoint') return true;
@@ -622,6 +636,11 @@ export function sampleLocal(tile, lx, lz, out) {
     forkSample(p, lx, lz, out);
   } else if (p.kind === 'sbend') {
     sbendSample(p, lx, lz, out);
+  } else if (p.kind === 'area' && p.shape) {
+    // 0.9.69 : plaque triangulaire ou en quart de disque : seule sa forme porte la voiture.
+    if (out.inFootprint) out.inFootprint = inPlate(p, lx, lz);
+    out.d = 0;
+    out.along = (half - lz) / (2 * half);
   } else if (p.kind === 'loop') {
     // Seules les deux voies d'accès au sol sont des surfaces « normales ».
     const lane = lz >= 0 ? -p.mirror * p.lane : p.mirror * p.lane;
@@ -722,4 +741,76 @@ function sbendSample(p, lx, lz, out) {
   out.gx = (sg * dx) / r; out.gz = (sg * dz) / r;
   const a = first ? 0.5 * datan2(-dz, -g.m * dx) / g.phi : 1 - 0.5 * datan2(dz, g.m * dx) / g.phi;
   out.along = a < 0 ? 0 : a > 1 ? 1 : a;
+}
+
+// ---- Plaques (0.9.69) -------------------------------------------------------------------------------------------------------------------------
+// Forme d'une plaque dans son empreinte [−h, h]² (h = size · ½ case) : 'sq' carré plein ; 'tri' triangle rectangle d'angle droit au coin (−h, +h)
+// (sommets (−h, −h), (−h, +h), (+h, +h) : la moitié du carré à gauche de la diagonale) ; 'sec' quart de disque de centre (−h, +h) et de rayon 2h.
+// Les quatre caps (tile.r) donnent les quatre coins.
+export const plateShape = (p) => p.shape || 'sq';
+export function inPlate(p, lx, lz) {
+  const h = p.size * HALF, sh = plateShape(p);
+  if (sh === 'tri') return lx <= lz + 1e-9;
+  if (sh === 'sec') { const dx = lx + h, dz = lz - h; return dx * dx + dz * dz <= 4 * h * h + 1e-6; }
+  return true;
+}
+
+// Bords d'une plaque (repère local), dans l'ordre des bits de l'option eb. Segment : de (ax, az) à (bx, bz), normale (nx, nz) vers l'INTÉRIEUR ;
+// arc : centre (cx, cz), rayon R, quart de disque vers +x / −z depuis le centre (l'intérieur est du côté du centre).
+const EDGES = new Map();
+export function plateEdges(p) {
+  let e = EDGES.get(p);
+  if (e) return e;
+  const h = p.size * HALF, sh = plateShape(p);
+  const seg = (ax, az, bx, bz, cx, cz) => {
+    const tx = bx - ax, tz = bz - az, len = Math.sqrt(tx * tx + tz * tz);
+    let nx = -tz / len, nz = tx / len;
+    if ((cx - ax) * nx + (cz - az) * nz < 0) { nx = -nx; nz = -nz; }
+    return { t: 'seg', ax, az, bx, bz, tx: tx / len, tz: tz / len, len, nx, nz };
+  };
+  if (sh === 'tri') {
+    const cx = -h / 3, cz = h / 3;
+    e = [seg(-h, h, -h, -h, cx, cz), seg(-h, h, h, h, cx, cz), seg(h, h, -h, -h, cx, cz)];
+  } else if (sh === 'sec') {
+    e = [seg(-h, h, -h, -h, 0, 0), seg(-h, h, h, h, 0, 0), { t: 'arc', cx: -h, cz: h, R: 2 * h }];
+  } else e = [seg(-h, -h, h, -h, 0, 0), seg(h, -h, h, h, 0, 0), seg(-h, h, h, h, 0, 0), seg(-h, -h, -h, h, 0, 0)];
+  EDGES.set(p, e);
+  return e;
+}
+// Masque « tous les bords » d'une plaque.
+export const plateAllEdges = (p) => (1 << plateEdges(p).length) - 1;
+
+// Distance d'un point au bord e, comptée vers l'intérieur de la plaque (négative dehors), sa normale intérieure (nx, nz) et `on` : le point est en face
+// du bord (à `slack` près), c'est-à-dire qu'il peut le toucher. Pour un arc : l'intérieur est du côté du centre.
+export function edgeDist(e, x, z, slack, out) {
+  if (e.t === 'seg') {
+    const rx = x - e.ax, rz = z - e.az, s = rx * e.tx + rz * e.tz;
+    out.d = rx * e.nx + rz * e.nz; out.nx = e.nx; out.nz = e.nz;
+    out.on = s >= -slack && s <= e.len + slack;
+  } else {
+    const dx = x - e.cx, dz = z - e.cz, r = Math.sqrt(dx * dx + dz * dz) || 1e-6;
+    out.d = e.R - r; out.nx = -dx / r; out.nz = -dz / r;
+    out.on = dx >= -slack && dz <= slack;
+  }
+  return out;
+}
+
+// Contour d'une plaque (repère local) : polygone convexe ; un quart de disque a 8 côtés par case de rayon (rendu, mini-carte).
+export function plateOutline(p) {
+  const h = p.size * HALF, sh = plateShape(p);
+  if (sh === 'tri') return [[-h, -h], [-h, h], [h, h]];
+  if (sh === 'sec') {
+    const n = 8 * p.size, pts = [[-h, h]];
+    for (let i = 0; i <= n; i++) { const a = (Math.PI / 2) * (i / n); pts.push([-h + 2 * h * dcos(a), h - 2 * h * dsin(a)]); }
+    return pts;
+  }
+  return [[-h, -h], [-h, h], [h, h], [h, -h]];
+}
+
+// Centre de gravité d'une plaque (repère local) : point de retour d'un checkpoint posé dessus, centre de sa balise.
+export function areaCentroid(p) {
+  const h = p.size * HALF, sh = plateShape(p);
+  if (sh === 'tri') return { x: -h / 3, z: h / 3 };
+  if (sh === 'sec') { const k = (8 * h) / (3 * Math.PI); return { x: -h + k, z: h - k }; }
+  return { x: 0, z: 0 };
 }

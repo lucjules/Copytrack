@@ -1,7 +1,7 @@
 // Modifications du circuit : revêtements, options des pièces, mouvement, couleurs, décorations.
 // Ces méthodes s'ajoutent au prototype de Track (voir track.js) : `this` est l'instance.
 import { MAX_DECOS } from '../constants.js';
-import { PIECES, SURFACES, surfaceAllowed, flagAllowed, clampMover, THEMES, clearConflicts } from '../pieces.js';
+import { PIECES, SURFACES, surfaceAllowed, flagAllowed, clampMover, THEMES, clearConflicts, plateAllEdges } from '../pieces.js';
 import { isObstacle } from '../obstacles.js';
 import { isSolid, SOLID_SCALE } from '../solids.js';
 import { DECO_ORDER } from '../decoData.js';
@@ -37,6 +37,11 @@ export const editMethods = {
       const th = tile.th === val ? 0 : val;
       if (!THEMES.some((h) => h.id === th)) return false;
       tile.th = th;
+      this.version++;
+      return true;
+    }
+    if (flag === 'eb') {      // 0.9.69 : bordures d'une plaque (toutes ↔ aucune ; bord par bord : setEdges)
+      tile.eb = tile.eb ? 0 : val & plateAllEdges(PIECES[tile.t]);
       this.version++;
       return true;
     }
@@ -100,6 +105,17 @@ export const editMethods = {
     const np = S2 && S2.def != null ? Math.max(S2.min, Math.min(S2.max, p || S2.def)) : 0;
     if ((tile.s2 || '') === s && (tile.p2 || 0) === np) return false;
     tile.s2 = s; tile.p2 = np;
+    this.version++;
+    return true;
+  },
+
+  // 0.9.69 : bordures d'une plaque, bord par bord (masque de bits, voir pieces.js plateEdges). Renvoie true si quelque chose a changé.
+  setEdges(tile, mask) {
+    const P = PIECES[tile.t];
+    if (!P || P.kind !== 'area') return false;
+    const m = (mask | 0) & plateAllEdges(P);
+    if ((tile.eb | 0) === m) return false;
+    tile.eb = m;
     this.version++;
     return true;
   },

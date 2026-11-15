@@ -558,6 +558,62 @@ var PIECES = {
     mirror: -1,
     shift: 2
   },
+  // 0.9.69 : plaques (surfaces libres, comme la plateforme) : carrées 2×2 et 3×3, triangles et quarts de disque de 1 à 3 cases (voir plateShape).
+  // Toute la plaque se roule ; des bordures se posent au choix sur chacun de ses bords (option eb).
+  plate2: {
+    label: "Plaque 2\xD72",
+    kind: "area",
+    size: 2,
+    rise: 0
+  },
+  plate3: {
+    label: "Plaque 3\xD73",
+    kind: "area",
+    size: 3,
+    rise: 0
+  },
+  tri1: {
+    label: "Plaque triangle",
+    kind: "area",
+    size: 1,
+    rise: 0,
+    shape: "tri"
+  },
+  tri2: {
+    label: "Plaque triangle 2\xD72",
+    kind: "area",
+    size: 2,
+    rise: 0,
+    shape: "tri"
+  },
+  tri3: {
+    label: "Plaque triangle 3\xD73",
+    kind: "area",
+    size: 3,
+    rise: 0,
+    shape: "tri"
+  },
+  sec1: {
+    label: "Plaque quart de disque",
+    kind: "area",
+    size: 1,
+    rise: 0,
+    shape: "sec"
+  },
+  sec2: {
+    label: "Plaque quart de disque 2\xD72",
+    kind: "area",
+    size: 2,
+    rise: 0,
+    shape: "sec"
+  },
+  sec3: {
+    label: "Plaque quart de disque 3\xD73",
+    kind: "area",
+    size: 3,
+    rise: 0,
+    shape: "sec"
+  },
   // « Courbe » : un tremplin courbé (virage montant). Serré = 1 case, grand = 2×2.
   cv05: {
     label: "Courbe serr\xE9e \xB7 inclinaison \xBD",
@@ -1141,7 +1197,16 @@ var PIECE_ORDER = [
   "sbendFast",
   "sbendFastL",
   "sbendWide",
-  "sbendWideL"
+  "sbendWideL",
+  // 0.9.69 : plaques (à la suite : ne jamais réordonner)
+  "plate2",
+  "plate3",
+  "tri1",
+  "tri2",
+  "tri3",
+  "sec1",
+  "sec2",
+  "sec3"
 ];
 var SURFACES = {
   "": {
@@ -1486,6 +1551,7 @@ function flagAllowed(type, flag, tile = null, val = 0) {
   const lineLike = p.kind === "line" || p.kind === "arc";
   if (flag === "v") return true;
   if (flag === "th") return p.kind !== "ring";
+  if (flag === "eb") return p.kind === "area" && (val | 0) >= 0 && (val | 0) <= 15;
   if (flag === "gs") {
     if (!(val >= 0 && val < GATE_STYLES.length) || !lineLike || p.kind === "ring") return false;
     if (p.special === "start" || p.special === "finish" || p.special === "checkpoint") return true;
@@ -1766,6 +1832,10 @@ function sampleLocal(tile, lx, lz, out) {
     forkSample(p, lx, lz, out);
   } else if (p.kind === "sbend") {
     sbendSample(p, lx, lz, out);
+  } else if (p.kind === "area" && p.shape) {
+    if (out.inFootprint) out.inFootprint = inPlate(p, lx, lz);
+    out.d = 0;
+    out.along = (half - lz) / (2 * half);
   } else if (p.kind === "loop") {
     const lane = lz >= 0 ? -p.mirror * p.lane : p.mirror * p.lane;
     out.d = lx - lane;
@@ -1865,6 +1935,103 @@ function sbendSample(p, lx, lz, out) {
   out.gz = sg * dz / r;
   const a = first ? 0.5 * datan2(-dz, -g.m * dx) / g.phi : 1 - 0.5 * datan2(dz, g.m * dx) / g.phi;
   out.along = a < 0 ? 0 : a > 1 ? 1 : a;
+}
+var plateShape = (p) => p.shape || "sq";
+function inPlate(p, lx, lz) {
+  const h = p.size * HALF, sh = plateShape(p);
+  if (sh === "tri") return lx <= lz + 1e-9;
+  if (sh === "sec") {
+    const dx = lx + h, dz = lz - h;
+    return dx * dx + dz * dz <= 4 * h * h + 1e-6;
+  }
+  return true;
+}
+var EDGES = /* @__PURE__ */ new Map();
+function plateEdges(p) {
+  let e = EDGES.get(p);
+  if (e) return e;
+  const h = p.size * HALF, sh = plateShape(p);
+  const seg = (ax, az, bx, bz, cx, cz) => {
+    const tx = bx - ax, tz = bz - az, len = Math.sqrt(tx * tx + tz * tz);
+    let nx = -tz / len, nz = tx / len;
+    if ((cx - ax) * nx + (cz - az) * nz < 0) {
+      nx = -nx;
+      nz = -nz;
+    }
+    return {
+      t: "seg",
+      ax,
+      az,
+      bx,
+      bz,
+      tx: tx / len,
+      tz: tz / len,
+      len,
+      nx,
+      nz
+    };
+  };
+  if (sh === "tri") {
+    const cx = -h / 3, cz = h / 3;
+    e = [
+      seg(-h, h, -h, -h, cx, cz),
+      seg(-h, h, h, h, cx, cz),
+      seg(h, h, -h, -h, cx, cz)
+    ];
+  } else if (sh === "sec") {
+    e = [
+      seg(-h, h, -h, -h, 0, 0),
+      seg(-h, h, h, h, 0, 0),
+      {
+        t: "arc",
+        cx: -h,
+        cz: h,
+        R: 2 * h
+      }
+    ];
+  } else e = [
+    seg(-h, -h, h, -h, 0, 0),
+    seg(h, -h, h, h, 0, 0),
+    seg(-h, h, h, h, 0, 0),
+    seg(-h, -h, -h, h, 0, 0)
+  ];
+  EDGES.set(p, e);
+  return e;
+}
+var plateAllEdges = (p) => (1 << plateEdges(p).length) - 1;
+function edgeDist(e, x, z, slack, out) {
+  if (e.t === "seg") {
+    const rx = x - e.ax, rz = z - e.az, s = rx * e.tx + rz * e.tz;
+    out.d = rx * e.nx + rz * e.nz;
+    out.nx = e.nx;
+    out.nz = e.nz;
+    out.on = s >= -slack && s <= e.len + slack;
+  } else {
+    const dx = x - e.cx, dz = z - e.cz, r = Math.sqrt(dx * dx + dz * dz) || 1e-6;
+    out.d = e.R - r;
+    out.nx = -dx / r;
+    out.nz = -dz / r;
+    out.on = dx >= -slack && dz <= slack;
+  }
+  return out;
+}
+function areaCentroid(p) {
+  const h = p.size * HALF, sh = plateShape(p);
+  if (sh === "tri") return {
+    x: -h / 3,
+    z: h / 3
+  };
+  if (sh === "sec") {
+    const k = 8 * h / (3 * Math.PI);
+    return {
+      x: -h + k,
+      z: h - k
+    };
+  }
+  return {
+    x: 0,
+    z: 0
+  };
 }
 
 // js/ribbons.js
@@ -2600,6 +2767,53 @@ var B2 = (x0, y0, z0, x1, y1, z1) => ({
     z1
   ]
 });
+var RB = (cx, cz, a, hx, hz, y0, y1) => ({
+  t: "box",
+  b: [
+    -hx,
+    y0,
+    -hz,
+    hx,
+    y1,
+    hz
+  ],
+  f: {
+    ox: cx,
+    oz: cz,
+    c: dcos(a),
+    s: dsin(a)
+  }
+});
+var RAMP = (x0, y0, z0, x1, y1, z1) => ({
+  t: "ramp",
+  b: [
+    x0,
+    y0,
+    z0,
+    x1,
+    y1,
+    z1
+  ]
+});
+var PYR = (x0, y0, z0, x1, y1, z1) => ({
+  t: "pyr",
+  b: [
+    x0,
+    y0,
+    z0,
+    x1,
+    y1,
+    z1
+  ]
+});
+function arcWall(R, n, th, H) {
+  const out = [], da = Math.PI / 2 / n, hl = R * dtan(da / 2) + th * 0.5;
+  for (let i = 0; i < n; i++) {
+    const a = (i + 0.5) * da;
+    out.push(RB(-R / 2 + R * dcos(a), R / 2 - R * dsin(a), a + Math.PI / 2, hl, th / 2, 0, H));
+  }
+  return out;
+}
 var SOLIDS = {
   // ---- Étape 1 : piliers et poutres (section 3,2 m pour un pilier, 1,6 m pour une poutre)
   pillar: {
@@ -2663,6 +2877,84 @@ var SOLIDS = {
       B2(14.6, 0, -0.8, 16.2, 9, 0.8),
       B2(-16.2, 9, -0.8, 16.2, 10.6, 0.8)
     ]
+  },
+  // ---- Étape 2 (0.9.69) : murs pleins (4 m de haut, 0,8 m d'épaisseur ; le muret : 1,2 m)
+  wallS: {
+    label: "Mur plein",
+    parts: [
+      B2(-8, 0, -0.4, 8, 4, 0.4)
+    ]
+  },
+  wallSLow: {
+    label: "Muret plein",
+    parts: [
+      B2(-8, 0, -0.4, 8, 1.2, 0.4)
+    ]
+  },
+  wallSL: {
+    label: "Mur plein en L",
+    parts: [
+      B2(-8, 0, -0.4, 0.4, 4, 0.4),
+      B2(-0.4, 0, -8, 0.4, 4, -0.4)
+    ]
+  },
+  wallST: {
+    label: "Mur plein en T",
+    parts: [
+      B2(-8, 0, -0.4, 8, 4, 0.4),
+      B2(-0.4, 0, -8, 0.4, 4, -0.4)
+    ]
+  },
+  wallSX: {
+    label: "Mur plein en croix",
+    parts: [
+      B2(-8, 0, -0.4, 8, 4, 0.4),
+      B2(-0.4, 0, -8, 0.4, 4, -0.4),
+      B2(-0.4, 0, 0.4, 0.4, 4, 8)
+    ]
+  },
+  wallSC: {
+    label: "Mur plein courbe",
+    parts: arcWall(16, 8, 0.8, 4)
+  },
+  // ---- Étape 2 (0.9.69) : blocs pleins (dessus roulable ; la cale et la pyramide se montent)
+  block: {
+    label: "Bloc",
+    parts: [
+      B2(-4, 0, -4, 4, 8, 4)
+    ]
+  },
+  slab: {
+    label: "Dalle",
+    parts: [
+      B2(-8, 0, -8, 8, 1.2, 8)
+    ]
+  },
+  wedge: {
+    label: "Cale",
+    parts: [
+      RAMP(-6, 0, -8, 6, 4, 8)
+    ]
+  },
+  wedgeSteep: {
+    label: "Cale raide",
+    parts: [
+      RAMP(-6, 0, -4, 6, 4, 4)
+    ]
+  },
+  pyramidS: {
+    label: "Pyramide pleine",
+    parts: [
+      PYR(-8, 0, -8, 8, 5, 8)
+    ]
+  },
+  archS: {
+    label: "Arche pleine",
+    parts: [
+      B2(-18, 0, -2, -14.6, 10, 2),
+      B2(14.6, 0, -2, 18, 10, 2),
+      B2(-18, 10, -2, 18, 12.4, 2)
+    ]
   }
 };
 var SOLID_IDS = Object.keys(SOLIDS);
@@ -2699,7 +2991,10 @@ function solidEntry(d) {
         x1,
         z1
       ]
-    ]) r = Math.max(r, hypot2(x, z));
+    ]) {
+      partOut(p, x, z, PO);
+      r = Math.max(r, hypot2(PO.x, PO.z));
+    }
     top = Math.max(top, y1);
     bot = Math.min(bot, y0);
   }
@@ -2742,6 +3037,47 @@ function buildSolidGrid(decos) {
 }
 function solidsAt(index, x, z) {
   return index.grid.get(solidKey(Math.floor(x / SOLID_CELL), Math.floor(z / SOLID_CELL)));
+}
+function partIn(p, x, z, out) {
+  const f = p.f;
+  if (!f) {
+    out.x = x;
+    out.z = z;
+    return out;
+  }
+  const dx = x - f.ox, dz = z - f.oz;
+  out.x = dx * f.c - dz * f.s;
+  out.z = dx * f.s + dz * f.c;
+  return out;
+}
+function partOut(p, x, z, out, vec = false) {
+  const f = p.f;
+  if (!f) {
+    out.x = x;
+    out.z = z;
+    return out;
+  }
+  out.x = x * f.c + z * f.s + (vec ? 0 : f.ox);
+  out.z = -x * f.s + z * f.c + (vec ? 0 : f.oz);
+  return out;
+}
+var PO = {
+  x: 0,
+  z: 0
+};
+var PA = {
+  x: 0,
+  z: 0
+};
+var PB = {
+  x: 0,
+  z: 0
+};
+function slopeOf(p) {
+  const [x0, y0, z0, x1, y1, z1] = p.b;
+  if (p.t === "ramp") return Math.abs((y1 - y0) / (z1 - z0));
+  if (p.t === "pyr") return Math.max((y1 - y0) / ((x1 - x0) / 2), (y1 - y0) / ((z1 - z0) / 2));
+  return 0;
 }
 function toLocal2(e, wx, wz, out) {
   const dx = (wx - e.x) / e.k, dz = (wz - e.z) / e.k;
@@ -2817,13 +3153,14 @@ function solidFloor(index, x, y, z, step, best, out, hidden = null) {
     toLocal2(e, x, z, LA);
     const parts = e.def.parts;
     for (let j = 0; j < parts.length; j++) {
-      const p = parts[j], b = p.b;
-      if (LA.x < b[0] || LA.x > b[3] || LA.z < b[2] || LA.z > b[5]) continue;
-      const h = e.y + partTop(p, LA.x, LA.z) * e.k;
+      const p = parts[j], b = p.b, q = partIn(p, LA.x, LA.z, PA);
+      if (q.x < b[0] || q.x > b[3] || q.z < b[2] || q.z > b[5]) continue;
+      const h = e.y + partTop(p, q.x, q.z) * e.k;
       if (h > y + step || h <= best) continue;
       best = h;
-      partNormal(p, LA.x, LA.z, NL);
-      toWorldVec(e, NL.x, NL.z, WV);
+      partNormal(p, q.x, q.z, NL);
+      partOut(p, NL.x, NL.z, PO, true);
+      toWorldVec(e, PO.x, PO.z, WV);
       out.h = h;
       out.nx = WV.x;
       out.ny = NL.y;
@@ -2852,20 +3189,20 @@ function solidSide(index, x, z, px, pz, ylo, yhi, plo, R, step, hit, hidden = nu
     toLocal2(e, px, pz, LB);
     const r = R / e.k, parts = e.def.parts;
     for (let j = 0; j < parts.length; j++) {
-      const p = parts[j], b = p.b;
-      const qx = LA.x < b[0] ? b[0] : LA.x > b[3] ? b[3] : LA.x, qz = LA.z < b[2] ? b[2] : LA.z > b[5] ? b[5] : LA.z;
-      const ddx = LA.x - qx, ddz = LA.z - qz, dist = hypot2(ddx, ddz);
+      const p = parts[j], b = p.b, P1 = partIn(p, LA.x, LA.z, PA), P0 = partIn(p, LB.x, LB.z, PB);
+      const qx = P1.x < b[0] ? b[0] : P1.x > b[3] ? b[3] : P1.x, qz = P1.z < b[2] ? b[2] : P1.z > b[5] ? b[5] : P1.z;
+      const ddx = P1.x - qx, ddz = P1.z - qz, dist = hypot2(ddx, ddz);
       if (dist >= r) continue;
       const lo = e.y + b[1] * e.k, top = e.y + partTop(p, qx, qz) * e.k;
       if (yhi < lo + 0.2 || ylo > top - 0.05) continue;
-      if (ylo >= top - step || plo >= top - 0.3) continue;
+      if (ylo >= top - step - slopeOf(p) * 2.5 * (dist < 1e-6 ? 1 : 0) || plo >= top - 0.3) continue;
       let nx, nz, push;
       if (dist > 1e-6) {
         nx = ddx / dist;
         nz = ddz / dist;
         push = r - dist;
       } else {
-        const ex0 = LA.x - b[0], ex1 = b[3] - LA.x, ez0 = LA.z - b[2], ez1 = b[5] - LA.z;
+        const ex0 = P1.x - b[0], ex1 = b[3] - P1.x, ez0 = P1.z - b[2], ez1 = b[5] - P1.z;
         let f = 0, m = ex0;
         if (ex1 < m) {
           m = ex1;
@@ -2879,15 +3216,16 @@ function solidSide(index, x, z, px, pz, ylo, yhi, plo, R, step, hit, hidden = nu
           m = ez1;
           f = 3;
         }
-        if (LB.x < b[0]) f = 0;
-        else if (LB.x > b[3]) f = 1;
-        else if (LB.z < b[2]) f = 2;
-        else if (LB.z > b[5]) f = 3;
+        if (P0.x < b[0]) f = 0;
+        else if (P0.x > b[3]) f = 1;
+        else if (P0.z < b[2]) f = 2;
+        else if (P0.z > b[5]) f = 3;
         nx = f === 0 ? -1 : f === 1 ? 1 : 0;
         nz = f === 2 ? -1 : f === 3 ? 1 : 0;
         push = (f === 0 ? ex0 : f === 1 ? ex1 : f === 2 ? ez0 : ez1) + r;
       }
-      toWorldVec(e, nx, nz, WV);
+      partOut(p, nx, nz, PO, true);
+      toWorldVec(e, PO.x, PO.z, WV);
       hit.nx = WV.x;
       hit.nz = WV.z;
       hit.dx = WV.x * push * e.k;
@@ -2908,8 +3246,8 @@ function solidCeiling(index, x, z, ylo, yhi, pyhi, hidden = null) {
     toLocal2(e, x, z, LA);
     const parts = e.def.parts;
     for (let j = 0; j < parts.length; j++) {
-      const b = parts[j].b;
-      if (LA.x < b[0] || LA.x > b[3] || LA.z < b[2] || LA.z > b[5]) continue;
+      const b = parts[j].b, q = partIn(parts[j], LA.x, LA.z, PA);
+      if (q.x < b[0] || q.x > b[3] || q.z < b[2] || q.z > b[5]) continue;
       const lo = e.y + b[1] * e.k;
       if (yhi > lo && pyhi <= lo + 0.05) return lo;
     }
@@ -4199,7 +4537,20 @@ var DECO_ORDER = [
   "beamT",
   "beamX",
   "beamPost",
-  "gantry"
+  "gantry",
+  // 0.9.69 : solides : murs pleins et blocs pleins
+  "wallS",
+  "wallSLow",
+  "wallSL",
+  "wallST",
+  "wallSX",
+  "wallSC",
+  "block",
+  "slab",
+  "wedge",
+  "wedgeSteep",
+  "pyramidS",
+  "archS"
 ];
 var BASE = [
   [
@@ -4856,6 +5207,78 @@ var BASE = [
         "gantry",
         "Portique en poutres",
         "\u26E9"
+      ]
+    ]
+  ],
+  [
+    "wallsS",
+    "Murs pleins",
+    [
+      [
+        "wallS",
+        "Mur plein",
+        "\u{1F9F1}"
+      ],
+      [
+        "wallSLow",
+        "Muret plein",
+        "\u25AD"
+      ],
+      [
+        "wallSL",
+        "Mur plein en L",
+        "\u2514"
+      ],
+      [
+        "wallST",
+        "Mur plein en T",
+        "\u2534"
+      ],
+      [
+        "wallSX",
+        "Mur plein en croix",
+        "\u253C"
+      ],
+      [
+        "wallSC",
+        "Mur plein courbe",
+        "\u25DC"
+      ]
+    ]
+  ],
+  [
+    "blocks",
+    "Blocs pleins",
+    [
+      [
+        "block",
+        "Bloc",
+        "\u25A0"
+      ],
+      [
+        "slab",
+        "Dalle",
+        "\u25B0"
+      ],
+      [
+        "wedge",
+        "Cale",
+        "\u25E2"
+      ],
+      [
+        "wedgeSteep",
+        "Cale raide",
+        "\u25E3"
+      ],
+      [
+        "pyramidS",
+        "Pyramide pleine",
+        "\u25B2"
+      ],
+      [
+        "archS",
+        "Arche pleine",
+        "\u2302"
       ]
     ]
   ],
@@ -5628,6 +6051,11 @@ var editMethods = {
       this.version++;
       return true;
     }
+    if (flag === "eb") {
+      tile.eb = tile.eb ? 0 : val & plateAllEdges(PIECES[tile.t]);
+      this.version++;
+      return true;
+    }
     if (flag === "gs") {
       tile.gs = tile.gs === val ? 0 : val;
       this.version++;
@@ -5704,6 +6132,16 @@ var editMethods = {
     if ((tile.s2 || "") === s && (tile.p2 || 0) === np) return false;
     tile.s2 = s;
     tile.p2 = np;
+    this.version++;
+    return true;
+  },
+  // 0.9.69 : bordures d'une plaque, bord par bord (masque de bits, voir pieces.js plateEdges). Renvoie true si quelque chose a changé.
+  setEdges(tile, mask) {
+    const P = PIECES[tile.t];
+    if (!P || P.kind !== "area") return false;
+    const m = (mask | 0) & plateAllEdges(P);
+    if ((tile.eb | 0) === m) return false;
+    tile.eb = m;
     this.version++;
     return true;
   },
@@ -6684,6 +7122,7 @@ var Track = class _Track {
       s2: "",
       p2: 0,
       gs: 0,
+      eb: 0,
       g: Math.max(0, Math.min(MAX_GROUP, t.g | 0))
     };
     tile.v = t.v && flagAllowed(type, "v") ? 1 : 0;
@@ -6700,6 +7139,7 @@ var Track = class _Track {
     tile.tb = t.tb && flagAllowed(type, "tb", tile) ? 1 : 0;
     tile.th = THEMES.some((h) => h.id === (t.th | 0)) && flagAllowed(type, "th") ? t.th | 0 : 0;
     tile.gs = (t.gs | 0) > 0 && flagAllowed(type, "gs", tile, t.gs | 0) ? t.gs | 0 : 0;
+    tile.eb = (t.eb | 0) > 0 && flagAllowed(type, "eb", tile, t.eb | 0) ? (t.eb | 0) & plateAllEdges(PIECES[type]) : 0;
     tile.col = cleanColors(t.col);
     if (surfaceAllowed(type, s, tile.o)) {
       tile.s = s;
@@ -6992,6 +7432,7 @@ var Track = class _Track {
       if (t.tb) e.tb = 1;
       if (t.th) e.th = t.th;
       if (t.gs) e.gs = t.gs;
+      if (t.eb) e.eb = t.eb;
       if (t.ms) e.ms = t.ms;
       if (t.ma) e.ma = t.ma;
       if (t.s2) {
@@ -7111,6 +7552,7 @@ var Track = class _Track {
         tile.tb = ex.tb | 0;
         tile.th = ex.th | 0;
         tile.gs = ex.gs | 0;
+        tile.eb = ex.eb | 0;
         tile.ms = ex.ms | 0;
         tile.ma = +ex.ma || 0;
         tile.g = ex.g | 0;
@@ -7138,7 +7580,7 @@ var Track = class _Track {
         continue;
       }
       const legacy = LEGACY_TILE[tile.t] || LEGACY_SURFACE[tile.t] || LEGACY_PIECE[tile.t];
-      if (!legacy && ((tile.o | 0) !== norm.o || (tile.v ? 1 : 0) !== norm.v || (tile.tn ? 1 : 0) !== norm.tn || (tile.mv | 0) !== norm.mv || (tile.cp | 0) !== norm.cp || (tile.tb | 0) !== norm.tb || (SURFACE_ALIAS[tile.s] || tile.s || "") !== norm.s)) lost.options++;
+      if (!legacy && ((tile.o | 0) !== norm.o || (tile.v ? 1 : 0) !== norm.v || (tile.tn ? 1 : 0) !== norm.tn || (tile.mv | 0) !== norm.mv || (tile.cp | 0) !== norm.cp || (tile.tb | 0) !== norm.tb || (tile.eb | 0) !== norm.eb || (SURFACE_ALIAS[tile.s] || tile.s || "") !== norm.s)) lost.options++;
       tr.add(tile);
     }
     if (Array.isArray(data.o)) {
@@ -7198,6 +7640,7 @@ function tileExtras(t) {
   if (t.o) e += "o" + t.o;
   if (t.mv && (t.ms || t.ma)) e += `s${t.ms || 0}a${t.ma || 0}`;
   if (t.s2) e += `f${t.s2}:${t.p2 || 0}`;
+  if (t.eb) e += "e" + t.eb;
   return e;
 }
 function b64encode(str) {
@@ -7265,6 +7708,10 @@ function scriptTrack(name, script, opts2 = {}) {
       r: r & 3,
       ...curOver || cur
     };
+    if (PIECES[t].kind === "area" && tile.gs) {
+      tile.eb = tile.gs;
+      tile.gs = 0;
+    }
     const mp = cur.mv && opts2.movers ? opts2.movers[cur.mvTok - 1] : null;
     if (mp) {
       tile.ms = mp.ms || 0;
@@ -7278,7 +7725,7 @@ function scriptTrack(name, script, opts2 = {}) {
       "mv"
     ]) if (cur[f] && !flagAllowed(t, f, tile)) throw new Error(`${name} : drapeau ${f} interdit sur ${t}`);
     if (cur.o && !flagAllowed(t, "o", tile, cur.o)) throw new Error(`${name} : orientation ${cur.o} interdite sur ${t}`);
-    if (cur.gs && !flagAllowed(t, "gs", tile, cur.gs)) throw new Error(`${name} : style de portique ${cur.gs} impossible sur ${t}`);
+    if (tile.gs && !flagAllowed(t, "gs", tile, tile.gs)) throw new Error(`${name} : style de portique ${tile.gs} impossible sur ${t}`);
     const c = tr.conflicts(Track.normalize(tile));
     if (c.length) throw new Error(`${name} : conflit en (${px}, ${pz}) niveau ${lv} [${t}]`);
     if (!Track.inBounds(Track.normalize(tile))) throw new Error(`${name} : ${t} sort des niveaux en (${px}, ${pz})`);
@@ -7487,6 +7934,22 @@ function scriptTrack(name, script, opts2 = {}) {
     x += d.x;
     z += d.z;
   };
+  const platePiece = (type) => {
+    const size = PIECES[type].size, e = rot(h, size % 2 ? 0 : -0.5, (size - 1) / 2);
+    const added = place(type, Math.round(x + 0.5 - e.x - size / 2), Math.round(z + 0.5 - e.z - size / 2), l, h, false, true);
+    const f = DIRS[h], y = baseY(added), pts = [];
+    for (let i = 0; i <= 4 * size; i++) {
+      const k = i / 4 - 0.5;
+      pts.push([
+        (x + 0.5 + f[0] * k) * CELL,
+        y,
+        (z + 0.5 + f[1] * k) * CELL,
+        0
+      ]);
+    }
+    pushPts(pts);
+    adv(h, size);
+  };
   const sbendPiece = (type) => {
     const P = PIECES[type], m = P.mirror, size = P.size;
     const e = rot(h, -m * (size - 1) / 2, (size - 1) / 2);
@@ -7496,8 +7959,8 @@ function scriptTrack(name, script, opts2 = {}) {
     z += d.z;
   };
   for (let tok of script.trim().split(/\s+/)) {
-    const gsm = /\*(\d)$/.exec(tok);
-    if (gsm) tok = tok.slice(0, -2);
+    const gsm = /\*(\d{1,2})$/.exec(tok);
+    if (gsm) tok = tok.slice(0, -gsm[0].length);
     const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>(){}]*)$/.exec(tok);
     const m = gm ? [
       tok,
@@ -7540,6 +8003,7 @@ function scriptTrack(name, script, opts2 = {}) {
       for (let i = 0; i < n; i++) {
         const sg = P.mirror < 0 ? -1 : 1, rise = P.rise || 0;
         if (P.kind === "sbend") sbendPiece(id);
+        else if (P.kind === "area" && P.size > 1) platePiece(id);
         else if (P.kind === "arc" && P.size === 2) {
           const c = rot(h, 0.5 * sg, -0.5);
           place(id, Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
@@ -10374,6 +10838,12 @@ var HIT = {
   nx: 0,
   nz: 0
 };
+var ED = {
+  d: 0,
+  nx: 0,
+  nz: 0,
+  on: false
+};
 var wallMethods = {
   _bounds() {
     const p = this.pos, v = this.vel;
@@ -10580,6 +11050,34 @@ var wallMethods = {
     }
     return this.track.hasSolids ? this._probeSolids(x, z, px, pz, y) : null;
   },
+  // 0.9.69 : bordures d'une plaque (option eb, un bit par bord : pieces.js plateEdges). Une bordure occupe la bande [0, RAIL_W] à l'intérieur du bord, sur RAIL_H
+  // de haut ; même hauteur jugée et même sortie (côté d'où vient la sonde) qu'une bordure de route.
+  _probeEdges(tile, P, x, z, px, pz, y) {
+    if (!(isFloor(tile) || isCeilingFloor(tile))) return false;
+    toLocal(tile, x, z, L1);
+    sampleLocal(tile, L1.lx, L1.lz, S1);
+    const h = tile.v ? 2 * baseY(tile) - S1.h : S1.h, H = CAR.height, g = this.gSign;
+    const ylo = g > 0 ? y : y - H, yhi = g > 0 ? y + H : y;
+    if (tile.v ? ylo > h + SLAB_T + 0.2 || yhi < h - RAIL_H + 0.15 : ylo > h + RAIL_H - 0.15 || yhi < h - SLAB_T - 0.2) return false;
+    toLocal(tile, px, pz, L2);
+    const R = CAR.radius, edges = plateEdges(P);
+    for (let i = 0; i < edges.length; i++) {
+      if (!(tile.eb & 1 << i)) continue;
+      edgeDist(edges[i], L1.lx, L1.lz, R, ED);
+      if (!ED.on || ED.d - R >= RAIL_W || ED.d + R <= 0) continue;
+      const dIn = ED.d, nx = ED.nx, nz = ED.nz;
+      edgeDist(edges[i], L2.lx, L2.lz, R, ED);
+      const inside = ED.d > RAIL_W * 0.5;
+      const push = (inside ? RAIL_W + R : -R) - dIn;
+      rotVec(tile.r, nx, nz, W12);
+      HIT.dx = W12.x * push;
+      HIT.dz = W12.z * push;
+      HIT.nx = inside ? W12.x : -W12.x;
+      HIT.nz = inside ? W12.z : -W12.z;
+      return true;
+    }
+    return false;
+  },
   // 0.9.68 : solides (piliers, poutres, murs, blocs : solids.js) : leurs côtés sont des bordures pour la sonde (même choc, même frottement).
   _probeSolids(x, z, px, pz, y) {
     const H = CAR.height, g = this.gSign, py = this.prev.y;
@@ -10599,7 +11097,8 @@ var wallMethods = {
   },
   _probeTile(tile, x, z, px, pz, y, mx, mz) {
     const P = PIECES[tile.t];
-    if (P.kind === "area" || tile.nb && !tile.tn || !(isFloor(tile) || isCeilingFloor(tile))) return false;
+    if (P.kind === "area") return tile.eb ? this._probeEdges(tile, P, x, z, px, pz, y) : false;
+    if (tile.nb && !tile.tn || !(isFloor(tile) || isCeilingFloor(tile))) return false;
     let dh = 0;
     if (P.rise && (this.grounded || this.airTime < 0.25) && mx !== void 0) {
       toLocal(tile, mx, mz, L2);
@@ -12604,6 +13103,10 @@ var RaceLogic = class {
         this.collected.add(tile);
         this.splits.push(this.steps);
         let c = tileCenter(tile);
+        if (P.kind === "area" && P.shape) {
+          const g = areaCentroid(P);
+          c = localToWorld(tile, g.x, g.z);
+        }
         if (!P.special && P.kind === "arc") {
           const a = arcParams(P), ang = Math.PI * 1.25;
           c = localToWorld(tile, a.cx + a.R * dcos(ang), a.cz + a.R * dsin(ang));
@@ -14477,4 +14980,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "25dbf546d006ac5e";
+globalThis.__COPYTRACK_BUILD__ = "d0403b6e22155aad";

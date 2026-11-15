@@ -120,8 +120,23 @@ export const FAMILIES = {
       sbendWide: { len: '3', shift: '2', dir: 'R' }, sbendWideL: { len: '3', shift: '2', dir: 'L' },
     },
   },
+  // 0.9.69 : plaques (surfaces libres) : carré, triangle ou quart de disque, de 1 à 3 cases ; la plateforme est la plaque carrée 1×1.
+  plaque: {
+    label: 'Plaque',
+    hint: 'Surface libre, sans route : carrée, triangulaire ou en quart de disque, de 1 à 3 cases. Bordures au choix (Options, ou bord par bord dans l’Inspecteur).',
+    icon: 'platform',
+    traits: [
+      { id: 'forme', label: 'Forme', values: [['sq', 'Carrée'], ['tri', 'Triangle'], ['sec', 'Quart de disque']] },
+      { id: 'taille', label: 'Taille', values: [['1', '1 case'], ['2', '2×2'], ['3', '3×3']] },
+    ],
+    members: {
+      platform: { forme: 'sq', taille: '1' }, plate2: { forme: 'sq', taille: '2' }, plate3: { forme: 'sq', taille: '3' },
+      tri1: { forme: 'tri', taille: '1' }, tri2: { forme: 'tri', taille: '2' }, tri3: { forme: 'tri', taille: '3' },
+      sec1: { forme: 'sec', taille: '1' }, sec2: { forme: 'sec', taille: '2' }, sec3: { forme: 'sec', taille: '3' },
+    },
+  },
 };
-export const FAMILY_ORDER = ['straight', 'turn', 'chicane', 'courbe', 'roll', 'loop'];
+export const FAMILY_ORDER = ['straight', 'turn', 'chicane', 'courbe', 'roll', 'loop', 'plaque'];
 
 // type concret -> { fam, traits }
 const BY_TYPE = new Map();
