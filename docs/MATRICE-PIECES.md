@@ -13,7 +13,7 @@ transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 36
 | — | orientation non proposée par l'éditeur (`flagAllowed`) |
 | n/a | pièce sans route roulable (raison dans le fichier JSON) |
 
-Totaux : CHUTE 24 · OK 142 · RACCORD 4 · SAUT 70 · n/a 120 · v≥150 425 · v≥250 6 · v≥80 15 · — 402.
+Totaux : CHUTE 24 · OK 144 · RACCORD 4 · SAUT 74 · n/a 120 · v≥150 427 · v≥250 6 · v≥80 15 · — 426.
 
 **Limites** : pilote automatique (pas un humain), voiture classique, sans revêtement ni obstacle, une seule pièce testée par chaîne, vitesse de croisière régulée.
 Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles) sont dans `tools/compat/matrice-pieces.json`.
@@ -149,6 +149,10 @@ Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles)
 | `corkL` Tire-bouchon ↺ | OK | v≥150 | — | OK | v≥150 | — | v≥150 | — |
 | `tubeIn` Entrée de tube | OK | — | — | OK | — | — | — | — |
 | `tubeMid` Section de tube | OK | — | — | OK | — | — | — | — |
+| `loopTop` Sommet de looping ↱ | v≥150 | — | — | OK | — | — | — | — |
+| `loopTopL` Sommet de looping ↰ | v≥150 | — | — | OK | — | — | — | — |
+| `tubeTurn` Tube en virage ↱ | SAUT | — | — | SAUT | — | — | — | — |
+| `tubeTurnL` Tube en virage ↰ | SAUT | — | — | SAUT | — | — | — | — |
 
 ## Bifurcations
 

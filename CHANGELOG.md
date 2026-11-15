@@ -6,6 +6,15 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.72 — nouvelles pièces, étape 5 : looping modulaire, tube en virage
+
+**`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change. **Redéployer `submit-score`** (nouvelles pièces). Ajoutées à la FIN de l'ordre d'encodage.
+
+- **Looping modulaire** : la Montée en L mène à des murs verticaux (autant qu'on veut), puis au nouveau **Sommet de looping** (↱ / ↰ : demi-cercle de 16 m qui passe par-dessus et redescend une colonne à côté), puis à d'autres murs et à une Montée en L parcourue à l'envers. On obtient des loopings de toutes les hauteurs ; plus il est haut, plus il faut d'élan (le pilote passe jusqu'à 6 murs de chaque côté, ~80 m ; à 8, il retombe). La route guide le cap de la voiture pendant le glissement d'une colonne, comme sur les loopings décalés. Scripts : `LPR n` / `LPL n` (n murs de chaque côté).
+- **Tube en virage** (↱ / ↰, 2×2, rayon 48 m) : section de tube fermée qui tourne ; il s'enchaîne aux sections de tube (`TI TM TRR TM TO`). Scripts : `TRR` / `TLL`.
+- Éditeur : les quatre pièces dans la palette (miroirs ↱ / ↰ dans l'Inspecteur) ; étiquettes « Looping » et « Tube » des circuits.
+- **Tests** : `tools/test-etape5.mjs` (7 tests).
+
 ## Bêta 0.9.71 — nouvelles pièces, étape 4 : carrefours en T et en croix
 
 **`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change. **Redéployer `submit-score`** (nouvelles pièces). Ajoutées à la FIN de l'ordre d'encodage.

@@ -612,6 +612,7 @@ export function hashString(s) {
 //   0.9.67 : XR / XL virage géant plat (5x5, rayon 144 m)
 //   0.9.68 : suffixe *n : style du portique d'un départ, d'une arrivée ou d'un checkpoint : *1 ligne au sol, *2 arche, *3 pylônes (ex. start*2 C*3 finish*1)
 //   0.9.69 : sur une plaque, *n est le masque de ses bordures (un bit par bord, *15 : tout autour), ex. [plate2]*15 P*5
+//   0.9.72 : LPR / LPL n looping modulaire (n murs de chaque côté, on ressort une colonne à droite / à gauche) ; TRR / TLL tube en virage (2×2)
 //   0.9.71 : JX croisement (JXR / JXL : en tournant), JT / JTL carrefour en T tout droit (branche à droite / à gauche), JTD / JTG prendre la branche,
 //            JR / JL arriver par la branche et tourner ; repasser par un carrefour déjà posé (circuit en 8) : même jeton au même endroit
 //   0.9.70 : N route étroite (12 m), NI rétrécissement, NO retour à 24 m ; WI élargissement (3×3), W route large (56 m, 3×3), WO retour à 24 m
@@ -943,6 +944,28 @@ export function scriptTrack(name, script, opts = {}) {
         if (sgn > 0) place('giantcurve', ax, az, l, h); else place('giantcurve', ax, az, l, h + 1, true);
         x += fwd.x * 4 + side.x * 5; z += fwd.z * 4 + side.z * 5;
         h = (h + (sgn > 0 ? 1 : 3)) & 3;
+        break;
+      }
+      // 0.9.72 : looping modulaire LPR / LPL n : Montée en L, n murs (1 par défaut, 0 possible), Sommet de looping (↱ / ↰ : on redescend une colonne à
+      // droite / à gauche), n murs à la descente, Montée en L parcourue à l'envers ; on repart dans la colonne voisine, au niveau de départ, même cap.
+      case 'LPR': case 'LPL': {
+        const sg = op === 'LPR' ? 1 : -1, W = m[2] ? n : 1, l0 = l, f = DIRS[h], rt = DIRS[(h + (sg > 0 ? 1 : 3)) & 3];
+        const c0 = [x, z], c1 = [x + f[0], z + f[1]], s0 = [x + rt[0], z + rt[1]], s1 = [s0[0] + f[0], s0[1] + f[1]], sb = [s0[0] - f[0], s0[1] - f[1]];
+        place('ramp90', c0[0], c0[1], l0, h);
+        for (let i = 0; i < W; i++) place('wall', c1[0], c1[1], l0 + 2 + i, h);
+        const cells = [c0, c1, s0, s1];
+        place(sg > 0 ? 'loopTop' : 'loopTopL', Math.min(...cells.map((c) => c[0])), Math.min(...cells.map((c) => c[1])), l0 + 2 + W, h);
+        for (let i = W - 1; i >= 0; i--) place('wall', sb[0], sb[1], l0 + 2 + i, h + 2, true);
+        place('ramp90', s0[0], s0[1], l0, h + 2, true);
+        x = s1[0]; z = s1[1]; l = l0;
+        break;
+      }
+      // 0.9.72 : tube en virage TRR / TLL (2×2, rayon 48 m), entre des sections de tube (TI … TO).
+      case 'TRR': case 'TLL': {
+        const sg = op === 'TRR' ? 1 : -1, c = rot(h, 0.5 * sg, -0.5);
+        place(sg > 0 ? 'tubeTurn' : 'tubeTurnL', Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
+        const nx = rot(h, 2 * sg, -1);
+        x += nx.x; z += nx.z; h = (h + (sg > 0 ? 1 : 3)) & 3;
         break;
       }
       // 0.9.71 : carrefours. JX croisement tout droit, JXR / JXL en tournant ; JT carrefour en T, la branche à droite (JTL : à gauche), tout droit ;

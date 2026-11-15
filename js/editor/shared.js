@@ -6,7 +6,7 @@ import { DECO_LABELS } from '../decoData.js';
 export const PALETTE_ORDER = [
   'straight', 'curve', 'bigcurve', 'slope', 'steep', 'loop', 'loopL', 'loopBig', 'loopBigL', 'loopDouble', 'loopDoubleL', 'twist',
   'ramp90', 'wall', 'crest90', 'bank', 'bankBig', 'hugecurve', 'giantcurve', 'sbend', 'steep4', 'cv1', 'crv1',
-  'tube', 'tubeIn', 'tubeMid', 'cork', 'corkL', 'fork', 'forkL', 'gentle', 'ring', 'start', 'finish', 'platform',
+  'tube', 'tubeIn', 'tubeMid', 'tubeTurn', 'tubeTurnL', 'loopTop', 'loopTopL', 'cork', 'corkL', 'fork', 'forkL', 'gentle', 'ring', 'start', 'finish', 'platform',
 ].map((id) => ({ id }));
 
 // Outils (grille « Outils » à gauche) : ne posent rien. action : raccourci réglable (voir input.js) ; key : touche fixe.

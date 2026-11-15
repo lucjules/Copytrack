@@ -91,12 +91,15 @@ export function buildChain(type, opts) {
   c.add('start');
   c.straight();
   // Montée en L (ramp90 → mur → sommet) : les trois pièces ne se raccordent qu'entre elles (la route y est verticale) : la chaîne les pose toujours ensemble.
-  const L = ['ramp90', 'wall', 'crest90'].includes(type);
+  // (0.9.72 : le sommet de looping modulaire aussi : Montée en L, mur, sommet, mur et Montée en L à l'envers)
+  const L = ['ramp90', 'wall', 'crest90'].includes(type) || !!PIECES[type].loopTop;
   const need = entryOrientation(L ? 'ramp90' : type, opts);
   if (need === null) { c.fail = 'orientation d\'entrée illisible'; return c; }
   c.fromFloor(need);
   if (need !== 0) c.straight();
-  if (L) {
+  if (L && PIECES[type].loopTop) {
+    c.add('ramp90', opts); c.add('wall', opts); c.add(type, opts); c.add('wall', opts, true); c.add('ramp90', opts, true);
+  } else if (L) {
     c.add('ramp90', opts);
     if (type === 'wall') c.add('wall', opts);
     c.add('crest90', opts);

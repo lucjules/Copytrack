@@ -269,6 +269,11 @@ export default {
   'Croisement (4 bras) ou carrefour en T (3 bras), au même niveau. Un circuit peut repasser par un croisement (circuit en 8).': 'Crossroads (4 arms) or T junction (3 arms), on one level. A track can go through a crossroads twice (figure of eight).',
   'En T': 'T-shaped',
   'Carrefour : Forme': 'Junction: Shape',
+  // 0.9.72 : looping modulaire, tube en virage
+  'Sommet de looping ↱': 'Loop top ↱',
+  'Sommet de looping ↰': 'Loop top ↰',
+  'Tube en virage ↱': 'Tube turn ↱',
+  'Tube en virage ↰': 'Tube turn ↰',
   // 0.9.68 : style du portique (départ, arrivée, checkpoint)
   'Portique': 'Gate',
   'Ligne au sol': 'Line on the ground',

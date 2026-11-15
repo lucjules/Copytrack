@@ -94,6 +94,11 @@ const ICONS = {
   giantcurve: svg(`<path d="M2 48 A46 46 0 0 1 48 2 L48 10 A38 38 0 0 0 10 48Z" fill="#3c4160"/><path d="M2 48 A46 46 0 0 1 48 2" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M10 48 A38 38 0 0 1 48 10" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M14 40 A30 30 0 0 1 40 14" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 4" fill="none"/>`),
   crv05: crvIcon('½'), crv1: crvIcon(1), crv2: crvIcon(2), crv4: crvIcon(4),
   cross: crossIcon('NSEW'), tee: crossIcon('NSE'),
+  // 0.9.72 : sommet de looping modulaire (vu de côté : demi-cercle qui redescend à côté) et tube en virage (vu de dessus)
+  loopTop: svg(`<path d="M10 46V24a14 14 0 0 1 28 0v22" stroke="${ROAD}" stroke-width="8" fill="none"/><path d="M10 46V24a14 14 0 0 1 28 0v22" stroke="#36e9ff" stroke-width="2" fill="none"/><path d="M33 38l5 6 5-6" stroke="#36e9ff" stroke-width="2" fill="none"/>`),
+  loopTopL: svg(`<path d="M10 46V24a14 14 0 0 1 28 0v22" stroke="${ROAD}" stroke-width="8" fill="none"/><path d="M10 46V24a14 14 0 0 1 28 0v22" stroke="#ff5fd2" stroke-width="2" fill="none"/><path d="M33 38l5 6 5-6" stroke="#ff5fd2" stroke-width="2" fill="none"/>`),
+  tubeTurn: svg(`<path d="M6 48 A42 42 0 0 1 48 6" stroke="#7fe9ff" stroke-width="12" fill="none"/><path d="M6 48 A42 42 0 0 1 48 6" stroke="${ROAD}" stroke-width="6" fill="none"/>`),
+  tubeTurnL: svg(`<path d="M42 48 A42 42 0 0 0 0 6" stroke="#7fe9ff" stroke-width="12" fill="none"/><path d="M42 48 A42 42 0 0 0 0 6" stroke="${ROAD}" stroke-width="6" fill="none"/>`),
   narrow: widthIcon(7, 7), narrowIn: widthIcon(14, 7), wideIn: widthIcon(12, 22), wide: widthIcon(22, 22),
   plate2: plateIcon('sq', 2), plate3: plateIcon('sq', 3), tri1: plateIcon('tri', 1), tri2: plateIcon('tri', 2), tri3: plateIcon('tri', 3),
   sec1: plateIcon('sec', 1), sec2: plateIcon('sec', 2), sec3: plateIcon('sec', 3),

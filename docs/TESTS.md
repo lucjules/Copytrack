@@ -29,6 +29,7 @@ Tout se lance depuis la racine du dépôt. **Rien n'est désactivé** : un test 
 - **Nouvelles pièces, étape 2 (0.9.69)** : **`test-etape2`** (murs pleins, mur courbe sans trou ; plaques : formes, sol, bordures (signature, code, éditeur), voiture retenue par une bordure ou qui tombe sans, scripts `[plate3]*10`, rendu, plateforme inchangée ; blocs : bloc, dalle, arche, cale, cale raide et pyramide qui se montent, pente du dessus).
 - **Nouvelles pièces, étape 3 (0.9.70)** : **`test-etape3`** (largeur de route : distance au bord exacte, sol et bordure à la bonne largeur, voiture retenue à 6 m, scripts `N` / `NI` / `NO` / `WI` / `W` / `WO`, vérificateur, options, famille, rendu à la bonne largeur).
 - **Nouvelles pièces, étape 4 (0.9.71)** : **`test-etape4`** (carrefours : distance à la chaussée exacte, bouts et raccords, circuit en 8 par un seul croisement, toutes les façons de traverser un T, voiture retenue du côté fermé, options, famille, rendu).
+- **Nouvelles pièces, étape 5 (0.9.72)** : **`test-etape5`** (sommet de looping : géométrie, raccords ; looping modulaire de 0 à 6 murs fait sans toucher, trop haut pour l'élan : la voiture retombe ; tube en virage parcouru dans le tube ; rendu).
 - **Essais croisés** : **`test-croises`** — verre × obstacles mobiles × gravité inversée × aimant × volant inversé × checkpoints × groupes logiques × replays × circuits personnalisés × vérification des scores × sauvegardes de deux appareils × invité → compte.
 
 ## Rejouer un essai précis

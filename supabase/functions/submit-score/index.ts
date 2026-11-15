@@ -672,6 +672,46 @@ var PIECES = {
     rise: 0,
     arms: "NSE"
   },
+  // 0.9.72 : looping modulaire : la Montée en L (ramp90) mène à des murs verticaux, autant qu'on veut, puis ce SOMMET (demi-cercle de 16 m de rayon qui
+  // passe par-dessus et redescend une colonne à côté, à droite ↱ ou à gauche ↰), puis d'autres murs et une Montée en L parcourue à l'envers. Empreinte 2×2 :
+  // il commence au milieu de l'empreinte (bord avant de la Montée en L), dans la colonne de gauche (↱) ou de droite (↰), et redescend au bord arrière.
+  loopTop: {
+    label: "Sommet de looping \u21B1",
+    kind: "ribbon",
+    size: 2,
+    rise: 0,
+    clearance: 3,
+    mirror: 1,
+    loopTop: true
+  },
+  loopTopL: {
+    label: "Sommet de looping \u21B0",
+    kind: "ribbon",
+    size: 2,
+    rise: 0,
+    clearance: 3,
+    mirror: -1,
+    loopTop: true
+  },
+  // 0.9.72 : tube en virage (2×2, rayon 48 m, tube de 8 m de rayon, comme la section de tube) : s'enchaîne aux sections de tube.
+  tubeTurn: {
+    label: "Tube en virage \u21B1",
+    kind: "ribbon",
+    size: 2,
+    rise: 0,
+    clearance: 4,
+    mirror: 1,
+    tubeArc: true
+  },
+  tubeTurnL: {
+    label: "Tube en virage \u21B0",
+    kind: "ribbon",
+    size: 2,
+    rise: 0,
+    clearance: 4,
+    mirror: -1,
+    tubeArc: true
+  },
   // « Courbe » : un tremplin courbé (virage montant). Serré = 1 case, grand = 2×2.
   cv05: {
     label: "Courbe serr\xE9e \xB7 inclinaison \xBD",
@@ -1272,7 +1312,12 @@ var PIECE_ORDER = [
   "wide",
   // 0.9.71 : carrefours (à la suite : ne jamais réordonner)
   "cross",
-  "tee"
+  "tee",
+  // 0.9.72 : looping modulaire, tube en virage (à la suite : ne jamais réordonner)
+  "loopTop",
+  "loopTopL",
+  "tubeTurn",
+  "tubeTurnL"
 ];
 var SURFACES = {
   "": {
@@ -1540,7 +1585,7 @@ function isSideTile(tile) {
 }
 function headingGuided(tile) {
   const p = PIECES[tile.t];
-  return !!(tile.o || p.roll || p.rollable);
+  return !!(tile.o || p.roll || p.rollable || p.loopTop);
 }
 var isOriented = (tile) => !!tile.o && (PIECES[tile.t].kind === "line" || PIECES[tile.t].kind === "arc" || !!PIECES[tile.t].rollable);
 var rollFitHook = {
@@ -1632,7 +1677,7 @@ function flagAllowed(type, flag, tile = null, val = 0) {
     if (lineLike) return true;
     return !!p.rollable && (!rollFitHook.fits || rollFitHook.fits(type, val));
   }
-  if (flag === "nb") return !p.noRails && (lineLike || p.kind === "ribbon" && !type.startsWith("tube"));
+  if (flag === "nb") return !p.noRails && (lineLike || p.kind === "ribbon" && !type.startsWith("tube") && !p.loopTop);
   if (flag === "tn") return lineLike && !p.special && !hasConflict("tn", tile);
   if (flag === "mv") return (lineLike || p.kind === "area") && !p.special && !hasConflict("mv", tile);
   if (flag === "cp") {
@@ -2433,6 +2478,41 @@ function buildBase(tile) {
           o.hw = o.wrap ? Math.PI / kcMax : ROAD_HALF;
         },
         len: 2 * half
+      };
+    }
+    if (P.tubeArc) {
+      const kcMax = 1 / 8, a = arcParams(P), mir = P.mirror < 0 ? -1 : 1;
+      return {
+        tubeR: 8,
+        pos(u, o) {
+          const ang = Math.PI + Math.PI / 2 * u;
+          o.x = mir * (a.cx + a.R * dcos(ang));
+          o.y = base;
+          o.z = a.cz + a.R * dsin(ang);
+          o.nx = 0;
+          o.ny = 1;
+          o.nz = 0;
+          o.kc = kcMax;
+          o.wrap = true;
+          o.hw = Math.PI / kcMax;
+        },
+        len: Math.PI / 2 * a.R
+      };
+    }
+    if (P.loopTop) {
+      const Rt = HALF, m = P.mirror, x0 = -m * HALF;
+      return {
+        minU: 0.08,
+        pos(u, o) {
+          const th = Math.PI * u, c = dcos(th), s = dsin(th);
+          o.x = x0 + m * CELL * smooth(u);
+          o.y = base + Rt * s;
+          o.z = Rt - Rt * c;
+          o.nx = 0;
+          o.ny = -s;
+          o.nz = c;
+        },
+        len: hypot2(Math.PI * Rt, CELL)
       };
     }
     if (tile.t === "tubeIn" || tile.t === "tubeMid") {
@@ -8464,6 +8544,54 @@ function scriptTrack(name, script, opts2 = {}) {
         x += fwd.x * 4 + side.x * 5;
         z += fwd.z * 4 + side.z * 5;
         h = h + (sgn > 0 ? 1 : 3) & 3;
+        break;
+      }
+      // 0.9.72 : looping modulaire LPR / LPL n : Montée en L, n murs (1 par défaut, 0 possible), Sommet de looping (↱ / ↰ : on redescend une colonne à
+      // droite / à gauche), n murs à la descente, Montée en L parcourue à l'envers ; on repart dans la colonne voisine, au niveau de départ, même cap.
+      case "LPR":
+      case "LPL": {
+        const sg = op === "LPR" ? 1 : -1, W3 = m[2] ? n : 1, l0 = l, f = DIRS[h], rt = DIRS[h + (sg > 0 ? 1 : 3) & 3];
+        const c0 = [
+          x,
+          z
+        ], c1 = [
+          x + f[0],
+          z + f[1]
+        ], s0 = [
+          x + rt[0],
+          z + rt[1]
+        ], s1 = [
+          s0[0] + f[0],
+          s0[1] + f[1]
+        ], sb = [
+          s0[0] - f[0],
+          s0[1] - f[1]
+        ];
+        place("ramp90", c0[0], c0[1], l0, h);
+        for (let i = 0; i < W3; i++) place("wall", c1[0], c1[1], l0 + 2 + i, h);
+        const cells = [
+          c0,
+          c1,
+          s0,
+          s1
+        ];
+        place(sg > 0 ? "loopTop" : "loopTopL", Math.min(...cells.map((c) => c[0])), Math.min(...cells.map((c) => c[1])), l0 + 2 + W3, h);
+        for (let i = W3 - 1; i >= 0; i--) place("wall", sb[0], sb[1], l0 + 2 + i, h + 2, true);
+        place("ramp90", s0[0], s0[1], l0, h + 2, true);
+        x = s1[0];
+        z = s1[1];
+        l = l0;
+        break;
+      }
+      // 0.9.72 : tube en virage TRR / TLL (2×2, rayon 48 m), entre des sections de tube (TI … TO).
+      case "TRR":
+      case "TLL": {
+        const sg = op === "TRR" ? 1 : -1, c = rot(h, 0.5 * sg, -0.5);
+        place(sg > 0 ? "tubeTurn" : "tubeTurnL", Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
+        const nx = rot(h, 2 * sg, -1);
+        x += nx.x;
+        z += nx.z;
+        h = h + (sg > 0 ? 1 : 3) & 3;
         break;
       }
       // 0.9.71 : carrefours. JX croisement tout droit, JXR / JXL en tournant ; JT carrefour en T, la branche à droite (JTL : à gauche), tout droit ;
@@ -15271,4 +15399,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "cfbe7265e42a37bc";
+globalThis.__COPYTRACK_BUILD__ = "805a094510cef40c";

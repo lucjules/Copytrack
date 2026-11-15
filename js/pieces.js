@@ -93,6 +93,14 @@ export const PIECES = {
   // La chaussée est l'union du carré central et des bras (voir junctionSample) ; les bordures suivent tout son contour.
   cross:      { label: 'Croisement', kind: 'junction', size: 1, rise: 0, arms: 'NSEW' },
   tee:        { label: 'Carrefour en T', kind: 'junction', size: 1, rise: 0, arms: 'NSE' },
+  // 0.9.72 : looping modulaire : la Montée en L (ramp90) mène à des murs verticaux, autant qu'on veut, puis ce SOMMET (demi-cercle de 16 m de rayon qui
+  // passe par-dessus et redescend une colonne à côté, à droite ↱ ou à gauche ↰), puis d'autres murs et une Montée en L parcourue à l'envers. Empreinte 2×2 :
+  // il commence au milieu de l'empreinte (bord avant de la Montée en L), dans la colonne de gauche (↱) ou de droite (↰), et redescend au bord arrière.
+  loopTop:    { label: 'Sommet de looping ↱', kind: 'ribbon', size: 2, rise: 0, clearance: 3, mirror: 1, loopTop: true },
+  loopTopL:   { label: 'Sommet de looping ↰', kind: 'ribbon', size: 2, rise: 0, clearance: 3, mirror: -1, loopTop: true },
+  // 0.9.72 : tube en virage (2×2, rayon 48 m, tube de 8 m de rayon, comme la section de tube) : s'enchaîne aux sections de tube.
+  tubeTurn:   { label: 'Tube en virage ↱', kind: 'ribbon', size: 2, rise: 0, clearance: 4, mirror: 1, tubeArc: true },
+  tubeTurnL:  { label: 'Tube en virage ↰', kind: 'ribbon', size: 2, rise: 0, clearance: 4, mirror: -1, tubeArc: true },
   // « Courbe » : un tremplin courbé (virage montant). Serré = 1 case, grand = 2×2.
   cv05:       { label: 'Courbe serrée · inclinaison ½', kind: 'arc', size: 1, rise: 0.5 },
   cv1:        { label: 'Courbe serrée · inclinaison 1', kind: 'arc', size: 1, rise: 1 },
@@ -258,6 +266,8 @@ export const PIECE_ORDER = [
   'narrow', 'narrowIn', 'wideIn', 'wide',
   // 0.9.71 : carrefours (à la suite : ne jamais réordonner)
   'cross', 'tee',
+  // 0.9.72 : looping modulaire, tube en virage (à la suite : ne jamais réordonner)
+  'loopTop', 'loopTopL', 'tubeTurn', 'tubeTurnL',
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -346,7 +356,7 @@ export function isSideTile(tile) {
 // borné selon la vitesse (loi PolyTrack) : il ne suffirait pas à suivre ces pièces à la vitesse où elles se prennent.
 export function headingGuided(tile) {
   const p = PIECES[tile.t];
-  return !!(tile.o || p.roll || p.rollable);
+  return !!(tile.o || p.roll || p.rollable || p.loopTop);      // (0.9.72 : le sommet de looping modulaire glisse d'une colonne, comme un looping décalé)
 }
 
 // Une ligne ou un virage posé sur un mur (tile.o) se parcourt en mode ruban, comme une transition.
@@ -454,7 +464,7 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
     return !!p.rollable && (!rollFitHook.fits || rollFitHook.fits(type, val));
   }
   // (0.9.68 : aussi le départ, l'arrivée et le checkpoint : portique sans bordures, comme sur une plaque)
-  if (flag === 'nb') return !p.noRails && (lineLike || (p.kind === 'ribbon' && !type.startsWith('tube')));
+  if (flag === 'nb') return !p.noRails && (lineLike || (p.kind === 'ribbon' && !type.startsWith('tube') && !p.loopTop));
   if (flag === 'tn') return lineLike && !p.special && !hasConflict('tn', tile);
   // Pièce mobile : route « simple » (droite, virage, pente, plateforme), pas à l'envers, pas de checkpoint dessus.
   if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !hasConflict('mv', tile);

@@ -21,7 +21,7 @@ import { bodyMethods } from './inspector/bodies.js';
 export const MIRROR_TYPES = {
   loop: 'loopL', loopL: 'loop', loopBig: 'loopBigL', loopBigL: 'loopBig', loopDouble: 'loopDoubleL', loopDoubleL: 'loopDouble',
   cork: 'corkL', corkL: 'cork', fork: 'forkL', forkL: 'fork',
-  sbend: 'sbendL', sbendL: 'sbend', sbendLong: 'sbendLongL', sbendLongL: 'sbendLong', sbendFast: 'sbendFastL', sbendFastL: 'sbendFast', sbendWide: 'sbendWideL', sbendWideL: 'sbendWide',
+  sbend: 'sbendL', sbendL: 'sbend', loopTop: 'loopTopL', loopTopL: 'loopTop', tubeTurn: 'tubeTurnL', tubeTurnL: 'tubeTurn', sbendLong: 'sbendLongL', sbendLongL: 'sbendLong', sbendFast: 'sbendFastL', sbendFastL: 'sbendFast', sbendWide: 'sbendWideL', sbendWideL: 'sbendWide',
   loopBigDouble: 'loopBigDoubleL', loopBigDoubleL: 'loopBigDouble', loopTriple: 'loopTripleL', loopTripleL: 'loopTriple',
   loopBigTriple: 'loopBigTripleL', loopBigTripleL: 'loopBigTriple',
   cv05: 'cvL05', cvL05: 'cv05', cv1: 'cvL1', cvL1: 'cv1', cv2: 'cvL2', cvL2: 'cv2', cv4: 'cvL4', cvL4: 'cv4',

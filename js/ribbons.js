@@ -222,6 +222,34 @@ function buildBase(tile) {
         len: 2 * half,
       };
     }
+    if (P.tubeArc) {
+      // 0.9.72 : tube en virage : section de tube (rayon 8 m, fermée) le long d'un quart de cercle de 48 m (comme le grand virage).
+      const kcMax = 1 / 8, a = arcParams(P), mir = P.mirror < 0 ? -1 : 1;
+      return {
+        tubeR: 8,
+        pos(u, o) {
+          const ang = Math.PI + (Math.PI / 2) * u;
+          o.x = mir * (a.cx + a.R * dcos(ang)); o.y = base; o.z = a.cz + a.R * dsin(ang);
+          o.nx = 0; o.ny = 1; o.nz = 0;
+          o.kc = kcMax; o.wrap = true; o.hw = Math.PI / kcMax;
+        },
+        len: (Math.PI / 2) * a.R,
+      };
+    }
+    if (P.loopTop) {
+      // 0.9.72 : sommet de looping modulaire : demi-cercle vertical de rayon R = ½ case qui part du mur montant (z = 0, colonne x0, normale +z), passe
+      // par-dessus en reculant et redescend contre le bord arrière de l'empreinte (z = 2R, normale −z), en glissant d'une colonne (en douceur).
+      const Rt = HALF, m = P.mirror, x0 = -m * HALF;
+      return {
+        minU: 0.08,
+        pos(u, o) {
+          const th = Math.PI * u, c = dcos(th), s = dsin(th);
+          o.x = x0 + m * CELL * smooth(u); o.y = base + Rt * s; o.z = Rt - Rt * c;
+          o.nx = 0; o.ny = -s; o.nz = c;
+        },
+        len: hypot2(Math.PI * Rt, CELL),
+      };
+    }
     if (tile.t === 'tubeIn' || tile.t === 'tubeMid') {
       // Tube modulaire (une case, route au centre de la case) : l'entrée se referme
       // progressivement, la section est un tube complet qu'on peut enchaîner.
