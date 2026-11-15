@@ -185,7 +185,7 @@ test('anciens circuits : rollL / rollR / sideL / sideR sont lus comme transition
 
 console.log('Familles (éditeur)');
 test('familles : Ligne droite (9 inclinaisons), Virage (+16 descendants, + virage géant), Chicane (8), Courbe (20 raccords), Transition (16), Looping, Plaque (9) ; chaque pièce une seule fois', () => {
-  assert.deepEqual(FAMILY_ORDER, ['straight', 'turn', 'chicane', 'courbe', 'roll', 'loop', 'plaque']);
+  assert.deepEqual(FAMILY_ORDER.slice(0, 7), ['straight', 'turn', 'chicane', 'courbe', 'roll', 'loop', 'plaque']);      // (0.9.70 et après : d'autres familles à la suite)
   assert.equal(Object.keys(FAMILIES.plaque.members).length, 9);      // (0.9.69 : carré, triangle, quart de disque × 1 à 3 cases ; la plateforme en est la plaque carrée 1×1)
   assert.equal(Object.keys(FAMILIES.chicane.members).length, 8);      // (0.9.68 : courte, longue, rapide, grand S ; droite / gauche)
   assert.equal(Object.keys(FAMILIES.straight.members).length, 9);

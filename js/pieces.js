@@ -83,6 +83,12 @@ export const PIECES = {
   sec1:       { label: 'Plaque quart de disque', kind: 'area', size: 1, rise: 0, shape: 'sec' },
   sec2:       { label: 'Plaque quart de disque 2×2', kind: 'area', size: 2, rise: 0, shape: 'sec' },
   sec3:       { label: 'Plaque quart de disque 3×3', kind: 'area', size: 3, rise: 0, shape: 'sec' },
+  // 0.9.70 : largeur de route variable (hw : demi-largeur de la chaussée à l'entrée et à la sortie, 12 m d'ordinaire ; voir roadHalf). Lignes droites plates.
+  // Rétrécissement et élargissement se posent dans les deux sens (à l'envers : la route s'élargit ou se resserre).
+  narrow:     { label: 'Route étroite', kind: 'line', size: 1, rise: 0, hw: [6, 6] },
+  narrowIn:   { label: 'Rétrécissement', kind: 'line', size: 1, rise: 0, hw: [12, 6] },
+  wideIn:     { label: 'Élargissement', kind: 'line', size: 3, rise: 0, hw: [12, 28] },
+  wide:       { label: 'Route large', kind: 'line', size: 3, rise: 0, hw: [28, 28] },
   // « Courbe » : un tremplin courbé (virage montant). Serré = 1 case, grand = 2×2.
   cv05:       { label: 'Courbe serrée · inclinaison ½', kind: 'arc', size: 1, rise: 0.5 },
   cv1:        { label: 'Courbe serrée · inclinaison 1', kind: 'arc', size: 1, rise: 1 },
@@ -244,6 +250,8 @@ export const PIECE_ORDER = [
   'sbend', 'sbendL', 'sbendLong', 'sbendLongL', 'sbendFast', 'sbendFastL', 'sbendWide', 'sbendWideL',
   // 0.9.69 : plaques (à la suite : ne jamais réordonner)
   'plate2', 'plate3', 'tri1', 'tri2', 'tri3', 'sec1', 'sec2', 'sec3',
+  // 0.9.70 : largeur de route variable (à la suite : ne jamais réordonner)
+  'narrow', 'narrowIn', 'wideIn', 'wide',
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -416,6 +424,8 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
   if (flag === 'th') return p.kind !== 'ring';
   // 0.9.68 : style du portique (visuel) : là où il y a un portique (départ, arrivée, checkpoint en pièce ou en option sur une route). Sans pièce
   // posée (choix d'options avant la pose), toute ligne ou tout virage, qui peut recevoir l'option Checkpoint.
+  // 0.9.70 : route de largeur variable : à l'envers, sans bordures, thème ; pas de tunnel, de mur, de mouvement, de checkpoint ni d'anneau (ils supposent 24 m de chaussée).
+  if (p.hw && flag !== 'nb') return false;
   // 0.9.69 : bordures d'une plaque (masque de bits, un par bord : voir plateEdges).
   if (flag === 'eb') return p.kind === 'area' && (val | 0) >= 0 && (val | 0) <= 15;      // (le masque est ensuite ramené aux bords de la forme : Track.normalize)
   if (flag === 'gs') {
@@ -605,6 +615,7 @@ export function sampleLocal(tile, lx, lz, out) {
     let t = (half - lz) / len;
     t = t < 0 ? 0 : t > 1 ? 1 : t;
     out.d = lx;
+    if (p.hw) widthRemap(p, lx, lz, half, out);
     // Profil vertical (voir V_PROFILES) : droite, entrée douce, sortie douce ou S. Pente = rise · H'(t) / longueur.
     out.h = base + rise * profH(p, t);
     const k = rise * profD(p, t) / len;
@@ -813,4 +824,26 @@ export function areaCentroid(p) {
   if (sh === 'tri') return { x: -h / 3, z: h / 3 };
   if (sh === 'sec') { const k = (8 * h) / (3 * Math.PI); return { x: -h + k, z: h - k }; }
   return { x: 0, z: 0 };
+}
+
+// ---- Largeur de route variable (0.9.70) -----------------------------------------------------------------------------------------------------
+// Demi-largeur de la chaussée à l'avancée t (0 entrée, 1 sortie) ; ROAD_HALF (12 m) pour toutes les autres pièces.
+export function roadHalf(p, t) {
+  if (!p.hw) return ROAD_HALF;
+  return p.hw[0] + (p.hw[1] - p.hw[0]) * (t < 0 ? 0 : t > 1 ? 1 : t);
+}
+// L'écart latéral d est RECALÉ sur le bord réel : |d| − ROAD_HALF est la distance perpendiculaire (exacte, bord en biais compris) au bord de la chaussée,
+// positive dehors. Ainsi le sol (|d| ≤ ROAD_HALF), les bordures (bande ROAD_HALF..ROAD_HALF + RAIL_W), les dalles et les checkpoints marchent sans
+// cas particulier ; le gradient reste unitaire (la normale du bord). Au milieu d'une route large, d vaut 0 ; d'une route étroite, il saute de ±(12 − 6) :
+// sans effet, seul le bord compte.
+function widthRemap(p, lx, lz, half, out) {
+  const w0 = p.hw[0], w1 = p.hw[1], k = (w1 - w0) / (2 * half);       // la demi-largeur croît de k par mètre d'avancée (vers −z)
+  let t = (half - lz) / (2 * half);
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const hw = w0 + (w1 - w0) * t, c = 1 / Math.sqrt(1 + k * k), sg = lx >= 0 ? 1 : -1;
+  const e = (sg * lx - hw) * c;
+  const d = ROAD_HALF + e;
+  out.d = d > 0 ? sg * d : 0;
+  out.gx = c; out.gz = sg * k * c;
+  return out;
 }

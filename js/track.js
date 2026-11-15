@@ -611,6 +611,7 @@ export function hashString(s) {
 //   0.9.67 : XR / XL virage géant plat (5x5, rayon 144 m)
 //   0.9.68 : suffixe *n : style du portique d'un départ, d'une arrivée ou d'un checkpoint : *1 ligne au sol, *2 arche, *3 pylônes (ex. start*2 C*3 finish*1)
 //   0.9.69 : sur une plaque, *n est le masque de ses bordures (un bit par bord, *15 : tout autour), ex. [plate2]*15 P*5
+//   0.9.70 : N route étroite (12 m), NI rétrécissement, NO retour à 24 m ; WI élargissement (3×3), W route large (56 m, 3×3), WO retour à 24 m
 //   0.9.68 : ZR / ZL chicane (la route se décale d'une colonne à droite / à gauche, même cap) : ZR = 2 cases de long, ZR3 longue, ZR4 rapide ;
 //            ZZR / ZZL grand S (3×3, deux colonnes)
 //   CVR / CVL  courbe montante serrée droite / gauche, CBR / CBL grande courbe montante (2x2) : le nombre est l'inclinaison
@@ -759,6 +760,13 @@ export function scriptTrack(name, script, opts = {}) {
     pushPts(pts);
     adv(h, size);
   };
+  // 0.9.70 : ligne droite de plusieurs cases centrée sur la colonne courante (route large, élargissement) ; rev : parcourue à l'envers (pièce tournée
+  // d'un demi-tour : l'élargissement devient un rétrécissement).
+  const centered = (type, rev = false) => {
+    const size = PIECES[type].size, e = rot(h, 0, (size - 1) / 2);
+    place(type, Math.round(x + 0.5 - e.x - size / 2), Math.round(z + 0.5 - e.z - size / 2), l, rev ? h + 2 : h, rev);
+    adv(h, size);
+  };
   // 0.9.68 : chicane : entrée dans la première colonne (côté opposé au décalage), sortie `shift` colonnes plus loin, même cap.
   const sbendPiece = (type) => {
     const P = PIECES[type], m = P.mirror, size = P.size;
@@ -798,6 +806,7 @@ export function scriptTrack(name, script, opts = {}) {
         const sg = P.mirror < 0 ? -1 : 1, rise = P.rise || 0;
         if (P.kind === 'sbend') sbendPiece(id);
         else if (P.kind === 'area' && P.size > 1) platePiece(id);
+        else if (P.hw && P.size > 1) centered(id);
         else if (P.kind === 'arc' && P.size === 2) {
           const c = rot(h, 0.5 * sg, -0.5);
           place(id, Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
@@ -912,6 +921,14 @@ export function scriptTrack(name, script, opts = {}) {
         h = (h + (sgn > 0 ? 1 : 3)) & 3;
         break;
       }
+      // 0.9.70 : largeur de route : N route étroite (N3 : trois), NI rétrécissement (24 → 12 m), NO élargissement (12 → 24 m) ;
+      // WI élargissement vers la route large (3×3, 24 → 56 m), W route large (3×3), WO retour à la largeur normale.
+      case 'N': for (let i = 0; i < n; i++) { place('narrow', x, z, l, h); adv(h); } break;
+      case 'NI': place('narrowIn', x, z, l, h); adv(h); break;
+      case 'NO': place('narrowIn', x, z, l, h + 2, true); adv(h); break;
+      case 'WI': centered('wideIn'); break;
+      case 'W': for (let i = 0; i < n; i++) centered('wide'); break;
+      case 'WO': centered('wideIn', true); break;
       // 0.9.68 : chicanes : ZR / ZL décalage d'une colonne à droite / à gauche, longueur 2 (défaut), 3 ou 4 cases (ZR3, ZL4…) ; ZZR / ZZL grand S (3×3, deux colonnes).
       case 'ZR': case 'ZL': {
         const len = n <= 2 ? 2 : n === 3 ? 3 : 4, base = len === 2 ? 'sbend' : len === 3 ? 'sbendLong' : 'sbendFast';

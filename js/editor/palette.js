@@ -56,6 +56,9 @@ const plateIcon = (shape, n) => {
   return svg(`<path d="${d}" fill="#454a6a" stroke="#ffb84d" stroke-width="2" stroke-linejoin="round"/>${n > 1 ? `<text x="${shape === 'sq' ? 16 : 8}" y="${shape === 'sec' ? 38 : 30}" font-size="13" fill="#ffbf3c" font-family="sans-serif" font-weight="700">${n}×${n}</text>` : ''}`);
 };
 
+// 0.9.70 : largeur de route vue de dessus : bords (rouges) de x0 à x1 en bas, de x2 à x3 en haut.
+const widthIcon = (a, b) => svg(`<path d="M${24 - a} 46L${24 - b} 2H${24 + b}L${24 + a} 46Z" fill="${ROAD}"/><path d="M${24 - a} 46L${24 - b} 2M${24 + a} 46L${24 + b} 2" stroke="${RAIL}" stroke-width="2.5"/><path d="M24 6v8M24 20v8M24 34v8" stroke="${LINE}" stroke-width="2"/>`);
+
 // Petit nombre d'inclinaison dans le coin d'une icône.
 const numTag = (n) => `<text x="31" y="44" font-size="13" fill="#ffbf3c" font-family="sans-serif" font-weight="700" stroke="#14142a" stroke-width="2.2" paint-order="stroke">${n}</text>`;
 
@@ -87,6 +90,7 @@ const ICONS = {
   hugecurve: svg(`<path d="M2 48 A46 46 0 0 1 48 2 L48 14 A34 34 0 0 0 14 48Z" fill="#3c4160"/><path d="M2 48 A46 46 0 0 1 48 2" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M14 48 A34 34 0 0 1 48 14" stroke="#ff6b57" stroke-width="2.5" fill="none"/>`),
   giantcurve: svg(`<path d="M2 48 A46 46 0 0 1 48 2 L48 10 A38 38 0 0 0 10 48Z" fill="#3c4160"/><path d="M2 48 A46 46 0 0 1 48 2" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M10 48 A38 38 0 0 1 48 10" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M14 40 A30 30 0 0 1 40 14" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 4" fill="none"/>`),
   crv05: crvIcon('½'), crv1: crvIcon(1), crv2: crvIcon(2), crv4: crvIcon(4),
+  narrow: widthIcon(7, 7), narrowIn: widthIcon(14, 7), wideIn: widthIcon(12, 22), wide: widthIcon(22, 22),
   plate2: plateIcon('sq', 2), plate3: plateIcon('sq', 3), tri1: plateIcon('tri', 1), tri2: plateIcon('tri', 2), tri3: plateIcon('tri', 3),
   sec1: plateIcon('sec', 1), sec2: plateIcon('sec', 2), sec3: plateIcon('sec', 3),
   sbend: sbIcon(1), sbendL: sbIcon(-1), sbendLong: sbIcon(1, false, '3'), sbendLongL: sbIcon(-1, false, '3'),

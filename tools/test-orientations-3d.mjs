@@ -61,7 +61,7 @@ console.log('\n2. Familles : quelles pièces dans quelles orientations');
 test('LIGNES et VIRAGES (toutes pentes, courbes, descentes) : les six roulis, entrée ET sortie au bon roulis ; plateformes, départ / arrivée, anneaux, bifurcations : aucun', () => {
   let n = 0;
   for (const id of typesOf((P) => P.kind === 'line' || P.kind === 'arc')) {
-    if (PIECES[id].special) continue;
+    if (PIECES[id].special || PIECES[id].hw) continue;      // (0.9.70 : les routes de largeur variable restent au sol : test-etape3)
     for (let o = 1; o <= MAX_O; o++) {
       assert.equal(flagAllowed(id, 'o', null, o), true, `${id} o${o}`);
       const t = tileAt(id, { o });

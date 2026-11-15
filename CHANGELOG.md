@@ -6,6 +6,16 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.70 — nouvelles pièces, étape 3 : largeur de route variable
+
+**`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change. **Redéployer `submit-score`** (nouvelles pièces). Ajoutées à la FIN de l'ordre d'encodage.
+
+- **Route étroite** (12 m de chaussée au lieu de 24), **rétrécissement** (24 → 12 m en biais sur une case ; tourné d'un demi-tour, il élargit), **élargissement** (24 → 56 m sur 3×3) et **route large** (56 m, 3×3). Famille « Largeur » de l'éditeur. Options : sans bordures, à l'envers, thème. Scripts : `N` (route étroite, `N4`…), `NI` / `NO` (rétrécissement, retour à 24 m), `WI` / `W` / `WO` (route large).
+- La chaussée et ses bordures suivent exactement le bord (en biais sur un raccord) : le sol, les bordures, les dalles et les checkpoints n'ont rien de particulier à savoir, et une voiture lancée en travers d'une route étroite est retenue à 6 m de l'axe.
+- **Vérificateur de l'éditeur** : deux routes de largeurs différentes bout à bout (sans rétrécissement) donnent une alerte : le bout de la bordure de la route étroite barre la route large.
+- **Difficulté estimée** : une route étroite compte un peu (0,15 par case).
+- **Tests** : `tools/test-etape3.mjs` (8 tests).
+
 ## Bêta 0.9.69 — nouvelles pièces, étape 2 : murs pleins, plaques, blocs pleins
 
 **`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change (empreinte de physique, temps de référence, corpus de compatibilité ; la plateforme garde sa géométrie au bit près). **Redéployer `submit-score`** (plaques, bordures de plaque et nouveaux solides). Tout est ajouté à la FIN des ordres d'encodage.

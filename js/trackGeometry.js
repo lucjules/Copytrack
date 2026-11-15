@@ -2,7 +2,7 @@
 // Le maillage complet (tronçons, objets mobiles, lampes) est assemblé par TrackView dans trackMesh.js.
 import * as THREE from './vendor/three.module.min.js';
 import { CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T } from './constants.js';
-import { PIECES, SURFACES, RING_R, RING_Y, arcParams, sbendPoint, plateShape, plateEdges, plateOutline, areaCentroid, baseY, tileCenter, tileParam, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
+import { PIECES, SURFACES, RING_R, RING_Y, arcParams, sbendPoint, plateShape, plateEdges, plateOutline, areaCentroid, roadHalf, baseY, tileCenter, tileParam, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
 import { WATER_DROP, boatDrop } from './track/shared.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { renderOptions } from './renderOptions.js';
@@ -235,6 +235,12 @@ export function stripsFor(tile) {
     for (let i = 0; i <= n; i++) { sbendPoint(p, i / n, q); fr.push(flatFrame(q.x, base, q.z, q.tx, q.tz)); }
     return [fr];
   }
+  if (p.hw) {
+    // 0.9.70 : route de largeur variable : chaque repère porte sa demi-largeur (hw), que le profil en travers suit (voir sweep).
+    const n = 4 * p.size, fr = lineStrip(0, p.size * HALF, -p.size * HALF, base, base, n);
+    fr.forEach((f, i) => { f.hw = roadHalf(p, i / n); });
+    return [fr];
+  }
   // Ligne droite : profil vertical droit (4 tronçons) ou courbe (12 tronçons pour que le raccord reste lisse).
   return [profOf(p) === 'l' ? lineStrip(0, p.size * HALF, -p.size * HALF, base, base + p.rise * LEVEL_H, 4) : profileStrip(p, base, 12)];
 }
@@ -249,7 +255,8 @@ function sweep(gb, frames, style, nb, drop = 0) {
   const prof = nb ? PROFILE_NB : PROFILE;
   if (drop) frames = frames.map((f) => ({ ...f, p: [f.p[0] - f.u[0] * drop, f.p[1] - f.u[1] * drop, f.p[2] - f.u[2] * drop] }));
   const n = frames.length - 1;
-  const rings = frames.map((f) => prof.map((q) => at(f, q.d, q.h)));
+  // (0.9.70 : repère à demi-largeur propre : tout ce qui est au bord de la chaussée (lignes, bordures, dalle) est décalé de hw − 12 ; le tiret central reste)
+  const rings = frames.map((f) => prof.map((q) => at(f, f.hw == null || Math.abs(q.d) < 1 ? q.d : q.d + Math.sign(q.d) * (f.hw - ROAD_HALF), q.h)));
   const m = prof.length;
   for (let i = 0; i < n; i++) {
     const A = rings[i], B = rings[i + 1];
@@ -272,8 +279,9 @@ function sweep(gb, frames, style, nb, drop = 0) {
     ? [[-ROAD_HALF, ROAD_HALF, -SLAB_T, 0]]
     : [[-RO, -ROAD_HALF, -SLAB_T, RAIL_H], [-ROAD_HALF, ROAD_HALF, -SLAB_T, 0], [ROAD_HALF, RO, -SLAB_T, RAIL_H]];
   for (const start of [true, false]) {
-    const f = frames[start ? 0 : n];
-    for (const [d0, d1, h0, h1] of rects) {
+    const f = frames[start ? 0 : n], dw = f.hw == null ? 0 : f.hw - ROAD_HALF;      // (0.9.70 : route de largeur variable)
+    for (const [e0, e1, h0, h1] of rects) {
+      const d0 = e0 + Math.sign(e0) * dw, d1 = e1 + Math.sign(e1) * dw;
       const a = at(f, d0, h0), b = at(f, d1, h0), c = at(f, d1, h1), d = at(f, d0, h1);
       const slab = (style.pal && style.pal.slab) || PALETTE.slab;
       if (start) gb.quad(a, b, c, d, slab);
@@ -305,9 +313,10 @@ function fxLayer(fx, frames, tile, kind, half = ROAD_HALF) {
   for (let i = 0; i < n; i++) {
     const A = frames[i], B = frames[i + 1];
     const s1 = s0 + Math.hypot(B.p[0] - A.p[0], B.p[1] - A.p[1], B.p[2] - A.p[2]);
+    const ka = A.hw != null ? A.hw / half : 1, kb = B.hw != null ? B.hw / half : 1;      // (0.9.70 : route de largeur variable)
     for (let j = 0; j < D.length - 1; j++) {
       const d0 = D[j], d1 = D[j + 1];
-      fx.fxQuad(at(A, d0, lift), at(A, d1, lift), at(B, d1, lift), at(B, d0, lift),
+      fx.fxQuad(at(A, d0 * ka, lift), at(A, d1 * ka, lift), at(B, d1 * kb, lift), at(B, d0 * kb, lift),
         [kind, s0 * sgn, speed, d0], [kind, s0 * sgn, speed, d1], [kind, s1 * sgn, speed, d1], [kind, s1 * sgn, speed, d0], '#ffffff');
     }
     s0 = s1;

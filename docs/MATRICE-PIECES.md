@@ -13,7 +13,7 @@ transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 36
 | — | orientation non proposée par l'éditeur (`flagAllowed`) |
 | n/a | pièce sans route roulable (raison dans le fichier JSON) |
 
-Totaux : CHUTE 24 · OK 130 · RACCORD 4 · SAUT 70 · n/a 120 · v≥150 425 · v≥250 6 · v≥80 15 · — 366.
+Totaux : CHUTE 24 · OK 138 · RACCORD 4 · SAUT 70 · n/a 120 · v≥150 425 · v≥250 6 · v≥80 15 · — 390.
 
 **Limites** : pilote automatique (pas un humain), voiture classique, sans revêtement ni obstacle, une seule pièce testée par chaîne, vitesse de croisière régulée.
 Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles) sont dans `tools/compat/matrice-pieces.json`.
@@ -54,6 +54,10 @@ Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles)
 | `crs1` Courbe en S · montée 1 | OK | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
 | `cds05` Courbe en S · descente ½ | OK | v≥150 | v≥150 | OK | v≥150 | v≥150 | v≥150 | v≥150 |
 | `cds1` Courbe en S · descente 1 | OK | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
+| `narrow` Route étroite | OK | — | — | OK | — | — | — | — |
+| `narrowIn` Rétrécissement | OK | — | — | OK | — | — | — | — |
+| `wideIn` Élargissement | OK | — | — | OK | — | — | — | — |
+| `wide` Route large | OK | — | — | OK | — | — | — | — |
 
 ## Virages
 

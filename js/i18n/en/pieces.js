@@ -250,6 +250,18 @@ export default {
   'Plaque : une bordure tout autour (bord par bord dans l’Inspecteur)': 'Plate: a border all round (edge by edge in the Inspector)',
   'Plaque sans bordure': 'Plate without a border',
   'bordures de plaque': 'plate borders',
+  // 0.9.70 : largeur de route
+  'Route étroite': 'Narrow road',
+  'Rétrécissement': 'Narrowing',
+  'Élargissement': 'Widening',
+  'Route large': 'Wide road',
+  'Largeur': 'Width',
+  'Route étroite (12 m) ou large (56 m, 3×3), et leurs raccords en biais. Un rétrécissement tourné d’un demi-tour élargit (et inversement).': 'Narrow road (12 m) or wide road (56 m, 3×3), and the slanted joints between widths. A narrowing turned around widens (and the other way round).',
+  'Étroite (12 m)': 'Narrow (12 m)',
+  'Rétrécissement (24 → 12 m)': 'Narrowing (24 → 12 m)',
+  'Élargissement (24 → 56 m)': 'Widening (24 → 56 m)',
+  'Large (56 m)': 'Wide (56 m)',
+  'Largeur : Largeur': 'Width: Width',
   // 0.9.68 : style du portique (départ, arrivée, checkpoint)
   'Portique': 'Gate',
   'Ligne au sol': 'Line on the ground',

@@ -100,7 +100,13 @@ export function buildChain(type, opts) {
     c.add('ramp90', opts);
     if (type === 'wall') c.add('wall', opts);
     c.add('crest90', opts);
-  } else c.add(type, opts);
+  } else {
+    // 0.9.70 : une route de largeur variable se raccorde par un rétrécissement / élargissement de chaque côté (sinon le vérificateur signale, à raison, deux largeurs bout à bout).
+    const P = PIECES[type], adapt = (w) => (w === 6 ? 'narrowIn' : w === 28 ? 'wideIn' : null);
+    if (P.hw && adapt(P.hw[0])) c.add(adapt(P.hw[0]), opts);
+    c.add(type, opts);
+    if (P.hw && adapt(P.hw[1])) c.add(adapt(P.hw[1]), opts, true);
+  }
   c.straight();
   c.toFloor();
   if (!c.fail && c.orientId() !== 0) c.fail = `la route finit en « ${c.orient()} » : impossible de revenir au sol`;

@@ -1886,6 +1886,154 @@
    }
   }
  },
+ "narrow": {
+  "kind": "line",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "narrowIn": {
+  "kind": "line",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "wideIn": {
+  "kind": "line",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "wide": {
+  "kind": "line",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
  "cv05": {
   "kind": "arc",
   "cells": {

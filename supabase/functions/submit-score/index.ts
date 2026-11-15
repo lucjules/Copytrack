@@ -614,6 +614,48 @@ var PIECES = {
     rise: 0,
     shape: "sec"
   },
+  // 0.9.70 : largeur de route variable (hw : demi-largeur de la chaussée à l'entrée et à la sortie, 12 m d'ordinaire ; voir roadHalf). Lignes droites plates.
+  // Rétrécissement et élargissement se posent dans les deux sens (à l'envers : la route s'élargit ou se resserre).
+  narrow: {
+    label: "Route \xE9troite",
+    kind: "line",
+    size: 1,
+    rise: 0,
+    hw: [
+      6,
+      6
+    ]
+  },
+  narrowIn: {
+    label: "R\xE9tr\xE9cissement",
+    kind: "line",
+    size: 1,
+    rise: 0,
+    hw: [
+      12,
+      6
+    ]
+  },
+  wideIn: {
+    label: "\xC9largissement",
+    kind: "line",
+    size: 3,
+    rise: 0,
+    hw: [
+      12,
+      28
+    ]
+  },
+  wide: {
+    label: "Route large",
+    kind: "line",
+    size: 3,
+    rise: 0,
+    hw: [
+      28,
+      28
+    ]
+  },
   // « Courbe » : un tremplin courbé (virage montant). Serré = 1 case, grand = 2×2.
   cv05: {
     label: "Courbe serr\xE9e \xB7 inclinaison \xBD",
@@ -1206,7 +1248,12 @@ var PIECE_ORDER = [
   "tri3",
   "sec1",
   "sec2",
-  "sec3"
+  "sec3",
+  // 0.9.70 : largeur de route variable (à la suite : ne jamais réordonner)
+  "narrow",
+  "narrowIn",
+  "wideIn",
+  "wide"
 ];
 var SURFACES = {
   "": {
@@ -1551,6 +1598,7 @@ function flagAllowed(type, flag, tile = null, val = 0) {
   const lineLike = p.kind === "line" || p.kind === "arc";
   if (flag === "v") return true;
   if (flag === "th") return p.kind !== "ring";
+  if (p.hw && flag !== "nb") return false;
   if (flag === "eb") return p.kind === "area" && (val | 0) >= 0 && (val | 0) <= 15;
   if (flag === "gs") {
     if (!(val >= 0 && val < GATE_STYLES.length) || !lineLike || p.kind === "ring") return false;
@@ -1800,6 +1848,7 @@ function sampleLocal(tile, lx, lz, out) {
     let t = (half - lz) / len;
     t = t < 0 ? 0 : t > 1 ? 1 : t;
     out.d = lx;
+    if (p.hw) widthRemap(p, lx, lz, half, out);
     out.h = base + rise * profH(p, t);
     const k = rise * profD(p, t) / len;
     const inv = 1 / Math.sqrt(1 + k * k);
@@ -2032,6 +2081,18 @@ function areaCentroid(p) {
     x: 0,
     z: 0
   };
+}
+function widthRemap(p, lx, lz, half, out) {
+  const w0 = p.hw[0], w1 = p.hw[1], k = (w1 - w0) / (2 * half);
+  let t = (half - lz) / (2 * half);
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const hw = w0 + (w1 - w0) * t, c = 1 / Math.sqrt(1 + k * k), sg = lx >= 0 ? 1 : -1;
+  const e = (sg * lx - hw) * c;
+  const d = ROAD_HALF + e;
+  out.d = d > 0 ? sg * d : 0;
+  out.gx = c;
+  out.gz = sg * k * c;
+  return out;
 }
 
 // js/ribbons.js
@@ -7950,6 +8011,11 @@ function scriptTrack(name, script, opts2 = {}) {
     pushPts(pts);
     adv(h, size);
   };
+  const centered = (type, rev = false) => {
+    const size = PIECES[type].size, e = rot(h, 0, (size - 1) / 2);
+    place(type, Math.round(x + 0.5 - e.x - size / 2), Math.round(z + 0.5 - e.z - size / 2), l, rev ? h + 2 : h, rev);
+    adv(h, size);
+  };
   const sbendPiece = (type) => {
     const P = PIECES[type], m = P.mirror, size = P.size;
     const e = rot(h, -m * (size - 1) / 2, (size - 1) / 2);
@@ -8004,6 +8070,7 @@ function scriptTrack(name, script, opts2 = {}) {
         const sg = P.mirror < 0 ? -1 : 1, rise = P.rise || 0;
         if (P.kind === "sbend") sbendPiece(id);
         else if (P.kind === "area" && P.size > 1) platePiece(id);
+        else if (P.hw && P.size > 1) centered(id);
         else if (P.kind === "arc" && P.size === 2) {
           const c = rot(h, 0.5 * sg, -0.5);
           place(id, Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
@@ -8230,6 +8297,31 @@ function scriptTrack(name, script, opts2 = {}) {
         h = h + (sgn > 0 ? 1 : 3) & 3;
         break;
       }
+      // 0.9.70 : largeur de route : N route étroite (N3 : trois), NI rétrécissement (24 → 12 m), NO élargissement (12 → 24 m) ;
+      // WI élargissement vers la route large (3×3, 24 → 56 m), W route large (3×3), WO retour à la largeur normale.
+      case "N":
+        for (let i = 0; i < n; i++) {
+          place("narrow", x, z, l, h);
+          adv(h);
+        }
+        break;
+      case "NI":
+        place("narrowIn", x, z, l, h);
+        adv(h);
+        break;
+      case "NO":
+        place("narrowIn", x, z, l, h + 2, true);
+        adv(h);
+        break;
+      case "WI":
+        centered("wideIn");
+        break;
+      case "W":
+        for (let i = 0; i < n; i++) centered("wide");
+        break;
+      case "WO":
+        centered("wideIn", true);
+        break;
       // 0.9.68 : chicanes : ZR / ZL décalage d'une colonne à droite / à gauche, longueur 2 (défaut), 3 ou 4 cases (ZR3, ZL4…) ; ZZR / ZZL grand S (3×3, deux colonnes).
       case "ZR":
       case "ZL": {
@@ -14980,4 +15072,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "d0403b6e22155aad";
+globalThis.__COPYTRACK_BUILD__ = "11d083c3d5f27062";

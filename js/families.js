@@ -135,8 +135,16 @@ export const FAMILIES = {
       sec1: { forme: 'sec', taille: '1' }, sec2: { forme: 'sec', taille: '2' }, sec3: { forme: 'sec', taille: '3' },
     },
   },
+  // 0.9.70 : largeur de la route : étroite (12 m), large (56 m, 3×3), et les raccords en biais entre largeurs (posés à l'envers, ils font l'inverse).
+  largeur: {
+    label: 'Largeur',
+    hint: 'Route étroite (12 m) ou large (56 m, 3×3), et leurs raccords en biais. Un rétrécissement tourné d’un demi-tour élargit (et inversement).',
+    icon: 'narrow',
+    traits: [{ id: 'w', label: 'Largeur', values: [['n', 'Étroite (12 m)'], ['ni', 'Rétrécissement (24 → 12 m)'], ['wi', 'Élargissement (24 → 56 m)'], ['w', 'Large (56 m)']] }],
+    members: { narrow: { w: 'n' }, narrowIn: { w: 'ni' }, wideIn: { w: 'wi' }, wide: { w: 'w' } },
+  },
 };
-export const FAMILY_ORDER = ['straight', 'turn', 'chicane', 'courbe', 'roll', 'loop', 'plaque'];
+export const FAMILY_ORDER = ['straight', 'turn', 'chicane', 'courbe', 'roll', 'loop', 'plaque', 'largeur'];
 
 // type concret -> { fam, traits }
 const BY_TYPE = new Map();
