@@ -17,7 +17,7 @@ export function difficultyMetrics(track) {
   return {
     pieces: tiles.length,
     tight: tiles.filter((t) => P(t).kind === 'arc' && P(t).size === 1 && !P(t).checkpoint).length,
-    wide: tiles.filter((t) => (P(t).kind === 'arc' && P(t).size >= 2) || t.t === 'bank' || t.t === 'bankBig').length,
+    wide: tiles.filter((t) => (P(t).kind === 'arc' && P(t).size >= 2) || t.t === 'bank' || t.t === 'bankBig').length + 2 * tiles.filter((t) => P(t).kind === 'sbend').length,      // une chicane : deux grands arcs
     wallCells: tiles.filter((t) => t.o).length + tiles.filter((t) => P(t).roll).length,
     loops: tiles.filter((t) => P(t).kind === 'loop').length,
     ribbons: tiles.filter((t) => P(t).kind === 'ribbon').length,          // tubes, tire-bouchons, vrilles : routes en ruban

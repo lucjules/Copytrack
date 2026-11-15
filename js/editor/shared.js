@@ -5,7 +5,7 @@ import { DECO_LABELS } from '../decoData.js';
 // Pièces proposées dans la palette. 0.9.2 : plus aucun raccourci clavier pour choisir une pièce (les outils gardent les leurs).
 export const PALETTE_ORDER = [
   'straight', 'curve', 'bigcurve', 'slope', 'steep', 'loop', 'loopL', 'loopBig', 'loopBigL', 'loopDouble', 'loopDoubleL', 'twist',
-  'ramp90', 'wall', 'crest90', 'bank', 'bankBig', 'hugecurve', 'giantcurve', 'steep4', 'cv1', 'crv1',
+  'ramp90', 'wall', 'crest90', 'bank', 'bankBig', 'hugecurve', 'giantcurve', 'sbend', 'steep4', 'cv1', 'crv1',
   'tube', 'tubeIn', 'tubeMid', 'cork', 'corkL', 'fork', 'forkL', 'gentle', 'ring', 'start', 'finish', 'platform',
 ].map((id) => ({ id }));
 
@@ -32,11 +32,15 @@ export const MODS = [
   { id: 'mod:th1', flag: 'th', val: 1, label: 'Thème Herbe', hint: 'Aspect herbeux (visuel)' },
   { id: 'mod:th2', flag: 'th', val: 2, label: 'Thème Sable', hint: 'Aspect sableux (visuel)' },
   { id: 'mod:th3', flag: 'th', val: 3, label: 'Thème Roche', hint: 'Aspect rocheux (visuel)' },
+  // 0.9.68 : style du portique (départ, arrivée, checkpoint), visuel
+  { id: 'mod:gs1', flag: 'gs', val: 1, label: 'Ligne au sol', hint: 'Portique : seulement la ligne peinte et deux balises (visuel)' },
+  { id: 'mod:gs2', flag: 'gs', val: 2, label: 'Arche', hint: 'Portique : grande arche arrondie (visuel)' },
+  { id: 'mod:gs3', flag: 'gs', val: 3, label: 'Pylônes', hint: 'Portique : deux hauts pylônes lumineux, sans traverse (visuel)' },
 ];
 
-export const OPT_KEYS = ['v', 'o', 'nb', 'tn', 'mv', 'cp', 'tb', 'th'];
+export const OPT_KEYS = ['v', 'o', 'nb', 'tn', 'mv', 'cp', 'tb', 'th', 'gs'];
 
-export const NO_OPTS = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0 };
+export const NO_OPTS = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, gs: 0 };
 
 export const SNAPS = [{ id: 0, label: 'Libre' }, { id: 1, label: '1 m' }, { id: 4, label: '4 m' }, { id: CELL / 2, label: 'Demi-case' }, { id: CELL, label: 'Case' }];
 

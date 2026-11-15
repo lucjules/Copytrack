@@ -93,6 +93,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `simulation.js` | Simulation d'une course : UNE voiture (CarPhysics), ses règles (RaceLogic) et l'enchaînement exact d'un pas, en un seul endroit. |
 | `skids.js` | Traces de pneus : bandes sombres posées sur la route pendant les glisses et les gros freinages. |
 | `skills.js` | Académie 2 (Copytrack Evolution, E12) : des COMPÉTENCES (trajectoire, freinage, dérapage, sauts) et des EXERCICES ÉVALUÉS. Chaque exercice est un court circuit avec un objectif MESURÉ par l'analyse (analysis/drill.js : la course rejouée à partir de ses commandes), noté bronze, argent ou or. |
+| `solids.js` | Solides (0.9.68) : décorations « en dur » que la voiture ne traverse pas. Étape 1 : piliers et poutres ; étape 2 : murs et blocs. |
 | `storage.js` | Persistance locale (navigateur) : réglages, records + fantômes, circuits perso. |
 | `telemetry.js` | Statistiques de jeu ANONYMES (avec l'accord du joueur) : temps de fin, abandons, essais par circuit (intégré, défi du jour, de joueur). |
 | `themes.js` | Les 12 décors (thèmes visuels) du jeu : identité, nom et ordre de la carrière. Module de données pur (aucun rendu). |

@@ -6,6 +6,16 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.68 — nouvelles pièces, étape 1 : chicanes, panneaux, portiques, piliers et poutres
+
+**`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change (empreinte de physique, temps de référence et corpus de compatibilité identiques). **Redéployer `submit-score`** : le serveur rejoue les records avec sa propre copie de la physique, qui doit connaître les chicanes et les solides. Toutes les nouveautés sont ajoutées à la FIN des ordres d'encodage : aucun code de circuit existant ne change.
+
+- **Chicanes** (courbes en S latérales) : la route se décale d'une ou deux colonnes sans changer de cap. Huit pièces : courte 2×2 (rayon 40 m, ≈ 125 km/h au pilote), longue 3×3 (80 m, ≈ 190 km/h), rapide 4×4 (136 m, presque à fond), grand S 3×3 sur deux colonnes (52 m) ; vers la droite ou la gauche. Deux arcs tangents au milieu, géométrie exacte pour les murs et le sol. Éditeur : famille « Chicane » (longueur, décalage, sens) ; options à l'envers, sans bordures, tunnel, thème. Scripts : `ZR` / `ZL` (`ZR3`, `ZR4`), `ZZR` / `ZZL`.
+- **Panneaux de bord de route** (décorations, catégorie « Panneaux ») : chevrons gauche / droite / montée / descente, panneau danger, panneau interdit, et deux panneaux simples (descente, demi-tour).
+- **Portiques** : option « Portique » (visuelle, ne change ni la signature ni les records) pour un départ, une arrivée ou un checkpoint : portique classique, ligne au sol, arche, pylônes. Scripts : suffixe `*n` (`start*2`, `C*3`, `finish*1`). Le départ, l'arrivée et le checkpoint peuvent aussi être posés sans bordures.
+- **Piliers et poutres : les premiers SOLIDES** (catégorie « Piliers et poutres ») : pilier, pilier sur socle, poteau, poutre, poutres en L, en T, en croix, potence, portique en poutres. La voiture ne les traverse pas : leurs côtés se comportent comme une bordure (même choc sans rebond, même frottement), leur dessus porte la voiture, et une voiture qui saute dessous s'y cogne la tête. Ils se posent librement (position, hauteur, cap, échelle ×0,25 à ×8), jamais inclinés, et restent affichés même quand les décorations sont masquées (qualité basse). Leur position, leur hauteur et leur cap entrent dans la signature du circuit.
+- **Tests** : `tools/test-etape1.mjs` (20 tests). Les tests d'ordre d'encodage vérifient désormais des index fixes (le virage géant reste en 135, `custom` en 311) plutôt que « le dernier ».
+
 ## Bêta 0.9.67 — chapitre 1 refait, bifurcations à deux chemins, virage géant
 
 **`PHYS_VER` inchangé (36)** : la physique ne change pas. **Redéployer `submit-score`** : le serveur vérifie les records des circuits intégrés avec sa propre copie de `js/tracks.js`, et les six circuits du chapitre 1 ont changé (leurs clés de classement aussi). L'empreinte de physique est régénérée parce que plusieurs de ses scénarios roulent sur ces circuits.

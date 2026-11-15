@@ -5,6 +5,7 @@ import { PIECES, toLocal, sampleLocal, rotVec, isFloor, isCeilingFloor, baseY, T
 import { CAR } from './specs.js';
 import { wallBounce, wallFriction, wallHardLoss, wallSpinOf, wallStunOf, wallYawTarget } from './contact.js';
 import { dcos, dsin, hypot2 } from '../dmath.js';
+import { solidSide, solidCeiling, SOLID_STEP } from '../solids.js';
 
 const L1 = { lx: 0, lz: 0 };
 const L2 = { lx: 0, lz: 0 };
@@ -186,7 +187,7 @@ export const wallMethods = {
       if (this._probeTile(tile, x, z, px, pz, y, mx, mz)) return HIT;
     }
     // Pièces mobiles : bordures à leur position du moment. L'index les range dans toutes les cases qu'elles balaient : celles de cette case suffisent.
-    if (!this.track.hasMovers) return null;
+    if (!this.track.hasMovers) return this.track.hasSolids ? this._probeSolids(x, z, px, pz, y) : null;
     const time = this.time;
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
@@ -203,7 +204,26 @@ export const wallMethods = {
         }
       } else if (this._probeTile(tile, x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y)) return HIT;
     }
-    return null;
+    return this.track.hasSolids ? this._probeSolids(x, z, px, pz, y) : null;
+  },
+
+  // 0.9.68 : solides (piliers, poutres, murs, blocs : solids.js) : leurs côtés sont des bordures pour la sonde (même choc, même frottement).
+  _probeSolids(x, z, px, pz, y) {
+    const H = CAR.height, g = this.gSign, py = this.prev.y;
+    const ylo = g > 0 ? y : y - H, yhi = g > 0 ? y + H : y, plo = g > 0 ? py : py - H;
+    return solidSide(this.track.solidIndex, x, z, px, pz, ylo, yhi, plo, CAR.radius, SOLID_STEP, HIT, this.hiddenDecos) ? HIT : null;
+  },
+
+  // 0.9.68 : dessous d'un solide (une poutre au-dessus d'un tremplin) : une voiture qui saute dessous s'y cogne et retombe (gravité normale ; comme le dessous d'une dalle).
+  _solidRoof() {
+    if (this.gSign < 0 || this.grounded || !this.track.hasSolids) return;
+    const p = this.pos, v = this.vel, H = CAR.height;
+    const lo = solidCeiling(this.track.solidIndex, p.x, p.z, p.y, p.y + H, this.prev.y + H, this.hiddenDecos);
+    if (!Number.isNaN(lo)) {
+      p.y = lo - H;
+      if (v.y > 0) v.y = -v.y * 0.2;
+      this.ev.wall = Math.max(this.ev.wall, 2);
+    }
   },
 
   _probeTile(tile, x, z, px, pz, y, mx, mz) {

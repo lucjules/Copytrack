@@ -85,7 +85,7 @@ export function pickObjects(track, ray, mask = LAYER_ALL, ok = null) {
 }
 
 // ---- Phase 3 : visée exacte ---------------------------------------------------------------------------------------------
-const FLOORISH = new Set(['line', 'arc', 'area', 'fork']);
+const FLOORISH = new Set(['line', 'arc', 'area', 'fork', 'sbend']);
 const LQ = { lx: 0, lz: 0 }, SQ = {};
 
 // Pièce EXACTE visée par le rayon, quelle que soit la hauteur de pose choisie dans l'éditeur. Les boîtes englobantes sélectionnent

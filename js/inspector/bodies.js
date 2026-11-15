@@ -1,7 +1,7 @@
 // Contenu du panneau selon la sélection : pièce, pièce mobile, caractéristiques, couleurs, décoration.
 // Ces méthodes s'ajoutent au prototype de Inspector (voir inspector.js) : `this` est l'instance.
 import { MAX_LEVEL } from '../constants.js';
-import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, THEMES, MOVER, moverParams, paramText, ORIENTS, ORI_TO_O, tileOri } from '../pieces.js';
+import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, THEMES, GATE_STYLES, MOVER, moverParams, paramText, ORIENTS, ORI_TO_O, tileOri } from '../pieces.js';
 import { FAMILIES, familyOf, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from '../families.js';
 import { styleFor } from '../trackGeometry.js';
 import { DECO_COLORS } from '../decoData.js';
@@ -106,6 +106,11 @@ export const bodyMethods = {
     rows.push(this._select('Thème', THEMES.map((x) => [String(x.id), x.label]), () => String(t.th || 0),
       (v) => { const n = +v, cur = t.th || 0; if (n === cur) return true; return ed.track.toggleFlag(t, 'th', n === 0 ? cur : n) || false; },
       !flagAllowed(t.t, 'th', t)));
+    // Style du portique (visuel, 0.9.68) : départ, arrivée, checkpoint
+    if (flagAllowed(t.t, 'gs', t, 1)) {
+      rows.push(this._select('Portique', GATE_STYLES.map((x) => [String(x.id), x.label]), () => String(t.gs || 0),
+        (v) => { const n = +v, cur = t.gs || 0; if (n === cur) return true; return ed.track.toggleFlag(t, 'gs', n === 0 ? cur : n) || false; }));
+    }
     // Mouvement + réglages
     const mvOk = flagAllowed(t.t, 'mv', t) || !!t.mv;
     rows.push(this._select('Mouvement', [['0', 'Aucun'], ['1', 'Ascenseur'], ['2', 'Glissière'], ['3', 'Rotation']], () => String(t.mv || 0),

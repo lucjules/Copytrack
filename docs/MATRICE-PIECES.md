@@ -13,7 +13,7 @@ transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 36
 | — | orientation non proposée par l'éditeur (`flagAllowed`) |
 | n/a | pièce sans route roulable (raison dans le fichier JSON) |
 
-Totaux : CHUTE 24 · OK 114 · RACCORD 4 · SAUT 70 · n/a 56 · v≥150 425 · v≥250 6 · v≥80 15 · — 318.
+Totaux : CHUTE 24 · OK 130 · RACCORD 4 · SAUT 70 · n/a 56 · v≥150 425 · v≥250 6 · v≥80 15 · — 366.
 
 **Limites** : pilote automatique (pas un humain), voiture classique, sans revêtement ni obstacle, une seule pièce testée par chaîne, vitesse de croisière régulée.
 Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles) sont dans `tools/compat/matrice-pieces.json`.
@@ -144,6 +144,19 @@ Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles)
 |---|---|---|---|---|---|---|---|---|
 | `fork` Bifurcation ⑂→ | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 | `forkL` Bifurcation ←⑂ | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+
+## Chicanes
+
+| Pièce | Sol | Mur gauche | Mur droit | Plafond | Incliné gauche 45° | Incliné droit 45° | Surplomb gauche 135° | Surplomb droit 135° |
+|---|---|---|---|---|---|---|---|---|
+| `sbend` Chicane → | OK | — | — | OK | — | — | — | — |
+| `sbendL` Chicane ← | OK | — | — | OK | — | — | — | — |
+| `sbendLong` Chicane longue → | OK | — | — | OK | — | — | — | — |
+| `sbendLongL` Chicane longue ← | OK | — | — | OK | — | — | — | — |
+| `sbendFast` Chicane rapide → | OK | — | — | OK | — | — | — | — |
+| `sbendFastL` Chicane rapide ← | OK | — | — | OK | — | — | — | — |
+| `sbendWide` Grand S → | OK | — | — | OK | — | — | — | — |
+| `sbendWideL` Grand S ← | OK | — | — | OK | — | — | — | — |
 
 ## Transitions d'orientation
 

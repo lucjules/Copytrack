@@ -13,7 +13,7 @@
 // Un ruban peut avoir une section courbe : kc (courbure transversale), hw (demi-largeur
 // mesurée le long de la section) et wrap (section fermée : on peut en faire le tour).
 import { CELL, HALF, LEVEL_H, ROAD_HALF } from './constants.js';
-import { PIECES, baseY, arcParams, localToWorld, isOriented, oriAngle, rollOfO, rollFitHook, MAX_O, profH, profD } from './pieces.js';
+import { PIECES, baseY, arcParams, sbendPoint, localToWorld, isOriented, oriAngle, rollOfO, rollFitHook, MAX_O, profH, profD } from './pieces.js';
 import { dcos, dsin, hypot2, hypot3 } from './dmath.js';
 
 const smooth = (u) => u * u * (3 - 2 * u);
@@ -384,6 +384,10 @@ function centerlineLocal(tile, n) {
     const rib = ribbonOf(tile, true);
     // drapeau 2 : virage relevé (le pilote automatique doit y doser sa vitesse).
     sampleRibbon(Math.max(8, Math.round(rib.len / 3)), p.arc ? 2 : 1);
+  } else if (p.kind === 'sbend') {
+    // Chicane : assez de points pour que la première et la dernière corde suivent le cap de la route (raccords, pilote automatique).
+    const k = Math.max(n, 8 * p.size), q = {};
+    for (let i = 0; i <= k; i++) { sbendPoint(p, i / k, q); pts.push([q.x, base, q.z, 0]); }
   } else if (p.kind === 'arc') {
     const a = arcParams(p);
     for (let i = 0; i <= n; i++) {

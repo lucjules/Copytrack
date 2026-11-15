@@ -4,6 +4,7 @@ import { CELL, DIRS, MAX_LEVEL, LEVEL_H, MAX_DECOS, VEHICLES } from './constants
 import { PIECES, MAX_O, PIECE_ORDER, SURFACE_CODES, SURFACE_ALIAS, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, forkBranchX, rotVec, moverParams, clampMover, THEMES, LEGACY_TILE } from './pieces.js';
 import { centerlineWorld, rollLevels } from './ribbons.js';
 import { isObstacle, buildObstacleGrid } from './obstacles.js';
+import { isSolid, buildSolidGrid } from './solids.js';
 import { DECO_ORDER } from './decoData.js';
 import { packDecoParts, unpackDecoParts } from './customDeco.js';
 import { DECORS, DEFAULT_DECOR } from './themes.js';
@@ -52,7 +53,7 @@ export const RULES = [
 // leur valeur par défaut. Chaque champ produit par Track.normalize doit y figurer : un test (tools/test-circuit.mjs) le vérifie.
 export const TILE_FIELDS = [
   ['t', ''], ['x', 0], ['z', 0], ['l', 0], ['r', 0], ['s', ''], ['p', 0], ['v', 0], ['nb', 0], ['tn', 0], ['mv', 0], ['cp', 0], ['th', 0],
-  ['ms', 0], ['ma', 0], ['col', null], ['s2', ''], ['p2', 0], ['tb', 0], ['o', 0], ['g', 0],
+  ['ms', 0], ['ma', 0], ['col', null], ['s2', ''], ['p2', 0], ['tb', 0], ['o', 0], ['g', 0], ['gs', 0],
 ];
 
 export const tileToRow = (t) => TILE_FIELDS.map(([k, def]) => (t[k] ?? def));
@@ -135,7 +136,7 @@ export class Track {
     const cell = (v) => Math.max(-MAX_CELL, Math.min(MAX_CELL, v | 0));
     const tile = {
       t: type, x: cell(t.x), z: cell(t.z), l: Math.max(0, Math.min(MAX_LEVEL, Math.round((+t.l || 0) * 2) / 2)), r: t.r & 3,
-      s: '', p: 0, v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ms: 0, ma: 0, col: null, s2: '', p2: 0,
+      s: '', p: 0, v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ms: 0, ma: 0, col: null, s2: '', p2: 0, gs: 0,
       g: Math.max(0, Math.min(MAX_GROUP, t.g | 0)),      // groupe (calque de l'éditeur ; logique du circuit, E10) : 0 = aucun
     };
     tile.v = t.v && flagAllowed(type, 'v') ? 1 : 0;
@@ -149,6 +150,7 @@ export class Track {
     tile.cp = t.cp && flagAllowed(type, 'cp', tile, t.cp | 0) ? (t.cp | 0) : 0;
     tile.tb = t.tb && flagAllowed(type, 'tb', tile) ? 1 : 0;
     tile.th = THEMES.some((h) => h.id === (t.th | 0)) && flagAllowed(type, 'th') ? (t.th | 0) : 0;
+    tile.gs = (t.gs | 0) > 0 && flagAllowed(type, 'gs', tile, t.gs | 0) ? (t.gs | 0) : 0;      // (après le checkpoint : le style suit le portique)
     tile.col = cleanColors(t.col);
     if (surfaceAllowed(type, s, tile.o)) {
       tile.s = s;
@@ -234,6 +236,13 @@ export class Track {
     if (this._ogV !== this.version) { this._og = buildObstacleGrid(this.obstacles); this._ogV = this.version; }
     return this._og;
   }
+
+  // 0.9.68 : index des solides (piliers, poutres, murs, blocs : solids.js), reconstruit quand le circuit change ; partagé par toutes les voitures.
+  get solidIndex() {
+    if (this._sgV !== this.version) { this._sg = buildSolidGrid(this.decos); this._sgV = this.version; }
+    return this._sg;
+  }
+  get hasSolids() { return this.solidIndex.list.length > 0; }
 
   clear() {
     this.tiles = [];
@@ -322,7 +331,8 @@ export class Track {
       .map((t) => `${t.t}:${t.x}:${t.z}:${t.l}:${t.r}:${t.s}:${t.p}:${t.v}${t.nb}${t.tn}${t.mv ? 'm' + t.mv : ''}${tileExtras(t)}`)
       .sort()
       .join('|');
-    const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}${o.rz ? ':z' + o.rz.toFixed(2) : ''}` : ''}`).join('|');
+    // (0.9.68 : un solide compte pour la physique : sa hauteur et son cap aussi)
+    const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}${o.rz ? ':z' + o.rz.toFixed(2) : ''}` : isSolid(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}` : ''}`).join('|');
     const rules = RULES.map((r) => r.sig(this[r.key])).join('');
     return this.decor + '#' + parts + '#' + d + (this.laps > 1 ? '#L' + this.laps : '') + rules + this._logicSig();
   }
@@ -408,6 +418,7 @@ export class Track {
       if (t.o) e.o = t.o;
       if (t.tb) e.tb = 1;
       if (t.th) e.th = t.th;
+      if (t.gs) e.gs = t.gs;
       if (t.ms) e.ms = t.ms;
       if (t.ma) e.ma = t.ma;
       if (t.s2) { e.s2 = t.s2 === '-' ? -1 : Math.max(0, SURFACE_CODES.indexOf(t.s2)); if (t.p2) e.p2 = t.p2; }
@@ -467,7 +478,7 @@ export class Track {
       const tile = { t: type, x: data.t[i + 1], z: data.t[i + 2], l: data.t[i + 3], r: data.t[i + 4], s: '' };
       const ex = extras.get(i / stride);
       if (ex) {
-        tile.cp = ex.cp | 0; tile.o = ex.o | 0; tile.tb = ex.tb | 0; tile.th = ex.th | 0; tile.ms = ex.ms | 0; tile.ma = +ex.ma || 0; tile.g = ex.g | 0;
+        tile.cp = ex.cp | 0; tile.o = ex.o | 0; tile.tb = ex.tb | 0; tile.th = ex.th | 0; tile.gs = ex.gs | 0; tile.ms = ex.ms | 0; tile.ma = +ex.ma || 0; tile.g = ex.g | 0;
         if (ex.s2) { tile.s2 = ex.s2 === -1 ? '-' : SURFACE_CODES[ex.s2] || ''; tile.p2 = ex.p2 | 0; }
         if (ex.col && typeof ex.col === 'object') tile.col = Object.fromEntries(COLOR_KEYS.filter((k) => typeof ex.col[k] === 'string').map((k) => [k, '#' + ex.col[k]]));
       }
@@ -595,6 +606,9 @@ export function hashString(s) {
 //                       déportée du même côté qu'au départ), dans le même sens et au même niveau : ex. une voie qui saute un vide, l'autre qui en fait le tour.
 //   Phase 2 : HR / HL très grand virage plat (3x3)   UX / DX  ligne droite inclinée de 4 niveaux (montée / descente)
 //   0.9.67 : XR / XL virage géant plat (5x5, rayon 144 m)
+//   0.9.68 : suffixe *n : style du portique d'un départ, d'une arrivée ou d'un checkpoint : *1 ligne au sol, *2 arche, *3 pylônes (ex. start*2 C*3 finish*1)
+//   0.9.68 : ZR / ZL chicane (la route se décale d'une colonne à droite / à gauche, même cap) : ZR = 2 cases de long, ZR3 longue, ZR4 rapide ;
+//            ZZR / ZZL grand S (3×3, deux colonnes)
 //   CVR / CVL  courbe montante serrée droite / gauche, CBR / CBL grande courbe montante (2x2) : le nombre est l'inclinaison
 //   (0 = ½, 1, 2, 4), ex. CVR2, CBL0.   OT / OTL / OBT / OBTL / OBD / OBDL : looping triple, grand ×3, grand ×2
 //   suffixes : .a eau  .n plaque bateau  .e plaque deltaplane  .f inversion de gravité
@@ -617,6 +631,7 @@ export function scriptTrack(name, script, opts = {}) {
     if (cur.s && !surfaceAllowed(t, cur.s, cur.o | 0)) throw new Error(`${name} : revêtement ${cur.s} interdit sur ${t}`);
     for (const f of ['v', 'nb', 'tn', 'mv']) if (cur[f] && !flagAllowed(t, f, tile)) throw new Error(`${name} : drapeau ${f} interdit sur ${t}`);
     if (cur.o && !flagAllowed(t, 'o', tile, cur.o)) throw new Error(`${name} : orientation ${cur.o} interdite sur ${t}`);
+    if (cur.gs && !flagAllowed(t, 'gs', tile, cur.gs)) throw new Error(`${name} : style de portique ${cur.gs} impossible sur ${t}`);
     const c = tr.conflicts(Track.normalize(tile));
     if (c.length) throw new Error(`${name} : conflit en (${px}, ${pz}) niveau ${lv} [${t}]`);
     if (!Track.inBounds(Track.normalize(tile))) throw new Error(`${name} : ${t} sort des niveaux en (${px}, ${pz})`);
@@ -729,8 +744,19 @@ export function scriptTrack(name, script, opts = {}) {
     const d = rot(h, 2 * mirror * laneCells, -size);
     x += d.x; z += d.z;
   };
+  // 0.9.68 : chicane : entrée dans la première colonne (côté opposé au décalage), sortie `shift` colonnes plus loin, même cap.
+  const sbendPiece = (type) => {
+    const P = PIECES[type], m = P.mirror, size = P.size;
+    const e = rot(h, -m * (size - 1) / 2, (size - 1) / 2);
+    place(type, Math.round(x + 0.5 - e.x - size / 2), Math.round(z + 0.5 - e.z - size / 2), l, h);
+    const d = rot(h, m * P.shift, -size);
+    x += d.x; z += d.z;
+  };
 
-  for (const tok of script.trim().split(/\s+/)) {
+  for (let tok of script.trim().split(/\s+/)) {
+    // 0.9.68 : « *n » en fin de jeton : style du portique (1 ligne au sol, 2 arche, 3 pylônes) d'un départ, d'une arrivée ou d'un checkpoint (ex. start*2, C*3).
+    const gsm = /\*(\d)$/.exec(tok);
+    if (gsm) tok = tok.slice(0, -2);
     // [id] : n'importe quelle pièce par son identifiant (ex. [dn1] [cro2] [tr01s] [cvd1]) ; le niveau suit la pente de la pièce.
     const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>(){}]*)$/.exec(tok);
     const m = gm ? [tok, '@' + gm[1], gm[2], gm[3], gm[4], gm[5]] : /^([A-Za-z]+)(-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>(){}]*)$/.exec(tok);
@@ -742,6 +768,7 @@ export function scriptTrack(name, script, opts = {}) {
       o: m[5].includes('<') ? 1 : m[5].includes('>') ? 2 : m[5].includes('(') ? 3 : m[5].includes(')') ? 4 : m[5].includes('{') ? 5 : m[5].includes('}') ? 6 : 0,      // < : mur gauche, > : mur droit ; ( ) : incliné 45° gauche / droit ; { } : surplomb 135° gauche / droit
     };
     cur.mvTok = cur.mv ? ++moverTok : 0;
+    if (gsm) cur.gs = +gsm[1];
     if (m[3]) {
       cur.s = SURF_CODE[m[3]];
       if (!cur.s) throw new Error('Revêtement inconnu : ' + tok);
@@ -754,7 +781,8 @@ export function scriptTrack(name, script, opts = {}) {
       if (!P) throw new Error('Pièce inconnue : ' + id);
       for (let i = 0; i < n; i++) {
         const sg = P.mirror < 0 ? -1 : 1, rise = P.rise || 0;
-        if (P.kind === 'arc' && P.size === 2) {
+        if (P.kind === 'sbend') sbendPiece(id);
+        else if (P.kind === 'arc' && P.size === 2) {
           const c = rot(h, 0.5 * sg, -0.5);
           place(id, Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
           const nx = rot(h, 2 * sg, -1);
@@ -868,6 +896,14 @@ export function scriptTrack(name, script, opts = {}) {
         h = (h + (sgn > 0 ? 1 : 3)) & 3;
         break;
       }
+      // 0.9.68 : chicanes : ZR / ZL décalage d'une colonne à droite / à gauche, longueur 2 (défaut), 3 ou 4 cases (ZR3, ZL4…) ; ZZR / ZZL grand S (3×3, deux colonnes).
+      case 'ZR': case 'ZL': {
+        const len = n <= 2 ? 2 : n === 3 ? 3 : 4, base = len === 2 ? 'sbend' : len === 3 ? 'sbendLong' : 'sbendFast';
+        sbendPiece(op === 'ZR' ? base : base + 'L');
+        break;
+      }
+      case 'ZZR': sbendPiece('sbendWide'); break;
+      case 'ZZL': sbendPiece('sbendWideL'); break;
       case 'UX': place('steep4', x, z, l, h); l += 4; adv(h); break;
       case 'DX': l -= 4; place('steep4', x, z, l, h + 2, true); adv(h); break;
       case 'CVR': case 'CVL': {

@@ -2,7 +2,7 @@
 // Le maillage complet (tronçons, objets mobiles, lampes) est assemblé par TrackView dans trackMesh.js.
 import * as THREE from './vendor/three.module.min.js';
 import { CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T } from './constants.js';
-import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
+import { PIECES, SURFACES, RING_R, RING_Y, arcParams, sbendPoint, baseY, tileCenter, tileParam, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
 import { WATER_DROP, boatDrop } from './track/shared.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { renderOptions } from './renderOptions.js';
@@ -227,6 +227,12 @@ export function stripsFor(tile) {
       const ang = Math.PI + (Math.PI / 2) * (i / n);
       fr.push(flatFrame(mir * (a.cx + a.R * Math.cos(ang)), base + p.rise * LEVEL_H * (i / n), a.cz + a.R * Math.sin(ang), -mir * Math.sin(ang), Math.cos(ang)));
     }
+    return [fr];
+  }
+  if (p.kind === 'sbend') {
+    // Chicane : les deux arcs du S, 4 tronçons par case de longueur.
+    const n = 8 * p.size, fr = [], q = {};
+    for (let i = 0; i <= n; i++) { sbendPoint(p, i / n, q); fr.push(flatFrame(q.x, base, q.z, q.tx, q.tz)); }
     return [fr];
   }
   // Ligne droite : profil vertical droit (4 tronçons) ou courbe (12 tronçons pour que le raccord reste lisse).
@@ -549,16 +555,71 @@ function platform(gb, glow, tile, fx = null) {
 }
 
 // Portique (départ / checkpoint / arrivée).
+// Portique de départ, d'arrivée ou de checkpoint. 0.9.68 : quatre styles (option gs, visuelle) : 0 portique (poteaux et traverse), 1 ligne au sol
+// (deux balises basses), 2 arche (demi-cercle), 3 pylônes (deux hauts mâts lumineux, sans traverse). Le marquage au sol est le même pour tous.
 function gate(gb, glow, tile) {
   const sp = cpKind(tile) ? 'checkpoint' : PIECES[tile.t].special;
   const y = baseY(tile);
   const color = PALETTE[sp];
   const px = RO + 0.75;
   const top = 6.6;
-  for (const s of [-1, 1]) {
-    gb.taper(s * px, 0, y - SLAB_T, y + top, 1.1, 1.1, 0.8, 0.8, color);
-    gb.box(s * px - 0.7, y + RAIL_H - 0.3, -0.7, s * px + 0.7, y + RAIL_H, 0.7, PALETTE.slab);
+  const style = tile.gs | 0, rails = !hasNoRails(tile);
+  if (style === 0) {
+    for (const s of [-1, 1]) {
+      gb.taper(s * px, 0, y - SLAB_T, y + top, 1.1, 1.1, 0.8, 0.8, color);
+      if (rails) gb.box(s * px - 0.7, y + RAIL_H - 0.3, -0.7, s * px + 0.7, y + RAIL_H, 0.7, PALETTE.slab);
+    }
+  } else gateStyle(gb, glow, style, sp, color, y, px);
+  if (style === 0) gateBeam(gb, glow, sp, color, y, px, top);
+  gateLine(gb, sp, color, y);
+}
+
+// Variantes du portique (0.9.68).
+function gateStyle(gb, glow, style, sp, color, y, px) {
+  const chk = (i) => (i % 2 ? '#1e1f2b' : '#f7f2ea');
+  const spike = (cx, cy, h, r) => {
+    const tip = [cx, cy + h, 0], rg = [[cx - r, cy, 0], [cx, cy, -r], [cx + r, cy, 0], [cx, cy, r]];
+    for (let i = 0; i < 4; i++) glow.tri(rg[i], rg[(i + 1) % 4], tip, color);
+  };
+  if (style === 1) {
+    // Ligne au sol : deux balises basses de part et d'autre (rien au-dessus de la route).
+    for (const s of [-1, 1]) {
+      gb.taper(s * px, 0, y - SLAB_T, y + 1.8, 1.0, 1.0, 0.7, 0.7, sp === 'finish' ? chk(s > 0 ? 1 : 0) : color);
+      spike(s * px, y + 1.8, 0.9, 0.45);
+    }
+  } else if (style === 2) {
+    // Arche : deux piles jusqu'à 3 m puis un demi-cercle de rayon px (épaisseur 1,2 m, profondeur 1 m), bande lumineuse sur la face avant.
+    const R = px, cy = y + 3, n = 16, ri = R - 0.6, ro = R + 0.6, d = 0.5;
+    for (const s of [-1, 1]) gb.box(s * R - 0.6, y - SLAB_T, -d, s * R + 0.6, cy, d, color);
+    for (let i = 0; i < n; i++) {
+      const a0 = (Math.PI * i) / n, a1 = (Math.PI * (i + 1)) / n, c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
+      const P = (r, c, sn, z) => [r * c, cy + r * sn, z];
+      const col = sp === 'finish' ? chk(i) : color;
+      gb.quad(P(ri, c0, s0, d), P(ro, c0, s0, d), P(ro, c1, s1, d), P(ri, c1, s1, d), col);
+      gb.quad(P(ri, c1, s1, -d), P(ro, c1, s1, -d), P(ro, c0, s0, -d), P(ri, c0, s0, -d), col);
+      gb.quad(P(ro, c0, s0, d), P(ro, c0, s0, -d), P(ro, c1, s1, -d), P(ro, c1, s1, d), col);
+      gb.quad(P(ri, c1, s1, d), P(ri, c1, s1, -d), P(ri, c0, s0, -d), P(ri, c0, s0, d), col);
+      const g0 = R - 0.15, g1 = R + 0.15;
+      glow.quad(P(g0, c0, s0, d + 0.06), P(g1, c0, s0, d + 0.06), P(g1, c1, s1, d + 0.06), P(g0, c1, s1, d + 0.06), color);
+      glow.quad(P(g0, c1, s1, -d - 0.06), P(g1, c1, s1, -d - 0.06), P(g1, c0, s0, -d - 0.06), P(g0, c0, s0, -d - 0.06), color);
+    }
+  } else {
+    // Pylônes : deux mâts de 12 m, une bande lumineuse sur la face intérieure, un fanion au sommet (damier pour l'arrivée).
+    const H = 12;
+    for (const s of [-1, 1]) {
+      const x = s * px;
+      gb.taper(x, 0, y - SLAB_T, y + H, 1.3, 1.3, 0.7, 0.7, PALETTE.slab);
+      const xi = x - s * 0.62;
+      glow.quad([xi, y + 1, 0.3], [xi, y + 1, -0.3], [xi, y + H - 0.5, -0.3], [xi, y + H - 0.5, 0.3], color);
+      if (sp === 'finish') for (let i = 0; i < 4; i++) for (let r = 0; r < 2; r++) gb.box(x - s * (0.35 + i * 0.7) - 0.35, y + H - 1.4 + r * 0.7, -0.08, x - s * (0.35 + i * 0.7) + 0.35, y + H - 0.7 + r * 0.7, 0.08, chk(i + r));
+      else glow.tri([x, y + H, 0], [x, y + H - 1.6, 0], [x - s * 2.6, y + H - 0.8, 0], color);
+      spike(x, y + H, 1.2, 0.5);
+    }
   }
+}
+
+// Traverse du portique classique (damier pour l'arrivée) et ses pointes lumineuses.
+function gateBeam(gb, glow, sp, color, y, px, top) {
   const bx = px + 0.4;
   if (sp === 'finish') {
     const n = 18;
@@ -581,6 +642,10 @@ function gate(gb, glow, tile) {
     const rg = [[cx - r, cy, 0], [cx, cy, -r], [cx + r, cy, 0], [cx, cy, r]];
     for (let i = 0; i < 4; i++) glow.tri(rg[i], rg[(i + 1) % 4], tip, color);
   }
+}
+
+// Marquage au sol : damier (arrivée), ligne blanche (départ), tirets de la couleur du checkpoint.
+function gateLine(gb, sp, color, y) {
   const ly = y + 0.03;
   if (sp === 'finish') {
     const n = 18, w = (2 * ROAD_HALF) / n;
@@ -648,6 +713,7 @@ function pillarPoints(tile) {
     return angs.map((ang) => [mir * (a.cx + a.R * Math.cos(ang)), a.cz + a.R * Math.sin(ang)]);
   }
   if (p.kind === 'loop') return [[-p.mirror * p.lane, p.size * HALF - 4], [p.mirror * p.lane, -p.size * HALF + 4]];
+  if (p.kind === 'sbend') return [0.2, 0.5, 0.8].map((u) => { const q = sbendPoint(p, u); return [q.x, q.z]; });
   return [[0, 0]];
 }
 

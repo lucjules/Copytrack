@@ -7,6 +7,7 @@ import { DECO_COLORS } from './decoData.js';
 import { PACK_BUILDERS } from './decoPack.js';
 import { TAU, ringPts, cylinder, cone, sphere, octa, cylZ, cylX, limb, star5, GREY, DARK, WHITE } from './decoPrimitives.js';
 import { isObstacle } from './obstacles.js';
+import { SOLIDS, SOLID_IDS } from './solids.js';
 import { createObstacleMesh } from './obstacleMesh.js';
 import { buildCustomParts } from './customDecoBuild.js';
 
@@ -30,6 +31,52 @@ function signBoard(gb, glow, color, symbol) {
   else if (symbol === 'stop') { q(-0.9, 4.7, 0.9, 5.3); }
   else if (symbol === 'speed') { q(-0.8, 4.95, 0.8, 5.05); q(-0.6, 4.2, -0.4, 5.8); q(0.4, 4.2, 0.6, 5.8); }
   else if (symbol === 'warn') { q(-0.15, 4.5, 0.15, 5.4); q(-0.15, 4.1, 0.15, 4.35); }
+  else if (symbol === 'down') { q(-0.2, 4.9, 0.2, 6.0); t([0.8, 5.0], [-0.8, 5.0], [0, 4.0]); }
+  else if (symbol === 'uturn') { q(0.4, 4.6, 0.7, 5.8); q(-0.7, 5.5, 0.7, 5.8); q(-0.7, 4.7, -0.4, 5.8); t([-0.1, 4.7], [-1.0, 4.7], [-0.55, 4.1]); }
+}
+
+// 0.9.68 : panneau de bord de route : longue plaque (12 × 2,4 m) sur deux poteaux, face vers +z. Symboles lumineux : chevrons (gauche, droite,
+// montée, descente), triangles de danger ou croix d'interdiction. Comme tous les panneaux : décoratif (la voiture le traverse).
+function roadBoard(gb, glow, frame, sym, ink) {
+  for (const x of [-4.6, 4.6]) gb.box(x - 0.18, 0, -0.18, x + 0.18, 3.4, 0.18, GREY);
+  gb.box(-6, 1.2, -0.14, 6, 3.6, 0.14, frame);
+  gb.box(-5.8, 1.35, 0.14, 5.8, 3.45, 0.2, DARK);
+  const Z = 0.24, cy = 2.4;
+  // Polygone convexe (sommets dans un sens quelconque) : remis dans le sens direct vu de +z.
+  const poly = (pts, col, g = glow, z = Z) => {
+    let a = 0;
+    for (let i = 0; i < pts.length; i++) { const p = pts[i], n = pts[(i + 1) % pts.length]; a += p[0] * n[1] - n[0] * p[1]; }
+    const P = (a < 0 ? [...pts].reverse() : pts).map(([x, y]) => [x, y, z]);
+    if (P.length === 3) g.tri(P[0], P[1], P[2], col); else g.quad(P[0], P[1], P[2], P[3], col);
+  };
+  // Branche de chevron d'épaisseur t (décalée selon (ox, oy)).
+  const arm = (a, b, ox, oy) => poly([a, b, [b[0] + ox, b[1] + oy], [a[0] + ox, a[1] + oy]], ink);
+  if (sym === 'left' || sym === 'right') {
+    const s = sym === 'left' ? 1 : -1;      // « < » : pointe vers la gauche
+    for (let i = 0; i < 5; i++) {
+      const cx = -4.4 + i * 2.2, tip = [cx - s * 0.55, cy];
+      arm([cx + s * 0.55, cy + 0.8], tip, s * 0.5, 0); arm(tip, [cx + s * 0.55, cy - 0.8], s * 0.5, 0);
+    }
+  } else if (sym === 'up' || sym === 'down') {
+    const s = sym === 'up' ? 1 : -1;
+    for (let i = 0; i < 3; i++) for (const dy of [0.45, -0.45]) {
+      const cx = -3.6 + i * 3.6, tip = [cx, cy + dy + s * 0.35];
+      arm([cx - 0.9, cy + dy - s * 0.35], tip, 0, -s * 0.3); arm(tip, [cx + 0.9, cy + dy - s * 0.35], 0, -s * 0.3);
+    }
+  } else if (sym === 'warn') {
+    for (let i = 0; i < 3; i++) {
+      const cx = -3.6 + i * 3.6;
+      poly([[cx - 0.95, cy - 0.8], [cx + 0.95, cy - 0.8], [cx, cy + 0.85]], ink);
+      poly([[cx - 0.1, cy - 0.25], [cx + 0.1, cy - 0.25], [cx + 0.1, cy + 0.35], [cx - 0.1, cy + 0.35]], DARK, gb, Z + 0.02);
+      poly([[cx - 0.1, cy - 0.6], [cx + 0.1, cy - 0.6], [cx + 0.1, cy - 0.4], [cx - 0.1, cy - 0.4]], DARK, gb, Z + 0.02);
+    }
+  } else if (sym === 'no') {
+    for (let i = 0; i < 3; i++) {
+      const cx = -3.6 + i * 3.6, r = 0.7, w = 0.17;
+      poly([[cx - r - w, cy - r + w], [cx - r + w, cy - r - w], [cx + r + w, cy + r - w], [cx + r - w, cy + r + w]], ink);
+      poly([[cx - r - w, cy + r - w], [cx - r + w, cy + r + w], [cx + r + w, cy - r + w], [cx + r - w, cy - r - w]], ink, glow, Z + 0.01);
+    }
+  }
 }
 
 const BUILDERS = {
@@ -39,6 +86,14 @@ const BUILDERS = {
   sign_stop: (gb, glow, c) => signBoard(gb, glow, c || '#ff3b4f', 'stop'),
   sign_speed: (gb, glow, c) => signBoard(gb, glow, c || '#f4f1ea', 'speed'),
   sign_warn: (gb, glow, c) => signBoard(gb, glow, c || '#ffbf3c', 'warn'),
+  sign_down: (gb, glow, c) => signBoard(gb, glow, c || '#3ec1ff', 'down'),
+  sign_uturn: (gb, glow, c) => signBoard(gb, glow, c || '#2fd3b5', 'uturn'),
+  board_left: (gb, glow, c) => roadBoard(gb, glow, '#3a3d55', 'left', c || '#ffb02e'),
+  board_right: (gb, glow, c) => roadBoard(gb, glow, '#3a3d55', 'right', c || '#ffb02e'),
+  board_up: (gb, glow, c) => roadBoard(gb, glow, '#3a3d55', 'up', c || '#ffb02e'),
+  board_down: (gb, glow, c) => roadBoard(gb, glow, '#3a3d55', 'down', c || '#ffb02e'),
+  board_warn: (gb, glow, c) => roadBoard(gb, glow, '#3a3d55', 'warn', c || '#ffb02e'),
+  board_no: (gb, glow, c) => roadBoard(gb, glow, '#3a3d55', 'no', c || '#ff3b4f'),
   banner(gb, glow, c) {
     gb.box(-5.4, 0, -0.2, -4.8, 7, 0.2, GREY);
     gb.box(4.8, 0, -0.2, 5.4, 7, 0.2, GREY);
@@ -718,6 +773,35 @@ function gbOffset(gb, ox, oy, oz) {
 }
 
 Object.assign(BUILDERS, PACK_BUILDERS);
+
+// 0.9.68 : solides (solids.js) : la géométrie visible EST la forme de contact (mêmes pavés, rampes, pyramides), plus des liserés sans épaisseur.
+const SOLID_COL = { pillar: '#9aa0b8', pillarBase: '#9aa0b8', pillarThin: '#c9ccd8', beam: '#8d93ad', beamL: '#8d93ad', beamT: '#8d93ad', beamX: '#8d93ad', beamPost: '#8d93ad', gantry: '#ffbf3c' };
+function solidMesh(gb, glow, id, c) {
+  const def = SOLIDS[id], col = c || SOLID_COL[id] || '#9aa0b8';
+  for (const p of def.parts) {
+    const [x0, y0, z0, x1, y1, z1] = p.b;
+    if (p.t === 'ramp') {
+      // Rampe : dessus en pente de y0 (avant, +z) à y1 (arrière, −z).
+      const A = [x0, y0, z1], Bq = [x1, y0, z1], C = [x1, y1, z0], Dq = [x0, y1, z0], E = [x0, y0, z0], F = [x1, y0, z0];
+      gb.quad(A, Bq, C, Dq, col);
+      gb.quad(E, F, C, Dq, '#5a5e82');
+      gb.tri(A, Dq, E, '#6e7196'); gb.tri(Bq, F, C, '#6e7196');
+      gb.quad(A, E, F, Bq, DARK);
+    } else if (p.t === 'pyr') {
+      const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, T = [cx, y1, cz];
+      const q = [[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]];
+      for (let i = 0; i < 4; i++) gb.tri(q[i], q[(i + 1) % 4], T, i % 2 ? col : '#c9a46a');
+    } else gb.box(x0, y0, z0, x1, y1, z1, col);
+  }
+  // Repères visuels : bandes de danger sur la traverse d'un portique, liseré sombre en tête de pilier.
+  if (id === 'gantry') {
+    for (let i = 0; i < 16; i++) {
+      const xa = -16.2 + i * 2.025, xb = xa + 2.025, col2 = i % 2 ? '#1e1f2b' : (c || '#ffbf3c');
+      for (const z of [0.82, -0.82]) gb.quad([xa, 9, z], [xb, 9, z], [xb, 10.6, z], [xa, 10.6, z], col2);
+    }
+  } else if (id === 'pillar' || id === 'pillarBase') gb.box(-1.7, 11.4, -1.7, 1.7, 12.02, 1.7, '#5a5e82');
+}
+for (const id of SOLID_IDS) BUILDERS[id] = (gb, glow, c) => solidMesh(gb, glow, id, c);
 BUILDERS.custom = (gb, glow, c, d) => buildCustomParts(gb, glow, (d && d.cp) || []);
 
 export function decoColor(d) {

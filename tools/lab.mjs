@@ -23,6 +23,7 @@ const GLYPH = (t) => {
   if (P.kind === 'loop') return 'O';
   if (P.kind === 'ring') return 'o';
   if (P.kind === 'fork') return 'Y';
+  if (P.kind === 'sbend') return 'z';
   if (P.kind === 'area') return '#';
   if (t.t === 'twist') return '~';
   if (t.t === 'tube' || t.t === 'tubeIn' || t.t === 'tubeMid') return 'T';

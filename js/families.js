@@ -103,8 +103,25 @@ export const FAMILIES = {
       loopBigTriple: { dir: 'R', size: 'g', turns: '3' }, loopBigTripleL: { dir: 'L', size: 'g', turns: '3' },
     },
   },
+  // 0.9.68 : chicane (courbe en S latérale) : la route se décale d'une ou deux colonnes sans changer de cap. Plus elle est longue, plus elle est rapide.
+  chicane: {
+    label: 'Chicane',
+    hint: 'Courbe en S : la route se décale d’une ou deux colonnes sans changer de cap. Courte (2×2), longue (3×3) ou rapide (4×4).',
+    icon: 'sbend',
+    traits: [
+      { id: 'len', label: 'Longueur', values: [['2', 'Courte (2 cases)'], ['3', 'Longue (3 cases)'], ['4', 'Rapide (4 cases)']] },
+      { id: 'shift', label: 'Décalage', values: [['1', '1 colonne'], ['2', '2 colonnes']] },
+      { id: 'dir', label: 'Sens', values: [['R', 'Vers la droite →'], ['L', 'Vers la gauche ←']] },
+    ],
+    members: {
+      sbend: { len: '2', shift: '1', dir: 'R' }, sbendL: { len: '2', shift: '1', dir: 'L' },
+      sbendLong: { len: '3', shift: '1', dir: 'R' }, sbendLongL: { len: '3', shift: '1', dir: 'L' },
+      sbendFast: { len: '4', shift: '1', dir: 'R' }, sbendFastL: { len: '4', shift: '1', dir: 'L' },
+      sbendWide: { len: '3', shift: '2', dir: 'R' }, sbendWideL: { len: '3', shift: '2', dir: 'L' },
+    },
+  },
 };
-export const FAMILY_ORDER = ['straight', 'turn', 'courbe', 'roll', 'loop'];
+export const FAMILY_ORDER = ['straight', 'turn', 'chicane', 'courbe', 'roll', 'loop'];
 
 // type concret -> { fam, traits }
 const BY_TYPE = new Map();

@@ -53,7 +53,7 @@ test('un circuit sans pièce perso garde EXACTEMENT son code d\'avant ; au plus 
   assert.equal(JSON.parse(Buffer.from(b.encode().slice(5).replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()).v, 4);
   const sig = b.signature(); b.decos[0].cp = [{ ...b.decos[0].cp[0], c: '#123456' }];
   assert.equal(b.signature(), sig, 'la forme est visuelle : ni signature ni records ne bougent');
-  assert.ok(DECO_ORDER[DECO_ORDER.length - 1] === 'custom' && DECO_LABELS.custom);
+  assert.ok(DECO_ORDER[311] === 'custom' && DECO_LABELS.custom);      // (0.9.68 : d'autres décorations viennent à la suite)
 });
 test('un code hostile : kind inconnu, formes en trop, couleurs fausses', () => {
   const t = mk();

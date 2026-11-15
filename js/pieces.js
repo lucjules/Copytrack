@@ -16,7 +16,7 @@
 // Une pièce line/arc peut aussi être posée « à l'envers » (drapeau v) : elle
 // devient alors un ruban au plafond.
 import { CELL, HALF, LEVEL_H, ROAD_TOP, LOOP_R, LOOP_LANE, ROAD_HALF, RAIL_W, SURF_PHYS, WORLD_SCALE } from './constants.js';
-import { datan2, dcos, dsin } from './dmath.js';
+import { datan2, dcos, dsin, hypot2 } from './dmath.js';
 
 // 0.9.11 : les pièces ne sont plus écrites en mètres fixes mais en proportion de la case (CELL = 24 m avant la 0.9.11, 32 m depuis) : K = 1 reproduit l'ancien monde.
 const K = WORLD_SCALE;
@@ -63,6 +63,16 @@ export const PIECES = {
   hugecurve:  { label: 'Très grand virage plat', kind: 'arc', size: 3, rise: 0 },
   // 0.9.67 : virage géant 5×5 (rayon 144 m) : avec le braquage borné selon la vitesse (loi PolyTrack), le seul virage qui se prenne vers 280 km/h.
   giantcurve: { label: 'Virage géant', kind: 'arc', size: 5, rise: 0 },
+  // 0.9.68 : chicanes (courbes en S latérales, voir sbendParams) : la route entre au sud de la première colonne et ressort au nord, décalée de
+  // `shift` cases vers la droite (→, mirror 1) ou la gauche (←, mirror −1). Deux arcs de même rayon, opposés et tangents au milieu ; plates.
+  sbend:      { label: 'Chicane →', kind: 'sbend', size: 2, rise: 0, mirror: 1, shift: 1 },
+  sbendL:     { label: 'Chicane ←', kind: 'sbend', size: 2, rise: 0, mirror: -1, shift: 1 },
+  sbendLong:  { label: 'Chicane longue →', kind: 'sbend', size: 3, rise: 0, mirror: 1, shift: 1 },
+  sbendLongL: { label: 'Chicane longue ←', kind: 'sbend', size: 3, rise: 0, mirror: -1, shift: 1 },
+  sbendFast:  { label: 'Chicane rapide →', kind: 'sbend', size: 4, rise: 0, mirror: 1, shift: 1 },
+  sbendFastL: { label: 'Chicane rapide ←', kind: 'sbend', size: 4, rise: 0, mirror: -1, shift: 1 },
+  sbendWide:  { label: 'Grand S →', kind: 'sbend', size: 3, rise: 0, mirror: 1, shift: 2 },
+  sbendWideL: { label: 'Grand S ←', kind: 'sbend', size: 3, rise: 0, mirror: -1, shift: 2 },
   // « Courbe » : un tremplin courbé (virage montant). Serré = 1 case, grand = 2×2.
   cv05:       { label: 'Courbe serrée · inclinaison ½', kind: 'arc', size: 1, rise: 0.5 },
   cv1:        { label: 'Courbe serrée · inclinaison 1', kind: 'arc', size: 1, rise: 1 },
@@ -220,6 +230,8 @@ export const PIECE_ORDER = [
   ...GEN45_IDS,
   // 0.9.67 (à la suite : ne jamais réordonner)
   'giantcurve',
+  // 0.9.68 : chicanes (à la suite : ne jamais réordonner)
+  'sbend', 'sbendL', 'sbendLong', 'sbendLongL', 'sbendFast', 'sbendFastL', 'sbendWide', 'sbendWideL',
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -367,7 +379,7 @@ export function clearConflicts(opts, flag) {
 // Options « armées » dans l'éditeur avant la pose (elles s'ajoutent à la pièce choisie, aperçu compris) : bascule l'option `flag` (valeur `val` pour les
 // choix exclusifs : orientation, checkpoint, thème, mouvement) et retire ce qui lui est incompatible. Renvoie un nouvel objet.
 export function armOption(opts, flag, val) {
-  const o = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ...opts };
+  const o = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, gs: 0, ...opts };
   if (flag === 'o') {
     // Orientation : sol, mur gauche (1), mur droit (2) ; le plafond est le drapeau v. Un seul choix à la fois.
     o.o = val === 0 || o.o === val ? 0 : val;
@@ -381,7 +393,7 @@ export function armOption(opts, flag, val) {
 }
 
 // Drapeaux possibles : v (à l'envers), nb (sans bordures), tn (tunnel), mv (mouvement 1/2/3),
-// cp (checkpoint : 1 portique, 2 anneau aérien), th (thème visuel).
+// cp (checkpoint : 1 portique, 2 anneau aérien), th (thème visuel), gs (style du portique, visuel : 0.9.68).
 export function flagAllowed(type, flag, tile = null, val = 0) {
   const p = PIECES[type];
   if (!p) return false;
@@ -390,7 +402,16 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
   if (flag === 'v') return true;
   // Phase 2 : le thème est purement visuel, toute pièce de route en profite.
   if (flag === 'th') return p.kind !== 'ring';
+  // 0.9.68 : style du portique (visuel) : là où il y a un portique (départ, arrivée, checkpoint en pièce ou en option sur une route). Sans pièce
+  // posée (choix d'options avant la pose), toute ligne ou tout virage, qui peut recevoir l'option Checkpoint.
+  if (flag === 'gs') {
+    if (!(val >= 0 && val < GATE_STYLES.length) || !lineLike || p.kind === 'ring') return false;
+    if (p.special === 'start' || p.special === 'finish' || p.special === 'checkpoint') return true;
+    return !tile || tile.cp === 1;
+  }
   if (p.kind === 'ring' || p.kind === 'fork') return false;
+  // 0.9.68 : une chicane se pose à l'envers, sans bordures ou sous un tunnel (sa géométrie est une bande de route ordinaire) ; ni mur, ni mouvement, ni checkpoint.
+  if (p.kind === 'sbend') return flag === 'nb' || flag === 'tn';
   // 0.9.3 : orientation « mur gauche / droit » : une ligne ou un virage ordinaire peut être posé sur un mur (val 1 = gauche, 2 = droit).
   // Une route sur un mur n'a ni tunnel, ni checkpoint, ni anneau, ni mouvement, ni bordures ; le plafond (v) se choisit à part.
   // Phase 3 : le roulis (val 1..6 : ±90°, ±45°, ±135°) s'applique à toute ligne / tout virage ordinaire ET aux rubans « roulables » (loopings, tire-bouchons, vrilles, virages relevés)
@@ -400,7 +421,8 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
     if (lineLike) return true;
     return !!p.rollable && (!rollFitHook.fits || rollFitHook.fits(type, val));
   }
-  if (flag === 'nb') return !p.noRails && (lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube')));
+  // (0.9.68 : aussi le départ, l'arrivée et le checkpoint : portique sans bordures, comme sur une plaque)
+  if (flag === 'nb') return !p.noRails && (lineLike || (p.kind === 'ribbon' && !type.startsWith('tube')));
   if (flag === 'tn') return lineLike && !p.special && !hasConflict('tn', tile);
   // Pièce mobile : route « simple » (droite, virage, pente, plateforme), pas à l'envers, pas de checkpoint dessus.
   if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !hasConflict('mv', tile);
@@ -456,6 +478,14 @@ export function clampMover(mv, ms, ma) {
   if (a) { a = Math.max(M.amp.min, Math.min(M.amp.max, a)); if (a === M.amp.def) a = 0; }
   return { ms: s, ma: a };
 }
+
+// 0.9.68 : styles du portique de départ, d'arrivée ou de checkpoint (option « Portique », sans effet sur le jeu ni sur la signature).
+export const GATE_STYLES = [
+  { id: 0, label: 'Portique' },
+  { id: 1, label: 'Ligne au sol' },
+  { id: 2, label: 'Arche' },
+  { id: 3, label: 'Pylônes' },
+];
 
 // Thèmes visuels d'une pièce (option « Thème », sans effet sur le jeu).
 export const THEMES = [
@@ -590,6 +620,8 @@ export function sampleLocal(tile, lx, lz, out) {
     }
   } else if (p.kind === 'fork') {
     forkSample(p, lx, lz, out);
+  } else if (p.kind === 'sbend') {
+    sbendSample(p, lx, lz, out);
   } else if (p.kind === 'loop') {
     // Seules les deux voies d'accès au sol sont des surfaces « normales ».
     const lane = lz >= 0 ? -p.mirror * p.lane : p.mirror * p.lane;
@@ -640,3 +672,54 @@ function forkSample(p, lx, lz, out) {
   out.branch = Math.abs(da) <= ROAD_HALF ? 0 : 1;
 }
 
+// ---- Chicane (0.9.68) ------------------------------------------------------------------------------------------------------------------------
+// Courbe en S latérale dans une empreinte size × size : entrée au sud de la colonne x0 = −mirror·(size − 1)·½ case, sortie au nord décalée de
+// D = shift cases. Deux arcs de même rayon R, de sens opposés, tangents au point d'inflexion M (milieu de la pièce) : c'est le S de plus faible
+// courbure qui raccorde deux routes parallèles (R = (D² + L²) / 4D, L = longueur de la pièce) : 40 m (2×2), 80 m (3×3, 1 case), 136 m (4×4),
+// 52 m (3×3, 2 cases). Les centres C1, M et C2 sont alignés. Toute la géométrie (physique, rendu, ligne centrale) vient d'ici.
+const SB = new Map();
+export function sbendParams(p) {
+  let g = SB.get(p);
+  if (g) return g;
+  const half = p.size * HALF, m = p.mirror < 0 ? -1 : 1, D = p.shift * CELL, L = 2 * half;
+  const R = (D * D + L * L) / (4 * D);
+  const x0 = -m * (half - HALF), x1 = x0 + m * D;
+  g = {
+    half, m, D, L, R, x0, x1,
+    c1x: x0 + m * R, c1z: half,              // centre du premier arc (du côté du décalage)
+    c2x: x1 - m * R, c2z: -half,             // centre du second (de l'autre côté)
+    phi: datan2(half, Math.sqrt(R * R - half * half)),     // angle de chaque arc
+    mx: (x0 + x1) / 2,                       // point d'inflexion M = (mx, 0)
+    tmx: (m * L) / (2 * R), tmz: (D - 2 * R) / (2 * R),     // cap de la route en M (vecteur unitaire)
+  };
+  SB.set(p, g);
+  return g;
+}
+
+// Point de la ligne centrale à l'avancée u (0..1, proportionnelle à la longueur) : position (x, z) et cap unitaire (tx, tz), en local.
+export function sbendPoint(p, u, out = {}) {
+  const g = sbendParams(p);
+  if (u <= 0.5) {
+    const th = 2 * u * g.phi, c = dcos(th), s = dsin(th);
+    out.x = g.c1x - g.m * g.R * c; out.z = g.c1z - g.R * s;
+    out.tx = g.m * s; out.tz = -c;
+  } else {
+    const th = 2 * (1 - u) * g.phi, c = dcos(th), s = dsin(th);
+    out.x = g.c2x + g.m * g.R * c; out.z = g.c2z + g.R * s;
+    out.tx = g.m * s; out.tz = -c;
+  }
+  return out;
+}
+
+// Échantillon au sol : écart latéral EXACT (distance au bon arc, positive à droite du sens de marche) et son gradient ; avancée par l'angle parcouru.
+function sbendSample(p, lx, lz, out) {
+  const g = sbendParams(p);
+  const first = (lx - g.mx) * g.tmx + lz * g.tmz < 0;      // avant la normale en M : premier arc
+  const dx = lx - (first ? g.c1x : g.c2x), dz = lz - (first ? g.c1z : g.c2z);
+  const r = hypot2(dx, dz) || 1e-6;
+  const sg = first ? -g.m : g.m;        // premier arc : le centre est à droite (m = 1), un point plus à droite en est plus proche
+  out.d = sg * (r - g.R);
+  out.gx = (sg * dx) / r; out.gz = (sg * dz) / r;
+  const a = first ? 0.5 * datan2(-dz, -g.m * dx) / g.phi : 1 - 0.5 * datan2(dz, g.m * dx) / g.phi;
+  out.along = a < 0 ? 0 : a > 1 ? 1 : a;
+}

@@ -8,6 +8,7 @@ import { tileToRow } from './track.js';
 import { buildDecoInto, createPlaque, decoColor, setDecoRotation } from './decos.js';
 import { LIGHT_DECOS } from './decoData.js';
 import { isObstacle } from './obstacles.js';
+import { isSolid } from './solids.js';
 import { createObstacleMesh } from './obstacleMesh.js';
 import { buildTileInto } from './trackGeometry.js';
 import { renderOptions } from './renderOptions.js';
@@ -164,7 +165,7 @@ export class TrackView {
     }
     const span = CELL * CHUNK;
     for (const d of track.decos) {
-      if (renderOptions.hideDecos && !this.showAllDecos && !isObstacle(d.k)) continue;
+      if (renderOptions.hideDecos && !this.showAllDecos && !isObstacle(d.k) && !isSolid(d.k)) continue;      // (un obstacle ou un solide compte pour la course : toujours affiché)
       if (d.k === 'plaque') {
         const mesh = createPlaque(d);
         if (d.g) mesh.userData.g = d.g;
