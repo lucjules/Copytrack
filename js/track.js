@@ -8,6 +8,7 @@ import { isSolid, buildSolidGrid } from './solids.js';
 import { DECO_ORDER } from './decoData.js';
 import { packDecoParts, unpackDecoParts } from './customDeco.js';
 import { DECORS, DEFAULT_DECOR } from './themes.js';
+import { dcos, dsin } from './dmath.js';
 import { scriptsToArray, scriptsFromArray, sanitizeScripts } from './scripts.js';
 import { DEFAULT_AMBIANCE, cleanAmbiance, ambianceToArray, ambianceFromArray } from './ambiance.js';
 import { COLOR_KEYS, MP, W2, cleanColors } from './track/shared.js';
@@ -611,6 +612,8 @@ export function hashString(s) {
 //   0.9.67 : XR / XL virage géant plat (5x5, rayon 144 m)
 //   0.9.68 : suffixe *n : style du portique d'un départ, d'une arrivée ou d'un checkpoint : *1 ligne au sol, *2 arche, *3 pylônes (ex. start*2 C*3 finish*1)
 //   0.9.69 : sur une plaque, *n est le masque de ses bordures (un bit par bord, *15 : tout autour), ex. [plate2]*15 P*5
+//   0.9.71 : JX croisement (JXR / JXL : en tournant), JT / JTL carrefour en T tout droit (branche à droite / à gauche), JTD / JTG prendre la branche,
+//            JR / JL arriver par la branche et tourner ; repasser par un carrefour déjà posé (circuit en 8) : même jeton au même endroit
 //   0.9.70 : N route étroite (12 m), NI rétrécissement, NO retour à 24 m ; WI élargissement (3×3), W route large (56 m, 3×3), WO retour à 24 m
 //   0.9.68 : ZR / ZL chicane (la route se décale d'une colonne à droite / à gauche, même cap) : ZR = 2 cases de long, ZR3 longue, ZR4 rapide ;
 //            ZZR / ZZL grand S (3×3, deux colonnes)
@@ -767,6 +770,27 @@ export function scriptTrack(name, script, opts = {}) {
     place(type, Math.round(x + 0.5 - e.x - size / 2), Math.round(z + 0.5 - e.z - size / 2), l, rev ? h + 2 : h, rev);
     adv(h, size);
   };
+  // 0.9.71 : carrefour dans la case courante (au niveau courant) : r = rotation de la pièce, turn = 0 tout droit, 1 à droite, −1 à gauche. Un carrefour
+  // déjà posé là (deuxième passage d'un circuit en 8) est réutilisé, à condition d'avoir les bras voulus. Le tracé du pilote est posé ici (droit ou en
+  // quart de cercle de 16 m, comme le virage serré).
+  const junction = (type, r, turn) => {
+    let J = tr.tilesAt(x, z).find((t) => PIECES[t.t].kind === 'junction' && t.l === l);
+    if (!J) J = place(type, x, z, l, r, false, true);
+    const back = (h + 2) & 3, out = turn ? (h + (turn > 0 ? 1 : 3)) & 3 : h;
+    const arms = new Set([...PIECES[J.t].arms].map((a) => { const v = rot(J.r, ...{ N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] }[a]); return DIRS.findIndex((d) => d[0] === Math.round(v.x) && d[1] === Math.round(v.z)); }));
+    if (!arms.has(back) || !arms.has(out)) throw new Error(`${name} : le carrefour en (${x}, ${z}) n'a pas de bras dans ce sens`);
+    const f = DIRS[h], rt = DIRS[(h + 1) & 3], s = turn || 0, cx = (x + 0.5) * CELL, cz = (z + 0.5) * CELL, y = baseY(J), H = CELL / 2, pts = [];
+    for (let i = 0; i <= 8; i++) {
+      const u = i / 8;
+      if (!s) pts.push([cx + f[0] * H * (2 * u - 1), y, cz + f[1] * H * (2 * u - 1), 0]);
+      else {
+        const th = (Math.PI / 2) * u, ax = cx - f[0] * H + s * rt[0] * H, az = cz - f[1] * H + s * rt[1] * H;
+        pts.push([ax - s * rt[0] * H * dcos(th) + f[0] * H * dsin(th), y, az - s * rt[1] * H * dcos(th) + f[1] * H * dsin(th), 0]);
+      }
+    }
+    pushPts(pts);
+    h = out; adv(h);
+  };
   // 0.9.68 : chicane : entrée dans la première colonne (côté opposé au décalage), sortie `shift` colonnes plus loin, même cap.
   const sbendPiece = (type) => {
     const P = PIECES[type], m = P.mirror, size = P.size;
@@ -921,6 +945,18 @@ export function scriptTrack(name, script, opts = {}) {
         h = (h + (sgn > 0 ? 1 : 3)) & 3;
         break;
       }
+      // 0.9.71 : carrefours. JX croisement tout droit, JXR / JXL en tournant ; JT carrefour en T, la branche à droite (JTL : à gauche), tout droit ;
+      // JTD / JTG : on prend la branche (à droite / à gauche) ; JR / JL : on arrive par la branche du T et on tourne à droite / à gauche.
+      // Repasser par un carrefour déjà posé (circuit en 8) : le même jeton, au même endroit et au même niveau.
+      case 'JX': junction('cross', h, 0); break;
+      case 'JXR': junction('cross', h, 1); break;
+      case 'JXL': junction('cross', h, -1); break;
+      case 'JT': junction('tee', h, 0); break;
+      case 'JTL': junction('tee', h + 2, 0); break;
+      case 'JTD': junction('tee', h, 1); break;
+      case 'JTG': junction('tee', h + 2, -1); break;
+      case 'JR': junction('tee', h + 1, 1); break;
+      case 'JL': junction('tee', h + 1, -1); break;
       // 0.9.70 : largeur de route : N route étroite (N3 : trois), NI rétrécissement (24 → 12 m), NO élargissement (12 → 24 m) ;
       // WI élargissement vers la route large (3×3, 24 → 56 m), W route large (3×3), WO retour à la largeur normale.
       case 'N': for (let i = 0; i < n; i++) { place('narrow', x, z, l, h); adv(h); } break;

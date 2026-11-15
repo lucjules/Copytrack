@@ -89,6 +89,10 @@ export const PIECES = {
   narrowIn:   { label: 'Rétrécissement', kind: 'line', size: 1, rise: 0, hw: [12, 6] },
   wideIn:     { label: 'Élargissement', kind: 'line', size: 3, rise: 0, hw: [12, 28] },
   wide:       { label: 'Route large', kind: 'line', size: 3, rise: 0, hw: [28, 28] },
+  // 0.9.71 : carrefours au même niveau (arms : bras de route présents, repère local : N = avant (−z), S = arrière (+z, l'entrée), E = droite, W = gauche).
+  // La chaussée est l'union du carré central et des bras (voir junctionSample) ; les bordures suivent tout son contour.
+  cross:      { label: 'Croisement', kind: 'junction', size: 1, rise: 0, arms: 'NSEW' },
+  tee:        { label: 'Carrefour en T', kind: 'junction', size: 1, rise: 0, arms: 'NSE' },
   // « Courbe » : un tremplin courbé (virage montant). Serré = 1 case, grand = 2×2.
   cv05:       { label: 'Courbe serrée · inclinaison ½', kind: 'arc', size: 1, rise: 0.5 },
   cv1:        { label: 'Courbe serrée · inclinaison 1', kind: 'arc', size: 1, rise: 1 },
@@ -252,6 +256,8 @@ export const PIECE_ORDER = [
   'plate2', 'plate3', 'tri1', 'tri2', 'tri3', 'sec1', 'sec2', 'sec3',
   // 0.9.70 : largeur de route variable (à la suite : ne jamais réordonner)
   'narrow', 'narrowIn', 'wideIn', 'wide',
+  // 0.9.71 : carrefours (à la suite : ne jamais réordonner)
+  'cross', 'tee',
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -434,6 +440,8 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
     return !tile || tile.cp === 1;
   }
   if (p.kind === 'ring' || p.kind === 'fork') return false;
+  // 0.9.71 : un carrefour se pose à l'envers ou sans bordures (thème : plus haut) ; rien d'autre.
+  if (p.kind === 'junction') return flag === 'nb';
   // 0.9.68 : une chicane se pose à l'envers, sans bordures ou sous un tunnel (sa géométrie est une bande de route ordinaire) ; ni mur, ni mouvement, ni checkpoint.
   if (p.kind === 'sbend') return flag === 'nb' || flag === 'tn';
   // 0.9.3 : orientation « mur gauche / droit » : une ligne ou un virage ordinaire peut être posé sur un mur (val 1 = gauche, 2 = droit).
@@ -647,6 +655,8 @@ export function sampleLocal(tile, lx, lz, out) {
     forkSample(p, lx, lz, out);
   } else if (p.kind === 'sbend') {
     sbendSample(p, lx, lz, out);
+  } else if (p.kind === 'junction') {
+    junctionSample(p, lx, lz, out);
   } else if (p.kind === 'area' && p.shape) {
     // 0.9.69 : plaque triangulaire ou en quart de disque : seule sa forme porte la voiture.
     if (out.inFootprint) out.inFootprint = inPlate(p, lx, lz);
@@ -846,4 +856,32 @@ function widthRemap(p, lx, lz, half, out) {
   out.d = d > 0 ? sg * d : 0;
   out.gx = c; out.gz = sg * k * c;
   return out;
+}
+
+// ---- Carrefours (0.9.71) -------------------------------------------------------------------------------------------------------------------
+// Chaussée = carré central [−12, 12]² et, pour chaque bras présent, le rectangle qui le prolonge jusqu'au bord de la case. Pavés dans le repère local.
+const JRECT = { N: [-ROAD_HALF, -HALF, ROAD_HALF, -ROAD_HALF], S: [-ROAD_HALF, ROAD_HALF, ROAD_HALF, HALF], E: [ROAD_HALF, -ROAD_HALF, HALF, ROAD_HALF], W: [-HALF, -ROAD_HALF, -ROAD_HALF, ROAD_HALF] };
+const JR = new Map();
+export function junctionRects(p) {
+  let r = JR.get(p);
+  if (!r) { r = [[-ROAD_HALF, -ROAD_HALF, ROAD_HALF, ROAD_HALF], ...[...p.arms].map((a) => JRECT[a])]; JR.set(p, r); }
+  return r;
+}
+// Bout d'un bras : position (repère local, au bord de la case) et direction SORTANTE.
+export const JUNCTION_ENDS = { N: [0, -HALF, 0, -1], S: [0, HALF, 0, 1], E: [HALF, 0, 1, 0], W: [-HALF, 0, -1, 0] };
+// Écart latéral d'un carrefour : 0 sur la chaussée ; dehors, ROAD_HALF + la distance (exacte) à la chaussée, et le gradient est la direction qui s'en éloigne.
+// Ainsi le sol (|d| ≤ ROAD_HALF) et les bordures (bande ROAD_HALF..ROAD_HALF + RAIL_W) suivent tout le contour ; entre deux bras, la bordure fait un angle droit plein.
+function junctionSample(p, lx, lz, out) {
+  const half = p.size * HALF;
+  out.along = (half - lz) / (2 * half);
+  let best = Infinity, bx = 0, bz = 0;
+  for (const [x0, z0, x1, z1] of junctionRects(p)) {
+    const qx = lx < x0 ? x0 : lx > x1 ? x1 : lx, qz = lz < z0 ? z0 : lz > z1 ? z1 : lz;
+    const dx = lx - qx, dz = lz - qz, dd = dx * dx + dz * dz;
+    if (dd < best) { best = dd; bx = dx; bz = dz; }
+    if (dd === 0) break;
+  }
+  if (best === 0) { out.d = 0; out.gx = 1; out.gz = 0; return; }
+  const e = Math.sqrt(best);
+  out.d = ROAD_HALF + e; out.gx = bx / e; out.gz = bz / e;
 }

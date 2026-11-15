@@ -6,6 +6,15 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.71 — nouvelles pièces, étape 4 : carrefours en T et en croix
+
+**`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change. **Redéployer `submit-score`** (nouvelles pièces). Ajoutées à la FIN de l'ordre d'encodage.
+
+- **Croisement** (4 bras) et **carrefour en T** (3 bras ; la pièce tourne pour mettre la branche où l'on veut), au même niveau, famille « Carrefour » de l'éditeur. La chaussée est l'union du carré central et des bras ; les bordures suivent tout le contour (angle droit plein entre deux bras), une voiture lancée vers le côté fermé d'un T est retenue. Marquage : tirets sur les bras, ligne d'arrêt pointillée à l'entrée du carré.
+- **Circuit en 8** : un circuit peut repasser par le même croisement (perpendiculairement, ou dans l'autre sens). Scripts : `JX` (tout droit), `JXR` / `JXL` (tourner), `JT` / `JTL` (T, branche à droite / à gauche, tout droit), `JTD` / `JTG` (prendre la branche), `JR` / `JL` (arriver par la branche et tourner) ; le même jeton au même endroit réutilise le carrefour déjà posé (erreur claire s'il n'a pas de bras dans ce sens).
+- Mini-carte : un trait par bras. Vérificateur : un bout par bras.
+- **Tests** : `tools/test-etape4.mjs` (7 tests).
+
 ## Bêta 0.9.70 — nouvelles pièces, étape 3 : largeur de route variable
 
 **`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change. **Redéployer `submit-score`** (nouvelles pièces). Ajoutées à la FIN de l'ordre d'encodage.

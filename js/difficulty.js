@@ -21,7 +21,7 @@ export function difficultyMetrics(track) {
     wallCells: tiles.filter((t) => t.o).length + tiles.filter((t) => P(t).roll).length,
     loops: tiles.filter((t) => P(t).kind === 'loop').length,
     ribbons: tiles.filter((t) => P(t).kind === 'ribbon').length,          // tubes, tire-bouchons, vrilles : routes en ruban
-    specials: tiles.filter((t) => P(t).special || ['fork', 'ring', 'area'].includes(P(t).kind)).length,      // plaques, anneaux, bifurcations, plateformes
+    specials: tiles.filter((t) => P(t).special || ['fork', 'ring', 'area', 'junction'].includes(P(t).kind)).length,      // plaques, anneaux, bifurcations, plateformes
     movers: tiles.filter((t) => t.mv).length,
     tricky: tiles.filter((t) => TRICKY.has(t.s) || (t.s2 && TRICKY.has(t.s2))).length,
     obstacles: obst.length,

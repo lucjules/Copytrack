@@ -4,6 +4,7 @@ import { CELL, LEVEL_H, MAX_LEVEL, SURF_PHYS } from './constants.js';
 import { PIECES, forkBranchX, localToWorld, baseY, cpKind, toLocal, sampleLocal } from './pieces.js';
 import { Track } from './track.js';
 import { centerlineWorld } from './ribbons.js';
+import { junctionEnds } from './connect.js';
 import { mapGeometry, fitView, drawTrackMap } from './ui/trackMap.js';
 
 // ---- Pot de peinture : zones VIDES fermées -----------------------------------------------------------------------
@@ -272,6 +273,7 @@ export function shiftLevel(track, tiles, decos, d) {
 function endpoints(tile) {
   const P = PIECES[tile.t];
   if (P.kind === 'ring' || P.kind === 'area') return [];
+  if (P.kind === 'junction') return junctionEnds(tile, P);      // (0.9.71 : un bout par bras)
   if (P.kind === 'fork') {
     const half = P.size * (CELL / 2), y = baseY(tile);
     const mk = (branch, t, out) => {

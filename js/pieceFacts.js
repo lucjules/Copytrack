@@ -56,6 +56,8 @@ export const PIECE_FACTS = {
   narrowIn: {sol:'OK',murG:'—',murD:'—',plafond:'OK',incG:'—',incD:'—',surG:'—',surD:'—'},
   wideIn: {sol:'OK',murG:'—',murD:'—',plafond:'OK',incG:'—',incD:'—',surG:'—',surD:'—'},
   wide: {sol:'OK',murG:'—',murD:'—',plafond:'OK',incG:'—',incD:'—',surG:'—',surD:'—'},
+  cross: {sol:'OK',murG:'—',murD:'—',plafond:'OK',incG:'—',incD:'—',surG:'—',surD:'—'},
+  tee: {sol:'OK',murG:'—',murD:'—',plafond:'OK',incG:'—',incD:'—',surG:'—',surD:'—'},
   cv05: {sol:'OK',murG:'v≥150',murD:'v≥150',plafond:'OK',incG:'OK',incD:'OK',surG:'v≥150',surD:'v≥150'},
   cv1: {sol:'SAUT',murG:'v≥150',murD:'v≥150',plafond:'SAUT',incG:'v≥150',incD:'v≥150',surG:'v≥150',surD:'v≥150'},
   cv2: {sol:'SAUT',murG:'v≥150',murD:'CHUTE',plafond:'SAUT',incG:'v≥150',incD:'v≥150',surG:'v≥150',surD:'v≥150'},

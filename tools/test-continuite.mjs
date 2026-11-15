@@ -20,7 +20,7 @@ test('chaque type de pièce a ses extrémités : deux bouts (une bifurcation : t
   for (const type of Object.keys(PIECES)) {
     const e = tileEnds(Track.normalize({ t: type, x: 0, z: 0, l: 8, r: 0 }));
     const k = PIECES[type].kind;
-    assert.equal(e.length, k === 'ring' || k === 'area' ? 0 : k === 'fork' ? 3 : 2, type);
+    assert.equal(e.length, k === 'ring' || k === 'area' ? 0 : k === 'fork' ? 3 : k === 'junction' ? PIECES[type].arms.length : 2, type);      // (0.9.71 : un carrefour, un bout par bras)
     for (const x of e) for (const v of [x.x, x.y, x.z, x.dx, x.dy, x.dz, x.nx, x.ny, x.nz]) assert.ok(Number.isFinite(v), type);
   }
 });

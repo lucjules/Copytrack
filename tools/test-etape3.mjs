@@ -83,7 +83,7 @@ test('options : sans bordures, à l’envers, thème ; ni tunnel, ni mur, ni mou
   }
 });
 test('famille « Largeur » de l’éditeur ; rendu : les repères portent la demi-largeur, la bordure suit le bord (en biais sur un raccord)', () => {
-  assert.equal(FAMILY_ORDER[FAMILY_ORDER.length - 1], 'largeur');
+  assert.equal(FAMILY_ORDER[7], 'largeur');
   assert.equal(resolve('largeur', { w: 'wi' }), 'wideIn');
   assert.equal(Object.keys(FAMILIES.largeur.members).length, 4);
   const fr = stripsFor(Track.normalize({ t: 'narrowIn', x: 0, z: 0, l: 0, r: 0 }))[0];

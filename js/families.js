@@ -143,8 +143,16 @@ export const FAMILIES = {
     traits: [{ id: 'w', label: 'Largeur', values: [['n', 'Étroite (12 m)'], ['ni', 'Rétrécissement (24 → 12 m)'], ['wi', 'Élargissement (24 → 56 m)'], ['w', 'Large (56 m)']] }],
     members: { narrow: { w: 'n' }, narrowIn: { w: 'ni' }, wideIn: { w: 'wi' }, wide: { w: 'w' } },
   },
+  // 0.9.71 : carrefours au même niveau : croisement (4 bras) ou T (3 bras ; la pièce tourne pour mettre la branche où l'on veut).
+  carrefour: {
+    label: 'Carrefour',
+    hint: 'Croisement (4 bras) ou carrefour en T (3 bras), au même niveau. Un circuit peut repasser par un croisement (circuit en 8).',
+    icon: 'cross',
+    traits: [{ id: 'forme', label: 'Forme', values: [['x', 'Croisement'], ['t', 'En T']] }],
+    members: { cross: { forme: 'x' }, tee: { forme: 't' } },
+  },
 };
-export const FAMILY_ORDER = ['straight', 'turn', 'chicane', 'courbe', 'roll', 'loop', 'plaque', 'largeur'];
+export const FAMILY_ORDER = ['straight', 'turn', 'chicane', 'courbe', 'roll', 'loop', 'plaque', 'largeur', 'carrefour'];
 
 // type concret -> { fam, traits }
 const BY_TYPE = new Map();

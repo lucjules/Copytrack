@@ -262,6 +262,13 @@ export default {
   'Élargissement (24 → 56 m)': 'Widening (24 → 56 m)',
   'Large (56 m)': 'Wide (56 m)',
   'Largeur : Largeur': 'Width: Width',
+  // 0.9.71 : carrefours
+  'Croisement': 'Crossroads',
+  'Carrefour en T': 'T junction',
+  'Carrefour': 'Junction',
+  'Croisement (4 bras) ou carrefour en T (3 bras), au même niveau. Un circuit peut repasser par un croisement (circuit en 8).': 'Crossroads (4 arms) or T junction (3 arms), on one level. A track can go through a crossroads twice (figure of eight).',
+  'En T': 'T-shaped',
+  'Carrefour : Forme': 'Junction: Shape',
   // 0.9.68 : style du portique (départ, arrivée, checkpoint)
   'Portique': 'Gate',
   'Ligne au sol': 'Line on the ground',

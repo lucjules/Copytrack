@@ -2,7 +2,7 @@
 // Le maillage complet (tronçons, objets mobiles, lampes) est assemblé par TrackView dans trackMesh.js.
 import * as THREE from './vendor/three.module.min.js';
 import { CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T } from './constants.js';
-import { PIECES, SURFACES, RING_R, RING_Y, arcParams, sbendPoint, plateShape, plateEdges, plateOutline, areaCentroid, roadHalf, baseY, tileCenter, tileParam, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
+import { PIECES, SURFACES, RING_R, RING_Y, arcParams, sbendPoint, plateShape, plateEdges, plateOutline, areaCentroid, roadHalf, junctionRects, baseY, tileCenter, tileParam, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
 import { WATER_DROP, boatDrop } from './track/shared.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { renderOptions } from './renderOptions.js';
@@ -630,6 +630,61 @@ function plate(gb, glow, tile, fx) {
   if (s) { const c = areaCentroid(P); surfaceDecals(glow, lineStrip(c.x, c.z + HALF * 0.6, c.z - HALF * 0.6, y, y, 4), tile, true); }
 }
 
+// 0.9.71 : carrefour : la chaussée est l'union du carré central et des bras (pieces.js : junctionRects) ; les bordures suivent tout le contour (côté d'un bras,
+// ou côté du carré central quand le bras manque), avec un dé à l'angle entre deux bras (la bande de bordure de la physique y est un angle droit plein).
+const JDIR = { N: [0, -1, 1, 0], S: [0, 1, -1, 0], E: [1, 0, 0, 1], W: [-1, 0, 0, -1] };      // normale sortante (nx, nz), tangente (tx, tz)
+function junctionMesh(gb, glow, tile, style) {
+  const P = PIECES[tile.t], y = baseY(tile), y0 = y - SLAB_T, rails = !hasNoRails(tile), W = ROAD_HALF;
+  const slab = (style.pal && style.pal.slab) || PALETTE.slab, under = (style.pal && style.pal.under) || PALETTE.under;
+  const rects = junctionRects(P);
+  rects.forEach(([x0, z0, x1, z1], i) => {
+    gb.quad([x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0], style.road[i % 2 ? 1 : 0]);
+    gb.quad([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], under);
+  });
+  // Marquages : tirets au milieu de chaque bras, ligne d'arrêt pointillée à l'entrée du carré central.
+  for (const a of P.arms) {
+    const [nx, nz, tx, tz] = JDIR[a];
+    for (let k = 0; k < 2; k++) {
+      const s0 = W + 0.6 + k * 1.8, s1 = s0 + 1.0, P0 = [nx * s0, nz * s0], P1 = [nx * s1, nz * s1];
+      gb.quad([P0[0] - tx * 0.2, y + 0.02, P0[1] - tz * 0.2], [P0[0] + tx * 0.2, y + 0.02, P0[1] + tz * 0.2], [P1[0] + tx * 0.2, y + 0.02, P1[1] + tz * 0.2], [P1[0] - tx * 0.2, y + 0.02, P1[1] - tz * 0.2], style.line);
+    }
+    for (let k = -5; k <= 4; k += 2) {
+      const a0 = k * 2.2 + 0.5, a1 = a0 + 1.6, c = W - 0.4;
+      const A = [nx * c + tx * a0, nz * c + tz * a0], B = [nx * c + tx * a1, nz * c + tz * a1], C2 = [nx * (c + 0.5) + tx * a1, nz * (c + 0.5) + tz * a1], D = [nx * (c + 0.5) + tx * a0, nz * (c + 0.5) + tz * a0];
+      gb.quad([A[0], y + 0.02, A[1]], [B[0], y + 0.02, B[1]], [C2[0], y + 0.02, C2[1]], [D[0], y + 0.02, D[1]], style.line);
+    }
+  }
+  // Contour : segments (A → B) et normale sortante m de la bordure posée dessus.
+  const segs = [];
+  for (const d of ['N', 'E', 'S', 'W']) {
+    const [nx, nz, tx, tz] = JDIR[d];
+    if (P.arms.includes(d)) for (const s of [-1, 1]) segs.push([[nx * W + s * tx * W, nz * W + s * tz * W], [nx * HALF + s * tx * W, nz * HALF + s * tz * W], [s * tx, s * tz]]);
+    else segs.push([[nx * W - tx * W, nz * W - tz * W], [nx * W + tx * W, nz * W + tz * W], [nx, nz]]);
+  }
+  for (const [A, B, m] of segs) {
+    const h = rails ? RAIL_H : 0, o = rails ? RAIL_W : 0;
+    const A2 = [A[0] + m[0] * o, A[1] + m[1] * o], B2 = [B[0] + m[0] * o, B[1] + m[1] * o];
+    if (rails) {
+      const n = Math.max(1, Math.round(Math.hypot(B[0] - A[0], B[1] - A[1]) / 4));
+      for (let i = 0; i < n; i++) {
+        const u0 = i / n, u1 = (i + 1) / n, L = (p, q, u) => [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u];
+        const a = L(A, B, u0), b = L(A, B, u1), a2 = L(A2, B2, u0), b2 = L(A2, B2, u1), col = i % 2 ? style.railA : style.railB;
+        gb.quad([a[0], y + h, a[1]], [b[0], y + h, b[1]], [b2[0], y + h, b2[1]], [a2[0], y + h, a2[1]], col);
+        gb.quad([a[0], y, a[1]], [b[0], y, b[1]], [b[0], y + h, b[1]], [a[0], y + h, a[1]], col);
+      }
+      gb.quad([A2[0], y0, A2[1]], [B2[0], y0, B2[1]], [B2[0], y + h, B2[1]], [A2[0], y + h, A2[1]], slab);
+      gb.quad([A[0], y0, A[1]], [A2[0], y0, A2[1]], [B2[0], y0, B2[1]], [B[0], y0, B[1]], under);
+    } else gb.quad([A[0], y0, A[1]], [B[0], y0, B[1]], [B[0], y, B[1]], [A[0], y, A[1]], slab);
+  }
+  // Dés aux angles entre deux bras voisins.
+  if (rails) for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const ax = sx > 0 ? 'E' : 'W', az = sz > 0 ? 'S' : 'N';
+    if (!(P.arms.includes(ax) && P.arms.includes(az))) continue;
+    const x0 = sx * W, z0 = sz * W, x1 = sx * (W + RAIL_W), z1 = sz * (W + RAIL_W);
+    gb.box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.max(x0, x1), y + RAIL_H, Math.max(z0, z1), style.railA);
+  }
+}
+
 // Portique (départ / checkpoint / arrivée).
 // Portique de départ, d'arrivée ou de checkpoint. 0.9.68 : quatre styles (option gs, visuelle) : 0 portique (poteaux et traverse), 1 ligne au sol
 // (deux balises basses), 2 arche (demi-cercle), 3 pylônes (deux hauts mâts lumineux, sans traverse). Le marquage au sol est le même pour tous.
@@ -979,6 +1034,8 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
     ringMesh(gb, glow, tile);
   } else if (p.kind === 'fork') {
     forkMesh(gb, glow, tile, styleFor(tile), fx);
+  } else if (p.kind === 'junction') {
+    junctionMesh(gb, glow, tile, styleFor(tile));
   } else if (tile.t === 'tube' || tile.t === 'tubeIn' || tile.t === 'tubeMid') {
     crossSweep(gb, glow, tile, styleFor({ s: '', th: tile.th, col: tile.col }));
     // Revêtement d'une section de tube : bandes lumineuses au fond.

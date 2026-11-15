@@ -214,6 +214,7 @@ const FAM = (type) => {
   if (P.kind === 'loop') return 'Loopings';
   if (P.kind === 'fork') return 'Bifurcations';
   if (P.kind === 'sbend') return 'Chicanes';
+  if (P.kind === 'junction') return 'Carrefours';
   if (P.kind === 'ribbon') return 'Rubans (vrille, tire-bouchon, tubes, virages relevés, montée en L…)';
   if (P.kind === 'arc') return 'Virages';
   if (P.kind === 'area' || P.kind === 'ring') return 'Plateforme et anneaux';

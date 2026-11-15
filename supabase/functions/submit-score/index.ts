@@ -656,6 +656,22 @@ var PIECES = {
       28
     ]
   },
+  // 0.9.71 : carrefours au même niveau (arms : bras de route présents, repère local : N = avant (−z), S = arrière (+z, l'entrée), E = droite, W = gauche).
+  // La chaussée est l'union du carré central et des bras (voir junctionSample) ; les bordures suivent tout son contour.
+  cross: {
+    label: "Croisement",
+    kind: "junction",
+    size: 1,
+    rise: 0,
+    arms: "NSEW"
+  },
+  tee: {
+    label: "Carrefour en T",
+    kind: "junction",
+    size: 1,
+    rise: 0,
+    arms: "NSE"
+  },
   // « Courbe » : un tremplin courbé (virage montant). Serré = 1 case, grand = 2×2.
   cv05: {
     label: "Courbe serr\xE9e \xB7 inclinaison \xBD",
@@ -1253,7 +1269,10 @@ var PIECE_ORDER = [
   "narrow",
   "narrowIn",
   "wideIn",
-  "wide"
+  "wide",
+  // 0.9.71 : carrefours (à la suite : ne jamais réordonner)
+  "cross",
+  "tee"
 ];
 var SURFACES = {
   "": {
@@ -1606,6 +1625,7 @@ function flagAllowed(type, flag, tile = null, val = 0) {
     return !tile || tile.cp === 1;
   }
   if (p.kind === "ring" || p.kind === "fork") return false;
+  if (p.kind === "junction") return flag === "nb";
   if (p.kind === "sbend") return flag === "nb" || flag === "tn";
   if (flag === "o") {
     if (!(val >= 1 && val <= MAX_O) || p.special || p.noRails || hasConflict("o", tile)) return false;
@@ -1881,6 +1901,8 @@ function sampleLocal(tile, lx, lz, out) {
     forkSample(p, lx, lz, out);
   } else if (p.kind === "sbend") {
     sbendSample(p, lx, lz, out);
+  } else if (p.kind === "junction") {
+    junctionSample(p, lx, lz, out);
   } else if (p.kind === "area" && p.shape) {
     if (out.inFootprint) out.inFootprint = inPlate(p, lx, lz);
     out.d = 0;
@@ -2093,6 +2115,102 @@ function widthRemap(p, lx, lz, half, out) {
   out.gx = c;
   out.gz = sg * k * c;
   return out;
+}
+var JRECT = {
+  N: [
+    -ROAD_HALF,
+    -HALF,
+    ROAD_HALF,
+    -ROAD_HALF
+  ],
+  S: [
+    -ROAD_HALF,
+    ROAD_HALF,
+    ROAD_HALF,
+    HALF
+  ],
+  E: [
+    ROAD_HALF,
+    -ROAD_HALF,
+    HALF,
+    ROAD_HALF
+  ],
+  W: [
+    -HALF,
+    -ROAD_HALF,
+    -ROAD_HALF,
+    ROAD_HALF
+  ]
+};
+var JR = /* @__PURE__ */ new Map();
+function junctionRects(p) {
+  let r = JR.get(p);
+  if (!r) {
+    r = [
+      [
+        -ROAD_HALF,
+        -ROAD_HALF,
+        ROAD_HALF,
+        ROAD_HALF
+      ],
+      ...[
+        ...p.arms
+      ].map((a) => JRECT[a])
+    ];
+    JR.set(p, r);
+  }
+  return r;
+}
+var JUNCTION_ENDS = {
+  N: [
+    0,
+    -HALF,
+    0,
+    -1
+  ],
+  S: [
+    0,
+    HALF,
+    0,
+    1
+  ],
+  E: [
+    HALF,
+    0,
+    1,
+    0
+  ],
+  W: [
+    -HALF,
+    0,
+    -1,
+    0
+  ]
+};
+function junctionSample(p, lx, lz, out) {
+  const half = p.size * HALF;
+  out.along = (half - lz) / (2 * half);
+  let best = Infinity, bx = 0, bz = 0;
+  for (const [x0, z0, x1, z1] of junctionRects(p)) {
+    const qx = lx < x0 ? x0 : lx > x1 ? x1 : lx, qz = lz < z0 ? z0 : lz > z1 ? z1 : lz;
+    const dx = lx - qx, dz = lz - qz, dd = dx * dx + dz * dz;
+    if (dd < best) {
+      best = dd;
+      bx = dx;
+      bz = dz;
+    }
+    if (dd === 0) break;
+  }
+  if (best === 0) {
+    out.d = 0;
+    out.gx = 1;
+    out.gz = 0;
+    return;
+  }
+  const e = Math.sqrt(best);
+  out.d = ROAD_HALF + e;
+  out.gx = bx / e;
+  out.gz = bz / e;
 }
 
 // js/ribbons.js
@@ -8016,6 +8134,57 @@ function scriptTrack(name, script, opts2 = {}) {
     place(type, Math.round(x + 0.5 - e.x - size / 2), Math.round(z + 0.5 - e.z - size / 2), l, rev ? h + 2 : h, rev);
     adv(h, size);
   };
+  const junction = (type, r, turn) => {
+    let J = tr.tilesAt(x, z).find((t) => PIECES[t.t].kind === "junction" && t.l === l);
+    if (!J) J = place(type, x, z, l, r, false, true);
+    const back = h + 2 & 3, out = turn ? h + (turn > 0 ? 1 : 3) & 3 : h;
+    const arms = new Set([
+      ...PIECES[J.t].arms
+    ].map((a) => {
+      const v = rot(J.r, ...{
+        N: [
+          0,
+          -1
+        ],
+        S: [
+          0,
+          1
+        ],
+        E: [
+          1,
+          0
+        ],
+        W: [
+          -1,
+          0
+        ]
+      }[a]);
+      return DIRS.findIndex((d) => d[0] === Math.round(v.x) && d[1] === Math.round(v.z));
+    }));
+    if (!arms.has(back) || !arms.has(out)) throw new Error(`${name} : le carrefour en (${x}, ${z}) n'a pas de bras dans ce sens`);
+    const f = DIRS[h], rt = DIRS[h + 1 & 3], s = turn || 0, cx = (x + 0.5) * CELL, cz = (z + 0.5) * CELL, y = baseY(J), H = CELL / 2, pts = [];
+    for (let i = 0; i <= 8; i++) {
+      const u = i / 8;
+      if (!s) pts.push([
+        cx + f[0] * H * (2 * u - 1),
+        y,
+        cz + f[1] * H * (2 * u - 1),
+        0
+      ]);
+      else {
+        const th = Math.PI / 2 * u, ax = cx - f[0] * H + s * rt[0] * H, az = cz - f[1] * H + s * rt[1] * H;
+        pts.push([
+          ax - s * rt[0] * H * dcos(th) + f[0] * H * dsin(th),
+          y,
+          az - s * rt[1] * H * dcos(th) + f[1] * H * dsin(th),
+          0
+        ]);
+      }
+    }
+    pushPts(pts);
+    h = out;
+    adv(h);
+  };
   const sbendPiece = (type) => {
     const P = PIECES[type], m = P.mirror, size = P.size;
     const e = rot(h, -m * (size - 1) / 2, (size - 1) / 2);
@@ -8297,6 +8466,36 @@ function scriptTrack(name, script, opts2 = {}) {
         h = h + (sgn > 0 ? 1 : 3) & 3;
         break;
       }
+      // 0.9.71 : carrefours. JX croisement tout droit, JXR / JXL en tournant ; JT carrefour en T, la branche à droite (JTL : à gauche), tout droit ;
+      // JTD / JTG : on prend la branche (à droite / à gauche) ; JR / JL : on arrive par la branche du T et on tourne à droite / à gauche.
+      // Repasser par un carrefour déjà posé (circuit en 8) : le même jeton, au même endroit et au même niveau.
+      case "JX":
+        junction("cross", h, 0);
+        break;
+      case "JXR":
+        junction("cross", h, 1);
+        break;
+      case "JXL":
+        junction("cross", h, -1);
+        break;
+      case "JT":
+        junction("tee", h, 0);
+        break;
+      case "JTL":
+        junction("tee", h + 2, 0);
+        break;
+      case "JTD":
+        junction("tee", h, 1);
+        break;
+      case "JTG":
+        junction("tee", h + 2, -1);
+        break;
+      case "JR":
+        junction("tee", h + 1, 1);
+        break;
+      case "JL":
+        junction("tee", h + 1, -1);
+        break;
       // 0.9.70 : largeur de route : N route étroite (N3 : trois), NI rétrécissement (24 → 12 m), NO élargissement (12 → 24 m) ;
       // WI élargissement vers la route large (3×3, 24 → 56 m), W route large (3×3), WO retour à la largeur normale.
       case "N":
@@ -15072,4 +15271,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "11d083c3d5f27062";
+globalThis.__COPYTRACK_BUILD__ = "cfbe7265e42a37bc";

@@ -7,7 +7,7 @@
 //   drawTrackMap(g, geom, view, opts)  dessine dans un contexte 2D (style 'thumb' : la miniature d'origine, au pixel près ; 'map' : la grande carte)
 //   createTrackMap(canvas, track, o)   grande carte interactive : molette, glisser, pincer, double clic, clavier
 import { CELL } from '../constants.js';
-import { PIECES, SURFACES, forkBranchX, localToWorld, cpKind, plateOutline } from '../pieces.js';
+import { PIECES, SURFACES, forkBranchX, localToWorld, cpKind, plateOutline, JUNCTION_ENDS } from '../pieces.js';
 import { centerlineWorld } from '../ribbons.js';
 import { isObstacle } from '../obstacles.js';
 
@@ -46,6 +46,9 @@ export function mapGeometry(track) {
         const p = localToWorld(t, forkBranchX(P, tt, br), half - 2 * half * tt);
         return [p.x, 0, p.z];
       }));
+    } else if (P.kind === 'junction') {
+      // 0.9.71 : un trait par bras, du centre au bord de la case
+      lines = [...P.arms].map((a) => { const [lx, lz] = JUNCTION_ENDS[a], c = localToWorld(t, 0, 0), e = localToWorld(t, lx, lz); return [[c.x, 0, c.z], [e.x, 0, e.z]]; });
     } else lines = [centerlineWorld(t, 6)];
     const surf = [t.s || '', P.kind === 'fork' ? (t.s2 === '-' ? '' : t.s2 || t.s || '') : t.s || ''];
     for (const s of surf) if (ZONE_SURFACES.includes(s)) zones.add(s);
