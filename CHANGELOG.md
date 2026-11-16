@@ -6,6 +6,20 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.11 — chapitre 12 (Atelier des mécanismes) refait : les 72 circuits sont construits autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits de l'Atelier changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits de l'Atelier gardent leur leçon **telle quelle** : le début du tracé et les mécanismes d'origine (bumpers, piques, piques escamotables, balancier, mur coulissant, marteau, balayeur, ascenseur, glissière) sont au même point du chemin, donc franchis au même instant. Une **vitrine des nouvelles pièces** suit la leçon :
+  - **Garde-Fous** (35,2 s) : chicanes longues, route large sous un portique, grand S, murs pleins et blocs ; 19 nouveautés.
+  - **En Cadence** (43,7 s) : chicanes longues, croisement traversé deux fois (trois virages géants), passage étroit ; 16 nouveautés.
+  - **Le Pendule** (35,2 s) : chicanes longues, route large, tube qui tourne ; 17 nouveautés.
+  - **Rotors** (33,9 s) : chicanes longues, **plaque** traversée par la route, route large ; 16 nouveautés.
+  - **Monte-Charge** (32,7 s) : chicanes longues, petit **looping modulaire**, route large, murs en L ; 16 nouveautés.
+  - **Le Grand Atelier** (39,4 s) : chicanes rapides, route large, tube qui tourne ; 17 nouveautés.
+- Contrat du profil « mécanisme » : 14 à **45 s** (32 avant). `tools/test-etape6.mjs` couvre maintenant **les 12 chapitres** (Atelier : 25 à 45 s ; les autres : 45 à 85 s).
+- Difficulté estimée : seuils des étoiles recalés une dernière fois sur les 72 circuits refaits (`[7.3, 9.8, 14.1, 20.9]`).
+
 ## Bêta 0.10.10 — chapitre 11 (Canyon de cristal) refait autour des nouvelles pièces
 
 **`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 11 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.

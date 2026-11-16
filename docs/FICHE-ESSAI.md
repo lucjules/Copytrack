@@ -590,48 +590,48 @@ _Piques, balancier, marteau, balayeur, ascenseur, glissière : chaque mécanisme
 
 ### 67. Garde-Fous — Mécanisme, ◆◇◇◇◇
 
-- Départ : quatre boosters → vague. Au programme : les premiers obstacles, bumpers (ils repoussent) et piques fixes, sur les bords : rester sur la route les évite, couper un virage les réveille.
-- Pilote automatique : **18.1 s** · médailles : cristal 17 · or 17.9 · argent 20.6 · bronze 24.2
+- Départ : quatre boosters → vague. Au programme : bumpers (ils repoussent) et piques fixes sur les bords : rester sur la route les évite. Puis chicanes longues, route large sous un portique, grand S.
+- Pilote automatique : **35.2 s** · médailles : cristal 33.5 · or 35.2 · argent 40.5 · bronze 47.6
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 68. En Cadence — Mécanisme, ◆◇◇◇◇
 
-- Départ : trois boosters → trois cases. Au programme : des piques escamotables en travers de la route (trois secondes de cycle, une et demie dehors) : on passe quand elles sont rentrées.
-- Pilote automatique : **18.5 s** · médailles : cristal 17.5 · or 18.4 · argent 21.2 · bronze 24.9
+- Départ : trois boosters → trois cases. Au programme : piques escamotables en travers de la route : on passe quand elles sont rentrées. Puis chicanes longues, croisement traversé deux fois, passage étroit.
+- Pilote automatique : **43.7 s** · médailles : cristal 41.5 · or 43.7 · argent 50.3 · bronze 59
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 69. Le Pendule — Mécanisme, ◆◆◇◇◇
 
-- Départ : deux boosters → vague. Au programme : une boule balancier qui balaie la route, puis un mur coulissant : on lit leur rythme et on passe dans le vide.
-- Pilote automatique : **18.4 s** · médailles : cristal 17.3 · or 18.2 · argent 20.9 · bronze 24.5
+- Départ : deux boosters → vague. Au programme : une boule balancier puis un mur coulissant : on lit leur rythme. Puis chicanes longues, route large sous un portique, tube qui tourne à droite puis à gauche.
+- Pilote automatique : **35.2 s** · médailles : cristal 33.5 · or 35.2 · argent 40.5 · bronze 47.6
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 70. Rotors — Mécanisme, ◆◆◇◇◇
 
-- Départ : trois cases → trois boosters. Au programme : un marteau tournant au milieu de la route, puis un balayeur : des obstacles qui tournent, on entre juste après leur passage.
-- Pilote automatique : **19.9 s** · médailles : cristal 18.8 · or 19.8 · argent 22.8 · bronze 26.7
+- Départ : trois cases → trois boosters. Au programme : un marteau tournant puis un balayeur : on entre juste après leur passage. Puis chicanes longues, une plaque traversée, route large sous un portique.
+- Pilote automatique : **33.9 s** · médailles : cristal 32.2 · or 33.9 · argent 38.9 · bronze 45.7
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 71. Monte-Charge — Mécanisme, ◆◆◆◇◇
 
-- Départ : cinq boosters → vague. Au programme : la route bouge, un ascenseur (la dalle monte puis redescend) et une glissière (elle se décale sur le côté), comme dans l’éditeur.
-- Pilote automatique : **18.1 s** · médailles : cristal 17.1 · or 18 · argent 20.7 · bronze 24.3
+- Départ : cinq boosters → vague. Au programme : la route bouge, un ascenseur (la dalle monte puis redescend) et une glissière. Puis chicanes longues, petit looping modulaire, route large sous un portique.
+- Pilote automatique : **32.7 s** · médailles : cristal 31 · or 32.7 · argent 37.6 · bronze 44.1
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 72. Le Grand Atelier — Mécanisme, ◆◆◆◇◇
 
-- Départ : deux boosters → deux cases. Au programme : le tour d’horizon, un marteau, un balancier puis un mur coulissant à la suite : les mécanismes des circuits d’avant reviennent d’un coup.
-- Pilote automatique : **20.3 s** · médailles : cristal 19.3 · or 20.4 · argent 23.4 · bronze 27.5
+- Départ : deux boosters → deux cases. Au programme : un marteau, un balancier puis un mur coulissant à la suite. Puis chicanes rapides, route large sous un portique, tube qui tourne à droite puis à gauche.
+- Pilote automatique : **39.4 s** · médailles : cristal 37.5 · or 39.4 · argent 45.3 · bronze 53.2
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________

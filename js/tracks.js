@@ -811,74 +811,87 @@ export const BUILTIN_TRACKS = [
   {
     // Chapitre 12 (Atelier, bonus) · 1/6 — MÉCANISME : bumpers et piques fixes sur les bords : ils ne gênent que si l’on coupe les virages.
     // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    // 0.10.11 : la leçon d'abord (tracé et obstacles d'origine, au même point du chemin, donc au même instant), puis une vitrine des nouvelles pièces : chicanes longues,
+    // route large sous un portique de poutres, grand S ; deux murs pleins au départ, deux blocs à l'arrivée.
     id: 'garde', name: 'Garde-Fous', decor: 'atelier', difficulty: 1, profil: 'atelier',
     meca: ['bumper', 'spikes'],
-    appris: 'Départ : quatre boosters → vague. Au programme : les premiers obstacles, bumpers (ils repoussent) et piques fixes, sur les bords : rester sur la route les évite, couper un virage les réveille.',
+    appris: 'Départ : quatre boosters → vague. Au programme : bumpers (ils repoussent) et piques fixes sur les bords : rester sur la route les évite. Puis chicanes longues, route large sous un portique, grand S.',
     goal: { id: 'nowall' },
     opts: { l: 6 }, pilot: { vCap: 66 },
-    obst: [{ k: 'bumper', at: 0.3, side: -7.5, s: 0.8 }, { k: 'spikes', at: 0.55, side: 7.5, s: 0.7 }, { k: 'bumper', at: 0.8, side: 7.5, s: 0.8 }],
-    script: 'start B4 [cds1] S [crs1] S2 B HR S2 C S HL S B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 17, or: 17.9, argent: 20.6, bronze: 24.2 },
+    script: 'start*2 B4 [cds1] S [crs1] S2 B HR S2 C S HL S B [cdi1] [dn2] [cdo1] B2 S ZR3 S ZL3 S WI W2 WO S2 ZZR S B finish*2',
+    obst: [{ k: 'bumper', at: 0.15744, side: -7.5, s: 0.8 }, { k: 'spikes', at: 0.28893, side: 7.5, s: 0.7 }, { k: 'bumper', at: 0.41696, side: 7.5, s: 0.8 }, { k: 'wallS', at: 0.07, side: 26, rot: Math.PI / 2 }, { k: 'wallS', at: 0.07, side: -26, rot: Math.PI / 2 }, { k: 'board_right', at: 0.515, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.6, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.761, side: 0, s: 2 }, { k: 'beamPost', at: 0.755, side: 36 }, { k: 'beamPost', at: 0.755, side: -36 }, { k: 'board_right', at: 0.85, side: -20, rot: Math.PI }, { k: 'block', at: 0.95, side: 28 }, { k: 'block', at: 0.95, side: -28 }],
+    medals: { cristal: 33.5, or: 35.2, argent: 40.5, bronze: 47.6 },
   },
   {
     // Chapitre 12 (Atelier, bonus) · 2/6 — MÉCANISME : piques escamotables en travers de la route : on passe quand elles sont rentrées.
     // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    // 0.10.11 : la leçon d'abord (tracé et obstacles d'origine, au même point du chemin, donc au même instant), puis une vitrine des nouvelles pièces : chicanes longues,
+    // CROISEMENT traversé deux fois (boucle de trois virages géants), passage ÉTROIT entre des piliers fins.
     id: 'cadence', name: 'En Cadence', decor: 'atelier', difficulty: 1, profil: 'atelier',
     meca: ['spikesPop'],
-    appris: 'Départ : trois boosters → trois cases. Au programme : des piques escamotables en travers de la route (trois secondes de cycle, une et demie dehors) : on passe quand elles sont rentrées.',
+    appris: 'Départ : trois boosters → trois cases. Au programme : piques escamotables en travers de la route : on passe quand elles sont rentrées. Puis chicanes longues, croisement traversé deux fois, passage étroit.',
     goal: { id: 'norespawn' },
     opts: { l: 6 }, pilot: { vCap: 60 },
-    obst: [{ k: 'spikesPop', at: 0.104, side: 0, s: 1.1, ph: 0.583 }, { k: 'spikesPop', at: 0.213, side: 0, s: 1.1, ph: 0.167 }],
-    script: 'start B3 S3 [crs1] S B HR S2 C S2 HL S B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 17.5, or: 18.4, argent: 21.2, bronze: 24.9 },
+    script: 'start*2 B3 S3 [crs1] S B HR S2 C S2 HL S B [cdi1] [dn2] [cdo1] B2 ZR3 S ZL3 S JX S4 XR XR XR S4 JX S NI N NO S B finish*2',
+    obst: [{ k: 'spikesPop', at: 0.04178, side: 0, s: 1.1, ph: 0.583 }, { k: 'spikesPop', at: 0.0876, side: 0, s: 1.1, ph: 0.167 }, { k: 'board_right', at: 0.385, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.545, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.632, side: -24, rot: Math.PI }, { k: 'slab', at: 0.81, side: 26 }, { k: 'slab', at: 0.81, side: -26 }, { k: 'board_warn', at: 0.895, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.919, side: 14 }, { k: 'pillarThin', at: 0.919, side: -14 }],
+    medals: { cristal: 41.5, or: 43.7, argent: 50.3, bronze: 59 },
   },
   {
     // Chapitre 12 (Atelier, bonus) · 3/6 — MÉCANISME : une boule balancier puis un mur coulissant : il faut lire leur rythme.
     // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    // 0.10.11 : la leçon d'abord (tracé et obstacles d'origine, au même point du chemin, donc au même instant), puis une vitrine des nouvelles pièces : chicanes longues,
+    // route large sous un portique, TUBE qui tourne à droite puis à gauche ; deux blocs à l'arrivée.
     id: 'pendule', name: 'Le Pendule', decor: 'atelier', difficulty: 2, profil: 'atelier',
     meca: ['pendulum', 'slider'],
-    appris: 'Départ : deux boosters → vague. Au programme : une boule balancier qui balaie la route, puis un mur coulissant : on lit leur rythme et on passe dans le vide.',
+    appris: 'Départ : deux boosters → vague. Au programme : une boule balancier puis un mur coulissant : on lit leur rythme. Puis chicanes longues, route large sous un portique, tube qui tourne à droite puis à gauche.',
     goal: { id: 'nowall' },
     opts: { l: 6 }, pilot: { vCap: 66 },
-    obst: [{ k: 'pendulum', at: 0.1, side: 0, s: 1, ph: 0 }, { k: 'slider', at: 0.6, side: 0, s: 1, ph: 0.75 }],
-    script: 'start B2 [crs1] S2 [cds1] S2 HR S B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 17.3, or: 18.2, argent: 20.9, bronze: 24.5 },
+    script: 'start*2 B2 [crs1] S2 [cds1] S2 HR S B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 S ZR3 S ZL3 S WI W WO S TI TM TRR TM TLL TM TO S B finish*2',
+    obst: [{ k: 'pendulum', at: 0.0433, side: 0, s: 1, ph: 0 }, { k: 'slider', at: 0.25279, side: 0, s: 1, ph: 0.75 }, { k: 'board_right', at: 0.415, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.5, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.606, side: 0, s: 2 }, { k: 'pillar', at: 0.6, side: 36 }, { k: 'pillar', at: 0.6, side: -36 }, { k: 'board_warn', at: 0.65, side: 18, rot: Math.PI }, { k: 'block', at: 0.96, side: 28 }, { k: 'block', at: 0.96, side: -28 }],
+    medals: { cristal: 33.5, or: 35.2, argent: 40.5, bronze: 47.6 },
   },
   {
     // Chapitre 12 (Atelier, bonus) · 4/6 — MÉCANISME : un marteau tournant puis un balayeur : des obstacles qui tournent.
     // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    // 0.10.11 : la leçon d'abord (tracé et obstacles d'origine, au même point du chemin, donc au même instant), puis une vitrine des nouvelles pièces : chicane longue,
+    // une PLAQUE bordée (entre deux blocs) traversée par la route, chicane longue, route large sous un portique.
     id: 'rotors', name: 'Rotors', decor: 'atelier', difficulty: 2, profil: 'atelier',
     meca: ['hammer', 'sweeper'],
-    appris: 'Départ : trois cases → trois boosters. Au programme : un marteau tournant au milieu de la route, puis un balayeur : des obstacles qui tournent, on entre juste après leur passage.',
+    appris: 'Départ : trois cases → trois boosters. Au programme : un marteau tournant puis un balayeur : on entre juste après leur passage. Puis chicanes longues, une plaque traversée, route large sous un portique.',
     goal: { id: 'norespawn' },
     opts: { l: 6 }, pilot: { vCap: 62 },
-    obst: [{ k: 'hammer', at: 0.1, side: 0, s: 1, ph: 0.438 }, { k: 'sweeper', at: 0.3, side: 0, s: 1, ph: 0 }],
-    script: 'start S3 B3 [cds1] S [crs1] S2 HR S B C S2 HL S B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 18.8, or: 19.8, argent: 22.8, bronze: 26.7 },
+    script: 'start*2 S3 B3 [cds1] S [crs1] S2 HR S B C S2 HL S B [cdi1] [dn2] [cdo1] B2 S ZR3 S [plate3]*10 S ZL3 S WI W WO S2 B finish*2',
+    obst: [{ k: 'hammer', at: 0.0583, side: 0, s: 1, ph: 0.438 }, { k: 'sweeper', at: 0.17138, side: 0, s: 1, ph: 0 }, { k: 'board_right', at: 0.57, side: -20, rot: Math.PI }, { k: 'block', at: 0.69, side: 60 }, { k: 'block', at: 0.69, side: -60 }, { k: 'board_left', at: 0.74, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.873, side: 0, s: 2 }, { k: 'pillarBase', at: 0.867, side: 36 }, { k: 'pillarBase', at: 0.867, side: -36 }],
+    medals: { cristal: 32.2, or: 33.9, argent: 38.9, bronze: 45.7 },
   },
   {
     // Chapitre 12 (Atelier, bonus) · 5/6 — MÉCANISME : un ascenseur et une glissière : la route elle-même bouge.
     // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    // 0.10.11 : la leçon d'abord (tracé et obstacles d'origine, au même point du chemin, donc au même instant), puis une vitrine des nouvelles pièces : chicanes longues,
+    // un petit LOOPING MODULAIRE (sans mur), route large sous un portique de poutres ; deux murs en L à l'arrivée.
     id: 'montecharge', name: 'Monte-Charge', decor: 'atelier', difficulty: 3, profil: 'atelier',
     meca: ['lift', 'slide'],
-    appris: 'Départ : cinq boosters → vague. Au programme : la route bouge, un ascenseur (la dalle monte puis redescend) et une glissière (elle se décale sur le côté), comme dans l’éditeur.',
+    appris: 'Départ : cinq boosters → vague. Au programme : la route bouge, un ascenseur (la dalle monte puis redescend) et une glissière. Puis chicanes longues, petit looping modulaire, route large sous un portique.',
     goal: { id: 'nowall' },
     opts: { l: 6 }, pilot: { vCap: 64 },
     movers: [{ ms: 100, ma: 1 }, { ms: 100, ma: 0.5 }],      // PHYS_VER 36 : glissière d'une demi-case (avant une case) : se décaler de 32 m à 220 km/h demande ~170 m avec le braquage borné selon la vitesse
-    script: 'start B5 S [crs1] S2~ B HR S2= C S HL S B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 17.1, or: 18, argent: 20.7, bronze: 24.3 },
+    script: 'start*2 B5 S [crs1] S2~ B HR S2= C S HL S B [cdi1] [dn2] [cdo1] B2 S ZR3 S ZL3 S LPR0 S WI W WO S2 B finish*2',
+    obst: [{ k: 'board_right', at: 0.488, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.587, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.685, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.882, side: 0, s: 2 }, { k: 'beamPost', at: 0.876, side: 36 }, { k: 'beamPost', at: 0.876, side: -36 }, { k: 'wallSL', at: 0.95, side: 28 }, { k: 'wallSL', at: 0.95, side: -28, rot: Math.PI }],
+    medals: { cristal: 31, or: 32.7, argent: 37.6, bronze: 44.1 },
   },
   {
     // Chapitre 12 (Atelier, bonus) · 6/6 — MÉCANISME : marteau, balancier et mur coulissant à la suite : tout le chapitre d’un coup.
     // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
+    // 0.10.11 : la leçon d'abord (tracé et obstacles d'origine, au même point du chemin, donc au même instant), puis une vitrine des nouvelles pièces : chicanes rapides,
+    // route large sous un portique de poutres, TUBE qui tourne à droite puis à gauche ; deux blocs à l'arrivée.
     id: 'grandatelier', name: 'Le Grand Atelier', decor: 'atelier', difficulty: 3, profil: 'atelier',
     meca: ['hammer', 'pendulum', 'slider'],
-    appris: 'Départ : deux boosters → deux cases. Au programme : le tour d’horizon, un marteau, un balancier puis un mur coulissant à la suite : les mécanismes des circuits d’avant reviennent d’un coup.',
+    appris: 'Départ : deux boosters → deux cases. Au programme : un marteau, un balancier puis un mur coulissant à la suite. Puis chicanes rapides, route large sous un portique, tube qui tourne à droite puis à gauche.',
     goal: { id: 'norespawn' },
     opts: { l: 6 }, pilot: { vCap: 56 },
-    obst: [{ k: 'hammer', at: 0.066, side: 0, s: 1, ph: 0.966 }, { k: 'pendulum', at: 0.347, side: 0, s: 1, ph: 0.7 }, { k: 'slider', at: 0.637, side: 0, s: 1, ph: 0.396 }],
-    script: 'start B2 S2 [cds1] S2 [crs1] S B HR S2 C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 19.3, or: 20.4, argent: 23.4, bronze: 27.5 },
+    script: 'start*2 B2 S2 [cds1] S2 [crs1] S B HR S2 C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 S ZR4 S ZL4 S WI W WO S TI TM TRR TM TLL TM TO S B finish*2',
+    obst: [{ k: 'hammer', at: 0.0272, side: 0, s: 1, ph: 0.966 }, { k: 'pendulum', at: 0.14637, side: 0, s: 1, ph: 0.7 }, { k: 'slider', at: 0.26813, side: 0, s: 1, ph: 0.396 }, { k: 'board_right', at: 0.415, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.513, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.635, side: 0, s: 2 }, { k: 'beamPost', at: 0.629, side: 36 }, { k: 'beamPost', at: 0.629, side: -36 }, { k: 'board_warn', at: 0.675, side: 18, rot: Math.PI }, { k: 'block', at: 0.96, side: 28 }, { k: 'block', at: 0.96, side: -28 }],
+    medals: { cristal: 37.5, or: 39.4, argent: 45.3, bronze: 53.2 },
   },
 ];
 

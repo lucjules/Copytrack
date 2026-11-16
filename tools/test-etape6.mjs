@@ -10,7 +10,7 @@ import { CHAPTERS } from '../js/career.js';
 import { newElements, FAMILIES_NEW } from './nouveautes.mjs';
 import { runTrack } from './lab.mjs';
 
-const REFAITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];      // indices dans CHAPTERS des chapitres refaits autour des nouvelles pièces
+const REFAITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];      // indices dans CHAPTERS des chapitres refaits autour des nouvelles pièces
 const CH = REFAITS.map((c) => BUILTIN_TRACKS.filter((d) => d.decor === CHAPTERS[c].decor));
 const CH1 = CH[0];
 const built = new Map(CH.flat().map((d) => [d.id, buildBuiltin(d)]));
@@ -36,11 +36,11 @@ test('chaque chapitre refait montre les 9 familles de nouveautés', () => {
     assert.deepEqual([...FAMILIES_NEW].filter((f) => !fam.has(f)), [], c[0].decor);
   }
 });
-test('le pilote de référence les finit tous sans choc ni réapparition, en 45 à 85 s ; les nouveautés sont SUR le parcours (traversées), pas posées à côté', () => {
+test('le pilote de référence les finit tous sans choc ni réapparition, en 45 à 85 s (l\'Atelier, chapitre de leçons : 25 à 45 s) ; les nouveautés sont SUR le parcours (traversées), pas posées à côté', () => {
   for (const d of CH.flat()) {
-    const S = runTrack(built.get(d.id));
+    const S = runTrack(built.get(d.id)), [lo, hi] = d.profil === 'atelier' ? [25, 45] : [45, 85];
     assert.ok(S.ok && S.respawns === 0 && S.wallHits === 0, `${d.id} : ${S.reason}`);
-    assert.ok(S.time >= 45 && S.time <= 85, `${d.id} : ${S.time.toFixed(1)} s`);
+    assert.ok(S.time >= lo && S.time <= hi, `${d.id} : ${S.time.toFixed(1)} s`);
   }
   // pièces nouvelles traversées : chaque pièce de route nouvelle d'un circuit est sur le tracé du pilote
   for (const [id, tr] of built) {

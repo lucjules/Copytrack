@@ -64,7 +64,7 @@ export const PROFILE_CONTRACT = {
   // def.meca : les mécanismes qu'il enseigne (clés d'obstacles de js/obstacles.js, ou « lift » / « slide » pour l'ascenseur et la glissière) ; chacun doit être présent.
   atelier: (P, S, tr, def) => {
     const f = [];
-    if (S.time < 14 || S.time > 32) f.push(`atelier : ${S.time.toFixed(1)} s (14 à 32 s)`);
+    if (S.time < 14 || S.time > 45) f.push(`atelier : ${S.time.toFixed(1)} s (14 à 45 s)`);      // 0.10.11 : refaits avec les nouvelles pièces (la leçon d'abord, puis une vitrine) : 32 -> 45 s
     const meca = def.meca || [];
     if (!meca.length) f.push('atelier : aucun mécanisme déclaré (champ meca)');
     for (const m of meca) {
