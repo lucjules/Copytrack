@@ -8853,15 +8853,16 @@ function forkPath(tile, branch, reverse) {
 // js/tracks.js
 var BUILTIN_TRACKS = [
   {
-    // Chapitre 1 · 1/6 — SPRINT d'initiation (0.9.67 : refait deux fois plus long, esprit PolyTrack). Ouverture : deux boosters puis un premier wall-ride (transitions douces 2×2).
-    // Puis une bosse en S, un virage géant, une longue descente qui lance la voiture, une première bifurcation (petit saut tout droit, ou voie de côté), deux virages géants et
-    // un très grand virage plat. Aucun virage serré : le chrono se joue sur la vitesse de pointe et la trajectoire.
+    // Chapitre 1 · 1/6 — SPRINT d'initiation (0.9.67 : refait deux fois plus long, esprit PolyTrack ; 0.9.73 : avec les nouvelles pièces). Ouverture : départ sous une arche, deux boosters
+    // puis un premier wall-ride (transitions douces 2×2). Puis une bosse en S, un virage géant annoncé par des chevrons, une chicane rapide, une longue descente qui lance la voiture, une
+    // première bifurcation (petit saut tout droit, ou voie de côté), un virage géant suivi de la chicane rapide inverse, un très grand virage plat ; arrivée entre deux pylônes.
+    // Aucun virage serré : le chrono se joue sur la vitesse de pointe et la trajectoire.
     id: "eclats",
     name: "Premiers \xC9clats",
     decor: "desert",
     difficulty: 1,
     profil: "sprint",
-    appris: "D\xE9part : deux boosters \u2192 premier wall-ride (transitions douces 2\xD72). Au programme : vitesse de pointe, virages g\xE9ants, longue descente, premi\xE8re bifurcation : petit saut tout droit ou voie de c\xF4t\xE9.",
+    appris: "D\xE9part : sous une arche, deux boosters \u2192 premier wall-ride (transitions douces 2\xD72). Au programme : vitesse de pointe, virages g\xE9ants annonc\xE9s par des chevrons, chicanes rapides, longue descente, premi\xE8re bifurcation : petit saut tout droit ou voie de c\xF4t\xE9.",
     goal: {
       id: "under",
       t: 50.5
@@ -8872,7 +8873,21 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start B2 [tr01l] S4< [tr10l] S B S [crs1] S2 [cds1] S2 XR S4 C S2 [cdi1] [dn2] [cdo1] S2 SPL U G1 D S ALT S4 MRG S3 XL S4 B S2 C S2 HR S2 [crs1] S2 [cds1] S2 XL S4 B finish",
+    script: "start*2 B2 [tr01l] S4< [tr10l] S B S [crs1] S2 [cds1] S2 XR ZR4 C S2 [cdi1] [dn2] [cdo1] S2 SPL U G1 D S ALT S4 MRG S3 XL ZL4 B S2 C S2 HR S2 [crs1] S2 [cds1] S2 XL S4 B finish*3",
+    obst: [
+      {
+        k: "board_right",
+        at: 0.2,
+        side: 19,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.88,
+        side: -19,
+        rot: Math.PI
+      }
+    ],
     medals: {
       cristal: 46,
       or: 48.4,
@@ -9019,15 +9034,15 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 1 · 2/6 — SPEEDWAY (0.9.67 : refait, deux fois plus long). Ouverture : un booster puis directement un très grand virage relevé. Aucun virage serré : wall-ride de
-    // 6 cases sur la paroi du canyon (mur droit), trois virages géants pris au-dessus de 200 km/h, une descente douce, une bifurcation (voie directe, ou grand saut à gauche) et peu
-    // de boosters : la vitesse vient des descentes et des grandes courbes.
+    // Chapitre 1 · 2/6 — SPEEDWAY (0.9.67 : refait, deux fois plus long ; 0.9.73 : avec les nouvelles pièces). Ouverture : un booster puis directement un très grand virage relevé.
+    // Aucun virage serré : wall-ride de 6 cases sur la paroi du canyon (mur droit) le long d'une rangée de piliers, trois virages géants pris au-dessus de 200 km/h, une descente
+    // douce, puis la vallée s'élargit (route de 56 m sous un portique en poutres) avant de se resserrer ; une bifurcation (voie directe, ou grand saut à gauche) et peu de boosters.
     id: "canyon",
     name: "Canyon Corail",
     decor: "desert",
     difficulty: 2,
     profil: "speedway",
-    appris: "D\xE9part : un booster \u2192 directement un tr\xE8s grand virage relev\xE9. Au programme : wall-ride de 6 cases sur la paroi du canyon, virages g\xE9ants au-dessus de 200 km/h, descente douce, bifurcation : voie directe ou grand saut.",
+    appris: "D\xE9part : un booster \u2192 directement un tr\xE8s grand virage relev\xE9. Au programme : wall-ride de 6 cases sur la paroi du canyon, virages g\xE9ants au-dessus de 200 km/h, vall\xE9e qui s\u2019\xE9largit (route de 56 m), bifurcation : voie directe ou grand saut.",
     goal: {
       id: "nowall"
     },
@@ -9037,12 +9052,35 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 72
     },
-    script: "start B BRR B3 S2 [tr02l] S6> [tr20l] C S XR S2 [cdi1] [dn2] [cdo1] S BRR S2 C S3 XL S SPLL S4 ALT U G2 D MRG S2 XR S3 [crs1] S2 [cds1] S BLL S2 B C S2 XL S4 B finish",
+    script: "start B BRR B3 S2 [tr02l] S6> [tr20l] C S XR S2 [cdi1] [dn2] [cdo1] S BRR S C WI W WO XL S SPLL S4 ALT U G2 D MRG S2 XR S3 [crs1] S2 [cds1] S BLL S2 B C S2 XL S4 B finish*2",
+    obst: [
+      {
+        k: "gantry",
+        at: 0.52,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillarBase",
+        at: 0.2,
+        side: 24
+      },
+      {
+        k: "pillarBase",
+        at: 0.24,
+        side: 24
+      },
+      {
+        k: "pillarBase",
+        at: 0.28,
+        side: 24
+      }
+    ],
     medals: {
-      cristal: 48.4,
-      or: 51,
-      argent: 58.6,
-      bronze: 68.8
+      cristal: 50.5,
+      or: 53.2,
+      argent: 61.1,
+      bronze: 71.8
     }
   },
   {
@@ -9074,14 +9112,15 @@ var BUILTIN_TRACKS = [
   },
   {
     // Chapitre 1 · 3/6 — ACROBATIQUE (0.9.67 : refait, deux fois plus long). Ouverture : chute libre immédiate, depuis l'arrêt (la voiture quitte la plateforme de départ et se
-    // réceptionne sur une descente à 38°). Puis six sauts : deux tremplins, un saut sur un mur, une rampe à 38°, une bifurcation (sauter la terrasse ou
-    // descendre la pente) et un dernier saut avec anneau turbo ; il se finit de 158 à 238 km/h à l'abord des rampes (test-niveaux). Chaque checkpoint est suivi de deux boosters avant la rampe : on peut repartir À L'ARRÊT de chacun.
+    // réceptionne sur une descente à 38°). Puis six sauts : deux tremplins (le premier se reçoit sur une grande plaque 3×3 bordée sur ses côtés), un saut sur un mur, une rampe à 38°,
+    // une bifurcation (sauter la terrasse ou descendre la pente) et un dernier saut avec anneau turbo ; il se finit de 158 à 238 km/h à l'abord des rampes (test-niveaux). Chaque checkpoint
+    // (sous deux pylônes) est suivi de deux boosters avant la rampe : on peut repartir À L'ARRÊT de chacun. 0.9.73 : plaque, pylônes et chevrons de montée.
     id: "tremplins",
     name: "Tremplins du Cr\xE9puscule",
     decor: "desert",
     difficulty: 2,
     profil: "acrobatique",
-    appris: "D\xE9part : chute libre (la voiture quitte la plateforme de d\xE9part, \xE0 l\u2019arr\xEAt). Au programme : six sauts de plus en plus grands, saut sur un mur, rampe \xE0 38\xB0, bifurcation : sauter la terrasse ou descendre la pente.",
+    appris: "D\xE9part : chute libre (la voiture quitte la plateforme de d\xE9part, \xE0 l\u2019arr\xEAt). Au programme : six sauts de plus en plus grands, r\xE9ception sur une grande plaque, saut sur un mur, rampe \xE0 38\xB0, bifurcation : sauter la terrasse ou descendre la pente.",
     goal: {
       id: "perfect",
       n: 1
@@ -9092,7 +9131,21 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start V-5 [dn4] [cdo2] S C B2 S [crv1] UU G2 DD [cdo1] S XR S C B2 S [crv1] UU G2 DD [cdo1] S2 CBR1 S [tr01s] S2< [tr10s] S LL S C B2 S2 [crv2] UX G2 DX DX [cdo2] S SPL S2 G1 V-2 S ALT [dn2] S3 MRG S XL S C B2 S UU GR2 DD [cdo1] S3 finish",
+    script: "start V-5 [dn4] [cdo2] S C*3 B2 S [crv1] UU G2 DD [cdo1] [plate3]*10 XR S C*3 B2 S [crv1] UU G2 DD [cdo1] S2 CBR1 S [tr01s] S2< [tr10s] S LL S C*3 B2 S2 [crv2] UX G2 DX DX [cdo2] S SPL S2 G1 V-2 S ALT [dn2] S3 MRG S XL S C*3 B2 S UU GR2 DD [cdo1] S3 finish",
+    obst: [
+      {
+        k: "board_up",
+        at: 0.1,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_up",
+        at: 0.62,
+        side: -18,
+        rot: Math.PI
+      }
+    ],
     medals: {
       cristal: 55.9,
       or: 58.8,
@@ -9337,13 +9390,14 @@ var BUILTIN_TRACKS = [
   {
     // Chapitre 1 · 4/6 — ROLLERCOASTER (spirale ; placé avant Lac Gelé pour que deux Rollercoasters ne se suivent pas ; 0.9.67 : refait, deux fois plus long). Ouverture :
     // trois boosters puis directement un grand looping. Hélice montante de quatre grandes courbes inclinées (16 niveaux), checkpoint au sommet, plongeon à 38°, slalom de wall-rides
-    // gauche / droite, virage géant, tire-bouchon, bifurcation (tout droit, ou par le mur de droite), grand looping à gauche et dernier wall-ride.
+    // gauche / droite, virage géant, tire-bouchon, bifurcation (tout droit, ou par le mur de droite), looping modulaire à gauche (0.9.73 : montée en L, mur, sommet), un virage
+    // dans un tube (droite puis gauche) et dernier wall-ride ; arrivée sous une arche.
     id: "spirale",
     name: "Spirale Prismatique",
     decor: "desert",
     difficulty: 3,
     profil: "rollercoaster",
-    appris: "D\xE9part : trois boosters \u2192 directement un grand looping. Au programme : h\xE9lice montante de 16 niveaux, plongeon \xE0 38\xB0, slalom de wall-rides, tire-bouchon, bifurcation : tout droit ou par le mur, grand looping \xE0 gauche.",
+    appris: "D\xE9part : trois boosters \u2192 directement un grand looping. Au programme : h\xE9lice montante de 16 niveaux, plongeon \xE0 38\xB0, slalom de wall-rides, tire-bouchon, bifurcation : tout droit ou par le mur, looping modulaire, virages dans un tube.",
     goal: {
       id: "norespawn"
     },
@@ -9353,24 +9407,25 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 52
     },
-    script: "start B3 OB S B CBR4 CBR4 CBR4 CBR4 S C [cdi2] DX DX DX [cdo2] B S [tr01s] S2< [tr10s] S [tr02s] S3> [tr20s] S XL S C B S CK S SPL S4 ALT [tr02s] S2> [tr20s] MRG S XR B S OBL S [tr01s] S3< [tr10s] S B2 finish",
+    script: "start B3 OB S B CBR4 CBR4 CBR4 CBR4 S C [cdi2] DX DX DX [cdo2] B S [tr01s] S2< [tr10s] S [tr02s] S3> [tr20s] S XL S C B S CK S SPL S4 ALT [tr02s] S2> [tr20s] MRG S XR B S LPL1 S TI TRR TLL TO S [tr01s] S3< [tr10s] S B2 finish*2",
     medals: {
-      cristal: 60.6,
-      or: 63.8,
-      argent: 73.4,
-      bronze: 86.2
+      cristal: 65.5,
+      or: 68.9,
+      argent: 79.3,
+      bronze: 93
     }
   },
   {
-    // Chapitre 1 · 4/6 — TECHNIQUE (0.9.67 : refait, deux fois plus long). Ouverture : une épingle descendante dès le départ. Dix-huit virages serrés, des freinages forts
-    // avant chaque épingle et un booster à chaque relance ; de la glace avant les épingles (on ne freine plus dessus), une chicane sur un mur, une courbe montante serrée, deux
-    // checkpoints dans un virage et une bifurcation (ligne droite verglacée, ou détour qui accroche).
+    // Chapitre 1 · 4/6 — TECHNIQUE (0.9.67 : refait, deux fois plus long ; 0.9.73 : avec les nouvelles pièces). Ouverture : une épingle descendante dès le départ, puis une route
+    // étroite (12 m). Dix-huit virages serrés, des freinages forts avant chaque épingle et un booster à chaque relance ; de la glace avant les épingles (on ne freine plus dessus), une
+    // chicane sur un mur suivie d'une chicane en S, une courbe montante serrée, deux checkpoints dans un virage, une bifurcation (ligne droite verglacée, ou détour qui accroche) et,
+    // pour finir, un nœud en 8 : la route repasse par le même croisement.
     id: "verglas",
     name: "Lac Gel\xE9",
     decor: "desert",
     difficulty: 3,
     profil: "technique",
-    appris: "D\xE9part : \xE9pingle descendante d\xE8s le d\xE9part. Au programme : 18 virages serr\xE9s, glace avant les \xE9pingles, chicane sur un mur, checkpoints dans les virages, bifurcation : ligne verglac\xE9e ou d\xE9tour qui accroche.",
+    appris: "D\xE9part : \xE9pingle descendante d\xE8s le d\xE9part, puis une route \xE9troite. Au programme : 18 virages serr\xE9s, glace avant les \xE9pingles, chicanes, checkpoints dans les virages, bifurcation : ligne verglac\xE9e ou d\xE9tour qui accroche, n\u0153ud en 8 par un croisement.",
     goal: {
       id: "turbo",
       n: 2
@@ -9378,12 +9433,12 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start [cvd05] [cvd05] B S3 L I B S R L S B S2 R S R B S2 [tr01s] S2< [tr10s] S3 L S L B I S3 KR S R S2 B C S CVR1 L S R S SPLL I3 ALT S3 MRG S L B S2 R [cvd1] S KL S2 B S2 finish",
+    script: "start [cvd05] [cvd05] B NI N NO L I B S R L S B S2 R S R B S2 [tr01s] S2< [tr10s] ZR ZL L S L B I S3 KR S R S2 B C S CVR1 L S R S SPLL I3 ALT S3 MRG S L B S2 R [cvd1] S KL S2 B JX R S R R S JX R S finish",
     medals: {
-      cristal: 64.1,
-      or: 67.5,
-      argent: 77.6,
-      bronze: 91.1
+      cristal: 73.9,
+      or: 77.8,
+      argent: 89.4,
+      bronze: 105
     }
   },
   {
@@ -9665,26 +9720,46 @@ var BUILTIN_TRACKS = [
   },
   {
     // Chapitre 1 · 5/6 — ROLLERCOASTER (0.9.67 : refait, la finale du chapitre). Ouverture : trois boosters puis une montée verticale (montée en L, mur de 3, sommet). Chute,
-    // virage relevé, slalom de wall-rides gauche / droite, grand looping, arche mur → plafond → mur, virage géant, bifurcation (petit saut tout droit, ou par le mur de droite),
-    // double looping, hélice montante à gauche, descente, second virage géant, tire-bouchon et bosses en S. Plus de 20 cases sur un mur.
+    // virage relevé, slalom de wall-rides gauche / droite, looping modulaire à droite (0.9.73 : montée en L, mur, sommet), arche mur → plafond → mur, virage géant, bifurcation
+    // (petit saut tout droit, ou par le mur de droite), double looping, hélice montante à gauche, descente, second virage géant, tire-bouchon et bosses en S, sous une arche pleine
+    // entre deux murs pleins ; arrivée sous une arche. Plus de 20 cases sur un mur.
     id: "grandtour",
     name: "Le Grand Tour",
     decor: "desert",
     difficulty: 4,
     profil: "rollercoaster",
-    appris: "D\xE9part : trois boosters \u2192 mont\xE9e verticale (mont\xE9e en L, mur, sommet). Au programme : slalom de wall-rides, grand looping, arche mur \u2192 plafond \u2192 mur, bifurcation saut ou mur, double looping, tire-bouchon, virages g\xE9ants.",
+    appris: "D\xE9part : trois boosters \u2192 mont\xE9e verticale (mont\xE9e en L, mur, sommet). Au programme : slalom de wall-rides, looping modulaire, arche mur \u2192 plafond \u2192 mur, bifurcation saut ou mur, double looping, tire-bouchon, virages g\xE9ants, arche pleine entre deux murs.",
     goal: {
       id: "norespawn"
     },
     opts: {
       l: 3
     },
-    script: "start B3 QU WA3 CR S [cdi2] DX [cdo2] B BRR S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 OB S C S [tr01s] S2< [tr13s] S2^ [tr31s] S2< [tr10s] S2 XR S2 C S3 SPL U G1 D S ALT [tr02s] S2> [tr20s] MRG S OD S B2 CBL2 CBL2 S [cdi1] [dn2] [cdo1] XR S2 C B3 S CK S [crs1] S [cds1] S2 finish",
+    script: "start B3 QU WA3 CR S [cdi2] DX [cdo2] B BRR S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 LPR1 S C S [tr01s] S2< [tr13s] S2^ [tr31s] S2< [tr10s] S2 XR S2 C S3 SPL U G1 D S ALT [tr02s] S2> [tr20s] MRG S OD S B2 CBL2 CBL2 S [cdi1] [dn2] [cdo1] XR S2 C B3 S CK S [crs1] S [cds1] S2 finish*2",
+    obst: [
+      {
+        k: "archS",
+        at: 0.86,
+        side: 0
+      },
+      {
+        k: "wallS",
+        at: 0.9,
+        side: 24,
+        rot: Math.PI / 2
+      },
+      {
+        k: "wallS",
+        at: 0.93,
+        side: -24,
+        rot: Math.PI / 2
+      }
+    ],
     medals: {
-      cristal: 75.2,
-      or: 79.2,
-      argent: 91.1,
-      bronze: 106.9
+      cristal: 73,
+      or: 76.9,
+      argent: 88.4,
+      bronze: 103.8
     }
   },
   {
@@ -10964,11 +11039,11 @@ function buildBuiltin(def) {
       t.addDeco({
         k: o.k,
         x: q(a[0] + -dz / l * (o.side || 0), 0.5),
-        y: q(a[1], 0.1),
+        y: q(a[1] + (o.dy || 0), 0.1),
         z: q(a[2] + dx / l * (o.side || 0), 0.5),
-        ry: +ry.toFixed(4),
+        ry: +(ry + (o.rot || 0)).toFixed(4),
         s: o.s || 1,
-        c: 0,
+        c: o.c || 0,
         ph: o.ph || 0
       });
     }
@@ -15399,4 +15474,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "805a094510cef40c";
+globalThis.__COPYTRACK_BUILD__ = "b4ec8b23f63f3e40";

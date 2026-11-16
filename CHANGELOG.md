@@ -6,6 +6,21 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.73 — nouvelles pièces, étape 6 : le chapitre 1 refait avec les nouvelles pièces
+
+**`PHYS_VER` inchangé (36)** : la physique ne change pas. **Redéployer `submit-score`** : le serveur vérifie les records des circuits intégrés avec sa propre copie de `js/tracks.js`, et les six circuits du chapitre 1 ont changé (leurs clés de classement aussi). L'empreinte de physique est régénérée parce que plusieurs de ses scénarios roulent sur ces circuits.
+
+- **Les six circuits du chapitre 1 (Désert) utilisent les nouvelles pièces**, en gardant noms, thèmes, profils, ouvertures et bifurcations :
+  - **Premiers Éclats** : départ sous une arche, virages géants annoncés par des chevrons, deux chicanes rapides, arrivée entre deux pylônes (48,6 s).
+  - **Canyon Corail** : rangée de piliers le long du wall-ride, la vallée s'élargit (route de 56 m sous un portique en poutres) puis se resserre (53,2 s).
+  - **Tremplins du Crépuscule** : le premier saut se reçoit sur une grande plaque 3×3 bordée, checkpoints sous deux pylônes, chevrons de montée avant les rampes (59,9 s).
+  - **Spirale Prismatique** : looping modulaire à gauche au lieu du grand looping, virages dans un tube (droite puis gauche), arrivée sous une arche (68,9 s).
+  - **Lac Gelé** : route étroite dès la sortie de l'épingle, chicane en S après le mur, et un **nœud en 8** pour finir : la route repasse par le même croisement (77,8 s).
+  - **Le Grand Tour** : looping modulaire à droite au lieu du grand looping, arche pleine entre deux murs pleins avant l'arrivée (76,9 s).
+- **Règle vérifiée par un test** (`tools/test-etape6.mjs`, recensement : `tools/nouveautes.mjs`) : chaque circuit du chapitre 1 contient au moins 4 nouveautés de 2 familles au moins, et le chapitre montre les 9 familles (chicane, panneau, portique, pilier / poutre, mur / bloc, plaque, largeur, carrefour, looping / tube) ; les pièces nouvelles sont sur le tracé.
+- Les 72 circuits respectent leur contrat (pilote à ±10 %, reprise à l'arrêt depuis chaque checkpoint, vérificateur de l'éditeur) ; médailles de Canyon, Spirale, Lac Gelé et Grand Tour recalculées ; textes « ce qu'il enseigne » en français et en anglais.
+- Les circuits intégrés peuvent poser panneaux et solides le long du parcours (`obst` : rotation `rot`, hauteur `dy`).
+
 ## Bêta 0.9.72 — nouvelles pièces, étape 5 : looping modulaire, tube en virage
 
 **`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change. **Redéployer `submit-score`** (nouvelles pièces). Ajoutées à la FIN de l'ordre d'encodage.

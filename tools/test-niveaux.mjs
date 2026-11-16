@@ -16,6 +16,8 @@ const { CAREER_ORDER: THEME_ORDER } = await import('../js/themes.js');
 const { PROFILS, CHAPTERS, CHAPTER_SIZE, GOALS } = await import('../js/career.js');
 const { VERSION } = await import('../js/version.js');
 const { OBST } = await import('../js/obstacles.js');
+const { isSolid } = await import('../js/solids.js');
+const { DECO_LABELS } = await import('../js/decoData.js');
 const { RaceLogic } = await import('../js/raceLogic.js');
 const { checkDef, openingOf, vocabulary } = await import('./contract.mjs');
 const { runTrack } = await import('./lab.mjs');
@@ -256,9 +258,9 @@ test('objectifs bonus : un type connu, avec son paramètre', () => {
     if (d.goal.id === 'vehicle') assert.ok(['moto', 'boat', 'glider', 'car'].includes(d.goal.v), d.id);
   }
 });
-test('obstacles : types connus, placés sur le parcours, et le pilote n’en touche aucun (le contrat compte les chocs et les piques)', () => {
+test('obstacles : types connus, placés sur le parcours, et le pilote n’en touche aucun (le contrat compte les chocs et les piques) ; 0.9.73 : aussi des panneaux et des solides', () => {
   for (const d of BUILTIN_TRACKS) for (const o of d.obst || []) {
-    assert.ok(OBST[o.k], d.id + ' : obstacle ' + o.k);
+    assert.ok(OBST[o.k] || isSolid(o.k) || DECO_LABELS[o.k], d.id + ' : objet ' + o.k);
     assert.ok(o.at >= 0 && o.at < 1, d.id + ' : at ' + o.at);
   }
   assert.ok(BUILTIN_TRACKS.filter((d) => d.obst).length >= 5, 'l’usine garde ses obstacles');
