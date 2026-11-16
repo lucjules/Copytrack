@@ -43,7 +43,9 @@ export function difficultyScore(m) {
 }
 
 // Seuils du score pour 2, 3, 4 et 5 étoiles : environ les 15 %, 40 %, 65 % et 88 % des 72 circuits intégrés (voir tools/test-difficulte.mjs, qui garde cette répartition).
-export const STAR_STEPS = [4.6, 8, 10, 14];
+// 0.10.9 puis 0.10.11 (les 72 circuits refaits) : recalés (avant [4.6, 8, 10, 14]) : les circuits refaits autour des nouvelles pièces sont deux fois plus longs, et la longueur
+// compte dans le score.
+export const STAR_STEPS = [7.3, 9.8, 14.1, 20.9];
 
 export function starsOf(score) {
   let s = 1;

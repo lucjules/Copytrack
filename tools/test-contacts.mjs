@@ -492,7 +492,8 @@ test('gravité INVERSÉE sous une dalle pleine : la voiture la traverse, VOLONTA
   // le circuit officiel qui en dépend : le pilote automatique le termine dans son temps de référence
   const cf = BUILTIN_TRACKS.find((d) => d.id === 'cristalfele'), t = buildBuiltin(cf), sim = fresh(t), bot = new Autopilot(t.path); bot.reset(sim.phys);
   let fin = -1; run(sim, 120 * 60, () => bot.control(sim.phys), { onStep: (i, s) => { if (s.logic.finished && fin < 0) fin = i; } });
-  assert.ok(fin >= 0 && fin / 120 < 36, `Cristal Fêlé : arrivée en ${(fin / 120).toFixed(1)} s (référence 33,1 s) : la traversée des dalles en gravité inversée ne doit pas être bloquée`);
+  // (0.10.10 : Cristal Fêlé refait, 46 s : on compare au temps du pilote de référence, la médaille d'or, plutôt qu'à 36 s figées)
+  assert.ok(fin >= 0 && fin / 120 < cf.medals.or * 1.1, `Cristal Fêlé : arrivée en ${(fin / 120).toFixed(1)} s (référence ${cf.medals.or} s) : la traversée des dalles en gravité inversée ne doit pas être bloquée`);
 });
 test('gravité INVERSÉE dans un tunnel : le toit retient la voiture (elle n\'en sort plus par le haut) et elle est ramenée au checkpoint', () => {
   const r = invRun(slabCase('tunnel'), 0, 120 * 5);

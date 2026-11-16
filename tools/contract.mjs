@@ -64,7 +64,7 @@ export const PROFILE_CONTRACT = {
   // def.meca : les mécanismes qu'il enseigne (clés d'obstacles de js/obstacles.js, ou « lift » / « slide » pour l'ascenseur et la glissière) ; chacun doit être présent.
   atelier: (P, S, tr, def) => {
     const f = [];
-    if (S.time < 14 || S.time > 32) f.push(`atelier : ${S.time.toFixed(1)} s (14 à 32 s)`);
+    if (S.time < 14 || S.time > 45) f.push(`atelier : ${S.time.toFixed(1)} s (14 à 45 s)`);      // 0.10.11 : refaits avec les nouvelles pièces (la leçon d'abord, puis une vitrine) : 32 -> 45 s
     const meca = def.meca || [];
     if (!meca.length) f.push('atelier : aucun mécanisme déclaré (champ meca)');
     for (const m of meca) {
@@ -91,7 +91,7 @@ export function checkDef(def) {
   try { tr = buildBuiltin(def); } catch (e) { return { fails: ['construction : ' + e.message], info }; }
   if (!PROFILS[def.profil]) f.push('profil inconnu : ' + def.profil);
   if (def.params && def.params.v0) f.push('départ lancé (v0) interdit : on doit pouvoir repartir à l\'arrêt');
-  if (/^(B S2? R|S2 B|S B|B S2 B|B S2 R)/.test(def.script.replace(/^start /, ''))) f.push('départ « classique » interdit : ' + openingOf(def));
+  if (/^(B S2? R|S2 B|S B|B S2 B|B S2 R)/.test(def.script.replace(/^start\S* /, ''))) f.push('départ « classique » interdit : ' + openingOf(def));
   const voc = vocabulary(tr);
   if (voc.size < 4) f.push(`seulement ${voc.size} pièces nouvelles (${[...voc].join(' ')}) : 4 au moins`);
   const S = runTrack(tr);

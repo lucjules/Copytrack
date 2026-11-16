@@ -149,7 +149,7 @@ test('le serveur vérifie une course sous le profil Simulation dans SA catégori
 });
 
 test('laboratoire : mêmes commandes, deux réglages ; écart par secteur, le circuit n’est pas modifié', () => {
-  const t = track('serpent'), sig = t.signature(), code = t.encode();
+  const t = track('lianes'), sig = t.signature(), code = t.encode();      // (0.10.1 : Serpent refait : sous le profil Simulation la voiture ne passe plus la bifurcation du départ, aucune course à comparer ; Lianes : écart dès le secteur 2)
   const r = botRun(t);
   const same = labCompare(t, r.inputs, 'track', 'classic');
   assert.ok(same.same, 'tel quel = Classique v1 sur ce circuit');

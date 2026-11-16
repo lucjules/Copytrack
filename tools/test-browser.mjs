@@ -991,7 +991,7 @@ try {
     const sig = await app(async () => {
       const A = window.copytrack;
       const { BUILTIN_TRACKS, buildBuiltin } = await import('/js/tracks.js'); const { traceFromBot } = await import('/js/analysis/trace.js');
-      const track = buildBuiltin(BUILTIN_TRACKS.find((d) => d.id === 'serpent')), run = traceFromBot(track);
+      const track = buildBuiltin(BUILTIN_TRACKS.find((d) => d.id === 'lianes')), run = traceFromBot(track);      // (0.10.1 : Serpent refait : sous le profil Simulation la voiture ne passe plus la bifurcation du départ ; Lianes, comme tools/test-vehicles2.mjs)
       window.__lab = track;
       A.openLab({ track }, { inputs: run.inputs, time: run.time });
       return track.signature();

@@ -1,5 +1,5 @@
 // Les nouveautés des étapes 1 à 5 (0.9.68 à 0.9.72) présentes dans un circuit, rangées par famille : sert à la règle des circuits refaits
-// (tools/test-etape6.mjs : au moins 4 nouveautés de 2 familles par circuit du chapitre 1, toutes les familles sur le chapitre) et à l'atelier.
+// (tools/test-etape6.mjs : au moins 12 nouveautés dont 6 pièces de route, de 3 familles, par circuit refait ; les 9 familles sur chaque chapitre) et à l'atelier.
 import { PIECES } from '../js/pieces.js';
 import { isSolid } from '../js/solids.js';
 

@@ -6,6 +6,158 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.11 — chapitre 12 (Atelier des mécanismes) refait : les 72 circuits sont construits autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits de l'Atelier changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits de l'Atelier gardent leur leçon **telle quelle** : le début du tracé et les mécanismes d'origine (bumpers, piques, piques escamotables, balancier, mur coulissant, marteau, balayeur, ascenseur, glissière) sont au même point du chemin, donc franchis au même instant. Une **vitrine des nouvelles pièces** suit la leçon :
+  - **Garde-Fous** (35,2 s) : chicanes longues, route large sous un portique, grand S, murs pleins et blocs ; 19 nouveautés.
+  - **En Cadence** (43,7 s) : chicanes longues, croisement traversé deux fois (trois virages géants), passage étroit ; 16 nouveautés.
+  - **Le Pendule** (35,2 s) : chicanes longues, route large, tube qui tourne ; 17 nouveautés.
+  - **Rotors** (33,9 s) : chicanes longues, **plaque** traversée par la route, route large ; 16 nouveautés.
+  - **Monte-Charge** (32,7 s) : chicanes longues, petit **looping modulaire**, route large, murs en L ; 16 nouveautés.
+  - **Le Grand Atelier** (39,4 s) : chicanes rapides, route large, tube qui tourne ; 17 nouveautés.
+- Contrat du profil « mécanisme » : 14 à **45 s** (32 avant). `tools/test-etape6.mjs` couvre maintenant **les 12 chapitres** (Atelier : 25 à 45 s ; les autres : 45 à 85 s).
+- Difficulté estimée : seuils des étoiles recalés une dernière fois sur les 72 circuits refaits (`[7.3, 9.8, 14.1, 20.9]`).
+
+## Bêta 0.10.10 — chapitre 11 (Canyon de cristal) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 11 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits du Canyon de cristal sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés) :
+  - **Galerie de Cristal** (sprint, 48,2 s) : volant inversé entre deux cristaux, chicanes rapides, route large, croisement traversé deux fois, grand S ; 20 nouveautés. Objectif « moins de 49,5 s ».
+  - **Plafond Renversé** (technique, 59,4 s) : lacets au plafond, passage étroit entre des stalactites, chicanes serrées, cales de cristal, croisement traversé deux fois ; 19 nouveautés.
+  - **Cristal Fêlé** (acrobatique, 46,2 s) : cinq inversions sol ↔ plafond, la dernière retombe sur une **plaque**, chicanes longues, route large, passage étroit ; 22 nouveautés. Objectif « moins de 47,5 s ».
+  - **Miroir** (speedway, 49,0 s) : route large, chicane rapide, pont de verre entre deux **murs pleins**, grand S, tube qui tourne en miroir ; 19 nouveautés. Objectif inchangé : aucune bordure touchée.
+  - **Vrilles Souterraines** (rollercoaster, 47,3 s) : double looping, chicanes longues, route large, **looping modulaire**, tube qui tourne ; 20 nouveautés.
+  - **Cœur de la Montagne** (technique, 52,1 s) : passage étroit, chicanes serrées, pyramides de cristal, croisement traversé deux fois ; 20 nouveautés.
+- `tools/test-contacts.mjs` : la traversée des dalles en gravité inversée se vérifie sur Cristal Fêlé par rapport à sa médaille d'or (le temps du pilote), plus par rapport à 36 s figées.
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 11.
+
+## Bêta 0.10.9 — chapitre 10 (Ville dans les nuages) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 10 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits de la Ville dans les nuages sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés) :
+  - **Premier Envol** (sprint, 46,9 s) : vent entre deux dalles, chicanes rapides, route large, tube qui tourne, grand S ; 23 nouveautés. Objectif « moins de 48 s ».
+  - **Îles Suspendues** (acrobatique sans bordures, 48,1 s) : trois sauts reçus sur des **plaques sans bordures** (`*0`), blocs flottants, chicanes longues, route large et grand S sans bordures ; 24 nouveautés. Objectif « moins de 49,5 s ».
+  - **Rafales** (technique, 62,1 s) : passage étroit entre des piliers, chicanes serrées, **murets** coupe-vent, croisement traversé deux fois ; 20 nouveautés.
+  - **Montgolfières** (rollercoaster, 46,4 s) : **looping modulaire**, route large, tube qui tourne, passage étroit ; 24 nouveautés.
+  - **Pont des Vents** (speedway sans bordures, 45,3 s) : murs coupe-vent, route large, chicane rapide, grand S, tube qui tourne ; 19 nouveautés. Objectif inchangé : aucune bordure touchée.
+  - **Cité Céleste** (acrobatique, deltaplane, 48,8 s) : vol au-dessus d'une avenue de piliers et d'immeubles, deux sauts reçus sur des plaques ; 27 nouveautés. Objectif « moins de 50 s ».
+- **Difficulté estimée (étoiles)** : seuils recalés sur les circuits refaits (`[7.1, 9.7, 13.2, 20.5]`, avant `[4.6, 8, 10, 14]`) : deux fois plus longs, ils montaient presque tous d'une étoile (il ne restait que 3 circuits à une étoile). La répartition visée ne change pas (environ 15, 40, 65 et 88 % des circuits intégrés sous chaque seuil).
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 10.
+
+## Bêta 0.10.8 — chapitre 9 (Usine mécanique) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 9 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits de l'Usine mécanique sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés). Leurs obstacles (bumpers, piques, piques escamotables, marteau) sont gardés et replacés sur des lignes droites du nouveau tracé :
+  - **Chaîne de Montage** (sprint, 47,3 s) : moteur coupé entre deux **murs pleins**, chicanes rapides, route large, tube qui tourne, grand S ; 23 nouveautés. Objectif « moins de 48,5 s ».
+  - **Laminoir** (technique, 61,7 s) : passage étroit entre des piliers, chicanes serrées, blocs d'acier, croisement traversé deux fois ; 20 nouveautés.
+  - **Engrenages** (rollercoaster, 48,2 s) : triple looping, poutres en croix, route large, tube qui tourne ; 19 nouveautés.
+  - **Fonderie** (speedway, 48,0 s) : route large, chicane rapide, blocs de fonte, grand S, tube qui tourne ; 19 nouveautés. Objectif inchangé : aucune bordure touchée.
+  - **Presse Hydraulique** (acrobatique, 45,3 s) : trois sauts reçus sur des **plaques**, chicanes longues, route large ; 27 nouveautés. Objectif « moins de 46,5 s ».
+  - **Usine Folle** (technique, 55,1 s) : passage étroit, marteau, chicanes serrées, croisement traversé deux fois ; 20 nouveautés.
+- Textes anglais : « facades » sans cédille (le test de l'anglais prenait la lettre ç pour un reste de français) ; l'atelier de refonte le vérifie désormais pour chaque texte.
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 9.
+
+## Bêta 0.10.7 — chapitre 8 (Fonds marins) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 8 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits des Fonds marins sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés) :
+  - **Courant Chaud** (sprint, 45,7 s) : chicanes rapides, pyramides de corail, route large sous un portique, tube qui tourne, grand S ; 22 nouveautés. Objectif « moins de 47 s ».
+  - **Jardin de Corail** (technique, 54,7 s) : passage étroit entre des coraux, chicanes serrées, cales de roche, croisement traversé deux fois ; 20 nouveautés.
+  - **Épave Engloutie** (rollercoaster, 45,8 s) : morceaux d'épave (**mur en L**, poutre), **looping modulaire**, route large, tube qui tourne, passage étroit ; 25 nouveautés.
+  - **Méduses Électriques** (acrobatique en gravité lourde, 51,6 s) : deux sauts prolongés par des **plaques**, chicanes longues, route large ; 25 nouveautés. Objectif « moins de 53 s ».
+  - **Abysses** (rollercoaster, 50,1 s) : rochers, chicanes longues, looping modulaire, route large, tube qui tourne ; 22 nouveautés.
+  - **Grande Barrière** (speedway, 55,1 s) : route large, chicane rapide, grand S, croisement traversé deux fois ; 19 nouveautés. Objectif inchangé : aucune bordure touchée.
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 8.
+
+## Bêta 0.10.6 — chapitre 7 (Station orbitale) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 7 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits de la Station orbitale sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés) :
+  - **Quai d'Amarrage** (sprint, 49,8 s) : le grand saut en basse gravité se reçoit sur une **plaque** d'amarrage entre deux modules, chicanes rapides, route large, croisement traversé deux fois ; 21 nouveautés.
+  - **Navette** (technique en moto, 45,4 s) : deux coursives étroites, chicanes serrées, modules en dalles, croisement traversé deux fois ; 24 nouveautés.
+  - **Ceinture d'Astéroïdes** (rollercoaster, 45,6 s) : chicanes longues, tube qui tourne, **looping modulaire**, route large ; 20 nouveautés.
+  - **Grand Anneau** (speedway, 78,1 s) : **deux tours au lieu de trois**, sur un anneau agrandi (route large, chicanes serrées, longues puis rapides) : trois tours dépassaient 85 s dès qu'on ajoutait des pièces ; 20 nouveautés. Objectif inchangé : aucune bordure touchée.
+  - **Apesanteur** (acrobatique, 73,5 s) : une plaque entre deux modules, chicanes longues, route large ; 20 nouveautés. Objectif « moins de 76 s ».
+  - **Station Zénith** (technique, 54,6 s) : coursive étroite entre des piliers, blocs de la station, chicanes serrées, croisement traversé deux fois ; 20 nouveautés.
+- Description du chapitre (carrière) : « grand anneau à deux tours ».
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 7.
+
+## Bêta 0.10.5 — chapitre 6 (Volcan) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 6 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits du Volcan sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés) :
+  - **Braises** (sprint, 45,7 s) : chicanes rapides, pyramides de lave, route large sous un portique, tube qui tourne, grand S ; 21 nouveautés. Objectif « moins de 47 s ».
+  - **Coulée Ardente** (speedway, 47,1 s) : route large, chicane rapide, colonnes de basalte, grand S, tube qui tourne ; 19 nouveautés. Objectif inchangé : aucune bordure touchée.
+  - **Champs de Basalte** (technique, 55,2 s) : route étroite entre des colonnes, **murets**, chicanes serrées, croisement traversé deux fois ; 20 nouveautés.
+  - **Cheminée du Volcan** (rollercoaster, 46,6 s) : la cheminée, **looping modulaire**, route large, tube qui tourne, route étroite ; 24 nouveautés.
+  - **Caldeira** (speedway en deux tours, 77,9 s) : chaque côté de la boucle allongé d'autant (route large, chicanes rapides et longues) pour qu'elle se referme toujours ; 17 nouveautés.
+  - **Éruption** (acrobatique, 46,2 s) : sauts reçus sur des **plaques** de lave refroidie entre des cônes, chicanes longues, route large ; 26 nouveautés. Objectif « moins de 47,5 s ».
+- Test navigateur du laboratoire : sur Lianes Néon, comme le test Node (Serpent refait ne se court plus sous le profil Simulation).
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 6.
+
+## Bêta 0.10.4 — chapitre 5 (Nuit polaire) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 5 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits de la Nuit polaire sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés) :
+  - **Aurore Naissante** (sprint, 47,2 s) : grand S, route large sous un portique, chicanes rapides, tube qui tourne, blocs de glace ; 22 nouveautés. Objectif « moins de 48,5 s ».
+  - **Banquise Rebondissante** (acrobatique, 46,3 s) : quatre rebonds dont deux reçus sur des **plaques** de banquise entre des blocs de glace, chicanes longues, route large ; 28 nouveautés. Objectif « moins de 47,5 s ».
+  - **Glacier Magnétique** (technique, 64,5 s) : route étroite entre des stalagmites, bosse aimantée entre deux cales, chicanes serrées, croisement traversé deux fois ; 20 nouveautés.
+  - **Double Hélice** (rollercoaster, 70,2 s) : double hélice, double looping, route large, **looping modulaire** ; 17 nouveautés.
+  - **Couronne Boréale** (speedway, 53,9 s) : deux routes larges sous des portiques, chicane rapide, grand S, tube qui tourne ; 23 nouveautés. Objectif inchangé : aucune bordure touchée.
+  - **Blizzard** (technique, 61,1 s) : route étroite entre des piliers, chicanes serrées, dalles de neige, croisement traversé deux fois ; 20 nouveautés.
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 5.
+
+## Bêta 0.10.3 — chapitre 4 (Ville futuriste) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 4 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits de la Ville futuriste sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés) :
+  - **Néons Express** (speedway, 56,8 s) : départ sur le tapis roulant entre deux **murs pleins** (façades), deux avenues larges sous des portiques, chicane rapide, grand S, croisement traversé deux fois ; 23 nouveautés. Objectif inchangé : aucune bordure touchée.
+  - **Boulevard Sans Fin** (sprint, 46,2 s) : chicanes rapides, immeubles en blocs, avenue large sous un portique, chicanes longues, tube qui tourne sous la ville ; 23 nouveautés. Objectif « moins de 47,5 s ».
+  - **Hyperboucle** (rollercoaster, 51,4 s) : deux loopings décalés, grand looping, avenue large, **looping modulaire**, tube qui tourne ; 20 nouveautés.
+  - **Métro Aérien** (technique, 58,4 s) : quai étroit entre des colonnes, chicanes serrées, croisement traversé deux fois ; 18 nouveautés.
+  - **Tours Jumelles** (acrobatique, 46,0 s) : trois sauts de toit en toit, toits en **plaques**, chicanes longues, avenue large ; 21 nouveautés. Objectif « moins de 47,5 s ».
+  - **Viaduc Vertical** (rollercoaster, 50,0 s) : lift hill accéléré, grand looping, looping modulaire, avenue large, tube qui tourne ; 20 nouveautés.
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 4.
+
+## Bêta 0.10.2 — chapitre 3 (Archipel tropical) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 3 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits de l'Archipel tropical sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures, véhicules et objectifs gardés) :
+  - **Lagon Turquoise** (sprint en moto, 48,3 s) : deux sauts à anneau (le second reçu sur une **plaque**), chicanes rapides, route large sous un portique, croisement traversé deux fois, grand S, pyramides de roche ; 21 nouveautés.
+  - **Récif** (technique en bateau, 62,9 s) : route étroite sur une jetée entre des piliers fins, chicanes serrées, croisement traversé deux fois ; 20 nouveautés.
+  - **Phare** (acrobatique, deltaplane, 52,7 s) : deux sauts reçus sur des plaques, chicanes longues, hélice autour du phare, route large au sommet ; 22 nouveautés.
+  - **Tourbillon Tropical** (rollercoaster, 54,7 s) : triple looping, **looping modulaire**, tube qui tourne, route large sous un portique ; 21 nouveautés.
+  - **Sauts Lunaires** (acrobatique en basse gravité, 53,7 s) : trois grands sauts lunaires, plaques entre des cratères (pyramides, cale), chicanes longues ; 25 nouveautés.
+  - **Grand Archipel** (speedway, 59,9 s) : route large, chicane rapide, croisement traversé deux fois (trois virages géants), grand S ; 19 nouveautés. Objectif « moins de 61,5 s ».
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 3.
+- Correction : le contrôle « pas de départ classique » (contrat et `tools/test-niveaux.mjs`) ignorait les circuits dont le départ porte un style de portique (`start*2 …`, depuis 0.9.68) : il les vérifie de nouveau (aucun n'était en faute). Les tests des départs spéciaux (bateau, deltaplane, tapis roulant) acceptent aussi ce style.
+
+## Bêta 0.10.1 — chapitre 2 (Jungle néon) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 2 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Comme le chapitre 1 en 0.9.74, les six circuits de la Jungle néon sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés ; deux fois plus longs environ) :
+  - **Lianes Néon** (sprint, 48,6 s) : chicanes rapides après la rampe à anneau, pont de lianes sans bordures, S relevé, clairière (route large sous un portique entre quatre piliers), croisement traversé deux fois ; 18 nouveautés.
+  - **Canopée** (speedway, 60,5 s, 201 km/h de moyenne) : deux routes larges sous des portiques, grand S, chicane longue, tube qui tourne à droite puis à gauche ; 23 nouveautés. Objectif « moins de 62 s ».
+  - **Spores** (acrobatique, 49,7 s, 10,7 s en l'air) : quatre rebonds en escalier reçus sur des **plaques**, chicanes longues entre les rebonds ; 23 nouveautés.
+  - **Serpent** (technique, en moto, 54,2 s) : deux routes étroites (l'une entre des piliers fins), chicanes serrées, croisement traversé deux fois ; 22 nouveautés.
+  - **Racines Boueuses** (rollercoaster, 52,4 s) : looping modulaire, route large sous un portique, tube qui tourne, double looping ; 18 nouveautés.
+  - **Temple** (technique, 69,7 s) : blocs de pierre, route étroite, chicanes serrées, **arche pleine entre deux murs**, croisement traversé deux fois ; 24 nouveautés.
+- `tools/test-etape6.mjs` applique la règle du chapitre 1 (12 nouveautés dont 6 pièces de route, 3 familles ; les 9 familles par chapitre ; 45 à 85 s) à chaque chapitre refait.
+- Tests adaptés aux circuits refaits : le conseil « tu freines plus tôt » du coach est vérifié sur Serpent (sur le nouveau Temple, avancer un freinage envoie toujours la voiture au mur) ; la comparaison du laboratoire sous le profil Simulation, sur Lianes Néon.
+- Vérificateur de l'éditeur : un saut depuis un **Rebond** peut se recevoir sur une plaque plus haute que le départ, jusqu'aux 85 % de la hauteur du rebond (comme pour une route).
+
 ## Bêta 0.10.0 — les nouvelles pièces et le chapitre 1 refait autour d'elles
 
 **`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** (les six circuits du chapitre 1 ont changé depuis la dernière mise en ligne, leurs clés de classement aussi). Version qui rassemble les versions 0.9.68 à 0.9.74 ; rien d'autre ne change par rapport à 0.9.74.

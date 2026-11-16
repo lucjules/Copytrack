@@ -370,12 +370,14 @@ export function checkTrack(track) {
       if (f.y > e.y + hop && !flip && !e.entry) continue;
       if (!land || along < dist) { land = f; dist = along; }
     }
-    // 0.9.74 : une plaque (surface libre) en face reçoit aussi un saut : premier point de sa forme sur la trajectoire, pas plus haut que le départ (+ 1,2 niveau).
+    // 0.9.74 : une plaque (surface libre) en face reçoit aussi un saut : premier point de sa forme sur la trajectoire, pas plus haut que le départ (+ 1,2 niveau ;
+    // 0.10.1 : depuis un Rebond, jusqu'aux 85 % de la hauteur du rebond, comme pour une route).
     if (!land) {
+      const hopP = e.tile.s === 'bounce' ? 0.85 * (SURF_PHYS.bounce * ((e.tile.p || 100) / 100)) ** 2 / (2 * SURF_PHYS.gravity) : LEVEL_H * 1.2;
       for (let d = CELL / 4; d <= CELL * maxJump && !land; d += CELL / 4) {
         const x = e.x + ex * d, z = e.z + ez * d;
         for (const t of track.tilesAt(Math.floor(x / CELL), Math.floor(z / CELL))) {
-          if (t === e.tile || PIECES[t.t].kind !== 'area' || baseY(t) > e.y + LEVEL_H * 1.2) continue;
+          if (t === e.tile || PIECES[t.t].kind !== 'area' || baseY(t) > e.y + hopP) continue;
           toLocal(t, x, z, PL); sampleLocal(t, PL.lx, PL.lz, PS);
           if (!PS.inFootprint) continue;
           join(e.tile, t);

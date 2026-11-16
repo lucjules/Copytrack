@@ -77,11 +77,13 @@ test('freinage retardé (règle du coach, traces synthétiques) : « tu freines 
   assert.ok(tips[0].vars.v < tips[0].vars.vr, "ressorti plus lentement");
 });
 test('freinage avancé : « tu freines plus tôt »', () => {
-  const { R, refIn, trace } = setup('temple');
+  const { R, refIn, trace } = setup('serpent');
   // PHYS_VER 36 : la référence donne maintenant un petit coup de frein à 26 m/s juste après le départ (62 m) ; avancer CELUI-LÀ fait diverger tout le rejeu (murs dès le
   // secteur 1). On avance le premier vrai freinage (plus de 30 m/s : 469 m, secteur 5).
-  const target = brakingPoints(R).filter((b) => b.v0 > 30)[0], from = Math.round(R.t[target.i] * 120);
-  const early = edit(refIn, (st, fl) => { for (let k = from - 100; k < from; k++) fl[k] = (fl[k] & ~1) | 2; pad(st, fl); });
+  // 0.10.1 : Temple refait (deux fois plus long, lacets serrés partout) : avancer un freinage de 0,8 s y envoie toujours la voiture au mur, le conseil « mur » couvre tout.
+  // On prend Serpent (refait aussi) : le premier freinage à plus de 45 m/s de la seconde moitié (≈ 1 010 m, secteur 7, avant le croisement), avancé de 70 pas (0,58 s, ≈ 28 m).
+  const target = brakingPoints(R).filter((b) => b.v0 > 45 && b.s > R.ref.length / 2)[0], from = Math.round(R.t[target.i] * 120);
+  const early = edit(refIn, (st, fl) => { for (let k = from - 70; k < from; k++) fl[k] = (fl[k] & ~1) | 2; pad(st, fl); });
   const tips = coach(trace(early), R);
   // (phase 2 physique, PHYS_VER 35) Le freinage est maintenant limité par le cercle d'adhérence (brakeCorner) et le transfert de charge : 140 pas de frein (1,17 s) avant le
   // point de la référence ralentissent assez la voiture pour que les commandes suivantes, rejouées telles quelles, l'amènent hors du tracé (course jamais finie, aucun conseil
