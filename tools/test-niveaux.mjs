@@ -82,10 +82,10 @@ const OPENINGS = {
 };
 
 console.log('Version et profils');
-test('version 0.9.9 ou plus (bêta 0.9.x suit package.json)', () => {
-  const v = JSON.parse(read('package.json')).version;
+test('version 0.9.9 ou plus (bêta X.Y.Z suit package.json ; 0.10.0 depuis le regroupement des nouvelles pièces)', () => {
+  const v = JSON.parse(read('package.json')).version, [a, b, c] = v.split('.').map(Number);
   assert.equal(VERSION, 'bêta ' + v);
-  assert.ok(+v.split('.')[2] >= 9, v);
+  assert.ok(a > 0 || b > 9 || (b === 9 && c >= 9), v);
 });
 test('les 72 circuits (66 + 6 de l’Atelier) ont chacun un profil connu', () => {
   assert.equal(BUILTIN_TRACKS.length, 72);

@@ -24,9 +24,9 @@ function walk(dir, out = []) {
 }
 
 console.log('Version et textes');
-test('la version affichée suit package.json (bêta 0.9.x)', () => {
+test('la version affichée suit package.json (bêta X.Y.Z, 0.9.x puis 0.10.x)', () => {
   const v = JSON.parse(read('package.json')).version;
-  assert.match(v, /^0\.9\.\d+$/);
+  assert.match(v, /^0\.(9|[1-9]\d+)\.\d+$/);
   assert.equal(VERSION, 'bêta ' + v);
 });
 test('le texte du turbo annonce un gain (≈ +N km/h), pas une vitesse visée : le moteur n’a plus de plafond', () => {

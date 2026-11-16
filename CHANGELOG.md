@@ -6,6 +6,21 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.0 — les nouvelles pièces et le chapitre 1 refait autour d'elles
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** (les six circuits du chapitre 1 ont changé depuis la dernière mise en ligne, leurs clés de classement aussi). Version qui rassemble les versions 0.9.68 à 0.9.74 ; rien d'autre ne change par rapport à 0.9.74.
+
+- **Nouvelles pièces et décorations** (détail dans les sections 0.9.68 à 0.9.72) :
+  - **chicanes** (courbes en S) : normale, longue, rapide et grand S, dans les deux sens ;
+  - **panneaux** (flèches, danger, interdit, demi-tour), **portiques** de départ, d'arrivée et de checkpoint en quatre styles (portique, ligne au sol, arche, pylônes), **piliers et poutres** ;
+  - **murs pleins**, **blocs pleins** (bloc, dalle, cale, pyramide, arche) qui arrêtent la voiture et dont le dessus se roule ;
+  - **plaques** libres (rectangles, triangles, secteurs) aux bordures choisies côté par côté ;
+  - **largeur de route variable** : route étroite (12 m) et route large (56 m), avec leurs transitions ;
+  - **carrefours** en croix et en T ;
+  - **looping modulaire** (hauteur réglable, de 0 à 6 murs) et **tube en virage**.
+- **Le chapitre 1 (Désert) est refait autour de ces pièces** (détail dans la section 0.9.74) : Premiers Éclats, Canyon Corail, Tremplins du Crépuscule, Spirale Prismatique, Lac Gelé et Le Grand Tour contiennent chacun au moins 12 nouveautés, dont 6 pièces de route, de 3 familles au moins ; les 9 familles sont toutes présentes sur le chapitre.
+- Éditeur : familles Chicane, Plaque, Largeur et Carrefour dans la palette, options Portique et Bordures dans l'inspecteur, le vérificateur connaît toutes les nouvelles pièces (un saut peut se recevoir sur une plaque).
+
 ## Bêta 0.9.74 — le chapitre 1 refait AUTOUR des nouvelles pièces (circuits de référence)
 
 **`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 1 changent encore (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
