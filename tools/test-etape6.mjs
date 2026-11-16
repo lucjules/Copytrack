@@ -1,6 +1,6 @@
 // 0.9.73, étape 6 : les six circuits du chapitre 1 refaits avec les nouvelles pièces des étapes 1 à 5 : node tools/test-etape6.mjs   (npm test)
-// RÈGLE : chaque circuit du chapitre 1 contient au moins 4 nouveautés (pièces, options ou décorations des étapes 1 à 5 : tools/nouveautes.mjs) de 2 familles
-// au moins ; le chapitre entier montre les 9 familles. Le contrat complet de chaque circuit (pilote, tolérance de vitesse, reprise à l'arrêt, vérificateur,
+// 0.9.74 : refaits AUTOUR de ces pièces, pour servir de référence. RÈGLE : chaque circuit du chapitre 1 contient au moins 12 nouveautés (pièces, options ou décorations des
+// étapes 1 à 5 : tools/nouveautes.mjs), dont au moins 6 PIÈCES DE ROUTE nouvelles, de 3 familles au moins ; le chapitre entier montre les 9 familles. Le contrat complet de chaque circuit (pilote, tolérance de vitesse, reprise à l'arrêt, vérificateur,
 // médailles) reste celui de tools/test-niveaux.mjs.
 import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
@@ -17,10 +17,12 @@ test('le chapitre 1 compte bien ses six circuits (Désert)', () => {
   assert.deepEqual(CH1.map((d) => d.id), BUILTIN_TRACKS.slice(0, 6).map((d) => d.id));
 });
 for (const d of CH1) {
-  test(`${d.name} : au moins 4 nouveautés, de 2 familles au moins`, () => {
-    const N = newElements(built.get(d.id)), fam = new Set(N.map((e) => e.family));
-    assert.ok(N.length >= 4, `${N.length} nouveauté(s) : ${N.map((e) => e.what).join(', ')}`);
-    assert.ok(fam.size >= 2, `familles : ${[...fam].join(', ')}`);
+  test(`${d.name} : au moins 12 nouveautés dont 6 pièces de route, de 3 familles au moins`, () => {
+    const tr = built.get(d.id), N = newElements(tr), fam = new Set(N.map((e) => e.family));
+    const road = newElements({ tiles: tr.tiles, decos: [] }).filter((e) => !/\*|bordures/.test(e.what));      // (pièces de route : sans les options de portique ni de bordures)
+    assert.ok(N.length >= 12, `${N.length} nouveauté(s) : ${N.map((e) => e.what).join(', ')}`);
+    assert.ok(road.length >= 6, `${road.length} pièce(s) de route nouvelle(s) : ${road.map((e) => e.what).join(', ')}`);
+    assert.ok(fam.size >= 3, `familles : ${[...fam].join(', ')}`);
   });
 }
 test('le chapitre entier montre les 9 familles de nouveautés', () => {

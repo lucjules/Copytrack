@@ -370,6 +370,24 @@ export function checkTrack(track) {
       if (f.y > e.y + hop && !flip && !e.entry) continue;
       if (!land || along < dist) { land = f; dist = along; }
     }
+    // 0.9.74 : une plaque (surface libre) en face reçoit aussi un saut : premier point de sa forme sur la trajectoire, pas plus haut que le départ (+ 1,2 niveau).
+    if (!land) {
+      for (let d = CELL / 4; d <= CELL * maxJump && !land; d += CELL / 4) {
+        const x = e.x + ex * d, z = e.z + ez * d;
+        for (const t of track.tilesAt(Math.floor(x / CELL), Math.floor(z / CELL))) {
+          if (t === e.tile || PIECES[t.t].kind !== 'area' || baseY(t) > e.y + LEVEL_H * 1.2) continue;
+          toLocal(t, x, z, PL); sampleLocal(t, PL.lx, PL.lz, PS);
+          if (!PS.inFootprint) continue;
+          join(e.tile, t);
+          land = { tile: t, y: baseY(t), plate: true }; dist = d;
+          break;
+        }
+      }
+      if (land) {
+        if (Math.round(dist / CELL) >= 6 / Math.max(0.35, lowG) && !glider) issues.push({ tile: e.tile, level: 'warn', msg: `Saut de ${Math.round(dist / CELL)} cases : très long sans deltaplane.` });
+        continue;
+      }
+    }
     if (land) {
       join(e.tile, land.tile);
       if (e.entry && land.y > e.y + LEVEL_H * 1.2 && e.tile.s !== 'flip' && land.tile.s !== 'flip') continue;   // réception d'une chute : le départ du saut a déjà été examiné

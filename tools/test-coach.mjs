@@ -96,7 +96,7 @@ test('freinage avancé : « tu freines plus tôt »', () => {
 });
 test('un retour au checkpoint coûte du temps : il est signalé, avec sa perte, en tête ou juste derrière les chocs de mur qui le suivent', () => {
   const { R, refIn, trace } = setup('canyon');
-  const k = Math.round(R.n * 4 * 0.3);
+  const k = Math.round(R.n * 4 * 0.45);      // (0.9.74 : Canyon refait : à 30 % du tracé, le retour tombe juste après un checkpoint et ne coûte presque rien ; à 45 %, sur la deuxième route large)
   const resp = edit(refIn, (st, fl) => { fl[k] |= 4; pad(st, fl, 2400); });
   const tips = coach(trace(resp), R);
   // (0.9.59) Même situation que le freinage avancé ci-dessus : après le retour, les commandes de la référence sont rejouées telles quelles sur une trajectoire qui n'est plus la

@@ -84,7 +84,7 @@ test('profils : aucun véhicule plus rapide en ligne droite (pointe, accélérat
     }
   }
   assert.ok(specsOf('arcade').car.latGrip > SPECS.car.latGrip && specsOf('sim').car.latGrip < SPECS.car.latGrip);
-  const line = (p) => drive(track('eclats', p), 600, { throttle: true, steer: 0 }).phys.fwdSpeed;
+  const line = (p) => drive(track('canyon', p), 600, { throttle: true, steer: 0 }).phys.fwdSpeed;      // (0.9.74 : Canyon part tout droit sur une route large ; Éclats commence désormais par une chicane)
   const base = line(null);
   for (const p of ['arcade', 'sim']) assert.ok(Math.abs(line({ pm: p }) - base) < 0.5, `ligne droite ${p} : ${line({ pm: p })} contre ${base}`);
 });

@@ -55,8 +55,8 @@ const CAREER = [
 
 // Les trois premiers jetons après « start » : l'ouverture de chaque circuit, écrite ici pour que personne ne la change sans le vouloir.
 const OPENINGS = {
-  // chapitre 1 : booster → wall-ride · booster → virage relevé · chute libre · booster → looping · épingle descendante · montée verticale
-  eclats: 'B2 [tr01l] S4<', canyon: 'B BRR B3', tremplins: 'V-5 [dn4] [cdo2]', spirale: 'B3 OB S', verglas: '[cvd05] [cvd05] B', grandtour: 'B3 QU WA3',
+  // chapitre 1 (0.9.74) : booster → chicanes rapides · booster → route large · chute libre · booster → looping modulaire · route étroite · montée verticale
+  eclats: 'B2 ZR4 B', canyon: 'B WI W2', tremplins: 'V-5 [dn4] [cdo2]', spirale: 'B3 LPR2 S', verglas: 'NI N NO', grandtour: 'B3 QU WA3',
   // chapitre 2 : rampe + anneau · tube · rebond géant · bifurcation + moto · plafond · tunnel
   lianes: 'B3 UU GR2', canopee: 'TI TM3.b TO', spores: 'B2 S.j200 G1', serpent: 'Y2.o B S', racines: 'B3^ [tr31s] S<', temple: 'S# R# R#',
   // chapitre 3 : descente en moto · eau · deltaplane · triple looping · basse gravité · pente douce

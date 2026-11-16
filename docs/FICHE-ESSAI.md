@@ -18,48 +18,48 @@ _Sprint, speedway, tremplins, épingles et grand huit : tous les profils de circ
 
 ### 1. Premiers Éclats — Sprint, ◆◇◇◇◇
 
-- Départ : sous une arche, deux boosters → premier wall-ride (transitions douces 2×2). Au programme : vitesse de pointe, virages géants annoncés par des chevrons, chicanes rapides, longue descente, première bifurcation : petit saut tout droit ou voie de côté.
-- Pilote automatique : **48.6 s** · médailles : cristal 46 · or 48.4 · argent 55.7 · bronze 65.3
+- Départ : sous une arche, deux boosters → slalom de chicanes rapides. Au programme : premier wall-ride, bifurcation (petit saut ou voie de côté), croisement traversé deux fois (trois virages géants), route large sous un portique, chicanes longues.
+- Pilote automatique : **48.2 s** · médailles : cristal 45.8 · or 48.2 · argent 55.4 · bronze 65
 - Objectif bonus ★ : Finir en moins de 50.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 2. Canyon Corail — Speedway, ◆◆◇◇◇
 
-- Départ : un booster → directement un très grand virage relevé. Au programme : wall-ride de 6 cases sur la paroi du canyon, virages géants au-dessus de 200 km/h, vallée qui s’élargit (route de 56 m), bifurcation : voie directe ou grand saut.
-- Pilote automatique : **53.2 s** · médailles : cristal 50.5 · or 53.2 · argent 61.1 · bronze 71.8
+- Départ : un booster → la vallée s’élargit aussitôt (route de 56 m). Au programme : trois routes larges sous des portiques, virages géants au-dessus de 200 km/h, chicanes rapides, wall-ride le long des piliers, bifurcation : voie directe ou grand saut.
+- Pilote automatique : **47.6 s** · médailles : cristal 45.2 · or 47.6 · argent 54.7 · bronze 64.2
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 3. Tremplins du Crépuscule — Acrobatique, ◆◆◇◇◇
 
-- Départ : chute libre (la voiture quitte la plateforme de départ, à l’arrêt). Au programme : six sauts de plus en plus grands, réception sur une grande plaque, saut sur un mur, rampe à 38°, bifurcation : sauter la terrasse ou descendre la pente.
-- Pilote automatique : **59.9 s** · médailles : cristal 55.9 · or 58.8 · argent 67.6 · bronze 79.4
+- Départ : chute libre (la voiture quitte la plateforme de départ, à l’arrêt). Au programme : cinq sauts reçus sur des plaques, chicanes, wall-ride, rampe à 38°, bifurcation : sauter la terrasse ou descendre la pente, dernier saut dans un anneau.
+- Pilote automatique : **58.9 s** · médailles : cristal 55.9 · or 58.9 · argent 67.7 · bronze 79.5
 - Objectif bonus ★ : 1 réception parfaite
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 4. Spirale Prismatique — Rollercoaster, ◆◆◆◇◇
 
-- Départ : trois boosters → directement un grand looping. Au programme : hélice montante de 16 niveaux, plongeon à 38°, slalom de wall-rides, tire-bouchon, bifurcation : tout droit ou par le mur, looping modulaire, virages dans un tube.
-- Pilote automatique : **68.9 s** · médailles : cristal 65.5 · or 68.9 · argent 79.3 · bronze 93
+- Départ : trois boosters → directement un looping modulaire. Au programme : hélice de 16 niveaux, plongeon à 38°, wall-rides et chicanes, tube qui tourne, bifurcation : tout droit ou par le mur, trois loopings modulaires de hauteurs différentes.
+- Pilote automatique : **72.5 s** · médailles : cristal 68.9 · or 72.5 · argent 83.4 · bronze 97.9
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 5. Lac Gelé — Technique, ◆◆◆◇◇
 
-- Départ : épingle descendante dès le départ, puis une route étroite. Au programme : 18 virages serrés, glace avant les épingles, chicanes, checkpoints dans les virages, bifurcation : ligne verglacée ou détour qui accroche, nœud en 8 par un croisement.
-- Pilote automatique : **77.8 s** · médailles : cristal 73.9 · or 77.8 · argent 89.4 · bronze 105
+- Départ : sur une route étroite, épingle sur la glace. Au programme : virages serrés, deux nœuds en 8 par des croisements, chicanes en S, wall-ride, seconde route étroite, glace avant les épingles, bifurcation : ligne verglacée ou détour qui accroche.
+- Pilote automatique : **83.4 s** · médailles : cristal 79.2 · or 83.4 · argent 95.9 · bronze 112.6
 - Objectif bonus ★ : 2 mini-turbos
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 6. Le Grand Tour — Rollercoaster, ◆◆◆◆◇
 
-- Départ : trois boosters → montée verticale (montée en L, mur, sommet). Au programme : slalom de wall-rides, looping modulaire, arche mur → plafond → mur, bifurcation saut ou mur, double looping, tire-bouchon, virages géants, arche pleine entre deux murs.
-- Pilote automatique : **76.9 s** · médailles : cristal 73 · or 76.9 · argent 88.4 · bronze 103.8
+- Départ : trois boosters → montée verticale (montée en L, mur, sommet). Au programme : wall-rides, deux loopings modulaires, arche mur → plafond → mur, route large, bifurcation saut ou mur, tube qui tourne, virages géants, arche pleine entre deux murs.
+- Pilote automatique : **82.4 s** · médailles : cristal 78.2 · or 82.4 · argent 94.7 · bronze 111.2
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________

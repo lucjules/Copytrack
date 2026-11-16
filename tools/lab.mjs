@@ -125,7 +125,7 @@ export function profile(track, S) {
   const tight = tiles.filter((t) => P(t).kind === 'arc' && P(t).size === 1 && !P(t).checkpoint).length;
   const wide = tiles.filter((t) => (P(t).kind === 'arc' && P(t).size >= 2) || t.t === 'bank' || t.t === 'bankBig').length;
   const wallCells = tiles.filter((t) => t.o).length + tiles.filter((t) => P(t).roll).length;
-  const loops = tiles.filter((t) => P(t).kind === 'loop').length;
+  const loops = tiles.filter((t) => P(t).kind === 'loop' || P(t).loopTop).length;      // (0.9.74 : un looping modulaire compte : son sommet)
   const boosts = tiles.filter((t) => t.s === 'boost').length;
   const straights = tiles.filter((t) => P(t).kind === 'line' && !P(t).special && !(P(t).rise)).length;
   const rises = tiles.filter((t) => P(t).rise).length;

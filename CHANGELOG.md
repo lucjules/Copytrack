@@ -6,6 +6,23 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.9.74 — le chapitre 1 refait AUTOUR des nouvelles pièces (circuits de référence)
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 1 changent encore (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- En 0.9.73, les nouvelles pièces avaient été ajoutées par petites touches (2 à 3 pièces de route par circuit). Les six circuits du chapitre 1 sont maintenant **construits autour d'elles**, pour montrer ce qu'elles permettent (noms, thèmes, profils et bifurcations gardés) :
+  - **Premiers Éclats** (sprint, 48,2 s) : départ sous une arche, slalom de chicanes rapides, premier wall-ride, un **croisement traversé deux fois** (boucle de trois virages géants), route large sous un portique entre quatre piliers, chicanes longues ; 23 nouveautés.
+  - **Canyon Corail** (speedway, 47,6 s, 243 km/h de moyenne) : la vallée s'élargit et se resserre **trois fois** sous des portiques, chicanes rapides, wall-ride le long d'une rangée de piliers ; 23 nouveautés.
+  - **Tremplins du Crépuscule** (acrobatique, 58,9 s, 17,5 s en l'air ; finissable de 158 à 230 km/h à l'abord des rampes) : quatre sauts reçus sur des **plaques** bordées (dont un qui retombe deux niveaux plus bas sans rampe de réception), chicanes longues entre les sauts, un wall-ride court entre le deuxième et le troisième saut ; 18 nouveautés.
+  - **Spirale Prismatique** (rollercoaster, 72,5 s) : **trois loopings modulaires** de hauteurs différentes (dont l'ouverture), un tube qui tourne à gauche puis à droite, chicanes longues ; 13 nouveautés.
+  - **Lac Gelé** (technique, 83,4 s, 23 virages serrés) : départ sur une route étroite, **deux nœuds en 8** par des croisements, chicanes en S, seconde route étroite ; 17 nouveautés.
+  - **Le Grand Tour** (rollercoaster, 82,4 s) : deux loopings modulaires, route large sous un portique, tube qui tourne, arche pleine entre deux murs pleins, chicanes longues ; 19 nouveautés.
+- **Règle relevée** (`tools/test-etape6.mjs`) : au moins 12 nouveautés par circuit, dont 6 pièces de route nouvelles, de 3 familles au moins ; les 9 familles sur le chapitre.
+- **Vérificateur de l'éditeur** : un saut peut se recevoir sur une **plaque** (avant : seule une extrémité de route comptait, et le saut passait pour « relié à rien »).
+- Les panneaux et solides posés le long d'un circuit intégré ont un cap exact (multiple de π/8, dans ]−π, π]) : quatre quarts de tour dans l'éditeur redonnent le même circuit. Les obstacles existants gardent leur calcul au bit près.
+- Banc du pilote humain imparfait (`tools/test-maniabilite.mjs`) : aucun contact sur les nouveaux sprint et speedway.
+- Contrat des circuits : les nouvelles pièces comptent dans le vocabulaire (« 4 pièces nouvelles au moins »), un looping modulaire compte comme un looping. Ouvertures du chapitre 1 mises à jour (toutes différentes des 66 autres). Médailles des six circuits recalculées ; textes français et anglais refaits.
+
 ## Bêta 0.9.73 — nouvelles pièces, étape 6 : le chapitre 1 refait avec les nouvelles pièces
 
 **`PHYS_VER` inchangé (36)** : la physique ne change pas. **Redéployer `submit-score`** : le serveur vérifie les records des circuits intégrés avec sa propre copie de `js/tracks.js`, et les six circuits du chapitre 1 ont changé (leurs clés de classement aussi). L'empreinte de physique est régénérée parce que plusieurs de ses scénarios roulent sur ces circuits.
