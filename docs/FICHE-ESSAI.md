@@ -226,48 +226,48 @@ _Départ sur la glace, rebonds en terrasses, toboggan aimanté, hélices et poud
 
 ### 25. Aurore Naissante — Sprint, ◆◇◇◇◇
 
-- Départ : sur la glace : verglas, trois boosters, verglas. Au programme : vague douce, deux très grands virages plats, descente finale.
-- Pilote automatique : **23.0 s** · médailles : cristal 21.6 · or 22.8 · argent 26.2 · bronze 30.7
-- Objectif bonus ★ : Finir en moins de 23 s
+- Départ : sur la glace, glace, trois boosters, glace. Au programme : grand S, très grands virages plats, route large sous un portique, chicanes rapides, tube qui tourne à droite puis à gauche, blocs de glace.
+- Pilote automatique : **47.2 s** · médailles : cristal 44.8 · or 47.2 · argent 54.3 · bronze 63.7
+- Objectif bonus ★ : Finir en moins de 48.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 26. Banquise Rebondissante — Acrobatique, ◆◆◆◇◇
 
-- Départ : verglas, deux boosters, rebond vers une terrasse plus basse. Au programme : quatre rebonds de plus en plus puissants et longs : la Banquise descend de terrasse en terrasse (Spores monte).
-- Pilote automatique : **30.0 s** · médailles : cristal 28.5 · or 30 · argent 34.5 · bronze 40.5
-- Objectif bonus ★ : Finir en moins de 30 s
+- Départ : glace, deux boosters, premier rebond. Au programme : quatre rebonds de plus en plus forts, réceptions sur la glace et sur des plaques de banquise, wall-ride, chicanes longues, descente à 38°, route large.
+- Pilote automatique : **46.3 s** · médailles : cristal 44 · or 46.3 · argent 53.2 · bronze 62.5
+- Objectif bonus ★ : Finir en moins de 47.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 27. Glacier Magnétique — Technique, ◆◆◆◆◇
 
-- Départ : toboggan de 10 niveaux dès le départ. Au programme : huit virages serrés, glace avant les épingles, aimants sur la bosse centrale.
-- Pilote automatique : **44.3 s** · médailles : cristal 41.9 · or 44.1 · argent 50.7 · bronze 59.6
+- Départ : descente à 38° vers le glacier. Au programme : lacets sur la glace, route étroite entre des stalagmites, wall-ride, bosse aimantée, chicanes serrées, croisement traversé deux fois.
+- Pilote automatique : **64.5 s** · médailles : cristal 61.2 · or 64.5 · argent 74.1 · bronze 87
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 28. Double Hélice — Rollercoaster, ◆◆◆◆◇
 
-- Départ : tire-bouchon pris à l’élan, sans booster. Au programme : hélice montante (16 niveaux) puis descendante dans l’autre sens, double looping, wall-rides.
-- Pilote automatique : **49.1 s** · médailles : cristal 47 · or 49.5 · argent 56.9 · bronze 66.8
+- Départ : tire-bouchon dès la troisième case. Au programme : double hélice (montée, descente), double looping, route large sous un portique, wall-rides des deux côtés, chicanes longues, looping modulaire.
+- Pilote automatique : **70.2 s** · médailles : cristal 66.7 · or 70.2 · argent 80.8 · bronze 94.8
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 29. Couronne Boréale — Speedway, ◆◆◆◆◆
 
-- Départ : directement dans un très grand virage relevé, sans booster. Au programme : six virages relevés en couronne, wall-ride, 84 % du tour au-dessus de 220 km/h.
-- Pilote automatique : **29.7 s** · médailles : cristal 28.2 · or 29.7 · argent 34.1 · bronze 40.1
+- Départ : très grand virage relevé sans booster, puis trois boosters. Au programme : virages relevés en couronne, deux routes larges sous des portiques, chicane rapide, wall-ride, grand S, tube qui tourne.
+- Pilote automatique : **53.9 s** · médailles : cristal 51.2 · or 53.9 · argent 62 · bronze 72.8
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 30. Blizzard — Technique, ◆◆◆◆◆
 
-- Départ : dans la poudreuse. Au programme : neuf virages serrés, vent avant les épingles, neige épaisse en sortie.
-- Pilote automatique : **42.9 s** · médailles : cristal 40.7 · or 42.9 · argent 49.3 · bronze 57.9
+- Départ : poudreuse, booster. Au programme : vent latéral, épingles, route étroite entre des piliers, chicanes serrées, wall-ride, poudreuse, croisement traversé deux fois.
+- Pilote automatique : **61.1 s** · médailles : cristal 58.1 · or 61.1 · argent 70.3 · bronze 82.5
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________

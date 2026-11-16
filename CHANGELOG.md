@@ -6,6 +6,19 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.4 — chapitre 5 (Nuit polaire) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 5 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits de la Nuit polaire sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés) :
+  - **Aurore Naissante** (sprint, 47,2 s) : grand S, route large sous un portique, chicanes rapides, tube qui tourne, blocs de glace ; 22 nouveautés. Objectif « moins de 48,5 s ».
+  - **Banquise Rebondissante** (acrobatique, 46,3 s) : quatre rebonds dont deux reçus sur des **plaques** de banquise entre des blocs de glace, chicanes longues, route large ; 28 nouveautés. Objectif « moins de 47,5 s ».
+  - **Glacier Magnétique** (technique, 64,5 s) : route étroite entre des stalagmites, bosse aimantée entre deux cales, chicanes serrées, croisement traversé deux fois ; 20 nouveautés.
+  - **Double Hélice** (rollercoaster, 70,2 s) : double hélice, double looping, route large, **looping modulaire** ; 17 nouveautés.
+  - **Couronne Boréale** (speedway, 53,9 s) : deux routes larges sous des portiques, chicane rapide, grand S, tube qui tourne ; 23 nouveautés. Objectif inchangé : aucune bordure touchée.
+  - **Blizzard** (technique, 61,1 s) : route étroite entre des piliers, chicanes serrées, dalles de neige, croisement traversé deux fois ; 20 nouveautés.
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 5.
+
 ## Bêta 0.10.3 — chapitre 4 (Ville futuriste) refait autour des nouvelles pièces
 
 **`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 4 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
