@@ -6,6 +6,20 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.5 — chapitre 6 (Volcan) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 6 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits du Volcan sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés) :
+  - **Braises** (sprint, 45,7 s) : chicanes rapides, pyramides de lave, route large sous un portique, tube qui tourne, grand S ; 21 nouveautés. Objectif « moins de 47 s ».
+  - **Coulée Ardente** (speedway, 47,1 s) : route large, chicane rapide, colonnes de basalte, grand S, tube qui tourne ; 19 nouveautés. Objectif inchangé : aucune bordure touchée.
+  - **Champs de Basalte** (technique, 55,2 s) : route étroite entre des colonnes, **murets**, chicanes serrées, croisement traversé deux fois ; 20 nouveautés.
+  - **Cheminée du Volcan** (rollercoaster, 46,6 s) : la cheminée, **looping modulaire**, route large, tube qui tourne, route étroite ; 24 nouveautés.
+  - **Caldeira** (speedway en deux tours, 77,9 s) : chaque côté de la boucle allongé d'autant (route large, chicanes rapides et longues) pour qu'elle se referme toujours ; 17 nouveautés.
+  - **Éruption** (acrobatique, 46,2 s) : sauts reçus sur des **plaques** de lave refroidie entre des cônes, chicanes longues, route large ; 26 nouveautés. Objectif « moins de 47,5 s ».
+- Test navigateur du laboratoire : sur Lianes Néon, comme le test Node (Serpent refait ne se court plus sous le profil Simulation).
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 6.
+
 ## Bêta 0.10.4 — chapitre 5 (Nuit polaire) refait autour des nouvelles pièces
 
 **`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 5 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.

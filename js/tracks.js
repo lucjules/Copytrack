@@ -74,14 +74,16 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 54, or: 56.8, argent: 65.3, bronze: 76.7 },
   },
   {
-    // Chapitre 6 · 1/6 — SPRINT (collines). Ouverture : deux boosters puis UNE LONGUE COLLINE DOUCE (trois cases qui montent d'un demi-niveau, trois qui redescendent). Puis une vague en S,
-    // un S de virages relevés 2×2, un seul très grand virage plat et une descente finale de 4 niveaux. Presque tout droit.
+    // Chapitre 6 · 1/6 — SPRINT (0.10.5 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters, une colline douce (trois demi-niveaux montants puis descendants). Dos
+    // d'âne, chicanes rapides, S relevé, deux pyramides de lave, route large sous un portique entre des piliers de basalte, très grand virage plat, TUBE qui tourne à droite puis à
+    // gauche, descente, grand S. Aucun virage serré.
     id: 'braises', name: 'Braises', decor: 'volcano', difficulty: 2, profil: 'sprint',
-    appris: 'Départ : deux boosters → colline douce. Au programme : vague en S, S relevé 2×2, un très grand virage plat.',
-    goal: { id: 'under', t: 26 },
+    appris: 'Départ : deux boosters, une colline douce. Au programme : chicanes rapides, S relevé, route large sous un portique, très grand virage plat, tube qui tourne à droite puis à gauche, grand S.',
+    goal: { id: 'under', t: 47 },
     opts: { l: 6 }, pilot: { vCap: 66 },
-    script: 'start B2 GU3 GD3 B S [crs1] S2 [cds1] B BR S BL S B C S2 HL S2 B [cdi1] [dn2] [cdo1] S B2 finish',
-    medals: { cristal: 23.7, or: 25, argent: 28.7, bronze: 33.7 },
+    script: 'start*2 B2 GU3 GD3 B S [crs1] S2 [cds1] B ZR4 S ZL4 BR S BL S B C*3 WI W2 WO S2 HL S2 TI TM TRR TM TLL TM TO S B [cdi1] [dn2] [cdo1] S ZZR S B2 finish*2',
+    obst: [{ k: 'board_right', at: 0.19, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.27, side: 20, rot: Math.PI }, { k: 'pyramidS', at: 0.47, side: 28 }, { k: 'pyramidS', at: 0.47, side: -28 }, { k: 'gantry', at: 0.516, side: 0, s: 2 }, { k: 'pillarBase', at: 0.51, side: 36 }, { k: 'pillarBase', at: 0.51, side: -36 }, { k: 'board_warn', at: 0.6, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.893, side: -20, rot: Math.PI }],
+    medals: { cristal: 43.4, or: 45.7, argent: 52.5, bronze: 61.7 },
   },
   {
     // Chapitre 1 · 2/6 — SPEEDWAY (0.9.74 : refait AUTOUR des nouvelles pièces). Ouverture : un booster et la vallée s'élargit aussitôt (route de 56 m sous un portique en poutres).
@@ -192,14 +194,16 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 51.5, or: 54.2, argent: 62.4, bronze: 73.2 },
   },
   {
-    // Chapitre 6 · 2/6 — SPEEDWAY (coulée de lave). Ouverture : un booster puis un S de virages relevés 2×2 (droite, gauche) dès les premières cases, avant les virages relevés 3×3.
-    // Six virages relevés en tout, un wall-ride de quatre cases (mur droit) et un plongeon de 4 niveaux qui relance la voiture : 86 % du tour au-dessus de 220 km/h, aucun freinage.
+    // Chapitre 6 · 2/6 — SPEEDWAY (0.10.5 : refait AUTOUR des nouvelles pièces). Ouverture : un booster et un S relevé. Route large sous un portique, très grands virages relevés,
+    // chicane rapide, wall-ride à droite, colonnes de basalte, descente, grand S, TUBE qui tourne à droite puis à gauche dans la coulée. Aucun virage serré ; objectif : ne toucher
+    // aucune bordure.
     id: 'coulee', name: 'Coulée Ardente', decor: 'volcano', difficulty: 3, profil: 'speedway',
-    appris: 'Départ : un booster → S de virages relevés 2×2. Au programme : six virages relevés, wall-ride, plongeon, 4 % de freinage.',
+    appris: 'Départ : un booster et un S relevé. Au programme : route large sous un portique, très grands virages relevés, chicane rapide, wall-ride, descente, grand S, tube qui tourne dans la coulée.',
     goal: { id: 'nowall' },
     opts: { l: 12 }, pilot: { vCap: 70 },
-    script: 'start B BR S BL S BRR S B [tr02l] S4> [tr20l] BLL S2 C B [cdi1] [dn2] [cdo1] BRR S BLL B2 finish',
-    medals: { cristal: 26.6, or: 28, argent: 32.2, bronze: 37.9 },
+    script: 'start*3 B BR S BL S WI W2 WO S BRR S B ZR4 S [tr02l] S4> [tr20l] BLL S2 C*2 B [cdi1] [dn2] [cdo1] ZZL S BRR S TI TM TRR TM TLL TM TO S BLL B2 finish*2',
+    obst: [{ k: 'gantry', at: 0.14, side: 0, s: 2 }, { k: 'pillar', at: 0.134, side: 36 }, { k: 'pillar', at: 0.134, side: -36 }, { k: 'board_right', at: 0.258, side: -20, rot: Math.PI }, { k: 'pillarBase', at: 0.52, side: 26 }, { k: 'pillarBase', at: 0.52, side: -26 }, { k: 'board_left', at: 0.577, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.7, side: 18, rot: Math.PI }],
+    medals: { cristal: 44.8, or: 47.1, argent: 54.2, bronze: 63.6 },
   },
   {
     // Chapitre 7 · 2/6 — TECHNIQUE (navette, moto). Ouverture : DÉPART EN MOTO (plaque moto sur la case qui suit la ligne de départ) puis un slalom R L R L immédiat. Huit virages serrés,
@@ -297,14 +301,15 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 55.5, or: 58.4, argent: 67.2, bronze: 78.9 },
   },
   {
-    // Chapitre 6 · 3/6 — TECHNIQUE (basalte). Ouverture : DÉPART SUR UNE PLAQUE DE DÉRIVE (deux cases où l'arrière n'accroche presque plus : le moindre coup de volant fait glisser la voiture),
-    // suivie d'un booster. Huit virages serrés dont trois pris sur des dalles de dérive, une chicane sur un mur, une descente de 4 niveaux ; un booster à chaque relance.
+    // Chapitre 6 · 3/6 — TECHNIQUE (0.10.5 : refait AUTOUR des nouvelles pièces). Ouverture : plaque de dérive (deux cases), booster. Épingles en dérive, route ÉTROITE (12 m) entre
+    // des colonnes de basalte, wall-ride, deux murets, chicanes serrées, virage en dérive, CROISEMENT traversé deux fois (boucle de virages serrés), descente vers l'arrivée.
     id: 'basalte', name: 'Champs de Basalte', decor: 'volcano', difficulty: 4, profil: 'technique',
-    appris: 'Départ : sur une plaque de dérive (l’arrière n’accroche presque plus). Au programme : huit virages serrés dont trois sur dérive, chicane sur un mur.',
+    appris: 'Départ : plaque de dérive, booster. Au programme : épingles en dérive, route étroite entre des colonnes de basalte, wall-ride, chicanes serrées, croisement traversé deux fois.',
     goal: { id: 'norespawn' },
     opts: { l: 6 },
-    script: 'start S2.d B S2 R S L S B R.d L.d S2 C B S [tr01s] S2< [tr10s] S2 R S2.d L B S2 R.d S L B S [cdi1] [dn2] [cdo1] S B finish',
-    medals: { cristal: 35, or: 36.9, argent: 42.4, bronze: 49.7 },
+    script: 'start*1 S2.d B S2 R S L S B R.d L.d S2 C*3 B NI N2 NO S [tr01s] S2< [tr10s] S2 R S2.d L B ZR S ZL B S2 R.d S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3',
+    obst: [{ k: 'board_warn', at: 0.25, side: 16, rot: Math.PI }, { k: 'pillar', at: 0.272, side: 16 }, { k: 'pillar', at: 0.272, side: -16 }, { k: 'pillar', at: 0.287, side: 16 }, { k: 'pillar', at: 0.287, side: -16 }, { k: 'wallSLow', at: 0.44, side: 24, rot: Math.PI / 2 }, { k: 'wallSLow', at: 0.44, side: -24, rot: Math.PI / 2 }, { k: 'board_right', at: 0.545, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.6, side: 16, rot: Math.PI }, { k: 'board_warn', at: 0.76, side: 16, rot: Math.PI }],
+    medals: { cristal: 52.5, or: 55.2, argent: 63.5, bronze: 74.6 },
   },
   {
     // Chapitre 2 · 6/6 — TECHNIQUE (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : départ dans un tunnel du temple, deux virages serrés. Allée de colonnes, tube, épingle,
@@ -353,14 +358,16 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 66.7, or: 70.2, argent: 80.8, bronze: 94.8 },
   },
   {
-    // Chapitre 6 · 4/6 — ROLLERCOASTER (cheminée). Ouverture : trois boosters → un TUBE de deux sections qui débouche directement sur la cheminée, une montée verticale de quatre niveaux
-    // (quart de cercle, mur, sommet). Checkpoint au sommet, plongeon de 8 niveaux, grand looping et slalom de wall-rides gauche / droite.
+    // Chapitre 6 · 4/6 — ROLLERCOASTER (0.10.5 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → tube, puis la CHEMINÉE (montée en L, mur de quatre niveaux, sommet).
+    // Plongeon à 38°, grand looping, wall-rides gauche et droite, chicane longue, LOOPING MODULAIRE à gauche, route large sous un portique, TUBE qui tourne à droite puis à gauche,
+    // route ÉTROITE et chicane longue pour finir.
     id: 'cheminee', name: 'Cheminée du Volcan', decor: 'volcano', difficulty: 4, profil: 'rollercoaster',
-    appris: 'Départ : trois boosters → tube → montée verticale de quatre niveaux. Au programme : plongeon de 8 niveaux, grand looping, slalom de wall-rides.',
+    appris: 'Départ : trois boosters → tube, puis la cheminée (mur de quatre niveaux). Au programme : plongeon, grand looping, wall-rides, looping modulaire, route large, tube qui tourne, route étroite.',
     goal: { id: 'norespawn' },
     opts: { l: 2 }, pilot: { vCap: 66 },
-    script: 'start B3 TI TM2 TO QU WA4 CR S C [cdi2] DX [cdo2] B OB S2 B [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 finish',
-    medals: { cristal: 22.4, or: 23.6, argent: 27.2, bronze: 31.9 },
+    script: 'start*2 B3 TI TM2 TO QU WA4 CR S C*1 [cdi2] DX [cdo2] B OB S2 B [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S NI N2 NO S ZL3 S B2 finish*2',
+    obst: [{ k: 'board_warn', at: 0.095, side: 18, rot: Math.PI }, { k: 'sign_down', at: 0.2, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.235, side: -18, rot: Math.PI }, { k: 'board_right', at: 0.405, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.555, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.694, side: 0, s: 2 }, { k: 'pillar', at: 0.689, side: 36 }, { k: 'pillar', at: 0.689, side: -36 }, { k: 'board_warn', at: 0.878, side: 16, rot: Math.PI }],
+    medals: { cristal: 44.2, or: 46.6, argent: 53.5, bronze: 62.9 },
   },
   {
     // Chapitre 3 · 4/6 — ROLLERCOASTER (0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : quatre boosters → TRIPLE looping. Wall-ride à gauche, chicane longue, wall-ride à
@@ -422,14 +429,16 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 51.2, or: 53.9, argent: 62, bronze: 72.8 },
   },
   {
-    // Chapitre 6 · 5/6 — SPEEDWAY (circuit fermé, 2 tours). Ouverture : deux boosters puis UNE MONTÉE DOUCE de quatre cases (2 niveaux) vers la crête du cratère. Quatre virages relevés 3×3
-    // forment l'anneau, avec un wall-ride de quatre cases sur la paroi (mur droit) et la descente douce du retour. Sur deux tours, 94 % du temps au-dessus de 220 km/h.
+    // Chapitre 6 · 5/6 — SPEEDWAY EN DEUX TOURS (0.10.5 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters puis une montée douce de deux niveaux. Le tour du cratère :
+    // quatre très grands virages relevés, wall-ride, route large sous un portique, descente douce, chicanes rapides puis longues (deux pyramides de lave dans le cratère). Le circuit se
+    // referme : l'arrivée jouxte le départ. Aucun virage serré ; objectif : ne toucher aucune bordure.
     id: 'caldeira', name: 'Caldeira', decor: 'volcano', difficulty: 5, profil: 'speedway',
-    appris: 'Départ : deux boosters → montée douce vers la crête ; circuit fermé, 2 tours. Au programme : quatre virages relevés en anneau, wall-ride, 94 % du temps au-dessus de 220 km/h.',
+    appris: 'Départ : deux boosters, montée douce. Au programme : deux tours du cratère, quatre très grands virages relevés, wall-ride, route large sous un portique, chicanes rapides et longues.',
     goal: { id: 'nowall' },
     opts: { l: 6 }, pilot: { vCap: 70 }, laps: 2,
-    script: 'start B2 GU4 S BRR B S [tr02l] S4> [tr20l] BRR B S2 C GD4 S BRR S B S2 B S2 B S2 BRR finish',
-    medals: { cristal: 55.2, or: 58.1, argent: 66.8, bronze: 78.4 },
+    script: 'start*2 B2 GU4 S BRR B S [tr02l] S4> [tr20l] WI W WO BRR B S2 C*3 GD4 S BRR B ZR4 S ZL4 B ZR3 ZL3 S2 BRR finish*2',
+    obst: [{ k: 'gantry', at: 0.169, side: 0, s: 2 }, { k: 'pillar', at: 0.165, side: 36 }, { k: 'pillar', at: 0.165, side: -36 }, { k: 'pyramidS', at: 0.3, side: 60 }, { k: 'pyramidS', at: 0.3, side: -60 }, { k: 'board_right', at: 0.315, side: -20, rot: Math.PI }, { k: 'board_right', at: 0.39, side: -20, rot: Math.PI }],
+    medals: { cristal: 74, or: 77.9, argent: 89.6, bronze: 105.2 },
   },
   {
     // Chapitre 5 · 6/6 — TECHNIQUE (0.10.4 : refait AUTOUR des nouvelles pièces). Ouverture : poudreuse (deux cases), booster. Rafales de vent latéral, épingles, route ÉTROITE
@@ -478,15 +487,16 @@ export const BUILTIN_TRACKS = [
     medals: { cristal: 59.8, or: 62.9, argent: 72.4, bronze: 84.9 },
   },
   {
-    // Chapitre 6 · 6/6 — ACROBATIQUE (éruptions). Ouverture : trois boosters → une rampe à forte pente SANS virage d'entrée : un saut de cinq cases qui retombe dix niveaux plus bas. Quatre
-    // éruptions en tout (rampe forte, rampe douce avec anneau turbo, wall-ride entre les deux, rampe forte, rampe douce), chaque checkpoint suivi de deux boosters et placé loin de la réception
-    // précédente.
+    // Chapitre 6 · 6/6 — ACROBATIQUE (0.10.5 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → rampe droite de quatre niveaux et un vide de deux cases. Quatre
+    // sauts : les deux grands se reçoivent sur une descente suivie d'une PLAQUE de lave refroidie (entre des cônes), un saut à anneau turbo ; chicanes longues, wall-ride, route large
+    // sous un portique pour finir. Panneaux de montée avant chaque rampe.
     id: 'eruption', name: 'Éruption', decor: 'volcano', difficulty: 5, profil: 'acrobatique',
-    appris: 'Départ : trois boosters → rampe sans virage d’entrée : saut de cinq cases, réception 10 niveaux plus bas. Au programme : quatre éruptions, anneau turbo, wall-ride.',
-    goal: { id: 'under', t: 37.5 },
+    appris: 'Départ : trois boosters → rampe de quatre niveaux et vide de deux cases. Au programme : quatre sauts, plaques de lave refroidie, saut à anneau turbo, chicanes longues, wall-ride, route large.',
+    goal: { id: 'under', t: 47.5 },
     opts: { l: 16 }, pilot: { vCap: 60 },
-    script: 'start B3 UX G2 DX DX [cdo2] S3 C B2 [crv1] UU GR2 DD [cdo1] S [tr01s] S2< [tr10s] S C B2 [crv2] UX G2 DX DX [cdo2] S3 C B2 [crv1] UU G2 DD [cdo1] S5 finish',
-    medals: { cristal: 35, or: 36.9, argent: 42.4, bronze: 49.8 },
+    script: 'start*2 B3 UX G2 DX DX [cdo2] [plate3]*10 S2 C*3 ZR3 B2 [crv1] UU GR2 DD [cdo1] S [tr01s] S2< [tr10s] S C*3 B2 [crv2] UX G2 DX DX [cdo2] [plate2]*10 S2 C*3 ZL3 B2 [crv1] UU G2 DD [cdo1] WI W WO S3 finish*2',
+    obst: [{ k: 'board_up', at: 0.05, side: 18, rot: Math.PI }, { k: 'pyramidS', at: 0.15, side: 60 }, { k: 'pyramidS', at: 0.15, side: -60 }, { k: 'board_right', at: 0.205, side: -20, rot: Math.PI }, { k: 'board_up', at: 0.3, side: -18, rot: Math.PI }, { k: 'board_up', at: 0.57, side: 18, rot: Math.PI }, { k: 'wedge', at: 0.665, side: 60 }, { k: 'board_left', at: 0.72, side: 20, rot: Math.PI }, { k: 'board_up', at: 0.815, side: -18, rot: Math.PI }, { k: 'gantry', at: 0.903, side: 0, s: 2 }, { k: 'pillarBase', at: 0.897, side: 36 }, { k: 'pillarBase', at: 0.897, side: -36 }],
+    medals: { cristal: 43.9, or: 46.2, argent: 53.1, bronze: 62.4 },
   },
   {
     // Chapitre 7 · 6/6 — TECHNIQUE (station). Ouverture : DÉPART SUR UNE PLATEFORME d'amarrage (deux cases de plateforme, large et plate), un booster puis une première épingle.

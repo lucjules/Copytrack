@@ -278,49 +278,49 @@ _Collines de braises, plaque de dérive, cheminée verticale, caldeira à deux t
 
 ### 31. Braises — Sprint, ◆◆◇◇◇
 
-- Départ : deux boosters → colline douce. Au programme : vague en S, S relevé 2×2, un très grand virage plat.
-- Pilote automatique : **24.9 s** · médailles : cristal 23.7 · or 25 · argent 28.7 · bronze 33.7
-- Objectif bonus ★ : Finir en moins de 26 s
+- Départ : deux boosters, une colline douce. Au programme : chicanes rapides, S relevé, route large sous un portique, très grand virage plat, tube qui tourne à droite puis à gauche, grand S.
+- Pilote automatique : **45.7 s** · médailles : cristal 43.4 · or 45.7 · argent 52.5 · bronze 61.7
+- Objectif bonus ★ : Finir en moins de 47 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 32. Coulée Ardente — Speedway, ◆◆◆◇◇
 
-- Départ : un booster → S de virages relevés 2×2. Au programme : six virages relevés, wall-ride, plongeon, 4 % de freinage.
-- Pilote automatique : **28.0 s** · médailles : cristal 26.6 · or 28 · argent 32.2 · bronze 37.9
+- Départ : un booster et un S relevé. Au programme : route large sous un portique, très grands virages relevés, chicane rapide, wall-ride, descente, grand S, tube qui tourne dans la coulée.
+- Pilote automatique : **47.1 s** · médailles : cristal 44.8 · or 47.1 · argent 54.2 · bronze 63.6
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 33. Champs de Basalte — Technique, ◆◆◆◆◇
 
-- Départ : sur une plaque de dérive (l’arrière n’accroche presque plus). Au programme : huit virages serrés dont trois sur dérive, chicane sur un mur.
-- Pilote automatique : **37.0 s** · médailles : cristal 35 · or 36.9 · argent 42.4 · bronze 49.7
+- Départ : plaque de dérive, booster. Au programme : épingles en dérive, route étroite entre des colonnes de basalte, wall-ride, chicanes serrées, croisement traversé deux fois.
+- Pilote automatique : **55.2 s** · médailles : cristal 52.5 · or 55.2 · argent 63.5 · bronze 74.6
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 34. Cheminée du Volcan — Rollercoaster, ◆◆◆◆◇
 
-- Départ : trois boosters → tube → montée verticale de quatre niveaux. Au programme : plongeon de 8 niveaux, grand looping, slalom de wall-rides.
-- Pilote automatique : **23.9 s** · médailles : cristal 22.4 · or 23.6 · argent 27.2 · bronze 31.9
+- Départ : trois boosters → tube, puis la cheminée (mur de quatre niveaux). Au programme : plongeon, grand looping, wall-rides, looping modulaire, route large, tube qui tourne, route étroite.
+- Pilote automatique : **46.6 s** · médailles : cristal 44.2 · or 46.6 · argent 53.5 · bronze 62.9
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 35. Caldeira — Speedway, ◆◆◆◆◆
 
-- Départ : deux boosters → montée douce vers la crête ; circuit fermé, 2 tours. Au programme : quatre virages relevés en anneau, wall-ride, 94 % du temps au-dessus de 220 km/h.
-- Pilote automatique : **58.1 s** · médailles : cristal 55.2 · or 58.1 · argent 66.8 · bronze 78.4
+- Départ : deux boosters, montée douce. Au programme : deux tours du cratère, quatre très grands virages relevés, wall-ride, route large sous un portique, chicanes rapides et longues.
+- Pilote automatique : **77.9 s** · médailles : cristal 74 · or 77.9 · argent 89.6 · bronze 105.2
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 36. Éruption — Acrobatique, ◆◆◆◆◆
 
-- Départ : trois boosters → rampe sans virage d’entrée : saut de cinq cases, réception 10 niveaux plus bas. Au programme : quatre éruptions, anneau turbo, wall-ride.
-- Pilote automatique : **36.9 s** · médailles : cristal 35 · or 36.9 · argent 42.4 · bronze 49.8
-- Objectif bonus ★ : Finir en moins de 37.5 s
+- Départ : trois boosters → rampe de quatre niveaux et vide de deux cases. Au programme : quatre sauts, plaques de lave refroidie, saut à anneau turbo, chicanes longues, wall-ride, route large.
+- Pilote automatique : **46.2 s** · médailles : cristal 43.9 · or 46.2 · argent 53.1 · bronze 62.4
+- Objectif bonus ★ : Finir en moins de 47.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
