@@ -8946,14 +8946,15 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 3 · 1/6 — SPRINT (moto). Ouverture : départ EN MOTO (veh0), lancé par une descente de 7 niveaux au lieu d'un booster. Puis deux
-    // sauts en chapelet avec un anneau turbo chacun, un très grand virage plat et un dernier booster. Presque tout droit.
+    // Chapitre 3 · 1/6 — SPRINT EN MOTO (0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : descente en moto vers le lagon. Deux sauts à anneau turbo (le second se reçoit
+    // sur une PLAQUE, un banc de sable), chicanes rapides entre les deux, route large sous un portique, très grand virage plat, CROISEMENT traversé deux fois (boucle de trois
+    // virages géants), grand S ; deux pyramides de roche à l'arrivée. Aucun virage serré.
     id: "lagon",
     name: "Lagon Turquoise",
     decor: "isles",
     difficulty: 1,
     profil: "sprint",
-    appris: "D\xE9part : en moto, lanc\xE9 par une descente de 7 niveaux (sans booster). Au programme : deux sauts en chapelet avec un anneau turbo chacun, tr\xE8s grand virage plat.",
+    appris: "D\xE9part : en moto, descente vers le lagon. Au programme : deux sauts \xE0 anneau turbo (le second re\xE7u sur une plaque), chicanes rapides, route large sous un portique, croisement travers\xE9 deux fois, grand S.",
     goal: {
       id: "rings",
       n: 2
@@ -8967,12 +8968,64 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start [cdi1] [dn2] [dn2] [cdo2] B S [crv1] UU GR2 DD [cdo1] B2 S [crv1] UU GR2 DD [cdo1] S B C S3 HL S2 B2 finish",
+    script: "start*1 [cdi1] [dn2] [dn2] [cdo2] B S [crv1] UU GR2 DD [cdo1] B2 ZR4 S ZL4 S [crv1] UU GR2 V-2 [plate3]*10 S B C*2 WI W WO S HL S JX S4 XR XR XR S4 JX ZZR S B2 finish*2",
+    obst: [
+      {
+        k: "board_right",
+        at: 0.185,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.28,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.501,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillar",
+        at: 0.495,
+        side: 36
+      },
+      {
+        k: "pillar",
+        at: 0.495,
+        side: -36
+      },
+      {
+        k: "board_warn",
+        at: 0.565,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.64,
+        side: -24,
+        rot: Math.PI
+      },
+      {
+        k: "pyramidS",
+        at: 0.95,
+        side: 28
+      },
+      {
+        k: "pyramidS",
+        at: 0.95,
+        side: -28
+      }
+    ],
     medals: {
-      cristal: 20.9,
-      or: 22,
-      argent: 25.3,
-      bronze: 29.7
+      cristal: 45.9,
+      or: 48.3,
+      argent: 55.5,
+      bronze: 65.2
     }
   },
   {
@@ -9479,15 +9532,15 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 3 · 2/6 — TECHNIQUE (bateau). Ouverture : départ SUR L'EAU (plaque bateau juste après la ligne, slalom R L R L dans un chenal).
-    // Le bateau glisse et freine peu : les épingles se font en voiture, entre deux chenaux, avec un petit saut sur un mur. L'arrivée se franchit
-    // en bateau (objectif bonus), le chenal final sortant directement sur la ligne.
+    // Chapitre 3 · 2/6 — TECHNIQUE EN BATEAU (0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : plaque bateau, puis des lacets sur l'eau. Retour à la voiture, wall-ride,
+    // épingle, ROUTE ÉTROITE (12 m) sur une jetée entre des piliers fins, virages serrés, lacets descendants, deux chicanes serrées, CROISEMENT traversé deux fois (boucle de virages
+    // serrés) ; on finit en bateau sur l'eau, pour l'objectif.
     id: "recif",
     name: "R\xE9cif",
     decor: "isles",
     difficulty: 3,
     profil: "technique",
-    appris: "D\xE9part : sur l\u2019eau (plaque bateau, slalom R L R L dans un chenal). Au programme : \xE9pingles en voiture entre deux chenaux, petit saut sur un mur, arriv\xE9e franchie en bateau (objectif bonus).",
+    appris: "D\xE9part : plaque bateau, puis des lacets sur l\u2019eau. Au programme : wall-ride, \xE9pingle, route \xE9troite sur une jet\xE9e, chicanes serr\xE9es, croisement travers\xE9 deux fois, retour au bateau pour finir sur l\u2019eau.",
     goal: {
       id: "vehicle",
       v: "boat"
@@ -9498,24 +9551,76 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start S.n S2.a R.a L.a R.a L.a S.a S.n B2 S [tr01s] S2< [tr10s] S3 R R B S2 L S L B S3 [cvd05] [cvdL05] B S C S.n S2.a R.a L.a R.a L.a S2.a finish",
+    script: "start*3 S.n S2.a R.a L.a R.a L.a S.a S.n B2 S [tr01s] S2< [tr10s] S3 R R B S2 NI N2 NO L S L B S3 [cvd05] [cvdL05] B ZR S ZL B C*1 JX R S R R S JX R S B S C*3 S.n S2.a R.a L.a R.a L.a S2.a finish*2",
+    obst: [
+      {
+        k: "sign_uturn",
+        at: 0.318,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.38,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "pillarThin",
+        at: 0.405,
+        side: 14
+      },
+      {
+        k: "pillarThin",
+        at: 0.405,
+        side: -14
+      },
+      {
+        k: "pillarThin",
+        at: 0.42,
+        side: 14
+      },
+      {
+        k: "pillarThin",
+        at: 0.42,
+        side: -14
+      },
+      {
+        k: "board_right",
+        at: 0.575,
+        side: -16,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.625,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.688,
+        side: 16,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 41.2,
-      or: 43.4,
-      argent: 49.9,
-      bronze: 58.6
+      cristal: 59.7,
+      or: 62.9,
+      argent: 72.3,
+      bronze: 84.8
     }
   },
   {
-    // Chapitre 3 · 3/6 — ACROBATIQUE (deltaplane). Ouverture : trois boosters, plaque deltaplane et vol de cinq cases au-dessus de la mer. Puis
-    // deux sauts de voiture avec anneau turbo, séparés par la montée du phare (hélice de quatre grandes courbes inclinées, +8 niveaux) et un
-    // plongeon. La piste qui suit un vol plané est longue : selon l'élan, le deltaplane se pose plus ou moins loin.
+    // Chapitre 3 · 3/6 — ACROBATIQUE (0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters, plaque DELTAPLANE et grand saut à anneau turbo (on plane jusqu'à la
+    // descente). Retour à la voiture, saut à anneau reçu sur une PLAQUE, chicane longue, montée en hélice autour du phare (quatre grandes courbes montantes), route large au sommet sous
+    // un portique, descente à 38°, chicane longue et dernier saut à anneau reçu sur une plaque.
     id: "phare",
     name: "Phare",
     decor: "isles",
     difficulty: 3,
     profil: "acrobatique",
-    appris: "D\xE9part : trois boosters \u2192 d\xE9collage en deltaplane. Au programme : vol de cinq cases, mont\xE9e du phare (+8 niveaux), deux sauts de voiture avec anneau turbo.",
+    appris: "D\xE9part : plaque deltaplane, grand saut \xE0 anneau turbo. Au programme : saut re\xE7u sur une plaque, chicane longue, h\xE9lice autour du phare, route large au sommet, descente \xE0 38\xB0, dernier saut re\xE7u sur une plaque.",
     goal: {
       id: "rings",
       n: 2
@@ -9523,12 +9628,66 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 4
     },
-    script: "start B3 S.e UU GR4 DD S5 S.e S C B2 S [crv1] UU GR1 DD [cdo1] S2 CBR2 CBR2 CBR2 CBR2 S C B [cdi2] DX [cdo2] B S2 [crv1] UU GR1 DD [cdo1] S2 B finish",
+    script: "start*2 B3 S.e UU GR4 DD S5 S.e S C*3 B2 S [crv1] UU GR1 V-2 [plate3]*10 S ZR3 S2 CBR2 CBR2 CBR2 CBR2 S C*3 WI W WO B [cdi2] DX [cdo2] B ZL3 S2 [crv1] UU GR1 V-2 [plate2]*10 S2 B finish*1",
+    obst: [
+      {
+        k: "board_up",
+        at: 0.29,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.372,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.47,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.664,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillarBase",
+        at: 0.658,
+        side: 36
+      },
+      {
+        k: "pillarBase",
+        at: 0.658,
+        side: -36
+      },
+      {
+        k: "sign_down",
+        at: 0.705,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.77,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "board_up",
+        at: 0.87,
+        side: -18,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 39.7,
-      or: 41.8,
-      argent: 48.1,
-      bronze: 56.4
+      cristal: 50.1,
+      or: 52.7,
+      argent: 60.7,
+      bronze: 71.2
     }
   },
   {
@@ -10175,14 +10334,15 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 3 · 4/6 — ROLLERCOASTER (tourbillons). Ouverture : quatre boosters puis directement un grand looping TRIPLE (4×4, 7 niveaux de haut). Ensuite un slalom de
-    // wall-rides gauche / droite, un grand double looping et un plongeon de 8 niveaux : plus de 15 niveaux de dénivelé et deux murs.
+    // Chapitre 3 · 4/6 — ROLLERCOASTER (0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : quatre boosters → TRIPLE looping. Wall-ride à gauche, chicane longue, wall-ride à
+    // droite, grand double looping, LOOPING MODULAIRE à gauche (trois murs de chaque côté), TUBE qui tourne à droite puis à gauche, plongeon à 38°, route large sous un portique,
+    // chicane longue. Panneaux danger avant chaque looping et avant le tube.
     id: "vrille",
     name: "Tourbillon Tropical",
     decor: "isles",
     difficulty: 4,
     profil: "rollercoaster",
-    appris: "D\xE9part : quatre boosters \u2192 looping triple (4\xD74). Au programme : slalom de wall-rides gauche / droite, grand double looping, plongeon de 8 niveaux : 15 niveaux de d\xE9nivel\xE9.",
+    appris: "D\xE9part : quatre boosters \u2192 triple looping. Au programme : wall-rides des deux c\xF4t\xE9s, chicane longue, double looping, looping modulaire, tube qui tourne, plongeon \xE0 38\xB0, route large sous un portique.",
     goal: {
       id: "norespawn"
     },
@@ -10192,12 +10352,66 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start B4 OBT S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B OBDL S C B2 [cdi2] DX [cdo2] S B2 finish",
+    script: "start*2 B4 OBT S2 C*1 B2 [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B OBDL S C*3 B2 LPL3 S TI TM TRR TM TLL TM TO S B2 [cdi2] DX [cdo2] S WI W WO S ZL3 S B2 finish*2",
+    obst: [
+      {
+        k: "board_warn",
+        at: 0.03,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.295,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.42,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.555,
+        side: -18,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.692,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.91,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillar",
+        at: 0.905,
+        side: 36
+      },
+      {
+        k: "pillar",
+        at: 0.905,
+        side: -36
+      },
+      {
+        k: "board_left",
+        at: 0.926,
+        side: 20,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 32.6,
-      or: 34.3,
-      argent: 39.5,
-      bronze: 46.3
+      cristal: 52,
+      or: 54.7,
+      argent: 63,
+      bronze: 73.9
     }
   },
   {
@@ -10306,15 +10520,15 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 3 · 5/6 — ACROBATIQUE (gravité lunaire). Ouverture : la plaque de départ règle la gravité à 50 % ; la voiture quitte la plateforme au pas, flotte de 6 niveaux et se
-    // réceptionne sur une pente à 4 niveaux. Trois grands sauts de cinq cases (la portée est doublée par la basse gravité) avec de longues réceptions ; chaque rampe est précédée d'un
-    // checkpoint et de deux boosters (on repart de chacun à l'arrêt).
+    // Chapitre 3 · 5/6 — ACROBATIQUE en BASSE GRAVITÉ (50 % ; 0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : plaque de gravité, vide et chute de six niveaux. Trois grands
+    // sauts lunaires reçus sur des descentes, les deux premiers suivis d'une PLAQUE bordée (des cratères en pyramide à côté), chicanes longues et dos d'âne entre les sauts, route
+    // large sous un portique à l'arrivée. Panneaux de montée avant chaque rampe.
     id: "lunaire",
     name: "Sauts Lunaires",
     decor: "isles",
     difficulty: 4,
     profil: "acrobatique",
-    appris: "D\xE9part : la plaque de d\xE9part r\xE8gle la gravit\xE9 \xE0 50 % : la voiture flotte de 6 niveaux. Au programme : trois sauts de cinq cases en basse gravit\xE9, longues r\xE9ceptions.",
+    appris: "D\xE9part : plaque de basse gravit\xE9, vide et chute de six niveaux. Au programme : trois grands sauts lunaires, plaques entre des crat\xE8res, chicanes longues, dos d\u2019\xE2ne, route large sous un portique.",
     goal: {
       id: "perfect",
       n: 2
@@ -10322,12 +10536,75 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 28
     },
-    script: "start S.g50 G2 V-6 [dn4] [cdo2] S C B2 S [crv1] UU G3 DD [cdo1] [crs1] S2 [cds1] C B2 S [crv1] UU G3 DD [cdo1] [crs1] S2 [cds1] C B2 S [crv1] UU G3 DD [cdo1] S5 finish",
+    script: "start*2 S.g50 G2 V-6 [dn4] [cdo2] S C*3 B2 S [crv1] UU G3 DD [cdo1] [plate3]*10 ZR3 S [crs1] S2 [cds1] C*3 B2 S [crv1] UU G3 DD [cdo1] [plate3]*10 ZL3 S [crs1] S2 [cds1] C*3 B2 S [crv1] UU G3 DD [cdo1] S2 WI W WO S3 finish*2",
+    obst: [
+      {
+        k: "board_up",
+        at: 0.14,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.243,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "pyramidS",
+        at: 0.228,
+        side: 60
+      },
+      {
+        k: "pyramidS",
+        at: 0.228,
+        side: -60
+      },
+      {
+        k: "board_up",
+        at: 0.455,
+        side: -18,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.56,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "wedge",
+        at: 0.545,
+        side: 60
+      },
+      {
+        k: "board_up",
+        at: 0.77,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.9,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillarThin",
+        at: 0.895,
+        side: 36
+      },
+      {
+        k: "pillarThin",
+        at: 0.895,
+        side: -36
+      }
+    ],
     medals: {
-      cristal: 37,
-      or: 38.9,
-      argent: 44.8,
-      bronze: 52.5
+      cristal: 51,
+      or: 53.7,
+      argent: 61.8,
+      bronze: 72.5
     }
   },
   {
@@ -10433,18 +10710,18 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 3 · 6/6 — SPEEDWAY. Ouverture : AUCUN booster, une pente douce de six cases (3 niveaux) lance la voiture dans un très grand virage relevé. Cinq virages relevés 3×3,
-    // un wall-ride de quatre cases sur la falaise (mur droit), un plongeon de quatre niveaux et des boosters placés en sortie de virage : plus de la moitié du tour (61 %) au-dessus de 220 km/h,
-    // moins de 8 % de freinage.
+    // Chapitre 3 · 6/6 — SPEEDWAY (0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : longue pente douce vers la mer (six demi-niveaux). Très grands virages relevés, route
+    // large sous un portique, chicane rapide, wall-ride à droite, descente, CROISEMENT traversé deux fois (boucle de trois virages géants), grand S ; deux pyramides de roche à
+    // l'arrivée. Aucun virage serré.
     id: "archipel",
     name: "Grand Archipel",
     decor: "isles",
     difficulty: 5,
     profil: "speedway",
-    appris: "D\xE9part : aucun booster : une pente douce de six cases lance dans un tr\xE8s grand virage relev\xE9. Au programme : cinq virages relev\xE9s, wall-ride de quatre cases, plongeon, 85 % du tour au-dessus de 220 km/h.",
+    appris: "D\xE9part : longue pente douce vers la mer. Au programme : tr\xE8s grands virages relev\xE9s, route large sous un portique, chicane rapide, wall-ride, croisement travers\xE9 deux fois, grand S.",
     goal: {
       id: "under",
-      t: 33
+      t: 61.5
     },
     opts: {
       l: 8
@@ -10452,12 +10729,64 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 70
     },
-    script: "start GD6 BRR S B BLL S2 C B [tr02l] S4> [tr20l] BRR S2 [cdi1] [dn2] [cdo1] B BLL S2 B BRR S2 B2 finish",
+    script: "start*3 GD6 BRR S B BLL S2 C*2 WI W2 WO S ZR4 S B [tr02l] S4> [tr20l] BRR S2 [cdi1] [dn2] [cdo1] B BLL S2 JX S4 XR XR XR S4 JX S B BRR S2 ZZL S B2 finish*2",
+    obst: [
+      {
+        k: "gantry",
+        at: 0.249,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillarBase",
+        at: 0.244,
+        side: 36
+      },
+      {
+        k: "pillarBase",
+        at: 0.244,
+        side: -36
+      },
+      {
+        k: "board_right",
+        at: 0.27,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.635,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.685,
+        side: -24,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.92,
+        side: 24,
+        rot: Math.PI
+      },
+      {
+        k: "pyramidS",
+        at: 0.965,
+        side: 28
+      },
+      {
+        k: "pyramidS",
+        at: 0.965,
+        side: -28
+      }
+    ],
     medals: {
-      cristal: 30.4,
-      or: 32,
-      argent: 36.8,
-      bronze: 43.2
+      cristal: 56.9,
+      or: 59.9,
+      argent: 68.9,
+      bronze: 80.9
     }
   },
   {
@@ -15996,4 +16325,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "151a68c5d7a6b745";
+globalThis.__COPYTRACK_BUILD__ = "5ecc11a36627ae42";

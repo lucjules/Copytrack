@@ -91,7 +91,7 @@ export function checkDef(def) {
   try { tr = buildBuiltin(def); } catch (e) { return { fails: ['construction : ' + e.message], info }; }
   if (!PROFILS[def.profil]) f.push('profil inconnu : ' + def.profil);
   if (def.params && def.params.v0) f.push('départ lancé (v0) interdit : on doit pouvoir repartir à l\'arrêt');
-  if (/^(B S2? R|S2 B|S B|B S2 B|B S2 R)/.test(def.script.replace(/^start /, ''))) f.push('départ « classique » interdit : ' + openingOf(def));
+  if (/^(B S2? R|S2 B|S B|B S2 B|B S2 R)/.test(def.script.replace(/^start\S* /, ''))) f.push('départ « classique » interdit : ' + openingOf(def));
   const voc = vocabulary(tr);
   if (voc.size < 4) f.push(`seulement ${voc.size} pièces nouvelles (${[...voc].join(' ')}) : 4 au moins`);
   const S = runTrack(tr);

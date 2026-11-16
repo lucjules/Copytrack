@@ -127,7 +127,7 @@ test('chaque chapitre a une description propre', () => {
 
 console.log('Départs');
 test('aucun départ « classique » (booster, deux droites, virage) : le contrat le vérifie, ici sur la liste écrite', () => {
-  for (const d of BUILTIN_TRACKS) assert.ok(!/^(B S2? R|S2 B|S B|B S2 B|B S2 R)/.test(d.script.replace(/^start /, '')), d.id + ' : ' + openingOf(d));
+  for (const d of BUILTIN_TRACKS) assert.ok(!/^(B S2? R|S2 B|S B|B S2 B|B S2 R)/.test(d.script.replace(/^start\S* /, '')), d.id + ' : ' + openingOf(d));
 });
 test('les 72 ouvertures sont toutes différentes', () => {
   const o = BUILTIN_TRACKS.map(openingOf);
@@ -145,8 +145,8 @@ test('départ au plafond (Racines) en gravité inversée, départ en moto (Lagon
   assert.equal(new RaceLogic(buildBuiltin(by.racines)).spawnPoint().gs, -1);
   assert.equal(new RaceLogic(buildBuiltin(by.lagon)).respawn.vehicle, 'moto');
   assert.equal(by.lagon.params.veh0, 'moto');
-  assert.match(by.recif.script, /^start S\.n S2\.a /);
-  assert.match(by.cite.script, /^start S\.e /);
+  assert.match(by.recif.script, /^start\S* S\.n S2\.a /);
+  assert.match(by.cite.script, /^start\S* S\.e /);
   assert.ok(buildBuiltin(by.zenith).tiles.some((t) => t.t === 'platform'));
 });
 test('chute libre (Tremplins) : départ à plus de 8 niveaux de haut, depuis l’arrêt, réception sur une descente', () => {
@@ -154,7 +154,7 @@ test('chute libre (Tremplins) : départ à plus de 8 niveaux de haut, depuis l�
   assert.ok(runTrack(buildBuiltin(by.tremplins)).airMax > 1, 'la chute doit durer');
 });
 test('départ sur un tapis roulant (Néons Express) : la voiture est lancée par le tapis, sans booster dans les premières cases', () => {
-  assert.match(by.neons.script, /^start S3\.t201 /);
+  assert.match(by.neons.script, /^start\S* S3\.t201 /);
   const S = runTrack(buildBuiltin(by.neons));
   assert.ok(S.ok);
   assert.ok(S.samples.some((s) => s[0] < 5 && s[1] * 3.6 > 250), 'plus de 250 km/h avant 5 s');

@@ -6,6 +6,20 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.2 — chapitre 3 (Archipel tropical) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 3 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits de l'Archipel tropical sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures, véhicules et objectifs gardés) :
+  - **Lagon** (sprint en moto, 48,3 s) : deux sauts à anneau (le second reçu sur une **plaque**), chicanes rapides, route large sous un portique, croisement traversé deux fois, grand S, pyramides de roche ; 21 nouveautés.
+  - **Récif** (technique en bateau, 62,9 s) : route étroite sur une jetée entre des piliers fins, chicanes serrées, croisement traversé deux fois ; 20 nouveautés.
+  - **Phare** (acrobatique, deltaplane, 52,7 s) : deux sauts reçus sur des plaques, chicanes longues, hélice autour du phare, route large au sommet ; 22 nouveautés.
+  - **Vrille** (rollercoaster, 54,7 s) : triple looping, **looping modulaire**, tube qui tourne, route large sous un portique ; 21 nouveautés.
+  - **Lunaire** (acrobatique en basse gravité, 53,7 s) : trois grands sauts lunaires, plaques entre des cratères (pyramides, cale), chicanes longues ; 25 nouveautés.
+  - **Archipel** (speedway, 59,9 s) : route large, chicane rapide, croisement traversé deux fois (trois virages géants), grand S ; 19 nouveautés. Objectif « moins de 61,5 s ».
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 3.
+- Correction : le contrôle « pas de départ classique » (contrat et `tools/test-niveaux.mjs`) ignorait les circuits dont le départ porte un style de portique (`start*2 …`, depuis 0.9.68) : il les vérifie de nouveau (aucun n'était en faute). Les tests des départs spéciaux (bateau, deltaplane, tapis roulant) acceptent aussi ce style.
+
 ## Bêta 0.10.1 — chapitre 2 (Jungle néon) refait autour des nouvelles pièces
 
 **`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 2 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.

@@ -122,49 +122,49 @@ _Descente en moto, slalom en bateau et décollage en deltaplane autour du phare.
 
 ### 13. Lagon Turquoise — Sprint, ◆◇◇◇◇
 
-- Départ : en moto, lancé par une descente de 7 niveaux (sans booster). Au programme : deux sauts en chapelet avec un anneau turbo chacun, très grand virage plat.
-- Pilote automatique : **21.7 s** · médailles : cristal 20.9 · or 22 · argent 25.3 · bronze 29.7
+- Départ : en moto, descente vers le lagon. Au programme : deux sauts à anneau turbo (le second reçu sur une plaque), chicanes rapides, route large sous un portique, croisement traversé deux fois, grand S.
+- Pilote automatique : **48.3 s** · médailles : cristal 45.9 · or 48.3 · argent 55.5 · bronze 65.2
 - Objectif bonus ★ : Passer dans 2 anneaux turbo
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 14. Récif — Technique, ◆◆◆◇◇
 
-- Départ : sur l’eau (plaque bateau, slalom R L R L dans un chenal). Au programme : épingles en voiture entre deux chenaux, petit saut sur un mur, arrivée franchie en bateau (objectif bonus).
-- Pilote automatique : **43.4 s** · médailles : cristal 41.2 · or 43.4 · argent 49.9 · bronze 58.6
+- Départ : plaque bateau, puis des lacets sur l’eau. Au programme : wall-ride, épingle, route étroite sur une jetée, chicanes serrées, croisement traversé deux fois, retour au bateau pour finir sur l’eau.
+- Pilote automatique : **62.9 s** · médailles : cristal 59.7 · or 62.9 · argent 72.3 · bronze 84.8
 - Objectif bonus ★ : Franchir l'arrivée en bateau
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 15. Phare — Acrobatique, ◆◆◆◇◇
 
-- Départ : trois boosters → décollage en deltaplane. Au programme : vol de cinq cases, montée du phare (+8 niveaux), deux sauts de voiture avec anneau turbo.
-- Pilote automatique : **41.9 s** · médailles : cristal 39.7 · or 41.8 · argent 48.1 · bronze 56.4
+- Départ : plaque deltaplane, grand saut à anneau turbo. Au programme : saut reçu sur une plaque, chicane longue, hélice autour du phare, route large au sommet, descente à 38°, dernier saut reçu sur une plaque.
+- Pilote automatique : **52.7 s** · médailles : cristal 50.1 · or 52.7 · argent 60.7 · bronze 71.2
 - Objectif bonus ★ : Passer dans 2 anneaux turbo
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 16. Tourbillon Tropical — Rollercoaster, ◆◆◆◆◇
 
-- Départ : quatre boosters → looping triple (4×4). Au programme : slalom de wall-rides gauche / droite, grand double looping, plongeon de 8 niveaux : 15 niveaux de dénivelé.
-- Pilote automatique : **34.3 s** · médailles : cristal 32.6 · or 34.3 · argent 39.5 · bronze 46.3
+- Départ : quatre boosters → triple looping. Au programme : wall-rides des deux côtés, chicane longue, double looping, looping modulaire, tube qui tourne, plongeon à 38°, route large sous un portique.
+- Pilote automatique : **54.7 s** · médailles : cristal 52 · or 54.7 · argent 63 · bronze 73.9
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 17. Sauts Lunaires — Acrobatique, ◆◆◆◆◇
 
-- Départ : la plaque de départ règle la gravité à 50 % : la voiture flotte de 6 niveaux. Au programme : trois sauts de cinq cases en basse gravité, longues réceptions.
-- Pilote automatique : **38.9 s** · médailles : cristal 37 · or 38.9 · argent 44.8 · bronze 52.5
+- Départ : plaque de basse gravité, vide et chute de six niveaux. Au programme : trois grands sauts lunaires, plaques entre des cratères, chicanes longues, dos d’âne, route large sous un portique.
+- Pilote automatique : **53.7 s** · médailles : cristal 51 · or 53.7 · argent 61.8 · bronze 72.5
 - Objectif bonus ★ : 2 réceptions parfaites
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 18. Grand Archipel — Speedway, ◆◆◆◆◆
 
-- Départ : aucun booster : une pente douce de six cases lance dans un très grand virage relevé. Au programme : cinq virages relevés, wall-ride de quatre cases, plongeon, 85 % du tour au-dessus de 220 km/h.
-- Pilote automatique : **32.0 s** · médailles : cristal 30.4 · or 32 · argent 36.8 · bronze 43.2
-- Objectif bonus ★ : Finir en moins de 33 s
+- Départ : longue pente douce vers la mer. Au programme : très grands virages relevés, route large sous un portique, chicane rapide, wall-ride, croisement traversé deux fois, grand S.
+- Pilote automatique : **59.9 s** · médailles : cristal 56.9 · or 59.9 · argent 68.9 · bronze 80.9
+- Objectif bonus ★ : Finir en moins de 61.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
