@@ -47,7 +47,7 @@ export default {
   'Tapis roulant express, boucles, métro aérien, toits et lift hill : la ville monte en puissance.': 'Express conveyor belt, loops, elevated metro, rooftops and a lift hill: the city ramps up.',
   'Départ sur la glace, rebonds en terrasses, toboggan aimanté, hélices et poudreuse.': 'Start on the ice, terraced bounces, a magnetic slide, propellers and powder snow.',
   'Collines de braises, plaque de dérive, cheminée verticale, caldeira à deux tours et éruptions.': 'Ember hills, a drift plate, a vertical chimney, a two-lap caldera and eruptions.',
-  'Tube d’amarrage, basse gravité, moto, grand anneau à trois tours et apesanteur.': 'Docking tube, low gravity, motorbike, a three-lap grand ring and weightlessness.',
+  'Tube d’amarrage, basse gravité, moto, grand anneau à deux tours et apesanteur.': 'Docking tube, low gravity, motorbike, a two-lap grand ring and weightlessness.',
   'Contre-courants, gravité lourde, pont de verre et plongée vers les abysses.': 'Counter-currents, heavy gravity, a glass bridge and a dive to the abyss.',
   'Moteur coupé, bifurcation, pistons, marteau et ralentisseurs : l’usine ne pardonne rien.': 'Engine cut, a fork, pistons, a hammer and speed bumps: the factory forgives nothing.',
   'Vent de travers, îles sans bordures, gravité réduite, pont des vents et départ en deltaplane.': 'Crosswind, borderless islands, reduced gravity, the wind bridge and a glider start.',

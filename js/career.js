@@ -27,7 +27,7 @@ const CHAPTER_DESC = {
   city: 'Tapis roulant express, boucles, métro aérien, toits et lift hill : la ville monte en puissance.',
   polar: 'Départ sur la glace, rebonds en terrasses, toboggan aimanté, hélices et poudreuse.',
   volcano: 'Collines de braises, plaque de dérive, cheminée verticale, caldeira à deux tours et éruptions.',
-  orbit: 'Tube d’amarrage, basse gravité, moto, grand anneau à trois tours et apesanteur.',
+  orbit: 'Tube d’amarrage, basse gravité, moto, grand anneau à deux tours et apesanteur.',
   reef: 'Contre-courants, gravité lourde, pont de verre et plongée vers les abysses.',
   factory: 'Moteur coupé, bifurcation, pistons, marteau et ralentisseurs : l’usine ne pardonne rien.',
   sky: 'Vent de travers, îles sans bordures, gravité réduite, pont des vents et départ en deltaplane.',

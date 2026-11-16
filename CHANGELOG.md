@@ -6,6 +6,20 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.6 — chapitre 7 (Station orbitale) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 7 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits de la Station orbitale sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés) :
+  - **Quai d'Amarrage** (sprint, 49,8 s) : le grand saut en basse gravité se reçoit sur une **plaque** d'amarrage entre deux modules, chicanes rapides, route large, croisement traversé deux fois ; 21 nouveautés.
+  - **Navette** (technique en moto, 45,4 s) : deux coursives étroites, chicanes serrées, modules en dalles, croisement traversé deux fois ; 24 nouveautés.
+  - **Ceinture d'Astéroïdes** (rollercoaster, 45,6 s) : chicanes longues, tube qui tourne, **looping modulaire**, route large ; 20 nouveautés.
+  - **Grand Anneau** (speedway, 78,1 s) : **deux tours au lieu de trois**, sur un anneau agrandi (route large, chicanes serrées, longues puis rapides) : trois tours dépassaient 85 s dès qu'on ajoutait des pièces ; 20 nouveautés. Objectif inchangé : aucune bordure touchée.
+  - **Apesanteur** (acrobatique, 73,5 s) : une plaque entre deux modules, chicanes longues, route large ; 20 nouveautés. Objectif « moins de 76 s ».
+  - **Station Zénith** (technique, 54,6 s) : coursive étroite entre des piliers, blocs de la station, chicanes serrées, croisement traversé deux fois ; 20 nouveautés.
+- Description du chapitre (carrière) : « grand anneau à deux tours ».
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 7.
+
 ## Bêta 0.10.5 — chapitre 6 (Volcan) refait autour des nouvelles pièces
 
 **`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 6 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.

@@ -326,52 +326,52 @@ _Collines de braises, plaque de dérive, cheminée verticale, caldeira à deux t
 
 ## Chapitre 7 · Station orbitale
 
-_Tube d’amarrage, basse gravité, moto, grand anneau à trois tours et apesanteur._
+_Tube d’amarrage, basse gravité, moto, grand anneau à deux tours et apesanteur._
 
 ### 37. Quai d’Amarrage — Sprint, ◆◆◇◇◇
 
-- Départ : un booster → tube. Au programme : saut en basse gravité (40 %) avec anneau turbo, très grand virage plat.
-- Pilote automatique : **24.6 s** · médailles : cristal 23.3 · or 24.6 · argent 28.3 · bronze 33.2
+- Départ : booster et sas en tube, puis basse gravité. Au programme : grand saut à anneau turbo reçu sur une plaque d’amarrage, chicanes rapides, route large sous un portique, croisement traversé deux fois.
+- Pilote automatique : **49.8 s** · médailles : cristal 47.3 · or 49.8 · argent 57.2 · bronze 67.2
 - Objectif bonus ★ : Passer dans 1 anneau turbo
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 38. Navette — Technique, ◆◆◆◇◇
 
-- Départ : en moto (plaque), slalom R L R L immédiat. Au programme : huit virages serrés, chicane, arrivée en moto (objectif bonus).
-- Pilote automatique : **27.9 s** · médailles : cristal 26.5 · or 27.9 · argent 32.1 · bronze 37.7
+- Départ : plaque moto, booster, épingles. Au programme : coursive étroite entre des piliers, chicanes serrées, wall-ride, croisement traversé deux fois, seconde coursive étroite.
+- Pilote automatique : **45.4 s** · médailles : cristal 43.2 · or 45.4 · argent 52.2 · bronze 61.3
 - Objectif bonus ★ : Franchir l'arrivée en moto
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 39. Ceinture d’Astéroïdes — Rollercoaster, ◆◆◆◆◇
 
-- Départ : tire-bouchon à l’élan → trois boosters → grand double looping. Au programme : slalom de wall-rides, tube, plongeon.
-- Pilote automatique : **28.4 s** · médailles : cristal 27.2 · or 28.7 · argent 33 · bronze 38.7
+- Départ : tire-bouchon à gauche dès la deuxième case. Au programme : double looping, chicanes longues, wall-rides des deux côtés, tube qui tourne, looping modulaire, route large, plongeon.
+- Pilote automatique : **45.6 s** · médailles : cristal 43.4 · or 45.6 · argent 52.5 · bronze 61.6
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 40. Grand Anneau — Speedway, ◆◆◆◆◇
 
-- Départ : deux boosters → tube court ; circuit fermé, 3 tours. Au programme : quatre virages relevés, wall-ride, 95 % au-dessus de 220 km/h.
-- Pilote automatique : **76.4 s** · médailles : cristal 72.6 · or 76.4 · argent 87.9 · bronze 103.2
+- Départ : deux boosters puis un tube, entre deux murs de la station. Au programme : deux tours de l’anneau, quatre très grands virages relevés, chicanes, route large sous un portique, wall-ride.
+- Pilote automatique : **78.1 s** · médailles : cristal 74.2 · or 78.1 · argent 89.9 · bronze 105.5
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 41. Apesanteur — Acrobatique, ◆◆◆◆◆
 
-- Départ : deux boosters → plaque de gravité 20 %. Au programme : trois vols de 8 à 10 s en l’air (28 niveaux de dénivelé), wall-rides.
-- Pilote automatique : **63.8 s** · médailles : cristal 59.8 · or 62.9 · argent 72.4 · bronze 84.9
-- Objectif bonus ★ : Finir en moins de 67.5 s
+- Départ : deux boosters puis une plaque d’apesanteur. Au programme : trois sauts de huit cases reçus sur de longues descentes, une plaque entre deux modules, chicanes longues, wall-rides, route large.
+- Pilote automatique : **73.5 s** · médailles : cristal 69.8 · or 73.5 · argent 84.5 · bronze 99.2
+- Objectif bonus ★ : Finir en moins de 76 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 42. Station Zénith — Technique, ◆◆◆◆◆
 
-- Départ : sur une plateforme d’amarrage. Au programme : neuf virages serrés, chicane sur un mur.
-- Pilote automatique : **36.5 s** · médailles : cristal 34.4 · or 36.2 · argent 41.6 · bronze 48.8
+- Départ : sur une plateforme de la station. Au programme : épingles, coursive étroite entre des piliers, lacets en S, wall-ride, chicanes serrées, croisement traversé deux fois.
+- Pilote automatique : **54.6 s** · médailles : cristal 51.9 · or 54.6 · argent 62.8 · bronze 73.7
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
