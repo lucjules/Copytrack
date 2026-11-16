@@ -70,48 +70,48 @@ _Rampe de lancement, tube, rebonds de champignons et slalom en moto : la jungle 
 
 ### 7. Lianes Néon — Sprint, ◆◆◇◇◇
 
-- Départ : trois boosters → rampe de lancement avec anneau turbo dans le saut. Au programme : vagues douces, pont de lianes sans bordures à plus de 230 km/h, S de virages relevés, très grand virage plat.
-- Pilote automatique : **28.2 s** · médailles : cristal 26.3 · or 27.7 · argent 31.9 · bronze 37.4
+- Départ : trois boosters → rampe de lancement avec anneau turbo dans le saut. Au programme : chicanes rapides, pont de lianes sans bordures à plus de 230 km/h, S relevé, route large sous un portique, croisement traversé deux fois.
+- Pilote automatique : **48.6 s** · médailles : cristal 46.2 · or 48.6 · argent 55.9 · bronze 65.6
 - Objectif bonus ★ : Passer dans 1 anneau turbo
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 8. Canopée — Speedway, ◆◆◆◇◇
 
-- Départ : en tube propulsé, qui débouche sur un virage relevé 3×3. Au programme : S relevés, wall-ride de 5 cases sur le mur gauche, tube à pleine vitesse, 79 % du temps au-dessus de 220 km/h.
-- Pilote automatique : **38.4 s** · médailles : cristal 36.5 · or 38.4 · argent 44.1 · bronze 51.8
-- Objectif bonus ★ : Finir en moins de 39.5 s
+- Départ : dans un tube accélérateur de trois sections. Au programme : très grands virages relevés, deux routes larges sous des portiques, grand S, wall-ride sur un tronc, chicane longue, tube qui tourne à droite puis à gauche.
+- Pilote automatique : **60.5 s** · médailles : cristal 57.5 · or 60.5 · argent 69.6 · bronze 81.7
+- Objectif bonus ★ : Finir en moins de 62 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 9. Spores — Acrobatique, ◆◆◆◇◇
 
-- Départ : deux boosters → rebond géant (palier 2 niveaux plus haut). Au programme : quatre champignons en escalier en zigzag (+8 niveaux), plongeon final ; la portée d’un rebond est proportionnelle à la vitesse, le circuit est très tolérant.
-- Pilote automatique : **37.5 s** · médailles : cristal 35.3 · or 37.1 · argent 42.7 · bronze 50.1
+- Départ : deux boosters → un champignon rebondissant. Au programme : quatre rebonds en escalier reçus sur des plaques, deux niveaux plus haut à chaque fois, chicanes longues entre les rebonds, descente à 38°, chicane rapide.
+- Pilote automatique : **49.7 s** · médailles : cristal 47.3 · or 49.7 · argent 57.2 · bronze 67.2
 - Objectif bonus ★ : 3 réceptions parfaites
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 10. Serpent — Technique, ◆◆◆◇◇
 
-- Départ : bifurcation dès le départ : la voie de droite porte la plaque moto. Au programme : douze virages serrés en slaloms (R L R L), descente en lacets, petit saut sur un mur, moto → voiture → moto.
-- Pilote automatique : **34.0 s** · médailles : cristal 32.3 · or 34.1 · argent 39.2 · bronze 46
+- Départ : bifurcation, la voie de droite passe sur une plaque moto. Au programme : lacets descendants, route étroite entre des piliers, wall-ride, épingles en S, chicanes serrées, croisement traversé deux fois, seconde route étroite.
+- Pilote automatique : **54.2 s** · médailles : cristal 51.5 · or 54.2 · argent 62.4 · bronze 73.2
 - Objectif bonus ★ : Franchir l'arrivée en moto
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 11. Racines Boueuses — Rollercoaster, ◆◆◆◇◇
 
-- Départ : au plafond (la course commence en gravité inversée). Au programme : deux tonneaux complets (plafond → mur gauche → sol → mur droit → plafond), plongeon, virage relevé, boue et vent, double looping.
-- Pilote automatique : **30.2 s** · médailles : cristal 28.7 · or 30.2 · argent 34.7 · bronze 40.8
+- Départ : au plafond, dans les racines, trois boosters puis le mur gauche. Au programme : slalom plafond-murs, plongeon à 38°, looping modulaire, route large sous un portique, tube qui tourne, double looping.
+- Pilote automatique : **52.4 s** · médailles : cristal 49.8 · or 52.4 · argent 60.2 · bronze 70.7
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 12. Temple — Technique, ◆◆◆◆◇
 
-- Départ : dans un tunnel, épingle immédiate. Au programme : douze virages serrés (épingles dans un tube, hélice descendante, slalom sous un tunnel), un booster à chaque relance.
-- Pilote automatique : **37.7 s** · médailles : cristal 35.9 · or 37.7 · argent 43.4 · bronze 51
+- Départ : dans un tunnel du temple, deux virages serrés. Au programme : allée de colonnes, tube, lacets en spirale, chicane de tunnels, route étroite, chicanes serrées, arche entre deux murs, croisement traversé deux fois.
+- Pilote automatique : **69.7 s** · médailles : cristal 66.2 · or 69.7 · argent 80.2 · bronze 94.1
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________

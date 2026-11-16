@@ -6,6 +6,21 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.1 — chapitre 2 (Jungle néon) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 2 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Comme le chapitre 1 en 0.9.74, les six circuits de la Jungle néon sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés ; deux fois plus longs environ) :
+  - **Lianes Néon** (sprint, 48,6 s) : chicanes rapides après la rampe à anneau, pont de lianes sans bordures, S relevé, clairière (route large sous un portique entre quatre piliers), croisement traversé deux fois ; 18 nouveautés.
+  - **Canopée** (speedway, 60,5 s, 201 km/h de moyenne) : deux routes larges sous des portiques, grand S, chicane longue, tube qui tourne à droite puis à gauche ; 23 nouveautés. Objectif « moins de 62 s ».
+  - **Spores** (acrobatique, 49,7 s, 10,7 s en l'air) : quatre rebonds en escalier reçus sur des **plaques**, chicanes longues entre les rebonds ; 23 nouveautés.
+  - **Serpent** (technique, en moto, 54,2 s) : deux routes étroites (l'une entre des piliers fins), chicanes serrées, croisement traversé deux fois ; 22 nouveautés.
+  - **Racines** (rollercoaster, 52,4 s) : looping modulaire, route large sous un portique, tube qui tourne, double looping ; 18 nouveautés.
+  - **Temple** (technique, 69,7 s) : blocs de pierre, route étroite, chicanes serrées, **arche pleine entre deux murs**, croisement traversé deux fois ; 24 nouveautés.
+- `tools/test-etape6.mjs` applique la règle du chapitre 1 (12 nouveautés dont 6 pièces de route, 3 familles ; les 9 familles par chapitre ; 45 à 85 s) à chaque chapitre refait.
+- Tests adaptés aux circuits refaits : le conseil « tu freines plus tôt » du coach est vérifié sur Serpent (sur le nouveau Temple, avancer un freinage envoie toujours la voiture au mur) ; la comparaison du laboratoire sous le profil Simulation, sur Lianes Néon.
+- Vérificateur de l'éditeur : un saut depuis un **Rebond** peut se recevoir sur une plaque plus haute que le départ, jusqu'aux 85 % de la hauteur du rebond (comme pour une route).
+
 ## Bêta 0.10.0 — les nouvelles pièces et le chapitre 1 refait autour d'elles
 
 **`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** (les six circuits du chapitre 1 ont changé depuis la dernière mise en ligne, leurs clés de classement aussi). Version qui rassemble les versions 0.9.68 à 0.9.74 ; rien d'autre ne change par rapport à 0.9.74.

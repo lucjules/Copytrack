@@ -9003,15 +9003,15 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 2 · 1/6 — SPRINT. Ouverture : trois boosters → rampe de lancement avec un anneau turbo dans le saut. Puis une vague douce,
-    // un pont de lianes sans bordures à plus de 230 km/h (la trajectoire ne pardonne rien), un S de virages relevés et un très grand virage
-    // plat pour finir. Trois virages en tout, aucun serré.
+    // Chapitre 2 · 1/6 — SPRINT (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → rampe de lancement avec un anneau turbo dans le saut. Puis un slalom
+    // de chicanes rapides, une vague douce, le pont de lianes sans bordures à plus de 230 km/h, un S de virages relevés, une clairière (route large de 56 m sous un portique entre
+    // quatre piliers) et un CROISEMENT traversé deux fois (boucle de trois virages géants). Chevrons avant les chicanes et les virages, panneau danger avant le croisement. Aucun virage serré.
     id: "lianes",
     name: "Lianes N\xE9on",
     decor: "jungle",
     difficulty: 2,
     profil: "sprint",
-    appris: "D\xE9part : trois boosters \u2192 rampe de lancement avec anneau turbo dans le saut. Au programme : vagues douces, pont de lianes sans bordures \xE0 plus de 230 km/h, S de virages relev\xE9s, tr\xE8s grand virage plat.",
+    appris: "D\xE9part : trois boosters \u2192 rampe de lancement avec anneau turbo dans le saut. Au programme : chicanes rapides, pont de lianes sans bordures \xE0 plus de 230 km/h, S relev\xE9, route large sous un portique, croisement travers\xE9 deux fois.",
     goal: {
       id: "rings",
       n: 1
@@ -9022,12 +9022,64 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start B3 UU GR2 DD [cdo1] B2 S [crs1] S2 [cds1] B S2_ B_ S2_ BR S2 B BL S2 B C S3 HL S B2 finish",
+    script: "start*2 B3 UU GR2 DD [cdo1] B2 ZR4 S ZL4 [crs1] S2 [cds1] B S2_ B_ S2_ BR S2 B BL S2 C*3 WI W WO S JX S4 XR XR XR S4 JX S B2 finish*2",
+    obst: [
+      {
+        k: "board_right",
+        at: 0.11,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.195,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.625,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillar",
+        at: 0.618,
+        side: 36
+      },
+      {
+        k: "pillar",
+        at: 0.618,
+        side: -36
+      },
+      {
+        k: "pillar",
+        at: 0.634,
+        side: 36
+      },
+      {
+        k: "pillar",
+        at: 0.634,
+        side: -36
+      },
+      {
+        k: "board_warn",
+        at: 0.652,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.725,
+        side: -24,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 26.3,
-      or: 27.7,
-      argent: 31.9,
-      bronze: 37.4
+      cristal: 46.2,
+      or: 48.6,
+      argent: 55.9,
+      bronze: 65.6
     }
   },
   {
@@ -9278,18 +9330,18 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 2 · 2/6 — SPEEDWAY. Ouverture : départ en tube, propulsé par trois boosters, qui débouche directement sur un virage relevé 3×3.
-    // Une succession de S relevés (droite / gauche), deux vagues douces, un wall-ride de 5 cases sur le mur gauche (l'autre côté que le canyon
-    // du chapitre 1) et un tube à pleine vitesse. Aucun virage serré, plus de 240 km/h pendant plus d'un tiers du tour (35 %).
+    // Chapitre 2 · 2/6 — SPEEDWAY (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : départ dans un tube accélérateur de trois sections. Très grands virages relevés, deux
+    // routes larges sous des portiques (la canopée s'ouvre), un grand S, un wall-ride de cinq cases sur un tronc, une chicane longue, puis un TUBE qui tourne à droite puis à gauche
+    // entre les branches. Chevrons avant les chicanes, panneau danger avant le tube. Aucun virage serré.
     id: "canopee",
     name: "Canop\xE9e",
     decor: "jungle",
     difficulty: 3,
     profil: "speedway",
-    appris: "D\xE9part : en tube propuls\xE9, qui d\xE9bouche sur un virage relev\xE9 3\xD73. Au programme : S relev\xE9s, wall-ride de 5 cases sur le mur gauche, tube \xE0 pleine vitesse, 79 % du temps au-dessus de 220 km/h.",
+    appris: "D\xE9part : dans un tube acc\xE9l\xE9rateur de trois sections. Au programme : tr\xE8s grands virages relev\xE9s, deux routes larges sous des portiques, grand S, wall-ride sur un tronc, chicane longue, tube qui tourne \xE0 droite puis \xE0 gauche.",
     goal: {
       id: "under",
-      t: 39.5
+      t: 62
     },
     opts: {
       l: 5
@@ -9297,24 +9349,76 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 64
     },
-    script: "start TI TM3.b TO BRR S B BLL S [crs1] S2 [cds1] S [tr01l] S5< [tr10l] C B BRR S [crs1] S [cds1] B BLL S2 TB BRR S B BLL S2 B2 finish",
+    script: "start*3 TI TM3.b TO BRR S B BLL S WI W2 WO S [crs1] S2 [cds1] S ZZR S [tr01l] S5< [tr10l] C*2 B BRR S ZL3 S [crs1] S [cds1] B BLL S2 TI TM TRR TM TLL TM TO S BRR S B WI W WO BLL S2 B2 finish*2",
+    obst: [
+      {
+        k: "gantry",
+        at: 0.231,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillarBase",
+        at: 0.225,
+        side: 36
+      },
+      {
+        k: "pillarBase",
+        at: 0.225,
+        side: -36
+      },
+      {
+        k: "board_right",
+        at: 0.29,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.505,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.652,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.887,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillarBase",
+        at: 0.887,
+        side: 36
+      },
+      {
+        k: "pillarBase",
+        at: 0.887,
+        side: -36
+      }
+    ],
     medals: {
-      cristal: 36.5,
-      or: 38.4,
-      argent: 44.1,
-      bronze: 51.8
+      cristal: 57.5,
+      or: 60.5,
+      argent: 69.6,
+      bronze: 81.7
     }
   },
   {
-    // Chapitre 2 · 3/6 — ACROBATIQUE (rebonds). Ouverture : deux boosters → rebond géant (palier 2 niveaux plus haut). Quatre champignons en
-    // escalier en zigzag (+8 niveaux), puis un long plongeon. Un checkpoint avant chaque rebond, suivi de deux boosters : on repart de chacun
-    // à l'arrêt. La portée d'un rebond est proportionnelle à la vitesse (et non à son carré) : le circuit est finissable à ±40 % de vitesse.
+    // Chapitre 2 · 3/6 — ACROBATIQUE (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters et un champignon rebondissant (rebond à 200 %). Quatre rebonds en
+    // escalier : chacun envoie la voiture deux niveaux plus haut, sur une PLAQUE bordée (trois grandes, une moyenne), suivie d'un grand virage et d'un checkpoint entre deux pylônes ;
+    // chicanes longues entre les rebonds, descente à 38°, chicane rapide. Panneaux de montée avant chaque champignon. Réception parfaite possible à chaque rebond.
     id: "spores",
     name: "Spores",
     decor: "jungle",
     difficulty: 3,
     profil: "acrobatique",
-    appris: "D\xE9part : deux boosters \u2192 rebond g\xE9ant (palier 2 niveaux plus haut). Au programme : quatre champignons en escalier en zigzag (+8 niveaux), plongeon final ; la port\xE9e d\u2019un rebond est proportionnelle \xE0 la vitesse, le circuit est tr\xE8s tol\xE9rant.",
+    appris: "D\xE9part : deux boosters \u2192 un champignon rebondissant. Au programme : quatre rebonds en escalier re\xE7us sur des plaques, deux niveaux plus haut \xE0 chaque fois, chicanes longues entre les rebonds, descente \xE0 38\xB0, chicane rapide.",
     goal: {
       id: "perfect",
       n: 3
@@ -9322,12 +9426,56 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 2
     },
-    script: "start B2 S.j200 G1 V2 S3 RR C B2 S.j200 G1 V2 S3 LL C B2 S.j200 G1 V2 S3 RR C B2 S.j200 G1 V2 S3 LL S B [cdi2] DX [cdo2] B [crs1] S [cds1] B2 finish",
+    script: "start*1 B2 S.j200 G1 V2 [plate3]*10 S2 RR C*3 B2 S.j200 G1 V2 [plate3]*10 S2 LL ZR3 C*3 B2 S.j200 G1 V2 [plate3]*10 S2 RR S ZL3 C*3 B2 S.j200 G1 V2 [plate2]*10 S2 LL S B [cdi2] DX [cdo2] B ZR4 S [crs1] S [cds1] B2 finish*3",
+    obst: [
+      {
+        k: "board_up",
+        at: 0.035,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_up",
+        at: 0.185,
+        side: -18,
+        rot: Math.PI
+      },
+      {
+        k: "board_up",
+        at: 0.395,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_up",
+        at: 0.618,
+        side: -18,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.292,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.515,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "sign_down",
+        at: 0.745,
+        side: 18,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 35.3,
-      or: 37.1,
-      argent: 42.7,
-      bronze: 50.1
+      cristal: 47.3,
+      or: 49.7,
+      argent: 57.2,
+      bronze: 67.2
     }
   },
   {
@@ -9384,15 +9532,15 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 2 · 4/6 — TECHNIQUE (moto). Ouverture : bifurcation dès le départ ; la voie de droite porte la plaque moto (c'est elle qu'il faut
-    // prendre pour finir en moto). Douze virages serrés en slaloms (R L R L), une descente en lacets, un petit saut sur un mur et un
-    // booster à chaque relance. Deux autres plaques : la voiture au milieu, la moto de nouveau avant l'arrivée.
+    // Chapitre 2 · 4/6 — TECHNIQUE (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : bifurcation, la voie de droite passe sur une plaque MOTO. Lacets descendants, une route
+    // ÉTROITE (12 m) entre des piliers fins, un wall-ride, des épingles en S, deux chicanes serrées, un CROISEMENT traversé deux fois (boucle de virages serrés autour) et une seconde
+    // route étroite avant l'arrivée. Le circuit se finit en moto pour l'objectif.
     id: "serpent",
     name: "Serpent",
     decor: "jungle",
     difficulty: 3,
     profil: "technique",
-    appris: "D\xE9part : bifurcation d\xE8s le d\xE9part : la voie de droite porte la plaque moto. Au programme : douze virages serr\xE9s en slaloms (R L R L), descente en lacets, petit saut sur un mur, moto \u2192 voiture \u2192 moto.",
+    appris: "D\xE9part : bifurcation, la voie de droite passe sur une plaque moto. Au programme : lacets descendants, route \xE9troite entre des piliers, wall-ride, \xE9pingles en S, chicanes serr\xE9es, croisement travers\xE9 deux fois, seconde route \xE9troite.",
     goal: {
       id: "vehicle",
       v: "moto"
@@ -9400,12 +9548,64 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 8
     },
-    script: "start Y2.o B S [cvd05] [cvdL05] [cvd05] [cvdL05] B S S.o S [tr01s] S2< [tr10s] S R L R L B S2 C S.o S R L R L B S2 B finish",
+    script: "start*2 Y2.o B S [cvd05] [cvdL05] [cvd05] [cvdL05] B S NI N2 NO S.o S [tr01s] S2< [tr10s] S R L R L B S2 C*3 ZR S ZL B JX R S R R S JX B S2 C S.o S R L R L B NI N NO S2 B finish*1",
+    obst: [
+      {
+        k: "board_warn",
+        at: 0.2,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "pillarThin",
+        at: 0.226,
+        side: 14
+      },
+      {
+        k: "pillarThin",
+        at: 0.226,
+        side: -14
+      },
+      {
+        k: "pillarThin",
+        at: 0.245,
+        side: 14
+      },
+      {
+        k: "pillarThin",
+        at: 0.245,
+        side: -14
+      },
+      {
+        k: "board_right",
+        at: 0.524,
+        side: -16,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.578,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.628,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.892,
+        side: 16,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 32.3,
-      or: 34.1,
-      argent: 39.2,
-      bronze: 46
+      cristal: 51.5,
+      or: 54.2,
+      argent: 62.4,
+      bronze: 73.2
     }
   },
   {
@@ -9637,27 +9837,69 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 2 · 5/6 — ROLLERCOASTER (tonneaux). Ouverture : départ AU PLAFOND (la course commence en gravité inversée, comme des racines qui
-    // pendent). Deux tonneaux complets autour de l'axe de la route (plafond → mur gauche → sol → mur droit → plafond), un plongeon de
-    // 8 niveaux, un virage relevé, de la boue et du vent, puis un double looping. Les checkpoints sont suivis de boosters.
+    // Chapitre 2 · 5/6 — ROLLERCOASTER (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : départ AU PLAFOND (dans les racines), trois boosters, puis le mur gauche. Slalom
+    // plafond → mur droit → plafond → mur gauche, plongeon à 38°, chicane longue, LOOPING MODULAIRE (deux murs de chaque côté), très grand virage relevé, dérive et vent, route large
+    // sous un portique, un TUBE qui tourne à droite puis à gauche, chicane longue et double looping.
     id: "racines",
     name: "Racines Boueuses",
     decor: "jungle",
     difficulty: 3,
     profil: "rollercoaster",
-    appris: "D\xE9part : au plafond (la course commence en gravit\xE9 invers\xE9e). Au programme : deux tonneaux complets (plafond \u2192 mur gauche \u2192 sol \u2192 mur droit \u2192 plafond), plongeon, virage relev\xE9, boue et vent, double looping.",
+    appris: "D\xE9part : au plafond, dans les racines, trois boosters puis le mur gauche. Au programme : slalom plafond-murs, plongeon \xE0 38\xB0, looping modulaire, route large sous un portique, tube qui tourne, double looping.",
     goal: {
       id: "norespawn"
     },
     opts: {
       l: 10
     },
-    script: "start^ B3^ [tr31s] S< [tr10s] [tr02s] S> [tr23s] S^ [tr31s] S< [tr10s] S C B [cdi2] DX [cdo2] S BLL S S.d S.w100 S C B3 OD S2 B finish",
+    script: "start^ B3^ [tr31s] S< [tr10s] [tr02s] S> [tr23s] S^ [tr31s] S< [tr10s] S C*1 B [cdi2] DX [cdo2] S ZR3 S LPR2 S BLL S S.d S.w100 S WI W WO S C*3 B2 TI TM TRR TM TLL TO S ZL3 B3 OD S2 B finish*2",
+    obst: [
+      {
+        k: "board_right",
+        at: 0.288,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.335,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.58,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillar",
+        at: 0.575,
+        side: 36
+      },
+      {
+        k: "pillar",
+        at: 0.575,
+        side: -36
+      },
+      {
+        k: "board_left",
+        at: 0.78,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.845,
+        side: 18,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 28.7,
-      or: 30.2,
-      argent: 34.7,
-      bronze: 40.8
+      cristal: 49.8,
+      or: 52.4,
+      argent: 60.2,
+      bronze: 70.7
     }
   },
   {
@@ -9731,27 +9973,100 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 2 · 6/6 — TECHNIQUE (tunnels). Ouverture : départ dans un tunnel, avec une épingle immédiate. Douze virages serrés (épingles dans
-    // un tube, hélice descendante de quatre virages, slalom R L R L sous un tunnel), un tube pris à pleine vitesse et un booster à
-    // chaque relance : freiner fort, relancer fort.
+    // Chapitre 2 · 6/6 — TECHNIQUE (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : départ dans un tunnel du temple, deux virages serrés. Allée de colonnes, tube, épingle,
+    // descente, lacets en spirale, deux blocs de pierre avant la chicane de tunnels, ROUTE ÉTROITE (12 m), chicanes serrées, ARCHE PLEINE entre deux murs, épingle et un CROISEMENT
+    // traversé deux fois (boucle de virages serrés). Panneaux : danger avant la route étroite et le croisement, demi-tour avant l'épingle.
     id: "temple",
     name: "Temple",
     decor: "jungle",
     difficulty: 4,
     profil: "technique",
-    appris: "D\xE9part : dans un tunnel, \xE9pingle imm\xE9diate. Au programme : douze virages serr\xE9s (\xE9pingles dans un tube, h\xE9lice descendante, slalom sous un tunnel), un booster \xE0 chaque relance.",
+    appris: "D\xE9part : dans un tunnel du temple, deux virages serr\xE9s. Au programme : all\xE9e de colonnes, tube, lacets en spirale, chicane de tunnels, route \xE9troite, chicanes serr\xE9es, arche entre deux murs, croisement travers\xE9 deux fois.",
     goal: {
       id: "norespawn"
     },
     opts: {
       l: 8
     },
-    script: "start S# R# R# B# S2# B S3 TI TM2 TO S R R B S2 [cdi1] [dn2] [cdo1] S C S [cvd05] [cvd05] [cvd05] [cvd05] S2 B S R# L# R# L# S2# B finish",
+    script: "start*3 S# R# R# B# S2# B S3 TI TM2 TO S R R B S2 [cdi1] [dn2] [cdo1] S C*2 S [cvd05] [cvd05] [cvd05] [cvd05] S2 B S R# L# R# L# S2# B NI N2 NO S ZR S R R S ZL B S2 C*1 L L B S5 JX R S R R S JX R S B finish*3",
+    obst: [
+      {
+        k: "pillarBase",
+        at: 0.1,
+        side: 20
+      },
+      {
+        k: "pillarBase",
+        at: 0.1,
+        side: -20
+      },
+      {
+        k: "pillarBase",
+        at: 0.12,
+        side: 20
+      },
+      {
+        k: "pillarBase",
+        at: 0.12,
+        side: -20
+      },
+      {
+        k: "sign_uturn",
+        at: 0.42,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.538,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.598,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "archS",
+        at: 0.727,
+        side: 0
+      },
+      {
+        k: "wallS",
+        at: 0.722,
+        side: 26,
+        rot: Math.PI / 2
+      },
+      {
+        k: "wallS",
+        at: 0.722,
+        side: -26,
+        rot: Math.PI / 2
+      },
+      {
+        k: "block",
+        at: 0.44,
+        side: 24
+      },
+      {
+        k: "block",
+        at: 0.44,
+        side: -24
+      },
+      {
+        k: "board_warn",
+        at: 0.852,
+        side: 18,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 35.9,
-      or: 37.7,
-      argent: 43.4,
-      bronze: 51
+      cristal: 66.2,
+      or: 69.7,
+      argent: 80.2,
+      bronze: 94.1
     }
   },
   {
@@ -15681,4 +15996,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "f6f255d812e75a3b";
+globalThis.__COPYTRACK_BUILD__ = "151a68c5d7a6b745";
