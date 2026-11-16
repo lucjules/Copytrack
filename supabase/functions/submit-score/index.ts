@@ -13756,17 +13756,17 @@ var BUILTIN_TRACKS = [
   },
   // ---- Canyon de cristal : gravité inversée, plafonds, verre, volant inversé ----
   {
-    // Chapitre 11 · 1/6 — SPRINT (galerie). Ouverture : deux boosters puis TROIS CASES DE VOLANT INVERSÉ (plaque violette) : en ligne droite, le piège est de corriger dans le mauvais sens.
-    // Puis une vague en S, deux très grands virages plats (droite, gauche) et une descente finale de 4 niveaux. Presque tout droit.
+    // Chapitre 11 · 1/6 — SPRINT (0.10.10 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters puis le VOLANT INVERSÉ (trois cases) entre deux cristaux. Dos d'âne,
+    // chicanes rapides, très grand virage plat, route large sous un portique, CROISEMENT traversé deux fois (boucle de trois virages géants), descente, grand S. Aucun virage serré.
     id: "galerie",
     name: "Galerie de Cristal",
     decor: "caves",
     difficulty: 2,
     profil: "sprint",
-    appris: "D\xE9part : deux boosters \u2192 volant invers\xE9 (trois cases en ligne droite). Au programme : vague en S, deux tr\xE8s grands virages plats, descente.",
+    appris: "D\xE9part : deux boosters puis volant invers\xE9 entre deux cristaux. Au programme : chicanes rapides, tr\xE8s grand virage plat, route large sous un portique, croisement travers\xE9 deux fois, grand S.",
     goal: {
       id: "under",
-      t: 21.5
+      t: 49.5
     },
     opts: {
       l: 6
@@ -13774,49 +13774,160 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start B2 S3.y S2 [crs1] S2 [cds1] B HR S2 B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
+    script: "start*2 B2 S3.y S2 [crs1] S2 [cds1] B ZR4 S ZL4 S HR S2 B C*3 WI W2 WO S2 JX S4 XR XR XR S4 JX S B [cdi1] [dn2] [cdo1] ZZR S B2 finish*2",
+    obst: [
+      {
+        k: "pyramidS",
+        at: 0.095,
+        side: 28
+      },
+      {
+        k: "pyramidS",
+        at: 0.095,
+        side: -28
+      },
+      {
+        k: "board_right",
+        at: 0.18,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.27,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.456,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillar",
+        at: 0.45,
+        side: 36
+      },
+      {
+        k: "pillar",
+        at: 0.45,
+        side: -36
+      },
+      {
+        k: "board_warn",
+        at: 0.51,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.586,
+        side: -24,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 19.3,
-      or: 20.3,
-      argent: 23.4,
-      bronze: 27.4
+      cristal: 45.8,
+      or: 48.2,
+      argent: 55.4,
+      bronze: 65
     }
   },
   {
-    // Chapitre 11 · 2/6 — TECHNIQUE (plafond renversé). Ouverture : un booster puis directement une VRILLE : la route se retourne et l'on roule au plafond, en gravité inversée. Quatre virages serrés
-    // au plafond (R L R L) avec un checkpoint, vrille de retour, puis quatre autres virages serrés au sol, une chicane sur un mur et une descente de 4 niveaux. Un booster à chaque relance.
+    // Chapitre 11 · 2/6 — TECHNIQUE (0.10.10 : refait AUTOUR des nouvelles pièces). Ouverture : booster puis une VRILLE avec inversion de gravité : la voiture roule au PLAFOND.
+    // Lacets serrés au plafond, retour au sol par une seconde vrille, passage ÉTROIT (12 m) entre des stalactites, deux chicanes serrées, deux cales de cristal, wall-ride, CROISEMENT
+    // traversé deux fois (boucle de virages serrés), descente vers l'arrivée.
     id: "plafond",
     name: "Plafond Renvers\xE9",
     decor: "caves",
     difficulty: 4,
     profil: "technique",
-    appris: "D\xE9part : un booster \u2192 vrille : la route se retourne, gravit\xE9 invers\xE9e. Au programme : huit virages serr\xE9s dont quatre au plafond.",
+    appris: "D\xE9part : vrille avec inversion de gravit\xE9, on roule au plafond. Au programme : lacets au plafond, retour au sol, passage \xE9troit entre des stalactites, chicanes serr\xE9es, wall-ride, croisement travers\xE9 deux fois.",
     goal: {
       id: "norespawn"
     },
     opts: {
       l: 8
     },
-    script: "start B TW.f S2^ B^ R^ S^ L^ S2^ R^ S^ L^ C^ B^ S2^ TWB.f S2 B R S L B S2 [tr01s] S2< [tr10s] S3 R B S L B S [cdi1] [dn2] [cdo1] S B finish",
+    script: "start*2 B TW.f S2^ B^ R^ S^ L^ S2^ R^ S^ L^ C^ B^ S2^ TWB.f S2 B NI N2 NO R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S3 R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*1",
+    obst: [
+      {
+        k: "board_warn",
+        at: 0.34,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "pillarThin",
+        at: 0.367,
+        side: 14
+      },
+      {
+        k: "pillarThin",
+        at: 0.367,
+        side: -14
+      },
+      {
+        k: "pillarThin",
+        at: 0.38,
+        side: 14
+      },
+      {
+        k: "pillarThin",
+        at: 0.38,
+        side: -14
+      },
+      {
+        k: "board_right",
+        at: 0.452,
+        side: -16,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.5,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "wedge",
+        at: 0.56,
+        side: 24
+      },
+      {
+        k: "wedge",
+        at: 0.56,
+        side: -24,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.79,
+        side: 16,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 38.8,
-      or: 40.9,
-      argent: 47,
-      bronze: 55.1
+      cristal: 56.4,
+      or: 59.4,
+      argent: 68.3,
+      bronze: 80.1
     }
   },
   {
-    // Chapitre 11 · 3/6 — ACROBATIQUE (cristal fêlé, inversions de gravité). Ouverture : deux boosters puis une PLAQUE D'INVERSION DE GRAVITÉ : la voiture « tombe » vers le plafond, 8 niveaux plus haut,
-    // et s'y réceptionne ; une seconde plaque la renvoie au sol. Trois allers-retours (8, 8 et 10 niveaux), une dalle de verre fragile au plafond, un wall-ride final et une descente de 4 niveaux.
+    // Chapitre 11 · 3/6 — ACROBATIQUE (0.10.10 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters et une plaque d'INVERSION DE GRAVITÉ : la voiture « tombe » au
+    // plafond, huit niveaux plus haut. Cinq inversions sol ↔ plafond (dont un pont de verre au plafond) ; la dernière retombe de dix niveaux sur une PLAQUE entre deux cristaux.
+    // Chicanes longues, route large sous un portique, wall-ride, passage ÉTROIT.
     id: "cristalfele",
     name: "Cristal F\xEAl\xE9",
     decor: "caves",
     difficulty: 4,
     profil: "acrobatique",
-    appris: "D\xE9part : deux boosters \u2192 inversion de gravit\xE9 : la voiture \xAB tombe \xBB au plafond, 8 niveaux plus haut. Au programme : trois allers-retours sol / plafond, verre fragile au plafond.",
+    appris: "D\xE9part : deux boosters et une inversion de gravit\xE9. Au programme : cinq inversions sol-plafond, pont de verre au plafond, chute de dix niveaux sur une plaque, chicanes longues, route large, passage \xE9troit.",
     goal: {
       id: "under",
-      t: 33.5
+      t: 47.5
     },
     opts: {
       l: 8
@@ -13824,23 +13935,70 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start B2 S.f V8 S4^ C^ B2^ S.f^ V-8 S4 C B2 S.f V8 S2.v^ S2^ B2^ S.f^ V-8 S4 C B2 S.f V10 S4^ B2^ S.f^ V-10 S5 [tr01s] S2< [tr10s] S [cdi1] [dn2] [cdo1] S2 finish",
+    script: "start*2 B2 S.f V8 S4^ C^ B2^ S.f^ V-8 S4 C*3 B2 S.f V8 S2.v^ S2^ B2^ S.f^ V-8 S4 C*3 B2 S.f V10 S4^ B2^ S.f^ V-10 [plate3]*10 S2 ZR3 S WI W WO S ZL3 S2 [tr01s] S2< [tr10s] S NI N NO [cdi1] [dn2] [cdo1] S2 finish*2",
+    obst: [
+      {
+        k: "pyramidS",
+        at: 0.545,
+        side: 60
+      },
+      {
+        k: "pyramidS",
+        at: 0.545,
+        side: -60
+      },
+      {
+        k: "board_right",
+        at: 0.58,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.662,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillarThin",
+        at: 0.656,
+        side: 36
+      },
+      {
+        k: "pillarThin",
+        at: 0.656,
+        side: -36
+      },
+      {
+        k: "board_left",
+        at: 0.695,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.88,
+        side: 16,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 31.4,
-      or: 33.1,
-      argent: 38,
-      bronze: 44.7
+      cristal: 43.9,
+      or: 46.2,
+      argent: 53.1,
+      bronze: 62.3
     }
   },
   {
-    // Chapitre 11 · 4/6 — SPEEDWAY (miroir). Ouverture : trois boosters puis un S de deux très grands virages relevés en miroir (gauche puis droite). La suite reprend le dessin à l'envers (droite
-    // puis gauche), après un wall-ride de quatre cases (mur droit) ; trois dalles de verre fragile (sans danger à grande vitesse) et un dernier S. Six virages relevés, 89 % du tour au-dessus de 220 km/h.
+    // Chapitre 11 · 4/6 — SPEEDWAY (0.10.10 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters puis un S en miroir de très grands virages relevés (gauche, droite).
+    // Route large sous un portique, chicane rapide, wall-ride à droite, pont de verre entre deux murs-miroirs, grand S vers la gauche, TUBE qui tourne à gauche puis à droite (en
+    // miroir des autres tubes). Aucun virage serré ; objectif : ne toucher aucune bordure.
     id: "miroir",
     name: "Miroir",
     decor: "caves",
     difficulty: 4,
     profil: "speedway",
-    appris: "D\xE9part : trois boosters \u2192 S de deux tr\xE8s grands virages relev\xE9s en miroir. Au programme : six virages relev\xE9s, wall-ride, trois dalles de verre.",
+    appris: "D\xE9part : trois boosters puis un S en miroir. Au programme : route large sous un portique, chicane rapide, wall-ride, pont de verre entre deux murs-miroirs, grand S, tube qui tourne \xE0 gauche puis \xE0 droite.",
     goal: {
       id: "nowall"
     },
@@ -13850,23 +14008,72 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 70
     },
-    script: "start B3 BLL S BRR S2 C B [tr02l] S4> [tr20l] BRR S BLL S B2 S3.v B BLL S BRR S B2 finish",
+    script: "start*3 B3 BLL S BRR S2 WI W2 WO S C*2 B ZR4 S [tr02l] S4> [tr20l] BRR S BLL S B2 S3.v B ZZL S BLL S BRR S TI TM TLL TM TRR TM TO S B2 finish*2",
+    obst: [
+      {
+        k: "gantry",
+        at: 0.206,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillar",
+        at: 0.2,
+        side: 36
+      },
+      {
+        k: "pillar",
+        at: 0.2,
+        side: -36
+      },
+      {
+        k: "board_right",
+        at: 0.25,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "wallS",
+        at: 0.586,
+        side: 28,
+        rot: Math.PI / 2
+      },
+      {
+        k: "wallS",
+        at: 0.586,
+        side: -28,
+        rot: Math.PI / 2
+      },
+      {
+        k: "board_left",
+        at: 0.608,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.8,
+        side: 18,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 29.1,
-      or: 30.6,
-      argent: 35.2,
-      bronze: 41.4
+      cristal: 46.6,
+      or: 49.1,
+      argent: 56.4,
+      bronze: 66.2
     }
   },
   {
-    // Chapitre 11 · 5/6 — ROLLERCOASTER (vrilles). Ouverture : un booster puis un PLONGEON de 4 niveaux qui débouche directement sur une VRILLE : la route se retourne et l'on roule au plafond (gravité inversée)
-    // pendant une descente et une remontée, avant une seconde vrille qui remet la route à l'endroit. Ensuite un double looping tournant à gauche, un slalom de wall-rides gauche / droite et l'arrivée.
+    // Chapitre 11 · 5/6 — ROLLERCOASTER (0.10.10 : refait AUTOUR des nouvelles pièces). Ouverture : booster, descente, puis une VRILLE vers le plafond (pentes au plafond, booster),
+    // retour au sol par une seconde vrille, double looping à gauche, deux cales de cristal, chicane longue, wall-rides gauche et droite, route large sous un portique, LOOPING
+    // MODULAIRE, TUBE qui tourne à gauche puis à droite.
     id: "vrilles",
     name: "Vrilles Souterraines",
     decor: "caves",
     difficulty: 5,
     profil: "rollercoaster",
-    appris: "D\xE9part : plongeon de 4 niveaux directement dans une vrille. Au programme : parcours au plafond, double looping, slalom de wall-rides gauche / droite.",
+    appris: "D\xE9part : booster, descente, vrille vers le plafond. Au programme : pentes au plafond, retour au sol, double looping, chicanes longues, wall-rides des deux c\xF4t\xE9s, route large, looping modulaire, tube qui tourne.",
     goal: {
       id: "norespawn"
     },
@@ -13876,35 +14083,144 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start B [cdi1] [dn2] [cdo1] TW.f S2^ D^ S2^ B^ S2^ U^ S^ TWB.f S2 B ODL S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 finish",
+    script: "start*2 B [cdi1] [dn2] [cdo1] TW.f S2^ D^ S2^ B^ S2^ U^ S^ TWB.f S2 B ODL S2 C*1 ZR3 B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S2 WI W WO S ZL3 S2 LPR2 S2 TI TM TLL TM TRR TM TO S B2 finish*2",
+    obst: [
+      {
+        k: "wedge",
+        at: 0.333,
+        side: 26
+      },
+      {
+        k: "wedge",
+        at: 0.333,
+        side: -26,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.343,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.597,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillar",
+        at: 0.592,
+        side: 36
+      },
+      {
+        k: "pillar",
+        at: 0.592,
+        side: -36
+      },
+      {
+        k: "board_left",
+        at: 0.618,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.67,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.8,
+        side: -18,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 25.5,
-      or: 26.8,
-      argent: 30.8,
-      bronze: 36.2
+      cristal: 45,
+      or: 47.3,
+      argent: 54.4,
+      bronze: 63.9
     }
   },
   {
-    // Chapitre 11 · 6/6 — TECHNIQUE (cœur de la montagne). Ouverture : un booster puis DEUX DALLES DE VERRE FRAGILE (5 s de résistance) aussitôt suivies d'un slalom R L R L. Huit virages serrés,
-    // une chicane sur un mur, une descente de 4 niveaux et un booster à chaque relance : le dernier circuit de la carrière.
+    // Chapitre 11 · 6/6 — TECHNIQUE (0.10.10 : refait AUTOUR des nouvelles pièces). Ouverture : booster et un VERRE très glissant (500 %), épingles en S. Passage ÉTROIT (12 m) entre
+    // des stalactites, deux chicanes serrées, wall-ride, deux pyramides de cristal au cœur de la montagne, CROISEMENT traversé deux fois (boucle de virages serrés), descente.
     id: "coeur",
     name: "C\u0153ur de la Montagne",
     decor: "caves",
     difficulty: 5,
     profil: "technique",
-    appris: "D\xE9part : un booster \u2192 deux dalles de verre fragile (5 s de r\xE9sistance) \u2192 slalom. Au programme : huit virages serr\xE9s, chicane sur un mur : le dernier circuit.",
+    appris: "D\xE9part : booster et verre tr\xE8s glissant, \xE9pingles en S. Au programme : passage \xE9troit entre des stalactites, chicanes serr\xE9es, wall-ride, pyramides de cristal, croisement travers\xE9 deux fois.",
     goal: {
       id: "norespawn"
     },
     opts: {
       l: 6
     },
-    script: "start B S2.v500 S R L R L B S2 C B S R S L B S2 [tr01s] S2< [tr10s] S3 R B S L B S [cdi1] [dn2] [cdo1] S B finish",
+    script: "start*2 B S2.v500 S R L R L B S2 C*3 B NI N2 NO S R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S3 R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
+    obst: [
+      {
+        k: "board_warn",
+        at: 0.212,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "pillarThin",
+        at: 0.234,
+        side: 14
+      },
+      {
+        k: "pillarThin",
+        at: 0.234,
+        side: -14
+      },
+      {
+        k: "pillarThin",
+        at: 0.249,
+        side: 14
+      },
+      {
+        k: "pillarThin",
+        at: 0.249,
+        side: -14
+      },
+      {
+        k: "board_right",
+        at: 0.35,
+        side: -16,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.408,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "pyramidS",
+        at: 0.635,
+        side: 24
+      },
+      {
+        k: "pyramidS",
+        at: 0.635,
+        side: -24
+      },
+      {
+        k: "board_warn",
+        at: 0.75,
+        side: 16,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 31.9,
-      or: 33.5,
-      argent: 38.6,
-      bronze: 45.3
+      cristal: 49.5,
+      or: 52.1,
+      argent: 59.9,
+      bronze: 70.3
     }
   },
   // ---- Atelier des mécanismes (chapitre BONUS, 12e) : obstacles puis pièces mobiles, un à un ----
@@ -18659,4 +18975,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "68871d23bb6ad380";
+globalThis.__COPYTRACK_BUILD__ = "096a809bce2bb914";

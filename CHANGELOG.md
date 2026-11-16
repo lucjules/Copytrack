@@ -6,6 +6,20 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.10 — chapitre 11 (Canyon de cristal) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 11 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits du Canyon de cristal sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés) :
+  - **Galerie de Cristal** (sprint, 48,2 s) : volant inversé entre deux cristaux, chicanes rapides, route large, croisement traversé deux fois, grand S ; 20 nouveautés. Objectif « moins de 49,5 s ».
+  - **Plafond Renversé** (technique, 59,4 s) : lacets au plafond, passage étroit entre des stalactites, chicanes serrées, cales de cristal, croisement traversé deux fois ; 19 nouveautés.
+  - **Cristal Fêlé** (acrobatique, 46,2 s) : cinq inversions sol ↔ plafond, la dernière retombe sur une **plaque**, chicanes longues, route large, passage étroit ; 22 nouveautés. Objectif « moins de 47,5 s ».
+  - **Miroir** (speedway, 49,0 s) : route large, chicane rapide, pont de verre entre deux **murs pleins**, grand S, tube qui tourne en miroir ; 19 nouveautés. Objectif inchangé : aucune bordure touchée.
+  - **Vrilles Souterraines** (rollercoaster, 47,3 s) : double looping, chicanes longues, route large, **looping modulaire**, tube qui tourne ; 20 nouveautés.
+  - **Cœur de la Montagne** (technique, 52,1 s) : passage étroit, chicanes serrées, pyramides de cristal, croisement traversé deux fois ; 20 nouveautés.
+- `tools/test-contacts.mjs` : la traversée des dalles en gravité inversée se vérifie sur Cristal Fêlé par rapport à sa médaille d'or (le temps du pilote), plus par rapport à 36 s figées.
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 11.
+
 ## Bêta 0.10.9 — chapitre 10 (Ville dans les nuages) refait autour des nouvelles pièces
 
 **`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 10 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.

@@ -538,48 +538,48 @@ _Volant inversé, vrilles, inversions de gravité, plafonds et verre fragile._
 
 ### 61. Galerie de Cristal — Sprint, ◆◆◇◇◇
 
-- Départ : deux boosters → volant inversé (trois cases en ligne droite). Au programme : vague en S, deux très grands virages plats, descente.
-- Pilote automatique : **20.5 s** · médailles : cristal 19.3 · or 20.3 · argent 23.4 · bronze 27.4
-- Objectif bonus ★ : Finir en moins de 21.5 s
+- Départ : deux boosters puis volant inversé entre deux cristaux. Au programme : chicanes rapides, très grand virage plat, route large sous un portique, croisement traversé deux fois, grand S.
+- Pilote automatique : **48.2 s** · médailles : cristal 45.8 · or 48.2 · argent 55.4 · bronze 65
+- Objectif bonus ★ : Finir en moins de 49.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 62. Plafond Renversé — Technique, ◆◆◆◆◇
 
-- Départ : un booster → vrille : la route se retourne, gravité inversée. Au programme : huit virages serrés dont quatre au plafond.
-- Pilote automatique : **41.1 s** · médailles : cristal 38.8 · or 40.9 · argent 47 · bronze 55.1
+- Départ : vrille avec inversion de gravité, on roule au plafond. Au programme : lacets au plafond, retour au sol, passage étroit entre des stalactites, chicanes serrées, wall-ride, croisement traversé deux fois.
+- Pilote automatique : **59.4 s** · médailles : cristal 56.4 · or 59.4 · argent 68.3 · bronze 80.1
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 63. Cristal Fêlé — Acrobatique, ◆◆◆◆◇
 
-- Départ : deux boosters → inversion de gravité : la voiture « tombe » au plafond, 8 niveaux plus haut. Au programme : trois allers-retours sol / plafond, verre fragile au plafond.
-- Pilote automatique : **33.6 s** · médailles : cristal 31.4 · or 33.1 · argent 38 · bronze 44.7
-- Objectif bonus ★ : Finir en moins de 33.5 s
+- Départ : deux boosters et une inversion de gravité. Au programme : cinq inversions sol-plafond, pont de verre au plafond, chute de dix niveaux sur une plaque, chicanes longues, route large, passage étroit.
+- Pilote automatique : **46.2 s** · médailles : cristal 43.9 · or 46.2 · argent 53.1 · bronze 62.3
+- Objectif bonus ★ : Finir en moins de 47.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 64. Miroir — Speedway, ◆◆◆◆◇
 
-- Départ : trois boosters → S de deux très grands virages relevés en miroir. Au programme : six virages relevés, wall-ride, trois dalles de verre.
-- Pilote automatique : **31.0 s** · médailles : cristal 29.1 · or 30.6 · argent 35.2 · bronze 41.4
+- Départ : trois boosters puis un S en miroir. Au programme : route large sous un portique, chicane rapide, wall-ride, pont de verre entre deux murs-miroirs, grand S, tube qui tourne à gauche puis à droite.
+- Pilote automatique : **49.0 s** · médailles : cristal 46.6 · or 49.1 · argent 56.4 · bronze 66.2
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 65. Vrilles Souterraines — Rollercoaster, ◆◆◆◆◆
 
-- Départ : plongeon de 4 niveaux directement dans une vrille. Au programme : parcours au plafond, double looping, slalom de wall-rides gauche / droite.
-- Pilote automatique : **27.0 s** · médailles : cristal 25.5 · or 26.8 · argent 30.8 · bronze 36.2
+- Départ : booster, descente, vrille vers le plafond. Au programme : pentes au plafond, retour au sol, double looping, chicanes longues, wall-rides des deux côtés, route large, looping modulaire, tube qui tourne.
+- Pilote automatique : **47.3 s** · médailles : cristal 45 · or 47.3 · argent 54.4 · bronze 63.9
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 66. Cœur de la Montagne — Technique, ◆◆◆◆◆
 
-- Départ : un booster → deux dalles de verre fragile (5 s de résistance) → slalom. Au programme : huit virages serrés, chicane sur un mur : le dernier circuit.
-- Pilote automatique : **33.9 s** · médailles : cristal 31.9 · or 33.5 · argent 38.6 · bronze 45.3
+- Départ : booster et verre très glissant, épingles en S. Au programme : passage étroit entre des stalactites, chicanes serrées, wall-ride, pyramides de cristal, croisement traversé deux fois.
+- Pilote automatique : **52.1 s** · médailles : cristal 49.5 · or 52.1 · argent 59.9 · bronze 70.3
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
