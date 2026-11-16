@@ -12693,17 +12693,18 @@ var BUILTIN_TRACKS = [
   },
   // ---- Usine mécanique : obstacles, tapis, moteur coupé, ascenseurs ----
   {
-    // Chapitre 9 · 1/6 — SPRINT (chaîne). Ouverture : trois boosters puis TROIS CASES À MOTEUR COUPÉ : la voiture file sur son élan sans pouvoir accélérer, avant de reprendre un booster et un tapis roulant
-    // (+72 km/h). Puis une vague douce, deux très grands virages plats (droite, gauche) et une descente finale de 4 niveaux. Un bumper et des piques sur les bords de la route.
+    // Chapitre 9 · 1/6 — SPRINT (0.10.8 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters puis le MOTEUR COUPÉ (trois cases) entre deux murs de l'atelier. Tapis
+    // roulant, dos d'âne, chicanes rapides, très grand virage plat, un BUMPER sur la droite, route large sous un portique de poutres, des PIQUES sur la gauche, TUBE qui tourne à
+    // droite puis à gauche, chicanes longues, descente, grand S. Aucun virage serré.
     id: "chaine",
     name: "Cha\xEEne de Montage",
     decor: "factory",
     difficulty: 2,
     profil: "sprint",
-    appris: "D\xE9part : trois boosters \u2192 trois cases \xE0 moteur coup\xE9. Au programme : tapis roulant, vague, deux tr\xE8s grands virages plats ; bumper et piques sur les bords.",
+    appris: "D\xE9part : trois boosters puis moteur coup\xE9 entre deux murs. Au programme : tapis roulant, chicanes rapides, bumper, route large sous un portique, piques, tube qui tourne, chicanes longues, grand S.",
     goal: {
       id: "under",
-      t: 23
+      t: 48.5
     },
     opts: {
       l: 6
@@ -12711,74 +12712,182 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
+    script: "start*2 B3 S3.c B S2.t137 S [crs1] S2 [cds1] B ZR4 S ZL4 S HR S2 B C*3 WI W2 WO S HL S2 TI TM TRR TM TLL TM TO S ZR3 S ZL3 B [cdi1] [dn2] [cdo1] ZZR S B2 finish*2",
     obst: [
       {
         k: "bumper",
-        at: 0.3,
+        at: 0.372,
         side: 7.5,
         s: 0.8
       },
       {
         k: "spikes",
-        at: 0.6,
+        at: 0.497,
         side: -7.5,
         s: 0.7
+      },
+      {
+        k: "wallS",
+        at: 0.064,
+        side: 26,
+        rot: Math.PI / 2
+      },
+      {
+        k: "wallS",
+        at: 0.064,
+        side: -26,
+        rot: Math.PI / 2
+      },
+      {
+        k: "board_right",
+        at: 0.19,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.27,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.432,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "beamPost",
+        at: 0.426,
+        side: 36
+      },
+      {
+        k: "beamPost",
+        at: 0.426,
+        side: -36
+      },
+      {
+        k: "board_warn",
+        at: 0.506,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.736,
+        side: -20,
+        rot: Math.PI
       }
     ],
-    script: "start B3 S3.c B S2.t137 S [crs1] S2 [cds1] B HR S2 B C S HL S2 B [cdi1] [dn2] [cdo1] B2 finish",
     medals: {
-      cristal: 20.6,
-      or: 21.7,
-      argent: 25,
-      bronze: 29.3
+      cristal: 45,
+      or: 47.3,
+      argent: 54.4,
+      bronze: 63.9
     }
   },
   {
-    // Chapitre 9 · 2/6 — TECHNIQUE (laminoir). Ouverture : BIFURCATION dès le départ : la voie de droite porte un booster (c'est la voie rapide, celle que suit le pilote), l'autre reste neutre.
-    // Huit virages serrés (slaloms, épingles), une dalle ralentisseur entre deux épingles, une chicane sur un mur, une descente de 4 niveaux ; un booster à chaque relance. Un bumper et des piques sur les bords.
+    // Chapitre 9 · 2/6 — TECHNIQUE (0.10.8 : refait AUTOUR des nouvelles pièces). Ouverture : bifurcation, la voie de droite est accélérée. Lacets en S, passage ÉTROIT (12 m) entre
+    // des piliers fins, ralentisseurs, deux chicanes serrées, un BUMPER entre deux blocs d'acier, wall-ride, CROISEMENT traversé deux fois (boucle de virages serrés), descente, des
+    // PIQUES avant l'arrivée.
     id: "laminoir",
     name: "Laminoir",
     decor: "factory",
     difficulty: 3,
     profil: "technique",
-    appris: "D\xE9part : bifurcation : la voie de droite porte un booster. Au programme : huit virages serr\xE9s, ralentisseur, chicane ; bumper et piques.",
+    appris: "D\xE9part : bifurcation, voie de droite acc\xE9l\xE9r\xE9e. Au programme : lacets en S, passage \xE9troit entre des piliers, ralentisseurs, chicanes serr\xE9es, bumper, wall-ride, croisement travers\xE9 deux fois, piques.",
     goal: {
       id: "norespawn"
     },
     opts: {
       l: 6
     },
+    script: "start*1 Y2.b B S R S L S R S L B C*3 B NI N2 NO S R S2.x S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "bumper",
-        at: 0.3,
+        at: 0.543,
         side: -7.5,
         s: 0.8
       },
       {
         k: "spikes",
-        at: 0.8,
+        at: 0.958,
         side: 7.5,
         s: 0.7
+      },
+      {
+        k: "board_warn",
+        at: 0.265,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "pillarThin",
+        at: 0.287,
+        side: 14
+      },
+      {
+        k: "pillarThin",
+        at: 0.287,
+        side: -14
+      },
+      {
+        k: "pillarThin",
+        at: 0.301,
+        side: 14
+      },
+      {
+        k: "pillarThin",
+        at: 0.301,
+        side: -14
+      },
+      {
+        k: "board_right",
+        at: 0.425,
+        side: -16,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.477,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "block",
+        at: 0.543,
+        side: 24
+      },
+      {
+        k: "block",
+        at: 0.543,
+        side: -24
+      },
+      {
+        k: "board_warn",
+        at: 0.768,
+        side: 16,
+        rot: Math.PI
       }
     ],
-    script: "start Y2.b B S R S L S R S L B C B S R S2.x S L B S2 [tr01s] S2< [tr10s] S R B S L B S [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 41.3,
-      or: 43.5,
-      argent: 50,
-      bronze: 58.7
+      cristal: 58.6,
+      or: 61.7,
+      argent: 70.9,
+      bronze: 83.3
     }
   },
   {
-    // Chapitre 9 · 3/6 — ROLLERCOASTER (rouages). Ouverture : deux boosters puis directement une HÉLICE montante (quatre grandes courbes inclinées : 8 niveaux, comme le pas d'une vis). Ensuite le checkpoint,
-    // un looping TRIPLE (4×4, petit format), un slalom de wall-rides gauche / droite et un plongeon de 8 niveaux. Des piques escamotables sur le bord de la route.
+    // Chapitre 9 · 3/6 — ROLLERCOASTER (0.10.8 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters et une hélice montante de quatre courbes (les engrenages). Chicane
+    // longue, TRIPLE looping à gauche, poutres en croix, wall-rides gauche puis droite, route large sous un portique, chicane longue, PIQUES ESCAMOTABLES, TUBE qui tourne à gauche
+    // puis à droite, plongeon à 38°.
     id: "engrenages",
     name: "Engrenages",
     decor: "factory",
     difficulty: 3,
     profil: "rollercoaster",
-    appris: "D\xE9part : deux boosters \u2192 h\xE9lice montante de 8 niveaux. Au programme : looping triple, wall-rides, plongeon ; piques escamotables.",
+    appris: "D\xE9part : deux boosters et une h\xE9lice montante. Au programme : chicane longue, triple looping, wall-rides des deux c\xF4t\xE9s, route large sous un portique, piques escamotables, tube qui tourne, plongeon.",
     goal: {
       id: "norespawn"
     },
@@ -12788,31 +12897,82 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
+    script: "start*2 B2 CBR2 CBR2 CBR2 CBR2 S C*1 ZR3 B2 OTL S2 B [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S2 WI W WO S ZL3 S2 TI TM TLL TM TRR TM TO S B [cdi2] DX [cdo2] S B2 finish*2",
     obst: [
       {
         k: "spikesPop",
-        at: 0.45,
+        at: 0.605,
         side: 6.5,
         s: 0.75
+      },
+      {
+        k: "board_right",
+        at: 0.128,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.188,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "beamX",
+        at: 0.375,
+        side: 28
+      },
+      {
+        k: "beamX",
+        at: 0.375,
+        side: -28
+      },
+      {
+        k: "gantry",
+        at: 0.631,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "beamPost",
+        at: 0.626,
+        side: 36
+      },
+      {
+        k: "beamPost",
+        at: 0.626,
+        side: -36
+      },
+      {
+        k: "board_left",
+        at: 0.657,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.72,
+        side: 18,
+        rot: Math.PI
       }
     ],
-    script: "start B2 CBR2 CBR2 CBR2 CBR2 S C B2 OTL S2 B [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B [cdi2] DX [cdo2] S B2 finish",
     medals: {
-      cristal: 30.4,
-      or: 32.1,
-      argent: 36.9,
-      bronze: 43.3
+      cristal: 45.8,
+      or: 48.2,
+      argent: 55.4,
+      bronze: 65.1
     }
   },
   {
-    // Chapitre 9 · 4/6 — SPEEDWAY (fonderie). Ouverture : trois boosters puis UN TUNNEL de quatre cases pris à plus de 220 km/h, directement suivi d'un très grand virage relevé. Cinq virages relevés 3×3,
-    // un wall-ride de quatre cases (mur droit), deux cases à moteur coupé entre deux virages (la voiture file sur son élan) et deux bumpers sur les bords.
+    // Chapitre 9 · 4/6 — SPEEDWAY (0.10.8 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters et un tunnel de quatre cases. Très grands virages relevés, un BUMPER, route
+    // large sous un portique, chicane rapide, wall-ride à droite, moteur coupé, deux blocs de fonte, grand S, un second BUMPER avant un TUBE qui tourne à droite puis à gauche. Aucun
+    // virage serré ; objectif : ne toucher aucune bordure.
     id: "fonderie",
     name: "Fonderie",
     decor: "factory",
     difficulty: 4,
     profil: "speedway",
-    appris: "D\xE9part : trois boosters \u2192 tunnel de quatre cases \u2192 virage relev\xE9. Au programme : cinq virages relev\xE9s, wall-ride, deux cases \xE0 moteur coup\xE9, bumpers.",
+    appris: "D\xE9part : trois boosters et un tunnel. Au programme : tr\xE8s grands virages relev\xE9s, deux bumpers, route large sous un portique, chicane rapide, wall-ride, moteur coup\xE9, grand S, tube qui tourne.",
     goal: {
       id: "nowall"
     },
@@ -12822,40 +12982,85 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 70
     },
+    script: "start*3 B3 S4# BRR S B BLL S2 WI W2 WO S C*2 B ZR4 S [tr02l] S4> [tr20l] BRR S2.c BLL B S ZZR S BRR S TI TM TRR TM TLL TM TO S B2 finish*2",
     obst: [
       {
         k: "bumper",
-        at: 0.35,
+        at: 0.24,
         side: -7.5,
         s: 0.8
       },
       {
         k: "bumper",
-        at: 0.75,
+        at: 0.78,
         side: 7.5,
         s: 0.8
+      },
+      {
+        k: "gantry",
+        at: 0.268,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillar",
+        at: 0.262,
+        side: 36
+      },
+      {
+        k: "pillar",
+        at: 0.262,
+        side: -36
+      },
+      {
+        k: "board_right",
+        at: 0.315,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "block",
+        at: 0.65,
+        side: 28
+      },
+      {
+        k: "block",
+        at: 0.65,
+        side: -28
+      },
+      {
+        k: "board_right",
+        at: 0.66,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.785,
+        side: 18,
+        rot: Math.PI
       }
     ],
-    script: "start B3 S4# BRR S B BLL S2 C B [tr02l] S4> [tr20l] BRR S2.c BLL B S BRR S B2 finish",
     medals: {
-      cristal: 28.4,
-      or: 29.9,
-      argent: 34.4,
-      bronze: 40.4
+      cristal: 45.6,
+      or: 48,
+      argent: 55.2,
+      bronze: 64.8
     }
   },
   {
-    // Chapitre 9 · 5/6 — ACROBATIQUE (pistons). Ouverture : deux boosters puis UN TAPIS DE QUATRE PISTONS (quatre rebonds à 150 % qui s'enchaînent sans que la voiture touche le sol plus d'un instant).
-    // Puis une rampe raide, un rebond vers une terrasse 2 niveaux plus bas, un wall-ride et une rampe douce. Chaque checkpoint est suivi de deux boosters. Piques escamotables et bumper sur les bords.
+    // Chapitre 9 · 5/6 — ACROBATIQUE (0.10.8 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters et une bande rebondissante (150 %). PIQUES ESCAMOTABLES, grand saut reçu
+    // sur une descente puis une PLAQUE entre deux dalles de presse, chicane longue, rebond reçu sur une plaque, wall-ride, saut reçu sur une plaque, chicane longue, route large sous un
+    // portique et un BUMPER pour finir. Panneaux de montée avant chaque saut.
     id: "presse",
     name: "Presse Hydraulique",
     decor: "factory",
     difficulty: 4,
     profil: "acrobatique",
-    appris: "D\xE9part : deux boosters \u2192 tapis de quatre pistons (rebonds en cha\xEEne). Au programme : rampe raide, rebond vers une terrasse, wall-ride, rampe douce.",
+    appris: "D\xE9part : deux boosters et une bande rebondissante. Au programme : piques escamotables, trois sauts re\xE7us sur des plaques, chicanes longues, wall-ride, route large sous un portique, bumper.",
     goal: {
       id: "under",
-      t: 33
+      t: 46.5
     },
     opts: {
       l: 20
@@ -12863,69 +13068,186 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
+    script: "start*2 B2 S4.j150 S3 C*3 B2 [crv2] UX G2 DX DX [cdo2] [plate3]*10 S2 C*3 ZR3 B2 S.j150 G2 V-2 [plate3]*10 S [tr01s] S2< [tr10s] S C*3 B2 [crv1] UU G2 DD [cdo1] [plate2]*10 S2 ZL3 S WI W WO S3 finish*2",
     obst: [
       {
         k: "spikesPop",
-        at: 0.2,
+        at: 0.127,
         side: -6.5,
         s: 0.75
       },
       {
         k: "bumper",
-        at: 0.6,
+        at: 0.945,
         side: 7.5,
         s: 0.8
+      },
+      {
+        k: "board_up",
+        at: 0.04,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_up",
+        at: 0.195,
+        side: -18,
+        rot: Math.PI
+      },
+      {
+        k: "slab",
+        at: 0.29,
+        side: 60
+      },
+      {
+        k: "slab",
+        at: 0.29,
+        side: -60
+      },
+      {
+        k: "board_right",
+        at: 0.355,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_up",
+        at: 0.445,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_up",
+        at: 0.69,
+        side: -18,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.805,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.906,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillarBase",
+        at: 0.9,
+        side: 36
+      },
+      {
+        k: "pillarBase",
+        at: 0.9,
+        side: -36
       }
     ],
-    script: "start B2 S4.j150 S3 C B2 [crv2] UX G2 DX DX [cdo2] S3 C B2 S.j150 G2 V-2 S3 [tr01s] S2< [tr10s] S C B2 [crv1] UU G2 DD [cdo1] S5 finish",
     medals: {
-      cristal: 31.2,
-      or: 32.8,
-      argent: 37.8,
-      bronze: 44.3
+      cristal: 43,
+      or: 45.3,
+      argent: 52.1,
+      bronze: 61.1
     }
   },
   {
-    // Chapitre 9 · 6/6 — TECHNIQUE (usine folle). Ouverture : deux boosters puis DEUX DALLES RALENTISSEUR (freinage forcé) juste avant le slalom R L R L. Neuf virages serrés, une zone moteur coupé, une chicane
-    // sur un mur, une descente de 4 niveaux et un booster à chaque relance. Un marteau tournant au milieu de la route (à passer au bon moment) et, sur les bords, des piques et un bumper.
+    // Chapitre 9 · 6/6 — TECHNIQUE (0.10.8 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters, ralentisseurs, épingles en S. Deux blocs, passage ÉTROIT (12 m) entre
+    // des piliers fins, moteur coupé, le MARTEAU qui balaie la route, wall-ride, deux chicanes serrées, des PIQUES, CROISEMENT traversé deux fois (boucle de virages serrés), un BUMPER
+    // avant l'arrivée.
     id: "usinefolle",
     name: "Usine Folle",
     decor: "factory",
     difficulty: 5,
     profil: "technique",
-    appris: "D\xE9part : deux boosters \u2192 deux dalles ralentisseur juste avant le slalom. Au programme : neuf virages serr\xE9s, moteur coup\xE9, chicane ; marteau, piques, bumper.",
+    appris: "D\xE9part : deux boosters, ralentisseurs, \xE9pingles en S. Au programme : passage \xE9troit entre des piliers, moteur coup\xE9, marteau, wall-ride, chicanes serr\xE9es, piques, croisement travers\xE9 deux fois, bumper.",
     goal: {
       id: "norespawn"
     },
     opts: {
       l: 8
     },
+    script: "start*2 B2 S2.x R L R L B S2 C*3 B NI N2 NO S R S L B S2.c S2 [tr01s] S2< [tr10s] S R B ZR S ZL B S L B S JX R S R R S JX R S R B [cdi1] [dn2] [cdo1] S B finish*1",
     obst: [
       {
         k: "hammer",
-        at: 0.35,
+        at: 0.385,
         side: 0,
         s: 1
       },
       {
         k: "spikes",
-        at: 0.5,
+        at: 0.673,
         side: 7.5,
         s: 0.7
       },
       {
         k: "bumper",
-        at: 0.9,
+        at: 0.953,
         side: -7.5,
         s: 0.8
+      },
+      {
+        k: "block",
+        at: 0.155,
+        side: 24
+      },
+      {
+        k: "block",
+        at: 0.155,
+        side: -24
+      },
+      {
+        k: "board_warn",
+        at: 0.205,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "pillarThin",
+        at: 0.227,
+        side: 14
+      },
+      {
+        k: "pillarThin",
+        at: 0.227,
+        side: -14
+      },
+      {
+        k: "pillarThin",
+        at: 0.242,
+        side: 14
+      },
+      {
+        k: "pillarThin",
+        at: 0.242,
+        side: -14
+      },
+      {
+        k: "board_right",
+        at: 0.558,
+        side: -16,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.612,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.73,
+        side: 16,
+        rot: Math.PI
       }
     ],
-    script: "start B2 S2.x R L R L B S2 C B S R S L B S2.c S2 [tr01s] S2< [tr10s] S R B S L B S R B [cdi1] [dn2] [cdo1] S B finish",
     medals: {
-      cristal: 35.4,
-      or: 37.3,
-      argent: 42.8,
-      bronze: 50.3
+      cristal: 52.3,
+      or: 55.1,
+      argent: 63.3,
+      bronze: 74.3
     }
   },
   // ---- Ville dans les nuages : vent, deltaplane, gravité faible, sauts ----
@@ -17990,4 +18312,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "390012502e7c9884";
+globalThis.__COPYTRACK_BUILD__ = "bcb4211b1c9c2e7a";

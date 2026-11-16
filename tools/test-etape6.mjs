@@ -10,7 +10,7 @@ import { CHAPTERS } from '../js/career.js';
 import { newElements, FAMILIES_NEW } from './nouveautes.mjs';
 import { runTrack } from './lab.mjs';
 
-const REFAITS = [0, 1, 2, 3, 4, 5, 6, 7];      // indices dans CHAPTERS des chapitres refaits autour des nouvelles pièces
+const REFAITS = [0, 1, 2, 3, 4, 5, 6, 7, 8];      // indices dans CHAPTERS des chapitres refaits autour des nouvelles pièces
 const CH = REFAITS.map((c) => BUILTIN_TRACKS.filter((d) => d.decor === CHAPTERS[c].decor));
 const CH1 = CH[0];
 const built = new Map(CH.flat().map((d) => [d.id, buildBuiltin(d)]));

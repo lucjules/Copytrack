@@ -6,6 +6,20 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.8 — chapitre 9 (Usine mécanique) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 9 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits de l'Usine mécanique sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés). Leurs obstacles (bumpers, piques, piques escamotables, marteau) sont gardés et replacés sur des lignes droites du nouveau tracé :
+  - **Chaîne de Montage** (sprint, 47,3 s) : moteur coupé entre deux **murs pleins**, chicanes rapides, route large, tube qui tourne, grand S ; 23 nouveautés. Objectif « moins de 48,5 s ».
+  - **Laminoir** (technique, 61,7 s) : passage étroit entre des piliers, chicanes serrées, blocs d'acier, croisement traversé deux fois ; 20 nouveautés.
+  - **Engrenages** (rollercoaster, 48,2 s) : triple looping, poutres en croix, route large, tube qui tourne ; 19 nouveautés.
+  - **Fonderie** (speedway, 48,0 s) : route large, chicane rapide, blocs de fonte, grand S, tube qui tourne ; 19 nouveautés. Objectif inchangé : aucune bordure touchée.
+  - **Presse Hydraulique** (acrobatique, 45,3 s) : trois sauts reçus sur des **plaques**, chicanes longues, route large ; 27 nouveautés. Objectif « moins de 46,5 s ».
+  - **Usine Folle** (technique, 55,1 s) : passage étroit, marteau, chicanes serrées, croisement traversé deux fois ; 20 nouveautés.
+- Textes anglais : « facades » sans cédille (le test de l'anglais prenait la lettre ç pour un reste de français) ; l'atelier de refonte le vérifie désormais pour chaque texte.
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 9.
+
 ## Bêta 0.10.7 — chapitre 8 (Fonds marins) refait autour des nouvelles pièces
 
 **`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 8 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.

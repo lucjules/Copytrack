@@ -434,48 +434,48 @@ _Moteur coupé, bifurcation, pistons, marteau et ralentisseurs : l’usine ne pa
 
 ### 49. Chaîne de Montage — Sprint, ◆◆◇◇◇
 
-- Départ : trois boosters → trois cases à moteur coupé. Au programme : tapis roulant, vague, deux très grands virages plats ; bumper et piques sur les bords.
-- Pilote automatique : **21.9 s** · médailles : cristal 20.6 · or 21.7 · argent 25 · bronze 29.3
-- Objectif bonus ★ : Finir en moins de 23 s
+- Départ : trois boosters puis moteur coupé entre deux murs. Au programme : tapis roulant, chicanes rapides, bumper, route large sous un portique, piques, tube qui tourne, chicanes longues, grand S.
+- Pilote automatique : **47.3 s** · médailles : cristal 45 · or 47.3 · argent 54.4 · bronze 63.9
+- Objectif bonus ★ : Finir en moins de 48.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 50. Laminoir — Technique, ◆◆◆◇◇
 
-- Départ : bifurcation : la voie de droite porte un booster. Au programme : huit virages serrés, ralentisseur, chicane ; bumper et piques.
-- Pilote automatique : **43.5 s** · médailles : cristal 41.3 · or 43.5 · argent 50 · bronze 58.7
+- Départ : bifurcation, voie de droite accélérée. Au programme : lacets en S, passage étroit entre des piliers, ralentisseurs, chicanes serrées, bumper, wall-ride, croisement traversé deux fois, piques.
+- Pilote automatique : **61.7 s** · médailles : cristal 58.6 · or 61.7 · argent 70.9 · bronze 83.3
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 51. Engrenages — Rollercoaster, ◆◆◆◇◇
 
-- Départ : deux boosters → hélice montante de 8 niveaux. Au programme : looping triple, wall-rides, plongeon ; piques escamotables.
-- Pilote automatique : **32.1 s** · médailles : cristal 30.4 · or 32.1 · argent 36.9 · bronze 43.3
+- Départ : deux boosters et une hélice montante. Au programme : chicane longue, triple looping, wall-rides des deux côtés, route large sous un portique, piques escamotables, tube qui tourne, plongeon.
+- Pilote automatique : **48.2 s** · médailles : cristal 45.8 · or 48.2 · argent 55.4 · bronze 65.1
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 52. Fonderie — Speedway, ◆◆◆◆◇
 
-- Départ : trois boosters → tunnel de quatre cases → virage relevé. Au programme : cinq virages relevés, wall-ride, deux cases à moteur coupé, bumpers.
-- Pilote automatique : **29.9 s** · médailles : cristal 28.4 · or 29.9 · argent 34.4 · bronze 40.4
+- Départ : trois boosters et un tunnel. Au programme : très grands virages relevés, deux bumpers, route large sous un portique, chicane rapide, wall-ride, moteur coupé, grand S, tube qui tourne.
+- Pilote automatique : **48.0 s** · médailles : cristal 45.6 · or 48 · argent 55.2 · bronze 64.8
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 53. Presse Hydraulique — Acrobatique, ◆◆◆◆◇
 
-- Départ : deux boosters → tapis de quatre pistons (rebonds en chaîne). Au programme : rampe raide, rebond vers une terrasse, wall-ride, rampe douce.
-- Pilote automatique : **33.2 s** · médailles : cristal 31.2 · or 32.8 · argent 37.8 · bronze 44.3
-- Objectif bonus ★ : Finir en moins de 33 s
+- Départ : deux boosters et une bande rebondissante. Au programme : piques escamotables, trois sauts reçus sur des plaques, chicanes longues, wall-ride, route large sous un portique, bumper.
+- Pilote automatique : **45.3 s** · médailles : cristal 43 · or 45.3 · argent 52.1 · bronze 61.1
+- Objectif bonus ★ : Finir en moins de 46.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 54. Usine Folle — Technique, ◆◆◆◆◆
 
-- Départ : deux boosters → deux dalles ralentisseur juste avant le slalom. Au programme : neuf virages serrés, moteur coupé, chicane ; marteau, piques, bumper.
-- Pilote automatique : **37.3 s** · médailles : cristal 35.4 · or 37.3 · argent 42.8 · bronze 50.3
+- Départ : deux boosters, ralentisseurs, épingles en S. Au programme : passage étroit entre des piliers, moteur coupé, marteau, wall-ride, chicanes serrées, piques, croisement traversé deux fois, bumper.
+- Pilote automatique : **55.1 s** · médailles : cristal 52.3 · or 55.1 · argent 63.3 · bronze 74.3
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
