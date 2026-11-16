@@ -11,7 +11,8 @@ const est = (script, o = {}) => estimateDifficulty(scriptTrack('t', script, { de
 console.log('Étoiles');
 test('seuils croissants ; 1 à 5 étoiles ; libellés et affichage', () => {
   assert.deepEqual([...STAR_STEPS].sort((a, b) => a - b), STAR_STEPS);
-  assert.deepEqual([0, 3, 4.6, 7.9, 8, 9.9, 10, 13.9, 14, 99].map(starsOf), [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+  // juste sous chaque seuil, puis sur le seuil (0.10.9 : les seuils sont recalés quand les circuits intégrés changent ; ce test suit STAR_STEPS)
+  assert.deepEqual([0, ...STAR_STEPS.flatMap((t) => [t - 0.01, t]), 99].map(starsOf), [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
   assert.equal(starsText(3), '◆◆◆◇◇'); assert.equal(STAR_LABELS.length, 6);
 });
 test('sur les 72 circuits intégrés : les cinq niveaux sont tous représentés (au moins 5 % chacun), sans niveau qui écrase les autres (60 % au plus)', () => {

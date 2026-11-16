@@ -666,64 +666,75 @@ export const BUILTIN_TRACKS = [
   },
   // ---- Ville dans les nuages : vent, deltaplane, gravité faible, sauts ----
   {
-    // Chapitre 10 · 1/6 — SPRINT (premier envol). Ouverture : trois boosters puis TROIS CASES DE VENT LATÉRAL : le vent pousse la voiture de côté et la trajectoire se corrige dès le départ.
-    // Puis une vague en S, deux très grands virages plats (droite, gauche) et une descente finale de 4 niveaux. Presque tout droit.
+    // Chapitre 10 · 1/6 — SPRINT (0.10.9 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters puis un VENT latéral (trois cases, 150 %) entre deux dalles. Dos d'âne,
+    // chicanes rapides, très grand virage plat, route large sous un portique, second très grand virage plat, TUBE qui tourne à droite puis à gauche dans les nuages, descente, grand
+    // S et chicanes longues. Aucun virage serré.
     id: 'envol', name: 'Premier Envol', decor: 'sky', difficulty: 2, profil: 'sprint',
-    appris: 'Départ : trois boosters → vent latéral. Au programme : vague en S, deux très grands virages plats, descente.',
-    goal: { id: 'under', t: 21.5 },
+    appris: 'Départ : trois boosters puis un vent latéral entre deux dalles. Au programme : chicanes rapides, très grands virages plats, route large sous un portique, tube qui tourne, grand S, chicanes longues.',
+    goal: { id: 'under', t: 48 },
     opts: { l: 6 }, pilot: { vCap: 66 },
-    script: 'start B3 S3.w150 S [crs1] S2 [cds1] B HR S2 B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 finish',
-    medals: { cristal: 19.3, or: 20.3, argent: 23.4, bronze: 27.4 },
+    script: 'start*2 B3 S3.w150 S [crs1] S2 [cds1] B ZR4 S ZL4 S HR S2 B C*3 WI W2 WO S2 HL S2 TI TM TRR TM TLL TM TO S B [cdi1] [dn2] [cdo1] ZZR S ZL3 S2 ZR3 S B2 finish*2',
+    obst: [{ k: 'slab', at: 0.064, side: 26 }, { k: 'slab', at: 0.064, side: -26 }, { k: 'board_right', at: 0.155, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.233, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.395, side: 0, s: 2 }, { k: 'pillar', at: 0.389, side: 36 }, { k: 'pillar', at: 0.389, side: -36 }, { k: 'board_warn', at: 0.483, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.76, side: -20, rot: Math.PI }],
+    medals: { cristal: 44.5, or: 46.9, argent: 53.9, bronze: 63.3 },
   },
   {
-    // Chapitre 10 · 2/6 — ACROBATIQUE (îles suspendues). Ouverture : trois boosters puis une rampe SANS BORDURES (les îles sont des plateformes sans barrière) : la voiture passe un anneau turbo et se pose
-    // sur une île plus basse. Trois sauts (rampe douce avec anneau, rampe forte, rampe douce avec anneau) avec un petit wall-ride entre les deux derniers. Chaque checkpoint est suivi de deux boosters.
+    // Chapitre 10 · 2/6 — ACROBATIQUE SANS BORDURES (0.10.9 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → rampe sans bordures. Trois sauts d'île en île, chacun
+    // reçu sur une descente puis une PLAQUE sans bordures (une île suspendue, entre des blocs flottants) ; deux sauts à anneau turbo, chicanes longues, wall-ride, route large sous un
+    // portique et grand S, sans bordures non plus. Panneaux de montée avant chaque rampe.
     id: 'suspendues', name: 'Îles Suspendues', decor: 'sky', difficulty: 3, profil: 'acrobatique',
-    appris: 'Départ : trois boosters → rampe sans bordures (les îles n’ont pas de barrière). Au programme : trois sauts avec anneaux turbo, wall-ride.',
-    goal: { id: 'under', t: 30 },
+    appris: 'Départ : trois boosters → rampe sans bordures. Au programme : trois sauts d’île en île reçus sur des plaques sans bordures, anneaux turbo, chicanes longues, wall-ride, route large, grand S.',
+    goal: { id: 'under', t: 49.5 },
     opts: { l: 20 }, pilot: { vCap: 60 },
-    script: 'start B3_ [crv1]_ UU_ GR2 DD_ [cdo1]_ S3_ C B2_ [crv2]_ UX_ G2 DX_ DX_ [cdo2]_ S3_ C B2_ [tr01s] S2< [tr10s] B_ S_ [crv1]_ UU_ GR2 DD_ [cdo1]_ S5_ finish',
-    medals: { cristal: 28.1, or: 29.6, argent: 34, bronze: 39.9 },
+    script: 'start*2 B3_ [crv1]_ UU_ GR2 DD_ [cdo1]_ [plate3]*0 S2_ C*3 B2_ [crv2]_ UX_ G2 DX_ DX_ [cdo2]_ [plate3]*0 S2_ ZR3_ C*3 B2_ [tr01s] S2< [tr10s] B_ S_ [crv1]_ UU_ GR2 DD_ [cdo1]_ [plate2]*0 S2_ ZL3_ S_ WI_ W2_ WO_ S_ ZZR_ S3_ finish*2',
+    obst: [{ k: 'board_up', at: 0.055, side: 18, rot: Math.PI }, { k: 'block', at: 0.13, side: 60 }, { k: 'block', at: 0.13, side: -60 }, { k: 'board_up', at: 0.22, side: -18, rot: Math.PI }, { k: 'board_right', at: 0.358, side: -20, rot: Math.PI }, { k: 'board_up', at: 0.61, side: 18, rot: Math.PI }, { k: 'board_left', at: 0.72, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.827, side: 0, s: 2 }, { k: 'pillarThin', at: 0.82, side: 36 }, { k: 'pillarThin', at: 0.82, side: -36 }],
+    medals: { cristal: 45.7, or: 48.2, argent: 55.4, bronze: 65 },
   },
   {
-    // Chapitre 10 · 3/6 — TECHNIQUE (rafales). Ouverture : deux boosters puis DEUX CASES DE VENT LATÉRAL FORT (180 %) avant le premier virage serré : la voiture arrive de travers. Neuf virages serrés,
-    // du vent à chaque relance (150 %, 120 %), une chicane sur un mur, une descente de 4 niveaux ; un booster à chaque relance.
+    // Chapitre 10 · 3/6 — TECHNIQUE (0.10.9 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters et une RAFALE (vent à 180 %). Lacets en S dans le vent, passage ÉTROIT
+    // (12 m) entre des piliers fins, deux chicanes serrées, wall-ride, deux murets coupe-vent, CROISEMENT traversé deux fois (boucle de virages serrés), descente vers l'arrivée.
     id: 'rafales', name: 'Rafales', decor: 'sky', difficulty: 4, profil: 'technique',
-    appris: 'Départ : deux boosters → vent fort (180 %) juste avant la première épingle. Au programme : neuf virages serrés, du vent à chaque relance.',
+    appris: 'Départ : deux boosters et une rafale. Au programme : lacets dans le vent, passage étroit entre des piliers, chicanes serrées, wall-ride, murets coupe-vent, croisement traversé deux fois.',
     goal: { id: 'norespawn' },
     opts: { l: 6 },
-    script: 'start B2 S2.w180 S R S L S R B S2 C B S.w150 S2 R S L B S2.w120 S R S L B S [tr01s] S2< [tr10s] S3 R B S2 L B S [cdi1] [dn2] [cdo1] S B finish',
-    medals: { cristal: 41.4, or: 43.6, argent: 50.1, bronze: 58.8 },
+    script: 'start*1 B2 S2.w180 S R S L S R B S2 C*3 B S.w150 S2 R S L B NI N2 NO S2.w120 S R S L B ZR S ZL B S [tr01s] S2< [tr10s] S3 R B S2 L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3',
+    obst: [{ k: 'board_warn', at: 0.296, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.316, side: 14 }, { k: 'pillarThin', at: 0.316, side: -14 }, { k: 'pillarThin', at: 0.33, side: 14 }, { k: 'pillarThin', at: 0.33, side: -14 }, { k: 'board_right', at: 0.44, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.49, side: 16, rot: Math.PI }, { k: 'wallSLow', at: 0.673, side: 24, rot: Math.PI / 2 }, { k: 'wallSLow', at: 0.673, side: -24, rot: Math.PI / 2 }, { k: 'board_warn', at: 0.784, side: 16, rot: Math.PI }],
+    medals: { cristal: 59, or: 62.1, argent: 71.4, bronze: 83.8 },
   },
   {
-    // Chapitre 10 · 4/6 — ROLLERCOASTER (montgolfières, gravité réduite). Ouverture : trois boosters, une plaque de gravité à 40 % puis directement un grand looping (la boucle se prend plus facilement,
-    // mais la voiture flotte). Ensuite un slalom de wall-rides gauche / droite et un plongeon de 8 niveaux ; une plaque à 100 % rétablit la pesanteur avant l'arrivée.
+    // Chapitre 10 · 4/6 — ROLLERCOASTER (0.10.9 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters, gravité réduite (40 %) et un grand looping. Chicane longue,
+    // wall-rides gauche et droite, LOOPING MODULAIRE à gauche, route large sous un portique, chicane longue, TUBE qui tourne à gauche puis à droite, passage ÉTROIT, plongeon à 38°
+    // et retour à la gravité normale.
     id: 'montgolfieres', name: 'Montgolfières', decor: 'sky', difficulty: 4, profil: 'rollercoaster',
-    appris: 'Départ : trois boosters → plaque de gravité 40 % → grand looping. Au programme : slalom de wall-rides, plongeon, pesanteur rétablie avant l’arrivée.',
+    appris: 'Départ : trois boosters, gravité réduite et grand looping. Au programme : chicanes longues, wall-rides des deux côtés, looping modulaire, route large, tube qui tourne, passage étroit, plongeon.',
     goal: { id: 'norespawn' },
     opts: { l: 10 }, pilot: { vCap: 58 },
-    script: 'start B3 S.g40 OB S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B [cdi2] DX [cdo2] S.g100 B2 finish',
-    medals: { cristal: 21.5, or: 22.7, argent: 26.1, bronze: 30.6 },
+    script: 'start*2 B3 S.g40 OB S2 C*1 ZR3 B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B LPL1 S WI W WO S ZL3 S TI TM TLL TM TRR TM TO S NI N2 NO S B [cdi2] DX [cdo2] S.g100 S2 B2 finish*2',
+    obst: [{ k: 'board_warn', at: 0.045, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.15, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.425, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.563, side: 0, s: 2 }, { k: 'pillar', at: 0.558, side: 36 }, { k: 'pillar', at: 0.558, side: -36 }, { k: 'board_left', at: 0.59, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.64, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.836, side: 16, rot: Math.PI }],
+    medals: { cristal: 44.1, or: 46.4, argent: 53.4, bronze: 62.6 },
   },
   {
-    // Chapitre 10 · 5/6 — SPEEDWAY (pont des vents). Ouverture : deux boosters puis du VENT LATÉRAL sur un pont SANS BORDURES, directement suivi d'un très grand virage relevé lui aussi sans bordure.
-    // Quatre virages relevés, un wall-ride de quatre cases (mur droit) et un second coup de vent : tout le tour est sans barrière, 86 % du temps au-dessus de 220 km/h.
+    // Chapitre 10 · 5/6 — SPEEDWAY SANS BORDURES (0.10.9 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters, vent latéral et un très grand virage relevé, sans bordures.
+    // Deux murs coupe-vent, route large sous un portique, chicane rapide, wall-ride à droite, second vent, grand S et un TUBE qui tourne à droite puis à gauche. Aucun virage serré ;
+    // objectif : ne toucher aucune bordure (il n'y en a presque pas).
     id: 'pontvents', name: 'Pont des Vents', decor: 'sky', difficulty: 5, profil: 'speedway',
-    appris: 'Départ : deux boosters → vent sur un pont sans bordures → virage relevé sans bordure. Au programme : quatre virages relevés, wall-ride, 86 % au-dessus de 220 km/h.',
+    appris: 'Départ : deux boosters, vent latéral, très grand virage relevé sans bordures. Au programme : murs coupe-vent, route large sous un portique, chicane rapide, wall-ride, grand S, tube qui tourne.',
     goal: { id: 'nowall' },
     opts: { l: 6 }, pilot: { vCap: 70 },
-    script: 'start B2_ S2.w150_ BRR_ S_ B_ BLL_ S2_ C B_ [tr02l] S4> [tr20l] BRR_ S2.w100_ B_ BLL_ S_ B2 finish',
-    medals: { cristal: 23, or: 24.2, argent: 27.9, bronze: 32.7 },
+    script: 'start*3 B2_ S2.w150_ BRR_ S_ B_ BLL_ S2_ WI_ W2_ WO_ S_ C*2 B_ ZR4_ S_ [tr02l] S4> [tr20l] BRR_ S2.w100_ B_ BLL_ S_ ZZR_ S_ BRR_ S_ TI TM TRR TM TLL TM TO S_ B2 finish*2',
+    obst: [{ k: 'wallS', at: 0.126, side: 28, rot: Math.PI / 2 }, { k: 'wallS', at: 0.126, side: -28, rot: Math.PI / 2 }, { k: 'gantry', at: 0.247, side: 0, s: 2 }, { k: 'pillarBase', at: 0.241, side: 36 }, { k: 'pillarBase', at: 0.241, side: -36 }, { k: 'board_right', at: 0.296, side: -20, rot: Math.PI }, { k: 'board_right', at: 0.65, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.777, side: 18, rot: Math.PI }],
+    medals: { cristal: 43, or: 45.3, argent: 52, bronze: 61.1 },
   },
   {
-    // Chapitre 10 · 6/6 — ACROBATIQUE (cité céleste). Ouverture : DÉPART EN DELTAPLANE depuis le bord du toit (plaque deltaplane juste après la ligne, chute de 6 niveaux) : la voiture plane vers une
-    // avenue de 10 cases, où une seconde plaque la rend à la voiture. Puis une rampe raide, un wall-ride sur une façade et une rampe douce avec anneau turbo. Les checkpoints sont suivis de deux boosters.
+    // Chapitre 10 · 6/6 — ACROBATIQUE (0.10.9 : refait AUTOUR des nouvelles pièces). Ouverture : plaque DELTAPLANE, ralentisseur et un vide : on plane six niveaux plus bas, au-dessus
+    // de l'avenue de la cité (piliers et immeubles en blocs). Retour à la voiture, grand saut reçu sur une descente puis une PLAQUE, chicane longue, wall-ride, saut à anneau turbo
+    // reçu sur une plaque, chicane longue, route large sous un portique.
     id: 'cite', name: 'Cité Céleste', decor: 'sky', difficulty: 5, profil: 'acrobatique',
-    appris: 'Départ : en deltaplane : plaque sur la ligne, chute de 6 niveaux. Au programme : avenue de 10 cases, rampe raide, wall-ride, rampe douce avec anneau.',
-    goal: { id: 'under', t: 37 },
+    appris: 'Départ : plaque deltaplane, vol au-dessus de la cité. Au programme : grand saut reçu sur une plaque, chicanes longues, wall-ride, saut à anneau turbo reçu sur une plaque, route large.',
+    goal: { id: 'under', t: 50 },
     opts: { l: 40 }, pilot: { vCap: 60 },
-    script: 'start S.e S.x G2 V-6 [dn4] [cdo2] S10 S.e S2 C B2 [crv2] UX G2 DX DX [cdo2] S3 C B2 [tr01s] S2< [tr10s] S C B2 [crv1] UU GR2 DD [cdo1] S5 finish',
-    medals: { cristal: 34.8, or: 36.6, argent: 42.1, bronze: 49.4 },
+    script: 'start*2 S.e S.x G2 V-6 [dn4] [cdo2] S10 S.e S2 C*3 B2 [crv2] UX G2 DX DX [cdo2] [plate3]*10 S2 C*3 ZR3 B2 [tr01s] S2< [tr10s] S C*3 B2 [crv1] UU GR2 DD [cdo1] [plate2]*10 S2 ZL3 S WI W WO S3 finish*2',
+    obst: [{ k: 'pillar', at: 0.12, side: 30 }, { k: 'pillar', at: 0.12, side: -30 }, { k: 'block', at: 0.165, side: 30 }, { k: 'block', at: 0.165, side: -30 }, { k: 'board_up', at: 0.3, side: 18, rot: Math.PI }, { k: 'slab', at: 0.395, side: 60 }, { k: 'slab', at: 0.395, side: -60 }, { k: 'board_right', at: 0.45, side: -20, rot: Math.PI }, { k: 'board_up', at: 0.695, side: -18, rot: Math.PI }, { k: 'board_left', at: 0.82, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.912, side: 0, s: 2 }, { k: 'pillarBase', at: 0.906, side: 36 }, { k: 'pillarBase', at: 0.906, side: -36 }],
+    medals: { cristal: 46.4, or: 48.8, argent: 56.1, bronze: 65.9 },
   },
   // ---- Canyon de cristal : gravité inversée, plafonds, verre, volant inversé ----
   {

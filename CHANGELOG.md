@@ -6,6 +6,20 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.9 — chapitre 10 (Ville dans les nuages) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 10 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits de la Ville dans les nuages sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés) :
+  - **Premier Envol** (sprint, 46,9 s) : vent entre deux dalles, chicanes rapides, route large, tube qui tourne, grand S ; 23 nouveautés. Objectif « moins de 48 s ».
+  - **Îles Suspendues** (acrobatique sans bordures, 48,1 s) : trois sauts reçus sur des **plaques sans bordures** (`*0`), blocs flottants, chicanes longues, route large et grand S sans bordures ; 24 nouveautés. Objectif « moins de 49,5 s ».
+  - **Rafales** (technique, 62,1 s) : passage étroit entre des piliers, chicanes serrées, **murets** coupe-vent, croisement traversé deux fois ; 20 nouveautés.
+  - **Montgolfières** (rollercoaster, 46,4 s) : **looping modulaire**, route large, tube qui tourne, passage étroit ; 24 nouveautés.
+  - **Pont des Vents** (speedway sans bordures, 45,3 s) : murs coupe-vent, route large, chicane rapide, grand S, tube qui tourne ; 19 nouveautés. Objectif inchangé : aucune bordure touchée.
+  - **Cité Céleste** (acrobatique, deltaplane, 48,8 s) : vol au-dessus d'une avenue de piliers et d'immeubles, deux sauts reçus sur des plaques ; 27 nouveautés. Objectif « moins de 50 s ».
+- **Difficulté estimée (étoiles)** : seuils recalés sur les circuits refaits (`[7.1, 9.7, 13.2, 20.5]`, avant `[4.6, 8, 10, 14]`) : deux fois plus longs, ils montaient presque tous d'une étoile (il ne restait que 3 circuits à une étoile). La répartition visée ne change pas (environ 15, 40, 65 et 88 % des circuits intégrés sous chaque seuil).
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 10.
+
 ## Bêta 0.10.8 — chapitre 9 (Usine mécanique) refait autour des nouvelles pièces
 
 **`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 9 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.

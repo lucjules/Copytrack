@@ -486,49 +486,49 @@ _Vent de travers, îles sans bordures, gravité réduite, pont des vents et dép
 
 ### 55. Premier Envol — Sprint, ◆◆◇◇◇
 
-- Départ : trois boosters → vent latéral. Au programme : vague en S, deux très grands virages plats, descente.
-- Pilote automatique : **20.5 s** · médailles : cristal 19.3 · or 20.3 · argent 23.4 · bronze 27.4
-- Objectif bonus ★ : Finir en moins de 21.5 s
+- Départ : trois boosters puis un vent latéral entre deux dalles. Au programme : chicanes rapides, très grands virages plats, route large sous un portique, tube qui tourne, grand S, chicanes longues.
+- Pilote automatique : **46.9 s** · médailles : cristal 44.5 · or 46.9 · argent 53.9 · bronze 63.3
+- Objectif bonus ★ : Finir en moins de 48 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 56. Îles Suspendues — Acrobatique, ◆◆◆◇◇
 
-- Départ : trois boosters → rampe sans bordures (les îles n’ont pas de barrière). Au programme : trois sauts avec anneaux turbo, wall-ride.
-- Pilote automatique : **29.9 s** · médailles : cristal 28.1 · or 29.6 · argent 34 · bronze 39.9
-- Objectif bonus ★ : Finir en moins de 30 s
+- Départ : trois boosters → rampe sans bordures. Au programme : trois sauts d’île en île reçus sur des plaques sans bordures, anneaux turbo, chicanes longues, wall-ride, route large, grand S.
+- Pilote automatique : **48.1 s** · médailles : cristal 45.7 · or 48.2 · argent 55.4 · bronze 65
+- Objectif bonus ★ : Finir en moins de 49.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 57. Rafales — Technique, ◆◆◆◆◇
 
-- Départ : deux boosters → vent fort (180 %) juste avant la première épingle. Au programme : neuf virages serrés, du vent à chaque relance.
-- Pilote automatique : **43.9 s** · médailles : cristal 41.4 · or 43.6 · argent 50.1 · bronze 58.8
+- Départ : deux boosters et une rafale. Au programme : lacets dans le vent, passage étroit entre des piliers, chicanes serrées, wall-ride, murets coupe-vent, croisement traversé deux fois.
+- Pilote automatique : **62.1 s** · médailles : cristal 59 · or 62.1 · argent 71.4 · bronze 83.8
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 58. Montgolfières — Rollercoaster, ◆◆◆◆◇
 
-- Départ : trois boosters → plaque de gravité 40 % → grand looping. Au programme : slalom de wall-rides, plongeon, pesanteur rétablie avant l’arrivée.
-- Pilote automatique : **22.6 s** · médailles : cristal 21.5 · or 22.7 · argent 26.1 · bronze 30.6
+- Départ : trois boosters, gravité réduite et grand looping. Au programme : chicanes longues, wall-rides des deux côtés, looping modulaire, route large, tube qui tourne, passage étroit, plongeon.
+- Pilote automatique : **46.4 s** · médailles : cristal 44.1 · or 46.4 · argent 53.4 · bronze 62.6
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 59. Pont des Vents — Speedway, ◆◆◆◆◆
 
-- Départ : deux boosters → vent sur un pont sans bordures → virage relevé sans bordure. Au programme : quatre virages relevés, wall-ride, 86 % au-dessus de 220 km/h.
-- Pilote automatique : **24.2 s** · médailles : cristal 23 · or 24.2 · argent 27.9 · bronze 32.7
+- Départ : deux boosters, vent latéral, très grand virage relevé sans bordures. Au programme : murs coupe-vent, route large sous un portique, chicane rapide, wall-ride, grand S, tube qui tourne.
+- Pilote automatique : **45.3 s** · médailles : cristal 43 · or 45.3 · argent 52 · bronze 61.1
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 60. Cité Céleste — Acrobatique, ◆◆◆◆◆
 
-- Départ : en deltaplane : plaque sur la ligne, chute de 6 niveaux. Au programme : avenue de 10 cases, rampe raide, wall-ride, rampe douce avec anneau.
-- Pilote automatique : **37.3 s** · médailles : cristal 34.8 · or 36.6 · argent 42.1 · bronze 49.4
-- Objectif bonus ★ : Finir en moins de 37 s
+- Départ : plaque deltaplane, vol au-dessus de la cité. Au programme : grand saut reçu sur une plaque, chicanes longues, wall-ride, saut à anneau turbo reçu sur une plaque, route large.
+- Pilote automatique : **48.8 s** · médailles : cristal 46.4 · or 48.8 · argent 56.1 · bronze 65.9
+- Objectif bonus ★ : Finir en moins de 50 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
