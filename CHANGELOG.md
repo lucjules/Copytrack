@@ -6,6 +6,19 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.7 — chapitre 8 (Fonds marins) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 8 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits des Fonds marins sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés) :
+  - **Courant Chaud** (sprint, 45,7 s) : chicanes rapides, pyramides de corail, route large sous un portique, tube qui tourne, grand S ; 22 nouveautés. Objectif « moins de 47 s ».
+  - **Jardin de Corail** (technique, 54,7 s) : passage étroit entre des coraux, chicanes serrées, cales de roche, croisement traversé deux fois ; 20 nouveautés.
+  - **Épave Engloutie** (rollercoaster, 45,8 s) : morceaux d'épave (**mur en L**, poutre), **looping modulaire**, route large, tube qui tourne, passage étroit ; 25 nouveautés.
+  - **Méduses Électriques** (acrobatique en gravité lourde, 51,6 s) : deux sauts prolongés par des **plaques**, chicanes longues, route large ; 25 nouveautés. Objectif « moins de 53 s ».
+  - **Abysses** (rollercoaster, 50,1 s) : rochers, chicanes longues, looping modulaire, route large, tube qui tourne ; 22 nouveautés.
+  - **Grande Barrière** (speedway, 55,1 s) : route large, chicane rapide, grand S, croisement traversé deux fois ; 19 nouveautés. Objectif inchangé : aucune bordure touchée.
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 8.
+
 ## Bêta 0.10.6 — chapitre 7 (Station orbitale) refait autour des nouvelles pièces
 
 **`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 7 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.

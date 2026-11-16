@@ -12185,17 +12185,18 @@ var BUILTIN_TRACKS = [
   // ==== 0.9 : quatre nouveaux thèmes (6 circuits chacun) ============================
   // ---- Fonds marins : courants (tapis roulants), eau et bateau, bulles de verre ----
   {
-    // Chapitre 8 · 1/6 — SPRINT (courants). Ouverture : deux boosters, puis un CONTRE-COURANT (deux cases de tapis roulant à contresens, −122 km/h) qui freine la voiture, aussitôt suivi d'un courant
-    // favorable (+138 km/h, deux cases) qui la relance. Puis une vague douce, un très grand virage plat, un tapis de trois cases, un dernier virage et une descente de 4 niveaux. Les tapis sont loin des virages.
+    // Chapitre 8 · 1/6 — SPRINT (0.10.7 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters, un CONTRE-COURANT (tapis à 40 %) puis un courant à 170 %. Dos d'âne,
+    // chicanes rapides, très grand virage plat, courant, deux pyramides de corail, route large sous un portique, second très grand virage plat, un TUBE qui tourne à droite puis à
+    // gauche, descente, grand S et chicane longue. Aucun virage serré.
     id: "courant",
     name: "Courant Chaud",
     decor: "reef",
     difficulty: 2,
     profil: "sprint",
-    appris: "D\xE9part : deux boosters \u2192 contre-courant (\u2212122 km/h) puis courant favorable (+138 km/h). Au programme : vague, tr\xE8s grand virage plat, tapis de trois cases.",
+    appris: "D\xE9part : deux boosters, contre-courant puis courant. Au programme : chicanes rapides, tr\xE8s grands virages plats, route large sous un portique, tube qui tourne \xE0 droite puis \xE0 gauche, grand S.",
     goal: {
       id: "under",
-      t: 23
+      t: 47
     },
     opts: {
       l: 6
@@ -12203,46 +12204,156 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start B2 S2.t40 S2.t170 S [crs1] S2 [cds1] B HR S3.t137 B C S2 HL S2 B [cdi1] [dn2] [cdo1] S B2 finish",
+    script: "start*2 B2 S2.t40 S2.t170 S [crs1] S2 [cds1] B ZR4 S ZL4 S HR S3.t137 B C*3 WI W2 WO S2 HL S2 TI TM TRR TM TLL TM TO S B [cdi1] [dn2] [cdo1] S ZZR S2 ZL3 S B2 finish*2",
+    obst: [
+      {
+        k: "board_right",
+        at: 0.16,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.24,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "pyramidS",
+        at: 0.375,
+        side: 28
+      },
+      {
+        k: "pyramidS",
+        at: 0.375,
+        side: -28
+      },
+      {
+        k: "gantry",
+        at: 0.423,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillarBase",
+        at: 0.417,
+        side: 36
+      },
+      {
+        k: "pillarBase",
+        at: 0.417,
+        side: -36
+      },
+      {
+        k: "board_warn",
+        at: 0.51,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.815,
+        side: -20,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 20.5,
-      or: 21.6,
-      argent: 24.9,
-      bronze: 29.2
+      cristal: 43.4,
+      or: 45.7,
+      argent: 52.6,
+      bronze: 61.7
     }
   },
   {
-    // Chapitre 8 · 2/6 — TECHNIQUE (corail). Ouverture : un booster, puis un COURANT FAVORABLE (+72 km/h sur deux cases) qui lance la voiture vers un premier virage serré. Huit virages serrés,
-    // une dalle de verre fragile en sortie de virage, une chicane sur un mur et une descente de 4 niveaux ; un booster à chaque relance.
+    // Chapitre 8 · 2/6 — TECHNIQUE (0.10.7 : refait AUTOUR des nouvelles pièces). Ouverture : booster puis un courant (tapis à 137 %). Lacets en S, passage ÉTROIT (12 m) entre
+    // des coraux fins, pont de verre, deux chicanes serrées, deux cales de roche, wall-ride, CROISEMENT traversé deux fois (boucle de virages serrés), descente vers l'arrivée.
     id: "corail",
     name: "Jardin de Corail",
     decor: "reef",
     difficulty: 3,
     profil: "technique",
-    appris: "D\xE9part : un booster \u2192 courant favorable vers une premi\xE8re \xE9pingle. Au programme : huit virages serr\xE9s, dalle de verre fragile, chicane.",
+    appris: "D\xE9part : booster puis un courant. Au programme : lacets en S, passage \xE9troit entre des coraux, pont de verre, chicanes serr\xE9es, wall-ride, croisement travers\xE9 deux fois.",
     goal: {
       id: "norespawn"
     },
     opts: {
       l: 6
     },
-    script: "start B S2.t137 S2 R S L S R S L B C B S R S2.v S L B S2 [tr01s] S2< [tr10s] S R B S L B S [cdi1] [dn2] [cdo1] S B finish",
+    script: "start*1 B S2.t137 S2 R S L S R S L B C*3 B NI N2 NO S R S2.v S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
+    obst: [
+      {
+        k: "board_warn",
+        at: 0.235,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "pillarThin",
+        at: 0.257,
+        side: 14
+      },
+      {
+        k: "pillarThin",
+        at: 0.257,
+        side: -14
+      },
+      {
+        k: "pillarThin",
+        at: 0.272,
+        side: 14
+      },
+      {
+        k: "pillarThin",
+        at: 0.272,
+        side: -14
+      },
+      {
+        k: "board_right",
+        at: 0.4,
+        side: -16,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.455,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "wedge",
+        at: 0.52,
+        side: 24
+      },
+      {
+        k: "wedge",
+        at: 0.52,
+        side: -24,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.76,
+        side: 16,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 34.7,
-      or: 36.5,
-      argent: 41.9,
-      bronze: 49.2
+      cristal: 51.9,
+      or: 54.7,
+      argent: 62.9,
+      bronze: 73.8
     }
   },
   {
-    // Chapitre 8 · 3/6 — ROLLERCOASTER (épave). Ouverture : trois boosters puis directement un WALL-RIDE sur le mur droit (le flanc de la coque, trois cases à plus de 200 km/h). Puis le
-    // checkpoint, un double looping, un second wall-ride sur le mur gauche et un plongeon de 8 niveaux.
+    // Chapitre 8 · 3/6 — ROLLERCOASTER (0.10.7 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → wall-ride à droite sur la coque. Morceaux de l'épave (mur en L,
+    // poutre), double looping, wall-ride à gauche, chicane longue, LOOPING MODULAIRE (deux murs de chaque côté), route large sous un portique, chicane longue, TUBE qui tourne à
+    // droite puis à gauche, passage ÉTROIT et plongeon à 38°.
     id: "epave",
     name: "\xC9pave Engloutie",
     decor: "reef",
     difficulty: 3,
     profil: "rollercoaster",
-    appris: "D\xE9part : trois boosters \u2192 wall-ride sur le flanc de la coque. Au programme : double looping, second wall-ride, plongeon de 8 niveaux.",
+    appris: "D\xE9part : trois boosters \u2192 wall-ride sur la coque. Au programme : double looping, wall-rides des deux c\xF4t\xE9s, looping modulaire, route large, tube qui tourne, passage \xE9troit, plongeon.",
     goal: {
       id: "norespawn"
     },
@@ -12252,27 +12363,85 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start B3 [tr02s] S3> [tr20s] S C B2 OD S2 B [tr01s] S3< [tr10s] S B [cdi2] DX [cdo2] S B2 finish",
+    script: "start*2 B3 [tr02s] S3> [tr20s] S C*1 B2 OD S2 B [tr01s] S3< [tr10s] S2 ZR3 S2 LPR2 S WI W WO S ZL3 S2 TI TM TRR TM TLL TM TO S NI N2 NO S B [cdi2] DX [cdo2] S3 B2 finish*2",
+    obst: [
+      {
+        k: "wallSL",
+        at: 0.115,
+        side: 28
+      },
+      {
+        k: "beamL",
+        at: 0.115,
+        side: -28
+      },
+      {
+        k: "board_warn",
+        at: 0.15,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.395,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.45,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.599,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "beamPost",
+        at: 0.594,
+        side: 36
+      },
+      {
+        k: "beamPost",
+        at: 0.594,
+        side: -36
+      },
+      {
+        k: "board_warn",
+        at: 0.678,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.852,
+        side: 16,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 19.9,
-      or: 21,
-      argent: 24.1,
-      bronze: 28.3
+      cristal: 43.5,
+      or: 45.8,
+      argent: 52.6,
+      bronze: 61.8
     }
   },
   {
-    // Chapitre 8 · 4/6 — ACROBATIQUE (gravité lourde). Ouverture : cinq boosters puis une plaque de GRAVITÉ À 130 % (la pression des profondeurs) : la voiture flotte moins, elle tombe plus vite (à 200 %, plus aucune rampe ne se franchissait : les pentes freinent trop).
-    // Rampes raides mais vides très courts (1 ou 2 cases) : quatre sauts brefs de moins de deux secondes, réceptions violentes sur des pentes à forte inclinaison, un wall-ride avant le dernier saut.
-    // Chaque checkpoint est suivi de deux boosters ; la gravité lourde reste active jusqu'à l'arrivée.
+    // Chapitre 8 · 4/6 — ACROBATIQUE en GRAVITÉ LOURDE (130 % ; 0.10.7 : refait AUTOUR des nouvelles pièces). Ouverture : cinq boosters, plaque de gravité. Quatre sauts courts et
+    // puissants reçus sur des descentes ; deux se prolongent sur une PLAQUE (entre des rochers) ; chicanes longues, wall-ride, route large sous un portique pour finir. Panneaux de
+    // montée avant chaque rampe.
     id: "meduses",
     name: "M\xE9duses \xC9lectriques",
     decor: "reef",
     difficulty: 4,
     profil: "acrobatique",
-    appris: "D\xE9part : cinq boosters \u2192 plaque de gravit\xE9 130 % (la pression des profondeurs). Au programme : quatre sauts brefs, r\xE9ceptions violentes, wall-ride.",
+    appris: "D\xE9part : cinq boosters, gravit\xE9 lourde. Au programme : quatre sauts courts et puissants, deux plaques entre des rochers, chicanes longues, wall-ride, route large sous un portique.",
     goal: {
       id: "under",
-      t: 41.5
+      t: 53
     },
     opts: {
       l: 24
@@ -12280,23 +12449,88 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 62
     },
-    script: "start B5 S.g130 S2 [crv2] UX G1 DX DX [cdo2] S3 C B3 [crv2] UX G1 DX DX [cdo2] S3 C B3 [crv1] UU G1 DD [cdo1] S [tr01s] S2< [tr10s] S3 C B3 [crv2] UX G1 DX DX [cdo2] S5 finish",
+    script: "start*2 B5 S.g130 S2 [crv2] UX G1 DX DX [cdo2] [plate3]*10 S2 C*3 B3 [crv2] UX G1 DX DX [cdo2] S ZR3 S2 C*3 B3 [crv1] UU G1 DD [cdo1] [plate2]*10 S [tr01s] S2< [tr10s] S3 C*3 ZL3 B3 [crv2] UX G1 DX DX [cdo2] WI W WO S3 finish*2",
+    obst: [
+      {
+        k: "board_up",
+        at: 0.11,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "pyramidS",
+        at: 0.2,
+        side: 60
+      },
+      {
+        k: "pyramidS",
+        at: 0.2,
+        side: -60
+      },
+      {
+        k: "board_up",
+        at: 0.285,
+        side: -18,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.368,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_up",
+        at: 0.5,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.74,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "board_up",
+        at: 0.83,
+        side: -18,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.92,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillarThin",
+        at: 0.915,
+        side: 36
+      },
+      {
+        k: "pillarThin",
+        at: 0.915,
+        side: -36
+      }
+    ],
     medals: {
-      cristal: 39.3,
-      or: 41.3,
-      argent: 47.5,
-      bronze: 55.8
+      cristal: 49,
+      or: 51.6,
+      argent: 59.4,
+      bronze: 69.7
     }
   },
   {
-    // Chapitre 8 · 5/6 — ROLLERCOASTER (abysses). Ouverture : un booster puis un PLONGEON de 12 niveaux (deux rampes à forte pente) qui débouche directement sur un grand looping au fond.
-    // Puis un slalom de wall-rides gauche / droite et la remontée en hélice (deux grandes courbes inclinées, 8 niveaux).
+    // Chapitre 8 · 5/6 — ROLLERCOASTER (0.10.7 : refait AUTOUR des nouvelles pièces). Ouverture : plongeon dans les abysses (deux descentes à 38°) puis un grand looping. Deux
+    // rochers, wall-rides gauche et droite, chicane longue, remontée en hélice, LOOPING MODULAIRE à gauche, route large sous un portique, TUBE qui tourne à droite puis à gauche,
+    // chicane longue.
     id: "abysses",
     name: "Abysses",
     decor: "reef",
     difficulty: 4,
     profil: "rollercoaster",
-    appris: "D\xE9part : un booster \u2192 plongeon de 12 niveaux \u2192 grand looping au fond. Au programme : slalom de wall-rides, remont\xE9e en h\xE9lice.",
+    appris: "D\xE9part : plongeon dans les abysses puis grand looping. Au programme : wall-rides des deux c\xF4t\xE9s, chicanes longues, remont\xE9e en h\xE9lice, looping modulaire, route large, tube qui tourne.",
     goal: {
       id: "norespawn"
     },
@@ -12306,23 +12540,88 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start B [cdi2] DX DX [cdo2] OB S2 C B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 S B finish",
+    script: "start*2 B [cdi2] DX DX [cdo2] OB S2 C*1 B2 [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 S LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B finish*2",
+    obst: [
+      {
+        k: "sign_down",
+        at: 0.012,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.06,
+        side: -18,
+        rot: Math.PI
+      },
+      {
+        k: "block",
+        at: 0.175,
+        side: 26
+      },
+      {
+        k: "block",
+        at: 0.175,
+        side: -26
+      },
+      {
+        k: "board_right",
+        at: 0.29,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.52,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.691,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillar",
+        at: 0.686,
+        side: 36
+      },
+      {
+        k: "pillar",
+        at: 0.686,
+        side: -36
+      },
+      {
+        k: "board_warn",
+        at: 0.717,
+        side: -18,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.915,
+        side: 20,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 23.6,
-      or: 24.8,
-      argent: 28.6,
-      bronze: 33.5
+      cristal: 47.6,
+      or: 50.1,
+      argent: 57.6,
+      bronze: 67.6
     }
   },
   {
-    // Chapitre 8 · 6/6 — SPEEDWAY (barrière). Ouverture : deux boosters puis un PONT DE VERRE (trois dalles fragiles, sans danger à grande vitesse) qui débouche sur un virage relevé 3×3.
-    // Cinq virages relevés, un wall-ride de quatre cases (mur droit) et un courant favorable de deux cases entre deux virages : 87 % du tour au-dessus de 220 km/h.
+    // Chapitre 8 · 6/6 — SPEEDWAY (0.10.7 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters et un pont de VERRE entre deux pyramides de corail. Très grands virages
+    // relevés, route large sous un portique, chicane rapide, wall-ride à droite, courant, grand S, CROISEMENT traversé deux fois (boucle de trois virages géants). Aucun virage
+    // serré ; objectif : ne toucher aucune bordure.
     id: "barriere",
     name: "Grande Barri\xE8re",
     decor: "reef",
     difficulty: 5,
     profil: "speedway",
-    appris: "D\xE9part : deux boosters \u2192 pont de verre \u2192 virage relev\xE9. Au programme : cinq virages relev\xE9s, wall-ride, courant favorable, 87 % au-dessus de 220 km/h.",
+    appris: "D\xE9part : deux boosters et un pont de verre. Au programme : tr\xE8s grands virages relev\xE9s, route large sous un portique, chicane rapide, wall-ride, grand S, croisement travers\xE9 deux fois.",
     goal: {
       id: "nowall"
     },
@@ -12332,12 +12631,64 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 70
     },
-    script: "start B2 S3.v BRR S B BLL S2 C B [tr02l] S4> [tr20l] BRR S2.t137 BLL B S BRR S B2 finish",
+    script: "start*3 B2 S3.v BRR S B BLL S2 WI W2 WO S C*2 B ZR4 S [tr02l] S4> [tr20l] BRR S2.t137 BLL B S ZZR S BRR S JX S4 XR XR XR S4 JX S B2 finish*2",
+    obst: [
+      {
+        k: "pyramidS",
+        at: 0.03,
+        side: 28
+      },
+      {
+        k: "pyramidS",
+        at: 0.03,
+        side: -28
+      },
+      {
+        k: "gantry",
+        at: 0.246,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillarBase",
+        at: 0.24,
+        side: 36
+      },
+      {
+        k: "pillarBase",
+        at: 0.24,
+        side: -36
+      },
+      {
+        k: "board_right",
+        at: 0.29,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.63,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.755,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.805,
+        side: -24,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 26,
-      or: 27.3,
-      argent: 31.4,
-      bronze: 36.9
+      cristal: 52.3,
+      or: 55.1,
+      argent: 63.4,
+      bronze: 74.4
     }
   },
   // ---- Usine mécanique : obstacles, tapis, moteur coupé, ascenseurs ----
@@ -17639,4 +17990,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "229277586b47947f";
+globalThis.__COPYTRACK_BUILD__ = "390012502e7c9884";

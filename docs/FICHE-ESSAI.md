@@ -382,48 +382,48 @@ _Contre-courants, gravité lourde, pont de verre et plongée vers les abysses._
 
 ### 43. Courant Chaud — Sprint, ◆◆◇◇◇
 
-- Départ : deux boosters → contre-courant (−122 km/h) puis courant favorable (+138 km/h). Au programme : vague, très grand virage plat, tapis de trois cases.
-- Pilote automatique : **21.8 s** · médailles : cristal 20.5 · or 21.6 · argent 24.9 · bronze 29.2
-- Objectif bonus ★ : Finir en moins de 23 s
+- Départ : deux boosters, contre-courant puis courant. Au programme : chicanes rapides, très grands virages plats, route large sous un portique, tube qui tourne à droite puis à gauche, grand S.
+- Pilote automatique : **45.7 s** · médailles : cristal 43.4 · or 45.7 · argent 52.6 · bronze 61.7
+- Objectif bonus ★ : Finir en moins de 47 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 44. Jardin de Corail — Technique, ◆◆◆◇◇
 
-- Départ : un booster → courant favorable vers une première épingle. Au programme : huit virages serrés, dalle de verre fragile, chicane.
-- Pilote automatique : **36.5 s** · médailles : cristal 34.7 · or 36.5 · argent 41.9 · bronze 49.2
+- Départ : booster puis un courant. Au programme : lacets en S, passage étroit entre des coraux, pont de verre, chicanes serrées, wall-ride, croisement traversé deux fois.
+- Pilote automatique : **54.7 s** · médailles : cristal 51.9 · or 54.7 · argent 62.9 · bronze 73.8
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 45. Épave Engloutie — Rollercoaster, ◆◆◆◇◇
 
-- Départ : trois boosters → wall-ride sur le flanc de la coque. Au programme : double looping, second wall-ride, plongeon de 8 niveaux.
-- Pilote automatique : **21.2 s** · médailles : cristal 19.9 · or 21 · argent 24.1 · bronze 28.3
+- Départ : trois boosters → wall-ride sur la coque. Au programme : double looping, wall-rides des deux côtés, looping modulaire, route large, tube qui tourne, passage étroit, plongeon.
+- Pilote automatique : **45.8 s** · médailles : cristal 43.5 · or 45.8 · argent 52.6 · bronze 61.8
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 46. Méduses Électriques — Acrobatique, ◆◆◆◆◇
 
-- Départ : cinq boosters → plaque de gravité 130 % (la pression des profondeurs). Au programme : quatre sauts brefs, réceptions violentes, wall-ride.
-- Pilote automatique : **41.9 s** · médailles : cristal 39.3 · or 41.3 · argent 47.5 · bronze 55.8
-- Objectif bonus ★ : Finir en moins de 41.5 s
+- Départ : cinq boosters, gravité lourde. Au programme : quatre sauts courts et puissants, deux plaques entre des rochers, chicanes longues, wall-ride, route large sous un portique.
+- Pilote automatique : **51.6 s** · médailles : cristal 49 · or 51.6 · argent 59.4 · bronze 69.7
+- Objectif bonus ★ : Finir en moins de 53 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 47. Abysses — Rollercoaster, ◆◆◆◆◇
 
-- Départ : un booster → plongeon de 12 niveaux → grand looping au fond. Au programme : slalom de wall-rides, remontée en hélice.
-- Pilote automatique : **24.9 s** · médailles : cristal 23.6 · or 24.8 · argent 28.6 · bronze 33.5
+- Départ : plongeon dans les abysses puis grand looping. Au programme : wall-rides des deux côtés, chicanes longues, remontée en hélice, looping modulaire, route large, tube qui tourne.
+- Pilote automatique : **50.1 s** · médailles : cristal 47.6 · or 50.1 · argent 57.6 · bronze 67.6
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 48. Grande Barrière — Speedway, ◆◆◆◆◆
 
-- Départ : deux boosters → pont de verre → virage relevé. Au programme : cinq virages relevés, wall-ride, courant favorable, 87 % au-dessus de 220 km/h.
-- Pilote automatique : **27.3 s** · médailles : cristal 26 · or 27.3 · argent 31.4 · bronze 36.9
+- Départ : deux boosters et un pont de verre. Au programme : très grands virages relevés, route large sous un portique, chicane rapide, wall-ride, grand S, croisement traversé deux fois.
+- Pilote automatique : **55.1 s** · médailles : cristal 52.3 · or 55.1 · argent 63.4 · bronze 74.4
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
