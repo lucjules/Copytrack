@@ -1294,6 +1294,968 @@
    }
   }
  },
+ "sbend": {
+  "kind": "sbend",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "sbendL": {
+  "kind": "sbend",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "sbendLong": {
+  "kind": "sbend",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "sbendLongL": {
+  "kind": "sbend",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "sbendFast": {
+  "kind": "sbend",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "sbendFastL": {
+  "kind": "sbend",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "sbendWide": {
+  "kind": "sbend",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "sbendWideL": {
+  "kind": "sbend",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "plate2": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "plate3": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "tri1": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "tri2": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "tri3": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "sec1": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "sec2": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "sec3": {
+  "kind": "area",
+  "cells": {
+   "sol": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "murD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "plafond": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "incD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surG": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   },
+   "surD": {
+    "code": "n/a",
+    "why": "plaque : surface sans extrémité (aucun raccord orienté)"
+   }
+  }
+ },
+ "narrow": {
+  "kind": "line",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "narrowIn": {
+  "kind": "line",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "wideIn": {
+  "kind": "line",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "wide": {
+  "kind": "line",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "cross": {
+  "kind": "junction",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tee": {
+  "kind": "junction",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "loopTop": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "v≥150",
+    "runs": "80:non fini/vol2.87 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "loopTopL": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "v≥150",
+    "runs": "80:non fini/vol2.87 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tubeTurn": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.38 250:ok/vol0.42"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.38 250:ok/vol0.58"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "tubeTurnL": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.38 250:ok/vol0.42"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.38 250:ok/vol0.58"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
  "cv05": {
   "kind": "arc",
   "cells": {

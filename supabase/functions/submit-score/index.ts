@@ -492,6 +492,226 @@ var PIECES = {
     size: 5,
     rise: 0
   },
+  // 0.9.68 : chicanes (courbes en S latérales, voir sbendParams) : la route entre au sud de la première colonne et ressort au nord, décalée de
+  // `shift` cases vers la droite (→, mirror 1) ou la gauche (←, mirror −1). Deux arcs de même rayon, opposés et tangents au milieu ; plates.
+  sbend: {
+    label: "Chicane \u2192",
+    kind: "sbend",
+    size: 2,
+    rise: 0,
+    mirror: 1,
+    shift: 1
+  },
+  sbendL: {
+    label: "Chicane \u2190",
+    kind: "sbend",
+    size: 2,
+    rise: 0,
+    mirror: -1,
+    shift: 1
+  },
+  sbendLong: {
+    label: "Chicane longue \u2192",
+    kind: "sbend",
+    size: 3,
+    rise: 0,
+    mirror: 1,
+    shift: 1
+  },
+  sbendLongL: {
+    label: "Chicane longue \u2190",
+    kind: "sbend",
+    size: 3,
+    rise: 0,
+    mirror: -1,
+    shift: 1
+  },
+  sbendFast: {
+    label: "Chicane rapide \u2192",
+    kind: "sbend",
+    size: 4,
+    rise: 0,
+    mirror: 1,
+    shift: 1
+  },
+  sbendFastL: {
+    label: "Chicane rapide \u2190",
+    kind: "sbend",
+    size: 4,
+    rise: 0,
+    mirror: -1,
+    shift: 1
+  },
+  sbendWide: {
+    label: "Grand S \u2192",
+    kind: "sbend",
+    size: 3,
+    rise: 0,
+    mirror: 1,
+    shift: 2
+  },
+  sbendWideL: {
+    label: "Grand S \u2190",
+    kind: "sbend",
+    size: 3,
+    rise: 0,
+    mirror: -1,
+    shift: 2
+  },
+  // 0.9.69 : plaques (surfaces libres, comme la plateforme) : carrées 2×2 et 3×3, triangles et quarts de disque de 1 à 3 cases (voir plateShape).
+  // Toute la plaque se roule ; des bordures se posent au choix sur chacun de ses bords (option eb).
+  plate2: {
+    label: "Plaque 2\xD72",
+    kind: "area",
+    size: 2,
+    rise: 0
+  },
+  plate3: {
+    label: "Plaque 3\xD73",
+    kind: "area",
+    size: 3,
+    rise: 0
+  },
+  tri1: {
+    label: "Plaque triangle",
+    kind: "area",
+    size: 1,
+    rise: 0,
+    shape: "tri"
+  },
+  tri2: {
+    label: "Plaque triangle 2\xD72",
+    kind: "area",
+    size: 2,
+    rise: 0,
+    shape: "tri"
+  },
+  tri3: {
+    label: "Plaque triangle 3\xD73",
+    kind: "area",
+    size: 3,
+    rise: 0,
+    shape: "tri"
+  },
+  sec1: {
+    label: "Plaque quart de disque",
+    kind: "area",
+    size: 1,
+    rise: 0,
+    shape: "sec"
+  },
+  sec2: {
+    label: "Plaque quart de disque 2\xD72",
+    kind: "area",
+    size: 2,
+    rise: 0,
+    shape: "sec"
+  },
+  sec3: {
+    label: "Plaque quart de disque 3\xD73",
+    kind: "area",
+    size: 3,
+    rise: 0,
+    shape: "sec"
+  },
+  // 0.9.70 : largeur de route variable (hw : demi-largeur de la chaussée à l'entrée et à la sortie, 12 m d'ordinaire ; voir roadHalf). Lignes droites plates.
+  // Rétrécissement et élargissement se posent dans les deux sens (à l'envers : la route s'élargit ou se resserre).
+  narrow: {
+    label: "Route \xE9troite",
+    kind: "line",
+    size: 1,
+    rise: 0,
+    hw: [
+      6,
+      6
+    ]
+  },
+  narrowIn: {
+    label: "R\xE9tr\xE9cissement",
+    kind: "line",
+    size: 1,
+    rise: 0,
+    hw: [
+      12,
+      6
+    ]
+  },
+  wideIn: {
+    label: "\xC9largissement",
+    kind: "line",
+    size: 3,
+    rise: 0,
+    hw: [
+      12,
+      28
+    ]
+  },
+  wide: {
+    label: "Route large",
+    kind: "line",
+    size: 3,
+    rise: 0,
+    hw: [
+      28,
+      28
+    ]
+  },
+  // 0.9.71 : carrefours au même niveau (arms : bras de route présents, repère local : N = avant (−z), S = arrière (+z, l'entrée), E = droite, W = gauche).
+  // La chaussée est l'union du carré central et des bras (voir junctionSample) ; les bordures suivent tout son contour.
+  cross: {
+    label: "Croisement",
+    kind: "junction",
+    size: 1,
+    rise: 0,
+    arms: "NSEW"
+  },
+  tee: {
+    label: "Carrefour en T",
+    kind: "junction",
+    size: 1,
+    rise: 0,
+    arms: "NSE"
+  },
+  // 0.9.72 : looping modulaire : la Montée en L (ramp90) mène à des murs verticaux, autant qu'on veut, puis ce SOMMET (demi-cercle de 16 m de rayon qui
+  // passe par-dessus et redescend une colonne à côté, à droite ↱ ou à gauche ↰), puis d'autres murs et une Montée en L parcourue à l'envers. Empreinte 2×2 :
+  // il commence au milieu de l'empreinte (bord avant de la Montée en L), dans la colonne de gauche (↱) ou de droite (↰), et redescend au bord arrière.
+  loopTop: {
+    label: "Sommet de looping \u21B1",
+    kind: "ribbon",
+    size: 2,
+    rise: 0,
+    clearance: 3,
+    mirror: 1,
+    loopTop: true
+  },
+  loopTopL: {
+    label: "Sommet de looping \u21B0",
+    kind: "ribbon",
+    size: 2,
+    rise: 0,
+    clearance: 3,
+    mirror: -1,
+    loopTop: true
+  },
+  // 0.9.72 : tube en virage (2×2, rayon 48 m, tube de 8 m de rayon, comme la section de tube) : s'enchaîne aux sections de tube.
+  tubeTurn: {
+    label: "Tube en virage \u21B1",
+    kind: "ribbon",
+    size: 2,
+    rise: 0,
+    clearance: 4,
+    mirror: 1,
+    tubeArc: true
+  },
+  tubeTurnL: {
+    label: "Tube en virage \u21B0",
+    kind: "ribbon",
+    size: 2,
+    rise: 0,
+    clearance: 4,
+    mirror: -1,
+    tubeArc: true
+  },
   // « Courbe » : un tremplin courbé (virage montant). Serré = 1 case, grand = 2×2.
   cv05: {
     label: "Courbe serr\xE9e \xB7 inclinaison \xBD",
@@ -1066,7 +1286,38 @@ var PIECE_ORDER = [
   // Phase 3 (0.9.62) : transitions de 45° (à la suite : ne jamais réordonner)
   ...GEN45_IDS,
   // 0.9.67 (à la suite : ne jamais réordonner)
-  "giantcurve"
+  "giantcurve",
+  // 0.9.68 : chicanes (à la suite : ne jamais réordonner)
+  "sbend",
+  "sbendL",
+  "sbendLong",
+  "sbendLongL",
+  "sbendFast",
+  "sbendFastL",
+  "sbendWide",
+  "sbendWideL",
+  // 0.9.69 : plaques (à la suite : ne jamais réordonner)
+  "plate2",
+  "plate3",
+  "tri1",
+  "tri2",
+  "tri3",
+  "sec1",
+  "sec2",
+  "sec3",
+  // 0.9.70 : largeur de route variable (à la suite : ne jamais réordonner)
+  "narrow",
+  "narrowIn",
+  "wideIn",
+  "wide",
+  // 0.9.71 : carrefours (à la suite : ne jamais réordonner)
+  "cross",
+  "tee",
+  // 0.9.72 : looping modulaire, tube en virage (à la suite : ne jamais réordonner)
+  "loopTop",
+  "loopTopL",
+  "tubeTurn",
+  "tubeTurnL"
 ];
 var SURFACES = {
   "": {
@@ -1334,7 +1585,7 @@ function isSideTile(tile) {
 }
 function headingGuided(tile) {
   const p = PIECES[tile.t];
-  return !!(tile.o || p.roll || p.rollable);
+  return !!(tile.o || p.roll || p.rollable || p.loopTop);
 }
 var isOriented = (tile) => !!tile.o && (PIECES[tile.t].kind === "line" || PIECES[tile.t].kind === "arc" || !!PIECES[tile.t].rollable);
 var rollFitHook = {
@@ -1411,13 +1662,22 @@ function flagAllowed(type, flag, tile = null, val = 0) {
   const lineLike = p.kind === "line" || p.kind === "arc";
   if (flag === "v") return true;
   if (flag === "th") return p.kind !== "ring";
+  if (p.hw && flag !== "nb") return false;
+  if (flag === "eb") return p.kind === "area" && (val | 0) >= 0 && (val | 0) <= 15;
+  if (flag === "gs") {
+    if (!(val >= 0 && val < GATE_STYLES.length) || !lineLike || p.kind === "ring") return false;
+    if (p.special === "start" || p.special === "finish" || p.special === "checkpoint") return true;
+    return !tile || tile.cp === 1;
+  }
   if (p.kind === "ring" || p.kind === "fork") return false;
+  if (p.kind === "junction") return flag === "nb";
+  if (p.kind === "sbend") return flag === "nb" || flag === "tn";
   if (flag === "o") {
     if (!(val >= 1 && val <= MAX_O) || p.special || p.noRails || hasConflict("o", tile)) return false;
     if (lineLike) return true;
     return !!p.rollable && (!rollFitHook.fits || rollFitHook.fits(type, val));
   }
-  if (flag === "nb") return !p.noRails && (lineLike && !p.special || p.kind === "ribbon" && !type.startsWith("tube"));
+  if (flag === "nb") return !p.noRails && (lineLike || p.kind === "ribbon" && !type.startsWith("tube") && !p.loopTop);
   if (flag === "tn") return lineLike && !p.special && !hasConflict("tn", tile);
   if (flag === "mv") return (lineLike || p.kind === "area") && !p.special && !hasConflict("mv", tile);
   if (flag === "cp") {
@@ -1514,6 +1774,24 @@ function clampMover(mv, ms, ma) {
     ma: a
   };
 }
+var GATE_STYLES = [
+  {
+    id: 0,
+    label: "Portique"
+  },
+  {
+    id: 1,
+    label: "Ligne au sol"
+  },
+  {
+    id: 2,
+    label: "Arche"
+  },
+  {
+    id: 3,
+    label: "Pyl\xF4nes"
+  }
+];
 var THEMES = [
   {
     id: 0,
@@ -1635,6 +1913,7 @@ function sampleLocal(tile, lx, lz, out) {
     let t = (half - lz) / len;
     t = t < 0 ? 0 : t > 1 ? 1 : t;
     out.d = lx;
+    if (p.hw) widthRemap(p, lx, lz, half, out);
     out.h = base + rise * profH(p, t);
     const k = rise * profD(p, t) / len;
     const inv = 1 / Math.sqrt(1 + k * k);
@@ -1665,6 +1944,14 @@ function sampleLocal(tile, lx, lz, out) {
     }
   } else if (p.kind === "fork") {
     forkSample(p, lx, lz, out);
+  } else if (p.kind === "sbend") {
+    sbendSample(p, lx, lz, out);
+  } else if (p.kind === "junction") {
+    junctionSample(p, lx, lz, out);
+  } else if (p.kind === "area" && p.shape) {
+    if (out.inFootprint) out.inFootprint = inPlate(p, lx, lz);
+    out.d = 0;
+    out.along = (half - lz) / (2 * half);
   } else if (p.kind === "loop") {
     const lane = lz >= 0 ? -p.mirror * p.lane : p.mirror * p.lane;
     out.d = lx - lane;
@@ -1708,6 +1995,267 @@ function forkSample(p, lx, lz, out) {
     out.gz = slope * cb;
   }
   out.branch = Math.abs(da) <= ROAD_HALF ? 0 : 1;
+}
+var SB = /* @__PURE__ */ new Map();
+function sbendParams(p) {
+  let g = SB.get(p);
+  if (g) return g;
+  const half = p.size * HALF, m = p.mirror < 0 ? -1 : 1, D = p.shift * CELL, L4 = 2 * half;
+  const R = (D * D + L4 * L4) / (4 * D);
+  const x0 = -m * (half - HALF), x1 = x0 + m * D;
+  g = {
+    half,
+    m,
+    D,
+    L: L4,
+    R,
+    x0,
+    x1,
+    c1x: x0 + m * R,
+    c1z: half,
+    c2x: x1 - m * R,
+    c2z: -half,
+    phi: datan2(half, Math.sqrt(R * R - half * half)),
+    mx: (x0 + x1) / 2,
+    tmx: m * L4 / (2 * R),
+    tmz: (D - 2 * R) / (2 * R)
+  };
+  SB.set(p, g);
+  return g;
+}
+function sbendPoint(p, u, out = {}) {
+  const g = sbendParams(p);
+  if (u <= 0.5) {
+    const th = 2 * u * g.phi, c = dcos(th), s = dsin(th);
+    out.x = g.c1x - g.m * g.R * c;
+    out.z = g.c1z - g.R * s;
+    out.tx = g.m * s;
+    out.tz = -c;
+  } else {
+    const th = 2 * (1 - u) * g.phi, c = dcos(th), s = dsin(th);
+    out.x = g.c2x + g.m * g.R * c;
+    out.z = g.c2z + g.R * s;
+    out.tx = g.m * s;
+    out.tz = -c;
+  }
+  return out;
+}
+function sbendSample(p, lx, lz, out) {
+  const g = sbendParams(p);
+  const first = (lx - g.mx) * g.tmx + lz * g.tmz < 0;
+  const dx = lx - (first ? g.c1x : g.c2x), dz = lz - (first ? g.c1z : g.c2z);
+  const r = hypot2(dx, dz) || 1e-6;
+  const sg = first ? -g.m : g.m;
+  out.d = sg * (r - g.R);
+  out.gx = sg * dx / r;
+  out.gz = sg * dz / r;
+  const a = first ? 0.5 * datan2(-dz, -g.m * dx) / g.phi : 1 - 0.5 * datan2(dz, g.m * dx) / g.phi;
+  out.along = a < 0 ? 0 : a > 1 ? 1 : a;
+}
+var plateShape = (p) => p.shape || "sq";
+function inPlate(p, lx, lz) {
+  const h = p.size * HALF, sh = plateShape(p);
+  if (sh === "tri") return lx <= lz + 1e-9;
+  if (sh === "sec") {
+    const dx = lx + h, dz = lz - h;
+    return dx * dx + dz * dz <= 4 * h * h + 1e-6;
+  }
+  return true;
+}
+var EDGES = /* @__PURE__ */ new Map();
+function plateEdges(p) {
+  let e = EDGES.get(p);
+  if (e) return e;
+  const h = p.size * HALF, sh = plateShape(p);
+  const seg = (ax, az, bx, bz, cx, cz) => {
+    const tx = bx - ax, tz = bz - az, len = Math.sqrt(tx * tx + tz * tz);
+    let nx = -tz / len, nz = tx / len;
+    if ((cx - ax) * nx + (cz - az) * nz < 0) {
+      nx = -nx;
+      nz = -nz;
+    }
+    return {
+      t: "seg",
+      ax,
+      az,
+      bx,
+      bz,
+      tx: tx / len,
+      tz: tz / len,
+      len,
+      nx,
+      nz
+    };
+  };
+  if (sh === "tri") {
+    const cx = -h / 3, cz = h / 3;
+    e = [
+      seg(-h, h, -h, -h, cx, cz),
+      seg(-h, h, h, h, cx, cz),
+      seg(h, h, -h, -h, cx, cz)
+    ];
+  } else if (sh === "sec") {
+    e = [
+      seg(-h, h, -h, -h, 0, 0),
+      seg(-h, h, h, h, 0, 0),
+      {
+        t: "arc",
+        cx: -h,
+        cz: h,
+        R: 2 * h
+      }
+    ];
+  } else e = [
+    seg(-h, -h, h, -h, 0, 0),
+    seg(h, -h, h, h, 0, 0),
+    seg(-h, h, h, h, 0, 0),
+    seg(-h, -h, -h, h, 0, 0)
+  ];
+  EDGES.set(p, e);
+  return e;
+}
+var plateAllEdges = (p) => (1 << plateEdges(p).length) - 1;
+function edgeDist(e, x, z, slack, out) {
+  if (e.t === "seg") {
+    const rx = x - e.ax, rz = z - e.az, s = rx * e.tx + rz * e.tz;
+    out.d = rx * e.nx + rz * e.nz;
+    out.nx = e.nx;
+    out.nz = e.nz;
+    out.on = s >= -slack && s <= e.len + slack;
+  } else {
+    const dx = x - e.cx, dz = z - e.cz, r = Math.sqrt(dx * dx + dz * dz) || 1e-6;
+    out.d = e.R - r;
+    out.nx = -dx / r;
+    out.nz = -dz / r;
+    out.on = dx >= -slack && dz <= slack;
+  }
+  return out;
+}
+function areaCentroid(p) {
+  const h = p.size * HALF, sh = plateShape(p);
+  if (sh === "tri") return {
+    x: -h / 3,
+    z: h / 3
+  };
+  if (sh === "sec") {
+    const k = 8 * h / (3 * Math.PI);
+    return {
+      x: -h + k,
+      z: h - k
+    };
+  }
+  return {
+    x: 0,
+    z: 0
+  };
+}
+function widthRemap(p, lx, lz, half, out) {
+  const w0 = p.hw[0], w1 = p.hw[1], k = (w1 - w0) / (2 * half);
+  let t = (half - lz) / (2 * half);
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const hw = w0 + (w1 - w0) * t, c = 1 / Math.sqrt(1 + k * k), sg = lx >= 0 ? 1 : -1;
+  const e = (sg * lx - hw) * c;
+  const d = ROAD_HALF + e;
+  out.d = d > 0 ? sg * d : 0;
+  out.gx = c;
+  out.gz = sg * k * c;
+  return out;
+}
+var JRECT = {
+  N: [
+    -ROAD_HALF,
+    -HALF,
+    ROAD_HALF,
+    -ROAD_HALF
+  ],
+  S: [
+    -ROAD_HALF,
+    ROAD_HALF,
+    ROAD_HALF,
+    HALF
+  ],
+  E: [
+    ROAD_HALF,
+    -ROAD_HALF,
+    HALF,
+    ROAD_HALF
+  ],
+  W: [
+    -HALF,
+    -ROAD_HALF,
+    -ROAD_HALF,
+    ROAD_HALF
+  ]
+};
+var JR = /* @__PURE__ */ new Map();
+function junctionRects(p) {
+  let r = JR.get(p);
+  if (!r) {
+    r = [
+      [
+        -ROAD_HALF,
+        -ROAD_HALF,
+        ROAD_HALF,
+        ROAD_HALF
+      ],
+      ...[
+        ...p.arms
+      ].map((a) => JRECT[a])
+    ];
+    JR.set(p, r);
+  }
+  return r;
+}
+var JUNCTION_ENDS = {
+  N: [
+    0,
+    -HALF,
+    0,
+    -1
+  ],
+  S: [
+    0,
+    HALF,
+    0,
+    1
+  ],
+  E: [
+    HALF,
+    0,
+    1,
+    0
+  ],
+  W: [
+    -HALF,
+    0,
+    -1,
+    0
+  ]
+};
+function junctionSample(p, lx, lz, out) {
+  const half = p.size * HALF;
+  out.along = (half - lz) / (2 * half);
+  let best = Infinity, bx = 0, bz = 0;
+  for (const [x0, z0, x1, z1] of junctionRects(p)) {
+    const qx = lx < x0 ? x0 : lx > x1 ? x1 : lx, qz = lz < z0 ? z0 : lz > z1 ? z1 : lz;
+    const dx = lx - qx, dz = lz - qz, dd = dx * dx + dz * dz;
+    if (dd < best) {
+      best = dd;
+      bx = dx;
+      bz = dz;
+    }
+    if (dd === 0) break;
+  }
+  if (best === 0) {
+    out.d = 0;
+    out.gx = 1;
+    out.gz = 0;
+    return;
+  }
+  const e = Math.sqrt(best);
+  out.d = ROAD_HALF + e;
+  out.gx = bx / e;
+  out.gz = bz / e;
 }
 
 // js/ribbons.js
@@ -1932,6 +2480,41 @@ function buildBase(tile) {
         len: 2 * half
       };
     }
+    if (P.tubeArc) {
+      const kcMax = 1 / 8, a = arcParams(P), mir = P.mirror < 0 ? -1 : 1;
+      return {
+        tubeR: 8,
+        pos(u, o) {
+          const ang = Math.PI + Math.PI / 2 * u;
+          o.x = mir * (a.cx + a.R * dcos(ang));
+          o.y = base;
+          o.z = a.cz + a.R * dsin(ang);
+          o.nx = 0;
+          o.ny = 1;
+          o.nz = 0;
+          o.kc = kcMax;
+          o.wrap = true;
+          o.hw = Math.PI / kcMax;
+        },
+        len: Math.PI / 2 * a.R
+      };
+    }
+    if (P.loopTop) {
+      const Rt = HALF, m = P.mirror, x0 = -m * HALF;
+      return {
+        minU: 0.08,
+        pos(u, o) {
+          const th = Math.PI * u, c = dcos(th), s = dsin(th);
+          o.x = x0 + m * CELL * smooth(u);
+          o.y = base + Rt * s;
+          o.z = Rt - Rt * c;
+          o.nx = 0;
+          o.ny = -s;
+          o.nz = c;
+        },
+        len: hypot2(Math.PI * Rt, CELL)
+      };
+    }
     if (tile.t === "tubeIn" || tile.t === "tubeMid") {
       const kcMax = 1 / 8, entry = tile.t === "tubeIn";
       return {
@@ -2145,6 +2728,17 @@ function centerlineLocal(tile, n) {
   } else if (p.kind === "ribbon" || p.kind === "loop") {
     const rib = ribbonOf(tile, true);
     sampleRibbon(Math.max(8, Math.round(rib.len / 3)), p.arc ? 2 : 1);
+  } else if (p.kind === "sbend") {
+    const k = Math.max(n, 8 * p.size), q = {};
+    for (let i = 0; i <= k; i++) {
+      sbendPoint(p, i / k, q);
+      pts.push([
+        q.x,
+        base,
+        q.z,
+        0
+      ]);
+    }
   } else if (p.kind === "arc") {
     const a = arcParams(p);
     for (let i = 0; i <= n; i++) {
@@ -2418,6 +3012,506 @@ function obstacleRadius(d) {
   if (def.type === "box") return (def.travel + hypot2(def.hx, def.hz) + 1) * k;
   if (def.type === "bar") return (def.len + def.r + 1) * k;
   return (def.r + 1) * k;
+}
+
+// js/solids.js
+var B2 = (x0, y0, z0, x1, y1, z1) => ({
+  t: "box",
+  b: [
+    x0,
+    y0,
+    z0,
+    x1,
+    y1,
+    z1
+  ]
+});
+var RB = (cx, cz, a, hx, hz, y0, y1) => ({
+  t: "box",
+  b: [
+    -hx,
+    y0,
+    -hz,
+    hx,
+    y1,
+    hz
+  ],
+  f: {
+    ox: cx,
+    oz: cz,
+    c: dcos(a),
+    s: dsin(a)
+  }
+});
+var RAMP = (x0, y0, z0, x1, y1, z1) => ({
+  t: "ramp",
+  b: [
+    x0,
+    y0,
+    z0,
+    x1,
+    y1,
+    z1
+  ]
+});
+var PYR = (x0, y0, z0, x1, y1, z1) => ({
+  t: "pyr",
+  b: [
+    x0,
+    y0,
+    z0,
+    x1,
+    y1,
+    z1
+  ]
+});
+function arcWall(R, n, th, H) {
+  const out = [], da = Math.PI / 2 / n, hl = R * dtan(da / 2) + th * 0.5;
+  for (let i = 0; i < n; i++) {
+    const a = (i + 0.5) * da;
+    out.push(RB(-R / 2 + R * dcos(a), R / 2 - R * dsin(a), a + Math.PI / 2, hl, th / 2, 0, H));
+  }
+  return out;
+}
+var SOLIDS = {
+  // ---- Étape 1 : piliers et poutres (section 3,2 m pour un pilier, 1,6 m pour une poutre)
+  pillar: {
+    label: "Pilier",
+    parts: [
+      B2(-1.6, 0, -1.6, 1.6, 12, 1.6)
+    ]
+  },
+  pillarBase: {
+    label: "Pilier sur socle",
+    parts: [
+      B2(-2.8, 0, -2.8, 2.8, 1.2, 2.8),
+      B2(-1.6, 1.2, -1.6, 1.6, 12, 1.6)
+    ]
+  },
+  pillarThin: {
+    label: "Poteau",
+    parts: [
+      B2(-0.6, 0, -0.6, 0.6, 6, 0.6)
+    ]
+  },
+  beam: {
+    label: "Poutre",
+    parts: [
+      B2(-8, 0, -0.8, 8, 1.6, 0.8)
+    ]
+  },
+  beamL: {
+    label: "Poutre en L",
+    parts: [
+      B2(-8, 0, -0.8, 0.8, 1.6, 0.8),
+      B2(-0.8, 0, -8, 0.8, 1.6, -0.8)
+    ]
+  },
+  beamT: {
+    label: "Poutre en T",
+    parts: [
+      B2(-8, 0, -0.8, 8, 1.6, 0.8),
+      B2(-0.8, 0, -8, 0.8, 1.6, -0.8)
+    ]
+  },
+  beamX: {
+    label: "Poutre en croix",
+    parts: [
+      B2(-8, 0, -0.8, 8, 1.6, 0.8),
+      B2(-0.8, 0, -8, 0.8, 1.6, -0.8),
+      B2(-0.8, 0, 0.8, 0.8, 1.6, 8)
+    ]
+  },
+  beamPost: {
+    label: "Potence",
+    parts: [
+      B2(-0.8, 0, -0.8, 0.8, 10, 0.8),
+      B2(-0.8, 10, -0.8, 12, 11.6, 0.8)
+    ]
+  },
+  gantry: {
+    label: "Portique en poutres",
+    parts: [
+      B2(-16.2, 0, -0.8, -14.6, 9, 0.8),
+      B2(14.6, 0, -0.8, 16.2, 9, 0.8),
+      B2(-16.2, 9, -0.8, 16.2, 10.6, 0.8)
+    ]
+  },
+  // ---- Étape 2 (0.9.69) : murs pleins (4 m de haut, 0,8 m d'épaisseur ; le muret : 1,2 m)
+  wallS: {
+    label: "Mur plein",
+    parts: [
+      B2(-8, 0, -0.4, 8, 4, 0.4)
+    ]
+  },
+  wallSLow: {
+    label: "Muret plein",
+    parts: [
+      B2(-8, 0, -0.4, 8, 1.2, 0.4)
+    ]
+  },
+  wallSL: {
+    label: "Mur plein en L",
+    parts: [
+      B2(-8, 0, -0.4, 0.4, 4, 0.4),
+      B2(-0.4, 0, -8, 0.4, 4, -0.4)
+    ]
+  },
+  wallST: {
+    label: "Mur plein en T",
+    parts: [
+      B2(-8, 0, -0.4, 8, 4, 0.4),
+      B2(-0.4, 0, -8, 0.4, 4, -0.4)
+    ]
+  },
+  wallSX: {
+    label: "Mur plein en croix",
+    parts: [
+      B2(-8, 0, -0.4, 8, 4, 0.4),
+      B2(-0.4, 0, -8, 0.4, 4, -0.4),
+      B2(-0.4, 0, 0.4, 0.4, 4, 8)
+    ]
+  },
+  wallSC: {
+    label: "Mur plein courbe",
+    parts: arcWall(16, 8, 0.8, 4)
+  },
+  // ---- Étape 2 (0.9.69) : blocs pleins (dessus roulable ; la cale et la pyramide se montent)
+  block: {
+    label: "Bloc",
+    parts: [
+      B2(-4, 0, -4, 4, 8, 4)
+    ]
+  },
+  slab: {
+    label: "Dalle",
+    parts: [
+      B2(-8, 0, -8, 8, 1.2, 8)
+    ]
+  },
+  wedge: {
+    label: "Cale",
+    parts: [
+      RAMP(-6, 0, -8, 6, 4, 8)
+    ]
+  },
+  wedgeSteep: {
+    label: "Cale raide",
+    parts: [
+      RAMP(-6, 0, -4, 6, 4, 4)
+    ]
+  },
+  pyramidS: {
+    label: "Pyramide pleine",
+    parts: [
+      PYR(-8, 0, -8, 8, 5, 8)
+    ]
+  },
+  archS: {
+    label: "Arche pleine",
+    parts: [
+      B2(-18, 0, -2, -14.6, 10, 2),
+      B2(14.6, 0, -2, 18, 10, 2),
+      B2(-18, 10, -2, 18, 12.4, 2)
+    ]
+  }
+};
+var SOLID_IDS = Object.keys(SOLIDS);
+var isSolid = (k) => !!SOLIDS[k];
+var SOLID_SCALE = [
+  0.25,
+  8
+];
+var SOLID_STEP = 0.6;
+var SOLID_CELL = 16;
+var solidKey = (ix, iz) => ix * 1048576 + iz;
+var fin = Number.isFinite;
+function solidEntry(d) {
+  const def = SOLIDS[d.k];
+  if (!def || !fin(d.x) || !fin(d.y) || !fin(d.z) || !fin(d.ry || 0) || !(d.s > 0)) return null;
+  const c = dcos(d.ry || 0), s = dsin(d.ry || 0), k = d.s;
+  let r = 0, top = -Infinity, bot = Infinity;
+  for (const p of def.parts) {
+    const [x0, y0, z0, x1, y1, z1] = p.b;
+    for (const [x, z] of [
+      [
+        x0,
+        z0
+      ],
+      [
+        x1,
+        z0
+      ],
+      [
+        x0,
+        z1
+      ],
+      [
+        x1,
+        z1
+      ]
+    ]) {
+      partOut(p, x, z, PO);
+      r = Math.max(r, hypot2(PO.x, PO.z));
+    }
+    top = Math.max(top, y1);
+    bot = Math.min(bot, y0);
+  }
+  return {
+    d,
+    def,
+    c,
+    s,
+    k,
+    x: d.x,
+    y: d.y,
+    z: d.z,
+    r: r * k,
+    top: d.y + top * k,
+    bottom: d.y + bot * k
+  };
+}
+function buildSolidGrid(decos) {
+  const grid = /* @__PURE__ */ new Map(), list = [];
+  for (const d of decos) {
+    if (!isSolid(d.k)) continue;
+    const e = solidEntry(d);
+    if (!e) continue;
+    list.push(e);
+    const i0 = Math.floor((e.x - e.r) / SOLID_CELL), i1 = Math.floor((e.x + e.r) / SOLID_CELL);
+    const j0 = Math.floor((e.z - e.r) / SOLID_CELL), j1 = Math.floor((e.z + e.r) / SOLID_CELL);
+    if (i1 - i0 > 64 || j1 - j0 > 64) continue;
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+      const key2 = solidKey(i, j), b = grid.get(key2);
+      if (b) b.push(e);
+      else grid.set(key2, [
+        e
+      ]);
+    }
+  }
+  return {
+    grid,
+    list
+  };
+}
+function solidsAt(index, x, z) {
+  return index.grid.get(solidKey(Math.floor(x / SOLID_CELL), Math.floor(z / SOLID_CELL)));
+}
+function partIn(p, x, z, out) {
+  const f = p.f;
+  if (!f) {
+    out.x = x;
+    out.z = z;
+    return out;
+  }
+  const dx = x - f.ox, dz = z - f.oz;
+  out.x = dx * f.c - dz * f.s;
+  out.z = dx * f.s + dz * f.c;
+  return out;
+}
+function partOut(p, x, z, out, vec = false) {
+  const f = p.f;
+  if (!f) {
+    out.x = x;
+    out.z = z;
+    return out;
+  }
+  out.x = x * f.c + z * f.s + (vec ? 0 : f.ox);
+  out.z = -x * f.s + z * f.c + (vec ? 0 : f.oz);
+  return out;
+}
+var PO = {
+  x: 0,
+  z: 0
+};
+var PA = {
+  x: 0,
+  z: 0
+};
+var PB = {
+  x: 0,
+  z: 0
+};
+function slopeOf(p) {
+  const [x0, y0, z0, x1, y1, z1] = p.b;
+  if (p.t === "ramp") return Math.abs((y1 - y0) / (z1 - z0));
+  if (p.t === "pyr") return Math.max((y1 - y0) / ((x1 - x0) / 2), (y1 - y0) / ((z1 - z0) / 2));
+  return 0;
+}
+function toLocal2(e, wx, wz, out) {
+  const dx = (wx - e.x) / e.k, dz = (wz - e.z) / e.k;
+  out.x = dx * e.c - dz * e.s;
+  out.z = dx * e.s + dz * e.c;
+  return out;
+}
+function toWorldVec(e, x, z, out) {
+  out.x = x * e.c + z * e.s;
+  out.z = -x * e.s + z * e.c;
+  return out;
+}
+function partTop(p, x, z) {
+  const [x0, y0, z0, x1, y1, z1] = p.b;
+  if (p.t === "ramp") {
+    const u = (z1 - z) / (z1 - z0);
+    return y0 + (y1 - y0) * (u < 0 ? 0 : u > 1 ? 1 : u);
+  }
+  if (p.t === "pyr") {
+    const hx = (x1 - x0) / 2, hz = (z1 - z0) / 2, ux = Math.abs(x - (x0 + hx)) / hx, uz = Math.abs(z - (z0 + hz)) / hz;
+    const m = ux > uz ? ux : uz;
+    return y0 + (y1 - y0) * (1 - (m > 1 ? 1 : m));
+  }
+  return y1;
+}
+function partNormal(p, x, z, out) {
+  const [x0, y0, z0, x1, y1, z1] = p.b;
+  out.x = 0;
+  out.y = 1;
+  out.z = 0;
+  if (p.t === "ramp") {
+    const k = (y1 - y0) / (z1 - z0), l = Math.sqrt(1 + k * k);
+    out.y = 1 / l;
+    out.z = k / l;
+  } else if (p.t === "pyr") {
+    const hx = (x1 - x0) / 2, hz = (z1 - z0) / 2, ux = (x - (x0 + hx)) / hx, uz = (z - (z0 + hz)) / hz, H = y1 - y0;
+    if (Math.abs(ux) > Math.abs(uz)) {
+      const k = H / hx, l = Math.sqrt(1 + k * k);
+      out.x = (ux > 0 ? k : -k) / l;
+      out.y = 1 / l;
+    } else {
+      const k = H / hz, l = Math.sqrt(1 + k * k);
+      out.z = (uz > 0 ? k : -k) / l;
+      out.y = 1 / l;
+    }
+  }
+  return out;
+}
+var LA = {
+  x: 0,
+  z: 0
+};
+var LB = {
+  x: 0,
+  z: 0
+};
+var WV = {
+  x: 0,
+  z: 0
+};
+var NL = {
+  x: 0,
+  y: 0,
+  z: 0
+};
+function solidFloor(index, x, y, z, step, best, out, hidden = null) {
+  const bucket = solidsAt(index, x, z);
+  if (!bucket) return best;
+  for (let i = 0; i < bucket.length; i++) {
+    const e = bucket[i];
+    if (hidden && hidden.has(e.d)) continue;
+    if (y + step < e.bottom) continue;
+    toLocal2(e, x, z, LA);
+    const parts = e.def.parts;
+    for (let j = 0; j < parts.length; j++) {
+      const p = parts[j], b = p.b, q = partIn(p, LA.x, LA.z, PA);
+      if (q.x < b[0] || q.x > b[3] || q.z < b[2] || q.z > b[5]) continue;
+      const h = e.y + partTop(p, q.x, q.z) * e.k;
+      if (h > y + step || h <= best) continue;
+      best = h;
+      partNormal(p, q.x, q.z, NL);
+      partOut(p, NL.x, NL.z, PO, true);
+      toWorldVec(e, PO.x, PO.z, WV);
+      out.h = h;
+      out.nx = WV.x;
+      out.ny = NL.y;
+      out.nz = WV.z;
+      out.tile = null;
+      out.type = "road";
+      out.mod = "";
+      out.p = 0;
+      out.lx = 0;
+      out.lz = 0;
+      out.solid = e.d;
+    }
+  }
+  return best;
+}
+function solidSide(index, x, z, px, pz, ylo, yhi, plo, R, step, hit, hidden = null) {
+  const bucket = solidsAt(index, x, z);
+  if (!bucket) return false;
+  for (let i = 0; i < bucket.length; i++) {
+    const e = bucket[i];
+    if (hidden && hidden.has(e.d)) continue;
+    if (yhi < e.bottom + 0.2 || ylo > e.top) continue;
+    const dx0 = x - e.x, dz0 = z - e.z, rr = e.r + R + 0.5;
+    if (dx0 * dx0 + dz0 * dz0 > rr * rr) continue;
+    toLocal2(e, x, z, LA);
+    toLocal2(e, px, pz, LB);
+    const r = R / e.k, parts = e.def.parts;
+    for (let j = 0; j < parts.length; j++) {
+      const p = parts[j], b = p.b, P1 = partIn(p, LA.x, LA.z, PA), P0 = partIn(p, LB.x, LB.z, PB);
+      const qx = P1.x < b[0] ? b[0] : P1.x > b[3] ? b[3] : P1.x, qz = P1.z < b[2] ? b[2] : P1.z > b[5] ? b[5] : P1.z;
+      const ddx = P1.x - qx, ddz = P1.z - qz, dist = hypot2(ddx, ddz);
+      if (dist >= r) continue;
+      const lo = e.y + b[1] * e.k, top = e.y + partTop(p, qx, qz) * e.k;
+      if (yhi < lo + 0.2 || ylo > top - 0.05) continue;
+      if (ylo >= top - step - slopeOf(p) * 2.5 * (dist < 1e-6 ? 1 : 0) || plo >= top - 0.3) continue;
+      let nx, nz, push;
+      if (dist > 1e-6) {
+        nx = ddx / dist;
+        nz = ddz / dist;
+        push = r - dist;
+      } else {
+        const ex0 = P1.x - b[0], ex1 = b[3] - P1.x, ez0 = P1.z - b[2], ez1 = b[5] - P1.z;
+        let f = 0, m = ex0;
+        if (ex1 < m) {
+          m = ex1;
+          f = 1;
+        }
+        if (ez0 < m) {
+          m = ez0;
+          f = 2;
+        }
+        if (ez1 < m) {
+          m = ez1;
+          f = 3;
+        }
+        if (P0.x < b[0]) f = 0;
+        else if (P0.x > b[3]) f = 1;
+        else if (P0.z < b[2]) f = 2;
+        else if (P0.z > b[5]) f = 3;
+        nx = f === 0 ? -1 : f === 1 ? 1 : 0;
+        nz = f === 2 ? -1 : f === 3 ? 1 : 0;
+        push = (f === 0 ? ex0 : f === 1 ? ex1 : f === 2 ? ez0 : ez1) + r;
+      }
+      partOut(p, nx, nz, PO, true);
+      toWorldVec(e, PO.x, PO.z, WV);
+      hit.nx = WV.x;
+      hit.nz = WV.z;
+      hit.dx = WV.x * push * e.k;
+      hit.dz = WV.z * push * e.k;
+      hit.solid = e.d;
+      return true;
+    }
+  }
+  return false;
+}
+function solidCeiling(index, x, z, ylo, yhi, pyhi, hidden = null) {
+  const bucket = solidsAt(index, x, z);
+  if (!bucket) return NaN;
+  for (let i = 0; i < bucket.length; i++) {
+    const e = bucket[i];
+    if (hidden && hidden.has(e.d)) continue;
+    if (yhi < e.bottom || ylo > e.top) continue;
+    toLocal2(e, x, z, LA);
+    const parts = e.def.parts;
+    for (let j = 0; j < parts.length; j++) {
+      const b = parts[j].b, q = partIn(parts[j], LA.x, LA.z, PA);
+      if (q.x < b[0] || q.x > b[3] || q.z < b[2] || q.z > b[5]) continue;
+      const lo = e.y + b[1] * e.k;
+      if (yhi > lo && pyhi <= lo + 0.05) return lo;
+    }
+  }
+  return NaN;
 }
 
 // js/decoPackData.js
@@ -3683,7 +4777,39 @@ var DECO_ORDER = [
   // 0.9.3 : pack de ~200 décorations (plage, Saint-Valentin, Nouvel An, fête foraine, ville, ferme, château, Japon, sport, jungle…)
   ...PACK_IDS,
   // 0.9.24 : pièce décorative personnalisée (customDeco.js), à la fin : l'ordre existant ne change jamais.
-  "custom"
+  "custom",
+  // 0.9.68 : panneaux de bord de route (chevrons, danger, interdit) et deux panneaux simples
+  "board_left",
+  "board_right",
+  "board_up",
+  "board_down",
+  "board_warn",
+  "board_no",
+  "sign_down",
+  "sign_uturn",
+  // 0.9.68 : solides (physiques, voir solids.js) : piliers et poutres
+  "pillar",
+  "pillarBase",
+  "pillarThin",
+  "beam",
+  "beamL",
+  "beamT",
+  "beamX",
+  "beamPost",
+  "gantry",
+  // 0.9.69 : solides : murs pleins et blocs pleins
+  "wallS",
+  "wallSLow",
+  "wallSL",
+  "wallST",
+  "wallSX",
+  "wallSC",
+  "block",
+  "slab",
+  "wedge",
+  "wedgeSteep",
+  "pyramidS",
+  "archS"
 ];
 var BASE = [
   [
@@ -3724,6 +4850,46 @@ var BASE = [
         "banner",
         "Banderole",
         "\u{1F6A9}"
+      ],
+      [
+        "sign_down",
+        "Descente",
+        "\u2B07"
+      ],
+      [
+        "sign_uturn",
+        "Demi-tour",
+        "\u21A9"
+      ],
+      [
+        "board_left",
+        "Chevrons gauche",
+        "\u23EA"
+      ],
+      [
+        "board_right",
+        "Chevrons droite",
+        "\u23E9"
+      ],
+      [
+        "board_up",
+        "Chevrons mont\xE9e",
+        "\u23EB"
+      ],
+      [
+        "board_down",
+        "Chevrons descente",
+        "\u23EC"
+      ],
+      [
+        "board_warn",
+        "Panneau danger",
+        "\u26A0"
+      ],
+      [
+        "board_no",
+        "Panneau interdit",
+        "\u274C"
       ]
     ]
   ],
@@ -4248,6 +5414,130 @@ var BASE = [
         "skull",
         "Cr\xE2ne",
         "\u{1F480}"
+      ]
+    ]
+  ],
+  // 0.9.68 : solides : la voiture ne les traverse pas (côtés comme une bordure, dessus roulable)
+  [
+    "struct",
+    "Piliers et poutres",
+    [
+      [
+        "pillar",
+        "Pilier",
+        "\u25AE"
+      ],
+      [
+        "pillarBase",
+        "Pilier sur socle",
+        "\u{1F5FF}"
+      ],
+      [
+        "pillarThin",
+        "Poteau",
+        "\u2502"
+      ],
+      [
+        "beam",
+        "Poutre",
+        "\u25AC"
+      ],
+      [
+        "beamL",
+        "Poutre en L",
+        "\u2517"
+      ],
+      [
+        "beamT",
+        "Poutre en T",
+        "\u2533"
+      ],
+      [
+        "beamX",
+        "Poutre en croix",
+        "\u254B"
+      ],
+      [
+        "beamPost",
+        "Potence",
+        "\u250F"
+      ],
+      [
+        "gantry",
+        "Portique en poutres",
+        "\u26E9"
+      ]
+    ]
+  ],
+  [
+    "wallsS",
+    "Murs pleins",
+    [
+      [
+        "wallS",
+        "Mur plein",
+        "\u{1F9F1}"
+      ],
+      [
+        "wallSLow",
+        "Muret plein",
+        "\u25AD"
+      ],
+      [
+        "wallSL",
+        "Mur plein en L",
+        "\u2514"
+      ],
+      [
+        "wallST",
+        "Mur plein en T",
+        "\u2534"
+      ],
+      [
+        "wallSX",
+        "Mur plein en croix",
+        "\u253C"
+      ],
+      [
+        "wallSC",
+        "Mur plein courbe",
+        "\u25DC"
+      ]
+    ]
+  ],
+  [
+    "blocks",
+    "Blocs pleins",
+    [
+      [
+        "block",
+        "Bloc",
+        "\u25A0"
+      ],
+      [
+        "slab",
+        "Dalle",
+        "\u25B0"
+      ],
+      [
+        "wedge",
+        "Cale",
+        "\u25E2"
+      ],
+      [
+        "wedgeSteep",
+        "Cale raide",
+        "\u25E3"
+      ],
+      [
+        "pyramidS",
+        "Pyramide pleine",
+        "\u25B2"
+      ],
+      [
+        "archS",
+        "Arche pleine",
+        "\u2302"
       ]
     ]
   ],
@@ -4838,7 +6128,8 @@ var surfaceMethods = {
   // Les pièces mobiles (ascenseur, glissière, rotation) sont prises à leur position au chrono `time` (s) de la course : le circuit n'a
   // pas d'horloge propre, plusieurs voitures (la sienne, un fantôme, un adversaire) l'interrogent chacune à son propre chrono.
   // broken : pièces de verre déjà brisées dans CETTE course (propre à chaque voiture, voir CarPhysics) : sans collision.
-  surfaceAt(x, y, z, out, step = 1.6, broken = null, time = 0) {
+  // hidden (0.9.68) : décorations cachées par la logique du circuit (un solide caché ne porte plus la voiture).
+  surfaceAt(x, y, z, out, step = 1.6, broken = null, time = 0, hidden = null) {
     out.h = 0;
     out.nx = 0;
     out.ny = 1;
@@ -4849,6 +6140,7 @@ var surfaceMethods = {
     out.p = 0;
     out.lx = 0;
     out.lz = 0;
+    out.solid = null;
     const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
     let best = -Infinity;
     const cell2 = this.tilesAt(cx, cz);
@@ -4868,6 +6160,7 @@ var surfaceMethods = {
         } else best = this._floorTry(tile, x - MO.x, z - MO.z, MO.y, y, step, best, out);
       }
     }
+    if (this.hasSolids) solidFloor(this.solidIndex, x, y, z, step, best, out, hidden);
     return out;
   },
   _floorTry(tile, x, z, oy, y, step, best, out, a = 0) {
@@ -5017,6 +6310,16 @@ var editMethods = {
       this.version++;
       return true;
     }
+    if (flag === "eb") {
+      tile.eb = tile.eb ? 0 : val & plateAllEdges(PIECES[tile.t]);
+      this.version++;
+      return true;
+    }
+    if (flag === "gs") {
+      tile.gs = tile.gs === val ? 0 : val;
+      this.version++;
+      return true;
+    }
     if (flag === "mv" || flag === "cp" || flag === "tb" || flag === "v") {
       const cand = {
         ...tile
@@ -5091,6 +6394,16 @@ var editMethods = {
     this.version++;
     return true;
   },
+  // 0.9.69 : bordures d'une plaque, bord par bord (masque de bits, voir pieces.js plateEdges). Renvoie true si quelque chose a changé.
+  setEdges(tile, mask) {
+    const P = PIECES[tile.t];
+    if (!P || P.kind !== "area") return false;
+    const m = (mask | 0) & plateAllEdges(P);
+    if ((tile.eb | 0) === m) return false;
+    tile.eb = m;
+    this.version++;
+    return true;
+  },
   addDeco(d) {
     if (this.decos.length >= MAX_DECOS) return null;
     const deco = {
@@ -5110,6 +6423,11 @@ var editMethods = {
       deco.s = Math.max(0.5, Math.min(2.5, deco.s));
     }
     if (!DECO_ORDER.includes(deco.k)) return null;
+    const solid = isSolid(deco.k);
+    if (solid) {
+      deco.s = Math.max(SOLID_SCALE[0], Math.min(SOLID_SCALE[1], deco.s));
+      if (!Number.isFinite(deco.x) || !Number.isFinite(deco.y) || !Number.isFinite(deco.z) || !Number.isFinite(deco.ry)) return null;
+    }
     if (isObstacle(deco.k)) {
       let v = +d.rz;
       if (Number.isFinite(v) && v) {
@@ -5118,7 +6436,7 @@ var editMethods = {
         v = Math.round(v / (Math.PI / 4)) * (Math.PI / 4);
         if (Math.abs(v) > 1e-4) deco.rz = +v.toFixed(3);
       }
-    } else {
+    } else if (!solid) {
       for (const a of [
         "rx",
         "rz"
@@ -6062,6 +7380,8 @@ var Track = class _Track {
       col: null,
       s2: "",
       p2: 0,
+      gs: 0,
+      eb: 0,
       g: Math.max(0, Math.min(MAX_GROUP, t.g | 0))
     };
     tile.v = t.v && flagAllowed(type, "v") ? 1 : 0;
@@ -6077,6 +7397,8 @@ var Track = class _Track {
     tile.cp = t.cp && flagAllowed(type, "cp", tile, t.cp | 0) ? t.cp | 0 : 0;
     tile.tb = t.tb && flagAllowed(type, "tb", tile) ? 1 : 0;
     tile.th = THEMES.some((h) => h.id === (t.th | 0)) && flagAllowed(type, "th") ? t.th | 0 : 0;
+    tile.gs = (t.gs | 0) > 0 && flagAllowed(type, "gs", tile, t.gs | 0) ? t.gs | 0 : 0;
+    tile.eb = (t.eb | 0) > 0 && flagAllowed(type, "eb", tile, t.eb | 0) ? (t.eb | 0) & plateAllEdges(PIECES[type]) : 0;
     tile.col = cleanColors(t.col);
     if (surfaceAllowed(type, s, tile.o)) {
       tile.s = s;
@@ -6159,6 +7481,17 @@ var Track = class _Track {
       this._ogV = this.version;
     }
     return this._og;
+  }
+  // 0.9.68 : index des solides (piliers, poutres, murs, blocs : solids.js), reconstruit quand le circuit change ; partagé par toutes les voitures.
+  get solidIndex() {
+    if (this._sgV !== this.version) {
+      this._sg = buildSolidGrid(this.decos);
+      this._sgV = this.version;
+    }
+    return this._sg;
+  }
+  get hasSolids() {
+    return this.solidIndex.list.length > 0;
   }
   clear() {
     this.tiles = [];
@@ -6259,7 +7592,7 @@ var Track = class _Track {
   // prend une empreinte forte (SHA-256) pour lier une clé de classement u-… à UN seul circuit (supabase/etape15-backend.sql, track_binds).
   signatureText() {
     const parts = this.tiles.map((t) => `${t.t}:${t.x}:${t.z}:${t.l}:${t.r}:${t.s}:${t.p}:${t.v}${t.nb}${t.tn}${t.mv ? "m" + t.mv : ""}${tileExtras(t)}`).sort().join("|");
-    const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}${o.rz ? ":z" + o.rz.toFixed(2) : ""}` : ""}`).join("|");
+    const d = this.decos.map((o) => `${o.k}:${o.x.toFixed(1)}:${o.z.toFixed(1)}:${o.s}${isObstacle(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}:${o.ph || 0}${o.rz ? ":z" + o.rz.toFixed(2) : ""}` : isSolid(o.k) ? `:${o.y.toFixed(1)}:${o.ry.toFixed(2)}` : ""}`).join("|");
     const rules = RULES.map((r) => r.sig(this[r.key])).join("");
     return this.decor + "#" + parts + "#" + d + (this.laps > 1 ? "#L" + this.laps : "") + rules + this._logicSig();
   }
@@ -6357,6 +7690,8 @@ var Track = class _Track {
       if (t.o) e.o = t.o;
       if (t.tb) e.tb = 1;
       if (t.th) e.th = t.th;
+      if (t.gs) e.gs = t.gs;
+      if (t.eb) e.eb = t.eb;
       if (t.ms) e.ms = t.ms;
       if (t.ma) e.ma = t.ma;
       if (t.s2) {
@@ -6475,6 +7810,8 @@ var Track = class _Track {
         tile.o = ex.o | 0;
         tile.tb = ex.tb | 0;
         tile.th = ex.th | 0;
+        tile.gs = ex.gs | 0;
+        tile.eb = ex.eb | 0;
         tile.ms = ex.ms | 0;
         tile.ma = +ex.ma || 0;
         tile.g = ex.g | 0;
@@ -6502,7 +7839,7 @@ var Track = class _Track {
         continue;
       }
       const legacy = LEGACY_TILE[tile.t] || LEGACY_SURFACE[tile.t] || LEGACY_PIECE[tile.t];
-      if (!legacy && ((tile.o | 0) !== norm.o || (tile.v ? 1 : 0) !== norm.v || (tile.tn ? 1 : 0) !== norm.tn || (tile.mv | 0) !== norm.mv || (tile.cp | 0) !== norm.cp || (tile.tb | 0) !== norm.tb || (SURFACE_ALIAS[tile.s] || tile.s || "") !== norm.s)) lost.options++;
+      if (!legacy && ((tile.o | 0) !== norm.o || (tile.v ? 1 : 0) !== norm.v || (tile.tn ? 1 : 0) !== norm.tn || (tile.mv | 0) !== norm.mv || (tile.cp | 0) !== norm.cp || (tile.tb | 0) !== norm.tb || (tile.eb | 0) !== norm.eb || (SURFACE_ALIAS[tile.s] || tile.s || "") !== norm.s)) lost.options++;
       tr.add(tile);
     }
     if (Array.isArray(data.o)) {
@@ -6562,6 +7899,7 @@ function tileExtras(t) {
   if (t.o) e += "o" + t.o;
   if (t.mv && (t.ms || t.ma)) e += `s${t.ms || 0}a${t.ma || 0}`;
   if (t.s2) e += `f${t.s2}:${t.p2 || 0}`;
+  if (t.eb) e += "e" + t.eb;
   return e;
 }
 function b64encode(str) {
@@ -6629,6 +7967,10 @@ function scriptTrack(name, script, opts2 = {}) {
       r: r & 3,
       ...curOver || cur
     };
+    if (PIECES[t].kind === "area" && tile.gs) {
+      tile.eb = tile.gs;
+      tile.gs = 0;
+    }
     const mp = cur.mv && opts2.movers ? opts2.movers[cur.mvTok - 1] : null;
     if (mp) {
       tile.ms = mp.ms || 0;
@@ -6642,6 +7984,7 @@ function scriptTrack(name, script, opts2 = {}) {
       "mv"
     ]) if (cur[f] && !flagAllowed(t, f, tile)) throw new Error(`${name} : drapeau ${f} interdit sur ${t}`);
     if (cur.o && !flagAllowed(t, "o", tile, cur.o)) throw new Error(`${name} : orientation ${cur.o} interdite sur ${t}`);
+    if (tile.gs && !flagAllowed(t, "gs", tile, tile.gs)) throw new Error(`${name} : style de portique ${tile.gs} impossible sur ${t}`);
     const c = tr.conflicts(Track.normalize(tile));
     if (c.length) throw new Error(`${name} : conflit en (${px}, ${pz}) niveau ${lv} [${t}]`);
     if (!Track.inBounds(Track.normalize(tile))) throw new Error(`${name} : ${t} sort des niveaux en (${px}, ${pz})`);
@@ -6850,7 +8193,89 @@ function scriptTrack(name, script, opts2 = {}) {
     x += d.x;
     z += d.z;
   };
-  for (const tok of script.trim().split(/\s+/)) {
+  const platePiece = (type) => {
+    const size = PIECES[type].size, e = rot(h, size % 2 ? 0 : -0.5, (size - 1) / 2);
+    const added = place(type, Math.round(x + 0.5 - e.x - size / 2), Math.round(z + 0.5 - e.z - size / 2), l, h, false, true);
+    const f = DIRS[h], y = baseY(added), pts = [];
+    for (let i = 0; i <= 4 * size; i++) {
+      const k = i / 4 - 0.5;
+      pts.push([
+        (x + 0.5 + f[0] * k) * CELL,
+        y,
+        (z + 0.5 + f[1] * k) * CELL,
+        0
+      ]);
+    }
+    pushPts(pts);
+    adv(h, size);
+  };
+  const centered = (type, rev = false) => {
+    const size = PIECES[type].size, e = rot(h, 0, (size - 1) / 2);
+    place(type, Math.round(x + 0.5 - e.x - size / 2), Math.round(z + 0.5 - e.z - size / 2), l, rev ? h + 2 : h, rev);
+    adv(h, size);
+  };
+  const junction = (type, r, turn) => {
+    let J = tr.tilesAt(x, z).find((t) => PIECES[t.t].kind === "junction" && t.l === l);
+    if (!J) J = place(type, x, z, l, r, false, true);
+    const back = h + 2 & 3, out = turn ? h + (turn > 0 ? 1 : 3) & 3 : h;
+    const arms = new Set([
+      ...PIECES[J.t].arms
+    ].map((a) => {
+      const v = rot(J.r, ...{
+        N: [
+          0,
+          -1
+        ],
+        S: [
+          0,
+          1
+        ],
+        E: [
+          1,
+          0
+        ],
+        W: [
+          -1,
+          0
+        ]
+      }[a]);
+      return DIRS.findIndex((d) => d[0] === Math.round(v.x) && d[1] === Math.round(v.z));
+    }));
+    if (!arms.has(back) || !arms.has(out)) throw new Error(`${name} : le carrefour en (${x}, ${z}) n'a pas de bras dans ce sens`);
+    const f = DIRS[h], rt = DIRS[h + 1 & 3], s = turn || 0, cx = (x + 0.5) * CELL, cz = (z + 0.5) * CELL, y = baseY(J), H = CELL / 2, pts = [];
+    for (let i = 0; i <= 8; i++) {
+      const u = i / 8;
+      if (!s) pts.push([
+        cx + f[0] * H * (2 * u - 1),
+        y,
+        cz + f[1] * H * (2 * u - 1),
+        0
+      ]);
+      else {
+        const th = Math.PI / 2 * u, ax = cx - f[0] * H + s * rt[0] * H, az = cz - f[1] * H + s * rt[1] * H;
+        pts.push([
+          ax - s * rt[0] * H * dcos(th) + f[0] * H * dsin(th),
+          y,
+          az - s * rt[1] * H * dcos(th) + f[1] * H * dsin(th),
+          0
+        ]);
+      }
+    }
+    pushPts(pts);
+    h = out;
+    adv(h);
+  };
+  const sbendPiece = (type) => {
+    const P = PIECES[type], m = P.mirror, size = P.size;
+    const e = rot(h, -m * (size - 1) / 2, (size - 1) / 2);
+    place(type, Math.round(x + 0.5 - e.x - size / 2), Math.round(z + 0.5 - e.z - size / 2), l, h);
+    const d = rot(h, m * P.shift, -size);
+    x += d.x;
+    z += d.z;
+  };
+  for (let tok of script.trim().split(/\s+/)) {
+    const gsm = /\*(\d{1,2})$/.exec(tok);
+    if (gsm) tok = tok.slice(0, -gsm[0].length);
     const gm = /^\[([A-Za-z0-9]+)\](-?\d*)(?:\.([a-z])(\d*))?([\^_#~=%<>(){}]*)$/.exec(tok);
     const m = gm ? [
       tok,
@@ -6873,6 +8298,7 @@ function scriptTrack(name, script, opts2 = {}) {
       o: m[5].includes("<") ? 1 : m[5].includes(">") ? 2 : m[5].includes("(") ? 3 : m[5].includes(")") ? 4 : m[5].includes("{") ? 5 : m[5].includes("}") ? 6 : 0
     };
     cur.mvTok = cur.mv ? ++moverTok : 0;
+    if (gsm) cur.gs = +gsm[1];
     if (m[3]) {
       cur.s = SURF_CODE[m[3]];
       if (!cur.s) throw new Error("Rev\xEAtement inconnu : " + tok);
@@ -6891,7 +8317,10 @@ function scriptTrack(name, script, opts2 = {}) {
       if (!P) throw new Error("Pi\xE8ce inconnue : " + id);
       for (let i = 0; i < n; i++) {
         const sg = P.mirror < 0 ? -1 : 1, rise = P.rise || 0;
-        if (P.kind === "arc" && P.size === 2) {
+        if (P.kind === "sbend") sbendPiece(id);
+        else if (P.kind === "area" && P.size > 1) platePiece(id);
+        else if (P.hw && P.size > 1) centered(id);
+        else if (P.kind === "arc" && P.size === 2) {
           const c = rot(h, 0.5 * sg, -0.5);
           place(id, Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
           const nx = rot(h, 2 * sg, -1);
@@ -7117,6 +8546,122 @@ function scriptTrack(name, script, opts2 = {}) {
         h = h + (sgn > 0 ? 1 : 3) & 3;
         break;
       }
+      // 0.9.72 : looping modulaire LPR / LPL n : Montée en L, n murs (1 par défaut, 0 possible), Sommet de looping (↱ / ↰ : on redescend une colonne à
+      // droite / à gauche), n murs à la descente, Montée en L parcourue à l'envers ; on repart dans la colonne voisine, au niveau de départ, même cap.
+      case "LPR":
+      case "LPL": {
+        const sg = op === "LPR" ? 1 : -1, W3 = m[2] ? n : 1, l0 = l, f = DIRS[h], rt = DIRS[h + (sg > 0 ? 1 : 3) & 3];
+        const c0 = [
+          x,
+          z
+        ], c1 = [
+          x + f[0],
+          z + f[1]
+        ], s0 = [
+          x + rt[0],
+          z + rt[1]
+        ], s1 = [
+          s0[0] + f[0],
+          s0[1] + f[1]
+        ], sb = [
+          s0[0] - f[0],
+          s0[1] - f[1]
+        ];
+        place("ramp90", c0[0], c0[1], l0, h);
+        for (let i = 0; i < W3; i++) place("wall", c1[0], c1[1], l0 + 2 + i, h);
+        const cells = [
+          c0,
+          c1,
+          s0,
+          s1
+        ];
+        place(sg > 0 ? "loopTop" : "loopTopL", Math.min(...cells.map((c) => c[0])), Math.min(...cells.map((c) => c[1])), l0 + 2 + W3, h);
+        for (let i = W3 - 1; i >= 0; i--) place("wall", sb[0], sb[1], l0 + 2 + i, h + 2, true);
+        place("ramp90", s0[0], s0[1], l0, h + 2, true);
+        x = s1[0];
+        z = s1[1];
+        l = l0;
+        break;
+      }
+      // 0.9.72 : tube en virage TRR / TLL (2×2, rayon 48 m), entre des sections de tube (TI … TO).
+      case "TRR":
+      case "TLL": {
+        const sg = op === "TRR" ? 1 : -1, c = rot(h, 0.5 * sg, -0.5);
+        place(sg > 0 ? "tubeTurn" : "tubeTurnL", Math.round(x + 0.5 + c.x - 1), Math.round(z + 0.5 + c.z - 1), l, h);
+        const nx = rot(h, 2 * sg, -1);
+        x += nx.x;
+        z += nx.z;
+        h = h + (sg > 0 ? 1 : 3) & 3;
+        break;
+      }
+      // 0.9.71 : carrefours. JX croisement tout droit, JXR / JXL en tournant ; JT carrefour en T, la branche à droite (JTL : à gauche), tout droit ;
+      // JTD / JTG : on prend la branche (à droite / à gauche) ; JR / JL : on arrive par la branche du T et on tourne à droite / à gauche.
+      // Repasser par un carrefour déjà posé (circuit en 8) : le même jeton, au même endroit et au même niveau.
+      case "JX":
+        junction("cross", h, 0);
+        break;
+      case "JXR":
+        junction("cross", h, 1);
+        break;
+      case "JXL":
+        junction("cross", h, -1);
+        break;
+      case "JT":
+        junction("tee", h, 0);
+        break;
+      case "JTL":
+        junction("tee", h + 2, 0);
+        break;
+      case "JTD":
+        junction("tee", h, 1);
+        break;
+      case "JTG":
+        junction("tee", h + 2, -1);
+        break;
+      case "JR":
+        junction("tee", h + 1, 1);
+        break;
+      case "JL":
+        junction("tee", h + 1, -1);
+        break;
+      // 0.9.70 : largeur de route : N route étroite (N3 : trois), NI rétrécissement (24 → 12 m), NO élargissement (12 → 24 m) ;
+      // WI élargissement vers la route large (3×3, 24 → 56 m), W route large (3×3), WO retour à la largeur normale.
+      case "N":
+        for (let i = 0; i < n; i++) {
+          place("narrow", x, z, l, h);
+          adv(h);
+        }
+        break;
+      case "NI":
+        place("narrowIn", x, z, l, h);
+        adv(h);
+        break;
+      case "NO":
+        place("narrowIn", x, z, l, h + 2, true);
+        adv(h);
+        break;
+      case "WI":
+        centered("wideIn");
+        break;
+      case "W":
+        for (let i = 0; i < n; i++) centered("wide");
+        break;
+      case "WO":
+        centered("wideIn", true);
+        break;
+      // 0.9.68 : chicanes : ZR / ZL décalage d'une colonne à droite / à gauche, longueur 2 (défaut), 3 ou 4 cases (ZR3, ZL4…) ; ZZR / ZZL grand S (3×3, deux colonnes).
+      case "ZR":
+      case "ZL": {
+        const len = n <= 2 ? 2 : n === 3 ? 3 : 4, base = len === 2 ? "sbend" : len === 3 ? "sbendLong" : "sbendFast";
+        sbendPiece(op === "ZR" ? base : base + "L");
+        break;
+      }
+      case "ZZR":
+        sbendPiece("sbendWide");
+        break;
+      case "ZZL":
+        sbendPiece("sbendWideL");
+        break;
       case "UX":
         place("steep4", x, z, l, h);
         l += 4;
@@ -7308,15 +8853,16 @@ function forkPath(tile, branch, reverse) {
 // js/tracks.js
 var BUILTIN_TRACKS = [
   {
-    // Chapitre 1 · 1/6 — SPRINT d'initiation (0.9.67 : refait deux fois plus long, esprit PolyTrack). Ouverture : deux boosters puis un premier wall-ride (transitions douces 2×2).
-    // Puis une bosse en S, un virage géant, une longue descente qui lance la voiture, une première bifurcation (petit saut tout droit, ou voie de côté), deux virages géants et
-    // un très grand virage plat. Aucun virage serré : le chrono se joue sur la vitesse de pointe et la trajectoire.
+    // Chapitre 1 · 1/6 — SPRINT d'initiation (0.9.74 : refait AUTOUR des nouvelles pièces, pour servir de référence). Ouverture : départ sous une arche, deux boosters, puis un
+    // slalom de chicanes rapides (droite, gauche) et un premier wall-ride (transitions douces 2×2). Bifurcation (petit saut tout droit, ou voie de côté), puis un CROISEMENT traversé deux fois : la route en repart pour une
+    // boucle de trois virages géants et y revient de côté. Route large sous un portique en poutres entre quatre piliers, chicanes longues, un dernier virage géant ; arrivée entre deux
+    // pylônes. Chevrons avant les virages, panneaux danger avant le croisement. Aucun virage serré : le chrono se joue sur la vitesse et la trajectoire.
     id: "eclats",
     name: "Premiers \xC9clats",
     decor: "desert",
     difficulty: 1,
     profil: "sprint",
-    appris: "D\xE9part : deux boosters \u2192 premier wall-ride (transitions douces 2\xD72). Au programme : vitesse de pointe, virages g\xE9ants, longue descente, premi\xE8re bifurcation : petit saut tout droit ou voie de c\xF4t\xE9.",
+    appris: "D\xE9part : sous une arche, deux boosters \u2192 slalom de chicanes rapides. Au programme : premier wall-ride, bifurcation (petit saut ou voie de c\xF4t\xE9), croisement travers\xE9 deux fois (trois virages g\xE9ants), route large sous un portique, chicanes longues.",
     goal: {
       id: "under",
       t: 50.5
@@ -7327,12 +8873,76 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start B2 [tr01l] S4< [tr10l] S B S [crs1] S2 [cds1] S2 XR S4 C S2 [cdi1] [dn2] [cdo1] S2 SPL U G1 D S ALT S4 MRG S3 XL S4 B S2 C S2 HR S2 [crs1] S2 [cds1] S2 XL S4 B finish",
+    script: "start*2 B2 ZR4 B ZL4 [tr01l] S2< [tr10l] C*1 S SPL U G1 D S ALT S4 MRG S JX S4 XR XR XR S4 JX C*1 WI W WO S ZR3 S ZL3 S XL S3 B finish*3",
+    obst: [
+      {
+        k: "board_right",
+        at: 0.06,
+        side: -20,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.14,
+        side: 20,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.43,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.515,
+        side: -24,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.665,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.734,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillar",
+        at: 0.722,
+        side: 36
+      },
+      {
+        k: "pillar",
+        at: 0.722,
+        side: -36
+      },
+      {
+        k: "pillar",
+        at: 0.747,
+        side: 36
+      },
+      {
+        k: "pillar",
+        at: 0.747,
+        side: -36
+      },
+      {
+        k: "board_left",
+        at: 0.9,
+        side: 24,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 46,
-      or: 48.4,
-      argent: 55.7,
-      bronze: 65.3
+      cristal: 45.8,
+      or: 48.2,
+      argent: 55.4,
+      bronze: 65
     }
   },
   {
@@ -7474,15 +9084,15 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 1 · 2/6 — SPEEDWAY (0.9.67 : refait, deux fois plus long). Ouverture : un booster puis directement un très grand virage relevé. Aucun virage serré : wall-ride de
-    // 6 cases sur la paroi du canyon (mur droit), trois virages géants pris au-dessus de 200 km/h, une descente douce, une bifurcation (voie directe, ou grand saut à gauche) et peu
-    // de boosters : la vitesse vient des descentes et des grandes courbes.
+    // Chapitre 1 · 2/6 — SPEEDWAY (0.9.74 : refait AUTOUR des nouvelles pièces). Ouverture : un booster et la vallée s'élargit aussitôt (route de 56 m sous un portique en poutres).
+    // Trois fois la vallée s'élargit et se resserre, chaque fois sous un portique ; virages géants pris au-dessus de 200 km/h, chicanes rapides, wall-ride de 6 cases sur la paroi
+    // du canyon le long d'une rangée de piliers, bifurcation (voie directe, ou grand saut à gauche). Chevrons avant les virages. Aucun virage serré.
     id: "canyon",
     name: "Canyon Corail",
     decor: "desert",
     difficulty: 2,
     profil: "speedway",
-    appris: "D\xE9part : un booster \u2192 directement un tr\xE8s grand virage relev\xE9. Au programme : wall-ride de 6 cases sur la paroi du canyon, virages g\xE9ants au-dessus de 200 km/h, descente douce, bifurcation : voie directe ou grand saut.",
+    appris: "D\xE9part : un booster \u2192 la vall\xE9e s\u2019\xE9largit aussit\xF4t (route de 56 m). Au programme : trois routes larges sous des portiques, virages g\xE9ants au-dessus de 200 km/h, chicanes rapides, wall-ride le long des piliers, bifurcation : voie directe ou grand saut.",
     goal: {
       id: "nowall"
     },
@@ -7492,12 +9102,71 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 72
     },
-    script: "start B BRR B3 S2 [tr02l] S6> [tr20l] C S XR S2 [cdi1] [dn2] [cdo1] S BRR S2 C S3 XL S SPLL S4 ALT U G2 D MRG S2 XR S3 [crs1] S2 [cds1] S BLL S2 B C S2 XL S4 B finish",
+    script: "start B WI W2 WO XR S ZR4 S2 [tr02l] S6> [tr20l] S C WI W WO XR S2 SPLL S4 ALT U G2 D MRG S2 XR WI W WO S ZL4 XL S2 B finish*2",
+    obst: [
+      {
+        k: "gantry",
+        at: 0.048,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "gantry",
+        at: 0.472,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "gantry",
+        at: 0.788,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillarBase",
+        at: 0.3,
+        side: -24
+      },
+      {
+        k: "pillarBase",
+        at: 0.33,
+        side: -24
+      },
+      {
+        k: "pillarBase",
+        at: 0.36,
+        side: -24
+      },
+      {
+        k: "board_right",
+        at: 0.095,
+        side: -24,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.505,
+        side: -24,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.735,
+        side: -24,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.905,
+        side: 24,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 48.4,
-      or: 51,
-      argent: 58.6,
-      bronze: 68.8
+      cristal: 45.2,
+      or: 47.6,
+      argent: 54.7,
+      bronze: 64.2
     }
   },
   {
@@ -7528,15 +9197,16 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 1 · 3/6 — ACROBATIQUE (0.9.67 : refait, deux fois plus long). Ouverture : chute libre immédiate, depuis l'arrêt (la voiture quitte la plateforme de départ et se
-    // réceptionne sur une descente à 38°). Puis six sauts : deux tremplins, un saut sur un mur, une rampe à 38°, une bifurcation (sauter la terrasse ou
-    // descendre la pente) et un dernier saut avec anneau turbo ; il se finit de 158 à 238 km/h à l'abord des rampes (test-niveaux). Chaque checkpoint est suivi de deux boosters avant la rampe : on peut repartir À L'ARRÊT de chacun.
+    // Chapitre 1 · 3/6 — ACROBATIQUE (0.9.74 : refait AUTOUR des nouvelles pièces). Ouverture : chute libre immédiate, depuis l'arrêt (la voiture quitte la plateforme de départ et se
+    // réceptionne sur une descente à 38°). Cinq sauts : quatre se reçoivent sur des PLAQUES bordées sur leurs côtés (dont un saut qui retombe deux niveaux plus bas, sans rampe de réception),
+    // des chicanes longues entre les sauts, un wall-ride sur le mur gauche, une rampe à 38°, une bifurcation (sauter la terrasse ou descendre la pente) et un dernier saut à travers un anneau turbo. Chaque checkpoint
+    // (entre deux pylônes) est suivi de deux boosters avant la rampe : on peut repartir À L'ARRÊT de chacun. Chevrons de montée avant les rampes.
     id: "tremplins",
     name: "Tremplins du Cr\xE9puscule",
     decor: "desert",
     difficulty: 2,
     profil: "acrobatique",
-    appris: "D\xE9part : chute libre (la voiture quitte la plateforme de d\xE9part, \xE0 l\u2019arr\xEAt). Au programme : six sauts de plus en plus grands, saut sur un mur, rampe \xE0 38\xB0, bifurcation : sauter la terrasse ou descendre la pente.",
+    appris: "D\xE9part : chute libre (la voiture quitte la plateforme de d\xE9part, \xE0 l\u2019arr\xEAt). Au programme : cinq sauts re\xE7us sur des plaques, chicanes, wall-ride, rampe \xE0 38\xB0, bifurcation : sauter la terrasse ou descendre la pente, dernier saut dans un anneau.",
     goal: {
       id: "perfect",
       n: 1
@@ -7547,12 +9217,38 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start V-5 [dn4] [cdo2] S C B2 S [crv1] UU G2 DD [cdo1] S XR S C B2 S [crv1] UU G2 DD [cdo1] S2 CBR1 S [tr01s] S2< [tr10s] S LL S C B2 S2 [crv2] UX G2 DX DX [cdo2] S SPL S2 G1 V-2 S ALT [dn2] S3 MRG S XL S C B2 S UU GR2 DD [cdo1] S3 finish",
+    script: "start V-5 [dn4] [cdo2] S C*3 B2 S [crv1] UU G2 DD [cdo1] [plate3]*10 ZR3 S C*3 B2 S [crv1] UU G2 V-2 [plate3]*10 S XR S [tr01s] S2< [tr10s] S C*3 B2 S [crv2] UX G2 DX DX [cdo2] [plate3]*10 ZL3 SPL S2 G1 V-2 S ALT [dn2] S3 MRG S XL S C*3 B2 S UU GR2 DD [cdo1] [plate2]*10 S2 finish",
+    obst: [
+      {
+        k: "board_up",
+        at: 0.1,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_up",
+        at: 0.31,
+        side: -18,
+        rot: Math.PI
+      },
+      {
+        k: "board_up",
+        at: 0.495,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_up",
+        at: 0.875,
+        side: -18,
+        rot: Math.PI
+      }
+    ],
     medals: {
       cristal: 55.9,
-      or: 58.8,
-      argent: 67.6,
-      bronze: 79.4
+      or: 58.9,
+      argent: 67.7,
+      bronze: 79.5
     }
   },
   {
@@ -7790,15 +9486,16 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 1 · 4/6 — ROLLERCOASTER (spirale ; placé avant Lac Gelé pour que deux Rollercoasters ne se suivent pas ; 0.9.67 : refait, deux fois plus long). Ouverture :
-    // trois boosters puis directement un grand looping. Hélice montante de quatre grandes courbes inclinées (16 niveaux), checkpoint au sommet, plongeon à 38°, slalom de wall-rides
-    // gauche / droite, virage géant, tire-bouchon, bifurcation (tout droit, ou par le mur de droite), grand looping à gauche et dernier wall-ride.
+    // Chapitre 1 · 4/6 — ROLLERCOASTER (spirale ; placé avant Lac Gelé pour que deux Rollercoasters ne se suivent pas ; 0.9.74 : refait AUTOUR des nouvelles pièces). Ouverture :
+    // trois boosters puis directement un LOOPING MODULAIRE (deux murs de chaque côté). Hélice montante de quatre grandes courbes inclinées (16 niveaux), checkpoint au sommet, plongeon
+    // à 38°, slalom de wall-rides et chicanes longues, virage géant, un TUBE qui tourne à gauche puis à droite, bifurcation (tout droit, ou par le mur de droite), deux autres loopings
+    // modulaires (quatre murs, puis aucun) ; arrivée sous une arche. Panneaux danger avant les loopings, chevrons avant les virages géants.
     id: "spirale",
     name: "Spirale Prismatique",
     decor: "desert",
     difficulty: 3,
     profil: "rollercoaster",
-    appris: "D\xE9part : trois boosters \u2192 directement un grand looping. Au programme : h\xE9lice montante de 16 niveaux, plongeon \xE0 38\xB0, slalom de wall-rides, tire-bouchon, bifurcation : tout droit ou par le mur, grand looping \xE0 gauche.",
+    appris: "D\xE9part : trois boosters \u2192 directement un looping modulaire. Au programme : h\xE9lice de 16 niveaux, plongeon \xE0 38\xB0, wall-rides et chicanes, tube qui tourne, bifurcation : tout droit ou par le mur, trois loopings modulaires de hauteurs diff\xE9rentes.",
     goal: {
       id: "norespawn"
     },
@@ -7808,24 +9505,56 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 52
     },
-    script: "start B3 OB S B CBR4 CBR4 CBR4 CBR4 S C [cdi2] DX DX DX [cdo2] B S [tr01s] S2< [tr10s] S [tr02s] S3> [tr20s] S XL S C B S CK S SPL S4 ALT [tr02s] S2> [tr20s] MRG S XR B S OBL S [tr01s] S3< [tr10s] S B2 finish",
+    script: "start B3 LPR2 S B CBR4 CBR4 CBR4 CBR4 S C [cdi2] DX DX DX [cdo2] B S [tr01s] S2< [tr10s] S ZR3 [tr02s] S3> [tr20s] S XL S C B TI TM TRR TM TLL TM TO S SPL S4 ALT [tr02s] S2> [tr20s] MRG S XR B S LPL4 S ZL3 [tr01s] S3< [tr10s] S B LPR0 S B2 finish*2",
+    obst: [
+      {
+        k: "board_warn",
+        at: 0.02,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.675,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.912,
+        side: -18,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.405,
+        side: 24,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.647,
+        side: -24,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 60.6,
-      or: 63.8,
-      argent: 73.4,
-      bronze: 86.2
+      cristal: 68.9,
+      or: 72.5,
+      argent: 83.4,
+      bronze: 97.9
     }
   },
   {
-    // Chapitre 1 · 4/6 — TECHNIQUE (0.9.67 : refait, deux fois plus long). Ouverture : une épingle descendante dès le départ. Dix-huit virages serrés, des freinages forts
-    // avant chaque épingle et un booster à chaque relance ; de la glace avant les épingles (on ne freine plus dessus), une chicane sur un mur, une courbe montante serrée, deux
-    // checkpoints dans un virage et une bifurcation (ligne droite verglacée, ou détour qui accroche).
+    // Chapitre 1 · 4/6 — TECHNIQUE (0.9.74 : refait AUTOUR des nouvelles pièces). Ouverture : une route étroite (12 m) qui mène à une épingle sur la glace. Deux NŒUDS EN 8 :
+    // la route repasse chaque fois par le même croisement (lacets serrés autour), des chicanes en S, une seconde route étroite après le wall-ride, de la glace avant les épingles,
+    // un checkpoint dans un virage et une bifurcation (ligne droite verglacée, ou détour qui accroche). Panneaux danger avant les croisements, demi-tour avant une épingle.
     id: "verglas",
     name: "Lac Gel\xE9",
     decor: "desert",
     difficulty: 3,
     profil: "technique",
-    appris: "D\xE9part : \xE9pingle descendante d\xE8s le d\xE9part. Au programme : 18 virages serr\xE9s, glace avant les \xE9pingles, chicane sur un mur, checkpoints dans les virages, bifurcation : ligne verglac\xE9e ou d\xE9tour qui accroche.",
+    appris: "D\xE9part : sur une route \xE9troite, \xE9pingle sur la glace. Au programme : virages serr\xE9s, deux n\u0153uds en 8 par des croisements, chicanes en S, wall-ride, seconde route \xE9troite, glace avant les \xE9pingles, bifurcation : ligne verglac\xE9e ou d\xE9tour qui accroche.",
     goal: {
       id: "turbo",
       n: 2
@@ -7833,12 +9562,50 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start [cvd05] [cvd05] B S3 L I B S R L S B S2 R S R B S2 [tr01s] S2< [tr10s] S3 L S L B I S3 KR S R S2 B C S CVR1 L S R S SPLL I3 ALT S3 MRG S L B S2 R [cvd1] S KL S2 B S2 finish",
+    script: "start NI N NO L I B R L S B JX R S R R S JX R B S2 L ZR ZL R S B C S R L JX L S L L S JX L B S2 [tr01s] S2< [tr10s] NI N2 NO R S L B I S3 KR S R S2 B C SPLL I3 ALT S3 MRG S L B S2 R [cvd1] S KL S2 B finish",
+    obst: [
+      {
+        k: "board_left",
+        at: 0.03,
+        side: 12,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.112,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.373,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "board_right",
+        at: 0.252,
+        side: -16,
+        rot: Math.PI
+      },
+      {
+        k: "board_left",
+        at: 0.28,
+        side: 16,
+        rot: Math.PI
+      },
+      {
+        k: "sign_uturn",
+        at: 0.62,
+        side: 12,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 64.1,
-      or: 67.5,
-      argent: 77.6,
-      bronze: 91.1
+      cristal: 79.2,
+      or: 83.4,
+      argent: 95.9,
+      bronze: 112.6
     }
   },
   {
@@ -8119,27 +9886,81 @@ var BUILTIN_TRACKS = [
     }
   },
   {
-    // Chapitre 1 · 5/6 — ROLLERCOASTER (0.9.67 : refait, la finale du chapitre). Ouverture : trois boosters puis une montée verticale (montée en L, mur de 3, sommet). Chute,
-    // virage relevé, slalom de wall-rides gauche / droite, grand looping, arche mur → plafond → mur, virage géant, bifurcation (petit saut tout droit, ou par le mur de droite),
-    // double looping, hélice montante à gauche, descente, second virage géant, tire-bouchon et bosses en S. Plus de 20 cases sur un mur.
+    // Chapitre 1 · 5/6 — ROLLERCOASTER (la finale du chapitre ; 0.9.74 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters puis une montée verticale (montée en L,
+    // mur de 3, sommet). Chute, virage relevé, slalom de wall-rides gauche / droite, LOOPING MODULAIRE à droite, chicane longue, arche mur → plafond → mur, virage géant, ROUTE LARGE
+    // sous un portique, bifurcation (petit saut tout droit, ou par le mur de droite), un TUBE qui tourne, hélice montante à gauche, descente, second virage géant, ARCHE PLEINE entre
+    // deux murs pleins, chicane longue et LOOPING MODULAIRE à gauche ; arrivée sous une arche. Plus de 20 cases sur un mur.
     id: "grandtour",
     name: "Le Grand Tour",
     decor: "desert",
     difficulty: 4,
     profil: "rollercoaster",
-    appris: "D\xE9part : trois boosters \u2192 mont\xE9e verticale (mont\xE9e en L, mur, sommet). Au programme : slalom de wall-rides, grand looping, arche mur \u2192 plafond \u2192 mur, bifurcation saut ou mur, double looping, tire-bouchon, virages g\xE9ants.",
+    appris: "D\xE9part : trois boosters \u2192 mont\xE9e verticale (mont\xE9e en L, mur, sommet). Au programme : wall-rides, deux loopings modulaires, arche mur \u2192 plafond \u2192 mur, route large, bifurcation saut ou mur, tube qui tourne, virages g\xE9ants, arche pleine entre deux murs.",
     goal: {
       id: "norespawn"
     },
     opts: {
       l: 3
     },
-    script: "start B3 QU WA3 CR S [cdi2] DX [cdo2] B BRR S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 OB S C S [tr01s] S2< [tr13s] S2^ [tr31s] S2< [tr10s] S2 XR S2 C S3 SPL U G1 D S ALT [tr02s] S2> [tr20s] MRG S OD S B2 CBL2 CBL2 S [cdi1] [dn2] [cdo1] XR S2 C B3 S CK S [crs1] S [cds1] S2 finish",
+    script: "start B3 QU WA3 CR S [cdi2] DX [cdo2] B BRR S [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B2 LPR1 S C S ZR3 [tr01s] S2< [tr13s] S2^ [tr31s] S2< [tr10s] S2 XR S2 C WI W WO SPL U G1 D S ALT [tr02s] S2> [tr20s] MRG S B2 TI TLL TRR TO CBL2 CBL2 S [cdi1] [dn2] [cdo1] XR S2 C B3 ZL3 LPL1 S2 finish*2",
+    obst: [
+      {
+        k: "board_warn",
+        at: 0.3,
+        side: 18,
+        rot: Math.PI
+      },
+      {
+        k: "board_warn",
+        at: 0.905,
+        side: -18,
+        rot: Math.PI
+      },
+      {
+        k: "gantry",
+        at: 0.605,
+        side: 0,
+        s: 2
+      },
+      {
+        k: "pillar",
+        at: 0.6,
+        side: 36
+      },
+      {
+        k: "pillar",
+        at: 0.6,
+        side: -36
+      },
+      {
+        k: "archS",
+        at: 0.847,
+        side: 0
+      },
+      {
+        k: "wallS",
+        at: 0.84,
+        side: 26,
+        rot: Math.PI / 2
+      },
+      {
+        k: "wallS",
+        at: 0.84,
+        side: -26,
+        rot: Math.PI / 2
+      },
+      {
+        k: "board_right",
+        at: 0.555,
+        side: -24,
+        rot: Math.PI
+      }
+    ],
     medals: {
-      cristal: 75.2,
-      or: 79.2,
-      argent: 91.1,
-      bronze: 106.9
+      cristal: 78.2,
+      or: 82.4,
+      argent: 94.7,
+      bronze: 111.2
     }
   },
   {
@@ -9415,15 +11236,21 @@ function buildBuiltin(def) {
       const a = P[i], b = P[i + 1];
       const dx = b[0] - a[0], dz = b[2] - a[2], l = hypot2(dx, dz) || 1;
       const q = (v, st) => Math.round(v / st) * st;
-      const ry = q(datan2(dx / l, dz / l), Math.PI / 8);
+      let ry = q(datan2(dx / l, dz / l), Math.PI / 8);
+      if (o.rot || !isObstacle(o.k)) {
+        let k = Math.round((ry + (o.rot || 0)) / (Math.PI / 8));
+        while (k > 8) k -= 16;
+        while (k <= -8) k += 16;
+        ry = k * Math.PI / 8;
+      } else ry = +ry.toFixed(4);
       t.addDeco({
         k: o.k,
         x: q(a[0] + -dz / l * (o.side || 0), 0.5),
-        y: q(a[1], 0.1),
+        y: q(a[1] + (o.dy || 0), 0.1),
         z: q(a[2] + dx / l * (o.side || 0), 0.5),
-        ry: +ry.toFixed(4),
+        ry,
         s: o.s || 1,
-        c: 0,
+        c: o.c || 0,
         ph: o.ph || 0
       });
     }
@@ -9712,6 +11539,12 @@ var HIT = {
   nx: 0,
   nz: 0
 };
+var ED = {
+  d: 0,
+  nx: 0,
+  nz: 0,
+  on: false
+};
 var wallMethods = {
   _bounds() {
     const p = this.pos, v = this.vel;
@@ -9898,7 +11731,7 @@ var wallMethods = {
       if (tile.mv || this.excl.has(tile)) continue;
       if (this._probeTile(tile, x, z, px, pz, y, mx, mz)) return HIT;
     }
-    if (!this.track.hasMovers) return null;
+    if (!this.track.hasMovers) return this.track.hasSolids ? this._probeSolids(x, z, px, pz, y) : null;
     const time = this.time;
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
@@ -9916,11 +11749,57 @@ var wallMethods = {
         }
       } else if (this._probeTile(tile, x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y)) return HIT;
     }
-    return null;
+    return this.track.hasSolids ? this._probeSolids(x, z, px, pz, y) : null;
+  },
+  // 0.9.69 : bordures d'une plaque (option eb, un bit par bord : pieces.js plateEdges). Une bordure occupe la bande [0, RAIL_W] à l'intérieur du bord, sur RAIL_H
+  // de haut ; même hauteur jugée et même sortie (côté d'où vient la sonde) qu'une bordure de route.
+  _probeEdges(tile, P, x, z, px, pz, y) {
+    if (!(isFloor(tile) || isCeilingFloor(tile))) return false;
+    toLocal(tile, x, z, L1);
+    sampleLocal(tile, L1.lx, L1.lz, S1);
+    const h = tile.v ? 2 * baseY(tile) - S1.h : S1.h, H = CAR.height, g = this.gSign;
+    const ylo = g > 0 ? y : y - H, yhi = g > 0 ? y + H : y;
+    if (tile.v ? ylo > h + SLAB_T + 0.2 || yhi < h - RAIL_H + 0.15 : ylo > h + RAIL_H - 0.15 || yhi < h - SLAB_T - 0.2) return false;
+    toLocal(tile, px, pz, L2);
+    const R = CAR.radius, edges = plateEdges(P);
+    for (let i = 0; i < edges.length; i++) {
+      if (!(tile.eb & 1 << i)) continue;
+      edgeDist(edges[i], L1.lx, L1.lz, R, ED);
+      if (!ED.on || ED.d - R >= RAIL_W || ED.d + R <= 0) continue;
+      const dIn = ED.d, nx = ED.nx, nz = ED.nz;
+      edgeDist(edges[i], L2.lx, L2.lz, R, ED);
+      const inside = ED.d > RAIL_W * 0.5;
+      const push = (inside ? RAIL_W + R : -R) - dIn;
+      rotVec(tile.r, nx, nz, W12);
+      HIT.dx = W12.x * push;
+      HIT.dz = W12.z * push;
+      HIT.nx = inside ? W12.x : -W12.x;
+      HIT.nz = inside ? W12.z : -W12.z;
+      return true;
+    }
+    return false;
+  },
+  // 0.9.68 : solides (piliers, poutres, murs, blocs : solids.js) : leurs côtés sont des bordures pour la sonde (même choc, même frottement).
+  _probeSolids(x, z, px, pz, y) {
+    const H = CAR.height, g = this.gSign, py = this.prev.y;
+    const ylo = g > 0 ? y : y - H, yhi = g > 0 ? y + H : y, plo = g > 0 ? py : py - H;
+    return solidSide(this.track.solidIndex, x, z, px, pz, ylo, yhi, plo, CAR.radius, SOLID_STEP, HIT, this.hiddenDecos) ? HIT : null;
+  },
+  // 0.9.68 : dessous d'un solide (une poutre au-dessus d'un tremplin) : une voiture qui saute dessous s'y cogne et retombe (gravité normale ; comme le dessous d'une dalle).
+  _solidRoof() {
+    if (this.gSign < 0 || this.grounded || !this.track.hasSolids) return;
+    const p = this.pos, v = this.vel, H = CAR.height;
+    const lo = solidCeiling(this.track.solidIndex, p.x, p.z, p.y, p.y + H, this.prev.y + H, this.hiddenDecos);
+    if (!Number.isNaN(lo)) {
+      p.y = lo - H;
+      if (v.y > 0) v.y = -v.y * 0.2;
+      this.ev.wall = Math.max(this.ev.wall, 2);
+    }
   },
   _probeTile(tile, x, z, px, pz, y, mx, mz) {
     const P = PIECES[tile.t];
-    if (P.kind === "area" || tile.nb && !tile.tn || !(isFloor(tile) || isCeilingFloor(tile))) return false;
+    if (P.kind === "area") return tile.eb ? this._probeEdges(tile, P, x, z, px, pz, y) : false;
+    if (tile.nb && !tile.tn || !(isFloor(tile) || isCeilingFloor(tile))) return false;
     let dh = 0;
     if (P.rise && (this.grounded || this.airTime < 0.25) && mx !== void 0) {
       toLocal(tile, mx, mz, L2);
@@ -9963,7 +11842,7 @@ var wallMethods = {
 var OB = {};
 var OL = {};
 var RW = {};
-var fin = Number.isFinite;
+var fin2 = Number.isFinite;
 var obstacleMethods = {
   // Le temps des obstacles est le chrono de la course (this.clock = pas de course, fixé
   // par l'appelant avant chaque pas) : même mouvement en replay et après un retour (R).
@@ -9992,16 +11871,16 @@ var obstacleMethods = {
   _obstacleContact(d, t) {
     const p = this.pos, v = this.vel, n0 = this.n;
     const cx = p.x + n0.x * 0.8, cy = p.y + n0.y * 0.8, cz = p.z + n0.z * 0.8;
-    if (!d || !OBST[d.k] || !fin(d.x) || !fin(d.y) || !fin(d.z) || !fin(d.s || 1) || !fin(d.ry || 0)) return false;
+    if (!d || !OBST[d.k] || !fin2(d.x) || !fin2(d.y) || !fin2(d.z) || !fin2(d.s || 1) || !fin2(d.ry || 0)) return false;
     if (Math.abs(cx - d.x) > 40 || Math.abs(cz - d.z) > 40) return false;
     const rr = obstacleRadius(d) + 3 + (d.rz ? 14 * (d.s || 1) : 0);
     const ox = cx - d.x, oz = cz - d.z;
     if (ox * ox + oz * oz > rr * rr) return false;
     const def = OBST[d.k], k = d.s || 1, rc = 1.4 / k;
-    if (!(k > 0) || !fin(rc)) return false;
+    if (!(k > 0) || !fin2(rc)) return false;
     obstacleLocal(d, t, OB);
     toLocalObs(d, cx, cy, cz, OL);
-    if (!(fin(OB.x) && fin(OB.y) && fin(OB.z) && fin(OB.vx) && fin(OB.vy) && fin(OB.vz) && fin(OB.on) && fin(OL.x) && fin(OL.y) && fin(OL.z))) return false;
+    if (!(fin2(OB.x) && fin2(OB.y) && fin2(OB.z) && fin2(OB.vx) && fin2(OB.vy) && fin2(OB.vz) && fin2(OB.on) && fin2(OL.x) && fin2(OL.y) && fin2(OL.z))) return false;
     let nx = 0, ny = 0, nz = 0, pen = 0, ovx = 0, ovy = 0, ovz = 0;
     if (def.type === "spike") {
       if (OB.on < 0.4 || this.graceT > 0) return false;
@@ -10105,7 +11984,7 @@ var obstacleMethods = {
     }
     let wx = nx * c + nz * sn, wz = -nx * sn + nz * c, wy = ny;
     const vwx = (ovx * c + ovz * sn) * k, vwz = (-ovx * sn + ovz * c) * k, vwy = ovy * k;
-    if (!(fin(wx) && fin(wy) && fin(wz) && fin(vwx) && fin(vwy) && fin(vwz))) return false;
+    if (!(fin2(wx) && fin2(wy) && fin2(wz) && fin2(vwx) && fin2(vwy) && fin2(vwz))) return false;
     if (d.rz) {
       if (this.grounded) {
         const dn = wx * n0.x + wy * n0.y + wz * n0.z;
@@ -10261,11 +12140,11 @@ var ribbonMethods = {
             vd: 0,
             psi: 0
           };
-          const B2 = this._basis(R, F);
-          R.vs = v.x * B2.e1x + v.y * B2.e1y + v.z * B2.e1z;
-          R.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
+          const B3 = this._basis(R, F);
+          R.vs = v.x * B3.e1x + v.y * B3.e1y + v.z * B3.e1z;
+          R.vd = v.x * B3.e2x + v.y * B3.e2y + v.z * B3.e2z;
           const h = this.fwd;
-          R.psi = datan2(h.x * B2.e2x + h.y * B2.e2y + h.z * B2.e2z, h.x * B2.e1x + h.y * B2.e1y + h.z * B2.e1z);
+          R.psi = datan2(h.x * B3.e2x + h.y * B3.e2y + h.z * B3.e2z, h.x * B3.e1x + h.y * B3.e1y + h.z * B3.e1z);
           this.rib = R;
           this.ev.loopIn = true;
           this._ribPlace(R);
@@ -10327,11 +12206,11 @@ var ribbonMethods = {
         psi: 0
       };
       R.dl = clamp(dl * R.dir, -ROAD_HALF + 1, ROAD_HALF - 1) * R.dir;
-      const B2 = this._basis(R, F);
-      R.vs = v.x * B2.e1x + v.y * B2.e1y + v.z * B2.e1z;
-      R.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
+      const B3 = this._basis(R, F);
+      R.vs = v.x * B3.e1x + v.y * B3.e1y + v.z * B3.e1z;
+      R.vd = v.x * B3.e2x + v.y * B3.e2y + v.z * B3.e2z;
       const h = this.fwd;
-      R.psi = datan2(h.x * B2.e2x + h.y * B2.e2y + h.z * B2.e2z, h.x * B2.e1x + h.y * B2.e1y + h.z * B2.e1z);
+      R.psi = datan2(h.x * B3.e2x + h.y * B3.e2y + h.z * B3.e2z, h.x * B3.e1x + h.y * B3.e1y + h.z * B3.e1z);
       this.ev.land = -vn;
       const kq = this._landing(F.nx, F.ny, F.nz);
       R.vs *= kq;
@@ -10394,7 +12273,7 @@ var ribbonMethods = {
     this._cross(R, F);
     const kc = F.kc || 0;
     const kn = kn0 * F.cc - kg0 * F.cs, kg = kg0 * F.cc + kn0 * F.cs;
-    const B2 = this._basis(R, F);
+    const B3 = this._basis(R, F);
     if (tile.s === "flip" || ribbonInverts(tile)) {
       const ng = F.ny >= -0.05 ? 1 : -1;
       if (ng !== this.gSign) {
@@ -10405,8 +12284,8 @@ var ribbonMethods = {
     const g = this.g * this.gSign;
     const sidePiece = isSideTile(tile);
     const hold = sidePiece ? Math.min(1, SIDE_HOLD * R.vs * R.vs / Math.max(1, this.g)) : 0;
-    R.vs -= g * B2.e1y * dt;
-    R.vd -= g * B2.e2y * dt * (1 - hold);
+    R.vs -= g * B3.e1y * dt;
+    R.vd -= g * B3.e2y * dt * (1 - hold);
     if (sidePiece && Math.abs(F.ny) < 0.7 && Math.abs(R.vs) < SIDE_MIN_SPEED) {
       R.lowT = (R.lowT || 0) + dt;
       if (R.lowT > SIDE_GRACE) {
@@ -10429,8 +12308,8 @@ var ribbonMethods = {
     let envGrip = P.grip;
     if (P.grip !== 1) gripK *= P.grip;
     if (P.windOn) {
-      R.vs += (P.windX * B2.e1x + P.windZ * B2.e1z) * dt;
-      R.vd += (P.windX * B2.e2x + P.windZ * B2.e2z) * dt;
+      R.vs += (P.windX * B3.e1x + P.windZ * B3.e1z) * dt;
+      R.vd += (P.windX * B3.e2x + P.windZ * B3.e2z) * dt;
     }
     const E = this.env;
     if (E) {
@@ -10442,8 +12321,8 @@ var ribbonMethods = {
       }
       if (E.gust) {
         const g2 = E.gustAt(st);
-        R.vs += (g2.x * B2.e1x + g2.z * B2.e1z) * dt;
-        R.vd += (g2.x * B2.e2x + g2.z * B2.e2z) * dt;
+        R.vs += (g2.x * B3.e1x + g2.z * B3.e1z) * dt;
+        R.vd += (g2.x * B3.e2x + g2.z * B3.e2z) * dt;
       }
     }
     this.envGrip = envGrip;
@@ -10452,8 +12331,8 @@ var ribbonMethods = {
     else if (mod === "wind") {
       const a = (tileParam(tile) - 100) / 100 * CAR.wind;
       rotVec(tile.r, 1, 0, TMP);
-      R.vs += (TMP.x * B2.e1x + TMP.z * B2.e1z) * a * dt;
-      R.vd += (TMP.x * B2.e2x + TMP.z * B2.e2z) * a * dt;
+      R.vs += (TMP.x * B3.e1x + TMP.z * B3.e1z) * a * dt;
+      R.vd += (TMP.x * B3.e2x + TMP.z * B3.e2z) * a * dt;
     } else if (mod === "conveyor") beltE1 = beltSpeed(tileParam(tile)) * R.dir;
     else if (mod === "spring" && this.plateLock !== "spring") {
       this.plateLock = "spring";
@@ -10568,34 +12447,34 @@ var ribbonMethods = {
       return;
     }
     const F = this._cross(R, frameWorld(R.tile, R.rib, R.u, this.F));
-    const B2 = this._basis(R, F);
-    R.vs = v.x * B2.e1x + v.y * B2.e1y + v.z * B2.e1z;
-    R.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
-    R.u = clamp(R.u + R.dir * (dx * B2.e1x + dy * B2.e1y + dz * B2.e1z) / F.ds, 0, 1);
+    const B3 = this._basis(R, F);
+    R.vs = v.x * B3.e1x + v.y * B3.e1y + v.z * B3.e1z;
+    R.vd = v.x * B3.e2x + v.y * B3.e2y + v.z * B3.e2z;
+    R.u = clamp(R.u + R.dir * (dx * B3.e1x + dy * B3.e1y + dz * B3.e1z) / F.ds, 0, 1);
     if (!F.wrap) {
       const lim = (F.hw || ROAD_HALF) - 0.2;
-      R.dl = clamp(R.dl + R.dir * (dx * B2.e2x + dy * B2.e2y + dz * B2.e2z), -lim, lim);
-    } else R.dl += R.dir * (dx * B2.e2x + dy * B2.e2y + dz * B2.e2z);
+      R.dl = clamp(R.dl + R.dir * (dx * B3.e2x + dy * B3.e2y + dz * B3.e2z), -lim, lim);
+    } else R.dl += R.dir * (dx * B3.e2x + dy * B3.e2y + dz * B3.e2z);
     this._ribPlace(R);
   },
   // Place la voiture sur le ruban (position, vitesse, orientation monde).
   _ribPlace(R) {
     const F = this._cross(R, frameWorld(R.tile, R.rib, R.u, this.F));
-    const B2 = this._basis(R, F);
+    const B3 = this._basis(R, F);
     const p = this.pos, v = this.vel;
     p.x = F.qx;
     p.y = F.qy;
     p.z = F.qz;
-    v.x = B2.e1x * R.vs + B2.e2x * R.vd;
-    v.y = B2.e1y * R.vs + B2.e2y * R.vd;
-    v.z = B2.e1z * R.vs + B2.e2z * R.vd;
+    v.x = B3.e1x * R.vs + B3.e2x * R.vd;
+    v.y = B3.e1y * R.vs + B3.e2y * R.vd;
+    v.z = B3.e1z * R.vs + B3.e2z * R.vd;
     this.n.x = F.nx;
     this.n.y = F.ny;
     this.n.z = F.nz;
     const c = dcos(R.psi), s = dsin(R.psi);
-    this.fwd.x = B2.e1x * c + B2.e2x * s;
-    this.fwd.y = B2.e1y * c + B2.e2y * s;
-    this.fwd.z = B2.e1z * c + B2.e2z * s;
+    this.fwd.x = B3.e1x * c + B3.e2x * s;
+    this.fwd.y = B3.e1y * c + B3.e2y * s;
+    this.fwd.z = B3.e1z * c + B3.e2z * s;
     if (hypot2(this.fwd.x, this.fwd.z) > 0.3) this.yaw = datan2(-this.fwd.x, -this.fwd.z);
     this.grounded = true;
     this.surfType = "road";
@@ -10640,11 +12519,11 @@ var ribbonMethods = {
         N.dl = clamp((px - F2.px) * F2.rx + (py - F2.py) * F2.ry + (pz - F2.pz) * F2.rz, -ROAD_HALF + 1, ROAD_HALF - 1);
       }
       this._cross(N, F2);
-      const B2 = this._basis(N, F2);
-      N.vs = v.x * B2.e1x + v.y * B2.e1y + v.z * B2.e1z;
-      N.vd = v.x * B2.e2x + v.y * B2.e2y + v.z * B2.e2z;
+      const B22 = this._basis(N, F2);
+      N.vs = v.x * B22.e1x + v.y * B22.e1y + v.z * B22.e1z;
+      N.vd = v.x * B22.e2x + v.y * B22.e2y + v.z * B22.e2z;
       const h2 = this.fwd;
-      N.psi = datan2(h2.x * B2.e2x + h2.y * B2.e2y + h2.z * B2.e2z, h2.x * B2.e1x + h2.y * B2.e1y + h2.z * B2.e1z);
+      N.psi = datan2(h2.x * B22.e2x + h2.y * B22.e2y + h2.z * B22.e2z, h2.x * B22.e1x + h2.y * B22.e1y + h2.z * B22.e1z);
       this.rib = N;
       this._ribPlace(N);
       return;
@@ -11491,6 +13370,7 @@ var CarPhysics = class {
     this._pinned = false;
     this._tunnelRoof();
     this._slabs();
+    this._solidRoof();
     this.pinT = this._pinned ? this.pinT + DT : Math.max(0, this.pinT - 2 * DT);
     if (this.pinT > 1) this.lost = true;
     const ox = p.x, oy = p.y, oz = p.z;
@@ -11504,14 +13384,14 @@ var CarPhysics = class {
   _roadContact() {
     const dt = DT, p = this.pos, v = this.vel, ev = this.ev;
     const gs = this.gSign;
-    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.excl, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.excl);
+    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.excl, this.time, this.hiddenDecos) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.excl);
     const gap = gs * (p.y - s.h);
     const vn = v.x * s.nx + v.y * s.ny + v.z * s.nz;
     const magnet = s.mod === "magnet";
     const launch = magnet ? Infinity : CAR.launch;
     const snap = magnet ? CAR.step : CAR.snap;
     if (!this.grounded) {
-      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.excl, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.excl);
+      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.excl, this.time, this.hiddenDecos) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.excl);
       const mg = gs * (p.y - m.h);
       if (m.mod === "magnet" && mg > 0.02 && mg < CAR.magnetRange) {
         const a = CAR.magnetAcc * (1 - mg / CAR.magnetRange) * dt;
@@ -11924,6 +13804,10 @@ var RaceLogic = class {
         this.collected.add(tile);
         this.splits.push(this.steps);
         let c = tileCenter(tile);
+        if (P.kind === "area" && P.shape) {
+          const g = areaCentroid(P);
+          c = localToWorld(tile, g.x, g.z);
+        }
         if (!P.special && P.kind === "arc") {
           const a = arcParams(P), ang = Math.PI * 1.25;
           c = localToWorld(tile, a.cx + a.R * dcos(ang), a.cz + a.R * dsin(ang));
@@ -13797,4 +15681,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "020570432b3eb7dd";
+globalThis.__COPYTRACK_BUILD__ = "f6f255d812e75a3b";

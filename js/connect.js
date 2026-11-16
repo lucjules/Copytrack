@@ -5,7 +5,7 @@
 // Une extrémité : { x, y, z } position, { dx, dy, dz } direction SORTANTE (hors de la pièce), { nx, ny, nz } normale de la route en ce point,
 // `entry` / `exit` pour une pièce à deux bouts (sens nominal : de l'entrée sud vers la sortie nord de son repère local).
 import { CELL, LEVEL_H } from './constants.js';
-import { PIECES, ORI_NAMES, baseY, localToWorld, rotVec, isRibbon, forkBranchX } from './pieces.js';
+import { PIECES, ORI_NAMES, baseY, localToWorld, rotVec, isRibbon, forkBranchX, roadHalf, JUNCTION_ENDS } from './pieces.js';
 import { centerlineWorld, ribbonOf } from './ribbons.js';
 import { hypot3 } from './dmath.js';
 
@@ -35,6 +35,9 @@ export function tileEnds(tile) {
     };
     return [mk(0, 0, false), mk(0, 1, true), mk(1, 1, true)];
   }
+  // 0.9.71 : carrefour : un bout par bras ; l'arrière (S) est l'entrée, les autres des sorties (arm : N, E, W).
+  if (P.kind === 'junction') return junctionEnds(tile, P, floorNormal(tile));
+  // (0.9.70 : chaque bout porte la demi-largeur de sa chaussée, w : 12 m sauf sur une route de largeur variable)
   const pts = centerlineWorld(tile, 6);
   if (pts.length < 2) return [];
   const a = pts[0], a2 = pts[1], b = pts[pts.length - 1], b2 = pts[pts.length - 2];
@@ -43,9 +46,17 @@ export function tileEnds(tile) {
   const ribbon = isRibbon(tile);
   const na = ribbon ? ribbonNormal(tile, 0) : floorNormal(tile), nb = ribbon ? ribbonNormal(tile, 1) : floorNormal(tile);
   return [
-    { x: a[0], y: a[1], z: a[2], dx: ax, dy: ay, dz: az, nx: na[0], ny: na[1], nz: na[2], tile, entry: true },
-    { x: b[0], y: b[1], z: b[2], dx: bx, dy: by, dz: bz, nx: nb[0], ny: nb[1], nz: nb[2], tile, exit: true },
+    { x: a[0], y: a[1], z: a[2], dx: ax, dy: ay, dz: az, nx: na[0], ny: na[1], nz: na[2], tile, entry: true, w: roadHalf(P, 0) },
+    { x: b[0], y: b[1], z: b[2], dx: bx, dy: by, dz: bz, nx: nb[0], ny: nb[1], nz: nb[2], tile, exit: true, w: roadHalf(P, 1) },
   ];
+}
+
+export function junctionEnds(tile, P, n = [0, 1, 0]) {
+  const y = baseY(tile);
+  return [...P.arms].map((a) => {
+    const [lx, lz, dx, dz] = JUNCTION_ENDS[a], w = localToWorld(tile, lx, lz), d = localToWorld(tile, lx + dx, lz + dz);
+    return { x: w.x, y, z: w.z, dx: d.x - w.x, dy: 0, dz: d.z - w.z, nx: n[0], ny: n[1], nz: n[2], tile, ...(a === 'S' ? { entry: true } : { exit: true, arm: a }), w: 12 };
+  }).sort((a, b) => (b.entry ? 1 : 0) - (a.entry ? 1 : 0));
 }
 
 // Deux extrémités se touchent-elles (même point à 2 m près, sens opposés) ? Même critère que le vérificateur (editorTools.checkTrack).

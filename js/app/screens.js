@@ -252,10 +252,10 @@ export const screenMethods = {
   _trackTags(track) {
     const tags = [];
     const has = (fn) => track.tiles.some(fn);
-    if (has((t) => PIECES[t.t].kind === 'loop')) tags.push('Looping');
+    if (has((t) => PIECES[t.t].kind === 'loop' || PIECES[t.t].loopTop)) tags.push('Looping');
     if (has((t) => t.t === 'steep' || t.t === 'steep4')) tags.push('Sauts');
     if (has((t) => t.t === 'bank' || t.t === 'bankBig')) tags.push('Virage relevé');
-    if (has((t) => t.t === 'tube' || t.t === 'tubeMid')) tags.push('Tube');
+    if (has((t) => t.t === 'tube' || t.t === 'tubeMid' || PIECES[t.t].tubeArc)) tags.push('Tube');
     if (has((t) => t.t === 'cork' || t.t === 'corkL')) tags.push('Tire-bouchon');
     if (has((t) => PIECES[t.t].kind === 'fork')) tags.push('Bifurcation');
     if (has((t) => PIECES[t.t].kind === 'ring')) tags.push('Anneaux');

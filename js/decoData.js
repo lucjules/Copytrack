@@ -30,6 +30,12 @@ export const DECO_ORDER = [
   ...PACK_IDS,
   // 0.9.24 : pièce décorative personnalisée (customDeco.js), à la fin : l'ordre existant ne change jamais.
   'custom',
+  // 0.9.68 : panneaux de bord de route (chevrons, danger, interdit) et deux panneaux simples
+  'board_left', 'board_right', 'board_up', 'board_down', 'board_warn', 'board_no', 'sign_down', 'sign_uturn',
+  // 0.9.68 : solides (physiques, voir solids.js) : piliers et poutres
+  'pillar', 'pillarBase', 'pillarThin', 'beam', 'beamL', 'beamT', 'beamX', 'beamPost', 'gantry',
+  // 0.9.69 : solides : murs pleins et blocs pleins
+  'wallS', 'wallSLow', 'wallSL', 'wallST', 'wallSX', 'wallSC', 'block', 'slab', 'wedge', 'wedgeSteep', 'pyramidS', 'archS',
 ];
 
 // Décorations qui éclairent vraiment la scène (PointLight / SpotLight). La couleur de l'objet (index ou #rrggbb) donne celle de la lumière.
@@ -50,6 +56,9 @@ const BASE = [
   ['signs', 'Panneaux', [
     ['sign_left', 'Flèche gauche', '⬅'], ['sign_right', 'Flèche droite', '➡'], ['sign_up', 'Tout droit', '⬆'], ['sign_stop', 'Stop', '⛔'],
     ['sign_speed', 'Limite', '🅿'], ['sign_warn', 'Danger', '⚠'], ['banner', 'Banderole', '🚩'],
+    ['sign_down', 'Descente', '⬇'], ['sign_uturn', 'Demi-tour', '↩'],
+    ['board_left', 'Chevrons gauche', '⏪'], ['board_right', 'Chevrons droite', '⏩'], ['board_up', 'Chevrons montée', '⏫'], ['board_down', 'Chevrons descente', '⏬'],
+    ['board_warn', 'Panneau danger', '⚠'], ['board_no', 'Panneau interdit', '❌'],
   ]],
   ['shapes', 'Formes', [
     ['cube', 'Cube', '⬛'], ['sphere', 'Sphère', '⚪'], ['cylinder', 'Cylindre', '🛢'], ['cone', 'Cône', '🔺'],
@@ -108,6 +117,20 @@ const BASE = [
     ['pumpkin', 'Citrouille', '🎃'], ['ghost', 'Fantôme', '👻'], ['tombstone', 'Pierre tombale', '🪦'], ['bats', 'Chauves-souris', '🦇'],
     ['witchHat', 'Chapeau de sorcière', '🧙'], ['cauldron', 'Chaudron', '🫕'], ['spookyTree', 'Arbre mort', '🌳'], ['hauntedHouse', 'Maison hantée', '🏚'],
     ['skull', 'Crâne', '💀'],
+  ]],
+  // 0.9.68 : solides : la voiture ne les traverse pas (côtés comme une bordure, dessus roulable)
+  ['struct', 'Piliers et poutres', [
+    ['pillar', 'Pilier', '▮'], ['pillarBase', 'Pilier sur socle', '🗿'], ['pillarThin', 'Poteau', '│'], ['beam', 'Poutre', '▬'],
+    ['beamL', 'Poutre en L', '┗'], ['beamT', 'Poutre en T', '┳'], ['beamX', 'Poutre en croix', '╋'], ['beamPost', 'Potence', '┏'],
+    ['gantry', 'Portique en poutres', '⛩'],
+  ]],
+  ['wallsS', 'Murs pleins', [
+    ['wallS', 'Mur plein', '🧱'], ['wallSLow', 'Muret plein', '▭'], ['wallSL', 'Mur plein en L', '└'], ['wallST', 'Mur plein en T', '┴'],
+    ['wallSX', 'Mur plein en croix', '┼'], ['wallSC', 'Mur plein courbe', '◜'],
+  ]],
+  ['blocks', 'Blocs pleins', [
+    ['block', 'Bloc', '■'], ['slab', 'Dalle', '▰'], ['wedge', 'Cale', '◢'], ['wedgeSteep', 'Cale raide', '◣'],
+    ['pyramidS', 'Pyramide pleine', '▲'], ['archS', 'Arche pleine', '⌂'],
   ]],
   ['obstacles', 'Obstacles', [
     ['spikes', 'Piques', '🔱'], ['spikesPop', 'Piques escamotables', '⏫'], ['pendulum', 'Boule balancier', '🔴'], ['hammer', 'Marteau tournant', '🔨'],

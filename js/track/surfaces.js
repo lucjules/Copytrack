@@ -4,6 +4,7 @@ import { CELL, ROAD_HALF, RAIL_W, SLAB_T, LEVEL_H } from '../constants.js';
 import { PIECES, isFloor, isCeilingFloor, baseY, toLocal, sampleLocal, rotVec, tileCenter, MOVER, moverParams } from '../pieces.js';
 import { dcos, dsin } from '../dmath.js';
 import { MP, W, W2, WATER_DROP, boatDrop } from './shared.js';
+import { solidFloor } from '../solids.js';
 const L = { lx: 0, lz: 0 };
 
 const S = {};
@@ -43,9 +44,10 @@ export const surfaceMethods = {
   // Les pièces mobiles (ascenseur, glissière, rotation) sont prises à leur position au chrono `time` (s) de la course : le circuit n'a
   // pas d'horloge propre, plusieurs voitures (la sienne, un fantôme, un adversaire) l'interrogent chacune à son propre chrono.
   // broken : pièces de verre déjà brisées dans CETTE course (propre à chaque voiture, voir CarPhysics) : sans collision.
-  surfaceAt(x, y, z, out, step = 1.6, broken = null, time = 0) {
+  // hidden (0.9.68) : décorations cachées par la logique du circuit (un solide caché ne porte plus la voiture).
+  surfaceAt(x, y, z, out, step = 1.6, broken = null, time = 0, hidden = null) {
     out.h = 0; out.nx = 0; out.ny = 1; out.nz = 0;
-    out.tile = null; out.type = 'ground'; out.mod = ''; out.p = 0; out.lx = 0; out.lz = 0;
+    out.tile = null; out.type = 'ground'; out.mod = ''; out.p = 0; out.lx = 0; out.lz = 0; out.solid = null;
     const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
     let best = -Infinity;
     const cell = this.tilesAt(cx, cz);
@@ -65,6 +67,8 @@ export const surfaceMethods = {
         else best = this._floorTry(tile, x - MO.x, z - MO.z, MO.y, y, step, best, out);
       }
     }
+    // 0.9.68 : le dessus des solides (blocs, poutres, piliers) est roulable, comme une route sans revêtement.
+    if (this.hasSolids) solidFloor(this.solidIndex, x, y, z, step, best, out, hidden);
     return out;
   },
 

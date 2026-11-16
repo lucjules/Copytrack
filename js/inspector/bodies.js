@@ -1,7 +1,7 @@
 // Contenu du panneau selon la sélection : pièce, pièce mobile, caractéristiques, couleurs, décoration.
 // Ces méthodes s'ajoutent au prototype de Inspector (voir inspector.js) : `this` est l'instance.
 import { MAX_LEVEL } from '../constants.js';
-import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, THEMES, MOVER, moverParams, paramText, ORIENTS, ORI_TO_O, tileOri } from '../pieces.js';
+import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, THEMES, GATE_STYLES, plateEdges, plateShape, MOVER, moverParams, paramText, ORIENTS, ORI_TO_O, tileOri } from '../pieces.js';
 import { FAMILIES, familyOf, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from '../families.js';
 import { styleFor } from '../trackGeometry.js';
 import { DECO_COLORS } from '../decoData.js';
@@ -9,6 +9,9 @@ import { safeUrl } from '../decos.js';
 import { isObstacle } from '../obstacles.js';
 import { h } from '../dom.js';
 import { LEGACY_CP, MIRROR_TYPES } from '../inspector.js';
+
+// 0.9.69 : noms des bords d'une plaque, dans l'ordre des bits de l'option eb (pieces.js : plateEdges). Avant = sens de la flèche de la pièce.
+const EDGE_NAMES = { sq: ['Bord avant', 'Bord droit', 'Bord arrière', 'Bord gauche'], tri: ['Bord gauche', 'Bord arrière', 'Diagonale'], sec: ['Bord gauche', 'Bord arrière', 'Arc'] };
 const isStartFinish = (type) => { const sp = PIECES[type] && PIECES[type].special; return sp === 'start' || sp === 'finish'; };
 
 export const bodyMethods = {
@@ -89,6 +92,15 @@ export const bodyMethods = {
       }
     }
 
+    // 0.9.69 : bordures d'une plaque, bord par bord (repère de la pièce : l'avant est le sens de la flèche)
+    if (P.kind === 'area') {
+      group('Bordures');
+      plateEdges(P).forEach((e, bit) => {
+        const name = EDGE_NAMES[plateShape(P)][bit];
+        rows.push(this._check(name, () => !!(t.eb & (1 << bit)), (on) => (on === !!(t.eb & (1 << bit)) ? true : ed.track.setEdges(t, on ? (t.eb | 0) | (1 << bit) : (t.eb | 0) & ~(1 << bit)) || false)));
+      });
+    }
+
     // Options
     group('Options');
     const flag = (f, label, hint) => this._check(label, () => t[f], (on) => (on !== !!t[f] ? ed.track.toggleFlag(t, f) || false : true), !flagAllowed(t.t, f, t) && !t[f], hint);
@@ -106,6 +118,11 @@ export const bodyMethods = {
     rows.push(this._select('Thème', THEMES.map((x) => [String(x.id), x.label]), () => String(t.th || 0),
       (v) => { const n = +v, cur = t.th || 0; if (n === cur) return true; return ed.track.toggleFlag(t, 'th', n === 0 ? cur : n) || false; },
       !flagAllowed(t.t, 'th', t)));
+    // Style du portique (visuel, 0.9.68) : départ, arrivée, checkpoint
+    if (flagAllowed(t.t, 'gs', t, 1)) {
+      rows.push(this._select('Portique', GATE_STYLES.map((x) => [String(x.id), x.label]), () => String(t.gs || 0),
+        (v) => { const n = +v, cur = t.gs || 0; if (n === cur) return true; return ed.track.toggleFlag(t, 'gs', n === 0 ? cur : n) || false; }));
+    }
     // Mouvement + réglages
     const mvOk = flagAllowed(t.t, 'mv', t) || !!t.mv;
     rows.push(this._select('Mouvement', [['0', 'Aucun'], ['1', 'Ascenseur'], ['2', 'Glissière'], ['3', 'Rotation']], () => String(t.mv || 0),

@@ -617,6 +617,7 @@ export class CarPhysics {
     this._pinned = false;
     this._tunnelRoof();
     this._slabs();
+    this._solidRoof();
     // Gravité inversée, plaquée EN L'AIR sous une dalle ou un toit de tunnel (rien de roulable) : au bout d'une seconde la voiture est ramenée au checkpoint (même décision au rejeu et sur le serveur).
     this.pinT = this._pinned ? this.pinT + DT : Math.max(0, this.pinT - 2 * DT);
     if (this.pinT > 1) this.lost = true;
@@ -636,7 +637,7 @@ export class CarPhysics {
     // Contact avec la chaussée.
     // En gravité inversée, le « sol » est le dessous des pièces posées à l'envers.
     const gs = this.gSign;
-    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.excl, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.excl);
+    const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.excl, this.time, this.hiddenDecos) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surf, CAR.step, this.excl);
     const gap = gs * (p.y - s.h);
     const vn = v.x * s.nx + v.y * s.ny + v.z * s.nz;
     // Aimant : la voiture reste collée à la route quoi qu'il arrive (bosses, vitesse).
@@ -646,7 +647,7 @@ export class CarPhysics {
     // Aimant : au-dessus d'une route aimantée, la voiture est attirée vers la surface le long de SA normale, pas selon
     // la gravité du monde. Endroit ou envers, c'est la même règle (au plafond, la normale pointe vers le bas du monde).
     if (!this.grounded) {
-      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.excl, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.excl);
+      const m = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.excl, this.time, this.hiddenDecos) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, this.surfM, CAR.magnetRange, this.excl);
       const mg = gs * (p.y - m.h);
       if (m.mod === 'magnet' && mg > 0.02 && mg < CAR.magnetRange) {
         const a = CAR.magnetAcc * (1 - mg / CAR.magnetRange) * dt;

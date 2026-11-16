@@ -91,16 +91,25 @@ export function buildChain(type, opts) {
   c.add('start');
   c.straight();
   // Montée en L (ramp90 → mur → sommet) : les trois pièces ne se raccordent qu'entre elles (la route y est verticale) : la chaîne les pose toujours ensemble.
-  const L = ['ramp90', 'wall', 'crest90'].includes(type);
+  // (0.9.72 : le sommet de looping modulaire aussi : Montée en L, mur, sommet, mur et Montée en L à l'envers)
+  const L = ['ramp90', 'wall', 'crest90'].includes(type) || !!PIECES[type].loopTop;
   const need = entryOrientation(L ? 'ramp90' : type, opts);
   if (need === null) { c.fail = 'orientation d\'entrée illisible'; return c; }
   c.fromFloor(need);
   if (need !== 0) c.straight();
-  if (L) {
+  if (L && PIECES[type].loopTop) {
+    c.add('ramp90', opts); c.add('wall', opts); c.add(type, opts); c.add('wall', opts, true); c.add('ramp90', opts, true);
+  } else if (L) {
     c.add('ramp90', opts);
     if (type === 'wall') c.add('wall', opts);
     c.add('crest90', opts);
-  } else c.add(type, opts);
+  } else {
+    // 0.9.70 : une route de largeur variable se raccorde par un rétrécissement / élargissement de chaque côté (sinon le vérificateur signale, à raison, deux largeurs bout à bout).
+    const P = PIECES[type], adapt = (w) => (w === 6 ? 'narrowIn' : w === 28 ? 'wideIn' : null);
+    if (P.hw && adapt(P.hw[0])) c.add(adapt(P.hw[0]), opts);
+    c.add(type, opts);
+    if (P.hw && adapt(P.hw[1])) c.add(adapt(P.hw[1]), opts, true);
+  }
   c.straight();
   c.toFloor();
   if (!c.fail && c.orientId() !== 0) c.fail = `la route finit en « ${c.orient()} » : impossible de revenir au sol`;
@@ -171,6 +180,8 @@ export function probe(type, opts) {
 // ---- Matrice complète ---------------------------------------------------------------------------------------------------------------------------
 const NA = {
   platform: 'plateforme : surface sans extrémité (aucun raccord orienté)',
+  // 0.9.69 : les plaques sont des plateformes (surfaces sans extrémité) de toute taille et forme
+  ...Object.fromEntries(['plate2', 'plate3', 'tri1', 'tri2', 'tri3', 'sec1', 'sec2', 'sec3'].map((id) => [id, 'plaque : surface sans extrémité (aucun raccord orienté)'])),
   ring: 'anneau flottant : pas de route',
   cpRing: 'anneau flottant : pas de route',
   start: 'ouvre toutes les chaînes (départ)',
@@ -205,6 +216,8 @@ const FAM = (type) => {
   if (P.roll) return 'Transitions d\'orientation';
   if (P.kind === 'loop') return 'Loopings';
   if (P.kind === 'fork') return 'Bifurcations';
+  if (P.kind === 'sbend') return 'Chicanes';
+  if (P.kind === 'junction') return 'Carrefours';
   if (P.kind === 'ribbon') return 'Rubans (vrille, tire-bouchon, tubes, virages relevés, montée en L…)';
   if (P.kind === 'arc') return 'Virages';
   if (P.kind === 'area' || P.kind === 'ring') return 'Plateforme et anneaux';

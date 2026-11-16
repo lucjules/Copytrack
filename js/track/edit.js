@@ -1,8 +1,9 @@
 // Modifications du circuit : revêtements, options des pièces, mouvement, couleurs, décorations.
 // Ces méthodes s'ajoutent au prototype de Track (voir track.js) : `this` est l'instance.
 import { MAX_DECOS } from '../constants.js';
-import { PIECES, SURFACES, surfaceAllowed, flagAllowed, clampMover, THEMES, clearConflicts } from '../pieces.js';
+import { PIECES, SURFACES, surfaceAllowed, flagAllowed, clampMover, THEMES, clearConflicts, plateAllEdges } from '../pieces.js';
 import { isObstacle } from '../obstacles.js';
+import { isSolid, SOLID_SCALE } from '../solids.js';
 import { DECO_ORDER } from '../decoData.js';
 import { sanitizeDecoParts, MAX_CUSTOM_DECOS } from '../customDeco.js';
 import { HEX, cleanColors } from './shared.js';
@@ -36,6 +37,16 @@ export const editMethods = {
       const th = tile.th === val ? 0 : val;
       if (!THEMES.some((h) => h.id === th)) return false;
       tile.th = th;
+      this.version++;
+      return true;
+    }
+    if (flag === 'eb') {      // 0.9.69 : bordures d'une plaque (toutes ↔ aucune ; bord par bord : setEdges)
+      tile.eb = tile.eb ? 0 : val & plateAllEdges(PIECES[tile.t]);
+      this.version++;
+      return true;
+    }
+    if (flag === 'gs') {      // style du portique (visuel, comme le thème)
+      tile.gs = tile.gs === val ? 0 : val;
       this.version++;
       return true;
     }
@@ -98,6 +109,17 @@ export const editMethods = {
     return true;
   },
 
+  // 0.9.69 : bordures d'une plaque, bord par bord (masque de bits, voir pieces.js plateEdges). Renvoie true si quelque chose a changé.
+  setEdges(tile, mask) {
+    const P = PIECES[tile.t];
+    if (!P || P.kind !== 'area') return false;
+    const m = (mask | 0) & plateAllEdges(P);
+    if ((tile.eb | 0) === m) return false;
+    tile.eb = m;
+    this.version++;
+    return true;
+  },
+
   addDeco(d) {
     if (this.decos.length >= MAX_DECOS) return null;
     const deco = {
@@ -109,6 +131,12 @@ export const editMethods = {
     // Obstacles : décalage de phase (0 à 1) pour désynchroniser plusieurs obstacles.
     if (isObstacle(deco.k)) { deco.ph = Math.max(0, Math.min(0.95, Math.round((+d.ph || 0) * 20) / 20)); deco.s = Math.max(0.5, Math.min(2.5, deco.s)); }
     if (!DECO_ORDER.includes(deco.k)) return null;
+    // 0.9.68 : un solide (pilier, poutre, mur, bloc) compte pour la physique : jamais incliné ni roulé (rx, rz ignorés), échelle bornée (voir solids.js).
+    const solid = isSolid(deco.k);
+    if (solid) {
+      deco.s = Math.max(SOLID_SCALE[0], Math.min(SOLID_SCALE[1], deco.s));
+      if (!Number.isFinite(deco.x) || !Number.isFinite(deco.y) || !Number.isFinite(deco.z) || !Number.isFinite(deco.ry)) return null;
+    }
     // Inclinaison (rx : nez vers le bas / le haut) et roulis (rz) : purement VISUELS pour une décoration ; pour un obstacle seul le roulis rz compte (physique), par pas de 45°.
     // Ramenés dans [-π, π] ; absents (0) quand la décoration est droite, pour que les codes existants ne changent pas.
     if (isObstacle(deco.k)) {
@@ -120,7 +148,7 @@ export const editMethods = {
         v = Math.round(v / (Math.PI / 4)) * (Math.PI / 4);
         if (Math.abs(v) > 1e-4) deco.rz = +v.toFixed(3);
       }
-    } else {
+    } else if (!solid) {
       for (const a of ['rx', 'rz']) {
         let v = +d[a];
         if (!Number.isFinite(v) || !v) continue;

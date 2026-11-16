@@ -13,7 +13,7 @@
 // Un ruban peut avoir une section courbe : kc (courbure transversale), hw (demi-largeur
 // mesurée le long de la section) et wrap (section fermée : on peut en faire le tour).
 import { CELL, HALF, LEVEL_H, ROAD_HALF } from './constants.js';
-import { PIECES, baseY, arcParams, localToWorld, isOriented, oriAngle, rollOfO, rollFitHook, MAX_O, profH, profD } from './pieces.js';
+import { PIECES, baseY, arcParams, sbendPoint, localToWorld, isOriented, oriAngle, rollOfO, rollFitHook, MAX_O, profH, profD } from './pieces.js';
 import { dcos, dsin, hypot2, hypot3 } from './dmath.js';
 
 const smooth = (u) => u * u * (3 - 2 * u);
@@ -222,6 +222,34 @@ function buildBase(tile) {
         len: 2 * half,
       };
     }
+    if (P.tubeArc) {
+      // 0.9.72 : tube en virage : section de tube (rayon 8 m, fermée) le long d'un quart de cercle de 48 m (comme le grand virage).
+      const kcMax = 1 / 8, a = arcParams(P), mir = P.mirror < 0 ? -1 : 1;
+      return {
+        tubeR: 8,
+        pos(u, o) {
+          const ang = Math.PI + (Math.PI / 2) * u;
+          o.x = mir * (a.cx + a.R * dcos(ang)); o.y = base; o.z = a.cz + a.R * dsin(ang);
+          o.nx = 0; o.ny = 1; o.nz = 0;
+          o.kc = kcMax; o.wrap = true; o.hw = Math.PI / kcMax;
+        },
+        len: (Math.PI / 2) * a.R,
+      };
+    }
+    if (P.loopTop) {
+      // 0.9.72 : sommet de looping modulaire : demi-cercle vertical de rayon R = ½ case qui part du mur montant (z = 0, colonne x0, normale +z), passe
+      // par-dessus en reculant et redescend contre le bord arrière de l'empreinte (z = 2R, normale −z), en glissant d'une colonne (en douceur).
+      const Rt = HALF, m = P.mirror, x0 = -m * HALF;
+      return {
+        minU: 0.08,
+        pos(u, o) {
+          const th = Math.PI * u, c = dcos(th), s = dsin(th);
+          o.x = x0 + m * CELL * smooth(u); o.y = base + Rt * s; o.z = Rt - Rt * c;
+          o.nx = 0; o.ny = -s; o.nz = c;
+        },
+        len: hypot2(Math.PI * Rt, CELL),
+      };
+    }
     if (tile.t === 'tubeIn' || tile.t === 'tubeMid') {
       // Tube modulaire (une case, route au centre de la case) : l'entrée se referme
       // progressivement, la section est un tube complet qu'on peut enchaîner.
@@ -384,6 +412,10 @@ function centerlineLocal(tile, n) {
     const rib = ribbonOf(tile, true);
     // drapeau 2 : virage relevé (le pilote automatique doit y doser sa vitesse).
     sampleRibbon(Math.max(8, Math.round(rib.len / 3)), p.arc ? 2 : 1);
+  } else if (p.kind === 'sbend') {
+    // Chicane : assez de points pour que la première et la dernière corde suivent le cap de la route (raccords, pilote automatique).
+    const k = Math.max(n, 8 * p.size), q = {};
+    for (let i = 0; i <= k; i++) { sbendPoint(p, i / k, q); pts.push([q.x, base, q.z, 0]); }
   } else if (p.kind === 'arc') {
     const a = arcParams(p);
     for (let i = 0; i <= n; i++) {

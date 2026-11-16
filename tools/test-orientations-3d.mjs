@@ -35,7 +35,7 @@ test('orientationOf lit le roulis d\'une normale au pas de 45° (8 orientations)
   assert.equal(orientationOf([0, 1, 0], [0, 1, 0]), null, 'route verticale : pas de gauche ni de droite');
 });
 test('16 transitions de 45° (anneau 0·4·1·6·3·7·2·5) : de et vers chaque voisin, tangente conservée, roulis de 45° exactement, ajoutées à la SUITE des types (index des circuits sauvegardés)', () => {
-  assert.equal(GEN45_IDS.length, 16); assert.equal(PIECE_ORDER.slice(-17, -1).join(), GEN45_IDS.join());      // (0.9.67 : le virage géant vient ensuite)
+  assert.equal(GEN45_IDS.length, 16); assert.equal(PIECE_ORDER.slice(119, 135).join(), GEN45_IDS.join());      // (index 119 à 134 ; 0.9.67 : le virage géant vient ensuite, puis les pièces de la 0.9.68)
   const ring = [0, 4, 1, 6, 3, 7, 2, 5];
   for (let i = 0; i < 8; i++) for (const [a, b] of [[ring[i], ring[(i + 1) % 8]], [ring[(i + 1) % 8], ring[i]]]) {
     const id = `tr${a}${b}s`;
@@ -61,7 +61,7 @@ console.log('\n2. Familles : quelles pièces dans quelles orientations');
 test('LIGNES et VIRAGES (toutes pentes, courbes, descentes) : les six roulis, entrée ET sortie au bon roulis ; plateformes, départ / arrivée, anneaux, bifurcations : aucun', () => {
   let n = 0;
   for (const id of typesOf((P) => P.kind === 'line' || P.kind === 'arc')) {
-    if (PIECES[id].special) continue;
+    if (PIECES[id].special || PIECES[id].hw) continue;      // (0.9.70 : les routes de largeur variable restent au sol : test-etape3)
     for (let o = 1; o <= MAX_O; o++) {
       assert.equal(flagAllowed(id, 'o', null, o), true, `${id} o${o}`);
       const t = tileAt(id, { o });

@@ -8,7 +8,8 @@ import { Track, b64decode, MAX_GROUP } from '../js/track.js';
 import { copyRect } from '../js/editorTools.js';
 import { historyMethods } from '../js/editor/history.js';
 
-const base = () => Track.decode(buildBuiltin(BUILTIN_TRACKS.find((d) => d.id === 'canyon')).encode());
+// (un circuit intégré, ses décorations retirées : 0.9.73, Canyon a des piliers et un portique ; ici seules comptent les décorations ajoutées par les tests)
+const base = () => { const t = Track.decode(buildBuiltin(BUILTIN_TRACKS.find((d) => d.id === 'canyon')).encode()); for (const d of [...t.decos]) t.removeDeco(d); return t; };
 
 console.log('Groupes');
 test('numéro de groupe borné (0 à 63) ; noms nettoyés', () => {

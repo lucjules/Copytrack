@@ -1,10 +1,11 @@
 // Collisions de la voiture avec les murs (bordures), les toits de tunnel, les dalles et les limites du monde.
 // Ces méthodes s'ajoutent au prototype de CarPhysics (voir physics.js) : `this` est la voiture.
 import { CELL, DT, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T } from '../constants.js';
-import { PIECES, toLocal, sampleLocal, rotVec, isFloor, isCeilingFloor, baseY, TUNNEL_TOP } from '../pieces.js';
+import { PIECES, toLocal, sampleLocal, rotVec, isFloor, isCeilingFloor, baseY, TUNNEL_TOP, plateEdges, edgeDist } from '../pieces.js';
 import { CAR } from './specs.js';
 import { wallBounce, wallFriction, wallHardLoss, wallSpinOf, wallStunOf, wallYawTarget } from './contact.js';
 import { dcos, dsin, hypot2 } from '../dmath.js';
+import { solidSide, solidCeiling, SOLID_STEP } from '../solids.js';
 
 const L1 = { lx: 0, lz: 0 };
 const L2 = { lx: 0, lz: 0 };
@@ -15,6 +16,7 @@ const MOV = {};
 const MQ1 = {};
 const MQ2 = {};
 const HIT = { dx: 0, dz: 0, nx: 0, nz: 0 };
+const ED = { d: 0, nx: 0, nz: 0, on: false };
 
 export const wallMethods = {
   _bounds() {
@@ -186,7 +188,7 @@ export const wallMethods = {
       if (this._probeTile(tile, x, z, px, pz, y, mx, mz)) return HIT;
     }
     // Pièces mobiles : bordures à leur position du moment. L'index les range dans toutes les cases qu'elles balaient : celles de cette case suffisent.
-    if (!this.track.hasMovers) return null;
+    if (!this.track.hasMovers) return this.track.hasSolids ? this._probeSolids(x, z, px, pz, y) : null;
     const time = this.time;
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i];
@@ -203,12 +205,59 @@ export const wallMethods = {
         }
       } else if (this._probeTile(tile, x - o.x, z - o.z, px - o.x, pz - o.z, y - o.y)) return HIT;
     }
-    return null;
+    return this.track.hasSolids ? this._probeSolids(x, z, px, pz, y) : null;
+  },
+
+  // 0.9.69 : bordures d'une plaque (option eb, un bit par bord : pieces.js plateEdges). Une bordure occupe la bande [0, RAIL_W] à l'intérieur du bord, sur RAIL_H
+  // de haut ; même hauteur jugée et même sortie (côté d'où vient la sonde) qu'une bordure de route.
+  _probeEdges(tile, P, x, z, px, pz, y) {
+    if (!(isFloor(tile) || isCeilingFloor(tile))) return false;
+    toLocal(tile, x, z, L1);
+    sampleLocal(tile, L1.lx, L1.lz, S1);
+    const h = tile.v ? 2 * baseY(tile) - S1.h : S1.h, H = CAR.height, g = this.gSign;
+    const ylo = g > 0 ? y : y - H, yhi = g > 0 ? y + H : y;
+    if (tile.v ? (ylo > h + SLAB_T + 0.2 || yhi < h - RAIL_H + 0.15) : (ylo > h + RAIL_H - 0.15 || yhi < h - SLAB_T - 0.2)) return false;
+    toLocal(tile, px, pz, L2);
+    const R = CAR.radius, edges = plateEdges(P);
+    for (let i = 0; i < edges.length; i++) {
+      if (!(tile.eb & (1 << i))) continue;
+      edgeDist(edges[i], L1.lx, L1.lz, R, ED);
+      if (!ED.on || ED.d - R >= RAIL_W || ED.d + R <= 0) continue;
+      const dIn = ED.d, nx = ED.nx, nz = ED.nz;
+      edgeDist(edges[i], L2.lx, L2.lz, R, ED);
+      const inside = ED.d > RAIL_W * 0.5;
+      const push = (inside ? RAIL_W + R : -R) - dIn;
+      rotVec(tile.r, nx, nz, W1);
+      HIT.dx = W1.x * push; HIT.dz = W1.z * push;
+      HIT.nx = inside ? W1.x : -W1.x; HIT.nz = inside ? W1.z : -W1.z;
+      return true;
+    }
+    return false;
+  },
+
+  // 0.9.68 : solides (piliers, poutres, murs, blocs : solids.js) : leurs côtés sont des bordures pour la sonde (même choc, même frottement).
+  _probeSolids(x, z, px, pz, y) {
+    const H = CAR.height, g = this.gSign, py = this.prev.y;
+    const ylo = g > 0 ? y : y - H, yhi = g > 0 ? y + H : y, plo = g > 0 ? py : py - H;
+    return solidSide(this.track.solidIndex, x, z, px, pz, ylo, yhi, plo, CAR.radius, SOLID_STEP, HIT, this.hiddenDecos) ? HIT : null;
+  },
+
+  // 0.9.68 : dessous d'un solide (une poutre au-dessus d'un tremplin) : une voiture qui saute dessous s'y cogne et retombe (gravité normale ; comme le dessous d'une dalle).
+  _solidRoof() {
+    if (this.gSign < 0 || this.grounded || !this.track.hasSolids) return;
+    const p = this.pos, v = this.vel, H = CAR.height;
+    const lo = solidCeiling(this.track.solidIndex, p.x, p.z, p.y, p.y + H, this.prev.y + H, this.hiddenDecos);
+    if (!Number.isNaN(lo)) {
+      p.y = lo - H;
+      if (v.y > 0) v.y = -v.y * 0.2;
+      this.ev.wall = Math.max(this.ev.wall, 2);
+    }
   },
 
   _probeTile(tile, x, z, px, pz, y, mx, mz) {
     const P = PIECES[tile.t];
-    if (P.kind === 'area' || (tile.nb && !tile.tn) || !(isFloor(tile) || isCeilingFloor(tile))) return false;
+    if (P.kind === 'area') return tile.eb ? this._probeEdges(tile, P, x, z, px, pz, y) : false;      // 0.9.69 : bordures d'une plaque
+    if ((tile.nb && !tile.tn) || !(isFloor(tile) || isCeilingFloor(tile))) return false;
     // 0.9.59 : voiture POSÉE sur une pièce en pente. La hauteur de la bordure est celle de la route SOUS LA SONDE (1,25 m devant ou derrière le centre), alors que
     // `y` est celle du centre : sur une pente raide l'écart dépassait la hauteur de la bordure. Au bord intérieur d'un virage montant serré (rayon 4 m), la route monte
     // de plusieurs mètres en 1,25 m : aucune des deux sondes ne « voyait » la bordure et la voiture la traversait ; sur une ligne droite d'inclinaison 4, la sonde du

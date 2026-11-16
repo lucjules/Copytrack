@@ -6,6 +6,101 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.0 — les nouvelles pièces et le chapitre 1 refait autour d'elles
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** (les six circuits du chapitre 1 ont changé depuis la dernière mise en ligne, leurs clés de classement aussi). Version qui rassemble les versions 0.9.68 à 0.9.74 ; rien d'autre ne change par rapport à 0.9.74.
+
+- **Nouvelles pièces et décorations** (détail dans les sections 0.9.68 à 0.9.72) :
+  - **chicanes** (courbes en S) : normale, longue, rapide et grand S, dans les deux sens ;
+  - **panneaux** (flèches, danger, interdit, demi-tour), **portiques** de départ, d'arrivée et de checkpoint en quatre styles (portique, ligne au sol, arche, pylônes), **piliers et poutres** ;
+  - **murs pleins**, **blocs pleins** (bloc, dalle, cale, pyramide, arche) qui arrêtent la voiture et dont le dessus se roule ;
+  - **plaques** libres (rectangles, triangles, secteurs) aux bordures choisies côté par côté ;
+  - **largeur de route variable** : route étroite (12 m) et route large (56 m), avec leurs transitions ;
+  - **carrefours** en croix et en T ;
+  - **looping modulaire** (hauteur réglable, de 0 à 6 murs) et **tube en virage**.
+- **Le chapitre 1 (Désert) est refait autour de ces pièces** (détail dans la section 0.9.74) : Premiers Éclats, Canyon Corail, Tremplins du Crépuscule, Spirale Prismatique, Lac Gelé et Le Grand Tour contiennent chacun au moins 12 nouveautés, dont 6 pièces de route, de 3 familles au moins ; les 9 familles sont toutes présentes sur le chapitre.
+- Éditeur : familles Chicane, Plaque, Largeur et Carrefour dans la palette, options Portique et Bordures dans l'inspecteur, le vérificateur connaît toutes les nouvelles pièces (un saut peut se recevoir sur une plaque).
+
+## Bêta 0.9.74 — le chapitre 1 refait AUTOUR des nouvelles pièces (circuits de référence)
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 1 changent encore (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- En 0.9.73, les nouvelles pièces avaient été ajoutées par petites touches (2 à 3 pièces de route par circuit). Les six circuits du chapitre 1 sont maintenant **construits autour d'elles**, pour montrer ce qu'elles permettent (noms, thèmes, profils et bifurcations gardés) :
+  - **Premiers Éclats** (sprint, 48,2 s) : départ sous une arche, slalom de chicanes rapides, premier wall-ride, un **croisement traversé deux fois** (boucle de trois virages géants), route large sous un portique entre quatre piliers, chicanes longues ; 23 nouveautés.
+  - **Canyon Corail** (speedway, 47,6 s, 243 km/h de moyenne) : la vallée s'élargit et se resserre **trois fois** sous des portiques, chicanes rapides, wall-ride le long d'une rangée de piliers ; 23 nouveautés.
+  - **Tremplins du Crépuscule** (acrobatique, 58,9 s, 17,5 s en l'air ; finissable de 158 à 230 km/h à l'abord des rampes) : quatre sauts reçus sur des **plaques** bordées (dont un qui retombe deux niveaux plus bas sans rampe de réception), chicanes longues entre les sauts, un wall-ride court entre le deuxième et le troisième saut ; 18 nouveautés.
+  - **Spirale Prismatique** (rollercoaster, 72,5 s) : **trois loopings modulaires** de hauteurs différentes (dont l'ouverture), un tube qui tourne à gauche puis à droite, chicanes longues ; 13 nouveautés.
+  - **Lac Gelé** (technique, 83,4 s, 23 virages serrés) : départ sur une route étroite, **deux nœuds en 8** par des croisements, chicanes en S, seconde route étroite ; 17 nouveautés.
+  - **Le Grand Tour** (rollercoaster, 82,4 s) : deux loopings modulaires, route large sous un portique, tube qui tourne, arche pleine entre deux murs pleins, chicanes longues ; 19 nouveautés.
+- **Règle relevée** (`tools/test-etape6.mjs`) : au moins 12 nouveautés par circuit, dont 6 pièces de route nouvelles, de 3 familles au moins ; les 9 familles sur le chapitre.
+- **Vérificateur de l'éditeur** : un saut peut se recevoir sur une **plaque** (avant : seule une extrémité de route comptait, et le saut passait pour « relié à rien »).
+- Les panneaux et solides posés le long d'un circuit intégré ont un cap exact (multiple de π/8, dans ]−π, π]) : quatre quarts de tour dans l'éditeur redonnent le même circuit. Les obstacles existants gardent leur calcul au bit près.
+- Banc du pilote humain imparfait (`tools/test-maniabilite.mjs`) : aucun contact sur les nouveaux sprint et speedway.
+- Contrat des circuits : les nouvelles pièces comptent dans le vocabulaire (« 4 pièces nouvelles au moins »), un looping modulaire compte comme un looping. Ouvertures du chapitre 1 mises à jour (toutes différentes des 66 autres). Médailles des six circuits recalculées ; textes français et anglais refaits.
+
+## Bêta 0.9.73 — nouvelles pièces, étape 6 : le chapitre 1 refait avec les nouvelles pièces
+
+**`PHYS_VER` inchangé (36)** : la physique ne change pas. **Redéployer `submit-score`** : le serveur vérifie les records des circuits intégrés avec sa propre copie de `js/tracks.js`, et les six circuits du chapitre 1 ont changé (leurs clés de classement aussi). L'empreinte de physique est régénérée parce que plusieurs de ses scénarios roulent sur ces circuits.
+
+- **Les six circuits du chapitre 1 (Désert) utilisent les nouvelles pièces**, en gardant noms, thèmes, profils, ouvertures et bifurcations :
+  - **Premiers Éclats** : départ sous une arche, virages géants annoncés par des chevrons, deux chicanes rapides, arrivée entre deux pylônes (48,6 s).
+  - **Canyon Corail** : rangée de piliers le long du wall-ride, la vallée s'élargit (route de 56 m sous un portique en poutres) puis se resserre (53,2 s).
+  - **Tremplins du Crépuscule** : le premier saut se reçoit sur une grande plaque 3×3 bordée, checkpoints sous deux pylônes, chevrons de montée avant les rampes (59,9 s).
+  - **Spirale Prismatique** : looping modulaire à gauche au lieu du grand looping, virages dans un tube (droite puis gauche), arrivée sous une arche (68,9 s).
+  - **Lac Gelé** : route étroite dès la sortie de l'épingle, chicane en S après le mur, et un **nœud en 8** pour finir : la route repasse par le même croisement (77,8 s).
+  - **Le Grand Tour** : looping modulaire à droite au lieu du grand looping, arche pleine entre deux murs pleins avant l'arrivée (76,9 s).
+- **Règle vérifiée par un test** (`tools/test-etape6.mjs`, recensement : `tools/nouveautes.mjs`) : chaque circuit du chapitre 1 contient au moins 4 nouveautés de 2 familles au moins, et le chapitre montre les 9 familles (chicane, panneau, portique, pilier / poutre, mur / bloc, plaque, largeur, carrefour, looping / tube) ; les pièces nouvelles sont sur le tracé.
+- Les 72 circuits respectent leur contrat (pilote à ±10 %, reprise à l'arrêt depuis chaque checkpoint, vérificateur de l'éditeur) ; médailles de Canyon, Spirale, Lac Gelé et Grand Tour recalculées ; textes « ce qu'il enseigne » en français et en anglais.
+- Les circuits intégrés peuvent poser panneaux et solides le long du parcours (`obst` : rotation `rot`, hauteur `dy`).
+
+## Bêta 0.9.72 — nouvelles pièces, étape 5 : looping modulaire, tube en virage
+
+**`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change. **Redéployer `submit-score`** (nouvelles pièces). Ajoutées à la FIN de l'ordre d'encodage.
+
+- **Looping modulaire** : la Montée en L mène à des murs verticaux (autant qu'on veut), puis au nouveau **Sommet de looping** (↱ / ↰ : demi-cercle de 16 m qui passe par-dessus et redescend une colonne à côté), puis à d'autres murs et à une Montée en L parcourue à l'envers. On obtient des loopings de toutes les hauteurs ; plus il est haut, plus il faut d'élan (le pilote passe jusqu'à 6 murs de chaque côté, ~80 m ; à 8, il retombe). La route guide le cap de la voiture pendant le glissement d'une colonne, comme sur les loopings décalés. Scripts : `LPR n` / `LPL n` (n murs de chaque côté).
+- **Tube en virage** (↱ / ↰, 2×2, rayon 48 m) : section de tube fermée qui tourne ; il s'enchaîne aux sections de tube (`TI TM TRR TM TO`). Scripts : `TRR` / `TLL`.
+- Éditeur : les quatre pièces dans la palette (miroirs ↱ / ↰ dans l'Inspecteur) ; étiquettes « Looping » et « Tube » des circuits.
+- **Tests** : `tools/test-etape5.mjs` (7 tests).
+
+## Bêta 0.9.71 — nouvelles pièces, étape 4 : carrefours en T et en croix
+
+**`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change. **Redéployer `submit-score`** (nouvelles pièces). Ajoutées à la FIN de l'ordre d'encodage.
+
+- **Croisement** (4 bras) et **carrefour en T** (3 bras ; la pièce tourne pour mettre la branche où l'on veut), au même niveau, famille « Carrefour » de l'éditeur. La chaussée est l'union du carré central et des bras ; les bordures suivent tout le contour (angle droit plein entre deux bras), une voiture lancée vers le côté fermé d'un T est retenue. Marquage : tirets sur les bras, ligne d'arrêt pointillée à l'entrée du carré.
+- **Circuit en 8** : un circuit peut repasser par le même croisement (perpendiculairement, ou dans l'autre sens). Scripts : `JX` (tout droit), `JXR` / `JXL` (tourner), `JT` / `JTL` (T, branche à droite / à gauche, tout droit), `JTD` / `JTG` (prendre la branche), `JR` / `JL` (arriver par la branche et tourner) ; le même jeton au même endroit réutilise le carrefour déjà posé (erreur claire s'il n'a pas de bras dans ce sens).
+- Mini-carte : un trait par bras. Vérificateur : un bout par bras.
+- **Tests** : `tools/test-etape4.mjs` (7 tests).
+
+## Bêta 0.9.70 — nouvelles pièces, étape 3 : largeur de route variable
+
+**`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change. **Redéployer `submit-score`** (nouvelles pièces). Ajoutées à la FIN de l'ordre d'encodage.
+
+- **Route étroite** (12 m de chaussée au lieu de 24), **rétrécissement** (24 → 12 m en biais sur une case ; tourné d'un demi-tour, il élargit), **élargissement** (24 → 56 m sur 3×3) et **route large** (56 m, 3×3). Famille « Largeur » de l'éditeur. Options : sans bordures, à l'envers, thème. Scripts : `N` (route étroite, `N4`…), `NI` / `NO` (rétrécissement, retour à 24 m), `WI` / `W` / `WO` (route large).
+- La chaussée et ses bordures suivent exactement le bord (en biais sur un raccord) : le sol, les bordures, les dalles et les checkpoints n'ont rien de particulier à savoir, et une voiture lancée en travers d'une route étroite est retenue à 6 m de l'axe.
+- **Vérificateur de l'éditeur** : deux routes de largeurs différentes bout à bout (sans rétrécissement) donnent une alerte : le bout de la bordure de la route étroite barre la route large.
+- **Difficulté estimée** : une route étroite compte un peu (0,15 par case).
+- **Tests** : `tools/test-etape3.mjs` (8 tests).
+
+## Bêta 0.9.69 — nouvelles pièces, étape 2 : murs pleins, plaques, blocs pleins
+
+**`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change (empreinte de physique, temps de référence, corpus de compatibilité ; la plateforme garde sa géométrie au bit près). **Redéployer `submit-score`** (plaques, bordures de plaque et nouveaux solides). Tout est ajouté à la FIN des ordres d'encodage.
+
+- **Murs pleins** (catégorie « Murs pleins », des solides comme les piliers) : mur droit (16 m × 4 m), muret (1,2 m : plus haut qu'une marche, il arrête la voiture), murs en L, en T, en croix, et mur courbe (quart de cercle de 16 m de rayon, fait de pavés tournés sans trou).
+- **Plaques** (surfaces libres, famille « Plaque » de l'éditeur ; la plateforme en est la plaque carrée 1×1) : carrées 2×2 et 3×3, triangles et quarts de disque de 1 à 3 cases. Seule leur forme porte la voiture. **Bordures au choix** : « Bordures tout autour » dans les Options, ou bord par bord dans l'Inspecteur (avant, droit, arrière, gauche ; diagonale ; arc) ; elles arrêtent la voiture comme une bordure de route et entrent dans la signature. Scripts : `[plate3]` (centrée sur la route), suffixe `*n` = masque des bordures (`[plate3]*10` : bords gauche et droit). Un checkpoint posé sur une plaque triangle ou en quart de disque ramène à son centre de gravité. Mini-carte : les plaques sont dessinées à leur forme.
+- **Blocs pleins** (catégorie « Blocs pleins ») : bloc (8 m), dalle (16 × 16 × 1,2 m), cale (4 m sur 16 m) et cale raide (4 m sur 8 m) qu'on monte pour sauter, pyramide (5 m) qui se monte aussi, arche pleine (on passe dessous, 29 m de large). Leur dessus porte la voiture ; une cale prise par sa face haute est un mur.
+- **Vérificateur de l'éditeur** : une plaque de plusieurs cases est reliée à ses voisines tout autour de son empreinte ; une plaque triangle ne couvre que sa moitié de case.
+- **Tests** : `tools/test-etape2.mjs` (17 tests).
+
+## Bêta 0.9.68 — nouvelles pièces, étape 1 : chicanes, panneaux, portiques, piliers et poutres
+
+**`PHYS_VER` inchangé (36)** : sur les circuits existants rien ne change (empreinte de physique, temps de référence et corpus de compatibilité identiques). **Redéployer `submit-score`** : le serveur rejoue les records avec sa propre copie de la physique, qui doit connaître les chicanes et les solides. Toutes les nouveautés sont ajoutées à la FIN des ordres d'encodage : aucun code de circuit existant ne change.
+
+- **Chicanes** (courbes en S latérales) : la route se décale d'une ou deux colonnes sans changer de cap. Huit pièces : courte 2×2 (rayon 40 m, ≈ 125 km/h au pilote), longue 3×3 (80 m, ≈ 190 km/h), rapide 4×4 (136 m, presque à fond), grand S 3×3 sur deux colonnes (52 m) ; vers la droite ou la gauche. Deux arcs tangents au milieu, géométrie exacte pour les murs et le sol. Éditeur : famille « Chicane » (longueur, décalage, sens) ; options à l'envers, sans bordures, tunnel, thème. Scripts : `ZR` / `ZL` (`ZR3`, `ZR4`), `ZZR` / `ZZL`.
+- **Panneaux de bord de route** (décorations, catégorie « Panneaux ») : chevrons gauche / droite / montée / descente, panneau danger, panneau interdit, et deux panneaux simples (descente, demi-tour).
+- **Portiques** : option « Portique » (visuelle, ne change ni la signature ni les records) pour un départ, une arrivée ou un checkpoint : portique classique, ligne au sol, arche, pylônes. Scripts : suffixe `*n` (`start*2`, `C*3`, `finish*1`). Le départ, l'arrivée et le checkpoint peuvent aussi être posés sans bordures.
+- **Piliers et poutres : les premiers SOLIDES** (catégorie « Piliers et poutres ») : pilier, pilier sur socle, poteau, poutre, poutres en L, en T, en croix, potence, portique en poutres. La voiture ne les traverse pas : leurs côtés se comportent comme une bordure (même choc sans rebond, même frottement), leur dessus porte la voiture, et une voiture qui saute dessous s'y cogne la tête. Ils se posent librement (position, hauteur, cap, échelle ×0,25 à ×8), jamais inclinés, et restent affichés même quand les décorations sont masquées (qualité basse). Leur position, leur hauteur et leur cap entrent dans la signature du circuit.
+- **Tests** : `tools/test-etape1.mjs` (20 tests). Les tests d'ordre d'encodage vérifient désormais des index fixes (le virage géant reste en 135, `custom` en 311) plutôt que « le dernier ».
+
 ## Bêta 0.9.67 — chapitre 1 refait, bifurcations à deux chemins, virage géant
 
 **`PHYS_VER` inchangé (36)** : la physique ne change pas. **Redéployer `submit-score`** : le serveur vérifie les records des circuits intégrés avec sa propre copie de `js/tracks.js`, et les six circuits du chapitre 1 ont changé (leurs clés de classement aussi). L'empreinte de physique est régénérée parce que plusieurs de ses scénarios roulent sur ces circuits.

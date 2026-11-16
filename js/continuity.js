@@ -165,6 +165,21 @@ export function continuityIssues(track) {
     });
   }
 
+  // ---- width : deux chaussées de largeurs différentes bout à bout (0.9.70) ------------------------------------------------------------
+  for (const e of all) {
+    if (e.w === undefined) continue;
+    for (const f of touching(e)) {
+      if (f.w === undefined || Math.abs(e.w - f.w) < 0.5 || e.w > f.w) continue;      // (une fois par paire : vu depuis la plus étroite)
+      const key = [pos(e.tile), pos(f.tile)].sort().join('/');
+      add({
+        tile: e.tile, other: f.tile, key, level: 'warn', code: 'width',
+        why: `${lab(e.tile)} (${pos(e.tile)}) a une chaussée de ${2 * e.w} m et ${lab(f.tile)} (${pos(f.tile)}), qui la touche, de ${2 * f.w} m.`,
+        effect: 'Le bout de la bordure de la route étroite barre la route large : une voiture qui arrive sur le côté le heurte de face.',
+        fix: 'Intercale un Rétrécissement (ou un Élargissement) entre les deux : il raccorde les deux largeurs en biais.',
+      });
+    }
+  }
+
   // ---- piece-fact : ce que la matrice de compatibilité a mesuré ---------------------------------------------------------------------
   for (const t of tiles) {
     const col = t.v ? 'plafond' : COL_OF_O[t.o | 0];

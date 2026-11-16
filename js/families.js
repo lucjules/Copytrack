@@ -103,8 +103,56 @@ export const FAMILIES = {
       loopBigTriple: { dir: 'R', size: 'g', turns: '3' }, loopBigTripleL: { dir: 'L', size: 'g', turns: '3' },
     },
   },
+  // 0.9.68 : chicane (courbe en S latérale) : la route se décale d'une ou deux colonnes sans changer de cap. Plus elle est longue, plus elle est rapide.
+  chicane: {
+    label: 'Chicane',
+    hint: 'Courbe en S : la route se décale d’une ou deux colonnes sans changer de cap. Courte (2×2), longue (3×3) ou rapide (4×4).',
+    icon: 'sbend',
+    traits: [
+      { id: 'len', label: 'Longueur', values: [['2', 'Courte (2 cases)'], ['3', 'Longue (3 cases)'], ['4', 'Rapide (4 cases)']] },
+      { id: 'shift', label: 'Décalage', values: [['1', '1 colonne'], ['2', '2 colonnes']] },
+      { id: 'dir', label: 'Sens', values: [['R', 'Vers la droite →'], ['L', 'Vers la gauche ←']] },
+    ],
+    members: {
+      sbend: { len: '2', shift: '1', dir: 'R' }, sbendL: { len: '2', shift: '1', dir: 'L' },
+      sbendLong: { len: '3', shift: '1', dir: 'R' }, sbendLongL: { len: '3', shift: '1', dir: 'L' },
+      sbendFast: { len: '4', shift: '1', dir: 'R' }, sbendFastL: { len: '4', shift: '1', dir: 'L' },
+      sbendWide: { len: '3', shift: '2', dir: 'R' }, sbendWideL: { len: '3', shift: '2', dir: 'L' },
+    },
+  },
+  // 0.9.69 : plaques (surfaces libres) : carré, triangle ou quart de disque, de 1 à 3 cases ; la plateforme est la plaque carrée 1×1.
+  plaque: {
+    label: 'Plaque',
+    hint: 'Surface libre, sans route : carrée, triangulaire ou en quart de disque, de 1 à 3 cases. Bordures au choix (Options, ou bord par bord dans l’Inspecteur).',
+    icon: 'platform',
+    traits: [
+      { id: 'forme', label: 'Forme', values: [['sq', 'Carrée'], ['tri', 'Triangle'], ['sec', 'Quart de disque']] },
+      { id: 'taille', label: 'Taille', values: [['1', '1 case'], ['2', '2×2'], ['3', '3×3']] },
+    ],
+    members: {
+      platform: { forme: 'sq', taille: '1' }, plate2: { forme: 'sq', taille: '2' }, plate3: { forme: 'sq', taille: '3' },
+      tri1: { forme: 'tri', taille: '1' }, tri2: { forme: 'tri', taille: '2' }, tri3: { forme: 'tri', taille: '3' },
+      sec1: { forme: 'sec', taille: '1' }, sec2: { forme: 'sec', taille: '2' }, sec3: { forme: 'sec', taille: '3' },
+    },
+  },
+  // 0.9.70 : largeur de la route : étroite (12 m), large (56 m, 3×3), et les raccords en biais entre largeurs (posés à l'envers, ils font l'inverse).
+  largeur: {
+    label: 'Largeur',
+    hint: 'Route étroite (12 m) ou large (56 m, 3×3), et leurs raccords en biais. Un rétrécissement tourné d’un demi-tour élargit (et inversement).',
+    icon: 'narrow',
+    traits: [{ id: 'w', label: 'Largeur', values: [['n', 'Étroite (12 m)'], ['ni', 'Rétrécissement (24 → 12 m)'], ['wi', 'Élargissement (24 → 56 m)'], ['w', 'Large (56 m)']] }],
+    members: { narrow: { w: 'n' }, narrowIn: { w: 'ni' }, wideIn: { w: 'wi' }, wide: { w: 'w' } },
+  },
+  // 0.9.71 : carrefours au même niveau : croisement (4 bras) ou T (3 bras ; la pièce tourne pour mettre la branche où l'on veut).
+  carrefour: {
+    label: 'Carrefour',
+    hint: 'Croisement (4 bras) ou carrefour en T (3 bras), au même niveau. Un circuit peut repasser par un croisement (circuit en 8).',
+    icon: 'cross',
+    traits: [{ id: 'forme', label: 'Forme', values: [['x', 'Croisement'], ['t', 'En T']] }],
+    members: { cross: { forme: 'x' }, tee: { forme: 't' } },
+  },
 };
-export const FAMILY_ORDER = ['straight', 'turn', 'courbe', 'roll', 'loop'];
+export const FAMILY_ORDER = ['straight', 'turn', 'chicane', 'courbe', 'roll', 'loop', 'plaque', 'largeur', 'carrefour'];
 
 // type concret -> { fam, traits }
 const BY_TYPE = new Map();

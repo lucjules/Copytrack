@@ -23,6 +23,8 @@ const OPTION_GROUPS = [
   { id: 'cp', label: 'Checkpoint', flag: 'cp', check: true, choices: [['cp', 1, 'Checkpoint']] },
   { id: 'tb', label: 'Anneau turbo', flag: 'tb', choices: [['tb', 0, 'Aucun'], ['tb', 1, 'Turbo']] },
   { id: 'th', label: 'Thème', flag: 'th', choices: [['th', 0, 'Classique'], ['th', 1, 'Herbe'], ['th', 2, 'Sable'], ['th', 3, 'Roche']] },
+  { id: 'gs', label: 'Portique', flag: 'gs', choices: [['gs', 0, 'Portique'], ['gs', 1, 'Ligne au sol'], ['gs', 2, 'Arche'], ['gs', 3, 'Pylônes']] },
+  { id: 'eb', label: 'Plaque', flag: 'eb', choices: [['eb', 0, 'Sans bordure'], ['eb', 15, 'Bordures tout autour']] },
   { id: 'mv', label: 'Mouvement', flag: 'mv', choices: [['mv', 0, 'Aucun'], ['mv', 1, 'Ascenseur'], ['mv', 2, 'Glissière'], ['mv', 3, 'Rotation']] },
 ];
 
@@ -40,6 +42,25 @@ const loopIcon = (mir, col, turns = 1, w = 9) => {
   const r = turns > 1 ? `M${x0} 46V32a8 8 0 1 ${mir > 0 ? 1 : 0} 16 0a8 8 0 1 ${mir > 0 ? 1 : 0} -16 0` : `M${x0} 46V30a10 10 0 1 ${mir > 0 ? 1 : 0} ${mir > 0 ? 20 : -20} 0V2`;
   return svg(`<path d="${r}" stroke="${ROAD}" stroke-width="${w}" fill="none"/><path d="${r}" stroke="${col}" stroke-width="2" fill="none"/>`);
 };
+
+// 0.9.68 : chicane vue de dessus : la route entre en bas dans une colonne et ressort en haut dans une autre (mir : → 1, ← −1) ; wide : 2 colonnes.
+const sbIcon = (mir, wide = false, tag = '') => {
+  const a = wide ? 9 : 15, b = wide ? 39 : 33, x0 = mir > 0 ? a : b, x1 = mir > 0 ? b : a;
+  const d = `M${x0} 48C${x0} 26 ${x1} 22 ${x1} 0`;
+  return svg(`<path d="${d}" stroke="${RAIL}" stroke-width="${wide ? 14 : 17}" fill="none"/><path d="${d}" stroke="${ROAD}" stroke-width="${wide ? 10 : 13}" fill="none"/><path d="${d}" stroke="${LINE}" stroke-width="1.6" stroke-dasharray="4 4" fill="none"/>${tag ? `<text x="${mir > 0 ? 3 : 33}" y="44" font-size="11" fill="#ffbf3c" font-family="sans-serif" font-weight="700" stroke="#14142a" stroke-width="2.2" paint-order="stroke">${tag}</text>` : ''}`);
+};
+
+// 0.9.69 : plaques vues de dessus (carré, triangle, quart de disque) ; n : taille.
+const plateIcon = (shape, n) => {
+  const d = shape === 'tri' ? 'M4 4V44H44Z' : shape === 'sec' ? 'M4 44V4A40 40 0 0 1 44 44Z' : 'M4 4H44V44H4Z';
+  return svg(`<path d="${d}" fill="#454a6a" stroke="#ffb84d" stroke-width="2" stroke-linejoin="round"/>${n > 1 ? `<text x="${shape === 'sq' ? 16 : 8}" y="${shape === 'sec' ? 38 : 30}" font-size="13" fill="#ffbf3c" font-family="sans-serif" font-weight="700">${n}×${n}</text>` : ''}`);
+};
+
+// 0.9.70 : largeur de route vue de dessus : bords (rouges) de x0 à x1 en bas, de x2 à x3 en haut.
+const widthIcon = (a, b) => svg(`<path d="M${24 - a} 46L${24 - b} 2H${24 + b}L${24 + a} 46Z" fill="${ROAD}"/><path d="M${24 - a} 46L${24 - b} 2M${24 + a} 46L${24 + b} 2" stroke="${RAIL}" stroke-width="2.5"/><path d="M24 6v8M24 20v8M24 34v8" stroke="${LINE}" stroke-width="2"/>`);
+
+// 0.9.71 : carrefours vus de dessus (bras présents parmi N, S, E, W).
+const crossIcon = (arms) => svg(`<path d="M17 17H31V31H17Z${arms.includes('N') ? 'M17 2H31V17H17Z' : ''}${arms.includes('S') ? 'M17 31H31V46H17Z' : ''}${arms.includes('E') ? 'M31 17H46V31H31Z' : ''}${arms.includes('W') ? 'M2 17H17V31H2Z' : ''}" fill="${ROAD}"/><path d="${arms.includes('W') ? 'M17 2V17H2M2 31H17V46' : 'M17 2V46'}M31 2V17H46M46 31H31V46" stroke="${RAIL}" stroke-width="2" fill="none"/>`);
 
 // Petit nombre d'inclinaison dans le coin d'une icône.
 const numTag = (n) => `<text x="31" y="44" font-size="13" fill="#ffbf3c" font-family="sans-serif" font-weight="700" stroke="#14142a" stroke-width="2.2" paint-order="stroke">${n}</text>`;
@@ -72,6 +93,17 @@ const ICONS = {
   hugecurve: svg(`<path d="M2 48 A46 46 0 0 1 48 2 L48 14 A34 34 0 0 0 14 48Z" fill="#3c4160"/><path d="M2 48 A46 46 0 0 1 48 2" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M14 48 A34 34 0 0 1 48 14" stroke="#ff6b57" stroke-width="2.5" fill="none"/>`),
   giantcurve: svg(`<path d="M2 48 A46 46 0 0 1 48 2 L48 10 A38 38 0 0 0 10 48Z" fill="#3c4160"/><path d="M2 48 A46 46 0 0 1 48 2" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M10 48 A38 38 0 0 1 48 10" stroke="#ff6b57" stroke-width="2.5" fill="none"/><path d="M14 40 A30 30 0 0 1 40 14" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 4" fill="none"/>`),
   crv05: crvIcon('½'), crv1: crvIcon(1), crv2: crvIcon(2), crv4: crvIcon(4),
+  cross: crossIcon('NSEW'), tee: crossIcon('NSE'),
+  // 0.9.72 : sommet de looping modulaire (vu de côté : demi-cercle qui redescend à côté) et tube en virage (vu de dessus)
+  loopTop: svg(`<path d="M10 46V24a14 14 0 0 1 28 0v22" stroke="${ROAD}" stroke-width="8" fill="none"/><path d="M10 46V24a14 14 0 0 1 28 0v22" stroke="#36e9ff" stroke-width="2" fill="none"/><path d="M33 38l5 6 5-6" stroke="#36e9ff" stroke-width="2" fill="none"/>`),
+  loopTopL: svg(`<path d="M10 46V24a14 14 0 0 1 28 0v22" stroke="${ROAD}" stroke-width="8" fill="none"/><path d="M10 46V24a14 14 0 0 1 28 0v22" stroke="#ff5fd2" stroke-width="2" fill="none"/><path d="M33 38l5 6 5-6" stroke="#ff5fd2" stroke-width="2" fill="none"/>`),
+  tubeTurn: svg(`<path d="M6 48 A42 42 0 0 1 48 6" stroke="#7fe9ff" stroke-width="12" fill="none"/><path d="M6 48 A42 42 0 0 1 48 6" stroke="${ROAD}" stroke-width="6" fill="none"/>`),
+  tubeTurnL: svg(`<path d="M42 48 A42 42 0 0 0 0 6" stroke="#7fe9ff" stroke-width="12" fill="none"/><path d="M42 48 A42 42 0 0 0 0 6" stroke="${ROAD}" stroke-width="6" fill="none"/>`),
+  narrow: widthIcon(7, 7), narrowIn: widthIcon(14, 7), wideIn: widthIcon(12, 22), wide: widthIcon(22, 22),
+  plate2: plateIcon('sq', 2), plate3: plateIcon('sq', 3), tri1: plateIcon('tri', 1), tri2: plateIcon('tri', 2), tri3: plateIcon('tri', 3),
+  sec1: plateIcon('sec', 1), sec2: plateIcon('sec', 2), sec3: plateIcon('sec', 3),
+  sbend: sbIcon(1), sbendL: sbIcon(-1), sbendLong: sbIcon(1, false, '3'), sbendLongL: sbIcon(-1, false, '3'),
+  sbendFast: sbIcon(1, false, '4'), sbendFastL: sbIcon(-1, false, '4'), sbendWide: sbIcon(1, true), sbendWideL: sbIcon(-1, true),
   cv05: incIcon(false, '½'), cv1: incIcon(false, 1), cv2: incIcon(false, 2), cv4: incIcon(false, 4),
   cvL05: incIcon(false, '½'), cvL1: incIcon(false, 1), cvL2: incIcon(false, 2), cvL4: incIcon(false, 4),
   cvBig05: incIcon(true, '½'), cvBig1: incIcon(true, 1), cvBig2: incIcon(true, 2), cvBig4: incIcon(true, 4),
@@ -443,7 +475,7 @@ export const paletteMethods = {
           b.prepend(sw);
         }
         const m = val ? MODS.find((x) => x.id === modId(flag, val)) : null;
-        b.title = m ? m.hint : flag === 'cp' ? 'Pas de checkpoint' : flag === 'mv' ? 'Pièce fixe' : flag === 'th' ? 'Aspect d’origine' : flag === 'o' ? 'Route à plat, au sol' : '';
+        b.title = m ? m.hint : flag === 'cp' ? 'Pas de checkpoint' : flag === 'mv' ? 'Pièce fixe' : flag === 'th' ? 'Aspect d’origine' : flag === 'gs' ? 'Portique classique' : flag === 'eb' ? 'Plaque sans bordure' : flag === 'o' ? 'Route à plat, au sol' : '';
         b.addEventListener('click', () => { this._optClick(flag, val); this.app.audio.click(); });
         chips.appendChild(b);
         this.optChips.push(b);
@@ -490,7 +522,7 @@ export const paletteMethods = {
       // « Aucun » n'a de sens que pour une pose combinée ; un choix impossible sur la pièce est grisé.
       b.hidden = !piece && val === 0 && flag !== 'o';
       // « Sol » est toujours possible ; l'orientation compte pour la ligne droite et le virage, pas pour les autres pièces.
-      const ok = !piece || (flag === 'o' && val === 0) || (val === 0) || flagAllowed(piece, flag, flag === 'cp' || flag === 'mv' || flag === 'tb' ? { ...probe, ...this._compatProbe(flag) } : flag === 'o' ? null : probe, val);
+      const ok = !piece || (flag === 'o' && val === 0) || (val === 0) || flagAllowed(piece, flag, flag === 'cp' || flag === 'mv' || flag === 'tb' ? { ...probe, ...this._compatProbe(flag) } : flag === 'gs' ? { ...probe, cp: this.opts.cp } : flag === 'o' ? null : probe, val);
       b.classList.toggle('dim', !ok);
     }
     const hint = document.getElementById('ed-opt-hint');

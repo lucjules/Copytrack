@@ -16,7 +16,7 @@ const TOOL_IDS = new Set(['select', 'inspect', 'erase']);
 
 const MIRROR = MIRROR_TYPES;
 
-const OPT_NAMES = { v: 'plafond', o: 'mur', nb: 'sans bordures', tn: 'tunnel', mv: 'mouvement', cp: 'checkpoint', tb: 'anneau turbo', th: 'thème' };
+const OPT_NAMES = { v: 'plafond', o: 'mur', nb: 'sans bordures', tn: 'tunnel', mv: 'mouvement', cp: 'checkpoint', tb: 'anneau turbo', th: 'thème', gs: 'style du portique', eb: 'bordures de plaque' };
 
 // Pourquoi une pose sort des niveaux (sol ou plafond) : plafond, mur, pente descendante ou simple hauteur.
 function outOfBounds(tile) {

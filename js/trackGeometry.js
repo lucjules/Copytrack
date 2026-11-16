@@ -2,7 +2,7 @@
 // Le maillage complet (tronçons, objets mobiles, lampes) est assemblé par TrackView dans trackMesh.js.
 import * as THREE from './vendor/three.module.min.js';
 import { CELL, HALF, LEVEL_H, ROAD_HALF, RAIL_W, RAIL_H, SLAB_T } from './constants.js';
-import { PIECES, SURFACES, RING_R, RING_Y, arcParams, baseY, tileCenter, tileParam, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
+import { PIECES, SURFACES, RING_R, RING_Y, arcParams, sbendPoint, plateShape, plateEdges, plateOutline, areaCentroid, roadHalf, junctionRects, baseY, tileCenter, tileParam, forkBranchX, forkSep, sampleLocal, cpKind, beltSpeed, isOriented, hasNoRails, profH, profOf } from './pieces.js';
 import { WATER_DROP, boatDrop } from './track/shared.js';
 import { ribbonOf, frameLocal } from './ribbons.js';
 import { renderOptions } from './renderOptions.js';
@@ -229,6 +229,18 @@ export function stripsFor(tile) {
     }
     return [fr];
   }
+  if (p.kind === 'sbend') {
+    // Chicane : les deux arcs du S, 4 tronçons par case de longueur.
+    const n = 8 * p.size, fr = [], q = {};
+    for (let i = 0; i <= n; i++) { sbendPoint(p, i / n, q); fr.push(flatFrame(q.x, base, q.z, q.tx, q.tz)); }
+    return [fr];
+  }
+  if (p.hw) {
+    // 0.9.70 : route de largeur variable : chaque repère porte sa demi-largeur (hw), que le profil en travers suit (voir sweep).
+    const n = 4 * p.size, fr = lineStrip(0, p.size * HALF, -p.size * HALF, base, base, n);
+    fr.forEach((f, i) => { f.hw = roadHalf(p, i / n); });
+    return [fr];
+  }
   // Ligne droite : profil vertical droit (4 tronçons) ou courbe (12 tronçons pour que le raccord reste lisse).
   return [profOf(p) === 'l' ? lineStrip(0, p.size * HALF, -p.size * HALF, base, base + p.rise * LEVEL_H, 4) : profileStrip(p, base, 12)];
 }
@@ -243,7 +255,8 @@ function sweep(gb, frames, style, nb, drop = 0) {
   const prof = nb ? PROFILE_NB : PROFILE;
   if (drop) frames = frames.map((f) => ({ ...f, p: [f.p[0] - f.u[0] * drop, f.p[1] - f.u[1] * drop, f.p[2] - f.u[2] * drop] }));
   const n = frames.length - 1;
-  const rings = frames.map((f) => prof.map((q) => at(f, q.d, q.h)));
+  // (0.9.70 : repère à demi-largeur propre : tout ce qui est au bord de la chaussée (lignes, bordures, dalle) est décalé de hw − 12 ; le tiret central reste)
+  const rings = frames.map((f) => prof.map((q) => at(f, f.hw == null || Math.abs(q.d) < 1 ? q.d : q.d + Math.sign(q.d) * (f.hw - ROAD_HALF), q.h)));
   const m = prof.length;
   for (let i = 0; i < n; i++) {
     const A = rings[i], B = rings[i + 1];
@@ -266,8 +279,9 @@ function sweep(gb, frames, style, nb, drop = 0) {
     ? [[-ROAD_HALF, ROAD_HALF, -SLAB_T, 0]]
     : [[-RO, -ROAD_HALF, -SLAB_T, RAIL_H], [-ROAD_HALF, ROAD_HALF, -SLAB_T, 0], [ROAD_HALF, RO, -SLAB_T, RAIL_H]];
   for (const start of [true, false]) {
-    const f = frames[start ? 0 : n];
-    for (const [d0, d1, h0, h1] of rects) {
+    const f = frames[start ? 0 : n], dw = f.hw == null ? 0 : f.hw - ROAD_HALF;      // (0.9.70 : route de largeur variable)
+    for (const [e0, e1, h0, h1] of rects) {
+      const d0 = e0 + Math.sign(e0) * dw, d1 = e1 + Math.sign(e1) * dw;
       const a = at(f, d0, h0), b = at(f, d1, h0), c = at(f, d1, h1), d = at(f, d0, h1);
       const slab = (style.pal && style.pal.slab) || PALETTE.slab;
       if (start) gb.quad(a, b, c, d, slab);
@@ -299,9 +313,10 @@ function fxLayer(fx, frames, tile, kind, half = ROAD_HALF) {
   for (let i = 0; i < n; i++) {
     const A = frames[i], B = frames[i + 1];
     const s1 = s0 + Math.hypot(B.p[0] - A.p[0], B.p[1] - A.p[1], B.p[2] - A.p[2]);
+    const ka = A.hw != null ? A.hw / half : 1, kb = B.hw != null ? B.hw / half : 1;      // (0.9.70 : route de largeur variable)
     for (let j = 0; j < D.length - 1; j++) {
       const d0 = D[j], d1 = D[j + 1];
-      fx.fxQuad(at(A, d0, lift), at(A, d1, lift), at(B, d1, lift), at(B, d0, lift),
+      fx.fxQuad(at(A, d0 * ka, lift), at(A, d1 * ka, lift), at(B, d1 * kb, lift), at(B, d0 * kb, lift),
         [kind, s0 * sgn, speed, d0], [kind, s0 * sgn, speed, d1], [kind, s1 * sgn, speed, d1], [kind, s1 * sgn, speed, d0], '#ffffff');
     }
     s0 = s1;
@@ -525,6 +540,8 @@ function surfaceDecals(glow, frames, tile, area = false) {
 }
 
 function platform(gb, glow, tile, fx = null) {
+  const P = PIECES[tile.t];
+  if (P.size > 1 || P.shape || tile.eb) { plate(gb, glow, tile, fx); return; }      // 0.9.69 : plaques (la plateforme 1×1 sans bordure garde sa géométrie d'avant)
   const y = baseY(tile);
   const y0 = y - SLAB_T;
   const s = tile.s || '';
@@ -548,17 +565,192 @@ function platform(gb, glow, tile, fx = null) {
   if (s) surfaceDecals(glow, lineStrip(0, HALF, -HALF, y, y, 4), tile, true);
 }
 
+// 0.9.69 : plaque de taille et de forme quelconques (carré, triangle, quart de disque : pieces.js plateShape), et ses bordures (option eb).
+// Le contour est un polygone (pieces.js : plateOutline) ; le dessus est un damier de cases de 8 m découpé au contour.
+function plate(gb, glow, tile, fx) {
+  const P = PIECES[tile.t], y = baseY(tile), y0 = y - SLAB_T, h = P.size * HALF;
+  const s = tile.s || '';
+  const sty = tile.col || tile.th ? styleFor(tile) : null;
+  const top = s ? SURFACE_STYLE[s].road : sty ? sty.road : [PALETTE.platA, PALETTE.platB];
+  const side = (sty && sty.pal && sty.pal.slab) || PALETTE.slab, under = (sty && sty.pal && sty.pal.under) || PALETTE.under;
+  const poly = plateOutline(P), n = poly.length;
+  // Dessus : cases du damier (8 m) découpées au contour (Sutherland-Hodgman, polygone convexe).
+  const w = CELL / 4, m = P.size * 4;
+  const clip = (cell) => {
+    let out = cell;
+    for (let i = 0; i < n && out.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % n], inside = (p) => (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]) >= -1e-9;
+      const src = out; out = [];
+      for (let k = 0; k < src.length; k++) {
+        const p = src[k], q = src[(k + 1) % src.length], ip = inside(p), iq = inside(q);
+        if (ip) out.push(p);
+        if (ip !== iq) {
+          const d1 = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]), d2 = (b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0]), t = d1 / (d1 - d2);
+          out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]);
+        }
+      }
+    }
+    return out;
+  };
+  // (le contour doit tourner dans le sens où « inside » est à gauche : on le vérifie par son aire)
+  let area = 0;
+  for (let i = 0; i < n; i++) area += poly[i][0] * poly[(i + 1) % n][1] - poly[(i + 1) % n][0] * poly[i][1];
+  if (area < 0) poly.reverse();
+  for (let i = 0; i < m; i++) for (let j = 0; j < m; j++) {
+    const x0 = -h + i * w, z0 = -h + j * w;
+    const c = clip([[x0, z0], [x0 + w, z0], [x0 + w, z0 + w], [x0, z0 + w]]);
+    for (let k = 1; k + 1 < c.length; k++) gb.tri([c[0][0], y, c[0][1]], [c[k + 1][0], y, c[k + 1][1]], [c[k][0], y, c[k][1]], top[(i + j) % 2]);
+  }
+  // Tranche et dessous.
+  for (let i = 0; i < n; i++) {
+    const a = poly[i], b = poly[(i + 1) % n];
+    gb.quad([a[0], y0, a[1]], [b[0], y0, b[1]], [b[0], y - 0.001, b[1]], [a[0], y - 0.001, a[1]], side);
+  }
+  for (let k = 1; k + 1 < n; k++) gb.tri([poly[0][0], y0, poly[0][1]], [poly[k][0], y0, poly[k][1]], [poly[k + 1][0], y0, poly[k + 1][1]], under);
+  // Bordures choisies : un muret de RAIL_W × RAIL_H à l'intérieur du bord, rayé comme les bordures de route ; liseré sur les autres bords.
+  const style = styleFor(tile), edges = plateEdges(P);
+  edges.forEach((e, bit) => {
+    const on = !!(tile.eb & (1 << bit));
+    const pts = [];
+    if (e.t === 'seg') { const k = Math.max(2, Math.round(e.len / 4)); for (let i = 0; i <= k; i++) pts.push([e.ax + (e.bx - e.ax) * (i / k), e.az + (e.bz - e.az) * (i / k), e.nx, e.nz]); }
+    else { const k = 8 * P.size; for (let i = 0; i <= k; i++) { const a = (Math.PI / 2) * (i / k), c = Math.cos(a), sn = Math.sin(a); pts.push([e.cx + e.R * c, e.cz - e.R * sn, -c, sn]); } }
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const [ax, az, anx, anz] = pts[i], [bx, bz, bnx, bnz] = pts[i + 1];
+      const iw = on ? RAIL_W : 0.4;
+      const A = [ax, az], B = [bx, bz], A2 = [ax + anx * iw, az + anz * iw], B2 = [bx + bnx * iw, bz + bnz * iw];
+      if (!on) { gb.quad([A[0], y + 0.02, A[1]], [B[0], y + 0.02, B[1]], [B2[0], y + 0.02, B2[1]], [A2[0], y + 0.02, A2[1]], s || sty ? style.railA : PALETTE.platEdge); continue; }
+      const col = i % 2 ? style.railA : style.railB, yt = y + RAIL_H;
+      gb.quad([A[0], yt, A[1]], [B[0], yt, B[1]], [B2[0], yt, B2[1]], [A2[0], yt, A2[1]], col);
+      gb.quad([A[0], y, A[1]], [B[0], y, B[1]], [B[0], yt, B[1]], [A[0], yt, A[1]], col);
+      gb.quad([A2[0], yt, A2[1]], [B2[0], yt, B2[1]], [B2[0], y, B2[1]], [A2[0], y, A2[1]], col);
+    }
+  });
+  const sq = plateShape(P) === 'sq';
+  if (fx && FX_KIND[s] !== undefined && sq) fxLayer(fx, lineStrip(0, h, -h, y, y, 4 * P.size), tile, FX_KIND[s], h - 0.4);
+  if (s) { const c = areaCentroid(P); surfaceDecals(glow, lineStrip(c.x, c.z + HALF * 0.6, c.z - HALF * 0.6, y, y, 4), tile, true); }
+}
+
+// 0.9.71 : carrefour : la chaussée est l'union du carré central et des bras (pieces.js : junctionRects) ; les bordures suivent tout le contour (côté d'un bras,
+// ou côté du carré central quand le bras manque), avec un dé à l'angle entre deux bras (la bande de bordure de la physique y est un angle droit plein).
+const JDIR = { N: [0, -1, 1, 0], S: [0, 1, -1, 0], E: [1, 0, 0, 1], W: [-1, 0, 0, -1] };      // normale sortante (nx, nz), tangente (tx, tz)
+function junctionMesh(gb, glow, tile, style) {
+  const P = PIECES[tile.t], y = baseY(tile), y0 = y - SLAB_T, rails = !hasNoRails(tile), W = ROAD_HALF;
+  const slab = (style.pal && style.pal.slab) || PALETTE.slab, under = (style.pal && style.pal.under) || PALETTE.under;
+  const rects = junctionRects(P);
+  rects.forEach(([x0, z0, x1, z1], i) => {
+    gb.quad([x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0], style.road[i % 2 ? 1 : 0]);
+    gb.quad([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], under);
+  });
+  // Marquages : tirets au milieu de chaque bras, ligne d'arrêt pointillée à l'entrée du carré central.
+  for (const a of P.arms) {
+    const [nx, nz, tx, tz] = JDIR[a];
+    for (let k = 0; k < 2; k++) {
+      const s0 = W + 0.6 + k * 1.8, s1 = s0 + 1.0, P0 = [nx * s0, nz * s0], P1 = [nx * s1, nz * s1];
+      gb.quad([P0[0] - tx * 0.2, y + 0.02, P0[1] - tz * 0.2], [P0[0] + tx * 0.2, y + 0.02, P0[1] + tz * 0.2], [P1[0] + tx * 0.2, y + 0.02, P1[1] + tz * 0.2], [P1[0] - tx * 0.2, y + 0.02, P1[1] - tz * 0.2], style.line);
+    }
+    for (let k = -5; k <= 4; k += 2) {
+      const a0 = k * 2.2 + 0.5, a1 = a0 + 1.6, c = W - 0.4;
+      const A = [nx * c + tx * a0, nz * c + tz * a0], B = [nx * c + tx * a1, nz * c + tz * a1], C2 = [nx * (c + 0.5) + tx * a1, nz * (c + 0.5) + tz * a1], D = [nx * (c + 0.5) + tx * a0, nz * (c + 0.5) + tz * a0];
+      gb.quad([A[0], y + 0.02, A[1]], [B[0], y + 0.02, B[1]], [C2[0], y + 0.02, C2[1]], [D[0], y + 0.02, D[1]], style.line);
+    }
+  }
+  // Contour : segments (A → B) et normale sortante m de la bordure posée dessus.
+  const segs = [];
+  for (const d of ['N', 'E', 'S', 'W']) {
+    const [nx, nz, tx, tz] = JDIR[d];
+    if (P.arms.includes(d)) for (const s of [-1, 1]) segs.push([[nx * W + s * tx * W, nz * W + s * tz * W], [nx * HALF + s * tx * W, nz * HALF + s * tz * W], [s * tx, s * tz]]);
+    else segs.push([[nx * W - tx * W, nz * W - tz * W], [nx * W + tx * W, nz * W + tz * W], [nx, nz]]);
+  }
+  for (const [A, B, m] of segs) {
+    const h = rails ? RAIL_H : 0, o = rails ? RAIL_W : 0;
+    const A2 = [A[0] + m[0] * o, A[1] + m[1] * o], B2 = [B[0] + m[0] * o, B[1] + m[1] * o];
+    if (rails) {
+      const n = Math.max(1, Math.round(Math.hypot(B[0] - A[0], B[1] - A[1]) / 4));
+      for (let i = 0; i < n; i++) {
+        const u0 = i / n, u1 = (i + 1) / n, L = (p, q, u) => [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u];
+        const a = L(A, B, u0), b = L(A, B, u1), a2 = L(A2, B2, u0), b2 = L(A2, B2, u1), col = i % 2 ? style.railA : style.railB;
+        gb.quad([a[0], y + h, a[1]], [b[0], y + h, b[1]], [b2[0], y + h, b2[1]], [a2[0], y + h, a2[1]], col);
+        gb.quad([a[0], y, a[1]], [b[0], y, b[1]], [b[0], y + h, b[1]], [a[0], y + h, a[1]], col);
+      }
+      gb.quad([A2[0], y0, A2[1]], [B2[0], y0, B2[1]], [B2[0], y + h, B2[1]], [A2[0], y + h, A2[1]], slab);
+      gb.quad([A[0], y0, A[1]], [A2[0], y0, A2[1]], [B2[0], y0, B2[1]], [B[0], y0, B[1]], under);
+    } else gb.quad([A[0], y0, A[1]], [B[0], y0, B[1]], [B[0], y, B[1]], [A[0], y, A[1]], slab);
+  }
+  // Dés aux angles entre deux bras voisins.
+  if (rails) for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const ax = sx > 0 ? 'E' : 'W', az = sz > 0 ? 'S' : 'N';
+    if (!(P.arms.includes(ax) && P.arms.includes(az))) continue;
+    const x0 = sx * W, z0 = sz * W, x1 = sx * (W + RAIL_W), z1 = sz * (W + RAIL_W);
+    gb.box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.max(x0, x1), y + RAIL_H, Math.max(z0, z1), style.railA);
+  }
+}
+
 // Portique (départ / checkpoint / arrivée).
+// Portique de départ, d'arrivée ou de checkpoint. 0.9.68 : quatre styles (option gs, visuelle) : 0 portique (poteaux et traverse), 1 ligne au sol
+// (deux balises basses), 2 arche (demi-cercle), 3 pylônes (deux hauts mâts lumineux, sans traverse). Le marquage au sol est le même pour tous.
 function gate(gb, glow, tile) {
   const sp = cpKind(tile) ? 'checkpoint' : PIECES[tile.t].special;
   const y = baseY(tile);
   const color = PALETTE[sp];
   const px = RO + 0.75;
   const top = 6.6;
-  for (const s of [-1, 1]) {
-    gb.taper(s * px, 0, y - SLAB_T, y + top, 1.1, 1.1, 0.8, 0.8, color);
-    gb.box(s * px - 0.7, y + RAIL_H - 0.3, -0.7, s * px + 0.7, y + RAIL_H, 0.7, PALETTE.slab);
+  const style = tile.gs | 0, rails = !hasNoRails(tile);
+  if (style === 0) {
+    for (const s of [-1, 1]) {
+      gb.taper(s * px, 0, y - SLAB_T, y + top, 1.1, 1.1, 0.8, 0.8, color);
+      if (rails) gb.box(s * px - 0.7, y + RAIL_H - 0.3, -0.7, s * px + 0.7, y + RAIL_H, 0.7, PALETTE.slab);
+    }
+  } else gateStyle(gb, glow, style, sp, color, y, px);
+  if (style === 0) gateBeam(gb, glow, sp, color, y, px, top);
+  gateLine(gb, sp, color, y);
+}
+
+// Variantes du portique (0.9.68).
+function gateStyle(gb, glow, style, sp, color, y, px) {
+  const chk = (i) => (i % 2 ? '#1e1f2b' : '#f7f2ea');
+  const spike = (cx, cy, h, r) => {
+    const tip = [cx, cy + h, 0], rg = [[cx - r, cy, 0], [cx, cy, -r], [cx + r, cy, 0], [cx, cy, r]];
+    for (let i = 0; i < 4; i++) glow.tri(rg[i], rg[(i + 1) % 4], tip, color);
+  };
+  if (style === 1) {
+    // Ligne au sol : deux balises basses de part et d'autre (rien au-dessus de la route).
+    for (const s of [-1, 1]) {
+      gb.taper(s * px, 0, y - SLAB_T, y + 1.8, 1.0, 1.0, 0.7, 0.7, sp === 'finish' ? chk(s > 0 ? 1 : 0) : color);
+      spike(s * px, y + 1.8, 0.9, 0.45);
+    }
+  } else if (style === 2) {
+    // Arche : deux piles jusqu'à 3 m puis un demi-cercle de rayon px (épaisseur 1,2 m, profondeur 1 m), bande lumineuse sur la face avant.
+    const R = px, cy = y + 3, n = 16, ri = R - 0.6, ro = R + 0.6, d = 0.5;
+    for (const s of [-1, 1]) gb.box(s * R - 0.6, y - SLAB_T, -d, s * R + 0.6, cy, d, color);
+    for (let i = 0; i < n; i++) {
+      const a0 = (Math.PI * i) / n, a1 = (Math.PI * (i + 1)) / n, c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
+      const P = (r, c, sn, z) => [r * c, cy + r * sn, z];
+      const col = sp === 'finish' ? chk(i) : color;
+      gb.quad(P(ri, c0, s0, d), P(ro, c0, s0, d), P(ro, c1, s1, d), P(ri, c1, s1, d), col);
+      gb.quad(P(ri, c1, s1, -d), P(ro, c1, s1, -d), P(ro, c0, s0, -d), P(ri, c0, s0, -d), col);
+      gb.quad(P(ro, c0, s0, d), P(ro, c0, s0, -d), P(ro, c1, s1, -d), P(ro, c1, s1, d), col);
+      gb.quad(P(ri, c1, s1, d), P(ri, c1, s1, -d), P(ri, c0, s0, -d), P(ri, c0, s0, d), col);
+      const g0 = R - 0.15, g1 = R + 0.15;
+      glow.quad(P(g0, c0, s0, d + 0.06), P(g1, c0, s0, d + 0.06), P(g1, c1, s1, d + 0.06), P(g0, c1, s1, d + 0.06), color);
+      glow.quad(P(g0, c1, s1, -d - 0.06), P(g1, c1, s1, -d - 0.06), P(g1, c0, s0, -d - 0.06), P(g0, c0, s0, -d - 0.06), color);
+    }
+  } else {
+    // Pylônes : deux mâts de 12 m, une bande lumineuse sur la face intérieure, un fanion au sommet (damier pour l'arrivée).
+    const H = 12;
+    for (const s of [-1, 1]) {
+      const x = s * px;
+      gb.taper(x, 0, y - SLAB_T, y + H, 1.3, 1.3, 0.7, 0.7, PALETTE.slab);
+      const xi = x - s * 0.62;
+      glow.quad([xi, y + 1, 0.3], [xi, y + 1, -0.3], [xi, y + H - 0.5, -0.3], [xi, y + H - 0.5, 0.3], color);
+      if (sp === 'finish') for (let i = 0; i < 4; i++) for (let r = 0; r < 2; r++) gb.box(x - s * (0.35 + i * 0.7) - 0.35, y + H - 1.4 + r * 0.7, -0.08, x - s * (0.35 + i * 0.7) + 0.35, y + H - 0.7 + r * 0.7, 0.08, chk(i + r));
+      else glow.tri([x, y + H, 0], [x, y + H - 1.6, 0], [x - s * 2.6, y + H - 0.8, 0], color);
+      spike(x, y + H, 1.2, 0.5);
+    }
   }
+}
+
+// Traverse du portique classique (damier pour l'arrivée) et ses pointes lumineuses.
+function gateBeam(gb, glow, sp, color, y, px, top) {
   const bx = px + 0.4;
   if (sp === 'finish') {
     const n = 18;
@@ -581,6 +773,10 @@ function gate(gb, glow, tile) {
     const rg = [[cx - r, cy, 0], [cx, cy, -r], [cx + r, cy, 0], [cx, cy, r]];
     for (let i = 0; i < 4; i++) glow.tri(rg[i], rg[(i + 1) % 4], tip, color);
   }
+}
+
+// Marquage au sol : damier (arrivée), ligne blanche (départ), tirets de la couleur du checkpoint.
+function gateLine(gb, sp, color, y) {
   const ly = y + 0.03;
   if (sp === 'finish') {
     const n = 18, w = (2 * ROAD_HALF) / n;
@@ -604,20 +800,23 @@ function gate(gb, glow, tile) {
 // Checkpoint posé sur une plateforme : quatre balises d'angle, un cadre lumineux au sol et un losange central. La plateforme
 // n'a pas de sens de route : un portique n'aurait pas de sens ici, toute la dalle valide le checkpoint.
 function checkpointPad(gb, glow, tile) {
-  const y = baseY(tile), color = PALETTE.checkpoint, c = HALF - 1.6, top = 5.2;
+  // 0.9.69 : sur une plaque triangulaire ou en quart de disque, la balise est centrée sur la plaque (centre de gravité) et rétrécie pour y tenir.
+  const P = PIECES[tile.t], sh = plateShape(P), ctr = areaCentroid(P), h = P.size * HALF;
+  const y = baseY(tile), color = PALETTE.checkpoint, c = Math.min(HALF - 1.6, sh === 'tri' ? 0.4 * h : sh === 'sec' ? 0.55 * h : HALF - 1.6), top = 5.2;
+  const cx0 = ctr.x, cz0 = ctr.z;
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
-      const x = sx * c, z = sz * c, r = 0.5;
+      const x = cx0 + sx * c, z = cz0 + sz * c, r = 0.5;
       gb.taper(x, z, y, y + top, 1.0, 1.0, 0.6, 0.6, color);
       const tip = [x, y + top + 1.4, z], rg = [[x - r, y + top, z], [x, y + top, z - r], [x + r, y + top, z], [x, y + top, z + r]];
       for (let i = 0; i < 4; i++) glow.tri(rg[i], rg[(i + 1) % 4], tip, color);
     }
   }
-  const o = HALF - 1.6, w = 0.7, ly = y + 0.05;
+  const o = c, w = 0.7, ly = y + 0.05;
   for (const [x0, z0, x1, z1] of [[-o, -o, o, -o + w], [-o, o - w, o, o], [-o, -o, -o + w, o], [o - w, -o, o, o]]) {
-    glow.quad([x0, ly, z1], [x1, ly, z1], [x1, ly, z0], [x0, ly, z0], color);
+    glow.quad([cx0 + x0, ly, cz0 + z1], [cx0 + x1, ly, cz0 + z1], [cx0 + x1, ly, cz0 + z0], [cx0 + x0, ly, cz0 + z0], color);
   }
-  const f = { p: [0, y, 0], r: [1, 0, 0], u: [0, 1, 0], t: [0, 0, -1] };
+  const f = { p: [cx0, y, cz0], r: [1, 0, 0], u: [0, 1, 0], t: [0, 0, -1] };
   ring(glow, f, 0, 0, 5.2, 0.7, color);
   ring(glow, f, 0, 0, 2.6, 0.55, color);
 }
@@ -648,6 +847,7 @@ function pillarPoints(tile) {
     return angs.map((ang) => [mir * (a.cx + a.R * Math.cos(ang)), a.cz + a.R * Math.sin(ang)]);
   }
   if (p.kind === 'loop') return [[-p.mirror * p.lane, p.size * HALF - 4], [p.mirror * p.lane, -p.size * HALF + 4]];
+  if (p.kind === 'sbend') return [0.2, 0.5, 0.8].map((u) => { const q = sbendPoint(p, u); return [q.x, q.z]; });
   return [[0, 0]];
 }
 
@@ -677,7 +877,7 @@ function tileMatrix(tile) {
 // ---- v1.5 : section courbe (tube) ---------------------------------
 function crossSweep(gb, glow, tile, style) {
   const rib = ribbonOf(tile, true);
-  const N = tile.t === 'tube' ? 48 : 20, M = 32;
+  const N = tile.t === 'tube' ? 48 : PIECES[tile.t].tubeArc ? 40 : 20, M = 32;
   const F = {};
   const rings = [];
   for (let i = 0; i <= N; i++) {
@@ -834,7 +1034,9 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
     ringMesh(gb, glow, tile);
   } else if (p.kind === 'fork') {
     forkMesh(gb, glow, tile, styleFor(tile), fx);
-  } else if (tile.t === 'tube' || tile.t === 'tubeIn' || tile.t === 'tubeMid') {
+  } else if (p.kind === 'junction') {
+    junctionMesh(gb, glow, tile, styleFor(tile));
+  } else if (tile.t === 'tube' || tile.t === 'tubeIn' || tile.t === 'tubeMid' || p.tubeArc) {
     crossSweep(gb, glow, tile, styleFor({ s: '', th: tile.th, col: tile.col }));
     // Revêtement d'une section de tube : bandes lumineuses au fond.
     if (s) surfaceDecals(glow, lineStrip(0, HALF, -HALF, baseY(tile), baseY(tile), 4), tile);

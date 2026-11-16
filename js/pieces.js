@@ -16,7 +16,7 @@
 // Une pièce line/arc peut aussi être posée « à l'envers » (drapeau v) : elle
 // devient alors un ruban au plafond.
 import { CELL, HALF, LEVEL_H, ROAD_TOP, LOOP_R, LOOP_LANE, ROAD_HALF, RAIL_W, SURF_PHYS, WORLD_SCALE } from './constants.js';
-import { datan2, dcos, dsin } from './dmath.js';
+import { datan2, dcos, dsin, hypot2 } from './dmath.js';
 
 // 0.9.11 : les pièces ne sont plus écrites en mètres fixes mais en proportion de la case (CELL = 24 m avant la 0.9.11, 32 m depuis) : K = 1 reproduit l'ancien monde.
 const K = WORLD_SCALE;
@@ -63,6 +63,44 @@ export const PIECES = {
   hugecurve:  { label: 'Très grand virage plat', kind: 'arc', size: 3, rise: 0 },
   // 0.9.67 : virage géant 5×5 (rayon 144 m) : avec le braquage borné selon la vitesse (loi PolyTrack), le seul virage qui se prenne vers 280 km/h.
   giantcurve: { label: 'Virage géant', kind: 'arc', size: 5, rise: 0 },
+  // 0.9.68 : chicanes (courbes en S latérales, voir sbendParams) : la route entre au sud de la première colonne et ressort au nord, décalée de
+  // `shift` cases vers la droite (→, mirror 1) ou la gauche (←, mirror −1). Deux arcs de même rayon, opposés et tangents au milieu ; plates.
+  sbend:      { label: 'Chicane →', kind: 'sbend', size: 2, rise: 0, mirror: 1, shift: 1 },
+  sbendL:     { label: 'Chicane ←', kind: 'sbend', size: 2, rise: 0, mirror: -1, shift: 1 },
+  sbendLong:  { label: 'Chicane longue →', kind: 'sbend', size: 3, rise: 0, mirror: 1, shift: 1 },
+  sbendLongL: { label: 'Chicane longue ←', kind: 'sbend', size: 3, rise: 0, mirror: -1, shift: 1 },
+  sbendFast:  { label: 'Chicane rapide →', kind: 'sbend', size: 4, rise: 0, mirror: 1, shift: 1 },
+  sbendFastL: { label: 'Chicane rapide ←', kind: 'sbend', size: 4, rise: 0, mirror: -1, shift: 1 },
+  sbendWide:  { label: 'Grand S →', kind: 'sbend', size: 3, rise: 0, mirror: 1, shift: 2 },
+  sbendWideL: { label: 'Grand S ←', kind: 'sbend', size: 3, rise: 0, mirror: -1, shift: 2 },
+  // 0.9.69 : plaques (surfaces libres, comme la plateforme) : carrées 2×2 et 3×3, triangles et quarts de disque de 1 à 3 cases (voir plateShape).
+  // Toute la plaque se roule ; des bordures se posent au choix sur chacun de ses bords (option eb).
+  plate2:     { label: 'Plaque 2×2', kind: 'area', size: 2, rise: 0 },
+  plate3:     { label: 'Plaque 3×3', kind: 'area', size: 3, rise: 0 },
+  tri1:       { label: 'Plaque triangle', kind: 'area', size: 1, rise: 0, shape: 'tri' },
+  tri2:       { label: 'Plaque triangle 2×2', kind: 'area', size: 2, rise: 0, shape: 'tri' },
+  tri3:       { label: 'Plaque triangle 3×3', kind: 'area', size: 3, rise: 0, shape: 'tri' },
+  sec1:       { label: 'Plaque quart de disque', kind: 'area', size: 1, rise: 0, shape: 'sec' },
+  sec2:       { label: 'Plaque quart de disque 2×2', kind: 'area', size: 2, rise: 0, shape: 'sec' },
+  sec3:       { label: 'Plaque quart de disque 3×3', kind: 'area', size: 3, rise: 0, shape: 'sec' },
+  // 0.9.70 : largeur de route variable (hw : demi-largeur de la chaussée à l'entrée et à la sortie, 12 m d'ordinaire ; voir roadHalf). Lignes droites plates.
+  // Rétrécissement et élargissement se posent dans les deux sens (à l'envers : la route s'élargit ou se resserre).
+  narrow:     { label: 'Route étroite', kind: 'line', size: 1, rise: 0, hw: [6, 6] },
+  narrowIn:   { label: 'Rétrécissement', kind: 'line', size: 1, rise: 0, hw: [12, 6] },
+  wideIn:     { label: 'Élargissement', kind: 'line', size: 3, rise: 0, hw: [12, 28] },
+  wide:       { label: 'Route large', kind: 'line', size: 3, rise: 0, hw: [28, 28] },
+  // 0.9.71 : carrefours au même niveau (arms : bras de route présents, repère local : N = avant (−z), S = arrière (+z, l'entrée), E = droite, W = gauche).
+  // La chaussée est l'union du carré central et des bras (voir junctionSample) ; les bordures suivent tout son contour.
+  cross:      { label: 'Croisement', kind: 'junction', size: 1, rise: 0, arms: 'NSEW' },
+  tee:        { label: 'Carrefour en T', kind: 'junction', size: 1, rise: 0, arms: 'NSE' },
+  // 0.9.72 : looping modulaire : la Montée en L (ramp90) mène à des murs verticaux, autant qu'on veut, puis ce SOMMET (demi-cercle de 16 m de rayon qui
+  // passe par-dessus et redescend une colonne à côté, à droite ↱ ou à gauche ↰), puis d'autres murs et une Montée en L parcourue à l'envers. Empreinte 2×2 :
+  // il commence au milieu de l'empreinte (bord avant de la Montée en L), dans la colonne de gauche (↱) ou de droite (↰), et redescend au bord arrière.
+  loopTop:    { label: 'Sommet de looping ↱', kind: 'ribbon', size: 2, rise: 0, clearance: 3, mirror: 1, loopTop: true },
+  loopTopL:   { label: 'Sommet de looping ↰', kind: 'ribbon', size: 2, rise: 0, clearance: 3, mirror: -1, loopTop: true },
+  // 0.9.72 : tube en virage (2×2, rayon 48 m, tube de 8 m de rayon, comme la section de tube) : s'enchaîne aux sections de tube.
+  tubeTurn:   { label: 'Tube en virage ↱', kind: 'ribbon', size: 2, rise: 0, clearance: 4, mirror: 1, tubeArc: true },
+  tubeTurnL:  { label: 'Tube en virage ↰', kind: 'ribbon', size: 2, rise: 0, clearance: 4, mirror: -1, tubeArc: true },
   // « Courbe » : un tremplin courbé (virage montant). Serré = 1 case, grand = 2×2.
   cv05:       { label: 'Courbe serrée · inclinaison ½', kind: 'arc', size: 1, rise: 0.5 },
   cv1:        { label: 'Courbe serrée · inclinaison 1', kind: 'arc', size: 1, rise: 1 },
@@ -220,6 +258,16 @@ export const PIECE_ORDER = [
   ...GEN45_IDS,
   // 0.9.67 (à la suite : ne jamais réordonner)
   'giantcurve',
+  // 0.9.68 : chicanes (à la suite : ne jamais réordonner)
+  'sbend', 'sbendL', 'sbendLong', 'sbendLongL', 'sbendFast', 'sbendFastL', 'sbendWide', 'sbendWideL',
+  // 0.9.69 : plaques (à la suite : ne jamais réordonner)
+  'plate2', 'plate3', 'tri1', 'tri2', 'tri3', 'sec1', 'sec2', 'sec3',
+  // 0.9.70 : largeur de route variable (à la suite : ne jamais réordonner)
+  'narrow', 'narrowIn', 'wideIn', 'wide',
+  // 0.9.71 : carrefours (à la suite : ne jamais réordonner)
+  'cross', 'tee',
+  // 0.9.72 : looping modulaire, tube en virage (à la suite : ne jamais réordonner)
+  'loopTop', 'loopTopL', 'tubeTurn', 'tubeTurnL',
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -308,7 +356,7 @@ export function isSideTile(tile) {
 // borné selon la vitesse (loi PolyTrack) : il ne suffirait pas à suivre ces pièces à la vitesse où elles se prennent.
 export function headingGuided(tile) {
   const p = PIECES[tile.t];
-  return !!(tile.o || p.roll || p.rollable);
+  return !!(tile.o || p.roll || p.rollable || p.loopTop);      // (0.9.72 : le sommet de looping modulaire glisse d'une colonne, comme un looping décalé)
 }
 
 // Une ligne ou un virage posé sur un mur (tile.o) se parcourt en mode ruban, comme une transition.
@@ -367,7 +415,7 @@ export function clearConflicts(opts, flag) {
 // Options « armées » dans l'éditeur avant la pose (elles s'ajoutent à la pièce choisie, aperçu compris) : bascule l'option `flag` (valeur `val` pour les
 // choix exclusifs : orientation, checkpoint, thème, mouvement) et retire ce qui lui est incompatible. Renvoie un nouvel objet.
 export function armOption(opts, flag, val) {
-  const o = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, ...opts };
+  const o = { v: 0, o: 0, nb: 0, tn: 0, mv: 0, cp: 0, tb: 0, th: 0, gs: 0, eb: 0, ...opts };
   if (flag === 'o') {
     // Orientation : sol, mur gauche (1), mur droit (2) ; le plafond est le drapeau v. Un seul choix à la fois.
     o.o = val === 0 || o.o === val ? 0 : val;
@@ -381,7 +429,7 @@ export function armOption(opts, flag, val) {
 }
 
 // Drapeaux possibles : v (à l'envers), nb (sans bordures), tn (tunnel), mv (mouvement 1/2/3),
-// cp (checkpoint : 1 portique, 2 anneau aérien), th (thème visuel).
+// cp (checkpoint : 1 portique, 2 anneau aérien), th (thème visuel), gs (style du portique, visuel : 0.9.68).
 export function flagAllowed(type, flag, tile = null, val = 0) {
   const p = PIECES[type];
   if (!p) return false;
@@ -390,7 +438,22 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
   if (flag === 'v') return true;
   // Phase 2 : le thème est purement visuel, toute pièce de route en profite.
   if (flag === 'th') return p.kind !== 'ring';
+  // 0.9.68 : style du portique (visuel) : là où il y a un portique (départ, arrivée, checkpoint en pièce ou en option sur une route). Sans pièce
+  // posée (choix d'options avant la pose), toute ligne ou tout virage, qui peut recevoir l'option Checkpoint.
+  // 0.9.70 : route de largeur variable : à l'envers, sans bordures, thème ; pas de tunnel, de mur, de mouvement, de checkpoint ni d'anneau (ils supposent 24 m de chaussée).
+  if (p.hw && flag !== 'nb') return false;
+  // 0.9.69 : bordures d'une plaque (masque de bits, un par bord : voir plateEdges).
+  if (flag === 'eb') return p.kind === 'area' && (val | 0) >= 0 && (val | 0) <= 15;      // (le masque est ensuite ramené aux bords de la forme : Track.normalize)
+  if (flag === 'gs') {
+    if (!(val >= 0 && val < GATE_STYLES.length) || !lineLike || p.kind === 'ring') return false;
+    if (p.special === 'start' || p.special === 'finish' || p.special === 'checkpoint') return true;
+    return !tile || tile.cp === 1;
+  }
   if (p.kind === 'ring' || p.kind === 'fork') return false;
+  // 0.9.71 : un carrefour se pose à l'envers ou sans bordures (thème : plus haut) ; rien d'autre.
+  if (p.kind === 'junction') return flag === 'nb';
+  // 0.9.68 : une chicane se pose à l'envers, sans bordures ou sous un tunnel (sa géométrie est une bande de route ordinaire) ; ni mur, ni mouvement, ni checkpoint.
+  if (p.kind === 'sbend') return flag === 'nb' || flag === 'tn';
   // 0.9.3 : orientation « mur gauche / droit » : une ligne ou un virage ordinaire peut être posé sur un mur (val 1 = gauche, 2 = droit).
   // Une route sur un mur n'a ni tunnel, ni checkpoint, ni anneau, ni mouvement, ni bordures ; le plafond (v) se choisit à part.
   // Phase 3 : le roulis (val 1..6 : ±90°, ±45°, ±135°) s'applique à toute ligne / tout virage ordinaire ET aux rubans « roulables » (loopings, tire-bouchons, vrilles, virages relevés)
@@ -400,7 +463,8 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
     if (lineLike) return true;
     return !!p.rollable && (!rollFitHook.fits || rollFitHook.fits(type, val));
   }
-  if (flag === 'nb') return !p.noRails && (lineLike && !p.special || (p.kind === 'ribbon' && !type.startsWith('tube')));
+  // (0.9.68 : aussi le départ, l'arrivée et le checkpoint : portique sans bordures, comme sur une plaque)
+  if (flag === 'nb') return !p.noRails && (lineLike || (p.kind === 'ribbon' && !type.startsWith('tube') && !p.loopTop));
   if (flag === 'tn') return lineLike && !p.special && !hasConflict('tn', tile);
   // Pièce mobile : route « simple » (droite, virage, pente, plateforme), pas à l'envers, pas de checkpoint dessus.
   if (flag === 'mv') return (lineLike || p.kind === 'area') && !p.special && !hasConflict('mv', tile);
@@ -456,6 +520,14 @@ export function clampMover(mv, ms, ma) {
   if (a) { a = Math.max(M.amp.min, Math.min(M.amp.max, a)); if (a === M.amp.def) a = 0; }
   return { ms: s, ma: a };
 }
+
+// 0.9.68 : styles du portique de départ, d'arrivée ou de checkpoint (option « Portique », sans effet sur le jeu ni sur la signature).
+export const GATE_STYLES = [
+  { id: 0, label: 'Portique' },
+  { id: 1, label: 'Ligne au sol' },
+  { id: 2, label: 'Arche' },
+  { id: 3, label: 'Pylônes' },
+];
 
 // Thèmes visuels d'une pièce (option « Thème », sans effet sur le jeu).
 export const THEMES = [
@@ -561,6 +633,7 @@ export function sampleLocal(tile, lx, lz, out) {
     let t = (half - lz) / len;
     t = t < 0 ? 0 : t > 1 ? 1 : t;
     out.d = lx;
+    if (p.hw) widthRemap(p, lx, lz, half, out);
     // Profil vertical (voir V_PROFILES) : droite, entrée douce, sortie douce ou S. Pente = rise · H'(t) / longueur.
     out.h = base + rise * profH(p, t);
     const k = rise * profD(p, t) / len;
@@ -590,6 +663,15 @@ export function sampleLocal(tile, lx, lz, out) {
     }
   } else if (p.kind === 'fork') {
     forkSample(p, lx, lz, out);
+  } else if (p.kind === 'sbend') {
+    sbendSample(p, lx, lz, out);
+  } else if (p.kind === 'junction') {
+    junctionSample(p, lx, lz, out);
+  } else if (p.kind === 'area' && p.shape) {
+    // 0.9.69 : plaque triangulaire ou en quart de disque : seule sa forme porte la voiture.
+    if (out.inFootprint) out.inFootprint = inPlate(p, lx, lz);
+    out.d = 0;
+    out.along = (half - lz) / (2 * half);
   } else if (p.kind === 'loop') {
     // Seules les deux voies d'accès au sol sont des surfaces « normales ».
     const lane = lz >= 0 ? -p.mirror * p.lane : p.mirror * p.lane;
@@ -640,3 +722,176 @@ function forkSample(p, lx, lz, out) {
   out.branch = Math.abs(da) <= ROAD_HALF ? 0 : 1;
 }
 
+// ---- Chicane (0.9.68) ------------------------------------------------------------------------------------------------------------------------
+// Courbe en S latérale dans une empreinte size × size : entrée au sud de la colonne x0 = −mirror·(size − 1)·½ case, sortie au nord décalée de
+// D = shift cases. Deux arcs de même rayon R, de sens opposés, tangents au point d'inflexion M (milieu de la pièce) : c'est le S de plus faible
+// courbure qui raccorde deux routes parallèles (R = (D² + L²) / 4D, L = longueur de la pièce) : 40 m (2×2), 80 m (3×3, 1 case), 136 m (4×4),
+// 52 m (3×3, 2 cases). Les centres C1, M et C2 sont alignés. Toute la géométrie (physique, rendu, ligne centrale) vient d'ici.
+const SB = new Map();
+export function sbendParams(p) {
+  let g = SB.get(p);
+  if (g) return g;
+  const half = p.size * HALF, m = p.mirror < 0 ? -1 : 1, D = p.shift * CELL, L = 2 * half;
+  const R = (D * D + L * L) / (4 * D);
+  const x0 = -m * (half - HALF), x1 = x0 + m * D;
+  g = {
+    half, m, D, L, R, x0, x1,
+    c1x: x0 + m * R, c1z: half,              // centre du premier arc (du côté du décalage)
+    c2x: x1 - m * R, c2z: -half,             // centre du second (de l'autre côté)
+    phi: datan2(half, Math.sqrt(R * R - half * half)),     // angle de chaque arc
+    mx: (x0 + x1) / 2,                       // point d'inflexion M = (mx, 0)
+    tmx: (m * L) / (2 * R), tmz: (D - 2 * R) / (2 * R),     // cap de la route en M (vecteur unitaire)
+  };
+  SB.set(p, g);
+  return g;
+}
+
+// Point de la ligne centrale à l'avancée u (0..1, proportionnelle à la longueur) : position (x, z) et cap unitaire (tx, tz), en local.
+export function sbendPoint(p, u, out = {}) {
+  const g = sbendParams(p);
+  if (u <= 0.5) {
+    const th = 2 * u * g.phi, c = dcos(th), s = dsin(th);
+    out.x = g.c1x - g.m * g.R * c; out.z = g.c1z - g.R * s;
+    out.tx = g.m * s; out.tz = -c;
+  } else {
+    const th = 2 * (1 - u) * g.phi, c = dcos(th), s = dsin(th);
+    out.x = g.c2x + g.m * g.R * c; out.z = g.c2z + g.R * s;
+    out.tx = g.m * s; out.tz = -c;
+  }
+  return out;
+}
+
+// Échantillon au sol : écart latéral EXACT (distance au bon arc, positive à droite du sens de marche) et son gradient ; avancée par l'angle parcouru.
+function sbendSample(p, lx, lz, out) {
+  const g = sbendParams(p);
+  const first = (lx - g.mx) * g.tmx + lz * g.tmz < 0;      // avant la normale en M : premier arc
+  const dx = lx - (first ? g.c1x : g.c2x), dz = lz - (first ? g.c1z : g.c2z);
+  const r = hypot2(dx, dz) || 1e-6;
+  const sg = first ? -g.m : g.m;        // premier arc : le centre est à droite (m = 1), un point plus à droite en est plus proche
+  out.d = sg * (r - g.R);
+  out.gx = (sg * dx) / r; out.gz = (sg * dz) / r;
+  const a = first ? 0.5 * datan2(-dz, -g.m * dx) / g.phi : 1 - 0.5 * datan2(dz, g.m * dx) / g.phi;
+  out.along = a < 0 ? 0 : a > 1 ? 1 : a;
+}
+
+// ---- Plaques (0.9.69) -------------------------------------------------------------------------------------------------------------------------
+// Forme d'une plaque dans son empreinte [−h, h]² (h = size · ½ case) : 'sq' carré plein ; 'tri' triangle rectangle d'angle droit au coin (−h, +h)
+// (sommets (−h, −h), (−h, +h), (+h, +h) : la moitié du carré à gauche de la diagonale) ; 'sec' quart de disque de centre (−h, +h) et de rayon 2h.
+// Les quatre caps (tile.r) donnent les quatre coins.
+export const plateShape = (p) => p.shape || 'sq';
+export function inPlate(p, lx, lz) {
+  const h = p.size * HALF, sh = plateShape(p);
+  if (sh === 'tri') return lx <= lz + 1e-9;
+  if (sh === 'sec') { const dx = lx + h, dz = lz - h; return dx * dx + dz * dz <= 4 * h * h + 1e-6; }
+  return true;
+}
+
+// Bords d'une plaque (repère local), dans l'ordre des bits de l'option eb. Segment : de (ax, az) à (bx, bz), normale (nx, nz) vers l'INTÉRIEUR ;
+// arc : centre (cx, cz), rayon R, quart de disque vers +x / −z depuis le centre (l'intérieur est du côté du centre).
+const EDGES = new Map();
+export function plateEdges(p) {
+  let e = EDGES.get(p);
+  if (e) return e;
+  const h = p.size * HALF, sh = plateShape(p);
+  const seg = (ax, az, bx, bz, cx, cz) => {
+    const tx = bx - ax, tz = bz - az, len = Math.sqrt(tx * tx + tz * tz);
+    let nx = -tz / len, nz = tx / len;
+    if ((cx - ax) * nx + (cz - az) * nz < 0) { nx = -nx; nz = -nz; }
+    return { t: 'seg', ax, az, bx, bz, tx: tx / len, tz: tz / len, len, nx, nz };
+  };
+  if (sh === 'tri') {
+    const cx = -h / 3, cz = h / 3;
+    e = [seg(-h, h, -h, -h, cx, cz), seg(-h, h, h, h, cx, cz), seg(h, h, -h, -h, cx, cz)];
+  } else if (sh === 'sec') {
+    e = [seg(-h, h, -h, -h, 0, 0), seg(-h, h, h, h, 0, 0), { t: 'arc', cx: -h, cz: h, R: 2 * h }];
+  } else e = [seg(-h, -h, h, -h, 0, 0), seg(h, -h, h, h, 0, 0), seg(-h, h, h, h, 0, 0), seg(-h, -h, -h, h, 0, 0)];
+  EDGES.set(p, e);
+  return e;
+}
+// Masque « tous les bords » d'une plaque.
+export const plateAllEdges = (p) => (1 << plateEdges(p).length) - 1;
+
+// Distance d'un point au bord e, comptée vers l'intérieur de la plaque (négative dehors), sa normale intérieure (nx, nz) et `on` : le point est en face
+// du bord (à `slack` près), c'est-à-dire qu'il peut le toucher. Pour un arc : l'intérieur est du côté du centre.
+export function edgeDist(e, x, z, slack, out) {
+  if (e.t === 'seg') {
+    const rx = x - e.ax, rz = z - e.az, s = rx * e.tx + rz * e.tz;
+    out.d = rx * e.nx + rz * e.nz; out.nx = e.nx; out.nz = e.nz;
+    out.on = s >= -slack && s <= e.len + slack;
+  } else {
+    const dx = x - e.cx, dz = z - e.cz, r = Math.sqrt(dx * dx + dz * dz) || 1e-6;
+    out.d = e.R - r; out.nx = -dx / r; out.nz = -dz / r;
+    out.on = dx >= -slack && dz <= slack;
+  }
+  return out;
+}
+
+// Contour d'une plaque (repère local) : polygone convexe ; un quart de disque a 8 côtés par case de rayon (rendu, mini-carte).
+export function plateOutline(p) {
+  const h = p.size * HALF, sh = plateShape(p);
+  if (sh === 'tri') return [[-h, -h], [-h, h], [h, h]];
+  if (sh === 'sec') {
+    const n = 8 * p.size, pts = [[-h, h]];
+    for (let i = 0; i <= n; i++) { const a = (Math.PI / 2) * (i / n); pts.push([-h + 2 * h * dcos(a), h - 2 * h * dsin(a)]); }
+    return pts;
+  }
+  return [[-h, -h], [-h, h], [h, h], [h, -h]];
+}
+
+// Centre de gravité d'une plaque (repère local) : point de retour d'un checkpoint posé dessus, centre de sa balise.
+export function areaCentroid(p) {
+  const h = p.size * HALF, sh = plateShape(p);
+  if (sh === 'tri') return { x: -h / 3, z: h / 3 };
+  if (sh === 'sec') { const k = (8 * h) / (3 * Math.PI); return { x: -h + k, z: h - k }; }
+  return { x: 0, z: 0 };
+}
+
+// ---- Largeur de route variable (0.9.70) -----------------------------------------------------------------------------------------------------
+// Demi-largeur de la chaussée à l'avancée t (0 entrée, 1 sortie) ; ROAD_HALF (12 m) pour toutes les autres pièces.
+export function roadHalf(p, t) {
+  if (!p.hw) return ROAD_HALF;
+  return p.hw[0] + (p.hw[1] - p.hw[0]) * (t < 0 ? 0 : t > 1 ? 1 : t);
+}
+// L'écart latéral d est RECALÉ sur le bord réel : |d| − ROAD_HALF est la distance perpendiculaire (exacte, bord en biais compris) au bord de la chaussée,
+// positive dehors. Ainsi le sol (|d| ≤ ROAD_HALF), les bordures (bande ROAD_HALF..ROAD_HALF + RAIL_W), les dalles et les checkpoints marchent sans
+// cas particulier ; le gradient reste unitaire (la normale du bord). Au milieu d'une route large, d vaut 0 ; d'une route étroite, il saute de ±(12 − 6) :
+// sans effet, seul le bord compte.
+function widthRemap(p, lx, lz, half, out) {
+  const w0 = p.hw[0], w1 = p.hw[1], k = (w1 - w0) / (2 * half);       // la demi-largeur croît de k par mètre d'avancée (vers −z)
+  let t = (half - lz) / (2 * half);
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const hw = w0 + (w1 - w0) * t, c = 1 / Math.sqrt(1 + k * k), sg = lx >= 0 ? 1 : -1;
+  const e = (sg * lx - hw) * c;
+  const d = ROAD_HALF + e;
+  out.d = d > 0 ? sg * d : 0;
+  out.gx = c; out.gz = sg * k * c;
+  return out;
+}
+
+// ---- Carrefours (0.9.71) -------------------------------------------------------------------------------------------------------------------
+// Chaussée = carré central [−12, 12]² et, pour chaque bras présent, le rectangle qui le prolonge jusqu'au bord de la case. Pavés dans le repère local.
+const JRECT = { N: [-ROAD_HALF, -HALF, ROAD_HALF, -ROAD_HALF], S: [-ROAD_HALF, ROAD_HALF, ROAD_HALF, HALF], E: [ROAD_HALF, -ROAD_HALF, HALF, ROAD_HALF], W: [-HALF, -ROAD_HALF, -ROAD_HALF, ROAD_HALF] };
+const JR = new Map();
+export function junctionRects(p) {
+  let r = JR.get(p);
+  if (!r) { r = [[-ROAD_HALF, -ROAD_HALF, ROAD_HALF, ROAD_HALF], ...[...p.arms].map((a) => JRECT[a])]; JR.set(p, r); }
+  return r;
+}
+// Bout d'un bras : position (repère local, au bord de la case) et direction SORTANTE.
+export const JUNCTION_ENDS = { N: [0, -HALF, 0, -1], S: [0, HALF, 0, 1], E: [HALF, 0, 1, 0], W: [-HALF, 0, -1, 0] };
+// Écart latéral d'un carrefour : 0 sur la chaussée ; dehors, ROAD_HALF + la distance (exacte) à la chaussée, et le gradient est la direction qui s'en éloigne.
+// Ainsi le sol (|d| ≤ ROAD_HALF) et les bordures (bande ROAD_HALF..ROAD_HALF + RAIL_W) suivent tout le contour ; entre deux bras, la bordure fait un angle droit plein.
+function junctionSample(p, lx, lz, out) {
+  const half = p.size * HALF;
+  out.along = (half - lz) / (2 * half);
+  let best = Infinity, bx = 0, bz = 0;
+  for (const [x0, z0, x1, z1] of junctionRects(p)) {
+    const qx = lx < x0 ? x0 : lx > x1 ? x1 : lx, qz = lz < z0 ? z0 : lz > z1 ? z1 : lz;
+    const dx = lx - qx, dz = lz - qz, dd = dx * dx + dz * dz;
+    if (dd < best) { best = dd; bx = dx; bz = dz; }
+    if (dd === 0) break;
+  }
+  if (best === 0) { out.d = 0; out.gx = 1; out.gz = 0; return; }
+  const e = Math.sqrt(best);
+  out.d = ROAD_HALF + e; out.gx = bx / e; out.gz = bz / e;
+}

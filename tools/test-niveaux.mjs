@@ -16,6 +16,8 @@ const { CAREER_ORDER: THEME_ORDER } = await import('../js/themes.js');
 const { PROFILS, CHAPTERS, CHAPTER_SIZE, GOALS } = await import('../js/career.js');
 const { VERSION } = await import('../js/version.js');
 const { OBST } = await import('../js/obstacles.js');
+const { isSolid } = await import('../js/solids.js');
+const { DECO_LABELS } = await import('../js/decoData.js');
 const { RaceLogic } = await import('../js/raceLogic.js');
 const { checkDef, openingOf, vocabulary } = await import('./contract.mjs');
 const { runTrack } = await import('./lab.mjs');
@@ -53,8 +55,8 @@ const CAREER = [
 
 // Les trois premiers jetons après « start » : l'ouverture de chaque circuit, écrite ici pour que personne ne la change sans le vouloir.
 const OPENINGS = {
-  // chapitre 1 : booster → wall-ride · booster → virage relevé · chute libre · booster → looping · épingle descendante · montée verticale
-  eclats: 'B2 [tr01l] S4<', canyon: 'B BRR B3', tremplins: 'V-5 [dn4] [cdo2]', spirale: 'B3 OB S', verglas: '[cvd05] [cvd05] B', grandtour: 'B3 QU WA3',
+  // chapitre 1 (0.9.74) : booster → chicanes rapides · booster → route large · chute libre · booster → looping modulaire · route étroite · montée verticale
+  eclats: 'B2 ZR4 B', canyon: 'B WI W2', tremplins: 'V-5 [dn4] [cdo2]', spirale: 'B3 LPR2 S', verglas: 'NI N NO', grandtour: 'B3 QU WA3',
   // chapitre 2 : rampe + anneau · tube · rebond géant · bifurcation + moto · plafond · tunnel
   lianes: 'B3 UU GR2', canopee: 'TI TM3.b TO', spores: 'B2 S.j200 G1', serpent: 'Y2.o B S', racines: 'B3^ [tr31s] S<', temple: 'S# R# R#',
   // chapitre 3 : descente en moto · eau · deltaplane · triple looping · basse gravité · pente douce
@@ -80,10 +82,10 @@ const OPENINGS = {
 };
 
 console.log('Version et profils');
-test('version 0.9.9 ou plus (bêta 0.9.x suit package.json)', () => {
-  const v = JSON.parse(read('package.json')).version;
+test('version 0.9.9 ou plus (bêta X.Y.Z suit package.json ; 0.10.0 depuis le regroupement des nouvelles pièces)', () => {
+  const v = JSON.parse(read('package.json')).version, [a, b, c] = v.split('.').map(Number);
   assert.equal(VERSION, 'bêta ' + v);
-  assert.ok(+v.split('.')[2] >= 9, v);
+  assert.ok(a > 0 || b > 9 || (b === 9 && c >= 9), v);
 });
 test('les 72 circuits (66 + 6 de l’Atelier) ont chacun un profil connu', () => {
   assert.equal(BUILTIN_TRACKS.length, 72);
@@ -256,9 +258,9 @@ test('objectifs bonus : un type connu, avec son paramètre', () => {
     if (d.goal.id === 'vehicle') assert.ok(['moto', 'boat', 'glider', 'car'].includes(d.goal.v), d.id);
   }
 });
-test('obstacles : types connus, placés sur le parcours, et le pilote n’en touche aucun (le contrat compte les chocs et les piques)', () => {
+test('obstacles : types connus, placés sur le parcours, et le pilote n’en touche aucun (le contrat compte les chocs et les piques) ; 0.9.73 : aussi des panneaux et des solides', () => {
   for (const d of BUILTIN_TRACKS) for (const o of d.obst || []) {
-    assert.ok(OBST[o.k], d.id + ' : obstacle ' + o.k);
+    assert.ok(OBST[o.k] || isSolid(o.k) || DECO_LABELS[o.k], d.id + ' : objet ' + o.k);
     assert.ok(o.at >= 0 && o.at < 1, d.id + ' : at ' + o.at);
   }
   assert.ok(BUILTIN_TRACKS.filter((d) => d.obst).length >= 5, 'l’usine garde ses obstacles');

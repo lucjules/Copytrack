@@ -6,7 +6,7 @@
 // l'applique aux candidats avant qu'ils entrent dans js/tracks.js. Chaque défaut renvoyé est une phrase lisible.
 import { buildBuiltin, BUILTIN_TRACKS } from '../js/tracks.js';
 import { PROFILS } from '../js/career.js';
-import { GEN_IDS } from '../js/pieces.js';
+import { GEN_IDS, PIECE_ORDER } from '../js/pieces.js';
 import { checkTrack } from '../js/editorTools.js';
 import { orientationIssues } from '../js/joins.js';
 import { RaceLogic } from '../js/raceLogic.js';
@@ -15,7 +15,8 @@ import { Track } from '../js/track.js';
 import { runTrack, profile, asciiMap } from './lab.mjs';
 import { proposeFrom } from './medals.mjs';
 
-const NEW = new Set([...GEN_IDS, 'hugecurve', 'steep4', 'bankBig', 'giantcurve']);
+// (0.9.74 : et les pièces des étapes 1 à 5 : chicanes, plaques, largeurs, carrefours, looping modulaire, tube en virage)
+const NEW = new Set([...GEN_IDS, 'hugecurve', 'steep4', 'bankBig', 'giantcurve', ...PIECE_ORDER.slice(PIECE_ORDER.indexOf('sbend'))]);
 export const vocabulary = (tr) => {
   const v = new Set();
   for (const t of tr.tiles) { if (NEW.has(t.t)) v.add(t.t); if (t.o) v.add('wall-ride'); }

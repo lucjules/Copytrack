@@ -48,13 +48,13 @@ test('les circuits partagés gardent leurs bifurcations : encodage puis lecture 
 });
 
 console.log('Virage géant');
-test('pièce 5×5, rayon 144 m (centre au coin), ajoutée en DERNIER dans l’ordre d’encodage ; les rayons des anciens virages ne changent pas', () => {
+test('pièce 5×5, rayon 144 m (centre au coin), ajoutée à la suite dans l’ordre d’encodage (index 135) ; les rayons des anciens virages ne changent pas', () => {
   assert.equal(PIECES.giantcurve.size, 5); assert.equal(PIECES.giantcurve.kind, 'arc'); assert.equal(PIECES.giantcurve.rise, 0);
   assert.deepEqual(arcParams(PIECES.giantcurve), { cx: 2.5 * CELL, cz: 2.5 * CELL, R: 4.5 * CELL });
   assert.deepEqual(arcParams(PIECES.curve), { cx: CELL / 2, cz: CELL / 2, R: CELL / 2 });
   assert.deepEqual(arcParams(PIECES.bigcurve), { cx: CELL, cz: CELL, R: 1.5 * CELL });
   assert.deepEqual(arcParams(PIECES.hugecurve), { cx: 1.5 * CELL, cz: 1.5 * CELL, R: 2.5 * CELL });
-  assert.equal(PIECE_ORDER[PIECE_ORDER.length - 1], 'giantcurve');
+  assert.equal(PIECE_ORDER[135], 'giantcurve');
 });
 test('famille « Virage » de l’éditeur : rayon « Géant »', () => {
   assert.equal(resolve('turn', { size: 'xl', bank: '0', incl: '0', dir: 'R' }), 'giantcurve');

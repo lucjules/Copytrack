@@ -17,16 +17,17 @@ export function difficultyMetrics(track) {
   return {
     pieces: tiles.length,
     tight: tiles.filter((t) => P(t).kind === 'arc' && P(t).size === 1 && !P(t).checkpoint).length,
-    wide: tiles.filter((t) => (P(t).kind === 'arc' && P(t).size >= 2) || t.t === 'bank' || t.t === 'bankBig').length,
+    wide: tiles.filter((t) => (P(t).kind === 'arc' && P(t).size >= 2) || t.t === 'bank' || t.t === 'bankBig').length + 2 * tiles.filter((t) => P(t).kind === 'sbend').length,      // une chicane : deux grands arcs
     wallCells: tiles.filter((t) => t.o).length + tiles.filter((t) => P(t).roll).length,
     loops: tiles.filter((t) => P(t).kind === 'loop').length,
     ribbons: tiles.filter((t) => P(t).kind === 'ribbon').length,          // tubes, tire-bouchons, vrilles : routes en ruban
-    specials: tiles.filter((t) => P(t).special || ['fork', 'ring', 'area'].includes(P(t).kind)).length,      // plaques, anneaux, bifurcations, plateformes
+    specials: tiles.filter((t) => P(t).special || ['fork', 'ring', 'area', 'junction'].includes(P(t).kind)).length,      // plaques, anneaux, bifurcations, plateformes
     movers: tiles.filter((t) => t.mv).length,
     tricky: tiles.filter((t) => TRICKY.has(t.s) || (t.s2 && TRICKY.has(t.s2))).length,
     obstacles: obst.length,
     obstacleWeight: obst.reduce((a, d) => a + (OBST_W[d.k] ?? (OBST[d.k] ? 1 : 0)), 0),
     noRails: tiles.filter((t) => t.nb).length,
+    narrow: tiles.filter((t) => t.t === 'narrow' || t.t === 'narrowIn').length,      // 0.9.70 : route étroite (12 m)
     ceiling: tiles.filter((t) => t.v).length,
     heightRange: Number.isFinite(minL) ? Math.max(0, maxL - minL) : 0,
     laps: Math.max(1, track.laps || 1),
@@ -37,7 +38,7 @@ export function difficultyMetrics(track) {
 export function difficultyScore(m) {
   const lap = m.laps > 1 ? 1 + (m.laps - 1) * 0.25 : 1;
   const v = m.tight * 0.8 + m.wide * 0.1 + m.wallCells * 0.3 + m.loops * 0.8 + m.ribbons * 0.12 + m.specials * 0.5
-    + m.movers * 0.9 + m.obstacleWeight * 0.7 + m.tricky * 0.3 + m.noRails * 0.2 + m.ceiling * 0.2 + Math.max(0, m.heightRange - 6) * 0.12 + m.pieces * 0.05;
+    + m.movers * 0.9 + m.obstacleWeight * 0.7 + m.tricky * 0.3 + m.noRails * 0.2 + (m.narrow || 0) * 0.15 + m.ceiling * 0.2 + Math.max(0, m.heightRange - 6) * 0.12 + m.pieces * 0.05;
   return +(v * lap).toFixed(2);
 }
 
