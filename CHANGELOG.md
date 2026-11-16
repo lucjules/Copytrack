@@ -6,6 +6,15 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.11.0 — plus de raccourcis : chaque boucle de carrefour a son checkpoint
+
+**`PHYS_VER` inchangé (36)**, temps et médailles inchangés. **Redéployer `submit-score`** : 25 circuits changent (un checkpoint en plus), leurs clés de classement aussi.
+
+- **Défaut corrigé** : 26 croisements, sur 25 circuits, se laissaient **couper** : au premier passage, on tournait directement vers la sortie et on sautait toute la boucle (de 5 à 16 s de gagnées). Chaque boucle a maintenant un **checkpoint** (portique à pylônes), posé à la place d'une ligne droite : le tracé et les temps ne changent pas. Circuits concernés : Premiers Éclats, Lac Gelé (deux boucles), Lianes Néon, Serpent, Temple, Lagon Turquoise, Récif, Grand Archipel, Néons Express, Métro Aérien, Glacier Magnétique, Blizzard, Champs de Basalte, Quai d'Amarrage, Navette, Station Zénith, Jardin de Corail, Grande Barrière, Laminoir, Usine Folle, Rafales, Galerie de Cristal, Plafond Renversé, Cœur de la Montagne, En Cadence.
+- **Vérificateur de l'éditeur** : il prévient quand un carrefour traversé deux fois laisse couper la boucle qui revient sur lui (aucun checkpoint, départ ou arrivée entre deux de ses bras) : « Pose un checkpoint dans la boucle. » Le contrat des circuits officiels l'applique aussi.
+- **`tools/test-raccourcis.mjs`** (`npm test`) : le vérificateur signale la boucle sans checkpoint et se tait avec ; un pilote qui coupe finit la course sans checkpoint et ne la finit plus avec ; aucun circuit officiel ne se coupe.
+- Wiki régénéré (vérificateur, glossaire).
+
 ## Bêta 0.10.12 — le wiki du jeu, accessible depuis le menu
 
 **`PHYS_VER` inchangé (36)**, circuits inchangés : rien à redéployer.

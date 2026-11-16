@@ -487,7 +487,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <div class="card"><h4>Inspecter <kbd>I</kbd></h4><p>Un panneau de propriétés lié au circuit dans les deux sens ; des gizmos 3D déplacent et pivotent les décorations.</p></div>
     <div class="card"><h4>Gomme <kbd>X</kbd></h4><p>Avec un filtre : tout, décorations seules ou pistes seules.</p></div>
     <div class="card"><h4>Pot de peinture</h4><p>Remplit toute une zone connectée d'une pièce ou d'un revêtement ; la zone est surlignée avant le clic.</p></div>
-    <div class="card"><h4>Vérificateur <kbd>F2</kbd></h4><p>Extrémités libres, sauts risqués, raccords d'orientation, pièces inaccessibles ; un clic fait clignoter les pièces en cause.</p></div>
+    <div class="card"><h4>Vérificateur <kbd>F2</kbd></h4><p>Extrémités libres, sauts risqués, raccords d'orientation, pièces inaccessibles, boucles de carrefour sans checkpoint (qu'on pourrait couper) ; un clic fait clignoter les pièces en cause.</p></div>
     <div class="card"><h4>Prolonger <kbd>P</kbd></h4><p>Déroule la route sans viser les cases : ligne, virage, pente, mur ; les transitions s'insèrent toutes seules.</p></div>
   </div>
   <h3>Les onglets de la palette</h3>
@@ -680,7 +680,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <dt>Checkpoint</dt><dd>Portique de passage obligatoire. <kbd>R</kbd> y ramène la voiture, avec le chrono du passage.</dd>
     <dt>Chicane</dt><dd>Pièce qui décale la route d'une colonne en gardant son cap.</dd>
     <dt>Contrat</dt><dd>L'ensemble des mesures qu'un circuit officiel doit tenir (<code>tools/contract.mjs</code>).</dd>
-    <dt>Croisement</dt><dd>Carrefour en croix ; un circuit peut le traverser deux fois.</dd>
+    <dt>Croisement</dt><dd>Carrefour en croix ; un circuit peut le traverser deux fois, avec un checkpoint dans la boucle pour qu'on ne puisse pas la couper.</dd>
     <dt>Fantôme</dt><dd>Une voiture transparente qui rejoue une course enregistrée.</dd>
     <dt>Famille</dt><dd>Groupe de pièces de l'éditeur dont on règle les caractéristiques.</dd>
     <dt>Fiche (Race Hub)</dt><dd>L'écran d'un circuit : carte, médailles, fantômes, classements.</dd>

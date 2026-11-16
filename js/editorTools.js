@@ -317,13 +317,19 @@ export function checkTrack(track) {
   // Union-find pour la connexité.
   const parent = new Map(track.tiles.map((t) => [t, t]));
   const find = (t) => { while (parent.get(t) !== t) t = parent.get(t); return t; };
-  const join = (a, b) => parent.set(find(a), find(b));
+  // 0.11.0 : en plus de la connexité, les liaisons pièce à pièce (raccords, plaques, sauts) : elles servent à trouver les boucles qu'un carrefour permet de couper.
+  const adj = new Map(), armNb = new Map();
+  const link = (a, b) => { if (!adj.has(a)) adj.set(a, new Set()); adj.get(a).add(b); };
+  const join = (a, b) => { parent.set(find(a), find(b)); if (a !== b) { link(a, b); link(b, a); } };
   const free = [];
   for (const e of eps) {
     let ok = false;
     for (const f of eps) {
       if (f.tile === e.tile) continue;
-      if (Math.hypot(e.x - f.x, e.y - f.y, e.z - f.z) < 2 && e.dx * f.dx + e.dy * f.dy + e.dz * f.dz < -0.5) { ok = true; join(e.tile, f.tile); }
+      if (Math.hypot(e.x - f.x, e.y - f.y, e.z - f.z) < 2 && e.dx * f.dx + e.dy * f.dy + e.dz * f.dz < -0.5) {
+        ok = true; join(e.tile, f.tile);
+        if (PIECES[e.tile.t].kind === 'junction') { if (!armNb.has(e.tile)) armNb.set(e.tile, []); armNb.get(e.tile).push(f.tile); }
+      }
     }
     const pl = platformAt(track, e.x + e.dx * 2, e.z + e.dz * 2, e.y);
     if (pl) { ok = true; join(e.tile, pl); }
@@ -418,6 +424,25 @@ export function checkTrack(track) {
         issues.push({ tile: t, level: 'error', msg: `${PIECES[t.t].label} inaccessible depuis le départ.` });
       }
     }
+  }
+  // 0.11.0 : un carrefour traversé deux fois (circuit en 8) laisse COUPER la boucle qui revient sur lui : au premier passage, on tourne directement vers la sortie.
+  // Deux bras reliés par des pièces sans checkpoint (ni départ, ni arrivée) entre eux : la boucle se coupe. Remède : un checkpoint dans la boucle.
+  const gate = (t) => !!cpKind(t) || PIECES[t.t].special === 'finish' || PIECES[t.t].special === 'start';
+  for (const [J, nbs] of armNb) {
+    const arms = [...new Set(nbs)].filter((t) => !gate(t));
+    let cut = false;
+    for (let i = 0; i < arms.length && !cut; i++) {
+      const seen = new Set([J, arms[i]]), q = [arms[i]];
+      while (q.length && !cut) {
+        const t = q.pop();
+        for (const n of adj.get(t) || []) {
+          if (seen.has(n) || gate(n)) continue;
+          if (n !== arms[i] && arms.includes(n)) { cut = true; break; }
+          seen.add(n); q.push(n);
+        }
+      }
+    }
+    if (cut) issues.push({ tile: J, level: 'warn', msg: 'Carrefour : la boucle qui revient sur lui n’a aucun checkpoint, on peut la couper en tournant au premier passage. Pose un checkpoint dans la boucle.' });
   }
   for (const e of track.validate()) issues.push({ tile: null, level: 'error', msg: e });
   // 0.9.59 : « Inversion de gravité au départ » sans plafond au départ. La voiture part en gravité inversée ; si le départ n'est pas une pièce posée à l'envers, il n'y a

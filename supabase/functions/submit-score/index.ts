@@ -8873,7 +8873,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*2 B2 ZR4 B ZL4 [tr01l] S2< [tr10l] C*1 S SPL U G1 D S ALT S4 MRG S JX S4 XR XR XR S4 JX C*1 WI W WO S ZR3 S ZL3 S XL S3 B finish*3",
+    script: "start*2 B2 ZR4 B ZL4 [tr01l] S2< [tr10l] C*1 S SPL U G1 D S ALT S4 MRG S JX S4 XR XR XR S2 C*3 S JX C*1 WI W WO S ZR3 S ZL3 S XL S3 B finish*3",
     obst: [
       {
         k: "board_right",
@@ -8968,7 +8968,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*1 [cdi1] [dn2] [dn2] [cdo2] B S [crv1] UU GR2 DD [cdo1] B2 ZR4 S ZL4 S [crv1] UU GR2 V-2 [plate3]*10 S B C*2 WI W WO S HL S JX S4 XR XR XR S4 JX ZZR S B2 finish*2",
+    script: "start*1 [cdi1] [dn2] [dn2] [cdo2] B S [crv1] UU GR2 DD [cdo1] B2 ZR4 S ZL4 S [crv1] UU GR2 V-2 [plate3]*10 S B C*2 WI W WO S HL S JX S4 XR XR XR S2 C*3 S JX ZZR S B2 finish*2",
     obst: [
       {
         k: "board_right",
@@ -9128,7 +9128,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*2 B3 UU GR2 DD [cdo1] B2 ZR4 S ZL4 [crs1] S2 [cds1] B S2_ B_ S2_ BR S2 B BL S2 C*3 WI W WO S JX S4 XR XR XR S4 JX S B2 finish*2",
+    script: "start*2 B3 UU GR2 DD [cdo1] B2 ZR4 S ZL4 [crs1] S2 [cds1] B S2_ B_ S2_ BR S2 B BL S2 C*3 WI W WO S JX S4 XR XR XR S2 C*3 S JX S B2 finish*2",
     obst: [
       {
         k: "board_right",
@@ -9207,7 +9207,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 70
     },
-    script: "start*3 S3.t201 S BRR S2 B BLL S2 WI W2 WO S ZR4 S C*2 B [tr02l] S4> [tr20l] BRR S2 ZZL S B BLL S2 JX S4 XR XR XR S4 JX S B WI W WO S B2 finish*2",
+    script: "start*3 S3.t201 S BRR S2 B BLL S2 WI W2 WO S ZR4 S C*2 B [tr02l] S4> [tr20l] BRR S2 ZZL S B BLL S2 JX S4 XR XR XR S2 C*3 S JX S B WI W WO S B2 finish*2",
     obst: [
       {
         k: "wallS",
@@ -9461,7 +9461,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*3 B TI TM TO B S.g40 [crs1] UU GR2 G5 V-5 [plate3]*10 S7 S.g100 B C*2 ZR4 S ZL4 S HR S WI W WO S JX S4 XR XR XR S4 JX B [cdi1] [dn2] [cdo1] B2 finish*2",
+    script: "start*3 B TI TM TO B S.g40 [crs1] UU GR2 G5 V-5 [plate3]*10 S7 S.g100 B C*2 ZR4 S ZL4 S HR S WI W WO S JX S4 XR XR XR S2 C*3 S JX B [cdi1] [dn2] [cdo1] B2 finish*2",
     obst: [
       {
         k: "board_up",
@@ -9832,7 +9832,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start*3 S.n S2.a R.a L.a R.a L.a S.a S.n B2 S [tr01s] S2< [tr10s] S3 R R B S2 NI N2 NO L S L B S3 [cvd05] [cvdL05] B ZR S ZL B C*1 JX R S R R S JX R S B S C*3 S.n S2.a R.a L.a R.a L.a S2.a finish*2",
+    script: "start*3 S.n S2.a R.a L.a R.a L.a S.a S.n B2 S [tr01s] S2< [tr10s] S3 R R B S2 NI N2 NO L S L B S3 [cvd05] [cvdL05] B ZR S ZL B C*1 JX R C*3 R R S JX R S B S C*3 S.n S2.a R.a L.a R.a L.a S2.a finish*2",
     obst: [
       {
         k: "sign_uturn",
@@ -9988,7 +9988,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 8
     },
-    script: "start*2 Y2.o B S [cvd05] [cvdL05] [cvd05] [cvdL05] B S NI N2 NO S.o S [tr01s] S2< [tr10s] S R L R L B S2 C*3 ZR S ZL B JX R S R R S JX B S2 C S.o S R L R L B NI N NO S2 B finish*1",
+    script: "start*2 Y2.o B S [cvd05] [cvdL05] [cvd05] [cvdL05] B S NI N2 NO S.o S [tr01s] S2< [tr10s] S R L R L B S2 C*3 ZR S ZL B JX R C*3 R R S JX B S2 C S.o S R L R L B NI N NO S2 B finish*1",
     obst: [
       {
         k: "board_warn",
@@ -10138,7 +10138,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 8
     },
-    script: "start*2 S.o B R L R L B S2 C*3 B NI N2 NO S R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R S R R S JX R S NI N NO [cdi1] [dn2] [cdo1] S B finish*1",
+    script: "start*2 S.o B R L R L B S2 C*3 B NI N2 NO S R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R C*3 R R S JX R S NI N NO [cdi1] [dn2] [cdo1] S B finish*1",
     obst: [
       {
         k: "board_warn",
@@ -10364,7 +10364,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start NI N NO L I B R L S B JX R S R R S JX R B S2 L ZR ZL R S B C S R L JX L S L L S JX L B S2 [tr01s] S2< [tr10s] NI N2 NO R S L B I S3 KR S R S2 B C SPLL I3 ALT S3 MRG S L B S2 R [cvd1] S KL S2 B finish",
+    script: "start NI N NO L I B R L S B JX R C*3 R R S JX R B S2 L ZR ZL R S B C S R L JX L C*3 L L S JX L B S2 [tr01s] S2< [tr10s] NI N2 NO R S L B I S3 KR S R S2 B C SPLL I3 ALT S3 MRG S L B S2 R [cvd1] S KL S2 B finish",
     obst: [
       {
         k: "board_left",
@@ -10590,7 +10590,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 12
     },
-    script: "start*1 [cdi2] DX [cdo2] S2 I S2 R B S2 L B S I S2 R S L C*3 B S NI N2 NO S [tr01s] S2< [tr10s] S2 R B S.m [crs1].m S [cds1].m L B ZR S ZL B S I S2 R S2 L B S2 JX R S R R S JX R S2 B finish*2",
+    script: "start*1 [cdi2] DX [cdo2] S2 I S2 R B S2 L B S I S2 R S L C*3 B S NI N2 NO S [tr01s] S2< [tr10s] S2 R B S.m [crs1].m S [cds1].m L B ZR S ZL B S I S2 R S2 L B S2 JX R C*3 R R S JX R S2 B finish*2",
     obst: [
       {
         k: "board_warn",
@@ -10671,7 +10671,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 2
     },
-    script: "start*1 B CVR2 CVR2 S B R_ L_ R_ L_ S B C*3 B S2 R S R B S NI N2 NO S [tr01s] S2< [tr10s] S B L S R# L# R# L# S2# B ZR S ZL B JX R S R R S JX R S B [cdi1] [dn2] [cdo1] S B finish*3",
+    script: "start*1 B CVR2 CVR2 S B R_ L_ R_ L_ S B C*3 B S2 R S R B S NI N2 NO S [tr01s] S2< [tr10s] S B L S R# L# R# L# S2# B ZR S ZL B JX R C*3 R R S JX R S B [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "board_warn",
@@ -10740,7 +10740,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start*1 S2.d B S2 R S L S B R.d L.d S2 C*3 B NI N2 NO S [tr01s] S2< [tr10s] S2 R S2.d L B ZR S ZL B S2 R.d S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
+    script: "start*1 S2.d B S2 R S L S B R.d L.d S2 C*3 B NI N2 NO S [tr01s] S2< [tr10s] S2 R S2.d L B ZR S ZL B S2 R.d S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "board_warn",
@@ -10822,7 +10822,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 8
     },
-    script: "start*3 S# R# R# B# S2# B S3 TI TM2 TO S R R B S2 [cdi1] [dn2] [cdo1] S C*2 S [cvd05] [cvd05] [cvd05] [cvd05] S2 B S R# L# R# L# S2# B NI N2 NO S ZR S R R S ZL B S2 C*1 L L B S5 JX R S R R S JX R S B finish*3",
+    script: "start*3 S# R# R# B# S2# B S3 TI TM2 TO S R R B S2 [cdi1] [dn2] [cdo1] S C*2 S [cvd05] [cvd05] [cvd05] [cvd05] S2 B S R# L# R# L# S2# B NI N2 NO S ZR S R R S ZL B S2 C*1 L L B S5 JX R C*3 R R S JX R S B finish*3",
     obst: [
       {
         k: "pillarBase",
@@ -11701,7 +11701,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 8
     },
-    script: "start*2 S2.p B S2 R S.w150 L S B S2.p R S L B C*3 B NI N2 NO S3.w120 R S R S B ZR S ZL B S2 [tr01s] S2< [tr10s] S L B S.p R S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*1",
+    script: "start*2 S2.p B S2 R S.w150 L S B S2.p R S L B C*3 B NI N2 NO S3.w120 R S R S B ZR S ZL B S2 [tr01s] S2< [tr10s] S L B S.p R S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*1",
     obst: [
       {
         k: "board_warn",
@@ -11866,7 +11866,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 70
     },
-    script: "start*3 GD6 BRR S B BLL S2 C*2 WI W2 WO S ZR4 S B [tr02l] S4> [tr20l] BRR S2 [cdi1] [dn2] [cdo1] B BLL S2 JX S4 XR XR XR S4 JX S B BRR S2 ZZL S B2 finish*2",
+    script: "start*3 GD6 BRR S B BLL S2 C*2 WI W2 WO S ZR4 S B [tr02l] S4> [tr20l] BRR S2 [cdi1] [dn2] [cdo1] B BLL S2 JX S4 XR XR XR S2 C*3 S JX S B BRR S2 ZZL S B2 finish*2",
     obst: [
       {
         k: "gantry",
@@ -12118,7 +12118,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start*2 P2 B S R B S L S R B S2 C*3 B NI N2 NO S L R L R B S2 [tr01s] S2< [tr10s] S3 L B ZR S ZL B S R B JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
+    script: "start*2 P2 B S R B S L S R B S2 C*3 B NI N2 NO S L R L R B S2 [tr01s] S2< [tr10s] S3 L B ZR S ZL B S R B JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "board_warn",
@@ -12279,7 +12279,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start*1 B S2.t137 S2 R S L S R S L B C*3 B NI N2 NO S R S2.v S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
+    script: "start*1 B S2.t137 S2 R S L S R S L B C*3 B NI N2 NO S R S2.v S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "board_warn",
@@ -12631,7 +12631,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 70
     },
-    script: "start*3 B2 S3.v BRR S B BLL S2 WI W2 WO S C*2 B ZR4 S [tr02l] S4> [tr20l] BRR S2.t137 BLL B S ZZR S BRR S JX S4 XR XR XR S4 JX S B2 finish*2",
+    script: "start*3 B2 S3.v BRR S B BLL S2 WI W2 WO S C*2 B ZR4 S [tr02l] S4> [tr20l] BRR S2.t137 BLL B S ZZR S BRR S JX S4 XR XR XR S2 C*3 S JX S B2 finish*2",
     obst: [
       {
         k: "pyramidS",
@@ -12802,7 +12802,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start*1 Y2.b B S R S L S R S L B C*3 B NI N2 NO S R S2.x S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
+    script: "start*1 Y2.b B S R S L S R S L B C*3 B NI N2 NO S R S2.x S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "bumper",
@@ -13168,7 +13168,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 8
     },
-    script: "start*2 B2 S2.x R L R L B S2 C*3 B NI N2 NO S R S L B S2.c S2 [tr01s] S2< [tr10s] S R B ZR S ZL B S L B S JX R S R R S JX R S R B [cdi1] [dn2] [cdo1] S B finish*1",
+    script: "start*2 B2 S2.x R L R L B S2 C*3 B NI N2 NO S R S L B S2.c S2 [tr01s] S2< [tr10s] S R B ZR S ZL B S L B S JX R C*3 R R S JX R S R B [cdi1] [dn2] [cdo1] S B finish*1",
     obst: [
       {
         k: "hammer",
@@ -13432,7 +13432,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start*1 B2 S2.w180 S R S L S R B S2 C*3 B S.w150 S2 R S L B NI N2 NO S2.w120 S R S L B ZR S ZL B S [tr01s] S2< [tr10s] S3 R B S2 L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
+    script: "start*1 B2 S2.w180 S R S L S R B S2 C*3 B S.w150 S2 R S L B NI N2 NO S2.w120 S R S L B ZR S ZL B S [tr01s] S2< [tr10s] S3 R B S2 L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "board_warn",
@@ -13774,7 +13774,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*2 B2 S3.y S2 [crs1] S2 [cds1] B ZR4 S ZL4 S HR S2 B C*3 WI W2 WO S2 JX S4 XR XR XR S4 JX S B [cdi1] [dn2] [cdo1] ZZR S B2 finish*2",
+    script: "start*2 B2 S3.y S2 [crs1] S2 [cds1] B ZR4 S ZL4 S HR S2 B C*3 WI W2 WO S2 JX S4 XR XR XR S2 C*3 S JX S B [cdi1] [dn2] [cdo1] ZZR S B2 finish*2",
     obst: [
       {
         k: "pyramidS",
@@ -13850,7 +13850,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 8
     },
-    script: "start*2 B TW.f S2^ B^ R^ S^ L^ S2^ R^ S^ L^ C^ B^ S2^ TWB.f S2 B NI N2 NO R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S3 R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*1",
+    script: "start*2 B TW.f S2^ B^ R^ S^ L^ S2^ R^ S^ L^ C^ B^ S2^ TWB.f S2 B NI N2 NO R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S3 R B S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*1",
     obst: [
       {
         k: "board_warn",
@@ -14159,7 +14159,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start*2 B S2.v500 S R L R L B S2 C*3 B NI N2 NO S R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S3 R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
+    script: "start*2 B S2.v500 S R L R L B S2 C*3 B NI N2 NO S R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S3 R B S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "board_warn",
@@ -14355,7 +14355,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start*2 B3 S3 [crs1] S B HR S2 C S2 HL S B [cdi1] [dn2] [cdo1] B2 ZR3 S ZL3 S JX S4 XR XR XR S4 JX S NI N NO S B finish*2",
+    script: "start*2 B3 S3 [crs1] S B HR S2 C S2 HL S B [cdi1] [dn2] [cdo1] B2 ZR3 S ZL3 S JX S4 XR XR XR S2 C*3 S JX S NI N NO S B finish*2",
     obst: [
       {
         k: "spikesPop",
@@ -19260,4 +19260,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "6cc3cee8faa2e297";
+globalThis.__COPYTRACK_BUILD__ = "79206bd9be8780ae";
