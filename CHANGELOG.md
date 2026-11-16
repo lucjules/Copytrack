@@ -6,17 +6,30 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.3 — chapitre 4 (Ville futuriste) refait autour des nouvelles pièces
+
+**`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 4 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
+
+- Les six circuits de la Ville futuriste sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures et objectifs gardés) :
+  - **Néons Express** (speedway, 56,8 s) : départ sur le tapis roulant entre deux **murs pleins** (façades), deux avenues larges sous des portiques, chicane rapide, grand S, croisement traversé deux fois ; 23 nouveautés. Objectif inchangé : aucune bordure touchée.
+  - **Boulevard Sans Fin** (sprint, 46,2 s) : chicanes rapides, immeubles en blocs, avenue large sous un portique, chicanes longues, tube qui tourne sous la ville ; 23 nouveautés. Objectif « moins de 47,5 s ».
+  - **Hyperboucle** (rollercoaster, 51,4 s) : deux loopings décalés, grand looping, avenue large, **looping modulaire**, tube qui tourne ; 20 nouveautés.
+  - **Métro Aérien** (technique, 58,4 s) : quai étroit entre des colonnes, chicanes serrées, croisement traversé deux fois ; 18 nouveautés.
+  - **Tours Jumelles** (acrobatique, 46,0 s) : trois sauts de toit en toit, toits en **plaques**, chicanes longues, avenue large ; 21 nouveautés. Objectif « moins de 47,5 s ».
+  - **Viaduc Vertical** (rollercoaster, 50,0 s) : lift hill accéléré, grand looping, looping modulaire, avenue large, tube qui tourne ; 20 nouveautés.
+- `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 4.
+
 ## Bêta 0.10.2 — chapitre 3 (Archipel tropical) refait autour des nouvelles pièces
 
 **`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits du chapitre 3 changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.
 
 - Les six circuits de l'Archipel tropical sont **construits autour des nouvelles pièces** (noms, thèmes, profils, ouvertures, véhicules et objectifs gardés) :
-  - **Lagon** (sprint en moto, 48,3 s) : deux sauts à anneau (le second reçu sur une **plaque**), chicanes rapides, route large sous un portique, croisement traversé deux fois, grand S, pyramides de roche ; 21 nouveautés.
+  - **Lagon Turquoise** (sprint en moto, 48,3 s) : deux sauts à anneau (le second reçu sur une **plaque**), chicanes rapides, route large sous un portique, croisement traversé deux fois, grand S, pyramides de roche ; 21 nouveautés.
   - **Récif** (technique en bateau, 62,9 s) : route étroite sur une jetée entre des piliers fins, chicanes serrées, croisement traversé deux fois ; 20 nouveautés.
   - **Phare** (acrobatique, deltaplane, 52,7 s) : deux sauts reçus sur des plaques, chicanes longues, hélice autour du phare, route large au sommet ; 22 nouveautés.
-  - **Vrille** (rollercoaster, 54,7 s) : triple looping, **looping modulaire**, tube qui tourne, route large sous un portique ; 21 nouveautés.
-  - **Lunaire** (acrobatique en basse gravité, 53,7 s) : trois grands sauts lunaires, plaques entre des cratères (pyramides, cale), chicanes longues ; 25 nouveautés.
-  - **Archipel** (speedway, 59,9 s) : route large, chicane rapide, croisement traversé deux fois (trois virages géants), grand S ; 19 nouveautés. Objectif « moins de 61,5 s ».
+  - **Tourbillon Tropical** (rollercoaster, 54,7 s) : triple looping, **looping modulaire**, tube qui tourne, route large sous un portique ; 21 nouveautés.
+  - **Sauts Lunaires** (acrobatique en basse gravité, 53,7 s) : trois grands sauts lunaires, plaques entre des cratères (pyramides, cale), chicanes longues ; 25 nouveautés.
+  - **Grand Archipel** (speedway, 59,9 s) : route large, chicane rapide, croisement traversé deux fois (trois virages géants), grand S ; 19 nouveautés. Objectif « moins de 61,5 s ».
 - `tools/test-etape6.mjs` couvre maintenant les chapitres 1 à 3.
 - Correction : le contrôle « pas de départ classique » (contrat et `tools/test-niveaux.mjs`) ignorait les circuits dont le départ porte un style de portique (`start*2 …`, depuis 0.9.68) : il les vérifie de nouveau (aucun n'était en faute). Les tests des départs spéciaux (bateau, deltaplane, tapis roulant) acceptent aussi ce style.
 
@@ -29,7 +42,7 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
   - **Canopée** (speedway, 60,5 s, 201 km/h de moyenne) : deux routes larges sous des portiques, grand S, chicane longue, tube qui tourne à droite puis à gauche ; 23 nouveautés. Objectif « moins de 62 s ».
   - **Spores** (acrobatique, 49,7 s, 10,7 s en l'air) : quatre rebonds en escalier reçus sur des **plaques**, chicanes longues entre les rebonds ; 23 nouveautés.
   - **Serpent** (technique, en moto, 54,2 s) : deux routes étroites (l'une entre des piliers fins), chicanes serrées, croisement traversé deux fois ; 22 nouveautés.
-  - **Racines** (rollercoaster, 52,4 s) : looping modulaire, route large sous un portique, tube qui tourne, double looping ; 18 nouveautés.
+  - **Racines Boueuses** (rollercoaster, 52,4 s) : looping modulaire, route large sous un portique, tube qui tourne, double looping ; 18 nouveautés.
   - **Temple** (technique, 69,7 s) : blocs de pierre, route étroite, chicanes serrées, **arche pleine entre deux murs**, croisement traversé deux fois ; 24 nouveautés.
 - `tools/test-etape6.mjs` applique la règle du chapitre 1 (12 nouveautés dont 6 pièces de route, 3 familles ; les 9 familles par chapitre ; 45 à 85 s) à chaque chapitre refait.
 - Tests adaptés aux circuits refaits : le conseil « tu freines plus tôt » du coach est vérifié sur Serpent (sur le nouveau Temple, avancer un freinage envoie toujours la voiture au mur) ; la comparaison du laboratoire sous le profil Simulation, sur Lianes Néon.

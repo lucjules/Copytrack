@@ -174,48 +174,48 @@ _Tapis roulant express, boucles, métro aérien, toits et lift hill : la ville m
 
 ### 19. Néons Express — Speedway, ◆◆◇◇◇
 
-- Départ : tapis roulant à +200 km/h (trois cases) : près de 290 km/h sans booster. Au programme : quatre virages relevés, wall-ride sur la façade d’une tour, 93 % au-dessus de 220 km/h.
-- Pilote automatique : **24.1 s** · médailles : cristal 22.9 · or 24.1 · argent 27.7 · bronze 32.5
+- Départ : tapis roulant à +200 km/h entre deux façades, sans booster. Au programme : très grands virages relevés, avenue large sous un portique, chicane rapide, wall-ride sur une tour, grand S, croisement traversé deux fois.
+- Pilote automatique : **56.8 s** · médailles : cristal 54 · or 56.8 · argent 65.3 · bronze 76.7
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 20. Boulevard Sans Fin — Sprint, ◆◆◇◇◇
 
-- Départ : sans bordures (six cases). Au programme : vague douce, tunnel de quatre cases, un seul très grand virage plat.
-- Pilote automatique : **20.4 s** · médailles : cristal 19.3 · or 20.3 · argent 23.4 · bronze 27.4
-- Objectif bonus ★ : Finir en moins de 21.5 s
+- Départ : boulevard sans bordures, boosters. Au programme : chicanes rapides, tunnel, très grand virage plat, avenue large sous un portique, chicanes longues, tube qui tourne sous la ville, grand S.
+- Pilote automatique : **46.2 s** · médailles : cristal 43.9 · or 46.2 · argent 53.2 · bronze 62.4
+- Objectif bonus ★ : Finir en moins de 47.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 21. Hyperboucle — Rollercoaster, ◆◆◆◇◇
 
-- Départ : trois boosters → deux loopings qui s’enchaînent en S. Au programme : trois loopings, deux wall-rides, plongeon de 8 niveaux.
-- Pilote automatique : **32.5 s** · médailles : cristal 31.1 · or 32.7 · argent 37.6 · bronze 44.2
+- Départ : trois boosters → deux loopings décalés. Au programme : wall-rides des deux côtés, chicane longue, grand looping, avenue large sous un portique, looping modulaire, plongeon à 38°, tube qui tourne.
+- Pilote automatique : **51.4 s** · médailles : cristal 48.9 · or 51.5 · argent 59.2 · bronze 69.5
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 22. Métro Aérien — Technique, ◆◆◆◆◇
 
-- Départ : montée en lacets : deux courbes montantes serrées. Au programme : 13 virages serrés : slalom sans bordures sur le viaduc, épingles, chicane sur un mur, slalom sous un tunnel.
-- Pilote automatique : **39.1 s** · médailles : cristal 36.6 · or 38.5 · argent 44.3 · bronze 52
+- Départ : booster puis montée en lacets. Au programme : épingles sans bordures, quai étroit entre des colonnes, wall-ride, chicane de tunnels, chicanes serrées, croisement traversé deux fois.
+- Pilote automatique : **58.4 s** · médailles : cristal 55.5 · or 58.4 · argent 67.2 · bronze 78.9
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 23. Tours Jumelles — Acrobatique, ◆◆◆◆◇
 
-- Départ : trois boosters, petit looping, puis rampe de toit. Au programme : trois sauts de toit en toit, wall-ride sur une façade, réception de 10 niveaux.
-- Pilote automatique : **35.5 s** · médailles : cristal 33.7 · or 35.5 · argent 40.8 · bronze 47.9
-- Objectif bonus ★ : Finir en moins de 36 s
+- Départ : trois boosters → looping. Au programme : trois sauts de toit en toit, toits en plaques, chicanes longues, wall-ride entre deux tours, avenue large sous un portique.
+- Pilote automatique : **46.0 s** · médailles : cristal 43.7 · or 46 · argent 52.9 · bronze 62.1
+- Objectif bonus ★ : Finir en moins de 47.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 24. Viaduc Vertical — Rollercoaster, ◆◆◆◆◆
 
-- Départ : trois boosters → lift hill de 16 niveaux. Au programme : plongeon de 12 niveaux, grand looping, slalom de wall-rides.
-- Pilote automatique : **30.0 s** · médailles : cristal 28 · or 29.5 · argent 33.9 · bronze 39.8
+- Départ : trois boosters → lift hill accéléré. Au programme : viaduc au sommet, plongeon, grand looping, wall-rides des deux côtés, looping modulaire, avenue large sous un portique, tube qui tourne.
+- Pilote automatique : **50.0 s** · médailles : cristal 47.5 · or 50 · argent 57.5 · bronze 67.5
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
