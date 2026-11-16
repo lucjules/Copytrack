@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.10.11** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.10.12** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -14,6 +14,8 @@ npm start
 ```
 
 Puis ouvrir <http://localhost:8080>. N'importe quel serveur statique fonctionne aussi, par exemple `python3 -m http.server`.
+
+Le **wiki du jeu** (`wiki/index.html`, en français) explique tout : pilotage, carrière, les 72 circuits avec leur carte, pièces, revêtements, éditeur, modes en ligne et architecture. On l'ouvre depuis le jeu (bouton **📖 Wiki du jeu** de la barre du bas de l'accueil, ou *Créer › Wiki du jeu*). Il se régénère à partir du code avec `npm run wiki` (ses captures d'écran : `node tools/wiki/shots.mjs`, le jeu étant servi).
 
 Pour le publier avec **GitHub Pages** : *Settings → Pages → Deploy from a branch*, puis choisir la branche et le dossier `/ (root)`.
 Le jeu s'**installe comme une application** (bouton d'installation du navigateur) et se joue **hors ligne** une fois chargé.
@@ -165,7 +167,7 @@ La clé secrète n'est jamais dans le jeu : seule la fonction serveur l'utilise,
 ## Mettre en ligne une nouvelle version (aide-mémoire)
 
 1. `npm test` doit finir sans erreur (il vérifie aussi que `sw.js`, le préchargement des modules de `index.html` et `docs/MODULES.md` sont à jour) ; `npm run lint` aussi.
-2. Après tout changement de circuit, de pièce ou de physique : `npm run sw` (cache hors ligne et préchargement) puis `npm run build:function` (fonction serveur).
+2. Après tout changement de circuit, de pièce ou de physique : `npm run sw` (cache hors ligne et préchargement) puis `npm run build:function` (fonction serveur) ; après tout changement de version, de circuit ou de pièce : `npm run wiki` (`tools/test-wiki.mjs` échoue sinon).
    Un changement de physique impose aussi d'incrémenter `PHYS_VER` : la procédure complète est dans [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#changer-la-physique-la-procédure).
 3. **Redéployer la fonction `submit-score`** dans Supabase avec le nouveau `index.ts` : sans cela, les temps des circuits changés sont refusés en ligne.
 4. Les records d'un circuit repartent de zéro dès que son tracé change (la clé de classement contient son empreinte) : rien à nettoyer côté base.
@@ -226,6 +228,7 @@ js/                             le jeu : modèle, simulation, rendu, application
 supabase/                       scripts SQL, fonction serveur « submit-score », notes comptes et multijoueur
 tools/                          tests (npm test), atelier de level design, générateurs de fichiers
 docs/                           ARCHITECTURE.md (comment ça s'emboîte), MODULES.md (index généré), fiche d'essai des circuits
+wiki/                           le wiki du jeu (index.html généré par npm run wiki, captures dans img/)
 ```
 
 Lire d'abord [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Avant de proposer un changement :

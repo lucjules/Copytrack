@@ -6,6 +6,14 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.10.12 — le wiki du jeu, accessible depuis le menu
+
+**`PHYS_VER` inchangé (36)**, circuits inchangés : rien à redéployer.
+
+- **Wiki du jeu** (`wiki/index.html`, en français) : tout le jeu expliqué, du joueur au développeur. Démarrer et commandes, pilotage (avec un schéma d'un saut), carrière (médailles, objectifs bonus, profils et leur contrat, les 12 chapitres), **les 72 circuits** avec leur carte vue du dessus tracée depuis le chemin du pilote de référence, leurs médailles, leur difficulté et leur objectif (filtres par chapitre et par profil), les 19 revêtements, les véhicules et le garage, les familles de pièces et un **catalogue des pièces avec les icônes de l'éditeur**, les décors solides, les obstacles et les 35 catégories de décorations, l'éditeur et ses raccourcis, les modes et le jeu en ligne, l'architecture (schémas des couches et d'un pas de simulation, codes de partage, langage des circuits intégrés, contrat, tests, mise en ligne), l'historique des versions et un glossaire. Recherche, thème clair ou sombre, lisible sur téléphone ; illustré par des captures du jeu.
+- **Dans le jeu** : un bouton **📖 Wiki du jeu** dans la barre du bas de l'accueil, et une entrée *Wiki du jeu* dans le panneau **Créer** (rubrique des pièces). Le wiki s'ouvre dans un nouvel onglet ; il demande le réseau (il n'est pas dans le cache hors ligne : ses images pèsent 2 Mo).
+- **`npm run wiki`** (`tools/wiki/build.mjs`) régénère la page à partir du code (circuits, cartes, médailles, icônes de `js/editor/palette.js`, revêtements, obstacles, décorations, versions du CHANGELOG) dans le modèle `tools/wiki/modele.html` ; `node tools/wiki/shots.mjs` refait les captures, le jeu étant servi. `tools/test-wiki.mjs` (`npm test`) vérifie que la page est à jour, que le menu y mène et que ses données et ses images sont là.
+
 ## Bêta 0.10.11 — chapitre 12 (Atelier des mécanismes) refait : les 72 circuits sont construits autour des nouvelles pièces
 
 **`PHYS_VER` inchangé (36)**. **Redéployer `submit-score`** : les six circuits de l'Atelier changent (leurs clés de classement aussi). Empreinte de physique, temps de référence et corpus de compatibilité régénérés pour cette raison seulement.

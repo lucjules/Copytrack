@@ -1217,6 +1217,12 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   text-align: center;
 }
 
+/* Lien vers le wiki (wiki/index.html, généré par npm run wiki) : un petit bouton dans la barre du bas de l'accueil, et une entrée du panneau Créer */
+#menu .menu-wiki { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding: 3px 12px; border-radius: 999px; border: 1px solid rgba(54, 233, 255, 0.55); color: var(--cyan); font-style: normal; font-weight: 600; text-decoration: none; white-space: nowrap; }
+#menu .menu-wiki:hover { background: rgba(54, 233, 255, 0.12); }
+#menu .menu-wiki:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+#menu a.menu-entry { text-decoration: none; }
+
 /* ---------- Écrans de liste : barre du haut, onglets, rubriques, cartes ---------- */
 #tracks, #mytracks, #community { background: linear-gradient(180deg, rgba(20, 20, 45, 0.8), rgba(20, 20, 45, 0.9)); padding-top: 0; }
 .screen-head {
