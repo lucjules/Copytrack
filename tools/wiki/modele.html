@@ -1,0 +1,798 @@
+<title>Wiki Copytrack</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Mise en page : sommaire fixe à gauche (piste), contenu en colonne de lecture ; les tableaux et grilles débordent seulement dans leur propre conteneur. */
+:root {
+  --bg: #eef0f6; --surface: #ffffff; --surface2: #f6f7fb; --ink: #151935; --muted: #575e80; --line: #d9dceb;
+  --accent: #d9432f; --accent-ink: #ffffff; --neon: #0a8fae; --curb-a: #d9432f; --curb-b: #ffffff;
+  --cristal: #3fb9d8; --or: #c99a1c; --argent: #8a92a8; --bronze: #b06a33;
+  --p-sprint: #d9432f; --p-speedway: #b8338c; --p-technique: #2f6fd9; --p-rollercoaster: #7a3fd0; --p-acrobatique: #d98a1c; --p-atelier: #1f9a6a;
+  --code-bg: #e9ebf4;
+  --f-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --nav-w: 248px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1228; --surface: #171b36; --surface2: #1d2242; --ink: #eceeff; --muted: #a3a9cf; --line: #2b3157;
+    --accent: #ff6b57; --accent-ink: #1a0d0a; --neon: #36e9ff; --curb-a: #ff6b57; --curb-b: #f4f1f8;
+    --cristal: #7fe3ff; --or: #f2c14e; --argent: #c3c8d6; --bronze: #e09a62;
+    --p-sprint: #ff7a66; --p-speedway: #ff6fc8; --p-technique: #6aa3ff; --p-rollercoaster: #b98bff; --p-acrobatique: #ffb547; --p-atelier: #45d39a;
+    --code-bg: #23284d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1228; --surface: #171b36; --surface2: #1d2242; --ink: #eceeff; --muted: #a3a9cf; --line: #2b3157;
+  --accent: #ff6b57; --accent-ink: #1a0d0a; --neon: #36e9ff; --curb-a: #ff6b57; --curb-b: #f4f1f8;
+  --cristal: #7fe3ff; --or: #f2c14e; --argent: #c3c8d6; --bronze: #e09a62;
+  --p-sprint: #ff7a66; --p-speedway: #ff6fc8; --p-technique: #6aa3ff; --p-rollercoaster: #b98bff; --p-acrobatique: #ffb547; --p-atelier: #45d39a;
+  --code-bg: #23284d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.6; }
+a { color: var(--neon); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid var(--neon); outline-offset: 2px; border-radius: 4px; }
+code, kbd, .mono { font-family: var(--f-mono); font-size: .88em; }
+code { background: var(--code-bg); padding: .08em .35em; border-radius: 4px; }
+kbd { display: inline-block; min-width: 1.8em; text-align: center; padding: .05em .45em; border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 6px; background: var(--surface); font-size: .82em; }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.15; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem); margin: 0 0 .3em; font-weight: 700; }
+h3 { font-size: 1.12rem; margin: 1.8em 0 .5em; font-weight: 700; }
+p { margin: 0 0 .9em; }
+.layout { display: grid; grid-template-columns: var(--nav-w) minmax(0, 1fr); min-height: 100%; }
+/* Sommaire */
+nav.toc { position: sticky; top: env(safe-area-inset-top, 0px); height: 100vh; overflow-y: auto; padding: 22px 14px 40px max(16px, env(safe-area-inset-left, 0px)); border-right: 1px solid var(--line); background: var(--surface); }
+.brand { font-family: var(--f-display); font-weight: 800; font-size: 1.15rem; letter-spacing: .02em; display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.brand-badge { width: 28px; height: 28px; flex: none; }
+.ver { font-size: .78rem; color: var(--muted); margin: 0 0 14px 38px; font-family: var(--f-mono); }
+.search { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface2); color: var(--ink); font: inherit; font-size: .9rem; margin-bottom: 12px; }
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: s; }
+.toc li a { display: grid; grid-template-columns: 26px 1fr; align-items: baseline; padding: 6px 8px; border-radius: 8px; color: var(--ink); text-decoration: none; font-size: .93rem; }
+.toc li a::before { counter-increment: s; content: counter(s, decimal-leading-zero); font-family: var(--f-mono); font-size: .72rem; color: var(--muted); }
+.toc li a:hover { background: var(--surface2); }
+.toc li a.on { background: var(--accent); color: var(--accent-ink); }
+.toc li a.on::before { color: var(--accent-ink); }
+.toc .grp { font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 14px 8px 4px; }
+.theme-btn { margin-top: 16px; width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface2); color: var(--ink); font: inherit; font-size: .85rem; cursor: pointer; }
+main { min-width: 0; padding-block: 0 80px; }
+.sec { padding-block: 56px 8px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1120px; margin: 0 auto; }
+.sec > .lede { font-size: 1.08rem; color: var(--muted); max-width: 68ch; }
+.read { max-width: 70ch; }
+.kicker { font-family: var(--f-mono); font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; display: block; }
+/* Bordure de piste rouge et blanche : le séparateur de rubrique */
+.curb { height: 8px; border-radius: 2px; background: repeating-linear-gradient(90deg, var(--curb-a) 0 22px, var(--curb-b) 22px 44px); margin: 10px 0 22px; max-width: 220px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent); }
+/* Accueil */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 32px; align-items: center; padding-top: 40px; }
+.hero h1 { font-size: clamp(2.2rem, 1rem + 2.6vw, 3.4rem); margin: 0; font-weight: 800; letter-spacing: .01em; }
+.hero h1 span { color: var(--accent); }
+.hero .tag { font-size: 1.15rem; color: var(--muted); margin: 12px 0 18px; max-width: 40ch; }
+.shot { margin: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); }
+.shot img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
+.shot figcaption { font-size: .82rem; color: var(--muted); padding: 8px 12px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 10px; margin: 26px 0 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.stat b { display: block; font-family: var(--f-display); font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat span { font-size: .82rem; color: var(--muted); }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 12px; margin: 14px 0; }
+.gallery.two { grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+.card h4 { margin: 0 0 6px; font-family: var(--f-display); font-size: .98rem; font-weight: 700; }
+.card p { margin: 0; font-size: .93rem; color: var(--muted); }
+.card p + p { margin-top: 6px; }
+.note { border-left: 4px solid var(--neon); background: var(--surface); padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 16px 0; font-size: .95rem; }
+.note.warn { border-left-color: var(--accent); }
+.tbl { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .76rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); background: var(--surface2); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+ul.tight { margin: 0 0 1em; padding-left: 1.2em; }
+ul.tight li { margin: .25em 0; }
+/* Puces */
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: .75rem; font-weight: 600; padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.p-sprint { color: var(--p-sprint); } .p-speedway { color: var(--p-speedway); } .p-technique { color: var(--p-technique); }
+.p-rollercoaster { color: var(--p-rollercoaster); } .p-acrobatique { color: var(--p-acrobatique); } .p-atelier { color: var(--p-atelier); }
+.medals { display: flex; flex-wrap: wrap; gap: 6px; font-family: var(--f-mono); font-size: .76rem; font-variant-numeric: tabular-nums; }
+.medal { display: inline-flex; align-items: center; gap: 4px; }
+.medal i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.m-cristal i { background: var(--cristal); transform: rotate(45deg); border-radius: 2px; } .m-or i { background: var(--or); } .m-argent i { background: var(--argent); } .m-bronze i { background: var(--bronze); }
+/* Chapitres */
+.chapters { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 14px; }
+.chap { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+.chap img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
+.chap .body { padding: 12px 14px 14px; display: grid; gap: 6px; }
+.chap .num { font-family: var(--f-mono); font-size: .72rem; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
+.chap h4 { margin: 0; font-family: var(--f-display); font-size: 1.02rem; }
+.chap p { margin: 0; font-size: .9rem; color: var(--muted); }
+.chap .names { font-size: .82rem; color: var(--ink); }
+/* Explorateur des circuits */
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.filters button { font: inherit; font-size: .82rem; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tracks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 268px), 1fr)); gap: 12px; }
+.trk { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 12px; align-items: start; }
+.trk svg { width: 84px; height: 84px; background: var(--surface2); border-radius: 8px; }
+.trk h5 { margin: 0; font-family: var(--f-display); font-size: .9rem; font-weight: 700; line-height: 1.2; }
+.trk .meta { font-size: .76rem; color: var(--muted); margin: 3px 0 6px; font-variant-numeric: tabular-nums; }
+.trk .stars { color: var(--accent); letter-spacing: 1px; font-size: .8rem; }
+.trk details { grid-column: 1 / -1; font-size: .84rem; color: var(--muted); }
+.trk summary { cursor: pointer; color: var(--ink); font-size: .8rem; }
+.trk .goal { font-size: .78rem; margin-top: 6px; }
+.count { font-size: .85rem; color: var(--muted); margin: 6px 0 0; }
+/* Revêtements, obstacles */
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 10px; }
+.sw { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 12px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.sw .dot { width: 38px; height: 38px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent); }
+.sw h4 { margin: 0; font-size: .92rem; font-family: var(--f-display); }
+.sw p { margin: 2px 0 0; font-size: .84rem; color: var(--muted); }
+.sw .param { font-family: var(--f-mono); font-size: .72rem; color: var(--neon); }
+/* Pièces */
+.pieces { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
+.pc { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px; text-align: center; font-size: .74rem; line-height: 1.25; }
+.pc .ic { width: 56px; height: 56px; margin: 0 auto 6px; background: #1d2242; border-radius: 8px; display: grid; place-items: center; }
+.pc .ic svg { width: 46px; height: 46px; }
+.pc code { display: block; margin-top: 4px; font-size: .68rem; background: none; color: var(--muted); padding: 0; }
+.pc.new { border-color: var(--accent); }
+.fam { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 10px; }
+.deco-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 10px; }
+.deco-cats .card p { font-size: .82rem; }
+.deco-cats .n { font-family: var(--f-mono); color: var(--accent); font-size: .78rem; }
+/* Schémas */
+.diagram { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; overflow-x: auto; margin: 14px 0; }
+.diagram svg { display: block; width: 100%; height: auto; min-width: 620px; }
+.diagram svg text { font-family: var(--f-body); fill: var(--ink); }
+.diagram .mut { fill: var(--muted); }
+.diagram .box { fill: var(--surface2); stroke: var(--line); }
+.diagram .hot { fill: color-mix(in srgb, var(--accent) 16%, var(--surface)); stroke: var(--accent); }
+.diagram .cool { fill: color-mix(in srgb, var(--neon) 14%, var(--surface)); stroke: var(--neon); }
+.diagram .arrow { stroke: var(--muted); stroke-width: 1.6; fill: none; marker-end: url(#ah); }
+.diagram .road { stroke: var(--muted); stroke-width: 3; fill: none; }
+.diagram .traj { stroke: var(--neon); stroke-width: 2.5; fill: none; stroke-dasharray: 6 5; }
+/* Historique */
+.timeline { list-style: none; margin: 14px 0; padding: 0; border-left: 3px solid var(--line); }
+.timeline li { position: relative; padding: 4px 0 10px 18px; font-size: .9rem; }
+.timeline li::before { content: ""; position: absolute; left: -8px; top: 11px; width: 13px; height: 13px; border-radius: 50%; background: var(--surface); border: 3px solid var(--accent); }
+.timeline li b { font-family: var(--f-mono); font-size: .8rem; color: var(--accent); margin-right: 6px; }
+.timeline li.minor::before { border-color: var(--line); width: 9px; height: 9px; left: -6px; top: 13px; }
+.versions { columns: 2 320px; column-gap: 24px; font-size: .84rem; margin: 10px 0; padding: 0; list-style: none; }
+.versions li { break-inside: avoid; padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.versions b { font-family: var(--f-mono); font-weight: 500; color: var(--muted); }
+dl.gloss { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); gap: 8px 18px; margin: 14px 0; }
+dl.gloss dt { font-weight: 600; font-family: var(--f-display); font-size: .9rem; }
+dl.gloss dd { margin: 0; color: var(--muted); font-size: .93rem; }
+.hidden-by-search { display: none !important; }
+footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px, env(safe-area-inset-left, 0px)); max-width: 1120px; margin: 0 auto; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); }
+/* Téléphone : le sommaire devient une barre en haut */
+@media (max-width: 860px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  nav.toc { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--surface); }
+  .brand, .ver, .toc .grp, .theme-btn { display: none; }
+  .search { margin-bottom: 8px; }
+  .toc ol { display: flex; overflow-x: auto; gap: 4px; padding-bottom: 2px; }
+  .toc li a { white-space: nowrap; grid-template-columns: auto; padding: 5px 10px; font-size: .84rem; }
+  .toc li a::before { display: none; }
+  .hero { grid-template-columns: minmax(0, 1fr); }
+  dl.gloss { grid-template-columns: minmax(0, 1fr); }
+  .sec { padding-block: 40px 4px; }
+}
+</style>
+
+<div class="layout">
+<nav class="toc" aria-label="Sommaire">
+  <div class="brand"><svg class="brand-badge" viewBox="0 0 28 28" aria-hidden="true"><polygon points="3,22 11,5 25,9 19,24" fill="var(--accent)"/><polygon points="11,5 25,9 18,13" fill="var(--neon)"/></svg>Copytrack</div>
+  <p class="ver">wiki · bêta __VERSION__</p>
+  <input id="q" class="search" type="search" placeholder="Rechercher dans le wiki…" aria-label="Rechercher dans le wiki">
+  <ol>
+    <li class="grp" aria-hidden="true">Jouer</li>
+    <li><a href="#accueil">Accueil</a></li>
+    <li><a href="#demarrer">Démarrer</a></li>
+    <li><a href="#pilotage">Pilotage</a></li>
+    <li><a href="#carriere">Carrière</a></li>
+    <li><a href="#circuits">Les 72 circuits</a></li>
+    <li><a href="#revetements">Revêtements</a></li>
+    <li><a href="#vehicules">Véhicules et garage</a></li>
+    <li class="grp" aria-hidden="true">Construire</li>
+    <li><a href="#pieces">Pièces</a></li>
+    <li><a href="#decors">Décors et obstacles</a></li>
+    <li><a href="#editeur">Éditeur</a></li>
+    <li class="grp" aria-hidden="true">Le reste</li>
+    <li><a href="#modes">Modes et en ligne</a></li>
+    <li><a href="#technique">Sous le capot</a></li>
+    <li><a href="#historique">Historique</a></li>
+    <li><a href="#glossaire">Glossaire</a></li>
+  </ol>
+  <button class="theme-btn" id="theme" type="button">Basculer clair / sombre</button>
+</nav>
+
+<main>
+<!-- ============================== ACCUEIL ============================== -->
+<section class="sec" id="accueil" data-s>
+  <div class="hero">
+    <div>
+      <span class="kicker">Wiki du projet · bêta __VERSION__</span>
+      <h1>COPY<span>TRACK</span></h1>
+      <div class="curb"></div>
+      <p class="tag">Un jeu de course contre-la-montre <strong>low-poly</strong> qui tourne dans le navigateur, avec un éditeur de circuits complet. Décors, véhicules, pièces, musique et circuits sont conçus pour le projet.</p>
+      <p class="read">Ce wiki explique <strong>tout</strong> : comment on pilote, comment la carrière s'enchaîne, chacun des 72 circuits, toutes les pièces et tous les revêtements, l'éditeur, les modes en ligne, et ce qui se passe sous le capot. Les chiffres et les cartes sont tirés du code du jeu lui-même.</p>
+    </div>
+    <figure class="shot"><img src="img/menu-accueil.jpg" alt="Menu principal de Copytrack : six tuiles Jouer, Créer, Multijoueur, Progression, Profil, Paramètres" loading="eager"><figcaption>Le menu principal et ses six catégories.</figcaption></figure>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="gallery">
+    <figure class="shot"><img src="img/course-couronne-tube.jpg" alt="Couronne Boréale : la voiture entre dans un tube qui tourne" loading="lazy"><figcaption>Couronne Boréale : un tube qui tourne.</figcaption></figure>
+    <figure class="shot"><img src="img/course-phare-plaque.jpg" alt="Phare : réception sur une plaque bordée, l'hélice du phare au loin" loading="lazy"><figcaption>Phare : une plaque, l'hélice au fond.</figcaption></figure>
+    <figure class="shot"><img src="img/course-miroir-verre.jpg" alt="Miroir : pont de verre fissuré entre deux murs" loading="lazy"><figcaption>Miroir : le pont de verre.</figcaption></figure>
+    <figure class="shot"><img src="img/course-epave.jpg" alt="Épave Engloutie : l'épave au bord de la route sous l'eau" loading="lazy"><figcaption>Épave Engloutie.</figcaption></figure>
+  </div>
+  <h3>En une minute</h3>
+  <div class="cols">
+    <div class="card"><h4>Contre la montre</h4><p>Chaque circuit se court seul contre le chrono, du départ à l'arrivée en passant par les checkpoints. Quatre médailles : bronze, argent, or et cristal.</p></div>
+    <div class="card"><h4>72 circuits, 12 chapitres</h4><p>Onze chapitres de carrière, un par décor, plus l'Atelier en bonus. Chaque circuit a un profil, une ouverture unique et un objectif bonus.</p></div>
+    <div class="card"><h4>Un éditeur complet</h4><p>Plus de 160 pièces, 19 revêtements, des centaines de décorations, un vérificateur et un partage par code ou par lien.</p></div>
+    <div class="card"><h4>Rejouable au bit près</h4><p>La physique ne dépend que des commandes. Les replays, les fantômes et la vérification des records par le serveur reposent là-dessus.</p></div>
+  </div>
+</section>
+
+<!-- ============================== DÉMARRER ============================== -->
+<section class="sec" id="demarrer" data-s>
+  <span class="kicker">Jouer</span><h2>Démarrer</h2><div class="curb"></div>
+  <div class="read">
+    <h3>Lancer le jeu</h3>
+    <p>Copytrack est un site statique : du HTML, des modules JavaScript et three.js inclus. Il n'y a rien à compiler. Depuis le dossier du projet :</p>
+    <div class="tbl"><table><tr><td><code>npm start</code></td><td>puis ouvrir <code>http://localhost:8080</code></td></tr><tr><td><code>python3 -m http.server</code></td><td>n'importe quel serveur statique convient aussi</td></tr><tr><td>GitHub Pages</td><td><em>Settings → Pages → Deploy from a branch</em>, dossier racine</td></tr></table></div>
+    <p>Le jeu s'<strong>installe comme une application</strong> (bouton d'installation du navigateur) et se joue <strong>hors ligne</strong> une fois chargé.</p>
+    <h3>Le premier lancement</h3>
+    <p>Le jeu demande un pseudo. En <strong>invité</strong>, la progression reste sur l'appareil ; avec un <strong>compte</strong> (pseudo et mot de passe), elle suit le joueur partout. Certains pseudos comme « Player » sont réservés. Un court tutoriel guide les premiers tours de roue. La langue suit le navigateur au premier lancement (français ou anglais) et se change dans <em>Paramètres › Interface</em>.</p>
+    <h3>Le menu principal</h3>
+  </div>
+  <div class="cols">
+    <div class="card"><h4>Jouer</h4><p>Course rapide, carrière, défi du jour, circuits de la communauté, modes, Académie.</p></div>
+    <div class="card"><h4>Créer</h4><p>L'éditeur, mes circuits, importer un code.</p></div>
+    <div class="card"><h4>Multijoueur</h4><p>Salons en direct, compétition, amis.</p></div>
+    <div class="card"><h4>Progression</h4><p>Records et médailles, niveau et licences, statistiques, déblocages.</p></div>
+    <div class="card"><h4>Profil</h4><p>Compte, amis, sauvegardes, code joueur.</p></div>
+    <div class="card"><h4>Paramètres</h4><p>Audio, graphismes, accessibilité, jeu, interface, commandes.</p></div>
+  </div>
+  <h3>Les commandes</h3>
+  <div class="cols">
+    <div class="tbl"><table>
+      <tr><th>Touche</th><th>En course</th></tr>
+      <tr><td><kbd>↑</kbd> <kbd>Z</kbd></td><td>Accélérer (en l'air : piquer du nez)</td></tr>
+      <tr><td><kbd>↓</kbd> <kbd>S</kbd></td><td>Freiner, marche arrière (en l'air : relever le nez)</td></tr>
+      <tr><td><kbd>←</kbd> <kbd>→</kbd> <kbd>Q</kbd> <kbd>D</kbd></td><td>Tourner</td></tr>
+      <tr><td>Frein + volant</td><td>Dérapage</td></tr>
+      <tr><td><kbd>R</kbd></td><td>Revenir au dernier checkpoint (le chrono revient au temps du checkpoint)</td></tr>
+      <tr><td><kbd>T</kbd> <kbd>Entrée</kbd></td><td>Recommencer</td></tr>
+      <tr><td><kbd>C</kbd></td><td>Changer de caméra</td></tr>
+      <tr><td><kbd>H</kbd></td><td>Klaxon</td></tr>
+      <tr><td><kbd>Échap</kbd> <kbd>P</kbd></td><td>Pause</td></tr>
+    </table></div>
+    <div class="tbl"><table>
+      <tr><th>Touche</th><th>En replay</th></tr>
+      <tr><td><kbd>Espace</kbd></td><td>Pause</td></tr>
+      <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Vitesse de lecture (×0,25 à ×4)</td></tr>
+      <tr><td><kbd>C</kbd></td><td>Caméra (dont TV et orbite)</td></tr>
+      <tr><td><kbd>Entrée</kbd></td><td>Recommencer</td></tr>
+      <tr><td><kbd>Échap</kbd></td><td>Quitter</td></tr>
+    </table>
+    <p style="padding:10px 12px 12px;margin:0;font-size:.88rem;color:var(--muted)">Clavier AZERTY ou QWERTY (<kbd>W</kbd> <kbd>A</kbd>), manette, et sur mobile des boutons tactiles ou le glisser du pouce. Toutes les touches se réassignent dans <em>Paramètres › Commandes</em>.</p></div>
+  </div>
+</section>
+
+<!-- ============================== PILOTAGE ============================== -->
+<section class="sec" id="pilotage" data-s>
+  <span class="kicker">Jouer</span><h2>Pilotage</h2><div class="curb"></div>
+  <p class="lede">La physique avance par pas fixes de 1/120 s. La voiture suit un modèle « bicyclette » : le volant oriente les roues avant, et ce sont les pneus qui font tourner la voiture.</p>
+  <div class="cols">
+    <div class="card"><h4>Dérapage au frein</h4><p>Il n'y a pas de bouton de dérapage. Freiner en tournant franchement, à bonne vitesse, fait décrocher l'arrière ; garder le volant prolonge la glisse.</p></div>
+    <div class="card"><h4>Mini-turbo</h4><p>Une glisse assez longue charge un mini-turbo à deux niveaux : étincelles bleues, puis orange. On le lâche en sortie de virage.</p></div>
+    <div class="card"><h4>En l'air</h4><p>Le volant ne tourne plus que les roues. Accélérer fait plonger le nez, freiner le relève : c'est ainsi qu'on règle l'assiette avant de toucher le sol.</p></div>
+    <div class="card"><h4>Réception</h4><p>Elle est parfaite, correcte ou ratée selon l'assiette au contact. Une réception ratée coûte de la vitesse ; certains objectifs bonus comptent les réceptions parfaites.</p></div>
+    <div class="card"><h4>Appui</h4><p>Sur les loopings, les tubes, les murs et les routes à l'envers, l'adhérence dépend de la force qui plaque les roues. Trop lent, on décroche.</p></div>
+    <div class="card"><h4>Wall-ride</h4><p>Une transition fait basculer la route sur un mur. On le prend vite (130 km/h au moins pour les circuits officiels), et on ressort par la transition inverse.</p></div>
+  </div>
+  <h3>Anatomie d'un saut</h3>
+  <div class="diagram" role="img" aria-label="Schéma d'un saut : rampe, trajectoire, puis trois réceptions possibles : parfaite, correcte, ratée">
+    <svg viewBox="0 0 760 230">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+      <path class="road" d="M20 190H150L250 120"/>
+      <path class="traj" d="M250 120 Q 400 10 560 170"/>
+      <path class="road" d="M520 200 L 600 170 H 740"/>
+      <g transform="translate(250 112) rotate(-35)"><rect x="-16" y="-8" width="32" height="14" rx="3" fill="var(--accent)"/></g>
+      <g transform="translate(404 52)"><rect x="-16" y="-8" width="32" height="14" rx="3" fill="var(--accent)" opacity=".75"/></g>
+      <g transform="translate(560 158) rotate(22)"><rect x="-16" y="-8" width="32" height="14" rx="3" fill="var(--accent)"/></g>
+      <text x="40" y="215" font-size="13" class="mut">élan (boosters)</text>
+      <text x="180" y="100" font-size="13">rampe</text>
+      <text x="350" y="30" font-size="13">en l'air : gaz = nez vers le bas, frein = nez vers le haut</text>
+      <text x="600" y="150" font-size="13" font-weight="600">réception</text>
+      <text x="600" y="195" font-size="12" class="mut">parallèle à la pente : parfaite</text>
+      <text x="600" y="211" font-size="12" class="mut">un peu de travers : correcte</text>
+      <text x="600" y="227" font-size="12" class="mut">nez planté : ratée, vitesse perdue</text>
+    </svg>
+  </div>
+  <h3>Caméras, ressenti et aides</h3>
+  <ul class="tight read">
+    <li>Quatre caméras (poursuite, proche, capot, lointaine) avec <kbd>C</kbd> ; un effet de vitesse apparaît au-delà de 180 km/h.</li>
+    <li>Le réglage <em>Sensations</em> dose le coup de champ de vision au turbo, l'aspiration derrière une voiture et les vibrations.</li>
+    <li>Les <strong>aides à la conduite</strong> (gaz automatique, anti-patinage) existent ; une course aidée se range dans la catégorie « assisté », sans médailles.</li>
+    <li>Le profil de HUD <em>Entraînement</em> montre l'écart en direct contre ton record, le fantôme or ou le record mondial, des mini-secteurs, la vitesse maxi et les forces g.</li>
+  </ul>
+  <div class="gallery two">
+    <figure class="shot"><img src="img/course-ceinture-looping.jpg" alt="Ceinture d'Astéroïdes : la voiture en courbe au-dessus du vide" loading="lazy"><figcaption>Ceinture d'Astéroïdes : virage au-dessus du vide.</figcaption></figure>
+    <figure class="shot"><img src="img/course-tours-saut.jpg" alt="Tours Jumelles : la voiture en plein saut au-dessus d'une plateforme" loading="lazy"><figcaption>Tours Jumelles : en plein saut de toit en toit.</figcaption></figure>
+  </div>
+</section>
+
+<!-- ============================== CARRIÈRE ============================== -->
+<section class="sec" id="carriere" data-s>
+  <span class="kicker">Jouer</span><h2>Carrière</h2><div class="curb"></div>
+  <p class="lede">Onze chapitres de six circuits, un par décor, rangés du plus facile au plus dur, plus un chapitre bonus : l'Atelier des mécanismes.</p>
+  <div class="read">
+    <p>Un chapitre s'ouvre avec <strong>4 médailles</strong> dans le précédent. L'Atelier, lui, s'ouvre avec 4 médailles du <em>premier</em> chapitre, et ses médailles n'ouvrent rien d'autre. Choisir un circuit ouvre sa <strong>fiche</strong> (Race Hub) : grande carte zoomable, difficulté, distance, médailles, fantômes, catégories de records et classements.</p>
+  </div>
+  <div class="gallery two">
+    <figure class="shot"><img src="img/menu-carriere.jpg" alt="Écran Circuits : défi du jour, saison de la semaine, chapitres" loading="lazy"><figcaption>L'écran Circuits : défi du jour, saison, chapitres.</figcaption></figure>
+    <figure class="shot"><img src="img/fiche-circuit.jpg" alt="Fiche du circuit Premiers Éclats : carte, difficulté, médailles, fantômes" loading="lazy"><figcaption>La fiche de Premiers Éclats.</figcaption></figure>
+  </div>
+  <h3>Les médailles</h3>
+  <div class="read">
+    <p>La médaille <strong>or</strong> vaut le temps du pilote de référence, qui finit chaque circuit officiel sans faute. Les autres en découlent :</p>
+  </div>
+  <div class="tbl"><table>
+    <tr><th>Médaille</th><th>Temps à battre</th><th>Exemple (Lianes Néon)</th></tr>
+    <tr><td><span class="medal m-cristal"><i></i>Cristal</span></td><td>environ 5 % plus rapide que l'or</td><td class="num">46,2 s</td></tr>
+    <tr><td><span class="medal m-or"><i></i>Or</span></td><td>le temps du pilote de référence</td><td class="num">48,6 s</td></tr>
+    <tr><td><span class="medal m-argent"><i></i>Argent</span></td><td>or + 15 %</td><td class="num">55,9 s</td></tr>
+    <tr><td><span class="medal m-bronze"><i></i>Bronze</span></td><td>or + 35 %</td><td class="num">65,6 s</td></tr>
+  </table></div>
+  <h3>Les objectifs bonus ★</h3>
+  <p class="read">Chaque circuit a un objectif en plus du chrono, qui rapporte des pièces (la monnaie du garage) :</p>
+  <div class="cols">
+    <div class="card"><h4>Sans muret</h4><p>Finir sans toucher de bordure.</p></div>
+    <div class="card"><h4>Sans réapparition</h4><p>Finir sans revenir au checkpoint.</p></div>
+    <div class="card"><h4>Réceptions parfaites</h4><p>N sauts reçus bien à plat.</p></div>
+    <div class="card"><h4>Mini-turbos</h4><p>N mini-turbos déclenchés.</p></div>
+    <div class="card"><h4>Anneaux turbo</h4><p>Passer dans N anneaux.</p></div>
+    <div class="card"><h4>Véhicule</h4><p>Franchir l'arrivée en moto, en bateau, en deltaplane…</p></div>
+    <div class="card"><h4>Moins de X s</h4><p>Un temps fixé entre l'or et l'argent.</p></div>
+  </div>
+  <h3>Les six profils de circuits</h3>
+  <p class="read">Chaque circuit est conçu pour une expérience précise, annoncée par une pastille. Un <strong>contrat</strong> mesuré sur la course du pilote de référence vérifie que le circuit tient sa promesse :</p>
+  <div class="tbl"><table id="profils-tbl"></table></div>
+  <h3>Les douze chapitres</h3>
+  <div class="chapters" id="chapters"></div>
+</section>
+
+<!-- ============================== CIRCUITS ============================== -->
+<section class="sec" id="circuits" data-s>
+  <span class="kicker">Jouer</span><h2>Les 72 circuits</h2><div class="curb"></div>
+  <p class="lede">Chaque carte est tracée depuis le chemin réel du pilote de référence : point vert au départ, point corail à l'arrivée, points clairs aux checkpoints. Ouvre « Au programme » pour lire le résumé du circuit.</p>
+  <div class="note">Depuis les versions 0.9.74 à 0.10.11, les 72 circuits sont construits <strong>autour des nouvelles pièces</strong> : au moins 12 nouveautés par circuit, dont 6 pièces de route, et les 9 familles de nouveautés sur chaque chapitre.</div>
+  <div class="filters" id="f-chap" role="group" aria-label="Filtrer par chapitre"></div>
+  <div class="filters" id="f-prof" role="group" aria-label="Filtrer par profil"></div>
+  <p class="count" id="count" aria-live="polite"></p>
+  <div class="tracks" id="tracks"></div>
+</section>
+
+<!-- ============================== REVÊTEMENTS ============================== -->
+<section class="sec" id="revetements" data-s>
+  <span class="kicker">Jouer</span><h2>Revêtements</h2><div class="curb"></div>
+  <p class="lede">Toute dalle de route peut porter un revêtement. Les réglables affichent des unités réelles (km/h, m/s², secondes) dans l'éditeur, et leur couleur suit le réglage.</p>
+  <div class="swatches" id="surfaces"></div>
+  <h3>Les options de route</h3>
+  <div class="tbl"><table>
+    <tr><th>Option</th><th>Effet</th></tr>
+    <tr><td>Orientation</td><td>Sol, incliné à 45° (gauche ou droite), mur gauche, mur droit ou plafond : une ligne droite ou un virage se pose n'importe où.</td></tr>
+    <tr><td>Sans bordures</td><td>Plus de muret : on peut tomber.</td></tr>
+    <tr><td>Tunnel</td><td>Parois et toit physiques : on ne sort plus par les côtés.</td></tr>
+    <tr><td>Checkpoint</td><td>Un portique de passage ; on y revient avec <kbd>R</kbd>.</td></tr>
+    <tr><td>Portique</td><td>Style du départ, de l'arrivée ou d'un checkpoint : portique, ligne au sol, arche ou pylônes (purement visuel).</td></tr>
+    <tr><td>Anneau turbo</td><td>Un anneau flottant qui relance la voiture.</td></tr>
+    <tr><td>Thème</td><td>Classique, herbe, sable, roche (visuel).</td></tr>
+    <tr><td>Plaque</td><td>Bordures d'une plaque choisies côté par côté.</td></tr>
+    <tr><td>Mouvement</td><td>Ascenseur, glissière ou rotation : la pièce bouge selon le chrono.</td></tr>
+  </table></div>
+</section>
+
+<!-- ============================== VÉHICULES ============================== -->
+<section class="sec" id="vehicules" data-s>
+  <span class="kicker">Jouer</span><h2>Véhicules et garage</h2><div class="curb"></div>
+  <p class="lede">Une course commence en voiture. Des plaques de transformation la changent en route ; repasser sur la même plaque rend la voiture.</p>
+  <div class="cols">
+    <div class="card"><h4>Voiture</h4><p>Le véhicule de base, équilibré. Elle coule dans l'eau.</p></div>
+    <div class="card"><h4>Moto</h4><p>Démarre plus fort, tourne plus serré, vitesse de pointe un peu plus basse. Certains circuits commencent ou doivent finir en moto.</p></div>
+    <div class="card"><h4>Bateau</h4><p>Indispensable sur l'eau, il se traîne sur la route. La plaque bateau est une très légère montée de l'eau vers le sol.</p></div>
+    <div class="card"><h4>Deltaplane</h4><p>La voiture avec une aile delta : elle plane au-dessus du vide et vire en inclinant l'aile ; gaz pour piquer, frein pour cabrer.</p></div>
+  </div>
+  <h3>Le garage</h3>
+  <div class="gallery two">
+    <figure class="shot"><img src="img/garage.jpg" alt="Le garage : une voiture jaune et les catégories de personnalisation" loading="lazy"><figcaption>Le garage : carrosseries, couleurs, LED, dessins, ailerons, roues…</figcaption></figure>
+    <div class="read">
+      <p>Le garage est <strong>purement visuel</strong> : il ne change rien à la physique. On y choisit parmi 8 carrosseries (buggy, sport, citadine, muscle, rallye…), une moto routière ou un chopper, des couleurs et des finitions (brillante, mate, métallisée, nacrée), des LED, des dessins, des ornements, des ailerons, des roues, une traînée lumineuse et un klaxon (<kbd>H</kbd>).</p>
+      <p>L'<strong>atelier de voiture</strong> va plus loin : 24 pièces libres, peinture et motifs, un dessin de 16 × 16, des effets, et un code de partage <code>SHC1:</code>. Les préréglages sont rangés par saison (Noël, Nouvel An, Plage, Été…), avec des collections et des exclusifs à débloquer.</p>
+      <p>Les <strong>pièces</strong> (la monnaie) se gagnent selon la médaille et les objectifs bonus.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== PIÈCES ============================== -->
+<section class="sec" id="pieces" data-s>
+  <span class="kicker">Construire</span><h2>Pièces</h2><div class="curb"></div>
+  <p class="lede">Un circuit est une grille de cases de 32 m, sur des niveaux de 6,4 m. Chaque pièce occupe une ou plusieurs cases. L'éditeur les regroupe en <strong>familles</strong> dont on règle les caractéristiques (inclinaison, rayon, sens…).</p>
+  <h3>Les neuf familles de la palette</h3>
+  <div class="fam" id="families"></div>
+  <h3>Les nouvelles pièces (0.9.68 à 0.9.72)</h3>
+  <div class="cols">
+    <div class="card"><h4>Chicanes</h4><p>La route se décale d'une colonne en gardant son cap : normale, longue, rapide, et le grand S sur deux colonnes.</p></div>
+    <div class="card"><h4>Plaques</h4><p>Surfaces libres : carrés, triangles et secteurs, avec des bordures choisies côté par côté. Idéales pour recevoir un saut.</p></div>
+    <div class="card"><h4>Largeur variable</h4><p>Route étroite de 12 m et route large de 56 m, avec leurs transitions depuis la route normale de 24 m.</p></div>
+    <div class="card"><h4>Carrefours</h4><p>En croix et en T. Un circuit peut repasser par le même croisement : c'est le « nœud en 8 ».</p></div>
+    <div class="card"><h4>Looping modulaire</h4><p>Montée, de 0 à 6 murs, un sommet, puis la redescente une colonne à côté.</p></div>
+    <div class="card"><h4>Tube en virage</h4><p>Un tube de 2 × 2 cases qui tourne, entre des sections de tube.</p></div>
+  </div>
+  <h3>Le catalogue, icônes de l'éditeur</h3>
+  <p class="read">Voici les pièces de la palette, avec l'icône qu'elles ont dans l'éditeur et leur identifiant interne. Les pièces encadrées en corail sont les nouvelles.</p>
+  <div class="filters" id="f-kind" role="group" aria-label="Filtrer les pièces"></div>
+  <div class="pieces" id="catalog"></div>
+</section>
+
+<!-- ============================== DÉCORS ============================== -->
+<section class="sec" id="decors" data-s>
+  <span class="kicker">Construire</span><h2>Décors et obstacles</h2><div class="curb"></div>
+  <p class="lede">Les décorations se posent librement, à l'unité près, en dehors de la grille. La plupart sont visuelles ; trois catégories sont <strong>solides</strong>, et les obstacles comptent pour la physique.</p>
+  <h3>Les décors solides</h3>
+  <div class="cols">
+    <div class="card"><h4>Piliers et poutres</h4><p>Piliers, poutres en L, en T, en croix, portiques : on peut les heurter.</p></div>
+    <div class="card"><h4>Murs pleins</h4><p>Droit, bas, en L, en T, en croix et courbe. Ils arrêtent la voiture comme un muret.</p></div>
+    <div class="card"><h4>Blocs pleins</h4><p>Bloc, dalle, cale, pyramide, arche : leur dessus se roule.</p></div>
+  </div>
+  <h3>Les obstacles</h3>
+  <p class="read">Leur mouvement ne dépend que du chrono de la course : il est identique en course, en replay, après un retour au checkpoint et dans la vérification en ligne.</p>
+  <div class="swatches" id="obstacles"></div>
+  <h3>Les pièces mobiles</h3>
+  <div class="cols">
+    <div class="card"><h4>Ascenseur</h4><p>La dalle monte puis redescend, d'un ou plusieurs niveaux.</p></div>
+    <div class="card"><h4>Glissière</h4><p>La dalle se décale sur le côté, d'une demi-case ou plus.</p></div>
+    <div class="card"><h4>Rotation</h4><p>La pièce tourne sur elle-même.</p></div>
+  </div>
+  <h3>Toutes les catégories de décorations</h3>
+  <p class="read" id="deco-sum"></p>
+  <div class="deco-cats" id="decos"></div>
+  <div class="gallery two">
+    <figure class="shot"><img src="img/course-usine-marteau.jpg" alt="Usine Folle : la route vers le marteau tournant" loading="lazy"><figcaption>Usine Folle : vers le marteau tournant.</figcaption></figure>
+    <figure class="shot"><img src="img/course-braises-pyramides.jpg" alt="Braises : deux pylônes de portique et la route qui file" loading="lazy"><figcaption>Braises : un checkpoint à pylônes.</figcaption></figure>
+  </div>
+</section>
+
+<!-- ============================== ÉDITEUR ============================== -->
+<section class="sec" id="editeur" data-s>
+  <span class="kicker">Construire</span><h2>Éditeur</h2><div class="curb"></div>
+  <p class="lede">On pose les pièces au clic, on les tourne, on change de niveau, puis on teste depuis n'importe quelle pièce. Le vérificateur signale ce qui cloche avant même de rouler.</p>
+  <div class="gallery two">
+    <figure class="shot"><img src="img/editeur-eclats.jpg" alt="L'éditeur ouvert sur Premiers Éclats, vue d'ensemble et palette" loading="lazy"><figcaption>Premiers Éclats dans l'éditeur : la boucle autour du croisement.</figcaption></figure>
+    <figure class="shot"><img src="img/editeur-verglas.jpg" alt="L'éditeur ouvert sur Lac Gelé" loading="lazy"><figcaption>Lac Gelé : les deux nœuds en 8.</figcaption></figure>
+  </div>
+  <h3>Les outils</h3>
+  <div class="cols">
+    <div class="card"><h4>Sélection <kbd>Q</kbd></h4><p>Copier, couper ou déplacer, coller avec rotation, monter ou descendre, supprimer une zone.</p></div>
+    <div class="card"><h4>Inspecter <kbd>I</kbd></h4><p>Un panneau de propriétés lié au circuit dans les deux sens ; des gizmos 3D déplacent et pivotent les décorations.</p></div>
+    <div class="card"><h4>Gomme <kbd>X</kbd></h4><p>Avec un filtre : tout, décorations seules ou pistes seules.</p></div>
+    <div class="card"><h4>Pot de peinture</h4><p>Remplit toute une zone connectée d'une pièce ou d'un revêtement ; la zone est surlignée avant le clic.</p></div>
+    <div class="card"><h4>Vérificateur <kbd>F2</kbd></h4><p>Extrémités libres, sauts risqués, raccords d'orientation, pièces inaccessibles ; un clic fait clignoter les pièces en cause.</p></div>
+    <div class="card"><h4>Prolonger <kbd>P</kbd></h4><p>Déroule la route sans viser les cases : ligne, virage, pente, mur ; les transitions s'insèrent toutes seules.</p></div>
+  </div>
+  <h3>Les onglets de la palette</h3>
+  <ul class="tight read">
+    <li><strong>Pièces</strong> : les familles et leurs caractéristiques.</li>
+    <li><strong>Options</strong> : orientation, sans bordures, tunnel, checkpoint, anneau turbo, thème, portique, bordures de plaque, mouvement.</li>
+    <li><strong>Revêtements</strong> : les 19 revêtements et leurs réglages.</li>
+    <li><strong>Décors</strong> : toutes les catégories de décorations, des couleurs, une image par URL, tes pièces décoratives perso (code <code>SHD1:</code>).</li>
+    <li><strong>Prefabs</strong> : chicane, épingle, slalom, saut, looping, wall-ride à coller ; « Enregistrer la sélection » crée les tiens (code <code>SHP1:</code>).</li>
+  </ul>
+  <h3>Plus loin</h3>
+  <div class="cols">
+    <div class="card"><h4>Éditeur de logique</h4><p>Des règles ÉVÉNEMENT → CONDITIONS → ACTIONS (bouton ⚙ ou <kbd>F6</kbd>) : une porte qui s'ouvre au checkpoint, un groupe caché au départ. Elles tournent dans la simulation, donc aussi en replay et en vérification.</p></div>
+    <div class="card"><h4>Groupes et calques</h4><p>Ranger la sélection, nommer, masquer (ni dessiné, ni visable), verrouiller.</p></div>
+    <div class="card"><h4>Ambiance</h4><p>Moment de la journée, ciel, brouillard, météo, musique, heure qui défile : rangés dans le code du circuit.</p></div>
+    <div class="card"><h4>Mode guidé</h4><p>L'éditeur démarre avec l'essentiel seulement ; « Tout afficher » rend le reste.</p></div>
+    <div class="card"><h4>Partage</h4><p>Par code <code>SHW3:</code> ou par lien. Il faut finir son circuit pour que le partage donne des médailles : le temps de l'auteur devient le bronze.</p></div>
+    <div class="card"><h4>Tester</h4><p><kbd>T</kbd> teste le circuit, <kbd>Maj</kbd> + <kbd>T</kbd> depuis la pièce visée.</p></div>
+  </div>
+  <h3>Raccourcis</h3>
+  <div class="tbl"><table>
+    <tr><th>Touche ou souris</th><th>Action</th><th>Touche ou souris</th><th>Action</th></tr>
+    <tr><td>Clic</td><td>Poser (glisser : plusieurs)</td><td>Clic droit</td><td>Supprimer</td></tr>
+    <tr><td>Clic droit glissé</td><td>Tourner la vue</td><td>Clic molette</td><td>Pipette</td></tr>
+    <tr><td>Molette</td><td>Zoom</td><td><kbd>E</kbd> / <kbd>C</kbd>, Page↑ / Page↓</td><td>Changer de niveau</td></tr>
+    <tr><td><kbd>R</kbd> (<kbd>Maj</kbd> + <kbd>R</kbd>)</td><td>Pivoter</td><td><kbd>Tab</kbd></td><td>Pièce suivante</td></tr>
+    <tr><td><kbd>M</kbd></td><td>Miroir</td><td><kbd>B</kbd></td><td>Revêtement suivant</td></tr>
+    <tr><td><kbd>Ctrl</kbd> + <kbd>C</kbd> <kbd>X</kbd> <kbd>V</kbd> <kbd>A</kbd></td><td>Copier, déplacer, coller, tout</td><td><kbd>Ctrl</kbd> + <kbd>D</kbd></td><td>Dupliquer</td></tr>
+    <tr><td><kbd>Z</kbd></td><td>Vue par niveau</td><td><kbd>H</kbd></td><td>Vue de dessus</td></tr>
+    <tr><td><kbd>G</kbd></td><td>Grille</td><td><kbd>F</kbd></td><td>Recentrer</td></tr>
+    <tr><td><kbd>N</kbd></td><td>Accrochage des décorations</td><td><kbd>[</kbd> <kbd>]</kbd></td><td>Taille de la décoration</td></tr>
+    <tr><td><kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Y</kbd> / <kbd>S</kbd></td><td>Annuler, rétablir, enregistrer</td><td><kbd>F1</kbd> ou <kbd>?</kbd></td><td>Tous les raccourcis</td></tr>
+  </table></div>
+  <figure class="shot" style="max-width:720px"><img src="img/editeur-vide.jpg" alt="L'éditeur vide avec une seule pièce posée et la palette des familles" loading="lazy"><figcaption>Un nouveau circuit : la palette des familles en bas, les outils à gauche.</figcaption></figure>
+</section>
+
+<!-- ============================== MODES ============================== -->
+<section class="sec" id="modes" data-s>
+  <span class="kicker">Le reste</span><h2>Modes et en ligne</h2><div class="curb"></div>
+  <p class="lede">Le jeu fonctionne entièrement hors ligne. Les fonctions en ligne (classements, communauté, comptes, multijoueur) passent par un projet Supabase.</p>
+  <div class="cols">
+    <div class="card"><h4>Course rapide</h4><p>Un clic lance le prochain circuit, sans médaille.</p></div>
+    <div class="card"><h4>Défi du jour</h4><p>Un circuit généré à partir de la date, le même pour tout le monde, vérifié par le pilote automatique.</p></div>
+    <div class="card"><h4>Modes de jeu</h4><p>Un mode = des règles + un objectif : Sauts lunaires, Pieds de plomb, Route libre, Tout en moto, Départ lancé, Marathon… Les tiens se partagent (<code>SHM1:</code>), et en paquets (<code>SHX1:</code>).</p></div>
+    <div class="card"><h4>Académie</h4><p>Six leçons de deux minutes : prise en main, dérapage et mini-turbo, mini-turbos en série, saut et réception parfaite, plaque de transformation, obstacles. Puis des exercices notés.</p></div>
+    <div class="card"><h4>Multijoueur</h4><p>Jusqu'à 8 joueurs, code de 6 caractères ou salon public. Course libre ou championnat. Positions à 20 Hz en WebRTC pair à pair.</p></div>
+    <div class="card"><h4>Communauté</h4><p>Publier ses circuits, classements vérifiés, « Cette semaine », circuit de la semaine, commentaires, playlists, modes publiés.</p></div>
+    <div class="card"><h4>Saisons et compétition</h4><p>Saisons hebdomadaires avec divisions, duels entre amis classés à l'Elo, tournois privés.</p></div>
+    <div class="card"><h4>Progression</h4><p>Niveau et licences, titres affichés au classement, défis de maîtrise, statistiques.</p></div>
+  </div>
+  <div class="gallery">
+    <figure class="shot"><img src="img/academie.jpg" alt="Le menu de l'Académie et ses six leçons" loading="lazy"><figcaption>L'Académie.</figcaption></figure>
+    <figure class="shot"><img src="img/modes.jpg" alt="Le menu des modes de jeu" loading="lazy"><figcaption>Les modes de jeu.</figcaption></figure>
+    <figure class="shot"><img src="img/multijoueur.jpg" alt="Le menu multijoueur : créer, rejoindre, salons publics" loading="lazy"><figcaption>Le multijoueur.</figcaption></figure>
+    <figure class="shot"><img src="img/records.jpg" alt="Records et médailles, une ligne par circuit" loading="lazy"><figcaption>Records et médailles.</figcaption></figure>
+  </div>
+  <h3>Replays, fantômes, coach</h3>
+  <div class="cols">
+    <div class="card"><h4>Replay Theater</h4><p>Chaque course est enregistrée (les commandes seulement) et se revoit à l'identique. Barre de temps, secteurs et incidents marqués, analyse, export vidéo WebM.</p></div>
+    <div class="card"><h4>Fantômes</h4><p>Ton record, le fantôme de la médaille d'or, celui d'un ami (code <code>SHG1:</code>), ou ceux des dix premiers du classement. Un lien de défi lance la course contre ton fantôme.</p></div>
+    <div class="card"><h4>Coach</h4><p>À l'arrivée, trois conseils localisés et chiffrés : freinage trop tardif ou trop tôt, virage trop prudent, trajectoire large, chocs, retours au checkpoint.</p></div>
+    <div class="card"><h4>Laboratoire</h4><p>Les commandes d'un record rejouées sous deux réglages, avec l'écart par secteur et la courbe.</p></div>
+  </div>
+  <h3>Options et accessibilité</h3>
+  <p class="read">Volume des effets et de la musique (synthétisée en direct, une ambiance par décor), qualité graphique (Auto, Ultra, Haute, Moyenne, Basse, Potato), compteur d'images, champ de vision, effet de vitesse, tremblements de caméra, couleurs adaptées au daltonisme, taille de l'interface, animations réduites, thèmes d'interface et HUD déplaçable. Le jeu est en français et en anglais (environ 1 700 textes).</p>
+</section>
+
+<!-- ============================== TECHNIQUE ============================== -->
+<section class="sec" id="technique" data-s>
+  <span class="kicker">Le reste</span><h2>Sous le capot</h2><div class="curb"></div>
+  <p class="lede">Pour qui veut lire ou modifier le code. Quatre idées tiennent tout l'ensemble.</p>
+  <div class="cols">
+    <div class="card"><h4>1. La physique est une fonction des commandes</h4><p>Pas fixe de 1/120 s ; à chaque pas, seulement volant, gaz, frein et retour au checkpoint. Rejouer les commandes redonne exactement la même course.</p></div>
+    <div class="card"><h4>2. Le même code tourne partout</h4><p>Le noyau de simulation n'a ni rendu ni DOM : le navigateur, la fonction serveur (Deno) et les outils (Node) exécutent le même <code>Simulation.step</code>.</p></div>
+    <div class="card"><h4>3. Des nombres identiques partout</h4><p>Les moteurs JavaScript arrondissent <code>Math.sin</code> ou <code>Math.atan2</code> à leur façon. Le noyau n'utilise que + − × ÷ et √, et les fonctions de <code>js/dmath.js</code> construites dessus.</p></div>
+    <div class="card"><h4>4. <code>PHYS_VER</code> lie tout</h4><p>Records, replays, fantômes, classements et salons dépendent de la version de la physique (aujourd'hui <strong>__PHYS__</strong>). Un test échoue si la physique change sans elle.</p></div>
+  </div>
+  <h3>Les couches</h3>
+  <div class="diagram" role="img" aria-label="Schéma des couches : interface et rendu au-dessus du noyau de simulation, partagé par le navigateur, le serveur Deno et les outils Node">
+    <svg viewBox="0 0 760 300">
+      <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+      <rect class="box" x="20" y="20" width="220" height="64" rx="10"/><text x="130" y="47" text-anchor="middle" font-size="14" font-weight="600">Application</text><text x="130" y="68" text-anchor="middle" font-size="11" class="mut">main.js, race, editor, garage, ui</text>
+      <rect class="box" x="270" y="20" width="220" height="64" rx="10"/><text x="380" y="47" text-anchor="middle" font-size="14" font-weight="600">Rendu (three.js)</text><text x="380" y="68" text-anchor="middle" font-size="11" class="mut">trackMesh, decos, scenery, carModel</text>
+      <rect class="box" x="520" y="20" width="220" height="64" rx="10"/><text x="630" y="47" text-anchor="middle" font-size="14" font-weight="600">En ligne</text><text x="630" y="68" text-anchor="middle" font-size="11" class="mut">Supabase, comptes, WebRTC</text>
+      <rect class="hot" x="120" y="128" width="520" height="70" rx="12"/><text x="380" y="157" text-anchor="middle" font-size="15" font-weight="700">Noyau de simulation (sans rendu ni DOM)</text><text x="380" y="180" text-anchor="middle" font-size="11" class="mut">simulation · physics · raceLogic · autopilot · track · pieces · ribbons · obstacles · solids · dmath</text>
+      <rect class="cool" x="20" y="236" width="220" height="50" rx="10"/><text x="130" y="266" text-anchor="middle" font-size="13">Navigateur : course, fantômes</text>
+      <rect class="cool" x="270" y="236" width="220" height="50" rx="10"/><text x="380" y="258" text-anchor="middle" font-size="13">Deno : submit-score</text><text x="380" y="276" text-anchor="middle" font-size="11" class="mut">rejoue avant d'accepter</text>
+      <rect class="cool" x="520" y="236" width="220" height="50" rx="10"/><text x="630" y="258" text-anchor="middle" font-size="13">Node : outils et tests</text><text x="630" y="276" text-anchor="middle" font-size="11" class="mut">lab, contract, sim</text>
+      <path d="M130 84V128" stroke="var(--muted)" stroke-width="1.6" marker-end="url(#ah2)"/><path d="M380 84V128" stroke="var(--muted)" stroke-width="1.6" marker-end="url(#ah2)"/>
+      <path d="M130 236V198" stroke="var(--muted)" stroke-width="1.6" marker-end="url(#ah2)"/><path d="M380 236V198" stroke="var(--muted)" stroke-width="1.6" marker-end="url(#ah2)"/><path d="M630 236V198" stroke="var(--muted)" stroke-width="1.6" marker-end="url(#ah2)"/>
+    </svg>
+  </div>
+  <h3>Un pas de simulation (1/120 s)</h3>
+  <div class="diagram" role="img" aria-label="Un pas : retour éventuel au checkpoint, conduite, puis score">
+    <svg viewBox="0 0 760 120">
+      <defs><marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+      <rect class="box" x="10" y="30" width="150" height="60" rx="10"/><text x="85" y="56" text-anchor="middle" font-size="13" font-weight="600">Commandes</text><text x="85" y="75" text-anchor="middle" font-size="11" class="mut">volant, gaz, frein, retour</text>
+      <rect class="box" x="200" y="30" width="160" height="60" rx="10"/><text x="280" y="56" text-anchor="middle" font-size="13" font-weight="600">rewind()</text><text x="280" y="75" text-anchor="middle" font-size="11" class="mut">si retour demandé</text>
+      <rect class="hot" x="400" y="30" width="160" height="60" rx="10"/><text x="480" y="56" text-anchor="middle" font-size="13" font-weight="600">drive()</text><text x="480" y="75" text-anchor="middle" font-size="11" class="mut">sol, air, rubans, murs</text>
+      <rect class="cool" x="600" y="30" width="150" height="60" rx="10"/><text x="675" y="56" text-anchor="middle" font-size="13" font-weight="600">score()</text><text x="675" y="75" text-anchor="middle" font-size="11" class="mut">checkpoints, arrivée</text>
+      <path d="M160 60H198" stroke="var(--muted)" stroke-width="1.6" marker-end="url(#ah3)"/><path d="M360 60H398" stroke="var(--muted)" stroke-width="1.6" marker-end="url(#ah3)"/><path d="M560 60H598" stroke="var(--muted)" stroke-width="1.6" marker-end="url(#ah3)"/>
+    </svg>
+  </div>
+  <h3>Un record en ligne, du clavier au classement</h3>
+  <ol class="read tight">
+    <li>Pendant la course, le jeu enregistre les <strong>commandes</strong> de chaque pas (volant au centième, trois drapeaux).</li>
+    <li>À l'arrivée, il envoie ces commandes et le temps annoncé à la fonction <code>submit-score</code>.</li>
+    <li>La fonction <strong>rejoue</strong> la course sous Deno avec le code du jeu publié. Un faux temps est refusé.</li>
+    <li>Le record est rangé sous une clé qui contient l'empreinte du circuit (<code>b-&lt;id&gt;-&lt;empreinte&gt;</code>) : un circuit qui change repart d'un classement vide.</li>
+  </ol>
+  <h3>Les codes de partage</h3>
+  <div class="tbl"><table>
+    <tr><th>Préfixe</th><th>Contenu</th></tr>
+    <tr><td><code>SHW3:</code></td><td>un circuit (pièces, décorations, règles, logique)</td></tr>
+    <tr><td><code>SHG1:</code></td><td>un fantôme (les commandes d'une course)</td></tr>
+    <tr><td><code>SHC1:</code></td><td>une voiture de l'atelier</td></tr>
+    <tr><td><code>SHD1:</code></td><td>une pièce décorative perso</td></tr>
+    <tr><td><code>SHM1:</code></td><td>un mode de jeu</td></tr>
+    <tr><td><code>SHX1:</code></td><td>un paquet (plusieurs modes)</td></tr>
+    <tr><td><code>SHP1:</code></td><td>un prefab de l'éditeur</td></tr>
+  </table></div>
+  <p class="read">Chaque pièce est sérialisée comme un type concret, c'est-à-dire son index dans <code>PIECE_ORDER</code>, une liste où l'on ne fait qu'ajouter. Les anciens codes se lisent donc toujours à l'identique. La <strong>signature</strong> d'un circuit, sa clé de classement, ignore le nom, la description, le thème et les couleurs.</p>
+  <h3>Le langage des circuits intégrés</h3>
+  <p class="read">Les 72 circuits officiels sont écrits dans un petit langage « à la tortue », dans <code>js/tracks.js</code>. Par exemple, Premiers Éclats commence par <code>start*2 B2 ZR4 B ZL4 [tr01l] S2&lt; [tr10l] C*1 …</code>.</p>
+  <div class="tbl"><table>
+    <tr><th>Jeton</th><th>Pièce</th><th>Jeton</th><th>Pièce</th></tr>
+    <tr><td><code>start</code> <code>finish</code> <code>C</code></td><td>départ, arrivée, checkpoint</td><td><code>S3</code></td><td>3 lignes droites</td></tr>
+    <tr><td><code>R</code> <code>L</code> / <code>RR</code> <code>LL</code></td><td>virage serré / grand virage</td><td><code>BR</code> <code>BRR</code></td><td>virage relevé, très grand relevé</td></tr>
+    <tr><td><code>HR</code> / <code>XR</code></td><td>très grand virage plat / virage géant (5×5)</td><td><code>U</code> <code>D</code> <code>UU</code> <code>DD</code></td><td>pentes et tremplins</td></tr>
+    <tr><td><code>G2</code> <code>GR2</code></td><td>vide de 2 cases (avec anneau turbo)</td><td><code>V-2</code></td><td>changer de niveau</td></tr>
+    <tr><td><code>O</code> <code>OB</code> <code>OD</code> <code>OT</code></td><td>loopings</td><td><code>LPR2</code></td><td>looping modulaire, 2 murs</td></tr>
+    <tr><td><code>TI TM4 TO</code></td><td>tube modulaire</td><td><code>TRR</code> <code>TLL</code></td><td>tube en virage</td></tr>
+    <tr><td><code>ZR</code> <code>ZR3</code> <code>ZR4</code> <code>ZZR</code></td><td>chicanes</td><td><code>JX</code> <code>JT</code></td><td>croisement, carrefour en T</td></tr>
+    <tr><td><code>NI N NO</code> / <code>WI W WO</code></td><td>route étroite / large</td><td><code>[plate3]*10</code></td><td>plaque, bordures côté par côté</td></tr>
+    <tr><td><code>SPL … ALT … MRG</code></td><td>bifurcation à deux chemins</td><td><code>[tr01s] S2&lt; [tr10s]</code></td><td>wall-ride sur le mur gauche</td></tr>
+    <tr><td><code>S.i</code> <code>S.b150</code> <code>S.g40</code></td><td>revêtement (verglas, accélérateur 150 %, gravité 40 %)</td><td><code>^</code> <code>_</code> <code>#</code></td><td>à l'envers, sans bordures, tunnel</td></tr>
+  </table></div>
+  <h3>Le contrat d'un circuit officiel</h3>
+  <p class="read">Avant d'entrer dans le jeu, un circuit passe <code>tools/contract.mjs</code> : le pilote de référence le finit sans choc, encore à ±10 % de sa vitesse, et repart à l'arrêt de chaque checkpoint. Le vérificateur de l'éditeur ne trouve rien, les médailles suivent le temps du pilote, le code de partage se relit à l'identique, et le profil tient ses mesures. Un pilote humain simulé, qui hésite et tremble, le finit aussi sans se cogner.</p>
+  <h3>Les tests</h3>
+  <div class="stats">
+    <div class="stat"><b>104</b><span>fichiers de tests Node</span></div>
+    <div class="stat"><b>1 440</b><span>vérifications Node</span></div>
+    <div class="stat"><b>86</b><span>tests navigateur</span></div>
+    <div class="stat"><b>193</b><span>scénarios d'empreinte physique</span></div>
+    <div class="stat"><b>~100 k</b><span>lignes dans le dépôt</span></div>
+  </div>
+  <p class="read">L'empreinte de la physique doit être identique sous Node, Deno et Chromium. Un corpus de compatibilité garde les clés de classement, les anciens codes et des courses enregistrées avec leur temps exact. La CI rejoue le lint, les tests, la physique sous Deno, le navigateur et le SQL.</p>
+  <h3>Mettre en ligne une version</h3>
+  <ol class="read tight">
+    <li><code>npm run lint</code> et <code>npm test</code> sans erreur.</li>
+    <li>Après un changement de circuit, de pièce ou de physique : <code>npm run sw</code> puis <code>npm run build:function</code>.</li>
+    <li>Un changement de physique incrémente <code>PHYS_VER</code> et régénère l'empreinte.</li>
+    <li><strong>Redéployer la fonction <code>submit-score</code></strong> : sinon les temps des circuits changés sont refusés.</li>
+    <li>Publier la branche (GitHub Pages sert la racine).</li>
+  </ol>
+  <h3>Le dossier du projet</h3>
+  <div class="tbl"><table>
+    <tr><td><code>index.html</code>, <code>css/</code></td><td>l'interface</td></tr>
+    <tr><td><code>js/</code></td><td>le jeu : modèle, simulation, rendu, application, en ligne</td></tr>
+    <tr><td><code>supabase/</code></td><td>scripts SQL (17 étapes), fonctions serveur <code>submit-score</code> et <code>ice</code></td></tr>
+    <tr><td><code>tools/</code></td><td>tests, atelier de level design, générateurs</td></tr>
+    <tr><td><code>docs/</code></td><td>architecture, index des modules, fiche d'essai des circuits, audits</td></tr>
+  </table></div>
+</section>
+
+<!-- ============================== HISTORIQUE ============================== -->
+<section class="sec" id="historique" data-s>
+  <span class="kicker">Le reste</span><h2>Historique</h2><div class="curb"></div>
+  <p class="lede">Les grandes étapes du projet, de la v1.5 devenue bêta 0.5 jusqu'à la bêta __VERSION__.</p>
+  <ul class="timeline">
+    <li><b>0.5 à 0.9</b>Les bases : pièces, revêtements, éditeur, carrière, replays et fantômes, communauté et classements vérifiés.</li>
+    <li><b>0.9.11</b>Le monde passe de cases de 24 m à 32 m.</li>
+    <li><b>0.9.18 à 0.9.43</b>Communauté, titres, collections, véhicules v2, laboratoire, modes, saisons, compétition, multijoueur.</li>
+    <li><b>0.9.44 à 0.9.58</b>Aides à la conduite, accessibilité, nouveau moteur, accueil à six catégories, backend sûr.</li>
+    <li><b>0.9.59 à 0.9.64</b>Audit complet puis cinq phases : caméra et éditeur, physique, construction 3D, intégrité, sécurité.</li>
+    <li><b>0.9.65</b>Physique recalée sur le comportement d'un jeu du même genre (<code>PHYS_VER</code> 36) ; les 72 circuits sont recalés.</li>
+    <li><b>0.9.67</b>Bifurcations à deux chemins libres, virage géant, chapitre 1 refait.</li>
+    <li><b>0.9.68 à 0.9.72</b>Les nouvelles pièces, en cinq étapes : chicanes et décors solides, plaques et blocs, largeur variable, carrefours, looping modulaire et tube en virage.</li>
+    <li><b>0.9.73 à 0.10.0</b>Le chapitre 1 refait autour des nouvelles pièces ; regroupement en 0.10.0.</li>
+    <li><b>0.10.1 à 0.10.11</b>Les 66 autres circuits refaits à leur tour, un chapitre par version.</li>
+  </ul>
+  <details><summary>Toutes les versions (__NVERS__ entrées du CHANGELOG)</summary><ul class="versions" id="versions"></ul></details>
+</section>
+
+<!-- ============================== GLOSSAIRE ============================== -->
+<section class="sec" id="glossaire" data-s>
+  <span class="kicker">Le reste</span><h2>Glossaire</h2><div class="curb"></div>
+  <dl class="gloss">
+    <dt>Checkpoint</dt><dd>Portique de passage obligatoire. <kbd>R</kbd> y ramène la voiture, avec le chrono du passage.</dd>
+    <dt>Chicane</dt><dd>Pièce qui décale la route d'une colonne en gardant son cap.</dd>
+    <dt>Contrat</dt><dd>L'ensemble des mesures qu'un circuit officiel doit tenir (<code>tools/contract.mjs</code>).</dd>
+    <dt>Croisement</dt><dd>Carrefour en croix ; un circuit peut le traverser deux fois.</dd>
+    <dt>Fantôme</dt><dd>Une voiture transparente qui rejoue une course enregistrée.</dd>
+    <dt>Famille</dt><dd>Groupe de pièces de l'éditeur dont on règle les caractéristiques.</dd>
+    <dt>Fiche (Race Hub)</dt><dd>L'écran d'un circuit : carte, médailles, fantômes, classements.</dd>
+    <dt>Looping modulaire</dt><dd>Looping fait d'une montée, de murs, d'un sommet et d'une redescente une colonne à côté.</dd>
+    <dt>Mini-turbo</dt><dd>Relance gagnée par une glisse assez longue.</dd>
+    <dt>Nouveauté</dt><dd>Pièce, option ou décoration ajoutée de 0.9.68 à 0.9.72 ; comptée par <code>tools/nouveautes.mjs</code>.</dd>
+    <dt>Ouverture</dt><dd>Les trois premiers éléments d'un circuit après le départ, uniques pour chacun des 72.</dd>
+    <dt><code>PHYS_VER</code></dt><dd>La version de la physique ; tout ce qui rejoue une course en dépend.</dd>
+    <dt>Pilote de référence</dt><dd>Le pilote automatique qui fixe la médaille d'or de chaque circuit officiel.</dd>
+    <dt>Plaque</dt><dd>Surface libre (carré, triangle, secteur) aux bordures réglables.</dd>
+    <dt>Profil</dt><dd>Sprint, speedway, technique, rollercoaster, acrobatique ou mécanisme.</dd>
+    <dt>Réception parfaite</dt><dd>Toucher le sol avec la voiture parallèle à la pente.</dd>
+    <dt>Signature</dt><dd>L'empreinte d'un circuit qui sert de clé à ses classements.</dd>
+    <dt>Wall-ride</dt><dd>Rouler sur un mur vertical, entre deux transitions.</dd>
+  </dl>
+</section>
+</main>
+</div>
+<footer>Wiki rédigé à partir du dépôt Copytrack (bêta __VERSION__). Les chiffres, les cartes et les icônes viennent du code du jeu ; les images sont des captures du jeu lui-même.</footer>
+
+<script type="application/json" id="d-data">__DATA__</script>
+<script type="application/json" id="d-maps">__MAPS__</script>
+<script type="application/json" id="d-icons">__ICONS__</script>
+<script type="application/json" id="d-vers">__VERS__</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById('d-data').textContent);
+  const MAPS = JSON.parse(document.getElementById('d-maps').textContent);
+  const ICONS = JSON.parse(document.getElementById('d-icons').textContent);
+  const VERS = JSON.parse(document.getElementById('d-vers').textContent);
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const fmt = (n, d = 1) => Number(n).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const PROF = D.profils;
+  const SHOT = { desert: 'course-eclats-croisement', jungle: 'course-canopee-route-large', isles: 'course-phare-plaque', city: 'course-neons-tapis', polar: 'course-couronne-tube', volcano: 'course-cheminee-mur', orbit: 'course-ceinture-looping', reef: 'course-epave', factory: 'course-usine-marteau', sky: 'course-cite-deltaplane', caves: 'course-miroir-verre', atelier: 'course-atelier-balancier' };
+  const all = D.chapters.flatMap((c, ci) => c.tracks.map((t, ti) => ({ ...t, ci, ti, chap: c.name, decor: c.decor })));
+
+  // Chiffres
+  const nNew = all.reduce((a, t) => a + t.nouveautes, 0);
+  const stats = [[D.counts.tracks, 'circuits'], [D.chapters.length, 'chapitres'], [D.counts.pieces, 'types de pièces'], [D.counts.decos, 'décorations'], [D.counts.surfaces, 'revêtements'], [D.obstacles.length, 'obstacles'], [4, 'véhicules'], [nNew.toLocaleString('fr-FR'), 'nouveautés posées sur les circuits']];
+  $('#stats').innerHTML = stats.map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
+
+  // Profils
+  const CONTRAT = {
+    sprint: 'Aucun virage serré, 6 très grands virages au plus, 12 à 50 s, plus de 55 % du temps au-dessus de 180 km/h, 40 % de lignes droites.',
+    speedway: 'Aucun virage serré, 4 très grands virages au moins, 10 % du temps au-dessus de 220 km/h, 14 % de freinage au plus, 185 km/h de moyenne.',
+    technique: '8 virages serrés au moins, du freinage, 15 % du temps sous 120 km/h, 170 km/h de moyenne au plus, 5 boosters (un par relance).',
+    rollercoaster: '6 niveaux de dénivelé, 8 cases sur un mur, un looping au moins, des wall-rides des deux côtés.',
+    acrobatique: '6 s en l’air au moins, 3 sauts, 8 niveaux de dénivelé.',
+    atelier: 'Le ou les mécanismes annoncés sont dans le circuit ; 14 à 45 s.',
+  };
+  $('#profils-tbl').innerHTML = '<tr><th>Profil</th><th>Promesse</th><th>Ce que mesure le contrat</th><th>Circuits</th></tr>' + Object.entries(PROF).map(([k, p]) =>
+    `<tr><td><span class="chip p-${k}">${esc(p.label)}</span></td><td>${esc(p.tip)}</td><td>${esc(CONTRAT[k] || '')}</td><td class="num">${all.filter((t) => t.profil === k).length}</td></tr>`).join('');
+
+  // Chapitres
+  $('#chapters').innerHTML = D.chapters.map((c, i) => `<article class="chap"><img src="img/${SHOT[c.decor]}.jpg" alt="Une course dans le décor ${esc(c.name)}" loading="lazy"><div class="body"><span class="num">${c.bonus ? 'Chapitre bonus' : 'Chapitre ' + (i + 1)}</span><h4>${esc(c.name)}</h4><p>${esc(c.desc)}</p><span class="names">${c.tracks.map((t) => esc(t.name)).join(' · ')}</span></div></article>`).join('');
+
+  // Explorateur
+  const mmss = (s) => { const m = Math.floor(s / 60), r = s - m * 60; return (m ? m + ':' + (r < 10 ? '0' : '') : '') + fmt(r, 2) + (m ? '' : ' s'); };
+  const mapSvg = (id) => { const m = MAPS[id]; if (!m) return ''; return `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="${m.d}" fill="none" stroke="var(--neon)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>${m.cps.map((p) => `<circle cx="${p[0]}" cy="${p[1]}" r="2.6" fill="var(--surface)" stroke="var(--ink)" stroke-width="1"/>`).join('')}<circle cx="${m.a[0]}" cy="${m.a[1]}" r="4" fill="#2bc46b"/><circle cx="${m.b[0]}" cy="${m.b[1]}" r="4" fill="var(--accent)"/></svg>`; };
+  const card = (t) => { const m = MAPS[t.id] || {}; const md = t.medals;
+    return `<article class="trk" data-chap="${t.ci}" data-prof="${t.profil}" data-text="${esc((t.name + ' ' + t.chap + ' ' + t.appris).toLowerCase())}">${mapSvg(t.id)}<div><h5>${esc(t.name)}</h5><div class="meta">${esc(t.chap)} · ${t.ti + 1}/6 · ${m.km ? fmt(m.km, 2) + ' km' : ''}${t.laps > 1 ? ' · ' + t.laps + ' tours' : ''}</div><span class="chip p-${t.profil}">${esc(PROF[t.profil].label)}</span> <span class="stars" title="Difficulté estimée">${'◆'.repeat(t.stars)}${'◇'.repeat(5 - t.stars)}</span><div class="medals" style="margin-top:6px"><span class="medal m-cristal"><i></i>${fmt(md.cristal)}</span><span class="medal m-or"><i></i>${fmt(md.or)}</span><span class="medal m-argent"><i></i>${fmt(md.argent)}</span><span class="medal m-bronze"><i></i>${fmt(md.bronze)}</span></div><div class="goal">★ ${esc(t.goal)}</div></div><details><summary>Au programme · ${t.nouveautes} nouveautés</summary><p style="margin:6px 0 0">${esc(t.appris)}</p></details></article>`; };
+  $('#tracks').innerHTML = all.map(card).join('');
+  let fChap = 'all', fProf = 'all', fText = '';
+  const apply = () => { let n = 0; document.querySelectorAll('.trk').forEach((el) => { const ok = (fChap === 'all' || el.dataset.chap === fChap) && (fProf === 'all' || el.dataset.prof === fProf) && (!fText || el.dataset.text.includes(fText)); el.hidden = !ok; if (ok) n++; }); $('#count').textContent = n + ' circuit' + (n > 1 ? 's' : '') + ' affiché' + (n > 1 ? 's' : ''); };
+  const mkFilters = (sel, items, set) => { const box = $(sel); box.innerHTML = items.map(([v, l], i) => `<button type="button" data-v="${v}" aria-pressed="${i === 0}">${esc(l)}</button>`).join('');
+    box.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; box.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); set(b.dataset.v); apply(); }); };
+  mkFilters('#f-chap', [['all', 'Tous les chapitres'], ...D.chapters.map((c, i) => [String(i), c.name])], (v) => (fChap = v));
+  mkFilters('#f-prof', [['all', 'Tous les profils'], ...Object.entries(PROF).map(([k, p]) => [k, p.label])], (v) => (fProf = v));
+  apply();
+
+  // Revêtements
+  const SURF = { ice: 'L’adhérence chute : on glisse, il faut anticiper.', boost: 'Pousse la voiture vers l’avant.', bounce: 'Projette la voiture vers le haut.', magnet: 'Colle la voiture à la route, même sur une bosse ou un mur.', drift: 'L’arrière décroche facilement : on passe en travers.', slow: 'Freine la voiture.', wind: 'Pousse sur le côté, jusqu’à 54 m/s² à pleine force ; sens réglable.', gravity: 'Change la gravité jusqu’à la plaque suivante : les sauts portent plus loin, ou moins.', moto: 'Transforme en moto ; repasser rend la voiture.', water: 'Une voiture y coule ; le bateau y avance.', boat: 'Transforme en bateau ; une très légère montée de l’eau vers le sol.', glider: 'Transforme en deltaplane : on plane au-dessus du vide.', flip: 'Inverse la gravité : la voiture tombe vers le plafond ; une seconde plaque la remet.', conveyor: 'Tapis réglable de −200 à +200 km/h.', spring: 'Projette la voiture sur le côté.', glass: 'Plus de vitesse, mais la dalle cède après 0,3 à 5 s de contact cumulé.', powder: 'Neige épaisse qui freine.', reverse: 'Gauche et droite sont inversées.', cut: 'Plus d’accélération tant qu’on roule dessus.' };
+  $('#surfaces').innerHTML = D.surfaces.map((s) => `<div class="sw"><span class="dot" style="background:${s.color || '#888'}"></span><div><h4>${esc(s.label)}</h4><p>${esc(SURF[s.id] || '')}</p>${s.param ? `<span class="param">réglage : ${esc(s.param)}</span>` : ''}</div></div>`).join('');
+
+  // Obstacles
+  const OB = { spikes: ['Fixes ; les toucher renvoie au checkpoint.', '#d9432f'], spikesPop: ['Sortent et rentrent toutes les 3 s : on passe quand elles sont rentrées.', '#ff8c42'], pendulum: ['Une boule balancée à travers la route, période 3,2 s.', '#7a3fd0'], hammer: ['Une boule qui tourne au bout d’un bras, période 2,8 s.', '#b8338c'], slider: ['Un mur qui coulisse de 7 m, période 4 s.', '#2f6fd9'], sweeper: ['Une barre de 9 m qui balaie la route, période 4 s.', '#0a8fae'], bumper: ['Un poteau qui repousse la voiture à 18 m/s.', '#1f9a6a'] };
+  $('#obstacles').innerHTML = D.obstacles.map((o) => `<div class="sw"><span class="dot" style="background:${(OB[o.id] || [])[1] || '#888'}"></span><div><h4>${esc(o.label)}</h4><p>${esc((OB[o.id] || [''])[0])}</p></div></div>`).join('');
+
+  // Décors
+  const nItems = D.decoCats.reduce((a, c) => a + c.items.length, 0);
+  $('#deco-sum').textContent = D.decoCats.length + ' catégories visibles dans la palette, ' + nItems + ' objets ; les saisonnières (Noël, Halloween, Saint-Valentin…) se débloquent.';
+  $('#decos').innerHTML = D.decoCats.map((c) => `<div class="card"><h4>${esc(c.label)} <span class="n">${c.items.length}</span></h4><p>${c.items.map(esc).join(' · ')}</p></div>`).join('');
+
+  // Familles et catalogue
+  $('#families').innerHTML = D.families.map((f) => `<div class="card"><h4>${esc(f.label)} <span class="n" style="font-family:var(--f-mono);color:var(--accent);font-size:.78rem">${f.members} pièces</span></h4><p>${esc(f.hint || '')}</p>${f.traits.length ? `<p style="margin-top:6px;font-size:.8rem">Réglages : ${f.traits.map(esc).join(', ')}</p>` : ''}</div>`).join('');
+  const KIND = { line: 'Lignes et pentes', arc: 'Virages', sbend: 'Chicanes', area: 'Plaques et plateformes', junction: 'Carrefours', loop: 'Loopings', ribbon: 'Rubans (tubes, murs, transitions)', fork: 'Bifurcations', ring: 'Anneaux' };
+  const NEWSET = new Set(['sbend', 'sbendL', 'sbendLong', 'sbendLongL', 'sbendFast', 'sbendFastL', 'sbendWide', 'sbendWideL', 'plate2', 'plate3', 'tri1', 'tri2', 'tri3', 'sec1', 'sec2', 'sec3', 'narrow', 'narrowIn', 'wideIn', 'wide', 'cross', 'tee', 'loopTop', 'loopTopL', 'tubeTurn', 'tubeTurnL', 'giantcurve']);
+  const withIcon = D.pieceList.filter((p) => ICONS[p.id]);
+  let fKind = 'all';
+  const renderCat = () => { $('#catalog').innerHTML = withIcon.filter((p) => fKind === 'all' || (fKind === 'new' ? NEWSET.has(p.id) : p.kind === fKind)).map((p) => `<div class="pc${NEWSET.has(p.id) ? ' new' : ''}"><div class="ic">${ICONS[p.id]}</div>${esc(p.label)}<code>${esc(p.id)}</code></div>`).join(''); };
+  const kinds = [...new Set(withIcon.map((p) => p.kind))].filter((k) => KIND[k]);
+  mkFilters('#f-kind', [['all', 'Toutes (' + withIcon.length + ')'], ['new', 'Nouvelles'], ...kinds.map((k) => [k, KIND[k]])], (v) => { fKind = v; renderCat(); });
+  renderCat();
+
+  // Versions
+  $('#versions').innerHTML = VERS.map((v) => { const m = v.match(/^(Bêta [\d.]+|Nouveautés[^—]*)\s*(?:—\s*(.*))?$/); return `<li><b>${esc(m ? m[1] : v)}</b>${m && m[2] ? ' — ' + esc(m[2]) : ''}</li>`; }).join('');
+
+  // Sommaire actif
+  const links = [...document.querySelectorAll('.toc a')];
+  const io = new IntersectionObserver((es) => { es.forEach((e) => { if (e.isIntersecting) links.forEach((a) => a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id)); }); }, { rootMargin: '-35% 0px -60% 0px' });
+  document.querySelectorAll('section[data-s]').forEach((s) => io.observe(s));
+
+  // Recherche : filtre les rubriques et les circuits
+  $('#q').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase(); fText = q.length > 1 ? q : ''; apply();
+    document.querySelectorAll('section[data-s]').forEach((s) => s.classList.toggle('hidden-by-search', !!fText && !s.textContent.toLowerCase().includes(fText) && s.id !== 'circuits'));
+    if (fText && $('#circuits')) { const any = [...document.querySelectorAll('.trk')].some((el) => !el.hidden); $('#circuits').classList.toggle('hidden-by-search', !any); }
+  });
+
+  // Thème
+  $('#theme').addEventListener('click', () => { const r = document.documentElement, cur = r.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); r.dataset.theme = cur === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('ct-wiki-theme', r.dataset.theme); } catch (e) { /* stockage indisponible */ } });
+  try { const t = localStorage.getItem('ct-wiki-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) { /* stockage indisponible */ }
+})();
+</script>
