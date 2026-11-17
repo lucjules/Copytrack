@@ -345,18 +345,18 @@ export function isRibbonKind(type) {
 }
 
 // Route « sur le côté » : roulée à 90° autour de son axe (mur gauche / droit, ou transition d'orientation). La gravité ne change pas :
-// l'appui vient de la vitesse (voir physics.js, SIDE_HOLD).
+// l’appui vient de la vitesse (voir physics/ribbon.js, SIDE_DROP).
 export function isSideTile(tile) {
   const p = PIECES[tile.t];
   return !!(tile.o || p.roll);
 }
 
-// PHYS_VER 36 : la route guide le cap de la voiture le long de sa propre courbure (géodésique) sur les routes roulées (mur, 45°, surplomb, transitions) et sur les
-// pièces « attraction » qui tournent autour de leur axe (loopings décalés, vrilles, tire-bouchons). Ailleurs, le cap ne suit que le volant, dont l'angle est
-// borné selon la vitesse (loi PolyTrack) : il ne suffirait pas à suivre ces pièces à la vitesse où elles se prennent.
-export function headingGuided(tile) {
+// Route roulée (mur, 45°, surplomb, transitions) ou pièce « attraction » qui tourne autour de son axe (loopings, vrilles, tire-bouchons, sommet de looping
+// modulaire) : la projection au sol de son tracé ne dit rien du virage à prendre. Le pilote automatique n'y règle pas sa vitesse sur cette projection.
+// (Jusqu'à PHYS_VER 36, `headingGuided` : la route y guidait aussi le cap de la voiture. PHYS_VER 37 : plus aucune aide, il faut braquer comme dans PolyTrack.)
+export function rolledRibbon(tile) {
   const p = PIECES[tile.t];
-  return !!(tile.o || p.roll || p.rollable || p.loopTop);      // (0.9.72 : le sommet de looping modulaire glisse d'une colonne, comme un looping décalé)
+  return !!(tile.o || p.roll || p.rollable || p.loopTop);
 }
 
 // Une ligne ou un virage posé sur un mur (tile.o) se parcourt en mode ruban, comme une transition.

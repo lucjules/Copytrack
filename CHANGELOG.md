@@ -6,6 +6,34 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.11.1 — loopings et murs à piloter, petit contrôle en l'air : plus aucune aide, comme PolyTrack
+
+**`PHYS_VER` 36 → 37** : records, replays et fantômes repartent de zéro. **Redéployer `submit-score`** (`npm run build:function`, déjà régénérée).
+
+- **Loopings, tire-bouchons, transitions vers un mur : il faut braquer.** La route ne guide plus le cap de la voiture le long de sa courbure (`headingGuided`, propre à
+  Copytrack depuis PHYS_VER 36). Mains lâchées, un looping décalé jette la voiture contre la bordure, un tire-bouchon la sort de la route ; au volant, on passe comme avant.
+- **Murs (wall-rides) : la gravité tire vers le bas, le nez pique.** Plus de maintien « magique » au-dessus de 80 km/h (`SIDE_HOLD`, supprimé) : la gravité tire
+  pleinement vers le bas du mur et le nez de la voiture pique d'autant plus qu'elle est lente (`SIDE_DROP`, 0,5 · g / v rad/s). Il faut tenir le volant un peu vers le
+  haut pour garder sa ligne, plus pour monter ; mains lâchées on tombe, même d'un mur de deux cases. Les pneus gardent toute leur adhérence : un virage posé sur un mur se
+  pilote comme au sol. (Une adhérence réduite sur les murs a été essayée : elle rendait impraticables les grands virages sur un mur, la base des wall-rides de la phase 3.)
+- **En l'air, comme PolyTrack (mesuré en boîte noire, 0.6.3)** : en quittant un bord, la voiture **bascule nez en bas**, d'autant plus qu'elle est lente (65 °/s à
+  39 km/h, 38 à 78, 26 à 140, 16 à 225 : `airTip`), et **rien ne la redresse** (le ressort d'assiette qui la reposait d'elle-même est supprimé). Ni les gaz ni le volant
+  n'agissent (vérifié : 0,00 °/s de lacet volant tenu). **Seul le frein (aérofrein) freine la rotation** : c'est le petit contrôle en l'air de PolyTrack. Bien dosé, il
+  amène la voiture à la pente de la réception (réception parfaite) ; oublié, la voiture se pose piquée et perd de la vitesse (à 100 km/h sur un tremplin d'essai : −29 %
+  sans aérofrein, −11 % avec).
+- **Pilote automatique** (fantôme d'or, démo, validation) : il braque sur les rubans avec une anticipation de la courbure de la pièce et du nez qui pique sur un mur, vise
+  la direction de marche sur un mur (en crabe), arrive aligné à l'entrée d'un ruban, et **dose l'aérofrein** : il prévoit où et avec quelle assiette il retombe, et freine
+  tant que la rotation l'amènerait au-delà de la pente de la réception (il épargne le lacet d'un saut pris en virage). Réceptions parfaites sur les 72 circuits : 67 → 85.
+- **Circuits** : les 72 finissent sans un choc, contrats tenus ; temps quasi inchangés (écart médian 0,00 s, quatre circuits de plus de 0,3 s). **Abysses** : la
+  voiture tombait du haut de son looping modulaire (65 km/h au sommet), même avant ; deux boosters de plus avant lui (médailles recalculées, or 45,6 s). **Épave** : une
+  section de tube de plus avant la sortie (on retombait du tube sur la route étroite).
+- **Académie et exercices** : la leçon *Saut et réception parfaite* et l'exercice *Trois réceptions* se posent maintenant sur une **pente** (sur une terrasse plate, la
+  bascule rendait la réception parfaite impossible) ; leurs textes, l'aide des commandes et les conseils du bilan expliquent l'aérofrein (français et anglais).
+- **Matrice des pièces** : 71 cases CHUTE (24 avant) : les pentes et courbes en pente raides posées de côté, et le virage serré en surplomb, tournent la route plus vite
+  que le volant ne le permet à la vitesse d'un mur ; le vérificateur de l'éditeur les signale.
+- **Tests** : `tools/test-sans-aide.mjs` (nouveau) ; mis à jour : murs à 90° (volant tenu / mains lâchées), sauts (aérofrein), looping trop haut, orientations 3D,
+  matrice. Wiki : pilotage, commandes, schéma du saut.
+
 ## Bêta 0.11.0 — plus de raccourcis : chaque boucle de carrefour a son checkpoint
 
 **`PHYS_VER` inchangé (36)**, temps et médailles inchangés. **Redéployer `submit-score`** : 25 circuits changent (un checkpoint en plus), leurs clés de classement aussi.

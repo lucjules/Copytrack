@@ -551,7 +551,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : trois boosters → wall-ride sur la coque. Au programme : double looping, wall-rides des deux côtés, looping modulaire, route large, tube qui tourne, passage étroit, plongeon.',
     goal: { id: 'norespawn' },
     opts: { l: 12 }, pilot: { vCap: 66 },
-    script: 'start*2 B3 [tr02s] S3> [tr20s] S C*1 B2 OD S2 B [tr01s] S3< [tr10s] S2 ZR3 S2 LPR2 S WI W WO S ZL3 S2 TI TM TRR TM TLL TM TO S NI N2 NO S B [cdi2] DX [cdo2] S3 B2 finish*2',
+    script: 'start*2 B3 [tr02s] S3> [tr20s] S C*1 B2 OD S2 B [tr01s] S3< [tr10s] S2 ZR3 S2 LPR2 S WI W WO S ZL3 S2 TI TM TRR TM TLL TM2 TO S NI N2 NO S B [cdi2] DX [cdo2] S3 B2 finish*2',
     obst: [{ k: 'wallSL', at: 0.115, side: 28 }, { k: 'beamL', at: 0.115, side: -28 }, { k: 'board_warn', at: 0.15, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.395, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.45, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.599, side: 0, s: 2 }, { k: 'beamPost', at: 0.594, side: 36 }, { k: 'beamPost', at: 0.594, side: -36 }, { k: 'board_warn', at: 0.678, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.852, side: 16, rot: Math.PI }],
     medals: { cristal: 43.5, or: 45.8, argent: 52.6, bronze: 61.8 },
   },
@@ -575,9 +575,9 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : plongeon dans les abysses puis grand looping. Au programme : wall-rides des deux côtés, chicanes longues, remontée en hélice, looping modulaire, route large, tube qui tourne.',
     goal: { id: 'norespawn' },
     opts: { l: 22 }, pilot: { vCap: 66 },
-    script: 'start*2 B [cdi2] DX DX [cdo2] OB S2 C*1 B2 [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 S LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B finish*2',
+    script: 'start*2 B [cdi2] DX DX [cdo2] OB S2 C*1 B2 [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B finish*2',
     obst: [{ k: 'sign_down', at: 0.012, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.06, side: -18, rot: Math.PI }, { k: 'block', at: 0.175, side: 26 }, { k: 'block', at: 0.175, side: -26 }, { k: 'board_right', at: 0.29, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.52, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.691, side: 0, s: 2 }, { k: 'pillar', at: 0.686, side: 36 }, { k: 'pillar', at: 0.686, side: -36 }, { k: 'board_warn', at: 0.717, side: -18, rot: Math.PI }, { k: 'board_left', at: 0.915, side: 20, rot: Math.PI }],
-    medals: { cristal: 47.6, or: 50.1, argent: 57.6, bronze: 67.6 },
+    medals: { cristal: 43.3, or: 45.6, argent: 52.4, bronze: 61.5 },
   },
   {
     // Chapitre 8 · 6/6 — SPEEDWAY (0.10.7 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters et un pont de VERRE entre deux pyramides de corail. Très grands virages

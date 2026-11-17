@@ -1,10 +1,10 @@
 // Conduite sur les rubans 3D (loopings, vrilles, tubes, murs, plafond) : entrée, conduite, sortie et raccord d'un ruban à l'autre.
 // Ces méthodes s'ajoutent au prototype de CarPhysics (voir physics.js) : `this` est la voiture.
 import { CELL, DT, ROAD_HALF } from '../constants.js';
-import { PIECES, PLATES, rotVec, tileCenter, isRibbon, tileParam, beltSpeed, isSideTile, hasNoRails, headingGuided } from '../pieces.js';
+import { PIECES, PLATES, rotVec, tileCenter, isRibbon, tileParam, beltSpeed, isSideTile, hasNoRails } from '../pieces.js';
 import { ribbonOf, frameLocal, ribbonInverts } from '../ribbons.js';
 import { RAIN_GRIP } from '../sim/env.js';
-import { CAR, SIDE_AERO, SIDE_HOLD, SIDE_MIN_SPEED, SIDE_GRACE, surfaceCoeffs } from './specs.js';
+import { CAR, SIDE_AERO, SIDE_DROP, SIDE_MIN_SPEED, SIDE_GRACE, surfaceCoeffs } from './specs.js';
 import { wallBounce, wallFriction, wallHardLoss, wallSpinOf, wallStunOf } from './contact.js';
 import { clamp } from '../mathutil.js';
 import { dasin, datan2, dcos, dsin, hypot2, hypot3 } from '../dmath.js';
@@ -192,23 +192,24 @@ export const ribbonMethods = {
     }
     // Gravité projetée dans le plan de la route (vrille, mur, envers, paroi du tube...).
     const g = this.g * this.gSign;
-    // Route sur le côté (pièces 90°) : l'appui aérodynamique (vitesse²) compense la glissade le long du plan ; la gravité, elle, ne change pas.
-    // En dessous de ~80 km/h il ne compense plus assez : la voiture glisse vers le bord du bas et tombe.
+    // Route sur le côté (pièces 90°) : la gravité tire PLEINEMENT le long du plan (PHYS_VER 37, comme PolyTrack) et le nez pique vers le bas du mur (SIDE_DROP) :
+    // il faut le tenir au volant. Avant : l'appui aérodynamique annulait la glissade au-dessus de 80 km/h (SIDE_HOLD) et la route guidait le cap.
     const sidePiece = isSideTile(tile);
-    const hold = sidePiece ? Math.min(1, SIDE_HOLD * R.vs * R.vs / Math.max(1, this.g)) : 0;
     R.vs -= g * B.e1y * dt;
-    R.vd -= g * B.e2y * dt * (1 - hold);
+    R.vd -= g * B.e2y * dt;
+    R.sag = sidePiece ? (SIDE_DROP * g * B.e2y) / Math.max(Math.abs(R.vs), 20) : 0;      // (rad/s ; lu aussi par le pilote automatique)
+    R.psi -= R.sag * dt;
     // Décrochage : sur un plan penché de plus de 45°, sans la vitesse minimale la voiture ne tient pas (plus de « magie »). Après un court
     // délai elle quitte la paroi et tombe, avec la vitesse qu'elle avait.
     if (sidePiece && Math.abs(F.ny) < 0.7 && Math.abs(R.vs) < SIDE_MIN_SPEED) {
       R.lowT = (R.lowT || 0) + dt;
       if (R.lowT > SIDE_GRACE) { this.ev.wallOff = true; this._ribPlace(R); this._ribDetach(); return; }
     } else if (R.lowT) R.lowT = Math.max(0, R.lowT - 2 * dt);
-    // PHYS_VER 36 : sur une route ROULÉE (mur, 45°, surplomb, transition) et sur les loopings, vrilles et tire-bouchons (headingGuided), la route guide le cap le long
-    // de sa propre courbure. Le braquage permis (loi PolyTrack, borné selon la vitesse) ne suffit pas pour un virage serré au-dessus de la vitesse minimale de mur
-    // (108 km/h), ni pour le décalage latéral d'un looping pris à 180 km/h : sans ce guidage, ces pièces seraient infranchissables ou jetteraient la voiture contre
-    // la bordure à la sortie. Au sol et sur un virage relevé, le cap ne suit que le volant (comme PolyTrack).
-    if (!headingGuided(tile)) R.psi -= R.dir * kg * R.vs * dt;
+    // La route tourne sous la voiture : son cap relatif change d'autant, sur TOUS les rubans (PHYS_VER 37, comme PolyTrack : aucune aide). Il faut braquer pour suivre
+    // le décalage d'un looping, d'un tire-bouchon, d'une transition vers un mur. Avant (PHYS_VER 36) : sur les routes roulées et les loopings (headingGuided),
+    // la route guidait le cap le long de sa courbure : on passait tout droit, mains lâchées.
+    R.psi -= R.dir * kg * R.vs * dt;
+    R.kg = kg;      // (lu par le pilote automatique : braquage d'anticipation pour suivre la pièce)
 
     // Revêtements actifs sur ce ruban : mêmes effets qu'au sol, sans aide particulière.
     const mod = tile.s, f = tileParam(tile) / 100;

@@ -123,7 +123,7 @@ test('TOUTE pièce-ruban qui retourne la voiture (entrée et sortie de côtés o
   }
   assert.ok(inverting >= 8 && checked > 200, `${inverting} cases qui retournent la voiture sur ${checked}`);
 });
-test('la vrille et les transitions retournées passent SANS revêtement « Inversion de gravité » ; la matrice ne garde que 18 cases CHUTE (29 avant la phase 2), toutes des montées raides sur mur ou la rampe cvd4', () => {
+test('la vrille et les transitions retournées passent SANS revêtement « Inversion de gravité » ; la matrice ne garde que 24 cases CHUTE (29 avant la phase 2), toutes des montées et descentes raides sur mur ou la rampe cvd4', () => {
   assert.notEqual(PIECE_FACTS.twist.sol, 'CHUTE');
   for (const t of ['tr10s', 'tr20s', 'tr10l', 'tr20l']) assert.notEqual(PIECE_FACTS[t].plafond, 'CHUTE', t);
   const chutes = [];
@@ -131,8 +131,10 @@ test('la vrille et les transitions retournées passent SANS revêtement « Inver
   // (colonnes d'origine seulement : les orientations de la phase 3 ajoutent 4 cases de la même famille de montées raides, voir test-orientations-3d)
   const old = chutes.filter((c) => /\/(sol|murG|murD|plafond)$/.test(c));
   // (PHYS_VER 36 : 16 -> 18 ; les deux nouvelles, cvd4 sur le mur gauche et cvdL4 sur le mur droit, sont les miroirs de cases déjà CHUTE de la même rampe)
-  assert.ok(old.length <= 18, `${old.length} CHUTE : ${old.join(' ')}`);
-  for (const c of old) assert.match(c, /^(cv|cro|cdi)/, c + ' : famille non documentée');
+  // (PHYS_VER 37 : 18 -> 24 ; plus de guidage du cap sur les rubans et le nez pique sur un mur : les pentes RAIDES posées sur un mur (steep4, dn4, cv2) y tournent la route
+  // plus vite que le volant ne le permet à la vitesse d'un mur)
+  assert.ok(old.length <= 24, `${old.length} CHUTE : ${old.join(' ')}`);
+  for (const c of old) assert.match(c, /^(cv|cro|cdi|steep4|dn4)/, c + ' : famille non documentée');
 });
 
 console.log('\n3. Dérapage');
@@ -241,20 +243,24 @@ test('identité des véhicules, revêtements et profils : le dérapage marche pa
 
 console.log('\n4. Sauts et réceptions');
 const AIRS = ['none', 'gas', 'brake', 'tapGas', 'tapBrake'];
-test('gaz ou frein tenus en l\'air : jamais « ratée », perte ≤ 20 % (avant : −42 % et réception « bad » à 100 comme à 200 km/h dès qu\'on touchait une pédale)', () => {
+// PHYS_VER 37 (PolyTrack) : rien ne redresse la voiture en l'air ; en quittant le bord elle bascule nez en bas, d'autant plus qu'elle est lente. Seul l'aérofrein freine sa rotation.
+test('frein tenu ou donné en l\'air (aérofrein) : jamais « ratée », perte ≤ 20 %, réception parfaite à 200 km/h ; sans lui, à 100 km/h, la voiture se pose trop piquée', () => {
   for (const v of [100, 200]) for (const a of AIRS) {
     const m = jumpRun(v, a);
     assert.ok(m.ok, `${v}/${a} : réception`);
+    assert.ok(m.pitchPeak <= 0.7, `${v} km/h ${a} : tangage maximal ${m.pitchPeak} rad (avant 1,4)`);
+    if (!/brake/i.test(a)) continue;
     assert.notEqual(m.q, 'bad', `${v} km/h ${a} : réception ${m.q}`);
     assert.ok(m.loss <= 20, `${v} km/h ${a} : −${m.loss} %`);
-    assert.ok(m.pitchPeak <= 0.7, `${v} km/h ${a} : tangage maximal ${m.pitchPeak} rad (avant 1,4)`);
   }
+  assert.equal(jumpRun(200, 'brake').q, 'perfect', 'aérofrein à 200 km/h : réception parfaite');
+  assert.equal(jumpRun(100, 'none').q, 'bad', 'sans aérofrein, à 100 km/h, la bascule du décollage n\'est pas rattrapée');
 });
-// (PHYS_VER 36, loi PolyTrack : ni gaz ni volant n'agissent en l'air ; le frein est un AÉROFREIN qui fige l'assiette. Avant : gaz = nez plus bas, frein = nez plus haut)
-test('en l\'air, les pédales ne pilotent plus l\'assiette : gaz tenu = ne rien faire ; frein tenu (aérofrein) fige l\'assiette, jamais plus de tangage ni de perte qu\'à vide', () => {
+// (PHYS_VER 36, loi PolyTrack : ni gaz ni volant n'agissent en l'air ; le frein est un AÉROFREIN qui amortit la rotation. Avant : gaz = nez plus bas, frein = nez plus haut)
+test('en l\'air, les pédales ne pilotent plus l\'assiette : gaz tenu = ne rien faire ; frein tenu (aérofrein) amortit la rotation, jamais plus de tangage ni de perte qu\'à vide', () => {
   for (const v of [100, 200]) {
     const none = jumpRun(v, 'none'), gas = jumpRun(v, 'gas'), brake = jumpRun(v, 'brake');
-    assert.ok(gas.loss <= none.loss + 2, `${v} km/h : gaz −${gas.loss} % contre −${none.loss} %`);
+    assert.deepEqual([gas.loss, gas.q, gas.pitchPeak], [none.loss, none.q, none.pitchPeak], `${v} km/h : les gaz n'agissent pas en l'air`);
     assert.ok(brake.pitchPeak <= none.pitchPeak + 0.01, `${v} km/h : l'aérofrein ne relève pas le nez (${brake.pitchPeak} contre ${none.pitchPeak} rad)`);
     assert.ok(brake.loss <= none.loss + 2, `${v} km/h : frein −${brake.loss} % contre −${none.loss} %`);
   }
@@ -278,7 +284,7 @@ test('dérapage puis saut : abordé en glisse, le tremplin donne un vol fini et 
     for (let i = 0; i < 120 * 14 && !landed; i++) {
       const t = i * DT; ph.clock = i;
       const air = !ph.grounded && ph.pos.y > 14;
-      const inp = air ? { throttle: true } : t > 0.2 && t < 0.45 ? { steer: 0.6, brake: true } : t < 1.1 ? { steer: 0.25, throttle: true } : { steer: 0, throttle: true };
+      const inp = air ? { brake: true } : t > 0.2 && t < 0.45 ? { steer: 0.6, brake: true } : t < 1.1 ? { steer: 0.25, throttle: true } : { steer: 0, throttle: true };      // (PHYS_VER 37 : en l'air, l'aérofrein, comme un joueur)
       ph.step(inp);
       if (![ph.pos.x, ph.pos.y, ph.pos.z, ph.vel.x, ph.vel.z, ph.yaw].every(Number.isFinite)) ok = false;
       if (air) took = true;

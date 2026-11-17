@@ -1583,7 +1583,7 @@ function isSideTile(tile) {
   const p = PIECES[tile.t];
   return !!(tile.o || p.roll);
 }
-function headingGuided(tile) {
+function rolledRibbon(tile) {
   const p = PIECES[tile.t];
   return !!(tile.o || p.roll || p.rollable || p.loopTop);
 }
@@ -6912,15 +6912,16 @@ var CAR = {
   magnetRange: 4,
   magnetAcc: 80,
   launch: 0.6,
-  airPitchAcc: 4.2,
-  airPitchDamp: 2.6,
-  airSpring: 18,
-  // PHYS_VER 36 (PolyTrack) : en l'air, NI les gaz NI le volant ne pilotent la voiture (avant : assiette ± 14° aux gaz / au frein, lacet au volant).
-  // Seul le FREIN agit : l'aérofrein amortit la rotation (PolyTrack : tangage 28 → 6 °/s en 1,6 s). Sans lui, la rotation acquise est gardée.
+  // PHYS_VER 37 (PolyTrack, mesuré en boîte noire) : en l'air, NI les gaz NI le volant ne pilotent la voiture, et RIEN ne la redresse : la rotation acquise au
+  // décollage est gardée tout le vol. Seul le FREIN agit : l'aérofrein amortit la rotation (PolyTrack : tangage 28 → 7 °/s en 1,6 s). C'est le petit contrôle en l'air
+  // de PolyTrack : freiner au bon moment pour arriver à plat (ou à la pente de la réception) fait gagner des dixièmes. Avant (PHYS_VER 36) : un ressort d'assiette
+  // rapprochait l'assiette de la trajectoire (15 %) puis, près du sol, de la pente de la route (35 %) : la voiture se posait d'elle-même, le frein ne servait presque à rien.
   airBrake: 1,
-  airLevelH: 14,
-  airLevelW: 0.35,
-  airAero: 0.15,
+  airSpin: 0.1,
+  // Bascule au décollage : quand la route s'arrête sous la voiture, l'avant n'est plus porté alors que l'arrière l'est encore : la voiture part en piqué. PolyTrack (bord
+  // de route plat, mesuré) : 65 °/s à 39 km/h, 38 °/s à 78 km/h, 26 °/s à 140 km/h, 16 °/s à 225 km/h, soit airTip / (v + airTipV0) rad/s.
+  airTip: 18.4,
+  airTipV0: 5.5,
   landOk: 0.38,
   // Mini-turbo (phase 2) : une glisse CONTRÔLÉE se charge ; la récompense dépend de sa durée (et un peu de son angle, plafonné). Avant : +6 / +16 km/h pour 100 km/h perdus.
   mtTime1: 0.45,
@@ -7003,8 +7004,7 @@ var MOTO = {
   steerC: 29.1,
   driftRear: 0.76,
   steerIn: 11,
-  steerOut: 11,
-  airPitchAcc: 5.2
+  steerOut: 11
 };
 var BOAT = {
   ...CAR,
@@ -7023,8 +7023,7 @@ var BOAT = {
 var GLIDER = {
   ...CAR,
   accel: SURF_PHYS.engineAccel * (8 / 11),
-  maxSpeed: SURF_PHYS.maxSpeed * (90 / 95),
-  airPitchAcc: 3.4
+  maxSpeed: SURF_PHYS.maxSpeed * (90 / 95)
 };
 var SPECS = {
   car: CAR,
@@ -7050,7 +7049,7 @@ var GLIDE = {
   turnRamp: 7
 };
 var SIDE_AERO = 0.03;
-var SIDE_HOLD = 25 / (30 * 30);
+var SIDE_DROP = 0.5;
 var SIDE_MIN_SPEED = 30;
 var SIDE_GRACE = 0.3;
 var COEF = {
@@ -7109,7 +7108,6 @@ var MUL = {
     steerOut: 1.3,
     brake: 1.08,
     brakeV: 1.08,
-    airPitchAcc: 1.2,
     corner: 1.1,
     steerC: 1.1
   },
@@ -12363,7 +12361,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*2 B3 [tr02s] S3> [tr20s] S C*1 B2 OD S2 B [tr01s] S3< [tr10s] S2 ZR3 S2 LPR2 S WI W WO S ZL3 S2 TI TM TRR TM TLL TM TO S NI N2 NO S B [cdi2] DX [cdo2] S3 B2 finish*2",
+    script: "start*2 B3 [tr02s] S3> [tr20s] S C*1 B2 OD S2 B [tr01s] S3< [tr10s] S2 ZR3 S2 LPR2 S WI W WO S ZL3 S2 TI TM TRR TM TLL TM2 TO S NI N2 NO S B [cdi2] DX [cdo2] S3 B2 finish*2",
     obst: [
       {
         k: "wallSL",
@@ -12540,7 +12538,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*2 B [cdi2] DX DX [cdo2] OB S2 C*1 B2 [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 S LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B finish*2",
+    script: "start*2 B [cdi2] DX DX [cdo2] OB S2 C*1 B2 [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B finish*2",
     obst: [
       {
         k: "sign_down",
@@ -12606,10 +12604,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 47.6,
-      or: 50.1,
-      argent: 57.6,
-      bronze: 67.6
+      cristal: 43.3,
+      or: 45.6,
+      argent: 52.4,
+      bronze: 61.5
     }
   },
   {
@@ -15862,9 +15860,10 @@ var ribbonMethods = {
     }
     const g = this.g * this.gSign;
     const sidePiece = isSideTile(tile);
-    const hold = sidePiece ? Math.min(1, SIDE_HOLD * R.vs * R.vs / Math.max(1, this.g)) : 0;
     R.vs -= g * B3.e1y * dt;
-    R.vd -= g * B3.e2y * dt * (1 - hold);
+    R.vd -= g * B3.e2y * dt;
+    R.sag = sidePiece ? SIDE_DROP * g * B3.e2y / Math.max(Math.abs(R.vs), 20) : 0;
+    R.psi -= R.sag * dt;
     if (sidePiece && Math.abs(F.ny) < 0.7 && Math.abs(R.vs) < SIDE_MIN_SPEED) {
       R.lowT = (R.lowT || 0) + dt;
       if (R.lowT > SIDE_GRACE) {
@@ -15874,7 +15873,8 @@ var ribbonMethods = {
         return;
       }
     } else if (R.lowT) R.lowT = Math.max(0, R.lowT - 2 * dt);
-    if (!headingGuided(tile)) R.psi -= R.dir * kg * R.vs * dt;
+    R.psi -= R.dir * kg * R.vs * dt;
+    R.kg = kg;
     const mod = tile.s, f = tileParam(tile) / 100;
     const C4 = surfaceCoeffs(mod, f);
     const extraDrag = C4.extraDrag, vmaxK = C4.vmaxK, rearK = C4.rearK;
@@ -16204,6 +16204,7 @@ var BK = {
   w: 0
 };
 var AIR_BRAKE_DECAY = dexp(-CAR.airBrake * DT);
+var AIR_SPIN_DECAY = dexp(-CAR.airSpin * DT);
 var CarPhysics = class {
   constructor(track) {
     this.track = track;
@@ -16365,7 +16366,7 @@ var CarPhysics = class {
     this.envGrip = 1;
     this.pitch = 0;
     this.pitchRate = 0;
-    this.pitch0 = 0;
+    this.tipNext = false;
     this.landQ = "";
     this.aoa = 0.08;
     this.glidePitch = 0;
@@ -16889,11 +16890,12 @@ var CarPhysics = class {
     this.airTime = 0;
     this.pitch = dasin(clamp(fy, -1, 1));
     this.pitchRate = 0;
+    this.tipNext = false;
     return false;
   }
   // En l'air : trajectoire balistique, rotation, tangage, vol plané.
   _flyAir(inp) {
-    const dt = DT, v = this.vel, K3 = this.k;
+    const dt = DT, v = this.vel;
     let fx = -dsin(this.yaw), fz = -dcos(this.yaw);
     const airBrake = !!inp.brake && this.vehicle !== "glider";
     if (this.vehicle === "glider") {
@@ -16913,26 +16915,20 @@ var CarPhysics = class {
     this.slip = 0;
     this.fwdSpeed = v.x * fx + v.z * fz;
     this.airTime += dt;
-    if (this.vehicle === "glider") this.pitch = this.glidePitch;
-    else {
-      const gs = this.gSign, hv = hypot2(v.x, v.z);
-      const flight = datan2(v.y * gs, Math.max(hv, 1));
-      if (this.airTime <= dt * 1.01) this.pitch0 = this.pitch;
-      let tgt = this.pitch0 + (flight - this.pitch0) * CAR.airAero, w = 0;
-      const p = this.pos;
-      const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, S12, 0.5, this.excl, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, S12, 0.5, this.excl);
-      if (s.type === "road" && Number.isFinite(s.h)) {
-        const height = (p.y - s.h) * gs;
-        if (height >= -0.5 && height < CAR.airLevelH) {
-          w = CAR.airLevelW * (1 - Math.max(0, height) / CAR.airLevelH);
-          const slope = -(s.nx * fx + s.nz * fz) / Math.max(0.3, Math.abs(s.ny));
-          tgt += (datan(slope * gs) - tgt) * w;
-        }
+    if (this.vehicle === "glider") {
+      this.pitch = this.glidePitch;
+      this.tipNext = false;
+    } else {
+      if (this.tipNext) {
+        this.tipNext = false;
+        this.pitchRate -= this.gSign * CAR.airTip / (hypot2(v.x, v.z) + CAR.airTipV0);
       }
-      const want = clamp(tgt, -1.4, 1.4);
-      if (airBrake) this.pitchRate *= AIR_BRAKE_DECAY;
-      else this.pitchRate += (CAR.airSpring * (want - this.pitch) - CAR.airPitchDamp * 3 * this.pitchRate) * dt * K3.airPitchAcc / CAR.airPitchAcc;
-      this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
+      this.pitchRate *= airBrake ? AIR_BRAKE_DECAY : AIR_SPIN_DECAY;
+      this.pitch += this.pitchRate * dt;
+      if (Math.abs(this.pitch) > 1.4) {
+        this.pitch = clamp(this.pitch, -1.4, 1.4);
+        this.pitchRate = 0;
+      }
     }
   }
   // Déplacement puis collisions (anneaux, entrée de ruban, murs, toits, dalles, obstacles, limites). Renvoie true si le pas se termine ici.
@@ -17010,6 +17006,7 @@ var CarPhysics = class {
       this.grounded = true;
       this._setGround(s);
     } else {
+      if (this.grounded) this.tipNext = true;
       this.grounded = false;
     }
     if (this.grounded && this.surfMod === "bounce" && this.bounceCD <= 0) {
@@ -17615,6 +17612,29 @@ var Autopilot = class {
     const h = hypot2(b[0] - a[0], b[2] - a[2]);
     return h > 0.5 ? datan2(b[1] - a[1], h) : 0;
   }
+  // Aérofrein (PHYS_VER 37) : le pilote cherche où il retombe (sa trajectoire balistique contre le chemin devant) et son assiette à ce moment-là si la rotation
+  // continue ; si elle l'amènerait au-delà de la pente de la réception (plus piqué en tournant vers le bas, plus cabré en tournant vers le haut), il freine.
+  // Il relâche dès que la rotation restante l'y amène : le frein n'agit que sur la rotation, pas sur la vitesse. En gravité inversée : rien (pas de plafond prévu).
+  _airBrake(phys) {
+    if (phys.gSign < 0 || phys.vehicle === "glider") return false;
+    const p = phys.pos, v = phys.vel, path = this.path, n = path.length, hv = hypot2(v.x, v.z);
+    if (hv < 2) return false;
+    const ux = v.x / hv, uz = v.z / hv, g = phys.g;
+    for (let k = this.idx; k < n && k < this.idx + 240; k++) {
+      const q = path[k], d = (q[0] - p.x) * ux + (q[2] - p.z) * uz;
+      if (d <= 1) continue;
+      const t = d / hv;
+      if (p.y + v.y * t - 0.5 * g * t * t > q[1] + 0.3) continue;
+      const a = path[Math.max(0, k - 2)], b = path[Math.min(n - 1, k + 2)], h = hypot2(b[0] - a[0], b[2] - a[2]);
+      const slope = h > 0.5 ? datan2(b[1] - a[1], h) : 0;
+      if (phys.airTime + t < 0.35) return false;
+      const pr = phys.pitchRate, kS = CAR.airSpin;
+      const err = phys.pitch + pr * (1 - dexp(-kS * t)) / kS - slope;
+      const tol = Math.abs(phys.omega) > 0.1 ? CAR.landOk * 0.8 : 0.03;
+      return Math.abs(err) > tol && err * pr > 0;
+    }
+    return false;
+  }
   // Point de reprise (départ, réapparition) : le point du tracé le plus proche, cherché sur TOUT le tracé (0.9.67 : avant, les 400 premiers points seulement ;
   // sur un circuit long, un checkpoint au-delà se raccrochait au premier passage voisin et le pilote faisait demi-tour), parmi ceux orientés dans le sens
   // de la voiture (un tronçon voisin parcouru dans l'autre sens n'est pas un point de reprise).
@@ -17655,14 +17675,7 @@ var Autopilot = class {
   control(phys) {
     const c = this._control(phys);
     if (phys.rib) {
-    } else if (phys.gSign < 0) {
-      c.steer = -c.steer;
-      if (!phys.grounded && phys.vehicle !== "glider") {
-        const t = c.throttle;
-        c.throttle = c.brake;
-        c.brake = t;
-      }
-    }
+    } else if (phys.gSign < 0) c.steer = -c.steer;
     const reverseActive = phys.rib ? phys.rib.tile.s === "reverse" : phys.grounded && phys.surfMod === "reverse";
     if (reverseActive) c.steer = -c.steer;
     return c;
@@ -17689,8 +17702,12 @@ var Autopilot = class {
       const d2 = R.dir * R.dl;
       const vs = Math.max(8, Math.abs(R.vs));
       const psiDes = dasin(Math.max(-0.5, Math.min(0.5, -1.2 * d2 / vs)));
-      const st2 = (psiDes - R.psi) * 6 - phys.omega * 0.35;
-      const vT = headingGuided(R.tile) ? this.vCap : this._vTarget(Math.abs(R.vs));
+      const travel = isSideTile(R.tile) && Math.abs(R.vs) > 5 ? datan2(R.vd, Math.abs(R.vs)) : R.psi;
+      const K3 = this.K, L4 = K3.a + K3.b, vAbs = Math.abs(R.vs);
+      const dMax = Math.min(K3.steerMax, K3.steerC * this.envGrip * dpow(Math.max(1, vAbs), -K3.steerN));
+      const ff = rolledRibbon(R.tile) ? datan(L4 * (R.dir * (R.kg || 0) + (R.sag || 0) / Math.max(8, vAbs))) / Math.max(1e-3, dMax) : 0;
+      const st2 = ff + (psiDes - travel) * 6 - phys.omega * 0.35;
+      const vT = rolledRibbon(R.tile) ? this.vCap : this._vTarget(Math.abs(R.vs));
       return {
         throttle: Math.abs(R.vs) < Math.min(this.vCap, vT - 0.5),
         brake: Math.abs(R.vs) > vT + 6,
@@ -17737,7 +17754,7 @@ var Autopilot = class {
     if (!phys.grounded) {
       return {
         throttle: false,
-        brake: false,
+        brake: this._airBrake(phys),
         steer: 0,
         drift: false
       };
@@ -17747,7 +17764,16 @@ var Autopilot = class {
     let j = this.idx;
     while (j < path.length - 1 && this.dist[j] - this.dist[this.idx] < look && path[j + 1][3] !== 1) j++;
     if (path[j + 1] && path[j + 1][3] === 1 && j === this.idx) j++;
-    const tq = path[j];
+    let tq = path[j];
+    const short = look - (this.dist[j] - this.dist[this.idx]);
+    if (short > 2 && j > 0 && path[j + 1] && path[j + 1][3] === 1) {
+      const a = path[j - 1], ex = tq[0] - a[0], ez = tq[2] - a[2], el = hypot2(ex, ez);
+      if (el > 0.1) tq = [
+        tq[0] + ex / el * short,
+        tq[1],
+        tq[2] + ez / el * short
+      ];
+    }
     const fx = -dsin(phys.yaw), fz = -dcos(phys.yaw);
     const tx = tq[0] - p.x, tz = tq[2] - p.z;
     const cross = fx * tz - fz * tx;
@@ -18055,7 +18081,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/version.js
-var PHYS_VER = 36;
+var PHYS_VER = 37;
 
 // js/ghostFormat.js
 var GHOST_EVERY = 4;
@@ -19260,4 +19286,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "79206bd9be8780ae";
+globalThis.__COPYTRACK_BUILD__ = "e4f922bdf9e2e5f9";

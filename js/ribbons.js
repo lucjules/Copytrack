@@ -104,7 +104,7 @@ function buildRolled(tile) {
   const half = P.size * HALF;
   const len = P.kind === 'arc' ? hypot2((Math.PI / 2) * arcParams(P).R, P.rise * LEVEL_H) : hypot2(2 * half, P.rise * LEVEL_H);
   return {
-    minU: 0.5,        // comme la vrille : l'appui ne lâche jamais la voiture (c'est la vitesse, via SIDE_HOLD, qui décide si elle tient)
+    minU: 0.5,        // comme la vrille : l'appui ne lâche jamais la voiture (c’est la vitesse et le pilote qui décident si elle tient : physics/ribbon.js, SIDE_DROP)
     len: len * 1.2,
     pos(u, o) {
       floorCenter(tile, u, C);
@@ -126,7 +126,7 @@ function rollWrap(inner, psi) {
   const x0 = e.x, y0 = e.y;
   return {
     ...inner,
-    minU: 0.5,      // (comme une ligne sur un mur : l'appui ne lâche jamais la voiture, la vitesse décide via SIDE_HOLD)
+    minU: 0.5,      // (comme une ligne sur un mur : l'appui ne lâche jamais la voiture, la vitesse et le volant décident : SIDE_DROP)
     pos(u, o) {
       inner.pos(u, o);
       const dx = o.x - x0, dy = o.y - y0;
@@ -275,7 +275,7 @@ function buildBase(tile) {
       const [a, b] = P.roll, long = !!P.rollLong;
       const psa = oriAngle(a, b), psb = oriAngle(b, a);
       return {
-        minU: 0.5,      // jamais lâchée par l'appui : c'est la vitesse (SIDE_HOLD) qui décide si on tient ou si on glisse
+        minU: 0.5,      // jamais lâchée par l'appui : c’est la vitesse et le volant (SIDE_DROP) qui décident si on tient ou si on glisse
         pos(u, o) {
           const psi = psa + (psb - psa) * smooth(u);
           o.x = long ? -HALF : 0; o.y = base; o.z = half - 2 * half * u;

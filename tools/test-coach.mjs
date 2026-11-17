@@ -82,7 +82,8 @@ test('freinage avancé : « tu freines plus tôt »', () => {
   // secteur 1). On avance le premier vrai freinage (plus de 30 m/s : 469 m, secteur 5).
   // 0.10.1 : Temple refait (deux fois plus long, lacets serrés partout) : avancer un freinage de 0,8 s y envoie toujours la voiture au mur, le conseil « mur » couvre tout.
   // On prend Serpent (refait aussi) : le premier freinage à plus de 45 m/s de la seconde moitié (≈ 1 010 m, secteur 7, avant le croisement), avancé de 70 pas (0,58 s, ≈ 28 m).
-  const target = brakingPoints(R).filter((b) => b.v0 > 45 && b.s > R.ref.length / 2)[0], from = Math.round(R.t[target.i] * 120);
+  // (0.11.1, PHYS_VER 37 : ce freinage tombe maintenant 1 m avant la mi-parcours ; on le cherche dans les 55 % de la fin)
+  const target = brakingPoints(R).filter((b) => b.v0 > 45 && b.s > R.ref.length * 0.45)[0], from = Math.round(R.t[target.i] * 120);
   const early = edit(refIn, (st, fl) => { for (let k = from - 70; k < from; k++) fl[k] = (fl[k] & ~1) | 2; pad(st, fl); });
   const tips = coach(trace(early), R);
   // (phase 2 physique, PHYS_VER 35) Le freinage est maintenant limité par le cercle d'adhérence (brakeCorner) et le transfert de charge : 140 pas de frein (1,17 s) avant le

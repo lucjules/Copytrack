@@ -12,7 +12,9 @@ const { PALETTE_ORDER, TOOLS } = await import('../js/editor/shared.js');
 const { Inspector } = await import('../js/inspector.js');
 const { KEY_ACTIONS } = await import('../js/input.js');
 const { CarPhysics } = await import('../js/physics.js');
-const { SIDE_HOLD } = await import('../js/physics/specs.js');
+const { SIDE_DROP } = await import('../js/physics/specs.js');
+const { Autopilot } = await import('../js/autopilot.js');
+const { centerlineWorld } = await import('../js/ribbons.js');
 const { RaceLogic, placeAtStart } = await import('../js/raceLogic.js');
 const { CELL, HALF, LEVEL_H, DT } = await import('../js/constants.js');
 const { DECO_ORDER, DECO_CATS, DECO_LABELS, LIGHT_DECOS } = await import('../js/decoData.js');
@@ -160,30 +162,38 @@ test('les 4 anciennes pièces gardent leur index (lecture des anciens circuits) 
   assert.equal(tl('sideL').o, 2); assert.equal(hasNoRails(tl('sideL')), true);
   assert.equal(flagAllowed('straight', 'o', null, 1), true, '0.9.3 : l’orientation est une option de la ligne droite');
 });
-function sideRun(v0, throttle, legacy = false) {
+// steer : false = mains lâchées, true = le pilote automatique tient le volant (PHYS_VER 37 : sur un mur le nez pique vers le bas, il faut le tenir).
+function sideRun(v0, throttle, legacy = false, steer = false) {
   const tr = new Track('s');
-  tr.add({ t: 'start', x: 0, z: 0, l: 4, r: 0 }); tr.add({ t: legacy ? 'rollL' : 'tr02s', x: 0, z: -1, l: 4, r: 0 });
-  for (let z = -2; z >= -7; z--) tr.add(legacy ? { t: 'sideL', x: 0, z, l: 4, r: 0 } : { t: 'straight', o: 2, x: 0, z, l: 4, r: 0 });
+  const added = [tr.add({ t: 'start', x: 0, z: 0, l: 4, r: 0 }), tr.add({ t: legacy ? 'rollL' : 'tr02s', x: 0, z: -1, l: 4, r: 0 })];
+  for (let z = -2; z >= -7; z--) added.push(tr.add(legacy ? { t: 'sideL', x: 0, z, l: 4, r: 0 } : { t: 'straight', o: 2, x: 0, z, l: 4, r: 0 }));
+  const path = [];
+  for (const t of added) { const pts = centerlineWorld(t, 6); if (path.length) pts.shift(); path.push(...pts); }
   const phys = new CarPhysics(tr), logic = new RaceLogic(tr); placeAtStart(phys, logic);
+  const bot = new Autopilot(path); bot.reset(phys);
   phys.vel.z = -v0 / 3.6; phys.fwdSpeed = v0 / 3.6;
   let onSide = 0, maxDl = 0, left = false;
   for (let i = 0; i < 120 * 6; i++) {
-    phys.clock = i; phys.step({ steer: 0, throttle, brake: false });
+    phys.clock = i; phys.step({ steer: steer ? bot.control(phys).steer : 0, throttle, brake: false });
     if (phys.rib && phys.rib.tile.o === 2) { onSide++; maxDl = Math.max(maxDl, Math.abs(phys.rib.dl)); }
     if (onSide && !phys.rib && phys.pos.z > -7 * CELL) left = true;
   }
   return { onSide, maxDl, left };
 }
 for (const legacy of [false, true]) {
-  test(`à grande vitesse la voiture tient sur le plan vertical sans glisser${legacy ? ' (ancien circuit : pièces rollL / sideL)' : ''}`, () => {
-    const r = sideRun(200, true, legacy);
-    assert.ok(r.onSide > 120 * 2, 'longtemps sur la route côté : ' + r.onSide);
-    assert.ok(r.maxDl < 0.5, 'aucune glissade : ' + r.maxDl);
+  test(`à grande vitesse, volant tenu, la voiture tient sur le plan vertical tout du long${legacy ? ' (ancien circuit : pièces rollL / sideL)' : ''}`, () => {
+    const r = sideRun(200, true, legacy, true);
+    assert.ok(r.onSide > 120 * 2 && !r.left, 'longtemps sur la route côté : ' + r.onSide);
+    assert.ok(r.maxDl < 6, 'elle garde sa ligne : ' + r.maxDl);
   });
-  test(`trop lente, elle glisse le long du plan et tombe par le bord (la gravité ne change pas)${legacy ? ' (ancien circuit)' : ''}`, () => {
-    const r = sideRun(72, false, legacy);
+  test(`mains lâchées, même à grande vitesse, le nez pique vers le bas et la voiture tombe du plan (PHYS_VER 37 : plus de maintien sans volant)${legacy ? ' (ancien circuit)' : ''}`, () => {
+    const r = sideRun(200, true, legacy, false);
     assert.equal(r.left, true, 'elle quitte la route avant la fin');
-    assert.ok(SIDE_HOLD > 0);
+    assert.ok(SIDE_DROP > 0);
+  });
+  test(`trop lente, même volant tenu, elle glisse le long du plan et tombe par le bord (la gravité ne change pas)${legacy ? ' (ancien circuit)' : ''}`, () => {
+    const r = sideRun(72, false, legacy, true);
+    assert.equal(r.left, true, 'elle quitte la route avant la fin');
   });
 }
 

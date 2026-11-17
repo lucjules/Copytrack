@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
 import { scriptTrack, Track } from '../js/track.js';
-import { PIECES, PIECE_ORDER, headingGuided, flagAllowed } from '../js/pieces.js';
+import { PIECES, PIECE_ORDER, rolledRibbon, flagAllowed } from '../js/pieces.js';
 import { ribbonOf } from '../js/ribbons.js';
 import { tileEnds, endsTouch } from '../js/connect.js';
 import { continuityIssues } from '../js/continuity.js';
@@ -29,7 +29,7 @@ test('sommet : du mur montant (normale vers l’arrière) au mur descendant une 
     assert.ok(Math.abs(top.y - a.y - HALF) < 1e-9 && top.ny === -1, 'au sommet : à l’envers, 16 m plus haut');
     assert.ok(PIECES[id].clearance * LEVEL_H >= HALF);
   }
-  assert.ok(headingGuided({ t: 'loopTop' }), 'la route guide le cap pendant le glissement d’une colonne (comme un looping décalé)');
+  assert.ok(rolledRibbon({ t: 'loopTop' }), 'pièce roulée pour le pilote automatique (sa projection au sol ne dit rien du virage), comme un looping décalé');
 });
 test('looping modulaire LPR / LPL n : Montée en L, n murs, sommet, n murs, Montée en L à l’envers ; on ressort une colonne à côté, au niveau de départ', () => {
   const tr = build('start B3 S6 LPR2 S6 finish');
@@ -49,7 +49,8 @@ test('le pilote fait le looping de 0 à 6 murs de chaque côté (jusqu’à ~80 
     assert.ok(R.yMax > 6.8 + 2 * LEVEL_H + W * LEVEL_H + HALF - 2, `${op}${W} : sommet atteint (${R.yMax.toFixed(1)} m)`);
   }
   const R = runTrack(build('start B3 S6 LPR8 S6 finish'), { maxTime: 30 });
-  assert.ok(!R.ok || R.respawns > 0, 'un looping trop haut pour l’élan : la voiture retombe');
+  // (PHYS_VER 37 : rien ne redresse plus la voiture en l'air ; retombée du sommet, elle peut se reposer sur la route du bas et repartir : on vérifie la chute elle-même.)
+  assert.ok(!R.ok || R.respawns > 0 || R.airTotal > 1, 'un looping trop haut pour l’élan : la voiture retombe');
 });
 test('les bouts se raccordent : rampe → mur → sommet → mur (à l’envers) → rampe (à l’envers)', () => {
   const tr = build('start S2 LPR1 S2 finish'), T = tr.tiles;

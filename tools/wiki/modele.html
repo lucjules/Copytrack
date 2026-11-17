@@ -266,8 +266,8 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
   <div class="cols">
     <div class="tbl"><table>
       <tr><th>Touche</th><th>En course</th></tr>
-      <tr><td><kbd>↑</kbd> <kbd>Z</kbd></td><td>Accélérer (en l'air : piquer du nez)</td></tr>
-      <tr><td><kbd>↓</kbd> <kbd>S</kbd></td><td>Freiner, marche arrière (en l'air : relever le nez)</td></tr>
+      <tr><td><kbd>↑</kbd> <kbd>Z</kbd></td><td>Accélérer (sans effet en l'air)</td></tr>
+      <tr><td><kbd>↓</kbd> <kbd>S</kbd></td><td>Freiner, marche arrière (en l'air : aérofrein, freine la rotation de la voiture)</td></tr>
       <tr><td><kbd>←</kbd> <kbd>→</kbd> <kbd>Q</kbd> <kbd>D</kbd></td><td>Tourner</td></tr>
       <tr><td>Frein + volant</td><td>Dérapage</td></tr>
       <tr><td><kbd>R</kbd></td><td>Revenir au dernier checkpoint (le chrono revient au temps du checkpoint)</td></tr>
@@ -295,10 +295,10 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
   <div class="cols">
     <div class="card"><h4>Dérapage au frein</h4><p>Il n'y a pas de bouton de dérapage. Freiner en tournant franchement, à bonne vitesse, fait décrocher l'arrière ; garder le volant prolonge la glisse.</p></div>
     <div class="card"><h4>Mini-turbo</h4><p>Une glisse assez longue charge un mini-turbo à deux niveaux : étincelles bleues, puis orange. On le lâche en sortie de virage.</p></div>
-    <div class="card"><h4>En l'air</h4><p>Le volant ne tourne plus que les roues. Accélérer fait plonger le nez, freiner le relève : c'est ainsi qu'on règle l'assiette avant de toucher le sol.</p></div>
+    <div class="card"><h4>En l'air</h4><p>Ni le volant ni l'accélérateur n'agissent. En quittant un bord, la voiture bascule nez en bas (d'autant plus qu'elle est lente) et rien ne la redresse. Seul le frein (aérofrein) freine sa rotation : on s'en sert pour arriver à la pente de la réception. C'est le petit contrôle en l'air de PolyTrack, qui fait gagner des dixièmes.</p></div>
     <div class="card"><h4>Réception</h4><p>Elle est parfaite, correcte ou ratée selon l'assiette au contact. Une réception ratée coûte de la vitesse ; certains objectifs bonus comptent les réceptions parfaites.</p></div>
-    <div class="card"><h4>Appui</h4><p>Sur les loopings, les tubes, les murs et les routes à l'envers, l'adhérence dépend de la force qui plaque les roues. Trop lent, on décroche.</p></div>
-    <div class="card"><h4>Wall-ride</h4><p>Une transition fait basculer la route sur un mur. On le prend vite (130 km/h au moins pour les circuits officiels), et on ressort par la transition inverse.</p></div>
+    <div class="card"><h4>Appui et pilotage</h4><p>Sur les loopings, les tubes, les murs et les routes à l'envers, c'est la vitesse qui plaque les roues : trop lent, on décroche. Rien n'y guide la voiture : il faut braquer pour suivre un looping décalé, un tire-bouchon ou une transition.</p></div>
+    <div class="card"><h4>Wall-ride</h4><p>Une transition fait basculer la route sur un mur. On le prend vite (130 km/h au moins pour les circuits officiels). Sur le mur, la gravité tire vers le bas et le nez pique : il faut tenir le volant un peu vers le haut pour garder sa ligne, mains lâchées on tombe. On ressort par la transition inverse.</p></div>
   </div>
   <h3>Anatomie d'un saut</h3>
   <div class="diagram" role="img" aria-label="Schéma d'un saut : rampe, trajectoire, puis trois réceptions possibles : parfaite, correcte, ratée">
@@ -312,7 +312,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
       <g transform="translate(560 158) rotate(22)"><rect x="-16" y="-8" width="32" height="14" rx="3" fill="var(--accent)"/></g>
       <text x="40" y="215" font-size="13" class="mut">élan (boosters)</text>
       <text x="180" y="100" font-size="13">rampe</text>
-      <text x="350" y="30" font-size="13">en l'air : gaz = nez vers le bas, frein = nez vers le haut</text>
+      <text x="300" y="30" font-size="13">en l'air : la voiture bascule nez en bas ; le frein (aérofrein) freine la rotation</text>
       <text x="600" y="150" font-size="13" font-weight="600">réception</text>
       <text x="600" y="195" font-size="12" class="mut">parallèle à la pente : parfaite</text>
       <text x="600" y="211" font-size="12" class="mut">un peu de travers : correcte</text>

@@ -247,7 +247,7 @@ export class RaceSession {
       tmpV.set(p.n.x, p.n.y, p.n.z);
       this.up.lerp(tmpV, 0.28).normalize();
     } else {
-      // En l'air, l'assiette vient de la physique (gaz = nez vers le bas, frein = nez vers le haut).
+      // En l'air, l'assiette vient de la physique (bascule au décollage, gardée ; l'aérofrein freine la rotation).
       const c = Math.cos(p.pitch), s = Math.sin(p.pitch);
       const gs = p.gSign;
       tmpV.set(-fx * s * gs, c * gs, -fz * s * gs);

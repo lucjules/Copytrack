@@ -1,8 +1,8 @@
 // Pilote automatique simple qui suit la ligne centrale d'un circuit scripté.
 // Utilisé pour la démo du menu et pour valider les circuits (tools/sim.mjs).
 import { CAR, steerLimitSpeed } from './physics/specs.js';
-import { headingGuided } from './pieces.js';
-import { dasin, datan2, dcos, dsin, hypot2, hypot3 } from './dmath.js';
+import { rolledRibbon, isSideTile } from './pieces.js';
+import { dasin, datan, datan2, dcos, dexp, dpow, dsin, hypot2, hypot3 } from './dmath.js';
 
 export class Autopilot {
   constructor(path, opts = {}) {
@@ -64,6 +64,32 @@ export class Autopilot {
     return h > 0.5 ? datan2(b[1] - a[1], h) : 0;
   }
 
+  // Aérofrein (PHYS_VER 37) : le pilote cherche où il retombe (sa trajectoire balistique contre le chemin devant) et son assiette à ce moment-là si la rotation
+  // continue ; si elle l'amènerait au-delà de la pente de la réception (plus piqué en tournant vers le bas, plus cabré en tournant vers le haut), il freine.
+  // Il relâche dès que la rotation restante l'y amène : le frein n'agit que sur la rotation, pas sur la vitesse. En gravité inversée : rien (pas de plafond prévu).
+  _airBrake(phys) {
+    if (phys.gSign < 0 || phys.vehicle === 'glider') return false;
+    const p = phys.pos, v = phys.vel, path = this.path, n = path.length, hv = hypot2(v.x, v.z);
+    if (hv < 2) return false;
+    const ux = v.x / hv, uz = v.z / hv, g = phys.g;
+    for (let k = this.idx; k < n && k < this.idx + 240; k++) {
+      const q = path[k], d = (q[0] - p.x) * ux + (q[2] - p.z) * uz;
+      if (d <= 1) continue;
+      const t = d / hv;
+      if (p.y + v.y * t - 0.5 * g * t * t > q[1] + 0.3) continue;
+      const a = path[Math.max(0, k - 2)], b = path[Math.min(n - 1, k + 2)], h = hypot2(b[0] - a[0], b[2] - a[2]);
+      const slope = h > 0.5 ? datan2(b[1] - a[1], h) : 0;
+      if (phys.airTime + t < 0.35) return false;      // vol trop court : la réception ne coûte rien
+      const pr = phys.pitchRate, kS = CAR.airSpin;
+      const err = phys.pitch + (pr * (1 - dexp(-kS * t))) / kS - slope;
+      // L'aérofrein amortit AUSSI le lacet : une voiture qui tourne (saut dans un virage) arriverait de travers. Dans ce cas il ne freine que si la réception coûterait
+      // de la vitesse (au-delà de landOk) ; sinon il vise la réception parfaite.
+      const tol = Math.abs(phys.omega) > 0.1 ? CAR.landOk * 0.8 : 0.03;
+      return Math.abs(err) > tol && err * pr > 0;
+    }
+    return false;
+  }
+
   // Point de reprise (départ, réapparition) : le point du tracé le plus proche, cherché sur TOUT le tracé (0.9.67 : avant, les 400 premiers points seulement ;
   // sur un circuit long, un checkpoint au-delà se raccrochait au premier passage voisin et le pilote faisait demi-tour), parmi ceux orientés dans le sens
   // de la voiture (un tronçon voisin parcouru dans l'autre sens n'est pas un point de reprise).
@@ -105,10 +131,7 @@ export class Autopilot {
     // à l'envers (son repère est déjà orienté par sa normale : droite = tangente × normale, voir ribbons.js frameLocal). Avant 0.9.59 le volant y était
     // inversé : sur un virage relevé, un tire-bouchon ou un looping posé au plafond, le pilote braquait du mauvais côté et finissait plaqué contre la paroi.
     if (phys.rib) { /* repère de la route : rien à traduire */ }
-    else if (phys.gSign < 0) {
-      c.steer = -c.steer;
-      if (!phys.grounded && phys.vehicle !== 'glider') { const t = c.throttle; c.throttle = c.brake; c.brake = t; }
-    }
+    else if (phys.gSign < 0) c.steer = -c.steer;
     // 0.9.11 : sur une dalle « volant inversé », la physique renverse le braquage (physics.js, reverseActive). Le pilote le sait : sans cela
     // toute correction aggravait l'écart (rétroaction positive) et le moindre bruit de volant sortait la voiture de la route.
     const reverseActive = phys.rib ? phys.rib.tile.s === 'reverse' : phys.grounded && phys.surfMod === 'reverse';
@@ -140,12 +163,21 @@ export class Autopilot {
       const d2 = R.dir * R.dl;
       const vs = Math.max(8, Math.abs(R.vs));
       const psiDes = dasin(Math.max(-0.5, Math.min(0.5, (-1.2 * d2) / vs)));
-      const st = (psiDes - R.psi) * 6 - phys.omega * 0.35;
+      // Sur un mur, on vise la DIRECTION DE MARCHE (cap + glisse), pas le cap seul : la gravité fait glisser la voiture vers le bas et il faut garder le nez
+      // un peu vers le haut (en crabe) pour tenir sa ligne (PHYS_VER 37) ; viser le cap laissait la voiture descendre de plusieurs mètres.
+      const travel = isSideTile(R.tile) && Math.abs(R.vs) > 5 ? datan2(R.vd, Math.abs(R.vs)) : R.psi;
+      // Braquage d'anticipation : celui qui fait tourner la voiture aussi vite que la pièce tourne sous elle (courbure géodésique kg, PHYS_VER 37 : plus de guidage),
+      // rapporté à l'angle de braquage permis à cette vitesse. Sans lui, le pilote ne corrigeait qu'après coup et sortait des loopings décalés et des tire-bouchons de travers.
+      const K = this.K, L = K.a + K.b, vAbs = Math.abs(R.vs);
+      const dMax = Math.min(K.steerMax, K.steerC * this.envGrip * dpow(Math.max(1, vAbs), -K.steerN));
+      // (et, sur un mur, de quoi tenir le nez qui pique vers le bas : R.sag. Pas dans un tube : la paroi y fait tourner la voiture d'elle-même.)
+      const ff = rolledRibbon(R.tile) ? datan(L * (R.dir * (R.kg || 0) + (R.sag || 0) / Math.max(8, vAbs))) / Math.max(1e-3, dMax) : 0;
+      const st = ff + (psiDes - travel) * 6 - phys.omega * 0.35;
       // 0.9.12 : sur un mur le pilote respecte aussi sa vitesse maximale (avant, gaz à fond : avec le moteur mesuré la vitesse montait sans limite).
       // PHYS_VER 36 : et la vitesse des virages à venir (un virage relevé se tient au braquage, qui est borné selon la vitesse).
       // (seulement sur un ruban « au sol » : virage relevé, tube… Sur une route roulée (mur, 45°) la projection horizontale du tracé ne dit rien de son
-      // virage, la route guide le cap, et lever le pied ferait passer sous la vitesse minimale de mur.)
-      const vT = headingGuided(R.tile) ? this.vCap : this._vTarget(Math.abs(R.vs));
+      // virage, et lever le pied ferait passer sous la vitesse minimale de mur.)
+      const vT = rolledRibbon(R.tile) ? this.vCap : this._vTarget(Math.abs(R.vs));
       return { throttle: Math.abs(R.vs) < Math.min(this.vCap, vT - 0.5), brake: Math.abs(R.vs) > vT + 6, steer: Math.max(-1, Math.min(1, st)), drift: false };
     }
     const path = this.path, p = phys.pos;
@@ -178,16 +210,22 @@ export class Autopilot {
       return { throttle: dive, brake: pull, steer: Math.max(-1, Math.min(1, ang * 2.2)), drift: false };
     }
     if (!phys.grounded) {
-      // En l'air (PHYS_VER 36) : ni les gaz ni le volant n'agissent, et le frein figerait l'assiette (aérofrein) : le pilote laisse l'assiette
-      // suivre d'elle-même la trajectoire puis la route (avant : il visait la pente d'atterrissage aux gaz et au frein).
-      return { throttle: false, brake: false, steer: 0, drift: false };
+      // En l'air : ni les gaz ni le volant n'agissent ; seul l'aérofrein amortit la rotation (PHYS_VER 37 : rien d'autre ne redresse la voiture).
+      return { throttle: false, brake: this._airBrake(phys), steer: 0, drift: false };
     }
     const v = Math.max(0, phys.fwdSpeed);
     const look = 8 + v * this.lookK;
     let j = this.idx;
     while (j < path.length - 1 && this.dist[j] - this.dist[this.idx] < look && path[j + 1][3] !== 1) j++;
     if (path[j + 1] && path[j + 1][3] === 1 && j === this.idx) j++;
-    const tq = path[j];
+    let tq = path[j];
+    // Visée arrêtée par l'entrée d'un ruban (mur, looping, tube : sa projection au sol ne dit rien de sa direction) : on prolonge la visée dans l'axe
+    // d'entrée du ruban, pour y arriver ALIGNÉ (sans guidage du cap sur les rubans, une entrée de travers part dans la bordure ou tombe du mur).
+    const short = look - (this.dist[j] - this.dist[this.idx]);
+    if (short > 2 && j > 0 && path[j + 1] && path[j + 1][3] === 1) {
+      const a = path[j - 1], ex = tq[0] - a[0], ez = tq[2] - a[2], el = hypot2(ex, ez);
+      if (el > 0.1) tq = [tq[0] + (ex / el) * short, tq[1], tq[2] + (ez / el) * short];
+    }
     const fx = -dsin(phys.yaw), fz = -dcos(phys.yaw);
     const tx = tq[0] - p.x, tz = tq[2] - p.z;
     const cross = fx * tz - fz * tx;

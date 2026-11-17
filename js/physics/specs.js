@@ -53,15 +53,16 @@ export const CAR = {
   magnetRange: 4,     // aimant : portée de l'attraction au-dessus d'une route aimantée (m)
   magnetAcc: 80,      // ... et accélération maximale vers la route, le long de sa normale (m/s²)
   launch: 0.6,        // vitesse normale (m/s) au-delà de laquelle la route « tombe » sous la voiture : elle décolle (0.9.11 : 2,0 -> 0,6, sans exemption d'angle)
-  airPitchAcc: 4.2,  // vivacité du tangage en l'air (relative : la moto est plus vive, le deltaplane moins)
-  airPitchDamp: 2.6, // amortissement de base (le ressort d'assiette l'utilise ×3)
-  airSpring: 18,     // raideur du ressort d'assiette (rad/s² par rad) : l'assiette rejoint son objectif en ≈ 0,5 s
-  // PHYS_VER 36 (PolyTrack) : en l'air, NI les gaz NI le volant ne pilotent la voiture (avant : assiette ± 14° aux gaz / au frein, lacet au volant).
-  // Seul le FREIN agit : l'aérofrein amortit la rotation (PolyTrack : tangage 28 → 6 °/s en 1,6 s). Sans lui, la rotation acquise est gardée.
+  // PHYS_VER 37 (PolyTrack, mesuré en boîte noire) : en l'air, NI les gaz NI le volant ne pilotent la voiture, et RIEN ne la redresse : la rotation acquise au
+  // décollage est gardée tout le vol. Seul le FREIN agit : l'aérofrein amortit la rotation (PolyTrack : tangage 28 → 7 °/s en 1,6 s). C'est le petit contrôle en l'air
+  // de PolyTrack : freiner au bon moment pour arriver à plat (ou à la pente de la réception) fait gagner des dixièmes. Avant (PHYS_VER 36) : un ressort d'assiette
+  // rapprochait l'assiette de la trajectoire (15 %) puis, près du sol, de la pente de la route (35 %) : la voiture se posait d'elle-même, le frein ne servait presque à rien.
   airBrake: 1.0,     // amortissement de la rotation par l'aérofrein (1/s), tangage et lacet
-  airLevelH: 14,     // sous cette hauteur (m) au-dessus de la route, l'assiette tend vers la pente de la route…
-  airLevelW: 0.35,   // … avec au plus cette part (aide partielle : la réception parfaite reste un geste)
-  airAero: 0.15,     // part de l'écart assiette de décollage → trajectoire que la stabilité aérodynamique corrige : l'inertie garde l'assiette (sans commande, comme avant)
+  airSpin: 0.1,      // amortissement naturel de la rotation en vol (1/s) : PolyTrack 28,6 → 22,6 °/s en 2 s
+  // Bascule au décollage : quand la route s'arrête sous la voiture, l'avant n'est plus porté alors que l'arrière l'est encore : la voiture part en piqué. PolyTrack (bord
+  // de route plat, mesuré) : 65 °/s à 39 km/h, 38 °/s à 78 km/h, 26 °/s à 140 km/h, 16 °/s à 225 km/h, soit airTip / (v + airTipV0) rad/s.
+  airTip: 18.4,      // (rad·m/s)
+  airTipV0: 5.5,     // (m/s)
   landOk: 0.38,      // écart d'angle toléré à la réception (rad) sans perte de vitesse (une bosse de pente passe)
   // Mini-turbo (phase 2) : une glisse CONTRÔLÉE se charge ; la récompense dépend de sa durée (et un peu de son angle, plafonné). Avant : +6 / +16 km/h pour 100 km/h perdus.
   mtTime1: 0.45,     // charge (s) pour le niveau 1 (PHYS_VER 36 : 0,6 -> 0,45 ; les glisses se referment d'elles-mêmes en ≈ 1 s)
@@ -145,7 +146,6 @@ export const MOTO = {
   driftRear: 0.76,    // glisse moins au freinage en virage
   steerIn: 11,
   steerOut: 11,
-  airPitchAcc: 5.2,   // plus vive en l'air
 };
 
 // Bateau (plaque bateau) : rapide sur l'eau, glisse un peu, se traîne sur la route.
@@ -170,7 +170,6 @@ const GLIDER = {
   ...CAR,
   accel: SURF_PHYS.engineAccel * (8 / 11),
   maxSpeed: SURF_PHYS.maxSpeed * (90 / 95),
-  airPitchAcc: 3.4,
 };
 export const SPECS = { car: CAR, moto: MOTO, boat: BOAT, glider: GLIDER };
 
@@ -199,8 +198,11 @@ export const GLIDE = {
 // Route sur le côté (pièces 90°) : appui aérodynamique (m/s² par (m/s)²) ajouté à l'appui réel. Pour tenir contre la gravité sur un
 // plan vertical il faut environ 21 m/s (75 km/h) ; en dessous, la voiture glisse le long du plan et tombe par le bord.
 export const SIDE_AERO = 0.03;
-// Compensation de la glissade sur un plan vertical (m/s² par (m/s)²) : g / 22² => tenue complète à partir de 22 m/s (80 km/h).
-export const SIDE_HOLD = 25 / (30 * 30);
+// PHYS_VER 37 (comme PolyTrack : aucune gravité « collée » à la route) : sur un mur, la gravité tire PLEINEMENT vers le bas du mur, et le nez de la voiture
+// PIQUE vers le bas (le poids l'emporte sur l'appui) : SIDE_DROP · g / v rad/s, d'autant plus vite qu'elle est lente. Mains lâchées, la voiture finit par
+// plonger et tomber du mur ; il faut tenir le volant un peu vers le haut pour garder sa ligne, et plus pour monter. Les pneus gardent toute leur adhérence :
+// un virage posé sur un mur se pilote comme au sol. Avant (PHYS_VER 36) : SIDE_HOLD annulait la gravité au-dessus de 80 km/h et la route guidait le cap.
+export const SIDE_DROP = 0.5;
 // 0.9.4 : vitesse minimale sur un mur. En dessous (108 km/h), la gravité reprend toute la paroi ; si l'élan manque encore SIDE_GRACE secondes
 // une fois la route penchée de plus de 45°, la voiture décroche et tombe (vitesse conservée : elle quitte le mur comme une balle).
 export const SIDE_MIN_SPEED = 30;

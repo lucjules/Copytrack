@@ -33,10 +33,10 @@ export const LESSONS = [
   },
   {
     id: 'reception', name: 'Saut et réception parfaite', decor: 'desert',
-    script: 'start B S C S2 G1 V-2 S3 finish', opts: { l: 6 },      // PHYS_VER 36 : saut d'une terrasse vers une terrasse plus basse (avant : tremplin puis pente, qu'on rattrapait au tangage en l'air)
+    script: 'start B S C S2 G1 V-1 D S2 finish', opts: { l: 6 },      // PHYS_VER 37 : la voiture bascule nez en bas en quittant le bord ; on se pose sur une PENTE en freinant en l'air (avant : terrasse plate, où l'on retombait à plat d'office)
     goal: { id: 'perfect', n: 1 },
-    intro: ['En l’air, ni le volant ni l’accélérateur n’agissent : la voiture garde le <b>cap</b> et l’<b>assiette</b> de son décollage.', '<b>{brake}</b> en l’air (aérofrein) arrête sa rotation. Décolle bien droit pour retomber <b>à plat</b> et dans l’axe.', 'Une réception parfaite (étincelles vertes) conserve ta vitesse ; une mauvaise te secoue.'],
-    tip: 'Décolle droit, sans tourner : en l’air rien ne se rattrape. Frein en l’air = aérofrein.',
+    intro: ['En quittant le bord, la voiture <b>bascule nez en bas</b> et rien ne la redresse : en l’air, ni le volant ni l’accélérateur n’agissent.', '<b>{brake}</b> en l’air (aérofrein) freine sa rotation : freine pour arriver à la <b>pente de la réception</b>, et décolle bien droit pour retomber dans l’axe.', 'Une réception parfaite (étincelles vertes) conserve ta vitesse ; une mauvaise te secoue.'],
+    tip: 'En l’air, la voiture pique du nez : freine (aérofrein) pour arriver à la pente de la réception.',
   },
   {
     id: 'plaque', name: 'Plaque de transformation', decor: 'desert',
