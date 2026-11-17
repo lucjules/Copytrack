@@ -10,7 +10,7 @@ import { InputRecorder, quantSteer } from '../js/replay.js';
 import { verifyRun, replayRun } from '../js/verify.js';
 import { PHYS_VER } from '../js/version.js';
 import { DrivingAids, aidsActive, aidedKey, cleanAids, steerCurve, AID_IDS } from '../js/aids.js';
-import { reducedMotion } from '../js/a11y.js';
+import { reducedMotion, watchSystemMotion } from '../js/a11y.js';
 import { parseVariant, applyVariant } from '../js/variants.js';
 
 const def = (id) => BUILTIN_TRACKS.find((d) => d.id === id);
@@ -89,6 +89,20 @@ console.log('Accessibilité');
 test('animations réduites : le réglage prime, « auto » suit le système', () => {
   assert.equal(reducedMotion('on', false), true); assert.equal(reducedMotion('off', true), false);
   assert.equal(reducedMotion('auto', true), true); assert.equal(reducedMotion('auto', false), false); assert.equal(reducedMotion(undefined, true), true);
+});
+
+test('animations réduites « Système » : un changement du réglage système est suivi même sans l’évènement « change » (relu toutes les 2 s), une seule fois par changement', () => {
+  const g = globalThis, saved = { mm: g.matchMedia, si: g.setInterval, ci: g.clearInterval };
+  const mq = { matches: true, addEventListener() {}, removeEventListener() {} };
+  let tick = null, cleared = false;
+  g.matchMedia = () => mq; g.setInterval = (f, ms) => { assert.equal(ms, 2000); tick = f; return 7; }; g.clearInterval = (id) => { cleared = id === 7; };
+  try {
+    const seen = [], stop = watchSystemMotion((v) => seen.push(v));
+    tick(); assert.deepEqual(seen, [], 'rien n’a changé');
+    mq.matches = false; tick(); tick(); assert.deepEqual(seen, [false], 'un changement, signalé une fois');
+    mq.matches = true; tick(); assert.deepEqual(seen, [false, true]);
+    stop(); assert.ok(cleared, 'arrêt : la relecture cesse');
+  } finally { g.matchMedia = saved.mm; g.setInterval = saved.si; g.clearInterval = saved.ci; }
 });
 
 await finish('Tous les tests des aides et de l’accessibilité passent.');

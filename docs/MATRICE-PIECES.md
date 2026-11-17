@@ -13,7 +13,7 @@ transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 37
 | — | orientation non proposée par l'éditeur (`flagAllowed`) |
 | n/a | pièce sans route roulable (raison dans le fichier JSON) |
 
-Totaux : CHUTE 73 · OK 136 · RACCORD 4 · SAUT 74 · n/a 120 · v≥150 400 · v≥80 23 · — 410.
+Totaux : CHUTE 73 · OK 194 · RACCORD 4 · SAUT 82 · n/a 120 · v≥150 464 · v≥80 23 · — 416.
 
 **Limites** : pilote automatique (pas un humain), voiture classique, sans revêtement ni obstacle, une seule pièce testée par chaîne, vitesse de croisière régulée.
 Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles) sont dans `tools/compat/matrice-pieces.json`.
@@ -100,6 +100,22 @@ Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles)
 | `cvdBigL2` Virage descendant grand ↰ · 2 | SAUT | v≥150 | v≥150 | SAUT | v≥150 | v≥150 | v≥150 | v≥150 |
 | `cvdBigL4` Virage descendant grand ↰ · 4 | SAUT | v≥150 | v≥150 | v≥80 | v≥150 | v≥150 | v≥150 | v≥150 |
 | `giantcurve` Virage géant | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvGiant05` Virage géant montant · ½ | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvGiant1` Virage géant montant · 1 | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvGiant2` Virage géant montant · 2 | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvGiant4` Virage géant montant · 4 | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `cvGiantL05` Virage géant montant ↰ · ½ | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvGiantL1` Virage géant montant ↰ · 1 | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvGiantL2` Virage géant montant ↰ · 2 | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvGiantL4` Virage géant montant ↰ · 4 | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `cvdGiant05` Virage géant descendant · ½ | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvdGiant1` Virage géant descendant · 1 | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvdGiant2` Virage géant descendant · 2 | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvdGiant4` Virage géant descendant · 4 | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
+| `cvdGiantL05` Virage géant descendant ↰ · ½ | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvdGiantL1` Virage géant descendant ↰ · 1 | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvdGiantL2` Virage géant descendant ↰ · 2 | OK | v≥150 | v≥150 | OK | OK | OK | v≥150 | v≥150 |
+| `cvdGiantL4` Virage géant descendant ↰ · 4 | SAUT | v≥150 | v≥150 | SAUT | OK | OK | v≥150 | v≥150 |
 
 ## Plateforme et anneaux
 
@@ -153,6 +169,7 @@ Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles)
 | `loopTopL` Sommet de looping ↰ | v≥150 | — | — | OK | — | — | — | — |
 | `tubeTurn` Tube en virage ↱ | SAUT | — | — | SAUT | — | — | — | — |
 | `tubeTurnL` Tube en virage ↰ | SAUT | — | — | SAUT | — | — | — | — |
+| `bankGiant` Virage géant relevé | OK | — | — | OK | — | — | — | — |
 
 ## Bifurcations
 

@@ -250,6 +250,7 @@ export default {
   'Saut de {n:w} cases sans tremplin : la voiture risque de tomber.': 'Jump of {n} cells without a ramp: the car may fall.',
   'Arrivée de saut plus haute que le départ.': 'Jump landing higher than the take-off.',
   'Carrefour : la boucle qui revient sur lui n’a aucun checkpoint, on peut la couper en tournant au premier passage. Pose un checkpoint dans la boucle.': 'Crossroads: the loop that comes back to it has no checkpoint, so it can be skipped by turning on the first pass. Put a checkpoint in the loop.',
+  'Bifurcation en T : un checkpoint dans une des voies ; qui prend l’autre voie ne le passe pas et ne peut plus finir la course. Pose-le avant la bifurcation ou après la fusion.': 'T fork: a checkpoint inside one of the lanes; whoever takes the other lane misses it and can no longer finish the race. Place it before the fork or after the merge.',
   '{a:t} inaccessible depuis le départ.': '{a} unreachable from the start.',
   'Gravité inversée au départ, mais le départ n’est pas posé au plafond : la voiture tombera vers le ciel. Pose le départ à l’envers (orientation Plafond) ou décoche la règle.': 'Inverted gravity at the start, but the start is not on the ceiling: the car will fall into the sky. Place the start upside down (Ceiling orientation) or untick the rule.',
   'Essai libre : ce circuit n’a pas d’arrivée (Échap pour revenir à l’éditeur).': 'Free test: this track has no finish (Esc to go back to the editor).',

@@ -428,7 +428,9 @@ export function checkTrack(track) {
   // 0.11.0 : un carrefour traversé deux fois (circuit en 8) laisse COUPER la boucle qui revient sur lui : au premier passage, on tourne directement vers la sortie.
   // Deux bras reliés par des pièces sans checkpoint (ni départ, ni arrivée) entre eux : la boucle se coupe. Remède : un checkpoint dans la boucle.
   const gate = (t) => !!cpKind(t) || PIECES[t.t].special === 'finish' || PIECES[t.t].special === 'start';
+  // (0.11.4 : seulement les croisements. Un carrefour en T est une BIFURCATION : ses deux voies se rejoignent plus loin, la boucle qu'elles forment est le choix offert.)
   for (const [J, nbs] of armNb) {
+    if (PIECES[J.t].arms.length < 4) continue;
     const arms = [...new Set(nbs)].filter((t) => !gate(t));
     let cut = false;
     for (let i = 0; i < arms.length && !cut; i++) {
@@ -443,6 +445,34 @@ export function checkTrack(track) {
       }
     }
     if (cut) issues.push({ tile: J, level: 'warn', msg: 'Carrefour : la boucle qui revient sur lui n’a aucun checkpoint, on peut la couper en tournant au premier passage. Pose un checkpoint dans la boucle.' });
+  }
+  // 0.11.4 : bifurcation en T : deux bras d'un T dont les voies (sans traverser d'autre carrefour) mènent au même second carrefour sont les deux chemins d'une bifurcation.
+  // Chaque checkpoint posé doit être pris : un checkpoint DANS une voie (ou un dans chacune) ne l'est pas par qui prend l'autre voie, et la course ne finit plus.
+  const isJ = (t) => PIECES[t.t].kind === 'junction', teeWarned = new Set();      // (une alerte par bifurcation, pas une par T)
+  for (const [J, nbs] of armNb) {
+    if (PIECES[J.t].arms.length !== 3) continue;
+    const lanes = [...new Set(nbs)].map((a) => {
+      if (isJ(a)) return { ends: new Set([a]), cp: false };
+      const seen = new Set([J, a]), q = [a], ends = new Set();
+      let cp = !!cpKind(a);
+      while (q.length) {
+        const t = q.pop();
+        for (const n of adj.get(t) || []) {
+          if (seen.has(n)) continue;
+          seen.add(n);
+          if (isJ(n)) { ends.add(n); continue; }
+          if (cpKind(n)) cp = true;
+          q.push(n);
+        }
+      }
+      return { ends, cp };
+    });
+    for (let i = 0; i < lanes.length; i++) for (let j = i + 1; j < lanes.length; j++) {
+      const a = lanes[i], b = lanes[j];
+      if (a.ends.size !== 1 || b.ends.size !== 1 || [...a.ends][0] !== [...b.ends][0] || [...a.ends][0] === J) continue;
+      const key = [J, [...a.ends][0]].map((t) => track.tiles.indexOf(t)).sort((u, v) => u - v).join('-');
+      if ((a.cp || b.cp) && !teeWarned.has(key)) teeWarned.add(key) && issues.push({ tile: J, level: 'warn', msg: 'Bifurcation en T : un checkpoint dans une des voies ; qui prend l’autre voie ne le passe pas et ne peut plus finir la course. Pose-le avant la bifurcation ou après la fusion.' });
+    }
   }
   for (const e of track.validate()) issues.push({ tile: null, level: 'error', msg: e });
   // 0.9.59 : « Inversion de gravité au départ » sans plafond au départ. La voiture part en gravité inversée ; si le départ n'est pas une pièce posée à l'envers, il n'y a

@@ -439,7 +439,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <div class="card"><h4>Chicanes</h4><p>La route se décale d'une colonne en gardant son cap : normale, longue, rapide, et le grand S sur deux colonnes.</p></div>
     <div class="card"><h4>Plaques</h4><p>Surfaces libres : carrés, triangles et secteurs, avec des bordures choisies côté par côté. Idéales pour recevoir un saut.</p></div>
     <div class="card"><h4>Largeur variable</h4><p>Route étroite de 12 m et route large de 56 m, avec leurs transitions depuis la route normale de 24 m.</p></div>
-    <div class="card"><h4>Carrefours</h4><p>En croix et en T. Un circuit peut repasser par le même croisement : c'est le « nœud en 8 ».</p></div>
+    <div class="card"><h4>Carrefours</h4><p>En croix et en T. Un circuit peut repasser par le même croisement : c'est le « nœud en 8 ». Le T sert de <strong>bifurcation</strong> : on arrive par son pied, on choisit tout droit ou la branche, et les deux voies se rejoignent à un second T.</p></div>
     <div class="card"><h4>Looping modulaire</h4><p>Montée, de 0 à 6 murs, un sommet, puis la redescente une colonne à côté.</p></div>
     <div class="card"><h4>Tube en virage</h4><p>Un tube de 2 × 2 cases qui tourne, entre des sections de tube.</p></div>
   </div>
@@ -491,7 +491,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <div class="card"><h4>Inspecter <kbd>I</kbd></h4><p>Un panneau de propriétés lié au circuit dans les deux sens ; des gizmos 3D déplacent et pivotent les décorations.</p></div>
     <div class="card"><h4>Gomme <kbd>X</kbd></h4><p>Avec un filtre : tout, décorations seules ou pistes seules.</p></div>
     <div class="card"><h4>Pot de peinture</h4><p>Remplit toute une zone connectée d'une pièce ou d'un revêtement ; la zone est surlignée avant le clic.</p></div>
-    <div class="card"><h4>Vérificateur <kbd>F2</kbd></h4><p>Extrémités libres, sauts risqués, raccords d'orientation, pièces inaccessibles, boucles de carrefour sans checkpoint (qu'on pourrait couper) ; un clic fait clignoter les pièces en cause.</p></div>
+    <div class="card"><h4>Vérificateur <kbd>F2</kbd></h4><p>Extrémités libres, sauts risqués, raccords d'orientation, pièces inaccessibles, boucles de carrefour sans checkpoint (qu'on pourrait couper), checkpoint dans une voie de bifurcation en T ; un clic fait clignoter les pièces en cause.</p></div>
     <div class="card"><h4>Prolonger <kbd>P</kbd></h4><p>Déroule la route sans viser les cases : ligne, virage, pente, mur ; les transitions s'insèrent toutes seules.</p></div>
   </div>
   <h3>Les onglets de la palette</h3>
@@ -620,11 +620,11 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <tr><th>Jeton</th><th>Pièce</th><th>Jeton</th><th>Pièce</th></tr>
     <tr><td><code>start</code> <code>finish</code> <code>C</code></td><td>départ, arrivée, checkpoint</td><td><code>S3</code></td><td>3 lignes droites</td></tr>
     <tr><td><code>R</code> <code>L</code> / <code>RR</code> <code>LL</code></td><td>virage serré / grand virage</td><td><code>BR</code> <code>BRR</code></td><td>virage relevé, très grand relevé</td></tr>
-    <tr><td><code>HR</code> / <code>XR</code></td><td>très grand virage plat / virage géant (5×5)</td><td><code>U</code> <code>D</code> <code>UU</code> <code>DD</code></td><td>pentes et tremplins</td></tr>
+    <tr><td><code>HR</code> / <code>XR</code> <code>XBR</code> <code>XUR2</code> <code>XDR1</code></td><td>très grand virage plat / virage géant (5×5) : plat, relevé, montant, descendant</td><td><code>U</code> <code>D</code> <code>UU</code> <code>DD</code></td><td>pentes et tremplins</td></tr>
     <tr><td><code>G2</code> <code>GR2</code></td><td>vide de 2 cases (avec anneau turbo)</td><td><code>V-2</code></td><td>changer de niveau</td></tr>
     <tr><td><code>O</code> <code>OB</code> <code>OD</code> <code>OT</code></td><td>loopings</td><td><code>LPR2</code></td><td>looping modulaire, 2 murs</td></tr>
     <tr><td><code>TI TM4 TO</code></td><td>tube modulaire</td><td><code>TRR</code> <code>TLL</code></td><td>tube en virage</td></tr>
-    <tr><td><code>ZR</code> <code>ZR3</code> <code>ZR4</code> <code>ZZR</code></td><td>chicanes</td><td><code>JX</code> <code>JT</code></td><td>croisement, carrefour en T</td></tr>
+    <tr><td><code>ZR</code> <code>ZR3</code> <code>ZR4</code> <code>ZZR</code></td><td>chicanes</td><td><code>JX</code> <code>JT</code> / <code>TSPL … TALT … TMRG</code></td><td>croisement, carrefour en T / bifurcation en T</td></tr>
     <tr><td><code>NI N NO</code> / <code>WI W WO</code></td><td>route étroite / large</td><td><code>[plate3]*10</code></td><td>plaque, bordures côté par côté</td></tr>
     <tr><td><code>SPL … ALT … MRG</code></td><td>bifurcation à deux chemins</td><td><code>[tr01s] S2&lt; [tr10s]</code></td><td>wall-ride sur le mur gauche</td></tr>
     <tr><td><code>ZL4&lt; ZR4&lt;</code></td><td>chicanes posées sur le mur : bosse (monter de 32 m, redescendre)</td><td><code>{ k: 'block', at, wall: 'bas' }</code></td><td>bloc sur le bas du mur (obstacle de circuit)</td></tr>
@@ -686,6 +686,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <dt>Chicane</dt><dd>Pièce qui décale la route d'une colonne en gardant son cap.</dd>
     <dt>Contrat</dt><dd>L'ensemble des mesures qu'un circuit officiel doit tenir (<code>tools/contract.mjs</code>).</dd>
     <dt>Croisement</dt><dd>Carrefour en croix ; un circuit peut le traverser deux fois, avec un checkpoint dans la boucle pour qu'on ne puisse pas la couper.</dd>
+    <dt>Bifurcation en T</dt><dd>Un carrefour en T où l'on choisit tout droit ou la branche ; les deux voies se rejoignent à un second T. Pas de checkpoint dans une voie : qui prend l'autre ne pourrait plus finir.</dd>
     <dt>Fantôme</dt><dd>Une voiture transparente qui rejoue une course enregistrée.</dd>
     <dt>Famille</dt><dd>Groupe de pièces de l'éditeur dont on règle les caractéristiques.</dd>
     <dt>Fiche (Race Hub)</dt><dd>L'écran d'un circuit : carte, médailles, fantômes, classements.</dd>

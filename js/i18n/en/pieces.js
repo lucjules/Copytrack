@@ -125,6 +125,12 @@ export default {
   'Virage descendant grand · {a:w}': 'Wide downhill turn · {a}',
   'Virage descendant serré ↰ · {a:w}': 'Tight downhill turn ↰ · {a}',
   'Virage descendant grand ↰ · {a:w}': 'Wide downhill turn ↰ · {a}',
+  // 0.11.4 : virage géant relevé et inclinés
+  'Virage géant relevé': 'Banked giant turn',
+  'Virage géant montant · {a:w}': 'Climbing giant turn · {a}',
+  'Virage géant montant ↰ · {a:w}': 'Climbing giant turn ↰ · {a}',
+  'Virage géant descendant · {a:w}': 'Downhill giant turn · {a}',
+  'Virage géant descendant ↰ · {a:w}': 'Downhill giant turn ↰ · {a}',
   'Transition {a:t} → {b:t}': 'Transition {a} → {b}',
   'Transition {a:t} → {b:t} (douce 2×2)': 'Transition {a} → {b} (soft 2×2)',
   'sol': 'ground',

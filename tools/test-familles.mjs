@@ -72,13 +72,13 @@ test('Looping : orientation × taille × 1 à 3 boucles = 12 pièces, toutes à 
   }
   assert.equal(PIECES.loopTriple.size, 4);
 });
-test('Virage incliné : 16 pièces montantes + 16 descendantes (droite / gauche × serré / grand × ½, 1, 2, 4), rise = inclinaison signée', () => {
+test('Virage incliné : 24 pièces montantes + 24 descendantes (droite / gauche × serré / grand / géant × ½, 1, 2, 4), rise = inclinaison signée', () => {
   for (const sgn of [1, -1]) {
     const inc = Object.entries(FAMILIES.turn.members).filter(([, tr]) => Math.sign(+tr.incl) === sgn);
-    assert.equal(inc.length, 16, sgn > 0 ? 'montants' : 'descendants');
+    assert.equal(inc.length, 24, sgn > 0 ? 'montants' : 'descendants');      // (0.11.4 : + 8 géants)
     for (const [type, tr] of inc) {
       assert.equal(PIECES[type].kind, 'arc'); assert.equal(PIECES[type].rise, +tr.incl);
-      assert.equal(PIECES[type].size, tr.size === 's' ? 1 : 2); assert.equal(PIECES[type].mirror === -1, tr.dir === 'L');
+      assert.equal(PIECES[type].size, { s: 1, m: 2, xl: 5 }[tr.size]); assert.equal(PIECES[type].mirror === -1, tr.dir === 'L');
     }
   }
 });
@@ -191,8 +191,10 @@ for (const type of CURVES) {
     const P = PIECES[type], t = tile({ t: type, l: 1 }), half = P.size * HALF, mir = P.mirror < 0 ? -1 : 1;
     const o = {};
     // Entrée : milieu du bord sud de la route ; sortie : bord est (ou ouest).
-    const A = P.size === 1 ? { x: 0, z: half } : { x: mir * -HALF, z: half };
-    const B = P.size === 1 ? { x: mir * half, z: 0 } : { x: mir * half, z: -HALF };
+    // (arc de centre (half, half) et de rayon (size − ½) case : 0.11.4, aussi le virage géant 5×5)
+    const R = (P.size - 0.5) * 2 * HALF;
+    const A = { x: mir * (half - R), z: half };
+    const B = { x: mir * half, z: half - R };
     sampleLocal(t, A.x, A.z, o);
     assert.ok(Math.abs(o.h - baseY(t)) < 1e-6, 'entrée à ' + o.h);
     assert.ok(Math.abs(o.d) < 1e-6, 'sur la ligne centrale');

@@ -4550,6 +4550,635 @@
    }
   }
  },
+ "bankGiant": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "cvGiant05": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvGiant1": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvGiant2": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvGiant4": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.49 250:ok/vol0.64"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.49 250:ok/vol0.59"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvGiantL05": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvGiantL1": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvGiantL2": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvGiantL4": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.49 250:ok/vol0.64"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.49 250:ok/vol0.59"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiant05": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiant1": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.02 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.03 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiant2": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiant4": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.4 250:ok/vol0.4"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.49 250:ok/vol0.6"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.28 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.28 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiantL05": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiantL1": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.03 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.02 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiantL2": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiantL4": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.4 250:ok/vol0.4"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.49 250:ok/vol0.6"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.28 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.28 150:ok 250:ok"
+   }
+  }
+ },
  "tr01s": {
   "kind": "ribbon",
   "cells": {

@@ -6,6 +6,28 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.11.4 — familles : la bifurcation en T, le virage géant relevé et incliné
+
+**`PHYS_VER` reste 37** (pas encore publiée). **Redéployer `submit-score`** : onze circuits changent.
+
+- **Bifurcation en T** (script `TSPL … TALT … TMRG`, branche à gauche : `TSPLL`) : le carrefour en T sert enfin. On arrive par son pied, on choisit **tout droit**
+  ou **la branche** ; les deux voies se rejoignent à un second T, la branche arrivant par le côté. Le virage à 90° dans un T est serré : le choix intéressant est
+  « risque contre sécurité ». Dans les circuits, la voie directe **saute un vide**, la branche **fait le tour** (8 s de plus, sans risque).
+  Vérificateur : un T n'est plus pris pour un raccourci (la règle de la 0.11.0 ne vise plus que les croisements) ; il signale un checkpoint posé dans une voie
+  (tous doivent être pris : qui prend l'autre voie ne finirait plus).
+- **Virage géant relevé** et **virages géants inclinés** (montée ou descente de ½ à 4 niveaux, ↱ / ↰) : la famille Virage a maintenant toutes ses combinaisons
+  au rayon Géant (17 pièces, script `XBR`, `XUR n`, `XDR n`).
+- **Circuits** :
+  - bifurcation en T : **Temple** (avant le croisement) et **Viaduc Vertical** (au sommet) ;
+  - la boucle « croisement + trois virages géants plats », répétée sur neuf circuits, est variée : relevée (Lagon, Néons, Éclats, Cadence), en pente
+    (Lianes, Quai), qui plonge et remonte (Barrière), relevée et en pente (Archipel, Galerie).
+  Les 72 circuits tiennent leur contrat ; temps quasi inchangés, médailles inchangées.
+- Correction : le réglage « animations réduites : Système » suit le changement du réglage du système même quand le navigateur ne le signale pas (relu toutes
+  les 2 s) ; c'était la cause d'un test navigateur instable.
+- Tests : `tools/test-familles-04.mjs` (nouveau) ; familles, accessibilité. Wiki : carrefours, jetons de script, glossaire.
+- Pas faits dans cette phase (repoussés) : largeur variable des virages et des pentes, chicanes relevées ou inclinées, plaques inclinées, tubes de grand rayon ou en
+  pente, checkpoint posé sur un carrefour.
+
 ## Bêta 0.11.3 — wall-rides 2.0 : la route monte le long du mur, des blocs à passer par-dessus
 
 **`PHYS_VER` reste 37** (pas encore publiée : une seule remise à zéro des records avec la 0.11.1). **Redéployer `submit-score`** : douze circuits changent.

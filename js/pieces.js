@@ -173,6 +173,13 @@ for (const [pre, size, mir, lab] of [['cvd', 1, 1, 'serré'], ['cvdBig', 2, 1, '
   for (const r of RISES) gen(pre + rtag(r), { label: `Virage descendant ${lab} · ${rtxt(r)}`, kind: 'arc', size, rise: -r, ...(mir < 0 ? { mirror: -1 } : {}) });
 }
 
+// 0.11.4 : la famille Virage complétée pour le virage géant (5×5, rayon 144 m) : relevé, et incliné (montée / descente de ½ à 4 niveaux, ↱ / ↰).
+export const GIANT_IDS = ['bankGiant'];
+PIECES.bankGiant = { label: 'Virage géant relevé', kind: 'ribbon', size: 5, rise: 0, clearance: 2, arc: true, bank: 0.5 };
+for (const [pre, mir, dn, lab] of [['cvGiant', 1, 1, 'montant'], ['cvGiantL', -1, 1, 'montant ↰'], ['cvdGiant', 1, -1, 'descendant'], ['cvdGiantL', -1, -1, 'descendant ↰']]) {
+  for (const r of RISES) { const id = pre + rtag(r); PIECES[id] = { label: `Virage géant ${lab} · ${rtxt(r)}`, kind: 'arc', size: 5, rise: dn * r, ...(mir < 0 ? { mirror: -1 } : {}) }; GIANT_IDS.push(id); }
+}
+
 // Phase 3 : rubans qu'on peut rouler autour de leur axe d'entrée (loopings sur un mur / latéraux / inclinés, vrilles et tire-bouchons inclinés…).
 for (const id of Object.keys(PIECES)) {
   const P = PIECES[id];
@@ -271,6 +278,8 @@ export const PIECE_ORDER = [
   'cross', 'tee',
   // 0.9.72 : looping modulaire, tube en virage (à la suite : ne jamais réordonner)
   'loopTop', 'loopTopL', 'tubeTurn', 'tubeTurnL',
+  // 0.11.4 : virage géant relevé et inclinés (à la suite : ne jamais réordonner)
+  ...GIANT_IDS,
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.

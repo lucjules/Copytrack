@@ -609,10 +609,12 @@ export function hashString(s) {
 //                       automatique, sinon il suit la directe) ; MRG pose la fusion. Les deux voies doivent finir côte à côte (la
 //                       déportée du même côté qu'au départ), dans le même sens et au même niveau : ex. une voie qui saute un vide, l'autre qui en fait le tour.
 //   Phase 2 : HR / HL très grand virage plat (3x3)   UX / DX  ligne droite inclinée de 4 niveaux (montée / descente)
-//   0.9.67 : XR / XL virage géant plat (5x5, rayon 144 m)
+//   0.9.67 : XR / XL virage géant plat (5x5, rayon 144 m) ; 0.11.4 : XBR / XBL relevé, XUR / XUL n montant, XDR / XDL n descendant (n comme CVR)
 //   0.9.68 : suffixe *n : style du portique d'un départ, d'une arrivée ou d'un checkpoint : *1 ligne au sol, *2 arche, *3 pylônes (ex. start*2 C*3 finish*1)
 //   0.9.69 : sur une plaque, *n est le masque de ses bordures (un bit par bord, *15 : tout autour), ex. [plate2]*15 P*5
 //   0.9.72 : LPR / LPL n looping modulaire (n murs de chaque côté, on ressort une colonne à droite / à gauche) ; TRR / TLL tube en virage (2×2)
+//   0.11.4 : TSPL … TALT … TMRG bifurcation EN T : un T (branche à droite ; TSPLL : à gauche), la voie directe tout droit, puis (TALT) celle de la branche ; elles se
+//            rejoignent à un second T (TMRG), la branche arrivant par le côté de la case qui suit la directe. TALTP : le pilote automatique suit la branche.
 //   0.9.71 : JX croisement (JXR / JXL : en tournant), JT / JTL carrefour en T tout droit (branche à droite / à gauche), JTD / JTG prendre la branche,
 //            JR / JL arriver par la branche et tourner ; repasser par un carrefour déjà posé (circuit en 8) : même jeton au même endroit
 //   0.9.70 : N route étroite (12 m), NI rétrécissement, NO retour à 24 m ; WI élargissement (3×3), W route large (56 m, 3×3), WO retour à 24 m
@@ -743,6 +745,35 @@ export function scriptTrack(name, script, opts = {}) {
     pushPts(forkPath(jT, branch, true));
     x = A.x + fwd.x * 2; z = A.z + fwd.z * 2; h = A.h; l = A.l;
     split = null;
+  };
+  // 0.11.4 : bifurcation EN T (TSPL / TSPLL … TALT / TALTP … TMRG) : un carrefour en T où l'on arrive par le pied ; la voie directe continue tout droit, la voie de la
+  // branche tourne (à droite : TSPL ; à gauche : TSPLL). Les deux voies se rejoignent à un second T posé au bout de la directe, où la branche arrive par le côté.
+  let tsplit = null;
+  const teeOpen = (side) => {
+    if (tsplit) throw new Error(`${name} : bifurcation en T déjà ouverte (TSPL … TMRG ne s'imbriquent pas)`);
+    const r = side > 0 ? h : (h + 2) & 3;
+    tsplit = { side, r, x, z, h, l, start: path.length, segA: null, endA: null, botB: false };
+    junction('tee', r, 0);
+  };
+  const teeAlt = (botB) => {
+    if (!tsplit || tsplit.segA) throw new Error(`${name} : TALT sans TSPL (ou deux fois)`);
+    tsplit.segA = path.splice(tsplit.start);
+    tsplit.endA = { x, z, h, l };
+    tsplit.botB = botB;
+    x = tsplit.x; z = tsplit.z; h = tsplit.h; l = tsplit.l;
+    junction('tee', tsplit.r, tsplit.side);
+  };
+  const teeMerge = () => {
+    if (!tsplit || !tsplit.segA) throw new Error(`${name} : TMRG sans TSPL … TALT`);
+    const A = tsplit.endA, segB = path.splice(tsplit.start), B = { x, z, h, l };
+    // (la position courante est la case où se pose la pièce suivante : les deux voies doivent y arriver, la directe tout droit, la branche par le côté)
+    const side = B.x !== A.x || B.z !== A.z || B.l !== A.l ? 0 : B.h === ((A.h + 3) & 3) ? 1 : B.h === ((A.h + 1) & 3) ? -1 : 0;
+    if (!side) throw new Error(`${name} : les deux voies de la bifurcation en T ne se rejoignent pas (directe : case ${A.x},${A.z} niveau ${A.l} cap ${A.h} ; branche : case ${B.x},${B.z} niveau ${B.l} cap ${B.h} ; attendu : la même case et le même niveau, la branche arrivant par le côté)`);
+    const r = side > 0 ? A.h : (A.h + 2) & 3;
+    if (tsplit.botB) { pushPts(segB); x = B.x; z = B.z; h = B.h; l = B.l; junction('tee', r, side); }
+    else { pushPts(tsplit.segA); x = A.x; z = A.z; h = A.h; l = A.l; junction('tee', r, 0); }
+    // la branche non suivie par le pilote : le T de fusion doit exister quel que soit le chemin du pilote (posé ci-dessus)
+    tsplit = null;
   };
   // Ajoute des points au chemin du pilote en évitant le doublon de raccord.
   function pushPts(pts) { if (!pts.length) return; if (path.length) pts = pts.slice(1); path.push(...pts); }
@@ -956,6 +987,23 @@ export function scriptTrack(name, script, opts = {}) {
         h = (h + (sgn > 0 ? 1 : 3)) & 3;
         break;
       }
+      // 0.11.4 : XBR / XBL virage géant RELEVÉ ; XUR / XUL n virage géant MONTANT, XDR / XDL n DESCENDANT (n : 0 = ½, 1, 2, 4 niveaux, comme CVR)
+      case 'XBR': case 'XBL': case 'XUR': case 'XUL': case 'XDR': case 'XDL': {
+        const sgn = op[2] === 'R' ? 1 : -1, kind = op[1];
+        const fwd = rot(h, 0, -1), side = rot(h, sgn, 0);
+        const cells = [];
+        for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) cells.push([x + side.x * i + fwd.x * j, z + side.z * i + fwd.z * j]);
+        const ax = Math.min(...cells.map((c) => c[0])), az = Math.min(...cells.map((c) => c[1]));
+        if (kind === 'B') { if (sgn > 0) place('bankGiant', ax, az, l, h); else place('bankGiant', ax, az, l, h + 1, true); }
+        else {
+          const k = ['05', '1', '2', '4'][n === 0 ? 0 : n === 1 ? 1 : n === 2 ? 2 : 3], r = k === '05' ? 0.5 : +k;
+          place((kind === 'U' ? 'cvGiant' : 'cvdGiant') + (sgn > 0 ? '' : 'L') + k, ax, az, l, h);      // (niveau d'entrée ; la pièce monte ou descend de r)
+          l += kind === 'U' ? r : -r;
+        }
+        x += fwd.x * 4 + side.x * 5; z += fwd.z * 4 + side.z * 5;
+        h = (h + (sgn > 0 ? 1 : 3)) & 3;
+        break;
+      }
       // 0.9.72 : looping modulaire LPR / LPL n : Montée en L, n murs (1 par défaut, 0 possible), Sommet de looping (↱ / ↰ : on redescend une colonne à
       // droite / à gauche), n murs à la descente, Montée en L parcourue à l'envers ; on repart dans la colonne voisine, au niveau de départ, même cap.
       case 'LPR': case 'LPL': {
@@ -1055,11 +1103,17 @@ export function scriptTrack(name, script, opts = {}) {
       case 'ALT': splitAlt(false); break;
       case 'ALTP': splitAlt(true); break;
       case 'MRG': splitMerge(); break;
+      case 'TSPL': teeOpen(1); break;
+      case 'TSPLL': teeOpen(-1); break;
+      case 'TALT': teeAlt(false); break;
+      case 'TALTP': teeAlt(true); break;
+      case 'TMRG': teeMerge(); break;
       case 'V': l += n; break;
       default: throw new Error('Instruction inconnue : ' + op);
     }
   }
   if (split) throw new Error(`${name} : bifurcation SPL sans MRG`);
+  if (tsplit) throw new Error(`${name} : bifurcation en T (TSPL) sans TMRG`);
   for (const d of opts.decos || []) tr.addDeco(d);
   tr.path = path;
   tr.turtle = { x, z, h, l };   // position finale (sert à refermer les circuits à tours)
