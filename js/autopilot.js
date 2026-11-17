@@ -165,7 +165,10 @@ export class Autopilot {
       // Revenir au centre : cap visé proportionnel à l'écart, puis braquage vers ce cap.
       const d2 = R.dir * R.dl;
       const vs = Math.max(8, Math.abs(R.vs));
-      const psiDes = dasin(Math.max(-0.5, Math.min(0.5, (-1.2 * d2) / vs)));
+      // Ligne visée sur un mur (0.11.3 : bloc posé sur le bas ou le haut du mur, tracks.js wallSolid) : hauteur en m (+ = vers le haut du mur), ramenée à l'axe latéral du ruban.
+      const wl = this.path.wallLine && R.sag ? this.path.wallLine[this.idx] || 0 : 0;
+      const tgt = wl ? wl * Math.sign(R.sag) * phys.gSign : 0;
+      const psiDes = dasin(Math.max(-0.5, Math.min(0.5, (-(wl ? 1.8 : 1.2) * (d2 - tgt)) / vs)));      // (plus vif pour changer de ligne devant un bloc)
       // Sur un mur, on vise la DIRECTION DE MARCHE (cap + glisse), pas le cap seul : la gravité fait glisser la voiture vers le bas et il faut garder le nez
       // un peu vers le haut (en crabe) pour tenir sa ligne (PHYS_VER 37) ; viser le cap laissait la voiture descendre de plusieurs mètres.
       const travel = isSideTile(R.tile) && Math.abs(R.vs) > 5 ? datan2(R.vd, Math.abs(R.vs)) : R.psi;

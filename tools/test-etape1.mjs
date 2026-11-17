@@ -88,10 +88,11 @@ test('famille « Chicane » de l’éditeur (longueur × décalage × sens), ent
   assert.deepEqual(familyOf('sbendFast').traits, { len: '4', shift: '1', dir: 'R' });
   assert.equal(Object.keys(FAMILIES.chicane.members).length, 8);
 });
-test('options : à l’envers, sans bordures, tunnel, thème ; ni mur, ni mouvement, ni checkpoint ; les bandes de route ont 4 tronçons par case', () => {
+test('options : à l’envers, sans bordures, tunnel, thème ; ni mouvement, ni checkpoint ; sur un mur gauche ou droit seulement (0.11.3, wall-ride qui monte ou descend) ; les bandes de route ont 4 tronçons par case', () => {
   for (const f of ['v', 'nb', 'tn', 'th']) assert.ok(flagAllowed('sbend', f), f);
   for (const f of ['mv', 'cp', 'tb']) assert.ok(!flagAllowed('sbend', f, null, 1), f);
-  assert.ok(!flagAllowed('sbend', 'o', null, 1));
+  for (const o of [1, 2]) assert.ok(flagAllowed('sbend', 'o', null, o), 'mur ' + o);      // (0.11.3 : roulée sur un mur, la chicane monte ou descend le long du mur)
+  for (const o of [3, 4, 5, 6]) assert.ok(!flagAllowed('sbend', 'o', null, o), 'roulis ' + o + ' : sortie hors de la grille');
   for (const id of CHICANES) assert.equal(stripsFor({ t: id, x: 0, z: 0, l: 0, r: 0 })[0].length, 8 * PIECES[id].size + 1);
   const gb = new GeoBuilder(), glow = new GeoBuilder();
   buildTileInto(gb, glow, Track.normalize({ t: 'sbendWide', x: 0, z: 0, l: 3, r: 1, tn: 1 }));

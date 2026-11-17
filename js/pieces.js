@@ -177,6 +177,9 @@ for (const [pre, size, mir, lab] of [['cvd', 1, 1, 'serré'], ['cvdBig', 2, 1, '
 for (const id of Object.keys(PIECES)) {
   const P = PIECES[id];
   if (P.kind === 'loop' || id === 'twist' || id === 'cork' || id === 'corkL') P.rollable = true;
+  // 0.11.3 (wall-ride) : la chicane aussi. Roulée sur un mur, son décalage d'une (deux) colonne(s) devient une MONTÉE ou une DESCENTE de 32 m (64 m) le long du mur,
+  // en S lisse : la route « passe en hauteur ». (Inclinée à 45° ou en surplomb, la sortie tomberait hors de la grille : rollFits la refuse.)
+  if (P.kind === 'sbend') P.rollable = true;
 }
 
 // Orientation d'une route : roulis ψ autour de l'axe de la route : normale = cos ψ · (haut de la route) + sin ψ · (droite de la route).
@@ -452,8 +455,9 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
   if (p.kind === 'ring' || p.kind === 'fork') return false;
   // 0.9.71 : un carrefour se pose à l'envers ou sans bordures (thème : plus haut) ; rien d'autre.
   if (p.kind === 'junction') return flag === 'nb';
-  // 0.9.68 : une chicane se pose à l'envers, sans bordures ou sous un tunnel (sa géométrie est une bande de route ordinaire) ; ni mur, ni mouvement, ni checkpoint.
-  if (p.kind === 'sbend') return flag === 'nb' || flag === 'tn';
+  // 0.9.68 : une chicane se pose à l'envers, sans bordures ou sous un tunnel (sa géométrie est une bande de route ordinaire) ; ni mouvement, ni checkpoint.
+  // 0.11.3 : et sur un mur gauche ou droit (roulis, plus bas) : wall-ride qui monte ou descend.
+  if (p.kind === 'sbend' && flag !== 'o') return flag === 'nb' || flag === 'tn';
   // 0.9.3 : orientation « mur gauche / droit » : une ligne ou un virage ordinaire peut être posé sur un mur (val 1 = gauche, 2 = droit).
   // Une route sur un mur n'a ni tunnel, ni checkpoint, ni anneau, ni mouvement, ni bordures ; le plafond (v) se choisit à part.
   // Phase 3 : le roulis (val 1..6 : ±90°, ±45°, ±135°) s'applique à toute ligne / tout virage ordinaire ET aux rubans « roulables » (loopings, tire-bouchons, vrilles, virages relevés)

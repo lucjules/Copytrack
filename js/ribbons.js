@@ -187,6 +187,16 @@ function buildBase(tile) {
       len: total * R + 2 * lane,
     };
   }
+  if (P.kind === 'sbend') {
+    // 0.11.3 : chicane « à plat » : la base d'une chicane roulée sur un mur (rollWrap), dont le décalage latéral devient vertical.
+    const q = {};
+    let len = 0, px = 0, pz = 0;
+    for (let i = 0; i <= 64; i++) { sbendPoint(P, i / 64, q); if (i) len += hypot2(q.x - px, q.z - pz); px = q.x; pz = q.z; }
+    return {
+      pos(u, o) { sbendPoint(P, u, q); o.x = q.x; o.y = base; o.z = q.z; o.nx = 0; o.ny = 1; o.nz = 0; },
+      len,
+    };
+  }
   if (P.kind === 'ribbon') {
     // ---- v1.5 ----
     if (P.arc) {
@@ -408,7 +418,7 @@ function centerlineLocal(tile, n) {
     for (let i = 0; i < 4; i++) pts.push([-m * p.lane, base, half - (half * i) / 4, 0]);
     sampleRibbon(32 * p.turns);
     for (let i = 1; i <= 4; i++) pts.push([m * p.lane, base, -(half * i) / 4, 0]);
-  } else if (p.kind === 'ribbon' || p.kind === 'loop') {
+  } else if (p.kind === 'ribbon' || p.kind === 'loop' || (p.kind === 'sbend' && tile.o)) {      // (0.11.3 : chicane roulée sur un mur)
     const rib = ribbonOf(tile, true);
     // drapeau 2 : virage relevé (le pilote automatique doit y doser sa vitesse).
     sampleRibbon(Math.max(8, Math.round(rib.len / 3)), p.arc ? 2 : 1);

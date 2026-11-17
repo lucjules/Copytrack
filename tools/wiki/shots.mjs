@@ -17,6 +17,7 @@ const RACES = [
   ['courant', 0.42, 'course-courant-portique'], ['usinefolle', 0.38, 'course-usine-marteau'], ['cite', 0.14, 'course-cite-deltaplane'],
   ['suspendues', 0.12, 'course-iles-plaque'], ['miroir', 0.586, 'course-miroir-verre'], ['cristalfele', 0.07, 'course-cristal-plafond'],
   ['grandatelier', 0.14, 'course-atelier-balancier'], ['verglas', 0.11, 'course-verglas-croisement'], ['spirale', 0.05, 'course-spirale-looping'],
+  ['viaduc', 0.33, 'course-viaduc-bosse'], ['canyon', 0.27, 'course-canyon-blocs'],      // (0.11.3 : wall-rides 2.0)
 ];
 await (async () => {
   const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--mute-audio'] });

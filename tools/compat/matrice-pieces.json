@@ -1302,12 +1302,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.87 150:non fini/vol1.27 250:non fini/vol1.07"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -1339,12 +1339,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.87 150:non fini/vol1.27 250:non fini/vol1.07"
    },
    "plafond": {
     "code": "OK",
@@ -1376,12 +1376,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -1413,12 +1413,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -1450,12 +1450,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -1487,12 +1487,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -1524,12 +1524,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:non fini"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -1561,12 +1561,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:non fini"
    },
    "plafond": {
     "code": "OK",

@@ -131,6 +131,8 @@ export const editMethods = {
     // Obstacles : décalage de phase (0 à 1) pour désynchroniser plusieurs obstacles.
     if (isObstacle(deco.k)) { deco.ph = Math.max(0, Math.min(0.95, Math.round((+d.ph || 0) * 20) / 20)); deco.s = Math.max(0.5, Math.min(2.5, deco.s)); }
     if (!DECO_ORDER.includes(deco.k)) return null;
+    // 0.11.3 : une position illisible (code abîmé : coordonnée vide) refuse la décoration, comme pour un solide : gardée, elle devenait 0 au ré-encodage (circuit instable).
+    if (!Number.isFinite(deco.x) || !Number.isFinite(deco.y) || !Number.isFinite(deco.z)) return null;
     // 0.9.68 : un solide (pilier, poutre, mur, bloc) compte pour la physique : jamais incliné ni roulé (rx, rz ignorés), échelle bornée (voir solids.js).
     const solid = isSolid(deco.k);
     if (solid) {

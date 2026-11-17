@@ -298,7 +298,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <div class="card"><h4>En l'air</h4><p>Le volant n'agit pas, l'accélérateur penche à peine le nez vers l'avant. En quittant un bord, la voiture bascule nez en bas (d'autant plus qu'elle est lente) et rien ne la redresse. Seul le frein (aérofrein) freine sa rotation : on s'en sert pour arriver à la pente de la réception. C'est le petit contrôle en l'air de PolyTrack, qui fait gagner des dixièmes.</p></div>
     <div class="card"><h4>Réception</h4><p>Elle est parfaite, correcte ou ratée selon l'assiette au contact. Une réception ratée coûte de la vitesse ; certains objectifs bonus comptent les réceptions parfaites.</p></div>
     <div class="card"><h4>Appui et pilotage</h4><p>Sur les loopings, les tubes, les murs et les routes à l'envers, c'est la vitesse qui plaque les roues : trop lent, on décroche. Rien n'y guide la voiture : il faut braquer pour suivre un looping décalé, un tire-bouchon ou une transition.</p></div>
-    <div class="card"><h4>Wall-ride</h4><p>Une transition fait basculer la route sur un mur. On le prend vite (130 km/h au moins pour les circuits officiels). Sur le mur, la gravité tire vers le bas et le nez pique : il faut tenir le volant un peu vers le haut pour garder sa ligne, mains lâchées on tombe. On ressort par la transition inverse.</p></div>
+    <div class="card"><h4>Wall-ride</h4><p>Une transition fait basculer la route sur un mur. On le prend vite (130 km/h au moins pour les circuits officiels). Sur le mur, la gravité tire vers le bas et le nez pique : il faut tenir le volant un peu vers le haut pour garder sa ligne, mains lâchées on tombe. Une chicane posée sur le mur fait <strong>monter ou descendre</strong> la route de 32 m (une bosse : monter puis redescendre) ; un <strong>bloc</strong> posé sur le bas du mur oblige à passer au-dessus, sur le haut à passer dessous. On ressort par la transition inverse.</p></div>
   </div>
   <h3>Anatomie d'un saut</h3>
   <div class="diagram" role="img" aria-label="Schéma d'un saut : rampe, trajectoire, puis trois réceptions possibles : parfaite, correcte, ratée">
@@ -326,6 +326,10 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <li>Les <strong>aides à la conduite</strong> (gaz automatique, anti-patinage) existent ; une course aidée se range dans la catégorie « assisté », sans médailles.</li>
     <li>Le profil de HUD <em>Entraînement</em> montre l'écart en direct contre ton record, le fantôme or ou le record mondial, des mini-secteurs, la vitesse maxi et les forces g.</li>
   </ul>
+  <div class="gallery two">
+    <figure class="shot"><img src="img/course-viaduc-bosse.jpg" alt="Viaduc Vertical : sur le mur, la route monte en S (bosse de wall-ride)" loading="lazy"><figcaption>Viaduc Vertical : la bosse du wall-ride (la route monte le long du mur).</figcaption></figure>
+    <figure class="shot"><img src="img/course-canyon-blocs.jpg" alt="Canyon Corail : sur le mur, un bloc occupe la moitié basse ; la voiture passe au-dessus" loading="lazy"><figcaption>Canyon Corail : un bloc sur le bas du mur, on passe au-dessus.</figcaption></figure>
+  </div>
   <div class="gallery two">
     <figure class="shot"><img src="img/course-ceinture-looping.jpg" alt="Ceinture d'Astéroïdes : la voiture en courbe au-dessus du vide" loading="lazy"><figcaption>Ceinture d'Astéroïdes : virage au-dessus du vide.</figcaption></figure>
     <figure class="shot"><img src="img/course-tours-saut.jpg" alt="Tours Jumelles : la voiture en plein saut au-dessus d'une plateforme" loading="lazy"><figcaption>Tours Jumelles : en plein saut de toit en toit.</figcaption></figure>
@@ -623,6 +627,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <tr><td><code>ZR</code> <code>ZR3</code> <code>ZR4</code> <code>ZZR</code></td><td>chicanes</td><td><code>JX</code> <code>JT</code></td><td>croisement, carrefour en T</td></tr>
     <tr><td><code>NI N NO</code> / <code>WI W WO</code></td><td>route étroite / large</td><td><code>[plate3]*10</code></td><td>plaque, bordures côté par côté</td></tr>
     <tr><td><code>SPL … ALT … MRG</code></td><td>bifurcation à deux chemins</td><td><code>[tr01s] S2&lt; [tr10s]</code></td><td>wall-ride sur le mur gauche</td></tr>
+    <tr><td><code>ZL4&lt; ZR4&lt;</code></td><td>chicanes posées sur le mur : bosse (monter de 32 m, redescendre)</td><td><code>{ k: 'block', at, wall: 'bas' }</code></td><td>bloc sur le bas du mur (obstacle de circuit)</td></tr>
     <tr><td><code>S.i</code> <code>S.b150</code> <code>S.g40</code></td><td>revêtement (verglas, accélérateur 150 %, gravité 40 %)</td><td><code>^</code> <code>_</code> <code>#</code></td><td>à l'envers, sans bordures, tunnel</td></tr>
   </table></div>
   <h3>Le contrat d'un circuit officiel</h3>
@@ -694,7 +699,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <dt>Profil</dt><dd>Sprint, speedway, technique, rollercoaster, acrobatique ou mécanisme.</dd>
     <dt>Réception parfaite</dt><dd>Toucher le sol avec la voiture parallèle à la pente.</dd>
     <dt>Signature</dt><dd>L'empreinte d'un circuit qui sert de clé à ses classements.</dd>
-    <dt>Wall-ride</dt><dd>Rouler sur un mur vertical, entre deux transitions.</dd>
+    <dt>Wall-ride</dt><dd>Rouler sur un mur vertical, entre deux transitions ; une chicane posée sur le mur le fait monter ou descendre, un bloc oblige à passer au-dessus ou dessous.</dd>
   </dl>
 </section>
 </main>

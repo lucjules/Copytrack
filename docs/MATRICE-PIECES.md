@@ -13,7 +13,7 @@ transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 37
 | — | orientation non proposée par l'éditeur (`flagAllowed`) |
 | n/a | pièce sans route roulable (raison dans le fichier JSON) |
 
-Totaux : CHUTE 71 · OK 136 · RACCORD 4 · SAUT 74 · n/a 120 · v≥150 386 · v≥80 23 · — 426.
+Totaux : CHUTE 73 · OK 136 · RACCORD 4 · SAUT 74 · n/a 120 · v≥150 400 · v≥80 23 · — 410.
 
 **Limites** : pilote automatique (pas un humain), voiture classique, sans revêtement ni obstacle, une seule pièce testée par chaîne, vitesse de croisière régulée.
 Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles) sont dans `tools/compat/matrice-pieces.json`.
@@ -165,14 +165,14 @@ Les raisons détaillées de chaque case (vitesses, chutes, raccords impossibles)
 
 | Pièce | Sol | Mur gauche | Mur droit | Plafond | Incliné gauche 45° | Incliné droit 45° | Surplomb gauche 135° | Surplomb droit 135° |
 |---|---|---|---|---|---|---|---|---|
-| `sbend` Chicane → | OK | — | — | OK | — | — | — | — |
-| `sbendL` Chicane ← | OK | — | — | OK | — | — | — | — |
-| `sbendLong` Chicane longue → | OK | — | — | OK | — | — | — | — |
-| `sbendLongL` Chicane longue ← | OK | — | — | OK | — | — | — | — |
-| `sbendFast` Chicane rapide → | OK | — | — | OK | — | — | — | — |
-| `sbendFastL` Chicane rapide ← | OK | — | — | OK | — | — | — | — |
-| `sbendWide` Grand S → | OK | — | — | OK | — | — | — | — |
-| `sbendWideL` Grand S ← | OK | — | — | OK | — | — | — | — |
+| `sbend` Chicane → | OK | CHUTE | v≥150 | OK | — | — | — | — |
+| `sbendL` Chicane ← | OK | v≥150 | CHUTE | OK | — | — | — | — |
+| `sbendLong` Chicane longue → | OK | v≥150 | v≥150 | OK | — | — | — | — |
+| `sbendLongL` Chicane longue ← | OK | v≥150 | v≥150 | OK | — | — | — | — |
+| `sbendFast` Chicane rapide → | OK | v≥150 | v≥150 | OK | — | — | — | — |
+| `sbendFastL` Chicane rapide ← | OK | v≥150 | v≥150 | OK | — | — | — | — |
+| `sbendWide` Grand S → | OK | v≥150 | v≥150 | OK | — | — | — | — |
+| `sbendWideL` Grand S ← | OK | v≥150 | v≥150 | OK | — | — | — | — |
 
 ## Carrefours
 

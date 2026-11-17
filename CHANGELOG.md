@@ -6,6 +6,27 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.11.3 — wall-rides 2.0 : la route monte le long du mur, des blocs à passer par-dessus
+
+**`PHYS_VER` reste 37** (pas encore publiée : une seule remise à zéro des records avec la 0.11.1). **Redéployer `submit-score`** : douze circuits changent.
+
+- **Chicane posée sur un mur** (nouveau, éditeur et script `ZL< ZR4> …`) : roulée sur le mur, son décalage d'une colonne devient une **montée ou une descente de 32 m le
+  long du mur** (64 m pour le grand S), en S lisse. Deux à la suite font une **bosse** : la route monte, puis redescend (« un virage, mais sur le côté »). Elle se pilote
+  au volant (rien ne guide), à partir de 150 km/h ; la chicane rapide (4 cases) passe jusqu'à 260 km/h, la courte qui descend est trop brusque (signalée par le vérificateur).
+  Sur un mur gauche, la chicane vers la gauche monte ; sur un mur droit, celle vers la droite.
+- **Blocs sur un mur** : un solide (bloc, pilier…) arrête maintenant une voiture qui roule sur un mur, un looping ou un tube (avant, elle le traversait). Dans un circuit,
+  un obstacle `{ wall: 'bas' }` se colle sur le bas du mur (il faut passer **au-dessus**), `{ wall: 'haut' }` sur le haut (passer **dessous**) ; le pilote automatique
+  change de ligne avant le bloc.
+- **Douze circuits** reçoivent ces wall-rides (un ou deux par chapitre) :
+  - **slalom entre deux blocs** sur le mur : Canyon Corail, Couronne Boréale, Canopée ;
+  - **un bloc sur chaque mur** : Hyperboucle, Engrenages, Épave Engloutie, Tourbillon Tropical ;
+  - **bosse sur le mur** (monter de 32 m, redescendre) : Viaduc Vertical, Cheminée du Volcan, Montgolfières, Vrilles Souterraines, Ceinture d'Astéroïdes
+    (médailles recalculées : leur mur est plus long, de 2,6 à 3 s).
+  Les 72 circuits tiennent leur contrat ; le pilote humain imparfait du banc n'y touche pas un bloc.
+- Correction : une décoration à la position illisible (code de circuit abîmé) est refusée ; gardée, elle devenait 0 au ré-encodage.
+- Tests : `tools/test-wall-ride.mjs` (nouveau) ; chicanes (sur un mur gauche ou droit), matrice des pièces (la chicane courte qui descend un mur rejoint les CHUTE
+  documentées), coach. Wiki : wall-ride, deux captures, jetons de script.
+
 ## Bêta 0.11.2 — en l'air, les pédales penchent la voiture d'un rien
 
 **`PHYS_VER` reste 37** (la 0.11.1 n'a pas été publiée : une seule remise à zéro des records). **Redéployer `submit-score`** avec la 0.11.1.

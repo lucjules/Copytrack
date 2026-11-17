@@ -123,7 +123,7 @@ test('TOUTE pièce-ruban qui retourne la voiture (entrée et sortie de côtés o
   }
   assert.ok(inverting >= 8 && checked > 200, `${inverting} cases qui retournent la voiture sur ${checked}`);
 });
-test('la vrille et les transitions retournées passent SANS revêtement « Inversion de gravité » ; la matrice ne garde que 24 cases CHUTE (29 avant la phase 2), toutes des montées et descentes raides sur mur ou la rampe cvd4', () => {
+test('la vrille et les transitions retournées passent SANS revêtement « Inversion de gravité » ; la matrice ne garde que 26 cases CHUTE (29 avant la phase 2), toutes des montées et descentes raides sur mur, la chicane courte qui descend un mur, ou la rampe cvd4', () => {
   assert.notEqual(PIECE_FACTS.twist.sol, 'CHUTE');
   for (const t of ['tr10s', 'tr20s', 'tr10l', 'tr20l']) assert.notEqual(PIECE_FACTS[t].plafond, 'CHUTE', t);
   const chutes = [];
@@ -133,8 +133,9 @@ test('la vrille et les transitions retournées passent SANS revêtement « Inver
   // (PHYS_VER 36 : 16 -> 18 ; les deux nouvelles, cvd4 sur le mur gauche et cvdL4 sur le mur droit, sont les miroirs de cases déjà CHUTE de la même rampe)
   // (PHYS_VER 37 : 18 -> 24 ; plus de guidage du cap sur les rubans et le nez pique sur un mur : les pentes RAIDES posées sur un mur (steep4, dn4, cv2) y tournent la route
   // plus vite que le volant ne le permet à la vitesse d'un mur)
-  assert.ok(old.length <= 24, `${old.length} CHUTE : ${old.join(' ')}`);
-  for (const c of old) assert.match(c, /^(cv|cro|cdi|steep4|dn4)/, c + ' : famille non documentée');
+  // (0.11.3 : + 2, la chicane COURTE qui descend un mur, trop brusque à la vitesse d'un mur ; la longue et la rapide passent)
+  assert.ok(old.length <= 26, `${old.length} CHUTE : ${old.join(' ')}`);
+  for (const c of old) assert.match(c, /^(cv|cro|cdi|steep4|dn4|sbend\/murG|sbendL\/murD)/, c + ' : famille non documentée');
 });
 
 console.log('\n3. Dérapage');

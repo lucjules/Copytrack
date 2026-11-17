@@ -108,7 +108,8 @@ test('la matrice (8 orientations) : toutes les cases proposées par l\'éditeur 
   for (const [t, row] of Object.entries(PIECE_FACTS)) for (const c of cols) { assert.ok(row[c], `${t}/${c}`); if (row[c] === 'CHUTE') chutes.push(t + '/' + c); }
   // PHYS_VER 37 (plus aucune aide sur les rubans, le nez pique sur un mur) : 71 chutes (30 avant), toutes des montées, descentes et courbes en pente RAIDES posées de côté
   // (la route y tourne plus vite que le volant ne le permet à la vitesse d'un mur), et le virage serré en surplomb (135°, à l'envers à moitié).
-  for (const c of chutes) assert.ok(/^(cv|cro|cdi|cdo|crv|steep4|dn4)/.test(c) || c === 'curve/surD', c + ' : hors des familles documentées (montées et descentes raides, virage serré en surplomb)');
+  // (0.11.3 : et la chicane COURTE qui DESCEND sur un mur, trop brusque à la vitesse d'un mur : la longue et la rapide passent)
+  for (const c of chutes) assert.ok(/^(cv|cro|cdi|cdo|crv|steep4|dn4)/.test(c) || ['curve/surD', 'sbend/murG', 'sbendL/murD'].includes(c), c + ' : hors des familles documentées (montées et descentes raides, virage serré en surplomb, chicane courte qui descend un mur)');
   assert.ok(chutes.length <= 75, chutes.length + ' chutes');
   assert.ok(Object.values(PIECE_FACTS).flatMap((r) => Object.values(r)).filter((c) => c === 'RACCORD').length <= 4, 'les RACCORD d\'avant (60) étaient une confusion entre roulis et pente : seuls restent les triples loopings (15 niveaux)');
   for (const t of ['loop', 'loopBig', 'loopDouble']) assert.ok(['OK', 'SAUT', 'v≥150'].includes(PIECE_FACTS[t].murG), `${t}/murG ${PIECE_FACTS[t].murG}`);      // (les triples descendent de 15 niveaux : hors des niveaux de la chaîne d'essai, RACCORD)

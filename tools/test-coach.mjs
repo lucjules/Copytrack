@@ -109,7 +109,8 @@ test('un retour au checkpoint coûte du temps : il est signalé, avec sa perte, 
   const rs = tips.find((x) => x.id === 'respawn');
   assert.ok(rs, tips.map((x) => x.id).join(', '));
   assert.ok(rs.loss > 0.5);
-  assert.ok(tips.indexOf(rs) <= 1 && tips.slice(0, tips.indexOf(rs)).every((x) => x.id === 'wall'), tips.map((x) => x.id).join(', '));
+  // (0.11.3 : le mur de Canyon porte deux blocs : la course rejouée de travers les heurte aussi, deux conseils « mur » peuvent passer devant)
+  assert.ok(tips.indexOf(rs) <= 2 && tips.slice(0, tips.indexOf(rs)).every((x) => x.id === 'wall'), tips.map((x) => x.id).join(', '));
 });
 test('virages pris trop prudemment : vitesse mini ou freinage, jamais un conseil sans mesure', () => {
   const { track, R, trace } = setup('eclats');

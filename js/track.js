@@ -618,6 +618,8 @@ export function hashString(s) {
 //   0.9.70 : N route étroite (12 m), NI rétrécissement, NO retour à 24 m ; WI élargissement (3×3), W route large (56 m, 3×3), WO retour à 24 m
 //   0.9.68 : ZR / ZL chicane (la route se décale d'une colonne à droite / à gauche, même cap) : ZR = 2 cases de long, ZR3 longue, ZR4 rapide ;
 //            ZZR / ZZL grand S (3×3, deux colonnes)
+//   0.11.3 : chicane posée sur un mur (ZR< ZL< ZR4> …) : la route MONTE ou DESCEND de 5 niveaux (32 m) le long du mur, même colonne (mur gauche : ZL monte, ZR descend ;
+//            mur droit : l'inverse) ; ZZ : 10 niveaux. Une bosse : ZL4< ZR4<. (Obstacle de circuit posé sur un mur : tracks.js, obst { wall: 'bas' | 'haut' }.)
 //   CVR / CVL  courbe montante serrée droite / gauche, CBR / CBL grande courbe montante (2x2) : le nombre est l'inclinaison
 //   (0 = ½, 1, 2, 4), ex. CVR2, CBL0.   OT / OTL / OBT / OBTL / OBD / OBDL : looping triple, grand ×3, grand ×2
 //   suffixes : .a eau  .n plaque bateau  .e plaque deltaplane  .f inversion de gravité
@@ -793,10 +795,18 @@ export function scriptTrack(name, script, opts = {}) {
     h = out; adv(h);
   };
   // 0.9.68 : chicane : entrée dans la première colonne (côté opposé au décalage), sortie `shift` colonnes plus loin, même cap.
+  // 0.11.3 : posée sur un mur (ZR< ZL> …), la chicane roulée ne se décale plus : elle MONTE ou DESCEND de `shift` × 5 niveaux le long du mur (mur gauche : vers la droite =
+  // vers le bas, puisque le toit de la voiture pointe vers la droite ; mur droit : l'inverse).
   const sbendPiece = (type) => {
     const P = PIECES[type], m = P.mirror, size = P.size;
     const e = rot(h, -m * (size - 1) / 2, (size - 1) / 2);
     place(type, Math.round(x + 0.5 - e.x - size / 2), Math.round(z + 0.5 - e.z - size / 2), l, h);
+    if (cur.o === 1 || cur.o === 2) {
+      const d = rot(h, 0, -size);
+      x += d.x; z += d.z;
+      l += (cur.o === 1 ? -1 : 1) * m * P.shift * Math.round(CELL / LEVEL_H);
+      return;
+    }
     const d = rot(h, m * P.shift, -size);
     x += d.x; z += d.z;
   };
