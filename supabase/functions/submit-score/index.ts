@@ -6918,6 +6918,9 @@ var CAR = {
   // rapprochait l'assiette de la trajectoire (15 %) puis, près du sol, de la pente de la route (35 %) : la voiture se posait d'elle-même, le frein ne servait presque à rien.
   airBrake: 1,
   airSpin: 0.1,
+  // Bascule aux pédales en l'air (0.11.2) : gaz = le nez descend, frein = il remonte, d'un rien. PolyTrack (15 vols mesurés) : l'effet des gaz est sous la précision
+  // de la mesure (moins de 0,5 °/s², moins d'un degré après 1,2 s d'appui) ; les joueurs le sentent : on le prend à cette borne. L'aérofrein, lui, est bien mesuré.
+  airTilt: 9e-3,
   // Bascule au décollage : quand la route s'arrête sous la voiture, l'avant n'est plus porté alors que l'arrière l'est encore : la voiture part en piqué. PolyTrack (bord
   // de route plat, mesuré) : 65 °/s à 39 km/h, 38 °/s à 78 km/h, 26 °/s à 140 km/h, 16 °/s à 225 km/h, soit airTip / (v + airTipV0) rad/s.
   airTip: 18.4,
@@ -16924,6 +16927,8 @@ var CarPhysics = class {
         this.pitchRate -= this.gSign * CAR.airTip / (hypot2(v.x, v.z) + CAR.airTipV0);
       }
       this.pitchRate *= airBrake ? AIR_BRAKE_DECAY : AIR_SPIN_DECAY;
+      if (airBrake) this.pitchRate += this.gSign * CAR.airTilt * dt;
+      else if (inp.throttle) this.pitchRate -= this.gSign * CAR.airTilt * dt;
       this.pitch += this.pitchRate * dt;
       if (Math.abs(this.pitch) > 1.4) {
         this.pitch = clamp(this.pitch, -1.4, 1.4);
@@ -17558,6 +17563,9 @@ var Simulation = class {
 };
 
 // js/autopilot.js
+var AIR_NONE = 0;
+var AIR_BRAKE = 1;
+var AIR_GAS = 2;
 var Autopilot = class {
   constructor(path, opts2 = {}) {
     this.path = path;
@@ -17612,13 +17620,13 @@ var Autopilot = class {
     const h = hypot2(b[0] - a[0], b[2] - a[2]);
     return h > 0.5 ? datan2(b[1] - a[1], h) : 0;
   }
-  // Aérofrein (PHYS_VER 37) : le pilote cherche où il retombe (sa trajectoire balistique contre le chemin devant) et son assiette à ce moment-là si la rotation
+  // En l'air (PHYS_VER 37) : le pilote cherche où il retombe (sa trajectoire balistique contre le chemin devant) et son assiette à ce moment-là si la rotation
   // continue ; si elle l'amènerait au-delà de la pente de la réception (plus piqué en tournant vers le bas, plus cabré en tournant vers le haut), il freine.
   // Il relâche dès que la rotation restante l'y amène : le frein n'agit que sur la rotation, pas sur la vitesse. En gravité inversée : rien (pas de plafond prévu).
-  _airBrake(phys) {
-    if (phys.gSign < 0 || phys.vehicle === "glider") return false;
+  _airControl(phys) {
+    if (phys.gSign < 0 || phys.vehicle === "glider") return AIR_NONE;
     const p = phys.pos, v = phys.vel, path = this.path, n = path.length, hv = hypot2(v.x, v.z);
-    if (hv < 2) return false;
+    if (hv < 2) return AIR_NONE;
     const ux = v.x / hv, uz = v.z / hv, g = phys.g;
     for (let k = this.idx; k < n && k < this.idx + 240; k++) {
       const q = path[k], d = (q[0] - p.x) * ux + (q[2] - p.z) * uz;
@@ -17627,13 +17635,14 @@ var Autopilot = class {
       if (p.y + v.y * t - 0.5 * g * t * t > q[1] + 0.3) continue;
       const a = path[Math.max(0, k - 2)], b = path[Math.min(n - 1, k + 2)], h = hypot2(b[0] - a[0], b[2] - a[2]);
       const slope = h > 0.5 ? datan2(b[1] - a[1], h) : 0;
-      if (phys.airTime + t < 0.35) return false;
+      if (phys.airTime + t < 0.35) return AIR_NONE;
       const pr = phys.pitchRate, kS = CAR.airSpin;
       const err = phys.pitch + pr * (1 - dexp(-kS * t)) / kS - slope;
       const tol = Math.abs(phys.omega) > 0.1 ? CAR.landOk * 0.8 : 0.03;
-      return Math.abs(err) > tol && err * pr > 0;
+      if (Math.abs(err) > tol && err * pr > 0) return AIR_BRAKE;
+      return err > 0.03 ? AIR_GAS : AIR_NONE;
     }
-    return false;
+    return AIR_NONE;
   }
   // Point de reprise (départ, réapparition) : le point du tracé le plus proche, cherché sur TOUT le tracé (0.9.67 : avant, les 400 premiers points seulement ;
   // sur un circuit long, un checkpoint au-delà se raccrochait au premier passage voisin et le pilote faisait demi-tour), parmi ceux orientés dans le sens
@@ -17752,9 +17761,10 @@ var Autopilot = class {
       };
     }
     if (!phys.grounded) {
+      const a = this._airControl(phys);
       return {
-        throttle: false,
-        brake: this._airBrake(phys),
+        throttle: a === AIR_GAS,
+        brake: a === AIR_BRAKE,
         steer: 0,
         drift: false
       };
@@ -19286,4 +19296,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "e4f922bdf9e2e5f9";
+globalThis.__COPYTRACK_BUILD__ = "da99c0e4e3d4a1b8";

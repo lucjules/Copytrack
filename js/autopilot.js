@@ -4,6 +4,8 @@ import { CAR, steerLimitSpeed } from './physics/specs.js';
 import { rolledRibbon, isSideTile } from './pieces.js';
 import { dasin, datan, datan2, dcos, dexp, dpow, dsin, hypot2, hypot3 } from './dmath.js';
 
+const AIR_NONE = 0, AIR_BRAKE = 1, AIR_GAS = 2;
+
 export class Autopilot {
   constructor(path, opts = {}) {
     this.path = path;
@@ -64,13 +66,13 @@ export class Autopilot {
     return h > 0.5 ? datan2(b[1] - a[1], h) : 0;
   }
 
-  // Aérofrein (PHYS_VER 37) : le pilote cherche où il retombe (sa trajectoire balistique contre le chemin devant) et son assiette à ce moment-là si la rotation
+  // En l'air (PHYS_VER 37) : le pilote cherche où il retombe (sa trajectoire balistique contre le chemin devant) et son assiette à ce moment-là si la rotation
   // continue ; si elle l'amènerait au-delà de la pente de la réception (plus piqué en tournant vers le bas, plus cabré en tournant vers le haut), il freine.
   // Il relâche dès que la rotation restante l'y amène : le frein n'agit que sur la rotation, pas sur la vitesse. En gravité inversée : rien (pas de plafond prévu).
-  _airBrake(phys) {
-    if (phys.gSign < 0 || phys.vehicle === 'glider') return false;
+  _airControl(phys) {
+    if (phys.gSign < 0 || phys.vehicle === 'glider') return AIR_NONE;
     const p = phys.pos, v = phys.vel, path = this.path, n = path.length, hv = hypot2(v.x, v.z);
-    if (hv < 2) return false;
+    if (hv < 2) return AIR_NONE;
     const ux = v.x / hv, uz = v.z / hv, g = phys.g;
     for (let k = this.idx; k < n && k < this.idx + 240; k++) {
       const q = path[k], d = (q[0] - p.x) * ux + (q[2] - p.z) * uz;
@@ -79,15 +81,16 @@ export class Autopilot {
       if (p.y + v.y * t - 0.5 * g * t * t > q[1] + 0.3) continue;
       const a = path[Math.max(0, k - 2)], b = path[Math.min(n - 1, k + 2)], h = hypot2(b[0] - a[0], b[2] - a[2]);
       const slope = h > 0.5 ? datan2(b[1] - a[1], h) : 0;
-      if (phys.airTime + t < 0.35) return false;      // vol trop court : la réception ne coûte rien
+      if (phys.airTime + t < 0.35) return AIR_NONE;      // vol trop court : la réception ne coûte rien
       const pr = phys.pitchRate, kS = CAR.airSpin;
       const err = phys.pitch + (pr * (1 - dexp(-kS * t))) / kS - slope;
       // L'aérofrein amortit AUSSI le lacet : une voiture qui tourne (saut dans un virage) arriverait de travers. Dans ce cas il ne freine que si la réception coûterait
       // de la vitesse (au-delà de landOk) ; sinon il vise la réception parfaite.
       const tol = Math.abs(phys.omega) > 0.1 ? CAR.landOk * 0.8 : 0.03;
-      return Math.abs(err) > tol && err * pr > 0;
+      if (Math.abs(err) > tol && err * pr > 0) return AIR_BRAKE;
+      return err > 0.03 ? AIR_GAS : AIR_NONE;      // trop cabrée à la réception : les gaz font descendre le nez d'un rien
     }
-    return false;
+    return AIR_NONE;
   }
 
   // Point de reprise (départ, réapparition) : le point du tracé le plus proche, cherché sur TOUT le tracé (0.9.67 : avant, les 400 premiers points seulement ;
@@ -210,8 +213,9 @@ export class Autopilot {
       return { throttle: dive, brake: pull, steer: Math.max(-1, Math.min(1, ang * 2.2)), drift: false };
     }
     if (!phys.grounded) {
-      // En l'air : ni les gaz ni le volant n'agissent ; seul l'aérofrein amortit la rotation (PHYS_VER 37 : rien d'autre ne redresse la voiture).
-      return { throttle: false, brake: this._airBrake(phys), steer: 0, drift: false };
+      // En l'air : le volant n'agit pas ; l'aérofrein amortit la rotation, les gaz penchent le nez d'un rien (PHYS_VER 37 : rien d'autre ne redresse la voiture).
+      const a = this._airControl(phys);
+      return { throttle: a === AIR_GAS, brake: a === AIR_BRAKE, steer: 0, drift: false };
     }
     const v = Math.max(0, phys.fwdSpeed);
     const look = 8 + v * this.lookK;

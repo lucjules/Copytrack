@@ -155,7 +155,7 @@ _Descente en moto, slalom en bateau et décollage en deltaplane autour du phare.
 ### 17. Sauts Lunaires — Acrobatique, ◆◆◆◆◇
 
 - Départ : plaque de basse gravité, vide et chute de six niveaux. Au programme : trois grands sauts lunaires, plaques entre des cratères, chicanes longues, dos d’âne, route large sous un portique.
-- Pilote automatique : **53.8 s** · médailles : cristal 51 · or 53.7 · argent 61.8 · bronze 72.5
+- Pilote automatique : **53.7 s** · médailles : cristal 51 · or 53.7 · argent 61.8 · bronze 72.5
 - Objectif bonus ★ : 2 réceptions parfaites
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________

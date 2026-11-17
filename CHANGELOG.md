@@ -6,6 +6,16 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.11.2 — en l'air, les pédales penchent la voiture d'un rien
+
+**`PHYS_VER` reste 37** (la 0.11.1 n'a pas été publiée : une seule remise à zéro des records). **Redéployer `submit-score`** avec la 0.11.1.
+
+- **En l'air, gaz = le nez descend d'un rien, frein = il remonte d'un rien** (`airTilt`, 0,5 °/s²), en plus de l'aérofrein qui amortit la rotation. Mesuré sur PolyTrack
+  (15 vols, en appuyant une fois en l'air) : l'aérofrein se confirme (amortissement 1,0 /s, amortissement naturel 0,1 /s) ; l'effet des gaz est sous la précision de la
+  mesure (moins d'un degré après 1,2 s d'appui). Les joueurs le sentent : on le prend à cette borne. Le volant, lui, n'agit toujours pas.
+- Pilote automatique : il accélère en l'air quand il arriverait trop cabré sur la réception. Circuits, temps et médailles inchangés (72/72 sans choc, contrats tenus).
+- Textes (leçon, exercice, aide des commandes, wiki) : l'accélérateur penche le nez d'un rien en l'air.
+
 ## Bêta 0.11.1 — loopings et murs à piloter, petit contrôle en l'air : plus aucune aide, comme PolyTrack
 
 **`PHYS_VER` 36 → 37** : records, replays et fantômes repartent de zéro. **Redéployer `submit-score`** (`npm run build:function`, déjà régénérée).

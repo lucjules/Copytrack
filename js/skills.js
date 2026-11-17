@@ -52,7 +52,7 @@ export const DRILLS = [
     script: 'start B S C S2 G1 V-1 D S2 R S2 G1 V-1 D S2 L S2 G1 V-1 D S2 finish', opts: { l: 14 }, zones: [],      // PHYS_VER 37 : trois sauts d'une terrasse vers une pente plus bas, deux juste après un virage ; la voiture bascule nez en bas en quittant le bord, l'aérofrein l'amène à la pente (avant : terrasses plates)
     measure: 'landings', better: 'high', thresholds: [1, 2, 3],
     goals: ['{v} réception(s) parfaite(s) sur 3'],
-    intro: ['Trois sauts d’une terrasse vers une pente plus bas, deux juste après un virage. Ce qui compte : le nombre de <b>réceptions parfaites</b> (étincelles vertes).', 'En l’air, ni le volant ni l’accélérateur n’agissent, et la voiture bascule nez en bas en quittant le bord. Seul le frein (aérofrein) freine sa rotation.', 'Redresse <b>avant</b> le bord (volant droit au décollage), puis <b>freine en l’air</b> pour arriver à la pente de la réception.'],
+    intro: ['Trois sauts d’une terrasse vers une pente plus bas, deux juste après un virage. Ce qui compte : le nombre de <b>réceptions parfaites</b> (étincelles vertes).', 'En l’air, le volant n’agit pas et la voiture bascule nez en bas en quittant le bord. Le frein (aérofrein) freine sa rotation ; l’accélérateur ne penche le nez que d’un rien.', 'Redresse <b>avant</b> le bord (volant droit au décollage), puis <b>freine en l’air</b> pour arriver à la pente de la réception.'],
     tip: 'Volant droit au décollage, puis freine en l’air (aérofrein) pour arriver à la pente de la réception.',
   },
 ];

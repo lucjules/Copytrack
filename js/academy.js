@@ -35,7 +35,7 @@ export const LESSONS = [
     id: 'reception', name: 'Saut et réception parfaite', decor: 'desert',
     script: 'start B S C S2 G1 V-1 D S2 finish', opts: { l: 6 },      // PHYS_VER 37 : la voiture bascule nez en bas en quittant le bord ; on se pose sur une PENTE en freinant en l'air (avant : terrasse plate, où l'on retombait à plat d'office)
     goal: { id: 'perfect', n: 1 },
-    intro: ['En quittant le bord, la voiture <b>bascule nez en bas</b> et rien ne la redresse : en l’air, ni le volant ni l’accélérateur n’agissent.', '<b>{brake}</b> en l’air (aérofrein) freine sa rotation : freine pour arriver à la <b>pente de la réception</b>, et décolle bien droit pour retomber dans l’axe.', 'Une réception parfaite (étincelles vertes) conserve ta vitesse ; une mauvaise te secoue.'],
+    intro: ['En quittant le bord, la voiture <b>bascule nez en bas</b> et rien ne la redresse : en l’air, le volant n’agit pas, et l’accélérateur ne penche le nez que d’un rien.', '<b>{brake}</b> en l’air (aérofrein) freine sa rotation : freine pour arriver à la <b>pente de la réception</b>, et décolle bien droit pour retomber dans l’axe.', 'Une réception parfaite (étincelles vertes) conserve ta vitesse ; une mauvaise te secoue.'],
     tip: 'En l’air, la voiture pique du nez : freine (aérofrein) pour arriver à la pente de la réception.',
   },
   {

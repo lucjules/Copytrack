@@ -582,7 +582,8 @@ export class CarPhysics {
     this.airTime += dt;
     // Tangage (PHYS_VER 37, PolyTrack mesuré) : la rotation est GARDÉE tout le vol, rien ne redresse la voiture. Au décollage d'une route qui s'arrête (bord, haut de
     // rampe), la voiture bascule en piqué (airTip : l'avant n'est plus porté quand l'arrière l'est encore), d'autant plus qu'elle est lente. L'aérofrein amortit la
-    // rotation : freiner au bon moment pour arriver à la pente de la réception, c'est le petit contrôle en l'air de PolyTrack. Avant (PHYS_VER 36) : un ressort
+    // rotation : freiner au bon moment pour arriver à la pente de la réception, c'est le petit contrôle en l'air de PolyTrack (et les pédales penchent la voiture d'un rien :
+    // gaz en avant, frein en arrière). Avant (PHYS_VER 36) : un ressort
     // rapprochait l'assiette de la trajectoire puis, près du sol, de la pente de la route, et la voiture se posait d'elle-même.
     if (this.vehicle === 'glider') { this.pitch = this.glidePitch; this.tipNext = false; }
     else {
@@ -591,6 +592,9 @@ export class CarPhysics {
         this.pitchRate -= this.gSign * CAR.airTip / (hypot2(v.x, v.z) + CAR.airTipV0);
       }
       this.pitchRate *= airBrake ? AIR_BRAKE_DECAY : AIR_SPIN_DECAY;
+      // Gaz en l'air : le nez descend d'un rien ; frein : il remonte d'un rien (en plus de l'aérofrein). Voir CAR.airTilt.
+      if (airBrake) this.pitchRate += this.gSign * CAR.airTilt * dt;
+      else if (inp.throttle) this.pitchRate -= this.gSign * CAR.airTilt * dt;
       this.pitch += this.pitchRate * dt;
       if (Math.abs(this.pitch) > 1.4) { this.pitch = clamp(this.pitch, -1.4, 1.4); this.pitchRate = 0; }
     }

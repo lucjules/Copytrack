@@ -257,10 +257,10 @@ test('frein tenu ou donné en l\'air (aérofrein) : jamais « ratée », perte �
   assert.equal(jumpRun(100, 'none').q, 'bad', 'sans aérofrein, à 100 km/h, la bascule du décollage n\'est pas rattrapée');
 });
 // (PHYS_VER 36, loi PolyTrack : ni gaz ni volant n'agissent en l'air ; le frein est un AÉROFREIN qui amortit la rotation. Avant : gaz = nez plus bas, frein = nez plus haut)
-test('en l\'air, les pédales ne pilotent plus l\'assiette : gaz tenu = ne rien faire ; frein tenu (aérofrein) amortit la rotation, jamais plus de tangage ni de perte qu\'à vide', () => {
+test('en l\'air, les pédales ne pilotent plus l\'assiette : gaz tenu = presque rien (le nez descend d\'un rien) ; frein tenu (aérofrein) amortit la rotation, jamais plus de tangage ni de perte qu\'à vide', () => {
   for (const v of [100, 200]) {
     const none = jumpRun(v, 'none'), gas = jumpRun(v, 'gas'), brake = jumpRun(v, 'brake');
-    assert.deepEqual([gas.loss, gas.q, gas.pitchPeak], [none.loss, none.q, none.pitchPeak], `${v} km/h : les gaz n'agissent pas en l'air`);
+    assert.ok(gas.q === none.q && Math.abs(gas.loss - none.loss) <= 1 && Math.abs(gas.pitchPeak - none.pitchPeak) <= 0.02, `${v} km/h : les gaz n'agissent presque pas en l'air`);
     assert.ok(brake.pitchPeak <= none.pitchPeak + 0.01, `${v} km/h : l'aérofrein ne relève pas le nez (${brake.pitchPeak} contre ${none.pitchPeak} rad)`);
     assert.ok(brake.loss <= none.loss + 2, `${v} km/h : frein −${brake.loss} % contre −${none.loss} %`);
   }

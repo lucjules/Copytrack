@@ -46,7 +46,7 @@ export default {
   'Enchaîner les mini-turbos fait gagner du temps dans chaque circuit technique de la carrière.': 'Chaining mini-turbos saves time on every technical track of the career.',
   'Objectif : deux mini-turbos.': 'Goal: two mini-turbos.',
   'Deux mini-turbos : volant à fond, frein une seconde, relâche.': 'Two mini-turbos: full steering, brake for a second, release.',
-  'En quittant le bord, la voiture <b>bascule nez en bas</b> et rien ne la redresse : en l’air, ni le volant ni l’accélérateur n’agissent.': 'Leaving the edge, the car <b>tips nose down</b> and nothing straightens it: in the air, neither steering nor throttle does anything.',
+  'En quittant le bord, la voiture <b>bascule nez en bas</b> et rien ne la redresse : en l’air, le volant n’agit pas, et l’accélérateur ne penche le nez que d’un rien.': 'Leaving the edge, the car <b>tips nose down</b> and nothing straightens it: in the air, steering does nothing, and the throttle only tilts the nose a tiny bit.',
   '<b>{a}</b> en l’air (aérofrein) freine sa rotation : freine pour arriver à la <b>pente de la réception</b>, et décolle bien droit pour retomber dans l’axe.': '<b>{a}</b> in the air (air brake) slows its rotation: brake to meet the <b>slope of the landing</b>, and take off dead straight to land in line.',
   'Une réception parfaite (étincelles vertes) conserve ta vitesse ; une mauvaise te secoue.': 'A perfect landing (green sparks) keeps your speed; a bad one shakes you up.',
   'En l’air, la voiture pique du nez : freine (aérofrein) pour arriver à la pente de la réception.': 'In the air, the car noses down: brake (air brake) to meet the slope of the landing.',
