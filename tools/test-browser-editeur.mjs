@@ -130,6 +130,89 @@ try {
     assert.ok(!/⛔|⚠/.test(badge), 'pastille : « ' + badge + ' »');
     await ctx.close();
   });
+  // 0.12.0 : nouveau rangement, avec de vrais clics et de vrais glissés de souris.
+  await test('rangement 0.12 : le rail change d’outil et de panneau ; une famille et ses réglages ; « Remplir » propre à l’outil ; la recherche trouve « route large · montée »', async () => {
+    const { ctx, page } = await open(1366, 768);
+    const state = () => ed(page, () => { const E = window.copytrack.session; const vis = (id) => !document.querySelector(`#ed-palette [data-panel="${id}"]`).hidden; return { tool: E.tool, panels: ['pieces', 'paint', 'decos', 'select', 'inspect', 'erase'].filter(vis) }; });
+    await page.click('#ed-tools [data-tool="paint"]');
+    assert.deepEqual((await state()).panels, ['paint']);
+    await page.click('#ed-tools [data-tool="decos"]');
+    assert.match((await state()).tool, /^deco:/);
+    await page.click('#ed-tools [data-tool="pieces"]');
+    await page.click('#ed-palette .lib-tile[data-fam="turn"]');
+    assert.equal((await state()).tool, 'curve');
+    await page.selectOption('#ed-pset-traits select[aria-label="Virage : Largeur"]', 'w');
+    assert.equal((await state()).tool, 'wbigcurve', 'virage large : le serré n’existe pas, on passe au grand');
+    await page.click('#ed-palette [data-panel="pieces"] [data-seg="fill"]');
+    assert.equal((await state()).tool, 'fill-piece:wbigcurve');
+    await page.click('#ed-tools [data-tool="paint"]');
+    assert.ok(!(await state()).tool.startsWith('fill-'), 'la peinture garde son propre interrupteur');
+    await page.click('#ed-tools [data-tool="pieces"]');
+    await page.click('#ed-palette [data-panel="pieces"] [data-seg="place"]');
+    await page.fill('#ed-search', 'route large montée');
+    const hits = await page.evaluate(() => [...document.querySelectorAll('#ed-results .lib-tile')].map((b) => b.dataset.piece));
+    assert.deepEqual(hits, ['wslU05', 'wslU1', 'wslU2', 'wslU4']);
+    await page.click('#ed-results .lib-tile[data-piece="wslU2"]');
+    assert.equal((await state()).tool, 'wslU2');
+    await ctx.close();
+  });
+  await test('rangement 0.12 : sélection tracée à la souris, barre flottante entre le panneau et la Vue, la zone se déplace en la glissant (un seul Ctrl+Z)', async () => {
+    const { ctx, page } = await open(1366, 768);
+    await ed(page, () => { const E = window.copytrack.session; E.pitch = 1.5; E.dist = 260; E.target.set(16, E.levelY(), -48); E.setMode('select'); });
+    await page.waitForTimeout(400);
+    // Écran : le centre de la case (x, z) ; on trace une zone qui couvre le départ et les deux premières pièces.
+    const scr = (x, z) => ed(page, ([x, z]) => { const E = window.copytrack.session, v = E.target.clone().set((x + 0.5) * 32, E.levelY(), (z + 0.5) * 32).project(window.copytrack.camera), r = window.copytrack.renderer.domElement.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }, [x, z]);
+    const n0 = await ed(page, () => window.copytrack.session.track.tiles.length);
+    const [ax, ay] = await scr(0, 0), [bx, by] = await scr(0, -2);
+    await page.mouse.move(ax, ay); await page.mouse.down(); await page.mouse.move(bx, by, { steps: 6 }); await page.mouse.up();
+    const sel = await ed(page, () => window.copytrack.session.sel);
+    assert.deepEqual(sel, { x0: 0, z0: -2, x1: 0, z1: 0 });
+    const geo = await page.evaluate(() => { const b = (id) => document.getElementById(id).getBoundingClientRect(); return { bar: b('ed-selbar'), pal: b('ed-palette'), view: b('ed-view'), shown: !document.getElementById('ed-selbar').classList.contains('hidden') }; });
+    assert.ok(geo.shown && geo.bar.left >= geo.pal.right && geo.bar.right <= geo.view.left, 'barre entre le panneau et la Vue : ' + JSON.stringify(geo));
+    // Glisser DANS la zone : elle se déplace de deux cases vers l'est.
+    const [cx, cy] = await scr(0, -1), [dx, dy] = await scr(2, -1);
+    const before = await ed(page, () => window.copytrack.session.track.encode());
+    await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.move(dx, dy, { steps: 8 }); await page.mouse.up();
+    const after = await ed(page, () => { const E = window.copytrack.session; return { sel: E.sel, start: E.track.startTile.x, n: E.track.tiles.length }; });
+    assert.deepEqual(after.sel, { x0: 2, z0: -2, x1: 2, z1: 0 }); assert.equal(after.start, 2); assert.equal(after.n, n0);
+    await page.keyboard.press('Control+z'); await page.waitForTimeout(200);
+    assert.equal(await ed(page, () => window.copytrack.session.track.encode()), before, 'un seul Ctrl+Z ramène la zone');
+    await ctx.close();
+  });
+  await test('rangement 0.12 : fenêtre « Circuit » à onglets (Course → Logique applique ce qui a changé) ; Échap referme puis quitte en enregistrant', async () => {
+    const { ctx, page } = await open(1366, 768);
+    await page.click('[data-ed="params"]');
+    await page.waitForSelector('.pp-tabs [data-ptab="course"]');
+    await page.click('.pp-tabs [data-ptab="course"]');
+    assert.equal(await page.evaluate(() => document.querySelector('.pp-tab[data-pt="course"]').hidden), false);
+    await page.selectOption('#pp-veh', 'moto');
+    await page.click('.pp-tabs [data-ptab="logic"]');
+    await page.waitForSelector('#lg-new');
+    assert.equal(await ed(page, () => window.copytrack.session.track.veh0), 'moto', 'le véhicule de départ est appliqué en changeant d’onglet');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !window.copytrack.ui.modalOpen);
+    await ed(page, () => { const E = window.copytrack.session; E.setTool('inspect'); E.inspector.select('tile', E.track.tiles[0]); });
+    await page.keyboard.press('Escape'); await page.waitForTimeout(150);
+    assert.equal(await ed(page, () => window.copytrack.session.inspector.active), false, 'Échap referme l’inspecteur');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => window.copytrack.mode === 'menu', null, { timeout: 8000 });
+    const saved = await page.evaluate(async () => (await import('/js/storage.js')).listMyTracks().map((t) => t.name));
+    assert.ok(saved.includes('Essai'), 'le circuit modifié est dans « Mes circuits » : ' + saved.join(', '));
+    await ctx.close();
+  });
+  await test('rangement 0.12 sur téléphone (844 × 390) : le panneau est un tiroir, il se referme après un choix ; la vue reste dégagée', async () => {
+    const { ctx, page } = await open(844, 390);
+    const drawer = () => page.evaluate(() => { const r = document.getElementById('ed-palette').getBoundingClientRect(); return r.right > 60 && r.left < 70; });
+    assert.equal(await drawer(), false, 'fermé au départ');
+    await page.click('#ed-tools [data-tool="pieces"]');
+    await page.waitForTimeout(300);
+    assert.equal(await drawer(), true, 'toucher l’outil actif ouvre le tiroir');
+    await page.click('#ed-palette .lib-tile[data-fam="loop"]');
+    await page.waitForTimeout(300);
+    assert.equal(await drawer(), false, 'il se referme après le choix');
+    assert.match(await ed(page, () => window.copytrack.session.tool), /^loop/);
+    await ctx.close();
+  });
 } finally {
   await browser.close(); server.kill();
 }

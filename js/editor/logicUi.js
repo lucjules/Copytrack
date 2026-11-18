@@ -154,17 +154,18 @@ export const logicUiMethods = {
     };
 
     list();
-    this.app.ui.modal({
-      title: 'Logique du circuit', body, wide: true,
-      actions: [{ label: 'Annuler' }, { label: 'Enregistrer', primary: true, onClick: () => {
-        const before = JSON.stringify(T.lg);
-        T.setLogic(draft);
-        if (JSON.stringify(T.lg) !== before) {
-          this._changed(); this._commit();
-          this.app.ui.flash(T.lg ? `Logique enregistrée : ${T.lg.rules.length} règle${T.lg.rules.length > 1 ? 's' : ''}. Elle change la course : à revérifier.` : 'Logique retirée.', 3);
-        }
-        return true;
-      } }],
-    });
+    const save = () => {
+      const before = JSON.stringify(T.lg);
+      T.setLogic(draft);
+      if (JSON.stringify(T.lg) !== before) {
+        this._changed(); this._commit();
+        this.app.ui.flash(T.lg ? `Logique enregistrée : ${T.lg.rules.length} règle${T.lg.rules.length > 1 ? 's' : ''}. Elle change la course : à revérifier.` : 'Logique retirée.', 3);
+      }
+      return true;
+    };
+    // (0.12.0 : onglet de la fenêtre « Circuit » ; changer d'onglet enregistre ce qui a été modifié)
+    const wrap = document.createElement('div');
+    wrap.append(this._circuitTabs('logic', (id, leaving) => { if (leaving) save(); return true; }), body);
+    this.app.ui.modal({ title: 'Circuit', body: wrap, wide: true, actions: [{ label: 'Annuler' }, { label: 'Enregistrer', primary: true, onClick: save }] });
   },
 };

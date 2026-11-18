@@ -127,7 +127,7 @@ export const pointerMethods = {
         this._pinch = { d, ang };
       } else if (p.moved) {
         if (this.tool === 'select' && !this.pasting) {
-          if (!this.selDrag) { this._updateHover(); this._selectDown(); }
+          if (!this.selDrag && !this.selMove) { this._updateHover(); this._selectDown(); }
           this._updateHover(); this._selectMove();
         } else this._pan(dx, dy);
       }
@@ -138,7 +138,7 @@ export const pointerMethods = {
       this.pitch = Math.max(this.freeCam ? -0.3 : 0.2, Math.min(1.5, this.pitch + dy * 0.005));      // caméra libre (E22) : jusqu'au ras du sol
     } else if (p.button === 1 && p.moved) {
       this._pan(dx, dy);
-    } else if (p.button === 0 && this.selDrag) {
+    } else if (p.button === 0 && (this.selDrag || this.selMove)) {
       this._updateHover();
       this._selectMove();
     } else if (p.button === 0 && this.painting && !this.tool.startsWith('deco:')) {
@@ -156,15 +156,15 @@ export const pointerMethods = {
       if (p.button === 2 && !p.moved) { this._updateHover(); this._erase(); }
       if (p.button === 1 && !p.moved) { this._updateHover(); this._pick(); }
       if (p.button === 0) {
-        if (this.selDrag) this._selectUp();
+        if (this.selDrag || this.selMove) this._selectUp();
         this.painting = false;
         this._lastPaint = null;
         this._commit();
       }
     } else if (this._multiTouch) {
       if (this.pointers.size === 0) this._multiTouch = false;
-      if (this.selDrag) this._selectUp();
-    } else if (this.selDrag) {
+      if (this.selDrag || this.selMove) this._selectUp();
+    } else if (this.selDrag || this.selMove) {
       this._selectUp();
     } else if (!p.moved && this.pointers.size === 0) {
       this._setNdc(e);

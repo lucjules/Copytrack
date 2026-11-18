@@ -87,11 +87,11 @@ test('le bouton « + Nouveau » ne passe plus sous le compteur de pièces', () =
 test('listes déroulantes d’options : jamais plus larges que l’écran', () => {
   assert.match(css, /\.form select \{[^}]*max-width: 100%/);
 });
-test('palette de l’éditeur repliable, choix mémorisé', () => {
+test('panneau de l’éditeur : tiroir sur petit écran (il se referme après un choix), carte réduite pour Sélection, Inspecter et Gomme (0.12.0)', () => {
   const e = readEditor();
-  assert.match(e, /pal-fold/);
-  assert.match(e, /copytrack\.edFold/);
-  assert.match(css, /\.ed-palette\.folded/);
+  assert.match(e, /drawer-open/);
+  assert.match(css, /#editor\.ed12\.drawer-open \.ed-palette/);
+  assert.match(css, /\.ed-palette\.compact/);
 });
 
 await finish('Tous les tests des textes et du style passent.');

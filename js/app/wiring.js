@@ -209,10 +209,18 @@ export const wiringMethods = {
 
   _editorAction(a) {
     const ed = this.session;
-    if (a === 'menu-toggle') { ed.toggleMenu(); return; }
-    ed.toggleMenu(false);          // toute autre action (y compris un élément du menu hamburger) referme le menu
+    if (a === 'menu-toggle') { ed.toggleMenu(document.getElementById('ed-menu').classList.contains('hidden'), 'ed-menu'); return; }
+    if (a === 'test-menu') { ed.toggleMenu(document.getElementById('ed-test-menu').classList.contains('hidden'), 'ed-test-menu'); return; }
+    if (a === 'view-toggle') { const v = document.getElementById('ed-view'), on = v.classList.toggle('folded'); v.querySelector('.ed-vh').setAttribute('aria-expanded', String(!on)); return; }
+    ed.toggleMenu(false);          // toute autre action (y compris un élément d'un menu) referme les menus
     switch (a) {
       case 'menu': this.leaveEditor(); break;
+      case 'open': if (this.leaveEditor()) this.showScreen('mytracks'); break;
+      case 'saveas': ed.saveCopy(); break;
+      case 'rename': ed.renameDialog(); break;
+      case 'topview': ed.toggleTopView(); ed._refreshUI(); break;
+      case 'recenter': ed.recenter(); break;
+      case 'grid': ed.toggleGrid(); break;
       case 'undo': ed.undo(); break;
       case 'redo': ed.redo(); break;
       case 'save': ed.save(); break;
@@ -227,7 +235,7 @@ export const wiringMethods = {
       case 'testhere': ed.testHere(); break;
       case 'levelview': ed.toggleLevelView(); break;
       case 'groups': ed.openGroups(); break;
-      case 'freecam': ed.toggleFreeCam(); break;
+      case 'freecam': ed.toggleFreeCam(); ed._refreshUI(); break;
       case 'logic': ed.openLogic(); break;
       case 'export': this.shareModal(ed.track.encode(), ed.track.name, ed.track); break;
       case 'import': this.importModal(true); break;

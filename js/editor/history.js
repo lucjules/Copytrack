@@ -35,7 +35,12 @@ export const historyMethods = {
     if (el) { el.classList.toggle('dirty', d); el.title = d ? 'Modifications non enregistrées (Ctrl + S)' : 'Enregistré dans « Mes circuits »'; el.setAttribute('aria-label', el.title); }
   },
   // Un circuit qui ne contient que le départ (nouveau circuit jamais touché) : rien à protéger.
-  _isTrivial() { return !this.entryId && !this.track.decos.length && this.track.tiles.every((t) => t.t === 'start'); },
+  // (0.12.0 : un départ seul MAIS des réglages, une logique, des déclencheurs ou une description : c'est déjà du travail, il s'enregistre)
+  _isTrivial() {
+    const t = this.track;
+    return !this.entryId && !t.decos.length && t.tiles.every((x) => x.t === 'start') && !t.lg && !(t.scripts && t.scripts.length) && !t.desc
+      && JSON.stringify(t.rulesState()) === JSON.stringify(new Track('').rulesState());
+  },
   // Enregistrement automatique quand on quitte l'éditeur, qu'on ouvre un autre circuit ou qu'on en commence un nouveau : avant 0.12.0, « Retour » ne gardait le travail que dans
   // l'unique brouillon, que la session suivante écrasait (le circuit modifié était perdu sans un mot). Renvoie 'saved', 'failed' ou '' (rien à faire).
   autoSave() {
@@ -138,6 +143,38 @@ export const historyMethods = {
     return ok;
   },
 
+  // « Enregistrer une copie » : une nouvelle entrée de « Mes circuits » ; l'éditeur travaille ensuite sur la copie.
+  saveCopy() {
+    const id = this.entryId;
+    this.entryId = null;
+    if (this.save(true)) this.app.ui.flash(`Copie de « ${this.track.name} » enregistrée dans « Mes circuits ».`, 2.4);
+    else this.entryId = id;
+  },
+
+  // Renommer le circuit (clic sur son nom dans la barre du haut). Le nom n'est pas dans la signature : la vérification et les records restent.
+  renameDialog() {
+    const f = document.createElement('div');
+    f.className = 'form';
+    f.innerHTML = '<label>Nom du circuit<input id="ed-rename" maxlength="40" spellcheck="false" autocomplete="off"></label>';
+    const input = f.querySelector('#ed-rename');
+    input.value = this.track.name;
+    const ok = () => {
+      const nm = input.value.replace(/\s+/g, ' ').trim().slice(0, 40);
+      if (!nm) { this.app.ui.flash('Donne un nom au circuit.'); return false; }
+      if (nm !== this.track.name) { this.track.name = nm; this._changed(false); this._commit(); }
+      return true;
+    };
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (ok()) this.app.ui.closeModal(); } });
+    this.app.ui.modal({ title: 'Renommer le circuit', body: f, actions: [{ label: 'Annuler' }, { label: 'Renommer', primary: true, onClick: ok }] });
+    setTimeout(() => { input.focus(); input.select(); }, 60);
+  },
+
+  toggleGrid() {
+    this.showGrid = !this.showGrid;
+    this.app.ui.flash(this.showGrid ? 'Grille' : 'Sans grille', 1.2);
+    this._refreshUI();
+  },
+
   // Message d'un enregistrement automatique (après autoSave).
   _autoSaveNote(r) {
     if (r === 'saved') this.app.ui.flash(`« ${this.track.name} » enregistré dans « Mes circuits ».`, 2.4);
@@ -226,14 +263,14 @@ export const historyMethods = {
     if (!this.freeCam) { this.pitch = Math.max(0.2, this.pitch); this.dist = Math.max(25, this.dist); }
     else { this.pitch = Math.min(this.pitch, 0.12); this.dist = Math.min(this.dist, 40); }
     this.app.ui.flash(this.freeCam ? 'Caméra libre : au ras du sol, approche jusqu’à 3 m (V pour revenir)' : 'Caméra habituelle', 2);
-    const b = document.querySelector('[data-ed="freecam"]');
-    if (b) b.setAttribute('aria-pressed', this.freeCam ? 'true' : 'false');
+    this._refreshUI();
   },
   minDist() { return this.freeCam ? 3 : 25; },
 
   toggleTopView() {
     if (this.pitch < 1.4) { this._prevPitch = this.pitch; this.pitch = 1.5; }
     else this.pitch = this._prevPitch || 0.95;
+    this._refreshUI();
   },
 
   // État confié à l'application avant un essai (voir _keepState) ; l'identifiant suit l'état exporté.

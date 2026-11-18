@@ -490,20 +490,6 @@ kbd {
 .piece-btn svg { width: 46px; height: 46px; }
 .piece-btn .k { position: absolute; top: 2px; left: 6px; font-size: 10px; opacity: 0.6; }
 
-.ed-side {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: center;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 8px;
-}
 .ed-level { font-weight: 700; font-size: 14px; text-align: center; }
 
 /* ---------- Tactile ---------- */
@@ -557,9 +543,6 @@ body.touch .hud-br { bottom: 120px; }
 }
 
 /* ---------- v1.1 ---------- */
-.pal-row { display: flex; gap: 6px; align-items: center; }
-.pal-row.surf .piece-btn { width: 64px; min-width: 64px; padding: 2px 2px 4px; }
-.pal-row.surf .piece-btn svg { width: 34px; height: 34px; }
 
 .track-group { margin: 6px 0 22px; }
 .track-group h3.group-title { margin: 0 0 12px; font-style: italic; font-size: 20px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
@@ -627,12 +610,9 @@ body.touch .t-top { top: auto; right: auto; left: 12px; bottom: 112px; flex-dire
   .ed-top .btn { padding: 5px 8px; font-size: 13px; }
   .ed-top .btn kbd { display: none; }
   .ed-palette { left: 6px; right: 70px; bottom: 6px; transform: none; max-width: none; padding: 5px; gap: 4px; overflow-x: auto; }
-  .pal-row { gap: 4px; }
-  .piece-btn, .pal-row.surf .piece-btn { width: 54px; min-width: 54px; font-size: 9px; padding: 2px 1px 3px; }
-  .piece-btn svg, .pal-row.surf .piece-btn svg { width: 28px; height: 28px; }
+  .piece-btn { width: 54px; min-width: 54px; font-size: 9px; padding: 2px 1px 3px; }
+  .piece-btn svg { width: 28px; height: 28px; }
   .piece-btn .k { display: none; }
-  .ed-side { right: 6px; padding: 5px; gap: 4px; top: auto; bottom: 6px; transform: none; }
-  .ed-side .btn.icon { min-width: 34px; padding: 5px 6px; }
   .ed-level { font-size: 12px; }
   .hud-tr .medal-list { display: none; }
   .screen { padding: 14px 16px; }
@@ -643,15 +623,10 @@ body.touch .t-top { top: auto; right: auto; left: 12px; bottom: 112px; flex-dire
 .coins { color: var(--amber); font-weight: 700; font-variant-numeric: tabular-nums; }
 .coins.top { position: fixed; top: calc(14px + env(safe-area-inset-top)); right: calc(16px + env(safe-area-inset-right)); z-index: 12; background: var(--panel); border: 1px solid var(--line); padding: 6px 12px; border-radius: 10px; font-size: 18px; }
 
-.pal-tabs { display: flex; gap: 4px; margin-bottom: 6px; }
-.pal-tab { font: inherit; font-size: 13px; color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 4px 12px; cursor: pointer; }
-.pal-tab.on { color: var(--text); background: rgba(255, 255, 255, 0.1); border-color: var(--line); }
 .pal-panel[hidden] { display: none; }
-.pal-row { overflow-x: auto; }
 .pal-param { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 6px; padding: 4px 6px; }
 .pal-param input[type=range] { flex: 1; min-width: 140px; }
 .pal-param b { min-width: 64px; font-variant-numeric: tabular-nums; }
-.pal-hint { font-size: 12px; color: var(--muted); max-width: 520px; padding: 6px; }
 .pal-deco-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
 .pal-deco-top select, .pal-deco-top input[type=text] { font: inherit; font-size: 13px; color: var(--text); background: rgba(0,0,0,0.3); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; -webkit-user-select: text; user-select: text; }
 .pal-deco-top input[type=text] { flex: 1; min-width: 180px; }
@@ -712,7 +687,7 @@ body.touch #touch .t-zone { background: none; border: 0; }
   .coins.top { font-size: 14px; padding: 3px 8px; top: calc(6px + env(safe-area-inset-top)); }
   .menu-buttons { gap: 6px; }
   .btn.big { padding: 8px 14px; font-size: 15px; }
-  .pal-hint, .side-note { display: none; }
+  .side-note { display: none; }
 }
 @media (max-width: 520px) and (orientation: portrait) {
   .logo { font-size: 44px; }
@@ -779,7 +754,6 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   background: var(--panel); border: 1px solid var(--line); flex-wrap: wrap; justify-content: center;
 }
 .ed-selbar .btn[disabled] { opacity: 0.4; pointer-events: none; }
-.ed-side .btn.on { background: #5ff2ff33; border-color: #5ff2ff; }
 .thumb { width: 100%; aspect-ratio: 168 / 104; border-radius: 8px; display: block; margin-bottom: 6px; background: #16122b; image-rendering: auto; }
 @media (max-width: 760px) { .ed-selbar { top: auto; bottom: 120px; } }
 
@@ -843,10 +817,8 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 /* ---------- 0.9 : éditeur ---------- */
 /* Palette sur toute la largeur, jusqu'à 3 lignes de pièces (puis défilement). */
 .ed-palette { left: 10px; right: 92px; transform: none; max-width: none; bottom: 34px; overflow-x: hidden; }
-.ed-palette .pal-row { flex-wrap: wrap; align-content: flex-start; max-height: 252px; overflow-y: auto; padding-right: 2px; }
 .ed-palette .piece-btn { width: 68px; min-width: 68px; }
 .ed-palette .piece-btn svg { width: 40px; height: 40px; }
-.ed-palette .pal-row.surf .piece-btn { width: 68px; min-width: 68px; }
 .pal-deco-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .ed-top .btn.primary { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25), 0 4px 18px rgba(255, 95, 162, 0.35); }
 
@@ -863,8 +835,7 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 
 @media (max-height: 500px) {
   .ed-palette { right: 70px; bottom: 6px; }
-  .ed-palette .pal-row { max-height: 128px; }
-  .ed-palette .piece-btn, .ed-palette .pal-row.surf .piece-btn { width: 54px; min-width: 54px; }
+  .ed-palette .piece-btn { width: 54px; min-width: 54px; }
   .ed-palette .piece-btn svg { width: 28px; height: 28px; }
 }
 /* Le panneau d'état suit la hauteur réelle de la barre du haut (qui peut passer sur 2 lignes). */
@@ -899,9 +870,7 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 #opt-name.bad { outline: 2px solid var(--bad); }
 
 /* ---- Éditeur : sous-menu de la gomme et panneau d'inspection ---- */
-.ed-erasebar { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; padding: 6px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); flex-wrap: wrap; justify-content: center; }
-.ed-erasebar.hidden, .ed-insp.hidden { display: none; }
-.ed-erasebar .btn.on { background: #ff3b5c33; border-color: #ff3b5c; }
+.ed-insp.hidden { display: none; }
 .ed-insp { position: absolute; right: 74px; top: calc(var(--ed-top-h, 54px) + 10px); width: 264px; max-height: calc(100vh - var(--ed-top-h, 54px) - 376px); min-height: 120px; overflow-y: auto; padding: 10px 12px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(6px); display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 .insp-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .insp-head small { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -923,7 +892,7 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 .insp-swatches .swatch.on { border-color: #fff; }
 .insp-check { display: flex; gap: 8px; align-items: center; color: var(--text); }
 .insp-foot { margin-top: 4px; display: flex; justify-content: flex-end; }
-@media (max-width: 760px) { .ed-insp { right: 6px; top: auto; bottom: 172px; width: min(264px, calc(100vw - 12px)); max-height: 34vh; } .ed-erasebar { top: auto; bottom: 172px; } }
+@media (max-width: 760px) { .ed-insp { right: 6px; top: auto; bottom: 172px; width: min(264px, calc(100vw - 12px)); max-height: 34vh; } }
 
 /* ---- Multijoueur : salon et résultats ---- */
 .mp-join { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 13px; }
@@ -1013,16 +982,13 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 
 /* Panneau des pièces ancré en bas, pleine largeur (plus flottant) */
 #editor .ed-palette { left: 0; right: 0; bottom: 0; transform: none; max-width: none; width: auto; border-radius: 14px 14px 0 0; border-left: 0; border-right: 0; border-bottom: 0; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); overflow-x: hidden; max-height: 42vh; overflow-y: auto; }
-#editor .ed-palette .pal-row { max-height: 230px; }
-.pal-tabs { align-items: center; }
 .pal-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
 .pal-chips .chip, .ed-insp .chip, #editor .chip { font: inherit; font-size: 13px; color: var(--muted); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
 #editor .chip:hover { color: var(--text); }
 #editor .chip.on { color: var(--text); background: rgba(95, 242, 255, 0.16); border-color: var(--cyan); }
 /* La colonne de niveau à droite et le panneau d'inspection restent au-dessus du panneau ancré. */
-#editor .ed-side { top: calc(50% - var(--ed-pal-h, 270px) / 2); }
 #editor .ed-insp { max-height: calc(100vh - var(--ed-top-h, 54px) - var(--ed-pal-h, 270px) - 30px); }
-#editor .ed-selbar, #editor .ed-erasebar { top: calc(var(--ed-top-h, 54px) + 14px); }
+#editor .ed-selbar { top: calc(var(--ed-top-h, 54px) + 14px); }
 
 /* Fenêtre large : l'aide des raccourcis s'étend à l'horizontale (quatre colonnes : touche, action, touche, action) */
 .modal-panel.wide { width: min(1180px, 96vw); }
@@ -1043,14 +1009,6 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 }
 
 /* ---- Phase 2 : familles de pièces (caractéristiques), options combinées, onglets de l'inspecteur ---- */
-.fam-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
-.fam-card { display: flex; gap: 6px; align-items: stretch; padding: 4px 6px 4px 4px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); }
-.fam-card.on { border-color: var(--cyan); background: rgba(95, 242, 255, 0.08); }
-.fam-card .fam-main { width: 76px; min-width: 76px; }
-.fam-traits { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 112px; }
-.fam-traits label { display: grid; grid-template-columns: 74px 1fr; gap: 4px; align-items: center; font-size: 11px; color: var(--muted); }
-.fam-traits select { min-width: 0; font: inherit; font-size: 12px; color: var(--text); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line); border-radius: 6px; padding: 2px 4px; }
-.fam-traits select option:disabled { color: #777; }
 .opt-panel { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: flex-start; margin-bottom: 4px; }
 .opt-group { display: flex; flex-direction: column; gap: 3px; }
 .opt-group > b { font-size: 11px; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
@@ -1058,12 +1016,7 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 .chip.dim { opacity: 0.38; }
 .chip[hidden], .btn[hidden] { display: none; }
 .chip .th-sw { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; vertical-align: -1px; border: 1px solid rgba(255, 255, 255, 0.4); }
-#ed-opt-hint[data-mode="combo"]::before { content: "Mode combiné — "; color: var(--cyan); }
-#ed-opt-hint[data-mode="apply"]::before { content: "Mode « appliquer » — "; color: var(--cyan); }
 @media (max-width: 760px) {
-  .fam-card .fam-main { width: 54px; min-width: 54px; }
-  .fam-traits { min-width: 96px; }
-  .fam-traits label { grid-template-columns: 1fr; gap: 0; }
 }
 .insp-tabs { display: flex; gap: 4px; }
 .insp-tabs .btn { flex: 1; padding: 5px 4px; font-size: 13px; }
@@ -1087,9 +1040,8 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 .card .meta .medal { vertical-align: -3px; margin-right: 2px; }
 
 /* Palette repliable (0.9.5) : seuls les onglets restent visibles. */
-.pal-tab.pal-fold { margin-left: auto; padding: 4px 12px; }
 #editor .ed-palette.folded { max-height: none; overflow: visible; }
-#editor .ed-palette.folded .pal-panel, #editor .ed-palette.folded .pal-hint { display: none !important; }
+#editor .ed-palette.folded .pal-panel { display: none !important; }
 
 /* Options : les listes déroulantes longues ne doivent pas dépasser l'écran (0.9.5). */
 .form label { min-width: 0; }
@@ -1598,7 +1550,6 @@ body.hud-editing > section, body.hud-editing #touch { display: none !important; 
    l'écran est bas (téléphone en paysage : ses derniers boutons étaient coupés) (0.9.46). */
 .form label:has(> #opt-quality) { flex-direction: column; align-items: stretch; gap: 6px; }
 .form label:has(> #opt-quality) select { width: 100%; }
-#editor .ed-side { max-height: calc(100vh - var(--ed-top-h, 54px) - var(--ed-pal-h, 270px) - 24px); min-height: 120px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 
 /* Modes de jeu : le nom du mode et sa description sur deux lignes (ils se collaient), sur toute la largeur libre (0.9.46). */
 .srow.mode-row > .mode-name { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; color: var(--text); }
@@ -1655,3 +1606,173 @@ body.hud-editing > section, body.hud-editing #touch { display: none !important; 
   #garage-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
   #garage-tabs .tab { flex: 0 0 auto; }
 }
+
+/* ---------- 0.12.0 · Éditeur : quatre zones, un rôle chacune ----------
+   En haut : le circuit (fichier, nom, réglages, annuler, problèmes, essais). À gauche : le rail des six outils et le panneau de l'outil choisi.
+   À droite : la vue. La barre de sélection (au-dessus de la zone) et l'inspecteur n'apparaissent qu'avec leur outil. Téléphone : le panneau devient un tiroir. */
+#editor.ed12 { --ed-top-h: 52px; --ed-rail-w: 74px; --ed-lib-w: 320px; }
+#editor.ed12 .ed-top { top: 0; left: 0; right: 0; height: var(--ed-top-h); padding: 0 10px; gap: 6px; flex-wrap: nowrap; background: rgba(23, 15, 46, 0.94); border-bottom: 1px solid var(--line); backdrop-filter: blur(6px); }
+#editor.ed12 .ed-top .btn { white-space: nowrap; }
+#editor.ed12 .ed-spacer { flex: 1 1 auto; min-width: 4px; }
+#editor.ed12 .ed-title { font: inherit; font-weight: 700; font-size: 15px; color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 32vw; }
+#editor.ed12 .ed-title:hover, #editor.ed12 .ed-title:focus-visible { border-color: var(--line); background: rgba(255, 255, 255, 0.06); }
+#editor.ed12 #ed-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#editor.ed12 .ed-saved { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--good); opacity: 0.55; }
+#editor.ed12 .ed-saved.dirty { background: var(--amber); opacity: 1; box-shadow: 0 0 0 3px rgba(255, 191, 60, 0.25); }
+#editor.ed12 .ed-split { display: flex; gap: 2px; }
+#editor.ed12 .ed-split .ed-menu { left: auto; right: 0; }
+#editor.ed12 .ed-split > .btn:first-child { border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
+#editor.ed12 .ed-split > .btn.icon { border-top-left-radius: 4px; border-bottom-left-radius: 4px; min-width: 30px; padding-left: 6px; padding-right: 6px; }
+
+/* Rail des outils */
+#editor.ed12 .ed-rail { position: absolute; left: 0; top: var(--ed-top-h); bottom: 0; width: var(--ed-rail-w); display: flex; flex-direction: column; gap: 6px; padding: 10px 7px; background: rgba(23, 15, 46, 0.94); border-right: 1px solid var(--line); overflow-y: auto; scrollbar-width: none; }
+#editor.ed12 .ed-rail .tool-btn { width: 100%; padding: 6px 2px 7px; font-size: 11px; }
+#editor.ed12 .ed-rail .tool-btn svg { width: 30px; height: 30px; }
+#editor.ed12 .ed-rail .tool-btn.on { border-color: var(--cyan); background: rgba(95, 242, 255, 0.16); }
+#editor.ed12 .ed-rail .tool-btn.on.fill { border-color: #ffb347; background: rgba(255, 179, 71, 0.18); }
+#editor.ed12 .ed-rail .tool-btn[hidden] { display: none; }
+
+/* Panneau de l'outil */
+#editor.ed12 .ed-palette { left: var(--ed-rail-w); right: auto; top: var(--ed-top-h); bottom: 0; width: var(--ed-lib-w); max-width: none; max-height: none; transform: none; border-radius: 0; border: 0; border-right: 1px solid var(--line); padding: 10px 10px 18px; gap: 8px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; background: rgba(28, 20, 58, 0.9); backdrop-filter: blur(6px); scrollbar-width: thin; display: block; }
+#editor.ed12 .pal-panel { display: flex; flex-direction: column; gap: 8px; }
+#editor.ed12 .pal-panel[hidden] { display: none; }
+#editor.ed12 .pal-h { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+#editor.ed12 .pal-close { display: none; }
+#editor.ed12 .pal-guided { margin-bottom: 8px; }
+#editor.ed12 .pal-top { display: flex; flex-direction: column; gap: 6px; }
+#editor.ed12 .pal-search { width: 100%; font: inherit; font-size: 13px; color: var(--text); background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; -webkit-user-select: text; user-select: text; }
+#editor.ed12 .pal-search:focus { outline: none; border-color: var(--cyan); }
+#editor.ed12 .pal-seg { display: flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+#editor.ed12 .pal-seg button { flex: 1; font: inherit; font-size: 12.5px; color: var(--muted); background: transparent; border: 0; padding: 6px 4px; cursor: pointer; }
+#editor.ed12 .pal-seg button + button { border-left: 1px solid var(--line); }
+#editor.ed12 .pal-seg button.on { color: var(--text); background: rgba(95, 242, 255, 0.16); }
+#editor.ed12 .pal-seg button[data-seg="fill"].on { background: rgba(255, 179, 71, 0.2); }
+#editor.ed12 .lib-sec[hidden] { display: none; }
+#editor.ed12 .lib-head { width: 100%; display: flex; justify-content: space-between; align-items: center; font: inherit; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); background: transparent; border: 0; border-bottom: 1px solid var(--line); padding: 4px 2px; margin-bottom: 6px; cursor: pointer; }
+#editor.ed12 .lib-head:hover { color: var(--text); }
+#editor.ed12 .lib-head i { font-style: normal; transition: transform 0.15s; }
+#editor.ed12 .lib-sec.closed .lib-head i { transform: rotate(-90deg); }
+#editor.ed12 .lib-sec.closed > :not(.lib-head) { display: none; }
+#editor.ed12 .lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 5px; }
+#editor.ed12 .lib-grid .piece-btn { width: auto; min-width: 0; padding: 4px 2px 5px; font-size: 10.5px; line-height: 1.15; text-align: center; }
+#editor.ed12 .lib-grid .piece-btn svg { width: 38px; height: 38px; }
+#editor.ed12 .lib-grid .piece-btn .emo { font-size: 26px; line-height: 38px; }
+#editor.ed12 .lib-grid .piece-btn[hidden] { display: none; }
+#editor.ed12 .lib-grid.list { grid-template-columns: 1fr; }
+#editor.ed12 .lib-grid.list .piece-btn { flex-direction: row; gap: 8px; text-align: left; padding: 3px 8px; font-size: 12px; }
+#editor.ed12 .lib-grid.list .piece-btn svg { width: 28px; height: 28px; flex: none; }
+#editor.ed12 .lib-count { font-size: 12px; color: var(--muted); margin: 2px 0 6px; }
+#editor.ed12 .ed-palette.searching .lib-sec { display: none; }
+#editor.ed12 .lib-results[hidden] { display: none; }
+#editor.ed12 [data-panel="prefabs"] .pf-row { margin-bottom: 6px; }
+
+/* Réglages de la pièce choisie */
+#editor.ed12 .pal-set { margin-top: 4px; padding: 10px; border-radius: 12px; background: rgba(0, 0, 0, 0.22); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+#editor.ed12 .pal-set[hidden] { display: none; }
+#editor.ed12 .pset-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+#editor.ed12 .pset-head b { font-size: 14px; }
+#editor.ed12 .pset-head small { color: var(--muted); font-size: 12px; }
+#editor.ed12 .pset-traits { display: flex; flex-direction: column; gap: 4px; }
+#editor.ed12 .pset-traits label { display: grid; grid-template-columns: 88px 1fr; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+#editor.ed12 .pset-traits select { min-width: 0; font: inherit; font-size: 12.5px; color: var(--text); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line); border-radius: 7px; padding: 4px 6px; }
+#editor.ed12 .pset-traits select option:disabled { color: #807a92; }
+#editor.ed12 .pset-acts { display: flex; flex-wrap: wrap; gap: 5px; }
+#editor.ed12 .pset-acts .btn[hidden] { display: none; }
+#editor.ed12 .opt-panel { flex-direction: column; gap: 6px; margin: 0; }
+#editor.ed12 .opt-group.na { display: none; }
+#editor.ed12 .opt-group > b { font-size: 10.5px; }
+#editor.ed12 .opt-panel .chip { font-size: 12px; padding: 3px 9px; }
+#editor.ed12 .ed-palette.guided .opt-group:not([hidden]) ~ #ed-opt-clear { display: none; }
+#editor.ed12 .pal-param { flex-wrap: wrap; padding: 0; margin: 0; }
+#editor.ed12 .pal-param input[type=range] { min-width: 100px; }
+#editor.ed12 .pal-deco-top { gap: 6px 10px; }
+#editor.ed12 .pal-deco-top label.inl { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); width: 100%; }
+#editor.ed12 .pal-deco-top label.inl input[type=range] { flex: 1; min-width: 0; }
+#editor.ed12 #ed-deco-url { width: 100%; }
+#editor.ed12 .pal-chips.sub .chip { font-size: 12px; padding: 3px 9px; }
+#editor.ed12 .pal-note { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+#editor.ed12 .pal-btns { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+#editor.ed12 .pal-btns.mv span { font-size: 12px; color: var(--muted); margin-right: 2px; }
+#editor.ed12 .pal-btns .btn.on { background: #ff3b5c33; border-color: #ff3b5c; }
+#editor.ed12 .pal-btns .btn[disabled] { opacity: 0.4; pointer-events: none; }
+
+/* Colonne Vue */
+#editor.ed12 .ed-view { position: absolute; right: 10px; top: calc(var(--ed-top-h) + 10px); width: 124px; display: flex; flex-direction: column; gap: 5px; padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; max-height: calc(100vh - var(--ed-top-h) - 20px); overflow-y: auto; scrollbar-width: none; }
+#editor.ed12 .ed-vh { font: inherit; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); background: transparent; border: 0; text-align: left; padding: 0 2px 2px; cursor: pointer; }
+#editor.ed12 .ed-view .btn { justify-content: flex-start; text-align: left; padding: 5px 8px; font-size: 12.5px; white-space: nowrap; }
+#editor.ed12 .ed-view .btn.on { background: #5ff2ff26; border-color: #5ff2ff; }
+#editor.ed12 .ed-lvl { display: grid; grid-template-columns: 30px 1fr 30px; gap: 4px; align-items: center; }
+#editor.ed12 .ed-lvl .btn { justify-content: center; padding: 4px 0; }
+#editor.ed12 .ed-view.folded > :not(.ed-vh) { display: none; }
+
+/* Inspecteur, barre de sélection, aide du bas */
+#editor.ed12 .ed-insp { right: 146px; top: calc(var(--ed-top-h) + 10px); max-height: calc(100vh - var(--ed-top-h) - 60px); }
+#editor.ed12 .ed-selbar { transform: none; flex-wrap: nowrap; align-items: center; gap: 4px; padding: 5px; border-color: var(--cyan); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); z-index: 3; max-width: calc(100vw - 16px); overflow-x: auto; scrollbar-width: none; }
+#editor.ed12 .ed-selbar.hidden { display: none; }
+#editor.ed12 .ed-selbar .btn { padding: 5px 9px; font-size: 13px; white-space: nowrap; }
+#editor.ed12 .ed-selbar .sep { width: 1px; align-self: stretch; margin: 2px 2px; background: var(--line); flex: none; }
+#editor.ed12 .ed-hint { position: absolute; left: calc(var(--ed-rail-w) + var(--ed-lib-w) + 12px); right: 146px; bottom: calc(10px + env(safe-area-inset-bottom)); display: flex; justify-content: center; pointer-events: none; }
+#editor.ed12 .ed-hint span { max-width: 100%; padding: 5px 12px; border-radius: 999px; background: rgba(14, 10, 30, 0.72); color: var(--muted); font-size: 12px; text-align: center; }
+#editor.ed12 .ed-hint b { color: var(--text); font-weight: 600; margin-right: 6px; }
+#editor.ed12 .ed-hint:empty { display: none; }
+
+/* Écran moyen : le panneau se resserre, les libellés de la barre du haut restent. */
+@media (max-width: 1180px) {
+  #editor.ed12 { --ed-lib-w: 276px; }
+  #editor.ed12 .ed-top .btn kbd { display: none; }
+}
+@media (max-width: 960px) {
+  #editor.ed12 .ed-top .lbl { display: none; }
+  #editor.ed12 .ed-hint { display: none; }
+}
+
+/* Téléphone, petite tablette : le panneau de l'outil est un TIROIR qui s'ouvre depuis le rail (toucher l'outil actif) et se referme après un choix ;
+   la colonne Vue se replie derrière « 👁 Vue ». */
+@media (max-width: 760px), (max-height: 520px) {
+  #editor.ed12 { --ed-top-h: 46px; --ed-rail-w: 58px; --ed-lib-w: min(310px, calc(100vw - 58px)); }
+  #editor.ed12 .ed-top { padding: 0 6px; gap: 4px; }
+  #editor.ed12 .ed-top .btn { padding: 5px 8px; font-size: 13px; }
+  #editor.ed12 .ed-title { font-size: 13px; padding: 4px 6px; max-width: 26vw; }
+  #editor.ed12 .ed-rail { padding: 6px 4px; gap: 4px; }
+  #editor.ed12 .ed-rail .tool-btn { font-size: 9px; padding: 4px 1px 5px; }
+  #editor.ed12 .ed-rail .tool-btn svg { width: 26px; height: 26px; }
+  #editor.ed12 .ed-rail .tool-btn .k { display: none; }
+  #editor.ed12 .ed-palette { z-index: 4; transform: translateX(calc(-100% - var(--ed-rail-w))); transition: transform 0.18s; box-shadow: 8px 0 24px rgba(0, 0, 0, 0.45); }
+  #editor.ed12.drawer-open .ed-palette { transform: none; }
+  #editor.ed12 .pal-close { display: block; position: sticky; top: 0; margin-left: auto; z-index: 1; }
+  #editor.ed12 .ed-view { top: calc(var(--ed-top-h) + 6px); right: 6px; width: auto; padding: 5px; }
+  #editor.ed12 .ed-view .btn { font-size: 12px; padding: 4px 7px; }
+  #editor.ed12 .ed-insp { right: 6px; left: auto; top: auto; bottom: 6px; width: min(270px, calc(100vw - var(--ed-rail-w) - 12px)); max-height: 46vh; }
+  #editor.ed12 .ed-hint { display: flex; left: calc(var(--ed-rail-w) + 8px); right: 8px; bottom: 6px; }
+  #editor.ed12 .ed-hint span { pointer-events: auto; cursor: pointer; }
+  #editor.ed12 .ed-hint .txt { display: none; }
+  #editor.ed12 .ed-selbar .btn { padding: 4px 7px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { #editor.ed12 .ed-palette { transition: none; } }
+body.reduce-motion #editor.ed12 .ed-palette { transition: none; }
+#editor.ed12 .ed-hint i.txt { font-style: normal; }
+/* Les réglages de la pièce choisie restent visibles au bas du panneau pendant qu'on parcourt la bibliothèque ; ses options se replient. */
+#editor.ed12 .pal-set { position: sticky; bottom: -18px; margin-bottom: -8px; z-index: 1; max-height: 56%; overflow-y: auto; background: rgba(20, 14, 42, 0.97); box-shadow: 0 -10px 20px rgba(0, 0, 0, 0.35); scrollbar-width: thin; }
+#editor.ed12 .pset-opts > summary { cursor: pointer; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--cyan); }
+#editor.ed12 .pset-opts[open] > summary { margin-bottom: 6px; }
+#editor.ed12 .ed-lvl .btn.icon { min-width: 0; width: 30px; }
+#editor.ed12 .ed-level { font-size: 13px; white-space: nowrap; }
+#editor.ed12 .ed-palette.compact { bottom: auto; max-height: calc(100vh - var(--ed-top-h) - 20px); border-bottom: 1px solid var(--line); border-bottom-right-radius: 14px; }
+.pp-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.pp-tabs .btn.on { background: #5ff2ff26; border-color: #5ff2ff; }
+.pp-tab[hidden] { display: none !important; }
+.pp-tab { display: flex; flex-direction: column; gap: 12px; }
+.ed-optdlg .pal-chips { margin-top: 8px; }
+/* Les menus de la barre du haut passent au-dessus du panneau et de la colonne Vue ; la barre de sélection passe à la ligne si la place manque. */
+#editor.ed12 .ed-top { z-index: 6; }
+#editor.ed12 .ed-selbar { flex-wrap: wrap; overflow: visible; }
+#editor.ed12 .ed-palette.searching .pal-set { position: static; margin-bottom: 0; max-height: none; box-shadow: none; }
+@media (max-width: 760px), (max-height: 520px) {
+  /* Tiroir : les réglages de la pièce choisie juste sous la recherche (pas collés en bas : ils cacheraient la bibliothèque) */
+  #editor.ed12 .pal-panel[data-panel="pieces"] > * { order: 1; }
+  #editor.ed12 .pal-panel[data-panel="pieces"] > .pal-h, #editor.ed12 .pal-panel[data-panel="pieces"] > .pal-top { order: -2; }
+  #editor.ed12 .pal-panel[data-panel="pieces"] > .pal-set { order: -1; position: static; margin: 0; max-height: none; box-shadow: none; }
+  #editor.ed12 .ed-view:not(.folded) { display: grid; grid-template-columns: repeat(2, minmax(0, auto)); }
+  #editor.ed12 .ed-view:not(.folded) > .ed-vh, #editor.ed12 .ed-view:not(.folded) > .ed-lvl { grid-column: 1 / -1; }
+}
+#editor.ed12 .ed-menu { min-width: 250px; }

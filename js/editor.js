@@ -52,8 +52,10 @@ export class EditorSession {
       this.entryId = null;
       setTimeout(() => { try { this.app.ui.flash(this.loadIssue + ' Le circuit d\'origine reste intact dans « Mes circuits » ; ce que tu enregistres ici en fait une copie.', 8); } catch { /* interface fermée */ } }, 700);
     }
-    this.tool = validTool(state.tool) ? state.tool : 'straight';
+    // (0.12.0 : l'ancien outil « appliquer une option » n'a plus de bouton : un brouillon qui l'avait reprend la ligne droite)
+    this.tool = validTool(state.tool) && !state.tool.startsWith('mod:') ? state.tool : 'straight';
     this.fillMode = isFill(this.tool);
+    if (this.fillMode) { if (fillBase(this.tool).startsWith('surf:')) this._fillPaint = true; else this._fillPieces = true; }
     this.eraseFilter = ERASE_FILTERS[state.eraseFilter] ? state.eraseFilter : 'all';   // gomme : tout / décorations / pistes
     this.camLocked = false;      // vrai pendant qu'un gizmo est saisi : la caméra de l'éditeur ne bouge pas
     this.rot = state.rot || 0;
@@ -134,7 +136,6 @@ export class EditorSession {
     // Le gizmo (TransformControls) s'abonne aux clics AVANT l'éditeur : il décide le premier s'il est saisi.
     this.inspector = new Inspector(this);
     this._bind();
-    this._buildEraseBar();
     this._buildPalette();
     if (kept) this.inspector.restore(this.histSel[this.hIndex]);
     this._refreshUI();
@@ -208,7 +209,7 @@ export class EditorSession {
     if (input.act('ed.recenter')) this.recenter();
     if (input.act('ed.topView')) this.toggleTopView();
     if (input.act('ed.freeCam')) this.toggleFreeCam();
-    if (input.act('ed.grid')) { this.showGrid = !this.showGrid; this.app.ui.flash(this.showGrid ? 'Grille' : 'Sans grille', 1.2); }
+    if (input.act('ed.grid')) this.toggleGrid();
     if (input.act('ed.help')) { this.app.editorHelp(); return; }
     if (input.act('ed.test')) { if (shift) this.testHere(); else this.test(); return; }
     for (const t of TOOLS) if (t.key && t.id !== 'fill' && input.hit(t.key)) this.setTool(t.id);
@@ -302,7 +303,6 @@ export class EditorSession {
     const q = this.app.quality && this.app.quality.profile;
     if (q) { this.app.camera.far = q.far; this.app.camera.updateProjectionMatrix(); }
     if (this.app.scenery.refreshFog) this.app.scenery.refreshFog();
-    if (this.eraseBar) this.eraseBar.remove();
     this.view.dispose();
     for (const o of [this.preview, this.highlight, this.marker, this.footprint, this.grid]) {
       if (!o) continue;

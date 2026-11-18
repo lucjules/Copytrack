@@ -583,61 +583,76 @@
   <div id="replay-bar" class="replay-bar hidden"><b>REPLAY</b><span class="rs">▶ ×1</span><button class="btn small" id="replay-export" data-action="export-video" title="Enregistrer ce replay en vidéo (WebM, sans son)">🎬 Vidéo</button><span class="rh">Espace : pause · ← → : vitesse · C : caméra · Entrée : recommencer · Échap : quitter</span></div>
 
   <!-- Éditeur -->
-  <div id="editor" class="hidden">
-    <div class="ed-top">
+  <div id="editor" class="hidden ed12">
+    <!-- 0.12.0 : quatre zones, un rôle chacune. En haut : le circuit ; à gauche : les outils (que fait mon clic ?) et leur panneau (avec quoi ?) ;
+         à droite : la vue. La barre de sélection et l'inspecteur n'apparaissent qu'avec leur outil. -->
+    <div class="ed-top" role="toolbar" aria-label="Circuit">
       <div class="ed-menu-wrap">
-        <button class="btn icon" id="ed-menu-btn" data-ed="menu-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="ed-menu" title="Menu de l'éditeur">☰</button>
+        <button class="btn" id="ed-menu-btn" data-ed="menu-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="ed-menu" title="Fichier : nouveau, ouvrir, importer, partager, enregistrer, aide">☰ <span class="lbl">Fichier</span></button>
         <div class="ed-menu hidden" id="ed-menu" role="menu" aria-labelledby="ed-menu-btn">
-          <button role="menuitem" data-ed="new">Nouveau</button>
-          <button role="menuitem" data-ed="import">Importer</button>
+          <button role="menuitem" data-ed="new">Nouveau circuit</button>
+          <button role="menuitem" data-ed="open">Ouvrir (Mes circuits)</button>
+          <button role="menuitem" data-ed="import">Importer un code</button>
           <button role="menuitem" data-ed="export">Partager</button>
-          <button role="menuitem" data-ed="save">Enregistrer <kbd>Ctrl S</kbd></button>
           <hr>
+          <button role="menuitem" data-ed="save">Enregistrer <kbd>Ctrl S</kbd></button>
+          <button role="menuitem" data-ed="saveas">Enregistrer une copie</button>
+          <hr>
+          <button role="menuitem" data-ed="help">Aide et raccourcis <kbd>F1</kbd></button>
           <button role="menuitem" data-ed="menu">← Retour au menu</button>
         </div>
       </div>
-      <button class="btn" data-ed="params" title="Paramètres du niveau : décor, tours, règles de départ (F3)">⚙ Paramètres</button>
+      <button class="ed-title" id="ed-title" type="button" data-ed="rename" title="Renommer le circuit"><span id="ed-name">Mon circuit</span><i id="ed-saved" class="ed-saved" aria-label="Enregistré dans « Mes circuits »"></i></button>
+      <button class="btn" data-ed="params" title="Réglages du circuit : nom, décor, tours, départ, conditions, ambiance, déclencheurs, logique (F3)">⚙ <span class="lbl">Circuit</span></button>
       <div class="ed-group">
-        <button class="btn icon" data-ed="undo" title="Annuler (Ctrl+Z)">↶</button>
-        <button class="btn icon" data-ed="redo" title="Rétablir (Ctrl+Y)">↷</button>
+        <button class="btn icon" data-ed="undo" title="Annuler (Ctrl+Z)" aria-label="Annuler">↶</button>
+        <button class="btn icon" data-ed="redo" title="Rétablir (Ctrl+Y)" aria-label="Rétablir">↷</button>
       </div>
-      <div class="ed-group">
-        <button class="btn" data-ed="testhere" title="Tester depuis la pièce visée (Maj+T)">▶ Ici</button>
-        <button class="btn" data-ed="test" title="Essai libre, sans vérification (T)">▶ Tester <kbd>T</kbd></button>
-        <button class="btn primary" data-ed="verify" title="Course complète : ton temps devient la médaille cristal, puis tu peux publier (F2)">✔ Vérifier</button>
-      </div>
+      <span class="ed-spacer"></span>
       <button class="ed-warn hidden" id="ed-warn" type="button" aria-live="polite"></button>
+      <div class="ed-menu-wrap ed-split">
+        <button class="btn" data-ed="test" title="Essai libre depuis le départ, sans vérification (T)">▶ <span class="lbl">Tester</span> <kbd>T</kbd></button>
+        <button class="btn icon" id="ed-test-btn" data-ed="test-menu" aria-haspopup="true" aria-expanded="false" aria-controls="ed-test-menu" title="Autres essais" aria-label="Autres essais">▾</button>
+        <div class="ed-menu hidden" id="ed-test-menu" role="menu" aria-labelledby="ed-test-btn">
+          <button role="menuitem" data-ed="test">Depuis le départ <kbd>T</kbd></button>
+          <button role="menuitem" data-ed="testhere">Depuis la pièce visée <kbd>Maj T</kbd></button>
+        </div>
+      </div>
+      <button class="btn primary" data-ed="verify" title="Course complète : ton temps devient la médaille cristal, puis tu peux publier (F2)">🏁 <span class="lbl">Vérifier et publier</span></button>
     </div>
-    <div class="ed-selbar hidden" id="ed-selbar">
-      <button class="btn" data-sel="all" title="Tout sélectionner (Ctrl+A)">Tout</button>
+    <div class="ed-rail" id="ed-tools" role="toolbar" aria-label="Outils" aria-orientation="vertical"></div>
+    <div class="ed-palette" id="ed-palette" role="region" aria-label="Bibliothèque de l’outil"></div>
+    <div class="ed-view" id="ed-view" role="toolbar" aria-label="Vue">
+      <button class="ed-vh" type="button" data-ed="view-toggle" aria-expanded="true" title="Vue : niveau, caméra, grille, calques">👁 <span>Vue</span></button>
+      <div class="ed-lvl" role="group" aria-label="Niveau">
+        <button class="btn icon" data-ed="lvl-down" title="Descendre d’un niveau (C / Page↓)" aria-label="Niveau −">▼</button>
+        <div id="ed-level" class="ed-level">Niv. 0</div>
+        <button class="btn icon" data-ed="lvl-up" title="Monter d’un niveau (E / Page↑)" aria-label="Niveau +">▲</button>
+      </div>
+      <button class="btn" data-ed="levelview" aria-pressed="false" title="N’afficher que le niveau choisi ; la sélection ne prend que lui (Z)">◐ <span>Ce niveau</span></button>
+      <button class="btn" data-ed="topview" aria-pressed="false" title="Vue de dessus (H)">⬒ <span>Dessus</span></button>
+      <button class="btn" data-ed="recenter" title="Recentrer sur le circuit (F)">⌖ <span>Recentrer</span></button>
+      <button class="btn" data-ed="freecam" aria-pressed="false" title="Caméra libre : au ras du sol, approche jusqu’à 3 m (V)">🎥 <span>Ras du sol</span></button>
+      <button class="btn" data-ed="grid" aria-pressed="true" title="Afficher ou masquer la grille (G)">▦ <span>Grille</span></button>
+      <button class="btn" data-ed="groups" title="Calques et groupes : masquer, verrouiller, nommer (F4)">☰ <span>Calques</span></button>
+    </div>
+    <div class="ed-selbar hidden" id="ed-selbar" role="toolbar" aria-label="Zone sélectionnée">
       <button class="btn" data-sel="copy" title="Copier (Ctrl+C)">Copier</button>
-      <button class="btn" data-sel="cut" title="Couper (Ctrl+X) puis déplacer">Déplacer</button>
-      <button class="btn" data-sel="paste" title="Coller (Ctrl+V)">Coller</button>
+      <button class="btn" data-sel="cut" title="Couper (Ctrl+X) : la zone se pose ailleurs">Couper</button>
       <button class="btn" data-sel="dup" title="Dupliquer : le double est à poser ailleurs">Dupliquer</button>
-      <button class="btn icon" data-sel="rot" title="Pivoter la sélection ou le collage (R)">⟳</button>
-      <button class="btn icon" data-sel="mv-l" title="Déplacer la sélection d'une case vers la gauche" aria-label="Déplacer à gauche">←</button>
-      <button class="btn icon" data-sel="mv-u" title="Déplacer la sélection d'une case vers le haut de l'écran (nord)" aria-label="Déplacer au nord">↑</button>
-      <button class="btn icon" data-sel="mv-d" title="Déplacer la sélection d'une case vers le bas de l'écran (sud)" aria-label="Déplacer au sud">↓</button>
-      <button class="btn icon" data-sel="mv-r" title="Déplacer la sélection d'une case vers la droite" aria-label="Déplacer à droite">→</button>
-      <button class="btn icon" data-sel="up" title="Monter la sélection (E)">▲</button>
-      <button class="btn icon" data-sel="down" title="Descendre la sélection (C)">▼</button>
-      <button class="btn" data-sel="del" title="Supprimer (Suppr)">Supprimer</button>
-      <button class="btn icon" data-sel="none" title="Annuler la sélection (Échap)">✕</button>
+      <i class="sep"></i>
+      <button class="btn icon" data-sel="rot" title="Pivoter la zone (R)" aria-label="Pivoter la zone">⟳</button>
+      <button class="btn icon" data-sel="up" title="Monter la zone d’un niveau (E)" aria-label="Monter la zone">▲</button>
+      <button class="btn icon" data-sel="down" title="Descendre la zone d’un niveau (C)" aria-label="Descendre la zone">▼</button>
+      <i class="sep"></i>
+      <button class="btn" data-sel="opt" title="Appliquer une option (mur, tunnel, sans bordures, thème…) à toutes les pièces de la zone">Option…</button>
+      <button class="btn" data-sel="group" title="Ranger la zone dans un groupe (calques, logique)">Groupe…</button>
+      <button class="btn" data-sel="prefab" title="Enregistrer la zone comme prefab réutilisable">💾 Prefab</button>
+      <i class="sep"></i>
+      <button class="btn danger" data-sel="del" title="Supprimer (Suppr)">Supprimer</button>
+      <button class="btn icon" data-sel="none" title="Retirer la sélection (Échap)" aria-label="Retirer la sélection">✕</button>
     </div>
-    <div class="ed-tools" id="ed-tools" role="toolbar" aria-label="Outils"></div>
-    <div class="ed-palette" id="ed-palette"></div>
-    <div class="ed-side">
-      <button class="btn icon" data-ed="lvl-up" title="Monter (E / Page↑)">▲</button>
-      <div id="ed-level" class="ed-level">Niv. 0</div>
-      <button class="btn icon" data-ed="lvl-down" title="Descendre (C / Page↓)">▼</button>
-      <button class="btn icon" data-ed="rotate" title="Pivoter (R)">⟳</button>
-      <button class="btn icon" data-ed="extend" title="Prolonger : pose la pièce choisie au bout de la dernière pièce, raccordée (P)" aria-label="Prolonger">➜</button>
-      <button class="btn icon" data-ed="levelview" title="Vue par niveau (Z) : la sélection ne prend alors que ce niveau">◐</button>
-      <button class="btn icon" data-ed="groups" title="Groupes et calques (F4)">▦</button>
-      <button class="btn icon" data-ed="freecam" aria-pressed="false" title="Caméra libre : au ras du sol, approche jusqu’à 3 m (V)">🎥</button>
-      <button class="btn icon" data-ed="logic" title="Logique du circuit (F6)">⚙</button>
-      <button class="btn icon" data-ed="help" title="Raccourcis (F1 ou ?)">?</button>
-    </div>
+    <div class="ed-hint" id="ed-hint" aria-live="off"></div>
   </div>
 
   <!-- Fenêtre modale générique -->

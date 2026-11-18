@@ -2,12 +2,14 @@
 // Ces méthodes s'ajoutent au prototype de EditorSession (voir editor.js) : `this` est l'instance.
 import * as THREE from '../vendor/three.module.min.js';
 import { CELL, MAX_LEVEL, LEVEL_H } from '../constants.js';
-import { PIECES } from '../pieces.js';
+import { PIECES, flagAllowed } from '../pieces.js';
+import { MODS } from './shared.js';
 import { Track } from '../track.js';
 import { buildTileMesh } from '../trackMesh.js';
 import { buildDecoMesh } from '../decos.js';
 import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, moveSelection, rotateSelection, checkTrack, findDuplicateSpot, duplicateSelection, duplicable } from '../editorTools.js';
 import { continuityIssues, issueText, issueLevelOrder } from '../continuity.js';
+const _P = new THREE.Vector3();
 export const selectionMethods = {
   // Problèmes repérables sans rouler (0.9.5) : extrémités libres, sauts risqués, pièces inaccessibles (checkTrack), puis raccords d'orientation
   // de 0.9.3 (un mur contre le sol : il manque une transition). Calculés une fois par état du circuit ; { tile, level, msg }.
@@ -76,6 +78,12 @@ export const selectionMethods = {
   _selectDown(tap = false) {
     if (!this.hover) return;
     if (this.pasting) { this.doPaste(); return; }
+    // 0.12.0 : glisser DANS la zone sélectionnée la déplace (tout ou rien, comme les flèches ; un seul pas d'annulation au relâchement).
+    const r = this.sel, c = this.hover;
+    if (!tap && r && c.cx >= r.x0 && c.cx <= r.x1 && c.cz >= r.z0 && c.cz <= r.z1) {
+      this.selMove = { cx: c.cx, cz: c.cz, dx: 0, dz: 0, warned: false };
+      return;
+    }
     this.selDrag = { cx: this.hover.cx, cz: this.hover.cz };
     this.selGroup = 0;                                              // une zone tracée à la main n'est plus « le groupe »
     this.sel = normRect(this.selDrag, this.selDrag);
@@ -83,11 +91,35 @@ export const selectionMethods = {
   },
 
   _selectMove() {
+    if (this.selMove && this.hover) { this._dragSel(); return; }
     if (!this.selDrag || !this.hover) return;
     this.sel = normRect(this.selDrag, this.hover);
   },
 
+  // Déplacement de la zone pendant le glisser : la zone suit le curseur case par case ; une case refusée (pièce qui gêne) laisse la zone où elle est.
+  _dragSel() {
+    const m = this.selMove, want = { dx: this.hover.cx - m.cx, dz: this.hover.cz - m.cz };
+    const ddx = want.dx - m.dx, ddz = want.dz - m.dz;
+    if (!ddx && !ddz) return;
+    const tiles = this._selTiles(), decos = this._selDecos();
+    if (!tiles.length && !decos.length) return;
+    if (!moveSelection(this.track, this.sel, tiles, decos, ddx, ddz)) {
+      if (!m.warned) { m.warned = true; this.app.ui.flash('Une pièce gêne : la zone ne passe pas par là.', 1.6); }
+      return;
+    }
+    m.dx = want.dx; m.dz = want.dz;
+    this.sel = { x0: this.sel.x0 + ddx, z0: this.sel.z0 + ddz, x1: this.sel.x1 + ddx, z1: this.sel.z1 + ddz };
+    this._changed();
+  },
+
   _selectUp() {
+    if (this.selMove) {
+      const moved = this.selMove.dx || this.selMove.dz;
+      this.selMove = null;
+      if (moved) { this.app.audio.place(); this._commit(); }
+      this._refreshSelBar();
+      return;
+    }
     this.selDrag = null;
     this._selInfo();
     this._noteSel();
@@ -264,10 +296,42 @@ export const selectionMethods = {
   _updateSelBox() {
     const r = this.sel;
     this.selBox.visible = !!r && this.tool === 'select' && !this.pasting;
+    this._placeSelBar();
     if (!this.selBox.visible) return;
     const h = this.levelY() + 6;
     this.selBox.scale.set((r.x1 - r.x0 + 1) * CELL, h + 2, (r.z1 - r.z0 + 1) * CELL);
     this.selBox.position.set((r.x0 + r.x1 + 1) / 2 * CELL, h / 2 - 1, (r.z0 + r.z1 + 1) / 2 * CELL);
+  },
+
+  // 0.12.0 : la barre d'actions de la zone flotte juste au-dessus d'elle (point le plus haut de la zone à l'écran), sans sortir de la vue ni passer sous la barre du haut.
+  _placeSelBar() {
+    const bar = typeof document !== 'undefined' && document.getElementById('ed-selbar');
+    if (!bar) return;
+    const r = this.sel, show = !!r && this.tool === 'select' && !this.pasting && !this.selDrag;
+    bar.classList.toggle('hidden', !show);
+    if (!show || !this.app.camera || !this.app.renderer) return;
+    const cam = this.app.camera, rect = this.app.renderer.domElement.getBoundingClientRect(), y = this.levelY() + 2;
+    let top = Infinity, bottom = -Infinity, sx = 0, n = 0;
+    for (const [x, z] of [[r.x0, r.z0], [r.x1 + 1, r.z0], [r.x0, r.z1 + 1], [r.x1 + 1, r.z1 + 1]]) {
+      _P.set(x * CELL, y, z * CELL).project(cam);
+      if (_P.z > 1) continue;
+      const px = rect.left + (_P.x + 1) / 2 * rect.width, py = rect.top + (1 - _P.y) / 2 * rect.height;
+      top = Math.min(top, py); bottom = Math.max(bottom, py); sx += px; n++;
+    }
+    // (zone hors de l'écran : la barre reste en haut de la vue libre)
+    // Entre le panneau de l'outil (ou le rail) et la colonne Vue ; au-dessus de la zone, ou en dessous s'il n'y a pas la place.
+    const box = (id) => { const e = document.getElementById(id); if (!e || e.offsetParent === null) return null; const b = e.getBoundingClientRect(); return b.width && b.height ? b : null; };
+    const pal = box('ed-palette'), rail = box('ed-tools'), view = box('ed-view'), topBar = box('ed-top') || { bottom: 54 };
+    const x0 = Math.max(rail ? rail.right : 0, pal ? pal.right : 0) + 8, x1 = (view ? view.left : window.innerWidth) - 8;
+    bar.style.maxWidth = Math.max(160, x1 - x0) + 'px';
+    const w = bar.offsetWidth, hgt = bar.offsetHeight;
+    const minTop = (document.querySelector('#editor .ed-top') || { getBoundingClientRect: () => topBar }).getBoundingClientRect().bottom + 8;
+    const cx = n ? sx / n : (x0 + x1) / 2;
+    const left = Math.max(x0, Math.min(x1 - w, cx - w / 2));
+    let t = n ? top - hgt - 10 : minTop;
+    if (t < minTop) t = bottom + 10;
+    t = Math.max(minTop, Math.min(window.innerHeight - hgt - 8, t));
+    if (this._selBarPos !== left + ',' + t) { this._selBarPos = left + ',' + t; bar.style.left = left + 'px'; bar.style.top = t + 'px'; }
   },
 
   _updatePastePreview() {
@@ -297,13 +361,44 @@ export const selectionMethods = {
   },
 
   _refreshSelBar() {
-    const bar = document.getElementById('ed-selbar');
-    if (!bar) return;
-    bar.classList.toggle('hidden', this.tool !== 'select');
-    bar.querySelectorAll('[data-sel]').forEach((b) => {
+    if (typeof document === 'undefined') return;
+    this._placeSelBar();
+    document.querySelectorAll('#editor [data-sel]').forEach((b) => {
       const a = b.dataset.sel;
-      b.disabled = (['copy', 'cut', 'del', 'up', 'down', 'dup', 'mv-l', 'mv-r', 'mv-u', 'mv-d'].includes(a) && !this.sel) || (a === 'paste' && !this.clip) || (a === 'rot' && !this.pasting && !this.sel);
+      b.disabled = (['copy', 'cut', 'del', 'up', 'down', 'dup', 'mv-l', 'mv-r', 'mv-u', 'mv-d', 'opt', 'group', 'prefab', 'none'].includes(a) && !this.sel) || (a === 'paste' && !this.clip) || (a === 'rot' && !this.pasting && !this.sel);
     });
+  },
+
+  // « Option… » de la barre de sélection : applique une option (mur, plafond, tunnel, sans bordures, thème…) à TOUTES les pièces de la zone qui l'acceptent, en un pas.
+  // (Remplace l'ancien mode « appliquer une option à la pièce cliquée » de l'onglet Options.)
+  optionDialog() {
+    const tiles = this._selTiles();
+    if (!tiles.length) { this.app.ui.flash('Sélectionne d’abord des pièces (outil Sélection, Q).'); return; }
+    const body = document.createElement('div');
+    body.className = 'ed-optdlg';
+    const p = document.createElement('p'); p.className = 'meta';
+    p.textContent = `${tiles.length} pièce${tiles.length > 1 ? 's' : ''} dans la zone. Chaque option est appliquée aux pièces qui l'acceptent ; un second clic la retire.`;
+    body.appendChild(p);
+    const row = document.createElement('div'); row.className = 'pal-chips';
+    for (const m of MODS) {
+      const b = document.createElement('button');
+      b.className = 'chip'; b.type = 'button'; b.textContent = m.label; b.title = m.hint; b.dataset.mod = m.id;
+      b.addEventListener('click', () => {
+        const val = m.val == null ? 1 : m.val;
+        let n = 0;
+        for (const t of this._selTiles()) {
+          if (!flagAllowed(t.t, m.flag, m.flag === 'o' ? null : t, val) && !(m.flag === 'o' && val === 0)) continue;
+          // Même valeur partout : l'option est mise à toutes (ou retirée de toutes si toutes l'avaient déjà).
+          if (this.track.toggleFlag(t, m.flag, val)) n++;
+        }
+        if (n) { this._changed(); this._commit(); this.app.audio.place(); }
+        else this.app.audio.error();
+        this.app.ui.flash(n ? `${m.label} : ${n} pièce${n > 1 ? 's' : ''} modifiée${n > 1 ? 's' : ''}.` : `${m.label} : aucune pièce de la zone ne l’accepte (ou pas la place).`, 2.2);
+      });
+      row.appendChild(b);
+    }
+    body.appendChild(row);
+    this.app.ui.modal({ title: 'Option pour toute la zone', body, actions: [{ label: 'Fermer', primary: true }] });
   },
 
   selAction(a) {
@@ -322,6 +417,9 @@ export const selectionMethods = {
       case 'down': this.shiftSel(-1); break;
       case 'all': this.selectAll(); break;
       case 'none': this.clearSel(); break;
+      case 'opt': this.optionDialog(); break;
+      case 'group': this.openGroups(); break;
+      case 'prefab': this._savePrefabDialog(); break;
       default: break;
     }
     this._refreshSelBar();
@@ -332,8 +430,7 @@ export const selectionMethods = {
     this.focusLevel = !this.focusLevel;
     this.needsRebuild = true;
     this.app.ui.flash(this.focusLevel ? `Niveau ${this.level} seul` : 'Tous les niveaux', 1.6);
-    const b = document.querySelector('[data-ed="levelview"]');
-    if (b) b.classList.toggle('on', this.focusLevel);
+    this._refreshUI();
   },
 
   _markIssues(issues) {
