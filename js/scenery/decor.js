@@ -385,7 +385,11 @@ export const decorMethods = {
       o.traverse((c) => {
         if (c.isMesh) {
           c.geometry.dispose();
-          c.material.dispose();
+          // (0.12.2 : les textures des matériaux aussi : les fenêtres de la ville en créaient une à chaque chargement, jamais libérée)
+          for (const m of Array.isArray(c.material) ? c.material : [c.material]) {
+            for (const v of Object.values(m)) if (v && v.isTexture) v.dispose();
+            m.dispose();
+          }
         }
       });
       o.removeFromParent();

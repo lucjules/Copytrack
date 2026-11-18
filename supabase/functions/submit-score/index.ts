@@ -3271,6 +3271,24 @@ function ribbonExtent(tile) {
   extentCache.set(rib, e);
   return e;
 }
+var groundCache = /* @__PURE__ */ new Map();
+function minGroundLevel(type) {
+  let r = groundCache.get(type);
+  if (r !== void 0) return r;
+  r = 0;
+  const P = PIECES[type];
+  if (P && (P.kind === "ribbon" || P.kind === "loop")) {
+    const e = ribbonExtent({
+      t: type,
+      l: 0,
+      o: 0,
+      v: 0
+    });
+    if (e && e.minY < -ROAD_TOP) r = Math.ceil((-e.minY - ROAD_TOP) / LEVEL_H * 2 - 1e-9) / 2;
+  }
+  groundCache.set(type, r);
+  return r;
+}
 var fitCache = /* @__PURE__ */ new Map();
 function rollFits(type, val) {
   const key2 = type + "/" + val;
@@ -7376,9 +7394,15 @@ var CAR = {
   // rapprochait l'assiette de la trajectoire (15 %) puis, près du sol, de la pente de la route (35 %) : la voiture se posait d'elle-même, le frein ne servait presque à rien.
   airBrake: 1,
   airSpin: 0.1,
-  // Bascule aux pédales en l'air (0.11.2) : gaz = le nez descend, frein = il remonte, d'un rien. PolyTrack (15 vols mesurés) : l'effet des gaz est sous la précision
-  // de la mesure (moins de 0,5 °/s², moins d'un degré après 1,2 s d'appui) ; les joueurs le sentent : on le prend à cette borne. L'aérofrein, lui, est bien mesuré.
-  airTilt: 9e-3,
+  // Bascule aux pédales en l'air (0.12.3, PHYS_VER 38 ; avant : 0,5 °/s², imperceptible) : tant qu'on appuie, la voiture penche vers un angle BORNÉ (gaz : le nez
+  // descend ; frein : il remonte, en plus de l'aérofrein) ; relâcher la ramène doucement. La bascule s'ajoute à la rotation gardée du décollage sans jamais dépasser
+  // ±airLean : impossible de faire un tour complet aux pédales. Elle compte à la réception, comme l'assiette (petit contrôle pour se poser à la pente de la route).
+  airLean: 0.38,
+  airLeanT: 0.45,
+  airLeanBackT: 0.7,
+  // Volant en l'air (0.12.3) : une rotation douce, comme le vent sur une voile, qui s'arrête quand on lâche le volant (la rotation du décollage, elle, reste gardée).
+  airYaw: 0.45,
+  airYawT: 0.35,
   // Bascule au décollage : quand la route s'arrête sous la voiture, l'avant n'est plus porté alors que l'arrière l'est encore : la voiture part en piqué. PolyTrack (bord
   // de route plat, mesuré) : 65 °/s à 39 km/h, 38 °/s à 78 km/h, 26 °/s à 140 km/h, 16 °/s à 225 km/h, soit airTip / (v + airTipV0) rad/s.
   airTip: 18.4,
@@ -7878,6 +7902,12 @@ var Track = class _Track {
   static inBounds(t) {
     const [lo, hi] = _Track.range(t);
     return lo >= (t.v ? 1 : 0) && hi <= MAX_LEVEL + 6;
+  }
+  // Pose permise DANS L'ÉDITEUR (0.12.2) : dans les niveaux, et sans que la chaussée passe sous le terrain (la vrille, le tire-bouchon, les loopings
+  // double et triple plongent sous leur niveau). Les circuits générés (défis du jour, circuits intégrés) gardent la règle d'avant (inBounds) :
+  // ils doivent se reconstruire à l'identique ; une pièce enterrée d'un ancien circuit est montrée dans une fosse (scenery/pits.js).
+  static placeable(t) {
+    return _Track.inBounds(t) && (t.v || t.o || t.l >= minGroundLevel(t.t));
   }
   // Pièces gênées par t. Phase 3 : un anneau flottant (pièce « anneau » : turbo ou ancien checkpoint aérien) peut être posé
   // sur des cases déjà occupées par une autre pièce, et inversement ; deux anneaux ne se superposent pas.
@@ -9682,10 +9712,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 44.8,
-      or: 47.2,
-      argent: 54.3,
-      bronze: 63.7
+      cristal: 45.4,
+      or: 47.8,
+      argent: 54.9,
+      bronze: 64.5
     }
   },
   {
@@ -9931,10 +9961,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 43.4,
-      or: 45.7,
-      argent: 52.5,
-      bronze: 61.7
+      cristal: 44,
+      or: 46.4,
+      argent: 53.3,
+      bronze: 62.6
     }
   },
   {
@@ -10266,10 +10296,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 48.9,
-      or: 51.5,
-      argent: 59.2,
-      bronze: 69.5
+      cristal: 49.6,
+      or: 52.3,
+      argent: 60.1,
+      bronze: 70.5
     }
   },
   {
@@ -10359,10 +10389,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 57.5,
-      or: 60.5,
-      argent: 69.6,
-      bronze: 81.7
+      cristal: 58,
+      or: 61.1,
+      argent: 70.2,
+      bronze: 82.4
     }
   },
   {
@@ -10737,10 +10767,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 44.8,
-      or: 47.1,
-      argent: 54.2,
-      bronze: 63.6
+      cristal: 45.4,
+      or: 47.8,
+      argent: 54.9,
+      bronze: 64.5
     }
   },
   {
@@ -10903,10 +10933,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 43.9,
-      or: 46.2,
-      argent: 53.2,
-      bronze: 62.4
+      cristal: 44.4,
+      or: 46.8,
+      argent: 53.8,
+      bronze: 63.1
     }
   },
   {
@@ -11678,10 +11708,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 46.1,
-      or: 48.5,
-      argent: 55.8,
-      bronze: 65.5
+      cristal: 46.9,
+      or: 49.3,
+      argent: 56.7,
+      bronze: 66.6
     }
   },
   {
@@ -11835,10 +11865,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 46.9,
-      or: 49.4,
-      argent: 56.8,
-      bronze: 66.6
+      cristal: 47.5,
+      or: 50,
+      argent: 57.5,
+      bronze: 67.5
     }
   },
   {
@@ -11929,10 +11959,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 52,
-      or: 54.7,
-      argent: 63,
-      bronze: 73.9
+      cristal: 52.7,
+      or: 55.5,
+      argent: 63.8,
+      bronze: 74.9
     }
   },
   {
@@ -12263,10 +12293,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 51.2,
-      or: 53.9,
-      argent: 62,
-      bronze: 72.8
+      cristal: 51.9,
+      or: 54.7,
+      argent: 62.9,
+      bronze: 73.8
     }
   },
   {
@@ -12493,10 +12523,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 50.2,
-      or: 52.8,
-      argent: 60.7,
-      bronze: 71.3
+      cristal: 51.2,
+      or: 53.9,
+      argent: 62,
+      bronze: 72.7
     }
   },
   {
@@ -12912,10 +12942,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 43.4,
-      or: 45.7,
-      argent: 52.6,
-      bronze: 61.7
+      cristal: 44.1,
+      or: 46.4,
+      argent: 53.4,
+      bronze: 62.6
     }
   },
   {
@@ -13090,10 +13120,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 43.5,
-      or: 45.8,
-      argent: 52.6,
-      bronze: 61.8
+      cristal: 44.7,
+      or: 47,
+      argent: 54.1,
+      bronze: 63.5
     }
   },
   {
@@ -13273,10 +13303,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 43.3,
-      or: 45.6,
-      argent: 52.4,
-      bronze: 61.5
+      cristal: 43.7,
+      or: 46,
+      argent: 52.9,
+      bronze: 62.1
     }
   },
   {
@@ -13448,10 +13478,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 45,
-      or: 47.3,
-      argent: 54.4,
-      bronze: 63.9
+      cristal: 45.5,
+      or: 47.9,
+      argent: 55,
+      bronze: 64.6
     }
   },
   {
@@ -13638,10 +13668,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 45.8,
-      or: 48.2,
-      argent: 55.4,
-      bronze: 65.1
+      cristal: 46.6,
+      or: 49,
+      argent: 56.4,
+      bronze: 66.2
     }
   },
   {
@@ -13723,10 +13753,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 45.6,
-      or: 48,
-      argent: 55.2,
-      bronze: 64.8
+      cristal: 46.4,
+      or: 48.8,
+      argent: 56.1,
+      bronze: 65.9
     }
   },
   {
@@ -14006,10 +14036,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 44.5,
-      or: 46.9,
-      argent: 53.9,
-      bronze: 63.3
+      cristal: 45.1,
+      or: 47.5,
+      argent: 54.6,
+      bronze: 64.1
     }
   },
   {
@@ -14330,10 +14360,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 43,
-      or: 45.3,
-      argent: 52,
-      bronze: 61.1
+      cristal: 43.8,
+      or: 46.1,
+      argent: 53,
+      bronze: 62.2
     }
   },
   {
@@ -14741,10 +14771,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 46.6,
-      or: 49.1,
-      argent: 56.4,
-      bronze: 66.2
+      cristal: 47,
+      or: 49.5,
+      argent: 57,
+      bronze: 66.9
     }
   },
   {
@@ -14822,10 +14852,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 47.6,
-      or: 50.2,
-      argent: 57.7,
-      bronze: 67.7
+      cristal: 48.2,
+      or: 50.7,
+      argent: 58.3,
+      bronze: 68.5
     }
   },
   {
@@ -15194,10 +15224,10 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 33.5,
-      or: 35.2,
-      argent: 40.5,
-      bronze: 47.6
+      cristal: 34,
+      or: 35.8,
+      argent: 41.2,
+      bronze: 48.3
     }
   },
   {
@@ -16391,7 +16421,95 @@ var SHIT = {
   nz: 0,
   solid: null
 };
+var TUBE_TYPES = /* @__PURE__ */ new Set([
+  "tube",
+  "tubeIn",
+  "tubeMid"
+]);
+var isTube = (tile) => TUBE_TYPES.has(tile.t) || !!PIECES[tile.t].tubeArc;
+var TUBE_SKIN = 0.02;
+var TUBE_BOUNCE = 0;
+var RA = {
+  r: 0,
+  x: 0,
+  y: 0,
+  z: 0
+};
+var RB2 = {
+  r: 0,
+  x: 0,
+  y: 0,
+  z: 0
+};
+var TF = {};
 var ribbonMethods = {
+  // Coque d'un tube, voiture en vol (décrochée en haut, ou sautant dedans ; ou tombant dessus depuis l'extérieur). Avant 0.12.2 la coque n'avait
+  // aucune collision : la voiture sortait par le haut, puis, en retombant, traversait la coque et se reposait AU FOND (une « téléportation »).
+  // Désormais une voiture partie de l'intérieur y reste (elle rebondit sur la paroi et retombe au fond), une voiture venue de l'extérieur reste dehors.
+  _tubeShell() {
+    const p = this.pos, q = this.prev, v = this.vel;
+    const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
+    for (const tile of tiles) {
+      if (!isTube(tile) || this.excl.has(tile)) continue;
+      const rib = ribbonOf(tile);
+      let bu = 0, bd = Infinity;
+      for (let i = 0; i <= 24; i++) {
+        const F2 = frameWorld(tile, rib, i / 24, TF);
+        const dx = p.x - F2.px, dy = p.y - F2.py, dz = p.z - F2.pz, d = dx * dx + dy * dy + dz * dz;
+        if (d < bd) {
+          bd = d;
+          bu = i / 24;
+        }
+      }
+      let u = bu;
+      for (let it = 0; it < 4; it++) {
+        const F2 = frameWorld(tile, rib, u, TF);
+        u = clamp(u + ((p.x - F2.px) * F2.tx + (p.y - F2.py) * F2.ty + (p.z - F2.pz) * F2.tz) / F2.ds, 0, 1);
+      }
+      if (u <= 2e-3 || u >= 0.998) continue;
+      const F = frameWorld(tile, rib, u, TF);
+      if (!F.wrap || !(F.kc > 0)) continue;
+      const R = 1 / F.kc, ax = F.px + F.nx * R, ay = F.py + F.ny * R, az = F.pz + F.nz * R;
+      const radial = (x, y, z, out) => {
+        let dx = x - ax, dy = y - ay, dz = z - az;
+        const a = dx * F.tx + dy * F.ty + dz * F.tz;
+        dx -= F.tx * a;
+        dy -= F.ty * a;
+        dz -= F.tz * a;
+        out.r = hypot3(dx, dy, dz);
+        out.x = dx;
+        out.y = dy;
+        out.z = dz;
+        return out;
+      };
+      radial(p.x, p.y, p.z, RA);
+      radial(q.x, q.y, q.z, RB2);
+      if (RA.r < 1e-6) continue;
+      let target, side;
+      if (RB2.r < R + SLAB_T / 2) {
+        const ceiling = -RA.y / RA.r * this.gSign < -0.2;
+        if (RA.r <= R + (ceiling ? TUBE_SKIN : 0.3)) continue;
+        target = R - TUBE_SKIN;
+        side = 1;
+      } else {
+        if (RA.r >= R + SLAB_T) continue;
+        target = R + SLAB_T + TUBE_SKIN;
+        side = -1;
+      }
+      const ex = RA.x / RA.r, ey = RA.y / RA.r, ez = RA.z / RA.r;
+      const push = target - RA.r;
+      p.x += ex * push;
+      p.y += ey * push;
+      p.z += ez * push;
+      const vr = v.x * ex + v.y * ey + v.z * ez;
+      if (side * vr > 0) {
+        const dv = vr * (1 + TUBE_BOUNCE);
+        v.x -= ex * dv;
+        v.y -= ey * dv;
+        v.z -= ez * dv;
+      }
+    }
+  },
   // Sur un ruban, l'état est exprimé dans le plan de la route :
   //   e1 = sens de parcours, e2 = droite, n = normale.
   //   vs, vd : vitesse le long de e1 / e2 ; psi : cap de la voiture par rapport à e1.
@@ -16821,6 +16939,8 @@ var ribbonMethods = {
     this.pitch = dasin(clamp(this.fwd.y, -1, 1));
     this.pitchRate = 0;
     this.airTime = 0;
+    this.airLean = 0;
+    this.airYawW = 0;
     const t = this.rib && this.rib.tile;
     this.fallWhy = why ? why : this.ev.wallOff ? "wall" : t && PIECES[t.t].kind === "loop" ? "loop" : t && t.t === "twist" ? "twist" : t && t.v ? "inv" : "crest";
     this.rib = null;
@@ -16963,6 +17083,9 @@ var BK = {
 };
 var AIR_BRAKE_DECAY = dexp(-CAR.airBrake * DT);
 var AIR_SPIN_DECAY = dexp(-CAR.airSpin * DT);
+var AIR_LEAN_K = 1 - dexp(-DT / CAR.airLeanT);
+var AIR_LEAN_BACK_K = 1 - dexp(-DT / CAR.airLeanBackT);
+var AIR_YAW_K = 1 - dexp(-DT / CAR.airYawT);
 var CarPhysics = class {
   constructor(track) {
     this.track = track;
@@ -17129,6 +17252,8 @@ var CarPhysics = class {
     this.aoa = 0.08;
     this.glidePitch = 0;
     this.bankT = 0;
+    this.airLean = 0;
+    this.airYawW = 0;
     if (this.v2) {
       this.lean = 0;
       this.mAx = 0;
@@ -17649,6 +17774,8 @@ var CarPhysics = class {
     this.pitch = dasin(clamp(fy, -1, 1));
     this.pitchRate = 0;
     this.tipNext = false;
+    this.airLean = 0;
+    this.airYawW = 0;
     return false;
   }
   // En l'air : trajectoire balistique, rotation, tangage, vol plané.
@@ -17663,8 +17790,10 @@ var CarPhysics = class {
     } else v.y -= this.g * this.gSign * dt;
     if (airBrake) this.omega *= AIR_BRAKE_DECAY;
     const us = this._upSign();
-    this.yaw -= this.omega * us * dt;
-    this.yawRate = -this.omega * us;
+    if (this.vehicle !== "glider") this.airYawW += (clamp(this.steer, -1, 1) * CAR.airYaw - this.airYawW) * AIR_YAW_K;
+    else this.airYawW = 0;
+    this.yaw -= (this.omega + this.airYawW) * us * dt;
+    this.yawRate = -(this.omega + this.airYawW) * us;
     this.steerAngle = this._steerAngle(hypot2(v.x, v.z), this.driftT);
     const k = 1 - 6e-4 * this.speed * dt;
     v.x *= k;
@@ -17682,9 +17811,10 @@ var CarPhysics = class {
         this.pitchRate -= this.gSign * CAR.airTip / (hypot2(v.x, v.z) + CAR.airTipV0);
       }
       this.pitchRate *= airBrake ? AIR_BRAKE_DECAY : AIR_SPIN_DECAY;
-      if (airBrake) this.pitchRate += this.gSign * CAR.airTilt * dt;
-      else if (inp.throttle) this.pitchRate -= this.gSign * CAR.airTilt * dt;
-      this.pitch += this.pitchRate * dt;
+      const lt = airBrake && !inp.throttle ? this.gSign * CAR.airLean : inp.throttle && !airBrake ? -this.gSign * CAR.airLean : 0;
+      const lean = this.airLean + (lt - this.airLean) * (lt ? AIR_LEAN_K : AIR_LEAN_BACK_K);
+      this.pitch += this.pitchRate * dt + (lean - this.airLean);
+      this.airLean = lean;
       if (Math.abs(this.pitch) > 1.4) {
         this.pitch = clamp(this.pitch, -1.4, 1.4);
         this.pitchRate = 0;
@@ -17701,6 +17831,7 @@ var CarPhysics = class {
     if (this.ev.sink) return true;
     if (this._tryEnterRibbon()) return true;
     if (!this.grounded && this._tryLandRibbon()) return true;
+    if (!this.grounded) this._tubeShell();
     this._walls();
     this._pinned = false;
     this._tunnelRoof();
@@ -18321,6 +18452,7 @@ var Simulation = class {
 var AIR_NONE = 0;
 var AIR_BRAKE = 1;
 var AIR_GAS = 2;
+var AIR_DAMP = 3;
 var Autopilot = class {
   constructor(path, opts2 = {}) {
     this.path = path;
@@ -18394,8 +18526,8 @@ var Autopilot = class {
       const pr = phys.pitchRate, kS = CAR.airSpin;
       const err = phys.pitch + pr * (1 - dexp(-kS * t)) / kS - slope;
       const tol = Math.abs(phys.omega) > 0.1 ? CAR.landOk * 0.8 : 0.03;
-      if (Math.abs(err) > tol && err * pr > 0) return AIR_BRAKE;
-      return err > 0.03 ? AIR_GAS : AIR_NONE;
+      if (Math.abs(err) > tol && err * pr > 0) return AIR_DAMP;
+      return AIR_NONE;
     }
     return AIR_NONE;
   }
@@ -18520,8 +18652,8 @@ var Autopilot = class {
     if (!phys.grounded) {
       const a = this._airControl(phys);
       return {
-        throttle: a === AIR_GAS,
-        brake: a === AIR_BRAKE,
+        throttle: a === AIR_GAS || a === AIR_DAMP,
+        brake: a === AIR_BRAKE || a === AIR_DAMP,
         steer: 0,
         drift: false
       };
@@ -18848,7 +18980,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/version.js
-var PHYS_VER = 37;
+var PHYS_VER = 38;
 
 // js/ghostFormat.js
 var GHOST_EVERY = 4;
@@ -20053,4 +20185,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "5f21f39755bac47d";
+globalThis.__COPYTRACK_BUILD__ = "fec13a7391d952cf";

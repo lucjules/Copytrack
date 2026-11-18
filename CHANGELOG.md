@@ -6,6 +6,58 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.12.3 — la voiture se pilote un peu en l'air
+
+**`PHYS_VER` reste 38** (la 0.12.2 n'est pas encore publiée ; le redéploiement de `submit-score` qu'elle demande couvre aussi ce changement).
+
+- **Bascule aux pédales en l'air** : l'accélérateur penche la voiture vers l'avant (le nez descend), le frein vers l'arrière (le nez remonte), jusqu'à
+  22° au plus, atteints en une seconde environ ; au relâché, la voiture revient doucement. Elle s'ajoute à la rotation prise au décollage, toujours gardée :
+  impossible de faire un tour complet aux pédales. Avant, l'effet des gaz était imperceptible (0,5 °/s²).
+- **Le frein amortit toujours la rotation** (aérofrein). **Frein et accélérateur ensemble** : l'aérofrein seul, sans bascule.
+- **Volant en l'air** : il tourne la voiture en douceur, comme le vent sur une voile (26 °/s au plus), et s'arrête quand on le lâche. Avant, il ne faisait
+  rien en l'air.
+- Tout est dans la physique : la bascule se voit au replay, sur les fantômes et en multijoueur, et compte à la réception comme l'assiette.
+- Pilote automatique : il garde sa conduite d'avant (aérofrein avec les deux pédales, volant au neutre en l'air) ; ses temps bougent de 0,03 à 0,09 s,
+  médailles inchangées.
+- Textes de l'académie, du défi de saut et de l'aide mis à jour (français et anglais).
+- Tests : `test-sans-aide` (bascule bornée, lacet doux, frein + gaz), `test-physique-corrections` (réceptions avec chaque pédale).
+
+## Bêta 0.12.2 — audit complet du rendu : poteaux, tapis, tubes, marquages, terrain, météo, caméra
+
+**`PHYS_VER` passe à 38** : le tube a désormais une coque pleine (voir plus bas). **Redéployer `submit-score`** (`npm run build:function` est fait ; la fonction
+embarque la physique) au moment de publier cette version : un record envoyé avec l'ancienne physique ne se rejoue plus pareil.
+
+Audit de tout ce qui se dessine, piloté par des outils neufs (`tools/audit-rendu/`) : une matrice de toutes les pièces dans toutes les orientations
+(1 346 combinaisons, 30 000 variantes de revêtements et d'options), des sondes qui mesurent au lieu de regarder, un banc de rendu (le vrai moteur sans
+menus), une machine à captures, des tours automatiques des 72 circuits officiels et des mesures de performance. Défauts corrigés :
+
+- **Poteaux qui traversaient la route** dans les pentes et les virages qui montent (260 pièces, jusqu'à 2,85 m ; 66 circuits officiels sur 72) : le chapeau
+  du poteau, plat et calé au centre, suit maintenant le dessous de la dalle. Le poteau des **plaques triangle** est sous leur centre de gravité (il était
+  sur le bord, à moitié dans le vide).
+- **Poteaux sous les rubans posés en hauteur** (virages relevés, tubes, tire-bouchons, transitions vers un mur…), qui flottaient : jusqu'à trois, sous les
+  passages à plat. Les pièces verticales (mur, sommet de looping) restent sans support.
+- **Tapis roulant** : les chevrons pointent dans le sens de la poussée (au réglage par défaut, ils pointaient à l'envers ; ils n'étaient justes qu'en marche
+  arrière) ; à 0 km/h, plus de chevrons.
+- **Pièces qui passaient sous le terrain** : la vrille (−11,6 m), le tire-bouchon (−3,85 m), les loopings double et triple (−0,4 m) ne se posent plus
+  aussi bas dans l'éditeur (vrille : niveau 2 au moins ; tire-bouchon : 1 ; loopings double et triple : ½). Dans un circuit existant, le terrain est
+  creusé sous elles (une fosse). Les circuits générés (défis du jour) se reconstruisent comme avant.
+- **Marquages des revêtements** à la largeur de la route : ils débordaient de 5 m dans le vide sur une route étroite et ne couvraient que le milieu d'une
+  route large. La **cale du bateau** sur une route étroite redessinait la route à la largeur normale (24 m au lieu de 12).
+- **Vent** : dans un virage, les flèches gardent la direction de la poussée (l'axe de la pièce) au lieu de tourner avec la route ; leur longueur dit la
+  force ; à 100 % (aucun vent), plus de flèches.
+- **Tube** (physique) : la coque est pleine. Une voiture décrochée en haut du tube y reste et retombe au fond ; une voiture qui tombe sur le tube reste
+  dehors (avant : elle traversait la coque et se retrouvait dedans, comme téléportée). Les temps du pilote changent de 0,1 à 0,9 s sur 22 circuits
+  officiels où la voiture frôlait la paroi en sortie de tube : leurs médailles sont recalées (or = temps du pilote).
+- **Météo** (pluie, neige, braises…) : elle s'estompe dans un tunnel, dans un tube et sous une route (elle tombait à travers le toit).
+- **Caméra** : en gravité inversée au-dessus d'une route ordinaire, elle n'entre plus dans la dalle (on voyait à travers, sur « Cristal Fêlé »).
+- **Scintillement** des marquages et des revêtements animés au loin (et de près sur les appareils à tampon de profondeur 16 bits) : décalage de profondeur.
+- Détails : courbes en S raides et chicanes posées sur un mur dessinées plus finement (la route dessinée s'écartait de 12 à 26 cm de celle de la physique) ;
+  plus de traces de pneus sur l'eau ; la texture des immeubles du décor « ville » est libérée à chaque changement de circuit (une de plus à chaque chargement).
+- Vérifié sans défaut : la route dessinée suit celle de la physique partout (8 cm), les anneaux sont là où ils se déclenchent, les 341 décors se construisent,
+  aucune fuite de géométrie, 19 à 90 ms pour construire un circuit officiel, 1 à 12 ms par modification dans l'éditeur.
+- Tests : `tools/test-audit-rendu.mjs` (chaque sonde d'un défaut corrigé ne trouve plus rien), `tools/test-familles.mjs` (looping triple au niveau 0).
+  Rapport : `docs/AUDIT-RENDU-0.12.2.md`.
+
 ## Bêta 0.12.1 — l'orientation se choisit avec la pièce
 
 **`PHYS_VER` reste 37.**

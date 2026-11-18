@@ -129,7 +129,8 @@ export function cornerBench(v0, strategy, { vehicle = 'car', surf = {}, pm = '' 
 
 // ---- 3. Sauts et réceptions ------------------------------------------------------------------------------------------------------------
 // Tremplin (UU, 22°) abordé à `v0` km/h ; commande donnée EN L'AIR : none | gas | brake | tapGas (0,25 s) | tapBrake (0,3 s).
-const AIR = { none: () => ({}), gas: () => ({ throttle: true }), brake: () => ({ brake: true }), tapGas: (a) => ({ throttle: a < 0.25 }), tapBrake: (a) => ({ brake: a < 0.3 }), gasSteer: () => ({ throttle: true, steer: 1 }) };
+const AIR = { none: () => ({}), gas: () => ({ throttle: true }), brake: () => ({ brake: true }), damp: () => ({ brake: true, throttle: true }),      // (damp, 0.12.3 : les deux pédales, l'aérofrein sans bascule)
+  tapGas: (a) => ({ throttle: a < 0.25 }), tapBrake: (a) => ({ brake: a < 0.3 }), gasSteer: () => ({ throttle: true, steer: 1 }) };
 export function jumpRun(v0, air, { script = 'start S3 UU G2 S4 finish', l = 2, vehicle = 'car' } = {}) {
   const tr = scriptTrack('j', script, { l });
   const ph = new CarPhysics(tr), lg = new RaceLogic(tr); placeAtStart(ph, lg); ph.graceT = 0; ph.vehicle = vehicle;

@@ -12,7 +12,7 @@
 //  cork*   : tire-bouchon (hélice d'un tour)
 // Un ruban peut avoir une section courbe : kc (courbure transversale), hw (demi-largeur
 // mesurée le long de la section) et wrap (section fermée : on peut en faire le tour).
-import { CELL, HALF, LEVEL_H, ROAD_HALF } from './constants.js';
+import { CELL, HALF, LEVEL_H, ROAD_HALF, ROAD_TOP } from './constants.js';
 import { PIECES, baseY, arcParams, sbendPoint, localToWorld, isOriented, oriAngle, rollOfO, rollFitHook, MAX_O, profH, profD } from './pieces.js';
 import { dcos, dsin, hypot2, hypot3 } from './dmath.js';
 
@@ -495,6 +495,23 @@ export function ribbonExtent(tile) {
   }
   extentCache.set(rib, e);
   return e;
+}
+
+// Niveau le plus bas où la pièce peut se poser sans que sa chaussée passe sous le terrain (0.12.2) : la vrille (−11,6 m sous son niveau), le
+// tire-bouchon (−4 m), les loopings double et triple (la route décalée entre deux boucles, −0,8 m) plongent sous leur niveau. Par demi-niveaux.
+// Pièce à plat seulement (à l'envers et sur un mur, Track.range réserve déjà les niveaux du dessous).
+const groundCache = new Map();
+export function minGroundLevel(type) {
+  let r = groundCache.get(type);
+  if (r !== undefined) return r;
+  r = 0;
+  const P = PIECES[type];
+  if (P && (P.kind === 'ribbon' || P.kind === 'loop')) {
+    const e = ribbonExtent({ t: type, l: 0, o: 0, v: 0 });
+    if (e && e.minY < -ROAD_TOP) r = Math.ceil(((-e.minY - ROAD_TOP) / LEVEL_H) * 2 - 1e-9) / 2;
+  }
+  groundCache.set(type, r);
+  return r;
 }
 
 // Le roulis `val` (1..MAX_O) de la pièce `type` tient-il dans l'empreinte (size × size cases) ? Le ruban roulé ne doit pas sortir des cases de la pièce : la physique et l'éditeur

@@ -50,7 +50,7 @@ export function retypePlacement(track, tile, type) {
   try {
     for (const [dx, dz] of offsets) {
       const cand = Track.normalize({ ...tile, t: type, x: tile.x + dx, z: tile.z + dz });
-      if (Track.inBounds(cand) && !track.conflicts(cand).length) return cand;
+      if (Track.placeable(cand) && !track.conflicts(cand).length) return cand;
     }
   } finally { track._insert(tile); }
   return null;

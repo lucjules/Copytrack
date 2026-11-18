@@ -553,7 +553,8 @@ export class RaceSession {
     }
 
     // Traces de pneus (glisse ou gros freinage) et étincelles du mini-turbo en charge.
-    const sliding = p.grounded && !p.rib && p.speed > 8 && (p.slip > 0.06 * Math.abs(p.fwdSpeed) + 1.2 || (inp.brake && p.fwdSpeed > 12 && !inp.throttle));
+    // (0.12.2 : pas de traces de pneus sur l'eau ni sur la cale du bateau)
+    const sliding = p.grounded && !p.rib && p.surfMod !== 'water' && p.surfMod !== 'boat' && p.speed > 8 && (p.slip > 0.06 * Math.abs(p.fwdSpeed) + 1.2 || (inp.brake && p.fwdSpeed > 12 && !inp.throttle));
     const wheelsX = this.car.vehicle === 'boat' ? [] : this.car.isMoto ? [0] : [-0.95, 0.95];
     tmpV2.set(1, 0, 0).applyQuaternion(g.quaternion);
     const lean = !!(app.quality && app.quality.profile && app.quality.profile.lean);   // Ultra Potato : ni traces de pneus, ni étincelles, ni traînée

@@ -68,7 +68,7 @@ export function extendPlan(track, from, type, opts = {}) {
       if (!c) continue;
       found = true;
       const tile = Track.normalize(c);
-      if (!Track.inBounds(tile)) { blocked = blocked || 'sort des niveaux autorisés (monte ou descends la route d\'avant)'; continue; }
+      if (!Track.placeable(tile)) { blocked = blocked || 'sort des niveaux autorisés (monte ou descends la route d\'avant)'; continue; }
       if (track.conflicts(tile).length) { blocked = blocked || 'tomberait sur une pièce déjà posée'; continue; }
       return { tile, inferred: t.inferred, end, reverse };
     }
@@ -82,7 +82,7 @@ export function extendPlan(track, from, type, opts = {}) {
   if (inferTry && armed) {
     // (orientation choisie impossible à raccorder : on retombe sur celle de la route, comme avant la phase 3)
     const c = compatiblePlacement(end, type, inferTry.opts, {});
-    if (c) { const tile = Track.normalize(c); if (Track.inBounds(tile) && !track.conflicts(tile).length) return { tile, inferred: true, end, reverse: false, note: chain && chain.why ? chain.why : '' }; }
+    if (c) { const tile = Track.normalize(c); if (Track.placeable(tile) && !track.conflicts(tile).length) return { tile, inferred: true, end, reverse: false, note: chain && chain.why ? chain.why : '' }; }
   }
   if (chain && chain.why) return { why: chain.why };
   // Aucun raccord : géométrie ou roulis ?
@@ -105,12 +105,12 @@ function widthBridge(track, end, fromW, toW, type, opts) {
     const c = compatiblePlacement(end, id, {}, { reverse });
     if (!c) return null;
     const a = Track.normalize(c);
-    if (!Track.inBounds(a) || track.conflicts(a).length) return null;
+    if (!Track.placeable(a) || track.conflicts(a).length) return null;
     const added = track.add(a);
     const next = tileEnds(added).find((e) => (reverse ? e.entry : e.exit));
     const p = next && compatiblePlacement(next, type, opts, {});
     const tile = p ? Track.normalize(p) : null;
-    const ok = tile && Track.inBounds(tile) && !track.conflicts(tile).length;
+    const ok = tile && Track.placeable(tile) && !track.conflicts(tile).length;
     track.remove(added);
     if (!ok) return null;
     return { tile, chain: [{ ...a }, tile], widened: true, bridged: false, end };
@@ -133,7 +133,7 @@ function autoBridge(track, end, type, opts) {
     const c = compatiblePlacement(cur, id, o, {});
     if (!c) { undo(); return { why: `${PIECES[id].label} ne se raccorde pas ici : la chaîne de transitions (${path.map((x) => PIECES[x].label).join(' → ')}) ne tient pas.` }; }
     const tile = Track.normalize(c);
-    if (!Track.inBounds(tile)) { undo(); return { why: `${PIECES[id].label} sortirait des niveaux autorisés (monte ou descends la route d'avant).` }; }
+    if (!Track.placeable(tile)) { undo(); return { why: `${PIECES[id].label} sortirait des niveaux autorisés (monte ou descends la route d'avant).` }; }
     if (track.conflicts(tile).length) { undo(); return { why: `${PIECES[id].label} tomberait sur une pièce déjà posée.` }; }
     const added = track.add(tile);
     placed.push(added);

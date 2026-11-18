@@ -242,7 +242,7 @@ export class Inspector {
       for (const [dx, dz, l] of tries) {
         if (l < 0 || l > MAX_LEVEL) continue;
         const cand = Track.normalize({ ...obj, col: obj.col ? { ...obj.col } : null, x: obj.x + dx, z: obj.z + dz, l });
-        if (!Track.inBounds(cand) || ed.track.conflicts(cand).length) continue;
+        if (!Track.placeable(cand) || ed.track.conflicts(cand).length) continue;
         added = ed.track.add(cand);
         break;
       }

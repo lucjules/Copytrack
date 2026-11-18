@@ -1,7 +1,7 @@
 # Matrice de compatibilité des pièces (générée)
 
 Générée par `node tools/matrice-pieces.mjs --update` : **ne pas modifier à la main**. Chaque case est un vrai circuit (départ → pièce → arrivée, avec les
-transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 37) au pilote automatique, à 80, 150 et 250 km/h de croisière.
+transitions nécessaires) roulé par le moteur de physique actuel (`PHYS_VER` 38) au pilote automatique, à 80, 150 et 250 km/h de croisière.
 
 | Code | Sens |
 |---|---|

@@ -11,6 +11,8 @@ import { PIECES } from './pieces.js';
 import { DEFAULT_DECOR } from './themes.js';
 import { resolveAmbiance, isDefaultAmbiance, cleanAmbiance, cycleTheme, cyclePhaseStart, CYCLE_SECONDS } from './ambiance.js';
 import { Weather } from './weather.js';
+import { coveredAt } from './cover.js';
+import { pitsFor, cutTriangle, pitInto } from './scenery/pits.js';
 import { hash2 } from './scenery/shared.js';
 import { decorMethods } from './scenery/decor.js';
 
@@ -548,13 +550,17 @@ export class Scenery {
       const k = Math.min(T.rock.length - 1, Math.floor(h / 18 + r * 0.8));
       return T.rock[k];
     };
+    // 0.12.2 : fosses sous les pièces qui plongent sous le sol (circuits d'avant l'interdiction, voir scenery/pits.js).
+    const pits = pitsFor(track);
+    const tri = pits.length ? (p, q, r, col) => { for (const t of cutTriangle([p, q, r], pits)) gb.tri(t[0], t[1], t[2], col); } : (p, q, r, col) => gb.tri(p, q, r, col);
     for (let i = 0; i < seg; i++) {
       for (let j = 0; j < seg; j++) {
         const a = H[i][j], b2 = H[i + 1][j], c = H[i + 1][j + 1], d = H[i][j + 1];
-        gb.tri(a, d, c, colorFor((a[1] + d[1] + c[1]) / 3, hash2(i, j, seed + 11), a[0], a[2]));
-        gb.tri(a, c, b2, colorFor((a[1] + c[1] + b2[1]) / 3, hash2(j, i, seed + 13), c[0], c[2]));
+        tri(a, d, c, colorFor((a[1] + d[1] + c[1]) / 3, hash2(i, j, seed + 11), a[0], a[2]));
+        tri(a, c, b2, colorFor((a[1] + c[1] + b2[1]) / 3, hash2(j, i, seed + 13), c[0], c[2]));
       }
     }
+    for (const r of pits) pitInto(gb, r, T.rock[0], T.rock[Math.min(1, T.rock.length - 1)]);
     this.terrain = new THREE.Mesh(gb.build(), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }));
     this.terrain.receiveShadow = true;
     this.root.add(this.terrain);
@@ -603,7 +609,7 @@ export class Scenery {
     this.sky.material.uniforms.time.value = now / 1000;
     const dt = Math.min(0.1, (now - (this._wT || now)) / 1000);
     this._wT = now;
-    if (this.weather) this.weather.update(dt, camera || { position: focus });
+    if (this.weather) { const c = camera || { position: focus }; this.weather.update(dt, c, !!(this._last && this.weather.obj && coveredAt(this._last[0], c.position.x, c.position.y, c.position.z))); }
     const c = this._cycle;
     if (c) {
       c.phase += (dt / c.len) * 4;

@@ -11,6 +11,7 @@
 // croissante avec la violence du choc, mini-turbo mérité, réception jamais ratée pour une pédale tenue.
 import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
+import { CAR } from '../js/physics/specs.js';
 import { flat, arena, setSpeed, wallContact, driftRun, cornerBench, jumpRun } from './mesures-physique.mjs';
 import { Track } from '../js/track.js';
 import { PIECES, LEGACY_TILE } from '../js/pieces.js';
@@ -250,21 +251,28 @@ test('frein tenu ou donné en l\'air (aérofrein) : jamais « ratée », perte �
   for (const v of [100, 200]) for (const a of AIRS) {
     const m = jumpRun(v, a);
     assert.ok(m.ok, `${v}/${a} : réception`);
-    assert.ok(m.pitchPeak <= 0.7, `${v} km/h ${a} : tangage maximal ${m.pitchPeak} rad (avant 1,4)`);
+    // (0.12.3 : gaz tenus = la bascule aux pédales s'ajoute, bornée à CAR.airLean)
+    assert.ok(m.pitchPeak <= 0.7 + (/gas/i.test(a) ? CAR.airLean : 0), `${v} km/h ${a} : tangage maximal ${m.pitchPeak} rad (avant 1,4)`);
     if (!/brake/i.test(a)) continue;
     assert.notEqual(m.q, 'bad', `${v} km/h ${a} : réception ${m.q}`);
     assert.ok(m.loss <= 20, `${v} km/h ${a} : −${m.loss} %`);
   }
-  assert.equal(jumpRun(200, 'brake').q, 'perfect', 'aérofrein à 200 km/h : réception parfaite');
+  // (0.12.3 : le frein seul lève aussi le nez ; les deux pédales ensemble font l'aérofrein seul, celui des mesures PolyTrack)
+  assert.equal(jumpRun(200, 'damp').q, 'perfect', 'aérofrein (frein + gaz) à 200 km/h : réception parfaite');
+  assert.notEqual(jumpRun(200, 'brake').q, 'bad', 'frein seul à 200 km/h : jamais ratée');
   assert.equal(jumpRun(100, 'none').q, 'bad', 'sans aérofrein, à 100 km/h, la bascule du décollage n\'est pas rattrapée');
 });
-// (PHYS_VER 36, loi PolyTrack : ni gaz ni volant n'agissent en l'air ; le frein est un AÉROFREIN qui amortit la rotation. Avant : gaz = nez plus bas, frein = nez plus haut)
-test('en l\'air, les pédales ne pilotent plus l\'assiette : gaz tenu = presque rien (le nez descend d\'un rien) ; frein tenu (aérofrein) amortit la rotation, jamais plus de tangage ni de perte qu\'à vide', () => {
+// 0.12.3 (PHYS_VER 38) : les pédales penchent la voiture en l'air, d'un angle BORNÉ (CAR.airLean) : gaz = nez plus bas, frein = nez plus haut (en plus de l'aérofrein,
+// qui amortit toujours la rotation). Avant (PHYS_VER 36-37, loi PolyTrack) : les gaz n'agissaient presque pas (0,5 °/s²), et le frein n'était qu'un aérofrein.
+test('en l\'air, les pédales penchent la voiture d\'un angle borné : gaz = nez plus bas, frein = nez plus haut ; jamais plus que CAR.airLean ; l\'aérofrein (les deux pédales) amortit sans coûter plus qu\'à vide', () => {
   for (const v of [100, 200]) {
-    const none = jumpRun(v, 'none'), gas = jumpRun(v, 'gas'), brake = jumpRun(v, 'brake');
-    assert.ok(gas.q === none.q && Math.abs(gas.loss - none.loss) <= 1 && Math.abs(gas.pitchPeak - none.pitchPeak) <= 0.02, `${v} km/h : les gaz n'agissent presque pas en l'air`);
-    assert.ok(brake.pitchPeak <= none.pitchPeak + 0.01, `${v} km/h : l'aérofrein ne relève pas le nez (${brake.pitchPeak} contre ${none.pitchPeak} rad)`);
-    assert.ok(brake.loss <= none.loss + 2, `${v} km/h : frein −${brake.loss} % contre −${none.loss} %`);
+    const none = jumpRun(v, 'none'), gas = jumpRun(v, 'gas'), brake = jumpRun(v, 'brake'), damp = jumpRun(v, 'damp');
+    assert.ok(gas.pitchPeak >= none.pitchPeak + 0.1, `${v} km/h : les gaz penchent le nez visiblement (${gas.pitchPeak} contre ${none.pitchPeak} rad)`);
+    assert.ok(gas.pitchPeak <= none.pitchPeak + CAR.airLean + 0.01, `${v} km/h : jamais plus que la bascule maximale (${gas.pitchPeak} contre ${none.pitchPeak} rad)`);
+    assert.ok(brake.pitchPeak <= none.pitchPeak + CAR.airLean + 0.01, `${v} km/h : frein : bascule bornée elle aussi (${brake.pitchPeak} contre ${none.pitchPeak} rad)`);
+    // L'aérofrein seul (les deux pédales) ne coûte jamais plus qu'à vide ; le frein seul, qui lève le nez, est un choix du pilote (il peut se poser cabré).
+    assert.ok(damp.loss <= none.loss + 2, `${v} km/h : aérofrein −${damp.loss} % contre −${none.loss} %`);
+    assert.notEqual(brake.q, 'bad', `${v} km/h : frein seul : réception ${brake.q}`);
   }
 });
 test('moto : mêmes garanties ; deltaplane : il plane toujours (identité) et un frein tenu ne le jette pas', () => {

@@ -36,6 +36,8 @@ const TMP = { x: 0, z: 0 };
 const BK = { vx: 0, vy: 0, w: 0 };
 const AIR_BRAKE_DECAY = dexp(-CAR.airBrake * DT);      // aérofrein : amortissement de la rotation par pas (constante, calculée une fois)
 const AIR_SPIN_DECAY = dexp(-CAR.airSpin * DT);        // amortissement naturel de la rotation en vol, par pas
+const AIR_LEAN_K = 1 - dexp(-DT / CAR.airLeanT), AIR_LEAN_BACK_K = 1 - dexp(-DT / CAR.airLeanBackT);      // bascule aux pédales : approche par pas
+const AIR_YAW_K = 1 - dexp(-DT / CAR.airYawT);                                                            // lacet au volant : approche par pas
 
 export class CarPhysics {
   constructor(track) {
@@ -121,6 +123,7 @@ export class CarPhysics {
     this.driftT = 0; this.bounceCD = 0; this.driftCharge = 0; this.slipV = 0; this.xfer = 0; this.prevSteerIn = 0; this.wallT = 0; this.stunT = 0; this.stuckT = 0; this.wallRun = 0; this.pinT = 0; this._pinned = false; this.unstick = 0; this.unstickT = 0; this.unstickDir = 0; this.crawlT = 0; this.touchT = 0; this.wnx = 0; this.wnz = 0; this.wallPrev = 0;
     this.envGrip = 1;
     this.pitch = 0; this.pitchRate = 0; this.tipNext = false; this.landQ = ''; this.aoa = 0.08; this.glidePitch = 0; this.bankT = 0;
+    this.airLean = 0; this.airYawW = 0;      // (0.12.3 : bascule aux pédales et lacet au volant en l'air)
     if (this.v2) { this.lean = 0; this.mAx = 0; this.heave = 0; this.v2F = 1; this.v2R = 1; }
     this.rib = null;
     this.gravMul = 1;
@@ -556,6 +559,7 @@ export class CarPhysics {
     this.airTime = 0;
     this.pitch = dasin(clamp(fy, -1, 1));   // assiette au sol : sert d'assiette de départ en l'air
     this.pitchRate = 0; this.tipNext = false;
+    this.airLean = 0; this.airYawW = 0;
     return false;
   }
 
@@ -572,8 +576,11 @@ export class CarPhysics {
     else v.y -= this.g * this.gSign * dt;
     if (airBrake) this.omega *= AIR_BRAKE_DECAY;
     const us = this._upSign();
-    this.yaw -= this.omega * us * dt;
-    this.yawRate = -this.omega * us;
+    // 0.12.3 : le volant fait tourner la voiture en douceur (s'arrête quand on le lâche) ; le deltaplane a ses propres commandes.
+    if (this.vehicle !== 'glider') this.airYawW += (clamp(this.steer, -1, 1) * CAR.airYaw - this.airYawW) * AIR_YAW_K;
+    else this.airYawW = 0;
+    this.yaw -= (this.omega + this.airYawW) * us * dt;
+    this.yawRate = -(this.omega + this.airYawW) * us;
     this.steerAngle = this._steerAngle(hypot2(v.x, v.z), this.driftT);
     const k = 1 - 0.0006 * this.speed * dt;
     v.x *= k; v.y *= k; v.z *= k;
@@ -592,10 +599,12 @@ export class CarPhysics {
         this.pitchRate -= this.gSign * CAR.airTip / (hypot2(v.x, v.z) + CAR.airTipV0);
       }
       this.pitchRate *= airBrake ? AIR_BRAKE_DECAY : AIR_SPIN_DECAY;
-      // Gaz en l'air : le nez descend d'un rien ; frein : il remonte d'un rien (en plus de l'aérofrein). Voir CAR.airTilt.
-      if (airBrake) this.pitchRate += this.gSign * CAR.airTilt * dt;
-      else if (inp.throttle) this.pitchRate -= this.gSign * CAR.airTilt * dt;
-      this.pitch += this.pitchRate * dt;
+      // 0.12.3 : gaz en l'air, le nez descend ; frein, il remonte (en plus de l'aérofrein) ; vers un angle borné (CAR.airLean), puis retour en douceur au relâché.
+      // Les deux pédales ensemble : l'aérofrein seul, sans bascule.
+      const lt = airBrake && !inp.throttle ? this.gSign * CAR.airLean : inp.throttle && !airBrake ? -this.gSign * CAR.airLean : 0;
+      const lean = this.airLean + (lt - this.airLean) * (lt ? AIR_LEAN_K : AIR_LEAN_BACK_K);
+      this.pitch += this.pitchRate * dt + (lean - this.airLean);
+      this.airLean = lean;
       if (Math.abs(this.pitch) > 1.4) { this.pitch = clamp(this.pitch, -1.4, 1.4); this.pitchRate = 0; }
     }
   }
@@ -608,6 +617,7 @@ export class CarPhysics {
     if (this.ev.sink) return true;
     if (this._tryEnterRibbon()) return true;
     if (!this.grounded && this._tryLandRibbon()) return true;
+    if (!this.grounded) this._tubeShell();        // (0.12.2, PHYS_VER 38 : coque pleine des tubes)
     this._walls();
     this._pinned = false;
     this._tunnelRoof();

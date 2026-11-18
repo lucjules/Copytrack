@@ -51,9 +51,13 @@ export class Weather {
     this.obj.geometry.setDrawRange(0, WEATHER_KINDS[this.kind].line ? n * 2 : n);
   }
 
-  update(dt, cam) {
+  // covered (0.12.2) : la caméra est à l'abri (tunnel, tube, sous une route, voir cover.js) : la météo s'estompe en un tiers de seconde.
+  update(dt, cam, covered = false) {
     if (!this.obj) return;
     const W = WEATHER_KINDS[this.kind], p = this.p, n = this.n;
+    this.fade = Math.max(0, Math.min(1, (this.fade ?? 1) + (covered ? -3 : 3) * dt));
+    this.obj.material.opacity = W.op * this.fade;
+    this.obj.visible = this.fade > 0.01;
     this.t += dt;
     const cx = cam.position.x, cy = cam.position.y, cz = cam.position.z;
     for (let i = 0; i < n; i++) {
