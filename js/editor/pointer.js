@@ -63,7 +63,7 @@ export const pointerMethods = {
       const items = [...document.querySelectorAll('#ed-menu button')], i = items.indexOf(document.activeElement);
       if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
       else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
-      else if (e.key === 'Escape') { e.preventDefault(); this.toggleMenu(false); }
+      // (Échap : lu par EditorSession.update, qui referme d'abord le menu ; le traiter ici aussi le comptait deux fois.)
     };
     document.addEventListener('pointerdown', this._h.outside, true);
     document.addEventListener('keydown', this._h.menuKey);
@@ -90,6 +90,8 @@ export const pointerMethods = {
     if (this.camLocked || this.inspector.gizmoBusy) return;
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, button: e.button, type: e.pointerType, moved: false });
     if (this.pointers.size === 2) this._pinch = null;
+    // Geste à plusieurs doigts (pincer, tourner) : aucun doigt relevé ensuite ne pose de pièce (avant 0.12.0, le doigt resté immobile en posait une).
+    if (this.pointers.size >= 2) this._multiTouch = true;
     if (e.pointerType === 'mouse' && e.button === 1) e.preventDefault();
     if (e.pointerType === 'mouse' && e.button === 0) {
       this._updateHover();
@@ -125,7 +127,7 @@ export const pointerMethods = {
         this._pinch = { d, ang };
       } else if (p.moved) {
         if (this.tool === 'select' && !this.pasting) {
-          if (!this.selDrag) { this._updateHover(); this._selectDown(); }
+          if (!this.selDrag && !this.selMove) { this._updateHover(); this._selectDown(); }
           this._updateHover(); this._selectMove();
         } else this._pan(dx, dy);
       }
@@ -136,7 +138,7 @@ export const pointerMethods = {
       this.pitch = Math.max(this.freeCam ? -0.3 : 0.2, Math.min(1.5, this.pitch + dy * 0.005));      // caméra libre (E22) : jusqu'au ras du sol
     } else if (p.button === 1 && p.moved) {
       this._pan(dx, dy);
-    } else if (p.button === 0 && this.selDrag) {
+    } else if (p.button === 0 && (this.selDrag || this.selMove)) {
       this._updateHover();
       this._selectMove();
     } else if (p.button === 0 && this.painting && !this.tool.startsWith('deco:')) {
@@ -154,12 +156,15 @@ export const pointerMethods = {
       if (p.button === 2 && !p.moved) { this._updateHover(); this._erase(); }
       if (p.button === 1 && !p.moved) { this._updateHover(); this._pick(); }
       if (p.button === 0) {
-        if (this.selDrag) this._selectUp();
+        if (this.selDrag || this.selMove) this._selectUp();
         this.painting = false;
         this._lastPaint = null;
         this._commit();
       }
-    } else if (this.selDrag) {
+    } else if (this._multiTouch) {
+      if (this.pointers.size === 0) this._multiTouch = false;
+      if (this.selDrag || this.selMove) this._selectUp();
+    } else if (this.selDrag || this.selMove) {
       this._selectUp();
     } else if (!p.moved && this.pointers.size === 0) {
       this._setNdc(e);

@@ -432,7 +432,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
 <section class="sec" id="pieces" data-s>
   <span class="kicker">Construire</span><h2>Pièces</h2><div class="curb"></div>
   <p class="lede">Un circuit est une grille de cases de 32 m, sur des niveaux de 6,4 m. Chaque pièce occupe une ou plusieurs cases. L'éditeur les regroupe en <strong>familles</strong> dont on règle les caractéristiques (inclinaison, rayon, sens…).</p>
-  <h3>Les neuf familles de la palette</h3>
+  <h3>Les treize familles de la palette</h3>
   <div class="fam" id="families"></div>
   <h3>Les nouvelles pièces (0.9.68 à 0.9.72)</h3>
   <div class="cols">
@@ -443,6 +443,8 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <div class="card"><h4>Looping modulaire</h4><p>Montée, de 0 à 6 murs, un sommet, puis la redescente une colonne à côté.</p></div>
     <div class="card"><h4>Tube en virage</h4><p>Un tube de 2 × 2 cases qui tourne, entre des sections de tube.</p></div>
   </div>
+  <h3>Des familles complètes (0.12.0)</h3>
+  <p class="read">Chaque famille a toutes ses combinaisons : la <strong>largeur</strong> (étroite, normale, large) se combine avec l'inclinaison de la ligne droite, les raccords de la courbe et tous les virages ; le très grand virage s'incline, les virages relevés montent et descendent ; la courbe en S existe en 2 et 4 niveaux ; le grand S rapide décale de deux colonnes ; la transition bascule aussi de 90° entre orientations inclinées. Une combinaison absente est grisée dans l'éditeur, avec sa raison au survol (par exemple : pas de virage serré en route large, son rayon de 16 m est plus petit que la demi-largeur de la route). Une route large monte comme trois pentes à la suite : en montée 1, elle gagne 3 niveaux sur ses 3 cases.</p>
   <h3>Le catalogue, icônes de l'éditeur</h3>
   <p class="read">Voici les pièces de la palette, avec l'icône qu'elles ont dans l'éditeur et leur identifiant interne. Les pièces encadrées en corail sont les nouvelles.</p>
   <div class="filters" id="f-kind" role="group" aria-label="Filtrer les pièces"></div>
@@ -485,26 +487,31 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <figure class="shot"><img src="img/editeur-eclats.jpg" alt="L'éditeur ouvert sur Premiers Éclats, vue d'ensemble et palette" loading="lazy"><figcaption>Premiers Éclats dans l'éditeur : la boucle autour du croisement.</figcaption></figure>
     <figure class="shot"><img src="img/editeur-verglas.jpg" alt="L'éditeur ouvert sur Lac Gelé" loading="lazy"><figcaption>Lac Gelé : les deux nœuds en 8.</figcaption></figure>
   </div>
-  <h3>Les outils</h3>
-  <div class="cols">
-    <div class="card"><h4>Sélection <kbd>Q</kbd></h4><p>Copier, couper ou déplacer, coller avec rotation, monter ou descendre, supprimer une zone.</p></div>
-    <div class="card"><h4>Inspecter <kbd>I</kbd></h4><p>Un panneau de propriétés lié au circuit dans les deux sens ; des gizmos 3D déplacent et pivotent les décorations.</p></div>
-    <div class="card"><h4>Gomme <kbd>X</kbd></h4><p>Avec un filtre : tout, décorations seules ou pistes seules.</p></div>
-    <div class="card"><h4>Pot de peinture</h4><p>Remplit toute une zone connectée d'une pièce ou d'un revêtement ; la zone est surlignée avant le clic.</p></div>
-    <div class="card"><h4>Vérificateur <kbd>F2</kbd></h4><p>Extrémités libres, sauts risqués, raccords d'orientation, pièces inaccessibles, boucles de carrefour sans checkpoint (qu'on pourrait couper), checkpoint dans une voie de bifurcation en T ; un clic fait clignoter les pièces en cause.</p></div>
-    <div class="card"><h4>Prolonger <kbd>P</kbd></h4><p>Déroule la route sans viser les cases : ligne, virage, pente, mur ; les transitions s'insèrent toutes seules.</p></div>
-  </div>
-  <h3>Les onglets de la palette</h3>
+  <h3>Le rangement : quatre zones, un rôle chacune</h3>
   <ul class="tight read">
-    <li><strong>Pièces</strong> : les familles et leurs caractéristiques.</li>
-    <li><strong>Options</strong> : orientation, sans bordures, tunnel, checkpoint, anneau turbo, thème, portique, bordures de plaque, mouvement.</li>
-    <li><strong>Revêtements</strong> : les 19 revêtements et leurs réglages.</li>
-    <li><strong>Décors</strong> : toutes les catégories de décorations, des couleurs, une image par URL, tes pièces décoratives perso (code <code>SHD1:</code>).</li>
-    <li><strong>Prefabs</strong> : chicane, épingle, slalom, saut, looping, wall-ride à coller ; « Enregistrer la sélection » crée les tiens (code <code>SHP1:</code>).</li>
+    <li><strong>En haut, le circuit</strong> : menu <em>Fichier</em> (nouveau, ouvrir, importer, partager, enregistrer, copie, aide), le nom du circuit (un clic le renomme ; un point orange tant qu'il n'est pas enregistré), <em>⚙ Circuit</em>, annuler / rétablir, la pastille des problèmes, <em>▶ Tester</em> (sa flèche : depuis la pièce visée) et <em>🏁 Vérifier et publier</em>.</li>
+    <li><strong>À gauche, les outils</strong> : un rail de six outils (que fait mon clic ?) et le panneau de l'outil choisi (avec quoi ?).</li>
+    <li><strong>À droite, la vue</strong> : niveau, ce niveau seul, vue de dessus, recentrer, caméra au ras du sol, grille, calques. Rien ici ne modifie le circuit.</li>
+    <li><strong>Seulement quand on en a besoin</strong> : la barre de la zone sélectionnée, au-dessus d'elle, et l'inspecteur.</li>
   </ul>
+  <p class="read">Quitter l'éditeur (Échap, <em>Retour au menu</em>), ouvrir un autre circuit ou en commencer un nouveau <strong>enregistre</strong> le circuit modifié dans « Mes circuits ». L'historique d'annulation, le presse-papiers et les options choisies survivent à un essai. Sur téléphone, le panneau de l'outil est un tiroir : toucher l'outil actif l'ouvre, il se referme après un choix.</p>
+  <h3>Les six outils</h3>
+  <div class="cols">
+    <div class="card"><h4>Pistes <kbd>Tab</kbd></h4><p>La bibliothèque par sections (routes, acrobaties, tubes, surfaces, course, morceaux tout faits), une recherche (« large montée », « relevé »…) et les pièces récentes. Sous la pièce choisie : ses caractéristiques (largeur, rayon, inclinaison…), ses options (mur, plafond, tunnel, checkpoint, mouvement…), et Pivoter, Miroir, Prolonger. L'interrupteur <em>Remplir une zone</em> remplace le pot de peinture.</p></div>
+    <div class="card"><h4>Peinture <kbd>B</kbd></h4><p>Les revêtements et leur réglage, en unités réelles ; <em>Toute la zone</em> peint une zone connectée d'un coup.</p></div>
+    <div class="card"><h4>Décors</h4><p>Cinq familles (solides, bord de piste, paysages, lieux et objets, fêtes et saisons), une recherche, la couleur, la taille, la hauteur, l'accrochage ; tes pièces décoratives perso (code <code>SHD1:</code>). Les <strong>solides</strong> comptent pour la course.</p></div>
+    <div class="card"><h4>Sélection <kbd>Q</kbd></h4><p>Trace une zone ; <strong>glisse dedans pour la déplacer</strong>. Sa barre : copier, couper, dupliquer, pivoter, monter, descendre, une option pour toute la zone, la ranger dans un groupe, en faire un prefab (code <code>SHP1:</code>), supprimer.</p></div>
+    <div class="card"><h4>Inspecter <kbd>I</kbd></h4><p>Un panneau de propriétés lié au circuit dans les deux sens ; des gizmos 3D déplacent et pivotent l'objet.</p></div>
+    <div class="card"><h4>Gomme <kbd>X</kbd></h4><p>Avec un filtre : tout, décorations seules ou pistes seules. Un calque verrouillé ou masqué n'est jamais touché.</p></div>
+  </div>
+  <div class="cols">
+    <div class="card"><h4>Vérificateur <kbd>F2</kbd></h4><p>Extrémités libres, sauts risqués, raccords d'orientation et de largeur, pièces inaccessibles, boucles de carrefour sans checkpoint (qu'on pourrait couper), checkpoint dans une voie de bifurcation en T ; un clic fait clignoter les pièces en cause.</p></div>
+    <div class="card"><h4>Prolonger <kbd>P</kbd></h4><p>Déroule la route sans viser les cases : ligne, virage, pente, mur ; les transitions d'orientation et les raccords de largeur s'insèrent tout seuls.</p></div>
+    <div class="card"><h4>Fenêtre « Circuit » <kbd>F3</kbd></h4><p>Six onglets : général (nom, description, décor, tours), course (départ, gravité, véhicule…), conditions (adhérence, vent, pluie…), ambiance, déclencheurs, logique.</p></div>
+  </div>
   <h3>Plus loin</h3>
   <div class="cols">
-    <div class="card"><h4>Éditeur de logique</h4><p>Des règles ÉVÉNEMENT → CONDITIONS → ACTIONS (bouton ⚙ ou <kbd>F6</kbd>) : une porte qui s'ouvre au checkpoint, un groupe caché au départ. Elles tournent dans la simulation, donc aussi en replay et en vérification.</p></div>
+    <div class="card"><h4>Éditeur de logique</h4><p>Des règles ÉVÉNEMENT → CONDITIONS → ACTIONS (onglet Logique de la fenêtre « Circuit », ou <kbd>F6</kbd>) : une porte qui s'ouvre au checkpoint, un groupe caché au départ. Elles tournent dans la simulation, donc aussi en replay et en vérification.</p></div>
     <div class="card"><h4>Groupes et calques</h4><p>Ranger la sélection, nommer, masquer (ni dessiné, ni visable), verrouiller.</p></div>
     <div class="card"><h4>Ambiance</h4><p>Moment de la journée, ciel, brouillard, météo, musique, heure qui défile : rangés dans le code du circuit.</p></div>
     <div class="card"><h4>Mode guidé</h4><p>L'éditeur démarre avec l'essentiel seulement ; « Tout afficher » rend le reste.</p></div>
@@ -525,7 +532,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <tr><td><kbd>N</kbd></td><td>Accrochage des décorations</td><td><kbd>[</kbd> <kbd>]</kbd></td><td>Taille de la décoration</td></tr>
     <tr><td><kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Y</kbd> / <kbd>S</kbd></td><td>Annuler, rétablir, enregistrer</td><td><kbd>F1</kbd> ou <kbd>?</kbd></td><td>Tous les raccourcis</td></tr>
   </table></div>
-  <figure class="shot" style="max-width:720px"><img src="img/editeur-vide.jpg" alt="L'éditeur vide avec une seule pièce posée et la palette des familles" loading="lazy"><figcaption>Un nouveau circuit : la palette des familles en bas, les outils à gauche.</figcaption></figure>
+  <figure class="shot" style="max-width:720px"><img src="img/editeur-vide.jpg" alt="L'éditeur vide avec une seule pièce posée, le rail des outils et la bibliothèque des pièces" loading="lazy"><figcaption>Un nouveau circuit : les outils à gauche avec leur panneau, la vue à droite.</figcaption></figure>
 </section>
 
 <!-- ============================== MODES ============================== -->

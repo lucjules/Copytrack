@@ -1,18 +1,26 @@
 // Palette de l'éditeur : boutons d'outils, familles de pièces, options, paramètres, aide à la compatibilité, menu.
 // Ces méthodes s'ajoutent au prototype de EditorSession (voir editor.js) : `this` est l'instance.
 import { SURF_PHYS } from '../constants.js';
-import { PIECES, SURFACES, SURFACE_ORDER, surfaceRule, flagAllowed, paramText, armOption } from '../pieces.js';
-import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, isFamilyMember, REPLACED_BY_OPTION } from '../families.js';
+import { PIECES, PIECE_ORDER, LEGACY_TILE, SURFACES, SURFACE_ORDER, surfaceRule, flagAllowed, paramText, armOption } from '../pieces.js';
+import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, REPLACED_BY_OPTION, missingReason } from '../families.js';
 import { Track } from '../track.js';
 import { DECORS } from '../themes.js';
 import { tint, THEME_SWATCH } from '../trackGeometry.js';
 import { isObstacle } from '../obstacles.js';
-import { DECO_CATS, DECO_COLORS, DECO_ICONS } from '../decoData.js';
+import { DECO_CATS, DECO_COLORS, DECO_ICONS, DECO_LABELS } from '../decoData.js';
 import { keyLabel } from '../input.js';
 import { esc } from '../dom.js';
+import { translate } from '../i18n.js';
 import { ERASE_FILTERS, ERASE_FILTER_ORDER } from '../editorPick.js';
+import { MIRROR_TYPES } from '../inspector.js';
 import { SKY_CHOICES, FOG_CHOICES, MUSIC_CHOICES, WEATHER_CHOICES, CYCLE_CHOICES } from '../ambiance.js';
-import { MODS, NO_OPTS, OPT_KEYS, PALETTE_ORDER, SNAPS, TOOLS, fillBase, isFill, pieceLabel } from './shared.js';
+import { MODS, NO_OPTS, OPT_KEYS, SNAPS, fillBase, isFill, toFill, pieceLabel } from './shared.js';
+
+// Onglets de la fenêtre « Circuit ».
+const CIRCUIT_TABS = [['gen', 'Général'], ['course', 'Course'], ['cond', 'Conditions'], ['amb', 'Ambiance'], ['scripts', 'Déclencheurs'], ['logic', 'Logique']];
+
+// Recherche : minuscules, sans accents, blancs réduits.
+const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 const WIND_DIRS = [[0, 'Vers le nord'], [45, 'Vers le nord-est'], [90, 'Vers l’est'], [135, 'Vers le sud-est'], [180, 'Vers le sud'], [225, 'Vers le sud-ouest'], [270, 'Vers l’ouest'], [315, 'Vers le nord-ouest']];
 // Options proposées dans l'onglet « Options » : bascules (route) et choix exclusifs (checkpoint, thème, mouvement).
 // Avec une pièce choisie, elles s'ajoutent à la pose (aperçu compris) ; sans pièce, elles s'appliquent à la pièce cliquée.
@@ -153,6 +161,7 @@ const ICONS = {
   inspect: svg(`<rect x="8" y="14" width="26" height="22" rx="3" fill="#5ff2ff22" stroke="#5ff2ff" stroke-width="3"/><path d="M28 24l14 6-6 3-3 6z" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/><circle cx="21" cy="25" r="3" fill="#5ff2ff"/>`),
   select: svg(`<rect x="7" y="9" width="34" height="30" fill="#5ff2ff22" stroke="#5ff2ff" stroke-width="3" stroke-dasharray="6 4"/><path d="M30 30l10 10M30 30v8M30 30h8" stroke="#ffffff" stroke-width="2.5"/>`),
   erase: svg(`<path d="M12 12l24 24M36 12L12 36" stroke="#ff5a6e" stroke-width="5" stroke-linecap="round"/>`),
+  decos: svg(`<path d="M24 6l12 18H28l9 13H11l9-13h-8z" fill="#3fbf6b" stroke="#1d6b3a" stroke-width="2" stroke-linejoin="round"/><rect x="21" y="37" width="6" height="7" fill="#8a5a33"/>`),
   fill: svg(`<path d="M10 26l14-14 14 14-12 12z" fill="#ffb34722" stroke="#ffb347" stroke-width="3" stroke-linejoin="round"/><path d="M24 12V8M36 30c3 4 5 6 5 9a5 5 0 0 1-10 0c0-3 2-5 5-9z" stroke="#ffb347" stroke-width="3" fill="#ffb347" stroke-linecap="round"/>`),
   'surf:': svg(`${straightBase()}<path d="M24 8v32" stroke="${LINE}" stroke-width="2" stroke-dasharray="5 5"/>`),
   'surf:ice': svg(`${straightBase('#bfe4f2', '#7fd3ff')}<path d="M24 14v20M15 19l18 10M15 29l18-10" stroke="#4aa8d8" stroke-width="2.5"/>`),
@@ -184,15 +193,66 @@ const ICONS = {
 // Mode guidé de l'éditeur (nouveau joueur) : l'essentiel seulement, pour commencer sans se perdre : les familles « Droite » (avec ses pentes) et « Virage », le départ, l'arrivée et le checkpoint.
 // (La pente est un réglage de la famille « Droite », le grand virage un réglage de la famille « Virage » : ni l'une ni l'autre n'est une pièce à part.)
 // Rien n'est retiré à qui connaît déjà l'éditeur (le mode ne s'active que pour un nouveau joueur, ou à la demande dans Options) ; « Tout afficher » le quitte.
-export const GUIDED = { pieces: new Set(['start', 'finish']), fams: new Set(['straight', 'turn']), flags: new Set(['cp']), tabs: new Set(['pieces', 'mods']) };
+export const GUIDED = { pieces: new Set(['start', 'finish']), fams: new Set(['straight', 'turn']), flags: new Set(['cp']), modes: new Set(['pieces', 'select', 'inspect', 'erase']) };
+
+// ---- 0.12.0 : rangement de l'éditeur en quatre zones (voir index.html, #editor.ed12) ------------------------------------------------------------------
+// Le RAIL d'outils dit ce que fait le clic ; le PANNEAU de l'outil dit avec quoi. Les outils sont des MODES dérivés de `tool` (le modèle ne change pas :
+// une pièce, 'surf:…', 'deco:…', 'select', 'inspect', 'erase', et 'fill-…' pour le pot de peinture, devenu l'interrupteur « Remplir » de Pièces et Peinture).
+export const MODES = [
+  { id: 'pieces', label: 'Pistes', hint: 'Poser des pièces de route', icon: 'straight', keyAction: 'ed.nextPiece' },
+  { id: 'paint', label: 'Peinture', hint: 'Revêtements : verglas, accélérateur, eau…', icon: 'surf:boost', keyAction: 'ed.surface' },
+  { id: 'decos', label: 'Décors', hint: 'Décorations, solides et obstacles' , icon: 'decos' },
+  { id: 'select', label: 'Sélection', hint: 'Zone : copier, déplacer, pivoter, supprimer', icon: 'select', key: 'KeyQ', k: 'Q' },
+  { id: 'inspect', label: 'Inspecter', hint: 'Propriétés et gizmos 3D d’une pièce ou d’un décor', icon: 'inspect', keyAction: 'ed.inspect' },
+  { id: 'erase', label: 'Gomme', hint: 'Effacer : tout, décors ou pistes', icon: 'erase', keyAction: 'ed.erase' },
+];
+export const modeOf = (tool) => {
+  const b = fillBase(tool || '');
+  if (b === 'select' || b === 'inspect' || b === 'erase') return b;
+  if (b.startsWith('surf:')) return 'paint';
+  if (b.startsWith('deco:')) return 'decos';
+  return 'pieces';
+};
+
+// Bibliothèque des pièces : sections, chacune une suite de cartes (« fam:… » : une famille, sinon une pièce seule). Toute famille et toute pièce seule de la
+// palette y est (tools/test-rangement.mjs).
+export const LIBRARY = [
+  { id: 'roads', label: 'Routes', items: ['fam:straight', 'fam:turn', 'fam:chicane', 'fam:courbe', 'fam:largeur', 'fam:carrefour', 'fam:fork'] },
+  { id: 'acro', label: 'Acrobaties', items: ['fam:roll', 'fam:loop', 'fam:vertical', 'fam:cork', 'twist'] },
+  { id: 'tubes', label: 'Tubes', items: ['fam:tube'] },
+  { id: 'areas', label: 'Surfaces', items: ['fam:plaque'] },
+  { id: 'race', label: 'Course', items: ['start', 'finish', 'ring'] },
+];
+// Décors : cinq familles au lieu de 35 catégories en ligne. Les SOLIDES (piliers, murs pleins, blocs, obstacles) comptent pour la course : à part.
+export const DECO_FAMS = [
+  { id: 'solid', label: 'Solides', cats: ['struct', 'wallsS', 'blocks', 'obstacles'], hint: 'Comptent pour la course : la voiture les heurte ou roule dessus (ils changent la signature du circuit).' },
+  { id: 'side', label: 'Bord de piste', cats: ['race', 'signs', 'lights', 'shapes', 'build', 'image'] },
+  { id: 'land', label: 'Paysages', cats: ['nature', 'jungle', 'beach', 'sea', 'sky', 'space', 'cave', 'winter'] },
+  { id: 'place', label: 'Lieux et objets', cats: ['city', 'factory', 'farm', 'castle', 'vehicles', 'sport', 'fair', 'wild', 'japan', 'candy', 'party'] },
+  { id: 'fest', label: 'Fêtes et saisons', cats: ['xmas', 'halloween', 'valentine', 'newyear', 'spring', 'autumn'] },
+];
+const decoFamOf = (cat) => (DECO_FAMS.find((f) => f.cats.includes(cat)) || DECO_FAMS[1]).id;
+const RECENT_MAX = 8;
+
+// Ligne d'aide du bas : les gestes de l'outil actif.
+const HINTS = {
+  pieces: 'Clic : poser · glisser : plusieurs · R : pivoter · P : prolonger · clic droit : effacer · Alt + clic : pipette',
+  fill: 'Clic sur une pièce : remplit sa zone connectée · sur une case vide entourée de pièces : la remplit · un seul Ctrl + Z annule tout',
+  paint: 'Clic : peindre la pièce visée · glisser : plusieurs · clic droit : effacer',
+  decos: 'Clic : poser · R : pivoter · Maj + souris : hauteur · Alt + molette : taille · N : accrochage',
+  select: 'Glisser : tracer une zone · glisser DANS la zone : la déplacer · Ctrl + C / X / V / D · Suppr',
+  paste: 'Clic : coller ici · R : pivoter · Échap : annuler',
+  inspect: 'Clic : choisir une pièce ou un décor · flèches et cercles : déplacer, pivoter · Maj + souris : hauteur · Ctrl + D : dupliquer',
+  erase: 'Clic ou glisser : effacer · X : changer de filtre (tout, décors, pistes)',
+};
 
 export const paletteMethods = {
   guidedOn() { return this.app.settings.editorGuided === true; },
 
-  // Cet outil est-il proposé ? (mode complet : tout ; mode guidé : les six pièces, le checkpoint et les quatre outils.)
+  // Cet outil est-il proposé ? (mode complet : tout ; mode guidé : les pièces de base, le checkpoint, la sélection, l'inspection et la gomme.)
   guidedAllows(id) {
     if (!this.guidedOn()) return true;
-    if (TOOLS.some((t) => t.id === id)) return true;
+    if (id === 'select' || id === 'inspect' || id === 'erase' || id === 'fill') return true;
     const base = fillBase(id);
     if (id.startsWith('mod:')) return GUIDED.flags.has(MODS.find((m) => m.id === id)?.flag);
     if (base.startsWith('surf:') || base.startsWith('deco:')) return false;
@@ -201,19 +261,19 @@ export const paletteMethods = {
     return !!(f && GUIDED.fams.has(f.fam));
   },
 
-  // Met la palette dans l'état voulu (guidé ou complet) : boutons, onglets, familles, groupes d'options, bandeau.
+  // Met la palette dans l'état voulu (guidé ou complet) : outils du rail, cartes de la bibliothèque, groupes d'options, bandeau.
   _applyGuided() {
     const pal = document.getElementById('ed-palette');
     if (!pal) return;
     const on = this.guidedOn();
     pal.classList.toggle('guided', on);
-    for (const b of pal.querySelectorAll('.pal-row:not(.surf):not(.decos) > .piece-btn[data-piece]')) b.hidden = on && !GUIDED.pieces.has(b.dataset.piece);
-    for (const c of pal.querySelectorAll('.fam-card')) c.hidden = on && !GUIDED.fams.has(c.dataset.fam);
-    for (const t of pal.querySelectorAll('.pal-tab[data-tab]')) t.hidden = on && !GUIDED.tabs.has(t.dataset.tab);
+    for (const b of document.querySelectorAll('#ed-tools .tool-btn')) b.hidden = on && !GUIDED.modes.has(b.dataset.tool);
+    for (const c of pal.querySelectorAll('.lib-tile')) c.hidden = on && !(c.dataset.fam ? GUIDED.fams.has(c.dataset.fam) : GUIDED.pieces.has(c.dataset.piece));
+    for (const s of pal.querySelectorAll('.lib-sec[data-sec]')) s.hidden = on && ![...s.querySelectorAll('.lib-tile')].some((t) => !t.hidden);
     for (const g of pal.querySelectorAll('.opt-group')) g.hidden = on && ![...g.querySelectorAll('[data-flag]')].some((b) => GUIDED.flags.has(b.dataset.flag));
+    for (const e of pal.querySelectorAll('[data-full-only]')) e.hidden = on;
     const banner = pal.querySelector('.pal-guided');
     if (banner) banner.hidden = !on;
-    if (on && !GUIDED.tabs.has(this.tab)) this.setTab('pieces');
     if (on && !this.guidedAllows(this.tool)) this.tool = 'straight';
   },
 
@@ -224,18 +284,74 @@ export const paletteMethods = {
     if (this._refreshUI) this._refreshUI();
   },
 
-  // ---------------------------------------------------------------- UI
-  _toolButton(parent, id, k, label = pieceLabel(id)) {
-    const b = document.createElement('button');
-    b.className = 'piece-btn';
-    b.dataset.piece = id;
-    b.title = label + (k ? ` (${k})` : '');
-    const icon = ICONS[id] || `<span class="emo">${id.startsWith('deco:') ? DECO_ICONS[id.slice(5)] || '◆' : '◆'}</span>`;
-    b.innerHTML = `${k ? `<span class="k">${k}</span>` : ''}${icon}<span>${label}</span>`;
-    b.addEventListener('click', () => { this.setTool(id); this.app.audio.click(); });
-    parent.appendChild(b);
+  // ---------------------------------------------------------------- Outils (rail) et modes
+  mode() { return modeOf(this.tool); },
+
+  // Changer d'outil depuis le rail : on reprend la dernière pièce, le dernier revêtement ou la dernière décoration choisis (et l'interrupteur « Remplir »).
+  setMode(m) {
+    if (m === 'pieces') {
+      const p = this._lastPiece && PIECES[this._lastPiece] ? this._lastPiece : 'straight';
+      this.setTool(this._fillPieces ? toFill(p) : p);
+    } else if (m === 'paint') {
+      const s = this._lastSurf && SURFACES[this._lastSurf.slice(5)] ? this._lastSurf : 'surf:boost';
+      this.setTool(this._fillPaint ? toFill(s) : s);
+    } else if (m === 'decos') {
+      this.setTool('deco:' + (this._lastDeco || DECO_CATS[this.deco.cat].kinds[0]));
+    } else this.setTool(m);
   },
 
+  // Interrupteur « Poser / Remplir une zone » (pièces) et « Une pièce / Toute la zone » (peinture) : le pot de peinture.
+  setFill(on) {
+    const base = fillBase(this.tool);
+    if (!PIECES[base] && !base.startsWith('surf:')) return;
+    if (base.startsWith('surf:')) this._fillPaint = !!on; else this._fillPieces = !!on;
+    this.fillMode = !!on;
+    this.setTool(on ? toFill(base) : base);
+  },
+
+  _toolButton(parent, id, k, label = pieceLabel(id)) {
+    const b = document.createElement('button');
+    b.className = 'piece-btn lib-tile';
+    b.type = 'button';
+    b.dataset.piece = id;
+    b.title = label + (k ? ` (${k})` : '');
+    // (une pièce sans icône à elle prend celle de sa famille : les 270 pièces de la 0.12.0 n'ont pas chacune la leur)
+    const fam = familyOf(id);
+    const icon = ICONS[id] || (fam && ICONS[FAMILIES[fam.fam].icon]) || `<span class="emo">${id.startsWith('deco:') ? DECO_ICONS[id.slice(5)] || '◆' : '◆'}</span>`;
+    b.innerHTML = `${k ? `<span class="k">${k}</span>` : ''}${icon}<span>${esc(label)}</span>`;
+    b.addEventListener('click', () => { this.setTool(id); this.app.audio.click(); this._closeDrawer(); });
+    parent.appendChild(b);
+    return b;
+  },
+
+  _buildTools() {
+    const box = document.getElementById('ed-tools');
+    box.innerHTML = '';
+    for (const m of MODES) {
+      const code = m.keyAction ? (this.app.input.bindings[m.keyAction] || []).filter(Boolean)[0] : m.key;
+      const SHORT = { Backslash: '\\', Slash: '/', Backquote: '`', Delete: 'Suppr', Tab: '⇥' };
+      const k = m.k || (code ? SHORT[code] || keyLabel(code) : '');
+      const b = document.createElement('button');
+      b.className = 'tool-btn'; b.type = 'button';
+      b.dataset.tool = m.id;
+      b.title = `${m.label}${k ? ` (${k})` : ''} : ${m.hint}`;
+      b.setAttribute('aria-label', m.label);
+      b.innerHTML = `${k ? `<span class="k">${esc(k)}</span>` : ''}${ICONS[m.icon] || ''}<span>${m.label}</span>`;
+      // Sur téléphone, toucher l'outil déjà actif ouvre ou referme son panneau (tiroir).
+      b.addEventListener('click', () => { const same = this.mode() === m.id; this.setMode(m.id); this.app.audio.click(); this._toggleDrawer(same ? undefined : true); });
+      box.appendChild(b);
+    }
+  },
+
+  // Tiroir (petit écran) : le panneau de l'outil s'ouvre par-dessus la vue et se referme après un choix.
+  _toggleDrawer(open) {
+    const ed = document.getElementById('editor');
+    if (!ed) return;
+    ed.classList.toggle('drawer-open', open === undefined ? !ed.classList.contains('drawer-open') : open);
+  },
+  _closeDrawer() { const ed = document.getElementById('editor'); if (ed) ed.classList.remove('drawer-open'); },
+
+  // ---------------------------------------------------------------- Panneau de l'outil
   _buildPalette() {
     const pal = document.getElementById('ed-palette');
     pal.innerHTML = '';
@@ -244,179 +360,128 @@ export const paletteMethods = {
     guide.innerHTML = '<span>🎓 <b>Mode guidé</b> : l’essentiel pour commencer (droite et pentes, virages, départ, arrivée, checkpoint).</span><button class="btn small" type="button">Tout afficher</button>';
     guide.querySelector('button').addEventListener('click', () => { this.setGuided(false); this.app.audio.click(); });
     pal.appendChild(guide);
-    const tabs = document.createElement('div');
-    tabs.className = 'pal-tabs';
-    const panels = {};
-    for (const [id, label] of [['pieces', 'Pièces'], ['mods', 'Options'], ['surf', 'Revêtements'], ['decos', 'Décors'], ['prefabs', 'Prefabs']]) {   // Options à côté de Pièces
-      const b = document.createElement('button');
-      b.className = 'pal-tab';
-      b.dataset.tab = id;
-      b.textContent = label;
-      b.addEventListener('click', () => { if (pal.classList.contains('folded')) pal.querySelector('.pal-fold').click(); this.setTab(id); this.app.audio.click(); });
-      tabs.appendChild(b);
-      const panel = document.createElement('div');
-      panel.className = 'pal-panel';
-      panel.dataset.panel = id;
-      panels[id] = panel;
+    const close = document.createElement('button');
+    close.className = 'btn icon pal-close'; close.type = 'button'; close.textContent = '✕';
+    close.title = 'Refermer le panneau'; close.setAttribute('aria-label', 'Refermer le panneau');
+    close.addEventListener('click', () => this._closeDrawer());
+    pal.appendChild(close);
+    this.panels = {};
+    for (const m of MODES) {
+      const p = document.createElement('div');
+      p.className = 'pal-panel'; p.dataset.panel = m.id;
+      const h = document.createElement('div'); h.className = 'pal-h'; h.textContent = m.label;
+      p.appendChild(h);
+      this.panels[m.id] = p;
+      pal.appendChild(p);
     }
-    // Replier la palette : libère l'écran (utile sur téléphone en paysage). Le choix est mémorisé.
-    const fold = document.createElement('button');
-    fold.className = 'pal-tab pal-fold'; fold.type = 'button';
-    const setFold = (on, save) => {
-      pal.classList.toggle('folded', on);
-      fold.textContent = on ? '▴' : '▾';
-      fold.title = fold.ariaLabel = on ? 'Déplier la palette' : 'Replier la palette';
-      fold.setAttribute('aria-expanded', String(!on));
-      document.getElementById('editor').style.setProperty('--ed-pal-h', pal.offsetHeight + 'px');
-      if (save) try { localStorage.setItem('copytrack.edFold', on ? '1' : '0'); } catch (e) { /* stockage indisponible */ }
-    };
-    fold.addEventListener('click', () => { setFold(!pal.classList.contains('folded'), true); this.app.audio.click(); });
-    tabs.appendChild(fold);
-    pal.appendChild(tabs);
-    let folded = false; try { folded = localStorage.getItem('copytrack.edFold') === '1'; } catch (e) { /* ignoré */ }
-    setFold(folded, false);
-
-    // Familles (caractéristiques en listes déroulantes), puis les pièces à l'unité.
-    const rowF = document.createElement('div'); rowF.className = 'fam-row';
-    this.famCards = {};
-    for (const fam of FAMILY_ORDER) rowF.appendChild(this._familyCard(fam));
-    panels.pieces.appendChild(rowF);
-    const rowP = document.createElement('div'); rowP.className = 'pal-row';
-    for (const p of PALETTE_ORDER) if (!isFamilyMember(p.id) && !REPLACED_BY_OPTION.has(p.id)) this._toolButton(rowP, p.id, p.k);
-    panels.pieces.appendChild(rowP);
-
-    const rowS = document.createElement('div'); rowS.className = 'pal-row surf';
-    for (const s of SURFACE_ORDER) this._toolButton(rowS, 'surf:' + s, '');
-    panels.surf.appendChild(rowS);
-    const par = document.createElement('div');
-    par.className = 'pal-param';
-    par.innerHTML = '<span id="ed-param-label">—</span><input type="range" id="ed-param" min="0" max="100" step="1"><b id="ed-param-val"></b><button class="btn" id="ed-param-reset" title="Valeur par défaut">↺</button>';
-    panels.surf.appendChild(par);
-    const compat = document.createElement('button');
-    compat.className = 'btn small';
-    compat.textContent = 'Compatibilité…';
-    compat.title = 'Quels revêtements vont sur quelles pièces';
-    compat.addEventListener('click', () => this.showCompat());
-    par.appendChild(compat);
-
-    panels.mods.appendChild(this._optionsPanel());
-    const hint = document.createElement('div');
-    hint.className = 'pal-hint';
-    hint.id = 'ed-opt-hint';
-    hint.textContent = 'Pièce + options se posent ensemble. Sans pièce : l’option s’applique à la pièce cliquée.';
-    panels.mods.appendChild(hint);
-
-    const dTop = document.createElement('div');
-    dTop.className = 'pal-deco-top';
-    dTop.innerHTML = `<div class="swatches" id="ed-deco-colors"></div>
-      <label class="inl">Taille <input type="range" id="ed-deco-scale" min="0.3" max="6" step="0.05"><b id="ed-deco-scale-val"></b></label>
-      <label class="inl" id="ed-deco-ph-wrap" title="Décalage dans le cycle de l'obstacle (pour désynchroniser plusieurs obstacles)">Décalage <input type="range" id="ed-deco-ph" min="0" max="0.95" step="0.05"><b id="ed-deco-ph-val"></b></label>
-      <label class="inl" title="Posée là où le curseur touche la route ou le sol ; ce curseur (ou Maj + souris) ajoute une hauteur">Hauteur <input type="range" id="ed-deco-dy" min="-20" max="120" step="0.5"><b id="ed-deco-dy-val"></b></label>
-      <button class="btn" id="ed-deco-snap" title="Accrochage (N)"></button>
-      <input type="text" id="ed-deco-url" placeholder="URL de l'image (https://…)" maxlength="400">`;
-    // Sous-catégories de décors : une rangée de boutons (plus de liste déroulante).
-    const cats = document.createElement('div');
-    cats.className = 'pal-chips'; cats.id = 'ed-deco-cats'; cats.setAttribute('role', 'tablist'); cats.setAttribute('aria-label', 'Catégories de décors');
-    for (const [k, c] of Object.entries(DECO_CATS)) {
-      const b = document.createElement('button');
-      b.className = 'chip'; b.dataset.cat = k; b.textContent = c.label; b.setAttribute('role', 'tab');
-      b.addEventListener('click', () => { this.deco.cat = k; this._buildDecoRow(); this.app.audio.click(); });
-      cats.appendChild(b);
-    }
-    panels.decos.appendChild(cats);
-    panels.decos.appendChild(dTop);
-    const rowD = document.createElement('div'); rowD.className = 'pal-row decos'; rowD.id = 'ed-deco-row';
-    panels.decos.appendChild(rowD);
-    for (const p of Object.values(panels)) pal.appendChild(p);
+    this._buildPiecesPanel(this.panels.pieces);
+    this._buildPaintPanel(this.panels.paint);
+    this._buildDecosPanel(this.panels.decos);
+    this._buildSelectPanel(this.panels.select);
+    this._buildInspectPanel(this.panels.inspect);
+    this._buildErasePanel(this.panels.erase);
     this._buildPrefabPanel();
-
-    // Réglages des revêtements
-    const range = document.getElementById('ed-param');
-    range.oninput = () => { this.surfParam[fillBase(this.tool).slice(5)] = +range.value; this._refreshParam(); };
-    document.getElementById('ed-param-reset').onclick = () => { delete this.surfParam[fillBase(this.tool).slice(5)]; this._refreshParam(); };
-    // Réglages des décorations
-    const sc = document.getElementById('ed-deco-scale');
-    sc.value = this.deco.scale;
-    sc.oninput = () => { this.deco.scale = +sc.value; this.previewKey = ''; this._refreshDeco(); };
-    const dyr = document.getElementById('ed-deco-dy');
-    dyr.value = this.deco.dy || 0;
-    dyr.oninput = () => { this.deco.dy = +dyr.value; this.previewKey = ''; this._refreshDeco(); };
-    const ph = document.getElementById('ed-deco-ph');
-    ph.value = this.deco.ph;
-    ph.oninput = () => { this.deco.ph = +ph.value; this.previewKey = ''; this._refreshDeco(); };
-    document.getElementById('ed-deco-snap').onclick = () => this.cycleSnap();
-    const url = document.getElementById('ed-deco-url');
-    url.oninput = () => { this.deco.url = url.value.trim(); this.previewKey = ''; };
-    const colors = document.getElementById('ed-deco-colors');
-    colors.innerHTML = '';
-    for (let i = 0; i <= DECO_COLORS.length; i++) {
-      const b = document.createElement('button');
-      b.className = 'swatch' + (i === this.deco.color ? ' on' : '');
-      b.dataset.c = i;
-      b.title = i ? DECO_COLORS[i - 1] : 'Couleurs naturelles';
-      b.style.background = i ? DECO_COLORS[i - 1] : 'conic-gradient(#ff6b57,#ffbf3c,#7cf06b,#3ec1ff,#c77dff,#ff6b57)';
-      b.onclick = () => { this.deco.color = i; this.previewKey = ''; this._refreshDeco(); };
-      colors.appendChild(b);
-    }
-    this._buildDecoRow();
-
-    this.setTab(fillBase(this.tool).startsWith('surf:') ? 'surf' : this.tool.startsWith('mod:') ? 'mods' : this.tool.startsWith('deco:') ? 'decos' : 'pieces');
     this._buildTools();
     this._applyGuided();
+    // Petit écran : la colonne Vue démarre repliée ; toucher la ligne du bas (la pièce choisie) ouvre le tiroir de l'outil.
+    const view = document.getElementById('ed-view');
+    if (view && typeof matchMedia !== 'undefined' && matchMedia('(max-width: 760px), (max-height: 520px)').matches) { view.classList.add('folded'); view.querySelector('.ed-vh').setAttribute('aria-expanded', 'false'); }
+    const hint = document.getElementById('ed-hint');
+    if (hint) hint.onclick = () => this._toggleDrawer(true);
   },
 
-  // Grille « Outils » : Sélection, Inspecter, Gomme, Pot de peinture (ils ne posent rien : à part des pièces).
-  _buildTools() {
-    const box = document.getElementById('ed-tools');
-    box.innerHTML = '';
-    const SHORT = { Backslash: '\\', Slash: '/', Backquote: '`', Delete: 'Suppr' };
-    const label = (code) => (code ? SHORT[code] || keyLabel(code) : '');
-    for (const t of TOOLS) {
-      const code = t.action ? (this.app.input.bindings[t.action] || []).filter(Boolean)[0] : t.key;
-      const k = t.k || label(code);
+  _seg(choices, onPick) {
+    const seg = document.createElement('div');
+    seg.className = 'pal-seg'; seg.setAttribute('role', 'group');
+    for (const [id, label, title] of choices) {
       const b = document.createElement('button');
-      b.className = 'tool-btn';
-      b.dataset.tool = t.id;
-      b.title = `${t.label}${k ? ` (${k})` : ''} : ${t.hint}`;
-      b.setAttribute('aria-label', t.label);
-      b.innerHTML = `${k ? `<span class="k">${esc(k)}</span>` : ''}${ICONS[t.id] || ''}<span>${t.label}</span>`;
-      b.addEventListener('click', () => { if (t.id === 'fill') this.toggleFill(); else this.setTool(t.id); this.app.audio.click(); });
-      box.appendChild(b);
+      b.type = 'button'; b.dataset.seg = id; b.textContent = label; if (title) b.title = title;
+      b.addEventListener('click', () => { onPick(id); this.app.audio.click(); });
+      seg.appendChild(b);
+    }
+    return seg;
+  },
+
+  _section(parent, id, label, open = true) {
+    const sec = document.createElement('section');
+    sec.className = 'lib-sec'; sec.dataset.sec = id;
+    const head = document.createElement('button');
+    head.type = 'button'; head.className = 'lib-head'; head.setAttribute('aria-expanded', String(open));
+    head.innerHTML = `<span>${esc(label)}</span><i aria-hidden="true">▾</i>`;
+    const body = document.createElement('div');
+    body.className = 'lib-grid';
+    head.addEventListener('click', () => { const o = head.getAttribute('aria-expanded') !== 'true'; head.setAttribute('aria-expanded', String(o)); sec.classList.toggle('closed', !o); });
+    sec.classList.toggle('closed', !open);
+    sec.append(head, body);
+    parent.appendChild(sec);
+    return body;
+  },
+
+  // ---- Pièces : recherche, Poser / Remplir, récentes, sections, morceaux tout faits, réglages de la pièce choisie
+  _buildPiecesPanel(panel) {
+    const top = document.createElement('div');
+    top.className = 'pal-top';
+    const search = document.createElement('input');
+    search.type = 'search'; search.id = 'ed-search'; search.className = 'pal-search';
+    search.placeholder = 'Rechercher une pièce (large, relevé, tube…)'; search.setAttribute('aria-label', 'Rechercher une pièce');
+    search.addEventListener('input', () => this._renderSearch());
+    search.addEventListener('keydown', (e) => { if (e.key === 'Escape') { search.value = ''; this._renderSearch(); search.blur(); } });
+    top.appendChild(search);
+    top.appendChild(this._seg([['place', 'Poser', 'Poser la pièce choisie (clic ou glisser)'], ['fill', 'Remplir une zone', 'Pot de peinture : remplir une zone connectée, ou une zone vide fermée (touche `)']], (id) => this.setFill(id === 'fill')));
+    panel.appendChild(top);
+    const results = document.createElement('div');
+    results.className = 'lib-results'; results.id = 'ed-results'; results.hidden = true;
+    panel.appendChild(results);
+    this.libCards = {};
+    this._recentGrid = this._section(panel, 'recent', 'Récentes');
+    for (const sec of LIBRARY) {
+      const grid = this._section(panel, sec.id, sec.label);
+      for (const it of sec.items) {
+        if (it.startsWith('fam:')) grid.appendChild(this._familyTile(it.slice(4)));
+        else this.libCards[it] = this._toolButton(grid, it, '');
+      }
+    }
+    const pf = document.createElement('section');
+    pf.className = 'lib-sec'; pf.dataset.sec = 'prefabs'; pf.setAttribute('data-full-only', '');
+    const pfHead = document.createElement('button');
+    pfHead.type = 'button'; pfHead.className = 'lib-head'; pfHead.setAttribute('aria-expanded', 'false');
+    pfHead.innerHTML = '<span>Morceaux tout faits</span><i aria-hidden="true">▾</i>';
+    const pfBody = document.createElement('div');
+    pfBody.dataset.panel = 'prefabs';
+    pfHead.addEventListener('click', () => { const o = pf.classList.contains('closed'); pfHead.setAttribute('aria-expanded', String(o)); pf.classList.toggle('closed', !o); });
+    pf.classList.add('closed');
+    pf.append(pfHead, pfBody);
+    panel.appendChild(pf);
+    this._prefabSec = pf;
+    // Réglages de la pièce choisie : caractéristiques de sa famille, options, gestes de pose.
+    const set = document.createElement('div');
+    set.className = 'pal-set'; set.id = 'ed-pset';
+    set.innerHTML = '<div class="pset-head"><b id="ed-pset-name"></b><small id="ed-pset-size"></small></div><div class="pset-traits" id="ed-pset-traits"></div><div class="pset-acts" id="ed-pset-acts"></div><details class="pset-opts" id="ed-pset-opts"><summary>Options de la pièce <span id="ed-pset-armed"></span></summary></details>';
+    panel.appendChild(set);
+    set.querySelector('#ed-pset-opts').appendChild(this._optionsPanel());
+    const acts = set.querySelector('#ed-pset-acts');
+    for (const [id, label, title, fn] of [
+      ['rot', '⟳ Pivoter', 'Pivoter la pièce d’un quart de tour (R ; Maj + R : sens inverse)', () => this.rotate(1)],
+      ['mirror', '⇋ Miroir', 'Version gauche / droite de la pièce (M)', () => this.mirror()],
+      ['extend', '➜ Prolonger', 'Poser la pièce au bout de la dernière pièce posée, raccordée (P)', () => this.extend()],
+    ]) {
+      const b = document.createElement('button');
+      b.className = 'btn small'; b.type = 'button'; b.dataset.pact = id; b.textContent = label; b.title = title;
+      b.addEventListener('click', () => { fn(); this.app.audio.click(); });
+      acts.appendChild(b);
     }
   },
 
-  // ---- Familles de pièces (Phase 2) ---------------------------------------------------------------------------------
-  _familyCard(fam) {
+  _familyTile(fam) {
     const F = FAMILIES[fam];
-    const card = document.createElement('div');
-    card.className = 'fam-card';
-    card.dataset.fam = fam;
-    const main = document.createElement('button');
-    main.className = 'piece-btn fam-main';
-    main.addEventListener('click', () => { this.setTool(resolve(fam, this._famTraits(fam))); this.app.audio.click(); });
-    card.appendChild(main);
-    const col = document.createElement('div');
-    col.className = 'fam-traits';
-    const selects = {};
-    for (const t of F.traits) {
-      const lab = document.createElement('label');
-      const span = document.createElement('span');
-      span.textContent = t.label;
-      const sel = document.createElement('select');
-      sel.setAttribute('aria-label', `${F.label} : ${t.label}`);
-      for (const [v, text] of t.values) { const o = document.createElement('option'); o.value = v; o.textContent = text; sel.appendChild(o); }
-      sel.addEventListener('change', () => {
-        const type = withTrait(fam, this._famTraits(fam), t.id, sel.value);
-        if (type) this.setTool(type);
-        this.app.audio.click();
-      });
-      lab.append(span, sel);
-      col.appendChild(lab);
-      selects[t.id] = sel;
-    }
-    card.appendChild(col);
-    this.famCards[fam] = { card, main, selects };
-    return card;
+    const b = document.createElement('button');
+    b.className = 'piece-btn lib-tile fam-main'; b.type = 'button';
+    b.dataset.fam = fam;
+    b.addEventListener('click', () => { this.setTool(resolve(fam, this._famTraits(fam))); this.app.audio.click(); this._closeDrawer(); });
+    this.libCards['fam:' + fam] = b;
+    b.title = `${F.label} — ${F.hint}`;
+    b.innerHTML = `${ICONS[F.icon] || '<span class="emo">◆</span>'}<span>${esc(F.label)}</span>`;
+    return b;
   },
 
   // Combinaison de caractéristiques actuelle d'une famille (celle de la pièce choisie, sinon la dernière choisie, sinon la 1re).
@@ -427,36 +492,289 @@ export const paletteMethods = {
     return this.famTraits[fam];
   },
 
-  _syncFamilies() {
-    if (!this.famCards) return;
-    for (const fam of FAMILY_ORDER) {
-      const { card, main, selects } = this.famCards[fam];
-      const F = FAMILIES[fam];
-      const tr = this._famTraits(fam);
-      const type = resolve(fam, tr);
-      const on = !!type && type === fillBase(this.tool);
-      card.classList.toggle('on', on);
-      main.classList.toggle('on', on);
-      main.dataset.piece = type || '';
-      const P = type && PIECES[type];
-      main.title = P ? `${P.label} — ${F.hint}` : F.label;
-      main.innerHTML = `${ICONS[type] || ICONS[F.icon] || '<span class="emo">◆</span>'}<span>${F.label}${P && P.size > 1 ? ` ${P.size}×${P.size}` : ''}</span>`;
-      for (const t of F.traits) {
-        const ok = validValues(fam, tr, t.id);
-        selects[t.id].value = tr[t.id];
-        for (const o of selects[t.id].options) o.disabled = !ok.has(o.value) && o.value !== tr[t.id];
-      }
+  // Recherche : toutes les pièces dont le nom (ou celui de leur famille) contient chacun des mots tapés, en français comme dans la langue affichée.
+  _renderSearch() {
+    const input = document.getElementById('ed-search'), box = document.getElementById('ed-results');
+    if (!input || !box) return;
+    const q = norm(input.value);
+    const pal = document.getElementById('ed-palette');
+    pal.classList.toggle('searching', !!q);
+    box.hidden = !q;
+    box.innerHTML = '';
+    if (!q) return;
+    const words = q.split(' ');
+    const hits = [];
+    for (const id of PIECE_ORDER) {
+      if (!PIECES[id] || LEGACY_TILE[id] || REPLACED_BY_OPTION.has(id) || !this.guidedAllows(id)) continue;
+      const f = familyOf(id);
+      if (!f && !LIBRARY.some((s) => s.items.includes(id))) continue;
+      const hay = norm([PIECES[id].label, f ? FAMILIES[f.fam].label : '', translate(PIECES[id].label), f ? translate(FAMILIES[f.fam].label) : ''].join(' '));
+      if (words.every((w) => hay.includes(w))) hits.push(id);
     }
+    const head = document.createElement('div');
+    head.className = 'lib-count';
+    head.textContent = hits.length ? `${hits.length} pièce${hits.length > 1 ? 's' : ''}` : 'Aucune pièce ne correspond.';
+    box.appendChild(head);
+    const grid = document.createElement('div'); grid.className = 'lib-grid list';
+    for (const id of hits.slice(0, 60)) this._toolButton(grid, id, '');
+    box.appendChild(grid);
+    if (hits.length > 60) { const more = document.createElement('div'); more.className = 'lib-count'; more.textContent = `… et ${hits.length - 60} autres : précise la recherche.`; box.appendChild(more); }
+    this._syncLibrary();
   },
 
-  // ---- Options (Phase 2) -----------------------------------------------------------------------------------------------
+  // Pièces récentes (gardées par l'application : elles survivent à un essai et au retour au menu).
+  _noteRecent(base) {
+    const list = this.app._edRecent || [];
+    const g = this._recentGrid;
+    if (PIECES[base] && base !== list[0]) this.app._edRecent = [base, ...list.filter((x) => x !== base)].slice(0, RECENT_MAX);
+    else if (!g || g.childElementCount === list.length) return;
+    if (!g) return;
+    g.innerHTML = '';
+    for (const id of this.app._edRecent || []) if (this.guidedAllows(id)) this._toolButton(g, id, '');
+    g.parentElement.hidden = !g.childElementCount;
+  },
+
+  // Cartes allumées, réglages de la pièce choisie (caractéristiques, options), interrupteur Poser / Remplir.
+  _syncLibrary() {
+    const base = fillBase(this.tool), fam = familyOf(base);
+    const pal = document.getElementById('ed-palette');
+    if (!pal) return;
+    for (const b of pal.querySelectorAll('.lib-tile')) {
+      const on = b.dataset.fam ? !!fam && fam.fam === b.dataset.fam : b.dataset.piece === base;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+    }
+    // Icône d'une carte de famille : la pièce actuelle de la famille.
+    for (const f of FAMILY_ORDER) {
+      const card = this.libCards && this.libCards['fam:' + f];
+      if (!card) continue;
+      const type = resolve(f, this._famTraits(f));
+      if (card.dataset.type !== type) { card.dataset.type = type || ''; card.firstElementChild.outerHTML = ICONS[type] || ICONS[FAMILIES[f].icon] || '<span class="emo">◆</span>'; }
+    }
+    for (const sg of pal.querySelectorAll('[data-panel="pieces"] .pal-top [data-seg]')) sg.classList.toggle('on', (sg.dataset.seg === 'fill') === isFill(this.tool));
+    for (const sg of pal.querySelectorAll('[data-panel="paint"] [data-seg]')) sg.classList.toggle('on', (sg.dataset.seg === 'fill') === isFill(this.tool));
+    const set = document.getElementById('ed-pset');
+    if (!set) return;
+    const P = PIECES[base];
+    set.hidden = !P;
+    if (!P) return;
+    document.getElementById('ed-pset-name').textContent = P.label;
+    document.getElementById('ed-pset-size').textContent = P.size > 1 ? `${P.size}×${P.size}` : '';
+    const box = document.getElementById('ed-pset-traits');
+    const key = fam ? fam.fam : '';
+    if (box.dataset.fam !== key) {
+      box.dataset.fam = key;
+      box.innerHTML = '';
+      this._traitSelects = {};
+      if (fam) for (const t of FAMILIES[fam.fam].traits) {
+        const lab = document.createElement('label');
+        const span = document.createElement('span'); span.textContent = t.label;
+        const sel = document.createElement('select');
+        sel.setAttribute('aria-label', `${FAMILIES[fam.fam].label} : ${t.label}`);
+        for (const [v, text] of t.values) { const o = document.createElement('option'); o.value = v; o.textContent = text; sel.appendChild(o); }
+        sel.addEventListener('change', () => {
+          const f2 = familyOf(fillBase(this.tool)); if (!f2) return;
+          const type = withTrait(f2.fam, f2.traits, t.id, sel.value);
+          if (type) this.setTool(isFill(this.tool) ? toFill(type) : type);
+          this.app.audio.click();
+        });
+        lab.append(span, sel);
+        box.appendChild(lab);
+        this._traitSelects[t.id] = sel;
+      }
+    }
+    // Choix grisés : la raison s'affiche au survol (families.js : missingReason).
+    if (fam) for (const t of FAMILIES[fam.fam].traits) {
+      const sel = this._traitSelects[t.id];
+      const ok = validValues(fam.fam, fam.traits, t.id);
+      sel.value = fam.traits[t.id];
+      for (const o of sel.options) {
+        const dis = !ok.has(o.value) && o.value !== fam.traits[t.id];
+        o.disabled = dis;
+        o.title = dis ? missingReason(fam.fam, { ...fam.traits, [t.id]: o.value }) || 'Cette combinaison n’existe pas.' : '';
+      }
+    }
+    const mir = set.querySelector('[data-pact="mirror"]');
+    if (mir) mir.hidden = !(MIRROR_TYPES[base] || (this.opts && this.opts.o));
+  },
+
+  // ---- Peinture
+  _buildPaintPanel(panel) {
+    const top = document.createElement('div'); top.className = 'pal-top';
+    top.appendChild(this._seg([['place', 'Une pièce', 'Peindre la pièce visée (clic ou glisser)'], ['fill', 'Toute la zone', 'Peindre toute la zone connectée de même revêtement (touche `)']], (id) => this.setFill(id === 'fill')));
+    panel.appendChild(top);
+    const rowS = document.createElement('div'); rowS.className = 'lib-grid surf';
+    for (const s of SURFACE_ORDER) this._toolButton(rowS, 'surf:' + s, '');
+    panel.appendChild(rowS);
+    const par = document.createElement('div');
+    par.className = 'pal-param';
+    par.innerHTML = '<span id="ed-param-label">—</span><input type="range" id="ed-param" min="0" max="100" step="1"><b id="ed-param-val"></b><button class="btn" id="ed-param-reset" type="button" title="Valeur par défaut" aria-label="Valeur par défaut">↺</button>';
+    panel.appendChild(par);
+    const compat = document.createElement('button');
+    compat.className = 'btn small'; compat.type = 'button';
+    compat.textContent = 'Compatibilité…';
+    compat.title = 'Quels revêtements vont sur quelles pièces';
+    compat.addEventListener('click', () => this.showCompat());
+    panel.appendChild(compat);
+    const range = par.querySelector('#ed-param');
+    range.oninput = () => { this.surfParam[fillBase(this.tool).slice(5)] = +range.value; this._refreshParam(); };
+    par.querySelector('#ed-param-reset').onclick = () => { delete this.surfParam[fillBase(this.tool).slice(5)]; this._refreshParam(); };
+  },
+
+  // ---- Décors : recherche, cinq familles, catégories, réglages, grille ; mes pièces décoratives
+  _buildDecosPanel(panel) {
+    const top = document.createElement('div'); top.className = 'pal-top';
+    const search = document.createElement('input');
+    search.type = 'search'; search.id = 'ed-deco-search'; search.className = 'pal-search';
+    search.placeholder = 'Rechercher un décor (arbre, pilier, panneau…)'; search.setAttribute('aria-label', 'Rechercher un décor');
+    search.addEventListener('input', () => this._buildDecoRow());
+    search.addEventListener('keydown', (e) => { if (e.key === 'Escape') { search.value = ''; this._buildDecoRow(); search.blur(); } });
+    top.appendChild(search);
+    panel.appendChild(top);
+    const fams = document.createElement('div');
+    fams.className = 'pal-chips'; fams.id = 'ed-deco-fams'; fams.setAttribute('role', 'tablist'); fams.setAttribute('aria-label', 'Familles de décors');
+    for (const f of DECO_FAMS) {
+      const b = document.createElement('button');
+      b.className = 'chip'; b.type = 'button'; b.dataset.dfam = f.id; b.textContent = f.label; b.setAttribute('role', 'tab');
+      if (f.hint) b.title = f.hint;
+      b.addEventListener('click', () => { this.deco.cat = f.cats.find((c) => DECO_CATS[c]) || this.deco.cat; this._buildDecoRow(); this.app.audio.click(); });
+      fams.appendChild(b);
+    }
+    panel.appendChild(fams);
+    const cats = document.createElement('div');
+    cats.className = 'pal-chips sub'; cats.id = 'ed-deco-cats'; cats.setAttribute('role', 'tablist'); cats.setAttribute('aria-label', 'Catégories de décors');
+    panel.appendChild(cats);
+    const rowD = document.createElement('div'); rowD.className = 'lib-grid decos'; rowD.id = 'ed-deco-row';
+    panel.appendChild(rowD);
+    const dTop = document.createElement('div');
+    dTop.className = 'pal-deco-top';
+    dTop.innerHTML = `<div class="swatches" id="ed-deco-colors"></div>
+      <label class="inl">Taille <input type="range" id="ed-deco-scale" min="0.3" max="6" step="0.05"><b id="ed-deco-scale-val"></b></label>
+      <label class="inl" id="ed-deco-ph-wrap" title="Décalage dans le cycle de l'obstacle (pour désynchroniser plusieurs obstacles)">Décalage <input type="range" id="ed-deco-ph" min="0" max="0.95" step="0.05"><b id="ed-deco-ph-val"></b></label>
+      <label class="inl" title="Posée là où le curseur touche la route ou le sol ; ce curseur (ou Maj + souris) ajoute une hauteur">Hauteur <input type="range" id="ed-deco-dy" min="-20" max="120" step="0.5"><b id="ed-deco-dy-val"></b></label>
+      <button class="btn small" id="ed-deco-snap" type="button" title="Accrochage (N)"></button>
+      <input type="text" id="ed-deco-url" placeholder="URL de l'image (https://…)" maxlength="400">`;
+    panel.appendChild(dTop);
+    const cd = document.createElement('div'); cd.dataset.panel = 'cdeco'; cd.setAttribute('data-full-only', '');
+    panel.appendChild(cd);
+    this._cdecoBox = cd;
+    const sc = dTop.querySelector('#ed-deco-scale');
+    sc.value = this.deco.scale;
+    sc.oninput = () => { this.deco.scale = +sc.value; this.previewKey = ''; this._refreshDeco(); };
+    const dyr = dTop.querySelector('#ed-deco-dy');
+    dyr.value = this.deco.dy || 0;
+    dyr.oninput = () => { this.deco.dy = +dyr.value; this.previewKey = ''; this._refreshDeco(); };
+    const ph = dTop.querySelector('#ed-deco-ph');
+    ph.value = this.deco.ph;
+    ph.oninput = () => { this.deco.ph = +ph.value; this.previewKey = ''; this._refreshDeco(); };
+    dTop.querySelector('#ed-deco-snap').onclick = () => this.cycleSnap();
+    const url = dTop.querySelector('#ed-deco-url');
+    url.oninput = () => { this.deco.url = url.value.trim(); this.previewKey = ''; };
+    const colors = dTop.querySelector('#ed-deco-colors');
+    for (let i = 0; i <= DECO_COLORS.length; i++) {
+      const b = document.createElement('button');
+      b.className = 'swatch' + (i === this.deco.color ? ' on' : ''); b.type = 'button';
+      b.dataset.c = i;
+      b.title = i ? DECO_COLORS[i - 1] : 'Couleurs naturelles';
+      b.setAttribute('aria-label', b.title);
+      b.style.background = i ? DECO_COLORS[i - 1] : 'conic-gradient(#ff6b57,#ffbf3c,#7cf06b,#3ec1ff,#c77dff,#ff6b57)';
+      b.onclick = () => { this.deco.color = i; this.previewKey = ''; this._refreshDeco(); };
+      colors.appendChild(b);
+    }
+    this._buildDecoRow();
+  },
+
+  _syncDecoCats() {
+    const fam = decoFamOf(this.deco.cat);
+    document.querySelectorAll('#ed-deco-fams .chip').forEach((c) => { const on = c.dataset.dfam === fam; c.classList.toggle('on', on); c.setAttribute('aria-selected', String(on)); });
+    const box = document.getElementById('ed-deco-cats');
+    if (!box) return;
+    const F = DECO_FAMS.find((f) => f.id === fam);
+    const cats = [...F.cats.filter((c) => DECO_CATS[c]), ...(fam === 'side' ? Object.keys(DECO_CATS).filter((c) => !DECO_FAMS.some((x) => x.cats.includes(c))) : [])];
+    if (box.dataset.fam !== fam) {
+      box.dataset.fam = fam;
+      box.innerHTML = '';
+      for (const k of cats) {
+        const b = document.createElement('button');
+        b.className = 'chip'; b.type = 'button'; b.dataset.cat = k; b.textContent = DECO_CATS[k].label; b.setAttribute('role', 'tab');
+        b.addEventListener('click', () => { this.deco.cat = k; this._buildDecoRow(); this.app.audio.click(); });
+        box.appendChild(b);
+      }
+    }
+    box.querySelectorAll('.chip').forEach((c) => { const on = c.dataset.cat === this.deco.cat; c.classList.toggle('on', on); c.setAttribute('aria-selected', String(on)); });
+  },
+
+  _buildDecoRow() {
+    this._syncDecoCats();
+    const row = document.getElementById('ed-deco-row');
+    if (!row) return;
+    row.innerHTML = '';
+    const q = norm((document.getElementById('ed-deco-search') || {}).value || '');
+    const pal = document.getElementById('ed-palette');
+    if (pal) pal.classList.toggle('deco-searching', !!q);
+    if (q) {
+      const words = q.split(' '), seen = new Set();
+      for (const c of Object.values(DECO_CATS)) for (const k of c.kinds) {
+        if (seen.has(k)) continue; seen.add(k);
+        const hay = norm(`${DECO_LABELS[k] || k} ${translate(DECO_LABELS[k] || k)} ${c.label} ${translate(c.label)}`);
+        if (words.every((w) => hay.includes(w))) this._toolButton(row, 'deco:' + k, '');
+      }
+      if (!row.children.length) row.textContent = 'Aucun décor ne correspond.';
+    } else for (const k of DECO_CATS[this.deco.cat].kinds) this._toolButton(row, 'deco:' + k, '');
+    this._refreshUI();
+  },
+
+  // ---- Sélection, inspection, gomme : ce que fait l'outil, et les actions qui ne tiennent pas dans la barre flottante
+  _buildSelectPanel(panel) {
+    const p = document.createElement('p'); p.className = 'pal-note';
+    p.textContent = 'Trace une zone en glissant sur la grille. Glisse ensuite DANS la zone pour la déplacer ; ses actions (copier, pivoter, supprimer…) s’affichent juste au-dessus.';
+    panel.appendChild(p);
+    const row = document.createElement('div'); row.className = 'pal-btns';
+    for (const [a, label, title] of [['all', 'Tout sélectionner', 'Sélectionner tout le circuit (Ctrl + A)'], ['paste', 'Coller', 'Ctrl + V : poser le presse-papiers'], ['none', 'Désélectionner', 'Retirer la sélection (Échap)']]) {
+      // (le clic d'un bouton data-sel est traité par l'application, js/app/wiring.js, comme ceux de la barre flottante)
+      const b = document.createElement('button'); b.className = 'btn small'; b.type = 'button'; b.dataset.sel = a; b.textContent = label; b.title = title;
+      row.appendChild(b);
+    }
+    panel.appendChild(row);
+    const mv = document.createElement('div'); mv.className = 'pal-btns mv';
+    const lab = document.createElement('span'); lab.textContent = 'Déplacer d’une case :'; mv.appendChild(lab);
+    for (const [a, t, l] of [['mv-l', '←', 'vers la gauche'], ['mv-u', '↑', 'vers le haut de l’écran (nord)'], ['mv-d', '↓', 'vers le bas de l’écran (sud)'], ['mv-r', '→', 'vers la droite']]) {
+      const b = document.createElement('button'); b.className = 'btn icon small'; b.type = 'button'; b.dataset.sel = a; b.textContent = t; b.title = 'Déplacer la zone d’une case ' + l; b.setAttribute('aria-label', b.title);
+      mv.appendChild(b);
+    }
+    panel.appendChild(mv);
+  },
+
+  _buildInspectPanel(panel) {
+    const p = document.createElement('p'); p.className = 'pal-note';
+    p.textContent = 'Clique une pièce ou une décoration : ses propriétés s’ouvrent à droite (position, cap, roulis, type, revêtement, options, couleurs). Les flèches de la scène la déplacent, les cercles la font pivoter ; chaque geste s’annule en un Ctrl + Z.';
+    panel.appendChild(p);
+  },
+
+  _buildErasePanel(panel) {
+    const row = document.createElement('div'); row.className = 'pal-btns'; row.setAttribute('role', 'group'); row.setAttribute('aria-label', 'Filtre de la gomme');
+    for (const f of ERASE_FILTER_ORDER) {
+      const b = document.createElement('button');
+      b.className = 'btn'; b.type = 'button'; b.dataset.ef = f; b.textContent = ERASE_FILTERS[f].label;
+      b.title = ERASE_FILTERS[f].hint + ' (X pour changer)';
+      b.addEventListener('click', () => { this.app.audio.click(); this.setEraseFilter(f); });
+      row.appendChild(b);
+    }
+    panel.appendChild(row);
+    const p = document.createElement('p'); p.className = 'pal-note';
+    p.textContent = 'Avec n’importe quel outil, le clic droit efface aussi. Les pièces d’un calque verrouillé ou masqué ne sont jamais effacées.';
+    panel.appendChild(p);
+    this.eraseBar = row;
+  },
+
+  // ---- Options de la pièce (dans ses réglages)
   _optionsPanel() {
     const wrap = document.createElement('div');
     wrap.className = 'opt-panel';
     this.optChips = [];
     for (const g of OPTION_GROUPS) {
       const row = document.createElement('div');
-      row.className = 'opt-group';
+      row.className = 'opt-group'; row.dataset.og = g.id;
       const lab = document.createElement('b');
       lab.textContent = g.label;
       row.appendChild(lab);
@@ -467,6 +785,7 @@ export const paletteMethods = {
       for (const [flag, val, text] of g.choices) {
         const b = document.createElement('button');
         b.className = 'chip' + (val === 0 ? ' none' : '') + (g.check ? ' chk' : '');
+        b.type = 'button';
         b.textContent = text;
         b.dataset.flag = flag; b.dataset.val = val;
         if (flag === 'th') {
@@ -484,7 +803,7 @@ export const paletteMethods = {
       wrap.appendChild(row);
     }
     const clear = document.createElement('button');
-    clear.className = 'btn small';
+    clear.className = 'btn small'; clear.type = 'button';
     clear.id = 'ed-opt-clear';
     clear.textContent = 'Retirer les options';
     clear.addEventListener('click', () => { this.opts = { ...NO_OPTS }; this.previewKey = ''; this._refreshUI(); });
@@ -492,11 +811,11 @@ export const paletteMethods = {
     return wrap;
   },
 
-  // Clic sur une option : avec une pièce choisie elle est « armée » (posée avec elle) ; sans pièce, elle devient l'outil
-  // « appliquer à une pièce posée » (comme avant).
+  // Clic sur une option : elle est « armée » et se pose avec la pièce choisie. (Pour changer l'option d'une pièce déjà posée : l'Inspecteur, ou « Option… »
+  // de la barre de sélection pour toute une zone.)
   _optClick(flag, val) {
     if (this.guidedOn() && !GUIDED.flags.has(flag)) { this.app.ui.flash('Option du mode complet : « Tout afficher » dans la palette.', 2.5); return; }
-    if (PIECES[this.tool]) {
+    if (PIECES[fillBase(this.tool)]) {
       this.opts = armOption(this.opts, flag, val);
       this.previewKey = '';
       this._refreshUI();
@@ -507,7 +826,7 @@ export const paletteMethods = {
 
   _syncOptions() {
     if (!this.optChips) return;
-    const piece = PIECES[this.tool] ? this.tool : null;
+    const piece = PIECES[fillBase(this.tool)] ? fillBase(this.tool) : null;
     const probe = piece ? Track.normalize({ t: piece, x: 0, z: 0, l: 0, r: 0 }) : null;
     for (const b of this.optChips) {
       const flag = b.dataset.flag, val = +b.dataset.val;
@@ -519,16 +838,18 @@ export const paletteMethods = {
       } else on = this.tool === modId(flag, val);
       b.classList.toggle('on', on);
       b.setAttribute('aria-pressed', String(on));
-      // « Aucun » n'a de sens que pour une pose combinée ; un choix impossible sur la pièce est grisé.
-      b.hidden = !piece && val === 0 && flag !== 'o';
-      // « Sol » est toujours possible ; l'orientation compte pour la ligne droite et le virage, pas pour les autres pièces.
       const ok = !piece || (flag === 'o' && val === 0) || (val === 0) || flagAllowed(piece, flag, flag === 'cp' || flag === 'mv' || flag === 'tb' ? { ...probe, ...this._compatProbe(flag) } : flag === 'gs' ? { ...probe, cp: this.opts.cp } : flag === 'o' ? null : probe, val);
       b.classList.toggle('dim', !ok);
     }
-    const hint = document.getElementById('ed-opt-hint');
-    if (hint) hint.dataset.mode = piece ? 'combo' : 'apply';
+    // Un groupe d'options dont aucun choix ne vaut pour cette pièce est replié : seul ce qui sert reste à l'écran.
+    for (const g of document.querySelectorAll('#ed-pset .opt-group')) {
+      const any = [...g.querySelectorAll('[data-flag]')].some((b) => +b.dataset.val !== 0 && !b.classList.contains('dim'));
+      g.classList.toggle('na', !any);
+    }
     const clear = document.getElementById('ed-opt-clear');
     if (clear) clear.hidden = !piece || !OPT_KEYS.some((k) => this.opts[k]);
+    const armed = document.getElementById('ed-pset-armed');
+    if (armed) { const on = this.optChips.filter((b) => b.classList.contains('on') && +b.dataset.val !== 0 && !(b.dataset.flag === 'o' && +b.dataset.val === 0)).map((b) => b.textContent); armed.textContent = on.length ? '· ' + on.join(', ') : ''; }
   },
 
   // Options déjà armées qui gênent le test d'une autre (mouvement ↔ checkpoint, tunnel ↔ checkpoint).
@@ -537,22 +858,10 @@ export const paletteMethods = {
     return flag === 'cp' ? { mv: o.mv, tn: o.tn, tb: o.tb, v: o.v, o: o.o } : flag === 'tb' ? { mv: o.mv, tn: o.tn, cp: o.cp, v: o.v, o: o.o } : { cp: o.cp, tb: o.tb, v: o.v, o: o.o };
   },
 
-  _syncDecoCats() {
-    document.querySelectorAll('#ed-deco-cats .chip').forEach((c) => { const on = c.dataset.cat === this.deco.cat; c.classList.toggle('on', on); c.setAttribute('aria-selected', String(on)); });
-  },
-
-  _buildDecoRow() {
-    this._syncDecoCats();
-    const row = document.getElementById('ed-deco-row');
-    row.innerHTML = '';
-    for (const k of DECO_CATS[this.deco.cat].kinds) this._toolButton(row, 'deco:' + k, '');
-    this._refreshUI();
-  },
-
+  // Compatibilité : l'ancien choix d'onglet. Les panneaux suivent l'outil ; « prefabs » ouvre la section des morceaux tout faits.
   setTab(id) {
     this.tab = id;
-    document.querySelectorAll('#ed-palette .pal-tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === id));
-    document.querySelectorAll('#ed-palette .pal-panel').forEach((p) => { p.hidden = p.dataset.panel !== id; });
+    if (id === 'prefabs' && this._prefabSec) { this._prefabSec.classList.remove('closed'); this._prefabSec.querySelector('.lib-head').setAttribute('aria-expanded', 'true'); this._prefabSec.scrollIntoView({ block: 'nearest' }); }
   },
 
   _surfParamValue(s) {
@@ -598,21 +907,57 @@ export const paletteMethods = {
   },
 
   _refreshUI() {
+    if (typeof document === 'undefined') return;
+    const mode = this.mode(), base = fillBase(this.tool);
+    if (PIECES[base]) { this._lastPiece = base; this._noteRecent(base); }
+    else if (base.startsWith('surf:')) this._lastSurf = base;
+    else if (base.startsWith('deco:')) this._lastDeco = base.slice(5);
     this._refreshSelBar();
-    document.querySelectorAll('#ed-palette .piece-btn:not(.fam-main)').forEach((b) => b.classList.toggle('on', b.dataset.piece === fillBase(this.tool)));
-    this._syncFamilies();
-    this._syncOptions();
-    // Grille d'outils : l'outil actif (le pot de peinture reste actif en gardant la pièce / le revêtement choisi).
+    // Rail : l'outil actif.
     document.querySelectorAll('#ed-tools .tool-btn').forEach((b) => {
-      const on = b.dataset.tool === 'fill' ? isFill(this.tool) : b.dataset.tool === this.tool;
+      const on = b.dataset.tool === mode;
       b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+      b.classList.toggle('fill', on && isFill(this.tool));
     });
-    document.getElementById('ed-level').textContent = `Niv. ${this.level}`;
-    if (this.eraseBar) {
-      this.eraseBar.classList.toggle('hidden', this.tool !== 'erase');
-      this.eraseBar.querySelectorAll('[data-ef]').forEach((b) => b.classList.toggle('on', b.dataset.ef === this.eraseFilter));
+    // Panneau : celui de l'outil (Sélection, Inspecter et Gomme n'ont que quelques lignes : le panneau se réduit à une carte, la vue reste dégagée).
+    if (this.panels) for (const [id, p] of Object.entries(this.panels)) p.hidden = id !== mode;
+    const palEl = document.getElementById('ed-palette');
+    if (palEl) palEl.classList.toggle('compact', mode === 'select' || mode === 'inspect' || mode === 'erase');
+    this._syncLibrary();
+    this._syncOptions();
+    document.querySelectorAll('#ed-palette .lib-grid.surf .lib-tile, #ed-deco-row .lib-tile').forEach((b) => b.classList.toggle('on', b.dataset.piece === base));
+    const lvl = document.getElementById('ed-level');
+    if (lvl) lvl.textContent = `Niv. ${this.level}`;
+    if (this.eraseBar) this.eraseBar.querySelectorAll('[data-ef]').forEach((b) => b.classList.toggle('on', b.dataset.ef === this.eraseFilter));
+    // Barre du haut : nom du circuit ; colonne Vue : boutons à bascule.
+    const nm = document.getElementById('ed-name');
+    if (nm && nm.textContent !== this.track.name) nm.textContent = this.track.name;
+    for (const [id, on] of [['levelview', this.focusLevel], ['topview', this.pitch >= 1.4], ['freecam', !!this.freeCam], ['grid', this.showGrid]]) {
+      const b = document.querySelector(`#editor [data-ed="${id}"]`);
+      if (b) { b.classList.toggle('on', !!on); b.setAttribute('aria-pressed', String(!!on)); }
     }
-    // Plus de bloc de statistiques en haut à gauche : seulement une pastille quand le circuit a un défaut.
+    // Ligne du bas : ce qui est choisi, puis les gestes de l'outil (sur téléphone, seulement ce qui est choisi : un toucher ouvre le tiroir).
+    const hint = document.getElementById('ed-hint');
+    if (hint) {
+      const cur = PIECES[base] ? PIECES[base].label : base.startsWith('surf:') ? SURFACES[base.slice(5)].label : base.startsWith('deco:') ? DECO_LABELS[base.slice(5)] || '' : (MODES.find((m) => m.id === mode) || {}).label || '';
+      const txt = this.pasting ? HINTS.paste : isFill(this.tool) ? HINTS.fill : HINTS[mode] || '';
+      const html = `<span>${cur ? `<b>${esc(cur)}${isFill(this.tool) ? ' · remplir' : ''}</b>` : ''}<i class="txt">${esc(txt)}</i></span>`;
+      if (hint._html !== html) { hint._html = html; hint.innerHTML = html; }
+    }
+    this._refreshBadge();
+    this._refreshParam();
+    this._refreshDeco();
+  },
+
+  // Pastille des problèmes. Le vérificateur relit tout le circuit : sur un petit circuit on le fait tout de suite ; sur un grand (plus de 600 pièces), un quart de
+  // seconde après la dernière modification, pour qu'un glissé qui pose vingt pièces ne relance pas vingt vérifications (0.12.0).
+  _refreshBadge() {
+    if (this._joinKey === this.track.version || this.track.tiles.length <= 600) { this._drawBadge(); return; }
+    clearTimeout(this._badgeT);
+    this._badgeT = setTimeout(() => { this._badgeT = 0; if (!this.disposed) this._drawBadge(); }, 250);
+  },
+
+  _drawBadge() {
     // Pastille : bloquants et avertissements (les conseils « info » ne comptent pas) ; un clic ouvre la fenêtre des problèmes (selection.js : showIssues).
     const found = this._tileIssues();
     const errs = this.track.validate().concat(found.filter((i) => i.level !== 'info').map((i) => i.msg));
@@ -624,22 +969,21 @@ export const paletteMethods = {
       warn.textContent = errs.length ? `${hard ? '⛔' : '⚠'} ${errs.length}` : tips ? `ℹ ${tips}` : '';
       warn.title = errs.length ? `${errs.length} problème${errs.length > 1 ? 's' : ''} : cliquer pour le détail` : `${tips} conseil${tips > 1 ? 's' : ''} : cliquer pour le détail`;
       warn.setAttribute('aria-label', warn.title);
-      warn.onclick = () => { this.showIssues(); this._markIssues(found.filter((i) => i.level !== 'info')); };   // la fenêtre détaille ; les pièces en cause clignotent
+      warn.onclick = () => { const f = this._tileIssues(); this.showIssues(); this._markIssues(f.filter((i) => i.level !== 'info')); };   // la fenêtre détaille ; les pièces en cause clignotent
     }
-    const root = document.getElementById('editor');
-    const top = document.querySelector('#editor .ed-top'), pal = document.getElementById('ed-palette');
-    if (top) root.style.setProperty('--ed-top-h', top.offsetHeight + 'px');
-    if (pal) root.style.setProperty('--ed-pal-h', pal.offsetHeight + 'px');
-    this._refreshParam();
-    this._refreshDeco();
   },
 
-  toggleMenu(open = !this.menuOpen) {
-    const m = document.getElementById('ed-menu'), b = document.getElementById('ed-menu-btn');
-    if (!m || !b) return;
-    m.classList.toggle('hidden', !open);
-    b.setAttribute('aria-expanded', String(open));
-    if (open) { const first = m.querySelector('button'); if (first) first.focus({ preventScroll: true }); } else if (document.activeElement && m.contains(document.activeElement)) b.focus({ preventScroll: true });
+  // Menus de la barre du haut (Fichier, autres essais) : un seul ouvert à la fois.
+  toggleMenu(open = !this.menuOpen, id = 'ed-menu') {
+    for (const [mid, bid] of [['ed-menu', 'ed-menu-btn'], ['ed-test-menu', 'ed-test-btn']]) {
+      const m = document.getElementById(mid), b = document.getElementById(bid);
+      if (!m || !b) continue;
+      const on = open && mid === id;
+      const was = !m.classList.contains('hidden');
+      m.classList.toggle('hidden', !on);
+      b.setAttribute('aria-expanded', String(on));
+      if (on && !was) { const first = m.querySelector('button'); if (first) first.focus({ preventScroll: true }); } else if (!on && was && document.activeElement && m.contains(document.activeElement)) b.focus({ preventScroll: true });
+    }
   },
 
   setEraseFilter(f) {
@@ -652,26 +996,6 @@ export const paletteMethods = {
 
   cycleEraseFilter() {
     this.setEraseFilter(ERASE_FILTER_ORDER[(ERASE_FILTER_ORDER.indexOf(this.eraseFilter) + 1) % ERASE_FILTER_ORDER.length]);
-  },
-
-  // Sous-menu de la gomme : un bouton par filtre.
-  _buildEraseBar() {
-    const bar = document.createElement('div');
-    bar.className = 'ed-erasebar hidden';
-    bar.id = 'ed-erasebar';
-    bar.setAttribute('role', 'group');
-    bar.setAttribute('aria-label', 'Filtre de la gomme');
-    for (const f of ERASE_FILTER_ORDER) {
-      const b = document.createElement('button');
-      b.className = 'btn';
-      b.dataset.ef = f;
-      b.textContent = ERASE_FILTERS[f].label;
-      b.title = ERASE_FILTERS[f].hint + ' (X pour changer)';
-      b.addEventListener('click', () => { this.app.audio.click(); this.setEraseFilter(f); });
-      bar.appendChild(b);
-    }
-    document.getElementById('editor').appendChild(bar);
-    this.eraseBar = bar;
   },
 
   // Teste à partir de la pièce visée (sans médaille ni vérification).
@@ -695,21 +1019,52 @@ export const paletteMethods = {
   },
 
   // ---------------------------------------------------------------- Paramètres du niveau
-  openParams() {
+  // ---- Fenêtre « Circuit » (0.12.0) : un onglet par sujet. Général, Course, Conditions et Ambiance sont les réglages du niveau ; Déclencheurs et Logique ont leur propre
+  // fenêtre, avec la même barre d'onglets. Passer d'un onglet à une autre fenêtre APPLIQUE ce qui a été modifié (comme « Appliquer »).
+  _circuitTabs(active, beforeLeave) {
+    const bar = document.createElement('div');
+    bar.className = 'pp-tabs'; bar.setAttribute('role', 'tablist'); bar.setAttribute('aria-label', 'Réglages du circuit');
+    for (const [id, label] of CIRCUIT_TABS) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn small'; b.dataset.ptab = id; b.textContent = label; b.setAttribute('role', 'tab');
+      b.classList.toggle('on', id === active); b.setAttribute('aria-selected', String(id === active));
+      b.addEventListener('click', () => {
+        if (id === active) return;
+        const inParams = ['gen', 'course', 'cond', 'amb'];
+        if (inParams.includes(id) && inParams.includes(active)) { beforeLeave(id, false); return; }
+        if (beforeLeave(id, true) === false) return;
+        this.app.ui.closeModal();
+        setTimeout(() => (id === 'scripts' ? this._scriptsDialog() : id === 'logic' ? this.openLogic() : this.openParams(id)), 0);
+      });
+      bar.appendChild(b);
+    }
+    return bar;
+  },
+
+  openParams(tab = 'gen') {
     const T = this.track;
     const f = document.createElement('div');
     f.className = 'form ed-params';
     const veh = { car: 'Voiture', moto: 'Moto', boat: 'Bateau', glider: 'Deltaplane' };
     f.innerHTML = `
+      <div class="pp-tab" data-pt="gen">
       <label>Nom<input type="text" id="pp-name" maxlength="40" placeholder="Mon circuit"></label>
       <label class="col">Description<textarea id="pp-desc" maxlength="200" rows="2" placeholder="200 caractères au plus"></textarea></label>
       <label>Décor<select id="pp-decor">${Object.entries(DECORS).map(([id, d]) => `<option value="${id}">${d.label}</option>`).join('')}</select></label>
       <label title="Circuit fermé : l'arrivée est franchie à chaque tour">Tours<select id="pp-laps">${Array.from({ length: 9 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}</select></label>
+      <p class="meta">Le nom et la description ne changent ni la course ni les records ; le décor et le nombre de tours la changent : à revérifier.</p>
+      </div>
+      <div class="pp-tab" data-pt="course">
       <label title="Rouler sur le terrain ne renvoie plus au checkpoint (il reste lent)">Hors piste autorisé<input type="checkbox" id="pp-off"></label>
       <label>Vitesse de départ<span class="inl"><input type="range" id="pp-v0" min="0" max="300" step="10"><b id="pp-v0v"></b></span></label>
       <label>Gravité de départ<span class="inl"><input type="range" id="pp-g0" min="15" max="250" step="5"><b id="pp-g0v"></b></span></label>
       <label>Véhicule de départ<select id="pp-veh">${Object.entries(veh).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
       <label title="La course commence en gravité inversée : la voiture est plaquée au plafond (départ posé sur une pièce à l'envers)">Inversion de gravité au départ<input type="checkbox" id="pp-ig"></label>
+      <label title="Arcade : plus d'adhérence, plus stable. Simulation : pneus plus progressifs, véhicules v2. Aucun profil n'est plus rapide en ligne droite.">Profil physique<select id="pp-pm"><option value="">Classique</option><option value="arcade">Arcade</option><option value="sim">Simulation</option></select></label>
+      <label title="Moto qui penche et transfère sa masse, bateau sur la houle et dans les courants, deltaplane porté par les ascendances">Véhicules v2 (moto, bateau, deltaplane)<input type="checkbox" id="pp-vm"></label>
+      <p class="meta">Ces règles changent la course : à revérifier.</p>
+      </div>
+      <div class="pp-tab" data-pt="cond">
       <label title="L'adhérence de toute la piste, en plus de celle des revêtements (100 % : normale)">Adhérence de la piste<span class="inl"><input type="range" id="pp-grip" min="25" max="150" step="5"><b id="pp-gripv"></b></span></label>
       <label title="Un vent constant sur toute la route (0 : aucun)">Vent<span class="inl"><input type="range" id="pp-wind" min="0" max="100" step="5"><b id="pp-windv"></b></span></label>
       <label title="Vers où souffle le vent (le nord est en haut de l'éditeur)">Direction du vent<select id="pp-winddir">${WIND_DIRS.map(([a, l]) => `<option value="${a}">${l}</option>`).join('')}</select></label>
@@ -718,10 +1073,10 @@ export const paletteMethods = {
       <label title="Des coups de vent, par à-coups, dans la direction du vent (0 : aucune)">Rafales<span class="inl"><input type="range" id="pp-gust" min="0" max="100" step="10"><b id="pp-gustv"></b></span></label>
       <label title="La pluie forcit et faiblit pendant la course, toujours de la même façon">Conditions qui varient<input type="checkbox" id="pp-ev"></label>
       <label title="Place les flaques, les plaques de givre et les rafales : même graine, mêmes conditions pour tout le monde">Graine des conditions<span class="inl"><input type="number" id="pp-es" min="0" max="999" step="1"><button class="btn small" type="button" id="pp-es-dice" title="Tirer une autre graine">🎲</button></span></label>
-      <label title="Arcade : plus d'adhérence, plus stable. Simulation : pneus plus progressifs, véhicules v2. Aucun profil n'est plus rapide en ligne droite.">Profil physique<select id="pp-pm"><option value="">Classique</option><option value="arcade">Arcade</option><option value="sim">Simulation</option></select></label>
-      <label title="Moto qui penche et transfère sa masse, bateau sur la houle et dans les courants, deltaplane porté par les ascendances">Véhicules v2 (moto, bateau, deltaplane)<input type="checkbox" id="pp-vm"></label>
-      <p class="meta">Départ, tours, gravité, véhicule, adhérence, vent, conditions et profil changent la course : à revérifier.</p>
-      <h4 class="opt-h">Ambiance (sans effet sur la course ni les temps)</h4>
+      <p class="meta">Les conditions changent la course : à revérifier. Même graine, mêmes conditions pour tout le monde.</p>
+      </div>
+      <div class="pp-tab" data-pt="amb">
+      <p class="meta">L’ambiance est sans effet sur la course ni sur les temps.</p>
       <label>Moment de la journée<select id="pp-sky">${SKY_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
       <label>Brume<select id="pp-fog">${FOG_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
       <label>Musique<select id="pp-music">${MUSIC_CHOICES.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
@@ -731,8 +1086,7 @@ export const paletteMethods = {
       <label>Teinte du ciel<span class="inl"><input type="checkbox" id="pp-tint-on" title="Teinte choisie"><input type="color" id="pp-tint"></span></label>
       <label>Teinte du sol<span class="inl"><input type="checkbox" id="pp-gtint-on" title="Teinte choisie"><input type="color" id="pp-gtint"></span></label>
       <label>Couleur de la brume<span class="inl"><input type="checkbox" id="pp-fogc-on" title="Couleur choisie"><input type="color" id="pp-fogc"></span></label>
-      <div class="opt-row"><span>Effets sur les cases du circuit</span><button class="btn small" type="button" id="pp-scripts">Déclencheurs…</button></div>
-      <div class="opt-row"><span>Règles « quand… si… alors… » (portes, routes secrètes, gravité…)</span><button class="btn small" type="button" id="pp-logic">Logique…</button></div>`;
+      </div>`;
     const $f = (id) => f.querySelector('#' + id);
     $f('pp-name').value = T.name || '';
     $f('pp-desc').value = T.desc || '';
@@ -765,12 +1119,15 @@ export const paletteMethods = {
     showP();
     $f('pp-es-dice').onclick = () => { $f('pp-es').value = String(1 + Math.floor(Math.random() * 999)); };
     $f('pp-v0').oninput = show; $f('pp-g0').oninput = show; show();
-    $f('pp-scripts').onclick = () => { this.app.ui.closeModal(); setTimeout(() => this._scriptsDialog(), 0); };
-    $f('pp-logic').onclick = () => { this.app.ui.closeModal(); setTimeout(() => this.openLogic(), 0); };
-    this.app.ui.modal({
-      title: 'Paramètres du niveau',
-      body: f,
-      actions: [{ label: 'Annuler' }, { label: 'Appliquer', primary: true, onClick: () => {
+    // Onglets : on montre la partie du formulaire de l'onglet ; vers Déclencheurs ou Logique, ce qui a été modifié est appliqué d'abord.
+    const snap0 = () => [...f.querySelectorAll('input, select, textarea')].map((e) => (e.type === 'checkbox' ? e.checked : e.value)).join('|');
+    const initial = snap0();
+    const showTab = (id) => {
+      for (const el of f.querySelectorAll('.pp-tab')) el.hidden = el.dataset.pt !== id;
+      for (const b of tabs.querySelectorAll('[data-ptab]')) { const on = b.dataset.ptab === id; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
+    };
+    const tabs = this._circuitTabs(tab, (id, leaving) => { if (!leaving) { showTab(id); return true; } if (snap0() !== initial) { apply(); this.app.ui.flash('Réglages du circuit appliqués.', 1.6); } return true; });
+    const apply = () => {
         const laps = +$f('pp-laps').value;
         if (laps > 1 && (T.laps || 1) === 1) this.app.ui.flash('Plusieurs tours : arrivée juste avant le départ.', 3);
         T.laps = laps;
@@ -793,7 +1150,11 @@ export const paletteMethods = {
         this._changed(false);
         this._commit();
         return true;
-      } }],
-    });
+    };
+    const body = document.createElement('div');
+    body.className = 'pp-body';
+    body.append(tabs, f);
+    showTab(tab);
+    this.app.ui.modal({ title: 'Circuit', body, wide: true, actions: [{ label: 'Annuler' }, { label: 'Appliquer', primary: true, onClick: () => apply() }] });
   },
 };

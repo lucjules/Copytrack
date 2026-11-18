@@ -24,7 +24,8 @@ export const prefabMethods = {
     for (const b of panel.querySelectorAll('[data-pf-del]')) b.onclick = () => { deletePrefab(b.dataset.pfDel); this.app.audio.erase(); this._buildPrefabPanel(); };
     panel.querySelector('[data-pf="save"]').onclick = () => this._savePrefabDialog();
     panel.querySelector('[data-pf="import"]').onclick = () => this._importPrefabDialog();
-    this._buildCdecoSection(panel);
+    // (0.12.0 : les pièces décoratives perso sont dans le panneau Décors)
+    if (this._cdecoBox) { this._cdecoBox.innerHTML = ''; this._buildCdecoSection(this._cdecoBox); } else this._buildCdecoSection(panel);
   },
 
   _usePrefab(clip) {

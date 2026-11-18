@@ -142,15 +142,16 @@ export function scriptsToLogic(track) {
   const byCell = new Map();
   for (const s of scripts) { const k = s.x + ',' + s.z; if (!byCell.has(k)) byCell.set(k, []); byCell.get(k).push(s); }
   const lg = sanitizeLogic(track.lg) || { v: 1, off: [], vars: 0, rules: [] };
-  const assign = [], names = [];
+  const assign = [], names = [], cells = new Set();
   for (const [k, list] of byCell) {
     const [x, z] = k.split(',').map(Number), tiles = track.tilesAt(x, z).filter((t) => !t.g);
     if (!tiles.length || !free.length || lg.rules.length >= LOGIC_MAX.rules) continue;
     const g = free.shift();
+    cells.add(k);
     for (const t of tiles) assign.push([t, g]);
     names.push([g, `Case ${x},${z}`]);
     lg.rules.push({ on: ['zone', g], if: [], do: list.slice(0, LOGIC_MAX.acts).map((s) => ['fx', s.a, s.v]), once: true });
   }
   if (!assign.length) return null;
-  return { lg, assign, names };
+  return { lg, assign, names, cells };      // cells : cases converties (« x,z ») ; leurs déclencheurs sont remplacés par les règles
 }

@@ -227,6 +227,7 @@ export function stripsFor(tile) {
       const ang = Math.PI + (Math.PI / 2) * (i / n);
       fr.push(flatFrame(mir * (a.cx + a.R * Math.cos(ang)), base + p.rise * LEVEL_H * (i / n), a.cz + a.R * Math.sin(ang), -mir * Math.sin(ang), Math.cos(ang)));
     }
+    if (p.hw) for (const f of fr) f.hw = p.hw[0];      // (0.12.0 : virage étroit ou large)
     return [fr];
   }
   if (p.kind === 'sbend') {
@@ -237,7 +238,9 @@ export function stripsFor(tile) {
   }
   if (p.hw) {
     // 0.9.70 : route de largeur variable : chaque repère porte sa demi-largeur (hw), que le profil en travers suit (voir sweep).
-    const n = 4 * p.size, fr = lineStrip(0, p.size * HALF, -p.size * HALF, base, base, n);
+    // 0.12.0 : en pente aussi (droite, ou profil courbe : 12 tronçons par case pour que le raccord reste lisse).
+    const n = profOf(p) === 'l' ? 4 * p.size : 12 * p.size;
+    const fr = !p.rise ? lineStrip(0, p.size * HALF, -p.size * HALF, base, base, n) : profOf(p) === 'l' ? lineStrip(0, p.size * HALF, -p.size * HALF, base, base + p.rise * LEVEL_H, n) : profileStrip(p, base, n);
     fr.forEach((f, i) => { f.hw = roadHalf(p, i / n); });
     return [fr];
   }

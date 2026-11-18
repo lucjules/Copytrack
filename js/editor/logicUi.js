@@ -51,15 +51,22 @@ export const logicUiMethods = {
       for (const b of body.querySelectorAll('[data-ed-rule]')) b.onclick = () => { editing = +b.dataset.edRule; rule = JSON.parse(JSON.stringify(draft.rules[editing])); edit(); };
       body.querySelector('#lg-new').onclick = () => { editing = -1; rule = { on: ['cp', 1], if: [], do: [defAct('show', g0)], once: true }; edit(); };
       const cv = body.querySelector('#lg-conv');
+      // La conversion est appliquée tout de suite, logique comprise (un pas d'annulation) : avant 0.12.0 elle supprimait les déclencheurs et créait les groupes, mais les
+      // règles restaient dans le brouillon de la fenêtre, que sa réouverture remplaçait : les règles étaient perdues. Les déclencheurs d'une case qui n'a pas pu être
+      // convertie (case vide, pièce déjà dans un groupe, plus de place pour des règles) restent en place.
       if (cv) cv.onclick = () => {
+        const prev = T.lg;
+        T.lg = sanitizeLogic(draft);                 // les règles déjà modifiées dans cette fenêtre comptent
         const r = scriptsToLogic(T);
-        if (!r) return;
-        for (const [t, g] of r.assign) { T.remove(t); T.add({ ...t, g }); }
+        T.lg = prev;
+        if (!r) { this.app.ui.flash('Aucune case à convertir : chaque déclencheur doit être posé sur une pièce qui n’est dans aucun groupe.', 3.5); return; }
+        for (const [t, g] of r.assign) t.g = g;
         for (const [g, n] of r.names) T.setGroupName(g, n);
-        T.setParams({ scripts: [] });
-        Object.assign(draft, JSON.parse(JSON.stringify(r.lg)));
+        T.setParams({ scripts: T.scripts.filter((sc) => !r.cells.has(sc.x + ',' + sc.z)) });
+        T.setLogic(r.lg);
         this._changed(); this._commit();
-        this.app.ui.flash(r.names.length > 1 ? `${r.names.length} cases converties en groupes et en règles.` : 'Une case convertie en groupe et en règle.', 2.4);
+        const left = T.scripts.length;
+        this.app.ui.flash((r.names.length > 1 ? `${r.names.length} cases converties en groupes et en règles.` : 'Une case convertie en groupe et en règle.') + (left ? ` ${left} déclencheur${left > 1 ? 's' : ''} n’a pas pu l’être.` : ''), 3);
         this.openLogic();
       };
     };
@@ -147,17 +154,18 @@ export const logicUiMethods = {
     };
 
     list();
-    this.app.ui.modal({
-      title: 'Logique du circuit', body, wide: true,
-      actions: [{ label: 'Annuler' }, { label: 'Enregistrer', primary: true, onClick: () => {
-        const before = JSON.stringify(T.lg);
-        T.setLogic(draft);
-        if (JSON.stringify(T.lg) !== before) {
-          this._changed(); this._commit();
-          this.app.ui.flash(T.lg ? `Logique enregistrée : ${T.lg.rules.length} règle${T.lg.rules.length > 1 ? 's' : ''}. Elle change la course : à revérifier.` : 'Logique retirée.', 3);
-        }
-        return true;
-      } }],
-    });
+    const save = () => {
+      const before = JSON.stringify(T.lg);
+      T.setLogic(draft);
+      if (JSON.stringify(T.lg) !== before) {
+        this._changed(); this._commit();
+        this.app.ui.flash(T.lg ? `Logique enregistrée : ${T.lg.rules.length} règle${T.lg.rules.length > 1 ? 's' : ''}. Elle change la course : à revérifier.` : 'Logique retirée.', 3);
+      }
+      return true;
+    };
+    // (0.12.0 : onglet de la fenêtre « Circuit » ; changer d'onglet enregistre ce qui a été modifié)
+    const wrap = document.createElement('div');
+    wrap.append(this._circuitTabs('logic', (id, leaving) => { if (leaving) save(); return true; }), body);
+    this.app.ui.modal({ title: 'Circuit', body: wrap, wide: true, actions: [{ label: 'Annuler' }, { label: 'Enregistrer', primary: true, onClick: save }] });
   },
 };

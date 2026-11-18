@@ -29,11 +29,15 @@ export const scriptsUiMethods = {
       box.appendChild(h('div', { class: 'row' }, h('button', { class: 'btn small', type: 'button', disabled: list.length >= MAX_SCRIPTS, 'data-sc': 'add', onclick: () => { const c = this.lastHoverCell || { cx: 0, cz: 0 }; list.push(sanitizeScript({ x: c.cx, z: c.cz, a: 'msg', v: 'Bravo !' })); render(); } }, '+ Ajouter un déclencheur')));
     };
     render();
-    this.app.ui.modal({ title: 'Déclencheurs du circuit', body: box, wide: true, actions: [{ label: 'Annuler' }, { label: 'Appliquer', primary: true, onClick: () => {
+    const before = JSON.stringify(sanitizeScripts(T.scripts));
+    const apply = () => {
       T.setParams({ scripts: list });
       this._changed(false);
       this._commit();
       return true;
-    } }] });
+    };
+    // (0.12.0 : onglet de la fenêtre « Circuit » ; changer d'onglet applique ce qui a été modifié)
+    const wrap = h('div', {}, this._circuitTabs('scripts', (id, leaving) => { if (leaving && JSON.stringify(sanitizeScripts(list)) !== before) { apply(); this.app.ui.flash('Déclencheurs appliqués.', 1.6); } return true; }), box);
+    this.app.ui.modal({ title: 'Circuit', body: wrap, wide: true, actions: [{ label: 'Annuler' }, { label: 'Appliquer', primary: true, onClick: apply }] });
   },
 };

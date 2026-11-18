@@ -496,7 +496,7 @@ try {
       const { scriptTrack } = await import('/js/track.js');
       const src = scriptTrack('s', 'start S4 O S3 finish');
       T.clear(); for (const t of src.tiles) T.add(t); E._commit(); E._changed();
-      const before = T.encode(), btn = (a) => document.querySelector(`#ed-selbar [data-sel="${a}"]`);
+      const before = T.encode(), btn = (a) => document.querySelector(`#editor [data-sel="${a}"]`);      // (0.12.0 : barre flottante, et flèches dans le panneau)
       E.setTool('select'); E.selAction('all');
       const enabled = ['copy', 'cut', 'del', 'rot', 'dup', 'mv-l', 'mv-r', 'mv-u', 'mv-d'].map((a) => [a, !btn(a).disabled]);
       btn('rot').click();                                  // pivoter la sélection entière
@@ -1053,7 +1053,7 @@ try {
     await page.waitForTimeout(1000);
     await app(() => window.copytrack.session.openParams());
     assert.ok(await page.locator('#pp-weather').count() && await page.locator('#pp-cycle').count(), 'réglages météo et heure');
-    await click('#pp-scripts');
+    await click('.pp-tabs [data-ptab="scripts"]');      // (0.12.0 : un onglet de la fenêtre « Circuit »)
     await page.waitForTimeout(300);
     await click('#modal-body button[data-sc="add"]');
     assert.ok(await page.locator('#modal-body .sc-row').count() === 1, 'un déclencheur ajouté');
@@ -1230,16 +1230,17 @@ try {
     await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.guidedOn, null, 20000);
     const vis = () => app(() => {
       const pal = document.getElementById('ed-palette'), v = (q) => [...pal.querySelectorAll(q)].filter((e) => !e.hidden).length;
-      return { guided: pal.classList.contains('guided'), banner: !pal.querySelector('.pal-guided').hidden, fams: v('.fam-card'), singles: v('.pal-row:not(.surf):not(.decos) > .piece-btn[data-piece]'), tabs: v('.pal-tab[data-tab]'), groups: v('.opt-group') };
+      const lib = (q) => [...pal.querySelectorAll('.lib-sec[data-sec]:not([data-sec="recent"]):not([hidden]) ' + q)].filter((e) => !e.hidden).length;
+      return { guided: pal.classList.contains('guided'), banner: !pal.querySelector('.pal-guided').hidden, fams: lib('.lib-tile[data-fam]'), singles: lib('.lib-tile[data-piece]'), tabs: [...document.querySelectorAll('#ed-tools .tool-btn')].filter((e) => !e.hidden).length, groups: v('.opt-group') };
     });
     const g = await vis();
-    assert.ok(g.guided && g.banner, 'bandeau'); assert.equal(g.fams, 2); assert.equal(g.singles, 2); assert.equal(g.tabs, 2); assert.equal(g.groups, 1, 'seul le groupe checkpoint');
+    assert.ok(g.guided && g.banner, 'bandeau'); assert.equal(g.fams, 2); assert.equal(g.singles, 2); assert.equal(g.tabs, 4, 'outils : pistes, sélection, inspecter, gomme'); assert.equal(g.groups, 1, 'seul le groupe checkpoint');
     await shot('18-editeur-guide');
     const refused = await app(() => { const s = window.copytrack.session; s.setTool('loop'); return s.tool; });
     assert.notEqual(refused, 'loop', 'une pièce du mode complet est refusée');
     await app(() => document.querySelector('#ed-palette .pal-guided button').click());
     const f = await vis();
-    assert.ok(!f.guided && !f.banner); assert.ok(f.fams >= 5 && f.singles > 10 && f.tabs === 5 && f.groups > 3, JSON.stringify(f));
+    assert.ok(!f.guided && !f.banner); assert.ok(f.fams >= 13 && f.singles >= 4 && f.tabs === 6 && f.groups > 3, JSON.stringify(f));
     assert.equal(await app(() => window.copytrack.settings.editorGuided), false);
     assert.equal(await app(() => { const s = window.copytrack.session; s.setTool('loop'); return s.tool; }), 'loop');
     await app(() => window.copytrack.leaveEditor());
@@ -1407,7 +1408,7 @@ try {
     await app(() => window.copytrack.session.track.setParams({ rain: 0, gust: 0, envVary: false, envSeed: 0, pm: '', vm: 1 }));
     assert.equal(await app(() => window.copytrack.session.track.signature()), sig0);
     // --- prefabs
-    await page.evaluate(() => document.querySelector('#ed-palette .pal-tab[data-tab="prefabs"]').click());
+    await page.evaluate(() => document.querySelector('#ed-palette [data-sec="prefabs"] .lib-head').click());      // (0.12.0 : section « Morceaux tout faits » de l'outil Pistes)
     await waitApp(() => document.querySelectorAll('#ed-palette [data-pf-starter]').length >= 6);
     const n0 = await app(() => window.copytrack.session.track.tiles.length);
     await page.evaluate(() => document.querySelector('#ed-palette [data-pf-starter="chicane"]').click());
@@ -1431,9 +1432,9 @@ try {
     assert.match(await page.evaluate(() => document.getElementById('pf-err').textContent), /invalide ou coupé/);
     await page.evaluate((c) => { document.getElementById('pf-code').value = c; [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent.trim() === 'Importer').click(); }, code);
     await waitApp(() => document.querySelectorAll('#ed-palette .pf-mine').length === 1);
-    // guidé : l'onglet Prefabs disparaît
+    // guidé : la section des morceaux tout faits disparaît
     await app(() => window.copytrack.session.setGuided(true));
-    assert.equal(await page.evaluate(() => document.querySelector('#ed-palette .pal-tab[data-tab="prefabs"]').hidden), true, 'mode guidé : pas de prefabs');
+    assert.equal(await page.evaluate(() => document.querySelector('#ed-palette [data-sec="prefabs"]').hidden), true, 'mode guidé : pas de prefabs');
     await app(async () => { window.copytrack.session.setGuided(false); const m = await import('/js/storage.js'); for (const p of m.listPrefabs()) m.deletePrefab(p.id); window.copytrack.settings.editorGuided = null; });
     await app(() => window.copytrack.leaveEditor());
     await waitApp(() => window.copytrack.mode === 'menu');
@@ -1487,7 +1488,10 @@ try {
       window.copytrack.openEditor({ code: t.encode(), name: 'Porte' });
     });
     await waitApp(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.openLogic, null, 20000);
-    await click('[data-ed="logic"]');
+    // (0.12.0 : la logique est un onglet de la fenêtre « Circuit »)
+    await click('[data-ed="params"]');
+    await waitApp(() => document.querySelector('.pp-tabs [data-ptab="logic"]'));
+    await click('.pp-tabs [data-ptab="logic"]');
     await waitApp(() => document.getElementById('lg-new'));
     await click('#lg-new');
     await waitApp(() => document.getElementById('lg-ok'));

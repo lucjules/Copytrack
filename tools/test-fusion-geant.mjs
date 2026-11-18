@@ -57,8 +57,8 @@ test('pièce 5×5, rayon 144 m (centre au coin), ajoutée à la suite dans l’o
   assert.equal(PIECE_ORDER[135], 'giantcurve');
 });
 test('famille « Virage » de l’éditeur : rayon « Géant »', () => {
-  assert.equal(resolve('turn', { size: 'xl', bank: '0', incl: '0', dir: 'R' }), 'giantcurve');
-  assert.deepEqual(familyOf('giantcurve').traits, { size: 'xl', bank: '0', incl: '0', dir: 'R' });
+  assert.equal(resolve('turn', { w: 'N', size: 'xl', bank: '0', incl: '0', dir: 'R' }), 'giantcurve');
+  assert.deepEqual(familyOf('giantcurve').traits, { w: 'N', size: 'xl', bank: '0', incl: '0', dir: 'R' });
 });
 test('XR / XL tournent de 90° dans le bon sens ; le circuit se partage à l’identique', () => {
   const tr = build('start S2 XR S2 XL S2 finish');

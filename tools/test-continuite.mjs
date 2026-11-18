@@ -27,7 +27,8 @@ test('chaque type de pièce a ses extrémités : deux bouts (une bifurcation : t
 test('toute pièce à deux bouts se raccorde à elle-même : placementsAfter retrouve la pièce suivante, à n\'importe quel cap et niveau', () => {
   for (const type of Object.keys(PIECES)) {
     if (['ring', 'area', 'fork'].includes(PIECES[type].kind) || LEGACY_TILE[type]) continue;
-    for (const r of [0, 1, 2, 3]) for (const l of [6, 9.5]) {
+    for (const r of [0, 1, 2, 3]) for (const l0 of [6, 9.5]) {
+      const l = l0 + Math.max(0, -(PIECES[type].rise || 0));      // (0.12.0 : une descente large perd jusqu'à 12 niveaux : la suivante doit rester au-dessus du sol)
       const a = Track.normalize({ t: type, x: 3, z: -2, l, r });
       const exit = tileEnds(a).find((e) => e.exit);
       const c = placementsAfter(exit, type, {});

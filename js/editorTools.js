@@ -158,21 +158,26 @@ export function placedClip(clip, cx, cz, level, canLift = true) {
   };
 }
 
-// Collage : remplace ce qui gêne. Un seul départ par circuit. Renvoie { added, skipped, lift }.
-export function pasteClip(track, clip, cx, cz, level) {
+// Collage : remplace ce qui gêne. Un seul départ par circuit. Renvoie { added, skipped, guarded, lift }.
+// ok(pièce) : faux pour une pièce qu'on ne doit pas remplacer (calque verrouillé ou masqué de l'éditeur) ; la pièce collée à sa place est alors ignorée.
+// 0.12.0 : le départ du circuit n'est jamais effacé par une autre pièce collée sur lui (il ne l'est que par le départ du presse-papiers, qui le remplace) ; avant, coller
+// une zone sur le départ laissait un circuit sans départ.
+export function pasteClip(track, clip, cx, cz, level, ok = null) {
   const P = placedClip(clip, cx, cz, level);
-  let skipped = 0, added = 0;
-  const hasStart = !!track.startTile;
+  let skipped = 0, added = 0, guarded = 0;
   for (const t of P.tiles) {
     // Dernier garde-fou (zone trop haute, ou qu'aucun décalage ne sauve) : une pièce hors des niveaux est ignorée et comptée, jamais posée sous le sol.
     const n = Track.normalize(t);
-    if (t.l < 0 || t.l > MAX_LEVEL || !Track.inBounds(n) || (t.t === 'start' && hasStart)) { skipped++; continue; }
-    for (const c of track.conflicts(n)) track.remove(c);
+    if (t.l < 0 || t.l > MAX_LEVEL || !Track.inBounds(n)) { skipped++; continue; }
+    const cs = track.conflicts(n), start = track.startTile;
+    if (ok && cs.some((c) => !ok(c))) { guarded++; continue; }
+    if (t.t === 'start' ? start && !cs.includes(start) : cs.includes(start)) { skipped++; continue; }
+    for (const c of cs) track.remove(c);
     track.add(t);
     added++;
   }
   for (const d of P.decos) if (track.addDeco(d)) added++;
-  return { added, skipped, lift: P.lift };
+  return { added, skipped, guarded, lift: P.lift };
 }
 
 // Duplication d'une zone (Ctrl+D) : la première place LIBRE pour une copie de toutes les pièces et décorations sélectionnées, sans rien écraser
@@ -322,9 +327,19 @@ export function checkTrack(track) {
   const link = (a, b) => { if (!adj.has(a)) adj.set(a, new Set()); adj.get(a).add(b); };
   const join = (a, b) => { parent.set(find(a), find(b)); if (a !== b) { link(a, b); link(b, a); } };
   const free = [];
+  // 0.12.0 : les extrémités sont rangées dans un index par cubes de 2 m ; deux extrémités raccordées (à moins de 2 m) sont dans le même cube ou un cube
+  // voisin. Avant, chaque extrémité était comparée à toutes les autres : 2 s par pose sur un circuit de 3 000 pièces, l'éditeur se figeait.
+  const EK = (x, y, z) => `${x},${y},${z}`, ec = (v) => Math.floor(v / 2);
+  const ebox = new Map();
+  for (const e of eps) { const k = EK(ec(e.x), ec(e.y), ec(e.z)); if (!ebox.has(k)) ebox.set(k, []); ebox.get(k).push(e); }
+  const near = (e) => {
+    const out = [], cx = ec(e.x), cy = ec(e.y), cz = ec(e.z);
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) { const l = ebox.get(EK(cx + i, cy + j, cz + k)); if (l) for (const f of l) out.push(f); }
+    return out;
+  };
   for (const e of eps) {
     let ok = false;
-    for (const f of eps) {
+    for (const f of near(e)) {
       if (f.tile === e.tile) continue;
       if (Math.hypot(e.x - f.x, e.y - f.y, e.z - f.z) < 2 && e.dx * f.dx + e.dy * f.dy + e.dz * f.dz < -0.5) {
         ok = true; join(e.tile, f.tile);
@@ -347,6 +362,7 @@ export function checkTrack(track) {
     }
   }
   const glider = track.tiles.some((t) => t.s === 'glider');
+  const rings = track.tiles.filter((t) => PIECES[t.t].kind === 'ring');
   // Gravité réduite : les sauts portent plus loin.
   const lowG = Math.min(1, ...track.tiles.filter((t) => t.s === 'gravity').map((t) => (t.p || 40) / 100));
   const maxJump = (glider ? 14 : 9) / Math.max(0.35, lowG);
@@ -405,8 +421,7 @@ export function checkTrack(track) {
       else if (!ramp && cells >= 2 && land.y >= e.y - 1) issues.push({ tile: e.tile, level: 'warn', msg: `Saut de ${cells} cases sans tremplin : la voiture risque de tomber.` });
       if (land.y > e.y + 0.6 && e.tile.s !== 'flip' && land.tile.s !== 'flip' && e.tile.s !== 'bounce') issues.push({ tile: land.tile, level: 'warn', msg: 'Arrivée de saut plus haute que le départ.' });
       // Les éventuels anneaux sur le trajet sont « sur la route ».
-      for (const t of track.tiles) {
-        if (PIECES[t.t].kind !== 'ring') continue;
+      for (const t of rings) {
         const cx = (t.x + 0.5) * CELL - e.x, cz = (t.z + 0.5) * CELL - e.z;
         const along = cx * ex + cz * ez, side = Math.abs(cx * ez - cz * ex);
         if (along > 0 && along < dist && side < CELL / 2) join(t, e.tile);

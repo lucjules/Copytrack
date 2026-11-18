@@ -1,5 +1,62 @@
 // Dictionnaire anglais — le catalogue de l'éditeur : pièces de piste, familles et caractéristiques, inspecteur, décorations.
 
+// 0.12.0 : libellés des pièces générées (largeur × inclinaison × profil, virages très grands, étroits, larges et relevés inclinés) et nouveaux textes des familles.
+const W12 = [['étroite', 'Narrow', 'narrow'], ['large', 'Wide', 'wide']];
+const SENS12 = [['montant', 'climbing', ''], ['montant ↰', 'climbing', ' ↰'], ['descendant', 'downhill', ''], ['descendant ↰', 'downhill', ' ↰']];
+const SIZE12 = [['serré', 'Tight'], ['grand', 'Wide'], ['très grand', 'Very wide'], ['géant', 'Giant']];
+const CRV12 = [['début de montée', 'start of climb'], ['fin de montée', 'end of climb'], ['montée en S', 'S-climb'], ['début de descente', 'start of descent'], ['fin de descente', 'end of descent'], ['descente en S', 'S-descent']];
+const F12 = {
+  ...Object.fromEntries(W12.flatMap(([fr, En]) => [[`Route ${fr} · montée {a:w}`, `${En} road · climb {a}`], [`Route ${fr} · descente {a:w}`, `${En} road · descent {a}`]])),
+  ...Object.fromEntries(W12.flatMap(([fr, En]) => CRV12.map(([lf, le]) => [`Courbe ${fr} · ${lf} {a:w}`, `${En} curve · ${le} {a}`]))),
+  ...Object.fromEntries(SENS12.map(([fr, en, d]) => [`Très grand virage ${fr} · {a:w}`, `Very wide ${en} turn${d} · {a}`])),
+  ...Object.fromEntries(W12.flatMap(([fr, , en]) => SIZE12.map(([sf, se]) => [`Virage ${sf} · route ${fr}`, `${se} turn · ${en} road`]))),
+  ...Object.fromEntries(W12.flatMap(([fr, , en]) => SIZE12.flatMap(([sf, se]) => SENS12.map(([df, de, d]) => [`Virage ${sf} ${df} · {a:w} · route ${fr}`, `${se} ${de} turn${d} · {a} · ${en} road`])))),
+  ...Object.fromEntries(SIZE12.flatMap(([sf, se]) => SENS12.map(([df, de, d]) => [`Virage ${sf} relevé ${df} · {a:w}`, `${se} banked ${de} turn${d} · {a}`]))),
+  'Élargissement depuis étroite': 'Widening from narrow',
+  'Grand S rapide →': 'Fast big S →',
+  'Grand S rapide ←': 'Fast big S ←',
+  'Normale (24 m)': 'Normal (24 m)',
+  'Étroite (12 m)': 'Narrow (12 m)',
+  'Large (56 m)': 'Wide (56 m)',
+  'Changement de largeur': 'Width change',
+  'Raccords en biais entre deux largeurs de route. Tourné d’un demi-tour, un rétrécissement élargit (et inversement).': 'Slanted joints between two road widths. Turned around, a narrowing widens (and the other way round).',
+  'Normale → étroite (24 → 12 m)': 'Normal → narrow (24 → 12 m)',
+  'Normale → large (24 → 56 m)': 'Normal → wide (24 → 56 m)',
+  'Étroite → large (12 → 56 m)': 'Narrow → wide (12 → 56 m)',
+  'Route droite, plate ou en pente : montée ou descente de ½, 1, 2 ou 4 niveaux par case. Étroite (12 m), normale (24 m) ou large (56 m, 3×3 : en montée 1 elle gagne 3 niveaux). L’orientation (sol, mur, plafond) se règle dans les réglages de la pièce.': 'Straight road, flat or sloped: climb or descent of ½, 1, 2 or 4 levels per cell. Narrow (12 m), normal (24 m) or wide (56 m, 3×3: climbing 1, it gains 3 levels). The orientation (ground, wall, ceiling) is set in the piece settings.',
+  'Serré, grand, très grand ou géant ; plat, relevé ou incliné ; étroit, normal ou large. Pas de virage serré relevé (il ne se prend pas assez vite pour que le relevé serve) ni large (rayon 16 m, plus petit que la demi-largeur de la route large) ; le relevé n’existe qu’en largeur normale.': 'Tight, wide, very wide or giant; flat, banked or inclined; narrow, normal or wide road. No tight banked turn (it is never taken fast enough for the banking to help) and no tight wide-road turn (16 m radius, less than half the wide road); banking exists on the normal width only.',
+  'Raccord de pente qui se courbe : début doux (plat → pente), fin douce (pente → plat) ou en S (plat → plat). Montée ou descente ; étroite, normale ou large (3×3, pente comme la ligne droite large).': 'Curved slope joint: soft start (flat → slope), soft end (slope → flat) or S (flat → flat). Climb or descent; narrow, normal or wide (3×3, slope like the wide straight).',
+  'Courbe en S : la route se décale d’une ou deux colonnes sans changer de cap. Courte (2×2), longue (3×3) ou rapide (4×4). Le décalage de deux colonnes demande une chicane longue ou rapide (sur 2 cases, ce serait deux quarts de tour).': 'S-bend: the road shifts one or two columns without changing heading. Short (2×2), long (3×3) or fast (4×4). A two-column shift needs a long or fast chicane (over 2 cells it would be two quarter turns).',
+  'Tube fermé où l’on roule sur la paroi et au plafond : entrée, sections à enchaîner, virage (rayon 48 m), ou tube 2×2 d’un seul tenant. La sortie est une entrée tournée d’un demi-tour.': 'Closed tube where you ride on the wall and the ceiling: entrance, sections to chain, turn (48 m radius), or a one-piece 2×2 tube. The exit is an entrance turned around.',
+  'Pièce': 'Piece',
+  'Tire-bouchon': 'Corkscrew',
+  'Pas de virage serré en route large : son rayon (16 m) est plus petit que la demi-largeur de la route large (28 m).': 'No tight turn on a wide road: its radius (16 m) is smaller than half the wide road (28 m).',
+  'Pas de virage serré relevé : il ne se prend jamais assez vite pour que le relevé serve.': 'No tight banked turn: it is never taken fast enough for the banking to help.',
+  'Le virage relevé n’existe qu’en largeur normale : sa chaussée penchée suppose 24 m.': 'Banked turns exist on the normal width only: the tilted road assumes 24 m.',
+  'Un virage plat à gauche est le virage à droite tourné : choisis « Droite » et pivote la pièce (R).': 'A flat left turn is the right turn rotated: choose “Right” and rotate the piece (R).',
+  'Pas de décalage de deux colonnes sur 2 cases : ce serait deux quarts de tour, pas une chicane.': 'No two-column shift over 2 cells: it would be two quarter turns, not a chicane.',
+  'De et vers : même orientation, rien à faire basculer.': 'From and to: same orientation, nothing to switch.',
+  'Pas de passage direct de 135° ou 180° : enchaîne deux transitions.': 'No direct 135° or 180° switch: chain two transitions.',
+  'Une transition de 45° tient sur une case et elle est déjà progressive : pas de forme douce.': 'A 45° transition fits in one cell and is already progressive: no soft version.',
+  'Pièce symétrique : la même dans les deux sens (pivote-la au besoin).': 'Symmetric piece: the same both ways (rotate it if needed).',
+  'Transition {a:t} → {b:t} (45°)': 'Transition {a} → {b} (45°)',
+  'Fait basculer la route d’une orientation à l’autre, de 45° (une case, progressive) ou de 90° (franche sur une case, douce sur 2×2). Pour 135° ou 180°, enchaîner deux transitions. Il faut de la vitesse sur un mur.': 'Switches the road from one orientation to another, by 45° (one cell, progressive) or 90° (sharp over one cell, soft over 2×2). For 135° or 180°, chain two transitions. You need speed on a wall.',
+  'Entrée / sortie': 'Entrance / exit',
+  'Section': 'Section',
+  'Tube 2×2': 'Tube 2×2',
+  'Looping modulaire': 'Modular loop',
+  'Montée en L vers un mur vertical, autant de murs que voulu, puis un sommet : le sommet du L fait sauter vers le plateau, le sommet de looping redescend une colonne à côté.': 'L climb up to a vertical wall, as many walls as you like, then a top: the top of the L jumps onto the plateau, the loop top comes back down one column over.',
+  'Sommet du L (saut)': 'Top of the L (jump)',
+  'Sommet de looping': 'Loop top',
+  'Hélice autour d’un axe parallèle à la route : un tour complet, il faut de la vitesse. La vrille (demi-tour de roulis) est une pièce à part.': 'Helix around an axis parallel to the road: one full turn, you need speed. The twist (half a roll) is a separate piece.',
+  'Horaire ↻': 'Clockwise ↻',
+  'Anti-horaire ↺': 'Anticlockwise ↺',
+  'Une entrée et deux sorties ; tournée d’un demi-tour, deux entrées et une sortie. Voie directe et voie déportée, chacune avec son revêtement.': 'One entrance and two exits; turned around, two entrances and one exit. Straight lane and offset lane, each with its own surface.',
+  'Voie déportée': 'Offset lane',
+  'À droite ⑂→': 'On the right ⑂→',
+  'À gauche ←⑂': 'On the left ←⑂',
+};
+
 export default {
   // ---------------------------------------------------------------- pièces de piste et familles
   'Descente {n:w}': 'Descent {n}',
@@ -604,4 +661,6 @@ export default {
   'Portique de lumières': 'Light gantry',
   'Gâteau d’anniversaire': 'Birthday cake',
   'Bouquet de ballons': 'Balloon bunch',
+  // ---------------------------------------------------------------- 0.12.0 : familles complètes
+  ...F12,
 };

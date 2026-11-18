@@ -36,13 +36,16 @@ const isStartFinish = (type) => { const sp = PIECES[type] && PIECES[type].specia
 export const toolMethods = {
   setTool(id) {
     if (!this.guidedAllows(id)) { this.app.ui.flash('Disponible en mode complet : « Tout afficher » dans la palette.', 2.5); return; }
-    // Mode pot de peinture : choisir une pièce ou un revêtement garde le pot ; tout autre outil le quitte.
-    if (isFill(id)) this.fillMode = true;
-    else if (this.fillMode && toFill(id)) id = toFill(id);
-    else this.fillMode = false;
+    // Pot de peinture (0.12.0 : l'interrupteur « Remplir » de l'outil Pièces, et « Toute la zone » de la Peinture, chacun le sien) : choisir une autre pièce
+    // (ou un autre revêtement) garde l'interrupteur de son outil.
+    if (isFill(id)) { if (fillBase(id).startsWith('surf:')) this._fillPaint = true; else this._fillPieces = true; }
+    else if (toFill(id) && (PIECES[id] ? this._fillPieces : this._fillPaint)) id = toFill(id);
+    this.fillMode = isFill(id);
     if (id !== 'select') { this.pasting = false; this.sel = null; this.selDrag = null; }
     if (id !== 'inspect') this.inspector.clear();
     if (PIECES[fillBase(id)] || fillBase(id).startsWith('surf:')) this._lastBrush = fillBase(id);     // dernière pièce / dernier revêtement : sert au pot de peinture
+    // (0.12.0 : et ce que reprend chaque outil du rail quand on y revient)
+    { const b = fillBase(id); if (PIECES[b]) this._lastPiece = b; else if (b.startsWith('surf:')) this._lastSurf = b; else if (b.startsWith('deco:')) this._lastDeco = b.slice(5); }
     this.tool = id;
     this.previewKey = '';
     // Ce qu'il faut savoir avant de poser cette pièce (une seule fois par pièce et par orientation et par séance d'édition : pas de bavardage).
@@ -63,18 +66,18 @@ export const toolMethods = {
     this._refreshUI();
   },
 
-  // Active / désactive le pot de peinture sur la pièce ou le revêtement choisi.
+  // Active / désactive le pot de peinture (touche `) : l'interrupteur « Remplir » de l'outil Pièces ou Peinture ; depuis un autre outil, celui des pièces.
   toggleFill() {
-    if (isFill(this.tool)) {
-      this.fillMode = false;
-      this.setTool(fillBase(this.tool));
-      this.app.ui.flash('Pot de peinture désactivé', 1.2);
+    const base = fillBase(this.tool);
+    if (PIECES[base] || base.startsWith('surf:')) {
+      const on = !isFill(this.tool);
+      this.setFill(on);
+      this.app.ui.flash(on ? 'Remplir : clique une pièce pour remplir sa zone' : 'Remplir désactivé', 1.4);
       return;
     }
-    const f = toFill(this.tool) || toFill(this._lastBrush || 'straight');     // depuis un autre outil : on remplit avec la dernière pièce choisie
-    if (!f) { this.app.ui.flash('Choisis d’abord une pièce ou un revêtement.'); this.app.audio.error(); return; }
-    this.setTool(f);
-    this.app.ui.flash('Pot de peinture : clique une pièce pour remplir sa zone', 1.8);
+    this._fillPieces = true;
+    this.setMode('pieces');
+    this.app.ui.flash('Remplir : clique une pièce pour remplir sa zone', 1.6);
   },
 
   cyclePiece(d) {
@@ -131,6 +134,9 @@ export const toolMethods = {
       const c = conflicts[0];
       if (c.t === tile.t && c.x === tile.x && c.z === tile.z && c.l === tile.l && c.r === tile.r && OPT_KEYS.every((k) => (c[k] | 0) === (norm[k] | 0))) return;
     }
+    // Une pièce d'un calque verrouillé ou masqué (groups.js) n'est jamais remplacée : avant 0.12.0 la pose l'effaçait sans un mot, même invisible.
+    const guarded = conflicts.find((c) => !this._layerOk(c));
+    if (guarded) { if (!painting) { this.app.ui.flash(this._layerWhy(guarded)); this.app.audio.error(); } return; }
     for (const c of conflicts) this.track.remove(c);
     if (tile.t === 'start') for (const s of this.track.tiles.filter((x) => x.t === 'start')) this.track.remove(s);
     const dropped = this._droppedOptions(tile, norm);
@@ -164,7 +170,7 @@ export const toolMethods = {
     const P = PIECES[r.tile.t], cx = (r.tile.x + P.size / 2) * CELL, cz = (r.tile.z + P.size / 2) * CELL;
     if (Math.hypot(cx - this.target.x, cz - this.target.z) > this.dist * 0.45) { this.target.x = cx; this.target.z = cz; }
     if (r.note) this.app.ui.flash(`Orientation choisie impossible à raccorder (${r.note}) : la route reprend son orientation.`, 4);
-    else this.app.ui.flash(`${P.label} posée${r.reverse ? ' à contresens (retour de la pièce)' : r.bridged ? ` après ${r.chain.length - 1} transition${r.chain.length > 2 ? 's' : ''} d'orientation (raccord automatique)` : r.inferred ? ' (orientation de la route reprise)' : ''}`, 1.4);
+    else this.app.ui.flash(`${P.label} posée${r.reverse ? ' à contresens (retour de la pièce)' : r.widened ? ` après un ${PIECES[r.chain[0].t].label.toLowerCase()} (raccord de largeur automatique)` : r.bridged ? ` après ${r.chain.length - 1} transition${r.chain.length > 2 ? 's' : ''} d'orientation (raccord automatique)` : r.inferred ? ' (orientation de la route reprise)' : ''}`, 1.4);
     return true;
   },
 
@@ -179,10 +185,11 @@ export const toolMethods = {
       this.autoLevel = new Map([[`${tile.x + ex},${tile.z + ez}`, tile.l + p.rise], [`${tile.x - bx},${tile.z - bz}`, tile.l]]);
       return;
     }
-    const [dx, dz] = DIRS[tile.r];
+    // (0.12.0 : une pente large fait 3×3 : la case visée pour la pièce suivante est le CENTRE de l'empreinte voisine, comme pour la pose d'une pièce de taille impaire)
+    const [dx, dz] = DIRS[tile.r], s = p.size, c = (s - 1) / 2;
     this.autoLevel = new Map([
-      [`${tile.x + dx},${tile.z + dz}`, tile.l + p.rise],
-      [`${tile.x - dx},${tile.z - dz}`, tile.l],
+      [`${tile.x + c + dx * s},${tile.z + c + dz * s}`, tile.l + p.rise],
+      [`${tile.x + c - dx * s},${tile.z + c - dz * s}`, tile.l],
     ]);
   },
 
@@ -248,8 +255,10 @@ export const toolMethods = {
   },
 
   // Prédicat de la zone : mêmes pièces que la cible (même revêtement pour un remplissage de revêtement, même type pour un remplissage de type).
+  // (0.12.0 : la zone s'arrête aux pièces d'un calque verrouillé ou masqué, comme les autres outils.)
   _fillMatcher(start) {
-    return this.tool.startsWith('fill-surf:') ? (t) => (t.s || '') === (start.s || '') : (t) => t.t === start.t;
+    const ok = (t) => this._layerOk(t);
+    return this.tool.startsWith('fill-surf:') ? (t) => ok(t) && (t.s || '') === (start.s || '') : (t) => ok(t) && t.t === start.t;
   },
 
   // Aperçu AVANT validation : les cases de la zone que le clic modifierait (cache par pièce visée, outil et état du circuit : le parcours n'est pas
@@ -449,12 +458,15 @@ export const toolMethods = {
     }
     const t = this._targetTile();
     if (!t) return;
+    if (!this.guidedAllows(t.t)) { this.app.ui.flash('Disponible en mode complet : « Tout afficher » dans la palette.', 2.5); return; }
+    // Comme un choix dans la palette (setTool) : le collage en cours, la zone sélectionnée et l'inspection sont quittés. Avant 0.12.0, la pipette changeait l'outil
+    // directement : un collage restait « armé » et R tournait le presse-papiers au lieu de la pièce.
     this.fillMode = false;
-    this.tool = t.t; this.rot = t.r; this.level = t.l;
     for (const k of OPT_KEYS) this.opts[k] = t[k] | 0;                  // la pipette reprend aussi les options de la pièce
-    this.autoLevel = null;
+    this.setTool(t.t);
+    this.rot = t.r;
+    this.setLevel(t.l);
     this.previewKey = '';
-    this.setTab('pieces');
     this._refreshUI();
     this.app.ui.flash(`Pipette : ${pieceLabel(t.t)}, niveau ${t.l}`);
   },

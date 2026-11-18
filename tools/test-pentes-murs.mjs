@@ -185,13 +185,14 @@ test('anciens circuits : rollL / rollR / sideL / sideR sont lus comme transition
 
 console.log('Familles (éditeur)');
 test('familles : Ligne droite (9 inclinaisons), Virage (+16 descendants, + virage géant, relevé et incliné), Chicane (8), Courbe (20 raccords), Transition (16), Looping, Plaque (9) ; chaque pièce une seule fois', () => {
-  assert.deepEqual(FAMILY_ORDER.slice(0, 7), ['straight', 'turn', 'chicane', 'courbe', 'roll', 'loop', 'plaque']);      // (0.9.70 et après : d'autres familles à la suite)
+  assert.deepEqual(FAMILY_ORDER.slice(0, 4), ['straight', 'turn', 'chicane', 'courbe']);      // (0.12.0 : les autres familles suivent, rangées par sorte de pièce)
+  for (const f of ['roll', 'loop', 'plaque']) assert.ok(FAMILY_ORDER.includes(f), f);
   assert.equal(Object.keys(FAMILIES.plaque.members).length, 9);      // (0.9.69 : carré, triangle, quart de disque × 1 à 3 cases ; la plateforme en est la plaque carrée 1×1)
-  assert.equal(Object.keys(FAMILIES.chicane.members).length, 8);      // (0.9.68 : courte, longue, rapide, grand S ; droite / gauche)
-  assert.equal(Object.keys(FAMILIES.straight.members).length, 9);
-  assert.equal(Object.keys(FAMILIES.turn.members).length, 5 + 16 + 16 + 1 + 1 + 16);      // (0.9.67 : virage géant, rayon « Géant » ; 0.11.4 : géant relevé, géants inclinés)
-  assert.equal(Object.keys(FAMILIES.courbe.members).length, 20);
-  assert.equal(Object.keys(FAMILIES.roll.members).length, 16);
+  assert.equal(Object.keys(FAMILIES.chicane.members).length, 10);      // (0.9.68 : courte, longue, rapide, grand S ; droite / gauche ; 0.12.0 : grand S rapide)
+  assert.equal(Object.keys(FAMILIES.straight.members).length, 27);      // (0.12.0 : × trois largeurs)
+  assert.equal(Object.keys(FAMILIES.turn.members).length, 238);      // (0.12.0 : 14 combinaisons largeur × rayon × profil, chacune plate + 16 inclinées ; voir test-familles-completes)
+  assert.equal(Object.keys(FAMILIES.courbe.members).length, 72);
+  assert.equal(Object.keys(FAMILIES.roll.members).length, 48);      // (0.12.0 : 90° franches et douces autour du sol, du plafond et entre inclinés (32) + 45° (16))
   const seen = new Set();
   for (const fam of FAMILY_ORDER) for (const [type, tr] of Object.entries(FAMILIES[fam].members)) {
     assert.ok(!seen.has(type), 'doublon ' + type); seen.add(type);
@@ -203,15 +204,16 @@ test('Transition : « De » et « Vers » sont des orientations ; une combinaiso
   assert.equal(resolve('roll', { de: '0', vers: '1', forme: 's' }), 'tr01s');
   assert.equal(resolve('roll', { de: '1', vers: '0', forme: 'l' }), 'tr10l');
   assert.equal(resolve('roll', { de: '1', vers: '2', forme: 's' }), null, 'mur gauche → mur droit : pas de transition directe');
-  assert.deepEqual([...validValues('roll', { de: '1', vers: '0', forme: 's' }, 'vers')].sort(), ['0', '3']);
+  assert.deepEqual([...validValues('roll', { de: '1', vers: '0', forme: 's' }, 'vers')].sort(), ['0', '3', '4', '6'], '0.12.0 : depuis le mur gauche, 90° (sol, plafond) et 45° (incliné, surplomb)');
   assert.ok(withTrait('roll', { de: '0', vers: '1', forme: 's' }, 'de', '1'), 'une pièce proche est proposée');
 });
 test('Courbe : début doux / fin douce / S, montée ou descente ; Ligne droite : descentes', () => {
-  assert.equal(resolve('courbe', { sens: 'd', incl: '1', prof: 'o' }), 'cdo1');
-  assert.equal(resolve('courbe', { sens: 'u', incl: '2', prof: 'o' }), 'cro2');
-  assert.equal(resolve('courbe', { sens: 'u', incl: '2', prof: 's' }), null, 'le S n’existe qu’en ½ et 1 niveau');
-  assert.equal(resolve('straight', { incl: '-2' }), 'dn2');
-  assert.equal(resolve('turn', { size: 'm', bank: '0', incl: '-1', dir: 'L' }), 'cvdBigL1');
+  assert.equal(resolve('courbe', { w: 'N', sens: 'd', incl: '1', prof: 'o' }), 'cdo1');
+  assert.equal(resolve('courbe', { w: 'N', sens: 'u', incl: '2', prof: 'o' }), 'cro2');
+  assert.equal(resolve('courbe', { w: 'N', sens: 'u', incl: '2', prof: 's' }), 'crs2', '0.12.0 : le S existe aussi en 2 et 4 niveaux');
+  assert.equal(resolve('courbe', { w: 'w', sens: 'u', incl: '1', prof: 'i' }), 'wcrv1');
+  assert.equal(resolve('straight', { w: 'N', incl: '-2' }), 'dn2');
+  assert.equal(resolve('turn', { w: 'N', size: 'm', bank: '0', incl: '-1', dir: 'L' }), 'cvdBigL1');
 });
 
 console.log('Éditeur : orientation et pentes à la pose');

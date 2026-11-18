@@ -80,7 +80,7 @@ test('options : à l’envers, sans bordures, thème ; ni checkpoint, ni tunnel,
     assert.ok(!flagAllowed(id, 'o', null, 1));
     for (const nb of [0, 1]) { const gb = new GeoBuilder(), glow = new GeoBuilder(); buildTileInto(gb, glow, Track.normalize({ t: id, x: 0, z: 0, l: 2, r: 1, nb, s: 'ice' })); assert.ok(!gb.empty); }
   }
-  assert.equal(FAMILY_ORDER[8], 'carrefour');
+  assert.ok(FAMILY_ORDER.includes('carrefour'));
   assert.equal(resolve('carrefour', { forme: 't' }), 'tee');
   assert.equal(Object.keys(FAMILIES.carrefour.members).length, 2);
 });

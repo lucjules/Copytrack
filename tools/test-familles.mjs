@@ -9,10 +9,11 @@ import { GeoBuilder } from '../js/geo.js';
 import { buildTileInto, stripsFor, styleFor } from '../js/trackGeometry.js';
 import { Track, scriptTrack, b64encode } from '../js/track.js';
 import {
-  PIECES, PIECE_ORDER, sampleLocal, baseY, flagAllowed, cpKind, moverParams, clampMover, profH, profD,
+  PIECES, PIECE_ORDER, sampleLocal, baseY, flagAllowed, cpKind, moverParams, clampMover, profH, profD, arcParams,
 } from '../js/pieces.js';
 import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, isFamilyMember } from '../js/families.js';
 import { CarPhysics } from '../js/physics.js';
+import { ribbonOf, frameLocal } from '../js/ribbons.js';
 import { RaceLogic, placeAtStart } from '../js/raceLogic.js';
 import { Autopilot } from '../js/autopilot.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../js/tracks.js';
@@ -43,21 +44,32 @@ test('Ligne droite : inclinaison plat / ½ / 1 / 2 / 4, montée ou descente ; le
   const m = FAMILIES.straight.members;
   assert.equal(m.straight.incl, '0'); assert.equal(m.gentle.incl, '0.5'); assert.equal(m.slope.incl, '1'); assert.equal(m.steep.incl, '2'); assert.equal(m.steep4.incl, '4');
   assert.deepEqual([m.dn05.incl, m.dn1.incl, m.dn2.incl, m.dn4.incl], ['-0.5', '-1', '-2', '-4'], '0.9.3 : pentes descendantes');
-  for (const [type, tr] of Object.entries(m)) assert.equal(PIECES[type].rise, +tr.incl, type);
+  // 0.12.0 : l'inclinaison est une pente par case ; la route large (3 cases) gagne trois fois plus de niveaux.
+  for (const [type, tr] of Object.entries(m)) assert.equal(PIECES[type].rise, +tr.incl * (tr.w === 'w' ? 3 : 1), type);
+  for (const [type, tr] of Object.entries(m)) assert.equal(PIECES[type].size, tr.w === 'w' ? 3 : 1, type);
+  for (const [type, tr] of Object.entries(m)) assert.deepEqual(PIECES[type].hw || null, { N: null, n: [6, 6], w: [28, 28] }[tr.w], type);
+  assert.equal(Object.keys(m).length, 27, 'trois largeurs × neuf inclinaisons');
 });
 test('Virages : serré / grand / très grand plat et relevé ; une combinaison qui n’existe pas est repoussée', () => {
   assert.equal(PIECES.hugecurve.size, 3); assert.equal(PIECES.hugecurve.rise, 0); assert.equal(PIECES.hugecurve.kind, 'arc');
-  const flat = { incl: '0', dir: 'R' };
+  const flat = { w: 'N', incl: '0', dir: 'R' };
   assert.equal(resolve('turn', { size: 'l', bank: '0', ...flat }), 'hugecurve');
   assert.equal(resolve('turn', { size: 's', bank: '1', ...flat }), null);
   assert.deepEqual([...validValues('turn', { size: 's', bank: '0', ...flat }, 'bank')], ['0']);
   assert.equal(withTrait('turn', { size: 's', bank: '0', ...flat }, 'bank', '1'), 'bank');                      // « relevé » : on prend le plus proche
   assert.equal(withTrait('turn', { size: 'l', bank: '1', ...flat }, 'size', 's'), 'curve');
   // 0.9.2 : l'Inclinaison du virage fonctionne comme celle de la ligne droite (plat, ½, 1, 2, 4) ; le sens ne compte que s'il monte.
-  assert.deepEqual(FAMILIES.turn.traits.find((t) => t.id === 'incl').values.map((v) => v[0]), FAMILIES.straight.traits[0].values.map((v) => v[0]));
-  assert.equal(resolve('turn', { size: 'm', bank: '0', incl: '2', dir: 'L' }), 'cvBigL2');
-  assert.deepEqual([...validValues('turn', { size: 's', bank: '0', incl: '0', dir: 'R' }, 'dir')], ['R']);
-  assert.deepEqual([...validValues('turn', { size: 's', bank: '0', incl: '1', dir: 'R' }, 'dir')].sort(), ['L', 'R']);
+  assert.deepEqual(FAMILIES.turn.traits.find((t) => t.id === 'incl').values.map((v) => v[0]), FAMILIES.straight.traits.find((t) => t.id === 'incl').values.map((v) => v[0]));
+  assert.equal(resolve('turn', { w: 'N', size: 'm', bank: '0', incl: '2', dir: 'L' }), 'cvBigL2');
+  assert.deepEqual([...validValues('turn', { w: 'N', size: 's', bank: '0', incl: '0', dir: 'R' }, 'dir')], ['R']);
+  assert.deepEqual([...validValues('turn', { w: 'N', size: 's', bank: '0', incl: '1', dir: 'R' }, 'dir')].sort(), ['L', 'R']);
+  // 0.12.0 : le très grand virage incliné, les relevés inclinés, les virages étroits et larges
+  assert.equal(resolve('turn', { w: 'N', size: 'l', bank: '0', incl: '-2', dir: 'L' }), 'cvdHugeL2');
+  assert.equal(resolve('turn', { w: 'N', size: 'm', bank: '1', incl: '1', dir: 'L' }), 'bankUL1');
+  assert.equal(resolve('turn', { w: 'n', size: 's', bank: '0', incl: '0', dir: 'R' }), 'ncurve');
+  assert.equal(resolve('turn', { w: 'w', size: 'xl', bank: '0', incl: '4', dir: 'R' }), 'wcvGiant4');
+  assert.deepEqual([...validValues('turn', { w: 'w', size: 'm', bank: '0', incl: '0', dir: 'R' }, 'size')].sort(), ['l', 'm', 'xl'], 'pas de virage serré large');
+  assert.deepEqual([...validValues('turn', { w: 'n', size: 'm', bank: '0', incl: '0', dir: 'R' }, 'bank')], ['0'], 'relevé : largeur normale seulement');
 });
 test('Looping : orientation × taille × 1 à 3 boucles = 12 pièces, toutes à lane ≥ 12·boucles', () => {
   const F = FAMILIES.loop;
@@ -72,22 +84,25 @@ test('Looping : orientation × taille × 1 à 3 boucles = 12 pièces, toutes à 
   }
   assert.equal(PIECES.loopTriple.size, 4);
 });
-test('Virage incliné : 24 pièces montantes + 24 descendantes (droite / gauche × serré / grand / géant × ½, 1, 2, 4), rise = inclinaison signée', () => {
+test('Virage incliné : toutes les combinaisons (largeur × rayon × profil × ½, 1, 2, 4 × droite / gauche), rise = inclinaison signée, rayon de la route normale', () => {
+  // 0.12.0 : normale (4 rayons plats + 3 relevés), étroite (4 rayons), large (3 rayons : pas de serré) : 14 × 4 inclinaisons × 2 sens = 112 par signe.
   for (const sgn of [1, -1]) {
     const inc = Object.entries(FAMILIES.turn.members).filter(([, tr]) => Math.sign(+tr.incl) === sgn);
-    assert.equal(inc.length, 24, sgn > 0 ? 'montants' : 'descendants');      // (0.11.4 : + 8 géants)
+    assert.equal(inc.length, 112, sgn > 0 ? 'montants' : 'descendants');
     for (const [type, tr] of inc) {
-      assert.equal(PIECES[type].kind, 'arc'); assert.equal(PIECES[type].rise, +tr.incl);
-      assert.equal(PIECES[type].size, { s: 1, m: 2, xl: 5 }[tr.size]); assert.equal(PIECES[type].mirror === -1, tr.dir === 'L');
+      const P = PIECES[type];
+      assert.equal(P.kind, tr.bank === '1' ? 'ribbon' : 'arc', type); assert.equal(P.rise, +tr.incl, type);
+      assert.equal(P.size, { s: 1, m: 2, l: 3, xl: 5 }[tr.size] + (tr.w === 'w' ? 1 : 0), type); assert.equal(P.mirror === -1, tr.dir === 'L', type);
+      assert.equal(arcParams(P).R, { s: 16, m: 48, l: 80, xl: 144 }[tr.size], type + ' : rayon');
     }
   }
 });
 test('Courbe (0.9.3) : 20 raccords de pente (montée / descente × début doux, fin douce, S), profil h = rise·H(t), tangentes aux extrémités', () => {
   const ms = Object.entries(FAMILIES.courbe.members);
-  assert.equal(ms.length, 20);
+  assert.equal(ms.length, 72, '0.12.0 : trois largeurs × montée / descente × quatre inclinaisons × trois raccords');
   assert.deepEqual(ms.slice(0, 4).map(([k]) => k), ['crv05', 'crv1', 'crv2', 'crv4'], 'les anciennes Courbes (0.9.2) sont le « début doux » montant');
   for (const [type, tr] of ms) {
-    const P = PIECES[type]; assert.equal(P.kind, 'line'); assert.equal(P.rise, (tr.sens === 'd' ? -1 : 1) * +tr.incl, type);
+    const P = PIECES[type]; assert.equal(P.kind, 'line'); assert.equal(P.rise, (tr.sens === 'd' ? -1 : 1) * +tr.incl * (tr.w === 'w' ? 3 : 1), type);
     assert.equal(P.prof || 'i', tr.prof, type);
     const t = tile({ type, t: type, l: 4 }), o = {}, half = P.size * HALF, sg = Math.sign(P.rise);
     let prevH = -Infinity;
@@ -185,19 +200,21 @@ test('options impossibles refusées : checkpoint sur pente, anneau à l’envers
 });
 
 console.log('Courbes montantes et pièces paramétriques');
-const CURVES = Object.entries(FAMILIES.turn.members).filter(([, tr]) => tr.incl !== '0').map(([type]) => type);
+const CURVES = Object.entries(FAMILIES.turn.members).filter(([, tr]) => tr.incl !== '0' && tr.bank === '0').map(([type]) => type);
+const BANKED = Object.entries(FAMILIES.turn.members).filter(([, tr]) => tr.incl !== '0' && tr.bank === '1').map(([type]) => type);
 for (const type of CURVES) {
   test(`${type} : l’altitude ${PIECES[type].rise > 0 ? 'monte' : 'descend'} de ${Math.abs(PIECES[type].rise)} niveau(x) de l’entrée à la sortie, normale unitaire, bords cohérents avec le maillage`, () => {
     const P = PIECES[type], t = tile({ t: type, l: 1 }), half = P.size * HALF, mir = P.mirror < 0 ? -1 : 1;
     const o = {};
     // Entrée : milieu du bord sud de la route ; sortie : bord est (ou ouest).
     // (arc de centre (half, half) et de rayon (size − ½) case : 0.11.4, aussi le virage géant 5×5)
-    const R = (P.size - 0.5) * 2 * HALF;
+    const R = arcParams(P).R;      // (0.12.0 : virage large : rayon de la route normale, empreinte plus grande d'une case)
     const A = { x: mir * (half - R), z: half };
     const B = { x: mir * half, z: half - R };
     sampleLocal(t, A.x, A.z, o);
     assert.ok(Math.abs(o.h - baseY(t)) < 1e-6, 'entrée à ' + o.h);
-    assert.ok(Math.abs(o.d) < 1e-6, 'sur la ligne centrale');
+    const onAxis = (d) => (P.hw ? Math.abs(d) <= Math.max(0, ROAD_HALF - P.hw[0]) + 1e-6 : Math.abs(d) < 1e-6);      // (route étroite : d recalé sur le bord, voir widthRemap)
+    assert.ok(onAxis(o.d), 'sur la ligne centrale');
     sampleLocal(t, B.x, B.z, o);
     assert.ok(Math.abs(o.h - (baseY(t) + P.rise * LEVEL_H)) < 1e-6, 'sortie à ' + o.h);
     // Hauteur continue et monotone (croissante pour une montée, décroissante pour une descente), normale unitaire inclinée.
@@ -211,7 +228,7 @@ for (const type of CURVES) {
       assert.ok(Math.abs(Math.hypot(o.nx, o.ny, o.nz) - 1) < 1e-9);
       assert.ok(o.ny > 0.3 && o.ny < 1, 'normale ' + o.ny);
       assert.ok(sg * q[1] >= prev - 1e-9); prev = sg * q[1];
-      assert.ok(Math.abs(o.d) < 1e-6);
+      assert.ok(onAxis(o.d));
     }
     // Pente le long de la route égale à la dérivée de la hauteur le long de la ligne centrale.
     const mid = fr[Math.floor(fr.length / 2)], nxt = fr[Math.floor(fr.length / 2) + 1];
@@ -220,6 +237,23 @@ for (const type of CURVES) {
     const along = ((nxt.p[0] - mid.p[0]) * -o.nx + (nxt.p[2] - mid.p[2]) * -o.nz) / (dxz * Math.hypot(o.nx, o.nz));
     assert.ok(Math.abs(Math.hypot(o.nx, o.nz) / o.ny - Math.abs(dy / dxz)) < 0.03, 'pente de la normale ' + (Math.hypot(o.nx, o.nz) / o.ny) + ' vs ' + dy / dxz);
     assert.ok(sg * along > 0.9, 'la normale penche vers l’arrière d’une montée (vers l’avant d’une descente)');
+  });
+}
+for (const type of BANKED) {
+  test(`${type} : virage relevé incliné, la ligne centrale ${PIECES[type].rise > 0 ? 'monte' : 'descend'} de ${Math.abs(PIECES[type].rise)} niveau(x), la route penche vers l’intérieur, maillage fini`, () => {
+    const P = PIECES[type], t = tile({ t: type, l: 6 }), rib = ribbonOf(t, true), F = {}, o = {};
+    rib.pos(0, o); const y0 = o.y; rib.pos(1, o); const y1 = o.y;
+    assert.ok(Math.abs(y0 - baseY(t)) < 1e-6 && Math.abs(y1 - (baseY(t) + P.rise * LEVEL_H)) < 1e-6, `${y0} → ${y1}`);
+    const mir = P.mirror < 0 ? -1 : 1, a = arcParams(P);
+    for (const u of [0.25, 0.5, 0.75]) {
+      frameLocal(rib, u, F);
+      assert.ok(Math.abs(F.nx * F.tx + F.ny * F.ty + F.nz * F.tz) < 1e-6, 'normale ⟂ tangente');
+      const cx = mir * a.cx - F.px, cz = a.cz - F.pz, inward = (F.nx * cx + F.nz * cz) / Math.hypot(cx, cz);
+      assert.ok(inward > 0.25, `penche vers l’intérieur (${inward.toFixed(2)})`);
+    }
+    const gb = new GeoBuilder(), glow = new GeoBuilder();
+    buildTileInto(gb, glow, t, null);
+    assert.ok(!gb.empty && gb.pos.every(Number.isFinite));
   });
 }
 test('Courbe gauche = miroir exact de la courbe droite (hauteur, distance à l’axe, normale)', () => {
