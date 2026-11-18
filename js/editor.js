@@ -121,13 +121,24 @@ export class EditorSession {
     this.hIndex = 0;
     this.histSel = [null];       // sélection de l'Inspection rangée avec chaque pas d'historique
     this.histRect = [null];      // et rectangle de sélection de zone (Q) : annuler / rétablir le restaure (avant : il restait tel quel)
+    // Enregistré ou pas (history.js : isDirty) : un circuit rouvert depuis « Mes circuits » est enregistré ; un brouillon qui ne l'était pas le reste.
+    this._savedSnap = state.dirty ? null : this._saveKey();
+
+    // Retour d'un essai : l'historique d'annulation, le presse-papiers, les options armées… reviennent (history.js : _keepState). Seulement si l'état rouvert
+    // est exactement celui qu'on a quitté.
+    const keep = app._editorKeep;
+    app._editorKeep = null;
+    const kept = !!(keep && state.keepId === keep.id && keep.history[keep.hIndex] === this.history[0]);
+    if (kept) this._restoreKeep(keep);
 
     // Le gizmo (TransformControls) s'abonne aux clics AVANT l'éditeur : il décide le premier s'il est saisi.
     this.inspector = new Inspector(this);
     this._bind();
     this._buildEraseBar();
     this._buildPalette();
+    if (kept) this.inspector.restore(this.histSel[this.hIndex]);
     this._refreshUI();
+    this._refreshSaved();
     app.camera.fov = 55;
     app.camera.up.set(0, 1, 0);
     app.camera.updateProjectionMatrix();
@@ -160,10 +171,16 @@ export class EditorSession {
   update(dt) {
     const input = this.app.input;
     if (this.app.ui.modalOpen) return this._render(dt);
-    if (input.hit('Escape') && this.menuOpen) { this.toggleMenu(false); return this._render(dt); }
-    if ((input.hit('Escape') || input.padEdges.delete('pause')) && this.inspector.active) { this.inspector.clear(); return this._render(dt); }
-    if ((input.hit('Escape') || input.padEdges.delete('pause')) && (this.pasting || this.sel)) { this.clearSel(); return this._render(dt); }
-    if (input.hit('Escape') || input.padEdges.delete('pause')) { this.app.leaveEditor(); return; }
+    // Échap (ou le bouton pause de la manette) est lu UNE fois : hit() consomme la touche. Avant, le premier test (menu ouvert ?) la consommait
+    // même menu fermé, et Échap ne refermait plus l'inspecteur, ne retirait plus la sélection et ne ramenait plus au menu.
+    const esc = input.hit('Escape'), pause = input.padEdges.delete('pause');
+    if (esc || pause) {
+      if (this.menuOpen) this.toggleMenu(false);
+      else if (this.inspector.active) this.inspector.clear();
+      else if (this.pasting || this.sel) this.clearSel();
+      else { this.app.leaveEditor(); return; }
+      return this._render(dt);
+    }
     const shift = input.down('ShiftLeft', 'ShiftRight');
     const ctrl = input.down('ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight');
     const selMode = this.tool === 'select' && this.sel && !this.pasting;
@@ -276,7 +293,9 @@ export class EditorSession {
     document.removeEventListener('pointerdown', this._h.outside, true);
     document.removeEventListener('keydown', this._h.menuKey);
     this.toggleMenu(false);
+    this.disposed = true;
     clearTimeout(this._draftT);
+    clearTimeout(this._badgeT);
     setEditorDraft(this.exportState());
     this.inspector.dispose();
     // Horizon et brouillard du profil de qualité reviennent avec la course.
@@ -290,6 +309,8 @@ export class EditorSession {
       o.traverse((c) => { if (c.geometry) c.geometry.dispose(); });
       o.removeFromParent();
     }
+    // (0.12.0 : leurs matériaux aussi ; ceux de l'aperçu sont partagés, libérés juste après)
+    for (const o of [this.highlight, this.marker, this.footprint, this.grid]) if (o && o.material) o.material.dispose();
     this.previewMat.dispose();
     this.previewGlow.dispose();
   }

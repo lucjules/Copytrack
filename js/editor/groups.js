@@ -12,6 +12,11 @@ export const groupMethods = {
     if (!g) return true;
     return !(this.hiddenGroups && this.hiddenGroups.has(g)) && !(this.lockedGroups && this.lockedGroups.has(g));
   },
+  // Pourquoi un objet n'est pas modifiable (calque masqué ou verrouillé).
+  _layerWhy(o) {
+    const g = o && o.g, name = (this.track.groups && this.track.groups[g]) || `Groupe ${g}`;
+    return this.hiddenGroups && this.hiddenGroups.has(g) ? `Une pièce du calque masqué « ${name} » est à cet endroit : affiche-le (Calques) pour la remplacer.` : `Pièce du calque verrouillé « ${name} » : déverrouille-le (Calques) pour la remplacer.`;
+  },
 
   _groupCounts() {
     const c = new Map(), bump = (g, k) => { const v = c.get(g) || [0, 0]; v[k]++; c.set(g, v); };
@@ -35,7 +40,7 @@ export const groupMethods = {
   assignSelection(g) {
     const tiles = this._selTiles(), decos = this._selDecos();
     if (!tiles.length && !decos.length) { this.app.ui.flash('Sélectionne d’abord des pièces (outil Sélection, Q).'); return 0; }
-    for (const t of tiles) { this.track.remove(t); this.track.add({ ...t, g }); }
+    for (const t of tiles) t.g = Math.max(0, Math.min(MAX_GROUP, g | 0));      // (en place : l'ordre du circuit et la pièce inspectée ne changent pas)
     for (const d of decos) { if (g) d.g = g; else delete d.g; }
     // La sélection était « le groupe N » (selectGroup) : elle suit ses membres dans leur nouveau groupe ; retirés de tout groupe, il n'y a plus de filtre possible :
     // la zone est abandonnée (sinon le rectangle se mettrait à désigner toutes les pièces qu'il contient).

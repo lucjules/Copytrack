@@ -19,7 +19,12 @@ export const editorFlowMethods = {
       this.mode = 'editor';
       this.ui.showScreen(null);
       this.ui.setMode('editor');
-      this.session = new EditorSession(this, state || getEditorDraft() || {});
+      // Le brouillon d'une version d'avant 0.12.0 ne dit pas s'il était enregistré : on le considère modifié (au pire, un enregistrement de trop).
+      let st = state;
+      if (!st) { st = getEditorDraft() || {}; if (st.code && st.dirty === undefined) st.dirty = true; }
+      // Un autre circuit s'ouvre : l'état gardé pour un retour d'essai ne le concerne pas.
+      if (!st.keepId) this._editorKeep = null;
+      this.session = new EditorSession(this, st);
       this.audio.music.play('menu');
       this._resize();
     } finally { this._openingEditor = false; }
@@ -74,8 +79,17 @@ export const editorFlowMethods = {
     });
   },
 
+  // Quitter l'éditeur enregistre le circuit dans « Mes circuits » s'il a changé (0.12.0) : avant, seul l'unique brouillon le gardait, et la session suivante l'écrasait.
+  // Si l'enregistrement échoue (stockage plein), on reste dans l'éditeur : le message dit quoi faire.
   leaveEditor() {
+    const ed = this.session && this.session.kind === 'editor' ? this.session : null;
+    const r = ed ? ed.autoSave() : '';
+    if (r === 'failed') return false;
+    const name = ed ? ed.track.name : '';
+    this._editorKeep = null;
     this.showMenu('menu');
+    if (r === 'saved') this.ui.flash(`« ${name} » enregistré dans « Mes circuits ».`, 2.6);
+    return true;
   },
 
   // Test depuis l'éditeur. verify : course complète qui vérifie le circuit (temps de l'auteur).
@@ -98,7 +112,7 @@ export const editorFlowMethods = {
       if (run) saveProof(track, run);      // la course de vérification : le serveur la rejouera à la publication (js/authorProof.js)
     }
     time = track.vt;
-    if (this.editorState) this.editorState.code = track.encode();
+    if (this.editorState) { this.editorState.code = track.encode(); }
     const m = track.derivedMedals;
     setTimeout(() => {
       this.ui.modal({

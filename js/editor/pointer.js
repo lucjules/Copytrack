@@ -63,7 +63,7 @@ export const pointerMethods = {
       const items = [...document.querySelectorAll('#ed-menu button')], i = items.indexOf(document.activeElement);
       if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
       else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
-      else if (e.key === 'Escape') { e.preventDefault(); this.toggleMenu(false); }
+      // (Échap : lu par EditorSession.update, qui referme d'abord le menu ; le traiter ici aussi le comptait deux fois.)
     };
     document.addEventListener('pointerdown', this._h.outside, true);
     document.addEventListener('keydown', this._h.menuKey);
@@ -90,6 +90,8 @@ export const pointerMethods = {
     if (this.camLocked || this.inspector.gizmoBusy) return;
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, button: e.button, type: e.pointerType, moved: false });
     if (this.pointers.size === 2) this._pinch = null;
+    // Geste à plusieurs doigts (pincer, tourner) : aucun doigt relevé ensuite ne pose de pièce (avant 0.12.0, le doigt resté immobile en posait une).
+    if (this.pointers.size >= 2) this._multiTouch = true;
     if (e.pointerType === 'mouse' && e.button === 1) e.preventDefault();
     if (e.pointerType === 'mouse' && e.button === 0) {
       this._updateHover();
@@ -159,6 +161,9 @@ export const pointerMethods = {
         this._lastPaint = null;
         this._commit();
       }
+    } else if (this._multiTouch) {
+      if (this.pointers.size === 0) this._multiTouch = false;
+      if (this.selDrag) this._selectUp();
     } else if (this.selDrag) {
       this._selectUp();
     } else if (!p.moved && this.pointers.size === 0) {

@@ -252,9 +252,10 @@ export const selectionMethods = {
 
   doPaste() {
     if (!this.clip || !this.hover) return;
-    const res = pasteClip(this.track, this.clip, this.hover.cx, this.hover.cz, this.level);
+    const res = pasteClip(this.track, this.clip, this.hover.cx, this.hover.cz, this.level, (o) => this._layerOk(o));
     this.app.audio.place();
-    if (res.skipped) this.app.ui.flash(`${res.skipped} pièce(s) ignorée(s) (départ en double ou hors des niveaux).`);
+    if (res.guarded) this.app.ui.flash(`${res.guarded} pièce(s) non collée(s) : la place est prise par un calque verrouillé ou masqué.`, 3);
+    else if (res.skipped) this.app.ui.flash(`${res.skipped} pièce(s) ignorée(s) (départ en double, départ du circuit à garder, ou hors des niveaux).`, 3);
     else if (res.lift) this.app.ui.flash(`Zone posée ${res.lift} niveau${res.lift > 1 ? 'x' : ''} plus haut : une de ses pièces passerait sous le sol.`, 3);
     this._changed();
     this._commit();

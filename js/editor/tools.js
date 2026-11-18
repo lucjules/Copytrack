@@ -131,6 +131,9 @@ export const toolMethods = {
       const c = conflicts[0];
       if (c.t === tile.t && c.x === tile.x && c.z === tile.z && c.l === tile.l && c.r === tile.r && OPT_KEYS.every((k) => (c[k] | 0) === (norm[k] | 0))) return;
     }
+    // Une pièce d'un calque verrouillé ou masqué (groups.js) n'est jamais remplacée : avant 0.12.0 la pose l'effaçait sans un mot, même invisible.
+    const guarded = conflicts.find((c) => !this._layerOk(c));
+    if (guarded) { if (!painting) { this.app.ui.flash(this._layerWhy(guarded)); this.app.audio.error(); } return; }
     for (const c of conflicts) this.track.remove(c);
     if (tile.t === 'start') for (const s of this.track.tiles.filter((x) => x.t === 'start')) this.track.remove(s);
     const dropped = this._droppedOptions(tile, norm);
@@ -248,8 +251,10 @@ export const toolMethods = {
   },
 
   // Prédicat de la zone : mêmes pièces que la cible (même revêtement pour un remplissage de revêtement, même type pour un remplissage de type).
+  // (0.12.0 : la zone s'arrête aux pièces d'un calque verrouillé ou masqué, comme les autres outils.)
   _fillMatcher(start) {
-    return this.tool.startsWith('fill-surf:') ? (t) => (t.s || '') === (start.s || '') : (t) => t.t === start.t;
+    const ok = (t) => this._layerOk(t);
+    return this.tool.startsWith('fill-surf:') ? (t) => ok(t) && (t.s || '') === (start.s || '') : (t) => ok(t) && t.t === start.t;
   },
 
   // Aperçu AVANT validation : les cases de la zone que le clic modifierait (cache par pièce visée, outil et état du circuit : le parcours n'est pas
@@ -449,12 +454,15 @@ export const toolMethods = {
     }
     const t = this._targetTile();
     if (!t) return;
+    if (!this.guidedAllows(t.t)) { this.app.ui.flash('Disponible en mode complet : « Tout afficher » dans la palette.', 2.5); return; }
+    // Comme un choix dans la palette (setTool) : le collage en cours, la zone sélectionnée et l'inspection sont quittés. Avant 0.12.0, la pipette changeait l'outil
+    // directement : un collage restait « armé » et R tournait le presse-papiers au lieu de la pièce.
     this.fillMode = false;
-    this.tool = t.t; this.rot = t.r; this.level = t.l;
     for (const k of OPT_KEYS) this.opts[k] = t[k] | 0;                  // la pipette reprend aussi les options de la pièce
-    this.autoLevel = null;
+    this.setTool(t.t);
+    this.rot = t.r;
+    this.setLevel(t.l);
     this.previewKey = '';
-    this.setTab('pieces');
     this._refreshUI();
     this.app.ui.flash(`Pipette : ${pieceLabel(t.t)}, niveau ${t.l}`);
   },

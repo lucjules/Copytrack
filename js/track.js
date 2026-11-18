@@ -319,6 +319,7 @@ export class Track {
     if (p.ambiance !== undefined) this.ambiance = cleanAmbiance(p.ambiance);
     if (p.scripts !== undefined) this.scripts = sanitizeScripts(p.scripts);
     for (const r of RULES) if (p[r.key] !== undefined) this[r.key] = r.clean(p[r.key]);
+    this.version++;      // (0.12.0 : les règles de course comptent pour le vérificateur de l'éditeur, qui met ses constats en cache par version)
   }
 
   // Signature du contenu (pièces, décorations, règles de course), utilisée pour la

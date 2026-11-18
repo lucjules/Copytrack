@@ -1,8 +1,8 @@
 // État du circuit dans l'éditeur : instantanés, annuler / rétablir, enregistrement, nouveau circuit, essai.
 // Ces méthodes s'ajoutent au prototype de EditorSession (voir editor.js) : `this` est l'instance.
-import { CELL } from '../constants.js';
+import { CELL, MAX_TRACK_CODE_CHARS } from '../constants.js';
 import { PIECES } from '../pieces.js';
-import { Track, tileToRow, rowToTile } from '../track.js';
+import { Track, tileToRow, rowToTile, lossText, lossBlocking } from '../track.js';
 import { setEditorDraft, saveMyTrack, newId, wroteOk } from '../storage.js';
 import { centerlineWorld } from '../ribbons.js';
 export const historyMethods = {
@@ -16,7 +16,31 @@ export const historyMethods = {
       rot: this.rot,
       level: this.level,
       cam: { tx: this.target.x, tz: this.target.z, dist: this.dist, yaw: this.yaw, pitch: this.pitch },
+      dirty: this.isDirty(),      // (0.12.0 : un brouillon rouvert sait s'il reste quelque chose à enregistrer)
     };
+  },
+
+  // ---------------------------------------------------------------- Enregistré ou pas (0.12.0)
+  // Le circuit diffère-t-il de ce qui est enregistré dans « Mes circuits » ? `_savedSnap` est l'instantané du dernier enregistrement (ou de l'ouverture d'un
+  // circuit enregistré) ; null : rien d'enregistré pour cet état.
+  isDirty() { return this._savedSnap !== this._saveKey(); },
+  _markSaved() { this._savedSnap = this._saveKey(); this._lastDirty = undefined; this._refreshSaved(); },
+  // Ce qui compte pour « enregistré » : le contenu (instantané d'historique) ET la vérification de l'auteur (une course de vérification change le code partagé).
+  _saveKey() { return this._snapshot() + '#' + this.track.vt + ':' + this.track.vh; },
+  _refreshSaved() {
+    const d = this.isDirty();
+    if (d === this._lastDirty) return;
+    this._lastDirty = d;
+    const el = typeof document !== 'undefined' ? document.getElementById('ed-saved') : null;
+    if (el) { el.classList.toggle('dirty', d); el.title = d ? 'Modifications non enregistrées (Ctrl + S)' : 'Enregistré dans « Mes circuits »'; el.setAttribute('aria-label', el.title); }
+  },
+  // Un circuit qui ne contient que le départ (nouveau circuit jamais touché) : rien à protéger.
+  _isTrivial() { return !this.entryId && !this.track.decos.length && this.track.tiles.every((t) => t.t === 'start'); },
+  // Enregistrement automatique quand on quitte l'éditeur, qu'on ouvre un autre circuit ou qu'on en commence un nouveau : avant 0.12.0, « Retour » ne gardait le travail que dans
+  // l'unique brouillon, que la session suivante écrasait (le circuit modifié était perdu sans un mot). Renvoie 'saved', 'failed' ou '' (rien à faire).
+  autoSave() {
+    if (!this.isDirty() || this._isTrivial()) return '';
+    return this.save(true) ? 'saved' : 'failed';
   },
 
   // ---------------------------------------------------------------- Historique
@@ -48,6 +72,7 @@ export const historyMethods = {
     }
     this._changed(false);
     this.needsRebuild = true;
+    this._lastDirty = undefined; this._refreshSaved();
     this.inspector.restore(this.histSel[this.hIndex]);   // l'objet inspecté revient avec l'état annulé / rétabli
     // Le rectangle de sélection de zone aussi (copié : le modifier ensuite ne change pas l'historique).
     const r = this.histRect && this.histRect[this.hIndex];
@@ -60,6 +85,7 @@ export const historyMethods = {
     if (!this.histRect) this.histRect = this.histSel.map(() => null);
     const snap = this._snapshot();
     if (snap === this.history[this.hIndex]) { this.histSel[this.hIndex] = this.inspector.describe(); this.histRect[this.hIndex] = this.sel ? { ...this.sel } : null; return; }
+    this._lastDirty = undefined;
     this.history.length = this.hIndex + 1;
     this.histSel.length = this.hIndex + 1;
     this.histRect.length = this.hIndex + 1;
@@ -68,6 +94,7 @@ export const historyMethods = {
     this.histRect.push(this.sel ? { ...this.sel } : null);
     if (this.history.length > 200) { this.history.shift(); this.histSel.shift(); this.histRect.shift(); }
     this.hIndex = this.history.length - 1;
+    this._refreshSaved();
   },
 
   undo() {
@@ -93,17 +120,32 @@ export const historyMethods = {
     this._draftT = setTimeout(() => setEditorDraft(this.exportState()), 400);
   },
 
-  save() {
-    const entry = saveMyTrack({ id: this.entryId || newId(), name: this.track.name, code: this.track.encode() });
-    this.entryId = entry.id;
+  // silent : enregistrement automatique (l'appelant le dit lui-même).
+  save(silent = false) {
+    const code = this.track.encode();
+    // Un code trop long ne tient pas dans « Mes circuits » (MAX_TRACK_CODE_CHARS) : on le dit, au lieu d'accuser le stockage du navigateur.
+    if (code.length > MAX_TRACK_CODE_CHARS) {
+      this.app.ui.flash(`Circuit trop grand pour être enregistré (${Math.round(code.length / 1000)} Ko de code, ${Math.round(MAX_TRACK_CODE_CHARS / 1000)} Ko au plus) : retire des pièces ou des décorations.`, 7);
+      this.app.audio.error();
+      return false;
+    }
+    const entry = saveMyTrack({ id: this.entryId || newId(), name: this.track.name, code });
     const ok = wroteOk();
+    if (ok) { this.entryId = entry.id; this._markSaved(); }
     setEditorDraft(this.exportState());
-    if (ok) this.app.ui.flash('Circuit enregistré dans « Mes circuits »');
-    else { this.app.ui.flash('Enregistrement impossible : le stockage du navigateur est plein ou bloqué. Copie le code du circuit (Partager) pour ne pas le perdre.', 7); this.app.audio.error(); }
+    if (ok && !silent) this.app.ui.flash('Circuit enregistré dans « Mes circuits »');
+    else if (!ok) { this.app.ui.flash('Enregistrement impossible : le stockage du navigateur est plein ou bloqué. Copie le code du circuit (Partager) pour ne pas le perdre.', 7); this.app.audio.error(); }
     return ok;
   },
 
+  // Message d'un enregistrement automatique (après autoSave).
+  _autoSaveNote(r) {
+    if (r === 'saved') this.app.ui.flash(`« ${this.track.name} » enregistré dans « Mes circuits ».`, 2.4);
+  },
+
   newTrack() {
+    const r = this.autoSave();
+    if (r === 'failed') return;
     this.track.clear();
     this.track.name = 'Mon circuit';
     this.track.add({ t: 'start', x: 0, z: 0, l: 0, r: 0 });
@@ -112,23 +154,63 @@ export const historyMethods = {
     this.target.set(CELL / 2, this.levelY(), CELL / 2);
     this._commit();
     this._changed();
+    this._savedSnap = null; this._markSaved();      // un circuit neuf n'a rien à enregistrer
+    this._autoSaveNote(r);
   },
 
+  // ---------------------------------------------------------------- Aller-retour éditeur → essai → éditeur (0.12.0)
+  // L'essai remplace la session de l'éditeur par une course ; au retour, une session neuve est créée. Avant 0.12.0 tout ce qui n'était pas dans le code du circuit se
+  // perdait à chaque essai : l'historique d'annulation, le presse-papiers, les options armées, les réglages de décor, les calques masqués… On le confie à
+  // l'application le temps de l'essai, et la session suivante le reprend si elle rouvre exactement le même état.
+  _keepState() {
+    return {
+      id: Date.now() + ':' + Math.random(),
+      history: this.history, hIndex: this.hIndex, histSel: this.histSel, histRect: this.histRect,
+      clip: this.clip, opts: { ...this.opts }, famTraits: { ...this.famTraits }, deco: { ...this.deco }, surfParam: { ...this.surfParam },
+      hiddenGroups: this.hiddenGroups ? [...this.hiddenGroups] : [], lockedGroups: this.lockedGroups ? [...this.lockedGroups] : [],
+      focusLevel: this.focusLevel, freeCam: !!this.freeCam, showGrid: this.showGrid, lastBrush: this._lastBrush, hinted: this._hinted ? [...this._hinted] : [],
+      savedSnap: this._savedSnap, lastTile: this._lastTile ? this.track.tiles.indexOf(this._lastTile) : -1, ui: this._uiKeep ? this._uiKeep() : null,
+    };
+  },
+
+  _restoreKeep(k) {
+    this.history = k.history; this.hIndex = k.hIndex; this.histSel = k.histSel; this.histRect = k.histRect;
+    this.clip = k.clip; this.opts = { ...this.opts, ...k.opts }; this.famTraits = k.famTraits; this.deco = { ...this.deco, ...k.deco }; this.surfParam = k.surfParam;
+    if (k.hiddenGroups.length) { this.hiddenGroups = new Set(k.hiddenGroups); for (const g of k.hiddenGroups) this.view.setGroupVisible(g, false); }
+    if (k.lockedGroups.length) this.lockedGroups = new Set(k.lockedGroups);
+    this.focusLevel = k.focusLevel; if (k.focusLevel) this.needsRebuild = true;
+    this.freeCam = k.freeCam; this.showGrid = k.showGrid; this._lastBrush = k.lastBrush; this._hinted = new Set(k.hinted);
+    this._savedSnap = k.savedSnap;
+    if (k.lastTile >= 0) this._lastTile = this.track.tiles[k.lastTile];
+    this._keptUi = k.ui;
+  },
+
+  // Remplace le circuit de l'éditeur par celui d'un code (Importer, « Charger dans l'éditeur »). Tout est repris, y compris la logique, les noms de groupes, l'auteur
+  // et la vérification (avant 0.12.0 la logique et les groupes se perdaient : la signature changeait et la vérification de l'auteur avec).
   loadCode(code) {
     const t = Track.decode(code);
-    this.track.clear();
-    for (const tile of t.tiles) this.track.add(tile);
-    for (const d of t.decos) this.track.addDeco(d);
-    this.track.name = t.name;
-    this.track.decor = t.decor;
-    this.track.laps = t.laps;
-    this.track.setParams(t);
-    this.track.vt = t.vt; this.track.vh = t.vh;
+    const r = this.autoSave();
+    if (r === 'failed') return;
+    const tr = this.track;
+    tr.clear();
+    for (const tile of t.tiles) tr.add(tile);
+    for (const d of t.decos) tr.addDeco(d);
+    tr.name = t.name;
+    tr.author = t.author;
+    tr.decor = t.decor;
+    tr.laps = t.laps;
+    tr.setParams(t);
+    tr.groups = { ...t.groups };
+    tr.lg = t.lg ? JSON.parse(JSON.stringify(t.lg)) : null;
+    tr.vt = t.vt; tr.vh = t.vh;
+    tr.version++;
     this._applyDecor();
     this.entryId = null;
     this.recenter();
     this._commit();
     this._changed();
+    this._autoSaveNote(r);
+    if (lossBlocking(t)) this.app.ui.flash(lossText(t) + ' Ce que tu enregistres sera une copie incomplète.', 7);
   },
 
   recenter() {
@@ -154,6 +236,14 @@ export const historyMethods = {
     else this.pitch = this._prevPitch || 0.95;
   },
 
+  // État confié à l'application avant un essai (voir _keepState) ; l'identifiant suit l'état exporté.
+  _stateForTest() {
+    const st = this.exportState();
+    this.app._editorKeep = this._keepState();
+    st.keepId = this.app._editorKeep.id;
+    return st;
+  },
+
   testHere() {
     const t = this._targetTile();
     if (!t || ['ring', 'area'].includes(PIECES[t.t].kind)) { this.app.ui.flash('Vise une pièce de route.'); this.app.audio.error(); return; }
@@ -170,7 +260,7 @@ export const historyMethods = {
     const a = pts[0], b = pts[1];
     const yaw = Math.atan2(-(b[0] - a[0]), -(b[2] - a[2]));
     const gs = (t.v && PIECES[t.t].kind !== 'ribbon' && PIECES[t.t].kind !== 'loop') || this.track.flip0 ? -1 : 1;
-    this.app.testTrack(this.exportState(), { x: a[0] + (b[0] - a[0]) * 0.5, y: a[1], z: a[2] + (b[2] - a[2]) * 0.5, yaw, gs });
+    this.app.testTrack(this._stateForTest(), { x: a[0] + (b[0] - a[0]) * 0.5, y: a[1], z: a[2] + (b[2] - a[2]) * 0.5, yaw, gs });
   },
 
   // Phase 3 : un simple essai ne demande plus d'arrivée (on roule librement) ; la vérification, elle, en exige une.
@@ -181,6 +271,6 @@ export const historyMethods = {
       this.app.audio.error();
       return;
     }
-    this.app.testTrack(this.exportState(), null, verify);
+    this.app.testTrack(this._stateForTest(), null, verify);
   },
 };

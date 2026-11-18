@@ -612,7 +612,24 @@ export const paletteMethods = {
       this.eraseBar.classList.toggle('hidden', this.tool !== 'erase');
       this.eraseBar.querySelectorAll('[data-ef]').forEach((b) => b.classList.toggle('on', b.dataset.ef === this.eraseFilter));
     }
-    // Plus de bloc de statistiques en haut à gauche : seulement une pastille quand le circuit a un défaut.
+    this._refreshBadge();
+    const root = document.getElementById('editor');
+    const top = document.querySelector('#editor .ed-top'), pal = document.getElementById('ed-palette');
+    if (top) root.style.setProperty('--ed-top-h', top.offsetHeight + 'px');
+    if (pal) root.style.setProperty('--ed-pal-h', pal.offsetHeight + 'px');
+    this._refreshParam();
+    this._refreshDeco();
+  },
+
+  // Pastille des problèmes. Le vérificateur relit tout le circuit : sur un petit circuit on le fait tout de suite ; sur un grand (plus de 600 pièces), un quart de
+  // seconde après la dernière modification, pour qu'un glissé qui pose vingt pièces ne relance pas vingt vérifications (0.12.0).
+  _refreshBadge() {
+    if (this._joinKey === this.track.version || this.track.tiles.length <= 600) { this._drawBadge(); return; }
+    clearTimeout(this._badgeT);
+    this._badgeT = setTimeout(() => { this._badgeT = 0; if (!this.disposed) this._drawBadge(); }, 250);
+  },
+
+  _drawBadge() {
     // Pastille : bloquants et avertissements (les conseils « info » ne comptent pas) ; un clic ouvre la fenêtre des problèmes (selection.js : showIssues).
     const found = this._tileIssues();
     const errs = this.track.validate().concat(found.filter((i) => i.level !== 'info').map((i) => i.msg));
@@ -624,14 +641,8 @@ export const paletteMethods = {
       warn.textContent = errs.length ? `${hard ? '⛔' : '⚠'} ${errs.length}` : tips ? `ℹ ${tips}` : '';
       warn.title = errs.length ? `${errs.length} problème${errs.length > 1 ? 's' : ''} : cliquer pour le détail` : `${tips} conseil${tips > 1 ? 's' : ''} : cliquer pour le détail`;
       warn.setAttribute('aria-label', warn.title);
-      warn.onclick = () => { this.showIssues(); this._markIssues(found.filter((i) => i.level !== 'info')); };   // la fenêtre détaille ; les pièces en cause clignotent
+      warn.onclick = () => { const f = this._tileIssues(); this.showIssues(); this._markIssues(f.filter((i) => i.level !== 'info')); };   // la fenêtre détaille ; les pièces en cause clignotent
     }
-    const root = document.getElementById('editor');
-    const top = document.querySelector('#editor .ed-top'), pal = document.getElementById('ed-palette');
-    if (top) root.style.setProperty('--ed-top-h', top.offsetHeight + 'px');
-    if (pal) root.style.setProperty('--ed-pal-h', pal.offsetHeight + 'px');
-    this._refreshParam();
-    this._refreshDeco();
   },
 
   toggleMenu(open = !this.menuOpen) {

@@ -234,7 +234,7 @@ export const wiringMethods = {
       case 'new':
         this.ui.modal({
           title: 'Nouveau circuit ?',
-          body: '<p>Le circuit actuel sera remplacé (pense à l’enregistrer d’abord).</p>',
+          body: '<p>Le circuit actuel est enregistré dans « Mes circuits », puis remplacé par un circuit vide.</p>',
           actions: [{ label: 'Annuler' }, { label: 'Nouveau', primary: true, onClick: () => ed.newTrack() }],
         });
         break;
