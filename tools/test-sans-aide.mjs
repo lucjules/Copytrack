@@ -58,20 +58,30 @@ test('décollage d\'un bord plat : la voiture bascule nez en bas, d\'autant plus
   for (const [kmh, want] of [[39, 65], [78, 38], [140, 26], [225, 16]]) assert.ok(Math.abs(deg(kmh) - want) / want < 0.25, `${kmh} km/h : ${deg(kmh).toFixed(1)} °/s (PolyTrack ${want})`);
   assert.ok(deg(60) > deg(120) && deg(120) > deg(240));
 });
-test('en vol, la rotation est GARDÉE (aucun redressement) ; le volant n\'y change rien, les gaz penchent le nez d\'un rien ; l\'aérofrein l\'amortit (≈ 1 /s, PolyTrack 28 → 7 °/s en 1,6 s)', () => {
-  const none = edge(150), gas = edge(150, { throttle: true }), steer = edge(150, { steer: 1 }), brake = edge(150, { brake: true });
+test('en vol, la rotation est GARDÉE (aucun redressement) ; l\'aérofrein l\'amortit (≈ 1 /s, PolyTrack 28 → 7 °/s en 1,6 s) ; 0.12.3 : les pédales penchent la voiture d\'un angle borné, le volant la tourne en douceur', () => {
+  const none = edge(150), gas = edge(150, { throttle: true }), steer = edge(150, { steer: 1 }), brake = edge(150, { brake: true }), both = edge(150, { brake: true, throttle: true });
   const at = (rows, t) => rows.find((r) => r.t >= t);
   const r0 = at(none, 0.05).rate, r1 = at(none, 1.05).rate;
   assert.ok(r1 / r0 > 0.85 && r1 / r0 <= 1, `sans commande : ${(r0 * 57.3).toFixed(1)} → ${(r1 * 57.3).toFixed(1)} °/s en 1 s`);
   assert.ok(at(none, 1).pitch < -0.3, 'le nez a piqué de plus de 17° en une seconde');
-  assert.deepEqual(steer.slice(0, 100).map((r) => [r.pitch, r.yaw]), none.slice(0, 100).map((r) => [r.pitch, r.yaw]), 'volant : aucun effet en l\'air');
-  // Gaz (0.11.2) : le nez descend d'un rien (PolyTrack : sous 0,5 °/s², la précision de la mesure) ; le cap ne bouge pas.
-  const dGas = (at(none, 1.5).pitch - at(gas, 1.5).pitch) * 57.3;
-  assert.ok(dGas > 0.2 && dGas < 1, `gaz : ${dGas.toFixed(2)}° de plus vers le bas après 1,5 s`);
+  // Gaz : le nez descend vers CAR.airLean de plus (≈ 22°), pas au-delà : aucun tour complet aux pédales ; le cap ne bouge pas.
+  const dGas = at(none, 1.5).pitch - at(gas, 1.5).pitch;
+  assert.ok(dGas > 0.8 * CAR.airLean && dGas <= CAR.airLean + 1e-9, `gaz : ${(dGas * 57.3).toFixed(1)}° de plus vers le bas après 1,5 s (borne ${(CAR.airLean * 57.3).toFixed(0)}°)`);
+  const dGasMax = Math.max(...gas.slice(0, Math.min(gas.length, none.length)).map((r, i) => none[i].pitch - r.pitch));
+  assert.ok(dGasMax <= CAR.airLean + 1e-9, 'jamais plus que la bascule maximale, même en tenant les gaz tout le vol');
   assert.deepEqual(gas.slice(0, 100).map((r) => r.yaw), none.slice(0, 100).map((r) => r.yaw), 'gaz : le cap ne bouge pas');
+  // Volant : le cap tourne en douceur (≤ CAR.airYaw), du côté du volant (à droite : le cap diminue) ; l'assiette ne change pas.
+  assert.deepEqual(steer.slice(0, 100).map((r) => r.pitch), none.slice(0, 100).map((r) => r.pitch), 'volant : l\'assiette ne change pas');
+  const dYaw = at(none, 1).yaw - at(steer, 1).yaw;
+  assert.ok(dYaw > 0.2 && dYaw < CAR.airYaw, `volant à droite : ${(dYaw * 57.3).toFixed(1)}° de rotation en 1 s`);
+  for (let i = 1; i < Math.min(80, steer.length); i++) assert.ok(Math.abs((steer[i].yaw - steer[i - 1].yaw) - (none[i].yaw - none[i - 1].yaw)) / DT <= CAR.airYaw + 1e-9, 'jamais plus vite que CAR.airYaw');
+  // Frein : l'aérofrein amortit la rotation (≈ 1 /s) et le nez remonte (bascule) ; les deux pédales ensemble : l'aérofrein seul, sans bascule.
   const b0 = at(brake, 0.05).rate, b1 = at(brake, 1.05).rate, k = Math.log(b0 / b1);
   assert.ok(Math.abs(k - CAR.airBrake) < 0.15, `aérofrein : ${k.toFixed(2)} /s`);
   assert.ok(Math.abs(at(brake, 2).pitch) < 0.55 * Math.abs(at(none, 2).pitch), `freiner en l'air garde la voiture bien plus à plat (${(at(brake, 2).pitch * 57.3).toFixed(0)}° contre ${(at(none, 2).pitch * 57.3).toFixed(0)}° après 2 s)`);
+  const lean = at(brake, 1.5).pitch - at(both, 1.5).pitch;
+  assert.ok(lean > 0.8 * CAR.airLean && lean <= CAR.airLean + 1e-9, `frein seul : le nez remonte de ${(lean * 57.3).toFixed(1)}° de plus qu'avec les deux pédales`);
+  assert.ok(Math.abs(at(both, 1.05).rate - b1) < 1e-9, 'les deux pédales : même amortissement que le frein');
 });
 
 await finish('Tous les tests du pilotage sans aide passent.');

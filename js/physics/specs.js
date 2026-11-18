@@ -59,9 +59,15 @@ export const CAR = {
   // rapprochait l'assiette de la trajectoire (15 %) puis, près du sol, de la pente de la route (35 %) : la voiture se posait d'elle-même, le frein ne servait presque à rien.
   airBrake: 1.0,     // amortissement de la rotation par l'aérofrein (1/s), tangage et lacet
   airSpin: 0.1,      // amortissement naturel de la rotation en vol (1/s) : PolyTrack 28,6 → 22,6 °/s en 2 s
-  // Bascule aux pédales en l'air (0.11.2) : gaz = le nez descend, frein = il remonte, d'un rien. PolyTrack (15 vols mesurés) : l'effet des gaz est sous la précision
-  // de la mesure (moins de 0,5 °/s², moins d'un degré après 1,2 s d'appui) ; les joueurs le sentent : on le prend à cette borne. L'aérofrein, lui, est bien mesuré.
-  airTilt: 0.009,    // (rad/s², ≈ 0,5 °/s²)
+  // Bascule aux pédales en l'air (0.12.3, PHYS_VER 38 ; avant : 0,5 °/s², imperceptible) : tant qu'on appuie, la voiture penche vers un angle BORNÉ (gaz : le nez
+  // descend ; frein : il remonte, en plus de l'aérofrein) ; relâcher la ramène doucement. La bascule s'ajoute à la rotation gardée du décollage sans jamais dépasser
+  // ±airLean : impossible de faire un tour complet aux pédales. Elle compte à la réception, comme l'assiette (petit contrôle pour se poser à la pente de la route).
+  airLean: 0.38,     // bascule maximale aux pédales (rad, ≈ 22°)
+  airLeanT: 0.45,    // temps pour s'en approcher en appuyant (s ; 90 % en ≈ 1 s)
+  airLeanBackT: 0.7, // temps pour revenir quand on relâche (s)
+  // Volant en l'air (0.12.3) : une rotation douce, comme le vent sur une voile, qui s'arrête quand on lâche le volant (la rotation du décollage, elle, reste gardée).
+  airYaw: 0.45,      // lacet maximal au volant (rad/s, ≈ 26 °/s)
+  airYawT: 0.35,     // temps de montée et de retombée (s)
   // Bascule au décollage : quand la route s'arrête sous la voiture, l'avant n'est plus porté alors que l'arrière l'est encore : la voiture part en piqué. PolyTrack (bord
   // de route plat, mesuré) : 65 °/s à 39 km/h, 38 °/s à 78 km/h, 26 °/s à 140 km/h, 16 °/s à 225 km/h, soit airTip / (v + airTipV0) rad/s.
   airTip: 18.4,      // (rad·m/s)

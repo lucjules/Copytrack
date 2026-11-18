@@ -6,6 +6,22 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.12.3 — la voiture se pilote un peu en l'air
+
+**`PHYS_VER` reste 38** (la 0.12.2 n'est pas encore publiée ; le redéploiement de `submit-score` qu'elle demande couvre aussi ce changement).
+
+- **Bascule aux pédales en l'air** : l'accélérateur penche la voiture vers l'avant (le nez descend), le frein vers l'arrière (le nez remonte), jusqu'à
+  22° au plus, atteints en une seconde environ ; au relâché, la voiture revient doucement. Elle s'ajoute à la rotation prise au décollage, toujours gardée :
+  impossible de faire un tour complet aux pédales. Avant, l'effet des gaz était imperceptible (0,5 °/s²).
+- **Le frein amortit toujours la rotation** (aérofrein). **Frein et accélérateur ensemble** : l'aérofrein seul, sans bascule.
+- **Volant en l'air** : il tourne la voiture en douceur, comme le vent sur une voile (26 °/s au plus), et s'arrête quand on le lâche. Avant, il ne faisait
+  rien en l'air.
+- Tout est dans la physique : la bascule se voit au replay, sur les fantômes et en multijoueur, et compte à la réception comme l'assiette.
+- Pilote automatique : il garde sa conduite d'avant (aérofrein avec les deux pédales, volant au neutre en l'air) ; ses temps bougent de 0,03 à 0,09 s,
+  médailles inchangées.
+- Textes de l'académie, du défi de saut et de l'aide mis à jour (français et anglais).
+- Tests : `test-sans-aide` (bascule bornée, lacet doux, frein + gaz), `test-physique-corrections` (réceptions avec chaque pédale).
+
 ## Bêta 0.12.2 — audit complet du rendu : poteaux, tapis, tubes, marquages, terrain, météo, caméra
 
 **`PHYS_VER` passe à 38** : le tube a désormais une coque pleine (voir plus bas). **Redéployer `submit-score`** (`npm run build:function` est fait ; la fonction

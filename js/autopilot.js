@@ -4,7 +4,7 @@ import { CAR, steerLimitSpeed } from './physics/specs.js';
 import { rolledRibbon, isSideTile } from './pieces.js';
 import { dasin, datan, datan2, dcos, dexp, dpow, dsin, hypot2, hypot3 } from './dmath.js';
 
-const AIR_NONE = 0, AIR_BRAKE = 1, AIR_GAS = 2;
+const AIR_NONE = 0, AIR_BRAKE = 1, AIR_GAS = 2, AIR_DAMP = 3;      // (AIR_DAMP, 0.12.3 : frein + gaz = aérofrein sans bascule)
 
 export class Autopilot {
   constructor(path, opts = {}) {
@@ -82,13 +82,16 @@ export class Autopilot {
       const a = path[Math.max(0, k - 2)], b = path[Math.min(n - 1, k + 2)], h = hypot2(b[0] - a[0], b[2] - a[2]);
       const slope = h > 0.5 ? datan2(b[1] - a[1], h) : 0;
       if (phys.airTime + t < 0.35) return AIR_NONE;      // vol trop court : la réception ne coûte rien
+      // 0.12.3 : les pédales penchent maintenant la voiture en l'air (vers ±airLean ; voir physics.js, _flyAir). Le pilote garde sa conduite d'avant : il
+      // n'amortit qu'avec les DEUX pédales (aérofrein sans bascule, AIR_DAMP), exactement l'ancien frein, et ne touche plus aux gaz en vol (leur effet d'avant,
+      // 0,5 °/s², était négligeable). Ses temps et ses trajectoires restent ceux qui ont servi à régler les circuits et leurs médailles.
       const pr = phys.pitchRate, kS = CAR.airSpin;
       const err = phys.pitch + (pr * (1 - dexp(-kS * t))) / kS - slope;
       // L'aérofrein amortit AUSSI le lacet : une voiture qui tourne (saut dans un virage) arriverait de travers. Dans ce cas il ne freine que si la réception coûterait
       // de la vitesse (au-delà de landOk) ; sinon il vise la réception parfaite.
       const tol = Math.abs(phys.omega) > 0.1 ? CAR.landOk * 0.8 : 0.03;
-      if (Math.abs(err) > tol && err * pr > 0) return AIR_BRAKE;
-      return err > 0.03 ? AIR_GAS : AIR_NONE;      // trop cabrée à la réception : les gaz font descendre le nez d'un rien
+      if (Math.abs(err) > tol && err * pr > 0) return AIR_DAMP;
+      return AIR_NONE;
     }
     return AIR_NONE;
   }
@@ -216,9 +219,9 @@ export class Autopilot {
       return { throttle: dive, brake: pull, steer: Math.max(-1, Math.min(1, ang * 2.2)), drift: false };
     }
     if (!phys.grounded) {
-      // En l'air : le volant n'agit pas ; l'aérofrein amortit la rotation, les gaz penchent le nez d'un rien (PHYS_VER 37 : rien d'autre ne redresse la voiture).
+      // En l'air : volant au neutre (0.12.3 : il ferait tourner la voiture) ; gaz et frein penchent la voiture, le frein amortit aussi la rotation (les deux : amortit seulement).
       const a = this._airControl(phys);
-      return { throttle: a === AIR_GAS, brake: a === AIR_BRAKE, steer: 0, drift: false };
+      return { throttle: a === AIR_GAS || a === AIR_DAMP, brake: a === AIR_BRAKE || a === AIR_DAMP, steer: 0, drift: false };
     }
     const v = Math.max(0, phys.fwdSpeed);
     const look = 8 + v * this.lookK;

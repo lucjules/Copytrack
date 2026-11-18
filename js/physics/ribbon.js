@@ -487,7 +487,7 @@ export const ribbonMethods = {
   },
 
   _ribDetach(why = '') {
-    this.pitch = dasin(clamp(this.fwd.y, -1, 1)); this.pitchRate = 0; this.airTime = 0;
+    this.pitch = dasin(clamp(this.fwd.y, -1, 1)); this.pitchRate = 0; this.airTime = 0; this.airLean = 0; this.airYawW = 0;
     const t = this.rib && this.rib.tile;
     this.fallWhy = why ? why : this.ev.wallOff ? 'wall' : t && PIECES[t.t].kind === 'loop' ? 'loop' : t && t.t === 'twist' ? 'twist' : t && t.v ? 'inv' : 'crest';
     this.rib = null;

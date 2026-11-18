@@ -7394,9 +7394,15 @@ var CAR = {
   // rapprochait l'assiette de la trajectoire (15 %) puis, près du sol, de la pente de la route (35 %) : la voiture se posait d'elle-même, le frein ne servait presque à rien.
   airBrake: 1,
   airSpin: 0.1,
-  // Bascule aux pédales en l'air (0.11.2) : gaz = le nez descend, frein = il remonte, d'un rien. PolyTrack (15 vols mesurés) : l'effet des gaz est sous la précision
-  // de la mesure (moins de 0,5 °/s², moins d'un degré après 1,2 s d'appui) ; les joueurs le sentent : on le prend à cette borne. L'aérofrein, lui, est bien mesuré.
-  airTilt: 9e-3,
+  // Bascule aux pédales en l'air (0.12.3, PHYS_VER 38 ; avant : 0,5 °/s², imperceptible) : tant qu'on appuie, la voiture penche vers un angle BORNÉ (gaz : le nez
+  // descend ; frein : il remonte, en plus de l'aérofrein) ; relâcher la ramène doucement. La bascule s'ajoute à la rotation gardée du décollage sans jamais dépasser
+  // ±airLean : impossible de faire un tour complet aux pédales. Elle compte à la réception, comme l'assiette (petit contrôle pour se poser à la pente de la route).
+  airLean: 0.38,
+  airLeanT: 0.45,
+  airLeanBackT: 0.7,
+  // Volant en l'air (0.12.3) : une rotation douce, comme le vent sur une voile, qui s'arrête quand on lâche le volant (la rotation du décollage, elle, reste gardée).
+  airYaw: 0.45,
+  airYawT: 0.35,
   // Bascule au décollage : quand la route s'arrête sous la voiture, l'avant n'est plus porté alors que l'arrière l'est encore : la voiture part en piqué. PolyTrack (bord
   // de route plat, mesuré) : 65 °/s à 39 km/h, 38 °/s à 78 km/h, 26 °/s à 140 km/h, 16 °/s à 225 km/h, soit airTip / (v + airTipV0) rad/s.
   airTip: 18.4,
@@ -16933,6 +16939,8 @@ var ribbonMethods = {
     this.pitch = dasin(clamp(this.fwd.y, -1, 1));
     this.pitchRate = 0;
     this.airTime = 0;
+    this.airLean = 0;
+    this.airYawW = 0;
     const t = this.rib && this.rib.tile;
     this.fallWhy = why ? why : this.ev.wallOff ? "wall" : t && PIECES[t.t].kind === "loop" ? "loop" : t && t.t === "twist" ? "twist" : t && t.v ? "inv" : "crest";
     this.rib = null;
@@ -17075,6 +17083,9 @@ var BK = {
 };
 var AIR_BRAKE_DECAY = dexp(-CAR.airBrake * DT);
 var AIR_SPIN_DECAY = dexp(-CAR.airSpin * DT);
+var AIR_LEAN_K = 1 - dexp(-DT / CAR.airLeanT);
+var AIR_LEAN_BACK_K = 1 - dexp(-DT / CAR.airLeanBackT);
+var AIR_YAW_K = 1 - dexp(-DT / CAR.airYawT);
 var CarPhysics = class {
   constructor(track) {
     this.track = track;
@@ -17241,6 +17252,8 @@ var CarPhysics = class {
     this.aoa = 0.08;
     this.glidePitch = 0;
     this.bankT = 0;
+    this.airLean = 0;
+    this.airYawW = 0;
     if (this.v2) {
       this.lean = 0;
       this.mAx = 0;
@@ -17761,6 +17774,8 @@ var CarPhysics = class {
     this.pitch = dasin(clamp(fy, -1, 1));
     this.pitchRate = 0;
     this.tipNext = false;
+    this.airLean = 0;
+    this.airYawW = 0;
     return false;
   }
   // En l'air : trajectoire balistique, rotation, tangage, vol plané.
@@ -17775,8 +17790,10 @@ var CarPhysics = class {
     } else v.y -= this.g * this.gSign * dt;
     if (airBrake) this.omega *= AIR_BRAKE_DECAY;
     const us = this._upSign();
-    this.yaw -= this.omega * us * dt;
-    this.yawRate = -this.omega * us;
+    if (this.vehicle !== "glider") this.airYawW += (clamp(this.steer, -1, 1) * CAR.airYaw - this.airYawW) * AIR_YAW_K;
+    else this.airYawW = 0;
+    this.yaw -= (this.omega + this.airYawW) * us * dt;
+    this.yawRate = -(this.omega + this.airYawW) * us;
     this.steerAngle = this._steerAngle(hypot2(v.x, v.z), this.driftT);
     const k = 1 - 6e-4 * this.speed * dt;
     v.x *= k;
@@ -17794,9 +17811,10 @@ var CarPhysics = class {
         this.pitchRate -= this.gSign * CAR.airTip / (hypot2(v.x, v.z) + CAR.airTipV0);
       }
       this.pitchRate *= airBrake ? AIR_BRAKE_DECAY : AIR_SPIN_DECAY;
-      if (airBrake) this.pitchRate += this.gSign * CAR.airTilt * dt;
-      else if (inp.throttle) this.pitchRate -= this.gSign * CAR.airTilt * dt;
-      this.pitch += this.pitchRate * dt;
+      const lt = airBrake && !inp.throttle ? this.gSign * CAR.airLean : inp.throttle && !airBrake ? -this.gSign * CAR.airLean : 0;
+      const lean = this.airLean + (lt - this.airLean) * (lt ? AIR_LEAN_K : AIR_LEAN_BACK_K);
+      this.pitch += this.pitchRate * dt + (lean - this.airLean);
+      this.airLean = lean;
       if (Math.abs(this.pitch) > 1.4) {
         this.pitch = clamp(this.pitch, -1.4, 1.4);
         this.pitchRate = 0;
@@ -18434,6 +18452,7 @@ var Simulation = class {
 var AIR_NONE = 0;
 var AIR_BRAKE = 1;
 var AIR_GAS = 2;
+var AIR_DAMP = 3;
 var Autopilot = class {
   constructor(path, opts2 = {}) {
     this.path = path;
@@ -18507,8 +18526,8 @@ var Autopilot = class {
       const pr = phys.pitchRate, kS = CAR.airSpin;
       const err = phys.pitch + pr * (1 - dexp(-kS * t)) / kS - slope;
       const tol = Math.abs(phys.omega) > 0.1 ? CAR.landOk * 0.8 : 0.03;
-      if (Math.abs(err) > tol && err * pr > 0) return AIR_BRAKE;
-      return err > 0.03 ? AIR_GAS : AIR_NONE;
+      if (Math.abs(err) > tol && err * pr > 0) return AIR_DAMP;
+      return AIR_NONE;
     }
     return AIR_NONE;
   }
@@ -18633,8 +18652,8 @@ var Autopilot = class {
     if (!phys.grounded) {
       const a = this._airControl(phys);
       return {
-        throttle: a === AIR_GAS,
-        brake: a === AIR_BRAKE,
+        throttle: a === AIR_GAS || a === AIR_DAMP,
+        brake: a === AIR_BRAKE || a === AIR_DAMP,
         steer: 0,
         drift: false
       };
@@ -20166,4 +20185,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "75f83b474b0e9cb8";
+globalThis.__COPYTRACK_BUILD__ = "fec13a7391d952cf";
