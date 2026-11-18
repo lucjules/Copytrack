@@ -49,6 +49,7 @@ export const editorFlowMethods = {
       [L('ed.levelUp') + ' / ' + L('ed.levelDown'), 'Niveau + / −'],
       [L('ed.rotate'), 'Pivoter (Maj : sens inverse)'],
       [L('ed.mirror'), 'Miroir gauche / droite'],
+      [L('ed.orient'), 'Orientation suivante : à l’endroit, à l’envers, sur un mur (Maj : précédente)'],
       [L('ed.nextPiece'), 'Pièce suivante (Maj : précédente)'],
       [L('ed.extend'), 'Prolonger : pose la pièce choisie au bout de la dernière pièce, raccordée'],
       ['Q', 'Sélection de zone (glisser DANS la zone : la déplacer)'],

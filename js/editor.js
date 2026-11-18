@@ -201,6 +201,7 @@ export class EditorSession {
     if (input.act('ed.surface')) this.cycleSurface();
     if (input.act('ed.fill')) this.toggleFill();
     if (input.act('ed.mirror')) this.mirror();
+    if (input.act('ed.orient')) this.cycleOrientation(shift ? -1 : 1);
     if (input.act('ed.snap')) this.cycleSnap();
     if (input.act('ed.scaleUp')) this.scaleDeco(1.1);
     if (input.act('ed.scaleDown')) this.scaleDeco(0.9);

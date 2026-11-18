@@ -24,6 +24,7 @@ export const KEY_ACTIONS = {
     ['ed.fill', 'Pot de peinture (remplir une zone)', ['Backquote', '']],
     ['ed.inspect', 'Inspecter (propriétés et gizmos)', ['KeyI', 'Backslash']],
     ['ed.mirror', 'Miroir (looping gauche / droite)', ['KeyM', '']],
+    ['ed.orient', 'Orientation suivante (à l’endroit, à l’envers, sur un mur)', ['KeyO', '']],
     ['ed.snap', 'Accrochage des décorations', ['KeyN', '']],
     ['ed.scaleUp', 'Décoration : agrandir', ['BracketRight', '']],
     ['ed.scaleDown', 'Décoration : réduire', ['BracketLeft', '']],
