@@ -6,6 +6,45 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.12.0 — l'éditeur rangé en quatre zones, des familles de pièces complètes, onze défauts corrigés
+
+**`PHYS_VER` reste 37** : la physique des pièces existantes ne change pas (empreinte identique), les circuits intégrés non plus. **Redéployer `submit-score`** : la fonction
+embarque `pieces.js` ; sans cela, un circuit qui utilise une des nouvelles pièces ne peut pas être vérifié par le serveur.
+
+- **Rangement de l'éditeur en quatre zones**, un rôle chacune :
+  - **en haut, le circuit** : menu *Fichier* (nouveau, ouvrir, importer, partager, enregistrer, enregistrer une copie, aide), le nom du circuit (un clic le renomme ;
+    un point orange tant qu'il n'est pas enregistré), *⚙ Circuit*, annuler / rétablir, la pastille des problèmes, *▶ Tester ▾* et *🏁 Vérifier et publier* ;
+  - **à gauche** : un rail de six outils (Pistes, Peinture, Décors, Sélection, Inspecter, Gomme) et le panneau de l'outil. Pistes : bibliothèque par sections,
+    recherche, pièces récentes ; sous la pièce choisie, ses caractéristiques, ses options et Pivoter / Miroir / Prolonger. L'onglet Options disparaît (ses deux usages :
+    les réglages de la pièce, et l'Inspecteur ou « Option… » de la barre de sélection) ; le pot de peinture devient l'interrupteur « Remplir » de chaque outil.
+    Décors : cinq familles au lieu de 35 catégories en ligne, les solides (qui comptent pour la course) à part ; recherche ;
+  - **à droite, la vue** : niveau, ce niveau seul, dessus, recentrer, ras du sol, grille, calques (avec leurs libellés) ;
+  - la **barre de sélection** flotte au-dessus de la zone ; **glisser dans la zone la déplace** (un seul pas d'annulation) ;
+  - la fenêtre **« Circuit »** a six onglets (général, course, conditions, ambiance, déclencheurs, logique) ; changer d'onglet applique ce qui a été modifié ;
+  - sur **téléphone**, le panneau devient un tiroir qui se referme après un choix, la colonne Vue se replie ; une ligne du bas rappelle la pièce choisie et les gestes.
+- **Familles de pièces complètes** (270 pièces nouvelles, 442 au total) : chaque combinaison de chaque famille existe, ou est grisée avec sa raison
+  (`families.js : missingReason`, vérifié par `tools/test-familles-completes.mjs`).
+  - **Largeur** (étroite, normale, large) : caractéristique de la Ligne droite, de la Courbe et du Virage. Route large en pente (3×3 : montée 1 = 3 niveaux), courbes
+    étroites et larges, virages étroits (tous rayons) et larges (grand, très grand, géant : même rayon que la route normale, empreinte plus grande d'une case) ;
+    élargissement étroite → large. « Prolonger » pose les raccords de largeur dans le bon sens et les insère tout seul.
+  - Très grand virage incliné ; **virages relevés qui montent ou descendent** (grand, très grand, géant, ↱ / ↰) ; courbe en S de 2 et 4 niveaux ; grand S rapide (4×4,
+    deux colonnes) ; transitions de 90° entre orientations inclinées, et les transitions de 45° rangées dans la famille Transition.
+  - Tube, Looping modulaire, Tire-bouchon et Bifurcation deviennent des familles.
+  - La matrice de compatibilité roule chaque nouvelle pièce : deux seules ne passent pas au sol (`ncvd4`, `ncvdL4`, le virage serré étroit qui descend de 4 niveaux),
+    comme leurs équivalentes de largeur normale ; le vérificateur les signale.
+- **Défauts corrigés** :
+  - **perte de travail** : quitter l'éditeur, ouvrir un autre circuit, « Nouveau » ou l'import enregistrent le circuit modifié dans « Mes circuits » (avant : seul
+    l'unique brouillon le gardait, et la session suivante l'écrasait) ;
+  - **Échap** referme l'inspecteur, retire la sélection, puis ramène au menu (la touche était perdue au premier test) ;
+  - **vérificateur** : extrémités rangées par cubes de 2 m (5 000 pièces : 3,9 s → 0,12 s par pose, résultats identiques sur 360 circuits) ; pastille différée sur un
+    grand circuit, et à jour après les paramètres du niveau ;
+  - « Charger dans l'éditeur » garde la logique, les noms de groupes, l'auteur et la vérification ; « Convertir les déclencheurs » ne perd plus les règles ;
+  - les calques verrouillés ou masqués ne sont plus remplacés par la pose, le collage ni le pot de peinture ; le collage n'efface plus le départ ;
+  - un pincement à deux doigts ne pose plus de pièce ; la pipette pendant un collage le quitte ; matériaux libérés en quittant l'éditeur ;
+  - l'**historique d'annulation**, le presse-papiers, les options armées et les calques traversent un **essai**.
+- Tests : `test-editeur-012`, `test-familles-completes`, `test-rangement` (nouveaux) ; quatre tests navigateur de l'éditeur (vrais clics et glissés) ; familles, matrice,
+  traductions anglaises, wiki (section Éditeur réécrite, captures de l'éditeur refaites).
+
 ## Bêta 0.11.4 — familles : la bifurcation en T, le virage géant relevé et incliné
 
 **`PHYS_VER` reste 37** (pas encore publiée). **Redéployer `submit-score`** : onze circuits changent.
