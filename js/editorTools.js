@@ -142,7 +142,7 @@ export function rotateClip(clip, keepRect = false) {
 // descendante, route sur un mur, transition : Track.inBounds) ; dans un presse-papiers les niveaux sont relatifs au plus bas, donc une zone collée au niveau 0 enterrait
 // ces pièces (le prefab « Wall-ride » collé au sol descendait 9 m sous terre). 0 si tout tient déjà, ou si aucun décalage raisonnable ne suffit.
 export function clipLift(tiles) {
-  const fits = (k) => tiles.every((t) => { try { return Track.inBounds(Track.normalize({ ...t, l: t.l + k })); } catch { return true; } });
+  const fits = (k) => tiles.every((t) => { try { return Track.placeable(Track.normalize({ ...t, l: t.l + k })); } catch { return true; } });
   for (let k = 0; k <= 8; k++) if (fits(k)) return k;
   return 0;
 }
@@ -168,7 +168,7 @@ export function pasteClip(track, clip, cx, cz, level, ok = null) {
   for (const t of P.tiles) {
     // Dernier garde-fou (zone trop haute, ou qu'aucun décalage ne sauve) : une pièce hors des niveaux est ignorée et comptée, jamais posée sous le sol.
     const n = Track.normalize(t);
-    if (t.l < 0 || t.l > MAX_LEVEL || !Track.inBounds(n)) { skipped++; continue; }
+    if (t.l < 0 || t.l > MAX_LEVEL || !Track.placeable(n)) { skipped++; continue; }
     const cs = track.conflicts(n), start = track.startTile;
     if (ok && cs.some((c) => !ok(c))) { guarded++; continue; }
     if (t.t === 'start' ? start && !cs.includes(start) : cs.includes(start)) { skipped++; continue; }
@@ -193,7 +193,7 @@ export function findDuplicateSpot(track, rect, tiles) {
   for (const { dx, dz, dl } of tries) {
     const ok = src.every((t) => {
       const c = Track.normalize({ ...t, col: t.col ? { ...t.col } : null, x: t.x + dx, z: t.z + dz, l: t.l + dl });
-      return t.l + dl >= 0 && t.l + dl <= MAX_LEVEL && Track.inBounds(c) && track.conflicts(c).length === 0;
+      return t.l + dl >= 0 && t.l + dl <= MAX_LEVEL && Track.placeable(c) && track.conflicts(c).length === 0;
     });
     if (ok) return { dx, dz, dl };
   }
@@ -230,7 +230,7 @@ function replaceTiles(track, tiles, moved) {
   const sel = new Set(tiles);
   for (const t of moved) {
     const n = Track.normalize(t);
-    if (!Track.inBounds(n) || t.l < 0 || t.l > MAX_LEVEL || track.conflicts(n).some((c) => !sel.has(c))) return false;
+    if (!Track.placeable(n) || t.l < 0 || t.l > MAX_LEVEL || track.conflicts(n).some((c) => !sel.has(c))) return false;
   }
   // 2. Application : l'ordre des pièces dans le circuit est conservé (le code partagé et la signature n'en changent pas pour rien).
   const order = track.tiles.slice(), repl = new Map();

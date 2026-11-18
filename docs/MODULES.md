@@ -29,6 +29,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `constants.js` | Dimensions du monde (en mètres) : case de 32 m, route de 24 m de large, niveau de 6,4 m. |
 | `continuity.js` | Continuité physique d'un circuit (phase 1 après l'audit 0.9.59) : ce que le vérificateur d'extrémités (editorTools.checkTrack) ne voit pas. |
 | `cosmetics.js` | Catalogue de personnalisation du véhicule. 100 % visuel : aucune de ces options ne modifie la physique (voir CAR dans physics.js, qui ne dépend pas du modèle 3D). |
+| `cover.js` | La caméra est-elle à l'abri (0.12.2) ? Dans un tunnel, dans un tube, ou juste sous une route : la météo décorative (pluie, neige…) s'y estompe au lieu de tomber à travers le toit. Purement visuel : la course ne l'utilise pas. |
 | `custom.js` | Voiture personnalisée (lot 10) : pièces libres, peinture avancée, dessin 16×16, effets, code partageable « SHC1: ». |
 | `customCar.js` | Rendu de la voiture personnalisée (lot 10) : pièces libres, livrée (dégradé, motif, dessin 16×16, texte, numéro) et plaque d'immatriculation. |
 | `customDeco.js` | Pièces décoratives personnalisées (lot 12) : un petit objet que le joueur assemble avec des formes simples et pose dans l'éditeur comme n'importe quelle décoration. |
@@ -261,6 +262,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | Fichier | Rôle |
 | --- | --- |
 | `decor.js` | Décors de chaque thème (désert, pôles, jungle, ville, îles, volcan, orbite, grottes, ciel, récif, usine) et terrain. |
+| `pits.js` | Fosses du terrain (0.12.2) : une pièce qui plonge sous son niveau (vrille, tire-bouchon, looping double ou triple) posée trop bas dans un circuit d'avant l'interdiction (Track.inBounds) passait sous le sol. Le terrain est découpé autour de sa partie enterrée et une fosse (fond et parois) la laisse voir. Purement visuel : la physique n'a pas de terrain (le sol est à y = 0, la route est au-dessus). |
 | `shared.js` | Éléments partagés par les familles de méthodes de Scenery (voir scenery.js). |
 
 ## `js/sim/`

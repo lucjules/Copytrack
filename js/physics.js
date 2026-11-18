@@ -608,6 +608,7 @@ export class CarPhysics {
     if (this.ev.sink) return true;
     if (this._tryEnterRibbon()) return true;
     if (!this.grounded && this._tryLandRibbon()) return true;
+    if (!this.grounded) this._tubeShell();        // (0.12.2, PHYS_VER 38 : coque pleine des tubes)
     this._walls();
     this._pinned = false;
     this._tunnelRoof();

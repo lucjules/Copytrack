@@ -4,6 +4,7 @@ import { CELL, MAX_LEVEL, DIRS, MAX_DECOS } from '../constants.js';
 import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, armOption } from '../pieces.js';
 import { retypePlacement } from '../tileInfo.js';
 import { Track } from '../track.js';
+import { minGroundLevel } from '../ribbons.js';
 import { safeUrl } from '../decos.js';
 import { DECO_CATS, DECO_LABELS } from '../decoData.js';
 import { enclosedRegion, tileRegion, fillZone } from '../editorTools.js';
@@ -22,6 +23,8 @@ const OPT_NAMES = { v: 'plafond', o: 'mur', nb: 'sans bordures', tn: 'tunnel', m
 function outOfBounds(tile) {
   const P = PIECES[tile.t], [lo] = Track.range(tile);
   if (tile.v) return 'Hors des niveaux : à l’envers, la route pend sous son niveau (monte d’abord).';
+  const g = tile.o ? 0 : minGroundLevel(tile.t);
+  if (tile.l < g) return `Hors des niveaux : ${P.label} plonge sous son niveau et passerait sous le sol (niveau ${String(g).replace('.', ',')} au moins).`;
   if (tile.o || (P.below && lo < 0)) return 'Hors des niveaux : une route sur un mur descend de 2 niveaux sous son niveau (monte d’abord).';
   if (lo < 0) return 'Hors des niveaux : la pente descend sous le sol (monte d’abord).';
   return 'Hors des niveaux.';
@@ -128,7 +131,7 @@ export const toolMethods = {
     if (painting && key === this._lastPaint) return;
     this._lastPaint = key;
     const norm = Track.normalize(tile);
-    if (!Track.inBounds(norm)) { if (!painting) { this.app.ui.flash(outOfBounds(norm)); this.app.audio.error(); } return; }
+    if (!Track.placeable(norm)) { if (!painting) { this.app.ui.flash(outOfBounds(norm)); this.app.audio.error(); } return; }
     const conflicts = this.track.conflicts(tile);
     if (conflicts.length === 1) {
       const c = conflicts[0];
@@ -313,7 +316,7 @@ export const toolMethods = {
       const tile = { t: base, x, z, l: this.level, r: this.rot, s: '' };
       for (const k of OPT_KEYS) if (this.opts && this.opts[k]) tile[k] = this.opts[k];
       const norm = Track.normalize(tile);
-      if (!Track.inBounds(norm) || this.track.conflicts(norm).length) { skipped++; continue; }
+      if (!Track.placeable(norm) || this.track.conflicts(norm).length) { skipped++; continue; }
       this.track.add(tile);
       done++;
     }
@@ -328,7 +331,7 @@ export const toolMethods = {
   _retypeTile(tile, type) {
     if (!PIECES[type] || PIECES[type].size !== PIECES[tile.t].size) return false;
     const cand = Track.normalize({ ...tile, t: type });               // retire les options devenues impossibles
-    if (!Track.inBounds(cand)) return false;
+    if (!Track.placeable(cand)) return false;
     this.track.remove(tile);
     if (this.track.conflicts(cand).length) { this.track._insert(tile); return false; }
     Object.assign(tile, cand);                                        // même objet : la zone collectée reste valide
@@ -351,7 +354,7 @@ export const toolMethods = {
     const conv = LEGACY_CP[tile.t];
     if (!conv) return false;
     const cand = Track.normalize({ ...tile, t: conv[0], cp: conv[1] });
-    if (cand.cp !== conv[1] || !Track.inBounds(cand)) return false;
+    if (cand.cp !== conv[1] || !Track.placeable(cand)) return false;
     this.track.remove(tile);
     if (this.track.conflicts(cand).length) { this.track._insert(tile); return false; }
     Object.assign(tile, cand);
@@ -437,7 +440,7 @@ export const toolMethods = {
   // Modifie une pièce (case, niveau, rotation) en vérifiant la place ; réindexe le circuit. Faux si impossible.
   _applyTilePatch(tile, patch) {
     const cand = Track.normalize({ ...tile, ...patch });
-    if (!Track.inBounds(cand)) return false;
+    if (!Track.placeable(cand)) return false;
     if (cand.x === tile.x && cand.z === tile.z && cand.l === tile.l && cand.r === tile.r) return true;
     this.track.remove(tile);
     if (this.track.conflicts(cand).length) { this.track._insert(tile); return false; }

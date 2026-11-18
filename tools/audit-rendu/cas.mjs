@@ -22,7 +22,7 @@ export function orientationAllowed(t, opts) {
 export function placeLowest(t, opts = {}, x = 0, z = 0, from = 0) {
   for (let l = from; l <= 14; l += 0.5) {
     const tile = Track.normalize({ t, x, z, l, r: 0, ...opts });
-    if (Track.inBounds(tile)) return tile;
+    if (Track.placeable(tile)) return tile;      // (la règle de l’éditeur : dans les niveaux et au-dessus du terrain)
   }
   return null;
 }
@@ -34,7 +34,7 @@ export function pieceCases({ ids = PIECE_IDS, level = null } = {}) {
     for (const O of ORIENTATIONS) {
       if (!orientationAllowed(t, O.opts)) continue;
       const tile = level == null ? placeLowest(t, O.opts) : Track.normalize({ t, x: 0, z: 0, l: level, r: 0, ...O.opts });
-      if (!tile || (level != null && !Track.inBounds(tile))) continue;
+      if (!tile || (level != null && !Track.placeable(tile))) continue;
       // L'éditeur peut refuser silencieusement une option (normalize la retire) : on ne garde que les cas réellement posables.
       if ((O.opts.v | 0) !== (tile.v | 0) || (O.opts.o | 0) !== (tile.o | 0)) continue;
       out.push({ t, orient: O.key, opts: O.opts, tile });

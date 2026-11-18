@@ -3,6 +3,7 @@
 // des rafales. Purement visuel et sonore : tout ce qui compte pour la course est dans la physique (sim/env.js), qui ne dépend pas d'ici.
 import * as THREE from './vendor/three.module.min.js';
 import { Weather } from './weather.js';
+import { coveredAt } from './cover.js';
 
 const LIFT = 0.04;                                       // au-dessus de la route (sans scintillement)
 
@@ -36,7 +37,8 @@ export class EnvFx {
     if (this.rain) {
       const k = E.rainAt(step);
       if (Math.abs(k - this.level) > 0.02) { this.level = k; this.rain.setIntensity(Math.max(0.15, k)); }
-      this.rain.update(dt, camera);
+      const T = app.session && app.session.track, c = camera.position;
+      this.rain.update(dt, camera, !!(T && coveredAt(T, c.x, c.y, c.z)));
     }
     const audio = app.audio;
     const p = grounded ? E.patchAt(pos.x, pos.y, pos.z) : null;

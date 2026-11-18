@@ -46,8 +46,8 @@ window.banc = {
     renderer.setSize(w, h, false);
     camera.aspect = w / h; camera.fov = fov; camera.updateProjectionMatrix();
     camera.position.copy(V(eye)); camera.lookAt(V(at));
-    window.__T = t;
-    scenery.update(V(at), camera, 120);
+    // Une demi-seconde jouée avant la photo (météo qui s'estompe sous un abri, cycle du jour) : 6 pas de 100 ms jusqu'à l'instant t.
+    for (let k = 5; k >= 0; k--) { window.__T = t - k * 100; scenery.update(V(at), camera, 120); }
     if (view) { view.updateMoving(t / 1000); view.updateLights(camera.position, t / 1000); }
     renderer.render(scene, camera);
     return canvas.toDataURL('image/jpeg', q);

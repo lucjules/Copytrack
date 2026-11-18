@@ -493,7 +493,7 @@ export const pointerMethods = {
     this.previewKey = key;
     this._clearPreview();
     const conflicts = this.track.conflicts(cand);
-    if (!Track.inBounds(Track.normalize(cand))) conflicts.push(null);
+    if (!Track.placeable(Track.normalize(cand))) conflicts.push(null);
     const nc = Track.normalize(cand);
     const same = conflicts.length === 1 && conflicts[0] && ['t', 'x', 'z', 'l', 'r'].every((k) => conflicts[0][k] === cand[k]) && OPT_KEYS.every((k) => (conflicts[0][k] | 0) === (nc[k] | 0));
     this.previewMat.emissive.set(conflicts.length && !same ? '#ff2244' : '#000000');

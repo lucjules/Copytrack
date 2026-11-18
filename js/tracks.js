@@ -51,7 +51,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 66 },
     script: 'start*2 I2 B3 I2 S [crs1] S2 [cds1] B ZZR S2 HR S3 B C*3 WI W3 WO S ZR4 S2 HL S2 TI TM2 TRR TM TLL TM2 TO S B [cdi1] [dn2] [cdo1] S ZL4 S2 B2 finish*2',
     obst: [{ k: 'board_right', at: 0.168, side: -20, rot: Math.PI }, { k: 'gantry', at: 0.344, side: 0, s: 2 }, { k: 'pillarThin', at: 0.338, side: 36 }, { k: 'pillarThin', at: 0.338, side: -36 }, { k: 'board_right', at: 0.392, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.52, side: 18, rot: Math.PI }, { k: 'board_left', at: 0.862, side: 20, rot: Math.PI }, { k: 'block', at: 0.95, side: 28 }, { k: 'slab', at: 0.95, side: -28 }],
-    medals: { cristal: 44.8, or: 47.2, argent: 54.3, bronze: 63.7 },
+    medals: { cristal: 45.4, or: 47.8, argent: 54.9, bronze: 64.5 },
   },
   {
     // Chapitre 2 · 1/6 — SPRINT (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → rampe de lancement avec un anneau turbo dans le saut. Puis un slalom
@@ -89,7 +89,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 66 },
     script: 'start*2 B2 GU3 GD3 B S [crs1] S2 [cds1] B ZR4 S ZL4 BR S BL S B C*3 WI W2 WO S2 HL S2 TI TM TRR TM TLL TM TO S B [cdi1] [dn2] [cdo1] S ZZR S B2 finish*2',
     obst: [{ k: 'board_right', at: 0.19, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.27, side: 20, rot: Math.PI }, { k: 'pyramidS', at: 0.47, side: 28 }, { k: 'pyramidS', at: 0.47, side: -28 }, { k: 'gantry', at: 0.516, side: 0, s: 2 }, { k: 'pillarBase', at: 0.51, side: 36 }, { k: 'pillarBase', at: 0.51, side: -36 }, { k: 'board_warn', at: 0.6, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.893, side: -20, rot: Math.PI }],
-    medals: { cristal: 43.4, or: 45.7, argent: 52.5, bronze: 61.7 },
+    medals: { cristal: 44, or: 46.4, argent: 53.3, bronze: 62.6 },
   },
   {
     // Chapitre 1 · 2/6 — SPEEDWAY (0.9.74 : refait AUTOUR des nouvelles pièces). Ouverture : un booster et la vallée s'élargit aussitôt (route de 56 m sous un portique en poutres).
@@ -141,7 +141,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 12 }, pilot: { vCap: 66 },
     script: 'start*2 B3 O OL S2 B3 [tr01s] S4< [tr10s] S ZR3 S BR S2 B [tr02s] S4> [tr20s] S C*1 B OB S2 WI W WO S LPR2 S B [cdi2] DX [cdo2] S TI TM TRR TM TLL TM TO S ZL3 S B2 finish*2',
     obst: [{ k: 'board_warn', at: 0.025, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.28, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.49, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.581, side: 0, s: 2 }, { k: 'pillar', at: 0.576, side: 36 }, { k: 'pillar', at: 0.576, side: -36 }, { k: 'board_warn', at: 0.6, side: -18, rot: Math.PI }, { k: 'board_warn', at: 0.762, side: 18, rot: Math.PI }, { k: 'board_left', at: 0.925, side: 20, rot: Math.PI }, { k: 'block', at: 0.23745, wall: 'bas', s: 2 }, { k: 'block', at: 0.43257, wall: 'haut', s: 2 }],
-    medals: { cristal: 48.9, or: 51.5, argent: 59.2, bronze: 69.5 },
+    medals: { cristal: 49.6, or: 52.3, argent: 60.1, bronze: 70.5 },
   },
   {
     // Chapitre 2 · 2/6 — SPEEDWAY (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : départ dans un tube accélérateur de trois sections. Très grands virages relevés, deux
@@ -154,7 +154,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 5 }, pilot: { vCap: 64 },
     script: 'start*3 TI TM3.b TO BRR S B BLL S WI W2 WO S [crs1] S2 [cds1] S ZZR S [tr01l] S5< [tr10l] C*2 B BRR S ZL3 S [crs1] S [cds1] B BLL S2 TI TM TRR TM TLL TM TO S BRR S B WI W WO BLL S2 B2 finish*2',
     obst: [{ k: 'gantry', at: 0.231, side: 0, s: 2 }, { k: 'pillarBase', at: 0.225, side: 36 }, { k: 'pillarBase', at: 0.225, side: -36 }, { k: 'board_right', at: 0.29, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.505, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.652, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.887, side: 0, s: 2 }, { k: 'pillarBase', at: 0.887, side: 36 }, { k: 'pillarBase', at: 0.887, side: -36 }, { k: 'block', at: 0.37583, wall: 'bas', s: 2 }, { k: 'block', at: 0.4012, wall: 'haut', s: 2 }],
-    medals: { cristal: 57.5, or: 60.5, argent: 69.6, bronze: 81.7 },
+    medals: { cristal: 58, or: 61.1, argent: 70.2, bronze: 82.4 },
   },
   {
     // Chapitre 2 · 3/6 — ACROBATIQUE (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters et un champignon rebondissant (rebond à 200 %). Quatre rebonds en
@@ -215,7 +215,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 12 }, pilot: { vCap: 70 },
     script: 'start*3 B BR S BL S WI W2 WO S BRR S B ZR4 S [tr02l] S4> [tr20l] BLL S2 C*2 B [cdi1] [dn2] [cdo1] ZZL S BRR S TI TM TRR TM TLL TM TO S BLL B2 finish*2',
     obst: [{ k: 'gantry', at: 0.14, side: 0, s: 2 }, { k: 'pillar', at: 0.134, side: 36 }, { k: 'pillar', at: 0.134, side: -36 }, { k: 'board_right', at: 0.258, side: -20, rot: Math.PI }, { k: 'pillarBase', at: 0.52, side: 26 }, { k: 'pillarBase', at: 0.52, side: -26 }, { k: 'board_left', at: 0.577, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.7, side: 18, rot: Math.PI }],
-    medals: { cristal: 44.8, or: 47.1, argent: 54.2, bronze: 63.6 },
+    medals: { cristal: 45.4, or: 47.8, argent: 54.9, bronze: 64.5 },
   },
   {
     // Chapitre 7 · 2/6 — TECHNIQUE EN MOTO (0.10.6 : refait AUTOUR des nouvelles pièces). Ouverture : plaque MOTO, booster, épingles. Coursive ÉTROITE (12 m) entre des piliers
@@ -238,7 +238,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 4 }, pilot: { vCap: 66 },
     script: 'start*2 B2_ S3_ B_ S [crs1] S2 [cds1] B ZR4 S ZL4 S B2# S2# C*3 B S3 HR S2 WI W2 WO S ZR3 S2 ZL3 B [cdi1] [dn2] [cdo1] S TI TM TRR TM TLL TM TO S ZZR S B2 finish*1',
     obst: [{ k: 'board_right', at: 0.15, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.225, side: 20, rot: Math.PI }, { k: 'block', at: 0.38, side: 28 }, { k: 'block', at: 0.38, side: -28 }, { k: 'gantry', at: 0.464, side: 0, s: 2 }, { k: 'pillar', at: 0.458, side: 36 }, { k: 'pillar', at: 0.458, side: -36 }, { k: 'board_right', at: 0.5, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.676, side: 18, rot: Math.PI }],
-    medals: { cristal: 43.9, or: 46.2, argent: 53.2, bronze: 62.4 },
+    medals: { cristal: 44.4, or: 46.8, argent: 53.8, bronze: 63.1 },
   },
   {
     // Chapitre 1 · 4/6 — ROLLERCOASTER (spirale ; placé avant Lac Gelé pour que deux Rollercoasters ne se suivent pas ; 0.9.74 : refait AUTOUR des nouvelles pièces). Ouverture :
@@ -361,7 +361,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 10 }, pilot: { vCap: 66 },
     script: 'start*2 S CKL S B3 OBDL S2 C*1 ZR3 B2 [tr01s] ZL4< ZR4< [tr10s] S [tr02s] S3> [tr20s] S B TI TM TRR TM TLL TM TO S LPR2 S WI W WO S B [cdi2] DX [cdo2] S2 ZL3 S2 B2 finish*2',
     obst: [{ k: 'board_warn', at: 0.01085, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.08466, side: -18, rot: Math.PI }, { k: 'board_right', at: 0.20912, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.54631, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.70839, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.84298, side: 0, s: 2 }, { k: 'beamPost', at: 0.83864, side: 36 }, { k: 'beamPost', at: 0.83864, side: -36 }, { k: 'board_left', at: 0.91534, side: 20, rot: Math.PI }],
-    medals: { cristal: 46.1, or: 48.5, argent: 55.8, bronze: 65.5 },
+    medals: { cristal: 46.9, or: 49.3, argent: 56.7, bronze: 66.6 },
   },
   {
     // Chapitre 5 · 4/6 — ROLLERCOASTER (0.10.4 : refait AUTOUR des nouvelles pièces). Ouverture : tire-bouchon dès la troisième case. Hélice montante de quatre grandes courbes
@@ -386,7 +386,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 2 }, pilot: { vCap: 66 },
     script: 'start*2 B3 TI TM2 TO QU WA4 CR S C*1 [cdi2] DX [cdo2] B OB S2 B [tr01s] ZL4< ZR4< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S NI N2 NO S ZL3 S B2 finish*2',
     obst: [{ k: 'board_warn', at: 0.08646, side: 18, rot: Math.PI }, { k: 'sign_down', at: 0.18164, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.21247, side: -18, rot: Math.PI }, { k: 'board_right', at: 0.46046, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.59718, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.72319, side: 0, s: 2 }, { k: 'pillar', at: 0.71783, side: 36 }, { k: 'pillar', at: 0.71783, side: -36 }, { k: 'board_warn', at: 0.88941, side: 16, rot: Math.PI }],
-    medals: { cristal: 46.9, or: 49.4, argent: 56.8, bronze: 66.6 },
+    medals: { cristal: 47.5, or: 50, argent: 57.5, bronze: 67.5 },
   },
   {
     // Chapitre 3 · 4/6 — ROLLERCOASTER (0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : quatre boosters → TRIPLE looping. Wall-ride à gauche, chicane longue, wall-ride à
@@ -399,7 +399,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 8 }, pilot: { vCap: 66 },
     script: 'start*2 B4 OBT S2 C*1 B2 [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B OBDL S C*3 B2 LPL3 S TI TM TRR TM TLL TM TO S B2 [cdi2] DX [cdo2] S WI W WO S ZL3 S B2 finish*2',
     obst: [{ k: 'board_warn', at: 0.03, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.295, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.42, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.555, side: -18, rot: Math.PI }, { k: 'board_warn', at: 0.692, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.91, side: 0, s: 2 }, { k: 'pillar', at: 0.905, side: 36 }, { k: 'pillar', at: 0.905, side: -36 }, { k: 'board_left', at: 0.926, side: 20, rot: Math.PI }, { k: 'block', at: 0.26161, wall: 'haut', s: 2 }, { k: 'block', at: 0.38183, wall: 'bas', s: 2 }],
-    medals: { cristal: 52, or: 54.7, argent: 63, bronze: 73.9 },
+    medals: { cristal: 52.7, or: 55.5, argent: 63.8, bronze: 74.9 },
   },
   {
     // Chapitre 1 · 5/6 — ROLLERCOASTER (la finale du chapitre ; 0.9.74 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters puis une montée verticale (montée en L,
@@ -449,7 +449,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 70 },
     script: 'start*3 BRR B3 S BLL S2 WI W2 WO S B BRR C*2 S ZR4 S [tr02l] S4> [tr20l] BLL B S2 ZZR S BRR B S2 TI TM TRR TM TLL TM TO S BLL B2 WI W WO S B2 finish*2',
     obst: [{ k: 'gantry', at: 0.2, side: 0, s: 2 }, { k: 'pillar', at: 0.194, side: 36 }, { k: 'pillar', at: 0.194, side: -36 }, { k: 'board_right', at: 0.31, side: -20, rot: Math.PI }, { k: 'board_right', at: 0.555, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.685, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.947, side: 0, s: 2 }, { k: 'pillar', at: 0.941, side: 36 }, { k: 'pillar', at: 0.941, side: -36 }, { k: 'block', at: 0.41077, wall: 'haut', s: 2 }, { k: 'block', at: 0.43732, wall: 'bas', s: 2 }],
-    medals: { cristal: 51.2, or: 53.9, argent: 62, bronze: 72.8 },
+    medals: { cristal: 51.9, or: 54.7, argent: 62.9, bronze: 73.8 },
   },
   {
     // Chapitre 6 · 5/6 — SPEEDWAY EN DEUX TOURS (0.10.5 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters puis une montée douce de deux niveaux. Le tour du cratère :
@@ -486,7 +486,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 2 }, pilot: { vCap: 66 },
     script: 'start*2 B3 [crv4] UX.b UX.b [cro4] TSPLL U G1 D TALT S R S3 R S TMRG C*1 S2 [cdi2] DX DX [cdo2] B OB S2 B [tr01s] ZL4< ZR4< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B2 finish*2',
     obst: [{ k: 'sign_down', at: 0.13072, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.17356, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.44978, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.59749, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.73929, side: 0, s: 2 }, { k: 'pillar', at: 0.73486, side: 36 }, { k: 'pillar', at: 0.73486, side: -36 }, { k: 'board_warn', at: 0.75702, side: -18, rot: Math.PI }, { k: 'board_left', at: 0.92393, side: 20, rot: Math.PI }],
-    medals: { cristal: 50.2, or: 52.8, argent: 60.7, bronze: 71.3 },
+    medals: { cristal: 51.2, or: 53.9, argent: 62, bronze: 72.7 },
   },
   {
     // Chapitre 3 · 6/6 — SPEEDWAY (0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : longue pente douce vers la mer (six demi-niveaux). Très grands virages relevés, route
@@ -548,7 +548,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 66 },
     script: 'start*2 B2 S2.t40 S2.t170 S [crs1] S2 [cds1] B ZR4 S ZL4 S HR S3.t137 B C*3 WI W2 WO S2 HL S2 TI TM TRR TM TLL TM TO S B [cdi1] [dn2] [cdo1] S ZZR S2 ZL3 S B2 finish*2',
     obst: [{ k: 'board_right', at: 0.16, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.24, side: 20, rot: Math.PI }, { k: 'pyramidS', at: 0.375, side: 28 }, { k: 'pyramidS', at: 0.375, side: -28 }, { k: 'gantry', at: 0.423, side: 0, s: 2 }, { k: 'pillarBase', at: 0.417, side: 36 }, { k: 'pillarBase', at: 0.417, side: -36 }, { k: 'board_warn', at: 0.51, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.815, side: -20, rot: Math.PI }],
-    medals: { cristal: 43.4, or: 45.7, argent: 52.6, bronze: 61.7 },
+    medals: { cristal: 44.1, or: 46.4, argent: 53.4, bronze: 62.6 },
   },
   {
     // Chapitre 8 · 2/6 — TECHNIQUE (0.10.7 : refait AUTOUR des nouvelles pièces). Ouverture : booster puis un courant (tapis à 137 %). Lacets en S, passage ÉTROIT (12 m) entre
@@ -572,7 +572,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 12 }, pilot: { vCap: 66 },
     script: 'start*2 B3 [tr02s] S3> [tr20s] S C*1 B2 OD S2 B [tr01s] S3< [tr10s] S2 ZR3 S2 LPR2 S WI W WO S ZL3 S2 TI TM TRR TM TLL TM2 TO S NI N2 NO S B [cdi2] DX [cdo2] S3 B2 finish*2',
     obst: [{ k: 'wallSL', at: 0.115, side: 28 }, { k: 'beamL', at: 0.115, side: -28 }, { k: 'board_warn', at: 0.15, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.395, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.45, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.599, side: 0, s: 2 }, { k: 'beamPost', at: 0.594, side: 36 }, { k: 'beamPost', at: 0.594, side: -36 }, { k: 'board_warn', at: 0.678, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.852, side: 16, rot: Math.PI }, { k: 'block', at: 0.0796, wall: 'bas', s: 2 }, { k: 'block', at: 0.33617, wall: 'haut', s: 2 }],
-    medals: { cristal: 43.5, or: 45.8, argent: 52.6, bronze: 61.8 },
+    medals: { cristal: 44.7, or: 47, argent: 54.1, bronze: 63.5 },
   },
   {
     // Chapitre 8 · 4/6 — ACROBATIQUE en GRAVITÉ LOURDE (130 % ; 0.10.7 : refait AUTOUR des nouvelles pièces). Ouverture : cinq boosters, plaque de gravité. Quatre sauts courts et
@@ -596,7 +596,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 22 }, pilot: { vCap: 66 },
     script: 'start*2 B [cdi2] DX DX [cdo2] OB S2 C*1 B2 [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B finish*2',
     obst: [{ k: 'sign_down', at: 0.012, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.06, side: -18, rot: Math.PI }, { k: 'block', at: 0.175, side: 26 }, { k: 'block', at: 0.175, side: -26 }, { k: 'board_right', at: 0.29, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.52, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.691, side: 0, s: 2 }, { k: 'pillar', at: 0.686, side: 36 }, { k: 'pillar', at: 0.686, side: -36 }, { k: 'board_warn', at: 0.717, side: -18, rot: Math.PI }, { k: 'board_left', at: 0.915, side: 20, rot: Math.PI }],
-    medals: { cristal: 43.3, or: 45.6, argent: 52.4, bronze: 61.5 },
+    medals: { cristal: 43.7, or: 46, argent: 52.9, bronze: 62.1 },
   },
   {
     // Chapitre 8 · 6/6 — SPEEDWAY (0.10.7 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters et un pont de VERRE entre deux pyramides de corail. Très grands virages
@@ -622,7 +622,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 66 },
     script: 'start*2 B3 S3.c B S2.t137 S [crs1] S2 [cds1] B ZR4 S ZL4 S HR S2 B C*3 WI W2 WO S HL S2 TI TM TRR TM TLL TM TO S ZR3 S ZL3 B [cdi1] [dn2] [cdo1] ZZR S B2 finish*2',
     obst: [{ k: 'bumper', at: 0.372, side: 7.5, s: 0.8 }, { k: 'spikes', at: 0.497, side: -7.5, s: 0.7 }, { k: 'wallS', at: 0.064, side: 26, rot: Math.PI / 2 }, { k: 'wallS', at: 0.064, side: -26, rot: Math.PI / 2 }, { k: 'board_right', at: 0.19, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.27, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.432, side: 0, s: 2 }, { k: 'beamPost', at: 0.426, side: 36 }, { k: 'beamPost', at: 0.426, side: -36 }, { k: 'board_warn', at: 0.506, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.736, side: -20, rot: Math.PI }],
-    medals: { cristal: 45, or: 47.3, argent: 54.4, bronze: 63.9 },
+    medals: { cristal: 45.5, or: 47.9, argent: 55, bronze: 64.6 },
   },
   {
     // Chapitre 9 · 2/6 — TECHNIQUE (0.10.8 : refait AUTOUR des nouvelles pièces). Ouverture : bifurcation, la voie de droite est accélérée. Lacets en S, passage ÉTROIT (12 m) entre
@@ -647,7 +647,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 10 }, pilot: { vCap: 66 },
     script: 'start*2 B2 CBR2 CBR2 CBR2 CBR2 S C*1 ZR3 B2 OTL S2 B [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S2 WI W WO S ZL3 S2 TI TM TLL TM TRR TM TO S B [cdi2] DX [cdo2] S B2 finish*2',
     obst: [{ k: 'spikesPop', at: 0.605, side: 6.5, s: 0.75 }, { k: 'board_right', at: 0.128, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.188, side: 18, rot: Math.PI }, { k: 'beamX', at: 0.375, side: 28 }, { k: 'beamX', at: 0.375, side: -28 }, { k: 'gantry', at: 0.631, side: 0, s: 2 }, { k: 'beamPost', at: 0.626, side: 36 }, { k: 'beamPost', at: 0.626, side: -36 }, { k: 'board_left', at: 0.657, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.72, side: 18, rot: Math.PI }, { k: 'block', at: 0.45588, wall: 'bas', s: 2 }, { k: 'block', at: 0.55623, wall: 'haut', s: 2 }],
-    medals: { cristal: 45.8, or: 48.2, argent: 55.4, bronze: 65.1 },
+    medals: { cristal: 46.6, or: 49, argent: 56.4, bronze: 66.2 },
   },
   {
     // Chapitre 9 · 4/6 — SPEEDWAY (0.10.8 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters et un tunnel de quatre cases. Très grands virages relevés, un BUMPER, route
@@ -659,7 +659,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 70 },
     script: 'start*3 B3 S4# BRR S B BLL S2 WI W2 WO S C*2 B ZR4 S [tr02l] S4> [tr20l] BRR S2.c BLL B S ZZR S BRR S TI TM TRR TM TLL TM TO S B2 finish*2',
     obst: [{ k: 'bumper', at: 0.24, side: -7.5, s: 0.8 }, { k: 'bumper', at: 0.78, side: 7.5, s: 0.8 }, { k: 'gantry', at: 0.268, side: 0, s: 2 }, { k: 'pillar', at: 0.262, side: 36 }, { k: 'pillar', at: 0.262, side: -36 }, { k: 'board_right', at: 0.315, side: -20, rot: Math.PI }, { k: 'block', at: 0.65, side: 28 }, { k: 'block', at: 0.65, side: -28 }, { k: 'board_right', at: 0.66, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.785, side: 18, rot: Math.PI }],
-    medals: { cristal: 45.6, or: 48, argent: 55.2, bronze: 64.8 },
+    medals: { cristal: 46.4, or: 48.8, argent: 56.1, bronze: 65.9 },
   },
   {
     // Chapitre 9 · 5/6 — ACROBATIQUE (0.10.8 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters et une bande rebondissante (150 %). PIQUES ESCAMOTABLES, grand saut reçu
@@ -696,7 +696,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 66 },
     script: 'start*2 B3 S3.w150 S [crs1] S2 [cds1] B ZR4 S ZL4 S HR S2 B C*3 WI W2 WO S2 HL S2 TI TM TRR TM TLL TM TO S B [cdi1] [dn2] [cdo1] ZZR S ZL3 S2 ZR3 S B2 finish*2',
     obst: [{ k: 'slab', at: 0.064, side: 26 }, { k: 'slab', at: 0.064, side: -26 }, { k: 'board_right', at: 0.155, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.233, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.395, side: 0, s: 2 }, { k: 'pillar', at: 0.389, side: 36 }, { k: 'pillar', at: 0.389, side: -36 }, { k: 'board_warn', at: 0.483, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.76, side: -20, rot: Math.PI }],
-    medals: { cristal: 44.5, or: 46.9, argent: 53.9, bronze: 63.3 },
+    medals: { cristal: 45.1, or: 47.5, argent: 54.6, bronze: 64.1 },
   },
   {
     // Chapitre 10 · 2/6 — ACROBATIQUE SANS BORDURES (0.10.9 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → rampe sans bordures. Trois sauts d'île en île, chacun
@@ -744,7 +744,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 70 },
     script: 'start*3 B2_ S2.w150_ BRR_ S_ B_ BLL_ S2_ WI_ W2_ WO_ S_ C*2 B_ ZR4_ S_ [tr02l] S4> [tr20l] BRR_ S2.w100_ B_ BLL_ S_ ZZR_ S_ BRR_ S_ TI TM TRR TM TLL TM TO S_ B2 finish*2',
     obst: [{ k: 'wallS', at: 0.126, side: 28, rot: Math.PI / 2 }, { k: 'wallS', at: 0.126, side: -28, rot: Math.PI / 2 }, { k: 'gantry', at: 0.247, side: 0, s: 2 }, { k: 'pillarBase', at: 0.241, side: 36 }, { k: 'pillarBase', at: 0.241, side: -36 }, { k: 'board_right', at: 0.296, side: -20, rot: Math.PI }, { k: 'board_right', at: 0.65, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.777, side: 18, rot: Math.PI }],
-    medals: { cristal: 43, or: 45.3, argent: 52, bronze: 61.1 },
+    medals: { cristal: 43.8, or: 46.1, argent: 53, bronze: 62.2 },
   },
   {
     // Chapitre 10 · 6/6 — ACROBATIQUE (0.10.9 : refait AUTOUR des nouvelles pièces). Ouverture : plaque DELTAPLANE, ralentisseur et un vide : on plane six niveaux plus bas, au-dessus
@@ -805,7 +805,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 70 },
     script: 'start*3 B3 BLL S BRR S2 WI W2 WO S C*2 B ZR4 S [tr02l] S4> [tr20l] BRR S BLL S B2 S3.v B ZZL S BLL S BRR S TI TM TLL TM TRR TM TO S B2 finish*2',
     obst: [{ k: 'gantry', at: 0.206, side: 0, s: 2 }, { k: 'pillar', at: 0.2, side: 36 }, { k: 'pillar', at: 0.2, side: -36 }, { k: 'board_right', at: 0.25, side: -20, rot: Math.PI }, { k: 'wallS', at: 0.586, side: 28, rot: Math.PI / 2 }, { k: 'wallS', at: 0.586, side: -28, rot: Math.PI / 2 }, { k: 'board_left', at: 0.608, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.8, side: 18, rot: Math.PI }],
-    medals: { cristal: 46.6, or: 49.1, argent: 56.4, bronze: 66.2 },
+    medals: { cristal: 47, or: 49.5, argent: 57, bronze: 66.9 },
   },
   {
     // Chapitre 11 · 5/6 — ROLLERCOASTER (0.10.10 : refait AUTOUR des nouvelles pièces). Ouverture : booster, descente, puis une VRILLE vers le plafond (pentes au plafond, booster),
@@ -818,7 +818,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 10 }, pilot: { vCap: 66 },
     script: 'start*2 B [cdi1] [dn2] [cdo1] TW.f S2^ D^ S2^ B^ S2^ U^ S^ TWB.f S2 B ODL S2 C*1 ZR3 B2 [tr01s] ZL4< ZR4< [tr10s] S [tr02s] S3> [tr20s] S2 WI W WO S ZL3 S2 LPR2 S2 TI TM TLL TM TRR TM TO S B2 finish*2',
     obst: [{ k: 'wedge', at: 0.30147, side: 26 }, { k: 'wedge', at: 0.30147, side: -26, rot: Math.PI }, { k: 'board_right', at: 0.31083, side: -20, rot: Math.PI }, { k: 'gantry', at: 0.63436, side: 0, s: 2 }, { k: 'pillar', at: 0.63035, side: 36 }, { k: 'pillar', at: 0.63035, side: -36 }, { k: 'board_left', at: 0.65441, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.7012, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.81885, side: -18, rot: Math.PI }],
-    medals: { cristal: 47.6, or: 50.2, argent: 57.7, bronze: 67.7 },
+    medals: { cristal: 48.2, or: 50.7, argent: 58.3, bronze: 68.5 },
   },
   {
     // Chapitre 11 · 6/6 — TECHNIQUE (0.10.10 : refait AUTOUR des nouvelles pièces). Ouverture : booster et un VERRE très glissant (500 %), épingles en S. Passage ÉTROIT (12 m) entre
@@ -873,7 +873,7 @@ export const BUILTIN_TRACKS = [
     opts: { l: 6 }, pilot: { vCap: 66 },
     script: 'start*2 B2 [crs1] S2 [cds1] S2 HR S B C S2 HL S2 B [cdi1] [dn2] [cdo1] B2 S ZR3 S ZL3 S WI W WO S TI TM TRR TM TLL TM TO S B finish*2',
     obst: [{ k: 'pendulum', at: 0.0433, side: 0, s: 1, ph: 0 }, { k: 'slider', at: 0.25279, side: 0, s: 1, ph: 0.75 }, { k: 'board_right', at: 0.415, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.5, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.606, side: 0, s: 2 }, { k: 'pillar', at: 0.6, side: 36 }, { k: 'pillar', at: 0.6, side: -36 }, { k: 'board_warn', at: 0.65, side: 18, rot: Math.PI }, { k: 'block', at: 0.96, side: 28 }, { k: 'block', at: 0.96, side: -28 }],
-    medals: { cristal: 33.5, or: 35.2, argent: 40.5, bronze: 47.6 },
+    medals: { cristal: 34, or: 35.8, argent: 41.2, bronze: 48.3 },
   },
   {
     // Chapitre 12 (Atelier, bonus) · 4/6 — MÉCANISME : un marteau tournant puis un balayeur : des obstacles qui tournent.

@@ -9,12 +9,19 @@ import { SLAB_T, ROAD_HALF } from '../../js/constants.js';
 import { Track } from '../../js/track.js';
 import { GeoBuilder, FxBuilder } from '../../js/geo.js';
 import { buildTileInto, pillarSpecs } from '../../js/trackGeometry.js';
+import { FX_FRAG } from '../../js/trackMesh.js';
 import { ribbonOf, frameLocal, centerlineWorld } from '../../js/ribbons.js';
 import { pieceCases, surfaceVariants, PIECE_IDS } from './cas.mjs';
 import { SONDES2 } from './sondes2.mjs';
 
 const TERRAIN_Y = -0.02;          // le terrain est plat sous le circuit (scenery.js : heightAt = 0, posé 2 cm plus bas)
 const r2 = (x) => Math.round(x * 100) / 100;
+// Dessus du chapeau d'un poteau au point (dx, dz) ∈ [−2, 2]² : interpolation des quatre coins (cap : −x−z, +x−z, −x+z, +x+z), ou plat à `top`.
+export const capTop = (P, dx, dz) => {
+  if (!P.cap) return P.top;
+  const u = (dx + 2) / 4, v = (dz + 2) / 4, c = P.cap;
+  return (c[0] * (1 - u) + c[1] * u) * (1 - v) + (c[2] * (1 - u) + c[3] * u) * v;
+};
 
 export function build(tile, track = null) {
   const gb = new GeoBuilder(), glow = new GeoBuilder(), fx = new FxBuilder();
@@ -79,7 +86,7 @@ export function sondeSousTerrain(cases, out) {
 export function sondePoteaux(cases, out) {
   const S = {};
   for (const c of cases) {
-    if (c.orient !== 'sol') continue;
+    if (c.orient !== 'sol' || PIECES[c.t].kind === 'ribbon') continue;      // (rubans : leurs poteaux sont vérifiés par la sonde « supports »)
     const tile = Track.normalize({ ...c.tile, l: Math.max(c.tile.l, 3) });
     if (!Track.inBounds(tile)) continue;
     const ctr = tileCenter(tile);
@@ -89,7 +96,8 @@ export function sondePoteaux(cases, out) {
         sampleLocal(tile, P.lx + dx, P.lz + dz, S);
         if (!S.inFootprint) continue;
         const under = S.h - SLAB_T;
-        poke = Math.max(poke, P.top - under); gapMin = Math.min(gapMin, under - P.top);
+        const ct = capTop(P, dx, dz);
+        poke = Math.max(poke, ct - under); gapMin = Math.min(gapMin, under - ct);
       }
       void ctr;
       if (poke > 0.05) out.push({ sonde: 'poteaux', ...ref(c, tile), valeur: r2(poke), msg: `le chapeau du poteau dépasse de ${r2(poke)} m à travers la route` });
@@ -129,6 +137,8 @@ export function sondeMarquages(cases, out) {
 }
 
 // ---- S5 : sens du tapis roulant ------------------------------------------------------------------------------------------------
+// Modèle du shader : la pointe suit le signe de la vitesse si le terme latéral est multiplié par beltDir (0.12.2), sinon elle vise toujours l'entrée.
+const APEX_FOLLOWS_SPEED = FX_FRAG.includes('beltDir * abs(vFx.w)');
 // Le shader (trackMesh.js) dessine des chevrons dont la POINTE est vers les abscisses (vFx.y) décroissantes, quelle que soit la vitesse,
 // et les fait défiler vers les abscisses croissantes si la vitesse (vFx.z) est positive. On compare ces deux sens à la poussée de la physique.
 export function sondeTapis(cases, out) {
@@ -150,7 +160,7 @@ export function sondeTapis(cases, out) {
         const bs = beltSpeed(tileParam(tile));
         const push = (dx * S.gz + dz * -S.gx) * bs * Math.sign(dy);      // > 0 : la poussée va vers les abscisses croissantes
         if (Math.abs(push) < 1e-6) continue;
-        const scroll = Math.sign(sp), apex = -1;
+        const scroll = Math.sign(sp), apex = APEX_FOLLOWS_SPEED ? Math.sign(sp) : -1;
         if (Math.sign(push) === scroll) scrollOk++; else scrollBad++;
         if (Math.sign(push) === apex) apexOk++; else apexBad++;
       }

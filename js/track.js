@@ -2,7 +2,7 @@
 // requêtes de surface pour la physique, sérialisation en code partageable.
 import { CELL, DIRS, MAX_LEVEL, LEVEL_H, MAX_DECOS, VEHICLES } from './constants.js';
 import { PIECES, MAX_O, PIECE_ORDER, SURFACE_CODES, SURFACE_ALIAS, LEGACY_SURFACE, LEGACY_PIECE, SURFACES, surfaceAllowed, flagAllowed, forkBranchX, rotVec, moverParams, clampMover, THEMES, LEGACY_TILE, plateAllEdges, baseY } from './pieces.js';
-import { centerlineWorld, rollLevels } from './ribbons.js';
+import { centerlineWorld, rollLevels, minGroundLevel } from './ribbons.js';
 import { isObstacle, buildObstacleGrid } from './obstacles.js';
 import { isSolid, buildSolidGrid } from './solids.js';
 import { DECO_ORDER } from './decoData.js';
@@ -177,6 +177,13 @@ export class Track {
     const [lo, hi] = Track.range(t);
     // À l'envers, la voiture pend sous la chaussée : il faut au moins un niveau sous la pièce.
     return lo >= (t.v ? 1 : 0) && hi <= MAX_LEVEL + 6;
+  }
+
+  // Pose permise DANS L'ÉDITEUR (0.12.2) : dans les niveaux, et sans que la chaussée passe sous le terrain (la vrille, le tire-bouchon, les loopings
+  // double et triple plongent sous leur niveau). Les circuits générés (défis du jour, circuits intégrés) gardent la règle d'avant (inBounds) :
+  // ils doivent se reconstruire à l'identique ; une pièce enterrée d'un ancien circuit est montrée dans une fosse (scenery/pits.js).
+  static placeable(t) {
+    return Track.inBounds(t) && (t.v || t.o || t.l >= minGroundLevel(t.t));
   }
 
   // Pièces gênées par t. Phase 3 : un anneau flottant (pièce « anneau » : turbo ou ancien checkpoint aérien) peut être posé

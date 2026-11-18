@@ -9,7 +9,7 @@
 //   circuits       : circuits officiels et leçons de l'académie : route sous le terrain, chapeaux de poteaux, rubans en l'air sans support
 //   tube           : la voiture en vol libre dans un tube (décrochée) traverse-t-elle la coque ? tombée sur le tube, se retrouve-t-elle dedans ?
 import { PIECES, SURFACES, sampleLocal, tileCenter, isRibbon, baseY, LEGACY_TILE, arcParams } from '../../js/pieces.js';
-import { ROAD_HALF, CELL, SLAB_T } from '../../js/constants.js';
+import { ROAD_HALF, CELL, SLAB_T, RAIL_W } from '../../js/constants.js';
 import { Track } from '../../js/track.js';
 import { GeoBuilder, FxBuilder } from '../../js/geo.js';
 import { buildTileInto, stripsFor, pillarSpecs } from '../../js/trackGeometry.js';
@@ -20,6 +20,7 @@ import { DECO_ORDER } from '../../js/decoData.js';
 import { BUILTIN_TRACKS, buildBuiltin } from '../../js/tracks.js';
 import { CarPhysics } from '../../js/physics.js';
 import { surfaceVariants } from './cas.mjs';
+import { capTop } from './sondes.mjs';
 
 const r2 = (x) => Math.round(x * 100) / 100;
 const ref = (c, tile = c.tile) => ({ t: c.t, orient: c.orient, opts: c.opts, l: tile.l, ...(tile.s ? { s: tile.s, p: tile.p } : {}) });
@@ -79,6 +80,33 @@ export function sondeRenduPhysique(cases, out) {
   }
 }
 
+// ---- largeur de la route dessinée ----------------------------------------------------------------------------------------------
+// Tous les sommets de la route (maillage plein : dalle, bordures) de chaque revêtement doivent rester entre les bords de la physique, bordures comprises
+// (|d| − ROAD_HALF ≤ largeur des bordures). Attrape une route redessinée à la mauvaise largeur (plaque bateau sur route étroite, avant 0.12.2).
+export function sondeLargeurRoute(cases, out) {
+  const S = {};
+  for (const c of cases) {
+    const P = PIECES[c.t];
+    if (c.orient !== 'sol' || !FLOOR.has(P.kind) || P.special || c.tile.l > 0.01 && !P.rise) continue;
+    const ctr = tileCenter(c.tile);
+    let worst = 0, which = '';
+    for (const v of [{}].concat(surfaceVariants())) {
+      const tile = Track.normalize({ ...c.tile, l: 0, ...v });
+      if (v.s && tile.s !== v.s) continue;
+      if (!Track.inBounds(tile)) continue;
+      const gb = new GeoBuilder();
+      buildTileInto(gb, new GeoBuilder(), tile, null, new FxBuilder());
+      for (let i = 0; i < gb.pos.length; i += 3) {
+        sampleLocal(tile, gb.pos[i] - ctr.x, gb.pos[i + 2] - ctr.z, S);
+        if (S.d == null || !S.inFootprint) continue;
+        const e = Math.abs(S.d) - ROAD_HALF - RAIL_W - 0.3;
+        if (e > worst) { worst = e; which = v.s ? SURFACES[v.s].label : 'route normale'; }
+      }
+    }
+    if (worst > 0.2) out.push({ sonde: 'largeur-route', ...ref(c), valeur: r2(worst), msg: `${which} : la route dessinée dépasse de ${r2(worst)} m le bord de la physique` });
+  }
+}
+
 // ---- facettes des rubans -----------------------------------------------------------------------------------------------------
 // Même découpage que stripsFor (ribbonStrip) : max(8, len / 2.5) tronçons, ou 56 par tour de looping.
 export function sondeFacettes(cases, out) {
@@ -87,7 +115,8 @@ export function sondeFacettes(cases, out) {
     const P = PIECES[c.t], tile = c.tile;
     const rib = ribbonOf(tile, true);
     if (!rib || !(P.kind === 'ribbon' || P.kind === 'loop' || tile.o)) continue;
-    const n = P.kind === 'loop' && !tile.o ? 56 * P.turns : Math.max(8, Math.round(rib.len / 2.5));
+    // Découpage réel du rendu : la bande roulée de stripsFor (pour un looping à plat, celle du milieu).
+    const strips = stripsFor(tile), n = (P.kind === 'loop' && !tile.o ? strips[1] : strips[0]).length - 1;
     let worst = 0;
     for (let i = 0; i < n; i++) {
       frameLocal(rib, i / n, A); frameLocal(rib, (i + 1) / n, B); frameLocal(rib, (i + 0.5) / n, M);
@@ -130,7 +159,7 @@ export function sondeLargeur(cases, out) {
     const ctr = tileCenter(c.tile), hw = Math.max(...P.hw);
     const base = new GeoBuilder();
     buildTileInto(new GeoBuilder(), base, Track.normalize({ ...c.tile }), null, new FxBuilder());
-    for (const s of ['conveyor', 'magnet', 'slow', 'boost']) {
+    for (const s of ['conveyor', 'magnet', 'slow']) {      // (bandes d'un bord à l'autre ; les flèches centrées gardent leur taille)
       const tile = Track.normalize({ ...c.tile, s });
       const glow = new GeoBuilder();
       buildTileInto(new GeoBuilder(), glow, tile, null, new FxBuilder());
@@ -201,47 +230,74 @@ export function sondeCircuits(_cases, out, stats) {
       if (LEGACY_TILE[tile.t] || !PIECES[tile.t]) continue;
       const m = roadMin(tile);
       if (m < -0.05) out.push({ sonde: 'circuits', t: tile.t, orient: name, l: tile.l, valeur: r2(m), msg: `${name} : ${PIECES[tile.t].label} (${tile.x}, ${tile.z}) passe sous le terrain (${r2(m)} m)` });
-      for (const P of pillarSpecs(tile, tr)) {
+      for (const P of PIECES[tile.t].kind === 'ribbon' ? [] : pillarSpecs(tile, tr)) {      // (rubans : sonde « supports »)
         let poke = -Infinity;
-        for (const dx of [-2, 0, 2]) for (const dz of [-2, 0, 2]) { sampleLocal(tile, P.lx + dx, P.lz + dz, S); if (S.inFootprint) poke = Math.max(poke, P.top - (S.h - SLAB_T)); }
+        for (const dx of [-2, 0, 2]) for (const dz of [-2, 0, 2]) { sampleLocal(tile, P.lx + dx, P.lz + dz, S); if (S.inFootprint) poke = Math.max(poke, capTop(P, dx, dz) - (S.h - SLAB_T)); }
         if (poke > 0.05) out.push({ sonde: 'circuits', t: tile.t, orient: name, l: tile.l, valeur: r2(poke), msg: `${name} : poteau de ${PIECES[tile.t].label} (${tile.x}, ${tile.z}) qui dépasse de ${r2(poke)} m` });
       }
-      if (PIECES[tile.t].kind === 'ribbon' && !tile.o && !tile.v && baseY(tile) > 3) out.push({ sonde: 'circuits-air', t: tile.t, orient: name, l: tile.l, valeur: r2(baseY(tile)), msg: `${name} : ${PIECES[tile.t].label} (${tile.x}, ${tile.z}) à ${r2(baseY(tile))} m sans aucun support` });
+      if (PIECES[tile.t].kind === 'ribbon' && !tile.o && !tile.v && baseY(tile) > 3 && !pillarSpecs(tile, tr).length) out.push({ sonde: 'circuits-air', t: tile.t, orient: name, l: tile.l, valeur: r2(baseY(tile)), msg: `${name} : ${PIECES[tile.t].label} (${tile.x}, ${tile.z}) à ${r2(baseY(tile))} m sans aucun support` });
     }
   }
   stats.circuits = nt;
 }
 
-// ---- tube : la voiture décrochée et la coque ---------------------------------------------------------------------------------
-// Le tube (crossSweep) est une coque de rayon 1 / kc autour de l'axe (centre de la section = point bas + n / kc).
-export function sondeTube(_cases, out) {
-  for (const t of ['tube', 'tubeMid']) {
-    if (!PIECES[t]) continue;
-    const tile = Track.normalize({ t, x: 0, z: 0, l: 2, r: 0 });
-    const tr = new Track('tube', [tile]);
-    const rib = ribbonOf(tile), ctr = tileCenter(tile), F = {};
-    frameLocal(rib, 0.5, F);
-    if (!F.kc) continue;
-    const R = 1 / F.kc, ax = [ctr.x + F.px + F.nx * R, F.py + F.ny * R, ctr.z + F.pz + F.nz * R];
-    const radial = (p) => Math.hypot(p.x - ax[0], p.y - ax[1]);       // (axe du tube le long de z, pièce non tournée)
-    // 1) Décrochée près du haut, lancée vers le haut et le côté : sort-elle de la coque ?
-    let ph = new CarPhysics(tr);
-    ph.place(ax[0] + 1, ax[1] + R - 2.5, ax[2], 0);
-    ph.graceT = 0; ph.vel.y = 9; ph.vel.x = 4; ph.vel.z = -6;
-    let maxR = 0, outside = false;
-    for (let i = 0; i < 240; i++) { ph.step({}); const r = radial(ph.pos); maxR = Math.max(maxR, r); if (r > R + 1.2 && Math.abs(ph.pos.z - ax[2]) < 30) outside = true; }
-    if (outside) out.push({ sonde: 'tube', t, orient: 'sol', l: tile.l, valeur: r2(maxR - R), msg: `décrochée en haut du tube, la voiture traverse la coque (jusqu’à ${r2(maxR - R)} m au-delà de la paroi)` });
-    // 2) Tombée sur le dessus du tube depuis l'extérieur : où finit-elle ?
-    ph = new CarPhysics(tr);
-    ph.place(ax[0] + 0.5, ax[1] + R + 4, ax[2], 0);
-    ph.graceT = 0; ph.vel.z = -3;
-    let inside = false;
-    for (let i = 0; i < 360; i++) { ph.step({}); if (radial(ph.pos) < R - 1.5) inside = true; }
-    if (inside) out.push({ sonde: 'tube', t, orient: 'sol', l: tile.l, valeur: 1, msg: 'tombée sur le dessus du tube, la voiture passe à travers la coque et se retrouve dedans' });
+// ---- supports des rubans ------------------------------------------------------------------------------------------------------
+// Chaque ruban posé au niveau 3 (à plat) a au moins un poteau, sauf ceux qui n'ont aucun passage à plat (mur vertical, sommet de looping…).
+export function sondeSupports(cases, out) {
+  const F = {};
+  for (const c of cases) {
+    if (c.orient !== 'sol' || PIECES[c.t].kind !== 'ribbon') continue;
+    const tile = Track.normalize({ ...c.tile, l: Math.max(3, c.tile.l) });
+    if (!Track.inBounds(tile)) continue;
+    const rib = ribbonOf(tile, true);
+    let flat = false;
+    for (let i = 1; i < 24; i++) { frameLocal(rib, i / 24, F); if (F.ny >= 0.8) flat = true; }
+    if (flat && !pillarSpecs(tile).length) out.push({ sonde: 'supports', ...ref(c, tile), valeur: r2(baseY(tile)), msg: `posé à ${r2(baseY(tile))} m, aucun poteau` });
   }
 }
 
+// ---- tube : la voiture décrochée et la coque ---------------------------------------------------------------------------------
+// Le tube (crossSweep) est une coque de rayon 1 / kc autour de l'axe (centre de la section = point bas + n / kc).
+export function sondeTube(_cases, out) {
+  // Voiture posée en vol libre en (x, y, z) avec la vitesse v (place() la recolle au sol : on la remet en l'air à la main).
+  const fly = (tr, x, y, z, v) => {
+    const ph = new CarPhysics(tr);
+    ph.place(x, y, z, 0);
+    ph.pos.x = ph.prev.x = x; ph.pos.y = ph.prev.y = y; ph.pos.z = ph.prev.z = z;
+    ph.grounded = false; ph.graceT = 0; ph.vel.x = v[0]; ph.vel.y = v[1]; ph.vel.z = v[2];
+    return ph;
+  };
+  for (const t of ['tube', 'tubeMid', 'tubeTurn']) {
+    if (!PIECES[t]) continue;
+    const tile = Track.normalize({ t, x: 0, z: 0, l: 2, r: 0 });
+    const tr = new Track('tube', [tile]), T = tr.tiles[0];
+    const rib = ribbonOf(T), F = {};
+    frameWorldLocal(T, rib, 0.5, F);
+    if (!F.kc) continue;
+    const R = 1 / F.kc, ax = [F.px + F.nx * R, F.py + F.ny * R, F.pz + F.nz * R];
+    const radial = (p) => { const dx = p.x - ax[0], dy = p.y - ax[1], dz = p.z - ax[2], a = dx * F.tx + dy * F.ty + dz * F.tz; return Math.hypot(dx - F.tx * a, dy - F.ty * a, dz - F.tz * a); };
+    const near = (p) => Math.abs((p.x - ax[0]) * F.tx + (p.y - ax[1]) * F.ty + (p.z - ax[2]) * F.tz) < 12;
+    // 1) Décrochée près du haut, lancée vers le haut : sort-elle de la coque ?
+    let ph = fly(tr, ax[0] + F.rx * 1, ax[1] + R - 2.5, ax[2] + F.rz * 1, [F.tx * 6, 9, F.tz * 6]);
+    let maxR = 0;
+    for (let i = 0; i < 240; i++) { ph.step({}); if (near(ph.pos)) maxR = Math.max(maxR, radial(ph.pos)); }
+    if (maxR > R + 0.5) out.push({ sonde: 'tube', t, orient: 'sol', l: tile.l, valeur: r2(maxR - R), msg: `décrochée en haut du tube, la voiture traverse la coque (jusqu’à ${r2(maxR - R)} m au-delà de la paroi)` });
+    // 2) Tombée sur le dessus du tube depuis l'extérieur : où finit-elle ?
+    ph = fly(tr, ax[0], ax[1] + R + 4, ax[2], [F.tx * 2, 0, F.tz * 2]);
+    let inside = false;
+    for (let i = 0; i < 360; i++) { ph.step({}); if (near(ph.pos) && radial(ph.pos) < R - 1.5) inside = true; }
+    if (inside) out.push({ sonde: 'tube', t, orient: 'sol', l: tile.l, valeur: 1, msg: 'tombée sur le dessus du tube, la voiture passe à travers la coque et se retrouve dedans' });
+  }
+}
+// Repère monde du milieu d'un ruban (pièce non tournée : monde = centre + local).
+function frameWorldLocal(tile, rib, u, F) {
+  frameLocal(rib, u, F);
+  const c = tileCenter(tile);
+  F.px += c.x; F.pz += c.z;
+  return F;
+}
+
 export const SONDES2 = {
-  'rendu-physique': sondeRenduPhysique, facettes: sondeFacettes, emprise: sondeEmprise, largeur: sondeLargeur,
-  revetements: sondeRevetements, decors: sondeDecors, circuits: sondeCircuits, tube: sondeTube,
+  'rendu-physique': sondeRenduPhysique, 'largeur-route': sondeLargeurRoute, facettes: sondeFacettes, emprise: sondeEmprise, largeur: sondeLargeur,
+  revetements: sondeRevetements, decors: sondeDecors, circuits: sondeCircuits, supports: sondeSupports, tube: sondeTube,
 };

@@ -110,6 +110,25 @@ function decorsPreset() {
   return [...new Set(flagged.concat(reps))].map((k) => ({ groupe: flagged.includes(k) ? 'Décors signalés par la sonde' : 'Un décor par catégorie', titre: k,
     tiles: [Track.normalize({ t: 'straight', x: 0, z: 0, l: 0, r: 0 })], decos: [{ k, x: 40, y: 0, z: 16, s: 1 }], focus: null, angles: ['ras du sol'] }));
 }
+// Mêmes scènes photographiées avant et après les corrections (rapport de l'audit).
+const T = (t, extra = {}, l = 0) => [Track.normalize({ t, x: 0, z: 0, l, r: 0, ...extra })];
+PRESETS.avantapres = [
+  { groupe: 'Poteaux', titre: 'Courbe raide qui monte (crs4), niveau 3', tiles: T('crs4', {}, 3), focus: 'poteau', angles: ['gros plan'] },
+  { groupe: 'Poteaux', titre: 'Virage qui monte de 4 niveaux (cv4), niveau 3', tiles: T('cv4', {}, 3), focus: 'poteau', angles: ['gros plan'] },
+  { groupe: 'Poteaux', titre: 'Plaque triangle, niveau 1', tiles: T('tri1', {}, 1), angles: ['trois-quarts'] },
+  { groupe: 'Tapis roulant', titre: 'Tapis qui avance (+160 km/h)', tiles: T('straight', { s: 'conveyor', p: 181 }), angles: ['dessus'] },
+  { groupe: 'Tapis roulant', titre: 'Tapis à l’arrêt (0 km/h)', tiles: T('straight', { s: 'conveyor', p: 101 }), angles: ['dessus'] },
+  { groupe: 'Marquages', titre: 'Route étroite, tapis roulant', tiles: T('narrow', { s: 'conveyor' }), angles: ['dessus'] },
+  { groupe: 'Marquages', titre: 'Route large, aimant', tiles: T('wide', { s: 'magnet' }), angles: ['dessus'] },
+  { groupe: 'Marquages', titre: 'Vent dans un virage serré', tiles: T('curve', { s: 'wind' }), angles: ['dessus'] },
+  { groupe: 'Sous le terrain', titre: 'Vrille, niveau 0', tiles: T('twist'), focus: 'creux', angles: ['gros plan, ras du sol'] },
+  { groupe: 'Sous le terrain', titre: 'Looping double, niveau 0', tiles: T('loopDouble'), focus: 'creux', angles: ['gros plan, ras du sol'] },
+  { groupe: 'Supports', titre: 'Virage relevé, niveau 3', tiles: T('bank', {}, 3), angles: ['ras du sol'] },
+  { groupe: 'Supports', titre: 'Tube, niveau 2', tiles: T('tube', {}, 2), angles: ['ras du sol'] },
+  { groupe: 'Supports', titre: 'Tire-bouchon, niveau 2', tiles: T('cork', {}, 2), angles: ['ras du sol'] },
+  { groupe: 'Météo', titre: 'Pluie dans un tunnel', decor: 'polar', ambiance: { weather: 'rain' }, tiles: [...T('straight', { tn: 1 }), Track.normalize({ t: 'straight', x: 0, z: -1, l: 0, r: 0, tn: 1 })], angles: [['dedans', 1500]] },
+];
+
 Object.assign(PRESETS, { pieces: piecesPreset(), orientations: orientationsPreset(), revetements: revetementsPreset(), themes: themesPreset(), decors: decorsPreset() });
 
 // Point à examiner de près (pièce non tournée : monde = centre + local) : le poteau dont le chapeau dépasse le plus, ou le point le plus bas de la chaussée.

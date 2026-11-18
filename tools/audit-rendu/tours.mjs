@@ -10,7 +10,7 @@ import { writeFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const arg = (k) => (process.argv.find((a) => a.startsWith('--' + k + '=')) || '').split('=')[1];
-const MAX = +(arg('max') || 999), SECS = +(arg('secs') || 75), JSON_OUT = arg('json');
+const MAX = +(arg('max') || 999), SECS = +(arg('secs') || 75), JSON_OUT = arg('json'), ONLY = arg('only');
 
 const { chromium } = require('playwright');
 const PORT = 9600 + Math.floor(Math.random() * 300);
@@ -31,6 +31,7 @@ try {
   await page.waitForTimeout(600); await page.evaluate(() => window.copytrack.ui.closeModal());
   const n = Math.min(MAX, await page.evaluate(() => window.copytrack.builtins.length));
   for (let i = 0; i < n; i++) {
+    if (ONLY && !(await page.evaluate(([i, o]) => window.copytrack.builtins[i].def.name.includes(o), [i, decodeURIComponent(ONLY)]))) continue;
     const r = await page.evaluate(async ([i, secs]) => {
       const A = window.copytrack, B = A.builtins[i];
       const THREE = await import('/js/vendor/three.module.min.js');

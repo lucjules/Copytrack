@@ -197,7 +197,10 @@ function ribbonStrip(tile, count) {
 function boatRamp(strip, tile) {
   const p = PIECES[tile.t];
   let fr = strip;
-  if (p.kind === 'line' && strip.length < 13) fr = profileStrip(p, baseY(tile), 12);
+  if (p.kind === 'line' && strip.length < 13) {
+    fr = profileStrip(p, baseY(tile), 12);
+    if (p.hw) fr.forEach((f, i) => { f.hw = roadHalf(p, i / 12); });      // (0.12.2 : route étroite ou large : la cale garde sa largeur)
+  }
   const n = fr.length - 1;
   return fr.map((f, i) => ({ ...f, p: [f.p[0], f.p[1] - boatDrop(i / n), f.p[2]] }));
 }
@@ -216,7 +219,8 @@ export function stripsFor(tile) {
   }
   if (p.kind === 'ribbon' || isOriented(tile)) {
     // Ruban (transition, vrille, tube…) ou ligne / virage posé sur un mur : la bande suit la chaussée roulée.
-    return [ribbonStrip(tile, Math.max(8, Math.round(ribbonOf(tile, true).len / 2.5)))];
+    // (0.12.2 : une chicane roulée sur un mur tourne deux fois sur sa longueur : un tronçon tous les 1,5 m au lieu de 2,5, sinon 26 cm d'écart)
+    return [ribbonStrip(tile, Math.max(8, Math.round(ribbonOf(tile, true).len / (p.kind === 'sbend' ? 1.5 : 2.5))))];
   }
   if (p.kind === 'arc') {
     // Arc de cercle ; un virage incliné monte (ou descend) régulièrement sur le quart de tour (rampe hélicoïdale, chaussée horizontale en travers).
@@ -239,13 +243,14 @@ export function stripsFor(tile) {
   if (p.hw) {
     // 0.9.70 : route de largeur variable : chaque repère porte sa demi-largeur (hw), que le profil en travers suit (voir sweep).
     // 0.12.0 : en pente aussi (droite, ou profil courbe : 12 tronçons par case pour que le raccord reste lisse).
-    const n = profOf(p) === 'l' ? 4 * p.size : 12 * p.size;
+    const n = profOf(p) === 'l' ? 4 * p.size : 12 * p.size * (Math.abs(p.rise) >= 3 * p.size ? 2 : 1);
     const fr = !p.rise ? lineStrip(0, p.size * HALF, -p.size * HALF, base, base, n) : profOf(p) === 'l' ? lineStrip(0, p.size * HALF, -p.size * HALF, base, base + p.rise * LEVEL_H, n) : profileStrip(p, base, n);
     fr.forEach((f, i) => { f.hw = roadHalf(p, i / n); });
     return [fr];
   }
   // Ligne droite : profil vertical droit (4 tronçons) ou courbe (12 tronçons pour que le raccord reste lisse).
-  return [profOf(p) === 'l' ? lineStrip(0, p.size * HALF, -p.size * HALF, base, base + p.rise * LEVEL_H, 4) : profileStrip(p, base, 12)];
+  // (0.12.2 : 24 tronçons pour un profil courbe de 3 niveaux ou plus : avec 12, la route dessinée s'écartait de 12 cm de celle de la physique)
+  return [profOf(p) === 'l' ? lineStrip(0, p.size * HALF, -p.size * HALF, base, base + p.rise * LEVEL_H, 4) : profileStrip(p, base, Math.abs(p.rise) >= 3 ? 24 : 12)];
 }
 
 const at = (f, d, h) => [
@@ -364,10 +369,15 @@ function frameAt(frames, t) {
   let tg = [B.p[0] - A.p[0], B.p[1] - A.p[1], B.p[2] - A.p[2]];
   const l = Math.hypot(...tg) || 1;
   tg = tg.map((v) => v / l);
-  return { p, r: mix(A.r, B.r), u: mix(A.u, B.u), t: tg };
+  // 0.12.2 : largeur de la route à cet endroit (route étroite ou large) : kp met à l'échelle les positions qui vont d'un bord à l'autre,
+  // ks les formes centrées (flèches, anneaux), qui rétrécissent sur une route étroite mais gardent leur taille sur une route large.
+  const hw = (A.hw ?? ROAD_HALF) + ((B.hw ?? ROAD_HALF) - (A.hw ?? ROAD_HALF)) * k, kp = hw / ROAD_HALF;
+  return { p, r: mix(A.r, B.r), u: mix(A.u, B.u), t: tg, kp, ks: Math.min(1, kp) };
 }
 
-const onFrame = (f, d, along, h = 0.05) => [
+// Point d'un marquage : écart latéral d (mis à l'échelle des formes centrées), avancée along, hauteur h au-dessus de la chaussée.
+const onFrame = (f, d, along, h = 0.05) => onFrameRaw(f, d * (f.ks ?? 1), along, h);
+const onFrameRaw = (f, d, along, h = 0.05) => [
   f.p[0] + f.r[0] * d + f.t[0] * along + f.u[0] * h,
   f.p[1] + f.r[1] * d + f.t[1] * along + f.u[1] * h,
   f.p[2] + f.r[2] * d + f.t[2] * along + f.u[2] * h,
@@ -391,8 +401,11 @@ function ring(glow, f, cx, cy, r, t, color) {
   }
 }
 
+// Barre en travers : un bout loin du centre (≥ 4 m, bandes d'un bord à l'autre) suit la largeur de la route, un bout près du centre suit les formes.
 function bar(glow, f, d0, a0, d1, a1, color) {
-  glow.quad(onFrame(f, d0, a0), onFrame(f, d1, a0), onFrame(f, d1, a1), onFrame(f, d0, a1), color);
+  const sc = (d) => d * (Math.abs(d) >= 4 ? f.kp ?? 1 : f.ks ?? 1);
+  const e0 = sc(d0), e1 = sc(d1);
+  glow.quad(onFrameRaw(f, e0, a0), onFrameRaw(f, e1, a0), onFrameRaw(f, e1, a1), onFrameRaw(f, e0, a1), color);
 }
 
 function surfaceDecals(glow, frames, tile, area = false) {
@@ -416,10 +429,15 @@ function surfaceDecals(glow, frames, tile, area = false) {
       for (const d of [-4.5, 0, 4.5]) chevron(glow, f, d, 0, 1.8, 0.6, 2.2, up ? 0 : Math.PI, col);
     }
   } else if (s === 'wind') {
-    const dirR = (p || SURFACES.wind.def) >= 100 ? 1 : -1;
-    for (const t of centers) {
-      const f = frameAt(frames, t);
-      for (const a of [-3.5, 0, 3.5]) chevron(glow, f, 0, a, 1.7, 0.6, 2.4, dirR > 0 ? -Math.PI / 2 : Math.PI / 2, col);
+    // 0.12.2 : le vent pousse selon l'axe latéral FIXE de la pièce (x local, voir physics.js) : dans un virage, les flèches gardent cette direction
+    // (avant, elles tournaient avec la route) ; leur longueur dit la force ; à 100 % (aucun vent), pas de flèche.
+    const pw = p || SURFACES.wind.def, dirR = pw >= 100 ? 1 : -1, force = Math.min(1, Math.abs(pw - 100) / 100);
+    if (force > 0.005) {
+      for (const t of centers) {
+        const f = frameAt(frames, t);
+        const dd = dirR * f.r[0], da = dirR * f.t[0], rot = Math.atan2(-dd, da);
+        for (const a of [-3.5, 0, 3.5]) chevron(glow, f, 0, a, 1.7, 0.6, 1.4 + 1.4 * force, rot, col);
+      }
     }
   } else if (s === 'slow') {
     const n = long ? 9 : 5;
@@ -851,26 +869,84 @@ function pillarPoints(tile) {
   }
   if (p.kind === 'loop') return [[-p.mirror * p.lane, p.size * HALF - 4], [p.mirror * p.lane, -p.size * HALF + 4]];
   if (p.kind === 'sbend') return [0.2, 0.5, 0.8].map((u) => { const q = sbendPoint(p, u); return [q.x, q.z]; });
+  // 0.12.2 : plaque triangle ou quart de disque : le poteau sous son centre de gravité (le centre de la case est sur le bord du triangle).
+  if (p.kind === 'area' && p.shape) { const g = areaCentroid(p); return [[g.x, g.z]]; }
   return [[0, 0]];
 }
 
 // Poteaux d'une pièce (repère local) : pied au sol, chapeau de 4 m × 4 m dont le dessus est à `top`. Exporté pour les sondes de l'audit du rendu
 // (tools/audit-rendu) ; `m` : matrice de la pièce (calculée si absente).
+// Poteau masqué : une autre pièce plus basse occupe sa case (il serait planté au milieu de sa route).
+function pillarBlocked(tile, track, m, lx, lz, top) {
+  if (!track) return false;
+  const w = new THREE.Vector3(lx, 0, lz).applyMatrix4(m || tileMatrix(tile));
+  const cx = Math.floor(w.x / CELL), cz = Math.floor(w.z / CELL);
+  for (const o of track.tilesAt(cx, cz)) if (o !== tile && PIECES[o.t].kind !== 'ring' && baseY(o) < top) return true;
+  return false;
+}
+
 export function pillarSpecs(tile, track = null, m = null) {
   const p = PIECES[tile.t], out = [];
-  if (!((tile.l > 0 || p.rise > 0) && p.kind !== 'ribbon' && p.kind !== 'ring' && !tile.v && !tile.o && !tile.mv)) return out;
+  if (p.kind === 'ribbon') return ribbonPillars(tile, track, m);
+  if (!((tile.l > 0 || p.rise > 0) && p.kind !== 'ring' && !tile.v && !tile.o && !tile.mv)) return out;
   for (const [lx, lz] of pillarPoints(tile)) {
     const top = pillarHeightAt(tile, lz, lx) - SLAB_T;
     if (top < 1.2) continue;
-    if (track) {
-      const w = new THREE.Vector3(lx, 0, lz).applyMatrix4(m || tileMatrix(tile));
-      const cx = Math.floor(w.x / CELL), cz = Math.floor(w.z / CELL);
-      let blocked = false;
-      for (const o of track.tilesAt(cx, cz)) if (o !== tile && PIECES[o.t].kind !== 'ring' && baseY(o) < top) blocked = true;
-      if (blocked) continue;
+    if (pillarBlocked(tile, track, m, lx, lz, top)) continue;
+    // Dessus du chapeau (coins −x−z, +x−z, −x+z, +x+z) : le dessous de la dalle à chaque coin ; le bas du chapeau 0,5 m sous le plus bas.
+    const cap = [];
+    for (const dz of [-2, 2]) for (const dx of [-2, 2]) { sampleLocal(tile, lx + dx, lz + dz, CAP_S); cap.push(CAP_S.inFootprint ? CAP_S.h - SLAB_T : top); }
+    // Route courbe (profil arrondi, virage qui monte) : entre les coins, le dessus plan du chapeau peut passer quelques centimètres au-dessus de la
+    // dalle ; on l'abaisse d'autant (mesuré aux milieux des bords et au centre).
+    let over = 0;
+    for (const [u, v] of [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5], [0.5, 0.5]]) {
+      sampleLocal(tile, lx - 2 + 4 * u, lz - 2 + 4 * v, CAP_S);
+      if (!CAP_S.inFootprint) continue;
+      const plane = (cap[0] * (1 - u) + cap[1] * u) * (1 - v) + (cap[2] * (1 - u) + cap[3] * u) * v;
+      over = Math.max(over, plane - (CAP_S.h - SLAB_T));
     }
-    out.push({ lx, lz, top });
+    if (over > 0) for (let k = 0; k < 4; k++) cap[k] -= over + 0.02;
+    out.push({ lx, lz, top, cap, bottom: Math.min(...cap) - 0.5 });
   }
+  return out;
+}
+const CAP_S = {};
+
+// 0.12.2 : poteaux sous les rubans posés en hauteur (virages relevés, tubes, tire-bouchons, transitions vers un mur…), qui flottaient. Sous les
+// passages où la route est à peu près à plat (normale vers le haut), au plus trois, espacés d'au moins 18 m ; le chapeau épouse le dessous de la dalle
+// (plan tangent). Pas sous une pièce à l'envers, sur un mur ou mobile, ni là où une autre pièce plus basse occupe la case.
+const RF = {};
+function ribbonPillars(tile, track, m) {
+  const out = [];
+  if (tile.v || tile.o || tile.mv) return out;
+  const rib = ribbonOf(tile, true);
+  if (!rib) return out;
+  const cand = [];
+  const n = 24;
+  for (let i = 1; i < n; i++) {
+    frameLocal(rib, i / n, RF);
+    if (RF.ny < 0.8) continue;
+    // Dessous de la dalle : plan passant par p − n·SLAB_T, de normale n ; hauteur de ce plan en (x, z).
+    const qx = RF.px - RF.nx * SLAB_T, qy = RF.py - RF.ny * SLAB_T, qz = RF.pz - RF.nz * SLAB_T;
+    const plane = (x, z) => qy - (RF.nx * (x - qx) + RF.nz * (z - qz)) / RF.ny;
+    const cap = [];
+    for (const dz of [-2, 2]) for (const dx of [-2, 2]) cap.push(plane(RF.px + dx, RF.pz + dz));
+    const top = Math.min(...cap);
+    if (top < 1.2) continue;
+    cand.push({ u: i / n, lx: RF.px, lz: RF.pz, top, cap: cap.map((y) => y - 0.05), bottom: top - 0.55, s: i / n * rib.len });
+  }
+  // Au plus trois, espacés : le premier près du quart, puis les plus éloignés des précédents.
+  const picked = [];
+  for (const target of [0.5, 0.2, 0.8]) {
+    let best = null, bd = Infinity;
+    for (const c of cand) {
+      if (picked.some((q) => Math.abs(q.s - c.s) < 18)) continue;
+      const d = Math.abs(c.u - target);
+      if (d < bd) { bd = d; best = c; }
+    }
+    if (best && bd < 0.2) picked.push(best);
+  }
+  for (const c of picked) if (!pillarBlocked(tile, track, m, c.lx, c.lz, c.top)) out.push(c);
   return out;
 }
 
@@ -1091,10 +1167,15 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
   else if ((p.special === 'start' || p.special === 'finish' || ck === 'gate') && p.kind !== 'ring') gate(gb, glow, tile);
   if (p.kind === 'loop' && !tile.o) loopTowers(gb, glow, tile);
 
-  // Piliers (pas sous un ruban vertical / une route à l'envers)
-  for (const { lx, lz, top } of pillarSpecs(tile, track, m)) {
-    gb.taper(lx, lz, 0, top - 0.5, 3.2, 3.2, 2.4, 2.4, PALETTE.pillar);
-    gb.box(lx - 2, top - 0.5, lz - 2, lx + 2, top, lz + 2, PALETTE.pillarCap);
+  // Piliers (pas sous un ruban vertical / une route à l'envers). 0.12.2 : le chapeau suit le dessous de la dalle (pente, virage qui monte) :
+  // ses quatre coins sont sous la route, il ne la traverse plus (avant, plat et calé sur le centre, il ressortait jusqu'à 2,85 m dans les pentes).
+  for (const P of pillarSpecs(tile, track, m)) {
+    const { lx, lz, cap, bottom } = P;
+    gb.taper(lx, lz, 0, bottom, 3.2, 3.2, 2.4, 2.4, PALETTE.pillar);
+    gb.hex8([
+      [lx - 2, bottom, lz - 2], [lx + 2, bottom, lz - 2], [lx - 2, cap[0], lz - 2], [lx + 2, cap[1], lz - 2],
+      [lx - 2, bottom, lz + 2], [lx + 2, bottom, lz + 2], [lx - 2, cap[2], lz + 2], [lx + 2, cap[3], lz + 2],
+    ], PALETTE.pillarCap);
   }
   gb.setMatrix(null);
   glow.setMatrix(null);

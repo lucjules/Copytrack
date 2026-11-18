@@ -502,16 +502,18 @@ test('Courbe montante posée : le niveau suit pour la case suivante (aide à la 
   const { self: e2 } = mkEd('cvL2'); e2._act(false);
   assert.equal(e2.autoLevel.get('-1,0'), 2, 'la version gauche sort à gauche');
 });
-test('retypePlacement : looping 1 → 3 boucles garde la pièce en place (2×2 → 4×4), refuse si la place manque', () => {
+test('retypePlacement : looping 1 → 3 boucles garde la pièce en place (2×2 → 4×4), refuse si la place manque ; au niveau 0, refuse (0.12.2 : le triple passerait sous le sol)', () => {
+  const tr0 = new Track('r0');
+  assert.equal(retypePlacement(tr0, tr0.add({ t: 'loop', x: 4, z: 4, l: 0, r: 0 }), 'loopTriple'), null, 'niveau 0 : la route décalée du triple passerait sous le terrain');
   const tr = new Track('r');
-  const lp = tr.add({ t: 'loop', x: 4, z: 4, l: 0, r: 0 });
+  const lp = tr.add({ t: 'loop', x: 4, z: 4, l: 1, r: 0 });
   const c = retypePlacement(tr, lp, 'loopTriple');
   assert.ok(c); assert.deepEqual([c.t, c.x, c.z], ['loopTriple', 3, 3]);
   assert.equal(tr.tiles.length, 1, 'la pièce d’origine reste en place le temps du test');
-  const blocker = tr.add({ t: 'straight', x: 3, z: 3, l: 0, r: 0 }); void blocker;
-  tr.add({ t: 'straight', x: 6, z: 6, l: 0, r: 0 }); tr.add({ t: 'straight', x: 5, z: 3, l: 0, r: 0 });
+  const blocker = tr.add({ t: 'straight', x: 3, z: 3, l: 1, r: 0 }); void blocker;
+  tr.add({ t: 'straight', x: 6, z: 6, l: 1, r: 0 }); tr.add({ t: 'straight', x: 5, z: 3, l: 1, r: 0 });
   // Toutes les ancres autour sont maintenant gênées par une pièce voisine : pas de variante 4×4 possible
-  tr.add({ t: 'straight', x: 3, z: 6, l: 0, r: 0 }); tr.add({ t: 'straight', x: 6, z: 3, l: 0, r: 0 }); tr.add({ t: 'straight', x: 4, z: 3, l: 0, r: 0 });
+  tr.add({ t: 'straight', x: 3, z: 6, l: 1, r: 0 }); tr.add({ t: 'straight', x: 6, z: 3, l: 1, r: 0 }); tr.add({ t: 'straight', x: 4, z: 3, l: 1, r: 0 });
   assert.equal(retypePlacement(tr, lp, 'loopTriple'), null);
   assert.equal(tr.tiles.includes(lp), true);
 });

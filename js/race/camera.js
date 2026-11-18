@@ -5,6 +5,7 @@ import { frameWorld } from '../physics/ribbon.js';
 import { REPLAY_CAMS, tmpV, tmpV2 } from './shared.js';
 import { fovPunch, landingDip, feelScale } from '../feel.js';
 import { CamAssist, RIG, limitedAim } from '../camrig.js';
+import { SLAB_T } from '../constants.js';
 const UP = new THREE.Vector3(0, 1, 0);
 const upTarget = new THREE.Vector3(), lookP = new THREE.Vector3(), AIM_A = { x: 0, y: 0, z: 0 }, AIM_B = { x: 0, y: 0, z: 0 }, AIM_O = { x: 0, y: 0, z: 0 };
 
@@ -195,6 +196,10 @@ export const cameraMethods = {
       // Au plafond : jamais au-dessus de la chaussée retournée.
       const s = this.track.ceilingSurfaceAt(this.camPos.x, this.camPos.y, this.camPos.z, this._camS || (this._camS = {}), 2);
       if (Number.isFinite(s.h) && this.camPos.y > s.h - 1.2) this.camPos.y = s.h - 1.2;
+      // 0.12.2 : gravité inversée au-dessus d'une route ordinaire (plaque d'inversion) : la caméra passe sous la voiture et entrait dans la dalle
+      // de la route d'en dessous (on voyait à travers). Elle reste du côté de la voiture, au-dessus de la chaussée.
+      const f = this.track.surfaceAt(this.camPos.x, this.camPos.y + SLAB_T + 0.6, this.camPos.z, this._camF || (this._camF = {}), SLAB_T + 1.2, null, p.time);
+      if (f.tile && car.position.y > f.h && this.camPos.y < f.h + 0.6 && this.camPos.y > f.h - SLAB_T - 0.3) this.camPos.y = f.h + 0.6;
     }
     cam.position.copy(this.camPos);
     cam.position.y -= landingDip(this._feel.dipI, this._feel.dipT, this._feelScale());     // tassement à la réception (feel.js)

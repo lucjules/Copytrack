@@ -1,6 +1,6 @@
 // Conduite sur les rubans 3D (loopings, vrilles, tubes, murs, plafond) : entrée, conduite, sortie et raccord d'un ruban à l'autre.
 // Ces méthodes s'ajoutent au prototype de CarPhysics (voir physics.js) : `this` est la voiture.
-import { CELL, DT, ROAD_HALF } from '../constants.js';
+import { CELL, DT, ROAD_HALF, SLAB_T } from '../constants.js';
 import { PIECES, PLATES, rotVec, tileCenter, isRibbon, tileParam, beltSpeed, isSideTile, hasNoRails } from '../pieces.js';
 import { ribbonOf, frameLocal, ribbonInverts } from '../ribbons.js';
 import { RAIN_GRIP } from '../sim/env.js';
@@ -36,7 +36,70 @@ export function frameWorld(tile, rib, u, F) {
 const RIB_SOLID_H = 1.1;
 const SHIT = { dx: 0, dz: 0, nx: 0, nz: 0, solid: null };
 
+// 0.12.2 (PHYS_VER 38) : coque pleine des tubes. Les tubes de la palette (et les virages de tube) : leur section est refermée (repère `wrap`).
+const TUBE_TYPES = new Set(['tube', 'tubeIn', 'tubeMid']);
+const isTube = (tile) => TUBE_TYPES.has(tile.t) || !!PIECES[tile.t].tubeArc;
+// La position de la voiture est son point de contact : sur la paroi intérieure, elle est exactement à R de l'axe. La coque dessinée a l'épaisseur
+// d'une dalle (SLAB_T) : la paroi extérieure est à R + SLAB_T. Dedans / dehors se décide au pas précédent, au milieu de l'épaisseur.
+const TUBE_SKIN = 0.02, TUBE_BOUNCE = 0;      // (sans rebond : la voiture glisse sur la paroi, comme sur la chaussée)
+const RA = { r: 0, x: 0, y: 0, z: 0 }, RB = { r: 0, x: 0, y: 0, z: 0 }, TF = {};      // (TF : repère propre à la coque, le tampon this.F sert au ruban)
+
 export const ribbonMethods = {
+  // Coque d'un tube, voiture en vol (décrochée en haut, ou sautant dedans ; ou tombant dessus depuis l'extérieur). Avant 0.12.2 la coque n'avait
+  // aucune collision : la voiture sortait par le haut, puis, en retombant, traversait la coque et se reposait AU FOND (une « téléportation »).
+  // Désormais une voiture partie de l'intérieur y reste (elle rebondit sur la paroi et retombe au fond), une voiture venue de l'extérieur reste dehors.
+  _tubeShell() {
+    const p = this.pos, q = this.prev, v = this.vel;
+    const tiles = this.track.tilesAt(Math.floor(p.x / CELL), Math.floor(p.z / CELL));
+    for (const tile of tiles) {
+      if (!isTube(tile) || this.excl.has(tile)) continue;
+      const rib = ribbonOf(tile);
+      // Abscisse la plus proche (recherche grossière puis affinage, comme _tryLandRibbon).
+      let bu = 0, bd = Infinity;
+      for (let i = 0; i <= 24; i++) {
+        const F = frameWorld(tile, rib, i / 24, TF);
+        const dx = p.x - F.px, dy = p.y - F.py, dz = p.z - F.pz, d = dx * dx + dy * dy + dz * dz;
+        if (d < bd) { bd = d; bu = i / 24; }
+      }
+      let u = bu;
+      for (let it = 0; it < 4; it++) {
+        const F = frameWorld(tile, rib, u, TF);
+        u = clamp(u + ((p.x - F.px) * F.tx + (p.y - F.py) * F.ty + (p.z - F.pz) * F.tz) / F.ds, 0, 1);
+      }
+      if (u <= 0.002 || u >= 0.998) continue;            // aux embouchures, la voiture entre et sort par les bouts
+      const F = frameWorld(tile, rib, u, TF);
+      if (!F.wrap || !(F.kc > 0)) continue;
+      const R = 1 / F.kc, ax = F.px + F.nx * R, ay = F.py + F.ny * R, az = F.pz + F.nz * R;
+      const radial = (x, y, z, out) => {
+        let dx = x - ax, dy = y - ay, dz = z - az;
+        const a = dx * F.tx + dy * F.ty + dz * F.tz;
+        dx -= F.tx * a; dy -= F.ty * a; dz -= F.tz * a;
+        out.r = hypot3(dx, dy, dz); out.x = dx; out.y = dy; out.z = dz;
+        return out;
+      };
+      radial(p.x, p.y, p.z, RA); radial(q.x, q.y, q.z, RB);
+      if (RA.r < 1e-6) continue;
+      let target, side;
+      if (RB.r < R + SLAB_T / 2) {
+        // Dedans. Sur le bas et les côtés du tube, la voiture s'y pose ou la frôle comme sur toute route (_tryLandRibbon) : on ne la retient
+        // que si elle s'enfonce franchement dans la coque (30 cm, invisible dans ses 90 cm d'épaisseur). Sous le plafond (la paroi au-dessus
+        // d'elle), elle est arrêtée aussitôt et retombe.
+        const ceiling = (-RA.y / RA.r) * this.gSign < -0.2;
+        if (RA.r <= R + (ceiling ? TUBE_SKIN : 0.3)) continue;
+        target = R - TUBE_SKIN; side = 1;
+      } else { if (RA.r >= R + SLAB_T) continue; target = R + SLAB_T + TUBE_SKIN; side = -1; }
+      const ex = RA.x / RA.r, ey = RA.y / RA.r, ez = RA.z / RA.r;      // vers l'extérieur
+      const push = target - RA.r;
+      p.x += ex * push; p.y += ey * push; p.z += ez * push;
+      const vr = v.x * ex + v.y * ey + v.z * ez;
+      if (side * vr > 0) {
+        const dv = vr * (1 + TUBE_BOUNCE);
+        v.x -= ex * dv; v.y -= ey * dv; v.z -= ez * dv;      // (contact de la chaussée du tube, pas un choc contre un mur : aucun évènement)
+      }
+    }
+  },
+
+
   // Sur un ruban, l'état est exprimé dans le plan de la route :
   //   e1 = sens de parcours, e2 = droite, n = normale.
   //   vs, vd : vitesse le long de e1 / e2 ; psi : cap de la voiture par rapport à e1.

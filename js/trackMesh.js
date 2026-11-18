@@ -27,7 +27,7 @@ void main() {
   gl_Position = projectionMatrix * mvPosition;
   #include <fog_vertex>
 }`;
-const FX_FRAG = `
+export const FX_FRAG = `
 uniform float uTime;
 varying vec4 vFx;
 varying vec3 vPos;
@@ -46,9 +46,11 @@ void main() {
     float foam = edge * (0.6 + 0.4 * sin(vFx.y * 0.9 + t * 3.0 + p.x));
     c = mix(c, vec3(0.92, 0.98, 1.0), clamp(foam, 0.0, 1.0));
   } else if (k < 1.5) {
-    // Tapis roulant : chevrons qui défilent à la vitesse de la bande.
-    float s = fract((vFx.y - t * vFx.z - abs(vFx.w) * 0.45) / 4.0);
-    float ch = step(0.72, s);
+    // Tapis roulant : chevrons qui défilent à la vitesse de la bande, pointe dans le sens de la poussée (0.12.2 : avant, la pointe était toujours
+    // tournée vers l'entrée, à contresens au réglage par défaut) ; à l'arrêt, plus de chevrons, seulement les lattes de la bande.
+    float beltDir = vFx.z < 0.0 ? -1.0 : 1.0;
+    float s = fract((vFx.y - t * vFx.z + beltDir * abs(vFx.w) * 0.45) / 4.0);
+    float ch = step(0.72, s) * step(0.05, abs(vFx.z));
     float lines = step(0.92, fract(vFx.y * 0.0 + (vFx.w + 9.0) / 4.5));
     c = mix(vec3(0.10, 0.10, 0.12), vec3(0.18, 0.18, 0.21), lines);
     c = mix(c, vec3(1.0, 0.82, 0.24), ch * (1.0 - edge));
@@ -75,6 +77,9 @@ function createFxMaterial() {
     fragmentShader: FX_FRAG,
     fog: true,
     side: THREE.DoubleSide,
+    // 0.12.2 : la nappe est 3 cm au-dessus de la chaussée : sans décalage de profondeur, elle scintillait au loin (et de près sur les
+    // appareils à tampon de profondeur 16 bits). Le décalage la fait toujours gagner contre la route qu'elle recouvre.
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2,
   });
 }
 
@@ -82,7 +87,8 @@ function createFxMaterial() {
 export function createTrackMaterials() {
   return {
     solid: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0.0, side: THREE.DoubleSide }),
-    glow: new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, side: THREE.DoubleSide }),
+    // (0.12.2 : marquages des revêtements à 5 cm de la route : même décalage de profondeur que la nappe animée, contre le scintillement au loin)
+    glow: new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
     fx: createFxMaterial(),
   };
 }
