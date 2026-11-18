@@ -11,6 +11,7 @@ import { GeoBuilder, FxBuilder } from '../../js/geo.js';
 import { buildTileInto, pillarSpecs } from '../../js/trackGeometry.js';
 import { ribbonOf, frameLocal, centerlineWorld } from '../../js/ribbons.js';
 import { pieceCases, surfaceVariants, PIECE_IDS } from './cas.mjs';
+import { SONDES2 } from './sondes2.mjs';
 
 const TERRAIN_Y = -0.02;          // le terrain est plat sous le circuit (scenery.js : heightAt = 0, posé 2 cm plus bas)
 const r2 = (x) => Math.round(x * 100) / 100;
@@ -164,7 +165,7 @@ function ref(c, tile = c.tile) {
   return { t: c.t, orient: c.orient, opts: c.opts, l: tile.l, ...(tile.s ? { s: tile.s, p: tile.p } : {}) };
 }
 
-export const SONDES = { geometrie: sondeGeometrie, 'sous-terrain': sondeSousTerrain, poteaux: sondePoteaux, marquages: sondeMarquages, tapis: sondeTapis };
+export const SONDES = { geometrie: sondeGeometrie, 'sous-terrain': sondeSousTerrain, poteaux: sondePoteaux, marquages: sondeMarquages, tapis: sondeTapis, ...SONDES2 };
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const arg = (k) => (process.argv.find((a) => a.startsWith('--' + k + '=')) || '').split('=')[1];

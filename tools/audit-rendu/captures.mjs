@@ -11,7 +11,8 @@ import { PIECES, SURFACES, tileCenter, sampleLocal } from '../../js/pieces.js';
 import { pillarSpecs } from '../../js/trackGeometry.js';
 import { SLAB_T } from '../../js/constants.js';
 import { ribbonOf, frameLocal } from '../../js/ribbons.js';
-import { pieceCases, orientLabel } from './cas.mjs';
+import { pieceCases, orientLabel, surfaceVariants } from './cas.mjs';
+import { DECO_CATS } from '../../js/decoData.js';
 import { SONDES } from './sondes.mjs';
 
 const require = createRequire(import.meta.url);
@@ -56,6 +57,60 @@ export const PRESETS = {
     { groupe: 'Témoins (sans défaut mesuré)', titre: 'Virage relevé (dévers), niveau 3', tiles: one('bank', {}, 3), angles: ['trois-quarts', 'ras du sol'] },
   ],
 };
+
+// ---- Sélections de la phase 2 (générées) --------------------------------------------------------------------------------------
+const FAM_REPS = ['straight', 'curve', 'bigcurve', 'hugecurve', 'cv2', 'cvBig2', 'slope', 'steep4', 'crv2', 'cds2', 'gentle', 'sbend', 'sbendWide', 'narrow', 'narrowIn',
+  'wideIn', 'wide', 'wslU2', 'nslU2', 'ncv2', 'wcv2', 'checkpoint', 'cpCurve', 'start', 'finish', 'fork', 'forkL', 'platform', 'ring'];
+const isRibbonOrSpecial = (t) => ['ribbon', 'loop', 'area', 'fork', 'ring', 'sbend', 'junction'].includes(PIECES[t].kind);
+function piecesPreset() {
+  const ids = [...new Set(FAM_REPS.filter((t) => PIECES[t]).concat(pieceCases().filter((c) => c.orient === 'sol' && isRibbonOrSpecial(c.t)).map((c) => c.t)))];
+  return ids.map((t) => {
+    const c = pieceCases({ ids: [t] }).find((x) => x.orient === 'sol');
+    const tile = Track.normalize({ ...c.tile, l: Math.max(c.tile.l, PIECES[t].kind === 'ribbon' || PIECES[t].kind === 'loop' ? 0 : 1) });
+    return { groupe: PIECES[t].kind, titre: `${PIECES[t].label} (${t})`, tiles: [Track.inBounds(tile) ? tile : c.tile], angles: ['trois-quarts'] };
+  });
+}
+function orientationsPreset() {
+  const ids = ['straight', 'curve', 'bigcurve', 'cv2', 'slope', 'cvBig2', 'checkpoint', 'loop', 'bank', 'sbend'];
+  const out = [];
+  for (const t of ids) for (const c of pieceCases({ ids: [t] })) if (c.orient !== 'sol') out.push({ groupe: t, titre: `${PIECES[t].label} · ${orientLabel(c.orient)}`, tiles: [c.tile], angles: ['trois-quarts'] });
+  return out;
+}
+function revetementsPreset() {
+  const out = [];
+  for (const v of surfaceVariants()) for (const [t, extra] of [['straight', {}], ['curve', {}], ['straight', { v: 1 }], ['sbend', {}]]) {
+    const tile = Track.normalize({ t, x: 0, z: 0, l: extra.v ? 2 : 0, r: 0, ...extra, ...v });
+    if (tile.s !== v.s || (extra.v && !tile.v)) continue;
+    out.push({ groupe: SURFACES[v.s].label, titre: `${SURFACES[v.s].label}${v.p ? ' ' + v.p + ' %' : ''} · ${PIECES[t].label}${extra.v ? ' au plafond' : ''}`, tiles: [tile], angles: [extra.v ? 'ras du sol' : 'trois-quarts'] });
+  }
+  return out;
+}
+// Petite vitrine (route, pente, virage, looping, décors) pour comparer thèmes, ambiances et profils de qualité.
+const vitrine = () => [
+  Track.normalize({ t: 'start', x: 0, z: 0, l: 0, r: 0 }), Track.normalize({ t: 'straight', x: 0, z: -1, l: 0, r: 0, s: 'boost' }),
+  Track.normalize({ t: 'slope', x: 0, z: -2, l: 0, r: 0 }), Track.normalize({ t: 'curve', x: 0, z: -3, l: 1, r: 0 }),
+  Track.normalize({ t: 'loop', x: 2, z: -2, l: 0, r: 0 }), Track.normalize({ t: 'straight', x: -1, z: -3, l: 1, r: 1, s: 'water' }),
+];
+const vitrineDecos = [{ k: 'tree', x: 70, y: 0, z: -10, s: 1.4 }, { k: 'rock', x: -20, y: 0, z: 10, s: 1.2 }, { k: 'lamp', x: 34, y: 0, z: -20, s: 1 }];
+const VIEW = { 'vitrine': (b) => ({ eye: [b.c[0] + 0.55 * b.s, b.c[1] + 0.35 * b.s, b.c[2] + 0.75 * b.s], at: b.c }) };
+Object.assign(ANGLES, VIEW);
+function themesPreset() {
+  const out = [];
+  for (const decor of ['desert', 'polar', 'jungle', 'city', 'volcano', 'orbit', 'caves', 'sky', 'reef', 'factory', 'atelier', 'isles']) out.push({ groupe: 'Thèmes', titre: decor, decor, tiles: vitrine(), decos: vitrineDecos, angles: ['vitrine'] });
+  for (const sky of ['dawn', 'day', 'sunset', 'night']) out.push({ groupe: 'Ciels', titre: sky, decor: 'jungle', ambiance: { sky }, tiles: vitrine(), decos: vitrineDecos, angles: ['vitrine'] });
+  for (const fog of ['clear', 'misty', 'thick']) out.push({ groupe: 'Brouillard', titre: fog, decor: 'city', ambiance: { fog }, tiles: vitrine(), decos: vitrineDecos, angles: ['vitrine'] });
+  for (const weather of ['rain', 'snow', 'embers']) out.push({ groupe: 'Météo', titre: weather, decor: 'polar', ambiance: { weather }, tiles: vitrine(), decos: vitrineDecos, angles: [['vitrine', 2000]] });
+  for (const quality of ['ultra', 'high', 'medium', 'low', 'potato', 'ultrapotato']) out.push({ groupe: 'Qualité', titre: quality, quality, decor: 'desert', tiles: vitrine(), decos: vitrineDecos, angles: ['vitrine'] });
+  return out;
+}
+function decorsPreset() {
+  const flagged = ['roofFlat', 'shard', 'cloud', 'balloon', 'airship', 'fishSchool', 'jellyfish', 'satellite', 'asteroid', 'lanternHang', 'helicopter', 'sailboat', 'sleigh', 'ghost', 'bats', 'skull', 'buoy',
+    'heartBig', 'cupidArrow', 'confettiCannon', 'discoBall', 'redLantern', 'bell', 'hangingGhost', 'broom', 'eggBasket', 'shipWreck', 'zenStone', 'macaron'];
+  const reps = Object.values(DECO_CATS).map((c) => c.kinds[0]);
+  return [...new Set(flagged.concat(reps))].map((k) => ({ groupe: flagged.includes(k) ? 'Décors signalés par la sonde' : 'Un décor par catégorie', titre: k,
+    tiles: [Track.normalize({ t: 'straight', x: 0, z: 0, l: 0, r: 0 })], decos: [{ k, x: 40, y: 0, z: 16, s: 1 }], focus: null, angles: ['ras du sol'] }));
+}
+Object.assign(PRESETS, { pieces: piecesPreset(), orientations: orientationsPreset(), revetements: revetementsPreset(), themes: themesPreset(), decors: decorsPreset() });
 
 // Point à examiner de près (pièce non tournée : monde = centre + local) : le poteau dont le chapeau dépasse le plus, ou le point le plus bas de la chaussée.
 function focusOf(kind, tile) {
@@ -115,7 +170,7 @@ export async function capture(preset, outDir) {
     const rows = [];
     let n = 0;
     for (const [i, c] of PRESETS[preset].entries()) {
-      const box = await page.evaluate(([tiles, decor]) => window.banc.load(tiles, { decor }), [c.tiles, c.decor || 'desert']);
+      const box = await page.evaluate(([tiles, o]) => window.banc.load(tiles, o), [c.tiles, { decor: c.decor || 'desert', ambiance: c.ambiance || null, quality: c.quality || 'high', decos: c.decos || [] }]);
       const b = { min: box.min, max: box.max, c: box.min.map((v, k) => (v + box.max[k]) / 2) };
       b.s = Math.max(box.max[0] - box.min[0], box.max[1] - box.min[1], box.max[2] - box.min[2], 24);
       b.f = (c.focus && focusOf(c.focus, c.tiles[0])) || b.c;
@@ -124,7 +179,7 @@ export async function capture(preset, outDir) {
         const [name, t] = Array.isArray(a) ? a : [a, 0];
         const cam = ANGLES[name](b);
         const url = await page.evaluate((o) => window.banc.shoot(o), { ...cam, t, w: 640, h: 360 });
-        const file = `img/${String(i).padStart(2, '0')}-${name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]+/gi, '-')}${t ? '-' + t : ''}.jpg`;
+        const file = `img/${String(i).padStart(3, '0')}-${name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]+/gi, '-')}${t ? '-' + t : ''}.jpg`;
         writeFileSync(join(outDir, file), Buffer.from(url.split(',')[1], 'base64'));
         shots.push({ file, label: name + (Array.isArray(a) ? ` · ${t} ms` : '') });
         n++;

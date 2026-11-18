@@ -8,7 +8,7 @@
 <body>
 <canvas id="c"></canvas>
 <!-- Horloge maîtrisée : le shader des revêtements animés et le décor lisent performance.now() ; le banc la règle image par image. -->
-<script>window.__T = 0; performance.now = () => window.__T;</script>
+<script>window.__T = 0; window.__realNow = performance.now.bind(performance); performance.now = () => window.__T;</script>
 <script type="module" src="./banc.js"></script>
 </body>
 </html>
