@@ -86,7 +86,8 @@ test('famille « Chicane » de l’éditeur (longueur × décalage × sens), ent
   assert.equal(resolve('chicane', { len: '3', shift: '2', dir: 'L' }), 'sbendWideL');
   assert.equal(resolve('chicane', { len: '2', shift: '2', dir: 'R' }), null, 'pas de décalage de 2 colonnes sur 2 cases');
   assert.deepEqual(familyOf('sbendFast').traits, { len: '4', shift: '1', dir: 'R' });
-  assert.equal(Object.keys(FAMILIES.chicane.members).length, 8);
+  assert.equal(Object.keys(FAMILIES.chicane.members).length, 10);
+  assert.equal(resolve('chicane', { len: '4', shift: '2', dir: 'L' }), 'sbendFastWideL', '0.12.0 : grand S rapide (4×4, deux colonnes)');
 });
 test('options : à l’envers, sans bordures, tunnel, thème ; ni mouvement, ni checkpoint ; sur un mur gauche ou droit seulement (0.11.3, wall-ride qui monte ou descend) ; les bandes de route ont 4 tronçons par case', () => {
   for (const f of ['v', 'nb', 'tn', 'th']) assert.ok(flagAllowed('sbend', f), f);

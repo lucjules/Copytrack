@@ -199,6 +199,24 @@ function buildBase(tile) {
   }
   if (P.kind === 'ribbon') {
     // ---- v1.5 ----
+    if (P.arc && (P.rise || P.mirror < 0)) {
+      // 0.12.0 : virage relevé INCLINÉ (hélice relevée, ↱ / ↰) : la ligne centrale monte (ou descend) régulièrement sur le quart de tour, comme un virage incliné,
+      // et la chaussée penche vers l'intérieur comme un virage relevé. Normale = celle de la rampe (pente k le long de la route), penchée de b vers le centre.
+      const a = arcParams(P), mir = P.mirror < 0 ? -1 : 1, rise = (P.rise || 0) * LEVEL_H, L = (Math.PI / 2) * a.R;
+      const k = rise / L, ik = 1 / Math.sqrt(1 + k * k);
+      return {
+        pos(u, o) {
+          const ang = Math.PI + (Math.PI / 2) * u;
+          const b = P.bank * dsin(Math.PI * u), sb = dsin(b), cb = dcos(b);
+          const ca = dcos(ang), sa = dsin(ang);
+          o.x = mir * (a.cx + a.R * ca); o.z = a.cz + a.R * sa;
+          o.y = base + ROAD_HALF * sb + rise * u;
+          const tx = -mir * sa, tz = ca;                                   // sens de parcours (horizontal, unitaire)
+          o.nx = cb * (-k * tx * ik) + sb * (-mir * ca); o.ny = cb * ik; o.nz = cb * (-k * tz * ik) + sb * (-sa);
+        },
+        len: hypot2(L, rise),
+      };
+    }
     if (P.arc) {
       // Virage relevé : arc horizontal, la route penche vers l'intérieur (inclinaison
       // nulle aux extrémités pour se raccorder aux routes plates). Le bord intérieur

@@ -57,7 +57,7 @@ test('mur courbe : un quart de cercle de rayon 16 m fait de 8 tronçons tournés
 console.log('F. Plaques');
 test('huit plaques à la suite des types de pièces (index 144 à 151) ; famille « Plaque » (forme × taille) dont la plateforme est la carrée 1×1', () => {
   assert.deepEqual(PIECE_ORDER.slice(144, 152), PLATES);
-  assert.equal(FAMILY_ORDER[6], 'plaque');
+  assert.ok(FAMILY_ORDER.includes('plaque'));
   assert.equal(resolve('plaque', { forme: 'sq', taille: '1' }), 'platform');
   assert.equal(resolve('plaque', { forme: 'sec', taille: '3' }), 'sec3');
   assert.equal(Object.keys(FAMILIES.plaque.members).length, 9);

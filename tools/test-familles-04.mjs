@@ -42,11 +42,12 @@ test('vérificateur : une bifurcation en T n\'est pas un raccourci ; un checkpoi
   // (un croisement traversé deux fois reste surveillé : voir test-raccourcis)
 });
 test('virage géant relevé et inclinés : dans la famille Virage (rayon Géant), à la suite de l\'ordre des pièces ; posés par script au bon niveau ; pilotés sans choc', () => {
-  assert.equal(resolve('turn', { size: 'xl', bank: '1', incl: '0', dir: 'R' }), 'bankGiant');
-  assert.equal(resolve('turn', { size: 'xl', bank: '0', incl: '2', dir: 'L' }), 'cvGiantL2');
-  assert.equal(resolve('turn', { size: 'xl', bank: '0', incl: '-4', dir: 'R' }), 'cvdGiant4');
-  assert.deepEqual(PIECE_ORDER.slice(PIECE_ORDER.indexOf('tubeTurnL') + 1), ['bankGiant', ...['cvGiant', 'cvGiantL', 'cvdGiant', 'cvdGiantL'].flatMap((p) => ['05', '1', '2', '4'].map((r) => p + r))]);
-  for (const id of PIECE_ORDER.slice(PIECE_ORDER.indexOf('bankGiant'))) assert.equal(PIECES[id].size, 5, id);
+  assert.equal(resolve('turn', { w: 'N', size: 'xl', bank: '1', incl: '0', dir: 'R' }), 'bankGiant');
+  assert.equal(resolve('turn', { w: 'N', size: 'xl', bank: '0', incl: '2', dir: 'L' }), 'cvGiantL2');
+  assert.equal(resolve('turn', { w: 'N', size: 'xl', bank: '0', incl: '-4', dir: 'R' }), 'cvdGiant4');
+  const giant = ['bankGiant', ...['cvGiant', 'cvGiantL', 'cvdGiant', 'cvdGiantL'].flatMap((p) => ['05', '1', '2', '4'].map((r) => p + r))];
+  assert.deepEqual(PIECE_ORDER.slice(PIECE_ORDER.indexOf('tubeTurnL') + 1, PIECE_ORDER.indexOf('tubeTurnL') + 1 + giant.length), giant, '(0.12.0 : d’autres types suivent)');
+  for (const id of giant) assert.equal(PIECES[id].size, 5, id);
   const lv = (sc) => build(sc).tiles.find((t) => t.t === 'finish').l - 4;
   assert.equal(lv('start S2 XUR2 S2 finish'), 2); assert.equal(lv('start S2 XDL4 S2 finish'), -4); assert.equal(lv('start S2 XUR0 S2 finish'), 0.5); assert.equal(lv('start S2 XBR S2 finish'), 0);
   for (const sc of ['start B2 S3 XBR S3 finish', 'start B2 S3 XBL S3 finish', 'start B2 S3 XUR2 S3 finish', 'start B2 S3 XUL4 S3 finish', 'start B2 S3 XDR1 S3 finish', 'start B2 S3 XDL2 S3 finish']) {

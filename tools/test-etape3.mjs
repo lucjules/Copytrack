@@ -83,9 +83,12 @@ test('options : sans bordures, à l’envers, thème ; ni tunnel, ni mur, ni mou
   }
 });
 test('famille « Largeur » de l’éditeur ; rendu : les repères portent la demi-largeur, la bordure suit le bord (en biais sur un raccord)', () => {
-  assert.equal(FAMILY_ORDER[7], 'largeur');
+  assert.ok(FAMILY_ORDER.includes('largeur'));
   assert.equal(resolve('largeur', { w: 'wi' }), 'wideIn');
-  assert.equal(Object.keys(FAMILIES.largeur.members).length, 4);
+  // 0.12.0 : la famille ne garde que les raccords (et gagne étroite → large) ; les routes étroite et large sont des largeurs de la Ligne droite.
+  assert.deepEqual(Object.keys(FAMILIES.largeur.members), ['narrowIn', 'wideIn', 'wideInN']);
+  assert.equal(resolve('straight', { w: 'n', incl: '0' }), 'narrow');
+  assert.equal(resolve('straight', { w: 'w', incl: '0' }), 'wide');
   const fr = stripsFor(Track.normalize({ t: 'narrowIn', x: 0, z: 0, l: 0, r: 0 }))[0];
   assert.deepEqual([fr[0].hw, fr[fr.length - 1].hw], [12, 6]);
   for (const id of IDS) for (const s of ['', 'water', 'boost']) {

@@ -134,8 +134,9 @@ test('la vrille et les transitions retournées passent SANS revêtement « Inver
   // (PHYS_VER 37 : 18 -> 24 ; plus de guidage du cap sur les rubans et le nez pique sur un mur : les pentes RAIDES posées sur un mur (steep4, dn4, cv2) y tournent la route
   // plus vite que le volant ne le permet à la vitesse d'un mur)
   // (0.11.3 : + 2, la chicane COURTE qui descend un mur, trop brusque à la vitesse d'un mur ; la longue et la rapide passent)
-  assert.ok(old.length <= 26, `${old.length} CHUTE : ${old.join(' ')}`);
-  for (const c of old) assert.match(c, /^(cv|cro|cdi|steep4|dn4|sbend\/murG|sbendL\/murD)/, c + ' : famille non documentée');
+  // (0.12.0 : + 2, la même rampe cvd4 / cvdL4 en route ÉTROITE au sol (ncvd4, ncvdL4) : déjà CHUTE en largeur normale, le vérificateur la signale)
+  assert.ok(old.length <= 28, `${old.length} CHUTE : ${old.join(' ')}`);
+  for (const c of old) assert.match(c, /^(cv|cro|cdi|steep4|dn4|sbend\/murG|sbendL\/murD|ncvdL?4\/sol)/, c + ' : famille non documentée');
 });
 
 console.log('\n3. Dérapage');

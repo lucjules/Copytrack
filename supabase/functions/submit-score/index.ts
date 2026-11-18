@@ -1239,6 +1239,361 @@ for (const pas of ROLL_PASSAGES45) {
     noRails: true
   });
 }
+var FAMILY12_IDS = [];
+var gen12 = (id, def) => {
+  PIECES[id] = def;
+  FAMILY12_IDS.push(id);
+};
+var W_HW = {
+  n: [
+    6,
+    6
+  ],
+  w: [
+    28,
+    28
+  ]
+};
+var W_TXT = {
+  n: "\xE9troite",
+  w: "large"
+};
+for (const r of [
+  2,
+  4
+]) gen12("crs" + rtag(r), {
+  label: `Courbe en S \xB7 mont\xE9e ${rtxt(r)}`,
+  kind: "line",
+  size: 1,
+  rise: r,
+  prof: "s"
+});
+for (const r of [
+  2,
+  4
+]) gen12("cds" + rtag(r), {
+  label: `Courbe en S \xB7 descente ${rtxt(r)}`,
+  kind: "line",
+  size: 1,
+  rise: -r,
+  prof: "s"
+});
+for (const w of [
+  "n",
+  "w"
+]) {
+  const size = w === "w" ? 3 : 1, k = size, wl = W_TXT[w];
+  for (const r of RISES) gen12(`${w}slU${rtag(r)}`, {
+    label: `Route ${wl} \xB7 mont\xE9e ${rtxt(r)}`,
+    kind: "line",
+    size,
+    rise: r * k,
+    hw: W_HW[w],
+    noV: true
+  });
+  for (const r of RISES) gen12(`${w}slD${rtag(r)}`, {
+    label: `Route ${wl} \xB7 descente ${rtxt(r)}`,
+    kind: "line",
+    size,
+    rise: -r * k,
+    hw: W_HW[w],
+    noV: true
+  });
+  for (const [pre, sg, prof, lab] of [
+    [
+      "crv",
+      1,
+      "i",
+      "d\xE9but de mont\xE9e"
+    ],
+    [
+      "cro",
+      1,
+      "o",
+      "fin de mont\xE9e"
+    ],
+    [
+      "crs",
+      1,
+      "s",
+      "mont\xE9e en S"
+    ],
+    [
+      "cdi",
+      -1,
+      "i",
+      "d\xE9but de descente"
+    ],
+    [
+      "cdo",
+      -1,
+      "o",
+      "fin de descente"
+    ],
+    [
+      "cds",
+      -1,
+      "s",
+      "descente en S"
+    ]
+  ]) {
+    for (const r of RISES) gen12(`${w}${pre}${rtag(r)}`, {
+      label: `Courbe ${wl} \xB7 ${lab} ${rtxt(r)}`,
+      kind: "line",
+      size,
+      rise: sg * r * k,
+      prof,
+      hw: W_HW[w],
+      noV: true
+    });
+  }
+}
+gen12("wideInN", {
+  label: "\xC9largissement depuis \xE9troite",
+  kind: "line",
+  size: 3,
+  rise: 0,
+  hw: [
+    6,
+    28
+  ],
+  noV: true
+});
+for (const [pre, mir, dn, lab] of [
+  [
+    "cvHuge",
+    1,
+    1,
+    "montant"
+  ],
+  [
+    "cvHugeL",
+    -1,
+    1,
+    "montant \u21B0"
+  ],
+  [
+    "cvdHuge",
+    1,
+    -1,
+    "descendant"
+  ],
+  [
+    "cvdHugeL",
+    -1,
+    -1,
+    "descendant \u21B0"
+  ]
+]) {
+  for (const r of RISES) gen12(pre + rtag(r), {
+    label: `Tr\xE8s grand virage ${lab} \xB7 ${rtxt(r)}`,
+    kind: "arc",
+    size: 3,
+    rise: dn * r,
+    ...mir < 0 ? {
+      mirror: -1
+    } : {}
+  });
+}
+var TURN_SIZES = {
+  s: [
+    1,
+    "serr\xE9"
+  ],
+  m: [
+    2,
+    "grand"
+  ],
+  l: [
+    3,
+    "tr\xE8s grand"
+  ],
+  xl: [
+    5,
+    "g\xE9ant"
+  ]
+};
+var TURN_TAG = {
+  s: "",
+  m: "Big",
+  l: "Huge",
+  xl: "Giant"
+};
+var TURN_FLAT = {
+  s: "curve",
+  m: "bigcurve",
+  l: "hugecurve",
+  xl: "giantcurve"
+};
+for (const w of [
+  "n",
+  "w"
+]) {
+  for (const [sz, [size0, lab]] of Object.entries(TURN_SIZES)) {
+    if (w === "w" && sz === "s") continue;
+    const size = w === "w" ? size0 + 1 : size0, extra = {
+      hw: W_HW[w],
+      noV: true,
+      ...w === "w" ? {
+        arcOff: 1
+      } : {}
+    };
+    gen12(w + TURN_FLAT[sz], {
+      label: `Virage ${lab} \xB7 route ${W_TXT[w]}`,
+      kind: "arc",
+      size,
+      rise: 0,
+      ...extra
+    });
+    for (const [mid, mir, dn, sens] of [
+      [
+        "",
+        1,
+        1,
+        "montant"
+      ],
+      [
+        "L",
+        -1,
+        1,
+        "montant \u21B0"
+      ],
+      [
+        "d",
+        1,
+        -1,
+        "descendant"
+      ],
+      [
+        "dL",
+        -1,
+        -1,
+        "descendant \u21B0"
+      ]
+    ]) {
+      const pre = mid.startsWith("d") ? `${w}cvd${TURN_TAG[sz]}${mid.slice(1)}` : `${w}cv${TURN_TAG[sz]}${mid}`;
+      for (const r of RISES) gen12(pre + rtag(r), {
+        label: `Virage ${lab} ${sens} \xB7 ${rtxt(r)} \xB7 route ${W_TXT[w]}`,
+        kind: "arc",
+        size,
+        rise: dn * r,
+        ...mir < 0 ? {
+          mirror: -1
+        } : {},
+        ...extra
+      });
+    }
+  }
+}
+for (const [base, size, bank, lab] of [
+  [
+    "bank",
+    2,
+    0.42,
+    "grand"
+  ],
+  [
+    "bankBig",
+    3,
+    0.5,
+    "tr\xE8s grand"
+  ],
+  [
+    "bankGiant",
+    5,
+    0.5,
+    "g\xE9ant"
+  ]
+]) {
+  for (const [mid, mir, dn, sens] of [
+    [
+      "U",
+      1,
+      1,
+      "montant"
+    ],
+    [
+      "UL",
+      -1,
+      1,
+      "montant \u21B0"
+    ],
+    [
+      "D",
+      1,
+      -1,
+      "descendant"
+    ],
+    [
+      "DL",
+      -1,
+      -1,
+      "descendant \u21B0"
+    ]
+  ]) {
+    for (const r of RISES) gen12(`${base}${mid}${rtag(r)}`, {
+      label: `Virage ${lab} relev\xE9 ${sens} \xB7 ${rtxt(r)}`,
+      kind: "ribbon",
+      size,
+      rise: dn * r,
+      clearance: 2 + Math.max(0, Math.ceil(dn * r)),
+      arc: true,
+      bank,
+      ...mir < 0 ? {
+        mirror: -1
+      } : {}
+    });
+  }
+}
+var ROLL_PASSAGES90D = [
+  "46",
+  "64",
+  "67",
+  "76",
+  "75",
+  "57",
+  "54",
+  "45"
+];
+for (const long of [
+  false,
+  true
+]) {
+  for (const pas of ROLL_PASSAGES90D) {
+    const a = +pas[0], b = +pas[1];
+    gen12(`tr${pas}${long ? "l" : "s"}`, {
+      label: `Transition ${ORI_NAME[a]} \u2192 ${ORI_NAME[b]}${long ? " (douce 2\xD72)" : ""}`,
+      kind: "ribbon",
+      size: long ? 2 : 1,
+      rise: 0,
+      clearance: 2,
+      below: 2,
+      roll: [
+        a,
+        b
+      ],
+      rollLong: long,
+      noRails: true
+    });
+  }
+}
+gen12("sbendFastWide", {
+  label: "Grand S rapide \u2192",
+  kind: "sbend",
+  size: 4,
+  rise: 0,
+  mirror: 1,
+  shift: 2
+});
+gen12("sbendFastWideL", {
+  label: "Grand S rapide \u2190",
+  kind: "sbend",
+  size: 4,
+  rise: 0,
+  mirror: -1,
+  shift: 2
+});
+PIECES.sbendFastWide.rollable = PIECES.sbendFastWideL.rollable = true;
 var LEGACY_TILE = {
   rollL: {
     t: "tr02s"
@@ -1372,7 +1727,9 @@ var PIECE_ORDER = [
   "tubeTurn",
   "tubeTurnL",
   // 0.11.4 : virage géant relevé et inclinés (à la suite : ne jamais réordonner)
-  ...GIANT_IDS
+  ...GIANT_IDS,
+  // 0.12.0 : familles complètes (à la suite : ne jamais réordonner ; l'ordre est celui de FAMILY12_IDS)
+  ...FAMILY12_IDS
 ];
 var SURFACES = {
   "": {
@@ -1715,7 +2072,7 @@ function flagAllowed(type, flag, tile = null, val = 0) {
   const p = PIECES[type];
   if (!p) return false;
   const lineLike = p.kind === "line" || p.kind === "arc";
-  if (flag === "v") return true;
+  if (flag === "v") return !p.noV;
   if (flag === "th") return p.kind !== "ring";
   if (p.hw && flag !== "nb") return false;
   if (flag === "eb") return p.kind === "area" && (val | 0) >= 0 && (val | 0) <= 15;
@@ -1948,7 +2305,7 @@ function arcParams(p) {
   return {
     cx: p.size * HALF,
     cz: p.size * HALF,
-    R: (p.size - 0.5) * CELL
+    R: (p.size - 0.5 - (p.arcOff || 0)) * CELL
   };
 }
 function sampleLocal(tile, lx, lz, out) {
@@ -1983,6 +2340,10 @@ function sampleLocal(tile, lx, lz, out) {
     out.d = dist - a.R;
     out.gx = mir * dx / dist;
     out.gz = dz / dist;
+    if (p.hw) {
+      const e = Math.abs(out.d) - p.hw[0], dd = ROAD_HALF + e;
+      out.d = dd > 0 ? out.d < 0 ? -dd : dd : 0;
+    }
     let ang = datan2(dz, dx);
     if (ang < 0) ang += Math.PI * 2;
     out.along = (ang - Math.PI) / (Math.PI / 2);
@@ -2521,6 +2882,25 @@ function buildBase(tile) {
     };
   }
   if (P.kind === "ribbon") {
+    if (P.arc && (P.rise || P.mirror < 0)) {
+      const a = arcParams(P), mir = P.mirror < 0 ? -1 : 1, rise = (P.rise || 0) * LEVEL_H, L4 = Math.PI / 2 * a.R;
+      const k = rise / L4, ik = 1 / Math.sqrt(1 + k * k);
+      return {
+        pos(u, o) {
+          const ang = Math.PI + Math.PI / 2 * u;
+          const b = P.bank * dsin(Math.PI * u), sb = dsin(b), cb = dcos(b);
+          const ca = dcos(ang), sa = dsin(ang);
+          o.x = mir * (a.cx + a.R * ca);
+          o.z = a.cz + a.R * sa;
+          o.y = base + ROAD_HALF * sb + rise * u;
+          const tx = -mir * sa, tz = ca;
+          o.nx = cb * (-k * tx * ik) + sb * (-mir * ca);
+          o.ny = cb * ik;
+          o.nz = cb * (-k * tz * ik) + sb * -sa;
+        },
+        len: hypot2(L4, rise)
+      };
+    }
     if (P.arc) {
       const a = arcParams(P);
       return {
@@ -7660,6 +8040,7 @@ var Track = class _Track {
     if (p.ambiance !== void 0) this.ambiance = cleanAmbiance(p.ambiance);
     if (p.scripts !== void 0) this.scripts = sanitizeScripts(p.scripts);
     for (const r of RULES) if (p[r.key] !== void 0) this[r.key] = r.clean(p[r.key]);
+    this.version++;
   }
   // Signature du contenu (pièces, décorations, règles de course), utilisée pour la
   // vérification et comme clé des classements en ligne. Le nom, la description et l'auteur
@@ -19672,4 +20053,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "b283ba6a9b7cbf49";
+globalThis.__COPYTRACK_BUILD__ = "5f21f39755bac47d";

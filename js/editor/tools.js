@@ -167,7 +167,7 @@ export const toolMethods = {
     const P = PIECES[r.tile.t], cx = (r.tile.x + P.size / 2) * CELL, cz = (r.tile.z + P.size / 2) * CELL;
     if (Math.hypot(cx - this.target.x, cz - this.target.z) > this.dist * 0.45) { this.target.x = cx; this.target.z = cz; }
     if (r.note) this.app.ui.flash(`Orientation choisie impossible à raccorder (${r.note}) : la route reprend son orientation.`, 4);
-    else this.app.ui.flash(`${P.label} posée${r.reverse ? ' à contresens (retour de la pièce)' : r.bridged ? ` après ${r.chain.length - 1} transition${r.chain.length > 2 ? 's' : ''} d'orientation (raccord automatique)` : r.inferred ? ' (orientation de la route reprise)' : ''}`, 1.4);
+    else this.app.ui.flash(`${P.label} posée${r.reverse ? ' à contresens (retour de la pièce)' : r.widened ? ` après un ${PIECES[r.chain[0].t].label.toLowerCase()} (raccord de largeur automatique)` : r.bridged ? ` après ${r.chain.length - 1} transition${r.chain.length > 2 ? 's' : ''} d'orientation (raccord automatique)` : r.inferred ? ' (orientation de la route reprise)' : ''}`, 1.4);
     return true;
   },
 
@@ -182,10 +182,11 @@ export const toolMethods = {
       this.autoLevel = new Map([[`${tile.x + ex},${tile.z + ez}`, tile.l + p.rise], [`${tile.x - bx},${tile.z - bz}`, tile.l]]);
       return;
     }
-    const [dx, dz] = DIRS[tile.r];
+    // (0.12.0 : une pente large fait 3×3 : la case visée pour la pièce suivante est le CENTRE de l'empreinte voisine, comme pour la pose d'une pièce de taille impaire)
+    const [dx, dz] = DIRS[tile.r], s = p.size, c = (s - 1) / 2;
     this.autoLevel = new Map([
-      [`${tile.x + dx},${tile.z + dz}`, tile.l + p.rise],
-      [`${tile.x - dx},${tile.z - dz}`, tile.l],
+      [`${tile.x + c + dx * s},${tile.z + c + dz * s}`, tile.l + p.rise],
+      [`${tile.x + c - dx * s},${tile.z + c - dz * s}`, tile.l],
     ]);
   },
 

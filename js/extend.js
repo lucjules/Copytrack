@@ -1,6 +1,7 @@
 // Outil « Prolonger » de l'éditeur : à partir de l'extrémité libre d'une pièce, trouve où poser la pièce choisie pour qu'elle se RACCORDE (position, hauteur, cap et
 // roulis). Module pur (aucun rendu, aucun DOM) : l'éditeur (editor/tools.js : extend) n'a plus qu'à poser le résultat.
-import { PIECES, flagAllowed, clearConflicts } from './pieces.js';
+import { PIECES, flagAllowed, clearConflicts, roadHalf } from './pieces.js';
+import { ROAD_HALF } from './constants.js';
 import { Track } from './track.js';
 import { tileEnds, endsTouch, placementsAfter, compatiblePlacement, rollGap, ROLL_TOLERANCE } from './connect.js';
 import { endOrientation } from './continuity.js';
@@ -48,10 +49,19 @@ export function extendPlan(track, from, type, opts = {}) {
   const armed = !!(opts.o || opts.v);
   if (inferTry && !armed) tries.push(inferTry);
   let blocked = null;
+  // 0.12.0 : largeur de la route. Un raccord de largeur (rétrécissement, élargissement) se pose dans le sens qui part de la largeur de la route : après une route large,
+  // l'élargissement est posé retourné (il rétrécit). Une pièce d'une autre largeur que la route reçoit d'abord le raccord qui manque (raccordement automatique).
+  const endW = end.w ?? ROAD_HALF, same = (a, b) => Math.abs(a - b) < 0.01;
+  const changer = !!(P.hw && !same(P.hw[0], P.hw[1]));
+  const revFirst = changer && same(endW, P.hw[1]) && !same(endW, P.hw[0]);
+  if (!changer && lineLike && !same(endW, roadHalf(P, 0))) {
+    const wb = widthBridge(track, end, endW, roadHalf(P, 0), type, tries[tries.length - 1].opts);
+    if (wb) return wb;
+  }
   // D'abord dans le sens de la pièce ; sinon à contresens (retour d'une vrille, d'un tire-bouchon, courbe symétrique) : la pièce est alors parcourue de sa sortie vers son entrée.
   // Le contresens n'est essayé que si le sens normal ne donne AUCUN raccord (roulis ou géométrie) : une descente refusée parce qu'elle sortirait des niveaux ne devient pas
   // une montée en silence.
-  for (const reverse of [false, true]) {
+  for (const reverse of revFirst ? [true, false] : [false, true]) {
     let found = false;
     for (const t of tries) {
       const c = compatiblePlacement(end, type, t.opts, { reverse });
@@ -82,6 +92,30 @@ export function extendPlan(track, from, type, opts = {}) {
     if (got && rollGap(end, got) >= ROLL_TOLERANCE) return { why: `${P.label} se raccorde par sa forme, mais la route arrive ${ORI_NAME[o] || 'dans une autre orientation'} et cette pièce est ${ORI_NAME[endOrientation(got)] || 'dans une autre orientation'} : choisis une pièce posée ${ORI_NAME[o] || 'comme la route'}, ou une transition.` };
   }
   return { why: `Aucune ${P.label} ne se raccorde à cette extrémité (hauteur, pente ou cap incompatibles) : essaie une autre pièce de la même famille.` };
+}
+
+// 0.12.0 : raccord de largeur + pièce : { tile, chain, widened: true } ou null. Le raccord est celui (rétrécissement, élargissement) dont un bout a la largeur de la route
+// et l'autre celle de la pièce, posé dans le sens qui convient.
+const WIDTH_CHANGERS = ['narrowIn', 'wideIn', 'wideInN'];
+function widthBridge(track, end, fromW, toW, type, opts) {
+  const same = (a, b) => Math.abs(a - b) < 0.01;
+  for (const id of WIDTH_CHANGERS) {
+    const hw = PIECES[id].hw, reverse = same(hw[1], fromW) && same(hw[0], toW);
+    if (!reverse && !(same(hw[0], fromW) && same(hw[1], toW))) continue;
+    const c = compatiblePlacement(end, id, {}, { reverse });
+    if (!c) return null;
+    const a = Track.normalize(c);
+    if (!Track.inBounds(a) || track.conflicts(a).length) return null;
+    const added = track.add(a);
+    const next = tileEnds(added).find((e) => (reverse ? e.entry : e.exit));
+    const p = next && compatiblePlacement(next, type, opts, {});
+    const tile = p ? Track.normalize(p) : null;
+    const ok = tile && Track.inBounds(tile) && !track.conflicts(tile).length;
+    track.remove(added);
+    if (!ok) return null;
+    return { tile, chain: [{ ...a }, tile], widened: true, bridged: false, end };
+  }
+  return null;
 }
 
 // Chaîne de transitions + pièce : { tile, chain: [tuiles dans l'ordre de pose], bridged: true } ou { why } ou null (pas de problème d'orientation à résoudre).

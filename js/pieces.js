@@ -233,6 +233,71 @@ for (const pas of ROLL_PASSAGES45) {
   const a = +pas[0], b = +pas[1];
   gen45(`tr${pas}s`, { label: `Transition ${ORI_NAME[a]} → ${ORI_NAME[b]} (45°)`, kind: 'ribbon', size: 1, rise: 0, clearance: 2, below: 2, roll: [a, b], rollLong: false, noRails: true });
 }
+// ---- 0.12.0 : familles complètes (largeur × inclinaison × profil, virages très grands inclinés, virages relevés inclinés) ---------------------------
+// Chaque famille de l'éditeur (families.js) a maintenant toutes ses combinaisons, sauf celles que la géométrie interdit (documentées là-bas). Types
+// GÉNÉRÉS, rangés dans FAMILY12_IDS dans un ordre figé (PIECE_ORDER : seulement ajouter à la suite).
+//  Largeur : étroite (12 m, hw 6, mêmes empreintes que la route normale) et large (56 m, hw 28). Une route large occupe 3 colonnes : sa ligne droite fait
+//  3×3 et son « inclinaison » est une PENTE (niveaux par case) : en montée 1 elle gagne 3 niveaux, comme trois pentes 1 à la suite. Ses virages gardent les rayons
+//  de la route normale (grand 48 m, très grand 80 m, géant 144 m) avec une empreinte plus grande d'une case : l'entrée est au milieu de trois colonnes (arcOff,
+//  voir arcParams). Pas de virage serré large (rayon 16 m < demi-largeur 28 m). Les routes étroites et larges ne se posent ni à l'envers, ni sur un mur
+//  (noV, flagAllowed) : leurs bordures, portiques et rubans supposent 24 m de chaussée.
+export const FAMILY12_IDS = [];
+const gen12 = (id, def) => { PIECES[id] = def; FAMILY12_IDS.push(id); };
+const W_HW = { n: [6, 6], w: [28, 28] };
+const W_TXT = { n: 'étroite', w: 'large' };
+// Raccords doux en S de 2 et 4 niveaux (route normale), qui manquaient à la famille Courbe.
+for (const r of [2, 4]) gen12('crs' + rtag(r), { label: `Courbe en S · montée ${rtxt(r)}`, kind: 'line', size: 1, rise: r, prof: 's' });
+for (const r of [2, 4]) gen12('cds' + rtag(r), { label: `Courbe en S · descente ${rtxt(r)}`, kind: 'line', size: 1, rise: -r, prof: 's' });
+// Lignes droites et courbes étroites (1 case) et larges (3×3 : montée ×3).
+for (const w of ['n', 'w']) {
+  const size = w === 'w' ? 3 : 1, k = size, wl = W_TXT[w];
+  for (const r of RISES) gen12(`${w}slU${rtag(r)}`, { label: `Route ${wl} · montée ${rtxt(r)}`, kind: 'line', size, rise: r * k, hw: W_HW[w], noV: true });
+  for (const r of RISES) gen12(`${w}slD${rtag(r)}`, { label: `Route ${wl} · descente ${rtxt(r)}`, kind: 'line', size, rise: -r * k, hw: W_HW[w], noV: true });
+  for (const [pre, sg, prof, lab] of [['crv', 1, 'i', 'début de montée'], ['cro', 1, 'o', 'fin de montée'], ['crs', 1, 's', 'montée en S'], ['cdi', -1, 'i', 'début de descente'], ['cdo', -1, 'o', 'fin de descente'], ['cds', -1, 's', 'descente en S']]) {
+    for (const r of RISES) gen12(`${w}${pre}${rtag(r)}`, { label: `Courbe ${wl} · ${lab} ${rtxt(r)}`, kind: 'line', size, rise: sg * r * k, prof, hw: W_HW[w], noV: true });
+  }
+}
+// Changement de largeur qui manquait : de la route étroite à la route large (12 → 56 m ; tourné d'un demi-tour : 56 → 12).
+gen12('wideInN', { label: 'Élargissement depuis étroite', kind: 'line', size: 3, rise: 0, hw: [6, 28], noV: true });
+// Virages : très grand (3×3, 80 m) incliné, comme les autres rayons.
+for (const [pre, mir, dn, lab] of [['cvHuge', 1, 1, 'montant'], ['cvHugeL', -1, 1, 'montant ↰'], ['cvdHuge', 1, -1, 'descendant'], ['cvdHugeL', -1, -1, 'descendant ↰']]) {
+  for (const r of RISES) gen12(pre + rtag(r), { label: `Très grand virage ${lab} · ${rtxt(r)}`, kind: 'arc', size: 3, rise: dn * r, ...(mir < 0 ? { mirror: -1 } : {}) });
+}
+// Virages étroits (mêmes empreintes et rayons que la route normale) et larges (rayon de la route normale, empreinte +1 case), plats et inclinés.
+const TURN_SIZES = { s: [1, 'serré'], m: [2, 'grand'], l: [3, 'très grand'], xl: [5, 'géant'] };
+const TURN_TAG = { s: '', m: 'Big', l: 'Huge', xl: 'Giant' };
+const TURN_FLAT = { s: 'curve', m: 'bigcurve', l: 'hugecurve', xl: 'giantcurve' };
+for (const w of ['n', 'w']) {
+  for (const [sz, [size0, lab]] of Object.entries(TURN_SIZES)) {
+    if (w === 'w' && sz === 's') continue;
+    const size = w === 'w' ? size0 + 1 : size0, extra = { hw: W_HW[w], noV: true, ...(w === 'w' ? { arcOff: 1 } : {}) };
+    gen12(w + TURN_FLAT[sz], { label: `Virage ${lab} · route ${W_TXT[w]}`, kind: 'arc', size, rise: 0, ...extra });
+    for (const [mid, mir, dn, sens] of [['', 1, 1, 'montant'], ['L', -1, 1, 'montant ↰'], ['d', 1, -1, 'descendant'], ['dL', -1, -1, 'descendant ↰']]) {
+      const pre = mid.startsWith('d') ? `${w}cvd${TURN_TAG[sz]}${mid.slice(1)}` : `${w}cv${TURN_TAG[sz]}${mid}`;
+      for (const r of RISES) gen12(pre + rtag(r), { label: `Virage ${lab} ${sens} · ${rtxt(r)} · route ${W_TXT[w]}`, kind: 'arc', size, rise: dn * r, ...(mir < 0 ? { mirror: -1 } : {}), ...extra });
+    }
+  }
+}
+// Virages relevés inclinés (grand, très grand, géant) : la route penche vers l'intérieur ET monte ou descend (hélice relevée), ↱ / ↰.
+for (const [base, size, bank, lab] of [['bank', 2, 0.42, 'grand'], ['bankBig', 3, 0.5, 'très grand'], ['bankGiant', 5, 0.5, 'géant']]) {
+  for (const [mid, mir, dn, sens] of [['U', 1, 1, 'montant'], ['UL', -1, 1, 'montant ↰'], ['D', 1, -1, 'descendant'], ['DL', -1, -1, 'descendant ↰']]) {
+    for (const r of RISES) gen12(`${base}${mid}${rtag(r)}`, { label: `Virage ${lab} relevé ${sens} · ${rtxt(r)}`, kind: 'ribbon', size, rise: dn * r, clearance: 2 + Math.max(0, Math.ceil(dn * r)), arc: true, bank, ...(mir < 0 ? { mirror: -1 } : {}) });
+  }
+}
+// Transitions de 90° entre orientations inclinées (45° ↔ 135° du même côté, et entre les deux côtés en passant par le haut ou le bas : 4·6, 6·7, 7·5, 5·4) :
+// la famille Transition avait les 90° autour du sol et du plafond, pas ceux-là. Mêmes formes (franche 1 case, douce 2×2) que les autres 90°.
+export const ROLL_PASSAGES90D = ['46', '64', '67', '76', '75', '57', '54', '45'];
+for (const long of [false, true]) {
+  for (const pas of ROLL_PASSAGES90D) {
+    const a = +pas[0], b = +pas[1];
+    gen12(`tr${pas}${long ? 'l' : 's'}`, { label: `Transition ${ORI_NAME[a]} → ${ORI_NAME[b]}${long ? ' (douce 2×2)' : ''}`, kind: 'ribbon', size: long ? 2 : 1, rise: 0, clearance: 2, below: 2, roll: [a, b], rollLong: long, noRails: true });
+  }
+}
+// Chicane rapide (4×4) au grand décalage de deux colonnes, qui manquait à la famille Chicane.
+gen12('sbendFastWide', { label: 'Grand S rapide →', kind: 'sbend', size: 4, rise: 0, mirror: 1, shift: 2 });
+gen12('sbendFastWideL', { label: 'Grand S rapide ←', kind: 'sbend', size: 4, rise: 0, mirror: -1, shift: 2 });
+PIECES.sbendFastWide.rollable = PIECES.sbendFastWideL.rollable = true;      // (comme les autres chicanes : wall-ride, voir plus haut)
+
 // Anciens types de la 0.9.2 (routes « sur le côté ») : toujours lisibles, convertis à la lecture en pièce + orientation.
 //   rollL / rollR : transitions sol → mur droit / gauche ;  sideL / sideR : ligne droite sur un mur droit / gauche.
 export const LEGACY_TILE = {
@@ -280,6 +345,8 @@ export const PIECE_ORDER = [
   'loopTop', 'loopTopL', 'tubeTurn', 'tubeTurnL',
   // 0.11.4 : virage géant relevé et inclinés (à la suite : ne jamais réordonner)
   ...GIANT_IDS,
+  // 0.12.0 : familles complètes (à la suite : ne jamais réordonner ; l'ordre est celui de FAMILY12_IDS)
+  ...FAMILY12_IDS,
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -446,8 +513,8 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
   const p = PIECES[type];
   if (!p) return false;
   const lineLike = p.kind === 'line' || p.kind === 'arc';
-  // 0.9 : toutes les pièces peuvent être posées à l'envers (retournées sous leur niveau).
-  if (flag === 'v') return true;
+  // 0.9 : toutes les pièces peuvent être posées à l'envers (retournées sous leur niveau). 0.12.0 : sauf les nouvelles routes étroites et larges (noV).
+  if (flag === 'v') return !p.noV;
   // Phase 2 : le thème est purement visuel, toute pièce de route en profite.
   if (flag === 'th') return p.kind !== 'ring';
   // 0.9.68 : style du portique (visuel) : là où il y a un portique (départ, arrivée, checkpoint en pièce ou en option sur une route). Sans pièce
@@ -623,7 +690,8 @@ export function localToWorld(tile, lx, lz, out = {}) {
 
 export function arcParams(p) {
   // Centre de l'arc au coin de la pièce, rayon (taille − ½) case : 16 m (1×1), 48 m (2×2), 80 m (3×3), 144 m (5×5).
-  return { cx: p.size * HALF, cz: p.size * HALF, R: (p.size - 0.5) * CELL };
+  // 0.12.0 : virage de route large (arcOff 1) : l'entrée est au milieu des TROIS premières colonnes, le rayon celui de la route normale d'une case de moins.
+  return { cx: p.size * HALF, cz: p.size * HALF, R: (p.size - 0.5 - (p.arcOff || 0)) * CELL };
 }
 
 // Échantillonne la géométrie au sol d'une pièce au point local (lx, lz).
@@ -660,6 +728,8 @@ export function sampleLocal(tile, lx, lz, out) {
     const dx = mir * lx - a.cx, dz = lz - a.cz;
     const dist = Math.sqrt(dx * dx + dz * dz) || 1e-6;
     out.d = dist - a.R; out.gx = (mir * dx) / dist; out.gz = dz / dist;
+    // 0.12.0 : virage étroit ou large (largeur constante) : même recalage que la ligne droite (widthRemap) : |d| − ROAD_HALF = distance exacte au bord.
+    if (p.hw) { const e = Math.abs(out.d) - p.hw[0], dd = ROAD_HALF + e; out.d = dd > 0 ? (out.d < 0 ? -dd : dd) : 0; }
     let ang = datan2(dz, dx);
     if (ang < 0) ang += Math.PI * 2;
     out.along = (ang - Math.PI) / (Math.PI / 2);
