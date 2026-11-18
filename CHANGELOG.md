@@ -6,6 +6,16 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.12.1 — l'orientation se choisit avec la pièce
+
+**`PHYS_VER` reste 37.**
+
+- Éditeur : une liste **Orientation** dans les réglages de la pièce choisie, à côté de Largeur, Rayon, Inclinaison, Sens : *à l'endroit (sol)*, *à l'envers
+  (plafond)*, *sur le côté gauche* ou *droit (mur)*, et inclinée ou en surplomb à 45° / 135°. La pièce se pose directement ainsi (avant : chercher l'option dans
+  « Options de la pièce », repliées, ou corriger chaque pièce posée dans l'Inspecteur). Les orientations qu'une pièce refuse sont grisées, avec leur raison.
+  **Touche O** : orientation suivante (Maj + O : précédente).
+- Test : `tools/test-rangement.mjs`.
+
 ## Bêta 0.12.0 — l'éditeur rangé en quatre zones, des familles de pièces complètes, onze défauts corrigés
 
 **`PHYS_VER` reste 37** : la physique des pièces existantes ne change pas (empreinte identique), les circuits intégrés non plus. **Redéployer `submit-score`** : la fonction

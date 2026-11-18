@@ -1,7 +1,7 @@
 // Palette de l'éditeur : boutons d'outils, familles de pièces, options, paramètres, aide à la compatibilité, menu.
 // Ces méthodes s'ajoutent au prototype de EditorSession (voir editor.js) : `this` est l'instance.
 import { SURF_PHYS } from '../constants.js';
-import { PIECES, PIECE_ORDER, LEGACY_TILE, SURFACES, SURFACE_ORDER, surfaceRule, flagAllowed, paramText, armOption } from '../pieces.js';
+import { PIECES, PIECE_ORDER, LEGACY_TILE, SURFACES, SURFACE_ORDER, surfaceRule, flagAllowed, paramText, armOption, ORI_TO_O, O_TO_ORI } from '../pieces.js';
 import { FAMILIES, FAMILY_ORDER, familyOf, resolve, validValues, withTrait, REPLACED_BY_OPTION, missingReason } from '../families.js';
 import { Track } from '../track.js';
 import { DECORS } from '../themes.js';
@@ -15,6 +15,9 @@ import { ERASE_FILTERS, ERASE_FILTER_ORDER } from '../editorPick.js';
 import { MIRROR_TYPES } from '../inspector.js';
 import { SKY_CHOICES, FOG_CHOICES, MUSIC_CHOICES, WEATHER_CHOICES, CYCLE_CHOICES } from '../ambiance.js';
 import { MODS, NO_OPTS, OPT_KEYS, SNAPS, fillBase, isFill, toFill, pieceLabel } from './shared.js';
+
+// Orientations proposées à la pose (ids de pieces.js : ORIENTS), les quatre principales d'abord.
+const ORIENT_ITEMS = [[0, 'À l’endroit (sol)'], [3, 'À l’envers (plafond)'], [1, 'Sur le côté gauche (mur)'], [2, 'Sur le côté droit (mur)'], [4, 'Inclinée à gauche (45°)'], [5, 'Inclinée à droite (45°)'], [6, 'Surplomb à gauche (135°)'], [7, 'Surplomb à droite (135°)']];
 
 // Onglets de la fenêtre « Circuit ».
 const CIRCUIT_TABS = [['gen', 'Général'], ['course', 'Course'], ['cond', 'Conditions'], ['amb', 'Ambiance'], ['scripts', 'Déclencheurs'], ['logic', 'Logique']];
@@ -456,7 +459,7 @@ export const paletteMethods = {
     // Réglages de la pièce choisie : caractéristiques de sa famille, options, gestes de pose.
     const set = document.createElement('div');
     set.className = 'pal-set'; set.id = 'ed-pset';
-    set.innerHTML = '<div class="pset-head"><b id="ed-pset-name"></b><small id="ed-pset-size"></small></div><div class="pset-traits" id="ed-pset-traits"></div><div class="pset-acts" id="ed-pset-acts"></div><details class="pset-opts" id="ed-pset-opts"><summary>Options de la pièce <span id="ed-pset-armed"></span></summary></details>';
+    set.innerHTML = '<div class="pset-head"><b id="ed-pset-name"></b><small id="ed-pset-size"></small></div><div class="pset-traits" id="ed-pset-traits"></div><div class="pset-traits" id="ed-pset-ori"></div><div class="pset-acts" id="ed-pset-acts"></div><details class="pset-opts" id="ed-pset-opts"><summary>Options de la pièce <span id="ed-pset-armed"></span></summary></details>';
     panel.appendChild(set);
     set.querySelector('#ed-pset-opts').appendChild(this._optionsPanel());
     const acts = set.querySelector('#ed-pset-acts');
@@ -594,8 +597,67 @@ export const paletteMethods = {
         o.title = dis ? missingReason(fam.fam, { ...fam.traits, [t.id]: o.value }) || 'Cette combinaison n’existe pas.' : '';
       }
     }
+    this._syncOrientation(base);
     const mir = set.querySelector('[data-pact="mirror"]');
     if (mir) mir.hidden = !(MIRROR_TYPES[base] || (this.opts && this.opts.o));
+  },
+
+  // ---- Orientation de la pièce choisie (0.12.1) : une liste à côté des caractéristiques (à l'endroit, à l'envers, mur gauche, mur droit, inclinée…), au lieu
+  // d'aller la chercher dans les options repliées ou de corriger chaque pièce posée dans l'Inspecteur. Elle arme l'option, qui se pose avec la pièce.
+  _orientChoices(piece) {
+    return ORIENT_ITEMS.map(([id, label]) => {
+      let why = '';
+      if (id === 3) { if (!flagAllowed(piece, 'v')) why = 'Les routes étroites et larges ne se posent pas à l’envers.'; }
+      else if (id !== 0 && !flagAllowed(piece, 'o', null, ORI_TO_O[id])) why = 'Cette pièce ne se pose pas dans cette orientation.';
+      return { id, label, why };
+    });
+  },
+  currentOrientation() { return this.opts.v ? 3 : O_TO_ORI[this.opts.o | 0] || 0; },
+  setOrientation(id) {
+    const piece = fillBase(this.tool);
+    if (!PIECES[piece]) return;
+    const c = this._orientChoices(piece).find((x) => x.id === id);
+    if (!c || c.why) { if (c) { this.app.ui.flash(c.why, 2.5); this.app.audio.error(); } return; }
+    let o = armOption(this.opts, 'o', 0);                                 // à l'endroit, au sol (retire aussi le plafond)
+    if (id === 3) o = armOption(o, 'v', 1);
+    else if (id !== 0) o = armOption(o, 'o', ORI_TO_O[id]);
+    this.opts = o;
+    this.previewKey = '';
+    this._refreshUI();
+  },
+  _syncOrientation(piece) {
+    const box = document.getElementById('ed-pset-ori');
+    if (!box) return;
+    const choices = PIECES[piece] && !this.guidedOn() ? this._orientChoices(piece) : [];
+    box.hidden = choices.filter((c) => !c.why).length < 2;
+    if (box.hidden) return;
+    let sel = box.querySelector('select');
+    if (!sel) {
+      const lab = document.createElement('label');
+      const span = document.createElement('span'); span.textContent = 'Orientation';
+      sel = document.createElement('select');
+      sel.id = 'ed-pset-orient';
+      sel.setAttribute('aria-label', 'Orientation de la pièce');
+      sel.title = 'À l’endroit, à l’envers ou sur un mur : la pièce se pose directement ainsi (touche O : orientation suivante)';
+      for (const [id, label] of ORIENT_ITEMS) { const op = document.createElement('option'); op.value = id; op.textContent = label; sel.appendChild(op); }
+      sel.addEventListener('change', () => { this.setOrientation(+sel.value); this.app.audio.click(); });
+      lab.append(span, sel);
+      box.appendChild(lab);
+    }
+    for (const op of sel.options) { const c = choices.find((x) => x.id === +op.value); op.disabled = !!c.why; op.title = c.why; }
+    const cur = choices.find((x) => x.id === this.currentOrientation());
+    sel.value = String(cur && !cur.why ? cur.id : 0);      // (orientation armée que cette pièce refuse : elle se posera à l'endroit)
+  },
+  // Touche O : l'orientation suivante permise pour la pièce choisie.
+  cycleOrientation(d = 1) {
+    const piece = fillBase(this.tool);
+    if (!PIECES[piece] || this.guidedOn()) return;
+    const ok = this._orientChoices(piece).filter((c) => !c.why);
+    if (ok.length < 2) { this.app.ui.flash('Cette pièce ne se pose qu’à l’endroit.', 2); return; }
+    const i = ok.findIndex((c) => c.id === this.currentOrientation());
+    const next = ok[(i + d + ok.length) % ok.length];
+    this.setOrientation(next.id);
+    this.app.ui.flash(`Orientation : ${next.label}`, 1.4);
   },
 
   // ---- Peinture

@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.12.0** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.12.1** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -79,7 +79,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 
 - **Rangement en quatre zones** (0.12.0), un rôle chacune :
   - **en haut, le circuit** : menu *Fichier* (nouveau, ouvrir, importer, partager, enregistrer, enregistrer une copie, aide), le **nom** du circuit (un clic le renomme ; un point orange tant qu'il n'est pas enregistré), *⚙ Circuit*, annuler / rétablir, la pastille des problèmes, *▶ Tester* (sa flèche : depuis la pièce visée) et *🏁 Vérifier et publier* ;
-  - **à gauche, les outils** : un rail de six outils (**Pistes**, **Peinture**, **Décors**, **Sélection**, **Inspecter**, **Gomme**) et le panneau de l'outil choisi. Pistes : la bibliothèque par sections (routes, acrobaties, tubes, surfaces, course, morceaux tout faits), une **recherche** (« large montée », « relevé »…), les pièces récentes, et sous la pièce choisie ses **caractéristiques**, ses **options** et *Pivoter / Miroir / Prolonger*. Décors : cinq familles (les **solides**, qui comptent pour la course, à part) et une recherche ;
+  - **à gauche, les outils** : un rail de six outils (**Pistes**, **Peinture**, **Décors**, **Sélection**, **Inspecter**, **Gomme**) et le panneau de l'outil choisi. Pistes : la bibliothèque par sections (routes, acrobaties, tubes, surfaces, course, morceaux tout faits), une **recherche** (« large montée », « relevé »…), les pièces récentes, et sous la pièce choisie ses **caractéristiques**, son **orientation** (à l'endroit, à l'envers, sur le côté gauche ou droit… ; touche O), ses **options** et *Pivoter / Miroir / Prolonger*. Décors : cinq familles (les **solides**, qui comptent pour la course, à part) et une recherche ;
   - **à droite, la vue** : niveau, ce niveau seul, dessus, recentrer, ras du sol, grille, calques ;
   - **seulement quand on en a besoin** : la barre de la zone sélectionnée, juste au-dessus d'elle, et l'inspecteur.
   Sur téléphone, le panneau de l'outil est un **tiroir** qui se referme après un choix.

@@ -73,4 +73,26 @@ test('« Remplir » est l’interrupteur de CHAQUE outil : celui des pièces ne 
   s.setMode('select'); assert.equal(s.tool, 'select');
 });
 
+test('orientation dans les réglages de la pièce (0.12.1) : à l’endroit, à l’envers, sur le côté gauche ou droit, armée pour la pose ; refusée si la pièce ne la permet pas ; touche O', () => {
+  const flashes = [];
+  const s = { tool: 'straight', opts: {}, famTraits: {}, deco: { cat: 'nature' }, inspector: { clear() {} }, app: { settings: {}, ui: { flash: (m) => flashes.push(m) }, audio: { error() {} } }, previewKey: '' };
+  Object.assign(s, toolMethods, paletteMethods, { setTab() {}, _refreshUI() {}, guidedAllows: () => true });
+  s.setOrientation(1); assert.deepEqual([s.opts.o, s.opts.v], [1, 0], 'mur gauche');
+  s.setOrientation(2); assert.deepEqual([s.opts.o, s.opts.v], [2, 0], 'mur droit (remplace le gauche)');
+  s.setOrientation(3); assert.deepEqual([s.opts.o, s.opts.v], [0, 1], 'à l’envers');
+  s.setOrientation(0); assert.deepEqual([s.opts.o, s.opts.v], [0, 0], 'à l’endroit');
+  s.setOrientation(3); s.setOrientation(3); assert.equal(s.opts.v, 1, 'choisir deux fois la même ne l’annule pas');
+  s.setOrientation(0);
+  s.cycleOrientation(); assert.equal(s.currentOrientation(), 3, 'O : à l’envers après à l’endroit');
+  s.cycleOrientation(); assert.equal(s.currentOrientation(), 1);
+  s.cycleOrientation(-1); assert.equal(s.currentOrientation(), 3, 'Maj + O : précédente');
+  s.setOrientation(0); s.setTool('wslU1');
+  s.setOrientation(3);
+  assert.equal(s.opts.v | 0, 0, 'route large : pas à l’envers');
+  assert.match(flashes.at(-1), /ne se posent pas à l’envers/);
+  // Toute pièce qui se pose dans au moins deux orientations a la liste ; les routes étroites et larges, non.
+  assert.ok(s._orientChoices('cvBig2').filter((c) => !c.why).length >= 4, 'virage incliné : sol, plafond, murs');
+  assert.equal(s._orientChoices('wslU1').filter((c) => !c.why).length, 1);
+});
+
 await finish('Tous les tests du rangement de l’éditeur passent.');
