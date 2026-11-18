@@ -854,6 +854,26 @@ function pillarPoints(tile) {
   return [[0, 0]];
 }
 
+// Poteaux d'une pièce (repère local) : pied au sol, chapeau de 4 m × 4 m dont le dessus est à `top`. Exporté pour les sondes de l'audit du rendu
+// (tools/audit-rendu) ; `m` : matrice de la pièce (calculée si absente).
+export function pillarSpecs(tile, track = null, m = null) {
+  const p = PIECES[tile.t], out = [];
+  if (!((tile.l > 0 || p.rise > 0) && p.kind !== 'ribbon' && p.kind !== 'ring' && !tile.v && !tile.o && !tile.mv)) return out;
+  for (const [lx, lz] of pillarPoints(tile)) {
+    const top = pillarHeightAt(tile, lz, lx) - SLAB_T;
+    if (top < 1.2) continue;
+    if (track) {
+      const w = new THREE.Vector3(lx, 0, lz).applyMatrix4(m || tileMatrix(tile));
+      const cx = Math.floor(w.x / CELL), cz = Math.floor(w.z / CELL);
+      let blocked = false;
+      for (const o of track.tilesAt(cx, cz)) if (o !== tile && PIECES[o.t].kind !== 'ring' && baseY(o) < top) blocked = true;
+      if (blocked) continue;
+    }
+    out.push({ lx, lz, top });
+  }
+  return out;
+}
+
 function pillarHeightAt(tile, lz, lx = 0) {
   const p = PIECES[tile.t];
   const base = baseY(tile);
@@ -1072,20 +1092,9 @@ export function buildTileInto(gb, glow, tile, track = null, fx = null) {
   if (p.kind === 'loop' && !tile.o) loopTowers(gb, glow, tile);
 
   // Piliers (pas sous un ruban vertical / une route à l'envers)
-  if ((tile.l > 0 || p.rise > 0) && p.kind !== 'ribbon' && p.kind !== 'ring' && !tile.v && !tile.o && !tile.mv) {
-    for (const [lx, lz] of pillarPoints(tile)) {
-      const top = pillarHeightAt(tile, lz, lx) - SLAB_T;
-      if (top < 1.2) continue;
-      if (track) {
-        const w = new THREE.Vector3(lx, 0, lz).applyMatrix4(m);
-        const cx = Math.floor(w.x / CELL), cz = Math.floor(w.z / CELL);
-        let blocked = false;
-        for (const o of track.tilesAt(cx, cz)) if (o !== tile && PIECES[o.t].kind !== 'ring' && baseY(o) < top) blocked = true;
-        if (blocked) continue;
-      }
-      gb.taper(lx, lz, 0, top - 0.5, 3.2, 3.2, 2.4, 2.4, PALETTE.pillar);
-      gb.box(lx - 2, top - 0.5, lz - 2, lx + 2, top, lz + 2, PALETTE.pillarCap);
-    }
+  for (const { lx, lz, top } of pillarSpecs(tile, track, m)) {
+    gb.taper(lx, lz, 0, top - 0.5, 3.2, 3.2, 2.4, 2.4, PALETTE.pillar);
+    gb.box(lx - 2, top - 0.5, lz - 2, lx + 2, top, lz + 2, PALETTE.pillarCap);
   }
   gb.setMatrix(null);
   glow.setMatrix(null);
