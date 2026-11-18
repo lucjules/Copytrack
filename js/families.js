@@ -195,7 +195,7 @@ export const FAMILIES = {
   },
   fork: {
     label: 'Bifurcation',
-    hint: 'Une entrée, deux sorties (ou deux entrées, une sortie, posée à l’envers) : voie directe et voie déportée, chacune avec son revêtement.',
+    hint: 'Une entrée et deux sorties ; tournée d’un demi-tour, deux entrées et une sortie. Voie directe et voie déportée, chacune avec son revêtement.',
     icon: 'fork',
     traits: [{ id: 'dir', label: 'Voie déportée', values: [['R', 'À droite ⑂→'], ['L', 'À gauche ←⑂']] }],
     members: { fork: { dir: 'R' }, forkL: { dir: 'L' } },

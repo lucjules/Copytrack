@@ -457,7 +457,7 @@ export default {
   'Zone : copier, déplacer, pivoter, supprimer': 'Area: copy, move, rotate, delete',
   'Propriétés et gizmos 3D d’une pièce ou d’un décor': 'Properties and 3D gizmos of a piece or a decoration',
   'Effacer : tout, décors ou pistes': 'Erase: everything, scenery or tracks',
-  '{n:t} ({k:w}) : {h:t}': '{n} ({k}): {h}',
+  'Décors : Décorations, solides et obstacles': 'Scenery: decorations, solids and obstacles',
   'Refermer le panneau': 'Close the panel',
   'Rechercher une pièce (large, relevé, tube…)': 'Search for a piece (wide, banked, tube…)',
   'Rechercher une pièce': 'Search for a piece',

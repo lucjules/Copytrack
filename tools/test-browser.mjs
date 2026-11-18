@@ -1053,7 +1053,7 @@ try {
     await page.waitForTimeout(1000);
     await app(() => window.copytrack.session.openParams());
     assert.ok(await page.locator('#pp-weather').count() && await page.locator('#pp-cycle').count(), 'réglages météo et heure');
-    await click('#pp-scripts');
+    await click('.pp-tabs [data-ptab="scripts"]');      // (0.12.0 : un onglet de la fenêtre « Circuit »)
     await page.waitForTimeout(300);
     await click('#modal-body button[data-sc="add"]');
     assert.ok(await page.locator('#modal-body .sc-row').count() === 1, 'un déclencheur ajouté');
@@ -1408,7 +1408,7 @@ try {
     await app(() => window.copytrack.session.track.setParams({ rain: 0, gust: 0, envVary: false, envSeed: 0, pm: '', vm: 1 }));
     assert.equal(await app(() => window.copytrack.session.track.signature()), sig0);
     // --- prefabs
-    await page.evaluate(() => document.querySelector('#ed-palette .pal-tab[data-tab="prefabs"]').click());
+    await page.evaluate(() => document.querySelector('#ed-palette [data-sec="prefabs"] .lib-head').click());      // (0.12.0 : section « Morceaux tout faits » de l'outil Pistes)
     await waitApp(() => document.querySelectorAll('#ed-palette [data-pf-starter]').length >= 6);
     const n0 = await app(() => window.copytrack.session.track.tiles.length);
     await page.evaluate(() => document.querySelector('#ed-palette [data-pf-starter="chicane"]').click());
@@ -1432,9 +1432,9 @@ try {
     assert.match(await page.evaluate(() => document.getElementById('pf-err').textContent), /invalide ou coupé/);
     await page.evaluate((c) => { document.getElementById('pf-code').value = c; [...document.querySelectorAll('#modal-actions button')].find((b) => b.textContent.trim() === 'Importer').click(); }, code);
     await waitApp(() => document.querySelectorAll('#ed-palette .pf-mine').length === 1);
-    // guidé : l'onglet Prefabs disparaît
+    // guidé : la section des morceaux tout faits disparaît
     await app(() => window.copytrack.session.setGuided(true));
-    assert.equal(await page.evaluate(() => document.querySelector('#ed-palette .pal-tab[data-tab="prefabs"]').hidden), true, 'mode guidé : pas de prefabs');
+    assert.equal(await page.evaluate(() => document.querySelector('#ed-palette [data-sec="prefabs"]').hidden), true, 'mode guidé : pas de prefabs');
     await app(async () => { window.copytrack.session.setGuided(false); const m = await import('/js/storage.js'); for (const p of m.listPrefabs()) m.deletePrefab(p.id); window.copytrack.settings.editorGuided = null; });
     await app(() => window.copytrack.leaveEditor());
     await waitApp(() => window.copytrack.mode === 'menu');

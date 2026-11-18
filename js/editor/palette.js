@@ -731,8 +731,8 @@ export const paletteMethods = {
     panel.appendChild(p);
     const row = document.createElement('div'); row.className = 'pal-btns';
     for (const [a, label, title] of [['all', 'Tout sélectionner', 'Sélectionner tout le circuit (Ctrl + A)'], ['paste', 'Coller', 'Ctrl + V : poser le presse-papiers'], ['none', 'Désélectionner', 'Retirer la sélection (Échap)']]) {
+      // (le clic d'un bouton data-sel est traité par l'application, js/app/wiring.js, comme ceux de la barre flottante)
       const b = document.createElement('button'); b.className = 'btn small'; b.type = 'button'; b.dataset.sel = a; b.textContent = label; b.title = title;
-      b.addEventListener('click', () => { this.selAction(a); this.app.audio.click(); });
       row.appendChild(b);
     }
     panel.appendChild(row);
@@ -740,7 +740,6 @@ export const paletteMethods = {
     const lab = document.createElement('span'); lab.textContent = 'Déplacer d’une case :'; mv.appendChild(lab);
     for (const [a, t, l] of [['mv-l', '←', 'vers la gauche'], ['mv-u', '↑', 'vers le haut de l’écran (nord)'], ['mv-d', '↓', 'vers le bas de l’écran (sud)'], ['mv-r', '→', 'vers la droite']]) {
       const b = document.createElement('button'); b.className = 'btn icon small'; b.type = 'button'; b.dataset.sel = a; b.textContent = t; b.title = 'Déplacer la zone d’une case ' + l; b.setAttribute('aria-label', b.title);
-      b.addEventListener('click', () => { this.selAction(a); this.app.audio.click(); });
       mv.appendChild(b);
     }
     panel.appendChild(mv);

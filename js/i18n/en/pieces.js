@@ -51,7 +51,7 @@ const F12 = {
   'Hélice autour d’un axe parallèle à la route : un tour complet, il faut de la vitesse. La vrille (demi-tour de roulis) est une pièce à part.': 'Helix around an axis parallel to the road: one full turn, you need speed. The twist (half a roll) is a separate piece.',
   'Horaire ↻': 'Clockwise ↻',
   'Anti-horaire ↺': 'Anticlockwise ↺',
-  'Une entrée, deux sorties (ou deux entrées, une sortie, posée à l’envers) : voie directe et voie déportée, chacune avec son revêtement.': 'One entrance, two exits (or two entrances and one exit, placed the other way): straight lane and offset lane, each with its own surface.',
+  'Une entrée et deux sorties ; tournée d’un demi-tour, deux entrées et une sortie. Voie directe et voie déportée, chacune avec son revêtement.': 'One entrance and two exits; turned around, two entrances and one exit. Straight lane and offset lane, each with its own surface.',
   'Voie déportée': 'Offset lane',
   'À droite ⑂→': 'On the right ⑂→',
   'À gauche ←⑂': 'On the left ←⑂',

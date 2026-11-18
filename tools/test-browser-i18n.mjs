@@ -261,7 +261,7 @@ try {
     assert.deepEqual(await frenchLeft(page), [], 'arrivée : texte resté en français');
     await page.evaluate(() => window.copytrack.openEditor({ code: null }));
     await page.waitForTimeout(1200);
-    assert.equal(await page.locator('[title="Editor menu"]').count(), 1, 'infobulle traduite');
+    assert.equal(await page.locator('[title="File: new, open, import, share, save, help"]').count(), 1, 'infobulle traduite (0.12.0 : menu Fichier)');
     assert.deepEqual(await frenchLeft(page), [], 'éditeur : texte resté en français');
     await page.evaluate(() => window.copytrack.session.openParams());
     await page.waitForTimeout(250);
