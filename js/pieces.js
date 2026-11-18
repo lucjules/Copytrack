@@ -173,10 +173,20 @@ for (const [pre, size, mir, lab] of [['cvd', 1, 1, 'serré'], ['cvdBig', 2, 1, '
   for (const r of RISES) gen(pre + rtag(r), { label: `Virage descendant ${lab} · ${rtxt(r)}`, kind: 'arc', size, rise: -r, ...(mir < 0 ? { mirror: -1 } : {}) });
 }
 
+// 0.11.4 : la famille Virage complétée pour le virage géant (5×5, rayon 144 m) : relevé, et incliné (montée / descente de ½ à 4 niveaux, ↱ / ↰).
+export const GIANT_IDS = ['bankGiant'];
+PIECES.bankGiant = { label: 'Virage géant relevé', kind: 'ribbon', size: 5, rise: 0, clearance: 2, arc: true, bank: 0.5 };
+for (const [pre, mir, dn, lab] of [['cvGiant', 1, 1, 'montant'], ['cvGiantL', -1, 1, 'montant ↰'], ['cvdGiant', 1, -1, 'descendant'], ['cvdGiantL', -1, -1, 'descendant ↰']]) {
+  for (const r of RISES) { const id = pre + rtag(r); PIECES[id] = { label: `Virage géant ${lab} · ${rtxt(r)}`, kind: 'arc', size: 5, rise: dn * r, ...(mir < 0 ? { mirror: -1 } : {}) }; GIANT_IDS.push(id); }
+}
+
 // Phase 3 : rubans qu'on peut rouler autour de leur axe d'entrée (loopings sur un mur / latéraux / inclinés, vrilles et tire-bouchons inclinés…).
 for (const id of Object.keys(PIECES)) {
   const P = PIECES[id];
   if (P.kind === 'loop' || id === 'twist' || id === 'cork' || id === 'corkL') P.rollable = true;
+  // 0.11.3 (wall-ride) : la chicane aussi. Roulée sur un mur, son décalage d'une (deux) colonne(s) devient une MONTÉE ou une DESCENTE de 32 m (64 m) le long du mur,
+  // en S lisse : la route « passe en hauteur ». (Inclinée à 45° ou en surplomb, la sortie tomberait hors de la grille : rollFits la refuse.)
+  if (P.kind === 'sbend') P.rollable = true;
 }
 
 // Orientation d'une route : roulis ψ autour de l'axe de la route : normale = cos ψ · (haut de la route) + sin ψ · (droite de la route).
@@ -268,6 +278,8 @@ export const PIECE_ORDER = [
   'cross', 'tee',
   // 0.9.72 : looping modulaire, tube en virage (à la suite : ne jamais réordonner)
   'loopTop', 'loopTopL', 'tubeTurn', 'tubeTurnL',
+  // 0.11.4 : virage géant relevé et inclinés (à la suite : ne jamais réordonner)
+  ...GIANT_IDS,
 ];
 
 // Revêtements. def/min/max : paramètre en % (intensité). inv : autorisé à l'envers.
@@ -345,18 +357,18 @@ export function isRibbonKind(type) {
 }
 
 // Route « sur le côté » : roulée à 90° autour de son axe (mur gauche / droit, ou transition d'orientation). La gravité ne change pas :
-// l'appui vient de la vitesse (voir physics.js, SIDE_HOLD).
+// l’appui vient de la vitesse (voir physics/ribbon.js, SIDE_DROP).
 export function isSideTile(tile) {
   const p = PIECES[tile.t];
   return !!(tile.o || p.roll);
 }
 
-// PHYS_VER 36 : la route guide le cap de la voiture le long de sa propre courbure (géodésique) sur les routes roulées (mur, 45°, surplomb, transitions) et sur les
-// pièces « attraction » qui tournent autour de leur axe (loopings décalés, vrilles, tire-bouchons). Ailleurs, le cap ne suit que le volant, dont l'angle est
-// borné selon la vitesse (loi PolyTrack) : il ne suffirait pas à suivre ces pièces à la vitesse où elles se prennent.
-export function headingGuided(tile) {
+// Route roulée (mur, 45°, surplomb, transitions) ou pièce « attraction » qui tourne autour de son axe (loopings, vrilles, tire-bouchons, sommet de looping
+// modulaire) : la projection au sol de son tracé ne dit rien du virage à prendre. Le pilote automatique n'y règle pas sa vitesse sur cette projection.
+// (Jusqu'à PHYS_VER 36, `headingGuided` : la route y guidait aussi le cap de la voiture. PHYS_VER 37 : plus aucune aide, il faut braquer comme dans PolyTrack.)
+export function rolledRibbon(tile) {
   const p = PIECES[tile.t];
-  return !!(tile.o || p.roll || p.rollable || p.loopTop);      // (0.9.72 : le sommet de looping modulaire glisse d'une colonne, comme un looping décalé)
+  return !!(tile.o || p.roll || p.rollable || p.loopTop);
 }
 
 // Une ligne ou un virage posé sur un mur (tile.o) se parcourt en mode ruban, comme une transition.
@@ -452,8 +464,9 @@ export function flagAllowed(type, flag, tile = null, val = 0) {
   if (p.kind === 'ring' || p.kind === 'fork') return false;
   // 0.9.71 : un carrefour se pose à l'envers ou sans bordures (thème : plus haut) ; rien d'autre.
   if (p.kind === 'junction') return flag === 'nb';
-  // 0.9.68 : une chicane se pose à l'envers, sans bordures ou sous un tunnel (sa géométrie est une bande de route ordinaire) ; ni mur, ni mouvement, ni checkpoint.
-  if (p.kind === 'sbend') return flag === 'nb' || flag === 'tn';
+  // 0.9.68 : une chicane se pose à l'envers, sans bordures ou sous un tunnel (sa géométrie est une bande de route ordinaire) ; ni mouvement, ni checkpoint.
+  // 0.11.3 : et sur un mur gauche ou droit (roulis, plus bas) : wall-ride qui monte ou descend.
+  if (p.kind === 'sbend' && flag !== 'o') return flag === 'nb' || flag === 'tn';
   // 0.9.3 : orientation « mur gauche / droit » : une ligne ou un virage ordinaire peut être posé sur un mur (val 1 = gauche, 2 = droit).
   // Une route sur un mur n'a ni tunnel, ni checkpoint, ni anneau, ni mouvement, ni bordures ; le plafond (v) se choisit à part.
   // Phase 3 : le roulis (val 1..6 : ±90°, ±45°, ±135°) s'applique à toute ligne / tout virage ordinaire ET aux rubans « roulables » (loopings, tire-bouchons, vrilles, virages relevés)

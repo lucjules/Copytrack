@@ -6,6 +6,96 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.11.4 — familles : la bifurcation en T, le virage géant relevé et incliné
+
+**`PHYS_VER` reste 37** (pas encore publiée). **Redéployer `submit-score`** : onze circuits changent.
+
+- **Bifurcation en T** (script `TSPL … TALT … TMRG`, branche à gauche : `TSPLL`) : le carrefour en T sert enfin. On arrive par son pied, on choisit **tout droit**
+  ou **la branche** ; les deux voies se rejoignent à un second T, la branche arrivant par le côté. Le virage à 90° dans un T est serré : le choix intéressant est
+  « risque contre sécurité ». Dans les circuits, la voie directe **saute un vide**, la branche **fait le tour** (8 s de plus, sans risque).
+  Vérificateur : un T n'est plus pris pour un raccourci (la règle de la 0.11.0 ne vise plus que les croisements) ; il signale un checkpoint posé dans une voie
+  (tous doivent être pris : qui prend l'autre voie ne finirait plus).
+- **Virage géant relevé** et **virages géants inclinés** (montée ou descente de ½ à 4 niveaux, ↱ / ↰) : la famille Virage a maintenant toutes ses combinaisons
+  au rayon Géant (17 pièces, script `XBR`, `XUR n`, `XDR n`).
+- **Circuits** :
+  - bifurcation en T : **Temple** (avant le croisement) et **Viaduc Vertical** (au sommet) ;
+  - la boucle « croisement + trois virages géants plats », répétée sur neuf circuits, est variée : relevée (Lagon, Néons, Éclats, Cadence), en pente
+    (Lianes, Quai), qui plonge et remonte (Barrière), relevée et en pente (Archipel, Galerie).
+  Les 72 circuits tiennent leur contrat ; temps quasi inchangés, médailles inchangées.
+- Correction : le réglage « animations réduites : Système » suit le changement du réglage du système même quand le navigateur ne le signale pas (relu toutes
+  les 2 s) ; c'était la cause d'un test navigateur instable.
+- Tests : `tools/test-familles-04.mjs` (nouveau) ; familles, accessibilité. Wiki : carrefours, jetons de script, glossaire.
+- Pas faits dans cette phase (repoussés) : largeur variable des virages et des pentes, chicanes relevées ou inclinées, plaques inclinées, tubes de grand rayon ou en
+  pente, checkpoint posé sur un carrefour.
+
+## Bêta 0.11.3 — wall-rides 2.0 : la route monte le long du mur, des blocs à passer par-dessus
+
+**`PHYS_VER` reste 37** (pas encore publiée : une seule remise à zéro des records avec la 0.11.1). **Redéployer `submit-score`** : douze circuits changent.
+
+- **Chicane posée sur un mur** (nouveau, éditeur et script `ZL< ZR4> …`) : roulée sur le mur, son décalage d'une colonne devient une **montée ou une descente de 32 m le
+  long du mur** (64 m pour le grand S), en S lisse. Deux à la suite font une **bosse** : la route monte, puis redescend (« un virage, mais sur le côté »). Elle se pilote
+  au volant (rien ne guide), à partir de 150 km/h ; la chicane rapide (4 cases) passe jusqu'à 260 km/h, la courte qui descend est trop brusque (signalée par le vérificateur).
+  Sur un mur gauche, la chicane vers la gauche monte ; sur un mur droit, celle vers la droite.
+- **Blocs sur un mur** : un solide (bloc, pilier…) arrête maintenant une voiture qui roule sur un mur, un looping ou un tube (avant, elle le traversait). Dans un circuit,
+  un obstacle `{ wall: 'bas' }` se colle sur le bas du mur (il faut passer **au-dessus**), `{ wall: 'haut' }` sur le haut (passer **dessous**) ; le pilote automatique
+  change de ligne avant le bloc.
+- **Douze circuits** reçoivent ces wall-rides (un ou deux par chapitre) :
+  - **slalom entre deux blocs** sur le mur : Canyon Corail, Couronne Boréale, Canopée ;
+  - **un bloc sur chaque mur** : Hyperboucle, Engrenages, Épave Engloutie, Tourbillon Tropical ;
+  - **bosse sur le mur** (monter de 32 m, redescendre) : Viaduc Vertical, Cheminée du Volcan, Montgolfières, Vrilles Souterraines, Ceinture d'Astéroïdes
+    (médailles recalculées : leur mur est plus long, de 2,6 à 3 s).
+  Les 72 circuits tiennent leur contrat ; le pilote humain imparfait du banc n'y touche pas un bloc.
+- Correction : une décoration à la position illisible (code de circuit abîmé) est refusée ; gardée, elle devenait 0 au ré-encodage.
+- Tests : `tools/test-wall-ride.mjs` (nouveau) ; chicanes (sur un mur gauche ou droit), matrice des pièces (la chicane courte qui descend un mur rejoint les CHUTE
+  documentées), coach. Wiki : wall-ride, deux captures, jetons de script.
+
+## Bêta 0.11.2 — en l'air, les pédales penchent la voiture d'un rien
+
+**`PHYS_VER` reste 37** (la 0.11.1 n'a pas été publiée : une seule remise à zéro des records). **Redéployer `submit-score`** avec la 0.11.1.
+
+- **En l'air, gaz = le nez descend d'un rien, frein = il remonte d'un rien** (`airTilt`, 0,5 °/s²), en plus de l'aérofrein qui amortit la rotation. Mesuré sur PolyTrack
+  (15 vols, en appuyant une fois en l'air) : l'aérofrein se confirme (amortissement 1,0 /s, amortissement naturel 0,1 /s) ; l'effet des gaz est sous la précision de la
+  mesure (moins d'un degré après 1,2 s d'appui). Les joueurs le sentent : on le prend à cette borne. Le volant, lui, n'agit toujours pas.
+- Pilote automatique : il accélère en l'air quand il arriverait trop cabré sur la réception. Circuits, temps et médailles inchangés (72/72 sans choc, contrats tenus).
+- Textes (leçon, exercice, aide des commandes, wiki) : l'accélérateur penche le nez d'un rien en l'air.
+
+## Bêta 0.11.1 — loopings et murs à piloter, petit contrôle en l'air : plus aucune aide, comme PolyTrack
+
+**`PHYS_VER` 36 → 37** : records, replays et fantômes repartent de zéro. **Redéployer `submit-score`** (`npm run build:function`, déjà régénérée).
+
+- **Loopings, tire-bouchons, transitions vers un mur : il faut braquer.** La route ne guide plus le cap de la voiture le long de sa courbure (`headingGuided`, propre à
+  Copytrack depuis PHYS_VER 36). Mains lâchées, un looping décalé jette la voiture contre la bordure, un tire-bouchon la sort de la route ; au volant, on passe comme avant.
+- **Murs (wall-rides) : la gravité tire vers le bas, le nez pique.** Plus de maintien « magique » au-dessus de 80 km/h (`SIDE_HOLD`, supprimé) : la gravité tire
+  pleinement vers le bas du mur et le nez de la voiture pique d'autant plus qu'elle est lente (`SIDE_DROP`, 0,5 · g / v rad/s). Il faut tenir le volant un peu vers le
+  haut pour garder sa ligne, plus pour monter ; mains lâchées on tombe, même d'un mur de deux cases. Les pneus gardent toute leur adhérence : un virage posé sur un mur se
+  pilote comme au sol. (Une adhérence réduite sur les murs a été essayée : elle rendait impraticables les grands virages sur un mur, la base des wall-rides de la phase 3.)
+- **En l'air, comme PolyTrack (mesuré en boîte noire, 0.6.3)** : en quittant un bord, la voiture **bascule nez en bas**, d'autant plus qu'elle est lente (65 °/s à
+  39 km/h, 38 à 78, 26 à 140, 16 à 225 : `airTip`), et **rien ne la redresse** (le ressort d'assiette qui la reposait d'elle-même est supprimé). Ni les gaz ni le volant
+  n'agissent (vérifié : 0,00 °/s de lacet volant tenu). **Seul le frein (aérofrein) freine la rotation** : c'est le petit contrôle en l'air de PolyTrack. Bien dosé, il
+  amène la voiture à la pente de la réception (réception parfaite) ; oublié, la voiture se pose piquée et perd de la vitesse (à 100 km/h sur un tremplin d'essai : −29 %
+  sans aérofrein, −11 % avec).
+- **Pilote automatique** (fantôme d'or, démo, validation) : il braque sur les rubans avec une anticipation de la courbure de la pièce et du nez qui pique sur un mur, vise
+  la direction de marche sur un mur (en crabe), arrive aligné à l'entrée d'un ruban, et **dose l'aérofrein** : il prévoit où et avec quelle assiette il retombe, et freine
+  tant que la rotation l'amènerait au-delà de la pente de la réception (il épargne le lacet d'un saut pris en virage). Réceptions parfaites sur les 72 circuits : 67 → 85.
+- **Circuits** : les 72 finissent sans un choc, contrats tenus ; temps quasi inchangés (écart médian 0,00 s, quatre circuits de plus de 0,3 s). **Abysses** : la
+  voiture tombait du haut de son looping modulaire (65 km/h au sommet), même avant ; deux boosters de plus avant lui (médailles recalculées, or 45,6 s). **Épave** : une
+  section de tube de plus avant la sortie (on retombait du tube sur la route étroite).
+- **Académie et exercices** : la leçon *Saut et réception parfaite* et l'exercice *Trois réceptions* se posent maintenant sur une **pente** (sur une terrasse plate, la
+  bascule rendait la réception parfaite impossible) ; leurs textes, l'aide des commandes et les conseils du bilan expliquent l'aérofrein (français et anglais).
+- **Matrice des pièces** : 71 cases CHUTE (24 avant) : les pentes et courbes en pente raides posées de côté, et le virage serré en surplomb, tournent la route plus vite
+  que le volant ne le permet à la vitesse d'un mur ; le vérificateur de l'éditeur les signale.
+- **Tests** : `tools/test-sans-aide.mjs` (nouveau) ; mis à jour : murs à 90° (volant tenu / mains lâchées), sauts (aérofrein), looping trop haut, orientations 3D,
+  matrice. Wiki : pilotage, commandes, schéma du saut.
+
+## Bêta 0.11.0 — plus de raccourcis : chaque boucle de carrefour a son checkpoint
+
+**`PHYS_VER` inchangé (36)**, temps et médailles inchangés. **Redéployer `submit-score`** : 25 circuits changent (un checkpoint en plus), leurs clés de classement aussi.
+
+- **Défaut corrigé** : 26 croisements, sur 25 circuits, se laissaient **couper** : au premier passage, on tournait directement vers la sortie et on sautait toute la boucle (de 5 à 16 s de gagnées). Chaque boucle a maintenant un **checkpoint** (portique à pylônes), posé à la place d'une ligne droite : le tracé et les temps ne changent pas. Circuits concernés : Premiers Éclats, Lac Gelé (deux boucles), Lianes Néon, Serpent, Temple, Lagon Turquoise, Récif, Grand Archipel, Néons Express, Métro Aérien, Glacier Magnétique, Blizzard, Champs de Basalte, Quai d'Amarrage, Navette, Station Zénith, Jardin de Corail, Grande Barrière, Laminoir, Usine Folle, Rafales, Galerie de Cristal, Plafond Renversé, Cœur de la Montagne, En Cadence.
+- **Vérificateur de l'éditeur** : il prévient quand un carrefour traversé deux fois laisse couper la boucle qui revient sur lui (aucun checkpoint, départ ou arrivée entre deux de ses bras) : « Pose un checkpoint dans la boucle. » Le contrat des circuits officiels l'applique aussi.
+- **`tools/test-raccourcis.mjs`** (`npm test`) : le vérificateur signale la boucle sans checkpoint et se tait avec ; un pilote qui coupe finit la course sans checkpoint et ne la finit plus avec ; aucun circuit officiel ne se coupe.
+- Wiki régénéré (vérificateur, glossaire).
+
 ## Bêta 0.10.12 — le wiki du jeu, accessible depuis le menu
 
 **`PHYS_VER` inchangé (36)**, circuits inchangés : rien à redéployer.

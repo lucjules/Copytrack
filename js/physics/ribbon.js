@@ -1,11 +1,12 @@
 // Conduite sur les rubans 3D (loopings, vrilles, tubes, murs, plafond) : entrée, conduite, sortie et raccord d'un ruban à l'autre.
 // Ces méthodes s'ajoutent au prototype de CarPhysics (voir physics.js) : `this` est la voiture.
 import { CELL, DT, ROAD_HALF } from '../constants.js';
-import { PIECES, PLATES, rotVec, tileCenter, isRibbon, tileParam, beltSpeed, isSideTile, hasNoRails, headingGuided } from '../pieces.js';
+import { PIECES, PLATES, rotVec, tileCenter, isRibbon, tileParam, beltSpeed, isSideTile, hasNoRails } from '../pieces.js';
 import { ribbonOf, frameLocal, ribbonInverts } from '../ribbons.js';
 import { RAIN_GRIP } from '../sim/env.js';
-import { CAR, SIDE_AERO, SIDE_HOLD, SIDE_MIN_SPEED, SIDE_GRACE, surfaceCoeffs } from './specs.js';
+import { CAR, SIDE_AERO, SIDE_DROP, SIDE_MIN_SPEED, SIDE_GRACE, surfaceCoeffs } from './specs.js';
 import { wallBounce, wallFriction, wallHardLoss, wallSpinOf, wallStunOf } from './contact.js';
+import { solidSide } from '../solids.js';
 import { clamp } from '../mathutil.js';
 import { dasin, datan2, dcos, dsin, hypot2, hypot3 } from '../dmath.js';
 
@@ -30,6 +31,10 @@ export function frameWorld(tile, rib, u, F) {
   F.kc = FL.kc; F.hw = FL.hw; F.wrap = FL.wrap;
   return F;
 }
+
+// Sonde des solides sur un ruban : demi-tranche verticale de la voiture (sur un mur, c'est sa demi-largeur) et résultat du contact.
+const RIB_SOLID_H = 1.1;
+const SHIT = { dx: 0, dz: 0, nx: 0, nz: 0, solid: null };
 
 export const ribbonMethods = {
   // Sur un ruban, l'état est exprimé dans le plan de la route :
@@ -192,23 +197,24 @@ export const ribbonMethods = {
     }
     // Gravité projetée dans le plan de la route (vrille, mur, envers, paroi du tube...).
     const g = this.g * this.gSign;
-    // Route sur le côté (pièces 90°) : l'appui aérodynamique (vitesse²) compense la glissade le long du plan ; la gravité, elle, ne change pas.
-    // En dessous de ~80 km/h il ne compense plus assez : la voiture glisse vers le bord du bas et tombe.
+    // Route sur le côté (pièces 90°) : la gravité tire PLEINEMENT le long du plan (PHYS_VER 37, comme PolyTrack) et le nez pique vers le bas du mur (SIDE_DROP) :
+    // il faut le tenir au volant. Avant : l'appui aérodynamique annulait la glissade au-dessus de 80 km/h (SIDE_HOLD) et la route guidait le cap.
     const sidePiece = isSideTile(tile);
-    const hold = sidePiece ? Math.min(1, SIDE_HOLD * R.vs * R.vs / Math.max(1, this.g)) : 0;
     R.vs -= g * B.e1y * dt;
-    R.vd -= g * B.e2y * dt * (1 - hold);
+    R.vd -= g * B.e2y * dt;
+    R.sag = sidePiece ? (SIDE_DROP * g * B.e2y) / Math.max(Math.abs(R.vs), 20) : 0;      // (rad/s ; lu aussi par le pilote automatique)
+    R.psi -= R.sag * dt;
     // Décrochage : sur un plan penché de plus de 45°, sans la vitesse minimale la voiture ne tient pas (plus de « magie »). Après un court
     // délai elle quitte la paroi et tombe, avec la vitesse qu'elle avait.
     if (sidePiece && Math.abs(F.ny) < 0.7 && Math.abs(R.vs) < SIDE_MIN_SPEED) {
       R.lowT = (R.lowT || 0) + dt;
       if (R.lowT > SIDE_GRACE) { this.ev.wallOff = true; this._ribPlace(R); this._ribDetach(); return; }
     } else if (R.lowT) R.lowT = Math.max(0, R.lowT - 2 * dt);
-    // PHYS_VER 36 : sur une route ROULÉE (mur, 45°, surplomb, transition) et sur les loopings, vrilles et tire-bouchons (headingGuided), la route guide le cap le long
-    // de sa propre courbure. Le braquage permis (loi PolyTrack, borné selon la vitesse) ne suffit pas pour un virage serré au-dessus de la vitesse minimale de mur
-    // (108 km/h), ni pour le décalage latéral d'un looping pris à 180 km/h : sans ce guidage, ces pièces seraient infranchissables ou jetteraient la voiture contre
-    // la bordure à la sortie. Au sol et sur un virage relevé, le cap ne suit que le volant (comme PolyTrack).
-    if (!headingGuided(tile)) R.psi -= R.dir * kg * R.vs * dt;
+    // La route tourne sous la voiture : son cap relatif change d'autant, sur TOUS les rubans (PHYS_VER 37, comme PolyTrack : aucune aide). Il faut braquer pour suivre
+    // le décalage d'un looping, d'un tire-bouchon, d'une transition vers un mur. Avant (PHYS_VER 36) : sur les routes roulées et les loopings (headingGuided),
+    // la route guidait le cap le long de sa courbure : on passait tout droit, mains lâchées.
+    R.psi -= R.dir * kg * R.vs * dt;
+    R.kg = kg;      // (lu par le pilote automatique : braquage d'anticipation pour suivre la pièce)
 
     // Revêtements actifs sur ce ruban : mêmes effets qu'au sol, sans aide particulière.
     const mod = tile.s, f = tileParam(tile) / 100;
@@ -344,20 +350,34 @@ export const ribbonMethods = {
     }
     this._ribPlace(R);
     this._ribObstacles(R);
+    if (this.rib === R) this._ribSolids(R);
   },
 
-  // Obstacles (piques, bumpers, marteaux...) sur un ruban (looping, mur, tube, vrille) : avant 0.9.48 ils n'agissaient que sur les routes
-  // posées au sol (_collide n'est jamais appelé en mode ruban) : la voiture les traversait. Le contact est calculé comme au sol (même
-  // fonction), puis le déplacement et la vitesse obtenus sont ramenés dans le repère du ruban (abscisse u, écart latéral dl, vitesses vs / vd).
-  // Un choc ne détache jamais la voiture du ruban (comme un mur) : seule la physique du ruban décide du décrochage.
-  _ribObstacles(R) {
-    if (!this.track.obstacles.length || this.hazardGrace > 0) return;
-    const p = this.pos, v = this.vel;
-    const x0 = p.x, y0 = p.y, z0 = p.z;
-    this._obstacles();
-    if (this.ev.sink) return;                                   // contact létal (piques) : fin du pas
-    const dx = p.x - x0, dy = p.y - y0, dz = p.z - z0;
-    if (dx === 0 && dy === 0 && dz === 0 && this.ev.shock === 0) { this.grounded = true; return; }
+  // 0.11.3 (wall-ride) : solides (blocs, piliers, murs…) contre une voiture sur un ruban : avant, ils n'arrêtaient qu'une voiture au sol, celle d'un mur les traversait.
+  // Même sonde qu'au sol (solids.js, solidSide), sur la tranche verticale de la voiture (sur un mur, sa largeur) ; même choc qu'une bordure (inélastique, frottement de
+  // Coulomb, perte des chocs violents), puis retour dans le repère du ruban. Un bloc posé sur le bas d'un mur oblige donc à passer AU-DESSUS.
+  _ribSolids(R) {
+    if (!this.track.hasSolids) return;
+    const p = this.pos, v = this.vel, q = this.prev, K = this.k;
+    if (!solidSide(this.track.solidIndex, p.x, p.z, q.x, q.z, p.y - RIB_SOLID_H, p.y + RIB_SOLID_H, q.y - RIB_SOLID_H, CAR.radius, 0, SHIT, this.hiddenDecos)) return;
+    const x0 = p.x, z0 = p.z;
+    p.x += SHIT.dx; p.z += SHIT.dz;
+    const into = -(v.x * SHIT.nx + v.z * SHIT.nz);
+    if (into > 0) {
+      if (into > 2) this.ev.wall = Math.max(this.ev.wall, into);
+      const k = into * (1 + wallBounce(K, into));
+      v.x += SHIT.nx * k; v.z += SHIT.nz * k;
+      const sp = hypot3(v.x, v.y, v.z);
+      if (sp > 1e-6) { const f = (Math.max(0, sp - wallFriction(K, into)) / sp) * (1 - wallHardLoss(K, into)); v.x *= f; v.y *= f; v.z *= f; }
+      const stun = wallStunOf(K, into);
+      if (stun > 0) this.stunT = Math.max(this.stunT, stun);
+    }
+    this._ribFromWorld(R, p.x - x0, 0, p.z - z0);
+  },
+
+  // Ramène dans le repère du ruban un déplacement monde (dx, dy, dz) déjà appliqué et la vitesse monde de la voiture (abscisse u, écart dl, vitesses vs / vd).
+  _ribFromWorld(R, dx, dy, dz) {
+    const v = this.vel;
     const F = this._cross(R, frameWorld(R.tile, R.rib, R.u, this.F));
     const B = this._basis(R, F);
     R.vs = v.x * B.e1x + v.y * B.e1y + v.z * B.e1z;
@@ -368,6 +388,21 @@ export const ribbonMethods = {
       R.dl = clamp(R.dl + R.dir * (dx * B.e2x + dy * B.e2y + dz * B.e2z), -lim, lim);
     } else R.dl += R.dir * (dx * B.e2x + dy * B.e2y + dz * B.e2z);
     this._ribPlace(R);                                          // (remet aussi grounded = true : _obstacles l'avait peut-être levé)
+  },
+
+  // Obstacles (piques, bumpers, marteaux...) sur un ruban (looping, mur, tube, vrille) : avant 0.9.48 ils n'agissaient que sur les routes
+  // posées au sol (_collide n'est jamais appelé en mode ruban) : la voiture les traversait. Le contact est calculé comme au sol (même
+  // fonction), puis le déplacement et la vitesse obtenus sont ramenés dans le repère du ruban (abscisse u, écart latéral dl, vitesses vs / vd).
+  // Un choc ne détache jamais la voiture du ruban (comme un mur) : seule la physique du ruban décide du décrochage.
+  _ribObstacles(R) {
+    if (!this.track.obstacles.length || this.hazardGrace > 0) return;
+    const p = this.pos;
+    const x0 = p.x, y0 = p.y, z0 = p.z;
+    this._obstacles();
+    if (this.ev.sink) return;                                   // contact létal (piques) : fin du pas
+    const dx = p.x - x0, dy = p.y - y0, dz = p.z - z0;
+    if (dx === 0 && dy === 0 && dz === 0 && this.ev.shock === 0) { this.grounded = true; return; }
+    this._ribFromWorld(R, dx, dy, dz);
   },
 
   // Place la voiture sur le ruban (position, vitesse, orientation monde).

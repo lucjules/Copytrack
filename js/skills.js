@@ -49,11 +49,11 @@ export const DRILLS = [
   },
   {
     id: 'receptions', skill: 'vol', name: 'Trois réceptions', decor: 'desert',
-    script: 'start B S C S2 G1 V-2 S2 R S G1 V-2 S2 L S G1 V-2 S3 finish', opts: { l: 14 }, zones: [],      // PHYS_VER 36 : trois sauts de terrasse en terrasse, deux juste après un virage (avant : trois tremplins vers une pente, rattrapés au tangage en l'air)
+    script: 'start B S C S2 G1 V-1 D S2 R S2 G1 V-1 D S2 L S2 G1 V-1 D S2 finish', opts: { l: 14 }, zones: [],      // PHYS_VER 37 : trois sauts d'une terrasse vers une pente plus bas, deux juste après un virage ; la voiture bascule nez en bas en quittant le bord, l'aérofrein l'amène à la pente (avant : terrasses plates)
     measure: 'landings', better: 'high', thresholds: [1, 2, 3],
     goals: ['{v} réception(s) parfaite(s) sur 3'],
-    intro: ['Trois sauts d’une terrasse à l’autre, deux juste après un virage. Ce qui compte : le nombre de <b>réceptions parfaites</b> (étincelles vertes).', 'En l’air, rien ne se rattrape : ni le volant ni l’accélérateur n’agissent, la voiture garde le cap et l’assiette de son décollage.', 'Redresse <b>avant</b> le bord : volant droit au décollage, et la voiture retombe à plat, dans l’axe.'],
-    tip: 'Redresse avant le bord : volant droit au décollage. En l’air, plus rien ne se rattrape.',
+    intro: ['Trois sauts d’une terrasse vers une pente plus bas, deux juste après un virage. Ce qui compte : le nombre de <b>réceptions parfaites</b> (étincelles vertes).', 'En l’air, le volant n’agit pas et la voiture bascule nez en bas en quittant le bord. Le frein (aérofrein) freine sa rotation ; l’accélérateur ne penche le nez que d’un rien.', 'Redresse <b>avant</b> le bord (volant droit au décollage), puis <b>freine en l’air</b> pour arriver à la pente de la réception.'],
+    tip: 'Volant droit au décollage, puis freine en l’air (aérofrein) pour arriver à la pente de la réception.',
   },
 ];
 export const drillById = (id) => DRILLS.find((d) => d.id === id) || null;

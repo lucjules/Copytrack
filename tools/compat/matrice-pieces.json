@@ -8,11 +8,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -28,11 +28,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -45,31 +45,31 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
    },
    "incG": {
-    "code": "OK",
-    "runs": "80:ok 150:ok 250:ok"
+    "code": "v≥80",
+    "runs": "80:ok 150:ok 250:non fini/vol3.62"
    },
    "incD": {
-    "code": "OK",
-    "runs": "80:ok 150:ok 250:ok"
+    "code": "v≥80",
+    "runs": "80:ok 150:non fini/vol2.01 250:non fini/vol2.02"
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:perdue/vol5.12"
    },
    "surD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.96 150:perdue/vol3.22 250:perdue/vol3.24"
    }
   }
  },
@@ -82,11 +82,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -102,11 +102,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -119,11 +119,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -139,11 +139,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -156,11 +156,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥80",
@@ -176,11 +176,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -341,7 +341,7 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "—",
@@ -382,7 +382,7 @@
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥150",
@@ -415,7 +415,7 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "—",
@@ -456,7 +456,7 @@
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥150",
@@ -489,7 +489,7 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "—",
@@ -530,7 +530,7 @@
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥150",
@@ -563,11 +563,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -575,11 +575,11 @@
    },
    "incG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "incD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surG": {
     "code": "v≥150",
@@ -896,7 +896,7 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:non fini/vol1.5"
    },
    "murD": {
     "code": "—",
@@ -908,7 +908,7 @@
    },
    "incG": {
     "code": "v≥150",
-    "runs": "80:wall/vol3.91 150:ok 250:ok"
+    "runs": "80:wall/vol3.91 150:ok 250:non fini/vol4.45"
    },
    "incD": {
     "code": "—",
@@ -916,7 +916,7 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.27 150:ok 250:ok"
+    "runs": "80:wall/vol4.38 150:ok 250:perdue/vol4.83"
    },
    "surD": {
     "code": "—",
@@ -933,7 +933,7 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:non fini/vol2.42"
    },
    "murD": {
     "code": "—",
@@ -945,7 +945,7 @@
    },
    "incG": {
     "code": "v≥150",
-    "runs": "80:wall/vol1.78 150:ok 250:ok"
+    "runs": "80:wall/vol3.01 150:ok 250:non fini/vol3.38"
    },
    "incD": {
     "code": "—",
@@ -953,7 +953,7 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol5.23 150:ok 250:ok"
+    "runs": "80:wall/vol5.22 150:ok 250:wall/vol4.38"
    },
    "surD": {
     "code": "—",
@@ -1155,11 +1155,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -1175,11 +1175,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -1191,12 +1191,12 @@
     "runs": "80:ok/vol1.42 150:ok/vol2.04 250:ok/vol2.04"
    },
    "murG": {
-    "code": "v≥250",
-    "runs": "80:wall/vol2.88 150:wall/vol2.73 250:ok/vol0.99"
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.87 150:non fini/vol3.93 250:non fini/vol3.67"
    },
    "murD": {
-    "code": "v≥250",
-    "runs": "80:wall/vol2.88 150:wall/vol2.73 250:ok/vol0.99"
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.87 150:non fini/vol3.93 250:non fini/vol3.67"
    },
    "plafond": {
     "code": "v≥80",
@@ -1204,19 +1204,19 @@
    },
    "incG": {
     "code": "v≥150",
-    "runs": "80:wall 150:ok 250:ok"
+    "runs": "80:wall/vol1.21 150:ok 250:ok"
    },
    "incD": {
     "code": "v≥150",
-    "runs": "80:wall 150:ok 250:ok"
+    "runs": "80:wall/vol1.21 150:ok 250:ok"
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.96 150:ok 250:perdue/vol3.4"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.96 150:ok 250:perdue/vol3.4"
    }
   }
  },
@@ -1229,11 +1229,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -1249,11 +1249,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -1266,11 +1266,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -1286,11 +1286,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -1302,12 +1302,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.87 150:non fini/vol1.27 250:non fini/vol1.07"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -1339,12 +1339,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.87 150:non fini/vol1.27 250:non fini/vol1.07"
    },
    "plafond": {
     "code": "OK",
@@ -1376,12 +1376,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -1413,12 +1413,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -1450,12 +1450,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -1487,12 +1487,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -1524,12 +1524,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:non fini"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -1561,12 +1561,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
-    "code": "—",
-    "why": "non proposé par l'éditeur (flagAllowed)"
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:non fini"
    },
    "plafond": {
     "code": "OK",
@@ -2265,11 +2265,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -2280,16 +2280,16 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "incD": {
-    "code": "OK",
-    "runs": "80:ok 150:ok 250:ok"
+    "code": "v≥80",
+    "runs": "80:ok 150:non fini/vol2.03 250:non fini/vol2.02"
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:perdue/vol5.29"
    },
    "surD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.95 150:perdue/vol3.28 250:perdue/vol3.33"
    }
   }
  },
@@ -2302,11 +2302,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -2317,16 +2317,16 @@
     "runs": "80:wall 150:ok 250:ok"
    },
    "incD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol3.12 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.97 150:non fini/vol2.06 250:non fini/vol2.04"
    },
    "surG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.94 150:perdue/vol4.41 250:perdue/vol4.92"
    },
    "surD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol3.88 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.84 150:perdue/vol3.37 250:perdue/vol3.45"
    }
   }
  },
@@ -2339,11 +2339,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "CHUTE",
-    "runs": "80:wall/vol2.88 150:non fini/vol2.73 250:non fini/vol2.76"
+    "runs": "80:wall/vol2.87 150:non fini/vol2.37 250:non fini/vol2.4"
    },
    "plafond": {
     "code": "SAUT",
@@ -2354,16 +2354,16 @@
     "runs": "80:wall 150:ok 250:ok"
    },
    "incD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol3.3 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.2 150:non fini/vol2.97 250:non fini/vol3.07"
    },
    "surG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.94 150:perdue/vol4.02 250:perdue/vol4.3"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol3.04 150:ok 250:ok"
+    "runs": "80:wall/vol2.9 150:ok 250:ok"
    }
   }
  },
@@ -2376,11 +2376,11 @@
    },
    "murG": {
     "code": "CHUTE",
-    "runs": "80:wall/vol2.88 150:non fini/vol3.97 250:non fini/vol3.7"
+    "runs": "80:wall/vol2.87 150:non fini/vol3.63 250:non fini/vol3.48"
    },
    "murD": {
     "code": "CHUTE",
-    "runs": "80:wall/vol2.88 150:wall/vol2.73 250:non fini/vol2.69"
+    "runs": "80:wall/vol2.87 150:wall/vol2.59 250:non fini/vol2.54"
    },
    "plafond": {
     "code": "SAUT",
@@ -2391,16 +2391,16 @@
     "runs": "80:wall 150:ok 250:ok"
    },
    "incD": {
-    "code": "v≥250",
-    "runs": "80:wall 150:wall 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.39 150:wall/vol3.61 250:non fini/vol3.73"
    },
    "surG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:perdue/vol2.81"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.96 150:perdue/vol3.48 250:perdue/vol3.62"
    },
    "surD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol3.73 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.25 150:perdue/vol3.42 250:perdue/vol2.99"
    }
   }
  },
@@ -2413,11 +2413,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -2433,11 +2433,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -2450,11 +2450,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -2470,11 +2470,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -2487,11 +2487,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -2507,11 +2507,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -2524,11 +2524,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -2540,15 +2540,15 @@
    },
    "incD": {
     "code": "v≥150",
-    "runs": "80:wall 150:ok 250:ok"
+    "runs": "80:wall/vol0.74 150:ok 250:ok"
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:perdue/vol3.59"
    }
   }
  },
@@ -2561,31 +2561,31 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
    },
    "incG": {
-    "code": "OK",
-    "runs": "80:ok 150:ok 250:ok"
+    "code": "v≥80",
+    "runs": "80:ok 150:non fini/vol2.03 250:non fini/vol2.02"
    },
    "incD": {
     "code": "OK",
     "runs": "80:ok 150:ok 250:ok"
    },
    "surG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.95 150:perdue/vol3.28 250:perdue/vol3.33"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:perdue/vol5.29"
    }
   }
  },
@@ -2598,31 +2598,31 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol0.56 150:ok/vol0.38 250:ok/vol0.49"
    },
    "incG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol3.12 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.97 150:non fini/vol2.06 250:non fini/vol2.04"
    },
    "incD": {
     "code": "v≥150",
     "runs": "80:wall 150:ok 250:ok"
    },
    "surG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol3.88 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.84 150:perdue/vol3.37 250:perdue/vol3.45"
    },
    "surD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.94 150:perdue/vol4.41 250:perdue/vol4.92"
    }
   }
  },
@@ -2635,19 +2635,19 @@
    },
    "murG": {
     "code": "CHUTE",
-    "runs": "80:wall/vol2.88 150:non fini/vol2.73 250:non fini/vol2.76"
+    "runs": "80:wall/vol2.87 150:non fini/vol2.37 250:non fini/vol2.4"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol1.07 150:ok/vol0.77 250:ok/vol0.94"
    },
    "incG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol3.3 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.2 150:non fini/vol2.97 250:non fini/vol3.07"
    },
    "incD": {
     "code": "v≥150",
@@ -2655,11 +2655,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol3.04 150:ok 250:ok"
+    "runs": "80:wall/vol2.9 150:ok 250:ok"
    },
    "surD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.94 150:perdue/vol4.02 250:perdue/vol4.3"
    }
   }
  },
@@ -2672,31 +2672,31 @@
    },
    "murG": {
     "code": "CHUTE",
-    "runs": "80:wall/vol2.88 150:wall/vol2.73 250:non fini/vol2.69"
+    "runs": "80:wall/vol2.87 150:wall/vol2.59 250:non fini/vol2.54"
    },
    "murD": {
     "code": "CHUTE",
-    "runs": "80:wall/vol2.88 150:non fini/vol3.97 250:non fini/vol3.7"
+    "runs": "80:wall/vol2.87 150:non fini/vol3.63 250:non fini/vol3.48"
    },
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok/vol1.35 150:ok/vol1.31 250:ok/vol1.67"
    },
    "incG": {
-    "code": "v≥250",
-    "runs": "80:wall 150:wall 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.39 150:wall/vol3.61 250:non fini/vol3.73"
    },
    "incD": {
     "code": "v≥150",
     "runs": "80:wall 150:ok 250:ok"
    },
    "surG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol3.73 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.25 150:perdue/vol3.42 250:perdue/vol2.99"
    },
    "surD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:perdue/vol2.81"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.96 150:perdue/vol3.48 250:perdue/vol3.62"
    }
   }
  },
@@ -2709,11 +2709,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -2729,11 +2729,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -2746,11 +2746,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -2766,11 +2766,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -2783,11 +2783,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -2803,11 +2803,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -2820,11 +2820,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -2832,7 +2832,7 @@
    },
    "incG": {
     "code": "v≥150",
-    "runs": "80:wall 150:ok 250:ok"
+    "runs": "80:wall/vol0.74 150:ok 250:ok"
    },
    "incD": {
     "code": "v≥150",
@@ -2840,11 +2840,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:perdue/vol3.59"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -2857,7 +2857,7 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "—",
@@ -2898,7 +2898,7 @@
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥150",
@@ -2927,7 +2927,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:loop/vol3.81 150:ok 250:ok"
+    "runs": "80:loop/vol2 150:ok 250:ok"
    },
    "murG": {
     "code": "RACCORD",
@@ -2939,7 +2939,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:loop/vol4.93 150:ok 250:ok"
+    "runs": "80:loop/vol2.01 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -2964,7 +2964,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:loop/vol3.81 150:ok 250:ok"
+    "runs": "80:loop/vol2 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -2976,7 +2976,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:loop/vol4.93 150:ok 250:ok"
+    "runs": "80:loop/vol2.01 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -3013,7 +3013,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:loop/vol2.71 150:ok 250:ok"
+    "runs": "80:loop/vol2.82 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -3050,7 +3050,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:loop/vol2.62 150:ok 250:ok"
+    "runs": "80:loop/vol2.71 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -3079,11 +3079,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -3099,11 +3099,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -3116,11 +3116,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥80",
@@ -3136,11 +3136,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -3153,11 +3153,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:en vol à l'arrivée/vol1.67"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:en vol à l'arrivée/vol1.67"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥80",
@@ -3173,11 +3173,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.95 150:ok 250:perdue/vol3.47"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.95 150:ok 250:perdue/vol3.47"
    }
   }
  },
@@ -3190,11 +3190,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok/vol3.28 250:ok/vol3.74"
+    "runs": "80:wall/vol2.87 150:ok/vol0.81 250:ok/vol0.68"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok/vol3.28 250:ok/vol3.74"
+    "runs": "80:wall/vol2.87 150:ok/vol0.81 250:ok/vol0.68"
    },
    "plafond": {
     "code": "v≥80",
@@ -3202,19 +3202,19 @@
    },
    "incG": {
     "code": "v≥150",
-    "runs": "80:wall/vol1.57 150:ok/vol3.28 250:ok/vol3.74"
+    "runs": "80:wall/vol1.56 150:ok/vol3.35 250:ok/vol3.69"
    },
    "incD": {
     "code": "v≥150",
-    "runs": "80:wall/vol1.57 150:ok/vol3.28 250:ok/vol3.74"
+    "runs": "80:wall/vol1.56 150:ok/vol3.35 250:ok/vol3.69"
    },
    "surG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.95 150:perdue/vol2.57 250:perdue/vol2.35"
    },
    "surD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.95 150:perdue/vol2.57 250:perdue/vol2.35"
    }
   }
  },
@@ -3227,11 +3227,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -3247,11 +3247,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
    }
   }
  },
@@ -3264,11 +3264,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -3284,11 +3284,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.18 150:ok 250:ok"
+    "runs": "80:wall/vol4.02 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.18 150:ok 250:ok"
+    "runs": "80:wall/vol4.02 150:ok 250:ok"
    }
   }
  },
@@ -3301,11 +3301,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -3321,11 +3321,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.27 150:ok 250:ok"
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.27 150:ok 250:ok"
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
    }
   }
  },
@@ -3337,12 +3337,12 @@
     "runs": "80:ok/vol1.65 150:ok/vol1.65 250:ok/vol1.65"
    },
    "murG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok/vol0.79"
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.87 150:non fini/vol1.1 250:non fini/vol1.12"
    },
    "murD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok/vol0.79"
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.87 150:non fini/vol1.1 250:non fini/vol1.12"
    },
    "plafond": {
     "code": "SAUT",
@@ -3350,19 +3350,19 @@
    },
    "incG": {
     "code": "v≥150",
-    "runs": "80:wall 150:ok 250:ok"
+    "runs": "80:wall 150:ok 250:non fini/vol1.74"
    },
    "incD": {
     "code": "v≥150",
-    "runs": "80:wall 150:ok 250:ok"
+    "runs": "80:wall 150:ok 250:non fini/vol1.74"
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.43 150:ok 250:ok"
+    "runs": "80:wall/vol4.28 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.43 150:ok 250:ok"
+    "runs": "80:wall/vol4.28 150:ok 250:ok"
    }
   }
  },
@@ -3375,11 +3375,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -3395,11 +3395,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -3412,11 +3412,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -3432,11 +3432,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -3449,11 +3449,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:non fini/vol3.02"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:non fini/vol3.02"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -3469,11 +3469,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -3486,11 +3486,11 @@
    },
    "murG": {
     "code": "CHUTE",
-    "runs": "80:wall/vol2.88 150:non fini/vol2.89 250:non fini/vol2.89"
+    "runs": "80:wall/vol2.87 150:wall/vol3.15 250:non fini/vol3.14"
    },
    "murD": {
     "code": "CHUTE",
-    "runs": "80:wall/vol2.88 150:non fini/vol2.89 250:non fini/vol2.89"
+    "runs": "80:wall/vol2.87 150:wall/vol3.15 250:non fini/vol3.14"
    },
    "plafond": {
     "code": "v≥80",
@@ -3498,19 +3498,19 @@
    },
    "incG": {
     "code": "CHUTE",
-    "runs": "80:wall 150:wall/vol4.16 250:wall/vol4.18"
+    "runs": "80:wall 150:wall 250:non fini/vol4.25"
    },
    "incD": {
     "code": "CHUTE",
-    "runs": "80:wall 150:wall/vol4.16 250:wall/vol4.18"
+    "runs": "80:wall 150:wall 250:non fini/vol4.25"
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok/vol1.57 250:ok/vol1.65"
+    "runs": "80:wall/vol3.95 150:ok/vol1.57 250:ok/vol1.67"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok/vol1.57 250:ok/vol1.65"
+    "runs": "80:wall/vol3.95 150:ok/vol1.57 250:ok/vol1.67"
    }
   }
  },
@@ -3523,11 +3523,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -3543,11 +3543,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
    }
   }
  },
@@ -3560,11 +3560,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -3580,11 +3580,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.18 150:ok 250:ok"
+    "runs": "80:wall/vol4.02 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.18 150:ok 250:ok"
+    "runs": "80:wall/vol4.02 150:ok 250:ok"
    }
   }
  },
@@ -3596,12 +3596,12 @@
     "runs": "80:ok 150:ok 250:ok"
    },
    "murG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:non fini/vol1.39"
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.87 150:non fini/vol1.63 250:non fini/vol1.15"
    },
    "murD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:non fini/vol1.39"
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.87 150:non fini/vol1.63 250:non fini/vol1.15"
    },
    "plafond": {
     "code": "OK",
@@ -3609,19 +3609,19 @@
    },
    "incG": {
     "code": "v≥150",
-    "runs": "80:wall 150:ok 250:ok"
+    "runs": "80:wall 150:ok 250:non fini/vol2.36"
    },
    "incD": {
     "code": "v≥150",
-    "runs": "80:wall 150:ok 250:ok"
+    "runs": "80:wall 150:ok 250:non fini/vol2.36"
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.27 150:ok 250:ok"
+    "runs": "80:wall/vol4.11 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.27 150:ok 250:ok"
+    "runs": "80:wall/vol4.11 150:ok 250:ok"
    }
   }
  },
@@ -3634,31 +3634,31 @@
    },
    "murG": {
     "code": "CHUTE",
-    "runs": "80:wall/vol2.88 150:non fini/vol1.07 250:non fini/vol0.88"
+    "runs": "80:wall/vol2.87 150:non fini/vol1.12 250:non fini/vol1.12"
    },
    "murD": {
     "code": "CHUTE",
-    "runs": "80:wall/vol2.88 150:non fini/vol1.07 250:non fini/vol0.88"
+    "runs": "80:wall/vol2.87 150:non fini/vol1.12 250:non fini/vol1.12"
    },
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok 150:ok/vol1.57 250:ok/vol1.64"
    },
    "incG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol1.09 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol1.08 150:non fini/vol1.11 250:non fini/vol0.99"
    },
    "incD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol1.09 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol1.08 150:non fini/vol1.11 250:non fini/vol0.99"
    },
    "surG": {
     "code": "CHUTE",
-    "runs": "80:wall/vol4.44 150:wall/vol3.34 250:perdue/vol6.92"
+    "runs": "80:wall/vol4.28 150:perdue/vol6.43 250:perdue/vol6.78"
    },
    "surD": {
     "code": "CHUTE",
-    "runs": "80:wall/vol4.44 150:wall/vol3.34 250:perdue/vol6.92"
+    "runs": "80:wall/vol4.28 150:perdue/vol6.43 250:perdue/vol6.78"
    }
   }
  },
@@ -3671,11 +3671,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -3691,11 +3691,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
    }
   }
  },
@@ -3708,11 +3708,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -3728,11 +3728,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.18 150:ok 250:ok"
+    "runs": "80:wall/vol4.03 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.18 150:ok 250:ok"
+    "runs": "80:wall/vol4.03 150:ok 250:ok"
    }
   }
  },
@@ -3745,11 +3745,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok/vol0.8"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok/vol0.8"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -3765,11 +3765,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.27 150:ok 250:ok"
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.27 150:ok 250:ok"
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
    }
   }
  },
@@ -3782,11 +3782,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok/vol1.57 250:ok/vol1.4"
+    "runs": "80:wall/vol2.87 150:ok/vol1.57 250:ok/vol1.41"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok/vol1.57 250:ok/vol1.4"
+    "runs": "80:wall/vol2.87 150:ok/vol1.57 250:ok/vol1.41"
    },
    "plafond": {
     "code": "SAUT",
@@ -3794,19 +3794,19 @@
    },
    "incG": {
     "code": "SAUT",
-    "runs": "80:ok/vol1.65 150:ok/vol1.56 250:ok/vol1.65"
+    "runs": "80:ok/vol1.64 150:ok/vol1.57 250:ok/vol1.65"
    },
    "incD": {
     "code": "SAUT",
-    "runs": "80:ok/vol1.65 150:ok/vol1.56 250:ok/vol1.65"
+    "runs": "80:ok/vol1.64 150:ok/vol1.57 250:ok/vol1.65"
    },
    "surG": {
     "code": "CHUTE",
-    "runs": "80:wall 150:wall/vol5.28 250:perdue/vol5.26"
+    "runs": "80:wall/vol3.95 150:wall 250:perdue/vol5.32"
    },
    "surD": {
     "code": "CHUTE",
-    "runs": "80:wall 150:wall/vol5.28 250:perdue/vol5.26"
+    "runs": "80:wall/vol3.95 150:wall 250:perdue/vol5.32"
    }
   }
  },
@@ -3819,11 +3819,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -3839,11 +3839,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -3856,11 +3856,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -3876,11 +3876,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.09 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    }
   }
  },
@@ -3893,11 +3893,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -3913,11 +3913,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
    }
   }
  },
@@ -3930,11 +3930,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -3950,11 +3950,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.18 150:ok 250:ok"
+    "runs": "80:wall/vol4.03 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.18 150:ok 250:ok"
+    "runs": "80:wall/vol4.03 150:ok 250:ok"
    }
   }
  },
@@ -3967,31 +3967,31 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok 150:ok/vol0.48 250:ok/vol0.48"
    },
    "incG": {
-    "code": "OK",
-    "runs": "80:ok 150:ok 250:ok"
+    "code": "v≥80",
+    "runs": "80:ok 150:ok 250:non fini/vol3.82"
    },
    "incD": {
-    "code": "OK",
-    "runs": "80:ok 150:ok 250:ok"
+    "code": "v≥80",
+    "runs": "80:ok 150:non fini/vol2 250:non fini/vol2.02"
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "runs": "80:wall/vol3.98 150:ok 250:perdue/vol4.95"
    },
    "surD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.99 150:perdue/vol3.22 250:perdue/vol3.22"
    }
   }
  },
@@ -4004,31 +4004,31 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol0.65 150:perdue/vol4.17 250:perdue/vol4.19"
    },
    "incG": {
-    "code": "v≥150",
-    "runs": "80:wall 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall 150:non fini/vol3.12 250:non fini/vol3.78"
    },
    "incD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol2.59 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.55 150:non fini/vol2.01 250:non fini/vol2.04"
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.18 150:ok 250:ok"
+    "runs": "80:wall/vol4.02 150:ok 250:ok"
    },
    "surD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.31 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol4.17 150:perdue/vol3.23 250:perdue/vol3.21"
    }
   }
  },
@@ -4041,31 +4041,31 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:non fini/vol1.97"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok/vol1.12 250:ok/vol1.1"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol1.06 150:perdue/vol4.28 250:perdue/vol4.28"
    },
    "incG": {
-    "code": "v≥150",
-    "runs": "80:wall 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall 150:non fini/vol2.62 250:non fini/vol2.8"
    },
    "incD": {
     "code": "v≥150",
-    "runs": "80:wall/vol1.57 150:ok 250:ok"
+    "runs": "80:wall/vol1.51 150:ok 250:ok"
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.27 150:ok 250:ok"
+    "runs": "80:wall/vol4.11 150:ok 250:ok"
    },
    "surD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.48 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol4.39 150:perdue/vol4.16 250:perdue/vol4.33"
    }
   }
  },
@@ -4078,31 +4078,31 @@
    },
    "murG": {
     "code": "CHUTE",
-    "runs": "80:wall/vol2.88 150:non fini/vol2.05 250:non fini/vol2.23"
+    "runs": "80:wall/vol2.87 150:non fini/vol1.79 250:non fini/vol2.07"
    },
    "murD": {
     "code": "CHUTE",
-    "runs": "80:wall/vol2.88 150:non fini/vol2.67 250:non fini/vol2.7"
+    "runs": "80:wall/vol2.87 150:non fini/vol2.41 250:non fini/vol2.47"
    },
    "plafond": {
     "code": "CHUTE",
     "runs": "80:perdue/vol4.42 150:perdue/vol4.44 250:perdue/vol4.45"
    },
    "incG": {
-    "code": "v≥150",
-    "runs": "80:wall 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall 150:non fini/vol1.93 250:non fini/vol2.01"
    },
    "incD": {
-    "code": "v≥150",
-    "runs": "80:wall/vol2.2 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol1.49 150:non fini/vol1.63 250:non fini/vol1.31"
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.44 150:ok 250:ok"
+    "runs": "80:wall/vol4.28 150:ok 250:ok"
    },
    "surD": {
-    "code": "v≥250",
-    "runs": "80:wall 150:wall 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol4.58 150:wall/vol4.78 250:perdue/vol4.84"
    }
   }
  },
@@ -4115,11 +4115,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -4135,11 +4135,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
    }
   }
  },
@@ -4152,11 +4152,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -4172,11 +4172,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.18 150:ok 250:ok"
+    "runs": "80:wall/vol4.02 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.18 150:ok 250:ok"
+    "runs": "80:wall/vol4.02 150:ok 250:ok"
    }
   }
  },
@@ -4189,11 +4189,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -4209,11 +4209,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.27 150:ok 250:ok"
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.27 150:ok 250:ok"
+    "runs": "80:wall/vol4.12 150:ok 250:perdue/vol4.22"
    }
   }
  },
@@ -4226,11 +4226,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥80",
@@ -4246,11 +4246,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.44 150:ok 250:ok"
+    "runs": "80:wall/vol4.28 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.44 150:ok 250:ok"
+    "runs": "80:wall/vol4.28 150:ok 250:perdue/vol4.74"
    }
   }
  },
@@ -4263,31 +4263,31 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
     "runs": "80:ok 150:ok/vol0.48 250:ok/vol0.48"
    },
    "incG": {
-    "code": "OK",
-    "runs": "80:ok 150:ok 250:ok"
+    "code": "v≥80",
+    "runs": "80:ok 150:non fini/vol2 250:non fini/vol2.02"
    },
    "incD": {
-    "code": "OK",
-    "runs": "80:ok 150:ok 250:ok"
+    "code": "v≥80",
+    "runs": "80:ok 150:ok 250:non fini/vol3.82"
    },
    "surG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol3.99 150:perdue/vol3.22 250:perdue/vol3.22"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "runs": "80:wall/vol3.98 150:ok 250:perdue/vol4.95"
    }
   }
  },
@@ -4300,31 +4300,31 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥80",
     "runs": "80:ok/vol0.65 150:perdue/vol4.17 250:perdue/vol4.19"
    },
    "incG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol2.59 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol2.55 150:non fini/vol2.01 250:non fini/vol2.04"
    },
    "incD": {
-    "code": "v≥150",
-    "runs": "80:wall 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall 150:non fini/vol3.12 250:non fini/vol3.78"
    },
    "surG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.31 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol4.17 150:perdue/vol3.23 250:perdue/vol3.21"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.18 150:ok 250:ok"
+    "runs": "80:wall/vol4.02 150:ok 250:ok"
    }
   }
  },
@@ -4337,11 +4337,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok/vol1.12 250:ok/vol1.1"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:non fini/vol1.97"
    },
    "plafond": {
     "code": "v≥80",
@@ -4349,19 +4349,19 @@
    },
    "incG": {
     "code": "v≥150",
-    "runs": "80:wall/vol1.57 150:ok 250:ok"
+    "runs": "80:wall/vol1.51 150:ok 250:ok"
    },
    "incD": {
-    "code": "v≥150",
-    "runs": "80:wall 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall 150:non fini/vol2.62 250:non fini/vol2.8"
    },
    "surG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol4.48 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol4.39 150:perdue/vol4.16 250:perdue/vol4.33"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.27 150:ok 250:ok"
+    "runs": "80:wall/vol4.11 150:ok 250:ok"
    }
   }
  },
@@ -4374,31 +4374,31 @@
    },
    "murG": {
     "code": "CHUTE",
-    "runs": "80:wall/vol2.88 150:non fini/vol2.67 250:non fini/vol2.7"
+    "runs": "80:wall/vol2.87 150:non fini/vol2.41 250:non fini/vol2.47"
    },
    "murD": {
     "code": "CHUTE",
-    "runs": "80:wall/vol2.88 150:non fini/vol2.05 250:non fini/vol2.23"
+    "runs": "80:wall/vol2.87 150:non fini/vol1.79 250:non fini/vol2.07"
    },
    "plafond": {
     "code": "CHUTE",
     "runs": "80:perdue/vol4.42 150:perdue/vol4.43 250:perdue/vol4.44"
    },
    "incG": {
-    "code": "v≥150",
-    "runs": "80:wall/vol2.2 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol1.49 150:non fini/vol1.63 250:non fini/vol1.31"
    },
    "incD": {
-    "code": "v≥150",
-    "runs": "80:wall 150:ok 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall 150:non fini/vol1.93 250:non fini/vol2.01"
    },
    "surG": {
-    "code": "v≥250",
-    "runs": "80:wall 150:wall 250:ok"
+    "code": "CHUTE",
+    "runs": "80:wall/vol4.58 150:wall/vol4.78 250:perdue/vol4.84"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.44 150:ok 250:ok"
+    "runs": "80:wall/vol4.28 150:ok 250:ok"
    }
   }
  },
@@ -4411,11 +4411,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "OK",
@@ -4431,11 +4431,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.14 150:ok 250:ok"
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
    }
   }
  },
@@ -4448,11 +4448,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -4468,11 +4468,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.18 150:ok 250:ok"
+    "runs": "80:wall/vol4.02 150:ok 250:ok"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.18 150:ok 250:ok"
+    "runs": "80:wall/vol4.02 150:ok 250:ok"
    }
   }
  },
@@ -4485,11 +4485,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "SAUT",
@@ -4505,11 +4505,11 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.27 150:ok 250:ok"
+    "runs": "80:wall/vol4.12 150:ok 250:perdue/vol4.22"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.27 150:ok 250:ok"
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
    }
   }
  },
@@ -4522,11 +4522,11 @@
    },
    "murG": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murD": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "plafond": {
     "code": "v≥80",
@@ -4542,11 +4542,640 @@
    },
    "surG": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.44 150:ok 250:ok"
+    "runs": "80:wall/vol4.28 150:ok 250:perdue/vol4.74"
    },
    "surD": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.44 150:ok 250:ok"
+    "runs": "80:wall/vol4.28 150:ok 250:ok"
+   }
+  }
+ },
+ "bankGiant": {
+  "kind": "ribbon",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "murD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "incD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surG": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   },
+   "surD": {
+    "code": "—",
+    "why": "non proposé par l'éditeur (flagAllowed)"
+   }
+  }
+ },
+ "cvGiant05": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvGiant1": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvGiant2": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvGiant4": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.49 250:ok/vol0.64"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.49 250:ok/vol0.59"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvGiantL05": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvGiantL1": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvGiantL2": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvGiantL4": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.49 250:ok/vol0.64"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.49 250:ok/vol0.59"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiant05": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiant1": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.02 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.03 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiant2": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiant4": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.4 250:ok/vol0.4"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.49 250:ok/vol0.6"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.28 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.28 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiantL05": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol3.98 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiantL1": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.03 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.02 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiantL2": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.12 150:ok 250:ok"
+   }
+  }
+ },
+ "cvdGiantL4": {
+  "kind": "arc",
+  "cells": {
+   "sol": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.4 250:ok/vol0.4"
+   },
+   "murG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "murD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
+   },
+   "plafond": {
+    "code": "SAUT",
+    "runs": "80:ok 150:ok/vol0.49 250:ok/vol0.6"
+   },
+   "incG": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "incD": {
+    "code": "OK",
+    "runs": "80:ok 150:ok 250:ok"
+   },
+   "surG": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.28 150:ok 250:ok"
+   },
+   "surD": {
+    "code": "v≥150",
+    "runs": "80:wall/vol4.28 150:ok 250:ok"
    }
   }
  },
@@ -4555,7 +5184,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -4567,7 +5196,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.87 150:ok 250:ok"
+    "runs": "80:wall/vol2.84 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -4592,7 +5221,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -4604,7 +5233,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -4629,7 +5258,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -4641,7 +5270,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.87 150:ok 250:ok"
+    "runs": "80:wall/vol2.84 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -4666,7 +5295,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -4678,7 +5307,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -4703,7 +5332,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -4715,7 +5344,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -4740,7 +5369,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.87 150:ok 250:ok"
+    "runs": "80:wall/vol2.84 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -4752,7 +5381,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -4777,7 +5406,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -4789,7 +5418,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -4814,7 +5443,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.87 150:ok 250:ok"
+    "runs": "80:wall/vol2.84 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -4826,7 +5455,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -4851,7 +5480,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.85 150:ok 250:ok"
+    "runs": "80:wall/vol2.66 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -4863,7 +5492,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.07 150:ok 250:ok"
+    "runs": "80:wall/vol3.88 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -4888,7 +5517,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -4900,7 +5529,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -4925,7 +5554,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.85 150:ok 250:ok"
+    "runs": "80:wall/vol2.66 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -4937,7 +5566,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.07 150:ok 250:ok"
+    "runs": "80:wall/vol3.88 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -4962,7 +5591,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -4974,7 +5603,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -4999,7 +5628,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -5011,7 +5640,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -5036,7 +5665,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.07 150:ok 250:ok"
+    "runs": "80:wall/vol3.88 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -5048,7 +5677,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.85 150:ok 250:ok"
+    "runs": "80:wall/vol2.66 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -5073,7 +5702,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -5085,7 +5714,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -5110,7 +5739,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.07 150:ok 250:ok"
+    "runs": "80:wall/vol3.88 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -5122,7 +5751,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.85 150:ok 250:ok"
+    "runs": "80:wall/vol2.66 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -5159,7 +5788,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -5221,7 +5850,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.89 150:ok 250:ok"
+    "runs": "80:wall/vol2.76 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -5233,7 +5862,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.97 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -5258,7 +5887,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -5270,7 +5899,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -5295,7 +5924,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -5307,7 +5936,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -5332,7 +5961,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.97 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -5344,7 +5973,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.89 150:ok 250:ok"
+    "runs": "80:wall/vol2.76 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -5406,7 +6035,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -5443,7 +6072,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -5517,7 +6146,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.97 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -5529,7 +6158,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.89 150:ok 250:ok"
+    "runs": "80:wall/vol2.76 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -5554,7 +6183,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -5566,7 +6195,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -5591,7 +6220,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -5603,7 +6232,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.88 150:ok 250:ok"
+    "runs": "80:wall/vol2.87 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -5628,7 +6257,7 @@
   "cells": {
    "sol": {
     "code": "v≥150",
-    "runs": "80:wall/vol2.89 150:ok 250:ok"
+    "runs": "80:wall/vol2.76 150:ok 250:ok"
    },
    "murG": {
     "code": "—",
@@ -5640,7 +6269,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.97 150:ok 250:ok"
    },
    "incG": {
     "code": "—",
@@ -5714,7 +6343,7 @@
    },
    "plafond": {
     "code": "v≥150",
-    "runs": "80:wall/vol4.1 150:ok 250:ok"
+    "runs": "80:wall/vol3.94 150:ok 250:ok"
    },
    "incG": {
     "code": "—",

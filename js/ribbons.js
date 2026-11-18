@@ -104,7 +104,7 @@ function buildRolled(tile) {
   const half = P.size * HALF;
   const len = P.kind === 'arc' ? hypot2((Math.PI / 2) * arcParams(P).R, P.rise * LEVEL_H) : hypot2(2 * half, P.rise * LEVEL_H);
   return {
-    minU: 0.5,        // comme la vrille : l'appui ne lâche jamais la voiture (c'est la vitesse, via SIDE_HOLD, qui décide si elle tient)
+    minU: 0.5,        // comme la vrille : l'appui ne lâche jamais la voiture (c’est la vitesse et le pilote qui décident si elle tient : physics/ribbon.js, SIDE_DROP)
     len: len * 1.2,
     pos(u, o) {
       floorCenter(tile, u, C);
@@ -126,7 +126,7 @@ function rollWrap(inner, psi) {
   const x0 = e.x, y0 = e.y;
   return {
     ...inner,
-    minU: 0.5,      // (comme une ligne sur un mur : l'appui ne lâche jamais la voiture, la vitesse décide via SIDE_HOLD)
+    minU: 0.5,      // (comme une ligne sur un mur : l'appui ne lâche jamais la voiture, la vitesse et le volant décident : SIDE_DROP)
     pos(u, o) {
       inner.pos(u, o);
       const dx = o.x - x0, dy = o.y - y0;
@@ -185,6 +185,16 @@ function buildBase(tile) {
         o.nx = 0; o.ny = c; o.nz = s;
       },
       len: total * R + 2 * lane,
+    };
+  }
+  if (P.kind === 'sbend') {
+    // 0.11.3 : chicane « à plat » : la base d'une chicane roulée sur un mur (rollWrap), dont le décalage latéral devient vertical.
+    const q = {};
+    let len = 0, px = 0, pz = 0;
+    for (let i = 0; i <= 64; i++) { sbendPoint(P, i / 64, q); if (i) len += hypot2(q.x - px, q.z - pz); px = q.x; pz = q.z; }
+    return {
+      pos(u, o) { sbendPoint(P, u, q); o.x = q.x; o.y = base; o.z = q.z; o.nx = 0; o.ny = 1; o.nz = 0; },
+      len,
     };
   }
   if (P.kind === 'ribbon') {
@@ -275,7 +285,7 @@ function buildBase(tile) {
       const [a, b] = P.roll, long = !!P.rollLong;
       const psa = oriAngle(a, b), psb = oriAngle(b, a);
       return {
-        minU: 0.5,      // jamais lâchée par l'appui : c'est la vitesse (SIDE_HOLD) qui décide si on tient ou si on glisse
+        minU: 0.5,      // jamais lâchée par l'appui : c’est la vitesse et le volant (SIDE_DROP) qui décident si on tient ou si on glisse
         pos(u, o) {
           const psi = psa + (psb - psa) * smooth(u);
           o.x = long ? -HALF : 0; o.y = base; o.z = half - 2 * half * u;
@@ -408,7 +418,7 @@ function centerlineLocal(tile, n) {
     for (let i = 0; i < 4; i++) pts.push([-m * p.lane, base, half - (half * i) / 4, 0]);
     sampleRibbon(32 * p.turns);
     for (let i = 1; i <= 4; i++) pts.push([m * p.lane, base, -(half * i) / 4, 0]);
-  } else if (p.kind === 'ribbon' || p.kind === 'loop') {
+  } else if (p.kind === 'ribbon' || p.kind === 'loop' || (p.kind === 'sbend' && tile.o)) {      // (0.11.3 : chicane roulée sur un mur)
     const rib = ribbonOf(tile, true);
     // drapeau 2 : virage relevé (le pilote automatique doit y doser sa vitesse).
     sampleRibbon(Math.max(8, Math.round(rib.len / 3)), p.arc ? 2 : 1);

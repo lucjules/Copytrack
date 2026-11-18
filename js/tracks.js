@@ -9,6 +9,8 @@
 import { scriptTrack } from './track.js';
 import { CAREER_ORDER } from './themes.js';
 import { datan2, hypot2 } from './dmath.js';
+import { CELL } from './constants.js';
+import { PIECES } from './pieces.js';
 import { isObstacle } from './obstacles.js';
 
 export const BUILTIN_TRACKS = [
@@ -17,24 +19,26 @@ export const BUILTIN_TRACKS = [
     // slalom de chicanes rapides (droite, gauche) et un premier wall-ride (transitions douces 2×2). Bifurcation (petit saut tout droit, ou voie de côté), puis un CROISEMENT traversé deux fois : la route en repart pour une
     // boucle de trois virages géants et y revient de côté. Route large sous un portique en poutres entre quatre piliers, chicanes longues, un dernier virage géant ; arrivée entre deux
     // pylônes. Chevrons avant les virages, panneaux danger avant le croisement. Aucun virage serré : le chrono se joue sur la vitesse et la trajectoire.
+    // 0.11.4 (familles) : la boucle du croisement : trois virages géants, celui du milieu RELEVÉ.
     id: 'eclats', name: 'Premiers Éclats', decor: 'desert', difficulty: 1, profil: 'sprint',
-    appris: 'Départ : sous une arche, deux boosters → slalom de chicanes rapides. Au programme : premier wall-ride, bifurcation (petit saut ou voie de côté), croisement traversé deux fois (trois virages géants), route large sous un portique, chicanes longues.',
+    appris: 'Départ : sous une arche, deux boosters → slalom de chicanes rapides. Au programme : premier wall-ride, bifurcation (petit saut ou voie de côté), croisement traversé deux fois (trois virages géants, un relevé), route large sous un portique, chicanes longues.',
     goal: { id: 'under', t: 50.5 },
     opts: { l: 8 }, pilot: { vCap: 66 },
-    script: 'start*2 B2 ZR4 B ZL4 [tr01l] S2< [tr10l] C*1 S SPL U G1 D S ALT S4 MRG S JX S4 XR XR XR S4 JX C*1 WI W WO S ZR3 S ZL3 S XL S3 B finish*3',
-    obst: [{ k: 'board_right', at: 0.06, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.14, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.43, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.515, side: -24, rot: Math.PI }, { k: 'board_warn', at: 0.665, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.734, side: 0, s: 2 }, { k: 'pillar', at: 0.722, side: 36 }, { k: 'pillar', at: 0.722, side: -36 }, { k: 'pillar', at: 0.747, side: 36 }, { k: 'pillar', at: 0.747, side: -36 }, { k: 'board_left', at: 0.9, side: 24, rot: Math.PI }],
+    script: 'start*2 B2 ZR4 B ZL4 [tr01l] S2< [tr10l] C*1 S SPL U G1 D S ALT S4 MRG S JX S4 XR XBR XR S2 C*3 S JX C*1 WI W WO S ZR3 S ZL3 S XL S3 B finish*3',
+    obst: [{ k: 'board_right', at: 0.05388, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.12571, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.38469, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.46219, side: -24, rot: Math.PI }, { k: 'board_warn', at: 0.70038, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.76087, side: 0, s: 2 }, { k: 'pillar', at: 0.75142, side: 36 }, { k: 'pillar', at: 0.75142, side: -36 }, { k: 'pillar', at: 0.7741, side: 36 }, { k: 'pillar', at: 0.7741, side: -36 }, { k: 'board_left', at: 0.91021, side: 24, rot: Math.PI }],
     medals: { cristal: 45.8, or: 48.2, argent: 55.4, bronze: 65 },
   },
   {
     // Chapitre 3 · 1/6 — SPRINT EN MOTO (0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : descente en moto vers le lagon. Deux sauts à anneau turbo (le second se reçoit
     // sur une PLAQUE, un banc de sable), chicanes rapides entre les deux, route large sous un portique, très grand virage plat, CROISEMENT traversé deux fois (boucle de trois
     // virages géants), grand S ; deux pyramides de roche à l'arrivée. Aucun virage serré.
+    // 0.11.4 (familles) : la boucle du croisement : trois virages géants RELEVÉS.
     id: 'lagon', name: 'Lagon Turquoise', decor: 'isles', difficulty: 1, profil: 'sprint',
-    appris: 'Départ : en moto, descente vers le lagon. Au programme : deux sauts à anneau turbo (le second reçu sur une plaque), chicanes rapides, route large sous un portique, croisement traversé deux fois, grand S.',
+    appris: 'Départ : en moto, descente vers le lagon. Au programme : deux sauts à anneau turbo (le second reçu sur une plaque), chicanes rapides, route large sous un portique, croisement traversé deux fois (boucle relevée), grand S.',
     goal: { id: 'rings', n: 2 },
     opts: { l: 8 }, params: { veh0: 'moto' }, pilot: { vCap: 66 },
-    script: 'start*1 [cdi1] [dn2] [dn2] [cdo2] B S [crv1] UU GR2 DD [cdo1] B2 ZR4 S ZL4 S [crv1] UU GR2 V-2 [plate3]*10 S B C*2 WI W WO S HL S JX S4 XR XR XR S4 JX ZZR S B2 finish*2',
-    obst: [{ k: 'board_right', at: 0.185, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.28, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.501, side: 0, s: 2 }, { k: 'pillar', at: 0.495, side: 36 }, { k: 'pillar', at: 0.495, side: -36 }, { k: 'board_warn', at: 0.565, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.64, side: -24, rot: Math.PI }, { k: 'pyramidS', at: 0.95, side: 28 }, { k: 'pyramidS', at: 0.95, side: -28 }],
+    script: 'start*1 [cdi1] [dn2] [dn2] [cdo2] B S [crv1] UU GR2 DD [cdo1] B2 ZR4 S ZL4 S [crv1] UU GR2 V-2 [plate3]*10 S B C*2 WI W WO S HL S JX S4 XBR XBR XBR S2 C*3 S JX ZZR S B2 finish*2',
+    obst: [{ k: 'board_right', at: 0.1307, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.19912, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.35526, side: 0, s: 2 }, { k: 'pillar', at: 0.35175, side: 36 }, { k: 'pillar', at: 0.35175, side: -36 }, { k: 'board_warn', at: 0.40088, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.45526, side: -24, rot: Math.PI }, { k: 'pyramidS', at: 0.96404, side: 28 }, { k: 'pyramidS', at: 0.96404, side: -28 }],
     medals: { cristal: 45.9, or: 48.3, argent: 55.5, bronze: 65.2 },
   },
   {
@@ -53,24 +57,26 @@ export const BUILTIN_TRACKS = [
     // Chapitre 2 · 1/6 — SPRINT (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → rampe de lancement avec un anneau turbo dans le saut. Puis un slalom
     // de chicanes rapides, une vague douce, le pont de lianes sans bordures à plus de 230 km/h, un S de virages relevés, une clairière (route large de 56 m sous un portique entre
     // quatre piliers) et un CROISEMENT traversé deux fois (boucle de trois virages géants). Chevrons avant les chicanes et les virages, panneau danger avant le croisement. Aucun virage serré.
+    // 0.11.4 (familles) : la boucle du croisement MONTE d'un niveau puis redescend (virages géants inclinés).
     id: 'lianes', name: 'Lianes Néon', decor: 'jungle', difficulty: 2, profil: 'sprint',
-    appris: 'Départ : trois boosters → rampe de lancement avec anneau turbo dans le saut. Au programme : chicanes rapides, pont de lianes sans bordures à plus de 230 km/h, S relevé, route large sous un portique, croisement traversé deux fois.',
+    appris: 'Départ : trois boosters → rampe de lancement avec anneau turbo dans le saut. Au programme : chicanes rapides, pont de lianes sans bordures à plus de 230 km/h, S relevé, route large sous un portique, croisement traversé deux fois, boucle en pente.',
     goal: { id: 'rings', n: 1 },
     opts: { l: 3 }, pilot: { vCap: 66 },
-    script: 'start*2 B3 UU GR2 DD [cdo1] B2 ZR4 S ZL4 [crs1] S2 [cds1] B S2_ B_ S2_ BR S2 B BL S2 C*3 WI W WO S JX S4 XR XR XR S4 JX S B2 finish*2',
-    obst: [{ k: 'board_right', at: 0.11, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.195, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.625, side: 0, s: 2 }, { k: 'pillar', at: 0.618, side: 36 }, { k: 'pillar', at: 0.618, side: -36 }, { k: 'pillar', at: 0.634, side: 36 }, { k: 'pillar', at: 0.634, side: -36 }, { k: 'board_warn', at: 0.652, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.725, side: -24, rot: Math.PI }],
+    script: 'start*2 B3 UU GR2 DD [cdo1] B2 ZR4 S ZL4 [crs1] S2 [cds1] B S2_ B_ S2_ BR S2 B BL S2 C*3 WI W WO S JX S4 XUR1 XR XDR1 S2 C*3 S JX S B2 finish*2',
+    obst: [{ k: 'board_right', at: 0.10948, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.19526, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.62415, side: 0, s: 2 }, { k: 'pillar', at: 0.61738, side: 36 }, { k: 'pillar', at: 0.61738, side: -36 }, { k: 'pillar', at: 0.63318, side: 36 }, { k: 'pillar', at: 0.63318, side: -36 }, { k: 'board_warn', at: 0.65124, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.72573, side: -24, rot: Math.PI }],
     medals: { cristal: 46.2, or: 48.6, argent: 55.9, bronze: 65.6 },
   },
   {
     // Chapitre 4 · 1/6 — SPEEDWAY (0.10.3 : refait AUTOUR des nouvelles pièces). Ouverture : DÉPART SUR UN TAPIS ROULANT à +200 km/h (trois cases) entre deux façades : la voiture
     // est lancée à près de 290 km/h sans un seul booster. Très grands virages relevés, avenue large sous un portique, chicane rapide, wall-ride sur la façade d'une tour, grand S,
     // CROISEMENT traversé deux fois (boucle de trois virages géants) et seconde avenue large sous un portique. Aucun virage serré ; objectif : ne toucher aucune bordure.
+    // 0.11.4 (familles) : la boucle du croisement : virages géants relevé, plat, relevé.
     id: 'neons', name: 'Néons Express', decor: 'city', difficulty: 2, profil: 'speedway',
-    appris: 'Départ : tapis roulant à +200 km/h entre deux façades, sans booster. Au programme : très grands virages relevés, avenue large sous un portique, chicane rapide, wall-ride sur une tour, grand S, croisement traversé deux fois.',
+    appris: 'Départ : tapis roulant à +200 km/h entre deux façades, sans booster. Au programme : très grands virages relevés, avenue large sous un portique, chicane rapide, wall-ride sur une tour, grand S, croisement traversé deux fois (deux virages géants relevés).',
     goal: { id: 'nowall' },
     opts: { l: 4 }, pilot: { vCap: 70 },
-    script: 'start*3 S3.t201 S BRR S2 B BLL S2 WI W2 WO S ZR4 S C*2 B [tr02l] S4> [tr20l] BRR S2 ZZL S B BLL S2 JX S4 XR XR XR S4 JX S B WI W WO S B2 finish*2',
-    obst: [{ k: 'wallS', at: 0.03, side: 26, rot: Math.PI / 2 }, { k: 'wallS', at: 0.03, side: -26, rot: Math.PI / 2 }, { k: 'gantry', at: 0.251, side: 0, s: 2 }, { k: 'pillarBase', at: 0.245, side: 36 }, { k: 'pillarBase', at: 0.245, side: -36 }, { k: 'board_right', at: 0.278, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.553, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.7, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.755, side: -24, rot: Math.PI }, { k: 'gantry', at: 0.941, side: 0, s: 2 }],
+    script: 'start*3 S3.t201 S BRR S2 B BLL S2 WI W2 WO S ZR4 S C*2 B [tr02l] S4> [tr20l] BRR S2 ZZL S B BLL S2 JX S4 XBR XR XBR S2 C*3 S JX S B WI W WO S B2 finish*2',
+    obst: [{ k: 'wallS', at: 0.02559, side: 26, rot: Math.PI / 2 }, { k: 'wallS', at: 0.02559, side: -26, rot: Math.PI / 2 }, { k: 'gantry', at: 0.21231, side: 0, s: 2 }, { k: 'pillarBase', at: 0.20816, side: 36 }, { k: 'pillarBase', at: 0.20816, side: -36 }, { k: 'board_right', at: 0.23582, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.46819, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.59405, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.6397, side: -24, rot: Math.PI }, { k: 'gantry', at: 0.94952, side: 0, s: 2 }],
     medals: { cristal: 54, or: 56.8, argent: 65.3, bronze: 76.7 },
   },
   {
@@ -89,24 +95,26 @@ export const BUILTIN_TRACKS = [
     // Chapitre 1 · 2/6 — SPEEDWAY (0.9.74 : refait AUTOUR des nouvelles pièces). Ouverture : un booster et la vallée s'élargit aussitôt (route de 56 m sous un portique en poutres).
     // Trois fois la vallée s'élargit et se resserre, chaque fois sous un portique ; virages géants pris au-dessus de 200 km/h, chicanes rapides, wall-ride de 6 cases sur la paroi
     // du canyon le long d'une rangée de piliers, bifurcation (voie directe, ou grand saut à gauche). Chevrons avant les virages. Aucun virage serré.
+    // 0.11.3 (wall-ride) : wall-ride en slalom : un bloc sur le bas du mur (passer dessus), puis un sur le haut (passer dessous).
     id: 'canyon', name: 'Canyon Corail', decor: 'desert', difficulty: 2, profil: 'speedway',
-    appris: 'Départ : un booster → la vallée s’élargit aussitôt (route de 56 m). Au programme : trois routes larges sous des portiques, virages géants au-dessus de 200 km/h, chicanes rapides, wall-ride le long des piliers, bifurcation : voie directe ou grand saut.',
+    appris: 'Départ : un booster → la vallée s’élargit aussitôt (route de 56 m). Au programme : trois routes larges sous des portiques, virages géants au-dessus de 200 km/h, chicanes rapides, wall-ride en slalom entre deux blocs, bifurcation : voie directe ou grand saut.',
     goal: { id: 'nowall' },
     opts: { l: 8 }, pilot: { vCap: 72 },
     script: 'start B WI W2 WO XR S ZR4 S2 [tr02l] S6> [tr20l] S C WI W WO XR S2 SPLL S4 ALT U G2 D MRG S2 XR WI W WO S ZL4 XL S2 B finish*2',
-    obst: [{ k: 'gantry', at: 0.048, side: 0, s: 2 }, { k: 'gantry', at: 0.472, side: 0, s: 2 }, { k: 'gantry', at: 0.788, side: 0, s: 2 }, { k: 'pillarBase', at: 0.3, side: -24 }, { k: 'pillarBase', at: 0.33, side: -24 }, { k: 'pillarBase', at: 0.36, side: -24 }, { k: 'board_right', at: 0.095, side: -24, rot: Math.PI }, { k: 'board_right', at: 0.505, side: -24, rot: Math.PI }, { k: 'board_right', at: 0.735, side: -24, rot: Math.PI }, { k: 'board_left', at: 0.905, side: 24, rot: Math.PI }],
+    obst: [{ k: 'gantry', at: 0.048, side: 0, s: 2 }, { k: 'gantry', at: 0.472, side: 0, s: 2 }, { k: 'gantry', at: 0.788, side: 0, s: 2 }, { k: 'pillarBase', at: 0.3, side: -24 }, { k: 'pillarBase', at: 0.33, side: -24 }, { k: 'pillarBase', at: 0.36, side: -24 }, { k: 'board_right', at: 0.095, side: -24, rot: Math.PI }, { k: 'board_right', at: 0.505, side: -24, rot: Math.PI }, { k: 'board_right', at: 0.735, side: -24, rot: Math.PI }, { k: 'board_left', at: 0.905, side: 24, rot: Math.PI }, { k: 'block', at: 0.30991, wall: 'bas', s: 2 }, { k: 'block', at: 0.3629, wall: 'haut', s: 2 }],
     medals: { cristal: 45.2, or: 47.6, argent: 54.7, bronze: 64.2 },
   },
   {
     // Chapitre 7 · 1/6 — SPRINT (0.10.6 : refait AUTOUR des nouvelles pièces). Ouverture : booster et sas en tube, puis une plaque de BASSE GRAVITÉ (40 %) : le grand saut à anneau
     // turbo traverse un vide de cinq cases et se reçoit cinq niveaux plus bas, sur une PLAQUE d'amarrage entre deux modules. Gravité normale, chicanes rapides, très grand virage
     // plat, route large sous un portique, CROISEMENT traversé deux fois (boucle de trois virages géants). Aucun virage serré.
+    // 0.11.4 (familles) : la boucle du croisement monte d'un demi-niveau puis redescend.
     id: 'quai', name: 'Quai d’Amarrage', decor: 'orbit', difficulty: 2, profil: 'sprint',
-    appris: 'Départ : booster et sas en tube, puis basse gravité. Au programme : grand saut à anneau turbo reçu sur une plaque d’amarrage, chicanes rapides, route large sous un portique, croisement traversé deux fois.',
+    appris: 'Départ : booster et sas en tube, puis basse gravité. Au programme : grand saut à anneau turbo reçu sur une plaque d’amarrage, chicanes rapides, route large sous un portique, croisement traversé deux fois, boucle en pente.',
     goal: { id: 'rings', n: 1 },
     opts: { l: 14 }, pilot: { vCap: 66 },
-    script: 'start*3 B TI TM TO B S.g40 [crs1] UU GR2 G5 V-5 [plate3]*10 S7 S.g100 B C*2 ZR4 S ZL4 S HR S WI W WO S JX S4 XR XR XR S4 JX B [cdi1] [dn2] [cdo1] B2 finish*2',
-    obst: [{ k: 'board_up', at: 0.13, side: 18, rot: Math.PI }, { k: 'block', at: 0.2, side: 60 }, { k: 'block', at: 0.2, side: -60 }, { k: 'board_right', at: 0.33, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.42, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.56, side: 0, s: 2 }, { k: 'pillar', at: 0.555, side: 36 }, { k: 'pillar', at: 0.555, side: -36 }, { k: 'board_warn', at: 0.595, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.67, side: -24, rot: Math.PI }],
+    script: 'start*3 B TI TM TO B S.g40 [crs1] UU GR2 G5 V-5 [plate3]*10 S7 S.g100 B C*2 ZR4 S ZL4 S HR S WI W WO S JX S4 XUR0 XR XDR0 S2 C*3 S JX B [cdi1] [dn2] [cdo1] B2 finish*2',
+    obst: [{ k: 'board_up', at: 0.12976, side: 18, rot: Math.PI }, { k: 'block', at: 0.20119, side: 60 }, { k: 'block', at: 0.20119, side: -60 }, { k: 'board_right', at: 0.32976, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.42024, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.56071, side: 0, s: 2 }, { k: 'pillar', at: 0.55595, side: 36 }, { k: 'pillar', at: 0.55595, side: -36 }, { k: 'board_warn', at: 0.59405, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.67024, side: -24, rot: Math.PI }],
     medals: { cristal: 47.3, or: 49.8, argent: 57.2, bronze: 67.2 },
   },
   {
@@ -126,24 +134,26 @@ export const BUILTIN_TRACKS = [
     // Chapitre 4 · 3/6 — ROLLERCOASTER (0.10.3 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → deux loopings décalés (droite, gauche). Wall-ride à gauche, chicane
     // longue, virage relevé, wall-ride à droite, grand looping, avenue large sous un portique, LOOPING MODULAIRE (deux murs de chaque côté), plongeon à 38°, TUBE qui tourne à droite
     // puis à gauche, chicane longue. Panneaux danger avant les loopings et le tube.
+    // 0.11.3 (wall-ride) : un bloc sur chaque mur : sur le bas du mur gauche (passer dessus), sur le haut du mur droit (passer dessous).
     id: 'hyper', name: 'Hyperboucle', decor: 'city', difficulty: 3, profil: 'rollercoaster',
-    appris: 'Départ : trois boosters → deux loopings décalés. Au programme : wall-rides des deux côtés, chicane longue, grand looping, avenue large sous un portique, looping modulaire, plongeon à 38°, tube qui tourne.',
+    appris: 'Départ : trois boosters → deux loopings décalés. Au programme : wall-rides des deux côtés, un bloc sur chaque mur, chicane longue, grand looping, avenue large sous un portique, looping modulaire, plongeon à 38°, tube qui tourne.',
     goal: { id: 'norespawn' },
     opts: { l: 12 }, pilot: { vCap: 66 },
     script: 'start*2 B3 O OL S2 B3 [tr01s] S4< [tr10s] S ZR3 S BR S2 B [tr02s] S4> [tr20s] S C*1 B OB S2 WI W WO S LPR2 S B [cdi2] DX [cdo2] S TI TM TRR TM TLL TM TO S ZL3 S B2 finish*2',
-    obst: [{ k: 'board_warn', at: 0.025, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.28, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.49, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.581, side: 0, s: 2 }, { k: 'pillar', at: 0.576, side: 36 }, { k: 'pillar', at: 0.576, side: -36 }, { k: 'board_warn', at: 0.6, side: -18, rot: Math.PI }, { k: 'board_warn', at: 0.762, side: 18, rot: Math.PI }, { k: 'board_left', at: 0.925, side: 20, rot: Math.PI }],
+    obst: [{ k: 'board_warn', at: 0.025, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.28, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.49, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.581, side: 0, s: 2 }, { k: 'pillar', at: 0.576, side: 36 }, { k: 'pillar', at: 0.576, side: -36 }, { k: 'board_warn', at: 0.6, side: -18, rot: Math.PI }, { k: 'board_warn', at: 0.762, side: 18, rot: Math.PI }, { k: 'board_left', at: 0.925, side: 20, rot: Math.PI }, { k: 'block', at: 0.23745, wall: 'bas', s: 2 }, { k: 'block', at: 0.43257, wall: 'haut', s: 2 }],
     medals: { cristal: 48.9, or: 51.5, argent: 59.2, bronze: 69.5 },
   },
   {
     // Chapitre 2 · 2/6 — SPEEDWAY (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : départ dans un tube accélérateur de trois sections. Très grands virages relevés, deux
     // routes larges sous des portiques (la canopée s'ouvre), un grand S, un wall-ride de cinq cases sur un tronc, une chicane longue, puis un TUBE qui tourne à droite puis à gauche
     // entre les branches. Chevrons avant les chicanes, panneau danger avant le tube. Aucun virage serré.
+    // 0.11.3 (wall-ride) : wall-ride en slalom sur le tronc : un bloc en bas, puis un en haut.
     id: 'canopee', name: 'Canopée', decor: 'jungle', difficulty: 3, profil: 'speedway',
-    appris: 'Départ : dans un tube accélérateur de trois sections. Au programme : très grands virages relevés, deux routes larges sous des portiques, grand S, wall-ride sur un tronc, chicane longue, tube qui tourne à droite puis à gauche.',
+    appris: 'Départ : dans un tube accélérateur de trois sections. Au programme : très grands virages relevés, deux routes larges sous des portiques, grand S, wall-ride en slalom sur un tronc, chicane longue, tube qui tourne à droite puis à gauche.',
     goal: { id: 'under', t: 62 },
     opts: { l: 5 }, pilot: { vCap: 64 },
     script: 'start*3 TI TM3.b TO BRR S B BLL S WI W2 WO S [crs1] S2 [cds1] S ZZR S [tr01l] S5< [tr10l] C*2 B BRR S ZL3 S [crs1] S [cds1] B BLL S2 TI TM TRR TM TLL TM TO S BRR S B WI W WO BLL S2 B2 finish*2',
-    obst: [{ k: 'gantry', at: 0.231, side: 0, s: 2 }, { k: 'pillarBase', at: 0.225, side: 36 }, { k: 'pillarBase', at: 0.225, side: -36 }, { k: 'board_right', at: 0.29, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.505, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.652, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.887, side: 0, s: 2 }, { k: 'pillarBase', at: 0.887, side: 36 }, { k: 'pillarBase', at: 0.887, side: -36 }],
+    obst: [{ k: 'gantry', at: 0.231, side: 0, s: 2 }, { k: 'pillarBase', at: 0.225, side: 36 }, { k: 'pillarBase', at: 0.225, side: -36 }, { k: 'board_right', at: 0.29, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.505, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.652, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.887, side: 0, s: 2 }, { k: 'pillarBase', at: 0.887, side: 36 }, { k: 'pillarBase', at: 0.887, side: -36 }, { k: 'block', at: 0.37583, wall: 'bas', s: 2 }, { k: 'block', at: 0.4012, wall: 'haut', s: 2 }],
     medals: { cristal: 57.5, or: 60.5, argent: 69.6, bronze: 81.7 },
   },
   {
@@ -167,7 +177,7 @@ export const BUILTIN_TRACKS = [
     goal: { id: 'vehicle', v: 'boat' },
     opts: { l: 4 },
     pilot: { vCap: 60 },
-    script: 'start*3 S.n S2.a R.a L.a R.a L.a S.a S.n B2 S [tr01s] S2< [tr10s] S3 R R B S2 NI N2 NO L S L B S3 [cvd05] [cvdL05] B ZR S ZL B C*1 JX R S R R S JX R S B S C*3 S.n S2.a R.a L.a R.a L.a S2.a finish*2',
+    script: 'start*3 S.n S2.a R.a L.a R.a L.a S.a S.n B2 S [tr01s] S2< [tr10s] S3 R R B S2 NI N2 NO L S L B S3 [cvd05] [cvdL05] B ZR S ZL B C*1 JX R C*3 R R S JX R S B S C*3 S.n S2.a R.a L.a R.a L.a S2.a finish*2',
     obst: [{ k: 'sign_uturn', at: 0.318, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.38, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.405, side: 14 }, { k: 'pillarThin', at: 0.405, side: -14 }, { k: 'pillarThin', at: 0.42, side: 14 }, { k: 'pillarThin', at: 0.42, side: -14 }, { k: 'board_right', at: 0.575, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.625, side: 16, rot: Math.PI }, { k: 'board_warn', at: 0.688, side: 16, rot: Math.PI }],
     medals: { cristal: 59.7, or: 62.9, argent: 72.3, bronze: 84.8 },
   },
@@ -191,7 +201,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : bifurcation, la voie de droite passe sur une plaque moto. Au programme : lacets descendants, route étroite entre des piliers, wall-ride, épingles en S, chicanes serrées, croisement traversé deux fois, seconde route étroite.',
     goal: { id: 'vehicle', v: 'moto' },
     opts: { l: 8 },
-    script: 'start*2 Y2.o B S [cvd05] [cvdL05] [cvd05] [cvdL05] B S NI N2 NO S.o S [tr01s] S2< [tr10s] S R L R L B S2 C*3 ZR S ZL B JX R S R R S JX B S2 C S.o S R L R L B NI N NO S2 B finish*1',
+    script: 'start*2 Y2.o B S [cvd05] [cvdL05] [cvd05] [cvdL05] B S NI N2 NO S.o S [tr01s] S2< [tr10s] S R L R L B S2 C*3 ZR S ZL B JX R C*3 R R S JX B S2 C S.o S R L R L B NI N NO S2 B finish*1',
     obst: [{ k: 'board_warn', at: 0.2, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.226, side: 14 }, { k: 'pillarThin', at: 0.226, side: -14 }, { k: 'pillarThin', at: 0.245, side: 14 }, { k: 'pillarThin', at: 0.245, side: -14 }, { k: 'board_right', at: 0.524, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.578, side: 16, rot: Math.PI }, { k: 'board_warn', at: 0.628, side: 16, rot: Math.PI }, { k: 'board_warn', at: 0.892, side: 16, rot: Math.PI }],
     medals: { cristal: 51.5, or: 54.2, argent: 62.4, bronze: 73.2 },
   },
@@ -215,7 +225,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : plaque moto, booster, épingles. Au programme : coursive étroite entre des piliers, chicanes serrées, wall-ride, croisement traversé deux fois, seconde coursive étroite.',
     goal: { id: 'vehicle', v: 'moto' },
     opts: { l: 8 },
-    script: 'start*2 S.o B R L R L B S2 C*3 B NI N2 NO S R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R S R R S JX R S NI N NO [cdi1] [dn2] [cdo1] S B finish*1',
+    script: 'start*2 S.o B R L R L B S2 C*3 B NI N2 NO S R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R C*3 R R S JX R S NI N NO [cdi1] [dn2] [cdo1] S B finish*1',
     obst: [{ k: 'board_warn', at: 0.185, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.206, side: 14 }, { k: 'pillarThin', at: 0.206, side: -14 }, { k: 'pillarThin', at: 0.222, side: 14 }, { k: 'pillarThin', at: 0.222, side: -14 }, { k: 'board_right', at: 0.325, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.383, side: 16, rot: Math.PI }, { k: 'slab', at: 0.58, side: 24 }, { k: 'slab', at: 0.58, side: -24 }, { k: 'board_warn', at: 0.7, side: 16, rot: Math.PI }, { k: 'board_warn', at: 0.853, side: 16, rot: Math.PI }],
     medals: { cristal: 43.2, or: 45.4, argent: 52.2, bronze: 61.3 },
   },
@@ -252,7 +262,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : sur une route étroite, épingle sur la glace. Au programme : virages serrés, deux nœuds en 8 par des croisements, chicanes en S, wall-ride, seconde route étroite, glace avant les épingles, bifurcation : ligne verglacée ou détour qui accroche.',
     goal: { id: 'turbo', n: 2 },
     opts: { l: 6 },
-    script: 'start NI N NO L I B R L S B JX R S R R S JX R B S2 L ZR ZL R S B C S R L JX L S L L S JX L B S2 [tr01s] S2< [tr10s] NI N2 NO R S L B I S3 KR S R S2 B C SPLL I3 ALT S3 MRG S L B S2 R [cvd1] S KL S2 B finish',
+    script: 'start NI N NO L I B R L S B JX R C*3 R R S JX R B S2 L ZR ZL R S B C S R L JX L C*3 L L S JX L B S2 [tr01s] S2< [tr10s] NI N2 NO R S L B I S3 KR S R S2 B C SPLL I3 ALT S3 MRG S L B S2 R [cvd1] S KL S2 B finish',
     obst: [{ k: 'board_left', at: 0.03, side: 12, rot: Math.PI }, { k: 'board_warn', at: 0.112, side: 16, rot: Math.PI }, { k: 'board_warn', at: 0.373, side: 16, rot: Math.PI }, { k: 'board_right', at: 0.252, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.28, side: 16, rot: Math.PI }, { k: 'sign_uturn', at: 0.62, side: 12, rot: Math.PI }],
     medals: { cristal: 79.2, or: 83.4, argent: 95.9, bronze: 112.6 },
   },
@@ -288,7 +298,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : descente à 38° vers le glacier. Au programme : lacets sur la glace, route étroite entre des stalagmites, wall-ride, bosse aimantée, chicanes serrées, croisement traversé deux fois.',
     goal: { id: 'norespawn' },
     opts: { l: 12 },
-    script: 'start*1 [cdi2] DX [cdo2] S2 I S2 R B S2 L B S I S2 R S L C*3 B S NI N2 NO S [tr01s] S2< [tr10s] S2 R B S.m [crs1].m S [cds1].m L B ZR S ZL B S I S2 R S2 L B S2 JX R S R R S JX R S2 B finish*2',
+    script: 'start*1 [cdi2] DX [cdo2] S2 I S2 R B S2 L B S I S2 R S L C*3 B S NI N2 NO S [tr01s] S2< [tr10s] S2 R B S.m [crs1].m S [cds1].m L B ZR S ZL B S I S2 R S2 L B S2 JX R C*3 R R S JX R S2 B finish*2',
     obst: [{ k: 'board_warn', at: 0.31, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.332, side: 14 }, { k: 'pillarThin', at: 0.332, side: -14 }, { k: 'pillarThin', at: 0.345, side: 14 }, { k: 'pillarThin', at: 0.345, side: -14 }, { k: 'wedge', at: 0.53, side: 24 }, { k: 'wedge', at: 0.53, side: -24, rot: Math.PI }, { k: 'board_right', at: 0.6, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.645, side: 16, rot: Math.PI }, { k: 'board_warn', at: 0.83, side: 16, rot: Math.PI }],
     medals: { cristal: 61.2, or: 64.5, argent: 74.1, bronze: 87 },
   },
@@ -300,7 +310,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : booster puis montée en lacets. Au programme : épingles sans bordures, quai étroit entre des colonnes, wall-ride, chicane de tunnels, chicanes serrées, croisement traversé deux fois.',
     goal: { id: 'norespawn' },
     opts: { l: 2 },
-    script: 'start*1 B CVR2 CVR2 S B R_ L_ R_ L_ S B C*3 B S2 R S R B S NI N2 NO S [tr01s] S2< [tr10s] S B L S R# L# R# L# S2# B ZR S ZL B JX R S R R S JX R S B [cdi1] [dn2] [cdo1] S B finish*3',
+    script: 'start*1 B CVR2 CVR2 S B R_ L_ R_ L_ S B C*3 B S2 R S R B S NI N2 NO S [tr01s] S2< [tr10s] S B L S R# L# R# L# S2# B ZR S ZL B JX R C*3 R R S JX R S B [cdi1] [dn2] [cdo1] S B finish*3',
     obst: [{ k: 'board_warn', at: 0.3, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.322, side: 14 }, { k: 'pillarThin', at: 0.322, side: -14 }, { k: 'pillarThin', at: 0.337, side: 14 }, { k: 'pillarThin', at: 0.337, side: -14 }, { k: 'board_right', at: 0.645, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.7, side: 16, rot: Math.PI }, { k: 'board_warn', at: 0.75, side: 16, rot: Math.PI }],
     medals: { cristal: 55.5, or: 58.4, argent: 67.2, bronze: 78.9 },
   },
@@ -311,7 +321,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : plaque de dérive, booster. Au programme : épingles en dérive, route étroite entre des colonnes de basalte, wall-ride, chicanes serrées, croisement traversé deux fois.',
     goal: { id: 'norespawn' },
     opts: { l: 6 },
-    script: 'start*1 S2.d B S2 R S L S B R.d L.d S2 C*3 B NI N2 NO S [tr01s] S2< [tr10s] S2 R S2.d L B ZR S ZL B S2 R.d S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3',
+    script: 'start*1 S2.d B S2 R S L S B R.d L.d S2 C*3 B NI N2 NO S [tr01s] S2< [tr10s] S2 R S2.d L B ZR S ZL B S2 R.d S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3',
     obst: [{ k: 'board_warn', at: 0.25, side: 16, rot: Math.PI }, { k: 'pillar', at: 0.272, side: 16 }, { k: 'pillar', at: 0.272, side: -16 }, { k: 'pillar', at: 0.287, side: 16 }, { k: 'pillar', at: 0.287, side: -16 }, { k: 'wallSLow', at: 0.44, side: 24, rot: Math.PI / 2 }, { k: 'wallSLow', at: 0.44, side: -24, rot: Math.PI / 2 }, { k: 'board_right', at: 0.545, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.6, side: 16, rot: Math.PI }, { k: 'board_warn', at: 0.76, side: 16, rot: Math.PI }],
     medals: { cristal: 52.5, or: 55.2, argent: 63.5, bronze: 74.6 },
   },
@@ -319,12 +329,13 @@ export const BUILTIN_TRACKS = [
     // Chapitre 2 · 6/6 — TECHNIQUE (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : départ dans un tunnel du temple, deux virages serrés. Allée de colonnes, tube, épingle,
     // descente, lacets en spirale, deux blocs de pierre avant la chicane de tunnels, ROUTE ÉTROITE (12 m), chicanes serrées, ARCHE PLEINE entre deux murs, épingle et un CROISEMENT
     // traversé deux fois (boucle de virages serrés). Panneaux : danger avant la route étroite et le croisement, demi-tour avant l'épingle.
+    // 0.11.4 (familles) : bifurcation EN T : la voie directe saute un vide (rapide), la branche fait le tour (sûre, plus lente).
     id: 'temple', name: 'Temple', decor: 'jungle', difficulty: 4, profil: 'technique',
-    appris: 'Départ : dans un tunnel du temple, deux virages serrés. Au programme : allée de colonnes, tube, lacets en spirale, chicane de tunnels, route étroite, chicanes serrées, arche entre deux murs, croisement traversé deux fois.',
+    appris: 'Départ : dans un tunnel du temple, deux virages serrés. Au programme : allée de colonnes, tube, lacets en spirale, chicane de tunnels, route étroite, chicanes serrées, saut ou détour en T, arche, croisement traversé deux fois.',
     goal: { id: 'norespawn' },
     opts: { l: 8 },
-    script: 'start*3 S# R# R# B# S2# B S3 TI TM2 TO S R R B S2 [cdi1] [dn2] [cdo1] S C*2 S [cvd05] [cvd05] [cvd05] [cvd05] S2 B S R# L# R# L# S2# B NI N2 NO S ZR S R R S ZL B S2 C*1 L L B S5 JX R S R R S JX R S B finish*3',
-    obst: [{ k: 'pillarBase', at: 0.1, side: 20 }, { k: 'pillarBase', at: 0.1, side: -20 }, { k: 'pillarBase', at: 0.12, side: 20 }, { k: 'pillarBase', at: 0.12, side: -20 }, { k: 'sign_uturn', at: 0.42, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.538, side: 16, rot: Math.PI }, { k: 'board_right', at: 0.598, side: -20, rot: Math.PI }, { k: 'archS', at: 0.727, side: 0 }, { k: 'wallS', at: 0.722, side: 26, rot: Math.PI / 2 }, { k: 'wallS', at: 0.722, side: -26, rot: Math.PI / 2 }, { k: 'block', at: 0.44, side: 24 }, { k: 'block', at: 0.44, side: -24 }, { k: 'board_warn', at: 0.852, side: 18, rot: Math.PI }],
+    script: 'start*3 S# R# R# B# S2# B S3 TI TM2 TO S R R B S2 [cdi1] [dn2] [cdo1] S C*2 S [cvd05] [cvd05] [cvd05] [cvd05] S2 B S R# L# R# L# S2# B NI N2 NO S ZR S R R S ZL B S2 C*1 L L B TSPL U G1 D TALT S L S3 L S TMRG JX R C*3 R R S JX R S B finish*3',
+    obst: [{ k: 'pillarBase', at: 0.10141, side: 20 }, { k: 'pillarBase', at: 0.10141, side: -20 }, { k: 'pillarBase', at: 0.12149, side: 20 }, { k: 'pillarBase', at: 0.12149, side: -20 }, { k: 'sign_uturn', at: 0.42269, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.54116, side: 16, rot: Math.PI }, { k: 'board_right', at: 0.60141, side: -20, rot: Math.PI }, { k: 'archS', at: 0.73193, side: 0 }, { k: 'wallS', at: 0.7259, side: 26, rot: Math.PI / 2 }, { k: 'wallS', at: 0.7259, side: -26, rot: Math.PI / 2 }, { k: 'block', at: 0.44277, side: 24 }, { k: 'block', at: 0.44277, side: -24 }, { k: 'board_warn', at: 0.8504, side: 18, rot: Math.PI }],
     medals: { cristal: 66.2, or: 69.7, argent: 80.2, bronze: 94.1 },
   },
   {
@@ -343,13 +354,14 @@ export const BUILTIN_TRACKS = [
     // Chapitre 7 · 3/6 — ROLLERCOASTER (0.10.6 : refait AUTOUR des nouvelles pièces). Ouverture : tire-bouchon à gauche dès la deuxième case. Grand double looping, chicane longue,
     // wall-rides gauche puis droite, TUBE qui tourne à droite puis à gauche entre les astéroïdes, LOOPING MODULAIRE (deux murs de chaque côté), route large sous un portique de
     // poutres, plongeon à 38°, chicane longue.
+    // 0.11.3 (wall-ride) : le mur gauche devient une BOSSE : la route monte de 32 m le long du mur, puis redescend.
     id: 'ceinture', name: 'Ceinture d’Astéroïdes', decor: 'orbit', difficulty: 4, profil: 'rollercoaster',
-    appris: 'Départ : tire-bouchon à gauche dès la deuxième case. Au programme : double looping, chicanes longues, wall-rides des deux côtés, tube qui tourne, looping modulaire, route large, plongeon.',
+    appris: 'Départ : tire-bouchon à gauche dès la deuxième case. Au programme : double looping, chicanes longues, wall-ride en bosse (monter, redescendre), wall-ride à droite, tube qui tourne, looping modulaire, route large, plongeon.',
     goal: { id: 'norespawn' },
     opts: { l: 10 }, pilot: { vCap: 66 },
-    script: 'start*2 S CKL S B3 OBDL S2 C*1 ZR3 B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B TI TM TRR TM TLL TM TO S LPR2 S WI W WO S B [cdi2] DX [cdo2] S2 ZL3 S2 B2 finish*2',
-    obst: [{ k: 'board_warn', at: 0.012, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.095, side: -18, rot: Math.PI }, { k: 'board_right', at: 0.232, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.495, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.675, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.826, side: 0, s: 2 }, { k: 'beamPost', at: 0.821, side: 36 }, { k: 'beamPost', at: 0.821, side: -36 }, { k: 'board_left', at: 0.905, side: 20, rot: Math.PI }],
-    medals: { cristal: 43.4, or: 45.6, argent: 52.5, bronze: 61.6 },
+    script: 'start*2 S CKL S B3 OBDL S2 C*1 ZR3 B2 [tr01s] ZL4< ZR4< [tr10s] S [tr02s] S3> [tr20s] S B TI TM TRR TM TLL TM TO S LPR2 S WI W WO S B [cdi2] DX [cdo2] S2 ZL3 S2 B2 finish*2',
+    obst: [{ k: 'board_warn', at: 0.01085, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.08466, side: -18, rot: Math.PI }, { k: 'board_right', at: 0.20912, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.54631, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.70839, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.84298, side: 0, s: 2 }, { k: 'beamPost', at: 0.83864, side: 36 }, { k: 'beamPost', at: 0.83864, side: -36 }, { k: 'board_left', at: 0.91534, side: 20, rot: Math.PI }],
+    medals: { cristal: 46.1, or: 48.5, argent: 55.8, bronze: 65.5 },
   },
   {
     // Chapitre 5 · 4/6 — ROLLERCOASTER (0.10.4 : refait AUTOUR des nouvelles pièces). Ouverture : tire-bouchon dès la troisième case. Hélice montante de quatre grandes courbes
@@ -367,24 +379,26 @@ export const BUILTIN_TRACKS = [
     // Chapitre 6 · 4/6 — ROLLERCOASTER (0.10.5 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → tube, puis la CHEMINÉE (montée en L, mur de quatre niveaux, sommet).
     // Plongeon à 38°, grand looping, wall-rides gauche et droite, chicane longue, LOOPING MODULAIRE à gauche, route large sous un portique, TUBE qui tourne à droite puis à gauche,
     // route ÉTROITE et chicane longue pour finir.
+    // 0.11.3 (wall-ride) : le mur gauche devient une BOSSE : la route monte de 32 m le long du mur, puis redescend.
     id: 'cheminee', name: 'Cheminée du Volcan', decor: 'volcano', difficulty: 4, profil: 'rollercoaster',
-    appris: 'Départ : trois boosters → tube, puis la cheminée (mur de quatre niveaux). Au programme : plongeon, grand looping, wall-rides, looping modulaire, route large, tube qui tourne, route étroite.',
+    appris: 'Départ : trois boosters → tube, puis la cheminée (mur de quatre niveaux). Au programme : plongeon, grand looping, wall-ride en bosse (monter, redescendre), wall-ride, looping modulaire, route large, tube qui tourne, route étroite.',
     goal: { id: 'norespawn' },
     opts: { l: 2 }, pilot: { vCap: 66 },
-    script: 'start*2 B3 TI TM2 TO QU WA4 CR S C*1 [cdi2] DX [cdo2] B OB S2 B [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S NI N2 NO S ZL3 S B2 finish*2',
-    obst: [{ k: 'board_warn', at: 0.095, side: 18, rot: Math.PI }, { k: 'sign_down', at: 0.2, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.235, side: -18, rot: Math.PI }, { k: 'board_right', at: 0.405, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.555, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.694, side: 0, s: 2 }, { k: 'pillar', at: 0.689, side: 36 }, { k: 'pillar', at: 0.689, side: -36 }, { k: 'board_warn', at: 0.878, side: 16, rot: Math.PI }],
-    medals: { cristal: 44.2, or: 46.6, argent: 53.5, bronze: 62.9 },
+    script: 'start*2 B3 TI TM2 TO QU WA4 CR S C*1 [cdi2] DX [cdo2] B OB S2 B [tr01s] ZL4< ZR4< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S NI N2 NO S ZL3 S B2 finish*2',
+    obst: [{ k: 'board_warn', at: 0.08646, side: 18, rot: Math.PI }, { k: 'sign_down', at: 0.18164, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.21247, side: -18, rot: Math.PI }, { k: 'board_right', at: 0.46046, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.59718, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.72319, side: 0, s: 2 }, { k: 'pillar', at: 0.71783, side: 36 }, { k: 'pillar', at: 0.71783, side: -36 }, { k: 'board_warn', at: 0.88941, side: 16, rot: Math.PI }],
+    medals: { cristal: 46.9, or: 49.4, argent: 56.8, bronze: 66.6 },
   },
   {
     // Chapitre 3 · 4/6 — ROLLERCOASTER (0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : quatre boosters → TRIPLE looping. Wall-ride à gauche, chicane longue, wall-ride à
     // droite, grand double looping, LOOPING MODULAIRE à gauche (trois murs de chaque côté), TUBE qui tourne à droite puis à gauche, plongeon à 38°, route large sous un portique,
     // chicane longue. Panneaux danger avant chaque looping et avant le tube.
+    // 0.11.3 (wall-ride) : un bloc sur chaque mur : en haut à gauche, en bas à droite.
     id: 'vrille', name: 'Tourbillon Tropical', decor: 'isles', difficulty: 4, profil: 'rollercoaster',
-    appris: 'Départ : quatre boosters → triple looping. Au programme : wall-rides des deux côtés, chicane longue, double looping, looping modulaire, tube qui tourne, plongeon à 38°, route large sous un portique.',
+    appris: 'Départ : quatre boosters → triple looping. Au programme : wall-rides des deux côtés, un bloc sur chaque mur, chicane longue, double looping, looping modulaire, tube qui tourne, plongeon à 38°, route large sous un portique.',
     goal: { id: 'norespawn' },
     opts: { l: 8 }, pilot: { vCap: 66 },
     script: 'start*2 B4 OBT S2 C*1 B2 [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B OBDL S C*3 B2 LPL3 S TI TM TRR TM TLL TM TO S B2 [cdi2] DX [cdo2] S WI W WO S ZL3 S B2 finish*2',
-    obst: [{ k: 'board_warn', at: 0.03, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.295, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.42, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.555, side: -18, rot: Math.PI }, { k: 'board_warn', at: 0.692, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.91, side: 0, s: 2 }, { k: 'pillar', at: 0.905, side: 36 }, { k: 'pillar', at: 0.905, side: -36 }, { k: 'board_left', at: 0.926, side: 20, rot: Math.PI }],
+    obst: [{ k: 'board_warn', at: 0.03, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.295, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.42, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.555, side: -18, rot: Math.PI }, { k: 'board_warn', at: 0.692, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.91, side: 0, s: 2 }, { k: 'pillar', at: 0.905, side: 36 }, { k: 'pillar', at: 0.905, side: -36 }, { k: 'board_left', at: 0.926, side: 20, rot: Math.PI }, { k: 'block', at: 0.26161, wall: 'haut', s: 2 }, { k: 'block', at: 0.38183, wall: 'bas', s: 2 }],
     medals: { cristal: 52, or: 54.7, argent: 63, bronze: 73.9 },
   },
   {
@@ -428,12 +442,13 @@ export const BUILTIN_TRACKS = [
     // Chapitre 5 · 5/6 — SPEEDWAY (0.10.4 : refait AUTOUR des nouvelles pièces). Ouverture : très grand virage relevé pris sans booster, puis trois boosters. Virages relevés en
     // couronne, deux routes larges sous des portiques, chicane rapide, wall-ride à droite, grand S, TUBE qui tourne à droite puis à gauche. Aucun virage serré ; objectif : ne toucher
     // aucune bordure.
+    // 0.11.3 (wall-ride) : wall-ride en slalom : un bloc sur le haut du mur (passer dessous), puis un sur le bas (passer dessus).
     id: 'couronne', name: 'Couronne Boréale', decor: 'polar', difficulty: 5, profil: 'speedway',
-    appris: 'Départ : très grand virage relevé sans booster, puis trois boosters. Au programme : virages relevés en couronne, deux routes larges sous des portiques, chicane rapide, wall-ride, grand S, tube qui tourne.',
+    appris: 'Départ : très grand virage relevé sans booster, puis trois boosters. Au programme : virages relevés en couronne, deux routes larges sous des portiques, chicane rapide, wall-ride en slalom entre deux blocs, grand S, tube qui tourne.',
     goal: { id: 'nowall' },
     opts: { l: 6 }, pilot: { vCap: 70 },
     script: 'start*3 BRR B3 S BLL S2 WI W2 WO S B BRR C*2 S ZR4 S [tr02l] S4> [tr20l] BLL B S2 ZZR S BRR B S2 TI TM TRR TM TLL TM TO S BLL B2 WI W WO S B2 finish*2',
-    obst: [{ k: 'gantry', at: 0.2, side: 0, s: 2 }, { k: 'pillar', at: 0.194, side: 36 }, { k: 'pillar', at: 0.194, side: -36 }, { k: 'board_right', at: 0.31, side: -20, rot: Math.PI }, { k: 'board_right', at: 0.555, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.685, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.947, side: 0, s: 2 }, { k: 'pillar', at: 0.941, side: 36 }, { k: 'pillar', at: 0.941, side: -36 }],
+    obst: [{ k: 'gantry', at: 0.2, side: 0, s: 2 }, { k: 'pillar', at: 0.194, side: 36 }, { k: 'pillar', at: 0.194, side: -36 }, { k: 'board_right', at: 0.31, side: -20, rot: Math.PI }, { k: 'board_right', at: 0.555, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.685, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.947, side: 0, s: 2 }, { k: 'pillar', at: 0.941, side: 36 }, { k: 'pillar', at: 0.941, side: -36 }, { k: 'block', at: 0.41077, wall: 'haut', s: 2 }, { k: 'block', at: 0.43732, wall: 'bas', s: 2 }],
     medals: { cristal: 51.2, or: 53.9, argent: 62, bronze: 72.8 },
   },
   {
@@ -455,7 +470,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : poudreuse, booster. Au programme : vent latéral, épingles, route étroite entre des piliers, chicanes serrées, wall-ride, poudreuse, croisement traversé deux fois.',
     goal: { id: 'norespawn' },
     opts: { l: 8 },
-    script: 'start*2 S2.p B S2 R S.w150 L S B S2.p R S L B C*3 B NI N2 NO S3.w120 R S R S B ZR S ZL B S2 [tr01s] S2< [tr10s] S L B S.p R S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*1',
+    script: 'start*2 S2.p B S2 R S.w150 L S B S2.p R S L B C*3 B NI N2 NO S3.w120 R S R S B ZR S ZL B S2 [tr01s] S2< [tr10s] S L B S.p R S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*1',
     obst: [{ k: 'board_warn', at: 0.255, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.277, side: 14 }, { k: 'pillarThin', at: 0.277, side: -14 }, { k: 'pillarThin', at: 0.291, side: 14 }, { k: 'pillarThin', at: 0.291, side: -14 }, { k: 'board_right', at: 0.42, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.47, side: 16, rot: Math.PI }, { k: 'slab', at: 0.645, side: 24 }, { k: 'slab', at: 0.645, side: -24 }, { k: 'board_warn', at: 0.775, side: 16, rot: Math.PI }],
     medals: { cristal: 58.1, or: 61.1, argent: 70.3, bronze: 82.5 },
   },
@@ -463,24 +478,27 @@ export const BUILTIN_TRACKS = [
     // Chapitre 4 · 6/6 — ROLLERCOASTER (0.10.3 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → LIFT HILL (deux montées droites de quatre niveaux, accélérées).
     // Viaduc au sommet, plongeon, grand looping, wall-ride à gauche, chicane longue, wall-ride à droite, LOOPING MODULAIRE à gauche, avenue large sous un portique, TUBE qui tourne
     // à droite puis à gauche, chicane longue.
+    // 0.11.3 (wall-ride) : le mur gauche devient une BOSSE : la route monte de 32 m le long du mur, puis redescend (chicanes rapides posées sur le mur).
+    // 0.11.4 (familles) : bifurcation EN T au sommet : sauter le vide ou faire le tour par la branche.
     id: 'viaduc', name: 'Viaduc Vertical', decor: 'city', difficulty: 5, profil: 'rollercoaster',
-    appris: 'Départ : trois boosters → lift hill accéléré. Au programme : viaduc au sommet, plongeon, grand looping, wall-rides des deux côtés, looping modulaire, avenue large sous un portique, tube qui tourne.',
+    appris: 'Départ : trois boosters → lift hill accéléré. Au programme : viaduc au sommet, saut ou détour en T, plongeon, grand looping, wall-ride en bosse (monter, redescendre), wall-ride à droite, looping modulaire, avenue large sous un portique, tube qui tourne.',
     goal: { id: 'norespawn' },
     opts: { l: 2 }, pilot: { vCap: 66 },
-    script: 'start*2 B3 [crv4] UX.b UX.b [cro4] S5 C*1 S2 [cdi2] DX DX [cdo2] B OB S2 B [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B2 finish*2',
-    obst: [{ k: 'sign_down', at: 0.15, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.198, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.39, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.553, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.71, side: 0, s: 2 }, { k: 'pillar', at: 0.705, side: 36 }, { k: 'pillar', at: 0.705, side: -36 }, { k: 'board_warn', at: 0.73, side: -18, rot: Math.PI }, { k: 'board_left', at: 0.915, side: 20, rot: Math.PI }],
-    medals: { cristal: 47.5, or: 50, argent: 57.5, bronze: 67.5 },
+    script: 'start*2 B3 [crv4] UX.b UX.b [cro4] TSPLL U G1 D TALT S R S3 R S TMRG C*1 S2 [cdi2] DX DX [cdo2] B OB S2 B [tr01s] ZL4< ZR4< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B2 finish*2',
+    obst: [{ k: 'sign_down', at: 0.13072, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.17356, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.44978, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.59749, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.73929, side: 0, s: 2 }, { k: 'pillar', at: 0.73486, side: 36 }, { k: 'pillar', at: 0.73486, side: -36 }, { k: 'board_warn', at: 0.75702, side: -18, rot: Math.PI }, { k: 'board_left', at: 0.92393, side: 20, rot: Math.PI }],
+    medals: { cristal: 50.2, or: 52.8, argent: 60.7, bronze: 71.3 },
   },
   {
     // Chapitre 3 · 6/6 — SPEEDWAY (0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : longue pente douce vers la mer (six demi-niveaux). Très grands virages relevés, route
     // large sous un portique, chicane rapide, wall-ride à droite, descente, CROISEMENT traversé deux fois (boucle de trois virages géants), grand S ; deux pyramides de roche à
     // l'arrivée. Aucun virage serré.
+    // 0.11.4 (familles) : la boucle du croisement : virage géant relevé, puis montée et descente d'un niveau.
     id: 'archipel', name: 'Grand Archipel', decor: 'isles', difficulty: 5, profil: 'speedway',
-    appris: 'Départ : longue pente douce vers la mer. Au programme : très grands virages relevés, route large sous un portique, chicane rapide, wall-ride, croisement traversé deux fois, grand S.',
+    appris: 'Départ : longue pente douce vers la mer. Au programme : très grands virages relevés, route large sous un portique, chicane rapide, wall-ride, croisement traversé deux fois (boucle relevée puis en pente), grand S.',
     goal: { id: 'under', t: 61.5 },
     opts: { l: 8 }, pilot: { vCap: 70 },
-    script: 'start*3 GD6 BRR S B BLL S2 C*2 WI W2 WO S ZR4 S B [tr02l] S4> [tr20l] BRR S2 [cdi1] [dn2] [cdo1] B BLL S2 JX S4 XR XR XR S4 JX S B BRR S2 ZZL S B2 finish*2',
-    obst: [{ k: 'gantry', at: 0.249, side: 0, s: 2 }, { k: 'pillarBase', at: 0.244, side: 36 }, { k: 'pillarBase', at: 0.244, side: -36 }, { k: 'board_right', at: 0.27, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.635, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.685, side: -24, rot: Math.PI }, { k: 'board_left', at: 0.92, side: 24, rot: Math.PI }, { k: 'pyramidS', at: 0.965, side: 28 }, { k: 'pyramidS', at: 0.965, side: -28 }],
+    script: 'start*3 GD6 BRR S B BLL S2 C*2 WI W2 WO S ZR4 S B [tr02l] S4> [tr20l] BRR S2 [cdi1] [dn2] [cdo1] B BLL S2 JX S4 XBR XUR1 XDR1 S2 C*3 S JX S B BRR S2 ZZL S B2 finish*2',
+    obst: [{ k: 'gantry', at: 0.23061, side: 0, s: 2 }, { k: 'pillarBase', at: 0.22507, side: 36 }, { k: 'pillarBase', at: 0.22507, side: -36 }, { k: 'board_right', at: 0.25, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.58657, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.63227, side: -24, rot: Math.PI }, { k: 'board_left', at: 0.9259, side: 24, rot: Math.PI }, { k: 'pyramidS', at: 0.96745, side: 28 }, { k: 'pyramidS', at: 0.96745, side: -28 }],
     medals: { cristal: 56.9, or: 59.9, argent: 68.9, bronze: 80.9 },
   },
   {
@@ -514,7 +532,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : sur une plateforme de la station. Au programme : épingles, coursive étroite entre des piliers, lacets en S, wall-ride, chicanes serrées, croisement traversé deux fois.',
     goal: { id: 'norespawn' },
     opts: { l: 6 },
-    script: 'start*2 P2 B S R B S L S R B S2 C*3 B NI N2 NO S L R L R B S2 [tr01s] S2< [tr10s] S3 L B ZR S ZL B S R B JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3',
+    script: 'start*2 P2 B S R B S L S R B S2 C*3 B NI N2 NO S L R L R B S2 [tr01s] S2< [tr10s] S3 L B ZR S ZL B S R B JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3',
     obst: [{ k: 'board_warn', at: 0.232, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.254, side: 14 }, { k: 'pillarThin', at: 0.254, side: -14 }, { k: 'pillarThin', at: 0.269, side: 14 }, { k: 'pillarThin', at: 0.269, side: -14 }, { k: 'block', at: 0.53, side: 24 }, { k: 'block', at: 0.53, side: -24 }, { k: 'board_right', at: 0.605, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.66, side: 16, rot: Math.PI }, { k: 'board_warn', at: 0.756, side: 16, rot: Math.PI }],
     medals: { cristal: 51.9, or: 54.6, argent: 62.8, bronze: 73.7 },
   },
@@ -539,7 +557,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : booster puis un courant. Au programme : lacets en S, passage étroit entre des coraux, pont de verre, chicanes serrées, wall-ride, croisement traversé deux fois.',
     goal: { id: 'norespawn' },
     opts: { l: 6 },
-    script: 'start*1 B S2.t137 S2 R S L S R S L B C*3 B NI N2 NO S R S2.v S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3',
+    script: 'start*1 B S2.t137 S2 R S L S R S L B C*3 B NI N2 NO S R S2.v S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3',
     obst: [{ k: 'board_warn', at: 0.235, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.257, side: 14 }, { k: 'pillarThin', at: 0.257, side: -14 }, { k: 'pillarThin', at: 0.272, side: 14 }, { k: 'pillarThin', at: 0.272, side: -14 }, { k: 'board_right', at: 0.4, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.455, side: 16, rot: Math.PI }, { k: 'wedge', at: 0.52, side: 24 }, { k: 'wedge', at: 0.52, side: -24, rot: Math.PI }, { k: 'board_warn', at: 0.76, side: 16, rot: Math.PI }],
     medals: { cristal: 51.9, or: 54.7, argent: 62.9, bronze: 73.8 },
   },
@@ -547,12 +565,13 @@ export const BUILTIN_TRACKS = [
     // Chapitre 8 · 3/6 — ROLLERCOASTER (0.10.7 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → wall-ride à droite sur la coque. Morceaux de l'épave (mur en L,
     // poutre), double looping, wall-ride à gauche, chicane longue, LOOPING MODULAIRE (deux murs de chaque côté), route large sous un portique, chicane longue, TUBE qui tourne à
     // droite puis à gauche, passage ÉTROIT et plongeon à 38°.
+    // 0.11.3 (wall-ride) : un bloc sur chaque mur : en bas à droite, en haut à gauche.
     id: 'epave', name: 'Épave Engloutie', decor: 'reef', difficulty: 3, profil: 'rollercoaster',
-    appris: 'Départ : trois boosters → wall-ride sur la coque. Au programme : double looping, wall-rides des deux côtés, looping modulaire, route large, tube qui tourne, passage étroit, plongeon.',
+    appris: 'Départ : trois boosters → wall-ride sur la coque. Au programme : double looping, wall-rides des deux côtés, un bloc sur chaque mur, looping modulaire, route large, tube qui tourne, passage étroit, plongeon.',
     goal: { id: 'norespawn' },
     opts: { l: 12 }, pilot: { vCap: 66 },
-    script: 'start*2 B3 [tr02s] S3> [tr20s] S C*1 B2 OD S2 B [tr01s] S3< [tr10s] S2 ZR3 S2 LPR2 S WI W WO S ZL3 S2 TI TM TRR TM TLL TM TO S NI N2 NO S B [cdi2] DX [cdo2] S3 B2 finish*2',
-    obst: [{ k: 'wallSL', at: 0.115, side: 28 }, { k: 'beamL', at: 0.115, side: -28 }, { k: 'board_warn', at: 0.15, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.395, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.45, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.599, side: 0, s: 2 }, { k: 'beamPost', at: 0.594, side: 36 }, { k: 'beamPost', at: 0.594, side: -36 }, { k: 'board_warn', at: 0.678, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.852, side: 16, rot: Math.PI }],
+    script: 'start*2 B3 [tr02s] S3> [tr20s] S C*1 B2 OD S2 B [tr01s] S3< [tr10s] S2 ZR3 S2 LPR2 S WI W WO S ZL3 S2 TI TM TRR TM TLL TM2 TO S NI N2 NO S B [cdi2] DX [cdo2] S3 B2 finish*2',
+    obst: [{ k: 'wallSL', at: 0.115, side: 28 }, { k: 'beamL', at: 0.115, side: -28 }, { k: 'board_warn', at: 0.15, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.395, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.45, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.599, side: 0, s: 2 }, { k: 'beamPost', at: 0.594, side: 36 }, { k: 'beamPost', at: 0.594, side: -36 }, { k: 'board_warn', at: 0.678, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.852, side: 16, rot: Math.PI }, { k: 'block', at: 0.0796, wall: 'bas', s: 2 }, { k: 'block', at: 0.33617, wall: 'haut', s: 2 }],
     medals: { cristal: 43.5, or: 45.8, argent: 52.6, bronze: 61.8 },
   },
   {
@@ -575,20 +594,21 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : plongeon dans les abysses puis grand looping. Au programme : wall-rides des deux côtés, chicanes longues, remontée en hélice, looping modulaire, route large, tube qui tourne.',
     goal: { id: 'norespawn' },
     opts: { l: 22 }, pilot: { vCap: 66 },
-    script: 'start*2 B [cdi2] DX DX [cdo2] OB S2 C*1 B2 [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 S LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B finish*2',
+    script: 'start*2 B [cdi2] DX DX [cdo2] OB S2 C*1 B2 [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B finish*2',
     obst: [{ k: 'sign_down', at: 0.012, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.06, side: -18, rot: Math.PI }, { k: 'block', at: 0.175, side: 26 }, { k: 'block', at: 0.175, side: -26 }, { k: 'board_right', at: 0.29, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.52, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.691, side: 0, s: 2 }, { k: 'pillar', at: 0.686, side: 36 }, { k: 'pillar', at: 0.686, side: -36 }, { k: 'board_warn', at: 0.717, side: -18, rot: Math.PI }, { k: 'board_left', at: 0.915, side: 20, rot: Math.PI }],
-    medals: { cristal: 47.6, or: 50.1, argent: 57.6, bronze: 67.6 },
+    medals: { cristal: 43.3, or: 45.6, argent: 52.4, bronze: 61.5 },
   },
   {
     // Chapitre 8 · 6/6 — SPEEDWAY (0.10.7 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters et un pont de VERRE entre deux pyramides de corail. Très grands virages
     // relevés, route large sous un portique, chicane rapide, wall-ride à droite, courant, grand S, CROISEMENT traversé deux fois (boucle de trois virages géants). Aucun virage
     // serré ; objectif : ne toucher aucune bordure.
+    // 0.11.4 (familles) : la boucle du croisement DESCEND d'un niveau puis remonte.
     id: 'barriere', name: 'Grande Barrière', decor: 'reef', difficulty: 5, profil: 'speedway',
-    appris: 'Départ : deux boosters et un pont de verre. Au programme : très grands virages relevés, route large sous un portique, chicane rapide, wall-ride, grand S, croisement traversé deux fois.',
+    appris: 'Départ : deux boosters et un pont de verre. Au programme : très grands virages relevés, route large sous un portique, chicane rapide, wall-ride, grand S, croisement traversé deux fois, boucle qui plonge et remonte.',
     goal: { id: 'nowall' },
     opts: { l: 6 }, pilot: { vCap: 70 },
-    script: 'start*3 B2 S3.v BRR S B BLL S2 WI W2 WO S C*2 B ZR4 S [tr02l] S4> [tr20l] BRR S2.t137 BLL B S ZZR S BRR S JX S4 XR XR XR S4 JX S B2 finish*2',
-    obst: [{ k: 'pyramidS', at: 0.03, side: 28 }, { k: 'pyramidS', at: 0.03, side: -28 }, { k: 'gantry', at: 0.246, side: 0, s: 2 }, { k: 'pillarBase', at: 0.24, side: 36 }, { k: 'pillarBase', at: 0.24, side: -36 }, { k: 'board_right', at: 0.29, side: -20, rot: Math.PI }, { k: 'board_right', at: 0.63, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.755, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.805, side: -24, rot: Math.PI }],
+    script: 'start*3 B2 S3.v BRR S B BLL S2 WI W2 WO S C*2 B ZR4 S [tr02l] S4> [tr20l] BRR S2.t137 BLL B S ZZR S BRR S JX S4 XDR1 XR XUR1 S2 C*3 S JX S B2 finish*2',
+    obst: [{ k: 'pyramidS', at: 0.0296, side: 28 }, { k: 'pyramidS', at: 0.0296, side: -28 }, { k: 'gantry', at: 0.2456, side: 0, s: 2 }, { k: 'pillarBase', at: 0.2408, side: 36 }, { k: 'pillarBase', at: 0.2408, side: -36 }, { k: 'board_right', at: 0.2904, side: -20, rot: Math.PI }, { k: 'board_right', at: 0.6296, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.7544, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.8056, side: -24, rot: Math.PI }],
     medals: { cristal: 52.3, or: 55.1, argent: 63.4, bronze: 74.4 },
   },
   // ---- Usine mécanique : obstacles, tapis, moteur coupé, ascenseurs ----
@@ -612,7 +632,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : bifurcation, voie de droite accélérée. Au programme : lacets en S, passage étroit entre des piliers, ralentisseurs, chicanes serrées, bumper, wall-ride, croisement traversé deux fois, piques.',
     goal: { id: 'norespawn' },
     opts: { l: 6 },
-    script: 'start*1 Y2.b B S R S L S R S L B C*3 B NI N2 NO S R S2.x S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3',
+    script: 'start*1 Y2.b B S R S L S R S L B C*3 B NI N2 NO S R S2.x S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3',
     obst: [{ k: 'bumper', at: 0.543, side: -7.5, s: 0.8 }, { k: 'spikes', at: 0.958, side: 7.5, s: 0.7 }, { k: 'board_warn', at: 0.265, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.287, side: 14 }, { k: 'pillarThin', at: 0.287, side: -14 }, { k: 'pillarThin', at: 0.301, side: 14 }, { k: 'pillarThin', at: 0.301, side: -14 }, { k: 'board_right', at: 0.425, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.477, side: 16, rot: Math.PI }, { k: 'block', at: 0.543, side: 24 }, { k: 'block', at: 0.543, side: -24 }, { k: 'board_warn', at: 0.768, side: 16, rot: Math.PI }],
     medals: { cristal: 58.6, or: 61.7, argent: 70.9, bronze: 83.3 },
   },
@@ -620,12 +640,13 @@ export const BUILTIN_TRACKS = [
     // Chapitre 9 · 3/6 — ROLLERCOASTER (0.10.8 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters et une hélice montante de quatre courbes (les engrenages). Chicane
     // longue, TRIPLE looping à gauche, poutres en croix, wall-rides gauche puis droite, route large sous un portique, chicane longue, PIQUES ESCAMOTABLES, TUBE qui tourne à gauche
     // puis à droite, plongeon à 38°.
+    // 0.11.3 (wall-ride) : un bloc sur chaque mur : en bas à gauche, en haut à droite.
     id: 'engrenages', name: 'Engrenages', decor: 'factory', difficulty: 3, profil: 'rollercoaster',
-    appris: 'Départ : deux boosters et une hélice montante. Au programme : chicane longue, triple looping, wall-rides des deux côtés, route large sous un portique, piques escamotables, tube qui tourne, plongeon.',
+    appris: 'Départ : deux boosters et une hélice montante. Au programme : chicane longue, triple looping, wall-rides des deux côtés, un bloc sur chaque mur, route large sous un portique, piques escamotables, tube qui tourne, plongeon.',
     goal: { id: 'norespawn' },
     opts: { l: 10 }, pilot: { vCap: 66 },
     script: 'start*2 B2 CBR2 CBR2 CBR2 CBR2 S C*1 ZR3 B2 OTL S2 B [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S2 WI W WO S ZL3 S2 TI TM TLL TM TRR TM TO S B [cdi2] DX [cdo2] S B2 finish*2',
-    obst: [{ k: 'spikesPop', at: 0.605, side: 6.5, s: 0.75 }, { k: 'board_right', at: 0.128, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.188, side: 18, rot: Math.PI }, { k: 'beamX', at: 0.375, side: 28 }, { k: 'beamX', at: 0.375, side: -28 }, { k: 'gantry', at: 0.631, side: 0, s: 2 }, { k: 'beamPost', at: 0.626, side: 36 }, { k: 'beamPost', at: 0.626, side: -36 }, { k: 'board_left', at: 0.657, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.72, side: 18, rot: Math.PI }],
+    obst: [{ k: 'spikesPop', at: 0.605, side: 6.5, s: 0.75 }, { k: 'board_right', at: 0.128, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.188, side: 18, rot: Math.PI }, { k: 'beamX', at: 0.375, side: 28 }, { k: 'beamX', at: 0.375, side: -28 }, { k: 'gantry', at: 0.631, side: 0, s: 2 }, { k: 'beamPost', at: 0.626, side: 36 }, { k: 'beamPost', at: 0.626, side: -36 }, { k: 'board_left', at: 0.657, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.72, side: 18, rot: Math.PI }, { k: 'block', at: 0.45588, wall: 'bas', s: 2 }, { k: 'block', at: 0.55623, wall: 'haut', s: 2 }],
     medals: { cristal: 45.8, or: 48.2, argent: 55.4, bronze: 65.1 },
   },
   {
@@ -660,7 +681,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : deux boosters, ralentisseurs, épingles en S. Au programme : passage étroit entre des piliers, moteur coupé, marteau, wall-ride, chicanes serrées, piques, croisement traversé deux fois, bumper.',
     goal: { id: 'norespawn' },
     opts: { l: 8 },
-    script: 'start*2 B2 S2.x R L R L B S2 C*3 B NI N2 NO S R S L B S2.c S2 [tr01s] S2< [tr10s] S R B ZR S ZL B S L B S JX R S R R S JX R S R B [cdi1] [dn2] [cdo1] S B finish*1',
+    script: 'start*2 B2 S2.x R L R L B S2 C*3 B NI N2 NO S R S L B S2.c S2 [tr01s] S2< [tr10s] S R B ZR S ZL B S L B S JX R C*3 R R S JX R S R B [cdi1] [dn2] [cdo1] S B finish*1',
     obst: [{ k: 'hammer', at: 0.385, side: 0, s: 1 }, { k: 'spikes', at: 0.673, side: 7.5, s: 0.7 }, { k: 'bumper', at: 0.953, side: -7.5, s: 0.8 }, { k: 'block', at: 0.155, side: 24 }, { k: 'block', at: 0.155, side: -24 }, { k: 'board_warn', at: 0.205, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.227, side: 14 }, { k: 'pillarThin', at: 0.227, side: -14 }, { k: 'pillarThin', at: 0.242, side: 14 }, { k: 'pillarThin', at: 0.242, side: -14 }, { k: 'board_right', at: 0.558, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.612, side: 16, rot: Math.PI }, { k: 'board_warn', at: 0.73, side: 16, rot: Math.PI }],
     medals: { cristal: 52.3, or: 55.1, argent: 63.3, bronze: 74.3 },
   },
@@ -696,7 +717,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : deux boosters et une rafale. Au programme : lacets dans le vent, passage étroit entre des piliers, chicanes serrées, wall-ride, murets coupe-vent, croisement traversé deux fois.',
     goal: { id: 'norespawn' },
     opts: { l: 6 },
-    script: 'start*1 B2 S2.w180 S R S L S R B S2 C*3 B S.w150 S2 R S L B NI N2 NO S2.w120 S R S L B ZR S ZL B S [tr01s] S2< [tr10s] S3 R B S2 L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3',
+    script: 'start*1 B2 S2.w180 S R S L S R B S2 C*3 B S.w150 S2 R S L B NI N2 NO S2.w120 S R S L B ZR S ZL B S [tr01s] S2< [tr10s] S3 R B S2 L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3',
     obst: [{ k: 'board_warn', at: 0.296, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.316, side: 14 }, { k: 'pillarThin', at: 0.316, side: -14 }, { k: 'pillarThin', at: 0.33, side: 14 }, { k: 'pillarThin', at: 0.33, side: -14 }, { k: 'board_right', at: 0.44, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.49, side: 16, rot: Math.PI }, { k: 'wallSLow', at: 0.673, side: 24, rot: Math.PI / 2 }, { k: 'wallSLow', at: 0.673, side: -24, rot: Math.PI / 2 }, { k: 'board_warn', at: 0.784, side: 16, rot: Math.PI }],
     medals: { cristal: 59, or: 62.1, argent: 71.4, bronze: 83.8 },
   },
@@ -704,13 +725,14 @@ export const BUILTIN_TRACKS = [
     // Chapitre 10 · 4/6 — ROLLERCOASTER (0.10.9 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters, gravité réduite (40 %) et un grand looping. Chicane longue,
     // wall-rides gauche et droite, LOOPING MODULAIRE à gauche, route large sous un portique, chicane longue, TUBE qui tourne à gauche puis à droite, passage ÉTROIT, plongeon à 38°
     // et retour à la gravité normale.
+    // 0.11.3 (wall-ride) : le mur droit devient une BOSSE : la route monte de 32 m le long du mur, puis redescend.
     id: 'montgolfieres', name: 'Montgolfières', decor: 'sky', difficulty: 4, profil: 'rollercoaster',
-    appris: 'Départ : trois boosters, gravité réduite et grand looping. Au programme : chicanes longues, wall-rides des deux côtés, looping modulaire, route large, tube qui tourne, passage étroit, plongeon.',
+    appris: 'Départ : trois boosters, gravité réduite et grand looping. Au programme : chicanes longues, wall-ride en bosse à droite (monter, redescendre), wall-ride à gauche, looping modulaire, route large, tube qui tourne, passage étroit, plongeon.',
     goal: { id: 'norespawn' },
     opts: { l: 10 }, pilot: { vCap: 58 },
-    script: 'start*2 B3 S.g40 OB S2 C*1 ZR3 B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B LPL1 S WI W WO S ZL3 S TI TM TLL TM TRR TM TO S NI N2 NO S B [cdi2] DX [cdo2] S.g100 S2 B2 finish*2',
-    obst: [{ k: 'board_warn', at: 0.045, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.15, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.425, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.563, side: 0, s: 2 }, { k: 'pillar', at: 0.558, side: 36 }, { k: 'pillar', at: 0.558, side: -36 }, { k: 'board_left', at: 0.59, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.64, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.836, side: 16, rot: Math.PI }],
-    medals: { cristal: 44.1, or: 46.4, argent: 53.4, bronze: 62.6 },
+    script: 'start*2 B3 S.g40 OB S2 C*1 ZR3 B2 [tr01s] S3< [tr10s] S [tr02s] ZR4> ZL4> [tr20s] S B LPL1 S WI W WO S ZL3 S TI TM TLL TM TRR TM TO S NI N2 NO S B [cdi2] DX [cdo2] S.g100 S2 B2 finish*2',
+    obst: [{ k: 'board_warn', at: 0.03984, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.13359, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.48828, side: 18, rot: Math.PI }, { k: 'gantry', at: 0.61016, side: 0, s: 2 }, { k: 'pillar', at: 0.60703, side: 36 }, { k: 'pillar', at: 0.60703, side: -36 }, { k: 'board_left', at: 0.63516, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.67891, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.85391, side: 16, rot: Math.PI }],
+    medals: { cristal: 46.9, or: 49.4, argent: 56.8, bronze: 66.7 },
   },
   {
     // Chapitre 10 · 5/6 — SPEEDWAY SANS BORDURES (0.10.9 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters, vent latéral et un très grand virage relevé, sans bordures.
@@ -740,12 +762,13 @@ export const BUILTIN_TRACKS = [
   {
     // Chapitre 11 · 1/6 — SPRINT (0.10.10 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters puis le VOLANT INVERSÉ (trois cases) entre deux cristaux. Dos d'âne,
     // chicanes rapides, très grand virage plat, route large sous un portique, CROISEMENT traversé deux fois (boucle de trois virages géants), descente, grand S. Aucun virage serré.
+    // 0.11.4 (familles) : la boucle du croisement monte d'un niveau dans un virage géant relevé, puis redescend.
     id: 'galerie', name: 'Galerie de Cristal', decor: 'caves', difficulty: 2, profil: 'sprint',
-    appris: 'Départ : deux boosters puis volant inversé entre deux cristaux. Au programme : chicanes rapides, très grand virage plat, route large sous un portique, croisement traversé deux fois, grand S.',
+    appris: 'Départ : deux boosters puis volant inversé entre deux cristaux. Au programme : chicanes rapides, très grand virage plat, route large sous un portique, croisement traversé deux fois, boucle en pente relevée, grand S.',
     goal: { id: 'under', t: 49.5 },
     opts: { l: 6 }, pilot: { vCap: 66 },
-    script: 'start*2 B2 S3.y S2 [crs1] S2 [cds1] B ZR4 S ZL4 S HR S2 B C*3 WI W2 WO S2 JX S4 XR XR XR S4 JX S B [cdi1] [dn2] [cdo1] ZZR S B2 finish*2',
-    obst: [{ k: 'pyramidS', at: 0.095, side: 28 }, { k: 'pyramidS', at: 0.095, side: -28 }, { k: 'board_right', at: 0.18, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.27, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.456, side: 0, s: 2 }, { k: 'pillar', at: 0.45, side: 36 }, { k: 'pillar', at: 0.45, side: -36 }, { k: 'board_warn', at: 0.51, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.586, side: -24, rot: Math.PI }],
+    script: 'start*2 B2 S3.y S2 [crs1] S2 [cds1] B ZR4 S ZL4 S HR S2 B C*3 WI W2 WO S2 JX S4 XUR1 XBR XDR1 S2 C*3 S JX S B [cdi1] [dn2] [cdo1] ZZR S B2 finish*2',
+    obst: [{ k: 'pyramidS', at: 0.08473, side: 28 }, { k: 'pyramidS', at: 0.08473, side: -28 }, { k: 'board_right', at: 0.16004, side: -20, rot: Math.PI }, { k: 'board_left', at: 0.23954, side: 20, rot: Math.PI }, { k: 'gantry', at: 0.40272, side: 0, s: 2 }, { k: 'pillar', at: 0.39854, side: 36 }, { k: 'pillar', at: 0.39854, side: -36 }, { k: 'board_warn', at: 0.45084, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.51778, side: -24, rot: Math.PI }],
     medals: { cristal: 45.8, or: 48.2, argent: 55.4, bronze: 65 },
   },
   {
@@ -756,7 +779,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : vrille avec inversion de gravité, on roule au plafond. Au programme : lacets au plafond, retour au sol, passage étroit entre des stalactites, chicanes serrées, wall-ride, croisement traversé deux fois.',
     goal: { id: 'norespawn' },
     opts: { l: 8 },
-    script: 'start*2 B TW.f S2^ B^ R^ S^ L^ S2^ R^ S^ L^ C^ B^ S2^ TWB.f S2 B NI N2 NO R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S3 R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*1',
+    script: 'start*2 B TW.f S2^ B^ R^ S^ L^ S2^ R^ S^ L^ C^ B^ S2^ TWB.f S2 B NI N2 NO R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S3 R B S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*1',
     obst: [{ k: 'board_warn', at: 0.34, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.367, side: 14 }, { k: 'pillarThin', at: 0.367, side: -14 }, { k: 'pillarThin', at: 0.38, side: 14 }, { k: 'pillarThin', at: 0.38, side: -14 }, { k: 'board_right', at: 0.452, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.5, side: 16, rot: Math.PI }, { k: 'wedge', at: 0.56, side: 24 }, { k: 'wedge', at: 0.56, side: -24, rot: Math.PI }, { k: 'board_warn', at: 0.79, side: 16, rot: Math.PI }],
     medals: { cristal: 56.4, or: 59.4, argent: 68.3, bronze: 80.1 },
   },
@@ -788,13 +811,14 @@ export const BUILTIN_TRACKS = [
     // Chapitre 11 · 5/6 — ROLLERCOASTER (0.10.10 : refait AUTOUR des nouvelles pièces). Ouverture : booster, descente, puis une VRILLE vers le plafond (pentes au plafond, booster),
     // retour au sol par une seconde vrille, double looping à gauche, deux cales de cristal, chicane longue, wall-rides gauche et droite, route large sous un portique, LOOPING
     // MODULAIRE, TUBE qui tourne à gauche puis à droite.
+    // 0.11.3 (wall-ride) : le mur gauche devient une BOSSE : la route monte de 32 m le long du mur, puis redescend.
     id: 'vrilles', name: 'Vrilles Souterraines', decor: 'caves', difficulty: 5, profil: 'rollercoaster',
-    appris: 'Départ : booster, descente, vrille vers le plafond. Au programme : pentes au plafond, retour au sol, double looping, chicanes longues, wall-rides des deux côtés, route large, looping modulaire, tube qui tourne.',
+    appris: 'Départ : booster, descente, vrille vers le plafond. Au programme : pentes au plafond, retour au sol, double looping, chicanes longues, wall-ride en bosse (monter, redescendre), wall-ride à droite, route large, looping modulaire, tube qui tourne.',
     goal: { id: 'norespawn' },
     opts: { l: 10 }, pilot: { vCap: 66 },
-    script: 'start*2 B [cdi1] [dn2] [cdo1] TW.f S2^ D^ S2^ B^ S2^ U^ S^ TWB.f S2 B ODL S2 C*1 ZR3 B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S2 WI W WO S ZL3 S2 LPR2 S2 TI TM TLL TM TRR TM TO S B2 finish*2',
-    obst: [{ k: 'wedge', at: 0.333, side: 26 }, { k: 'wedge', at: 0.333, side: -26, rot: Math.PI }, { k: 'board_right', at: 0.343, side: -20, rot: Math.PI }, { k: 'gantry', at: 0.597, side: 0, s: 2 }, { k: 'pillar', at: 0.592, side: 36 }, { k: 'pillar', at: 0.592, side: -36 }, { k: 'board_left', at: 0.618, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.67, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.8, side: -18, rot: Math.PI }],
-    medals: { cristal: 45, or: 47.3, argent: 54.4, bronze: 63.9 },
+    script: 'start*2 B [cdi1] [dn2] [cdo1] TW.f S2^ D^ S2^ B^ S2^ U^ S^ TWB.f S2 B ODL S2 C*1 ZR3 B2 [tr01s] ZL4< ZR4< [tr10s] S [tr02s] S3> [tr20s] S2 WI W WO S ZL3 S2 LPR2 S2 TI TM TLL TM TRR TM TO S B2 finish*2',
+    obst: [{ k: 'wedge', at: 0.30147, side: 26 }, { k: 'wedge', at: 0.30147, side: -26, rot: Math.PI }, { k: 'board_right', at: 0.31083, side: -20, rot: Math.PI }, { k: 'gantry', at: 0.63436, side: 0, s: 2 }, { k: 'pillar', at: 0.63035, side: 36 }, { k: 'pillar', at: 0.63035, side: -36 }, { k: 'board_left', at: 0.65441, side: 20, rot: Math.PI }, { k: 'board_warn', at: 0.7012, side: 18, rot: Math.PI }, { k: 'board_warn', at: 0.81885, side: -18, rot: Math.PI }],
+    medals: { cristal: 47.6, or: 50.2, argent: 57.7, bronze: 67.7 },
   },
   {
     // Chapitre 11 · 6/6 — TECHNIQUE (0.10.10 : refait AUTOUR des nouvelles pièces). Ouverture : booster et un VERRE très glissant (500 %), épingles en S. Passage ÉTROIT (12 m) entre
@@ -803,7 +827,7 @@ export const BUILTIN_TRACKS = [
     appris: 'Départ : booster et verre très glissant, épingles en S. Au programme : passage étroit entre des stalactites, chicanes serrées, wall-ride, pyramides de cristal, croisement traversé deux fois.',
     goal: { id: 'norespawn' },
     opts: { l: 6 },
-    script: 'start*2 B S2.v500 S R L R L B S2 C*3 B NI N2 NO S R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S3 R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3',
+    script: 'start*2 B S2.v500 S R L R L B S2 C*3 B NI N2 NO S R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S3 R B S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3',
     obst: [{ k: 'board_warn', at: 0.212, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.234, side: 14 }, { k: 'pillarThin', at: 0.234, side: -14 }, { k: 'pillarThin', at: 0.249, side: 14 }, { k: 'pillarThin', at: 0.249, side: -14 }, { k: 'board_right', at: 0.35, side: -16, rot: Math.PI }, { k: 'board_left', at: 0.408, side: 16, rot: Math.PI }, { k: 'pyramidS', at: 0.635, side: 24 }, { k: 'pyramidS', at: 0.635, side: -24 }, { k: 'board_warn', at: 0.75, side: 16, rot: Math.PI }],
     medals: { cristal: 49.5, or: 52.1, argent: 59.9, bronze: 70.3 },
   },
@@ -827,13 +851,14 @@ export const BUILTIN_TRACKS = [
     // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
     // 0.10.11 : la leçon d'abord (tracé et obstacles d'origine, au même point du chemin, donc au même instant), puis une vitrine des nouvelles pièces : chicanes longues,
     // CROISEMENT traversé deux fois (boucle de trois virages géants), passage ÉTROIT entre des piliers fins.
+    // 0.11.4 (familles) : le premier virage géant de la boucle est relevé.
     id: 'cadence', name: 'En Cadence', decor: 'atelier', difficulty: 1, profil: 'atelier',
     meca: ['spikesPop'],
-    appris: 'Départ : trois boosters → trois cases. Au programme : piques escamotables en travers de la route : on passe quand elles sont rentrées. Puis chicanes longues, croisement traversé deux fois, passage étroit.',
+    appris: 'Départ : trois boosters → trois cases. Au programme : piques escamotables en travers de la route : on passe quand elles sont rentrées. Puis chicanes longues, croisement traversé deux fois (un virage géant relevé), passage étroit.',
     goal: { id: 'norespawn' },
     opts: { l: 6 }, pilot: { vCap: 60 },
-    script: 'start*2 B3 S3 [crs1] S B HR S2 C S2 HL S B [cdi1] [dn2] [cdo1] B2 ZR3 S ZL3 S JX S4 XR XR XR S4 JX S NI N NO S B finish*2',
-    obst: [{ k: 'spikesPop', at: 0.04178, side: 0, s: 1.1, ph: 0.583 }, { k: 'spikesPop', at: 0.0876, side: 0, s: 1.1, ph: 0.167 }, { k: 'board_right', at: 0.385, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.545, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.632, side: -24, rot: Math.PI }, { k: 'slab', at: 0.81, side: 26 }, { k: 'slab', at: 0.81, side: -26 }, { k: 'board_warn', at: 0.895, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.919, side: 14 }, { k: 'pillarThin', at: 0.919, side: -14 }],
+    script: 'start*2 B3 S3 [crs1] S B HR S2 C S2 HL S B [cdi1] [dn2] [cdo1] B2 ZR3 S ZL3 S JX S4 XBR XR XR S2 C*3 S JX S NI N NO S B finish*2',
+    obst: [{ k: 'spikesPop', at: 0.03638, side: 0, s: 1.1, ph: 0.583 }, { k: 'spikesPop', at: 0.07629, side: 0, s: 1.1, ph: 0.167 }, { k: 'board_right', at: 0.33451, side: -20, rot: Math.PI }, { k: 'board_warn', at: 0.47535, side: 18, rot: Math.PI }, { k: 'board_right', at: 0.55047, side: -24, rot: Math.PI }, { k: 'slab', at: 0.83451, side: 26 }, { k: 'slab', at: 0.83451, side: -26 }, { k: 'board_warn', at: 0.90962, side: 16, rot: Math.PI }, { k: 'pillarThin', at: 0.9284, side: 14 }, { k: 'pillarThin', at: 0.9284, side: -14 }],
     medals: { cristal: 41.5, or: 43.7, argent: 50.3, bronze: 59 },
   },
   {
@@ -900,6 +925,23 @@ export const BUILTIN_TRACKS = [
 // départage les circuits de même difficulté).
 BUILTIN_TRACKS.sort((a, b) => CAREER_ORDER.indexOf(a.decor) - CAREER_ORDER.indexOf(b.decor) || a.difficulty - b.difficulty);
 
+// 0.11.3 (wall-ride) : solide posé SUR un mur (obst { k, at, wall: 'bas' | 'haut', s }) : collé à la paroi, sur le bas du mur (il faut passer AU-DESSUS) ou sur le haut (il faut
+// passer DESSOUS), et la ligne du pilote automatique monte ou descend de 6 m sur les 110 m qui précèdent et le long du bloc (t.path.wallLine, hauteur visée en m, + = vers le
+// haut du mur). Le bloc fait 8·s m de côté et s'arrête au milieu du mur : la moitié libre (12 m) laisse passer la voiture avec de la marge.
+function wallSolid(t, def, o, i, a, ux, uz) {
+  const tile = t.tilesAt(Math.floor(a[0] / CELL), Math.floor(a[2] / CELL)).find((x) => (x.o === 1 || x.o === 2) && PIECES[x.t].kind === 'line' && !PIECES[x.t].rise);
+  if (!tile) throw new Error(`${def.id} : obstacle « ${o.k} » sur un mur (at ${o.at}) : pas de ligne droite sur un mur à cet endroit`);
+  const s = o.s || 1, side = (tile.o === 1 ? 1 : -1) * 4 * s, dy = o.wall === 'bas' ? -8 * s : 0;
+  const q = (v, st) => Math.round(v / st) * st;
+  let k = Math.round(datan2(ux, uz) / (Math.PI / 8)); while (k > 8) k -= 16; while (k <= -8) k += 16;
+  t.addDeco({ k: o.k, x: q(a[0] - uz * side, 0.5), y: q(a[1] + dy, 0.1), z: q(a[2] + ux * side, 0.5), ry: (k * Math.PI) / 8, s, c: o.c || 0, ph: 0 });
+  const P = t.path, laps = def.laps > 1 ? def.laps : 1, one = laps > 1 ? (P.length - 1) / laps + 1 : P.length;
+  if (!P.wallLine) P.wallLine = new Array(P.length).fill(0);
+  const want = o.wall === 'bas' ? 6 : -6, d = (j) => hypot2(P[j][0] - a[0], P[j][2] - a[2]);
+  for (let j = i; j >= 0 && d(j) < 110 && !P.wallLine[j]; j--) for (let lap = 0; lap < laps; lap++) P.wallLine[j + lap * (one - 1)] = want;      // (sans empiéter sur la ligne d'un bloc précédent)
+  for (let j = i; j < one && d(j) < 4 * s + 6; j++) for (let lap = 0; lap < laps; lap++) P.wallLine[j + lap * (one - 1)] = want;
+}
+
 export function buildBuiltin(def) {
   const t = scriptTrack(def.name, def.script, { ...(def.opts || {}), decor: def.decor || 'desert', ...(def.movers ? { movers: def.movers } : {}) });
   t.author = 'Copytrack';
@@ -920,6 +962,7 @@ export function buildBuiltin(def) {
       const i = Math.min(n - 2, Math.floor(n * o.at));
       const a = P[i], b = P[i + 1];
       const dx = b[0] - a[0], dz = b[2] - a[2], l = hypot2(dx, dz) || 1;
+      if (o.wall) continue;      // (posés après, dans l'ordre du chemin : wallSolid)
       // Valeurs arrondies : le calcul flottant peut différer d'un moteur JavaScript à l'autre
       // (navigateur / serveur) ; l'empreinte du circuit doit être identique partout.
       const q = (v, st) => Math.round(v / st) * st;
@@ -928,6 +971,10 @@ export function buildBuiltin(def) {
       // Obstacles : calcul d'avant, inchangé au bit près.
       if (o.rot || !isObstacle(o.k)) { let k = Math.round((ry + (o.rot || 0)) / (Math.PI / 8)); while (k > 8) k -= 16; while (k <= -8) k += 16; ry = (k * Math.PI) / 8; } else ry = +ry.toFixed(4);
       t.addDeco({ k: o.k, x: q(a[0] + (-dz / l) * (o.side || 0), 0.5), y: q(a[1] + (o.dy || 0), 0.1), z: q(a[2] + (dx / l) * (o.side || 0), 0.5), ry, s: o.s || 1, c: o.c || 0, ph: o.ph || 0 });
+    }
+    for (const o of def.obst.filter((x) => x.wall).sort((x, y) => x.at - y.at)) {
+      const i = Math.min(n - 2, Math.floor(n * o.at)), a = P[i], b = P[i + 1], dx = b[0] - a[0], dz = b[2] - a[2], l = hypot2(dx, dz) || 1;
+      wallSolid(t, def, o, i, a, dx / l, dz / l);
     }
   }
   return t;

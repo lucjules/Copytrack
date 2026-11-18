@@ -55,8 +55,8 @@ export const DRILL_HINT = {
   'turbo-1': 'Mini-turbo simple : la glisse a été écourtée. Après le coup de frein, accélère en gardant le volant à fond jusqu’à ce qu’elle se referme.',
   'turbo-wall': 'Le renforcé y est, mais un choc a coûté la note : déclenche la glisse un peu plus tôt, avant l’entrée du virage.',
   'turbo-slow': 'Le renforcé y est, mais l’arrivée est trop lente : redresse dès que les étincelles changent de couleur et remets les gaz.',
-  'land-bad': '{n} réception(s) ratée(s) : la voiture a décollé en tournant. Redresse avant le bord : en l’air, ni le volant ni l’accélérateur n’agissent.',
-  'land-ok': 'Réceptions correctes mais pas parfaites : décolle tout droit, volant au centre, pour retomber à plat et dans l’axe.',
+  'land-bad': '{n} réception(s) ratée(s) : la voiture a décollé en tournant, ou s’est posée trop piquée. Redresse avant le bord, et freine en l’air (aérofrein) pour arrêter sa rotation.',
+  'land-ok': 'Réceptions correctes mais pas parfaites : décolle tout droit, volant au centre, et freine en l’air (aérofrein) pour arriver à la pente de la réception.',
   zone: 'Dans la zone mesurée, le pilote de référence va plus vite : {tip}',
   best: 'Note maximale : tu vas aussi vite que la référence. Essaie de battre ta meilleure mesure.',
 };

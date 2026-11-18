@@ -31,7 +31,7 @@ const GLYPH = (t) => {
   if (t.t === 'cork' || t.t === 'corkL') return '@';
   if (P.roll) return 'w';                               // transition d'orientation
   if (t.o) return t.o === 1 ? '<' : '>';                // route sur un mur
-  if (t.t === 'bank' || t.t === 'bankBig') return 'b';
+  if (t.t === 'bank' || t.t === 'bankBig' || t.t === 'bankGiant') return 'b';
   if (t.t === 'wall') return 'W';
   if (t.t === 'ramp90' || t.t === 'crest90') return 'Q';
   if (P.kind === 'arc') return P.size === 3 ? 'H' : P.size === 2 ? 'g' : 'c';
@@ -123,7 +123,7 @@ export function profile(track, S) {
   const tiles = track.tiles;
   const P = (t) => PIECES[t.t];
   const tight = tiles.filter((t) => P(t).kind === 'arc' && P(t).size === 1 && !P(t).checkpoint).length;
-  const wide = tiles.filter((t) => (P(t).kind === 'arc' && P(t).size >= 2) || t.t === 'bank' || t.t === 'bankBig').length;
+  const wide = tiles.filter((t) => (P(t).kind === 'arc' && P(t).size >= 2) || t.t === 'bank' || t.t === 'bankBig' || t.t === 'bankGiant').length;
   const wallCells = tiles.filter((t) => t.o).length + tiles.filter((t) => P(t).roll).length;
   const loops = tiles.filter((t) => P(t).kind === 'loop' || P(t).loopTop).length;      // (0.9.74 : un looping modulaire compte : son sommet)
   const boosts = tiles.filter((t) => t.s === 'boost').length;

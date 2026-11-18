@@ -10,12 +10,16 @@ export function reducedMotion(setting, system = systemReducedMotion()) {
   return !!system;
 }
 // Suit les changements du réglage système ; fn(réduit) à chaque changement. Renvoie une fonction pour arrêter.
+// 0.11.4 : l'évènement « change » n'arrive pas toujours (navigateur sans écran, certaines vues intégrées) : la requête est aussi relue toutes les 2 s, et fn
+// n'est appelée que si la valeur a vraiment changé (les deux voies ne la signalent qu'une fois).
 export function watchSystemMotion(fn) {
   try {
     const m = globalThis.matchMedia && globalThis.matchMedia('(prefers-reduced-motion: reduce)');
     if (!m || !m.addEventListener) return () => {};
-    const h = () => fn(m.matches);
+    let last = m.matches;
+    const h = () => { if (m.matches !== last) { last = m.matches; fn(last); } };
     m.addEventListener('change', h);
-    return () => m.removeEventListener('change', h);
+    const iv = globalThis.setInterval ? globalThis.setInterval(h, 2000) : null;
+    return () => { m.removeEventListener('change', h); if (iv !== null) globalThis.clearInterval(iv); };
   } catch { return () => {}; }
 }

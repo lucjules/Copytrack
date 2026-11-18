@@ -18,15 +18,15 @@ _Sprint, speedway, tremplins, épingles et grand huit : tous les profils de circ
 
 ### 1. Premiers Éclats — Sprint, ◆◇◇◇◇
 
-- Départ : sous une arche, deux boosters → slalom de chicanes rapides. Au programme : premier wall-ride, bifurcation (petit saut ou voie de côté), croisement traversé deux fois (trois virages géants), route large sous un portique, chicanes longues.
-- Pilote automatique : **48.2 s** · médailles : cristal 45.8 · or 48.2 · argent 55.4 · bronze 65
+- Départ : sous une arche, deux boosters → slalom de chicanes rapides. Au programme : premier wall-ride, bifurcation (petit saut ou voie de côté), croisement traversé deux fois (trois virages géants, un relevé), route large sous un portique, chicanes longues.
+- Pilote automatique : **48.1 s** · médailles : cristal 45.8 · or 48.2 · argent 55.4 · bronze 65
 - Objectif bonus ★ : Finir en moins de 50.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 2. Canyon Corail — Speedway, ◆◆◇◇◇
 
-- Départ : un booster → la vallée s’élargit aussitôt (route de 56 m). Au programme : trois routes larges sous des portiques, virages géants au-dessus de 200 km/h, chicanes rapides, wall-ride le long des piliers, bifurcation : voie directe ou grand saut.
+- Départ : un booster → la vallée s’élargit aussitôt (route de 56 m). Au programme : trois routes larges sous des portiques, virages géants au-dessus de 200 km/h, chicanes rapides, wall-ride en slalom entre deux blocs, bifurcation : voie directe ou grand saut.
 - Pilote automatique : **47.6 s** · médailles : cristal 45.2 · or 47.6 · argent 54.7 · bronze 64.2
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -43,7 +43,7 @@ _Sprint, speedway, tremplins, épingles et grand huit : tous les profils de circ
 ### 4. Spirale Prismatique — Rollercoaster, ◆◆◆◇◇
 
 - Départ : trois boosters → directement un looping modulaire. Au programme : hélice de 16 niveaux, plongeon à 38°, wall-rides et chicanes, tube qui tourne, bifurcation : tout droit ou par le mur, trois loopings modulaires de hauteurs différentes.
-- Pilote automatique : **72.5 s** · médailles : cristal 68.9 · or 72.5 · argent 83.4 · bronze 97.9
+- Pilote automatique : **72.8 s** · médailles : cristal 68.9 · or 72.5 · argent 83.4 · bronze 97.9
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -59,7 +59,7 @@ _Sprint, speedway, tremplins, épingles et grand huit : tous les profils de circ
 ### 6. Le Grand Tour — Rollercoaster, ◆◆◆◆◇
 
 - Départ : trois boosters → montée verticale (montée en L, mur, sommet). Au programme : wall-rides, deux loopings modulaires, arche mur → plafond → mur, route large, bifurcation saut ou mur, tube qui tourne, virages géants, arche pleine entre deux murs.
-- Pilote automatique : **82.4 s** · médailles : cristal 78.2 · or 82.4 · argent 94.7 · bronze 111.2
+- Pilote automatique : **82.5 s** · médailles : cristal 78.2 · or 82.4 · argent 94.7 · bronze 111.2
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -70,7 +70,7 @@ _Rampe de lancement, tube, rebonds de champignons et slalom en moto : la jungle 
 
 ### 7. Lianes Néon — Sprint, ◆◆◇◇◇
 
-- Départ : trois boosters → rampe de lancement avec anneau turbo dans le saut. Au programme : chicanes rapides, pont de lianes sans bordures à plus de 230 km/h, S relevé, route large sous un portique, croisement traversé deux fois.
+- Départ : trois boosters → rampe de lancement avec anneau turbo dans le saut. Au programme : chicanes rapides, pont de lianes sans bordures à plus de 230 km/h, S relevé, route large sous un portique, croisement traversé deux fois, boucle en pente.
 - Pilote automatique : **48.6 s** · médailles : cristal 46.2 · or 48.6 · argent 55.9 · bronze 65.6
 - Objectif bonus ★ : Passer dans 1 anneau turbo
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -78,8 +78,8 @@ _Rampe de lancement, tube, rebonds de champignons et slalom en moto : la jungle 
 
 ### 8. Canopée — Speedway, ◆◆◆◇◇
 
-- Départ : dans un tube accélérateur de trois sections. Au programme : très grands virages relevés, deux routes larges sous des portiques, grand S, wall-ride sur un tronc, chicane longue, tube qui tourne à droite puis à gauche.
-- Pilote automatique : **60.5 s** · médailles : cristal 57.5 · or 60.5 · argent 69.6 · bronze 81.7
+- Départ : dans un tube accélérateur de trois sections. Au programme : très grands virages relevés, deux routes larges sous des portiques, grand S, wall-ride en slalom sur un tronc, chicane longue, tube qui tourne à droite puis à gauche.
+- Pilote automatique : **60.6 s** · médailles : cristal 57.5 · or 60.5 · argent 69.6 · bronze 81.7
 - Objectif bonus ★ : Finir en moins de 62 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -103,14 +103,14 @@ _Rampe de lancement, tube, rebonds de champignons et slalom en moto : la jungle 
 ### 11. Racines Boueuses — Rollercoaster, ◆◆◆◇◇
 
 - Départ : au plafond, dans les racines, trois boosters puis le mur gauche. Au programme : slalom plafond-murs, plongeon à 38°, looping modulaire, route large sous un portique, tube qui tourne, double looping.
-- Pilote automatique : **52.4 s** · médailles : cristal 49.8 · or 52.4 · argent 60.2 · bronze 70.7
+- Pilote automatique : **52.5 s** · médailles : cristal 49.8 · or 52.4 · argent 60.2 · bronze 70.7
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 12. Temple — Technique, ◆◆◆◆◇
 
-- Départ : dans un tunnel du temple, deux virages serrés. Au programme : allée de colonnes, tube, lacets en spirale, chicane de tunnels, route étroite, chicanes serrées, arche entre deux murs, croisement traversé deux fois.
+- Départ : dans un tunnel du temple, deux virages serrés. Au programme : allée de colonnes, tube, lacets en spirale, chicane de tunnels, route étroite, chicanes serrées, saut ou détour en T, arche, croisement traversé deux fois.
 - Pilote automatique : **69.7 s** · médailles : cristal 66.2 · or 69.7 · argent 80.2 · bronze 94.1
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -122,8 +122,8 @@ _Descente en moto, slalom en bateau et décollage en deltaplane autour du phare.
 
 ### 13. Lagon Turquoise — Sprint, ◆◇◇◇◇
 
-- Départ : en moto, descente vers le lagon. Au programme : deux sauts à anneau turbo (le second reçu sur une plaque), chicanes rapides, route large sous un portique, croisement traversé deux fois, grand S.
-- Pilote automatique : **48.3 s** · médailles : cristal 45.9 · or 48.3 · argent 55.5 · bronze 65.2
+- Départ : en moto, descente vers le lagon. Au programme : deux sauts à anneau turbo (le second reçu sur une plaque), chicanes rapides, route large sous un portique, croisement traversé deux fois (boucle relevée), grand S.
+- Pilote automatique : **48.2 s** · médailles : cristal 45.9 · or 48.3 · argent 55.5 · bronze 65.2
 - Objectif bonus ★ : Passer dans 2 anneaux turbo
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -131,7 +131,7 @@ _Descente en moto, slalom en bateau et décollage en deltaplane autour du phare.
 ### 14. Récif — Technique, ◆◆◆◇◇
 
 - Départ : plaque bateau, puis des lacets sur l’eau. Au programme : wall-ride, épingle, route étroite sur une jetée, chicanes serrées, croisement traversé deux fois, retour au bateau pour finir sur l’eau.
-- Pilote automatique : **62.9 s** · médailles : cristal 59.7 · or 62.9 · argent 72.3 · bronze 84.8
+- Pilote automatique : **62.8 s** · médailles : cristal 59.7 · or 62.9 · argent 72.3 · bronze 84.8
 - Objectif bonus ★ : Franchir l'arrivée en bateau
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -146,8 +146,8 @@ _Descente en moto, slalom en bateau et décollage en deltaplane autour du phare.
 
 ### 16. Tourbillon Tropical — Rollercoaster, ◆◆◆◆◇
 
-- Départ : quatre boosters → triple looping. Au programme : wall-rides des deux côtés, chicane longue, double looping, looping modulaire, tube qui tourne, plongeon à 38°, route large sous un portique.
-- Pilote automatique : **54.7 s** · médailles : cristal 52 · or 54.7 · argent 63 · bronze 73.9
+- Départ : quatre boosters → triple looping. Au programme : wall-rides des deux côtés, un bloc sur chaque mur, chicane longue, double looping, looping modulaire, tube qui tourne, plongeon à 38°, route large sous un portique.
+- Pilote automatique : **54.9 s** · médailles : cristal 52 · or 54.7 · argent 63 · bronze 73.9
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -162,8 +162,8 @@ _Descente en moto, slalom en bateau et décollage en deltaplane autour du phare.
 
 ### 18. Grand Archipel — Speedway, ◆◆◆◆◆
 
-- Départ : longue pente douce vers la mer. Au programme : très grands virages relevés, route large sous un portique, chicane rapide, wall-ride, croisement traversé deux fois, grand S.
-- Pilote automatique : **59.9 s** · médailles : cristal 56.9 · or 59.9 · argent 68.9 · bronze 80.9
+- Départ : longue pente douce vers la mer. Au programme : très grands virages relevés, route large sous un portique, chicane rapide, wall-ride, croisement traversé deux fois (boucle relevée puis en pente), grand S.
+- Pilote automatique : **60.0 s** · médailles : cristal 56.9 · or 59.9 · argent 68.9 · bronze 80.9
 - Objectif bonus ★ : Finir en moins de 61.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -174,8 +174,8 @@ _Tapis roulant express, boucles, métro aérien, toits et lift hill : la ville m
 
 ### 19. Néons Express — Speedway, ◆◆◇◇◇
 
-- Départ : tapis roulant à +200 km/h entre deux façades, sans booster. Au programme : très grands virages relevés, avenue large sous un portique, chicane rapide, wall-ride sur une tour, grand S, croisement traversé deux fois.
-- Pilote automatique : **56.8 s** · médailles : cristal 54 · or 56.8 · argent 65.3 · bronze 76.7
+- Départ : tapis roulant à +200 km/h entre deux façades, sans booster. Au programme : très grands virages relevés, avenue large sous un portique, chicane rapide, wall-ride sur une tour, grand S, croisement traversé deux fois (deux virages géants relevés).
+- Pilote automatique : **56.7 s** · médailles : cristal 54 · or 56.8 · argent 65.3 · bronze 76.7
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -183,15 +183,15 @@ _Tapis roulant express, boucles, métro aérien, toits et lift hill : la ville m
 ### 20. Boulevard Sans Fin — Sprint, ◆◆◇◇◇
 
 - Départ : boulevard sans bordures, boosters. Au programme : chicanes rapides, tunnel, très grand virage plat, avenue large sous un portique, chicanes longues, tube qui tourne sous la ville, grand S.
-- Pilote automatique : **46.2 s** · médailles : cristal 43.9 · or 46.2 · argent 53.2 · bronze 62.4
+- Pilote automatique : **46.3 s** · médailles : cristal 43.9 · or 46.2 · argent 53.2 · bronze 62.4
 - Objectif bonus ★ : Finir en moins de 47.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 21. Hyperboucle — Rollercoaster, ◆◆◆◇◇
 
-- Départ : trois boosters → deux loopings décalés. Au programme : wall-rides des deux côtés, chicane longue, grand looping, avenue large sous un portique, looping modulaire, plongeon à 38°, tube qui tourne.
-- Pilote automatique : **51.4 s** · médailles : cristal 48.9 · or 51.5 · argent 59.2 · bronze 69.5
+- Départ : trois boosters → deux loopings décalés. Au programme : wall-rides des deux côtés, un bloc sur chaque mur, chicane longue, grand looping, avenue large sous un portique, looping modulaire, plongeon à 38°, tube qui tourne.
+- Pilote automatique : **51.6 s** · médailles : cristal 48.9 · or 51.5 · argent 59.2 · bronze 69.5
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -207,15 +207,15 @@ _Tapis roulant express, boucles, métro aérien, toits et lift hill : la ville m
 ### 23. Tours Jumelles — Acrobatique, ◆◆◆◆◇
 
 - Départ : trois boosters → looping. Au programme : trois sauts de toit en toit, toits en plaques, chicanes longues, wall-ride entre deux tours, avenue large sous un portique.
-- Pilote automatique : **46.0 s** · médailles : cristal 43.7 · or 46 · argent 52.9 · bronze 62.1
+- Pilote automatique : **45.9 s** · médailles : cristal 43.7 · or 46 · argent 52.9 · bronze 62.1
 - Objectif bonus ★ : Finir en moins de 47.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 24. Viaduc Vertical — Rollercoaster, ◆◆◆◆◆
 
-- Départ : trois boosters → lift hill accéléré. Au programme : viaduc au sommet, plongeon, grand looping, wall-rides des deux côtés, looping modulaire, avenue large sous un portique, tube qui tourne.
-- Pilote automatique : **50.0 s** · médailles : cristal 47.5 · or 50 · argent 57.5 · bronze 67.5
+- Départ : trois boosters → lift hill accéléré. Au programme : viaduc au sommet, saut ou détour en T, plongeon, grand looping, wall-ride en bosse (monter, redescendre), wall-ride à droite, looping modulaire, avenue large sous un portique, tube qui tourne.
+- Pilote automatique : **53.4 s** · médailles : cristal 50.2 · or 52.8 · argent 60.7 · bronze 71.3
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -235,7 +235,7 @@ _Départ sur la glace, rebonds en terrasses, toboggan aimanté, hélices et poud
 ### 26. Banquise Rebondissante — Acrobatique, ◆◆◆◇◇
 
 - Départ : glace, deux boosters, premier rebond. Au programme : quatre rebonds de plus en plus forts, réceptions sur la glace et sur des plaques de banquise, wall-ride, chicanes longues, descente à 38°, route large.
-- Pilote automatique : **46.3 s** · médailles : cristal 44 · or 46.3 · argent 53.2 · bronze 62.5
+- Pilote automatique : **46.2 s** · médailles : cristal 44 · or 46.3 · argent 53.2 · bronze 62.5
 - Objectif bonus ★ : Finir en moins de 47.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -251,15 +251,15 @@ _Départ sur la glace, rebonds en terrasses, toboggan aimanté, hélices et poud
 ### 28. Double Hélice — Rollercoaster, ◆◆◆◆◇
 
 - Départ : tire-bouchon dès la troisième case. Au programme : double hélice (montée, descente), double looping, route large sous un portique, wall-rides des deux côtés, chicanes longues, looping modulaire.
-- Pilote automatique : **70.2 s** · médailles : cristal 66.7 · or 70.2 · argent 80.8 · bronze 94.8
+- Pilote automatique : **70.3 s** · médailles : cristal 66.7 · or 70.2 · argent 80.8 · bronze 94.8
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 29. Couronne Boréale — Speedway, ◆◆◆◆◆
 
-- Départ : très grand virage relevé sans booster, puis trois boosters. Au programme : virages relevés en couronne, deux routes larges sous des portiques, chicane rapide, wall-ride, grand S, tube qui tourne.
-- Pilote automatique : **53.9 s** · médailles : cristal 51.2 · or 53.9 · argent 62 · bronze 72.8
+- Départ : très grand virage relevé sans booster, puis trois boosters. Au programme : virages relevés en couronne, deux routes larges sous des portiques, chicane rapide, wall-ride en slalom entre deux blocs, grand S, tube qui tourne.
+- Pilote automatique : **54.5 s** · médailles : cristal 51.2 · or 53.9 · argent 62 · bronze 72.8
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -302,8 +302,8 @@ _Collines de braises, plaque de dérive, cheminée verticale, caldeira à deux t
 
 ### 34. Cheminée du Volcan — Rollercoaster, ◆◆◆◆◇
 
-- Départ : trois boosters → tube, puis la cheminée (mur de quatre niveaux). Au programme : plongeon, grand looping, wall-rides, looping modulaire, route large, tube qui tourne, route étroite.
-- Pilote automatique : **46.6 s** · médailles : cristal 44.2 · or 46.6 · argent 53.5 · bronze 62.9
+- Départ : trois boosters → tube, puis la cheminée (mur de quatre niveaux). Au programme : plongeon, grand looping, wall-ride en bosse (monter, redescendre), wall-ride, looping modulaire, route large, tube qui tourne, route étroite.
+- Pilote automatique : **49.4 s** · médailles : cristal 46.9 · or 49.4 · argent 56.8 · bronze 66.6
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -330,7 +330,7 @@ _Tube d’amarrage, basse gravité, moto, grand anneau à deux tours et apesante
 
 ### 37. Quai d’Amarrage — Sprint, ◆◆◇◇◇
 
-- Départ : booster et sas en tube, puis basse gravité. Au programme : grand saut à anneau turbo reçu sur une plaque d’amarrage, chicanes rapides, route large sous un portique, croisement traversé deux fois.
+- Départ : booster et sas en tube, puis basse gravité. Au programme : grand saut à anneau turbo reçu sur une plaque d’amarrage, chicanes rapides, route large sous un portique, croisement traversé deux fois, boucle en pente.
 - Pilote automatique : **49.8 s** · médailles : cristal 47.3 · or 49.8 · argent 57.2 · bronze 67.2
 - Objectif bonus ★ : Passer dans 1 anneau turbo
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -346,8 +346,8 @@ _Tube d’amarrage, basse gravité, moto, grand anneau à deux tours et apesante
 
 ### 39. Ceinture d’Astéroïdes — Rollercoaster, ◆◆◆◆◇
 
-- Départ : tire-bouchon à gauche dès la deuxième case. Au programme : double looping, chicanes longues, wall-rides des deux côtés, tube qui tourne, looping modulaire, route large, plongeon.
-- Pilote automatique : **45.6 s** · médailles : cristal 43.4 · or 45.6 · argent 52.5 · bronze 61.6
+- Départ : tire-bouchon à gauche dès la deuxième case. Au programme : double looping, chicanes longues, wall-ride en bosse (monter, redescendre), wall-ride à droite, tube qui tourne, looping modulaire, route large, plongeon.
+- Pilote automatique : **48.5 s** · médailles : cristal 46.1 · or 48.5 · argent 55.8 · bronze 65.5
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -355,7 +355,7 @@ _Tube d’amarrage, basse gravité, moto, grand anneau à deux tours et apesante
 ### 40. Grand Anneau — Speedway, ◆◆◆◆◇
 
 - Départ : deux boosters puis un tube, entre deux murs de la station. Au programme : deux tours de l’anneau, quatre très grands virages relevés, chicanes, route large sous un portique, wall-ride.
-- Pilote automatique : **78.1 s** · médailles : cristal 74.2 · or 78.1 · argent 89.9 · bronze 105.5
+- Pilote automatique : **78.0 s** · médailles : cristal 74.2 · or 78.1 · argent 89.9 · bronze 105.5
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -383,7 +383,7 @@ _Contre-courants, gravité lourde, pont de verre et plongée vers les abysses._
 ### 43. Courant Chaud — Sprint, ◆◆◇◇◇
 
 - Départ : deux boosters, contre-courant puis courant. Au programme : chicanes rapides, très grands virages plats, route large sous un portique, tube qui tourne à droite puis à gauche, grand S.
-- Pilote automatique : **45.7 s** · médailles : cristal 43.4 · or 45.7 · argent 52.6 · bronze 61.7
+- Pilote automatique : **45.8 s** · médailles : cristal 43.4 · or 45.7 · argent 52.6 · bronze 61.7
 - Objectif bonus ★ : Finir en moins de 47 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -398,8 +398,8 @@ _Contre-courants, gravité lourde, pont de verre et plongée vers les abysses._
 
 ### 45. Épave Engloutie — Rollercoaster, ◆◆◆◇◇
 
-- Départ : trois boosters → wall-ride sur la coque. Au programme : double looping, wall-rides des deux côtés, looping modulaire, route large, tube qui tourne, passage étroit, plongeon.
-- Pilote automatique : **45.8 s** · médailles : cristal 43.5 · or 45.8 · argent 52.6 · bronze 61.8
+- Départ : trois boosters → wall-ride sur la coque. Au programme : double looping, wall-rides des deux côtés, un bloc sur chaque mur, looping modulaire, route large, tube qui tourne, passage étroit, plongeon.
+- Pilote automatique : **46.2 s** · médailles : cristal 43.5 · or 45.8 · argent 52.6 · bronze 61.8
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -415,14 +415,14 @@ _Contre-courants, gravité lourde, pont de verre et plongée vers les abysses._
 ### 47. Abysses — Rollercoaster, ◆◆◆◆◇
 
 - Départ : plongeon dans les abysses puis grand looping. Au programme : wall-rides des deux côtés, chicanes longues, remontée en hélice, looping modulaire, route large, tube qui tourne.
-- Pilote automatique : **50.1 s** · médailles : cristal 47.6 · or 50.1 · argent 57.6 · bronze 67.6
+- Pilote automatique : **45.5 s** · médailles : cristal 43.3 · or 45.6 · argent 52.4 · bronze 61.5
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
 
 ### 48. Grande Barrière — Speedway, ◆◆◆◆◆
 
-- Départ : deux boosters et un pont de verre. Au programme : très grands virages relevés, route large sous un portique, chicane rapide, wall-ride, grand S, croisement traversé deux fois.
+- Départ : deux boosters et un pont de verre. Au programme : très grands virages relevés, route large sous un portique, chicane rapide, wall-ride, grand S, croisement traversé deux fois, boucle qui plonge et remonte.
 - Pilote automatique : **55.1 s** · médailles : cristal 52.3 · or 55.1 · argent 63.4 · bronze 74.4
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -435,7 +435,7 @@ _Moteur coupé, bifurcation, pistons, marteau et ralentisseurs : l’usine ne pa
 ### 49. Chaîne de Montage — Sprint, ◆◆◇◇◇
 
 - Départ : trois boosters puis moteur coupé entre deux murs. Au programme : tapis roulant, chicanes rapides, bumper, route large sous un portique, piques, tube qui tourne, chicanes longues, grand S.
-- Pilote automatique : **47.3 s** · médailles : cristal 45 · or 47.3 · argent 54.4 · bronze 63.9
+- Pilote automatique : **47.4 s** · médailles : cristal 45 · or 47.3 · argent 54.4 · bronze 63.9
 - Objectif bonus ★ : Finir en moins de 48.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -450,7 +450,7 @@ _Moteur coupé, bifurcation, pistons, marteau et ralentisseurs : l’usine ne pa
 
 ### 51. Engrenages — Rollercoaster, ◆◆◆◇◇
 
-- Départ : deux boosters et une hélice montante. Au programme : chicane longue, triple looping, wall-rides des deux côtés, route large sous un portique, piques escamotables, tube qui tourne, plongeon.
+- Départ : deux boosters et une hélice montante. Au programme : chicane longue, triple looping, wall-rides des deux côtés, un bloc sur chaque mur, route large sous un portique, piques escamotables, tube qui tourne, plongeon.
 - Pilote automatique : **48.2 s** · médailles : cristal 45.8 · or 48.2 · argent 55.4 · bronze 65.1
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -459,7 +459,7 @@ _Moteur coupé, bifurcation, pistons, marteau et ralentisseurs : l’usine ne pa
 ### 52. Fonderie — Speedway, ◆◆◆◆◇
 
 - Départ : trois boosters et un tunnel. Au programme : très grands virages relevés, deux bumpers, route large sous un portique, chicane rapide, wall-ride, moteur coupé, grand S, tube qui tourne.
-- Pilote automatique : **48.0 s** · médailles : cristal 45.6 · or 48 · argent 55.2 · bronze 64.8
+- Pilote automatique : **47.9 s** · médailles : cristal 45.6 · or 48 · argent 55.2 · bronze 64.8
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -467,7 +467,7 @@ _Moteur coupé, bifurcation, pistons, marteau et ralentisseurs : l’usine ne pa
 ### 53. Presse Hydraulique — Acrobatique, ◆◆◆◆◇
 
 - Départ : deux boosters et une bande rebondissante. Au programme : piques escamotables, trois sauts reçus sur des plaques, chicanes longues, wall-ride, route large sous un portique, bumper.
-- Pilote automatique : **45.3 s** · médailles : cristal 43 · or 45.3 · argent 52.1 · bronze 61.1
+- Pilote automatique : **45.2 s** · médailles : cristal 43 · or 45.3 · argent 52.1 · bronze 61.1
 - Objectif bonus ★ : Finir en moins de 46.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -475,7 +475,7 @@ _Moteur coupé, bifurcation, pistons, marteau et ralentisseurs : l’usine ne pa
 ### 54. Usine Folle — Technique, ◆◆◆◆◆
 
 - Départ : deux boosters, ralentisseurs, épingles en S. Au programme : passage étroit entre des piliers, moteur coupé, marteau, wall-ride, chicanes serrées, piques, croisement traversé deux fois, bumper.
-- Pilote automatique : **55.1 s** · médailles : cristal 52.3 · or 55.1 · argent 63.3 · bronze 74.3
+- Pilote automatique : **55.0 s** · médailles : cristal 52.3 · or 55.1 · argent 63.3 · bronze 74.3
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -510,8 +510,8 @@ _Vent de travers, îles sans bordures, gravité réduite, pont des vents et dép
 
 ### 58. Montgolfières — Rollercoaster, ◆◆◆◆◇
 
-- Départ : trois boosters, gravité réduite et grand looping. Au programme : chicanes longues, wall-rides des deux côtés, looping modulaire, route large, tube qui tourne, passage étroit, plongeon.
-- Pilote automatique : **46.4 s** · médailles : cristal 44.1 · or 46.4 · argent 53.4 · bronze 62.6
+- Départ : trois boosters, gravité réduite et grand looping. Au programme : chicanes longues, wall-ride en bosse à droite (monter, redescendre), wall-ride à gauche, looping modulaire, route large, tube qui tourne, passage étroit, plongeon.
+- Pilote automatique : **49.4 s** · médailles : cristal 46.9 · or 49.4 · argent 56.8 · bronze 66.7
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -519,7 +519,7 @@ _Vent de travers, îles sans bordures, gravité réduite, pont des vents et dép
 ### 59. Pont des Vents — Speedway, ◆◆◆◆◆
 
 - Départ : deux boosters, vent latéral, très grand virage relevé sans bordures. Au programme : murs coupe-vent, route large sous un portique, chicane rapide, wall-ride, grand S, tube qui tourne.
-- Pilote automatique : **45.3 s** · médailles : cristal 43 · or 45.3 · argent 52 · bronze 61.1
+- Pilote automatique : **45.2 s** · médailles : cristal 43 · or 45.3 · argent 52 · bronze 61.1
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -538,8 +538,8 @@ _Volant inversé, vrilles, inversions de gravité, plafonds et verre fragile._
 
 ### 61. Galerie de Cristal — Sprint, ◆◆◇◇◇
 
-- Départ : deux boosters puis volant inversé entre deux cristaux. Au programme : chicanes rapides, très grand virage plat, route large sous un portique, croisement traversé deux fois, grand S.
-- Pilote automatique : **48.2 s** · médailles : cristal 45.8 · or 48.2 · argent 55.4 · bronze 65
+- Départ : deux boosters puis volant inversé entre deux cristaux. Au programme : chicanes rapides, très grand virage plat, route large sous un portique, croisement traversé deux fois, boucle en pente relevée, grand S.
+- Pilote automatique : **48.1 s** · médailles : cristal 45.8 · or 48.2 · argent 55.4 · bronze 65
 - Objectif bonus ★ : Finir en moins de 49.5 s
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -547,7 +547,7 @@ _Volant inversé, vrilles, inversions de gravité, plafonds et verre fragile._
 ### 62. Plafond Renversé — Technique, ◆◆◆◆◇
 
 - Départ : vrille avec inversion de gravité, on roule au plafond. Au programme : lacets au plafond, retour au sol, passage étroit entre des stalactites, chicanes serrées, wall-ride, croisement traversé deux fois.
-- Pilote automatique : **59.4 s** · médailles : cristal 56.4 · or 59.4 · argent 68.3 · bronze 80.1
+- Pilote automatique : **59.3 s** · médailles : cristal 56.4 · or 59.4 · argent 68.3 · bronze 80.1
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -570,8 +570,8 @@ _Volant inversé, vrilles, inversions de gravité, plafonds et verre fragile._
 
 ### 65. Vrilles Souterraines — Rollercoaster, ◆◆◆◆◆
 
-- Départ : booster, descente, vrille vers le plafond. Au programme : pentes au plafond, retour au sol, double looping, chicanes longues, wall-rides des deux côtés, route large, looping modulaire, tube qui tourne.
-- Pilote automatique : **47.3 s** · médailles : cristal 45 · or 47.3 · argent 54.4 · bronze 63.9
+- Départ : booster, descente, vrille vers le plafond. Au programme : pentes au plafond, retour au sol, double looping, chicanes longues, wall-ride en bosse (monter, redescendre), wall-ride à droite, route large, looping modulaire, tube qui tourne.
+- Pilote automatique : **50.1 s** · médailles : cristal 47.6 · or 50.2 · argent 57.7 · bronze 67.7
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -579,7 +579,7 @@ _Volant inversé, vrilles, inversions de gravité, plafonds et verre fragile._
 ### 66. Cœur de la Montagne — Technique, ◆◆◆◆◆
 
 - Départ : booster et verre très glissant, épingles en S. Au programme : passage étroit entre des stalactites, chicanes serrées, wall-ride, pyramides de cristal, croisement traversé deux fois.
-- Pilote automatique : **52.1 s** · médailles : cristal 49.5 · or 52.1 · argent 59.9 · bronze 70.3
+- Pilote automatique : **52.0 s** · médailles : cristal 49.5 · or 52.1 · argent 59.9 · bronze 70.3
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________
@@ -598,7 +598,7 @@ _Piques, balancier, marteau, balayeur, ascenseur, glissière : chaque mécanisme
 
 ### 68. En Cadence — Mécanisme, ◆◇◇◇◇
 
-- Départ : trois boosters → trois cases. Au programme : piques escamotables en travers de la route : on passe quand elles sont rentrées. Puis chicanes longues, croisement traversé deux fois, passage étroit.
+- Départ : trois boosters → trois cases. Au programme : piques escamotables en travers de la route : on passe quand elles sont rentrées. Puis chicanes longues, croisement traversé deux fois (un virage géant relevé), passage étroit.
 - Pilote automatique : **43.7 s** · médailles : cristal 41.5 · or 43.7 · argent 50.3 · bronze 59
 - Objectif bonus ★ : Finir sans réapparition
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
@@ -623,7 +623,7 @@ _Piques, balancier, marteau, balayeur, ascenseur, glissière : chaque mécanisme
 ### 71. Monte-Charge — Mécanisme, ◆◆◆◇◇
 
 - Départ : cinq boosters → vague. Au programme : la route bouge, un ascenseur (la dalle monte puis redescend) et une glissière. Puis chicanes longues, petit looping modulaire, route large sous un portique.
-- Pilote automatique : **32.7 s** · médailles : cristal 31 · or 32.7 · argent 37.6 · bronze 44.1
+- Pilote automatique : **32.8 s** · médailles : cristal 31 · or 32.7 · argent 37.6 · bronze 44.1
 - Objectif bonus ★ : Finir sans toucher de muret
 - [ ] Départ  - [ ] Passage  - [ ] Médaille  - [ ] Bonus  - [ ] Checkpoint  - [ ] Fini
 - Mon meilleur temps : ______ s · Notes : ____________________________________________

@@ -102,12 +102,15 @@ test('VRILLE : six roulis ; TIRE-BOUCHON : roulis à gauche (90°, 45°, 135°) 
     assert.ok(!inside || true, id);
   }
 });
-test('la matrice (8 orientations) : toutes les cases proposées par l\'éditeur sont mesurées ; les CHUTE sont des montées raides roulées (famille documentée) ; vrilles, loopings et tire-bouchons passent à 150 km/h', () => {
+test('la matrice (8 orientations) : toutes les cases proposées par l\'éditeur sont mesurées ; les CHUTE sont des montées raides roulées (famille documentée) ou le virage serré en surplomb ; vrilles, loopings et tire-bouchons passent à 150 km/h', () => {
   const cols = ['sol', 'murG', 'murD', 'plafond', 'incG', 'incD', 'surG', 'surD'];
   const chutes = [];
   for (const [t, row] of Object.entries(PIECE_FACTS)) for (const c of cols) { assert.ok(row[c], `${t}/${c}`); if (row[c] === 'CHUTE') chutes.push(t + '/' + c); }
-  for (const c of chutes) assert.match(c, /^(cv|cro|cdi|cdo|crv)/, c + ' : hors des familles documentées (montées et descentes raides)');
-  assert.ok(chutes.length <= 30, chutes.length + ' chutes');
+  // PHYS_VER 37 (plus aucune aide sur les rubans, le nez pique sur un mur) : 71 chutes (30 avant), toutes des montées, descentes et courbes en pente RAIDES posées de côté
+  // (la route y tourne plus vite que le volant ne le permet à la vitesse d'un mur), et le virage serré en surplomb (135°, à l'envers à moitié).
+  // (0.11.3 : et la chicane COURTE qui DESCEND sur un mur, trop brusque à la vitesse d'un mur : la longue et la rapide passent)
+  for (const c of chutes) assert.ok(/^(cv|cro|cdi|cdo|crv|steep4|dn4)/.test(c) || ['curve/surD', 'sbend/murG', 'sbendL/murD'].includes(c), c + ' : hors des familles documentées (montées et descentes raides, virage serré en surplomb, chicane courte qui descend un mur)');
+  assert.ok(chutes.length <= 75, chutes.length + ' chutes');
   assert.ok(Object.values(PIECE_FACTS).flatMap((r) => Object.values(r)).filter((c) => c === 'RACCORD').length <= 4, 'les RACCORD d\'avant (60) étaient une confusion entre roulis et pente : seuls restent les triples loopings (15 niveaux)');
   for (const t of ['loop', 'loopBig', 'loopDouble']) assert.ok(['OK', 'SAUT', 'v≥150'].includes(PIECE_FACTS[t].murG), `${t}/murG ${PIECE_FACTS[t].murG}`);      // (les triples descendent de 15 niveaux : hors des niveaux de la chaîne d'essai, RACCORD)
   for (const t of ['loopL', 'loopBigL']) assert.ok(['OK', 'SAUT', 'v≥150'].includes(PIECE_FACTS[t].murD), `${t}/murD`);
@@ -148,7 +151,7 @@ const SEQ = {
   'looping sur un mur gauche (↱) entre deux murs': [['straight'], ['straight', { o: 1 }], ['loop', { o: 1 }], ['straight', { o: 1 }], ['straight'], ['finish']],
   'looping ↰ sur un mur droit': [['straight'], ['straight'], ['loopL', { o: 2 }], ['straight', { o: 2 }], ['straight'], ['finish']],
   'grand looping et double looping sur un mur (départ haut : l\'hélice descend de 10 niveaux chacun)': [['straight'], ['loopBig', { o: 1 }], ['straight', { o: 1 }], ['straight'], ['loopDouble', { o: 1 }], ['straight', { o: 1 }], ['straight'], ['finish']],
-  'vrille inclinée (45°) puis tire-bouchon sur un mur': [['straight'], ['twist', { o: 3 }], ['straight'], ['cork', { o: 1 }], ['straight'], ['finish']],
+  'vrille inclinée (45°) puis tire-bouchon sur un mur (150 km/h : plus vite, le tire-bouchon tourne plus vite que le volant ne le permet)': [['straight'], ['twist', { o: 3 }], ['straight'], ['cork', { o: 1 }], ['straight'], ['finish']],
   'looping au sol, vrille, looping sur un mur, tire-bouchon (familles différentes à la suite)': [['straight'], ['loop'], ['straight'], ['twist'], ['straight'], ['loopL', { o: 2 }], ['straight', { o: 2 }], ['straight'], ['cork'], ['straight'], ['finish']],
   'courbes et pentes sur un plan incliné de 45° (montée, descente, S)': [['straight'], ['straight', { o: 3 }], ['slope', { o: 3 }], ['straight', { o: 3 }], ['dn1', { o: 3 }], ['straight', { o: 3 }], ['straight'], ['finish']],
 };
@@ -157,16 +160,21 @@ for (const [name, seq] of Object.entries(SEQ)) {
     const b = buildSeq(seq, { level: 24 });
     assert.equal(b.failed, '', b.failed);
     assert.deepEqual(errorsOf(b.tr).map((i) => i.code + ' ' + i.why), [], 'le vérificateur de continuité ne voit aucune erreur');
-    for (const kmh of [150, 250]) {
+    for (const kmh of /tire-bouchon sur un mur/.test(name) ? [150] : [150, 250]) {      // (PHYS_VER 37 : plus de guidage du cap sur les rubans)
       const r = rideSeq(b, kmh);
       assert.ok(r.finished !== null && !r.fell, `${kmh} km/h : ${r.fell || 'non fini'}`);
     }
   });
 }
-test('à 100 km/h les murs lâchent (voulu : vitesse minimale de mur, 108 km/h) mais les routes inclinées de 45° tiennent à toutes les vitesses', () => {
-  const wall = buildSeq(SEQ['looping sur un mur gauche (↱) entre deux murs'], { level: 24 }), inc = buildSeq([['straight'], ['straight', { o: 3 }], ['curve', { o: 3 }], ['straight', { o: 3 }], ['straight'], ['finish']]);
+test('à 100 km/h les murs lâchent (voulu : vitesse minimale de mur, 108 km/h) mais les routes inclinées de 45° tiennent, aux vitesses où leur virage se prend', () => {
+  const wall = buildSeq(SEQ['looping sur un mur gauche (↱) entre deux murs'], { level: 24 });
+  const inc = (c) => buildSeq([['straight'], ['straight', { o: 3 }], [c, { o: 3 }], ['straight', { o: 3 }], ['straight'], ['finish']]);
   assert.ok(rideSeq(wall, 100).fell === 'wall', 'mur à 100 km/h');
-  for (const kmh of [60, 100, 150, 250]) { const r = rideSeq(inc, kmh); assert.ok(r.finished !== null && !r.fell, `incliné 45° à ${kmh} km/h : ${r.fell}`); }
+  // PHYS_VER 37 : plus de guidage du cap ; un virage serré incliné se prend comme au sol, au volant : jusqu'à 150 km/h. Le grand virage, à toutes les vitesses.
+  for (const [c, speeds] of [['curve', [60, 100, 150]], ['bigcurve', [60, 100, 150, 250]]]) {
+    const b = inc(c);
+    for (const kmh of speeds) { const r = rideSeq(b, kmh); assert.ok(r.finished !== null && !r.fell, `${c} incliné 45° à ${kmh} km/h : ${r.fell}`); }
+  }
 });
 test('véhicules et profils : moto, profil Arcade, profil Simulation roulent un enchaînement sol → incliné → mur → sol et un looping sur un mur à 200 km/h', () => {
   const a = buildSeq(SEQ['sol → incliné 45° → mur → surplomb 135° → plafond → retour'], { level: 24 }), l = buildSeq(SEQ['looping sur un mur gauche (↱) entre deux murs'], { level: 24 });
@@ -181,7 +189,7 @@ test('sauts et réceptions sur plan incliné : tremplin posé sur une route à 4
   for (const kmh of [150, 250]) { const r = rideSeq(b, kmh); assert.ok(r.finished !== null && !r.fell, `${kmh} km/h : ${r.fell || 'non fini'}`); }
 });
 test('déterminisme : deux roulages du même enchaînement donnent exactement le même temps', () => {
-  const b = buildSeq(SEQ['vrille inclinée (45°) puis tire-bouchon sur un mur']);
+  const b = buildSeq(SEQ[Object.keys(SEQ).find((k) => k.startsWith('vrille inclinée (45°) puis tire-bouchon sur un mur'))]);
   assert.equal(rideSeq(b, 200).finished, rideSeq(b, 200).finished);
 });
 

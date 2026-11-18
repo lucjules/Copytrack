@@ -21,7 +21,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // ---- Serveur « GitHub Pages » ------------------------------------------------------------------------------------------------------------
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.txt': 'text/plain' };
 const state = { piecesOld: false, hits: { nav: 0, piecesReload: 0 } };
-const OLD_PIECES = (await readFile(join(root, 'js/pieces.js'), 'utf8')).replace('export function headingGuided', 'function headingGuided');      // la version d'avant n'avait pas cet export
+const OLD_PIECES = (await readFile(join(root, 'js/pieces.js'), 'utf8')).replace('export function rolledRibbon', 'function rolledRibbon');      // la version d'avant n'avait pas cet export (0.9.65 : headingGuided)
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   let path = decodeURIComponent(url.pathname);
@@ -85,7 +85,7 @@ await test('un ancien js/pieces.js gardé par le cache HTTP à côté des nouvea
   state.piecesOld = false; state.hits.nav = 0; state.hits.piecesReload = 0;      // « mise en ligne »
   await page.goto(BASE + '/');
   assert.ok(await poll(page, visible, 30000), 'le jeu a démarré');
-  assert.ok(errors.some((m) => /headingGuided/.test(m)), 'le mélange de versions a bien été reproduit : ' + errors.join(' | '));
+  assert.ok(errors.some((m) => /rolledRibbon/.test(m)), 'le mélange de versions a bien été reproduit : ' + errors.join(' | '));
   assert.ok(state.hits.piecesReload >= 1, 'js/pieces.js redemandé au serveur en contournant le cache');
   assert.equal(state.hits.nav, 2, 'une seule réparation : la page est rechargée une fois');
   assert.ok(await poll(page, () => sessionStorage.getItem('copytrack.repair') === null, 3000), 'la garde est désarmée après le démarrage (une prochaine mise à jour pourra réparer à nouveau)');

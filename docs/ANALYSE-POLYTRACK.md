@@ -89,6 +89,9 @@ Précision : sauf mention, les valeurs sont à ±2 %. Les marques **[certain]**,
 * **En l'air : aucun contrôle** — ni les gaz ni le volant ne changent la rotation (mesuré). Le **frein en l'air (aérofrein)** amortit la rotation :
   tangage 28 → 6 °/s en 1,6 s (décroissance ≈ 1 /s).
 * La rotation acquise au décollage est conservée (piqué constant de ≈ 26 °/s en quittant un bord de route). Pas de redressement automatique.
+* Bascule au décollage d'un bord plat (mesure complémentaire, 0.11.1) : 65 °/s à 39 km/h, 38 °/s à 78 km/h, 26 °/s à 140 km/h, 16 °/s à 225 km/h (gaz tenus ou non :
+  pas de différence), soit ≈ 18,4 / (v + 5,5) rad/s avec v en m/s. Le volant tenu en l'air ne change ni le cap ni le roulis (0,00 °/s de lacet sur 1,7 s).
+  Copytrack l'applique depuis PHYS_VER 37 (`airTip`), sans le ressort d'assiette qu'il avait gardé jusque-là : c'est l'aérofrein qui fait les réceptions.
 
 ### 4.2 Murs et bordures
 

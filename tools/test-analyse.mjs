@@ -96,7 +96,10 @@ test('deux styles de pilotage : l’écart final est la différence des temps, l
   const d = delta(A, B, { step: 10 });
   assert.ok(d.dt[d.dt.length - 1] > 0);
   assert.ok(Math.abs(deltaAt(A, B, 10) - d.dt[1]) < 1e-9);
-  assert.ok(brakingPoints(A).length >= 1 || brakingPoints(B).length >= 1, 'des freinages repérés');
+  // PHYS_VER 37 : sur Éclats le pilote ne freine plus qu'en l'air (aérofrein, pour ses réceptions) : ce n'est pas un freinage, le repérage l'ignore. Les vrais : Serpent.
+  assert.ok([A, B].every((T) => brakingPoints(T).every((b) => !T.air[b.i])), 'l’aérofrein n’est pas compté comme un freinage');
+  const S = buildBuiltin(def('serpent')), sr = botRun(S);
+  assert.ok(brakingPoints(alignTrace(traceFromInputs(S, sr.inputs), makeReference(S))).length >= 1, 'des freinages repérés');
 });
 test('la distance projetée avance sur les 72 circuits (pilote automatique), jusqu’à l’arrivée', () => {
   const bad = [];

@@ -70,7 +70,7 @@ export const screenMethods = {
         body: `<ul class="tuto">
             <li><b>Dérapage</b> : freine en virage, garde le volant.</li>
             <li><b>Mini-turbo</b> : une longue glisse donne une poussée.</li>
-            <li><b>En l'air</b> : ni volant ni gaz, la voiture garde son élan. Décolle droit ; le frein en l'air (aérofrein) arrête sa rotation.</li>
+            <li><b>En l'air</b> : pas de volant, et la voiture bascule nez en bas en quittant le bord. Décolle droit ; le frein en l'air (aérofrein) freine sa rotation, les gaz penchent le nez d'un rien.</li>
             <li><b>Vitesse</b> : la voiture accélère longtemps, la vitesse de pointe se mérite. Le turbo va encore plus vite.</li>
             <li><b>Murs</b> : un choc te ralentit et te fait tourner, frotter une barrière te freine. Lève le pied avant d'y aller.</li>
             <li>Loopings, tubes, routes sur un mur : il faut de la vitesse pour rester plaqué (sur un mur à 90°, environ 110 km/h minimum, sinon tu décroches).</li>
@@ -254,7 +254,7 @@ export const screenMethods = {
     const has = (fn) => track.tiles.some(fn);
     if (has((t) => PIECES[t.t].kind === 'loop' || PIECES[t.t].loopTop)) tags.push('Looping');
     if (has((t) => t.t === 'steep' || t.t === 'steep4')) tags.push('Sauts');
-    if (has((t) => t.t === 'bank' || t.t === 'bankBig')) tags.push('Virage relevé');
+    if (has((t) => t.t === 'bank' || t.t === 'bankBig' || t.t === 'bankGiant')) tags.push('Virage relevé');
     if (has((t) => t.t === 'tube' || t.t === 'tubeMid' || PIECES[t.t].tubeArc)) tags.push('Tube');
     if (has((t) => t.t === 'cork' || t.t === 'corkL')) tags.push('Tire-bouchon');
     if (has((t) => PIECES[t.t].kind === 'fork')) tags.push('Bifurcation');

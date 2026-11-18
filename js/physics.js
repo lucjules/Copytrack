@@ -22,7 +22,7 @@ import { clamp } from './mathutil.js';
 import { wallMethods } from './physics/walls.js';
 import { obstacleMethods } from './physics/obstacles.js';
 import { ribbonMethods } from './physics/ribbon.js';
-import { dacos, dasin, datan, datan2, dcos, dexp, dpow, dsin, dtan, hypot2, hypot3 } from './dmath.js';
+import { dacos, dasin, datan2, dcos, dexp, dpow, dsin, dtan, hypot2, hypot3 } from './dmath.js';
 
 // Part (0 à 1) de la vitesse à partir de laquelle un transfert de charge compte (rien sous 12 m/s, plein à 30 m/s).
 const smoothSpeed = (v) => { const t = clamp((Math.abs(v) - 12) / 18, 0, 1); return t * t * (3 - 2 * t); };
@@ -35,6 +35,7 @@ const MOV = {};
 const TMP = { x: 0, z: 0 };
 const BK = { vx: 0, vy: 0, w: 0 };
 const AIR_BRAKE_DECAY = dexp(-CAR.airBrake * DT);      // aérofrein : amortissement de la rotation par pas (constante, calculée une fois)
+const AIR_SPIN_DECAY = dexp(-CAR.airSpin * DT);        // amortissement naturel de la rotation en vol, par pas
 
 export class CarPhysics {
   constructor(track) {
@@ -119,7 +120,7 @@ export class CarPhysics {
     this.steer = 0; this.steerAngle = 0; this.boost = 0; this.boostF = 1; this.slip = 0; this.airTime = 0; this.fwdSpeed = 0;
     this.driftT = 0; this.bounceCD = 0; this.driftCharge = 0; this.slipV = 0; this.xfer = 0; this.prevSteerIn = 0; this.wallT = 0; this.stunT = 0; this.stuckT = 0; this.wallRun = 0; this.pinT = 0; this._pinned = false; this.unstick = 0; this.unstickT = 0; this.unstickDir = 0; this.crawlT = 0; this.touchT = 0; this.wnx = 0; this.wnz = 0; this.wallPrev = 0;
     this.envGrip = 1;
-    this.pitch = 0; this.pitchRate = 0; this.pitch0 = 0; this.landQ = ''; this.aoa = 0.08; this.glidePitch = 0; this.bankT = 0;
+    this.pitch = 0; this.pitchRate = 0; this.tipNext = false; this.landQ = ''; this.aoa = 0.08; this.glidePitch = 0; this.bankT = 0;
     if (this.v2) { this.lean = 0; this.mAx = 0; this.heave = 0; this.v2F = 1; this.v2R = 1; }
     this.rib = null;
     this.gravMul = 1;
@@ -554,17 +555,17 @@ export class CarPhysics {
     this.fwdSpeed = vf;
     this.airTime = 0;
     this.pitch = dasin(clamp(fy, -1, 1));   // assiette au sol : sert d'assiette de départ en l'air
-    this.pitchRate = 0;
+    this.pitchRate = 0; this.tipNext = false;
     return false;
   }
 
   // En l'air : trajectoire balistique, rotation, tangage, vol plané.
   _flyAir(inp) {
-    const dt = DT, v = this.vel, K = this.k;
+    const dt = DT, v = this.vel;
     let fx = -dsin(this.yaw), fz = -dcos(this.yaw);
     // En l'air : trajectoire balistique, la voiture garde son cap (le volant ne tourne que les roues). PHYS_VER 36 (PolyTrack) : ni les gaz ni le
     // volant n'agissent en l'air, la rotation acquise au décollage est GARDÉE ; seul le frein (aérofrein) l'amortit. Avant : lacet au volant,
-    // rotation amortie d'elle-même (1,5 /s).
+    // rotation amortie d'elle-même (1,5 /s). PHYS_VER 37 : le tangage aussi (plus de ressort d'assiette, voir plus bas).
     // Exception : le deltaplane plane et vire en inclinant son aile (ses commandes sont les siennes).
     const airBrake = !!inp.brake && this.vehicle !== 'glider';
     if (this.vehicle === 'glider') { this._glide(inp, dt); fx = -dsin(this.yaw); fz = -dcos(this.yaw); }
@@ -579,29 +580,23 @@ export class CarPhysics {
     this.slip = 0;
     this.fwdSpeed = v.x * fx + v.z * fz;
     this.airTime += dt;
-    // Tangage. La voiture n'étant pas un solide en rotation, son assiette est un ressort amorti PASSIF (phase 2) : elle tend vers la trajectoire de vol, et près
-    // du sol vers la pente de la route en dessous. PHYS_VER 36 (PolyTrack) : plus aucune commande ne la décale (avant : gaz = nez plus bas, frein = nez plus haut) ;
-    // l'aérofrein FIGE l'assiette : le ressort ne joue plus et la rotation s'amortit (airBrake). Le joueur choisit donc de garder son attitude ou de la laisser suivre la trajectoire.
-    if (this.vehicle === 'glider') this.pitch = this.glidePitch;
+    // Tangage (PHYS_VER 37, PolyTrack mesuré) : la rotation est GARDÉE tout le vol, rien ne redresse la voiture. Au décollage d'une route qui s'arrête (bord, haut de
+    // rampe), la voiture bascule en piqué (airTip : l'avant n'est plus porté quand l'arrière l'est encore), d'autant plus qu'elle est lente. L'aérofrein amortit la
+    // rotation : freiner au bon moment pour arriver à la pente de la réception, c'est le petit contrôle en l'air de PolyTrack (et les pédales penchent la voiture d'un rien :
+    // gaz en avant, frein en arrière). Avant (PHYS_VER 36) : un ressort
+    // rapprochait l'assiette de la trajectoire puis, près du sol, de la pente de la route, et la voiture se posait d'elle-même.
+    if (this.vehicle === 'glider') { this.pitch = this.glidePitch; this.tipNext = false; }
     else {
-      const gs = this.gSign, hv = hypot2(v.x, v.z);
-      const flight = datan2(v.y * gs, Math.max(hv, 1));
-      if (this.airTime <= dt * 1.01) this.pitch0 = this.pitch;                      // assiette au décollage : l'inertie la garde, la stabilité aérodynamique ne la rapproche que PEU de la trajectoire
-      let tgt = this.pitch0 + (flight - this.pitch0) * CAR.airAero, w = 0;
-      const p = this.pos;
-      const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, S1, 0.5, this.excl, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, S1, 0.5, this.excl);
-      if (s.type === 'road' && Number.isFinite(s.h)) {
-        const height = (p.y - s.h) * gs;
-        if (height >= -0.5 && height < CAR.airLevelH) {
-          w = CAR.airLevelW * (1 - Math.max(0, height) / CAR.airLevelH);
-          const slope = -(s.nx * fx + s.nz * fz) / Math.max(0.3, Math.abs(s.ny));         // pente de la route le long du cap (montée > 0)
-          tgt += (datan(slope * gs) - tgt) * w;
-        }
+      if (this.tipNext) {
+        this.tipNext = false;
+        this.pitchRate -= this.gSign * CAR.airTip / (hypot2(v.x, v.z) + CAR.airTipV0);
       }
-      const want = clamp(tgt, -1.4, 1.4);
-      if (airBrake) this.pitchRate *= AIR_BRAKE_DECAY;
-      else this.pitchRate += (CAR.airSpring * (want - this.pitch) - CAR.airPitchDamp * 3 * this.pitchRate) * dt * K.airPitchAcc / CAR.airPitchAcc;
-      this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
+      this.pitchRate *= airBrake ? AIR_BRAKE_DECAY : AIR_SPIN_DECAY;
+      // Gaz en l'air : le nez descend d'un rien ; frein : il remonte d'un rien (en plus de l'aérofrein). Voir CAR.airTilt.
+      if (airBrake) this.pitchRate += this.gSign * CAR.airTilt * dt;
+      else if (inp.throttle) this.pitchRate -= this.gSign * CAR.airTilt * dt;
+      this.pitch += this.pitchRate * dt;
+      if (Math.abs(this.pitch) > 1.4) { this.pitch = clamp(this.pitch, -1.4, 1.4); this.pitchRate = 0; }
     }
   }
 
@@ -678,6 +673,7 @@ export class CarPhysics {
       this.grounded = true;
       this._setGround(s);
     } else {
+      if (this.grounded) this.tipNext = true;      // la route s'arrête sous la voiture : elle décolle et bascule (_flyAir)
       this.grounded = false;
     }
 

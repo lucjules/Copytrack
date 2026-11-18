@@ -10,7 +10,7 @@ import { SPECS } from './specs.js';
 
 export const PROFILE_IDS = ['arcade', 'sim'];
 const MUL = {
-  arcade: { latGrip: 1.15, yawDamp: 1.45, steerOut: 1.3, brake: 1.08, brakeV: 1.08, airPitchAcc: 1.2, corner: 1.1, steerC: 1.1 },
+  arcade: { latGrip: 1.15, yawDamp: 1.45, steerOut: 1.3, brake: 1.08, brakeV: 1.08, corner: 1.1, steerC: 1.1 },
   sim: { latGrip: 0.93, yawDamp: 0.75, corner: 0.82, brake: 0.9, brakeV: 0.9, steerC: 0.9 },
 };
 const REAR = { arcade: (r) => Math.min(0.92, r + 0.12), sim: (r) => r };      // adhérence arrière en dérapage

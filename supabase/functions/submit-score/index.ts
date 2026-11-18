@@ -1072,9 +1072,62 @@ for (const [pre, size, mir, lab] of [
     } : {}
   });
 }
+var GIANT_IDS = [
+  "bankGiant"
+];
+PIECES.bankGiant = {
+  label: "Virage g\xE9ant relev\xE9",
+  kind: "ribbon",
+  size: 5,
+  rise: 0,
+  clearance: 2,
+  arc: true,
+  bank: 0.5
+};
+for (const [pre, mir, dn, lab] of [
+  [
+    "cvGiant",
+    1,
+    1,
+    "montant"
+  ],
+  [
+    "cvGiantL",
+    -1,
+    1,
+    "montant \u21B0"
+  ],
+  [
+    "cvdGiant",
+    1,
+    -1,
+    "descendant"
+  ],
+  [
+    "cvdGiantL",
+    -1,
+    -1,
+    "descendant \u21B0"
+  ]
+]) {
+  for (const r of RISES) {
+    const id = pre + rtag(r);
+    PIECES[id] = {
+      label: `Virage g\xE9ant ${lab} \xB7 ${rtxt(r)}`,
+      kind: "arc",
+      size: 5,
+      rise: dn * r,
+      ...mir < 0 ? {
+        mirror: -1
+      } : {}
+    };
+    GIANT_IDS.push(id);
+  }
+}
 for (const id of Object.keys(PIECES)) {
   const P = PIECES[id];
   if (P.kind === "loop" || id === "twist" || id === "cork" || id === "corkL") P.rollable = true;
+  if (P.kind === "sbend") P.rollable = true;
 }
 var D45 = Math.PI / 4;
 var ORI_ANGLE = [
@@ -1317,7 +1370,9 @@ var PIECE_ORDER = [
   "loopTop",
   "loopTopL",
   "tubeTurn",
-  "tubeTurnL"
+  "tubeTurnL",
+  // 0.11.4 : virage géant relevé et inclinés (à la suite : ne jamais réordonner)
+  ...GIANT_IDS
 ];
 var SURFACES = {
   "": {
@@ -1583,7 +1638,7 @@ function isSideTile(tile) {
   const p = PIECES[tile.t];
   return !!(tile.o || p.roll);
 }
-function headingGuided(tile) {
+function rolledRibbon(tile) {
   const p = PIECES[tile.t];
   return !!(tile.o || p.roll || p.rollable || p.loopTop);
 }
@@ -1671,7 +1726,7 @@ function flagAllowed(type, flag, tile = null, val = 0) {
   }
   if (p.kind === "ring" || p.kind === "fork") return false;
   if (p.kind === "junction") return flag === "nb";
-  if (p.kind === "sbend") return flag === "nb" || flag === "tn";
+  if (p.kind === "sbend" && flag !== "o") return flag === "nb" || flag === "tn";
   if (flag === "o") {
     if (!(val >= 1 && val <= MAX_O) || p.special || p.noRails || hasConflict("o", tile)) return false;
     if (lineLike) return true;
@@ -2443,6 +2498,28 @@ function buildBase(tile) {
       len: total * R + 2 * lane
     };
   }
+  if (P.kind === "sbend") {
+    const q = {};
+    let len = 0, px = 0, pz = 0;
+    for (let i = 0; i <= 64; i++) {
+      sbendPoint(P, i / 64, q);
+      if (i) len += hypot2(q.x - px, q.z - pz);
+      px = q.x;
+      pz = q.z;
+    }
+    return {
+      pos(u, o) {
+        sbendPoint(P, u, q);
+        o.x = q.x;
+        o.y = base;
+        o.z = q.z;
+        o.nx = 0;
+        o.ny = 1;
+        o.nz = 0;
+      },
+      len
+    };
+  }
   if (P.kind === "ribbon") {
     if (P.arc) {
       const a = arcParams(P);
@@ -2725,7 +2802,7 @@ function centerlineLocal(tile, n) {
       -(half * i) / 4,
       0
     ]);
-  } else if (p.kind === "ribbon" || p.kind === "loop") {
+  } else if (p.kind === "ribbon" || p.kind === "loop" || p.kind === "sbend" && tile.o) {
     const rib = ribbonOf(tile, true);
     sampleRibbon(Math.max(8, Math.round(rib.len / 3)), p.arc ? 2 : 1);
   } else if (p.kind === "sbend") {
@@ -6423,6 +6500,7 @@ var editMethods = {
       deco.s = Math.max(0.5, Math.min(2.5, deco.s));
     }
     if (!DECO_ORDER.includes(deco.k)) return null;
+    if (!Number.isFinite(deco.x) || !Number.isFinite(deco.y) || !Number.isFinite(deco.z)) return null;
     const solid = isSolid(deco.k);
     if (solid) {
       deco.s = Math.max(SOLID_SCALE[0], Math.min(SOLID_SCALE[1], deco.s));
@@ -6912,15 +6990,19 @@ var CAR = {
   magnetRange: 4,
   magnetAcc: 80,
   launch: 0.6,
-  airPitchAcc: 4.2,
-  airPitchDamp: 2.6,
-  airSpring: 18,
-  // PHYS_VER 36 (PolyTrack) : en l'air, NI les gaz NI le volant ne pilotent la voiture (avant : assiette ± 14° aux gaz / au frein, lacet au volant).
-  // Seul le FREIN agit : l'aérofrein amortit la rotation (PolyTrack : tangage 28 → 6 °/s en 1,6 s). Sans lui, la rotation acquise est gardée.
+  // PHYS_VER 37 (PolyTrack, mesuré en boîte noire) : en l'air, NI les gaz NI le volant ne pilotent la voiture, et RIEN ne la redresse : la rotation acquise au
+  // décollage est gardée tout le vol. Seul le FREIN agit : l'aérofrein amortit la rotation (PolyTrack : tangage 28 → 7 °/s en 1,6 s). C'est le petit contrôle en l'air
+  // de PolyTrack : freiner au bon moment pour arriver à plat (ou à la pente de la réception) fait gagner des dixièmes. Avant (PHYS_VER 36) : un ressort d'assiette
+  // rapprochait l'assiette de la trajectoire (15 %) puis, près du sol, de la pente de la route (35 %) : la voiture se posait d'elle-même, le frein ne servait presque à rien.
   airBrake: 1,
-  airLevelH: 14,
-  airLevelW: 0.35,
-  airAero: 0.15,
+  airSpin: 0.1,
+  // Bascule aux pédales en l'air (0.11.2) : gaz = le nez descend, frein = il remonte, d'un rien. PolyTrack (15 vols mesurés) : l'effet des gaz est sous la précision
+  // de la mesure (moins de 0,5 °/s², moins d'un degré après 1,2 s d'appui) ; les joueurs le sentent : on le prend à cette borne. L'aérofrein, lui, est bien mesuré.
+  airTilt: 9e-3,
+  // Bascule au décollage : quand la route s'arrête sous la voiture, l'avant n'est plus porté alors que l'arrière l'est encore : la voiture part en piqué. PolyTrack (bord
+  // de route plat, mesuré) : 65 °/s à 39 km/h, 38 °/s à 78 km/h, 26 °/s à 140 km/h, 16 °/s à 225 km/h, soit airTip / (v + airTipV0) rad/s.
+  airTip: 18.4,
+  airTipV0: 5.5,
   landOk: 0.38,
   // Mini-turbo (phase 2) : une glisse CONTRÔLÉE se charge ; la récompense dépend de sa durée (et un peu de son angle, plafonné). Avant : +6 / +16 km/h pour 100 km/h perdus.
   mtTime1: 0.45,
@@ -7003,8 +7085,7 @@ var MOTO = {
   steerC: 29.1,
   driftRear: 0.76,
   steerIn: 11,
-  steerOut: 11,
-  airPitchAcc: 5.2
+  steerOut: 11
 };
 var BOAT = {
   ...CAR,
@@ -7023,8 +7104,7 @@ var BOAT = {
 var GLIDER = {
   ...CAR,
   accel: SURF_PHYS.engineAccel * (8 / 11),
-  maxSpeed: SURF_PHYS.maxSpeed * (90 / 95),
-  airPitchAcc: 3.4
+  maxSpeed: SURF_PHYS.maxSpeed * (90 / 95)
 };
 var SPECS = {
   car: CAR,
@@ -7050,7 +7130,7 @@ var GLIDE = {
   turnRamp: 7
 };
 var SIDE_AERO = 0.03;
-var SIDE_HOLD = 25 / (30 * 30);
+var SIDE_DROP = 0.5;
 var SIDE_MIN_SPEED = 30;
 var SIDE_GRACE = 0.3;
 var COEF = {
@@ -7109,7 +7189,6 @@ var MUL = {
     steerOut: 1.3,
     brake: 1.08,
     brakeV: 1.08,
-    airPitchAcc: 1.2,
     corner: 1.1,
     steerC: 1.1
   },
@@ -8172,6 +8251,68 @@ function scriptTrack(name, script, opts2 = {}) {
     l = A2.l;
     split = null;
   };
+  let tsplit = null;
+  const teeOpen = (side) => {
+    if (tsplit) throw new Error(`${name} : bifurcation en T d\xE9j\xE0 ouverte (TSPL \u2026 TMRG ne s'imbriquent pas)`);
+    const r = side > 0 ? h : h + 2 & 3;
+    tsplit = {
+      side,
+      r,
+      x,
+      z,
+      h,
+      l,
+      start: path.length,
+      segA: null,
+      endA: null,
+      botB: false
+    };
+    junction("tee", r, 0);
+  };
+  const teeAlt = (botB) => {
+    if (!tsplit || tsplit.segA) throw new Error(`${name} : TALT sans TSPL (ou deux fois)`);
+    tsplit.segA = path.splice(tsplit.start);
+    tsplit.endA = {
+      x,
+      z,
+      h,
+      l
+    };
+    tsplit.botB = botB;
+    x = tsplit.x;
+    z = tsplit.z;
+    h = tsplit.h;
+    l = tsplit.l;
+    junction("tee", tsplit.r, tsplit.side);
+  };
+  const teeMerge = () => {
+    if (!tsplit || !tsplit.segA) throw new Error(`${name} : TMRG sans TSPL \u2026 TALT`);
+    const A2 = tsplit.endA, segB = path.splice(tsplit.start), B3 = {
+      x,
+      z,
+      h,
+      l
+    };
+    const side = B3.x !== A2.x || B3.z !== A2.z || B3.l !== A2.l ? 0 : B3.h === (A2.h + 3 & 3) ? 1 : B3.h === (A2.h + 1 & 3) ? -1 : 0;
+    if (!side) throw new Error(`${name} : les deux voies de la bifurcation en T ne se rejoignent pas (directe : case ${A2.x},${A2.z} niveau ${A2.l} cap ${A2.h} ; branche : case ${B3.x},${B3.z} niveau ${B3.l} cap ${B3.h} ; attendu : la m\xEAme case et le m\xEAme niveau, la branche arrivant par le c\xF4t\xE9)`);
+    const r = side > 0 ? A2.h : A2.h + 2 & 3;
+    if (tsplit.botB) {
+      pushPts(segB);
+      x = B3.x;
+      z = B3.z;
+      h = B3.h;
+      l = B3.l;
+      junction("tee", r, side);
+    } else {
+      pushPts(tsplit.segA);
+      x = A2.x;
+      z = A2.z;
+      h = A2.h;
+      l = A2.l;
+      junction("tee", r, 0);
+    }
+    tsplit = null;
+  };
   function pushPts(pts) {
     if (!pts.length) return;
     if (path.length) pts = pts.slice(1);
@@ -8269,6 +8410,13 @@ function scriptTrack(name, script, opts2 = {}) {
     const P = PIECES[type], m = P.mirror, size = P.size;
     const e = rot(h, -m * (size - 1) / 2, (size - 1) / 2);
     place(type, Math.round(x + 0.5 - e.x - size / 2), Math.round(z + 0.5 - e.z - size / 2), l, h);
+    if (cur.o === 1 || cur.o === 2) {
+      const d2 = rot(h, 0, -size);
+      x += d2.x;
+      z += d2.z;
+      l += (cur.o === 1 ? -1 : 1) * m * P.shift * Math.round(CELL / LEVEL_H);
+      return;
+    }
     const d = rot(h, m * P.shift, -size);
     x += d.x;
     z += d.z;
@@ -8546,6 +8694,39 @@ function scriptTrack(name, script, opts2 = {}) {
         h = h + (sgn > 0 ? 1 : 3) & 3;
         break;
       }
+      // 0.11.4 : XBR / XBL virage géant RELEVÉ ; XUR / XUL n virage géant MONTANT, XDR / XDL n DESCENDANT (n : 0 = ½, 1, 2, 4 niveaux, comme CVR)
+      case "XBR":
+      case "XBL":
+      case "XUR":
+      case "XUL":
+      case "XDR":
+      case "XDL": {
+        const sgn = op[2] === "R" ? 1 : -1, kind = op[1];
+        const fwd = rot(h, 0, -1), side = rot(h, sgn, 0);
+        const cells = [];
+        for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) cells.push([
+          x + side.x * i + fwd.x * j,
+          z + side.z * i + fwd.z * j
+        ]);
+        const ax = Math.min(...cells.map((c) => c[0])), az = Math.min(...cells.map((c) => c[1]));
+        if (kind === "B") {
+          if (sgn > 0) place("bankGiant", ax, az, l, h);
+          else place("bankGiant", ax, az, l, h + 1, true);
+        } else {
+          const k = [
+            "05",
+            "1",
+            "2",
+            "4"
+          ][n === 0 ? 0 : n === 1 ? 1 : n === 2 ? 2 : 3], r = k === "05" ? 0.5 : +k;
+          place((kind === "U" ? "cvGiant" : "cvdGiant") + (sgn > 0 ? "" : "L") + k, ax, az, l, h);
+          l += kind === "U" ? r : -r;
+        }
+        x += fwd.x * 4 + side.x * 5;
+        z += fwd.z * 4 + side.z * 5;
+        h = h + (sgn > 0 ? 1 : 3) & 3;
+        break;
+      }
       // 0.9.72 : looping modulaire LPR / LPL n : Montée en L, n murs (1 par défaut, 0 possible), Sommet de looping (↱ / ↰ : on redescend une colonne à
       // droite / à gauche), n murs à la descente, Montée en L parcourue à l'envers ; on repart dans la colonne voisine, au niveau de départ, même cap.
       case "LPR":
@@ -8808,6 +8989,21 @@ function scriptTrack(name, script, opts2 = {}) {
       case "MRG":
         splitMerge();
         break;
+      case "TSPL":
+        teeOpen(1);
+        break;
+      case "TSPLL":
+        teeOpen(-1);
+        break;
+      case "TALT":
+        teeAlt(false);
+        break;
+      case "TALTP":
+        teeAlt(true);
+        break;
+      case "TMRG":
+        teeMerge();
+        break;
       case "V":
         l += n;
         break;
@@ -8816,6 +9012,7 @@ function scriptTrack(name, script, opts2 = {}) {
     }
   }
   if (split) throw new Error(`${name} : bifurcation SPL sans MRG`);
+  if (tsplit) throw new Error(`${name} : bifurcation en T (TSPL) sans TMRG`);
   for (const d of opts2.decos || []) tr.addDeco(d);
   tr.path = path;
   tr.turtle = {
@@ -8857,12 +9054,13 @@ var BUILTIN_TRACKS = [
     // slalom de chicanes rapides (droite, gauche) et un premier wall-ride (transitions douces 2×2). Bifurcation (petit saut tout droit, ou voie de côté), puis un CROISEMENT traversé deux fois : la route en repart pour une
     // boucle de trois virages géants et y revient de côté. Route large sous un portique en poutres entre quatre piliers, chicanes longues, un dernier virage géant ; arrivée entre deux
     // pylônes. Chevrons avant les virages, panneaux danger avant le croisement. Aucun virage serré : le chrono se joue sur la vitesse et la trajectoire.
+    // 0.11.4 (familles) : la boucle du croisement : trois virages géants, celui du milieu RELEVÉ.
     id: "eclats",
     name: "Premiers \xC9clats",
     decor: "desert",
     difficulty: 1,
     profil: "sprint",
-    appris: "D\xE9part : sous une arche, deux boosters \u2192 slalom de chicanes rapides. Au programme : premier wall-ride, bifurcation (petit saut ou voie de c\xF4t\xE9), croisement travers\xE9 deux fois (trois virages g\xE9ants), route large sous un portique, chicanes longues.",
+    appris: "D\xE9part : sous une arche, deux boosters \u2192 slalom de chicanes rapides. Au programme : premier wall-ride, bifurcation (petit saut ou voie de c\xF4t\xE9), croisement travers\xE9 deux fois (trois virages g\xE9ants, un relev\xE9), route large sous un portique, chicanes longues.",
     goal: {
       id: "under",
       t: 50.5
@@ -8873,67 +9071,67 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*2 B2 ZR4 B ZL4 [tr01l] S2< [tr10l] C*1 S SPL U G1 D S ALT S4 MRG S JX S4 XR XR XR S4 JX C*1 WI W WO S ZR3 S ZL3 S XL S3 B finish*3",
+    script: "start*2 B2 ZR4 B ZL4 [tr01l] S2< [tr10l] C*1 S SPL U G1 D S ALT S4 MRG S JX S4 XR XBR XR S2 C*3 S JX C*1 WI W WO S ZR3 S ZL3 S XL S3 B finish*3",
     obst: [
       {
         k: "board_right",
-        at: 0.06,
+        at: 0.05388,
         side: -20,
         rot: Math.PI
       },
       {
         k: "board_left",
-        at: 0.14,
+        at: 0.12571,
         side: 20,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.43,
+        at: 0.38469,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.515,
+        at: 0.46219,
         side: -24,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.665,
+        at: 0.70038,
         side: 18,
         rot: Math.PI
       },
       {
         k: "gantry",
-        at: 0.734,
+        at: 0.76087,
         side: 0,
         s: 2
       },
       {
         k: "pillar",
-        at: 0.722,
+        at: 0.75142,
         side: 36
       },
       {
         k: "pillar",
-        at: 0.722,
+        at: 0.75142,
         side: -36
       },
       {
         k: "pillar",
-        at: 0.747,
+        at: 0.7741,
         side: 36
       },
       {
         k: "pillar",
-        at: 0.747,
+        at: 0.7741,
         side: -36
       },
       {
         k: "board_left",
-        at: 0.9,
+        at: 0.91021,
         side: 24,
         rot: Math.PI
       }
@@ -8949,12 +9147,13 @@ var BUILTIN_TRACKS = [
     // Chapitre 3 · 1/6 — SPRINT EN MOTO (0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : descente en moto vers le lagon. Deux sauts à anneau turbo (le second se reçoit
     // sur une PLAQUE, un banc de sable), chicanes rapides entre les deux, route large sous un portique, très grand virage plat, CROISEMENT traversé deux fois (boucle de trois
     // virages géants), grand S ; deux pyramides de roche à l'arrivée. Aucun virage serré.
+    // 0.11.4 (familles) : la boucle du croisement : trois virages géants RELEVÉS.
     id: "lagon",
     name: "Lagon Turquoise",
     decor: "isles",
     difficulty: 1,
     profil: "sprint",
-    appris: "D\xE9part : en moto, descente vers le lagon. Au programme : deux sauts \xE0 anneau turbo (le second re\xE7u sur une plaque), chicanes rapides, route large sous un portique, croisement travers\xE9 deux fois, grand S.",
+    appris: "D\xE9part : en moto, descente vers le lagon. Au programme : deux sauts \xE0 anneau turbo (le second re\xE7u sur une plaque), chicanes rapides, route large sous un portique, croisement travers\xE9 deux fois (boucle relev\xE9e), grand S.",
     goal: {
       id: "rings",
       n: 2
@@ -8968,56 +9167,56 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*1 [cdi1] [dn2] [dn2] [cdo2] B S [crv1] UU GR2 DD [cdo1] B2 ZR4 S ZL4 S [crv1] UU GR2 V-2 [plate3]*10 S B C*2 WI W WO S HL S JX S4 XR XR XR S4 JX ZZR S B2 finish*2",
+    script: "start*1 [cdi1] [dn2] [dn2] [cdo2] B S [crv1] UU GR2 DD [cdo1] B2 ZR4 S ZL4 S [crv1] UU GR2 V-2 [plate3]*10 S B C*2 WI W WO S HL S JX S4 XBR XBR XBR S2 C*3 S JX ZZR S B2 finish*2",
     obst: [
       {
         k: "board_right",
-        at: 0.185,
+        at: 0.1307,
         side: -20,
         rot: Math.PI
       },
       {
         k: "board_left",
-        at: 0.28,
+        at: 0.19912,
         side: 20,
         rot: Math.PI
       },
       {
         k: "gantry",
-        at: 0.501,
+        at: 0.35526,
         side: 0,
         s: 2
       },
       {
         k: "pillar",
-        at: 0.495,
+        at: 0.35175,
         side: 36
       },
       {
         k: "pillar",
-        at: 0.495,
+        at: 0.35175,
         side: -36
       },
       {
         k: "board_warn",
-        at: 0.565,
+        at: 0.40088,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.64,
+        at: 0.45526,
         side: -24,
         rot: Math.PI
       },
       {
         k: "pyramidS",
-        at: 0.95,
+        at: 0.96404,
         side: 28
       },
       {
         k: "pyramidS",
-        at: 0.95,
+        at: 0.96404,
         side: -28
       }
     ],
@@ -9112,12 +9311,13 @@ var BUILTIN_TRACKS = [
     // Chapitre 2 · 1/6 — SPRINT (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → rampe de lancement avec un anneau turbo dans le saut. Puis un slalom
     // de chicanes rapides, une vague douce, le pont de lianes sans bordures à plus de 230 km/h, un S de virages relevés, une clairière (route large de 56 m sous un portique entre
     // quatre piliers) et un CROISEMENT traversé deux fois (boucle de trois virages géants). Chevrons avant les chicanes et les virages, panneau danger avant le croisement. Aucun virage serré.
+    // 0.11.4 (familles) : la boucle du croisement MONTE d'un niveau puis redescend (virages géants inclinés).
     id: "lianes",
     name: "Lianes N\xE9on",
     decor: "jungle",
     difficulty: 2,
     profil: "sprint",
-    appris: "D\xE9part : trois boosters \u2192 rampe de lancement avec anneau turbo dans le saut. Au programme : chicanes rapides, pont de lianes sans bordures \xE0 plus de 230 km/h, S relev\xE9, route large sous un portique, croisement travers\xE9 deux fois.",
+    appris: "D\xE9part : trois boosters \u2192 rampe de lancement avec anneau turbo dans le saut. Au programme : chicanes rapides, pont de lianes sans bordures \xE0 plus de 230 km/h, S relev\xE9, route large sous un portique, croisement travers\xE9 deux fois, boucle en pente.",
     goal: {
       id: "rings",
       n: 1
@@ -9128,55 +9328,55 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*2 B3 UU GR2 DD [cdo1] B2 ZR4 S ZL4 [crs1] S2 [cds1] B S2_ B_ S2_ BR S2 B BL S2 C*3 WI W WO S JX S4 XR XR XR S4 JX S B2 finish*2",
+    script: "start*2 B3 UU GR2 DD [cdo1] B2 ZR4 S ZL4 [crs1] S2 [cds1] B S2_ B_ S2_ BR S2 B BL S2 C*3 WI W WO S JX S4 XUR1 XR XDR1 S2 C*3 S JX S B2 finish*2",
     obst: [
       {
         k: "board_right",
-        at: 0.11,
+        at: 0.10948,
         side: -20,
         rot: Math.PI
       },
       {
         k: "board_left",
-        at: 0.195,
+        at: 0.19526,
         side: 20,
         rot: Math.PI
       },
       {
         k: "gantry",
-        at: 0.625,
+        at: 0.62415,
         side: 0,
         s: 2
       },
       {
         k: "pillar",
-        at: 0.618,
+        at: 0.61738,
         side: 36
       },
       {
         k: "pillar",
-        at: 0.618,
+        at: 0.61738,
         side: -36
       },
       {
         k: "pillar",
-        at: 0.634,
+        at: 0.63318,
         side: 36
       },
       {
         k: "pillar",
-        at: 0.634,
+        at: 0.63318,
         side: -36
       },
       {
         k: "board_warn",
-        at: 0.652,
+        at: 0.65124,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.725,
+        at: 0.72573,
         side: -24,
         rot: Math.PI
       }
@@ -9192,12 +9392,13 @@ var BUILTIN_TRACKS = [
     // Chapitre 4 · 1/6 — SPEEDWAY (0.10.3 : refait AUTOUR des nouvelles pièces). Ouverture : DÉPART SUR UN TAPIS ROULANT à +200 km/h (trois cases) entre deux façades : la voiture
     // est lancée à près de 290 km/h sans un seul booster. Très grands virages relevés, avenue large sous un portique, chicane rapide, wall-ride sur la façade d'une tour, grand S,
     // CROISEMENT traversé deux fois (boucle de trois virages géants) et seconde avenue large sous un portique. Aucun virage serré ; objectif : ne toucher aucune bordure.
+    // 0.11.4 (familles) : la boucle du croisement : virages géants relevé, plat, relevé.
     id: "neons",
     name: "N\xE9ons Express",
     decor: "city",
     difficulty: 2,
     profil: "speedway",
-    appris: "D\xE9part : tapis roulant \xE0 +200 km/h entre deux fa\xE7ades, sans booster. Au programme : tr\xE8s grands virages relev\xE9s, avenue large sous un portique, chicane rapide, wall-ride sur une tour, grand S, croisement travers\xE9 deux fois.",
+    appris: "D\xE9part : tapis roulant \xE0 +200 km/h entre deux fa\xE7ades, sans booster. Au programme : tr\xE8s grands virages relev\xE9s, avenue large sous un portique, chicane rapide, wall-ride sur une tour, grand S, croisement travers\xE9 deux fois (deux virages g\xE9ants relev\xE9s).",
     goal: {
       id: "nowall"
     },
@@ -9207,63 +9408,63 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 70
     },
-    script: "start*3 S3.t201 S BRR S2 B BLL S2 WI W2 WO S ZR4 S C*2 B [tr02l] S4> [tr20l] BRR S2 ZZL S B BLL S2 JX S4 XR XR XR S4 JX S B WI W WO S B2 finish*2",
+    script: "start*3 S3.t201 S BRR S2 B BLL S2 WI W2 WO S ZR4 S C*2 B [tr02l] S4> [tr20l] BRR S2 ZZL S B BLL S2 JX S4 XBR XR XBR S2 C*3 S JX S B WI W WO S B2 finish*2",
     obst: [
       {
         k: "wallS",
-        at: 0.03,
+        at: 0.02559,
         side: 26,
         rot: Math.PI / 2
       },
       {
         k: "wallS",
-        at: 0.03,
+        at: 0.02559,
         side: -26,
         rot: Math.PI / 2
       },
       {
         k: "gantry",
-        at: 0.251,
+        at: 0.21231,
         side: 0,
         s: 2
       },
       {
         k: "pillarBase",
-        at: 0.245,
+        at: 0.20816,
         side: 36
       },
       {
         k: "pillarBase",
-        at: 0.245,
+        at: 0.20816,
         side: -36
       },
       {
         k: "board_right",
-        at: 0.278,
+        at: 0.23582,
         side: -20,
         rot: Math.PI
       },
       {
         k: "board_left",
-        at: 0.553,
+        at: 0.46819,
         side: 20,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.7,
+        at: 0.59405,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.755,
+        at: 0.6397,
         side: -24,
         rot: Math.PI
       },
       {
         k: "gantry",
-        at: 0.941,
+        at: 0.94952,
         side: 0,
         s: 2
       }
@@ -9359,12 +9560,13 @@ var BUILTIN_TRACKS = [
     // Chapitre 1 · 2/6 — SPEEDWAY (0.9.74 : refait AUTOUR des nouvelles pièces). Ouverture : un booster et la vallée s'élargit aussitôt (route de 56 m sous un portique en poutres).
     // Trois fois la vallée s'élargit et se resserre, chaque fois sous un portique ; virages géants pris au-dessus de 200 km/h, chicanes rapides, wall-ride de 6 cases sur la paroi
     // du canyon le long d'une rangée de piliers, bifurcation (voie directe, ou grand saut à gauche). Chevrons avant les virages. Aucun virage serré.
+    // 0.11.3 (wall-ride) : wall-ride en slalom : un bloc sur le bas du mur (passer dessus), puis un sur le haut (passer dessous).
     id: "canyon",
     name: "Canyon Corail",
     decor: "desert",
     difficulty: 2,
     profil: "speedway",
-    appris: "D\xE9part : un booster \u2192 la vall\xE9e s\u2019\xE9largit aussit\xF4t (route de 56 m). Au programme : trois routes larges sous des portiques, virages g\xE9ants au-dessus de 200 km/h, chicanes rapides, wall-ride le long des piliers, bifurcation : voie directe ou grand saut.",
+    appris: "D\xE9part : un booster \u2192 la vall\xE9e s\u2019\xE9largit aussit\xF4t (route de 56 m). Au programme : trois routes larges sous des portiques, virages g\xE9ants au-dessus de 200 km/h, chicanes rapides, wall-ride en slalom entre deux blocs, bifurcation : voie directe ou grand saut.",
     goal: {
       id: "nowall"
     },
@@ -9432,6 +9634,18 @@ var BUILTIN_TRACKS = [
         at: 0.905,
         side: 24,
         rot: Math.PI
+      },
+      {
+        k: "block",
+        at: 0.30991,
+        wall: "bas",
+        s: 2
+      },
+      {
+        k: "block",
+        at: 0.3629,
+        wall: "haut",
+        s: 2
       }
     ],
     medals: {
@@ -9445,12 +9659,13 @@ var BUILTIN_TRACKS = [
     // Chapitre 7 · 1/6 — SPRINT (0.10.6 : refait AUTOUR des nouvelles pièces). Ouverture : booster et sas en tube, puis une plaque de BASSE GRAVITÉ (40 %) : le grand saut à anneau
     // turbo traverse un vide de cinq cases et se reçoit cinq niveaux plus bas, sur une PLAQUE d'amarrage entre deux modules. Gravité normale, chicanes rapides, très grand virage
     // plat, route large sous un portique, CROISEMENT traversé deux fois (boucle de trois virages géants). Aucun virage serré.
+    // 0.11.4 (familles) : la boucle du croisement monte d'un demi-niveau puis redescend.
     id: "quai",
     name: "Quai d\u2019Amarrage",
     decor: "orbit",
     difficulty: 2,
     profil: "sprint",
-    appris: "D\xE9part : booster et sas en tube, puis basse gravit\xE9. Au programme : grand saut \xE0 anneau turbo re\xE7u sur une plaque d\u2019amarrage, chicanes rapides, route large sous un portique, croisement travers\xE9 deux fois.",
+    appris: "D\xE9part : booster et sas en tube, puis basse gravit\xE9. Au programme : grand saut \xE0 anneau turbo re\xE7u sur une plaque d\u2019amarrage, chicanes rapides, route large sous un portique, croisement travers\xE9 deux fois, boucle en pente.",
     goal: {
       id: "rings",
       n: 1
@@ -9461,61 +9676,61 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*3 B TI TM TO B S.g40 [crs1] UU GR2 G5 V-5 [plate3]*10 S7 S.g100 B C*2 ZR4 S ZL4 S HR S WI W WO S JX S4 XR XR XR S4 JX B [cdi1] [dn2] [cdo1] B2 finish*2",
+    script: "start*3 B TI TM TO B S.g40 [crs1] UU GR2 G5 V-5 [plate3]*10 S7 S.g100 B C*2 ZR4 S ZL4 S HR S WI W WO S JX S4 XUR0 XR XDR0 S2 C*3 S JX B [cdi1] [dn2] [cdo1] B2 finish*2",
     obst: [
       {
         k: "board_up",
-        at: 0.13,
+        at: 0.12976,
         side: 18,
         rot: Math.PI
       },
       {
         k: "block",
-        at: 0.2,
+        at: 0.20119,
         side: 60
       },
       {
         k: "block",
-        at: 0.2,
+        at: 0.20119,
         side: -60
       },
       {
         k: "board_right",
-        at: 0.33,
+        at: 0.32976,
         side: -20,
         rot: Math.PI
       },
       {
         k: "board_left",
-        at: 0.42,
+        at: 0.42024,
         side: 20,
         rot: Math.PI
       },
       {
         k: "gantry",
-        at: 0.56,
+        at: 0.56071,
         side: 0,
         s: 2
       },
       {
         k: "pillar",
-        at: 0.555,
+        at: 0.55595,
         side: 36
       },
       {
         k: "pillar",
-        at: 0.555,
+        at: 0.55595,
         side: -36
       },
       {
         k: "board_warn",
-        at: 0.595,
+        at: 0.59405,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.67,
+        at: 0.67024,
         side: -24,
         rot: Math.PI
       }
@@ -9586,12 +9801,13 @@ var BUILTIN_TRACKS = [
     // Chapitre 4 · 3/6 — ROLLERCOASTER (0.10.3 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → deux loopings décalés (droite, gauche). Wall-ride à gauche, chicane
     // longue, virage relevé, wall-ride à droite, grand looping, avenue large sous un portique, LOOPING MODULAIRE (deux murs de chaque côté), plongeon à 38°, TUBE qui tourne à droite
     // puis à gauche, chicane longue. Panneaux danger avant les loopings et le tube.
+    // 0.11.3 (wall-ride) : un bloc sur chaque mur : sur le bas du mur gauche (passer dessus), sur le haut du mur droit (passer dessous).
     id: "hyper",
     name: "Hyperboucle",
     decor: "city",
     difficulty: 3,
     profil: "rollercoaster",
-    appris: "D\xE9part : trois boosters \u2192 deux loopings d\xE9cal\xE9s. Au programme : wall-rides des deux c\xF4t\xE9s, chicane longue, grand looping, avenue large sous un portique, looping modulaire, plongeon \xE0 38\xB0, tube qui tourne.",
+    appris: "D\xE9part : trois boosters \u2192 deux loopings d\xE9cal\xE9s. Au programme : wall-rides des deux c\xF4t\xE9s, un bloc sur chaque mur, chicane longue, grand looping, avenue large sous un portique, looping modulaire, plongeon \xE0 38\xB0, tube qui tourne.",
     goal: {
       id: "norespawn"
     },
@@ -9654,6 +9870,18 @@ var BUILTIN_TRACKS = [
         at: 0.925,
         side: 20,
         rot: Math.PI
+      },
+      {
+        k: "block",
+        at: 0.23745,
+        wall: "bas",
+        s: 2
+      },
+      {
+        k: "block",
+        at: 0.43257,
+        wall: "haut",
+        s: 2
       }
     ],
     medals: {
@@ -9667,12 +9895,13 @@ var BUILTIN_TRACKS = [
     // Chapitre 2 · 2/6 — SPEEDWAY (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : départ dans un tube accélérateur de trois sections. Très grands virages relevés, deux
     // routes larges sous des portiques (la canopée s'ouvre), un grand S, un wall-ride de cinq cases sur un tronc, une chicane longue, puis un TUBE qui tourne à droite puis à gauche
     // entre les branches. Chevrons avant les chicanes, panneau danger avant le tube. Aucun virage serré.
+    // 0.11.3 (wall-ride) : wall-ride en slalom sur le tronc : un bloc en bas, puis un en haut.
     id: "canopee",
     name: "Canop\xE9e",
     decor: "jungle",
     difficulty: 3,
     profil: "speedway",
-    appris: "D\xE9part : dans un tube acc\xE9l\xE9rateur de trois sections. Au programme : tr\xE8s grands virages relev\xE9s, deux routes larges sous des portiques, grand S, wall-ride sur un tronc, chicane longue, tube qui tourne \xE0 droite puis \xE0 gauche.",
+    appris: "D\xE9part : dans un tube acc\xE9l\xE9rateur de trois sections. Au programme : tr\xE8s grands virages relev\xE9s, deux routes larges sous des portiques, grand S, wall-ride en slalom sur un tronc, chicane longue, tube qui tourne \xE0 droite puis \xE0 gauche.",
     goal: {
       id: "under",
       t: 62
@@ -9734,6 +9963,18 @@ var BUILTIN_TRACKS = [
         k: "pillarBase",
         at: 0.887,
         side: -36
+      },
+      {
+        k: "block",
+        at: 0.37583,
+        wall: "bas",
+        s: 2
+      },
+      {
+        k: "block",
+        at: 0.4012,
+        wall: "haut",
+        s: 2
       }
     ],
     medals: {
@@ -9832,7 +10073,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start*3 S.n S2.a R.a L.a R.a L.a S.a S.n B2 S [tr01s] S2< [tr10s] S3 R R B S2 NI N2 NO L S L B S3 [cvd05] [cvdL05] B ZR S ZL B C*1 JX R S R R S JX R S B S C*3 S.n S2.a R.a L.a R.a L.a S2.a finish*2",
+    script: "start*3 S.n S2.a R.a L.a R.a L.a S.a S.n B2 S [tr01s] S2< [tr10s] S3 R R B S2 NI N2 NO L S L B S3 [cvd05] [cvdL05] B ZR S ZL B C*1 JX R C*3 R R S JX R S B S C*3 S.n S2.a R.a L.a R.a L.a S2.a finish*2",
     obst: [
       {
         k: "sign_uturn",
@@ -9988,7 +10229,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 8
     },
-    script: "start*2 Y2.o B S [cvd05] [cvdL05] [cvd05] [cvdL05] B S NI N2 NO S.o S [tr01s] S2< [tr10s] S R L R L B S2 C*3 ZR S ZL B JX R S R R S JX B S2 C S.o S R L R L B NI N NO S2 B finish*1",
+    script: "start*2 Y2.o B S [cvd05] [cvdL05] [cvd05] [cvdL05] B S NI N2 NO S.o S [tr01s] S2< [tr10s] S R L R L B S2 C*3 ZR S ZL B JX R C*3 R R S JX B S2 C S.o S R L R L B NI N NO S2 B finish*1",
     obst: [
       {
         k: "board_warn",
@@ -10138,7 +10379,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 8
     },
-    script: "start*2 S.o B R L R L B S2 C*3 B NI N2 NO S R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R S R R S JX R S NI N NO [cdi1] [dn2] [cdo1] S B finish*1",
+    script: "start*2 S.o B R L R L B S2 C*3 B NI N2 NO S R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R C*3 R R S JX R S NI N NO [cdi1] [dn2] [cdo1] S B finish*1",
     obst: [
       {
         k: "board_warn",
@@ -10364,7 +10605,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start NI N NO L I B R L S B JX R S R R S JX R B S2 L ZR ZL R S B C S R L JX L S L L S JX L B S2 [tr01s] S2< [tr10s] NI N2 NO R S L B I S3 KR S R S2 B C SPLL I3 ALT S3 MRG S L B S2 R [cvd1] S KL S2 B finish",
+    script: "start NI N NO L I B R L S B JX R C*3 R R S JX R B S2 L ZR ZL R S B C S R L JX L C*3 L L S JX L B S2 [tr01s] S2< [tr10s] NI N2 NO R S L B I S3 KR S R S2 B C SPLL I3 ALT S3 MRG S L B S2 R [cvd1] S KL S2 B finish",
     obst: [
       {
         k: "board_left",
@@ -10590,7 +10831,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 12
     },
-    script: "start*1 [cdi2] DX [cdo2] S2 I S2 R B S2 L B S I S2 R S L C*3 B S NI N2 NO S [tr01s] S2< [tr10s] S2 R B S.m [crs1].m S [cds1].m L B ZR S ZL B S I S2 R S2 L B S2 JX R S R R S JX R S2 B finish*2",
+    script: "start*1 [cdi2] DX [cdo2] S2 I S2 R B S2 L B S I S2 R S L C*3 B S NI N2 NO S [tr01s] S2< [tr10s] S2 R B S.m [crs1].m S [cds1].m L B ZR S ZL B S I S2 R S2 L B S2 JX R C*3 R R S JX R S2 B finish*2",
     obst: [
       {
         k: "board_warn",
@@ -10671,7 +10912,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 2
     },
-    script: "start*1 B CVR2 CVR2 S B R_ L_ R_ L_ S B C*3 B S2 R S R B S NI N2 NO S [tr01s] S2< [tr10s] S B L S R# L# R# L# S2# B ZR S ZL B JX R S R R S JX R S B [cdi1] [dn2] [cdo1] S B finish*3",
+    script: "start*1 B CVR2 CVR2 S B R_ L_ R_ L_ S B C*3 B S2 R S R B S NI N2 NO S [tr01s] S2< [tr10s] S B L S R# L# R# L# S2# B ZR S ZL B JX R C*3 R R S JX R S B [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "board_warn",
@@ -10740,7 +10981,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start*1 S2.d B S2 R S L S B R.d L.d S2 C*3 B NI N2 NO S [tr01s] S2< [tr10s] S2 R S2.d L B ZR S ZL B S2 R.d S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
+    script: "start*1 S2.d B S2 R S L S B R.d L.d S2 C*3 B NI N2 NO S [tr01s] S2< [tr10s] S2 R S2.d L B ZR S ZL B S2 R.d S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "board_warn",
@@ -10810,88 +11051,89 @@ var BUILTIN_TRACKS = [
     // Chapitre 2 · 6/6 — TECHNIQUE (0.10.1 : refait AUTOUR des nouvelles pièces). Ouverture : départ dans un tunnel du temple, deux virages serrés. Allée de colonnes, tube, épingle,
     // descente, lacets en spirale, deux blocs de pierre avant la chicane de tunnels, ROUTE ÉTROITE (12 m), chicanes serrées, ARCHE PLEINE entre deux murs, épingle et un CROISEMENT
     // traversé deux fois (boucle de virages serrés). Panneaux : danger avant la route étroite et le croisement, demi-tour avant l'épingle.
+    // 0.11.4 (familles) : bifurcation EN T : la voie directe saute un vide (rapide), la branche fait le tour (sûre, plus lente).
     id: "temple",
     name: "Temple",
     decor: "jungle",
     difficulty: 4,
     profil: "technique",
-    appris: "D\xE9part : dans un tunnel du temple, deux virages serr\xE9s. Au programme : all\xE9e de colonnes, tube, lacets en spirale, chicane de tunnels, route \xE9troite, chicanes serr\xE9es, arche entre deux murs, croisement travers\xE9 deux fois.",
+    appris: "D\xE9part : dans un tunnel du temple, deux virages serr\xE9s. Au programme : all\xE9e de colonnes, tube, lacets en spirale, chicane de tunnels, route \xE9troite, chicanes serr\xE9es, saut ou d\xE9tour en T, arche, croisement travers\xE9 deux fois.",
     goal: {
       id: "norespawn"
     },
     opts: {
       l: 8
     },
-    script: "start*3 S# R# R# B# S2# B S3 TI TM2 TO S R R B S2 [cdi1] [dn2] [cdo1] S C*2 S [cvd05] [cvd05] [cvd05] [cvd05] S2 B S R# L# R# L# S2# B NI N2 NO S ZR S R R S ZL B S2 C*1 L L B S5 JX R S R R S JX R S B finish*3",
+    script: "start*3 S# R# R# B# S2# B S3 TI TM2 TO S R R B S2 [cdi1] [dn2] [cdo1] S C*2 S [cvd05] [cvd05] [cvd05] [cvd05] S2 B S R# L# R# L# S2# B NI N2 NO S ZR S R R S ZL B S2 C*1 L L B TSPL U G1 D TALT S L S3 L S TMRG JX R C*3 R R S JX R S B finish*3",
     obst: [
       {
         k: "pillarBase",
-        at: 0.1,
+        at: 0.10141,
         side: 20
       },
       {
         k: "pillarBase",
-        at: 0.1,
+        at: 0.10141,
         side: -20
       },
       {
         k: "pillarBase",
-        at: 0.12,
+        at: 0.12149,
         side: 20
       },
       {
         k: "pillarBase",
-        at: 0.12,
+        at: 0.12149,
         side: -20
       },
       {
         k: "sign_uturn",
-        at: 0.42,
+        at: 0.42269,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.538,
+        at: 0.54116,
         side: 16,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.598,
+        at: 0.60141,
         side: -20,
         rot: Math.PI
       },
       {
         k: "archS",
-        at: 0.727,
+        at: 0.73193,
         side: 0
       },
       {
         k: "wallS",
-        at: 0.722,
+        at: 0.7259,
         side: 26,
         rot: Math.PI / 2
       },
       {
         k: "wallS",
-        at: 0.722,
+        at: 0.7259,
         side: -26,
         rot: Math.PI / 2
       },
       {
         k: "block",
-        at: 0.44,
+        at: 0.44277,
         side: 24
       },
       {
         k: "block",
-        at: 0.44,
+        at: 0.44277,
         side: -24
       },
       {
         k: "board_warn",
-        at: 0.852,
+        at: 0.8504,
         side: 18,
         rot: Math.PI
       }
@@ -10983,12 +11225,13 @@ var BUILTIN_TRACKS = [
     // Chapitre 7 · 3/6 — ROLLERCOASTER (0.10.6 : refait AUTOUR des nouvelles pièces). Ouverture : tire-bouchon à gauche dès la deuxième case. Grand double looping, chicane longue,
     // wall-rides gauche puis droite, TUBE qui tourne à droite puis à gauche entre les astéroïdes, LOOPING MODULAIRE (deux murs de chaque côté), route large sous un portique de
     // poutres, plongeon à 38°, chicane longue.
+    // 0.11.3 (wall-ride) : le mur gauche devient une BOSSE : la route monte de 32 m le long du mur, puis redescend.
     id: "ceinture",
     name: "Ceinture d\u2019Ast\xE9ro\xEFdes",
     decor: "orbit",
     difficulty: 4,
     profil: "rollercoaster",
-    appris: "D\xE9part : tire-bouchon \xE0 gauche d\xE8s la deuxi\xE8me case. Au programme : double looping, chicanes longues, wall-rides des deux c\xF4t\xE9s, tube qui tourne, looping modulaire, route large, plongeon.",
+    appris: "D\xE9part : tire-bouchon \xE0 gauche d\xE8s la deuxi\xE8me case. Au programme : double looping, chicanes longues, wall-ride en bosse (monter, redescendre), wall-ride \xE0 droite, tube qui tourne, looping modulaire, route large, plongeon.",
     goal: {
       id: "norespawn"
     },
@@ -10998,66 +11241,66 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*2 S CKL S B3 OBDL S2 C*1 ZR3 B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B TI TM TRR TM TLL TM TO S LPR2 S WI W WO S B [cdi2] DX [cdo2] S2 ZL3 S2 B2 finish*2",
+    script: "start*2 S CKL S B3 OBDL S2 C*1 ZR3 B2 [tr01s] ZL4< ZR4< [tr10s] S [tr02s] S3> [tr20s] S B TI TM TRR TM TLL TM TO S LPR2 S WI W WO S B [cdi2] DX [cdo2] S2 ZL3 S2 B2 finish*2",
     obst: [
       {
         k: "board_warn",
-        at: 0.012,
+        at: 0.01085,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.095,
+        at: 0.08466,
         side: -18,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.232,
+        at: 0.20912,
         side: -20,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.495,
+        at: 0.54631,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.675,
+        at: 0.70839,
         side: 18,
         rot: Math.PI
       },
       {
         k: "gantry",
-        at: 0.826,
+        at: 0.84298,
         side: 0,
         s: 2
       },
       {
         k: "beamPost",
-        at: 0.821,
+        at: 0.83864,
         side: 36
       },
       {
         k: "beamPost",
-        at: 0.821,
+        at: 0.83864,
         side: -36
       },
       {
         k: "board_left",
-        at: 0.905,
+        at: 0.91534,
         side: 20,
         rot: Math.PI
       }
     ],
     medals: {
-      cristal: 43.4,
-      or: 45.6,
-      argent: 52.5,
-      bronze: 61.6
+      cristal: 46.1,
+      or: 48.5,
+      argent: 55.8,
+      bronze: 65.5
     }
   },
   {
@@ -11139,12 +11382,13 @@ var BUILTIN_TRACKS = [
     // Chapitre 6 · 4/6 — ROLLERCOASTER (0.10.5 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → tube, puis la CHEMINÉE (montée en L, mur de quatre niveaux, sommet).
     // Plongeon à 38°, grand looping, wall-rides gauche et droite, chicane longue, LOOPING MODULAIRE à gauche, route large sous un portique, TUBE qui tourne à droite puis à gauche,
     // route ÉTROITE et chicane longue pour finir.
+    // 0.11.3 (wall-ride) : le mur gauche devient une BOSSE : la route monte de 32 m le long du mur, puis redescend.
     id: "cheminee",
     name: "Chemin\xE9e du Volcan",
     decor: "volcano",
     difficulty: 4,
     profil: "rollercoaster",
-    appris: "D\xE9part : trois boosters \u2192 tube, puis la chemin\xE9e (mur de quatre niveaux). Au programme : plongeon, grand looping, wall-rides, looping modulaire, route large, tube qui tourne, route \xE9troite.",
+    appris: "D\xE9part : trois boosters \u2192 tube, puis la chemin\xE9e (mur de quatre niveaux). Au programme : plongeon, grand looping, wall-ride en bosse (monter, redescendre), wall-ride, looping modulaire, route large, tube qui tourne, route \xE9troite.",
     goal: {
       id: "norespawn"
     },
@@ -11154,78 +11398,79 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*2 B3 TI TM2 TO QU WA4 CR S C*1 [cdi2] DX [cdo2] B OB S2 B [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S NI N2 NO S ZL3 S B2 finish*2",
+    script: "start*2 B3 TI TM2 TO QU WA4 CR S C*1 [cdi2] DX [cdo2] B OB S2 B [tr01s] ZL4< ZR4< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S NI N2 NO S ZL3 S B2 finish*2",
     obst: [
       {
         k: "board_warn",
-        at: 0.095,
+        at: 0.08646,
         side: 18,
         rot: Math.PI
       },
       {
         k: "sign_down",
-        at: 0.2,
+        at: 0.18164,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.235,
+        at: 0.21247,
         side: -18,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.405,
+        at: 0.46046,
         side: -20,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.555,
+        at: 0.59718,
         side: 18,
         rot: Math.PI
       },
       {
         k: "gantry",
-        at: 0.694,
+        at: 0.72319,
         side: 0,
         s: 2
       },
       {
         k: "pillar",
-        at: 0.689,
+        at: 0.71783,
         side: 36
       },
       {
         k: "pillar",
-        at: 0.689,
+        at: 0.71783,
         side: -36
       },
       {
         k: "board_warn",
-        at: 0.878,
+        at: 0.88941,
         side: 16,
         rot: Math.PI
       }
     ],
     medals: {
-      cristal: 44.2,
-      or: 46.6,
-      argent: 53.5,
-      bronze: 62.9
+      cristal: 46.9,
+      or: 49.4,
+      argent: 56.8,
+      bronze: 66.6
     }
   },
   {
     // Chapitre 3 · 4/6 — ROLLERCOASTER (0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : quatre boosters → TRIPLE looping. Wall-ride à gauche, chicane longue, wall-ride à
     // droite, grand double looping, LOOPING MODULAIRE à gauche (trois murs de chaque côté), TUBE qui tourne à droite puis à gauche, plongeon à 38°, route large sous un portique,
     // chicane longue. Panneaux danger avant chaque looping et avant le tube.
+    // 0.11.3 (wall-ride) : un bloc sur chaque mur : en haut à gauche, en bas à droite.
     id: "vrille",
     name: "Tourbillon Tropical",
     decor: "isles",
     difficulty: 4,
     profil: "rollercoaster",
-    appris: "D\xE9part : quatre boosters \u2192 triple looping. Au programme : wall-rides des deux c\xF4t\xE9s, chicane longue, double looping, looping modulaire, tube qui tourne, plongeon \xE0 38\xB0, route large sous un portique.",
+    appris: "D\xE9part : quatre boosters \u2192 triple looping. Au programme : wall-rides des deux c\xF4t\xE9s, un bloc sur chaque mur, chicane longue, double looping, looping modulaire, tube qui tourne, plongeon \xE0 38\xB0, route large sous un portique.",
     goal: {
       id: "norespawn"
     },
@@ -11288,6 +11533,18 @@ var BUILTIN_TRACKS = [
         at: 0.926,
         side: 20,
         rot: Math.PI
+      },
+      {
+        k: "block",
+        at: 0.26161,
+        wall: "haut",
+        s: 2
+      },
+      {
+        k: "block",
+        at: 0.38183,
+        wall: "bas",
+        s: 2
       }
     ],
     medals: {
@@ -11543,12 +11800,13 @@ var BUILTIN_TRACKS = [
     // Chapitre 5 · 5/6 — SPEEDWAY (0.10.4 : refait AUTOUR des nouvelles pièces). Ouverture : très grand virage relevé pris sans booster, puis trois boosters. Virages relevés en
     // couronne, deux routes larges sous des portiques, chicane rapide, wall-ride à droite, grand S, TUBE qui tourne à droite puis à gauche. Aucun virage serré ; objectif : ne toucher
     // aucune bordure.
+    // 0.11.3 (wall-ride) : wall-ride en slalom : un bloc sur le haut du mur (passer dessous), puis un sur le bas (passer dessus).
     id: "couronne",
     name: "Couronne Bor\xE9ale",
     decor: "polar",
     difficulty: 5,
     profil: "speedway",
-    appris: "D\xE9part : tr\xE8s grand virage relev\xE9 sans booster, puis trois boosters. Au programme : virages relev\xE9s en couronne, deux routes larges sous des portiques, chicane rapide, wall-ride, grand S, tube qui tourne.",
+    appris: "D\xE9part : tr\xE8s grand virage relev\xE9 sans booster, puis trois boosters. Au programme : virages relev\xE9s en couronne, deux routes larges sous des portiques, chicane rapide, wall-ride en slalom entre deux blocs, grand S, tube qui tourne.",
     goal: {
       id: "nowall"
     },
@@ -11609,6 +11867,18 @@ var BUILTIN_TRACKS = [
         k: "pillar",
         at: 0.941,
         side: -36
+      },
+      {
+        k: "block",
+        at: 0.41077,
+        wall: "haut",
+        s: 2
+      },
+      {
+        k: "block",
+        at: 0.43732,
+        wall: "bas",
+        s: 2
       }
     ],
     medals: {
@@ -11701,7 +11971,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 8
     },
-    script: "start*2 S2.p B S2 R S.w150 L S B S2.p R S L B C*3 B NI N2 NO S3.w120 R S R S B ZR S ZL B S2 [tr01s] S2< [tr10s] S L B S.p R S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*1",
+    script: "start*2 S2.p B S2 R S.w150 L S B S2.p R S L B C*3 B NI N2 NO S3.w120 R S R S B ZR S ZL B S2 [tr01s] S2< [tr10s] S L B S.p R S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*1",
     obst: [
       {
         k: "board_warn",
@@ -11769,12 +12039,14 @@ var BUILTIN_TRACKS = [
     // Chapitre 4 · 6/6 — ROLLERCOASTER (0.10.3 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → LIFT HILL (deux montées droites de quatre niveaux, accélérées).
     // Viaduc au sommet, plongeon, grand looping, wall-ride à gauche, chicane longue, wall-ride à droite, LOOPING MODULAIRE à gauche, avenue large sous un portique, TUBE qui tourne
     // à droite puis à gauche, chicane longue.
+    // 0.11.3 (wall-ride) : le mur gauche devient une BOSSE : la route monte de 32 m le long du mur, puis redescend (chicanes rapides posées sur le mur).
+    // 0.11.4 (familles) : bifurcation EN T au sommet : sauter le vide ou faire le tour par la branche.
     id: "viaduc",
     name: "Viaduc Vertical",
     decor: "city",
     difficulty: 5,
     profil: "rollercoaster",
-    appris: "D\xE9part : trois boosters \u2192 lift hill acc\xE9l\xE9r\xE9. Au programme : viaduc au sommet, plongeon, grand looping, wall-rides des deux c\xF4t\xE9s, looping modulaire, avenue large sous un portique, tube qui tourne.",
+    appris: "D\xE9part : trois boosters \u2192 lift hill acc\xE9l\xE9r\xE9. Au programme : viaduc au sommet, saut ou d\xE9tour en T, plongeon, grand looping, wall-ride en bosse (monter, redescendre), wall-ride \xE0 droite, looping modulaire, avenue large sous un portique, tube qui tourne.",
     goal: {
       id: "norespawn"
     },
@@ -11784,78 +12056,79 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*2 B3 [crv4] UX.b UX.b [cro4] S5 C*1 S2 [cdi2] DX DX [cdo2] B OB S2 B [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B2 finish*2",
+    script: "start*2 B3 [crv4] UX.b UX.b [cro4] TSPLL U G1 D TALT S R S3 R S TMRG C*1 S2 [cdi2] DX DX [cdo2] B OB S2 B [tr01s] ZL4< ZR4< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B2 finish*2",
     obst: [
       {
         k: "sign_down",
-        at: 0.15,
+        at: 0.13072,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.198,
+        at: 0.17356,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.39,
+        at: 0.44978,
         side: -20,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.553,
+        at: 0.59749,
         side: 18,
         rot: Math.PI
       },
       {
         k: "gantry",
-        at: 0.71,
+        at: 0.73929,
         side: 0,
         s: 2
       },
       {
         k: "pillar",
-        at: 0.705,
+        at: 0.73486,
         side: 36
       },
       {
         k: "pillar",
-        at: 0.705,
+        at: 0.73486,
         side: -36
       },
       {
         k: "board_warn",
-        at: 0.73,
+        at: 0.75702,
         side: -18,
         rot: Math.PI
       },
       {
         k: "board_left",
-        at: 0.915,
+        at: 0.92393,
         side: 20,
         rot: Math.PI
       }
     ],
     medals: {
-      cristal: 47.5,
-      or: 50,
-      argent: 57.5,
-      bronze: 67.5
+      cristal: 50.2,
+      or: 52.8,
+      argent: 60.7,
+      bronze: 71.3
     }
   },
   {
     // Chapitre 3 · 6/6 — SPEEDWAY (0.10.2 : refait AUTOUR des nouvelles pièces). Ouverture : longue pente douce vers la mer (six demi-niveaux). Très grands virages relevés, route
     // large sous un portique, chicane rapide, wall-ride à droite, descente, CROISEMENT traversé deux fois (boucle de trois virages géants), grand S ; deux pyramides de roche à
     // l'arrivée. Aucun virage serré.
+    // 0.11.4 (familles) : la boucle du croisement : virage géant relevé, puis montée et descente d'un niveau.
     id: "archipel",
     name: "Grand Archipel",
     decor: "isles",
     difficulty: 5,
     profil: "speedway",
-    appris: "D\xE9part : longue pente douce vers la mer. Au programme : tr\xE8s grands virages relev\xE9s, route large sous un portique, chicane rapide, wall-ride, croisement travers\xE9 deux fois, grand S.",
+    appris: "D\xE9part : longue pente douce vers la mer. Au programme : tr\xE8s grands virages relev\xE9s, route large sous un portique, chicane rapide, wall-ride, croisement travers\xE9 deux fois (boucle relev\xE9e puis en pente), grand S.",
     goal: {
       id: "under",
       t: 61.5
@@ -11866,56 +12139,56 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 70
     },
-    script: "start*3 GD6 BRR S B BLL S2 C*2 WI W2 WO S ZR4 S B [tr02l] S4> [tr20l] BRR S2 [cdi1] [dn2] [cdo1] B BLL S2 JX S4 XR XR XR S4 JX S B BRR S2 ZZL S B2 finish*2",
+    script: "start*3 GD6 BRR S B BLL S2 C*2 WI W2 WO S ZR4 S B [tr02l] S4> [tr20l] BRR S2 [cdi1] [dn2] [cdo1] B BLL S2 JX S4 XBR XUR1 XDR1 S2 C*3 S JX S B BRR S2 ZZL S B2 finish*2",
     obst: [
       {
         k: "gantry",
-        at: 0.249,
+        at: 0.23061,
         side: 0,
         s: 2
       },
       {
         k: "pillarBase",
-        at: 0.244,
+        at: 0.22507,
         side: 36
       },
       {
         k: "pillarBase",
-        at: 0.244,
+        at: 0.22507,
         side: -36
       },
       {
         k: "board_right",
-        at: 0.27,
+        at: 0.25,
         side: -20,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.635,
+        at: 0.58657,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.685,
+        at: 0.63227,
         side: -24,
         rot: Math.PI
       },
       {
         k: "board_left",
-        at: 0.92,
+        at: 0.9259,
         side: 24,
         rot: Math.PI
       },
       {
         k: "pyramidS",
-        at: 0.965,
+        at: 0.96745,
         side: 28
       },
       {
         k: "pyramidS",
-        at: 0.965,
+        at: 0.96745,
         side: -28
       }
     ],
@@ -12118,7 +12391,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start*2 P2 B S R B S L S R B S2 C*3 B NI N2 NO S L R L R B S2 [tr01s] S2< [tr10s] S3 L B ZR S ZL B S R B JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
+    script: "start*2 P2 B S R B S L S R B S2 C*3 B NI N2 NO S L R L R B S2 [tr01s] S2< [tr10s] S3 L B ZR S ZL B S R B JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "board_warn",
@@ -12279,7 +12552,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start*1 B S2.t137 S2 R S L S R S L B C*3 B NI N2 NO S R S2.v S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
+    script: "start*1 B S2.t137 S2 R S L S R S L B C*3 B NI N2 NO S R S2.v S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "board_warn",
@@ -12348,12 +12621,13 @@ var BUILTIN_TRACKS = [
     // Chapitre 8 · 3/6 — ROLLERCOASTER (0.10.7 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters → wall-ride à droite sur la coque. Morceaux de l'épave (mur en L,
     // poutre), double looping, wall-ride à gauche, chicane longue, LOOPING MODULAIRE (deux murs de chaque côté), route large sous un portique, chicane longue, TUBE qui tourne à
     // droite puis à gauche, passage ÉTROIT et plongeon à 38°.
+    // 0.11.3 (wall-ride) : un bloc sur chaque mur : en bas à droite, en haut à gauche.
     id: "epave",
     name: "\xC9pave Engloutie",
     decor: "reef",
     difficulty: 3,
     profil: "rollercoaster",
-    appris: "D\xE9part : trois boosters \u2192 wall-ride sur la coque. Au programme : double looping, wall-rides des deux c\xF4t\xE9s, looping modulaire, route large, tube qui tourne, passage \xE9troit, plongeon.",
+    appris: "D\xE9part : trois boosters \u2192 wall-ride sur la coque. Au programme : double looping, wall-rides des deux c\xF4t\xE9s, un bloc sur chaque mur, looping modulaire, route large, tube qui tourne, passage \xE9troit, plongeon.",
     goal: {
       id: "norespawn"
     },
@@ -12363,7 +12637,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*2 B3 [tr02s] S3> [tr20s] S C*1 B2 OD S2 B [tr01s] S3< [tr10s] S2 ZR3 S2 LPR2 S WI W WO S ZL3 S2 TI TM TRR TM TLL TM TO S NI N2 NO S B [cdi2] DX [cdo2] S3 B2 finish*2",
+    script: "start*2 B3 [tr02s] S3> [tr20s] S C*1 B2 OD S2 B [tr01s] S3< [tr10s] S2 ZR3 S2 LPR2 S WI W WO S ZL3 S2 TI TM TRR TM TLL TM2 TO S NI N2 NO S B [cdi2] DX [cdo2] S3 B2 finish*2",
     obst: [
       {
         k: "wallSL",
@@ -12420,6 +12694,18 @@ var BUILTIN_TRACKS = [
         at: 0.852,
         side: 16,
         rot: Math.PI
+      },
+      {
+        k: "block",
+        at: 0.0796,
+        wall: "bas",
+        s: 2
+      },
+      {
+        k: "block",
+        at: 0.33617,
+        wall: "haut",
+        s: 2
       }
     ],
     medals: {
@@ -12540,7 +12826,7 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*2 B [cdi2] DX DX [cdo2] OB S2 C*1 B2 [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 S LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B finish*2",
+    script: "start*2 B [cdi2] DX DX [cdo2] OB S2 C*1 B2 [tr01s] S3< [tr10s] S ZR3 S [tr02s] S3> [tr20s] S B2 CBR4 CBR4 B2 LPL2 S WI W WO S TI TM TRR TM TLL TM TO S ZL3 S B finish*2",
     obst: [
       {
         k: "sign_down",
@@ -12606,22 +12892,23 @@ var BUILTIN_TRACKS = [
       }
     ],
     medals: {
-      cristal: 47.6,
-      or: 50.1,
-      argent: 57.6,
-      bronze: 67.6
+      cristal: 43.3,
+      or: 45.6,
+      argent: 52.4,
+      bronze: 61.5
     }
   },
   {
     // Chapitre 8 · 6/6 — SPEEDWAY (0.10.7 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters et un pont de VERRE entre deux pyramides de corail. Très grands virages
     // relevés, route large sous un portique, chicane rapide, wall-ride à droite, courant, grand S, CROISEMENT traversé deux fois (boucle de trois virages géants). Aucun virage
     // serré ; objectif : ne toucher aucune bordure.
+    // 0.11.4 (familles) : la boucle du croisement DESCEND d'un niveau puis remonte.
     id: "barriere",
     name: "Grande Barri\xE8re",
     decor: "reef",
     difficulty: 5,
     profil: "speedway",
-    appris: "D\xE9part : deux boosters et un pont de verre. Au programme : tr\xE8s grands virages relev\xE9s, route large sous un portique, chicane rapide, wall-ride, grand S, croisement travers\xE9 deux fois.",
+    appris: "D\xE9part : deux boosters et un pont de verre. Au programme : tr\xE8s grands virages relev\xE9s, route large sous un portique, chicane rapide, wall-ride, grand S, croisement travers\xE9 deux fois, boucle qui plonge et remonte.",
     goal: {
       id: "nowall"
     },
@@ -12631,55 +12918,55 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 70
     },
-    script: "start*3 B2 S3.v BRR S B BLL S2 WI W2 WO S C*2 B ZR4 S [tr02l] S4> [tr20l] BRR S2.t137 BLL B S ZZR S BRR S JX S4 XR XR XR S4 JX S B2 finish*2",
+    script: "start*3 B2 S3.v BRR S B BLL S2 WI W2 WO S C*2 B ZR4 S [tr02l] S4> [tr20l] BRR S2.t137 BLL B S ZZR S BRR S JX S4 XDR1 XR XUR1 S2 C*3 S JX S B2 finish*2",
     obst: [
       {
         k: "pyramidS",
-        at: 0.03,
+        at: 0.0296,
         side: 28
       },
       {
         k: "pyramidS",
-        at: 0.03,
+        at: 0.0296,
         side: -28
       },
       {
         k: "gantry",
-        at: 0.246,
+        at: 0.2456,
         side: 0,
         s: 2
       },
       {
         k: "pillarBase",
-        at: 0.24,
+        at: 0.2408,
         side: 36
       },
       {
         k: "pillarBase",
-        at: 0.24,
+        at: 0.2408,
         side: -36
       },
       {
         k: "board_right",
-        at: 0.29,
+        at: 0.2904,
         side: -20,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.63,
+        at: 0.6296,
         side: -20,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.755,
+        at: 0.7544,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.805,
+        at: 0.8056,
         side: -24,
         rot: Math.PI
       }
@@ -12802,7 +13089,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start*1 Y2.b B S R S L S R S L B C*3 B NI N2 NO S R S2.x S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
+    script: "start*1 Y2.b B S R S L S R S L B C*3 B NI N2 NO S R S2.x S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S R B S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "bumper",
@@ -12882,12 +13169,13 @@ var BUILTIN_TRACKS = [
     // Chapitre 9 · 3/6 — ROLLERCOASTER (0.10.8 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters et une hélice montante de quatre courbes (les engrenages). Chicane
     // longue, TRIPLE looping à gauche, poutres en croix, wall-rides gauche puis droite, route large sous un portique, chicane longue, PIQUES ESCAMOTABLES, TUBE qui tourne à gauche
     // puis à droite, plongeon à 38°.
+    // 0.11.3 (wall-ride) : un bloc sur chaque mur : en bas à gauche, en haut à droite.
     id: "engrenages",
     name: "Engrenages",
     decor: "factory",
     difficulty: 3,
     profil: "rollercoaster",
-    appris: "D\xE9part : deux boosters et une h\xE9lice montante. Au programme : chicane longue, triple looping, wall-rides des deux c\xF4t\xE9s, route large sous un portique, piques escamotables, tube qui tourne, plongeon.",
+    appris: "D\xE9part : deux boosters et une h\xE9lice montante. Au programme : chicane longue, triple looping, wall-rides des deux c\xF4t\xE9s, un bloc sur chaque mur, route large sous un portique, piques escamotables, tube qui tourne, plongeon.",
     goal: {
       id: "norespawn"
     },
@@ -12954,6 +13242,18 @@ var BUILTIN_TRACKS = [
         at: 0.72,
         side: 18,
         rot: Math.PI
+      },
+      {
+        k: "block",
+        at: 0.45588,
+        wall: "bas",
+        s: 2
+      },
+      {
+        k: "block",
+        at: 0.55623,
+        wall: "haut",
+        s: 2
       }
     ],
     medals: {
@@ -13168,7 +13468,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 8
     },
-    script: "start*2 B2 S2.x R L R L B S2 C*3 B NI N2 NO S R S L B S2.c S2 [tr01s] S2< [tr10s] S R B ZR S ZL B S L B S JX R S R R S JX R S R B [cdi1] [dn2] [cdo1] S B finish*1",
+    script: "start*2 B2 S2.x R L R L B S2 C*3 B NI N2 NO S R S L B S2.c S2 [tr01s] S2< [tr10s] S R B ZR S ZL B S L B S JX R C*3 R R S JX R S R B [cdi1] [dn2] [cdo1] S B finish*1",
     obst: [
       {
         k: "hammer",
@@ -13432,7 +13732,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start*1 B2 S2.w180 S R S L S R B S2 C*3 B S.w150 S2 R S L B NI N2 NO S2.w120 S R S L B ZR S ZL B S [tr01s] S2< [tr10s] S3 R B S2 L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
+    script: "start*1 B2 S2.w180 S R S L S R B S2 C*3 B S.w150 S2 R S L B NI N2 NO S2.w120 S R S L B ZR S ZL B S [tr01s] S2< [tr10s] S3 R B S2 L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "board_warn",
@@ -13502,12 +13802,13 @@ var BUILTIN_TRACKS = [
     // Chapitre 10 · 4/6 — ROLLERCOASTER (0.10.9 : refait AUTOUR des nouvelles pièces). Ouverture : trois boosters, gravité réduite (40 %) et un grand looping. Chicane longue,
     // wall-rides gauche et droite, LOOPING MODULAIRE à gauche, route large sous un portique, chicane longue, TUBE qui tourne à gauche puis à droite, passage ÉTROIT, plongeon à 38°
     // et retour à la gravité normale.
+    // 0.11.3 (wall-ride) : le mur droit devient une BOSSE : la route monte de 32 m le long du mur, puis redescend.
     id: "montgolfieres",
     name: "Montgolfi\xE8res",
     decor: "sky",
     difficulty: 4,
     profil: "rollercoaster",
-    appris: "D\xE9part : trois boosters, gravit\xE9 r\xE9duite et grand looping. Au programme : chicanes longues, wall-rides des deux c\xF4t\xE9s, looping modulaire, route large, tube qui tourne, passage \xE9troit, plongeon.",
+    appris: "D\xE9part : trois boosters, gravit\xE9 r\xE9duite et grand looping. Au programme : chicanes longues, wall-ride en bosse \xE0 droite (monter, redescendre), wall-ride \xE0 gauche, looping modulaire, route large, tube qui tourne, passage \xE9troit, plongeon.",
     goal: {
       id: "norespawn"
     },
@@ -13517,66 +13818,66 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 58
     },
-    script: "start*2 B3 S.g40 OB S2 C*1 ZR3 B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S B LPL1 S WI W WO S ZL3 S TI TM TLL TM TRR TM TO S NI N2 NO S B [cdi2] DX [cdo2] S.g100 S2 B2 finish*2",
+    script: "start*2 B3 S.g40 OB S2 C*1 ZR3 B2 [tr01s] S3< [tr10s] S [tr02s] ZR4> ZL4> [tr20s] S B LPL1 S WI W WO S ZL3 S TI TM TLL TM TRR TM TO S NI N2 NO S B [cdi2] DX [cdo2] S.g100 S2 B2 finish*2",
     obst: [
       {
         k: "board_warn",
-        at: 0.045,
+        at: 0.03984,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.15,
+        at: 0.13359,
         side: -20,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.425,
+        at: 0.48828,
         side: 18,
         rot: Math.PI
       },
       {
         k: "gantry",
-        at: 0.563,
+        at: 0.61016,
         side: 0,
         s: 2
       },
       {
         k: "pillar",
-        at: 0.558,
+        at: 0.60703,
         side: 36
       },
       {
         k: "pillar",
-        at: 0.558,
+        at: 0.60703,
         side: -36
       },
       {
         k: "board_left",
-        at: 0.59,
+        at: 0.63516,
         side: 20,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.64,
+        at: 0.67891,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.836,
+        at: 0.85391,
         side: 16,
         rot: Math.PI
       }
     ],
     medals: {
-      cristal: 44.1,
-      or: 46.4,
-      argent: 53.4,
-      bronze: 62.6
+      cristal: 46.9,
+      or: 49.4,
+      argent: 56.8,
+      bronze: 66.7
     }
   },
   {
@@ -13758,12 +14059,13 @@ var BUILTIN_TRACKS = [
   {
     // Chapitre 11 · 1/6 — SPRINT (0.10.10 : refait AUTOUR des nouvelles pièces). Ouverture : deux boosters puis le VOLANT INVERSÉ (trois cases) entre deux cristaux. Dos d'âne,
     // chicanes rapides, très grand virage plat, route large sous un portique, CROISEMENT traversé deux fois (boucle de trois virages géants), descente, grand S. Aucun virage serré.
+    // 0.11.4 (familles) : la boucle du croisement monte d'un niveau dans un virage géant relevé, puis redescend.
     id: "galerie",
     name: "Galerie de Cristal",
     decor: "caves",
     difficulty: 2,
     profil: "sprint",
-    appris: "D\xE9part : deux boosters puis volant invers\xE9 entre deux cristaux. Au programme : chicanes rapides, tr\xE8s grand virage plat, route large sous un portique, croisement travers\xE9 deux fois, grand S.",
+    appris: "D\xE9part : deux boosters puis volant invers\xE9 entre deux cristaux. Au programme : chicanes rapides, tr\xE8s grand virage plat, route large sous un portique, croisement travers\xE9 deux fois, boucle en pente relev\xE9e, grand S.",
     goal: {
       id: "under",
       t: 49.5
@@ -13774,55 +14076,55 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*2 B2 S3.y S2 [crs1] S2 [cds1] B ZR4 S ZL4 S HR S2 B C*3 WI W2 WO S2 JX S4 XR XR XR S4 JX S B [cdi1] [dn2] [cdo1] ZZR S B2 finish*2",
+    script: "start*2 B2 S3.y S2 [crs1] S2 [cds1] B ZR4 S ZL4 S HR S2 B C*3 WI W2 WO S2 JX S4 XUR1 XBR XDR1 S2 C*3 S JX S B [cdi1] [dn2] [cdo1] ZZR S B2 finish*2",
     obst: [
       {
         k: "pyramidS",
-        at: 0.095,
+        at: 0.08473,
         side: 28
       },
       {
         k: "pyramidS",
-        at: 0.095,
+        at: 0.08473,
         side: -28
       },
       {
         k: "board_right",
-        at: 0.18,
+        at: 0.16004,
         side: -20,
         rot: Math.PI
       },
       {
         k: "board_left",
-        at: 0.27,
+        at: 0.23954,
         side: 20,
         rot: Math.PI
       },
       {
         k: "gantry",
-        at: 0.456,
+        at: 0.40272,
         side: 0,
         s: 2
       },
       {
         k: "pillar",
-        at: 0.45,
+        at: 0.39854,
         side: 36
       },
       {
         k: "pillar",
-        at: 0.45,
+        at: 0.39854,
         side: -36
       },
       {
         k: "board_warn",
-        at: 0.51,
+        at: 0.45084,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.586,
+        at: 0.51778,
         side: -24,
         rot: Math.PI
       }
@@ -13850,7 +14152,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 8
     },
-    script: "start*2 B TW.f S2^ B^ R^ S^ L^ S2^ R^ S^ L^ C^ B^ S2^ TWB.f S2 B NI N2 NO R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S3 R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*1",
+    script: "start*2 B TW.f S2^ B^ R^ S^ L^ S2^ R^ S^ L^ C^ B^ S2^ TWB.f S2 B NI N2 NO R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S3 R B S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*1",
     obst: [
       {
         k: "board_warn",
@@ -14068,12 +14370,13 @@ var BUILTIN_TRACKS = [
     // Chapitre 11 · 5/6 — ROLLERCOASTER (0.10.10 : refait AUTOUR des nouvelles pièces). Ouverture : booster, descente, puis une VRILLE vers le plafond (pentes au plafond, booster),
     // retour au sol par une seconde vrille, double looping à gauche, deux cales de cristal, chicane longue, wall-rides gauche et droite, route large sous un portique, LOOPING
     // MODULAIRE, TUBE qui tourne à gauche puis à droite.
+    // 0.11.3 (wall-ride) : le mur gauche devient une BOSSE : la route monte de 32 m le long du mur, puis redescend.
     id: "vrilles",
     name: "Vrilles Souterraines",
     decor: "caves",
     difficulty: 5,
     profil: "rollercoaster",
-    appris: "D\xE9part : booster, descente, vrille vers le plafond. Au programme : pentes au plafond, retour au sol, double looping, chicanes longues, wall-rides des deux c\xF4t\xE9s, route large, looping modulaire, tube qui tourne.",
+    appris: "D\xE9part : booster, descente, vrille vers le plafond. Au programme : pentes au plafond, retour au sol, double looping, chicanes longues, wall-ride en bosse (monter, redescendre), wall-ride \xE0 droite, route large, looping modulaire, tube qui tourne.",
     goal: {
       id: "norespawn"
     },
@@ -14083,65 +14386,65 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 66
     },
-    script: "start*2 B [cdi1] [dn2] [cdo1] TW.f S2^ D^ S2^ B^ S2^ U^ S^ TWB.f S2 B ODL S2 C*1 ZR3 B2 [tr01s] S3< [tr10s] S [tr02s] S3> [tr20s] S2 WI W WO S ZL3 S2 LPR2 S2 TI TM TLL TM TRR TM TO S B2 finish*2",
+    script: "start*2 B [cdi1] [dn2] [cdo1] TW.f S2^ D^ S2^ B^ S2^ U^ S^ TWB.f S2 B ODL S2 C*1 ZR3 B2 [tr01s] ZL4< ZR4< [tr10s] S [tr02s] S3> [tr20s] S2 WI W WO S ZL3 S2 LPR2 S2 TI TM TLL TM TRR TM TO S B2 finish*2",
     obst: [
       {
         k: "wedge",
-        at: 0.333,
+        at: 0.30147,
         side: 26
       },
       {
         k: "wedge",
-        at: 0.333,
+        at: 0.30147,
         side: -26,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.343,
+        at: 0.31083,
         side: -20,
         rot: Math.PI
       },
       {
         k: "gantry",
-        at: 0.597,
+        at: 0.63436,
         side: 0,
         s: 2
       },
       {
         k: "pillar",
-        at: 0.592,
+        at: 0.63035,
         side: 36
       },
       {
         k: "pillar",
-        at: 0.592,
+        at: 0.63035,
         side: -36
       },
       {
         k: "board_left",
-        at: 0.618,
+        at: 0.65441,
         side: 20,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.67,
+        at: 0.7012,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.8,
+        at: 0.81885,
         side: -18,
         rot: Math.PI
       }
     ],
     medals: {
-      cristal: 45,
-      or: 47.3,
-      argent: 54.4,
-      bronze: 63.9
+      cristal: 47.6,
+      or: 50.2,
+      argent: 57.7,
+      bronze: 67.7
     }
   },
   {
@@ -14159,7 +14462,7 @@ var BUILTIN_TRACKS = [
     opts: {
       l: 6
     },
-    script: "start*2 B S2.v500 S R L R L B S2 C*3 B NI N2 NO S R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S3 R B S L B S JX R S R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
+    script: "start*2 B S2.v500 S R L R L B S2 C*3 B NI N2 NO S R S L B ZR S ZL B S2 [tr01s] S2< [tr10s] S3 R B S L B S JX R C*3 R R S JX R S [cdi1] [dn2] [cdo1] S B finish*3",
     obst: [
       {
         k: "board_warn",
@@ -14337,6 +14640,7 @@ var BUILTIN_TRACKS = [
     // Placé par recherche (tools/lab.mjs) : le pilote passe sans choc à 90, 100 et 110 % de sa vitesse ; les phases des obstacles laissent une fenêtre de passage large.
     // 0.10.11 : la leçon d'abord (tracé et obstacles d'origine, au même point du chemin, donc au même instant), puis une vitrine des nouvelles pièces : chicanes longues,
     // CROISEMENT traversé deux fois (boucle de trois virages géants), passage ÉTROIT entre des piliers fins.
+    // 0.11.4 (familles) : le premier virage géant de la boucle est relevé.
     id: "cadence",
     name: "En Cadence",
     decor: "atelier",
@@ -14345,7 +14649,7 @@ var BUILTIN_TRACKS = [
     meca: [
       "spikesPop"
     ],
-    appris: "D\xE9part : trois boosters \u2192 trois cases. Au programme : piques escamotables en travers de la route : on passe quand elles sont rentr\xE9es. Puis chicanes longues, croisement travers\xE9 deux fois, passage \xE9troit.",
+    appris: "D\xE9part : trois boosters \u2192 trois cases. Au programme : piques escamotables en travers de la route : on passe quand elles sont rentr\xE9es. Puis chicanes longues, croisement travers\xE9 deux fois (un virage g\xE9ant relev\xE9), passage \xE9troit.",
     goal: {
       id: "norespawn"
     },
@@ -14355,64 +14659,64 @@ var BUILTIN_TRACKS = [
     pilot: {
       vCap: 60
     },
-    script: "start*2 B3 S3 [crs1] S B HR S2 C S2 HL S B [cdi1] [dn2] [cdo1] B2 ZR3 S ZL3 S JX S4 XR XR XR S4 JX S NI N NO S B finish*2",
+    script: "start*2 B3 S3 [crs1] S B HR S2 C S2 HL S B [cdi1] [dn2] [cdo1] B2 ZR3 S ZL3 S JX S4 XBR XR XR S2 C*3 S JX S NI N NO S B finish*2",
     obst: [
       {
         k: "spikesPop",
-        at: 0.04178,
+        at: 0.03638,
         side: 0,
         s: 1.1,
         ph: 0.583
       },
       {
         k: "spikesPop",
-        at: 0.0876,
+        at: 0.07629,
         side: 0,
         s: 1.1,
         ph: 0.167
       },
       {
         k: "board_right",
-        at: 0.385,
+        at: 0.33451,
         side: -20,
         rot: Math.PI
       },
       {
         k: "board_warn",
-        at: 0.545,
+        at: 0.47535,
         side: 18,
         rot: Math.PI
       },
       {
         k: "board_right",
-        at: 0.632,
+        at: 0.55047,
         side: -24,
         rot: Math.PI
       },
       {
         k: "slab",
-        at: 0.81,
+        at: 0.83451,
         side: 26
       },
       {
         k: "slab",
-        at: 0.81,
+        at: 0.83451,
         side: -26
       },
       {
         k: "board_warn",
-        at: 0.895,
+        at: 0.90962,
         side: 16,
         rot: Math.PI
       },
       {
         k: "pillarThin",
-        at: 0.919,
+        at: 0.9284,
         side: 14
       },
       {
         k: "pillarThin",
-        at: 0.919,
+        at: 0.9284,
         side: -14
       }
     ],
@@ -14792,6 +15096,30 @@ var BUILTIN_TRACKS = [
   }
 ];
 BUILTIN_TRACKS.sort((a, b) => CAREER_ORDER.indexOf(a.decor) - CAREER_ORDER.indexOf(b.decor) || a.difficulty - b.difficulty);
+function wallSolid(t, def, o, i, a, ux, uz) {
+  const tile = t.tilesAt(Math.floor(a[0] / CELL), Math.floor(a[2] / CELL)).find((x) => (x.o === 1 || x.o === 2) && PIECES[x.t].kind === "line" && !PIECES[x.t].rise);
+  if (!tile) throw new Error(`${def.id} : obstacle \xAB ${o.k} \xBB sur un mur (at ${o.at}) : pas de ligne droite sur un mur \xE0 cet endroit`);
+  const s = o.s || 1, side = (tile.o === 1 ? 1 : -1) * 4 * s, dy = o.wall === "bas" ? -8 * s : 0;
+  const q = (v, st) => Math.round(v / st) * st;
+  let k = Math.round(datan2(ux, uz) / (Math.PI / 8));
+  while (k > 8) k -= 16;
+  while (k <= -8) k += 16;
+  t.addDeco({
+    k: o.k,
+    x: q(a[0] - uz * side, 0.5),
+    y: q(a[1] + dy, 0.1),
+    z: q(a[2] + ux * side, 0.5),
+    ry: k * Math.PI / 8,
+    s,
+    c: o.c || 0,
+    ph: 0
+  });
+  const P = t.path, laps = def.laps > 1 ? def.laps : 1, one = laps > 1 ? (P.length - 1) / laps + 1 : P.length;
+  if (!P.wallLine) P.wallLine = new Array(P.length).fill(0);
+  const want = o.wall === "bas" ? 6 : -6, d = (j) => hypot2(P[j][0] - a[0], P[j][2] - a[2]);
+  for (let j = i; j >= 0 && d(j) < 110 && !P.wallLine[j]; j--) for (let lap = 0; lap < laps; lap++) P.wallLine[j + lap * (one - 1)] = want;
+  for (let j = i; j < one && d(j) < 4 * s + 6; j++) for (let lap = 0; lap < laps; lap++) P.wallLine[j + lap * (one - 1)] = want;
+}
 function buildBuiltin(def) {
   const t = scriptTrack(def.name, def.script, {
     ...def.opts || {},
@@ -14814,6 +15142,7 @@ function buildBuiltin(def) {
       const i = Math.min(n - 2, Math.floor(n * o.at));
       const a = P[i], b = P[i + 1];
       const dx = b[0] - a[0], dz = b[2] - a[2], l = hypot2(dx, dz) || 1;
+      if (o.wall) continue;
       const q = (v, st) => Math.round(v / st) * st;
       let ry = q(datan2(dx / l, dz / l), Math.PI / 8);
       if (o.rot || !isObstacle(o.k)) {
@@ -14832,6 +15161,10 @@ function buildBuiltin(def) {
         c: o.c || 0,
         ph: o.ph || 0
       });
+    }
+    for (const o of def.obst.filter((x) => x.wall).sort((x, y) => x.at - y.at)) {
+      const i = Math.min(n - 2, Math.floor(n * o.at)), a = P[i], b = P[i + 1], dx = b[0] - a[0], dz = b[2] - a[2], l = hypot2(dx, dz) || 1;
+      wallSolid(t, def, o, i, a, dx / l, dz / l);
     }
   }
   return t;
@@ -15669,6 +16002,14 @@ function frameWorld(tile, rib, u, F) {
   F.wrap = FL.wrap;
   return F;
 }
+var RIB_SOLID_H = 1.1;
+var SHIT = {
+  dx: 0,
+  dz: 0,
+  nx: 0,
+  nz: 0,
+  solid: null
+};
 var ribbonMethods = {
   // Sur un ruban, l'état est exprimé dans le plan de la route :
   //   e1 = sens de parcours, e2 = droite, n = normale.
@@ -15862,9 +16203,10 @@ var ribbonMethods = {
     }
     const g = this.g * this.gSign;
     const sidePiece = isSideTile(tile);
-    const hold = sidePiece ? Math.min(1, SIDE_HOLD * R.vs * R.vs / Math.max(1, this.g)) : 0;
     R.vs -= g * B3.e1y * dt;
-    R.vd -= g * B3.e2y * dt * (1 - hold);
+    R.vd -= g * B3.e2y * dt;
+    R.sag = sidePiece ? SIDE_DROP * g * B3.e2y / Math.max(Math.abs(R.vs), 20) : 0;
+    R.psi -= R.sag * dt;
     if (sidePiece && Math.abs(F.ny) < 0.7 && Math.abs(R.vs) < SIDE_MIN_SPEED) {
       R.lowT = (R.lowT || 0) + dt;
       if (R.lowT > SIDE_GRACE) {
@@ -15874,7 +16216,8 @@ var ribbonMethods = {
         return;
       }
     } else if (R.lowT) R.lowT = Math.max(0, R.lowT - 2 * dt);
-    if (!headingGuided(tile)) R.psi -= R.dir * kg * R.vs * dt;
+    R.psi -= R.dir * kg * R.vs * dt;
+    R.kg = kg;
     const mod = tile.s, f = tileParam(tile) / 100;
     const C4 = surfaceCoeffs(mod, f);
     const extraDrag = C4.extraDrag, vmaxK = C4.vmaxK, rearK = C4.rearK;
@@ -16009,22 +16352,39 @@ var ribbonMethods = {
     }
     this._ribPlace(R);
     this._ribObstacles(R);
+    if (this.rib === R) this._ribSolids(R);
   },
-  // Obstacles (piques, bumpers, marteaux...) sur un ruban (looping, mur, tube, vrille) : avant 0.9.48 ils n'agissaient que sur les routes
-  // posées au sol (_collide n'est jamais appelé en mode ruban) : la voiture les traversait. Le contact est calculé comme au sol (même
-  // fonction), puis le déplacement et la vitesse obtenus sont ramenés dans le repère du ruban (abscisse u, écart latéral dl, vitesses vs / vd).
-  // Un choc ne détache jamais la voiture du ruban (comme un mur) : seule la physique du ruban décide du décrochage.
-  _ribObstacles(R) {
-    if (!this.track.obstacles.length || this.hazardGrace > 0) return;
-    const p = this.pos, v = this.vel;
-    const x0 = p.x, y0 = p.y, z0 = p.z;
-    this._obstacles();
-    if (this.ev.sink) return;
-    const dx = p.x - x0, dy = p.y - y0, dz = p.z - z0;
-    if (dx === 0 && dy === 0 && dz === 0 && this.ev.shock === 0) {
-      this.grounded = true;
-      return;
+  // 0.11.3 (wall-ride) : solides (blocs, piliers, murs…) contre une voiture sur un ruban : avant, ils n'arrêtaient qu'une voiture au sol, celle d'un mur les traversait.
+  // Même sonde qu'au sol (solids.js, solidSide), sur la tranche verticale de la voiture (sur un mur, sa largeur) ; même choc qu'une bordure (inélastique, frottement de
+  // Coulomb, perte des chocs violents), puis retour dans le repère du ruban. Un bloc posé sur le bas d'un mur oblige donc à passer AU-DESSUS.
+  _ribSolids(R) {
+    if (!this.track.hasSolids) return;
+    const p = this.pos, v = this.vel, q = this.prev, K3 = this.k;
+    if (!solidSide(this.track.solidIndex, p.x, p.z, q.x, q.z, p.y - RIB_SOLID_H, p.y + RIB_SOLID_H, q.y - RIB_SOLID_H, CAR.radius, 0, SHIT, this.hiddenDecos)) return;
+    const x0 = p.x, z0 = p.z;
+    p.x += SHIT.dx;
+    p.z += SHIT.dz;
+    const into = -(v.x * SHIT.nx + v.z * SHIT.nz);
+    if (into > 0) {
+      if (into > 2) this.ev.wall = Math.max(this.ev.wall, into);
+      const k = into * (1 + wallBounce(K3, into));
+      v.x += SHIT.nx * k;
+      v.z += SHIT.nz * k;
+      const sp = hypot3(v.x, v.y, v.z);
+      if (sp > 1e-6) {
+        const f = Math.max(0, sp - wallFriction(K3, into)) / sp * (1 - wallHardLoss(K3, into));
+        v.x *= f;
+        v.y *= f;
+        v.z *= f;
+      }
+      const stun = wallStunOf(K3, into);
+      if (stun > 0) this.stunT = Math.max(this.stunT, stun);
     }
+    this._ribFromWorld(R, p.x - x0, 0, p.z - z0);
+  },
+  // Ramène dans le repère du ruban un déplacement monde (dx, dy, dz) déjà appliqué et la vitesse monde de la voiture (abscisse u, écart dl, vitesses vs / vd).
+  _ribFromWorld(R, dx, dy, dz) {
+    const v = this.vel;
     const F = this._cross(R, frameWorld(R.tile, R.rib, R.u, this.F));
     const B3 = this._basis(R, F);
     R.vs = v.x * B3.e1x + v.y * B3.e1y + v.z * B3.e1z;
@@ -16035,6 +16395,23 @@ var ribbonMethods = {
       R.dl = clamp(R.dl + R.dir * (dx * B3.e2x + dy * B3.e2y + dz * B3.e2z), -lim, lim);
     } else R.dl += R.dir * (dx * B3.e2x + dy * B3.e2y + dz * B3.e2z);
     this._ribPlace(R);
+  },
+  // Obstacles (piques, bumpers, marteaux...) sur un ruban (looping, mur, tube, vrille) : avant 0.9.48 ils n'agissaient que sur les routes
+  // posées au sol (_collide n'est jamais appelé en mode ruban) : la voiture les traversait. Le contact est calculé comme au sol (même
+  // fonction), puis le déplacement et la vitesse obtenus sont ramenés dans le repère du ruban (abscisse u, écart latéral dl, vitesses vs / vd).
+  // Un choc ne détache jamais la voiture du ruban (comme un mur) : seule la physique du ruban décide du décrochage.
+  _ribObstacles(R) {
+    if (!this.track.obstacles.length || this.hazardGrace > 0) return;
+    const p = this.pos;
+    const x0 = p.x, y0 = p.y, z0 = p.z;
+    this._obstacles();
+    if (this.ev.sink) return;
+    const dx = p.x - x0, dy = p.y - y0, dz = p.z - z0;
+    if (dx === 0 && dy === 0 && dz === 0 && this.ev.shock === 0) {
+      this.grounded = true;
+      return;
+    }
+    this._ribFromWorld(R, dx, dy, dz);
   },
   // Place la voiture sur le ruban (position, vitesse, orientation monde).
   _ribPlace(R) {
@@ -16204,6 +16581,7 @@ var BK = {
   w: 0
 };
 var AIR_BRAKE_DECAY = dexp(-CAR.airBrake * DT);
+var AIR_SPIN_DECAY = dexp(-CAR.airSpin * DT);
 var CarPhysics = class {
   constructor(track) {
     this.track = track;
@@ -16365,7 +16743,7 @@ var CarPhysics = class {
     this.envGrip = 1;
     this.pitch = 0;
     this.pitchRate = 0;
-    this.pitch0 = 0;
+    this.tipNext = false;
     this.landQ = "";
     this.aoa = 0.08;
     this.glidePitch = 0;
@@ -16889,11 +17267,12 @@ var CarPhysics = class {
     this.airTime = 0;
     this.pitch = dasin(clamp(fy, -1, 1));
     this.pitchRate = 0;
+    this.tipNext = false;
     return false;
   }
   // En l'air : trajectoire balistique, rotation, tangage, vol plané.
   _flyAir(inp) {
-    const dt = DT, v = this.vel, K3 = this.k;
+    const dt = DT, v = this.vel;
     let fx = -dsin(this.yaw), fz = -dcos(this.yaw);
     const airBrake = !!inp.brake && this.vehicle !== "glider";
     if (this.vehicle === "glider") {
@@ -16913,26 +17292,22 @@ var CarPhysics = class {
     this.slip = 0;
     this.fwdSpeed = v.x * fx + v.z * fz;
     this.airTime += dt;
-    if (this.vehicle === "glider") this.pitch = this.glidePitch;
-    else {
-      const gs = this.gSign, hv = hypot2(v.x, v.z);
-      const flight = datan2(v.y * gs, Math.max(hv, 1));
-      if (this.airTime <= dt * 1.01) this.pitch0 = this.pitch;
-      let tgt = this.pitch0 + (flight - this.pitch0) * CAR.airAero, w = 0;
-      const p = this.pos;
-      const s = gs > 0 ? this.track.surfaceAt(p.x, p.y, p.z, S12, 0.5, this.excl, this.time) : this.track.ceilingSurfaceAt(p.x, p.y, p.z, S12, 0.5, this.excl);
-      if (s.type === "road" && Number.isFinite(s.h)) {
-        const height = (p.y - s.h) * gs;
-        if (height >= -0.5 && height < CAR.airLevelH) {
-          w = CAR.airLevelW * (1 - Math.max(0, height) / CAR.airLevelH);
-          const slope = -(s.nx * fx + s.nz * fz) / Math.max(0.3, Math.abs(s.ny));
-          tgt += (datan(slope * gs) - tgt) * w;
-        }
+    if (this.vehicle === "glider") {
+      this.pitch = this.glidePitch;
+      this.tipNext = false;
+    } else {
+      if (this.tipNext) {
+        this.tipNext = false;
+        this.pitchRate -= this.gSign * CAR.airTip / (hypot2(v.x, v.z) + CAR.airTipV0);
       }
-      const want = clamp(tgt, -1.4, 1.4);
-      if (airBrake) this.pitchRate *= AIR_BRAKE_DECAY;
-      else this.pitchRate += (CAR.airSpring * (want - this.pitch) - CAR.airPitchDamp * 3 * this.pitchRate) * dt * K3.airPitchAcc / CAR.airPitchAcc;
-      this.pitch = clamp(this.pitch + this.pitchRate * dt, -1.4, 1.4);
+      this.pitchRate *= airBrake ? AIR_BRAKE_DECAY : AIR_SPIN_DECAY;
+      if (airBrake) this.pitchRate += this.gSign * CAR.airTilt * dt;
+      else if (inp.throttle) this.pitchRate -= this.gSign * CAR.airTilt * dt;
+      this.pitch += this.pitchRate * dt;
+      if (Math.abs(this.pitch) > 1.4) {
+        this.pitch = clamp(this.pitch, -1.4, 1.4);
+        this.pitchRate = 0;
+      }
     }
   }
   // Déplacement puis collisions (anneaux, entrée de ruban, murs, toits, dalles, obstacles, limites). Renvoie true si le pas se termine ici.
@@ -17010,6 +17385,7 @@ var CarPhysics = class {
       this.grounded = true;
       this._setGround(s);
     } else {
+      if (this.grounded) this.tipNext = true;
       this.grounded = false;
     }
     if (this.grounded && this.surfMod === "bounce" && this.bounceCD <= 0) {
@@ -17561,6 +17937,9 @@ var Simulation = class {
 };
 
 // js/autopilot.js
+var AIR_NONE = 0;
+var AIR_BRAKE = 1;
+var AIR_GAS = 2;
 var Autopilot = class {
   constructor(path, opts2 = {}) {
     this.path = path;
@@ -17615,6 +17994,30 @@ var Autopilot = class {
     const h = hypot2(b[0] - a[0], b[2] - a[2]);
     return h > 0.5 ? datan2(b[1] - a[1], h) : 0;
   }
+  // En l'air (PHYS_VER 37) : le pilote cherche où il retombe (sa trajectoire balistique contre le chemin devant) et son assiette à ce moment-là si la rotation
+  // continue ; si elle l'amènerait au-delà de la pente de la réception (plus piqué en tournant vers le bas, plus cabré en tournant vers le haut), il freine.
+  // Il relâche dès que la rotation restante l'y amène : le frein n'agit que sur la rotation, pas sur la vitesse. En gravité inversée : rien (pas de plafond prévu).
+  _airControl(phys) {
+    if (phys.gSign < 0 || phys.vehicle === "glider") return AIR_NONE;
+    const p = phys.pos, v = phys.vel, path = this.path, n = path.length, hv = hypot2(v.x, v.z);
+    if (hv < 2) return AIR_NONE;
+    const ux = v.x / hv, uz = v.z / hv, g = phys.g;
+    for (let k = this.idx; k < n && k < this.idx + 240; k++) {
+      const q = path[k], d = (q[0] - p.x) * ux + (q[2] - p.z) * uz;
+      if (d <= 1) continue;
+      const t = d / hv;
+      if (p.y + v.y * t - 0.5 * g * t * t > q[1] + 0.3) continue;
+      const a = path[Math.max(0, k - 2)], b = path[Math.min(n - 1, k + 2)], h = hypot2(b[0] - a[0], b[2] - a[2]);
+      const slope = h > 0.5 ? datan2(b[1] - a[1], h) : 0;
+      if (phys.airTime + t < 0.35) return AIR_NONE;
+      const pr = phys.pitchRate, kS = CAR.airSpin;
+      const err = phys.pitch + pr * (1 - dexp(-kS * t)) / kS - slope;
+      const tol = Math.abs(phys.omega) > 0.1 ? CAR.landOk * 0.8 : 0.03;
+      if (Math.abs(err) > tol && err * pr > 0) return AIR_BRAKE;
+      return err > 0.03 ? AIR_GAS : AIR_NONE;
+    }
+    return AIR_NONE;
+  }
   // Point de reprise (départ, réapparition) : le point du tracé le plus proche, cherché sur TOUT le tracé (0.9.67 : avant, les 400 premiers points seulement ;
   // sur un circuit long, un checkpoint au-delà se raccrochait au premier passage voisin et le pilote faisait demi-tour), parmi ceux orientés dans le sens
   // de la voiture (un tronçon voisin parcouru dans l'autre sens n'est pas un point de reprise).
@@ -17655,14 +18058,7 @@ var Autopilot = class {
   control(phys) {
     const c = this._control(phys);
     if (phys.rib) {
-    } else if (phys.gSign < 0) {
-      c.steer = -c.steer;
-      if (!phys.grounded && phys.vehicle !== "glider") {
-        const t = c.throttle;
-        c.throttle = c.brake;
-        c.brake = t;
-      }
-    }
+    } else if (phys.gSign < 0) c.steer = -c.steer;
     const reverseActive = phys.rib ? phys.rib.tile.s === "reverse" : phys.grounded && phys.surfMod === "reverse";
     if (reverseActive) c.steer = -c.steer;
     return c;
@@ -17688,9 +18084,15 @@ var Autopilot = class {
       const R = phys.rib;
       const d2 = R.dir * R.dl;
       const vs = Math.max(8, Math.abs(R.vs));
-      const psiDes = dasin(Math.max(-0.5, Math.min(0.5, -1.2 * d2 / vs)));
-      const st2 = (psiDes - R.psi) * 6 - phys.omega * 0.35;
-      const vT = headingGuided(R.tile) ? this.vCap : this._vTarget(Math.abs(R.vs));
+      const wl = this.path.wallLine && R.sag ? this.path.wallLine[this.idx] || 0 : 0;
+      const tgt = wl ? wl * Math.sign(R.sag) * phys.gSign : 0;
+      const psiDes = dasin(Math.max(-0.5, Math.min(0.5, -(wl ? 1.8 : 1.2) * (d2 - tgt) / vs)));
+      const travel = isSideTile(R.tile) && Math.abs(R.vs) > 5 ? datan2(R.vd, Math.abs(R.vs)) : R.psi;
+      const K3 = this.K, L4 = K3.a + K3.b, vAbs = Math.abs(R.vs);
+      const dMax = Math.min(K3.steerMax, K3.steerC * this.envGrip * dpow(Math.max(1, vAbs), -K3.steerN));
+      const ff = rolledRibbon(R.tile) ? datan(L4 * (R.dir * (R.kg || 0) + (R.sag || 0) / Math.max(8, vAbs))) / Math.max(1e-3, dMax) : 0;
+      const st2 = ff + (psiDes - travel) * 6 - phys.omega * 0.35;
+      const vT = rolledRibbon(R.tile) ? this.vCap : this._vTarget(Math.abs(R.vs));
       return {
         throttle: Math.abs(R.vs) < Math.min(this.vCap, vT - 0.5),
         brake: Math.abs(R.vs) > vT + 6,
@@ -17735,9 +18137,10 @@ var Autopilot = class {
       };
     }
     if (!phys.grounded) {
+      const a = this._airControl(phys);
       return {
-        throttle: false,
-        brake: false,
+        throttle: a === AIR_GAS,
+        brake: a === AIR_BRAKE,
         steer: 0,
         drift: false
       };
@@ -17747,7 +18150,16 @@ var Autopilot = class {
     let j = this.idx;
     while (j < path.length - 1 && this.dist[j] - this.dist[this.idx] < look && path[j + 1][3] !== 1) j++;
     if (path[j + 1] && path[j + 1][3] === 1 && j === this.idx) j++;
-    const tq = path[j];
+    let tq = path[j];
+    const short = look - (this.dist[j] - this.dist[this.idx]);
+    if (short > 2 && j > 0 && path[j + 1] && path[j + 1][3] === 1) {
+      const a = path[j - 1], ex = tq[0] - a[0], ez = tq[2] - a[2], el = hypot2(ex, ez);
+      if (el > 0.1) tq = [
+        tq[0] + ex / el * short,
+        tq[1],
+        tq[2] + ez / el * short
+      ];
+    }
     const fx = -dsin(phys.yaw), fz = -dcos(phys.yaw);
     const tx = tq[0] - p.x, tz = tq[2] - p.z;
     const cross = fx * tz - fz * tx;
@@ -18055,7 +18467,7 @@ function dailyChallenge(day = dayKey()) {
 }
 
 // js/version.js
-var PHYS_VER = 36;
+var PHYS_VER = 37;
 
 // js/ghostFormat.js
 var GHOST_EVERY = 4;
@@ -19260,4 +19672,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "6cc3cee8faa2e297";
+globalThis.__COPYTRACK_BUILD__ = "b283ba6a9b7cbf49";
