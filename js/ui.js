@@ -188,6 +188,8 @@ export class UI {
     }
     $('modal').classList.remove('hidden');
     this.modalOpen = true;
+    // Un Échap appuyé AVANT l'ouverture (pas encore lu par la boucle) ne doit pas refermer cette fenêtre au tour suivant.
+    if (this.app.input && this.app.input.pressed) this.app.input.pressed.delete('Escape');
   }
 
   _fireModalClose() { const f = this._onModalClose; this._onModalClose = null; if (f) f(); }

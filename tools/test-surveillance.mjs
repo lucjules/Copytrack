@@ -9,6 +9,12 @@ const NOW = Date.parse('2026-11-19T07:00:00Z');
 const base = { errors_24h: 3, error_installs_24h: 1, purge_scheduled: true, purge_last: '2026-11-19T03:17:02Z', phys_ver: 38, scores_24h: 4, runs_24h: 20, players_7d: 2, tracks: 19 };
 const levels = (h, o = {}) => judgeHealth(h, { physVer: 38, now: NOW, ...o }).map((x) => x.niveau);
 
+test('avis des testeurs (étape 19) : comptés dans l’activité quand la base les connaît, rien sinon', () => {
+  const info = (h) => judgeHealth(h, { physVer: 38, now: NOW }).map((x) => x.msg).join(' | ');
+  assert.match(info({ ...base, feedback_24h: 3 }), /3 avis de testeurs sur 24 h/);
+  assert.doesNotMatch(info(base), /avis/);
+});
+
 test('journée normale : aucune alerte', () => assert.ok(!levels(base).includes('ALERTE')));
 test('trop d’installations touchées par des erreurs, ou trop d’erreurs : alerte', () => {
   assert.ok(levels({ ...base, error_installs_24h: LIMITS.errorInstalls24h + 1 }).includes('ALERTE'));

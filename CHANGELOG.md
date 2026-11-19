@@ -6,6 +6,26 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.13.0 — version d'essai : avis des testeurs dans le jeu, médailles calées sur un petit groupe
+
+**`PHYS_VER` reste 38**, rien ne change dans la course. Phase 4 du plan de la 1.0 : les essais humains. Protocole, message aux testeurs et suite :
+[docs/ESSAIS.md](docs/ESSAIS.md). **Demande l'étape SQL 19** (`supabase/etape19-avis.sql`, à appliquer avant la mise en ligne :
+[supabase/MIGRATIONS.md](supabase/MIGRATIONS.md)).
+
+- **« Donner mon avis »** (Paramètres, et en bas de l'accueil) : appareil, commandes, expérience des jeux de course, plaisir de jeu, caméra, et
+  quatre équilibrages de « trop dur » à « trop facile » (dérapage, chocs contre les murs, contrôle en l'air, difficulté des circuits), deux textes
+  libres courts. Anonyme : le pseudo n'est joint que si le joueur coche la case. Proposé **une seule fois**, après 6 courses finies, aux joueurs qui
+  ont accepté les statistiques anonymes. Conservé 12 mois (page Confidentialité mise à jour, en français et en anglais).
+- **Étape SQL 19** : table `feedback` fermée à la lecture, envoi par `submit_feedback` (valeurs bornées, adresses web retirées, 5 avis par
+  appareil et par jour), avis dans la purge nocturne et dans le rapport de santé (`tools/surveillance.mjs` les compte).
+- **Médailles calées sur 8 testeurs** (`tools/essais.mjs`) : chaque meilleur temps est rapporté au temps du pilote automatique du même circuit ;
+  un modèle commun « niveau du testeur × difficulté du circuit » donne les médailles des **72** circuits même quand chacun n'a que quelques temps
+  (cible : bronze pour 90 % des testeurs, argent la moitié, or 15 %, cristal 3 %). Les temps impossibles et les raccourcis isolés sont écartés, et
+  le rapport nomme les circuits concernés. Il donne aussi les facteurs à reporter sur le circuit du jour (où chaque arrivée décroche aujourd'hui le
+  Cristal) et résume les avis par groupe (débutants, habitués, appareil). Les médailles ne seront écrites qu'après les essais.
+- Une fenêtre qui s'ouvre juste après un appui sur Échap ne se referme plus toute seule.
+- CSV du tableau de bord Supabase lus correctement (virgules et retours à la ligne dans un champ) par `tools/telemetry-report.mjs`.
+
 ## Bêta 0.12.6 — qualité et plateformes : Firefox et Safari vérifiés, hors ligne réparé, clavier, contraste
 
 **`PHYS_VER` reste 38**, rien ne change dans la course. Phase 3 du plan de la 1.0. Cibles, mesures et vérifications : [docs/PLATEFORMES.md](docs/PLATEFORMES.md).

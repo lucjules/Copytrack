@@ -123,6 +123,24 @@ for (const engine of ENGINES) {
     await page.keyboard.press('Escape');
     await wait(() => !document.getElementById('menu-tiles').classList.contains('hidden'));
   });
+  await step('avis d’un testeur : le formulaire se remplit et s’envoie (serveur simulé), sans pseudo par défaut', async () => {
+    let sent = null;
+    await page.route(/rpc\/submit_feedback/, async (r) => { sent = JSON.parse(r.request().postData()).f; await r.fulfill({ status: 200, contentType: 'application/json', body: '17' }); });
+    // (Échap vient d'être appuyé à l'étape précédente : la fenêtre ne doit pas se refermer toute seule au tour suivant de la boucle.)
+    await app(() => { const A = window.copytrack; A.showMenu('menu'); A.showFeedback(); });
+    await wait(() => !!document.querySelector('.feedback-form') && !document.getElementById('modal').classList.contains('hidden'));
+    await page.waitForTimeout(300);
+    assert.ok(await app(() => window.copytrack.ui.modalOpen && !document.getElementById('modal').classList.contains('hidden')), 'la fenêtre d’avis reste ouverte');
+    await app(() => {
+      const f = document.querySelector('.feedback-form'), pick = (n, v) => { f.querySelector(`input[name="${n}"][value="${v}"]`).checked = true; };
+      pick('fb-experience', 'habitue');
+      for (const [k, v] of [['fun', 4], ['drift', 0], ['walls', -1], ['air', 1], ['difficulty', 0], ['camera', 5]]) pick('fb-' + k, v);
+      f.querySelector('textarea[name="comment"]').value = 'Essai automatique';
+    });
+    await page.click('#modal-actions .btn.primary');
+    await wait(() => /Merci/.test(document.getElementById('toast').textContent));
+    assert.ok(sent && sent.experience === 'habitue' && sent.walls === -1 && sent.comment === 'Essai automatique' && !('pseudo' in sent), JSON.stringify(sent));
+  });
   await step('anglais, puis pages légales (fenêtre du jeu)', async () => {
     await app(async () => { const m = await import('/js/i18n/boot.js'); await m.switchLanguage('en', { persist: false }); });
     await wait(() => /Play/.test(document.querySelector('[data-action="sub-play"]').textContent));

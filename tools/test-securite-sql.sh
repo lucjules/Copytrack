@@ -37,7 +37,7 @@ done
 $P -d $DB -f supabase/etape15b-publication-verifiee.sql >/dev/null
 $P -d $DB -f supabase/etape16-durcissement.sql >/dev/null
 if [ -z "${AVANT:-}" ]; then $P -d $DB -f supabase/etape17-securite.sql >/dev/null; $P -d $DB -f supabase/etape17-securite.sql >/dev/null; fi          # relançable
-if [ -z "${AVANT:-}" ]; then $P -d $DB -f supabase/etape18-maintenance.sql >/dev/null; fi          # (0.12.5) les attaques se rejouent sur l'état final de la base
+if [ -z "${AVANT:-}" ]; then $P -d $DB -f supabase/etape18-maintenance.sql >/dev/null; $P -d $DB -f supabase/etape19-avis.sql >/dev/null; fi          # (0.12.5) les attaques se rejouent sur l'état final de la base
 
 # verify-prod.sql (lecture seule) sur la base COMPLÈTE (étapes 1 à 17), avant tout objet d'essai : aucune ligne MANQUE ni ÉCART (ses lignes « étape 17 », « étape 16 » et « RLS partout »).
 VP="$($P -d $DB -At -F'|' -f supabase/verify-prod.sql)"
@@ -45,6 +45,7 @@ if [ -z "${AVANT:-}" ]; then
   if echo "$VP" | grep -qE '\|(MANQUE|ÉCART)$'; then echo "  FAIL verify-prod.sql sur la base complète : lignes MANQUE / ÉCART :"; echo "$VP" | grep -E '\|(MANQUE|ÉCART)$'; VPFAIL=1; else VPFAIL=0; fi
   [ "$(echo "$VP" | grep -c 'étape 17')" -ge 9 ] || { echo "  FAIL verify-prod.sql ne contient pas les lignes de l'étape 17"; VPFAIL=1; }
   [ "$(echo "$VP" | grep -c 'étape 18')" -ge 8 ] || { echo "  FAIL verify-prod.sql ne contient pas les lignes de l'étape 18"; VPFAIL=1; }
+  [ "$(echo "$VP" | grep -c 'étape 19')" -ge 1 ] || { echo "  FAIL verify-prod.sql ne contient pas la ligne de l'étape 19"; VPFAIL=1; }
 else VPFAIL=0; fi
 
 cat > "$TMP/attaques.sql" <<'SQL'
@@ -116,7 +117,7 @@ select public.chk('A8 fonctions RÉSERVÉES au serveur (clé de service) : refus
   and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute'))));
 select public.chk('A9 fonctions appelables SANS session (anon) : seulement la liste attendue (lectures publiques, inscription, statistiques)', (
   select string_agg(p.proname, ',' order by p.proname) from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prokind = 'f' and p.prorettype <> 'trigger'::regtype and has_function_privilege('anon', p.oid, 'execute') and p.proname not in ('as_user', 'chk', 'rows_of', 'denied'))
-  = 'current_season,elo,follower_count,get_ghost,health_report,log_errors,log_runs,modes_list,my_season,playlists_list,random_track,recommended_tracks,season_bounds,season_clock,season_points,season_standings,sector_board,track_comments_list,track_stats,trending_tracks,username_available');
+  = 'current_season,elo,follower_count,get_ghost,health_report,log_errors,log_runs,modes_list,my_season,playlists_list,random_track,recommended_tracks,season_bounds,season_clock,season_points,season_standings,sector_board,submit_feedback,track_comments_list,track_stats,trending_tracks,username_available');
 select public.chk('A10 toute fonction « security definer » fixe son search_path (pas de détournement par un schéma de l''appelant)', not exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.proname not in ('as_user', 'chk')
   and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%')));
 select public.chk('A11 aucune fonction de public n''est exécutable par PUBLIC si elle écrit pour le serveur seulement', not exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname in ('submit_best', 'publish_track', 'rate_check', 'competition_open')

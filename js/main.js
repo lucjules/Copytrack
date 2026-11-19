@@ -41,6 +41,7 @@ import { modesMethods } from './app/modes.js';
 import { raceHubMethods } from './app/raceHub.js';
 import { theaterAppMethods } from './app/theater.js';
 import { legalMethods } from './app/legal.js';
+import { feedbackMethods } from './app/feedback.js';
 
 // Tous les modules sont chargés et liés : la garde du démarrage (js/boot-guard.js) se désarme.
 window.__copytrackBooted = true;
@@ -458,7 +459,7 @@ class App {
 }
 
 // Les familles de méthodes vivent dans app/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(App.prototype, multiMethods, academyMethods, competitionMethods, labMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods, theaterAppMethods, legalMethods);
+Object.assign(App.prototype, multiMethods, academyMethods, competitionMethods, labMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods, theaterAppMethods, legalMethods, feedbackMethods);
 
 
 // Application installable et jouable hors ligne (service worker), si le contexte le permet.

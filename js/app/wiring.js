@@ -153,6 +153,7 @@ export const wiringMethods = {
       case 'sub-play': case 'sub-create': case 'sub-multi': case 'sub-progress': case 'sub-profile': case 'sub-settings': this._menuSub(a.slice(4)); break;
       case 'sub-back': this._lastPanel = null; this._menuSub(null, true); break;
       case 'play': this.showScreen('tracks'); break;
+      case 'feedback': this.showFeedback(); break;      // (0.13.0 : avis des testeurs)
       case 'quick': this.quickRace(); break;
       case 'daily': this.openDailyHub('menu'); break;
       case 'hub-back': this.closeRaceHub(); break;

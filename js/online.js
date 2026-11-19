@@ -277,6 +277,11 @@ class OnlineClient {
     return this._fetch('/rest/v1/rpc/log_runs', { method: 'POST', body: { events }, auth: false });
   }
 
+  // Avis d'un testeur (js/feedback.js, supabase/etape19-avis.sql) : sans session ; renvoie l'identifiant de l'avis, ou 0 si un plafond est atteint.
+  async sendFeedback(f) {
+    return this._fetch('/rest/v1/rpc/submit_feedback', { method: 'POST', body: { f }, auth: false });
+  }
+
   // Erreurs du jeu (js/errorReport.js, supabase/etape18-maintenance.sql) : sans session, comme les statistiques.
   async logErrors(events) {
     return this._fetch('/rest/v1/rpc/log_errors', { method: 'POST', body: { events }, auth: false });
