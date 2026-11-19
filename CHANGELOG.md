@@ -8,8 +8,9 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 ## Bêta 0.12.5 — la base prête pour la 1.0 : sécurité, conservation, erreurs remontées, surveillance
 
-**`PHYS_VER` reste 38.** Phase 2 du plan de la 1.0 (base et serveur). **Étape SQL 18 à appliquer** (`supabase/etape18-maintenance.sql`,
-relançable, ne supprime rien en s'appliquant : [supabase/MIGRATIONS.md](supabase/MIGRATIONS.md)). Aucune fonction serveur à redéployer.
+**`PHYS_VER` reste 38.** Phase 2 du plan de la 1.0 (base et serveur). **Étape SQL 18 appliquée en production le 19 novembre 2026 et vérifiée**
+(`supabase/etape18-maintenance.sql`, relançable, ne supprime rien en s'appliquant : [supabase/MIGRATIONS.md](supabase/MIGRATIONS.md)). La logique
+des fonctions serveur ne change pas ; `submit-score` sera redéployée avec la mise en ligne (son empreinte de build suit le nom du jeu).
 
 - **Sécurité de la base** : chemin de recherche fixé sur les 5 fonctions signalées par Supabase ; les fonctions de déclencheur ne s'appellent plus
   par l'API (elles se déclenchent toujours).

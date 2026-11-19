@@ -7,7 +7,13 @@ Tant qu'une vérification ci-dessous n'a pas été faite et lue par quelqu'un, u
 
 Constat en **lecture seule** par le connecteur Supabase (`verify-prod.sql` et requêtes de contrôle) : les étapes **1 à 17, 15b comprise, sont
 appliquées** (aucune ligne `MANQUE` ni `ÉCART`) ; `submit-score` déployée en `PHYS_VER` 38, son build identique au dépôt de la 0.12.3.
-Étape **18** (`etape18-maintenance.sql`) : préparée et testée, **pas encore appliquée** (elle attend l'accord de l'éditeur).
+Étape **18** (`etape18-maintenance.sql`) : **appliquée le 19 novembre 2026** avec l'accord de l'éditeur (connecteur Supabase, migration
+`etape18_maintenance`). Vérifié aussitôt : lignes « étape 18 » conformes (search_path 5/5, fonctions de déclencheur fermées, aucune clé étrangère
+sans index, aucune règle RLS qui évalue `auth.uid()` par ligne, aucune table sans clé primaire, fonctions ouvertes sans session = la liste attendue),
+tâche `virelo-purge` active ; conseils Supabase : plus de `search_path` mutable, d'index manquant, d'`auth_rls_initplan` ni de table sans clé ;
+première purge à la main (4 compteurs anti-abus périmés effacés, rien d'autre) ; lectures publiques du jeu inchangées ; `tools/surveillance.mjs` sans alerte.
+Reste signalé par Supabase, voulu : fonctions `security definer` appelables (c'est l'API du jeu), sessions anonymes (le mode invité), tables sans
+règle RLS (fermées à tous) ; à faire par l'éditeur : la protection contre les mots de passe divulgués.
 Les paragraphes historiques plus bas (« rien n'a été exécuté sur la production ») datent d'avant ce constat.
 
 ## Procédure de mise à jour complète (production)
