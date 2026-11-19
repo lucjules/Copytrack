@@ -25,7 +25,7 @@ export function judgeHealth(h, { physVer = PHYS_VER, now = Date.now(), limits = 
     say(late ? 'ALERTE' : 'ok', `purge nocturne : dernière le ${h.purge_last || 'jamais'}${late ? ` (plus de ${limits.purgeLateHours} h : la tâche pg_cron ne tourne plus ?)` : ''}`);
   } else say('info', 'purge nocturne : pg_cron absent, purge à lancer à la main (select public.purge_expired();)');
   if (h.phys_ver != null) say(+h.phys_ver > physVer ? 'ALERTE' : 'ok', `physique : plus récente en base ${h.phys_ver}, dépôt ${physVer}`);
-  say('info', `activité : ${+h.scores_24h || 0} temps et ${+h.runs_24h || 0} parties (statistiques) sur 24 h, ${+h.players_7d || 0} nouveaux pilotes sur 7 jours, ${+h.tracks || 0} circuits publiés`);
+  say('info', `activité : ${+h.scores_24h || 0} temps et ${+h.runs_24h || 0} parties (statistiques) sur 24 h, ${+h.players_7d || 0} nouveaux pilotes sur 7 jours, ${+h.tracks || 0} circuits publiés${h.feedback_24h != null ? `, ${+h.feedback_24h || 0} avis de testeurs sur 24 h` : ''}`);
   return out;
 }
 

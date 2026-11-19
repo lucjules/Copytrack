@@ -139,7 +139,7 @@ export const finishMethods = {
       if (daily.coins) { bits.push(`+${daily.coins} ◆`); app.ui.updateCoins(); }
       setTimeout(() => app.ui.flash(bits.join(' · '), 3.4), 900);
     }
-    if (!this.opts.fromEditor && !this.opts.spawn) app.telemetry.record({ trackKey: this.trackKey, outcome: 'finish', time, respawns: this.stats.respawns, medal: medal && medal.id });
+    if (!this.opts.fromEditor && !this.opts.spawn) { app.telemetry.record({ trackKey: this.trackKey, outcome: 'finish', time, respawns: this.stats.respawns, medal: medal && medal.id }); if (app.noteFinish) app.noteFinish(); }
     const prevMedal = prev ? medalFor(medalTime(prev), this.medals) : null;
     let reward = null, tierBefore;
     if (this.opts.fromEditor && this.opts.spawn) {

@@ -31,6 +31,7 @@ export const screenMethods = {
     this.audio.music.play('menu');
     this.showScreen(screen);
     this._resize();
+    if (screen === 'menu' && this.maybeAskFeedback) this.maybeAskFeedback();      // (0.13.0 : avis des testeurs, js/app/feedback.js)
   },
 
   showScreen(name) {

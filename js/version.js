@@ -8,7 +8,7 @@ export const GAME_NAME = 'Virelo';
 export const FILE_PREFIX = GAME_NAME.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
 //
 // VERSION : la version affichée au joueur ; à incrémenter à chaque modification livrée (package.json doit concorder : un test le vérifie).
-export const VERSION = 'bêta 0.12.5';
+export const VERSION = 'bêta 0.13.0';
 
 // PHYS_VER : la version de la PHYSIQUE. Les replays, les records, les fantômes importés, les classements en ligne et les salons
 // multijoueurs sont tous liés à ce numéro : un replay enregistré avec une autre physique ne redonne pas la même course.

@@ -59,6 +59,23 @@ Avant l'étape 6, laisser un temps de cohabitation n'est pas possible pour les t
 
 Ne jamais lancer 6 avant 3 et 5. Les étapes 2 et 6 sont **relançables sans danger** (idempotentes) et ne **suppriment aucune donnée**.
 
+### Étape 19 (avis des testeurs, 0.13.0) : `etape19-avis.sql`
+
+Pré-requis : étape 18 (elle redéfinit `purge_expired` et `health_report` en y ajoutant les avis). **Relançable ; ne supprime aucune donnée en
+s'appliquant.** Ce qu'elle fait : table `feedback` (RLS activée, fermée à tous : seul le tableau de bord ou le connecteur la lit), fonction
+`submit_feedback(jsonb)` ouverte sans session (valeurs bornées comme le formulaire, adresses web retirées des textes, 5 avis par installation et par
+jour, 300 par heure en tout : au-delà, elle renvoie 0 sans erreur), avis de plus de 12 mois dans la purge nocturne, `feedback_24h` dans
+`health_report`. Test : `tools/test-etape19-sql.sh` (`npm run test:sql`) ; les attaques de `test-securite-sql.sh` sont rejouées après elle.
+
+| Étape | Action | Vérification (à lire) | Si elle échoue |
+|---|---|---|---|
+| 19.0 | `verify-prod.sql` | La ligne « étape 19 » dit `MANQUE` (avant) ; rien d'autre | Comprendre l'écart d'abord |
+| 19.1 | `etape19-avis.sql` (SQL Editor, ou le connecteur Supabase) | `verify-prod.sql` : ligne « étape 19 » à `ok`, « fonctions appelables SANS session hors liste » à `ok` ; conseils Supabase : rien de nouveau hors `submit_feedback` (security definer appelable, voulu) | Retour arrière ci-dessous |
+| 19.2 | Mettre en ligne le jeu 0.13.0 (formulaire « Donner mon avis ») | Un avis envoyé depuis le jeu apparaît dans `feedback` ; `node tools/surveillance.mjs` affiche « 1 avis de testeurs sur 24 h » | Remettre le jeu précédent (le formulaire disparaît, la table reste) |
+
+**Retour arrière** : `revoke execute on function public.submit_feedback(jsonb) from anon, authenticated;` ferme l'envoi ; la table et ses avis
+peuvent rester (fermés à tous, purgés à 12 mois). Relancer `etape18-maintenance.sql` remet la purge et la santé de l'étape 18 (sans les avis).
+
 ### Étape 18 (maintenance avant la 1.0, 0.12.5) : `etape18-maintenance.sql`
 
 Pré-requis : étapes 1 à 17. **Relançable ; ne supprime aucune donnée en s'appliquant** (les purges ne tournent qu'à l'heure dite). Ce qu'elle fait :

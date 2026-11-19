@@ -10,13 +10,10 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { BUILTIN_TRACKS } from '../js/tracks.js';
 import { quantile, proposeFromSample, MIN_SAMPLE } from './medals.mjs';
+import { parseCsv } from './essais.mjs';
 
 export function parseRows(text, name = 'runs.json') {
-  if (name.endsWith('.csv')) {
-    const [head, ...lines] = text.trim().split(/\r?\n/);
-    const cols = head.split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
-    return lines.filter(Boolean).map((l) => Object.fromEntries(l.split(',').map((v, i) => [cols[i], v.replace(/^"|"$/g, '')])));
-  }
+  if (name.endsWith('.csv')) return parseCsv(text);          // (guillemets, virgules dans un champ : l'export du tableau de bord)
   const data = JSON.parse(text);
   return Array.isArray(data) ? data : data.rows || [];
 }

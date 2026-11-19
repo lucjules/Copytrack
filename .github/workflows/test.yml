@@ -73,7 +73,10 @@ jobs:
         with: { node-version: 22 }
       - run: npm install --no-save playwright@1.63.0
       - run: npx playwright install --with-deps firefox webkit
-      - run: node tools/test-browser-moteurs.mjs
+      - run: sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libglx-mesa0 libegl-mesa0
+      # (Firefox avec un écran virtuel et le rendu logiciel de Mesa : sans écran, il ne trouve aucun pilote OpenGL sur la machine de CI)
+      - run: xvfb-run -a node tools/test-browser-moteurs.mjs
+        env: { MOTEURS_HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1' }
 
   # Les scripts SQL de supabase/ (communauté, classements, comptes, durcissement) sur un vrai PostgreSQL, appliqués deux fois (relançables).
   sql:

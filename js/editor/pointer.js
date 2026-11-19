@@ -4,6 +4,7 @@ import * as THREE from '../vendor/three.module.min.js';
 import { CELL, LEVEL_H, MAX_LEVEL } from '../constants.js';
 import { PIECES, surfaceAllowed, flagAllowed } from '../pieces.js';
 import { Track } from '../track.js';
+import { spillConflicts } from '../spill.js';
 import { DECORS } from '../themes.js';
 import { buildTileMesh } from '../trackMesh.js';
 import { tint } from '../trackGeometry.js';
@@ -494,6 +495,7 @@ export const pointerMethods = {
     this._clearPreview();
     const conflicts = this.track.conflicts(cand);
     if (!Track.placeable(Track.normalize(cand))) conflicts.push(null);
+    if (spillConflicts(this.track, Track.normalize(cand), conflicts).length) conflicts.push(null);      // (0.12.6 : débordement d'une pente au mur, js/spill.js)
     const nc = Track.normalize(cand);
     const same = conflicts.length === 1 && conflicts[0] && ['t', 'x', 'z', 'l', 'r'].every((k) => conflicts[0][k] === cand[k]) && OPT_KEYS.every((k) => (conflicts[0][k] | 0) === (nc[k] | 0));
     this.previewMat.emissive.set(conflicts.length && !same ? '#ff2244' : '#000000');

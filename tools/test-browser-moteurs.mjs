@@ -30,7 +30,11 @@ const server = createServer(async (req, res) => {
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const BASE = `http://127.0.0.1:${server.address().port}`;
 
-const LAUNCH = { chromium: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--mute-audio'] }, firefox: { firefoxUserPrefs: { 'webgl.force-enabled': true, 'media.autoplay.default': 0 } }, webkit: {} };
+// Firefox : sans écran, il ne trouve aucun pilote OpenGL sur une machine de CI (« Exhausted GL driver options ») ; MOTEURS_HEADED=1 le lance avec un écran
+// virtuel (xvfb-run) et le rendu logiciel de Mesa (llvmpipe), comme un ordinateur sans carte graphique (voir .github/workflows/test.yml).
+const HEADED = !!process.env.MOTEURS_HEADED;
+const LAUNCH = { chromium: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--mute-audio'] },
+  firefox: { headless: !HEADED, firefoxUserPrefs: { 'webgl.force-enabled': true, 'webgl.disable-fail-if-major-performance-caveat': true, 'media.autoplay.default': 0 } }, webkit: {} };
 let failures = 0, total = 0;
 
 for (const engine of ENGINES) {
@@ -40,15 +44,23 @@ for (const engine of ENGINES) {
   catch (e) { failures++; console.log(`  FAIL ${engine} ne démarre pas : ${String(e.message).split('\n')[0]}`); continue; }
   const ctx = await browser.newContext({ locale: 'fr-FR', viewport: { width: 1280, height: 720 }, serviceWorkers: 'block' });
   const page = await ctx.newPage();
-  const errors = [];
+  const errors = [], consoleErr = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') consoleErr.push(m.text().slice(0, 200)); });
   await page.route(/supabase\.co/, (r) => r.abort());      // (aucun serveur en ligne : le jeu doit le dire, pas planter)
   const app = (fn, arg) => page.evaluate(fn, arg);
   const wait = (fn, arg, timeout = 60000) => page.waitForFunction(fn, arg, { timeout, polling: 100 });
   const step = async (name, fn) => {
     total++;
     try { await fn(); console.log(`  ok   ${name}`); }
-    catch (e) { failures++; console.log(`  FAIL ${name}\n       ${String(e.message).split('\n').slice(0, 3).join('\n       ')}`); }
+    catch (e) {
+      failures++;
+      // Diagnostic : écran de démarrage, WebGL disponible ou non, erreurs de la console (une erreur attrapée par le jeu n'est pas une « pageerror »).
+      const st = await page.evaluate(() => ({ jeu: typeof window.copytrack, accueil: !document.getElementById('welcome').classList.contains('hidden'),
+        chargement: (document.querySelector('#loading .tagline') || {}).textContent, webgl2: !!document.createElement('canvas').getContext('webgl2'),
+        webgl1: !!document.createElement('canvas').getContext('webgl') })).catch((x) => ({ illisible: x.message }));
+      console.log(`  FAIL ${name}\n       ${String(e.message).split('\n').slice(0, 3).join('\n       ')}\n       état : ${JSON.stringify(st)}${consoleErr.length ? `\n       console : ${consoleErr.slice(-4).join(' | ')}` : ''}`);
+    }
   };
   await step('accueil, pseudo invité, menu', async () => {
     await page.goto(BASE + '/index.html');
@@ -81,6 +93,53 @@ for (const engine of ENGINES) {
     await page.waitForTimeout(800);
     await app(() => window.copytrack.leaveEditor());
     await wait(() => window.copytrack.mode === 'menu');
+  });
+  await step('contexte WebGL perdu puis rendu : la course passe en pause, le joueur est prévenu, l’affichage reprend', async () => {
+    await app(() => window.copytrack.playBuiltin(0));
+    await wait(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.state === 'racing');
+    await app(() => { window.__lc = window.copytrack.renderer.getContext().getExtension('WEBGL_lose_context'); window.__lc.loseContext(); });
+    await wait(() => window.copytrack._glLost === true && /interrompu/.test(document.getElementById('toast').textContent));
+    assert.notEqual(await app(() => window.copytrack.session.state), 'racing', 'la course n’avance plus pendant la perte');
+    await app(() => window.__lc.restoreContext());
+    await wait(() => window.copytrack._glLost === false);
+    const f0 = await app(() => window.copytrack.renderer.info.render.frame);
+    await page.waitForTimeout(1200);
+    assert.ok((await app(() => window.copytrack.renderer.info.render.frame)) > f0, 'les images reprennent');
+    await app(() => window.copytrack.quitRace());
+    await wait(() => window.copytrack.mode === 'menu');
+  });
+  await step('clavier : les flèches parcourent les tuiles de l’accueil, Entrée ouvre un panneau, Échap y revient', async () => {
+    await app(() => { const A = window.copytrack; A.ui.closeModal(); A.showMenu('menu'); document.activeElement && document.activeElement.blur(); });
+    await wait(() => !document.getElementById('menu').classList.contains('hidden') && !document.getElementById('menu-tiles').classList.contains('hidden'));
+    const onTile = () => app(() => { const a = document.activeElement; return !!(a && a.closest('#menu-tiles') && /^sub-/.test(a.dataset.action || '')) && a.dataset.action; });
+    let tile = false;
+    for (let i = 0; i < 8 && !tile; i++) { await page.keyboard.press(i ? 'ArrowRight' : 'ArrowDown'); tile = await onTile(); }
+    assert.ok(tile, 'une tuile reçoit le focus aux flèches');
+    await page.keyboard.press('ArrowRight');
+    const tile2 = await onTile();
+    assert.ok(tile2 && tile2 !== tile, `→ passe à la tuile voisine (${tile} → ${tile2})`);
+    await page.keyboard.press('Enter');
+    await wait(() => document.getElementById('menu-tiles').classList.contains('hidden'));
+    await page.keyboard.press('Escape');
+    await wait(() => !document.getElementById('menu-tiles').classList.contains('hidden'));
+  });
+  await step('avis d’un testeur : le formulaire se remplit et s’envoie (serveur simulé), sans pseudo par défaut', async () => {
+    let sent = null;
+    await page.route(/rpc\/submit_feedback/, async (r) => { sent = JSON.parse(r.request().postData()).f; await r.fulfill({ status: 200, contentType: 'application/json', body: '17' }); });
+    // (Échap vient d'être appuyé à l'étape précédente : la fenêtre ne doit pas se refermer toute seule au tour suivant de la boucle.)
+    await app(() => { const A = window.copytrack; A.showMenu('menu'); A.showFeedback(); });
+    await wait(() => !!document.querySelector('.feedback-form') && !document.getElementById('modal').classList.contains('hidden'));
+    await page.waitForTimeout(300);
+    assert.ok(await app(() => window.copytrack.ui.modalOpen && !document.getElementById('modal').classList.contains('hidden')), 'la fenêtre d’avis reste ouverte');
+    await app(() => {
+      const f = document.querySelector('.feedback-form'), pick = (n, v) => { f.querySelector(`input[name="${n}"][value="${v}"]`).checked = true; };
+      pick('fb-experience', 'habitue');
+      for (const [k, v] of [['fun', 4], ['drift', 0], ['walls', -1], ['air', 1], ['difficulty', 0], ['camera', 5]]) pick('fb-' + k, v);
+      f.querySelector('textarea[name="comment"]').value = 'Essai automatique';
+    });
+    await page.click('#modal-actions .btn.primary');
+    await wait(() => /Merci/.test(document.getElementById('toast').textContent));
+    assert.ok(sent && sent.experience === 'habitue' && sent.walls === -1 && sent.comment === 'Essai automatique' && !('pseudo' in sent), JSON.stringify(sent));
   });
   await step('anglais, puis pages légales (fenêtre du jeu)', async () => {
     await app(async () => { const m = await import('/js/i18n/boot.js'); await m.switchLanguage('en', { persist: false }); });

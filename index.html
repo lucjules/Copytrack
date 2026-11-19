@@ -61,6 +61,7 @@
   <link rel="modulepreload" href="js/app/raceHub.js">
   <link rel="modulepreload" href="js/app/theater.js">
   <link rel="modulepreload" href="js/app/legal.js">
+  <link rel="modulepreload" href="js/app/feedback.js">
   <link rel="modulepreload" href="js/geo.js">
   <link rel="modulepreload" href="js/constants.js">
   <link rel="modulepreload" href="js/pieces.js">
@@ -154,6 +155,7 @@
   <link rel="modulepreload" href="js/analysis/coach.js">
   <link rel="modulepreload" href="js/legal.js">
   <link rel="modulepreload" href="js/dataExport.js">
+  <link rel="modulepreload" href="js/feedback.js">
   <link rel="modulepreload" href="js/decoPack.js">
   <link rel="modulepreload" href="js/decoPrimitives.js">
   <link rel="modulepreload" href="js/customDecoBuild.js">
@@ -177,6 +179,7 @@
   <link rel="modulepreload" href="js/net/signaling.js">
   <link rel="modulepreload" href="js/net/transport.js">
   <link rel="modulepreload" href="js/analysis/events.js">
+  <link rel="modulepreload" href="js/spill.js">
   <link rel="modulepreload" href="js/connect.js">
   <link rel="modulepreload" href="js/sim/params.js">
   <link rel="modulepreload" href="js/sim/env.js">
@@ -267,9 +270,9 @@
         </div>
       </div>
       <div class="menu-panel hidden" id="menu-sub-multi" role="group" aria-labelledby="mp-multi">
-        <header class="menu-panel-head"><button class="btn" data-action="sub-back">← Retour</button><h2 id="mp-multi">Multijoueur</h2></header>
+        <header class="menu-panel-head"><button class="btn" data-action="sub-back">← Retour</button><h2 id="mp-multi">Multijoueur <span class="tag-beta" title="Salons en direct : en cours d’essai à plusieurs ; signale tout souci (Paramètres › Confidentialité et licences)">bêta</span></h2></header>
         <div class="menu-panel-grid">
-          <button data-action="multi" class="btn menu-entry primary" title="Courir en direct avec d'autres joueurs, sur un circuit de la communauté ou le tien"><b>Salons</b><small>rejoindre ou créer une salle, championnats</small></button>
+          <button data-action="multi" class="btn menu-entry primary" title="Courir en direct avec d'autres joueurs, sur un circuit de la communauté ou le tien"><b>Salons <span class="tag-beta">bêta</span></b><small>rejoindre ou créer une salle, championnats</small></button>
           <button data-action="competition" class="btn menu-entry"><b>Compétition</b><small>duels entre amis, tournois</small></button>
           <button data-action="tab-friends" class="btn menu-entry"><b>Amis</b><small>demandes et liste d’amis (compte)</small></button>
         </div>
@@ -301,10 +304,11 @@
           <button data-action="tab-game" class="btn menu-entry"><b>Jeu</b><small>fantômes, classements, tutoriel</small></button>
           <button data-action="tab-ui" class="btn menu-entry"><b>Interface</b><small>thème, HUD, caméras</small></button>
           <button data-action="legal-confidentialite" class="btn menu-entry"><b>Confidentialité et licences</b><small>données, mentions légales, crédits</small></button>
+          <button data-action="feedback" class="btn menu-entry"><b>Donner mon avis</b><small>version d’essai : dérapage, murs, difficulté…</small></button>
         </div>
       </div>
     </div>
-    <footer class="menu-foot"><span id="menu-foot">Virelo · un jeu de course original · propulsé par three.js</span> <a class="menu-wiki" href="wiki/" target="_blank" rel="noopener" title="Tout le jeu expliqué : pilotage, circuits, pièces, éditeur (nouvel onglet)">📖 Wiki du jeu</a> <span class="menu-legal"><button type="button" data-action="legal-credits">Crédits</button> · <button type="button" data-action="legal-confidentialite">Confidentialité</button> · <button type="button" data-action="legal-mentions">Mentions légales</button></span></footer>
+    <footer class="menu-foot"><span id="menu-foot">Virelo · un jeu de course original · propulsé par three.js</span> <a class="menu-wiki" href="wiki/" target="_blank" rel="noopener" title="Tout le jeu expliqué : pilotage, circuits, pièces, éditeur (nouvel onglet)">📖 Wiki du jeu</a> <span class="menu-legal"><button type="button" data-action="feedback">Donner mon avis</button> · <button type="button" data-action="legal-credits">Crédits</button> · <button type="button" data-action="legal-confidentialite">Confidentialité</button> · <button type="button" data-action="legal-mentions">Mentions légales</button></span></footer>
   </section>
 
   <!-- Sélection de circuit -->

@@ -37,10 +37,11 @@ const PAGES = {
 <li><b>Jeu en ligne</b> (invité ou compte) : une session à identifiant aléatoire ; tes temps (avec les commandes de la course, que le serveur rejoue pour vérifier le temps), les circuits que tu publies, tes commentaires, mentions « j'aime », signalements, abonnements, amis, duels et tournois, avec ton pseudo. Le pseudo, les temps, les circuits publiés et les commentaires sont <b>visibles par les autres joueurs</b>.</li>
 <li><b>Protection contre les abus</b> : des compteurs (identifiant de session et heure) limitent les envois ; ils sont effacés au bout d'une heure environ.</li>
 <li><b>Statistiques anonymes</b> (seulement si tu as dit oui) : le temps de tes arrivées et abandons et ton nombre d'essais sur les circuits officiels, et les erreurs du jeu s'il en survient (message nettoyé, fichier et ligne du code, version, famille de navigateur), avec un identifiant aléatoire propre à l'appareil, jamais lié à ton pseudo ni à ton compte. Elles servent à régler la difficulté et les médailles, et à corriger les plantages. Tu peux retirer ton accord à tout moment (Paramètres › Jeu).</li>
+<li><b>Avis</b> (seulement si tu en envoies un, Paramètres › Donner mon avis) : tes réponses (appareil, commandes, expérience, notes, textes), l'identifiant aléatoire de l'appareil, la version du jeu ; ton pseudo seulement si tu coches « joindre mon pseudo ». Lus par l'éditeur pour régler le jeu.</li>
 <li><b>Multijoueur</b> : les joueurs d'une salle se connectent directement entre eux (WebRTC). Les autres joueurs de la salle et les serveurs de mise en relation (STUN de Google, et un relais si le réseau l'exige) voient ton adresse IP le temps de la partie.</li>
 <li><b>Hébergement du site</b> : comme tout hébergeur, GitHub reçoit l'adresse IP et le type de navigateur de chaque visiteur (journaux techniques gérés par GitHub).</li>
 </ul>
-<p>Bases légales (RGPD) : l'exécution du service que tu demandes (compte, jeu en ligne, multijoueur, art. 6.1.b) ; notre intérêt légitime à protéger le service (compteurs, art. 6.1.f) ; ton consentement (statistiques, art. 6.1.a). Les polices du jeu sont servies par le site lui-même : aucune requête vers un service de polices tiers.</p>
+<p>Bases légales (RGPD) : l'exécution du service que tu demandes (compte, jeu en ligne, multijoueur, art. 6.1.b) ; notre intérêt légitime à protéger le service (compteurs, art. 6.1.f) ; ton consentement (statistiques, avis, art. 6.1.a). Les polices du jeu sont servies par le site lui-même : aucune requête vers un service de polices tiers.</p>
 <h3>Où sont les données, et qui les voit</h3>
 <ul>
 <li><b>Supabase</b> (base de données, authentification, fonctions serveur), sous-traitant : serveurs à Londres, Royaume-Uni, pays qui bénéficie d'une décision d'adéquation de la Commission européenne.</li>
@@ -52,7 +53,7 @@ const PAGES = {
 <ul>
 <li>Compte, sauvegarde, temps, circuits publiés, commentaires : tant que le compte existe. Profil › Supprimer le compte efface le tout, immédiatement et définitivement.</li>
 <li>Données d'une session invitée : 12 mois au plus après sa dernière activité.</li>
-<li>Statistiques anonymes : 12 mois au plus ; erreurs du jeu : 90 jours.</li>
+<li>Statistiques anonymes et avis : 12 mois au plus ; erreurs du jeu : 90 jours.</li>
 <li>Compteurs contre les abus : environ une heure.</li>
 </ul>
 <h3>Tes droits</h3>
@@ -76,10 +77,11 @@ const PAGES = {
 <li><b>Online play</b> (guest or account): a session with a random identifier; your times (with the race inputs, which the server replays to check the time), the tracks you publish, your comments, likes, reports, follows, friends, duels and tournaments, with your username. Usernames, times, published tracks and comments are <b>visible to other players</b>.</li>
 <li><b>Abuse protection</b>: counters (session identifier and time) limit submissions; they are erased after about one hour.</li>
 <li><b>Anonymous statistics</b> (only if you said yes): your finish and retirement times and number of attempts on the official tracks, and the game's errors if any occur (cleaned message, code file and line, version, browser family), with a random identifier specific to the device, never linked to your username or account. They are used to tune difficulty and medals, and to fix crashes. You can withdraw your consent at any time (Settings › Game).</li>
+<li><b>Feedback</b> (only if you send it, Settings › Give feedback): your answers (device, controls, experience, ratings, texts), the device's random identifier, the game version; your username only if you tick “attach my username”. Read by the publisher to tune the game.</li>
 <li><b>Multiplayer</b>: players in a room connect directly to each other (WebRTC). The other players in the room and the connection servers (Google STUN, and a relay if the network requires one) see your IP address for the duration of the game.</li>
 <li><b>Website hosting</b>: like any host, GitHub receives the IP address and browser type of each visitor (technical logs managed by GitHub).</li>
 </ul>
-<p>Legal bases (GDPR): performance of the service you request (account, online play, multiplayer, Art. 6(1)(b)); our legitimate interest in protecting the service (counters, Art. 6(1)(f)); your consent (statistics, Art. 6(1)(a)). The game's fonts are served by the site itself: no request to a third-party font service.</p>
+<p>Legal bases (GDPR): performance of the service you request (account, online play, multiplayer, Art. 6(1)(b)); our legitimate interest in protecting the service (counters, Art. 6(1)(f)); your consent (statistics, feedback, Art. 6(1)(a)). The game's fonts are served by the site itself: no request to a third-party font service.</p>
 <h3>Where the data is, and who sees it</h3>
 <ul>
 <li><b>Supabase</b> (database, authentication, server functions), processor: servers in London, United Kingdom, a country covered by a European Commission adequacy decision.</li>
@@ -91,7 +93,7 @@ const PAGES = {
 <ul>
 <li>Account, cloud save, times, published tracks, comments: as long as the account exists. Profile › Delete account erases all of it, immediately and permanently.</li>
 <li>Guest session data: at most 12 months after its last activity.</li>
-<li>Anonymous statistics: at most 12 months; game errors: 90 days.</li>
+<li>Anonymous statistics and feedback: at most 12 months; game errors: 90 days.</li>
 <li>Abuse counters: about one hour.</li>
 </ul>
 <h3>Your rights</h3>

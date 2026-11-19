@@ -4,6 +4,7 @@ import { CELL, MAX_LEVEL, DIRS, MAX_DECOS } from '../constants.js';
 import { PIECES, SURFACES, SURFACE_ORDER, surfaceAllowed, flagAllowed, armOption } from '../pieces.js';
 import { retypePlacement } from '../tileInfo.js';
 import { Track } from '../track.js';
+import { spillConflicts, spillMessage } from '../spill.js';
 import { minGroundLevel } from '../ribbons.js';
 import { safeUrl } from '../decos.js';
 import { DECO_CATS, DECO_LABELS } from '../decoData.js';
@@ -140,6 +141,9 @@ export const toolMethods = {
     // Une pièce d'un calque verrouillé ou masqué (groups.js) n'est jamais remplacée : avant 0.12.0 la pose l'effaçait sans un mot, même invisible.
     const guarded = conflicts.find((c) => !this._layerOk(c));
     if (guarded) { if (!painting) { this.app.ui.flash(this._layerWhy(guarded)); this.app.audio.error(); } return; }
+    // (0.12.6) Le bord incliné d'une pente posée au mur déborde dans la case voisine : seule une pièce qui la prolonge peut s'y poser (js/spill.js).
+    const spill = spillConflicts(this.track, norm, conflicts);
+    if (spill.length) { if (!painting) { this.app.ui.flash(spillMessage(spill[0]), 3); this.app.audio.error(); } return; }
     for (const c of conflicts) this.track.remove(c);
     if (tile.t === 'start') for (const s of this.track.tiles.filter((x) => x.t === 'start')) this.track.remove(s);
     const dropped = this._droppedOptions(tile, norm);

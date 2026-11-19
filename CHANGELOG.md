@@ -6,6 +6,50 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.13.0 — version d'essai : avis des testeurs dans le jeu, médailles calées sur un petit groupe
+
+**`PHYS_VER` reste 38**, rien ne change dans la course. Phase 4 du plan de la 1.0 : les essais humains. Protocole, message aux testeurs et suite :
+[docs/ESSAIS.md](docs/ESSAIS.md). **Demande l'étape SQL 19** (`supabase/etape19-avis.sql`, à appliquer avant la mise en ligne :
+[supabase/MIGRATIONS.md](supabase/MIGRATIONS.md)).
+
+- **« Donner mon avis »** (Paramètres, et en bas de l'accueil) : appareil, commandes, expérience des jeux de course, plaisir de jeu, caméra, et
+  quatre équilibrages de « trop dur » à « trop facile » (dérapage, chocs contre les murs, contrôle en l'air, difficulté des circuits), deux textes
+  libres courts. Anonyme : le pseudo n'est joint que si le joueur coche la case. Proposé **une seule fois**, après 6 courses finies, aux joueurs qui
+  ont accepté les statistiques anonymes. Conservé 12 mois (page Confidentialité mise à jour, en français et en anglais).
+- **Étape SQL 19** : table `feedback` fermée à la lecture, envoi par `submit_feedback` (valeurs bornées, adresses web retirées, 5 avis par
+  appareil et par jour), avis dans la purge nocturne et dans le rapport de santé (`tools/surveillance.mjs` les compte).
+- **Médailles calées sur 8 testeurs** (`tools/essais.mjs`) : chaque meilleur temps est rapporté au temps du pilote automatique du même circuit ;
+  un modèle commun « niveau du testeur × difficulté du circuit » donne les médailles des **72** circuits même quand chacun n'a que quelques temps
+  (cible : bronze pour 90 % des testeurs, argent la moitié, or 15 %, cristal 3 %). Les temps impossibles et les raccourcis isolés sont écartés, et
+  le rapport nomme les circuits concernés. Il donne aussi les facteurs à reporter sur le circuit du jour (où chaque arrivée décroche aujourd'hui le
+  Cristal) et résume les avis par groupe (débutants, habitués, appareil). Les médailles ne seront écrites qu'après les essais.
+- Une fenêtre qui s'ouvre juste après un appui sur Échap ne se referme plus toute seule.
+- CSV du tableau de bord Supabase lus correctement (virgules et retours à la ligne dans un champ) par `tools/telemetry-report.mjs`.
+
+## Bêta 0.12.6 — qualité et plateformes : Firefox et Safari vérifiés, hors ligne réparé, clavier, contraste
+
+**`PHYS_VER` reste 38**, rien ne change dans la course. Phase 3 du plan de la 1.0. Cibles, mesures et vérifications : [docs/PLATEFORMES.md](docs/PLATEFORMES.md).
+
+- **Hors ligne réparé** : après une première visite, le jeu ne redémarrait plus sans réseau. `js/verify.js`, importé par l'écran Communauté, était
+  exclu de la copie du service worker ; la garde de démarrage prenait l'échec pour une mise à jour et **effaçait la copie hors ligne**. Les deux sont
+  corrigés : tout le code du jeu est dans la copie, et la garde n'efface plus rien hors ligne (elle le dit, avec « Réessayer »).
+- **Firefox et WebKit (Safari)** vérifiés à chaque envoi (`tools/test-browser-moteurs.mjs`, tâche CI `moteurs`) : accueil, menu, 3D, course,
+  éditeur, contexte WebGL perdu, clavier, anglais, pages légales.
+- **Contexte WebGL perdu** (mémoire graphique, pilote réinitialisé) : la course passe en pause et le joueur est prévenu ; l'affichage reprend quand
+  le navigateur le rend, sinon « Recharger » est proposé au bout de 8 s.
+- **Sans WebGL 2** : un message dit quoi faire (accélération matérielle, mise à jour, autre navigateur) au lieu d'un écran d'accueil inutile ;
+  les autres échecs de démarrage disent de recharger, traduits.
+- **Clavier** : les flèches parcourent les menus, le garage et les fenêtres (même navigation que la manette) ; Entrée choisit, Échap revient.
+- **Contraste** vérifié pour les six thèmes (WCAG, 4,5:1 pour le texte) ; les messages d'erreur des thèmes Crépuscule et Forêt sont éclaircis.
+- **Pentes posées au mur** : leur bord incliné déborde dans la case d'avant et d'après ; l'éditeur y refuse désormais une pièce qui ne les prolonge
+  pas, avec un message (pose, aperçu, prolonger, collage, déplacement). Les circuits existants se lisent comme avant. Pièces verticales sans
+  poteau : style « suspendu » assumé (décision écrite dans `docs/AUDIT-RENDU-0.12.2.md`).
+- **Multijoueur en direct marqué « bêta »** pour la 1.0.
+- **Chargement mesuré** (`tools/mesure-chargement.mjs`, GitHub Pages simulé) : accueil en 1,2 s et menu en 2,1 s en 4G à la première visite,
+  0,4 s ensuite. Objectif tenu : pas de compilation à la publication.
+- CI : relançable à la main (pour éprouver sa stabilité) ; tests `test-debordement`, `test-contraste`, `test-hors-ligne`, deux de plus dans
+  `test-browser-boot` (hors ligne, sans WebGL 2).
+
 ## Bêta 0.12.5 — la base prête pour la 1.0 : sécurité, conservation, erreurs remontées, surveillance
 
 **`PHYS_VER` reste 38.** Phase 2 du plan de la 1.0 (base et serveur). **Étape SQL 18 appliquée en production le 19 novembre 2026 et vérifiée**

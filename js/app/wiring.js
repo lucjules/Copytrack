@@ -108,6 +108,18 @@ export const wiringMethods = {
       if (e.key !== 'Escape' || this._screen !== 'menu' || this.ui.modalOpen || !this._menuSubOpen) return;
       e.preventDefault(); this._menuSub(null, true);
     });
+    // (0.12.6) Flèches du clavier dans les menus, le garage et les fenêtres : la même navigation spatiale que la manette (_padNav). Les champs (texte, liste,
+    // curseur) gardent leurs flèches ; en course et dans l'éditeur, les flèches restent au pilotage et à la caméra (sauf dans une fenêtre ouverte hors course).
+    document.addEventListener('keydown', (e) => {
+      const dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!dir || e.altKey || e.ctrlKey || e.metaKey || this.input.capture) return;
+      if (!(this.mode === 'menu' || this.mode === 'garage' || (this.ui.modalOpen && this.mode !== 'race'))) return;
+      const t = e.target, tag = t && t.tagName;
+      if (tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && t.type !== 'checkbox') || (t && t.isContentEditable)) return;
+      if (t && t.closest && t.closest('[role="tablist"], [role="radiogroup"]')) return;      // (ces groupes ont leurs propres flèches)
+      e.preventDefault();
+      this._padNav({ dx: dir[0], dy: dir[1] });
+    });
     document.querySelectorAll('#bind-tabs .tab').forEach((t) => t.addEventListener('click', () => { this.audio.click(); this._renderControls(t.dataset.tab); }));
   },
 
@@ -141,6 +153,7 @@ export const wiringMethods = {
       case 'sub-play': case 'sub-create': case 'sub-multi': case 'sub-progress': case 'sub-profile': case 'sub-settings': this._menuSub(a.slice(4)); break;
       case 'sub-back': this._lastPanel = null; this._menuSub(null, true); break;
       case 'play': this.showScreen('tracks'); break;
+      case 'feedback': this.showFeedback(); break;      // (0.13.0 : avis des testeurs)
       case 'quick': this.quickRace(); break;
       case 'daily': this.openDailyHub('menu'); break;
       case 'hub-back': this.closeRaceHub(); break;

@@ -106,6 +106,34 @@ await test('serveur durablement incohérent : un seul essai de réparation, puis
   await ctx.close();
 });
 
+console.log('Hors ligne et sans 3D (phase 3 de la 1.0)');
+await test('hors ligne : après une première visite (service worker), le jeu redémarre sans réseau jusqu’au menu', async () => {
+  const ctx = await browser.newContext({ locale: 'fr-FR', viewport: { width: 960, height: 540 }, serviceWorkers: 'allow' });
+  const page = await ctx.newPage(), errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(BASE + '/');
+  assert.ok(await poll(page, visible, 20000), 'première visite');
+  // Le service worker s'installe : il met en cache toute la liste de sw.js (addAll), puis prend la main.
+  assert.ok(await poll(page, async () => { const r = await navigator.serviceWorker.ready; const ks = await caches.keys(); return !!r.active && ks.some((k) => k.startsWith('copytrack-')); }, 30000), 'service worker actif et cache rempli');
+  await ctx.setOffline(true);
+  await page.reload();
+  assert.ok(await poll(page, visible, 30000), 'l’accueil s’affiche sans réseau');
+  await page.fill('#wl-name', 'HorsLigne');
+  await page.click('#wl-submit');
+  assert.ok(await poll(page, () => window.copytrack && window.copytrack.mode === 'menu', 30000), 'le menu s’affiche sans réseau');
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+await test('sans WebGL 2 : pas d’écran d’accueil pour rien, un message qui dit quoi faire', async () => {
+  const { ctx, page } = await freshPage();
+  await page.addInitScript(() => { delete window.WebGL2RenderingContext; const g = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function (t, ...a) { return /webgl/.test(t) ? null : g.call(this, t, ...a); }; });
+  await page.goto(BASE + '/');
+  const msg = await poll(page, () => { const t = document.querySelector('#loading .tagline'); return t && /WebGL 2/.test(t.textContent) && t.textContent; }, 20000);
+  assert.match(msg || '', /accélération matérielle/);
+  assert.equal(await page.evaluate(() => document.getElementById('welcome').classList.contains('hidden')), true, 'l’accueil ne s’affiche pas');
+  await ctx.close();
+});
+
 await browser.close();
 server.close();
 console.log(failures ? `\n${failures} test(s) en échec sur ${n}` : `\nTous les tests navigateur du démarrage passent (${n}).`);

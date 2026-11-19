@@ -584,4 +584,5 @@ export default {
   'Orientation : {o:t}': 'Orientation: {o}',
   'Orientation suivante (à l’endroit, à l’envers, sur un mur)': 'Next orientation (right way up, upside down, on a wall)',
   'Orientation suivante : à l’endroit, à l’envers, sur un mur (Maj : précédente)': 'Next orientation: right way up, upside down, on a wall (Shift: previous)',
+  'Le bord incliné de « {p:t} » déborde dans cette case : pose une pièce qui la prolonge, ou ailleurs.': 'The tilted edge of “{p}” spills into this cell: place a piece that continues it, or somewhere else.',
 };

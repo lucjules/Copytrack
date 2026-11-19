@@ -1194,6 +1194,18 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 .legal-text li { margin: 4px 0; }
 .legal-text a { color: var(--cyan); }
 @media (max-height: 500px) { .legal-text { max-height: 44vh; } .legal-page .legal-tabs { margin-bottom: 6px; } }
+/* (0.12.6) Étiquette « bêta » : le multijoueur en direct reste en essai pour la 1.0 */
+.tag-beta { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--amber); color: var(--amber); font-size: 0.6em; font-style: normal; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; vertical-align: middle; }
+/* Avis des testeurs (0.13.0, js/app/feedback.js) */
+.feedback-form { display: flex; flex-direction: column; gap: 10px; max-height: min(64vh, 680px); overflow-y: auto; padding-right: 6px; }
+.feedback-form .fb-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.feedback-form .fb-q { min-width: 96px; font-weight: 700; }
+.feedback-form .fb-choice { display: inline-flex; align-items: center; gap: 5px; }
+.feedback-form .fb-scale { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; margin: 0; }
+.feedback-form .fb-scale legend { padding: 0 4px; font-weight: 700; }
+.feedback-form .fb-end { color: var(--muted); font-size: 0.85em; }
+.feedback-form .fb-dot { display: inline-flex; flex-direction: column; align-items: center; min-width: 38px; font-size: 0.85em; }
+.feedback-form textarea { width: 100%; }
 .link-btn { background: none; border: 0; padding: 0; color: var(--cyan); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 #menu a.menu-entry { text-decoration: none; }
 

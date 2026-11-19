@@ -18,8 +18,9 @@ async function walk(dir) {
   }
   return out;
 }
-// Fichiers que seul le serveur exécute (vérification des temps) : inutiles hors ligne, donc hors du cache.
-const SERVER_ONLY = new Set(['js/verify.js']);
+// (0.12.6) Aucune exclusion : js/verify.js, longtemps gardé hors du cache (« seul le serveur l'exécute »), est importé par l'écran Communauté
+// (replayTime) ; absent du cache, il faisait échouer tout le démarrage hors ligne (le service worker répondait par la page HTML).
+const SERVER_ONLY = new Set();
 const files = ['index.html', 'manifest.webmanifest'];
 for (const d of ['css', 'js', 'icons', 'assets']) {
   for (const f of await walk(join(root, d))) {

@@ -122,9 +122,9 @@ checks as (
   union all
   select 91, 'étape 17 : fonctions appelables SANS session (anon) hors de la liste attendue (lectures publiques, inscription, statistiques)', 'aucune',
          coalesce((select string_agg(p.proname, ', ' order by p.proname) from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prokind = 'f' and p.prorettype <> 'trigger'::regtype and has_function_privilege('anon', p.oid, 'execute')
-                   and p.proname not in ('current_season', 'elo', 'follower_count', 'get_ghost', 'health_report', 'log_errors', 'log_runs', 'modes_list', 'my_season', 'playlists_list', 'random_track', 'recommended_tracks', 'season_bounds', 'season_clock', 'season_points', 'season_standings', 'sector_board', 'track_comments_list', 'track_stats', 'trending_tracks', 'username_available')), 'aucune'),
+                   and p.proname not in ('current_season', 'elo', 'follower_count', 'get_ghost', 'health_report', 'log_errors', 'log_runs', 'modes_list', 'my_season', 'playlists_list', 'random_track', 'recommended_tracks', 'season_bounds', 'season_clock', 'season_points', 'season_standings', 'sector_board', 'submit_feedback', 'track_comments_list', 'track_stats', 'trending_tracks', 'username_available')), 'aucune'),
          case when exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prokind = 'f' and p.prorettype <> 'trigger'::regtype and has_function_privilege('anon', p.oid, 'execute')
-                   and p.proname not in ('current_season', 'elo', 'follower_count', 'get_ghost', 'health_report', 'log_errors', 'log_runs', 'modes_list', 'my_season', 'playlists_list', 'random_track', 'recommended_tracks', 'season_bounds', 'season_clock', 'season_points', 'season_standings', 'sector_board', 'track_comments_list', 'track_stats', 'trending_tracks', 'username_available')) then 'ÉCART' else 'ok' end
+                   and p.proname not in ('current_season', 'elo', 'follower_count', 'get_ghost', 'health_report', 'log_errors', 'log_runs', 'modes_list', 'my_season', 'playlists_list', 'random_track', 'recommended_tracks', 'season_bounds', 'season_clock', 'season_points', 'season_standings', 'sector_board', 'submit_feedback', 'track_comments_list', 'track_stats', 'trending_tracks', 'username_available')) then 'ÉCART' else 'ok' end
   union all
   -- ---- 4 ter. étape 18 (maintenance avant la 1.0) ------------------------------------------------------------------------------------------------------
   select 100, 'étape 18 : search_path fixé sur cloud_saves_touch, season_clock, season_bounds, current_season, elo', '5 sur 5',
@@ -181,6 +181,19 @@ checks as (
          || ' · dernière purge : ' || case when to_regclass('public.maintenance_log') is null then 'jamais'
               else coalesce((xpath('/row/c/text()', query_to_xml('select max(at)::text as c from public.maintenance_log where what = ''purge_expired''', false, true, '')))[1]::text, 'jamais') end,
          'info'
+  union all
+  -- ---- 4 quater. étape 19 (avis des testeurs) -----------------------------------------------------------------------------------------------------------
+  select 110, 'étape 19 : table feedback fermée à la lecture, submit_feedback ouverte, purge à 12 mois', 'en place',
+         case when to_regclass('public.feedback') is null or to_regprocedure('public.submit_feedback(jsonb)') is null then 'absente'
+              when has_table_privilege('anon', 'public.feedback', 'select') or has_table_privilege('authenticated', 'public.feedback', 'select')
+                   or not has_function_privilege('anon', 'public.submit_feedback(jsonb)', 'execute')
+                   or coalesce(position('feedback' in pg_get_functiondef(to_regprocedure('public.purge_expired()'))), 0) = 0 then 'droits ou purge non conformes'
+              else 'en place' end,
+         case when to_regclass('public.feedback') is null or to_regprocedure('public.submit_feedback(jsonb)') is null then 'MANQUE'
+              when has_table_privilege('anon', 'public.feedback', 'select') or has_table_privilege('authenticated', 'public.feedback', 'select')
+                   or not has_function_privilege('anon', 'public.submit_feedback(jsonb)', 'execute')
+                   or coalesce(position('feedback' in pg_get_functiondef(to_regprocedure('public.purge_expired()'))), 0) = 0 then 'ÉCART'
+              else 'ok' end
   union all
   select 92, 'étape 16 : anon sans aucune écriture directe sur aucune table (INSERT / UPDATE / DELETE)', 'aucune',
          coalesce((select string_agg(c.relname, ', ' order by c.relname) from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind = 'r'

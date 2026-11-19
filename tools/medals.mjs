@@ -39,6 +39,18 @@ export function proposeFromSample(times) {
   return out;
 }
 
+// Écrit des médailles dans le source de js/tracks.js (texte) pour le circuit def, marquées `medalsBy: 'humain'` (une seule fois), et garde l'objectif
+// « moins de t s » entre l'or et l'argent (au demi-point). Renvoie le nouveau texte ; lève une erreur si l'entrée du circuit est introuvable.
+export function writeMedals(src, def, m) {
+  const id = def.id, re = new RegExp("(    id: '" + id + "',[\\s\\S]*?\\n    medals: )\\{[^}]*\\},?\\n(    medalsBy: '[a-z]+',\\n)?");
+  if (!re.test(src)) throw new Error('entrée introuvable : ' + id);
+  if (def.goal && def.goal.id === 'under') {
+    const t = Math.round(((m.or + m.argent) / 2) * 2) / 2, g = new RegExp("(    id: '" + id + "',[\\s\\S]*?\\n    goal: \\{ id: 'under', t: )[0-9.]+");
+    src = src.replace(g, (_, a) => a + t);
+  }
+  return src.replace(re, (_, a) => a + '{ ' + Object.entries(m).map(([k, v]) => k + ': ' + v).join(', ') + " },\n    medalsBy: 'humain',\n");
+}
+
 export function proposeMedals(def) {
   const S = runTrack(buildBuiltin(def));
   if (!S.ok) return null;
@@ -58,15 +70,7 @@ if (process.argv[1] && process.argv[1].endsWith('medals.mjs') && process.argv.in
     if (!t.length) continue;
     const m = proposeFromSample(t);
     console.log(`${id.padEnd(14)} ${t.length} temps, meilleur ${Math.min(...t).toFixed(2)} s   proposé ${JSON.stringify(m).replace(/"/g, '')}   écrit ${JSON.stringify(def.medals).replace(/"/g, '')}`);
-    if (process.argv.includes('--ecrire')) {
-      const re = new RegExp("(    id: '" + id + "',[\\s\\S]*?\\n    medals: )\\{[^}]*\\},?\\n");
-      if (!re.test(src)) throw new Error('entrée introuvable : ' + id);
-      if (def.goal && def.goal.id === 'under') {                // l'objectif « moins de t s » doit rester entre l'or et l'argent
-        const t = Math.round(((m.or + m.argent) / 2) * 2) / 2, g = new RegExp("(    id: '" + id + "',[\\s\\S]*?\\n    goal: \\{ id: 'under', t: )[0-9.]+");
-        src = src.replace(g, (_, a) => a + t);
-      }
-      src = src.replace(re, (_, a) => a + '{ ' + Object.entries(m).map(([k, v]) => k + ': ' + v).join(', ') + " },\n    medalsBy: 'humain',\n"); n++;
-    }
+    if (process.argv.includes('--ecrire')) { src = writeMedals(src, def, m); n++; }
   }
   if (process.argv.includes('--ecrire')) { writeFileSync(path, src); console.log(n + ' circuits recalés sur des temps humains dans js/tracks.js (puis : node tools/golden.mjs --update ; npm run sw ; npm run build:function)'); }
 } else if (process.argv[1] && process.argv[1].endsWith('medals.mjs')) {

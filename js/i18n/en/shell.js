@@ -410,5 +410,15 @@ export default {
 
   // ---------------------------------------------------------------- pluriels (v = valeurs captées, en texte)
   '{n:w} tours': (v) => `${v.n} ${plural(v.n, 'lap', 'laps')}`,
+  'L’affichage 3D a été interrompu par le navigateur : reprise en cours…': 'The browser interrupted the 3D display: recovering…',
+  'Affichage 3D interrompu': '3D display interrupted',
+  'Le navigateur a coupé l’affichage 3D (mémoire graphique saturée ou pilote réinitialisé) et ne l’a pas rendu. Recharger la page le rétablit ; tes records, tes circuits et ta progression sont enregistrés.': 'The browser cut the 3D display (graphics memory full or driver reset) and has not restored it. Reloading the page brings it back; your records, tracks and progress are saved.',
+  'Recharger': 'Reload',
+  'Attendre': 'Wait',
+  'Affichage 3D rétabli.': '3D display restored.',
+  'Ce navigateur n’a pas pu démarrer la 3D (WebGL 2). Active l’accélération matérielle dans ses réglages, mets-le à jour, ou essaie un navigateur récent (Chrome, Edge, Firefox, Safari).': 'This browser could not start 3D (WebGL 2). Turn on hardware acceleration in its settings, update it, or try a recent browser (Chrome, Edge, Firefox, Safari).',
+  'Le jeu n’a pas pu démarrer : {m}. Recharge la page.': 'The game could not start: {m}. Reload the page.',
+  'Multijoueur <span class="tag-beta" title="Salons en direct : en cours d’essai à plusieurs ; signale tout souci (Paramètres › Confidentialité et licences)">bêta</span>': 'Multiplayer <span class="tag-beta" title="Live rooms: still being tested with several players; report any issue (Settings › Privacy and licences)">beta</span>',
+  'Salons <span class="tag-beta">bêta</span>': 'Rooms <span class="tag-beta">beta</span>',
 };
 

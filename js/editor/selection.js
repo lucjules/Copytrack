@@ -5,6 +5,7 @@ import { CELL, MAX_LEVEL, LEVEL_H } from '../constants.js';
 import { PIECES, flagAllowed } from '../pieces.js';
 import { MODS } from './shared.js';
 import { Track } from '../track.js';
+import { spillConflicts } from '../spill.js';
 import { buildTileMesh } from '../trackMesh.js';
 import { buildDecoMesh } from '../decos.js';
 import { normRect, tilesInRect, decosInRect, copyRect, rotateClip, placedClip, pasteClip, shiftLevel, moveSelection, rotateSelection, checkTrack, findDuplicateSpot, duplicateSelection, duplicable } from '../editorTools.js';
@@ -352,7 +353,7 @@ export const selectionMethods = {
     let bad = false;
     for (const t of P.tiles) {
       if (t.l < 0 || t.l > MAX_LEVEL) { bad = true; continue; }
-      if (this.track.conflicts(Track.normalize(t)).length) bad = true;
+      if (this.track.conflicts(Track.normalize(t)).length || spillConflicts(this.track, Track.normalize(t)).length) bad = true;
       this.preview.add(buildTileMesh(Track.normalize(t), this.previewMat, this.previewGlow));
     }
     for (const d of P.decos.slice(0, 40)) this.preview.add(buildDecoMesh(d, this.previewMat, this.previewGlow));

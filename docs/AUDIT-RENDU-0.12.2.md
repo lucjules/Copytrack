@@ -37,7 +37,7 @@ Audit de tout ce qui se dessine dans Copytrack, mené avec des outils construits
 - Portique de checkpoint au milieu de la case alors que le passage compte dès l'entrée dans la case : la pièce se prend dans les deux sens.
 - Poteau absent quand une autre pièce occupe la case en dessous : sinon il serait planté au milieu de sa route.
 - 25 décors volants ou suspendus, 4 décors en partie enterrés (toit plat, pierre zen, grand cœur, panier d'œufs) : leur dessin le veut.
-- Pièces au mur en pente dont les bords débordent dans la case voisine (66 pièces) : conséquence de la pente, raccord continu avec la pièce suivante.
+- Pièces au mur en pente dont les bords débordent dans la case voisine (66 pièces) : conséquence de la pente, raccord continu avec la pièce suivante. **Depuis la 0.12.6**, l'éditeur réserve ce bord : seule la pièce qui prolonge la pente peut se poser dans la case débordée (`js/spill.js`, `tools/test-debordement.mjs`) ; les circuits existants se lisent comme avant.
 - Immeubles (ville) et nuages (ciel) près des caméras éloignées du banc : jamais sur la route ni autour d'elle (une case de marge).
 
 ## Vérifié sans défaut
@@ -50,3 +50,12 @@ pour construire un circuit officiel, 32 à 61 appels de dessin, 45 à 121 k tria
 
 Non mesurés ici : les vrais téléphones (précision des GPU, contexte WebGL perdu, 120 Hz), l'export vidéo et le mode théâtre, le rendu des véhicules
 au contact (seulement à travers les tours). La pluie s'estompe pour toute la caméra à l'abri (pas goutte par goutte).
+
+## Décisions de la phase 3 de la 1.0 (0.12.6)
+
+- **Pentes posées au mur (F1)** : bord réservé dans la case voisine, voir plus haut.
+- **Pièces verticales sans poteau (F2, 89 occurrences dans les circuits officiels : murs, sommets de looping)** : **style « suspendu » assumé**.
+  Un poteau ne peut pas porter une route verticale sans traverser la route qui passe dessous ou à côté, et un support mural dessiné devrait
+  s'ancrer dans un mur qui n'existe pas. Ces pièces tiennent par leurs raccords, comme les anneaux, les plateformes et les décors volants ; le reste
+  de la route (ce qui a un passage à plat) garde ses poteaux. Rien à changer dans le rendu ; la sonde `supports` continue d'exiger un poteau partout
+  ailleurs.
