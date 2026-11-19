@@ -3,6 +3,7 @@
 import { PIECES, flagAllowed, clearConflicts, roadHalf } from './pieces.js';
 import { ROAD_HALF } from './constants.js';
 import { Track } from './track.js';
+import { spillConflicts } from './spill.js';
 import { tileEnds, endsTouch, placementsAfter, compatiblePlacement, rollGap, ROLL_TOLERANCE } from './connect.js';
 import { endOrientation } from './continuity.js';
 import { oriIdOfEnd, entryOrientation, transitionPath, oriLabel } from './orient.js';
@@ -69,7 +70,7 @@ export function extendPlan(track, from, type, opts = {}) {
       found = true;
       const tile = Track.normalize(c);
       if (!Track.placeable(tile)) { blocked = blocked || 'sort des niveaux autorisés (monte ou descends la route d\'avant)'; continue; }
-      if (track.conflicts(tile).length) { blocked = blocked || 'tomberait sur une pièce déjà posée'; continue; }
+      if (track.conflicts(tile).length || spillConflicts(track, tile).length) { blocked = blocked || 'tomberait sur une pièce déjà posée'; continue; }
       return { tile, inferred: t.inferred, end, reverse };
     }
     if (found) break;
@@ -134,7 +135,7 @@ function autoBridge(track, end, type, opts) {
     if (!c) { undo(); return { why: `${PIECES[id].label} ne se raccorde pas ici : la chaîne de transitions (${path.map((x) => PIECES[x].label).join(' → ')}) ne tient pas.` }; }
     const tile = Track.normalize(c);
     if (!Track.placeable(tile)) { undo(); return { why: `${PIECES[id].label} sortirait des niveaux autorisés (monte ou descends la route d'avant).` }; }
-    if (track.conflicts(tile).length) { undo(); return { why: `${PIECES[id].label} tomberait sur une pièce déjà posée.` }; }
+    if (track.conflicts(tile).length || spillConflicts(track, tile).length) { undo(); return { why: `${PIECES[id].label} tomberait sur une pièce déjà posée.` }; }
     const added = track.add(tile);
     placed.push(added);
     cur = tileEnds(added).find((e) => e.exit);

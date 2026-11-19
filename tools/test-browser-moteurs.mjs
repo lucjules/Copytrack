@@ -40,15 +40,23 @@ for (const engine of ENGINES) {
   catch (e) { failures++; console.log(`  FAIL ${engine} ne démarre pas : ${String(e.message).split('\n')[0]}`); continue; }
   const ctx = await browser.newContext({ locale: 'fr-FR', viewport: { width: 1280, height: 720 }, serviceWorkers: 'block' });
   const page = await ctx.newPage();
-  const errors = [];
+  const errors = [], consoleErr = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') consoleErr.push(m.text().slice(0, 200)); });
   await page.route(/supabase\.co/, (r) => r.abort());      // (aucun serveur en ligne : le jeu doit le dire, pas planter)
   const app = (fn, arg) => page.evaluate(fn, arg);
   const wait = (fn, arg, timeout = 60000) => page.waitForFunction(fn, arg, { timeout, polling: 100 });
   const step = async (name, fn) => {
     total++;
     try { await fn(); console.log(`  ok   ${name}`); }
-    catch (e) { failures++; console.log(`  FAIL ${name}\n       ${String(e.message).split('\n').slice(0, 3).join('\n       ')}`); }
+    catch (e) {
+      failures++;
+      // Diagnostic : écran de démarrage, WebGL disponible ou non, erreurs de la console (une erreur attrapée par le jeu n'est pas une « pageerror »).
+      const st = await page.evaluate(() => ({ jeu: typeof window.copytrack, accueil: !document.getElementById('welcome').classList.contains('hidden'),
+        chargement: (document.querySelector('#loading .tagline') || {}).textContent, webgl2: !!document.createElement('canvas').getContext('webgl2'),
+        webgl1: !!document.createElement('canvas').getContext('webgl') })).catch((x) => ({ illisible: x.message }));
+      console.log(`  FAIL ${name}\n       ${String(e.message).split('\n').slice(0, 3).join('\n       ')}\n       état : ${JSON.stringify(st)}${consoleErr.length ? `\n       console : ${consoleErr.slice(-4).join(' | ')}` : ''}`);
+    }
   };
   await step('accueil, pseudo invité, menu', async () => {
     await page.goto(BASE + '/index.html');

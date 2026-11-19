@@ -3,6 +3,7 @@
 import { CELL, LEVEL_H, MAX_LEVEL, SURF_PHYS } from './constants.js';
 import { PIECES, forkBranchX, localToWorld, baseY, cpKind, toLocal, sampleLocal } from './pieces.js';
 import { Track } from './track.js';
+import { spillConflicts } from './spill.js';
 import { centerlineWorld } from './ribbons.js';
 import { junctionEnds } from './connect.js';
 import { mapGeometry, fitView, drawTrackMap } from './ui/trackMap.js';
@@ -171,6 +172,7 @@ export function pasteClip(track, clip, cx, cz, level, ok = null) {
     if (t.l < 0 || t.l > MAX_LEVEL || !Track.placeable(n)) { skipped++; continue; }
     const cs = track.conflicts(n), start = track.startTile;
     if (ok && cs.some((c) => !ok(c))) { guarded++; continue; }
+    if (spillConflicts(track, n, cs).length) { skipped++; continue; }      // (0.12.6 : débordement d'une pente au mur, js/spill.js)
     if (t.t === 'start' ? start && !cs.includes(start) : cs.includes(start)) { skipped++; continue; }
     for (const c of cs) track.remove(c);
     track.add(t);
@@ -230,7 +232,7 @@ function replaceTiles(track, tiles, moved) {
   const sel = new Set(tiles);
   for (const t of moved) {
     const n = Track.normalize(t);
-    if (!Track.placeable(n) || t.l < 0 || t.l > MAX_LEVEL || track.conflicts(n).some((c) => !sel.has(c))) return false;
+    if (!Track.placeable(n) || t.l < 0 || t.l > MAX_LEVEL || track.conflicts(n).some((c) => !sel.has(c)) || spillConflicts(track, n, tiles).length) return false;
   }
   // 2. Application : l'ordre des pièces dans le circuit est conservé (le code partagé et la signature n'en changent pas pour rien).
   const order = track.tiles.slice(), repl = new Map();
