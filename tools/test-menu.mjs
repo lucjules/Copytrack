@@ -31,7 +31,7 @@ test('chaque tuile ouvre un panneau existant, annoncé aux lecteurs d\'écran, q
     const p = panels.find((x) => 'menu-sub-' + x.name === id);
     assert.ok(p, 'panneau ' + id);
     assert.match(p.html, /data-action="sub-back"[^>]*>← Retour</, id + ' : bouton Retour');
-    assert.match(p.html, /<h2 id="mp-[a-z]+">[^<]+<\/h2>/, id + ' : titre');
+    assert.match(p.html, /<h2 id="mp-[a-z]+">[^<]+(<span class="tag-beta"[^>]*>[^<]*<\/span>)?<\/h2>/, id + ' : titre');      // (0.12.6 : étiquette « bêta » permise)
     assert.match(p.html, /role="group" aria-labelledby="mp-/, id + ' : annoncé');
   }
 });

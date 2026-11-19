@@ -6,6 +6,30 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.12.6 — qualité et plateformes : Firefox et Safari vérifiés, hors ligne réparé, clavier, contraste
+
+**`PHYS_VER` reste 38**, rien ne change dans la course. Phase 3 du plan de la 1.0. Cibles, mesures et vérifications : [docs/PLATEFORMES.md](docs/PLATEFORMES.md).
+
+- **Hors ligne réparé** : après une première visite, le jeu ne redémarrait plus sans réseau. `js/verify.js`, importé par l'écran Communauté, était
+  exclu de la copie du service worker ; la garde de démarrage prenait l'échec pour une mise à jour et **effaçait la copie hors ligne**. Les deux sont
+  corrigés : tout le code du jeu est dans la copie, et la garde n'efface plus rien hors ligne (elle le dit, avec « Réessayer »).
+- **Firefox et WebKit (Safari)** vérifiés à chaque envoi (`tools/test-browser-moteurs.mjs`, tâche CI `moteurs`) : accueil, menu, 3D, course,
+  éditeur, contexte WebGL perdu, clavier, anglais, pages légales.
+- **Contexte WebGL perdu** (mémoire graphique, pilote réinitialisé) : la course passe en pause et le joueur est prévenu ; l'affichage reprend quand
+  le navigateur le rend, sinon « Recharger » est proposé au bout de 8 s.
+- **Sans WebGL 2** : un message dit quoi faire (accélération matérielle, mise à jour, autre navigateur) au lieu d'un écran d'accueil inutile ;
+  les autres échecs de démarrage disent de recharger, traduits.
+- **Clavier** : les flèches parcourent les menus, le garage et les fenêtres (même navigation que la manette) ; Entrée choisit, Échap revient.
+- **Contraste** vérifié pour les six thèmes (WCAG, 4,5:1 pour le texte) ; les messages d'erreur des thèmes Crépuscule et Forêt sont éclaircis.
+- **Pentes posées au mur** : leur bord incliné déborde dans la case d'avant et d'après ; l'éditeur y refuse désormais une pièce qui ne les prolonge
+  pas, avec un message (pose, aperçu, prolonger, collage, déplacement). Les circuits existants se lisent comme avant. Pièces verticales sans
+  poteau : style « suspendu » assumé (décision écrite dans `docs/AUDIT-RENDU-0.12.2.md`).
+- **Multijoueur en direct marqué « bêta »** pour la 1.0.
+- **Chargement mesuré** (`tools/mesure-chargement.mjs`, GitHub Pages simulé) : accueil en 1,2 s et menu en 2,1 s en 4G à la première visite,
+  0,4 s ensuite. Objectif tenu : pas de compilation à la publication.
+- CI : relançable à la main (pour éprouver sa stabilité) ; tests `test-debordement`, `test-contraste`, `test-hors-ligne`, deux de plus dans
+  `test-browser-boot` (hors ligne, sans WebGL 2).
+
 ## Bêta 0.12.5 — la base prête pour la 1.0 : sécurité, conservation, erreurs remontées, surveillance
 
 **`PHYS_VER` reste 38.** Phase 2 du plan de la 1.0 (base et serveur). **Étape SQL 18 appliquée en production le 19 novembre 2026 et vérifiée**
