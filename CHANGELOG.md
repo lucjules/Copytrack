@@ -6,6 +6,23 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.14.0 — multijoueur : lien d'invitation, salon en grand, course à départ commun, revanche
+
+**`PHYS_VER` reste 38.** Phase C (fondations du multijoueur) de [docs/ANALYSE-FONCTIONNELLE.md](docs/ANALYSE-FONCTIONNELLE.md), sauf le relais
+réseau (TURN), qui attend le choix d'un service par l'éditeur.
+
+- **Lien d'invitation.** « 🔗 Copier le lien d'invitation » (et « 📤 Partager » sur téléphone) donne l'adresse du jeu suivie de `#salle=CODE`.
+  L'ouvrir lance le jeu et rejoint la salle directement, après le pseudo.
+- **Salon en grand, sur deux colonnes.**
+  - À gauche : le code, l'invitation et les joueurs, chacun avec la couleur de sa voiture, ★ pour l'hôte, son état (prêt, pas prêt, en course) et sa liaison.
+  - À droite : le mode, le circuit avec son aperçu (circuits intégrés), les collisions, le salon public et les règles. L'invité voit le mode et le circuit choisis par l'hôte.
+- **Prêt.** Chacun clique « Je suis prêt » (« 1 / 2 prêts »). Si quelqu'un n'est pas prêt, le premier « Lancer » de l'hôte avertit ; le second part quand même.
+- **Course à départ commun** (nouveau mode, choisi par défaut) : un circuit (intégré ou de la communauté), départ sur une grille, classement en direct, « 🏁 Course terminée » à l'arrivée. Le championnat (plusieurs manches) et la course libre (fantômes, chacun à son rythme) restent.
+- **Revanche.** À la fin d'une course ou d'un championnat, les invités cliquent « 🔁 Je veux une revanche » (l'hôte voit « Revanche demandée : 1 / 2 ») ; l'hôte relance les mêmes circuits pour tous en un clic.
+- **Les voitures des autres ont leur apparence du garage** : de vraies voitures dans une course à départ commun ou un championnat, des fantômes de leur couleur en course libre. Avant : un fantôme d'une couleur de joueur.
+- **Connexion impossible expliquée** dans le salon, avec la cause (réseaux qui bloquent la connexion directe : 4G, école, entreprise) et quoi essayer.
+- Tests : `test-net` (voiture annoncée et filtrée, prêt, mode de l'hôte, revanche, apparence des voitures), `test-browser` (lien, prêt, course, revanche à deux onglets ; le championnat déclare ses joueurs prêts).
+
 ## Bêta 0.13.1 — caméra stable, boutons lisibles, néons et moto corrigés, nouvelle version annoncée
 
 **`PHYS_VER` reste 38**, rien ne change dans la course : records, fantômes et médailles restent valables. Phase A du plan tiré de l'analyse

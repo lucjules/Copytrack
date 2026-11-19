@@ -12,7 +12,8 @@ export const netMethods = {
     const ids = room.list.map((m) => m.id).sort();
     const add = (m) => {
       if (m.self || this.remote.has(m.id) || m.link === 'incompatible') return;
-      const rc = new RemoteCar(this.app.scene, { id: m.id, name: m.name, colorIndex: ids.indexOf(m.id) },
+      // (0.13.1) à son apparence ; une vraie voiture dans une course à départ commun (championnat), un fantôme de sa couleur en course libre
+      const rc = new RemoteCar(this.app.scene, { id: m.id, name: m.name, colorIndex: ids.indexOf(m.id), car: m.car, opaque: !!this.cup },
         { onTeleport: (pos) => this.app.particles.burst(pos.x, pos.y + 1.5, pos.z, 16, 6, 0.5, 0.6, '#9fe3ff', 0) });
       this.remote.set(m.id, rc);
     };

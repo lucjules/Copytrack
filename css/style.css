@@ -1838,3 +1838,25 @@ body.in-race #update-bar { display: none; }
 #editor.ed12 .pal-set .pset-head b::before { content: '▾ '; color: var(--cyan); }
 #editor.ed12 .pal-set.folded .pset-head b::before { content: '▸ '; }
 #editor.ed12 .pal-set.folded > :not(.pset-head) { display: none; }
+
+/* 0.13.1 : salon multijoueur en grand, sur deux colonnes (joueurs à gauche, mode et circuit à droite). */
+.modal-panel.mp-lobby-panel { width: min(1080px, 96vw); max-width: 96vw; }
+.mp-lobby { display: grid; grid-template-columns: minmax(260px, 0.9fr) 1.1fr; gap: 18px; align-items: start; }
+@media (max-width: 760px) { .mp-lobby { grid-template-columns: 1fr; } }
+.mp-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.mp-invite { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.mp-cards li.mp-card { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid transparent; }
+.mp-cards li.mp-card.ready { border-color: var(--good, #46e08a); }
+.mp-car { width: 34px; height: 20px; border-radius: 6px 10px 4px 4px; border-bottom: 5px solid; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); }
+.mp-who { display: flex; flex-direction: column; min-width: 0; }
+.mp-who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-who small { color: var(--muted); font-size: 12px; }
+.mp-card.ready .mp-who small { color: var(--good, #46e08a); }
+.mp-readyline { margin: 0; text-align: center; font-weight: 700; }
+.mp-netnote:empty { display: none; }
+.mp-netnote { color: var(--amber); }
+.mp-preview { width: 100%; max-width: 420px; height: auto; aspect-ratio: 32 / 17; border-radius: 10px; border: 1px solid var(--line); align-self: center; }
+.mp-preview[hidden] { display: none; }
+.mp-mode { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.mp-want:empty { display: none; }
+.mp-cup.single .mp-row em { display: none; }

@@ -11,6 +11,8 @@ import { PublicDirectory, describeRoom, LOBBY_CODE } from '../net/directory.js';
 import { createIceLoader } from '../net/ice.js';
 import { saveResume, loadResume, clearResume } from '../net/resume.js';
 import { listMyTracks, formatTime } from '../storage.js';
+import { profile } from '../profile.js';
+import { mapGeometry, fitView, drawTrackMap } from '../ui/trackMap.js';
 const STEPS_PER_S = 120;
 const fmtSteps = (steps) => (steps == null ? '—' : formatTime(steps / STEPS_PER_S));
 export const multiMethods = {
@@ -18,7 +20,9 @@ export const multiMethods = {
   _roomOpts(code = null) {
     this._iceLoader = this._iceLoader || createIceLoader({ getToken: this._tokenFn() });
     const back = code ? loadResume(normalizeCode(code)) : null;
-    return { name: this.settings.playerName, makeSignaling: (o) => defaultSignaling(o, this._tokenFn()), getIce: this._iceLoader, ...(back ? { selfId: back.selfId, token: back.token } : {}) };
+    const L = profile().loadout || {}, car = {};
+    for (const k of ['body', 'color', 'color2', 'decalColor', 'spoiler', 'led', 'decal', 'ornament', 'wheels', 'finish', 'bike']) if (typeof L[k] === 'string') car[k] = L[k];      // (0.13.1) mon apparence, vue par les autres
+    return { name: this.settings.playerName, car, makeSignaling: (o) => defaultSignaling(o, this._tokenFn()), getIce: this._iceLoader, ...(back ? { selfId: back.selfId, token: back.token } : {}) };
   },
 
   _bindRoom(room) {
@@ -146,16 +150,16 @@ export const multiMethods = {
   multiMenu() {
     if (this.room && !this.room.closed) { this.multiLobby(this.room); return; }
     const wrap = document.createElement('div');
-    wrap.innerHTML = `<p><b>Course libre</b> : même circuit, chacun à son rythme, en voitures fantômes (aucune collision), chacun son chrono et on recommence quand on veut (R).
-      <b>Championnat</b> : plusieurs circuits à la suite, départ commun sur une grille, des points par place, collisions douces en option.
-      Jusqu'à ${MAX_PLAYERS} joueurs. Une salle se rejoint avec un code de 6 caractères, ou depuis la liste des salons publics.</p>
+    wrap.innerHTML = `<p><b>Course</b> : un circuit, départ commun sur une grille, classement à l'arrivée. <b>Championnat</b> : plusieurs circuits à la suite, des points par place.
+      <b>Course libre</b> : même circuit, chacun à son rythme, en voitures fantômes (aucune collision), on recommence quand on veut (R).
+      Jusqu'à ${MAX_PLAYERS} joueurs. Une salle se rejoint avec un code de 6 caractères, un lien d'invitation, ou depuis la liste des salons publics.</p>
       <label class="mp-join"><span>Rejoindre une salle</span><input id="mp-code" maxlength="8" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
       <p class="mp-err" id="mp-err" role="alert"></p>`;
     const err = (m) => { wrap.querySelector('#mp-err').textContent = m || ''; };
     const busy = (b) => document.querySelectorAll('#modal-actions button').forEach((x) => { x.disabled = b; });
     const go = async (fn) => {
       err(''); busy(true);
-      try { const room = await fn(); this.room = room; this._bindRoom(room); this.ui.closeModal(); this.multiLobby(room); }
+      try { await this._enterRoom(await fn()); }
       catch (e) { err(e.message || 'Impossible de se connecter.'); busy(false); }
     };
     this.ui.modal({
@@ -174,47 +178,117 @@ export const multiMethods = {
     setTimeout(() => { const i = wrap.querySelector('#mp-code'); if (i) i.focus(); }, 50);
   },
 
+  async _enterRoom(room) {
+    this.room = room; this._bindRoom(room); this.ui.closeModal(); this.multiLobby(room);
+    return room;
+  },
+
+  // 0.13.1 : lien d'invitation. L'adresse du jeu suivie de #salle=CODE ouvre le jeu et rejoint la salle (après le pseudo).
+  inviteLink(room) { return `${location.origin}${location.pathname}#salle=${room.code}`; },
+  async joinFromLink(code) {
+    const c = normalizeCode(code);
+    if (!ROOM_RE.test(c)) { this.ui.flash('Lien d’invitation invalide.', 3); return false; }
+    if (this.room && !this.room.closed) { if (this.room.code === c) { this.multiLobby(this.room); return true; } this.room.leave(); }
+    this.ui.flash('Connexion à la salle ' + c + '…', 2);
+    try { await this._enterRoom(await Room.join(c, this._roomOpts(c))); return true; }
+    catch (e) { this.ui.flash(e.message || 'Impossible de rejoindre cette salle.', 4); return false; }
+  },
+
+  // Salon (0.13.1, refait) : en grand ; à gauche le code, l'invitation et les joueurs (voiture, prêt, liaison) ; à droite le mode, le circuit (avec son
+  // aperçu) et les réglages (hôte) ou ce qu'a choisi l'hôte (invité). Trois modes : Course (départ commun, une manche), Championnat, Course libre.
   multiLobby(room) {
     const body = document.createElement('div');
+    body.className = 'mp-lobby';
+    const left = document.createElement('div'), right = document.createElement('div');
+    left.className = 'mp-col mp-left'; right.className = 'mp-col mp-right';
+    body.append(left, right);
     const code = document.createElement('div');
     code.className = 'mp-code';
     code.innerHTML = `<small>Code de la salle</small><b>${esc(room.code)}</b>`;
+    const invite = document.createElement('div');
+    invite.className = 'mp-invite';
+    const copyBtn = Object.assign(document.createElement('button'), { type: 'button', className: 'btn small', textContent: '🔗 Copier le lien d’invitation' });
+    copyBtn.dataset.mp = 'copy';
+    copyBtn.onclick = async () => {
+      try { await navigator.clipboard.writeText(this.inviteLink(room)); this.ui.flash('Lien copié : envoie-le à tes amis.', 2.4); }
+      catch { this.ui.flash(this.inviteLink(room), 6); }
+    };
+    invite.append(copyBtn);
+    if (navigator.share) {
+      const shareBtn = Object.assign(document.createElement('button'), { type: 'button', className: 'btn small', textContent: '📤 Partager' });
+      shareBtn.onclick = () => navigator.share({ title: 'Virelo', text: `Rejoins ma salle (code ${room.code})`, url: this.inviteLink(room) }).catch(() => {});
+      invite.append(shareBtn);
+    }
     const list = document.createElement('ul');
-    list.className = 'mp-list';
+    list.className = 'mp-list mp-cards';
+    const netNote = document.createElement('p');
+    netNote.className = 'mp-netnote meta';
+    const readyLine = document.createElement('p');
+    readyLine.className = 'mp-readyline';
+    left.append(code, invite, list, readyLine, netNote);
     const modeRow = document.createElement('div');
     modeRow.className = 'mp-mode';
     const trackRow = document.createElement('div');
     trackRow.className = 'mp-track';
+    const preview = document.createElement('canvas');
+    preview.className = 'mp-preview'; preview.width = 320; preview.height = 170;
     const pick = document.createElement('div');
     pick.className = 'mp-pick';
     const note = document.createElement('p');
     note.className = 'meta';
     const msg = document.createElement('p');
     msg.className = 'mp-err'; msg.setAttribute('role', 'alert');
-    body.append(code, list, modeRow, trackRow, pick, msg, note);
+    right.append(modeRow, trackRow, preview, pick, msg, note);
     const LINK = { self: '', open: '● connecté', connecting: '… connexion', failed: '✕ liaison impossible', closed: '✕ déconnecté', incompatible: '✕ autre version', away: '⏳ reconnexion' };
+    const MODES = { race: 'Course', cup: 'Championnat', free: 'Course libre' };
     // Choix de l'hôte, gardés d'une ouverture du salon à l'autre : circuits ajoutés à la liste, mode, nombre de manches, sélection, collisions, salon public.
-    const extra = this._mpExtra = Object.assign({ mine: [], community: [], mode: 'free', rounds: 3, pool: 'all', collisions: true, pub: false }, this._mpExtra);
+    const extra = this._mpExtra = Object.assign({ mine: [], community: [], mode: 'race', rounds: 3, pool: 'all', collisions: true, pub: false }, this._mpExtra);
+    const drawPreview = () => {
+      const id = room.trackId, b = id && this.builtins.find((x) => x.key === id);
+      preview.hidden = !b || extra.mode === 'cup' && room.meta.host;
+      if (!b) return;
+      try {
+        const g = preview.getContext('2d'), geom = mapGeometry(b.track);
+        g.clearRect(0, 0, preview.width, preview.height);
+        drawTrackMap(g, geom, fitView(geom.bounds, preview.width, preview.height, 10), { bg: '#16122b' });
+      } catch { preview.hidden = true; }
+    };
     const render = () => {
-      list.innerHTML = room.list.map((m) => `<li class="${m.self ? 'me' : ''}"><span>${m.id === room.hostId ? '★ ' : ''}${esc(m.name)}${m.self ? ' (toi)' : ''}</span><i>${LINK[m.link] || ''}${m.link === 'open' && m.rtt ? ` · ${Math.round(m.rtt)} ms` : ''}</i></li>`).join('');
+      const host = room.isHost, mode = host ? extra.mode : room.hostMode || 'race';
+      // Joueurs : voiture (couleurs du garage), nom, hôte, prêt, liaison.
+      list.innerHTML = room.list.map((m) => {
+        const c = m.car || {}, col = /^#[0-9a-f]{6}$/i.test(c.color || '') ? c.color : '#8890a6', col2 = /^#[0-9a-f]{6}$/i.test(c.color2 || '') ? c.color2 : '#23242f';
+        return `<li class="mp-card${m.self ? ' me' : ''}${m.ready ? ' ready' : ''}" data-id="${esc(m.id)}"><span class="mp-car" style="background:${col};border-color:${col2}" aria-hidden="true"></span>`
+          + `<span class="mp-who"><b>${m.id === room.hostId ? '★ ' : ''}${esc(m.name)}${m.self ? ' (toi)' : ''}</b><small>${m.ready ? '✔ Prêt' : m.racing ? '🏁 En course' : 'Pas prêt'}</small></span>`
+          + `<i>${LINK[m.link] || ''}${m.link === 'open' && m.rtt ? ` · ${Math.round(m.rtt)} ms` : ''}</i></li>`;
+      }).join('');
+      const rc = room.readyCount();
+      readyLine.textContent = `${rc.ready} / ${rc.total} prêt${rc.total > 1 ? 's' : ''}`;
+      // Liaison impossible : dire pourquoi et quoi faire (pas de relais réseau pour l'instant).
+      const failed = room.list.filter((m) => m.link === 'failed');
+      netNote.textContent = failed.length ? `Connexion impossible avec ${failed.map((m) => m.name).join(', ')} : vos réseaux bloquent la connexion directe entre joueurs (4G, réseau d'école ou d'entreprise). Essayez depuis un autre réseau (Wi-Fi à la maison, partage de connexion).` : '';
+      const readyBtn = document.querySelector('#modal-actions [data-mp="ready"]');
+      if (readyBtn) readyBtn.textContent = room.meta.ready ? 'Plus prêt' : 'Je suis prêt';
       modeRow.innerHTML = ''; trackRow.innerHTML = ''; pick.innerHTML = '';
-      const host = room.isHost, cup = extra.mode === 'cup';
+      const cup = mode === 'cup', race = mode === 'race';
       const start = document.querySelector('#modal-actions [data-mp="start"]');
       if (start) {
         start.hidden = !host;
         start.disabled = cup ? false : !room.track;
-        start.textContent = cup ? (room.cupActive ? 'Relancer un championnat' : 'Lancer le championnat') : room.started ? 'Relancer pour tous' : 'Lancer la course';
+        start.textContent = cup ? (room.cupActive ? 'Relancer un championnat' : 'Lancer le championnat') : race ? 'Lancer la course' : room.started ? 'Relancer pour tous' : 'Lancer la course libre';
       }
       const running = room.cupActive;
       if (!host) {
+        modeRow.innerHTML = `<span>Mode</span><b>${esc(MODES[mode] || MODES.race)}</b>`;
         trackRow.textContent = running ? `Championnat en cours : manche ${Math.min(room.cup.total, (room.cupState ? room.cupState.n : room.cup.played) + 1)} sur ${room.cup.total}.`
           : room.track ? `Circuit : ${room.track.name || room.track.id}` : 'L\'hôte choisit le circuit…';
-        note.textContent = (running ? 'Tu rejoins à la prochaine manche.' : room.started ? 'Course en cours : rejoins-la.' : 'En attente de l\'hôte.') + (room.rules ? ' Règles : ' + describeRules(room.rules).join(' · ') + '.' : '');
+        note.textContent = (running ? 'Tu rejoins à la prochaine manche.' : room.started && mode === 'free' ? 'Course en cours : rejoins-la.' : 'Clique « Je suis prêt » ; l\'hôte lance la course.') + (room.rules ? ' Règles : ' + describeRules(room.rules).join(' · ') + '.' : '');
+        drawPreview();
         return;
       }
-      // Mode : course libre (chacun à son rythme) ou championnat (manches, points).
-      modeRow.innerHTML = `<span>Mode</span><label><input type="radio" name="mp-mode" value="free"${cup ? '' : ' checked'}> Course libre</label><label><input type="radio" name="mp-mode" value="cup"${cup ? ' checked' : ''}> Championnat</label>`;
-      for (const r of modeRow.querySelectorAll('input')) r.onchange = () => { extra.mode = r.value; render(); };
+      // Mode : course (départ commun), championnat (manches, points) ou course libre (chacun à son rythme).
+      modeRow.innerHTML = `<span>Mode</span>${Object.entries(MODES).map(([k, l]) => `<label><input type="radio" name="mp-mode" value="${k}"${mode === k ? ' checked' : ''}> ${l}</label>`).join('')}`;
+      for (const r of modeRow.querySelectorAll('input')) r.onchange = () => { extra.mode = r.value; room.setMode(r.value); render(); };
       const opt = (v, label, selected) => `<option value="${esc(v)}"${selected ? ' selected' : ''}>${esc(label)}</option>`;
       if (cup) {
         const cfg = document.createElement('div');
@@ -226,9 +300,9 @@ export const multiMethods = {
         pick.append(cfg);
         note.textContent = running ? 'Un championnat est en cours : « Relancer » le remplace.' : 'Barème : 10, 8, 6, 5, 4, 3, 2, 1 points par place. Les circuits sont tirés au sort, du plus facile au plus dur.';
       } else {
-        note.textContent = 'Partage le code. Chacun court à son rythme.';
+        note.textContent = race ? 'Départ commun sur une grille, classement à l\'arrivée. Circuits intégrés ou de la communauté.' : 'Chacun court à son rythme, en voitures fantômes.';
         const sel = document.createElement('select');
-        const mine = listMyTracks();
+        const mine = race ? [] : listMyTracks();      // (course à départ commun : circuits intégrés ou de la communauté, que chacun charge lui-même)
         sel.innerHTML = '<option value="">Choisis un circuit…</option>'
           + '<optgroup label="Circuits intégrés">' + this.builtins.map((b) => opt('b:' + b.key, b.def.name, room.trackId === b.key)).join('') + '</optgroup>'
           + (mine.length ? '<optgroup label="Mes circuits">' + mine.map((e) => opt('m:' + e.id, e.name)).join('') + '</optgroup>' : '')
@@ -261,6 +335,14 @@ export const multiMethods = {
           const keep = msg.textContent; render(); msg.textContent = keep;
         };
         pick.append(row);
+        if (race) {
+          const col = document.createElement('label');
+          col.className = 'chk';
+          col.innerHTML = `<input type="checkbox" data-k="collisions"${extra.collisions ? ' checked' : ''}> Collisions douces (les voitures se poussent)`;
+          col.querySelector('input').onchange = (e) => { extra.collisions = e.target.checked; };
+          pick.append(col);
+          if (room.track && !/^(b-|c:)/.test(room.track.id)) msg.textContent = 'Pour une course à départ commun, choisis un circuit intégré ou de la communauté.';
+        }
       }
       // Salon public : visible dans la liste « Salons publics » (réservé au créateur du salon).
       if (room.meta.host) {
@@ -277,22 +359,37 @@ export const multiMethods = {
         stop.onclick = () => { room.stopCup(); render(); };
         pick.append(stop);
       }
+      drawPreview();
     };
+    if (room.isHost) room.setMode(extra.mode);
     const EVENTS = ['members', 'track', 'cup', 'cupstop', 'cupround', ...(room.meta.host ? [] : ['rules'])];       // l'hôte ne redessine pas ses propres réglages sous ses doigts
     const sub = () => { if (document.body.contains(body)) render(); };
     for (const e of EVENTS) room.on(e, sub);
     const off = () => { for (const e of EVENTS) room.off(e, sub); };
     this.ui.modal({
-      title: 'Salle multijoueur', body,
+      title: 'Salle multijoueur', body, wide: true, panelClass: 'mp-lobby-panel',
       actions: [
         { label: 'Lancer la course', primary: true, attrs: { 'data-mp': 'start' }, onClick: () => {
-          if (extra.mode === 'cup') {
+          const mode = extra.mode;
+          const rc = room.readyCount();
+          if (rc.ready < rc.total && !this._mpForce) {
+            msg.textContent = `${rc.total - rc.ready} joueur${rc.total - rc.ready > 1 ? 's ne sont' : ' n’est'} pas prêt${rc.total - rc.ready > 1 ? 's' : ''} : clique encore sur « Lancer » pour partir quand même.`;
+            this._mpForce = true; setTimeout(() => { this._mpForce = false; }, 6000);
+            return false;
+          }
+          this._mpForce = false;
+          if (mode === 'cup') {
             const rounds = buildPlaylist(poolFor(this.builtins, extra.pool, { rounds: extra.rounds }), { rounds: extra.rounds });
             if (!rounds.length) { msg.textContent = 'Aucun circuit dans cette sélection.'; return false; }
             off(); room.startCup({ rounds, collisions: extra.collisions }); return true;
           }
+          if (mode === 'race') {
+            if (!room.track || !/^(b-|c:)/.test(room.track.id)) { msg.textContent = 'Choisis un circuit intégré ou de la communauté.'; return false; }
+            off(); room.startCup({ rounds: [{ id: room.track.id, name: room.track.name || '', sig: room.track.sig || '' }], collisions: extra.collisions }); return true;
+          }
           off(); room.start(); return true;
         } },
+        { label: 'Je suis prêt', attrs: { 'data-mp': 'ready' }, onClick: () => { room.setReady(!room.meta.ready); this.audio.click(); return false; } },
         { label: 'Quitter la salle', danger: true, onClick: () => { off(); room.leave(); return true; } },
       ],
     });
@@ -385,7 +482,7 @@ export const multiMethods = {
   _showCupPanel(room, ctx) {
     this._removeCupPanel();
     const el = document.createElement('div');
-    el.id = 'mp-cup'; el.className = 'mp-cup';
+    el.id = 'mp-cup'; el.className = 'mp-cup' + (room.cup && room.cup.total === 1 ? ' single' : '');      // (une course seule : pas de points)
     el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Championnat');
     const cup = room.cup;
     const nameOf = (id) => esc(cup.names.get(id) || '?');
@@ -394,13 +491,14 @@ export const multiMethods = {
     if (ctx.round) {
       const { n, result, standings, final } = ctx.round;
       const rt = cup.rounds[n];
-      html = `<h2>${final ? '🏆 Championnat terminé' : `Manche ${n + 1}/${cup.total}`}</h2><p class="meta">${esc((rt && rt.name) || '')}</p>`
-        + '<h3>Résultats de la manche</h3><div class="mp-tab">'
+      const single = cup.total === 1;      // (0.13.1) course à départ commun : une seule manche, pas de classement par points
+      html = `<h2>${single ? '🏁 Course terminée' : final ? '🏆 Championnat terminé' : `Manche ${n + 1}/${cup.total}`}</h2><p class="meta">${esc((rt && rt.name) || '')}</p>`
+        + `<h3>${single ? 'Arrivée' : 'Résultats de la manche'}</h3><div class="mp-tab">`
         + result.order.map((id, i) => `<div class="mp-row${id === room.selfId ? ' me' : ''}"><b>${result.times[id] != null ? medal(i) : '✕'}</b><span>${nameOf(id)}</span><i>${result.times[id] != null ? fmtSteps(result.times[id]) : 'sans temps'}</i><em>${result.points[id] ? '+' + result.points[id] : ''}</em></div>`).join('')
-        + `</div><h3>${final ? 'Classement final' : 'Classement général'}</h3><div class="mp-tab">`
+        + (single ? '</div><div hidden>' : `</div><h3>${final ? 'Classement final' : 'Classement général'}</h3><div class="mp-tab">`)
         + standings.map((r, i) => `<div class="mp-row${r.id === room.selfId ? ' me' : ''}"><b>${final ? medal(i) : i + 1}</b><span>${esc(r.name)}</span><i>${r.points} pt${r.points > 1 ? 's' : ''}</i><em>${r.wins ? r.wins + ' 🏁' : ''}</em></div>`).join('')
         + '</div>'
-        + (final ? '<div class="mp-cup-act"><button class="btn primary" data-act="lobby">Retour au salon</button></div>'
+        + (final ? `<p class="mp-want meta" data-want></p><div class="mp-cup-act">${room.isHost ? '<button class="btn primary" data-act="rematch">🔁 Revanche</button>' : '<button class="btn primary" data-act="want">🔁 Je veux une revanche</button>'}<button class="btn" data-act="lobby">Retour au salon</button></div>`
           : '<p class="mp-next" data-next></p><div class="mp-cup-act"><button class="btn danger" data-act="leave">Quitter le championnat</button></div>');
     } else {
       const k = ctx.wait ? ctx.wait.n + 1 : 1;
@@ -410,6 +508,20 @@ export const multiMethods = {
     document.body.appendChild(el);
     const act = (name, fn) => { const b = el.querySelector(`[data-act="${name}"]`); if (b) b.onclick = fn; };
     act('lobby', () => this._leaveRaceToLobby(room));
+    // Revanche (0.13.1) : les invités la demandent, l'hôte voit les demandes et relance les mêmes circuits pour tous.
+    act('want', () => { room.setWant(room.meta.want === 'rematch' ? null : 'rematch'); });
+    act('rematch', () => { room.startCup({ rounds: cup.rounds.map((r) => ({ ...r })), collisions: cup.collisions }); });
+    const wantEl = el.querySelector('[data-want]');
+    if (wantEl) {
+      const show = () => {
+        if (!document.body.contains(el)) { room.off('members', show); return; }
+        const w = room.wantCount();
+        wantEl.textContent = w.n ? `Revanche demandée : ${w.n} / ${w.total}` : '';
+        const b = el.querySelector('[data-act="want"]');
+        if (b) b.textContent = room.meta.want === 'rematch' ? '✔ Revanche demandée' : '🔁 Je veux une revanche';
+      };
+      show(); room.on('members', show);
+    }
     act('leave', () => { this._removeBoard(); this._removeCupPanel(); room.leave(); });
     this._cupPanel = { el, timer: null };
     const next = el.querySelector('[data-next]');

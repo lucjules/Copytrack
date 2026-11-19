@@ -379,7 +379,9 @@ class App {
     setTimeout(() => this.checkRewards(), 2500);          // rattrape ce qui est déjà mérité (joueur existant)
     this.startUpdateCheck();                              // (0.13.1) nouvelle version en ligne : bandeau « Recharger » (app/update.js)
     // Premier lancement : petit tutoriel (sauf si on arrive par un lien de circuit).
-    if (!this.settings.tutorialDone && !hash.startsWith('#t=') && !hash.startsWith('#g=')) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
+    if (!this.settings.tutorialDone && !hash.startsWith('#t=') && !hash.startsWith('#g=') && !hash.startsWith('#salle=')) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
+    // (0.13.1) lien d'invitation à une salle multijoueur : #salle=CODE
+    if (hash.startsWith('#salle=')) { history.replaceState(null, '', location.pathname + location.search); setTimeout(() => this.joinFromLink(decodeURIComponent(hash.slice(7))), 400); }
     if (hash.startsWith('#g=')) {
       try {
         const ghost = ghostFromHash(hash);
