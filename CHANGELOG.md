@@ -6,6 +6,26 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.13.1 — caméra stable, boutons lisibles, néons et moto corrigés, nouvelle version annoncée
+
+**`PHYS_VER` reste 38**, rien ne change dans la course : records, fantômes et médailles restent valables. Phase A du plan tiré de l'analyse
+fonctionnelle ([docs/ANALYSE-FONCTIONNELLE.md](docs/ANALYSE-FONCTIONNELLE.md)).
+
+- **La caméra ne tremble plus.**
+  - Elle est calculée au pas de la physique (120 fois par seconde), puis lissée entre deux pas à l'affichage, comme la voiture. Avant, elle tremblait sur les écrans 120/144 Hz et quand le nombre d'images variait.
+  - La visée de la zone de réception pendant un saut était la plus grosse source d'à-coups. Le point de chute est maintenant interpolé (il sautait de plusieurs mètres d'un calcul à l'autre) et lissé dans le temps. La pente visée et la vitesse compensée sont lissées aussi.
+  - Mesure (centile 99 des à-coups de rotation, 16 circuits) : en moyenne **199 → 46** à 144 images/s, **51 → 26** à 60 images/s. Exemples : Braises 429 → 70, Garde 537 → 70.
+  - La secousse après un choc est un mouvement doux, plus un tirage au hasard à chaque image. Les accélérateurs ne secouent plus la caméra (le coup de champ de vision reste).
+  - Entrée et sortie des loopings, tubes et murs fondues sur 0,35 s ; caméra remontée en douceur au-dessus du sol ; passage sous un pont fondu.
+- **Boutons lisibles sur tout décor.** Les boutons des menus ont un liseré clair et une ombre ; chaque thème a ses couleurs de bouton (Crépuscule, Forêt, Minuit, Mono, Contraste élevé). Avant, ils disparaissaient sur un décor sombre (« noir sur noir »).
+- **Nouvelle version annoncée.** Un onglet resté ouvert vérifie toutes les 30 minutes, et au retour sur l'onglet, si une version plus récente est en ligne. Il propose alors « Recharger », jamais pendant une course.
+- **Néons ajustés à chaque carrosserie.** Les barres restent entre les roues et le halo épouse la voiture ; sous la moto, plus de barres dans le vide. Les jantes néon se voient sur la moto.
+- **Pilote de moto refait** : cuisses, jambes et pieds aux repose-pieds, bras jusqu'aux poignées du guidon (aussi sur le chopper).
+- **Téléphone en paysage** : la fenêtre d'arrivée passe sur deux colonnes et tient dans l'écran avec ses deux rangées de boutons. Les messages s'affichent en haut.
+- **Éditeur** : les réglages de la pièce, collés en bas de la palette, se replient d'un clic sur leur titre (choix gardé) et prennent moins de place.
+- **Publication d'un circuit** : en cas d'échec, la fenêtre reste ouverte avec l'erreur et on peut réessayer (avant, elle se fermait et il fallait tout refaire) ; fermer avec Échap compte comme « Annuler ».
+- Tests : `test-vehicules`, `test-mise-a-jour`, des contrôles de caméra en plus (`test-camera`, `test-camrig`, à-coups à 144 images/s dans `test-browser-camera`), des boutons de chaque thème (`test-contraste`), de l'arrivée sur téléphone en paysage (`test-browser`), de la publication, de la nouvelle version et des réglages repliables (`test-browser-moteurs`).
+
 ## Bêta 0.13.0 — version d'essai : avis des testeurs dans le jeu, médailles calées sur un petit groupe
 
 **`PHYS_VER` reste 38**, rien ne change dans la course. Phase 4 du plan de la 1.0 : les essais humains. Protocole, message aux testeurs et suite :

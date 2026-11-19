@@ -258,6 +258,8 @@ export default {
   'Difficulté estimée : <b>{a} {b}</b> (d’après la géométrie ; affichée sur la carte).': 'Estimated difficulty: <b>{a} {b}</b> (from the geometry; shown on the card).',
   'Nom et description modifiables après publication.': 'Name and description can be edited after publishing.',
   'Donne un nom à ton circuit.': 'Give your track a name.',
+  'Publication en cours…': 'Publishing…',
+  'Publication impossible pour le moment.': 'Cannot publish right now.',
   '« {name} » est publié ! Retrouve-le dans Communauté › Mes publications.': '“{name}” is published! Find it in Community › My publications.',
   'Chargement du classement…': 'Loading the leaderboard…',
   'Affronter son fantôme': 'Race their ghost',

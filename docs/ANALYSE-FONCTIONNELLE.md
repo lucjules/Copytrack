@@ -6,6 +6,9 @@ Analyse du 19 novembre 2026, faite **depuis le jeu** et non depuis le code :
 - point de départ : le retour d'expérience de l'éditeur (caméra qui tremble, boutons « noir sur noir », néons décalés, moto, modes « en gros
   pâté », déclencheurs de messages, publication), puis tout le reste.
 
+> **Avancement.** La phase A (urgences et défauts visibles) est faite en **0.13.1**, à trois exceptions près, qui demandent une action de l'éditeur :
+> l'étape SQL 19 (U1), le relais TURN (U2) et le redéploiement de `submit-score` (U3).
+
 **Méthode.**
 
 - **Parcours automatisé** du jeu comme un joueur (navigateur réel, `?net=local` pour le multijoueur à deux onglets) : accueil, menus, course,

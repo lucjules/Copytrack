@@ -364,19 +364,28 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
     carWheels.push({ pivot, spin, front: z < 0 });
   }
 
-  // LED sous la voiture
+  // LED sous la voiture.
+  // 0.13.1 : halo et barres taillés sur la carrosserie (avant : 3,8 × 6,2 m et barres à ±1,33 m pour toutes, donc des barres qui sortaient sur les
+  // côtés, au-delà des roues, et un halo plus large que la voiture). barX : écart des barres à l'axe ; barLen : leur longueur ; cz : centre en z.
   const leds = [];
-  const addUnderglow = (root, w, d, y = 0.07) => {
+  const addUnderglow = (root, w, d, y = 0.07, { barX = w * 0.34, barLen = d * 0.62, barY = y + 0.14, cz = 0 } = {}) => {
     if (!ledMat) return;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2), ledMat);
-    m.position.y = y; m.renderOrder = 2; root.add(m);
+    m.position.set(0, y, cz); m.renderOrder = 2; root.add(m);
     leds.push(m);
     for (const s of [-1, 1]) {
-      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.05, d * 0.62), ledBar);
-      bar.position.set(s * (w * 0.34), y + 0.14, 0); root.add(bar);
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.05, barLen), ledBar);
+      bar.position.set(s * barX, barY, cz); root.add(bar);
     }
   };
-  addUnderglow(carRoot, 3.8, 6.2);
+  {
+    carRoot.updateMatrixWorld(true);
+    const bb = new THREE.Box3().setFromObject(body);
+    const halfW = Math.min(1.0, Math.max(0.5, Math.max(-bb.min.x, bb.max.x) || 1));
+    const z0 = Number.isFinite(bb.min.z) ? Math.max(-2.6, bb.min.z) : -2.3, z1 = Number.isFinite(bb.max.z) ? Math.min(2.6, bb.max.z) : 2.3;
+    // barres : sous la caisse, entre les roues (face intérieure des pneus à 0,82 m de l'axe)
+    addUnderglow(carRoot, 2 * halfW + 0.5, (z1 - z0) + 0.4, 0.07, { barX: Math.min(0.74, halfW * 0.85), barLen: (z1 - z0) * 0.6, cz: (z0 + z1) / 2 });
+  }
 
   // ---------------------------------------------------------------- Moto
   const bikeRoot = new THREE.Group();
@@ -411,17 +420,35 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
   bikeHead.position.set(0, 0.98, -1.38); bikeHead.rotation.x = -0.3; bikeBody.add(bikeHead);
   const bikeTail = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.1, 0.06), tailMat);
   bikeTail.position.set(0, 1.0, 2.1); bikeBody.add(bikeTail);
-  // Pilote
+  // Pilote (0.13.1 : refait. Avant : pas de cuisses ni de pieds visibles, des avant-bras qui s'arrêtaient à 60 cm du guidon). Chaque membre est un
+  // pavé tendu entre deux articulations : hanche → genou → repose-pied, épaule → coude → poignée du guidon.
   const suit = mk({ color: L.color2, roughness: 0.7 });
-  frameBox(0.46, 0.7, 0.36, 0, 1.75, 0.55, suit, -0.45);
-  frameBox(0.16, 0.7, 0.16, 0.3, 1.5, -0.1, suit, -1.0);
-  frameBox(0.16, 0.7, 0.16, -0.3, 1.5, -0.1, suit, -1.0);
-  frameBox(0.16, 0.6, 0.16, 0.26, 0.95, 0.7, suit, 0.3);
-  frameBox(0.16, 0.6, 0.16, -0.26, 0.95, 0.7, suit, 0.3);
+  const boots = dark;
+  const limb = (a, b, t, mat) => {
+    const va = new THREE.Vector3(...a), vb = new THREE.Vector3(...b), dir = vb.clone().sub(va), len = dir.length();
+    const m = new THREE.Mesh(new THREE.BoxGeometry(t, len, t), mat);
+    m.position.copy(va).add(vb).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+    bikeBody.add(m); return m;
+  };
+  const RIDER = {
+    hip: [0.17, 1.4, 0.78], knee: [0.34, 1.08, 0.12], foot: [0.3, 0.52, 0.42],
+    shoulder: [0.25, 1.95, 0.2], elbow: [0.38, 1.6, -0.32], hand: chopper ? [0.42, 2.1, -0.66] : [0.5, 1.3, -0.95],
+  };
+  limb([0, 1.38, 0.8], [0, 1.98, 0.18], 0.44, suit).scale.z = 0.75;          // buste penché vers l'avant
+  for (const sx of [-1, 1]) {
+    const P = (k) => [RIDER[k][0] * sx, RIDER[k][1], RIDER[k][2]];
+    limb(P('hip'), P('knee'), 0.2, suit);                                   // cuisse
+    limb(P('knee'), P('foot'), 0.17, suit);                                 // jambe
+    const f = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.32), boots); f.position.set(...P('foot')); f.position.z -= 0.08; bikeBody.add(f);
+    limb(P('shoulder'), P('elbow'), 0.15, suit);                            // bras
+    limb(P('elbow'), P('hand'), 0.13, suit);                                // avant-bras
+    const g = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.13, 0.13), boots); g.position.set(...P('hand')); bikeBody.add(g);
+  }
   const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.27, 7, 5), paint);
-  helmet.position.set(0, 2.25, 0.2); bikeBody.add(helmet);
+  helmet.position.set(0, 2.24, 0.06); bikeBody.add(helmet);
   const visor = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.12, 0.2), glass);
-  visor.position.set(0, 2.25, -0.02); bikeBody.add(visor);
+  visor.position.set(0, 2.24, -0.15); bikeBody.add(visor);
   // Décalque de base de la moto : bande sur le réservoir
   if (L.decal !== 'none') frameBox(0.1, 0.06, 1.5, 0, 1.0, 0.1, decalMat, 0.1).position.y = 1.19;
   // Ornement : gyrophare ou antenne
@@ -463,12 +490,13 @@ export function createCar(loadoutIn = DEFAULT_LOADOUT, opts = {}) {
     spin.add(new THREE.Mesh(bikeTire, rubber));
     spin.add(new THREE.Mesh(bikeRim, rimMat));
     if (L.wheels === 'spoke') for (let i = 0; i < 3; i++) { const sp = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.04, 0.78), rimMat); sp.rotation.x = (i / 3) * Math.PI; spin.add(sp); }
-    if (neonMat) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.03, 4, 14), neonMat); r.rotation.y = Math.PI / 2; spin.add(r); }
+    // 0.13.1 : anneaux néon sur les FLANCS du pneu (avant : un anneau de 0,42 m au centre d'un pneu de 0,5 m, donc caché dedans)
+    if (neonMat) for (const sx of [-0.16, 0.16]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.03, 4, 14), neonMat); r.rotation.y = Math.PI / 2; r.position.x = sx; spin.add(r); }
     pivot.add(spin);
     bikeRoot.add(pivot);
     bikeWheels.push({ pivot, spin, front });
   }
-  addUnderglow(bikeRoot, 1.7, 4.2);
+  addUnderglow(bikeRoot, 1.2, 3.4, 0.07, { barX: 0.27, barLen: 1.4, barY: 0.26, cz: 0.1 });      // (0.13.1 : avant 1,7 × 4,2 m et barres à ±0,58 m, dans le vide à côté de la moto)
   bikeRoot.visible = false;
 
   // ---------------------------------------------------------------- Bateau

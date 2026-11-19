@@ -305,10 +305,7 @@ export class RaceSession {
       if (inp.throttle && this.phys.speed < 1) { this._stuckT = (this._stuckT || 0) + DT; if (this._stuckT > 3 && !this._stuckSaid) { this._stuckSaid = true; this._say(MSG.stuck); } }
       else { this._stuckT = 0; if (this.phys.speed > 4) this._stuckSaid = false; }
     }
-    if (ev.boostHit) {
-      app.audio.boost();
-      this.shake = Math.max(this.shake, 0.25);
-    }
+    if (ev.boostHit) app.audio.boost();      // (0.13.1 : plus de secousse de caméra sur un accélérateur, ce n'est pas un choc ; le coup de champ de vision reste)
     if (ev.boostHit || ev.miniTurbo) this._feel.punchT = 0;                      // coup de champ de vision (feel.js)
     if (ev.land > 4) { this._feel.dipT = 0; this._feel.dipI = ev.land; }          // tassement de la caméra à la réception
     if (ev.wall > 3) {
@@ -483,6 +480,7 @@ export class RaceSession {
       this.acc += Number.isFinite(dt) ? Math.min(dt, 0.1) : 0;      // (un dt NaN rendait l'accumulateur NaN pour toujours : plus aucun pas de physique, voiture figée)
       while (this.acc >= DT) {
         this._stepOnce();
+        this._cameraTick();      // caméra au pas de la physique (race/camera.js)
         this.acc -= DT;
       }
       if (this.state === 'finished') {
@@ -611,8 +609,8 @@ export class RaceSession {
     this._renderSimGhosts(alpha, dt);
     this._renderRivals(alpha, dt);
 
-    // Caméra
-    this._camera(dt);
+    // Caméra (interpolée entre deux pas de physique, race/camera.js)
+    this._cameraRender(dt, alpha);
     if (this.multi) {
       const now = performance.now();
       for (const rc of this.remote.values()) rc.update(now, app.camera.position);

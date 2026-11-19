@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import * as THREE from '../js/vendor/three.module.min.js';
 import { CamFlip, FLIP_DURATION } from '../js/camflip.js';
 import { test, finish } from './harness.mjs';
+import { readFileSync } from 'node:fs';
+import { shakeOffset, CAM_BLEND_S } from '../js/race/camera.js';
 
 const DT = 1 / 60;
 const view = (tiltDeg) => new THREE.Vector3(0, -Math.sin(tiltDeg * Math.PI / 180), -Math.cos(tiltDeg * Math.PI / 180));
@@ -57,6 +59,28 @@ test('visée presque verticale : pas de NaN', () => {
   const f = new CamFlip(), up = new THREE.Vector3(0, 1, 0), axis = new THREE.Vector3(0, -1, 0);
   f.update(DT, 1, axis, up);
   for (let i = 0; i < 40; i++) { f.update(DT, -1, axis, up); assert.ok(Number.isFinite(up.x + up.y + up.z)); }
+});
+
+test('secousse (0.13.1) : bruit lisse et borné (plus de tirage aléatoire à chaque image), nulle sans intensité ; pas de secousse sur un accélérateur', () => {
+  let maxStep = 0, maxAbs = 0;
+  for (let t = 0; t < 3; t += 1 / 1000) {
+    const a = shakeOffset(t, 1), b = shakeOffset(t + 1 / 1000, 1);
+    maxStep = Math.max(maxStep, Math.abs(b.x - a.x), Math.abs(b.y - a.y)); maxAbs = Math.max(maxAbs, Math.abs(a.x), Math.abs(a.y));
+  }
+  assert.ok(maxAbs <= 0.5 + 1e-9, 'amplitude bornée comme avant (±k/2)');
+  assert.ok(maxStep < 0.03, `continu : ${maxStep.toFixed(4)} par ms`);
+  assert.deepEqual(shakeOffset(1.234, 0), { x: 0, y: 0 });
+  const race = readFileSync(new URL('../js/race.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(race, /boostHit\)\s*\{[^}]*shake/, 'un accélérateur ne secoue plus la caméra');
+  assert.ok(!/Math\.random\(\)[^\n]*\* k/.test(readFileSync(new URL('../js/race/camera.js', import.meta.url), 'utf8')), 'plus de tirage aléatoire dans la secousse');
+});
+
+test('caméra de course au pas de la physique (0.13.1) : calculée après chaque pas, interpolée à l\'affichage, fondu de 0,35 s entre régimes', () => {
+  const race = readFileSync(new URL('../js/race.js', import.meta.url), 'utf8'), rep = readFileSync(new URL('../js/race/replayMode.js', import.meta.url), 'utf8');
+  assert.match(race, /this\._stepOnce\(\);\s*this\._cameraTick\(\);/);
+  assert.match(rep, /this\._stepOnce\(\);\s*this\._cameraTick\(\);/);
+  assert.match(race, /this\._cameraRender\(dt, alpha\)/);
+  assert.equal(CAM_BLEND_S, 0.35);
 });
 
 await finish('Tous les tests de caméra passent.');

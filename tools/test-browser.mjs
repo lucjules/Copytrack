@@ -1165,6 +1165,24 @@ try {
     assert.deepEqual(bad, [], 'boutons hors d\'atteinte :\n' + bad.join('\n'));
   });
 
+  await test('arrivée sur téléphone en paysage (844×390, 667×375) : toute la fenêtre tient sans défiler, les deux rangées de boutons sont dans l\'écran (0.13.1)', async () => {
+    const old = page.viewportSize(), bad = [];
+    try {
+      for (const [w, h] of [[844, 390], [667, 375]]) {
+        await page.setViewportSize({ width: w, height: h });
+        await app(() => { window.copytrack.ui.closeModal(); window.copytrack.playBuiltin(0); });
+        await waitApp(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 30000);
+        await app(() => window.copytrack.session._finish(52.34));
+        await page.waitForTimeout(900);
+        await app(() => window.copytrack.ui.closeModal());
+        const r = await app(() => { const p = document.querySelector('#finish .panel'), btns = [...p.querySelectorAll('.row .btn')].filter((b) => !b.classList.contains('hidden') && getComputedStyle(b).display !== 'none'); return { scroll: p.scrollHeight - p.clientHeight, low: Math.max(...btns.map((b) => b.getBoundingClientRect().bottom)), h: window.innerHeight }; });
+        if (r.scroll > 2 || r.low > r.h) bad.push(`${w}×${h} : ${JSON.stringify(r)}`);
+        await app(() => { window.copytrack.quitRace(); window.copytrack.showMenu('menu'); });
+      }
+    } finally { await page.setViewportSize(old); }
+    assert.deepEqual(bad, []);
+  });
+
   await test('fenêtres hautes (académie) sur un écran de 700 px de haut : le titre et le dernier bouton restent atteignables (la fenêtre défile au lieu de déborder)', async () => {
     const old = page.viewportSize();
     await page.setViewportSize({ width: 1280, height: 700 });

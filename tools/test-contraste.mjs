@@ -7,8 +7,12 @@ import { test, finish } from './harness.mjs';
 import { THEMES } from '../js/uitheme.js';
 
 const css = readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
-const root = css.slice(css.indexOf(':root {'), css.indexOf('}', css.indexOf(':root {')));
-const BASE = Object.fromEntries([...root.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+// toutes les déclarations :root (la palette de base, puis celle des écrans de menu « --ui-… »)
+const BASE = {};
+for (let i = css.indexOf(':root {'); i >= 0; i = css.indexOf(':root {', i + 1)) {
+  const block = css.slice(i, css.indexOf('}', i));
+  for (const m of block.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/(--[\w-]+):\s*([^;]+);/g)) if (!(m[1] in BASE)) BASE[m[1]] = m[2].trim();
+}
 export function parse(c) {
   let m;
   if ((m = /^#([0-9a-f]{6})$/i.exec(c))) return [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16)).concat(1);
@@ -35,6 +39,21 @@ for (const [name, th] of Object.entries(THEMES)) {
     assert.deepEqual(bad, []);
   });
 }
+// 0.13.1 : boutons des écrans de menu posés sur le voile de l'accueil (rgba(20, 20, 45, 0.55 → 0.8)) au-dessus du décor 3D, sombre ou clair.
+const VOILE_SOMBRE = over(parse('rgba(20, 20, 45, 0.8)'), [0, 0, 0, 1]), VOILE_CLAIR = over(parse('rgba(20, 20, 45, 0.55)'), [255, 255, 255, 1]);
+for (const [name, th] of Object.entries(THEMES)) {
+  test(`thème « ${th.label} » : boutons des menus visibles sur tout décor (texte ≥ 4,5:1, liseré ≥ 3:1 sur décor sombre, fond ≥ 3:1 sur décor clair)`, () => {
+    const v = { ...BASE, ...th.vars }, fill = parse(v['--ui-btn']), edge = over(parse(v['--ui-btn-edge']), fill);
+    assert.ok(fill && edge, name);
+    assert.ok(ratio([255, 255, 255, 1], fill) >= 4.5, `texte ${ratio([255, 255, 255, 1], fill).toFixed(2)}`);
+    assert.ok(ratio(edge, VOILE_SOMBRE) >= 3, `liseré sur décor sombre ${ratio(edge, VOILE_SOMBRE).toFixed(2)}:1 (« noir sur noir »)`);
+    assert.ok(ratio(fill, VOILE_CLAIR) >= 3, `fond sur décor clair ${ratio(fill, VOILE_CLAIR).toFixed(2)}:1`);
+  });
+}
+test('les boutons des menus ont un liseré et une ombre (0.13.1 : plus de « border: 0 ; box-shadow: none »)', () => {
+  const rule = css.slice(css.indexOf('#menu .btn, #tracks .btn'), css.indexOf('}', css.indexOf('#menu .btn, #tracks .btn')));
+  assert.match(rule, /box-shadow: inset 0 0 0 1\.5px var\(--ui-btn-edge\)/);
+});
 test('la taille de l’interface (texte compris) se règle de 85 à 130 % (Paramètres › Accessibilité)', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.match(html, /id="opt-ui" min="0\.85" max="1\.3"/);

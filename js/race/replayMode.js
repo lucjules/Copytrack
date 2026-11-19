@@ -23,6 +23,7 @@ export const replayMethods = {
       this.acc += Math.min(dt, 0.1) * this.replaySpeed;
       while (this.acc >= DT && this.state !== 'finished') {
         this._stepOnce();
+        this._cameraTick();
         this.acc -= DT;
       }
     } else if (this.state === 'finished') this.finishT += dt;

@@ -27,11 +27,13 @@ export const RIG = {
   aimMax: 0.55,            // part de la direction « zone de réception » mélangée à la visée normale
   aimShiftMax: 0.2,        // écart maximal (rad, ≈ 11°) entre la visée normale et la visée finale : la voiture reste toujours dans le champ
   horizon: 3, step: 1 / 20,    // trajectoire prédite : 3 s au plus, un point tous les 50 ms
+  slopeTau: 0.15, velTau: 0.1,   // lissage de la pente visée et de la vitesse compensée (s) (0.13.1 : la normale du sol et la vitesse sautent aux jointures et sur l'eau)
+  aimTau: 0.25,            // lissage du point visé pendant un saut (s) (0.13.1 : selon le temps écoulé ; 0,25 s : à-coups ÷ 3 à 5 à 144 images/s, réception toujours dans le champ)
   exitHold: 0.08, exitBlend: 0.55, exitRate: 14,   // sortie d'un ruban : la caméra suit d'abord la voiture, puis rejoint le haut du monde en ≈ 0,6 s
 };
 
 export class CamAssist {
-  constructor() { this.out = { lead: 0, comp: 0, slope: 0, aimW: 0, aim: { x: 0, y: 0, z: 0 }, heightK: 1, upMix: 0, upRate: 6, exiting: false }; this.tmp = {}; this.reset(); }
+  constructor() { this.out = { lead: 0, comp: 0, slope: 0, aimW: 0, aim: { x: 0, y: 0, z: 0 }, heightK: 1, upMix: 0, upRate: 6, exiting: false, vx: 0, vz: 0 }; this.tmp = {}; this.reset(); }
 
   reset(p = null) {
     this.lastYaw = p && Number.isFinite(p.yaw) ? p.yaw : null;
@@ -40,6 +42,7 @@ export class CamAssist {
     this.sinceRib = Infinity;
     this.hasAim = false;
     this.ax = 0; this.ay = 0; this.az = 0;
+    this.slopeS = 0; this.vS = null;
     const o = this.out;
     o.lead = 0; o.comp = 0; o.slope = 0; o.aimW = 0; o.heightK = 1; o.upMix = 0; o.upRate = 6; o.exiting = false;
   }
@@ -62,11 +65,18 @@ export class CamAssist {
     // 2. Compensation du retard de suivi.
     o.comp = RIG.lagComp * k;
     // 3. Pente de la route devant la voiture (au sol, hors ruban) : la visée la suit.
-    o.slope = 0;
+    let slope = 0;
     if (p.grounded && !p.rib && p.n && p.n.y > 0.3) {
       const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
-      o.slope = clamp((-(p.n.x * fx + p.n.z * fz) / p.n.y) * RIG.slopeLook, -RIG.slopeMax, RIG.slopeMax) * k;
+      slope = clamp((-(p.n.x * fx + p.n.z * fz) / p.n.y) * RIG.slopeLook, -RIG.slopeMax, RIG.slopeMax) * k;
     }
+    this.slopeS += (slope - this.slopeS) * (1 - Math.exp(-dt / RIG.slopeTau));
+    o.slope = this.slopeS;
+    // Vitesse horizontale lissée, pour la compensation du retard de suivi (camera.js).
+    if (!this.vS) this.vS = { x: p.vel.x, z: p.vel.z };
+    const kv = 1 - Math.exp(-dt / RIG.velTau);
+    this.vS.x += (p.vel.x - this.vS.x) * kv; this.vS.z += (p.vel.z - this.vS.z) * kv;
+    o.vx = this.vS.x; o.vz = this.vS.z;
     // 4. Temps en l'air et sortie de ruban.
     if (p.rib) { this.sinceRib = 0; this.airT = 0; }
     else {
@@ -78,7 +88,7 @@ export class CamAssist {
     const w = smoothstep(RIG.airFrom, RIG.airTo, this.airT) * k;
     o.aimW = Math.min(1, w) * RIG.aimMax;
     o.heightK = 1 + 0.18 * Math.min(1, w);
-    if (w > 0.001 && track) this._predict(p, track);
+    if (w > 0.001 && track) this._predict(p, track, dt);
     if (this.hasAim) { o.aim.x = this.ax; o.aim.y = this.ay; o.aim.z = this.az; }
     else o.aimW = 0;
     // 6. Haut de la caméra : après un ruban, elle accompagne la voiture (qui se redresse seule en ~0,2 s) puis rejoint le haut du monde.
@@ -90,21 +100,32 @@ export class CamAssist {
   }
 
   // Point où la voiture retombera, par une trajectoire balistique prédite (visuelle) ; lissé pour ne pas trembler.
-  _predict(p, track) {
+  // 0.13.1 : le point de chute est INTERPOLÉ entre les deux points de trajectoire qui encadrent le sol (avant : le premier point sous le sol, donc un
+  // point qui sautait de vx × 50 ms, plusieurs mètres, d'un calcul à l'autre), et le lissage dépend du temps écoulé (avant : 25 % par appel, soit
+  // deux fois plus vif à 120 calculs par seconde qu'à 60). C'était la plus grosse source de tremblement de la caméra pendant les sauts.
+  _predict(p, track, dt = 1 / 60) {
     const g = (Number.isFinite(p.g) ? p.g : 19) * (p.gSign < 0 ? -1 : 1);
     let x = p.pos.x, y = p.pos.y, z = p.pos.z, vy = p.vel.y;
     const vx = p.vel.x, vz = p.vel.z;
-    let hit = null;
+    let hit = null, px = x, py = y, pz = z, pd = null;
     const t0 = p.time || 0;
     for (let t = RIG.step; t <= RIG.horizon; t += RIG.step) {
       vy -= g * RIG.step; x += vx * RIG.step; y += vy * RIG.step; z += vz * RIG.step;
       const s = p.gSign < 0 ? track.ceilingSurfaceAt(x, y, z, this.tmp, 0.6) : track.surfaceAt(x, y, z, this.tmp, 0.6, null, t0 + t);
       const h = s.h;
-      if (Number.isFinite(h) && (p.gSign < 0 ? y >= h : y <= h) && t > 0.1) { hit = { x, y: h, z }; break; }
+      const d = Number.isFinite(h) ? (p.gSign < 0 ? h - y : y - h) : null;      // hauteur au-dessus du sol (> 0 : encore en l'air)
+      if (d !== null && d <= 0 && t > 0.1) {
+        // entre le point précédent (encore au-dessus, d = pd) et celui-ci (sous le sol) : le point où la hauteur s'annule
+        const f = pd !== null && pd > 0 ? clamp(pd / (pd - d), 0, 1) : 1;
+        hit = { x: px + (x - px) * f, y: py + (y - py) * f, z: pz + (z - pz) * f };
+        if (Number.isFinite(h)) hit.y = Math.max(Math.min(hit.y, Math.max(py, y)), Math.min(py, y));
+        break;
+      }
+      px = x; py = y; pz = z; pd = d;
     }
     if (!hit) hit = { x, y, z };                                   // rien trouvé dans l'horizon : on vise là où la trajectoire mène
     if (!this.hasAim) { this.ax = hit.x; this.ay = hit.y; this.az = hit.z; this.hasAim = true; }
-    else { const a = 0.25; this.ax += (hit.x - this.ax) * a; this.ay += (hit.y - this.ay) * a; this.az += (hit.z - this.az) * a; }
+    else { const a = 1 - Math.exp(-Math.min(0.1, Math.max(0, dt)) / RIG.aimTau); this.ax += (hit.x - this.ax) * a; this.ay += (hit.y - this.ay) * a; this.az += (hit.z - this.az) * a; }
   }
 }
 

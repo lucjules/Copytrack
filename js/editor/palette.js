@@ -473,6 +473,14 @@ export const paletteMethods = {
       b.addEventListener('click', () => { fn(); this.app.audio.click(); });
       acts.appendChild(b);
     }
+    // 0.13.1 : les réglages se replient d'un clic sur leur titre (ils restent collés en bas de la palette et en cachaient le bas) ; choix gardé.
+    const head = set.querySelector('.pset-head');
+    head.title = 'Replier ou déplier les réglages de la pièce';
+    head.setAttribute('role', 'button'); head.tabIndex = 0;
+    const fold = (v) => { set.classList.toggle('folded', v); this.app.settings.psetFolded = v; this.app.saveSettings(); };
+    set.classList.toggle('folded', !!this.app.settings.psetFolded);
+    head.addEventListener('click', () => fold(!set.classList.contains('folded')));
+    head.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fold(!set.classList.contains('folded')); } });
   },
 
   _familyTile(fam) {

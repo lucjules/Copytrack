@@ -42,6 +42,7 @@ import { raceHubMethods } from './app/raceHub.js';
 import { theaterAppMethods } from './app/theater.js';
 import { legalMethods } from './app/legal.js';
 import { feedbackMethods } from './app/feedback.js';
+import { updateMethods } from './app/update.js';
 
 // Tous les modules sont chargés et liés : la garde du démarrage (js/boot-guard.js) se désarme.
 window.__copytrackBooted = true;
@@ -376,6 +377,7 @@ class App {
     this.errors.scheduleFlush(20000);
     setTimeout(() => this.askTelemetry(), 4000);
     setTimeout(() => this.checkRewards(), 2500);          // rattrape ce qui est déjà mérité (joueur existant)
+    this.startUpdateCheck();                              // (0.13.1) nouvelle version en ligne : bandeau « Recharger » (app/update.js)
     // Premier lancement : petit tutoriel (sauf si on arrive par un lien de circuit).
     if (!this.settings.tutorialDone && !hash.startsWith('#t=') && !hash.startsWith('#g=')) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
     if (hash.startsWith('#g=')) {
@@ -459,7 +461,7 @@ class App {
 }
 
 // Les familles de méthodes vivent dans app/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(App.prototype, multiMethods, academyMethods, competitionMethods, labMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods, theaterAppMethods, legalMethods, feedbackMethods);
+Object.assign(App.prototype, multiMethods, academyMethods, competitionMethods, labMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods, theaterAppMethods, legalMethods, feedbackMethods, updateMethods);
 
 
 // Application installable et jouable hors ligne (service worker), si le contexte le permet.

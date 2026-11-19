@@ -728,6 +728,15 @@ body.ov-open #touch, body.ov-open .hud-br, body.ov-open .hud-hint, body.ov-open 
   #pause .panel { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; }
   #pause h2 { width: 100%; text-align: center; }
 }
+/* 0.13.1 : téléphone en paysage : l'arrivée sur deux colonnes (médaille, temps et récompense à gauche ; détails et boutons à droite), pour que les
+   deux rangées de boutons tiennent dans l'écran sans défiler (avant : « Revoir la course · Partager · Classement · Fiche » sous le bord). */
+@media (max-height: 520px) and (min-width: 600px) {
+  .overlay .finish-panel { display: grid; grid-template-columns: minmax(180px, 0.8fr) 1.2fr; grid-auto-flow: row dense; column-gap: 16px; row-gap: 4px; align-items: start; width: min(760px, 96vw); }
+  .finish-panel > .fin-medal, .finish-panel > #fin-title, .finish-panel > .fin-time, .finish-panel > .fin-reward, .finish-panel > .fin-xp { grid-column: 1; text-align: center; }
+  .finish-panel > .fin-detail, .finish-panel > .fin-goal, .finish-panel > .fin-online, .finish-panel > .fin-coach, .finish-panel > .row { grid-column: 2; }
+  .finish-panel .row.small-row .btn { padding: 5px 8px; font-size: 12px; }
+  .toast { bottom: auto; top: calc(8px + env(safe-area-inset-top)); }      /* (le message ne passe plus devant les boutons de l'arrivée) */
+}
 body.touch kbd { display: none; }
 
 /* Effet de vitesse : traits radiaux sur les bords, transparents au centre. */
@@ -1089,7 +1098,8 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   --ui-surface-2: #212b58;
   --ui-surface-3: #192042;
   --ui-surface-glass: rgba(40, 52, 106, 0.5);
-  --ui-btn: #112052;
+  --ui-btn: #172a6e;           /* 0.13.1 : un peu plus clair que #112052, et un liseré : le bouton se voit sur tout décor, même sombre */
+  --ui-btn-edge: rgba(160, 190, 255, 0.7);
   --ui-btn-hover: #334b77;
   --ui-btn-active: #151f41;
   --ui-btn-off: #313d53;
@@ -1103,14 +1113,15 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   border: 0;
   border-radius: 2px;
   transform: skewX(var(--ui-skew));
-  box-shadow: none;
+  /* 0.13.1 : liseré intérieur clair + ombre portée. Avant : ni bord ni ombre, le bouton bleu nuit disparaissait sur un décor sombre (« noir sur noir »). */
+  box-shadow: inset 0 0 0 1.5px var(--ui-btn-edge), 0 3px 12px rgba(0, 0, 0, 0.45);
   transition: background 0.12s, transform 0.08s;
 }
 #menu .btn > *, #tracks .btn > *, #mytracks .btn > *, #community .btn > *, .screen-head .btn > * { display: inline-block; transform: skewX(calc(-1 * var(--ui-skew))); }
 #menu .btn:hover, #tracks .btn:hover, #mytracks .btn:hover, #community .btn:hover, .screen-head .btn:hover { background: var(--ui-btn-hover); border: 0; }
 #menu .btn:active, #tracks .btn:active, #mytracks .btn:active, #community .btn:active, .screen-head .btn:active { background: var(--ui-btn-active); transform: skewX(var(--ui-skew)) scale(0.98); }
 #menu .btn:disabled, #tracks .btn:disabled, #mytracks .btn:disabled, #community .btn:disabled, .screen-head .btn:disabled { background: var(--ui-btn-off); color: var(--ui-text-off); cursor: default; }
-#menu .btn.primary, #tracks .btn.primary, #mytracks .btn.primary, #community .btn.primary, .screen-head .btn.primary { background: var(--ui-accent); color: #1a0f0a; }
+#menu .btn.primary, #tracks .btn.primary, #mytracks .btn.primary, #community .btn.primary, .screen-head .btn.primary { background: var(--ui-accent); color: #1a0f0a; box-shadow: 0 3px 12px rgba(0, 0, 0, 0.45); }
 #menu .btn.primary:hover, #tracks .btn.primary:hover, #mytracks .btn.primary:hover, #community .btn.primary:hover, .screen-head .btn.primary:hover { filter: brightness(1.1); background: var(--ui-accent); }
 
 /* ---------- Accueil : logo centré, rangée de tuiles, barre du bas ---------- */
@@ -1787,7 +1798,7 @@ body.hud-editing > section, body.hud-editing #touch { display: none !important; 
 body.reduce-motion #editor.ed12 .ed-palette { transition: none; }
 #editor.ed12 .ed-hint i.txt { font-style: normal; }
 /* Les réglages de la pièce choisie restent visibles au bas du panneau pendant qu'on parcourt la bibliothèque ; ses options se replient. */
-#editor.ed12 .pal-set { position: sticky; bottom: -18px; margin-bottom: -8px; z-index: 1; max-height: 56%; overflow-y: auto; background: rgba(20, 14, 42, 0.97); box-shadow: 0 -10px 20px rgba(0, 0, 0, 0.35); scrollbar-width: thin; }
+#editor.ed12 .pal-set { position: sticky; bottom: -18px; margin-bottom: -8px; z-index: 1; max-height: 42%; overflow-y: auto; background: rgba(20, 14, 42, 0.97); box-shadow: 0 -10px 20px rgba(0, 0, 0, 0.35); scrollbar-width: thin; }
 #editor.ed12 .pset-opts > summary { cursor: pointer; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--cyan); }
 #editor.ed12 .pset-opts[open] > summary { margin-bottom: 6px; }
 #editor.ed12 .ed-lvl .btn.icon { min-width: 0; width: 30px; }
@@ -1811,3 +1822,19 @@ body.reduce-motion #editor.ed12 .ed-palette { transition: none; }
   #editor.ed12 .ed-view:not(.folded) > .ed-vh, #editor.ed12 .ed-view:not(.folded) > .ed-lvl { grid-column: 1 / -1; }
 }
 #editor.ed12 .ed-menu { min-width: 250px; }
+
+/* 0.13.1 : bandeau « nouvelle version » (js/app/update.js) ; caché pendant une course, il réapparaît à l'arrivée. */
+#update-bar {
+  position: fixed; left: 50%; top: max(10px, env(safe-area-inset-top)); transform: translateX(-50%); z-index: 60;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+  max-width: calc(100vw - 32px); padding: 8px 12px; border-radius: 12px;
+  background: var(--panel-2); border: 1px solid var(--cyan); color: var(--text); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5); font-size: 14px;
+}
+#update-bar .btn { padding: 5px 12px; }
+body.in-race #update-bar { display: none; }
+
+/* 0.13.1 : réglages de la pièce repliables (titre cliquable) : repliés, ils ne cachent plus le bas de la palette. */
+#editor.ed12 .pal-set .pset-head { cursor: pointer; }
+#editor.ed12 .pal-set .pset-head b::before { content: '▾ '; color: var(--cyan); }
+#editor.ed12 .pal-set.folded .pset-head b::before { content: '▸ '; }
+#editor.ed12 .pal-set.folded > :not(.pset-head) { display: none; }
