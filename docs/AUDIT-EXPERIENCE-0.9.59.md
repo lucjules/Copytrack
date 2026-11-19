@@ -15,7 +15,7 @@ hors dépôt, dans le répertoire de travail temporaire de la session : `scratch
 | **[HYPOTHÈSE]** | plausible mais à confirmer par un joueur humain ou un test dédié |
 
 **Ce que je n'ai PAS pu faire** (détail en section 16) : aucun humain n'a conduit. Je n'ai donc **ressenti** ni les accélérations, ni les virages, ni le son, ni les vibrations ;
-je les ai **mesurés**. Je n'ai pas joué à PolyTrack dans cette session : toute comparaison avec lui est une **hypothèse à vérifier côte à côte**, pas une observation.
+je les ai **mesurés**. Je n'ai joué à aucun autre jeu du genre dans cette session : toute comparaison est une **hypothèse à vérifier côte à côte**, pas une observation.
 L'éditeur a été ouvert, lu et capturé, mais je n'ai pas mené de session de construction interactive complète (pose pièce par pièce à la souris).
 
 **Honnêteté sur ma méthode** : deux de mes premiers montages étaient faux (voiture posée sur le terrain hors piste au lieu de la plateforme ; route trop courte pour atteindre la bordure).
@@ -230,7 +230,7 @@ C'est un geste d'expert caché derrière un réflexe contraire ; je classe « ma
 | CA-6 | Voiture petite à l'écran en Poursuite (≈ 6,6 % de la largeur à 960 px). | [CAPTURE] — affaire de goût, P3 |
 
 **La caméra peut-elle rendre Copytrack nettement plus agréable sans toucher à la physique ?** **Oui.** Elle est *purement visuelle* (aucun impact sur `PHYS_VER`, serveur, records). Les trois leviers à fort rendement : anticipation latérale pilotée par le braquage/lacet, visée vers le bas en descente et en vol, lissage dédié de sortie de ruban (monde ↔ route) avec conservation de l'élan angulaire visuel.
-**Comparaison PolyTrack** : non vérifiée dans cette session ; **hypothèse** à tester côte à côte — une caméra de poursuite à avance de visée et à retard de position réglés finement est une des différences de « jus » les plus fréquentes entre jeux de ce genre.
+**Comparaison avec un autre jeu du genre** : non vérifiée dans cette session ; **hypothèse** à tester côte à côte — une caméra de poursuite à avance de visée et à retard de position réglés finement est une des différences de « jus » les plus fréquentes entre jeux de ce genre.
 
 ---
 
@@ -285,9 +285,9 @@ C'est un geste d'expert caché derrière un réflexe contraire ; je classe « ma
 3. **Jeu de murs fragile et peu explicable** (F-3) : bande sans bordure, seuil de vitesse invisible, chutes sans cause lisible.
 4. **Sauts** : réflexe gaz tenu = −43 % (F-6) ; vol à 2 s sans zone d'atterrissage visible (CA-2).
 5. **Perception de la vitesse** : lignes de vitesse (dès 126 km/h), FOV +18°, coup de FOV au turbo — présents ; flou de mouvement, vibration, son : **non testés** (§16).
-6. **Identité** : « PolyTrack-like » assumé (low-poly, time attack, éditeur) mais la **signature propre** (gravité manipulée, wall-ride, plaques de transformation, analyse) est précisément la partie **la moins cohérente physiquement** (§4). Faire de la gravité/orientation le trait distinctif *et* le rendre irréprochable est la meilleure voie vers une identité propre.
+6. **Identité** : genre assumé (low-poly, time attack, éditeur) mais la **signature propre** (gravité manipulée, wall-ride, plaques de transformation, analyse) est précisément la partie **la moins cohérente physiquement** (§4). Faire de la gravité/orientation le trait distinctif *et* le rendre irréprochable est la meilleure voie vers une identité propre.
 
-**Comparaison avec PolyTrack** : **non vérifiée** ici. À tester côte à côte, sur le même type de circuit, un protocole court : (1) rayon et vitesse en virage serré, (2) conséquence d'un contact de bordure à 5°, (3) accessibilité d'une glisse volontaire, (4) lisibilité de la caméra en descente et en saut, (5) construction d'un circuit de 20 pièces (temps et nombre de clics).
+**Comparaison avec un autre jeu du genre** : **non vérifiée** ici. À tester côte à côte, sur le même type de circuit, un protocole court : (1) rayon et vitesse en virage serré, (2) conséquence d'un contact de bordure à 5°, (3) accessibilité d'une glisse volontaire, (4) lisibilité de la caméra en descente et en saut, (5) construction d'un circuit de 20 pièces (temps et nombre de clics).
 
 ---
 
@@ -422,7 +422,7 @@ Contraintes transversales : un format de pièce ou de revêtement **ne se réord
 
 ## 16. Éléments impossibles à tester et incertitudes restantes
 
-**Non testé (impossible ici)** : sensation réelle de conduite (aucun humain) ; **son** (moteur, klaxons, musique) ; vibrations manette/téléphone ; **images par seconde** sur un vrai GPU (WebGL logiciel SwiftShader, qualité graphique minimale : les captures sont pixellisées et la brume/profondeur ne sont pas représentatives) ; Firefox, Safari ; manette ; tactile ; multijoueur réel ; PolyTrack (aucune comparaison directe).
+**Non testé (impossible ici)** : sensation réelle de conduite (aucun humain) ; **son** (moteur, klaxons, musique) ; vibrations manette/téléphone ; **images par seconde** sur un vrai GPU (WebGL logiciel SwiftShader, qualité graphique minimale : les captures sont pixellisées et la brume/profondeur ne sont pas représentatives) ; Firefox, Safari ; manette ; tactile ; multijoueur réel ; autre jeu du genre (aucune comparaison directe).
 
 **Testé partiellement** : caméra (6 situations capturées, pas toutes les caméras ni tous les circuits) ; éditeur (ouverture, inventaire, validation par script, **pas** de session de pose à la souris) ; mur-ride (une seule configuration de pièces, un seul véhicule) ; surfaces (une seule vitesse d'essai par colonne) ; loopings (seuil sans moteur non isolé proprement).
 

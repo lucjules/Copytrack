@@ -1,9 +1,9 @@
-# Copytrack
+# Virelo
 
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.12.3** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.12.4** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -249,9 +249,13 @@ Lire d'abord [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Avant de proposer un 
 
 La CI (`.github/workflows/test.yml`) rejoue tout cela : lint et tests, physique sous Deno, navigateur, SQL.
 
-## Licence
+## Licence, confidentialité, mentions légales
 
-Code du jeu : MIT. three.js : MIT (voir `js/vendor/THREE_LICENSE.txt`).
+- Code et contenus du jeu : licence MIT ([LICENSE](LICENSE)). Composants tiers (three.js, polices) : [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+- Pages Confidentialité, Mentions légales, Règles de la communauté, Crédits et licences : dans le jeu (barre du bas du menu, Paramètres) et sur
+  [legal.html](legal.html), page autonome lisible sans lancer le jeu. Une seule source pour les deux : `js/legal.js` (français et anglais).
+- Éditeur et contact : `legal` dans `js/config.js`. Toute nouvelle donnée envoyée au serveur doit être décrite dans `js/legal.js`.
+- Le nom affiché du jeu est `GAME_NAME` (`js/version.js`) ; les identifiants techniques (clés de sauvegarde, dépôt, projet Supabase) gardent l'ancien nom.
 
 ## Format des circuits (SHW3) et compatibilité
 

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="theme-color" content="#241a4a">
+  <title>Virelo · Confidentialité et mentions légales</title>
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <!-- Page autonome (0.12.4) : les pages légales du jeu, lisibles sans le lancer (lien partageable). Textes : js/legal.js (les mêmes que dans le jeu). -->
+  <style>
+    @font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 500; font-display: swap; src: url(assets/fonts/chakra-petch-latin-500-normal.woff2) format('woff2'); }
+    @font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 700; font-display: swap; src: url(assets/fonts/chakra-petch-latin-700-normal.woff2) format('woff2'); }
+    :root { --bg: #170f2e; --panel: #221a45; --line: rgba(255, 255, 255, 0.14); --text: #f7efe6; --muted: #c2b3d6; --cyan: #5ff2ff; --pink: #ff7ad9; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 500 16px/1.55 'Chakra Petch', 'Segoe UI', system-ui, sans-serif; }
+    main { max-width: 820px; margin: 0 auto; padding: 24px 16px 48px; }
+    header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .logo { font-weight: 700; font-size: 26px; letter-spacing: 0.04em; color: var(--text); text-decoration: none; }
+    .logo span { color: var(--pink); }
+    nav, .langs { display: flex; flex-wrap: wrap; gap: 8px; }
+    nav a, .langs a { padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--text); text-decoration: none; font-size: 14px; }
+    nav a[aria-current="page"], .langs a[aria-current="true"] { border-color: var(--cyan); color: var(--cyan); }
+    article { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; margin-top: 14px; }
+    h1 { font-size: 26px; margin: 0 0 8px; }
+    h3 { font-size: 18px; margin: 20px 0 6px; }
+    ul { padding-left: 22px; } li { margin: 5px 0; }
+    a { color: var(--cyan); }
+    .meta { color: var(--muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <a class="logo" href="./">VIRE<span>LO</span></a>
+      <div class="langs" id="langs"></div>
+    </header>
+    <nav id="nav" aria-label="Pages"></nav>
+    <article id="page"><noscript>Cette page a besoin de JavaScript. This page needs JavaScript.</noscript></article>
+  </main>
+  <script type="module" src="js/legalPage.js"></script>
+</body>
+</html>

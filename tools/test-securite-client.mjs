@@ -7,7 +7,7 @@
 //  - aucun secret (clé de service, jeton d'accès, JWT) dans les fichiers suivis ni dans l'historique récent ;
 //  - les textes venus d'autres joueurs ne sont jamais collés tels quels dans une page (esc() / textContent) : garde statique sur les écrans en ligne.
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -50,14 +50,18 @@ test('index.html : aucun <script> en ligne, aucun gestionnaire en ligne (onload,
   assert.ok(!/\son[a-z]+\s*=/i.test(html.replace(/<!--[\s\S]*?-->/g, '')), 'gestionnaire en ligne dans index.html');
   assert.ok(!/javascript:/i.test(html) && !/<iframe|<object|<embed|<style/i.test(html));
 });
-test('les serveurs extérieurs cités par index.html sont ceux que la politique autorise (feuille de style → style-src, police → font-src)', () => {
-  const ext = [...html.replace(/<!--[\s\S]*?-->/g, '').matchAll(/(?:href|src)="(https?:\/\/[^"]+)"/g)].map((m) => new URL(m[1]).origin).filter((o, i, a) => a.indexOf(o) === i);
-  for (const o of ext) assert.ok([...csp.get('style-src'), ...csp.get('font-src'), ...csp.get('img-src')].includes(o), o + ' n\'est pas autorisé par la politique');
-  assert.ok(csp.get('style-src').includes('https://fonts.googleapis.com') && csp.get('font-src').includes('https://fonts.gstatic.com'));
+test('aucun serveur extérieur cité par index.html (0.12.4 : la police est servie par le jeu) ; la politique n’autorise aucun service de polices tiers', () => {
+  const ext = [...html.replace(/<!--[\s\S]*?-->/g, '').matchAll(/(?:href|src)="(https?:\/\/[^"]+)"/g)].map((m) => new URL(m[1]).origin);
+  assert.deepEqual(ext, []);
+  assert.deepEqual(csp.get('style-src'), ["'self'", "'unsafe-inline'"]);
+  assert.deepEqual(csp.get('font-src'), ["'self'"]);
 });
-test('la police se rend active SANS gestionnaire en ligne : main.js lève « media=print » de #font-css', () => {
-  assert.ok(/id="font-css"/.test(html) && /media="print"/.test(html));
-  assert.match(read('js/main.js'), /getElementById\('font-css'\)[\s\S]{0,200}media = 'all'/);
+test('la police du jeu (Chakra Petch) est déclarée par css/style.css et ses fichiers existent, avec leur licence', () => {
+  const css = read('css/style.css');
+  const urls = [...css.matchAll(/@font-face[^}]*url\(([^)]+)\)/g)].map((m) => m[1]);
+  assert.ok(urls.length >= 3, urls.length + ' fichiers');
+  for (const u of urls) assert.ok(existsSync(join(root, 'css', u)), u);
+  assert.ok(existsSync(join(root, 'assets/fonts/OFL.txt')));
 });
 
 console.log('Code du jeu : rien de dynamique, rien de tiers');
@@ -73,7 +77,9 @@ test('les seuls serveurs que le jeu appelle : Supabase (js/config.js) ; aucun h�
   const hosts = new Set();
   for (const f of JS) {
     if (f.startsWith('js/i18n/')) continue;
-    const src = read(f).split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+    // (0.12.4) Les pages légales CITENT des sites (liens que le joueur ouvre : hébergeur, CNIL, page du projet) : elles n'appellent rien, et le test le vérifie.
+    if (f === 'js/legal.js') { assert.ok(!/\bfetch\(|XMLHttpRequest|WebSocket|sendBeacon|import\(/.test(read(f)), f + ' : aucun appel réseau'); continue; }
+    const src = read(f).split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n').replace(/\bsource: 'https:\/\/github\.com\/[\w-]+\/[\w-]+',/, '');
     for (const m of src.matchAll(/https?:\/\/([a-z0-9.-]+)/gi)) hosts.add(m[1].toLowerCase());
   }
   hosts.delete('www.w3.org');

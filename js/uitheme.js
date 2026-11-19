@@ -1,8 +1,9 @@
 // Thèmes et disposition de l'interface (lot 11) : couleurs, police, arrondis, compteur de vitesse, taille et place des éléments du HUD.
 // Module pur (testé sous Node) : il calcule des valeurs ; js/app/uicustom.js les applique à la page. Rien ici ne touche au jeu.
+import { GAME_NAME } from './version.js';
 
 export const THEMES = {
-  default: { label: 'Copytrack', vars: {} },
+  default: { label: GAME_NAME, vars: {} },
   midnight: { label: 'Minuit', vars: { '--bg': '#070b1c', '--panel': 'rgba(10, 18, 44, 0.84)', '--panel-2': 'rgba(18, 32, 74, 0.92)', '--pink': '#7aa8ff', '--cyan': '#4de1ff', '--amber': '#ffd166', '--grad': 'linear-gradient(100deg, #4d7cff 0%, #7aa8ff 50%, #4de1ff 100%)' } },
   sunset: { label: 'Crépuscule', vars: { '--bg': '#2a0f1f', '--panel': 'rgba(60, 18, 36, 0.84)', '--panel-2': 'rgba(92, 28, 50, 0.92)', '--pink': '#ff8fa3', '--cyan': '#ffc15e', '--amber': '#ff9f43', '--grad': 'linear-gradient(100deg, #ff5e62 0%, #ff9966 50%, #ffd26e 100%)' } },
   forest: { label: 'Forêt', vars: { '--bg': '#0b1f17', '--panel': 'rgba(12, 40, 28, 0.84)', '--panel-2': 'rgba(20, 62, 44, 0.92)', '--pink': '#9be37a', '--cyan': '#5ff2b5', '--amber': '#e6e36a', '--grad': 'linear-gradient(100deg, #3ddc84 0%, #9be37a 50%, #5ff2b5 100%)' } },

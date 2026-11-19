@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test, finish } from './harness.mjs';
+import { LEGAL_IDS } from '../js/legal.js';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const wiring = readFileSync(new URL('../js/app/wiring.js', import.meta.url), 'utf8');
@@ -44,6 +45,7 @@ test('chaque bouton du menu a un traitement (aucun bouton mort) : un « case » 
   const all = [...tileButtons.map((b) => b.action), ...entries, 'sub-back'];
   for (const a of all) {
     if (a.startsWith('tab-')) assert.ok(TAB_HUB[a.slice(4)], a + ' : onglet inconnu');
+    else if (a.startsWith('legal-')) assert.ok(LEGAL_IDS.includes(a.slice(6)), a + ' : page légale inconnue (js/legal.js)');      // (0.12.4 : « legal-<page> » ouvre la page)
     else assert.ok(wiring.includes(`case '${a}'`), a + ' : aucun case dans js/app/wiring.js');
   }
 });

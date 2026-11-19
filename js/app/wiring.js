@@ -7,6 +7,7 @@ import { $ } from '../dom.js';
 import { checkPseudo } from '../account.js';
 import { clearRecords } from '../storage.js';
 import { fovText } from './shared.js';
+import { GAME_NAME } from '../version.js';
 import { AID_IDS, cleanAids } from '../aids.js';
 import { steerCurveText } from './settings.js';
 import { TAB_HUB } from './profile.js';
@@ -135,6 +136,7 @@ export const wiringMethods = {
     const s = this.session;
     // Entrées des panneaux Progression, Profil, Paramètres : « tab-<onglet> » ouvre l'écran à onglets sur cet onglet (app/profile.js, HUBS).
     if (a.startsWith('tab-') && TAB_HUB[a.slice(4)]) { this.showScreen(a.slice(4)); return; }
+    if (a.startsWith('legal-')) { this.showLegal(a.slice(6)); return; }      // (0.12.4) pages légales : js/app/legal.js
     switch (a) {
       case 'sub-play': case 'sub-create': case 'sub-multi': case 'sub-progress': case 'sub-profile': case 'sub-settings': this._menuSub(a.slice(4)); break;
       case 'sub-back': this._lastPanel = null; this._menuSub(null, true); break;
@@ -315,7 +317,7 @@ export const wiringMethods = {
         $('menu').querySelector('.logo').animate([{ transform: 'rotate(0)' }, { transform: 'rotate(360deg) scale(1.15)' }, { transform: 'rotate(720deg)' }], { duration: 900 });
         this.audio.finish(true);
         if (!p.eggs.logo) { p.eggs.logo = 1; addCoins(25); saveProfile(); this.ui.updateCoins(); this.ui.flash('Tu as cliqué sur le logo 7 fois : +25 ◆ !', 3); }
-        else this.ui.flash('Copytrack vous salue ✦', 2);
+        else this.ui.flash(`${GAME_NAME} vous salue ✦`, 2);
       }
     });
   },

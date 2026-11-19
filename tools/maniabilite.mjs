@@ -81,7 +81,7 @@ export function changementDeVoie(speed, decalage = ROAD_HALF) {
 // oscille dès que le retard dépasse ~0,1 s : c'est une limite du pilote, pas de la voiture) ; tremblement : écart-type du bruit de volant ; jugement : erreur relative sur
 // la vitesse à laquelle il se met à freiner. Générateur pseudo-aléatoire déterministe (le banc doit donner les mêmes chiffres à chaque exécution).
 // PHYS_VER 36 : le gain n'est plus un facteur (volant × 0,8, jamais plus de 80 % du braquage) mais une COURBE, |volant|^(1/gain) : les petites corrections
-// restent plus douces (0,2 -> 0,13), le braquage complet reste possible. Avec le braquage borné selon la vitesse (loi PolyTrack), les grands virages se
+// restent plus douces (0,2 -> 0,13), le braquage complet reste possible. Avec le braquage borné selon la vitesse (loi mesurée), les grands virages se
 // prennent près du braquage permis : un pilote plafonné à 80 % ne les tenait plus, ce qu'aucun joueur ne ferait (il met le volant à fond).
 export function pilotHumain({ reaction = 0.1, tremblement = 0.18, jugement = 0.12, graine = 1, gain = 0.8 } = {}) {
   let s = graine >>> 0 || 1;

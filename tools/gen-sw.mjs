@@ -25,7 +25,7 @@ for (const d of ['css', 'js', 'icons', 'assets']) {
   for (const f of await walk(join(root, d))) {
     const rel = relative(root, f).split('\\').join('/');
     if (SERVER_ONLY.has(rel)) continue;
-    if (/\.(js|css|png|svg|txt|mp3)$/.test(f)) files.push(rel);
+    if (/\.(js|css|png|svg|txt|woff2)$/.test(f)) files.push(rel);
   }
 }
 files.sort();

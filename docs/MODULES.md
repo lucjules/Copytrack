@@ -35,6 +35,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `customDeco.js` | Pièces décoratives personnalisées (lot 12) : un petit objet que le joueur assemble avec des formes simples et pose dans l'éditeur comme n'importe quelle décoration. |
 | `customDecoBuild.js` | Géométrie des pièces décoratives personnalisées (lot 12) : construction sur un GeoBuilder. Données et validation : customDeco.js. |
 | `daily.js` | Défi du jour (v1.5) : un circuit généré à partir de la date. Tout le monde a le même circuit le même jour, sans serveur. Le pilote automatique vérifie qu'il est faisable et fixe les médailles, comme pour les circuits intégrés. |
+| `dataExport.js` | Export des données du joueur (RGPD : droit d'accès et de portabilité, 0.12.4) : un fichier JSON lisible avec ce que cet appareil garde (stockage local du joueur en cours) et, s'il a une session en ligne, ce que le serveur garde à son nom, lu table par table avec SES droits (ce qu'il peut lire, rien de plus : les règles de la base s'appliquent). Aucun jeton de session n'entre dans le fichier. Module pur (testé sous Node : tools/test-legal.mjs). |
 | `decoData.js` | Données des décorations (sans dépendance au rendu). |
 | `decoPack.js` | Constructeurs du pack de décorations 0.9.3 (voir decoPackData.js pour la liste). Coordonnées locales, base à y = 0, 1 unité = 1 m. |
 | `decoPackData.js` | Pack de décorations 0.9.3 (≈ 200 objets) : données seules (identifiant, nom, icône), sans dépendance au rendu. |
@@ -60,12 +61,14 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `input.js` | Entrées : clavier (codes physiques => QWERTY et AZERTY), manette, tactile. |
 | `inspector.js` | Mode Inspection de l'éditeur : sélection d'une pièce ou d'une décoration, panneau de propriétés généré selon l'objet, et gizmos 3D (TransformControls : flèches de déplacement, cercles de rotation). |
 | `joins.js` | Raccords d'orientation (0.9.3) : une route sur un mur ne se raccorde pas directement au sol, il faut une transition. |
+| `legal.js` | Pages légales (0.12.4) : crédits et licences, confidentialité, mentions légales, règles de la communauté. Une seule source, en français et en anglais, affichée dans le jeu (js/app/legal.js) et par la page autonome legal.html (lien partageable, lisible sans lancer le jeu ni créer de compte). |
+| `legalPage.js` | Page autonome legal.html (0.12.4) : affiche une page légale (?p=confidentialite \| mentions \| regles \| credits) dans la langue choisie (?lang=fr \| en ; sinon la langue réglée dans le jeu sur cet appareil, sinon celle du navigateur). Les textes sont ceux du jeu (js/legal.js). |
 | `logicText.js` | Logique du circuit en phrases, et ses vérifications (éditeur de logique, E11). Module pur, testé sous Node (tools/test-logique.mjs). |
 | `main.js` | Point d'entrée : crée le moteur de rendu et orchestre menu / course / éditeur. |
 | `mathutil.js` | Petits utilitaires numériques partagés (la physique, l'audio, les traînées). Ne dépend de rien. |
 | `medals.js` | Médailles : leur ordre (de la meilleure à la moins bonne) et leur attribution selon un temps. |
 | `mods.js` | Paquets de personnalisation « mods » (lot 13) : un seul code « SHX1: » qui regroupe ma voiture, mon interface, mes caméras, mes pièces décoratives et mes modes. |
-| `music.js` | Musique du jeu : le menu joue le MP3 déposé dans assets/music-menu.mp3 (en boucle ; sans ce fichier, repli sur un groove house synthétisé) ; les courses jouent une musique chill synthétisée (AudioEngine.js) dont l'intensité suit la vitesse. |
+| `music.js` | Musique du jeu, entièrement synthétisée (AudioEngine.js) : un groove house dans les menus, une musique chill pendant les courses, dont l'intensité suit la vitesse. Coupure nette entre les deux. (0.12.4 : le MP3 du menu, dont l'auteur et la licence n'étaient pas connus, est retiré.) |
 | `mutations.js` | Défi du jour 2 (Copytrack Evolution, E13) : la MUTATION du jour et les SÉRIES de jours. |
 | `obstacleMesh.js` | Modèles 3D animés des obstacles (voir obstacles.js pour la physique). |
 | `obstacles.js` | Obstacles (0.9) : objets posés librement comme les décorations, mais qui comptent pour la physique. Leur mouvement ne dépend que du chrono de la course (pas fixe), donc il est identique en course, en replay, après un retour au checkpoint et dans la vérification en ligne. Ce module n'a aucune dépendance au rendu. |
@@ -109,7 +112,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `uitheme.js` | Thèmes et disposition de l'interface (lot 11) : couleurs, police, arrondis, compteur de vitesse, taille et place des éléments du HUD. |
 | `variants.js` | Variantes de records (Copytrack Evolution, E3) : des catégories de classement sur un même circuit (départ en moto, gravité lunaire, sans obstacles…), SÉPARÉES du record officiel. Une variante est un jeu de règles (rulesCore.js) appliqué à une copie du circuit : rien de neuf dans la physique. Elle voyage dans la clé de classement, sans aucune migration de la base : |
 | `verify.js` | Vérification d'une course (classements en ligne). Module sans rendu ni navigateur : il est utilisé par la fonction serveur Supabase (supabase/functions/submit-score), qui le charge depuis le site du jeu. La physique étant déterministe, rejouer les commandes enregistrées redonne exactement la même course et le même temps. |
-| `version.js` | Numéros de version du jeu (une seule source). |
+| `version.js` | Numéros de version du jeu (une seule source), et son nom. |
 | `videoExport.js` | Export d'un replay en vidéo : le canvas 3D est enregistré (MediaRecorder) pendant que le replay se joue, puis proposé en téléchargement (WebM). |
 | `weather.js` | Météo décorative (lot 12) : pluie, neige, braises, poussière, pétales. Un nuage de points qui suit la caméra ; aucun effet sur la course. |
 | `welcome.js` | Écran d'accueil : le menu principal ne s'ouvre qu'une fois le pseudo défini. |
@@ -136,6 +139,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `competition.js` | Compétition asynchrone (Copytrack Evolution, E17) : duels classés entre amis (Elo) et tournois privés. Tout se joue sur des circuits de la carrière, sous des catégories de record « …~v1.duel-N » et « …~v1.tour-N » (variants.js) : la course est rejouée par le serveur comme toute autre, et les résultats, le classement Elo et la clôture sont calculés en base (supabase/etape12-competition.sql). Ces méthodes s'ajoutent au prototype de App. |
 | `editorFlow.js` | Passages entre le menu et l'éditeur : ouverture, aide, retour, essai d'un circuit. |
 | `lab.js` | Laboratoire de comparaison (Copytrack Evolution, E20) : depuis la fiche d'un circuit, rejoue les commandes du record personnel sous deux réglages physiques (profils, véhicules v1 / v2, adhérence, pluie) et affiche l'écart secteur par secteur et le long du circuit. Le calcul est dans analysis/lab.js ; le circuit n'est jamais modifié. Ces méthodes s'ajoutent au prototype de App. |
+| `legal.js` | Pages légales dans le jeu (0.12.4) : confidentialité, mentions légales, règles de la communauté, crédits et licences (textes : js/legal.js), et export des données du joueur (js/dataExport.js). Ces méthodes s'ajoutent au prototype de App (voir main.js) : `this` est l'instance. |
 | `modes.js` | Modes de jeu, règles de partie et paquets (lot 13) : l'interface. Les règles et validations sont dans rules.js et mods.js. Ces méthodes s'ajoutent au prototype de App. |
 | `multi.js` | Multijoueur : salons (privés par code, ou publics), circuit commun, lobby, départ en course à plusieurs, classement du salon, championnat (manches). |
 | `profile.js` | Profil : compte, sauvegardes, import et export de sauvegarde. |
@@ -187,6 +191,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `data.js` | Dictionnaire anglais — les données du jeu : noms des circuits intégrés, libellés des commandes et des touches. |
 | `editor.js` | Dictionnaire anglais — l'éditeur de circuits : barre d'outils, palette, options, niveau, sélection, prefabs, raccourcis, messages. |
 | `hub.js` | Dictionnaire anglais — Race Hub (fiche d'un circuit), classement à onglets, favoris, course rapide (Copytrack Evolution, 0.9.26). |
+| `legal.js` | Dictionnaire anglais — pages légales (0.12.4) : liens, case d'âge, export des données, rappel des règles. Les textes des pages elles-mêmes sont écrits dans les deux langues dans js/legal.js (ils ne passent pas par le dictionnaire). |
 | `online.js` | Dictionnaire anglais — la vie autour de la course : Académie, récompenses, garage, communauté, multijoueur, erreurs du serveur. |
 | `pieces.js` | Dictionnaire anglais — le catalogue de l'éditeur : pièces de piste, familles et caractéristiques, inspecteur, décorations. |
 | `race.js` | Dictionnaire anglais — la course : messages au centre de l'écran, objectifs, carrière, arrivée, replay, caméras, décors, erreurs de circuit. |

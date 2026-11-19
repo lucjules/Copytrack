@@ -1,9 +1,16 @@
-<title>Wiki Copytrack</title>
+<title>Wiki __NAME__</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
+/* Polices du wiki (SIL Open Font License 1.1, fonts/OFL.txt), servies par le site : aucune requête vers un service de polices tiers. */
+@font-face { font-family: 'Unbounded'; font-style: normal; font-weight: 500; font-display: swap; src: url(fonts/unbounded-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Unbounded'; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/unbounded-latin-700-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Unbounded'; font-style: normal; font-weight: 800; font-display: swap; src: url(fonts/unbounded-latin-800-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/ibm-plex-sans-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 500; font-display: swap; src: url(fonts/ibm-plex-sans-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 600; font-display: swap; src: url(fonts/ibm-plex-sans-latin-600-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'IBM Plex Sans'; font-style: italic; font-weight: 400; font-display: swap; src: url(fonts/ibm-plex-sans-latin-400-italic.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/ibm-plex-mono-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url(fonts/ibm-plex-mono-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
 /* Mise en page : sommaire fixe à gauche (piste), contenu en colonne de lecture ; les tableaux et grilles débordent seulement dans leur propre conteneur. */
 :root {
   --bg: #eef0f6; --surface: #ffffff; --surface2: #f6f7fb; --ink: #151935; --muted: #575e80; --line: #d9dceb;
@@ -188,7 +195,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
 
 <div class="layout">
 <nav class="toc" aria-label="Sommaire">
-  <div class="brand"><svg class="brand-badge" viewBox="0 0 28 28" aria-hidden="true"><polygon points="3,22 11,5 25,9 19,24" fill="var(--accent)"/><polygon points="11,5 25,9 18,13" fill="var(--neon)"/></svg>Copytrack</div>
+  <div class="brand"><svg class="brand-badge" viewBox="0 0 28 28" aria-hidden="true"><polygon points="3,22 11,5 25,9 19,24" fill="var(--accent)"/><polygon points="11,5 25,9 18,13" fill="var(--neon)"/></svg>__NAME__</div>
   <p class="ver">wiki · bêta __VERSION__</p>
   <input id="q" class="search" type="search" placeholder="Rechercher dans le wiki…" aria-label="Rechercher dans le wiki">
   <ol>
@@ -219,12 +226,12 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
   <div class="hero">
     <div>
       <span class="kicker">Wiki du projet · bêta __VERSION__</span>
-      <h1>COPY<span>TRACK</span></h1>
+      <h1>VIRE<span>LO</span></h1>
       <div class="curb"></div>
       <p class="tag">Un jeu de course contre-la-montre <strong>low-poly</strong> qui tourne dans le navigateur, avec un éditeur de circuits complet. Décors, véhicules, pièces, musique et circuits sont conçus pour le projet.</p>
       <p class="read">Ce wiki explique <strong>tout</strong> : comment on pilote, comment la carrière s'enchaîne, chacun des 72 circuits, toutes les pièces et tous les revêtements, l'éditeur, les modes en ligne, et ce qui se passe sous le capot. Les chiffres et les cartes sont tirés du code du jeu lui-même.</p>
     </div>
-    <figure class="shot"><img src="img/menu-accueil.jpg" alt="Menu principal de Copytrack : six tuiles Jouer, Créer, Multijoueur, Progression, Profil, Paramètres" loading="eager"><figcaption>Le menu principal et ses six catégories.</figcaption></figure>
+    <figure class="shot"><img src="img/menu-accueil.jpg" alt="Menu principal de __NAME__ : six tuiles Jouer, Créer, Multijoueur, Progression, Profil, Paramètres" loading="eager"><figcaption>Le menu principal et ses six catégories.</figcaption></figure>
   </div>
   <div class="stats" id="stats"></div>
   <div class="gallery">
@@ -247,7 +254,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
   <span class="kicker">Jouer</span><h2>Démarrer</h2><div class="curb"></div>
   <div class="read">
     <h3>Lancer le jeu</h3>
-    <p>Copytrack est un site statique : du HTML, des modules JavaScript et three.js inclus. Il n'y a rien à compiler. Depuis le dossier du projet :</p>
+    <p>__NAME__ est un site statique : du HTML, des modules JavaScript et three.js inclus. Il n'y a rien à compiler. Depuis le dossier du projet :</p>
     <div class="tbl"><table><tr><td><code>npm start</code></td><td>puis ouvrir <code>http://localhost:8080</code></td></tr><tr><td><code>python3 -m http.server</code></td><td>n'importe quel serveur statique convient aussi</td></tr><tr><td>GitHub Pages</td><td><em>Settings → Pages → Deploy from a branch</em>, dossier racine</td></tr></table></div>
     <p>Le jeu s'<strong>installe comme une application</strong> (bouton d'installation du navigateur) et se joue <strong>hors ligne</strong> une fois chargé.</p>
     <h3>Le premier lancement</h3>
@@ -295,7 +302,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
   <div class="cols">
     <div class="card"><h4>Dérapage au frein</h4><p>Il n'y a pas de bouton de dérapage. Freiner en tournant franchement, à bonne vitesse, fait décrocher l'arrière ; garder le volant prolonge la glisse.</p></div>
     <div class="card"><h4>Mini-turbo</h4><p>Une glisse assez longue charge un mini-turbo à deux niveaux : étincelles bleues, puis orange. On le lâche en sortie de virage.</p></div>
-    <div class="card"><h4>En l'air</h4><p>Le volant n'agit pas, l'accélérateur penche à peine le nez vers l'avant. En quittant un bord, la voiture bascule nez en bas (d'autant plus qu'elle est lente) et rien ne la redresse. Seul le frein (aérofrein) freine sa rotation : on s'en sert pour arriver à la pente de la réception. C'est le petit contrôle en l'air de PolyTrack, qui fait gagner des dixièmes.</p></div>
+    <div class="card"><h4>En l'air</h4><p>En quittant un bord, la voiture bascule nez en bas (d'autant plus qu'elle est lente) et rien ne la redresse. Les pédales la penchent d'un angle limité : accélérateur, le nez descend ; frein, il remonte, et le frein amortit aussi la rotation (aérofrein). Le volant la fait tourner doucement sur elle-même. On s'en sert pour arriver à la pente de la réception : c'est ce petit contrôle en l'air qui fait gagner des dixièmes.</p></div>
     <div class="card"><h4>Réception</h4><p>Elle est parfaite, correcte ou ratée selon l'assiette au contact. Une réception ratée coûte de la vitesse ; certains objectifs bonus comptent les réceptions parfaites.</p></div>
     <div class="card"><h4>Appui et pilotage</h4><p>Sur les loopings, les tubes, les murs et les routes à l'envers, c'est la vitesse qui plaque les roues : trop lent, on décroche. Rien n'y guide la voiture : il faut braquer pour suivre un looping décalé, un tire-bouchon ou une transition.</p></div>
     <div class="card"><h4>Wall-ride</h4><p>Une transition fait basculer la route sur un mur. On le prend vite (130 km/h au moins pour les circuits officiels). Sur le mur, la gravité tire vers le bas et le nez pique : il faut tenir le volant un peu vers le haut pour garder sa ligne, mains lâchées on tombe. Une chicane posée sur le mur fait <strong>monter ou descendre</strong> la route de 32 m (une bosse : monter puis redescendre) ; un <strong>bloc</strong> posé sur le bas du mur oblige à passer au-dessus, sur le haut à passer dessous. On ressort par la transition inverse.</p></div>
@@ -712,7 +719,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
 </section>
 </main>
 </div>
-<footer>Wiki rédigé à partir du dépôt Copytrack (bêta __VERSION__). Les chiffres, les cartes et les icônes viennent du code du jeu ; les images sont des captures du jeu lui-même.</footer>
+<footer>Wiki rédigé à partir du code de __NAME__ (bêta __VERSION__). Les chiffres, les cartes et les icônes viennent du code du jeu ; les images sont des captures du jeu lui-même. <a href="../legal.html?p=confidentialite">Confidentialité</a> · <a href="../legal.html?p=mentions">Mentions légales</a> · <a href="../legal.html?p=credits">Crédits et licences</a></footer>
 
 <script type="application/json" id="d-data">__DATA__</script>
 <script type="application/json" id="d-maps">__MAPS__</script>

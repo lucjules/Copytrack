@@ -11,6 +11,7 @@ import { locale } from '../i18n.js';
 import { levelOf, ensureXp, LICENCES, hasLicence, masteryCount, MASTERY, LEVEL_REWARDS } from '../progression.js';
 import { CATALOG } from '../cosmetics.js';
 import { online } from '../online.js';
+import { FILE_PREFIX } from '../version.js';
 // Un seul écran à onglets sert trois entrées de l'accueil : Profil, Progression et Paramètres. Chaque entrée a son titre et ses onglets ; l'onglet courant
 // (this.profileTab) dit laquelle est ouverte. Les anciens noms d'onglet ('options') mènent au premier onglet des paramètres liés à l'image.
 export const HUBS = {
@@ -123,6 +124,9 @@ export const profileMethods = {
         <button class="btn" data-p="file">Importer un fichier</button>
       </div>
       <input type="file" id="prof-file" accept=".shw,.txt" class="hidden">
+      <h3 class="opt-h">Mes données</h3>
+      <p class="prof-note">Tout ce que cet appareil et le serveur gardent à ton nom, dans un fichier JSON lisible. <button type="button" class="link-btn" data-p="privacy">Confidentialité</button></p>
+      <div class="row"><button class="btn" data-p="export">Exporter mes données</button></div>
       <h3 class="opt-h">Zone sensible</h3>
       <div class="opt-row"><span>Effacer tous les records de cet appareil</span><button class="btn subtle" data-action="reset-records">Effacer les records</button></div>`;
     body.querySelector('[data-p="copy"]').onclick = async () => {
@@ -134,10 +138,12 @@ export const profileMethods = {
       const code = await exportCode();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([code], { type: 'text/plain' }));
-      a.download = `copytrack-${p.id}.shw`;
+      a.download = `${FILE_PREFIX}-${p.id}.shw`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     };
+    body.querySelector('[data-p="export"]').onclick = () => { this.exportMyData().catch((e) => this.ui.flash(e.message || String(e), 3)); };
+    body.querySelector('[data-p="privacy"]').onclick = () => this.showLegal('confidentialite');
     body.querySelector('[data-p="paste"]').onclick = () => this._importSaveModal();
     const file = body.querySelector('#prof-file');
     body.querySelector('[data-p="file"]').onclick = () => file.click();
@@ -249,7 +255,7 @@ export const profileMethods = {
     const ta = document.createElement('textarea');
     ta.placeholder = 'SHWP1:…';
     const wrap = document.createElement('div');
-    wrap.innerHTML = '<p>Colle ici un code joueur Copytrack.</p>';
+    wrap.innerHTML = '<p>Colle ici un code joueur.</p>';
     wrap.appendChild(ta);
     this.ui.modal({ title: 'Importer une sauvegarde', body: wrap, actions: [
       { label: 'Continuer', primary: true, onClick: () => { const v = ta.value; setTimeout(() => this._askImport(v), 50); } },

@@ -2,7 +2,7 @@
 // Ce ne sont pas des tests « ça tourne » : ils mesurent si la voiture est agréable à conduire.
 //  1. le véhicule seul : rayon de braquage, adhérence latérale, rapidité de la réponse, retour droit après un coup de volant, distance pour changer de voie ;
 //  2. un pilote humain imparfait (réaction, volant qui tremble, braquage moins sec) sur les 66 circuits : contacts avec les bordures par minute et taux d'arrivée.
-// PHYS_VER 36 : la partie 1 suit la loi de braquage de PolyTrack (bornée selon la vitesse) ; la partie 2 garde ses seuils (le pilote de référence prend les virages
+// PHYS_VER 36 : la partie 1 suit la loi de braquage mesurée (bornée selon la vitesse) ; la partie 2 garde ses seuils (le pilote de référence prend les virages
 // à 85 % de la vitesse où l'angle suffit, et le « braquage moins sec » est une courbe qui permet encore le braquage complet : maniabilite.mjs).
 // Les seuils sont ceux de la 0.9.11 avec une marge ; la 0.9.10 donnait 1,1 contact par minute (26 circuits sur 66 avec au moins un contact) pour 178 arrivées sur 198.
 import assert from 'node:assert/strict';
@@ -21,11 +21,11 @@ test('la route est large : 24 m (cases de 32 m), la voiture en fait 5 : on ne se
   assert.equal(CELL, 32);
   assert.ok(ROAD_HALF >= 12);
 });
-// PHYS_VER 36 (caractère PolyTrack, docs/ANALYSE-POLYTRACK.md) : c'est l'ANGLE DE BRAQUAGE PERMIS, min(23,5° ; 22,93 · v^−1,566), qui borne le virage, pas
-// l'adhérence. La voiture suit presque la géométrie (rayon ≈ empattement / angle) et l'accélération latérale permise CROÎT avec la vitesse (PolyTrack : 35 m/s²
+// PHYS_VER 36 (lois de conduite, docs/LOIS-PHYSIQUE.md) : c'est l'ANGLE DE BRAQUAGE PERMIS, min(23,5° ; 22,93 · v^−1,566), qui borne le virage, pas
+// l'adhérence. La voiture suit presque la géométrie (rayon ≈ empattement / angle) et l'accélération latérale permise CROÎT avec la vitesse (référence : 35 m/s²
 // à 100 km/h, 67 à 480). Avant : rayon ≤ 9 m à 72 km/h et 5 à 8 g partout (adhérence), réponse ≤ 0,15 s.
 const geo = (v) => (CAR.a + CAR.b) / Math.min(CAR.steerMax, CAR.steerC * Math.pow(v, -CAR.steerN));
-test('virage à fond : c\'est l\'angle permis qui limite (loi PolyTrack) ; 2,5 à 6 g latéraux, de plus en plus avec la vitesse', () => {
+test('virage à fond : c\'est l\'angle permis qui limite (loi mesurée) ; 2,5 à 6 g latéraux, de plus en plus avec la vitesse', () => {
   let prev = 0;
   for (const [kmh, v] of Object.entries(V)) {
     const r = virageStabilise(v);
@@ -41,7 +41,7 @@ test('rayon de braquage : celui de la géométrie (empattement / angle permis), 
   }
   assert.ok(virageStabilise(V[144]).rayon < 1.5 * CELL, 'à 144 km/h, un virage d\'une case et demie de rayon se prend volant à fond');
 });
-test('réponse au volant : 90 % de la rotation en 0,2 s au plus à toute vitesse (PolyTrack : plein braquage en 0,1 s)', () => {
+test('réponse au volant : 90 % de la rotation en 0,2 s au plus à toute vitesse (référence : plein braquage en 0,1 s)', () => {
   for (const k of [72, 144, 216, 288]) assert.ok(virageStabilise(V[k]).retard90 <= 0.2, `à ${k} : ${virageStabilise(V[k]).retard90}`);
 });
 test('sous-vireuse, donc stable : un coup de volant à fond lâché ramène droit en une demi-seconde, sans tête-à-queue, avec un dérapage ≤ 20 %', () => {
@@ -52,7 +52,7 @@ test('sous-vireuse, donc stable : un coup de volant à fond lâché ramène droi
     assert.ok(r.derapage <= 0.2, `${kmh} km/h : dérapage ${(r.derapage * 100).toFixed(1)} %`);
   }
 });
-// PHYS_VER 36 : à grande vitesse l'angle permis est petit (2,7° à 200 km/h) : changer de voie prend de la place, comme dans PolyTrack (avant : ≤ 1,2 / 2 / 3,2 / 5 cases, < 2 s).
+// PHYS_VER 36 : à grande vitesse l'angle permis est petit (2,7° à 200 km/h) : changer de voie prend de la place (avant : ≤ 1,2 / 2 / 3,2 / 5 cases, < 2 s).
 test('changer de voie (une demi-route) : ≤ 1,2 case à 72 km/h, ≤ 3 à 144, ≤ 6 à 216, ≤ 9 à 288, toujours en moins de 3,5 s', () => {
   const max = { 72: 1.2, 144: 3, 216: 6, 288: 9 };
   for (const [kmh, v] of Object.entries(V)) {

@@ -19,8 +19,7 @@ var SURF_PHYS = {
   belt: 200 / 3.6,
   spring: 56,
   bounce: 14,
-  // PHYS_VER 36 (caractère PolyTrack, docs/ANALYSE-POLYTRACK.md) : poussée CONSTANTE et traînée LINÉAIRE, la loi mesurée sur PolyTrack
-  // (a = 20,19 − 0,107·v là-bas). Sous les gaz : a = engineAccel − (engineAccel / maxSpeed)·v, donc v(t) = maxSpeed·(1 − e^(−t/τ)), τ = maxSpeed / engineAccel
+  // PHYS_VER 36 (lois de conduite, docs/LOIS-PHYSIQUE.md) : poussée CONSTANTE et traînée LINÉAIRE. Sous les gaz : a = engineAccel − (engineAccel / maxSpeed)·v, donc v(t) = maxSpeed·(1 − e^(−t/τ)), τ = maxSpeed / engineAccel
   // (≈ 5 s) ; gaz levés, la traînée seule ralentit la voiture (au plafond : autant que la poussée). Les VITESSES restent celles de Copytrack
   // (plafond 290 km/h) : les circuits sont dessinés pour elles.
   gravity: 19,
@@ -485,7 +484,7 @@ var PIECES = {
     size: 3,
     rise: 0
   },
-  // 0.9.67 : virage géant 5×5 (rayon 144 m) : avec le braquage borné selon la vitesse (loi PolyTrack), le seul virage qui se prenne vers 280 km/h.
+  // 0.9.67 : virage géant 5×5 (rayon 144 m) : avec le braquage borné selon la vitesse (loi mesurée), le seul virage qui se prenne vers 280 km/h.
   giantcurve: {
     label: "Virage g\xE9ant",
     kind: "arc",
@@ -7356,10 +7355,10 @@ var CAR = {
   b: 1.4,
   yawK: 1.9,
   corner: 500,
-  // de son braquage (PolyTrack : dérive du châssis de 1° à 200 km/h, rayon = empattement / angle)
+  // de son braquage (référence : dérive du châssis de 1° à 200 km/h, rayon = empattement / angle)
   latGrip: 80,
   frontShare: 0.42,
-  // Braquage maxi des roues (PHYS_VER 36, loi MESURÉE sur PolyTrack) : min(steerMax, steerC · v^−steerN), v en m/s. 23,5° jusqu'à 47 km/h, 7,0° à
+  // Braquage maxi des roues (PHYS_VER 36, loi MESURÉE) : min(steerMax, steerC · v^−steerN), v en m/s. 23,5° jusqu'à 47 km/h, 7,0° à
   // 100 km/h, 2,7° à 200, 1,4° à 290 : c’est l’angle permis qui limite le virage, pas l’adhérence (accélération latérale ≈ 35 m/s² à 100 km/h, 56 à 290).
   steerMax: 0.41,
   steerC: 22.93,
@@ -7388,9 +7387,9 @@ var CAR = {
   magnetRange: 4,
   magnetAcc: 80,
   launch: 0.6,
-  // PHYS_VER 37 (PolyTrack, mesuré en boîte noire) : en l'air, NI les gaz NI le volant ne pilotent la voiture, et RIEN ne la redresse : la rotation acquise au
-  // décollage est gardée tout le vol. Seul le FREIN agit : l'aérofrein amortit la rotation (PolyTrack : tangage 28 → 7 °/s en 1,6 s). C'est le petit contrôle en l'air
-  // de PolyTrack : freiner au bon moment pour arriver à plat (ou à la pente de la réception) fait gagner des dixièmes. Avant (PHYS_VER 36) : un ressort d'assiette
+  // PHYS_VER 37 (mesuré) : en l'air, RIEN ne redresse la voiture : la rotation acquise au décollage est gardée tout le vol. L'aérofrein (le frein, seul ou
+  // avec les gaz) l'amortit (mesure de référence : tangage 28 → 7 °/s en 1,6 s) : freiner au bon moment pour arriver à plat (ou à la pente de la réception) fait
+  // gagner des dixièmes. Depuis la 0.12.3, les pédales et le volant agissent aussi un peu (voir airLean, airYaw). Avant (PHYS_VER 36) : un ressort d'assiette
   // rapprochait l'assiette de la trajectoire (15 %) puis, près du sol, de la pente de la route (35 %) : la voiture se posait d'elle-même, le frein ne servait presque à rien.
   airBrake: 1,
   airSpin: 0.1,
@@ -7403,8 +7402,8 @@ var CAR = {
   // Volant en l'air (0.12.3) : une rotation douce, comme le vent sur une voile, qui s'arrête quand on lâche le volant (la rotation du décollage, elle, reste gardée).
   airYaw: 0.45,
   airYawT: 0.35,
-  // Bascule au décollage : quand la route s'arrête sous la voiture, l'avant n'est plus porté alors que l'arrière l'est encore : la voiture part en piqué. PolyTrack (bord
-  // de route plat, mesuré) : 65 °/s à 39 km/h, 38 °/s à 78 km/h, 26 °/s à 140 km/h, 16 °/s à 225 km/h, soit airTip / (v + airTipV0) rad/s.
+  // Bascule au décollage : quand la route s'arrête sous la voiture, l'avant n'est plus porté alors que l'arrière l'est encore : la voiture part en piqué. Mesure de référence (bord
+  // de route plat) : 65 °/s à 39 km/h, 38 °/s à 78 km/h, 26 °/s à 140 km/h, 16 °/s à 225 km/h, soit airTip / (v + airTipV0) rad/s.
   airTip: 18.4,
   airTipV0: 5.5,
   landOk: 0.38,
@@ -9457,6 +9456,11 @@ function forkPath(tile, branch, reverse) {
   }
   return reverse ? out.reverse() : out;
 }
+
+// js/version.js
+var GAME_NAME = "Virelo";
+var FILE_PREFIX = GAME_NAME.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+var PHYS_VER = 38;
 
 // js/tracks.js
 var BUILTIN_TRACKS = [
@@ -15531,6 +15535,7 @@ function wallSolid(t, def, o, i, a, ux, uz) {
   for (let j = i; j >= 0 && d(j) < 110 && !P.wallLine[j]; j--) for (let lap = 0; lap < laps; lap++) P.wallLine[j + lap * (one - 1)] = want;
   for (let j = i; j < one && d(j) < 4 * s + 6; j++) for (let lap = 0; lap < laps; lap++) P.wallLine[j + lap * (one - 1)] = want;
 }
+var BUILTIN_AUTHOR = "Copytrack";
 function buildBuiltin(def) {
   const t = scriptTrack(def.name, def.script, {
     ...def.opts || {},
@@ -15539,7 +15544,7 @@ function buildBuiltin(def) {
       movers: def.movers
     } : {}
   });
-  t.author = "Copytrack";
+  t.author = BUILTIN_AUTHOR;
   if (def.params) t.setParams(def.params);
   if (def.laps > 1) {
     t.laps = def.laps;
@@ -17419,7 +17424,7 @@ var CarPhysics = class {
     return true;
   }
   // ---------------------------------------------------------------- Pneus
-  // Angle des roues avant (PHYS_VER 36, loi mesurée sur PolyTrack) : l'angle PERMIS diminue avec la vitesse, min(steerMax, steerC · v^−steerN) ;
+  // Angle des roues avant (PHYS_VER 36, loi mesurée) : l'angle PERMIS diminue avec la vitesse, min(steerMax, steerC · v^−steerN) ;
   // c'est lui, et non l'adhérence, qui borne le virage. En glisse établie (drift), les roues partent en plus vers la trajectoire de l'essieu avant
   // (counter, rad) : contre-braquage automatique, le volant ne fait qu'ajouter son angle permis par-dessus.
   // L'adhérence d'AMBIANCE (envGrip : pluie, flaques, givre, adhérence de tout le circuit) réduit aussi cet angle : l'angle permis est une enveloppe
@@ -18979,9 +18984,6 @@ function dailyChallenge(day = dayKey()) {
   return null;
 }
 
-// js/version.js
-var PHYS_VER = 38;
-
 // js/ghostFormat.js
 var GHOST_EVERY = 4;
 var GHOST_STRIDE = 7;
@@ -20185,4 +20187,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "fec13a7391d952cf";
+globalThis.__COPYTRACK_BUILD__ = "e0493811990eb999";

@@ -6,6 +6,31 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.12.4 — le jeu s'appelle Virelo ; licences, confidentialité et mentions légales
+
+**`PHYS_VER` reste 38**, rien ne change dans la course. Phase 1 du plan de la version 1.0 (légal et identité).
+
+- **Nouveau nom : Virelo.** Titre, menu, écran d'accueil, manifeste, wiki, auteur des circuits officiels, fichiers téléchargés (`virelo-….webm`,
+  `virelo-….shw`). Le nom vient d'une seule constante, `GAME_NAME` (`js/version.js`). Les identifiants techniques ne bougent pas (clés de sauvegarde,
+  dépôt, projet du serveur) : aucune progression n'est perdue.
+- **Aucune mention d'un autre jeu** : notes de version, wiki, commentaires du code et tests réécrits ; l'ancienne note de mesures est remplacée par
+  [docs/LOIS-PHYSIQUE.md](docs/LOIS-PHYSIQUE.md), qui fixe les lois de conduite gardées et leurs tests.
+- **Licence MIT** ([LICENSE](LICENSE)) et liste des composants tiers ([THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)).
+- **Pages Confidentialité, Mentions légales, Règles de la communauté, Crédits et licences**, en français et en anglais : dans le jeu (barre du bas du menu,
+  Paramètres › Confidentialité et licences) et sur [legal.html](legal.html), lisible sans lancer le jeu. Une seule source : `js/legal.js`.
+- **15 ans ou plus** (ou l'accord d'un parent) : case à cocher à la création d'un compte et à la publication d'un circuit, avec les règles de la communauté ;
+  rappel des règles sous les commentaires.
+- **Exporter mes données** (Profil › Sauvegardes) : un fichier JSON avec ce que l'appareil et le serveur gardent au nom du joueur, sans aucun jeton.
+- **Musique du menu** : le fichier MP3 (2,1 Mo), dont l'auteur et la licence n'étaient pas connus, est retiré ; le menu joue la musique synthétisée du jeu.
+  Chargement plus léger d'autant.
+- **Polices servies par le jeu** (Chakra Petch, et les polices du wiki) au lieu de Google Fonts : plus aucune adresse IP de joueur envoyée à un service de
+  polices ; la politique de sécurité du contenu n'autorise plus aucun serveur de polices extérieur.
+- Wiki : la carte « En l'air » décrit le contrôle en l'air de la 0.12.3.
+- Tests : `tools/test-legal.mjs` (nom unique, aucune mention d'un autre jeu, licences, pages dans les deux langues, case d'âge, export, statistiques sans
+  accord) ; `test-securite-client` vérifie qu'aucune page ne charge de police extérieure.
+- **À faire par l'éditeur** : régler une adresse de contact réservée au jeu (`legal.contact` dans `js/config.js`) ; vérifier le nom « Virelo » auprès de
+  l'INPI et de l'EUIPO avant la 1.0. Les durées de conservation annoncées (12 mois) seront appliquées par la base en phase 2.
+
 ## Bêta 0.12.3 — la voiture se pilote un peu en l'air
 
 **`PHYS_VER` reste 38** (la 0.12.2 n'est pas encore publiée ; le redéploiement de `submit-score` qu'elle demande couvre aussi ce changement).
@@ -154,13 +179,13 @@ embarque `pieces.js` ; sans cela, un circuit qui utilise une des nouvelles pièc
 
 **`PHYS_VER` reste 37** (la 0.11.1 n'a pas été publiée : une seule remise à zéro des records). **Redéployer `submit-score`** avec la 0.11.1.
 
-- **En l'air, gaz = le nez descend d'un rien, frein = il remonte d'un rien** (`airTilt`, 0,5 °/s²), en plus de l'aérofrein qui amortit la rotation. Mesuré sur PolyTrack
+- **En l'air, gaz = le nez descend d'un rien, frein = il remonte d'un rien** (`airTilt`, 0,5 °/s²), en plus de l'aérofrein qui amortit la rotation. Mesuré sur un jeu de référence
   (15 vols, en appuyant une fois en l'air) : l'aérofrein se confirme (amortissement 1,0 /s, amortissement naturel 0,1 /s) ; l'effet des gaz est sous la précision de la
   mesure (moins d'un degré après 1,2 s d'appui). Les joueurs le sentent : on le prend à cette borne. Le volant, lui, n'agit toujours pas.
 - Pilote automatique : il accélère en l'air quand il arriverait trop cabré sur la réception. Circuits, temps et médailles inchangés (72/72 sans choc, contrats tenus).
 - Textes (leçon, exercice, aide des commandes, wiki) : l'accélérateur penche le nez d'un rien en l'air.
 
-## Bêta 0.11.1 — loopings et murs à piloter, petit contrôle en l'air : plus aucune aide, comme PolyTrack
+## Bêta 0.11.1 — loopings et murs à piloter, petit contrôle en l'air : plus aucune aide
 
 **`PHYS_VER` 36 → 37** : records, replays et fantômes repartent de zéro. **Redéployer `submit-score`** (`npm run build:function`, déjà régénérée).
 
@@ -170,9 +195,9 @@ embarque `pieces.js` ; sans cela, un circuit qui utilise une des nouvelles pièc
   pleinement vers le bas du mur et le nez de la voiture pique d'autant plus qu'elle est lente (`SIDE_DROP`, 0,5 · g / v rad/s). Il faut tenir le volant un peu vers le
   haut pour garder sa ligne, plus pour monter ; mains lâchées on tombe, même d'un mur de deux cases. Les pneus gardent toute leur adhérence : un virage posé sur un mur se
   pilote comme au sol. (Une adhérence réduite sur les murs a été essayée : elle rendait impraticables les grands virages sur un mur, la base des wall-rides de la phase 3.)
-- **En l'air, comme PolyTrack (mesuré en boîte noire, 0.6.3)** : en quittant un bord, la voiture **bascule nez en bas**, d'autant plus qu'elle est lente (65 °/s à
+- **En l'air (lois mesurées)** : en quittant un bord, la voiture **bascule nez en bas**, d'autant plus qu'elle est lente (65 °/s à
   39 km/h, 38 à 78, 26 à 140, 16 à 225 : `airTip`), et **rien ne la redresse** (le ressort d'assiette qui la reposait d'elle-même est supprimé). Ni les gaz ni le volant
-  n'agissent (vérifié : 0,00 °/s de lacet volant tenu). **Seul le frein (aérofrein) freine la rotation** : c'est le petit contrôle en l'air de PolyTrack. Bien dosé, il
+  n'agissent (vérifié : 0,00 °/s de lacet volant tenu). **Seul le frein (aérofrein) freine la rotation** : c'est le petit contrôle en l'air. Bien dosé, il
   amène la voiture à la pente de la réception (réception parfaite) ; oublié, la voiture se pose piquée et perd de la vitesse (à 100 km/h sur un tremplin d'essai : −29 %
   sans aérofrein, −11 % avec).
 - **Pilote automatique** (fantôme d'or, démo, validation) : il braque sur les rubans avec une anticipation de la courbure de la pièce et du nez qui pique sur un mur, vise
@@ -456,7 +481,7 @@ embarque `pieces.js` ; sans cela, un circuit qui utilise une des nouvelles pièc
 
 **`PHYS_VER` inchangé (36)** : la physique ne change pas. **Redéployer `submit-score`** : le serveur vérifie les records des circuits intégrés avec sa propre copie de `js/tracks.js`, et les six circuits du chapitre 1 ont changé (leurs clés de classement aussi). L'empreinte de physique est régénérée parce que plusieurs de ses scénarios roulent sur ces circuits.
 
-- **Les six circuits du chapitre 1 (Désert) refaits**, deux fois plus longs et plus proches de l'esprit de PolyTrack : relief, longues descentes qui lancent la voiture, sauts, murs, grandes courbes, peu de boosters. Noms, thèmes, profils et ouvertures gardés. Temps du pilote de référence : Premiers Éclats 48 s (avant 23), Canyon Corail 51 s (32), Tremplins du Crépuscule 59 s (39), Spirale Prismatique 64 s (41), Lac Gelé 68 s (42), Le Grand Tour 79 s (37). Médailles, objectifs et textes « ce qu'il enseigne » (français et anglais) refaits ; les 72 circuits respectent leur contrat, et le pilote humain imparfait n'y touche aucune bordure.
+- **Les six circuits du chapitre 1 (Désert) refaits**, deux fois plus longs et plus proches de l'esprit du genre : relief, longues descentes qui lancent la voiture, sauts, murs, grandes courbes, peu de boosters. Noms, thèmes, profils et ouvertures gardés. Temps du pilote de référence : Premiers Éclats 48 s (avant 23), Canyon Corail 51 s (32), Tremplins du Crépuscule 59 s (39), Spirale Prismatique 64 s (41), Lac Gelé 68 s (42), Le Grand Tour 79 s (37). Médailles, objectifs et textes « ce qu'il enseigne » (français et anglais) refaits ; les 72 circuits respectent leur contrat, et le pilote humain imparfait n'y touche aucune bordure.
 - **Bifurcation à deux chemins libres, puis fusion** (une par circuit du chapitre 1) : dans le langage des circuits, `SPL` (voie déportée à droite ; `SPLL` : à gauche) … voie directe … `ALT` (ou `ALTP` : le pilote automatique prend la déportée) … voie déportée … `MRG`. Chaque voie suit son propre chemin (un saut, un mur, un détour, de la glace) et elles se rejoignent sur une fusion ; le constructeur refuse, avec un message clair, deux voies qui ne se rejoignent pas. Avant, `Y3` ne faisait que deux voies parallèles collées.
 - **Nouvelle pièce : virage géant** (5×5, rayon 144 m ; `XR` / `XL` dans les scripts ; famille « Virage », rayon « Géant » dans l'éditeur). Avec le braquage borné selon la vitesse, c'est le seul virage qui se prenne vers 220-280 km/h (le très grand virage 3×3 plafonne vers 190). Ajoutée à la FIN de l'ordre d'encodage : aucun code de circuit existant ne change.
 - **Pilote automatique** : à la reprise (départ, réapparition, essai « repartir du checkpoint »), il cherche son point sur tout le tracé, dans son sens de marche (avant : les 400 premiers points seulement ; sur un circuit long il se raccrochait au premier passage voisin et faisait demi-tour). Temps de référence des 66 autres circuits identiques.
@@ -473,12 +498,12 @@ embarque `pieces.js` ; sans cela, un circuit qui utilise une des nouvelles pièc
 - **Test** : `tools/test-browser-boot.mjs` (dans `npm run test:browser`) imite GitHub Pages et sert l'ancien `js/pieces.js` : sans la garde, le jeu reste bloqué (vérifié) ; avec, il démarre après un seul rechargement ; un serveur durablement incohérent donne le message, pas une boucle.
 - **Pour un navigateur déjà bloqué** (avant cette version) : recharger en vidant le cache (Ctrl + Maj + R), ou attendre 10 minutes.
 
-## Bêta 0.9.65 — physique au caractère PolyTrack (`PHYS_VER` 36)
+## Bêta 0.9.65 — nouvelles lois de conduite (`PHYS_VER` 36)
 
 **`PHYS_VER` 36** : records, replays, fantômes importés, classements en ligne et salons de la 35 ne sont **plus rejouables** (ils restent affichés comme temps). **Redéployer `submit-score`** (paquet régénéré), puis `node tools/check-deployed.mjs`. Aucune migration SQL.
-Les lois de conduite de PolyTrack 0.6.3, mesurées en boîte noire ([docs/ANALYSE-POLYTRACK.md](docs/ANALYSE-POLYTRACK.md)), remplacent celles de Copytrack ; l'enveloppe de vitesse (290 km/h, turbo 340), les revêtements, les véhicules et le mini-turbo restent ceux de Copytrack.
+De nouvelles lois de conduite, mesurées ([docs/LOIS-PHYSIQUE.md](docs/LOIS-PHYSIQUE.md)), remplacent celles de Copytrack ; l'enveloppe de vitesse (290 km/h, turbo 340), les revêtements, les véhicules et le mini-turbo restent ceux de Copytrack.
 
-- **Moteur et freins** : a = 16 − (16 / v_max)·v gaz à fond, a = −(16 / v_max)·v à vide (frein moteur linéaire ≈ 0,2 /s, PolyTrack) : 100 km/h en 2,1 s, 200 en 5,9 s, 250 en 9,9 s. Frein 52 + 0,5·v m/s² (≈ 3,5 × la poussée), marche arrière 8 m/s² jusqu'à 54 km/h. Ralentisseur : résistance = poussée × paramètre.
+- **Moteur et freins** : a = 16 − (16 / v_max)·v gaz à fond, a = −(16 / v_max)·v à vide (frein moteur linéaire ≈ 0,2 /s) : 100 km/h en 2,1 s, 200 en 5,9 s, 250 en 9,9 s. Frein 52 + 0,5·v m/s² (≈ 3,5 × la poussée), marche arrière 8 m/s² jusqu'à 54 km/h. Ralentisseur : résistance = poussée × paramètre.
 - **Direction** : l'angle de braquage PERMIS diminue avec la vitesse, min(23,5° ; 22,93 · v^−1,566) (23,5° jusqu'à 47 km/h, 7° à 100, 2,7° à 200) ; plein braquage en 0,1 s ; c'est lui, plus l'adhérence, qui borne le virage (rayon ≈ empattement / angle : 13 m à 72 km/h, 40 m à 144, 80 m à 216). Moto 29,1 / 27°, bateau 21,2 / 20°. **L'adhérence d'ambiance** (pluie, flaques, givre, adhérence du circuit, modèles v2 de la moto et du bateau) rétrécit cette enveloppe : sous une pluie à 100 %, −15 % d'angle. Profil Arcade : +10 % d'angle ; Simulation : −10 %.
 - **Glisse** : frein + volant, **contre-braquage automatique** (les roues avant suivent la trajectoire de l'essieu avant) ; la glisse se referme d'elle-même en ≈ 1 s et ne coûte presque plus de vitesse sur l'asphalte. Mini-turbo livré quand la glisse se referme ; niveaux à 0,45 et 0,85 s de charge (volant rendu tôt : simple ; volant tenu à fond jusqu'au bout : renforcé). Revêtement Dérive : l'arrière garde 0,85 − 0,5·f de son adhérence (sinon le braquage borné ne le faisait plus décrocher).
 - **En l'air** : ni volant ni gaz (rotation du décollage conservée) ; le frein est un **aérofrein** qui amortit la rotation (≈ 1 /s) et fige l'assiette. Le deltaplane garde ses commandes.
@@ -738,7 +763,7 @@ qui n'a PAS pu être testé, est dans [docs/AUDIT-0.9.59.md](docs/AUDIT-0.9.59.m
 - **Robustesse vérifiée par essais aléatoires** (aucun défaut trouvé, tests conservés) : `tools/test-submit-fuzz.mjs` (300 requêtes déformées au serveur de scores : toujours une réponse, jamais de 5xx, jamais d'écriture sans 200), `tools/test-sauvegardes-fuzz.mjs` (fusions de sauvegardes : jamais d'exception, aucune médaille / record / leçon perdu, stable), `tools/test-codes-fuzz.mjs` (2000 codes de circuit abîmés : refus propre ou circuit jouable).
 - **Test navigateur** : les courses de vitesse du panneau de compétition (redessiné après chaque réponse du serveur) sont réessayées au lieu d'échouer au hasard.
 
-## Bêta 0.9.46 — moteur propre à Copytrack, avec une vraie vitesse de pointe
+## Bêta 0.9.46 — moteur propre au jeu, avec une vraie vitesse de pointe
 
 `PHYS_VER` 28 (physique changée). **Redéployer `submit-score`** (déjà régénérée ici). Les records, replays, fantômes et classements de la 0.9.45 (physique 27) ne sont plus valables, comme ceux d'avant (physique 26 ou moins).
 
@@ -766,7 +791,7 @@ qui n'a PAS pu être testé, est dans [docs/AUDIT-0.9.59.md](docs/AUDIT-0.9.59.m
   - **éditeur** : sur un écran bas, la colonne de droite défile au lieu d'être coupée.
   - Test navigateur : sur trois tailles de téléphone, les 12 tuiles de l'accueil sont entières, aucune n'est recouverte.
 - **Nettoyage** :
-  - le dossier importé `polytrack-recon-…` (34 Mo de données d'un autre jeu) et la note de calibration qui s'y référait sont retirés, et le dossier est ajouté au `.gitignore` ;
+  - le dossier importé de mesures (34 Mo de données d'un autre jeu) et la note de calibration qui s'y référait sont retirés, et le dossier est ajouté au `.gitignore` ;
   - les deux erreurs de lint de la 0.9.45 sont corrigées ;
   - nouvel outil `tools/recaler.mjs` pour recaler les médailles après un changement de moteur.
 

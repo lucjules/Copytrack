@@ -101,8 +101,8 @@ export default {
   'Profil': 'Profile',
   'compte, sauvegardes, options, commandes': 'account, saves, options, controls',
   'Profil <small>compte, sauvegardes, options, commandes</small>': 'Profile <small>account, saves, options, controls</small>',
-  'Copytrack · un jeu de course original · propulsé par three.js': 'Copytrack · an original racing game · powered by three.js',
-  'Copytrack {v:t} · un jeu de course original · propulsé par three.js': 'Copytrack {v:t} · an original racing game · powered by three.js',
+  '{n:w} · un jeu de course original · propulsé par three.js': '{n} · an original racing game · powered by three.js',
+  '{n:w} {v:t} · un jeu de course original · propulsé par three.js': '{n} {v} · an original racing game · powered by three.js',
   'bêta {v:w}': 'beta {v}',
   'Circuits': 'Tracks',
   '← Retour': '← Back',
@@ -221,7 +221,7 @@ export default {
   'Le compte <b>{name}</b>, sa sauvegarde, tes circuits publiés et tes temps en ligne seront effacés. Irréversible.': 'The account <b>{name}</b>, its save, your published tracks and your online times will be erased. This cannot be undone.',
   'Supprimer définitivement': 'Delete permanently',
   'Ton code joueur': 'Your player code',
-  'Colle ici un code joueur Copytrack.': 'Paste a Copytrack player code here.',
+  'Colle ici un code joueur.': 'Paste a player code here.',
   'Importer une sauvegarde': 'Import a save',
   'Restaurer cette sauvegarde ?': 'Restore this save?',
   'Joueur <b>{name}</b>, du {d}.': 'Player <b>{name}</b>, from {d}.',
@@ -295,7 +295,7 @@ export default {
   'Couleurs appliquées à la prochaine course': 'Colours will apply to the next race',
   'Merci : statistiques anonymes activées.': 'Thanks: anonymous statistics enabled.',
   'Aider à équilibrer les circuits ?': 'Help balance the tracks?',
-  'Copytrack peut envoyer, <b>sans nom ni compte</b>, le temps de tes arrivées, tes abandons et ton nombre d\'essais sur chaque circuit (avec un identifiant aléatoire propre à cet appareil). Cela sert à régler la difficulté et les médailles sur de vrais joueurs.': 'Copytrack can send, <b>with no name or account</b>, your finish times, retirements and number of attempts on each track (with a random ID specific to this device). This is used to tune difficulty and medals on real players.',
+  'Le jeu peut envoyer, <b>sans nom ni compte</b>, le temps de tes arrivées, tes abandons et ton nombre d\'essais sur chaque circuit (avec un identifiant aléatoire propre à cet appareil). Cela sert à régler la difficulté et les médailles sur de vrais joueurs.': 'The game can send, <b>with no name or account</b>, your finish times, retirements and number of attempts on each track (with a random ID specific to this device). This is used to tune difficulty and medals on real players.',
   'Rien d\'autre ne part : ni pseudo, ni position, ni commandes. Tu peux changer d\'avis à tout moment dans Paramètres › Jeu.': 'Nothing else is sent: no username, no position, no inputs. You can change your mind at any time in Settings › Game.',
   'Effacer les records ?': 'Erase records?',
   'Tous les temps et fantômes enregistrés dans ce navigateur seront supprimés.': 'All times and ghosts saved in this browser will be deleted.',
@@ -322,7 +322,7 @@ export default {
   '« {a} » retirée de : {b}': '“{a}” removed from: {b}',
 
   // ---------------------------------------------------------------- tutoriel
-  'Bienvenue dans Copytrack !': 'Welcome to Copytrack!',
+  'Bienvenue dans {n} !': 'Welcome to {n}!',
   'Boutons ▲ / ▼ à droite': 'Buttons ▲ / ▼ on the right',
   'Boutons ◀ ▶ à gauche': 'Buttons ◀ ▶ on the left',
   'Passe les <b>checkpoints</b> puis l\'<b>arrivée</b>, le plus vite possible.': 'Go through the <b>checkpoints</b> then the <b>finish</b>, as fast as you can.',
@@ -406,7 +406,7 @@ export default {
   '↑↑↓↓←→←→BA : LED arc-en-ciel débloquée et +100 ◆ !': '↑↑↓↓←→←→BA: rainbow LED unlocked and +100 ◆!',
   'Tu connais déjà ce code 😉': 'You already know this code 😉',
   'Tu as cliqué sur le logo 7 fois : +25 ◆ !': 'You clicked the logo 7 times: +25 ◆!',
-  'Copytrack vous salue ✦': 'Copytrack salutes you ✦',
+  '{n:w} vous salue ✦': '{n} salutes you ✦',
 
   // ---------------------------------------------------------------- pluriels (v = valeurs captées, en texte)
   '{n:w} tours': (v) => `${v.n} ${plural(v.n, 'lap', 'laps')}`,

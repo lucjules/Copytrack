@@ -260,7 +260,7 @@ export const ribbonMethods = {
     }
     // Gravité projetée dans le plan de la route (vrille, mur, envers, paroi du tube...).
     const g = this.g * this.gSign;
-    // Route sur le côté (pièces 90°) : la gravité tire PLEINEMENT le long du plan (PHYS_VER 37, comme PolyTrack) et le nez pique vers le bas du mur (SIDE_DROP) :
+    // Route sur le côté (pièces 90°) : la gravité tire PLEINEMENT le long du plan (PHYS_VER 37) et le nez pique vers le bas du mur (SIDE_DROP) :
     // il faut le tenir au volant. Avant : l'appui aérodynamique annulait la glissade au-dessus de 80 km/h (SIDE_HOLD) et la route guidait le cap.
     const sidePiece = isSideTile(tile);
     R.vs -= g * B.e1y * dt;
@@ -273,7 +273,7 @@ export const ribbonMethods = {
       R.lowT = (R.lowT || 0) + dt;
       if (R.lowT > SIDE_GRACE) { this.ev.wallOff = true; this._ribPlace(R); this._ribDetach(); return; }
     } else if (R.lowT) R.lowT = Math.max(0, R.lowT - 2 * dt);
-    // La route tourne sous la voiture : son cap relatif change d'autant, sur TOUS les rubans (PHYS_VER 37, comme PolyTrack : aucune aide). Il faut braquer pour suivre
+    // La route tourne sous la voiture : son cap relatif change d'autant, sur TOUS les rubans (PHYS_VER 37 : aucune aide). Il faut braquer pour suivre
     // le décalage d'un looping, d'un tire-bouchon, d'une transition vers un mur. Avant (PHYS_VER 36) : sur les routes roulées et les loopings (headingGuided),
     // la route guidait le cap le long de sa courbure : on passait tout droit, mains lâchées.
     R.psi -= R.dir * kg * R.vs * dt;

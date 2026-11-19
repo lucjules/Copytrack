@@ -6,7 +6,7 @@
 //   4. sauts et réceptions : gaz tenus en l'air ≠ −43 %, perte proportionnelle à l'assiette réelle.
 // Les valeurs « avant » citées sont celles de la phase 1 (8241368) ; docs/AUDIT-PHASE2-PHYSIQUE.md donne les tableaux complets. Les seuils laissent de la marge : ils protègent le
 // COMPORTEMENT, pas des décimales (les décimales sont gardées par tools/phys-fingerprint.json et tools/golden-temps.json).
-// PHYS_VER 36 (caractère PolyTrack, docs/ANALYSE-POLYTRACK.md) : mur INÉLASTIQUE à frottement 0,7 (ni rebond, ni pivot ajouté, ni « encaissement »), aucun contrôle
+// PHYS_VER 36 (lois de conduite, docs/LOIS-PHYSIQUE.md) : mur INÉLASTIQUE à frottement 0,7 (ni rebond, ni pivot ajouté, ni « encaissement »), aucun contrôle
 // en l'air hors aérofrein (le frein fige l'assiette), glisse au frein avec contre-braquage automatique. Les garanties de jouabilité restent : jamais clouée, perte
 // croissante avec la violence du choc, mini-turbo mérité, réception jamais ratée pour une pédale tenue.
 import assert from 'node:assert/strict';
@@ -49,7 +49,7 @@ test('la perte croît avec la violence du choc (2° < 5° < 10° < 20° < 45°) 
     assert.ok(row[2] > 0.5 * v, `${v} km/h : un choc modéré (10°) ne la fauche pas (${row[2]} km/h)`);
   }
 });
-// (PHYS_VER 36 : un choc franc à 45° garde cos 45° − 0,7 · sin 45° ≈ 21 % de l'élan, PolyTrack ; volant au neutre, la voiture repart en raclant)
+// (PHYS_VER 36 : un choc franc à 45° garde cos 45° − 0,7 · sin 45° ≈ 21 % de l'élan, comme la mesure ; volant au neutre, la voiture repart en raclant)
 test('la voiture n\'est jamais clouée : cinq secondes après chaque contact, volant au neutre, elle roule à 50 km/h au moins, et à plus de la moitié de son approche après un choc modéré (≤ 20°)', () => {
   for (const v of SPEEDS) for (const a of ANGLES) {
     const w = walls[v + '/' + a];
@@ -58,7 +58,7 @@ test('la voiture n\'est jamais clouée : cinq secondes après chaque contact, vo
     if (a <= 20) assert.ok(w.v5 >= 0.5 * v, `${v} km/h ${a}° : ${w.v5} km/h à +5 s`);
   }
 });
-// (PHYS_VER 36 : plus de pivot AJOUTÉ par le choc (wallSpinMax 0, PolyTrack) : la rotation ne vient que des pneus et du frottement contre la paroi)
+// (PHYS_VER 36 : plus de pivot AJOUTÉ par le choc (wallSpinMax 0) : la rotation ne vient que des pneus et du frottement contre la paroi)
 test('le choc ne fait pas toupiller la voiture : rotation bornée (jamais plus de 5 rad/s), plus forte qu\'un frôlement dès 10°', () => {
   for (const v of SPEEDS) {
     const spins = ANGLES.map((a) => walls[v + '/' + a].spin);
@@ -231,7 +231,7 @@ test('identité des véhicules, revêtements et profils : le dérapage marche pa
     assert.ok(KEEP(m) >= 0.7, `${n} : ${Math.round(100 * KEEP(m))} % conservés`);
     assert.ok(m.turboGain <= 40, `${n} : turbo +${m.turboGain}`);
   }
-  // (PHYS_VER 36 : sur l'asphalte la glisse ne coûte presque plus de vitesse (contre-braquage automatique, PolyTrack) : la glace n'y gagne plus, mais n'y perd pas ; son identité est
+  // (PHYS_VER 36 : sur l'asphalte la glisse ne coûte presque plus de vitesse (contre-braquage automatique) : la glace n'y gagne plus, mais n'y perd pas ; son identité est
   // de tourner bien moins)
   assert.ok(rows.glace.keep >= rows.voiture.keep - 0.05, `la glace ne coûte pas plus de vitesse en glisse (${rows.glace.keep} contre ${rows.voiture.keep})`);
   assert.ok(rows.glace.yaw17 < 0.5 * rows.voiture.yaw17, `sur la glace la voiture tourne bien moins (${rows.glace.yaw17}° contre ${rows.voiture.yaw17}°)`);
@@ -246,7 +246,7 @@ test('identité des véhicules, revêtements et profils : le dérapage marche pa
 
 console.log('\n4. Sauts et réceptions');
 const AIRS = ['none', 'gas', 'brake', 'tapGas', 'tapBrake'];
-// PHYS_VER 37 (PolyTrack) : rien ne redresse la voiture en l'air ; en quittant le bord elle bascule nez en bas, d'autant plus qu'elle est lente. Seul l'aérofrein freine sa rotation.
+// PHYS_VER 37 (mesuré) : rien ne redresse la voiture en l'air ; en quittant le bord elle bascule nez en bas, d'autant plus qu'elle est lente. Seul l'aérofrein freine sa rotation.
 test('frein tenu ou donné en l\'air (aérofrein) : jamais « ratée », perte ≤ 20 %, réception parfaite à 200 km/h ; sans lui, à 100 km/h, la voiture se pose trop piquée', () => {
   for (const v of [100, 200]) for (const a of AIRS) {
     const m = jumpRun(v, a);
@@ -257,13 +257,13 @@ test('frein tenu ou donné en l\'air (aérofrein) : jamais « ratée », perte �
     assert.notEqual(m.q, 'bad', `${v} km/h ${a} : réception ${m.q}`);
     assert.ok(m.loss <= 20, `${v} km/h ${a} : −${m.loss} %`);
   }
-  // (0.12.3 : le frein seul lève aussi le nez ; les deux pédales ensemble font l'aérofrein seul, celui des mesures PolyTrack)
+  // (0.12.3 : le frein seul lève aussi le nez ; les deux pédales ensemble font l'aérofrein seul, celui des mesures de référence)
   assert.equal(jumpRun(200, 'damp').q, 'perfect', 'aérofrein (frein + gaz) à 200 km/h : réception parfaite');
   assert.notEqual(jumpRun(200, 'brake').q, 'bad', 'frein seul à 200 km/h : jamais ratée');
   assert.equal(jumpRun(100, 'none').q, 'bad', 'sans aérofrein, à 100 km/h, la bascule du décollage n\'est pas rattrapée');
 });
 // 0.12.3 (PHYS_VER 38) : les pédales penchent la voiture en l'air, d'un angle BORNÉ (CAR.airLean) : gaz = nez plus bas, frein = nez plus haut (en plus de l'aérofrein,
-// qui amortit toujours la rotation). Avant (PHYS_VER 36-37, loi PolyTrack) : les gaz n'agissaient presque pas (0,5 °/s²), et le frein n'était qu'un aérofrein.
+// qui amortit toujours la rotation). Avant (PHYS_VER 36-37, loi mesurée) : les gaz n'agissaient presque pas (0,5 °/s²), et le frein n'était qu'un aérofrein.
 test('en l\'air, les pédales penchent la voiture d\'un angle borné : gaz = nez plus bas, frein = nez plus haut ; jamais plus que CAR.airLean ; l\'aérofrein (les deux pédales) amortit sans coûter plus qu\'à vide', () => {
   for (const v of [100, 200]) {
     const none = jumpRun(v, 'none'), gas = jumpRun(v, 'gas'), brake = jumpRun(v, 'brake'), damp = jumpRun(v, 'damp');

@@ -14,7 +14,7 @@ import { OBST } from '../../js/obstacles.js';
 import { DECO_ORDER, DECO_CATS, DECO_LABELS } from '../../js/decoData.js';
 import { estimateDifficulty } from '../../js/difficulty.js';
 import { RaceLogic } from '../../js/raceLogic.js';
-import { VERSION, PHYS_VER } from '../../js/version.js';
+import { VERSION, PHYS_VER, GAME_NAME } from '../../js/version.js';
 import { newElements } from '../nouveautes.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -79,7 +79,7 @@ export function buildWikiPage() {
   const vNum = VERSION.replace(/^bêta /, '');
   const body = read('tools/wiki/modele.html')
     .replace('__DATA__', () => json(data)).replace('__MAPS__', () => json(maps)).replace('__ICONS__', () => json(icons)).replace('__VERS__', () => json(versions))
-    .replace(/__VERSION__/g, vNum).replace(/__PHYS__/g, String(PHYS_VER)).replace(/__NVERS__/g, String(versions.length));
+    .replace(/__NAME__/g, GAME_NAME).replace(/__VERSION__/g, vNum).replace(/__PHYS__/g, String(PHYS_VER)).replace(/__NVERS__/g, String(versions.length));
   const missing = [...new Set([...body.matchAll(/img\/([a-z0-9-]+)\.jpg/g), ...body.matchAll(/'(course-[a-z-]+)'/g)].map((m) => m[1]))].filter((n) => !existsSync(join(root, 'wiki/img', n + '.jpg')));
   if (missing.length) throw new Error('images absentes de wiki/img : ' + missing.join(', ') + ' (node tools/wiki/shots.mjs)');
   // Le modèle est écrit pour être aussi publié tel quel (sans <html> ni <head>) : on l'entoure ici d'un document complet, avec le retour au jeu.

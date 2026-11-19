@@ -6,21 +6,16 @@
        politique n'autorise que les scripts du site (ni script en ligne, ni eval), et que deux serveurs extérieurs : Supabase (classements, comptes) et Google Fonts (police). Les images de
        plaque (https) et les vignettes (data:, blob:) restent permises. Si tu héberges ta propre version : voir js/config.js (ajoute ton projet Supabase à connect-src).
        Un test (tools/test-securite-client.mjs) vérifie que cette ligne reste cohérente avec js/config.js et qu'index.html ne contient ni script ni gestionnaire en ligne. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: data:; connect-src 'self' https://vakhnbmqnwvkekwuntbz.supabase.co; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https:; media-src 'self' blob: data:; connect-src 'self' https://vakhnbmqnwvkekwuntbz.supabase.co; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#241a4a">
-  <meta name="description" content="Copytrack : jeu de course contre-la-montre low-poly avec éditeur de circuits, directement dans le navigateur.">
-  <title>Copytrack</title>
+  <meta name="description" content="Virelo : jeu de course contre-la-montre low-poly avec éditeur de circuits, directement dans le navigateur.">
+  <title>Virelo</title>
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Police : chargée sans bloquer le premier affichage (texte de secours d'abord, police ensuite : display=swap) -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap" media="print" id="font-css">
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap"></noscript>
   <link rel="stylesheet" href="css/style.css">
   <!-- modulepreload:start (généré par tools/gen-sw.mjs : ne pas modifier à la main) -->
   <link rel="modulepreload" href="js/main.js">
@@ -64,6 +59,7 @@
   <link rel="modulepreload" href="js/app/modes.js">
   <link rel="modulepreload" href="js/app/raceHub.js">
   <link rel="modulepreload" href="js/app/theater.js">
+  <link rel="modulepreload" href="js/app/legal.js">
   <link rel="modulepreload" href="js/geo.js">
   <link rel="modulepreload" href="js/constants.js">
   <link rel="modulepreload" href="js/pieces.js">
@@ -155,6 +151,8 @@
   <link rel="modulepreload" href="js/analysis/trace.js">
   <link rel="modulepreload" href="js/analysis/reference.js">
   <link rel="modulepreload" href="js/analysis/coach.js">
+  <link rel="modulepreload" href="js/legal.js">
+  <link rel="modulepreload" href="js/dataExport.js">
   <link rel="modulepreload" href="js/decoPack.js">
   <link rel="modulepreload" href="js/decoPrimitives.js">
   <link rel="modulepreload" href="js/customDecoBuild.js">
@@ -194,7 +192,7 @@
   <canvas id="gl"></canvas>
 
   <div id="loading" class="screen center">
-    <div class="logo">COPY<span>TRACK</span></div>
+    <div class="logo">VIRE<span>LO</span></div>
     <div class="tagline">Chargement…</div>
   </div>
 
@@ -205,7 +203,7 @@
         <button type="button" data-lang="fr" aria-pressed="true" lang="fr">Français</button>
         <button type="button" data-lang="en" aria-pressed="false" lang="en">English</button>
       </div>
-      <div class="logo">COPY<span>TRACK</span></div>
+      <div class="logo">VIRE<span>LO</span></div>
       <h2 id="wl-title">Qui joue ?</h2>
       <div class="wl-tabs" role="tablist" aria-label="Mode de connexion">
         <button type="button" role="tab" data-wl="guest" aria-selected="true">Invité</button>
@@ -224,16 +222,18 @@
           <input id="wl-pw2" name="password2" type="password" maxlength="72" autocomplete="new-password">
         </label>
         <label class="wl-check" id="wl-keep-wrap"><input type="checkbox" id="wl-keep" checked><span>Reprendre la progression de cet appareil</span></label>
+        <label class="wl-check" id="wl-age-wrap"><input type="checkbox" id="wl-age"><span>J’ai 15 ans ou plus (ou l’accord d’un parent) et j’accepte les <a href="legal.html?p=regles" target="_blank" rel="noopener">règles de la communauté</a>.</span></label>
         <p class="wl-error" id="wl-error" role="alert" aria-live="polite"></p>
         <button class="btn big primary" id="wl-submit" type="submit">Jouer</button>
       </form>
+      <p class="wl-legal"><a href="legal.html?p=confidentialite" target="_blank" rel="noopener">Confidentialité</a> · <a href="legal.html?p=mentions" target="_blank" rel="noopener">Mentions légales</a> · <a href="legal.html?p=credits" target="_blank" rel="noopener">Crédits</a></p>
     </div>
   </section>
 
   <!-- Menu principal -->
   <section id="menu" class="screen hidden">
     <div class="menu-left">
-      <h1 class="logo">COPY<span>TRACK</span></h1>
+      <h1 class="logo">VIRE<span>LO</span></h1>
       <p class="tagline">Course contre-la-montre low-poly</p>
       <!-- Six grandes catégories ; chacune ouvre un panneau d'actions (js/app/wiring.js, _menuSub) avec « ← Retour » et Échap. Les profils, la progression et les paramètres
            mènent aux onglets de l'écran « profile » (data-action="tab-…" : js/app/profile.js, HUBS). -->
@@ -299,10 +299,11 @@
           <button data-action="tab-controls" class="btn menu-entry"><b>Commandes</b><small>clavier, manette, tactile</small></button>
           <button data-action="tab-game" class="btn menu-entry"><b>Jeu</b><small>fantômes, classements, tutoriel</small></button>
           <button data-action="tab-ui" class="btn menu-entry"><b>Interface</b><small>thème, HUD, caméras</small></button>
+          <button data-action="legal-confidentialite" class="btn menu-entry"><b>Confidentialité et licences</b><small>données, mentions légales, crédits</small></button>
         </div>
       </div>
     </div>
-    <footer class="menu-foot"><span id="menu-foot">Copytrack · un jeu de course original · propulsé par three.js</span> <a class="menu-wiki" href="wiki/" target="_blank" rel="noopener" title="Tout le jeu expliqué : pilotage, circuits, pièces, éditeur (nouvel onglet)">📖 Wiki du jeu</a></footer>
+    <footer class="menu-foot"><span id="menu-foot">Virelo · un jeu de course original · propulsé par three.js</span> <a class="menu-wiki" href="wiki/" target="_blank" rel="noopener" title="Tout le jeu expliqué : pilotage, circuits, pièces, éditeur (nouvel onglet)">📖 Wiki du jeu</a> <span class="menu-legal"><button type="button" data-action="legal-credits">Crédits</button> · <button type="button" data-action="legal-confidentialite">Confidentialité</button> · <button type="button" data-action="legal-mentions">Mentions légales</button></span></footer>
   </section>
 
   <!-- Sélection de circuit -->

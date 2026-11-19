@@ -1,5 +1,6 @@
 // Export d'un replay en vidéo : le canvas 3D est enregistré (MediaRecorder) pendant que le replay se joue, puis proposé en téléchargement (WebM).
 // Sans son (le replay n'a pas de piste audio) et sans interface : seulement la scène. Module sans dépendance au jeu : il prend un canvas.
+import { FILE_PREFIX } from './version.js';
 
 // Premier format d'enregistrement que le navigateur sait écrire (WebM VP9 si possible, sinon VP8 ou H.264) ; null si MediaRecorder n'est pas disponible.
 export function pickMime(MR = globalThis.MediaRecorder) {
@@ -47,7 +48,7 @@ export class CanvasRecorder {
 }
 
 // Nom de fichier sûr : lettres, chiffres, tirets.
-export const videoFileName = (name, time, mime = 'video/webm') => `copytrack-${String(name || 'replay').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'replay'}-${Number.isFinite(time) ? time.toFixed(2).replace('.', '_') + 's' : 'clip'}.${/mp4/.test(mime) ? 'mp4' : 'webm'}`;
+export const videoFileName = (name, time, mime = 'video/webm') => `${FILE_PREFIX}-${String(name || 'replay').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'replay'}-${Number.isFinite(time) ? time.toFixed(2).replace('.', '_') + 's' : 'clip'}.${/mp4/.test(mime) ? 'mp4' : 'webm'}`;
 
 // Propose le fichier au téléchargement.
 export function downloadBlob(blob, filename) {

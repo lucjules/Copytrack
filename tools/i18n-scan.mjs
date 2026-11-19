@@ -153,6 +153,7 @@ export async function scan() {
   for (const file of walk(join(ROOT, 'js')).concat(join(ROOT, 'index.html'))) {
     const rel = relative(ROOT, file);
     if (/js\/i18n(\/|\.js)/.test(rel)) continue;
+    if (rel === 'js/legal.js') continue;      // (pages légales : écrites dans les deux langues, elles ne passent pas par le dictionnaire)
     const src = readFileSync(file, 'utf8');
     const cover = (h) => covered(norm(h));
     let items;

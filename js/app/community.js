@@ -146,8 +146,9 @@ export const communityMethods = {
         <label class="col">Description<textarea id="pub-desc" maxlength="200" rows="3" placeholder="Ce qui rend ton circuit unique (200 caractères au plus)"></textarea></label>
         <p class="meta">Difficulté estimée : <b>${starsText(estimateDifficulty(track).stars)} ${STAR_LABELS[estimateDifficulty(track).stars]}</b> (d’après la géométrie ; affichée sur la carte).</p>
         <p class="meta">Nom et description modifiables après publication.</p>
+        <label class="wl-check"><input type="checkbox" id="pub-ok"><span>Ce circuit est le mien et respecte les <a href="legal.html?p=regles" target="_blank" rel="noopener">règles de la communauté</a> ; j’ai 15 ans ou plus (ou l’accord d’un parent).</span></label>
         <p class="mp-err" id="pub-err" role="alert"></p>`;
-      const name = f.querySelector('#pub-name'), desc = f.querySelector('#pub-desc'), err = f.querySelector('#pub-err');
+      const name = f.querySelector('#pub-name'), desc = f.querySelector('#pub-desc'), err = f.querySelector('#pub-err'), ok = f.querySelector('#pub-ok');
       name.value = track.name && track.name !== 'Mon circuit' ? track.name : '';
       desc.value = track.desc || '';
       // Différé : la fenêtre d'où l'on vient se referme juste après ce clic et ne doit pas fermer celle-ci.
@@ -158,6 +159,7 @@ export const communityMethods = {
           { label: '🌐 Publier', primary: true, onClick: () => {
             const n = name.value.trim().slice(0, 40);
             if (!n) { err.textContent = 'Donne un nom à ton circuit.'; name.focus(); return false; }
+            if (!ok.checked) { err.textContent = 'Coche la case : ton circuit, les règles de la communauté et ton âge.'; ok.focus(); return false; }      // (0.12.4)
             track.name = n;
             track.desc = desc.value.replace(/\s+/g, ' ').trim().slice(0, 200);
             this._doPublish(track).then(() => resolve(true));
@@ -453,7 +455,7 @@ export const communityMethods = {
     box.classList.remove('hidden');
     const account = this.identity && this.identity.kind === 'account';
     box.innerHTML = `<h3>Commentaires</h3>
-      ${account ? '<div class="hub-cform"><textarea id="hub-cmsg" maxlength="280" rows="2" placeholder="Ton avis sur ce circuit (280 caractères)"></textarea><button class="btn small primary" id="hub-csend">Publier</button></div>' : '<p class="meta">Un compte est nécessaire pour commenter (Profil › Compte).</p>'}
+      ${account ? '<div class="hub-cform"><textarea id="hub-cmsg" maxlength="280" rows="2" placeholder="Ton avis sur ce circuit (280 caractères)"></textarea><button class="btn small primary" id="hub-csend">Publier</button></div><p class="meta hub-crules">Reste courtois : <a href="legal.html?p=regles" target="_blank" rel="noopener">règles de la communauté</a>.</p>' : '<p class="meta">Un compte est nécessaire pour commenter (Profil › Compte).</p>'}
       <ul class="hub-clist" id="hub-clist"><li class="meta">Chargement…</li></ul>`;
     const listEl = box.querySelector('#hub-clist');
     const load = async () => {
@@ -516,7 +518,7 @@ export const communityMethods = {
     const ta = document.createElement('textarea');
     ta.placeholder = 'Colle ici un code de circuit (SHW…), un lien de partage ou un code de fantôme (SHG1:…)';
     const wrap = document.createElement('div');
-    wrap.innerHTML = '<p>Colle le code d’un circuit Copytrack, ou le code du fantôme d’un ami.</p>';
+    wrap.innerHTML = '<p>Colle le code d’un circuit, ou le code du fantôme d’un ami.</p>';
     wrap.appendChild(ta);
     const parse = () => {
       if (/^\s*SHG1:/.test(ta.value)) { this.importGhostCode(ta.value); return null; }
