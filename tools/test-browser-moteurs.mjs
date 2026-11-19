@@ -30,7 +30,11 @@ const server = createServer(async (req, res) => {
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const BASE = `http://127.0.0.1:${server.address().port}`;
 
-const LAUNCH = { chromium: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--mute-audio'] }, firefox: { firefoxUserPrefs: { 'webgl.force-enabled': true, 'media.autoplay.default': 0 } }, webkit: {} };
+// Firefox : sans écran, il ne trouve aucun pilote OpenGL sur une machine de CI (« Exhausted GL driver options ») ; MOTEURS_HEADED=1 le lance avec un écran
+// virtuel (xvfb-run) et le rendu logiciel de Mesa (llvmpipe), comme un ordinateur sans carte graphique (voir .github/workflows/test.yml).
+const HEADED = !!process.env.MOTEURS_HEADED;
+const LAUNCH = { chromium: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--mute-audio'] },
+  firefox: { headless: !HEADED, firefoxUserPrefs: { 'webgl.force-enabled': true, 'webgl.disable-fail-if-major-performance-caveat': true, 'media.autoplay.default': 0 } }, webkit: {} };
 let failures = 0, total = 0;
 
 for (const engine of ENGINES) {
@@ -89,6 +93,35 @@ for (const engine of ENGINES) {
     await page.waitForTimeout(800);
     await app(() => window.copytrack.leaveEditor());
     await wait(() => window.copytrack.mode === 'menu');
+  });
+  await step('contexte WebGL perdu puis rendu : la course passe en pause, le joueur est prévenu, l’affichage reprend', async () => {
+    await app(() => window.copytrack.playBuiltin(0));
+    await wait(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.state === 'racing');
+    await app(() => { window.__lc = window.copytrack.renderer.getContext().getExtension('WEBGL_lose_context'); window.__lc.loseContext(); });
+    await wait(() => window.copytrack._glLost === true && /interrompu/.test(document.getElementById('toast').textContent));
+    assert.notEqual(await app(() => window.copytrack.session.state), 'racing', 'la course n’avance plus pendant la perte');
+    await app(() => window.__lc.restoreContext());
+    await wait(() => window.copytrack._glLost === false);
+    const f0 = await app(() => window.copytrack.renderer.info.render.frame);
+    await page.waitForTimeout(1200);
+    assert.ok((await app(() => window.copytrack.renderer.info.render.frame)) > f0, 'les images reprennent');
+    await app(() => window.copytrack.quitRace());
+    await wait(() => window.copytrack.mode === 'menu');
+  });
+  await step('clavier : les flèches parcourent les tuiles de l’accueil, Entrée ouvre un panneau, Échap y revient', async () => {
+    await app(() => { const A = window.copytrack; A.ui.closeModal(); A.showMenu('menu'); document.activeElement && document.activeElement.blur(); });
+    await wait(() => !document.getElementById('menu').classList.contains('hidden') && !document.getElementById('menu-tiles').classList.contains('hidden'));
+    const onTile = () => app(() => { const a = document.activeElement; return !!(a && a.closest('#menu-tiles') && /^sub-/.test(a.dataset.action || '')) && a.dataset.action; });
+    let tile = false;
+    for (let i = 0; i < 8 && !tile; i++) { await page.keyboard.press(i ? 'ArrowRight' : 'ArrowDown'); tile = await onTile(); }
+    assert.ok(tile, 'une tuile reçoit le focus aux flèches');
+    await page.keyboard.press('ArrowRight');
+    const tile2 = await onTile();
+    assert.ok(tile2 && tile2 !== tile, `→ passe à la tuile voisine (${tile} → ${tile2})`);
+    await page.keyboard.press('Enter');
+    await wait(() => document.getElementById('menu-tiles').classList.contains('hidden'));
+    await page.keyboard.press('Escape');
+    await wait(() => !document.getElementById('menu-tiles').classList.contains('hidden'));
   });
   await step('anglais, puis pages légales (fenêtre du jeu)', async () => {
     await app(async () => { const m = await import('/js/i18n/boot.js'); await m.switchLanguage('en', { persist: false }); });

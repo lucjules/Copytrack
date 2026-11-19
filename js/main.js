@@ -109,6 +109,31 @@ class App {
     window.addEventListener('orientationchange', () => this._resize());
     document.addEventListener('fullscreenchange', () => this._resize());
     document.addEventListener('visibilitychange', () => this._onVisibility());
+    // (0.12.6) Contexte WebGL perdu (mémoire graphique saturée, pilote réinitialisé, onglet longtemps en arrière-plan sur mobile) : three.js garde de quoi
+    // le rétablir ; le jeu met la course en pause et le dit, puis propose de recharger si le navigateur ne le rend pas.
+    canvas.addEventListener('webglcontextlost', () => this._onContextLost());
+    canvas.addEventListener('webglcontextrestored', () => this._onContextRestored());
+  }
+
+  _onContextLost() {
+    this._autoPause();
+    this._glLost = true;
+    try { this.ui.flash('L’affichage 3D a été interrompu par le navigateur : reprise en cours…', 6); } catch { /* interface pas encore prête */ }
+    clearTimeout(this._glTimer);
+    this._glTimer = setTimeout(() => {
+      if (!this._glLost) return;
+      this.ui.modal({
+        title: 'Affichage 3D interrompu',
+        body: '<p>Le navigateur a coupé l’affichage 3D (mémoire graphique saturée ou pilote réinitialisé) et ne l’a pas rendu. Recharger la page le rétablit ; tes records, tes circuits et ta progression sont enregistrés.</p>',
+        actions: [{ label: 'Recharger', primary: true, onClick: () => { location.reload(); } }, { label: 'Attendre' }],
+      });
+    }, 8000);
+  }
+
+  _onContextRestored() {
+    this._glLost = false;
+    clearTimeout(this._glTimer);
+    try { this.ui.flash('Affichage 3D rétabli.', 2); } catch { /* */ }
   }
 
   // Course en solo interrompue par autre chose que le joueur (onglet masqué, téléphone verrouillé, écran « tourne ton téléphone ») : elle passe en pause. Avant 0.9.59 la
@@ -441,10 +466,17 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => { /* pas grave : le jeu marche sans */ }); });
 }
 
+// (0.12.6) three.js r170 demande WebGL 2. Sans lui, rien ne peut s'afficher : le joueur le sait AVANT de choisir un pseudo, avec quoi faire.
+function webgl2Available() {
+  try { const c = document.createElement('canvas'); return !!(window.WebGL2RenderingContext && c.getContext('webgl2')); } catch { return false; }
+}
+const NO_WEBGL = 'Ce navigateur n’a pas pu démarrer la 3D (WebGL 2). Active l’accélération matérielle dans ses réglages, mets-le à jour, ou essaie un navigateur récent (Chrome, Edge, Firefox, Safari).';
+
 (async () => {
   try {
     // 0. La langue d'abord (réglage de l'appareil) : l'écran d'accueil lui-même est traduit.
     await initI18n();
+    if (!webgl2Available()) { const e = new Error(NO_WEBGL); e.noWebGL = true; throw e; }
     // 1. Pseudo d'abord : invité (session) ou compte. Le menu et le jeu ne se chargent qu'ensuite.
     const identity = await runWelcome();
     // 2. Le jeu, avec la progression du bon joueur (la portée de stockage est déjà choisie).
@@ -456,6 +488,6 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
     console.error(err);
     const l = document.getElementById('loading');
     l.classList.remove('hidden');
-    l.querySelector('.tagline').textContent = 'Impossible de démarrer le jeu (WebGL indisponible ?) : ' + err.message;
+    l.querySelector('.tagline').textContent = err && err.noWebGL ? NO_WEBGL : /webgl/i.test(String(err && err.message)) ? NO_WEBGL : 'Le jeu n’a pas pu démarrer : ' + (err && err.message) + '. Recharge la page.';
   }
 })();

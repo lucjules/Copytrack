@@ -1194,6 +1194,8 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 .legal-text li { margin: 4px 0; }
 .legal-text a { color: var(--cyan); }
 @media (max-height: 500px) { .legal-text { max-height: 44vh; } .legal-page .legal-tabs { margin-bottom: 6px; } }
+/* (0.12.6) Étiquette « bêta » : le multijoueur en direct reste en essai pour la 1.0 */
+.tag-beta { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--amber); color: var(--amber); font-size: 0.6em; font-style: normal; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; vertical-align: middle; }
 .link-btn { background: none; border: 0; padding: 0; color: var(--cyan); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 #menu a.menu-entry { text-decoration: none; }
 

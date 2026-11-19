@@ -11,8 +11,8 @@
   const KEY = 'copytrack.repair';
   const FR = !navigator.language || /^fr/i.test(navigator.language);
   const T = FR
-    ? { fixing: 'Mise à jour du jeu…', failed: 'Le jeu n’a pas pu démarrer : une mise à jour est peut-être en cours de mise en ligne. Réessaie dans quelques minutes, ou recharge en vidant le cache (Ctrl + Maj + R ; sur mobile : effacer les données du site).', slow: 'Le chargement est long. Si rien ne se passe, réessaie.', retry: 'Réessayer' }
-    : { fixing: 'Updating the game…', failed: 'The game could not start: an update may still be going live. Try again in a few minutes, or reload while clearing the cache (Ctrl + Shift + R; on mobile: clear the site data).', slow: 'Loading is taking a while. If nothing happens, try again.', retry: 'Try again' };
+    ? { offline: 'Hors ligne : le jeu n’a pas pu démarrer depuis sa copie sur cet appareil. Reconnecte-toi, puis réessaie.', fixing: 'Mise à jour du jeu…', failed: 'Le jeu n’a pas pu démarrer : une mise à jour est peut-être en cours de mise en ligne. Réessaie dans quelques minutes, ou recharge en vidant le cache (Ctrl + Maj + R ; sur mobile : effacer les données du site).', slow: 'Le chargement est long. Si rien ne se passe, réessaie.', retry: 'Réessayer' }
+    : { offline: 'Offline: the game could not start from its copy on this device. Reconnect, then try again.', fixing: 'Updating the game…', failed: 'The game could not start: an update may still be going live. Try again in a few minutes, or reload while clearing the cache (Ctrl + Shift + R; on mobile: clear the site data).', slow: 'Loading is taking a while. If nothing happens, try again.', retry: 'Try again' };
   const store = {
     get: function () { try { return sessionStorage.getItem(KEY); } catch (e) { return null; } },
     set: function () { try { sessionStorage.setItem(KEY, '1'); } catch (e) { /* stockage refusé : la réparation reste possible au bouton */ } },
@@ -45,6 +45,9 @@
   // worker, puis recharge la page. Une seule fois par session de navigation : un second échec s'affiche au lieu de boucler.
   function repair() {
     if (busy) return;
+    // (0.12.6) Hors ligne, ne rien effacer : vider les caches du service worker détruirait la seule copie du jeu sur l'appareil, et le rechargement
+    // échouerait (page d'erreur du navigateur). On le dit, avec « Réessayer » pour quand le réseau revient.
+    if (navigator.onLine === false) { say(T.offline, true); return; }
     if (store.get()) { say(T.failed, true); return; }
     busy = true;
     store.set();
