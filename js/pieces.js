@@ -61,7 +61,7 @@ export const PIECES = {
   // Phase 2 : nouvelles pièces (ajoutées en fin de PIECE_ORDER, les anciens codes restent lisibles).
   steep4:     { label: 'Ligne droite · inclinaison 4', kind: 'line', size: 1, rise: 4 },
   hugecurve:  { label: 'Très grand virage plat', kind: 'arc', size: 3, rise: 0 },
-  // 0.9.67 : virage géant 5×5 (rayon 144 m) : avec le braquage borné selon la vitesse (loi PolyTrack), le seul virage qui se prenne vers 280 km/h.
+  // 0.9.67 : virage géant 5×5 (rayon 144 m) : avec le braquage borné selon la vitesse (loi mesurée), le seul virage qui se prenne vers 280 km/h.
   giantcurve: { label: 'Virage géant', kind: 'arc', size: 5, rise: 0 },
   // 0.9.68 : chicanes (courbes en S latérales, voir sbendParams) : la route entre au sud de la première colonne et ressort au nord, décalée de
   // `shift` cases vers la droite (→, mirror 1) ou la gauche (←, mirror −1). Deux arcs de même rayon, opposés et tangents au milieu ; plates.
@@ -432,7 +432,7 @@ export function isSideTile(tile) {
 
 // Route roulée (mur, 45°, surplomb, transitions) ou pièce « attraction » qui tourne autour de son axe (loopings, vrilles, tire-bouchons, sommet de looping
 // modulaire) : la projection au sol de son tracé ne dit rien du virage à prendre. Le pilote automatique n'y règle pas sa vitesse sur cette projection.
-// (Jusqu'à PHYS_VER 36, `headingGuided` : la route y guidait aussi le cap de la voiture. PHYS_VER 37 : plus aucune aide, il faut braquer comme dans PolyTrack.)
+// (Jusqu'à PHYS_VER 36, `headingGuided` : la route y guidait aussi le cap de la voiture. PHYS_VER 37 : plus aucune aide, il faut braquer.)
 export function rolledRibbon(tile) {
   const p = PIECES[tile.t];
   return !!(tile.o || p.roll || p.rollable || p.loopTop);

@@ -10,17 +10,17 @@ const MODES = {
   guest: {
     submit: 'Jouer en invité',
     hint: 'Choisis un pseudo. Progression sur cet appareil ; un compte la suit partout.',
-    pw: false, pw2: false, keep: false,
+    pw: false, pw2: false, keep: false, age: false,
   },
   login: {
     submit: 'Se connecter',
     hint: 'Retrouve ta progression, tes circuits et tes records depuis n’importe quel appareil.',
-    pw: true, pw2: false, keep: false,
+    pw: true, pw2: false, keep: false, age: false,
   },
   signup: {
     submit: 'Créer mon compte',
     hint: 'Pseudo unique de 3 à 20 lettres, chiffres ou _ ; mot de passe de 8 caractères au moins. Sans e-mail : pas de récupération, note-le.',
-    pw: true, pw2: true, keep: true,
+    pw: true, pw2: true, keep: true, age: true,
   },
 };
 
@@ -35,7 +35,7 @@ export async function runWelcome() {
 
 function showForm(done, expiredName) {
   const root = $('welcome'), form = $('wl-form');
-  const name = $('wl-name'), pw = $('wl-pw'), pw2 = $('wl-pw2'), keep = $('wl-keep'), err = $('wl-error'), submit = $('wl-submit');
+  const name = $('wl-name'), pw = $('wl-pw'), pw2 = $('wl-pw2'), keep = $('wl-keep'), age = $('wl-age'), err = $('wl-error'), submit = $('wl-submit');
   const tabs = [...root.querySelectorAll('[data-wl]')];
   let mode = expiredName ? 'login' : 'guest';
   const guestProgress = account.hasGuestProgress();
@@ -49,6 +49,7 @@ function showForm(done, expiredName) {
     $('wl-pw-wrap').hidden = !cfg.pw;
     $('wl-pw2-wrap').hidden = !cfg.pw2;
     $('wl-keep-wrap').hidden = !(cfg.keep && guestProgress);
+    $('wl-age-wrap').hidden = !cfg.age;
     pw.autocomplete = m === 'signup' ? 'new-password' : 'current-password';
     submit.textContent = cfg.submit;
     name.value = m === 'guest' ? account.lastGuestName() : (m === 'login' ? expiredName || account.lastAccountName() : '');
@@ -77,6 +78,8 @@ function showForm(done, expiredName) {
       const p = checkPassword(pw.value, c.name);
       if (!p.ok) { setError(p.error); pw.focus(); return; }
       if (pw.value !== pw2.value) { setError('Les deux mots de passe ne sont pas identiques.'); pw2.focus(); return; }
+      // (0.12.4) Un compte permet de publier : 15 ans au moins, ou l'accord d'un parent (article 45 de la loi Informatique et Libertés), et les règles acceptées.
+      if (!age.checked) { setError('Coche la case : 15 ans ou plus (ou l’accord d’un parent) et les règles de la communauté.'); age.focus(); return; }
     }
     busy = true; submit.disabled = true;
     const label = submit.textContent;

@@ -31,7 +31,7 @@ function drive(track, { latK = 0.8, gesture = null, kick = false, stall = 0 } = 
   const sim = new Simulation(track), rec = new InputRecorder();
   sim.start();
   const ref = makeReference(track), o = { s: 0, j: 0, d: 0 };
-  // PHYS_VER 36 : le braquage permis diminue avec la vitesse (loi PolyTrack) : dans un virage serré c'est lui, plus l'adhérence, qui fixe la vitesse. Le « niveau » du pilote
+  // PHYS_VER 36 : le braquage permis diminue avec la vitesse (loi mesurée) : dans un virage serré c'est lui, plus l'adhérence, qui fixe la vitesse. Le « niveau » du pilote
   // règle donc aussi sa marge de braquage, en √latK (même échelle de vitesse que l'adhérence : v ∝ √a).
   const bot = new Autopilot(track.path, { latLimit: 56 * latK, steerMargin: 0.85 * Math.sqrt(latK) });
   bot.reset(sim.phys);
@@ -126,7 +126,7 @@ test('réceptions : décollage droit, trois parfaites (or) ; volant encore tourn
   const d = drillById('receptions');
   const bien = grade(d, {}), mal = grade(d, { kick: true });
   assert.deepEqual([bien.m.perfect, bien.g], [3, 3]);
-  // PHYS_VER 36 (loi PolyTrack) : en l'air ni le volant ni les gaz n'agissent, la voiture garde le cap de son décollage : décoller en tournant la fait retomber de travers.
+  // PHYS_VER 36 (loi mesurée) : en l'air ni le volant ni les gaz n'agissent, la voiture garde le cap de son décollage : décoller en tournant la fait retomber de travers.
   assert.equal(mal.m.perfect, 0); assert.equal(mal.g, 0); assert.ok(mal.m.time > bien.m.time, 'retomber de travers coûte du temps');
 });
 test('le conseil du bilan suit la mesure : coach face à la référence dans la zone, ou ce que le geste a manqué', () => {

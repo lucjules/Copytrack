@@ -1,11 +1,16 @@
 // Service worker généré par tools/gen-sw.mjs : ne pas modifier à la main.
 // Jeu hors ligne : les fichiers du jeu sont gardés en cache ; le réseau reste prioritaire
 // pour récupérer les mises à jour quand il est disponible.
-const CACHE = 'copytrack-f084f00f93';
+const CACHE = 'copytrack-a952a4d1f1';
 const FILES = [
   "./",
-  "assets/README.txt",
-  "assets/music-menu.mp3",
+  "assets/fonts/OFL.txt",
+  "assets/fonts/chakra-petch-latin-500-normal.woff2",
+  "assets/fonts/chakra-petch-latin-700-italic.woff2",
+  "assets/fonts/chakra-petch-latin-700-normal.woff2",
+  "assets/fonts/chakra-petch-latin-ext-500-normal.woff2",
+  "assets/fonts/chakra-petch-latin-ext-700-italic.woff2",
+  "assets/fonts/chakra-petch-latin-ext-700-normal.woff2",
   "css/style.css",
   "icons/icon-192.png",
   "icons/icon-512.png",
@@ -30,6 +35,7 @@ const FILES = [
   "js/app/competition.js",
   "js/app/editorFlow.js",
   "js/app/lab.js",
+  "js/app/legal.js",
   "js/app/modes.js",
   "js/app/multi.js",
   "js/app/profile.js",
@@ -62,6 +68,7 @@ const FILES = [
   "js/customDeco.js",
   "js/customDecoBuild.js",
   "js/daily.js",
+  "js/dataExport.js",
   "js/decoData.js",
   "js/decoPack.js",
   "js/decoPackData.js",
@@ -86,6 +93,7 @@ const FILES = [
   "js/editorPick.js",
   "js/editorTools.js",
   "js/envFx.js",
+  "js/errorReport.js",
   "js/extend.js",
   "js/families.js",
   "js/favorites.js",
@@ -104,6 +112,7 @@ const FILES = [
   "js/i18n/en/data.js",
   "js/i18n/en/editor.js",
   "js/i18n/en/hub.js",
+  "js/i18n/en/legal.js",
   "js/i18n/en/online.js",
   "js/i18n/en/pieces.js",
   "js/i18n/en/race.js",
@@ -116,6 +125,8 @@ const FILES = [
   "js/inspector/shared.js",
   "js/inspector/widgets.js",
   "js/joins.js",
+  "js/legal.js",
+  "js/legalPage.js",
   "js/logicText.js",
   "js/main.js",
   "js/mathutil.js",

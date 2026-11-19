@@ -26,7 +26,7 @@ export const DRILLS = [
   {
     id: 'chicanes', skill: 'trajectoire', name: 'Chicanes', decor: 'desert',
     script: 'start S2 R L R L S C S2 L R L R S2 finish', zones: [[2, 7], [10, 15]],
-    measure: 'zoneSpeed', better: 'high', unit: kmh, thresholds: [69, 75.5, 83],   // PHYS_VER 36 : braquage borné selon la vitesse (loi PolyTrack), les chicanes serrées se prennent au volant (pilote à 50, 60, 80 et 100 % : 66,5 / 71,3 / 79,6 / 86,0 km/h ; avant 100 / 114 / 124)
+    measure: 'zoneSpeed', better: 'high', unit: kmh, thresholds: [69, 75.5, 83],   // PHYS_VER 36 : braquage borné selon la vitesse (loi mesurée), les chicanes serrées se prennent au volant (pilote à 50, 60, 80 et 100 % : 66,5 / 71,3 / 79,6 / 86,0 km/h ; avant 100 / 114 / 124)
     goals: ['Vitesse moyenne dans les chicanes : {v} km/h ou plus'],
     intro: ['Deux séries de quatre virages serrés. Ce qui compte : la <b>vitesse moyenne dans les chicanes</b>, mesurée de l’entrée à la sortie.', 'Coupe au plus court : passe près de l’intérieur de chaque virage et redresse tôt pour enchaîner le suivant.', 'Freine avant la chicane, pas dedans : chaque correction brusque fait perdre de la vitesse.'],
     tip: 'Vitesse moyenne dans les chicanes : coupe près de l’intérieur, redresse tôt.',

@@ -1,6 +1,6 @@
 // Accélération et vitesse de pointe, chocs contre les murs, décrochage sur les murs à 90° (le « feeling » technique) : node tools/test-vitesse-et-murs.mjs   (npm test)
 //  accélération longue et vitesse de pointe élevée, murs punitifs, décrochage sur les murs à 90°.
-// PHYS_VER 36 (caractère PolyTrack, docs/ANALYSE-POLYTRACK.md) : a = 16 − (16 / v_max)·v gaz à fond, a = −(16 / v_max)·v à vide (vitesse approchée exponentiellement,
+// PHYS_VER 36 (lois de conduite, docs/LOIS-PHYSIQUE.md) : a = 16 − (16 / v_max)·v gaz à fond, a = −(16 / v_max)·v à vide (vitesse approchée exponentiellement,
 // τ = v_max / 16 ≈ 5 s) ; mur inélastique à frottement 0,7, sans rebond, sans pivot ajouté, sans « encaissement ».
 import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
@@ -27,7 +27,7 @@ test('plafond du moteur et du turbo : 290 et 340 km/h (le réglage linéaire de 
   assert.ok(Math.abs(SURF_PHYS.maxSpeed * 3.6 - 290) < 0.01 && Math.abs(SURF_PHYS.boostSpeed * 3.6 - 340) < 0.01);
   assert.ok(MOTO.maxSpeed >= 70 && MOTO.maxSpeed < SURF_PHYS.maxSpeed);
 });
-test('courbe (loi PolyTrack) : 100 km/h en 2,0 à 2,4 s, 200 km/h en 5,5 à 6,3 s, 250 km/h en 9,5 à 10,5 s ; jamais plus de 290 km/h sans turbo, même après une minute', () => {
+test('courbe (loi mesurée) : 100 km/h en 2,0 à 2,4 s, 200 km/h en 5,5 à 6,3 s, 250 km/h en 9,5 à 10,5 s ; jamais plus de 290 km/h sans turbo, même après une minute', () => {
   const { ph } = straight(90);
   const t = {};
   let top = 0;
@@ -52,7 +52,7 @@ test('sous turbo, la vitesse reste sous 340 km/h', () => {
   }
   assert.ok(top * 3.6 < 340, 'sous turbo : ' + (top * 3.6).toFixed(1) + ' km/h');
 });
-test('la poussée décroît LINÉAIREMENT avec la vitesse (loi PolyTrack) : 16 m/s² à l’arrêt, ≈ 6 m/s² à 50 m/s ; à vide, a = −(16 / v_max)·v (≈ 0,2 /s)', () => {
+test('la poussée décroît LINÉAIREMENT avec la vitesse (loi mesurée) : 16 m/s² à l’arrêt, ≈ 6 m/s² à 50 m/s ; à vide, a = −(16 / v_max)·v (≈ 0,2 /s)', () => {
   const { tr, ph } = straight(60);
   const acc = (v0, gas) => { ph.vel.z = -v0; ph.fwdSpeed = v0; ph.graceT = 0; const v1 = ph.speed; ph.clock = 0; tr.time = 0; ph.step(gas ? GAS : { steer: 0, throttle: false, brake: false }); return (ph.speed - v1) / DT; };
   const k = SURF_PHYS.engineAccel / SURF_PHYS.maxSpeed;
@@ -87,8 +87,8 @@ test('un choc franc contre un mur fait perdre au moins 30 % de la vitesse imméd
   assert.ok(b.impact > a.impact, 'plus vite, plus fort');
   assert.ok(b.after < 0.55 * b.before, `55 m/s : ${b.before.toFixed(1)} → ${b.after.toFixed(1)}`);
 });
-// (PHYS_VER 36 : avant, le choc rebondissait (wallE), ajoutait un pivot et « sonnait » la voiture (stunT) ; le mur de PolyTrack absorbe la composante normale et laisse filer le reste)
-test('le choc ne rebondit pas (mur inélastique, PolyTrack) : la voiture repart le long du mur, sans « encaissement » (moteur et adhérence intacts) ni toupie', () => {
+// (PHYS_VER 36 : avant, le choc rebondissait (wallE), ajoutait un pivot et « sonnait » la voiture (stunT) ; le mur absorbe la composante normale et laisse filer le reste)
+test('le choc ne rebondit pas (mur inélastique) : la voiture repart le long du mur, sans « encaissement » (moteur et adhérence intacts) ni toupie', () => {
   const { ph } = straight(20);
   ph.vel.z = -40; ph.fwdSpeed = 40; ph.graceT = 0;
   let spun = 0, stunned = false, hits = 0, bounce = 0, hitK = -1;
@@ -114,10 +114,10 @@ test('racler un mur freine en continu même sans vrai choc', () => {
   assert.ok(contact > 0, 'la voiture atteint la bordure');
   assert.ok(ph.speed < 25, 'vitesse après 3 s de glissade : ' + ph.speed.toFixed(1));
 });
-test('paramètres : mur PolyTrack (PHYS_VER 36) : inélastique, frottement de Coulomb 0,7, ni perte forfaitaire, ni pivot, ni encaissement ; un frôlement ne coûte presque rien', () => {
+test('paramètres : mur (PHYS_VER 36) : inélastique, frottement de Coulomb 0,7, ni perte forfaitaire, ni pivot, ni encaissement ; un frôlement ne coûte presque rien', () => {
   // Ancien réglage (wallLoss, wallLossMax, wallScrape 2/s) : toute touche coûtait une part de la vitesse, d'où une voiture clouée en quelques secondes. Phase 2 (PHYS_VER 35) : rebond
   // (wallE), frottement de Coulomb (wallMu), perte globale au-delà de wallHardFrom, pivot et encaissement. PHYS_VER 36 : la composante normale est absorbée, le frottement
-  // (μ 0,7, mesuré sur PolyTrack) proportionnel à l'impulsion fait la punition : un choc franc reste punitif, un frôlement non.
+  // (μ 0,7, mesuré) proportionnel à l'impulsion fait la punition : un choc franc reste punitif, un frôlement non.
   assert.ok(CAR.wallE === 0 && Math.abs(CAR.wallMu - 0.7) < 1e-9 && CAR.wallHardMax === 0 && CAR.wallSpinMax === 0 && CAR.wallStunMax === 0);
   assert.ok(CAR.wallScrape > 0 && CAR.wallScrape <= 0.3, 'frottement visqueux léger : racler longtemps freine sans clouer la voiture');
   assert.equal(CAR.wallLoss, undefined);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
 import { encodeGhost, decodeGhost, ghostLink, ghostFromHash, GHOST_LINK_MAX } from '../js/replay.js';
 import { pickMime, videoSupported, CanvasRecorder, videoFileName } from '../js/videoExport.js';
-import { PHYS_VER } from '../js/version.js';
+import { PHYS_VER, FILE_PREFIX } from '../js/version.js';
 
 const GH = { trackKey: 'b-eclats-abc123', time: 21.345, name: 'Ana', inputs: 'AAECAwQFBgcICQ==' };
 
@@ -75,9 +75,9 @@ await test('enregistrement : les morceaux sont réunis dans un fichier du bon ty
   assert.throws(() => new CanvasRecorder(fakeCanvas(), { MR: FakeMR }), /pas disponible/);
 });
 test('nom de fichier : lettres, chiffres et tirets seulement, accents retirés, temps lisible', () => {
-  assert.equal(videoFileName('Îles Suspendues', 31.456), 'copytrack-iles-suspendues-31_46s.webm');
-  assert.equal(videoFileName('../../etc/passwd<>', 12), 'copytrack-etc-passwd-12_00s.webm');
-  assert.equal(videoFileName('', NaN, 'video/mp4'), 'copytrack-replay-clip.mp4');
+  assert.equal(videoFileName('Îles Suspendues', 31.456), `${FILE_PREFIX}-iles-suspendues-31_46s.webm`);
+  assert.equal(videoFileName('../../etc/passwd<>', 12), `${FILE_PREFIX}-etc-passwd-12_00s.webm`);
+  assert.equal(videoFileName('', NaN, 'video/mp4'), `${FILE_PREFIX}-replay-clip.mp4`);
   assert.ok(videoFileName('x'.repeat(200), 1).length < 70);
 });
 

@@ -277,6 +277,11 @@ class OnlineClient {
     return this._fetch('/rest/v1/rpc/log_runs', { method: 'POST', body: { events }, auth: false });
   }
 
+  // Erreurs du jeu (js/errorReport.js, supabase/etape18-maintenance.sql) : sans session, comme les statistiques.
+  async logErrors(events) {
+    return this._fetch('/rest/v1/rpc/log_errors', { method: 'POST', body: { events }, auth: false });
+  }
+
   async played(id) {
     try { await this._fetch('/rest/v1/rpc/track_played', { method: 'POST', body: { t: id } }); } catch { /* sans importance */ }
   }

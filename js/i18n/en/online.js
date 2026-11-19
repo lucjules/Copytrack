@@ -241,7 +241,7 @@ export default {
   'Signaler': 'Report',
   'Merci, le signalement est enregistré.': 'Thanks, your report has been recorded.',
   'Colle ici un code de circuit (SHW…), un lien de partage ou un code de fantôme (SHG1:…)': 'Paste a track code (SHW…), a share link or a ghost code (SHG1:…) here',
-  'Colle le code d’un circuit Copytrack, ou le code du fantôme d’un ami.': 'Paste a Copytrack track code, or a friend’s ghost code.',
+  'Colle le code d’un circuit, ou le code du fantôme d’un ami.': 'Paste a track code, or a friend’s ghost code.',
   'Charger dans l’éditeur': 'Load in the editor',
   'Enregistrer + éditer': 'Save + edit',
   'Importer un circuit': 'Import a track',

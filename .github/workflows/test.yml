@@ -1,5 +1,5 @@
 name: tests
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]      # (workflow_dispatch : relancer à la main, pour éprouver la stabilité de la CI)
 
 permissions:
   contents: read
@@ -59,6 +59,22 @@ jobs:
         uses: actions/upload-artifact@v4
         with: { name: pw-fail, path: pw-fail, if-no-files-found: ignore, retention-days: 7 }
 
+  # Le jeu dans Firefox (Gecko) et WebKit (Safari) : parcours court mais complet (accueil, menu, 3D, course, éditeur, anglais, pages légales, aucune erreur).
+  # La suite complète tourne dans Chromium (tâche browser) ; celle-ci prouve que les deux autres moteurs font tourner le jeu (tools/test-browser-moteurs.mjs).
+  moteurs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      REQUIRE_BROWSER: '1'
+      BROWSERS: firefox,webkit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install --no-save playwright@1.63.0
+      - run: npx playwright install --with-deps firefox webkit
+      - run: node tools/test-browser-moteurs.mjs
+
   # Les scripts SQL de supabase/ (communauté, classements, comptes, durcissement) sur un vrai PostgreSQL, appliqués deux fois (relançables).
   sql:
     runs-on: ubuntu-latest
@@ -79,11 +95,11 @@ jobs:
       - uses: actions/checkout@v4
       - run: npm run test:sql
 
-  # Verdict unique : réussi seulement si les QUATRE tâches ont réellement abouti. `if: always()` : la tâche s'exécute même quand une autre a échoué
+  # Verdict unique : réussi seulement si les CINQ tâches ont réellement abouti. `if: always()` : la tâche s'exécute même quand une autre a échoué
   # ou a été ignorée, et refuse alors le succès (sans elle, une tâche « skipped » ne serait pas un échec).
   gate:
     if: always()
-    needs: [test, deno, browser, sql]
+    needs: [test, deno, browser, sql, moteurs]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -94,5 +110,5 @@ jobs:
         run: |
           echo "$DETAIL" | grep -E '"result"' || true
           n=0; for r in $RESULTS; do n=$((n+1)); if [ "$r" != "success" ]; then echo "::error::une tâche est en « $r » (résultats : $RESULTS)"; exit 1; fi; done
-          if [ "$n" -ne 4 ]; then echo "::error::$n résultat(s) au lieu de 4 : $RESULTS"; exit 1; fi
-          echo "4 tâches sur 4 en success"
+          if [ "$n" -ne 5 ]; then echo "::error::$n résultat(s) au lieu de 5 : $RESULTS"; exit 1; fi
+          echo "5 tâches sur 5 en success"

@@ -13,7 +13,7 @@ export class Autopilot {
     this.latLimit = opts.latLimit ?? CAR.latGrip * 0.62;     // 0.9.11 : la voiture est à l'avant limité (frontShare 0,42) : l'adhérence réellement utilisable est ~0,79 × latGrip
     this.brakeDecel = opts.brakeDecel ?? 10;   // 0.9.12 : 20 -> 10 : le moteur est 2× plus vif et la gravité plus faible (descentes qui décollent) : le pilote anticipe ses freinages
     this.vCap = opts.vCap ?? (path.pilot && path.pilot.vCap) ?? 52;     // 0.9.4 : le moteur monte bien plus haut, mais le pilote reste prudent (glace, murs punitifs, sauts calés pour ~190 km/h)
-    // PHYS_VER 36 : le braquage permis diminue avec la vitesse (loi PolyTrack) : un virage serré se prend aussi sous la vitesse où l'angle suffit
+    // PHYS_VER 36 : le braquage permis diminue avec la vitesse (loi mesurée) : un virage serré se prend aussi sous la vitesse où l'angle suffit
     // encore (avec une marge pour les corrections de trajectoire).
     this.steerMargin = opts.steerMargin ?? 0.85;
     this.envGrip = 1;

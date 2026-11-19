@@ -1,8 +1,8 @@
-// Pilotage sans aide (0.11.1, PHYS_VER 37), comme PolyTrack : node tools/test-sans-aide.mjs   (npm test)
+// Pilotage sans aide (0.11.1, PHYS_VER 37) : node tools/test-sans-aide.mjs   (npm test)
 //  - loopings, tire-bouchons, transitions vers un mur : la route ne guide plus le cap ; mains lâchées on finit dans la bordure ou dans le vide, au volant on passe ;
 //  - murs : la gravité tire pleinement vers le bas et le nez pique ; mains lâchées on tombe, volant tenu on garde sa ligne ;
-//  - en l'air : la voiture bascule nez en bas en quittant un bord (mesuré sur PolyTrack), rien ne la redresse, ni les gaz ni le volant n'agissent ; l'aérofrein
-//    amortit la rotation, et c'est lui qui fait les réceptions parfaites (le petit contrôle en l'air de PolyTrack, qui fait gagner des dixièmes).
+//  - en l'air : la voiture bascule nez en bas en quittant un bord (mesuré), rien ne la redresse, ni les gaz ni le volant n'agissent ; l'aérofrein
+//    amortit la rotation, et c'est lui qui fait les réceptions parfaites (le petit contrôle en l'air, qui fait gagner des dixièmes).
 import assert from 'node:assert/strict';
 import { test, finish } from './harness.mjs';
 import { scriptTrack } from '../js/track.js';
@@ -39,7 +39,7 @@ test('circuits officiels : le pilote automatique les finit tous ; mains lâchée
 });
 
 // ---- En l'air ---------------------------------------------------------------------------------------------------------------------------
-// Bord de falaise plat (comme la mesure faite sur PolyTrack) : la voiture roule à v puis quitte la route ; on relève la vitesse de tangage juste après.
+// Bord de falaise plat (comme la mesure de référence) : la voiture roule à v puis quitte la route ; on relève la vitesse de tangage juste après.
 function edge(kmh, inAir = {}) {
   const tr = scriptTrack('e', 'start S G6 S finish', { l: 20 });
   const ph = new CarPhysics(tr), lg = new RaceLogic(tr); placeAtStart(ph, lg); ph.graceT = 0;
@@ -53,12 +53,12 @@ function edge(kmh, inAir = {}) {
   }
   return rows;
 }
-test('décollage d\'un bord plat : la voiture bascule nez en bas, d\'autant plus qu\'elle est lente (PolyTrack mesuré : 65 °/s à 39 km/h, 38 à 78, 26 à 140, 16 à 225)', () => {
+test('décollage d\'un bord plat : la voiture bascule nez en bas, d\'autant plus qu\'elle est lente (mesuré : 65 °/s à 39 km/h, 38 à 78, 26 à 140, 16 à 225)', () => {
   const deg = (kmh) => -edge(kmh)[2].rate * 57.3;
-  for (const [kmh, want] of [[39, 65], [78, 38], [140, 26], [225, 16]]) assert.ok(Math.abs(deg(kmh) - want) / want < 0.25, `${kmh} km/h : ${deg(kmh).toFixed(1)} °/s (PolyTrack ${want})`);
+  for (const [kmh, want] of [[39, 65], [78, 38], [140, 26], [225, 16]]) assert.ok(Math.abs(deg(kmh) - want) / want < 0.25, `${kmh} km/h : ${deg(kmh).toFixed(1)} °/s (référence ${want})`);
   assert.ok(deg(60) > deg(120) && deg(120) > deg(240));
 });
-test('en vol, la rotation est GARDÉE (aucun redressement) ; l\'aérofrein l\'amortit (≈ 1 /s, PolyTrack 28 → 7 °/s en 1,6 s) ; 0.12.3 : les pédales penchent la voiture d\'un angle borné, le volant la tourne en douceur', () => {
+test('en vol, la rotation est GARDÉE (aucun redressement) ; l\'aérofrein l\'amortit (≈ 1 /s, mesuré 28 → 7 °/s en 1,6 s) ; 0.12.3 : les pédales penchent la voiture d\'un angle borné, le volant la tourne en douceur', () => {
   const none = edge(150), gas = edge(150, { throttle: true }), steer = edge(150, { steer: 1 }), brake = edge(150, { brake: true }), both = edge(150, { brake: true, throttle: true });
   const at = (rows, t) => rows.find((r) => r.t >= t);
   const r0 = at(none, 0.05).rate, r1 = at(none, 1.05).rate;

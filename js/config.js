@@ -22,6 +22,13 @@ const DEFAULTS = {
   // Fonction serveur « ice » (supabase/functions/ice) : renvoie STUN + relais TURN à identifiants à DURÉE LIMITÉE, demandés à l'ouverture d'une salle. Absente ou en panne :
   // le jeu retombe sur iceServers ci-dessus (STUN seul). '' la désactive. Voir supabase/MULTI.md.
   iceUrl: undefined,
+  // Pages légales (js/legal.js) : qui publie le jeu, comment le joindre, où lire son code. `contact` : une adresse e-mail réservée au jeu (demandes RGPD,
+  // signalements). Vide, les pages renvoient vers la page du projet (`source`) ; tools/test-legal.mjs le signale tant qu'elle manque.
+  legal: {
+    publisher: 'lucjules',
+    contact: '',
+    source: 'https://github.com/lucjules/Copytrack',
+  },
 };
 
 const override = (typeof globalThis !== 'undefined' && globalThis.COPYTRACK_CONFIG) || {};
@@ -29,4 +36,5 @@ export const CONFIG = {
   supabase: { ...DEFAULTS.supabase, ...(override.supabase || {}) },
   iceServers: Array.isArray(override.iceServers) ? override.iceServers : DEFAULTS.iceServers,
   iceUrl: typeof override.iceUrl === 'string' ? override.iceUrl : `${(override.supabase && override.supabase.url) || DEFAULTS.supabase.url}/functions/v1/ice`,
+  legal: { ...DEFAULTS.legal, ...(override.legal || {}) },
 };

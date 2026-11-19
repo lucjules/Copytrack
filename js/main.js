@@ -12,9 +12,9 @@ import { GameAudio } from './audio.js';
 import { UI } from './ui.js';
 import { $, esc } from './dom.js';
 import { RaceSession } from './race.js';
-import { BUILTIN_TRACKS, buildBuiltin } from './tracks.js';
+import { BUILTIN_TRACKS, buildBuiltin, authorLabel } from './tracks.js';
 import { Track, hashString, lossText, lossBlocking } from './track.js';
-import { VERSION, PHYS_VER } from './version.js';
+import { VERSION, PHYS_VER, GAME_NAME } from './version.js';
 import { online } from './online.js';
 import { account } from './account.js';
 import { runWelcome } from './welcome.js';
@@ -22,6 +22,7 @@ import { initI18n } from './i18n/boot.js';
 import { describeBuiltin, describeUser } from './trackDescriptor.js';
 import { loadSettings, saveSettings, getRecord, saveRecord, saveMyTrack, newId, formatTime, purgeOldRecords, getJSON, setJSON } from './storage.js';
 import { Telemetry } from './telemetry.js';
+import { ErrorReport } from './errorReport.js';
 import { ghostFromHash } from './replay.js';
 import { QualityManager, PROFILE_LABELS, wantAntialias } from './quality.js';
 import { multiMethods } from './app/multi.js';
@@ -39,16 +40,10 @@ import { uiCustomMethods } from './app/uicustom.js';
 import { modesMethods } from './app/modes.js';
 import { raceHubMethods } from './app/raceHub.js';
 import { theaterAppMethods } from './app/theater.js';
+import { legalMethods } from './app/legal.js';
 
 // Tous les modules sont chargés et liés : la garde du démarrage (js/boot-guard.js) se désarme.
 window.__copytrackBooted = true;
-
-// Police : la feuille de style est déclarée « media=print » dans index.html (chargement sans bloquer le premier affichage) ; on la rend active ici, car la politique de sécurité du contenu
-// n'autorise aucun gestionnaire en ligne (l'ancien « onload » de la balise).
-{
-  const fontCss = document.getElementById('font-css');
-  if (fontCss) { const on = () => { fontCss.media = 'all'; }; if (fontCss.sheet) on(); else fontCss.addEventListener('load', on, { once: true }); }
-}
 
 const MENU_FPS_CAP = 30;     // images par seconde au plus dans les menus
 
@@ -76,11 +71,16 @@ class App {
     });
     this.input = new Input();
     this.telemetry = new Telemetry({ store: { get: getJSON, set: setJSON }, send: (events) => online.logRuns(events), enabled: () => this.settings.telemetry === true });
+    // (0.12.5) Erreurs du jeu, anonymes, avec le même accord que les statistiques (js/errorReport.js) : erreurs non rattrapées, promesses rejetées, boucle de jeu.
+    this.errors = new ErrorReport({ store: { get: getJSON, set: setJSON }, send: (events) => online.logErrors(events), enabled: () => this.settings.telemetry === true,
+      install: () => this.telemetry.installId, origin: location.origin, userAgent: navigator.userAgent });
+    window.addEventListener('error', (ev) => { if (ev.error || ev.message) this.errors.capture('error', ev.error || ev.message, { file: ev.filename, line: ev.lineno, col: ev.colno }); });
+    window.addEventListener('unhandledrejection', (ev) => { const r = ev.reason; if (!(r && r.code === 'offline')) this.errors.capture('rejection', r); });      // (hors ligne : attendu, pas un défaut)
     this.input.setBindings(this.settings.keys, this.settings.pad);
     this.input.setPadConfig({ deadzone: this.settings.padDeadzone, sens: this.settings.padSens, rumble: this.settings.haptics });
     purgeOldRecords();
     profile();
-    $('menu-foot').textContent = `Copytrack ${VERSION} · un jeu de course original · propulsé par three.js`;
+    $('menu-foot').textContent = `${GAME_NAME} ${VERSION} · un jeu de course original · propulsé par three.js`;
     this.audio = new GameAudio();
     this.audio.setVolume(this.settings.volume);
     this.audio.setMusicVolume(this.settings.musicVolume);
@@ -194,20 +194,21 @@ class App {
     const now = performance.now();
     (window.__ctErrors || (window.__ctErrors = [])).push({ t: Math.round(now), msg: String(e && e.message || e), stack: String(e && e.stack || '').split('\n').slice(0, 4).join(' | ') });
     if (window.__ctErrors.length > 20) window.__ctErrors.shift();
+    if (this.errors) this.errors.capture('loop', e);
     if (this.mode !== 'race' || !this.session) {      // hors course : rien à reprendre, la boucle continue ; mais le joueur doit le savoir (au plus un message toutes les 15 s : une erreur peut revenir à chaque image)
       this._errTimes = [];
-      if (window.__ctErrors.length <= 2) console.error('Copytrack : erreur dans la boucle de jeu', e);
+      if (window.__ctErrors.length <= 2) console.error(GAME_NAME + ' : erreur dans la boucle de jeu', e);
       if (!this._errFlashAt || now - this._errFlashAt > 15000) { this._errFlashAt = now; try { this.ui.flash('Une erreur d’affichage est survenue (détails dans la console du navigateur).', 3.5); } catch { /* l'interface elle-même peut être la cause */ } }
       return;
     }
     this._errTimes = (this._errTimes || []).filter((x) => now - x < 5000);
     this._errTimes.push(now);
-    if (this._errTimes.length === 1 || this._errTimes.length === 2) console.error('Copytrack : erreur dans la boucle de jeu', e);
+    if (this._errTimes.length === 1 || this._errTimes.length === 2) console.error(GAME_NAME + ' : erreur dans la boucle de jeu', e);
     try {
       const S = this.session;
       if (this._errTimes.length === 1 && S.state === 'racing' && !S.replay && typeof S.respawn === 'function') { S.respawn(); this.ui.flash('Incident : retour au dernier checkpoint.', 2.5); }
       else if (this._errTimes.length === 2) { this.quitRace(); this.ui.flash('Une erreur est survenue : la course a été interrompue.', 4); }
-    } catch (e2) { console.error('Copytrack : la reprise après erreur a échoué', e2); }
+    } catch (e2) { console.error(GAME_NAME + ' : la reprise après erreur a échoué', e2); }
   }
 
   playCode(code, entryId = null) {
@@ -346,6 +347,7 @@ class App {
     this.showMenu('menu');
     this._startBench();
     this.telemetry.scheduleFlush(15000);
+    this.errors.scheduleFlush(20000);
     setTimeout(() => this.askTelemetry(), 4000);
     setTimeout(() => this.checkRewards(), 2500);          // rattrape ce qui est déjà mérité (joueur existant)
     // Premier lancement : petit tutoriel (sauf si on arrive par un lien de circuit).
@@ -365,7 +367,7 @@ class App {
         const loss = lossText(track), blocked = lossBlocking(track);
         this.ui.modal({
           title: 'Circuit partagé',
-          body: `<p>« ${esc(track.name)} » · ${track.tiles.length} pièces${track.author ? ' · par ' + esc(track.author) : ''}</p>${loss ? `<p class="mp-err" role="alert">${esc(loss)}${blocked ? ' Mets le jeu à jour pour l’enregistrer ou l’éditer.' : ''}</p>` : ''}`,
+          body: `<p>« ${esc(track.name)} » · ${track.tiles.length} pièces${track.author ? ' · par ' + esc(authorLabel(track.author)) : ''}</p>${loss ? `<p class="mp-err" role="alert">${esc(loss)}${blocked ? ' Mets le jeu à jour pour l’enregistrer ou l’éditer.' : ''}</p>` : ''}`,
           actions: [
             { label: 'Jouer', primary: true, onClick: () => this.playCode(track.encode()) },
             ...(blocked ? [] : [{ label: 'Ouvrir dans l’éditeur', onClick: () => {
@@ -431,7 +433,7 @@ class App {
 }
 
 // Les familles de méthodes vivent dans app/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(App.prototype, multiMethods, academyMethods, competitionMethods, labMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods, theaterAppMethods);
+Object.assign(App.prototype, multiMethods, academyMethods, competitionMethods, labMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods, theaterAppMethods, legalMethods);
 
 
 // Application installable et jouable hors ligne (service worker), si le contexte le permet.

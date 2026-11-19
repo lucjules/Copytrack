@@ -104,7 +104,7 @@ test('rafales : par à-coups, dans la direction du vent, jamais à contre-sens',
   assert.ok(calm > 50 && blow > 50, `${calm} calmes, ${blow} rafales`);
 });
 // Un virage pris à plus de 70 m/s, volant à fond : moins d'adhérence, moins de rotation (le pilote automatique, lui, roule sous la limite d'adhérence).
-// PHYS_VER 36 : la voiture est bornée par l'angle de braquage permis (loi PolyTrack) bien avant ses pneus ; c'est cet angle que la pluie rétrécit (envGrip).
+// PHYS_VER 36 : la voiture est bornée par l'angle de braquage permis (loi mesurée) bien avant ses pneus ; c'est cet angle que la pluie rétrécit (envGrip).
 function corner(t) {
   const sim = new Simulation(t);
   sim.start();

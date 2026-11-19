@@ -14,6 +14,7 @@ import { seasonOf, seasonTracks, seasonBounds } from '../seasons.js';
 import { describeDaily } from '../trackDescriptor.js';
 import { CHAPTERS, CHAPTER_SIZE, UNLOCK_MEDALS, PROFILS, goalFor, goalLabel, goalDone, chapterUnlocked, chapterState, careerSummary, prerequisiteOf, nextBuiltinIndex } from '../career.js';
 import { locale } from '../i18n.js';
+import { GAME_NAME } from '../version.js';
 import { profile } from '../profile.js';
 import { TAB_HUB } from './profile.js';
 import { getRecord, medalTime, listMyTracks, deleteMyTrack, formatTime } from '../storage.js';
@@ -57,7 +58,7 @@ export const screenMethods = {
     const K = (a) => this._keysOf(a);
     const steps = [
       {
-        title: 'Bienvenue dans Copytrack !',
+        title: `Bienvenue dans ${GAME_NAME} !`,
         body: `<p>Passe les <b>checkpoints</b> puis l'<b>arrivée</b>, le plus vite possible.</p>
           <ul class="tuto">
             <li>${touch ? 'Boutons ▲ / ▼ à droite' : `<b>${K('accelerate')}</b> / <b>${K('brake')}</b>`} : accélérer / freiner</li>

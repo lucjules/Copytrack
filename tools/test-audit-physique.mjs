@@ -287,7 +287,7 @@ test('ralentisseur (100 %, 150 %, 300 %) : une voiture, une moto ou un deltaplan
 });
 test('ralentisseur : au-dessus de 11 km/h il freine exactement comme avant ; sans les gaz la voiture s\'arrête et reste arrêtée ; un ralentisseur faible (30 %) ne change pas', () => {
   // Entrée à 30 m/s, gaz à fond, ralentisseur 150 % : décélération = résistance (accélération moteur × 1,5) − poussée nette du moteur (formule inchangée au-dessus du pas rampant).
-  // PHYS_VER 36 (loi PolyTrack, a = 16 − 16·v/vmax) : 24 de résistance + ≈ 5 de traînée moteur à 25-30 m/s − 16 de poussée ≈ 13 m/s² (avant : 21 − ~10,5).
+  // PHYS_VER 36 (loi mesurée, a = 16 − 16·v/vmax) : 24 de résistance + ≈ 5 de traînée moteur à 25-30 m/s − 16 de poussée ≈ 13 m/s² (avant : 21 − ~10,5).
   const sim = parked(lane(8, 'slow', 150)), P = sim.phys;
   P.vel.z = -30; P.fwdSpeed = 30;
   const v = [];

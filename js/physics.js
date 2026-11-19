@@ -267,7 +267,7 @@ export class CarPhysics {
   }
 
   // ---------------------------------------------------------------- Pneus
-  // Angle des roues avant (PHYS_VER 36, loi mesurée sur PolyTrack) : l'angle PERMIS diminue avec la vitesse, min(steerMax, steerC · v^−steerN) ;
+  // Angle des roues avant (PHYS_VER 36, loi mesurée) : l'angle PERMIS diminue avec la vitesse, min(steerMax, steerC · v^−steerN) ;
   // c'est lui, et non l'adhérence, qui borne le virage. En glisse établie (drift), les roues partent en plus vers la trajectoire de l'essieu avant
   // (counter, rad) : contre-braquage automatique, le volant ne fait qu'ajouter son angle permis par-dessus.
   // L'adhérence d'AMBIANCE (envGrip : pluie, flaques, givre, adhérence de tout le circuit) réduit aussi cet angle : l'angle permis est une enveloppe
@@ -567,7 +567,7 @@ export class CarPhysics {
   _flyAir(inp) {
     const dt = DT, v = this.vel;
     let fx = -dsin(this.yaw), fz = -dcos(this.yaw);
-    // En l'air : trajectoire balistique, la voiture garde son cap (le volant ne tourne que les roues). PHYS_VER 36 (PolyTrack) : ni les gaz ni le
+    // En l'air : trajectoire balistique, la voiture garde son cap (le volant ne tourne que les roues). PHYS_VER 36 (mesuré) : ni les gaz ni le
     // volant n'agissent en l'air, la rotation acquise au décollage est GARDÉE ; seul le frein (aérofrein) l'amortit. Avant : lacet au volant,
     // rotation amortie d'elle-même (1,5 /s). PHYS_VER 37 : le tangage aussi (plus de ressort d'assiette, voir plus bas).
     // Exception : le deltaplane plane et vire en inclinant son aile (ses commandes sont les siennes).
@@ -587,9 +587,9 @@ export class CarPhysics {
     this.slip = 0;
     this.fwdSpeed = v.x * fx + v.z * fz;
     this.airTime += dt;
-    // Tangage (PHYS_VER 37, PolyTrack mesuré) : la rotation est GARDÉE tout le vol, rien ne redresse la voiture. Au décollage d'une route qui s'arrête (bord, haut de
+    // Tangage (PHYS_VER 37, mesuré) : la rotation est GARDÉE tout le vol, rien ne redresse la voiture. Au décollage d'une route qui s'arrête (bord, haut de
     // rampe), la voiture bascule en piqué (airTip : l'avant n'est plus porté quand l'arrière l'est encore), d'autant plus qu'elle est lente. L'aérofrein amortit la
-    // rotation : freiner au bon moment pour arriver à la pente de la réception, c'est le petit contrôle en l'air de PolyTrack (et les pédales penchent la voiture d'un rien :
+    // rotation : freiner au bon moment pour arriver à la pente de la réception, c'est le petit contrôle en l'air (et les pédales penchent la voiture d'un rien :
     // gaz en avant, frein en arrière). Avant (PHYS_VER 36) : un ressort
     // rapprochait l'assiette de la trajectoire puis, près du sol, de la pente de la route, et la voiture se posait d'elle-même.
     if (this.vehicle === 'glider') { this.pitch = this.glidePitch; this.tipNext = false; }
@@ -736,7 +736,7 @@ export class CarPhysics {
     const K = this.k;
     const vf0 = vf;
     let a = 0;
-    // PHYS_VER 36 (caractère PolyTrack) : poussée CONSTANTE ; la traînée linéaire (plus bas) l'équilibre exactement à vmax.
+    // PHYS_VER 36 (lois de conduite revues) : poussée CONSTANTE ; la traînée linéaire (plus bas) l'équilibre exactement à vmax.
     const thrust = K.accel * traction;
     if (inp.throttle) {
       if (vf < -0.5) a += K.brake * traction;             // gaz en reculant : freine jusqu'à l'arrêt
@@ -745,7 +745,7 @@ export class CarPhysics {
     if (inp.brake) {
       // En dérapage, l'énergie part surtout dans la glisse : on ralentit moins.
       // Cercle de friction : un volant tourné à vitesse occupe déjà l'adhérence des pneus, il en reste moins pour freiner (brakeCorner) ; et pendant une glisse le freinage est presque annulé.
-      // Le frein mord plus fort à haute vitesse (brakeV). PolyTrack (mesuré) : 66 + 0,38·v m/s² ; Copytrack : brake + brakeV·v = 52 + 0,5·v, ≈ 3,5 × la poussée.
+      // Le frein mord plus fort à haute vitesse (brakeV). Référence mesurée : 66 + 0,38·v m/s² ; ici : brake + brakeV·v = 52 + 0,5·v, ≈ 3,5 × la poussée.
       if (vf > 0.5) a -= (K.brake + K.brakeV * vf) * traction * (1 - CAR.driftBrake * this.driftT) * (1 - CAR.brakeCorner * Math.abs(this.steer) * smoothSpeed(vf));
       else if (!inp.throttle) {
         const x = Math.max(0, -vf) / CAR.reverseMax;      // marche arrière : même loi linéaire, vers reverseMax
@@ -758,7 +758,7 @@ export class CarPhysics {
       const x = Math.max(0, vf) / vb;
       a += CAR.boostAccel * f * Math.max(0, 1 - x * x);
     }
-    // Traînée LINÉAIRE : thrust / vmax par m/s, gaz ou pas (PolyTrack, mesuré : 0,107·v pour sa vitesse de pointe ; ici 16 / 80,6 = 0,199·v) ; gaz levés elle seule
+    // Traînée LINÉAIRE : thrust / vmax par m/s, gaz ou pas (mesuré : 0,107·v pour sa vitesse de pointe ; ici 16 / 80,6 = 0,199·v) ; gaz levés elle seule
     // ralentit la voiture (au plafond, autant que la poussée).
     // Avant PHYS_VER 36 : 0,8 + 0,05·v à vide seulement, la poussée s'annulant d'elle-même vers le plafond.
     let res = CAR.roll * load + CAR.drag * vf * vf + extraDrag * load + (thrust / vmax) * Math.abs(vf);

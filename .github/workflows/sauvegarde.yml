@@ -1,0 +1,46 @@
+name: sauvegarde
+# Chaque semaine : une copie de la base (schémas public et auth) hors de Supabase, CHIFFRÉE, gardée 90 jours dans les artefacts du dépôt.
+# L'offre gratuite de Supabase ne fournit pas de sauvegarde téléchargeable : c'est la seule copie hors du projet (docs/EXPLOITATION.md).
+# Ne fait rien tant que les deux secrets n'existent pas (Settings › Secrets and variables › Actions) :
+#   SUPABASE_DB_URL     chaîne de connexion de la base (Supabase › Connect › Session pooler), mot de passe compris
+#   BACKUP_PASSPHRASE   phrase de passe de chiffrement (à garder AILLEURS : sans elle, la sauvegarde est illisible)
+# Restaurer : docs/EXPLOITATION.md, « Restaurer une sauvegarde ».
+on:
+  schedule:
+    - cron: '41 2 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sauvegarde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: secrets présents ?
+        id: s
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -n "$DB" ] && [ -n "$PASS" ]; then echo "ok=1" >> "$GITHUB_OUTPUT"; else echo "Secrets SUPABASE_DB_URL / BACKUP_PASSPHRASE absents : aucune sauvegarde (voir docs/EXPLOITATION.md)."; fi
+      - name: copie chiffrée (pg_dump 17)
+        if: steps.s.outputs.ok == '1'
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          mkdir -p sauvegarde
+          F="sauvegarde/virelo-$(date -u +%Y-%m-%d).sql.gz.gpg"
+          docker run --rm -e DB postgres:17 sh -c 'pg_dump "$DB" --schema=public --schema=auth --no-owner --no-privileges' \
+            | gzip -9 | gpg --batch --symmetric --cipher-algo AES256 --pinentry-mode loopback --passphrase-fd 3 3<<<"$PASS" -o "$F"
+          ls -l sauvegarde
+      - uses: actions/upload-artifact@v4
+        if: steps.s.outputs.ok == '1'
+        with:
+          name: sauvegarde-base
+          path: sauvegarde/*.sql.gz.gpg
+          retention-days: 90
+          if-no-files-found: error

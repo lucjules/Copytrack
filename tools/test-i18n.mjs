@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 import { test, finish } from './harness.mjs';
 import * as I from '../js/i18n.js';
+import { GAME_NAME } from '../js/version.js';
 import { htmlCandidates, candidate, covered } from './i18n-scan.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -154,7 +155,7 @@ reset('en'); I.register(en);
 test('index.html : tout texte et toute infobulle statiques sont traduits', () => {
   const src = readFileSync(join(root, 'index.html'), 'utf8');
   const body = src.replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, ' ')).replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, (m) => m.replace(/[^\n]/g, ' '));
-  const NOT_TEXT = new Set(['Copytrack', 'Français', 'English']);
+  const NOT_TEXT = new Set([GAME_NAME, 'Français', 'English']);
   const missing = htmlCandidates(body, 'html', (h) => covered(I.norm(h)))
     .filter((c) => candidate(c.text, c.kind) && !NOT_TEXT.has(I.norm(c.text)) && !covered(I.norm(c.text)))
     .map((c) => `ligne ${body.slice(0, c.at).split('\n').length} : ${I.norm(c.text)}`);
@@ -208,7 +209,9 @@ test('rendus fréquents : infobulles « Nom (touche) : description », touches, 
   assert.equal(I.translate('1 pièce · 1×1'), '1 piece · 1×1');
   assert.equal(I.translate('Transition sol → mur gauche (douce 2×2)'), 'Transition ground → left wall (soft 2×2)');
   assert.equal(I.translate('bêta 0.9.21'), 'beta 0.9.21');
-  assert.equal(I.translate('Copytrack bêta 0.9.21 · un jeu de course original · propulsé par three.js'), 'Copytrack beta 0.9.21 · an original racing game · powered by three.js');
+  assert.equal(I.translate(`${GAME_NAME} bêta 0.9.21 · un jeu de course original · propulsé par three.js`), `${GAME_NAME} beta 0.9.21 · an original racing game · powered by three.js`);
+  assert.equal(I.translate(`${GAME_NAME} · un jeu de course original · propulsé par three.js`), `${GAME_NAME} · an original racing game · powered by three.js`);
+  assert.equal(I.translate(`Bienvenue dans ${GAME_NAME} !`), `Welcome to ${GAME_NAME}!`);
 });
 
 finish('Tous les tests i18n passent.');

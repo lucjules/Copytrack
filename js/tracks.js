@@ -12,6 +12,7 @@ import { datan2, hypot2 } from './dmath.js';
 import { CELL } from './constants.js';
 import { PIECES } from './pieces.js';
 import { isObstacle } from './obstacles.js';
+import { GAME_NAME } from './version.js';
 
 export const BUILTIN_TRACKS = [
   {
@@ -942,9 +943,15 @@ function wallSolid(t, def, o, i, a, ux, uz) {
   for (let j = i; j < one && d(j) < 4 * s + 6; j++) for (let lap = 0; lap < laps; lap++) P.wallLine[j + lap * (one - 1)] = want;
 }
 
+// Auteur des circuits officiels tel qu'il est ÉCRIT dans leur code : il entre dans l'empreinte de ce code, donc dans leur clé de classement
+// (b-<id>-<empreinte>, js/verify.js). Le changer effacerait tous les records et classements : il garde l'ancien nom du jeu, et l'écran montre
+// le nom actuel (authorLabel, GAME_NAME).
+export const BUILTIN_AUTHOR = 'Copytrack';
+export const authorLabel = (a) => (a === BUILTIN_AUTHOR ? GAME_NAME : a);
+
 export function buildBuiltin(def) {
   const t = scriptTrack(def.name, def.script, { ...(def.opts || {}), decor: def.decor || 'desert', ...(def.movers ? { movers: def.movers } : {}) });
-  t.author = 'Copytrack';
+  t.author = BUILTIN_AUTHOR;
   if (def.params) t.setParams(def.params);
   // Circuit à plusieurs tours : le chemin du pilote automatique est répété.
   if (def.laps > 1) {

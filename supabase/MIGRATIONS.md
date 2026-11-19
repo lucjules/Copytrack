@@ -3,6 +3,19 @@
 Ce document ne dit **pas** ce qui est appliqué en production : seul le projet Supabase le sait. Il dit dans quel ordre appliquer, comment **le prouver**, et comment revenir en arrière.
 Tant qu'une vérification ci-dessous n'a pas été faite et lue par quelqu'un, une migration n'est **pas** « appliquée » et une fonction n'est **pas** « déployée ».
 
+## État de la production (constaté le 19 novembre 2026)
+
+Constat en **lecture seule** par le connecteur Supabase (`verify-prod.sql` et requêtes de contrôle) : les étapes **1 à 17, 15b comprise, sont
+appliquées** (aucune ligne `MANQUE` ni `ÉCART`) ; `submit-score` déployée en `PHYS_VER` 38, son build identique au dépôt de la 0.12.3.
+Étape **18** (`etape18-maintenance.sql`) : **appliquée le 19 novembre 2026** avec l'accord de l'éditeur (connecteur Supabase, migration
+`etape18_maintenance`). Vérifié aussitôt : lignes « étape 18 » conformes (search_path 5/5, fonctions de déclencheur fermées, aucune clé étrangère
+sans index, aucune règle RLS qui évalue `auth.uid()` par ligne, aucune table sans clé primaire, fonctions ouvertes sans session = la liste attendue),
+tâche `virelo-purge` active ; conseils Supabase : plus de `search_path` mutable, d'index manquant, d'`auth_rls_initplan` ni de table sans clé ;
+première purge à la main (4 compteurs anti-abus périmés effacés, rien d'autre) ; lectures publiques du jeu inchangées ; `tools/surveillance.mjs` sans alerte.
+Reste signalé par Supabase, voulu : fonctions `security definer` appelables (c'est l'API du jeu), sessions anonymes (le mode invité), tables sans
+règle RLS (fermées à tous) ; à faire par l'éditeur : la protection contre les mots de passe divulgués.
+Les paragraphes historiques plus bas (« rien n'a été exécuté sur la production ») datent d'avant ce constat.
+
 ## Procédure de mise à jour complète (production)
 
 **Rien de ce document n'a été exécuté sur la production par l'auteur de ce dépôt** : l'environnement de développement n'y accède pas. L'audit indépendant a constaté sur le projet réel : `submit-score` en version 23 avec `PHYS_VER` 31 (le jeu est en 33), `ice` en version 3 ; absents : `rate_hits`, `rate_check`, `track_binds`, `submit_best`, `publish_track`, `author_verified` ; présents : `submit_rate`, `submit_rate_check` (verrou par joueur seulement, pas de limite globale exacte), `scores_limit` (simple `COUNT`). Ce n'était PAS tout à fait l'état « étapes 1 à 14 » : la lecture de la base réelle (phase 8, comparaison objet par objet, corps de fonction par corps de fonction, droits et politiques, à une base de référence montée avec les étapes 1 à 14) a montré que **les étapes 7 (fantômes) et 8 (titres, circuits de la semaine) n'avaient jamais été jouées** (`scores.ghost`, `ghost_veh`, `has_ghost`, `players.title`, `get_ghost`, `set_title`, `trending_tracks` absents) et que `track_comments_list` était une **ancienne édition** de l'étape 13 (sans le titre de l'auteur). Tout le reste (130 objets, 65 fonctions, droits, politiques, contraintes, index, déclencheurs) était identique. Or `submit_best` (étape 15) écrit dans `scores.ghost` : lancer l'étape 15 seule aurait donné une fonction créée mais en échec à chaque temps soumis. Ne jamais supposer qu'une étape est appliquée parce que son fichier existe : `verify-prod.sql` contrôle maintenant aussi les étapes 7, 8 et 13.
@@ -45,6 +58,26 @@ Avant l'étape 6, laisser un temps de cohabitation n'est pas possible pour les t
 | 6 | **`etape15b-publication-verifiee.sql`** | SQL Editor | 2, 3 **et** 5 | **non** : les anciens clients ne peuvent plus publier |
 
 Ne jamais lancer 6 avant 3 et 5. Les étapes 2 et 6 sont **relançables sans danger** (idempotentes) et ne **suppriment aucune donnée**.
+
+### Étape 18 (maintenance avant la 1.0, 0.12.5) : `etape18-maintenance.sql`
+
+Pré-requis : étapes 1 à 17. **Relançable ; ne supprime aucune donnée en s'appliquant** (les purges ne tournent qu'à l'heure dite). Ce qu'elle fait :
+`search_path` fixé sur 5 fonctions, fonctions de déclencheur fermées à l'API (elles se déclenchent toujours), un index par clé étrangère, 16 règles
+RLS réécrites avec `(select auth.uid())` (mêmes conditions), clé primaire sur `rate_hits` et `submit_rate`, tables `client_errors`,
+`maintenance_log` et `scores_archive`, fonctions `log_errors` et `health_report` (ouvertes), `purge_expired` et `archive_old_scores` (réservées
+au serveur), extension `pg_cron` activée et purge planifiée chaque nuit (tâche `virelo-purge`). Détail : en-tête du fichier ; exploitation :
+[docs/EXPLOITATION.md](../docs/EXPLOITATION.md). Test : `tools/test-etape18-sql.sh` (`npm run test:sql`, 33 contrôles, et les 73 attaques de
+`test-securite-sql.sh` rejouées après elle).
+
+| Étape | Action | Vérification (à lire) | Si elle échoue |
+|---|---|---|---|
+| 18.0 | `verify-prod.sql` | Les lignes « étape 18 » disent `ÉCART` / `MANQUE` (avant) ; rien d'autre | Comprendre l'écart d'abord |
+| 18.1 | `etape18-maintenance.sql` (SQL Editor, ou le connecteur Supabase) | `verify-prod.sql` : lignes « étape 18 » à `ok`, la ligne « purge nocturne » montre `virelo-purge 17 3 * * *` ; conseils Supabase (*Advisors*) : plus de `search_path` mutable, d'index de clé étrangère manquant, de règle `auth_rls_initplan`, de table sans clé primaire | Voir « retour arrière » |
+| 18.2 | `select public.purge_expired();` une fois à la main | Renvoie les nombres effacés ; une ligne dans `maintenance_log` | Lire l'erreur, ne pas relancer en boucle |
+| 18.3 | Mettre en ligne le jeu 0.12.5 (remontée des erreurs) | `node tools/surveillance.mjs` : `health_report` lu, aucune alerte | Remettre le jeu précédent (rien ne dépend du jeu côté base) |
+
+**Retour arrière** (aucune donnée de joueur n'est touchée) : `select cron.unschedule('virelo-purge');` arrête la purge ; les tables et fonctions
+ajoutées peuvent rester (inertes sans le jeu 0.12.5). Les index, clés primaires et règles réécrites n'ont pas à être défaits (mêmes conditions).
 
 ### Étape 17 (sécurité, phase 5) : `etape17-securite.sql`
 

@@ -20,8 +20,7 @@ export const SURF_PHYS = {
   belt: 200 / 3.6,     // vitesse du tapis roulant à son réglage maximal : ±200 km/h
   spring: 56,          // poussée latérale du ressort à pleine force (m/s)
   bounce: 14,          // vitesse verticale d'un rebond à 100 % (m/s)
-  // PHYS_VER 36 (caractère PolyTrack, docs/ANALYSE-POLYTRACK.md) : poussée CONSTANTE et traînée LINÉAIRE, la loi mesurée sur PolyTrack
-  // (a = 20,19 − 0,107·v là-bas). Sous les gaz : a = engineAccel − (engineAccel / maxSpeed)·v, donc v(t) = maxSpeed·(1 − e^(−t/τ)), τ = maxSpeed / engineAccel
+  // PHYS_VER 36 (lois de conduite, docs/LOIS-PHYSIQUE.md) : poussée CONSTANTE et traînée LINÉAIRE. Sous les gaz : a = engineAccel − (engineAccel / maxSpeed)·v, donc v(t) = maxSpeed·(1 − e^(−t/τ)), τ = maxSpeed / engineAccel
   // (≈ 5 s) ; gaz levés, la traînée seule ralentit la voiture (au plafond : autant que la poussée). Les VITESSES restent celles de Copytrack
   // (plafond 290 km/h) : les circuits sont dessinés pour elles.
   gravity: 19,         // gravité normale (m/s²) (0.9.45 : 16, trop flottante ; avant : 25) ; gardée : sauts et loopings des circuits sont calés dessus
