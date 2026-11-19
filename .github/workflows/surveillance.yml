@@ -1,0 +1,20 @@
+name: surveillance
+# Chaque jour : le site, la fonction submit-score et la santé de la base (tools/surveillance.mjs, lecture seule, clé publique du jeu).
+# Une alerte fait échouer le travail : GitHub prévient le propriétaire du dépôt par e-mail. Lancement à la main : onglet Actions › surveillance › Run workflow.
+on:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  surveillance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node tools/surveillance.mjs

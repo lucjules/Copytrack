@@ -5,7 +5,7 @@
 // Tables lues, et le filtre qui désigne les lignes du joueur ({u} : son identifiant).
 export const EXPORT_TABLES = [
   ['accounts', 'user_id=eq.{u}'], ['players', 'id=eq.{u}'], ['cloud_saves', 'user_id=eq.{u}'],
-  ['scores', 'player=eq.{u}'], ['tracks', 'author=eq.{u}'], ['track_comments', 'author=eq.{u}'],
+  ['scores', 'player=eq.{u}'], ['scores_archive', 'player=eq.{u}'], ['tracks', 'author=eq.{u}'], ['track_comments', 'author=eq.{u}'],
   ['follows', 'follower=eq.{u}'], ['friends', 'or=(a.eq.{u},b.eq.{u})'], ['duels', 'or=(challenger.eq.{u},opponent.eq.{u})'],
   ['tournament_players', 'player=eq.{u}'], ['ratings', 'player=eq.{u}'], ['season_divisions', 'player=eq.{u}'], ['division_history', 'player=eq.{u}'],
   ['playlists', 'owner=eq.{u}'], ['community_modes', 'owner=eq.{u}'],

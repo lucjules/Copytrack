@@ -6,7 +6,7 @@ import { GAME_NAME, VERSION } from './version.js';
 import { CONFIG } from './config.js';
 
 export const LEGAL_IDS = ['confidentialite', 'mentions', 'regles', 'credits'];
-export const LEGAL_UPDATED = '2026-11-19';
+export const LEGAL_UPDATED = '2026-11-19';      // (0.12.5 : erreurs du jeu, conservation appliquée par la base)
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const link = (href, text) => `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(text)}</a>`;
@@ -36,7 +36,7 @@ const PAGES = {
 <li><b>Compte</b> (seulement si tu en crées un) : ton pseudo, ton mot de passe (gardé sous forme de hachage bcrypt par le service d'authentification : personne ne peut le lire) et la date de création. <b>Aucune adresse e-mail</b> n'est demandée. Sert à retrouver ta progression sur un autre appareil (sauvegarde dans le cloud).</li>
 <li><b>Jeu en ligne</b> (invité ou compte) : une session à identifiant aléatoire ; tes temps (avec les commandes de la course, que le serveur rejoue pour vérifier le temps), les circuits que tu publies, tes commentaires, mentions « j'aime », signalements, abonnements, amis, duels et tournois, avec ton pseudo. Le pseudo, les temps, les circuits publiés et les commentaires sont <b>visibles par les autres joueurs</b>.</li>
 <li><b>Protection contre les abus</b> : des compteurs (identifiant de session et heure) limitent les envois ; ils sont effacés au bout d'une heure environ.</li>
-<li><b>Statistiques anonymes</b> (seulement si tu as dit oui) : le temps de tes arrivées et abandons et ton nombre d'essais sur les circuits officiels, avec un identifiant aléatoire propre à l'appareil, jamais lié à ton pseudo ni à ton compte. Elles servent à régler la difficulté et les médailles. Tu peux retirer ton accord à tout moment (Paramètres › Jeu).</li>
+<li><b>Statistiques anonymes</b> (seulement si tu as dit oui) : le temps de tes arrivées et abandons et ton nombre d'essais sur les circuits officiels, et les erreurs du jeu s'il en survient (message nettoyé, fichier et ligne du code, version, famille de navigateur), avec un identifiant aléatoire propre à l'appareil, jamais lié à ton pseudo ni à ton compte. Elles servent à régler la difficulté et les médailles, et à corriger les plantages. Tu peux retirer ton accord à tout moment (Paramètres › Jeu).</li>
 <li><b>Multijoueur</b> : les joueurs d'une salle se connectent directement entre eux (WebRTC). Les autres joueurs de la salle et les serveurs de mise en relation (STUN de Google, et un relais si le réseau l'exige) voient ton adresse IP le temps de la partie.</li>
 <li><b>Hébergement du site</b> : comme tout hébergeur, GitHub reçoit l'adresse IP et le type de navigateur de chaque visiteur (journaux techniques gérés par GitHub).</li>
 </ul>
@@ -52,7 +52,7 @@ const PAGES = {
 <ul>
 <li>Compte, sauvegarde, temps, circuits publiés, commentaires : tant que le compte existe. Profil › Supprimer le compte efface le tout, immédiatement et définitivement.</li>
 <li>Données d'une session invitée : 12 mois au plus après sa dernière activité.</li>
-<li>Statistiques anonymes : 12 mois au plus.</li>
+<li>Statistiques anonymes : 12 mois au plus ; erreurs du jeu : 90 jours.</li>
 <li>Compteurs contre les abus : environ une heure.</li>
 </ul>
 <h3>Tes droits</h3>
@@ -75,7 +75,7 @@ const PAGES = {
 <li><b>Account</b> (only if you create one): your username, your password (kept as a bcrypt hash by the authentication service: nobody can read it) and the creation date. <b>No email address</b> is requested. Used to find your progress on another device (cloud save).</li>
 <li><b>Online play</b> (guest or account): a session with a random identifier; your times (with the race inputs, which the server replays to check the time), the tracks you publish, your comments, likes, reports, follows, friends, duels and tournaments, with your username. Usernames, times, published tracks and comments are <b>visible to other players</b>.</li>
 <li><b>Abuse protection</b>: counters (session identifier and time) limit submissions; they are erased after about one hour.</li>
-<li><b>Anonymous statistics</b> (only if you said yes): your finish and retirement times and number of attempts on the official tracks, with a random identifier specific to the device, never linked to your username or account. They are used to tune difficulty and medals. You can withdraw your consent at any time (Settings › Game).</li>
+<li><b>Anonymous statistics</b> (only if you said yes): your finish and retirement times and number of attempts on the official tracks, and the game's errors if any occur (cleaned message, code file and line, version, browser family), with a random identifier specific to the device, never linked to your username or account. They are used to tune difficulty and medals, and to fix crashes. You can withdraw your consent at any time (Settings › Game).</li>
 <li><b>Multiplayer</b>: players in a room connect directly to each other (WebRTC). The other players in the room and the connection servers (Google STUN, and a relay if the network requires one) see your IP address for the duration of the game.</li>
 <li><b>Website hosting</b>: like any host, GitHub receives the IP address and browser type of each visitor (technical logs managed by GitHub).</li>
 </ul>
@@ -91,7 +91,7 @@ const PAGES = {
 <ul>
 <li>Account, cloud save, times, published tracks, comments: as long as the account exists. Profile › Delete account erases all of it, immediately and permanently.</li>
 <li>Guest session data: at most 12 months after its last activity.</li>
-<li>Anonymous statistics: at most 12 months.</li>
+<li>Anonymous statistics: at most 12 months; game errors: 90 days.</li>
 <li>Abuse counters: about one hour.</li>
 </ul>
 <h3>Your rights</h3>

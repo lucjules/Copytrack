@@ -122,9 +122,65 @@ checks as (
   union all
   select 91, 'étape 17 : fonctions appelables SANS session (anon) hors de la liste attendue (lectures publiques, inscription, statistiques)', 'aucune',
          coalesce((select string_agg(p.proname, ', ' order by p.proname) from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prokind = 'f' and p.prorettype <> 'trigger'::regtype and has_function_privilege('anon', p.oid, 'execute')
-                   and p.proname not in ('current_season', 'elo', 'follower_count', 'get_ghost', 'log_runs', 'modes_list', 'my_season', 'playlists_list', 'random_track', 'recommended_tracks', 'season_bounds', 'season_clock', 'season_points', 'season_standings', 'sector_board', 'track_comments_list', 'track_stats', 'trending_tracks', 'username_available')), 'aucune'),
+                   and p.proname not in ('current_season', 'elo', 'follower_count', 'get_ghost', 'health_report', 'log_errors', 'log_runs', 'modes_list', 'my_season', 'playlists_list', 'random_track', 'recommended_tracks', 'season_bounds', 'season_clock', 'season_points', 'season_standings', 'sector_board', 'track_comments_list', 'track_stats', 'trending_tracks', 'username_available')), 'aucune'),
          case when exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prokind = 'f' and p.prorettype <> 'trigger'::regtype and has_function_privilege('anon', p.oid, 'execute')
-                   and p.proname not in ('current_season', 'elo', 'follower_count', 'get_ghost', 'log_runs', 'modes_list', 'my_season', 'playlists_list', 'random_track', 'recommended_tracks', 'season_bounds', 'season_clock', 'season_points', 'season_standings', 'sector_board', 'track_comments_list', 'track_stats', 'trending_tracks', 'username_available')) then 'ÉCART' else 'ok' end
+                   and p.proname not in ('current_season', 'elo', 'follower_count', 'get_ghost', 'health_report', 'log_errors', 'log_runs', 'modes_list', 'my_season', 'playlists_list', 'random_track', 'recommended_tracks', 'season_bounds', 'season_clock', 'season_points', 'season_standings', 'sector_board', 'track_comments_list', 'track_stats', 'trending_tracks', 'username_available')) then 'ÉCART' else 'ok' end
+  union all
+  -- ---- 4 ter. étape 18 (maintenance avant la 1.0) ------------------------------------------------------------------------------------------------------
+  select 100, 'étape 18 : search_path fixé sur cloud_saves_touch, season_clock, season_bounds, current_season, elo', '5 sur 5',
+         (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('cloud_saves_touch', 'season_clock', 'season_bounds', 'current_season', 'elo')
+            and array_to_string(proconfig, ',') like 'search_path=%') || ' sur 5',
+         case when (select count(*) from pg_proc where pronamespace = 'public'::regnamespace and proname in ('cloud_saves_touch', 'season_clock', 'season_bounds', 'current_season', 'elo')
+            and array_to_string(proconfig, ',') like 'search_path=%') = 5 then 'ok' else 'ÉCART' end
+  union all
+  select 101, 'étape 18 : fonctions de déclencheur appelables par l''API (anon, authenticated)', 'aucune',
+         coalesce((select string_agg(distinct p.proname, ', ') from pg_proc p, unnest(array['anon', 'authenticated']) r where p.pronamespace = 'public'::regnamespace
+                   and p.prorettype = 'trigger'::regtype and has_function_privilege(r, p.oid, 'execute')), 'aucune'),
+         case when exists (select 1 from pg_proc p, unnest(array['anon', 'authenticated']) r where p.pronamespace = 'public'::regnamespace
+                   and p.prorettype = 'trigger'::regtype and has_function_privilege(r, p.oid, 'execute')) then 'ÉCART' else 'ok' end
+  union all
+  select 102, 'étape 18 : clés étrangères de public sans index qui les couvre', 'aucune',
+         coalesce((select string_agg(c.conname, ', ' order by c.conname) from pg_constraint c where c.contype = 'f' and c.connamespace = 'public'::regnamespace
+                   and not exists (select 1 from pg_index i where i.indrelid = c.conrelid and (i.indkey::int2[])[0:array_length(c.conkey, 1) - 1] = c.conkey::int2[])), 'aucune'),
+         case when exists (select 1 from pg_constraint c where c.contype = 'f' and c.connamespace = 'public'::regnamespace
+                   and not exists (select 1 from pg_index i where i.indrelid = c.conrelid and (i.indkey::int2[])[0:array_length(c.conkey, 1) - 1] = c.conkey::int2[])) then 'ÉCART' else 'ok' end
+  union all
+  select 103, 'étape 18 : règles RLS qui évaluent auth.uid() à chaque ligne (au lieu de (select auth.uid()))', 'aucune',
+         coalesce((select string_agg(tablename || ' « ' || policyname || ' »', ', ' order by tablename, policyname) from pg_policies where schemaname = 'public'
+                   and regexp_replace(coalesce(qual, '') || ' ' || coalesce(with_check, ''), 'SELECT auth\.uid\(\) AS uid', '', 'g') ~ 'auth\.uid\(\)'), 'aucune'),
+         case when exists (select 1 from pg_policies where schemaname = 'public'
+                   and regexp_replace(coalesce(qual, '') || ' ' || coalesce(with_check, ''), 'SELECT auth\.uid\(\) AS uid', '', 'g') ~ 'auth\.uid\(\)') then 'ÉCART' else 'ok' end
+  union all
+  select 104, 'étape 18 : tables de public sans clé primaire', 'aucune',
+         coalesce((select string_agg(c.relname, ', ' order by c.relname) from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind = 'r'
+                   and not exists (select 1 from pg_constraint k where k.conrelid = c.oid and k.contype = 'p')), 'aucune'),
+         case when exists (select 1 from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind = 'r'
+                   and not exists (select 1 from pg_constraint k where k.conrelid = c.oid and k.contype = 'p')) then 'ÉCART' else 'ok' end
+  union all
+  select 105, 'étape 18 : tables client_errors, maintenance_log, scores_archive', 'présentes',
+         case when to_regclass('public.client_errors') is not null and to_regclass('public.maintenance_log') is not null and to_regclass('public.scores_archive') is not null then 'présentes' else 'absentes' end,
+         case when to_regclass('public.client_errors') is not null and to_regclass('public.maintenance_log') is not null and to_regclass('public.scores_archive') is not null then 'ok' else 'MANQUE' end
+  union all
+  select 106, 'étape 18 : purge_expired, archive_old_scores (réservées au serveur), log_errors, health_report (ouvertes)', 'présentes, droits conformes',
+         case when to_regprocedure('public.purge_expired()') is null or to_regprocedure('public.archive_old_scores(integer)') is null or to_regprocedure('public.log_errors(jsonb)') is null
+                   or to_regprocedure('public.health_report()') is null then 'absentes'
+              when has_function_privilege('anon', 'public.purge_expired()', 'execute') or has_function_privilege('authenticated', 'public.purge_expired()', 'execute')
+                   or has_function_privilege('anon', 'public.archive_old_scores(integer)', 'execute') or has_function_privilege('authenticated', 'public.archive_old_scores(integer)', 'execute')
+                   or not has_function_privilege('anon', 'public.log_errors(jsonb)', 'execute') or not has_function_privilege('anon', 'public.health_report()', 'execute') then 'droits non conformes'
+              else 'présentes, droits conformes' end,
+         case when to_regprocedure('public.purge_expired()') is null or to_regprocedure('public.archive_old_scores(integer)') is null or to_regprocedure('public.log_errors(jsonb)') is null
+                   or to_regprocedure('public.health_report()') is null then 'MANQUE'
+              when has_function_privilege('anon', 'public.purge_expired()', 'execute') or has_function_privilege('authenticated', 'public.purge_expired()', 'execute')
+                   or has_function_privilege('anon', 'public.archive_old_scores(integer)', 'execute') or has_function_privilege('authenticated', 'public.archive_old_scores(integer)', 'execute')
+                   or not has_function_privilege('anon', 'public.log_errors(jsonb)', 'execute') or not has_function_privilege('anon', 'public.health_report()', 'execute') then 'ÉCART'
+              else 'ok' end
+  union all
+  select 107, 'étape 18 : purge nocturne (pg_cron, tâche virelo-purge) et dernière purge', 'info',
+         case when to_regclass('cron.job') is null then 'pg_cron absent : purge à lancer à la main (select public.purge_expired();)'
+              else coalesce((xpath('/row/c/text()', query_to_xml('select string_agg(jobname || '' '' || schedule, '', '') as c from cron.job where jobname = ''virelo-purge''', false, true, '')))[1]::text, 'tâche absente') end
+         || ' · dernière purge : ' || case when to_regclass('public.maintenance_log') is null then 'jamais'
+              else coalesce((xpath('/row/c/text()', query_to_xml('select max(at)::text as c from public.maintenance_log where what = ''purge_expired''', false, true, '')))[1]::text, 'jamais') end,
+         'info'
   union all
   select 92, 'étape 16 : anon sans aucune écriture directe sur aucune table (INSERT / UPDATE / DELETE)', 'aucune',
          coalesce((select string_agg(c.relname, ', ' order by c.relname) from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind = 'r'

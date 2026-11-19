@@ -1716,6 +1716,9 @@ try {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await app(() => { const A = window.copytrack; A.settings.reduceMotion = 'auto'; A._applyAccess(); });
     assert.equal(await page.evaluate(() => document.body.classList.contains('reduce-motion')), true, '« Système » suit prefers-reduced-motion');
+    // (0.12.5) Laisser le navigateur rendre deux images : il n'évalue les requêtes média qu'au rendu. Sans cela, sous charge, « reduce » puis
+    // « no-preference » tombent avant le même rendu : aucun changement n'est observé, aucun évènement n'arrive, et l'attente ci-dessous expirait.
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await waitApp(() => !document.body.classList.contains('reduce-motion'), null, 30000);      // et suit son changement (évènement du navigateur, livré au prochain rendu : sous charge, bien plus de 10 s)
     // Caméra libre de l'éditeur : au ras du sol, puis retour aux bornes habituelles

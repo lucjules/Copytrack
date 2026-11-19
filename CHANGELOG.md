@@ -6,6 +6,33 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.12.5 — la base prête pour la 1.0 : sécurité, conservation, erreurs remontées, surveillance
+
+**`PHYS_VER` reste 38.** Phase 2 du plan de la 1.0 (base et serveur). **Étape SQL 18 à appliquer** (`supabase/etape18-maintenance.sql`,
+relançable, ne supprime rien en s'appliquant : [supabase/MIGRATIONS.md](supabase/MIGRATIONS.md)). Aucune fonction serveur à redéployer.
+
+- **Sécurité de la base** : chemin de recherche fixé sur les 5 fonctions signalées par Supabase ; les fonctions de déclencheur ne s'appellent plus
+  par l'API (elles se déclenchent toujours).
+- **Performance** : un index pour chacune des 10 clés étrangères qui n'en avaient pas ; 16 règles d'accès réécrites pour n'évaluer le joueur
+  qu'une fois par requête (mêmes conditions) ; clés primaires sur les deux tables de compteurs.
+- **Conservation des données appliquée par la base**, comme l'annonce la page Confidentialité : chaque nuit, les sessions invitées sans activité
+  depuis 12 mois (et ce qui leur appartient), les statistiques de plus de 12 mois, les erreurs de plus de 90 jours et les compteurs anti-abus sont
+  effacés (`purge_expired()`, `pg_cron`). Les comptes ne sont jamais purgés.
+- **Erreurs du jeu remontées**, anonymes et seulement avec l'accord déjà donné pour les statistiques (`js/errorReport.js`) : message nettoyé
+  (sans adresse, identifiant ni e-mail), fichier et ligne du code, version, famille de navigateur. Le texte d'accord, l'infobulle du réglage et la
+  page Confidentialité le disent.
+- **Surveillance quotidienne** (`tools/surveillance.mjs`, `.github/workflows/surveillance.yml`) : site, fonction `submit-score`, santé de la base
+  (`health_report()`) ; une alerte envoie un e-mail au propriétaire du dépôt. Elle garde aussi le projet gratuit actif (pas de mise en pause).
+- **Sauvegarde hebdomadaire chiffrée** hors de Supabase (`.github/workflows/sauvegarde.yml`), dès que ses deux secrets sont réglés ; procédure de
+  restauration et essai à faire : [docs/EXPLOITATION.md](docs/EXPLOITATION.md).
+- **Archivage des temps des anciennes physiques préparé** (`scores_archive`, `archive_old_scores`) : lancé une seule fois à la sortie de la 1.0.
+  Décision : la physique est gelée pour toute la 1.x. L'export des données du joueur inclut ses temps archivés.
+- Tests : `tools/test-etape18-sql.sh` (33 contrôles ; les 73 attaques de `test-securite-sql.sh` rejouées après l'étape 18), `test-erreurs`,
+  `test-surveillance` ; `verify-prod.sql` a une section « étape 18 ». Test navigateur « aides à la conduite » : course corrigée (le passage
+  « animations réduites » oui puis non tombait parfois avant le même rendu, et l'évènement attendu n'arrivait jamais).
+- **À faire par l'éditeur** : activer la protection contre les mots de passe divulgués (Supabase › Authentication) ; régler les secrets de la
+  sauvegarde ; décider offre gratuite ou Pro avant la 1.0 ; faire une fois l'essai de restauration sur un projet de test.
+
 ## Bêta 0.12.4 — le jeu s'appelle Virelo ; licences, confidentialité et mentions légales
 
 **`PHYS_VER` reste 38**, rien ne change dans la course. Phase 1 du plan de la version 1.0 (légal et identité).

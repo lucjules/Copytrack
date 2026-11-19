@@ -22,6 +22,7 @@ import { initI18n } from './i18n/boot.js';
 import { describeBuiltin, describeUser } from './trackDescriptor.js';
 import { loadSettings, saveSettings, getRecord, saveRecord, saveMyTrack, newId, formatTime, purgeOldRecords, getJSON, setJSON } from './storage.js';
 import { Telemetry } from './telemetry.js';
+import { ErrorReport } from './errorReport.js';
 import { ghostFromHash } from './replay.js';
 import { QualityManager, PROFILE_LABELS, wantAntialias } from './quality.js';
 import { multiMethods } from './app/multi.js';
@@ -70,6 +71,11 @@ class App {
     });
     this.input = new Input();
     this.telemetry = new Telemetry({ store: { get: getJSON, set: setJSON }, send: (events) => online.logRuns(events), enabled: () => this.settings.telemetry === true });
+    // (0.12.5) Erreurs du jeu, anonymes, avec le même accord que les statistiques (js/errorReport.js) : erreurs non rattrapées, promesses rejetées, boucle de jeu.
+    this.errors = new ErrorReport({ store: { get: getJSON, set: setJSON }, send: (events) => online.logErrors(events), enabled: () => this.settings.telemetry === true,
+      install: () => this.telemetry.installId, origin: location.origin, userAgent: navigator.userAgent });
+    window.addEventListener('error', (ev) => { if (ev.error || ev.message) this.errors.capture('error', ev.error || ev.message, { file: ev.filename, line: ev.lineno, col: ev.colno }); });
+    window.addEventListener('unhandledrejection', (ev) => { const r = ev.reason; if (!(r && r.code === 'offline')) this.errors.capture('rejection', r); });      // (hors ligne : attendu, pas un défaut)
     this.input.setBindings(this.settings.keys, this.settings.pad);
     this.input.setPadConfig({ deadzone: this.settings.padDeadzone, sens: this.settings.padSens, rumble: this.settings.haptics });
     purgeOldRecords();
@@ -188,6 +194,7 @@ class App {
     const now = performance.now();
     (window.__ctErrors || (window.__ctErrors = [])).push({ t: Math.round(now), msg: String(e && e.message || e), stack: String(e && e.stack || '').split('\n').slice(0, 4).join(' | ') });
     if (window.__ctErrors.length > 20) window.__ctErrors.shift();
+    if (this.errors) this.errors.capture('loop', e);
     if (this.mode !== 'race' || !this.session) {      // hors course : rien à reprendre, la boucle continue ; mais le joueur doit le savoir (au plus un message toutes les 15 s : une erreur peut revenir à chaque image)
       this._errTimes = [];
       if (window.__ctErrors.length <= 2) console.error(GAME_NAME + ' : erreur dans la boucle de jeu', e);
@@ -340,6 +347,7 @@ class App {
     this.showMenu('menu');
     this._startBench();
     this.telemetry.scheduleFlush(15000);
+    this.errors.scheduleFlush(20000);
     setTimeout(() => this.askTelemetry(), 4000);
     setTimeout(() => this.checkRewards(), 2500);          // rattrape ce qui est déjà mérité (joueur existant)
     // Premier lancement : petit tutoriel (sauf si on arrive par un lien de circuit).

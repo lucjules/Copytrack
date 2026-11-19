@@ -210,7 +210,7 @@ export const settingsMethods = {
   setTelemetry(on) {
     this.settings.telemetry = !!on;
     this.saveSettings();
-    if (on) { this.telemetry.scheduleFlush(3000); this.ui.flash('Merci : statistiques anonymes activées.'); } else this.telemetry.forget();
+    if (on) { this.telemetry.scheduleFlush(3000); this.ui.flash('Merci : statistiques anonymes activées.'); } else { this.telemetry.forget(); this.errors.forget(); }
     if ($('opt-telemetry')) $('opt-telemetry').checked = !!on;
   },
 
@@ -220,7 +220,7 @@ export const settingsMethods = {
     this.ui.modal({
       title: 'Aider à équilibrer les circuits ?',
       body: `<p>Le jeu peut envoyer, <b>sans nom ni compte</b>, le temps de tes arrivées, tes abandons et ton nombre d'essais sur chaque circuit
-        (avec un identifiant aléatoire propre à cet appareil). Cela sert à régler la difficulté et les médailles sur de vrais joueurs.</p>
+        (avec un identifiant aléatoire propre à cet appareil), et les erreurs du jeu s'il en survient. Cela sert à régler la difficulté et les médailles sur de vrais joueurs, et à corriger les plantages.</p>
         <p class="meta">Rien d'autre ne part : ni pseudo, ni position, ni commandes. Tu peux changer d'avis à tout moment dans Paramètres › Jeu.</p>`,
       actions: [
         { label: 'Accepter', primary: true, onClick: () => { this.setTelemetry(true); return true; } },

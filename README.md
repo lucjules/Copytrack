@@ -3,7 +3,7 @@
 Jeu de course contre-la-montre **low-poly** dans le navigateur, avec éditeur de circuits.
 C'est un jeu original : décors, véhicules, pièces, musique et circuits ont été conçus pour ce projet.
 
-Version actuelle : **bêta 0.12.4** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
+Version actuelle : **bêta 0.12.5** · [historique des versions](CHANGELOG.md) · [architecture](docs/ARCHITECTURE.md) · [index des modules](docs/MODULES.md)
 
 ## Jouer
 
@@ -116,7 +116,7 @@ Le jeu s'**installe comme une application** (bouton d'installation du navigateur
 
 ## En ligne (Supabase)
 
-Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un projet Supabase :
+Le jeu marche entièrement hors ligne ; les fonctions en ligne utilisent un projet Supabase  (ordre et vérification de chaque étape : [supabase/MIGRATIONS.md](supabase/MIGRATIONS.md) ; surveillance, sauvegardes et conservation des données : [docs/EXPLOITATION.md](docs/EXPLOITATION.md)) :
 
 1. **Communauté** : `supabase/etape1-communaute.sql` (tables des pilotes et circuits publiés, règles de sécurité).
 2. **Classements** : `supabase/etape2-classements.sql` (table des temps, en lecture seule pour le jeu) et la fonction serveur
