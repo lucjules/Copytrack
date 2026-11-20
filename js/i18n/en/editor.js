@@ -476,6 +476,7 @@ export default {
   '⟳ Pivoter': '⟳ Rotate',
   '⇋ Miroir': '⇋ Mirror',
   '➜ Prolonger': '➜ Extend',
+  'Replier ou déplier les réglages de la pièce': 'Fold or unfold the piece settings',
   'Pivoter la pièce d’un quart de tour (R ; Maj + R : sens inverse)': 'Rotate the piece a quarter turn (R; Shift + R: other way)',
   'Version gauche / droite de la pièce (M)': 'Left / right version of the piece (M)',
   'Poser la pièce au bout de la dernière pièce posée, raccordée (P)': 'Place the piece at the end of the last piece, connected (P)',

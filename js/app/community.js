@@ -151,19 +151,29 @@ export const communityMethods = {
       const name = f.querySelector('#pub-name'), desc = f.querySelector('#pub-desc'), err = f.querySelector('#pub-err'), ok = f.querySelector('#pub-ok');
       name.value = track.name && track.name !== 'Mon circuit' ? track.name : '';
       desc.value = track.desc || '';
+      // 0.13.1 : la fenêtre reste ouverte pendant l'envoi ; en cas d'échec, l'erreur s'y affiche et on peut réessayer (avant : elle se fermait
+      // tout de suite et l'écran d'arrivée de la vérification aussi, même si l'envoi échouait). Fermée autrement (Échap) : comme « Annuler ».
+      let done = false, sending = false;
+      const finish = (v) => { if (!done) { done = true; resolve(v); } };
       // Différé : la fenêtre d'où l'on vient se referme juste après ce clic et ne doit pas fermer celle-ci.
       setTimeout(() => this.ui.modal({
         title: 'Publier dans la communauté', body: f,
+        onClose: () => finish(false),
         actions: [
-          { label: 'Annuler', onClick: () => { resolve(false); return true; } },
+          { label: 'Annuler', onClick: () => { finish(false); return true; } },
           { label: '🌐 Publier', primary: true, onClick: () => {
+            if (sending) return false;
             const n = name.value.trim().slice(0, 40);
             if (!n) { err.textContent = 'Donne un nom à ton circuit.'; name.focus(); return false; }
             if (!ok.checked) { err.textContent = 'Coche la case : ton circuit, les règles de la communauté et ton âge.'; ok.focus(); return false; }      // (0.12.4)
             track.name = n;
             track.desc = desc.value.replace(/\s+/g, ' ').trim().slice(0, 200);
-            this._doPublish(track).then(() => resolve(true));
-            return true;
+            sending = true; err.textContent = 'Publication en cours…';
+            this._doPublish(track).then((res) => {
+              sending = false;
+              if (res === true) { finish(true); this.ui.closeModal(); } else err.textContent = res || 'Publication impossible pour le moment.';
+            });
+            return false;
           } },
         ],
       }), 60);
@@ -171,15 +181,16 @@ export const communityMethods = {
     });
   },
 
+  // Renvoie true si le circuit est publié, sinon le message d'erreur (affiché dans la fenêtre de publication, qui reste ouverte).
   async _doPublish(track) {
-    this.ui.flash('Publication en cours…', 6);
     try {
       await online.publish(track, this.settings.playerName, loadProof(track));
       this.ui.flash(`« ${track.name} » est publié ! Retrouve-le dans Communauté › Mes publications.`, 3.5);
       this.audio.checkpoint(true);
+      return true;
     } catch (e) {
-      this.ui.flash(e.message, 4);
       this.audio.error();
+      return (e && e.message) || 'Publication impossible pour le moment.';
     }
   },
 

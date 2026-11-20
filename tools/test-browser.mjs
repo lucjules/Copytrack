@@ -1165,6 +1165,24 @@ try {
     assert.deepEqual(bad, [], 'boutons hors d\'atteinte :\n' + bad.join('\n'));
   });
 
+  await test('arrivée sur téléphone en paysage (844×390, 667×375) : toute la fenêtre tient sans défiler, les deux rangées de boutons sont dans l\'écran (0.13.1)', async () => {
+    const old = page.viewportSize(), bad = [];
+    try {
+      for (const [w, h] of [[844, 390], [667, 375]]) {
+        await page.setViewportSize({ width: w, height: h });
+        await app(() => { window.copytrack.ui.closeModal(); window.copytrack.playBuiltin(0); });
+        await waitApp(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, 30000);
+        await app(() => window.copytrack.session._finish(52.34));
+        await page.waitForTimeout(900);
+        await app(() => window.copytrack.ui.closeModal());
+        const r = await app(() => { const p = document.querySelector('#finish .panel'), btns = [...p.querySelectorAll('.row .btn')].filter((b) => !b.classList.contains('hidden') && getComputedStyle(b).display !== 'none'); return { scroll: p.scrollHeight - p.clientHeight, low: Math.max(...btns.map((b) => b.getBoundingClientRect().bottom)), h: window.innerHeight }; });
+        if (r.scroll > 2 || r.low > r.h) bad.push(`${w}×${h} : ${JSON.stringify(r)}`);
+        await app(() => { window.copytrack.quitRace(); window.copytrack.showMenu('menu'); });
+      }
+    } finally { await page.setViewportSize(old); }
+    assert.deepEqual(bad, []);
+  });
+
   await test('fenêtres hautes (académie) sur un écran de 700 px de haut : le titre et le dernier bouton restent atteignables (la fenêtre défile au lieu de déborder)', async () => {
     const old = page.viewportSize();
     await page.setViewportSize({ width: 1280, height: 700 });
@@ -1617,6 +1635,9 @@ try {
       assert.ok(await page.locator('.mp-rules').count(), 'le bloc des règles est dans le salon de l\'hôte');
       await page.evaluate(() => window.copytrack.room.setRules({ offroad: 1, sameCars: 1 }));
       await B.waitForFunction(() => window.copytrack.room && window.copytrack.room.rules && window.copytrack.room.rules.offroad === 1, null, { timeout: 10000 });
+      // (0.13.1) tout le monde « prêt » : sinon le premier clic sur « Lancer » avertit seulement
+      await B.evaluate(() => window.copytrack.room.setReady(true)); await app(() => window.copytrack.room.setReady(true));
+      await waitApp(() => { const r = window.copytrack.room.readyCount(); return r.ready === r.total; }, null, 10000);
       await clickBtn(page, 'Lancer le championnat');
       await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.cup, null, 30000);
       await B.waitForFunction(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.cup, null, { timeout: 30000 });
@@ -1686,6 +1707,49 @@ try {
       await waitApp(() => window.copytrack.mode === 'menu' && window.copytrack.ui.modalOpen);
     } finally {
       await app(() => { if (window.copytrack.room) window.copytrack.room.leave(); window.copytrack.ui.closeModal(); window.copytrack.showMenu('menu'); }).catch(() => {});
+      await B.close();
+    }
+  });
+
+  await test('multijoueur (0.13.1) : lien d\'invitation, voiture annoncée, prêt, course à départ commun (vraies voitures), arrivée, revanche demandée puis lancée', async () => {
+    const B = await hook(await ctx.newPage());
+    try {
+      await app(() => history.replaceState(null, '', '?net=local'));
+      await app(() => window.copytrack.multiMenu());
+      await page.evaluate(() => [...document.querySelectorAll('#modal-actions button')].find((b) => /Créer une salle/.test(b.textContent)).click());
+      await waitApp(() => document.querySelector('.mp-code b'));
+      const code = (await page.evaluate(() => document.querySelector('.mp-code b').textContent)).trim();
+      assert.match(await app(() => window.copytrack.inviteLink(window.copytrack.room)), new RegExp('#salle=' + code + '$'));
+      await B.goto(`http://127.0.0.1:${PORT}/?net=local#salle=${code}`, { waitUntil: 'load' });
+      if (await B.locator('#wl-name').isVisible()) { await B.locator('#wl-name').fill('Bea'); await B.locator('#wl-submit').evaluate((el) => el.click()); }
+      await B.waitForFunction(() => window.copytrack && window.copytrack.room && window.copytrack.room.list.some((m) => !m.self && m.link === 'open'), null, { timeout: 30000 });
+      await waitApp(() => window.copytrack.room.list.some((m) => !m.self && m.link === 'open' && m.car && /^#[0-9a-f]{6}$/i.test(m.car.color)), null, 20000);
+      assert.equal(await page.locator('.mp-cards .mp-card').count(), 2, 'deux cartes de joueur');
+      // mode Course (par défaut), circuit intégré ; l'invité voit le mode et le circuit
+      await page.evaluate(() => { const r = document.querySelector('input[name="mp-mode"][value="race"]'); r.click(); const s = document.querySelector('.mp-track select'); s.value = s.options[1].value; s.dispatchEvent(new Event('change')); });
+      await B.waitForFunction(() => /Course/.test(document.querySelector('.mp-mode').textContent) && /Circuit/.test(document.querySelector('.mp-track').textContent), null, { timeout: 10000 });
+      // prêt : l'invité se déclare, l'hôte non ; premier clic sur « Lancer » = avertissement, second = départ
+      await B.evaluate(() => document.querySelector('#modal-actions [data-mp="ready"]').click());
+      await waitApp(() => /1 \/ 2 prêt/.test(document.querySelector('.mp-readyline').textContent), null, 10000);
+      await page.evaluate(() => document.querySelector('#modal-actions [data-mp="start"]').click());
+      assert.match(await page.evaluate(() => document.querySelector('.mp-lobby .mp-err').textContent), /pas prêt/);
+      await page.evaluate(() => document.querySelector('#modal-actions [data-mp="start"]').click());
+      await waitApp(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.cup && window.copytrack.session.cup.total === 1, null, 30000);
+      await B.waitForFunction(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.cup, null, { timeout: 30000 });
+      await waitApp(() => window.copytrack.session.state === 'racing' && [...window.copytrack.session.remote.values()].some((rc) => rc.ready), null, 30000);
+      assert.equal(await app(() => [...window.copytrack.session.remote.values()][0].opaque), true, 'la voiture de Bea est une vraie voiture à son apparence');
+      // arrivée : course terminée, sans classement par points ; Bea demande la revanche, Ana la voit puis la lance
+      await B.evaluate(() => window.copytrack.session._finish(30.0));
+      await app(() => window.copytrack.session._finish(31.5));
+      await waitApp(() => /Course terminée/.test((document.getElementById('mp-cup') || {}).textContent || ''), null, 20000);
+      await B.waitForFunction(() => /Course terminée/.test((document.getElementById('mp-cup') || {}).textContent || ''), null, { timeout: 20000 });
+      await B.evaluate(() => document.querySelector('#mp-cup [data-act="want"]').click());
+      await waitApp(() => /Revanche demandée : 1 \/ 2/.test(document.getElementById('mp-cup').textContent), null, 10000);
+      await page.evaluate(() => document.querySelector('#mp-cup [data-act="rematch"]').click());
+      await waitApp(() => window.copytrack.session && window.copytrack.session.cup && window.copytrack.session.state !== 'finished' && !document.getElementById('mp-cup'), null, 20000);
+      await B.waitForFunction(() => window.copytrack.session && window.copytrack.session.cup && window.copytrack.session.state !== 'finished' && !document.getElementById('mp-cup'), null, { timeout: 20000 });
+    } finally {
+      await app(() => { if (window.copytrack.room) window.copytrack.room.leave(); window.copytrack.ui.closeModal(); if (window.copytrack.mode === 'race') window.copytrack.quitRace(); window.copytrack.showMenu('menu'); }).catch(() => {});
       await B.close();
     }
   });

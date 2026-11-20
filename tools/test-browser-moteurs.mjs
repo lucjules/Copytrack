@@ -87,10 +87,40 @@ for (const engine of ENGINES) {
     await app(() => window.copytrack.quitRace());
     await wait(() => window.copytrack.mode === 'menu');
   });
+  await step('course (0.15.0) : mini-carte visible ; « Mauvais sens » à contre-sens ; pause : caméra, réglages rapides, retour au checkpoint', async () => {
+    await app(() => window.copytrack.playBuiltin(0));
+    await wait(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.state === 'racing');
+    await page.keyboard.down('ArrowUp'); await page.waitForTimeout(1500); await page.keyboard.up('ArrowUp');
+    assert.ok(await app(() => { const m = document.getElementById('minimap'); return !!m && getComputedStyle(m).display !== 'none' && m.getBoundingClientRect().width > 50; }), 'mini-carte affichée');
+    // demi-tour sur place, puis on accélère à contre-sens
+    await app(() => { const p = window.copytrack.session.phys; p.yaw += Math.PI; p.vel.x = -p.vel.x; p.vel.z = -p.vel.z; });
+    await page.keyboard.down('ArrowUp');
+    await wait(() => /Mauvais sens/.test(document.getElementById('hud-msg').textContent), null, 8000);
+    await page.keyboard.up('ArrowUp');
+    await page.keyboard.press('Escape');
+    await wait(() => !document.getElementById('pause').classList.contains('hidden'));
+    const pq = await app(() => ({ cam: document.getElementById('pq-cam').textContent, vol: +document.getElementById('pq-volume').value, set: window.copytrack.settings.volume, m0: window.copytrack.session.camMode }));
+    assert.match(pq.cam, /Caméra/); assert.equal(pq.vol, pq.set);
+    await app(() => document.querySelector('[data-action="pause-camera"]').click());
+    assert.notEqual(await app(() => window.copytrack.session.camMode), pq.m0, 'la caméra change depuis la pause');
+    await app(() => document.querySelector('[data-action="pause-respawn"]').click());
+    await wait(() => window.copytrack.session.state === 'racing' && document.getElementById('pause').classList.contains('hidden'));
+    await app(() => window.copytrack.quitRace());
+    await wait(() => window.copytrack.mode === 'menu');
+  });
   await step('éditeur : un circuit officiel s’ouvre et se dessine', async () => {
     await app(() => window.copytrack.openEditor({ code: window.copytrack.builtins[1].track.encode(), name: 'Moteur' }));
     await wait(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track && window.copytrack.session.track.tiles.length > 10);
     await page.waitForTimeout(800);
+    // 0.13.1 : les réglages de la pièce se replient d'un clic sur leur titre (ils cachaient le bas de la palette), et le choix est gardé
+    const fold = await app(async () => {
+      const set = document.getElementById('ed-pset'), head = set && set.querySelector('.pset-head');
+      if (!head || set.hidden) return 'réglages absents';
+      const was = set.classList.contains('folded'); head.click(); await new Promise((r) => setTimeout(r, 50));
+      const r = { toggled: set.classList.contains('folded') !== was, saved: !!window.copytrack.settings.psetFolded === set.classList.contains('folded'), acts: getComputedStyle(set.querySelector('.pset-acts')).display };
+      head.click(); return r;
+    });
+    assert.ok(fold.toggled && fold.saved, JSON.stringify(fold));
     await app(() => window.copytrack.leaveEditor());
     await wait(() => window.copytrack.mode === 'menu');
   });
@@ -140,6 +170,54 @@ for (const engine of ENGINES) {
     await page.click('#modal-actions .btn.primary');
     await wait(() => /Merci/.test(document.getElementById('toast').textContent));
     assert.ok(sent && sent.experience === 'habitue' && sent.walls === -1 && sent.comment === 'Essai automatique' && !('pseudo' in sent), JSON.stringify(sent));
+  });
+  await step('publication d’un circuit (serveur simulé) : un échec laisse la fenêtre ouverte avec l’erreur, le nouvel essai publie ; Échap = annuler', async () => {
+    const run = JSON.parse(await readFile(join(root, 'tools/compat/corpus.json'), 'utf8')).runs[0];      // course du pilote sur « Premiers Éclats »
+    let fails = 1, sent = 0;
+    const handler = async (r) => {
+      const url = r.request().url(), J = (b, status = 200) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
+      if (url.includes('/auth/v1/')) return J({ access_token: 'jeton', refresh_token: 'r', expires_in: 3600, user: { id: '00000000-0000-0000-0000-0000000000e1' } });
+      if (url.includes('/functions/v1/submit-score')) { sent++; return fails-- > 0 ? J({ error: 'Serveur occupé, réessaie.' }, 503) : J({ ok: true, id: 'x' }); }
+      if (r.request().method() === 'POST') return r.fulfill({ status: 201, body: '' });
+      return J([]);
+    };
+    await page.route(/supabase\.co/, handler);
+    try {
+      const open = () => app(async (run) => {
+        const A = window.copytrack, { buildBuiltin, BUILTIN_TRACKS } = await import('/js/tracks.js');
+        if (A.mode !== 'editor') await A.openEditor({ code: buildBuiltin(BUILTIN_TRACKS[0]).encode(), name: 'Mon circuit' });
+        const S = A.session; S.lastRun = { inputs: run.inputs, time: run.time };
+        A.editorState = { code: S.track.encode(), name: S.track.name };
+        window.__pub = 'attente'; A.publishTrack(S.track).then((v) => { window.__pub = v; });
+      }, run);
+      await open();
+      await app(async (run) => { const A = window.copytrack; if (!A.session.track.verified) { A.onEditorTestFinished(run.time, A.session.track); await new Promise((r) => setTimeout(r, 1000)); A.ui.closeModal(); } }, run);
+      await open();
+      await wait(() => /Publier dans la communauté/.test(document.getElementById('modal-title').textContent));
+      // Échap (fermeture sans bouton) : la publication est annulée
+      await app(() => window.copytrack.ui.closeModal());
+      await wait(() => window.__pub === false);
+      await open();
+      await wait(() => !!document.getElementById('pub-name'));
+      await page.fill('#pub-name', 'Essai moteurs'); await page.check('#pub-ok');
+      const pub = () => app(() => [...document.querySelectorAll('#modal-actions button')].find((x) => /Publier/.test(x.textContent)).click());
+      await pub();
+      await wait(() => /occupé|impossible|503/i.test(document.getElementById('pub-err').textContent));
+      assert.ok(await app(() => !document.getElementById('modal').classList.contains('hidden')), 'la fenêtre reste ouverte après l’échec');
+      await pub();
+      await wait(() => window.__pub === true);
+      assert.equal(sent, 2);
+      await app(() => { const A = window.copytrack; if (A.mode === 'editor') A.leaveEditor(); A.ui.closeModal(); A.showMenu('menu'); });
+    } finally { await page.unroute(/supabase\.co/, handler); }
+  });
+  await step('nouvelle version en ligne : le bandeau « Recharger » apparaît (version simulée), « Plus tard » le retire', async () => {
+    await page.route(/js\/version\.js\?u=/, (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: "export const VERSION = 'bêta 9.9.9';" }));
+    assert.equal(await app(() => window.copytrack._update.check(true)), true);
+    await wait(() => /9\.9\.9/.test((document.getElementById('update-bar') || {}).textContent || ''));
+    const vis = await app(() => getComputedStyle(document.getElementById('update-bar')).display !== 'none');
+    assert.ok(vis, 'visible à l’accueil');
+    await page.click('#update-bar [data-up="later"]');
+    await wait(() => !document.getElementById('update-bar'));
   });
   await step('anglais, puis pages légales (fenêtre du jeu)', async () => {
     await app(async () => { const m = await import('/js/i18n/boot.js'); await m.switchLanguage('en', { persist: false }); });

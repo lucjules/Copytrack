@@ -122,6 +122,22 @@ test('la caméra n\'est pas dans la fermeture de la vérification serveur (js/ve
   assert.ok(!seen.has('js/camrig.js') && !seen.has('js/race/camera.js'));
   assert.ok(seen.has('js/physics.js'), 'la fermeture contient bien la physique');
 });
+test('réception (0.13.1) : le point de chute glisse continûment quand la voiture avance (avant : il sautait de vx × 50 ms d\'un calcul à l\'autre)', () => {
+  const flat = { surfaceAt: () => ({ h: 0 }), ceilingSurfaceAt: () => ({ h: Infinity }) };
+  const hits = [];
+  for (let i = 0; i < 40; i++) {      // la voiture en l'air avance de 1/120 s à chaque calcul
+    const r = new CamAssist(); const p = fakeP({ grounded: false, pos: { x: 0, y: 6, z: -i * (40 / 120) }, vel: { x: 0, y: 2, z: -40 } });
+    r._predict(p, flat, DT); hits.push(r.az);
+  }
+  const steps = hits.slice(1).map((z, i) => Math.abs(z - hits[i]));
+  assert.ok(Math.max(...steps) < 0.5, `écart max d'un calcul à l'autre ${Math.max(...steps).toFixed(2)} m (la voiture avance de 0,33 m)`);
+});
+test('lissages (0.13.1) : pente visée et vitesse compensée suivent le temps, pas le nombre d\'appels (60 ou 120 calculs/s : même résultat)', () => {
+  const run = (hz) => { const r = new CamAssist(), p = fakeP({ n: { x: 0, y: 0.95, z: 0.31 } }); let o; for (let i = 0; i < hz / 4; i++) o = r.update(1 / hz, p, null, 1); return [o.slope, o.vz]; };
+  const [a, b] = [run(60), run(120)];
+  assert.ok(Math.abs(a[0] - b[0]) < 0.01 && a[0] !== 0, `pente ${a[0]} / ${b[0]}`);
+  assert.ok(Math.abs(a[1] - b[1]) < 0.05, `vitesse ${a[1]} / ${b[1]}`);
+});
 test('smoothstep : bornes et monotonie', () => { assert.equal(smoothstep(1, 2, 0), 0); assert.equal(smoothstep(1, 2, 3), 1); assert.ok(smoothstep(1, 2, 1.5) === 0.5); });
 
 finish('Aides de caméra : tout passe.');

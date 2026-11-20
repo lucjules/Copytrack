@@ -8,7 +8,7 @@ import { SnapshotBuffer } from '../js/net/interp.js';
 import { RemoteCar, darkness, FADE_NEAR, FADE_FAR, MAX_DARKEN } from '../js/remoteCar.js';
 import { SupabaseSignaling, Emitter } from '../js/net/signaling.js';
 import { PeerMesh } from '../js/net/transport.js';
-import { Room, newRoomCode, normalizeCode, ROOM_RE } from '../js/net/room.js';
+import { Room, cleanCarMeta, newRoomCode, normalizeCode, ROOM_RE } from '../js/net/room.js';
 import { RaceLogic } from '../js/raceLogic.js';
 import { Track } from '../js/track.js';
 import { PHYS_VER, NET_VER } from '../js/version.js';
@@ -277,6 +277,41 @@ function fakeRoomEnv() {
   const makeMesh = ({ selfId, handlers }) => { const m = { selfId, handlers, links: new Map(), ctl: [], state: [], addPeer(id) { this.added = (this.added || []).concat(id); }, removePeer() {}, closeAll() {}, sendCtl(msg, to) { this.ctl.push([msg, to]); }, broadcastState(b) { this.state.push(b); } }; meshes.push(m); return m; };
   return { make, makeMesh, meshes };
 }
+await test('salon (0.13.1) : voiture annoncée et filtrée, prêt compté, mode de l\'hôte vu par l\'invité, revanche demandée', async () => {
+  const env = fakeRoomEnv();
+  const opts = (name, car) => ({ name, car, makeSignaling: ({ code, selfId }) => env.make(selfId, code), makeMesh: env.makeMesh });
+  const host = await Room.create({ ...opts('Hôte', { body: 'muscle', color: '#ff4fd8' }), code: 'CAR234' });
+  const guest = await Room.join('CAR234', opts('Invité', { body: 'kart', color: '#36e9ff', '<img>': 'x', long: 'y'.repeat(40) }));
+  const g = host.members.get(guest.selfId);
+  assert.deepEqual(g.car, { body: 'kart', color: '#36e9ff' }, 'clés et valeurs douteuses retirées');
+  assert.deepEqual(cleanCarMeta('pas un objet'), null); assert.deepEqual(cleanCarMeta([1, 2]), null);
+  for (const m of [host, guest]) for (const x of m.members.values()) x.link = 'open';
+  assert.deepEqual(host.readyCount(), { ready: 0, total: 2 });
+  guest.setReady(true);
+  assert.deepEqual(host.readyCount(), { ready: 1, total: 2 });
+  host.setMode('race');
+  assert.equal(guest.hostMode, 'race', 'l\'invité voit le mode choisi');
+  guest.setMode('free'); assert.equal(host.hostMode, 'race', 'seul l\'hôte choisit');
+  guest.setWant('rematch');
+  assert.deepEqual(host.wantCount(), { n: 1, total: 2 });
+  guest.setWant(null); assert.deepEqual(host.wantCount(), { n: 0, total: 2 });
+  host.leave(); guest.leave();
+});
+
+await test('voiture d\'un adversaire (0.13.1) : à son apparence ; vraie voiture qui garde ses couleurs en course à départ commun, fantôme de SA couleur en course libre', () => {
+  const scene = { add() {} };
+  const real = new RemoteCar(scene, { id: 'a', name: 'Ana', car: { body: 'muscle', color: '#ff4fd8' }, opaque: true });
+  assert.equal(real.opaque, true); assert.equal('#' + real.baseColor.getHexString(), '#ff4fd8');
+  const before = [...real.base.keys()].map((m) => m.color.getHex());
+  real.setDistance(500);
+  assert.deepEqual([...real.base.keys()].map((m) => m.color.getHex()), before, 'pas d\'assombrissement pour une vraie voiture');
+  const ghost = new RemoteCar(scene, { id: 'b', name: 'Bea', car: { color: '#36e9ff' }, opaque: false });
+  assert.equal(ghost.opaque, false); assert.equal('#' + ghost.baseColor.getHexString(), '#36e9ff');
+  const old = new RemoteCar(scene, { id: 'c', name: 'Cid', colorIndex: 1 });
+  assert.equal(old.opaque, false, 'sans apparence annoncée : couleur de joueur, comme avant');
+  for (const r of [real, ghost, old]) r.dispose();
+});
+
 await test('créer puis rejoindre par code ; code inconnu, code pris, salle pleine, mauvaise version', async () => {
   const env = fakeRoomEnv();
   const opts = (name) => ({ name, makeSignaling: ({ code, selfId }) => env.make(selfId, code), makeMesh: env.makeMesh });

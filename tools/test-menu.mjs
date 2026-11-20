@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test, finish } from './harness.mjs';
 import { LEGAL_IDS } from '../js/legal.js';
+import { CATEGORIES, CATEGORY_GROUPS } from '../js/cosmetics.js';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const wiring = readFileSync(new URL('../js/app/wiring.js', import.meta.url), 'utf8');
@@ -17,10 +18,10 @@ const panels = [...menu.matchAll(/<div class="menu-panel hidden" id="menu-sub-([
 const entries = panels.flatMap((p) => [...p.html.matchAll(/<button[^>]*data-action="([^"]+)"[^>]*class="btn menu-entry[^"]*"/g)].map((m) => m[1]));
 
 console.log('Menu principal');
-test('six catégories visibles à l\'ouverture, dans l\'ordre : Jouer, Créer, Multijoueur, Progression, Profil, Paramètres', () => {
+test('six catégories visibles à l\'ouverture, dans l\'ordre : Jouer, Créer, Multijoueur, Progression, Garage (0.15.0, avant « Profil »), Paramètres', () => {
   assert.deepEqual(tileButtons.map((b) => b.action), ['sub-play', 'sub-create', 'sub-multi', 'sub-progress', 'sub-profile', 'sub-settings']);
   const labels = [...tiles.matchAll(/<button[^>]*>\s*([^<\s][^<]*?)\s*<small/g)].map((m) => m[1].trim());
-  assert.deepEqual(labels, ['Jouer', 'Créer', 'Multijoueur', 'Progression', 'Profil', 'Paramètres']);
+  assert.deepEqual(labels, ['Jouer', 'Créer', 'Multijoueur', 'Progression', 'Garage', 'Paramètres']);
 });
 test('chaque tuile ouvre un panneau existant, annoncé aux lecteurs d\'écran, qui a un titre et un bouton « ← Retour »', () => {
   assert.equal(panels.length, 6);
@@ -84,6 +85,14 @@ test('les réglages sont rangés par thème : le nom du pilote est dans le Compt
   assert.ok(panel('controls').includes('id="opt-touch"') && panel('controls').includes('id="bind-list"'));
   assert.ok(!profile.includes('data-action="reset-records"'), 'le bouton « Effacer les records » est généré dans les Sauvegardes (profile.js)');
   assert.ok(readFileSync(new URL('../js/app/profile.js', import.meta.url), 'utf8').includes('data-action="reset-records"'));
+});
+
+test('garage (0.15.0) : les 14 onglets sont rangés en quatre familles nommées, chacun une seule fois, aucun oublié', () => {
+  const ids = CATEGORY_GROUPS.flatMap((g) => g.cats);
+  assert.equal(CATEGORY_GROUPS.length, 4);
+  assert.deepEqual([...ids].sort(), CATEGORIES.map((c) => c.id).sort());
+  assert.equal(new Set(ids).size, ids.length);
+  for (const g of CATEGORY_GROUPS) assert.ok(g.label && g.cats.length >= 3, g.label);
 });
 
 finish('Tous les tests du menu principal passent.');

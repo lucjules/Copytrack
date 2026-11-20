@@ -113,6 +113,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `trail.js` | Traînée lumineuse du véhicule (cosmétique) : un ruban derrière la voiture, TOUJOURS présent (même à l'arrêt, très discret), dont l'intensité, la longueur et la largeur suivent la vitesse et le boost. Un ruban 3D avec une opacité par sommet (additif) : pas de particules qui apparaissent et disparaissent. |
 | `ui.js` | Interface DOM : écrans, HUD, fenêtres modales, notifications. |
 | `uitheme.js` | Thèmes et disposition de l'interface (lot 11) : couleurs, police, arrondis, compteur de vitesse, taille et place des éléments du HUD. |
+| `updateCheck.js` | Nouvelle version en ligne (0.13.1) : un onglet resté ouvert ne savait jamais qu'une version plus récente était publiée, et pouvait même charger des fichiers des deux versions (écrans ouverts plus tard) : affichages bizarres. Le jeu relit donc js/version.js sur le réseau toutes les 30 minutes et au retour sur l'onglet ; si la version a changé, il propose de recharger (js/app/update.js), jamais au milieu d'une course. |
 | `variants.js` | Variantes de records (Copytrack Evolution, E3) : des catégories de classement sur un même circuit (départ en moto, gravité lunaire, sans obstacles…), SÉPARÉES du record officiel. Une variante est un jeu de règles (rulesCore.js) appliqué à une copie du circuit : rien de neuf dans la physique. Elle voyage dans la clé de classement, sans aucune migration de la base : |
 | `verify.js` | Vérification d'une course (classements en ligne). Module sans rendu ni navigateur : il est utilisé par la fonction serveur Supabase (supabase/functions/submit-score), qui le charge depuis le site du jeu. La physique étant déterministe, rejouer les commandes enregistrées redonne exactement la même course et le même temps. |
 | `version.js` | Numéros de version du jeu (une seule source), et son nom. |
@@ -154,6 +155,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | `shared.js` | Éléments partagés par les familles de méthodes de App (voir main.js). |
 | `theater.js` | Replay Theater : point d'entrée de l'application (« Revoir la course » à l'arrivée, « Regarder mon record » de la fiche du circuit). |
 | `uicustom.js` | Personnalisation de l'interface (lot 11) : thème, couleurs, police, compteur de vitesse, éditeur de HUD (glisser-déposer) et éditeur de caméras. |
+| `update.js` | Bandeau « nouvelle version » (0.13.1, js/updateCheck.js) : visible dans les menus et l'éditeur, caché pendant une course (body.in-race, css) : il réapparaît à l'arrivée. « Recharger » relance le jeu sur la nouvelle version ; « Plus tard » le retire pour cette session. |
 | `wiring.js` | Branchement de l'interface : clics, actions du menu, de l'éditeur, tactile, manette, clins d'œil cachés. |
 
 ## `js/editor/`
@@ -303,6 +305,7 @@ La vue d'ensemble (principes, déterminisme, flux d'une course) est dans [ARCHIT
 | Fichier | Rôle |
 | --- | --- |
 | `leaderboardPanel.js` | Classement à onglets (Race Hub, fenêtre « 🏆 ») : chaque onglet est un FOURNISSEUR de données enregistré ici. Un onglet dont le fournisseur n'est pas disponible n'est pas affiché (jamais d'onglet vide ou factice). Amis, Secteurs et Saison (E15) demandent les étapes SQL 9 à 11 : sans elles, l'onglet dit qu'elles manquent, il ne montre pas de faux classement. |
+| `miniMap.js` | Mini-carte en course (0.15.0) : le circuit vu de dessus, nord en haut, avec la voiture du joueur, son fantôme et les adversaires. |
 | `traceChart.js` | Petites courbes sur un canvas (HUD d'entraînement, Replay Theater) : une fenêtre glissante de N valeurs par série, dessinée sans allocation. |
 | `trackMap.js` | Mini-carte d'un circuit, vue de dessus : un seul noyau de dessin pour les miniatures des cartes (editorTools.thumbnail) et la grande carte zoomable du Race Hub (createTrackMap). Marche pour TOUS les circuits, éditeur compris : elle dessine la ligne centrale de chaque pièce (centerlineWorld), pas track.path (qui n'existe que pour les circuits scriptés). |
 

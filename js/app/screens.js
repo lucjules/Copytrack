@@ -36,6 +36,9 @@ export const screenMethods = {
 
   showScreen(name) {
     this._screen = name;
+    // Un Échap appuyé AVANT l'ouverture de cet écran (déjà traité ailleurs, pas encore lu par la boucle) ne doit pas le refermer à l'image suivante :
+    // fermer un panneau de l'accueil par Échap puis cliquer aussitôt une ligne des records rouvrait la fiche puis la refermait (comme pour ui.modal).
+    if (this.input && this.input.pressed) this.input.pressed.delete('Escape');
     if (name === 'menu') {
       this._menuSub(null);
       const r = getRecord('daily-' + dayKey());
@@ -100,6 +103,10 @@ export const screenMethods = {
       actions.push({ label: 'C\'est parti !', onClick: () => { this._tutorialDone(); return true; } });
     }
     if (step < steps.length - 1) actions.push({ label: 'Passer', onClick: () => { this._tutorialDone(); return true; } });
+    // 0.15.0 : apprendre en roulant. Dès la première page, une course guidée (leçon 1 de l'Académie, « Prise en main », deux minutes, consignes à
+    // l'écran) plutôt que trois pages de texte ; le reste du tutoriel reste à portée.
+    if (step === 0) actions.unshift({ label: '🏁 Première course guidée', primary: true, attrs: { 'data-tuto': 'guided' }, onClick: () => { this._tutorialDone(); setTimeout(() => this.playLesson(0), 0); return true; } });
+    if (step === 0) for (const a of actions) if (a.label === 'Suivant →') a.primary = false;
     this.ui.modal({ title: `${s.title} (${step + 1}/${steps.length})`, body: s.body, actions });
   },
 
@@ -143,6 +150,21 @@ export const screenMethods = {
         ${sm.complete ? `<p class="cs-msg">✦ Carrière complète : ${sm.total} cristaux et ${sm.total} objectifs. Il n’y a plus rien à finir ici.</p>` : sm.finished ? '<p class="cs-msg">🏁 Carrière terminée : une médaille sur chaque circuit. Reste les cristaux et les objectifs bonus.</p>' : ''}`;
       list.appendChild(box);
     }
+    // 0.15.0 : « Continuer la carrière » : le prochain circuit ouvert sans médaille (sinon le premier sans cristal), en un clic.
+    {
+      const total0 = this.builtins.length;
+      const openCh = (i) => chapterUnlocked(Math.floor(i / CHAPTER_SIZE), medalOf, total0);
+      let next = this.builtins.findIndex((b, i) => openCh(i) && !medalOf(i));
+      if (next < 0) next = this.builtins.findIndex((b, i) => openCh(i) && (medalOf(i) || {}).id !== 'cristal');
+      if (next >= 0) {
+        const b = this.builtins[next], ch = Math.floor(next / CHAPTER_SIZE);
+        const go = document.createElement('button');
+        go.type = 'button'; go.className = 'btn big primary career-next'; go.dataset.next = String(next);
+        go.innerHTML = `<span>▶ Continuer la carrière</span><small>Chapitre ${ch + 1} · ${esc(b.def.name)}</small>`;
+        go.addEventListener('click', () => { this.audio.click(); this.openBuiltinHub(next, 'tracks'); });
+        list.appendChild(go);
+      }
+    }
     this._renderFavorites(list);
     // Défi du jour
     const dailyBox = document.createElement('div');
@@ -170,7 +192,7 @@ export const screenMethods = {
     dc.addEventListener('keydown', (e) => { if (e.key === 'Enter') goDaily(); });
     dGrid.appendChild(dc);
     dailyBox.appendChild(dGrid);
-    list.appendChild(dailyBox);
+    const after = [dailyBox];      // (0.15.0) défi du jour et saison : APRÈS les chapitres (avant, ils passaient devant la carrière)
 
     // Saison de la semaine (E15) : trois circuits de la carrière, un classement de points et des divisions (supabase/etape11-saisons.sql).
     const sn = seasonOf();
@@ -197,7 +219,7 @@ export const screenMethods = {
         sGrid.appendChild(card);
       }
       sBox.appendChild(sGrid);
-      list.appendChild(sBox);
+      after.push(sBox);
     }
 
     const total = this.builtins.length;
@@ -249,6 +271,7 @@ export const screenMethods = {
       g.appendChild(grid);
       list.appendChild(g);
     }
+    for (const el of after) list.appendChild(el);
   },
 
   _trackTags(track) {

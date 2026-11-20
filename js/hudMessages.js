@@ -39,5 +39,6 @@ export const MSG = {
   cut: ['Moteur coupé', PRIO.info, 0.9],
   badLanding: ['Réception ratée', PRIO.info, 0.8],
   keepClock: ['Chrono maintenu', PRIO.penalty, 1.1],
-  stuck: ['Bloqué ? R : retour au checkpoint', PRIO.info, 3.2],      // voiture immobile gaz à fond depuis 3 s (ralentisseur, bateau hors de l'eau, rebond sur place, nez dans une paroi…)
+  stuck: ['Bloqué ? R : retour au checkpoint', PRIO.info, 3.2],
+  wrongWay: ['⛔ Mauvais sens', PRIO.penalty, 1.4],      // (0.15.0) la voiture roule à contre-sens de la ligne du circuit depuis plus d'une demi-seconde      // voiture immobile gaz à fond depuis 3 s (ralentisseur, bateau hors de l'eau, rebond sur place, nez dans une paroi…)
 };

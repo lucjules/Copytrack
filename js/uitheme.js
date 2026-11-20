@@ -4,11 +4,11 @@ import { GAME_NAME } from './version.js';
 
 export const THEMES = {
   default: { label: GAME_NAME, vars: {} },
-  midnight: { label: 'Minuit', vars: { '--bg': '#070b1c', '--panel': 'rgba(10, 18, 44, 0.84)', '--panel-2': 'rgba(18, 32, 74, 0.92)', '--pink': '#7aa8ff', '--cyan': '#4de1ff', '--amber': '#ffd166', '--grad': 'linear-gradient(100deg, #4d7cff 0%, #7aa8ff 50%, #4de1ff 100%)' } },
-  sunset: { label: 'Crépuscule', vars: { '--bad': '#ff8c98', '--bg': '#2a0f1f', '--panel': 'rgba(60, 18, 36, 0.84)', '--panel-2': 'rgba(92, 28, 50, 0.92)', '--pink': '#ff8fa3', '--cyan': '#ffc15e', '--amber': '#ff9f43', '--grad': 'linear-gradient(100deg, #ff5e62 0%, #ff9966 50%, #ffd26e 100%)' } },
-  forest: { label: 'Forêt', vars: { '--bad': '#ff8c8c', '--bg': '#0b1f17', '--panel': 'rgba(12, 40, 28, 0.84)', '--panel-2': 'rgba(20, 62, 44, 0.92)', '--pink': '#9be37a', '--cyan': '#5ff2b5', '--amber': '#e6e36a', '--grad': 'linear-gradient(100deg, #3ddc84 0%, #9be37a 50%, #5ff2b5 100%)' } },
-  mono: { label: 'Mono', vars: { '--bg': '#101010', '--panel': 'rgba(24, 24, 24, 0.86)', '--panel-2': 'rgba(40, 40, 40, 0.94)', '--text': '#f2f2f2', '--muted': '#a8a8a8', '--pink': '#d8d8d8', '--cyan': '#ffffff', '--amber': '#cfcfcf', '--grad': 'linear-gradient(100deg, #777 0%, #ddd 100%)' } },
-  contrast: { label: 'Contraste élevé', vars: { '--bg': '#000000', '--panel': 'rgba(0, 0, 0, 0.94)', '--panel-2': 'rgba(18, 18, 18, 0.98)', '--line': 'rgba(255, 255, 255, 0.55)', '--text': '#ffffff', '--muted': '#e6e6e6', '--pink': '#ffe600', '--cyan': '#00e5ff', '--amber': '#ffe600', '--good': '#39ff7a', '--bad': '#ff5252', '--grad': 'linear-gradient(100deg, #ffe600 0%, #00e5ff 100%)' } },
+  midnight: { label: 'Minuit', vars: { '--ui-btn': '#142a6a', '--ui-btn-hover': '#22408c', '--ui-btn-active': '#0f2054', '--ui-btn-edge': 'rgba(120, 180, 255, 0.75)', '--bg': '#070b1c', '--panel': 'rgba(10, 18, 44, 0.84)', '--panel-2': 'rgba(18, 32, 74, 0.92)', '--pink': '#7aa8ff', '--cyan': '#4de1ff', '--amber': '#ffd166', '--grad': 'linear-gradient(100deg, #4d7cff 0%, #7aa8ff 50%, #4de1ff 100%)' } },
+  sunset: { label: 'Crépuscule', vars: { '--ui-btn': '#5a1f3a', '--ui-btn-hover': '#7a2c50', '--ui-btn-active': '#4a1830', '--ui-btn-edge': 'rgba(255, 190, 150, 0.7)', '--bad': '#ff8c98', '--bg': '#2a0f1f', '--panel': 'rgba(60, 18, 36, 0.84)', '--panel-2': 'rgba(92, 28, 50, 0.92)', '--pink': '#ff8fa3', '--cyan': '#ffc15e', '--amber': '#ff9f43', '--grad': 'linear-gradient(100deg, #ff5e62 0%, #ff9966 50%, #ffd26e 100%)' } },
+  forest: { label: 'Forêt', vars: { '--ui-btn': '#0d3826', '--ui-btn-hover': '#1a5a40', '--ui-btn-active': '#0a2d1f', '--ui-btn-edge': 'rgba(150, 255, 200, 0.65)', '--bad': '#ff8c8c', '--bg': '#0b1f17', '--panel': 'rgba(12, 40, 28, 0.84)', '--panel-2': 'rgba(20, 62, 44, 0.92)', '--pink': '#9be37a', '--cyan': '#5ff2b5', '--amber': '#e6e36a', '--grad': 'linear-gradient(100deg, #3ddc84 0%, #9be37a 50%, #5ff2b5 100%)' } },
+  mono: { label: 'Mono', vars: { '--ui-btn': '#2b2b2b', '--ui-btn-hover': '#444444', '--ui-btn-active': '#222222', '--ui-btn-edge': 'rgba(255, 255, 255, 0.6)', '--bg': '#101010', '--panel': 'rgba(24, 24, 24, 0.86)', '--panel-2': 'rgba(40, 40, 40, 0.94)', '--text': '#f2f2f2', '--muted': '#a8a8a8', '--pink': '#d8d8d8', '--cyan': '#ffffff', '--amber': '#cfcfcf', '--grad': 'linear-gradient(100deg, #777 0%, #ddd 100%)' } },
+  contrast: { label: 'Contraste élevé', vars: { '--ui-btn': '#000000', '--ui-btn-hover': '#262626', '--ui-btn-active': '#111111', '--ui-btn-edge': '#ffffff', '--bg': '#000000', '--panel': 'rgba(0, 0, 0, 0.94)', '--panel-2': 'rgba(18, 18, 18, 0.98)', '--line': 'rgba(255, 255, 255, 0.55)', '--text': '#ffffff', '--muted': '#e6e6e6', '--pink': '#ffe600', '--cyan': '#00e5ff', '--amber': '#ffe600', '--good': '#39ff7a', '--bad': '#ff5252', '--grad': 'linear-gradient(100deg, #ffe600 0%, #00e5ff 100%)' } },
 };
 export const FONTS = {
   default: { label: 'Chakra Petch', css: '' },
@@ -20,7 +20,7 @@ export const FONTS = {
 export const SPEEDOS = { default: 'Chiffres', big: 'Énorme', minimal: 'Discret', bar: 'Jauge', ring: 'Cadran' };
 export const TIMERS = { normal: 'Normal', big: 'Gros', small: 'Petit' };
 export const HUD_PIECES = { top: 'Chrono', tl: 'Circuit et checkpoints', tr: 'Record et médailles', br: 'Vitesse', hint: 'Aide des touches' };
-export const HUD_HIDE = { split: 'écart', best: 'record', medals: 'médailles', boost: 'jauge de boost', hint: 'aide des touches', track: 'nom du circuit' };
+export const HUD_HIDE = { split: 'écart', best: 'record', medals: 'médailles', boost: 'jauge de boost', hint: 'aide des touches', track: 'nom du circuit', minimap: 'mini-carte' };
 
 const HEX = /^#[0-9a-f]{6}$/i;
 const clamp = (v, lo, hi, def) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : def; };
@@ -72,5 +72,6 @@ export function themeVars(ui) {
 }
 // Toutes les variables que themeVars peut poser (pour retirer celles qui ne s'appliquent plus).
 export const CSS_VARS = ['--bg', '--panel', '--panel-2', '--line', '--text', '--muted', '--pink', '--cyan', '--amber', '--good', '--bad', '--grad', '--radius', '--font', '--hud-scale',
+  '--ui-btn', '--ui-btn-hover', '--ui-btn-active', '--ui-btn-edge',
   ...Object.keys(HUD_PIECES).flatMap((k) => [`--hx-${k}`, `--hy-${k}`])];
 export { rgba };

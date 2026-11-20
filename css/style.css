@@ -728,6 +728,15 @@ body.ov-open #touch, body.ov-open .hud-br, body.ov-open .hud-hint, body.ov-open 
   #pause .panel { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; }
   #pause h2 { width: 100%; text-align: center; }
 }
+/* 0.13.1 : téléphone en paysage : l'arrivée sur deux colonnes (médaille, temps et récompense à gauche ; détails et boutons à droite), pour que les
+   deux rangées de boutons tiennent dans l'écran sans défiler (avant : « Revoir la course · Partager · Classement · Fiche » sous le bord). */
+@media (max-height: 520px) and (min-width: 600px) {
+  .overlay .finish-panel { display: grid; grid-template-columns: minmax(180px, 0.8fr) 1.2fr; grid-auto-flow: row dense; column-gap: 16px; row-gap: 4px; align-items: start; width: min(760px, 96vw); }
+  .finish-panel > .fin-medal, .finish-panel > #fin-title, .finish-panel > .fin-time, .finish-panel > .fin-reward, .finish-panel > .fin-xp { grid-column: 1; text-align: center; }
+  .finish-panel > .fin-detail, .finish-panel > .fin-goal, .finish-panel > .fin-online, .finish-panel > .fin-coach, .finish-panel > .row { grid-column: 2; }
+  .finish-panel .row.small-row .btn { padding: 5px 8px; font-size: 12px; }
+  .toast { bottom: auto; top: calc(8px + env(safe-area-inset-top)); }      /* (le message ne passe plus devant les boutons de l'arrivée) */
+}
 body.touch kbd { display: none; }
 
 /* Effet de vitesse : traits radiaux sur les bords, transparents au centre. */
@@ -1089,7 +1098,8 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   --ui-surface-2: #212b58;
   --ui-surface-3: #192042;
   --ui-surface-glass: rgba(40, 52, 106, 0.5);
-  --ui-btn: #112052;
+  --ui-btn: #172a6e;           /* 0.13.1 : un peu plus clair que #112052, et un liseré : le bouton se voit sur tout décor, même sombre */
+  --ui-btn-edge: rgba(160, 190, 255, 0.7);
   --ui-btn-hover: #334b77;
   --ui-btn-active: #151f41;
   --ui-btn-off: #313d53;
@@ -1103,14 +1113,15 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   border: 0;
   border-radius: 2px;
   transform: skewX(var(--ui-skew));
-  box-shadow: none;
+  /* 0.13.1 : liseré intérieur clair + ombre portée. Avant : ni bord ni ombre, le bouton bleu nuit disparaissait sur un décor sombre (« noir sur noir »). */
+  box-shadow: inset 0 0 0 1.5px var(--ui-btn-edge), 0 3px 12px rgba(0, 0, 0, 0.45);
   transition: background 0.12s, transform 0.08s;
 }
 #menu .btn > *, #tracks .btn > *, #mytracks .btn > *, #community .btn > *, .screen-head .btn > * { display: inline-block; transform: skewX(calc(-1 * var(--ui-skew))); }
 #menu .btn:hover, #tracks .btn:hover, #mytracks .btn:hover, #community .btn:hover, .screen-head .btn:hover { background: var(--ui-btn-hover); border: 0; }
 #menu .btn:active, #tracks .btn:active, #mytracks .btn:active, #community .btn:active, .screen-head .btn:active { background: var(--ui-btn-active); transform: skewX(var(--ui-skew)) scale(0.98); }
 #menu .btn:disabled, #tracks .btn:disabled, #mytracks .btn:disabled, #community .btn:disabled, .screen-head .btn:disabled { background: var(--ui-btn-off); color: var(--ui-text-off); cursor: default; }
-#menu .btn.primary, #tracks .btn.primary, #mytracks .btn.primary, #community .btn.primary, .screen-head .btn.primary { background: var(--ui-accent); color: #1a0f0a; }
+#menu .btn.primary, #tracks .btn.primary, #mytracks .btn.primary, #community .btn.primary, .screen-head .btn.primary { background: var(--ui-accent); color: #1a0f0a; box-shadow: 0 3px 12px rgba(0, 0, 0, 0.45); }
 #menu .btn.primary:hover, #tracks .btn.primary:hover, #mytracks .btn.primary:hover, #community .btn.primary:hover, .screen-head .btn.primary:hover { filter: brightness(1.1); background: var(--ui-accent); }
 
 /* ---------- Accueil : logo centré, rangée de tuiles, barre du bas ---------- */
@@ -1600,7 +1611,7 @@ body.hud-editing > section, body.hud-editing #touch { display: none !important; 
 #menu [data-action="sub-play"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 3v18l15-9z'/%3E%3C/svg%3E"); }
 #menu [data-action="sub-multi"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 11a3.500 3.500 0 100-7 3.500 3.500 0 000 7zm8 0a3 3 0 100-6 3 3 0 000 6zM9 13c-3.300 0-7 1.700-7 4.500V20h14v-2.500C16 14.700 12.300 13 9 13zm8 .2c-.5 0-1 .1-1.500.2 1.100.900 1.900 2.100 1.900 3.600V20H22v-2.500c0-2.300-2.700-4.300-5-4.300z'/%3E%3C/svg%3E"); }
 #menu [data-action="sub-progress"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 3h10v2h3v3a4 4 0 01-4 4h-.4A5 5 0 0113 14.900V17h3v3H8v-3h3v-2.100A5 5 0 018.400 12H8a4 4 0 01-4-4V5h3zm-1 4v1a2 2 0 001 1.700V7zm12 0h-1v2.700A2 2 0 0018 8z'/%3E%3C/svg%3E"); }
-#menu [data-action="sub-profile"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.400 0-8 2.200-8 5v3h16v-3c0-2.800-3.600-5-8-5z'/%3E%3C/svg%3E"); }
+#menu [data-action="sub-profile"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 11l2-5h10l2 5h1a2 2 0 012 2v4h-2a3 3 0 01-6 0H10a3 3 0 01-6 0H2v-4a2 2 0 012-2h1zm3.2-3L7 11h10l-1.2-3H8.2zM7 15.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm10 0a1.5 1.5 0 100 3 1.5 1.5 0 000-3z'/%3E%3C/svg%3E"); }      /* (0.15.0) tuile Garage : une voiture */
 #menu [data-action="sub-settings"] { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19.400 13c.1-.3.1-.7.1-1s0-.7-.1-1l2.100-1.600c.2-.2.2-.4.100-.6l-2-3.500c-.1-.2-.4-.3-.6-.2l-2.500 1c-.5-.4-1.100-.7-1.700-1l-.4-2.600c0-.2-.2-.4-.5-.4h-4c-.2 0-.5.200-.5.400L9.700 5.600c-.6.300-1.200.6-1.700 1l-2.500-1c-.2-.1-.5 0-.6.200l-2 3.500c-.1.200-.1.500.1.600L5 11c0 .3-.1.700-.1 1s0 .7.100 1l-2.100 1.600c-.2.200-.2.400-.1.600l2 3.500c.1.200.4.300.6.200l2.500-1c.5.400 1.100.7 1.700 1l.4 2.600c0 .2.200.4.500.4h4c.2 0 .5-.2.500-.4l.4-2.600c.6-.3 1.200-.6 1.700-1l2.500 1c.2.100.5 0 .6-.2l2-3.500c.1-.2.100-.5-.1-.6zM12 15.500a3.500 3.500 0 110-7 3.500 3.500 0 010 7z'/%3E%3C/svg%3E"); }
 #menu .menu-panel { width: min(880px, 100%); margin-top: clamp(4px, 2vh, 18px); animation: menuSubIn 0.14s ease-out; }
 #menu .menu-panel.hidden, #menu .menu-buttons.hidden { display: none; }
@@ -1787,7 +1798,7 @@ body.hud-editing > section, body.hud-editing #touch { display: none !important; 
 body.reduce-motion #editor.ed12 .ed-palette { transition: none; }
 #editor.ed12 .ed-hint i.txt { font-style: normal; }
 /* Les réglages de la pièce choisie restent visibles au bas du panneau pendant qu'on parcourt la bibliothèque ; ses options se replient. */
-#editor.ed12 .pal-set { position: sticky; bottom: -18px; margin-bottom: -8px; z-index: 1; max-height: 56%; overflow-y: auto; background: rgba(20, 14, 42, 0.97); box-shadow: 0 -10px 20px rgba(0, 0, 0, 0.35); scrollbar-width: thin; }
+#editor.ed12 .pal-set { position: sticky; bottom: -18px; margin-bottom: -8px; z-index: 1; max-height: 42%; overflow-y: auto; background: rgba(20, 14, 42, 0.97); box-shadow: 0 -10px 20px rgba(0, 0, 0, 0.35); scrollbar-width: thin; }
 #editor.ed12 .pset-opts > summary { cursor: pointer; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--cyan); }
 #editor.ed12 .pset-opts[open] > summary { margin-bottom: 6px; }
 #editor.ed12 .ed-lvl .btn.icon { min-width: 0; width: 30px; }
@@ -1811,3 +1822,86 @@ body.reduce-motion #editor.ed12 .ed-palette { transition: none; }
   #editor.ed12 .ed-view:not(.folded) > .ed-vh, #editor.ed12 .ed-view:not(.folded) > .ed-lvl { grid-column: 1 / -1; }
 }
 #editor.ed12 .ed-menu { min-width: 250px; }
+
+/* 0.13.1 : bandeau « nouvelle version » (js/app/update.js) ; caché pendant une course, il réapparaît à l'arrivée. */
+#update-bar {
+  position: fixed; left: 50%; top: max(10px, env(safe-area-inset-top)); transform: translateX(-50%); z-index: 60;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+  max-width: calc(100vw - 32px); padding: 8px 12px; border-radius: 12px;
+  background: var(--panel-2); border: 1px solid var(--cyan); color: var(--text); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5); font-size: 14px;
+}
+#update-bar .btn { padding: 5px 12px; }
+body.in-race #update-bar { display: none; }
+
+/* 0.13.1 : réglages de la pièce repliables (titre cliquable) : repliés, ils ne cachent plus le bas de la palette. */
+#editor.ed12 .pal-set .pset-head { cursor: pointer; }
+#editor.ed12 .pal-set .pset-head b::before { content: '▾ '; color: var(--cyan); }
+#editor.ed12 .pal-set.folded .pset-head b::before { content: '▸ '; }
+#editor.ed12 .pal-set.folded > :not(.pset-head) { display: none; }
+
+/* 0.13.1 : salon multijoueur en grand, sur deux colonnes (joueurs à gauche, mode et circuit à droite). */
+.modal-panel.mp-lobby-panel { width: min(1080px, 96vw); max-width: 96vw; }
+.mp-lobby { display: grid; grid-template-columns: minmax(260px, 0.9fr) 1.1fr; gap: 18px; align-items: start; }
+@media (max-width: 760px) { .mp-lobby { grid-template-columns: 1fr; } }
+.mp-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.mp-invite { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.mp-cards li.mp-card { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid transparent; }
+.mp-cards li.mp-card.ready { border-color: var(--good, #46e08a); }
+.mp-car { width: 34px; height: 20px; border-radius: 6px 10px 4px 4px; border-bottom: 5px solid; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); }
+.mp-who { display: flex; flex-direction: column; min-width: 0; }
+.mp-who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-who small { color: var(--muted); font-size: 12px; }
+.mp-card.ready .mp-who small { color: var(--good, #46e08a); }
+.mp-readyline { margin: 0; text-align: center; font-weight: 700; }
+.mp-netnote:empty { display: none; }
+.mp-netnote { color: var(--amber); }
+.mp-preview { width: 100%; max-width: 420px; height: auto; aspect-ratio: 32 / 17; border-radius: 10px; border: 1px solid var(--line); align-self: center; }
+.mp-preview[hidden] { display: none; }
+.mp-mode { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.mp-want:empty { display: none; }
+.mp-cup.single .mp-row em { display: none; }
+
+/* 0.15.0 : pause, réglages rapides */
+.pause-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 8px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.pause-quick label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
+.pause-quick input[type=range] { width: 100%; }
+@media (max-height: 520px) { .pause-quick { grid-template-columns: repeat(3, 1fr); width: 100%; } }
+.career-next { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin: 4px 0 12px; }
+.career-next small { font-size: 13px; font-weight: 500; font-style: normal; opacity: 0.85; }
+.hub-mode { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.hub-mode select { flex: 1; font: inherit; color: var(--text); background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+
+/* 0.15.0 : écran Modes : onglets et cartes */
+.modes-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.mode-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.mode-card { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line); }
+.mode-card-head { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+.mode-ico { font-size: 24px; }
+.mode-desc, .mode-goal { margin: 0; font-size: 13px; color: var(--muted); }
+.mode-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.mode-chips .chip { font-size: 11.5px; padding: 2px 8px; }
+.mode-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; }
+
+/* 0.15.0 : mini-carte en course (js/ui/miniMap.js) */
+.minimap { position: fixed; left: calc(12px + env(safe-area-inset-left)); top: 96px; width: 168px; height: 120px; border-radius: 10px; border: 1px solid var(--line); pointer-events: none; z-index: 4; }
+body.hud-no-minimap .minimap { display: none; }
+@media (max-height: 520px) { .minimap { width: 118px; height: 84px; top: 60px; } }
+body.ov-open .minimap { opacity: 0.4; }
+
+/* ---------- 0.15.0 · Garage : onglets rangés en quatre familles (une rangée de familles, puis les onglets de la famille choisie) ---------- */
+#garage-tabs { flex-direction: column; flex-wrap: nowrap; gap: 0; }
+#garage-tabs .gtab-groups { display: flex; gap: 4px; margin-bottom: 4px; }
+#garage-tabs .gtab {
+  flex: 1 1 0; min-width: 0; min-height: 38px; padding: 4px 6px; border-radius: 8px;
+  border: 1px solid var(--ui-btn-border, rgba(255, 255, 255, 0.18)); background: var(--ui-surface-2); color: #bed8f7;
+  font: inherit; font-size: clamp(12px, 1.2vw, 15px); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer;
+}
+#garage-tabs .gtab:hover { background: var(--ui-btn-hover); color: var(--ui-text); }
+#garage-tabs .gtab.on { background: var(--ui-surface); color: var(--ui-text); border-color: var(--ui-accent); }
+#garage-tabs .gtab-sub { display: flex; flex-wrap: wrap; }
+#garage-tabs .tab.gtab-hide { display: none; }
+@media (max-height: 520px) {
+  #garage-tabs { flex-wrap: nowrap; overflow-x: visible; }
+  #garage-tabs .gtab { min-height: 32px; }
+  #garage-tabs .gtab-sub { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+}

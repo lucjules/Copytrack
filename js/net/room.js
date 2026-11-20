@@ -34,6 +34,7 @@ export const MAX_ROUND_MS = 600000;                                // championna
 export const RESULTS_MS = 12000;                                   // championnat : affichage des résultats avant la manche suivante
 
 export const ROOM_RE = /^[A-HJ-NP-Z2-9]{6}$/;
+export const MODES = ['race', 'cup', 'free'];
 export function normalizeCode(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
 export function newRoomCode(random = (n) => crypto.getRandomValues(new Uint8Array(n))) {
   const r = random(6);
@@ -41,19 +42,29 @@ export function newRoomCode(random = (n) => crypto.getRandomValues(new Uint8Arra
 }
 const newPeerId = () => (globalThis.crypto && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
 
+// Apparence de la voiture annoncée aux autres joueurs (0.13.1) : quelques identifiants et couleurs du garage, jamais plus. Ce qui vient d'un autre
+// joueur est filtré ici (16 clés au plus, valeurs courtes) puis validé contre le catalogue au moment de construire sa voiture (sanitizeLoadout).
+export function cleanCarMeta(c) {
+  if (!c || typeof c !== 'object' || Array.isArray(c)) return null;
+  const out = {};
+  for (const [k, v] of Object.entries(c).slice(0, 16)) if (/^[a-zA-Z0-9]{1,16}$/.test(k) && typeof v === 'string' && v.length <= 24) out[k] = v;
+  return Object.keys(out).length ? out : null;
+}
+
 export class RoomError extends Error {
   constructor(message, code) { super(message); this.code = code; }
 }
 
 export class Room extends Emitter {
-  constructor({ code, name, selfId = newPeerId(), token = newToken(), makeSignaling, makeMesh = null, getIce = null, now = () => performance.now(), schedule = (fn, ms) => setTimeout(fn, ms) }) {
+  constructor({ code, name, car = null, selfId = newPeerId(), token = newToken(), makeSignaling, makeMesh = null, getIce = null, now = () => performance.now(), schedule = (fn, ms) => setTimeout(fn, ms) }) {
     super();
     this.code = code; this.selfId = selfId; this.now = now; this.token = token; this.schedule = schedule;
     this.reconnecting = false;          // signalisation perdue : on retente de rejoindre la salle (resume.js)
     this._pendingFinish = null;         // championnat : mon arrivée de la manche en cours, renvoyée à l'hôte si une liaison se rouvre
     this.makeSignaling = makeSignaling; this.makeMesh = makeMesh; this.getIce = getIce;
-    this.meta = { name: String(name).slice(0, 20), host: false, ready: false, racing: false, v: PHYS_VER, net: NET_VER, t: Date.now() };
-    this.members = new Map();           // id → { id, name, host, ready, racing, v, t, link, rtt }
+    // car : apparence de ma voiture (garage), want : ce que je demande après une course ('rematch' : une revanche), annoncés par la présence.
+    this.meta = { name: String(name).slice(0, 20), host: false, ready: false, racing: false, v: PHYS_VER, net: NET_VER, t: Date.now(), car: cleanCarMeta(car), want: null };
+    this.members = new Map();           // id → { id, name, host, ready, racing, v, t, link, rtt, car, want }
     this.track = null;                  // circuit choisi : { id, name, sig } ; id = 'b-…' (intégré), 'c:<uuid>' (communauté), 'u:<signature>' (code envoyé par l'hôte)
     this.rules = null;                  // règles de la partie choisies par l'hôte (rules.js) ; null : aucune
     this.started = false;               // une course a déjà été lancée dans cette salle : les arrivants y entrent directement
@@ -237,7 +248,7 @@ export class Room extends Emitter {
     const prev = this.members.get(id);
     const back = prev && prev.link === 'away';                     // retour d'un joueur coupé : sa liaison est à refaire
     if (back) this.mesh.removePeer(id);
-    const m = { id, name: String(meta.name || '?').slice(0, 20), host: !!meta.host, ready: !!meta.ready, racing: !!meta.racing, v: meta.v, net: meta.net, t: meta.t || 0, link: prev && !back ? prev.link : 'connecting', rtt: prev ? prev.rtt : 0, token: prev ? prev.token : null, everOpen: !!(prev && prev.everOpen) };
+    const m = { id, name: String(meta.name || '?').slice(0, 20), host: !!meta.host, ready: !!meta.ready, car: cleanCarMeta(meta.car), want: meta.want === 'rematch' ? 'rematch' : null, mode: MODES.includes(meta.mode) ? meta.mode : null, racing: !!meta.racing, v: meta.v, net: meta.net, t: meta.t || 0, link: prev && !back ? prev.link : 'connecting', rtt: prev ? prev.rtt : 0, token: prev ? prev.token : null, everOpen: !!(prev && prev.everOpen) };
     this.members.set(id, m);
     if (m.v === PHYS_VER && m.net === NET_VER && !this.closed) this.mesh.addPeer(id);     // un joueur d'une autre version ne peut pas courir avec nous
     else m.link = 'incompatible';
@@ -273,6 +284,14 @@ export class Room extends Emitter {
   }
 
   setReady(ready) { this.meta.ready = !!ready; this.signaling.track(this.meta); this.emit('members'); }
+  // Mode choisi par l'hôte (0.13.1) : 'race' (course à départ commun), 'cup' (championnat), 'free' (course libre) ; annoncé pour l'affichage des invités.
+  setMode(mode) { if (!this.isHost) return; this.meta.mode = MODES.includes(mode) ? mode : null; this.signaling.track(this.meta); this.emit('members'); }
+  get hostMode() { const h = this.hostId === this.selfId ? this.meta : this.members.get(this.hostId); return h && MODES.includes(h.mode) ? h.mode : null; }
+  // Après une course : « je veux une revanche » (null : rien). L'hôte voit les demandes et relance.
+  setWant(want) { this.meta.want = want === 'rematch' ? 'rematch' : null; this.signaling.track(this.meta); this.emit('members'); }
+  // Tous les joueurs reliés (moi compris) sont-ils prêts ? et combien le sont.
+  readyCount() { const l = this.list.filter((m) => m.self || m.link === 'open'); return { ready: l.filter((m) => m.ready).length, total: l.length }; }
+  wantCount(want = 'rematch') { const l = this.list.filter((m) => m.self || m.link === 'open'); return { n: l.filter((m) => m.want === want).length, total: l.length }; }
 
   // ---- Messages fiables ----------------------------------------------------------------------------------------------
   _onMessage(from, kind, data) {
@@ -397,7 +416,7 @@ export class Room extends Emitter {
     this.state = 'racing';
     this.started = true;
     this.results.clear();                // un nouveau circuit : on repart de zéro (les temps d'avant ne se comparent pas)
-    this.meta.racing = true; this.meta.ready = false; this.signaling.track(this.meta);
+    this.meta.racing = true; this.meta.ready = false; this.meta.want = null; this.signaling.track(this.meta);
     this.emit('start', { trackId, track: this.track, startLocal: this.now() + inMs });
   }
 
@@ -494,7 +513,7 @@ export class Room extends Emitter {
     const slot = roster.indexOf(this.selfId);
     if (slot < 0) { this.emit('cupwait', { n, total: cup.total }); this.emit('members'); return; }         // arrivé trop tard pour cette manche : il part à la suivante
     this.state = 'racing';
-    this.meta.racing = true; this.meta.ready = false; this.signaling.track(this.meta);
+    this.meta.racing = true; this.meta.ready = false; this.meta.want = null; this.signaling.track(this.meta);
     this.emit('start', {
       trackId: track.id, track: this.track, startLocal: this.now() + inMs,
       cup: { n, total: cup.total, slot, count: roster.length, roster, collisions: cup.collisions },

@@ -2,6 +2,7 @@
 // le réseau en dit. Plus elle est loin de la caméra du joueur local, plus son matériau s'assombrit.
 import * as THREE from './vendor/three.module.min.js';
 import { createCar } from './carModel.js';
+import { sanitizeLoadout } from './cosmetics.js';
 import { SnapshotBuffer } from './net/interp.js';
 
 export const FADE_NEAR = 30;      // m : en deçà, couleur pleine
@@ -35,11 +36,15 @@ export function makeNameLabel(name) {
 }
 
 export class RemoteCar {
-  // scene : où ajouter la voiture ; info : { id, name, colorIndex } ; onTeleport(pos) : effet à l'apparition après un retour au checkpoint
-  constructor(scene, { id, name, colorIndex = 0 }, { onTeleport = null, delay } = {}) {
+  // scene : où ajouter la voiture ; info : { id, name, colorIndex, car, opaque } ; onTeleport(pos) : effet à l'apparition après un retour au checkpoint.
+  // 0.13.1 : car = l'apparence annoncée par le joueur (son garage, room.js). opaque : une vraie voiture à son apparence (course à départ commun,
+  // championnat) ; sinon (course libre) un fantôme translucide de SA couleur, qui s'assombrit de loin. Sans apparence : une couleur de joueur, comme avant.
+  constructor(scene, { id, name, colorIndex = 0, car = null, opaque = false }, { onTeleport = null, delay } = {}) {
     this.id = id; this.name = name;
-    this.baseColor = new THREE.Color(PLAYER_COLORS[colorIndex % PLAYER_COLORS.length]);
-    this.car = createCar(null, { ghost: true, ghostColor: '#' + this.baseColor.getHexString() });
+    const loadout = car ? sanitizeLoadout(car) : null;
+    this.baseColor = new THREE.Color(loadout ? loadout.color : PLAYER_COLORS[colorIndex % PLAYER_COLORS.length]);
+    this.opaque = !!(opaque && loadout);
+    this.car = this.opaque ? createCar(loadout) : createCar(loadout, { ghost: true, ghostColor: '#' + this.baseColor.getHexString() });
     this.group = this.car.group;
     this.group.visible = false;
     scene.add(this.group);
@@ -98,6 +103,7 @@ export class RemoteCar {
 
   // Assombrissement selon la distance à la caméra (voir darkness).
   setDistance(d) {
+    if (this.opaque) return;                  // une vraie voiture garde ses couleurs (l'assombrissement sert à distinguer les fantômes)
     const k = darkness(d);
     if (Math.abs(k - this.dark) < 0.004) return;
     this.dark = k;

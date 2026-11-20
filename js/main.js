@@ -6,7 +6,7 @@ import { renderOptions } from './renderOptions.js';
 import { Particles } from './particles.js';
 import { Input } from './input.js';
 import { GarageSession } from './garage.js';
-import { CATEGORIES } from './cosmetics.js';
+import { CATEGORIES, CATEGORY_GROUPS } from './cosmetics.js';
 import { profile } from './profile.js';
 import { GameAudio } from './audio.js';
 import { UI } from './ui.js';
@@ -42,6 +42,7 @@ import { raceHubMethods } from './app/raceHub.js';
 import { theaterAppMethods } from './app/theater.js';
 import { legalMethods } from './app/legal.js';
 import { feedbackMethods } from './app/feedback.js';
+import { updateMethods } from './app/update.js';
 
 // Tous les modules sont chargés et liés : la garde du démarrage (js/boot-guard.js) se désarme.
 window.__copytrackBooted = true;
@@ -343,14 +344,35 @@ class App {
     $('garage').classList.remove('hidden');
     const tabs = $('garage-tabs');
     tabs.innerHTML = '';
-    for (const c of CATEGORIES) {
-      const b = document.createElement('button');
-      b.className = 'tab';
-      b.dataset.cat = c.id;
-      b.textContent = c.label;
-      b.onclick = () => { this.audio.click(); this.session.setCat(c.id); };
-      tabs.appendChild(b);
-    }
+    // (0.15.0) Onglets rangés en quatre familles (CATEGORY_GROUPS) : une rangée de familles, puis les seuls onglets de la famille choisie
+    // (GarageSession._render cache les autres). Avant : 14 onglets d'un bloc, sur quatre ou cinq rangées.
+    const groups = document.createElement('div');
+    groups.className = 'gtab-groups';
+    groups.setAttribute('role', 'group');
+    groups.setAttribute('aria-label', 'Familles');
+    const sub = document.createElement('div');
+    sub.className = 'gtab-sub';
+    CATEGORY_GROUPS.forEach((g, gi) => {
+      const gb = document.createElement('button');
+      gb.className = 'gtab';
+      gb.type = 'button';
+      gb.dataset.group = String(gi);
+      gb.textContent = g.label;
+      gb.onclick = () => { this.audio.click(); const s = this.session; s.setCat(s.lastCat && g.cats.includes(s.lastCat[gi]) ? s.lastCat[gi] : g.cats[0]); };
+      groups.appendChild(gb);
+      for (const id of g.cats) {
+        const c = CATEGORIES.find((x) => x.id === id);
+        if (!c) continue;
+        const b = document.createElement('button');
+        b.className = 'tab';
+        b.dataset.cat = c.id;
+        b.dataset.group = String(gi);
+        b.textContent = c.label;
+        b.onclick = () => { this.audio.click(); this.session.setCat(c.id); };
+        sub.appendChild(b);
+      }
+    });
+    tabs.append(groups, sub);
     this.session._render();
     this._resize();
   }
@@ -376,8 +398,11 @@ class App {
     this.errors.scheduleFlush(20000);
     setTimeout(() => this.askTelemetry(), 4000);
     setTimeout(() => this.checkRewards(), 2500);          // rattrape ce qui est déjà mérité (joueur existant)
+    this.startUpdateCheck();                              // (0.13.1) nouvelle version en ligne : bandeau « Recharger » (app/update.js)
     // Premier lancement : petit tutoriel (sauf si on arrive par un lien de circuit).
-    if (!this.settings.tutorialDone && !hash.startsWith('#t=') && !hash.startsWith('#g=')) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
+    if (!this.settings.tutorialDone && !hash.startsWith('#t=') && !hash.startsWith('#g=') && !hash.startsWith('#salle=')) setTimeout(() => { if (!this.ui.modalOpen) this.tutorial(); }, 700);
+    // (0.13.1) lien d'invitation à une salle multijoueur : #salle=CODE
+    if (hash.startsWith('#salle=')) { history.replaceState(null, '', location.pathname + location.search); setTimeout(() => this.joinFromLink(decodeURIComponent(hash.slice(7))), 400); }
     if (hash.startsWith('#g=')) {
       try {
         const ghost = ghostFromHash(hash);
@@ -459,7 +484,7 @@ class App {
 }
 
 // Les familles de méthodes vivent dans app/ ; elles s'ajoutent au prototype (`this` est l'instance).
-Object.assign(App.prototype, multiMethods, academyMethods, competitionMethods, labMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods, theaterAppMethods, legalMethods, feedbackMethods);
+Object.assign(App.prototype, multiMethods, academyMethods, competitionMethods, labMethods, rewardsMethods, communityMethods, screenMethods, settingsMethods, profileMethods, wiringMethods, editorFlowMethods, uiCustomMethods, modesMethods, raceHubMethods, theaterAppMethods, legalMethods, feedbackMethods, updateMethods);
 
 
 // Application installable et jouable hors ligne (service worker), si le contexte le permet.

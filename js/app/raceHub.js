@@ -29,6 +29,8 @@ import { isTraining } from '../hudProfile.js';
 import { SURFACES } from '../pieces.js';
 import { mountLeaderboard } from '../ui/leaderboardPanel.js';
 import { thumbnail } from '../editorTools.js';
+import { BUILTIN_MODES, sanitizeRules } from '../rules.js';
+import { listModes } from '../storage.js';
 
 const MAX_RIVALS = 3;
 const WIND_LABEL = ['vers le nord', 'vers le nord-est', 'vers l’est', 'vers le sud-est', 'vers le sud', 'vers le sud-ouest', 'vers l’ouest', 'vers le nord-ouest'];
@@ -202,7 +204,8 @@ export const raceHubMethods = {
         ${d.variant ? '<p class="meta hub-hint">Classement et record à part, sans médailles ni pièces : le record officiel ne bouge pas.</p>' : ''}</div>` : ''}
       ${aidsActive(s.aids) ? '<p class="meta hub-hint hub-aids">🦾 Aides à la conduite activées : tes courses vont dans la catégorie « assisté » (Paramètres › Accessibilité).</p>' : ''}
       ${d.locked ? `<p class="hub-lock" role="status">🔒 ${esc(d.locked)}</p>` : ''}
-      <button class="btn big primary hub-play" id="hub-play"${d.locked ? ' disabled' : ''}>▶ Jouer <kbd>Entrée</kbd></button>`;
+      <button class="btn big primary hub-play" id="hub-play"${d.locked ? ' disabled' : ''}>▶ Jouer <kbd>Entrée</kbd></button>
+      ${d.locked || !d.track ? '' : `<label class="hub-mode"><span class="meta">Ou jouer ce circuit</span><select id="hub-mode" aria-label="Jouer ce circuit en mode"><option value="">en mode…</option>${this._hubModeOptions()}</select></label>`}`;
     for (const b of $('hub-launch').querySelectorAll('[data-ghost]')) b.onclick = () => {
       this.audio.click();
       const k = b.dataset.ghost;
@@ -225,6 +228,22 @@ export const raceHubMethods = {
       this._renderHubLaunch();
     };
     $('hub-play').onclick = () => this.hubPlay();
+    // 0.15.0 : « jouer ce circuit en mode… » (modes fournis et mes modes) : les règles du mode sur CE circuit, sans quitter la fiche pour la fenêtre des modes.
+    const sel = $('hub-mode');
+    if (sel) sel.onchange = () => {
+      const m = this._hubModeList().find((x) => x.id === sel.value);
+      if (!m || !h.desc.track) return;
+      this.audio.click();
+      if (h.map) { h.map.dispose(); h.map = null; }
+      this.playMode(m, h.desc.track);
+    };
+  },
+
+  _hubModeList() { return [...BUILTIN_MODES.map((m) => ({ ...m, rules: sanitizeRules(m.rules) })), ...listModes()]; },
+  _hubModeOptions() {
+    const own = listModes();
+    return `<optgroup label="Modes fournis">${BUILTIN_MODES.map((m) => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('')}</optgroup>`
+      + (own.length ? `<optgroup label="Mes modes">${own.map((m) => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('')}</optgroup>` : '');
   },
 
   // Défi du jour 2 (E13) : la série de jours et la mutation du jour (une catégorie de record, proposée en tête des catégories).

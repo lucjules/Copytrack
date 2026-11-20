@@ -71,6 +71,10 @@ export const wiringMethods = {
         this.saveSettings();
       });
     };
+    // (0.15.0) réglages rapides de la pause : mêmes réglages que dans Paramètres, appliqués tout de suite
+    $('pq-volume').addEventListener('input', (e) => { this.settings.volume = parseFloat(e.target.value); this.audio.setVolume(this.settings.volume); this.saveSettings(); });
+    $('pq-music').addEventListener('input', (e) => { this.settings.musicVolume = parseFloat(e.target.value); this.audio.setMusicVolume(this.settings.musicVolume); this.saveSettings(); });
+    for (const [id, key] of [['pq-shake', 'shakeAmt'], ['pq-fov', 'fovAdd']]) $(id).addEventListener('input', (e) => { this.settings[key] = parseFloat(e.target.value); this._applyAccess(); this.saveSettings(); });
     slider('opt-fov', 'fovAdd', fovText);
     slider('opt-shake', 'shakeAmt', (v) => Math.round(v * 100) + ' %');
     slider('opt-feel', 'feel', (v) => Math.round(v * 100) + ' %');
@@ -194,6 +198,8 @@ export const wiringMethods = {
       case 'back': { const p = this._lastPanel; this.showScreen('menu'); if (p) this._menuSub(p); break; }
       case 'new-track': this.openEditor({ name: 'Mon circuit', code: null, fresh: true }); break;
       case 'resume': if (s && s.resume) s.resume(); break;
+      case 'pause-respawn': if (s && s.resume && s.respawn) { s.resume(); s.respawn(true); } break;      // (0.15.0) pause : retour au checkpoint
+      case 'pause-camera': if (s && s.cycleCamera) { s.cycleCamera(); this.syncPauseQuick(); } break;
       case 'restart': if (s && s.restart) { this.ui.hideOverlay('pause'); s.restart(); } break;
       case 'quit': this.quitRace(); break;
       case 'watch-replay': this.watchReplay(); break;

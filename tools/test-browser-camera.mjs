@@ -131,6 +131,29 @@ try {
       assert.equal(r.bad, 0, sc); assert.ok(r.out <= r.frames * 0.05, `${sc} : voiture hors champ sur ${r.out} images de ${r.frames}`);
     }
   });
+  await test('tremblement (0.13.1) : à 144 images/s, les à-coups de rotation restent faibles sur deux circuits à sauts (centile 99 < 150 ; avant 429 et 537)', async () => {
+    const r = await page.evaluate(async () => {
+      const A = window.copytrack, { RaceSession } = await import('/js/race.js'), out = {};
+      A.settings.shakeAmt = 0;
+      for (const id of ['braises', 'garde']) {
+        const b = A.builtins.find((x) => x.def.id === id);
+        if (A.session && A.session.dispose) A.session.dispose();
+        const S = new RaceSession(A, b.track, { demo: true, seed: b.key }); A.session = S; A.mode = 'race';
+        const real = Object.getPrototypeOf(S).update; S.update = () => {};
+        const cam = A.camera, fw = new cam.position.constructor(); let p1 = null, p2 = null; const js = [];
+        for (let i = 0; i < 144 * 12; i++) {
+          real.call(S, 1 / 144); cam.getWorldDirection(fw);
+          const c = { x: fw.x, y: fw.y, z: fw.z };
+          if (p1 && p2) { const ang = (a, b2) => Math.acos(Math.max(-1, Math.min(1, a.x * b2.x + a.y * b2.y + a.z * b2.z))); js.push(Math.abs(ang(c, p1) - ang(p1, p2)) * 144 * 144); }
+          p2 = p1; p1 = c;
+        }
+        S.update = real; js.sort((a, b2) => a - b2); out[id] = js[Math.floor(js.length * 0.99)];
+      }
+      A.settings.shakeAmt = 1; A.quitRace ? A.quitRace() : null; A.showMenu('menu');
+      return out;
+    });
+    for (const [id, v] of Object.entries(r)) assert.ok(v < 150, `${id} : ${v.toFixed(0)}`);
+  });
 } finally {
   await browser.close(); server.kill();
 }

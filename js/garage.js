@@ -5,7 +5,7 @@ import { Track } from './track.js';
 import { TrackView } from './trackMesh.js';
 import { createCar } from './carModel.js';
 import {
-  CATALOG, COLOR_CHOICES, PRESETS, THEMES, PALETTES, sanitizeLoadout, exclusiveOf,
+  CATALOG, COLOR_CHOICES, PRESETS, THEMES, PALETTES, sanitizeLoadout, exclusiveOf, CATEGORY_GROUPS,
 } from './cosmetics.js';
 import { COLLECTIONS, COLLECTION_COINS, collectionProgress } from './rewards.js';
 import { profile, saveProfile, owns, missingItems, totalCost, buy, setLoadout } from './profile.js';
@@ -102,6 +102,11 @@ export class GarageSession {
     const p = profile();
     $('garage-coins').textContent = `◆ ${p.coins}`;
     document.querySelectorAll('#garage-tabs .tab').forEach((t) => t.classList.toggle('on', t.dataset.cat === this.cat));
+    // (0.15.0) Familles d'onglets : la famille de l'onglet ouvert est allumée, seuls ses onglets se voient ; on retient le dernier onglet de chaque famille.
+    const gi = CATEGORY_GROUPS.findIndex((g) => g.cats.includes(this.cat));
+    (this.lastCat || (this.lastCat = {}))[gi] = this.cat;
+    document.querySelectorAll('#garage-tabs .gtab').forEach((g) => g.classList.toggle('on', g.dataset.group === String(gi)));
+    document.querySelectorAll('#garage-tabs .gtab-sub .tab').forEach((t) => t.classList.toggle('gtab-hide', t.dataset.group !== String(gi)));
     $('garage-moto').classList.toggle('on', this.moto);
     const list = $('garage-list');
     list.innerHTML = '';

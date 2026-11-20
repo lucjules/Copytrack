@@ -6,6 +6,67 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.15.0 — parcours du joueur : pause complète, carrière, modes, garage, mini-carte, mauvais sens
+
+**`PHYS_VER` reste 38**, rien ne change dans la course : records, fantômes et médailles restent valables. Phase B (parcours du joueur) de
+[docs/ANALYSE-FONCTIONNELLE.md](docs/ANALYSE-FONCTIONNELLE.md).
+
+- **Pause complète.** En plus de Reprendre, Recommencer et Quitter : « Retour au checkpoint » (R), « 🎥 Caméra » (change de vue et affiche son nom),
+  « Commandes », et des réglages rapides sans quitter la course : volume des effets et de la musique, tremblements de la caméra, champ de vision.
+- **« ▶ Continuer la carrière »** en haut de l'écran Niveaux : ouvre directement le prochain circuit à médailler du premier chapitre ouvert.
+  Les chapitres viennent d'abord ; le défi du jour et la saison passent après.
+- **Écran Modes à onglets** : Modes fournis, Mes modes, Modes publiés, Paquets (mods). Chaque mode est une carte avec une icône (moto, bateau,
+  gravité, tours, hors-piste…), ses règles en étiquettes, son objectif et « Jouer ». Avant : une longue liste d'un bloc.
+- **« Ou jouer ce circuit en mode… »** sur la fiche d'un circuit : une liste déroulante lance le circuit avec les règles d'un mode (fourni ou à soi).
+- **Garage en entrée principale.** La tuile « Profil » de l'accueil devient « Garage » (voiture, compte, sauvegardes) et le garage vient en premier.
+  Ses 14 onglets sont rangés en quatre familles (Voiture, Peinture, Effets, Mes créations) : une rangée de familles, puis les onglets de la famille choisie.
+- **Première course guidée.** La première fenêtre du tutoriel propose « 🏁 Première course guidée » : la leçon 1 de l'Académie, avec ses consignes.
+- **Mini-carte** en course, en haut à gauche : le tracé vu de dessus, ta voiture, ton fantôme (or) et les autres joueurs (à leur couleur).
+  Elle se cache dans Interface › masquer, et le profil d'interface « minimal » la retire.
+- **« ⛔ Mauvais sens »** quand la voiture roule à contre-sens du tracé pendant plus d'une demi-seconde (au sol, au-delà de 8 m/s) ; jamais à tort
+  sur les 18 circuits vérifiés en entier.
+- **Corrigé** : un Échap qui venait de fermer un panneau de l'accueil pouvait refermer aussitôt l'écran ouvert juste après (la fiche d'un circuit
+  ouverte depuis les records se refermait). C'était la cause du test « records et médailles » qui échouait par moments.
+- **Corrigé** : une voiture distante sans couleur connue ne fait plus planter la mini-carte.
+- Tests : `test-minimap` (nouveau), `test-menu`, `test-browser-moteurs`.
+
+## Bêta 0.14.0 — multijoueur : lien d'invitation, salon en grand, course à départ commun, revanche
+
+**`PHYS_VER` reste 38.** Phase C (fondations du multijoueur) de [docs/ANALYSE-FONCTIONNELLE.md](docs/ANALYSE-FONCTIONNELLE.md), sauf le relais
+réseau (TURN), qui attend le choix d'un service par l'éditeur.
+
+- **Lien d'invitation.** « 🔗 Copier le lien d'invitation » (et « 📤 Partager » sur téléphone) donne l'adresse du jeu suivie de `#salle=CODE`.
+  L'ouvrir lance le jeu et rejoint la salle directement, après le pseudo.
+- **Salon en grand, sur deux colonnes.**
+  - À gauche : le code, l'invitation et les joueurs, chacun avec la couleur de sa voiture, ★ pour l'hôte, son état (prêt, pas prêt, en course) et sa liaison.
+  - À droite : le mode, le circuit avec son aperçu (circuits intégrés), les collisions, le salon public et les règles. L'invité voit le mode et le circuit choisis par l'hôte.
+- **Prêt.** Chacun clique « Je suis prêt » (« 1 / 2 prêts »). Si quelqu'un n'est pas prêt, le premier « Lancer » de l'hôte avertit ; le second part quand même.
+- **Course à départ commun** (nouveau mode, choisi par défaut) : un circuit (intégré ou de la communauté), départ sur une grille, classement en direct, « 🏁 Course terminée » à l'arrivée. Le championnat (plusieurs manches) et la course libre (fantômes, chacun à son rythme) restent.
+- **Revanche.** À la fin d'une course ou d'un championnat, les invités cliquent « 🔁 Je veux une revanche » (l'hôte voit « Revanche demandée : 1 / 2 ») ; l'hôte relance les mêmes circuits pour tous en un clic.
+- **Les voitures des autres ont leur apparence du garage** : de vraies voitures dans une course à départ commun ou un championnat, des fantômes de leur couleur en course libre. Avant : un fantôme d'une couleur de joueur.
+- **Connexion impossible expliquée** dans le salon, avec la cause (réseaux qui bloquent la connexion directe : 4G, école, entreprise) et quoi essayer.
+- Tests : `test-net` (voiture annoncée et filtrée, prêt, mode de l'hôte, revanche, apparence des voitures), `test-browser` (lien, prêt, course, revanche à deux onglets ; le championnat déclare ses joueurs prêts).
+
+## Bêta 0.13.1 — caméra stable, boutons lisibles, néons et moto corrigés, nouvelle version annoncée
+
+**`PHYS_VER` reste 38**, rien ne change dans la course : records, fantômes et médailles restent valables. Phase A du plan tiré de l'analyse
+fonctionnelle ([docs/ANALYSE-FONCTIONNELLE.md](docs/ANALYSE-FONCTIONNELLE.md)).
+
+- **La caméra ne tremble plus.**
+  - Elle est calculée au pas de la physique (120 fois par seconde), puis lissée entre deux pas à l'affichage, comme la voiture. Avant, elle tremblait sur les écrans 120/144 Hz et quand le nombre d'images variait.
+  - La visée de la zone de réception pendant un saut était la plus grosse source d'à-coups. Le point de chute est maintenant interpolé (il sautait de plusieurs mètres d'un calcul à l'autre) et lissé dans le temps. La pente visée et la vitesse compensée sont lissées aussi.
+  - Mesure (centile 99 des à-coups de rotation, 16 circuits) : en moyenne **199 → 46** à 144 images/s, **51 → 26** à 60 images/s. Exemples : Braises 429 → 70, Garde 537 → 70.
+  - La secousse après un choc est un mouvement doux, plus un tirage au hasard à chaque image. Les accélérateurs ne secouent plus la caméra (le coup de champ de vision reste).
+  - Entrée et sortie des loopings, tubes et murs fondues sur 0,35 s ; caméra remontée en douceur au-dessus du sol ; passage sous un pont fondu.
+- **Boutons lisibles sur tout décor.** Les boutons des menus ont un liseré clair et une ombre ; chaque thème a ses couleurs de bouton (Crépuscule, Forêt, Minuit, Mono, Contraste élevé). Avant, ils disparaissaient sur un décor sombre (« noir sur noir »).
+- **Nouvelle version annoncée.** Un onglet resté ouvert vérifie toutes les 30 minutes, et au retour sur l'onglet, si une version plus récente est en ligne. Il propose alors « Recharger », jamais pendant une course.
+- **Néons ajustés à chaque carrosserie.** Les barres restent entre les roues et le halo épouse la voiture ; sous la moto, plus de barres dans le vide. Les jantes néon se voient sur la moto.
+- **Pilote de moto refait** : cuisses, jambes et pieds aux repose-pieds, bras jusqu'aux poignées du guidon (aussi sur le chopper).
+- **Téléphone en paysage** : la fenêtre d'arrivée passe sur deux colonnes et tient dans l'écran avec ses deux rangées de boutons. Les messages s'affichent en haut.
+- **Éditeur** : les réglages de la pièce, collés en bas de la palette, se replient d'un clic sur leur titre (choix gardé) et prennent moins de place.
+- **Publication d'un circuit** : en cas d'échec, la fenêtre reste ouverte avec l'erreur et on peut réessayer (avant, elle se fermait et il fallait tout refaire) ; fermer avec Échap compte comme « Annuler ».
+- Tests : `test-vehicules`, `test-mise-a-jour`, des contrôles de caméra en plus (`test-camera`, `test-camrig`, à-coups à 144 images/s dans `test-browser-camera`), des boutons de chaque thème (`test-contraste`), de l'arrivée sur téléphone en paysage (`test-browser`), de la publication, de la nouvelle version et des réglages repliables (`test-browser-moteurs`).
+
 ## Bêta 0.13.0 — version d'essai : avis des testeurs dans le jeu, médailles calées sur un petit groupe
 
 **`PHYS_VER` reste 38**, rien ne change dans la course. Phase 4 du plan de la 1.0 : les essais humains. Protocole, message aux testeurs et suite :

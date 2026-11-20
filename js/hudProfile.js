@@ -7,7 +7,7 @@ export const HUD_PROFILES = {
   classic: { label: 'Classique', hide: [] },
   competitive: { label: 'Compétitif', hide: ['hint', 'medals', 'track'] },
   training: { label: 'Entraînement', hide: ['hint'], training: true },
-  minimal: { label: 'Minimaliste', hide: ['split', 'best', 'medals', 'boost', 'hint', 'track'] },
+  minimal: { label: 'Minimaliste', hide: ['split', 'best', 'medals', 'boost', 'hint', 'track', 'minimap'] },
 };
 export const TRAIN_WIDGETS = { delta: 'Écart en direct', sector: 'Secteurs', vmax: 'Vitesse maxi', g: 'Forces g', traces: 'Gaz, frein et vitesse', line: 'Ligne de la référence', brakes: 'Repères de freinage' };
 export const TRAIN_REFS = { record: 'Mon record', gold: 'Fantôme or (pilote automatique)', world: 'Record mondial (en ligne)' };

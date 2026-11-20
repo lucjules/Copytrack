@@ -205,6 +205,15 @@ export const settingsMethods = {
     this._renderUiCustom();
   },
 
+  // (0.15.0) Réglages rapides de la pause : valeurs du moment et nom de la caméra.
+  syncPauseQuick() {
+    const s = this.settings, sess = this.session;
+    if (!$('pq-volume')) return;
+    $('pq-volume').value = s.volume; $('pq-music').value = s.musicVolume; $('pq-shake').value = s.shakeAmt ?? 1; $('pq-fov').value = s.fovAdd || 0;
+    const cam = sess && sess.camList && sess.camList[sess.camMode];
+    $('pq-cam').textContent = '🎥 Caméra : ' + (cam ? cam.name : '—');
+  },
+
   // Taille de l'interface, compteur d'images, couleurs adaptées.
   // Accord pour les statistiques anonymes (voir telemetry.js) : demandé une fois, retrouvable dans Options.
   setTelemetry(on) {
