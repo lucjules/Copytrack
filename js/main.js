@@ -6,7 +6,7 @@ import { renderOptions } from './renderOptions.js';
 import { Particles } from './particles.js';
 import { Input } from './input.js';
 import { GarageSession } from './garage.js';
-import { CATEGORIES } from './cosmetics.js';
+import { CATEGORIES, CATEGORY_GROUPS } from './cosmetics.js';
 import { profile } from './profile.js';
 import { GameAudio } from './audio.js';
 import { UI } from './ui.js';
@@ -344,14 +344,35 @@ class App {
     $('garage').classList.remove('hidden');
     const tabs = $('garage-tabs');
     tabs.innerHTML = '';
-    for (const c of CATEGORIES) {
-      const b = document.createElement('button');
-      b.className = 'tab';
-      b.dataset.cat = c.id;
-      b.textContent = c.label;
-      b.onclick = () => { this.audio.click(); this.session.setCat(c.id); };
-      tabs.appendChild(b);
-    }
+    // (0.15.0) Onglets rangés en quatre familles (CATEGORY_GROUPS) : une rangée de familles, puis les seuls onglets de la famille choisie
+    // (GarageSession._render cache les autres). Avant : 14 onglets d'un bloc, sur quatre ou cinq rangées.
+    const groups = document.createElement('div');
+    groups.className = 'gtab-groups';
+    groups.setAttribute('role', 'group');
+    groups.setAttribute('aria-label', 'Familles');
+    const sub = document.createElement('div');
+    sub.className = 'gtab-sub';
+    CATEGORY_GROUPS.forEach((g, gi) => {
+      const gb = document.createElement('button');
+      gb.className = 'gtab';
+      gb.type = 'button';
+      gb.dataset.group = String(gi);
+      gb.textContent = g.label;
+      gb.onclick = () => { this.audio.click(); const s = this.session; s.setCat(s.lastCat && g.cats.includes(s.lastCat[gi]) ? s.lastCat[gi] : g.cats[0]); };
+      groups.appendChild(gb);
+      for (const id of g.cats) {
+        const c = CATEGORIES.find((x) => x.id === id);
+        if (!c) continue;
+        const b = document.createElement('button');
+        b.className = 'tab';
+        b.dataset.cat = c.id;
+        b.dataset.group = String(gi);
+        b.textContent = c.label;
+        b.onclick = () => { this.audio.click(); this.session.setCat(c.id); };
+        sub.appendChild(b);
+      }
+    });
+    tabs.append(groups, sub);
     this.session._render();
     this._resize();
   }

@@ -9,6 +9,8 @@ Analyse du 19 novembre 2026, faite **depuis le jeu** et non depuis le code :
 > **Avancement.** La phase A (urgences et défauts visibles) est faite en **0.13.1**, à trois exceptions près, qui demandent une action de l'éditeur :
 > l'étape SQL 19 (U1), le relais TURN (U2) et le redéploiement de `submit-score` (U3). Phase C (fondations du multijoueur) faite en **0.14.0**, sauf le
 > relais TURN : lien d'invitation, salon en grand, prêt, course à départ commun, revanche, apparence des voitures, connexion impossible expliquée.
+> Phase B (parcours du joueur) faite en **0.15.0** : pause complète, « Continuer la carrière », écran Modes à onglets et « jouer ce circuit en mode… »,
+> garage en entrée principale et onglets en quatre familles, première course guidée, mini-carte, « mauvais sens ».
 
 **Méthode.**
 

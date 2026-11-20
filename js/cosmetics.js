@@ -20,6 +20,15 @@ export const CATEGORIES = [
   { id: 'collections', label: 'Collections' },
 ];
 
+// (0.15.0) Les 14 onglets du garage rangés en quatre familles nommées (la barre d'onglets les montre groupés). Chaque onglet de CATEGORIES y figure une fois :
+// tools/test-menu.mjs le vérifie.
+export const CATEGORY_GROUPS = [
+  { label: 'Voiture', cats: ['body', 'wheels', 'spoiler', 'bike'] },
+  { label: 'Peinture', cats: ['colors', 'finish', 'decal', 'ornament'] },
+  { label: 'Effets', cats: ['led', 'trail', 'horn'] },
+  { label: 'Mes créations', cats: ['studio', 'presets', 'collections'] },
+];
+
 export const CATALOG = {
   body: [
     { id: 'buggy', label: 'Buggy', cost: 0 },

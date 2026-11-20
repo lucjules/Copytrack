@@ -54,32 +54,49 @@ export const modesMethods = {
   },
 
   // ---------------------------------------------------------------- menu des modes
-  modesMenu() {
-    const body = h('div', { class: 'studio' });
+  // 0.15.0 : un écran à onglets (Modes fournis · Mes modes · Publiés · Paquets) et une CARTE par mode (icône, règles en étiquettes, objectif, Jouer),
+  // au lieu d'une seule liste où tout s'empilait. S'ouvre sur « Mes modes » si le joueur en a, sinon sur les modes fournis.
+  modesMenu(tab = null) {
+    const body = h('div', { class: 'studio modes-screen' });
+    let cur = tab || (listModes().length ? 'mine' : 'builtin');
+    const icon = (m) => {
+      const r = m.rules || {};
+      return r.veh0 === 'moto' ? '🏍' : r.veh0 ? '🚤' : r.g0 > 0 && r.g0 < 100 ? '🌙' : r.g0 > 100 ? '🪨' : r.laps > 1 ? '🔁' : r.offroad > 0 ? '🌿' : r.v0 > 0 ? '🚀' : '🎮';
+    };
     const render = () => {
       body.replaceChildren();
-      body.appendChild(h('p', { class: 'meta' }, 'Un mode = des règles + un objectif, à jouer sur le circuit de ton choix (sans records ni classements). Pas de pièces à gagner : tout est pour le plaisir. Publié (🌐), un mode a son classement sur chaque circuit de la carrière.'));
-      const card = (m, own) => h('div', { class: 'srow mode-row', 'data-mode': m.id },
-        h('span', { class: 'mode-name' }, h('b', {}, m.name), h('small', {}, ...[m.desc, ...describeRules(m.rules), m.goal ? '🎯 ' + goalLabel(m.goal) : ''].filter(Boolean).flatMap((x, i) => (i ? [' · ', x] : [x])))),
-        h('button', { class: 'btn small primary', type: 'button', onclick: () => { this.ui.closeModal(); this._pickTrackForMode(m); } }, 'Jouer'),
-        ...(own ? [
-          h('button', { class: 'btn small', type: 'button', title: 'Modifier', onclick: () => { this.ui.closeModal(); this._modeDialog(m); } }, '✎'),
-          h('button', { class: 'btn small', type: 'button', title: 'Publier dans la communauté : ce mode aura son classement sur chaque circuit', 'data-md-pub': m.id, onclick: async () => {
-            try { await publishMode(m, this.settings.playerName); this.ui.flash(`Mode « ${m.name} » publié : Modes de jeu › Modes publiés.`, 3); } catch (e) { this.ui.flash(e.message, 4); }
-          } }, '🌐'),
-          h('button', { class: 'btn small', type: 'button', title: 'Copier le code (à partager)', onclick: async () => { try { await navigator.clipboard.writeText(encodeMode(m)); this.ui.flash('Code du mode copié : envoie-le à un ami (Importer un code).'); } catch { this.ui.flash('Copie impossible.'); } } }, '⧉'),
-          h('button', { class: 'btn small danger', type: 'button', title: 'Supprimer', onclick: () => { deleteMode(m.id); render(); } }, '✕')] : []));
-      body.appendChild(h('h4', { class: 'opt-h' }, 'Modes fournis'));
-      for (const m of BUILTIN_MODES) body.appendChild(card({ ...m, rules: sanitizeRules(m.rules) }, false));
       const mine = listModes();
-      body.appendChild(h('h4', { class: 'opt-h' }, 'Mes modes'));
-      if (!mine.length) body.appendChild(h('p', { class: 'meta' }, 'Aucun : crée ton premier mode.'));
-      for (const m of mine) body.appendChild(card(m, true));
+      const tabs = h('div', { class: 'tabs modes-tabs', role: 'tablist' },
+        h('button', { class: 'tab' + (cur === 'builtin' ? ' on' : ''), type: 'button', role: 'tab', 'aria-selected': String(cur === 'builtin'), onclick: () => { cur = 'builtin'; render(); } }, 'Modes fournis'),
+        h('button', { class: 'tab' + (cur === 'mine' ? ' on' : ''), type: 'button', role: 'tab', 'aria-selected': String(cur === 'mine'), onclick: () => { cur = 'mine'; render(); } }, `Mes modes (${mine.length})`),
+        h('button', { class: 'tab', type: 'button', 'data-md': 'published', onclick: () => { this.ui.closeModal(); this.communityModesDialog(); } }, '🌐 Modes publiés'),
+        h('button', { class: 'tab', type: 'button', 'data-md': 'packs', onclick: () => { this.ui.closeModal(); this.packsDialog(); } }, '📦 Paquets (mods)'));
+      body.appendChild(tabs);
+      body.appendChild(h('p', { class: 'meta' }, 'Un mode = des règles + un objectif, à jouer sur le circuit de ton choix (sans records ni classements). Pas de pièces à gagner : tout est pour le plaisir. Publié (🌐), un mode a son classement sur chaque circuit de la carrière.'));
+      const card = (m, own) => h('div', { class: 'mode-card mode-row', 'data-mode': m.id },
+        h('div', { class: 'mode-card-head' }, h('span', { class: 'mode-ico', 'aria-hidden': 'true' }, icon(m)), h('b', {}, m.name)),
+        m.desc ? h('p', { class: 'mode-desc' }, m.desc) : null,
+        h('div', { class: 'mode-chips' }, ...describeRules(m.rules).map((x) => h('span', { class: 'chip' }, x))),
+        m.goal ? h('p', { class: 'mode-goal' }, '🎯 ' + goalLabel(m.goal)) : null,
+        h('div', { class: 'mode-acts' },
+          h('button', { class: 'btn small primary', type: 'button', onclick: () => { this.ui.closeModal(); this._pickTrackForMode(m); } }, 'Jouer'),
+          ...(own ? [
+            h('button', { class: 'btn small', type: 'button', title: 'Modifier', onclick: () => { this.ui.closeModal(); this._modeDialog(m); } }, '✎'),
+            h('button', { class: 'btn small', type: 'button', title: 'Publier dans la communauté : ce mode aura son classement sur chaque circuit', 'data-md-pub': m.id, onclick: async () => {
+              try { await publishMode(m, this.settings.playerName); this.ui.flash(`Mode « ${m.name} » publié : Modes de jeu › Modes publiés.`, 3); } catch (e) { this.ui.flash(e.message, 4); }
+            } }, '🌐'),
+            h('button', { class: 'btn small', type: 'button', title: 'Copier le code (à partager)', onclick: async () => { try { await navigator.clipboard.writeText(encodeMode(m)); this.ui.flash('Code du mode copié : envoie-le à un ami (Importer un code).'); } catch { this.ui.flash('Copie impossible.'); } } }, '⧉'),
+            h('button', { class: 'btn small danger', type: 'button', title: 'Supprimer', onclick: () => { deleteMode(m.id); render(); } }, '✕')] : [])));
+      const grid = h('div', { class: 'mode-grid' });
+      if (cur === 'builtin') for (const m of BUILTIN_MODES) grid.appendChild(card({ ...m, rules: sanitizeRules(m.rules) }, false));
+      else {
+        if (!mine.length) body.appendChild(h('p', { class: 'meta' }, 'Aucun : crée ton premier mode.'));
+        for (const m of mine) grid.appendChild(card(m, true));
+      }
+      body.appendChild(grid);
       body.appendChild(h('div', { class: 'row wrap' },
         h('button', { class: 'btn small', type: 'button', 'data-md': 'new', disabled: mine.length >= MODES_MAX, onclick: () => { this.ui.closeModal(); this._modeDialog(null); } }, '✦ Créer un mode'),
-        h('button', { class: 'btn small', type: 'button', 'data-md': 'import', onclick: () => { this.ui.closeModal(); this._modeImportDialog(); } }, 'Importer un code'),
-        h('button', { class: 'btn small', type: 'button', 'data-md': 'published', onclick: () => { this.ui.closeModal(); this.communityModesDialog(); } }, '🌐 Modes publiés'),
-        h('button', { class: 'btn small', type: 'button', 'data-md': 'packs', onclick: () => { this.ui.closeModal(); this.packsDialog(); } }, '📦 Paquets (mods)')));
+        h('button', { class: 'btn small', type: 'button', 'data-md': 'import', onclick: () => { this.ui.closeModal(); this._modeImportDialog(); } }, 'Importer un code')));
     };
     render();
     this.ui.modal({ title: 'Modes de jeu', body, wide: true, actions: [{ label: 'Fermer', primary: true }] });

@@ -6,6 +6,30 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.15.0 — parcours du joueur : pause complète, carrière, modes, garage, mini-carte, mauvais sens
+
+**`PHYS_VER` reste 38**, rien ne change dans la course : records, fantômes et médailles restent valables. Phase B (parcours du joueur) de
+[docs/ANALYSE-FONCTIONNELLE.md](docs/ANALYSE-FONCTIONNELLE.md).
+
+- **Pause complète.** En plus de Reprendre, Recommencer et Quitter : « Retour au checkpoint » (R), « 🎥 Caméra » (change de vue et affiche son nom),
+  « Commandes », et des réglages rapides sans quitter la course : volume des effets et de la musique, tremblements de la caméra, champ de vision.
+- **« ▶ Continuer la carrière »** en haut de l'écran Niveaux : ouvre directement le prochain circuit à médailler du premier chapitre ouvert.
+  Les chapitres viennent d'abord ; le défi du jour et la saison passent après.
+- **Écran Modes à onglets** : Modes fournis, Mes modes, Modes publiés, Paquets (mods). Chaque mode est une carte avec une icône (moto, bateau,
+  gravité, tours, hors-piste…), ses règles en étiquettes, son objectif et « Jouer ». Avant : une longue liste d'un bloc.
+- **« Ou jouer ce circuit en mode… »** sur la fiche d'un circuit : une liste déroulante lance le circuit avec les règles d'un mode (fourni ou à soi).
+- **Garage en entrée principale.** La tuile « Profil » de l'accueil devient « Garage » (voiture, compte, sauvegardes) et le garage vient en premier.
+  Ses 14 onglets sont rangés en quatre familles (Voiture, Peinture, Effets, Mes créations) : une rangée de familles, puis les onglets de la famille choisie.
+- **Première course guidée.** La première fenêtre du tutoriel propose « 🏁 Première course guidée » : la leçon 1 de l'Académie, avec ses consignes.
+- **Mini-carte** en course, en haut à gauche : le tracé vu de dessus, ta voiture, ton fantôme (or) et les autres joueurs (à leur couleur).
+  Elle se cache dans Interface › masquer, et le profil d'interface « minimal » la retire.
+- **« ⛔ Mauvais sens »** quand la voiture roule à contre-sens du tracé pendant plus d'une demi-seconde (au sol, au-delà de 8 m/s) ; jamais à tort
+  sur les 18 circuits vérifiés en entier.
+- **Corrigé** : un Échap qui venait de fermer un panneau de l'accueil pouvait refermer aussitôt l'écran ouvert juste après (la fiche d'un circuit
+  ouverte depuis les records se refermait). C'était la cause du test « records et médailles » qui échouait par moments.
+- **Corrigé** : une voiture distante sans couleur connue ne fait plus planter la mini-carte.
+- Tests : `test-minimap` (nouveau), `test-menu`, `test-browser-moteurs`.
+
 ## Bêta 0.14.0 — multijoueur : lien d'invitation, salon en grand, course à départ commun, revanche
 
 **`PHYS_VER` reste 38.** Phase C (fondations du multijoueur) de [docs/ANALYSE-FONCTIONNELLE.md](docs/ANALYSE-FONCTIONNELLE.md), sauf le relais

@@ -20,7 +20,7 @@ export const FONTS = {
 export const SPEEDOS = { default: 'Chiffres', big: 'Énorme', minimal: 'Discret', bar: 'Jauge', ring: 'Cadran' };
 export const TIMERS = { normal: 'Normal', big: 'Gros', small: 'Petit' };
 export const HUD_PIECES = { top: 'Chrono', tl: 'Circuit et checkpoints', tr: 'Record et médailles', br: 'Vitesse', hint: 'Aide des touches' };
-export const HUD_HIDE = { split: 'écart', best: 'record', medals: 'médailles', boost: 'jauge de boost', hint: 'aide des touches', track: 'nom du circuit' };
+export const HUD_HIDE = { split: 'écart', best: 'record', medals: 'médailles', boost: 'jauge de boost', hint: 'aide des touches', track: 'nom du circuit', minimap: 'mini-carte' };
 
 const HEX = /^#[0-9a-f]{6}$/i;
 const clamp = (v, lo, hi, def) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : def; };

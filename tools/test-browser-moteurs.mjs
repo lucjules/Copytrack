@@ -87,6 +87,27 @@ for (const engine of ENGINES) {
     await app(() => window.copytrack.quitRace());
     await wait(() => window.copytrack.mode === 'menu');
   });
+  await step('course (0.15.0) : mini-carte visible ; « Mauvais sens » à contre-sens ; pause : caméra, réglages rapides, retour au checkpoint', async () => {
+    await app(() => window.copytrack.playBuiltin(0));
+    await wait(() => window.copytrack.mode === 'race' && window.copytrack.session && window.copytrack.session.state === 'racing');
+    await page.keyboard.down('ArrowUp'); await page.waitForTimeout(1500); await page.keyboard.up('ArrowUp');
+    assert.ok(await app(() => { const m = document.getElementById('minimap'); return !!m && getComputedStyle(m).display !== 'none' && m.getBoundingClientRect().width > 50; }), 'mini-carte affichée');
+    // demi-tour sur place, puis on accélère à contre-sens
+    await app(() => { const p = window.copytrack.session.phys; p.yaw += Math.PI; p.vel.x = -p.vel.x; p.vel.z = -p.vel.z; });
+    await page.keyboard.down('ArrowUp');
+    await wait(() => /Mauvais sens/.test(document.getElementById('hud-msg').textContent), null, 8000);
+    await page.keyboard.up('ArrowUp');
+    await page.keyboard.press('Escape');
+    await wait(() => !document.getElementById('pause').classList.contains('hidden'));
+    const pq = await app(() => ({ cam: document.getElementById('pq-cam').textContent, vol: +document.getElementById('pq-volume').value, set: window.copytrack.settings.volume, m0: window.copytrack.session.camMode }));
+    assert.match(pq.cam, /Caméra/); assert.equal(pq.vol, pq.set);
+    await app(() => document.querySelector('[data-action="pause-camera"]').click());
+    assert.notEqual(await app(() => window.copytrack.session.camMode), pq.m0, 'la caméra change depuis la pause');
+    await app(() => document.querySelector('[data-action="pause-respawn"]').click());
+    await wait(() => window.copytrack.session.state === 'racing' && document.getElementById('pause').classList.contains('hidden'));
+    await app(() => window.copytrack.quitRace());
+    await wait(() => window.copytrack.mode === 'menu');
+  });
   await step('éditeur : un circuit officiel s’ouvre et se dessine', async () => {
     await app(() => window.copytrack.openEditor({ code: window.copytrack.builtins[1].track.encode(), name: 'Moteur' }));
     await wait(() => window.copytrack.mode === 'editor' && window.copytrack.session && window.copytrack.session.track && window.copytrack.session.track.tiles.length > 10);

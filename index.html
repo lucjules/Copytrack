@@ -87,6 +87,7 @@
   <link rel="modulepreload" href="js/medals.js">
   <link rel="modulepreload" href="js/hudMessages.js">
   <link rel="modulepreload" href="js/camflip.js">
+  <link rel="modulepreload" href="js/ui/miniMap.js">
   <link rel="modulepreload" href="js/net/snapshot.js">
   <link rel="modulepreload" href="js/net/progress.js">
   <link rel="modulepreload" href="js/feel.js">
@@ -248,7 +249,7 @@
         <button data-action="sub-create" class="btn big" aria-haspopup="true" aria-expanded="false" aria-controls="menu-sub-create">Créer <small>éditeur, mes circuits</small></button>
         <button data-action="sub-multi" class="btn big" aria-haspopup="true" aria-expanded="false" aria-controls="menu-sub-multi">Multijoueur <small>salons, compétition</small></button>
         <button data-action="sub-progress" class="btn big" aria-haspopup="true" aria-expanded="false" aria-controls="menu-sub-progress">Progression <small>records, médailles</small></button>
-        <button data-action="sub-profile" class="btn big" aria-haspopup="true" aria-expanded="false" aria-controls="menu-sub-profile">Profil <small>compte, garage, sauvegardes</small></button>
+        <button data-action="sub-profile" class="btn big" aria-haspopup="true" aria-expanded="false" aria-controls="menu-sub-profile">Garage <small>voiture, compte, sauvegardes</small></button>
         <button data-action="sub-settings" class="btn big" aria-haspopup="true" aria-expanded="false" aria-controls="menu-sub-settings">Paramètres <small>son, image, commandes</small></button>
       </nav>
       <div class="menu-panel hidden" id="menu-sub-play" role="group" aria-labelledby="mp-play">
@@ -289,10 +290,10 @@
         </div>
       </div>
       <div class="menu-panel hidden" id="menu-sub-profile" role="group" aria-labelledby="mp-profile">
-        <header class="menu-panel-head"><button class="btn" data-action="sub-back">← Retour</button><h2 id="mp-profile">Profil</h2></header>
+        <header class="menu-panel-head"><button class="btn" data-action="sub-back">← Retour</button><h2 id="mp-profile">Garage et profil</h2></header>
         <div class="menu-panel-grid">
-          <button data-action="tab-account" class="btn menu-entry primary"><b>Compte et pseudonyme</b><small>invité ou compte, synchronisation</small></button>
-          <button data-action="garage" class="btn menu-entry"><b>Garage</b><small>cosmétiques de la voiture</small></button>
+          <button data-action="garage" class="btn menu-entry primary"><b>Garage</b><small>ta voiture : carrosserie, couleurs, néons, moto…</small></button>
+          <button data-action="tab-account" class="btn menu-entry"><b>Compte et pseudonyme</b><small>invité ou compte, synchronisation</small></button>
           <button data-action="tab-saves" class="btn menu-entry"><b>Sauvegardes</b><small>code joueur, import, export</small></button>
         </div>
       </div>
@@ -558,7 +559,17 @@
     <div class="panel">
       <h2>Pause</h2>
       <button class="btn big primary" data-action="resume">Reprendre</button>
+      <button class="btn big" data-action="pause-respawn">Retour au checkpoint <kbd>R</kbd></button>
       <button class="btn big" data-action="restart">Recommencer</button>
+      <!-- 0.15.0 : réglages rapides sans quitter la course -->
+      <div class="pause-quick">
+        <button class="btn" type="button" data-action="pause-camera" id="pq-cam">Caméra</button>
+        <button class="btn" type="button" data-action="help">Commandes</button>
+        <label><span>Effets</span><input type="range" id="pq-volume" min="0" max="1" step="0.05"></label>
+        <label><span>Musique</span><input type="range" id="pq-music" min="0" max="1" step="0.05"></label>
+        <label><span>Tremblements</span><input type="range" id="pq-shake" min="0" max="1" step="0.25"></label>
+        <label><span>Champ de vision</span><input type="range" id="pq-fov" min="-10" max="20" step="1"></label>
+      </div>
       <button class="btn big" data-action="quit">Quitter</button>
     </div>
   </div>

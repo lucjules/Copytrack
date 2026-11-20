@@ -3,6 +3,7 @@ import * as THREE from './vendor/three.module.min.js';
 import { DT } from './constants.js';
 import { CamFlip } from './camflip.js';
 import { MSG } from './hudMessages.js';
+import { MiniMap } from './ui/miniMap.js';
 import { SEND_EVERY_STEPS, F_FINISHED } from './net/snapshot.js';
 import { ProgressTracker, gridSpawn } from './net/progress.js';
 import { speedLines, slipstream, rumbleLevels, PassTracker } from './feel.js';
@@ -90,12 +91,16 @@ export class RaceSession {
     this.multi = opts.multi || null;
     this.cup = this.multi && this.multi.cup || null;          // manche d'un championnat : { n, total, slot, count, roster, collisions } (départ commun sur une grille)
     this.progress = this.multi ? new ProgressTracker(track.path) : null;       // avancement 0..1 sur le circuit (classement en direct)
+    // (0.15.0) en solo : la même ligne sert à dire « mauvais sens » (circuits qui ont une ligne centrale : carrière, défi du jour)
+    this.wayTrack = !this.multi && !opts.demo && !opts.replay && track.path ? new ProgressTracker(track.path) : null;
     this.prog = 0; this._jumped = false; this.protectUntil = 0; this._dnf = false;
     this.remote = new Map();
     this.teleSeq = 0;
     this.netTick = 0;     // horloge d'envoi : ne recule JAMAIS, même quand on recommence un essai (le tampon des autres joueurs en dépend)
     if (!this.demo && !this.replay && !opts.fromEditor && !this.multi) this._setupGhosts();
     if (this.multi) this._setupRemotes();
+    // (0.15.0) mini-carte : le circuit vu de dessus, la voiture, le fantôme et les adversaires (cachable : Interface › masquer)
+    if (!this.demo && typeof document !== 'undefined') { try { this.miniMap = new MiniMap(track); } catch { this.miniMap = null; } }
     if (opts.rivals && !this.demo && !this.replay && !this.multi) this.setRivals(opts.rivals);
     this.camList = cameraList(CAM_MODES, app.settings.cameras);          // les 4 d'origine puis celles du joueur (camprefs.js)
     this.camMode = this.demo ? 0 : clampCamIndex(app.settings.camera || 0, this.camList);
@@ -156,6 +161,7 @@ export class RaceSession {
     const sp = this.sim.start(spawn);
     if (this.cup && !this.opts.spawn) this.logic.respawn.snap = this.logic._snap();      // le point de départ sert de retour, avec l'état de la course à ce moment-là
     this.prog = 0; this._jumped = true; this.protectUntil = 0; this._dnf = false;
+    this._wayJump = true; this._wayN = 0;
     if (this.progress) this.progress.reset();
     this.car.setVehicle(this.phys.vehicle, true);
     this.up.set(this.phys.n.x, this.phys.n.y, this.phys.n.z);
@@ -216,7 +222,8 @@ export class RaceSession {
     if (this._train) this._trainRespawn();
     if (this.aids) this.aids.reset(this.phys);
     Object.assign(this.stats, this.statsSnap);       // les réceptions, turbos et anneaux d'après le checkpoint ne comptent plus
-    if (this.multi) { this.teleSeq = (this.teleSeq + 1) & 255; this._jumped = true; this.protectUntil = this.tick + 240; }       // 2 s sans collision après un retour au checkpoint
+    if (this.multi) { this.teleSeq = (this.teleSeq + 1) & 255; this._jumped = true; this.protectUntil = this.tick + 240; }
+    this._wayJump = true; this._wayN = 0;       // 2 s sans collision après un retour au checkpoint
     const steps = this.logic.steps;
     this.ghostRec.length = Math.min(this.ghostRec.length, Math.floor(steps / GHOST_EVERY) * 7);
     while (this.ghostVeh.length && this.ghostVeh[this.ghostVeh.length - 1][0] >= this.ghostRec.length / 7) this.ghostVeh.pop();
@@ -292,6 +299,7 @@ export class RaceSession {
     this.sim.drive(inp);      // horloge des obstacles et pièces mobiles = chrono, puis un pas de physique
     this._orient();
     if (this.multi && ++this.netTick % SEND_EVERY_STEPS === 0) { this._updateProgress(); this._sendNet(this.state === 'finished' && !this._dnf ? F_FINISHED : 0); }
+    if (this.state === 'racing' && !this.demo && !this.replay && this.tick % 12 === 0) this._checkWay();
     const ev = this.phys.ev;
     if (this.state === 'racing') {
       if (ev.wall > 4) this.stats.wallHits++;
@@ -422,6 +430,32 @@ export class RaceSession {
     }
   }
 
+  // (0.15.0) « ⛔ Mauvais sens » : cap opposé à la ligne du circuit, en roulant (plus de 8 m/s), 6 contrôles de suite (0,6 s) ; répété toutes les 1,2 s.
+  _checkWay() {
+    const T = this.progress || this.wayTrack;
+    if (!T || !T.available) return;
+    if (T === this.wayTrack) { const lg = this.logic; T.update(this.phys.pos, T.lapRange(lg.lap, lg.laps), this._wayJump); this._wayJump = false; }
+    const p = this.phys, sense = p.grounded && !p.rib && p.fwdSpeed > 8 ? T.headingSense(-Math.sin(p.yaw), -Math.cos(p.yaw)) : 0;
+    this._wayN = sense === -1 ? (this._wayN || 0) + 1 : 0;
+    if (this._wayN >= 6) { this._say(MSG.wrongWay); this._wayN = -6; this.stats.wrongWay = (this.stats.wrongWay || 0) + 1; }
+  }
+
+  // Points de la mini-carte : fantôme (or), adversaires (leur couleur), puis la voiture du joueur par-dessus.
+  _miniPoints() {
+    const pts = [];
+    const gc = this.ghostCar && this.ghostCar.group;
+    if (gc && gc.visible) pts.push({ x: gc.position.x, z: gc.position.z, color: '#ffd23e', r: 3 });
+    // Voiture distante sans couleur connue (ancienne présence, voiture de test) : rose par défaut, jamais d'erreur dans la boucle.
+    if (this.remote) for (const rc of this.remote.values()) {
+      const g = rc && rc.group;
+      if (!g || !g.visible) continue;
+      const col = rc.baseColor && rc.baseColor.getHexString ? '#' + rc.baseColor.getHexString() : '#ff4fd8';
+      pts.push({ x: g.position.x, z: g.position.z, color: col, r: 3.2 });
+    }
+    pts.push({ x: this.renderPos.x, z: this.renderPos.z, color: '#ffffff', r: 4.2, ring: true });
+    return pts;
+  }
+
   _snapStats() { const s = this.stats; this.statsSnap = { perfects: s.perfects, turbos: s.turbos, rings: s.rings }; }
 
   update(dt) {
@@ -493,6 +527,7 @@ export class RaceSession {
 
   pause() {
     this.state = 'paused';
+    if (this.app.syncPauseQuick) this.app.syncPauseQuick();
     this.app.ui.showOverlay('pause');
     this.app.audio.engine(null);
   }
@@ -611,6 +646,7 @@ export class RaceSession {
 
     // Caméra (interpolée entre deux pas de physique, race/camera.js)
     this._cameraRender(dt, alpha);
+    if (this.miniMap) this.miniMap.draw(this._miniPoints(), performance.now());
     if (this.multi) {
       const now = performance.now();
       for (const rc of this.remote.values()) rc.update(now, app.camera.position);
@@ -674,6 +710,7 @@ export class RaceSession {
     this._theaterDispose();
     this.app.camera.up.set(0, 1, 0);
     this.view.dispose();
+    if (this.miniMap) { this.miniMap.dispose(); this.miniMap = null; }
     this.car.dispose();
     this.skids.dispose();
     for (const g of this.ghosts) g.car.dispose();

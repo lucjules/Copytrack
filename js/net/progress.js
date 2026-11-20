@@ -46,7 +46,19 @@ export class ProgressTracker {
     let r = jumped ? null : this._best(pos, Math.max(lo, this.idx - 40), Math.min(hi, this.idx + 120));
     if (!r || r.bd > 70 * 70) r = this._best(pos, lo, hi);
     this.idx = r.best;
+    this.lastD2 = r.bd;
     return this.cum[this.idx] / this.total;
+  }
+
+  // (0.15.0) Sens de la marche : le cap de la voiture (fx, fz : vecteur unitaire) comparé au sens de la ligne centrale au point le plus proche.
+  // -1 : à contre-sens net (> ≈ 127°) ; 1 : dans le sens ; 0 : indéterminé (pas de ligne, voiture à plus de 25 m d'elle : autre branche, hors piste).
+  headingSense(fx, fz) {
+    if (!this.path || !(this.lastD2 <= 25 * 25)) return 0;
+    const P = this.path, i = this.idx, a = P[Math.max(0, i - 2)], b = P[Math.min(P.length - 1, i + 2)];
+    const tx = b[0] - a[0], tz = b[2] - a[2], l = hypot3(tx, 0, tz);
+    if (l < 1e-3) return 0;
+    const d = (tx * fx + tz * fz) / l;
+    return d < -0.6 ? -1 : d > 0.3 ? 1 : 0;
   }
 }
 
