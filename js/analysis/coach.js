@@ -1,4 +1,4 @@
-// Coach (Copytrack Evolution, E7) : des conseils LOCALISÉS (un secteur, un endroit) et JUSTIFIÉS par les mesures de deux courses projetées sur
+// Coach (Trackigami Evolution, E7) : des conseils LOCALISÉS (un secteur, un endroit) et JUSTIFIÉS par les mesures de deux courses projetées sur
 // la même référence (analysis/reference.js). On ne conseille que là où du temps a été perdu : une course identique à la référence ne reçoit
 // aucun conseil. Module pur, testé sous Node (tools/test-coach.mjs) ; le texte est en français (la clé de la traduction, comme partout).
 //

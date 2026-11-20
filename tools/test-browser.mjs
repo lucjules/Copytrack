@@ -1322,7 +1322,7 @@ try {
       assert.match(await app(() => document.querySelector('#replay-bar .rs').textContent), /REC/);
       await waitApp(() => window.copytrack.session.lastVideo, null, 120000);
       const v = await app(() => window.copytrack.session.lastVideo);
-      assert.ok(v.size > 5000 && /webm/.test(v.type) && /^virelo-.*\.webm$/.test(v.name), JSON.stringify(v));
+      assert.ok(v.size > 5000 && /webm/.test(v.type) && /^trackigami-.*\.webm$/.test(v.name), JSON.stringify(v));
       const d = await dl;
       assert.ok(d, 'le navigateur a reçu un téléchargement');
       assert.match(d.suggestedFilename(), /\.webm$/);

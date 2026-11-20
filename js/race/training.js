@@ -1,4 +1,4 @@
-// HUD d'entraînement (Copytrack Evolution, E5) : écart en direct contre une course de référence, mini-secteurs, vitesse maxi, forces g, courbes
+// HUD d'entraînement (Trackigami Evolution, E5) : écart en direct contre une course de référence, mini-secteurs, vitesse maxi, forces g, courbes
 // gaz / frein / vitesse, ligne de la référence et repères de ses freinages, dans la scène. Actif avec le profil de HUD « Entraînement »
 // (hudProfile.js). Ne LIT que la course : rien ici ne touche à la physique, au chrono ni à l'enregistrement.
 // Ces méthodes s'ajoutent au prototype de RaceSession (voir race.js) : `this` est l'instance.

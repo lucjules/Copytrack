@@ -1,5 +1,5 @@
 -- =====================================================================================
--- Copytrack : étape 15 (backend, phase 2) — à lancer une fois dans Supabase > SQL Editor, APRÈS les étapes 1 à 14.
+-- Trackigami : étape 15 (backend, phase 2) — à lancer une fois dans Supabase > SQL Editor, APRÈS les étapes 1 à 14.
 -- Peut être relancé sans danger (idempotente). AUCUNE suppression de données : on ajoute des tables, des fonctions et des droits plus stricts.
 -- Retour arrière : supabase/etape15-retour.sql. Ordre de mise en ligne et dépendances : supabase/MIGRATIONS.md.
 --

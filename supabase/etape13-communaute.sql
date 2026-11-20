@@ -1,5 +1,5 @@
 -- =====================================================================================
--- Copytrack : étape 13 (communauté 2 : commentaires, playlists, sélection, découverte, recommandations, statistiques, modes publiés)
+-- Trackigami : étape 13 (communauté 2 : commentaires, playlists, sélection, découverte, recommandations, statistiques, modes publiés)
 -- À lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 12. Peut être relancé sans danger.
 --
 --  1. Modération : table moderators (à remplir à la main, par la clé de service : insert into moderators values ('<uuid du compte>')).

@@ -1,4 +1,4 @@
-// Compétition asynchrone (Copytrack Evolution, E17) : duels classés entre amis (Elo) et tournois privés. Tout se joue sur des circuits de la carrière,
+// Compétition asynchrone (Trackigami Evolution, E17) : duels classés entre amis (Elo) et tournois privés. Tout se joue sur des circuits de la carrière,
 // sous des catégories de record « …~v1.duel-N » et « …~v1.tour-N » (variants.js) : la course est rejouée par le serveur comme toute autre, et les
 // résultats, le classement Elo et la clôture sont calculés en base (supabase/etape12-competition.sql). Ces méthodes s'ajoutent au prototype de App.
 import { esc } from '../dom.js';

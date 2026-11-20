@@ -1,4 +1,4 @@
-// Copytrack : logique de la fonction serveur « ice » (sans rien de propre à Deno : elle se teste sous Node, voir tools/test-ice.mjs).
+// Trackigami : logique de la fonction serveur « ice » (sans rien de propre à Deno : elle se teste sous Node, voir tools/test-ice.mjs).
 //
 // Donne au jeu les serveurs STUN et un relais TURN à identifiants à DURÉE LIMITÉE (quelques heures), pour que le multijoueur passe aussi dans les réseaux fermés
 // (entreprise, 4G à NAT symétrique : 10 à 20 % des paires sans relais). Aucun identifiant permanent n'est lisible dans le jeu : ils expirent seuls.

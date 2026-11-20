@@ -20,6 +20,7 @@ const read = (f) => readFileSync(join(root, f), 'utf8');
 const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean).filter((f) => existsSync(join(root, f)));
 const TEXT = /\.(js|mjs|ts|html|css|md|json|txt|sql|sh|yml|webmanifest)$|^\.gitignore$|^LICENSE$/;
 const OLD = 'Copy' + 'track';                 // l'ancien nom affiché (écrit en deux morceaux : ce fichier ne se trouve pas lui-même)
+const OLD2 = 'Vi' + 'relo';                   // (0.16.0) le nom de la 0.12.4 à la 0.15.1
 const OTHER = new RegExp('poly' + 'track', 'i');
 
 console.log('Nom du jeu');
@@ -30,17 +31,20 @@ test(`un seul nom affiché (${GAME_NAME}) : titre, manifeste, logos, page légal
   const logos = [...html.matchAll(/class="logo">([^<]*)<span>([^<]*)<\/span>/g)].map((m) => m[1] + m[2]);
   assert.ok(logos.length >= 3 && logos.every((l) => l === up), logos.join(', '));
   assert.match(read('legal.html'), new RegExp(`<title>${GAME_NAME} ·`));
-  assert.ok(!/Virelo|Copytrack/.test(read('tools/wiki/modele.html').replace(/__NAME__/g, '')) || read('tools/wiki/modele.html').includes('__NAME__'));
+  assert.ok(!new RegExp(`${OLD}|${OLD2}`).test(read('tools/wiki/modele.html')), 'le modèle du wiki écrit __NAME__, jamais un ancien nom');
   assert.match(read('wiki/index.html'), new RegExp(`<title>Wiki ${GAME_NAME}</title>`));
   assert.equal(FILE_PREFIX, GAME_NAME.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-'));
 });
 
 test('l’ancien nom n’apparaît plus dans ce que voit le joueur (pages, manifeste, textes du code, dictionnaire anglais, wiki)', () => {
-  for (const f of ['index.html', 'manifest.webmanifest', 'legal.html', 'wiki/index.html', 'tools/wiki/modele.html']) assert.ok(!read(f).includes(OLD), f);
+  for (const f of ['index.html', 'manifest.webmanifest', 'legal.html', 'wiki/index.html', 'tools/wiki/modele.html']) assert.ok(!read(f).includes(OLD) && !read(f).includes(OLD2), f);
+  // (0.16.0) Le nom de la 0.12.4 à la 0.15.1 n'apparaît plus NULLE PART dans le dépôt, sauf la tâche de purge nocturne déjà planifiée en production (nom technique).
+  const old2 = tracked.filter((f) => TEXT.test(f.split('/').pop()) && f !== 'tools/test-legal.mjs' && read(f).replace(new RegExp(OLD2.toLowerCase() + '-purge', 'g'), '').toLowerCase().includes(OLD2.toLowerCase()));
+  assert.deepEqual(old2, []);
   const found = [];
   for (const f of tracked.filter((x) => /^js\/.*\.js$/.test(x) && !x.startsWith('js/vendor/'))) {
     for (const s of jsStrings(read(f))) {
-      if (!s.text.includes(OLD) || /^https:\/\/github\.com\/[\w-]+\/[\w-]+$/.test(s.text)) continue;      // (l'adresse du dépôt garde son nom technique)
+      if (!(s.text.includes(OLD) || s.text.includes(OLD2)) || /^https:\/\/github\.com\/[\w-]+\/[\w-]+$/.test(s.text)) continue;      // (l'adresse du dépôt garde son nom technique)
       if (f === 'js/tracks.js' && s.text === OLD) continue;      // (BUILTIN_AUTHOR : écrit dans le code des circuits officiels, donc dans leur clé de classement)
       found.push(`${f}:${s.line} ${s.text.slice(0, 60)}`);
     }

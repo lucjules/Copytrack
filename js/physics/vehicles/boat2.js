@@ -1,4 +1,4 @@
-// Bateau v2 (Copytrack Evolution, E20) : flottabilité, vagues, courants. En service seulement avec les modèles v2 (règle vm = 2 ou profil
+// Bateau v2 (Trackigami Evolution, E20) : flottabilité, vagues, courants. En service seulement avec les modèles v2 (règle vm = 2 ou profil
 // Simulation) et sur l'eau ; sinon le bateau est celui de toujours.
 //   - VAGUES : une houle de deux trains de vagues, fonction de la position et du chrono de la course (les mêmes pour tout le monde). Monter le
 //     flanc d'une vague freine, le descendre relance ; une vague prise de travers pousse sur le côté ;

@@ -1,4 +1,4 @@
-// Logique du circuit (Copytrack Evolution, E10) : des règles ÉVÉNEMENT → CONDITIONS → ACTIONS exécutées DANS la simulation, donc identiques en course,
+// Logique du circuit (Trackigami Evolution, E10) : des règles ÉVÉNEMENT → CONDITIONS → ACTIONS exécutées DANS la simulation, donc identiques en course,
 // dans les fantômes, les replays et la vérification serveur (ce module est dans la fermeture de js/verify.js : aucune horloge, aucun hasard, aucune
 // trigonométrie). Elles agissent sur les GROUPES de pièces et de décorations (E9) : montrer, cacher (une pièce cachée n'a plus de collision, comme
 // une dalle de verre brisée), basculer ; et sur la gravité, des compteurs, et des effets visuels ou sonores (sans effet sur la course).

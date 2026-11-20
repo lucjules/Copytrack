@@ -1,5 +1,5 @@
 -- =====================================================================================
--- Copytrack : VÉRIFICATION de la base réelle (LECTURE SEULE : que des SELECT, rien n'est modifié, rien n'est supprimé).
+-- Trackigami : VÉRIFICATION de la base réelle (LECTURE SEULE : que des SELECT, rien n'est modifié, rien n'est supprimé).
 -- À coller dans Supabase > SQL Editor, avant et après chaque étape de MIGRATIONS.md, et à LIRE : une ligne « MANQUE » ou « ÉCART » n'est pas un détail.
 --
 -- Colonnes : verification | attendu | constate | statut

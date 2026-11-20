@@ -1,4 +1,4 @@
-// Aides à la conduite (Copytrack Evolution, E22) et réglage de la réponse du volant. Elles agissent sur les COMMANDES, avant leur enregistrement :
+// Aides à la conduite (Trackigami Evolution, E22) et réglage de la réponse du volant. Elles agissent sur les COMMANDES, avant leur enregistrement :
 // le replay, les fantômes et la vérification serveur rejouent les commandes effectives, sans relancer les aides (la course se rejoue à
 // l'identique). Une course avec aides va dans la catégorie de record « assisté » (étiquette « as-1 », variants.js) : son propre classement,
 // sans médailles ni pièces ; elle ne compte ni en saison, ni en duel, ni en tournoi.

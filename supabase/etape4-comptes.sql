@@ -1,5 +1,5 @@
 -- =====================================================================================
--- Copytrack : étape 4 (comptes et sauvegarde cloud entre appareils)
+-- Trackigami : étape 4 (comptes et sauvegarde cloud entre appareils)
 -- À coller dans Supabase > SQL Editor > New query, puis « Run » (après les étapes 1 à 3).
 -- Peut être relancé sans danger.
 --

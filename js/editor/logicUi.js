@@ -1,4 +1,4 @@
-// Éditeur de la logique du circuit (Copytrack Evolution, E11) : créer des règles ÉVÉNEMENT → CONDITIONS → ACTIONS sans écrire de code, les lire en
+// Éditeur de la logique du circuit (Trackigami Evolution, E11) : créer des règles ÉVÉNEMENT → CONDITIONS → ACTIONS sans écrire de code, les lire en
 // phrases, voir ce qui empêcherait de finir, et les essayer (T : en essai depuis l'éditeur, chaque règle déclenchée est annoncée). Les règles agissent
 // sur les groupes (▦, editor/groups.js). Ces méthodes s'ajoutent au prototype d'EditorSession : `this` est l'instance. Moteur : sim/logic.js.
 import { esc } from '../dom.js';

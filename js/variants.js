@@ -1,4 +1,4 @@
-// Variantes de records (Copytrack Evolution, E3) : des catégories de classement sur un même circuit (départ en moto, gravité lunaire, sans
+// Variantes de records (Trackigami Evolution, E3) : des catégories de classement sur un même circuit (départ en moto, gravité lunaire, sans
 // obstacles…), SÉPARÉES du record officiel. Une variante est un jeu de règles (rulesCore.js) appliqué à une copie du circuit : rien de neuf
 // dans la physique. Elle voyage dans la clé de classement, sans aucune migration de la base :
 //

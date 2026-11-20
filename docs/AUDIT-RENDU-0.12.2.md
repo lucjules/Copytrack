@@ -1,6 +1,6 @@
 # Audit du rendu — 0.12.2
 
-Audit de tout ce qui se dessine dans Copytrack, mené avec des outils construits pour l'occasion (`tools/audit-rendu/`) plutôt qu'à l'œil :
+Audit de tout ce qui se dessine dans Trackigami, mené avec des outils construits pour l'occasion (`tools/audit-rendu/`) plutôt qu'à l'œil :
 
 | Outil | Rôle |
 |---|---|

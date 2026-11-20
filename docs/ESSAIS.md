@@ -27,12 +27,12 @@ Un testeur qui joue sur deux appareils compte comme deux (chaque appareil a son 
 ## Avant de lancer
 
 1. L'étape SQL 19 (`supabase/etape19-avis.sql`, la table des avis) est appliquée en production : sans elle, le formulaire répond « Envoi impossible ».
-2. La version 0.13.0 est en ligne (demande de fusion fusionnée, GitHub Pages à jour) : le bas de l'accueil affiche « Virelo bêta 0.13.0 ».
+2. La version 0.13.0 est en ligne (demande de fusion fusionnée, GitHub Pages à jour) : le bas de l'accueil affiche « Trackigami bêta 0.13.0 ».
 3. Noter la **date de début** : elle sert à ne garder que les temps des essais (`--depuis`).
 
 ## Le message à envoyer (à copier)
 
-> Salut ! Je prépare la version 1.0 de mon jeu de course, Virelo, et j'ai besoin de ton avis : https://lucjules.github.io/Copytrack/
+> Salut ! Je prépare la version 1.0 de mon jeu de course, Trackigami, et j'ai besoin de ton avis : https://lucjules.github.io/Copytrack/
 >
 > Ça se joue dans le navigateur (ordinateur, téléphone ou tablette), sans rien installer. Compte 45 minutes à une heure, en une ou plusieurs fois.
 >

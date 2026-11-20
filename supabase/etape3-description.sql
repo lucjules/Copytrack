@@ -1,4 +1,4 @@
--- Copytrack bêta 0.9 — étape 3 : description des circuits, et modification du nom /
+-- Trackigami bêta 0.9 — étape 3 : description des circuits, et modification du nom /
 -- de la description après publication (seulement par l'auteur).
 -- À lancer une fois dans Supabase : SQL Editor › New query › coller › Run.
 -- Sans danger si on le relance.

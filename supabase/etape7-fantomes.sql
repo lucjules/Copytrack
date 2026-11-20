@@ -1,5 +1,5 @@
 -- =====================================================================================
--- Copytrack : étape 7 (fantômes du haut des classements) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 6.
+-- Trackigami : étape 7 (fantômes du haut des classements) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 6.
 -- Peut être relancé sans danger.
 --
 -- La fonction serveur « submit-score » REJOUE déjà chaque course pour en vérifier le temps ; elle range maintenant avec le record le FANTÔME de la course

@@ -1,4 +1,4 @@
-// Copytrack : fonction serveur « submit-score » (Supabase Edge Function).
+// Trackigami : fonction serveur « submit-score » (Supabase Edge Function).
 // FICHIER GÉNÉRÉ par tools/build-function.mjs à partir de server.ts et du code du jeu :
 // ne pas modifier à la main. À coller tel quel dans Supabase (Edge Functions).
 // deno-lint-ignore-file
@@ -20,7 +20,7 @@ var SURF_PHYS = {
   spring: 56,
   bounce: 14,
   // PHYS_VER 36 (lois de conduite, docs/LOIS-PHYSIQUE.md) : poussée CONSTANTE et traînée LINÉAIRE. Sous les gaz : a = engineAccel − (engineAccel / maxSpeed)·v, donc v(t) = maxSpeed·(1 − e^(−t/τ)), τ = maxSpeed / engineAccel
-  // (≈ 5 s) ; gaz levés, la traînée seule ralentit la voiture (au plafond : autant que la poussée). Les VITESSES restent celles de Copytrack
+  // (≈ 5 s) ; gaz levés, la traînée seule ralentit la voiture (au plafond : autant que la poussée). Les VITESSES restent celles de Trackigami
   // (plafond 290 km/h) : les circuits sont dessinés pour elles.
   gravity: 19,
   engineAccel: 16,
@@ -7669,7 +7669,7 @@ var RULES = [
     sig: (v) => v ? "#I" : "",
     v4: true
   },
-  // Paramètres de simulation (Copytrack Evolution, E8 ; sim/params.js) : à leur valeur par défaut, rien ne change (ni la course, ni la signature, ni le code).
+  // Paramètres de simulation (Trackigami Evolution, E8 ; sim/params.js) : à leur valeur par défaut, rien ne change (ni la course, ni la signature, ni le code).
   {
     key: "grip",
     def: 100,
@@ -7694,7 +7694,7 @@ var RULES = [
     sig: (v) => v ? "#A" + v : "",
     v4: true
   },
-  // Environnements déterministes (Copytrack Evolution, E19 ; sim/env.js) : absents par défaut, ils n'entrent ni dans la course, ni dans la signature.
+  // Environnements déterministes (Trackigami Evolution, E19 ; sim/env.js) : absents par défaut, ils n'entrent ni dans la course, ni dans la signature.
   {
     key: "rain",
     def: 0,
@@ -7735,7 +7735,7 @@ var RULES = [
     sig: (v) => v ? "#Y" : "",
     v4: true
   },
-  // Véhicules v2 et profils physiques (Copytrack Evolution, E20 ; physics/profiles.js, physics/vehicles/) : absents par défaut, rien ne change.
+  // Véhicules v2 et profils physiques (Trackigami Evolution, E20 ; physics/profiles.js, physics/vehicles/) : absents par défaut, rien ne change.
   {
     key: "vm",
     def: 1,
@@ -9458,7 +9458,7 @@ function forkPath(tile, branch, reverse) {
 }
 
 // js/version.js
-var GAME_NAME = "Virelo";
+var GAME_NAME = "Trackigami";
 var FILE_PREFIX = GAME_NAME.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
 var PHYS_VER = 38;
 
@@ -20187,4 +20187,4 @@ Deno.serve(createHandler({
   serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") ?? "*"
 }));
-globalThis.__COPYTRACK_BUILD__ = "e0493811990eb999";
+globalThis.__COPYTRACK_BUILD__ = "d6a1f5cf7990bcfd";

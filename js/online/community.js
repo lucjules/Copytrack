@@ -1,4 +1,4 @@
-// Communauté 2 (Copytrack Evolution, E21) : le client des fonctions de supabase/etape13-communaute.sql. Commentaires, playlists, sélection,
+// Communauté 2 (Trackigami Evolution, E21) : le client des fonctions de supabase/etape13-communaute.sql. Commentaires, playlists, sélection,
 // découverte au hasard, recommandations, statistiques de circuit (depuis run_stats), modes publiés. Tout passe par des fonctions de la base,
 // qui vérifient les droits, le débit et la modération : ce module ne fait que les appeler et remettre en forme leurs réponses.
 // Sans l'étape SQL 13 sur le serveur, chaque appel lève une OnlineError de code 'no-sql-step' (l'interface le dit).

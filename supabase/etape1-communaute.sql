@@ -1,5 +1,5 @@
 -- =====================================================================================
--- Copytrack : étape 1 (pilotes et circuits de la communauté)
+-- Trackigami : étape 1 (pilotes et circuits de la communauté)
 -- À coller dans Supabase > SQL Editor > New query, puis « Run ».
 -- Le script peut être relancé sans danger (il ne recrée pas ce qui existe déjà).
 --

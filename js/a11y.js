@@ -1,4 +1,4 @@
-// Accessibilité (Copytrack Evolution, E22) : réduction des animations. Réglage `reduceMotion` : 'auto' suit le système
+// Accessibilité (Trackigami Evolution, E22) : réduction des animations. Réglage `reduceMotion` : 'auto' suit le système
 // (prefers-reduced-motion), 'on' réduit toujours, 'off' jamais. Réduites : transitions des écrans et des fenêtres coupées (classe
 // body.reduce-motion, css/style.css), tremblements et effets de caméra du ressenti à zéro (race/camera.js). Rien ne change dans la course.
 export function systemReducedMotion() {

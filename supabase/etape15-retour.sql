@@ -1,5 +1,5 @@
 -- =====================================================================================
--- Copytrack : RETOUR ARRIÈRE de l'étape 15 — à lancer dans Supabase > SQL Editor si l'étape 15 pose problème. Peut être relancé sans danger.
+-- Trackigami : RETOUR ARRIÈRE de l'étape 15 — à lancer dans Supabase > SQL Editor si l'étape 15 pose problème. Peut être relancé sans danger.
 --
 -- Il rétablit les définitions des étapes 5 et 14 (déclencheur du plafond, submit_rate_check, droits d'insertion sur tracks) et retire les fonctions de
 -- l'étape 15. Il NE SUPPRIME AUCUNE DONNÉE : les tables rate_hits et track_binds et la colonne tracks.author_verified restent (inoffensives) ;

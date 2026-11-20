@@ -1,4 +1,4 @@
-// Profils physiques (Copytrack Evolution, E20) : Arcade, Classique, Simulation. Une règle du circuit (`pm`, table RULES de track.js) ou une
+// Profils physiques (Trackigami Evolution, E20) : Arcade, Classique, Simulation. Une règle du circuit (`pm`, table RULES de track.js) ou une
 // catégorie de record (variante `pm-…`) : jamais un achat, jamais une amélioration. Classique est la physique de toujours : sans profil,
 // specsOf renvoie null et la voiture lit SPECS tel quel (mêmes objets, mêmes nombres : l'empreinte ne change pas).
 //   Arcade      plus d'adhérence latérale, lacet plus amorti, arrière qui décroche moins, volant qui revient plus vite, freins plus mordants ;

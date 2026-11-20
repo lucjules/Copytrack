@@ -21,7 +21,7 @@ for (const [name, title] of Object.entries(FUNCTIONS)) {
   execFileSync('npx', ['--yes', 'deno@2.9.6', 'bundle', '--format', 'esm', join(dir, 'server.ts'), '-o', out], { stdio: 'inherit', cwd: root });
   const code = readFileSync(out, 'utf8');
   if (/^\s*import\s/m.test(code)) throw new Error(`Le fichier regroupé (${name}) contient encore un import.`);
-  const header = `// Copytrack : fonction serveur ${title} (Supabase Edge Function).
+  const header = `// Trackigami : fonction serveur ${title} (Supabase Edge Function).
 // FICHIER GÉNÉRÉ par tools/build-function.mjs à partir de server.ts et du code du jeu :
 // ne pas modifier à la main. À coller tel quel dans Supabase (Edge Functions).
 // deno-lint-ignore-file

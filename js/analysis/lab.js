@@ -1,4 +1,4 @@
-// Laboratoire de comparaison (Copytrack Evolution, E20) : rejoue les MÊMES commandes (une course enregistrée) sous deux réglages physiques et
+// Laboratoire de comparaison (Trackigami Evolution, E20) : rejoue les MÊMES commandes (une course enregistrée) sous deux réglages physiques et
 // mesure l'écart avec l'analyse d'E4 (trace rejouée au bit près, référence de parcours, secteurs, écart de temps le long du circuit). Le circuit
 // n'est jamais modifié : chaque réglage s'applique à une copie. Module pur, testé sous Node (tools/test-vehicles2.mjs).
 //

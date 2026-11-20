@@ -1,5 +1,5 @@
 -- =====================================================================================
--- Copytrack : étape 8 (découverte des circuits, titres) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 7.
+-- Trackigami : étape 8 (découverte des circuits, titres) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 7.
 -- Peut être relancé sans danger.
 --
 --  1. trending_tracks : les circuits les plus joués CETTE SEMAINE (nombre de pilotes distincts qui y ont couru dans les derniers jours), pour l'onglet « Cette semaine » et le « Circuit de la semaine »

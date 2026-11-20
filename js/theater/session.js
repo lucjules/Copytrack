@@ -1,4 +1,4 @@
-// Replay Theater (Copytrack Evolution, E6) : le replay devient une salle d'analyse. Jusqu'à quatre courses sur la piste en même temps (la course
+// Replay Theater (Trackigami Evolution, E6) : le replay devient une salle d'analyse. Jusqu'à quatre courses sur la piste en même temps (la course
 // regardée, rejouée EXACTEMENT par ses commandes, et jusqu'à trois à comparer : un autre record, le fantôme or, un fantôme en ligne), une barre de
 // temps où l'on se déplace (en avant comme en arrière), les secteurs et les incidents marqués dessus, et un panneau d'analyse (trajectoires sur la
 // carte, vitesses, écarts, secteurs). Construit SUR le mode replay de la course (même rendu, mêmes caméras, même export vidéo) : rien n'est dupliqué.

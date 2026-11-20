@@ -1,6 +1,6 @@
 -- =====================================================================================
--- Copytrack : étape 12 (compétition asynchrone : duels classés et tournois privés) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 11.
--- Peut être relancé sans danger. Copytrack Evolution, E17.
+-- Trackigami : étape 12 (compétition asynchrone : duels classés et tournois privés) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 11.
+-- Peut être relancé sans danger. Trackigami Evolution, E17.
 --
 -- DUELS entre amis (comptes) : l'un défie l'autre sur un circuit de la carrière ; le duel dure 24 h. Les temps sont une catégorie de record
 -- « b-…~v1.duel-N » : la fonction submit-score les rejoue et ne les accepte que des deux duellistes (le défié, une fois le duel accepté), avant

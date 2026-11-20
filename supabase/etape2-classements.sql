@@ -1,5 +1,5 @@
 -- =====================================================================================
--- Copytrack : étape 2 (classements par circuit)
+-- Trackigami : étape 2 (classements par circuit)
 -- À coller dans Supabase > SQL Editor > New query, puis « Run » (après l'étape 1).
 --
 -- Les temps sont écrits UNIQUEMENT par la fonction serveur « submit-score », qui

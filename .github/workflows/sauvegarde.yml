@@ -33,7 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p sauvegarde
-          F="sauvegarde/virelo-$(date -u +%Y-%m-%d).sql.gz.gpg"
+          F="sauvegarde/trackigami-$(date -u +%Y-%m-%d).sql.gz.gpg"
           docker run --rm -e DB postgres:17 sh -c 'pg_dump "$DB" --schema=public --schema=auth --no-owner --no-privileges' \
             | gzip -9 | gpg --batch --symmetric --cipher-algo AES256 --pinentry-mode loopback --passphrase-fd 3 3<<<"$PASS" -o "$F"
           ls -l sauvegarde

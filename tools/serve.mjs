@@ -25,4 +25,4 @@ createServer(async (req, res) => {
   } catch {
     res.writeHead(404, { 'Content-Type': 'text/plain' }).end('404');
   }
-}).listen(port, '127.0.0.1', () => console.log(`Copytrack : http://localhost:${port}`));
+}).listen(port, '127.0.0.1', () => console.log(`Trackigami : http://localhost:${port}`));

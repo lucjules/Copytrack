@@ -1,4 +1,4 @@
-// Défi du jour 2 (Copytrack Evolution, E13) : la MUTATION du jour et les SÉRIES de jours.
+// Défi du jour 2 (Trackigami Evolution, E13) : la MUTATION du jour et les SÉRIES de jours.
 //
 // La mutation est une CATÉGORIE de record du défi (une variante, variants.js : sa propre clé « daily-AAAA-MM-JJ~v1.… », son propre classement),
 // choisie d'après la date : le défi du jour lui-même ne change pas, ni pour les défis passés ni pour ceux de l'empreinte de la physique. Le serveur

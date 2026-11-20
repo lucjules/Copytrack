@@ -1,4 +1,4 @@
-# Prototype de rollback : décision (Copytrack Evolution, E18)
+# Prototype de rollback : décision (Trackigami Evolution, E18)
 
 **Question** : de vraies collisions déterministes entre 2 à 4 voitures sont-elles possibles en multijoueur, par un rollback (chacun simule le monde entier, prédit les commandes des autres et revient en arrière quand une vraie commande arrive) ?
 

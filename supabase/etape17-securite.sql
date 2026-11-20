@@ -1,5 +1,5 @@
 -- =====================================================================================
--- Copytrack : étape 17 (sécurité, phase 5) — à lancer une fois dans Supabase > SQL Editor, APRÈS les étapes 1 à 15 (16 recommandée, 15b indifférente).
+-- Trackigami : étape 17 (sécurité, phase 5) — à lancer une fois dans Supabase > SQL Editor, APRÈS les étapes 1 à 15 (16 recommandée, 15b indifférente).
 -- Peut être relancée sans danger (idempotente). AUCUNE suppression de données : on corrige des fonctions, on ajoute une table et des plafonds.
 -- Compatible avec le jeu et la fonction serveur actuels (aucun changement de signature). Retour arrière : voir « Retour arrière » à la fin.
 --

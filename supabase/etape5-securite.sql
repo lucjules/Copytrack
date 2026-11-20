@@ -1,5 +1,5 @@
 -- =====================================================================================
--- Copytrack : étape 5 (durcissement) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 4.
+-- Trackigami : étape 5 (durcissement) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 4.
 -- Peut être relancé sans danger.
 --
 --  1. Les commandes enregistrées (colonne scores.inputs) ne sont plus lisibles par le jeu : n'importe qui pouvait

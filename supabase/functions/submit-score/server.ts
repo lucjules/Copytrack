@@ -1,4 +1,4 @@
-// Copytrack : fonction serveur « submit-score » (Supabase Edge Function, Deno).
+// Trackigami : fonction serveur « submit-score » (Supabase Edge Function, Deno).
 //
 // Reçoit une course terminée (clé du circuit, commandes enregistrées, temps), la REJOUE
 // avec le vrai code du jeu, et n'enregistre le temps que s'il est confirmé.

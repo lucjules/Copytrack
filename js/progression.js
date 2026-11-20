@@ -1,4 +1,4 @@
-// Progression du pilote (Copytrack Evolution, E14) : EXPÉRIENCE et NIVEAUX, LICENCES, DÉFIS DE MAÎTRISE, et cosmétiques débloqués par le niveau.
+// Progression du pilote (Trackigami Evolution, E14) : EXPÉRIENCE et NIVEAUX, LICENCES, DÉFIS DE MAÎTRISE, et cosmétiques débloqués par le niveau.
 // Rien de tout cela ne touche à la course : aucun module de la physique ni de la vérification n'importe ce fichier, et un niveau ne débloque que des
 // éléments visuels du garage (tools/test-progression.mjs le vérifie). L'expérience vient des COURSES TERMINÉES et des OBJECTIFS atteints, jamais du
 // temps passé dans les menus ; les arrivées répétées sur le même circuit, le même jour, ne rapportent presque rien.

@@ -1,4 +1,4 @@
-# Copytrack — audit des manquements et de l'expérience de jeu (base : 0.9.59, `PHYS_VER` 34)
+# Trackigami — audit des manquements et de l'expérience de jeu (base : 0.9.59, `PHYS_VER` 34)
 
 Phase d'analyse et de conception. **Aucun fichier du dépôt n'a été modifié** (`git status` vide), aucun commit, aucune donnée Supabase touchée. Tous les essais ci-dessous ont tourné
 hors dépôt, dans le répertoire de travail temporaire de la session : `scratchpad/exp/` (scripts) et `scratchpad/shots/` (captures).
@@ -26,7 +26,7 @@ Leurs résultats ont été **écartés et refaits** après vérification de la s
 
 ---
 
-## 1. Compréhension générale du fonctionnement de Copytrack
+## 1. Compréhension générale du fonctionnement de Trackigami
 
 **Nature du jeu.** Un contre-la-montre solo low-poly dans le navigateur (site statique, three.js embarqué, ~35 000 lignes de JS), autour de : 72 circuits officiels en carrière, un
 **éditeur de circuits** complet, une communauté et des classements (Supabase), des replays/fantômes/coach, un multijoueur pair à pair, un garage purement visuel.
@@ -229,7 +229,7 @@ C'est un geste d'expert caché derrière un réflexe contraire ; je classe « ma
 | CA-5 | Pas de roulis de caméra dans les virages relevés au sol (le mode ruban la fait tourner **en entier** avec la bascule de la pièce). | [CODE] |
 | CA-6 | Voiture petite à l'écran en Poursuite (≈ 6,6 % de la largeur à 960 px). | [CAPTURE] — affaire de goût, P3 |
 
-**La caméra peut-elle rendre Copytrack nettement plus agréable sans toucher à la physique ?** **Oui.** Elle est *purement visuelle* (aucun impact sur `PHYS_VER`, serveur, records). Les trois leviers à fort rendement : anticipation latérale pilotée par le braquage/lacet, visée vers le bas en descente et en vol, lissage dédié de sortie de ruban (monde ↔ route) avec conservation de l'élan angulaire visuel.
+**La caméra peut-elle rendre Trackigami nettement plus agréable sans toucher à la physique ?** **Oui.** Elle est *purement visuelle* (aucun impact sur `PHYS_VER`, serveur, records). Les trois leviers à fort rendement : anticipation latérale pilotée par le braquage/lacet, visée vers le bas en descente et en vol, lissage dédié de sortie de ruban (monde ↔ route) avec conservation de l'élan angulaire visuel.
 **Comparaison avec un autre jeu du genre** : non vérifiée dans cette session ; **hypothèse** à tester côte à côte — une caméra de poursuite à avance de visée et à retard de position réglés finement est une des différences de « jus » les plus fréquentes entre jeux de ce genre.
 
 ---

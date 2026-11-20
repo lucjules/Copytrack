@@ -1,4 +1,4 @@
-// Saisons hebdomadaires (Copytrack Evolution, E15) : la saison N dure une semaine, du lundi 00:00 UTC au lundi suivant (la saison 1 commence le
+// Saisons hebdomadaires (Trackigami Evolution, E15) : la saison N dure une semaine, du lundi 00:00 UTC au lundi suivant (la saison 1 commence le
 // 9 novembre 2026, comme supabase/etape11-saisons.sql : un test compare les deux). Ses trois circuits, tirés de la carrière d'après le numéro, sont
 // les mêmes pour tout le monde ; leurs temps sont des catégories de record « b-…~v1.sea-N » (variants.js), que le serveur n'accepte que pendant la
 // semaine N (verify.js). Les points et les divisions se calculent en base, depuis les temps vérifiés (aucun point n'est déclaré par le jeu).

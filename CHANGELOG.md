@@ -6,6 +6,20 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.16.0 — le jeu s'appelle Trackigami
+
+**`PHYS_VER` reste 38**, rien ne change dans la course : records, fantômes, médailles et classements restent valables.
+
+- **Nouveau nom : Trackigami** (« track » + origami : des circuits pliés en facettes, comme le style low-poly du jeu).
+  - Côté joueur : titre de la page, logos (accueil, menu, écran de bienvenue), manifeste de l'application installée, pied du menu, partage d'une invitation, pages légales, thème d'interface par défaut, auteur affiché des circuits officiels, wiki.
+  - Fichiers téléchargés (vidéos, sauvegardes) : préfixés `trackigami-`.
+  - Côté projet : README, documentation, commentaires du code, en-têtes des étapes SQL et des fonctions serveur, historique des versions.
+- **Rien n'est perdu.**
+  - Les identifiants techniques ne changent pas : clés de sauvegarde du navigateur, adresse du dépôt et du site, projet du serveur, tâche de purge nocturne déjà planifiée.
+  - L'auteur écrit dans le code des circuits officiels non plus, car il fait partie de leur clé de classement ; l'écran affiche le nom du jeu à sa place.
+- **Historique des versions relu** : plus aucune référence à un autre jeu. Les passages sur les lois de conduite décrivent ce que fait le jeu.
+- Test : `test-legal` vérifie aussi que l'ancien nom n'apparaît plus nulle part dans le dépôt.
+
 ## Bêta 0.15.1 — wiki à jour, bouton « Continuer la carrière » lisible
 
 **`PHYS_VER` reste 38.**
@@ -151,15 +165,15 @@ des fonctions serveur ne change pas ; `submit-score` sera redéployée avec la m
 - **À faire par l'éditeur** : activer la protection contre les mots de passe divulgués (Supabase › Authentication) ; régler les secrets de la
   sauvegarde ; décider offre gratuite ou Pro avant la 1.0 ; faire une fois l'essai de restauration sur un projet de test.
 
-## Bêta 0.12.4 — le jeu s'appelle Virelo ; licences, confidentialité et mentions légales
+## Bêta 0.12.4 — un seul nom pour le jeu ; licences, confidentialité et mentions légales
 
 **`PHYS_VER` reste 38**, rien ne change dans la course. Phase 1 du plan de la version 1.0 (légal et identité).
 
-- **Nouveau nom : Virelo.** Titre, menu, écran d'accueil, manifeste, wiki, auteur des circuits officiels, fichiers téléchargés (`virelo-….webm`,
-  `virelo-….shw`). Le nom vient d'une seule constante, `GAME_NAME` (`js/version.js`). Les identifiants techniques ne bougent pas (clés de sauvegarde,
+- **Un seul nom affiché.** Titre, menu, écran d'accueil, manifeste, wiki, auteur des circuits officiels, fichiers téléchargés (préfixés du nom du jeu).
+  Le nom vient d'une seule constante, `GAME_NAME` (`js/version.js`). Les identifiants techniques ne bougent pas (clés de sauvegarde,
   dépôt, projet du serveur) : aucune progression n'est perdue.
-- **Aucune mention d'un autre jeu** : notes de version, wiki, commentaires du code et tests réécrits ; l'ancienne note de mesures est remplacée par
-  [docs/LOIS-PHYSIQUE.md](docs/LOIS-PHYSIQUE.md), qui fixe les lois de conduite gardées et leurs tests.
+- **Notes de version, wiki, commentaires du code et tests relus et réécrits** ; les lois de conduite et leurs tests sont décrits dans
+  [docs/LOIS-PHYSIQUE.md](docs/LOIS-PHYSIQUE.md).
 - **Licence MIT** ([LICENSE](LICENSE)) et liste des composants tiers ([THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)).
 - **Pages Confidentialité, Mentions légales, Règles de la communauté, Crédits et licences**, en français et en anglais : dans le jeu (barre du bas du menu,
   Paramètres › Confidentialité et licences) et sur [legal.html](legal.html), lisible sans lancer le jeu. Une seule source : `js/legal.js`.
@@ -171,9 +185,9 @@ des fonctions serveur ne change pas ; `submit-score` sera redéployée avec la m
 - **Polices servies par le jeu** (Chakra Petch, et les polices du wiki) au lieu de Google Fonts : plus aucune adresse IP de joueur envoyée à un service de
   polices ; la politique de sécurité du contenu n'autorise plus aucun serveur de polices extérieur.
 - Wiki : la carte « En l'air » décrit le contrôle en l'air de la 0.12.3.
-- Tests : `tools/test-legal.mjs` (nom unique, aucune mention d'un autre jeu, licences, pages dans les deux langues, case d'âge, export, statistiques sans
+- Tests : `tools/test-legal.mjs` (nom unique, licences, pages dans les deux langues, case d'âge, export, statistiques sans
   accord) ; `test-securite-client` vérifie qu'aucune page ne charge de police extérieure.
-- **À faire par l'éditeur** : régler une adresse de contact réservée au jeu (`legal.contact` dans `js/config.js`) ; vérifier le nom « Virelo » auprès de
+- **À faire par l'éditeur** : régler une adresse de contact réservée au jeu (`legal.contact` dans `js/config.js`) ; vérifier le nom du jeu auprès de
   l'INPI et de l'EUIPO avant la 1.0. Les durées de conservation annoncées (12 mois) seront appliquées par la base en phase 2.
 
 ## Bêta 0.12.3 — la voiture se pilote un peu en l'air
@@ -324,9 +338,9 @@ embarque `pieces.js` ; sans cela, un circuit qui utilise une des nouvelles pièc
 
 **`PHYS_VER` reste 37** (la 0.11.1 n'a pas été publiée : une seule remise à zéro des records). **Redéployer `submit-score`** avec la 0.11.1.
 
-- **En l'air, gaz = le nez descend d'un rien, frein = il remonte d'un rien** (`airTilt`, 0,5 °/s²), en plus de l'aérofrein qui amortit la rotation. Mesuré sur un jeu de référence
-  (15 vols, en appuyant une fois en l'air) : l'aérofrein se confirme (amortissement 1,0 /s, amortissement naturel 0,1 /s) ; l'effet des gaz est sous la précision de la
-  mesure (moins d'un degré après 1,2 s d'appui). Les joueurs le sentent : on le prend à cette borne. Le volant, lui, n'agit toujours pas.
+- **En l'air, gaz = le nez descend d'un rien, frein = il remonte d'un rien** (`airTilt`, 0,5 °/s²), en plus de l'aérofrein qui amortit la rotation. Réglé par
+  essais (15 vols, en appuyant une fois en l'air) : l'aérofrein amortit la rotation (1,0 /s, contre 0,1 /s sans lui) ; l'effet des gaz reste très faible
+  (moins d'un degré après 1,2 s d'appui), juste assez pour se sentir. Le volant, lui, n'agit toujours pas.
 - Pilote automatique : il accélère en l'air quand il arriverait trop cabré sur la réception. Circuits, temps et médailles inchangés (72/72 sans choc, contrats tenus).
 - Textes (leçon, exercice, aide des commandes, wiki) : l'accélérateur penche le nez d'un rien en l'air.
 
@@ -334,13 +348,13 @@ embarque `pieces.js` ; sans cela, un circuit qui utilise une des nouvelles pièc
 
 **`PHYS_VER` 36 → 37** : records, replays et fantômes repartent de zéro. **Redéployer `submit-score`** (`npm run build:function`, déjà régénérée).
 
-- **Loopings, tire-bouchons, transitions vers un mur : il faut braquer.** La route ne guide plus le cap de la voiture le long de sa courbure (`headingGuided`, propre à
-  Copytrack depuis PHYS_VER 36). Mains lâchées, un looping décalé jette la voiture contre la bordure, un tire-bouchon la sort de la route ; au volant, on passe comme avant.
+- **Loopings, tire-bouchons, transitions vers un mur : il faut braquer.** La route ne guide plus le cap de la voiture le long de sa courbure (`headingGuided`, une aide
+  ajoutée en PHYS_VER 36). Mains lâchées, un looping décalé jette la voiture contre la bordure, un tire-bouchon la sort de la route ; au volant, on passe comme avant.
 - **Murs (wall-rides) : la gravité tire vers le bas, le nez pique.** Plus de maintien « magique » au-dessus de 80 km/h (`SIDE_HOLD`, supprimé) : la gravité tire
   pleinement vers le bas du mur et le nez de la voiture pique d'autant plus qu'elle est lente (`SIDE_DROP`, 0,5 · g / v rad/s). Il faut tenir le volant un peu vers le
   haut pour garder sa ligne, plus pour monter ; mains lâchées on tombe, même d'un mur de deux cases. Les pneus gardent toute leur adhérence : un virage posé sur un mur se
   pilote comme au sol. (Une adhérence réduite sur les murs a été essayée : elle rendait impraticables les grands virages sur un mur, la base des wall-rides de la phase 3.)
-- **En l'air (lois mesurées)** : en quittant un bord, la voiture **bascule nez en bas**, d'autant plus qu'elle est lente (65 °/s à
+- **En l'air (nouvelles lois)** : en quittant un bord, la voiture **bascule nez en bas**, d'autant plus qu'elle est lente (65 °/s à
   39 km/h, 38 à 78, 26 à 140, 16 à 225 : `airTip`), et **rien ne la redresse** (le ressort d'assiette qui la reposait d'elle-même est supprimé). Ni les gaz ni le volant
   n'agissent (vérifié : 0,00 °/s de lacet volant tenu). **Seul le frein (aérofrein) freine la rotation** : c'est le petit contrôle en l'air. Bien dosé, il
   amène la voiture à la pente de la réception (réception parfaite) ; oublié, la voiture se pose piquée et perd de la vitesse (à 100 km/h sur un tremplin d'essai : −29 %
@@ -646,20 +660,20 @@ embarque `pieces.js` ; sans cela, un circuit qui utilise une des nouvelles pièc
 ## Bêta 0.9.65 — nouvelles lois de conduite (`PHYS_VER` 36)
 
 **`PHYS_VER` 36** : records, replays, fantômes importés, classements en ligne et salons de la 35 ne sont **plus rejouables** (ils restent affichés comme temps). **Redéployer `submit-score`** (paquet régénéré), puis `node tools/check-deployed.mjs`. Aucune migration SQL.
-De nouvelles lois de conduite, mesurées ([docs/LOIS-PHYSIQUE.md](docs/LOIS-PHYSIQUE.md)), remplacent celles de Copytrack ; l'enveloppe de vitesse (290 km/h, turbo 340), les revêtements, les véhicules et le mini-turbo restent ceux de Copytrack.
+De nouvelles lois de conduite ([docs/LOIS-PHYSIQUE.md](docs/LOIS-PHYSIQUE.md)) remplacent les anciennes ; l'enveloppe de vitesse (290 km/h, turbo 340), les revêtements, les véhicules et le mini-turbo ne changent pas.
 
 - **Moteur et freins** : a = 16 − (16 / v_max)·v gaz à fond, a = −(16 / v_max)·v à vide (frein moteur linéaire ≈ 0,2 /s) : 100 km/h en 2,1 s, 200 en 5,9 s, 250 en 9,9 s. Frein 52 + 0,5·v m/s² (≈ 3,5 × la poussée), marche arrière 8 m/s² jusqu'à 54 km/h. Ralentisseur : résistance = poussée × paramètre.
 - **Direction** : l'angle de braquage PERMIS diminue avec la vitesse, min(23,5° ; 22,93 · v^−1,566) (23,5° jusqu'à 47 km/h, 7° à 100, 2,7° à 200) ; plein braquage en 0,1 s ; c'est lui, plus l'adhérence, qui borne le virage (rayon ≈ empattement / angle : 13 m à 72 km/h, 40 m à 144, 80 m à 216). Moto 29,1 / 27°, bateau 21,2 / 20°. **L'adhérence d'ambiance** (pluie, flaques, givre, adhérence du circuit, modèles v2 de la moto et du bateau) rétrécit cette enveloppe : sous une pluie à 100 %, −15 % d'angle. Profil Arcade : +10 % d'angle ; Simulation : −10 %.
 - **Glisse** : frein + volant, **contre-braquage automatique** (les roues avant suivent la trajectoire de l'essieu avant) ; la glisse se referme d'elle-même en ≈ 1 s et ne coûte presque plus de vitesse sur l'asphalte. Mini-turbo livré quand la glisse se referme ; niveaux à 0,45 et 0,85 s de charge (volant rendu tôt : simple ; volant tenu à fond jusqu'au bout : renforcé). Revêtement Dérive : l'arrière garde 0,85 − 0,5·f de son adhérence (sinon le braquage borné ne le faisait plus décrocher).
 - **En l'air** : ni volant ni gaz (rotation du décollage conservée) ; le frein est un **aérofrein** qui amortit la rotation (≈ 1 /s) et fige l'assiette. Le deltaplane garde ses commandes.
 - **Murs** : inélastiques, frottement de Coulomb 0,7 ; plus de rebond, de perte forfaitaire, de pivot ajouté ni d'« encaissement ». Un frôlement ne coûte presque rien, un choc franc à 45° garde ≈ 21 % de l'élan ; la voiture n'est jamais clouée (≥ 50 km/h 5 s après, volant au neutre).
-- **Pièces 3D** : sur les routes roulées (mur, 45°, surplomb, transitions) et sur les loopings, vrilles et tire-bouchons (`headingGuided`, `js/pieces.js`), la route guide le cap le long de sa courbure : sans cela le braquage borné ne permettrait pas de les suivre (aide propre à Copytrack). Bordure intérieure des pentes : la sonde suit la pente aussi juste après le décollage (une traversée sur 300 essais).
+- **Pièces 3D** : sur les routes roulées (mur, 45°, surplomb, transitions) et sur les loopings, vrilles et tire-bouchons (`headingGuided`, `js/pieces.js`), la route guide le cap le long de sa courbure : sans cela le braquage borné ne permettrait pas de les suivre (une aide du jeu). Bordure intérieure des pentes : la sonde suit la pente aussi juste après le décollage (une traversée sur 300 essais).
 - **Pilote automatique** (démo, fantôme d'or, validation) : vitesse cible bornée aussi par l'angle permis (85 % de la vitesse où il suffit), selon le véhicule, le profil et l'adhérence d'ambiance ; plus aucune commande en l'air ; vitesse de virage sur les rubans ; gains de direction 3,6 et anticipation 0,35 s·v (sans quoi il dépassait son cap en sortie de grand virage et décollait de travers).
 - **Circuits** : les 72 finissent, respectent leur contrat (tolérance ±10 %, départ arrêté de chaque checkpoint) et ont leurs médailles et objectifs recalés. Temps du pilote : **+9,1 % en moyenne** (médiane +6,3 %, de +0,5 % à Lagon à +23,9 % au Laminoir : les virages serrés se prennent au volant). Banquise : terrasse de réception allongée d'une case (le dernier rebond retombait sur le mur) ; Monte-Charge : glissière d'une demi-case. Contrats de profil : sprint 30 s au plus et 55 % du temps au-dessus de 180 km/h, speedway 10 % au-dessus de 220 et 185 km/h de moyenne, technique 1 % de freinage.
 - **Académie** : leçon « Saut et réception parfaite » refaite (saut de terrasse en terrasse : décoller droit) ; exercice « Trois réceptions » refait (deux sauts juste après un virage : redresser avant le bord) ; seuils des chicanes (69 / 75,5 / 83 km/h) et du freinage (8,8 / 8,35 / 7,8 s) recalés, mini-turbo renforcé « tenu jusqu'au bout », arrivée en 9 s. Textes d'aide, conseils et traductions anglaises sans plus aucune mention du tangage aux pédales.
 - **Banc de maniabilité** : le « pilote humain imparfait » braque en courbe (|volant|^1,25) au lieu d'être plafonné à 80 % du volant ; 0,1 contact par minute en moyenne sur les 72 circuits.
-- **Tests** réécrits sur les nouvelles lois, avec la mesure en commentaire : maniabilité, vitesse et murs, corrections physiques (bordures, dérapage, sauts), pentes, environnements, Académie, exercices, coach, véhicules v2, orientations 3D, atelier, intégrité. Fichiers de référence régénérés : empreinte (193 scénarios), temps de référence, corpus de compatibilité, matrice des pièces (24 cases CHUTE au lieu de 30), fiche d'essai.
-- **Reste à juger à la main** : la sensation de conduite n'a été jugée que par machine ; gravité (19 m/s²) et traînée en l'air gardées de Copytrack ; le guidage du cap sur les pièces 3D est une aide propre à Copytrack ; deux nouvelles cases CHUTE (cvd4 sur le mur gauche, cvdL4 sur le mur droit, miroirs de cases déjà CHUTE).
+- **Tests** réécrits sur les nouvelles lois, avec la valeur attendue en commentaire : maniabilité, vitesse et murs, corrections physiques (bordures, dérapage, sauts), pentes, environnements, Académie, exercices, coach, véhicules v2, orientations 3D, atelier, intégrité. Fichiers de référence régénérés : empreinte (193 scénarios), temps de référence, corpus de compatibilité, matrice des pièces (24 cases CHUTE au lieu de 30), fiche d'essai.
+- **Reste à juger à la main** : la sensation de conduite n'a été jugée que par machine ; gravité (19 m/s²) et traînée en l'air inchangées ; le guidage du cap sur les pièces 3D est une aide du jeu ; deux nouvelles cases CHUTE (cvd4 sur le mur gauche, cvdL4 sur le mur droit, miroirs de cases déjà CHUTE).
 
 ## Bêta 0.9.64 — phase 5 : sécurité du backend et préparation à la production
 
@@ -842,7 +856,7 @@ qui n'a PAS pu être testé, est dans [docs/AUDIT-0.9.59.md](docs/AUDIT-0.9.59.m
 
 ## Bêta 0.9.53 — phase 6 : consolidation finale
 
-`PHYS_VER` inchangé (31). Bilan détaillé, avec l'état de chaque problème (confirmé, corrigé, testé, validé, non validé, restant) : `docs/PLAN-FINALISATION-COPYTRACK.md`. Procédures de test : `docs/TESTS.md`.
+`PHYS_VER` inchangé (31). Bilan détaillé, avec l'état de chaque problème (confirmé, corrigé, testé, validé, non validé, restant) : `docs/PLAN-FINALISATION.md`. Procédures de test : `docs/TESTS.md`.
 - **Lint** : 19 erreurs ESLint dans les fichiers de test écrits pendant ce chantier (variables inutilisées, `const`, globaux du navigateur) : la CI aurait échoué. Corrigées ; `npm run lint` passe.
 - **Record en mémoire** (`storage.getRecord`) : la copie du record faite pendant la session passait devant un record synchronisé d'une physique plus récente dès qu'elle avait un meilleur temps (d'une ancienne physique). La physique la plus récente l'emporte maintenant ; à physique égale, le meilleur temps.
 - **Traduction** : « un circuit reçu d'un ami » s'affichait « d'un friend » en anglais (trouvé par le test navigateur de langue).
@@ -853,7 +867,7 @@ qui n'a PAS pu être testé, est dans [docs/AUDIT-0.9.59.md](docs/AUDIT-0.9.59.m
 
 ## Bêta 0.9.52 — phase 5 : accueil à six catégories, écrans rangés
 
-`PHYS_VER` inchangé (31). Suivi : `docs/PLAN-FINALISATION-COPYTRACK.md`.
+`PHYS_VER` inchangé (31). Suivi : `docs/PLAN-FINALISATION.md`.
 - **Accueil** : six catégories — **Jouer**, **Créer**, **Multijoueur**, **Progression**, **Profil**, **Paramètres** — au lieu de six tuiles mêlant jeu, création et réglages plus deux sous-menus et une barre de raccourcis. Chaque catégorie ouvre un **panneau** d'actions (titre, ← Retour, Échap, bouton retour de la manette), au lieu d'un sous-menu qui s'ouvrait sous les tuiles ; un écran ouvert depuis un panneau y ramène au retour. Chaque action n'apparaît qu'une fois ; rien n'est supprimé : *Multijoueur* (salons) n'était accessible que depuis l'écran Communauté, il est maintenant dans son propre panneau. Aucun bouton ne mène à une fonction absente (pas de « Reprendre une partie » : le jeu n'a pas de sauvegarde de course en cours).
 - **Un écran à onglets pour trois entrées** : *Profil* (Compte, Amis, Sauvegardes), *Progression* (Records et médailles, Niveau et licences, Statistiques, Déblocages) et *Paramètres* (Audio, Graphismes, Accessibilité, Jeu, Interface, Commandes). Avant, tout cela tenait dans un seul onglet « Options » d'une soixantaine de réglages mélangés (le nom du pilote au milieu des commandes tactiles, « Effacer tous les records » au bas des options). Le nom du pilote est dans Compte, « Effacer les records » dans Sauvegardes (zone sensible), la langue dans Audio, les commandes tactiles dans Commandes, la taille de l'interface dans Accessibilité.
 - **Progression** (nouveaux écrans, faits de données déjà présentes) : bilan de la carrière et **tous les records et médailles** circuit par circuit (une ligne ouvre la fiche du circuit), statistiques, chapitres ouverts ou à gagner, titres, récompenses de niveau.
@@ -862,7 +876,7 @@ qui n'a PAS pu être testé, est dans [docs/AUDIT-0.9.59.md](docs/AUDIT-0.9.59.m
 
 ## Bêta 0.9.51 — phase 4 : comptes, cloud, scores, multijoueur
 
-`PHYS_VER` inchangé (31). **Lancer `supabase/etape14-securite.sql`** (relançable, aucune suppression) et **redéployer les fonctions `submit-score` et `ice`** (`npm run build:function`, déjà régénérées ici). Suivi : `docs/PLAN-FINALISATION-COPYTRACK.md`.
+`PHYS_VER` inchangé (31). **Lancer `supabase/etape14-securite.sql`** (relançable, aucune suppression) et **redéployer les fonctions `submit-score` et `ice`** (`npm run build:function`, déjà régénérées ici). Suivi : `docs/PLAN-FINALISATION.md`.
 - **Sécurité (réel défaut)** : le **code joueur** contenait la session en ligne de l'invité (jeton d'accès et de renouvellement) : quiconque recevait ce code et l'importait **devenait ce pilote** (scores, circuits publiés), et l'importer chez soi effaçait sa propre identité en ligne. Le code ne la contient plus, l'import l'ignore (les anciens codes aussi) et une restauration en « remplacer » garde l'identité de l'appareil.
 - **Sessions** : une panne du serveur (500, 502, 503) ou un « trop d'essais » (429) au renouvellement de la session **déconnectait le compte** et **donnait à l'invité une nouvelle identité anonyme** (donc un autre pilote : ses scores et circuits lui échappaient). Seul un jeton refusé par le serveur (400, 401, 403) expire la session ; le reste est une erreur passagère.
 - **Restauration face aux suppressions** : restaurer une ancienne sauvegarde ne ressuscitait pas durablement ce qu'on avait supprimé (la pierre tombale du cloud l'effaçait à la synchronisation suivante), ni les records antérieurs à une remise à zéro. Les circuits et records restaurés sont maintenant marqués plus récents que les suppressions ; une suppression ou une remise à zéro volontaire reste valable pour tout ce qui n'a pas été restauré après. Pierres tombales réunies (la plus récente de chacune) à l'import en fusion.
@@ -874,7 +888,7 @@ qui n'a PAS pu être testé, est dans [docs/AUDIT-0.9.59.md](docs/AUDIT-0.9.59.m
 
 ## Bêta 0.9.50 — phase 3 : éditeur, logique, progression
 
-`PHYS_VER` 31. **Redéployer `submit-score`** (déjà régénérée ici). Les records, replays, fantômes et classements de la 0.9.49 (physique 30) ne sont plus valables, mais **les médailles et déblocages sont conservés** (voir « Progression »). Suivi : `docs/PLAN-FINALISATION-COPYTRACK.md`.
+`PHYS_VER` 31. **Redéployer `submit-score`** (déjà régénérée ici). Les records, replays, fantômes et classements de la 0.9.49 (physique 30) ne sont plus valables, mais **les médailles et déblocages sont conservés** (voir « Progression »). Suivi : `docs/PLAN-FINALISATION.md`.
 - **Annuler / rétablir** : annuler ou rétablir (même une seule fois) remettait à zéro l'**ambiance** (moment de la journée, brume, météo, musique) et les **déclencheurs de cases** du circuit : l'instantané de l'historique ne les contenait pas. Corrigé ; test : 40 modifications au hasard annulées puis rétablies une à une, chaque état retombe exactement (code partagé identique), et aller-retour sans perte sur les 72 circuits.
 - **Sélection** : nouvelles actions, tout ou rien (si une pièce gêne, rien ne bouge) : **pivoter la sélection en place** (R ou ⟳), **la déplacer d'une case** (← ↑ ↓ →) et **la dupliquer** (Dupliquer, puis clic pour poser le double). Pièces, décorations, obstacles (leur cap tourne avec la pièce) et déclencheurs de cases suivent. Tests : la géométrie physique du circuit tourné (hauteur et revêtement en 400 points de 6 circuits) est exactement celle de l'original tourné ; quatre quarts de tour redonnent le circuit d'origine ; l'ordre des pièces est conservé.
 - **Pot de peinture** : la zone est maintenant calculée par une fonction partagée (`fillZone`, parcours itératif, borné à 8 000 pièces : au-delà le remplissage est refusé en entier, rien n'est modifié) et **prévisualisée avant validation** : toutes les pièces qui changeraient sont surlignées en orange (en rouge si la cible est refusée ou la zone trop grande). Tests : zones séparées, différence de hauteur de plus de 2 niveaux, 1 600 pièces en moins de 500 ms, l'aperçu ne modifie rien.
@@ -891,7 +905,7 @@ qui n'a PAS pu être testé, est dans [docs/AUDIT-0.9.59.md](docs/AUDIT-0.9.59.m
 
 ## Bêta 0.9.48 — phase 2 : réparation de la physique
 
-`PHYS_VER` 29 (physique changée). **Redéployer `submit-score`** (déjà régénérée ici). Les records, replays, fantômes et classements de la 0.9.47 (physique 28) ne sont plus valables. Suivi du chantier : `docs/PLAN-FINALISATION-COPYTRACK.md`.
+`PHYS_VER` 29 (physique changée). **Redéployer `submit-score`** (déjà régénérée ici). Les records, replays, fantômes et classements de la 0.9.47 (physique 28) ne sont plus valables. Suivi du chantier : `docs/PLAN-FINALISATION.md`.
 - **Obstacles sur les rubans** (looping, mur, tube, vrille) : les piques, bumpers, marteaux, balanciers, murs coulissants et balayeurs n'y avaient **aucun effet** (la collision n'était calculée qu'au sol : la voiture les traversait). Le contact est maintenant calculé sur le ruban avec la même fonction qu'au sol, puis le déplacement et la vitesse sont ramenés dans le repère du ruban (`_ribObstacles`, `js/physics/ribbon.js`). Un choc ne détache pas la voiture du ruban.
 - **Voiture coincée contre un mur** : à l'arrêt, nez au mur, le volant n'avait aucun effet (pas de vitesse, donc pas de rotation) et le gaz ne la libérait pas ; seule la marche arrière la sortait. Après 0,35 s plaquée contre un mur à moins de 2,5 m/s, le volant la fait pivoter sur place (1,2 rad/s à fond de volant) jusqu'à ce qu'elle reparte. Hors contact avec un mur, rien ne change.
 - **Retour au checkpoint : gravité cohérente avec la route** : un point de réapparition posé sur une route retournée (ou normale) a toujours la gravité de CETTE route (`respawnGs`) ; un anneau-checkpoint pris après une inversion de gravité gardait la gravité du moment du franchissement, pas celle du point de réapparition (voiture réapparue dans le ciel, à l'envers sur un sol normal).
@@ -900,7 +914,7 @@ qui n'a PAS pu être testé, est dans [docs/AUDIT-0.9.59.md](docs/AUDIT-0.9.59.m
 
 ## Bêta 0.9.47 — remise à niveau : accueil allégé
 
-`PHYS_VER` inchangé (28). Suivi du chantier : `docs/PLAN-FINALISATION-COPYTRACK.md`.
+`PHYS_VER` inchangé (28). Suivi du chantier : `docs/PLAN-FINALISATION.md`.
 - **Accueil** : 8 boutons visibles au lieu de 12 : **6 tuiles** (Course rapide, Carrière, Défi du jour, Créer, En ligne, Garage), deux **sous-menus** (Créer : éditeur, mes circuits, importer, modes ; En ligne : communauté, compétition) et une barre d'accès rapides (Académie, Profil). Un clic ailleurs referme le sous-menu ; `aria-expanded` et `aria-controls` pour les lecteurs d'écran. Rien n'est supprimé : toutes les actions restent atteignables.
 - **Tests** : `tools/test-menu.mjs` (au plus 8 boutons visibles, aucune action perdue, aucun bouton mort) ; le test navigateur parcourt les sous-menus sur trois tailles d'écran. Deux courses de vitesse du test navigateur sont réparées : l'enchaînement des fenêtres du premier lancement bloquait le toucher sur « Carrière », et un panneau d'amis redessiné laissait une lecture sur `null`.
 - **Fenêtres hautes** : une fenêtre plus haute que l'écran (l'Académie sur un écran de 700 px) débordait en haut et en bas : le titre et les boutons étaient hors d'atteinte. Elle défile maintenant (`.overlay .panel`) ; test navigateur ajouté (échoue sans le correctif : haut −187 px, bas 887 px sur 700).
@@ -936,7 +950,7 @@ qui n'a PAS pu être testé, est dans [docs/AUDIT-0.9.59.md](docs/AUDIT-0.9.59.m
   - **éditeur** : sur un écran bas, la colonne de droite défile au lieu d'être coupée.
   - Test navigateur : sur trois tailles de téléphone, les 12 tuiles de l'accueil sont entières, aucune n'est recouverte.
 - **Nettoyage** :
-  - le dossier importé de mesures (34 Mo de données d'un autre jeu) et la note de calibration qui s'y référait sont retirés, et le dossier est ajouté au `.gitignore` ;
+  - un dossier de données importé (34 Mo) et la note qui s'y référait sont retirés, et le dossier est ajouté au `.gitignore` ;
   - les deux erreurs de lint de la 0.9.45 sont corrigées ;
   - nouvel outil `tools/recaler.mjs` pour recaler les médailles après un changement de moteur.
 
@@ -952,7 +966,7 @@ qui n'a PAS pu être testé, est dans [docs/AUDIT-0.9.59.md](docs/AUDIT-0.9.59.m
 
 ## Bêta 0.9.44 — aides à la conduite, accessibilité, ressenti, caméra libre de l'éditeur
 
-Étape E22 de Copytrack Evolution (fin du bloc 6). `PHYS_VER` inchangé (26). **Redéployer `submit-score`** (déjà régénérée ici) : elle connaît la catégorie « assisté ».
+Étape E22 de Trackigami Evolution (fin du bloc 6). `PHYS_VER` inchangé (26). **Redéployer `submit-score`** (déjà régénérée ici) : elle connaît la catégorie « assisté ».
 
 - **Aides à la conduite** (Profil › Options) :
   - accélération automatique ;
@@ -984,7 +998,7 @@ qui n'a PAS pu être testé, est dans [docs/AUDIT-0.9.59.md](docs/AUDIT-0.9.59.m
 
 ## Bêta 0.9.43 — communauté : commentaires, playlists, sélection, découverte, statistiques, modes publiés
 
-Étape E21 de Copytrack Evolution. `PHYS_VER` inchangé (26), rien ne change dans la course. **Lancer l'étape SQL 13** (`supabase/etape13-communaute.sql`) et **ajouter les modérateurs** à la main (voir le README) ; `submit-score` n'a pas besoin d'être redéployée pour cette étape.
+Étape E21 de Trackigami Evolution. `PHYS_VER` inchangé (26), rien ne change dans la course. **Lancer l'étape SQL 13** (`supabase/etape13-communaute.sql`) et **ajouter les modérateurs** à la main (voir le README) ; `submit-score` n'a pas besoin d'être redéployée pour cette étape.
 
 Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les j'aime, les signalements de circuits (masqués à 3), les abonnements, les tendances de la semaine, la recherche, les favoris. Nouveau :
 - **Commentaires** sur la fiche d'un circuit de la communauté :
@@ -1018,7 +1032,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.42 — véhicules v2, profils physiques, laboratoire
 
-Étape E20 de Copytrack Evolution. `PHYS_VER` inchangé (26) : les modèles de toujours restent identiques au bit près (les 186 scénarios de l'empreinte sont identiques), les nouveaux modèles n'entrent en service que par une règle du circuit ou une catégorie de record. **Redéployer `submit-score`** (déjà régénérée ici) : nouvelles règles et catégories.
+Étape E20 de Trackigami Evolution. `PHYS_VER` inchangé (26) : les modèles de toujours restent identiques au bit près (les 186 scénarios de l'empreinte sont identiques), les nouveaux modèles n'entrent en service que par une règle du circuit ou une catégorie de record. **Redéployer `submit-score`** (déjà régénérée ici) : nouvelles règles et catégories.
 
 - **Profils physiques** (règle `pm` du circuit, catégories de record « 🕹️ Profil Arcade » et « 🎛️ Profil Simulation ») :
   - **Arcade** : plus d'adhérence latérale, lacet plus amorti, arrière qui décroche moins, volant qui revient plus vite ;
@@ -1043,7 +1057,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.41 — environnements déterministes : pluie et flaques, givre, rafales
 
-Étape E19 de Copytrack Evolution (début du bloc 6). `PHYS_VER` inchangé (26) : les circuits, records et replays existants courent exactement comme avant (les 182 scénarios de l'empreinte de la physique sont identiques). **Redéployer `submit-score`** (déjà régénérée ici) : la vérification connaît les nouvelles règles du circuit et la catégorie « sous la pluie ».
+Étape E19 de Trackigami Evolution (début du bloc 6). `PHYS_VER` inchangé (26) : les circuits, records et replays existants courent exactement comme avant (les 182 scénarios de l'empreinte de la physique sont identiques). **Redéployer `submit-score`** (déjà régénérée ici) : la vérification connaît les nouvelles règles du circuit et la catégorie « sous la pluie ».
 
 - **Cinq règles de circuit**, dans *Paramètres du niveau* de l'éditeur, absentes par défaut :
   - **Pluie** (0 à 100 %) : la piste glisse un peu partout (jusqu'à 15 % d'adhérence en moins), et beaucoup dans les **flaques** (jusqu'à moitié moins) ;
@@ -1068,7 +1082,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.40 — prototype de rollback : décision GO (hors interface)
 
-Étape E18 de Copytrack Evolution (fin du bloc 5). `PHYS_VER` inchangé (26), `NET_VER` inchangé (4), rien à redéployer. **Rien ne change pour le joueur** : le prototype n'est branché sur aucun écran, et les collisions douces d'E16 restent celles du jeu.
+Étape E18 de Trackigami Evolution (fin du bloc 5). `PHYS_VER` inchangé (26), `NET_VER` inchangé (4), rien à redéployer. **Rien ne change pour le joueur** : le prototype n'est branché sur aucun écran, et les collisions douces d'E16 restent celles du jeu.
 
 - **La question** : de vraies collisions déterministes entre 2 à 4 voitures sont-elles possibles ? Le rapport complet est dans [docs/ROLLBACK.md](docs/ROLLBACK.md).
 - **Le prototype** (`js/net/rollback.js`) :
@@ -1091,7 +1105,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.39 — compétition asynchrone : duels classés, tournois privés
 
-Étape E17 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (4). **Infrastructure à mettre en place** (le jeu dit ce qui manque, sans faux résultat) :
+Étape E17 de Trackigami Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (4). **Infrastructure à mettre en place** (le jeu dit ce qui manque, sans faux résultat) :
 - l'étape SQL 12 (`supabase/etape12-competition.sql`) ;
 - **redéployer `submit-score`** (déjà régénérée ici) : elle vérifie en base la fenêtre d'un duel ou d'un tournoi avant d'accepter un temps ;
 - facultatif : pg_cron, pour régler duels et tournois à l'heure dite (sinon, à la première consultation).
@@ -1110,7 +1124,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.38 — multijoueur robuste : reconnexion, hôte remplacé, collisions unifiées
 
-Étape E16 de Copytrack Evolution. `PHYS_VER` inchangé (26). **`NET_VER` passe à 4** : un joueur de 0.9.37 et un joueur de 0.9.38 ne peuvent plus être dans la même salle (le salon le dit, comme à chaque changement de protocole). Rien à redéployer. **Infrastructure facultative** : un relais TURN (voir `supabase/MULTI.md`).
+Étape E16 de Trackigami Evolution. `PHYS_VER` inchangé (26). **`NET_VER` passe à 4** : un joueur de 0.9.37 et un joueur de 0.9.38 ne peuvent plus être dans la même salle (le salon le dit, comme à chaque changement de protocole). Rien à redéployer. **Infrastructure facultative** : un relais TURN (voir `supabase/MULTI.md`).
 
 - **Une coupure ne fait plus sortir de la salle** (`js/net/resume.js`) :
   - le joueur coupé garde sa salle ouverte et sa course continue ; il retente seul de la rejoindre, avec le même identifiant ;
@@ -1128,7 +1142,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.37 — social, saisons hebdomadaires, classements par secteur
 
-Étape E15 de Copytrack Evolution (début du bloc 5). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **Infrastructure à mettre en place** (rien ne marche en ligne sans elle, et le jeu le dit) :
+Étape E15 de Trackigami Evolution (début du bloc 5). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **Infrastructure à mettre en place** (rien ne marche en ligne sans elle, et le jeu le dit) :
 - les étapes SQL 9, 10 et 11 (`supabase/etape9-secteurs.sql`, `etape10-social.sql`, `etape11-saisons.sql`) ;
 - **redéployer `submit-score`** (déjà régénérée ici) : temps intermédiaires des records, et catégorie de saison acceptée seulement pendant sa semaine ;
 - facultatif : l'extension **pg_cron**, pour une clôture des saisons à l'heure dite (sinon, elles se closent à la première consultation après la fin de la semaine) ;
@@ -1152,7 +1166,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.36 — progression du pilote : expérience, niveaux, licences, défis de maîtrise
 
-Étape E14 de Copytrack Evolution (fin du bloc 4). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.
+Étape E14 de Trackigami Evolution (fin du bloc 4). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.
 
 - **Expérience et niveaux** (1 à 50 ; niveau 2 à 100 XP, niveau 10 à 4 500 XP). L'expérience vient **seulement des courses terminées et des objectifs** :
   - première arrivée du jour sur un circuit : 20 XP ; les suivantes : 2 XP ;
@@ -1172,7 +1186,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.35 — Défi du jour 2 : mutation du jour, séries, récompenses
 
-Étape E13 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des mutations « verglas » et « vent » (catégories `gp` et `wd`, nouvelles). Le défi du jour et toutes les autres catégories sont vérifiés comme avant.
+Étape E13 de Trackigami Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des mutations « verglas » et « vent » (catégories `gp` et `wd`, nouvelles). Le défi du jour et toutes les autres catégories sont vérifiés comme avant.
 
 - **Mutation du jour** : chaque défi du jour a sa mutation, la même pour tout le monde, proposée en tête des catégories de record de sa fiche, avec son propre classement. Une par jour de la semaine (UTC) :
   - lundi : verglas (adhérence à 60 %) ;
@@ -1195,7 +1209,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.34 — Académie 2 : compétences et exercices évalués
 
-Étape E12 de Copytrack Evolution (début du bloc 4). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer (rien ne touche à la course ni au serveur).
+Étape E12 de Trackigami Evolution (début du bloc 4). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer (rien ne touche à la course ni au serveur).
 
 - **Exercices évalués** (Académie, sous les six leçons) : quatre **compétences** (trajectoire, freinage, dérapage, sauts et réceptions), un exercice chacune, noté **bronze, argent ou or**. Le niveau d'une compétence est la meilleure note de ses exercices.
   - **Chicanes** (trajectoire) : la vitesse moyenne dans deux séries de quatre virages serrés (100, 114, 124 km/h).
@@ -1214,7 +1228,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.33 — logique du circuit : des règles « quand… si… alors… »
 
-Étapes E10 et E11 de Copytrack Evolution (fin du bloc 3). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des **seuls** circuits qui ont une logique (comme pour l'adhérence et le vent de 0.9.31) ; tous les autres sont vérifiés comme avant.
+Étapes E10 et E11 de Trackigami Evolution (fin du bloc 3). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des **seuls** circuits qui ont une logique (comme pour l'adhérence et le vent de 0.9.31) ; tous les autres sont vérifiés comme avant.
 
 - **Logique du circuit** (éditeur, bouton ⚙ ou **F6**) : des règles **ÉVÉNEMENT → CONDITIONS → ACTIONS** qui agissent sur les groupes d'E9.
   - Événements : le départ, le passage d'un checkpoint (le n-ième, ou chacun), le début d'un tour, un temps de course, la voiture qui entre sur un groupe, la voiture qui change de véhicule.
@@ -1231,7 +1245,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.32 — groupes et calques dans l'éditeur, aperçu 3D des pièces perso
 
-Étape E9 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer (les groupes n'ont aucun effet sur la course : ils n'entrent pas dans la signature ; la logique du circuit, E10, s'en servira).
+Étape E9 de Trackigami Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer (les groupes n'ont aucun effet sur la course : ils n'entrent pas dans la signature ; la logique du circuit, E10, s'en servira).
 
 - **Groupes et calques** (éditeur, bouton ▦ ou **F4**) : ranger des pièces et des décorations dans des **groupes** numérotés (1 à 63) et **nommés**, puis, pendant l'édition, **masquer** un calque (ni dessiné ni visable) ou le **verrouiller** (visible mais ni sélectionnable ni modifiable) ; sélectionner tout un groupe ; sortir la sélection de son groupe. Les groupes et leurs noms voyagent dans le code du circuit (format 4) ; masquer et verrouiller restent des états de l'éditeur. Tout s'annule comme le reste.
 - **Vue par niveau** (◐, Z) : la sélection (copier, couper, supprimer, monter, descendre) ne prend plus que les pièces du niveau affiché.
@@ -1243,7 +1257,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.31 — adhérence et vent sur tout le circuit (paramètres de simulation)
 
-Étape E8 de Copytrack Evolution (début du bloc 3). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des **seuls** circuits qui utilisent ces réglages ; tous les autres sont vérifiés comme avant.
+Étape E8 de Trackigami Evolution (début du bloc 3). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des **seuls** circuits qui utilisent ces réglages ; tous les autres sont vérifiés comme avant.
 
 - **Éditeur › Paramètres du niveau** : **Adhérence de la piste** (25 à 150 %, en plus de celle des revêtements) et **Vent** (0 à 100 %, huit directions ; le nord est en haut de l'éditeur), sur le sol comme sur les loopings, murs et tubes. Ils changent la course : ils entrent dans la signature du circuit (donc dans sa clé de classement) et le code passe au format 4. La fiche du circuit les affiche.
 - **Additifs, et c'est vérifié** : à leur valeur par défaut, rien ne change, ni la course (la physique ne fait même pas l'opération), ni la signature, ni le code. Les **173 scénarios** de l'empreinte de la physique sont identiques ; **4 scénarios nouveaux** (adhérence 70 % et 140 %, vent sur la route et dans les loopings) s'y ajoutent, identiques sous Node, Deno et Chromium.
@@ -1253,7 +1267,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.30 — le coach
 
-Étape E7 de Copytrack Evolution (dernière du bloc 2). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.
+Étape E7 de Trackigami Evolution (dernière du bloc 2). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.
 
 - **Conseils à l'arrivée** : jusqu'à trois conseils, chacun **à un endroit** (un secteur) et **chiffré**, face à une référence plus rapide (ton record, sinon le fantôme or) :
   - retour au checkpoint (le temps qu'il a coûté), chocs contre le mur ;
@@ -1268,7 +1282,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.29 — Replay Theater
 
-Étape E6 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.
+Étape E6 de Trackigami Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer.
 
 - **Le replay devient une salle d'analyse.** « 🎬 Revoir la course » (arrivée) et « 🎬 Regarder mon record » (fiche du circuit) ouvrent le Theater :
   - **barre de temps** : on va et vient dans la course (en arrière comme en avant), avec les **secteurs**, les **retours au checkpoint** et les **chocs** marqués dessus ; lecture, pause, ×0,25 à ×4, comme avant au clavier (Espace, ← →, C, Entrée, Échap) ;
@@ -1282,7 +1296,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.28 — HUD d'entraînement et profils de HUD
 
-Étapes E4 et E5 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer. **Rien ne change pour qui garde le profil Classique** (le profil par défaut).
+Étapes E4 et E5 de Trackigami Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), rien à redéployer. **Rien ne change pour qui garde le profil Classique** (le profil par défaut).
 
 - **Profils de HUD** (Options › Personnalisation › Profil du HUD) : *Classique* (tout, comme avant), *Compétitif* (sans aide des touches, médailles ni nom du circuit), *Entraînement* (les outils ci-dessous), *Minimaliste* (chrono et vitesse). Un profil cache ses éléments **en plus** de ceux que tu as cachés toi-même.
 - **HUD d'entraînement** : à gauche de l'écran, l'**écart en direct** avec une course de référence (au passage d'un checkpoint, c'est l'écart officiel à 1/30 s près : testé), les **mini-secteurs** (12, temps et écart), la **vitesse maxi**, les **forces g**, et trois secondes de **courbes** gaz / frein / vitesse. Sur la piste : la **ligne de la référence** (verte quand elle accélère, rouge quand elle freine, blanche en roue libre) et des **repères à ses points de freinage**. Chaque outil se coupe à part.
@@ -1295,7 +1309,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.27 — catégories de records : départ en moto, en bateau, en deltaplane, sans obstacles
 
-Étape E3 de Copytrack Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), **aucune étape SQL** : une catégorie voyage dans la clé de classement (`<clé officielle>~v1.veh-moto`, 80 caractères au plus comme avant). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des catégories (« Clé de circuit invalide »), le reste marche.
+Étape E3 de Trackigami Evolution. `PHYS_VER` inchangé (26), `NET_VER` inchangé (3), **aucune étape SQL** : une catégorie voyage dans la clé de classement (`<clé officielle>~v1.veh-moto`, 80 caractères au plus comme avant). **À redéployer : la fonction `submit-score`** (`npm run build:function`, déjà régénérée ici) : sans elle, le serveur refuse les temps des catégories (« Clé de circuit invalide »), le reste marche.
 
 - **Fiche du circuit › Catégorie de record** : *Officiel*, *Départ en moto*, *en bateau*, *en deltaplane* (ou *en voiture* sur un circuit qui part autrement) et *Sans obstacles* (circuits à obstacles). Seules les catégories qui changent vraiment la course sont proposées. Chacune a **son classement mondial, son record et ses dernières courses** ; le record officiel n'est jamais touché. Pas de médailles ni de pièces dans une catégorie (elles sont calibrées sur le circuit officiel). Après la course, « Retour » ramène à la fiche dans la même catégorie.
 - **Vérifié par le serveur** comme le reste : `js/variants.js` (dans la fermeture de la vérification) lit la catégorie, `js/rulesCore.js` (les règles des modes, sorties de `rules.js` sans changer son interface) l'applique à une copie du circuit, puis la course est rejouée. Une écriture non canonique (noms dans le désordre, valeur hors liste, doublon) ou une catégorie sans effet sur ce circuit est refusée : deux écritures d'une même catégorie ne feront jamais deux classements.
@@ -1305,7 +1319,7 @@ Ce qui existait déjà et reste tel quel : la fiche détaillée (Race Hub), les 
 
 ## Bêta 0.9.26 — la fiche du circuit (Race Hub), la course rapide, et un filet de compatibilité
 
-Première livraison de **Copytrack Evolution** (étapes E0 à E2 du plan d'architecture). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). Le Race Hub lit les tables existantes (classement, fantômes de l'étape 7, titres de l'étape 8) : aucune étape SQL nouvelle. Aucun record, code ou replay ne change.
+Première livraison de **Trackigami Evolution** (étapes E0 à E2 du plan d'architecture). `PHYS_VER` inchangé (26), `NET_VER` inchangé (3). Le Race Hub lit les tables existantes (classement, fantômes de l'étape 7, titres de l'étape 8) : aucune étape SQL nouvelle. Aucun record, code ou replay ne change.
 
 **À redéployer : la fonction `submit-score`.** Son paquet (`supabase/functions/submit-score/index.ts`) n'avait pas été régénéré depuis 0.9.15 : il ignorait la décoration « pièce perso » (0.9.24), donc la signature d'un circuit qui en contient différait côté serveur et **ses records en ligne étaient refusés** (« Le code du circuit ne correspond pas »). Le paquet est régénéré ici (`npm run build:function`) ; la CI le vérifie (`git diff --exit-code`).
 
@@ -1351,7 +1365,7 @@ Première livraison de **Copytrack Evolution** (étapes E0 à E2 du plan d'archi
 `PHYS_VER` inchangé (26) ; rien à redéployer. Visuel uniquement : la conduite, les temps et les classements ne changent pas.
 
 - **Profil › Options › Personnalisation** :
-  - **6 thèmes** (Copytrack, Minuit, Crépuscule, Forêt, Mono, **Contraste élevé**), **deux couleurs d'accent** au choix, **opacité des panneaux**, **arrondi des boutons**, **5 polices** (Chakra Petch, système, arrondie, machine, classique).
+  - **6 thèmes** (Trackigami, Minuit, Crépuscule, Forêt, Mono, **Contraste élevé**), **deux couleurs d'accent** au choix, **opacité des panneaux**, **arrondi des boutons**, **5 polices** (Chakra Petch, système, arrondie, machine, classique).
   - **Compteur de vitesse** : chiffres, énorme, discret, **jauge** ou **cadran** ; **taille du chrono** (petit, normal, gros) ; **taille du HUD** (70 à 150 %) ; **cacher** l'écart, le record, les médailles, la jauge de boost, l'aide des touches, le nom du circuit.
   - **Disposer le HUD** : le vrai HUD s'affiche et on **glisse** le chrono, le bloc circuit, le bloc record, la vitesse et l'aide des touches où on veut (les positions sont en vw/vh : elles suivent la taille de l'écran) ; « Remettre » et « Réinitialiser » rendent tout.
   - **Mes caméras** : jusqu'à 6 caméras de course en plus des 4 d'origine (distance, hauteur, regard devant et en hauteur, champ de vision, nom), « Utiliser en course » ; la touche caméra fait le tour de la liste complète (replays compris).
@@ -1442,7 +1456,7 @@ Première livraison de **Copytrack Evolution** (étapes E0 à E2 du plan d'archi
   partie « # » de l'adresse : il ne part jamais vers un serveur. Un lien trop long pour certaines messageries (plus de 7 000 caractères) est signalé, avec le code à copier à la place ; un lien cassé, coupé
   ou d'une autre version du jeu donne un message lisible.
 - **Export vidéo du replay** : la barre de replay a un bouton **🎬 Vidéo** : le replay repart du début, la scène 3D est enregistrée (`MediaRecorder`, WebM VP9/VP8, 8 Mb/s, 60 i/s, sans son ni interface) et le fichier
-  `copytrack-<circuit>-<temps>.webm` est proposé au téléchargement, après une seconde et demie sur la ligne d'arrivée ; un second appui, Échap ou la fermeture du replay annule. Le navigateur qui ne sait pas enregistrer
+  `trackigami-<circuit>-<temps>.webm` est proposé au téléchargement, après une seconde et demie sur la ligne d'arrivée ; un second appui, Échap ou la fermeture du replay annule. Le navigateur qui ne sait pas enregistrer
   (anciens Safari, notamment) l'annonce au lieu de planter. **Pas de GIF** : un GIF de plusieurs secondes pèse bien plus lourd qu'un WebM et demande un encodeur à embarquer ; le WebM s'importe partout où un GIF animé servirait.
 - Nouveaux modules : `js/videoExport.js` (enregistreur de canvas, sans dépendance au jeu) ; `ghostLink` / `ghostFromHash` dans `js/replay.js`.
 - Tests : `tools/test-partage.mjs` (aller-retour du lien, liens cassés ou coupés, formats vidéo, enregistreur, nom de fichier) ; test navigateur : lien ouvert dans un autre onglet, course contre le fantôme partagé,
@@ -1917,7 +1931,7 @@ Recalibrage de la physique vers un feeling plus technique (arcade exigeant) :
 
 ## Bêta 0.5
 
-- Le jeu s'appelle désormais **Copytrack** et passe en version bêta (0.5).
+- Le jeu passe en version bêta (0.5).
 - Le demi-tube est retiré (dans les anciens codes de circuit, il devient une ligne droite).
 
 ## Nouveautés de la v1.5 (devenue bêta 0.5)
