@@ -1,4 +1,4 @@
-// Corpus de compatibilité (Copytrack Evolution, étape E0) : node tools/compat-gen.mjs --update
+// Corpus de compatibilité (Trackigami Evolution, étape E0) : node tools/compat-gen.mjs --update
 //
 // Fige ce que les joueurs ont déjà entre les mains et qui ne doit JAMAIS changer sans le vouloir : les clés des classements des 72 circuits,
 // les défis du jour passés, les codes de circuit (anciens formats SHW1 / SHW2 compris), les codes de partage (fantôme, voiture, pièce,

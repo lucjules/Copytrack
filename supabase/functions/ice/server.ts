@@ -1,4 +1,4 @@
-// Copytrack : fonction serveur « ice » (Supabase Edge Function, Deno) : serveurs STUN + relais TURN à identifiants à durée limitée pour le multijoueur.
+// Trackigami : fonction serveur « ice » (Supabase Edge Function, Deno) : serveurs STUN + relais TURN à identifiants à durée limitée pour le multijoueur.
 // La logique est dans handler.js (testable sous Node : tools/test-ice.mjs) ; ce fichier la branche sur Deno.serve.
 //
 // SOURCE de la fonction : ne pas coller ce fichier dans Supabase. `npm run build:function` génère index.ts (autonome, sans import) : c'est lui qu'on colle.

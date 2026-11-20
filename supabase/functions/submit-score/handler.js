@@ -1,4 +1,4 @@
-// Copytrack : logique de la fonction serveur « submit-score » (sans rien de propre à Deno : elle se teste sous Node, voir tools/test-submit-handler.mjs).
+// Trackigami : logique de la fonction serveur « submit-score » (sans rien de propre à Deno : elle se teste sous Node, voir tools/test-submit-handler.mjs).
 //
 // Reçoit une course terminée (clé du circuit, commandes enregistrées, temps), la REJOUE avec le vrai code du jeu (js/verify.js), et n'enregistre le
 // temps que s'il est confirmé. server.ts n'est que le fil qui la branche sur Deno.serve ; `npm run build:function` regroupe le tout en un seul fichier.

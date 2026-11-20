@@ -1867,7 +1867,7 @@ body.in-race #update-bar { display: none; }
 .pause-quick input[type=range] { width: 100%; }
 @media (max-height: 520px) { .pause-quick { grid-template-columns: repeat(3, 1fr); width: 100%; } }
 .career-next { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin: 4px 0 12px; }
-.career-next small { font-size: 13px; font-weight: 500; font-style: normal; opacity: 0.85; }
+.career-next small { font-size: 13px; font-weight: 500; font-style: normal; color: inherit; opacity: 0.85; }
 .hub-mode { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .hub-mode select { flex: 1; font: inherit; color: var(--text); background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
 

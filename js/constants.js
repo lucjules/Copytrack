@@ -21,7 +21,7 @@ export const SURF_PHYS = {
   spring: 56,          // poussée latérale du ressort à pleine force (m/s)
   bounce: 14,          // vitesse verticale d'un rebond à 100 % (m/s)
   // PHYS_VER 36 (lois de conduite, docs/LOIS-PHYSIQUE.md) : poussée CONSTANTE et traînée LINÉAIRE. Sous les gaz : a = engineAccel − (engineAccel / maxSpeed)·v, donc v(t) = maxSpeed·(1 − e^(−t/τ)), τ = maxSpeed / engineAccel
-  // (≈ 5 s) ; gaz levés, la traînée seule ralentit la voiture (au plafond : autant que la poussée). Les VITESSES restent celles de Copytrack
+  // (≈ 5 s) ; gaz levés, la traînée seule ralentit la voiture (au plafond : autant que la poussée). Les VITESSES restent celles de Trackigami
   // (plafond 290 km/h) : les circuits sont dessinés pour elles.
   gravity: 19,         // gravité normale (m/s²) (0.9.45 : 16, trop flottante ; avant : 25) ; gardée : sauts et loopings des circuits sont calés dessus
   engineAccel: 16,     // poussée (m/s²) : 0 -> 100 km/h en 2,1 s (PHYS_VER 35 : 14, en 1 − (v/vmax)^1,5)

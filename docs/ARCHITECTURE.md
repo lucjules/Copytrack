@@ -1,6 +1,6 @@
 # Architecture
 
-Copytrack est un jeu de course contre-la-montre dans le navigateur : un **site statique** (HTML + modules JavaScript, three.js inclus dans `js/vendor/`),
+Trackigami est un jeu de course contre-la-montre dans le navigateur : un **site statique** (HTML + modules JavaScript, three.js inclus dans `js/vendor/`),
 **sans étape de compilation**, plus un petit serveur (Supabase) pour les classements, la communauté, les comptes et les salons multijoueurs.
 Ce document explique comment les morceaux s'emboîtent. L'index de tous les fichiers, avec leur rôle, est dans [MODULES.md](MODULES.md) (généré) ; l'historique des
 versions dans [../CHANGELOG.md](../CHANGELOG.md).

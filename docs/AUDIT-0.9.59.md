@@ -1,4 +1,4 @@
-# Audit complet de Copytrack — version 0.9.59 (10 et 11 novembre 2026)
+# Audit complet de Trackigami — version 0.9.59 (10 et 11 novembre 2026)
 
 Ce rapport dit **ce qui a été réellement fait**, ce qui a été trouvé, ce qui a été corrigé, et — sans rien cacher — ce qui ne l'a pas été ou n'a pas pu être testé.
 Quatre statuts sont utilisés : **BUG CONFIRMÉ** (reproduit, avec un test qui échoue avant la correction), **BUG PROBABLE**, **RISQUE**, **AMÉLIORATION**.

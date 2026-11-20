@@ -1,6 +1,6 @@
 -- =====================================================================================
--- Copytrack : étape 9 (classements par secteur) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 8.
--- Peut être relancé sans danger. Copytrack Evolution, E15.
+-- Trackigami : étape 9 (classements par secteur) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 8.
+-- Peut être relancé sans danger. Trackigami Evolution, E15.
 --
 -- La fonction serveur « submit-score » rejoue déjà chaque course ; elle range maintenant avec le record ses TEMPS INTERMÉDIAIRES (en pas de simulation,
 -- 1/120 s : un par checkpoint passé, et par tour). Un secteur va d'un passage au suivant : le secteur 1 du départ au premier checkpoint, le dernier du

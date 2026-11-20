@@ -1,4 +1,4 @@
-// Académie 2 (Copytrack Evolution, E12) : des COMPÉTENCES (trajectoire, freinage, dérapage, sauts) et des EXERCICES ÉVALUÉS. Chaque exercice est un
+// Académie 2 (Trackigami Evolution, E12) : des COMPÉTENCES (trajectoire, freinage, dérapage, sauts) et des EXERCICES ÉVALUÉS. Chaque exercice est un
 // court circuit avec un objectif MESURÉ par l'analyse (analysis/drill.js : la course rejouée à partir de ses commandes), noté bronze, argent ou or.
 // Le niveau d'une compétence est la meilleure note de ses exercices. Les six leçons de l'Académie (academy.js) restent ce qu'elles sont.
 // Données et règles pures ; l'écran est dans app/academy.js. Aucun effet sur la course : on ne fait que mesurer.

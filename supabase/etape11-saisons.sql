@@ -1,6 +1,6 @@
 -- =====================================================================================
--- Copytrack : étape 11 (saisons hebdomadaires et divisions) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 10.
--- Peut être relancé sans danger. Copytrack Evolution, E15.
+-- Trackigami : étape 11 (saisons hebdomadaires et divisions) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 10.
+-- Peut être relancé sans danger. Trackigami Evolution, E15.
 --
 -- Une SAISON dure une semaine (du lundi 00:00 UTC au lundi suivant ; la saison 1 commence le 9 novembre 2026, comme js/seasons.js). Ses trois
 -- circuits sont choisis par le jeu d'après le numéro de la saison ; leurs temps sont des catégories de record « …~v1.sea-N » : la fonction serveur

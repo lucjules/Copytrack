@@ -1,4 +1,4 @@
-// Trace d'une course (Copytrack Evolution, analyse) : ce qui s'est passé, échantillonné comme les fantômes (un point tous les GHOST_EVERY pas,
+// Trace d'une course (Trackigami Evolution, analyse) : ce qui s'est passé, échantillonné comme les fantômes (un point tous les GHOST_EVERY pas,
 // soit 30 par seconde). Module pur, sans DOM ni rendu : testé sous Node (tools/test-analyse.mjs).
 //
 //   traceFromInputs(track, inputs)       rejeu EXACT des commandes enregistrées (GhostRunner, le même pas que la course et le serveur) : positions,

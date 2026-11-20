@@ -1,4 +1,4 @@
-// Comptes Copytrack : pseudo + mot de passe, sauvegarde cloud entre appareils. Les invités restent locaux.
+// Comptes Trackigami : pseudo + mot de passe, sauvegarde cloud entre appareils. Les invités restent locaux.
 //
 // Mots de passe : jamais stockés ni vus par le jeu. Ils partent en HTTPS vers Supabase Auth (GoTrue), qui ne garde
 // qu'un hachage bcrypt salé (auth.users.encrypted_password). Le pseudo sert d'identifiant : l'adresse technique

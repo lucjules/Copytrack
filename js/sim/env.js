@@ -1,4 +1,4 @@
-// Environnements déterministes (Copytrack Evolution, E19) : PLUIE (la piste glisse un peu partout, des flaques glissent beaucoup), GIVRE (des plaques de
+// Environnements déterministes (Trackigami Evolution, E19) : PLUIE (la piste glisse un peu partout, des flaques glissent beaucoup), GIVRE (des plaques de
 // verglas), RAFALES (le vent souffle par à-coups), et des conditions qui VARIENT au fil de la course (la pluie forcit et faiblit). Tout est tiré d'une
 // GRAINE et du chrono de la course (en pas) : même graine = mêmes flaques au même endroit, mêmes rafales au même instant, pour tout le monde, dans les
 // fantômes, les replays et la vérification serveur (ce module est dans sa fermeture : entiers et js/dmath.js seulement, aucune horloge, aucun hasard).

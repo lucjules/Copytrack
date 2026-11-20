@@ -1,4 +1,4 @@
-// Profils de HUD (Copytrack Evolution, E5) et réglages du HUD d'entraînement. Un profil choisit ce qui s'affiche PAR-DESSUS la personnalisation
+// Profils de HUD (Trackigami Evolution, E5) et réglages du HUD d'entraînement. Un profil choisit ce qui s'affiche PAR-DESSUS la personnalisation
 // du joueur (lot 11 : un élément caché par le joueur reste caché) ; « Entraînement » ajoute les outils d'analyse en direct (race/training.js).
 // Purement visuel : rien ici ne touche à la course. Module pur, testé sous Node.
 import { HUD_HIDE } from './uitheme.js';

@@ -1,5 +1,5 @@
 -- =====================================================================================
--- Copytrack : étape 16 (défense en profondeur des droits de table) — PROPOSÉE par l'audit 0.9.59, NON appliquée en production.
+-- Trackigami : étape 16 (défense en profondeur des droits de table) — PROPOSÉE par l'audit 0.9.59, NON appliquée en production.
 -- À lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 15 (15b indifférente). Relançable. AUCUNE donnée touchée : uniquement des REVOKE.
 -- Retour arrière : les « grant » correspondants (ou « grant all on <table> to anon, authenticated », l'état d'origine de Supabase).
 --

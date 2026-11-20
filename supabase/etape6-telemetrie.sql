@@ -1,5 +1,5 @@
 -- =====================================================================================
--- Copytrack : étape 6 (statistiques de jeu anonymes) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 5.
+-- Trackigami : étape 6 (statistiques de jeu anonymes) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 5.
 -- Peut être relancé sans danger.
 --
 -- Le jeu (avec l'accord du joueur, réglage « statistiques ») envoie, pour les circuits intégrés et le défi du jour : l'issue d'une partie (arrivée ou

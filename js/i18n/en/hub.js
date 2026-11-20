@@ -1,4 +1,4 @@
-// Dictionnaire anglais — Race Hub (fiche d'un circuit), classement à onglets, favoris, course rapide (Copytrack Evolution, 0.9.26).
+// Dictionnaire anglais — Race Hub (fiche d'un circuit), classement à onglets, favoris, course rapide (Trackigami Evolution, 0.9.26).
 
 export default {
   // ---------------------------------------------------------------- en-tête, favoris

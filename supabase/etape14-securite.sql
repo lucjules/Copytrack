@@ -1,5 +1,5 @@
 -- =====================================================================================
--- Copytrack : étape 14 (durcissement, phase 4) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 13.
+-- Trackigami : étape 14 (durcissement, phase 4) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 13.
 -- Peut être relancé sans danger. AUCUNE suppression de données : on ne fait que restreindre des droits et ajouter ce qui manque.
 --
 --  1. Profils : un pilote ne pouvait modifier que SA ligne, mais toutes ses colonnes, dont `created_at` (date de création) : il pouvait donc se

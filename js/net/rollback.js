@@ -1,4 +1,4 @@
-// PROTOTYPE de multijoueur à rollback (Copytrack Evolution, E18) : de vraies collisions déterministes entre 2 à 4 voitures. Hors interface : il n'est
+// PROTOTYPE de multijoueur à rollback (Trackigami Evolution, E18) : de vraies collisions déterministes entre 2 à 4 voitures. Hors interface : il n'est
 // branché sur aucun écran, seulement mesuré (tools/bench-rollback.mjs) et testé (tools/test-rollback.mjs). Décision et mesures : docs/ROLLBACK.md.
 //
 // Principe : chaque joueur fait tourner le MÊME monde (toutes les voitures, dans une seule simulation par voiture, plus les chocs entre elles), pas

@@ -1,4 +1,4 @@
-// Paramètres de simulation d'un circuit (Copytrack Evolution, E8) : ce que la physique lit en plus du circuit lui-même. Additifs : à leur valeur
+// Paramètres de simulation d'un circuit (Trackigami Evolution, E8) : ce que la physique lit en plus du circuit lui-même. Additifs : à leur valeur
 // par défaut (adhérence 100 %, pas de vent), la course est celle d'avant au bit près (l'empreinte des scénarios existants ne change pas ;
 // la physique ne fait même pas la multiplication). Les valeurs viennent des règles du circuit (track.js, table RULES : grip, wind, windDir), qui
 // entrent dans sa signature dès qu'elles ne sont plus par défaut. Dans la fermeture de la vérification serveur : dmath seulement.

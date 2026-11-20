@@ -1,4 +1,4 @@
-// Laboratoire de comparaison (Copytrack Evolution, E20) : depuis la fiche d'un circuit, rejoue les commandes du record personnel sous deux
+// Laboratoire de comparaison (Trackigami Evolution, E20) : depuis la fiche d'un circuit, rejoue les commandes du record personnel sous deux
 // réglages physiques (profils, véhicules v1 / v2, adhérence, pluie) et affiche l'écart secteur par secteur et le long du circuit. Le calcul est
 // dans analysis/lab.js ; le circuit n'est jamais modifié. Ces méthodes s'ajoutent au prototype de App.
 import { esc } from '../dom.js';

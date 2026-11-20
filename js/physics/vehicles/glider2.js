@@ -1,4 +1,4 @@
-// Deltaplane v2 (Copytrack Evolution, E20) : courants aériens et altitude. En service seulement avec les modèles v2 (règle vm = 2 ou profil
+// Deltaplane v2 (Trackigami Evolution, E20) : courants aériens et altitude. En service seulement avec les modèles v2 (règle vm = 2 ou profil
 // Simulation) et en vol ; sinon le deltaplane est celui de toujours.
 //   - ASCENDANCES : des colonnes d'air chaud, tirées d'un hachage entier des cases (les mêmes pour tout le monde, graine des conditions du
 //     circuit) : sous THERMAL_TOP mètres, elles poussent vers le haut, d'autant plus fort qu'on est près de leur axe ;

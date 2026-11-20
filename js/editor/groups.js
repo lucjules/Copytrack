@@ -1,4 +1,4 @@
-// Groupes et calques de l'éditeur (Copytrack Evolution, E9) : des pièces et décorations rangées dans des groupes numérotés (1 à 63) et nommés.
+// Groupes et calques de l'éditeur (Trackigami Evolution, E9) : des pièces et décorations rangées dans des groupes numérotés (1 à 63) et nommés.
 // Un groupe sert de CALQUE dans l'éditeur (masqué : ni dessiné ni visable ; verrouillé : visible mais ni sélectionnable ni modifiable) et, avec la
 // logique du circuit (E10), de cible aux règles (« montrer le groupe Porte nord au 2e checkpoint »). Masquer et verrouiller sont des états de
 // l'éditeur, pas du circuit : ils ne partent pas dans le code. Ces méthodes s'ajoutent au prototype d'EditorSession : `this` est l'instance.

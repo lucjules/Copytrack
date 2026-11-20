@@ -1,4 +1,4 @@
-// Moto v2 (Copytrack Evolution, E20) : inclinaison, transfert de masse, roue arrière, freins avant et arrière. En service seulement avec les
+// Moto v2 (Trackigami Evolution, E20) : inclinaison, transfert de masse, roue arrière, freins avant et arrière. En service seulement avec les
 // modèles v2 (règle vm = 2 ou profil Simulation, physics/profiles.js) ; sinon la moto est celle de toujours (aucune de ces lignes ne s'exécute).
 //   - INCLINAISON : la moto penche selon l'accélération latérale (angle visé = atan(a / g), au plus MAX_LEAN), avec un temps de bascule. Changer
 //     de cap plus vite qu'elle ne bascule coûte de l'adhérence (la moto n'est pas encore sur l'angle) ;

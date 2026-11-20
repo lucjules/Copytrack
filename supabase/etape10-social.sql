@@ -1,6 +1,6 @@
 -- =====================================================================================
--- Copytrack : étape 10 (amis et abonnements) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 9.
--- Peut être relancé sans danger. Copytrack Evolution, E15.
+-- Trackigami : étape 10 (amis et abonnements) — à lancer une fois dans Supabase > SQL Editor, après les étapes 1 à 9.
+-- Peut être relancé sans danger. Trackigami Evolution, E15.
 --
 --  - AMIS : une demande, acceptée ou refusée par l'autre. Seuls les COMPTES (pas les sessions invitées, qui changent d'identifiant si le navigateur
 --    est vidé) peuvent avoir des amis. Une demande n'est visible que des deux intéressés. Au plus 20 demandes envoyées par 24 h, 200 amis et demandes.

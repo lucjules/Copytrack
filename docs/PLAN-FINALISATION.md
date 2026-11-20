@@ -1,4 +1,4 @@
-# Plan de finalisation de Copytrack
+# Plan de finalisation de Trackigami
 
 Document de suivi du chantier « remise à niveau complète » (branche `claude/practical-dirac-vtqom0`, repartie de `main` 0.9.46). Mis à jour à chaque étape.
 Règles : ne rien supprimer d'utile, corriger les causes, un test de non-régression par correction, aucun test désactivé, rien fusionné dans `main` sans accord.

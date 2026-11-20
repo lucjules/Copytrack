@@ -1,4 +1,4 @@
-// Reconnexion au salon (Copytrack Evolution, E16, NET_VER 4). Une coupure (Wi-Fi qui saute, passage en 4G, onglet rechargé) ne fait plus sortir
+// Reconnexion au salon (Trackigami Evolution, E16, NET_VER 4). Une coupure (Wi-Fi qui saute, passage en 4G, onglet rechargé) ne fait plus sortir
 // de la salle :
 //   - le joueur coupé retente de rejoindre le même canal, avec le MÊME identifiant, pendant RESUME_MS (délais croissants RETRY_MS) ; sa course
 //     continue chez lui pendant ce temps ;

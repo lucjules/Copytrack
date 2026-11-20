@@ -1,4 +1,4 @@
-// Mesure d'un exercice de l'Académie (Copytrack Evolution, E12) : la course est REJOUÉE à partir de ses commandes (traceFromInputs, le même pas que
+// Mesure d'un exercice de l'Académie (Trackigami Evolution, E12) : la course est REJOUÉE à partir de ses commandes (traceFromInputs, le même pas que
 // la course et le serveur), puis mesurée par l'analyse : temps et vitesse moyenne dans des zones du circuit, chocs, réceptions, mini-turbos.
 // Le jeu et les tests mesurent donc exactement la même chose. Module pur, sans DOM (tools/test-skills.mjs).
 //

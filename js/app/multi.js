@@ -1,6 +1,7 @@
 // Multijoueur : salons (privés par code, ou publics), circuit commun, lobby, départ en course à plusieurs, classement du salon, championnat (manches).
 // Ces méthodes s'ajoutent au prototype de App (voir main.js) : `this` est l'instance.
 import { esc } from '../dom.js';
+import { GAME_NAME } from '../version.js';
 import { buildBuiltin } from '../tracks.js';
 import { Track } from '../track.js';
 import { applyRules, describeRules } from '../rules.js';
@@ -216,7 +217,7 @@ export const multiMethods = {
     invite.append(copyBtn);
     if (navigator.share) {
       const shareBtn = Object.assign(document.createElement('button'), { type: 'button', className: 'btn small', textContent: '📤 Partager' });
-      shareBtn.onclick = () => navigator.share({ title: 'Virelo', text: `Rejoins ma salle (code ${room.code})`, url: this.inviteLink(room) }).catch(() => {});
+      shareBtn.onclick = () => navigator.share({ title: GAME_NAME, text: `Rejoins ma salle (code ${room.code})`, url: this.inviteLink(room) }).catch(() => {});
       invite.append(shareBtn);
     }
     const list = document.createElement('ul');

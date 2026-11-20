@@ -1,4 +1,4 @@
-// Copytrack : fonction serveur « ice » (serveurs STUN/TURN du multijoueur) (Supabase Edge Function).
+// Trackigami : fonction serveur « ice » (serveurs STUN/TURN du multijoueur) (Supabase Edge Function).
 // FICHIER GÉNÉRÉ par tools/build-function.mjs à partir de server.ts et du code du jeu :
 // ne pas modifier à la main. À coller tel quel dans Supabase (Edge Functions).
 // deno-lint-ignore-file
