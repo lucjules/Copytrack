@@ -7,7 +7,7 @@ Analyse du 19 novembre 2026, faite **depuis le jeu** et non depuis le code :
   pâté », déclencheurs de messages, publication), puis tout le reste.
 
 > **Avancement.** La phase A (urgences et défauts visibles) est faite en **0.13.1**, à trois exceptions près, qui demandent une action de l'éditeur :
-> l'étape SQL 19 (U1), le relais TURN (U2) et le redéploiement de `submit-score` (U3). Phase C (fondations du multijoueur) faite en **0.14.0**, sauf le
+> l'étape SQL 19 (U1, **appliquée le 20/11**), le relais TURN (U2) et le redéploiement de `submit-score` (U3). Phase C (fondations du multijoueur) faite en **0.14.0**, sauf le
 > relais TURN : lien d'invitation, salon en grand, prêt, course à départ commun, revanche, apparence des voitures, connexion impossible expliquée.
 > Phase B (parcours du joueur) faite en **0.15.0** : pause complète, « Continuer la carrière », écran Modes à onglets et « jouer ce circuit en mode… »,
 > garage en entrée principale et onglets en quatre familles, première course guidée, mini-carte, « mauvais sens ».
@@ -33,9 +33,9 @@ Les scripts de mesure sont gardés hors du dépôt. Ils deviendront des tests au
 
 | # | Problème | Ce que voit le joueur | Action |
 | --- | --- | --- | --- |
-| U1 | **Étape SQL 19 non appliquée**, alors que la 0.13.0 est en ligne depuis le 19/11 à 19 h 55 | « Donner mon avis » répond « Envoi impossible » ; la fenêtre « Ton avis compte » s'ouvre après 6 courses et échoue | Appliquer `supabase/etape19-avis.sql` (accord déjà donné ; la confirmation Supabase n'a pas eu de réponse, deux fois) |
+| U1 | **Étape SQL 19 non appliquée**, alors que la 0.13.0 est en ligne depuis le 19/11 à 19 h 55 | « Donner mon avis » répond « Envoi impossible » ; la fenêtre « Ton avis compte » s'ouvre après 6 courses et échoue | **Fait le 20/11** : appliquée par l'éditeur (SQL Editor) ; vérifiée (table fermée à tous, `submit_feedback` ouverte, purge et santé à jour ; conseils Supabase : rien d'autre que ces deux points voulus) |
 | U2 | **Aucun relais TURN configuré** : la fonction `ice` répond 501 « Aucun relais TURN configuré » | Multijoueur en connexion directe seulement : « ✕ liaison impossible » fréquent en 4G et sur les réseaux d'école ou d'entreprise | Choisir un service de relais et régler ses secrets (`TURN_URLS`, `TURN_SECRET`) |
-| U3 | `submit-score` pas redéployée depuis la 0.12.3 | Rien de visible aujourd'hui (même physique 38) ; seule son empreinte de build diffère | Redéployer avant tout recalage de médailles (la fonction embarque les circuits) |
+| U3 | `submit-score` pas redéployée depuis la 0.12.3 | Rien de visible aujourd'hui (même physique 38) ; seule son empreinte de build diffère | Redéployer avant tout recalage de médailles (la fonction embarque les circuits). Vérifié le 20/11 : l'écart avec le dépôt n'est fait que de commentaires et de l'empreinte |
 
 ---
 
