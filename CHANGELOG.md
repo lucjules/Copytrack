@@ -6,6 +6,18 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 *Les nombres des sections anciennes (portées en cases, vitesses de saut…) sont ceux du monde de leur époque ; le monde est passé de cases de 24 m à 32 m en 0.9.11.*
 
+## Bêta 0.15.1 — wiki à jour, bouton « Continuer la carrière » lisible
+
+**`PHYS_VER` reste 38.**
+
+- **Wiki à jour des versions 0.13.1 à 0.15.0.**
+  - Pages mises à jour : première course guidée, tuile Garage, pause, mini-carte et « mauvais sens », caméra stable, « Continuer la carrière », garage en quatre familles, écran Modes à onglets.
+  - Nouvelle rubrique « Jouer à plusieurs » : lien d'invitation, salon, prêt, modes, revanche, relais pour les réseaux fermés.
+  - Captures des menus refaites, et deux nouvelles : la pause en course et le salon multijoueur.
+  - Chiffres des tests mis à jour.
+- **Corrigé** : le petit texte du bouton « ▶ Continuer la carrière » (« Chapitre 1 · … ») était clair sur fond corail ; il prend la couleur du bouton.
+- En production : l'étape SQL 19 (avis des testeurs) est appliquée et le relais TURN (Cloudflare) est en place, tous deux vérifiés.
+
 ## Bêta 0.15.0 — parcours du joueur : pause complète, carrière, modes, garage, mini-carte, mauvais sens
 
 **`PHYS_VER` reste 38**, rien ne change dans la course : records, fantômes et médailles restent valables. Phase B (parcours du joueur) de
@@ -13,7 +25,7 @@ multijoueurs y sont liés. Une version qui change `PHYS_VER` impose de **redépl
 
 - **Pause complète.** En plus de Reprendre, Recommencer et Quitter : « Retour au checkpoint » (R), « 🎥 Caméra » (change de vue et affiche son nom),
   « Commandes », et des réglages rapides sans quitter la course : volume des effets et de la musique, tremblements de la caméra, champ de vision.
-- **« ▶ Continuer la carrière »** en haut de l'écran Niveaux : ouvre directement le prochain circuit à médailler du premier chapitre ouvert.
+- **« ▶ Continuer la carrière »** en haut de l'écran de la carrière (Jouer › Carrière) : ouvre directement le prochain circuit à médailler du premier chapitre ouvert.
   Les chapitres viennent d'abord ; le défi du jour et la saison passent après.
 - **Écran Modes à onglets** : Modes fournis, Mes modes, Modes publiés, Paquets (mods). Chaque mode est une carte avec une icône (moto, bateau,
   gravité, tours, hors-piste…), ses règles en étiquettes, son objectif et « Jouer ». Avant : une longue liste d'un bloc.

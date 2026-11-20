@@ -45,10 +45,35 @@ await (async () => {
     await home();
     await safe('multijoueur', async () => { await page.evaluate(() => window.copytrack.multiMenu()); await page.waitForTimeout(800); });
     await home();
+    // (0.14.0) Le salon d'une salle créée, sans serveur : un second onglet en mode réseau local (?net=local), même profil.
+    try {
+      const p2 = await ctx.newPage();
+      await p2.route(/fonts\.(googleapis|gstatic)\.com|supabase\.co/, (r) => r.abort());
+      await p2.goto(URL_JEU + '?net=local', { waitUntil: 'load' });
+      await p2.waitForFunction(() => { const w = document.getElementById('welcome'); return (w && !w.classList.contains('hidden')) || (window.copytrack && window.copytrack.mode === 'menu'); }, null, { timeout: 60000 });
+      if (await p2.evaluate(() => !document.getElementById('welcome').classList.contains('hidden'))) { await p2.locator('#wl-name').fill('Essai'); await p2.locator('#wl-submit').evaluate((el) => el.click()); }
+      await p2.waitForFunction(() => window.copytrack && window.copytrack.mode === 'menu', null, { timeout: 60000 });
+      await p2.waitForTimeout(800); await p2.evaluate(() => { window.copytrack.ui.closeModal(); window.copytrack.multiMenu(); });
+      await p2.evaluate(() => [...document.querySelectorAll('#modal-actions button')].find((b) => /Créer une salle/.test(b.textContent)).click());
+      await p2.waitForFunction(() => document.querySelector('.mp-code b'), null, { timeout: 20000 });
+      await p2.waitForTimeout(1500);
+      await p2.screenshot({ path: `${OUT}/multijoueur-salon.jpg`, type: 'jpeg', quality: 82 }); console.log('ok', 'multijoueur-salon');
+      await p2.close();
+    } catch (e) { console.log('ÉCHEC', 'multijoueur-salon', e.message.split('\n')[0]); }
     await safe('profil', async () => { await page.evaluate(() => window.copytrack.showScreen('profile')); });
     await safe('records', async () => { await page.evaluate(() => window.copytrack.showScreen('records')); });
     await safe('options-graphismes', async () => { await page.evaluate(() => window.copytrack.showScreen('gfx')); });
     await safe('modes', async () => { await home(); await page.evaluate(() => window.copytrack.modesMenu()); await page.waitForTimeout(800); });
+    await home();
+    // (0.15.0) La pause en course, avec la mini-carte et le HUD derrière : Premiers Éclats, quelques secondes au pilote automatique.
+    await safe('course-pause', async () => {
+      await page.evaluate(async () => { const { BUILTIN_TRACKS, buildBuiltin } = await import('/js/tracks.js'); window.copytrack.playTrack(buildBuiltin(BUILTIN_TRACKS.find((d) => d.id === 'eclats')), { trackKey: null }); });
+      await page.waitForFunction(() => window.copytrack.session && window.copytrack.session.state === 'racing', null, { timeout: 40000 });
+      await page.evaluate(async () => { const { Autopilot } = await import('/js/autopilot.js'); const s = window.copytrack.session; const bot = new Autopilot(s.track.path, s.track.path.pilot || {}); bot.reset(s.phys); s.app.input.drive = () => bot.control(s.phys); });
+      await page.waitForTimeout(6000);
+      await page.evaluate(() => { const s = window.copytrack.session; delete s.app.input.drive; s.pause(); });
+    });
+    await page.evaluate(() => { const A = window.copytrack; try { if (A.mode === 'race') A.quitRace(); } catch (e) { /* */ } }); await page.waitForTimeout(1200);
     await home();
     await safe('editeur-vide', async () => { await page.evaluate(() => window.copytrack.openEditor({ code: null })); await page.waitForFunction(() => window.copytrack.mode === 'editor', null, { timeout: 20000 }); await page.waitForTimeout(2500); });
     await page.evaluate(() => { try { window.copytrack.leaveEditor(); } catch (e) {} }); await page.waitForTimeout(1500); await home();

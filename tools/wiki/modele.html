@@ -258,7 +258,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <div class="tbl"><table><tr><td><code>npm start</code></td><td>puis ouvrir <code>http://localhost:8080</code></td></tr><tr><td><code>python3 -m http.server</code></td><td>n'importe quel serveur statique convient aussi</td></tr><tr><td>GitHub Pages</td><td><em>Settings → Pages → Deploy from a branch</em>, dossier racine</td></tr></table></div>
     <p>Le jeu s'<strong>installe comme une application</strong> (bouton d'installation du navigateur) et se joue <strong>hors ligne</strong> une fois chargé.</p>
     <h3>Le premier lancement</h3>
-    <p>Le jeu demande un pseudo. En <strong>invité</strong>, la progression reste sur l'appareil ; avec un <strong>compte</strong> (pseudo et mot de passe), elle suit le joueur partout. Certains pseudos comme « Player » sont réservés. Un court tutoriel guide les premiers tours de roue. La langue suit le navigateur au premier lancement (français ou anglais) et se change dans <em>Paramètres › Interface</em>.</p>
+    <p>Le jeu demande un pseudo. En <strong>invité</strong>, la progression reste sur l'appareil ; avec un <strong>compte</strong> (pseudo et mot de passe), elle suit le joueur partout. Certains pseudos comme « Player » sont réservés. Un court tutoriel présente les commandes ; sa première fenêtre propose une <strong>première course guidée</strong> (la leçon 1 de l'Académie, avec ses consignes). La langue suit le navigateur au premier lancement (français ou anglais) et se change dans <em>Paramètres › Interface</em>.</p>
     <h3>Le menu principal</h3>
   </div>
   <div class="cols">
@@ -266,7 +266,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <div class="card"><h4>Créer</h4><p>L'éditeur, mes circuits, importer un code.</p></div>
     <div class="card"><h4>Multijoueur</h4><p>Salons en direct, compétition, amis.</p></div>
     <div class="card"><h4>Progression</h4><p>Records et médailles, niveau et licences, statistiques, déblocages.</p></div>
-    <div class="card"><h4>Profil</h4><p>Compte, amis, sauvegardes, code joueur.</p></div>
+    <div class="card"><h4>Garage</h4><p>Ta voiture d'abord (garage), puis le compte et le pseudonyme, et les sauvegardes (code joueur, import, export).</p></div>
     <div class="card"><h4>Paramètres</h4><p>Audio, graphismes, accessibilité, jeu, interface, commandes.</p></div>
   </div>
   <h3>Les commandes</h3>
@@ -281,7 +281,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
       <tr><td><kbd>T</kbd> <kbd>Entrée</kbd></td><td>Recommencer</td></tr>
       <tr><td><kbd>C</kbd></td><td>Changer de caméra</td></tr>
       <tr><td><kbd>H</kbd></td><td>Klaxon</td></tr>
-      <tr><td><kbd>Échap</kbd> <kbd>P</kbd></td><td>Pause</td></tr>
+      <tr><td><kbd>Échap</kbd> <kbd>P</kbd></td><td>Pause : reprendre, retour au checkpoint, caméra, commandes, réglages rapides</td></tr>
     </table></div>
     <div class="tbl"><table>
       <tr><th>Touche</th><th>En replay</th></tr>
@@ -329,10 +329,18 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
   <h3>Caméras, ressenti et aides</h3>
   <ul class="tight read">
     <li>Quatre caméras (poursuite, proche, capot, lointaine) avec <kbd>C</kbd> ; un effet de vitesse apparaît au-delà de 180 km/h.</li>
+    <li>La caméra est calculée au même rythme que la physique (120 fois par seconde), puis lissée à l'affichage : elle reste stable à 60 comme à 144 images par seconde. Après un choc, elle tremble doucement (réglable dans <em>Tremblements</em>, jusqu'à zéro).</li>
     <li>Le réglage <em>Sensations</em> dose le coup de champ de vision au turbo, l'aspiration derrière une voiture et les vibrations.</li>
     <li>Les <strong>aides à la conduite</strong> (gaz automatique, anti-patinage) existent ; une course aidée se range dans la catégorie « assisté », sans médailles.</li>
     <li>Le profil de HUD <em>Entraînement</em> montre l'écart en direct contre ton record, le fantôme or ou le record mondial, des mini-secteurs, la vitesse maxi et les forces g.</li>
   </ul>
+  <h3>À l'écran pendant la course</h3>
+  <div class="cols">
+    <div class="card"><h4>Mini-carte</h4><p>En haut à gauche : le circuit vu de dessus, ta voiture (blanche), ton fantôme (or) et les autres joueurs à leur couleur. Elle se masque dans <em>Paramètres › Interface</em>.</p></div>
+    <div class="card"><h4>Mauvais sens</h4><p>« ⛔ Mauvais sens » s'affiche quand la voiture roule à contre-sens du tracé pendant plus d'une demi-seconde. <kbd>R</kbd> ramène au dernier checkpoint, dans le bon sens.</p></div>
+    <div class="card"><h4>Pause</h4><p>Reprendre, retour au checkpoint, recommencer, changer de caméra, revoir les commandes, et des réglages sans quitter la course : volume des effets et de la musique, tremblements, champ de vision.</p></div>
+  </div>
+  <figure class="shot"><img src="img/course-pause.jpg" alt="La pause en course : reprendre, retour au checkpoint, recommencer, caméra, commandes, volumes, tremblements, champ de vision ; la mini-carte en haut à gauche" loading="lazy"><figcaption>La pause et ses réglages rapides ; la mini-carte en haut à gauche (atténuée pendant la pause).</figcaption></figure>
   <div class="gallery two">
     <figure class="shot"><img src="img/course-viaduc-bosse.jpg" alt="Viaduc Vertical : sur le mur, la route monte en S (bosse de wall-ride)" loading="lazy"><figcaption>Viaduc Vertical : la bosse du wall-ride (la route monte le long du mur).</figcaption></figure>
     <figure class="shot"><img src="img/course-canyon-blocs.jpg" alt="Canyon Corail : sur le mur, un bloc occupe la moitié basse ; la voiture passe au-dessus" loading="lazy"><figcaption>Canyon Corail : un bloc sur le bas du mur, on passe au-dessus.</figcaption></figure>
@@ -348,10 +356,11 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
   <span class="kicker">Jouer</span><h2>Carrière</h2><div class="curb"></div>
   <p class="lede">Onze chapitres de six circuits, un par décor, rangés du plus facile au plus dur, plus un chapitre bonus : l'Atelier des mécanismes.</p>
   <div class="read">
+    <p>En haut de l'écran, <strong>« ▶ Continuer la carrière »</strong> ouvre directement le prochain circuit où il te manque une médaille. Viennent ensuite les chapitres, puis le défi du jour et la saison de la semaine.</p>
     <p>Un chapitre s'ouvre avec <strong>4 médailles</strong> dans le précédent. L'Atelier, lui, s'ouvre avec 4 médailles du <em>premier</em> chapitre, et ses médailles n'ouvrent rien d'autre. Choisir un circuit ouvre sa <strong>fiche</strong> (Race Hub) : grande carte zoomable, difficulté, distance, médailles, fantômes, catégories de records et classements.</p>
   </div>
   <div class="gallery two">
-    <figure class="shot"><img src="img/menu-carriere.jpg" alt="Écran Circuits : défi du jour, saison de la semaine, chapitres" loading="lazy"><figcaption>L'écran Circuits : défi du jour, saison, chapitres.</figcaption></figure>
+    <figure class="shot"><img src="img/menu-carriere.jpg" alt="Écran Circuits : défi du jour, saison de la semaine, chapitres" loading="lazy"><figcaption>L'écran de la carrière : « Continuer la carrière », chapitres, défi du jour et saison.</figcaption></figure>
     <figure class="shot"><img src="img/fiche-circuit.jpg" alt="Fiche du circuit Premiers Éclats : carte, difficulté, médailles, fantômes" loading="lazy"><figcaption>La fiche de Premiers Éclats.</figcaption></figure>
   </div>
   <h3>Les médailles</h3>
@@ -426,9 +435,16 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
   </div>
   <h3>Le garage</h3>
   <div class="gallery two">
-    <figure class="shot"><img src="img/garage.jpg" alt="Le garage : une voiture jaune et les catégories de personnalisation" loading="lazy"><figcaption>Le garage : carrosseries, couleurs, LED, dessins, ailerons, roues…</figcaption></figure>
+    <figure class="shot"><img src="img/garage.jpg" alt="Le garage : une voiture jaune et les catégories de personnalisation" loading="lazy"><figcaption>Le garage : quatre familles d'onglets (Voiture, Peinture, Effets, Mes créations).</figcaption></figure>
     <div class="read">
-      <p>Le garage est <strong>purement visuel</strong> : il ne change rien à la physique. On y choisit parmi 8 carrosseries (buggy, sport, citadine, muscle, rallye…), une moto routière ou un chopper, des couleurs et des finitions (brillante, mate, métallisée, nacrée), des LED, des dessins, des ornements, des ailerons, des roues, une traînée lumineuse et un klaxon (<kbd>H</kbd>).</p>
+      <p>Le garage est <strong>purement visuel</strong> : il ne change rien à la physique. On y entre par la tuile <em>Garage</em> de l'accueil. Ses onglets sont rangés en quatre familles :</p>
+      <ul class="tight">
+        <li><strong>Voiture</strong> : 17 carrosseries (buggy, sport, citadine, muscle, rallye, kart, limousine, traîneau…), roues, ailerons, et la moto (routière ou chopper) ;</li>
+        <li><strong>Peinture</strong> : couleurs, finitions (brillante, mate, métallisée, nacrée), dessins, ornements ;</li>
+        <li><strong>Effets</strong> : néons (LED), traînée lumineuse, klaxon (<kbd>H</kbd>) ;</li>
+        <li><strong>Mes créations</strong> : l'atelier, les préréglages et les collections.</li>
+      </ul>
+      <p>Les néons sont taillés sur chaque carrosserie et sur la moto (jantes comprises), et le pilote de moto a les pieds aux repose-pieds et les mains au guidon.</p>
       <p>L'<strong>atelier de voiture</strong> va plus loin : 24 pièces libres, peinture et motifs, un dessin de 16 × 16, des effets, et un code de partage <code>SHC1:</code>. Les préréglages sont rangés par saison (Noël, Nouvel An, Plage, Été…), avec des collections et des exclusifs à débloquer.</p>
       <p>Les <strong>pièces</strong> (la monnaie) se gagnent selon la médaille et les objectifs bonus.</p>
     </div>
@@ -549,9 +565,9 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
   <div class="cols">
     <div class="card"><h4>Course rapide</h4><p>Un clic lance le prochain circuit, sans médaille.</p></div>
     <div class="card"><h4>Défi du jour</h4><p>Un circuit généré à partir de la date, le même pour tout le monde, vérifié par le pilote automatique.</p></div>
-    <div class="card"><h4>Modes de jeu</h4><p>Un mode = des règles + un objectif : Sauts lunaires, Pieds de plomb, Route libre, Tout en moto, Départ lancé, Marathon… Les tiens se partagent (<code>SHM1:</code>), et en paquets (<code>SHX1:</code>).</p></div>
+    <div class="card"><h4>Modes de jeu</h4><p>Un mode = des règles + un objectif : Sauts lunaires, Pieds de plomb, Route libre, Tout en moto, Départ lancé, Marathon… L'écran a quatre onglets (modes fournis, mes modes, modes publiés, paquets) ; chaque mode est une carte avec ses règles et « Jouer ». Sur la fiche d'un circuit, « Ou jouer ce circuit en mode… » le lance avec les règles d'un mode. Les tiens se partagent (<code>SHM1:</code>), et en paquets (<code>SHX1:</code>).</p></div>
     <div class="card"><h4>Académie</h4><p>Six leçons de deux minutes : prise en main, dérapage et mini-turbo, mini-turbos en série, saut et réception parfaite, plaque de transformation, obstacles. Puis des exercices notés.</p></div>
-    <div class="card"><h4>Multijoueur</h4><p>Jusqu'à 8 joueurs, code de 6 caractères ou salon public. Course libre ou championnat. Positions à 20 Hz en WebRTC pair à pair.</p></div>
+    <div class="card"><h4>Multijoueur</h4><p>Jusqu'à 8 joueurs, par lien d'invitation, code de 6 caractères ou salon public. Course à départ commun, championnat ou course libre, puis revanche. Détails ci-dessous.</p></div>
     <div class="card"><h4>Communauté</h4><p>Publier ses circuits, classements vérifiés, « Cette semaine », circuit de la semaine, commentaires, playlists, modes publiés.</p></div>
     <div class="card"><h4>Saisons et compétition</h4><p>Saisons hebdomadaires avec divisions, duels entre amis classés à l'Elo, tournois privés.</p></div>
     <div class="card"><h4>Progression</h4><p>Niveau et licences, titres affichés au classement, défis de maîtrise, statistiques.</p></div>
@@ -562,6 +578,22 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <figure class="shot"><img src="img/multijoueur.jpg" alt="Le menu multijoueur : créer, rejoindre, salons publics" loading="lazy"><figcaption>Le multijoueur.</figcaption></figure>
     <figure class="shot"><img src="img/records.jpg" alt="Records et médailles, une ligne par circuit" loading="lazy"><figcaption>Records et médailles.</figcaption></figure>
   </div>
+  <h3>Jouer à plusieurs</h3>
+  <ol class="read">
+    <li><strong>Créer une salle</strong> (Multijoueur › Créer une salle) : le jeu donne un code de 6 caractères et un <strong>lien d'invitation</strong> (« 🔗 Copier le lien », « 📤 Partager » sur téléphone).</li>
+    <li><strong>Les amis ouvrent le lien</strong> : le jeu démarre et rejoint la salle après le pseudo. On peut aussi taper le code, ou choisir un salon public.</li>
+    <li><strong>Le salon</strong> montre chaque joueur avec la couleur de sa voiture, ★ pour l'hôte, son état et la qualité de sa liaison ; à droite, le mode, le circuit (avec son aperçu) et les réglages, choisis par l'hôte.</li>
+    <li>Chacun clique <strong>« Je suis prêt »</strong>. L'hôte lance : si quelqu'un n'est pas prêt, le premier clic avertit, le second part quand même.</li>
+    <li>À l'arrivée, les invités peuvent demander une <strong>revanche</strong> ; l'hôte la relance pour tous en un clic.</li>
+  </ol>
+  <figure class="shot"><img src="img/multijoueur-salon.jpg" alt="Le salon d'une salle : code, lien d'invitation, joueurs et état prêt à gauche ; mode, circuit et réglages à droite" loading="lazy"><figcaption>Le salon : à gauche le code, l'invitation et les joueurs ; à droite le mode, le circuit et les réglages.</figcaption></figure>
+  <div class="cols">
+    <div class="card"><h4>Course à départ commun</h4><p>Le mode par défaut : un circuit, une grille de départ, le classement en direct, « Course terminée » à l'arrivée.</p></div>
+    <div class="card"><h4>Championnat</h4><p>Plusieurs manches, des points à chaque arrivée, un classement général.</p></div>
+    <div class="card"><h4>Course libre</h4><p>Chacun roule à son rythme ; les autres apparaissent en fantômes de leur couleur.</p></div>
+    <div class="card"><h4>Les voitures des autres</h4><p>Elles ont l'apparence choisie au garage (carrosserie, couleurs, néons). Les positions passent directement d'un joueur à l'autre (WebRTC), 20 fois par seconde.</p></div>
+    <div class="card"><h4>Réseaux fermés</h4><p>En 4G ou sur un réseau d'école ou d'entreprise, la connexion directe est souvent bloquée : le jeu passe alors par un <strong>relais</strong> (TURN, chez Cloudflare), avec des accès temporaires. Si rien ne passe, le salon explique pourquoi et quoi essayer.</p></div>
+  </div>
   <h3>Replays, fantômes, coach</h3>
   <div class="cols">
     <div class="card"><h4>Replay Theater</h4><p>Chaque course est enregistrée (les commandes seulement) et se revoit à l'identique. Barre de temps, secteurs et incidents marqués, analyse, export vidéo WebM.</p></div>
@@ -570,7 +602,7 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
     <div class="card"><h4>Laboratoire</h4><p>Les commandes d'un record rejouées sous deux réglages, avec l'écart par secteur et la courbe.</p></div>
   </div>
   <h3>Options et accessibilité</h3>
-  <p class="read">Volume des effets et de la musique (synthétisée en direct, une ambiance par décor), qualité graphique (Auto, Ultra, Haute, Moyenne, Basse, Potato), compteur d'images, champ de vision, effet de vitesse, tremblements de caméra, couleurs adaptées au daltonisme, taille de l'interface, animations réduites, thèmes d'interface et HUD déplaçable. Le jeu est en français et en anglais (environ 1 700 textes).</p>
+  <p class="read">Les réglages les plus utiles en course (volume, tremblements, champ de vision) sont aussi dans la pause. Volume des effets et de la musique (synthétisée en direct, une ambiance par décor), qualité graphique (Auto, Ultra, Haute, Moyenne, Basse, Potato), compteur d'images, champ de vision, effet de vitesse, tremblements de caméra, couleurs adaptées au daltonisme, taille de l'interface, animations réduites, thèmes d'interface et HUD déplaçable. Les boutons ont un liseré et des couleurs propres à chaque thème, pour rester lisibles sur tout décor. Un onglet resté ouvert annonce une nouvelle version (« Recharger »), jamais pendant une course. Le jeu est en français et en anglais (plus de 3 000 textes).</p>
 </section>
 
 <!-- ============================== TECHNIQUE ============================== -->
@@ -648,9 +680,9 @@ footer { padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px,
   <p class="read">Avant d'entrer dans le jeu, un circuit passe <code>tools/contract.mjs</code> : le pilote de référence le finit sans choc, encore à ±10 % de sa vitesse, et repart à l'arrêt de chaque checkpoint. Le vérificateur de l'éditeur ne trouve rien, les médailles suivent le temps du pilote, le code de partage se relit à l'identique, et le profil tient ses mesures. Un pilote humain simulé, qui hésite et tremble, le finit aussi sans se cogner.</p>
   <h3>Les tests</h3>
   <div class="stats">
-    <div class="stat"><b>104</b><span>fichiers de tests Node</span></div>
-    <div class="stat"><b>1 440</b><span>vérifications Node</span></div>
-    <div class="stat"><b>86</b><span>tests navigateur</span></div>
+    <div class="stat"><b>124</b><span>fichiers de tests Node</span></div>
+    <div class="stat"><b>1 776</b><span>vérifications Node</span></div>
+    <div class="stat"><b>107</b><span>tests navigateur</span></div>
     <div class="stat"><b>193</b><span>scénarios d'empreinte physique</span></div>
     <div class="stat"><b>~100 k</b><span>lignes dans le dépôt</span></div>
   </div>
